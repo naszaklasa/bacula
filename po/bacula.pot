@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: bacula-devel@lists.sourceforge.net\n"
-"POT-Creation-Date: 2006-06-08 16:46+0200\n"
+"POT-Creation-Date: 2006-06-29 09:37+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2413,19 +2413,19 @@ msgstr ""
 msgid "Scheduler logic error\n"
 msgstr ""
 
-#: src/dird/scheduler.c:176
+#: src/dird/scheduler.c:177
 msgid "Run job"
 msgstr ""
 
-#: src/dird/scheduler.c:397
+#: src/dird/scheduler.c:398
 msgid "Inserted job"
 msgstr ""
 
-#: src/dird/scheduler.c:405
+#: src/dird/scheduler.c:406
 msgid "Appended job"
 msgstr ""
 
-#: src/dird/scheduler.c:409
+#: src/dird/scheduler.c:410
 msgid "Run queue"
 msgstr ""
 
@@ -9127,7 +9127,7 @@ msgid ""
 "parts (%d/%d, device=%s)\n"
 msgstr ""
 
-#: src/stored/block.c:808 src/stored/block.c:918
+#: src/stored/block.c:808
 #, c-format
 msgid "Unable to open device next part %s: ERR=%s\n"
 msgstr ""
@@ -9151,34 +9151,39 @@ msgstr ""
 msgid "Block buffer size looping problem on device %s\n"
 msgstr ""
 
-#: src/stored/block.c:944
+#: src/stored/block.c:917
+#, c-format
+msgid "Unable to open device part=%d %s: ERR=%s\n"
+msgstr ""
+
+#: src/stored/block.c:943
 #, c-format
 msgid "Read error at file:blk %u:%u on device %s. ERR=%s.\n"
 msgstr ""
 
-#: src/stored/block.c:957
+#: src/stored/block.c:956
 #, c-format
 msgid "Read zero bytes at %u:%u on device %s.\n"
 msgstr ""
 
-#: src/stored/block.c:970
+#: src/stored/block.c:969
 #, c-format
 msgid ""
 "Volume data error at %u:%u! Very short block of %d bytes on device %s "
 "discarded.\n"
 msgstr ""
 
-#: src/stored/block.c:995
+#: src/stored/block.c:994
 #, c-format
 msgid "Block length %u is greater than buffer %u. Attempting recovery.\n"
 msgstr ""
 
-#: src/stored/block.c:1014
+#: src/stored/block.c:1013
 #, c-format
 msgid "Setting block buffer size to %u bytes.\n"
 msgstr ""
 
-#: src/stored/block.c:1029
+#: src/stored/block.c:1028
 #, c-format
 msgid ""
 "Volume data error at %u:%u! Short block of %d bytes on device %s discarded.\n"

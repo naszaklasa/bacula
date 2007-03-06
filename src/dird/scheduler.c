@@ -7,7 +7,7 @@
  *
  *     Kern Sibbald, May MM, major revision December MMIII
  *
- *   Version $Id: scheduler.c,v 1.33.2.2 2006/06/04 12:24:39 kerns Exp $
+ *   Version $Id: scheduler.c,v 1.33.2.3 2006/06/28 20:39:22 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -151,6 +151,7 @@ again:
               free(next_job);
           }
           schedules_invalidated = false;
+          unlock_jobs();
           goto again;
       }
       unlock_jobs();

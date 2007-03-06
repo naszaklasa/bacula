@@ -5,11 +5,11 @@
  *              Kern Sibbald, March MMI
  *                 added BB02 format October MMII
  *
- *   Version $Id: block.c,v 1.116.2.3 2006/03/24 16:35:23 kerns Exp $
+ *   Version $Id: block.c,v 1.116.2.4 2006/06/28 20:39:23 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2001-2005 Kern Sibbald
+   Copyright (C) 2001-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
@@ -910,13 +910,12 @@ reread:
    Dmsg3(100, "Tests : %d %d %d\n", (dev->VolCatInfo.VolCatParts > 0), 
          ((dev->file_addr-dev->part_start) == dev->part_size), 
          (dev->part <= dev->VolCatInfo.VolCatParts));*/
-   /* Check for part file end */
-   if ((dev->num_parts > 0) &&
-        ((dev->file_addr-dev->part_start) == dev->part_size) && 
-        (dev->part < dev->num_parts)) {
+   /* Check for DVD part file end */
+   if (dev->at_eof() && dev->is_dvd() && dev->num_parts > 0 &&
+        dev->part < dev->num_parts) {
       if (dvd_open_next_part(dcr) < 0) {
-         Jmsg2(dcr->jcr, M_FATAL, 0, _("Unable to open device next part %s: ERR=%s\n"),
-               dev->print_name(), strerror_dev(dev));
+         Jmsg3(dcr->jcr, M_FATAL, 0, _("Unable to open device part=%d %s: ERR=%s\n"),
+               dev->part, dev->print_name(), strerror_dev(dev));
          dev->dev_errno = EIO;
          return false;
       }

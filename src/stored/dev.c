@@ -26,7 +26,7 @@
  *     really necessary -- KES.  Note, this contortion has been
  *     corrected to a large extent by a rewrite (Apr MMI).
  *
- *   Version $Id: dev.c,v 1.156.2.6 2006/03/14 21:41:41 kerns Exp $
+ *   Version $Id: dev.c,v 1.156.2.7 2006/06/28 20:39:23 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -680,7 +680,7 @@ bool DEVICE::rewind(DCR *dcr)
          }
          break;
       }
-   } else if (is_file()) {      
+   } else if (is_file() || is_dvd()) {
       if (lseek_dev(this, (off_t)0, SEEK_SET) < 0) {
          berrno be;
          dev_errno = errno;

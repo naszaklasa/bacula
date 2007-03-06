@@ -1,5 +1,5 @@
 
-          Release Notes for Bacula 1.38.10
+          Release Notes for Bacula 1.38.11
 
   Bacula code: Total files = 423 Total lines = 139,479 (*.h *.c *.in)
 
@@ -11,6 +11,24 @@ Warning for version 1.38.8 and greater:
   (typical error for Windows users), unless the string is
   enclosed in double quotes, in which case, the backslashes
   must be doubled.   
+
+Major Changes for 1.38.11 
+- Add test for IRIX64 as OS
+- Fix scheduler hang during clock shift (due to missing unlock())
+- Minor tweaks to bregex.c
+- Fix to block.c to correctly check for DVD number of parts.
+- Fix to dev.c to permit DVD seeking in spool file.  Corrects
+  label rewriting problems.
+- Clarify license for techlogs (GPL). I consider them "part" of
+  the source code of Bacula.
+- Use FDL license for developer's manual, French translation, German
+  translation, bimagemgr manuals (same as the main manual), and
+  the web site.
+
+New features for 1.38.11:
+- None
+
+====================================================================
 
 Major Changes for 1.38.10:
 - This is a primarily a bug fix release, with the following bugs being

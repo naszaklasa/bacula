@@ -5,7 +5,7 @@
 
 # basic defines for every build
 %define depkgs ../depkgs
-%define depkgs_version 28Mar06
+%define depkgs_version 25Jun06
 %define sqlite_bindir /usr/lib/bacula/sqlite
 %define working_dir /var/bacula
 
@@ -23,7 +23,7 @@
 %define useradd /usr/sbin/useradd
 %define groupadd /usr/sbin/groupadd
 %define usermod /usr/sbin/usermod
-%define _rescuever 1.8.3
+%define _rescuever 1.8.4
 
 # platform defines - set one below or define the build_xxx on the command line
 # RedHat builds
@@ -82,10 +82,15 @@ exit 1
 %define mysql 0
 %{?build_mysql:%define mysql 1}
 # if using mysql 4.x define this and mysql above
-# currently: Mandrake 10.1, SuSE 9.x & 10.x, RHEL4 and Fedora Core 4 & 5
+# currently: Mandrake 10.1, SuSE 9.x & 10.0, RHEL4 and Fedora Core 4
 %define mysql4 0
 %{?build_mysql4:%define mysql4 1}
 %{?build_mysql4:%define mysql 1}
+# if using mysql 5.x define this and mysql above
+# currently: SuSE 10.1 and Fedora Core 5
+%define mysql5 0
+%{?build_mysql5:%define mysql5 1}
+%{?build_mysql5:%define mysql 1}
 %define sqlite 0
 %{?build_sqlite:%define sqlite 1}
 %define postgresql 0
@@ -314,12 +319,16 @@ BuildRequires: linc-devel
 BuildRequires: freetype-devel
 %endif
 
-%if %{mysql} && ! %{mysql4}
+%if %{mysql} && ! %{mysql4} && ! %{mysql5}
 BuildRequires: mysql-devel >= 3.23
 %endif
 
 %if %{mysql} && %{mysql4}
 BuildRequires: mysql-devel >= 4.0
+%endif
+
+%if %{mysql} && %{mysql5}
+BuildRequires: mysql-devel >= 5.0
 %endif
 
 %if %{postgresql} && %{wb3}
@@ -379,13 +388,17 @@ Requires: glibc >= 2.4
 Requires: libtermcap
 %endif
 
-%if %{mysql} && ! %{su9} && ! %{mdk} && ! %{mysql4}
+%if %{mysql} && ! %{su9} && ! %{mdk} && ! %{mysql4} && ! %{mysql5}
 Requires: mysql >= 3.23
 Requires: mysql-server >= 3.23
 %endif
 %if %{mysql} && ! %{su9} && ! %{su10} && ! %{mdk} && %{mysql4}
 Requires: mysql >= 4.0
 Requires: mysql-server >= 4.0
+%endif
+%if %{mysql} && ! %{su9} && ! %{su10} && ! %{mdk} && %{mysql5}
+Requires: mysql >= 5.0
+Requires: mysql-server >= 5.0
 %endif
 
 %if %{mysql} && %{su9} && ! %{mysql4}
@@ -399,6 +412,10 @@ Requires: mysql-client >= 4.0
 %if %{mysql} && %{su10} && %{mysql4}
 Requires: mysql >= 4.0
 Requires: mysql-client >= 4.0
+%endif
+%if %{mysql} && %{su10} && %{mysql5}
+Requires: mysql >= 5.0
+Requires: mysql-client >= 5.0
 %endif
 
 %if %{mysql} && %{mdk} && ! %{mysql4}
@@ -751,9 +768,9 @@ export LDFLAGS=-L/usr/lib64/mysql
         --with-scriptdir=/etc/bacula \
         --enable-smartalloc \
         --enable-client-only \
-	%if %{mdk}
-	--disable-nls \
-	%endif
+        %if %{mdk}
+        --disable-nls \
+        %endif
         --enable-static-fd
 
 make
@@ -780,7 +797,7 @@ make
         --with-postgresql \
 %endif
 %if %{wxconsole}
-	--enable-wx-console \
+        --enable-wx-console \
 %endif
         --with-working-dir=%{working_dir} \
         --with-pid-dir=/var/run \
@@ -1474,6 +1491,11 @@ fi
 %endif
 
 %changelog
+* Sun Jun 25 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- update depkgs to 25Jun06
+- add mysql5 build tag
+* Mon Jun 12 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 1.38.10 bump rescue version
 * Sun Jun 03 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - fix usermod statements
 - add fc5 target

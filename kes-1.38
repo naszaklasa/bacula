@@ -2,6 +2,20 @@
                         Kern Sibbald
 
 General:
+Release 1.38.11 (28Jun06) released 28JunO6
+28Jun06
+- Add test for IRIX64 as OS
+- Fix scheduler hang during clock shift (due to missing unlock())
+- Minor tweaks to bregex.c
+- Fix to block.c to correctly check for DVD number of parts.
+- Fix to dev.c to permit DVD seeking in spool file.  Corrects
+  label rewriting problems.
+- Clarify license for techlogs (GPL). I consider them "part" of
+  the source code of Bacula.
+- Use FDL license for developer's manual, French translation, German
+  translation, bimagemgr manuals (same as the main manual), and
+  the web site.
+
 Release 1.38.10 (08Jun06) released 12JunO6
 08Jun06
 - Modify setting ACLs to suppress error message if the file is a

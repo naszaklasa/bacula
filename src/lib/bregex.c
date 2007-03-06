@@ -26,12 +26,12 @@
  * Peters, Guido van Rossum, Ka-Ping Yee, Sjoerd Mullender, and
  * probably one or two others that I'm forgetting.
  *
- * $Id: bregex.c,v 1.1.2.1 2006/04/12 20:49:17 kerns Exp $ */
+ * $Id: bregex.c,v 1.1.2.2 2006/06/28 20:39:22 kerns Exp $ */
 
 #include "bacula.h"
 #include "bregex.h"
 
-#define set_error(x) bufp->errmsg=(x)
+#define set_error(x) bufp->errmsg=((char *)(x))
 #define got_error bufp->errmsg!=NULL
 
 /* The original code blithely assumed that sizeof(short) == 2.  Not
@@ -1033,7 +1033,7 @@ else \
    } \
 }
 
-char *re_compile_pattern(regex_t * bufp, unsigned char *regex)
+const char *re_compile_pattern(regex_t * bufp, unsigned char *regex)
 {
    int a;
    int pos;
