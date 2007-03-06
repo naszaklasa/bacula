@@ -1,0 +1,61 @@
+#!/bin/sh
+#
+# bacula-fd	SysV init script for Bacula-FD.
+#
+#	Written by Miquel van Smoorenburg <miquels@cistron.nl>.
+#	Modified for Debian GNU/Linux by Ian Murdock <imurdock@gnu.ai.mit.edu>.
+#	Customized for Bacula by Jose Luis Tallon <jltallon@adv-solutions.net>
+#
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/sbin/bacula-fd
+NAME="bacula-fd"
+PORT=9102
+DESC="Bacula File daemon"
+ARGS="-c /etc/bacula/bacula-fd.conf"
+
+test -f $DAEMON || exit 0
+
+set -e
+
+if [ -n "`getent services bacula-fd`" ]; then
+	PORT=`getent services bacula-fd | awk '{ gsub("/tcp","",$2); print $2; }'`
+fi
+
+PIDFILE=/var/run/bacula/$NAME.$PORT.pid
+
+case "$1" in
+  start)
+	if [ -f /etc/bacula/do_not_run ]; then
+		echo "Not starting $DESC: disabled via /etc/bacula/do_not_run"
+		exit 0
+	fi
+
+	echo -n "Starting $DESC: "
+	start-stop-daemon --start --quiet --pidfile $PIDFILE \
+		--exec $DAEMON -- $ARGS
+	echo "$NAME."
+	;;
+  stop)
+	echo -n "Stopping $DESC: "
+	start-stop-daemon --oknodo --stop --quiet --pidfile $PIDFILE \
+		--exec $DAEMON -- $ARGS
+	echo "$NAME."
+	;;
+
+  restart|force-reload)
+	echo -n "Restarting $DESC: "
+	start-stop-daemon --stop --oknodo --quiet --pidfile $PIDFILE  \
+		--exec $DAEMON -- $ARGS
+	sleep 1
+	start-stop-daemon --start --quiet --pidfile $PIDFILE \
+		--exec $DAEMON -- $ARGS
+	echo "$NAME."
+	;;
+  *)
+	N=/etc/init.d/$NAME
+	echo "Usage: $N {start|stop|restart|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

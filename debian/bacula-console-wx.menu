@@ -1,0 +1,2 @@
+?package(bacula-wxconsole):needs="X11" section="Apps/System" \
+  title="Bacula wxConsole" command="/usr/bin/bacula-console-wx -c /etc/bacula/wx-console.conf"

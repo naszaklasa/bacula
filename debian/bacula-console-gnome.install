@@ -1,0 +1,2 @@
+debian/additions/bacula-console-gnome.desktop	usr/share/applications
+scripts/bacula.png				usr/share/icons/gnome

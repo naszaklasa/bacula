@@ -1,0 +1,93 @@
+Bacula, network-based backup, recovery & verification system	
+http://www.bacula.org
+===============================================================================
+
+The 'bacula-common' package provides some of the common infrastructure
+for Bacula.  You can find Bacula READMEs and other documentation files
+there.
+
+BASIC INFORMATION
+-----------------
+
+To use bacula you must install one of the flavors of director,
+depending on your preferred database, onto a server.
+
+You must also install bacula-sd on the machine where you will be
+storing your backed-up data.  And you'll need bacula-fd on any machine
+that you want to back up.
+
+The installation will run the necessary daemons automatically, but to
+get any backups working you must customize the relevant configuration
+files in /etc/bacula as described in the bacula manual.  Once you have
+edited the files you should issue an appropriate /etc/init.d/bacula-xx
+force-reload.
+
+NETWORK ENABLING
+----------------
+
+By default, Debian's Bacula packages install config files in which the
+servers listen only on localhost by default.  If you want to be able
+to do backups over the network, you'll need to find the lines in
+bacula-dir.conf, bacula-sd.conf, and bacula-fd.conf that reference
+127.0.0.1 and remove them.
+
+PACKAGES
+========
+
+The virtual package 'bacula-director' is provided by
+
+	- bacula-director-sqlite3
+        - bacula-director-sqlite
+	- bacula-director-mysql
+	- bacula-director-pgsql
+
+These binaries have been compiled against the database indicated
+in the package's name.
+
+CONSOLE
+=======
+
+The package bacula-console provides the administration console for
+Bacula, so that users can contact the director.
+
+ There is, in fact, a wrapper
+script to ease usage by users: /usr/bin/bconsole
+
+The GNOME version of the admin console is contained in the
+bacula-console-gnome package.
+
+The wxWidgets-based console is included in the bacula-console-wx
+package.
+
+There are no wrappers for bacula-console-gnome nor
+bacula-wxconsole since they will likely be run from the corresponding
+launchers with appropriate '-c /etc/bacula/<flavor>.conf' arguments.
+The convenient '.menu' files are provided, too.
+
+USERS & SECURITY
+================
+
+Make sure you customize the passwords in the files in /etc/bacula.
+
+The installation will create a bacula user on the system, and the
+daemons and RunBefore/RunAfter jobs will run as that user.  However,
+the file director must run as root, as will your ClientRunBefore/After
+jobs.  Installation of a director will ask you for a database user to
+use.
+
+You can run Bacula consoles as any user, but the user you use will
+need to be able to read the console config files.  These files are, by
+default, under /etc/bacula.  You'll need to specify the config file
+with -c for any of the GUI consoles.
+
+FURTHER READING
+===============
+
+See the Bacula documentation on the upstream author's website,
+http://www.bacula.org.
+
+-- John Goerzen
+
+based on a file by Jose Luis Tallon
+
+ -- John Goerzen <jgoerzen@complete.org>, Sat, 13 May 2006 10:18:42 -0500

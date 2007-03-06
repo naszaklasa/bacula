@@ -1,0 +1,122 @@
+#! /bin/bash
+# postinst script for bacula-director-sqlite
+#
+
+. /usr/share/debconf/confmodule
+db_version 2.0
+
+set -e
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+#
+# quoting from the policy:
+#     Any necessary prompting should almost always be confined to the
+#     post-installation script, and should be protected with a conditional
+#     so that unnecessary prompting doesn't happen if a package's
+#     installation fails and the `postinst' is called with `abort-upgrade',
+#     `abort-remove' or `abort-deconfigure'.
+
+DB="/var/lib/bacula/bacula.db"
+MAKE_SQL_TABLES=/usr/share/bacula-director/make_sqlite_tables
+UPGRADE_SQL_DIR=/usr/share/bacula-director
+UPGRADE_TABLES1=update_sqlite_tables_6_to_7
+UPGRADE_TABLES2=update_sqlite_tables_7_to_8
+UPGRADE_TABLES3=update_sqlite_tables_8_to_9
+LOGDIR=/var/log/bacula
+POSTINST_COMMON=/usr/share/bacula-director/postinst-common
+DEFCONFIG=/usr/share/bacula-common/defconfig
+CFGFILE=/etc/bacula/bacula-dir.conf
+
+case "$1" in
+    configure)
+		touch $DB;	#Bug 243983
+		chown bacula:bacula $DB
+
+		db_get bacula-director-sqlite/create_tables || true
+		if [ "$RET" = "true" ]; then
+			touch $DB;      #Bug 243983
+			chown bacula:bacula $DB
+
+			if [ -z "$2" ]; then
+				# if we are not upgrading, we must create the tables
+				echo -n "Creating tables in DB $DB ..." >&2
+				if $MAKE_SQL_TABLES 2>&1 > /dev/null; then echo "Ok." ;
+				else echo "ERROR"; exit 100; fi
+			fi
+		fi
+		# fix for upgrade -- <mechanix@debian.org>
+		if [ -n "$2" ]; then
+			touch $LOGDIR/upgrade.log
+			
+			if dpkg --compare-versions "$2" le '1.32f-5-*' ; then
+			# On upgrade, unconditionally change Catalog 
+			echo -n "Upgrading SQLite tables to v7 format..."
+			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 >> $LOGDIR/upgrade.log  2>&1
+			then echo "Ok."
+			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
+			fi
+			fi
+			
+			if dpkg --compare-versions "$2" lt '1.36.0' ; then
+			# On upgrade, unconditionally change Catalog 
+			echo -n "Upgrading SQLite tables to v8 format..."
+			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES2 >> $LOGDIR/upgrade.log  2>&1
+			then echo "Ok."
+			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
+			fi
+			fi
+
+			if dpkg --compare-versions "$2" lt '1.38.0' ; then
+			# On upgrade, unconditionally change Catalog 
+			echo -n "Upgrading SQLite tables to v9 format..."
+			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES3 >> $LOGDIR/upgrade.log  2>&1
+			then echo "Ok."
+			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
+			fi
+			fi
+		fi
+
+		chmod 640 $DB		
+
+		# Preprocess configuration
+		TARGET=$CFGFILE.dpkg-tmp
+
+		sed -e 's/user = @db_user@;//' -e 's/password = "@db_passwd@";//' \
+			$DEFCONFIG/bacula-dir.conf > $TARGET
+
+		/bin/bash $POSTINST_COMMON
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+# Do start daemon
+db_stop
+
+if [ -n "$2" ]; then
+        /etc/init.d/bacula-director stop
+        sleep 1
+fi
+ 
+invoke-rc.d --quiet bacula-director start
+
+#DEBHELPER#
+
+exit 0
+

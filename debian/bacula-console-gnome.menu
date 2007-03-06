@@ -1,0 +1,2 @@
+?package(bacula-console-gnome):needs="X11" section="Apps/System" \
+  title="Bacula GNOME console" command="/usr/bin/bacula-console-gnome -c /etc/bacula/gnome-console.conf"

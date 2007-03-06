@@ -1,0 +1,2 @@
+?package(bacula-console):needs="text" section="Apps/System" \
+  title="Bacula console" command="/usr/bin/bconsole"
