@@ -1,2 +1,2 @@
-debian/manpages/bacula-dir.8
-debian/manpages/dbcheck.8
+manpages/bacula-dir.8
+manpages/dbcheck.8

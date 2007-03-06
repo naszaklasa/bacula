@@ -1,2 +1,2 @@
-debian/manpages/bcopy.8
-debian/manpages/bscan.8
+manpages/bcopy.8
+manpages/bscan.8

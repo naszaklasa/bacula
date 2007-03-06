@@ -1,3 +1,15 @@
+bacula (2.0.2-1) experimental; urgency=low
+
+  * New upstream release.  Closes: #408381.
+  * Upstream has dropped Gnome console.  Closes: #391820.
+  * Remove debian/manpages since manpages are now shipped upstream.
+    Modify debian/*.manpages to reference these files.
+  * debian/ support for automatically upgrading database to v10.
+  * Updated German translation.  Closes: #406547.
+  * Removed references to obsolete docs.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 23 Feb 2007 08:21:36 -0600
+
 bacula (1.38.11-8) unstable; urgency=high
 
   * Rebuild to fix earlier binNMU.   Closes: #411652.

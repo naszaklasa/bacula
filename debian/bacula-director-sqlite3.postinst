@@ -28,6 +28,7 @@ set -e
 DB="/var/lib/bacula/bacula.db"
 MAKE_SQL_TABLES=/usr/share/bacula-director/make_sqlite3_tables
 UPGRADE_SQL_DIR=/usr/share/bacula-director
+UPGRADE_TABLES1=update_sqlite3_tables
 LOGDIR=/var/log/bacula
 POSTINST_COMMON=/usr/share/bacula-director/postinst-common
 DEFCONFIG=/usr/share/bacula-common/defconfig
@@ -50,6 +51,21 @@ case "$1" in
 				else echo "ERROR"; exit 100; fi
 			fi
 		fi
+
+		# fix for upgrade -- <mechanix@debian.org>
+		if [ -n "$2" ]; then
+			touch $LOGDIR/upgrade.log
+			
+			if dpkg --compare-versions "$2" le '2.0.0' ; then
+			# On upgrade, unconditionally change Catalog 
+			echo -n "Upgrading SQLite3 tables to v10 format..."
+			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 >> $LOGDIR/upgrade.log  2>&1
+			then echo "Ok."
+			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
+			fi
+			fi
+
+                fi
 
 		chmod 640 $DB		
 
