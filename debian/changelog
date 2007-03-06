@@ -1,3 +1,17 @@
+bacula (1.38.11-7) unstable; urgency=low
+
+  * ACK NMU.  Closes: #394605.
+  * New Japanese translation thanks to Hideky Yamane.  Closes: #392638.
+  * New Czech translation from Jakup Kasparec.  Closes: #392680.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 27 Oct 2006 08:39:46 -0500
+
+bacula (1.38.11-6.1) unstable; urgency=low
+
+  * Remove explicit build dependency on python2.3.
+
+ -- Matthias Klose <doko@debian.org>  Fri, 27 Oct 2006 05:47:35 +0200
+
 bacula (1.38.11-6) unstable; urgency=high
 
   * Only call dbconfig-common if it exists in maintainer scripts.

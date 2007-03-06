@@ -14,32 +14,31 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: bacula 1.36.3-1\n"
-"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"Project-Id-Version: bacula 1.38.11-6\n"
+"Report-Msgid-Bugs-To:  John Goerzen <jgoerzen@complete.org>\n"
 "POT-Creation-Date: 2006-05-13 10:03-0500\n"
-"PO-Revision-Date: 2005-05-22 00:53+0900\n"
-"Last-Translator: Hideki Yamane <henrich@samba.gr.jp>\n"
+"PO-Revision-Date: 2006-10-09 00:52+0900\n"
+"Last-Translator: Hideki Yamane (Debian-JP) <henrich@debian.or.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=EUC-JP\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:4
 msgid "Create tables for Bacula's Catalog?"
-msgstr "Bacula ¤Î¥«¥¿¥í¥°ÍÑ¤Î¥Æ¡¼¥Ö¥ë¤òºîÀ®¤·¤Ş¤¹¤«?"
+msgstr "Bacula ã®ã‚«ã‚¿ãƒ­ã‚°ç”¨ãƒ†ãƒ¼ãƒ–ãƒ«ã‚’ä½œæˆã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:4
-#, fuzzy
 msgid ""
 "The tables needed for Bacula's catalog are missing.  This is normal for a "
 "fresh install of Bacula."
 msgstr ""
-"Bacula ¤Î¥«¥¿¥í¥°¤ËÉ¬Í×¤Ê¥Æ¡¼¥Ö¥ë¤¬Ìµ¤¯¤Ê¤Ã¤Æ¤¤¤ë¤Î¤¬¸«¤Ä¤«¤ê¤Ş¤·¤¿ (¶²¤é¤¯¤Ï"
-"¤¸¤á¤Æ¤Î¥¤¥ó¥¹¥È¡¼¥ë¤Ê¤Î¤Ç¤·¤ç¤¦)¡£¤¹¤°¤ËºîÀ®¤·¤Ş¤¹¤«?"
+"Bacula ã®ã‚«ã‚¿ãƒ­ã‚°ã«å¿…è¦ãªãƒ†ãƒ¼ãƒ–ãƒ«ãŒå­˜åœ¨ã—ã¦ã„ã¾ã›ã‚“ã€‚Bacula ã‚’åˆã‚ã¦ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«"
+"ã™ã‚‹å ´åˆã¯å•é¡Œã‚ã‚Šã¾ã›ã‚“ã€‚"
 
 #. Type: boolean
 #. Description
@@ -48,12 +47,14 @@ msgid ""
 "These tables are needed for the Bacula director to function. Should these "
 "tables be automatically set up for you?"
 msgstr ""
+"ã“ã‚Œã‚‰ã®ãƒ†ãƒ¼ãƒ–ãƒ«ã¯ Bacula director ãŒå‹•ä½œã™ã‚‹ãŸã‚ã«å¿…è¦ã§ã™ã€‚è‡ªå‹•çš„ã«ãƒ†ãƒ¼ãƒ–ãƒ«"
+"ã‚’ä½œæˆã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:14
 msgid "Remove Catalog on purge?"
-msgstr "purge ¤Îºİ¤Ë¥«¥¿¥í¥°¤òºï½ü¤·¤Ş¤¹¤«?"
+msgstr "purge ã®éš›ã«ã‚«ã‚¿ãƒ­ã‚°ã‚’å‰Šé™¤ã—ã¾ã™ã‹?"
 
 #. Type: boolean
 #. Description
@@ -62,18 +63,20 @@ msgid ""
 "Do you want the Bacula Catalog to be removed if you purge the Bacula "
 "director?"
 msgstr ""
+"Bacula director ã‚’å®Œå…¨ã«å‰Šé™¤ã™ã‚‹éš›ã« Bacula ã®ã‚«ã‚¿ãƒ­ã‚°ã‚’å‰Šé™¤ã—ã¾ã™ã‹?"
+
 
 #~ msgid ""
 #~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
 #~ "able to restore your backups unless you have another copy of the catalog "
 #~ "at hand."
 #~ msgstr ""
-#~ "·Ù¹ğ: ¤³¤ì¤Ï¤ä¤êÄ¾¤·¤¬¤­¤­¤Ş¤»¤ó¡£°ìÃ¶¥«¥¿¥í¥°¤òºï½ü¤¹¤ë¤È¡¢¼êÆ°¤Ç¥«¥¿¥í¥°"
-#~ "¤Î¥³¥Ô¡¼¤ò¹Ô¤Ã¤Æ¤¤¤Ê¤¤¸Â¤ê¡¢¥Ğ¥Ã¥¯¥¢¥Ã¥×¤ò¥ê¥¹¥È¥¢¤Ç¤­¤Ş¤»¤ó¡£"
+#~ "è­¦å‘Š: ã“ã‚Œã¯ã‚„ã‚Šç›´ã—ãŒããã¾ã›ã‚“ã€‚ä¸€æ—¦ã‚«ã‚¿ãƒ­ã‚°ã‚’å‰Šé™¤ã™ã‚‹ã¨ã€æ‰‹å‹•ã§ã‚«ã‚¿ãƒ­ã‚°"
+#~ "ã®ã‚³ãƒ”ãƒ¼ã‚’è¡Œã£ã¦ã„ãªã„é™ã‚Šã€ãƒãƒƒã‚¯ã‚¢ãƒƒãƒ—ã‚’ãƒªã‚¹ãƒˆã‚¢ã§ãã¾ã›ã‚“ã€‚"
 
 #~ msgid ""
 #~ "Shall I remove the Catalog / SQLite database at package purge time? This "
 #~ "will free all the used space."
 #~ msgstr ""
-#~ "¥Ñ¥Ã¥±¡¼¥¸¤ò purge ¤¹¤ëºİ¤Ë¥«¥¿¥í¥°¡¦SQLite ¥Ç¡¼¥¿¥Ù¡¼¥¹¤òºï½ü¤·¤Ş¤¹¤«? ¤³"
-#~ "¤ì¤ò¹Ô¤¦¤È¡¢ÍøÍÑ¤·¤Æ¤¤¤¿ÎÎ°è¤òÁ´¤Æ³«Êü¤·¤Ş¤¹¡£"
+#~ "ãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ã‚’ purge ã™ã‚‹éš›ã«ã‚«ã‚¿ãƒ­ã‚°ãƒ»SQLite ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹ã‚’å‰Šé™¤ã—ã¾ã™ã‹? ã“"
+#~ "ã‚Œã‚’è¡Œã†ã¨ã€åˆ©ç”¨ã—ã¦ã„ãŸé ˜åŸŸã‚’å…¨ã¦é–‹æ”¾ã—ã¾ã™ã€‚"

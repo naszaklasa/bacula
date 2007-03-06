@@ -1,2 +1,3 @@
 usr/lib/bacula/bsmtp	usr/lib/bacula/smtp
+usr/lib/bacula/bsmtp    usr/sbin/bsmtp
 usr/lib/bacula/btraceback	usr/sbin/btraceback
