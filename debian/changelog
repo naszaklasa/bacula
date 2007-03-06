@@ -1,3 +1,11 @@
+bacula (1.38.9-0.2) unstable; urgency=low
+
+  * No longer rm -rf /var/lib/bacula in bacula-director-common postinst.
+    Other Bacula packages may still be installed, and this breaks them.
+  * Include bwild and bregex in bacula-director-* packages.
+
+ -- John Goerzen <jgoerzen@complete.org>  Tue,  9 May 2006 08:45:28 -0500
+
 bacula (1.38.9-0.1) unstable; urgency=low
 
   * New upstream release: 1.38.9, which is mostly a bugfix release.
