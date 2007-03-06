@@ -1,0 +1,5 @@
+src/tools/bsmtp		usr/lib/bacula
+src/dird/query.sql	etc/bacula/scripts
+debian/patches/btraceback		usr/lib/bacula
+debian/patches/btraceback.gdb		usr/lib/bacula
+debian/additions/postinst-common	usr/share/bacula-director

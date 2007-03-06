@@ -9,9 +9,9 @@ echo "this script may take several minutes to run."
 echo " "
 
 # The location of the sqlite program
-bindir=/usr/lib/sqlite
+bindir=/usr/bin
 # The location of your bacula working directory
-cd /var/bacula
+cd /var/lib/bacula
 
 if [ -s bacula.db ];then
         DB_VER=`echo "select * from Version;" | $bindir/sqlite bacula.db | tail -n 1 2>/dev/null`

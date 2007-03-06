@@ -1,0 +1,32 @@
+"To use bacula you must install one of the flavors of director,
+depending on your preferred database, onto a server, bacula-sd on the
+machine to which you will back up, and bacula-fd on all machines from
+which you wish to backup.  The installation will run the necessary
+daemons automatically, but to get any backups working you must
+customize the relevant configuration files in /etc/bacula as described
+in the bacula manual.  Once you have edited the files you should issue
+an appropriate /etc/init.d/bacula-xx force-reload [if order matters,
+say how.  Maybe mention the bconsole reload commands.]
+
+[Or maybe it's set up with some basic backup automatic?]
+
+The installation will create a bacula user on the system, and the
+daemons and RunBefore/RunAfter jobs will run as that user.  However,
+the file director must run as root, as will your ClientRunBefore/After
+jobs.  Installation of a director creates a bacula user in the
+corresponding database.
+
+
+You will also need to ensure that the machines can communicate using
+tcp port xx.  bacula on Debian does not use tcpwrappers.
+
+The installation sets up the following cron and logrotate jobs: ....
+[or indicate which ones the administrator might want to setup.]
+
+You can run bconsole as any user [I can't, but I think that's because
+my tools have zapped the read world permission.]  To run
+bacula-console-gnome you must specify the path to the configuration
+file with bacula-console-gnome -c /etc/bacula/gnome-console.conf.
+[Of course, it would be best to fix that with a wrapper so it will run
+from the menu too, but that's a separate matter...]
+"

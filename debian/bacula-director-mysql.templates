@@ -1,0 +1,52 @@
+Template: bacula-director-mysql/db_host
+Type: string
+_Default: localhost
+_Description: Where is the MySQL server?
+ Enter the host where the MySQL server which is to hold Bacula's catalog
+ is.
+
+Template: bacula-director-mysql/db_user
+Type: string
+_Default: bacula
+_Description: MySQL username
+ Please, enter the username which Bacula will use to connect to MySQL.
+
+Template: bacula-director-mysql/db_password
+Type: password
+_Default: NONE
+_Description: MySQL password
+ Please, enter the password which Bacula will use to connect to MySQL.
+
+Template: bacula-director-mysql/create_tables
+Type: boolean
+Default: true
+_Description: Create tables for Bacula's Catalog?
+ I have detected that the tables needed for Bacula's Catalog are missing
+ (this is probably a fresh install). Shall I create them now?
+ .
+ A MySQL 'root' username & password will be required.
+
+Template: bacula-director-mysql/mysql_root_username
+Type: string
+_Default: root
+_Description: MySQL 'root' username
+ Please type the username to connect to MySQL as.
+ .
+ This user needs to have 'create database' privileges.
+
+Template: bacula-director-mysql/mysql_root_password
+Type: password
+_Default: NONE
+_Description: MySQL 'root' password
+ Please type the password for the username entered before.
+
+Template: bacula-director-mysql/remove_catalog_on_purge
+Type: boolean
+Default: false
+_Description: Remove Catalog on purge?
+ Shall I remove the Catalog from the MySQL server at package purge time?
+ This will free all the used space.
+ .
+ Warning: This is not undoable. Once you remove the catalog, you won't be
+ able to restore your backups unless you have another copy of the catalog
+ at hand.

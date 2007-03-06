@@ -1,0 +1,2 @@
+src/tray-monitor/bacula-tray-monitor	usr/bin
+debian/tmp/bacula-traymonitor.xpm		usr/share/pixmaps

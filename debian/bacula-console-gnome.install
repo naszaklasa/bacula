@@ -1,0 +1,3 @@
+debian/tmp/usr/sbin/bacula-console-gnome	usr/bin
+debian/additions/bacula-console-gnome.desktop	usr/share/applications
+scripts/bacula.png				usr/share/icons/gnome

@@ -1,0 +1,191 @@
+#! /bin/bash
+# postinst script for bacula-director-mysql
+#
+
+. /usr/share/debconf/confmodule
+db_version 2.0
+
+set -e
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+#
+# quoting from the policy:
+#     Any necessary prompting should almost always be confined to the
+#     post-installation script, and should be protected with a conditional
+#     so that unnecessary prompting doesn't happen if a package's
+#     installation fails and the `postinst' is called with `abort-upgrade',
+#     `abort-remove' or `abort-deconfigure'.
+
+## Globals
+CATALOG=bacula
+MYSQL=/usr/bin/mysql
+MYSQLADMIN=/usr/bin/mysqladmin
+MAKE_SQL_TABLES=/usr/share/bacula-director/make_mysql_tables
+UPGRADE_SQL_DIR=/usr/share/bacula-director
+UPGRADE_TABLES1=update_mysql_tables_6_to_7
+UPGRADE_TABLES2=update_mysql_tables_7_to_8
+LOGDIR=/var/log/bacula
+POSTINST_COMMON=/usr/share/bacula-director/postinst-common
+DEFCONFIG=/usr/share/bacula-common/defconfig
+CFGFILE=/etc/bacula/bacula-dir.conf
+
+case "$1" in
+configure)
+	
+	## Test mysql is running somewhere
+	
+	db_get bacula-director-mysql/db_host || true
+	MYSQL_HOST="$RET"
+	db_get bacula-director-mysql/mysql_root_username || true
+	MYSQL_ROOT_USER="$RET"
+
+	# Change order of following lines, so that ROOT_PASSWORD gets init'd
+	#  noticed by Tilo Levante
+	# db_input high bacula-director-mysql/mysql_root_password || true
+	db_get bacula-director-mysql/mysql_root_password || true
+	MYSQL_ROOT_PASSWORD="$RET"
+	db_reset bacula-director-mysql/mysql_root_password 
+	db_fset bacula-director-mysql/mysql_root_password "seen" "false"
+
+	if [ "$MYSQL_HOST" != "localhost" ]
+	then
+		MYSQL_HOST_STRING="-h $MYSQL_HOST"	
+	fi
+	
+	if [ -n "$MYSQL_ROOT_PASSWORD" ] && [ "$MYSQL_ROOT_PASSWORD" != "NONE" ]
+	then
+		MYSQL_PSWD_STRING="-p\"$MYSQL_ROOT_PASSWORD\""
+	fi
+
+	echo -n "Checking DB connectivity..."	
+	if ! eval $MYSQLADMIN $MYSQL_HOST_STRING -u $MYSQL_ROOT_USER \
+		$MYSQL_PSWD_STRING ping >/dev/null 2>&1
+	then
+		echo -e "\nERROR: Could not connect to MySQL server at $MYSQL_HOST"
+		exit 1
+	fi
+	echo "Ok."	
+
+	db_get bacula-director-mysql/create_tables || true
+	if [ "$RET" = "true" ]; then
+		# Create DB
+		echo -n "Creating Catalog \"$CATALOG\" ..."
+		eval $MYSQLADMIN $MYSQL_HOST_STRING -u $MYSQL_ROOT_USER $MYSQL_PSWD_STRING \
+			create $CATALOG >/dev/null 2>&1 || true
+		echo "Ok."
+
+		# Create tables
+		echo -n "Creating tables ..."
+		if ! eval $MAKE_SQL_TABLES $MYSQL_HOST_STRING \
+			-u $MYSQL_ROOT_USER $MYSQL_PSWD_STRING >/dev/null 2>&1
+		then
+			echo -e "\nERROR: Table creation failed!"
+			exit 1
+		fi
+		echo "Ok."
+
+		# Grant privileges to (unprivileged user!)
+		db_get bacula-director-mysql/db_user || true
+		MYSQL_USER="$RET"
+		db_get bacula-director-mysql/db_password || true
+		MYSQL_PASSWORD="$RET"
+	
+		MYSQL_HOST_URI=$MYSQL_HOST
+		if [ "$MYSQL_HOST" != "localhost" ]
+		then
+			MYSQL_HOST_URI="'%'"
+		fi
+		
+		q="'"
+		if [ "$MYSQL_PASSWORD" != "NONE" ]; then
+        	        MYSQL_USER_PSWD_STRING="IDENTIFIED BY $q$MYSQL_PASSWORD$q"
+                	MYSQL_AUTH_TOKEN=$MYSQL_PASSWORD
+	        fi
+
+		echo -e "GRANT ALL privileges ON $CATALOG.* TO $MYSQL_USER@$MYSQL_HOST_URI " \
+			"$MYSQL_USER_PSWD_STRING;\nFLUSH PRIVILEGES;" \
+			| eval $MYSQL -h $MYSQL_HOST -u $MYSQL_ROOT_USER $MYSQL_PSWD_STRING mysql
+
+	fi # bacula-director-mysql/create_tables == "true"
+
+	if [ -n "$2" ]; then
+		rm -f $LOGDIR/upgrade.log
+		touch $LOGDIR/upgrade.log
+	
+		if dpkg --compare-versions "$2" le '1.32f-5-*'; then
+		# On upgrade, unconditionally change Catalog
+		# patched upgrade script to use additional arguments on connection
+		echo -n "Upgrading Catalog to v7 ..."
+		if ! ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 $MYSQL_HOST_STRING \
+                        -u $MYSQL_ROOT_USER "$MYSQL_PSWD_STRING" > $LOGDIR/upgrade.log 2>&1
+		then
+                        echo -e "\nERROR: Catalog upgrading failed! Check $LOGDIR/upgrade.log for details."
+                        exit 1
+                fi
+                echo "Ok."
+                fi
+                
+                if dpkg --compare-versions "$2" lt '1.36.0'; then
+		# On upgrade, unconditionally change Catalog
+		# patched upgrade script to use additional arguments on connection
+		echo -n "Upgrading Catalog to v8 ..."
+		if ! ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES2 $MYSQL_HOST_STRING \
+                        -u $MYSQL_ROOT_USER $MYSQL_PSWD_STRING > $LOGDIR/upgrade.log 2>&1
+		then
+                        echo -e "\nERROR: Catalog upgrading failed! Check $LOGDIR/upgrade.log for details."
+                        exit 1
+                fi
+                echo "Ok."
+                fi
+                
+	fi
+
+
+	# PreProcess configuration
+	echo -n "Processing configuration ..."
+	TARGET=$CFGFILE.dpkg-tmp
+
+	
+	sed -e "s/dbname = bacula;/dbname = bacula; DB Address = $MYSQL_HOST;/" \
+	-e "s/@db_user@/$MYSQL_USER/" -e "s/@db_pswd@/$MYSQL_AUTH_TOKEN/" \
+		$DEFCONFIG/bacula-dir.conf > $TARGET
+
+	/bin/bash $POSTINST_COMMON
+
+	echo "Ok."
+	;;
+
+abort-upgrade|abort-remove|abort-deconfigure)
+
+	;;
+
+*)
+	echo "postinst called with unknown argument \`$1'" >&2
+	exit 1
+	;;
+esac
+
+# Unconditionally RESET the variables, so that
+# we "forget" about the passwords
+#db_reset bacula-director_mysql/mysql_root_username || true
+
+# Do start daemon
+db_stop
+
+if [ -n "$2" ]; then
+	/etc/init.d/bacula-director stop
+	sleep 1
+fi
+
+invoke-rc.d --quiet bacula-director start
+
+exit 0

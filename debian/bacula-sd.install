@@ -1,0 +1,5 @@
+debian/tmp/usr/sbin/bacula-sd
+debian/tmp/usr/sbin/bls
+debian/tmp/usr/sbin/bextract
+debian/tmp/usr/sbin/btape
+debian/tmp/etc/bacula/scripts/mtx-changer

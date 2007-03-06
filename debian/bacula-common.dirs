@@ -1,0 +1,5 @@
+etc/bacula
+var/run/bacula
+var/lib/bacula
+usr/share/bacula-common
+usr/share/bacula-common/defconfig

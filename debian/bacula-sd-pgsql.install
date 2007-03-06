@@ -1,0 +1,2 @@
+debian/bacula-director-pgsql/usr/sbin/bscan          usr/bin
+debian/bacula-director-pgsql/usr/sbin/bcopy          usr/bin

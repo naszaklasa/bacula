@@ -1,0 +1,39 @@
+Bacula, network-based backup, recovery & verification system	
+http://www.bacula.org
+===============================================================================
+
+	The 'bacula-common' package provides a repository for the common
+infrastructure: the 'bacula' user & group plus the template configurations
+which are massaged into boilerplate config by the postinstallation, using
+the configuration values entered through debconf.
+
+
+	The virtual package 'bacula-director' is provided by
+	- bacula-director-sqlite
+	- bacula-director-mysql
+	- bacula-director-pgsql
+	These binaries have been compiled against the database indicated
+in the package's name; "Flavored" version of the dbcheck utility is
+included too.
+
+
+	The package bacula-console provides the administration console for
+Bacula, so that users can contact the director. There is, in fact, a wrapper
+script to ease usage by users: /usr/bin/bconsole
+	( Now the console has been renamed as 'bconsole' upstream; the real
+console program is still being renamed as /usr/sbin/bacula-console )
+
+	The GNOME version of the admin console is contained in the 
+bacula-console-gnome package ( compiled against GNOME 2 libs )
+
+	The brand-new wxWidgets-based wx-console is included in the
+bacula-wxconsole package, compiled against wx-X11 v2.4 libraries.
+
+	I do not provide wrappers for bacula-console-gnome nor
+bacula-wxconsole since i expect them to be run from the corresponding
+launchers with appropriate '-c /etc/bacula/<flavor>.conf' arguments.
+The convenient '.menu' files are provided, too.
+
+
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>, Mon, 16 Aug 2004 19:08:45 +0100

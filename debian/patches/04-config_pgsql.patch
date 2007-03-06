@@ -1,0 +1,27 @@
+--- autoconf/aclocal.m4.orig
++++ autoconf/aclocal.m4
+@@ -568,6 +568,10 @@
+               POSTGRESQL_INCDIR=/usr/include/pgsql
+               POSTGRESQL_LIBDIR=/usr/lib/pgsql
+               POSTGRESQL_BINDIR=/usr/bin
++          elif test -f /usr/include/postgresql/libpq-fe.h; then
++              POSTGRESQL_INCDIR=/usr/include/postgresql
++              POSTGRESQL_LIBDIR=/usr/lib
++              POSTGRESQL_BINDIR=/usr/lib/postgresql/bin
+           else
+               AC_MSG_RESULT(no)
+               AC_MSG_ERROR(Unable to find libpq-fe.h in standard locations)
+--- configure.old
++++ configure
+@@ -7187,6 +7187,10 @@
+               POSTGRESQL_INCDIR=/usr/include/pgsql
+               POSTGRESQL_LIBDIR=/usr/lib/pgsql
+               POSTGRESQL_BINDIR=/usr/bin
++          elif test -f /usr/include/postgresql/libpq-fe.h; then
++              POSTGRESQL_INCDIR=/usr/include/postgresql
++              POSTGRESQL_LIBDIR=/usr/lib
++              POSTGRESQL_BINDIR=/usr/lib/postgresql/bin
+           else
+               echo "$as_me:$LINENO: result: no" >&5
+ echo "${ECHO_T}no" >&6
+

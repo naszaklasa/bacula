@@ -1,0 +1,6 @@
+#!/bin/sh
+# this would be the prefered option...
+#invoke-rc.d mysql start
+
+test -f /etc/init.d/mysql && /etc/init.d/mysql start
+exit 0
