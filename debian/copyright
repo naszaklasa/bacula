@@ -6,6 +6,12 @@ It was downloaded from http://www.bacula.org
 
 Upstream Authors: Kern Sibbald <kerns@users.sourceforge.net> and John Walker.
 
+History:
+The original Bacula code was Copyright Kern Sibbald and John Walker.
+After November 2004, it became Copyright Kern Sibbald, and finally,
+the copyright was transferred to the Free Software Foundation Europe
+on 15 November 2006.
+
 Trademark:
 The name Bacula is a registered trademark.
 
@@ -13,9 +19,9 @@ The name Bacula is a registered trademark.
 
 License:
 For the most part, Bacula is licensed under the GPL version 2         
-and any code that is Copyright Kern Sibbald and John Walker or
-Copyright Kern Sibbald (after November 2004) with the GPL
-indication is so licensed, but with the following four additions:
+with the additions listed below. Most this code is listed
+under Copyright Free Software Foundation Europe e.V.  What
+follows are the additions to the GPL version 2 license.
 
 Linking: 
 Bacula may be linked with any libraries permitted under the GPL,
@@ -46,17 +52,31 @@ the copyright license set forth in this Agreement.
 
 Code falling under the above conditions will be marked as follows:
 
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
 
 
 Windows:
@@ -77,6 +97,30 @@ how we build the Windows File daemon and many users have succeeded in doing
 so themselves.  Our intention is to respect as closely as possible Open
 Source practices while maintaining full respect for proprietary and
 copyrighted code.
+
+Other Licenses:
+Certain parts of the Bacula software are licensed by their
+copyright holder(s) under the GPL with no modifications.  These
+software files are clearly marked as such.
+
+There are parts of Bacula that are licensed under the LGPL so
+that they may be used in proprietary code to interface with
+Bacula.
+
+Finally there are parts of Bacula that are in the public domain.
+             
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 
 
 
