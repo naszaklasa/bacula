@@ -1,0 +1,89 @@
+--- bacula-1.36.0.orig/src/cats/bdb.c
++++ bacula-1.36.0/src/cats/bdb.c
+@@ -102,8 +102,8 @@
+  * never have errors, or it is really fatal.
+  */
+ B_DB *
+-db_init_database(JCR *jcr, char *db_name, char *db_user, char *db_password,
+-		 char *db_address, int db_port, char *db_socket, 
++db_init_database(JCR *jcr, char const *db_name, char const *db_user, char const *db_password,
++		 char const *db_address, int db_port, char const *db_socket, 
+ 		 int mult_db_connections)
+ {
+    B_DB *mdb;
+@@ -289,7 +289,7 @@
+    return mdb->errmsg;
+ }
+ 
+-int db_sql_query(B_DB *mdb, char *query, DB_RESULT_HANDLER *result_handler, void *ctx)
++int db_sql_query(B_DB *mdb, char const *query, DB_RESULT_HANDLER *result_handler, void *ctx)
+ {
+    return 1;
+ }
+@@ -430,7 +430,7 @@
+ }
+ 
+ 
+-void _db_lock(char *file, int line, B_DB *mdb)
++void _db_lock(const char *file, int line, B_DB *mdb)
+ {
+    int errstat;
+    if ((errstat=rwl_writelock(&mdb->lock)) != 0) {
+@@ -439,7 +439,7 @@
+    }
+ }    
+ 
+-void _db_unlock(char *file, int line, B_DB *mdb)
++void _db_unlock(const char *file, int line, B_DB *mdb)
+ {
+    int errstat;
+    if ((errstat=rwl_writeunlock(&mdb->lock)) != 0) {
+--- bacula-1.36.0.orig/src/cats/bdb_update.c
++++ bacula-1.36.0/src/cats/bdb_update.c
+@@ -111,7 +111,7 @@
+ 
+    fseek(mdb->jobfd, ojr.rec_addr, SEEK_SET);
+    if (fwrite(jr, len, 1, mdb->jobfd) != 1) {
+-      Mmsg1(&db->errmsg, _("Error updating DB Job file. ERR=%s\n"), strerror(errno));
++      Mmsg1(&mdb->errmsg, _("Error updating DB Job file. ERR=%s\n"), strerror(errno));
+       stat = 0;
+    }
+    fflush(mdb->jobfd);
+--- bacula-1.36.0.orig/src/cats/Makefile.in
++++ bacula-1.36.0/src/cats/Makefile.in
+@@ -79,7 +79,7 @@
+ 	$(RMF) create_sqlite_database	   update_sqlite_tables     make_sqlite_tables
+ 	$(RMF) grant_sqlite_privileges	   drop_sqlite_tables	    drop_sqlite_database
+ 
+-	$(RMF) mysql sqlite
++	$(RMF) mysql sqlite postgresql
+ 	$(RMF) make_catalog_backup delete_catalog_backup
+ 
+ distclean: realclean
+--- bacula-1.36.0.orig/src/cats/sql_update.c
++++ bacula-1.36.0/src/cats/sql_update.c
+@@ -395,4 +395,13 @@
+    }
+ }
+ 
++#else
++
++void
++db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
++{
++  /* DUMMY func for Bacula_DB */
++  return;
++}
++
+ #endif /* HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL*/
+--- bacula-1.36.0.orig/src/cats/bdb_create.c
++++ bacula-1.36.0/src/cats/bdb_create.c
+@@ -105,7 +105,7 @@
+  * Returns: 0 on failure
+  *	    record-id on success
+  */
+-int db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
++bool db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
+ {
+    int len;
+ 

@@ -1,0 +1,193 @@
+Source: bacula
+Section: admin
+Priority: optional
+Maintainer: Jose Luis Tallon <jltallon@adv-solutions.net>
+Build-Depends: autotools-dev, debhelper (>= 4.1.68), po-debconf (>= 0.8.2), zlib1g-dev, libreadline5-dev | libreadline-dev, libsqlite-dev, libmysqlclient12-dev, postgresql-dev, libwrap0-dev, libgnome-dev, libgnome2-dev, libwxgtk2.4-dev, libacl1-dev, libkrb5-dev
+Build-Depends-Indep: tetex-extra, gs
+Standards-Version: 3.6.1
+
+Package: bacula
+Architecture: all
+Pre-Depends: debconf (>= 1.4.30)
+Depends: bacula-director-sqlite(= ${Source-Version})|bacula-director, bacula-console (= ${Source-Version}), bacula-fd (= ${Source-Version}), bacula-sd (= ${Source-Version}),
+Description: Network backup, recovery and verification (Meta-package)
+ Bacula is a set of computer programs that permit you (or the system
+ administrator) to manage backup, recovery and verification of computer data
+ across a network of computer of different kinds.
+ .
+ Bacula is relatively easy to use and efficient, while offering many advanced
+ storage management features that make it easy to find and recover lost or
+ damaged files. Due to its modular design, Bacula is scalable from small single 
+ computer systems to systems consisting of hundreds of computers located over 
+ a large network.
+ .
+ This meta-package provides the entire suite of bacula applications:
+ job scheduling, storage control, node connector, and administrative console.
+
+Package: bacula-common
+Architecture: all
+Pre-Depends: debconf (>= 1.4.30)
+Depends: adduser (>= 3.0)
+Description: Network backup, recovery and verification (Common Support files)
+ Bacula is a set of computer programs that permit you to manage backup,
+ recovery, and verification of computer data across a network of computers
+ of different kinds. 
+
+Package: bacula-director-common
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30)
+Depends: bacula-common, exim4|mail-transport-agent, ${shlibs:Depends}
+Description: Network backup, recovery and verification (Director common files)
+ Bacula is a set of computer programs that permit you to manage backup,
+ recovery, and verification of computer data across a network of computers
+ of different kinds.
+
+Package: bacula-director-sqlite
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30)
+Depends: bacula-common (= ${Source-Version}), bacula-director-common (= ${Source-Version}), sqlite, ${shlibs:Depends}
+Conflicts: bacula-director-mysql, bacula-director-pgsql
+Provides: bacula-director
+Replaces: bacula-director-mysql, bacula-director-pgsql
+Description: Network backup, recovery and verification (Director daemon)
+ The Bacula Director service supervises all the backup, restore, verify and
+ archive operations. The system administrator uses the Director to schedule
+ backups and to recover files.
+ The Director can run as a daemon or as a service (i.e. in the foreground)
+ .
+ This version stores Bacula's Catalog in an SQLite database, and thus is
+ suited for smaller installations.
+ 
+Package: bacula-director-mysql
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30)
+Depends: bacula-common (= ${Source-Version}), bacula-director-common (= ${Source-Version}), mysql-client, ${shlibs:Depends}
+Conflicts: bacula-director-sqlite, bacula-director-pgsql
+Provides: bacula-director
+Replaces: bacula-director-sqlite, bacula-director-pgsql
+Recommends: mysql-server (>= 3.23.49)
+Description: Network backup, recovery and verification (Director daemon)
+ The Bacula Director service supervises all the backup, restore, verify and
+ archive operations. The system administrator uses the Director to schedule
+ backups and to recover files.
+ The Director can run as a daemon or as a service (i.e. in the foreground)
+ .
+ This version stores Bacula's Catalog in a MySQL server, and thus is suited
+ for largish installations.
+
+Package: bacula-director-pgsql
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30)
+Depends: bacula-common (= ${Source-Version}), bacula-director-common (=${Source-Version}), postgresql-client (>=7.4)
+Conflicts: bacula-director-sqlite, bacula-director-mysql
+Provides: bacula-director
+Replaces: bacula-director-sqlite, bacula-director-mysql
+Recommends: postgresql (>= 7.4)
+Suggests: postgresql-contrib, postgresql-doc
+Description: Network backup, recovery and verification (Director daemon)
+ The Bacula Director service supervises all the backup, restore, verify and
+ archive operations. The system administrator uses the Director to schedule
+ backups and to recover files.
+ The Director can run as a daemon or as a service (i.e. in the foreground)
+ .
+ This version stores Bacula's Catalog in a PostgreSQL server, and thus is 
+ suited for largish installations.
+
+Package: bacula-client
+Architecture: all
+Depends: bacula-console (= ${Source-Version}), bacula-fd (= ${Source-Version})
+Recommends: bacula-traymonitor
+Description: Network backup, recovery and verification (Client meta-package)
+ Minimal Bacula system client (File Daemon and Console only)
+
+Package: bacula-fd
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30)
+Depends: bacula-common (= ${Source-Version}), ${shlibs:Depends}
+Description: Network backup, recovery and verification (Filer daemon)
+ This program has to be installed in the machine to be backed up. It is
+ responsible for providing the file attributes and data when requested by
+ the Director, and also for the filesystem-dependent part of restoration.
+ .
+ There is a Win32 version of this program available for download from
+ Bacula's website: www.bacula.org
+
+Package: bacula-server
+Architecture: all
+Depends: bacula-director-mysql (= ${Source-Version})|bacula-director, bacula-sd (= ${Source-Version})
+Recommends: bacula-fd
+Description: Network backup, recovery and verification (Server meta-package)
+ Bacula system server: SQL-based catalog (either MySQL or PgSQL) and 
+ Storage Daemon, for a single machine (medium-sized deployment)
+ .
+ This meta-package provides an standard server install, comprising Director
+ and Storage daemons.
+
+Package: bacula-sd
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30), bacula-common (= ${Source-Version})
+Depends: ${shlibs:Depends}
+Recommends: mt-st, mtx
+Suggests: dds2tar, scsitools, sg3-utils
+Description: Network backup, recovery and verification (Storage daemon)
+ This program performs the storage and recovery of the file attributes and 
+ data to the physical backup media or volumes. In other words, it is
+ responsible for reading and writing your tapes (or other storage media,
+ such as files).
+ .
+ The Storage Daemon runs as a daemon on the machine which has the backup
+ device(s) (usually a tape drive).
+
+Package: bacula-doc
+Architecture: all
+Description: Network backup, recovery and verification - Documentation
+ Bacula is a set of computer programs that permit you (or the system
+ administrator) to manage backup, recovery and verification of computer data
+ across a network of computer of different kinds.
+ .
+ Bacula is relatively easy to use and efficient, while offering many advanced
+ storage management features that make it easy to find and recover lost or
+ damaged files. 
+
+Package: bacula-console
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30)
+Depends: bacula-common (= ${Source-Version}), ${shlibs:Depends}
+Description: Network backup, recovery and verification (Mgmt. Console)
+ The Console allows the administrator or user to communicate with the
+ Bacula Director. This is the TTY version.
+
+Package: bacula-console-gnome
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30)
+Depends: bacula-common (= ${Source-Version}), ${shlibs:Depends}
+Description: Network backup, recovery and verification (Console, Gnome version)
+ The Console allows the administrator or user to communicate with the
+ Bacula Director. This is the Gnome version.
+ .
+ This Gnome2 GUI interface is for the moment far from complete but is quite
+ functional, having all the capabilities of the shell Console.
+
+Package: bacula-wxconsole
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30)
+Depends: bacula-common (= ${Source-Version}), ${shlibs:Depends}
+Description: Network backup, recovery and verification (Console, Gnome version)
+ The WX-Console allows the administrator or user to communicate with the
+ Bacula Director. It provides a graphical interface to the backup/restore
+ operations.
+ .
+ This GUI interface has been designed to ease restore operations as much as
+ possible as compared to the "conventional" console.
+ .
+ There is a Win32 version of this program available for download from
+ Bacula's website: www.bacula.org
+
+#Package: bacula-traymonitor
+#Architecture: any
+#Pre-Depends: debconf (>= 1.4.30)
+#Depends: bacula-common (= ${Source-Version}), ${shlibs:Depends}
+#Recommends: kde
+#Description: Network backup, recovery and verification (Tray monitor)
+# The tray monitor
+# .

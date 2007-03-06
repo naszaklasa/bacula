@@ -1,0 +1,392 @@
+#!/usr/bin/make -f
+# debian/rules for Bacula
+# by Jose Luis Tallon, 
+# based upon dh_make template, copyright 1997 by Joey Hess.
+#
+
+#export DH_VERBOSE=1
+
+# These are used for cross-compiling and for saving the configure script
+# from having to guess our platform (since we know it already)
+DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+
+
+CFLAGS = -g -Wall
+INSTALL_PROGRAM = install
+
+
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -O0
+else
+	CFLAGS += -O2
+endif
+
+ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+	INSTALL_PROGRAM += -s
+endif
+
+
+FLAVORS = $(shell grep '^Package: bacula-director-' debian/control \
+	| sed 's/Package: bacula-director-//' | grep -v 'common' )
+
+TEMPLATES = $(wildcard debian/*.templates)
+
+CONF_ALL	= --enable-smartalloc --with-tcp-wrappers=/usr/include
+CONF_common	= --without-mysql --without-sqlite --without-postgresql \
+	--enable-gnome --with-x --enable-wx-console --enable-tray-monitor
+CONF_sqlite	= --with-sqlite
+CONF_mysql	= --with-mysql
+CONF_pgsql	= --with-postgresql
+
+FLAGS_mysql	= DEBUG=-DHAVE_MYSQL SQL_INC=-I/usr/include/mysql
+FLAGS_sqlite	= DEBUG=-DHAVE_SQLITE SQL_INC=-I/usr/include
+FLAGS_pgsql	= DEBUG=-DHAVE_POSTGRESQL SQL_INC=-I/usr/include/postgresql
+
+LIBS_mysql	= -L/usr/lib/mysql -lmysqlclient -lz -lssl -lcrypto
+LIBS_sqlite	= -L/usr/lib -lsqlite
+LIBS_pgsql	= -L/usr/lib -lpq -lssl -lcrypto -lcrypt -lkrb5 -lk5crypto -lcom_err -lresolv
+
+
+export FLAGS_mysql LIBS_mysql
+export FLAGS_sqlite LIBS_sqlite
+export FLAGS_pgsql LIBS_pgsql
+
+export FLAVORED_BIN_RE = '^$$$||/bacula-dir$$$||/dbcheck$$$
+
+################################################################################
+
+config.status:
+	dh_testdir
+	test -e autoconf/config.sub -a -L autoconf/config.sub || \
+		ln -sf /usr/share/misc/config.sub autoconf/config.sub
+	test -e autoconf/config.guess -a -L autoconf/config.guess || \
+		ln -sf /usr/share/misc/config.guess autoconf/config.guess
+	# Add here commands to configure the package.
+	@echo "**** Configuring 'base'. Flavors: $(FLAVORS)"
+	./configure --config-cache \
+		--host=${DEB_HOST_GNU_TYPE} --build=${DEB_BUILD_GNU_TYPE} --prefix=/usr \
+		--sysconfdir=/etc/bacula --with-scriptdir=/etc/bacula/scripts \
+		--sharedstatedir=/var/lib/bacula --localstatedir=/var/lib/bacula \
+		--with-pid-dir=/var/run/bacula --with-smtp-host=localhost \
+		--with-working-dir=/var/lib/bacula --with-subsys-dir=/var/lock \
+		--mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info \
+		$(CONF_ALL) $(CONF_common)
+	@echo "**** Base config done ****"
+
+
+
+build-arch:  config.status build-arch-stamp build-arch-flavor
+build-arch-stamp:
+	dh_testdir
+
+	# Main building process
+	$(MAKE)
+
+
+	# Grrr... client-only does not build needed db-independent 'bsmtp', 'stored'
+	$(MAKE) -C src/tools
+	$(MAKE) -C src/stored
+
+	chmod 755 debian/additions/postinst-common
+	chmod 755 debian/additions/bconsole
+
+	touch $@
+
+build-arch-flavor:	build-arch-flavor-stamp
+build-arch-flavor-stamp:
+	@for subdir in cats dird stored tools; do \
+		(cd src/$$subdir; cp Makefile Makefile.orig ); \
+	done
+
+	mv src/dird/bacula-dir src/dird/bacula-dir.orig
+	mv src/tools/dbcheck src/tools/dbcheck.orig
+	mv src/stored/bscan src/stored/bscan.orig
+
+	@for pkg in ${FLAVORS}; do \
+		eval FLAGS=$$`echo FLAGS_$$pkg`; \
+		eval LIBS=$$`echo LIBS_$$pkg`; \
+		echo ; echo "=== Building the $$pkg binaries: FLAGS=$$FLAGS $$LIBS" ===; \
+		$(MAKE) -C src/cats clean depend all $$FLAGS; \
+		for subdir in cats dird stored tools; do \
+			(cd src/$$subdir && cat Makefile.orig | \
+				sed "s@^DB_LIBS.*@DB_LIBS = $$LIBS@" > Makefile ; \
+			); \
+			$(MAKE) -C src/$$subdir clean depend all $$FLAGS ; \
+		done; \
+		echo "+ Renaming flavored binaries..."; \
+		for file in `find src -type f -exec file {} \; | \
+			grep 'ELF.*executable.*dynamically linked' | sed 's@:.*@@'`; do \
+				if [ -n "`echo $$file | grep -E $${FLAVORED_BIN_RE}`" ]; \
+				then echo " - $$file -> $$file.$$pkg"; mv $$file $$file.$$pkg; fi; \
+		done; \
+		$(RM) src/stored/bscan ; \
+		$(MAKE) -C src/stored bscan $$FLAGS TTOOL_LDFLAGS=-static 2>/dev/null; \
+		strip src/stored/bscan ; \
+		mv src/stored/bscan src/stored/bscan.$$pkg ; \
+	done
+
+	# Clean up after build -- reported by ezanard@debian.org
+	# Cleanup and recompile "neutral" bscan so that install works
+	$(MAKE) -C src/cats clean depend all
+	$(MAKE) -C src/stored bscan
+
+	@echo "* Restoring original(neutral) executables... "
+	mv src/dird/bacula-dir.orig src/dird/bacula-dir
+	mv src/tools/dbcheck.orig src/tools/dbcheck
+	mv src/stored/bscan.orig src/stored/bscan
+	@echo "Done"
+
+	@for subdir in cats dird stored tools; do \
+		(cd src/$$subdir; cp Makefile.orig Makefile); \
+	done
+
+	touch $@
+
+build-indep: config.status  build-indep-stamp
+build-indep-stamp:
+	dh_testdir
+
+	# Add here command to compile/build the arch indep package.
+	# It's ok not to do anything here, if you don't need to build
+	#  anything for this package.
+	#/usr/bin/docbook-to-man debian/bacula.sgml > bacula.1
+
+	( cd doc/latex ;	$(MAKE) tex dvipdf ; cd ../.. )
+
+	touch $@
+
+
+build: patch build-arch build-indep debian/po/templates.pot
+
+clean:
+	dh_testdir
+	dh_testroot
+	$(RM) config.cache
+
+	# Grrr... clean up after building "servers"
+	-for subdir in cats dird stored tools; do \
+		$(MAKE) -C src/$$subdir distclean; \
+        done
+
+	# Add here commands to clean up after the build process.
+	-$(MAKE) distclean
+
+
+	$(RM) autoconf/config.cache autoconf/config.sub	autoconf/config.guess autoconf/config.log config.log
+	$(RM) build-arch-stamp build-indep-stamp
+
+	dh_clean
+	$(RM) -r debian/tmp*
+	for dir in src/tconsole src/gnome-console src/gnome2-console src/wx-console \
+		scripts platforms src/win32 src/win32/pebuilder \
+		src/tray-monitor src/stored \
+		rescue rescue/solaris rescue/freebsd \
+		rescue/linux rescue/linux/cdrom rescue/linux/floppy; do \
+			$(RM) $$dir/Makefile ;\
+	done
+	$(RM) src/win32/*.nsi
+
+	## delete all remaining config files
+	$(RM) `find src -name '*.conf'`
+
+	## delete ${FLAVORED_BINARIES} 
+	$(RM) $(foreach pkg,$(FLAVORS), src/dird/bacula-dir.$(pkg) src/tools/dbcheck.$(pkg) src/stored/bscan.$(pkg))
+
+	-$(MAKE) -C doc/latex clean
+
+	$(RM) build-arch-flavor-stamp
+
+	$(RM) config.status config.cache config.log config.out
+	$(RM) autoconf/Make.common Makefile
+	$(RM) dbcheck bscan
+
+	# Unpatch everything. By PMHahn@debian.org
+	#if test -f patch-stamp; then \
+	#	for p in `ls -1 debian/patches/*.patch | sort -r`; do \
+	#		patch -p1 -i $$p; \
+	#	done; \
+	#	$(RM) patch-stamp; \
+	#fi
+
+	#if test -f patch-stamp; then \
+	#	patch -R -p0 -i debian/patches/10-grant_pgsql_privileges.patch; \
+	#	patch -R -p0 -i debian/patches/12-enable-pgsql_indexes.patch; \
+	#	$(RM) patch-stamp; \
+	#fi
+	$(RM) patch-stamp
+
+
+debian/po/templates.pot: $(TEMPLATES)
+	@debconf-updatepo
+
+
+install: build install-common install-flavors install-indep
+
+install-common: DH_OPTIONS=
+install-common: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k -pbacula-common
+	dh_clean -k -pbacula-director-common
+	dh_clean -k -pbacula-fd -pbacula-sd 
+	dh_clean -k -pbacula-console -pbacula-console-gnome -pbacula-wxconsole
+	dh_clean -k -pbacula -pbacula-client -pbacula-server -pbacula-doc
+	for pkg in ${FLAVORS}; do dh_clean -k -pbacula-director-$$pkg; done
+
+	dh_installdirs
+
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
+	$(MAKE) -C src/tools install DESTDIR=$(CURDIR)/debian/tmp
+	$(MAKE) -C src/stored install DESTDIR=$(CURDIR)/debian/tmp
+
+
+	mv debian/tmp/usr/sbin/bconsole debian/tmp/usr/sbin/bacula-console
+	mv debian/tmp/usr/sbin/gnome-console debian/tmp/usr/sbin/bacula-console-gnome
+	mv debian/tmp/usr/sbin/wx-console debian/tmp/usr/sbin/bacula-wxconsole
+
+	mkdir -p debian/tmp/scripts
+	for pkg in ${FLAVORS}; do \
+		eval flavor="`echo $$pkg | sed -e 's@pgsql@postgresql@'`"; \
+		for f in make update; do \
+			cat src/cats/$${f}_$${flavor}_tables.in | sed -f debian/patches/fix_scripts.sed \
+			> debian/tmp/scripts/$${f}_$${pkg}_tables; \
+			chmod 755 debian/tmp/scripts/$${f}_$${pkg}_tables; \
+		done; \
+	done
+	cat src/cats/grant_postgresql_privileges.in | sed -f debian/patches/fix_scripts.sed \
+		> debian/tmp/scripts/grant_pgsql_privileges
+	chmod 755 debian/tmp/scripts/grant_pgsql_privileges
+
+	dh_install -pbacula-director-common
+
+	dh_install -pbacula-fd
+	dh_install -pbacula-console -pbacula-console-gnome -pbacula-wxconsole
+	dh_link -pbacula-console usr/share/man/man8/bconsole.8.gz usr/share/man/man8/bacula-console.8.gz
+
+install-indep: DH_OPTIONS=
+install-indep: build fixconfig
+	dh_testdir
+	dh_testroot 
+	dh_install -i
+	dh_link -pbacula-director-common
+	dh_link -pbacula-common var/lib/bacula/log var/log/bacula/log
+	chmod 755 $(CURDIR)/debian/bacula-director-common/usr/sbin/btraceback
+	dh_install -pbacula -pbacula-client -pbacula-server -pbacula-doc
+	#install doc/html-manual/* \
+	#	$(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual
+	#$(RM) $(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual/*.wml
+
+
+install-flavors: DH_OPTIONS=
+install-flavors: build install-common
+	dh_install -pbacula-sd
+	@echo "Installing flavored versions ..."
+	@for pkg in ${FLAVORS}; do \
+		for file in `find src -type f -name "*.$$pkg" -exec file {} \; | \
+			grep 'ELF.*executable.*dynamically linked' | sed 's@:.*@@'`; do \
+			eval basename=`basename $$file | sed "s@\.$$pkg@@"`; \
+			echo $${file} -> $${basename} ;\
+				$(INSTALL_PROGRAM) $$file \
+					debian/bacula-director-$${pkg}/usr/sbin/$${basename}; \
+		done; \
+		dh_install -pbacula-director-$$pkg; \
+		dh_shlibdeps -pbacula-director-$$pkg; \
+	done; # $FLAVORS
+	@echo "Done"
+
+	for pkg in ${FLAVORS}; do \
+		dh_link -pbacula-sd \
+			usr/share/man/man8/bscan.8.gz \
+			usr/share/man/man8/bscan.$$pkg.8.gz \
+		; \
+		echo "$$pkg" > debian/bacula-director-$${pkg}/etc/bacula/bacula_flavor ; \
+	done
+
+
+patch: patch-stamp
+patch-stamp:
+	chmod 755 debian/patches/btraceback
+	chmod 755 debian/patches/fix_config debian/patches/fix_director
+	chmod 755 debian/additions/bconsole
+	chmod 755 debian/additions/{start,stop}mysql debian/additions/{make,delete}_catalog_backup
+
+	#@for pf in `find debian/patches -name '*.patch' | sort`; do \
+	#	echo "Applying patch: $$pf"; \
+	#	patch -p1 -s -i $$pf; \
+	#done;
+
+#	patch -p0 -i debian/patches/10-grant_pgsql_privileges.patch
+#	patch -p0 -i debian/patches/12-enable-pgsql_indexes.patch
+	touch patch-stamp
+
+
+fixconfig:
+	for f in bconsole.conf gnome-console.conf wx-console.conf \
+		bacula-sd.conf bacula-fd.conf; do \
+		debian/patches/fix_config \
+			debian/tmp/etc/bacula/$$f \
+			debian/bacula-common/usr/share/bacula-common/defconfig/$$f; \
+	done
+	debian/patches/fix_director \
+		debian/tmp/etc/bacula/bacula-dir.conf \
+		debian/bacula-common/usr/share/bacula-common/defconfig/bacula-dir.conf
+
+
+# Build architecture-independent files here.
+# Pass -i to all debhelper commands in this target to reduce clutter.
+binary-indep: build install patch
+	dh_testdir -i
+	dh_testroot -i
+#	dh_installdebconf -i
+	dh_installdocs -i -X.cvsignore -X1 -X*.wml -X*.inc -X*.list -X*.pl -X*.apf -X*.book
+	dh_installexamples -i
+#	dh_installmenu -i
+#	dh_installlogrotate -i
+#	dh_installinit -i
+	dh_installcron -i
+	dh_installman -i
+	dh_installinfo -i
+	dh_installchangelogs ChangeLog -i
+	dh_link -i
+	dh_compress -i -X.pdf
+	dh_fixperms -i
+	dh_installdeb -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i
+
+
+# Build architecture-dependent files here.
+binary-arch: build install binary-arch-common
+
+binary-arch-common: DH_OPTIONS=
+binary-arch-common: build install
+	dh_testdir -a
+	dh_testroot -a
+	dh_install -a
+	dh_installdebconf -a
+	dh_installdocs -a
+	dh_installexamples -a
+	dh_installmenu -pbacula-console -pbacula-console-gnome -pbacula-wxconsole
+#	dh_installlogrotate -a
+	dh_installinit -pbacula-sd -- defaults 90
+	dh_installinit -pbacula-fd -- defaults 91
+	dh_installinit --name=bacula-director -pbacula-director-common --no-start -- defaults 92
+#	dh_installcron -a
+	dh_installman -a
+	dh_installinfo -a
+	dh_installchangelogs ChangeLog -a
+	dh_strip -a
+	dh_link -a
+	dh_compress -a
+	dh_fixperms -a
+	dh_makeshlibs -a
+	dh_installdeb -a
+	dh_shlibdeps -a
+	dh_gencontrol -a
+	dh_md5sums -a
+	dh_builddeb -a
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install 

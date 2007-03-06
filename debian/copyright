@@ -1,0 +1,43 @@
+This package was debianized by Jose Luis Tallon <jltallon@adv-solutions.net> on
+Sun, 19 Oct 2003 14:36:45 +0200.
+
+It was downloaded from http://www.bacula.org
+
+Upstream Authors: Kern Sibbald <kerns@users.sourceforge.net> and John Walker.
+
+Copyright: (copied from http://www.bacula.org/)
+
+Bacula Copyright, Trademark, and Licenses
+There are a number of different licenses that are used in Bacula.
+
+GPL
+The vast bulk of the code is released under the GNU General
+Public License version 2. Most of this code is copyrighted:
+Copyright (C) 2000-2003 Kern Sibbald and John Walker.
+
+Portions may be copyrighted by other people 
+(ATT, the Free Software Foundation, ...).
+
+LGPL
+Some of the Bacula library source code is released under the
+GNU Lesser General Public License. This permits third parties
+to use these parts of our code in their proprietary programs
+
+to interface to Bacula.
+
+Public Domain
+Some of the Bacula code has been released to the public domain.
+E.g. md5.c, SQLite.
+
+Trademark
+Bacula is a registered trademark of Kern Sibbald and John Walker.
+
+We have done this to ensure that any variant of Bacula will be
+exactly compatible with the program that we have released.
+The use of the name Bacula is restricted to software systems
+that agree exactly with the program presented here. 
+
+
+On Debian systems, the complete text of the GNU General Public
+License and the GNU Lesser General Public License can be found
+in /usr/share/common-licenses/.

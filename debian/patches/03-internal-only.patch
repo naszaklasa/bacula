@@ -1,0 +1,22 @@
+--- configure.orig	2004-10-19 15:35:02.000000000 +0200
++++ configure	2004-10-21 13:08:10.000000000 +0200
+@@ -20648,19 +20648,6 @@
+    exit 1
+ fi
+ 
+-if test "x${db_name}" = "xInternal" ; then
+-   echo " "
+-   echo " "
+-   echo "You have not specified either --enable-client-only or one of the"
+-   echo "  supported databases: MySQL, PostgreSQL, or SQLite".
+-   echo "  This is not permitted. Please reconfigure."
+-   echo " "
+-   echo "Aborting the configuration ..."
+-   echo " "
+-   echo " "
+-   exit 1
+-fi
+-
+ echo "
+ Configuration on `date`:
+ 

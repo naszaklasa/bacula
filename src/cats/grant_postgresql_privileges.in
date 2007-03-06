@@ -2,12 +2,14 @@
 #
 # shell script to grant privileges to the bacula database
 #
-USER=bacula
 bindir=@SQL_BINDIR@
+
+if test -z "$DBUSER"; then USER=bacula;
+else USER=$DBUSER; fi
 
 if $bindir/psql $* bacula -f - <<END-OF-DATA
 
-create user ${USER};
+create user ${USER} password '$DBPASS';
 
 -- for tables
 grant all on unsavedfiles to ${USER};

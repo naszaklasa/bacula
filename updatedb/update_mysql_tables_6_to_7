@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Shell script to update MySQL tables from version 1.32 to 1.33
+# Shell script to update MySQL tables from version 1.32 to 1.33/34
 #
 echo " "
 echo "This script will update a bacula database from version 6 to 7."
@@ -11,19 +11,25 @@ echo " "
 # the location of the mysql program
 bindir=/usr/bin
 
-DB_VER=`$bindir/mysql bacula -e 'select * from Version;'|tail -n 1 2>/dev/null`
+DB_VER="`$bindir/mysql $* bacula -e 'select * from Version;'|tail -n 1 2>/dev/null`"
 if [ -z "$DB_VER" ]; then
 	echo "Sorry, I can't seem to locate a bacula database."
 	exit 1
 fi
 
-if [ -n "$DB_VER" ] && [ "$DB_VER" -ne "6" ]; then
-	echo "Sorry, this script is designed to update a version 6 database"
-	echo "and you have a version $DB_VER database."
-	exit 1
+if [ -n "$DB_VER" ]; then
+
+	if [ "$DB_VER" = "7" ]; then
+		echo "The Catalog is already at version 7. Nothing to do!"
+		exit 0
+	elif [ "$DB_VER" -ne "6" ]; then
+		echo "Sorry, this script is designed to update a version 6 database"
+		echo "and you have a version $DB_VER database."
+		exit 1
+	fi
 fi
 
-if $bindir/mysql $* -f <<END-OF-DATA
+if $bindir/mysql $* -f <<END_OF_DATA
 USE bacula;
 
 ALTER TABLE Media ADD COLUMN InChanger TINYINT NOT NULL DEFAULT 0;
@@ -70,10 +76,11 @@ CREATE TABLE BaseFiles (
 DELETE FROM Version;
 INSERT INTO Version (VersionId) VALUES (7);
 
-END-OF-DATA
+END_OF_DATA
 then
    echo "Update of Bacula MySQL tables succeeded."
 else
    echo "Update of Bacula MySQL tables failed."
 fi
+
 exit 0

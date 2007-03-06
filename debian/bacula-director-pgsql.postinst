@@ -1,0 +1,309 @@
+#! /bin/bash
+# postinst script for bacula-director-pgsql
+# by Jose Luis Tallon <jltallon@adv-solutions.net>
+# most ideas/code contributed by:
+# - Alvaro Hernandez Tortosa <aht@ahtech.net>
+# - Philip Mattias Hahn <pmhahn@debian.org>
+#
+
+. /usr/share/debconf/confmodule
+db_version 2.0
+
+set -e
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+#
+# quoting from the policy:
+#     Any necessary prompting should almost always be confined to the
+#     post-installation script, and should be protected with a conditional
+#     so that unnecessary prompting doesn't happen if a package's
+#     installation fails and the `postinst' is called with `abort-upgrade',
+#     `abort-remove' or `abort-deconfigure'.
+
+## Globals
+CATALOG=bacula
+PGSQL=/usr/bin/psql
+MAKE_SQL_TABLES="/usr/share/bacula-director/make_pgsql_tables"
+UPGRADE_SQL_DIR="/usr/share/bacula-director"
+UPGRADE_TABLES1="update_postgresql_tables_7_to_8"
+LOGDIR="/var/log/bacula"
+GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_pgsql_privileges"
+POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
+DEFCONFIG="/usr/share/bacula-common/defconfig"
+CFGFILE="/etc/bacula/bacula-dir.conf"
+AUTHFILE=`getent passwd bacula | cut -d ':' -f 6`/.pgpass
+
+backup_pgpass () {
+	if [ -f $DB_ADMIN_AUTHFILE ]; then
+		mv $DB_ADMIN_AUTHFILE ${DB_ADMIN_AUTHFILE}.bak
+	fi
+}
+restore_pgpass () {
+	rm -f $DB_ADMIN_AUTHFILE
+	if [ -f ${DB_ADMIN_AUTHFILE}.bak ]; then
+		mv ${DB_ADMIN_AUTHFILE}.bak $DB_ADMIN_AUTHFILE
+	else
+		rm -f $DB_ADMIN_AUTHFILE
+	fi
+}
+patch_pg_hba () {
+	# Inserts an access line to pg_hba.conf, after the IPv4 comment, 
+	# to allow local auth to the bacula database; and reload PostgreSQL
+
+	if [ ! -f "$1" ]; then return 1; fi
+	# Check for existence of the host line, before adding
+	if [ -z "`grep '^host[\ \s].*bacula' $1 | sed -n 1p`" ]; then
+		cat $1 | sed 's/^#\ All\ IPv4.*$/&\nhost    bacula      all         127.0.0.1         255.255.255.255   md5/' > ${1}.dpkg-tmp
+		cat ${1}.dpkg-tmp > $1 # perms unchanged 
+		rm -f ${1}.dpkg-tmp
+		if [ -n "`grep '^host[\ \s].*bacula' $1 | sed -n 1p`" ]; then
+			# the host line is now there, send a signal to reload PG config
+			if [ -f /etc/init.d/postgresql ]; then 
+				if ! eval "/etc/init.d/postgresql reload >/dev/null 2>&1"; then
+					echo "Could not reload the PostgreSQL server."
+				fi
+			fi
+		fi
+	fi
+	return 0
+}
+
+case "$1" in
+configure)
+	
+	db_get bacula-director-pgsql/db_host || true
+	PGSQL_HOST="$RET"
+	db_get bacula-director-pgsql/pgsql_root_username || true
+	DB_ADMIN="$RET"
+	db_get bacula-director-pgsql/pgsql_root_password || true
+	DB_ADMIN_PSWD="$RET"
+	db_get bacula-director-pgsql/db_user || true
+	DBUSER="$RET"
+	db_get bacula-director-pgsql/db_password || true
+	DBPASS="$RET"
+
+	PGHOST=""
+	PGUSER="$DB_ADMIN"
+        
+	# default: "localhost"
+        if [ "$PGSQL_HOST" != "localhost" ];  then 
+		PGHOST="$PGSQL_HOST"
+		PGSQL_HOST_STRING="-h $PGSQL_HOST"
+		PGCMD="eval"
+		PGCMDUSER=`id -nu`
+
+	else
+		# All pgsql commands are run under the db admin's unix account, 
+		# to satisfy the default "IDENT sameuser" authentication
+
+		if ! getent passwd $DB_ADMIN >/dev/null ; then
+			echo -e "\nFATAL: the specified DB Administrator does not exist in 'passwd' databases"
+			exit 1
+		fi
+		
+		PGSQL_HOST_STRING=""
+		PGCMD="su -s /bin/sh $DB_ADMIN -c"
+		PGCMDUSER=$DB_ADMIN
+		
+	fi
+	
+	# Export the connection parameters for psql
+	export PGHOST PGUSER
+	
+	# Since it's insecure to pass the password to postgres as 
+	# an environment variable 
+	# (www.postgresql.org/docs/7.4/interactive/libpq-envars.html),
+	# the password is set in the $HOME/.pgpass file (for details check
+	# http://www.postgresql.org/docs/7.4/interactive/libpq-pgpass.html).
+	
+	DB_ADMIN_AUTHFILE=`getent passwd $PGCMDUSER | cut -d ':' -f 6`/.pgpass
+	backup_pgpass
+	echo "$PGSQL_HOST:*:*:$DB_ADMIN:$DB_ADMIN_PSWD" > $DB_ADMIN_AUTHFILE
+	chown $PGCMDUSER:root $DB_ADMIN_AUTHFILE 
+	chmod 0600 $DB_ADMIN_AUTHFILE
+
+	db_get bacula-director-pgsql/drop_db || true; DROP_DB="$RET";
+	db_get bacula-director-pgsql/create_tables || true; CREATE_TABLES="$RET";
+
+	if [ "$DROP_DB" = "true" -o "$CREATE_TABLES" = "true" ]; then
+
+		echo -n "Checking DB connectivity..."
+		if ! $PGCMD "$PGSQL -l" >/dev/null 2>&1; then
+			echo -e "\nFATAL: Could not connect to PostgreSQL server at $PGSQL_HOST"
+			restore_pgpass
+			exit 1
+        	fi
+	        echo "Ok."
+
+	fi # DROP_DB || CREATE_TABLES
+
+	if [ "$DROP_DB" = "true" ]; then
+
+		db_get bacula-director-pgsql/db_user || true
+		DBUSER="$RET"
+
+		echo -n "Removing PostgreSQL User '$DBUSER' at '$PGSQL_HOST'... "
+		if ! $PGCMD "$PGSQL -d template1 \
+			-c \"DROP USER $DBUSER;\"" >/dev/null  2>&1; then
+			echo -e "\nERROR: Drop user failed!\n";
+		else
+			echo "Ok."
+		fi
+		
+		echo -n "Removing Catalog '$CATALOG' at '$PGSQL_HOST'... "
+		if ! $PGCMD "$PGSQL -d template1 \
+			-c \"DROP DATABASE $CATALOG;\"" >/dev/null  2>&1; then
+			echo -e "\nERROR: Drop catalog failed!\n";
+		else
+			echo "Ok."
+		fi
+
+		# we are done, don't do it next time
+		db_set bacula-director-pgsql/drop_db false
+		
+	fi # bacula-director-pgsql/drop_db == "true"
+	
+	if [ "$CREATE_TABLES" = "true" ]; then
+                 
+		echo -n "Creating Catalog '$CATALOG' at '$PGSQL_HOST'... "
+		DB_EXIST=`$PGCMD "$PGSQL -l" 2>/dev/null | grep $CATALOG` || true
+		if [ -z "$DB_EXIST" ]; then
+			if ! $PGCMD "$PGSQL -d template1 \
+				-c \"CREATE DATABASE $CATALOG;\"" >/dev/null  2>&1; then
+				echo -e "\nERROR: Database creation failed!";
+				restore_pgpass
+				# Unset parameters since they didn't work, re-ask next time
+				db_reset bacula-director-pgsql/db_host || true
+				db_reset bacula-director-pgsql/pgsql_root_username || true
+				db_reset bacula-director-pgsql/pgsql_root_password || true
+				db_fset bacula-director-pgsql/db_host "seen" "false"
+				db_fset bacula-director-pgsql/pgsql_root_username "seen" "false"
+				db_fset bacula-director-pgsql/pgsql_root_password "seen" "false"
+				exit 1;
+			fi
+			echo "Ok."
+		else
+			echo "Already exists."
+		fi # DB_EXIST
+
+		# Create tables
+		echo -n "Creating tables ..."
+		if ! $PGCMD $MAKE_SQL_TABLES >/dev/null 2>&1
+		then
+			echo -e "\nERROR: Table creation failed!"
+			restore_pgpass
+			exit 1
+		fi
+		echo "Ok."
+
+		# Export the parameters to the grant script
+		export DBUSER DBPASS
+		
+		# Grant privileges to (unprivileged user!)
+		echo -n "Granting privileges ..."
+		if ! $PGCMD $GRANT_SQL_PRIVS >/dev/null 2>&1
+		then
+			echo -e "\nERROR: Granting privileges failed!"
+			restore_pgpass
+			db_reset bacula-director-pgsql/db_user || true
+			db_reset bacula-director-pgsql/db_password || true
+			db_fset bacula-director-pgsql/db_user "seen" "false"
+			db_fset bacula-director-pgsql/db_password "seen" "false"
+			exit 1
+                fi
+                echo "Ok."
+
+		# Allow the director to connect to the DB on start-up.
+		# The default pg_hba.conf file on debian uses an auth mechanism
+		# "ident sameuser" which restricts db connections to the same 
+		# unix user, but the Bacula Director starts up as root and makes
+		# an initial db connection, before changing uid to the bacula user.
+		if [ "$PGSQL_HOST" = "localhost" ];  then
+			patch_pg_hba "/var/lib/postgres/data/pg_hba.conf"
+		fi
+        
+		# Since it's insecure to pass the password to postgres as an environment
+ 		# variable (www.postgresql.org/docs/7.4/interactive/libpq-envars.html),
+		# the password is set in the $HOME/.pgpass file (check
+		# http://www.postgresql.org/docs/7.4/interactive/libpq-pgpass.html).
+	
+		echo "$PGSQL_HOST:*:$CATALOG:$DBUSER:$DBPASS" > $AUTHFILE
+		chown bacula:root $AUTHFILE	# reported by Shin-young Yune
+		chmod 0600 $AUTHFILE
+
+		# we are done, don't do it again next time
+		db_set bacula-director-pgsql/create_tables false
+	
+	fi # bacula-director-pgsql/create_tables == "true"
+	
+	restore_pgpass
+	export PGUSER="$DBUSER"
+	
+	if [ -n "$2" ] && dpkg --compare-versions "$2" lt "1.36.0"; then
+		rm -f $LOGDIR/upgrade.log
+		touch $LOGDIR/upgrade.log
+
+		# On upgrade, unconditionally change Catalog
+		# patched upgrade script to use additional arguments on connection
+		echo -n "Upgrading Catalog to v8 ..."
+		if ! su -s /bin/sh bacula \
+			-c "${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1" \
+                        > $LOGDIR/upgrade.log 2>&1
+		then
+                        echo -e "\nERROR: Catalog upgrading failed! Check $LOGDIR/upgrade.log for details."
+                        exit 1
+                fi
+                echo "Ok."
+	
+	fi
+
+	# PreProcess configuration
+	echo -n "Processing configuration ..."
+	TARGET=$CFGFILE.dpkg-tmp
+
+	sed -e "s/make_catalog_backup bacula bacula/make_catalog_backup -h $PGSQL_HOST -U $DBUSER/" \
+		-e "s/dbname = bacula;/dbname = $CATALOG; DB Address = $PGSQL_HOST;/" \
+		-e "s/@db_user@/$DBUSER/" -e "s/@db_pswd@/$DBPASS/" \
+		$DEFCONFIG/bacula-dir.conf > $TARGET
+
+	/bin/sh $POSTINST_COMMON
+	echo "Ok."
+	;;
+
+abort-upgrade|abort-remove|abort-deconfigure)
+
+	;;
+
+*)
+	echo "postinst called with unknown argument \`$1'" >&2
+	exit 1
+	;;
+esac
+
+# Unconditionally RESET the variables, so that
+# we "forget" about the passwords
+db_reset bacula-director-pgsql/pgsql_root_password || true
+db_fset bacula-director-pgsql/pgsql_root_password "seen" "false"
+#db_reset bacula-director-pgsql/db_password || true
+#db_fset bacula-director-pgsql/db_password "seen" "false"
+
+# Do start daemon
+db_stop
+
+if [ -n "$2" ]; then
+	/etc/init.d/bacula-director stop
+	sleep 1
+fi
+
+invoke-rc.d --quiet bacula-director start
+
+exit 0

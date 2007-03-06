@@ -8440,6 +8440,10 @@ echo "$as_me: error: \"You can configure for only one database.\"" >&2;}
               POSTGRESQL_INCDIR=/usr/include/postgresql
               POSTGRESQL_LIBDIR=/usr/lib/postgresql
               POSTGRESQL_BINDIR=/usr/bin
+          elif test -f /usr/include/postgresql/libpq-fe.h; then
+              POSTGRESQL_INCDIR=/usr/include/postgresql
+              POSTGRESQL_LIBDIR=/usr/lib
+              POSTGRESQL_BINDIR=/usr/lib/postgresql/bin
           else
               echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6
@@ -22795,19 +22799,6 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    echo "  This is not permitted. Please reconfigure."
    echo " "
    echo "Aborting configuration ..."
-   echo " "
-   echo " "
-   exit 1
-fi
-
-if test "x${db_name}" = "xInternal" ; then
-   echo " "
-   echo " "
-   echo "You have not specified either --enable-client-only or one of the"
-   echo "  supported databases: MySQL, PostgreSQL, or SQLite".
-   echo "  This is not permitted. Please reconfigure."
-   echo " "
-   echo "Aborting the configuration ..."
    echo " "
    echo " "
    exit 1

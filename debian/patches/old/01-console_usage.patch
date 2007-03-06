@@ -1,0 +1,11 @@
+--- src/console/console.c.orig	2004-06-15 00:21:04.000000000 +0200
++++ src/console/console.c	2004-06-15 00:21:20.000000000 +0200
+@@ -97,7 +97,7 @@
+ {
+    fprintf(stderr, _(
+ "\nVersion: " VERSION " (" BDATE ") %s %s %s\n\n"
+-"Usage: bconsole [-s] [-c config_file] [-d debug_level] [config_file]\n"
++"Usage: bconsole [-s] [-c config_file] [-d debug_level]\n"
+ "       -c <file>   set configuration file to file\n"
+ "       -dnn        set debug level to nn\n"
+ "       -s          no signals\n"

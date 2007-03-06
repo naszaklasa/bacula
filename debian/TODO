@@ -1,0 +1,12 @@
+* Verify upgrades work as expected
+
+* Logging:
+	- Log to /var/log/bacula
+	- Install logrotate control file
+	-> Cristoph Haas
+
+* Bacula-SD
+	- Offer menu "which 'flavor' are you running?"
+	- Use update-alternatives to set a link from /usr/sbin/bscan
+	to /usr/lib/bacula/bscan.$flavor
+

@@ -1,0 +1,16 @@
+--- src/cats/sql_update.c.orig	2004-08-17 16:40:08.000000000 +0200
++++ src/cats/sql_update.c	2004-10-21 13:07:11.000000000 +0200
+@@ -395,4 +395,13 @@
+    }
+ }
+ 
++#else
++
++void
++db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
++{
++  /* DUMMY func for Bacula_DB */
++  return;
++}
++
+ #endif /* HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL*/

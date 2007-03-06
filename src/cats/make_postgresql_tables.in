@@ -212,14 +212,9 @@ create table file
 
 create index file_jobid_idx on file (jobid);
 create index file_fp_idx on file (filenameid, pathid);
-
---
--- Possibly add one or more of the following indexes
---  if your Verifies are too slow.
---
--- create index file_pathid_idx on file(pathid);
--- create index file_filenameid_idx on file(filenameid);
--- create index file_jpfid_idx on file (jobid, pathid, filenameid);
+create index file_pathid_idx on file(pathid);
+create index file_filenameid_idx on file(filenameid);
+create index file_jpfid_idx on file (jobid, pathid, filenameid);
 
 create table jobmedia
 (

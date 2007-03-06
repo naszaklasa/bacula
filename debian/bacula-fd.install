@@ -1,0 +1,5 @@
+debian/tmp/usr/sbin/bacula-fd
+debian/additions/make_catalog_backup	etc/bacula/scripts
+debian/additions/delete_catalog_backup	etc/bacula/scripts
+debian/additions/startmysql	etc/bacula/scripts
+debian/additions/stopmysql	etc/bacula/scripts
