@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Shell script to update MySQL tables from version 1.32 to 1.33/1.34
+# Shell script to update MySQL tables from version 1.32 to 1.33
 #
 echo " "
 echo "This script will update a bacula database from version 6 to 7."

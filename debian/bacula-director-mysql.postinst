@@ -188,4 +188,6 @@ fi
 
 invoke-rc.d --quiet bacula-director start
 
+#DEBHELPER#
+
 exit 0

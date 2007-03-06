@@ -31460,6 +31460,19 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi
 
+if test "x${db_name}" = "xInternal" ; then
+   echo " "
+   echo " "
+   echo "You have not specified either --enable-client-only or one of the"
+   echo "  supported databases: MySQL, PostgreSQL, SQLite3 or SQLite."
+   echo "  This is not permitted. Please reconfigure."
+   echo " "
+   echo "Aborting the configuration ..."
+   echo " "
+   echo " "
+   exit 1
+fi
+
 echo "
 Configuration on `date`:
 

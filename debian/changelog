@@ -1,3 +1,73 @@
+bacula (1.38.9-1) unstable; urgency=low
+
+  * New maintainer: John Goerzen <jgoerzen@complete.org>.
+    Closes: #366625.
+    Thanks to Jose Luis Tallon for initially packaging and maintaining
+    Bacula in Debian.
+
+  * Close bugs that have been fixed in my earlier NMUs.
+    Closes: #322753, #335809, #343762, #326175, #309601, #305220, #329271.
+    Closes: #326178, #312329, #303456, #339341, #339322, #281957, #331757.
+    Closes: #358762, #357619, #337250, #337376, #346430, #314492, #303862.
+    Closes: #339084.
+
+  * Examine all diffs to upstream and revert ones that are not
+    (any longer) necessary.
+
+  * Revert diff to db.m4 -- Bacula is now aware of pg_config natively.
+
+  * Removed commented-out patching/unpatching code in debian/rules
+
+  * Removed obsolete patch files debian/patches/*.patches,
+    debian/patches/*old.  These were only referenced by commented-out
+    code in debian/rules.
+
+  * Revert patch to dbd_find.c -- no apparent reason existed for
+    the change.
+
+  * Reverted hack to comment in update_mysql_tables_6_to_7
+
+  * Reverted hack to configure checking on syntax
+
+  * Renamed bacula-wxconsole to bacula-console-wx to maintain a
+    sane naming scheme.  Closes: #326177.
+
+  * Removed commented-out bacula-doc section from debian/control.
+
+  * Build-depends on mtx.
+
+  * Removed commented-out build-depends-indep for docs.
+
+  * Rewrote debian/rules build system -- now uses suggested vim-like 
+    build system.  It calls configure several times and builds the
+    package for each DB, rather than trying to hack the configure
+    system to short-circuit that.
+
+  * Use stock make_catalog_backup/delete_catalog_backup scripts,
+    and move these into the per-db bacula-director-* packages.
+
+  * Now build Sqlite3 packages (in addition to existing Sqlite v2
+    packages) and make them the default.
+
+  * Fix sqlite build-deps.  Previous versions build-dep'd on sqlite3
+    but built using sqlite2.
+
+  * No longer rename consoles in rules.
+
+  * Update standards-version to 3.7.0.
+  
+  * Clean target removes config.log
+
+  * Move bcopy and bscan manpages into proper bacula-sd-*sql* packages
+
+  * Added missing debconf dependencies to the bacula director packages
+
+  * Added missing adduser dependency to bacula-director-common
+
+  * Fixed menu files for correct location of console files
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 10 May 2006 11:16:05 -0500
+
 bacula (1.38.9-0.2) unstable; urgency=low
 
   * No longer rm -rf /var/lib/bacula in bacula-director-common postinst.

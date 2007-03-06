@@ -1,2 +1,2 @@
-debian/bacula-director-sqlite/usr/sbin/bscan usr/bin
-debian/bacula-director-sqlite/usr/sbin/bcopy usr/bin
+debian/tmp-install-sqlite/usr/sbin/bscan usr/bin
+debian/tmp-install-sqlite/usr/sbin/bcopy usr/bin

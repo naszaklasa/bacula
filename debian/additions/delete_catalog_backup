@@ -1,9 +1,0 @@
-#!/bin/sh
-#
-# This script deletes a catalog dump
-#
-WORKDIR=/var/lib/bacula
-DATAFILE=bacula.sql
-
-
-rm -f $WORKDIR/$DATAFILE

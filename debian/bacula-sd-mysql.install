@@ -1,2 +1,2 @@
-debian/bacula-director-mysql/usr/sbin/bscan          usr/bin
-debian/bacula-director-mysql/usr/sbin/bcopy          usr/bin
+debian/tmp-install-mysql/usr/sbin/bscan          usr/bin
+debian/tmp-install-mysql/usr/sbin/bcopy          usr/bin

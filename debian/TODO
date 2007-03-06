@@ -1,3 +1,5 @@
+* Make sure btraceback can be found in /usr/lib/bacula
+
 * Verify upgrades work as expected
 
 * Logging:
@@ -9,4 +11,21 @@
 	- Offer menu "which 'flavor' are you running?"
 	- Use update-alternatives to set a link from /usr/sbin/bscan
 	to /usr/lib/bacula/bscan.$flavor
+
+* bacula-common: 
+  /var/lib/bacula
+  /var/log/bacula
+  /var/log/bacula/log
+  /var/run/bacula
+
+  bacula-director-common: /var/log/bacula/bacula.log
+  /var/run/bacula
+
+  bacula-director-*: update_tables_x_to_x
+
+  bacula-sd-*: var/run/bacula var/lib/bacula
+
+* defconfig stuff is broken
+
+* look at installed bins and make sure we've got 'em all
 

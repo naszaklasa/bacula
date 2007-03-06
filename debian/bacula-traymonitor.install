@@ -1,2 +1,2 @@
-src/tray-monitor/bacula-tray-monitor	usr/bin
-debian/tmp/bacula-traymonitor.xpm		usr/share/pixmaps
+debian/tmp-install-sqlite/usr/sbin/bacula-tray-monitor	usr/bin
+src/tray-monitor/generic.xpm usr/share/pixmaps/bacula-traymonitor.xpm

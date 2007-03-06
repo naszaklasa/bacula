@@ -26,10 +26,10 @@ set -e
 #     `abort-remove' or `abort-deconfigure'.
 
 DB="/var/lib/bacula/bacula.db"
-MAKE_SQL_TABLES=/usr/share/bacula-director/make_sqlite_tables
+MAKE_SQL_TABLES=/usr/share/bacula-director/make_sqlite3_tables
 UPGRADE_SQL_DIR=/usr/share/bacula-director
-UPGRADE_TABLES1=update_sqlite_tables_6_to_7
-UPGRADE_TABLES2=update_sqlite_tables_7_to_8
+UPGRADE_TABLES1=update_sqlite3_tables_6_to_7
+UPGRADE_TABLES2=update_sqlite3_tables_7_to_8
 LOGDIR=/var/log/bacula
 POSTINST_COMMON=/usr/share/bacula-director/postinst-common
 DEFCONFIG=/usr/share/bacula-common/defconfig
@@ -40,7 +40,7 @@ case "$1" in
 		touch $DB;	#Bug 243983
 		chown bacula:bacula $DB
 
-		db_get bacula-director-sqlite/create_tables || true
+		db_get bacula-director-sqlite3/create_tables || true
 		if [ "$RET" = "true" ]; then
 			touch $DB;      #Bug 243983
 			chown bacula:bacula $DB
@@ -58,7 +58,7 @@ case "$1" in
 			
 			if dpkg --compare-versions "$2" le '1.32f-5-*' ; then
 			# On upgrade, unconditionally change Catalog 
-			echo -n "Upgrading SQLite tables to v7 format..."
+			echo -n "Upgrading SQLite3 tables to v7 format..."
 			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 >> $LOGDIR/upgrade.log  2>&1
 			then echo "Ok."
 			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
@@ -67,7 +67,7 @@ case "$1" in
 			
 			if dpkg --compare-versions "$2" lt '1.36.0' ; then
 			# On upgrade, unconditionally change Catalog 
-			echo -n "Upgrading SQLite tables to v8 format..."
+			echo -n "Upgrading SQLite3 tables to v8 format..."
 			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES2 >> $LOGDIR/upgrade.log  2>&1
 			then echo "Ok."
 			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."

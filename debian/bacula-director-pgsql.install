@@ -1,6 +1,8 @@
-debian/tmp/scripts/make_pgsql_tables	usr/share/bacula-director
-debian/tmp/scripts/grant_pgsql_privileges	usr/share/bacula-director
-updatedb/update_postgresql_tables_7_to_8	usr/share/bacula-director
-updatedb/update_postgresql_tables_8_to_9	usr/share/bacula-director
-debian/tmp/usr/sbin/bwild                        usr/sbin
-debian/tmp/usr/sbin/bregex                        usr/sbin
+debian/tmp-install-pgsql/etc/bacula/scripts/make_postgresql_tables	usr/share/bacula-director
+debian/tmp-install-pgsql/etc/bacula/scripts/grant_postgresql_privileges usr/share/bacula-director
+debian/tmp-install-pgsql/etc/bacula/scripts/update_postgres* usr/share/bacula-director
+debian/tmp-install-pgsql/usr/sbin/bwild                        usr/sbin
+debian/tmp-install-pgsql/usr/sbin/bregex                        usr/sbin
+debian/tmp-install-pgsql/etc/bacula/scripts/*catalog_backup etc/bacula/scripts
+debian/tmp-install-pgsql/usr/sbin/bacula-dir                  usr/sbin
+debian/tmp-install-pgsql/usr/sbin/dbcheck                  usr/sbin

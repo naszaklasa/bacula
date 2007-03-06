@@ -1,6 +1,7 @@
-debian/tmp/scripts/make_sqlite_tables	usr/share/bacula-director
-updatedb/update_sqlite_tables_6_to_7	usr/share/bacula-director
-updatedb/update_sqlite_tables_7_to_8	usr/share/bacula-director
-updatedb/update_sqlite_tables_8_to_9	usr/share/bacula-director
-debian/tmp/usr/sbin/bwild                        usr/sbin
-debian/tmp/usr/sbin/bregex                        usr/sbin
+debian/tmp-install-sqlite/etc/bacula/scripts/make_sqlite_tables usr/share/bacula-director
+debian/tmp-install-sqlite/etc/bacula/scripts/update_sqlite* usr/share/bacula-director
+debian/tmp-install-sqlite/usr/sbin/bwild                        usr/sbin
+debian/tmp-install-sqlite/usr/sbin/bregex                        usr/sbin
+debian/tmp-install-sqlite/etc/bacula/scripts/*catalog_backup etc/bacula/scripts
+debian/tmp-install-sqlite/usr/sbin/bacula-dir                  usr/sbin
+debian/tmp-install-sqlite/usr/sbin/dbcheck                  usr/sbin

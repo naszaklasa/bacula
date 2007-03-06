@@ -1,5 +1,5 @@
-src/tools/bsmtp		usr/lib/bacula
-src/dird/query.sql	etc/bacula/scripts
-debian/patches/btraceback		usr/lib/bacula
-debian/patches/btraceback.gdb		usr/lib/bacula
+debian/tmp-install-sqlite/usr/sbin/bsmtp		usr/lib/bacula
+debian/tmp-install-sqlite/etc/bacula/scripts/query.sql etc/bacula/scripts
+debian/tmp-install-sqlite/usr/sbin/btraceback usr/lib/bacula
+debian/tmp-install-sqlite/etc/bacula/scripts/btraceback.gdb etc/bacula/scripts
 debian/additions/postinst-common	usr/share/bacula-director

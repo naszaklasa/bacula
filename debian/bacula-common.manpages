@@ -1,2 +1,4 @@
 debian/manpages/btraceback.8
-debian/tmp/bacula.8
+scripts/bacula.man
+#debian/tmp-install-sqlite/usr/share/man/man8/bacula.8.gz
+
