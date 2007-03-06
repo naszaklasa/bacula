@@ -41,12 +41,11 @@ CONF_pgsql	= --with-postgresql
 
 FLAGS_mysql	= DEBUG=-DHAVE_MYSQL SQL_INC=-I/usr/include/mysql
 FLAGS_sqlite	= DEBUG=-DHAVE_SQLITE SQL_INC=-I/usr/include
-FLAGS_pgsql	= DEBUG=-DHAVE_POSTGRESQL SQL_INC=-I/usr/include/postgresql
+FLAGS_pgsql	= DEBUG=-DHAVE_POSTGRESQL SQL_INC=-I$(shell pg_config --includedir)
 
 LIBS_mysql	= -L/usr/lib/mysql -lmysqlclient -lz -lssl -lcrypto
 LIBS_sqlite	= -L/usr/lib -lsqlite
 LIBS_pgsql	= -L/usr/lib -lpq -lssl -lcrypto -lcrypt -lkrb5 -lk5crypto -lcom_err -lresolv
-
 
 export FLAGS_mysql LIBS_mysql
 export FLAGS_sqlite LIBS_sqlite
@@ -102,6 +101,7 @@ build-arch-flavor-stamp:
 	mv src/dird/bacula-dir src/dird/bacula-dir.orig
 	mv src/tools/dbcheck src/tools/dbcheck.orig
 	mv src/stored/bscan src/stored/bscan.orig
+	mv src/stored/bcopy src/stored/bcopy.orig
 
 	@for pkg in ${FLAVORS}; do \
 		eval FLAGS=$$`echo FLAGS_$$pkg`; \
@@ -120,21 +120,24 @@ build-arch-flavor-stamp:
 				if [ -n "`echo $$file | grep -E $${FLAVORED_BIN_RE}`" ]; \
 				then echo " - $$file -> $$file.$$pkg"; mv $$file $$file.$$pkg; fi; \
 		done; \
-		$(RM) src/stored/bscan ; \
-		$(MAKE) -C src/stored bscan $$FLAGS TTOOL_LDFLAGS=-static 2>/dev/null; \
+		$(RM) src/stored/bscan src/stored/bcopy ; \
+		$(MAKE) -C src/stored bscan bcopy $$FLAGS TTOOL_LDFLAGS=-static 2>/dev/null; \
 		strip src/stored/bscan ; \
+		strip src/stored/bcopy ; \
 		mv src/stored/bscan src/stored/bscan.$$pkg ; \
+		mv src/stored/bcopy src/stored/bcopy.$$pkg ; \
 	done
 
 	# Clean up after build -- reported by ezanard@debian.org
 	# Cleanup and recompile "neutral" bscan so that install works
 	$(MAKE) -C src/cats clean depend all
-	$(MAKE) -C src/stored bscan
+	$(MAKE) -C src/stored bscan bcopy
 
 	@echo "* Restoring original(neutral) executables... "
 	mv src/dird/bacula-dir.orig src/dird/bacula-dir
 	mv src/tools/dbcheck.orig src/tools/dbcheck
 	mv src/stored/bscan.orig src/stored/bscan
+	mv src/stored/bcopy.orig src/stored/bcopy
 	@echo "Done"
 
 	@for subdir in cats dird stored tools; do \
@@ -191,7 +194,7 @@ clean:
 	$(RM) `find src -name '*.conf'`
 
 	## delete ${FLAVORED_BINARIES} 
-	$(RM) $(foreach pkg,$(FLAVORS), src/dird/bacula-dir.$(pkg) src/tools/dbcheck.$(pkg) src/stored/bscan.$(pkg))
+	$(RM) $(foreach pkg,$(FLAVORS), src/dird/bacula-dir.$(pkg) src/tools/dbcheck.$(pkg) src/stored/bscan.$(pkg) src/stored/bcopy.$(pkg))
 
 	-$(MAKE) -C doc/latex clean
 
@@ -199,7 +202,7 @@ clean:
 
 	$(RM) config.status config.cache config.log config.out
 	$(RM) autoconf/Make.common Makefile
-	$(RM) dbcheck bscan
+	$(RM) dbcheck bscan bcopy
 
 	# Unpatch everything. By PMHahn@debian.org
 	#if test -f patch-stamp; then \
@@ -249,14 +252,15 @@ install-common: build
 	for pkg in ${FLAVORS}; do \
 		eval flavor="`echo $$pkg | sed -e 's@pgsql@postgresql@'`"; \
 		for f in make update; do \
-			cat src/cats/$${f}_$${flavor}_tables.in | sed -f debian/patches/fix_scripts.sed \
+			cat src/cats/$${f}_$${flavor}_tables.in | sed -f debian/patches/fix_ddl.sed \
 			> debian/tmp/scripts/$${f}_$${pkg}_tables; \
 			chmod 755 debian/tmp/scripts/$${f}_$${pkg}_tables; \
 		done; \
 	done
-	cat src/cats/grant_postgresql_privileges.in | sed -f debian/patches/fix_scripts.sed \
-		> debian/tmp/scripts/grant_pgsql_privileges
-	chmod 755 debian/tmp/scripts/grant_pgsql_privileges
+
+	# Fix DDL & scripts ...
+	/bin/bash debian/patches/fix_ddl
+	/bin/bash debian/patches/fix_scripts
 
 	dh_install -pbacula-director-common
 
@@ -299,6 +303,10 @@ install-flavors: build install-common
 		dh_link -pbacula-sd \
 			usr/share/man/man8/bscan.8.gz \
 			usr/share/man/man8/bscan.$$pkg.8.gz \
+		; \
+		dh_link -pbacula-sd \
+			usr/share/man/man8/bcopy.8.gz \
+			usr/share/man/man8/bcopy.$$pkg.8.gz \
 		; \
 		echo "$$pkg" > debian/bacula-director-$${pkg}/etc/bacula/bacula_flavor ; \
 	done

@@ -113,7 +113,7 @@ configure)
 
 		echo -e "GRANT ALL privileges ON $CATALOG.* TO $MYSQL_USER@$MYSQL_HOST_URI " \
 			"$MYSQL_USER_PSWD_STRING;\nFLUSH PRIVILEGES;" \
-			| $MYSQL -h $MYSQL_HOST -u $MYSQL_ROOT_USER $MYSQL_PSWD_STRING mysql
+			| eval $MYSQL -h $MYSQL_HOST -u $MYSQL_ROOT_USER $MYSQL_PSWD_STRING mysql
 
 	fi # bacula-director-mysql/create_tables == "true"
 

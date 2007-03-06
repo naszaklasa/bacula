@@ -1,1 +1,1 @@
-src/dird/bacula-dir.mysql -
+src/dird/bacula-dir.pgsql -

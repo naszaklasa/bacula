@@ -1,3 +1,33 @@
+bacula (1.36.3-2) unstable; urgency=low
+
+  * bacula-director-mysql: fix granting of privileges during postinst
+    -- typo in grant sentence('eval' missing) (Closes: #312329)
+
+  * bacula-director-pgsql: fix problems with unicode filenames
+    -- CREATE DATABASE $CATALOG WITH ENCODING = 'SQL_ASCII' (Closes: #313227)
+
+  * bacula-sd: Fix MTX support (Closes: #308803)
+    -- recompilation/relink, addresses CAN-2005-2096 implications.
+       (Closes: #318014)
+
+  * Localization enhancements:
+    - JA (Closes: #310104)
+    - FR (Closes: #309664)
+    - CS (Closes: #312148)
+    - VI (Closes: #313148)
+
+  * Solved problem with bacula-sd's lib dependencies 
+    -- bcopy was being improperly compiled/linked (Closes: #309919)
+    -- we'll have to come up with a better solution for this...
+
+  * PostgreSQL transition completed:
+    - build-depend on libpq-dev instead
+    - migrated to 'pg_config' for all directory configurations
+
+  * Dependencies: fix new? FTBFS, depend on libssl-dev (Closes: #317074)
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Thu, 14 Jul 2005 16:00:53 +0200
+
 bacula (1.36.3-1) unstable; urgency=low
 
   * New upstream version; several bugfixes (Closes: #306176)

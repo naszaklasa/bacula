@@ -1,0 +1,7 @@
+#!/bin/bash
+
+sed -f debian/patches/fix_ddl.sed \
+	< src/cats/grant_postgresql_privileges.in \
+	> debian/tmp/scripts/grant_pgsql_privileges
+	
+chmod 755 debian/tmp/scripts/grant_pgsql_privileges

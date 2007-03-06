@@ -8423,34 +8423,10 @@ echo "${ECHO_T}error" >&6
 echo "$as_me: error: \"You can configure for only one database.\"" >&2;}
    { (exit 1); exit 1; }; };
       fi
-      if test "$withval" = "yes"; then
-          if test -f /usr/local/include/libpq-fe.h; then
-              POSTGRESQL_INCDIR=/usr/local/include
-              POSTGRESQL_LIBDIR=/usr/local/lib
-              POSTGRESQL_BINDIR=/usr/local/bin
-          elif test -f /usr/include/libpq-fe.h; then
-              POSTGRESQL_INCDIR=/usr/include
-              POSTGRESQL_LIBDIR=/usr/lib
-              POSTGRESQL_BINDIR=/usr/bin
-          elif test -f /usr/include/pgsql/libpq-fe.h; then
-              POSTGRESQL_INCDIR=/usr/include/pgsql
-              POSTGRESQL_LIBDIR=/usr/lib/pgsql
-              POSTGRESQL_BINDIR=/usr/bin
-          elif test -f /usr/include/postgresql/libpq-fe.h; then
-              POSTGRESQL_INCDIR=/usr/include/postgresql
-              POSTGRESQL_LIBDIR=/usr/lib/postgresql
-              POSTGRESQL_BINDIR=/usr/bin
-          elif test -f /usr/include/postgresql/libpq-fe.h; then
-              POSTGRESQL_INCDIR=/usr/include/postgresql
-              POSTGRESQL_LIBDIR=/usr/lib
-              POSTGRESQL_BINDIR=/usr/lib/postgresql/bin
-          else
-              echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
-              { { echo "$as_me:$LINENO: error: Unable to find libpq-fe.h in standard locations" >&5
-echo "$as_me: error: Unable to find libpq-fe.h in standard locations" >&2;}
-   { (exit 1); exit 1; }; }
-          fi
+      if test "$withval" = "yes" || test -z "$withval"; then
+              POSTGRESQL_INCDIR=`pg_config --includedir`
+              POSTGRESQL_LIBDIR=`pg_config --libdir`
+              POSTGRESQL_BINDIR=`pg_config --bindir`      
       elif test -f $withval/include/libpq-fe.h; then
           POSTGRESQL_INCDIR=$withval/include
           POSTGRESQL_LIBDIR=$withval/lib

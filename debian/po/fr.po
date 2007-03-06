@@ -16,7 +16,7 @@ msgstr ""
 "Project-Id-Version: bacula\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2005-05-11 01:35+0000\n"
-"PO-Revision-Date: 2004-09-04 16:30+0200\n"
+"PO-Revision-Date: 2005-05-14 16:30+0200\n"
 "Last-Translator: Eric Madesclair <eric-m@wanadoo.fr>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
@@ -224,9 +224,8 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../bacula-director-pgsql.templates:32
-#, fuzzy
 msgid "Remove the Bacula Catalog?"
-msgstr "Faut-il créer les tables du catalogue de Bacula ?"
+msgstr "Faut-il supprimer les tables du catalogue de Bacula ?"
 
 #. Type: boolean
 #. Description
@@ -235,6 +234,8 @@ msgid ""
 "I have detected that a Bacula Catalog already exists.  Would you like to re-"
 "create it?"
 msgstr ""
+"Les tables du catalogue de Bacula existent déjà. Veuillez indiquer si vous "
+"souhaitez les créer à nouveau."
 
 #. Type: boolean
 #. Description
@@ -248,7 +249,7 @@ msgstr ""
 #. Description
 #: ../bacula-director-pgsql.templates:32
 msgid "If you are unsure, answer no."
-msgstr ""
+msgstr "Dans le doute, ne choisissez pas cette option."
 
 #. Type: string
 #. Default

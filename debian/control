@@ -2,7 +2,7 @@ Source: bacula
 Section: admin
 Priority: optional
 Maintainer: Jose Luis Tallon <jltallon@adv-solutions.net>
-Build-Depends: autotools-dev, debhelper (>= 4.1.68), po-debconf (>= 0.8.2), zlib1g-dev, libreadline5-dev | libreadline-dev, libsqlite-dev, libmysqlclient12-dev, postgresql-dev, libwrap0-dev, libgnome-dev, libgnome2-dev, libwxgtk2.4-dev, libacl1-dev, libkrb5-dev
+Build-Depends: autotools-dev, debhelper (>= 4.1.68), po-debconf (>= 0.8.2), zlib1g-dev, libreadline5-dev | libreadline-dev, libsqlite-dev, libmysqlclient14-dev, libpq-dev, libwrap0-dev, libssl-dev, libacl1-dev, libgnome-dev, libgnome2-dev, libwxgtk2.4-dev, libkrb5-dev, comerr-dev
 Build-Depends-Indep: tetex-extra, gs
 Standards-Version: 3.6.1
 

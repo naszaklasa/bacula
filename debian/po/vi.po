@@ -1,0 +1,267 @@
+# Vietnamese translation for bacula.
+# Copyright © 2005 Free Software Foundation, Inc.
+# Clytie Siddall <clytie@riverland.net.au>, 2005.
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: bacula 1.36.3-1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2005-05-11 01:35+0000\n"
+"PO-Revision-Date: 2005-06-12 17:12+0930\n"
+"Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
+"Language-Team: Vietnamese <gnomevi-list@lists.sourceforge.net>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0\n"
+
+#.Type: string
+#.Default
+#:../bacula-director-mysql.templates:3 ../bacula-director-pgsql.templates:3
+msgid "localhost"
+msgstr "localhost"
+
+#.Type: string
+#.Description
+#:../bacula-director-mysql.templates:4
+msgid "Where is the MySQL server?"
+msgstr "Trình phục vụ MySQL ở đâu?"
+
+#.Type: string
+#.Description
+#:../bacula-director-mysql.templates:4
+msgid ""
+"Enter the host where the MySQL server which is to hold Bacula's catalog is."
+msgstr "Hãy nhập tên máy có hỗ trợ trình phục vụ MySQL sẽ cất giữ phân loại Bacula."
+
+#.Type: string
+#.Default
+#:../bacula-director-mysql.templates:10 ../bacula-director-pgsql.templates:10
+msgid "bacula"
+msgstr "bacula"
+
+#.Type: string
+#.Description
+#:../bacula-director-mysql.templates:11
+msgid "MySQL username"
+msgstr "Tên người dùng MySQL"
+
+#.Type: string
+#.Description
+#:../bacula-director-mysql.templates:11
+msgid "Please, enter the username which Bacula will use to connect to MySQL."
+msgstr "Hãy nhập tên người dùng mà Bacula sẽ dùng để kết nối đến MySQL."
+
+#.Type: password
+#.Description
+#:../bacula-director-mysql.templates:17
+msgid "MySQL password"
+msgstr "Mật khẩu MySQL"
+
+#.Type: password
+#.Description
+#:../bacula-director-mysql.templates:17
+msgid "Please, enter the password which Bacula will use to connect to MySQL."
+msgstr "Hãy nhập mật khẩu mà Bacula sẽ dùng để kết nối đến MySQL."
+
+#.Type: boolean
+#.Description
+#:../bacula-director-mysql.templates:23 ../bacula-director-pgsql.templates:23
+#:../bacula-director-sqlite.templates:4
+msgid "Create tables for Bacula's Catalog?"
+msgstr "Tạo bảng cho phân loại của Bacula không?"
+
+#.Type: boolean
+#.Description
+#:../bacula-director-mysql.templates:23 ../bacula-director-pgsql.templates:23
+msgid ""
+"I have detected that the tables needed for Bacula's Catalog are missing "
+"(this is probably a fresh install). Shall I create them now?"
+msgstr "Thiếu bảng cần đến cho phân loại Bacula (rất có thể là lần cài đặt ban đầu). Bạn có muốn tạo những bảng ấy ngay bây giờ không?"
+
+#.Type: boolean
+#.Description
+#:../bacula-director-mysql.templates:23
+msgid "A MySQL 'root' username & password will be required."
+msgstr "Cần thiết một tên người dùng chủ và mật khẩu MySQL."
+
+#.Type: string
+#.Default
+#:../bacula-director-mysql.templates:31
+msgid "root"
+msgstr "người chủ"
+
+#.Type: string
+#.Description
+#:../bacula-director-mysql.templates:32
+msgid "MySQL 'root' username"
+msgstr "Tên người dùng chủ MySQL"
+
+#.Type: string
+#.Description
+#:../bacula-director-mysql.templates:32
+msgid "Please type the username to connect to MySQL as."
+msgstr "Hãy gõ tên người dùng sẽ kết nối đến MySQL."
+
+#.Type: string
+#.Description
+#:../bacula-director-mysql.templates:32 ../bacula-director-pgsql.templates:47
+msgid "This user needs to have 'create database' privileges."
+msgstr "Cần phải cho phép người dùng này có quyền truy cập «tạo cơ sở dữ liệu» (create database)."
+
+#.Type: password
+#.Default
+#:../bacula-director-mysql.templates:39 ../bacula-director-pgsql.templates:54
+msgid "NONE"
+msgstr "Không có"
+
+#.Type: password
+#.Description
+#:../bacula-director-mysql.templates:40
+msgid "MySQL 'root' password"
+msgstr "Mật khẩu người chủ MySQL"
+
+#.Type: password
+#.Description
+#:../bacula-director-mysql.templates:40 ../bacula-director-pgsql.templates:55
+msgid "Please type the password for the username entered before."
+msgstr "Hãy gõ mật khẩu cho tên người dùng mới được nhập."
+
+#.Type: boolean
+#.Description
+#:../bacula-director-mysql.templates:46 ../bacula-director-pgsql.templates:61
+#:../bacula-director-sqlite.templates:11
+msgid "Remove Catalog on purge?"
+msgstr "Loại bỏ phân loại khi tẩy không?"
+
+#.Type: boolean
+#.Description
+#:../bacula-director-mysql.templates:46
+msgid ""
+"Shall I remove the Catalog from the MySQL server at package purge time? This "
+"will free all the used space."
+msgstr "Bạn có muốn loại bỏ phân loại ra trình phục vụ MySQL khi tẩy gói tin này không? Làm như thế sẽ giải phóng các sức chứa đã dùng."
+
+#.Type: boolean
+#.Description
+#:../bacula-director-mysql.templates:46 ../bacula-director-pgsql.templates:61
+#:../bacula-director-sqlite.templates:11
+msgid ""
+"Warning: This is not undoable. Once you remove the catalog, you won't be "
+"able to restore your backups unless you have another copy of the catalog at "
+"hand."
+msgstr "Cảnh báo: không thể hủy bước này. Một khi đã loại bỏ phân loại, không thể phục hồi bản lưu trữ, trừ bạn có một bản sao phân loại nữa."
+
+#.Type: string
+#.Description
+#:../bacula-director-pgsql.templates:4
+msgid "Where is the PostgreSQL server?"
+msgstr "Trình phục vụ PostgreSQL ở đâu?"
+
+#.Type: string
+#.Description
+#:../bacula-director-pgsql.templates:4
+msgid ""
+"Enter the host where the PostgreSQL server which is to hold Bacula's catalog "
+"is."
+msgstr "Hãy nhập tên máy có hỗ trợ trình phục vụ PostgreSQL sẽ cất giữ phân loại Bacula."
+
+#.Type: string
+#.Description
+#:../bacula-director-pgsql.templates:11
+msgid "PostgreSQL username"
+msgstr "Tên người dùng PostgreSQL"
+
+#.Type: string
+#.Description
+#:../bacula-director-pgsql.templates:11
+msgid ""
+"Please, enter the username which Bacula will use to connect to PostgreSQL."
+msgstr "Hãy nhập tên người dùng mà Bacula sẽ dùng để kết nối đến PostgreSQL."
+
+#.Type: password
+#.Description
+#:../bacula-director-pgsql.templates:17
+msgid "PostgreSQL password"
+msgstr "Mật khẩu PostgreSQL"
+
+#.Type: password
+#.Description
+#:../bacula-director-pgsql.templates:17
+msgid ""
+"Please, enter the password which Bacula will use to connect to PostgreSQL."
+msgstr "Hãy nhập mật khẩu mà Bacula sẽ dùng để kết nối đến PostgreSQL."
+
+#.Type: boolean
+#.Description
+#:../bacula-director-pgsql.templates:32
+msgid "Remove the Bacula Catalog?"
+msgstr "Loại bỏ phân loại Bacula không?"
+
+#.Type: boolean
+#.Description
+#:../bacula-director-pgsql.templates:32
+msgid ""
+"I have detected that a Bacula Catalog already exists.  Would you like to re-"
+"create it?"
+msgstr "Tại đây có một phân loại Bacula rồi. Bạn có muốn tạo lại nó không?"
+
+#.Type: boolean
+#.Description
+#:../bacula-director-pgsql.templates:32
+msgid "A PgSQL 'admin' username & password will be required."
+msgstr "Sẽ cần thiết một tên người dùng và mật khẩu quản trị PostgreSQL."
+
+#.Type: boolean
+#.Description
+#:../bacula-director-pgsql.templates:32
+msgid "If you are unsure, answer no."
+msgstr "Nếu bạn chưa chắc, hãy trả lời «Không»."
+
+#.Type: string
+#.Default
+#:../bacula-director-pgsql.templates:46
+msgid "postgres"
+msgstr "postgres"
+
+#.Type: string
+#.Description
+#:../bacula-director-pgsql.templates:47
+msgid "PostgreSQL 'root' username"
+msgstr "Tên người dùng chủ PostgreSQL"
+
+#.Type: string
+#.Description
+#:../bacula-director-pgsql.templates:47
+msgid "Please type the username to connect to PostgreSQL as."
+msgstr "Hãy gõ tên người dùng sẽ kết nối đến PostgreSQL."
+
+#.Type: password
+#.Description
+#:../bacula-director-pgsql.templates:55
+msgid "PostgreSQL 'root' password"
+msgstr "Mật khẩu người chủ PostgreSQL"
+
+#.Type: boolean
+#.Description
+#:../bacula-director-pgsql.templates:61
+msgid ""
+"Shall I remove the Catalog from the PostgreSQL server at package purge time? "
+"This will free all the used space."
+msgstr "Bạn có muốn loại bỏ phân loại ra trình phục vụ PostgreSQL khi tẩy gói tin này không? Làm như thế sẽ giải phóng các sức chứa đã dùng."
+
+#.Type: boolean
+#.Description
+#:../bacula-director-sqlite.templates:4
+msgid ""
+"I have detected that the tables needed for Bacula's Catalog are missing "
+"( this is probably a fresh install ). Shall I create them now?"
+msgstr "Thiếu bảng cần đến cho phân loại Bacula (rất có thể là lần cài đặt ban đầu). Bạn có muốn tạo những bảng ấy ngay bây giờ không?"
+
+#.Type: boolean
+#.Description
+#:../bacula-director-sqlite.templates:11
+msgid ""
+"Shall I remove the Catalog / SQLite database at package purge time? This "
+"will free all the used space."
+msgstr "Bạn có muốn loại phân loại /bỏ cơ sở dữ liệu SQLite khi tẩy gói tin này? Làm như thế sẽ giải phóng các sức chứa đã dùng."

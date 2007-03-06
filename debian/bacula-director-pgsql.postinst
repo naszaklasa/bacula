@@ -178,7 +178,7 @@ configure)
 		DB_EXIST=`$PGCMD "$PGSQL -l" 2>/dev/null | grep $CATALOG` || true
 		if [ -z "$DB_EXIST" ]; then
 			if ! $PGCMD "$PGSQL -d template1 \
-				-c \"CREATE DATABASE $CATALOG;\"" >/dev/null  2>&1; then
+				-c \"CREATE DATABASE $CATALOG WITH ENCODING = 'SQL_ASCII';\"" >/dev/null  2>&1; then
 				echo -e "\nERROR: Database creation failed!";
 				restore_pgpass
 				# Unset parameters since they didn't work, re-ask next time

@@ -32,9 +32,9 @@ mandir = ${prefix}/share/man/man1
 manext = 1
 
 # Tools & program stuff
-CC = i386-linux-gcc
-CPP = i386-linux-gcc -E
-CXX = i386-linux-g++
+CC = i486-linux-gnu-gcc
+CPP = i486-linux-gnu-gcc -E
+CXX = i486-linux-gnu-g++
 MV = /bin/mv
 RM = /bin/rm
 RMF = /bin/rm -f
@@ -56,7 +56,7 @@ INSTALL_CONFIG = /usr/bin/install -c -m 640
 # Flags & libs
 CFLAGS = -g -O2 -Wall 
 CPPFLAGS = 
-LDFLAGS = -O
+LDFLAGS = 
 TTOOL_LDFLAGS = 
 #DEFS = -DHAVE_CONFIG_H
 LIBS = -lpthread  -lwrap
@@ -72,7 +72,7 @@ WLDFLAGS =
 #XINC =  @XPM_CFLAGS@
 
 # extra libraries needed by X on some systems, X library location
-#XLIB =  @XPM_LIBS@ -lX11 
+#XLIB =  -L/usr/X11R6/lib @XPM_LIBS@ -lX11 
 
 # End of common section of the Makefile
 #-------------------------------------------------------------------------
