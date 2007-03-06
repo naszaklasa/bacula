@@ -1,5 +1,5 @@
 # 
-# Version $Id: Makefile.in,v 1.64.2.5 2006/04/14 12:28:49 kerns Exp $
+# Version $Id: Makefile.in,v 1.64.2.6 2006/05/02 14:48:06 kerns Exp $
 # 
 @MCOMMON@
 
@@ -94,10 +94,10 @@ installdirs:
 	   chmod 770 $(DESTDIR)$(working_dir); \
 	fi
 	-if test "x$(dir_user)" != "x" ; then \
-	   chown -f $(dir_user) $(DESTDIR)$(working_dir); \
+	   chown $(dir_user) $(DESTDIR)$(working_dir); \
 	fi
 	-if test "x$(dir_group)" != "x" ; then \
-	   chown -f :$(dir_group) $(DESTDIR)$(working_dir); \
+	   chgrp $(dir_group) $(DESTDIR)$(working_dir); \
 	fi
 #	$(MKDIR) $(DESTDIR)$(mandir)
 

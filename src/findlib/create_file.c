@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, November MM
  *
- *   Version $Id: create_file.c,v 1.46.2.1 2006/03/04 11:10:18 kerns Exp $
+ *   Version $Id: create_file.c,v 1.46.2.2 2006/05/02 14:48:16 kerns Exp $
  *
  */
 /*
@@ -371,20 +371,30 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
  */
 static int separate_path_and_file(JCR *jcr, char *fname, char *ofile)
 {
-   char *f, *p;
+   char *f, *p, *q;
    int fnl, pnl;
 
    /* Separate pathname and filename */
-   for (p=f=ofile; *p; p++) {
+   for (q=p=f=ofile; *p; p++) {
       if (*p == '/') {
-         f = p;                    /* possible filename */
+         f = q;                    /* possible filename */
       }
+#ifdef HAVE_WIN32
+      if (*p == '\\') {            /* strip backslashes on Win32 */
+         continue;
+      }
+      *q++ = *p;                   /* copy data */
+#else
+      q++;
+#endif
    }
+
    if (*f == '/') {
       f++;
    }
+   *q = 0;                         /* terminate string */
 
-   fnl = p - f;
+   fnl = q - f;
    if (fnl == 0) {
       /* The filename length must not be zero here because we
        *  are dealing with a file (i.e. FT_REGE or FT_REG).
@@ -408,7 +418,7 @@ static int path_already_seen(JCR *jcr, char *path, int pnl)
    if (jcr->cached_pnl == pnl && strcmp(path, jcr->cached_path) == 0) {
       return 1;
    }
-   pm_strcpy(&jcr->cached_path, path);
+   pm_strcpy(jcr->cached_path, path);
    jcr->cached_pnl = pnl;
    return 0;
 }

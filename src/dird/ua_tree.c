@@ -6,7 +6,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_tree.c,v 1.39.2.1 2005/10/26 14:02:04 kerns Exp $
+ *   Version $Id: ua_tree.c,v 1.39.2.2 2006/05/02 14:48:16 kerns Exp $
  */
 /*
    Copyright (C) 2002-2005 Kern Sibbald
@@ -55,24 +55,24 @@ static int donecmd(UAContext *ua, TREE_CTX *tree);
 
 struct cmdstruct { const char *key; int (*func)(UAContext *ua, TREE_CTX *tree); const char *help; };
 static struct cmdstruct commands[] = {
- { N_("cd"),         cdcmd,        _("change current directory")},
- { N_("count"),      countcmd,     _("count marked files in and below the cd")},
- { N_("dir"),        dircmd,       _("long list current directory, wildcards allowed")},
- { N_(".dir"),       dot_dircmd,   _("long list current directory, wildcards allowed")},
- { N_("done"),       donecmd,      _("leave file selection mode")},
- { N_("estimate"),   estimatecmd,  _("estimate restore size")},
- { N_("exit"),       donecmd,      _("same as done command")},
- { N_("find"),       findcmd,      _("find files, wildcards allowed")},
- { N_("help"),       helpcmd,      _("print help")},
- { N_("ls"),         lscmd,        _("list current directory, wildcards allowed")},
- { N_("lsmark"),     lsmarkcmd,    _("list the marked files in and below the cd")},
- { N_("mark"),       markcmd,      _("mark dir/file to be restored recursively, wildcards allowed")},
- { N_("markdir"),    markdircmd,   _("mark directory name to be restored (no files)")},
- { N_("pwd"),        pwdcmd,       _("print current working directory")},
- { N_("unmark"),     unmarkcmd,    _("unmark dir/file to be restored recursively in dir")},
- { N_("unmarkdir"),  unmarkdircmd, _("unmark directory name only no recursion")},
- { N_("quit"),       quitcmd,      _("quit and do not do restore")},
- { N_("?"),          helpcmd,      _("print help")},
+ { NT_("cd"),         cdcmd,        _("change current directory")},
+ { NT_("count"),      countcmd,     _("count marked files in and below the cd")},
+ { NT_("dir"),        dircmd,       _("long list current directory, wildcards allowed")},
+ { NT_(".dir"),       dot_dircmd,   _("long list current directory, wildcards allowed")},
+ { NT_("done"),       donecmd,      _("leave file selection mode")},
+ { NT_("estimate"),   estimatecmd,  _("estimate restore size")},
+ { NT_("exit"),       donecmd,      _("same as done command")},
+ { NT_("find"),       findcmd,      _("find files, wildcards allowed")},
+ { NT_("help"),       helpcmd,      _("print help")},
+ { NT_("ls"),         lscmd,        _("list current directory, wildcards allowed")},
+ { NT_("lsmark"),     lsmarkcmd,    _("list the marked files in and below the cd")},
+ { NT_("mark"),       markcmd,      _("mark dir/file to be restored recursively, wildcards allowed")},
+ { NT_("markdir"),    markdircmd,   _("mark directory name to be restored (no files)")},
+ { NT_("pwd"),        pwdcmd,       _("print current working directory")},
+ { NT_("unmark"),     unmarkcmd,    _("unmark dir/file to be restored recursively in dir")},
+ { NT_("unmarkdir"),  unmarkdircmd, _("unmark directory name only no recursion")},
+ { NT_("quit"),       quitcmd,      _("quit and do not do restore")},
+ { NT_("?"),          helpcmd,      _("print help")},
              };
 #define comsize (sizeof(commands)/sizeof(struct cmdstruct))
 
@@ -472,6 +472,7 @@ static void ls_output(char *buf, const char *fname, const char *tag,
    char ec1[30];
    char en1[30], en2[30];
    int n;
+   time_t time;
 
    p = encode_mode(statp->st_mode, buf);
    if (dot_cmd) {
@@ -495,7 +496,13 @@ static void ls_output(char *buf, const char *fname, const char *tag,
       p += n;
       n = sprintf(p, "%10.10s  ", edit_uint64(statp->st_size, ec1));
       p += n;
-      p = encode_time(statp->st_ctime, p);
+      if (statp->st_ctime > statp->st_mtime) {
+         time = statp->st_ctime;
+      } else {
+         time = statp->st_mtime;
+      }
+      /* Display most recent time */
+      p = encode_time(time, p);
       *p++ = ' ';
       *p++ = *tag;
    }

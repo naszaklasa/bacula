@@ -1,5 +1,5 @@
 /*
- *    Version $Id: callbacks.c,v 1.10 2004/12/21 16:18:37 kerns Exp $
+ *    Version $Id: callbacks.c,v 1.10.4.1 2006/05/02 14:48:16 kerns Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -14,7 +14,7 @@
 #include "support.h"
 
 #define KEY_Enter 65293
-#define KEY_Up	  65362
+#define KEY_Up    65362
 #define KEY_Down  65364
 #define KEY_Left  65361
 #define KEY_Right 65363
@@ -127,9 +127,9 @@ static void add_to_history(gchar *ecmd)
       int i;
       GList *hp;
       for (i=0; i<HIST_DEL; i++) {
-	 hp = g_list_next(hist);
-	 free(hp->data);
-	 hist = g_list_remove(hist, hp->data);
+         hp = g_list_next(hist);
+         free(hp->data);
+         hist = g_list_remove(hist, hp->data);
       }
       hist_len -= HIST_DEL;
    }
@@ -153,34 +153,34 @@ on_entry1_key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer user_d
       gtk_entry_set_text((GtkEntry *)entry1, "");
    } else if (event->keyval == KEY_Up) {
       if (!hc) {
-	 if (!hist) {
-	    return FALSE;
-	 }
-	 hc = g_list_last(hist);
+         if (!hist) {
+            return FALSE;
+         }
+         hc = g_list_last(hist);
       } else {
-	 hc = g_list_previous(hc);
+         hc = g_list_previous(hc);
       }
       if (!hc) {
-	 if (!hist) {
-	    return FALSE;
-	 }
-	 hc = g_list_first(hist);
+         if (!hist) {
+            return FALSE;
+         }
+         hc = g_list_first(hist);
       }
       gtk_entry_set_text((GtkEntry *)entry1, (gchar *)hc->data);
    } else if (event->keyval == KEY_Down) {
       if (!hc) {
-	 if (!hist) {
-	    return FALSE;
-	 }
-	 hc = g_list_first(hist);
+         if (!hist) {
+            return FALSE;
+         }
+         hc = g_list_first(hist);
       } else {
-	 hc = g_list_next(hc);
+         hc = g_list_next(hc);
       }
       if (!hc) {
-	 if (!hist) {
-	    return FALSE;
-	 }
-	 hc = g_list_last(hist);
+         if (!hist) {
+            return FALSE;
+         }
+         hc = g_list_last(hist);
       }
       gtk_entry_set_text((GtkEntry *)entry1, (gchar *)hc->data);
    }
@@ -294,30 +294,30 @@ static void set_run_defaults()
    while (bnet_recv(UA_sock) > 0) {
       def = strchr(UA_sock->msg, '=');
       if (!def) {
-	 continue;
+         continue;
       }
       *def++ = 0;
       if (strcmp(UA_sock->msg, "job") == 0 ||
-	  strcmp(UA_sock->msg, "when") == 0) {
-	 continue;
+          strcmp(UA_sock->msg, "when") == 0) {
+         continue;
       }
       /* Where is an entry box */
       if (strcmp(UA_sock->msg, "where") == 0) {
-	 entry = lookup_widget(run_dialog, "entry_where");
-	 gtk_entry_set_text(GTK_ENTRY(entry), def);
-	 continue;
+         entry = lookup_widget(run_dialog, "entry_where");
+         gtk_entry_set_text(GTK_ENTRY(entry), def);
+         continue;
       }
 
       /* Now handle combo boxes */
       list = find_combo_list(UA_sock->msg);
       if (!list) {
-	 continue;
+         continue;
       }
       item = g_list_find_custom(list, def, compare_func);
       bsnprintf(cmd, sizeof(cmd), "combo_%s", UA_sock->msg);
       combo = lookup_widget(run_dialog, cmd);
       if (!combo) {
-	 continue;
+         continue;
       }
       pos = g_list_position(list, item);
       gtk_list_select_item(GTK_LIST(GTK_COMBO(combo)->list), pos);
@@ -405,9 +405,9 @@ on_run_ok_clicked(GtkButton *button, gpointer user_data)
    }
 
    bsnprintf(cmd, sizeof(cmd),
-	     "run job=\"%s\" fileset=\"%s\" level=%s client=\"%s\" pool=\"%s\" "
-	     "when=\"%s\" where=\"%s\" storage=\"%s\"",
-	     job, fileset, level, client, pool, when, where, storage);
+             "run job=\"%s\" fileset=\"%s\" level=%s client=\"%s\" pool=\"%s\" "
+             "when=\"%s\" where=\"%s\" storage=\"%s\"",
+             job, fileset, level, client, pool, when, where, storage);
    write_director(cmd);
    set_text(cmd, strlen(cmd));
    write_director("yes");
@@ -479,8 +479,8 @@ on_label_ok_clicked(GtkButton *button, gpointer user_data)
    }
 
    bsnprintf(cmd, sizeof(cmd),
-	     "label name=\"%s\" pool=\"%s\" storage=\"%s\" slot=%s",
-	     volume, pool, storage, slot);
+             "label volume=\"%s\" pool=\"%s\" storage=\"%s\" slot=%s",
+             volume, pool, storage, slot);
    write_director(cmd);
    set_text(cmd, strlen(cmd));
 }
@@ -516,12 +516,12 @@ on_select_files_button_clicked(GtkButton *button, gpointer user_data)
    }
 
    bsnprintf(cmd, sizeof(cmd),
-	     "restore select current fileset=\"%s\" client=\"%s\" pool=\"%s\" "
-	     "storage=\"%s\"", fileset, client, pool, storage);
+             "restore select current fileset=\"%s\" client=\"%s\" pool=\"%s\" "
+             "storage=\"%s\"", fileset, client, pool, storage);
    write_director(cmd);
    set_text(cmd, strlen(cmd));
    gtk_widget_show(restore_file_selection);
-   select_restore_files();	      /* put up select files dialog */
+   select_restore_files();            /* put up select files dialog */
 }
 
 void
@@ -554,96 +554,96 @@ on_restore_files_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_
 
 
 void
-on_new1_activate		       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_new1_activate                       (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_open1_activate		       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_open1_activate                      (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_save1_activate		       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_save1_activate                      (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_save_as1_activate		       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_save_as1_activate                   (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_quit1_activate		       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_quit1_activate                      (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_cut2_activate		       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_cut2_activate                       (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_copy2_activate		       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_copy2_activate                      (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_paste2_activate		       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_paste2_activate                     (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_clear2_activate		       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_clear2_activate                     (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_properties1_activate 	       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_properties1_activate                (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_preferences2_activate	       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_preferences2_activate               (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
 
 
 void
-on_about2_activate		       (GtkMenuItem	*menuitem,
-					gpointer	 user_data)
+on_about2_activate                     (GtkMenuItem     *menuitem,
+                                        gpointer         user_data)
 {
 
 }
@@ -668,28 +668,28 @@ void set_restore_dialog_defaults()
    while (bnet_recv(UA_sock) > 0) {
       def = strchr(UA_sock->msg, '=');
       if (!def) {
-	 continue;
+         continue;
       }
       *def++ = 0;
       if (strcmp(UA_sock->msg, "job") == 0 ||
-	  strcmp(UA_sock->msg, "when") == 0 ||
-	  strcmp(UA_sock->msg, "where") == 0 ||
-	  strcmp(UA_sock->msg, "messages") == 0 ||
-	  strcmp(UA_sock->msg, "level") == 0 ||
-	  strcmp(UA_sock->msg, "type") == 0) {
-	 continue;
+          strcmp(UA_sock->msg, "when") == 0 ||
+          strcmp(UA_sock->msg, "where") == 0 ||
+          strcmp(UA_sock->msg, "messages") == 0 ||
+          strcmp(UA_sock->msg, "level") == 0 ||
+          strcmp(UA_sock->msg, "type") == 0) {
+         continue;
       }
 
       /* Now handle combo boxes */
       list = find_combo_list(UA_sock->msg);
       if (!list) {
-	 continue;
+         continue;
       }
       item = g_list_find_custom(list, def, compare_func);
       bsnprintf(cmd, sizeof(cmd), "combo_restore_%s", UA_sock->msg);
       combo = lookup_widget(restore_dialog, cmd);
       if (!combo) {
-	 continue;
+         continue;
       }
       pos = g_list_position(list, item);
       gtk_list_select_item(GTK_LIST(GTK_COMBO(combo)->list), pos);
@@ -703,4 +703,10 @@ on_restore_job_entry_changed(GtkEditable *editable, gpointer user_data)
 {
    /* Set defaults that correspond to new job selection */
    set_restore_dialog_defaults();
+}
+
+void
+on_dir_button_clicked(GtkToolButton *toolbutton, gpointer user_data)
+{
+   write_director("status dir");
 }

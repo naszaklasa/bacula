@@ -4,11 +4,11 @@
  *
  * Kern Sibbald, November MMIV
  *
- *   Version $Id: pythonlib.c,v 1.11 2005/08/10 16:35:19 nboichat Exp $
+ *   Version $Id: pythonlib.c,v 1.11.2.1 2006/05/02 14:48:17 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2004-2005 Kern Sibbald
+   Copyright (C) 2004-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
@@ -29,6 +29,12 @@
 
 #undef _POSIX_C_SOURCE
 #include <Python.h>
+
+/* Forward referenced subroutines */
+static void init_python_lock();
+static void term_python_lock();
+void lock_python();
+void unlock_python();
 
 extern char *configfile;
 
@@ -135,6 +141,7 @@ void init_python_interpreter(const char *progname, const char *scripts,
       }
    }
    PyEval_ReleaseLock();
+   init_python_lock();
 }
 
 
@@ -144,6 +151,7 @@ void term_python_interpreter()
       Py_XDECREF(StartUp_module);
       Py_Finalize();
    }
+   term_python_lock();
 }
 
 static PyObject *set_bacula_events(PyObject *self, PyObject *args)
@@ -218,7 +226,8 @@ int generate_daemon_event(JCR *jcr, const char *event)
    }
 
    Dmsg1(100, "event=%s\n", event);
-   PyEval_AcquireLock();
+   lock_python();
+// PyEval_AcquireLock();
    if (strcmp(event, "JobStart") == 0) {
       if (!JobStart_method) {
          stat = 0;
@@ -292,9 +301,50 @@ bail_out:
    /* Fall through */
 jobstart_ok:
    Py_XDECREF(result);
-   PyEval_ReleaseLock();
+   unlock_python();
+// PyEval_ReleaseLock();
    return stat; 
 }
+
+static brwlock_t python_rwlock;
+
+static void init_python_lock()
+{
+   int errstat;
+   if ((errstat=rwl_init(&python_rwlock)) != 0) {
+      berrno be;
+      Emsg1(M_ABORT, 0, _("Unable to initialize the Python lock. ERR=%s\n"),
+            be.strerror(errstat));
+   }
+
+}
+
+static void term_python_lock()
+{
+   rwl_destroy(&python_rwlock);
+}
+
+/* This applies to a drive and to Volumes */
+void lock_python()
+{
+   int errstat;
+   if ((errstat=rwl_writelock(&python_rwlock)) != 0) {
+      berrno be;
+      Emsg2(M_ABORT, 0, "Python rwl_writelock failure. stat=%d: ERR=%s\n",
+           errstat, be.strerror(errstat));
+   }
+}
+
+void unlock_python()
+{
+   int errstat;
+   if ((errstat=rwl_writeunlock(&python_rwlock)) != 0) {
+      berrno be;
+      Emsg2(M_ABORT, 0, "Python rwl_writeunlock failure. stat=%d: ERR=%s\n",
+           errstat, be.strerror(errstat));
+   }
+}
+
 
 #else
 

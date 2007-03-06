@@ -1,7 +1,7 @@
 #
 # Bacula Makefile for the File daemon
 #
-#  Version $Id: Makefile.in,v 1.24.2.2 2005/11/10 20:11:20 kerns Exp $
+#  Version $Id: Makefile.in,v 1.24.2.3 2006/05/02 14:48:16 kerns Exp $
 #
 
 @MCOMMON@
@@ -137,8 +137,8 @@ install: all
 
 uninstall:
 	(cd $(DESTDIR)$(sbindir); $(RMF) bacula-fd)
-	(cd $(DESTDIR)$(sbindir); $(RMF) bacula-fd.conf)
-	(cd $(DESTDIR)$(sbindir); $(RMF) bacula-fd.conf.new)
+	(cd $(DESTDIR)$(sysconfdir); $(RMF) bacula-fd.conf)
+	(cd $(DESTDIR)$(sysconfdir); $(RMF) bacula-fd.conf.new)
 
 
 

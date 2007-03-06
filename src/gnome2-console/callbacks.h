@@ -1,5 +1,5 @@
 
-/*   Version $Id: callbacks.h,v 1.5 2004/12/21 16:18:37 kerns Exp $  */
+/*   Version $Id: callbacks.h,v 1.5.4.1 2006/05/02 14:48:16 kerns Exp $  */
 
 gboolean
 on_app1_delete_event                   (GtkWidget       *widget,
@@ -340,3 +340,7 @@ on_select_files_button_clicked         (GtkButton       *button,
 void
 on_restore_cancel_clicked              (GtkButton       *button,
 					gpointer         user_data);
+
+void
+on_dir_button_clicked                  (GtkToolButton   *toolbutton,
+                                        gpointer         user_data);

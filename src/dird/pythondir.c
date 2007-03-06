@@ -4,7 +4,7 @@
  *
  * Kern Sibbald, November MMIV
  *
- *   Version $Id: pythondir.c,v 1.12.2.3 2006/03/04 11:10:17 kerns Exp $
+ *   Version $Id: pythondir.c,v 1.12.2.4 2006/05/02 14:48:15 kerns Exp $
  *
  */
 /*
@@ -297,7 +297,7 @@ static PyObject *job_run(PyObject *self, PyObject *arg)
       return NULL;
    }
    /* Release lock due to recursion */
-   PyEval_ReleaseLock();
+// PyEval_ReleaseLock();
    jcr = get_jcr_from_PyObject(self);
    UAContext *ua = new_ua_context(jcr);
    ua->batch = true;
@@ -305,7 +305,7 @@ static PyObject *job_run(PyObject *self, PyObject *arg)
    parse_ua_args(ua);                 /* parse command */
    stat = run_cmd(ua, ua->cmd);
    free_ua_context(ua);
-   PyEval_AcquireLock();
+// PyEval_AcquireLock();
    return PyInt_FromLong((long)stat);
 }
 
@@ -372,7 +372,7 @@ static PyObject *job_cancel(PyObject *self, PyObject *args)
       /* ***FIXME*** raise exception */
       return NULL;
    }
-   PyEval_ReleaseLock();
+// PyEval_ReleaseLock();
    UAContext *ua = new_ua_context(jcr);
    ua->batch = true;
    if (!cancel_job(ua, jcr)) {
@@ -381,7 +381,7 @@ static PyObject *job_cancel(PyObject *self, PyObject *args)
    }
    free_ua_context(ua);
    free_jcr(jcr);
-   PyEval_AcquireLock();   
+// PyEval_AcquireLock();   
    Py_INCREF(Py_None);
    return Py_None;
 }
@@ -403,7 +403,8 @@ int generate_job_event(JCR *jcr, const char *event)
       return 0;
    }
 
-   PyEval_AcquireLock();
+   lock_python();
+// PyEval_AcquireLock();
 
    method = find_method(events, method, event);
    if (!method) {
@@ -424,7 +425,8 @@ int generate_job_event(JCR *jcr, const char *event)
    Py_XDECREF(result);
 
 bail_out:
-   PyEval_ReleaseLock();
+   unlock_python();
+// PyEval_ReleaseLock();
    return stat;
 }
 

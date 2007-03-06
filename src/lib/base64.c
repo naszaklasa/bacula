@@ -3,10 +3,10 @@
  *
  *    Written by Kern E. Sibbald, March MM.
  *
- *   Version $Id: base64.c,v 1.8 2005/09/24 13:11:31 kerns Exp $
+ *   Version $Id: base64.c,v 1.8.2.1 2006/05/02 14:48:16 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Copyright (C) 2000-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License

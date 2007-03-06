@@ -1,7 +1,7 @@
 /*
  * Prototypes for lib directory of Bacula
  *
- *   Version $Id: protos.h,v 1.109.2.5 2006/03/20 19:50:56 kerns Exp $
+ *   Version $Id: protos.h,v 1.109.2.6 2006/05/02 14:48:16 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -188,6 +188,8 @@ void init_python_interpreter(const char *progname, const char *scripts,
 void term_python_interpreter();
 //extern EVENT_HANDLER *generate_daemon_event;
 int generate_daemon_event(JCR *jcr, const char *event);
+void lock_python();
+void unlock_python();
 
 /* signal.c */
 void             init_signals             (void terminate(int sig));

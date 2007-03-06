@@ -11,7 +11,7 @@
  *       to do the backup.
  *     When the File daemon finishes the job, update the DB.
  *
- *   Version $Id: backup.c,v 1.93.2.4 2006/03/14 21:41:40 kerns Exp $
+ *   Version $Id: backup.c,v 1.93.2.5 2006/05/02 14:48:14 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -236,6 +236,22 @@ bool do_backup(JCR *jcr)
 
    if (!send_run_before_and_after_commands(jcr)) {
       goto bail_out;
+   }
+
+   /*    
+    * We re-update the job start record so that the start
+    *  time is set after the run before job.  This avoids 
+    *  that any files created by the run before job will
+    *  be saved twice.  They will be backed up in the current
+    *  job, but not in the next one unless they are changed.
+    *  Without this, they will be backed up in this job and
+    *  in the next job run because in that case, their date 
+    *   is after the start of this run.
+    */
+   jcr->start_time = time(NULL);
+   jcr->jr.StartTime = jcr->start_time;
+   if (!db_update_job_start_record(jcr, jcr->db, &jcr->jr)) {
+      Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
    }
 
    /* Send backup command */

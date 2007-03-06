@@ -2,7 +2,7 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id: mtx-changer.in,v 1.21.2.6 2006/04/13 20:33:03 kerns Exp $
+#  $Id: mtx-changer.in,v 1.21.2.7 2006/05/02 14:48:12 kerns Exp $
 #
 #  If you set in your Device resource
 #
@@ -54,7 +54,7 @@ debug() {
 # Create a temporary file
 #
 make_temp_file() {
-  TMPFILE=`mktemp -t mtx.XXXXXXXXXX`
+  TMPFILE=`mktemp @working_dir@/mtx.XXXXXXXXXX`
   if test x${TMPFILE} = x; then
      TMPFILE="@working_dir@/mtx.$$"
      if test -f ${TMPFILE}; then

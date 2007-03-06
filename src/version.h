@@ -1,11 +1,11 @@
 /*
- *  Version $Id: version.h,v 1.554.2.50 2006/04/13 20:33:03 kerns Exp $
+ *  Version $Id: version.h,v 1.554.2.51 2006/05/02 14:48:13 kerns Exp $
  */
 
 #undef  VERSION
-#define VERSION "1.38.8"
-#define BDATE   "14 April 2006"
-#define LSMDATE "14Apr06"
+#define VERSION "1.38.9"
+#define BDATE   "02 May 2006"
+#define LSMDATE "02May06"
 
 /* Debug flags */
 #undef  DEBUG

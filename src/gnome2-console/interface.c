@@ -29,15 +29,15 @@
 static GnomeUIInfo file1_menu_uiinfo[] =
 {
   {
-    GNOME_APP_UI_ITEM, _("_Connect"),
-    _("Connect to Director"),
+    GNOME_APP_UI_ITEM, N_("_Connect"),
+    N_("Connect to Director"),
     (gpointer) on_connect_activate, NULL, NULL,
     GNOME_APP_PIXMAP_NONE, NULL,
     0, (GdkModifierType) 0, NULL
   },
   {
-    GNOME_APP_UI_ITEM, _("_Disconnect"),
-    _("Disconnect from Director"),
+    GNOME_APP_UI_ITEM, N_("_Disconnect"),
+    N_("Disconnect from Director"),
     (gpointer) on_disconnect_activate, NULL, NULL,
     GNOME_APP_PIXMAP_NONE, NULL,
     0, (GdkModifierType) 0, NULL
@@ -90,7 +90,7 @@ static GnomeUIInfo edit1_menu_uiinfo[] =
 static GnomeUIInfo item1_menu_uiinfo[] =
 {
   {
-    GNOME_APP_UI_ITEM, _("_Display Messages"),
+    GNOME_APP_UI_ITEM, N_("_Display Messages"),
     NULL,
     (gpointer) on_msgs_activate, NULL, NULL,
     GNOME_APP_PIXMAP_NONE, NULL,
@@ -126,35 +126,35 @@ static GnomeUIInfo help1_menu_uiinfo[] =
 static GnomeUIInfo menubar1_uiinfo[] =
 {
   {
-    GNOME_APP_UI_SUBTREE, _("_File"),
+    GNOME_APP_UI_SUBTREE, N_("_File"),
     NULL,
     file1_menu_uiinfo, NULL, NULL,
     GNOME_APP_PIXMAP_NONE, NULL,
     0, (GdkModifierType) 0, NULL
   },
   {
-    GNOME_APP_UI_SUBTREE,_("_Edit"),
+    GNOME_APP_UI_SUBTREE, N_("_Edit"),
     NULL,
     edit1_menu_uiinfo, NULL, NULL,
     GNOME_APP_PIXMAP_NONE, NULL,
     0, (GdkModifierType) 0, NULL
   },
   {
-    GNOME_APP_UI_SUBTREE, _("_View"),
-    _("Display Messages"),
+    GNOME_APP_UI_SUBTREE, N_("_View"),
+    N_("Display Messages"),
     item1_menu_uiinfo, NULL, NULL,
     GNOME_APP_PIXMAP_NONE, NULL,
     0, (GdkModifierType) 0, NULL
   },
   {
-    GNOME_APP_UI_SUBTREE, _("_Settings"),
+    GNOME_APP_UI_SUBTREE, N_("_Settings"),
     NULL,
     settings1_menu_uiinfo, NULL, NULL,
     GNOME_APP_PIXMAP_NONE, NULL,
     0, (GdkModifierType) 0, NULL
   },
   {
-    GNOME_APP_UI_SUBTREE, _("_Help"),
+    GNOME_APP_UI_SUBTREE, N_("_Help"),
     NULL,
     help1_menu_uiinfo, NULL, NULL,
     GNOME_APP_PIXMAP_NONE, NULL,
@@ -172,12 +172,14 @@ create_console (void)
   GtkWidget *menubar1;
   GtkWidget *handlebox2;
   GtkWidget *toolbar2;
-  GtkWidget *tmp_toolbar_icon;
+  GtkIconSize tmp_toolbar_icon_size;
+  GtkWidget *tmp_image;
   GtkWidget *connect_button1;
   GtkWidget *run_button1;
-  GtkWidget *msgs_button;
+  GtkWidget *dir_button;
   GtkWidget *restore_button;
   GtkWidget *label_button;
+  GtkWidget *msgs_button;
   GtkWidget *vbox7;
   GtkWidget *scroll1;
   GtkWidget *text1;
@@ -189,9 +191,12 @@ create_console (void)
   GtkWidget *label39;
   GtkWidget *frame2;
   GtkWidget *status1;
+  GtkAccelGroup *accel_group;
   GtkTooltips *tooltips;
 
   tooltips = gtk_tooltips_new ();
+
+  accel_group = gtk_accel_group_new ();
 
   console = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title (GTK_WINDOW (console), _("Bacula Console"));
@@ -211,7 +216,7 @@ create_console (void)
   gtk_widget_show (menubar1);
   gtk_container_add (GTK_CONTAINER (handlebox1), menubar1);
   gnome_app_fill_menu (GTK_MENU_SHELL (menubar1), menubar1_uiinfo,
-		       NULL, FALSE, 0);
+                       accel_group, FALSE, 0);
 
   handlebox2 = gtk_handle_box_new ();
   gtk_widget_show (handlebox2);
@@ -223,56 +228,46 @@ create_console (void)
   gtk_container_add (GTK_CONTAINER (handlebox2), toolbar2);
   gtk_container_set_border_width (GTK_CONTAINER (toolbar2), 1);
   gtk_toolbar_set_style (GTK_TOOLBAR (toolbar2), GTK_TOOLBAR_BOTH);
+  tmp_toolbar_icon_size = gtk_toolbar_get_icon_size (GTK_TOOLBAR (toolbar2));
 
-  tmp_toolbar_icon = gtk_image_new_from_stock ("gtk-new", gtk_toolbar_get_icon_size (GTK_TOOLBAR (toolbar2)));
-  connect_button1 = gtk_toolbar_append_element (GTK_TOOLBAR (toolbar2),
-				GTK_TOOLBAR_CHILD_BUTTON,
-				NULL,
-				_("Connect"),
-				_("Connect to Director"), NULL,
-				tmp_toolbar_icon, NULL, NULL);
-  gtk_label_set_use_underline (GTK_LABEL (((GtkToolbarChild*) (g_list_last (GTK_TOOLBAR (toolbar2)->children)->data))->label), TRUE);
+  tmp_image = gtk_image_new_from_stock ("gtk-disconnect", tmp_toolbar_icon_size);
+  gtk_widget_show (tmp_image);
+  connect_button1 = (GtkWidget*) gtk_tool_button_new (tmp_image, _("Connect"));
   gtk_widget_show (connect_button1);
+  gtk_container_add (GTK_CONTAINER (toolbar2), connect_button1);
+  gtk_tool_item_set_tooltip (GTK_TOOL_ITEM (connect_button1), tooltips, _("Connect to Director"), NULL);
 
-  tmp_toolbar_icon = gtk_image_new_from_stock ("gtk-execute", gtk_toolbar_get_icon_size (GTK_TOOLBAR (toolbar2)));
-  run_button1 = gtk_toolbar_append_element (GTK_TOOLBAR (toolbar2),
-				GTK_TOOLBAR_CHILD_BUTTON,
-				NULL,
-				_("Run"),
-				_("Run a Job"), NULL,
-				tmp_toolbar_icon, NULL, NULL);
-  gtk_label_set_use_underline (GTK_LABEL (((GtkToolbarChild*) (g_list_last (GTK_TOOLBAR (toolbar2)->children)->data))->label), TRUE);
+  tmp_image = gtk_image_new_from_stock ("gtk-execute", tmp_toolbar_icon_size);
+  gtk_widget_show (tmp_image);
+  run_button1 = (GtkWidget*) gtk_tool_button_new (tmp_image, _("Run"));
   gtk_widget_show (run_button1);
+  gtk_container_add (GTK_CONTAINER (toolbar2), run_button1);
+  gtk_tool_item_set_tooltip (GTK_TOOL_ITEM (run_button1), tooltips, _("Run a Job"), NULL);
 
-  tmp_toolbar_icon = gtk_image_new_from_stock ("gtk-find", gtk_toolbar_get_icon_size (GTK_TOOLBAR (toolbar2)));
-  msgs_button = gtk_toolbar_append_element (GTK_TOOLBAR (toolbar2),
-				GTK_TOOLBAR_CHILD_BUTTON,
-				NULL,
-				_("Msgs"),
-				_("Display Messages"), NULL,
-				tmp_toolbar_icon, NULL, NULL);
-  gtk_label_set_use_underline (GTK_LABEL (((GtkToolbarChild*) (g_list_last (GTK_TOOLBAR (toolbar2)->children)->data))->label), TRUE);
-  gtk_widget_show (msgs_button);
+  tmp_image = gtk_image_new_from_stock ("gnome-stock-text-bulleted-list", tmp_toolbar_icon_size);
+  gtk_widget_show (tmp_image);
+  dir_button = (GtkWidget*) gtk_tool_button_new (tmp_image, _("Dir Status"));
+  gtk_widget_show (dir_button);
+  gtk_container_add (GTK_CONTAINER (toolbar2), dir_button);
 
-  tmp_toolbar_icon = gtk_image_new_from_stock ("gtk-revert-to-saved", gtk_toolbar_get_icon_size (GTK_TOOLBAR (toolbar2)));
-  restore_button = gtk_toolbar_append_element (GTK_TOOLBAR (toolbar2),
-				GTK_TOOLBAR_CHILD_BUTTON,
-				NULL,
-				_("Restore"),
-				NULL, NULL,
-				tmp_toolbar_icon, NULL, NULL);
-  gtk_label_set_use_underline (GTK_LABEL (((GtkToolbarChild*) (g_list_last (GTK_TOOLBAR (toolbar2)->children)->data))->label), TRUE);
+  tmp_image = gtk_image_new_from_stock ("gtk-revert-to-saved", tmp_toolbar_icon_size);
+  gtk_widget_show (tmp_image);
+  restore_button = (GtkWidget*) gtk_tool_button_new (tmp_image, _("Restore"));
   gtk_widget_show (restore_button);
+  gtk_container_add (GTK_CONTAINER (toolbar2), restore_button);
 
-  tmp_toolbar_icon = gtk_image_new_from_stock ("gtk-save-as", gtk_toolbar_get_icon_size (GTK_TOOLBAR (toolbar2)));
-  label_button = gtk_toolbar_append_element (GTK_TOOLBAR (toolbar2),
-				GTK_TOOLBAR_CHILD_BUTTON,
-				NULL,
-				_("Label"),
-				NULL, NULL,
-				tmp_toolbar_icon, NULL, NULL);
-  gtk_label_set_use_underline (GTK_LABEL (((GtkToolbarChild*) (g_list_last (GTK_TOOLBAR (toolbar2)->children)->data))->label), TRUE);
+  tmp_image = gtk_image_new_from_stock ("gtk-save-as", tmp_toolbar_icon_size);
+  gtk_widget_show (tmp_image);
+  label_button = (GtkWidget*) gtk_tool_button_new (tmp_image, _("Label"));
   gtk_widget_show (label_button);
+  gtk_container_add (GTK_CONTAINER (toolbar2), label_button);
+
+  tmp_image = gtk_image_new_from_stock ("gtk-find", tmp_toolbar_icon_size);
+  gtk_widget_show (tmp_image);
+  msgs_button = (GtkWidget*) gtk_tool_button_new (tmp_image, _("Msgs"));
+  gtk_widget_show (msgs_button);
+  gtk_container_add (GTK_CONTAINER (toolbar2), msgs_button);
+  gtk_tool_item_set_tooltip (GTK_TOOL_ITEM (msgs_button), tooltips, _("Display Messages"), NULL);
 
   vbox7 = gtk_vbox_new (FALSE, 0);
   gtk_widget_show (vbox7);
@@ -299,6 +294,7 @@ create_console (void)
   label38 = gtk_label_new (_(" Command: "));
   gtk_widget_show (label38);
   gtk_box_pack_start (GTK_BOX (hbox18), label38, FALSE, TRUE, 0);
+  gtk_label_set_justify (GTK_LABEL (label38), GTK_JUSTIFY_CENTER);
 
   entry1 = gtk_entry_new ();
   gtk_widget_show (entry1);
@@ -318,6 +314,7 @@ create_console (void)
   label39 = gtk_label_new (_(" Status: "));
   gtk_widget_show (label39);
   gtk_container_add (GTK_CONTAINER (frame1), label39);
+  gtk_label_set_justify (GTK_LABEL (label39), GTK_JUSTIFY_CENTER);
 
   frame2 = gtk_frame_new (NULL);
   gtk_widget_show (frame2);
@@ -326,33 +323,35 @@ create_console (void)
   status1 = gtk_label_new (_("  "));
   gtk_widget_show (status1);
   gtk_container_add (GTK_CONTAINER (frame2), status1);
-  gtk_label_set_justify (GTK_LABEL (status1), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (status1), 0, 0.5);
 
   g_signal_connect ((gpointer) console, "delete_event",
-		    G_CALLBACK (on_console_delete_event),
-		    NULL);
+                    G_CALLBACK (on_console_delete_event),
+                    NULL);
   g_signal_connect ((gpointer) connect_button1, "clicked",
-		    G_CALLBACK (on_connect_button_clicked),
-		    NULL);
+                    G_CALLBACK (on_connect_button_clicked),
+                    NULL);
   g_signal_connect ((gpointer) run_button1, "clicked",
-		    G_CALLBACK (on_run_button_clicked),
-		    NULL);
-  g_signal_connect ((gpointer) msgs_button, "clicked",
-		    G_CALLBACK (on_msgs_button_clicked),
-		    NULL);
+                    G_CALLBACK (on_run_button_clicked),
+                    NULL);
+  g_signal_connect ((gpointer) dir_button, "clicked",
+                    G_CALLBACK (on_dir_button_clicked),
+                    NULL);
   g_signal_connect ((gpointer) restore_button, "clicked",
-		    G_CALLBACK (on_restore_button_clicked),
-		    NULL);
+                    G_CALLBACK (on_restore_button_clicked),
+                    NULL);
   g_signal_connect ((gpointer) label_button, "clicked",
-		    G_CALLBACK (on_label_button_clicked),
-		    NULL);
+                    G_CALLBACK (on_label_button_clicked),
+                    NULL);
+  g_signal_connect ((gpointer) msgs_button, "clicked",
+                    G_CALLBACK (on_msgs_button_clicked),
+                    NULL);
   g_signal_connect ((gpointer) entry1, "key_press_event",
-		    G_CALLBACK (on_entry1_key_press_event),
-		    NULL);
+                    G_CALLBACK (on_entry1_key_press_event),
+                    NULL);
   g_signal_connect ((gpointer) entry1, "key_release_event",
-		    G_CALLBACK (on_entry1_key_release_event),
-		    NULL);
+                    G_CALLBACK (on_entry1_key_release_event),
+                    NULL);
 
   /* Store pointers to all widgets, for use by lookup_widget(). */
   GLADE_HOOKUP_OBJECT_NO_REF (console, console, "console");
@@ -380,9 +379,10 @@ create_console (void)
   GLADE_HOOKUP_OBJECT (console, toolbar2, "toolbar2");
   GLADE_HOOKUP_OBJECT (console, connect_button1, "connect_button1");
   GLADE_HOOKUP_OBJECT (console, run_button1, "run_button1");
-  GLADE_HOOKUP_OBJECT (console, msgs_button, "msgs_button");
+  GLADE_HOOKUP_OBJECT (console, dir_button, "dir_button");
   GLADE_HOOKUP_OBJECT (console, restore_button, "restore_button");
   GLADE_HOOKUP_OBJECT (console, label_button, "label_button");
+  GLADE_HOOKUP_OBJECT (console, msgs_button, "msgs_button");
   GLADE_HOOKUP_OBJECT (console, vbox7, "vbox7");
   GLADE_HOOKUP_OBJECT (console, scroll1, "scroll1");
   GLADE_HOOKUP_OBJECT (console, text1, "text1");
@@ -398,6 +398,8 @@ create_console (void)
 
   gtk_widget_grab_focus (entry1);
   gtk_widget_grab_default (entry1);
+  gtk_window_add_accel_group (GTK_WINDOW (console), accel_group);
+
   return console;
 }
 
@@ -421,6 +423,7 @@ create_about1 (void)
   about1 = gtk_dialog_new ();
   gtk_window_set_title (GTK_WINDOW (about1), _("About Bacula Console"));
   gtk_window_set_modal (GTK_WINDOW (about1), TRUE);
+  gtk_window_set_type_hint (GTK_WINDOW (about1), GDK_WINDOW_TYPE_HINT_DIALOG);
 
   dialog_vbox5 = GTK_DIALOG (about1)->vbox;
   gtk_widget_show (dialog_vbox5);
@@ -436,6 +439,7 @@ create_about1 (void)
   about_head = gtk_label_new (_("Bacula Console\n"));
   gtk_widget_show (about_head);
   gtk_box_pack_start (GTK_BOX (vbox9), about_head, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (about_head), GTK_JUSTIFY_CENTER);
 
   hseparator1 = gtk_hseparator_new ();
   gtk_widget_show (hseparator1);
@@ -444,19 +448,16 @@ create_about1 (void)
   copyright = gtk_label_new (_("Copyright (c) 2000 - 2004, Kern Sibbald and John Walker"));
   gtk_widget_show (copyright);
   gtk_box_pack_start (GTK_BOX (vbox9), copyright, TRUE, FALSE, 0);
-  gtk_label_set_justify (GTK_LABEL (copyright), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (copyright), 0.1, 0.5);
 
   authors = gtk_label_new (_("Authors: Kern Sibbald and John Walker"));
   gtk_widget_show (authors);
   gtk_box_pack_start (GTK_BOX (vbox9), authors, TRUE, FALSE, 0);
-  gtk_label_set_justify (GTK_LABEL (authors), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (authors), 0.0400001, 0.5);
 
   theme = gtk_label_new (_("It comes by night and sucks the essence from your computers"));
   gtk_widget_show (theme);
   gtk_box_pack_start (GTK_BOX (vbox9), theme, TRUE, FALSE, 0);
-  gtk_label_set_justify (GTK_LABEL (theme), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (theme), 0.15, 0.5);
 
   dialog_action_area5 = GTK_DIALOG (about1)->action_area;
@@ -470,6 +471,7 @@ create_about1 (void)
   label44 = gtk_label_new ("");
   gtk_widget_show (label44);
   gtk_box_pack_start (GTK_BOX (hbox20), label44, TRUE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (label44), GTK_JUSTIFY_CENTER);
 
   about_button = gtk_button_new_from_stock ("gtk-ok");
   gtk_widget_show (about_button);
@@ -479,8 +481,8 @@ create_about1 (void)
   GTK_WIDGET_SET_FLAGS (about_button, GTK_CAN_DEFAULT);
 
   g_signal_connect ((gpointer) about_button, "clicked",
-		    G_CALLBACK (on_about_button_clicked),
-		    NULL);
+                    G_CALLBACK (on_about_button_clicked),
+                    NULL);
 
   /* Store pointers to all widgets, for use by lookup_widget(). */
   GLADE_HOOKUP_OBJECT_NO_REF (about1, about1, "about1");
@@ -520,6 +522,7 @@ create_SelectDirectorDialog (void)
   SelectDirectorDialog = gtk_dialog_new ();
   gtk_window_set_title (GTK_WINDOW (SelectDirectorDialog), _("Select Director"));
   gtk_window_set_modal (GTK_WINDOW (SelectDirectorDialog), TRUE);
+  gtk_window_set_type_hint (GTK_WINDOW (SelectDirectorDialog), GDK_WINDOW_TYPE_HINT_DIALOG);
 
   dialog_vbox6 = GTK_DIALOG (SelectDirectorDialog)->vbox;
   gtk_widget_show (dialog_vbox6);
@@ -531,15 +534,17 @@ create_SelectDirectorDialog (void)
   label48 = gtk_label_new ("");
   gtk_widget_show (label48);
   gtk_box_pack_start (GTK_BOX (vbox10), label48, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (label48), GTK_JUSTIFY_CENTER);
   gtk_misc_set_alignment (GTK_MISC (label48), 0.48, 0.46);
 
   label47 = gtk_label_new (_("Select Director"));
   gtk_widget_show (label47);
   gtk_box_pack_start (GTK_BOX (vbox10), label47, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (label47), GTK_JUSTIFY_CENTER);
 
   combo1 = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo1)->popwin),
-		     "GladeParentKey", combo1);
+                     "GladeParentKey", combo1);
   gtk_widget_show (combo1);
   gtk_box_pack_start (GTK_BOX (vbox10), combo1, FALSE, FALSE, 0);
   gtk_container_set_border_width (GTK_CONTAINER (combo1), 6);
@@ -562,9 +567,10 @@ create_SelectDirectorDialog (void)
   gtk_widget_show (button11);
   gtk_box_pack_start (GTK_BOX (hbox21), button11, FALSE, FALSE, 0);
 
-  label46 = gtk_label_new ("         ");
+  label46 = gtk_label_new (_("         "));
   gtk_widget_show (label46);
   gtk_box_pack_start (GTK_BOX (hbox21), label46, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (label46), GTK_JUSTIFY_CENTER);
   gtk_misc_set_padding (GTK_MISC (label46), 2, 0);
 
   button13 = gtk_button_new_from_stock ("gtk-cancel");
@@ -572,11 +578,11 @@ create_SelectDirectorDialog (void)
   gtk_box_pack_start (GTK_BOX (hbox21), button13, FALSE, FALSE, 0);
 
   g_signal_connect ((gpointer) button11, "clicked",
-		    G_CALLBACK (on_select_director_OK_clicked),
-		    NULL);
+                    G_CALLBACK (on_select_director_OK_clicked),
+                    NULL);
   g_signal_connect ((gpointer) button13, "clicked",
-		    G_CALLBACK (on_select_director_cancel_clicked),
-		    NULL);
+                    G_CALLBACK (on_select_director_cancel_clicked),
+                    NULL);
 
   /* Store pointers to all widgets, for use by lookup_widget(). */
   GLADE_HOOKUP_OBJECT_NO_REF (SelectDirectorDialog, SelectDirectorDialog, "SelectDirectorDialog");
@@ -675,6 +681,7 @@ create_RunDialog (void)
 
   RunDialog = gtk_dialog_new ();
   gtk_window_set_title (GTK_WINDOW (RunDialog), _("Run a Job"));
+  gtk_window_set_type_hint (GTK_WINDOW (RunDialog), GDK_WINDOW_TYPE_HINT_DIALOG);
 
   dialog_vbox7 = GTK_DIALOG (RunDialog)->vbox;
   gtk_widget_show (dialog_vbox7);
@@ -690,6 +697,7 @@ create_RunDialog (void)
   label62 = gtk_label_new (_("Run a Job"));
   gtk_widget_show (label62);
   gtk_box_pack_start (GTK_BOX (vbox12), label62, FALSE, FALSE, 2);
+  gtk_label_set_justify (GTK_LABEL (label62), GTK_JUSTIFY_CENTER);
   gtk_misc_set_padding (GTK_MISC (label62), 0, 9);
 
   alignment1 = gtk_alignment_new (0.5, 0.5, 1, 1);
@@ -713,7 +721,7 @@ create_RunDialog (void)
 
   combo_job = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_job)->popwin),
-		     "GladeParentKey", combo_job);
+                     "GladeParentKey", combo_job);
   gtk_widget_show (combo_job);
   gtk_box_pack_start (GTK_BOX (hbox29), combo_job, TRUE, TRUE, 1);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_job), TRUE, FALSE);
@@ -728,10 +736,11 @@ create_RunDialog (void)
   label64 = gtk_label_new (_("   Type:"));
   gtk_widget_show (label64);
   gtk_box_pack_start (GTK_BOX (hbox29), label64, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (label64), GTK_JUSTIFY_CENTER);
 
   combo_type = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_type)->popwin),
-		     "GladeParentKey", combo_type);
+                     "GladeParentKey", combo_type);
   gtk_widget_show (combo_type);
   gtk_box_pack_start (GTK_BOX (hbox29), combo_type, FALSE, FALSE, 0);
   gtk_widget_set_size_request (combo_type, 141, 24);
@@ -744,10 +753,9 @@ create_RunDialog (void)
   gtk_widget_show (entry_type);
   gtk_editable_set_editable (GTK_EDITABLE (entry_type), FALSE);
 
-  label114 = gtk_label_new (" ");
+  label114 = gtk_label_new (_(" "));
   gtk_widget_show (label114);
   gtk_box_pack_start (GTK_BOX (hbox28), label114, FALSE, FALSE, 30);
-  gtk_label_set_justify (GTK_LABEL (label114), GTK_JUSTIFY_LEFT);
 
   hbox30 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox30);
@@ -762,7 +770,7 @@ create_RunDialog (void)
 
   combo_client = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_client)->popwin),
-		     "GladeParentKey", combo_client);
+                     "GladeParentKey", combo_client);
   gtk_widget_show (combo_client);
   gtk_box_pack_start (GTK_BOX (hbox30), combo_client, TRUE, TRUE, 1);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_client), TRUE, FALSE);
@@ -774,9 +782,10 @@ create_RunDialog (void)
   gtk_widget_show (entry_client);
   gtk_editable_set_editable (GTK_EDITABLE (entry_client), FALSE);
 
-  label67 = gtk_label_new (" ");
+  label67 = gtk_label_new (_(" "));
   gtk_widget_show (label67);
   gtk_box_pack_start (GTK_BOX (hbox30), label67, FALSE, FALSE, 123);
+  gtk_label_set_justify (GTK_LABEL (label67), GTK_JUSTIFY_CENTER);
 
   hbox31 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox31);
@@ -792,7 +801,7 @@ create_RunDialog (void)
 
   combo_fileset = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_fileset)->popwin),
-		     "GladeParentKey", combo_fileset);
+                     "GladeParentKey", combo_fileset);
   gtk_widget_show (combo_fileset);
   gtk_box_pack_start (GTK_BOX (hbox31), combo_fileset, FALSE, FALSE, 0);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_fileset), TRUE, FALSE);
@@ -808,13 +817,11 @@ create_RunDialog (void)
   gtk_widget_show (label156);
   gtk_box_pack_start (GTK_BOX (hbox31), label156, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label156, 13, 16);
-  gtk_label_set_justify (GTK_LABEL (label156), GTK_JUSTIFY_LEFT);
 
   label155 = gtk_label_new (_("Priority:"));
   gtk_widget_show (label155);
   gtk_box_pack_start (GTK_BOX (hbox31), label155, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label155, 52, 16);
-  gtk_label_set_justify (GTK_LABEL (label155), GTK_JUSTIFY_LEFT);
 
   spinbutton1_adj = gtk_adjustment_new (10, 0, 100, 1, 10, 10);
   spinbutton1 = gtk_spin_button_new (GTK_ADJUSTMENT (spinbutton1_adj), 1, 0);
@@ -826,7 +833,6 @@ create_RunDialog (void)
   gtk_widget_show (label157);
   gtk_box_pack_start (GTK_BOX (hbox31), label157, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label157, 100, 16);
-  gtk_label_set_justify (GTK_LABEL (label157), GTK_JUSTIFY_LEFT);
 
   hbox32 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox32);
@@ -841,7 +847,7 @@ create_RunDialog (void)
 
   combo_level = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_level)->popwin),
-		     "GladeParentKey", combo_level);
+                     "GladeParentKey", combo_level);
   gtk_widget_show (combo_level);
   gtk_box_pack_start (GTK_BOX (hbox32), combo_level, TRUE, TRUE, 0);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_level), TRUE, FALSE);
@@ -854,9 +860,10 @@ create_RunDialog (void)
   gtk_widget_show (entry_level);
   gtk_editable_set_editable (GTK_EDITABLE (entry_level), FALSE);
 
-  label71 = gtk_label_new ("             ");
+  label71 = gtk_label_new (_("             "));
   gtk_widget_show (label71);
   gtk_box_pack_start (GTK_BOX (hbox32), label71, FALSE, FALSE, 100);
+  gtk_label_set_justify (GTK_LABEL (label71), GTK_JUSTIFY_CENTER);
 
   hbox33 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox33);
@@ -867,10 +874,11 @@ create_RunDialog (void)
   gtk_widget_show (label72);
   gtk_box_pack_start (GTK_BOX (hbox33), label72, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label72, 68, 16);
+  gtk_label_set_justify (GTK_LABEL (label72), GTK_JUSTIFY_CENTER);
 
   combo_pool = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_pool)->popwin),
-		     "GladeParentKey", combo_pool);
+                     "GladeParentKey", combo_pool);
   gtk_widget_show (combo_pool);
   gtk_box_pack_start (GTK_BOX (hbox33), combo_pool, TRUE, TRUE, 0);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_pool), TRUE, FALSE);
@@ -883,9 +891,10 @@ create_RunDialog (void)
   gtk_widget_show (entry_pool);
   gtk_editable_set_editable (GTK_EDITABLE (entry_pool), FALSE);
 
-  label73 = gtk_label_new ("   ");
+  label73 = gtk_label_new (_("   "));
   gtk_widget_show (label73);
   gtk_box_pack_start (GTK_BOX (hbox33), label73, FALSE, FALSE, 120);
+  gtk_label_set_justify (GTK_LABEL (label73), GTK_JUSTIFY_CENTER);
 
   hbox39 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox39);
@@ -896,10 +905,11 @@ create_RunDialog (void)
   gtk_widget_show (label96);
   gtk_box_pack_start (GTK_BOX (hbox39), label96, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label96, 68, 16);
+  gtk_label_set_justify (GTK_LABEL (label96), GTK_JUSTIFY_CENTER);
 
   combo_storage = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_storage)->popwin),
-		     "GladeParentKey", combo_storage);
+                     "GladeParentKey", combo_storage);
   gtk_widget_show (combo_storage);
   gtk_box_pack_start (GTK_BOX (hbox39), combo_storage, TRUE, TRUE, 0);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_storage), TRUE, FALSE);
@@ -912,9 +922,10 @@ create_RunDialog (void)
   gtk_widget_show (entry_storage);
   gtk_editable_set_editable (GTK_EDITABLE (entry_storage), FALSE);
 
-  label97 = gtk_label_new ("   ");
+  label97 = gtk_label_new (_("   "));
   gtk_widget_show (label97);
   gtk_box_pack_start (GTK_BOX (hbox39), label97, FALSE, FALSE, 120);
+  gtk_label_set_justify (GTK_LABEL (label97), GTK_JUSTIFY_CENTER);
 
   hbox40 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox40);
@@ -925,10 +936,11 @@ create_RunDialog (void)
   gtk_widget_show (label98);
   gtk_box_pack_start (GTK_BOX (hbox40), label98, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label98, 68, 16);
+  gtk_label_set_justify (GTK_LABEL (label98), GTK_JUSTIFY_CENTER);
 
   combo_messages = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_messages)->popwin),
-		     "GladeParentKey", combo_messages);
+                     "GladeParentKey", combo_messages);
   gtk_widget_show (combo_messages);
   gtk_box_pack_start (GTK_BOX (hbox40), combo_messages, TRUE, TRUE, 0);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_messages), TRUE, FALSE);
@@ -940,9 +952,10 @@ create_RunDialog (void)
   gtk_widget_show (entry_messages);
   gtk_editable_set_editable (GTK_EDITABLE (entry_messages), FALSE);
 
-  label99 = gtk_label_new ("   ");
+  label99 = gtk_label_new (_("   "));
   gtk_widget_show (label99);
   gtk_box_pack_start (GTK_BOX (hbox40), label99, FALSE, FALSE, 120);
+  gtk_label_set_justify (GTK_LABEL (label99), GTK_JUSTIFY_CENTER);
 
   hbox34 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox34);
@@ -953,14 +966,16 @@ create_RunDialog (void)
   gtk_widget_show (label77);
   gtk_box_pack_start (GTK_BOX (hbox34), label77, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label77, 68, 16);
+  gtk_label_set_justify (GTK_LABEL (label77), GTK_JUSTIFY_CENTER);
 
   entry_where = gtk_entry_new ();
   gtk_widget_show (entry_where);
   gtk_box_pack_start (GTK_BOX (hbox34), entry_where, TRUE, TRUE, 0);
 
-  label78 = gtk_label_new ("   ");
+  label78 = gtk_label_new (_("   "));
   gtk_widget_show (label78);
   gtk_box_pack_start (GTK_BOX (hbox34), label78, FALSE, FALSE, 120);
+  gtk_label_set_justify (GTK_LABEL (label78), GTK_JUSTIFY_CENTER);
 
   hbox41 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox41);
@@ -971,14 +986,16 @@ create_RunDialog (void)
   gtk_widget_show (label100);
   gtk_box_pack_start (GTK_BOX (hbox41), label100, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label100, 68, 16);
+  gtk_label_set_justify (GTK_LABEL (label100), GTK_JUSTIFY_CENTER);
 
   entry_when = gtk_entry_new ();
   gtk_widget_show (entry_when);
   gtk_box_pack_start (GTK_BOX (hbox41), entry_when, TRUE, TRUE, 0);
 
-  label101 = gtk_label_new ("   ");
+  label101 = gtk_label_new (_("   "));
   gtk_widget_show (label101);
   gtk_box_pack_start (GTK_BOX (hbox41), label101, FALSE, FALSE, 120);
+  gtk_label_set_justify (GTK_LABEL (label101), GTK_JUSTIFY_CENTER);
 
   hbox60 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox60);
@@ -989,19 +1006,22 @@ create_RunDialog (void)
   gtk_widget_show (label153);
   gtk_box_pack_start (GTK_BOX (hbox60), label153, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label153, 68, 16);
+  gtk_label_set_justify (GTK_LABEL (label153), GTK_JUSTIFY_CENTER);
 
   entry28 = gtk_entry_new ();
   gtk_widget_show (entry28);
   gtk_box_pack_start (GTK_BOX (hbox60), entry28, TRUE, TRUE, 0);
 
-  label154 = gtk_label_new ("   ");
+  label154 = gtk_label_new (_("   "));
   gtk_widget_show (label154);
   gtk_box_pack_start (GTK_BOX (hbox60), label154, FALSE, FALSE, 36);
+  gtk_label_set_justify (GTK_LABEL (label154), GTK_JUSTIFY_CENTER);
 
-  label84 = gtk_label_new ("   ");
+  label84 = gtk_label_new (_("   "));
   gtk_widget_show (label84);
   gtk_box_pack_start (GTK_BOX (vbox11), label84, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label84, 12, 19);
+  gtk_label_set_justify (GTK_LABEL (label84), GTK_JUSTIFY_CENTER);
 
   dialog_action_area6 = GTK_DIALOG (RunDialog)->action_area;
   gtk_widget_show (dialog_action_area6);
@@ -1024,14 +1044,14 @@ create_RunDialog (void)
   GTK_WIDGET_SET_FLAGS (run_cancel, GTK_CAN_DEFAULT);
 
   g_signal_connect ((gpointer) entry_job, "changed",
-		    G_CALLBACK (on_entry_job_changed),
-		    NULL);
+                    G_CALLBACK (on_entry_job_changed),
+                    NULL);
   g_signal_connect ((gpointer) run_ok, "clicked",
-		    G_CALLBACK (on_run_ok_clicked),
-		    NULL);
+                    G_CALLBACK (on_run_ok_clicked),
+                    NULL);
   g_signal_connect ((gpointer) run_cancel, "clicked",
-		    G_CALLBACK (on_run_cancel_clicked),
-		    NULL);
+                    G_CALLBACK (on_run_cancel_clicked),
+                    NULL);
 
   /* Store pointers to all widgets, for use by lookup_widget(). */
   GLADE_HOOKUP_OBJECT_NO_REF (RunDialog, RunDialog, "RunDialog");
@@ -1105,7 +1125,7 @@ create_RunDialog (void)
 
 static GnomeUIInfo file2_menu_uiinfo[] =
 {
-  GNOMEUIINFO_MENU_NEW_ITEM (_("_New"), NULL, on_new1_activate, NULL),
+  GNOMEUIINFO_MENU_NEW_ITEM (N_("_New"), NULL, on_new1_activate, NULL),
   GNOMEUIINFO_MENU_OPEN_ITEM (on_open1_activate, NULL),
   GNOMEUIINFO_MENU_SAVE_ITEM (on_save1_activate, NULL),
   GNOMEUIINFO_MENU_SAVE_AS_ITEM (on_save_as1_activate, NULL),
@@ -1156,6 +1176,7 @@ create_restore_file_selection (void)
   GtkWidget *menubar2;
   GtkWidget *handlebox3;
   GtkWidget *toolbar3;
+  GtkIconSize tmp_toolbar_icon_size;
   GtkWidget *restore_up_button;
   GtkWidget *restore_add_button;
   GtkWidget *restore_remove_button;
@@ -1171,6 +1192,9 @@ create_restore_file_selection (void)
   GtkWidget *label152;
   GtkWidget *restore_select_cancel;
   GtkWidget *label1001;
+  GtkAccelGroup *accel_group;
+
+  accel_group = gtk_accel_group_new ();
 
   restore_file_selection = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   gtk_widget_set_size_request (restore_file_selection, 640, 480);
@@ -1190,7 +1214,7 @@ create_restore_file_selection (void)
   gtk_widget_show (menubar2);
   gtk_container_add (GTK_CONTAINER (handlebox4), menubar2);
   gnome_app_fill_menu (GTK_MENU_SHELL (menubar2), menubar2_uiinfo,
-		       NULL, FALSE, 0);
+                       accel_group, FALSE, 0);
 
   handlebox3 = gtk_handle_box_new ();
   gtk_widget_show (handlebox3);
@@ -1200,24 +1224,19 @@ create_restore_file_selection (void)
   gtk_widget_show (toolbar3);
   gtk_container_add (GTK_CONTAINER (handlebox3), toolbar3);
   gtk_toolbar_set_style (GTK_TOOLBAR (toolbar3), GTK_TOOLBAR_BOTH);
+  tmp_toolbar_icon_size = gtk_toolbar_get_icon_size (GTK_TOOLBAR (toolbar3));
 
-  restore_up_button = gtk_toolbar_insert_stock (GTK_TOOLBAR (toolbar3),
-				"gtk-go-up",
-				NULL,
-				NULL, NULL, NULL, -1);
+  restore_up_button = (GtkWidget*) gtk_tool_button_new_from_stock ("gtk-go-up");
   gtk_widget_show (restore_up_button);
+  gtk_container_add (GTK_CONTAINER (toolbar3), restore_up_button);
 
-  restore_add_button = gtk_toolbar_insert_stock (GTK_TOOLBAR (toolbar3),
-				"gtk-add",
-				NULL,
-				NULL, NULL, NULL, -1);
+  restore_add_button = (GtkWidget*) gtk_tool_button_new_from_stock ("gtk-add");
   gtk_widget_show (restore_add_button);
+  gtk_container_add (GTK_CONTAINER (toolbar3), restore_add_button);
 
-  restore_remove_button = gtk_toolbar_insert_stock (GTK_TOOLBAR (toolbar3),
-				"gtk-remove",
-				NULL,
-				NULL, NULL, NULL, -1);
+  restore_remove_button = (GtkWidget*) gtk_tool_button_new_from_stock ("gtk-remove");
   gtk_widget_show (restore_remove_button);
+  gtk_container_add (GTK_CONTAINER (toolbar3), restore_remove_button);
 
   hbox38 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox38);
@@ -1226,6 +1245,7 @@ create_restore_file_selection (void)
   label88 = gtk_label_new (_("Current dir:"));
   gtk_widget_show (label88);
   gtk_box_pack_start (GTK_BOX (hbox38), label88, FALSE, TRUE, 0);
+  gtk_label_set_justify (GTK_LABEL (label88), GTK_JUSTIFY_CENTER);
 
   restore_dir = gtk_entry_new ();
   gtk_widget_show (restore_dir);
@@ -1252,7 +1272,6 @@ create_restore_file_selection (void)
   FilesSelected = gtk_label_new (_("Files Selected: "));
   gtk_widget_show (FilesSelected);
   gtk_box_pack_start (GTK_BOX (hbox44), FilesSelected, TRUE, TRUE, 0);
-  gtk_label_set_justify (GTK_LABEL (FilesSelected), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (FilesSelected), 0.02, 0.5);
 
   restore_select_ok = gtk_button_new_from_stock ("gtk-ok");
@@ -1264,35 +1283,33 @@ create_restore_file_selection (void)
   gtk_widget_show (label152);
   gtk_box_pack_start (GTK_BOX (hbox44), label152, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label152, 34, 16);
-  gtk_label_set_justify (GTK_LABEL (label152), GTK_JUSTIFY_LEFT);
 
   restore_select_cancel = gtk_button_new_from_stock ("gtk-cancel");
   gtk_widget_show (restore_select_cancel);
   gtk_box_pack_start (GTK_BOX (hbox44), restore_select_cancel, FALSE, TRUE, 0);
 
-  label1001 = gtk_label_new (" ");
+  label1001 = gtk_label_new (_(" "));
   gtk_widget_show (label1001);
   gtk_box_pack_start (GTK_BOX (hbox44), label1001, FALSE, FALSE, 8);
-  gtk_label_set_justify (GTK_LABEL (label1001), GTK_JUSTIFY_LEFT);
 
   g_signal_connect ((gpointer) restore_file_selection, "delete_event",
-		    G_CALLBACK (on_restore_files_delete_event),
-		    NULL);
+                    G_CALLBACK (on_restore_files_delete_event),
+                    NULL);
   g_signal_connect ((gpointer) restore_up_button, "clicked",
-		    G_CALLBACK (on_restore_up_button_clicked),
-		    NULL);
+                    G_CALLBACK (on_restore_up_button_clicked),
+                    NULL);
   g_signal_connect ((gpointer) restore_add_button, "clicked",
-		    G_CALLBACK (on_restore_add_button_clicked),
-		    NULL);
+                    G_CALLBACK (on_restore_add_button_clicked),
+                    NULL);
   g_signal_connect ((gpointer) restore_remove_button, "clicked",
-		    G_CALLBACK (on_restore_remove_button_clicked),
-		    NULL);
+                    G_CALLBACK (on_restore_remove_button_clicked),
+                    NULL);
   g_signal_connect ((gpointer) restore_select_ok, "clicked",
-		    G_CALLBACK (on_restore_select_ok_clicked),
-		    NULL);
+                    G_CALLBACK (on_restore_select_ok_clicked),
+                    NULL);
   g_signal_connect ((gpointer) restore_select_cancel, "clicked",
-		    G_CALLBACK (on_restore_select_cancel_clicked),
-		    NULL);
+                    G_CALLBACK (on_restore_select_cancel_clicked),
+                    NULL);
 
   /* Store pointers to all widgets, for use by lookup_widget(). */
   GLADE_HOOKUP_OBJECT_NO_REF (restore_file_selection, restore_file_selection, "restore_file_selection");
@@ -1336,6 +1353,8 @@ create_restore_file_selection (void)
   GLADE_HOOKUP_OBJECT (restore_file_selection, restore_select_cancel, "restore_select_cancel");
   GLADE_HOOKUP_OBJECT (restore_file_selection, label1001, "label1001");
 
+  gtk_window_add_accel_group (GTK_WINDOW (restore_file_selection), accel_group);
+
   return restore_file_selection;
 }
 
@@ -1372,6 +1391,7 @@ create_label_dialog (void)
   label_dialog = gtk_dialog_new ();
   gtk_window_set_title (GTK_WINDOW (label_dialog), _("Label a Volume"));
   gtk_window_set_modal (GTK_WINDOW (label_dialog), TRUE);
+  gtk_window_set_type_hint (GTK_WINDOW (label_dialog), GDK_WINDOW_TYPE_HINT_DIALOG);
 
   dialog_vbox9 = GTK_DIALOG (label_dialog)->vbox;
   gtk_widget_show (dialog_vbox9);
@@ -1383,6 +1403,7 @@ create_label_dialog (void)
   label106 = gtk_label_new (_("Label a Volume"));
   gtk_widget_show (label106);
   gtk_box_pack_start (GTK_BOX (vbox16), label106, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (label106), GTK_JUSTIFY_CENTER);
   gtk_misc_set_padding (GTK_MISC (label106), 0, 9);
 
   hbox45 = gtk_hbox_new (FALSE, 0);
@@ -1393,11 +1414,12 @@ create_label_dialog (void)
   label107 = gtk_label_new (_("Storage:"));
   gtk_widget_show (label107);
   gtk_box_pack_start (GTK_BOX (hbox45), label107, TRUE, TRUE, 0);
+  gtk_label_set_justify (GTK_LABEL (label107), GTK_JUSTIFY_CENTER);
   gtk_misc_set_alignment (GTK_MISC (label107), 0.15, 0.5);
 
   label_combo_storage = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (label_combo_storage)->popwin),
-		     "GladeParentKey", label_combo_storage);
+                     "GladeParentKey", label_combo_storage);
   gtk_widget_show (label_combo_storage);
   gtk_box_pack_start (GTK_BOX (hbox45), label_combo_storage, TRUE, TRUE, 15);
   gtk_combo_set_value_in_list (GTK_COMBO (label_combo_storage), TRUE, FALSE);
@@ -1418,12 +1440,11 @@ create_label_dialog (void)
   label109 = gtk_label_new (_("Pool:"));
   gtk_widget_show (label109);
   gtk_box_pack_start (GTK_BOX (hbox46), label109, TRUE, TRUE, 0);
-  gtk_label_set_justify (GTK_LABEL (label109), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (label109), 0.12, 0.5);
 
   label_combo_pool = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (label_combo_pool)->popwin),
-		     "GladeParentKey", label_combo_pool);
+                     "GladeParentKey", label_combo_pool);
   gtk_widget_show (label_combo_pool);
   gtk_box_pack_start (GTK_BOX (hbox46), label_combo_pool, TRUE, TRUE, 14);
   gtk_combo_set_value_in_list (GTK_COMBO (label_combo_pool), TRUE, FALSE);
@@ -1444,7 +1465,6 @@ create_label_dialog (void)
   label111 = gtk_label_new (_("Volume Name:"));
   gtk_widget_show (label111);
   gtk_box_pack_start (GTK_BOX (hbox47), label111, TRUE, TRUE, 0);
-  gtk_label_set_justify (GTK_LABEL (label111), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (label111), 0.17, 0.5);
 
   label_entry_volume = gtk_entry_new ();
@@ -1459,7 +1479,6 @@ create_label_dialog (void)
   slot1 = gtk_label_new (_("Slot:"));
   gtk_widget_show (slot1);
   gtk_box_pack_start (GTK_BOX (hbox48), slot1, FALSE, TRUE, 0);
-  gtk_label_set_justify (GTK_LABEL (slot1), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (slot1), 0.09, 0.5);
 
   label_slot_adj = gtk_adjustment_new (0, 0, 10000, 1, 10, 10);
@@ -1468,9 +1487,10 @@ create_label_dialog (void)
   gtk_box_pack_start (GTK_BOX (hbox48), label_slot, TRUE, TRUE, 0);
   gtk_spin_button_set_numeric (GTK_SPIN_BUTTON (label_slot), TRUE);
 
-  label113 = gtk_label_new ("   ");
+  label113 = gtk_label_new (_("   "));
   gtk_widget_show (label113);
   gtk_box_pack_start (GTK_BOX (vbox16), label113, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (label113), GTK_JUSTIFY_CENTER);
 
   dialog_action_area8 = GTK_DIALOG (label_dialog)->action_area;
   gtk_widget_show (dialog_action_area8);
@@ -1493,11 +1513,11 @@ create_label_dialog (void)
   GTK_WIDGET_SET_FLAGS (label_cancel, GTK_CAN_DEFAULT);
 
   g_signal_connect ((gpointer) label_ok, "clicked",
-		    G_CALLBACK (on_label_ok_clicked),
-		    NULL);
+                    G_CALLBACK (on_label_ok_clicked),
+                    NULL);
   g_signal_connect ((gpointer) label_cancel, "clicked",
-		    G_CALLBACK (on_label_cancel_clicked),
-		    NULL);
+                    G_CALLBACK (on_label_cancel_clicked),
+                    NULL);
 
   /* Store pointers to all widgets, for use by lookup_widget(). */
   GLADE_HOOKUP_OBJECT_NO_REF (label_dialog, label_dialog, "label_dialog");
@@ -1584,6 +1604,7 @@ create_RestoreDialog (void)
   RestoreDialog = gtk_dialog_new ();
   gtk_window_set_title (GTK_WINDOW (RestoreDialog), _("Restore Files Dialog"));
   gtk_window_set_default_size (GTK_WINDOW (RestoreDialog), 300, 200);
+  gtk_window_set_type_hint (GTK_WINDOW (RestoreDialog), GDK_WINDOW_TYPE_HINT_DIALOG);
 
   dialog_vbox10 = GTK_DIALOG (RestoreDialog)->vbox;
   gtk_widget_show (dialog_vbox10);
@@ -1599,6 +1620,7 @@ create_RestoreDialog (void)
   label119 = gtk_label_new (_("Restore Files"));
   gtk_widget_show (label119);
   gtk_box_pack_start (GTK_BOX (vbox18), label119, FALSE, FALSE, 2);
+  gtk_label_set_justify (GTK_LABEL (label119), GTK_JUSTIFY_CENTER);
   gtk_misc_set_padding (GTK_MISC (label119), 0, 9);
 
   alignment3 = gtk_alignment_new (0.5, 0.5, 1, 1);
@@ -1621,7 +1643,7 @@ create_RestoreDialog (void)
 
   combo_restore_job = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_restore_job)->popwin),
-		     "GladeParentKey", combo_restore_job);
+                     "GladeParentKey", combo_restore_job);
   gtk_widget_show (combo_restore_job);
   gtk_box_pack_start (GTK_BOX (hbox51), combo_restore_job, TRUE, TRUE, 1);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_restore_job), TRUE, FALSE);
@@ -1636,6 +1658,7 @@ create_RestoreDialog (void)
   label122 = gtk_label_new ("");
   gtk_widget_show (label122);
   gtk_box_pack_start (GTK_BOX (hbox51), label122, FALSE, FALSE, 27);
+  gtk_label_set_justify (GTK_LABEL (label122), GTK_JUSTIFY_CENTER);
 
   hbox52 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox52);
@@ -1649,7 +1672,7 @@ create_RestoreDialog (void)
 
   combo_restore_client = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_restore_client)->popwin),
-		     "GladeParentKey", combo_restore_client);
+                     "GladeParentKey", combo_restore_client);
   gtk_widget_show (combo_restore_client);
   gtk_box_pack_start (GTK_BOX (hbox52), combo_restore_client, TRUE, TRUE, 1);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_restore_client), TRUE, FALSE);
@@ -1661,9 +1684,10 @@ create_RestoreDialog (void)
   gtk_widget_show (restore_client_entry);
   gtk_editable_set_editable (GTK_EDITABLE (restore_client_entry), FALSE);
 
-  label127 = gtk_label_new (" ");
+  label127 = gtk_label_new (_(" "));
   gtk_widget_show (label127);
   gtk_box_pack_start (GTK_BOX (hbox52), label127, FALSE, FALSE, 25);
+  gtk_label_set_justify (GTK_LABEL (label127), GTK_JUSTIFY_CENTER);
 
   hbox53 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox53);
@@ -1677,7 +1701,7 @@ create_RestoreDialog (void)
 
   combo_restore_fileset = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_restore_fileset)->popwin),
-		     "GladeParentKey", combo_restore_fileset);
+                     "GladeParentKey", combo_restore_fileset);
   gtk_widget_show (combo_restore_fileset);
   gtk_box_pack_start (GTK_BOX (hbox53), combo_restore_fileset, TRUE, TRUE, 0);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_restore_fileset), TRUE, FALSE);
@@ -1689,9 +1713,10 @@ create_RestoreDialog (void)
   gtk_widget_show (restore_fileset_entry);
   gtk_editable_set_editable (GTK_EDITABLE (restore_fileset_entry), FALSE);
 
-  label130 = gtk_label_new ("  ");
+  label130 = gtk_label_new (_("  "));
   gtk_widget_show (label130);
   gtk_box_pack_start (GTK_BOX (hbox53), label130, FALSE, FALSE, 23);
+  gtk_label_set_justify (GTK_LABEL (label130), GTK_JUSTIFY_CENTER);
 
   hbox55 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox55);
@@ -1701,10 +1726,11 @@ create_RestoreDialog (void)
   gtk_widget_show (label135);
   gtk_box_pack_start (GTK_BOX (hbox55), label135, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label135, 66, 16);
+  gtk_label_set_justify (GTK_LABEL (label135), GTK_JUSTIFY_CENTER);
 
   combo_restore_pool = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_restore_pool)->popwin),
-		     "GladeParentKey", combo_restore_pool);
+                     "GladeParentKey", combo_restore_pool);
   gtk_widget_show (combo_restore_pool);
   gtk_box_pack_start (GTK_BOX (hbox55), combo_restore_pool, TRUE, TRUE, 0);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_restore_pool), TRUE, FALSE);
@@ -1717,9 +1743,10 @@ create_RestoreDialog (void)
   gtk_widget_show (restore_pool_entry);
   gtk_editable_set_editable (GTK_EDITABLE (restore_pool_entry), FALSE);
 
-  label138 = gtk_label_new ("   ");
+  label138 = gtk_label_new (_("   "));
   gtk_widget_show (label138);
   gtk_box_pack_start (GTK_BOX (hbox55), label138, FALSE, FALSE, 21);
+  gtk_label_set_justify (GTK_LABEL (label138), GTK_JUSTIFY_CENTER);
 
   hbox56 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox56);
@@ -1729,10 +1756,11 @@ create_RestoreDialog (void)
   gtk_widget_show (label139);
   gtk_box_pack_start (GTK_BOX (hbox56), label139, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label139, 66, 16);
+  gtk_label_set_justify (GTK_LABEL (label139), GTK_JUSTIFY_CENTER);
 
   combo_restore_storage = gtk_combo_new ();
   g_object_set_data (G_OBJECT (GTK_COMBO (combo_restore_storage)->popwin),
-		     "GladeParentKey", combo_restore_storage);
+                     "GladeParentKey", combo_restore_storage);
   gtk_widget_show (combo_restore_storage);
   gtk_box_pack_start (GTK_BOX (hbox56), combo_restore_storage, TRUE, TRUE, 0);
   gtk_combo_set_value_in_list (GTK_COMBO (combo_restore_storage), TRUE, FALSE);
@@ -1745,9 +1773,10 @@ create_RestoreDialog (void)
   gtk_widget_show (restore_storage_entry);
   gtk_editable_set_editable (GTK_EDITABLE (restore_storage_entry), FALSE);
 
-  label142 = gtk_label_new ("   ");
+  label142 = gtk_label_new (_("   "));
   gtk_widget_show (label142);
   gtk_box_pack_start (GTK_BOX (hbox56), label142, FALSE, FALSE, 21);
+  gtk_label_set_justify (GTK_LABEL (label142), GTK_JUSTIFY_CENTER);
 
   hbox59 = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (hbox59);
@@ -1757,18 +1786,21 @@ create_RestoreDialog (void)
   gtk_widget_show (label148);
   gtk_box_pack_start (GTK_BOX (hbox59), label148, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label148, 66, 16);
+  gtk_label_set_justify (GTK_LABEL (label148), GTK_JUSTIFY_CENTER);
 
   restore_before_entry = gtk_entry_new ();
   gtk_widget_show (restore_before_entry);
   gtk_box_pack_start (GTK_BOX (hbox59), restore_before_entry, TRUE, TRUE, 0);
 
-  label149 = gtk_label_new ("   ");
+  label149 = gtk_label_new (_("   "));
   gtk_widget_show (label149);
   gtk_box_pack_start (GTK_BOX (hbox59), label149, FALSE, FALSE, 53);
+  gtk_label_set_justify (GTK_LABEL (label149), GTK_JUSTIFY_CENTER);
 
-  label150 = gtk_label_new ("   ");
+  label150 = gtk_label_new (_("   "));
   gtk_widget_show (label150);
   gtk_box_pack_start (GTK_BOX (vbox17), label150, FALSE, FALSE, 0);
+  gtk_label_set_justify (GTK_LABEL (label150), GTK_JUSTIFY_CENTER);
 
   dialog_action_area9 = GTK_DIALOG (RestoreDialog)->action_area;
   gtk_widget_show (dialog_action_area9);
@@ -1799,7 +1831,6 @@ create_RestoreDialog (void)
   restore_select_button = gtk_label_new_with_mnemonic (_("Select Files"));
   gtk_widget_show (restore_select_button);
   gtk_box_pack_start (GTK_BOX (hbox49), restore_select_button, FALSE, FALSE, 0);
-  gtk_label_set_justify (GTK_LABEL (restore_select_button), GTK_JUSTIFY_LEFT);
 
   restore_cancel = gtk_button_new_from_stock ("gtk-cancel");
   gtk_widget_show (restore_cancel);
@@ -1807,14 +1838,14 @@ create_RestoreDialog (void)
   GTK_WIDGET_SET_FLAGS (restore_cancel, GTK_CAN_DEFAULT);
 
   g_signal_connect ((gpointer) restore_job_entry, "changed",
-		    G_CALLBACK (on_restore_job_entry_changed),
-		    NULL);
+                    G_CALLBACK (on_restore_job_entry_changed),
+                    NULL);
   g_signal_connect ((gpointer) select_files_button, "clicked",
-		    G_CALLBACK (on_select_files_button_clicked),
-		    NULL);
+                    G_CALLBACK (on_select_files_button_clicked),
+                    NULL);
   g_signal_connect ((gpointer) restore_cancel, "clicked",
-		    G_CALLBACK (on_restore_cancel_clicked),
-		    NULL);
+                    G_CALLBACK (on_restore_cancel_clicked),
+                    NULL);
 
   /* Store pointers to all widgets, for use by lookup_widget(). */
   GLADE_HOOKUP_OBJECT_NO_REF (RestoreDialog, RestoreDialog, "RestoreDialog");
@@ -1881,6 +1912,7 @@ create_progress_dialog (void)
 
   progress_dialog = gtk_dialog_new ();
   gtk_window_set_title (GTK_WINDOW (progress_dialog), _("Progress"));
+  gtk_window_set_type_hint (GTK_WINDOW (progress_dialog), GDK_WINDOW_TYPE_HINT_DIALOG);
 
   dialog_vbox11 = GTK_DIALOG (progress_dialog)->vbox;
   gtk_widget_show (dialog_vbox11);
@@ -1893,13 +1925,11 @@ create_progress_dialog (void)
   gtk_widget_show (label1002);
   gtk_box_pack_start (GTK_BOX (vbox19), label1002, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label1002, 0, 43);
-  gtk_label_set_justify (GTK_LABEL (label1002), GTK_JUSTIFY_LEFT);
 
   label1003 = gtk_label_new ("");
   gtk_widget_show (label1003);
   gtk_box_pack_start (GTK_BOX (vbox19), label1003, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label1003, 0, 36);
-  gtk_label_set_justify (GTK_LABEL (label1003), GTK_JUSTIFY_LEFT);
 
   progressbar1 = gtk_progress_bar_new ();
   gtk_widget_show (progressbar1);
@@ -1910,7 +1940,6 @@ create_progress_dialog (void)
   gtk_widget_show (label1004);
   gtk_box_pack_start (GTK_BOX (vbox19), label1004, FALSE, FALSE, 0);
   gtk_widget_set_size_request (label1004, 0, 52);
-  gtk_label_set_justify (GTK_LABEL (label1004), GTK_JUSTIFY_LEFT);
 
   dialog_action_area10 = GTK_DIALOG (progress_dialog)->action_area;
   gtk_widget_show (dialog_action_area10);

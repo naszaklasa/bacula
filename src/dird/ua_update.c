@@ -5,7 +5,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_update.c,v 1.7.2.3 2006/02/23 19:56:12 kerns Exp $
+ *   Version $Id: ua_update.c,v 1.7.2.4 2006/05/02 14:48:16 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -51,10 +51,10 @@ static int update_pool(UAContext *ua);
 int update_cmd(UAContext *ua, const char *cmd)
 {
    static const char *kw[] = {
-      N_("media"),  /* 0 */
-      N_("volume"), /* 1 */
-      N_("pool"),   /* 2 */
-      N_("slots"),  /* 3 */
+      NT_("media"),  /* 0 */
+      NT_("volume"), /* 1 */
+      NT_("pool"),   /* 2 */
+      NT_("slots"),  /* 3 */
       NULL};
 
    if (!open_db(ua)) {
@@ -100,14 +100,14 @@ static void update_volstatus(UAContext *ua, const char *val, MEDIA_DBR *mr)
 {
    POOL_MEM query(PM_MESSAGE);
    const char *kw[] = {
-      N_("Append"),
-      N_("Archive"),
-      N_("Disabled"),
-      N_("Full"),
-      N_("Used"),
-      N_("Cleaning"),
-      N_("Recycle"),
-      N_("Read-Only"),
+      NT_("Append"),
+      NT_("Archive"),
+      NT_("Disabled"),
+      NT_("Full"),
+      NT_("Used"),
+      NT_("Cleaning"),
+      NT_("Recycle"),
+      NT_("Read-Only"),
       NULL};
    bool found = false;
    int i;
@@ -460,44 +460,45 @@ static int update_volume(UAContext *ua)
    }
 
    for ( ; !done; ) {
-      bsendmsg(ua, _("Updating Volume \"%s\"\n"), mr.VolumeName);
       start_prompt(ua, _("Parameters to modify:\n"));
-      add_prompt(ua, _("Volume Status"));
-      add_prompt(ua, _("Volume Retention Period"));
-      add_prompt(ua, _("Volume Use Duration"));
-      add_prompt(ua, _("Maximum Volume Jobs"));
-      add_prompt(ua, _("Maximum Volume Files"));
-      add_prompt(ua, _("Maximum Volume Bytes"));
-      add_prompt(ua, _("Recycle Flag"));
-      add_prompt(ua, _("Slot"));
-      add_prompt(ua, _("InChanger Flag"));
-      add_prompt(ua, _("Volume Files"));
-      add_prompt(ua, _("Pool"));
-      add_prompt(ua, _("Volume from Pool"));
-      add_prompt(ua, _("All Volumes from Pool"));
-      add_prompt(ua, _("Done"));
+      add_prompt(ua, _("Volume Status"));              /* 0 */
+      add_prompt(ua, _("Volume Retention Period"));    /* 1 */
+      add_prompt(ua, _("Volume Use Duration"));        /* 2 */
+      add_prompt(ua, _("Maximum Volume Jobs"));        /* 3 */
+      add_prompt(ua, _("Maximum Volume Files"));       /* 4 */
+      add_prompt(ua, _("Maximum Volume Bytes"));       /* 5 */
+      add_prompt(ua, _("Recycle Flag"));               /* 6 */
+      add_prompt(ua, _("Slot"));                       /* 7 */
+      add_prompt(ua, _("InChanger Flag"));             /* 8 */
+      add_prompt(ua, _("Volume Files"));               /* 9 */
+      add_prompt(ua, _("Pool"));                       /* 10 */
+      add_prompt(ua, _("Volume from Pool"));           /* 11 */
+      add_prompt(ua, _("All Volumes from Pool"));      /* 12 */
+      add_prompt(ua, _("Done"));                       /* 13 */
       i = do_prompt(ua, "", _("Select parameter to modify"), NULL, 0);  
+
       /* For All Volumes from Pool we don't need a Volume record */
-      if (i != 12) {
+      if (i != 12 && i != 13) {
          if (!select_media_dbr(ua, &mr)) {  /* Get Volume record */
             return 0;
          }
+         bsendmsg(ua, _("Updating Volume \"%s\"\n"), mr.VolumeName);
       }
       switch (i) {
       case 0:                         /* Volume Status */
          /* Modify Volume Status */
          bsendmsg(ua, _("Current Volume status is: %s\n"), mr.VolStatus);
          start_prompt(ua, _("Possible Values are:\n"));
-         add_prompt(ua, N_("Append")); 
-         add_prompt(ua, N_("Archive"));
-         add_prompt(ua, N_("Disabled"));
-         add_prompt(ua, N_("Full"));
-         add_prompt(ua, N_("Used"));
-         add_prompt(ua, N_("Cleaning"));
-         if (strcmp(mr.VolStatus, N_("Purged")) == 0) {
-            add_prompt(ua, N_("Recycle"));
+         add_prompt(ua, NT_("Append")); 
+         add_prompt(ua, NT_("Archive"));
+         add_prompt(ua, NT_("Disabled"));
+         add_prompt(ua, NT_("Full"));
+         add_prompt(ua, NT_("Used"));
+         add_prompt(ua, NT_("Cleaning"));
+         if (strcmp(mr.VolStatus, NT_("Purged")) == 0) {
+            add_prompt(ua, NT_("Recycle"));
          }
-         add_prompt(ua, N_("Read-Only"));
+         add_prompt(ua, NT_("Read-Only"));
          if (do_prompt(ua, "", _("Choose new Volume Status"), ua->cmd, sizeof(mr.VolStatus)) < 0) {
             return 1;
          }

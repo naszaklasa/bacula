@@ -4,29 +4,24 @@
  *
  * Kern Sibbald, January MMV
  *
- *   Version $Id: pythonsd.c,v 1.3 2005/08/10 16:35:37 nboichat Exp $
+ *   Version $Id: pythonsd.c,v 1.3.2.1 2006/05/02 14:48:17 kerns Exp $
  *
  */
-
 /*
-   Copyright (C) 2005 Kern Sibbald
+   Copyright (C) 2005-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
+
 
 #include "bacula.h"
 #include "stored.h"
@@ -55,18 +50,18 @@ struct s_vars {
 };
 
 static struct s_vars getvars[] = {
-   { N_("Job"),        "s"},          /* 0 */
-   { N_("SDName"),     "s"},          /* 1 */
-   { N_("Level"),      "s"},          /* 2 */
-   { N_("Type"),       "s"},          /* 3 */
-   { N_("JobId"),      "i"},          /* 4 */
-   { N_("Client"),     "s"},          /* 5 */
-   { N_("Pool"),       "s"},          /* 6 */
-   { N_("MediaType"),  "s"},          /* 7 */
-   { N_("JobName"),    "s"},          /* 8 */
-   { N_("JobStatus"),  "s"},          /* 9 */
-   { N_("VolumeName"), "s"},          /* 10 */
-   { N_("Device"),     "s"},          /* 11 */
+   { NT_("Job"),        "s"},          /* 0 */
+   { NT_("SDName"),     "s"},          /* 1 */
+   { NT_("Level"),      "s"},          /* 2 */
+   { NT_("Type"),       "s"},          /* 3 */
+   { NT_("JobId"),      "i"},          /* 4 */
+   { NT_("Client"),     "s"},          /* 5 */
+   { NT_("Pool"),       "s"},          /* 6 */
+   { NT_("MediaType"),  "s"},          /* 7 */
+   { NT_("JobName"),    "s"},          /* 8 */
+   { NT_("JobStatus"),  "s"},          /* 9 */
+   { NT_("VolumeName"), "s"},          /* 10 */
+   { NT_("Device"),     "s"},          /* 11 */
 
    { NULL,             NULL}
 };
@@ -74,7 +69,7 @@ static struct s_vars getvars[] = {
 
 /* Writable variables */
 static struct s_vars setvars[] = {
-   { N_("JobReport"),   "s"},
+   { NT_("JobReport"),   "s"},
 
    { NULL,             NULL}
 };
@@ -238,7 +233,8 @@ int generate_job_event(JCR *jcr, const char *event)
       return 0;
    }
 
-   PyEval_AcquireLock();
+   lock_python();
+// PyEval_AcquireLock();
 
    method = find_method(events, method, event);
    if (!method) {
@@ -259,7 +255,8 @@ int generate_job_event(JCR *jcr, const char *event)
    Py_XDECREF(result);
 
 bail_out:
-   PyEval_ReleaseLock();
+   unlock_python();
+// PyEval_ReleaseLock();
    return stat;
 }
 

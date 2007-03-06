@@ -1,4 +1,64 @@
 
+Release 1.38.8 (02May06)
+02May06
+- Added code to strip backslashes from Windows filenames during
+  a restore.
+- Corrected Win32 License to use the correct LICENSE file.
+- Corrected the buffer count and bytes reported in the heap 
+  statistics.
+26Apr06
+- Implement an NT_() macro to indicate that text should NOT
+  be translated.
+- Fix a number of incorrect strings marked for translation, when
+  they should not be (e.g. commands).
+- Fix StartTime bug reported for ClientRunBeforeJob and RunBeforeJob
+  Patches supplied by user in bugs #608 and #599.
+- Use most recent of st_ctime and st_mtime in restore tree DIR
+  listing. This fixes some problems with Win32 printing incorrect
+  values.
+- Correct the clock shift comm time calculation between the DIR
+  and the FD. It was added rather than subtracted.
+- Strip all backslashes in filenames to be restored on Win32
+  machines -- the names should all be in Unix format, and if
+  there are any backslashes it is most likely due to an improper
+  FileSet definition, and the files will not otherwise be 
+  restorable.
+- Remove lib/regex.c (replaced by bregex.c).
+- Delete src/win32/License.txt
+- Modify installer to install LICENSE
+25Apr06
+- Add back ua_label barcode fix from Rufolf Cejka.
+23Apr06
+- Add 'Dir Status' button to the gnome console.
+- Display heap stats in Storage daemon without debug level.
+22Apr06
+- Integrate most of the MinGW changes -- more to do.
+21Apr06
+- Implement using pg_config for finding PostgreSQL files.
+  Fixes bug #600. Patch supplied by user.
+- Remove -t option from mktemp in mtx_changer.in and use
+  working directory. Fixes bug #578.
+- Update job start time after the any run before job so that
+  files created by the script are only backed up once. Fixes
+  bug #599.
+- Strip trailing newline only from filenames entered in
+  the restore command when reading a file. This permits
+  the user to enter filenames with trailing spaces. Fixes
+  bug #549. The user supplied a patch that I modified slightly.
+- Use the most recent time (st_mtime, st_ctime) in the dir
+  command in restore. This gives the user a better idea of what
+  the newest file really is. This fixes bug #574. The fix
+  was suggested by the user.
+18Apr06
+- Remove the -f option from the chown in Makefile.in for more
+  portability.
+- Change setting the group in Makefile.in to use chgrp for
+  more portability.
+- Implement a Bacula read/write lock for Python rather
+  than using the Python lock to avoid recursive problems.
+- Correct the uninstall directory names in filed/Makefile.in
+  as reported by a user.
+
 Release 1.38.8 (14Apr06)               
 14Apr06
 - Correct Makefile for Solaris /bin/sh

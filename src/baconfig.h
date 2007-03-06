@@ -2,7 +2,7 @@
  * General header file configurations that apply to
  * all daemons.  System dependent stuff goes here.
  *
- *   Version $Id: baconfig.h,v 1.88.2.2 2006/01/09 20:42:55 kerns Exp $
+ *   Version $Id: baconfig.h,v 1.88.2.3 2006/05/02 14:48:12 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -91,6 +91,8 @@
       #define setlocale(p, d)
    #endif
 #endif /* ENABLE_NLS */
+/* Use the following for strings not to be translated */
+#define NT_(s) (s)   
 
 /* This should go away! ****FIXME***** */
 #define MAXSTRING 500

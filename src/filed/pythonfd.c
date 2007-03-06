@@ -4,27 +4,21 @@
  *
  * Kern Sibbald, March MMV
  *
- *   Version $Id: pythonfd.c,v 1.3 2005/08/10 16:35:19 nboichat Exp $
+ *   Version $Id: pythonfd.c,v 1.3.2.1 2006/05/02 14:48:16 kerns Exp $
  *
  */
-
 /*
-   Copyright (C) 2005 Kern Sibbald
+   Copyright (C) 2005-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -70,20 +64,20 @@ struct s_vars {
 
 /* Read-only variables */
 static struct s_vars getvars[] = {
-   { N_("FDName"),     "s"},          /* 0 */
-   { N_("Level"),      "s"},          /* 1 */
-   { N_("Type"),       "s"},          /* 2 */
-   { N_("JobId"),      "i"},          /* 3 */
-   { N_("Client"),     "s"},          /* 4 */
-   { N_("JobName"),    "s"},          /* 5 */
-   { N_("JobStatus"),  "s"},          /* 6 */
+   { NT_("FDName"),     "s"},          /* 0 */
+   { NT_("Level"),      "s"},          /* 1 */
+   { NT_("Type"),       "s"},          /* 2 */
+   { NT_("JobId"),      "i"},          /* 3 */
+   { NT_("Client"),     "s"},          /* 4 */
+   { NT_("JobName"),    "s"},          /* 5 */
+   { NT_("JobStatus"),  "s"},          /* 6 */
 
    { NULL,             NULL}
 };
 
 /* Writable variables */
 static struct s_vars setvars[] = {
-   { N_("JobReport"),   "s"},
+   { NT_("JobReport"),   "s"},
 
    { NULL,             NULL}
 };
@@ -247,7 +241,8 @@ int generate_job_event(JCR *jcr, const char *event)
       return 0;
    }
 
-   PyEval_AcquireLock();
+   lock_python();
+// PyEval_AcquireLock();
 
    method = find_method(events, method, event);
    if (!method) {
@@ -268,7 +263,8 @@ int generate_job_event(JCR *jcr, const char *event)
    Py_XDECREF(result);
 
 bail_out:
-   PyEval_ReleaseLock();
+   unlock_python();
+// PyEval_ReleaseLock();
    return stat;
 }
 

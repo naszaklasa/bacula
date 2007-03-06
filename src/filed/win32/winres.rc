@@ -68,7 +68,7 @@ BEGIN
             VALUE "FileDescription", "Bacula File daemon for Win32\0"
             VALUE "FileVersion", VERSION "\0"
             VALUE "InternalName", "Bacula\0"
-            VALUE "LegalCopyright", "Copyright Kern Sibbald, 1999-2005\0"
+            VALUE "LegalCopyright", "Copyright Kern Sibbald, 1999-2006\0"
             VALUE "LegalTrademarks", "Licensed under GNU GPL 2.0\0"
             VALUE "OriginalFilename", "filed.exe\0"
             VALUE "PrivateBuild", "\0"
@@ -141,7 +141,7 @@ BEGIN
     LTEXT           "         www.bacula.org",IDC_WWW,115,70,100,10
 //    LTEXT           "                 ",-1,69,81,100,10
 //    LTEXT           "                 ",-1,90,70,100,10
-    LTEXT           "Copyright (C) 1999-2005, Kern Sibbald",IDC_COPYRIGHT,7,120,175,10
+    LTEXT           "Copyright (C) 1999-2006, Kern Sibbald",IDC_COPYRIGHT,7,120,175,10
     LTEXT           N_("Licensed under GNU GPL 2.0."),IDC_TRADEMARK,7,130,175,10
     RTEXT           N_("Build Date:"),-1,108,24,42,8
     RTEXT           N_("Bacula Version:"),-1,100,9,50,8

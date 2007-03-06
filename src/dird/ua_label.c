@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, April MMIII
  *
- *   Version $Id: ua_label.c,v 1.58.2.8 2006/04/11 08:05:18 kerns Exp $
+ *   Version $Id: ua_label.c,v 1.58.2.9 2006/05/02 14:48:15 kerns Exp $
  */
 /*
    Copyright (C) 2003-2006 Kern Sibbald
@@ -290,7 +290,7 @@ static int do_label(UAContext *ua, const char *cmd, int relabel)
    bool print_reminder = true;
    bool label_barcodes = false;
    int ok = FALSE;
-   int i;
+   int i, j;
    int drive;
    bool media_record_exists = false;
    static const char *barcode_keyword[] = {
@@ -304,8 +304,12 @@ static int do_label(UAContext *ua, const char *cmd, int relabel)
       return 1;
    }
 
+   /* Look for one of the barcode keywords */
    if (!relabel && (i=find_arg_keyword(ua, barcode_keyword)) >= 0) {
-      *ua->argk[i] = 0;      /* zap barcode keyword */
+      /* Now find the keyword in the list */
+      if ((j = find_arg(ua, barcode_keyword[i])) > 0) {
+         *ua->argk[j] = 0;      /* zap barcode keyword */
+      }
       label_barcodes = true;
    }
 

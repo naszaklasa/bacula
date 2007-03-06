@@ -1,8 +1,74 @@
 
-          Release Notes for Bacula 1.38.8
+          Release Notes for Bacula 1.38.9
 
   Bacula code: Total files = 419 Total lines = 137,078 (*.h *.c *.in)
       20,440 additional lines of code since version 1.36.3
+
+Warning for version 1.38.8 and greater:
+- The Windows FD no longer automatically folds the case
+  in wild-card comparions. To get the same behavior as before,
+  you must explicitly use "Ignore Case = yes" in your FileSet.
+- Backslashes are no longer permitted in File directives
+  (typical error for Windows users), unless the string is
+  enclosed in double quotes, in which case, the backslashes
+  must be doubled.   
+- The new algorithm for selecting Volumes from the Scratch
+  pool that was implemented in 1.38.6 and 1.38.7 is abandoned 
+  in favor of a corrected version of the 1.38.5 algorithm.
+
+New features for 1.38.9:
+- A "Dir Status" button in the Gnome console.
+    
+Fixes:
+This is mainly a bug fix release containing a collection of
+  minor fixes for 1.38.8.
+- Added code to strip backslashes from Windows filenames during
+  a restore.
+- Corrected Win32 License to use the correct LICENSE file.
+- Corrected the buffer count and bytes reported in the heap
+  statistics.
+- Fix a number of incorrect strings marked for translation, when
+  they should not be (e.g. commands).
+- Fix StartTime bug reported for ClientRunBeforeJob and RunBeforeJob
+  Patches supplied by user in bugs #608 and #599.
+- Use most recent of st_ctime and st_mtime in restore tree DIR
+  listing. This fixes some problems with Win32 printing incorrect
+  values.
+- Correct the clock shift comm time calculation between the DIR
+  and the FD. It was added rather than subtracted.
+- Strip all backslashes in filenames to be restored on Win32
+  machines -- the names should all be in Unix format, and if
+  there are any backslashes it is most likely due to an improper
+  FileSet definition, and the files will not otherwise be
+  restorable.
+- Delete src/win32/License.txt
+- Modify installer to install LICENSE
+- Add back ua_label barcode fix from Rufolf Cejka.
+- Add 'Dir Status' button to the gnome console.
+- Display heap stats in Storage daemon without debug level.
+- Implement using pg_config for finding PostgreSQL files.
+  Fixes bug #600. Patch supplied by user.
+- Remove -t option from mktemp in mtx_changer.in and use
+  working directory. Fixes bug #578.
+- Update job start time after the any run before job so that
+  files created by the script are only backed up once. Fixes
+  bug #599.
+- Strip trailing newline only from filenames entered in
+  the restore command when reading a file. This permits
+  the user to enter filenames with trailing spaces. Fixes
+  bug #549. The user supplied a patch that I modified slightly.
+- Use the most recent time (st_mtime, st_ctime) in the dir
+  command in restore. This gives the user a better idea of what
+  the newest file really is. This fixes bug #574. The fix
+  was suggested by the user.
+- Remove the -f option from the chown in Makefile.in for more
+  portability.
+- Change setting the group in Makefile.in to use chgrp for
+  more portability.
+- Implement a Bacula read/write lock for Python rather
+  than using the Python lock to avoid recursive problems.
+- Correct the uninstall directory names in filed/Makefile.in
+  as reported by a user.
 
 !!!! Important !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   In Bacula version 1.38.5 and prior, there was apparently a
@@ -17,17 +83,6 @@
   a compiler bug in gcc's 64 bit code generation.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-Warning:
-- The Windows FD no longer automatically folds the case
-  in wild-card comparions. To get the same behavior as before,
-  you must explicitly use "Ignore Case = yes" in your FileSet.
-- Backslashes are no longer permitted in File directives
-  (typical error for Windows users), unless the string is
-  enclosed in double quotes, in which case, the backslashes
-  must be doubled.   
-- The new algorithm for selecting Volumes from the Scratch
-  pool that was implemented in 1.38.6 and 1.38.7 is abandoned 
-  in favor of a corrected version of the 1.38.5 algorithm.
 
 New features for 1.38.8:
 - Regex, RegexFile, and RegexDir are now implemented in the
