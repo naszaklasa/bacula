@@ -3,32 +3,30 @@
  *
  *   Written by Preben 'Peppe' Guldberg, December MMIV
  *
- *   Version $Id: fstype.c,v 1.4.2.1 2005/02/14 10:09:53 kerns Exp $
+ *   Version $Id: fstype.c,v 1.7 2005/08/10 16:35:37 nboichat Exp $
  *
  */
-
 /*
-   Copyright (C) 2004 Kern Sibbald
+   Copyright (C) 2004-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
 #include "bacula.h"
 #include "findlib/find.h"
+
+/* Dummy functions */
+int generate_daemon_event(JCR *jcr, const char *event) 
+   { return 1; }
 
 static void usage()
 {
@@ -55,14 +53,18 @@ main (int argc, char *const *argv)
    int status = 0;
    int ch, i;
 
+   setlocale(LC_ALL, "");
+   bindtextdomain("bacula", LOCALEDIR);
+   textdomain("bacula");
+
    while ((ch = getopt(argc, argv, "v?")) != -1) {
       switch (ch) {
          case 'v':
-	    verbose = 1;
-	    break;
+            verbose = 1;
+            break;
          case '?':
-	 default:
-	    usage();
+         default:
+            usage();
 
       }
    }
@@ -75,14 +77,14 @@ main (int argc, char *const *argv)
 
    for (i = 0; i < argc; --argc, ++argv) {
       if (fstype(*argv, fs, sizeof(fs))) {
-	 if (verbose) {
+         if (verbose) {
             printf("%s: %s\n", *argv, fs);
-	 } else {
-	    puts(fs);
-	 }
+         } else {
+            puts(fs);
+         }
       } else {
-         fprintf(stderr, "%s: unknown\n", *argv);
-	 status = 1;
+         fprintf(stderr, _("%s: unknown\n"), *argv);
+         status = 1;
       }
    }
 

@@ -424,14 +424,14 @@ int main()
      *	Perform SHA-1 tests
      */
     for(j = 0; j < 4; ++j) {
-        printf( "\nTest %d: %d, '%s'\n",
+	printf( "\nTest %d: %d, '%s'\n",
 		j+1,
 		repeatcount[j],
 		testarray[j]);
 
 	err = SHA1Init(&sha);
 	if (err) {
-            fprintf(stderr, "SHA1Reset Error %d.\n", err );
+	    fprintf(stderr, "SHA1Reset Error %d.\n", err );
 	    break;    /* out of for j loop */
 	}
 
@@ -441,7 +441,7 @@ int main()
 		  (const unsigned char *) testarray[j],
 		  strlen(testarray[j]));
 	    if (err) {
-                fprintf(stderr, "SHA1Input Error %d.\n", err );
+		fprintf(stderr, "SHA1Input Error %d.\n", err );
 		break;	  /* out of for i loop */
 	    }
 	}
@@ -449,19 +449,19 @@ int main()
 	err = SHA1Final(&sha, Message_Digest);
 	if (err) {
 	    fprintf(stderr,
-            "SHA1Result Error %d, could not compute message digest.\n",
+	    "SHA1Result Error %d, could not compute message digest.\n",
 	    err );
 	}
 	else
 	{
-            printf("\t");
+	    printf("\t");
 	    for(i = 0; i < 20 ; ++i) {
-                printf("%02X ", Message_Digest[i]);
+		printf("%02X ", Message_Digest[i]);
 	    }
-            printf("\n");
+	    printf("\n");
 	}
-        printf("Should match:\n");
-        printf("\t%s\n", resultarray[j]);
+	printf("Should match:\n");
+	printf("\t%s\n", resultarray[j]);
     }
 
     /* Test some error returns */
@@ -479,7 +479,7 @@ int main()
  * Reads a single ASCII file and prints the HEX sha1 sum.
  */
 #include <stdio.h>
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
    FILE *fd;
    SHA1Context ctx;

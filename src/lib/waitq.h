@@ -7,7 +7,7 @@
  *  This code inspired from "Programming with POSIX Threads", by
  *    David R. Butenhof
  *
- *   Version $Id: waitq.h,v 1.2 2002/05/19 07:38:06 kerns Exp $
+ *   Version $Id: waitq.h,v 1.3 2004/12/21 16:18:41 kerns Exp $
  *
  */
 /*
@@ -30,10 +30,10 @@
 
  */
 
-#ifndef __WAITQ_H 
+#ifndef __WAITQ_H
 #define __WAITQ_H 1
 
-/* 
+/*
  * Structure to keep track of wait queue request
  */
 typedef struct waitq_ele_tag {
@@ -43,7 +43,7 @@ typedef struct waitq_ele_tag {
    void 	    *msg;	      /* message to be passed */
 } waitq_ele_t;
 
-/* 
+/*
  * Structure describing a wait queue
  */
 typedef struct workq_tag {

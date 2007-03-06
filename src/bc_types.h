@@ -11,11 +11,11 @@
 
     Also, we define types such as file address lengths.
 
-    Version $Id: bc_types.h,v 1.20 2004/09/27 12:29:06 kerns Exp $
+    Version $Id: bc_types.h,v 1.22 2005/02/07 16:20:41 kerns Exp $
 
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -38,7 +38,7 @@
 #ifndef __bc_types_INCLUDED
 #define __bc_types_INCLUDED
 
-typedef char POOLMEM;   
+typedef char POOLMEM;
 
 
 /* Types */
@@ -139,14 +139,14 @@ typedef u_int64_t u_intmax_t;
 
 
 /* Limits for the above types. */
-#undef INT8_MIN  
-#undef INT8_MAX  
-#undef UINT8_MAX 
-#undef INT16_MIN 
-#undef INT16_MAX 
+#undef INT8_MIN
+#undef INT8_MAX
+#undef UINT8_MAX
+#undef INT16_MIN
+#undef INT16_MAX
 #undef UINT16_MAX
-#undef INT32_MIN 
-#undef INT32_MAX 
+#undef INT32_MIN
+#undef INT32_MAX
 #undef UINT32_MAX
 
 #define INT8_MIN        (-127-1)

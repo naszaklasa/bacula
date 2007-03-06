@@ -7,11 +7,11 @@
  *  The purpose of these routines is to ensure that Bacula
  *  can limp along if no real database is loaded on the
  *  system.
- *   
- *    Kern Sibbald, January MMI 
+ *
+ *    Kern Sibbald, January MMI
  *
  *
- *    Version $Id: bdb_update.c,v 1.17 2004/11/17 22:48:21 kerns Exp $
+ *    Version $Id: bdb_update.c,v 1.18 2004/12/21 16:18:30 kerns Exp $
  */
 
 /*
@@ -61,7 +61,7 @@
  * most current start fields to the job record.
  * It is assumed that you did a db_create_job_record() already.
  */
-bool db_update_job_start_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)    
+bool db_update_job_start_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 {
    int len, stat = 1;
    JOB_DBR ojr;
@@ -93,7 +93,7 @@ bool db_update_job_start_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
  * This is called at Job termination time to add all the
  * other fields to the job record.
  */
-int db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)	  
+int db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 {
    int len, stat = 1;
    JOB_DBR ojr;
@@ -121,12 +121,12 @@ int db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 }
 
 
-int db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr) 
-{ 
+int db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+{
    int stat = 1;
    MEDIA_DBR omr;
    int len;
-       
+
    db_lock(mdb);
    Dmsg0(200, "In db_update_media_record\n");
    mr->MediaId = 0;
@@ -159,12 +159,12 @@ int db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
    return stat;
 }
 
-int db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr) 
-{ 
+int db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
+{
    int stat = 1;
    POOL_DBR opr;
    int len;
-       
+
    db_lock(mdb);
    Dmsg0(200, "In db_update_pool_record\n");
    len = sizeof(opr);
@@ -178,7 +178,7 @@ int db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 
    /* Update specific fields */
    opr.NumVols = pr->NumVols;
-   opr.MaxVols = pr->MaxVols; 
+   opr.MaxVols = pr->MaxVols;
    opr.UseOnce = pr->UseOnce;
    opr.UseCatalog = pr->UseCatalog;
    opr.AcceptAnyVolume = pr->AcceptAnyVolume;
@@ -203,7 +203,7 @@ int db_add_SIG_to_file_record(JCR *jcr, B_DB *mdb, FileId_t FileId, char *SIG, i
 }
 
 int db_mark_file_record(JCR *jcr, B_DB *mdb, FileId_t FileId, JobId_t JobId)
-{ 
+{
    return 1;
 }
 
@@ -217,7 +217,7 @@ int db_update_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
    return 0;
 }
 
-int db_update_media_defaults(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr) 
+int db_update_media_defaults(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 {
    return 1;
 }

@@ -3,7 +3,7 @@
  *
  *  Kern Sibbald, 2001
  *
- *   Version $Id: md5.h,v 1.3 2002/10/23 09:16:05 kerns Exp $
+ *   Version $Id: md5.h,v 1.3.28.1 2006/01/07 11:18:11 kerns Exp $
  */
 /*
    Copyright (C) 2000, 2001, 2002 Kern Sibbald and John Walker
@@ -27,6 +27,8 @@
 
 #ifndef __BMD5_H
 #define __BMD5_H
+
+#define MD5HashSize 16
 
 struct MD5Context {
    uint32_t buf[4];

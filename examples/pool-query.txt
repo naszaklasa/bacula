@@ -1,0 +1,108 @@
+From: Arno Lehmann <al@its-lehmann.de>
+Organization: IT-Service Lehmann
+Subject: [Bacula-users] Pool information
+Date: Wed, 15 Dec 2004 23:00:50 +0100
+
+Hi all,
+
+I've been playing around a bit and created a small SQL program which 
+tries to give some useful information on pool usage in bacula.
+
+It gives you information like this:
++--------+----+------------+---------+----------+------------+------+
+| Pool   | Nr | GB_Total   | Nr_Full | Nr_Avail | GB_Avail   | V    |
++--------+----+------------+---------+----------+------------+------+
+| D-Full | 10 |    130.002 |       5 |        4 |     90.364 |  87% |
+| Diff   |  5 |     16.217 |       2 |        3 |     12.773 |  52% |
+| Full   | 29 |     63.994 |      23 |        6 |     14.284 |  25% |
+| Incr   |  9 |     32.844 |       7 |        2 |      6.838 |  91% |
+| QIC    | 15 |      3.978 |       1 |       14 |      3.657 |   0% |
++--------+----+------------+---------+----------+------------+------+
+and doesn't break the catalog :-)
+It's in no way optimized, but the impact on the database should not be 
+too big.
+
+Might be helpful sometimes, for example before a holiday.
+
+Here, it runs with MySQL 3.23.33. I'm not sure, but the function STD is 
+probably not ANSI-SQL. According to the MySQL manual, STDDEV is Oracles 
+version, so probably PostgreSQL has something similar... Implementing 
+Standard Deviation is otherwise quite inefficient, I'm afraid...
+
+If someone can improve or enhance the script - go on!
+
+Simply add this to he end of the query.sql file, usually found in 
+/etc/bacula under linux.
+
+Oh, and to make this as clearly as possible:
+Anybody may use, modify, distribute or ignore this script without any 
+limitations.
+
+Arno
+
+
+# 20
+:Show Pool usage
+CREATE TABLE tempal_F(Pool TINYBLOB NOT NULL,
+         Nr_Full INTEGER NOT NULL,GB_Full DECIMAL(9,3) NOT NULL,
+         Cap_Avg DECIMAL(15,0),V DECIMAL(3,2));
+CREATE TABLE tempal_E(Pool TINYBLOB NOT NULL,
+         Nr_Empty INTEGER NOT NULL);
+CREATE TABLE tempal_P(Pool TINYBLOB NOT NULL,Nr_Partly INTEGER NOT NULL,
+         GB_Partly DECIMAL(9,3) NOT NULL);
+CREATE TABLE tempal_T(Pool TINYBLOB NOT NULL,Nr INTEGER NOT NULL,
+         GB_Total DECIMAL(9,3) NOT NULL);
+INSERT INTO tempal_F
+         SELECT Pool.Name,COUNT(*),ROUND(SUM(VolBytes)/1024/1024/1024,3),
+                 AVG(VolBytes),STD(VolBytes)/AVG(VolBytes) FROM Media,Pool
+         WHERE Media.VolStatus='Full' AND Media.PoolId=Pool.PoolId
+         GROUP BY Pool.PoolId;
+INSERT INTO tempal_P
+         SELECT Pool.Name,COUNT(*),ROUND(SUM(VolBytes)/1024/1024/1024,3)
+         FROM Media,Pool
+         WHERE (Media.VolStatus='Append' OR Media.VolStatus='Busy')
+         AND Media.PoolId=Pool.PoolId
+         GROUP BY Pool.PoolId;
+INSERT INTO tempal_E
+         SELECT Pool.Name,COUNT(*)
+         FROM Media,Pool
+         WHERE (Media.VolStatus='Recycle' OR Media.VolStatus='Purged')
+         AND Media.PoolId=Pool.PoolId
+         GROUP BY Pool.PoolId;
+INSERT INTO tempal_T
+         SELECT Pool.Name AS Pool,COUNT(*),
+                 ROUND(SUM(VolBytes)/1024/1024/1024,3)
+         FROM Media,Pool
+         WHERE (Media.VolStatus='Full' OR (Media.Volstatus='Archive')
+         OR (Media.Volstatus='Append') OR (Media.Volstatus='Read-Only')
+         OR (Media.Volstatus='Busy') OR (Media.Volstatus='Used')
+         OR (Media.VolStatus='Disabled') OR (Media.VolStatus='Error'))
+         AND Media.PoolId=Pool.PoolId
+         GROUP BY Pool.PoolId;
+CREATE TABLE tempal_N(Note TINYBLOB);
+INSERT INTO tempal_N
+         VALUES("Only Pools with full and appendable volumes are shown!");
+INSERT INTO tempal_N
+         VALUES("V is a measurement for the reliability of the *guess*");
+INSERT INTO tempal_N
+         VALUES("of average volume capacity.");
+SELECT * FROM tempal_N;
+DROP TABLE IF EXISTS tempal_N;
+SELECT tempal_F.Pool,Nr+Nr_Empty AS Nr,LPAD(GB_Total,10,' ') AS GB_Total,
+         Nr_Full,Nr_Partly+Nr_Empty AS Nr_Avail,
+         LPAD(ROUND(GREATEST(0.0007,(Nr_Partly+Nr_Empty)*
+                 (GB_Full/Nr_Full)-GB_Partly),3),10,' ') AS GB_Avail,
+         CONCAT(LPAD(ROUND(
+                 100-(100*(V+1/(Nr_Full*Nr_Full*Nr_Full))),0),3,' '),'%')
+                 AS V
+         FROM tempal_P,tempal_F,tempal_T,tempal_E
+         WHERE tempal_F.Pool=tempal_T.Pool
+         AND tempal_F.Pool=tempal_P.Pool
+         AND tempal_E.Pool=tempal_T.Pool
+         GROUP BY Pool
+         ORDER BY Pool;
+!DROP TABLE tempal_P,tempal_E,tempal_T,tempal_F;
+
+-- 
+IT-Service Lehmann                    al@its-lehmann.de
+Arno Lehmann                  http://www.its-lehmann.de

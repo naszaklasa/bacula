@@ -1,6 +1,6 @@
 /*
  * Watchdog timer routines
- * 
+ *
  *    Kern Sibbald, December MMII
  *
 */
@@ -26,20 +26,20 @@
 
 enum {
    TYPE_CHILD = 1,
-   TYPE_PTHREAD, 
-   TYPE_BSOCK 
+   TYPE_PTHREAD,
+   TYPE_BSOCK
 };
 
 #define TIMEOUT_SIGNAL SIGUSR2
 
 struct s_watchdog_t {
-        bool one_shot;
-        time_t interval;
-        void (*callback)(struct s_watchdog_t *wd);
-        void (*destructor)(struct s_watchdog_t *wd);
-        void *data;
-        /* Private data below - don't touch outside of watchdog.c */
-        dlink link;
-        time_t next_fire;
+	bool one_shot;
+	time_t interval;
+	void (*callback)(struct s_watchdog_t *wd);
+	void (*destructor)(struct s_watchdog_t *wd);
+	void *data;
+	/* Private data below - don't touch outside of watchdog.c */
+	dlink link;
+	time_t next_fire;
 };
 typedef struct s_watchdog_t watchdog_t;

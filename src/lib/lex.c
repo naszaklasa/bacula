@@ -3,12 +3,12 @@
  *
  *   Kern Sibbald, 2000
  *
- *   Version $Id: lex.c,v 1.30.2.1 2005/02/14 10:02:26 kerns Exp $
+ *   Version $Id: lex.c,v 1.38 2005/08/10 16:35:19 nboichat Exp $
  *
  */
 
 /*
-   Copyright (C) 2000-2004 Kern Sibbald
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -61,7 +61,6 @@ int scan_to_next_not_eol(LEX * lc)
    return token;
 }
 
-
 /*
  * Format a scanner error message
  */
@@ -80,10 +79,19 @@ static void s_err(const char *file, int line, LEX *lc, const char *msg, ...)
                 _("Problem probably begins at line %d.\n"), lc->begin_line_no);
    } else {
       more[0] = 0;
-   }
-   e_msg(file, line, M_ERROR_TERM, 0, _("Config error: %s\n"
+   }  
+   if (lc->line_no > 0) {
+      e_msg(file, line, M_ERROR_TERM, 0, _("Config error: %s\n"
 "            : line %d, col %d of file %s\n%s\n%s"),
-      buf, lc->line_no, lc->col_no, lc->fname, lc->line, more);
+         buf, lc->line_no, lc->col_no, lc->fname, lc->line, more);
+   } else {
+      e_msg(file, line, M_ERROR_TERM, 0, _("Config error: %s\n"), buf);
+   }
+}
+
+void lex_set_default_error_handler(LEX *lf)
+{
+   lf->scan_error = s_err;
 }
 
 
@@ -97,7 +105,7 @@ LEX *lex_close_file(LEX *lf)
 
    Dmsg1(2000, "Close lex file: %s\n", lf->fname);
    if (lf == NULL) {
-      Emsg0(M_ABORT, 0, "Close of NULL file\n");
+      Emsg0(M_ABORT, 0, _("Close of NULL file\n"));
    }
    of = lf->next;
    fclose(lf->fd);
@@ -135,12 +143,9 @@ LEX *lex_open_file(LEX *lf, const char *filename, LEX_ERROR_HANDLER *scan_error)
 
 
    if ((fd = fopen(fname, "r")) == NULL) {
-      berrno be;
-      Emsg2(M_ERROR_TERM, 0, _("Cannot open config file %s: %s\n"),
-            fname, be.strerror());
-      return NULL; /* Never reached if exit_on_error == 1 */
+      return NULL;
    }
-   Dmsg1(2000, "Open config file: %s\n", fname);
+   Dmsg1(400, "Open config file: %s\n", fname);
    nf = (LEX *)malloc(sizeof(LEX));
    if (lf) {
       memcpy(nf, lf, sizeof(LEX));
@@ -151,15 +156,15 @@ LEX *lex_open_file(LEX *lf, const char *filename, LEX_ERROR_HANDLER *scan_error)
       lf = nf;                        /* start new packet */
       memset(lf, 0, sizeof(LEX));
    }
+   if (scan_error) {
+      lf->scan_error = scan_error;
+   } else {
+      lex_set_default_error_handler(lf);
+   }
    lf->fd = fd;
    lf->fname = fname;
    lf->state = lex_none;
    lf->ch = L_EOL;
-   if (scan_error) {
-      lf->scan_error = scan_error;
-   } else {
-      lf->scan_error = s_err;
-   }
    Dmsg1(2000, "Return lex=%x\n", lf);
    return lf;
 }
@@ -173,7 +178,7 @@ LEX *lex_open_file(LEX *lf, const char *filename, LEX_ERROR_HANDLER *scan_error)
 int lex_get_char(LEX *lf)
 {
    if (lf->ch == L_EOF) {
-      Emsg0(M_ABORT, 0, "get_char: called after EOF\n");
+      Emsg0(M_ABORT, 0, _("get_char: called after EOF\n"));
    }
    if (lf->ch == L_EOL) {
       if (bfgets(lf->line, MAXSTRING, lf->fd) == NULL) {
@@ -185,8 +190,9 @@ int lex_get_char(LEX *lf)
       }
       lf->line_no++;
       lf->col_no = 0;
+      Dmsg2(1000, "fget line=%d %s", lf->line_no, lf->line);
    }
-   lf->ch = lf->line[lf->col_no];
+   lf->ch = (uint8_t)lf->line[lf->col_no];
    if (lf->ch == 0) {
       lf->ch = L_EOL;
    } else {
@@ -235,13 +241,13 @@ static void begin_str(LEX *lf, int ch)
 static const char *lex_state_to_str(int state)
 {
    switch (state) {
-   case lex_none:          return "none";
-   case lex_comment:       return "comment";
-   case lex_number:        return "number";
-   case lex_ip_addr:       return "ip_addr";
-   case lex_identifier:    return "identifier";
-   case lex_string:        return "string";
-   case lex_quoted_string: return "quoted_string";
+   case lex_none:          return _("none");
+   case lex_comment:       return _("comment");
+   case lex_number:        return _("number");
+   case lex_ip_addr:       return _("ip_addr");
+   case lex_identifier:    return _("identifier");
+   case lex_string:        return _("string");
+   case lex_quoted_string: return _("quoted_string");
    default:                return "??????";
    }
 }
@@ -488,11 +494,17 @@ lex_get_token(LEX *lf, int expect)
          }
          if (B_ISSPACE(ch) || ch == '\n' || ch == L_EOL || ch == '}' || ch == '{' ||
              ch == ';' || ch == ','   || ch == '"' || ch == '#') {
+            /* Keep the original LEX so we can print an error if the included file can't be opened. */
+            LEX* lfori = lf;
+            
             lf->state = lex_none;
             lf = lex_open_file(lf, lf->str, NULL);
-       if (lf == NULL) {
-         return T_ERROR;
-       }
+            if (lf == NULL) {
+               berrno be;
+               scan_err2(lfori, _("Cannot open included config file %s: %s\n"),
+                  lfori->str, be.strerror());
+               return T_ERROR;
+            }
             break;
          }
          add_str(lf, ch);

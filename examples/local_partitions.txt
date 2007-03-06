@@ -1,0 +1,8 @@
+Date: Mon, 13 Dec 2004 11:52:51 +0100 (MET)
+From: Peter Eriksson <peter@ifm.liu.se>
+To: kern@sibbald.com
+Subject: A script to extract local partitions to backup
+Please find enclosed a small script that perhaps could be included
+in Bacula as an example for how to use the \| feature in FileSets.
+
+See: local_partitions in this directory for the script.

@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual C++ Express 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wx-console", "wx-console\wx-console.vcproj", "{9BA8E10D-0D82-4B25-8543-DE34641FBC10}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "baculafd", "baculafd\baculafd.vcproj", "{6A435DBB-4D3D-4DAE-8CB3-E0AF169A240B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "console", "console\console.vcproj", "{A0F65E06-9F18-40AC-81F6-A080852F1104}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9BA8E10D-0D82-4B25-8543-DE34641FBC10}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9BA8E10D-0D82-4B25-8543-DE34641FBC10}.Debug|Win32.Build.0 = Debug|Win32
+		{9BA8E10D-0D82-4B25-8543-DE34641FBC10}.Release|Win32.ActiveCfg = Release|Win32
+		{9BA8E10D-0D82-4B25-8543-DE34641FBC10}.Release|Win32.Build.0 = Release|Win32
+		{6A435DBB-4D3D-4DAE-8CB3-E0AF169A240B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6A435DBB-4D3D-4DAE-8CB3-E0AF169A240B}.Debug|Win32.Build.0 = Debug|Win32
+		{6A435DBB-4D3D-4DAE-8CB3-E0AF169A240B}.Release|Win32.ActiveCfg = Release|Win32
+		{6A435DBB-4D3D-4DAE-8CB3-E0AF169A240B}.Release|Win32.Build.0 = Release|Win32
+		{A0F65E06-9F18-40AC-81F6-A080852F1104}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A0F65E06-9F18-40AC-81F6-A080852F1104}.Debug|Win32.Build.0 = Debug|Win32
+		{A0F65E06-9F18-40AC-81F6-A080852F1104}.Release|Win32.ActiveCfg = Release|Win32
+		{A0F65E06-9F18-40AC-81F6-A080852F1104}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

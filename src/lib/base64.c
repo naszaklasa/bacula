@@ -1,28 +1,22 @@
-/*   
+/*
  *   Generic base 64 input and output routines
  *
  *    Written by Kern E. Sibbald, March MM.
  *
- *   Version $Id: base64.c,v 1.6 2004/04/10 11:12:14 kerns Exp $
+ *   Version $Id: base64.c,v 1.8 2005/09/24 13:11:31 kerns Exp $
  */
-
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -45,13 +39,13 @@ static uint8_t const base64_digits[64] =
 
 static int base64_inited = 0;
 static uint8_t base64_map[128];
-  
+
 
 /* Initialize the Base 64 conversion routines */
 void
 base64_init(void)
-{     
-   int i; 
+{
+   int i;
    memset(base64_map, 0, sizeof(base64_map));
    for (i=0; i<64; i++)
       base64_map[(uint8_t)base64_digits[i]] = i;
@@ -105,11 +99,11 @@ to_base64(intmax_t value, char *where)
  */
 int
 from_base64(intmax_t *value, char *where)
-{ 
+{
    uintmax_t val = 0;
    int i, neg;
 
-   if (!base64_inited) 
+   if (!base64_inited)
       base64_init();
    /* Check if it is negative */
    i = neg = 0;
@@ -122,7 +116,7 @@ from_base64(intmax_t *value, char *where)
       val <<= 6;
       val += base64_map[(uint8_t)where[i++]];
    }
-	 
+
    *value = neg ? -(intmax_t)val : (intmax_t)val;
    return i;
 }
@@ -133,7 +127,7 @@ from_base64(intmax_t *value, char *where)
  * buf as base64 characters.
  *
  *  Returns: the number of characters stored not
- *	     including the EOS
+ *           including the EOS
  */
 int
 bin_to_base64(char *buf, char *bin, int len)
@@ -146,9 +140,9 @@ bin_to_base64(char *buf, char *bin, int len)
    rem = 0;
    for (i=0; i<len; ) {
       if (rem < 6) {
-	 reg <<= 8;
-	 reg |= (int8_t)bin[i++];
-	 rem += 8;
+         reg <<= 8;
+         reg |= (int8_t)bin[i++];
+         rem += 8;
       }
       save = reg;
       reg >>= (rem - 6);
@@ -159,7 +153,7 @@ bin_to_base64(char *buf, char *bin, int len)
    if (rem) {
       mask = 1;
       for (i=1; i<rem; i++) {
-	 mask = (mask << 1) | 1;
+         mask = (mask << 1) | 1;
       }
       buf[j++] = base64_digits[reg & mask];
    }
@@ -205,7 +199,7 @@ static int errfunc(const char *epath, int eernoo)
  * Test the base64 routines by encoding and decoding
  * lstat() packets.
  */
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
    char where[500];
    int i;
@@ -218,7 +212,7 @@ int main(int argc, char *argv[])
    time_t t = 1028712799;
 
    if (argc > 1 && strcmp(argv[1], "-v") == 0)
-      debug_level++;  
+      debug_level++;
 
    base64_init();
 
@@ -229,12 +223,12 @@ int main(int argc, char *argv[])
       fname = my_glob.gl_pathv[i];
       if (lstat(fname, &statp) < 0) {
          printf("Cannot stat %s: %s\n", fname, strerror(errno));
-	 continue;
+         continue;
       }
       encode_stat(where, &statp);
 
       printf("Encoded stat=%s\n", where);
-     
+
 #ifdef xxx
       p = where;
       p += to_base64((intmax_t)(statp.st_atime), p);
@@ -259,25 +253,25 @@ int main(int argc, char *argv[])
 
       if (debug_level)
          printf("%s: len=%d val=%s\n", fname, strlen(where), where);
-      
+
       decode_stat(where, &statn);
 
-      if (statp.st_dev != statn.st_dev || 
-	  statp.st_ino != statn.st_ino ||
-	  statp.st_mode != statn.st_mode ||
-	  statp.st_nlink != statn.st_nlink ||
-	  statp.st_uid != statn.st_uid ||
-	  statp.st_gid != statn.st_gid ||
-	  statp.st_rdev != statn.st_rdev ||
-	  statp.st_size != statn.st_size ||
-	  statp.st_blksize != statn.st_blksize ||
-	  statp.st_blocks != statn.st_blocks ||
-	  statp.st_atime != statn.st_atime ||
-	  statp.st_mtime != statn.st_mtime ||
-	  statp.st_ctime != statn.st_ctime) {
+      if (statp.st_dev != statn.st_dev ||
+          statp.st_ino != statn.st_ino ||
+          statp.st_mode != statn.st_mode ||
+          statp.st_nlink != statn.st_nlink ||
+          statp.st_uid != statn.st_uid ||
+          statp.st_gid != statn.st_gid ||
+          statp.st_rdev != statn.st_rdev ||
+          statp.st_size != statn.st_size ||
+          statp.st_blksize != statn.st_blksize ||
+          statp.st_blocks != statn.st_blocks ||
+          statp.st_atime != statn.st_atime ||
+          statp.st_mtime != statn.st_mtime ||
+          statp.st_ctime != statn.st_ctime) {
 
          printf("%s: %s\n", fname, where);
-	 encode_stat(where, &statn);
+         encode_stat(where, &statn);
          printf("%s: %s\n", fname, where);
          printf("NOT EQAL\n");
       }
@@ -291,5 +285,5 @@ int main(int argc, char *argv[])
    printf("UINT32_MAX=%s\n", where);
 
    return 0;
-}   
+}
 #endif

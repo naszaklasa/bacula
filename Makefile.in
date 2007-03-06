@@ -1,9 +1,11 @@
 # 
-# Version $Id: Makefile.in,v 1.50.4.1 2005/02/25 09:46:48 kerns Exp $
+# Version $Id: Makefile.in,v 1.64.2.5 2006/04/14 12:28:49 kerns Exp $
 # 
 @MCOMMON@
 
 working_dir=@working_dir@
+dir_group=@dir_group@
+dir_user=@dir_user@
 
 srcdir =	@srcdir@
 VPATH = 	@srcdir@
@@ -16,14 +18,14 @@ first_rule: all
 dummy:
 
 # --client-only directories
-fd_subdirs = src scripts doc src/lib src/findlib src/filed \
-	     @READLINE_SRC@ src/console rescue rescue/linux \
+fd_subdirs = src scripts src/lib src/findlib src/filed \
+	     @READLINE_SRC@ src/console \
 	     @GNOME_DIR@ @TRAY_MONITOR_DIR@ @WX_DIR@
 
 # Non-client-only directores
-subdirs =    src/cats src/dird src/stored src/tools
+subdirs =    src/cats @DIRD_DIR@ @STORED_DIR@ src/tools
 
-all_subdirs = ${fd_subdirs} ${@ALL_DIRS@}
+all_subdirs = ${fd_subdirs} ${@ALL_DIRS@} 
 
 DIST =	INSTALL README.configure configure Makefile Makefile.in ChangeLog
 
@@ -38,7 +40,7 @@ MKDIR = $(srcdir)/autoconf/mkinstalldirs
 all: Makefile
 	@for I in ${all_subdirs}; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; \
-	      $(MAKE) $@ || (echo ""; echo ""; echo -e "  \a\a ====== Error in `pwd` ======\a\a"; \
+	      $(MAKE) $@ || (echo ""; echo ""; echo "  ====== Error in `pwd` ======"; \
 			    echo ""; echo "";)); \
 	done
 
@@ -49,11 +51,14 @@ depend:
 bacula-fd: Makefile	   
 	@for I in ${fd_subdirs}; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; \
-	      $(MAKE) all || (echo ""; echo ""; echo -e "  \a\a ====== Error in `pwd` ======\a\a"; \
+	      $(MAKE) all || (echo ""; echo ""; echo "	 ====== Error in `pwd` ======; \
 			    echo ""; echo "";)); \
 	done
 
 #-------------------------------------------------------------------------
+autoconf/aclocal.m4: autoconf/configure.in autoconf/bacula-macros/* autoconf/gettext-macros/*
+	cd autoconf && aclocal -I bacula-macros -I gettext-macros
+
 configure: autoconf/configure.in autoconf/aclocal.m4 autoconf/acconfig.h autoconf/config.h.in
 	cd $(srcdir);
 	${RMF} -f config.cache config.log config.out config.status src/config.h
@@ -65,7 +70,7 @@ old-configure: autoconf/configure.in autoconf/aclocal.m4 autoconf/acconfig.h
 	cd $(srcdir);
 	${RMF} -f config.cache config.log config.out config.status src/config.h
 	autoconf --include=$(srcdir)/autoconf \
-	autoconf/configure.in > configure
+	    autoconf/configure.in > configure
 	chmod 755 configure
 	@rm -f config.cache
 
@@ -84,7 +89,16 @@ installdirs:
 	$(MKDIR) $(DESTDIR)$(sbindir)
 	$(MKDIR) $(DESTDIR)$(sysconfdir)
 	$(MKDIR) $(DESTDIR)$(scriptdir)
-	$(MKDIR) $(DESTDIR)$(working_dir)
+	-if test ! -d $(DESTDIR)$(working_dir) ; then \
+	   $(MKDIR) $(DESTDIR)$(working_dir); \
+	   chmod 770 $(DESTDIR)$(working_dir); \
+	fi
+	-if test "x$(dir_user)" != "x" ; then \
+	   chown -f $(dir_user) $(DESTDIR)$(working_dir); \
+	fi
+	-if test "x$(dir_group)" != "x" ; then \
+	   chown -f :$(dir_group) $(DESTDIR)$(working_dir); \
+	fi
 #	$(MKDIR) $(DESTDIR)$(mandir)
 
 gnomedirs:
@@ -113,34 +127,34 @@ install-menu-consolehelper: gnomedirs
 	ln -s $(DESTDIR)/usr/bin/consolehelper $(DESTDIR)/usr/bin/gnome-console
 
 install: installdirs
-	@for I in $(all_subdirs); do (cd $$I; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
+	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
 
 uninstall:
-	@for I in $(all_subdirs); do (cd $$I; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
+	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
 
 install-autostart:
-	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
+	(cd platforms && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
 
 install-autostart-dir:
-	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
+	(cd platforms && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
 
 install-autostart-fd:
-	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
+	(cd platforms && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
 
 install-autostart-sd:
-	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
+	(cd platforms && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
 
 uninstall-autostart:
-	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
+	(cd platforms && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
 
 uninstall-autostart-dir:
-	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
+	(cd platforms && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
 
 uninstall-autostart-fd:
-	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
+	(cd platforms && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
 
 uninstall-autostart-sd:
-	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
+	(cd platforms && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
 
 uninstall-menu:
 	rm -f $(DESTDIR)/usr/share/pixmaps/bacula.png
@@ -163,17 +177,16 @@ Makefile: Makefile.in
 Makefiles:
 	$(SHELL) config.status
 	(cd scripts; \
-	chmod 755 startmysql stopmysql bacula fd startit stopit btraceback; \
-	chmod 755 mtx-changer bconsole gconsole devel_bacula)
+	 chmod 755 startmysql stopmysql bacula startit stopit btraceback; \
+	 chmod 755 mtx-changer bconsole gconsole devel_bacula; \
+	 chmod 755 dvd-handler)
 
 	(cd src/cats; \
-	chmod 755 create_bacula_database      update_bacula_tables     make_bacula_tables; \
-	chmod 755 grant_bacula_privileges     drop_bacula_tables       drop_bacula_database; \
-	   \
-	chmod 755 create_@DB_NAME@_database   update_@DB_NAME@_tables  make_@DB_NAME@_tables; \
-	chmod 755 grant_@DB_NAME@_privileges  drop_@DB_NAME@_tables    drop_@DB_NAME@_database; \
-	   \
-	chmod 755 make_catalog_backup delete_catalog_backup)
+	 chmod 755 create_bacula_database      update_bacula_tables	make_bacula_tables; \
+	 chmod 755 grant_bacula_privileges     drop_bacula_tables	drop_bacula_database; \
+	 chmod 755 create_@DB_NAME@_database   update_@DB_NAME@_tables	make_@DB_NAME@_tables; \
+	 chmod 755 grant_@DB_NAME@_privileges  drop_@DB_NAME@_tables	drop_@DB_NAME@_database; \
+	 chmod 755 make_catalog_backup delete_catalog_backup)
 
 clean:
 	@for I in ${all_subdirs}; \
@@ -187,26 +200,22 @@ clean:
 
 # clean for distribution
 distclean:
-	@for I in $(all_subdirs); do (cd $$I; $(MAKE) $@ || exit 1); done
-	@for I in $(all_subdirs); do (cd $$I; $(RMF) startit stopit btraceback); done
-	@(cd $(srcdir); $(RMF) *~ config.cache config.h config.log config.status config.out)
-	@(cd $(srcdir); $(RMF) Makefile autoconf/Make.common)
+	@for I in $(all_subdirs); do (cd $$I && $(MAKE) $@ || exit 1); done
+	@for I in $(all_subdirs); do (cd $$I && $(RMF) startit stopit btraceback); done
+	@(cd $(srcdir) && $(RMF) *~ config.cache config.h config.log config.status config.out)
+	@(cd $(srcdir) && $(RMF) Makefile autoconf/Make.common)
 	@(cd platforms; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1)
 	@$(RMF) bacula fd Makefile startmysql stopmysql startit stopit btraceback
 	@$(RMF) bconsole gconsole
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
-	@$(RMF) working/*
-	@$(RMF) -r examples/devices/CVS autoconf/CVS autoconf/gnome-macros/CVS
-	@$(RMF) -r doc/techlogs/2002/CVS doc/techlogs/2001/CVS doc/techlogs/1.27/CVS
-	@$(RMF) -r examples/CVS intl/CVS scripts/CVS
-	@$(RMF) -r po/CVS src/immortal/CVS rescue/freebsd/CVS rescue/solaris/CVS
-	@$(RMF) -r CVS src/gnome-console/CVS src/tconsole/CVS
+	@$(RMF) working/* kerns-* 
+	@$(RMF) -rf txt diff src/python src/testprogs
 
 devclean:
-	@for I in $(all_subdirs); do (cd $$I; $(MAKE) $@ || exit 1); done
-	@for I in $(all_subdirs); do (cd $$I; $(RMF) startit stopit btraceback); done
-	@(cd $(srcdir); $(RMF) *~ config.cache config.h config.log config.status config.out)
-	@(cd $(srcdir); $(RMF) Makefile autoconf/Make.common)
+	@for I in $(all_subdirs); do (cd $$I && $(MAKE) $@ || exit 1); done
+	@for I in $(all_subdirs); do (cd $$I && $(RMF) startit stopit btraceback); done
+	@(cd $(srcdir) && $(RMF) *~ config.cache config.h config.log config.status config.out)
+	@(cd $(srcdir) && $(RMF) Makefile autoconf/Make.common)
 	@(cd platforms; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1)
 	@$(RMF) bacula fd Makefile startmysql stopmysql startit stopit btraceback
 	@$(RMF) bconsole gconsole
@@ -216,12 +225,12 @@ devclean:
 distdirs:
 	mkdir ../$(VERNAME);
 	mkdir ../$(VERNAME)/autoconf;
-	@for I in $(all_subdirs); do (cd $$I; $(MAKE) DESTDIR=$(DESTDIR) $@ || (echo "Failed to make distclean in $$I"; exit 0) ); done
+	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || (echo "Failed to make distclean in $$I"; exit 0) ); done
 
 distcopy:
 	$(CP) -p $(DIST) ../$(VERNAME);
 	$(CP) -p $(DIST_CFG) ../$(VERNAME)/autoconf;
-	@for I in $(all_subdirs); do (cd $$I; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
+	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
 
 distrib: configure autoconf/config.h.in distdirs distcopy
 

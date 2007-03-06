@@ -7,6 +7,8 @@
 #     of the output file (default = bacula).
 #  $2 is the user name with which to access the database
 #     (default = bacula).
+#  $3 is the password with which to access the database or "" if no password
+#     (default "")
 #
 #
 cd @working_dir@
@@ -15,9 +17,22 @@ if test xsqlite = x@DB_NAME@ ; then
   echo ".dump" | @SQL_BINDIR@/sqlite $1.db >$1.sql
 else
   if test xmysql = x@DB_NAME@ ; then
-    @SQL_BINDIR@/mysqldump -u $2 -f --opt $1 >$1.sql
-  else
-    @SQL_BINDIR@/pg_dump -U $2 $1 >$1.sql
+    if test $# -gt 2; then
+      MYSQLPASSWORD=" --password=$3"
+    else
+      MYSQLPASSWORD=""
+    fi
+    @SQL_BINDIR@/mysqldump -u $2$MYSQLPASSWORD -f --opt $1 >$1.sql
+  else			      
+    if test xpostgresql = x@DB_NAME@ ; then
+      if test $# -gt 2; then
+        PGPASSWORD=$3
+		export PGPASSWORD
+      fi
+      exec @SQL_BINDIR@/pg_dump -U $2 $1 >$1.sql
+    else
+      echo ".dump" | @SQL_BINDIR@/sqlite3 $1.db >$1.sql
+    fi
   fi
 fi
 #
@@ -34,5 +49,6 @@ fi
 #  To read back a PostgreSQL database use:
 #     cd @working_dir@
 #     dropdb bacula
+#     createdb bacula
 #     psql bacula <bacula.sql
 #

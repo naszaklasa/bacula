@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, May MMIII
  *
- *   Version $Id: enable_priv.c,v 1.4 2004/04/30 10:01:25 kerns Exp $
+ *   Version $Id: enable_priv.c,v 1.6 2005/08/10 16:35:19 nboichat Exp $
  *
  */
 /*
@@ -38,7 +38,7 @@
 /*=============================================================*/
 
 #if !defined(HAVE_CYGWIN) && !defined(HAVE_WIN32)
-    
+
 int enable_backup_privileges(JCR *jcr, int ignore_errors)
  { return 0; }
 
@@ -67,10 +67,10 @@ enable_priv(JCR *jcr, HANDLE hToken, char *name, int ignore_errors)
        return 0;		      /* not avail on this OS */
     }
 
-    // Get the LUID for the security privilege. 
+    // Get the LUID for the security privilege.
     if (!p_LookupPrivilegeValue(NULL, name,  &tkp.Privileges[0].Luid)) {
-       if (!ignore_errors) {  
-          win_error(jcr, "LookupPrivilegeValue", GetLastError());
+       if (!ignore_errors) {
+	  win_error(jcr, "LookupPrivilegeValue", GetLastError());
        }
     }
 
@@ -82,12 +82,12 @@ enable_priv(JCR *jcr, HANDLE hToken, char *name, int ignore_errors)
     if (lerror != ERROR_SUCCESS) {
        if (!ignore_errors) {
 	  char buf[200];
-          strcpy(buf, "AdjustTokenPrivileges set ");
+	  strcpy(buf, _("AdjustTokenPrivileges set "));
 	  bstrncat(buf, name, sizeof(buf));
 	  win_error(jcr, buf, lerror);
        }
        return 0;
-    } 
+    }
     return 1;
 }
 
@@ -107,14 +107,14 @@ int enable_backup_privileges(JCR *jcr, int ignore_errors)
 
     hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, GetCurrentProcessId());
 
-    // Get a token for this process. 
+    // Get a token for this process.
     if (!p_OpenProcessToken(hProcess,
 	    TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
-       if (!ignore_errors) {  
-          win_error(jcr, "OpenProcessToken", GetLastError());
+       if (!ignore_errors) {
+	  win_error(jcr, "OpenProcessToken", GetLastError());
        }
        /* Forge on anyway */
-    } 
+    }
 
     /* Return a bit map of permissions set. */
     if (enable_priv(jcr, hToken, SE_SECURITY_NAME, ignore_errors)) {

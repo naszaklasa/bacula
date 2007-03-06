@@ -7,10 +7,10 @@
  *  The purpose of these routines is to ensure that Bacula
  *  can limp along if no real database is loaded on the
  *  system.
- *   
- *    Kern Sibbald, January MMI 
  *
- *    Version $Id: bdb_create.c,v 1.8 2004/11/17 22:48:21 kerns Exp $
+ *    Kern Sibbald, January MMI
+ *
+ *    Version $Id: bdb_create.c,v 1.10 2005/01/29 22:38:57 kerns Exp $
  */
 
 /*
@@ -46,7 +46,7 @@
 #ifdef HAVE_BACULA_DB
 
 /* Forward referenced functions */
-int db_create_pool_record(B_DB *mdb, POOL_DBR *pr);
+bool db_create_pool_record(B_DB *mdb, POOL_DBR *pr);
 
 /* -----------------------------------------------------------------------
  *
@@ -62,14 +62,14 @@ int db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
 }
 
 int db_create_file_item(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
-{	     
+{
    /****FIXME***** not implemented */
    return 1;
 }
 
 
-/*  
- * Create a new record for the Job    
+/*
+ * Create a new record for the Job
  *   This record is created at the start of the Job,
  *   it is updated in bdb_update.c when the Job terminates.
  *
@@ -101,7 +101,7 @@ int db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    return 1;
 }
 
-/* Create a JobMedia record for Volume used this job   
+/* Create a JobMedia record for Volume used this job
  * Returns: 0 on failure
  *	    record-id on success
  */
@@ -137,7 +137,7 @@ bool db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
  * Returns: 0 on failure
  *	    1 on success
  */
-int db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
+bool db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 {
    int len;
    POOL_DBR mpr;
@@ -171,15 +171,24 @@ int db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
    return 1;
 }
 
+bool db_create_device_record(JCR *jcr, B_DB *mdb, DEVICE_DBR *dr)
+{ return false; }
 
-/* 
+bool db_create_storage_record(JCR *jcr, B_DB *mdb, STORAGE_DBR *dr)
+{ return false; }
+
+bool db_create_mediatype_record(JCR *jcr, B_DB *mdb, MEDIATYPE_DBR *dr)
+{ return false; }
+
+
+/*
  * Create Unique Media record.	This record
  *   contains all the data pertaining to a specific
  *   Volume.
  *
  * Returns: 0 on failure
  *	    1 on success
- */ 
+ */
 int db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 {
    int len;
@@ -254,12 +263,12 @@ int db_create_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr)
 /*
  *  Create a unique FileSet record or return existing record
  *
- *   Note, here we write the FILESET_DBR structure 
+ *   Note, here we write the FILESET_DBR structure
  *
  * Returns: 0 on failure
  *	    1 on success
  */
-int db_create_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
+bool db_create_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
 {
    int len;
    FILESET_DBR lfsr;

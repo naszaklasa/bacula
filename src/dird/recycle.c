@@ -1,30 +1,25 @@
 /*
  *
  *   Bacula Director -- Automatic Recycling of Volumes
- *	Recycles Volumes that have been purged
+ *      Recycles Volumes that have been purged
  *
  *     Kern Sibbald, May MMII
  *
- *   Version $Id: recycle.c,v 1.17.4.1 2005/02/15 11:51:03 kerns Exp $
+ *   Version $Id: recycle.c,v 1.22.2.3 2006/02/23 19:56:12 kerns Exp $
  */
 
 /*
-   Copyright (C) 2002-2004 Kern Sibbald and John Walker
+   Copyright (C) 2002-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -81,8 +76,10 @@ int recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
    Dmsg0(100, "Enter recycle_oldest_purged_volume\n");
    oldest.MediaId = 0;
    if (InChanger) {
-      Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType, 
-           "AND InChanger=1 ");
+      char changer[100];
+      bsnprintf(changer, sizeof(changer), "AND InChanger=1 AND StorageId=%s ",
+         edit_int64(mr->StorageId, ed1));
+      Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType, changer);
    } else {
       Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType, "");
    }
@@ -98,11 +95,11 @@ int recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
    if (oldest.MediaId != 0) {
       mr->MediaId = oldest.MediaId;
       if (db_get_media_record(jcr, jcr->db, mr)) {
-	 if (recycle_volume(jcr, mr)) {
-            Jmsg(jcr, M_INFO, 0, "Recycled volume \"%s\"\n", mr->VolumeName);
+         if (recycle_volume(jcr, mr)) {
+            Jmsg(jcr, M_INFO, 0, _("Recycled volume \"%s\"\n"), mr->VolumeName);
             Dmsg1(100, "return 1  recycle_oldest_purged_volume Vol=%s\n", mr->VolumeName);
-	    return 1;
-	 }
+            return 1;
+         }
       }
       Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));
    }
@@ -119,5 +116,6 @@ int recycle_volume(JCR *jcr, MEDIA_DBR *mr)
    mr->VolJobs = mr->VolFiles = mr->VolBlocks = mr->VolErrors = 0;
    mr->VolBytes = 1;
    mr->FirstWritten = mr->LastWritten = 0;
+   mr->set_first_written = true;
    return db_update_media_record(jcr, jcr->db, mr);
 }

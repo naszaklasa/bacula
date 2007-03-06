@@ -3,32 +3,27 @@
  *
  *     Kern Sibbald, Feb MM
  *
- *    Version $Id: dird_conf.h,v 1.70.4.1 2005/02/14 10:02:21 kerns Exp $
+ *    Version $Id: dird_conf.h,v 1.89.2.3 2006/01/11 10:24:12 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
 /* NOTE:  #includes at the end of this file */
 
 /*
- * Resource codes -- they must be sequential for indexing   
+ * Resource codes -- they must be sequential for indexing
  */
 enum {
    R_DIRECTOR = 1001,
@@ -43,8 +38,9 @@ enum {
    R_COUNTER,
    R_CONSOLE,
    R_JOBDEFS,
+   R_DEVICE,
    R_FIRST = R_DIRECTOR,
-   R_LAST  = R_JOBDEFS                /* keep this updated */
+   R_LAST  = R_DEVICE                 /* keep this updated */
 };
 
 
@@ -61,9 +57,9 @@ enum {
 
 
 /* Used for certain KeyWord tables */
-struct s_kw {       
+struct s_kw {
    const char *name;
-   int token;   
+   int token;
 };
 
 /* Job Level keyword structure */
@@ -86,27 +82,67 @@ struct CLIENT;
 struct FILESET;
 struct POOL;
 struct RUN;
+struct DEVICE;
 
-/* 
- *   Director Resource  
+/*
+ *   Director Resource
  *
  */
-struct DIRRES {
+class DIRRES {
+public:
    RES   hdr;
    dlist *DIRaddrs;
    char *password;                    /* Password for UA access */
-   int enable_ssl;                    /* Use SSL for UA */
    char *query_file;                  /* SQL query file */
    char *working_directory;           /* WorkingDirectory */
+   const char *scripts_directory;     /* ScriptsDirectory */
    char *pid_directory;               /* PidDirectory */
    char *subsys_directory;            /* SubsysDirectory */
-   int require_ssl;                   /* Require SSL for all connections */
    MSGS *messages;                    /* Daemon message handler */
    uint32_t MaxConcurrentJobs;        /* Max concurrent jobs for whole director */
    utime_t FDConnectTimeout;          /* timeout for connect in seconds */
    utime_t SDConnectTimeout;          /* timeout in seconds */
+   int tls_enable;                    /* Enable TLS */
+   int tls_require;                   /* Require TLS */
+   int tls_verify_peer;              /* TLS Verify Client Certificate */
+   char *tls_ca_certfile;             /* TLS CA Certificate File */
+   char *tls_ca_certdir;              /* TLS CA Certificate Directory */
+   char *tls_certfile;                /* TLS Server Certificate File */
+   char *tls_keyfile;                 /* TLS Server Key File */
+   char *tls_dhfile;                  /* TLS Diffie-Hellman Parameters */
+   alist *tls_allowed_cns;            /* TLS Allowed Clients */
+   TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
 };
 
+/*
+ * Device Resource
+ *  This resource is a bit different from the other resources
+ *  because it is not defined in the Director 
+ *  by DEVICE { ... }, but rather by a "reference" such as
+ *  DEVICE = xxx; Then when the Director connects to the
+ *  SD, it requests the information about the device.
+ */
+class DEVICE {
+public:
+   RES hdr;
+
+   bool found;                        /* found with SD */
+   int num_writers;                   /* number of writers */
+   int max_writers;                   /* = 1 for files */
+   int reserved;                      /* number of reserves */
+   int num_drives;                    /* for autochanger */
+   bool autochanger;                  /* set if device is autochanger */
+   bool open;                         /* drive open */
+   bool append;                       /* in append mode */
+   bool read;                         /* in read mode */
+   bool labeled;                      /* Volume name valid */
+   bool offline;                      /* not available */
+   bool autoselect;                   /* can be selected via autochanger */
+   uint32_t PoolId;
+   char ChangerName[MAX_NAME_LENGTH];
+   char VolumeName[MAX_NAME_LENGTH];
+   char MediaType[MAX_NAME_LENGTH];
+};
 
 /*
  * Console ACL positions
@@ -124,14 +160,24 @@ enum {
    Num_ACL                            /* keep last */
 };
 
-/* 
+/*
  *    Console Resource
  */
-struct CONRES {
+class CONRES {
+public:
    RES   hdr;
    char *password;                    /* UA server password */
-   int enable_ssl;                    /* Use SSL */
    alist *ACL_lists[Num_ACL];         /* pointers to ACLs */
+   int tls_enable;                    /* Enable TLS */
+   int tls_require;                   /* Require TLS */
+   int tls_verify_peer;              /* TLS Verify Client Certificate */
+   char *tls_ca_certfile;             /* TLS CA Certificate File */
+   char *tls_ca_certdir;              /* TLS CA Certificate Directory */
+   char *tls_certfile;                /* TLS Server Certificate File */
+   char *tls_keyfile;                 /* TLS Server Key File */
+   char *tls_dhfile;                  /* TLS Diffie-Hellman Parameters */
+   alist *tls_allowed_cns;            /* TLS Allowed Clients */
+   TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
 };
 
 
@@ -139,7 +185,8 @@ struct CONRES {
  *   Catalog Resource
  *
  */
-struct CAT {
+class CAT {
+public:
    RES   hdr;
 
    int   db_port;                     /* Port -- not yet implemented */
@@ -156,7 +203,8 @@ struct CAT {
  *   Client Resource
  *
  */
-struct CLIENT {
+class CLIENT {
+public:
    RES   hdr;
 
    int   FDport;                      /* Where File daemon listens */
@@ -168,14 +216,21 @@ struct CLIENT {
    CAT *catalog;                      /* Catalog resource */
    uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
    uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
-   int enable_ssl;                    /* Use SSL */
+   int tls_enable;                    /* Enable TLS */
+   int tls_require;                   /* Require TLS */
+   char *tls_ca_certfile;             /* TLS CA Certificate File */
+   char *tls_ca_certdir;              /* TLS CA Certificate Directory */
+   char *tls_certfile;                /* TLS Client Certificate File */
+   char *tls_keyfile;                 /* TLS Client Key File */
+   TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
 };
 
 /*
  *   Store Resource
- * 
+ *
  */
-struct STORE {
+class STORE {
+public:
    RES   hdr;
 
    int   SDport;                      /* port where Directors connect */
@@ -183,20 +238,40 @@ struct STORE {
    char *address;
    char *password;
    char *media_type;
-   char *dev_name;   
+   alist *device;                     /* Alternate devices for this Storage */
    int  autochanger;                  /* set if autochanger */
+   int  drives;                       /* number of drives in autochanger */
    uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
    uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
-   int enable_ssl;                    /* Use SSL */
+   int tls_enable;                    /* Enable TLS */
+   int tls_require;                   /* Require TLS */
+   char *tls_ca_certfile;             /* TLS CA Certificate File */
+   char *tls_ca_certdir;              /* TLS CA Certificate Directory */
+   char *tls_certfile;                /* TLS Client Certificate File */
+   char *tls_keyfile;                 /* TLS Client Key File */
+   TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
+   int64_t StorageId;                 /* Set from Storage DB record */
+   int enabled;                       /* Set if device is enabled */
+
+   /* Methods */
+   char *dev_name() const;
+   char *name() const;
 };
 
+inline char *STORE::dev_name() const
+{ 
+   DEVICE *dev = (DEVICE *)device->first();
+   return dev->hdr.name;
+}
 
-#define MAX_STORE 2                   /* Max storage directives in Job */
+inline char *STORE::name() const { return hdr.name; }
+
 
 /*
  *   Job Resource
  */
-struct JOB {
+class JOB {
+public:
    RES   hdr;
 
    int   JobType;                     /* job type (backup, verify, restore */
@@ -214,6 +289,9 @@ struct JOB {
    int   replace;                     /* How (overwrite, ..) */
    utime_t MaxRunTime;                /* max run time in seconds */
    utime_t MaxWaitTime;               /* max blocking time in seconds */
+   utime_t FullMaxWaitTime;           /* Max Full job wait time */
+   utime_t DiffMaxWaitTime;           /* Max Differential job wait time */
+   utime_t IncMaxWaitTime;            /* Max Incremental job wait time */
    utime_t MaxStartDelay;             /* max start delay in seconds */
    int PrefixLinks;                   /* prefix soft links with Where path */
    int PruneJobs;                     /* Force pruning of Jobs */
@@ -222,23 +300,30 @@ struct JOB {
    int SpoolAttributes;               /* Set to spool attributes in SD */
    int spool_data;                    /* Set to spool data in SD */
    int rerun_failed_levels;           /* Upgrade to rerun failed levels */
+   int PreferMountedVolumes;          /* Prefer vols mounted rather than new one */
    uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
    int RescheduleOnError;             /* Set to reschedule on error */
    int RescheduleTimes;               /* Number of times to reschedule job */
    utime_t RescheduleInterval;        /* Reschedule interval */
    utime_t JobRetention;              /* job retention period in seconds */
-  
+   int write_part_after_job;          /* Set to write part after job in SD */
+   int enabled;                       /* Set if device is enabled */
+   
    MSGS      *messages;               /* How and where to send messages */
    SCHED     *schedule;               /* When -- Automatic schedule */
    CLIENT    *client;                 /* Who to backup */
    FILESET   *fileset;                /* What to backup -- Fileset */
-   alist     *storage[MAX_STORE];     /* Where is device -- Storage daemon */
+   alist     *storage;                /* Where is device -- list of Storage to be used */
    POOL      *pool;                   /* Where is media -- Media Pool */
    POOL      *full_pool;              /* Pool for Full backups */
    POOL      *inc_pool;               /* Pool for Incremental backups */
    POOL      *dif_pool;               /* Pool for Differental backups */
-   JOB       *verify_job;             /* Job name to verify */
+   union {
+      JOB       *verify_job;          /* Job name to verify */
+      JOB       *migration_job;       /* Job name to migrate */
+   };
    JOB       *jobdefs;                /* Job defaults */
+   alist     *run_cmds;               /* Run commands */
    uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
 };
 
@@ -269,11 +354,12 @@ struct INCEXE {
    alist name_list;                   /* filename list -- holds char * */
 };
 
-/* 
+/*
  *   FileSet Resource
  *
  */
-struct FILESET {
+class FILESET {
+public:
    RES   hdr;
 
    bool new_include;                  /* Set if new include used */
@@ -285,14 +371,16 @@ struct FILESET {
    struct MD5Context md5c;            /* MD5 of include/exclude */
    char MD5[30];                      /* base 64 representation of MD5 */
    int ignore_fs_changes;             /* Don't force Full if FS changed */
+   int enable_vss;                    /* Enable Volume Shadow Copy */
 };
 
- 
-/* 
+
+/*
  *   Schedule Resource
  *
  */
-struct SCHED {
+class SCHED {
+public:
    RES   hdr;
 
    RUN *run;
@@ -301,7 +389,8 @@ struct SCHED {
 /*
  *   Counter Resource
  */
-struct COUNTER {
+class COUNTER {
+public:
    RES   hdr;
 
    int32_t  MinValue;                 /* Minimum value */
@@ -313,15 +402,17 @@ struct COUNTER {
 };
 
 /*
- *   Pool Resource   
+ *   Pool Resource
  *
  */
-struct POOL {
+class POOL {
+public:
    RES   hdr;
 
    char *pool_type;                   /* Pool type */
    char *label_format;                /* Label format string */
    char *cleaning_prefix;             /* Cleaning label prefix */
+   int   LabelType;                   /* Bacula/ANSI/IBM label type */
    int   use_catalog;                 /* maintain catalog for media */
    int   catalog_files;               /* maintain file entries in catalog */
    int   use_volume_once;             /* write on volume only once */
@@ -335,9 +426,15 @@ struct POOL {
    uint32_t MaxVolJobs;               /* Maximum jobs on the Volume */
    uint32_t MaxVolFiles;              /* Maximum files on the Volume */
    uint64_t MaxVolBytes;              /* Maximum bytes on the Volume */
+   utime_t MigrationTime;             /* Time to migrate to next pool */
+   uint32_t MigrationHighBytes;       /* When migration starts */
+   uint32_t MigrationLowBytes;        /* When migration stops */
+   POOL  *NextPool;                   /* Next pool for migration */
    int   AutoPrune;                   /* default for pool auto prune */
    int   Recycle;                     /* default for media recycle yes/no */
 };
+
+
 
 
 /* Define the Union of all the above
@@ -355,19 +452,24 @@ union URES {
    POOL       res_pool;
    MSGS       res_msgs;
    COUNTER    res_counter;
+   DEVICE     res_dev;
    RES        hdr;
 };
 
 
 
 /* Run structure contained in Schedule Resource */
-struct RUN {
+class RUN {
+public:
    RUN *next;                         /* points to next run record */
    int level;                         /* level override */
    int Priority;                      /* priority override */
-   int job_type;  
+   int job_type;
    bool spool_data;                   /* Data spooling override */
    bool spool_data_set;               /* Data spooling override given */
+   bool write_part_after_job;         /* Write part after job override */
+   bool write_part_after_job_set;     /* Write part after job override given */
+   
    POOL *pool;                        /* Pool override */
    POOL *full_pool;                   /* Pool override */
    POOL *inc_pool;                    /* Pool override */

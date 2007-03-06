@@ -23,17 +23,17 @@ install-autostart-fd:
 	@echo "FreeBSD platform installation"
 	$(INSTALL_PROGRAM) -m 744 bacula-fd /etc/rc.bacula-fd
 	@-today="`date +%Y%m%d%H%M`"; \
-	grep -q /etc/rc.bacula-fd /etc/rc.local; \
+	grep -q /etc/rc.bacula-fd /etc/rc.conf; \
 	if [ $$? -eq 0 ]; then \
-	    echo "/etc/rc.local already patched"; \
+	    echo "/etc/rc.conf already patched"; \
 	else \
-	    rm -f /etc/rc.local.$$today; \
-	    cp -p /etc/rc.local /etc/rc.local.$$today; \
+	    rm -f /etc/rc.conf.$$today; \
+	    cp -p /etc/rc.conf /etc/rc.conf.$$today; \
 	    ( echo "Start the Bacula File daemon. Do not remove the 'TAG_BACULA_FD' text"; \
 	      echo "if [ -x /etc/rc.bacula-fd ]; then	  # TAG_BACULA_FD"; \
 	      echo "	    /etc/rc.bacula-fd start	  # TAG_BACULA_FD"; \
 	      echo "fi					  # TAG_BACULA_FD"; \
-	    ) >> /etc/rc.local; \
+	    ) >> /etc/rc.conf; \
 	    echo ""; \
 	fi
 
@@ -42,17 +42,17 @@ install-autostart-sd:
 	@echo "FreeBSD platform installation"
 	$(INSTALL_PROGRAM) -m 744 bacula-sd /etc/rc.bacula-sd
 	@-today="`date +%Y%m%d%H%M`"; \
-	grep -q /etc/rc.bacula-sd /etc/rc.local; \
+	grep -q /etc/rc.bacula-sd /etc/rc.conf; \
 	if [ $$? -eq 0 ]; then \
-	    echo "/etc/rc.local already patched"; \
+	    echo "/etc/rc.conf already patched"; \
 	else \
-	    rm -f /etc/rc.local.$$today; \
-	    cp -p /etc/rc.local /etc/rc.local.$$today; \
+	    rm -f /etc/rc.conf.$$today; \
+	    cp -p /etc/rc.conf /etc/rc.conf.$$today; \
 	    ( echo "Start the Bacula Storage daemon. Do not remove the 'TAG_BACULA_SD' text"; \
 	      echo "if [ -x /etc/rc.bacula-sd ]; then	  # TAG_BACULA_SD"; \
 	      echo "	    /etc/rc.bacula-sd start	  # TAG_BACULA_SD"; \
 	      echo "fi					  # TAG_BACULA_SD"; \
-	    ) >> /etc/rc.local; \
+	    ) >> /etc/rc.conf; \
 	    echo ""; \
 	fi
 
@@ -60,17 +60,17 @@ install-autostart-dir:
 	@echo "FreeBSD platform installation"
 	$(INSTALL_PROGRAM) -m 744 bacula-dir /etc/rc.bacula-dir
 	@-today="`date +%Y%m%d%H%M`"; \
-	grep -q /etc/rc.bacula-dir /etc/rc.local; \
+	grep -q /etc/rc.bacula-dir /etc/rc.conf; \
 	if [ $$? -eq 0 ]; then \
-	    echo "/etc/rc.local already patched"; \
+	    echo "/etc/rc.conf already patched"; \
 	else \
-	    rm -f /etc/rc.local.$$today; \
-	    cp -p /etc/rc.local /etc/rc.local.$$today; \
+	    rm -f /etc/rc.conf.$$today; \
+	    cp -p /etc/rc.conf /etc/rc.conf.$$today; \
 	    ( echo "Start the Bacula Director. Do not remove the 'TAG_BACULA_DIR' text"; \
 	      echo "if [ -x /etc/rc.bacula-dir ]; then	  # TAG_BACULA_DIR"; \
 	      echo "	    /etc/rc.bacula-dir start	  # TAG_BACULA_DIR"; \
 	      echo "fi					  # TAG_BACULA_DIR"; \
-	    ) >> /etc/rc.local; \
+	    ) >> /etc/rc.conf; \
 	    echo ""; \
 	fi
 
@@ -83,7 +83,7 @@ uninstall-autostart-fd:
 	@echo "FreeBSD platform uninstall"
 	rm -f /etc/rc.bacula-fd
 	@-today="`date +%Y%m%d%H%M`"; \
-	for f in /etc/rc.local ; do \
+	for f in /etc/rc.conf ; do \
 	    grep -q '# TAG_BACULA_FD' $$f; \
 	    if [ $$? -eq 0 ]; then \
 		    echo "removing Bacula lines from $$f"; \
@@ -100,7 +100,7 @@ uninstall-autostart-sd:
 	@echo "FreeBSD platform uninstall"
 	rm -f /etc/rc.bacula-sd
 	@-today="`date +%Y%m%d%H%M`"; \
-	for f in /etc/rc.local ; do \
+	for f in /etc/rc.conf ; do \
 	    grep -q '# TAG_BACULA_SD' $$f; \
 	    if [ $$? -eq 0 ]; then \
 		    echo "removing Bacula lines from $$f"; \
@@ -116,7 +116,7 @@ uninstall-autostart-dir:
 	@echo "FreeBSD platform uninstall"
 	rm -f /etc/rc.bacula-dir
 	@-today="`date +%Y%m%d%H%M`"; \
-	for f in /etc/rc.local ; do \
+	for f in /etc/rc.conf ; do \
 	    grep -q '# TAG_BACULA_DIR' $$f; \
 	    if [ $$? -eq 0 ]; then \
 		    echo "removing Bacula lines from $$f"; \
@@ -133,7 +133,6 @@ clean:
 
 distclean: clean
 	@rm -f Makefile bacula-*.spec
-	@rm -rf CVS
 
 devclean: clean
 	@rm -f Makefile bacula-*.spec

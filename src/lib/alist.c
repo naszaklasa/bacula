@@ -3,30 +3,25 @@
  *
  *    alist is a simple malloc'ed array of pointers.  For the moment,
  *      it simply malloc's a bigger array controlled by num_grow.
- *	Default is to realloc the pointer array for each new member.
+ *      Default is to realloc the pointer array for each new member.
  *
  *   Kern Sibbald, June MMIII
  *
- *   Version $Id: alist.c,v 1.7.4.1 2005/02/14 10:02:24 kerns Exp $
+ *   Version $Id: alist.c,v 1.9.4.2 2006/01/12 14:36:21 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2003-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -38,9 +33,9 @@
  */
 void alist::grow_list()
 {
-   if (num_items == 0) {
+   if (items == NULL) {
       if (num_grow == 0) {
-	 num_grow = 1;		      /* default if not initialized */
+         num_grow = 1;                /* default if not initialized */
       }
       items = (void **)malloc(num_grow * sizeof(void *));
       max_items = num_grow;
@@ -143,10 +138,10 @@ void alist::destroy()
 {
    if (items) {
       if (own_items) {
-	 for (int i=0; i<num_items; i++) {
-	    free(items[i]);
-	    items[i] = NULL;
-	 }
+         for (int i=0; i<num_items; i++) {
+            free(items[i]);
+            items[i] = NULL;
+         }
       }
       free(items);
       items = NULL;

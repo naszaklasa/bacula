@@ -20,7 +20,7 @@ case "$1" in
        ;;
     stop)
        echo "Stopping the Director daemon: "
-#      killproc @sbindir@/bacula-dir
+       pkill -x bacula-dir
        RETVAL=$?
        echo
        [ $RETVAL -eq 0 ] && rm -f @subsysdir@/bacula-dir

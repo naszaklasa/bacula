@@ -2,25 +2,20 @@
  * General header file configurations that apply to
  * all daemons.  System dependent stuff goes here.
  *
- *   Version $Id: baconfig.h,v 1.64.2.2.2.1 2005/04/05 17:23:32 kerns Exp $
+ *   Version $Id: baconfig.h,v 1.88.2.2 2006/01/09 20:42:55 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Copyright (C) 2000-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -35,6 +30,15 @@
 #define TRUE  1
 #define FALSE 0
 
+#ifdef HAVE_TLS
+#define have_tls 1
+#else
+#define have_tls 0
+#endif
+/* For compatibility with 1.39 */
+#define cleanup_crypto cleanup_tls
+#define init_crypto init_tls
+
 #ifndef ETIME
 #define ETIME ETIMEDOUT
 #endif
@@ -48,29 +52,45 @@
 #ifdef DEBUG
 #define ASSERT(x) if (!(x)) { \
    char *jcr = NULL; \
-   Emsg1(M_ERROR, 0, "Failed ASSERT: %s\n", #x); \
+   Emsg1(M_ERROR, 0, _("Failed ASSERT: %s\n"), #x); \
    jcr[0] = 0; }
 #else
 #define ASSERT(x)
 #endif
 
 /* Allow printing of NULL pointers */
-#define NPRT(x) (x)?(x):"*None*"
-
-#ifdef ENABLE_NLS
-#include <libintl.h>
-#define _(s) gettext((s))
-#define N_(s) (s)
-#else
-#undef _
-#define _(s) (s)
-#undef N_
-#define N_(s) (s)
-#undef textdomain
-#define textdomain(d)
-/* #define bindtextdomain(p, d) */
+#define NPRT(x) (x)?(x):_("*None*")
+ 
+#ifdef WIN32
+#undef ENABLE_NLS
 #endif
 
+#ifdef ENABLE_NLS
+   #include <libintl.h>
+   #include <locale.h>
+   #ifndef _
+      #define _(s) gettext((s))
+   #endif /* _ */
+   #ifndef N_
+      #define N_(s) (s)
+   #endif /* N_ */
+#else /* !ENABLE_NLS */
+   #ifndef _
+      #define _(s) (s)
+   #endif
+   #ifndef N_
+      #define N_(s) (s)
+   #endif
+   #ifndef textdomain
+      #define textdomain(d)
+   #endif
+   #ifndef bindtextdomain
+      #define bindtextdomain(p, d)
+   #endif
+   #ifndef setlocale
+      #define setlocale(p, d)
+   #endif
+#endif /* ENABLE_NLS */
 
 /* This should go away! ****FIXME***** */
 #define MAXSTRING 500
@@ -111,7 +131,7 @@
 /*
  * Default network buffer size
  */
-#define DEFAULT_NETWORK_BUFFER_SIZE (32 * 1024)
+#define DEFAULT_NETWORK_BUFFER_SIZE (64 * 1024)
 
 /*
  * Stream definitions.  Once defined these must NEVER
@@ -122,12 +142,15 @@
  *
  *   STREAM_UNIX_ATTRIBUTES
  *   STREAM_UNIX_ATTRIBUTES_EX
- *   STREAM_MD5_SIGNATURE
- *   STREAM_SHA1_SIGNATURE
+ *   STREAM_MD5_DIGEST
+ *   STREAM_SHA1_DIGEST
+ *   STREAM_SHA256_DIGEST
+ *   STREAM_SHA512_DIGEST
  */
 #define STREAM_UNIX_ATTRIBUTES    1    /* Generic Unix attributes */
 #define STREAM_FILE_DATA          2    /* Standard uncompressed data */
-#define STREAM_MD5_SIGNATURE      3    /* MD5 signature for the file */
+#define STREAM_MD5_SIGNATURE      3    /* deprecated */
+#define STREAM_MD5_DIGEST         3    /* MD5 digest for the file */
 #define STREAM_GZIP_DATA          4    /* GZip compressed file data */
 /* Extended Unix attributes with Win32 Extended data.  Deprecated. */
 #define STREAM_UNIX_ATTRIBUTES_EX 5    /* Extended Unix attr for Win32 EX */
@@ -135,16 +158,21 @@
 #define STREAM_SPARSE_GZIP_DATA   7
 #define STREAM_PROGRAM_NAMES      8    /* program names for program data */
 #define STREAM_PROGRAM_DATA       9    /* Data needing program */
-#define STREAM_SHA1_SIGNATURE    10    /* SHA1 signature for the file */
+#define STREAM_SHA1_SIGNATURE    10    /* deprecated */
+#define STREAM_SHA1_DIGEST       10    /* SHA1 digest for the file */
 #define STREAM_WIN32_DATA        11    /* Win32 BackupRead data */
 #define STREAM_WIN32_GZIP_DATA   12    /* Gzipped Win32 BackupRead data */
 #define STREAM_MACOS_FORK_DATA   13    /* Mac resource fork */
 #define STREAM_HFSPLUS_ATTRIBUTES 14   /* Mac OS extra attributes */
 /*** FIXME ***/
 #define STREAM_UNIX_ATTRIBUTES_ACCESS_ACL 15 /* Standard ACL attributes on UNIX */
-#define STREAM_UNIX_ATTRIBUTES_ACL 15 /* Standard ACL attributes on UNIX */
 #define STREAM_UNIX_ATTRIBUTES_DEFAULT_ACL 16 /* Default ACL attributes on UNIX */
 /*** FIXME ***/
+#define STREAM_SHA256_DIGEST     17    /* SHA-256 digest for the file */
+#define STREAM_SHA512_DIGEST     18    /* SHA-512 digest for the file */
+#define STREAM_SIGNED_DIGEST     19    /* Signed File Digest, ASN.1 Encoded */
+#define STREAM_ENCRYPTED_FILE_DATA 20  /* Encrypted, uncompressed data */
+#define STREAM_ENCRYPTED_WIN32_DATA 21 /* Encrypted, uncompressed Win32 BackupRead data */
 
 
 /*
@@ -268,19 +296,11 @@ extern void _v(char *file, int line, pthread_mutex_t *m);
 #define V(x) _v(__FILE__, __LINE__, &(x))
 
 #else
+extern void _p(pthread_mutex_t *m);
+extern void _v(pthread_mutex_t *m);
 
-/* These probably should be subroutines */
-#define P(x) \
-   do { int errstat; if ((errstat=pthread_mutex_lock(&(x)))) \
-      e_msg(__FILE__, __LINE__, M_ABORT, 0, "Mutex lock failure. ERR=%s\n",\
-           strerror(errstat)); \
-   } while(0)
-
-#define V(x) \
-   do { int errstat; if ((errstat=pthread_mutex_unlock(&(x)))) \
-         e_msg(__FILE__, __LINE__, M_ABORT, 0, "Mutex unlock failure. ERR=%s\n",\
-           strerror(errstat)); \
-   } while(0)
+#define P(x) _p(&(x))
+#define V(x) _v(&(x))
 
 #endif /* DEBUG_MUTEX */
 
@@ -313,20 +333,20 @@ void b_memset(const char *file, int line, void *mem, int val, size_t num);
  */
 /* Debug Messages that are printed */
 #ifdef DEBUG
-#define Dmsg0(lvl, msg)             d_msg(__FILE__, __LINE__, lvl, msg)
-#define Dmsg1(lvl, msg, a1)         d_msg(__FILE__, __LINE__, lvl, msg, a1)
-#define Dmsg2(lvl, msg, a1, a2)     d_msg(__FILE__, __LINE__, lvl, msg, a1, a2)
-#define Dmsg3(lvl, msg, a1, a2, a3) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2, a3)
-#define Dmsg4(lvl, msg, arg1, arg2, arg3, arg4) d_msg(__FILE__, __LINE__, lvl, msg, arg1, arg2, arg3, arg4)
-#define Dmsg5(lvl, msg, a1, a2, a3, a4, a5) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2, a3, a4, a5)
-#define Dmsg6(lvl, msg, a1, a2, a3, a4, a5, a6) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2, a3, a4, a5, a6)
-#define Dmsg7(lvl, msg, a1, a2, a3, a4, a5, a6, a7) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2, a3, a4, a5, a6, a7)
-#define Dmsg8(lvl, msg, a1, a2, a3, a4, a5, a6, a7, a8) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2, a3, a4, a5, a6, a7, a8)
-#define Dmsg9(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9) d_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9)
-#define Dmsg10(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10) d_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10)
-#define Dmsg11(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11) d_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11)
-#define Dmsg12(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12) d_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12)
-#define Dmsg13(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13) d_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13)
+#define Dmsg0(lvl, msg)             if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg)
+#define Dmsg1(lvl, msg, a1)         if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg, a1)
+#define Dmsg2(lvl, msg, a1, a2)     if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2)
+#define Dmsg3(lvl, msg, a1, a2, a3) if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2, a3)
+#define Dmsg4(lvl, msg, arg1, arg2, arg3, arg4) if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg, arg1, arg2, arg3, arg4)
+#define Dmsg5(lvl, msg, a1, a2, a3, a4, a5) if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2, a3, a4, a5)
+#define Dmsg6(lvl, msg, a1, a2, a3, a4, a5, a6) if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2, a3, a4, a5, a6)
+#define Dmsg7(lvl, msg, a1, a2, a3, a4, a5, a6, a7) if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2, a3, a4, a5, a6, a7)
+#define Dmsg8(lvl, msg, a1, a2, a3, a4, a5, a6, a7, a8) if ((lvl)<=debug_level) d_msg(__FILE__, __LINE__, lvl, msg, a1, a2, a3, a4, a5, a6, a7, a8)
+#define Dmsg9(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9) if ((lvl)<=debug_level) d_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9)
+#define Dmsg10(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10) if ((lvl)<=debug_level) d_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10)
+#define Dmsg11(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11) if ((lvl)<=debug_level) d_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11)
+#define Dmsg12(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12) if ((lvl)<=debug_level) d_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12)
+#define Dmsg13(lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13) if ((lvl)<=debug_level) d_msg(__FILE__,__LINE__,lvl,msg,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13)
 #else
 #define Dmsg0(lvl, msg)
 #define Dmsg1(lvl, msg, a1)
@@ -440,7 +460,7 @@ int  Mmsg(POOLMEM *&msgbuf, const char *fmt,...);
 int  Mmsg(POOL_MEM &msgbuf, const char *fmt,...);
 
 
-struct JCR;
+class JCR;
 void d_msg(const char *file, int line, int level, const char *fmt,...);
 void p_msg(const char *file, int line, int level, const char *fmt,...);
 void e_msg(const char *file, int line, int type, int level, const char *fmt,...);
@@ -451,8 +471,10 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 
 
 /* Use our strdup with smartalloc */
+#ifndef __WXGTK__
 #undef strdup
 #define strdup(buf) bad_call_on_strdup_use_bstrdup(buf)
+#endif
 
 /* Use our fgets which handles interrupts */
 #undef fgets
@@ -471,13 +493,35 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 #define bmalloc(size) b_malloc(__FILE__, __LINE__, (size))
 #endif
 
+/*
+ * Replace codes needed in both file routines and non-file routines
+ * Job replace codes -- in "replace"
+ */
+#define REPLACE_ALWAYS   'a'
+#define REPLACE_IFNEWER  'w'
+#define REPLACE_NEVER    'n'
+#define REPLACE_IFOLDER  'o'
+
+/* This probably should be done on a machine by machine basic, but it works */
+/* This is critical for the smartalloc routines to properly align memory */
+#define ALIGN_SIZE (sizeof(double))
+#define BALIGN(x) (((x) + ALIGN_SIZE - 1) & ~(ALIGN_SIZE -1))
+
+
 /* =============================================================
  *               OS Dependent defines
-  * =============================================================
-   */
+ * ============================================================= 
+ */
 
 #ifndef HAVE_FSEEKO
 /* Bad news. This OS cannot handle 64 bit fseeks and ftells */
+#define fseeko fseek
+#define ftello ftell
+#endif
+
+#if defined (__digital__) && defined (__unix__)
+/* Tru64 - it does have fseeko and ftello , but since ftell/fseek are also 64 bit */
+/* take this 'shortcut' */
 #define fseeko fseek
 #define ftello ftell
 #endif
@@ -505,9 +549,13 @@ extern int thr_setconcurrency(int);
 
 #endif
 
-#ifdef HAVE_DARWIN_OS
+#if defined(HAVE_DARWIN_OS) || defined(HAVE_OSF1_OS)
 /* Apparently someone forgot to wrap getdomainname as a C function */
 extern "C" int getdomainname(char *name, int len);
+#endif
+
+#ifdef HAVE_OSF1_OS
+extern "C" int mknod ( const char *path, int mode, dev_t device );
 #endif
 
 #ifdef HAVE_CYGWIN
@@ -524,15 +572,27 @@ extern "C" int getdomainname(char *name, int len);
 #ifdef HAVE_AIX_OS
 #endif
 
+/* HP-UX 11 specific workarounds */
+
+#ifdef HAVE_HPUX_OS
+# undef h_errno
+extern int h_errno;
+/* the {get,set}domainname() functions exist in HPUX's libc.
+ * the configure script detects that correctly.
+ * the problem is no system headers declares the prototypes for these functions
+ * this is done below
+ */
+extern "C" int getdomainname(char *name, int namelen);
+extern "C" int setdomainname(char *name, int namelen);
+#define uLong unsigned long
+#endif /* HAVE_HPUX_OS */
+
+
 #ifdef HAVE_OSF1_OS
 #undef HAVE_CHFLAGS  /* chflags is incorrectly detected */
 extern "C" int fchdir(int filedes);
 extern "C" long gethostid(void);
 #endif
-
-/* This probably should be done on a machine by machine basic, but it works */
-#define ALIGN_SIZE (sizeof(double))
-#define BALIGN(x) (((x) + ALIGN_SIZE - 1) & ~(ALIGN_SIZE -1))
 
 
 /* Added by KES to deal with Win32 systems */
@@ -540,15 +600,8 @@ extern "C" long gethostid(void);
 #define S_ISWIN32 020000
 #endif
 
-/*
- * Replace codes needed in both file routines and non-file routines
- * Job replace codes -- in "replace"
- */
-#define REPLACE_ALWAYS   'a'
-#define REPLACE_IFNEWER  'w'
-#define REPLACE_NEVER    'n'
-#define REPLACE_IFOLDER  'o'
 
+/* Disabled because it breaks internationalisation...
 #undef HAVE_SETLOCALE
 #ifdef HAVE_SETLOCALE
 #include <locale.h>
@@ -560,6 +613,7 @@ extern "C" long gethostid(void);
 #else
 #define nl_langinfo(x) ("ANSI_X3.4-1968")
 #endif
+*/
 
 /* Fake entry points if regex does not exist */
 #ifndef HAVE_REGEX_H

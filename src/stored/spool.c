@@ -3,25 +3,20 @@
  *
  *      Kern Sibbald, March 2004
  *
- *  Version $Id: spool.c,v 1.22.4.2.2.3 2005/04/23 11:30:19 kerns Exp $
+ *  Version $Id: spool.c,v 1.36.2.1 2005/12/10 13:18:07 kerns Exp $
  */
 /*
    Copyright (C) 2004-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -29,9 +24,9 @@
 #include "stored.h"
 
 /* Forward referenced subroutines */
-static void make_unique_data_spool_filename(JCR *jcr, POOLMEM **name);
-static bool open_data_spool_file(JCR *jcr);
-static bool close_data_spool_file(JCR *jcr);
+static void make_unique_data_spool_filename(DCR *dcr, POOLMEM **name);
+static bool open_data_spool_file(DCR *dcr);
+static bool close_data_spool_file(DCR *dcr);
 static bool despool_data(DCR *dcr, bool commit);
 static int  read_block_from_spool_file(DCR *dcr);
 static bool open_attr_spool_file(JCR *jcr, BSOCK *bs);
@@ -71,29 +66,29 @@ void list_spool_stats(BSOCK *bs)
 {
    char ed1[30], ed2[30];
    if (spool_stats.data_jobs || spool_stats.max_data_size) {
-      bnet_fsend(bs, "Data spooling: %u active jobs, %s bytes; %u total jobs, %s max bytes/job.\n",
+      bnet_fsend(bs, _("Data spooling: %u active jobs, %s bytes; %u total jobs, %s max bytes/job.\n"),
          spool_stats.data_jobs, edit_uint64_with_commas(spool_stats.data_size, ed1),
          spool_stats.total_data_jobs,
          edit_uint64_with_commas(spool_stats.max_data_size, ed2));
    }
    if (spool_stats.attr_jobs || spool_stats.max_attr_size) {
-      bnet_fsend(bs, "Attr spooling: %u active jobs, %s bytes; %u total jobs, %s max bytes.\n",
+      bnet_fsend(bs, _("Attr spooling: %u active jobs, %s bytes; %u total jobs, %s max bytes.\n"),
          spool_stats.attr_jobs, edit_uint64_with_commas(spool_stats.attr_size, ed1),
          spool_stats.total_attr_jobs,
          edit_uint64_with_commas(spool_stats.max_attr_size, ed2));
    }
 }
 
-bool begin_data_spool(JCR *jcr)
+bool begin_data_spool(DCR *dcr)
 {
    bool stat = true;
-   if (jcr->spool_data) {
+   if (dcr->jcr->spool_data) {
       Dmsg0(100, "Turning on data spooling\n");
-      jcr->dcr->spool_data = true;
-      stat = open_data_spool_file(jcr);
+      dcr->spool_data = true;
+      stat = open_data_spool_file(dcr);
       if (stat) {
-         jcr->dcr->spooling = true;
-         Jmsg(jcr, M_INFO, 0, _("Spooling data ...\n"));
+         dcr->spooling = true;
+         Jmsg(dcr->jcr, M_INFO, 0, _("Spooling data ...\n"));
          P(mutex);
          spool_stats.data_jobs++;
          V(mutex);
@@ -102,57 +97,57 @@ bool begin_data_spool(JCR *jcr)
    return stat;
 }
 
-bool discard_data_spool(JCR *jcr)
+bool discard_data_spool(DCR *dcr)
 {
-   if (jcr->dcr->spooling) {
+   if (dcr->spooling) {
       Dmsg0(100, "Data spooling discarded\n");
-      return close_data_spool_file(jcr);
+      return close_data_spool_file(dcr);
    }
    return true;
 }
 
-bool commit_data_spool(JCR *jcr)
+bool commit_data_spool(DCR *dcr)
 {
    bool stat;
 
-   if (jcr->dcr->spooling) {
+   if (dcr->spooling) {
       Dmsg0(100, "Committing spooled data\n");
-      stat = despool_data(jcr->dcr, true /*commit*/);
+      stat = despool_data(dcr, true /*commit*/);
       if (!stat) {
-         Pmsg1(000, "Bad return from despool WroteVol=%d\n", jcr->dcr->WroteVol);
-         close_data_spool_file(jcr);
+         Dmsg1(100, _("Bad return from despool WroteVol=%d\n"), dcr->WroteVol);
+         close_data_spool_file(dcr);
          return false;
       }
-      return close_data_spool_file(jcr);
+      return close_data_spool_file(dcr);
    }
    return true;
 }
 
-static void make_unique_data_spool_filename(JCR *jcr, POOLMEM **name)
+static void make_unique_data_spool_filename(DCR *dcr, POOLMEM **name)
 {
    const char *dir;
-   if (jcr->dcr->dev->device->spool_directory) {
-      dir = jcr->dcr->dev->device->spool_directory;
+   if (dcr->dev->device->spool_directory) {
+      dir = dcr->dev->device->spool_directory;
    } else {
       dir = working_directory;
    }
-   Mmsg(name, "%s/%s.data.spool.%s.%s", dir, my_name, jcr->Job, 
-        jcr->dcr->device->hdr.name);
+   Mmsg(name, "%s/%s.data.%s.%s.spool", dir, my_name, dcr->jcr->Job, 
+        dcr->device->hdr.name);
 }
 
 
-static bool open_data_spool_file(JCR *jcr)
+static bool open_data_spool_file(DCR *dcr)
 {
    POOLMEM *name  = get_pool_memory(PM_MESSAGE);
    int spool_fd;
 
-   make_unique_data_spool_filename(jcr, &name);
+   make_unique_data_spool_filename(dcr, &name);
    if ((spool_fd = open(name, O_CREAT|O_TRUNC|O_RDWR|O_BINARY, 0640)) >= 0) {
-      jcr->dcr->spool_fd = spool_fd;
-      jcr->spool_attributes = true;
+      dcr->spool_fd = spool_fd;
+      dcr->jcr->spool_attributes = true;
    } else {
       berrno be;
-      Jmsg(jcr, M_FATAL, 0, _("Open data spool file %s failed: ERR=%s\n"), name,
+      Jmsg(dcr->jcr, M_FATAL, 0, _("Open data spool file %s failed: ERR=%s\n"), name,
            be.strerror());
       free_pool_memory(name);
       return false;
@@ -162,25 +157,25 @@ static bool open_data_spool_file(JCR *jcr)
    return true;
 }
 
-static bool close_data_spool_file(JCR *jcr)
+static bool close_data_spool_file(DCR *dcr)
 {
    POOLMEM *name  = get_pool_memory(PM_MESSAGE);
 
    P(mutex);
    spool_stats.data_jobs--;
    spool_stats.total_data_jobs++;
-   if (spool_stats.data_size < jcr->dcr->spool_size) {
+   if (spool_stats.data_size < dcr->job_spool_size) {
       spool_stats.data_size = 0;
    } else {
-      spool_stats.data_size -= jcr->dcr->spool_size;
+      spool_stats.data_size -= dcr->job_spool_size;
    }
-   jcr->dcr->spool_size = 0;
+   dcr->job_spool_size = 0;
    V(mutex);
 
-   make_unique_data_spool_filename(jcr, &name);
-   close(jcr->dcr->spool_fd);
-   jcr->dcr->spool_fd = -1;
-   jcr->dcr->spooling = false;
+   make_unique_data_spool_filename(dcr, &name);
+   close(dcr->spool_fd);
+   dcr->spool_fd = -1;
+   dcr->spooling = false;
    unlink(name);
    Dmsg1(100, "Deleted spool file: %s\n", name);
    free_pool_memory(name);
@@ -200,9 +195,15 @@ static bool despool_data(DCR *dcr, bool commit)
    char ec1[50];
 
    Dmsg0(100, "Despooling data\n");
-   Jmsg(jcr, M_INFO, 0, _("%s spooled data to Volume. Despooling %s bytes ...\n"),
-        commit?"Committing":"Writing",
-        edit_uint64_with_commas(jcr->dcr->spool_size, ec1));
+   if (commit) {
+      Jmsg(jcr, M_INFO, 0, _("Committing spooled data to Volume \"%s\". Despooling %s bytes ...\n"),
+         jcr->dcr->VolumeName,
+         edit_uint64_with_commas(jcr->dcr->job_spool_size, ec1));
+   }
+   else {
+      Jmsg(jcr, M_INFO, 0, _("Writing spooled data to Volume. Despooling %s bytes ...\n"),
+         edit_uint64_with_commas(jcr->dcr->job_spool_size, ec1));
+   }
    dcr->spooling = false;
    lock_device(dcr->dev);
    dcr->dev_locked = true;
@@ -243,6 +244,10 @@ static bool despool_data(DCR *dcr, bool commit)
          break;
       }
       ok = write_block_to_device(dcr);
+      if (!ok) {
+         Jmsg2(jcr, M_FATAL, 0, _("Fatal append error on device %s: ERR=%s\n"),
+               dcr->dev->print_name(), strerror_dev(dcr->dev));
+      }
       Dmsg3(800, "Write block ok=%d FI=%d LI=%d\n", ok, block->FirstIndex, block->LastIndex);
    }
    dcr->block = block;                /* reset block */
@@ -252,20 +257,20 @@ static bool despool_data(DCR *dcr, bool commit)
       berrno be;
       Jmsg(dcr->jcr, M_ERROR, 0, _("Ftruncate spool file failed: ERR=%s\n"),
          be.strerror());
-      Pmsg1(000, "Bad return from ftruncate. ERR=%s\n", be.strerror());
+      Pmsg1(000, _("Bad return from ftruncate. ERR=%s\n"), be.strerror());
       ok = false;
    }
 
    P(mutex);
-   if (spool_stats.data_size < dcr->spool_size) {
+   if (spool_stats.data_size < dcr->job_spool_size) {
       spool_stats.data_size = 0;
    } else {
-      spool_stats.data_size -= dcr->spool_size;
+      spool_stats.data_size -= dcr->job_spool_size;
    }
    V(mutex);
    P(dcr->dev->spool_mutex);
-   dcr->dev->spool_size -= dcr->spool_size;
-   dcr->spool_size = 0;               /* zap size in input dcr */
+   dcr->dev->spool_size -= dcr->job_spool_size;
+   dcr->job_spool_size = 0;            /* zap size in input dcr */
    V(dcr->dev->spool_mutex);
    free_memory(rdev->dev_name);
    free_pool_memory(rdev->errmsg);
@@ -304,21 +309,21 @@ static int read_block_from_spool_file(DCR *dcr)
          Jmsg(dcr->jcr, M_FATAL, 0, _("Spool header read error. ERR=%s\n"),
               be.strerror());
       } else {
-         Pmsg2(000, "Spool read error. Wanted %u bytes, got %u\n", rlen, stat);
-         Jmsg2(dcr->jcr, M_FATAL, 0, _("Spool header read error. Wanted %u bytes, got %u\n"), rlen, stat);
+         Pmsg2(000, _("Spool read error. Wanted %u bytes, got %d\n"), rlen, stat);
+         Jmsg2(dcr->jcr, M_FATAL, 0, _("Spool header read error. Wanted %u bytes, got %d\n"), rlen, stat);
       }
       return RB_ERROR;
    }
    rlen = hdr.len;
    if (rlen > block->buf_len) {
-      Pmsg2(000, "Spool block too big. Max %u bytes, got %u\n", block->buf_len, rlen);
+      Pmsg2(000, _("Spool block too big. Max %u bytes, got %u\n"), block->buf_len, rlen);
       Jmsg2(dcr->jcr, M_FATAL, 0, _("Spool block too big. Max %u bytes, got %u\n"), block->buf_len, rlen);
       return RB_ERROR;
    }
    stat = read(dcr->spool_fd, (char *)block->buf, (size_t)rlen);
    if (stat != (ssize_t)rlen) {
-      Pmsg2(000, "Spool data read error. Wanted %u bytes, got %u\n", rlen, stat);
-      Jmsg2(dcr->jcr, M_FATAL, 0, _("Spool data read error. Wanted %u bytes, got %u\n"), rlen, stat);
+      Pmsg2(000, _("Spool data read error. Wanted %u bytes, got %d\n"), rlen, stat);
+      Jmsg2(dcr->jcr, M_FATAL, 0, _("Spool data read error. Wanted %u bytes, got %d\n"), rlen, stat);
       return RB_ERROR;
    }
    /* Setup write pointers */
@@ -352,9 +357,9 @@ bool write_block_to_spool_file(DCR *dcr)
    hlen = sizeof(spool_hdr);
    wlen = block->binbuf;
    P(dcr->dev->spool_mutex);
-   dcr->spool_size += hlen + wlen;
+   dcr->job_spool_size += hlen + wlen;
    dcr->dev->spool_size += hlen + wlen;
-   if ((dcr->max_spool_size > 0 && dcr->spool_size >= dcr->max_spool_size) ||
+   if ((dcr->max_job_spool_size > 0 && dcr->job_spool_size >= dcr->max_job_spool_size) ||
        (dcr->dev->max_spool_size > 0 && dcr->dev->spool_size >= dcr->dev->max_spool_size)) {
       despool = true;
    }
@@ -370,19 +375,19 @@ bool write_block_to_spool_file(DCR *dcr)
       char ec1[30], ec2[30], ec3[30], ec4[30];
       Dmsg4(100, "Despool in write_block_to_spool_file max_size=%s size=%s "
             "max_job_size=%s job_size=%s\n",
-            edit_uint64_with_commas(dcr->max_spool_size, ec1),
-            edit_uint64_with_commas(dcr->spool_size, ec2),
+            edit_uint64_with_commas(dcr->max_job_spool_size, ec1),
+            edit_uint64_with_commas(dcr->job_spool_size, ec2),
             edit_uint64_with_commas(dcr->dev->max_spool_size, ec3),
             edit_uint64_with_commas(dcr->dev->spool_size, ec4));
 #endif
       Jmsg(dcr->jcr, M_INFO, 0, _("User specified spool size reached.\n"));
       if (!despool_data(dcr, false)) {
-         Pmsg0(000, "Bad return from despool in write_block.\n");
+         Pmsg0(000, _("Bad return from despool in write_block.\n"));
          return false;
       }
       /* Despooling cleared these variables so reset them */
       P(dcr->dev->spool_mutex);
-      dcr->spool_size += hlen + wlen;
+      dcr->job_spool_size += hlen + wlen;
       dcr->dev->spool_size += hlen + wlen;
       V(dcr->dev->spool_mutex);
       Jmsg(dcr->jcr, M_INFO, 0, _("Spooling data again ...\n"));
@@ -540,13 +545,13 @@ bool commit_attribute_spool(JCR *jcr)
       size = ftello(jcr->dir_bsock->spool_fd);
       if (size < 0) {
          berrno be;
-         Jmsg(jcr, M_FATAL, 0, _("Ftell on attributes file failed: ERR=%s\n"),
+         Jmsg(jcr, M_FATAL, 0, _("Fseek on attributes file failed: ERR=%s\n"),
               be.strerror());
          goto bail_out;
       }
       P(mutex);
       if (spool_stats.attr_size + size > spool_stats.max_attr_size) {
-          spool_stats.max_attr_size = spool_stats.attr_size + size;
+         spool_stats.max_attr_size = spool_stats.attr_size + size;
       }
       spool_stats.attr_size += size;
       V(mutex);
@@ -564,7 +569,7 @@ bail_out:
 
 static void make_unique_spool_filename(JCR *jcr, POOLMEM **name, int fd)
 {
-   Mmsg(name, "%s/%s.attr.spool.%s.%d", working_directory, my_name,
+   Mmsg(name, "%s/%s.attr.%s.%d.spool", working_directory, my_name,
       jcr->Job, fd);
 }
 

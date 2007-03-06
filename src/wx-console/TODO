@@ -1,17 +1,17 @@
-console_thread: Find an alternate way to get error messages, without using
-  a temporary file. (See Kern's mail 15.11.04 - 17:32)
+BUGS
+----
+
+Reported by Thorsten (May 15 2005 4:23 PM):
+During my work (I used vs.net 2003) I noticed a few smaller glitches, but don't know if the problems lie within wx-console or the wxWindows library:
+- start wx-console -> enter quit -> memory leaks
+- start wx-xonsole in debug mode -> drawing error (empty console screen), one click to a scrollbar -> text is back (fixed, t.engel)
+- after "quit" of console -> director claims unexpected communication interruption
+
+
+Old TODO list
+-------------
 
 general : Show nice messages boxes when errors occurs.
-
-general : Bug reported by Kern:
-  I tried loading my current backup into the restore window. It
-  consisted of something like 10 jobs and was pretty big.  It was all
-  loaded, I double clicked on a directory, which was then marked, then
-  I opened it and clicked on subdirectory to unmark it, and I saw the
-  X appear on the top directory with a small check, then I'm not sure if I
-  clicked again, but my whole OS froze -- at first I could still move the
-  mouse a bit (very slowly) then after 30 seconds *everything* was dead.
-  I had to do a power off to get my system back.
    
 wxbRestorePanel : list jobs and list jobid=# will probably crash if there
    is nothing to show (db error or empty table)

@@ -12,7 +12,7 @@ struct saved_cwd
 
 int save_cwd(struct saved_cwd *cwd);
 int restore_cwd(const struct saved_cwd *cwd, const char *dest,
-                         const char *from);
+			 const char *from);
 void free_cwd(struct saved_cwd *cwd);
 
 #endif

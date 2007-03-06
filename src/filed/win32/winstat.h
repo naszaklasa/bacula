@@ -25,7 +25,7 @@
 
 class bacStatus;
 
-#ifndef _WINSTAT_H_ 
+#ifndef _WINSTAT_H_
 #define _WINSTAT_H_
 
 class bacStatus

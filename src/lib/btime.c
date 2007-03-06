@@ -1,7 +1,7 @@
 /*
  * Bacula time and date routines -- John Walker
  *
- *   Version $Id: btime.c,v 1.21 2004/11/21 08:53:22 kerns Exp $
+ *   Version $Id: btime.c,v 1.22 2004/12/21 16:18:38 kerns Exp $
  */
 /*
    Copyright (C) 2000-2004 Kern Sibbald and John Walker
@@ -28,9 +28,9 @@
  * in Bacula (fdate_t, ftime_t, time_t (Unix standard), btime_t, and
  *  utime_t).  fdate_t and ftime_t are deprecated and should no longer
  *  be used, and in general, Unix time time_t should no longer be used,
- *  it is being phased out. 
- *     
- *  Epoch is the base of Unix time in seconds (time_t, ...) 
+ *  it is being phased out.
+ *
+ *  Epoch is the base of Unix time in seconds (time_t, ...)
  *     and is 1 Jan 1970 at 0:0 UTC
  *
  *  The major two times that should be left are:
@@ -46,7 +46,7 @@ char *bstrftime(char *dt, int maxlen, utime_t tim)
 {
    time_t ttime = (time_t)tim;
    struct tm tm;
-   
+
    /* ***FIXME**** the format and localtime_r() should be user configurable */
    localtime_r(&ttime, &tm);
    strftime(dt, maxlen, "%d-%b-%Y %H:%M", &tm);
@@ -58,7 +58,7 @@ char *bstrftimes(char *dt, int maxlen, utime_t tim)
 {
    time_t ttime = (time_t)tim;
    struct tm tm;
-   
+
    /* ***FIXME**** the format and localtime_r() should be user configurable */
    localtime_r(&ttime, &tm);
    strftime(dt, maxlen, "%d-%b-%Y %H:%M:%S", &tm);
@@ -71,7 +71,7 @@ char *bstrftime_ny(char *dt, int maxlen, utime_t tim)
 {
    time_t ttime = (time_t)tim;
    struct tm tm;
-   
+
    /* ***FIXME**** the format and localtime_r() should be user configurable */
    localtime_r(&ttime, &tm);
    strftime(dt, maxlen, "%d-%b %H:%M", &tm);
@@ -84,7 +84,7 @@ char *bstrftime_nc(char *dt, int maxlen, utime_t tim)
 {
    time_t ttime = (time_t)tim;
    struct tm tm;
-   
+
    /* ***FIXME**** the format and localtime_r() should be user configurable */
    localtime_r(&ttime, &tm);
    /* NOTE! since the compiler complains about %y, I use %y and cut the century */
@@ -105,7 +105,7 @@ char *bstrutime(char *dt, int maxlen, utime_t tim)
 }
 
 /* Convert standard time string yyyy-mm-dd hh:mm:ss to Unix time */
-utime_t str_to_utime(char *str) 
+utime_t str_to_utime(char *str)
 {
    struct tm tm;
    time_t ttime;
@@ -116,7 +116,7 @@ utime_t str_to_utime(char *str)
    }
    if (tm.tm_mon > 0) {
       tm.tm_mon--;
-   } else { 
+   } else {
       return 0;
    }
    if (tm.tm_year >= 1900) {
@@ -127,7 +127,7 @@ utime_t str_to_utime(char *str)
    tm.tm_wday = tm.tm_yday = 0;
    tm.tm_isdst = -1;
    ttime = mktime(&tm);
-   if (ttime == -1) {	    
+   if (ttime == -1) {
       ttime = 0;
    }
    return (utime_t)ttime;
@@ -152,7 +152,7 @@ btime_t get_current_btime()
 /* Convert btime to Unix time */
 time_t btime_to_unix(btime_t bt)
 {
-   return (time_t)(bt/1000000); 		   
+   return (time_t)(bt/1000000);
 }
 
 /* Convert btime to utime */
@@ -180,7 +180,7 @@ int tm_wom(int mday, int wday)
    int wom = 1 + (mday - fs - 1) / 7;
 // Dmsg4(100, "mday=%d wom=%d wday=%d fs=%d\n", mday, wom, wday, fs);
    return wom;
-}  
+}
 
 /*
  * Given a Unix date return the week of the year.
@@ -354,13 +354,13 @@ void date_time_decode(struct date_time *dt,
     time_decode(dt->julian_day_fraction, hour, minute, second, second_fraction);
 }
 
-/*  tm_encode  --  Encode a civil date and time from a tm structure   
+/*  tm_encode  --  Encode a civil date and time from a tm structure
  *		   to a Julian day and day fraction.
  */
 
 /* Deprecated. Do not use. */
 void tm_encode(struct date_time *dt,
-		      struct tm *tm) 
+		      struct tm *tm)
 {
     uint32_t year;
     uint8_t month, day, hour, minute, second;
@@ -381,7 +381,7 @@ void tm_encode(struct date_time *dt,
 
 /* Deprecated. Do not use. */
 void tm_decode(struct date_time *dt,
-		      struct tm *tm) 
+		      struct tm *tm)
 {
     uint32_t year;
     uint8_t month, day, hour, minute, second;

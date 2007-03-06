@@ -1,0 +1,25 @@
+
+ This patch fixes a bug in the FD when running with /lib/tls pthreads.
+ Apply it to version 1.36.0 with:
+
+ cd <bacula-source>
+ patch -p0 <1.36.0-cancel.patch
+ make
+ make install
+ ...
+
+Index: src/lib/jcr.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/lib/jcr.c,v
+retrieving revision 1.60
+diff -u -r1.60 jcr.c
+--- src/lib/jcr.c	1 Sep 2004 19:44:29 -0000	1.60
++++ src/lib/jcr.c	15 Nov 2004 11:32:46 -0000
+@@ -191,6 +191,7 @@
+    Dmsg0(400, "Enter new_jcr\n");
+    jcr = (JCR *)malloc(size);
+    memset(jcr, 0, size);
++   jcr->my_thread_id = pthread_self();
+    jcr->msg_queue = New(dlist(item, &item->link));
+    jcr->job_end_push.init(1, false);
+    jcr->sched_time = time(NULL);

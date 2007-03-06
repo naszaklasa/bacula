@@ -3,34 +3,35 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: job.c,v 1.91.4.2.2.1 2005/03/04 09:14:16 kerns Exp $
+ *   Version $Id: job.c,v 1.125.2.2 2006/03/14 21:41:40 kerns Exp $
  *
  */
 /*
    Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
 #include "bacula.h"
 #include "filed.h"
+#ifdef WIN32_VSS
+#include "vss.h"   
+static pthread_mutex_t vss_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 extern char my_name[];
-extern CLIENT *me;		      /* our client resource */
+extern CLIENT *me;                    /* our client resource */
+
+int enable_vss = 0;                   /* set to use vss */
 
 /* Imported functions */
 extern int status_cmd(JCR *jcr);
@@ -42,10 +43,8 @@ static int bootstrap_cmd(JCR *jcr);
 static int cancel_cmd(JCR *jcr);
 static int setdebug_cmd(JCR *jcr);
 static int estimate_cmd(JCR *jcr);
-static int exclude_cmd(JCR *jcr);
 static int hello_cmd(JCR *jcr);
 static int job_cmd(JCR *jcr);
-static int include_cmd(JCR *jcr);
 static int fileset_cmd(JCR *jcr);
 static int level_cmd(JCR *jcr);
 static int verify_cmd(JCR *jcr);
@@ -78,9 +77,7 @@ static struct s_cmds cmds[] = {
    {"cancel",       cancel_cmd,    0},
    {"setdebug=",    setdebug_cmd,  0},
    {"estimate",     estimate_cmd,  0},
-   {"exclude",      exclude_cmd,   0},
    {"Hello",        hello_cmd,     1},
-   {"include",      include_cmd,   0},
    {"fileset",      fileset_cmd,   0},
    {"JobId=",       job_cmd,       0},
    {"level = ",     level_cmd,     0},
@@ -93,7 +90,7 @@ static struct s_cmds cmds[] = {
    {"bootstrap",    bootstrap_cmd, 0},
    {"RunBeforeJob", runbefore_cmd, 0},
    {"RunAfterJob",  runafter_cmd,  0},
-   {NULL,	NULL}		       /* list terminator */
+   {NULL,       NULL}                  /* list terminator */
 };
 
 /* Commands received from director that need scanning */
@@ -113,7 +110,6 @@ static char no_auth[]     = "2998 No Authorization\n";
 static char illegal_cmd[] = "2997 Illegal command for a Director with Monitor directive enabled\n";
 static char OKinc[]       = "2000 OK include\n";
 static char OKest[]       = "2000 OK estimate files=%u bytes=%s\n";
-static char OKexc[]       = "2000 OK exclude\n";
 static char OKlevel[]     = "2000 OK level\n";
 static char OKbackup[]    = "2000 OK backup\n";
 static char OKbootstrap[] = "2000 OK bootstrap\n";
@@ -187,37 +183,37 @@ void *handle_client_request(void *dirp)
 
       /* Read command */
       if (bnet_recv(dir) < 0) {
-	 break; 	      /* connection terminated */
+         break;               /* connection terminated */
       }
       dir->msg[dir->msglen] = 0;
       Dmsg1(100, "<dird: %s", dir->msg);
       found = false;
       for (i=0; cmds[i].cmd; i++) {
-	 if (strncmp(cmds[i].cmd, dir->msg, strlen(cmds[i].cmd)) == 0) {
-	    found = true;	  /* indicate command found */
-	    if (!jcr->authenticated && cmds[i].func != hello_cmd) {
-	       bnet_fsend(dir, no_auth);
-	       bnet_sig(dir, BNET_EOD);
-	       break;
-	    }
-	    if ((jcr->authenticated) && (!cmds[i].monitoraccess) && (jcr->director->monitor)) {
+         if (strncmp(cmds[i].cmd, dir->msg, strlen(cmds[i].cmd)) == 0) {
+            found = true;         /* indicate command found */
+            if (!jcr->authenticated && cmds[i].func != hello_cmd) {
+               bnet_fsend(dir, no_auth);
+               bnet_sig(dir, BNET_EOD);
+               break;
+            }
+            if ((jcr->authenticated) && (!cmds[i].monitoraccess) && (jcr->director->monitor)) {
                Dmsg1(100, "Command %s illegal.\n", cmds[i].cmd);
-	       bnet_fsend(dir, illegal_cmd);
-	       bnet_sig(dir, BNET_EOD);
-	       break;
-	    }
+               bnet_fsend(dir, illegal_cmd);
+               bnet_sig(dir, BNET_EOD);
+               break;
+            }
             Dmsg1(100, "Executing %s command.\n", cmds[i].cmd);
-	    if (!cmds[i].func(jcr)) {	      /* do command */
-	       quit = true;	    /* error or fully terminated, get out */
-               Dmsg0(20, "Quit command loop due to command error or Job done.\n");
-	    }
-	    break;
-	 }
+            if (!cmds[i].func(jcr)) {         /* do command */
+               quit = true;         /* error or fully terminated, get out */
+               Dmsg1(20, "Quit command loop. Canceled=%d\n", job_canceled(jcr));
+            }
+            break;
+         }
       }
-      if (!found) {		 /* command not found */
-	 bnet_fsend(dir, errmsg);
-	 quit = true;
-	 break;
+      if (!found) {              /* command not found */
+         bnet_fsend(dir, errmsg);
+         quit = true;
+         break;
       }
    }
 
@@ -229,68 +225,72 @@ void *handle_client_request(void *dirp)
    if (jcr->RunAfterJob && !job_canceled(jcr)) {
       run_cmd(jcr, jcr->RunAfterJob, "ClientRunAfterJob");
    }
-   dequeue_messages(jcr);	      /* send any queued messages */
+   generate_daemon_event(jcr, "JobEnd");
+
+   dequeue_messages(jcr);             /* send any queued messages */
 
    /* Inform Director that we are done */
    bnet_sig(dir, BNET_TERMINATE);
 
    /* Clean up fileset */
-   FF_PKT *ff = (FF_PKT *)jcr->ff;
+   FF_PKT *ff = jcr->ff;
    findFILESET *fileset = ff->fileset;
    if (fileset) {
       int i, j, k;
       /* Delete FileSet Include lists */
       for (i=0; i<fileset->include_list.size(); i++) {
-	 findINCEXE *incexe = (findINCEXE *)fileset->include_list.get(i);
-	 for (j=0; j<incexe->opts_list.size(); j++) {
-	    findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
-	    for (k=0; k<fo->regex.size(); k++) {
-	       regfree((regex_t *)fo->regex.get(k));
-	    }
-	    fo->regex.destroy();
-	    fo->regexdir.destroy();
-	    fo->regexfile.destroy();
-	    fo->wild.destroy();
-	    fo->wilddir.destroy();
-	    fo->wildfile.destroy();
-	    fo->base.destroy();
-	    fo->fstype.destroy();
-	    if (fo->reader) {
-	       free(fo->reader);
-	    }
-	    if (fo->writer) {
-	       free(fo->writer);
-	    }
-	 }
-	 incexe->opts_list.destroy();
-	 incexe->name_list.destroy();
+         findINCEXE *incexe = (findINCEXE *)fileset->include_list.get(i);
+         for (j=0; j<incexe->opts_list.size(); j++) {
+            findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
+            for (k=0; k<fo->regex.size(); k++) {
+               regfree((regex_t *)fo->regex.get(k));
+            }
+            fo->regex.destroy();
+            fo->regexdir.destroy();
+            fo->regexfile.destroy();
+            fo->wild.destroy();
+            fo->wilddir.destroy();
+            fo->wildfile.destroy();
+            fo->base.destroy();
+            fo->fstype.destroy();
+            if (fo->reader) {
+               free(fo->reader);
+            }
+            if (fo->writer) {
+               free(fo->writer);
+            }
+         }
+         incexe->opts_list.destroy();
+         incexe->name_list.destroy();
       }
       fileset->include_list.destroy();
 
       /* Delete FileSet Exclude lists */
       for (i=0; i<fileset->exclude_list.size(); i++) {
-	 findINCEXE *incexe = (findINCEXE *)fileset->exclude_list.get(i);
-	 for (j=0; j<incexe->opts_list.size(); j++) {
-	    findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
-	    fo->regex.destroy();
-	    fo->regexdir.destroy();
-	    fo->regexfile.destroy();
-	    fo->wild.destroy();
-	    fo->wilddir.destroy();
-	    fo->wildfile.destroy();
-	    fo->base.destroy();
-	    fo->fstype.destroy();
-	 }
-	 incexe->opts_list.destroy();
-	 incexe->name_list.destroy();
+         findINCEXE *incexe = (findINCEXE *)fileset->exclude_list.get(i);
+         for (j=0; j<incexe->opts_list.size(); j++) {
+            findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
+            fo->regex.destroy();
+            fo->regexdir.destroy();
+            fo->regexfile.destroy();
+            fo->wild.destroy();
+            fo->wilddir.destroy();
+            fo->wildfile.destroy();
+            fo->base.destroy();
+            fo->fstype.destroy();
+         }
+         incexe->opts_list.destroy();
+         incexe->name_list.destroy();
       }
       fileset->exclude_list.destroy();
       free(fileset);
    }
+   ff->fileset = NULL;
    Dmsg0(100, "Calling term_find_files\n");
-   term_find_files((FF_PKT *)jcr->ff);
+   term_find_files(jcr->ff);
+   jcr->ff = NULL;
    Dmsg0(100, "Done with term_find_files\n");
-   free_jcr(jcr);		      /* destroy JCR record */
+   free_jcr(jcr);                     /* destroy JCR record */
    Dmsg0(100, "Done with free_jcr\n");
    return NULL;
 }
@@ -321,22 +321,15 @@ static int cancel_cmd(JCR *jcr)
 
    if (sscanf(dir->msg, "cancel Job=%127s", Job) == 1) {
       if (!(cjcr=get_jcr_by_full_name(Job))) {
-         bnet_fsend(dir, "2901 Job %s not found.\n", Job);
+         bnet_fsend(dir, _("2901 Job %s not found.\n"), Job);
       } else {
-	 if (cjcr->store_bsock) {
-	    P(cjcr->mutex);
-	    cjcr->store_bsock->timed_out = 1;
-	    cjcr->store_bsock->terminated = 1;
-/*
- * #if !defined(HAVE_CYGWIN) && !defined(HAVE_WIN32)
- */
-#if !defined(HAVE_CYGWIN)
-	    pthread_kill(cjcr->my_thread_id, TIMEOUT_SIGNAL);
-#endif
-	    V(cjcr->mutex);
-	 }
-	 set_jcr_job_status(cjcr, JS_Canceled);
-	 free_jcr(cjcr);
+         if (cjcr->store_bsock) {
+            cjcr->store_bsock->timed_out = 1;
+            cjcr->store_bsock->terminated = 1;
+            pthread_kill(cjcr->my_thread_id, TIMEOUT_SIGNAL);
+         }
+         set_jcr_job_status(cjcr, JS_Canceled);
+         free_jcr(cjcr);
          bnet_fsend(dir, _("2001 Job %s marked to be canceled.\n"), Job);
       }
    } else {
@@ -359,7 +352,7 @@ static int setdebug_cmd(JCR *jcr)
    Dmsg1(110, "setdebug_cmd: %s", dir->msg);
    if (sscanf(dir->msg, "setdebug=%d trace=%d", &level, &trace_flag) != 2 || level < 0) {
       pm_strcpy(jcr->errmsg, dir->msg);
-      bnet_fsend(dir, "2991 Bad setdebug command: %s\n", jcr->errmsg);
+      bnet_fsend(dir, _("2991 Bad setdebug command: %s\n"), jcr->errmsg);
       return 0;
    }
    debug_level = level;
@@ -376,7 +369,7 @@ static int estimate_cmd(JCR *jcr)
    if (sscanf(dir->msg, estimatecmd, &jcr->listing) != 1) {
       pm_strcpy(jcr->errmsg, dir->msg);
       Jmsg(jcr, M_FATAL, 0, _("Bad estimate command: %s"), jcr->errmsg);
-      bnet_fsend(dir, "2992 Bad estimate command.\n");
+      bnet_fsend(dir, _("2992 Bad estimate command.\n"));
       return 0;
    }
    make_estimate(jcr);
@@ -396,8 +389,8 @@ static int job_cmd(JCR *jcr)
 
    sd_auth_key = get_memory(dir->msglen);
    if (sscanf(dir->msg, jobcmd,  &jcr->JobId, jcr->Job,
-	      &jcr->VolSessionId, &jcr->VolSessionTime,
-	      sd_auth_key) != 5) {
+              &jcr->VolSessionId, &jcr->VolSessionTime,
+              sd_auth_key) != 5) {
       pm_strcpy(jcr->errmsg, dir->msg);
       Jmsg(jcr, M_FATAL, 0, _("Bad Job Command: %s"), jcr->errmsg);
       bnet_fsend(dir, BADjob);
@@ -420,7 +413,7 @@ static int runbefore_cmd(JCR *jcr)
    if (sscanf(dir->msg, runbefore, cmd) != 1) {
       pm_strcpy(jcr->errmsg, dir->msg);
       Jmsg1(jcr, M_FATAL, 0, _("Bad RunBeforeJob command: %s\n"), jcr->errmsg);
-      bnet_fsend(dir, "2905 Bad RunBeforeJob command.\n");
+      bnet_fsend(dir, _("2905 Bad RunBeforeJob command.\n"));
       free_memory(cmd);
       return 0;
    }
@@ -433,7 +426,7 @@ static int runbefore_cmd(JCR *jcr)
       bnet_fsend(dir, OKRunBefore);
       return 1;
    } else {
-      bnet_fsend(dir, "2905 Bad RunBeforeJob command.\n");
+      bnet_fsend(dir, _("2905 Bad RunBeforeJob command.\n"));
       return 0;
    }
 }
@@ -447,7 +440,7 @@ static int runafter_cmd(JCR *jcr)
    if (sscanf(dir->msg, runafter, msg) != 1) {
       pm_strcpy(jcr->errmsg, dir->msg);
       Jmsg1(jcr, M_FATAL, 0, _("Bad RunAfter command: %s\n"), jcr->errmsg);
-      bnet_fsend(dir, "2905 Bad RunAfterJob command.\n");
+      bnet_fsend(dir, _("2905 Bad RunAfterJob command.\n"));
       free_memory(msg);
       return 0;
    }
@@ -474,13 +467,13 @@ static bool run_cmd(JCR *jcr, char *cmd, const char *name)
    if (bpipe == NULL) {
       berrno be;
       Jmsg(jcr, M_FATAL, 0, _("%s could not execute. ERR=%s\n"), name,
-	 be.strerror());
+         be.strerror());
       return false;
    }
    while (fgets(line, sizeof(line), bpipe->rfd)) {
       int len = strlen(line);
       if (len > 0 && line[len-1] == '\n') {
-	 line[len-1] = 0;
+         line[len-1] = 0;
       }
       Jmsg(jcr, M_INFO, 0, _("%s: %s\n"), name, line);
    }
@@ -488,125 +481,10 @@ static bool run_cmd(JCR *jcr, char *cmd, const char *name)
    if (status != 0) {
       berrno be;
       Jmsg(jcr, M_FATAL, 0, _("%s returned non-zero status=%d. ERR=%s\n"), name,
-	 status, be.strerror(status));
+         status, be.strerror(status));
       return false;
    }
    return true;
-}
-
-
-#define INC_LIST 0
-#define EXC_LIST 1
-
-static void add_fname_to_list(JCR *jcr, char *fname, int list)
-{
-   char *p, *q;
-   BPIPE *bpipe;
-   POOLMEM *fn;
-   FILE *ffd;
-   char buf[1000];
-   int optlen;
-   int stat;
-
-   /* Skip leading options -- currently ignored */
-   for (p=fname; *p && *p != ' '; p++)
-      { }
-   /* Skip spaces, and q points to first space */
-   for (q=NULL; *p && *p == ' '; p++) {
-      if (!q) {
-	 q = p;
-      }
-   }
-
-   switch (*p) {
-   case '|':
-      p++;			      /* skip over | */
-      fn = get_pool_memory(PM_FNAME);
-      fn = edit_job_codes(jcr, fn, p, "");
-      bpipe = open_bpipe(fn, 0, "r");
-      free_pool_memory(fn);
-      if (!bpipe) {
-         Jmsg(jcr, M_FATAL, 0, _("Cannot run program: %s. ERR=%s\n"),
-	    p, strerror(errno));
-	 return;
-      }
-      /* Copy File options */
-      if (list == INC_LIST) {
-	 *q = 0;		      /* terminate options */
-	 bstrncpy(buf, fname, sizeof(buf));
-         bstrncat(buf, " ", sizeof(buf));
-	 optlen = strlen(buf);
-      } else {
-	 optlen = 0;
-      }
-      while (fgets(buf+optlen, sizeof(buf)-optlen, bpipe->rfd)) {
-	 strip_trailing_junk(buf);
-	 if (list == INC_LIST) {
-	    add_fname_to_include_list((FF_PKT *)jcr->ff, 1, buf);
-	 } else {
-	    add_fname_to_exclude_list((FF_PKT *)jcr->ff, buf);
-	 }
-      }
-      if ((stat=close_bpipe(bpipe)) != 0) {
-         Jmsg(jcr, M_FATAL, 0, _("Error running program: %s. RtnStat=%d ERR=%s\n"),
-	    p, stat, strerror(errno));
-	 return;
-      }
-      break;
-   case '<':
-      p++;			/* skip over < */
-      if ((ffd = fopen(p, "r")) == NULL) {
-	 berrno be;
-         Jmsg(jcr, M_FATAL, 0, _("Cannot open %s file: %s. ERR=%s\n"),
-            list==INC_LIST?"included":"excluded", p, be.strerror());
-	 return;
-      }
-      /* Copy File options */
-      if (list == INC_LIST) {
-	 *q = 0;		      /* terminate options */
-	 bstrncpy(buf, fname, sizeof(buf));
-         bstrncat(buf, " ", sizeof(buf));
-	 optlen = strlen(buf);
-      } else {
-	 optlen = 0;
-      }
-      while (fgets(buf+optlen, sizeof(buf)-optlen, ffd)) {
-	 strip_trailing_junk(buf);
-	 if (list == INC_LIST) {
-	    add_fname_to_include_list((FF_PKT *)jcr->ff, 1, buf);
-	 } else {
-	    add_fname_to_exclude_list((FF_PKT *)jcr->ff, buf);
-	 }
-      }
-      fclose(ffd);
-      break;
-   default:
-      if (list == INC_LIST) {
-	 add_fname_to_include_list((FF_PKT *)jcr->ff, 1, fname);
-      } else {
-	 add_fname_to_exclude_list((FF_PKT *)jcr->ff, p);
-      }
-      break;
-   }
-}
-
-/*
- *
- * Get list of files/directories to include from Director
- *
- */
-static int include_cmd(JCR *jcr)
-{
-   BSOCK *dir = jcr->dir_bsock;
-
-   while (bnet_recv(dir) >= 0) {
-      dir->msg[dir->msglen] = 0;
-      strip_trailing_junk(dir->msg);
-      Dmsg1(010, "include file: %s\n", dir->msg);
-      add_fname_to_list(jcr, dir->msg, INC_LIST);
-   }
-
-   return bnet_fsend(dir, OKinc);
 }
 
 static bool init_fileset(JCR *jcr)
@@ -617,7 +495,7 @@ static bool init_fileset(JCR *jcr)
    if (!jcr->ff) {
       return false;
    }
-   ff = (FF_PKT *)jcr->ff;
+   ff = jcr->ff;
    if (ff->fileset) {
       return false;
    }
@@ -665,44 +543,46 @@ static void add_file_to_fileset(JCR *jcr, const char *fname, findFILESET *filese
    POOLMEM *fn;
    FILE *ffd;
    char buf[1000];
+   int ch;
    int stat;
 
    p = (char *)fname;
-   switch (*p) {
+   ch = (uint8_t)*p;
+   switch (ch) {
    case '|':
-      p++;			      /* skip over | */
+      p++;                            /* skip over | */
       fn = get_pool_memory(PM_FNAME);
       fn = edit_job_codes(jcr, fn, p, "");
       bpipe = open_bpipe(fn, 0, "r");
       free_pool_memory(fn);
       if (!bpipe) {
          Jmsg(jcr, M_FATAL, 0, _("Cannot run program: %s. ERR=%s\n"),
-	    p, strerror(errno));
-	 return;
+            p, strerror(errno));
+         return;
       }
       while (fgets(buf, sizeof(buf), bpipe->rfd)) {
-	 strip_trailing_junk(buf);
-	 fileset->incexe->name_list.append(bstrdup(buf));
+         strip_trailing_junk(buf);
+         fileset->incexe->name_list.append(bstrdup(buf));
       }
       if ((stat=close_bpipe(bpipe)) != 0) {
          Jmsg(jcr, M_FATAL, 0, _("Error running program: %s. RtnStat=%d ERR=%s\n"),
-	    p, stat, strerror(errno));
-	 return;
+            p, stat, strerror(errno));
+         return;
       }
       break;
    case '<':
       Dmsg0(100, "Doing < include on client.\n");
-      p++;			/* skip over < */
+      p++;                      /* skip over < */
       if ((ffd = fopen(p, "r")) == NULL) {
-	 berrno be;
+         berrno be;
          Jmsg(jcr, M_FATAL, 0, _("Cannot open FileSet input file: %s. ERR=%s\n"),
-	    p, be.strerror());
-	 return;
+            p, be.strerror());
+         return;
       }
       while (fgets(buf, sizeof(buf), ffd)) {
-	 strip_trailing_junk(buf);
+         strip_trailing_junk(buf);
          Dmsg1(100, "%s\n", buf);
-	 fileset->incexe->name_list.append(bstrdup(buf));
+         fileset->incexe->name_list.append(bstrdup(buf));
       }
       fclose(ffd);
       break;
@@ -715,7 +595,7 @@ static void add_file_to_fileset(JCR *jcr, const char *fname, findFILESET *filese
 
 static void add_fileset(JCR *jcr, const char *item)
 {
-   FF_PKT *ff = (FF_PKT *)jcr->ff;
+   FF_PKT *ff = jcr->ff;
    findFILESET *fileset = ff->fileset;
    int state = fileset->state;
    findFOPTS *current_opts;
@@ -781,27 +661,27 @@ static void add_fileset(JCR *jcr, const char *item)
       char prbuf[500];
       preg = (regex_t *)malloc(sizeof(regex_t));
       if (current_opts->flags & FO_IGNORECASE) {
-	 rc = regcomp(preg, item, REG_EXTENDED|REG_ICASE);
+         rc = regcomp(preg, item, REG_EXTENDED|REG_ICASE);
       } else {
-	 rc = regcomp(preg, item, REG_EXTENDED);
+         rc = regcomp(preg, item, REG_EXTENDED);
       }
       if (rc != 0) {
-	 regerror(rc, preg, prbuf, sizeof(prbuf));
-	 regfree(preg);
-	 free(preg);
-         Jmsg(jcr, M_FATAL, 0, "REGEX %s compile error. ERR=%s\n", item, prbuf);
-	 state = state_error;
-	 break;
+         regerror(rc, preg, prbuf, sizeof(prbuf));
+         regfree(preg);
+         free(preg);
+         Jmsg(jcr, M_FATAL, 0, _("REGEX %s compile error. ERR=%s\n"), item, prbuf);
+         state = state_error;
+         break;
       }
       state = state_options;
       if (subcode == ' ') {
-	 current_opts->regex.append(preg);
+         current_opts->regex.append(preg);
       } else if (subcode == 'D') {
-	 current_opts->regexdir.append(preg);
+         current_opts->regexdir.append(preg);
       } else if (subcode == 'F') {
-	 current_opts->regexfile.append(preg);
+         current_opts->regexfile.append(preg);
       } else {
-	 state = state_error;
+         state = state_error;
       }
       break;
    case 'B':
@@ -818,13 +698,13 @@ static void add_fileset(JCR *jcr, const char *item)
       current_opts = start_options(ff);
       state = state_options;
       if (subcode == ' ') {
-	 current_opts->wild.append(bstrdup(item));
+         current_opts->wild.append(bstrdup(item));
       } else if (subcode == 'D') {
-	 current_opts->wilddir.append(bstrdup(item));
+         current_opts->wilddir.append(bstrdup(item));
       } else if (subcode == 'F') {
-	 current_opts->wildfile.append(bstrdup(item));
+         current_opts->wildfile.append(bstrdup(item));
       } else {
-	 state = state_error;
+         state = state_error;
       }
       break;
    case 'O':
@@ -843,7 +723,7 @@ static void add_fileset(JCR *jcr, const char *item)
       state = state_options;
       break;
    default:
-      Jmsg(jcr, M_FATAL, 0, "Invalid FileSet command: %s\n", item);
+      Jmsg(jcr, M_FATAL, 0, _("Invalid FileSet command: %s\n"), item);
       state = state_error;
       break;
    }
@@ -852,7 +732,7 @@ static void add_fileset(JCR *jcr, const char *item)
 
 static bool term_fileset(JCR *jcr)
 {
-   FF_PKT *ff = (FF_PKT *)jcr->ff;
+   FF_PKT *ff = jcr->ff;
    findFILESET *fileset = ff->fileset;
    int i, j, k;
 
@@ -860,37 +740,37 @@ static bool term_fileset(JCR *jcr)
       findINCEXE *incexe = (findINCEXE *)fileset->include_list.get(i);
       Dmsg0(400, "I\n");
       for (j=0; j<incexe->opts_list.size(); j++) {
-	 findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
-	 for (k=0; k<fo->regex.size(); k++) {
+         findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
+         for (k=0; k<fo->regex.size(); k++) {
             Dmsg1(400, "R %s\n", (char *)fo->regex.get(k));
-	 }
-	 for (k=0; k<fo->regexdir.size(); k++) {
+         }
+         for (k=0; k<fo->regexdir.size(); k++) {
             Dmsg1(400, "RD %s\n", (char *)fo->regexdir.get(k));
-	 }
-	 for (k=0; k<fo->regexfile.size(); k++) {
+         }
+         for (k=0; k<fo->regexfile.size(); k++) {
             Dmsg1(400, "RF %s\n", (char *)fo->regexfile.get(k));
-	 }
-	 for (k=0; k<fo->wild.size(); k++) {
+         }
+         for (k=0; k<fo->wild.size(); k++) {
             Dmsg1(400, "W %s\n", (char *)fo->wild.get(k));
-	 }
-	 for (k=0; k<fo->wilddir.size(); k++) {
+         }
+         for (k=0; k<fo->wilddir.size(); k++) {
             Dmsg1(400, "WD %s\n", (char *)fo->wilddir.get(k));
-	 }
-	 for (k=0; k<fo->wildfile.size(); k++) {
+         }
+         for (k=0; k<fo->wildfile.size(); k++) {
             Dmsg1(400, "WF %s\n", (char *)fo->wildfile.get(k));
-	 }
-	 for (k=0; k<fo->base.size(); k++) {
+         }
+         for (k=0; k<fo->base.size(); k++) {
             Dmsg1(400, "B %s\n", (char *)fo->base.get(k));
-	 }
-	 for (k=0; k<fo->fstype.size(); k++) {
+         }
+         for (k=0; k<fo->fstype.size(); k++) {
             Dmsg1(400, "X %s\n", (char *)fo->fstype.get(k));
-	 }
-	 if (fo->reader) {
+         }
+         if (fo->reader) {
             Dmsg1(400, "D %s\n", fo->reader);
-	 }
-	 if (fo->writer) {
+         }
+         if (fo->writer) {
             Dmsg1(400, "T %s\n", fo->writer);
-	 }
+         }
       }
       for (j=0; j<incexe->name_list.size(); j++) {
          Dmsg1(400, "F %s\n", (char *)incexe->name_list.get(j));
@@ -900,31 +780,31 @@ static bool term_fileset(JCR *jcr)
       findINCEXE *incexe = (findINCEXE *)fileset->exclude_list.get(i);
       Dmsg0(400, "E\n");
       for (j=0; j<incexe->opts_list.size(); j++) {
-	 findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
-	 for (k=0; k<fo->regex.size(); k++) {
+         findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
+         for (k=0; k<fo->regex.size(); k++) {
             Dmsg1(400, "R %s\n", (char *)fo->regex.get(k));
-	 }
-	 for (k=0; k<fo->regexdir.size(); k++) {
+         }
+         for (k=0; k<fo->regexdir.size(); k++) {
             Dmsg1(400, "RD %s\n", (char *)fo->regexdir.get(k));
-	 }
-	 for (k=0; k<fo->regexfile.size(); k++) {
+         }
+         for (k=0; k<fo->regexfile.size(); k++) {
             Dmsg1(400, "RF %s\n", (char *)fo->regexfile.get(k));
-	 }
-	 for (k=0; k<fo->wild.size(); k++) {
+         }
+         for (k=0; k<fo->wild.size(); k++) {
             Dmsg1(400, "W %s\n", (char *)fo->wild.get(k));
-	 }
-	 for (k=0; k<fo->wilddir.size(); k++) {
+         }
+         for (k=0; k<fo->wilddir.size(); k++) {
             Dmsg1(400, "WD %s\n", (char *)fo->wilddir.get(k));
-	 }
-	 for (k=0; k<fo->wildfile.size(); k++) {
+         }
+         for (k=0; k<fo->wildfile.size(); k++) {
             Dmsg1(400, "WF %s\n", (char *)fo->wildfile.get(k));
-	 }
-	 for (k=0; k<fo->base.size(); k++) {
+         }
+         for (k=0; k<fo->base.size(); k++) {
             Dmsg1(400, "B %s\n", (char *)fo->base.get(k));
-	 }
-	 for (k=0; k<fo->fstype.size(); k++) {
+         }
+         for (k=0; k<fo->fstype.size(); k++) {
             Dmsg1(400, "X %s\n", (char *)fo->fstype.get(k));
-	 }
+         }
       }
       for (j=0; j<incexe->name_list.size(); j++) {
          Dmsg1(400, "F %s\n", (char *)incexe->name_list.get(j));
@@ -948,72 +828,72 @@ static void set_options(findFOPTS *fo, const char *opts)
       switch (*p) {
       case 'a':                 /* alway replace */
       case '0':                 /* no option */
-	 break;
+         break;
       case 'e':
-	 fo->flags |= FO_EXCLUDE;
-	 break;
+         fo->flags |= FO_EXCLUDE;
+         break;
       case 'f':
-	 fo->flags |= FO_MULTIFS;
-	 break;
+         fo->flags |= FO_MULTIFS;
+         break;
       case 'h':                 /* no recursion */
-	 fo->flags |= FO_NO_RECURSION;
-	 break;
+         fo->flags |= FO_NO_RECURSION;
+         break;
       case 'H':                 /* no hard link handling */
-	 fo->flags |= FO_NO_HARDLINK;
-	 break;
+         fo->flags |= FO_NO_HARDLINK;
+         break;
       case 'i':
-	 fo->flags |= FO_IGNORECASE;
-	 break;
+         fo->flags |= FO_IGNORECASE;
+         break;
       case 'M':                 /* MD5 */
-	 fo->flags |= FO_MD5;
-	 break;
+         fo->flags |= FO_MD5;
+         break;
       case 'n':
-	 fo->flags |= FO_NOREPLACE;
-	 break;
+         fo->flags |= FO_NOREPLACE;
+         break;
       case 'p':                 /* use portable data format */
-	 fo->flags |= FO_PORTABLE;
-	 break;
+         fo->flags |= FO_PORTABLE;
+         break;
       case 'R':                 /* Resource forks and Finder Info */
-	 fo->flags |= FO_HFSPLUS;
+         fo->flags |= FO_HFSPLUS;
       case 'r':                 /* read fifo */
-	 fo->flags |= FO_READFIFO;
-	 break;
+         fo->flags |= FO_READFIFO;
+         break;
       case 'S':
-	 fo->flags |= FO_SHA1;
-	 break;
+         fo->flags |= FO_SHA1;
+         break;
       case 's':
-	 fo->flags |= FO_SPARSE;
-	 break;
+         fo->flags |= FO_SPARSE;
+         break;
       case 'm':
-	 fo->flags |= FO_MTIMEONLY;
-	 break;
+         fo->flags |= FO_MTIMEONLY;
+         break;
       case 'k':
-	 fo->flags |= FO_KEEPATIME;
-	 break;
+         fo->flags |= FO_KEEPATIME;
+         break;
       case 'A':
-	 fo->flags |= FO_ACL;
-	 break;
+         fo->flags |= FO_ACL;
+         break;
       case 'V':                  /* verify options */
-	 /* Copy Verify Options */
+         /* Copy Verify Options */
          for (j=0; *p && *p != ':'; p++) {
-	    fo->VerifyOpts[j] = *p;
-	    if (j < (int)sizeof(fo->VerifyOpts) - 1) {
-	       j++;
-	    }
-	 }
-	 fo->VerifyOpts[j] = 0;
-	 break;
+            fo->VerifyOpts[j] = *p;
+            if (j < (int)sizeof(fo->VerifyOpts) - 1) {
+               j++;
+            }
+         }
+         fo->VerifyOpts[j] = 0;
+         break;
       case 'w':
-	 fo->flags |= FO_IF_NEWER;
-	 break;
+         fo->flags |= FO_IF_NEWER;
+         break;
       case 'Z':                 /* gzip compression */
-	 fo->flags |= FO_GZIP;
+         fo->flags |= FO_GZIP;
          fo->GZIP_level = *++p - '0';
          Dmsg1(200, "Compression level=%d\n", fo->GZIP_level);
-	 break;
+         break;
       default:
-         Emsg1(M_ERROR, 0, "Unknown include/exclude option: %c\n", *p);
-	 break;
+         Emsg1(M_ERROR, 0, _("Unknown include/exclude option: %c\n"), *p);
+         break;
       }
    }
 }
@@ -1025,6 +905,10 @@ static void set_options(findFOPTS *fo, const char *opts)
 static int fileset_cmd(JCR *jcr)
 {
    BSOCK *dir = jcr->dir_bsock;
+   int vss = 0;
+
+   sscanf(dir->msg, "fileset vss=%d", &vss);
+   enable_vss = vss;
 
    if (!init_fileset(jcr)) {
       return 0;
@@ -1040,36 +924,27 @@ static int fileset_cmd(JCR *jcr)
    return bnet_fsend(dir, OKinc);
 }
 
-
-/*
- * Get list of files to exclude from Director
- *
- */
-static int exclude_cmd(JCR *jcr)
+static void free_bootstrap(JCR *jcr)
 {
-   BSOCK *dir = jcr->dir_bsock;
-
-   while (bnet_recv(dir) >= 0) {
-      dir->msg[dir->msglen] = 0;
-      strip_trailing_junk(dir->msg);
-      add_fname_to_list(jcr, dir->msg, EXC_LIST);
-      Dmsg1(110, "<dird: exclude file %s\n", dir->msg);
+   if (jcr->RestoreBootstrap) {
+      unlink(jcr->RestoreBootstrap);
+      free_pool_memory(jcr->RestoreBootstrap);
+      jcr->RestoreBootstrap = NULL;
    }
-
-   return bnet_fsend(dir, OKexc);
 }
 
 
+/* 
+ * The Director sends us the bootstrap file, which
+ *   we will in turn pass to the SD.
+ */
 static int bootstrap_cmd(JCR *jcr)
 {
    BSOCK *dir = jcr->dir_bsock;
    POOLMEM *fname = get_pool_memory(PM_FNAME);
    FILE *bs;
 
-   if (jcr->RestoreBootstrap) {
-      unlink(jcr->RestoreBootstrap);
-      free_pool_memory(jcr->RestoreBootstrap);
-   }
+   free_bootstrap(jcr);
    Mmsg(fname, "%s/%s.%s.bootstrap", me->working_directory, me->hdr.name,
       jcr->Job);
    Dmsg1(400, "bootstrap=%s\n", fname);
@@ -1077,17 +952,15 @@ static int bootstrap_cmd(JCR *jcr)
    bs = fopen(fname, "a+");           /* create file */
    if (!bs) {
       berrno be;
+      Jmsg(jcr, M_FATAL, 0, _("Could not create bootstrap file %s: ERR=%s\n"),
+         jcr->RestoreBootstrap, be.strerror());
       /*
        * Suck up what he is sending to us so that he will then
        *   read our error message.
        */
       while (bnet_recv(dir) >= 0)
-	{  }
-
-      Jmsg(jcr, M_FATAL, 0, _("Could not create bootstrap file %s: ERR=%s\n"),
-	 jcr->RestoreBootstrap, be.strerror());
-      free_pool_memory(jcr->RestoreBootstrap);
-      jcr->RestoreBootstrap = NULL;
+        {  }
+      free_bootstrap(jcr);
       set_jcr_job_status(jcr, JS_ErrorTerminated);
       return 0;
    }
@@ -1097,7 +970,10 @@ static int bootstrap_cmd(JCR *jcr)
        fputs(dir->msg, bs);
    }
    fclose(bs);
-
+   /*
+    * Note, do not free the bootstrap yet -- it needs to be 
+    *  sent to the SD 
+    */
    return bnet_fsend(dir, OKbootstrap);
 }
 
@@ -1133,57 +1009,57 @@ static int level_cmd(JCR *jcr)
       return 1;   
    /*
     * We get his UTC since time, then sync the clocks and correct it
-    *	to agree with our clock.
+    *   to agree with our clock.
     */
    } else if (strcmp(level, "since_utime") == 0) {
       buf = get_memory(dir->msglen+1);
       utime_t since_time, adj;
       btime_t his_time, bt_start, rt=0, bt_adj=0;
       if (jcr->JobLevel == L_NONE) {
-	 jcr->JobLevel = L_SINCE;     /* if no other job level set, do it now */
+         jcr->JobLevel = L_SINCE;     /* if no other job level set, do it now */
       }
       if (sscanf(dir->msg, "level = since_utime %s mtime_only=%d",
-		 buf, &mtime_only) != 2) {
-	 goto bail_out;
+                 buf, &mtime_only) != 2) {
+         goto bail_out;
       }
-      since_time = str_to_uint64(buf);	/* this is the since time */
+      since_time = str_to_uint64(buf);  /* this is the since time */
       char ed1[50], ed2[50];
       /*
        * Sync clocks by polling him for the time. We take
        *   10 samples of his time throwing out the first two.
        */
       for (int i=0; i<10; i++) {
-	 bt_start = get_current_btime();
-	 bnet_sig(dir, BNET_BTIME);   /* poll for time */
-	 if (bnet_recv(dir) <= 0) {   /* get response */
-	    goto bail_out;
-	 }
+         bt_start = get_current_btime();
+         bnet_sig(dir, BNET_BTIME);   /* poll for time */
+         if (bnet_recv(dir) <= 0) {   /* get response */
+            goto bail_out;
+         }
          if (sscanf(dir->msg, "btime %s", buf) != 1) {
-	    goto bail_out;
-	 }
-	 if (i < 2) {		      /* toss first two results */
-	    continue;
-	 }
-	 his_time = str_to_uint64(buf);
-	 rt = get_current_btime() - bt_start; /* compute round trip time */
-	 bt_adj -= his_time - bt_start - rt/2;
+            goto bail_out;
+         }
+         if (i < 2) {                 /* toss first two results */
+            continue;
+         }
+         his_time = str_to_uint64(buf);
+         rt = get_current_btime() - bt_start; /* compute round trip time */
+         bt_adj -= his_time - bt_start - rt/2;
          Dmsg2(200, "rt=%s adj=%s\n", edit_uint64(rt, ed1), edit_uint64(bt_adj, ed2));
       }
 
-      bt_adj = bt_adj / 8;	      /* compute average time */
+      bt_adj = bt_adj / 8;            /* compute average time */
       Dmsg2(100, "rt=%s adj=%s\n", edit_uint64(rt, ed1), edit_uint64(bt_adj, ed2));
       adj = btime_to_utime(bt_adj);
-      since_time += adj;	      /* adjust for clock difference */
+      since_time += adj;              /* adjust for clock difference */
       if (adj != 0) {
          Jmsg(jcr, M_INFO, 0, _("DIR and FD clocks differ by %d seconds, FD automatically adjusting.\n"), adj);
       }
       bnet_sig(dir, BNET_EOD);
 
       Dmsg2(100, "adj = %d since_time=%d\n", (int)adj, (int)since_time);
-      jcr->incremental = 1;	      /* set incremental or decremental backup */
+      jcr->incremental = 1;           /* set incremental or decremental backup */
       jcr->mtime = (time_t)since_time; /* set since time */
    } else {
-      Jmsg1(jcr, M_FATAL, 0, "Unknown backup level: %s\n", level);
+      Jmsg1(jcr, M_FATAL, 0, _("Unknown backup level: %s\n"), level);
       free_memory(level);
       return 0;
    }
@@ -1212,11 +1088,11 @@ static int session_cmd(JCR *jcr)
 
    Dmsg1(100, "SessionCmd: %s", dir->msg);
    if (sscanf(dir->msg, sessioncmd, jcr->VolumeName,
-	      &jcr->VolSessionId, &jcr->VolSessionTime,
-	      &jcr->StartFile, &jcr->EndFile,
-	      &jcr->StartBlock, &jcr->EndBlock) != 7) {
+              &jcr->VolSessionId, &jcr->VolSessionTime,
+              &jcr->StartFile, &jcr->EndFile,
+              &jcr->StartBlock, &jcr->EndBlock) != 7) {
       pm_strcpy(jcr->errmsg, dir->msg);
-      Jmsg(jcr, M_FATAL, 0, "Bad session command: %s", jcr->errmsg);
+      Jmsg(jcr, M_FATAL, 0, _("Bad session command: %s"), jcr->errmsg);
       return 0;
    }
 
@@ -1229,10 +1105,10 @@ static int session_cmd(JCR *jcr)
  */
 static int storage_cmd(JCR *jcr)
 {
-   int stored_port;		   /* storage daemon port */
-   int enable_ssl;		   /* enable ssl to sd */
+   int stored_port;                /* storage daemon port */
+   int enable_ssl;                 /* enable ssl to sd */
    BSOCK *dir = jcr->dir_bsock;
-   BSOCK *sd;			      /* storage daemon bsock */
+   BSOCK *sd;                         /* storage daemon bsock */
 
    Dmsg1(100, "StorageCmd: %s", dir->msg);
    if (sscanf(dir->msg, storaddr, &jcr->stored_addr, &stored_port, &enable_ssl) != 3) {
@@ -1244,12 +1120,12 @@ static int storage_cmd(JCR *jcr)
    /* Open command communications with Storage daemon */
    /* Try to connect for 1 hour at 10 second intervals */
    sd = bnet_connect(jcr, 10, (int)me->SDConnectTimeout, _("Storage daemon"),
-		     jcr->stored_addr, NULL, stored_port, 1);
+                     jcr->stored_addr, NULL, stored_port, 1);
    if (sd == NULL) {
       Jmsg(jcr, M_FATAL, 0, _("Failed to connect to Storage daemon: %s:%d\n"),
-	  jcr->stored_addr, stored_port);
+          jcr->stored_addr, stored_port);
       Dmsg2(100, "Failed to connect to Storage daemon: %s:%d\n",
-	  jcr->stored_addr, stored_port);
+          jcr->stored_addr, stored_port);
       return 0;
    }
    Dmsg0(110, "Connection OK to SD.\n");
@@ -1281,7 +1157,7 @@ static int backup_cmd(JCR *jcr)
 
    set_jcr_job_status(jcr, JS_Blocked);
    jcr->JobType = JT_BACKUP;
-   Dmsg1(100, "begin backup ff=%p\n", (FF_PKT *)jcr->ff);
+   Dmsg1(100, "begin backup ff=%p\n", jcr->ff);
 
    if (sd == NULL) {
       Jmsg(jcr, M_FATAL, 0, _("Cannot contact Storage daemon\n"));
@@ -1303,7 +1179,7 @@ static int backup_cmd(JCR *jcr)
       Dmsg1(110, "<stored: %s", sd->msg);
       if (sscanf(sd->msg, OK_open, &jcr->Ticket) != 1) {
          Jmsg(jcr, M_FATAL, 0, _("Bad response to append open: %s\n"), sd->msg);
-	 goto cleanup;
+         goto cleanup;
       }
       Dmsg1(110, "Got Ticket=%d\n", jcr->Ticket);
    } else {
@@ -1324,6 +1200,48 @@ static int backup_cmd(JCR *jcr)
    if (!response(jcr, sd, OK_data, "Append Data")) {
       goto cleanup;
    }
+   
+   generate_daemon_event(jcr, "JobStart");
+
+#ifdef WIN32_VSS
+   /* START VSS ON WIN 32 */
+   if (g_pVSSClient && enable_vss) {
+      /* Run only one at a time */
+      P(vss_mutex);
+      if (g_pVSSClient->InitializeForBackup()) {
+         /* tell vss which drives to snapshot */   
+         char szWinDriveLetters[27];   
+         if (get_win32_driveletters(jcr->ff, szWinDriveLetters)) {
+            Jmsg(jcr, M_INFO, 0, _("Generate VSS snapshots. Driver=\"%s\", Drive(s)=\"%s\"\n"), g_pVSSClient->GetDriverName(), szWinDriveLetters);
+            if (!g_pVSSClient->CreateSnapshots(szWinDriveLetters)) {
+               berrno be;
+               Jmsg(jcr, M_WARNING, 0, _("Generate VSS snapshots failed. ERR=%s\n"),
+                  be.strerror());
+            } else {
+               /* tell user if snapshot creation of a specific drive failed */
+               size_t i;
+               for (i=0; i<strlen (szWinDriveLetters); i++) {
+                  if (islower(szWinDriveLetters[i])) {
+                     Jmsg(jcr, M_WARNING, 0, _("Generate VSS snapshot of drive \"%c:\\\" failed\n"), szWinDriveLetters[i]);
+                  }
+               }
+               /* inform user about writer states */
+               for (i=0; i<g_pVSSClient->GetWriterCount(); i++) {
+                  int msg_type = M_INFO;
+                  if (g_pVSSClient->GetWriterState(i) < 0) {
+                     msg_type = M_WARNING;
+                  }
+                  Jmsg(jcr, msg_type, 0, _("VSS Writer: %s\n"), g_pVSSClient->GetWriterInfo(i));
+               }
+            }
+         } else {
+            Jmsg(jcr, M_INFO, 0, _("No drive letters found for generating VSS snapshots.\n"));
+         }
+      } else {
+         Jmsg(jcr, M_WARNING, 0, _("VSS was not initialized properly. VSS support is disabled.\n"));
+      }
+   }
+#endif
 
    /*
     * Send Files to Storage daemon
@@ -1332,19 +1250,20 @@ static int backup_cmd(JCR *jcr)
    if (!blast_data_to_storage_daemon(jcr, NULL)) {
       set_jcr_job_status(jcr, JS_ErrorTerminated);
       bnet_suppress_error_messages(sd, 1);
+      bget_msg(sd);                   /* Read final response from append_data */
       Dmsg0(110, "Error in blast_data.\n");
    } else {
       set_jcr_job_status(jcr, JS_Terminated);
       if (jcr->JobStatus != JS_Terminated) {
-	 bnet_suppress_error_messages(sd, 1);
-	 goto cleanup;		      /* bail out now */
+         bnet_suppress_error_messages(sd, 1);
+         goto cleanup;                /* bail out now */
       }
       /*
        * Expect to get response to append_data from Storage daemon
        */
       if (!response(jcr, sd, OK_append, "Append Data")) {
-	 set_jcr_job_status(jcr, JS_ErrorTerminated);
-	 goto cleanup;
+         set_jcr_job_status(jcr, JS_ErrorTerminated);
+         goto cleanup;
       }
 
       /*
@@ -1353,8 +1272,8 @@ static int backup_cmd(JCR *jcr)
       bnet_fsend(sd, append_end, jcr->Ticket);
       /* Get end OK */
       if (!response(jcr, sd, OK_end, "Append End")) {
-	 set_jcr_job_status(jcr, JS_ErrorTerminated);
-	 goto cleanup;
+         set_jcr_job_status(jcr, JS_ErrorTerminated);
+         goto cleanup;
       }
 
       /*
@@ -1362,28 +1281,37 @@ static int backup_cmd(JCR *jcr)
        */
       bnet_fsend(sd, append_close, jcr->Ticket);
       while (bget_msg(sd) >= 0) {    /* stop on signal or error */
-	 if (sscanf(sd->msg, OK_close, &SDJobStatus) == 1) {
-	    ok = 1;
+         if (sscanf(sd->msg, OK_close, &SDJobStatus) == 1) {
+            ok = 1;
             Dmsg2(200, "SDJobStatus = %d %c\n", SDJobStatus, (char)SDJobStatus);
-	 }
+         }
       }
       if (!ok) {
          Jmsg(jcr, M_FATAL, 0, _("Append Close with SD failed.\n"));
-	 goto cleanup;
+         goto cleanup;
       }
       if (SDJobStatus != JS_Terminated) {
          Jmsg(jcr, M_FATAL, 0, _("Bad status %d returned from Storage Daemon.\n"),
-	    SDJobStatus);
+            SDJobStatus);
       }
    }
 
 cleanup:
+#ifdef WIN32_VSS
+   /* STOP VSS ON WIN 32 */
+   /* tell vss to close the backup session */
+   if (g_pVSSClient && enable_vss) {
+      g_pVSSClient->CloseBackup();
+      V(vss_mutex);
+   }
+#endif
+
    bnet_fsend(dir, EndJob, jcr->JobStatus, jcr->JobFiles,
       edit_uint64(jcr->ReadBytes, ed1),
       edit_uint64(jcr->JobBytes, ed2), jcr->Errors);
    Dmsg1(110, "End FD msg: %s\n", dir->msg);
-
-   return 0;			      /* return and stop command loop */
+   
+   return 0;                          /* return and stop command loop */
 }
 
 /*
@@ -1398,9 +1326,10 @@ static int verify_cmd(JCR *jcr)
 
    jcr->JobType = JT_VERIFY;
    if (sscanf(dir->msg, verifycmd, level) != 1) {
-      bnet_fsend(dir, "2994 Bad verify command: %s\n", dir->msg);
+      bnet_fsend(dir, _("2994 Bad verify command: %s\n"), dir->msg);
       return 0;
    }
+
    if (strcasecmp(level, "init") == 0) {
       jcr->JobLevel = L_VERIFY_INIT;
    } else if (strcasecmp(level, "catalog") == 0){
@@ -1412,11 +1341,14 @@ static int verify_cmd(JCR *jcr)
    } else if (strcasecmp(level, "disk_to_catalog") == 0) {
       jcr->JobLevel = L_VERIFY_DISK_TO_CATALOG;
    } else {
-      bnet_fsend(dir, "2994 Bad verify level: %s\n", dir->msg);
+      bnet_fsend(dir, _("2994 Bad verify level: %s\n"), dir->msg);
       return 0;
    }
 
    bnet_fsend(dir, OKverify);
+
+   generate_daemon_event(jcr, "JobStart");
+
    Dmsg1(110, "bfiled>dird: %s", dir->msg);
 
    switch (jcr->JobLevel) {
@@ -1426,7 +1358,7 @@ static int verify_cmd(JCR *jcr)
       break;
    case L_VERIFY_VOLUME_TO_CATALOG:
       if (!open_sd_read_session(jcr)) {
-	 return 0;
+         return 0;
       }
       start_dir_heartbeat(jcr);
       do_verify_volume(jcr);
@@ -1438,7 +1370,7 @@ static int verify_cmd(JCR *jcr)
       Dmsg1(130, "bfiled>stored: %s", sd->msg);
 
       /* ****FIXME**** check response */
-      bget_msg(sd);			 /* get OK */
+      bget_msg(sd);                      /* get OK */
 
       /* Inform Storage daemon that we are done */
       bnet_sig(sd, BNET_TERMINATE);
@@ -1448,7 +1380,7 @@ static int verify_cmd(JCR *jcr)
       do_verify(jcr);
       break;
    default:
-      bnet_fsend(dir, "2994 Bad verify level: %s\n", dir->msg);
+      bnet_fsend(dir, _("2994 Bad verify level: %s\n"), dir->msg);
       return 0;
    }
 
@@ -1461,7 +1393,7 @@ static int verify_cmd(JCR *jcr)
 
    /* Inform Director that we are done */
    bnet_sig(dir, BNET_TERMINATE);
-   return 0;			      /* return and terminate command loop */
+   return 0;                          /* return and terminate command loop */
 }
 
 /*
@@ -1487,9 +1419,9 @@ static int restore_cmd(JCR *jcr)
 
    if (sscanf(dir->msg, restorecmd, &replace, &prefix_links, where) != 3) {
       if (sscanf(dir->msg, restorecmd1, &replace, &prefix_links) != 2) {
-	 pm_strcpy(jcr->errmsg, dir->msg);
+         pm_strcpy(jcr->errmsg, dir->msg);
          Jmsg(jcr, M_FATAL, 0, _("Bad replace command. CMD=%s\n"), jcr->errmsg);
-	 return 0;
+         return 0;
       }
       *where = 0;
    }
@@ -1511,6 +1443,7 @@ static int restore_cmd(JCR *jcr)
    jcr->JobType = JT_RESTORE;
 
    set_jcr_job_status(jcr, JS_Blocked);
+
    if (!open_sd_read_session(jcr)) {
       set_jcr_job_status(jcr, JS_ErrorTerminated);
       goto bail_out;
@@ -1522,6 +1455,7 @@ static int restore_cmd(JCR *jcr)
     * Do restore of files and data
     */
    start_dir_heartbeat(jcr);
+   generate_daemon_event(jcr, "JobStart");
    do_restore(jcr);
    stop_dir_heartbeat(jcr);
 
@@ -1536,7 +1470,7 @@ static int restore_cmd(JCR *jcr)
    bnet_fsend(sd, read_close, jcr->Ticket);
    Dmsg1(130, "bfiled>stored: %s", sd->msg);
 
-   bget_msg(sd);		      /* get OK */
+   bget_msg(sd);                      /* get OK */
 
    /* Inform Storage daemon that we are done */
    bnet_sig(sd, BNET_TERMINATE);
@@ -1555,7 +1489,7 @@ bail_out:
    bnet_sig(dir, BNET_TERMINATE);
 
    Dmsg0(130, "Done in job.c\n");
-   return 0;			      /* return and terminate command loop */
+   return 0;                          /* return and terminate command loop */
 }
 
 static int open_sd_read_session(JCR *jcr)
@@ -1584,7 +1518,7 @@ static int open_sd_read_session(JCR *jcr)
       Dmsg1(110, "bfiled<stored: %s", sd->msg);
       if (sscanf(sd->msg, OK_open, &jcr->Ticket) != 1) {
          Jmsg(jcr, M_FATAL, 0, _("Bad response to SD read open: %s\n"), sd->msg);
-	 return 0;
+         return 0;
       }
       Dmsg1(110, "bfiled: got Ticket=%d\n", jcr->Ticket);
    } else {
@@ -1620,11 +1554,7 @@ static void filed_free_jcr(JCR *jcr)
    if (jcr->store_bsock) {
       bnet_close(jcr->store_bsock);
    }
-   if (jcr->RestoreBootstrap) {
-      unlink(jcr->RestoreBootstrap);
-      free_pool_memory(jcr->RestoreBootstrap);
-      jcr->RestoreBootstrap = NULL;
-   }
+   free_bootstrap(jcr);
    if (jcr->last_fname) {
       free_pool_memory(jcr->last_fname);
    }
@@ -1641,7 +1571,7 @@ static void filed_free_jcr(JCR *jcr)
  * sent. Check that the response is OK.
  *
  *  Returns: 0 on failure
- *	     1 on success
+ *           1 on success
  */
 int response(JCR *jcr, BSOCK *sd, char *resp, const char *cmd)
 {
@@ -1651,18 +1581,18 @@ int response(JCR *jcr, BSOCK *sd, char *resp, const char *cmd)
    if (bget_msg(sd) > 0) {
       Dmsg0(110, sd->msg);
       if (strcmp(sd->msg, resp) == 0) {
-	 return 1;
+         return 1;
       }
    }
    if (job_canceled(jcr)) {
-      return 0; 		      /* if canceled avoid useless error messages */
+      return 0;                       /* if canceled avoid useless error messages */
    }
    if (is_bnet_error(sd)) {
       Jmsg2(jcr, M_FATAL, 0, _("Comm error with SD. bad response to %s. ERR=%s\n"),
-	 cmd, bnet_strerror(sd));
+         cmd, bnet_strerror(sd));
    } else {
       Jmsg3(jcr, M_FATAL, 0, _("Bad response to %s command. Wanted %s, got %s\n"),
-	 cmd, resp, sd->msg);
+         cmd, resp, sd->msg);
    }
    return 0;
 }
@@ -1683,7 +1613,7 @@ static int send_bootstrap_file(JCR *jcr)
    if (!bs) {
       berrno be;
       Jmsg(jcr, M_FATAL, 0, _("Could not open bootstrap file %s: ERR=%s\n"),
-	 jcr->RestoreBootstrap, be.strerror());
+         jcr->RestoreBootstrap, be.strerror());
       set_jcr_job_status(jcr, JS_ErrorTerminated);
       goto bail_out;
    }
@@ -1702,11 +1632,6 @@ static int send_bootstrap_file(JCR *jcr)
    stat = 1;
 
 bail_out:
-   if (jcr->RestoreBootstrap) {
-      unlink(jcr->RestoreBootstrap);
-      free_pool_memory(jcr->RestoreBootstrap);
-      jcr->RestoreBootstrap = NULL;
-   }
-
+   free_bootstrap(jcr);
    return stat;
 }

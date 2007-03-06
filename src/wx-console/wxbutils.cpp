@@ -4,26 +4,23 @@
  *
  *    Nicolas Boichat, April-July 2004
  *
- *    Version $Id: wxbutils.cpp,v 1.8 2004/07/18 09:29:42 kerns Exp $
+ *    Version $Id: wxbutils.cpp,v 1.17 2005/08/18 21:45:18 nboichat Exp $
  */
 /*
-   Copyright (C) 2004 Kern Sibbald and John Walker
+   Copyright (C) 2004-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
-   as published by the Free Software Foundation; either version 2
-   of the License, or (at your option) any later version.
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
- 
+
 #include "wxbutils.h"
 
 #include "wxbmainframe.h"
@@ -36,6 +33,32 @@
 #undef Yield
 
 bool wxbUtils::inited = false;
+
+wxString wxbUtils::ConvertToPrintable(wxString& str) {
+   /* FIXME : Unicode support should be added to fix this problem */
+#if (wxUSE_UNICODE == 0) && __WXGTK20__
+   wxString strnew(str);
+   /* Convert the string to something printable without unicode */
+   for (unsigned int i = 0; i < strnew.Length(); i++) {
+      /* If the character is not ASCII, print a ? */
+      if (((unsigned char)strnew[i] > (unsigned char)127)) {
+         strnew[i] = '?';
+      }
+   }
+   return strnew;
+#else
+   return str;
+#endif   
+}
+
+/* Sleeps during milliseconds (wrapper for wxUsleep (2.4) or wxMilliSleep (2.6)) */
+void wxbUtils::MilliSleep(unsigned long milliseconds) {
+#if wxCHECK_VERSION(2, 6, 0)
+   ::wxMilliSleep(milliseconds);
+#else
+   ::wxUsleep(milliseconds);
+#endif
+}
 
 /* Initialization */
 void wxbUtils::Init() {
@@ -57,7 +80,7 @@ wxbTableParser* wxbUtils::CreateAndWaitForParser(wxString cmd) {
    while (!tableParser->hasFinished()) {
       //innerThread->Yield();
       wxTheApp->Yield(true);
-      ::wxUsleep(100);
+      wxbUtils::MilliSleep(100);
       //if (base+15 < wxDateTime::Now().GetTicks()) break;
    }
    return tableParser;
@@ -75,7 +98,7 @@ wxbPromptParser* wxbUtils::WaitForPrompt(wxString cmd, bool keepresults) {
    while (!promptParser->hasFinished()) {
       //innerThread->Yield();
       wxTheApp->Yield(true);
-      ::wxUsleep(100);
+      wxbUtils::MilliSleep(100);
       //if (base+15 < wxDateTime::Now().GetTicks()) break;
    }
      
@@ -100,7 +123,7 @@ wxbDataTokenizer* wxbUtils::WaitForEnd(wxString cmd, bool keepresults, bool line
    while (!datatokenizer->hasFinished()) {
       //innerThread->Yield();
       wxTheApp->Yield(true);
-      ::wxUsleep(100);
+      wxbUtils::MilliSleep(100);
       //if (base+15 < wxDateTime::Now().GetTicks()) break;
    }
    
@@ -142,14 +165,14 @@ bool wxbDataParser::Print(wxString str, int status) {
       }
    
       if (allnewline) {
-         ret = Analyse(buffer << "\n", CS_DATA);
-         buffer = "";
+         ret = Analyse(buffer << wxT("\n"), CS_DATA);
+         buffer = wxT("");
          for (unsigned int i = 1; i < str.Length(); i++) {
-            ret = Analyse("\n", status);
+            ret = Analyse(wxT("\n"), status);
          }
       }
       else {
-         wxStringTokenizer tkz(str, "\n", 
+         wxStringTokenizer tkz(str, wxT("\n"), 
             (wxStringTokenizerMode)(wxTOKEN_RET_DELIMS | wxTOKEN_RET_EMPTY | wxTOKEN_RET_EMPTY_ALL));
    
          while ( tkz.HasMoreTokens() ) {
@@ -158,23 +181,23 @@ bool wxbDataParser::Print(wxString str, int status) {
                if ((buffer.GetChar(buffer.Length()-1) == '\n') ||
                   (buffer.GetChar(buffer.Length()-1) == '\r')) {
                   ret = Analyse(buffer, status);
-                  buffer = "";
+                  buffer = wxT("");
                }
             }
          }
       }
    
-      if (buffer == "$ ") { // Restore console
+      if (buffer == wxT("$ ")) { // Restore console
          ret = Analyse(buffer, status);
-         buffer = "";
+         buffer = wxT("");
       }
    
       if (status != CS_DATA) {
          if (buffer.Length() != 0) {
             ret = Analyse(buffer, CS_DATA);
          }
-         buffer = "";
-         ret = Analyse("", status);
+         buffer = wxT("");
+         ret = Analyse(wxT(""), status);
       }
    }
    else {
@@ -199,7 +222,7 @@ wxbDataTokenizer::~wxbDataTokenizer() {
 bool wxbDataTokenizer::Analyse(wxString str, int status) {
    finished = ((status == CS_END) || (status == CS_PROMPT) || (status == CS_DISCONNECTED));
 
-   if (str != "") {
+   if (str != wxT("")) {
       Add(str);
    }
    return false;
@@ -215,10 +238,10 @@ bool wxbDataTokenizer::hasFinished() {
 wxbPromptParser::wxbPromptParser(): wxbDataParser(false) {
    finished = false;
    prompt = false;
-   introStr = "";
+   introStr = wxT("");
    choices = NULL;
    numerical = false;
-   questionStr = "";
+   questionStr = wxT("");
 }
 
 /* Destroy a wxbDataTokenizer */
@@ -241,23 +264,23 @@ bool wxbPromptParser::Analyse(wxString str, int status) {
             choices = NULL;
             numerical = false;
          }
-         questionStr = "";
-         introStr = "";
+         questionStr = wxT("");
+         introStr = wxT("");
       }
       int i;
       long num;
       
-      if (((i = str.Find(": ")) > 0) && (str.Mid(0, i).Trim(false).ToLong(&num))) { /* List element */
+      if (((i = str.Find(wxT(": "))) > 0) && (str.Mid(0, i).Trim(false).ToLong(&num))) { /* List element */
          if (!choices) {
             choices = new wxArrayString();
-            choices->Add(""); /* index 0 is never used by multiple choice questions */
+            choices->Add(wxT("")); /* index 0 is never used by multiple choice questions */
             numerical = true;
          }
          
          if ((long)choices->GetCount() != num) { /* new choice has begun */
             delete choices;
             choices = new wxArrayString();
-            choices->Add("", num); /* fill until this number */
+            choices->Add(wxT(""), num); /* fill until this number */
             numerical = true;
          }
          
@@ -274,20 +297,20 @@ bool wxbPromptParser::Analyse(wxString str, int status) {
    }
    else {
       finished = ((status == CS_PROMPT) || (status == CS_END) || (status == CS_DISCONNECTED));
-      if (prompt = ((status == CS_PROMPT) && (questionStr != "$ "))) { // && (str.Find(": ") == str.Length())
+      if (prompt = ((status == CS_PROMPT) && (questionStr != wxT("$ ")))) { // && (str.Find(": ") == str.Length())
          if (introStr.Last() == '\n') {
             introStr.RemoveLast();
          }
-         if ((introStr != "") && (questionStr == "")) {
+         if ((introStr != wxT("")) && (questionStr == wxT(""))) {
             questionStr = introStr;
-            introStr = "";
+            introStr = wxT("");
          }
          
-         if ((!choices) && (questionStr.Find("(yes/mod/no)") > -1)) {
+         if ((!choices) && (questionStr.Find(wxT("(yes/mod/no)")) > -1)) {
             choices = new wxArrayString();
-            choices->Add("yes");
-            choices->Add("mod");
-            choices->Add("no");
+            choices->Add(wxT("yes"));
+            choices->Add(wxT("mod"));
+            choices->Add(wxT("no"));
             numerical = false;
          }
          
@@ -299,8 +322,8 @@ bool wxbPromptParser::Analyse(wxString str, int status) {
             choices = NULL;
             numerical = false;
          }
-         questionStr = "";
-         introStr = "";
+         questionStr = wxT("");
+         introStr = wxT("");
       }
    }
    return false;

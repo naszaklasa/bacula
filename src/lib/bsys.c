@@ -5,25 +5,20 @@
  *
  *  Bacula utility functions are in util.c
  *
- *   Version $Id: bsys.c,v 1.32.4.1 2005/02/14 10:02:25 kerns Exp $
+ *   Version $Id: bsys.c,v 1.42.2.4 2005/12/22 21:35:24 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -79,7 +74,7 @@ int bmicrosleep(time_t sec, long usec)
    if (stat != 0) {
       berrno be;
       Dmsg2(200, "pthread_cond_timedwait stat=%d ERR=%s\n", stat,
-	 be.strerror(stat));
+         be.strerror(stat));
    }
    V(timer_mutex);
    return stat;
@@ -116,6 +111,57 @@ char *bstrncat(char *dest, POOL_MEM &src, int maxlen)
    strncat(dest, src.c_str(), maxlen-1);
    dest[maxlen-1] = 0;
    return dest;
+}
+
+/*
+ * Get character length of UTF-8 string
+ *
+ * Valid UTF-8 codes
+ * U-00000000 - U-0000007F: 0xxxxxxx 
+ * U-00000080 - U-000007FF: 110xxxxx 10xxxxxx 
+ * U-00000800 - U-0000FFFF: 1110xxxx 10xxxxxx 10xxxxxx 
+ * U-00010000 - U-001FFFFF: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx 
+ * U-00200000 - U-03FFFFFF: 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 
+ * U-04000000 - U-7FFFFFFF: 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+ */
+int cstrlen(const char *str)
+{
+   uint8_t *p = (uint8_t *)str;
+   int len = 0;
+   while (*p) {
+      if ((*p & 0xC0) != 0xC0) {
+         p++;
+         len++;
+         continue;
+      }
+      if ((*p & 0xD0) == 0xC0) {
+         p += 2;
+         len++;
+         continue;
+      }
+      if ((*p & 0xF0) == 0xD0) {
+         p += 3;
+         len++;
+         continue;
+      }
+      if ((*p & 0xF8) == 0xF0) {
+         p += 4;
+         len++;
+         continue;
+      }
+      if ((*p & 0xFC) == 0xF8) {
+         p += 5;
+         len++;
+         continue;
+      }
+      if ((*p & 0xFE) == 0xFC) {
+         p += 6;
+         len++;
+         continue;
+      }
+      p++;                      /* Shouln't get here but must advance */
+   }
+   return len;
 }
 
 
@@ -170,6 +216,8 @@ void *bcalloc (size_t size1, size_t size2)
    return buf;
 }
 
+/* Code now in src/lib/bsnprintf.c */
+#ifndef USE_BSNPRINTF
 
 #define BIG_BUF 5000
 /*
@@ -208,27 +256,21 @@ int bvsnprintf(char *str, int32_t size, const char  *format, va_list ap)
       Emsg0(M_ABORT, 0, _("Buffer overflow.\n"));
    }
    memcpy(str, buf, len);
-   str[len] = 0;		/* len excludes the null */
+   str[len] = 0;                /* len excludes the null */
    free_memory(buf);
    return len;
 #endif
 }
+#endif /* USE_BSNPRINTF */
 
 #ifndef HAVE_LOCALTIME_R
 
 struct tm *localtime_r(const time_t *timep, struct tm *tm)
 {
-    static pthread_mutex_t mutex;
-    static bool first = true;
+    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     struct tm *ltm,
 
-    if (first) {
-       pthread_mutex_init(&mutex, NULL);
-       first = false;
-    }
-
     P(mutex);
-
     ltm = localtime(timep);
     if (ltm) {
        memcpy(tm, ltm, sizeof(struct tm));
@@ -244,15 +286,10 @@ struct tm *localtime_r(const time_t *timep, struct tm *tm)
 
 int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
 {
-    static pthread_mutex_t mutex;
-    static int first = 1;
+    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     struct dirent *ndir;
     int stat;
 
-    if (first) {
-       pthread_mutex_init(&mutex, NULL);
-       first = 0;
-    }
     P(mutex);
     errno = 0;
     ndir = readdir(dirp);
@@ -274,15 +311,10 @@ int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
 
 int bstrerror(int errnum, char *buf, size_t bufsiz)
 {
-    static pthread_mutex_t mutex;
-    static int first = 1;
+    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     int stat = 0;
     const char *msg;
 
-    if (first) {
-       pthread_mutex_init(&mutex, NULL);
-       first = 0;
-    }
     P(mutex);
 
     msg = strerror(errnum);
@@ -307,8 +339,9 @@ void _p(char *file, int line, pthread_mutex_t *m)
       e_msg(file, line, M_ERROR, 0, _("Possible mutex deadlock.\n"));
       /* We didn't get the lock, so do it definitely now */
       if ((errstat=pthread_mutex_lock(m))) {
+         berrno be;
          e_msg(file, line, M_ABORT, 0, _("Mutex lock failure. ERR=%s\n"),
-	       strerror(errstat));
+               be.strerror(errstat));
       } else {
          e_msg(file, line, M_ERROR, 0, _("Possible mutex deadlock resolved.\n"));
       }
@@ -321,14 +354,39 @@ void _v(char *file, int line, pthread_mutex_t *m)
    int errstat;
 
    if ((errstat=pthread_mutex_trylock(m)) == 0) {
+      berrno be;
       e_msg(file, line, M_ERROR, 0, _("Mutex unlock not locked. ERR=%s\n"),
-	   strerror(errstat));
+           be.strerror(errstat));
     }
     if ((errstat=pthread_mutex_unlock(m))) {
+       berrno be;
        e_msg(file, line, M_ABORT, 0, _("Mutex unlock failure. ERR=%s\n"),
-	      strerror(errstat));
+              be.strerror(errstat));
     }
 }
+
+#else
+
+void _p(pthread_mutex_t *m)
+{
+   int errstat;
+   if ((errstat=pthread_mutex_lock(m))) {
+      berrno be;
+      e_msg(__FILE__, __LINE__, M_ABORT, 0, _("Mutex lock failure. ERR=%s\n"),
+            be.strerror(errstat));
+   }
+}
+
+void _v(pthread_mutex_t *m)
+{
+   int errstat;
+   if ((errstat=pthread_mutex_unlock(m))) {
+      berrno be;
+      e_msg(__FILE__, __LINE__, M_ABORT, 0, _("Mutex unlock failure. ERR=%s\n"),
+            be.strerror(errstat));
+   }
+}
+
 #endif /* DEBUG_MUTEX */
 
 #ifdef DEBUG_MEMSET
@@ -338,7 +396,7 @@ void b_memset(const char *file, int line, void *mem, int val, size_t num)
 {
    /* Testing for 2000 byte zero at beginning of Volume block */
    if (num > 1900 && num < 3000) {
-      Pmsg3(000, "Memset for %d bytes at %s:%d\n", (int)num, file, line);
+      Pmsg3(000, _("Memset for %d bytes at %s:%d\n"), (int)num, file, line);
    }
    memset(mem, val, num);
 }
@@ -365,24 +423,24 @@ void create_pid_file(char *dir, const char *progname, int port)
       /* File exists, see what we have */
       *pidbuf = 0;
       if ((pidfd = open(fname, O_RDONLY|O_BINARY, 0)) < 0 ||
-	   read(pidfd, &pidbuf, sizeof(pidbuf)) < 0 ||
+           read(pidfd, &pidbuf, sizeof(pidbuf)) < 0 ||
            sscanf(pidbuf, "%d", &oldpid) != 1) {
          Emsg2(M_ERROR_TERM, 0, _("Cannot open pid file. %s ERR=%s\n"), fname, strerror(errno));
       }
       /* See if other Bacula is still alive */
       if (kill(oldpid, 0) != -1 || errno != ESRCH) {
          Emsg3(M_ERROR_TERM, 0, _("%s is already running. pid=%d\nCheck file %s\n"),
-	       progname, oldpid, fname);
+               progname, oldpid, fname);
       }
       /* He is not alive, so take over file ownership */
-      unlink(fname);		      /* remove stale pid file */
+      unlink(fname);                  /* remove stale pid file */
    }
    /* Create new pid file */
    if ((pidfd = open(fname, O_CREAT|O_TRUNC|O_WRONLY|O_BINARY, 0640)) >= 0) {
       len = sprintf(pidbuf, "%d\n", (int)getpid());
       write(pidfd, pidbuf, len);
       close(pidfd);
-      del_pid_file_ok = TRUE;	      /* we created it so we can delete it */
+      del_pid_file_ok = TRUE;         /* we created it so we can delete it */
    } else {
       Emsg2(M_ERROR_TERM, 0, _("Could not open pid file. %s ERR=%s\n"), fname, strerror(errno));
    }
@@ -424,6 +482,21 @@ static struct s_state_hdr state_hdr = {
    0
 };
 
+#ifdef HAVE_WIN32
+#undef open
+#undef read
+#undef write
+#undef lseek
+#undef close
+#undef O_BINARY 
+#define open _open
+#define read _read
+#define write _write
+#define lseek _lseeki64
+#define close _close
+#define O_BINARY _O_BINARY
+#endif
+
 /*
  * Open and read the state file for the daemon
  */
@@ -431,6 +504,7 @@ void read_state_file(char *dir, const char *progname, int port)
 {
    int sfd;
    ssize_t stat;
+   bool ok = false;
    POOLMEM *fname = get_pool_memory(PM_FNAME);
    struct s_state_hdr hdr;
    int hdr_size = sizeof(hdr);
@@ -438,19 +512,20 @@ void read_state_file(char *dir, const char *progname, int port)
    Mmsg(&fname, "%s/%s.%d.state", dir, progname, port);
    /* If file exists, see what we have */
 // Dmsg1(10, "O_BINARY=%d\n", O_BINARY);
-   if ((sfd = open(fname, O_RDONLY|O_BINARY, 0)) < 0) {
+   if ((sfd = open(fname, O_RDONLY|O_BINARY)) < 0) {
       Dmsg3(010, "Could not open state file. sfd=%d size=%d: ERR=%s\n",
-		    sfd, sizeof(hdr), strerror(errno));
-	   goto bail_out;
+                    sfd, sizeof(hdr), strerror(errno));
+      goto bail_out;
    }
    if ((stat=read(sfd, &hdr, hdr_size)) != hdr_size) {
       Dmsg4(010, "Could not read state file. sfd=%d stat=%d size=%d: ERR=%s\n",
-		    sfd, (int)stat, hdr_size, strerror(errno));
+                    sfd, (int)stat, hdr_size, strerror(errno));
       goto bail_out;
    }
    if (hdr.version != state_hdr.version) {
       Dmsg2(010, "Bad hdr version. Wanted %d got %d\n",
-	 state_hdr.version, hdr.version);
+         state_hdr.version, hdr.version);
+      goto bail_out;
    }
    hdr.id[13] = 0;
    if (strcmp(hdr.id, state_hdr.id) != 0) {
@@ -458,11 +533,17 @@ void read_state_file(char *dir, const char *progname, int port)
       goto bail_out;
    }
 // Dmsg1(010, "Read header of %d bytes.\n", sizeof(hdr));
-   read_last_jobs_list(sfd, hdr.last_jobs_addr);
+   if (!read_last_jobs_list(sfd, hdr.last_jobs_addr)) {
+      goto bail_out;
+   }
+   ok = true;
 bail_out:
    if (sfd >= 0) {
       close(sfd);
    }
+   if (!ok) {
+      unlink(fname);
+    }
    free_pool_memory(fname);
 }
 
@@ -472,17 +553,21 @@ bail_out:
 void write_state_file(char *dir, const char *progname, int port)
 {
    int sfd;
+   bool ok = false;
    POOLMEM *fname = get_pool_memory(PM_FNAME);
 
    Mmsg(&fname, "%s/%s.%d.state", dir, progname, port);
    /* Create new state file */
+   unlink(fname);
    if ((sfd = open(fname, O_CREAT|O_WRONLY|O_BINARY, 0640)) < 0) {
-      Dmsg2(000, _("Could not create state file. %s ERR=%s\n"), fname, strerror(errno));
-      Emsg2(M_ERROR, 0, _("Could not create state file. %s ERR=%s\n"), fname, strerror(errno));
+      berrno be;
+      Dmsg2(000, "Could not create state file. %s ERR=%s\n", fname, be.strerror());
+      Emsg2(M_ERROR, 0, _("Could not create state file. %s ERR=%s\n"), fname, be.strerror());
       goto bail_out;
    }
    if (write(sfd, &state_hdr, sizeof(state_hdr)) != sizeof(state_hdr)) {
-      Dmsg1(000, "Write hdr error: ERR=%s\n", strerror(errno));
+      berrno be;
+      Dmsg1(000, "Write hdr error: ERR=%s\n", be.strerror());
       goto bail_out;
    }
 // Dmsg1(010, "Wrote header of %d bytes\n", sizeof(state_hdr));
@@ -490,16 +575,23 @@ void write_state_file(char *dir, const char *progname, int port)
    state_hdr.reserved[0] = write_last_jobs_list(sfd, state_hdr.last_jobs_addr);
 // Dmsg1(010, "write last job end = %d\n", (int)state_hdr.reserved[0]);
    if (lseek(sfd, 0, SEEK_SET) < 0) {
-      Dmsg1(000, "lseek error: ERR=%s\n", strerror(errno));
+      berrno be;
+      Dmsg1(000, "lseek error: ERR=%s\n", be.strerror());
       goto bail_out;
    }
    if (write(sfd, &state_hdr, sizeof(state_hdr)) != sizeof(state_hdr)) {
-      Pmsg1(000, "Write final hdr error: ERR=%s\n", strerror(errno));
+      berrno be;
+      Pmsg1(000, _("Write final hdr error: ERR=%s\n"), be.strerror());
+      goto bail_out;
    }
+   ok = true;
 // Dmsg1(010, "rewrote header = %d\n", sizeof(state_hdr));
 bail_out:
    if (sfd >= 0) {
       close(sfd);
+   }
+   if (!ok) {
+      unlink(fname);
    }
    free_pool_memory(fname);
 }
@@ -564,31 +656,31 @@ char *bfgets(char *s, int size, FILE *fd)
    *p = 0;
    for (int i=0; i < size-1; i++) {
       do {
-	 errno = 0;
-	 ch = fgetc(fd);
+         errno = 0;
+         ch = fgetc(fd);
       } while (ch == -1 && (errno == EINTR || errno == EAGAIN));
       if (ch == -1) {
-	 if (i == 0) {
-	    return NULL;
-	 } else {
-	    return s;
-	 }
+         if (i == 0) {
+            return NULL;
+         } else {
+            return s;
+         }
       }
       *p++ = ch;
       *p = 0;
       if (ch == '\r') { /* Support for Mac/Windows file format */
-	 ch = fgetc(fd);
+         ch = fgetc(fd);
          if (ch == '\n') { /* Windows (\r\n) */
-	    *p++ = ch;
-	    *p = 0;
-	 }
+            *p++ = ch;
+            *p = 0;
+         }
          else { /* Mac (\r only) */
-	    ungetc(ch, fd); /* Push next character back to fd */
-	 }
-	 break;
+            (void)ungetc(ch, fd); /* Push next character back to fd */
+         }
+         break;
       }
       if (ch == '\n') {
-	 break;
+         break;
       }
    }
    return s;

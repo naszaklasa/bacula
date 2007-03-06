@@ -3,7 +3,7 @@
  *
  *   By Kern Sibbald, January 2001
  *
- *   Version $Id: crc32.c,v 1.4 2004/04/10 11:12:14 kerns Exp $
+ *   Version $Id: crc32.c,v 1.5 2004/12/21 16:18:38 kerns Exp $
  *
  */
 /*
@@ -31,7 +31,7 @@
  * The following code can be used to generate the static CRC table.
  *
  * Note, the magic number 0xedb88320L below comes from the terms
- * of the defining polynomial x^n, 
+ * of the defining polynomial x^n,
  * where n=0,1,2,4,5,7,8,10,11,12,16,22,23,26
  */
 #include <stdio.h>
@@ -54,7 +54,7 @@ main()
       buf[k++] = crc;
       if (k == 5) {
 	 k = 0;
-         printf("  0x%08x, 0x%08x, 0x%08x, 0x%08x, 0x%08x,\n", 
+	 printf("  0x%08x, 0x%08x, 0x%08x, 0x%08x, 0x%08x,\n",
 	    buf[0], buf[1], buf[2], buf[3], buf[4]);
       }
    }

@@ -5,7 +5,7 @@
  *
  *     Nicolas Boichat, August MMIV
  *
- *    Version $Id: tray_conf.h,v 1.5.6.1 2005/04/12 21:31:23 kerns Exp $
+ *    Version $Id: tray_conf.h,v 1.6 2004/12/21 16:18:59 kerns Exp $
  */
 /*
    Copyright (C) 2004 Kern Sibbald and John Walker

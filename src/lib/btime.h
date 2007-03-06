@@ -1,9 +1,9 @@
 
-/*  
+/*
 
   See btime.c for defintions.
 
-     Version $Id: btime.h,v 1.12 2004/11/21 08:53:22 kerns Exp $
+     Version $Id: btime.h,v 1.13 2004/12/21 16:18:38 kerns Exp $
 
  */
 

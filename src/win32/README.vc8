@@ -1,0 +1,107 @@
+
+Instructions to build Bacula with Microsoft Visual C++ 2005 Express Edition (free version).
+---
+
+(Note: for the moment VSS support has been disabled, and this is not
+the official way to build the released FD.  See README.win32 for the
+"official" instructions.)
+
+What you need to download:
+- Visual C++ 2005 Express Edition (2MB + 66MB)
+  http://msdn.microsoft.com/vstudio/express/visualc/download/  
+  NOTE: You may want to download the whole CD for offline usage 
+  instead of the web installer, as Microsoft will
+  start to charge for VC++ one year after the product launch 
+  (launch was in November 2005, see VC++ FAQ).
+
+- Windows® Server 2003 SP1 Platform SDK Full Download (385MB)
+  http://www.microsoft.com/downloads/details.aspx?FamilyId=A55B6B43-E24F-4EA3-A93E-40C0EC4F68E5&displaylang=en
+  NOTE: choose "Full Download" version on the bottom of that page.
+
+- wxWidgets for Win32 (17MB) (exe file)
+  http://www.wxwidgets.org/dl_msw2.htm#stable
+
+- gettext packages (2MB)
+  + http://mirror.switch.ch/ftp/mirror/gnu/gettext/gettext-runtime-0.13.1.bin.woe32.zip
+  + http://mirror.switch.ch/ftp/mirror/gnu/gettext/gettext-tools-0.13.1.bin.woe32.zip
+  + http://mirror.switch.ch/ftp/mirror/gnu/libiconv/libiconv-1.9.1.bin.woe32.zip
+
+- Bacula source files:
+  + deppkgs-win32 from SF download page (extracted in <dev dir>/deppkgs-win32)
+  + latest source from the CVS (maybe you want to use mingw-msys to checkout them) (in <dev dir>/bacula)
+
+Installation instructions:
+ - Visual C++ Express Edition Beta 2:
+   + Run vcsetup.exe.
+   + When asked for Installation Options, only check "Graphical IDE" (MSDN Library is NOT needed).
+   + Remember where you install it (e.g. E:\Microsoft Visual Studio 8\)
+
+ - Windows® Server 2003 SP1 Platform SDK Full Download
+   + Run psdk-full.exe, type the directory where you downloaded the cab files.
+   + In a command prompt, run "PSDK-full.bat <temp directory>" (e.g. "PSDK-full.bat E:\temp")
+   + Run <temp directory>\setup.exe
+   + When asked for the installation directory, choose <vc++ install dir>\VC\PlatformSDK
+     (e.g. E:\Microsoft Visual Studio 8\VC\PlatformSDK\)
+   + When asked for components, you can safely remove documentation, samples, and all 64-bit tools and libs if you want to save disk space.
+
+ - gettext packages
+   + extract them all in <dev dir>/deppkgs-win32/gettext
+
+ - wxWidgets for Win32
+   + delete <dev dir>/deppkgs-win32/wx directory
+   + run wxMSW-2.6.1-Setup.exe, and install it to <dev dir>/deppkgs-win32/wx
+
+Build instructions:
+ - deppkgs:
+   + Start VC++ 2005 command prompt (in the start menu)
+   + run "<vc++ install dir>\VC\PlatformSDK\SetEnv.Cmd"
+   + cd <dev dir>/deppkgs-win32/zlib
+   + run "nmake -f win32\Makefile.msc" (don't worry about the warnings)
+   + cd <dev dir>/deppkgs-win32/pthreads
+   + run "nmake clean VCE" (again, don't worry about the warnings)
+   + (note pthreadVCE.dll has been created in this directory)
+ - wxWidgets:
+   + Open <dev dir>\depkgs-win32\wx\build\msw\wx.dsw in VC++ 2005
+   + Click on "Yes to all"
+   + In the solution explorer, open core/Setup Headers/setup.h and add, at the end of the file (before the last #endif):
+#if (_MSC_VER >= 1400) // VC8+
+#pragma warning(disable : 4996) // Either disable all deprecation warnings,
+// #define _CRT_SECURE_NO_DEPRECATE // Or just turn off warnings about the newly deprecated CRT functions.
+#endif // VC8+
+     This is not absolutely necessary, but this will remove annoying warnings.
+
+   + Launch Build->Configuration Manager, then select "Unicode Release"
+     and close this window. Then run Build->Build Solution.
+   + If the build of wx-console fails, try removing the comments around
+     #ifndef (line 145) and #endif (line 147) in file:
+     <dev dir>/bacula/src/win32/compat/compat.h
+   + Repeat the operation for the "Unicode Debug" configuration if needed.
+   + Open <dev dir>/bacula/src/win32/bacula.sln
+   + Launch Build->Configuration Manager, then select your configuration.
+   + Then run Build->Build Solution (this will build wx-console, bconsole 
+     and bacula-fd).
+
+Deploy instructions
+ - Bacula:
+   + To deploy bacula on Windows clients, create a setup using NSIS 
+     (Nullsoft Scriptable Install System).
+     http://nsis.sourceforge.net/Download
+   + Modify the default <dev dir>\bacula\src\win32\winbacula.nsi.in 
+     script to include your own customizations.
+     These are the required modifications:
+     
+     * Remove all references to msvcr71.dll, as this is a pre VC++ 2005 library.
+     * VC++ 2005 compiled binaries require a new way of deploying DLLs: WinSxS.
+       More info: http://blogs.msdn.com/nikolad/archive/2005/03/18/398720.aspx
+       Collect the following 4 files from c:\WINDOWS\WinSxS and copy them into the
+       directory where winbacula.nsi resides. Also add them to winbacula.nsi where
+       msvcr71.dll was previously.
+       
+       File msvcm80.dll
+       File msvcp80.dll
+       File msvcr80.dll
+       File Microsoft.VC80.CRT.manifest
+       
+       Modify Microsoft.VC80.CRT.manifest to match the version number mentioned in
+       bacula-fd.exe.intermediate.manifest that is in /bacula/src/win32/baculafd/Release.
+

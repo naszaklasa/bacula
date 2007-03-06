@@ -6,7 +6,7 @@
  *     Kern Sibbald May MMIII
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -28,16 +28,29 @@
 #ifndef __BFILE_H
 #define __BFILE_H
 
+#ifdef HAVE_PYTHON
+#undef _POSIX_C_SOURCE
+#include <Python.h>
+struct Python_IO {
+   PyObject *fo;
+   PyObject *fr;
+   PyObject *fc;
+};
+#else
+struct Python_IO {
+};
+#endif
+
 /*  =======================================================
  *
- *   W I N D O W S 
+ *   W I N D O W S
  *
  *  =======================================================
  */
 #if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
 
 #include <windows.h>
-#include "winapi.h"
+#include "../lib/winapi.h"
 
 enum {
    BF_CLOSED,
@@ -47,7 +60,7 @@ enum {
 
 /* In bfile.c */
 
-/* Basic low level I/O file packet */
+/* Basic Win32 low level I/O file packet */
 struct BFILE {
    int use_backup_api;                /* set if using BackupRead/Write */
    int mode;                          /* set if file is open */
@@ -59,9 +72,9 @@ struct BFILE {
    DWORD lerror;                      /* Last error code */
    int berrno;                        /* errno */
    char *prog;                        /* reader/writer program if any */
-   BPIPE *bpipe;                      /* pipe for reader */
    JCR *jcr;                          /* jcr for editing job codes */
-};      
+   Python_IO pio;                     /* Python I/O routines */
+};
 
 HANDLE bget_handle(BFILE *bfd);
 
@@ -69,33 +82,36 @@ HANDLE bget_handle(BFILE *bfd);
 
 /*  =======================================================
  *
- *   U N I X 
+ *   U N I X
  *
  *  =======================================================
  */
 
-/* Basic low level I/O file packet */
+/* Basic Unix low level I/O file packet */
 struct BFILE {
    int fid;                           /* file id on Unix */
    int berrno;
    char *prog;                        /* reader/writer program if any */
-   BPIPE *bpipe;                      /* pipe for reader */
    JCR *jcr;                          /* jcr for editing job codes */
-};      
+   Python_IO pio;                     /* Python I/O routines */
+};
 
 #endif
 
 void    binit(BFILE *bfd);
-int     is_bopen(BFILE *bfd);
-int     set_win32_backup(BFILE *bfd);
-int     set_portable_backup(BFILE *bfd);
-void    set_prog(BFILE *bfd, char *prog, JCR *jcr);
-int     have_win32_api();
-int     is_portable_backup(BFILE *bfd);
-int     is_stream_supported(int stream);
-int     is_win32_stream(int stream);
+bool    is_bopen(BFILE *bfd);
+bool    set_win32_backup(BFILE *bfd);
+bool    set_portable_backup(BFILE *bfd);
+bool    set_prog(BFILE *bfd, char *prog, JCR *jcr);
+bool    have_win32_api();
+bool    is_portable_backup(BFILE *bfd);
+bool    is_restore_stream_supported(int stream);
+bool    is_win32_stream(int stream);
 char   *xberror(BFILE *bfd);          /* DO NOT USE  -- use berrno class */
 int     bopen(BFILE *bfd, const char *fname, int flags, mode_t mode);
+#ifdef HAVE_DARWIN_OS
+int     bopen_rsrc(BFILE *bfd, const char *fname, int flags, mode_t mode);
+#endif
 int     bclose(BFILE *bfd);
 ssize_t bread(BFILE *bfd, void *buf, size_t count);
 ssize_t bwrite(BFILE *bfd, void *buf, size_t count);

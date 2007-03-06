@@ -1,0 +1,28 @@
+Tape Mount Client/Server for z/VM
+
+This package provides a simple Linux client and a VM disconnected
+virtual machine allowing Linux applications to mount and manage
+tapes hosted by a z/VM systems.
+
+The tools were written to support running Bacula, a open-source
+file level backup tool, as a Linux appliance running in a z/VM
+virtual machine, however they are general purpose enough to
+employ with other applications with some minor thought.  The
+application consists of a Perl script to run within the Linux
+guest, and a REXX/CMS Pipelines-based server to interact with a
+CMS-based tape management system.
+
+This package contains only the support for basic VM tape
+operations, and does not include support for the popular
+commercial TMS systems such as CA-VM:Tape or others.  A
+commercially supported version is available for a fee from Sine
+Nomine and includes detailed documentation, 24x7 support, and
+additional features.  Please contact Sine Nomine at info (at)
+sinenomine.net for information and pricing for the full
+commercial version of the software.
+
+
+This software is distributed according to the Artistic License.
+Please send bugs or suggestions to deb390 (at) sinenomine.net.
+
+Web site: http://sinenomine.net/vm/tapemount

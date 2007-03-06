@@ -1,9 +1,9 @@
 /*
  *   attr.h Definition of attributes packet for unpacking from tape
- * 
+ *
  *    Kern Sibbald, June MMIII
  *
- *   Version $Id: attr.h,v 1.3 2003/07/30 09:58:01 kerns Exp $
+ *   Version $Id: attr.h,v 1.4 2004/12/21 16:18:38 kerns Exp $
  */
 
 /*
@@ -37,8 +37,8 @@ struct ATTR {
    POOLMEM *ofname;                   /* output filename */
    POOLMEM *olname;                   /* output link name */
    /*
-    * Note the following three variables point into the 
-    *  current BSOCK record, so they are invalid after    
+    * Note the following three variables point into the
+    *  current BSOCK record, so they are invalid after
     *  the next socket read!
     */
    char *attr;                        /* attributes position */

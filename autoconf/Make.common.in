@@ -23,8 +23,8 @@ manprefix =
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 scriptdir = @scriptdir@
-mandir = @mandir@/man1
-manext = 1
+mandir = @mandir@/man8
+manext = 8
 
 # Tools & program stuff
 CC = @CC@
@@ -53,11 +53,14 @@ CFLAGS = @CFLAGS@
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 TTOOL_LDFLAGS = @TTOOL_LDFLAGS@
-#DEFS = @DEFS@
+#DEFS = @DEFS@ @LOCAL_DEFS@
 LIBS = @LIBS@
+WRAPLIBS = @WRAPLIBS@
 DINCLUDE = @DINCLUDE@
 DLIB = @DLIB@
 DB_LIBS = @DB_LIBS@
+PYTHON_LIBS = @PYTHON_LIBS@
+PYTHON_INC = @PYTHON_INCDIR@
 
 # Windows (cygwin) flags 
 WCFLAGS = @WCFLAGS@

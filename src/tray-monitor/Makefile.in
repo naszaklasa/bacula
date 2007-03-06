@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in,v 1.4 2004/09/25 10:19:59 nboichat Exp $
+#  Version $Id: Makefile.in,v 1.6.2.2 2005/11/10 20:11:21 kerns Exp $
 #
 @MCOMMON@
 
@@ -29,21 +29,25 @@ EXTRAOBJS = @OBJLIST@
 MONITOR_CPPFLAGS=@TRAY_MONITOR_CPPFLAGS@
 MONITOR_LDFLAGS=@TRAY_MONITOR_LDFLAGS@ @X_LIBS@ -lX11
 
+OPENSSL_INC = @OPENSSL_INC@
+OPENSSL_LIBS = @OPENSSL_LIBS@
+
 .SUFFIXES:	.c .o
 .PHONY:
 .DONTCARE:
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(MONITOR_CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(MONITOR_CPPFLAGS) \
+ $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile bacula-tray-monitor @STATIC_CONS@
+all: Makefile bacula-tray-monitor
 	@echo "==== Make of bacula-tray-monitor is good ===="
 	@echo " "
 
 bacula-tray-monitor: $(MONITOROBJS) ../lib/libbac.a
-	$(CXX) $(LDFLAGS) $(MONITOR_LDFLAGS) -L../lib -L../cats -o $@ $(MONITOROBJS) \
-	      $(DLIB) -lbac -lm $(LIBS) 
+	$(CXX) $(LDFLAGS) $(MONITOR_LDFLAGS) -L../lib -L../cats -o $@ \
+ $(MONITOROBJS) $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
 
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
@@ -58,7 +62,7 @@ realclean: clean
 
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
-	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+	(cd $(srcdir); $(RMF) Makefile)
 
 devclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi

@@ -1,0 +1,14 @@
+20Nov05 1.38.1-to-1.38.2.patch
+ This patch fixes the following bugs:
+
+- Fix crash in tray-monitor when daemon disconnects. Bug #479.
+- Fix bnet-server bug found on OpenBSD. Bug #486 (bug originator
+  says this patch does not fix his problem)
+- Fix cancel failure bug. Bug #481
+- Fix failure when Pool name has spaces. Bug #487
+- Fix SD crash in autochanger code. Mutex failure. Bug #488
+- Fix a couple of free()s in src/filed/acl.c
+- Fix memory overrun in bfile.c in building OS X resource
+  fork filename. Bug #489
+                         
+  

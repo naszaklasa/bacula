@@ -80,7 +80,7 @@ Section "Bacula File Service" SecService
   StrCmp $6 0 NoCygwin
   StrCpy $INSTDIR "c:\cygwin\bacula"
  NoCygwin:
-; IfFileExists "c:\cygwin" Cygwin ReallyNoCygwin
+; IfFileExists "c:\cygwin\bin\cygwin1.dll" Cygwin ReallyNoCygwin
 ;Cygwin:
 ; StrCpy $INSTDIR "c:\cygwin\bacula"
 ;ReallyNoCygwin:
@@ -90,10 +90,10 @@ Section "Bacula File Service" SecService
   IfFileExists "$INSTDIR\bin\bacula-fd.conf" Upgrade NoUpgrade
  Upgrade:
     StrCpy $7 1
-    ; Shutdown any baculas that could be running
+    ; Shutdown any bacula that could be running
     ExecWait '"$INSTDIR\bin\bacula-fd.exe" /kill'
     ; give it some time to shutdown
-    Sleep 1000
+    Sleep 3000
  NoUpgrade:
 
   ; Set output path to the installation directory.
@@ -104,6 +104,7 @@ Section "Bacula File Service" SecService
   CreateDirectory "c:\tmp"
   ; Put files there
   File baculafd\Release\bacula-fd.exe
+  File c:\windows\system32\msvcr71.dll
   File ..\..\..\depkgs-win32\pthreads\pthreadVCE.dll
   File License.txt
   IfFileExists "$INSTDIR\bin\bacula-fd.conf" newconf 
@@ -166,6 +167,7 @@ Section "Bacula File Service" SecService
   StrCmp $R0 "false" do_win98
   MessageBox MB_YESNO|MB_ICONQUESTION  "Would you like to start the Bacula Client now?" IDNO SetPerms
   Exec 'net start bacula'
+  Sleep 3000
  SetPerms:
   ; set default permissions on config file so it's not world readable
   Exec 'cmd /C echo Y|cacls "$INSTDIR\bin\bacula-fd.conf" /G SYSTEM:F Administrators:F'
@@ -176,12 +178,19 @@ Section "Bacula File Service" SecService
   MessageBox MB_YESNO|MB_ICONQUESTION  "Would you like to start the Bacula Client now?" IDNO NoStart
  Start:
   Exec '"$INSTDIR\bin\bacula-fd.exe" -c "$INSTDIR\bin\bacula-fd.conf"'
+  Sleep 3000
  NoStart:
 SectionEnd
 
 Section "Install Console" SecConsole
   SetOutPath "$INSTDIR\bin"
   File console\Release\bconsole.exe
+  IfFileExists "$INSTDIR\bin\pthreadVCE.dll" msvcr711
+  File ..\..\..\depkgs-win32\pthreads\pthreadVCE.dll
+ msvcr711:
+  IfFileExists "$INSTDIR\bin\msvcr71.dll" testconf1
+  File c:\windows\system32\msvcr71.dll
+ testconf1:
   IfFileExists "$INSTDIR\bin\bconsole.conf" newconf 
   File console\bconsole.conf
   goto do_next
@@ -200,6 +209,12 @@ SectionEnd
 Section "Install wx-Console" SecWxConsole
   SetOutPath "$INSTDIR\bin"
   File wx-console\Release\wx-console.exe
+  IfFileExists "$INSTDIR\bin\pthreadVCE.dll" msvcr712
+  File ..\..\..\depkgs-win32\pthreads\pthreadVCE.dll
+ msvcr712:
+  IfFileExists "$INSTDIR\bin\msvcr71.dll" testconf2
+  File c:\windows\system32\msvcr71.dll
+ testconf2:
   IfFileExists "$INSTDIR\bin\wx-console.conf" newconf 
   File wx-console\wx-console.conf
   goto do_next
@@ -222,10 +237,10 @@ SectionEnd
 Section "Install Documentation" SecDoc
   SetOutPath "$INSTDIR\doc"
   CreateDirectory "$INSTDIR\doc"
-  File ..\..\doc\latex\bacula\*.html
-  File ..\..\doc\latex\bacula\*.png
-  File ..\..\doc\latex\bacula\*.css
-  File ..\..\doc\latex\bacula.pdf
+  File ..\..\..\docs\manual\bacula\*.html
+  File ..\..\..\docs\manual\bacula\*.png
+  File ..\..\..\docs\manual\bacula\*.css
+  File ..\..\..\docs\manual\bacula.pdf
   ; Create Start Menu entry
   SetShellVarContext all
   CreateShortCut "$SMPROGRAMS\Bacula\Manual.lnk" "$INSTDIR\doc\bacula.pdf"

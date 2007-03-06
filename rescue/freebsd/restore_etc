@@ -1,9 +1,0 @@
-#!/bin/sh
-#
-# Note, this creates the directory etc, so if you want
-# the files to go into the real /etc, you must be one
-# level up when executing it. Otherwise you end up with 
-# a /etc/etc directory.
-#
-device=/mnt/floppy
-tar -v -z -f $device/etc.gz

@@ -1,6 +1,6 @@
 /*
  *
- *   Version $Id: serial.h,v 1.5 2004/06/15 10:40:47 kerns Exp $
+ *   Version $Id: serial.h,v 1.6 2004/12/21 16:18:40 kerns Exp $
  */
 
 /*
@@ -47,7 +47,7 @@ extern void unserial_string(uint8_t * * const ptr, char * const str);
 
 /*
 
-                         Serialisation Macros
+			 Serialisation Macros
 
     These macros use a uint8_t pointer, ser_ptr, which must be
     defined by the code which uses them.
@@ -66,7 +66,7 @@ extern void unserial_string(uint8_t * * const ptr, char * const str);
 #define unser_begin(x, s) ser_ptr = ((uint8_t *)(x))
 
 /*  ser_length  --  Determine length in bytes of serialised into a
-                    buffer x.  */
+		    buffer x.  */
 #define ser_length(x)  (ser_ptr - (uint8_t *)(x))
 #define unser_length(x)  (ser_ptr - (uint8_t *)(x))
 
@@ -75,7 +75,7 @@ extern void unserial_string(uint8_t * * const ptr, char * const str);
 #define unser_end(x, s)   ASSERT(ser_length(x) <= (s))
 
 /*  ser_check(x, s)  --  Verify length of serialised data in buffer x is
-                         expected length s.  */
+			 expected length s.  */
 #define ser_check(x, s) ASSERT(ser_length(x) == (s))
 
 /*                          Serialisation                   */

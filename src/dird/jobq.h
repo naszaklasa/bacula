@@ -1,5 +1,5 @@
 /*
- * Bacula job queue routines. 
+ * Bacula job queue routines.
  *
  *  Kern Sibbald, July MMIII
  *
@@ -7,7 +7,7 @@
  *    adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
  *
- *   Version $Id: jobq.h,v 1.3 2004/04/19 14:27:01 kerns Exp $
+ *   Version $Id: jobq.h,v 1.4 2004/12/21 16:18:33 kerns Exp $
  */
 /*
    Copyright (C) 2000-2004 Kern Sibbald and John Walker
@@ -29,10 +29,10 @@
 
  */
 
-#ifndef __JOBQ_H 
+#ifndef __JOBQ_H
 #define __JOBQ_H 1
 
-/* 
+/*
  * Structure to keep track of job queue request
  */
 struct jobq_item_t {
@@ -40,7 +40,7 @@ struct jobq_item_t {
    JCR *jcr;
 };
 
-/* 
+/*
  * Structure describing a work queue
  */
 struct jobq_t {

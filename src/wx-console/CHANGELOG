@@ -1,3 +1,22 @@
+05-05-2005 :
+ - Fix a problem when link count for a file is greater than 99 (bug #304).
+ - Add a workaround for a problem when displaying Unicode filenames with
+   non-Unicode wxWidgets.
+
+04-05-2005 :
+ - Remember the last window position and size.
+
+03-05-2005 :
+ - Fix compilation warnings with wxWidgets 2.6.0.
+ - Fix wxChoice height problem under wxGTK-2.6.0 (GTK+-2.0).
+
+26-04-2005 :
+ - Improve error handling when reading configuration file.
+ - Fixes compile error with unicode-enabled wxWidgets.
+
+25-04-2005 :
+ - Fixes to make wx-console compatible with wxWidgets 2.6.0.
+
 24-03-2005 :
  - wxbMainFrame : Fix a bug with GTK+-1.2 which caused wx-console to crash
    when starting.

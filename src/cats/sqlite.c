@@ -3,11 +3,11 @@
  *
  *    Kern Sibbald, January 2002
  *
- *    Version $Id: sqlite.c,v 1.27 2004/09/22 21:36:57 kerns Exp $
+ *    Version $Id: sqlite.c,v 1.30 2005/05/07 17:21:58 kerns Exp $
  */
 
 /*
-   Copyright (C) 2002-2004 Kern Sibbald and John Walker
+   Copyright (C) 2002-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -30,12 +30,12 @@
 /* The following is necessary so that we do not include
  * the dummy external definition of DB.
  */
-#define __SQL_C 		      /* indicate that this is sql.c */
+#define __SQL_C                       /* indicate that this is sql.c */
 
 #include "bacula.h"
 #include "cats.h"
 
-#ifdef HAVE_SQLITE
+#if    HAVE_SQLITE || HAVE_SQLITE3
 
 /* -----------------------------------------------------------------------
  *
@@ -60,28 +60,28 @@ int QueryDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
  */
 B_DB *
 db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char *db_password,
-		 const char *db_address, int db_port, const char *db_socket, 
-		 int mult_db_connections)
+                 const char *db_address, int db_port, const char *db_socket,
+                 int mult_db_connections)
 {
    B_DB *mdb;
 
-   P(mutex);			      /* lock DB queue */
+   P(mutex);                          /* lock DB queue */
    /* Look to see if DB already open */
    if (!mult_db_connections) {
       for (mdb=NULL; (mdb=(B_DB *)qnext(&db_list, &mdb->bq)); ) {
-	 if (strcmp(mdb->db_name, db_name) == 0) {
+         if (strcmp(mdb->db_name, db_name) == 0) {
             Dmsg2(300, "DB REopen %d %s\n", mdb->ref_count, db_name);
-	    mdb->ref_count++;
-	    V(mutex);
-	    return mdb; 		 /* already open */
-	 }
+            mdb->ref_count++;
+            V(mutex);
+            return mdb;                  /* already open */
+         }
       }
    }
    Dmsg0(300, "db_open first time\n");
    mdb = (B_DB *) malloc(sizeof(B_DB));
    memset(mdb, 0, sizeof(B_DB));
    mdb->db_name = bstrdup(db_name);
-   mdb->have_insert_id = TRUE; 
+   mdb->have_insert_id = TRUE;
    mdb->errmsg = get_pool_memory(PM_EMSG); /* get error message buffer */
    *mdb->errmsg = 0;
    mdb->cmd = get_pool_memory(PM_EMSG);    /* get command buffer */
@@ -92,7 +92,7 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
    mdb->path = get_pool_memory(PM_FNAME);
    mdb->esc_name = get_pool_memory(PM_FNAME);
    mdb->allow_transactions = mult_db_connections;
-   qinsert(&db_list, &mdb->bq); 	   /* put db in list */
+   qinsert(&db_list, &mdb->bq);            /* put db in list */
    V(mutex);
    return mdb;
 }
@@ -119,33 +119,44 @@ db_open_database(JCR *jcr, B_DB *mdb)
    mdb->connected = FALSE;
 
    if ((errstat=rwl_init(&mdb->lock)) != 0) {
-      Mmsg1(&mdb->errmsg, _("Unable to initialize DB lock. ERR=%s\n"), 
-	    strerror(errstat));
+      Mmsg1(&mdb->errmsg, _("Unable to initialize DB lock. ERR=%s\n"),
+            strerror(errstat));
       V(mutex);
       return 0;
    }
 
    /* open the database */
-   len = strlen(working_directory) + strlen(mdb->db_name) + 5; 
+   len = strlen(working_directory) + strlen(mdb->db_name) + 5;
    db_name = (char *)malloc(len);
    strcpy(db_name, working_directory);
    strcat(db_name, "/");
    strcat(db_name, mdb->db_name);
    strcat(db_name, ".db");
    if (stat(db_name, &statbuf) != 0) {
-      Mmsg1(&mdb->errmsg, _("Database %s does not exist, please create it.\n"), 
-	 db_name);
+      Mmsg1(&mdb->errmsg, _("Database %s does not exist, please create it.\n"),
+         db_name);
       free(db_name);
       V(mutex);
       return 0;
    }
+
+#ifdef HAVE_SQLITE3
+   int stat = sqlite3_open(db_name, &mdb->db);
+   if (stat != SQLITE_OK) {
+      mdb->sqlite_errmsg = (char *)sqlite3_errmsg(mdb->db); 
+   } else {
+      mdb->sqlite_errmsg = NULL;
+   }
+
+#else
    mdb->db = sqlite_open(
-	db_name,		      /* database name */
-	644,			      /* mode */
-	&mdb->sqlite_errmsg);	      /* error message */
+        db_name,                      /* database name */
+        644,                          /* mode */
+        &mdb->sqlite_errmsg);         /* error message */
+#endif
 
    Dmsg0(300, "sqlite_open\n");
-  
+
    if (mdb->db == NULL) {
       Mmsg2(&mdb->errmsg, _("Unable to open Database=%s. ERR=%s\n"),
          db_name, mdb->sqlite_errmsg ? mdb->sqlite_errmsg : _("unknown"));
@@ -159,7 +170,7 @@ db_open_database(JCR *jcr, B_DB *mdb)
       return 0;
    }
 
-   mdb->connected = TRUE;
+   mdb->connected = true;
    V(mutex);
    return 1;
 }
@@ -170,14 +181,15 @@ db_close_database(JCR *jcr, B_DB *mdb)
    if (!mdb) {
       return;
    }
+   db_end_transaction(jcr, mdb);
    P(mutex);
    mdb->ref_count--;
    if (mdb->ref_count == 0) {
       qdchain(&mdb->bq);
       if (mdb->connected && mdb->db) {
-	 sqlite_close(mdb->db);
+         sqlite_close(mdb->db);
       }
-      rwl_destroy(&mdb->lock);	     
+      rwl_destroy(&mdb->lock);
       free_pool_memory(mdb->errmsg);
       free_pool_memory(mdb->cmd);
       free_pool_memory(mdb->cached_path);
@@ -185,7 +197,7 @@ db_close_database(JCR *jcr, B_DB *mdb)
       free_pool_memory(mdb->path);
       free_pool_memory(mdb->esc_name);
       if (mdb->db_name) {
-	 free(mdb->db_name);
+         free(mdb->db_name);
       }
       free(mdb);
    }
@@ -198,6 +210,7 @@ db_close_database(JCR *jcr, B_DB *mdb)
  */
 int db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index)
 {
+#ifdef xxxx
    SQL_ROW row;
 
    db_lock(mdb);
@@ -227,16 +240,18 @@ int db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index)
    sql_free_result(mdb);
 
    db_unlock(mdb);
+#endif
+   strcpy(index, "NULL");
    return 1;
-}   
+}
 
 
 /*
  * Escape strings so that SQLite is happy
  *
  *   NOTE! len is the length of the old string. Your new
- *	   string must be long enough (max 2*old+1) to hold
- *	   the escaped output.
+ *         string must be long enough (max 2*old+1) to hold
+ *         the escaped output.
  */
 void
 db_escape_string(char *snew, char *old, int len)
@@ -250,16 +265,16 @@ db_escape_string(char *snew, char *old, int len)
       case '\'':
          *n++ = '\'';
          *n++ = '\'';
-	 o++;
-	 break;
+         o++;
+         break;
       case 0:
          *n++ = '\\';
-	 *n++ = 0;
-	 o++;
-	 break;
+         *n++ = 0;
+         o++;
+         break;
       default:
-	 *n++ = *o++;
-	 break;
+         *n++ = *o++;
+         break;
       }
    }
    *n = 0;
@@ -270,12 +285,12 @@ struct rh_data {
    void *ctx;
 };
 
-/*  
- * Convert SQLite's callback into Bacula DB callback  
+/*
+ * Convert SQLite's callback into Bacula DB callback
  */
 static int sqlite_result(void *arh_data, int num_fields, char **rows, char **col_names)
 {
-   struct rh_data *rh_data = (struct rh_data *)arh_data;   
+   struct rh_data *rh_data = (struct rh_data *)arh_data;
 
    if (rh_data->result_handler) {
       (*(rh_data->result_handler))(rh_data->ctx, num_fields, rows);
@@ -294,7 +309,11 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
 
    db_lock(mdb);
    if (mdb->sqlite_errmsg) {
+#ifdef HAVE_SQLITE3
+      sqlite3_free(mdb->sqlite_errmsg);
+#else
       actuallyfree(mdb->sqlite_errmsg);
+#endif
       mdb->sqlite_errmsg = NULL;
    }
    rh_data.result_handler = result_handler;
@@ -312,7 +331,7 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
 /*
  * Submit a sqlite query and retrieve all the data
  */
-int my_sqlite_query(B_DB *mdb, char *cmd) 
+int my_sqlite_query(B_DB *mdb, char *cmd)
 {
    int stat;
 
@@ -321,8 +340,8 @@ int my_sqlite_query(B_DB *mdb, char *cmd)
       mdb->sqlite_errmsg = NULL;
    }
    stat = sqlite_get_table(mdb->db, cmd, &mdb->result, &mdb->nrow, &mdb->ncolumn,
-	    &mdb->sqlite_errmsg);
-   mdb->row = 0;		      /* row fetched */
+            &mdb->sqlite_errmsg);
+   mdb->row = 0;                      /* row fetched */
    return stat;
 }
 
@@ -342,13 +361,13 @@ void my_sqlite_free_table(B_DB *mdb)
 
    if (mdb->fields_defined) {
       for (i=0; i < sql_num_fields(mdb); i++) {
-	 free(mdb->fields[i]);
+         free(mdb->fields[i]);
       }
       free(mdb->fields);
       mdb->fields_defined = false;
    }
    sqlite_free_table(mdb->result);
-   mdb->nrow = mdb->ncolumn = 0; 
+   mdb->nrow = mdb->ncolumn = 0;
 }
 
 void my_sqlite_field_seek(B_DB *mdb, int field)
@@ -361,23 +380,23 @@ void my_sqlite_field_seek(B_DB *mdb, int field)
    if (!mdb->fields_defined && sql_num_fields(mdb) > 0) {
       mdb->fields = (SQL_FIELD **)malloc(sizeof(SQL_FIELD) * mdb->ncolumn);
       for (i=0; i < sql_num_fields(mdb); i++) {
-	 mdb->fields[i] = (SQL_FIELD *)malloc(sizeof(SQL_FIELD));
-	 mdb->fields[i]->name = mdb->result[i];
-	 mdb->fields[i]->length = strlen(mdb->fields[i]->name);
-	 mdb->fields[i]->max_length = mdb->fields[i]->length;
-	 for (j=1; j <= mdb->nrow; j++) {
-	    int len;
-	    if (mdb->result[i + mdb->ncolumn *j]) {
-	       len = (uint32_t)strlen(mdb->result[i + mdb->ncolumn * j]);
-	    } else {
-	       len = 0;
-	    }
-	    if (len > mdb->fields[i]->max_length) {
-	       mdb->fields[i]->max_length = len;
-	    }
-	 }
-	 mdb->fields[i]->type = 0;
-	 mdb->fields[i]->flags = 1;	   /* not null */
+         mdb->fields[i] = (SQL_FIELD *)malloc(sizeof(SQL_FIELD));
+         mdb->fields[i]->name = mdb->result[i];
+         mdb->fields[i]->length = cstrlen(mdb->fields[i]->name);
+         mdb->fields[i]->max_length = mdb->fields[i]->length;
+         for (j=1; j <= mdb->nrow; j++) {
+            int len;
+            if (mdb->result[i + mdb->ncolumn *j]) {
+               len = (uint32_t)cstrlen(mdb->result[i + mdb->ncolumn * j]);
+            } else {
+               len = 0;
+            }
+            if (len > mdb->fields[i]->max_length) {
+               mdb->fields[i]->max_length = len;
+            }
+         }
+         mdb->fields[i]->type = 0;
+         mdb->fields[i]->flags = 1;        /* not null */
       }
       mdb->fields_defined = TRUE;
    }
@@ -392,7 +411,5 @@ SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb)
 {
    return mdb->fields[mdb->field++];
 }
-
-
 
 #endif /* HAVE_SQLITE */

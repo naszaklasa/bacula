@@ -3,10 +3,10 @@
  *
  *     Kern Sibbald, December MM
  *
- *    Version $Id: dird.h,v 1.7.14.1 2005/04/05 17:23:54 kerns Exp $
+ *    Version $Id: dird.h,v 1.9 2005/03/22 10:45:58 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as

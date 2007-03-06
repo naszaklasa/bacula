@@ -7,6 +7,9 @@
 /* --                     CONFIGURE SPECIFIED FEATURES                    -- */
 /* ------------------------------------------------------------------------- */
 
+#ifndef __WINCONFIG_H
+#define __WINCONFIG_H
+
 /* Define if you want to use MySQL as Catalog database */
 /* #undef USE_MYSQL_DB */
 
@@ -148,7 +151,8 @@
 /* #undef HAVE_SYS_BITYPES_H */
 
 /* Directory for PID files */
-#define _PATH_BACULA_PIDDIR "/var/run"
+/* #define _PATH_BACULA_PIDDIR "/var/run" */
+#undef _PATH_BACULA_PIDDIR
 
 /* Define if you have zlib */
 #define HAVE_LIBZ 1
@@ -360,7 +364,19 @@
 #define HAVE_SETENV 1
 
 /* Define to 1 if you have the `setlocale' function. */
-#undef HAVE_SETLOCALE  
+#undef HAVE_SETLOCALE
+
+/* Define to 1 if translation of program messages to the user's native
+   language is requested. */
+#if (defined _MSC_VER) && (_MSC_VER >= 1400) // VC8+
+/* Enable NLS only if we are using the new VC++.
+ * NLS should also work with VC++ 7.1, but the Makefiles are
+ * not adapted to support it (include, lib...). */
+#define ENABLE_NLS 1
+#endif
+
+#undef  LOCALEDIR
+#define LOCALEDIR "."
 
 #undef HAVE_NL_LANGINFO
 
@@ -629,3 +645,5 @@
 
 /* Define to `int' if <sys/types.h> doesn't define. */
 /* #undef uid_t */
+
+#endif /* __WINCONFIG_H */

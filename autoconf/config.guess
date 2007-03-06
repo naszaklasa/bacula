@@ -1,9 +1,9 @@
 #! /bin/sh
 # Attempt to guess a canonical system name.
 #   Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-#   2000, 2001, 2002, 2003 Free Software Foundation, Inc.
+#   2000, 2001, 2002, 2003, 2004 Free Software Foundation, Inc.
 
-timestamp='2003-06-17'
+timestamp='2004-09-07'
 
 # This file is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@ timestamp='2003-06-17'
 #
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the GNU
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -43,7 +43,7 @@ Usage: $0 [OPTION]
 Output the configuration name of the system \`$me' is run on.
 
 Operation modes:
-  -h, --help	     print this help, then exit
+  -h, --help         print this help, then exit
   -t, --time-stamp   print date of last modification, then exit
   -v, --version      print version number, then exit
 
@@ -53,7 +53,7 @@ version="\
 GNU config.guess ($timestamp)
 
 Originally written by Per Bothner.
-Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001
+Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004
 Free Software Foundation, Inc.
 
 This is free software; see the source for copying conditions.  There is NO
@@ -73,7 +73,7 @@ while test $# -gt 0 ; do
        echo "$usage"; exit 0 ;;
     -- )     # Stop option processing
        shift; break ;;
-    - ) # Use stdin as input.
+    - )	# Use stdin as input.
        break ;;
     -* )
        echo "$me: invalid option $1$help" >&2
@@ -111,7 +111,7 @@ trap "rm -f \$tmpfiles 2>/dev/null; rmdir \$tmp 2>/dev/null; exit 1" 1 2 13 15 ;
 dummy=$tmp/dummy ;
 tmpfiles="$dummy.c $dummy.o $dummy.rel $dummy" ;
 case $CC_FOR_BUILD,$HOST_CC,$CC in
- ,,)	echo "int x;" > $dummy.c ;
+ ,,)    echo "int x;" > $dummy.c ;
 	for c in cc gcc c89 c99 ; do
 	  if ($c -c -o $dummy.o $dummy.c) >/dev/null 2>&1 ; then
 	     CC_FOR_BUILD="$c"; break ;
@@ -121,8 +121,8 @@ case $CC_FOR_BUILD,$HOST_CC,$CC in
 	  CC_FOR_BUILD=no_compiler_found ;
 	fi
 	;;
- ,,*)	CC_FOR_BUILD=$CC ;;
- ,*,*)	CC_FOR_BUILD=$HOST_CC ;;
+ ,,*)   CC_FOR_BUILD=$CC ;;
+ ,*,*)  CC_FOR_BUILD=$HOST_CC ;;
 esac ;'
 
 # This is needed to find uname on a Pyramid OSx when run in the BSD universe.
@@ -135,15 +135,6 @@ UNAME_MACHINE=`(uname -m) 2>/dev/null` || UNAME_MACHINE=unknown
 UNAME_RELEASE=`(uname -r) 2>/dev/null` || UNAME_RELEASE=unknown
 UNAME_SYSTEM=`(uname -s) 2>/dev/null`  || UNAME_SYSTEM=unknown
 UNAME_VERSION=`(uname -v) 2>/dev/null` || UNAME_VERSION=unknown
-
-## for Red Hat Linux
-if test -f /etc/whitebox-release ; then
-    VENDOR=redhat ;
-elif test -f /etc/redhat-release ; then
-    VENDOR=redhat ;
-else
-    VENDOR= ;
-fi
 
 # Note: order is significant - the case branches are not exclusive.
 
@@ -158,7 +149,7 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
 	# object file format.
 	#
 	# Note: NetBSD doesn't particularly care about the vendor
-	# portion of the name.	We always set it to "unknown".
+	# portion of the name.  We always set it to "unknown".
 	sysctl="sysctl -n hw.machine_arch"
 	UNAME_MACHINE_ARCH=`(/sbin/$sysctl 2>/dev/null || \
 	    /usr/sbin/$sysctl 2>/dev/null || echo unknown)`
@@ -185,7 +176,7 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
 		fi
 		;;
 	    *)
-		os=netbsd
+	        os=netbsd
 		;;
 	esac
 	# The OS release
@@ -206,14 +197,20 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
 	# CPU_TYPE-MANUFACTURER-OPERATING_SYSTEM is used.
 	echo "${machine}-${os}${release}"
 	exit 0 ;;
+    amd64:OpenBSD:*:*)
+	echo x86_64-unknown-openbsd${UNAME_RELEASE}
+	exit 0 ;;
     amiga:OpenBSD:*:*)
 	echo m68k-unknown-openbsd${UNAME_RELEASE}
 	exit 0 ;;
-    arc:OpenBSD:*:*)
-	echo mipsel-unknown-openbsd${UNAME_RELEASE}
+    cats:OpenBSD:*:*)
+	echo arm-unknown-openbsd${UNAME_RELEASE}
 	exit 0 ;;
     hp300:OpenBSD:*:*)
 	echo m68k-unknown-openbsd${UNAME_RELEASE}
+	exit 0 ;;
+    luna88k:OpenBSD:*:*)
+    	echo m88k-unknown-openbsd${UNAME_RELEASE}
 	exit 0 ;;
     mac68k:OpenBSD:*:*)
 	echo m68k-unknown-openbsd${UNAME_RELEASE}
@@ -230,27 +227,35 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
     mvmeppc:OpenBSD:*:*)
 	echo powerpc-unknown-openbsd${UNAME_RELEASE}
 	exit 0 ;;
-    pmax:OpenBSD:*:*)
-	echo mipsel-unknown-openbsd${UNAME_RELEASE}
-	exit 0 ;;
     sgi:OpenBSD:*:*)
-	echo mipseb-unknown-openbsd${UNAME_RELEASE}
+	echo mips64-unknown-openbsd${UNAME_RELEASE}
 	exit 0 ;;
     sun3:OpenBSD:*:*)
 	echo m68k-unknown-openbsd${UNAME_RELEASE}
 	exit 0 ;;
-    wgrisc:OpenBSD:*:*)
-	echo mipsel-unknown-openbsd${UNAME_RELEASE}
-	exit 0 ;;
     *:OpenBSD:*:*)
 	echo ${UNAME_MACHINE}-unknown-openbsd${UNAME_RELEASE}
 	exit 0 ;;
+    *:ekkoBSD:*:*)
+	echo ${UNAME_MACHINE}-unknown-ekkobsd${UNAME_RELEASE}
+	exit 0 ;;
+    macppc:MirBSD:*:*)
+	echo powerppc-unknown-mirbsd${UNAME_RELEASE}
+	exit 0 ;;
+    *:MirBSD:*:*)
+	echo ${UNAME_MACHINE}-unknown-mirbsd${UNAME_RELEASE}
+	exit 0 ;;
     alpha:OSF1:*:*)
-	if test $UNAME_RELEASE = "V4.0"; then
+	case $UNAME_RELEASE in
+	*4.0)
 		UNAME_RELEASE=`/usr/sbin/sizer -v | awk '{print $3}'`
-	fi
+		;;
+	*5.*)
+	        UNAME_RELEASE=`/usr/sbin/sizer -v | awk '{print $4}'`
+		;;
+	esac
 	# According to Compaq, /usr/sbin/psrinfo has been available on
-	# OSF/1 and Tru64 systems produced since 1995.	I hope that
+	# OSF/1 and Tru64 systems produced since 1995.  I hope that
 	# covers most systems running today.  This code pipes the CPU
 	# types through head -n 1, so we only detect the type of CPU 0.
 	ALPHA_CPU_TYPE=`/usr/sbin/psrinfo -v | sed -n -e 's/^  The alpha \(.*\) processor.*$/\1/p' | head -n 1`
@@ -286,14 +291,12 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
 	    "EV7.9 (21364A)")
 		UNAME_MACHINE="alphaev79" ;;
 	esac
+	# A Pn.n version is a patched version.
 	# A Vn.n version is a released version.
 	# A Tn.n version is a released field test version.
 	# A Xn.n version is an unreleased experimental baselevel.
 	# 1.2 uses "1.2" for uname -r.
-	echo ${UNAME_MACHINE}-dec-osf`echo ${UNAME_RELEASE} | sed -e 's/^[VTX]//' | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-	exit 0 ;;
-    Alpha*:OpenVMS:*:*)
-	echo alpha-hp-vms
+	echo ${UNAME_MACHINE}-dec-osf`echo ${UNAME_RELEASE} | sed -e 's/^[PVTX]//' | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
 	exit 0 ;;
     Alpha\ *:Windows_NT*:*)
 	# How do we know it's Interix rather than the generic POSIX subsystem?
@@ -315,6 +318,9 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
 	exit 0 ;;
     *:OS/390:*:*)
 	echo i370-ibm-openedition
+	exit 0 ;;
+    *:OS400:*:*)
+        echo powerpc-ibm-os400
 	exit 0 ;;
     arm:RISC*:1.[012]*:*|arm:riscix:1.[012]*:*)
 	echo arm-acorn-riscix${UNAME_RELEASE}
@@ -386,27 +392,30 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
     # can be virtually everything (everything which is not
     # "atarist" or "atariste" at least should have a processor
     # > m68000).  The system name ranges from "MiNT" over "FreeMiNT"
-    # to the lowercase version "mint" (or "freemint").	Finally
+    # to the lowercase version "mint" (or "freemint").  Finally
     # the system name "TOS" denotes a system which is actually not
     # MiNT.  But MiNT is downward compatible to TOS, so this should
     # be no problem.
     atarist[e]:*MiNT:*:* | atarist[e]:*mint:*:* | atarist[e]:*TOS:*:*)
-	echo m68k-atari-mint${UNAME_RELEASE}
+        echo m68k-atari-mint${UNAME_RELEASE}
 	exit 0 ;;
     atari*:*MiNT:*:* | atari*:*mint:*:* | atarist[e]:*TOS:*:*)
 	echo m68k-atari-mint${UNAME_RELEASE}
-	exit 0 ;;
+        exit 0 ;;
     *falcon*:*MiNT:*:* | *falcon*:*mint:*:* | *falcon*:*TOS:*:*)
-	echo m68k-atari-mint${UNAME_RELEASE}
+        echo m68k-atari-mint${UNAME_RELEASE}
 	exit 0 ;;
     milan*:*MiNT:*:* | milan*:*mint:*:* | *milan*:*TOS:*:*)
-	echo m68k-milan-mint${UNAME_RELEASE}
-	exit 0 ;;
+        echo m68k-milan-mint${UNAME_RELEASE}
+        exit 0 ;;
     hades*:*MiNT:*:* | hades*:*mint:*:* | *hades*:*TOS:*:*)
-	echo m68k-hades-mint${UNAME_RELEASE}
-	exit 0 ;;
+        echo m68k-hades-mint${UNAME_RELEASE}
+        exit 0 ;;
     *:*MiNT:*:* | *:*mint:*:* | *:*TOS:*:*)
-	echo m68k-unknown-mint${UNAME_RELEASE}
+        echo m68k-unknown-mint${UNAME_RELEASE}
+        exit 0 ;;
+    m68k:machten:*:*)
+	echo m68k-apple-machten${UNAME_RELEASE}
 	exit 0 ;;
     powerpc:machten:*:*)
 	echo powerpc-apple-machten${UNAME_RELEASE}
@@ -473,8 +482,8 @@ EOF
 	echo m88k-motorola-sysv3
 	exit 0 ;;
     AViiON:dgux:*:*)
-	# DG/UX returns AViiON for all architectures
-	UNAME_PROCESSOR=`/usr/bin/uname -p`
+        # DG/UX returns AViiON for all architectures
+        UNAME_PROCESSOR=`/usr/bin/uname -p`
 	if [ $UNAME_PROCESSOR = mc88100 ] || [ $UNAME_PROCESSOR = mc88110 ]
 	then
 	    if [ ${TARGET_BINARY_INTERFACE}x = m88kdguxelfx ] || \
@@ -487,8 +496,8 @@ EOF
 	else
 	    echo i586-dg-dgux${UNAME_RELEASE}
 	fi
-	exit 0 ;;
-    M88*:DolphinOS:*:*) # DolphinOS (SVR3)
+ 	exit 0 ;;
+    M88*:DolphinOS:*:*)	# DolphinOS (SVR3)
 	echo m88k-dolphin-sysv3
 	exit 0 ;;
     M88*:*:R3*:*)
@@ -506,7 +515,7 @@ EOF
 	exit 0 ;;
     ????????:AIX?:[12].1:2)   # AIX 2.2.1 or AIX 2.1.1 is RT/PC AIX.
 	echo romp-ibm-aix      # uname -m gives an 8 hex-code CPU id
-	exit 0 ;;	       # Note that: echo "'`uname -s`'" gives 'AIX '
+	exit 0 ;;              # Note that: echo "'`uname -s`'" gives 'AIX '
     i*86:AIX:*:*)
 	echo i386-ibm-aix
 	exit 0 ;;
@@ -560,9 +569,9 @@ EOF
     ibmrt:4.4BSD:*|romp-ibm:BSD:*)
 	echo romp-ibm-bsd4.4
 	exit 0 ;;
-    ibmrt:*BSD:*|romp-ibm:BSD:*)	    # covers RT/PC BSD and
+    ibmrt:*BSD:*|romp-ibm:BSD:*)            # covers RT/PC BSD and
 	echo romp-ibm-bsd${UNAME_RELEASE}   # 4.3 with uname added to
-	exit 0 ;;			    # report: romp-ibm BSD 4.3
+	exit 0 ;;                           # report: romp-ibm BSD 4.3
     *:BOSX:*:*)
 	echo rs6000-bull-bosx
 	exit 0 ;;
@@ -578,57 +587,57 @@ EOF
     9000/[34678]??:HP-UX:*:*)
 	HPUX_REV=`echo ${UNAME_RELEASE}|sed -e 's/[^.]*.[0B]*//'`
 	case "${UNAME_MACHINE}" in
-	    9000/31? )		  HP_ARCH=m68000 ;;
-	    9000/[34]?? )	  HP_ARCH=m68k ;;
+	    9000/31? )            HP_ARCH=m68000 ;;
+	    9000/[34]?? )         HP_ARCH=m68k ;;
 	    9000/[678][0-9][0-9])
 		if [ -x /usr/bin/getconf ]; then
 		    sc_cpu_version=`/usr/bin/getconf SC_CPU_VERSION 2>/dev/null`
-		    sc_kernel_bits=`/usr/bin/getconf SC_KERNEL_BITS 2>/dev/null`
-		    case "${sc_cpu_version}" in
-		      523) HP_ARCH="hppa1.0" ;; # CPU_PA_RISC1_0
-		      528) HP_ARCH="hppa1.1" ;; # CPU_PA_RISC1_1
-		      532)			# CPU_PA_RISC2_0
-			case "${sc_kernel_bits}" in
-			  32) HP_ARCH="hppa2.0n" ;;
-			  64) HP_ARCH="hppa2.0w" ;;
+                    sc_kernel_bits=`/usr/bin/getconf SC_KERNEL_BITS 2>/dev/null`
+                    case "${sc_cpu_version}" in
+                      523) HP_ARCH="hppa1.0" ;; # CPU_PA_RISC1_0
+                      528) HP_ARCH="hppa1.1" ;; # CPU_PA_RISC1_1
+                      532)                      # CPU_PA_RISC2_0
+                        case "${sc_kernel_bits}" in
+                          32) HP_ARCH="hppa2.0n" ;;
+                          64) HP_ARCH="hppa2.0w" ;;
 			  '') HP_ARCH="hppa2.0" ;;   # HP-UX 10.20
-			esac ;;
-		    esac
+                        esac ;;
+                    esac
 		fi
 		if [ "${HP_ARCH}" = "" ]; then
 		    eval $set_cc_for_build
-		    sed 's/^		  //' << EOF >$dummy.c
+		    sed 's/^              //' << EOF >$dummy.c
 
-	      #define _HPUX_SOURCE
-	      #include <stdlib.h>
-	      #include <unistd.h>
+              #define _HPUX_SOURCE
+              #include <stdlib.h>
+              #include <unistd.h>
 
-	      int main ()
-	      {
-	      #if defined(_SC_KERNEL_BITS)
-		  long bits = sysconf(_SC_KERNEL_BITS);
-	      #endif
-		  long cpu  = sysconf (_SC_CPU_VERSION);
+              int main ()
+              {
+              #if defined(_SC_KERNEL_BITS)
+                  long bits = sysconf(_SC_KERNEL_BITS);
+              #endif
+                  long cpu  = sysconf (_SC_CPU_VERSION);
 
-		  switch (cpu)
-		{
-		case CPU_PA_RISC1_0: puts ("hppa1.0"); break;
-		case CPU_PA_RISC1_1: puts ("hppa1.1"); break;
-		case CPU_PA_RISC2_0:
-	      #if defined(_SC_KERNEL_BITS)
-		    switch (bits)
-			{
-			case 64: puts ("hppa2.0w"); break;
-			case 32: puts ("hppa2.0n"); break;
-			default: puts ("hppa2.0"); break;
-			} break;
-	      #else  /* !defined(_SC_KERNEL_BITS) */
-		    puts ("hppa2.0"); break;
-	      #endif
-		default: puts ("hppa1.0"); break;
-		}
-		  exit (0);
-	      }
+                  switch (cpu)
+              	{
+              	case CPU_PA_RISC1_0: puts ("hppa1.0"); break;
+              	case CPU_PA_RISC1_1: puts ("hppa1.1"); break;
+              	case CPU_PA_RISC2_0:
+              #if defined(_SC_KERNEL_BITS)
+              	    switch (bits)
+              		{
+              		case 64: puts ("hppa2.0w"); break;
+              		case 32: puts ("hppa2.0n"); break;
+              		default: puts ("hppa2.0"); break;
+              		} break;
+              #else  /* !defined(_SC_KERNEL_BITS) */
+              	    puts ("hppa2.0"); break;
+              #endif
+              	default: puts ("hppa1.0"); break;
+              	}
+                  exit (0);
+              }
 EOF
 		    (CCOPTS= $CC_FOR_BUILD -o $dummy $dummy.c 2>/dev/null) && HP_ARCH=`$dummy`
 		    test -z "$HP_ARCH" && HP_ARCH=hppa
@@ -661,7 +670,7 @@ EOF
 	  long cpu = sysconf (_SC_CPU_VERSION);
 	  /* The order matters, because CPU_IS_HP_MC68K erroneously returns
 	     true for CPU_PA_RISC1_0.  CPU_IS_PA_RISC returns correct
-	     results, however.	*/
+	     results, however.  */
 	  if (CPU_IS_PA_RISC (cpu))
 	    {
 	      switch (cpu)
@@ -708,22 +717,22 @@ EOF
 	exit 0 ;;
     C1*:ConvexOS:*:* | convex:ConvexOS:C1*:*)
 	echo c1-convex-bsd
-	exit 0 ;;
+        exit 0 ;;
     C2*:ConvexOS:*:* | convex:ConvexOS:C2*:*)
 	if getsysinfo -f scalar_acc
 	then echo c32-convex-bsd
 	else echo c2-convex-bsd
 	fi
-	exit 0 ;;
+        exit 0 ;;
     C34*:ConvexOS:*:* | convex:ConvexOS:C34*:*)
 	echo c34-convex-bsd
-	exit 0 ;;
+        exit 0 ;;
     C38*:ConvexOS:*:* | convex:ConvexOS:C38*:*)
 	echo c38-convex-bsd
-	exit 0 ;;
+        exit 0 ;;
     C4*:ConvexOS:*:* | convex:ConvexOS:C4*:*)
 	echo c4-convex-bsd
-	exit 0 ;;
+        exit 0 ;;
     CRAY*Y-MP:*:*:*)
 	echo ymp-cray-unicos${UNAME_RELEASE} | sed -e 's/\.[^.]*$/.X/'
 	exit 0 ;;
@@ -743,13 +752,18 @@ EOF
 	echo sv1-cray-unicos${UNAME_RELEASE} | sed -e 's/\.[^.]*$/.X/'
 	exit 0 ;;
     *:UNICOS/mp:*:*)
-	echo nv1-cray-unicosmp${UNAME_RELEASE} | sed -e 's/\.[^.]*$/.X/' 
+	echo craynv-cray-unicosmp${UNAME_RELEASE} | sed -e 's/\.[^.]*$/.X/'
 	exit 0 ;;
     F30[01]:UNIX_System_V:*:* | F700:UNIX_System_V:*:*)
 	FUJITSU_PROC=`uname -m | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz'`
-	FUJITSU_SYS=`uname -p | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' | sed -e 's/\///'`
-	FUJITSU_REL=`echo ${UNAME_RELEASE} | sed -e 's/ /_/'`
-	echo "${FUJITSU_PROC}-fujitsu-${FUJITSU_SYS}${FUJITSU_REL}"
+        FUJITSU_SYS=`uname -p | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' | sed -e 's/\///'`
+        FUJITSU_REL=`echo ${UNAME_RELEASE} | sed -e 's/ /_/'`
+        echo "${FUJITSU_PROC}-fujitsu-${FUJITSU_SYS}${FUJITSU_REL}"
+        exit 0 ;;
+    5000:UNIX_System_V:4.*:*)
+        FUJITSU_SYS=`uname -p | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' | sed -e 's/\///'`
+        FUJITSU_REL=`echo ${UNAME_RELEASE} | tr 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' 'abcdefghijklmnopqrstuvwxyz' | sed -e 's/ /_/'`
+        echo "sparc-fujitsu-${FUJITSU_SYS}${FUJITSU_REL}"
 	exit 0 ;;
     i*86:BSD/386:*:* | i*86:BSD/OS:*:* | *:Ascend\ Embedded/OS:*:*)
 	echo ${UNAME_MACHINE}-pc-bsdi${UNAME_RELEASE}
@@ -760,19 +774,8 @@ EOF
     *:BSD/OS:*:*)
 	echo ${UNAME_MACHINE}-unknown-bsdi${UNAME_RELEASE}
 	exit 0 ;;
-    *:FreeBSD:*:*|*:GNU/FreeBSD:*:*)
-	# Determine whether the default compiler uses glibc.
-	eval $set_cc_for_build
-	sed 's/^	//' << EOF >$dummy.c
-	#include <features.h>
-	#if __GLIBC__ >= 2
-	LIBC=gnu
-	#else
-	LIBC=
-	#endif
-EOF
-	eval `$CC_FOR_BUILD -E $dummy.c 2>/dev/null | grep ^LIBC=`
-	echo ${UNAME_MACHINE}-unknown-freebsd`echo ${UNAME_RELEASE}|sed -e 's/[-(].*//'`${LIBC:+-$LIBC}
+    *:FreeBSD:*:*)
+	echo ${UNAME_MACHINE}-unknown-freebsd`echo ${UNAME_RELEASE}|sed -e 's/[-(].*//'`
 	exit 0 ;;
     i*:CYGWIN*:*)
 	echo ${UNAME_MACHINE}-pc-cygwin
@@ -805,7 +808,12 @@ EOF
 	echo powerpcle-unknown-solaris2`echo ${UNAME_RELEASE}|sed -e 's/[^.]*//'`
 	exit 0 ;;
     *:GNU:*:*)
+	# the GNU system
 	echo `echo ${UNAME_MACHINE}|sed -e 's,[-/].*$,,'`-unknown-gnu`echo ${UNAME_RELEASE}|sed -e 's,/.*$,,'`
+	exit 0 ;;
+    *:GNU/*:*:*)
+	# other systems with GNU libc and userland
+	echo ${UNAME_MACHINE}-unknown-`echo ${UNAME_SYSTEM} | sed 's,^[^/]*/,,' | tr '[A-Z]' '[a-z]'``echo ${UNAME_RELEASE}|sed -e 's/[-(].*//'`-gnu
 	exit 0 ;;
     i*86:Minix:*:*)
 	echo ${UNAME_MACHINE}-pc-minix
@@ -816,8 +824,17 @@ EOF
     cris:Linux:*:*)
 	echo cris-axis-linux-gnu
 	exit 0 ;;
+    crisv32:Linux:*:*)
+	echo crisv32-axis-linux-gnu
+	exit 0 ;;
+    frv:Linux:*:*)
+    	echo frv-unknown-linux-gnu
+	exit 0 ;;
     ia64:Linux:*:*)
-	echo ${UNAME_MACHINE}-${VENDOR:-unknown}-linux-gnu
+	echo ${UNAME_MACHINE}-unknown-linux-gnu
+	exit 0 ;;
+    m32r*:Linux:*:*)
+	echo ${UNAME_MACHINE}-unknown-linux-gnu
 	exit 0 ;;
     m68*:Linux:*:*)
 	echo ${UNAME_MACHINE}-unknown-linux-gnu
@@ -861,21 +878,21 @@ EOF
 	test x"${CPU}" != x && echo "${CPU}-unknown-linux-gnu" && exit 0
 	;;
     ppc:Linux:*:*)
-	echo powerpc-${VENDOR:-unknown}-linux-gnu
+	echo powerpc-unknown-linux-gnu
 	exit 0 ;;
     ppc64:Linux:*:*)
-	echo powerpc64-${VENDOR:-unknown}-linux-gnu
+	echo powerpc64-unknown-linux-gnu
 	exit 0 ;;
     alpha:Linux:*:*)
 	case `sed -n '/^cpu model/s/^.*: \(.*\)/\1/p' < /proc/cpuinfo` in
-	  EV5)	 UNAME_MACHINE=alphaev5 ;;
+	  EV5)   UNAME_MACHINE=alphaev5 ;;
 	  EV56)  UNAME_MACHINE=alphaev56 ;;
 	  PCA56) UNAME_MACHINE=alphapca56 ;;
 	  PCA57) UNAME_MACHINE=alphapca56 ;;
-	  EV6)	 UNAME_MACHINE=alphaev6 ;;
+	  EV6)   UNAME_MACHINE=alphaev6 ;;
 	  EV67)  UNAME_MACHINE=alphaev67 ;;
 	  EV68*) UNAME_MACHINE=alphaev68 ;;
-	esac
+        esac
 	objdump --private-headers /bin/sh | grep ld.so.1 >/dev/null
 	if test "$?" = 0 ; then LIBC="libc1" ; else LIBC="" ; fi
 	echo ${UNAME_MACHINE}-unknown-linux-gnu${LIBC}
@@ -885,17 +902,17 @@ EOF
 	case `grep '^cpu[^a-z]*:' /proc/cpuinfo 2>/dev/null | cut -d' ' -f2` in
 	  PA7*) echo hppa1.1-unknown-linux-gnu ;;
 	  PA8*) echo hppa2.0-unknown-linux-gnu ;;
-	  *)	echo hppa-unknown-linux-gnu ;;
+	  *)    echo hppa-unknown-linux-gnu ;;
 	esac
 	exit 0 ;;
     parisc64:Linux:*:* | hppa64:Linux:*:*)
 	echo hppa64-unknown-linux-gnu
 	exit 0 ;;
     s390:Linux:*:* | s390x:Linux:*:*)
-	echo ${UNAME_MACHINE}-${VENDOR:-ibm}-linux-gnu
+	echo ${UNAME_MACHINE}-ibm-linux
 	exit 0 ;;
     sh64*:Linux:*:*)
-	echo ${UNAME_MACHINE}-unknown-linux-gnu
+    	echo ${UNAME_MACHINE}-unknown-linux-gnu
 	exit 0 ;;
     sh*:Linux:*:*)
 	echo ${UNAME_MACHINE}-unknown-linux-gnu
@@ -904,7 +921,7 @@ EOF
 	echo ${UNAME_MACHINE}-unknown-linux-gnu
 	exit 0 ;;
     x86_64:Linux:*:*)
-	echo x86_64-${VENDOR:-unknown}-linux-gnu
+	echo x86_64-unknown-linux-gnu
 	exit 0 ;;
     i*86:Linux:*:*)
 	# The BFD linker knows what the default object file format is, so
@@ -913,11 +930,11 @@ EOF
 	# Set LC_ALL=C to ensure ld outputs messages in English.
 	ld_supported_targets=`cd /; LC_ALL=C ld --help 2>&1 \
 			 | sed -ne '/supported targets:/!d
-				    s/[ 	][	]*/ /g
+				    s/[ 	][ 	]*/ /g
 				    s/.*supported targets: *//
 				    s/ .*//
 				    p'`
-	case "$ld_supported_targets" in
+        case "$ld_supported_targets" in
 	  elf32-i386)
 		TENTATIVE="${UNAME_MACHINE}-pc-linux-gnu"
 		;;
@@ -954,9 +971,12 @@ EOF
 	LIBC=gnuaout
 	#endif
 	#endif
+	#ifdef __dietlibc__
+	LIBC=dietlibc
+	#endif
 EOF
 	eval `$CC_FOR_BUILD -E $dummy.c 2>/dev/null | grep ^LIBC=`
-	test x"${LIBC}" != x && echo "${UNAME_MACHINE}-${VENDOR:-pc}-linux-${LIBC}" && exit 0
+	test x"${LIBC}" != x && echo "${UNAME_MACHINE}-pc-linux-${LIBC}" && exit 0
 	test x"${TENTATIVE}" != x && echo "${TENTATIVE}" && exit 0
 	;;
     i*86:DYNIX/ptx:4*:*)
@@ -966,11 +986,11 @@ EOF
 	echo i386-sequent-sysv4
 	exit 0 ;;
     i*86:UNIX_SV:4.2MP:2.*)
-	# Unixware is an offshoot of SVR4, but it has its own version
-	# number series starting with 2...
-	# I am not positive that other SVR4 systems won't match this,
-	# I just have to hope.	-- rms.
-	# Use sysv4.2uw... so that sysv4* matches it.
+        # Unixware is an offshoot of SVR4, but it has its own version
+        # number series starting with 2...
+        # I am not positive that other SVR4 systems won't match this,
+	# I just have to hope.  -- rms.
+        # Use sysv4.2uw... so that sysv4* matches it.
 	echo ${UNAME_MACHINE}-pc-sysv4.2uw${UNAME_VERSION}
 	exit 0 ;;
     i*86:OS/2:*:*)
@@ -983,6 +1003,9 @@ EOF
 	exit 0 ;;
     i*86:atheos:*:*)
 	echo ${UNAME_MACHINE}-unknown-atheos
+	exit 0 ;;
+	i*86:syllable:*:*)
+	echo ${UNAME_MACHINE}-pc-syllable
 	exit 0 ;;
     i*86:LynxOS:2.*:* | i*86:LynxOS:3.[01]*:* | i*86:LynxOS:4.0*:*)
 	echo i386-unknown-lynxos${UNAME_RELEASE}
@@ -1026,10 +1049,10 @@ EOF
 	exit 0 ;;
     pc:*:*:*)
 	# Left here for compatibility:
-	# uname -m prints for DJGPP always 'pc', but it prints nothing about
-	# the processor, so we play safe by assuming i386.
+        # uname -m prints for DJGPP always 'pc', but it prints nothing about
+        # the processor, so we play safe by assuming i386.
 	echo i386-pc-msdosdjgpp
-	exit 0 ;;
+        exit 0 ;;
     Intel:Mach:3*:*)
 	echo i386-pc-mach3
 	exit 0 ;;
@@ -1053,9 +1076,9 @@ EOF
     M680?0:D-NIX:5.3:*)
 	echo m68k-diab-dnix
 	exit 0 ;;
-    M68*:*:R3V[567]*:*)
+    M68*:*:R3V[5678]*:*)
 	test -r /sysV68 && echo 'm68k-motorola-sysv' && exit 0 ;;
-    3[34]??:*:4.0:3.0 | 3[34]??A:*:4.0:3.0 | 3[34]??,*:*:4.0:3.0 | 3[34]??/*:*:4.0:3.0 | 4400:*:4.0:3.0 | 4850:*:4.0:3.0 | SKA40:*:4.0:3.0 | SDS2:*:4.0:3.0 | SHG2:*:4.0:3.0)
+    3[345]??:*:4.0:3.0 | 3[34]??A:*:4.0:3.0 | 3[34]??,*:*:4.0:3.0 | 3[34]??/*:*:4.0:3.0 | 4400:*:4.0:3.0 | 4850:*:4.0:3.0 | SKA40:*:4.0:3.0 | SDS2:*:4.0:3.0 | SHG2:*:4.0:3.0 | S7501*:*:4.0:3.0)
 	OS_REL=''
 	test -r /etc/.relid \
 	&& OS_REL=.`sed -n 's/[^ ]* [^ ]* \([0-9][0-9]\).*/\1/p' < /etc/.relid`
@@ -1064,8 +1087,8 @@ EOF
 	/bin/uname -p 2>/dev/null | /bin/grep entium >/dev/null \
 	  && echo i586-ncr-sysv4.3${OS_REL} && exit 0 ;;
     3[34]??:*:4.0:* | 3[34]??,*:*:4.0:*)
-	/bin/uname -p 2>/dev/null | grep 86 >/dev/null \
-	  && echo i486-ncr-sysv4 && exit 0 ;;
+        /bin/uname -p 2>/dev/null | grep 86 >/dev/null \
+          && echo i486-ncr-sysv4 && exit 0 ;;
     m68*:LynxOS:2.*:* | m68*:LynxOS:3.0*:*)
 	echo m68k-unknown-lynxos${UNAME_RELEASE}
 	exit 0 ;;
@@ -1099,9 +1122,9 @@ EOF
 	fi
 	exit 0 ;;
     PENTIUM:*:4.0*:*) # Unisys `ClearPath HMP IX 4000' SVR4/MP effort
-		      # says <Richard.M.Bartel@ccMail.Census.GOV>
-	echo i586-unisys-sysv4
-	exit 0 ;;
+                      # says <Richard.M.Bartel@ccMail.Census.GOV>
+        echo i586-unisys-sysv4
+        exit 0 ;;
     *:UNIX_System_V:4*:FTX*)
 	# From Gerald Hewes <hewes@openmarket.com>.
 	# How about differentiating between stratus architectures? -djm
@@ -1123,11 +1146,11 @@ EOF
 	exit 0 ;;
     R[34]000:*System_V*:*:* | R4000:UNIX_SYSV:*:* | R*000:UNIX_SV:*:*)
 	if [ -d /usr/nec ]; then
-		echo mips-nec-sysv${UNAME_RELEASE}
+	        echo mips-nec-sysv${UNAME_RELEASE}
 	else
-		echo mips-unknown-sysv${UNAME_RELEASE}
+	        echo mips-unknown-sysv${UNAME_RELEASE}
 	fi
-	exit 0 ;;
+        exit 0 ;;
     BeBox:BeOS:*:*)	# BeOS running on hardware made by Be, PPC only.
 	echo powerpc-be-beos
 	exit 0 ;;
@@ -1153,9 +1176,10 @@ EOF
 	echo ${UNAME_MACHINE}-apple-rhapsody${UNAME_RELEASE}
 	exit 0 ;;
     *:Darwin:*:*)
-	case `uname -p` in
+	UNAME_PROCESSOR=`uname -p` || UNAME_PROCESSOR=unknown
+	case $UNAME_PROCESSOR in
 	    *86) UNAME_PROCESSOR=i686 ;;
-	    powerpc) UNAME_PROCESSOR=powerpc ;;
+	    unknown) UNAME_PROCESSOR=powerpc ;;
 	esac
 	echo ${UNAME_PROCESSOR}-apple-darwin${UNAME_RELEASE}
 	exit 0 ;;
@@ -1170,7 +1194,7 @@ EOF
     *:QNX:*:4*)
 	echo i386-pc-qnx
 	exit 0 ;;
-    NSR-[DGKLNPTVW]:NONSTOP_KERNEL:*:*)
+    NSR-?:NONSTOP_KERNEL:*:*)
 	echo nsr-tandem-nsk${UNAME_RELEASE}
 	exit 0 ;;
     *:NonStop-UX:*:*)
@@ -1212,8 +1236,18 @@ EOF
 	echo pdp10-unknown-its
 	exit 0 ;;
     SEI:*:*:SEIUX)
-	echo mips-sei-seiux${UNAME_RELEASE}
+        echo mips-sei-seiux${UNAME_RELEASE}
 	exit 0 ;;
+    *:DragonFly:*:*)
+	echo ${UNAME_MACHINE}-unknown-dragonfly`echo ${UNAME_RELEASE}|sed -e 's/[-(].*//'`
+	exit 0 ;;
+    *:*VMS:*:*)
+    	UNAME_MACHINE=`(uname -p) 2>/dev/null`
+	case "${UNAME_MACHINE}" in
+	    A*) echo alpha-dec-vms && exit 0 ;;
+	    I*) echo ia64-dec-vms && exit 0 ;;
+	    V*) echo vax-dec-vms && exit 0 ;;
+	esac
 esac
 
 #echo '(No uname command or uname output not recognized.)' 1>&2
@@ -1236,11 +1270,11 @@ main ()
 #include <sys/param.h>
   printf ("m68k-sony-newsos%s\n",
 #ifdef NEWSOS4
-	  "4"
+          "4"
 #else
 	  ""
 #endif
-	 ); exit (0);
+         ); exit (0);
 #endif
 #endif
 
@@ -1388,12 +1422,12 @@ uname -s = `(uname -s) 2>/dev/null || echo unknown`
 uname -v = `(uname -v) 2>/dev/null || echo unknown`
 
 /usr/bin/uname -p = `(/usr/bin/uname -p) 2>/dev/null`
-/bin/uname -X	  = `(/bin/uname -X) 2>/dev/null`
+/bin/uname -X     = `(/bin/uname -X) 2>/dev/null`
 
-hostinfo	       = `(hostinfo) 2>/dev/null`
-/bin/universe	       = `(/bin/universe) 2>/dev/null`
+hostinfo               = `(hostinfo) 2>/dev/null`
+/bin/universe          = `(/bin/universe) 2>/dev/null`
 /usr/bin/arch -k       = `(/usr/bin/arch -k) 2>/dev/null`
-/bin/arch	       = `(/bin/arch) 2>/dev/null`
+/bin/arch              = `(/bin/arch) 2>/dev/null`
 /usr/bin/oslevel       = `(/usr/bin/oslevel) 2>/dev/null`
 /usr/convex/getsysinfo = `(/usr/convex/getsysinfo) 2>/dev/null`
 

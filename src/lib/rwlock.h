@@ -1,36 +1,31 @@
 /*
  * Bacula Thread Read/Write locking code. It permits
- *  multiple readers but only one writer.                 
+ *  multiple readers but only one writer.
  *
  *  Kern Sibbald, January MMI
  *
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
  *
- *   Version $Id: rwlock.h,v 1.6 2003/03/18 19:51:58 kerns Exp $
+ *   Version $Id: rwlock.h,v 1.7.4.1 2006/03/14 21:41:41 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2003 Kern Sibbald and John Walker
+   Copyright (C) 2001-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
-#ifndef __RWLOCK_H 
+#ifndef __RWLOCK_H
 #define __RWLOCK_H 1
 
 typedef struct s_rwlock_tag {
@@ -57,7 +52,7 @@ typedef struct s_rwsteal_tag {
    {PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, \
     PTHREAD_COND_INITIALIZER, RWLOCK_VALID, 0, 0, 0, 0}
 
-/* 
+/*
  * read/write lock prototypes
  */
 extern int rwl_init(brwlock_t *wrlock);

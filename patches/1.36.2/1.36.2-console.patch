@@ -1,0 +1,32 @@
+
+ This patch causes the output directed to a file to be
+ flushed after every line. This is a bit overkill, IMO, but
+ a user complained about it.
+
+ Apply to 1.36.2 with:
+
+ cd <bacula>
+ patch -p0 <1.36.2-console.patch
+ make
+ ...
+
+Index: src/console/console.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/console/console.c,v
+retrieving revision 1.53.6.1
+diff -u -b -r1.53.6.1 console.c
+--- src/console/console.c	25 Feb 2005 09:47:06 -0000	1.53.6.1
++++ src/console/console.c	16 Mar 2005 11:36:43 -0000
+@@ -748,10 +748,11 @@
+     }
+ #else
+     fputs(buf, output);
++    fflush(output);
+     if (tee) {
+        fputs(buf, stdout);
+     }
+-    if (output == stdout || tee) {
++    if (output != stdout || tee) {
+        fflush(stdout);
+     }
+ #endif

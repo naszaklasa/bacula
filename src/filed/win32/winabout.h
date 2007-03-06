@@ -17,7 +17,7 @@
    MA 02111-1307, USA.
 
    This file was inspired by the VNC Win32 code by ATT
-  
+
    Kern E. Sibbald, 2000
 */
 

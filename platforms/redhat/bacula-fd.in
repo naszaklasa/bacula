@@ -14,25 +14,29 @@
 
 FD_USER=@fd_user@
 FD_GROUP=@fd_group@
+FD_OPTIONS=''
 OS=`uname -s`
 
 # if /lib/tls exists, force Bacula to use the glibc pthreads instead
-if [ -d "/lib/tls" -a $OS = "Linux" ] ; then
+if [ -d "/lib/tls" -a $OS = "Linux" -a `uname -r | cut -c1-3` = "2.4" ] ; then
      export LD_ASSUME_KERNEL=2.4.19
 fi
+
+# pull in any user defined FD_OPTIONS, FD_USER, FD_GROUP 
+[ -f /etc/sysconfig/bacula ] && . /etc/sysconfig/bacula
+
 RETVAL=0
 case "$1" in
     start)
-       OPTIONS=''
        if [ "${FD_USER}" != '' ]; then
-	  OPTIONS="${OPTIONS} -u ${FD_USER}"
+	  FD_OPTIONS="${FD_OPTIONS} -u ${FD_USER}"
        fi
 										   
        if [ "${FD_GROUP}" != '' ]; then
-	  OPTIONS="${OPTIONS} -g ${FD_GROUP}"
+	  FD_OPTIONS="${FD_OPTIONS} -g ${FD_GROUP}"
        fi
        echo -n "Starting Bacula File services: "
-       daemon @sbindir@/bacula-fd $2 ${OPTIONS} -c @sysconfdir@/bacula-fd.conf
+       daemon @sbindir@/bacula-fd $2 ${FD_OPTIONS} -c @sysconfdir@/bacula-fd.conf
        RETVAL=$?
        echo
        [ $RETVAL -eq 0 ] && touch @subsysdir@/bacula-fd

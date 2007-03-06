@@ -1,34 +1,41 @@
 /*
  *   scan.c -- scanning routines for Bacula
  *
- *    Kern Sibbald, MM	separated from util.c MMIII
+ *    Kern Sibbald, MM  separated from util.c MMIII
  *
- *   Version $Id: scan.c,v 1.11.8.1 2005/02/14 10:02:26 kerns Exp $
+ *   Version $Id: scan.c,v 1.15.2.2 2006/03/20 07:16:40 kerns Exp $
  */
-
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
+
 
 #include "bacula.h"
 #include "jcr.h"
 #include "findlib/find.h"
+
+/* Strip leading space from command line arguments */
+void strip_leading_space(char *str)
+{
+   char *p = str;
+   while (B_ISSPACE(*p)) {
+      p++;
+   }
+   if (p != str) {
+      strcpy(str, p);
+   }
+}
 
 
 /* Strip any trailing junk from the command */
@@ -39,6 +46,16 @@ void strip_trailing_junk(char *cmd)
 
    /* strip trailing junk from command */
    while ((p >= cmd) && (*p == '\n' || *p == '\r' || *p == ' '))
+      *p-- = 0;
+}
+
+/* Strip any trailing newline characters from the string */
+void strip_trailing_newline(char *cmd)
+{
+   char *p;
+   p = cmd + strlen(cmd) - 1;
+
+   while ((p >= cmd) && (*p == '\n' || *p == '\r'))
       *p-- = 0;
 }
 
@@ -56,8 +73,8 @@ void strip_trailing_slashes(char *dir)
 /*
  * Skip spaces
  *  Returns: 0 on failure (EOF)
- *	     1 on success
- *	     new address in passed parameter
+ *           1 on success
+ *           new address in passed parameter
  */
 bool skip_spaces(char **msg)
 {
@@ -75,8 +92,8 @@ bool skip_spaces(char **msg)
 /*
  * Skip nonspaces
  *  Returns: 0 on failure (EOF)
- *	     1 on success
- *	     new address in passed parameter
+ *           1 on success
+ *           new address in passed parameter
  */
 bool skip_nonspaces(char **msg)
 {
@@ -94,26 +111,26 @@ bool skip_nonspaces(char **msg)
 
 /* folded search for string - case insensitive */
 int
-fstrsch(const char *a, const char *b)	/* folded case search */
+fstrsch(const char *a, const char *b)   /* folded case search */
 {
    const char *s1,*s2;
    char c1, c2;
 
    s1=a;
    s2=b;
-   while (*s1) {		      /* do it the fast way */
+   while (*s1) {                      /* do it the fast way */
       if ((*s1++ | 0x20) != (*s2++ | 0x20))
-	 return 0;		      /* failed */
+         return 0;                    /* failed */
    }
-   while (*a) { 		      /* do it over the correct slow way */
+   while (*a) {                       /* do it over the correct slow way */
       if (B_ISUPPER(c1 = *a)) {
-	 c1 = tolower((int)c1);
+         c1 = tolower((int)c1);
       }
       if (B_ISUPPER(c2 = *b)) {
-	 c2 = tolower((int)c2);
+         c2 = tolower((int)c2);
       }
       if (c1 != c2) {
-	 return 0;
+         return 0;
       }
       a++;
       b++;
@@ -138,27 +155,27 @@ char *next_arg(char **s)
    Dmsg1(900, "Next arg=%s\n", p);
    for (n = q = p; *p ; ) {
       if (*p == '\\') {
-	 p++;
-	 if (*p) {
-	    *q++ = *p++;
-	 } else {
-	    *q++ = *p;
-	 }
-	 continue;
+         p++;
+         if (*p) {
+            *q++ = *p++;
+         } else {
+            *q++ = *p;
+         }
+         continue;
       }
       if (*p == '"') {                  /* start or end of quote */
-	 if (in_quote) {
-	    p++;			/* skip quote */
-	    in_quote = false;
-	    continue;
-	 }
-	 in_quote = true;
-	 p++;
-	 continue;
+         if (in_quote) {
+            p++;                        /* skip quote */
+            in_quote = false;
+            continue;
+         }
+         in_quote = true;
+         p++;
+         continue;
       }
       if (!in_quote && B_ISSPACE(*p)) {     /* end of field */
-	 p++;
-	 break;
+         p++;
+         break;
       }
       *q++ = *p++;
    }
@@ -189,7 +206,7 @@ char *next_arg(char **s)
  */
 
 int parse_args(POOLMEM *cmd, POOLMEM **args, int *argc,
-	       char **argk, char **argv, int max_args)
+               char **argk, char **argv, int max_args)
 {
    char *p, *q, *n;
 
@@ -201,33 +218,33 @@ int parse_args(POOLMEM *cmd, POOLMEM **args, int *argc,
    while (*argc < max_args) {
       n = next_arg(&p);
       if (*n) {
-	 argk[*argc] = n;
-	 argv[(*argc)++] = NULL;
+         argk[*argc] = n;
+         argv[(*argc)++] = NULL;
       } else {
-	 break;
+         break;
       }
    }
    /* Separate keyword and value */
    for (int i=0; i < *argc; i++) {
       p = strchr(argk[i], '=');
       if (p) {
-	 *p++ = 0;		      /* terminate keyword and point to value */
-	 /* Unquote quoted values */
+         *p++ = 0;                    /* terminate keyword and point to value */
+         /* Unquote quoted values */
          if (*p == '"') {
             for (n = q = ++p; *p && *p != '"'; ) {
                if (*p == '\\') {
-		  p++;
-	       }
-	       *q++ = *p++;
-	    }
-	    *q = 0;		      /* terminate string */
-	    p = n;		      /* point to string */
-	 }
-	 if (strlen(p) > MAX_NAME_LENGTH-1) {
-	    p[MAX_NAME_LENGTH-1] = 0; /* truncate to max len */
-	 }
+                  p++;
+               }
+               *q++ = *p++;
+            }
+            *q = 0;                   /* terminate string */
+            p = n;                    /* point to string */
+         }
+         if (strlen(p) > MAX_NAME_LENGTH-1) {
+            p[MAX_NAME_LENGTH-1] = 0; /* truncate to max len */
+         }
       }
-      argv[i] = p;		      /* save ptr to value or NULL */
+      argv[i] = p;                    /* save ptr to value or NULL */
    }
 #ifdef xxxx
    for (int i=0; i < *argc; i++) {
@@ -243,7 +260,7 @@ int parse_args(POOLMEM *cmd, POOLMEM **args, int *argc,
  *  in the arguments provided.
  */
 void split_path_and_filename(const char *fname, POOLMEM **path, int *pnl,
-	POOLMEM **file, int *fnl)
+        POOLMEM **file, int *fnl)
 {
    const char *f;
    int slen;
@@ -268,15 +285,15 @@ void split_path_and_filename(const char *fname, POOLMEM **path, int *pnl,
       f--;
    }
    if (*f == '/') {                   /* did we find a slash? */
-      f++;			      /* yes, point to filename */
-   } else {			      /* no, whole thing must be path name */
+      f++;                            /* yes, point to filename */
+   } else {                           /* no, whole thing must be path name */
       f = fname;
    }
    Dmsg2(200, "after strip len=%d f=%s\n", len, f);
    *fnl = fname - f + len;
    if (*fnl > 0) {
       *file = check_pool_memory_size(*file, *fnl+1);
-      memcpy(*file, f, *fnl);	 /* copy filename */
+      memcpy(*file, f, *fnl);    /* copy filename */
    }
    (*file)[*fnl] = 0;
 
@@ -292,7 +309,7 @@ void split_path_and_filename(const char *fname, POOLMEM **path, int *pnl,
 }
 
 /*
- * Extremely simple sscanf. Handles only %(u,d,ld,lu,lld,llu,c,nns)
+ * Extremely simple sscanf. Handles only %(u,d,ld,qd,qu,lu,lld,llu,c,nns)
  */
 const int BIG = 1000;
 int bsscanf(const char *buf, const char *fmt, ...)
@@ -310,95 +327,96 @@ int bsscanf(const char *buf, const char *fmt, ...)
    while (*fmt && !error) {
 //    Dmsg1(000, "fmt=%c\n", *fmt);
       if (*fmt == '%') {
-	 fmt++;
+         fmt++;
 //       Dmsg1(000, "Got %% nxt=%c\n", *fmt);
 switch_top:
-	 switch (*fmt++) {
+         switch (*fmt++) {
          case 'u':
          case 'd':
-	    value = 0;
-	    while (B_ISDIGIT(*buf)) {
+            value = 0;
+            while (B_ISDIGIT(*buf)) {
                value = B_TIMES10(value) + *buf++ - '0';
-	    }
-	    vp = (void *)va_arg(ap, void *);
+            }
+            vp = (void *)va_arg(ap, void *);
 //          Dmsg2(000, "val=%lld at 0x%lx\n", value, (long unsigned)vp);
-	    if (l < 2) {
-	       *((uint32_t *)vp) = (uint32_t)value;
+            if (l < 2) {
+               *((uint32_t *)vp) = (uint32_t)value;
 //             Dmsg0(000, "Store 32 bit int\n");
-	    } else {
-	       *((uint64_t *)vp) = (uint64_t)value;
+            } else {
+               *((uint64_t *)vp) = (uint64_t)value;
 //             Dmsg0(000, "Store 64 bit int\n");
-	    }
-	    count++;
-	    l = 0;
-	    break;
+            }
+            count++;
+            l = 0;
+            break;
          case 'l':
 //          Dmsg0(000, "got l\n");
-	    l = 1;
+            l = 1;
             if (*fmt == 'l') {
-	       l++;
-	       fmt++;
-	    }
+               l++;
+               fmt++;
+            }
             if (*fmt == 'd' || *fmt == 'u') {
-	       goto switch_top;
-	    }
+               goto switch_top;
+            }
 //          Dmsg1(000, "fmt=%c !=d,u\n", *fmt);
-	    error = true;
-	    break;
+            error = true;
+            break;
          case 'q':
-	    l = 2;
+            l = 2;
             if (*fmt == 'd' || *fmt == 'u') {
-	       goto switch_top;
-	    }
+               goto switch_top;
+            }
 //          Dmsg1(000, "fmt=%c !=d,u\n", *fmt);
-	    error = true;
-	    break;
+            error = true;
+            break;
          case 's':
 //          Dmsg1(000, "Store string max_len=%d\n", max_len);
-	    cp = (char *)va_arg(ap, char *);
-	    while (*buf && !B_ISSPACE(*buf) && max_len-- > 0) {
-	       *cp++ = *buf++;
-	    }
-	    *cp = 0;
-	    count++;
-	    max_len = BIG;
-	    break;
+            cp = (char *)va_arg(ap, char *);
+            while (*buf && !B_ISSPACE(*buf) && max_len-- > 0) {
+               *cp++ = *buf++;
+            }
+            *cp = 0;
+            count++;
+            max_len = BIG;
+            break;
          case 'c':
-	    cp = (char *)va_arg(ap, char *);
-	    *cp = *buf++;
-	    count++;
-	    break;
+            cp = (char *)va_arg(ap, char *);
+            *cp = *buf++;
+            count++;
+            break;
          case '%':
             if (*buf++ != '%') {
-	       error = true;
-	    }
-	    break;
-	 default:
-	    fmt--;
-	    max_len = 0;
-	    while (B_ISDIGIT(*fmt)) {
+               error = true;
+            }
+            break;
+         default:
+            fmt--;
+            max_len = 0;
+            while (B_ISDIGIT(*fmt)) {
                max_len = B_TIMES10(max_len) + *fmt++ - '0';
-	    }
+            }
 //          Dmsg1(000, "Default max_len=%d\n", max_len);
             if (*fmt == 's') {
-	       goto switch_top;
-	    }
+               goto switch_top;
+            }
 //          Dmsg1(000, "Default c=%c\n", *fmt);
-	    error = true;
-	    break;		      /* error: unknown format */
-	 }
-	 continue;
+            error = true;
+            break;                    /* error: unknown format */
+         }
+         continue;
 
       /* White space eats zero or more whitespace */
       } else if (B_ISSPACE(*fmt)) {
-	 fmt++;
-	 while (B_ISSPACE(*buf)) {
-	    buf++;
-	 }
+         fmt++;
+         while (B_ISSPACE(*buf)) {
+            buf++;
+         }
       /* Plain text must match */
       } else if (*buf++ != *fmt++) {
 //       Dmsg2(000, "Mismatch buf=%c fmt=%c\n", *--buf, *--fmt);
-	 error = true;
+         error = true;
+         break;
       }
    }
    va_end(ap);
@@ -434,25 +452,25 @@ static char OK_media[] = "1000 OK VolName=%127s VolJobs=%u VolFiles=%u"
 "1000 OK VolName=TestVolume001 VolJobs=0 VolFiles=0 VolBlocks=0 VolBytes=1 VolMounts=0 VolErrors=0 VolWrites=0 MaxVolBytes=0 VolCapacityBytes=0 VolStatus=Append Slot=0 MaxVolJobs=0 MaxVolFiles=0 InChanger=1 VolReadTime=0 VolWriteTime=0";
 struct VOLUME_CAT_INFO {
    /* Media info for the current Volume */
-   uint32_t VolCatJobs; 	      /* number of jobs on this Volume */
-   uint32_t VolCatFiles;	      /* Number of files */
-   uint32_t VolCatBlocks;	      /* Number of blocks */
-   uint64_t VolCatBytes;	      /* Number of bytes written */
-   uint32_t VolCatMounts;	      /* Number of mounts this volume */
-   uint32_t VolCatErrors;	      /* Number of errors this volume */
-   uint32_t VolCatWrites;	      /* Number of writes this volume */
-   uint32_t VolCatReads;	      /* Number of reads this volume */
-   uint64_t VolCatRBytes;	      /* Number of bytes read */
-   uint32_t VolCatRecycles;	      /* Number of recycles this volume */
-   int32_t  Slot;		      /* Slot in changer */
-   bool     InChanger;		      /* Set if vol in current magazine */
-   uint32_t VolCatMaxJobs;	      /* Maximum Jobs to write to volume */
-   uint32_t VolCatMaxFiles;	      /* Maximum files to write to volume */
-   uint64_t VolCatMaxBytes;	      /* Max bytes to write to volume */
+   uint32_t VolCatJobs;               /* number of jobs on this Volume */
+   uint32_t VolCatFiles;              /* Number of files */
+   uint32_t VolCatBlocks;             /* Number of blocks */
+   uint64_t VolCatBytes;              /* Number of bytes written */
+   uint32_t VolCatMounts;             /* Number of mounts this volume */
+   uint32_t VolCatErrors;             /* Number of errors this volume */
+   uint32_t VolCatWrites;             /* Number of writes this volume */
+   uint32_t VolCatReads;              /* Number of reads this volume */
+   uint64_t VolCatRBytes;             /* Number of bytes read */
+   uint32_t VolCatRecycles;           /* Number of recycles this volume */
+   int32_t  Slot;                     /* Slot in changer */
+   bool     InChanger;                /* Set if vol in current magazine */
+   uint32_t VolCatMaxJobs;            /* Maximum Jobs to write to volume */
+   uint32_t VolCatMaxFiles;           /* Maximum files to write to volume */
+   uint64_t VolCatMaxBytes;           /* Max bytes to write to volume */
    uint64_t VolCatCapacityBytes;      /* capacity estimate */
-   uint64_t VolReadTime;	      /* time spent reading */
-   uint64_t VolWriteTime;	      /* time spent writing this Volume */
-   char VolCatStatus[20];	      /* Volume status */
+   uint64_t VolReadTime;              /* time spent reading */
+   uint64_t VolWriteTime;             /* time spent writing this Volume */
+   char VolCatStatus[20];             /* Volume status */
    char VolCatName[MAX_NAME_LENGTH];  /* Desired volume to mount */
 };
    struct VOLUME_CAT_INFO vol;
@@ -470,14 +488,14 @@ struct VOLUME_CAT_INFO {
    printf("cnt=%d Agent=%s\n", cnt, Job);
 #endif
    cnt = bsscanf(media, OK_media,
-	       vol.VolCatName,
-	       &vol.VolCatJobs, &vol.VolCatFiles,
-	       &vol.VolCatBlocks, &vol.VolCatBytes,
-	       &vol.VolCatMounts, &vol.VolCatErrors,
-	       &vol.VolCatWrites, &vol.VolCatMaxBytes,
-	       &vol.VolCatCapacityBytes, vol.VolCatStatus,
-	       &vol.Slot, &vol.VolCatMaxJobs, &vol.VolCatMaxFiles,
-	       &vol.InChanger, &vol.VolReadTime, &vol.VolWriteTime);
+               vol.VolCatName,
+               &vol.VolCatJobs, &vol.VolCatFiles,
+               &vol.VolCatBlocks, &vol.VolCatBytes,
+               &vol.VolCatMounts, &vol.VolCatErrors,
+               &vol.VolCatWrites, &vol.VolCatMaxBytes,
+               &vol.VolCatCapacityBytes, vol.VolCatStatus,
+               &vol.Slot, &vol.VolCatMaxJobs, &vol.VolCatMaxFiles,
+               &vol.InChanger, &vol.VolReadTime, &vol.VolWriteTime);
    printf("cnt=%d Vol=%s\n", cnt, vol.VolCatName);
 
 }

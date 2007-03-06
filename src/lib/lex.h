@@ -5,11 +5,11 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: lex.h,v 1.9.4.1 2005/02/14 10:02:26 kerns Exp $
+ *   Version $Id: lex.h,v 1.11 2005/05/01 09:26:28 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as

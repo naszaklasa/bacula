@@ -1,6 +1,6 @@
 
 typedef struct {
-   GtkCList  *list;     
+   GtkCList  *list;
    POOLMEM *buf;                      /* scratch buffer */
    POOLMEM *fname;                    /* full path and file name */
    POOLMEM *path;                     /* path, no file */

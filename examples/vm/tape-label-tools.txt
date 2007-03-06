@@ -1,0 +1,27 @@
+From: David Boyes <dboyes@sinenomine.net>
+To: "'kern@sibbald.com'" <kern@sibbald.com>,
+Cc: "'bacula-devel'" <bacula-devel@lists.sourceforge.net>
+Subject: RE: [Bacula-devel] ANSI label tape creation tools for VM
+Date: Thu, 17 Feb 2005 11:03:26 -0500
+
+I don't seem to have a way to update the CVS (nor really a lot of
+experience with *update* access to the beastie), so appended below are
+some example scripts to use on a z/VM system to create labeled tapes
+suitable for use with the ANSI label support in Bacula. I suggest that
+we put these in the "examples" section of the tree as contributed tools
+-- I'll leave it to your discretion as to where/how to tag these. 
+
+I'm finishing up the documentation and packaging for my z/VM tape mount
+helper daemon and mtx-changer variant, so you may want to think about
+where those should go as well. 
+
+File BLABELA EXEC is the script for creating ANSI labeled tapes with the
+proper signature.
+
+File BLABELI EXEC is a variation of the above script for creating IBM SL
+label tapes with the proper signature. 
+
+File BACULA.DATA is a dummy file required by the annoying fact that the
+OS simulation routines in CMS require an actual file as input to the OS
+sim file creation utility (grr). 
+

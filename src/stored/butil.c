@@ -4,30 +4,25 @@
  *    bextract, ...  Some routines also used by Bacula.
  *
  *    Kern Sibbald, MM
- * 
- *  Normally nothing in this file is called by the Storage   
+ *
+ *  Normally nothing in this file is called by the Storage
  *    daemon because we interact more directly with the user
  *    i.e. printf, ...
  *
- *   Version $Id: butil.c,v 1.26 2004/09/20 09:07:03 kerns Exp $
+ *   Version $Id: butil.c,v 1.41.2.3 2006/03/14 21:41:41 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -45,22 +40,22 @@ extern char *configfile;
 #ifdef DEBUG
 char *rec_state_to_str(DEV_RECORD *rec)
 {
-   static char buf[200]; 
+   static char buf[200];
    buf[0] = 0;
    if (rec->state & REC_NO_HEADER) {
-      strcat(buf, "Nohdr,");
+      strcat(buf, _("Nohdr,"));
    }
    if (is_partial_record(rec)) {
-      strcat(buf, "partial,");
+      strcat(buf, _("partial,"));
    }
    if (rec->state & REC_BLOCK_EMPTY) {
-      strcat(buf, "empty,");
+      strcat(buf, _("empty,"));
    }
    if (rec->state & REC_NO_MATCH) {
-      strcat(buf, "Nomatch,");
+      strcat(buf, _("Nomatch,"));
    }
    if (rec->state & REC_CONTINUATION) {
-      strcat(buf, "cont,");
+      strcat(buf, _("cont,"));
    }
    if (buf[0]) {
       buf[strlen(buf)-1] = 0;
@@ -74,7 +69,7 @@ char *rec_state_to_str(DEV_RECORD *rec)
  *  tools (e.g. bls, bextract, bscan, ...)
  */
 JCR *setup_jcr(const char *name, char *dev_name, BSR *bsr,
-	       const char *VolumeName, int mode)
+               const char *VolumeName, int mode)
 {
    DCR *dcr;
    JCR *jcr = new_jcr(sizeof(JCR), my_free_jcr);
@@ -97,6 +92,9 @@ JCR *setup_jcr(const char *name, char *dev_name, BSR *bsr,
    jcr->fileset_md5 = get_pool_memory(PM_FNAME);
    pm_strcpy(jcr->fileset_md5, "Dummy.fileset.md5");
 
+   init_autochangers();
+   create_volume_list();
+
    dcr = setup_to_access_device(jcr, dev_name, VolumeName, mode);
    if (!dcr) {
       return NULL;
@@ -104,8 +102,8 @@ JCR *setup_jcr(const char *name, char *dev_name, BSR *bsr,
    if (!bsr && VolumeName) {
       bstrncpy(dcr->VolumeName, VolumeName, sizeof(dcr->VolumeName));
    }
-   strcpy(dcr->pool_name, "Default");
-   strcpy(dcr->pool_type, "Backup");
+   bstrncpy(dcr->pool_name, "Default", sizeof(dcr->pool_name));
+   bstrncpy(dcr->pool_type, "Backup", sizeof(dcr->pool_type));
    return jcr;
 }
 
@@ -114,7 +112,8 @@ JCR *setup_jcr(const char *name, char *dev_name, BSR *bsr,
  *   If the caller wants read access, acquire the device, otherwise,
  *     the caller will do it.
  */
-static DCR *setup_to_access_device(JCR *jcr, char *dev_name, const char *VolumeName, int mode)
+static DCR *setup_to_access_device(JCR *jcr, char *dev_name, 
+              const char *VolumeName, int mode)
 {
    DEVICE *dev;
    char *p;
@@ -122,66 +121,74 @@ static DCR *setup_to_access_device(JCR *jcr, char *dev_name, const char *VolumeN
    DCR *dcr;
    char VolName[MAX_NAME_LENGTH];
 
+   init_reservations_lock();
+
    /*
     * If no volume name already given and no bsr, and it is a file,
-    * try getting name from Filename  
+    * try getting name from Filename
     */
    if (VolumeName) {
       bstrncpy(VolName, VolumeName, sizeof(VolName));
+      if (strlen(VolumeName) >= MAX_NAME_LENGTH) {
+         Jmsg0(jcr, M_ERROR, 0, _("Volume name or names is too long. Please use a .bsr file.\n"));
+      }
    } else {
       VolName[0] = 0;
    }
    if (!jcr->bsr && VolName[0] == 0) {
       if (strncmp(dev_name, "/dev/", 5) != 0) {
-	 /* Try stripping file part */
-	 p = dev_name + strlen(dev_name);
+         /* Try stripping file part */
+         p = dev_name + strlen(dev_name);
 
          while (p >= dev_name && *p != '/')
-	    p--;
+            p--;
          if (*p == '/') {
-	    bstrncpy(VolName, p+1, sizeof(VolName));
-	    *p = 0;
-	 }
+            bstrncpy(VolName, p+1, sizeof(VolName));
+            *p = 0;
+         }
       }
    }
 
    if ((device=find_device_res(dev_name, mode)) == NULL) {
-      Jmsg2(jcr, M_FATAL, 0, _("Cannot find device \"%s\" in config file %s.\n"), 
-	   dev_name, configfile);
+      Jmsg2(jcr, M_FATAL, 0, _("Cannot find device \"%s\" in config file %s.\n"),
+           dev_name, configfile);
       return NULL;
    }
-   jcr->device = device;
-   
-   dev = init_dev(NULL, device);
+
+   dev = init_dev(jcr, device);
    if (!dev) {
       Jmsg1(jcr, M_FATAL, 0, _("Cannot init device %s\n"), dev_name);
       return NULL;
    }
    device->dev = dev;
-   dcr = new_dcr(jcr, dev);	   
+   dcr = new_dcr(jcr, dev);
+   jcr->dcr = dcr;
    if (VolName[0]) {
       bstrncpy(dcr->VolumeName, VolName, sizeof(dcr->VolumeName));
    }
    bstrncpy(dcr->dev_name, device->device_name, sizeof(dcr->dev_name));
-   if (!first_open_device(dev)) {
-      Jmsg1(jcr, M_FATAL, 0, _("Cannot open %s\n"), dcr->dev_name);
-      return NULL;
-   }
-   Dmsg0(90, "Device opened for read.\n");
 
-   create_vol_list(jcr);
+   create_restore_volume_list(jcr);
 
-   if (mode) {			      /* read only access? */
-      if (!acquire_device_for_read(jcr)) {
-	 return NULL;
+   if (mode) {                        /* read only access? */
+      Dmsg0(100, "Acquire device for read\n");
+      if (!acquire_device_for_read(dcr)) {
+         return NULL;
       }
+      jcr->read_dcr = dcr;
+   } else {
+      if (!first_open_device(dcr)) {
+         Jmsg1(jcr, M_FATAL, 0, _("Cannot open %s\n"), dev->print_name());
+         return NULL;
+      }
+      jcr->dcr = dcr;        /* write dcr */
    }
    return dcr;
 }
 
 
 /*
- * Called here when freeing JCR so that we can get rid 
+ * Called here when freeing JCR so that we can get rid
  *  of "daemon" specific memory allocated.
  */
 static void my_free_jcr(JCR *jcr)
@@ -203,8 +210,8 @@ static void my_free_jcr(JCR *jcr)
       jcr->fileset_md5 = NULL;
    }
    if (jcr->VolList) {
-      free_vol_list(jcr);
-   }  
+      free_restore_volume_list(jcr);
+   }
    if (jcr->dcr) {
       free_dcr(jcr->dcr);
       jcr->dcr = NULL;
@@ -214,48 +221,56 @@ static void my_free_jcr(JCR *jcr)
 
 
 /*
- * Search for device resource that corresponds to 
+ * Search for device resource that corresponds to
  * device name on command line (or default).
- *	 
+ *
  * Returns: NULL on failure
- *	    Device resource pointer on success
+ *          Device resource pointer on success
  */
 static DEVRES *find_device_res(char *device_name, int read_access)
 {
    bool found = false;
    DEVRES *device;
 
+   Dmsg0(900, "Enter find_device_res\n");
    LockRes();
    foreach_res(device, R_DEVICE) {
+      Dmsg2(900, "Compare %s and %s\n", device->device_name, device_name);
       if (strcmp(device->device_name, device_name) == 0) {
-	 found = true;
-	 break;
+         found = true;
+         break;
       }
-   } 
+   }
    if (!found) {
       /* Search for name of Device resource rather than archive name */
       if (device_name[0] == '"') {
-	 strcpy(device_name, device_name+1);
-	 int len = strlen(device_name);
-	 if (len > 0) {
+         int len = strlen(device_name);
+         bstrncpy(device_name, device_name+1, len+1);
+         len--;
+         if (len > 0) {
             device_name[len-1] = 0;   /* zap trailing " */
-	 }
+         }
       }
       foreach_res(device, R_DEVICE) {
-	 if (strcmp(device->hdr.name, device_name) == 0) {
-	    found = true;
-	    break;
-	 }
-      } 
+         Dmsg2(900, "Compare %s and %s\n", device->hdr.name, device_name);
+         if (strcmp(device->hdr.name, device_name) == 0) {
+            found = true;
+            break;
+         }
+      }
    }
    UnlockRes();
    if (!found) {
       Pmsg2(0, _("Could not find device \"%s\" in config file %s.\n"), device_name,
-	    configfile);
+            configfile);
       return NULL;
    }
-   Pmsg2(0, _("Using device: \"%s\" for %s.\n"), device_name,
-             read_access?"reading":"writing");
+   if (read_access) {
+      Pmsg1(0, _("Using device: \"%s\" for reading.\n"), device_name);
+   }
+   else {
+      Pmsg1(0, _("Using device: \"%s\" for writing.\n"), device_name);
+   }
    return device;
 }
 

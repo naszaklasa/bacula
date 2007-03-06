@@ -23,9 +23,12 @@ $in =~ s/Include\s*=\s*((?:\w+=\w+\s+)*){\s*((?:.*?\n)+?)\s*}/
   "Include { " . 
   ( $1 ? options($1) : '' ) . "\n" .
   file_lines($2) .
-  "\n  }\n" /eg;
+  "\n  }" /eg;
+
+$in =~ s/Exclude\s*=\s*{\s*}/
+  "Exclude { }"/eg;
 
 $in =~ s/Exclude\s*=\s*{\s*((?:.*?\n)+?)\s*}/
-  "Exclude {\n" . file_lines($1) . "\n  }\n"/eg;
+  "Exclude {\n" . file_lines($1) . "\n  }"/eg;
 
 print $in;

@@ -20,7 +20,7 @@ void stop_director_reader(gpointer data);
 void FillDirectory(const char *path, Window *window);
 Window *new_window();
 static void click_column_cb(GtkCList *item, gint column, Window *restore);
-static void select_row_cb(GtkCList *item, gint row, gint column, 
+static void select_row_cb(GtkCList *item, gint row, gint column,
 	     GdkEventButton *event, Window *restore);
 void row_data_destroy_cb(gpointer data);
 void split_path_and_filename(const char *fname, POOLMEM **path, int *pnl,
@@ -32,7 +32,7 @@ static GdkPixmap *check_trans = NULL;
 static GdkPixmap *blank_pixmap = NULL;
 static GdkPixmap *blank_trans = NULL;
 #endif
-	 
+
 static GtkWidget *restore_dir;	      /* current directory edit box */
 static GtkWidget *scrolled;	      /* select files scrolled window */
 static Window *restore;
@@ -55,7 +55,7 @@ static void discard_to_prompt()
 }
 
 /*
- * Move up one directory   
+ * Move up one directory
  */
 void
 on_restore_up_button_clicked(GtkButton *button, gpointer user_data)
@@ -118,7 +118,7 @@ on_restore_remove_button_clicked(GtkButton *button, gpointer user_data)
  */
 void select_restore_setup()
 {
-   const gchar *title[NUM_COLUMNS] = {"Mark", "File", "Mode", "User", "Group", "Size", "Date"};
+   const gchar *title[NUM_COLUMNS] = {_("Mark"), _("File"), _("Mode"), _("User"), _("Group"), _("Size"), _("Date")};
 
    restore_file_selection = create_restore_file_selection();
    if (!restore_file_selection) {
@@ -133,24 +133,24 @@ void select_restore_setup()
    restore = new_window();
 
 #ifdef needed
-   check_pixmap = gdk_pixmap_colormap_create_from_xpm(NULL, 
+   check_pixmap = gdk_pixmap_colormap_create_from_xpm(NULL,
 		  gdk_colormap_get_system(), &check_trans, NULL,
-                  "check.xpm");
-   blank_pixmap = gdk_pixmap_colormap_create_from_xpm(NULL, 
+		  "check.xpm");
+   blank_pixmap = gdk_pixmap_colormap_create_from_xpm(NULL,
 		  gdk_colormap_get_system(), &blank_trans, NULL,
-                  "blank.xpm");
+		  "blank.xpm");
 #endif
 
    /* XXX: Stupid gtk_clist_set_selection_mode() has incorrect declaration of the title argument */
    /* XXX: Workaround by typecast... peter@ifm.liu.se */
-   
+
    restore->list = (GtkCList *)gtk_clist_new_with_titles(NUM_COLUMNS, (gchar **) title);
    gtk_clist_set_selection_mode(restore->list, GTK_SELECTION_EXTENDED);
    gtk_clist_set_sort_column(restore->list, FILE_COLUMN);
    gtk_clist_set_auto_sort(restore->list, true);
-   gtk_signal_connect(GTK_OBJECT(restore->list), "click_column", 
+   gtk_signal_connect(GTK_OBJECT(restore->list), "click_column",
 		      G_CALLBACK(click_column_cb), restore);
-   gtk_signal_connect(GTK_OBJECT(restore->list), "select_row", 
+   gtk_signal_connect(GTK_OBJECT(restore->list), "select_row",
 		      G_CALLBACK(select_row_cb), restore);
 
    gtk_container_add(GTK_CONTAINER(scrolled), GTK_WIDGET(restore->list));
@@ -185,12 +185,12 @@ void FillDirectory(const char *path, Window *restore)
    gchar *text[NUM_COLUMNS] = {marked, file, modes, user, group, size, date};
    GtkCList *list = restore->list;
    int row = 0;
-   
-   stop_director_reader(NULL);	       
+
+   stop_director_reader(NULL);
    pm_strcpy(&restore->fname, path);
    gtk_entry_set_text(GTK_ENTRY(restore_dir), restore->fname);
    gtk_clist_freeze(list);
-   gtk_clist_clear(list); 
+   gtk_clist_clear(list);
 
    bsnprintf(pathbuf, sizeof(pathbuf), "cd %s", path);
    Dmsg1(100, "%s\n", pathbuf);
@@ -235,15 +235,15 @@ void FillDirectory(const char *path, Window *restore)
       l = p;
       skip_nonspaces(&p);	      /* date/time */
       skip_spaces(&p);
-      skip_nonspaces(&p);  
+      skip_nonspaces(&p);
       *p++ = 0;
       bstrncpy(date, l, sizeof(date));
       skip_spaces(&p);
       if (*p == '*') {
-         bstrncpy(marked, "x", sizeof(marked));
+	 bstrncpy(marked, "x", sizeof(marked));
 	 p++;
       } else {
-         bstrncpy(marked, " ", sizeof(marked));
+	 bstrncpy(marked, " ", sizeof(marked));
       }
       split_path_and_filename(p, &restore->path, &restore->pnl,
 			      &restore->file, &restore->fnl);
@@ -283,7 +283,7 @@ static void click_column_cb(GtkCList *item, gint column, Window *restore)
 /*
  * User selected a row
  */
-static void select_row_cb(GtkCList *item, gint row, gint column, 
+static void select_row_cb(GtkCList *item, gint row, gint column,
 	     GdkEventButton *event, Window *restore)
 {
    char *file;
@@ -294,8 +294,8 @@ static void select_row_cb(GtkCList *item, gint row, gint column,
       /* Double click on column 0 means to mark or unmark */
       if (column == 0) {
 	 gtk_clist_get_text(restore->list, row, CHECK_COLUMN, &marked);
-         Dmsg1(200, "Marked=%s\n", marked);
-         if (!marked || strcmp(marked, "x") != 0) {
+	 Dmsg1(200, "Marked=%s\n", marked);
+	 if (!marked || strcmp(marked, "x") != 0) {
 	    mark_row(row, true);
 	 } else {
 	    mark_row(row, false);
@@ -305,18 +305,18 @@ static void select_row_cb(GtkCList *item, gint row, gint column,
 	 int len;
 	 gtk_clist_get_text(item, row, FILE_COLUMN, &file);
 	 len = strlen(file);
-         if (len > 0 && file[len-1] == '/') {
+	 if (len > 0 && file[len-1] == '/') {
 	    /* Change to new directory */
 	    pm_strcpy(restore->path, restore->fname);
-            if (*file == '*') {
-               Mmsg(restore->fname, "%s%s", restore->path, file+1);
+	    if (*file == '*') {
+	       Mmsg(restore->fname, "%s%s", restore->path, file+1);
 	    } else {
-               Mmsg(restore->fname, "%s%s", restore->path, file);
+	       Mmsg(restore->fname, "%s%s", restore->path, file);
 	    }
 	    FillDirectory(restore->fname, restore);
 	 }
       }
-   }  
+   }
 }
 
 /*
@@ -334,7 +334,7 @@ void row_data_destroy_cb(gpointer data)
 	 utf8_mark = g_locale_to_utf8(new_mark, -1, NULL, NULL, NULL);
 	 gtk_clist_get_pixmap(restore->list, row, CHECK_COLUMN, &pixmap, &trans);
 	 if (pixmap == blank_pixmap) {
-            bstrncpy(new_mark, "x", sizeof(new_mark));
+	    bstrncpy(new_mark, "x", sizeof(new_mark));
 //	    gtk_clist_set_pixmap(item, row, CHECK_COLUMN, check_pixmap, check_trans);
 #endif
 #ifdef xxx

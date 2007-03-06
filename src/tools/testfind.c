@@ -1,24 +1,18 @@
 /*
  * Test program for find files
  */
-
 /*
-   Copyright (C) 2000-2003 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -32,6 +26,9 @@ int win32_client = 1;
 int win32_client = 0;
 #endif
 
+/* Dummy functions */
+int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
+int generate_job_event(JCR *jcr, const char *event) { return 1; }
 
 /* Global variables */
 static int num_files = 0;
@@ -43,7 +40,7 @@ static int attrs = 0;
 
 static JCR *jcr;
 
-static int print_file(FF_PKT *ff, void *pkt);
+static int print_file(FF_PKT *ff, void *pkt, bool);
 static void count_files(FF_PKT *ff);
 
 static void usage()
@@ -80,30 +77,34 @@ main (int argc, char *const *argv)
    char *exc = NULL;
    FILE *fd;
 
+   setlocale(LC_ALL, "");
+   bindtextdomain("bacula", LOCALEDIR);
+   textdomain("bacula");
+
    while ((ch = getopt(argc, argv, "ad:e:i:?")) != -1) {
       switch (ch) {
-	 case 'a':                    /* print extended attributes *debug* */
-	    attrs = 1;
-	    break;
+         case 'a':                    /* print extended attributes *debug* */
+            attrs = 1;
+            break;
 
-	 case 'd':                    /* set debug level */
-	    debug_level = atoi(optarg);
-	    if (debug_level <= 0) {
-	       debug_level = 1;
-	    }
-	    break;
+         case 'd':                    /* set debug level */
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
+            break;
 
-	 case 'e':                    /* exclude patterns */
-	    exc = optarg;
-	    break;
+         case 'e':                    /* exclude patterns */
+            exc = optarg;
+            break;
 
-	 case 'i':                    /* include patterns */
-	    inc = optarg;
-	    break;
+         case 'i':                    /* include patterns */
+            inc = optarg;
+            break;
 
-	 case '?':
-	 default:
-	    usage();
+         case '?':
+         default:
+            usage();
 
       }
    }
@@ -117,25 +118,25 @@ main (int argc, char *const *argv)
       add_fname_to_include_list(ff, 0, "/"); /* default to / */
    } else {
       for (i=0; i < argc; i++) {
-	 if (strcmp(argv[i], "-") == 0) {
-	     while (fgets(name, sizeof(name)-1, stdin)) {
-		strip_trailing_junk(name);
-		add_fname_to_include_list(ff, 0, name);
-	      }
-	      continue;
-	 }
-	 add_fname_to_include_list(ff, 0, argv[i]);
+         if (strcmp(argv[i], "-") == 0) {
+             while (fgets(name, sizeof(name)-1, stdin)) {
+                strip_trailing_junk(name);
+                add_fname_to_include_list(ff, 0, name);
+              }
+              continue;
+         }
+         add_fname_to_include_list(ff, 0, argv[i]);
       }
    }
    if (inc) {
       fd = fopen(inc, "r");
       if (!fd) {
-	 printf("Could not open include file: %s\n", inc);
-	 exit(1);
+         printf(_("Could not open include file: %s\n"), inc);
+         exit(1);
       }
       while (fgets(name, sizeof(name)-1, fd)) {
-	 strip_trailing_junk(name);
-	 add_fname_to_include_list(ff, 0, name);
+         strip_trailing_junk(name);
+         add_fname_to_include_list(ff, 0, name);
       }
       fclose(fd);
    }
@@ -143,16 +144,17 @@ main (int argc, char *const *argv)
    if (exc) {
       fd = fopen(exc, "r");
       if (!fd) {
-	 printf("Could not open exclude file: %s\n", exc);
-	 exit(1);
+         printf(_("Could not open exclude file: %s\n"), exc);
+         exit(1);
       }
       while (fgets(name, sizeof(name)-1, fd)) {
-	 strip_trailing_junk(name);
-	 add_fname_to_exclude_list(ff, name);
+         strip_trailing_junk(name);
+         add_fname_to_exclude_list(ff, name);
       }
       fclose(fd);
    }
-   find_files(jcr, ff, print_file, NULL);
+   match_files(jcr, ff, print_file, NULL);
+   term_include_exclude_files(ff);
    hard_links = term_find_files(ff);
 
    printf(_(""
@@ -171,38 +173,38 @@ main (int argc, char *const *argv)
   exit(0);
 }
 
-static int print_file(FF_PKT *ff, void *pkt)
+static int print_file(FF_PKT *ff, void *pkt, bool top_level) 
 {
 
    switch (ff->type) {
    case FT_LNKSAVED:
       if (debug_level == 1) {
-	 printf("%s\n", ff->fname);
+         printf("%s\n", ff->fname);
       } else if (debug_level > 1) {
-	 printf("Lnka: %s -> %s\n", ff->fname, ff->link);
+         printf("Lnka: %s -> %s\n", ff->fname, ff->link);
       }
       break;
    case FT_REGE:
       if (debug_level == 1) {
-	 printf("%s\n", ff->fname);
+         printf("%s\n", ff->fname);
       } else if (debug_level > 1) {
-	 printf("Empty: %s\n", ff->fname);
+         printf("Empty: %s\n", ff->fname);
       }
       count_files(ff);
       break;
    case FT_REG:
       if (debug_level == 1) {
-	 printf("%s\n", ff->fname);
+         printf("%s\n", ff->fname);
       } else if (debug_level > 1) {
-	 printf("Reg: %s\n", ff->fname);
+         printf(_("Reg: %s\n"), ff->fname);
       }
       count_files(ff);
       break;
    case FT_LNK:
       if (debug_level == 1) {
-	 printf("%s\n", ff->fname);
+         printf("%s\n", ff->fname);
       } else if (debug_level > 1) {
-	 printf("Lnk: %s -> %s\n", ff->fname, ff->link);
+         printf("Lnk: %s -> %s\n", ff->fname, ff->link);
       }
       count_files(ff);
       break;
@@ -213,24 +215,24 @@ static int print_file(FF_PKT *ff, void *pkt)
    case FT_INVALIDFS:
    case FT_DIREND:
       if (debug_level) {
-	 char errmsg[100] = "";
-	 if (ff->type == FT_NORECURSE) {
-	    bstrncpy(errmsg, "\t[will not descend: recursion turned off]", sizeof(errmsg));
-	 } else if (ff->type == FT_NOFSCHG) {
-	    bstrncpy(errmsg, "\t[will not descend: file system change not allowed]", sizeof(errmsg));
-	 } else if (ff->type == FT_INVALIDFS) {
-	    bstrncpy(errmsg, "\t[will not descend: disallowed file system]", sizeof(errmsg));
-	 }
-	 printf("%s%s%s\n", (debug_level > 1 ? "Dir: " : ""), ff->fname, errmsg);
+         char errmsg[100] = "";
+         if (ff->type == FT_NORECURSE) {
+            bstrncpy(errmsg, _("\t[will not descend: recursion turned off]"), sizeof(errmsg));
+         } else if (ff->type == FT_NOFSCHG) {
+            bstrncpy(errmsg, _("\t[will not descend: file system change not allowed]"), sizeof(errmsg));
+         } else if (ff->type == FT_INVALIDFS) {
+            bstrncpy(errmsg, _("\t[will not descend: disallowed file system]"), sizeof(errmsg));
+         }
+         printf("%s%s%s\n", (debug_level > 1 ? "Dir: " : ""), ff->fname, errmsg);
       }
       ff->type = FT_DIREND;
       count_files(ff);
       break;
    case FT_SPEC:
       if (debug_level == 1) {
-	 printf("%s\n", ff->fname);
+         printf("%s\n", ff->fname);
       } else if (debug_level > 1) {
-	 printf("Spec: %s\n", ff->fname);
+         printf("Spec: %s\n", ff->fname);
       }
       count_files(ff);
       break;
@@ -260,7 +262,7 @@ static int print_file(FF_PKT *ff, void *pkt)
       char attr[200];
       encode_attribsEx(NULL, attr, ff);
       if (*attr != 0) {
-	 printf("AttrEx=%s\n", attr);
+         printf("AttrEx=%s\n", attr);
       }
 //    set_attribsEx(NULL, ff->fname, NULL, NULL, ff->type, attr);
    }
@@ -284,12 +286,12 @@ static void count_files(FF_PKT *ar)
     */
    for (p=l=ar->fname; *p; p++) {
       if (*p == '/') {
-	 l = p; 		      /* set pos of last slash */
+         l = p;                       /* set pos of last slash */
       }
    }
    if (*l == '/') {                   /* did we find a slash? */
-      l++;			      /* yes, point to filename */
-   } else {			      /* no, whole thing must be path name */
+      l++;                            /* yes, point to filename */
+   } else {                           /* no, whole thing must be path name */
       l = p;
    }
 
@@ -308,7 +310,7 @@ static void count_files(FF_PKT *ar)
       trunc_fname++;
    }
    if (fnl > 0) {
-      strncpy(file, l, fnl);	      /* copy filename */
+      strncpy(file, l, fnl);          /* copy filename */
       file[fnl] = 0;
    } else {
       file[0] = ' ';                  /* blank filename */
@@ -332,8 +334,10 @@ static void count_files(FF_PKT *ar)
       printf(_("========== Path length is zero. File=%s\n"), ar->fname);
    }
    if (debug_level >= 10) {
-      printf("Path: %s\n", spath);
-      printf("File: %s\n", file);
+      printf(_("Path: %s\n"), spath);
+      printf(_("File: %s\n"), file);
    }
 
 }
+
+bool python_set_prog(JCR*, char const*) { return false; }

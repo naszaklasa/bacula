@@ -54,6 +54,45 @@ Device {
 }
 
 #
+# An autochanger device with two drives
+#
+#Autochanger {
+#  Name = Autochanger
+#  Device = Drive-1
+#  Device = Drive-2
+#  Changer Command = "/home/kern/bacula/bin/mtx-changer %c %o %S %a %d"
+#  Changer Device = /dev/sg0
+#}
+
+#Device {
+#  Name = Drive-1                      #
+#  Drive Index = 0
+#  Media Type = DLT-8000
+#  Archive Device = /dev/nst0
+#  AutomaticMount = yes;               # when device opened, read it
+#  AlwaysOpen = yes;
+#  RemovableMedia = yes;
+#  RandomAccess = no;
+#  AutoChanger = yes
+#  # Enable the Alert command only if you have the mtx package loaded
+#  Alert Command = "sh -c 'tapeinfo -f %c |grep TapeAlert|cat'"
+#}
+
+#Device {
+#  Name = Drive-2                      #
+#  Drive Index = 1
+#  Media Type = DLT-8000
+#  Archive Device = /dev/nst1
+#  AutomaticMount = yes;               # when device opened, read it
+#  AlwaysOpen = yes;
+#  RemovableMedia = yes;
+#  RandomAccess = no;
+#  AutoChanger = yes
+#  # Enable the Alert command only if you have the mtx package loaded
+#  Alert Command = "sh -c 'tapeinfo -f %c |grep TapeAlert|cat'"
+#}
+
+#
 # A Linux or Solaris tape drive
 #
 #Device {
@@ -67,6 +106,7 @@ Device {
 ## Changer Command = "@scriptdir@/mtx-changer %c %o %S %a %d"
 ## Changer Device = /dev/sg0
 ## AutoChanger = yes
+#  # Enable the Alert command only if you have the mtx package loaded
 ## Alert Command = "sh -c 'tapeinfo -f %c |grep TapeAlert|cat'"
 #}
 
@@ -106,9 +146,43 @@ Device {
 #  Maximum Block Size = 32768
 #}
  
+#
+# A DVD device
+#
+#Device {
+#  Name = "DVD-Writer"
+#  Media Type = DVD
+#  Archive Device = /dev/hdc
+#  LabelMedia = yes;                   # lets Bacula label unlabeled media
+#  Random Access = Yes;
+#  AutomaticMount = yes;               # when device opened, read it
+#  RemovableMedia = yes;
+#  AlwaysOpen = no;
+#  MaximumPartSize = 800M;
+#  RequiresMount = yes;
+#  MountPoint = /mnt/cdrom;
+#  MountCommand = "/bin/mount -t iso9660 -o ro %a %m";
+#  UnmountCommand = "/bin/umount %m";
+#  SpoolDirectory = /tmp/backup;
+#  WritePartCommand = "/etc/bacula/dvd-handler %a write %e %v"
+#  FreeSpaceCommand = "/etc/bacula/dvd-handler %a free"
+#}
 
- 
-
+#
+# For OpenBSD OS >= 3.6
+#
+#Device {
+#  Name = DDS-3
+#  Media Type = DDS-3
+#  Archive Device = /dev/nrst0
+#  Use MTIOCGET= no
+#  BSF at EOM = yes
+#  TWO EOF = no
+#  AutomaticMount = yes;
+#  AlwaysOpen = yes;
+#  RemovableMedia = yes;
+#  RandomAccess = no;
+#}
 
 #
 # A very old Exabyte with no end of media detection

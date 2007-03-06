@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -32,7 +32,8 @@
 #include "winservice.h"
 #include <signal.h>
 #include <pthread.h>
-#include "../../findlib/winapi.h"
+#include "../../lib/winapi.h"
+#include "baconfig.h"
 
 extern int BaculaMain(int argc, char *argv[]);
 extern void terminate_filed(int sig);
@@ -47,6 +48,7 @@ DWORD           mainthreadId;
 
 /* Imported variables */
 extern DWORD    g_servicethread;
+extern DWORD    g_platform_id;
 
 #define MAX_COMMAND_ARGS 100
 static char *command_args[MAX_COMMAND_ARGS] = {"bacula-fd", NULL};
@@ -165,6 +167,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
       /* Now check for command-line arguments */
 
+      /* /service helper - probably only needed on win9x */
+      if (strncmp(&szCmdLine[i], BaculaRunServiceHelper, strlen(BaculaRunServiceHelper)) == 0
+          && g_platform_id == VER_PLATFORM_WIN32_NT) {
+         /* exit with result "okay" */
+         return 0;          
+      }
+
       /* /service start service */
       if (strncmp(&szCmdLine[i], BaculaRunService, strlen(BaculaRunService)) == 0) {
          /* Run Bacula as a service */
@@ -216,15 +225,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
       /* /help */
       if (strncmp(&szCmdLine[i], BaculaShowHelp, strlen(BaculaShowHelp)) == 0) {
-         MessageBox(NULL, BaculaUsageText, "Bacula Usage", MB_OK|MB_ICONINFORMATION);
+         MessageBox(NULL, BaculaUsageText, _("Bacula Usage"), MB_OK|MB_ICONINFORMATION);
          i += strlen(BaculaShowHelp);
          continue;
       }
       
-      MessageBox(NULL, szCmdLine, "Bad Command Line Options", MB_OK);
+      MessageBox(NULL, szCmdLine, _("Bad Command Line Options"), MB_OK);
 
       /* Show the usage dialog */
-      MessageBox(NULL, BaculaUsageText, "Bacula Usage", MB_OK | MB_ICONINFORMATION);
+      MessageBox(NULL, BaculaUsageText, _("Bacula Usage"), MB_OK | MB_ICONINFORMATION);
       break;
    }
 
@@ -299,39 +308,12 @@ void *Main_Msg_Loop(LPVOID lpwThreadParam)
  */
 int BaculaAppMain()
 {
-/* DWORD dwThreadID; */
+ /* DWORD dwThreadID; */
    pthread_t tid;
+
+   InitWinAPIWrapper();
+
    WSA_Init();
-   HINSTANCE hLib = LoadLibrary("KERNEL32.DLL");
-   if (hLib) {
-      p_GetFileAttributesEx = (t_GetFileAttributesEx)
-          GetProcAddress(hLib, "GetFileAttributesExA");
-      p_SetProcessShutdownParameters = (t_SetProcessShutdownParameters)
-          GetProcAddress(hLib, "SetProcessShutdownParameters");
-      p_BackupRead = (t_BackupRead)
-          GetProcAddress(hLib, "BackupRead");
-      p_BackupWrite = (t_BackupWrite)
-          GetProcAddress(hLib, "BackupWrite");
-      FreeLibrary(hLib);
-   }
-   hLib = LoadLibrary("ADVAPI32.DLL");
-   if (hLib) {
-      p_OpenProcessToken = (t_OpenProcessToken)
-         GetProcAddress(hLib, "OpenProcessToken");
-      p_AdjustTokenPrivileges = (t_AdjustTokenPrivileges)
-         GetProcAddress(hLib, "AdjustTokenPrivileges");
-      p_LookupPrivilegeValue = (t_LookupPrivilegeValue)
-         GetProcAddress(hLib, "LookupPrivilegeValueA");
-      FreeLibrary(hLib);
-   }
-   /*  
-    * Even if these are defined, don't use on old 
-    *  platforms.
-    */
-   if (bacService::IsWin95()) {
-      p_BackupRead = NULL;
-      p_BackupWrite = NULL;
-   }
 
    /* Set this process to be the last application to be shut down. */
    if (p_SetProcessShutdownParameters) {
@@ -341,9 +323,10 @@ int BaculaAppMain()
    HWND hservwnd = FindWindow(MENU_CLASS_NAME, NULL);
    if (hservwnd != NULL) {
       /* We don't allow multiple instances! */
-      MessageBox(NULL, "Another instance of Bacula is already running", szAppName, MB_OK);
+      MessageBox(NULL, _("Another instance of Bacula is already running"), szAppName, MB_OK);
       _exit(0);
    }
+
 
    /* Create a thread to handle the Windows messages */
 // (void)CreateThread(NULL, 0, Main_Msg_Loop, NULL, 0, &dwThreadID);

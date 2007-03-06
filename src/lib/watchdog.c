@@ -1,29 +1,23 @@
 /*
- * Bacula thread watchdog routine. General routine that monitors
- *  the daemon and signals a thread if it is blocked on a BSOCK
- *  too long. This prevents catastropic long waits -- generally
- *  due to Windows "hanging" the app.
+ * Bacula thread watchdog routine. General routine that 
+ *  allows setting a watchdog timer with a callback that is
+ *  called when the timer goes off.
  *
  *  Kern Sibbald, January MMII
  *
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -31,7 +25,7 @@
 #include "jcr.h"
 
 /* Exported globals */
-time_t watchdog_time = 0;	      /* this has granularity of SLEEP_TIME */
+time_t watchdog_time = 0;             /* this has granularity of SLEEP_TIME */
 time_t watchdog_sleep_time = 60;      /* examine things every 60 seconds */
 
 /* Locals */
@@ -47,7 +41,7 @@ static void wd_unlock();
 /* Static globals */
 static bool quit = false;;
 static bool wd_is_init = false;
-static brwlock_t lock;		      /* watchdog lock */
+static brwlock_t lock;                /* watchdog lock */
 
 static pthread_t wd_tid;
 static dlist *wd_queue;
@@ -57,7 +51,7 @@ static dlist *wd_inactive;
  * Start watchdog thread
  *
  *  Returns: 0 on success
- *	     errno on failure
+ *           errno on failure
  */
 int start_watchdog(void)
 {
@@ -73,7 +67,7 @@ int start_watchdog(void)
 
    if ((errstat=rwl_init(&lock)) != 0) {
       Emsg1(M_ABORT, 0, _("Unable to initialize watchdog lock. ERR=%s\n"),
-	    strerror(errstat));
+            strerror(errstat));
    }
    wd_queue = New(dlist(dummy, &dummy->link));
    wd_inactive = New(dlist(dummy, &dummy->link));
@@ -100,7 +94,7 @@ static void ping_watchdog()
  * Terminate the watchdog thread
  *
  * Returns: 0 on success
- *	    errno on failure
+ *          errno on failure
  */
 int stop_watchdog(void)
 {
@@ -111,7 +105,7 @@ int stop_watchdog(void)
       return 0;
    }
 
-   quit = true; 		      /* notify watchdog thread to stop */
+   quit = true;                       /* notify watchdog thread to stop */
    wd_is_init = false;
 
    ping_watchdog();
@@ -122,7 +116,7 @@ int stop_watchdog(void)
       wd_queue->remove(item);
       p = (watchdog_t *)item;
       if (p->destructor != NULL) {
-	 p->destructor(p);
+         p->destructor(p);
       }
       free(p);
    }
@@ -134,7 +128,7 @@ int stop_watchdog(void)
       wd_inactive->remove(item);
       p = (watchdog_t *)item;
       if (p->destructor != NULL) {
-	 p->destructor(p);
+         p->destructor(p);
       }
       free(p);
    }
@@ -168,13 +162,13 @@ watchdog_t *new_watchdog(void)
 bool register_watchdog(watchdog_t *wd)
 {
    if (!wd_is_init) {
-      Emsg0(M_ABORT, 0, "BUG! register_watchdog called before start_watchdog\n");
+      Emsg0(M_ABORT, 0, _("BUG! register_watchdog called before start_watchdog\n"));
    }
    if (wd->callback == NULL) {
-      Emsg1(M_ABORT, 0, "BUG! Watchdog %p has NULL callback\n", wd);
+      Emsg1(M_ABORT, 0, _("BUG! Watchdog %p has NULL callback\n"), wd);
    }
    if (wd->interval == 0) {
-      Emsg1(M_ABORT, 0, "BUG! Watchdog %p has zero interval\n", wd);
+      Emsg1(M_ABORT, 0, _("BUG! Watchdog %p has zero interval\n"), wd);
    }
 
    wd_lock();
@@ -194,25 +188,25 @@ bool unregister_watchdog(watchdog_t *wd)
    bool ok = false;
 
    if (!wd_is_init) {
-      Emsg0(M_ABORT, 0, "BUG! unregister_watchdog_unlocked called before start_watchdog\n");
+      Emsg0(M_ABORT, 0, _("BUG! unregister_watchdog_unlocked called before start_watchdog\n"));
    }
 
    wd_lock();
    foreach_dlist(p, wd_queue) {
       if (wd == p) {
-	 wd_queue->remove(wd);
+         wd_queue->remove(wd);
          Dmsg1(800, "Unregistered watchdog %p\n", wd);
-	 ok = true;
-	 goto get_out;
+         ok = true;
+         goto get_out;
       }
    }
 
    foreach_dlist(p, wd_inactive) {
       if (wd == p) {
-	 wd_inactive->remove(wd);
+         wd_inactive->remove(wd);
          Dmsg1(800, "Unregistered inactive watchdog %p\n", wd);
-	 ok = true;
-	 goto get_out;
+         ok = true;
+         goto get_out;
       }
    }
 
@@ -224,6 +218,12 @@ get_out:
    return ok;
 }
 
+/*
+ * This is the thread that walks the watchdog queue
+ *  and when a queue item fires, the callback is
+ *  invoked.  If it is a one shot, the queue item
+ *  is moved to the inactive queue.
+ */
 extern "C" void *watchdog_thread(void *arg)
 {
    struct timespec timeout;
@@ -237,6 +237,10 @@ extern "C" void *watchdog_thread(void *arg)
       watchdog_t *p;
 
       /*
+       *
+       *  NOTE. lock_jcr_chain removed, but the message below
+       *   was left until we are sure there are no deadlocks.
+       *  
        * We lock the jcr chain here because a good number of the
        *   callback routines lock the jcr chain. We need to lock
        *   it here *before* the watchdog lock because the SD message
@@ -245,32 +249,31 @@ extern "C" void *watchdog_thread(void *arg)
        *   lock in the same order, we get a deadlock -- each holds
        *   the other's needed lock.
        */
-      lock_jcr_chain();
       wd_lock();
 
 walk_list:
       watchdog_time = time(NULL);
       next_time = watchdog_time + watchdog_sleep_time;
       foreach_dlist(p, wd_queue) {
-	 if (p->next_fire <= watchdog_time) {
-	    /* Run the callback */
-	    p->callback(p);
+         if (p->next_fire <= watchdog_time) {
+            /* Run the callback */
+            Dmsg2(3400, "Watchdog callback p=0x%p fire=%d\n", p, p->next_fire);
+            p->callback(p);
 
             /* Reschedule (or move to inactive list if it's a one-shot timer) */
-	    if (p->one_shot) {
-	       wd_queue->remove(p);
-	       wd_inactive->append(p);
-	       goto walk_list;
-	    } else {
-	       p->next_fire = watchdog_time + p->interval;
-	    }
-	 }
-	 if (p->next_fire < next_time) {
-	    next_time = p->next_fire;
-	 }
+            if (p->one_shot) {
+               wd_queue->remove(p);
+               wd_inactive->append(p);
+               goto walk_list;
+            } else {
+               p->next_fire = watchdog_time + p->interval;
+            }
+         }
+         if (p->next_fire <= next_time) {
+            next_time = p->next_fire;
+         }
       }
       wd_unlock();
-      unlock_jcr_chain();
 
       /*
        * Wait sleep time or until someone wakes us
@@ -279,11 +282,11 @@ walk_list:
       timeout.tv_nsec = tv.tv_usec * 1000;
       timeout.tv_sec = tv.tv_sec + next_time - time(NULL);
       while (timeout.tv_nsec >= 1000000000) {
-	 timeout.tv_nsec -= 1000000000;
-	 timeout.tv_sec++;
+         timeout.tv_nsec -= 1000000000;
+         timeout.tv_sec++;
       }
 
-      Dmsg1(900, "pthread_cond_timedwait %d\n", timeout.tv_sec - tv.tv_sec);
+      Dmsg1(1900, "pthread_cond_timedwait %d\n", timeout.tv_sec - tv.tv_sec);
       /* Note, this unlocks mutex during the sleep */
       P(timer_mutex);
       pthread_cond_timedwait(&timer, &timer_mutex, &timeout);
@@ -303,8 +306,8 @@ static void wd_lock()
 {
    int errstat;
    if ((errstat=rwl_writelock(&lock)) != 0) {
-      Emsg1(M_ABORT, 0, "rwl_writelock failure. ERR=%s\n",
-	   strerror(errstat));
+      Emsg1(M_ABORT, 0, _("rwl_writelock failure. ERR=%s\n"),
+           strerror(errstat));
    }
 }
 
@@ -317,7 +320,7 @@ static void wd_unlock()
 {
    int errstat;
    if ((errstat=rwl_writeunlock(&lock)) != 0) {
-      Emsg1(M_ABORT, 0, "rwl_writeunlock failure. ERR=%s\n",
-	   strerror(errstat));
+      Emsg1(M_ABORT, 0, _("rwl_writeunlock failure. ERR=%s\n"),
+           strerror(errstat));
    }
 }

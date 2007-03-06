@@ -1,9 +1,11 @@
 #
 # Bacula Tools Makefile
 #
-# Version $Id: Makefile.in,v 1.18.4.1 2005/02/14 10:02:28 kerns Exp $
+# Version $Id: Makefile.in,v 1.26.2.3 2006/04/12 20:49:17 kerns Exp $
 #
 @MCOMMON@
+
+PYTHON_INC = @PYTHON_INCDIR@
 
 srcdir =	.
 VPATH = 	.
@@ -23,6 +25,11 @@ dummy:
 
 #
 
+GETTEXT_LIBS = @LIBINTL@
+
+OPENSSL_INC = @OPENSSL_INC@
+OPENSSL_LIBS = @OPENSSL_LIBS@
+
 FINDOBJS = testfind.o
 
 # these are the objects that are changed by the .configure process
@@ -30,34 +37,53 @@ EXTRAOBJS = @OBJLIST@
 
 DIRCONFOBJS = ../dird/dird_conf.o ../dird/run_conf.o ../dird/inc_conf.o
 
+NODIRTOOLS = bsmtp
+DIRTOOLS = bsmtp dbcheck fstype testfind testls bregex bwild
+TOOLS = $(@DIR_TOOLS@)
+
+INSNODIRTOOLS = bsmtp
+INSDIRTOOLS = bsmtp dbcheck bwild bregex
+INSTOOLS = $(INS@DIR_TOOLS@)
+
+
 .SUFFIXES:	.c .o
 .PHONY:
 .DONTCARE:
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile bsmtp dbcheck fstype testfind testls 
+all: Makefile $(TOOLS) 
 	@echo "==== Make of tools is good ===="
 	@echo " "
 
 bsmtp:	bsmtp.o ../lib/libbac.a        
-	$(CXX) $(LDFLAGS) -L../lib -o $@ bsmtp.o -lbac -lm $(DLIB) $(LIBS) 
+	$(CXX) $(LDFLAGS) -L../lib -o $@ bsmtp.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 dbcheck: dbcheck.o ../lib/libbac.a ../cats/libsql.a $(DIRCONFOBJS)
-	$(CXX) $(LDFLAGS) -L../lib -L../cats -o $@ dbcheck.o $(DIRCONFOBJS) -lsql -lbac -lm $(DB_LIBS) $(LIBS) 
+	$(CXX) $(LDFLAGS) -L../lib -L../cats -o $@ dbcheck.o $(DIRCONFOBJS) -lsql -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 fstype: fstype.o ../lib/libbac.a ../findlib/libfind.a
-	$(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ fstype.o -lfind -lbac -lm $(DLIB) $(LIBS) 
+	$(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ fstype.o -lfind -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 testfind: ../findlib/libfind.a ../lib/libbac.a $(FINDOBJS)
 	$(CXX) -g $(LDFLAGS) -L. -L../lib -L../findlib -o $@ $(FINDOBJS) \
-	  $(DLIB) -lfind -lbac -lm $(LIBS) 
+	  $(DLIB) -lfind -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 testls: ../findlib/libfind.a ../lib/libbac.a testls.o
 	$(CXX) -g $(LDFLAGS) -L. -L../lib -L../findlib -o $@ testls.o \
-	  $(DLIB) -lfind -lbac -lm $(LIBS) 
+	  $(DLIB) -lfind -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+
+bregex: ../findlib/libfind.a ../lib/libbac.a bregex.o
+	$(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bregex.o \
+	  $(DLIB) -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+
+bwild:	../findlib/libfind.a ../lib/libbac.a bwild.o
+	$(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bwild.o \
+	  $(DLIB) -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+
+
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
@@ -65,28 +91,30 @@ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 
 clean:
 	@$(RMF) bsmtp core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
-	@$(RMF) testfind dbcheck testls fstype
+	@$(RMF) $(DIRTOOLS)
 
 realclean: clean
 	@$(RMF) tags
 
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
-	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+	(cd $(srcdir); $(RMF) Makefile)
 
 devclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
 	(cd $(srcdir); $(RMF) Makefile)
 
 # Allow non-root execution of bsmtp for non-root Directors
-install: bsmtp
-	$(INSTALL_PROGRAM) bsmtp $(DESTDIR)$(sbindir)/bsmtp	 
+install: $(INSTOOLS)
+	@for tool in ${INSTOOLS} ; do \
+	   $(INSTALL_PROGRAM) $$tool $(DESTDIR)$(sbindir)/$$tool ; \
+	done
 	chmod 755 $(DESTDIR)$(sbindir)/bsmtp
-	$(INSTALL_PROGRAM) dbcheck $(DESTDIR)$(sbindir)/dbcheck      
 
 uninstall:
-	(cd $(DESTDIR)$(sbindir); $(RMF) bsmtp)
-	(cd $(DESTDIR)$(sbindir); $(RMF) dbcheck)
+	@for tool in ${INSTOOLS} ; do \
+	   $(RMF) $(DESTDIR)$(sbindir)/$$tool ; \
+	done
 
 
 
@@ -99,12 +127,12 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \
 	   $(MV) Makefile.bak Makefile; \
-	   echo -e "Something went wrong\n\a"; \
+	   echo " ===== Something went wrong in make depend ====="; \
 	fi
 
 # -----------------------------------------------------------------------

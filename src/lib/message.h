@@ -2,7 +2,7 @@
  * Define Message Types for Bacula
  *    Kern Sibbald, 2000
  *
- *   Version $Id: message.h,v 1.18 2004/11/15 22:43:33 kerns Exp $
+ *   Version $Id: message.h,v 1.19.4.1 2005/12/10 13:18:05 kerns Exp $
  */
 /*
    Copyright (C) 2000, 2001, 2002 Kern Sibbald and John Walker
@@ -40,7 +40,7 @@
 #undef  M_ALERT
 
 /*
- * Most of these message levels are more or less obvious. 
+ * Most of these message levels are more or less obvious.
  * They have evolved somewhat during the development of Bacula,
  * and here are some of the details of where I am trying to
  * head (in the process of changing the code) as of 15 June 2002.
@@ -57,7 +57,7 @@
  *  M_FATAL       Bacula detected a fatal Job error. The Job will be killed,
  *                  but Bacula continues running.
  *  M_ERROR       Bacula detected a Job error. The Job will continue running
- *                  but the termination status will be error. 
+ *                  but the termination status will be error.
  *  M_WARNING     Job warning message.
  *  M_INFO        Job information message.
  *
@@ -128,6 +128,7 @@ struct MQUEUE_ITEM {
 void d_msg(const char *file, int line, int level, const char *fmt,...);
 void e_msg(const char *file, int line, int type, int level, const char *fmt,...);
 void Jmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...);
+void Qmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...);
 
 extern int debug_level;
 extern int verbose;

@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, May 2004
  *
- *    Version $Id: wxbconfigfileeditor.h,v 1.3.10.1 2005/04/12 21:31:24 kerns Exp $
+ *    Version $Id: wxbconfigfileeditor.h,v 1.5 2005/08/27 14:33:39 nboichat Exp $
  */
 /*
    Copyright (C) 2004 Kern Sibbald and John Walker
@@ -39,8 +39,11 @@ private:
 
    wxTextCtrl* textCtrl;
 
+   bool firstpaint;
+
    void OnSave(wxCommandEvent& event);
    void OnQuit(wxCommandEvent& event);
+   void OnPaint(wxPaintEvent& event);
 
    DECLARE_EVENT_TABLE()
 };

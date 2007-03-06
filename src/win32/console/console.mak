@@ -68,15 +68,18 @@ CLEAN :
         -@erase "$(INTDIR)\print.obj"
         -@erase "$(INTDIR)\queue.obj"
         -@erase "$(INTDIR)\rwlock.obj"
+        -@erase "$(INTDIR)\res.obj"
         -@erase "$(INTDIR)\scan.obj"
         -@erase "$(INTDIR)\serial.obj"
         -@erase "$(INTDIR)\sha1.obj"
         -@erase "$(INTDIR)\smartall.obj"
+        -@erase "$(INTDIR)\tls.obj"
         -@erase "$(INTDIR)\StdAfx.obj"
         -@erase "$(INTDIR)\btimers.obj"
         -@erase "$(INTDIR)\util.obj"
         -@erase "$(INTDIR)\vc60.idb"
         -@erase "$(INTDIR)\watchdog.obj"
+        -@erase "$(INTDIR)\winapi.obj"
         -@erase "$(OUTDIR)\bconsole.exe"
 
 "$(OUTDIR)" :
@@ -117,14 +120,17 @@ LINK32_OBJS= \
         "$(INTDIR)\print.obj" \
         "$(INTDIR)\queue.obj" \
         "$(INTDIR)\rwlock.obj" \
+        "$(INTDIR)\res.obj" \
         "$(INTDIR)\scan.obj" \
         "$(INTDIR)\serial.obj" \
         "$(INTDIR)\sha1.obj" \
         "$(INTDIR)\smartall.obj" \
+        "$(INTDIR)\tls.obj" \
         "$(INTDIR)\StdAfx.obj" \
         "$(INTDIR)\btimers.obj" \
         "$(INTDIR)\util.obj" \
-        "$(INTDIR)\watchdog.obj"
+        "$(INTDIR)\watchdog.obj" \
+        "$(INTDIR)\winapi.obj"
 
 "$(OUTDIR)\bconsole.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
@@ -171,16 +177,19 @@ CLEAN :
         -@erase "$(INTDIR)\print.obj"
         -@erase "$(INTDIR)\queue.obj"
         -@erase "$(INTDIR)\rwlock.obj"
+        -@erase "$(INTDIR)\res.obj"
         -@erase "$(INTDIR)\scan.obj"
         -@erase "$(INTDIR)\serial.obj"
         -@erase "$(INTDIR)\sha1.obj"
         -@erase "$(INTDIR)\smartall.obj"
+        -@erase "$(INTDIR)\tls.obj"
         -@erase "$(INTDIR)\StdAfx.obj"
         -@erase "$(INTDIR)\btimers.obj"
         -@erase "$(INTDIR)\util.obj"
         -@erase "$(INTDIR)\vc60.idb"
         -@erase "$(INTDIR)\vc60.pdb"
         -@erase "$(INTDIR)\watchdog.obj"
+        -@erase "$(INTDIR)\winapi.obj"
         -@erase "$(OUTDIR)\bconsole.exe"
 
 "$(OUTDIR)" :
@@ -221,14 +230,17 @@ LINK32_OBJS= \
         "$(INTDIR)\print.obj" \
         "$(INTDIR)\queue.obj" \
         "$(INTDIR)\rwlock.obj" \
+        "$(INTDIR)\res.obj" \
         "$(INTDIR)\scan.obj" \
         "$(INTDIR)\serial.obj" \
         "$(INTDIR)\sha1.obj" \
         "$(INTDIR)\smartall.obj" \
+        "$(INTDIR)\tls.obj" \
         "$(INTDIR)\StdAfx.obj" \
         "$(INTDIR)\btimers.obj" \
         "$(INTDIR)\util.obj" \
-        "$(INTDIR)\watchdog.obj"
+        "$(INTDIR)\watchdog.obj" \
+        "$(INTDIR)\winapi.obj"
 
 "$(OUTDIR)\bconsole.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
@@ -438,6 +450,12 @@ SOURCE=..\lib\rwlock.cpp
         $(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE=..\lib\res.cpp
+
+"$(INTDIR)\res.obj" : $(SOURCE) "$(INTDIR)"
+        $(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE=..\lib\scan.cpp
 
 "$(INTDIR)\scan.obj" : $(SOURCE) "$(INTDIR)"
@@ -459,6 +477,11 @@ SOURCE=..\lib\sha1.cpp
 SOURCE=..\lib\smartall.cpp
 
 "$(INTDIR)\smartall.obj" : $(SOURCE) "$(INTDIR)"
+        $(CPP) $(CPP_PROJ) $(SOURCE)
+
+SOURCE=..\lib\tls.cpp
+
+"$(INTDIR)\tls.obj" : $(SOURCE) "$(INTDIR)"
         $(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -502,6 +525,13 @@ SOURCE=..\lib\watchdog.cpp
 
 "$(INTDIR)\watchdog.obj" : $(SOURCE) "$(INTDIR)"
         $(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\lib\winapi.cpp
+
+"$(INTDIR)\winapi.obj" : $(SOURCE) "$(INTDIR)"
+        $(CPP) $(CPP_PROJ) $(SOURCE)
+
 
 
 

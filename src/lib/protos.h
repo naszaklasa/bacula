@@ -1,29 +1,24 @@
 /*
  * Prototypes for lib directory of Bacula
  *
- *   Version $Id: protos.h,v 1.89.2.1 2005/02/14 10:02:26 kerns Exp $
+ *   Version $Id: protos.h,v 1.109.2.5 2006/03/20 19:50:56 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Copyright (C) 2000-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
-struct JCR;
+class JCR;
 
 /* attr.c */
 ATTR     *new_attr();
@@ -43,6 +38,7 @@ char     *bstrncpy               (char *dest, const char *src, int maxlen);
 char     *bstrncpy               (char *dest, POOL_MEM &src, int maxlen);
 char     *bstrncat               (char *dest, const char *src, int maxlen);
 char     *bstrncat               (char *dest, POOL_MEM &src, int maxlen);
+int       cstrlen                (const char *str);
 void     *b_malloc               (const char *file, int line, size_t size);
 #ifndef DEBUG
 void     *bmalloc                (size_t size);
@@ -70,9 +66,10 @@ bool       bnet_send             (BSOCK *bsock);
 bool       bnet_fsend            (BSOCK *bs, const char *fmt, ...);
 bool       bnet_set_buffer_size  (BSOCK *bs, uint32_t size, int rw);
 bool       bnet_sig              (BSOCK *bs, int sig);
-int        bnet_ssl_server       (BSOCK *bsock, char *password, int ssl_need, int ssl_has);
-int        bnet_ssl_client       (BSOCK *bsock, char *password, int ssl_need);
-BSOCK *    bnet_connect            (JCR *jcr, int retry_interval,
+int        bnet_tls_server       (TLS_CONTEXT *ctx, BSOCK *bsock,
+                                  alist *verify_list);
+int        bnet_tls_client       (TLS_CONTEXT *ctx, BSOCK *bsock);
+BSOCK *    bnet_connect          (JCR *jcr, int retry_interval,
                int max_retry_time, const char *name, char *host, char *service,
                int port, int verbose);
 void       bnet_close            (BSOCK *bsock);
@@ -89,6 +86,9 @@ bool       is_bnet_stop          (BSOCK *bsock);
 int        is_bnet_error         (BSOCK *bsock);
 void       bnet_suppress_error_messages(BSOCK *bsock, bool flag);
 dlist *bnet_host2ipaddrs(const char *host, int family, const char **errstr);
+int        bnet_set_blocking     (BSOCK *sock);
+int        bnet_set_nonblocking  (BSOCK *sock);
+void       bnet_restore_blocking (BSOCK *sock, int flags);
 
 /* bget_msg.c */
 int      bget_msg(BSOCK *sock);
@@ -99,8 +99,8 @@ int              close_wpipe(BPIPE *bpipe);
 int              close_bpipe(BPIPE *bpipe);
 
 /* cram-md5.c */
-int cram_md5_get_auth(BSOCK *bs, char *password, int ssl_need);
-int cram_md5_auth(BSOCK *bs, char *password, int ssl_need);
+int cram_md5_get_auth(BSOCK *bs, char *password, int *tls_remote_need);
+int cram_md5_auth(BSOCK *bs, char *password, int tls_local_need);
 void hmac_md5(uint8_t* text, int text_len, uint8_t*  key,
               int key_len, uint8_t *hmac);
 
@@ -114,12 +114,14 @@ void     daemon_start            ();
 /* edit.c */
 uint64_t         str_to_uint64(char *str);
 int64_t          str_to_int64(char *str);
+#define          str_to_int32(str) ((int32_t)str_to_int64(str))
+char *           edit_uint64_with_suffix   (uint64_t val, char *buf);
 char *           edit_uint64_with_commas   (uint64_t val, char *buf);
 char *           add_commas              (char *val, char *buf);
 char *           edit_uint64             (uint64_t val, char *buf);
 char *           edit_int64              (int64_t val, char *buf);
-int              duration_to_utime       (char *str, utime_t *value);
-int              size_to_uint64(char *str, int str_len, uint64_t *rtn_value);
+bool             duration_to_utime       (char *str, utime_t *value);
+bool             size_to_uint64(char *str, int str_len, uint64_t *rtn_value);
 char             *edit_utime             (utime_t val, char *buf, int buf_len);
 bool             is_a_number             (const char *num);
 bool             is_an_integer           (const char *n);
@@ -130,10 +132,15 @@ void init_last_jobs_list();
 void term_last_jobs_list();
 void lock_last_jobs_list();
 void unlock_last_jobs_list();
-void read_last_jobs_list(int fd, uint64_t addr);
+bool read_last_jobs_list(int fd, uint64_t addr);
 uint64_t write_last_jobs_list(int fd, uint64_t addr);
 void write_state_file(char *dir, const char *progname, int port);
 void job_end_push(JCR *jcr, void job_end_cb(JCR *jcr,void *), void *ctx);
+void lock_jobs();
+void unlock_jobs();
+JCR *jcr_walk_start();
+JCR *jcr_walk_next(JCR *prev_jcr);
+void jcr_walk_end(JCR *jcr);
 
 
 /* lex.c */
@@ -143,6 +150,7 @@ int       lex_get_char           (LEX *lf);
 void      lex_unget_char         (LEX *lf);
 const char *  lex_tok_to_str     (int token);
 int       lex_get_token          (LEX *lf, int expect);
+void      lex_set_default_error_handler (LEX *lf);
 
 /* message.c */
 void       my_name_is            (int argc, char *argv[], const char *name);
@@ -157,7 +165,6 @@ void       init_console_msg      (const char *wd);
 void       free_msgs_res         (MSGS *msgs);
 void       dequeue_messages      (JCR *jcr);
 void       set_trace             (int trace_flag);
-void       set_exit_on_error     (int value);
 
 /* bnet_server.c */
 void       bnet_thread_server(dlist *addr, int max_clients, workq_t *client_wq,
@@ -176,16 +183,20 @@ void free_getgroup_cache();
 
 /* python.c */
 typedef int (EVENT_HANDLER)(JCR *jcr, const char *event);
-void init_python_interpreter(const char *progname, const char *scripts);
+void init_python_interpreter(const char *progname, const char *scripts,
+                             const char *module);
 void term_python_interpreter();
-extern EVENT_HANDLER *generate_event;
+//extern EVENT_HANDLER *generate_daemon_event;
+int generate_daemon_event(JCR *jcr, const char *event);
 
 /* signal.c */
 void             init_signals             (void terminate(int sig));
 void             init_stack_dump          (void);
 
 /* scan.c */
+void             strip_leading_space     (char *str);
 void             strip_trailing_junk     (char *str);
+void             strip_trailing_newline  (char *str);
 void             strip_trailing_slashes  (char *dir);
 bool             skip_spaces             (char **msg);
 bool             skip_nonspaces          (char **msg);
@@ -196,6 +207,34 @@ int              parse_args(POOLMEM *cmd, POOLMEM **args, int *argc,
 void            split_path_and_filename(const char *fname, POOLMEM **path,
                         int *pnl, POOLMEM **file, int *fnl);
 int             bsscanf(const char *buf, const char *fmt, ...);
+
+
+/* tls.c */
+int              init_tls                (void);
+int              cleanup_tls             (void);
+
+TLS_CONTEXT      *new_tls_context        (const char *ca_certfile,
+                                          const char *ca_certdir,
+                                          const char *certfile,
+                                          const char *keyfile,
+                                          TLS_PEM_PASSWD_CB *pem_callback,
+                                          const void *pem_userdata,
+                                          const char *dhfile,
+                                          bool verify_peer);
+void             free_tls_context        (TLS_CONTEXT *ctx);
+#ifdef HAVE_TLS
+bool             tls_postconnect_verify_host  (TLS_CONNECTION *tls,
+                                               const char *host);
+bool             tls_postconnect_verify_cn    (TLS_CONNECTION *tls,
+                                               alist *verify_list);
+TLS_CONNECTION   *new_tls_connection     (TLS_CONTEXT *ctx, int fd);
+void             free_tls_connection     (TLS_CONNECTION *tls);
+bool             tls_bsock_connect       (BSOCK *bsock);
+bool             tls_bsock_accept        (BSOCK *bsock);
+void             tls_bsock_shutdown      (BSOCK *bsock);
+int              tls_bsock_writen        (BSOCK *bsock, char *ptr, int32_t nbytes);
+int              tls_bsock_readn         (BSOCK *bsock, char *ptr, int32_t nbytes);
+#endif /* HAVE_TLS */
 
 
 /* util.c */

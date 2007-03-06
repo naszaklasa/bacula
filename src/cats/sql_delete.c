@@ -1,13 +1,13 @@
 /*
  * Bacula Catalog Database Delete record interface routines
- * 
+ *
  *    Kern Sibbald, December 2000
  *
- *    Version $Id: sql_delete.c,v 1.14 2004/08/17 14:40:08 kerns Exp $
+ *    Version $Id: sql_delete.c,v 1.18 2005/04/01 15:21:39 kerns Exp $
  */
 
 /*
-   Copyright (C) 2000, 2001, 2002 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -37,7 +37,7 @@
 #include "cats.h"
 
 
-#if    HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
 /* -----------------------------------------------------------------------
  *
  *   Generic Routines (or almost generic)
@@ -50,7 +50,7 @@ extern void print_dashes(B_DB *mdb);
 extern void print_result(B_DB *mdb);
 extern int QueryDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
 extern int DeleteDB(const char *file, int line, JCR *jcr, B_DB *db, char *delete_cmd);
-       
+
 /*
  * Delete Pool record, must also delete all associated
  *  Media records.
@@ -74,7 +74,7 @@ db_delete_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
 
       mdb->num_rows = sql_num_rows(mdb);
-   
+
       if (mdb->num_rows == 0) {
          Mmsg(mdb->errmsg, _("No pool record %s exists\n"), pr->Name);
 	 sql_free_result(mdb);
@@ -91,7 +91,7 @@ db_delete_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 	 db_unlock(mdb);
 	 return 0;
       }
-      pr->PoolId = atoi(row[0]);
+      pr->PoolId = str_to_int64(row[0]);
       sql_free_result(mdb);
    }
 
@@ -115,7 +115,7 @@ db_delete_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 #define MAX_DEL_LIST_LEN 1000000
 
 struct s_del_ctx {
-   JobId_t *JobId; 
+   JobId_t *JobId;
    int num_ids; 		      /* ids stored */
    int max_ids; 		      /* size of array */
    int num_del; 		      /* number deleted */
@@ -133,7 +133,7 @@ static int delete_handler(void *ctx, int num_fields, char **row)
 {
    struct s_del_ctx *del = (struct s_del_ctx *)ctx;
 
-   if (del->num_ids == MAX_DEL_LIST_LEN) {  
+   if (del->num_ids == MAX_DEL_LIST_LEN) {
       return 1;
    }
    if (del->num_ids == del->max_ids) {
@@ -146,8 +146,8 @@ static int delete_handler(void *ctx, int num_fields, char **row)
 }
 
 
-/* 
- * This routine will purge (delete) all records 
+/*
+ * This routine will purge (delete) all records
  * associated with a particular Volume. It will
  * not delete the media record itself.
  */
@@ -155,6 +155,7 @@ static int do_media_purge(B_DB *mdb, MEDIA_DBR *mr)
 {
    POOLMEM *query = get_pool_memory(PM_MESSAGE);
    struct s_del_ctx del;
+   char ed1[50];
    int i;
 
    del.num_ids = 0;
@@ -173,11 +174,11 @@ static int do_media_purge(B_DB *mdb, MEDIA_DBR *mr)
 
    for (i=0; i < del.num_ids; i++) {
       Dmsg1(400, "Delete JobId=%d\n", del.JobId[i]);
-      Mmsg(query, "DELETE FROM Job WHERE JobId=%u", del.JobId[i]);
+      Mmsg(query, "DELETE FROM Job WHERE JobId=%s", edit_int64(del.JobId[i], ed1));
       db_sql_query(mdb, query, NULL, (void *)NULL);
-      Mmsg(query, "DELETE FROM File WHERE JobId=%u", del.JobId[i]);
+      Mmsg(query, "DELETE FROM File WHERE JobId=%s", edit_int64(del.JobId[i], ed1));
       db_sql_query(mdb, query, NULL, (void *)NULL);
-      Mmsg(query, "DELETE FROM JobMedia WHERE JobId=%u", del.JobId[i]);
+      Mmsg(query, "DELETE FROM JobMedia WHERE JobId=%s", edit_int64(del.JobId[i], ed1));
       db_sql_query(mdb, query, NULL, (void *)NULL);
    }
    free(del.JobId);
@@ -194,7 +195,7 @@ int db_delete_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
    if (mr->MediaId == 0 && !db_get_media_record(jcr, mdb, mr)) {
       db_unlock(mdb);
       return 0;
-   } 
+   }
    /* Do purge if not already purged */
    if (strcmp(mr->VolStatus, "Purged") != 0) {
       /* Delete associated records */
@@ -208,7 +209,7 @@ int db_delete_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 }
 
 /*
- * Purge all records associated with a 
+ * Purge all records associated with a
  * media record. This does not delete the
  * media record itself. But the media status
  * is changed to "Purged".
@@ -219,7 +220,7 @@ int db_purge_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
    if (mr->MediaId == 0 && !db_get_media_record(jcr, mdb, mr)) {
       db_unlock(mdb);
       return 0;
-   } 
+   }
    /* Delete associated records */
    do_media_purge(mdb, mr);	      /* Note, always purge */
 
@@ -235,4 +236,4 @@ int db_purge_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 }
 
 
-#endif /* HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL */
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL*/

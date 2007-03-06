@@ -1,16 +1,7 @@
-# $Id: Makefile.in,v 1.29 2004/08/03 10:01:08 kerns Exp $
+# $Id: Makefile.in,v 1.37.2.5 2006/04/12 20:49:17 kerns Exp $
 @MCOMMON@
 
-CWEB = @CWEB@
-CTANGLE = $(CWEB)/ctangle
-CWEAVE = $(CWEB)/cweave
-TEXINPUTS = TEXINPUTS=.:$(CWEB):
-
-# FIXME -- These should be found by autoconf
-TEX = tex
-PDFTEX = pdftex
-XDVI = xdvi
-DVIPS = dvips
+python = @PYTHON_INCDIR@
 
 srcdir =	.
 VPATH = 	.
@@ -26,8 +17,6 @@ thisdir = src/lib
 
 DEBUG=@DEBUG@
 
-GMP_INC=@GMP_INC@
-
 first_rule: all
 dummy:
 
@@ -37,10 +26,11 @@ LIBSRCS = alloc.c attr.c base64.c berrno.c bsys.c bget_msg.c \
 	  cram-md5.c crc32.c daemon.c edit.c fnmatch.c \
 	  hmac.c idcache.c jcr.c lex.c alist.c dlist.c \
 	  md5.c message.c mem_pool.c parse_conf.c \
-	  queue.c rwlock.c scan.c serial.c sha1.c \
-	  semlock.c signal.c smartall.c tree.c \
+	  queue.c bregex.c \
+	  res.c rwlock.c scan.c serial.c sha1.c \
+	  semlock.c signal.c smartall.c tls.c tree.c \
 	  util.c var.c watchdog.c workq.c btimers.c \
-	  address_conf.c
+	  address_conf.c pythonlib.c 
 
 
 LIBOBJS = alloc.o attr.o base64.o berrno.o bsys.o bget_msg.o \
@@ -49,13 +39,17 @@ LIBOBJS = alloc.o attr.o base64.o berrno.o bsys.o bget_msg.o \
 	  cram-md5.o crc32.o daemon.o edit.o fnmatch.o \
 	  hmac.o idcache.o jcr.o lex.o alist.o dlist.o \
 	  md5.o message.o mem_pool.o parse_conf.o \
-	  queue.o rwlock.o scan.o serial.o sha1.o \
-	  semlock.o signal.o smartall.o tree.o \
+	  queue.o bregex.o \
+	  res.o rwlock.o scan.o serial.o sha1.o \
+	  semlock.o signal.o smartall.o tls.o tree.o \
 	  util.o var.o watchdog.o workq.o btimers.o \
-	  address_conf.o
+	  address_conf.o pythonlib.o
 
 
 EXTRAOBJS = @OBJLIST@
+
+OPENSSL_LIBS=@OPENSSL_LIBS@
+OPENSSL_INC=@OPENSSL_INC@
 
 
 .SUFFIXES:	.c .o .ch .dvi .pdf .tex .view .w .1
@@ -64,25 +58,10 @@ EXTRAOBJS = @OBJLIST@
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(OPENSSL_INC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
 .cc.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
-
-.w.c:
-	$(CTANGLE) $<
-
-.w.tex:
-	$(CWEAVE) $<
-
-.tex.dvi:
-	( $(TEXINPUTS) ; export TEXINPUTS; $(TEX) $< )
-
-.tex.pdf:
-	( $(TEXINPUTS) ; export TEXINPUTS; $(PDFTEX) $< )
-
-.dvi.view:
-	$(XDVI) -s 0 $<
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(OPENSSL_INC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
 #-------------------------------------------------------------------------
 all: Makefile libbac.a
@@ -98,6 +77,9 @@ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
+pythonlib.o: pythonlib.c
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(python) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
 rwlock_test:
 	rm -f rwlock.o
 	$(CXX) -DTEST_RWLOCK $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) rwlock.c
@@ -105,18 +87,18 @@ rwlock_test:
 	rm -f rwlock.o
 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) rwlock.c
 
-md5sum:
+md5sum: md5.o	
 	rm -f md5.o
 	$(CXX) -DMD5_SUM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) md5.c
-	$(CXX) $(LDFLAGS) -L. -o $@ md5.o $(LIBS) $(DLIB) -lbac -lm
+	$(CXX) $(LDFLAGS) -L. -o $@ md5.o $(LIBS) $(DLIB) -lbac $(OPENSSL_LIBS) -lm
 	rm -f md5.o
 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) md5.c
 
 
-sha1sum:
+sha1sum: sha1.o
 	rm -f sha1.o
 	$(CXX) -DSHA1_SUM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)	$(CFLAGS) sha1.c
-	$(CXX) $(LDFLAGS) -L. -o $@ sha1.o $(LIBS) $(DLIB) -lbac -lm
+	$(CXX) $(LDFLAGS) -L. -o $@ sha1.o $(LIBS) $(DLIB) -lbac $(OPENSSL_LIBS) -lm
 	rm -f sha1.o
 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) md5.c
 	 
@@ -133,7 +115,7 @@ realclean: clean
 
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
-	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+	(cd $(srcdir); $(RMF) Makefile)
 
 # Semi-automatic generation of dependencies:
 # Use gcc -MM because X11 `makedepend' doesn't work on all systems
@@ -141,16 +123,18 @@ distclean: realclean
 # `semi'-automatic since dependencies are generated at distribution time.
 
 depend:
+	@$(RMF) -f Makefile.bak
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >>Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \
 	   $(MV) Makefile.bak Makefile; \
-	   echo -e "Something went wrong\n\a"; \
+	   echo " ===== Something went wrong in make depend ====="; \
 	fi
 
+
 # -----------------------------------------------------------------------
-# DO NOT DELETE: nice dependency list follows
+# DO NOT DELETE: nice dependency list follows 

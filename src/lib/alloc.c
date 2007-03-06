@@ -2,7 +2,7 @@
 
 	Error checking memory allocator
 
-     Version $Id: alloc.c,v 1.3 2004/04/10 11:12:14 kerns Exp $
+     Version $Id: alloc.c,v 1.4 2004/12/21 16:18:38 kerns Exp $
 */
 
 /*
@@ -52,8 +52,8 @@ void *sm_alloc(char *fname, int lineno, unsigned int nbytes)
 	if ((buf = sm_malloc(fname, lineno, nbytes)) != NULL) {
 	   return buf;
 	}
-        V fprintf(stderr, "\nBoom!!!  Memory capacity exceeded.\n");
-        V fprintf(stderr, "  Requested %u bytes at line %d of %s.\n",
+	V fprintf(stderr, "\nBoom!!!  Memory capacity exceeded.\n");
+	V fprintf(stderr, "  Requested %u bytes at line %d of %s.\n",
 	   nbytes, lineno, fname);
 	abort();
 	/*NOTREACHED*/
@@ -69,8 +69,8 @@ void *alloc(unsigned int nbytes)
 	if ((buf = malloc(nbytes)) != NULL) {
 	   return buf;
 	}
-        V fprintf(stderr, "\nBoom!!!  Memory capacity exceeded.\n");
-        V fprintf(stderr, "  Requested %u bytes.\n", nbytes);
+	V fprintf(stderr, "\nBoom!!!  Memory capacity exceeded.\n");
+	V fprintf(stderr, "  Requested %u bytes.\n", nbytes);
 	abort();
 	/*NOTREACHED*/
 }

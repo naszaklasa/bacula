@@ -1,0 +1,24 @@
+
+ This patch fixes a bug where a tape gets "truncated" after
+ doing a restore. The number of files in the catalog do not
+ agree with what Bacula thinks is on tape, then the tape is
+ marked in error.
+ Apply this patch to version 1.36.1 with:
+
+ cd <bacula>
+ patch -p0 <1.36.1-truncate.patch
+ make
+ ...
+
+
+--- src/stored/read_record.c.orig	2004-09-29 21:11:17.000000000 +0200
++++ src/stored/read_record.c	2005-02-15 13:22:12.723140229 +0100
+@@ -266,7 +266,7 @@
+       Dmsg2(300, "Current postion (file:block) %d:%d\n",
+ 	 dev->file, dev->block_num);
+       jcr->bsr->mount_next_volume = false;
+-      dev->state |= ST_EOT;
++//    dev->state |= ST_EOT;
+       rec->Block = 0;
+       return 1;
+    }	 

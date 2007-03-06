@@ -3,7 +3,7 @@
  *
  *     Kern Sibbald, March 2002
  *
- *     Version $Id: console.h,v 1.6 2004/06/15 17:22:19 kerns Exp $
+ *     Version $Id: console.h,v 1.7 2004/12/21 16:18:37 kerns Exp $
  */
 
 #ifndef __CONSOLE_H_
@@ -22,10 +22,10 @@ extern GtkWidget *app1;       /* application window */
 extern GtkWidget *text1;      /* text window */
 extern GtkWidget *entry1;     /* entry box */
 extern GtkWidget *combo1;     /* Directory combo */
-extern GtkWidget *dir_dialog; 
+extern GtkWidget *dir_dialog;
 extern GtkWidget *dir_select;
 extern GtkWidget *run_dialog;       /* run dialog */
-extern GtkWidget *label_dialog;     
+extern GtkWidget *label_dialog;
 extern GtkWidget *restore_dialog;   /* restore dialog */
 extern GtkWidget *restore_file_selection;   /* restore files dialog */
 extern GtkWidget *about1;

@@ -27,6 +27,7 @@
 ..\lib\message
 ..\lib\parse_conf
 ..\lib\queue
+..\lib\res
 ..\lib\rwlock
 ..\lib\scan
 ..\lib\semlock
@@ -35,10 +36,12 @@
 ..\lib\signal
 ..\lib\smartall
 ..\lib\btimers
+..\lib\tls
 ..\lib\tree
 ..\lib\util
 ..\lib\var
 ..\lib\watchdog
+..\lib\winapi
 ..\lib\workq
 ..\compat\compat
 ..\compat\print

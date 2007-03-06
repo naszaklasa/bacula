@@ -1,0 +1,47 @@
+
+ This patch corrects a compile problem because of no statfs() 
+ on NetBSD. The patch was submitted by kardel with bug 258.
+
+ Apply the patch to version 1.36.2 with:
+
+ cd <bacula>
+ patch -p0 <1.36.2-netbsd.patch
+ make
+ ...
+
+Index: src/findlib/fstype.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/findlib/fstype.c,v
+retrieving revision 1.7.2.2
+diff -u -r1.7.2.2 fstype.c
+--- src/findlib/fstype.c	25 Feb 2005 09:47:06 -0000	1.7.2.2
++++ src/findlib/fstype.c	15 Mar 2005 14:01:44 -0000
+@@ -61,7 +61,6 @@
+  */
+ #if defined(HAVE_DARWIN_OS) \
+    || defined(HAVE_FREEBSD_OS ) \
+-   || defined(HAVE_NETBSD_OS) \
+    || defined(HAVE_OPENBSD_OS)
+ 
+ #include <sys/param.h>
+@@ -77,7 +76,20 @@
+    Dmsg1(50, "statfs() failed for \"%s\"\n", fname);
+    return false;
+ }
++#elif defined(HAVE_NETBSD_OS)
++#include <sys/param.h>
++#include <sys/mount.h>
+ 
++bool fstype(const char *fname, char *fs, int fslen)
++{
++   struct statvfs st;
++   if (statvfs(fname, &st) == 0) {
++      bstrncpy(fs, st.f_fstypename, fslen);
++      return true;
++   }
++   Dmsg1(50, "statfs() failed for \"%s\"\n", fname);
++   return false;
++}
+ #elif defined(HAVE_HPUX_OS) \
+    || defined(HAVE_IRIX_OS)
+ 

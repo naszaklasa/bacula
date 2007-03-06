@@ -78,8 +78,6 @@ clean:
 
 distclean: clean
 	@rm -f Makefile bacula-*.spec
-	@rm -rf CVS
 
 devclean: clean
 	@rm -f Makefile bacula-*.spec
-

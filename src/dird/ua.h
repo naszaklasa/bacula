@@ -3,25 +3,20 @@
  *
  *     Kern Sibbald, August MMI
  *
- *     Version $Id: ua.h,v 1.23.8.1 2005/02/14 10:02:21 kerns Exp $
+ *     Version $Id: ua.h,v 1.27.2.1 2005/12/20 23:15:01 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -49,9 +44,11 @@ struct UAContext {
    bool quit;                         /* if set, quit */
    bool verbose;                      /* set for normal UA verbosity */
    bool batch;                        /* set for non-interactive mode */
+   bool gui;                          /* set if talking to GUI program */
    uint32_t pint32_val;               /* positive integer */
    int32_t  int32_val;                /* positive/negative */
-};          
+   int64_t  int64_val;                /* big int */
+};
 
 /* Context for insert_tree_handler() */
 struct TREE_CTX {
@@ -66,5 +63,42 @@ struct TREE_CTX {
    uint32_t LastCount;                /* last count of files */
    uint32_t DeltaCount;               /* trigger for printing */
 };
+
+struct NAME_LIST {
+   char **name;                       /* list of names */
+   int num_ids;                       /* ids stored */
+   int max_ids;                       /* size of array */
+   int num_del;                       /* number deleted */
+   int tot_ids;                       /* total to process */
+};
+
+
+/* Main structure for obtaining JobIds or Files to be restored */
+struct RESTORE_CTX {
+   utime_t JobTDate;
+   uint32_t TotalFiles;
+   JobId_t JobId;
+   char ClientName[MAX_NAME_LENGTH];
+   char last_jobid[20];
+   POOLMEM *JobIds;                   /* User entered string of JobIds */
+   STORE  *store;
+   JOB *restore_job;
+   POOL *pool;
+   int restore_jobs;
+   uint32_t selected_files;
+   char *where;
+   RBSR *bsr;
+   POOLMEM *fname;                    /* filename only */
+   POOLMEM *path;                     /* path only */
+   POOLMEM *query;
+   int fnl;                           /* filename length */
+   int pnl;                           /* path length */
+   bool found;
+   bool all;                          /* mark all as default */
+   NAME_LIST name_list;
+};
+
+#define MAX_ID_LIST_LEN 1000000
+
 
 #endif

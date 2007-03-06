@@ -1,0 +1,48 @@
+Index: src/wx-console/wxbrestorepanel.cpp
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/wx-console/wxbrestorepanel.cpp,v
+retrieving revision 1.40.8.1
+diff -u -r1.40.8.1 wxbrestorepanel.cpp
+--- src/wx-console/wxbrestorepanel.cpp	24 Mar 2005 14:52:55 -0000	1.40.8.1
++++ src/wx-console/wxbrestorepanel.cpp	5 May 2005 18:45:05 -0000
+@@ -1469,23 +1469,29 @@
+ wxString* wxbRestorePanel::ParseList(wxString line) {
+    /* See ls_output in dird/ua_tree.c */
+   
+-   //drwxrwxrwx   1 root     root           0  2004-04-03 14:35:21  f:/tocd/NVSU 1.00.00/
+-   //+ 10     +  ++ +   8  + +   8  ++   8  +  +      19         + *+ ->
+-   //0           12 15       24      32        42                  62
+-
++   //drwxrwxrwx  111 root     root           0  2004-04-03 14:35:21  f:/tocd/NVSU 1.00.00/
++   //+ 10     +  +i+ +   8  + +   8  ++   8  +  +      19         + *+ ->
++   //0           12  i+15     i+24    i+32      i+42                i+62
++ 
++   int i;
++   
+    if (line.Length() < 63)
+       return NULL;
+ 
+    wxString* ret = new wxString[9];
+ 
+    ret[0] = line.Mid(0, 10).Trim();
+-   ret[1] = line.Mid(12, 2).Trim();
+-   ret[2] = line.Mid(15, 8).Trim();
+-   ret[3] = line.Mid(24, 8).Trim();
+-   ret[4] = line.Mid(32, 8).Trim();
+-   ret[5] = line.Mid(42, 19).Trim();
+-   ret[6] = line.Mid(62, 1);
+-   ret[7] = line.Mid(63).Trim();
++   
++   /* Column 1 has a variable width  */
++   i = line.find(' ', 14) - 14;
++   ret[1] = line.Mid(12, 2+i).Trim();
++      
++   ret[2] = line.Mid(15+i, 8).Trim();
++   ret[3] = line.Mid(24+i, 8).Trim();
++   ret[4] = line.Mid(32+i, 8).Trim();
++   ret[5] = line.Mid(42+i, 19).Trim();
++   ret[6] = line.Mid(62+i, 1);
++   ret[7] = line.Mid(63+i).Trim();
+ 
+    if (ret[6] == " ") ret[6] = "";
+ 

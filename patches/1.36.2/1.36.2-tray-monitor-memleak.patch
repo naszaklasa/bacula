@@ -1,0 +1,92 @@
+ 
+ This patch should fix memory leaks in tray-monitor.
+ Apply the patch to 1.36.2 with:
+
+ cd <bacula-source>/src/tray-monitor
+ patch -p0 <1.36.2-tray-monitor-memleak.patch
+ make
+ ...
+
+Index: tray-monitor.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/tray-monitor/tray-monitor.c,v
+retrieving revision 1.19
+diff -r1.19 tray-monitor.c
+36a37,38
+> #define TRAY_DEBUG_MEMORY 0
+> 
+50d51
+< static POOLMEM *args;
+135a137,157
+> int sm_line = 0;
+> 
+> #if TRAY_DEBUG_MEMORY
+> gpointer smt_malloc(gsize    n_bytes) {
+>    return sm_malloc("GLib", sm_line, n_bytes);
+> }
+>   
+> gpointer smt_realloc(gpointer mem, gsize    n_bytes) {
+>    return sm_realloc("GLib", sm_line, mem, n_bytes);
+> }
+> 
+> gpointer smt_calloc(gsize    n_blocks,
+>                     gsize    n_block_bytes) {
+>    return sm_calloc("GLib", sm_line, n_blocks, n_block_bytes);
+> }
+> 
+> void     smt_free(gpointer mem) {
+>    sm_free("Glib", sm_line, mem);
+> }
+> #endif
+> 
+142a165,175
+> #if TRAY_DEBUG_MEMORY
+>    GMemVTable smvtable;
+>    smvtable.malloc = &smt_malloc;
+>    smvtable.realloc = &smt_realloc;
+>    smvtable.free = &smt_free;
+>    smvtable.calloc = &smt_calloc;
+>    smvtable.try_malloc = NULL;
+>    smvtable.try_realloc = NULL;
+>    g_mem_set_vtable(&smvtable);
+> #endif
+>    
+154d186
+<    args = get_pool_memory(PM_FNAME);
+255c287
+<       g_assert((xpm_generic_var[i] = (char*)g_malloc(strlen(xpm_generic[i])*sizeof(char))));
+---
+>       g_assert((xpm_generic_var[i] = (char*)g_malloc((strlen(xpm_generic[i])+1)*sizeof(char))));
+412a445,448
+>    
+>    g_source_remove(timerTag);
+>    
+>    sm_line = 0;
+422d457
+<    free_pool_memory(args);
+429a465,468
+>    
+>    gtk_object_destroy(GTK_OBJECT(window));
+>    gtk_object_destroy(GTK_OBJECT(mTrayMenu));
+>    term_msg();
+430a470,473
+> #if TRAY_DEBUG_MEMORY
+>    sm_dump(false);
+> #endif
+>    
+534c577,581
+<    GtkTextBuffer *newbuffer = gtk_text_buffer_new(NULL);
+---
+>    sm_line++;
+> #if TRAY_DEBUG_MEMORY
+>    printf("sm_line=%d\n", sm_line);
+> #endif
+>    GtkTextBuffer *newbuffer;
+546a594,595
+>       newbuffer = gtk_text_buffer_new(NULL);
+>       
+558a608,609
+>       g_slist_free(list);
+>             
+963a1015
+>    g_object_unref(G_OBJECT(pixbuf));

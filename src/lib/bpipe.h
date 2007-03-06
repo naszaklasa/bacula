@@ -1,7 +1,7 @@
-/* 
+/*
  *   Bi-directional pipe structure
  *
- *   Version $Id: bpipe.h,v 1.4 2004/08/06 21:57:01 kerns Exp $
+ *   Version $Id: bpipe.h,v 1.5 2004/12/21 16:18:38 kerns Exp $
  */
 
 /*

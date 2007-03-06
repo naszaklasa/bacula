@@ -12,9 +12,9 @@ else
     echo "Granting PostgreSQL privileges"
     @scriptdir@/grant_postgresql_privileges $*
   else
-    if test xsqlite = x@DB_NAME@ ; then 
+    if test xsqlite = x@DB_NAME@ -o xsqlite3 = x@DB_NAME@ ; then 
       echo "Granting SQLite privileges"
-      @scriptdir@/grant_sqlite_privileges $*
+      @scriptdir@/grant_@DB_NAME@_privileges $*
     fi
   fi
 fi

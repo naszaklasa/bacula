@@ -5,7 +5,7 @@
  *
  *    Nicolas Boichat, April-July 2004
  *
- *   Version $Id: wxbutils.h,v 1.5.10.1 2005/04/12 21:31:25 kerns Exp $
+ *   Version $Id: wxbutils.h,v 1.8 2005/05/05 13:50:31 nboichat Exp $
  */
 /*
    Copyright (C) 2004 Kern Sibbald and John Walker
@@ -63,7 +63,12 @@ class wxbUtils
        * if keepresults is true, returns a valid pointer to a wxbPromptParser
        * containing the data. */
       static wxbPromptParser* WaitForPrompt(wxString cmd, bool keepresults = false);
-
+      
+      /* Sleeps during milliseconds (wrapper for wxUsleep (2.4) or wxMilliSleep (2.6)) */
+      static void MilliSleep(unsigned long milliseconds);
+      
+      static wxString ConvertToPrintable(wxString& str);
+      
    private:
       static bool inited;
 };

@@ -1,15 +1,15 @@
-/* 
+/*
  * Dumb Windows program to put up a message box
  * containing the command line.  Any leading and
  * trailing quotes are stripped.
- * 
+ *
  *  Kern E. Sibbald
- *   July MM  
+ *   July MM
  */
 #include "windows.h"
 
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		   PSTR szCmdLine, int iCmdShow)
 {
    int len = strlen(szCmdLine);

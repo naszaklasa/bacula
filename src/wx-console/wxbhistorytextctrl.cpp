@@ -4,24 +4,21 @@
  *
  *    Nicolas Boichat, July 2004
  *
- *    Version $Id: wxbhistorytextctrl.cpp,v 1.5 2004/08/12 23:15:39 nboichat Exp $
+ *    Version $Id: wxbhistorytextctrl.cpp,v 1.10 2005/08/18 21:45:18 nboichat Exp $
  */
 /*
-   Copyright (C) 2004 Kern Sibbald and John Walker
+   Copyright (C) 2004-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
-   as published by the Free Software Foundation; either version 2
-   of the License, or (at your option) any later version.
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
  
 #include "wxbhistorytextctrl.h"
@@ -41,7 +38,7 @@ wxbHistoryTextCtrl::wxbHistoryTextCtrl(wxStaticText* help,
             wxTE_PROCESS_ENTER, validator, name) {
    this->help = help;
    index = 0;
-   history.Add("");
+   history.Add(wxT(""));
 }
 
 void wxbHistoryTextCtrl::AddCommand(wxString cmd, wxString description) {
@@ -53,15 +50,15 @@ void wxbHistoryTextCtrl::ClearCommandList() {
 }
 
 void wxbHistoryTextCtrl::HistoryAdd(wxString cmd) {
-   if (cmd == "") return;
+   if (cmd == wxT("")) return;
    index = history.Count();
    history[index-1] = cmd;
-   history.Add("");
+   history.Add(wxT(""));
 }
 
 void wxbHistoryTextCtrl::SetValue(const wxString& value) {
-   if (value == "") {
-      help->SetLabel("Type your command below:");
+   if (value == wxT("")) {
+      help->SetLabel(_("Type your command below:"));
    }
    wxTextCtrl::SetValue(value);
 }
@@ -93,27 +90,27 @@ void wxbHistoryTextCtrl::OnKeyUp(wxKeyEvent& event) {
          SetInsertionPointEnd();
       }      
    }
-   else if (GetValue() != "") {
+   else if (GetValue() != wxT("")) {
       wxbCommands::iterator it;
       wxString key;
-      wxString helptext = "Unknown command.";
+      wxString helptext = _("Unknown command.");
       int found = 0;      
       for( it = commands.begin(); it != commands.end(); ++it ) {         
          if (it->first.Find(GetValue()) == 0) {
             found++;
             if (found > 2) {
-               helptext += " " + it->first;
+               helptext += wxT(" ") + it->first;
             }
             else if (found > 1) {
-               helptext = "Possible completions: " + key + " " + it->first;
+               helptext = _("Possible completions: ") + key + wxT(" ") + it->first;
             }
             else { // (found == 1)
-               helptext = it->first + ": " + it->second;
+               helptext = it->first + wxT(": ") + it->second;
                key = it->first;
             }
          }
          else if (GetValue().Find(it->first) == 0) {
-            helptext = it->first + ": " + it->second;
+            helptext = it->first + wxT(": ") + it->second;
             found = 0;
             break;
          }
@@ -132,7 +129,7 @@ void wxbHistoryTextCtrl::OnKeyUp(wxKeyEvent& event) {
       }
    }
    else {
-      help->SetLabel("Type your command below:");
+      help->SetLabel(_("Type your command below:"));
       event.Skip();
    }
 }

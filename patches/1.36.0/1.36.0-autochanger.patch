@@ -1,0 +1,41 @@
+
+ This patch should fix a problem where the autochanger thinks
+ a Volume is in the current magazine and loops a few times then
+ gives up.
+
+ Apply it to version 1.36.0 with the following:
+
+ cd <bacula-source>
+ patch -p0 <1.36.0-autochanger.patch
+ make
+ make install
+
+Index: src/stored/autochanger.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/stored/autochanger.c,v
+retrieving revision 1.23
+diff -u -r1.23 autochanger.c
+--- src/stored/autochanger.c	19 Sep 2004 18:56:27 -0000	1.23
++++ src/stored/autochanger.c	21 Nov 2004 22:23:26 -0000
+@@ -52,10 +52,11 @@
+ {
+    JCR *jcr = dcr->jcr;
+    DEVICE *dev = dcr->dev;
+-   int slot = dcr->VolCatInfo.Slot;
++   int slot;
+    int drive = jcr->device->drive_index;
+    int rtn_stat = -1;		      /* error status */
+      
++   slot = dcr->VolCatInfo.InChanger ? dcr->VolCatInfo.Slot : 0;
+    /*
+     * Handle autoloaders here.	If we cannot autoload it, we
+     *  will return FALSE to ask the sysop.
+@@ -65,7 +66,7 @@
+ 	 return 0;		      /* For user, bail out right now */
+       }
+       if (dir_find_next_appendable_volume(dcr)) {
+-	 slot = dcr->VolCatInfo.Slot; 
++	 slot = dcr->VolCatInfo.InChanger ? dcr->VolCatInfo.Slot : 0;
+       } else {
+ 	 slot = 0;
+       }

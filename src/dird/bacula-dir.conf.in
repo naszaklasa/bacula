@@ -46,6 +46,13 @@ Job {
   Write Bootstrap = "@working_dir@/Client1.bsr"
 }
 
+#Job {
+#  Name = "Client2"
+#  Client = @hostname@2-fd
+#  JobDefs = "DefaultJob"
+#  Write Bootstrap = "@working_dir@/Client2.bsr"
+#}
+
 # Backup the catalog database (after the nightly save)
 Job {
   Name = "BackupCatalog"
@@ -61,7 +68,10 @@ Job {
   Priority = 11                   # run after main backup
 }
 
+#
 # Standard Restore template, to be changed by Console program
+#  Only one such job is needed for all Jobs/Clients/Storage ...
+#
 Job {
   Name = "RestoreFiles"
   Type = Restore
@@ -116,15 +126,15 @@ FileSet {
 #  and incremental backups other days
 Schedule {
   Name = "WeeklyCycle"
-  Run = Full 1st sun at 1:05
-  Run = Differential 2nd-5th sun at 1:05
-  Run = Incremental mon-sat at 1:05
+  Run = Full 1st sun at 23:05
+  Run = Differential 2nd-5th sun at 23:05
+  Run = Incremental mon-sat at 23:05
 }
 
 # This schedule does the catalog. It starts after the WeeklyCycle
 Schedule {
   Name = "WeeklyCycleAfterBackup"
-  Run = Full sun-sat at 1:10
+  Run = Full sun-sat at 23:10
 }
 
 # This is the backup of the catalog
@@ -150,7 +160,23 @@ Client {
   AutoPrune = yes                     # Prune expired Jobs/Files
 }
 
-# Definiton of file storage device
+#
+# Second Client (File Services) to backup
+#  You should change Name, Address, and Password before using
+#
+#Client {
+#  Name = @hostname@2-fd                
+#  Address = @hostname@2
+#  FDPort = @fd_port@
+#  Catalog = MyCatalog
+#  Password = "@fd_password@2"         # password for FileDaemon 2
+#  File Retention = 30 days            # 30 days
+#  Job Retention = 6 months            # six months
+#  AutoPrune = yes                     # Prune expired Jobs/Files
+#}
+
+
+# Definition of file storage device
 Storage {
   Name = File
 # Do not use "localhost" here    
@@ -162,6 +188,7 @@ Storage {
 }
 
 
+
 # Definition of DDS tape storage device
 #Storage {
 #  Name = DDS-4    
@@ -171,6 +198,7 @@ Storage {
 #  Password = "@sd_password@"          # password for Storage daemon
 #  Device = DDS-4                      # must be same as Device in Storage daemon
 #  Media Type = DDS-4                  # must be same as MediaType in Storage daemon
+#  Autochanger = yes                   # enable for autochanger device
 #}
 
 # Definition of 8mm tape storage device
@@ -182,6 +210,17 @@ Storage {
 #  Password = "@sd_password@"
 #  Device = "Exabyte 8mm"
 #  MediaType = "8mm"
+#}
+
+# Definition of DVD storage device
+#Storage {
+#  Name = "DVD"
+#  Do not use "localhost" here
+#  Address = @hostname@                # N.B. Use a fully qualified name here
+#  SDPort = @sd_port@
+#  Password = "@sd_password@"
+#  Device = "DVD Writer"
+#  MediaType = "DVD"
 #}
 
 

@@ -1,8 +1,11 @@
-/* */
+/*
+ *  Version $Id: version.h,v 1.554.2.50 2006/04/13 20:33:03 kerns Exp $
+ */
+
 #undef  VERSION
-#define VERSION "1.36.3"
-#define BDATE   "22 April 2005"
-#define LSMDATE "22Apr05"
+#define VERSION "1.38.8"
+#define BDATE   "14 April 2006"
+#define LSMDATE "14Apr06"
 
 /* Debug flags */
 #undef  DEBUG
@@ -14,9 +17,11 @@
 /* If this is set stdout will not be closed on startup */
 /* #define DEVELOPER 1 */
 
-
+/* #define USE_BSNPRINTF */
 
 /* Debug flags not normally turned on */
+
+/* #define FILE_SEEK 1 */  
 
 /* #define TRACE_JCR_CHAIN 1 */
 /* #define TRACE_RES 1 */
@@ -35,6 +40,31 @@
 
 
 /* The following are turned on for performance testing */
+/*  
+ * If you turn on the NO_ATTRIBUTES_TEST and rebuild, the SD
+ *  will receive the attributes from the FD, will write them
+ *  to disk, then when the data is written to tape, it will
+ *  read back the attributes, but they will not be sent to
+ *  the Director. So this will eliminate: 1. the comm time
+ *  to send the attributes to the Director. 2. the time it
+ *  takes the Director to put them in the catalog database.
+ */
 /* #define NO_ATTRIBUTES_TEST 1 */
+
+/* 
+* If you turn on NO_TAPE_WRITE_TEST and rebuild, the SD
+*  will do all normal actions, but will not write to the
+*  Volume.  Note, this means a lot of functions such as
+*  labeling will not work, so you must use it only when 
+*  Bacula is going to append to a Volume. This will eliminate
+*  the time it takes to write to the Volume (not the time
+*  it takes to do any positioning).
+*/
 /* #define NO_TAPE_WRITE_TEST 1 */
-/* #define FD_NO_SEND TEST 1 */
+
+/*
+ * If you turn on FD_NO_SEND_TEST and rebuild, the FD will
+ *  not send any attributes or data to the SD. This will
+ *  eliminate the comm time sending to the SD.
+ */
+/* #define FD_NO_SEND_TEST 1 */

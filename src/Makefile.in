@@ -1,5 +1,5 @@
 #
-# Version $Id: Makefile.in,v 1.11 2004/05/28 15:45:56 kerns Exp $
+# Version $Id: Makefile.in,v 1.13.2.1 2005/11/10 20:11:20 kerns Exp $
 #
 @MCOMMON@
 
@@ -43,21 +43,19 @@ clean:
 	@$(RMF) AUTHORS ChangeLog Makefile.am NEWS README acconfig.h autogen.sh 
 	@$(RMF) configure.in stamp.h stamp-h.in
 	@$(RMF) -r po
-	(cd gnome-console; $(MAKE) clean)
-	(cd gnome2-console; $(MAKE) clean)
+	(cd gnome2-console && $(MAKE) clean)
 
 realclean: clean
 	@$(RMF) tags
 
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
-	@(cd $(srcdir); $(RMF) Makefile)
+	@(cd $(srcdir) && $(RMF) Makefile)
 	@$(RMF) config.h host.h
-	@$(RMF) -r CVS
 
 devclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
-	@(cd $(srcdir); $(RMF) Makefile)
+	@(cd $(srcdir) && $(RMF) Makefile)
 	@$(RMF) config.h host.h
 
 install:

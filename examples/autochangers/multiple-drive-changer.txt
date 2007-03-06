@@ -1,0 +1,257 @@
+Date: Tue, 15 Feb 2005 17:36:06 +0100
+From: Mario Wolff <mwolff@unix.schubert-gruppe.de>
+To: kern@sibbald.com
+CC: bacula-devel <bacula-devel@lists.sourceforge.net>
+Subject: Re: Using multiple tapedrives as autochanger!
+
+Hi Kern!
+
+Kern Sibbald schrieb:
+ > Hello,
+ >
+ > There is a similar script named ak-mtx-changer.txt in the
+ > <bacula>/examples/autochangers directory of the source tree. If you feel
+ > that your script brings something different, then I'll be happy to
+ > include it in the same directory. If that is the case, please put a
+ > small note in an email message to me with the script and I'll include it
+ > (I know you've already sent the script, but it saves me the time of
+ > searching for it, and I'm sure I've got the right one).
+ >
+ > Best regards, Kern
+
+As far as i understood the ak-mtx-changer.txt it's simply a 
+human-resource-changer!?!
+In the past every single server had it's own DDS-3 Tape, since we switch 
+  to a centralized networkbackup all these drives are unused.
+Now i took 6 of these drives and placed it in large case on one 
+scsi-controller. Running bacula with multitape-changer these six drives 
+are used as one drive with a 6-Slot-Changer!
+
+Regards,
+Mario
+
+PS: I've posted a deploy-script (deploy windows-fd from linux, automated 
+  your hints) a few days ago over gmane to the devellist. This message 
+was never posted and i got no error message. Maybe problem with the size 
+(Windows-FD was attached!) ???
+
+[pasted the hints once again for Kern!]
+
+Example:
+bacula-dir.conf:
+
+# Definition of DDS tape storage device
+Storage {
+   Name = Multitape
+   #Do not use "localhost" here
+   Address = mystorage    # N.B. Use a fully qualified name here
+   SDPort = 9103
+   Password = "strongsecret"       # password for Storage daemon
+   Device = Multitape
+   Autochanger = yes
+   Media Type = DDS-3
+}
+
+bacula-sd.conf:
+Device {
+   Name = Multitape                        #
+   Media Type = DDS-3
+   Archive Device = /dev/tape
+   AutomaticMount = yes;               # when device opened, read it
+   AlwaysOpen = yes;
+   RemovableMedia = yes;
+   RandomAccess = no;
+   # That's the magic!!!
+   Changer Command = "/etc/bacula/scripts/multitape-changer %c %o %S %a %d"
+   Changer Device = /dev/null
+   AutoChanger = yes
+}
+
+Hints:
+- Important to use a virtual name! multidrive-changer will create links! 
+  (Archive Device = /dev/tape)
+- It's a bash script not a sh script!
+- SD must run as root or the multitape-changer must be called with sudo 
+to have write permission to the /dev dir!
+- the default-config does an umount on tape-change! Don't switch this! 
+SD has to release the device-file!
+- don't use your tapedrives directly anymore! SD does not know that 
+/dev/tape is /dev/nst0!
+- don't remove the sleep 1 after getslot...! Without the sleep you will 
+get a "Operation not permitted" error!
+- only tested with Debian/GNU-Linux-SID
+
+[end of paste]
+
+
+--------------050209030507060501040304
+Content-Type: text/plain;
+ name="multitape-changer"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline;
+ filename="multitape-changer"
+
+#!/bin/bash
+#
+# Bacula interface to use multiple drives as one tape-changer
+# Arguments are copied from the mtx-script! Simply exchange 
+# the scriptname from demo-config
+#
+#  If you set in your Device resource
+#
+#  Changer Command = "path-to-this-script/multitape-changer %c %o %S %a %d"
+#    you will have the following input to this script:
+#
+#  multitape-changer "changer-device" "command" "slot" "archive-device" "drive-index"
+#                  $1              $2       $3        $4               $5
+#
+#  for example:
+#
+#  multitape-changer /dev/sg0 load 1 /dev/nst0 0 (on a Linux system)
+#
+# Setup arguments
+cmd="$2"
+slot=$3
+DEVICE=${4:-/dev/tape}
+
+LABELDIR=/etc/bacula/tapelabel # where to find labelfiles
+NULLDEVICE=/dev/null           # if unmount link to this
+SLOT01=/dev/nst0               # first slot
+SLOT02=/dev/nst1               # second slot
+                               # simply append more
+
+#get device for a given slotnumber
+getdevice(){
+  myslot=${1:-1}
+  if [ ${#myslot} -gt 2 ];then exit 1;fi
+  if [ ${#myslot} -eq 2 ];then 
+    eval echo \$SLOT$myslot
+    return
+  else
+    eval echo \$SLOT0$myslot
+    return
+  fi
+}
+
+#get name of labelfile for a given slot
+getname(){
+  myslot=${1:-1}
+  if [ ${#myslot} -gt 2 ];then exit 2;fi
+  if [ ${#myslot} -eq 2 ];then 
+    echo SLOT$myslot
+    return
+  else
+    echo SLOT0$myslot
+    return
+  fi
+}
+
+#how many tapes/slots to manage
+getslots(){
+  count=1
+  while [ "$( getdevice $count )" ];do
+    count=$[ $count + 1 ]
+  done
+  echo $[ $count - 1 ]
+  return
+}
+
+#get slot for a given device-file
+getslot(){
+  device=${1:-$NULLDEVICE}
+  if [ "$device" = "$NULLDEVICE" ];then
+    echo -en "0\n"
+    return
+  else
+    count=1
+    slotdev=$( getdevice $count )
+    while [ "$slotdev" ]; do 
+      if [ "$slotdev" = "$device" ];then
+        echo -en "$count\n"
+        return
+      fi
+      count=$[ $count + 1 ]
+      slotdev=$( getdevice $count )
+    done
+    exit 3
+  fi
+}
+            
+if test $# -lt 2 ; then
+  echo "usage: multitape-changer ctl-device command slot archive-device drive"
+  echo "  Insufficient number of arguments arguments given."
+  echo "  Mimimum usage is first two arguments ..."
+  exit 4
+fi
+
+#
+# Check for special cases where only 2 arguments are needed, 
+#  all others are a minimum of 3
+case $cmd in
+   loaded)
+     ;;
+   unload)
+     ;;
+   list)
+     ;;
+   slots)
+     ;;
+   *)
+     if test $# -lt 3; then
+        echo "usage: multitape-changer ctl-device command slot archive-device drive"
+        echo "  Insufficient number of arguments arguments given."
+        echo "  Mimimum usage is first three arguments ..."
+        exit 5
+     fi
+     ;;
+esac
+
+
+case $cmd in 
+   unload)
+      if [ -e $DEVICE ];then
+        rm $DEVICE && ln -s $NULLDEVICE $DEVICE || exit 6
+      else
+        ln -s $NULLDEVICE $DEVICE || exit 7
+      fi
+      ;;
+
+   load)
+      CURDEV=$( getdevice $slot )
+      if [ -e $DEVICE ];then
+        rm $DEVICE && ln -s $CURDEV $DEVICE || exit 8
+      else
+        ln -s $CURDEV $DEVICE || exit 9
+      fi
+      ;;
+
+   list) 
+      slots=$( getslots )
+      for slot in $( seq 1 $slots );do
+        labelfile=$LABELDIR/$( getname $slot )
+        if [ -f "$labelfile" ];then
+          echo "$slot:$( head -n 1 $labelfile)"
+        else
+          echo "$slot:"
+        fi
+      done
+      exit 0
+      ;;
+
+   loaded)
+      if [ -e $DEVICE ];then
+        line=$( ls -la $DEVICE )
+      fi
+      line=${line:-$NULLDEVICE}
+      getslot ${line##* }
+      sleep 1
+      exit 0
+      ;;
+
+   slots)
+      getslots
+      exit 0
+      ;;
+esac
+
+--------------050209030507060501040304--

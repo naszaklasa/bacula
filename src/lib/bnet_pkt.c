@@ -4,7 +4,7 @@
  *  by Kern Sibbald, July MMII
  *
  *
- *   Version $Id: bnet_pkt.c,v 1.4 2004/04/15 10:14:26 kerns Exp $
+ *   Version $Id: bnet_pkt.c,v 1.5 2004/12/21 16:18:38 kerns Exp $
  */
 /*
    Copyright (C) 2002-2004 Kern Sibbald and John Walker
@@ -30,7 +30,7 @@
 
 #include "bacula.h"
 
-/* 
+/*
  * Receive a message from the other end. Each message consists of
  * two packets. The first is a header that contains the size
  * of the data that follows in the second packet.
@@ -39,7 +39,7 @@
  * Returns -1 on hard end of file (i.e. network connection close)
  * Returns -2 on error
  */
-int32_t 
+int32_t
 bnet_recv_pkt(BSOCK *bsock, BPKT *pkt, int *version)
 {
    unser_declare;
@@ -50,7 +50,7 @@ bnet_recv_pkt(BSOCK *bsock, BPKT *pkt, int *version)
    unser_uint16(lversion);
    *version = (int)lversion;
 
-   
+
    for ( ; pkt->type != BP_EOF; pkt++) {
       if (pkt->id) {
 	 ser_int8(BP_ID);
@@ -86,11 +86,11 @@ bnet_recv_pkt(BSOCK *bsock, BPKT *pkt, int *version)
 	 ser_bytes((char *)pkt->value, pkt->len);
 	 break;
       default:
-         Emsg1(M_ABORT, 0, _("Unknown BPKT type: %d\n"), pkt->type);
+	 Emsg1(M_ABORT, 0, _("Unknown BPKT type: %d\n"), pkt->type);
       }
    }
    unser_end(bsock->msg, 0);
-   
+
 }
 
 /*
@@ -144,7 +144,7 @@ bnet_send_pkt(BSOCK *bsock, BPKT *pkt, int version)
 	 ser_bytes((char *)pkt->value, pkt->len);
 	 break;
       default:
-         Emsg1(M_ABORT, 0, _("Unknown BPKT type: %d\n"), pkt->type);
+	 Emsg1(M_ABORT, 0, _("Unknown BPKT type: %d\n"), pkt->type);
       }
    }
    ser_end(bsock->msg, 0);

@@ -2,30 +2,25 @@
       Generalized console input/output handler
       A maintanable replacement for readline()
 
-	 Updated for Bacula, Kern Sibbald, December MMIII
+         Updated for Bacula, Kern Sibbald, December MMIII
 
       This code is in part derived from code that I wrote in
       1981, so some of it is a bit old and could use a cleanup.
 
 */
 /*
-   Copyright (C) 1981-2004 Kern Sibbald and John Walker
-		 Yes, that is 1981 no error.
+   Copyright (C) 1981-2006 Kern Sibbald
+             Yes, that is 1981 no error.
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -39,7 +34,7 @@
  */
 
 
-#ifdef	TEST_PROGRAM
+#ifdef  TEST_PROGRAM
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -61,6 +56,12 @@ extern "C" char *tgetstr (const char*, char**);
 extern "C" char *tgoto (const char *, int, int);
 #elif HAVE_HPUX_OS
 #include <term.h>
+#elif defined (__digital__) && defined (__unix__)
+extern "C" int tgetent(void *, const char *);
+extern "C" int tgetnum(const char *);
+extern "C" char *tgetstr (const char*, char**);
+extern "C" char *tgoto (const char *, int, int);
+
 #else
 #include <termcap.h>
 #endif
@@ -88,33 +89,33 @@ static void add_smap(char *str, int func);
 
 static const char *t_up = "\n";                    /* scroll up character */
 static const char *t_honk = "\007";                /* sound beep */
-static char *t_il;			     /* insert line */
-static char *t_dl;			     /* delete line */
-static char *t_cs;			     /* clear screen */
-static char *t_cl;			     /* clear line */
-static int t_width = 79;		     /* terminal width */
-static int t_height = 24;		     /* terminal height */
-static int linsdel_ok = 0;		/* set if term has line insert & delete fncs */
+static char *t_il;                           /* insert line */
+static char *t_dl;                           /* delete line */
+static char *t_cs;                           /* clear screen */
+static char *t_cl;                           /* clear line */
+static int t_width = 79;                     /* terminal width */
+static int t_height = 24;                    /* terminal height */
+static int linsdel_ok = 0;              /* set if term has line insert & delete fncs */
 
-static char *t_cm;			     /* cursor positioning */
-static char *t_ti;			     /* init sequence */
-static char *t_te;			     /* end sequence */
-static char *t_do;			     /* down one line */
-static char *t_sf;			     /* scroll screen one line up */
+static char *t_cm;                           /* cursor positioning */
+static char *t_ti;                           /* init sequence */
+static char *t_te;                           /* end sequence */
+static char *t_do;                           /* down one line */
+static char *t_sf;                           /* scroll screen one line up */
 
 /* Keypad and Function Keys */
-static char *kl;			     /* left key */
-static char *kr;			     /* right */
-static char *ku;			     /* up */
-static char *kd;			     /* down */
-static char *kh;			     /* home */
-static char *kb;			     /* backspace */
-static char *kD;			     /* delete key */
-static char *kI;			     /* insert */
-static char *kN;			     /* next page */
-static char *kP;			     /* previous page */
-static char *kH;			     /* home */
-static char *kE;			     /* end */
+static char *kl;                             /* left key */
+static char *kr;                             /* right */
+static char *ku;                             /* up */
+static char *kd;                             /* down */
+static char *kh;                             /* home */
+static char *kb;                             /* backspace */
+static char *kD;                             /* delete key */
+static char *kI;                             /* insert */
+static char *kN;                             /* next page */
+static char *kP;                             /* previous page */
+static char *kH;                             /* home */
+static char *kE;                             /* end */
 
 #ifndef EOS
 #define EOS  '\0'                     /* end of string terminator */
@@ -135,8 +136,8 @@ typedef struct s_stab {
 
 #define MAX_STAB 30
 
-static stab_t **stab = NULL;		     /* array of stabs by length */
-static int num_stab;			     /* size of stab array */
+static stab_t **stab = NULL;                 /* array of stabs by length */
+static int num_stab;                         /* size of stab array */
 
 static bool old_term_params_set = false;
 static struct termios old_term_params;
@@ -145,48 +146,48 @@ static struct termios old_term_params;
    preceded by a header defined by the lstr structure */
 
 
-struct lstr {			      /* line pool structure */
-   struct lstr *prevl;		      /* link to previous line */
-   struct lstr *nextl;		      /* link to next line */
-   long len;			      /* length of line+header */
-   char used;			      /* set if line valid */
-   char line;			      /* line is actually varying length */
+struct lstr {                         /* line pool structure */
+   struct lstr *prevl;                /* link to previous line */
+   struct lstr *nextl;                /* link to next line */
+   long len;                          /* length of line+header */
+   char used;                         /* set if line valid */
+   char line;                         /* line is actually varying length */
 };
 
 #ifdef unix
-#define POOLEN 128000		      /* bytes in line pool */
+#define POOLEN 128000                 /* bytes in line pool */
 #else
-#define POOLEN 500		      /* bytes in line pool */
+#define POOLEN 500                    /* bytes in line pool */
 #endif
-char pool[POOLEN];		      /* line pool */
+char pool[POOLEN];                    /* line pool */
 #define PHDRL ((int)sizeof(struct lstr))  /* length of line header */
 
-static struct lstr *lptr;	      /* current line pointer */
-static struct lstr *slptr;	      /* store line pointer */
+static struct lstr *lptr;             /* current line pointer */
+static struct lstr *slptr;            /* store line pointer */
 static int cl, cp;
 static char *getnext(), *getprev();
 static int first = 1;
 static int mode_insert = 0;
-static int mode_wspace = 1;	      /* words separated by spaces */
+static int mode_wspace = 1;           /* words separated by spaces */
 
 
 static short char_map[600]= {
-   0,				       F_SOL,	 /* ^a Line start */
+   0,                                  F_SOL,    /* ^a Line start */
    F_PRVWRD, /* ^b Previous word */    F_BREAK,  /* ^C break */
-   F_DELCHR, /* ^D Delete character */ F_EOL,	 /* ^e End of line */
-   F_CSRRGT, /* ^f Right */	       F_TABBAK, /* ^G Back tab */
-   F_CSRLFT, /* ^H Left */	       F_TAB,	 /* ^I Tab */
-   F_CSRDWN, /* ^J Down */	       F_DELEOL, /* ^K kill to eol */
+   F_DELCHR, /* ^D Delete character */ F_EOL,    /* ^e End of line */
+   F_CSRRGT, /* ^f Right */            F_TABBAK, /* ^G Back tab */
+   F_CSRLFT, /* ^H Left */             F_TAB,    /* ^I Tab */
+   F_CSRDWN, /* ^J Down */             F_DELEOL, /* ^K kill to eol */
    F_CLRSCRN,/* ^L clear screen */     F_RETURN, /* ^M Carriage return */
    F_RETURN, /* ^N enter line  */      F_CONCAT, /* ^O Concatenate lines */
-   F_CSRUP,  /* ^P cursor up */        F_TINS,	 /* ^Q Insert character mode */
-   F_PAGUP,  /* ^R Page up */	       F_CENTER, /* ^S Center text */
+   F_CSRUP,  /* ^P cursor up */        F_TINS,   /* ^Q Insert character mode */
+   F_PAGUP,  /* ^R Page up */          F_CENTER, /* ^S Center text */
    F_PAGDWN, /* ^T Page down */        F_DELSOL, /* ^U delete to start of line */
    F_DELWRD, /* ^V Delete word */      F_PRVWRD, /* ^W Previous word */
    F_NXTMCH, /* ^X Next match */       F_DELEOL, /* ^Y Delete to end of line */
-   F_BACKGND,/* ^Z Background */       0x1B,	 /* ^[=ESC escape */
+   F_BACKGND,/* ^Z Background */       0x1B,     /* ^[=ESC escape */
    F_TENTRY, /* ^\ Entry mode */       F_PASTECB,/* ^]=paste clipboard */
-   F_HOME,   /* ^^ Home */	       F_ERSLIN, /* ^_ Erase line */
+   F_HOME,   /* ^^ Home */             F_ERSLIN, /* ^_ Erase line */
 
    ' ','!','"','#','$','%','&','\047',
    '(',')','*','+','\054','-','.','/',
@@ -263,15 +264,15 @@ void con_init(FILE *input)
  */
 void con_set_zed_keys(void)
 {
-   char_map[1]	= F_NXTWRD; /* ^A Next Word */
-   char_map[2]	= F_SPLIT;  /* ^B Split line */
-   char_map[3]	= F_EOI;    /* ^C Quit */
-   char_map[4]	= F_DELCHR; /* ^D Delete character */
-   char_map[5]	= F_EOF;    /* ^E End of file */
-   char_map[6]	= F_INSCHR; /* ^F Insert character */
-   char_map[7]	= F_TABBAK; /* ^G Back tab */
-   char_map[8]	= F_CSRLFT; /* ^H Left */
-   char_map[9]	= F_TAB;    /* ^I Tab */
+   char_map[1]  = F_NXTWRD; /* ^A Next Word */
+   char_map[2]  = F_SPLIT;  /* ^B Split line */
+   char_map[3]  = F_EOI;    /* ^C Quit */
+   char_map[4]  = F_DELCHR; /* ^D Delete character */
+   char_map[5]  = F_EOF;    /* ^E End of file */
+   char_map[6]  = F_INSCHR; /* ^F Insert character */
+   char_map[7]  = F_TABBAK; /* ^G Back tab */
+   char_map[8]  = F_CSRLFT; /* ^H Left */
+   char_map[9]  = F_TAB;    /* ^I Tab */
    char_map[10] = F_CSRDWN; /* ^J Down */
    char_map[11] = F_CSRUP;  /* ^K Up */
    char_map[12] = F_CSRRGT; /* ^L Right */
@@ -338,18 +339,18 @@ static unsigned do_smap(unsigned c)
     for ( ;; ) {
        found = 0;
        for (i=len-1; i<MAX_STAB; i++) {
-	  for (tstab=stab[i]; tstab; tstab=tstab->next) {
-	     if (strncmp(str, tstab->str, len) == 0) {
-		if (len == tstab->len) {
-		   return tstab->func;
-		}
-		found = 1;
-		break;		      /* found possibility continue searching */
-	     }
-	  }
+          for (tstab=stab[i]; tstab; tstab=tstab->next) {
+             if (strncmp(str, tstab->str, len) == 0) {
+                if (len == tstab->len) {
+                   return tstab->func;
+                }
+                found = 1;
+                break;                /* found possibility continue searching */
+             }
+          }
        }
        if (!found) {
-	  return len==1?c:0;
+          return len==1?c:0;
        }
        /* found partial match, so get next character and retry */
        str[len++] = t_gnc();
@@ -366,19 +367,19 @@ static void dump_stab()
 
     for (i=0; i<MAX_STAB; i++) {
        for (tstab=stab[i]; tstab; tstab=tstab->next) {
-	  for (j=0; j<tstab->len; j++) {
-	     c = tstab->str[j];
-	     if (c < 0x20 || c > 0x7F) {
+          for (j=0; j<tstab->len; j++) {
+             c = tstab->str[j];
+             if (c < 0x20 || c > 0x7F) {
                 sprintf(buf, " 0x%x ", c);
-		t_send(buf);
-	     } else {
-		buf[0] = c;
-		buf[1] = 0;
-		t_sendl(buf, 1);
-	     }
-	  }
+                t_send(buf);
+             } else {
+                buf[0] = c;
+                buf[1] = 0;
+                t_sendl(buf, 1);
+             }
+          }
           sprintf(buf, " func=%d len=%d\n\r", tstab->func, tstab->len);
-	  t_send(buf);
+          t_send(buf);
        }
     }
 }
@@ -413,7 +414,7 @@ static void add_smap(char *str, int func)
    tstab->next = stab[tstab->len-1];
    stab[tstab->len-1] = tstab;
 /* printf("Add_smap tstab=%x len=%d func=%d tstab->next=%x\n\r", tstab, len,
-	  func, tstab->next); */
+          func, tstab->next); */
 
 }
 
@@ -425,19 +426,19 @@ input_char()
 {
     unsigned c;
 
-    if ((c=t_gnc()) <= 599) {	      /* IBM generates codes up to 260 */
-	  c = do_smap(c);
-    } else if (c > 1000) {	      /* stuffed function */
-       c -= 1000;		      /* convert back to function code */
+    if ((c=t_gnc()) <= 599) {         /* IBM generates codes up to 260 */
+          c = do_smap(c);
+    } else if (c > 1000) {            /* stuffed function */
+       c -= 1000;                     /* convert back to function code */
     }
     if (c <= 0) {
-	t_honk_horn();
+        t_honk_horn();
     }
     /* if we got a screen size escape sequence, read height, width */
     if (c == F_SCRSIZ) {
        int y, x;
-       y = t_gnc() - 0x20;	  /* y */
-       x = t_gnc() - 0x20;	  /* x */
+       y = t_gnc() - 0x20;        /* y */
+       x = t_gnc() - 0x20;        /* x */
        c = input_char();
     }
     return c;
@@ -449,167 +450,167 @@ input_char()
 int
 input_line(char *string, int length)
 {
-   char curline[2000];		      /* edit buffer */
+   char curline[2000];                /* edit buffer */
    int noline;
    unsigned c;
    int more;
    int i;
 
     if (first) {
-       poolinit();		     /* build line pool */
+       poolinit();                   /* build line pool */
        first = 0;
     }
-    noline = 1; 		      /* no line fetched yet */
+    noline = 1;                       /* no line fetched yet */
     for (cl=cp=0; cl<length && cl<(int)sizeof(curline); ) {
        if (usrbrk()) {
-	  clrbrk();
-	  break;
+          clrbrk();
+          break;
        }
        switch (c=input_char()) {
-       case F_RETURN:		     /* CR */
+       case F_RETURN:                /* CR */
            t_sendl("\r\n", 2);       /* yes, print it and */
-	   goto done;		     /* get out */
-       case F_CLRSCRN:		     /* clear screen */
-	  asclrs();
-	  t_sendl(curline, cl);
-	  ascurs(0, cp);
-	  break;
+           goto done;                /* get out */
+       case F_CLRSCRN:               /* clear screen */
+          asclrs();
+          t_sendl(curline, cl);
+          ascurs(0, cp);
+          break;
        case F_CSRUP:
-	   if (noline) {	     /* no line fetched yet */
-	       getnext();	     /* getnext so getprev gets current */
-	       noline = 0;	     /* we now have line */
-	   }
-	   bstrncpy(curline, getprev(), sizeof(curline));
-	   prtcur(curline);
-	   break;
+           if (noline) {             /* no line fetched yet */
+               getnext();            /* getnext so getprev gets current */
+               noline = 0;           /* we now have line */
+           }
+           bstrncpy(curline, getprev(), sizeof(curline));
+           prtcur(curline);
+           break;
        case F_CSRDWN:
-	   noline = 0;		     /* mark line fetched */
-	   bstrncpy(curline, getnext(), sizeof(curline));
-	   prtcur(curline);
-	   break;
+           noline = 0;               /* mark line fetched */
+           bstrncpy(curline, getnext(), sizeof(curline));
+           prtcur(curline);
+           break;
        case F_INSCHR:
-	   insert_space(curline, sizeof(curline));
-	   break;
+           insert_space(curline, sizeof(curline));
+           break;
        case F_DELCHR:
-	   delchr(1, curline, sizeof(curline));       /* delete one character */
-	   break;
-       case F_CSRLFT:		     /* Backspace */
-	   backup(curline);
-	   break;
+           delchr(1, curline, sizeof(curline));       /* delete one character */
+           break;
+       case F_CSRLFT:                /* Backspace */
+           backup(curline);
+           break;
        case F_CSRRGT:
-	   forward(curline, sizeof(curline));
-	   break;
-       case F_ERSCHR:		     /* Rubout */
-	   backup(curline);
-	   delchr(1, curline, sizeof(curline));
-	   if (cp == 0) {
+           forward(curline, sizeof(curline));
+           break;
+       case F_ERSCHR:                /* Rubout */
+           backup(curline);
+           delchr(1, curline, sizeof(curline));
+           if (cp == 0) {
               t_char(' ');
-	      t_char(0x8);
-	   }
-	   break;
+              t_char(0x8);
+           }
+           break;
        case F_DELEOL:
-	   t_clrline(0, t_width);
-	   if (cl > cp)
-	       cl = cp;
-	   break;
+           t_clrline(0, t_width);
+           if (cl > cp)
+               cl = cp;
+           break;
        case F_NXTWRD:
-	   i = next_word(curline);
-	   while (i--) {
-	      forward(curline, sizeof(curline));
-	   }
-	   break;
+           i = next_word(curline);
+           while (i--) {
+              forward(curline, sizeof(curline));
+           }
+           break;
        case F_PRVWRD:
-	   i = prev_word(curline);
-	   while (i--) {
-	      backup(curline);
-	   }
-	   break;
+           i = prev_word(curline);
+           while (i--) {
+              backup(curline);
+           }
+           break;
        case F_DELWRD:
-	   delchr(next_word(curline), curline, sizeof(curline)); /* delete word */
-	   break;
-       case F_NXTMCH:		     /* Ctl-X */
-	   if (cl==0) {
-	       *string = EOS;	     /* terminate string */
-	       return(c);	     /* give it to him */
-	   }
-	   /* Note fall through */
+           delchr(next_word(curline), curline, sizeof(curline)); /* delete word */
+           break;
+       case F_NXTMCH:                /* Ctl-X */
+           if (cl==0) {
+               *string = EOS;        /* terminate string */
+               return(c);            /* give it to him */
+           }
+           /* Note fall through */
        case F_DELLIN:
        case F_ERSLIN:
-	   while (cp > 0) {
-	      backup(curline);	    /* backup to beginning of line */
-	   }
-	   t_clrline(0, t_width);     /* erase line */
-	   cp = 0;
-	   cl = 0;		     /* reset cursor counter */
+           while (cp > 0) {
+              backup(curline);      /* backup to beginning of line */
+           }
+           t_clrline(0, t_width);     /* erase line */
+           cp = 0;
+           cl = 0;                   /* reset cursor counter */
            t_char(' ');
-	   t_char(0x8);
-	   break;
+           t_char(0x8);
+           break;
        case F_SOL:
-	   while (cp > 0) {
-	      backup(curline);
-	   }
-	   break;
+           while (cp > 0) {
+              backup(curline);
+           }
+           break;
        case F_EOL:
-	   while (cp < cl) {
-	       forward(curline, sizeof(curline));
-	   }
-	   while (cp > cl) {
-	       backup(curline);
-	   }
-	   break;
-       case F_TINS:		     /* toggle insert mode */
-	   mode_insert = !mode_insert;	/* flip bit */
-	   break;
+           while (cp < cl) {
+               forward(curline, sizeof(curline));
+           }
+           while (cp > cl) {
+               backup(curline);
+           }
+           break;
+       case F_TINS:                  /* toggle insert mode */
+           mode_insert = !mode_insert;  /* flip bit */
+           break;
        default:
-	   if (c > 255) {	     /* function key hit */
-	       if (cl==0) {	     /* if first character then */
-		  *string = EOS;     /* terminate string */
-		  return c;	     /* return it */
-	       }
-	       t_honk_horn();	     /* complain */
-	   } else {
-	       if ((c & 0xC0) == 0xC0) {
-		  if ((c & 0xFC) == 0xFC) {
-		     more = 5;
-		  } else if ((c & 0xF8) == 0xF8) {
-		     more = 4;
-		  } else if ((c & 0xF0) == 0xF0) {
-		     more = 3;
-		  } else if ((c & 0xE0) == 0xE0) {
-		     more = 2;
-		  } else {
-		     more = 1;
-		  }
-	       } else {
-		  more = 0;
-	       }
-	       if (mode_insert) {
-		  insert_space(curline, sizeof(curline));
-	       }
-	       curline[cp++] = c;    /* store character in line being built */
-	       t_char(c);      /* echo character to terminal */
-	       while (more--) {
-		  c= input_char();
-		  insert_hole(curline, sizeof(curline));
-		  curline[cp++] = c;	/* store character in line being built */
-		  t_char(c);	  /* echo character to terminal */
-	       }
-	       if (cp > cl) {
-		  cl = cp;	     /* keep current length */
-		  curline[cp] = 0;
-	       }
-	   }
-	   break;
-       }			     /* end switch */
+           if (c > 255) {            /* function key hit */
+               if (cl==0) {          /* if first character then */
+                  *string = EOS;     /* terminate string */
+                  return c;          /* return it */
+               }
+               t_honk_horn();        /* complain */
+           } else {
+               if ((c & 0xC0) == 0xC0) {
+                  if ((c & 0xFC) == 0xFC) {
+                     more = 5;
+                  } else if ((c & 0xF8) == 0xF8) {
+                     more = 4;
+                  } else if ((c & 0xF0) == 0xF0) {
+                     more = 3;
+                  } else if ((c & 0xE0) == 0xE0) {
+                     more = 2;
+                  } else {
+                     more = 1;
+                  }
+               } else {
+                  more = 0;
+               }
+               if (mode_insert) {
+                  insert_space(curline, sizeof(curline));
+               }
+               curline[cp++] = c;    /* store character in line being built */
+               t_char(c);      /* echo character to terminal */
+               while (more--) {
+                  c= input_char();
+                  insert_hole(curline, sizeof(curline));
+                  curline[cp++] = c;    /* store character in line being built */
+                  t_char(c);      /* echo character to terminal */
+               }
+               if (cp > cl) {
+                  cl = cp;           /* keep current length */
+                  curline[cp] = 0;
+               }
+           }
+           break;
+       }                             /* end switch */
     }
 /* If we fall through here rather than goto done, the line is too long
    simply return what we have now. */
 done:
-   curline[cl++] = EOS; 	     /* terminate */
-   bstrncpy(string,curline,length);	      /* return line to caller */
+   curline[cl++] = EOS;              /* terminate */
+   bstrncpy(string,curline,length);           /* return line to caller */
    /* Note, put line zaps curline */
-   putline(curline,cl); 	     /* save line for posterity */
-   return 0;			     /* give it to him/her */
+   putline(curline,cl);              /* save line for posterity */
+   return 0;                         /* give it to him/her */
 }
 
 /* Insert a space at the current cursor position */
@@ -665,12 +666,12 @@ forward(char *str, int str_len)
    } else {
        t_char(str[cp]);
        if ((str[cp] & 0xC0) == 0xC0) {
-	  cp++;
-	  while ((str[cp] & 0xC0) == 0x80) {
-	     t_char(str[cp]);
-	     cp++;
-	  }
-	  cp--;
+          cp++;
+          while ((str[cp] & 0xC0) == 0x80) {
+             t_char(str[cp]);
+             cp++;
+          }
+          cp--;
        }
    }
    cp++;
@@ -687,8 +688,8 @@ char_count(int cptr, char *str)
    if ((str[cptr] & 0xC0) == 0xC0) {
       cptr++;
       while ((str[cptr] & 0xC0) == 0x80) {
-	 cnt++;
-	 cptr++;
+         cnt++;
+         cptr++;
       }
    }
    return cnt;
@@ -720,18 +721,18 @@ delchr(int del, char *curline, int line_len)
    while (del-- && cp > 0) {
       cnt = char_count(cp, curline);
       if ((i=cl-cp-cnt) > 0) {
-	 memcpy(&curline[cp], &curline[cp+cnt], i);
+         memcpy(&curline[cp], &curline[cp+cnt], i);
       }
       cl -= cnt;
       curline[cl] = EOS;
       t_clrline(0, t_width);
       i = 0;
       while (cl > cp) {
-	 forward(curline, line_len);
-	 i++;
+         forward(curline, line_len);
+         i++;
       }
       while (i--) {
-	 backup(curline);
+         backup(curline);
       }
    }
 }
@@ -769,23 +770,23 @@ prev_word(char *ldb_buf)
 {
     int ncp, i;
 
-    if (cp == 0)		      /* if at begin of line stop now */
-	return 0;
-    if (cp > cl)		      /* if past eol start at eol */
-	ncp=cl+1;
+    if (cp == 0)                      /* if at begin of line stop now */
+        return 0;
+    if (cp > cl)                      /* if past eol start at eol */
+        ncp=cl+1;
     else
-	ncp = cp;
+        ncp = cp;
     /* backup to end of previous word - i.e. skip special chars */
     for (i=ncp-1; i && !iswordc(*(ldb_buf+i)); i--) ;
-    if (i == 0) {		      /* at beginning of line? */
-	return cp;		      /* backup to beginning */
+    if (i == 0) {                     /* at beginning of line? */
+        return cp;                    /* backup to beginning */
     }
     /* now move back through word to beginning of word */
     for ( ; i && iswordc(*(ldb_buf+i)); i--) ;
-    ncp = i+1;			      /* position to first char of word */
+    ncp = i+1;                        /* position to first char of word */
     if (i==0 && iswordc(*ldb_buf))    /* check for beginning of line */
-	ncp = 0;
-    return cp-ncp;		      /* return count */
+        ncp = 0;
+    return cp-ncp;                    /* return count */
 }
 
 /* Display new current line */
@@ -818,7 +819,7 @@ poolinit()
 static char *
 getnext()
 {
-   do { 			     /* find next used line */
+   do {                              /* find next used line */
       lptr = lptr->nextl;
    } while (!lptr->used);
    return (char *)&lptr->line;
@@ -828,7 +829,7 @@ getnext()
 static char *
 getprev()
 {
-   do { 			     /* find previous used line */
+   do {                              /* find previous used line */
       lptr = lptr->prevl;
    } while (!lptr->used);
    return (char *)&lptr->line;
@@ -837,17 +838,17 @@ getprev()
 static void
 putline(char *newl, int newlen)
 {
-   struct lstr *nptr;		     /* points to next line */
+   struct lstr *nptr;                /* points to next line */
    char *p;
 
-   lptr = slptr;		     /* get ptr to last line stored */
-   lptr = lptr->nextl;		     /* advance pointer */
+   lptr = slptr;                     /* get ptr to last line stored */
+   lptr = lptr->nextl;               /* advance pointer */
    if ((char *)lptr-pool+newlen+PHDRL > POOLEN) { /* not enough room */
-       lptr->used = 0;		     /* delete line */
+       lptr->used = 0;               /* delete line */
        lptr = (struct lstr *)pool;   /* start at beginning of buffer */
    }
    while (lptr->len < newlen+PHDRL) { /* concatenate buffers */
-       nptr = lptr->nextl;	     /* point to next line */
+       nptr = lptr->nextl;           /* point to next line */
        lptr->nextl = nptr->nextl;    /* unlink it from list */
        nptr->nextl->prevl = lptr;
        lptr->len += nptr->len;
@@ -855,10 +856,10 @@ putline(char *newl, int newlen)
    if (lptr->len > newlen + 2 * PHDRL) { /* split buffer */
        nptr = (struct lstr *)((char *)lptr + newlen + PHDRL);
        /* Appropriate byte alignment - normally 2 byte, but on
-	  sparc we need 4 byte alignment, so we always do 4 */
+          sparc we need 4 byte alignment, so we always do 4 */
        if (((long unsigned)nptr & 3) != 0) { /* test four byte alignment */
-	   p = (char *)nptr;
-	   nptr = (struct lstr *)((((long unsigned) p) & ~3) + 4);
+           p = (char *)nptr;
+           nptr = (struct lstr *)((((long unsigned) p) & ~3) + 4);
        }
        nptr->len = lptr->len - ((char *)nptr - (char *)lptr);
        lptr->len -= nptr->len;
@@ -869,20 +870,20 @@ putline(char *newl, int newlen)
        nptr->used = 0;
    }
    memcpy(&lptr->line,newl,newlen);
-   lptr->used = 1;		     /* mark line used */
-   slptr = lptr;		     /* save as stored line */
+   lptr->used = 1;                   /* mark line used */
+   slptr = lptr;                     /* save as stored line */
 }
 
-#ifdef	DEBUGOUT
+#ifdef  DEBUGOUT
 static void
 dump(struct lstr *ptr, char *msg)
 {
     printf("%s buf=%x nextl=%x prevl=%x len=%d used=%d\n",
-	msg,ptr,ptr->nextl,ptr->prevl,ptr->len,ptr->used);
+        msg,ptr,ptr->nextl,ptr->prevl,ptr->len,ptr->used);
     if (ptr->used)
         printf("line=%s\n",&ptr->line);
 }
-#endif	/* DEBUGOUT */
+#endif  /* DEBUGOUT */
 
 
 /* Honk horn on terminal */
@@ -910,7 +911,7 @@ t_delete_line()
 static void
 t_clrline(int pos, int width)
 {
-    asclrl(pos, width); 	  /* clear to end of line */
+    asclrl(pos, width);           /* clear to end of line */
 }
 
 /* Helper function to add string preceded by
@@ -918,7 +919,7 @@ t_clrline(int pos, int width)
 static void add_esc_smap(const char *str, int func)
 {
    char buf[1000];
-   buf[0] = 0x1B;		      /* esc */
+   buf[0] = 0x1B;                     /* esc */
    bstrncpy(buf+1, str, sizeof(buf)-1);
    add_smap(buf, func);
 }
@@ -947,11 +948,11 @@ static void rawmode(FILE *input)
    t.c_cc[VMIN] = 1; /* satisfy read after 1 char */
    t.c_cc[VTIME] = 0;
    t.c_iflag &= ~(BRKINT | IGNPAR | PARMRK | INPCK |
-		  ISTRIP | ICRNL | IXON | IXOFF | INLCR | IGNCR);
+                  ISTRIP | ICRNL | IXON | IXOFF | INLCR | IGNCR);
    t.c_iflag |= IGNBRK;
    t.c_oflag |= ONLCR;
    t.c_lflag &= ~(ECHO | ECHOE | ECHOK | ECHONL | ICANON |
-		  NOFLSH | TOSTOP);
+                  NOFLSH | TOSTOP);
    tcflush(0, TCIFLUSH);
    if (tcsetattr(0, TCSANOW, &t) == -1) {
       printf("Cannot tcsetattr()\n");
@@ -960,12 +961,8 @@ static void rawmode(FILE *input)
    /* Defaults, the main program can override these */
    signal(SIGQUIT, SIG_IGN);
    signal(SIGHUP, SIG_IGN);
-// signal(SIGSTOP, SIG_IGN);
    signal(SIGINT, sigintcatcher);
    signal(SIGWINCH, SIG_IGN);
-   signal(SIGQUIT, SIG_IGN);
-   signal(SIGCHLD, SIG_IGN);
-// signal(SIGTSTP, SIG_IGN);
 
    if (!termtype) {
       printf("Cannot get terminal type.\n");
@@ -994,7 +991,7 @@ static void rawmode(FILE *input)
    t_do = (char *)tgetstr("do", &term_buffer);
    t_sf = (char *)tgetstr("sf", &term_buffer);
 
-   num_stab = MAX_STAB; 		 /* get default stab size */
+   num_stab = MAX_STAB;                  /* get default stab size */
    stab = (stab_t **)malloc(sizeof(stab_t *) * num_stab);
    memset(stab, 0, sizeof(stab_t *) * num_stab);
 
@@ -1077,18 +1074,18 @@ t_send(const char *msg)
    if (msg == NULL) {
       return;
    }
-   t_sendl(msg, strlen(msg));	 /* faster than one char at time */
+   t_sendl(msg, strlen(msg));    /* faster than one char at time */
 }
 
 /* Send single character to terminal - primitive routine - */
 void
 t_char(char c)
 {
-   write(1, &c, 1);
+   (void)write(1, &c, 1);
 }
 
 
-static int brkflg = 0;		    /* set on user break */
+static int brkflg = 0;              /* set on user break */
 
 /* Routine to return true if user types break */
 int usrbrk()
@@ -1128,12 +1125,12 @@ static void asclrl(int pos, int width)
    int i;
 
    if (t_cl) {
-       t_send(t_cl);		     /* use clear to eol function */
+       t_send(t_cl);                 /* use clear to eol function */
        return;
    }
    if (pos==1 && linsdel_ok) {
-       t_delete_line(); 	     /* delete line */
-       t_insert_line(); 	     /* reinsert it */
+       t_delete_line();              /* delete line */
+       t_insert_line();              /* reinsert it */
        return;
    }
    for (i=1; i<=width-pos+1; i++)
@@ -1165,7 +1162,7 @@ static void asclrs()
 static void asinsl()
 {
    t_clrline(0, t_width);
-   t_send(t_il);		      /* insert before */
+   t_send(t_il);                      /* insert before */
 }
 
 /* ASDELL -- Delete line at cursor */

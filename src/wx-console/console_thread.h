@@ -4,24 +4,21 @@
  *
  *    Nicolas Boichat, April-May 2004
  *
- *    Version $Id: console_thread.h,v 1.8.4.1 2005/04/12 21:31:24 kerns Exp $
+ *    Version $Id: console_thread.h,v 1.11.2.1 2006/04/12 20:49:18 kerns Exp $
  */
 /*
-   Copyright (C) 2004 Kern Sibbald and John Walker
+   Copyright (C) 2004-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
-   as published by the Free Software Foundation; either version 2
-   of the License, or (at your option) any later version.
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #ifndef CONSOLE_THREAD_H
@@ -29,7 +26,9 @@
 
 #include <wx/wxprec.h>
 
+#include <wx/string.h>
 #include <wx/thread.h> // inheriting class's header file
+#include <wx/intl.h> /* We need to have _ and N_ defined by wxWidgets before Bacula tries to redefine them */
 #include "bacula.h"
 #include "jcr.h"
 

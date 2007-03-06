@@ -1,11 +1,11 @@
 /*
  *
- *   Bacula Director -- Automatic Pruning 
- *	Applies retention periods
+ *   Bacula Director -- Automatic Pruning
+ *      Applies retention periods
  *
  *     Kern Sibbald, May MMII
  *
- *   Version $Id: autoprune.c,v 1.12 2004/04/19 14:27:00 kerns Exp $
+ *   Version $Id: autoprune.c,v 1.14 2005/07/11 18:26:23 kerns Exp $
  */
 
 /*
@@ -45,7 +45,7 @@ int do_autoprune(JCR *jcr)
    CLIENT *client;
    bool pruned;
 
-   if (!jcr->client) {		      /* temp -- remove me */
+   if (!jcr->client) {                /* temp -- remove me */
       return 1;
    }
 
@@ -60,7 +60,7 @@ int do_autoprune(JCR *jcr)
    } else {
       pruned = false;
    }
-  
+
    if (jcr->job->PruneFiles || jcr->client->AutoPrune) {
       Jmsg(jcr, M_INFO, 0, _("Begin pruning Files.\n"));
       prune_files(ua, client);
@@ -71,7 +71,7 @@ int do_autoprune(JCR *jcr)
    }
 
    free_ua_context(ua);
-   return 1;	
+   return 1;
 }
 
 /*
@@ -80,7 +80,7 @@ int do_autoprune(JCR *jcr)
  *   volume and no appendable volumes are available.
  *
  *  Return 0: on error
- *	   number of Volumes Purged
+ *         number of Volumes Purged
  */
 int prune_volumes(JCR *jcr)
 {
@@ -111,21 +111,20 @@ int prune_volumes(JCR *jcr)
       mr.MediaId = ids[i];
       if (!db_get_media_record(jcr, jcr->db, &mr)) {
          Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));
-	 continue;
+         continue;
       }
       /* Prune only Volumes from current Pool */
       if (jcr->PoolId != mr.PoolId) {
-	 continue;
+         continue;
       }
-      /* Prune only Volumes with status "Full", "Used", or "Append" */
-      if (strcmp(mr.VolStatus, "Full")   == 0 || 
-          strcmp(mr.VolStatus, "Append") == 0 ||
+      /* Prune only Volumes with status "Full", or "Used" */
+      if (strcmp(mr.VolStatus, "Full")   == 0 ||
           strcmp(mr.VolStatus, "Used")   == 0) {
          Dmsg1(200, "Prune Volume %s\n", mr.VolumeName);
-	 stat += prune_volume(ua, &mr); 
+         stat += prune_volume(ua, &mr);
          Dmsg1(200, "Num pruned = %d\n", stat);
       }
-   }   
+   }
 
 bail_out:
    db_unlock(jcr->db);

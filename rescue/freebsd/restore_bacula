@@ -1,9 +1,0 @@
-#! /bin/sh
-#
-# Get bacula from /mnt/floppy
-#
-cp /mnt/floppy/bacula-fd.conf .
-cp /mnt/floppy/bacula-fd.gz .
-gzip -d bacula-fd.gz
-echo ""
-echo "bacula-fd and bacula-fd.conf are in the current directory"

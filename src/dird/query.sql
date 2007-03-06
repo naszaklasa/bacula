@@ -58,12 +58,13 @@ SELECT DISTINCT Job.JobId,Client.Name as Client,Level,StartTime,JobFiles,JobByte
 # 6
 :List all backups for a Client
 *Enter Client Name:
-SELECT DISTINCT Job.JobId as JobId,Client.Name as Client,Level,StartTime,
+SELECT DISTINCT Job.JobId as JobId,Client.Name as Client,
+   FileSet.FileSet AS FileSet,Level,StartTime,
    JobFiles,JobBytes,VolumeName
- FROM Client,Job,JobMedia,Media
+ FROM Client,Job,JobMedia,Media,FileSet
  WHERE Client.Name='%1'
  AND Client.ClientId=Job.ClientId
- AND JobStatus='T'
+ AND JobStatus='T' AND Job.FileSetId=FileSet.FileSetId
  AND JobMedia.JobId=Job.JobId AND JobMedia.MediaId=Media.MediaId
  ORDER BY Job.StartTime;
 # 7
@@ -175,3 +176,20 @@ SELECT DISTINCT Job.JobId as JobId,Job.Name as Name,Job.StartTime as StartTime,
  AND Media.MediaId=JobMedia.MediaId              
  AND JobMedia.JobId=Job.JobId
  ORDER by Job.StartTime;
+# 16
+:List Volumes Bacula thinks are in changer:
+SELECT MediaId,VolumeName,VolBytes/(1024*1024*1024) AS GB,Storage.Name 
+  AS Storage,Slot,Pool.Name AS Pool,MediaType,VolStatus
+  FROM Media,Pool,Storage
+  WHERE Media.PoolId=Pool.PoolId
+  AND Slot>0 AND InChanger=1
+  AND Media.StorageId=Storage.StorageId
+  ORDER BY MediaType ASC, Slot ASC;
+# 17
+:List Volumes likely to need replacement from age or errors
+SELECT VolumeName AS Volume,VolMounts AS Mounts,VolErrors AS Errors,
+         VolWrites AS Writes,VolStatus AS Status
+  FROM Media
+  WHERE (VolErrors>0) OR (VolStatus='Error') OR (VolMounts>50) OR
+         (VolStatus='Disabled') OR (VolWrites>3999999)
+  ORDER BY VolStatus ASC, VolErrors,VolMounts,VolumeName DESC;

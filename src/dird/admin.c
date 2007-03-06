@@ -7,7 +7,7 @@
  *  Basic tasks done here:
  *     Display the job report.
  *
- *   Version $Id: admin.c,v 1.7.2.1 2005/02/14 10:02:19 kerns Exp $
+ *   Version $Id: admin.c,v 1.9 2005/02/28 14:02:07 kerns Exp $
  */
 
 /*
@@ -35,16 +35,16 @@
 #include "ua.h"
 
 
-/* Forward referenced functions */
-static void admin_cleanup(JCR *jcr, int TermCode);
-
-/* External functions */
+bool do_admin_init(JCR *jcr)
+{
+   return true;
+}
 
 /*
- *  Returns:  0 on failure
- *	      1 on success
+ *  Returns:  false on failure
+ *	      true  on success
  */
-int do_admin(JCR *jcr)
+bool do_admin(JCR *jcr)
 {
 
    jcr->jr.JobId = jcr->JobId;
@@ -57,13 +57,14 @@ int do_admin(JCR *jcr)
 
    set_jcr_job_status(jcr, JS_Running);
    admin_cleanup(jcr, JS_Terminated);
-   return 0;
+   return true;
 }
+
 
 /*
  * Release resources allocated during backup.
  */
-static void admin_cleanup(JCR *jcr, int TermCode)
+void admin_cleanup(JCR *jcr, int TermCode)
 {
    char sdt[50], edt[50];
    char term_code[100];

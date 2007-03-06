@@ -107,13 +107,13 @@ static const var_syntax_t var_syntax_default = {
 */
 
 /* minimal output-independent vprintf(3) variant which supports %{c,s,d,%} only */
-static int 
+static int
 var_mvxprintf(
-    int (*output)(void *ctx, const char *buffer, int bufsize), void *ctx, 
+    int (*output)(void *ctx, const char *buffer, int bufsize), void *ctx,
     const char *format, va_list ap)
 {
     /* sufficient integer buffer: <available-bits> x log_10(2) + safety */
-    char ibuf[((sizeof(int)*8)/3)+10]; 
+    char ibuf[((sizeof(int)*8)/3)+10];
     const char *cp;
     char c;
     int d;
@@ -124,34 +124,34 @@ var_mvxprintf(
 	return -1;
     bytes = 0;
     while (*format != '\0') {
-        if (*format == '%') {
+	if (*format == '%') {
 	    c = *(format+1);
-            if (c == '%') {
-                /* expand "%%" */
+	    if (c == '%') {
+		/* expand "%%" */
 		cp = &c;
 		n = sizeof(char);
 	    }
-            else if (c == 'c') {
-                /* expand "%c" */
+	    else if (c == 'c') {
+		/* expand "%c" */
 		c = (char)va_arg(ap, int);
 		cp = &c;
 		n = sizeof(char);
 	    }
-            else if (c == 's') {
-                /* expand "%s" */
+	    else if (c == 's') {
+		/* expand "%s" */
 		if ((cp = (char *)va_arg(ap, char *)) == NULL)
-                    cp = "(null)";
+		    cp = "(null)";
 		n = strlen(cp);
 	    }
-            else if (c == 'd') {
-                /* expand "%d" */
+	    else if (c == 'd') {
+		/* expand "%d" */
 		d = (int)va_arg(ap, int);
-                bsnprintf(ibuf, sizeof(ibuf), "%d", d); /* explicitly secure */
+		bsnprintf(ibuf, sizeof(ibuf), "%d", d); /* explicitly secure */
 		cp = ibuf;
 		n = strlen(cp);
 	    }
 	    else {
-                /* any other "%X" */
+		/* any other "%X" */
 		cp = (char *)format;
 		n  = 2;
 	    }
@@ -160,8 +160,8 @@ var_mvxprintf(
 	else {
 	    /* plain text */
 	    cp = (char *)format;
-            if ((format = strchr(cp, '%')) == NULL)
-                format = strchr(cp, '\0');
+	    if ((format = strchr(cp, '%')) == NULL)
+		format = strchr(cp, '\0');
 	    n = format - cp;
 	}
 	/* perform output operation */
@@ -180,9 +180,9 @@ typedef struct {
 } var_mvsnprintf_cb_t;
 
 /* output callback function for var_mvsnprintf() */
-static int 
+static int
 var_mvsnprintf_cb(
-    void *_ctx, 
+    void *_ctx,
     const char *buffer, int bufsize)
 {
     var_mvsnprintf_cb_t *ctx = (var_mvsnprintf_cb_t *)_ctx;
@@ -196,9 +196,9 @@ var_mvsnprintf_cb(
 }
 
 /* minimal vsnprintf(3) variant which supports %{c,s,d} only */
-static int 
+static int
 var_mvsnprintf(
-    char *buffer, int bufsize, 
+    char *buffer, int bufsize,
     const char *format, va_list ap)
 {
     int n;
@@ -208,7 +208,7 @@ var_mvsnprintf(
 	return -1;
     if (buffer != NULL && bufsize == 0)
 	return -1;
-    if (buffer == NULL) 
+    if (buffer == NULL)
 	/* just determine output length */
 	n = var_mvxprintf(NULL, NULL, format, ap);
     else {
@@ -219,7 +219,7 @@ var_mvsnprintf(
 	if (n != -1 && ctx.buflen == 0)
 	    n = -1;
 	if (n != -1)
-            *(ctx.bufptr) = '\0';
+	    *(ctx.bufptr) = '\0';
     }
     return n;
 }
@@ -264,7 +264,7 @@ typedef struct {
     int buffer_size;
 } tokenbuf_t;
 
-static void 
+static void
 tokenbuf_init(
     tokenbuf_t *buf)
 {
@@ -274,7 +274,7 @@ tokenbuf_init(
     return;
 }
 
-static int 
+static int
 tokenbuf_isundef(
     tokenbuf_t *buf)
 {
@@ -283,7 +283,7 @@ tokenbuf_isundef(
     return 0;
 }
 
-static int 
+static int
 tokenbuf_isempty(
     tokenbuf_t *buf)
 {
@@ -292,7 +292,7 @@ tokenbuf_isempty(
     return 0;
 }
 
-static void 
+static void
 tokenbuf_set(
     tokenbuf_t *buf, const char *begin, const char *end, int buffer_size)
 {
@@ -302,7 +302,7 @@ tokenbuf_set(
     return;
 }
 
-static void 
+static void
 tokenbuf_move(
     tokenbuf_t *src, tokenbuf_t *dst)
 {
@@ -313,7 +313,7 @@ tokenbuf_move(
     return;
 }
 
-static int 
+static int
 tokenbuf_assign(
     tokenbuf_t *buf, const char *data, int len)
 {
@@ -329,7 +329,7 @@ tokenbuf_assign(
     return 1;
 }
 
-static int 
+static int
 tokenbuf_append(
     tokenbuf_t *output, const char *data, int len)
 {
@@ -386,14 +386,14 @@ tokenbuf_append(
     return 1;
 }
 
-static int 
+static int
 tokenbuf_merge(
     tokenbuf_t *output, tokenbuf_t *input)
 {
     return tokenbuf_append(output, input->begin, input->end - input->begin);
 }
 
-static void 
+static void
 tokenbuf_free(
     tokenbuf_t *buf)
 {
@@ -410,7 +410,7 @@ tokenbuf_free(
 **
 */
 
-static void 
+static void
 expand_range(char a, char b, char_class_t chrclass)
 {
     do {
@@ -419,7 +419,7 @@ expand_range(char a, char b, char_class_t chrclass)
     return;
 }
 
-static var_rc_t 
+static var_rc_t
 expand_character_class(const char *desc, char_class_t chrclass)
 {
     int i;
@@ -430,7 +430,7 @@ expand_character_class(const char *desc, char_class_t chrclass)
 
     /* walk through class description and set appropriate entries in array */
     while (*desc != EOS) {
-        if (desc[1] == '-' && desc[2] != EOS) {
+	if (desc[1] == '-' && desc[2] != EOS) {
 	    if (desc[0] > desc[2])
 		return VAR_ERR_INCORRECT_CLASS_SPEC;
 	    expand_range(desc[0], desc[2], chrclass);
@@ -449,7 +449,7 @@ expand_character_class(const char *desc, char_class_t chrclass)
 **
 */
 
-static int 
+static int
 expand_isoct(
     int c)
 {
@@ -459,7 +459,7 @@ expand_isoct(
 	return 0;
 }
 
-static var_rc_t 
+static var_rc_t
 expand_octal(
     const char **src, char **dst, const char *end)
 {
@@ -467,8 +467,8 @@ expand_octal(
 
     if (end - *src < 3)
 	return VAR_ERR_INCOMPLETE_OCTAL;
-    if (   !expand_isoct(**src) 
-	|| !expand_isoct((*src)[1]) 
+    if (   !expand_isoct(**src)
+	|| !expand_isoct((*src)[1])
 	|| !expand_isoct((*src)[2]))
 	return VAR_ERR_INVALID_OCTAL;
 
@@ -489,18 +489,18 @@ expand_octal(
     return VAR_OK;
 }
 
-static int 
+static int
 expand_ishex(
     int c)
 {
     if ((c >= '0' && c <= '9') ||
-        (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
+	(c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
 	return 1;
     else
 	return 0;
 }
 
-static var_rc_t 
+static var_rc_t
 expand_simple_hex(
     const char **src, char **dst, const char *end)
 {
@@ -508,33 +508,33 @@ expand_simple_hex(
 
     if (end - *src < 2)
 	return VAR_ERR_INCOMPLETE_HEX;
-    if (   !expand_ishex(**src) 
+    if (   !expand_ishex(**src)
 	|| !expand_ishex((*src)[1]))
 	return VAR_ERR_INVALID_HEX;
 
     if (**src >= '0' && **src <= '9')
-        c = **src - '0';
+	c = **src - '0';
     else if (**src >= 'a' && **src <= 'f')
-        c = **src - 'a' + 10;
+	c = **src - 'a' + 10;
     else if (**src >= 'A' && **src <= 'F')
-        c = **src - 'A' + 10;
+	c = **src - 'A' + 10;
 
     c = c << 4;
     (*src)++;
 
     if (**src >= '0' && **src <= '9')
-        c += **src - '0';
+	c += **src - '0';
     else if (**src >= 'a' && **src <= 'f')
-        c += **src - 'a' + 10;
+	c += **src - 'a' + 10;
     else if (**src >= 'A' && **src <= 'F')
-        c += **src - 'A' + 10;
+	c += **src - 'A' + 10;
 
     **dst = (char)c;
     (*dst)++;
     return VAR_OK;
 }
 
-static var_rc_t 
+static var_rc_t
 expand_grouped_hex(
     const char **src, char **dst, const char *end)
 {
@@ -551,7 +551,7 @@ expand_grouped_hex(
     return VAR_OK;
 }
 
-static var_rc_t 
+static var_rc_t
 expand_hex(
     const char **src, char **dst, const char *end)
 {
@@ -564,7 +564,7 @@ expand_hex(
 	return expand_simple_hex(src, dst, end);
 }
 
-/* 
+/*
 **
 **  ==== RECURSIVE-DESCEND VARIABLE EXPANSION PARSER ====
 **
@@ -576,7 +576,7 @@ static int parse_numexp (var_t *var, var_parse_t *ctx, const char *begin, const 
 static int parse_name	(var_t *var, var_parse_t *ctx, const char *begin, const char *end);
 
 /* parse pattern text */
-static int 
+static int
 parse_pattern(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end)
@@ -595,7 +595,7 @@ parse_pattern(
 }
 
 /* parse substitution text */
-static int 
+static int
 parse_substext(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end)
@@ -614,7 +614,7 @@ parse_substext(
 }
 
 /* parse expression text */
-static int 
+static int
 parse_exptext(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end)
@@ -625,7 +625,7 @@ parse_exptext(
     for (p = begin;	p != end
 		    && *p != var->syntax.delim_init
 		    && *p != var->syntax.delim_close
-                    && *p != ':'; p++) {
+		    && *p != ':'; p++) {
 	if (*p == var->syntax.escape) {
 	    if (p + 1 == end)
 		return VAR_ERR_INCOMPLETE_QUOTED_PAIR;
@@ -636,7 +636,7 @@ parse_exptext(
 }
 
 /* parse opertion argument text */
-static int 
+static int
 parse_opargtext(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end)
@@ -654,7 +654,7 @@ parse_opargtext(
     return (p - begin);
 }
 
-static int 
+static int
 parse_opargtext_or_variable(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end,
@@ -702,7 +702,7 @@ error_return:
 }
 
 /* parse expression or variable */
-static int 
+static int
 parse_exptext_or_variable(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end,
@@ -753,7 +753,7 @@ error_return:
 }
 
 /* parse substitution text or variable */
-static int 
+static int
 parse_substext_or_variable(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end,
@@ -804,17 +804,17 @@ error_return:
 }
 
 /* parse class description */
-static int 
+static int
 parse_class_description(
     var_t *var, var_parse_t *ctx,
     tokenbuf_t *src, tokenbuf_t *dst)
 {
     unsigned char c, d;
-    const char *p; 
+    const char *p;
 
     p = src->begin;
     while (p != src->end) {
-        if ((src->end - p) >= 3 && p[1] == '-') {
+	if ((src->end - p) >= 3 && p[1] == '-') {
 	    if (*p > p[2])
 		return VAR_ERR_INCORRECT_TRANSPOSE_CLASS_SPEC;
 	    for (c = *p, d = p[2]; c <= d; ++c) {
@@ -832,12 +832,12 @@ parse_class_description(
 }
 
 /* parse regex replace part */
-static int 
+static int
 parse_regex_replace(
     var_t *var, var_parse_t *ctx,
-    const char *data, 
+    const char *data,
     tokenbuf_t *orig,
-    regmatch_t *pmatch, 
+    regmatch_t *pmatch,
     tokenbuf_t *expanded)
 {
     const char *p;
@@ -847,13 +847,13 @@ parse_regex_replace(
     tokenbuf_init(expanded);
 
     while (p != orig->end) {
-        if (*p == '\\') {
+	if (*p == '\\') {
 	    if (orig->end - p <= 1) {
 		tokenbuf_free(expanded);
 		return VAR_ERR_INCOMPLETE_QUOTED_PAIR;
 	    }
 	    p++;
-            if (*p == '\\') {
+	    if (*p == '\\') {
 		if (!tokenbuf_append(expanded, p, 1)) {
 		    tokenbuf_free(expanded);
 		    return VAR_ERR_OUT_OF_MEMORY;
@@ -865,7 +865,7 @@ parse_regex_replace(
 		tokenbuf_free(expanded);
 		return VAR_ERR_UNKNOWN_QUOTED_PAIR_IN_REPLACE;
 	    }
-            i = (*p - '0');
+	    i = (*p - '0');
 	    p++;
 	    if (pmatch[i].rm_so == -1 || pmatch[i].rm_eo == -1) {
 		tokenbuf_free(expanded);
@@ -889,10 +889,10 @@ parse_regex_replace(
 }
 
 /* operation: transpose */
-static int 
+static int
 op_transpose(
     var_t *var, var_parse_t *ctx,
-    tokenbuf_t *data, 
+    tokenbuf_t *data,
     tokenbuf_t *search,
     tokenbuf_t *replace)
 {
@@ -944,12 +944,12 @@ error_return:
 }
 
 /* operation: search & replace */
-static int 
+static int
 op_search_and_replace(
     var_t *var, var_parse_t *ctx,
-    tokenbuf_t *data, 
+    tokenbuf_t *data,
     tokenbuf_t *search,
-    tokenbuf_t *replace, 
+    tokenbuf_t *replace,
     tokenbuf_t *flags)
 {
     tokenbuf_t tmp;
@@ -965,16 +965,16 @@ op_search_and_replace(
 
     for (p = flags->begin; p != flags->end; p++) {
 	switch (tolower(*p)) {
-            case 'm':
+	    case 'm':
 		multiline = 1;
 		break;
-            case 'i':
+	    case 'i':
 		case_insensitive = 1;
 		break;
-            case 'g':
+	    case 'g':
 		global = 1;
 		break;
-            case 't':
+	    case 't':
 		no_regex = 1;
 		break;
 	    default:
@@ -1030,7 +1030,7 @@ op_search_and_replace(
 	}
 
 	/* compile the pattern. */
-	rc = regcomp(&preg, tmp.begin, 
+	rc = regcomp(&preg, tmp.begin,
 		     (	REG_EXTENDED
 		      | (multiline ? REG_NEWLINE : 0)
 		      | (case_insensitive ? REG_ICASE : 0)));
@@ -1041,9 +1041,9 @@ op_search_and_replace(
 	}
 
 	/* match the pattern and create the result string in the tmp buffer */
-        tokenbuf_append(&tmp, "", 0);
+	tokenbuf_append(&tmp, "", 0);
 	for (p = mydata.begin; p < mydata.end; ) {
-            if (p == mydata.begin || p[-1] == '\n')
+	    if (p == mydata.begin || p[-1] == '\n')
 		regexec_flag = 0;
 	    else
 		regexec_flag = REG_NOTBOL;
@@ -1053,8 +1053,8 @@ op_search_and_replace(
 		tokenbuf_append(&tmp, p, mydata.end - p);
 		break;
 	    }
-	    else if (	multiline 
-		     && (p + pmatch[0].rm_so) == mydata.end 
+	    else if (	multiline
+		     && (p + pmatch[0].rm_so) == mydata.end
 		     && (pmatch[0].rm_eo - pmatch[0].rm_so) == 0) {
 		/* special case: found empty pattern (usually /^/ or /$/ only)
 		   in multi-line at end of data (after the last newline) */
@@ -1103,7 +1103,7 @@ op_search_and_replace(
 		    }
 		    p++;
 		}
-		/* append prolog string and stop processing if we 
+		/* append prolog string and stop processing if we
 		   do not perform the search & replace globally */
 		if (!global) {
 		    if (!tokenbuf_append(&tmp, p, mydata.end - p)) {
@@ -1126,12 +1126,12 @@ op_search_and_replace(
 }
 
 /* operation: offset substring */
-static int 
+static int
 op_offset(
     var_t *var, var_parse_t *ctx,
-    tokenbuf_t *data, 
+    tokenbuf_t *data,
     int num1,
-    int num2, 
+    int num2,
     int isrange)
 {
     tokenbuf_t res;
@@ -1168,11 +1168,11 @@ op_offset(
 }
 
 /* operation: padding */
-static int 
+static int
 op_padding(
     var_t *var, var_parse_t *ctx,
-    tokenbuf_t *data, 
-    int width, 
+    tokenbuf_t *data,
+    int width,
     tokenbuf_t *fill,
     char position)
 {
@@ -1269,7 +1269,7 @@ op_padding(
 }
 
 /* parse an integer number ("123") */
-static int 
+static int
 parse_integer(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end,
@@ -1282,7 +1282,7 @@ parse_integer(
     num = 0;
     while (isdigit(*p) && p != end) {
 	num *= 10;
-        num += (*p - '0');
+	num += (*p - '0');
 	p++;
     }
     if (result != NULL)
@@ -1291,7 +1291,7 @@ parse_integer(
 }
 
 /* parse an operation (":x...") */
-static int 
+static int
 parse_operation(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end,
@@ -1319,7 +1319,7 @@ parse_operation(
 
     /* dispatch through the first operation character */
     switch (tolower(*p)) {
-        case 'l': {
+	case 'l': {
 	    /* turn value to lowercase. */
 	    if (data->begin != NULL) {
 		/* if the buffer does not live in an allocated buffer,
@@ -1337,7 +1337,7 @@ parse_operation(
 	    p++;
 	    break;
 	}
-        case 'u': {
+	case 'u': {
 	    /* turn value to uppercase. */
 	    if (data->begin != NULL) {
 		/* if the buffer does not live in an allocated buffer,
@@ -1355,7 +1355,7 @@ parse_operation(
 	    p++;
 	    break;
 	}
-        case 'o': {
+	case 'o': {
 	    /* cut out substring of value. */
 	    p++;
 	    rc = parse_integer(var, ctx, p, end, &num1);
@@ -1366,10 +1366,10 @@ parse_operation(
 	    else if (rc < 0)
 		goto error_return;
 	    p += rc;
-            if (*p == ',') {
+	    if (*p == ',') {
 		isrange = 0;
 		p++;
-            } else if (*p == '-') {
+	    } else if (*p == '-') {
 		isrange = 1;
 		p++;
 	    } else {
@@ -1385,11 +1385,11 @@ parse_operation(
 	    }
 	    break;
 	}
-        case '#': {
+	case '#': {
 	    /* determine length of the value */
 	    if (data->begin != NULL) {
 		char buf[((sizeof(int)*8)/3)+10]; /* sufficient size: <#bits> x log_10(2) + safety */
-                sprintf(buf, "%d", (int)(data->end - data->begin));
+		sprintf(buf, "%d", (int)(data->end - data->begin));
 		tokenbuf_free(data);
 		if (!tokenbuf_assign(data, buf, strlen(buf))) {
 		    rc = VAR_ERR_OUT_OF_MEMORY;
@@ -1399,7 +1399,7 @@ parse_operation(
 	    p++;
 	    break;
 	}
-        case '-': {
+	case '-': {
 	    /* substitute parameter if data is empty */
 	    p++;
 	    rc = parse_exptext_or_variable(var, ctx, p, end, &tmptokbuf);
@@ -1418,7 +1418,7 @@ parse_operation(
 	    }
 	    break;
 	}
-        case '*': {
+	case '*': {
 	    /* substitute empty string if data is not empty, parameter otherwise. */
 	    p++;
 	    rc = parse_exptext_or_variable(var, ctx, p, end, &tmptokbuf);
@@ -1435,13 +1435,13 @@ parse_operation(
 		    tokenbuf_move(&tmptokbuf, data);
 		} else {
 		    tokenbuf_free(data);
-                    data->begin = data->end = "";
+		    data->begin = data->end = "";
 		    data->buffer_size = 0;
 		}
 	    }
 	    break;
 	}
-        case '+': {
+	case '+': {
 	    /* substitute parameter if data is not empty. */
 	    p++;
 	    rc = parse_exptext_or_variable(var, ctx, p, end, &tmptokbuf);
@@ -1458,10 +1458,10 @@ parse_operation(
 	    }
 	    break;
 	}
-        case 's': {
+	case 's': {
 	    /* search and replace. */
 	    p++;
-            if (*p != '/')
+	    if (*p != '/')
 		return VAR_ERR_MALFORMATTED_REPLACE;
 	    p++;
 	    rc = parse_pattern(var, ctx, p, end);
@@ -1469,7 +1469,7 @@ parse_operation(
 		goto error_return;
 	    tokenbuf_set(&search, p, p + rc, 0);
 	    p += rc;
-            if (*p != '/') {
+	    if (*p != '/') {
 		rc = VAR_ERR_MALFORMATTED_REPLACE;
 		goto error_return;
 	    }
@@ -1478,7 +1478,7 @@ parse_operation(
 	    if (rc < 0)
 		goto error_return;
 	    p += rc;
-            if (*p != '/') {
+	    if (*p != '/') {
 		rc = VAR_ERR_MALFORMATTED_REPLACE;
 		goto error_return;
 	    }
@@ -1495,17 +1495,17 @@ parse_operation(
 	    }
 	    break;
 	}
-        case 'y': {
+	case 'y': {
 	    /* transpose characters from class A to class B. */
 	    p++;
-            if (*p != '/')
+	    if (*p != '/')
 		return VAR_ERR_MALFORMATTED_TRANSPOSE;
 	    p++;
 	    rc = parse_substext_or_variable(var, ctx, p, end, &search);
 	    if (rc < 0)
 		goto error_return;
 	    p += rc;
-            if (*p != '/') {
+	    if (*p != '/') {
 		rc = VAR_ERR_MALFORMATTED_TRANSPOSE;
 		goto error_return;
 	    }
@@ -1514,7 +1514,7 @@ parse_operation(
 	    if (rc < 0)
 		goto error_return;
 	    p += rc;
-            if (*p != '/') {
+	    if (*p != '/') {
 		rc = VAR_ERR_MALFORMATTED_TRANSPOSE;
 		goto error_return;
 	    } else
@@ -1526,10 +1526,10 @@ parse_operation(
 	    }
 	    break;
 	}
-        case 'p': {
+	case 'p': {
 	    /* padding. */
 	    p++;
-            if (*p != '/')
+	    if (*p != '/')
 		return VAR_ERR_MALFORMATTED_PADDING;
 	    p++;
 	    rc = parse_integer(var, ctx, p, end, &num1);
@@ -1538,7 +1538,7 @@ parse_operation(
 		goto error_return;
 	    }
 	    p += rc;
-            if (*p != '/') {
+	    if (*p != '/') {
 		rc = VAR_ERR_MALFORMATTED_PADDING;
 		goto error_return;
 	    }
@@ -1547,12 +1547,12 @@ parse_operation(
 	    if (rc < 0)
 		goto error_return;
 	    p += rc;
-            if (*p != '/') {
+	    if (*p != '/') {
 		rc = VAR_ERR_MALFORMATTED_PADDING;
 		goto error_return;
 	    }
 	    p++;
-            if (*p != 'l' && *p != 'c' && *p != 'r') {
+	    if (*p != 'l' && *p != 'c' && *p != 'r') {
 		rc = VAR_ERR_MALFORMATTED_PADDING;
 		goto error_return;
 	    }
@@ -1564,7 +1564,7 @@ parse_operation(
 	    }
 	    break;
 	}
-        case '%': {
+	case '%': {
 	    /* operation callback function */
 	    const char *op_ptr;
 	    int op_len;
@@ -1573,7 +1573,7 @@ parse_operation(
 	    const char *val_ptr;
 	    int val_len;
 	    const char *out_ptr;
-	    int out_len; 
+	    int out_len;
 	    int out_size;
 	    tokenbuf_t args;
 
@@ -1584,7 +1584,7 @@ parse_operation(
 	    op_ptr = p;
 	    op_len = rc;
 	    p += rc;
-            if (*p == '(') {
+	    if (*p == '(') {
 		p++;
 		tokenbuf_init(&args);
 		rc = parse_opargtext_or_variable(var, ctx, p, end, &args);
@@ -1593,7 +1593,7 @@ parse_operation(
 		p += rc;
 		arg_ptr = args.begin;
 		arg_len = args.end - args.begin;
-                if (*p != ')') {
+		if (*p != ')') {
 		    rc = VAR_ERR_MALFORMED_OPERATION_ARGUMENTS;
 		    goto error_return;
 		}
@@ -1651,10 +1651,10 @@ error_return:
 }
 
 /* parse numerical expression operand */
-static int 
+static int
 parse_numexp_operand(
     var_t *var, var_parse_t *ctx,
-    const char *begin, const char *end, 
+    const char *begin, const char *end,
     int *result, int *failed)
 {
     const char *p;
@@ -1678,7 +1678,7 @@ parse_numexp_operand(
 	if (p == end)
 	    return VAR_ERR_INCOMPLETE_INDEX_SPEC;
 	/* parse closing parenthesis */
-        if (*p != ')')
+	if (*p != ')')
 	    return VAR_ERR_UNCLOSED_BRACKET_IN_INDEX;
 	p++;
     }
@@ -1714,7 +1714,7 @@ parse_numexp_operand(
 	}
     }
     /* parse relative index mark ("#") */
-    else if (	var->syntax.index_mark != EOS 
+    else if (	var->syntax.index_mark != EOS
 	     && *p == var->syntax.index_mark) {
 	p++;
 	*result = ctx->index_this;
@@ -1755,10 +1755,10 @@ parse_numexp_operand(
 }
 
 /* parse numerical expression ("x+y") */
-static int 
+static int
 parse_numexp(
     var_t *var, var_parse_t *ctx,
-    const char *begin, const char *end, 
+    const char *begin, const char *end,
     int *result, int *failed)
 {
     const char *p;
@@ -1779,28 +1779,28 @@ parse_numexp(
 
     /* parse numerical operator */
     while (p != end) {
-        if (*p == '+' || *p == '-') {
+	if (*p == '+' || *p == '-') {
 	    op = *p++;
 	    /* recursively parse right operand (light binding) */
 	    rc = parse_numexp(var, ctx, p, end, &right, failed);
 	    if (rc < 0)
 		return rc;
 	    p += rc;
-            if (op == '+')
+	    if (op == '+')
 		*result = (*result + right);
 	    else
 		*result = (*result - right);
 	}
-        else if (*p == '*' || *p == '/' || *p == '%') {
+	else if (*p == '*' || *p == '/' || *p == '%') {
 	    op = *p++;
 	    /* recursively parse right operand (string binding) */
 	    rc = parse_numexp_operand(var, ctx, p, end, &right, failed);
 	    if (rc < 0)
 		return rc;
 	    p += rc;
-            if (op == '*')
+	    if (op == '*')
 		*result = (*result * right);
-            else if (op == '/') {
+	    else if (op == '/') {
 		if (right == 0) {
 		    if (*failed)
 			*result = 0;
@@ -1810,7 +1810,7 @@ parse_numexp(
 		else
 		    *result = (*result / right);
 	    }
-            else if (op == '%') {
+	    else if (op == '%') {
 		if (right == 0) {
 		    if (*failed)
 			*result = 0;
@@ -1830,7 +1830,7 @@ parse_numexp(
 }
 
 /* parse variable name ("abc") */
-static int 
+static int
 parse_name(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end)
@@ -1844,7 +1844,7 @@ parse_name(
 }
 
 /* lookup a variable value through the callback function */
-static int 
+static int
 lookup_value(
     var_t *var, var_parse_t *ctx,
     const char	*var_ptr, int  var_len, int var_inc, int var_idx,
@@ -1855,13 +1855,13 @@ lookup_value(
 
     /* pass through to original callback */
     rc = (*var->cb_value_fct)(var, var->cb_value_ctx,
-			      var_ptr, var_len, var_inc, var_idx, 
+			      var_ptr, var_len, var_inc, var_idx,
 			      val_ptr, val_len, val_size);
 
     /* convert undefined variable into empty variable if relative
        lookups are counted. This is the case inside an active loop
        construct if no limits are given. There the parse_input()
-       has to proceed until all variables have undefined values. 
+       has to proceed until all variables have undefined values.
        This trick here allows it to determine this case. */
     if (ctx->rel_lookup_flag && rc == VAR_ERR_UNDEFINED_VARIABLE) {
 	ctx->rel_lookup_cnt--;
@@ -1876,7 +1876,7 @@ lookup_value(
 }
 
 /* parse complex variable construct ("${name...}") */
-static int 
+static int
 parse_variable_complex(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end,
@@ -1888,7 +1888,7 @@ parse_variable_complex(
     int failed = 0;
     int rc;
     int idx = 0;
-    int inc;   
+    int inc;
     tokenbuf_t name;
     tokenbuf_t tmp;
 
@@ -1935,7 +1935,7 @@ parse_variable_complex(
 	tokenbuf_free(&tmp);	      /* KES 11/9/2003 */
     } while (rc > 0);
 
-    /* we must have the complete expanded variable name now, 
+    /* we must have the complete expanded variable name now,
        so make sure we really do. */
     if (name.begin == name.end) {
 	if (ctx->force_expand) {
@@ -1944,7 +1944,7 @@ parse_variable_complex(
 	}
 	else {
 	    /* If no force_expand is requested, we have to back-off.
-               We're not sure whether our approach here is 100% correct,
+	       We're not sure whether our approach here is 100% correct,
 	       because it _could_ have side-effects according to Peter
 	       Simons, but as far as we know and tried it, it is
 	       correct. But be warned -- RSE */
@@ -2008,7 +2008,7 @@ goahead:
 	tokenbuf_free(&tmp);
 	tokenbuf_init(&tmp);
 	p--;
-        while (p != end && *p == ':') {
+	while (p != end && *p == ':') {
 	    p++;
 	    if (!failed)
 		rc = parse_operation(var, ctx, p, end, result);
@@ -2055,7 +2055,7 @@ error_return:
 }
 
 /* parse variable construct ("$name" or "${name...}") */
-static int 
+static int
 parse_variable(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end,
@@ -2078,13 +2078,13 @@ parse_variable(
     if (p == end)
 	return VAR_ERR_INCOMPLETE_VARIABLE_SPEC;
 
-    /* parse a simple variable name. 
+    /* parse a simple variable name.
        (if this fails, we're try to parse a complex variable construct) */
     rc = parse_name(var, ctx, p, end);
     if (rc < 0)
 	return rc;
     if (rc > 0) {
-        inc = (p[rc] == '+');
+	inc = (p[rc] == '+');
 	rc2 = lookup_value(var, ctx, p, rc, inc, 0, &data, &len, &buffer_size);
 	if (rc2 == VAR_ERR_UNDEFINED_VARIABLE && !ctx->force_expand) {
 	    tokenbuf_set(result, begin, begin + 1 + rc, 0);
@@ -2104,7 +2104,7 @@ parse_variable(
 }
 
 /* parse loop construct limits ("[...]{b,s,e}") */
-static var_rc_t 
+static var_rc_t
 parse_looplimits(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end,
@@ -2201,14 +2201,14 @@ parse_looplimits(
 }
 
 /* parse plain text */
-static int 
+static int
 parse_text(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end)
 {
     const char *p;
 
-    /* parse until delim_init (variable construct) 
+    /* parse until delim_init (variable construct)
        or index_open (loop construct) is found */
     for (p = begin; p != end; p++) {
 	if (*p == var->syntax.escape) {
@@ -2219,7 +2219,7 @@ parse_text(
 	else if (*p == var->syntax.delim_init)
 	    break;
 	else if (   var->syntax.index_open != EOS
-		 && (	*p == var->syntax.index_open 
+		 && (	*p == var->syntax.index_open
 		     || *p == var->syntax.index_close))
 	    break;
     }
@@ -2227,7 +2227,7 @@ parse_text(
 }
 
 /* expand input in general */
-static var_rc_t 
+static var_rc_t
 parse_input(
     var_t *var, var_parse_t *ctx,
     const char *begin, const char *end,
@@ -2248,8 +2248,8 @@ parse_input(
 
     do {
 	/* try to parse a loop construct */
-	if (   p != end 
-	    && var->syntax.index_open != EOS 
+	if (   p != end
+	    && var->syntax.index_open != EOS
 	    && *p == var->syntax.index_open) {
 	    p++;
 
@@ -2269,24 +2269,24 @@ parse_input(
 	       or there is a stop limit known and it is still not reached */
 	    re_loop:
 	    for (i = start;
-		 (   (	 open_stop 
-		      && (   loop_limit_length < 0 
-			  || rel_lookup_cnt > ctx->rel_lookup_cnt)) 
-		  || (	 !open_stop 
+		 (   (	 open_stop
+		      && (   loop_limit_length < 0
+			  || rel_lookup_cnt > ctx->rel_lookup_cnt))
+		  || (	 !open_stop
 		      && i <= stop)				   );
 		 i += step) {
 
 		/* remember current output end for restoring */
 		output_backup = (output->end - output->begin);
 
-		/* open temporary context for recursion */ 
+		/* open temporary context for recursion */
 		ctx = var_parse_push(ctx, &myctx);
 		ctx->force_expand    = 1;
 		ctx->rel_lookup_flag = 1;
 		ctx->index_this      = i;
 
 		/* recursive parse input through ourself */
-		rc = parse_input(var, ctx, p, end, 
+		rc = parse_input(var, ctx, p, end,
 				 output, recursion_level+1);
 
 		/* retrieve info and close temporary context */
@@ -2305,7 +2305,7 @@ parse_input(
 
 		/* try to parse loop construct limit specification */
 		if (loop_limit_length < 0) {
-		    rc2 = parse_looplimits(var, ctx, p+rc+1, end, 
+		    rc2 = parse_looplimits(var, ctx, p+rc+1, end,
 					   &start, &step, &stop, &open_stop);
 		    if (rc2 < 0)
 			goto error_return;
@@ -2358,7 +2358,7 @@ parse_input(
 	    tokenbuf_free(&result);
 	    p += rc;
 	    continue;
-	}    
+	}
 	tokenbuf_free(&result);
 	if (rc < 0)
 	    goto error_return;
@@ -2388,14 +2388,14 @@ parse_input(
     return (var_rc_t)rc;
 }
 
-/* 
+/*
 **
 **  ==== APPLICATION PROGRAMMING INTERFACE (API) ====
 **
 */
 
 /* create variable expansion context */
-var_rc_t 
+var_rc_t
 var_create(
     var_t **pvar)
 {
@@ -2412,7 +2412,7 @@ var_create(
 }
 
 /* destroy variable expansion context */
-var_rc_t 
+var_rc_t
 var_destroy(
     var_t *var)
 {
@@ -2423,10 +2423,10 @@ var_destroy(
 }
 
 /* configure variable expansion context */
-var_rc_t 
+var_rc_t
 var_config(
-    var_t *var, 
-    var_config_t mode, 
+    var_t *var,
+    var_config_t mode,
     ...)
 {
     va_list ap;
@@ -2451,7 +2451,7 @@ var_config(
 	    var->syntax.name_chars  = NULL; /* unused internally */
 	    if ((rc = expand_character_class(s->name_chars, var->syntax_nameclass)) != VAR_OK)
 		return VAR_RC(rc);
-	    if (   var->syntax_nameclass[(int)var->syntax.delim_init] 
+	    if (   var->syntax_nameclass[(int)var->syntax.delim_init]
 		|| var->syntax_nameclass[(int)var->syntax.delim_open]
 		|| var->syntax_nameclass[(int)var->syntax.delim_close]
 		|| var->syntax_nameclass[(int)var->syntax.escape])
@@ -2484,11 +2484,11 @@ var_config(
 }
 
 /* perform unescape operation on a buffer */
-var_rc_t 
+var_rc_t
 var_unescape(
-    var_t *var, 
-    const char *src, int srclen, 
-    char *dst, int dstlen, 
+    var_t *var,
+    const char *src, int srclen,
+    char *dst, int dstlen,
     int all)
 {
     const char *end;
@@ -2498,34 +2498,34 @@ var_unescape(
 	return VAR_RC(VAR_ERR_INVALID_ARGUMENT);
     end = src + srclen;
     while (src < end) {
-        if (*src == '\\') {
+	if (*src == '\\') {
 	    if (++src == end)
 		return VAR_RC(VAR_ERR_INCOMPLETE_NAMED_CHARACTER);
 	    switch (*src) {
-                case '\\':
+		case '\\':
 		    if (!all) {
-                        *dst++ = '\\';
+			*dst++ = '\\';
 		    }
-                    *dst++ = '\\';
+		    *dst++ = '\\';
 		    break;
-                case 'n':
-                    *dst++ = '\n';
+		case 'n':
+		    *dst++ = '\n';
 		    break;
-                case 't':
-                    *dst++ = '\t';
+		case 't':
+		    *dst++ = '\t';
 		    break;
-                case 'r':
-                    *dst++ = '\r';
+		case 'r':
+		    *dst++ = '\r';
 		    break;
-                case 'x':
+		case 'x':
 		    ++src;
 		    if ((rc = expand_hex(&src, &dst, end)) != VAR_OK)
 			return VAR_RC(rc);
 		    break;
-                case '0': case '1': case '2': case '3': case '4':
-                case '5': case '6': case '7': case '8': case '9':
-		    if (   end - src >= 3 
-			&& isdigit((int)src[1]) 
+		case '0': case '1': case '2': case '3': case '4':
+		case '5': case '6': case '7': case '8': case '9':
+		    if (   end - src >= 3
+			&& isdigit((int)src[1])
 			&& isdigit((int)src[2])) {
 			if ((rc = expand_octal(&src, &dst, end)) != 0)
 			    return VAR_RC(rc);
@@ -2533,7 +2533,7 @@ var_unescape(
 		    }
 		default:
 		    if (!all) {
-                        *dst++ = '\\';
+			*dst++ = '\\';
 		    }
 		    *dst++ = *src;
 	    }
@@ -2546,11 +2546,11 @@ var_unescape(
 }
 
 /* perform expand operation on a buffer */
-var_rc_t 
+var_rc_t
 var_expand(
-    var_t *var, 
-    const char *src_ptr, int src_len, 
-    char **dst_ptr, int *dst_len, 
+    var_t *var,
+    const char *src_ptr, int src_len,
+    char **dst_ptr, int *dst_len,
     int force_expand)
 {
     var_parse_t ctx;
@@ -2574,9 +2574,9 @@ var_expand(
 
     /* post-processing */
     if (rc >= 0) {
-	/* always EOS-terminate output for convinience reasons 
+	/* always EOS-terminate output for convinience reasons
 	   but do not count the EOS-terminator in the length */
-        if (!tokenbuf_append(&output, "\0", 1)) {
+	if (!tokenbuf_append(&output, "\0", 1)) {
 	    tokenbuf_free(&output);
 	    return VAR_RC(VAR_ERR_OUT_OF_MEMORY);
 	}
@@ -2598,10 +2598,10 @@ var_expand(
 }
 
 /* format and expand a string */
-var_rc_t 
+var_rc_t
 var_formatv(
-    var_t *var, 
-    char **dst_ptr, int force_expand, 
+    var_t *var,
+    char **dst_ptr, int force_expand,
     const char *fmt, va_list ap)
 {
     var_rc_t rc;
@@ -2634,10 +2634,10 @@ var_formatv(
 }
 
 /* format and expand a string */
-var_rc_t 
+var_rc_t
 var_format(
-    var_t *var, 
-    char **dst_ptr, int force_expand, 
+    var_t *var,
+    char **dst_ptr, int force_expand,
     const char *fmt, ...)
 {
     var_rc_t rc;
@@ -2656,52 +2656,52 @@ var_format(
 
 /* var_rc_t to string mapping table */
 static const char *var_errors[] = {
-    "everything ok",                                           /* VAR_OK = 0 */
-    "incomplete named character",                              /* VAR_ERR_INCOMPLETE_NAMED_CHARACTER */
-    "incomplete hexadecimal value",                            /* VAR_ERR_INCOMPLETE_HEX */
-    "invalid hexadecimal value",                               /* VAR_ERR_INVALID_HEX */
-    "octal value too large",                                   /* VAR_ERR_OCTAL_TOO_LARGE */
-    "invalid octal value",                                     /* VAR_ERR_INVALID_OCTAL */
-    "incomplete octal value",                                  /* VAR_ERR_INCOMPLETE_OCTAL */
-    "incomplete grouped hexadecimal value",                    /* VAR_ERR_INCOMPLETE_GROUPED_HEX */
-    "incorrect character class specification",                 /* VAR_ERR_INCORRECT_CLASS_SPEC */
-    "invalid expansion configuration",                         /* VAR_ERR_INVALID_CONFIGURATION */
-    "out of memory",                                           /* VAR_ERR_OUT_OF_MEMORY */
-    "incomplete variable specification",                       /* VAR_ERR_INCOMPLETE_VARIABLE_SPEC */
-    "undefined variable",                                      /* VAR_ERR_UNDEFINED_VARIABLE */
-    "input is neither text nor variable",                      /* VAR_ERR_INPUT_ISNT_TEXT_NOR_VARIABLE */
-    "unknown command character in variable",                   /* VAR_ERR_UNKNOWN_COMMAND_CHAR */
-    "malformatted search and replace operation",               /* VAR_ERR_MALFORMATTED_REPLACE */
-    "unknown flag in search and replace operation",            /* VAR_ERR_UNKNOWN_REPLACE_FLAG */
-    "invalid regex in search and replace operation",           /* VAR_ERR_INVALID_REGEX_IN_REPLACE */
-    "missing parameter in command",                            /* VAR_ERR_MISSING_PARAMETER_IN_COMMAND */
-    "empty search string in search and replace operation",     /* VAR_ERR_EMPTY_SEARCH_STRING */
-    "start offset missing in cut operation",                   /* VAR_ERR_MISSING_START_OFFSET */
-    "offsets in cut operation delimited by unknown character", /* VAR_ERR_INVALID_OFFSET_DELIMITER */
-    "range out of bounds in cut operation",                    /* VAR_ERR_RANGE_OUT_OF_BOUNDS */
-    "offset out of bounds in cut operation",                   /* VAR_ERR_OFFSET_OUT_OF_BOUNDS */
-    "logic error in cut operation",                            /* VAR_ERR_OFFSET_LOGIC */
-    "malformatted transpose operation",                        /* VAR_ERR_MALFORMATTED_TRANSPOSE */
-    "source and target class mismatch in transpose operation", /* VAR_ERR_TRANSPOSE_CLASSES_MISMATCH */
-    "empty character class in transpose operation",            /* VAR_ERR_EMPTY_TRANSPOSE_CLASS */
-    "incorrect character class in transpose operation",        /* VAR_ERR_INCORRECT_TRANSPOSE_CLASS_SPEC */
-    "malformatted padding operation",                          /* VAR_ERR_MALFORMATTED_PADDING */
-    "width parameter missing in padding operation",            /* VAR_ERR_MISSING_PADDING_WIDTH */
-    "fill string missing in padding operation",                /* VAR_ERR_EMPTY_PADDING_FILL_STRING */
-    "unknown quoted pair in search and replace operation",     /* VAR_ERR_UNKNOWN_QUOTED_PAIR_IN_REPLACE */
-    "sub-matching reference out of range",                     /* VAR_ERR_SUBMATCH_OUT_OF_RANGE */
-    "invalid argument",                                        /* VAR_ERR_INVALID_ARGUMENT */
-    "incomplete quoted pair",                                  /* VAR_ERR_INCOMPLETE_QUOTED_PAIR */
-    "lookup function does not support variable arrays",        /* VAR_ERR_ARRAY_LOOKUPS_ARE_UNSUPPORTED */
-    "index of array variable contains an invalid character",   /* VAR_ERR_INVALID_CHAR_IN_INDEX_SPEC */
-    "index of array variable is incomplete",                   /* VAR_ERR_INCOMPLETE_INDEX_SPEC */
-    "bracket expression in array variable's index not closed", /* VAR_ERR_UNCLOSED_BRACKET_IN_INDEX */
-    "division by zero error in index specification",           /* VAR_ERR_DIVISION_BY_ZERO_IN_INDEX */
-    "unterminated loop construct",                             /* VAR_ERR_UNTERMINATED_LOOP_CONSTRUCT */
-    "invalid character in loop limits",                        /* VAR_ERR_INVALID_CHAR_IN_LOOP_LIMITS */
-    "malformed operation argument list",                       /* VAR_ERR_MALFORMED_OPERATION_ARGUMENTS */
-    "undefined operation",                                     /* VAR_ERR_UNDEFINED_OPERATION */
-    "formatting failure"                                       /* VAR_ERR_FORMATTING_FAILURE */
+    _("everything ok"),                                           /* VAR_OK = 0 */
+    _("incomplete named character"),                              /* VAR_ERR_INCOMPLETE_NAMED_CHARACTER */
+    _("incomplete hexadecimal value"),                            /* VAR_ERR_INCOMPLETE_HEX */
+    _("invalid hexadecimal value"),                               /* VAR_ERR_INVALID_HEX */
+    _("octal value too large"),                                   /* VAR_ERR_OCTAL_TOO_LARGE */
+    _("invalid octal value"),                                     /* VAR_ERR_INVALID_OCTAL */
+    _("incomplete octal value"),                                  /* VAR_ERR_INCOMPLETE_OCTAL */
+    _("incomplete grouped hexadecimal value"),                    /* VAR_ERR_INCOMPLETE_GROUPED_HEX */
+    _("incorrect character class specification"),                 /* VAR_ERR_INCORRECT_CLASS_SPEC */
+    _("invalid expansion configuration"),                         /* VAR_ERR_INVALID_CONFIGURATION */
+    _("out of memory"),                                           /* VAR_ERR_OUT_OF_MEMORY */
+    _("incomplete variable specification"),                       /* VAR_ERR_INCOMPLETE_VARIABLE_SPEC */
+    _("undefined variable"),                                      /* VAR_ERR_UNDEFINED_VARIABLE */
+    _("input is neither text nor variable"),                      /* VAR_ERR_INPUT_ISNT_TEXT_NOR_VARIABLE */
+    _("unknown command character in variable"),                   /* VAR_ERR_UNKNOWN_COMMAND_CHAR */
+    _("malformatted search and replace operation"),               /* VAR_ERR_MALFORMATTED_REPLACE */
+    _("unknown flag in search and replace operation"),            /* VAR_ERR_UNKNOWN_REPLACE_FLAG */
+    _("invalid regex in search and replace operation"),           /* VAR_ERR_INVALID_REGEX_IN_REPLACE */
+    _("missing parameter in command"),                            /* VAR_ERR_MISSING_PARAMETER_IN_COMMAND */
+    _("empty search string in search and replace operation"),     /* VAR_ERR_EMPTY_SEARCH_STRING */
+    _("start offset missing in cut operation"),                   /* VAR_ERR_MISSING_START_OFFSET */
+    _("offsets in cut operation delimited by unknown character"), /* VAR_ERR_INVALID_OFFSET_DELIMITER */
+    _("range out of bounds in cut operation"),                    /* VAR_ERR_RANGE_OUT_OF_BOUNDS */
+    _("offset out of bounds in cut operation"),                   /* VAR_ERR_OFFSET_OUT_OF_BOUNDS */
+    _("logic error in cut operation"),                            /* VAR_ERR_OFFSET_LOGIC */
+    _("malformatted transpose operation"),                        /* VAR_ERR_MALFORMATTED_TRANSPOSE */
+    _("source and target class mismatch in transpose operation"), /* VAR_ERR_TRANSPOSE_CLASSES_MISMATCH */
+    _("empty character class in transpose operation"),            /* VAR_ERR_EMPTY_TRANSPOSE_CLASS */
+    _("incorrect character class in transpose operation"),        /* VAR_ERR_INCORRECT_TRANSPOSE_CLASS_SPEC */
+    _("malformatted padding operation"),                          /* VAR_ERR_MALFORMATTED_PADDING */
+    _("width parameter missing in padding operation"),            /* VAR_ERR_MISSING_PADDING_WIDTH */
+    _("fill string missing in padding operation"),                /* VAR_ERR_EMPTY_PADDING_FILL_STRING */
+    _("unknown quoted pair in search and replace operation"),     /* VAR_ERR_UNKNOWN_QUOTED_PAIR_IN_REPLACE */
+    _("sub-matching reference out of range"),                     /* VAR_ERR_SUBMATCH_OUT_OF_RANGE */
+    _("invalid argument"),                                        /* VAR_ERR_INVALID_ARGUMENT */
+    _("incomplete quoted pair"),                                  /* VAR_ERR_INCOMPLETE_QUOTED_PAIR */
+    _("lookup function does not support variable arrays"),        /* VAR_ERR_ARRAY_LOOKUPS_ARE_UNSUPPORTED */
+    _("index of array variable contains an invalid character"),   /* VAR_ERR_INVALID_CHAR_IN_INDEX_SPEC */
+    _("index of array variable is incomplete"),                   /* VAR_ERR_INCOMPLETE_INDEX_SPEC */
+    _("bracket expression in array variable's index not closed"), /* VAR_ERR_UNCLOSED_BRACKET_IN_INDEX */
+    _("division by zero error in index specification"),           /* VAR_ERR_DIVISION_BY_ZERO_IN_INDEX */
+    _("unterminated loop construct"),                             /* VAR_ERR_UNTERMINATED_LOOP_CONSTRUCT */
+    _("invalid character in loop limits"),                        /* VAR_ERR_INVALID_CHAR_IN_LOOP_LIMITS */
+    _("malformed operation argument list"),                       /* VAR_ERR_MALFORMED_OPERATION_ARGUMENTS */
+    _("undefined operation"),                                     /* VAR_ERR_UNDEFINED_OPERATION */
+    _("formatting failure")                                       /* VAR_ERR_FORMATTING_FAILURE */
 };
 
 /* translate a return code into its corresponding descriptive text */
@@ -2710,7 +2710,7 @@ const char *var_strerror(var_t *var, var_rc_t rc)
     const char *str;
     rc = (var_rc_t)(0 - rc);
     if (rc < 0 || rc >= (int)sizeof(var_errors) / (int)sizeof(char *)) {
-        str = "unknown error";
+	str = _("unknown error");
     } else {
 	str = (char *)var_errors[rc];
     }

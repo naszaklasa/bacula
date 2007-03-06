@@ -4,7 +4,7 @@
  *
  *    Kern Sibbald, September MMI
  *
- *   Version $Id: estimate.c,v 1.12.8.1 2005/02/14 10:02:23 kerns Exp $
+ *   Version $Id: estimate.c,v 1.15 2005/04/09 07:20:58 kerns Exp $
  *
  */
 /*
@@ -30,7 +30,7 @@
 #include "bacula.h"
 #include "filed.h"
 
-static int tally_file(FF_PKT *ff_pkt, void *pkt);
+static int tally_file(FF_PKT *ff_pkt, void *pkt, bool);
 
 /*
  * Find all the requested files and count them.
@@ -51,7 +51,7 @@ int make_estimate(JCR *jcr)
  * Called here by find() for each file included.
  *
  */
-static int tally_file(FF_PKT *ff_pkt, void *ijcr)
+static int tally_file(FF_PKT *ff_pkt, void *ijcr, bool top_level) 
 {
    JCR *jcr = (JCR *)ijcr;
    ATTR attr;
@@ -60,7 +60,7 @@ static int tally_file(FF_PKT *ff_pkt, void *ijcr)
       return 0;
    }
    switch (ff_pkt->type) {
-   case FT_LNKSAVED:		      /* Hard linked, file already saved */
+   case FT_LNKSAVED:                  /* Hard linked, file already saved */
    case FT_REGE:
    case FT_REG:
    case FT_LNK:
@@ -86,19 +86,19 @@ static int tally_file(FF_PKT *ff_pkt, void *ijcr)
 
    if (ff_pkt->type != FT_LNKSAVED && S_ISREG(ff_pkt->statp.st_mode)) {
       if (ff_pkt->statp.st_size > 0) {
-	 jcr->JobBytes += ff_pkt->statp.st_size;
+         jcr->JobBytes += ff_pkt->statp.st_size;
       }
 #ifdef HAVE_DARWIN_OS
       if (ff_pkt->flags & FO_HFSPLUS) {
-	 if (ff_pkt->hfsinfo.rsrclength > 0) {
-	    jcr->JobBytes += ff_pkt->hfsinfo.rsrclength;
-	 }
-	 jcr->JobBytes += 32;    /* Finder info */
+         if (ff_pkt->hfsinfo.rsrclength > 0) {
+            jcr->JobBytes += ff_pkt->hfsinfo.rsrclength;
+         }
+         jcr->JobBytes += 32;    /* Finder info */
       }
 #endif
    }
    jcr->num_files_examined++;
-   jcr->JobFiles++;		     /* increment number of files seen */
+   jcr->JobFiles++;                  /* increment number of files seen */
    if (jcr->listing) {
       memcpy(&attr.statp, &ff_pkt->statp, sizeof(struct stat));
       attr.type = ff_pkt->type;

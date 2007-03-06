@@ -14,26 +14,30 @@
 
 SD_USER=@sd_user@
 SD_GROUP=@sd_group@
+SD_OPTIONS=''
 OS=`uname -s`
 
 # if /lib/tls exists, force Bacula to use the glibc pthreads instead
-if [ -d "/lib/tls" -a $OS = "Linux" ] ; then
+if [ -d "/lib/tls" -a $OS = "Linux" -a `uname -r | cut -c1-3` = "2.4" ] ; then
      export LD_ASSUME_KERNEL=2.4.19
 fi
+
+# pull in any user defined SD_OPTIONS, SD_USER, or SD_GROUP
+[ -f /etc/sysconfig/bacula ] && . /etc/sysconfig/bacula
+
 RETVAL=0
 case "$1" in
     start)
-       OPTIONS=''
        if [ "${SD_USER}" != '' ]; then
-	  OPTIONS="${OPTIONS} -u ${SD_USER}"
+	  SD_OPTIONS="${SD_OPTIONS} -u ${SD_USER}"
        fi
 										   
        if [ "${SD_GROUP}" != '' ]; then
-	  OPTIONS="${OPTIONS} -g ${SD_GROUP}"
+	  SD_OPTIONS="${SD_OPTIONS} -g ${SD_GROUP}"
        fi
 										      
        echo -n "Starting Bacula Storage services: "
-       daemon @sbindir@/bacula-sd $2 ${OPTIONS} -c @sysconfdir@/bacula-sd.conf
+       daemon @sbindir@/bacula-sd $2 ${SD_OPTIONS} -c @sysconfdir@/bacula-sd.conf
        RETVAL=$?
        echo
        [ $RETVAL -eq 0 ] && touch @subsysdir@/bacula-sd

@@ -3,12 +3,12 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: signal.c,v 1.31 2004/11/09 16:51:27 kerns Exp $
- * 
+ *   Version $Id: signal.c,v 1.34.2.1 2005/12/10 13:18:05 kerns Exp $
+ *
  * Note, we probably should do a core dump for the serious
- * signals such as SIGBUS, SIGPFE, ... 
- * Also, for SIGHUP and SIGUSR1, we should re-read the 
- * configuration file.  However, since this is a "general"  
+ * signals such as SIGBUS, SIGPFE, ...
+ * Also, for SIGHUP and SIGUSR1, we should re-read the
+ * configuration file.  However, since this is a "general"
  * routine, we leave it to the individual daemons to
  * tweek their signals after calling this routine.
  *
@@ -58,13 +58,13 @@ static pid_t main_pid = 0;
 const char *get_signal_name(int sig)
 {
    if (sig < 0 || sig > BA_NSIG || !sig_names[sig]) {
-      return "Invalid signal number";
+      return _("Invalid signal number");
    } else {
       return sig_names[sig];
    }
 }
 
-/* 
+/*
  * Handle signals here
  */
 extern "C" void signal_handler(int sig)
@@ -75,7 +75,7 @@ extern "C" void signal_handler(int sig)
    if (already_dead) {
       exit(1);
    }
-   Dmsg2(200, "sig=%d %s\n", sig, sig_names[sig]);
+   Dmsg2(900, "sig=%d %s\n", sig, sig_names[sig]);
    /* Ignore certain signals -- SIGUSR2 used to interrupt threads */
    if (sig == SIGCHLD || sig == SIGUSR2) {
       return;
@@ -84,7 +84,7 @@ extern "C" void signal_handler(int sig)
    if (sig == SIGTERM) {
 //    Emsg1(M_TERM, -1, "Shutting down Bacula service: %s ...\n", my_name);
    } else {
-      Emsg2(M_FATAL, -1, "Bacula interrupted by signal %d: %s\n", sig, sig_names[sig]);
+      Emsg2(M_FATAL, -1, _("Bacula interrupted by signal %d: %s\n"), sig, sig_names[sig]);
    }
 
 #ifdef TRACEBACK
@@ -97,17 +97,17 @@ extern "C" void signal_handler(int sig)
       pid_t pid;
       int exelen = strlen(exepath);
 
-      fprintf(stderr, "Kaboom! %s, %s got signal %d. Attempting traceback.\n", 
-	      exename, my_name, sig);
-      fprintf(stderr, "Kaboom! exepath=%s\n", exepath);
+      fprintf(stderr, _("Kaboom! %s, %s got signal %d. Attempting traceback.\n"),
+              exename, my_name, sig);
+      fprintf(stderr, _("Kaboom! exepath=%s\n"), exepath);
 
       if (exelen + 12 > (int)sizeof(btpath)) {
          bstrncpy(btpath, "btraceback", sizeof(btpath));
       } else {
-	 bstrncpy(btpath, exepath, sizeof(btpath));
+         bstrncpy(btpath, exepath, sizeof(btpath));
          if (btpath[exelen-1] == '/') {
-	    btpath[exelen-1] = 0;
-	 }
+            btpath[exelen-1] = 0;
+         }
          bstrncat(btpath, "/btraceback", sizeof(btpath));
       }
       if (exepath[exelen-1] != '/') {
@@ -115,14 +115,14 @@ extern "C" void signal_handler(int sig)
       }
       strcat(exepath, exename);
       if (!working_directory) {
-	 working_directory = buf;
-	 *buf = 0;
+         working_directory = buf;
+         *buf = 0;
       }
       if (*working_directory == 0) {
          strcpy((char *)working_directory, "/tmp/");
       }
       if (chdir(working_directory) != 0) {  /* dump in working directory */
-	 berrno be;
+         berrno be;
          Pmsg2(000, "chdir to %s failed. ERR=%s\n", working_directory,  be.strerror());
          strcpy((char *)working_directory, "/tmp/");
       }
@@ -132,21 +132,21 @@ extern "C" void signal_handler(int sig)
       Dmsg1(300, "btpath=%s\n", btpath);
       Dmsg1(300, "exepath=%s\n", exepath);
       switch (pid = fork()) {
-      case -1:			      /* error */
-         fprintf(stderr, "Fork error: ERR=%s\n", strerror(errno));
-	 break;
-      case 0:			      /* child */
-	 argv[0] = btpath;	      /* path to btraceback */
-	 argv[1] = exepath;	      /* path to exe */
-	 argv[2] = pid_buf;
-	 argv[3] = (char *)NULL;
-         fprintf(stderr, "Calling: %s %s %s\n", btpath, exepath, pid_buf);
-	 if (execv(btpath, argv) != 0) {
-            printf("execv: %s failed: ERR=%s\n", btpath, strerror(errno));
-	 }
-	 exit(-1);
-      default:			      /* parent */
-	 break;
+      case -1:                        /* error */
+         fprintf(stderr, _("Fork error: ERR=%s\n"), strerror(errno));
+         break;
+      case 0:                         /* child */
+         argv[0] = btpath;            /* path to btraceback */
+         argv[1] = exepath;           /* path to exe */
+         argv[2] = pid_buf;
+         argv[3] = (char *)NULL;
+         fprintf(stderr, _("Calling: %s %s %s\n"), btpath, exepath, pid_buf);
+         if (execv(btpath, argv) != 0) {
+            printf(_("execv: %s failed: ERR=%s\n"), btpath, strerror(errno));
+         }
+         exit(-1);
+      default:                        /* parent */
+         break;
       }
       /* Parent continue here, waiting for child */
       sigdefault.sa_flags = 0;
@@ -156,16 +156,16 @@ extern "C" void signal_handler(int sig)
       sigaction(sig,  &sigdefault, NULL);
       if (pid > 0) {
          Dmsg0(500, "Doing waitpid\n");
-	 waitpid(pid, NULL, 0);       /* wait for child to produce dump */
-         fprintf(stderr, "Traceback complete, attempting cleanup ...\n");
+         waitpid(pid, NULL, 0);       /* wait for child to produce dump */
+         fprintf(stderr, _("Traceback complete, attempting cleanup ...\n"));
          Dmsg0(500, "Done waitpid\n");
-	 exit_handler(sig);	      /* clean up if possible */
+         exit_handler(sig);           /* clean up if possible */
          Dmsg0(500, "Done exit_handler\n");
       } else {
          Dmsg0(500, "Doing sleep\n");
-	 bmicrosleep(30, 0);
+         bmicrosleep(30, 0);
       }
-      fprintf(stderr, "It looks like the traceback worked ...\n");
+      fprintf(stderr, _("It looks like the traceback worked ...\n"));
    }
 #endif
 
@@ -194,70 +194,70 @@ void init_signals(void terminate(int sig))
 
    exit_handler = terminate;
    if (BA_NSIG < _sys_nsig)
-      Emsg2(M_ABORT, 0, "BA_NSIG too small (%d) should be (%d)\n", BA_NSIG, _sys_nsig);
+      Emsg2(M_ABORT, 0, _("BA_NSIG too small (%d) should be (%d)\n"), BA_NSIG, _sys_nsig);
 
    for (i=0; i<_sys_nsig; i++)
       sig_names[i] = _sys_siglist[i];
 #else
    exit_handler = terminate;
-   sig_names[0]         = "UNKNOWN SIGNAL";
-   sig_names[SIGHUP]    = "Hangup";
-   sig_names[SIGINT]    = "Interrupt";
-   sig_names[SIGQUIT]   = "Quit";
-   sig_names[SIGILL]    = "Illegal instruction";;
-   sig_names[SIGTRAP]   = "Trace/Breakpoint trap";
-   sig_names[SIGABRT]   = "Abort";
+   sig_names[0]         = _("UNKNOWN SIGNAL");
+   sig_names[SIGHUP]    = _("Hangup");
+   sig_names[SIGINT]    = _("Interrupt");
+   sig_names[SIGQUIT]   = _("Quit");
+   sig_names[SIGILL]    = _("Illegal instruction");;
+   sig_names[SIGTRAP]   = _("Trace/Breakpoint trap");
+   sig_names[SIGABRT]   = _("Abort");
 #ifdef SIGEMT
-   sig_names[SIGEMT]    = "EMT instruction (Emulation Trap)";
+   sig_names[SIGEMT]    = _("EMT instruction (Emulation Trap)");
 #endif
 #ifdef SIGIOT
-   sig_names[SIGIOT]    = "IOT trap";
+   sig_names[SIGIOT]    = _("IOT trap");
 #endif
-   sig_names[SIGBUS]    = "BUS error";
-   sig_names[SIGFPE]    = "Floating-point exception";
-   sig_names[SIGKILL]   = "Kill, unblockable";
-   sig_names[SIGUSR1]   = "User-defined signal 1";
-   sig_names[SIGSEGV]   = "Segmentation violation";
-   sig_names[SIGUSR2]   = "User-defined signal 2";
-   sig_names[SIGPIPE]   = "Broken pipe";
-   sig_names[SIGALRM]   = "Alarm clock";
-   sig_names[SIGTERM]   = "Termination";
+   sig_names[SIGBUS]    = _("BUS error");
+   sig_names[SIGFPE]    = _("Floating-point exception");
+   sig_names[SIGKILL]   = _("Kill, unblockable");
+   sig_names[SIGUSR1]   = _("User-defined signal 1");
+   sig_names[SIGSEGV]   = _("Segmentation violation");
+   sig_names[SIGUSR2]   = _("User-defined signal 2");
+   sig_names[SIGPIPE]   = _("Broken pipe");
+   sig_names[SIGALRM]   = _("Alarm clock");
+   sig_names[SIGTERM]   = _("Termination");
 #ifdef SIGSTKFLT
-   sig_names[SIGSTKFLT] = "Stack fault";
+   sig_names[SIGSTKFLT] = _("Stack fault");
 #endif
-   sig_names[SIGCHLD]   = "Child status has changed";
-   sig_names[SIGCONT]   = "Continue";
-   sig_names[SIGSTOP]   = "Stop, unblockable";
-   sig_names[SIGTSTP]   = "Keyboard stop";
-   sig_names[SIGTTIN]   = "Background read from tty";
-   sig_names[SIGTTOU]   = "Background write to tty";
-   sig_names[SIGURG]    = "Urgent condition on socket";
-   sig_names[SIGXCPU]   = "CPU limit exceeded";
-   sig_names[SIGXFSZ]   = "File size limit exceeded";
-   sig_names[SIGVTALRM] = "Virtual alarm clock";
-   sig_names[SIGPROF]   = "Profiling alarm clock";
-   sig_names[SIGWINCH]  = "Window size change";
-   sig_names[SIGIO]     = "I/O now possible";
+   sig_names[SIGCHLD]   = _("Child status has changed");
+   sig_names[SIGCONT]   = _("Continue");
+   sig_names[SIGSTOP]   = _("Stop, unblockable");
+   sig_names[SIGTSTP]   = _("Keyboard stop");
+   sig_names[SIGTTIN]   = _("Background read from tty");
+   sig_names[SIGTTOU]   = _("Background write to tty");
+   sig_names[SIGURG]    = _("Urgent condition on socket");
+   sig_names[SIGXCPU]   = _("CPU limit exceeded");
+   sig_names[SIGXFSZ]   = _("File size limit exceeded");
+   sig_names[SIGVTALRM] = _("Virtual alarm clock");
+   sig_names[SIGPROF]   = _("Profiling alarm clock");
+   sig_names[SIGWINCH]  = _("Window size change");
+   sig_names[SIGIO]     = _("I/O now possible");
 #ifdef SIGPWR
-   sig_names[SIGPWR]    = "Power failure restart";
+   sig_names[SIGPWR]    = _("Power failure restart");
 #endif
 #ifdef SIGWAITING
-   sig_names[SIGWAITING] = "No runnable lwp";
+   sig_names[SIGWAITING] = _("No runnable lwp");
 #endif
 #ifdef SIGLWP
-   sig_name[SIGLWP]     = "SIGLWP special signal used by thread library";
+   sig_names[SIGLWP]     = _("SIGLWP special signal used by thread library");
 #endif
 #ifdef SIGFREEZE
-   sig_names[SIGFREEZE] = "Checkpoint Freeze";
+   sig_names[SIGFREEZE] = _("Checkpoint Freeze");
 #endif
 #ifdef SIGTHAW
-   sig_names[SIGTHAW]   = "Checkpoint Thaw";
+   sig_names[SIGTHAW]   = _("Checkpoint Thaw");
 #endif
 #ifdef SIGCANCEL
-   sig_names[SIGCANCEL] = "Thread Cancellation";
+   sig_names[SIGCANCEL] = _("Thread Cancellation");
 #endif
 #ifdef SIGLOST
-   sig_names[SIGLOST]   = "Resource Lost (e.g. record-lock lost)";
+   sig_names[SIGLOST]   = _("Resource Lost (e.g. record-lock lost)");
 #endif
 #endif
 
@@ -267,72 +267,72 @@ void init_signals(void terminate(int sig))
    sighandle.sa_handler = signal_handler;
    sigfillset(&sighandle.sa_mask);
    sigignore.sa_flags = 0;
-   sigignore.sa_handler = SIG_IGN;	 
+   sigignore.sa_handler = SIG_IGN;
    sigfillset(&sigignore.sa_mask);
    sigdefault.sa_flags = 0;
    sigdefault.sa_handler = SIG_DFL;
    sigfillset(&sigdefault.sa_mask);
 
 
-   sigaction(SIGPIPE,	&sigignore, NULL);
-   sigaction(SIGCHLD,	&sighandle, NULL);
-   sigaction(SIGCONT,	&sigignore, NULL);
-   sigaction(SIGPROF,	&sigignore, NULL);
-   sigaction(SIGWINCH,	&sigignore, NULL);
-   sigaction(SIGIO,	&sighandle, NULL);     
+   sigaction(SIGPIPE,   &sigignore, NULL);
+   sigaction(SIGCHLD,   &sighandle, NULL);
+   sigaction(SIGCONT,   &sigignore, NULL);
+   sigaction(SIGPROF,   &sigignore, NULL);
+   sigaction(SIGWINCH,  &sigignore, NULL);
+   sigaction(SIGIO,     &sighandle, NULL);
 
-   sigaction(SIGINT,	&sigdefault, NULL);    
-   sigaction(SIGXCPU,	&sigdefault, NULL);
-   sigaction(SIGXFSZ,	&sigdefault, NULL);
+   sigaction(SIGINT,    &sigdefault, NULL);
+   sigaction(SIGXCPU,   &sigdefault, NULL);
+   sigaction(SIGXFSZ,   &sigdefault, NULL);
 
-   sigaction(SIGHUP,	&sigignore, NULL);
-   sigaction(SIGQUIT,	&sighandle, NULL);   
-   sigaction(SIGILL,	&sighandle, NULL);    
-   sigaction(SIGTRAP,	&sighandle, NULL);   
-/* sigaction(SIGABRT,	&sighandle, NULL);   */
+   sigaction(SIGHUP,    &sigignore, NULL);
+   sigaction(SIGQUIT,   &sighandle, NULL);
+   sigaction(SIGILL,    &sighandle, NULL);
+   sigaction(SIGTRAP,   &sighandle, NULL);
+/* sigaction(SIGABRT,   &sighandle, NULL);   */
 #ifdef SIGEMT
-   sigaction(SIGEMT,	&sighandle, NULL);
+   sigaction(SIGEMT,    &sighandle, NULL);
 #endif
 #ifdef SIGIOT
-/* sigaction(SIGIOT,	&sighandle, NULL);  used by debugger */
+/* sigaction(SIGIOT,    &sighandle, NULL);  used by debugger */
 #endif
-   sigaction(SIGBUS,	&sighandle, NULL);    
-   sigaction(SIGFPE,	&sighandle, NULL);    
-   sigaction(SIGKILL,	&sighandle, NULL);   
-   sigaction(SIGUSR1,	&sighandle, NULL);   
-   sigaction(SIGSEGV,	&sighandle, NULL);   
-   sigaction(SIGUSR2,	&sighandle, NULL);
-   sigaction(SIGALRM,	&sighandle, NULL);   
-   sigaction(SIGTERM,	&sighandle, NULL);   
+   sigaction(SIGBUS,    &sighandle, NULL);
+   sigaction(SIGFPE,    &sighandle, NULL);
+   sigaction(SIGKILL,   &sighandle, NULL);
+   sigaction(SIGUSR1,   &sighandle, NULL);
+   sigaction(SIGSEGV,   &sighandle, NULL);
+   sigaction(SIGUSR2,   &sighandle, NULL);
+   sigaction(SIGALRM,   &sighandle, NULL);
+   sigaction(SIGTERM,   &sighandle, NULL);
 #ifdef SIGSTKFLT
-   sigaction(SIGSTKFLT, &sighandle, NULL); 
+   sigaction(SIGSTKFLT, &sighandle, NULL);
 #endif
-   sigaction(SIGSTOP,	&sighandle, NULL);   
-   sigaction(SIGTSTP,	&sighandle, NULL);   
-   sigaction(SIGTTIN,	&sighandle, NULL);   
-   sigaction(SIGTTOU,	&sighandle, NULL);   
-   sigaction(SIGURG,	&sighandle, NULL);    
-   sigaction(SIGVTALRM, &sighandle, NULL); 
+   sigaction(SIGSTOP,   &sighandle, NULL);
+   sigaction(SIGTSTP,   &sighandle, NULL);
+   sigaction(SIGTTIN,   &sighandle, NULL);
+   sigaction(SIGTTOU,   &sighandle, NULL);
+   sigaction(SIGURG,    &sighandle, NULL);
+   sigaction(SIGVTALRM, &sighandle, NULL);
 #ifdef SIGPWR
-   sigaction(SIGPWR,	&sighandle, NULL);    
+   sigaction(SIGPWR,    &sighandle, NULL);
 #endif
 #ifdef SIGWAITING
    sigaction(SIGWAITING,&sighandle, NULL);
 #endif
 #ifdef SIGLWP
-   sigaction(SIGLWP,	&sighandle, NULL);
+   sigaction(SIGLWP,    &sighandle, NULL);
 #endif
 #ifdef SIGFREEZE
    sigaction(SIGFREEZE, &sighandle, NULL);
 #endif
 #ifdef SIGTHAW
-   sigaction(SIGTHAW,	&sighandle, NULL);
+   sigaction(SIGTHAW,   &sighandle, NULL);
 #endif
 #ifdef SIGCANCEL
    sigaction(SIGCANCEL, &sighandle, NULL);
 #endif
 #ifdef SIGLOST
-   sigaction(SIGLOST,	&sighandle, NULL);
+   sigaction(SIGLOST,   &sighandle, NULL);
 #endif
 }
 #endif

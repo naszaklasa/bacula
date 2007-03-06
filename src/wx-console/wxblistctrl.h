@@ -5,7 +5,7 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: wxblistctrl.h,v 1.3.10.1 2005/04/12 21:31:25 kerns Exp $
+ *    Version $Id: wxblistctrl.h,v 1.4 2004/12/21 16:19:00 kerns Exp $
  */
 /*
    Copyright (C) 2004 Kern Sibbald and John Walker

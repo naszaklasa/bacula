@@ -7,10 +7,10 @@
  *  The purpose of these routines is to ensure that Bacula
  *  can limp along if no real database is loaded on the
  *  system.
- *   
- *    Kern Sibbald, January MMI 
  *
- *    Version $Id: bdb_delete.c,v 1.6 2003/06/02 22:19:53 kerns Exp $
+ *    Kern Sibbald, January MMI
+ *
+ *    Version $Id: bdb_delete.c,v 1.7 2004/12/21 16:18:30 kerns Exp $
  */
 
 /*
@@ -59,7 +59,7 @@
  * Delete a Pool record given the Name
  *
  * Returns: 0 on error
- *	    the number of records deleted on success 
+ *	    the number of records deleted on success
  */
 int db_delete_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 {
@@ -77,11 +77,11 @@ int db_delete_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
    memset(&opr, 0, sizeof(opr));
    stat = fwrite(&opr, sizeof(opr), 1, mdb->poolfd);
    db_unlock(mdb);
-   return stat; 
+   return stat;
 }
 
-int db_delete_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr) 
-{ 
+int db_delete_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+{
    int stat;
    MEDIA_DBR omr;
 
@@ -95,7 +95,7 @@ int db_delete_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
    memset(&omr, 0, sizeof(omr));
    stat = fwrite(&omr, sizeof(omr), 1, mdb->mediafd);
    db_unlock(mdb);
-   return stat; 
+   return stat;
 }
 
 #endif /* HAVE_BACULA_DB */

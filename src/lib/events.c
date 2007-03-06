@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, August MMI
  *
- *   Version $Id: events.c,v 1.5 2004/04/10 11:12:14 kerns Exp $
+ *   Version $Id: events.c,v 1.7 2005/08/10 16:35:19 nboichat Exp $
  *
  */
 /*
@@ -54,11 +54,11 @@ void log_event(UPSINFO *ups, int level, char *fmt, ...)
 
 	time(&nowtime);
 	localtime_r(&nowtime, &tm);
-        strftime(datetime, sizeof(datetime), "%a %b %d %X %Z %Y  ", &tm);
+	strftime(datetime, sizeof(datetime), "%a %b %d %X %Z %Y  ", &tm);
 	write(event_fd, datetime, strlen(datetime));
 	lm = strlen(msg);
-        if (msg[lm-1] != '\n') 
-           msg[lm++] = '\n';
+	if (msg[lm-1] != '\n')
+	   msg[lm++] = '\n';
 	write(event_fd, msg, lm);
     }
 }
@@ -68,7 +68,7 @@ void log_event(UPSINFO *ups, int level, char *fmt, ...)
 #define MAXLE 50		      /* truncate file when this many events */
 
 /*
- * If the EVENTS file exceeds MAXLE records, truncate it. 
+ * If the EVENTS file exceeds MAXLE records, truncate it.
  *
  * Returns:
  *
@@ -84,7 +84,7 @@ int truncate_events_file(UPSINFO *ups)
     int trunc = FALSE;
     FILE *events_file;
     int stat = 0;
-    
+
     if ((events_file = fopen(ups->eventfile, "r+")) == NULL)
 	return 0;
     for (i=0; i<NLE; i++)
@@ -114,7 +114,7 @@ int truncate_events_file(UPSINFO *ups)
     *buf = 0;
     /* Put records in single buffer in correct order */
     for (j=0; j < nrec; j++) {
-	strcat(buf, le[i++]); 
+	strcat(buf, le[i++]);
 	if (i >= NLE)
 	    i = 0;
     }
@@ -145,27 +145,27 @@ bailout:
 extern UPSINFO myUPS;
 extern int shm_OK;
 
-/*  
+/*
  * Fill the Events list box with the last events
- * 
+ *
  */
 void FillEventsBox(HWND hwnd, int idlist)
 {
     char buf[1000];
     int len;
     FILE *events_file;
-    
+
     if (!shm_OK || myUPS.eventfile[0] == 0 ||
-        (events_file = fopen(myUPS.eventfile, "r")) == NULL) {
-	SendDlgItemMessage(hwnd, idlist, LB_ADDSTRING, 0, 
-           (LONG)"Events not available");
+	(events_file = fopen(myUPS.eventfile, "r")) == NULL) {
+	SendDlgItemMessage(hwnd, idlist, LB_ADDSTRING, 0,
+	   (LONG)_("Events not available"));
 	return;
     }
 
     while (fgets(buf, sizeof(buf), events_file) != NULL) {
 	len = strlen(buf);
 	/* strip trailing cr/lfs */
-        while (len > 0 && (buf[len-1] == '\n' || buf[len-1] == '\r'))
+	while (len > 0 && (buf[len-1] == '\n' || buf[len-1] == '\r'))
 	    buf[--len] = 0;
 	SendDlgItemMessage(hwnd, idlist, LB_ADDSTRING, 0, (LONG)buf);
     }

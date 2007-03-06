@@ -1,7 +1,7 @@
 #
 # Bacula Makefile for the File daemon
 #
-#  Version $Id: Makefile.in,v 1.14 2004/09/24 12:30:14 kerns Exp $
+#  Version $Id: Makefile.in,v 1.24.2.2 2005/11/10 20:11:20 kerns Exp $
 #
 
 @MCOMMON@
@@ -19,15 +19,23 @@ thisdir = src/filed
 
 DEBUG=@DEBUG@
 
+GETTEXT_LIBS = @LIBINTL@
+
+OPENSSL_LIBS = @OPENSSL_LIBS@
+OPENSSL_INC = @OPENSSL_INC@
+
+PYTHON_LIBS = @PYTHON_LIBS@
+PYTHON_INC = @PYTHON_INCDIR@
+
 first_rule: all
 dummy:
 
 #
-SVRSRCS = filed.c authenticate.c backup.c estimate.c \
-	  filed_conf.c heartbeat.c job.c \
+SVRSRCS = filed.c authenticate.c acl.c backup.c chksum.c estimate.c \
+	  filed_conf.c heartbeat.c job.c pythonfd.c \
 	  restore.c status.c verify.c verify_vol.c
-SVROBJS = filed.o authenticate.o backup.o estimate.o \
-	  filed_conf.o heartbeat.o job.o \
+SVROBJS = filed.o authenticate.o acl.o backup.o chksum.o estimate.o \
+	  filed_conf.o heartbeat.o job.o pythonfd.o \
 	  restore.o status.o verify.o verify_vol.o
 
 # these are the objects that are changed by the .configure process
@@ -47,7 +55,7 @@ WIN32LIBS = $(@WIN32@)
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile @WIN32@ bacula-fd @STATIC_FD@
 	@echo "==== Make of filed is good ===="
@@ -72,11 +80,13 @@ win32:	$(WIN32OBJS)
 
 bacula-fd:  $(SVROBJS) ../findlib/libfind.a ../lib/libbac.a @WIN32@
 	$(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(SVROBJS) \
-	  $(WIN32LIBS) $(FDLIBS) -lfind -lbac -lm $(LIBS) $(DLIB)
+	  $(WIN32LIBS) $(FDLIBS) -lfind -lbac -lm $(PYTHON_LIBS) $(LIBS) \
+	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 static-bacula-fd:  $(SVROBJS) ../findlib/libfind.a ../lib/libbac.a @WIN32@
 	$(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../findlib -o $@ $(SVROBJS) \
-	   $(WIN32LIBS) $(FDLIBS) -lfind -lbac -lm $(LIBS) $(DLIB)
+	   $(WIN32LIBS) $(FDLIBS) -lfind -lbac -lm $(PYTHON_LIBS) $(LIBS) \
+	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 	strip $@
 
 
@@ -96,7 +106,7 @@ realclean: clean
 
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
-	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+	(cd $(srcdir); $(RMF) Makefile)
 	if test -f win32/Makefile; then \
 	   (cd win32; $(MAKE) distclean); \
 	fi
@@ -141,12 +151,12 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \
 	   $(MV) Makefile.bak Makefile; \
-	   echo -e "Something went wrong\n\a"; \
+	   echo " ===== Something went wrong in make depend ====="; \
 	fi
 
 # -----------------------------------------------------------------------

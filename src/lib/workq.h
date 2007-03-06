@@ -7,7 +7,7 @@
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
  *
- *   Version $Id: workq.h,v 1.5 2003/07/17 20:43:34 kerns Exp $
+ *   Version $Id: workq.h,v 1.6 2004/12/21 16:18:41 kerns Exp $
  */
 /*
    Copyright (C) 2000-2003 Kern Sibbald and John Walker
@@ -29,10 +29,10 @@
 
  */
 
-#ifndef __WORKQ_H 
+#ifndef __WORKQ_H
 #define __WORKQ_H 1
 
-/* 
+/*
  * Structure to keep track of work queue request
  */
 typedef struct workq_ele_tag {
@@ -40,7 +40,7 @@ typedef struct workq_ele_tag {
    void                 *data;
 } workq_ele_t;
 
-/* 
+/*
  * Structure describing a work queue
  */
 typedef struct workq_tag {
@@ -59,10 +59,10 @@ typedef struct workq_tag {
 #define WORKQ_VALID  0xdec1992
 
 extern int workq_init(
-              workq_t *wq,
-              int     threads,        /* maximum threads */
-              void   *(*engine)(void *)   /* engine routine */
-                    );
+	      workq_t *wq,
+	      int     threads,        /* maximum threads */
+	      void   *(*engine)(void *)   /* engine routine */
+		    );
 extern int workq_destroy(workq_t *wq);
 extern int workq_add(workq_t *wq, void *element, workq_ele_t **work_item, int priority);
 extern int workq_remove(workq_t *wq, workq_ele_t *work_item);

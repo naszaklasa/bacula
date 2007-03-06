@@ -1,6 +1,6 @@
 /*
  * Process and thread timer routines, built on top of watchdogs.
- * 
+ *
  *    Nic Bellamy <nic@bellamy.co.nz>, October 2003.
  *
 */

@@ -4,24 +4,21 @@
  *
  *    Nicolas Boichat, April-May 2004
  *
- *    Version $Id: wxbrestorepanel.h,v 1.19.10.1 2005/03/24 14:52:56 nboichat Exp $
+ *    Version $Id: wxbrestorepanel.h,v 1.21.2.2 2005/10/28 07:40:42 kerns Exp $
  */
 /*
-   Copyright (C) 2004 Kern Sibbald and John Walker
+   Copyright (C) 2004-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
-   as published by the Free Software Foundation; either version 2
-   of the License, or (at your option) any later version.
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #ifndef WXBRESTOREPANEL_H
@@ -49,6 +46,20 @@
 #include "wxblistctrl.h"
 
 WX_DECLARE_LIST(wxEvent, wxbEventList);
+
+/* Class for storing directory entries (results from dir commands). */
+class wxbDirEntry {
+public:
+   wxString perm;
+   wxString nlink;
+   wxString user;
+   wxString group;
+   wxString size;
+   wxString date;
+   int marked; /* 0 - Not Marked, 1 - Marked, 2 - Some file under is marked */
+   wxString fullname; /* full name with path */
+   wxString filename; /* only filename, no path */
+};
 
 /*
  * wxbPanel for restoring files
@@ -100,29 +111,29 @@ class wxbRestorePanel : public wxbPanel
       void UpdateTreeItem(wxTreeItemId item, bool updatelist, bool recurse);
 
       /* Parse dir command results. */
-      wxString* ParseList(wxString line);
+      int ParseList(wxString line, wxbDirEntry* entry);
 
       /* Sets a list item state, and update its parents and children if it is a directory */
       void SetListItemState(long listitem, int newstate);
 
       /* Sets a tree item state, and update its children, parents and list (if necessary) */
       void SetTreeItemState(wxTreeItemId item, int newstate);
-      
+
       /* Update a tree item parents' state */
       void UpdateTreeItemState(wxTreeItemId item);
 
       /* Refresh the whole tree. */
       void RefreshTree();
-      
+
       /* Refresh file list */
       void RefreshList();
-      
+
       /* Update first config, adapting settings to the job name selected */
       void UpdateFirstConfig();
-      
+
       /* Update second config */
       bool UpdateSecondConfig(wxbDataTokenizer* dt);
-      
+
 /* Status related */
       enum status_enum
       {
@@ -166,7 +177,7 @@ class wxbRestorePanel : public wxbPanel
 
       void OnStart(wxCommandEvent& event);
       void OnCancel(wxCommandEvent& event);
-      
+
       void OnTreeChanging(wxTreeEvent& event);
       void OnTreeExpanding(wxTreeEvent& event);
       void OnTreeChanged(wxTreeEvent& event);
@@ -174,14 +185,14 @@ class wxbRestorePanel : public wxbPanel
       void OnTreeAdd(wxCommandEvent& event);
       void OnTreeRemove(wxCommandEvent& event);
       void OnTreeRefresh(wxCommandEvent& event);
-      
+
       void OnListMarked(wxbListMarkedEvent& event);
       void OnListActivated(wxListEvent& event);
       void OnListChanged(wxListEvent& event);
       void OnListAdd(wxCommandEvent& event);
       void OnListRemove(wxCommandEvent& event);
       void OnListRefresh(wxCommandEvent& event);
-      
+
       void OnConfigUpdated(wxCommandEvent& event);
       void OnConfigOk(wxCommandEvent& WXUNUSED(event));
       void OnConfigApply(wxCommandEvent& WXUNUSED(event));
@@ -197,24 +208,24 @@ class wxbRestorePanel : public wxbPanel
 
       wxButton* start;
       wxButton* cancel;
-      
+
       wxbTreeCtrl* tree;
       wxButton* treeadd;
       wxButton* treeremove;
       wxButton* treerefresh;
-      
+
       wxbListCtrl* list;
       wxButton* listadd;
       wxButton* listremove;
       wxButton* listrefresh;
-      
+
       wxGauge* gauge;
-     
+
       long cfgUpdated; //keeps which config fields have been updated
 
       friend class wxbSplitterWindow;
 
-      DECLARE_EVENT_TABLE();    
+      DECLARE_EVENT_TABLE();
 };
 
 #endif // WXBRESTOREPANEL_H

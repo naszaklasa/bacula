@@ -12,7 +12,7 @@ Putting the Bacula Key in your Keyring:
 Once you download the Bacula public key, you must insert it in
 your keyring.  The procedure will differ depending on whether you
 are using PGP or GPG.  For GPG, assuming you have put the key
-in bacula.k, the procedure is:
+in bacula.key, the procedure is:
 
   gpg --import bacula.key
 
@@ -35,5 +35,4 @@ you download both the files and put them in the same directory, then
 for GPG, you use the following command to do the verification:
 
   gpg --verify xxxx.tar.gz.sig
-
 

@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: wxbconfigpanel.h,v 1.3.10.1 2005/04/12 21:31:25 kerns Exp $
+ *    Version $Id: wxbconfigpanel.h,v 1.5 2005/05/13 14:38:17 thorstenengel Exp $
  */
 /*
    Copyright (C) 2004 Kern Sibbald and John Walker
@@ -85,13 +85,13 @@ public:
 	wxbConfigPanel(wxWindow* parent, wxbConfig* config, wxString title, wxWindowID ok, wxWindowID cancel, wxWindowID apply = -1);
 	~wxbConfigPanel();
 
-   void SetRowString(const char* title, wxString value);
-   wxString GetRowString(const char* title);
-   int GetRowSelection(const char* title);
-   void SetRowSelection(const char* title, int ind);
+   void SetRowString(const wxChar* title, wxString value);
+   wxString GetRowString(const wxChar* title);
+   int GetRowSelection(const wxChar* title);
+   void SetRowSelection(const wxChar* title, int ind);
 
-   void ClearRowChoices(const char* title);
-   void AddRowChoice(const char* title, wxString value);
+   void ClearRowChoices(const wxChar* title);
+   void AddRowChoice(const wxChar* title, wxString value);
 
    /* If enable is true, enables apply button, and disables ok button */
    void EnableApply(bool enable = true);
@@ -105,7 +105,7 @@ private:
    wxButton* cfgCancel;
    wxButton* cfgApply;
 
-   int FindRow(const char* title);
+   int FindRow(const wxChar* title);
 };
 
 #endif

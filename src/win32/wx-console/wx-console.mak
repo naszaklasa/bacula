@@ -69,6 +69,7 @@ CLEAN :
 	-@erase "$(INTDIR)\message.obj"
 	-@erase "$(INTDIR)\parse_conf.obj"
 	-@erase "$(INTDIR)\queue.obj"
+	-@erase "$(INTDIR)\res.obj"
 	-@erase "$(INTDIR)\rwlock.obj"
 	-@erase "$(INTDIR)\scan.obj"
 	-@erase "$(INTDIR)\semlock.obj"
@@ -77,10 +78,12 @@ CLEAN :
 	-@erase "$(INTDIR)\signal.obj"
 	-@erase "$(INTDIR)\smartall.obj"
 	-@erase "$(INTDIR)\btimers.obj"
+	-@erase "$(INTDIR)\tls.obj"
 	-@erase "$(INTDIR)\tree.obj"
 	-@erase "$(INTDIR)\util.obj"
 	-@erase "$(INTDIR)\var.obj"
 	-@erase "$(INTDIR)\watchdog.obj"
+	-@erase "$(INTDIR)\winapi.obj"
 	-@erase "$(INTDIR)\workq.obj"
 	-@erase "$(INTDIR)\compat.obj"
 	-@erase "$(INTDIR)\print.obj"
@@ -102,14 +105,14 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "../compat" /I "../.." /I "../../../depkgs-win32/wx/include" /I "../../../../depkgs-win32/wx/include" /I "../../../../depkgs-win32/wx/lib/msw" /I "../../../../depkgs-win32/pthreads" /I "../../../../depkgs-win32/zlib" /I "." /D "NDEBUG" /D "WIN32" /D "__WXMSW__" /D "_CONSOLE" /D "_MBCS" /D "HAVE_WIN32" /D "HAVE_WXCONSOLE" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c
+CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "../compat" /I "../.." /I "../../../depkgs-win32/wx/include" /I "../../../../depkgs-win32/wx/include" /I "../../../../depkgs-win32/wx/lib/msw" /I "../../../../depkgs-win32/pthreads" /I "../../../../depkgs-win32/zlib" /I "." /D "UNICODE" /D "NDEBUG" /D "WIN32" /D "__WXMSW__" /D "_CONSOLE" /D "_MBCS" /D "HAVE_WIN32" /D "HAVE_WXCONSOLE" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c
 RSC_PROJ=/l 0x409 /fo"$(INTDIR)\winres.res" /d "NDEBUG" 
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\wx-console.bsc" 
 BSC32_SBRS= \
         
 LINK32=link.exe
-LINK32_FLAGS=wxmsw.lib rpcrt4.lib oleaut32.lib ole32.lib uuid.lib winspool.lib winmm.lib \
+LINK32_FLAGS=wxmswu.lib rpcrt4.lib oleaut32.lib ole32.lib uuid.lib winspool.lib winmm.lib \
   comctl32.lib comdlg32.lib Shell32.lib AdvAPI32.lib User32.lib Gdi32.lib wsock32.lib \
   wldap32.lib pthreadVCE.lib zlib.lib /nodefaultlib:libcmt.lib \
   /nologo /subsystem:windows /machine:I386 /out:"$(OUTDIR)\wx-console.exe" /libpath:"../../../../depkgs-win32/wx/lib" /libpath:"../../../../depkgs-win32/pthreads" /libpath:"../../../../depkgs-win32/zlib" 
@@ -143,6 +146,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\message.obj" \
 	"$(INTDIR)\parse_conf.obj" \
 	"$(INTDIR)\queue.obj" \
+	"$(INTDIR)\res.obj" \
 	"$(INTDIR)\rwlock.obj" \
 	"$(INTDIR)\scan.obj" \
 	"$(INTDIR)\semlock.obj" \
@@ -151,10 +155,12 @@ LINK32_OBJS= \
 	"$(INTDIR)\signal.obj" \
 	"$(INTDIR)\smartall.obj" \
 	"$(INTDIR)\btimers.obj" \
+	"$(INTDIR)\tls.obj" \
 	"$(INTDIR)\tree.obj" \
 	"$(INTDIR)\util.obj" \
 	"$(INTDIR)\var.obj" \
 	"$(INTDIR)\watchdog.obj" \
+	"$(INTDIR)\winapi.obj" \
 	"$(INTDIR)\workq.obj" \
 	"$(INTDIR)\compat.obj" \
 	"$(INTDIR)\print.obj" \
@@ -247,6 +253,8 @@ CLEAN :
 	-@erase "$(INTDIR)\parse_conf.sbr"
 	-@erase "$(INTDIR)\queue.obj
 	-@erase "$(INTDIR)\queue.sbr"
+	-@erase "$(INTDIR)\res.obj
+	-@erase "$(INTDIR)\res.sbr"
 	-@erase "$(INTDIR)\rwlock.obj
 	-@erase "$(INTDIR)\rwlock.sbr"
 	-@erase "$(INTDIR)\scan.obj
@@ -263,6 +271,8 @@ CLEAN :
 	-@erase "$(INTDIR)\smartall.sbr"
 	-@erase "$(INTDIR)\btimers.obj
 	-@erase "$(INTDIR)\btimers.sbr"
+	-@erase "$(INTDIR)\tls.obj
+	-@erase "$(INTDIR)\tls.sbr"
 	-@erase "$(INTDIR)\tree.obj
 	-@erase "$(INTDIR)\tree.sbr"
 	-@erase "$(INTDIR)\util.obj
@@ -271,6 +281,8 @@ CLEAN :
 	-@erase "$(INTDIR)\var.sbr"
 	-@erase "$(INTDIR)\watchdog.obj
 	-@erase "$(INTDIR)\watchdog.sbr"
+	-@erase "$(INTDIR)\winapi.obj
+	-@erase "$(INTDIR)\winapi.sbr"
 	-@erase "$(INTDIR)\workq.obj
 	-@erase "$(INTDIR)\workq.sbr"
 	-@erase "$(INTDIR)\compat.obj
@@ -310,7 +322,7 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 
-CPP_PROJ=/nologo /MTd /W3 /Gm /GX /ZI /Od /I "../compat" /I "../.." /I "../../../depkgs-win32/wx/include" /I "../../../../depkgs-win32/wx/include" /I "../../../../depkgs-win32/wx/lib/mswd" /I "../../../../depkgs-win32/pthreads" /I "../../../../depkgs-win32/zlib" /I "." /D "_DEBUG" /D "WIN32" /D "__WXMSW__" /D "_CONSOLE" /D "_MBCS" /D "HAVE_WIN32" /D "HAVE_WXCONSOLE" /FR"$(INTDIR)\\" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /GZ /c 
+CPP_PROJ=/nologo /MTd /W3 /Gm /GX /ZI /Od /I "../compat" /I "../.." /I "../../../depkgs-win32/wx/include" /I "../../../../depkgs-win32/wx/include" /I "../../../../depkgs-win32/wx/lib/mswd" /I "../../../../depkgs-win32/pthreads" /I "../../../../depkgs-win32/zlib" /I "." /D "UNICODE" /D "_DEBUG" /D "WIN32" /D "__WXMSW__" /D "_CONSOLE" /D "_MBCS" /D "HAVE_WIN32" /D "HAVE_WXCONSOLE" /FR"$(INTDIR)\\" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /GZ /c 
 RSC_PROJ=/l 0x409 /fo"$(INTDIR)\winres.res" /d "_DEBUG"
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\wx-console.bsc" 
@@ -344,6 +356,7 @@ BSC32_SBRS= \
 	"$(INTDIR)\message.sbr" \
 	"$(INTDIR)\parse_conf.sbr" \
 	"$(INTDIR)\queue.sbr" \
+	"$(INTDIR)\res.sbr" \
 	"$(INTDIR)\rwlock.sbr" \
 	"$(INTDIR)\scan.sbr" \
 	"$(INTDIR)\semlock.sbr" \
@@ -352,10 +365,12 @@ BSC32_SBRS= \
 	"$(INTDIR)\signal.sbr" \
 	"$(INTDIR)\smartall.sbr" \
 	"$(INTDIR)\btimers.sbr" \
+	"$(INTDIR)\tls.sbr" \
 	"$(INTDIR)\tree.sbr" \
 	"$(INTDIR)\util.sbr" \
 	"$(INTDIR)\var.sbr" \
 	"$(INTDIR)\watchdog.sbr" \
+	"$(INTDIR)\winapi.sbr" \
 	"$(INTDIR)\workq.sbr" \
 	"$(INTDIR)\compat.sbr" \
 	"$(INTDIR)\print.sbr" \
@@ -379,7 +394,7 @@ BSC32_SBRS= \
 <<
 
 LINK32=link.exe
-LINK32_FLAGS=wxmswd.lib rpcrt4.lib oleaut32.lib ole32.lib uuid.lib winspool.lib winmm.lib \
+LINK32_FLAGS=wxmswu.lib rpcrt4.lib oleaut32.lib ole32.lib uuid.lib winspool.lib winmm.lib \
   comctl32.lib comdlg32.lib Shell32.lib AdvAPI32.lib User32.lib Gdi32.lib wsock32.lib \
   wldap32.lib pthreadVCE.lib zlib.lib /nodefaultlib:libcmtd.lib \
   /nologo /subsystem:windows /pdb:none /debug /machine:I386 /out:"$(OUTDIR)\wx-console.exe" /libpath:"../../../../depkgs-win32/wx/lib" /libpath:"../../../../depkgs-win32/pthreads" /libpath:"../../../../depkgs-win32/zlib" 
@@ -413,6 +428,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\message.obj" \
 	"$(INTDIR)\parse_conf.obj" \
 	"$(INTDIR)\queue.obj" \
+	"$(INTDIR)\res.obj" \
 	"$(INTDIR)\rwlock.obj" \
 	"$(INTDIR)\scan.obj" \
 	"$(INTDIR)\semlock.obj" \
@@ -421,10 +437,12 @@ LINK32_OBJS= \
 	"$(INTDIR)\signal.obj" \
 	"$(INTDIR)\smartall.obj" \
 	"$(INTDIR)\btimers.obj" \
+	"$(INTDIR)\tls.obj" \
 	"$(INTDIR)\tree.obj" \
 	"$(INTDIR)\util.obj" \
 	"$(INTDIR)\var.obj" \
 	"$(INTDIR)\watchdog.obj" \
+	"$(INTDIR)\winapi.obj" \
 	"$(INTDIR)\workq.obj" \
 	"$(INTDIR)\compat.obj" \
 	"$(INTDIR)\print.obj" \
@@ -1045,6 +1063,25 @@ SOURCE=..\lib\queue.cpp
 !ENDIF 
 
 
+FILENAME=res
+SOURCE=..\lib\res.cpp
+!IF  "$(CFG)" == "wx-console - Win32 Release"
+
+
+"$(INTDIR)\$(FILENAME).obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ELSEIF  "$(CFG)" == "wx-console - Win32 Debug"
+
+
+"$(INTDIR)\$(FILENAME).obj"	"$(INTDIR)\$(FILENAME).sbr" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
+
+
 FILENAME=rwlock
 SOURCE=..\lib\rwlock.cpp
 !IF  "$(CFG)" == "wx-console - Win32 Release"
@@ -1197,6 +1234,25 @@ SOURCE=..\lib\btimers.cpp
 !ENDIF 
 
 
+FILENAME=tls
+SOURCE=..\lib\tls.cpp
+!IF  "$(CFG)" == "wx-console - Win32 Release"
+
+
+"$(INTDIR)\$(FILENAME).obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ELSEIF  "$(CFG)" == "wx-console - Win32 Debug"
+
+
+"$(INTDIR)\$(FILENAME).obj"	"$(INTDIR)\$(FILENAME).sbr" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
+
+
 FILENAME=tree
 SOURCE=..\lib\tree.cpp
 !IF  "$(CFG)" == "wx-console - Win32 Release"
@@ -1256,6 +1312,25 @@ SOURCE=..\lib\var.cpp
 
 FILENAME=watchdog
 SOURCE=..\lib\watchdog.cpp
+!IF  "$(CFG)" == "wx-console - Win32 Release"
+
+
+"$(INTDIR)\$(FILENAME).obj" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ELSEIF  "$(CFG)" == "wx-console - Win32 Debug"
+
+
+"$(INTDIR)\$(FILENAME).obj"	"$(INTDIR)\$(FILENAME).sbr" : $(SOURCE) "$(INTDIR)"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+!ENDIF 
+
+
+FILENAME=winapi
+SOURCE=..\lib\winapi.cpp
 !IF  "$(CFG)" == "wx-console - Win32 Release"
 
 
@@ -1575,6 +1650,5 @@ SOURCE=..\..\wx-console\wxbhistorytextctrl.cpp
 
 
 !ENDIF 
-
 
 

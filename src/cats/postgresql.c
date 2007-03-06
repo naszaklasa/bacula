@@ -5,26 +5,20 @@
  *    Dan Langille, December 2003
  *    based upon work done by Kern Sibbald, March 2000
  *
- *    Version $Id: postgresql.c,v 1.21 2004/09/22 21:36:57 kerns Exp $
+ *    Version $Id: postgresql.c,v 1.25.2.1 2006/03/24 16:35:23 kerns Exp $
  */
-
 /*
-   Copyright (C) 2003-2004 Kern Sibbald and John Walker
+   Copyright (C) 2003-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -32,7 +26,7 @@
 /* The following is necessary so that we do not include
  * the dummy external definition of DB.
  */
-#define __SQL_C 		      /* indicate that this is sql.c */
+#define __SQL_C                       /* indicate that this is sql.c */
 
 #include "bacula.h"
 #include "cats.h"
@@ -58,26 +52,26 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
  * never have errors, or it is really fatal.
  */
 B_DB *
-db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char *db_password, 
-		 const char *db_address, int db_port, const char *db_socket, 
-		 int mult_db_connections)
+db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char *db_password,
+                 const char *db_address, int db_port, const char *db_socket,
+                 int mult_db_connections)
 {
    B_DB *mdb;
 
-   if (!db_user) {		
+   if (!db_user) {
       Jmsg(jcr, M_FATAL, 0, _("A user name for PostgreSQL must be supplied.\n"));
       return NULL;
    }
-   P(mutex);			      /* lock DB queue */
+   P(mutex);                          /* lock DB queue */
    if (!mult_db_connections) {
       /* Look to see if DB already open */
       for (mdb=NULL; (mdb=(B_DB *)qnext(&db_list, &mdb->bq)); ) {
-	 if (strcmp(mdb->db_name, db_name) == 0) {
+         if (strcmp(mdb->db_name, db_name) == 0) {
             Dmsg2(100, "DB REopen %d %s\n", mdb->ref_count, db_name);
-	    mdb->ref_count++;
-	    V(mutex);
-	    return mdb; 		 /* already open */
-	 }
+            mdb->ref_count++;
+            V(mutex);
+            return mdb;                  /* already open */
+         }
       }
    }
    Dmsg0(100, "db_open first time\n");
@@ -96,17 +90,17 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
    }
    mdb->db_port        = db_port;
    mdb->have_insert_id = TRUE;
-   mdb->errmsg	       = get_pool_memory(PM_EMSG); /* get error message buffer */
+   mdb->errmsg         = get_pool_memory(PM_EMSG); /* get error message buffer */
    *mdb->errmsg        = 0;
-   mdb->cmd	       = get_pool_memory(PM_EMSG); /* get command buffer */
+   mdb->cmd            = get_pool_memory(PM_EMSG); /* get command buffer */
    mdb->cached_path    = get_pool_memory(PM_FNAME);
    mdb->cached_path_id = 0;
    mdb->ref_count      = 1;
-   mdb->fname	       = get_pool_memory(PM_FNAME);
-   mdb->path	       = get_pool_memory(PM_FNAME);
+   mdb->fname          = get_pool_memory(PM_FNAME);
+   mdb->path           = get_pool_memory(PM_FNAME);
    mdb->esc_name       = get_pool_memory(PM_FNAME);
    mdb->allow_transactions = mult_db_connections;
-   qinsert(&db_list, &mdb->bq); 	   /* put db in list */
+   qinsert(&db_list, &mdb->bq);            /* put db in list */
    V(mutex);
    return mdb;
 }
@@ -131,8 +125,8 @@ db_open_database(JCR *jcr, B_DB *mdb)
    mdb->connected = false;
 
    if ((errstat=rwl_init(&mdb->lock)) != 0) {
-      Mmsg1(&mdb->errmsg, _("Unable to initialize DB lock. ERR=%s\n"), 
-	    strerror(errstat));
+      Mmsg1(&mdb->errmsg, _("Unable to initialize DB lock. ERR=%s\n"),
+            strerror(errstat));
       V(mutex);
       return 0;
    }
@@ -148,30 +142,30 @@ db_open_database(JCR *jcr, B_DB *mdb)
    for (int retry=0; retry < 6; retry++) {
       /* connect to the database */
       mdb->db = PQsetdbLogin(
-	   mdb->db_address,	      /* default = localhost */
-	   port,		      /* default port */
-	   NULL,		      /* pg options */
-	   NULL,		      /* tty, ignored */
-	   mdb->db_name,	      /* database name */
-	   mdb->db_user,	      /* login name */
-	   mdb->db_password);	      /* password */
+           mdb->db_address,           /* default = localhost */
+           port,                      /* default port */
+           NULL,                      /* pg options */
+           NULL,                      /* tty, ignored */
+           mdb->db_name,              /* database name */
+           mdb->db_user,              /* login name */
+           mdb->db_password);         /* password */
 
       /* If no connect, try once more in case it is a timing problem */
       if (PQstatus(mdb->db) == CONNECTION_OK) {
-	 break;   
+         break;
       }
       bmicrosleep(5, 0);
    }
 
    Dmsg0(50, "pg_real_connect done\n");
-   Dmsg3(50, "db_user=%s db_name=%s db_password=%s\n", mdb->db_user, mdb->db_name, 
+   Dmsg3(50, "db_user=%s db_name=%s db_password=%s\n", mdb->db_user, mdb->db_name,
             mdb->db_password==NULL?"(NULL)":mdb->db_password);
-  
+
    if (PQstatus(mdb->db) != CONNECTION_OK) {
       Mmsg2(&mdb->errmsg, _("Unable to connect to PostgreSQL server.\n"
             "Database=%s User=%s\n"
             "It is probably not running or your password is incorrect.\n"),
-	     mdb->db_name, mdb->db_user);
+             mdb->db_name, mdb->db_user);
       V(mutex);
       return 0;
    }
@@ -180,6 +174,8 @@ db_open_database(JCR *jcr, B_DB *mdb)
       V(mutex);
       return 0;
    }
+
+   sql_query(mdb, "SET datestyle TO 'ISO, YMD'");
 
    mdb->connected = true;
    V(mutex);
@@ -192,14 +188,15 @@ db_close_database(JCR *jcr, B_DB *mdb)
    if (!mdb) {
       return;
    }
+   db_end_transaction(jcr, mdb);
    P(mutex);
    mdb->ref_count--;
    if (mdb->ref_count == 0) {
       qdchain(&mdb->bq);
       if (mdb->connected && mdb->db) {
-	 sql_close(mdb);
+         sql_close(mdb);
       }
-      rwl_destroy(&mdb->lock);	     
+      rwl_destroy(&mdb->lock);
       free_pool_memory(mdb->errmsg);
       free_pool_memory(mdb->cmd);
       free_pool_memory(mdb->cached_path);
@@ -207,21 +204,21 @@ db_close_database(JCR *jcr, B_DB *mdb)
       free_pool_memory(mdb->path);
       free_pool_memory(mdb->esc_name);
       if (mdb->db_name) {
-	 free(mdb->db_name);
+         free(mdb->db_name);
       }
       if (mdb->db_user) {
-	 free(mdb->db_user);
+         free(mdb->db_user);
       }
       if (mdb->db_password) {
-	 free(mdb->db_password);
+         free(mdb->db_password);
       }
       if (mdb->db_address) {
-	 free(mdb->db_address);
+         free(mdb->db_address);
       }
       if (mdb->db_socket) {
-	 free(mdb->db_socket);
+         free(mdb->db_socket);
       }
-      my_postgresql_free_result(mdb);	    
+      my_postgresql_free_result(mdb);
       free(mdb);
    }
    V(mutex);
@@ -230,7 +227,7 @@ db_close_database(JCR *jcr, B_DB *mdb)
 /*
  * Return the next unique index (auto-increment) for
  * the given table.  Return NULL on error.
- *  
+ *
  * For PostgreSQL, NULL causes the auto-increment value
  *  to be updated.
  */
@@ -238,15 +235,15 @@ int db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index)
 {
    strcpy(index, "NULL");
    return 1;
-}   
+}
 
 
 /*
  * Escape strings so that PostgreSQL is happy
  *
  *   NOTE! len is the length of the old string. Your new
- *	   string must be long enough (max 2*old+1) to hold
- *	   the escaped output.
+ *         string must be long enough (max 2*old+1) to hold
+ *         the escaped output.
  */
 void
 db_escape_string(char *snew, char *old, int len)
@@ -263,7 +260,7 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
    SQL_ROW row;
 
    Dmsg0(500, "db_sql_query started\n");
-  
+
    db_lock(mdb);
    if (sql_query(mdb, query) != 0) {
       Mmsg(mdb->errmsg, _("Query failed: %s: ERR=%s\n"), query, sql_strerror(mdb));
@@ -276,17 +273,17 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
    if (result_handler != NULL) {
       Dmsg0(500, "db_sql_query invoking handler\n");
       if ((mdb->result = sql_store_result(mdb)) != NULL) {
-	 int num_fields = sql_num_fields(mdb);
+         int num_fields = sql_num_fields(mdb);
 
          Dmsg0(500, "db_sql_query sql_store_result suceeded\n");
-	 while ((row = sql_fetch_row(mdb)) != NULL) {
+         while ((row = sql_fetch_row(mdb)) != NULL) {
 
             Dmsg0(500, "db_sql_query sql_fetch_row worked\n");
-	    if (result_handler(ctx, num_fields, row))
-	       break;
-	 }
+            if (result_handler(ctx, num_fields, row))
+               break;
+         }
 
-	sql_free_result(mdb);
+        sql_free_result(mdb);
       }
    }
    db_unlock(mdb);
@@ -298,7 +295,7 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
 
 
 
-POSTGRESQL_ROW my_postgresql_fetch_row(B_DB *mdb) 
+POSTGRESQL_ROW my_postgresql_fetch_row(B_DB *mdb)
 {
    int j;
    POSTGRESQL_ROW row = NULL; // by default, return NULL
@@ -310,8 +307,8 @@ POSTGRESQL_ROW my_postgresql_fetch_row(B_DB *mdb)
 
       if (mdb->row != NULL) {
          Dmsg0(500, "my_postgresql_fetch_row freeing space\n");
-	 free(mdb->row);
-	 mdb->row = NULL;
+         free(mdb->row);
+         mdb->row = NULL;
       }
 
       mdb->row = (POSTGRESQL_ROW) malloc(sizeof(char *) * mdb->num_fields);
@@ -325,7 +322,7 @@ POSTGRESQL_ROW my_postgresql_fetch_row(B_DB *mdb)
       Dmsg2(500, "my_postgresql_fetch_row row number '%d' is acceptable (0..%d)\n", mdb->row_number, mdb->num_rows);
       // get each value from this row
       for (j = 0; j < mdb->num_fields; j++) {
-	 mdb->row[j] = PQgetvalue(mdb->result, mdb->row_number, j);
+         mdb->row[j] = PQgetvalue(mdb->result, mdb->row_number, j);
          Dmsg2(500, "my_postgresql_fetch_row field '%d' has value '%s'\n", j, mdb->row[j]);
       }
       // increment the row number for the next call
@@ -354,20 +351,20 @@ int my_postgresql_max_length(B_DB *mdb, int field_num) {
       if (PQgetisnull(mdb->result, i, field_num)) {
           this_length = 4;        // "NULL"
       } else {
-	  this_length = strlen(PQgetvalue(mdb->result, i, field_num));
+          this_length = cstrlen(PQgetvalue(mdb->result, i, field_num));
       }
-		      
+
       if (max_length < this_length) {
-	  max_length = this_length;
+          max_length = this_length;
       }
    }
 
    return max_length;
 }
 
-POSTGRESQL_FIELD * my_postgresql_fetch_field(B_DB *mdb) 
+POSTGRESQL_FIELD * my_postgresql_fetch_field(B_DB *mdb)
 {
-   int	   i;
+   int     i;
 
    Dmsg0(500, "my_postgresql_fetch_field starts\n");
    if (mdb->fields == NULL) {
@@ -376,14 +373,14 @@ POSTGRESQL_FIELD * my_postgresql_fetch_field(B_DB *mdb)
 
       for (i = 0; i < mdb->num_fields; i++) {
          Dmsg1(500, "filling field %d\n", i);
-	 mdb->fields[i].name	       = PQfname(mdb->result, i);
-	 mdb->fields[i].max_length = my_postgresql_max_length(mdb, i);
-	 mdb->fields[i].type	   = PQftype(mdb->result, i);
-	 mdb->fields[i].flags	   = 0;
+         mdb->fields[i].name           = PQfname(mdb->result, i);
+         mdb->fields[i].max_length = my_postgresql_max_length(mdb, i);
+         mdb->fields[i].type       = PQftype(mdb->result, i);
+         mdb->fields[i].flags      = 0;
 
-         Dmsg4(500, "my_postgresql_fetch_field finds field '%s' has length='%d' type='%d' and IsNull=%d\n", 
-	    mdb->fields[i].name, mdb->fields[i].max_length, mdb->fields[i].type,
-	    mdb->fields[i].flags);
+         Dmsg4(500, "my_postgresql_fetch_field finds field '%s' has length='%d' type='%d' and IsNull=%d\n",
+            mdb->fields[i].name, mdb->fields[i].max_length, mdb->fields[i].type,
+            mdb->fields[i].flags);
       } // end for
    } // end if
 
@@ -393,7 +390,7 @@ POSTGRESQL_FIELD * my_postgresql_fetch_field(B_DB *mdb)
    return &mdb->fields[mdb->field_number++];
 }
 
-void my_postgresql_data_seek(B_DB *mdb, int row) 
+void my_postgresql_data_seek(B_DB *mdb, int row)
 {
    // set the row number to be returned on the next call
    // to my_postgresql_fetch_row
@@ -444,7 +441,7 @@ int my_postgresql_query(B_DB *mdb, const char *query) {
    return mdb->status;
 }
 
-void my_postgresql_free_result (B_DB *mdb) 
+void my_postgresql_free_result (B_DB *mdb)
 {
    if (mdb->result) {
       PQclear(mdb->result);
@@ -462,12 +459,12 @@ void my_postgresql_free_result (B_DB *mdb)
    }
 }
 
-int my_postgresql_currval(B_DB *mdb, char *table_name) 
+int my_postgresql_currval(B_DB *mdb, char *table_name)
 {
    // Obtain the current value of the sequence that
    // provides the serial value for primary key of the table.
 
-   // currval is local to our session.	It is not affected by
+   // currval is local to our session.  It is not affected by
    // other transactions.
 
    // Determine the name of the sequence.
@@ -483,7 +480,7 @@ int my_postgresql_currval(B_DB *mdb, char *table_name)
    char      sequence[NAMEDATALEN-1];
    char      query   [NAMEDATALEN+50];
    PGresult *result;
-   int	     id = 0;
+   int       id = 0;
 
    if (strcasecmp(table_name, "basefiles") == 0) {
       bstrncpy(sequence, "basefiles_baseid", sizeof(sequence));

@@ -2,14 +2,14 @@
  * Bacula Semaphore code. This code permits setting up
  *  a semaphore that lets through a specified number
  *  of callers simultaneously. Once the number of callers
- *  exceed the limit, they block.      
+ *  exceed the limit, they block.
  *
  *  Kern Sibbald, March MMIII
  *
  *   Derived from rwlock.h which was in turn derived from code in
  *     "Programming with POSIX Threads" By David R. Butenhof
  &
- *   Version $Id: semlock.c,v 1.3 2004/04/10 11:12:14 kerns Exp $
+ *   Version $Id: semlock.c,v 1.5 2005/08/10 16:35:19 nboichat Exp $
  *
  */
 /*
@@ -34,7 +34,7 @@
 
 #include "bacula.h"
 
-/*   
+/*
  * Initialize a semaphore
  *
  *  Returns: 0 on success
@@ -43,7 +43,7 @@
 int sem_init(semlock_t *sem, int max_active)
 {
    int stat;
-			
+
    sem->active = sem->waiting = 0;
    sem->max_active = max_active;
    if ((stat = pthread_mutex_init(&sem->mutex, NULL)) != 0) {
@@ -65,7 +65,7 @@ int sem_init(semlock_t *sem, int max_active)
  */
 int sem_destroy(semlock_t *sem)
 {
-   int stat, stat1;	  
+   int stat, stat1;
 
   if (sem->valid != SEMLOCK_VALID) {
      return EINVAL;
@@ -74,7 +74,7 @@ int sem_destroy(semlock_t *sem)
      return stat;
   }
 
-  /* 
+  /*
    * If any threads are active, report EBUSY
    */
   if (sem->active > 0) {
@@ -118,7 +118,7 @@ static void sem_release(void *arg)
 int sem_lock(semlock_t *sem)
 {
    int stat;
-    
+
    if (sem->valid != SEMLOCK_VALID) {
       return EINVAL;
    }
@@ -143,13 +143,13 @@ int sem_lock(semlock_t *sem)
    return stat;
 }
 
-/* 
+/*
  * Attempt to lock semaphore, don't wait
  */
 int sem_trylock(semlock_t *sem)
 {
    int stat, stat1;
-    
+
    if (sem->valid != SEMLOCK_VALID) {
       return EINVAL;
    }
@@ -165,15 +165,15 @@ int sem_trylock(semlock_t *sem)
    stat1 = pthread_mutex_unlock(&sem->mutex);
    return (stat == 0 ? stat1 : stat);
 }
-   
-/* 
+
+/*
  * Unlock semaphore
  *  Start any waiting callers
  */
 int sem_unlock(semlock_t *sem)
 {
    int stat, stat1;
-    
+
    if (sem->valid != SEMLOCK_VALID) {
       return EINVAL;
    }
@@ -182,7 +182,7 @@ int sem_unlock(semlock_t *sem)
    }
    sem->active--;
    if (sem->active < 0) {
-      Emsg0(M_ABORT, 0, "sem_unlock by non-owner.\n");
+      Emsg0(M_ABORT, 0, _("sem_unlock by non-owner.\n"));
    }
    if (sem->active >= sem->max_active) {
       stat = 0; 		      /* caller(s) still active */
@@ -213,7 +213,7 @@ typedef struct thread_tag {
    int interval;
 } thread_t;
 
-/* 
+/*
  * Semaphore lock and shared data.
  */
 typedef struct data_tag {
@@ -225,7 +225,7 @@ typedef struct data_tag {
 thread_t threads[THREADS];
 data_t data[DATASIZE];
 
-/* 
+/*
  * Thread start routine that uses semaphores locks.
  */
 void *thread_routine(void *arg)
@@ -245,14 +245,14 @@ void *thread_routine(void *arg)
       if ((iteration % self->interval) == 0) {
 	 status = sem_writelock(&data[element].lock);
 	 if (status != 0) {
-            Emsg1(M_ABORT, 0, "Write lock failed. ERR=%s\n", strerror(status));
+	    Emsg1(M_ABORT, 0, _("Write lock failed. ERR=%s\n"), strerror(status));
 	 }
 	 data[element].data = self->thread_num;
 	 data[element].writes++;
 	 self->writes++;
 	 status = sem_writeunlock(&data[element].lock);
 	 if (status != 0) {
-            Emsg1(M_ABORT, 0, "Write unlock failed. ERR=%s\n", strerror(status));
+	    Emsg1(M_ABORT, 0, _("Write unlock failed. ERR=%s\n"), strerror(status));
 	 }
       } else {
 	 /*
@@ -262,14 +262,14 @@ void *thread_routine(void *arg)
 	  */
 	  status = sem_readlock(&data[element].lock);
 	  if (status != 0) {
-             Emsg1(M_ABORT, 0, "Read lock failed. ERR=%s\n", strerror(status));
+	     Emsg1(M_ABORT, 0, _("Read lock failed. ERR=%s\n"), strerror(status));
 	  }
 	  self->reads++;
 	  if (data[element].data == self->thread_num)
 	     repeats++;
 	  status = sem_readunlock(&data[element].lock);
 	  if (status != 0) {
-             Emsg1(M_ABORT, 0, "Read unlock failed. ERR=%s\n", strerror(status));
+	     Emsg1(M_ABORT, 0, _("Read unlock failed. ERR=%s\n"), strerror(status));
 	  }
       }
       element++;
@@ -278,7 +278,7 @@ void *thread_routine(void *arg)
       }
    }
    if (repeats > 0) {
-      Pmsg2(000, "Thread %d found unchanged elements %d times\n",
+      Pmsg2(000, _("Thread %d found unchanged elements %d times\n"),
 	 self->thread_num, repeats);
    }
    return NULL;
@@ -310,7 +310,7 @@ int main (int argc, char *argv[])
 	data[data_count].writes = 0;
 	status = sem_init (&data[data_count].lock);
 	if (status != 0) {
-           Emsg1(M_ABORT, 0, "Init rwlock failed. ERR=%s\n", strerror(status));
+	   Emsg1(M_ABORT, 0, _("Init rwlock failed. ERR=%s\n"), strerror(status));
 	}
     }
 
@@ -325,7 +325,7 @@ int main (int argc, char *argv[])
 	status = pthread_create(&threads[count].thread_id,
 	    NULL, thread_routine, (void*)&threads[count]);
 	if (status != 0) {
-           Emsg1(M_ABORT, 0, "Create thread failed. ERR=%s\n", strerror(status));
+	   Emsg1(M_ABORT, 0, _("Create thread failed. ERR=%s\n"), strerror(status));
 	}
     }
 
@@ -336,10 +336,10 @@ int main (int argc, char *argv[])
     for (count = 0; count < THREADS; count++) {
 	status = pthread_join (threads[count].thread_id, NULL);
 	if (status != 0) {
-           Emsg1(M_ABORT, 0, "Join thread failed. ERR=%s\n", strerror(status));
+	   Emsg1(M_ABORT, 0, _("Join thread failed. ERR=%s\n"), strerror(status));
 	}
 	thread_writes += threads[count].writes;
-        printf ("%02d: interval %d, writes %d, reads %d\n",
+	printf (_("%02d: interval %d, writes %d, reads %d\n"),
 	    count, threads[count].interval,
 	    threads[count].writes, threads[count].reads);
     }
@@ -349,12 +349,12 @@ int main (int argc, char *argv[])
      */
     for (data_count = 0; data_count < DATASIZE; data_count++) {
 	data_writes += data[data_count].writes;
-        printf ("data %02d: value %d, %d writes\n",
+	printf (_("data %02d: value %d, %d writes\n"),
 	    data_count, data[data_count].data, data[data_count].writes);
 	sem_destroy (&data[data_count].lock);
     }
 
-    printf ("Total: %d thread writes, %d data writes\n",
+    printf (_("Total: %d thread writes, %d data writes\n"),
 	thread_writes, data_writes);
     return 0;
 }
@@ -426,16 +426,16 @@ void *thread_routine (void *arg)
 		self->updates++;
 		sem_writeunlock (&data[element].lock);
 	    } else
-                err_abort (status, "Try write lock");
+		err_abort (status, _("Try write lock"));
 	} else {
 	    status = sem_readtrylock (&data[element].lock);
 	    if (status == EBUSY)
 		self->r_collisions++;
 	    else if (status != 0) {
-                err_abort (status, "Try read lock");
+		err_abort (status, _("Try read lock"));
 	    } else {
 		if (data[element].data != data[element].updates)
-                    printf ("%d: data[%d] %d != %d\n",
+		    printf ("%d: data[%d] %d != %d\n",
 			self->thread_num, element,
 			data[element].data, data[element].updates);
 		sem_readunlock (&data[element].lock);
@@ -487,7 +487,7 @@ int main (int argc, char *argv[])
 	status = pthread_create (&threads[count].thread_id,
 	    NULL, thread_routine, (void*)&threads[count]);
 	if (status != 0)
-            err_abort (status, "Create thread");
+	    err_abort (status, _("Create thread"));
     }
 
     /*
@@ -497,10 +497,10 @@ int main (int argc, char *argv[])
     for (count = 0; count < THREADS; count++) {
 	status = pthread_join(threads[count].thread_id, NULL);
 	if (status != 0)
-            err_abort(status, "Join thread");
+	    err_abort(status, _("Join thread"));
 	thread_updates += threads[count].updates;
-        printf ("%02d: interval %d, updates %d, "
-                "r_collisions %d, w_collisions %d\n",
+	printf (_("%02d: interval %d, updates %d, "
+		"r_collisions %d, w_collisions %d\n"),
 	    count, threads[count].interval,
 	    threads[count].updates,
 	    threads[count].r_collisions, threads[count].w_collisions);
@@ -511,7 +511,7 @@ int main (int argc, char *argv[])
      */
     for (data_count = 0; data_count < DATASIZE; data_count++) {
 	data_updates += data[data_count].updates;
-        printf ("data %02d: value %d, %d updates\n",
+	printf (_("data %02d: value %d, %d updates\n"),
 	    data_count, data[data_count].data, data[data_count].updates);
 	sem_destroy(&data[data_count].lock);
     }

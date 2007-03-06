@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: csprint.h,v 1.6 2004/07/18 09:33:26 kerns Exp $
+ *    Version $Id: csprint.h,v 1.7.2.1 2005/10/26 14:02:05 kerns Exp $
  */
 /*
    Copyright (C) 2004 Kern Sibbald and John Walker
@@ -34,10 +34,16 @@
 #define CS_PROMPT        3 /* prompt signal received */
 #define CS_CONNECTED     4 /* the socket is now connected */
 #define CS_DISCONNECTED  5 /* the socket is now disconnected */
+
+#define CS_REMOVEPROMPT  6 /* remove the prompt (#), when automatic messages are comming */
+
 #define CS_DEBUG        10 /* used to print debug messages */
 #define CS_TERMINATED   99 /* used to signal that the thread is terminated */
 
 /* function called by console_thread to send events back to the GUI */
+class wxString;
+
 void csprint(const char* str, int status=CS_DATA);
+void csprint(wxString str, int status=CS_DATA);
 
 #endif

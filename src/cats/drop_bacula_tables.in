@@ -3,8 +3,8 @@
 #  Drop Bacula tables -- works for whatever is configured,
 #    MySQL, SQLite, or PostgreSQL
 #
-if test xsqlite = x@DB_NAME@ ; then
-  @scriptdir@/drop_sqlite_tables $*
+if test xsqlite = x@DB_NAME@ -o xsqlite3 = x@DB_NAME@ ; then
+  @scriptdir@/drop_@DB_NAME@_tables $*
   echo "Dropped SQLite tables"
 else
   if test xmysql = x@DB_NAME@ ; then 

@@ -1,12 +1,12 @@
 /*
  * Bacula File Daemon specific configuration and defines
  *
- *     Kern Sibbald, Jan MMI 
+ *     Kern Sibbald, Jan MMI
  *
- *   Version $Id: filed.h,v 1.9 2004/08/22 17:37:44 nboichat Exp $
+ *   Version $Id: filed.h,v 1.13 2005/04/17 21:35:13 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -27,8 +27,10 @@
 
 #define FILE_DAEMON 1
 #include "filed_conf.h"
+#include "chksum.h"
 #include "findlib/find.h"
 #include "jcr.h"
+#include "acl.h"
 #include "protos.h"                   /* file daemon prototypes */
 #ifdef HAVE_LIBZ
 #include <zlib.h>                     /* compression headers */

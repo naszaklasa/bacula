@@ -3,6 +3,9 @@
 #include "winres.h"
 #include "../../version.h"
 
+/* NB: Internationalization of this file will require some work... */
+#define N_(s) s
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Icons
@@ -25,15 +28,15 @@ IDR_TRAYMENU MENU DISCARDABLE
 BEGIN
     POPUP "tray"
     BEGIN
-        MENUITEM "&Status",                     ID_STATUS
-        MENUITEM "&Events",                     ID_EVENTS
+        MENUITEM N_("&Status"),                     ID_STATUS
+        MENUITEM N_("&Events"),                     ID_EVENTS
 #ifdef properties_implemented
-        MENUITEM "&Properties",                 ID_PROPERTIES
+        MENUITEM N_("&Properties"),                 ID_PROPERTIES
 #endif
         MENUITEM SEPARATOR
-        MENUITEM "&About Bacula",               ID_ABOUT
+        MENUITEM N_("&About Bacula"),               ID_ABOUT
         MENUITEM SEPARATOR
-        MENUITEM "&Close Bacula",               ID_CLOSE
+        MENUITEM N_("&Close Bacula"),               ID_CLOSE
     END
 END
 
@@ -65,7 +68,7 @@ BEGIN
             VALUE "FileDescription", "Bacula File daemon for Win32\0"
             VALUE "FileVersion", VERSION "\0"
             VALUE "InternalName", "Bacula\0"
-            VALUE "LegalCopyright", "Copyright Kern Sibbald, 1999-2004\0"
+            VALUE "LegalCopyright", "Copyright Kern Sibbald, 1999-2005\0"
             VALUE "LegalTrademarks", "Licensed under GNU GPL 2.0\0"
             VALUE "OriginalFilename", "filed.exe\0"
             VALUE "PrivateBuild", "\0"
@@ -109,8 +112,8 @@ STYLE DS_MODALFRAME | DS_3DLOOK | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP |
 CAPTION "Bacula Properties"
 FONT 8, "MS Sans Serif"
 BEGIN
-    PUSHBUTTON      "&Cancel",IDCANCEL,165,25,51,15
-    DEFPUSHBUTTON   "&OK",IDOK,165,5,51,15
+    PUSHBUTTON      N_("&Cancel"),IDCANCEL,165,25,51,15
+    DEFPUSHBUTTON   N_("&OK"),IDOK,165,5,51,15
     LTEXT           "No Properites yet",IDC_NONYET_LABEL,19,30,56,15,
                     SS_CENTERIMAGE
 END
@@ -133,15 +136,15 @@ BEGIN
     CONTROL         IDB_BACULABMP,IDB_BACULABMP,"Static",SS_BITMAP|SS_SUNKEN,7,5,32,32
 #endif
 
-    LTEXT           "      by Kern Sibbald",IDC_NAME,134,38,78,10
-    LTEXT           "For more information, see:",-1,115,60,100,10
-    LTEXT           "         www.sibbald.com/bacula",IDC_WWW,115,70,100,10
+    LTEXT           N_("      by Kern Sibbald"),IDC_NAME,134,38,78,10
+    LTEXT           N_("For more information, see:"),-1,115,60,100,10
+    LTEXT           "         www.bacula.org",IDC_WWW,115,70,100,10
 //    LTEXT           "                 ",-1,69,81,100,10
 //    LTEXT           "                 ",-1,90,70,100,10
-    LTEXT           "Copyright (C) 1999-2004, Kern Sibbald",IDC_COPYRIGHT,7,120,175,10
-    LTEXT           "Licensed under GNU GPL 2.0.",IDC_TRADEMARK,7,130,175,10
-    RTEXT           "Build Date:",-1,108,24,42,8
-    RTEXT           "Bacula Version:",-1,100,9,50,8
+    LTEXT           "Copyright (C) 1999-2005, Kern Sibbald",IDC_COPYRIGHT,7,120,175,10
+    LTEXT           N_("Licensed under GNU GPL 2.0."),IDC_TRADEMARK,7,130,175,10
+    RTEXT           N_("Build Date:"),-1,108,24,42,8
+    RTEXT           N_("Bacula Version:"),-1,100,9,50,8
     LTEXT           VERSION,IDC_VERSION,159,10,65,8
     LTEXT           BDATE,-1,159,24,65,10
 
@@ -155,7 +158,7 @@ END
 IDD_STATUS DIALOG DISCARDABLE  0, 0, 411, 244
 STYLE DS_MODALFRAME | DS_3DLOOK | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP |
     WS_VISIBLE | WS_CAPTION | WS_SYSMENU
-CAPTION "Bacula Status"
+CAPTION N_("Bacula Status")
 FONT 8, "Courier New"
 BEGIN
     DEFPUSHBUTTON   "&OK",IDOK,355,5,51,15
@@ -170,7 +173,7 @@ END
 IDD_EVENTS DIALOG DISCARDABLE  0, 0, 411, 204
 STYLE DS_MODALFRAME | DS_3DLOOK | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP |
     WS_VISIBLE | WS_CAPTION | WS_SYSMENU
-CAPTION "Bacula Events"
+CAPTION N_("Bacula Events")
 FONT 8, "Courier New"
 BEGIN
     DEFPUSHBUTTON   "&OK",IDOK,355,5,51,15

@@ -2,10 +2,10 @@
  *  Hashed Message Authentication Code using MD5 (HMAC-MD5)
  *
  * hmac_md5 was based on sample code in RFC2104 (thanks guys).
- * 
+ *
  * Adapted to Bacula by Kern E. Sibbald, February MMI.
  *
- *   Version $Id: hmac.c,v 1.4 2004/04/10 11:12:14 kerns Exp $
+ *   Version $Id: hmac.c,v 1.5.4.1 2006/01/07 11:18:11 kerns Exp $
  */
 /*
    Copyright (C) 2000-2004 Kern Sibbald and John Walker
@@ -29,8 +29,8 @@
 
 #include "bacula.h"
 
-#define PAD_LEN 64		      /* PAD length */
-#define SIG_LEN 16		      /* MD5 signature length */
+#define PAD_LEN 64           /* PAD length */
+#define SIG_LEN MD5HashSize  /* MD5 digest length */
 
 void
 hmac_md5(
@@ -73,7 +73,7 @@ hmac_md5(
    /* Zero pads and store key */
    memset(k_ipad, 0, PAD_LEN);
    memcpy(k_ipad, key, key_len);
-   memcpy(k_opad, k_ipad, PAD_LEN); 
+   memcpy(k_opad, k_ipad, PAD_LEN);
 
    /* XOR key with ipad and opad values */
    for (i=0; i<PAD_LEN; i++) {

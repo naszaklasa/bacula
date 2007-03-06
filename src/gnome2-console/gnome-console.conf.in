@@ -11,5 +11,5 @@ Director {
 
 ConsoleFont {
   Name = Default
-  Font = "-misc-fixed-medium-r-normal-*-*-130-*-*-c-*-iso8859-1"
+  Font = "LucidaTypewriter 9"
 }

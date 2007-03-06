@@ -41,7 +41,6 @@ clean:
 
 distclean: clean
 	@rm -f Makefile
-	@rm -rf CVS
 
 devclean: clean
 	@rm -f Makefile

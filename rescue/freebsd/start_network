@@ -1,9 +1,0 @@
-#!/bin/sh
-#
-#  Start network -- created by getdiskinfo
-#
-ip=192.168.68.112
-dev=eth0
-ifconfig lo up
-ifconfig $dev up $ip
-route add default gw $ip dev $dev

@@ -1,1 +1,1 @@
-#include "../../findlib/winapi.c"
+#include "../../lib/winapi.c"

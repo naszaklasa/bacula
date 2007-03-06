@@ -1,0 +1,51 @@
+
+  This patch fixes JobDefs so that if a Storage resource is
+  specified in a Job, it is not overridden by the JobDefs.
+  Apply to 1.36.0 with:
+
+  cd <bacula-source>
+  patch -p0 <1.36.0-jobdefs.patch
+  make
+  make install
+  ...
+
+
+Index: src/dird/backup.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/backup.c,v
+retrieving revision 1.73
+diff -u -r1.73 backup.c
+--- src/dird/backup.c	11 Nov 2004 07:55:05 -0000	1.73
++++ src/dird/backup.c	11 Nov 2004 17:21:19 -0000
+@@ -448,6 +448,7 @@
+ Client:                 %s\n\
+ FileSet:                \"%s\" %s\n\
+ Pool:                   \"%s\"\n\
++Storage:                \"%s\"\n\
+ Start time:             %s\n\
+ End time:               %s\n\
+ FD Files Written:       %s\n\
+@@ -472,6 +473,7 @@
+ 	jcr->client->hdr.name,
+ 	jcr->fileset->hdr.name, fsr->cCreateTime,
+ 	jcr->pool->hdr.name,
++	jcr->store->hdr.name,
+ 	sdt,
+ 	edt,
+ 	edit_uint64_with_commas(jcr->jr.JobFiles, ec1),
+Index: src/dird/dird.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/dird.c,v
+retrieving revision 1.70
+diff -u -r1.70 dird.c
+--- src/dird/dird.c	22 Sep 2004 19:51:05 -0000	1.70
++++ src/dird/dird.c	11 Nov 2004 17:21:19 -0000
+@@ -495,7 +495,7 @@
+ 	 /* Handle Storage alists specifically */
+ 	 JOB *jobdefs = job->jobdefs;
+ 	 for (i=0; i < MAX_STORE; i++) {
+-	    if (jobdefs->storage[i]) {
++	    if (jobdefs->storage[i] && !job->storage[i]) {
+ 	       STORE *st;
+ 	       job->storage[i] = New(alist(10, not_owned_by_alist));
+ 	       foreach_alist(st, jobdefs->storage[i]) {

@@ -1,8 +1,0 @@
-#! /bin/sh -v
-#
-
-argv1="$1"
-
-if [ $argv1 -eq 1 ] ; then
-   exec init -t1 S
-fi

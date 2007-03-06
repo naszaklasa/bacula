@@ -1,0 +1,50 @@
+ This patch fixes Bacula so that it does not exit if there
+ is a syntax error in its conf file during a reload command.
+ Apply the patch to 1.36.1 with:
+ 
+ cd <bacula-source>
+ patch -p0 <1.36.1-reload.patch
+ make
+ make install
+
+--- ../branch-1.36.1/src/dird/dird.c	2004-11-11 18:30:32.000000000 +0100
++++ src/dird/dird.c	2004-12-21 18:15:10.625754501 +0100
+@@ -372,6 +375,7 @@
+    JCR *jcr;
+    int njobs = 0;		      /* number of running jobs */
+    int table, rtable;
++   bool ok;	  
+ 
+    if (already_here) {
+       abort();			      /* Oops, recursion -> die */
+@@ -396,16 +400,17 @@
+    reload_table[table].res_table = save_config_resources();
+    Dmsg1(100, "Saved old config in table %d\n", table);
+ 
+-   parse_config(configfile);
++   ok = parse_config(configfile, 0);  /* no exit on error */
+ 
+    Dmsg0(100, "Reloaded config file\n");
+-   if (!check_resources()) {
++   if (!ok || !check_resources()) {
+       rtable = find_free_reload_table_entry();	  /* save new, bad table */
+       if (rtable < 0) {
+          Jmsg(NULL, M_ERROR, 0, _("Please correct configuration file: %s\n"), configfile);
+          Jmsg(NULL, M_ERROR_TERM, 0, _("Out of reload table entries. Giving up.\n"));
+       } else {
+          Jmsg(NULL, M_ERROR, 0, _("Please correct configuration file: %s\n"), configfile);
++         Jmsg(NULL, M_ERROR, 0, _("Resetting previous configuration.\n"));
+       }
+       reload_table[rtable].res_table = save_config_resources();
+       /* Now restore old resoure values */
+@@ -465,8 +470,8 @@
+    job = (JOB *)GetNextRes(R_JOB, NULL);
+    director = (DIRRES *)GetNextRes(R_DIRECTOR, NULL);
+    if (!director) {
+-      Jmsg(NULL, M_FATAL, 0, _("No Director resource defined in %s\n\
+-Without that I don't know who I am :-(\n"), configfile);
++      Jmsg(NULL, M_FATAL, 0, _("No Director resource defined in %s\n"
++"Without that I don't know who I am :-(\n"), configfile);
+       OK = false;
+    } else {
+       set_working_directory(director->working_directory);

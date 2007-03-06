@@ -1,0 +1,47 @@
+
+ This patch fixes the calculation for the total number of files
+ to be restored or verified by not double counting files that are
+ split across a tape file or across tapes.
+
+ To apply this patch, you must first have applied 1.36.0-verify.patch.
+
+ Apply it with:
+
+ cd <bacula-source>
+ patch -p0 <1.36.0-verify-2.patch
+ make
+ make install
+ ...
+
+Index: src/dird/bsr.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/bsr.c,v
+retrieving revision 1.16
+diff -u -r1.16 bsr.c
+--- src/dird/bsr.c	29 Oct 2004 22:11:43 -0000	1.16
++++ src/dird/bsr.c	4 Nov 2004 10:37:37 -0000
+@@ -238,6 +238,8 @@
+ {
+    uint32_t count = 0;
+    uint32_t total_count = 0; 
++   uint32_t LastIndex = 0;
++   bool first = true;
+    if (bsr) {
+       /*
+        * For a given volume, loop over all the JobMedia records.
+@@ -273,6 +275,15 @@
+             fprintf(fd, "Count=%u\n", count);
+ 	 }
+ 	 total_count += count;
++	 /* If the same file is present on two tapes or in two files
++	  *   on a tape, it is a continuation, and should not be treated
++	  *   twice in the totals.
++	  */
++	 if (!first && LastIndex == bsr->VolParams[i].FirstIndex) {
++	    total_count--;
++	 }
++	 first = false;
++	 LastIndex = bsr->VolParams[i].LastIndex;
+       }
+       write_bsr(ua, bsr->next, fd);
+    }

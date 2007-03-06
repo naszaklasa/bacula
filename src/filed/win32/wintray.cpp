@@ -201,7 +201,9 @@ bacMenu::SendTrayMsg(DWORD msg, int bacstat)
          if (msg == NIM_ADD) {
             // The tray icon couldn't be created, so use the Properties dialog
             // as the main program window
-            PostQuitMessage(0);
+         // removed because it causes quit when not running as a
+         // service in use with BartPe.
+         // PostQuitMessage(0);
          }
       }
    }

@@ -3,9 +3,9 @@
 # This routine alters the appropriately configured
 #  Bacula tables for PostgreSQL, MySQL, or SQLite.
 #
-if test xsqlite = x@DB_NAME@ ; then
+if test xsqlite = x@DB_NAME@ -o xsqlite3 = x@DB_NAME@ ; then
   echo "Altering SQLite tables"
-  @scriptdir@/update_sqlite_tables $*
+  @scriptdir@/update_@DB_NAME@_tables $*
 fi
 if test xmysql = x@DB_NAME@ ; then
   echo "Altering MySQL tables"

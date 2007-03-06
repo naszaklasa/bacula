@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, January MMIV
  *
- *   Version  $Id: ua_acl.c,v 1.2.16.1 2005/02/14 10:02:21 kerns Exp $
+ *   Version  $Id: ua_acl.c,v 1.5 2005/01/29 22:39:00 kerns Exp $
  */
 
 /*

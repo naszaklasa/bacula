@@ -1,0 +1,159 @@
+
+ This patch fixes, at least partially, a Verify error where
+ the count of files expected did not agree with the count 
+ found. There are still some cases where the expected count
+ exceeds the found probably due to the same directory being
+ examined multiple times.
+
+ Apply the patch to 1.36.0 with:
+
+ cd <bacula-source>
+ patch -p0 <1.36.0-verify.patch
+ make
+ make install
+
+
+Index: src/dird/bsr.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/bsr.c,v
+retrieving revision 1.15
+diff -u -r1.15 bsr.c
+--- src/dird/bsr.c	24 Sep 2004 15:53:00 -0000	1.15
++++ src/dird/bsr.c	29 Oct 2004 22:05:24 -0000
+@@ -34,7 +34,7 @@
+ #include "dird.h"
+ 
+ /* Forward referenced functions */
+-static int write_bsr(UAContext *ua, RBSR *bsr, FILE *fd);
++static uint32_t write_bsr(UAContext *ua, RBSR *bsr, FILE *fd);
+ void print_bsr(UAContext *ua, RBSR *bsr);
+ 
+ 
+@@ -178,11 +178,11 @@
+ /*
+  * Write the bootstrap records to file
+  */
+-int write_bsr_file(UAContext *ua, RBSR *bsr)
++uint32_t write_bsr_file(UAContext *ua, RBSR *bsr)
+ {
+    FILE *fd;
+    POOLMEM *fname = get_pool_memory(PM_MESSAGE);
+-   int count = 0;;
++   uint32_t count = 0;;
+    bool err;
+ 
+    Mmsg(fname, "%s/restore.bsr", working_directory);
+@@ -234,9 +234,10 @@
+    return count;
+ }
+ 
+-static int write_bsr(UAContext *ua, RBSR *bsr, FILE *fd)
++static uint32_t write_bsr(UAContext *ua, RBSR *bsr, FILE *fd)
+ {
+    uint32_t count = 0;
++   uint32_t total_count = 0; 
+    if (bsr) {
+       /*
+        * For a given volume, loop over all the JobMedia records.
+@@ -271,10 +272,11 @@
+ 	 if (count) {
+             fprintf(fd, "Count=%u\n", count);
+ 	 }
++	 total_count += count;
+       }
+       write_bsr(ua, bsr->next, fd);
+    }
+-   return count;
++   return total_count;
+ }
+ 
+ void print_bsr(UAContext *ua, RBSR *bsr)
+Index: src/dird/protos.h
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/protos.h,v
+retrieving revision 1.54
+diff -u -r1.54 protos.h
+--- src/dird/protos.h	24 Sep 2004 12:30:14 -0000	1.54
++++ src/dird/protos.h	29 Oct 2004 22:05:24 -0000
+@@ -44,7 +44,7 @@
+ RBSR *new_bsr();
+ void free_bsr(RBSR *bsr);
+ int complete_bsr(UAContext *ua, RBSR *bsr);
+-int write_bsr_file(UAContext *ua, RBSR *bsr);
++uint32_t write_bsr_file(UAContext *ua, RBSR *bsr);
+ void add_findex(RBSR *bsr, uint32_t JobId, int32_t findex);
+ RBSR_FINDEX *new_findex();
+ 
+@@ -62,7 +62,7 @@
+ 
+ /* fd_cmds.c */
+ extern int connect_to_file_daemon(JCR *jcr, int retry_interval,
+-				  int max_retry_time, int verbose);
++                                  int max_retry_time, int verbose);
+ extern int send_include_list(JCR *jcr);
+ extern int send_exclude_list(JCR *jcr);
+ extern int send_bootstrap_file(JCR *jcr);
+@@ -70,7 +70,7 @@
+ extern int get_attributes_and_put_in_catalog(JCR *jcr);
+ extern int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId);
+ extern int put_file_into_catalog(JCR *jcr, long file_index, char *fname, 
+-			  char *link, char *attr, int stream);
++                          char *link, char *attr, int stream);
+ extern void get_level_since_time(JCR *jcr, char *since, int since_len);
+ extern int send_run_before_and_after_commands(JCR *jcr);
+ 
+@@ -97,7 +97,7 @@
+ 
+ /* msgchan.c */
+ extern bool connect_to_storage_daemon(JCR *jcr, int retry_interval,    
+-			      int max_retry_time, int verbose);
++                              int max_retry_time, int verbose);
+ extern int start_storage_daemon_job(JCR *jcr);
+ extern int start_storage_daemon_message_thread(JCR *jcr);
+ extern int bget_dirmsg(BSOCK *bs);
+@@ -149,28 +149,28 @@
+ void free_ua_context(UAContext *ua);
+ 
+ /* ua_select.c */
+-STORE	*select_storage_resource(UAContext *ua);
+-JOB	*select_job_resource(UAContext *ua);
+-JOB	*select_restore_job_resource(UAContext *ua);
+-CLIENT	*select_client_resource(UAContext *ua);
++STORE   *select_storage_resource(UAContext *ua);
++JOB     *select_job_resource(UAContext *ua);
++JOB     *select_restore_job_resource(UAContext *ua);
++CLIENT  *select_client_resource(UAContext *ua);
+ FILESET *select_fileset_resource(UAContext *ua);
+-int	select_pool_and_media_dbr(UAContext *ua, POOL_DBR *pr, MEDIA_DBR *mr);
+-int	select_media_dbr(UAContext *ua, MEDIA_DBR *mr);
+-bool	select_pool_dbr(UAContext *ua, POOL_DBR *pr);
+-int	select_client_dbr(UAContext *ua, CLIENT_DBR *cr);
+-
+-void	start_prompt(UAContext *ua, const char *msg);
+-void	add_prompt(UAContext *ua, const char *prompt);
+-int	do_prompt(UAContext *ua, const char *automsg, const char *msg, char *prompt, int max_prompt);
+-CAT    *get_catalog_resource(UAContext *ua);	       
++int     select_pool_and_media_dbr(UAContext *ua, POOL_DBR *pr, MEDIA_DBR *mr);
++int     select_media_dbr(UAContext *ua, MEDIA_DBR *mr);
++bool    select_pool_dbr(UAContext *ua, POOL_DBR *pr);
++int     select_client_dbr(UAContext *ua, CLIENT_DBR *cr);
++
++void    start_prompt(UAContext *ua, const char *msg);
++void    add_prompt(UAContext *ua, const char *prompt);
++int     do_prompt(UAContext *ua, const char *automsg, const char *msg, char *prompt, int max_prompt);
++CAT    *get_catalog_resource(UAContext *ua);           
+ STORE  *get_storage_resource(UAContext *ua, int use_default);
+-int	get_media_type(UAContext *ua, char *MediaType, int max_media);
+-bool	get_pool_dbr(UAContext *ua, POOL_DBR *pr);
+-int	get_client_dbr(UAContext *ua, CLIENT_DBR *cr);
++int     get_media_type(UAContext *ua, char *MediaType, int max_media);
++bool    get_pool_dbr(UAContext *ua, POOL_DBR *pr);
++int     get_client_dbr(UAContext *ua, CLIENT_DBR *cr);
+ POOL   *get_pool_resource(UAContext *ua);
+ POOL   *select_pool_resource(UAContext *ua);
+ CLIENT *get_client_resource(UAContext *ua);
+-int	get_job_dbr(UAContext *ua, JOB_DBR *jr);
++int     get_job_dbr(UAContext *ua, JOB_DBR *jr);
+ 
+ int find_arg_keyword(UAContext *ua, const char **list);
+ int find_arg(UAContext *ua, const char *keyword);

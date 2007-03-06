@@ -11,28 +11,47 @@
  * for the external world. This is control with
  * the define __SQL_C, which is defined only in sql.c
  *
- *    Version $Id: cats.h,v 1.48 2004/09/22 21:36:57 kerns Exp $
+ *    Version $Id: cats.h,v 1.61.2.1 2006/02/25 07:47:44 kerns Exp $
  */
-
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
+
+/*
+   Here is how database versions work. 
+
+   While I am working on a new release with database changes, the
+   update scripts are in the src/cats directory under the names
+   update_xxx_tables.in.  Most of the time, I make database updates
+   in one go and immediately update the version, but not always.  If
+   there are going to be several updates as is the case with version
+   1.37, then I will often forgo changing the version until the last
+   update otherwise I will end up with too many versions and a lot
+   of confusion.
+
+   When I am pretty sure there will be no more updates, I will
+   change the version from 8 to 9 (in the present case), and when I
+   am 100% sure there will be no more changes, the update script
+   will be copied to the updatedb directory with the correct name
+   (in the present case 8 to 9).
+
+   Now, in principle, each of the different DB implementations 
+   can have a different version, but in practice they are all
+   the same (simplifies things). The exception is the internal
+   database, which is no longer used, and hence, no longer changes.
+ */
+
 
 #ifndef __SQL_H_
 #define __SQL_H_ 1
@@ -48,7 +67,7 @@ typedef int (DB_RESULT_HANDLER)(void *, int, char **);
 
 #ifdef HAVE_SQLITE
 
-#define BDB_VERSION 8
+#define BDB_VERSION 9
 
 #include <sqlite.h>
 
@@ -74,7 +93,7 @@ typedef struct s_sql_field {
  * subroutines.
  *                    S Q L I T E
  */
-typedef struct s_db {
+struct B_DB {
    BQUEUE bq;                         /* queue control */
    brwlock_t lock;                    /* transaction lock */
    struct sqlite *db;
@@ -110,11 +129,11 @@ typedef struct s_db {
    POOLMEM *esc_name;                 /* Escaped file/path name */
    int fnl;                           /* file name length */
    int pnl;                           /* path name length */
-} B_DB;
+};
 
 
-/* 
- * "Generic" names for easier conversion   
+/*
+ * "Generic" names for easier conversion
  *
  *                    S Q L I T E
  */
@@ -122,16 +141,140 @@ typedef struct s_db {
 #define sql_free_result(x)    my_sqlite_free_table(x)
 #define sql_fetch_row(x)      my_sqlite_fetch_row(x)
 #define sql_query(x, y)       my_sqlite_query((x), (y))
-#define sql_close(x)          sqlite_close((x)->db)  
+#ifdef HAVE_SQLITE3
+#define sql_insert_id(x,y)    sqlite3_last_insert_rowid((x)->db)
+#define sql_close(x)          sqlite3_close((x)->db)
+#else
+#define sql_insert_id(x,y)    sqlite_last_insert_rowid((x)->db)
+#define sql_close(x)          sqlite_close((x)->db)
+#endif
 #define sql_strerror(x)       (x)->sqlite_errmsg?(x)->sqlite_errmsg:"unknown"
 #define sql_num_rows(x)       (x)->nrow
 #define sql_data_seek(x, i)   (x)->row = (i)
 #define sql_affected_rows(x)  1
-#define sql_insert_id(x,y)    sqlite_last_insert_rowid((x)->db)
 #define sql_field_seek(x, y)  my_sqlite_field_seek((x), (y))
 #define sql_fetch_field(x)    my_sqlite_fetch_field(x)
 #define sql_num_fields(x)     ((x)->ncolumn)
-#define SQL_ROW               char**   
+#define SQL_ROW               char**
+
+
+
+/* In cats/sqlite.c */
+void       my_sqlite_free_table(B_DB *mdb);
+SQL_ROW    my_sqlite_fetch_row(B_DB *mdb);
+int        my_sqlite_query(B_DB *mdb, char *cmd);
+void       my_sqlite_field_seek(B_DB *mdb, int field);
+SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb);
+
+
+#else
+
+/*                    S Q L I T E 3            */
+ 
+
+#ifdef HAVE_SQLITE3
+
+
+#define BDB_VERSION 9
+
+#include <sqlite3.h>
+
+/* Define opaque structure for sqlite */
+struct sqlite3 {
+   char dummy;
+};
+
+#define IS_NUM(x)             ((x) == 1)
+#define IS_NOT_NULL(x)        ((x) == 1)
+
+typedef struct s_sql_field {
+   char *name;                        /* name of column */
+   int length;                        /* length */
+   int max_length;                    /* max length */
+   uint32_t type;                     /* type */
+   uint32_t flags;                    /* flags */
+} SQL_FIELD;
+
+/*
+ * This is the "real" definition that should only be
+ * used inside sql.c and associated database interface
+ * subroutines.
+ *                    S Q L I T E
+ */
+struct B_DB {
+   BQUEUE bq;                         /* queue control */
+   brwlock_t lock;                    /* transaction lock */
+   struct sqlite3 *db;
+   char **result;
+   int status;
+   int nrow;                          /* nrow returned from sqlite */
+   int ncolumn;                       /* ncolum returned from sqlite */
+   int num_rows;                      /* used by code */
+   int row;                           /* seek row */
+   int field;                         /* seek field */
+   SQL_FIELD **fields;                /* defined fields */
+   int ref_count;
+   char *db_name;
+   char *db_user;
+   char *db_address;                  /* host name address */
+   char *db_socket;                   /* socket for local access */
+   char *db_password;
+   int  db_port;                      /* port for host name address */
+   bool connected;                    /* connection made to db */
+   bool have_insert_id;               /* do not have insert id */
+   bool fields_defined;               /* set when fields defined */
+   char *sqlite_errmsg;               /* error message returned by sqlite */
+   POOLMEM *errmsg;                   /* nicely edited error message */
+   POOLMEM *cmd;                      /* SQL command string */
+   POOLMEM *cached_path;              /* cached path name */
+   int cached_path_len;               /* length of cached path */
+   uint32_t cached_path_id;           /* cached path id */
+   bool allow_transactions;           /* transactions allowed */
+   bool transaction;                  /* transaction started */
+   int changes;                       /* changes during transaction */
+   POOLMEM *fname;                    /* Filename only */
+   POOLMEM *path;                     /* Path only */
+   POOLMEM *esc_name;                 /* Escaped file/path name */
+   int fnl;                           /* file name length */
+   int pnl;                           /* path name length */
+};
+
+/*
+ * Conversion of sqlite 2 names to sqlite3
+ */
+#define sqlite_last_insert_rowid sqlite3_last_insert_rowid
+#define sqlite_open sqlite3_open
+#define sqlite_close sqlite3_close
+#define sqlite_result sqlite3_result
+#define sqlite_exec sqlite3_exec
+#define sqlite_get_table sqlite3_get_table
+#define sqlite_free_table sqlite3_free_table
+
+
+/*
+ * "Generic" names for easier conversion
+ *
+ *                    S Q L I T E 3
+ */
+#define sql_store_result(x)   (x)->result
+#define sql_free_result(x)    my_sqlite_free_table(x)
+#define sql_fetch_row(x)      my_sqlite_fetch_row(x)
+#define sql_query(x, y)       my_sqlite_query((x), (y))
+#ifdef HAVE_SQLITE3
+#define sql_insert_id(x,y)    sqlite3_last_insert_rowid((x)->db)
+#define sql_close(x)          sqlite3_close((x)->db)
+#else
+#define sql_insert_id(x,y)    sqlite_last_insert_rowid((x)->db)
+#define sql_close(x)          sqlite_close((x)->db)
+#endif
+#define sql_strerror(x)       (x)->sqlite_errmsg?(x)->sqlite_errmsg:"unknown"
+#define sql_num_rows(x)       (x)->nrow
+#define sql_data_seek(x, i)   (x)->row = (i)
+#define sql_affected_rows(x)  1
+#define sql_field_seek(x, y)  my_sqlite_field_seek((x), (y))
+#define sql_fetch_field(x)    my_sqlite_fetch_field(x)
+#define sql_num_fields(x)     ((x)->ncolumn)
+#define SQL_ROW               char**
 
 
 
@@ -147,7 +290,7 @@ SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb);
 
 #ifdef HAVE_MYSQL
 
-#define BDB_VERSION 8
+#define BDB_VERSION 9
 
 #include <mysql.h>
 
@@ -158,7 +301,7 @@ SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb);
  *
  *                     M Y S Q L
  */
-typedef struct s_db {
+struct B_DB {
    BQUEUE bq;                         /* queue control */
    brwlock_t lock;                    /* transaction lock */
    MYSQL mysql;
@@ -186,16 +329,17 @@ typedef struct s_db {
    POOLMEM *esc_name;                 /* Escaped file/path name */
    int fnl;                           /* file name length */
    int pnl;                           /* path name length */
-} B_DB;
+};
 
 #define DB_STATUS int
 
 /* "Generic" names for easier conversion */
 #define sql_store_result(x)   mysql_store_result((x)->db)
+#define sql_use_result(x)     mysql_use_result((x)->db)
 #define sql_free_result(x)    mysql_free_result((x)->result)
 #define sql_fetch_row(x)      mysql_fetch_row((x)->result)
 #define sql_query(x, y)       mysql_query((x)->db, (y))
-#define sql_close(x)          mysql_close((x)->db)  
+#define sql_close(x)          mysql_close((x)->db)
 #define sql_strerror(x)       mysql_error((x)->db)
 #define sql_num_rows(x)       mysql_num_rows((x)->result)
 #define sql_data_seek(x, i)   mysql_data_seek((x)->result, (i))
@@ -211,20 +355,20 @@ typedef struct s_db {
 
 #ifdef HAVE_POSTGRESQL
 
-#define BDB_VERSION 8
+#define BDB_VERSION 9
 
 #include <libpq-fe.h>
 
 /* TEMP: the following is taken from select OID, typname from pg_type; */
-#define IS_NUM(x)             ((x) == 20 || (x) == 21 || (x) == 23 || (x) == 700 || (x) == 701)
-#define IS_NOT_NULL(x)        ((x) == 1)
+#define IS_NUM(x)        ((x) == 20 || (x) == 21 || (x) == 23 || (x) == 700 || (x) == 701)
+#define IS_NOT_NULL(x)   ((x) == 1)
 
 typedef char **POSTGRESQL_ROW;
 typedef struct pg_field {
-        char         *name;
-        int           max_length;
-        unsigned int  type;
-        unsigned int  flags;       // 1 == not null
+   char         *name;
+   int           max_length;
+   unsigned int  type;
+   unsigned int  flags;       // 1 == not null
 } POSTGRESQL_FIELD;
 
 
@@ -235,7 +379,7 @@ typedef struct pg_field {
  *
  *                     P O S T G R E S Q L
  */
-typedef struct s_db {
+struct B_DB {
    BQUEUE bq;                         /* queue control */
    brwlock_t lock;                    /* transaction lock */
    PGconn *db;
@@ -269,7 +413,7 @@ typedef struct s_db {
    POOLMEM *esc_name;             /* Escaped file/path name */
    int fnl;                       /* file name length */
    int pnl;                       /* path name length */
-} B_DB;
+};     
 
 void               my_postgresql_free_result(B_DB *mdb);
 POSTGRESQL_ROW     my_postgresql_fetch_row  (B_DB *mdb);
@@ -285,7 +429,7 @@ POSTGRESQL_FIELD * my_postgresql_fetch_field(B_DB *mdb);
 #define sql_free_result(x)    my_postgresql_free_result(x)
 #define sql_fetch_row(x)      my_postgresql_fetch_row(x)
 #define sql_query(x, y)       my_postgresql_query((x), (y))
-#define sql_close(x)          PQfinish((x)->db)  
+#define sql_close(x)          PQfinish((x)->db)
 #define sql_strerror(x)       PQresultErrorMessage((x)->result)
 #define sql_num_rows(x)       ((unsigned) PQntuples((x)->result))
 #define sql_data_seek(x, i)   my_postgresql_data_seek((x), (i))
@@ -321,7 +465,7 @@ struct s_control {
 /* This is the REAL definition for using the
  *  Bacula internal DB
  */
-typedef struct s_db {
+struct B_DB {
    BQUEUE bq;                         /* queue control */
 /* pthread_mutex_t mutex;  */         /* single thread lock */
    brwlock_t lock;                    /* transaction lock */
@@ -340,8 +484,9 @@ typedef struct s_db {
    POOLMEM *cached_path;
    int cached_path_len;               /* length of cached path */
    uint32_t cached_path_id;
-} B_DB;
+};
 
+#endif /* HAVE_SQLITE3 */
 #endif /* HAVE_MYSQL */
 #endif /* HAVE_SQLITE */
 #endif /* HAVE_POSTGRESQL */
@@ -357,9 +502,9 @@ typedef struct s_db {
 
 /* This is a "dummy" definition for use outside of sql.c
  */
-typedef struct s_db {     
+struct B_DB {
    int dummy;                         /* for SunOS compiler */
-} B_DB;  
+};     
 
 #endif /*  __SQL_C */
 
@@ -371,7 +516,7 @@ extern uint32_t bacula_db_version;
 typedef uint32_t FileId_t;
 typedef uint32_t DBId_t;              /* general DB id type */
 typedef uint32_t JobId_t;
-      
+
 #define faddr_t long
 
 
@@ -416,6 +561,7 @@ struct JOB_DBR {
    char cStartTime[MAX_TIME_LENGTH];
    char cEndTime[MAX_TIME_LENGTH];
    /* Extra stuff not in DB */
+   int limit;                         /* limit records to display */
    faddr_t rec_addr;
 };
 
@@ -433,19 +579,24 @@ struct JOBMEDIA_DBR {
    uint32_t EndFile;                  /* End file on Volume */
    uint32_t StartBlock;               /* start block on tape */
    uint32_t EndBlock;                 /* last block */
+   uint32_t Copy;                     /* identical copy */
+   uint32_t Stripe;                   /* RAIT strip number */
 };
 
 
 /* Volume Parameter structure */
 struct VOL_PARAMS {
    char VolumeName[MAX_NAME_LENGTH];  /* Volume name */
-   uint32_t VolIndex;                 /* Volume seqence no. */ 
+   char MediaType[MAX_NAME_LENGTH];   /* Media Type */
+   uint32_t VolIndex;                 /* Volume seqence no. */
    uint32_t FirstIndex;               /* First index this Volume */
    uint32_t LastIndex;                /* Last index this Volume */
    uint32_t StartFile;                /* File for start of data */
    uint32_t EndFile;                  /* End file on Volume */
    uint32_t StartBlock;               /* start block on tape */
    uint32_t EndBlock;                 /* last block */
+// uint32_t Copy;                     /* identical copy */
+// uint32_t Stripe;                   /* RAIT strip number */
 };
 
 
@@ -464,6 +615,8 @@ struct ATTR_DBR {
    DBId_t PathId;
    DBId_t FilenameId;
    FileId_t FileId;
+   char *Sig;
+   int SigType;
 };
 
 
@@ -476,7 +629,6 @@ struct FILE_DBR {
    DBId_t PathId;
    JobId_t  MarkId;
    char LStat[256];
-/*   int Status; */
    char SIG[50];
    int SigType;                       /* NO_SIG/MD5_SIG/SHA1_SIG */
 };
@@ -487,6 +639,7 @@ struct POOL_DBR {
    char Name[MAX_NAME_LENGTH];        /* Pool name */
    uint32_t NumVols;                  /* total number of volumes */
    uint32_t MaxVols;                  /* max allowed volumes */
+   int32_t LabelType;                 /* Bacula/ANSI/IBM */
    int32_t UseOnce;                   /* set to use once only */
    int32_t UseCatalog;                /* set to use catalog */
    int32_t AcceptAnyVolume;           /* set to accept any volume sequence */
@@ -497,11 +650,47 @@ struct POOL_DBR {
    uint32_t MaxVolJobs;               /* Max Jobs on Volume */
    uint32_t MaxVolFiles;              /* Max files on Volume */
    uint64_t MaxVolBytes;              /* Max bytes on Volume */
-   char PoolType[MAX_NAME_LENGTH];             
+   char PoolType[MAX_NAME_LENGTH];
    char LabelFormat[MAX_NAME_LENGTH];
    /* Extra stuff not in DB */
    faddr_t rec_addr;
 };
+
+class DEVICE_DBR {
+public:
+   DBId_t DeviceId;
+   char Name[MAX_NAME_LENGTH];        /* Device name */
+   DBId_t MediaTypeId;                /* MediaType */
+   DBId_t StorageId;                  /* Storage id if autochanger */
+   uint32_t DevMounts;                /* Number of times mounted */
+   uint32_t DevErrors;                /* Number of read/write errors */
+   uint64_t DevReadBytes;             /* Number of bytes read */
+   uint64_t DevWriteBytes;            /* Number of bytew written */
+   uint64_t DevReadTime;              /* time spent reading volume */
+   uint64_t DevWriteTime;             /* time spent writing volume */
+   uint64_t DevReadTimeSincCleaning;  /* read time since cleaning */
+   uint64_t DevWriteTimeSincCleaning; /* write time since cleaning */
+   time_t   CleaningDate;             /* time last cleaned */
+   utime_t  CleaningPeriod;           /* time between cleanings */
+};
+
+class STORAGE_DBR {
+public:
+   DBId_t StorageId;
+   char Name[MAX_NAME_LENGTH];        /* Device name */
+   int AutoChanger;                   /* Set if autochanger */
+
+   /* Not in database */
+   bool created;                      /* set if created by db_create ... */
+};
+
+class MEDIATYPE_DBR {
+public:
+   DBId_t MediaTypeId;
+   char MediaType[MAX_NAME_LENGTH];   /* MediaType string */
+   int ReadOnly;                      /* Set if read-only */
+};
+
 
 /* Media record -- same as the database */
 struct MEDIA_DBR {
@@ -512,6 +701,7 @@ struct MEDIA_DBR {
    time_t   FirstWritten;             /* Time Volume first written */
    time_t   LastWritten;              /* Time Volume last written */
    time_t   LabelDate;                /* Date/Time Volume labeled */
+   int32_t  LabelType;                /* Label (Bacula/ANSI/IBM) */
    uint32_t VolJobs;                  /* number of jobs on this medium */
    uint32_t VolFiles;                 /* Number of files */
    uint32_t VolBlocks;                /* Number of blocks */
@@ -520,6 +710,7 @@ struct MEDIA_DBR {
    uint32_t VolWrites;                /* Number of writes */
    uint32_t VolReads;                 /* Number of reads */
    uint64_t VolBytes;                 /* Number of bytes written */
+   uint32_t VolParts;                 /* Number of parts written */
    uint64_t MaxVolBytes;              /* Max bytes to write to Volume */
    uint64_t VolCapacityBytes;         /* capacity estimate */
    uint64_t VolReadTime;              /* time spent reading volume */
@@ -531,6 +722,7 @@ struct MEDIA_DBR {
    int32_t  Recycle;                  /* recycle yes/no */
    int32_t  Slot;                     /* slot in changer */
    int32_t  InChanger;                /* Volume currently in changer */
+   DBId_t   StorageId;                /* Storage record Id */
    uint32_t EndFile;                  /* Last file on volume */
    uint32_t EndBlock;                 /* Last block on volume */
    char VolStatus[20];                /* Volume status */
@@ -541,7 +733,9 @@ struct MEDIA_DBR {
     */
    char    cFirstWritten[MAX_TIME_LENGTH]; /* FirstWritten returned from DB */
    char    cLastWritten[MAX_TIME_LENGTH];  /* LastWritten returned from DB */
-   char    cLabelData[MAX_TIME_LENGTH];    /* LabelData returned from DB */
+   char    cLabelDate[MAX_TIME_LENGTH];    /* LabelData returned from DB */
+   bool    set_first_written;                
+   bool    set_label_date;
 };
 
 /* Client record -- same as the database */
@@ -584,7 +778,7 @@ struct FILESET_DBR {
 #include "jcr.h"
 
 /*
- * Some functions exported by sql.c for use withing the 
+ * Some functions exported by sql.c for use withing the
  *   cats directory.
  */
 void list_result(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type type);
@@ -593,5 +787,5 @@ int get_sql_record_max(JCR *jcr, B_DB *mdb);
 int check_tables_version(JCR *jcr, B_DB *mdb);
 void _db_unlock(const char *file, int line, B_DB *mdb);
 void _db_lock(const char *file, int line, B_DB *mdb);
- 
+
 #endif /* __SQL_H_ */

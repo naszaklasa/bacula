@@ -1,7 +1,7 @@
 15c15
 <   echo ".dump" | @SQL_BINDIR@/sqlite $1.db >$1.sql
 ---
->   echo ".dump" | /usr/lib/sqlite/sqlite $1.db >$1.sql
+>   echo ".dump" | /usr/lib/bacula/sqlite/sqlite $1.db >$1.sql
 18c18
 <     @SQL_BINDIR@/mysqldump -u $2 -f --opt $1 >$1.sql
 ---

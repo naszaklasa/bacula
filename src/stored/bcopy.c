@@ -5,30 +5,28 @@
  *   Kern E. Sibbald, October 2002
  *
  *
- *   Version $Id: bcopy.c,v 1.27 2004/09/19 18:56:27 kerns Exp $
+ *   Version $Id: bcopy.c,v 1.42.2.1 2006/03/14 21:41:41 kerns Exp $
  */
 /*
-   Copyright (C) 2002-2004 Kern Sibbald and John Walker
+   Copyright (C) 2002-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
 #include "bacula.h"
 #include "stored.h"
+
+/* Dummy functions */
+int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
 
 /* Forward referenced functions */
 static bool record_cb(DCR *dcr, DEV_RECORD *rec);
@@ -37,8 +35,8 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec);
 /* Global variables */
 static DEVICE *in_dev = NULL;
 static DEVICE *out_dev = NULL;
-static JCR *in_jcr;		       /* input jcr */
-static JCR *out_jcr;		       /* output jcr */
+static JCR *in_jcr;                    /* input jcr */
+static JCR *out_jcr;                   /* output jcr */
 static BSR *bsr = NULL;
 static const char *wd = "/tmp";
 static int list_records = 0;
@@ -47,15 +45,18 @@ static uint32_t jobs = 0;
 static DEV_BLOCK *out_block;
 
 #define CONFIG_FILE "bacula-sd.conf"
-char *configfile;
-bool forge_on = true;
+char *configfile = NULL;
+STORES *me = NULL;                    /* our Global resource */
+bool forge_on = false;                /* proceed inspite of I/O errors */
+pthread_mutex_t device_release_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t wait_device_release = PTHREAD_COND_INITIALIZER;
 
 
 static void usage()
 {
    fprintf(stderr, _(
-"Copyright (C) 2002-2004 Kern Sibbald and John Walker.\n"
-"\nVersion: " VERSION " (" BDATE ")\n\n"
+"Copyright (C) 2002-2005 Kern Sibbald.\n"
+"\nVersion: %s (%s)\n\n"
 "Usage: bcopy [-d debug_level] <input-archive> <output-archive>\n"
 "       -b bootstrap      specify a bootstrap file\n"
 "       -c <file>         specify configuration file\n"
@@ -65,7 +66,7 @@ static void usage()
 "       -p                proceed inspite of errors\n"
 "       -v                verbose\n"
 "       -w <dir>          specify working directory (default /tmp)\n"
-"       -?                print this message\n\n"));
+"       -?                print this message\n\n"), VERSION, BDATE);
    exit(1);
 }
 
@@ -76,54 +77,58 @@ int main (int argc, char *argv[])
    char *oVolumeName = NULL;
    bool ignore_label_errors = false;
 
+   setlocale(LC_ALL, "");
+   bindtextdomain("bacula", LOCALEDIR);
+   textdomain("bacula");
+
    my_name_is(argc, argv, "bcopy");
    init_msg(NULL, NULL);
 
    while ((ch = getopt(argc, argv, "b:c:d:i:o:pvw:?")) != -1) {
       switch (ch) {
       case 'b':
-	 bsr = parse_bsr(NULL, optarg);
-	 break;
+         bsr = parse_bsr(NULL, optarg);
+         break;
 
       case 'c':                    /* specify config file */
-	 if (configfile != NULL) {
-	    free(configfile);
-	 }
-	 configfile = bstrdup(optarg);
-	 break;
+         if (configfile != NULL) {
+            free(configfile);
+         }
+         configfile = bstrdup(optarg);
+         break;
 
       case 'd':                    /* debug level */
-	 debug_level = atoi(optarg);
-	 if (debug_level <= 0)
-	    debug_level = 1; 
-	 break;
+         debug_level = atoi(optarg);
+         if (debug_level <= 0)
+            debug_level = 1;
+         break;
 
       case 'i':                    /* input Volume name */
-	 iVolumeName = optarg;
-	 break;
+         iVolumeName = optarg;
+         break;
 
       case 'o':                    /* output Volume name */
-	 oVolumeName = optarg;
-	 break;
+         oVolumeName = optarg;
+         break;
 
       case 'p':
-	 ignore_label_errors = true;
-	 forge_on = true;
-	 break;
-  
+         ignore_label_errors = true;
+         forge_on = true;
+         break;
+
       case 'v':
-	 verbose++;
-	 break;
+         verbose++;
+         break;
 
       case 'w':
-	 wd = optarg;
-	 break;
+         wd = optarg;
+         break;
 
       case '?':
       default:
-	 usage();
+         usage();
 
-      }  
+      }
    }
    argc -= optind;
    argv += optind;
@@ -148,7 +153,7 @@ int main (int argc, char *argv[])
    }
    in_jcr->ignore_label_errors = ignore_label_errors;
    in_dev = in_jcr->dcr->dev;
-   if (!in_dev) { 
+   if (!in_dev) {
       exit(1);
    }
 
@@ -158,18 +163,18 @@ int main (int argc, char *argv[])
       exit(1);
    }
    out_dev = out_jcr->dcr->dev;
-   if (!out_dev) { 
-      exit(1);	    
+   if (!out_dev) {
+      exit(1);
    }
    /* For we must now acquire the device for writing */
    lock_device(out_dev);
-   if (open_dev(out_dev, out_jcr->dcr->VolumeName, OPEN_READ_WRITE) < 0) {
+   if (out_dev->open(out_jcr->dcr, OPEN_READ_WRITE) < 0) {
       Emsg1(M_FATAL, 0, _("dev open failed: %s\n"), out_dev->errmsg);
       unlock_device(out_dev);
       exit(1);
    }
    unlock_device(out_dev);
-   if (!acquire_device_for_append(out_jcr)) {
+   if (!acquire_device_for_append(out_jcr->dcr)) {
       free_jcr(in_jcr);
       exit(1);
    }
@@ -189,7 +194,7 @@ int main (int argc, char *argv[])
    term_dev(out_dev);
    return 0;
 }
-  
+
 
 /*
  * read_records() calls back here for each record it gets
@@ -198,54 +203,54 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
 {
    if (list_records) {
       Pmsg5(000, _("Record: SessId=%u SessTim=%u FileIndex=%d Stream=%d len=%u\n"),
-	    rec->VolSessionId, rec->VolSessionTime, rec->FileIndex, 
-	    rec->Stream, rec->data_len);
+            rec->VolSessionId, rec->VolSessionTime, rec->FileIndex,
+            rec->Stream, rec->data_len);
    }
-   /* 
-    * Check for Start or End of Session Record 
+   /*
+    * Check for Start or End of Session Record
     *
     */
    if (rec->FileIndex < 0) {
 
       if (verbose > 1) {
-	 dump_label_record(in_dcr->dev, rec, 1);
+         dump_label_record(in_dcr->dev, rec, 1);
       }
       switch (rec->FileIndex) {
       case PRE_LABEL:
-         Pmsg0(000, "Volume is prelabeled. This volume cannot be copied.\n");
-	 return false;
+         Pmsg0(000, _("Volume is prelabeled. This volume cannot be copied.\n"));
+         return false;
       case VOL_LABEL:
-         Pmsg0(000, "Volume label not copied.\n");
-	 return true;
+         Pmsg0(000, _("Volume label not copied.\n"));
+         return true;
       case SOS_LABEL:
-	 jobs++;
-	 break;
+         jobs++;
+         break;
       case EOS_LABEL:
-	 while (!write_record_to_block(out_block, rec)) {
+         while (!write_record_to_block(out_block, rec)) {
             Dmsg2(150, "!write_record_to_block data_len=%d rem=%d\n", rec->data_len,
-		       rec->remainder);
-	    if (!write_block_to_device(out_jcr->dcr)) {
-               Dmsg2(90, "Got write_block_to_dev error on device %s. %s\n",
-		  dev_name(out_dev), strerror_dev(out_dev));
+                       rec->remainder);
+            if (!write_block_to_device(out_jcr->dcr)) {
+               Dmsg2(90, "Got write_block_to_dev error on device %s: ERR=%s\n",
+                  out_dev->print_name(), strerror_dev(out_dev));
                Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
-		     strerror_dev(out_dev));
-	    }
-	 }
-	 if (!write_block_to_device(out_jcr->dcr)) {
-            Dmsg2(90, "Got write_block_to_dev error on device %s. %s\n",
-	       dev_name(out_dev), strerror_dev(out_dev));
+                     strerror_dev(out_dev));
+            }
+         }
+         if (!write_block_to_device(out_jcr->dcr)) {
+            Dmsg2(90, "Got write_block_to_dev error on device %s: ERR=%s\n",
+               out_dev->print_name(), strerror_dev(out_dev));
             Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
-		  strerror_dev(out_dev));
-	 }
-	 break;
+                  strerror_dev(out_dev));
+         }
+         break;
       case EOM_LABEL:
-         Pmsg0(000, "EOM label not copied.\n");
-	 return true;
-      case EOT_LABEL:		   /* end of all tapes */
-         Pmsg0(000, "EOT label not copied.\n");
-	 return true;
+         Pmsg0(000, _("EOM label not copied.\n"));
+         return true;
+      case EOT_LABEL:              /* end of all tapes */
+         Pmsg0(000, _("EOT label not copied.\n"));
+         return true;
       default:
-	 break;
+         break;
       }
    }
 
@@ -253,13 +258,13 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
    records++;
    while (!write_record_to_block(out_block, rec)) {
       Dmsg2(150, "!write_record_to_block data_len=%d rem=%d\n", rec->data_len,
-		 rec->remainder);
+                 rec->remainder);
       if (!write_block_to_device(out_jcr->dcr)) {
-         Dmsg2(90, "Got write_block_to_dev error on device %s. %s\n",
-	    dev_name(out_dev), strerror_dev(out_dev));
+         Dmsg2(90, "Got write_block_to_dev error on device %s: ERR=%s\n",
+            out_dev->print_name(), strerror_dev(out_dev));
          Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
-	       strerror_dev(out_dev));
-	 break;
+               strerror_dev(out_dev));
+         break;
       }
    }
    return true;
@@ -267,20 +272,20 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
 
 
 /* Dummies to replace askdir.c */
-bool	dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing) { return 1;}
-bool	dir_find_next_appendable_volume(DCR *dcr) { return 1;}
-bool	dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
-bool	dir_create_jobmedia_record(DCR *dcr) { return 1; }
-bool	dir_ask_sysop_to_create_appendable_volume(DCR *dcr) { return 1; }
-bool	dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}
-bool	dir_send_job_status(JCR *jcr) {return 1;}
+bool    dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing) { return 1;}
+bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
+bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
+bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
+bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr) { return 1; }
+bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}
+bool    dir_send_job_status(JCR *jcr) {return 1;}
 
 
 bool dir_ask_sysop_to_mount_volume(DCR *dcr)
 {
    DEVICE *dev = dcr->dev;
-   fprintf(stderr, "Mount Volume \"%s\" on device %s and press return when ready: ",
-      dcr->VolumeName, dev_name(dev));
-   getchar();	
+   fprintf(stderr, _("Mount Volume \"%s\" on device %s and press return when ready: "),
+      dcr->VolumeName, dev->print_name());
+   getchar();
    return true;
 }

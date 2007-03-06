@@ -7,37 +7,33 @@
  *
  *   1. The generic lexical scanner in lib/lex.c and lib/lex.h
  *
- *   2. The generic config  scanner in lib/parse_config.c and 
- *	lib/parse_config.h.
- *	These files contain the parser code, some utility
- *	routines, and the common store routines (name, int,
- *	string).
+ *   2. The generic config  scanner in lib/parse_config.c and
+ *      lib/parse_config.h.
+ *      These files contain the parser code, some utility
+ *      routines, and the common store routines (name, int,
+ *      string).
  *
  *   3. The daemon specific file, which contains the Resource
- *	definitions as well as any specific store routines
- *	for the resource records.
+ *      definitions as well as any specific store routines
+ *      for the resource records.
  *
  *     Kern Sibbald, January MM, September MM
  *
- *     Version $Id: console_conf.c,v 1.13 2004/06/27 11:23:22 kerns Exp $
+ *     Version $Id: console_conf.c,v 1.18 2005/09/09 09:40:04 kerns Exp $
  */
-
 /*
-   Copyright (C) 2000, 2001 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
-   as published by the Free Software Foundation; either version 2
-   of the License, or (at your option) any later version.
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #include "bacula.h"
@@ -64,25 +60,35 @@ URES res_all;
 int  res_all_size = sizeof(res_all);
 
 /* Definition of records permitted within each
- * resource with the routine to process the record 
+ * resource with the routine to process the record
  * information.
- */ 
+ */
 static RES_ITEM dir_items[] = {
    {"name",        store_name,     ITEM(dir_res.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(dir_res.hdr.desc), 0, 0, 0},
    {"dirport",     store_int,      ITEM(dir_res.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",     store_str,      ITEM(dir_res.address),  0, ITEM_REQUIRED, 0},
    {"password",    store_password, ITEM(dir_res.password), 0, 0, 0},
-   {"enablessl", store_yesno,      ITEM(dir_res.enable_ssl), 1, ITEM_DEFAULT, 0},
-   {NULL, NULL, NULL, 0, 0, 0} 
+   {"tlsenable",      store_yesno,     ITEM(dir_res.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_yesno,     ITEM(dir_res.tls_require), 1, 0, 0},
+   {"tlscacertificatefile", store_dir, ITEM(dir_res.tls_ca_certfile), 0, 0, 0},
+   {"tlscacertificatedir", store_dir,  ITEM(dir_res.tls_ca_certdir), 0, 0, 0},
+   {"tlscertificate", store_dir,       ITEM(dir_res.tls_certfile), 0, 0, 0},
+   {"tlskey",         store_dir,       ITEM(dir_res.tls_keyfile), 0, 0, 0},
+   {NULL, NULL, NULL, 0, 0, 0}
 };
 
 static RES_ITEM con_items[] = {
    {"name",        store_name,     ITEM(con_res.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(con_res.hdr.desc), 0, 0, 0},
    {"password",    store_password, ITEM(con_res.password), 0, ITEM_REQUIRED, 0},
-   {"requiressl",  store_yesno,    ITEM(con_res.require_ssl), 1, ITEM_DEFAULT, 0},
-   {NULL, NULL, NULL, 0, 0, 0} 
+   {"tlsenable",      store_yesno,     ITEM(con_res.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_yesno,     ITEM(con_res.tls_require), 1, 0, 0},
+   {"tlscacertificatefile", store_dir, ITEM(con_res.tls_ca_certfile), 0, 0, 0},
+   {"tlscacertificatedir", store_dir,  ITEM(con_res.tls_ca_certdir), 0, 0, 0},
+   {"tlscertificate", store_dir,       ITEM(con_res.tls_certfile), 0, 0, 0},
+   {"tlskey",         store_dir,       ITEM(con_res.tls_keyfile), 0, 0, 0},
+   {NULL, NULL, NULL, 0, 0, 0}
 };
 
 static RES_ITEM con_font_items[] = {
@@ -90,19 +96,19 @@ static RES_ITEM con_font_items[] = {
    {"description", store_str,      ITEM(con_font.hdr.desc), 0, 0, 0},
    {"font",        store_str,      ITEM(con_font.fontface), 0, 0, 0},
    {"requiressl",  store_yesno,    ITEM(con_font.require_ssl), 1, ITEM_DEFAULT, 0},
-   {NULL, NULL, NULL, 0, 0, 0} 
+   {NULL, NULL, NULL, 0, 0, 0}
 };
 
 
-/* 
- * This is the master resource definition.  
+/*
+ * This is the master resource definition.
  * It must have one item for each of the resources.
  */
 RES_TABLE resources[] = {
    {"director",      dir_items,   R_DIRECTOR},
    {"console",       con_items,   R_CONSOLE},
    {"consolefont",   con_font_items, R_CONSOLE_FONT},
-   {NULL,	     NULL,	  0}
+   {NULL,            NULL,        0}
 };
 
 
@@ -113,37 +119,37 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
    bool recurse = true;
 
    if (res == NULL) {
-      printf("No record for %d %s\n", type, res_to_str(type));
+      printf(_("No record for %d %s\n"), type, res_to_str(type));
       return;
    }
-   if (type < 0) {		      /* no recursion */
+   if (type < 0) {                    /* no recursion */
       type = - type;
       recurse = false;
    }
    switch (type) {
    case R_DIRECTOR:
-      printf("Director: name=%s address=%s DIRport=%d\n", reshdr->name, 
-	      res->dir_res.address, res->dir_res.DIRport);
+      printf(_("Director: name=%s address=%s DIRport=%d\n"), reshdr->name,
+              res->dir_res.address, res->dir_res.DIRport);
       break;
    case R_CONSOLE:
-      printf("Console: name=%s\n", reshdr->name);
+      printf(_("Console: name=%s\n"), reshdr->name);
       break;
    case R_CONSOLE_FONT:
-      printf("ConsoleFont: name=%s font face=%s\n", 
-	     reshdr->name, NPRT(res->con_font.fontface));
+      printf(_("ConsoleFont: name=%s font face=%s\n"),
+             reshdr->name, NPRT(res->con_font.fontface));
       break;
    default:
-      printf("Unknown resource type %d\n", type);
+      printf(_("Unknown resource type %d\n"), type);
    }
    if (recurse && res->dir_res.hdr.next) {
       dump_resource(type, res->dir_res.hdr.next, sendit, sock);
    }
 }
 
-/* 
- * Free memory of resource.  
+/*
+ * Free memory of resource.
  * NB, we don't need to worry about freeing any references
- * to other resources as they will be freed when that 
+ * to other resources as they will be freed when that
  * resource chain is traversed.  Mainly we worry about freeing
  * allocated strings (names).
  */
@@ -167,21 +173,51 @@ void free_resource(RES *sres, int type)
    switch (type) {
    case R_DIRECTOR:
       if (res->dir_res.address) {
-	 free(res->dir_res.address);
+         free(res->dir_res.address);
+      }
+      if (res->dir_res.tls_ctx) { 
+         free_tls_context(res->dir_res.tls_ctx);
+      }
+      if (res->dir_res.tls_ca_certfile) {
+         free(res->dir_res.tls_ca_certfile);
+      }
+      if (res->dir_res.tls_ca_certdir) {
+         free(res->dir_res.tls_ca_certdir);
+      }
+      if (res->dir_res.tls_certfile) {
+         free(res->dir_res.tls_certfile);
+      }
+      if (res->dir_res.tls_keyfile) {
+         free(res->dir_res.tls_keyfile);
       }
       break;
    case R_CONSOLE:
       if (res->con_res.password) {
-	 free(res->con_res.password);
+         free(res->con_res.password);
+      }
+      if (res->con_res.tls_ctx) { 
+         free_tls_context(res->con_res.tls_ctx);
+      }
+      if (res->con_res.tls_ca_certfile) {
+         free(res->con_res.tls_ca_certfile);
+      }
+      if (res->con_res.tls_ca_certdir) {
+         free(res->con_res.tls_ca_certdir);
+      }
+      if (res->con_res.tls_certfile) {
+         free(res->con_res.tls_certfile);
+      }
+      if (res->con_res.tls_keyfile) {
+         free(res->con_res.tls_keyfile);
       }
       break;
    case R_CONSOLE_FONT:
       if (res->con_font.fontface) {
-	 free(res->con_font.fontface);
+         free(res->con_font.fontface);
       }
       break;
    default:
-      printf("Unknown resource type %d\n", type);
+      printf(_("Unknown resource type %d\n"), type);
    }
    /* Common stuff again -- free the resource, recurse to next one */
    free(res);
@@ -201,15 +237,15 @@ void save_resource(int type, RES_ITEM *items, int pass)
    int i, size = 0;
    int error = 0;
 
-   /* 
+   /*
     * Ensure that all required items are present
     */
    for (i=0; items[i].name; i++) {
       if (items[i].flags & ITEM_REQUIRED) {
-	    if (!bit_is_set(i, res_all.dir_res.hdr.item_present)) {  
-               Emsg2(M_ABORT, 0, "%s item is required in %s resource, but not found.\n",
-		 items[i].name, resources[rindex]);
-	     }
+            if (!bit_is_set(i, res_all.dir_res.hdr.item_present)) {
+               Emsg2(M_ABORT, 0, _("%s item is required in %s resource, but not found.\n"),
+                 items[i].name, resources[rindex]);
+             }
       }
    }
 
@@ -222,27 +258,27 @@ void save_resource(int type, RES_ITEM *items, int pass)
       switch (type) {
       /* Resources not containing a resource */
       case R_DIRECTOR:
-	 break;
+         break;
 
       case R_CONSOLE:
       case R_CONSOLE_FONT:
-	 break;
+         break;
 
       default:
-         Emsg1(M_ERROR, 0, "Unknown resource type %d\n", type);
-	 error = 1;
-	 break;
+         Emsg1(M_ERROR, 0, _("Unknown resource type %d\n"), type);
+         error = 1;
+         break;
       }
       /* Note, the resoure name was already saved during pass 1,
        * so here, we can just release it.
        */
       if (res_all.dir_res.hdr.name) {
-	 free(res_all.dir_res.hdr.name);
-	 res_all.dir_res.hdr.name = NULL;
+         free(res_all.dir_res.hdr.name);
+         res_all.dir_res.hdr.name = NULL;
       }
       if (res_all.dir_res.hdr.desc) {
-	 free(res_all.dir_res.hdr.desc);
-	 res_all.dir_res.hdr.desc = NULL;
+         free(res_all.dir_res.hdr.desc);
+         res_all.dir_res.hdr.desc = NULL;
       }
       return;
    }
@@ -259,7 +295,7 @@ void save_resource(int type, RES_ITEM *items, int pass)
       size = sizeof(CONRES);
       break;
    default:
-      printf("Unknown resource type %d\n", type);
+      printf(_("Unknown resource type %d\n"), type);
       error = 1;
       break;
    }
@@ -268,20 +304,20 @@ void save_resource(int type, RES_ITEM *items, int pass)
       res = (URES *)malloc(size);
       memcpy(res, &res_all, size);
       if (!res_head[rindex]) {
-	 res_head[rindex] = (RES *)res; /* store first entry */
+         res_head[rindex] = (RES *)res; /* store first entry */
       } else {
-	 RES *next;
-	 /* Add new res to end of chain */
-	 for (next=res_head[rindex]; next->next; next=next->next) {
-	    if (strcmp(next->name, res->dir_res.hdr.name) == 0) {
-	       Emsg2(M_ERROR_TERM, 0,
+         RES *next;
+         /* Add new res to end of chain */
+         for (next=res_head[rindex]; next->next; next=next->next) {
+            if (strcmp(next->name, res->dir_res.hdr.name) == 0) {
+               Emsg2(M_ERROR_TERM, 0,
                   _("Attempt to define second %s resource named \"%s\" is not permitted.\n"),
-		  resources[rindex].name, res->dir_res.hdr.name);
-	    }
-	 }
-	 next->next = (RES *)res;
+                  resources[rindex].name, res->dir_res.hdr.name);
+            }
+         }
+         next->next = (RES *)res;
          Dmsg2(90, "Inserting %s res: %s\n", res_to_str(type),
-	       res->dir_res.hdr.name);
+               res->dir_res.hdr.name);
       }
    }
 }

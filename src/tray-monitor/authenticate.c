@@ -59,7 +59,8 @@ static char FDOKhello[] = "2000 OK Hello\n";
 int authenticate_director(JCR *jcr, MONITOR *mon, DIRRES *director)
 {
    BSOCK *dir = jcr->dir_bsock;
-   int ssl_need = BNET_SSL_NONE;
+   int tls_local_need = BNET_TLS_NONE;
+   int tls_remote_need = BNET_TLS_NONE;
    char bashed_name[MAX_NAME_LENGTH];
    char *password;
 
@@ -71,8 +72,8 @@ int authenticate_director(JCR *jcr, MONITOR *mon, DIRRES *director)
    btimer_t *tid = start_bsock_timer(dir, 60 * 5);
    bnet_fsend(dir, DIRhello, bashed_name);
 
-   if (!cram_md5_get_auth(dir, password, ssl_need) ||
-       !cram_md5_auth(dir, password, ssl_need)) {
+   if (!cram_md5_get_auth(dir, password, &tls_remote_need) ||
+       !cram_md5_auth(dir, password, tls_local_need)) {
       stop_bsock_timer(tid);
       Jmsg0(jcr, M_FATAL, 0, _("Director authorization problem.\n"
 	    "Most likely the passwords do not agree.\n"
@@ -105,7 +106,8 @@ int authenticate_storage_daemon(JCR *jcr, MONITOR *monitor, STORE* store)
 {
    BSOCK *sd = jcr->store_bsock;
    char dirname[MAX_NAME_LENGTH];
-   int ssl_need = BNET_SSL_NONE;
+   int tls_local_need = BNET_TLS_NONE;
+   int tls_remote_need = BNET_TLS_NONE;
 
    /*
     * Send my name to the Storage daemon then do authentication
@@ -119,8 +121,8 @@ int authenticate_storage_daemon(JCR *jcr, MONITOR *monitor, STORE* store)
       Jmsg(jcr, M_FATAL, 0, _("Error sending Hello to Storage daemon. ERR=%s\n"), bnet_strerror(sd));
       return 0;
    }
-   if (!cram_md5_get_auth(sd, store->password, ssl_need) ||
-       !cram_md5_auth(sd, store->password, ssl_need)) {
+   if (!cram_md5_get_auth(sd, store->password, &tls_remote_need) ||
+       !cram_md5_auth(sd, store->password, tls_local_need)) {
       stop_bsock_timer(tid);
       Jmsg0(jcr, M_FATAL, 0, _("Director and Storage daemon passwords or names not the same.\n"
        "Please see http://www.bacula.org/html-manual/faq.html#AuthorizationErrors for help.\n"));
@@ -149,7 +151,8 @@ int authenticate_file_daemon(JCR *jcr, MONITOR *monitor, CLIENT* client)
 {
    BSOCK *fd = jcr->file_bsock;
    char dirname[MAX_NAME_LENGTH];
-   int ssl_need = BNET_SSL_NONE;
+   int tls_local_need = BNET_TLS_NONE;
+   int tls_remote_need = BNET_TLS_NONE;
 
    /*
     * Send my name to the File daemon then do authentication
@@ -163,8 +166,8 @@ int authenticate_file_daemon(JCR *jcr, MONITOR *monitor, CLIENT* client)
       Jmsg(jcr, M_FATAL, 0, _("Error sending Hello to File daemon. ERR=%s\n"), bnet_strerror(fd));
       return 0;
    }
-   if (!cram_md5_get_auth(fd, client->password, ssl_need) ||
-       !cram_md5_auth(fd, client->password, ssl_need)) {
+   if (!cram_md5_get_auth(fd, client->password, &tls_remote_need) ||
+       !cram_md5_auth(fd, client->password, tls_local_need)) {
       stop_bsock_timer(tid);
       Jmsg(jcr, M_FATAL, 0, _("Director and File daemon passwords or names not the same.\n"
        "Please see http://www.bacula.org/html-manual/faq.html#AuthorizationErrors for help.\n"));

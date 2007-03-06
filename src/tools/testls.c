@@ -1,24 +1,18 @@
-/*  
+/*
  * Test program for listing files during regression testing
  */
-
 /*
-   Copyright (C) 2000-2003 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -31,6 +25,10 @@ int win32_client = 1;
 int win32_client = 0;
 #endif
 
+/* Dummy functions */
+int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
+int generate_job_event(JCR *jcr, const char *event) { return 1; }
+
 
 /* Global variables */
 int attrs = 0;
@@ -38,7 +36,7 @@ int attrs = 0;
 static JCR *jcr;
 
 
-static int print_file(FF_PKT *ff, void *pkt);
+static int print_file(FF_PKT *ff, void *pkt, bool);
 static void print_ls_output(char *fname, char *link, int type, struct stat *statp);
 
 static void usage()
@@ -75,32 +73,36 @@ main (int argc, char *const *argv)
    char *exc = NULL;
    FILE *fd;
 
+   setlocale(LC_ALL, "");
+   bindtextdomain("bacula", LOCALEDIR);
+   textdomain("bacula");
+
    while ((ch = getopt(argc, argv, "ad:e:i:?")) != -1) {
       switch (ch) {
       case 'a':                       /* print extended attributes *debug* */
-	 attrs = 1;
-	 break;
+         attrs = 1;
+         break;
 
       case 'd':                       /* set debug level */
-	 debug_level = atoi(optarg);
-	 if (debug_level <= 0) {
-	    debug_level = 1; 
-	 }
-	 break;
+         debug_level = atoi(optarg);
+         if (debug_level <= 0) {
+            debug_level = 1;
+         }
+         break;
 
       case 'e':                       /* exclude patterns */
-	 exc = optarg;
-	 break;
+         exc = optarg;
+         break;
 
       case 'i':                       /* include patterns */
-	 inc = optarg;
-	 break;
+         inc = optarg;
+         break;
 
       case '?':
       default:
-	 usage();
+         usage();
 
-      }  
+      }
    }
    argc -= optind;
    argv += optind;
@@ -110,27 +112,27 @@ main (int argc, char *const *argv)
    ff = init_find_files();
    if (argc == 0 && !inc) {
       add_fname_to_include_list(ff, 0, "/"); /* default to / */
-   } else {   
+   } else {
       for (i=0; i < argc; i++) {
          if (strcmp(argv[i], "-") == 0) {
-	     while (fgets(name, sizeof(name)-1, stdin)) {
-		strip_trailing_junk(name);
-		add_fname_to_include_list(ff, 0, name); 
-	      }
-	      continue;
-	 }
-	 add_fname_to_include_list(ff, 0, argv[i]); 
+             while (fgets(name, sizeof(name)-1, stdin)) {
+                strip_trailing_junk(name);
+                add_fname_to_include_list(ff, 0, name);
+              }
+              continue;
+         }
+         add_fname_to_include_list(ff, 0, argv[i]);
       }
    }
    if (inc) {
       fd = fopen(inc, "r");
       if (!fd) {
-         printf("Could not open include file: %s\n", inc);
-	 exit(1);
+         printf(_("Could not open include file: %s\n"), inc);
+         exit(1);
       }
       while (fgets(name, sizeof(name)-1, fd)) {
-	 strip_trailing_junk(name);
-	 add_fname_to_include_list(ff, 0, name);
+         strip_trailing_junk(name);
+         add_fname_to_include_list(ff, 0, name);
       }
       fclose(fd);
    }
@@ -138,25 +140,27 @@ main (int argc, char *const *argv)
    if (exc) {
       fd = fopen(exc, "r");
       if (!fd) {
-         printf("Could not open exclude file: %s\n", exc);
-	 exit(1);
+         printf(_("Could not open exclude file: %s\n"), exc);
+         exit(1);
       }
       while (fgets(name, sizeof(name)-1, fd)) {
-	 strip_trailing_junk(name);
-	 add_fname_to_exclude_list(ff, name);
+         strip_trailing_junk(name);
+         add_fname_to_exclude_list(ff, name);
       }
       fclose(fd);
    }
-   find_files(jcr, ff, print_file, NULL);
+   match_files(jcr, ff, print_file, NULL);
+   term_include_exclude_files(ff);
    hard_links = term_find_files(ff);
-  
+
    free_jcr(jcr);
+   term_last_jobs_list();             /* free jcr chain */
    close_memory_pool();
    sm_dump(false);
    exit(0);
 }
 
-static int print_file(FF_PKT *ff, void *pkt)
+static int print_file(FF_PKT *ff, void *pkt, bool top_level) 
 {
 
    switch (ff->type) {
@@ -203,7 +207,7 @@ static int print_file(FF_PKT *ff, void *pkt)
 
 static void print_ls_output(char *fname, char *link, int type, struct stat *statp)
 {
-   char buf[1000]; 
+   char buf[1000];
    char ec1[30];
    char *p, *f;
    int n;
@@ -221,7 +225,7 @@ static void print_ls_output(char *fname, char *link, int type, struct stat *stat
    p += n;
    if (S_ISCHR(statp->st_mode) || S_ISBLK(statp->st_mode)) {
       n = sprintf(p, "%4x ", (int)statp->st_rdev);
-   } else { 
+   } else {
       n = sprintf(p, "     ");
    }
    p += n;
@@ -236,9 +240,11 @@ static void print_ls_output(char *fname, char *link, int type, struct stat *stat
       *p++ = ' ';
       /* Copy link name */
       for (f=link; *f && (p-buf) < (int)sizeof(buf); )
-	 *p++ = *f++;
+         *p++ = *f++;
    }
    *p++ = '\n';
    *p = 0;
    fputs(buf, stdout);
 }
+
+bool python_set_prog(JCR*, char const*) { return false; }

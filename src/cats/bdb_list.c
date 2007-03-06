@@ -7,10 +7,10 @@
  *  The purpose of these routines is to ensure that Bacula
  *  can limp along if no real database is loaded on the
  *  system.
- *   
- *    Kern Sibbald, January MMI 
  *
- *    Version $Id: bdb_list.c,v 1.11 2004/08/17 14:40:08 kerns Exp $
+ *    Kern Sibbald, January MMI
+ *
+ *    Version $Id: bdb_list.c,v 1.12 2004/12/21 16:18:30 kerns Exp $
  */
 
 /*
@@ -54,10 +54,10 @@
  * -----------------------------------------------------------------------
  */
 
-/* 
+/*
  * Submit general SQL query
  */
-int db_list_sql_query(JCR *jcr, B_DB *mdb, char *query, DB_LIST_HANDLER *sendit, 
+int db_list_sql_query(JCR *jcr, B_DB *mdb, char *query, DB_LIST_HANDLER *sendit,
 		      void *ctx, int verbose)
 {
    sendit(ctx, "SQL Queries not implemented with internal database.\n");
@@ -84,7 +84,7 @@ void db_list_pool_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ct
    fseek(mdb->poolfd, 0L, SEEK_SET);   /* rewind file */
    len = sizeof(pr);
    while (fread(&pr, len, 1, mdb->poolfd) > 0) {
-         Mmsg(mdb->cmd, " %7d  %6d  %6d  %-10s %s\n",
+	 Mmsg(mdb->cmd, " %7d  %6d  %6d  %-10s %s\n",
 	    pr.PoolId, pr.NumVols, pr.MaxVols, pr.PoolType, pr.Name);
 	 sendit(ctx, mdb->cmd);
    }
@@ -98,7 +98,7 @@ void db_list_pool_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ct
 /*
  * List Media records
  */
-void db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr, 
+void db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
 			   DB_LIST_HANDLER *sendit, void *ctx)
 {
    char ewc[30];
@@ -115,7 +115,7 @@ void db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
    fseek(mdb->mediafd, 0L, SEEK_SET);	/* rewind file */
    len = sizeof(mr);
    while (fread(&mr, len, 1, mdb->mediafd) > 0) {
-         Mmsg(mdb->cmd, " %-10s %17s %-15s  %s\n",
+	 Mmsg(mdb->cmd, " %-10s %17s %-15s  %s\n",
 	    mr.VolStatus, edit_uint64_with_commas(mr.VolBytes, ewc),
 	    mr.MediaType, mr.VolumeName);
 	 sendit(ctx, mdb->cmd);
@@ -125,7 +125,7 @@ void db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
    return;
 }
 
-void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId, 
+void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
 			      DB_LIST_HANDLER *sendit, void *ctx)
 {
    JOBMEDIA_DBR jm;
@@ -154,7 +154,7 @@ void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
 	    fseek(mdb->mediafd, 0L, SEEK_SET);
 	    while (fread(&mr, mrlen, 1, mdb->mediafd) > 0) {
 	       if (mr.MediaId == jm.MediaId) {
-                  Mmsg(mdb->cmd, " %7d  %-10s %10d %10d\n",
+		  Mmsg(mdb->cmd, " %7d  %-10s %10d %10d\n",
 		       jm.JobId, mr.VolumeName, jm.FirstIndex, jm.LastIndex);
 		  sendit(ctx, mdb->cmd);
 		  break;
@@ -166,7 +166,7 @@ void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
 	 fseek(mdb->mediafd, 0L, SEEK_SET);
 	 while (fread(&mr, mrlen, 1, mdb->mediafd) > 0) {
 	    if (mr.MediaId == jm.MediaId) {
-               Mmsg(mdb->cmd, " %7d  %-10s %10d %10d\n",
+	       Mmsg(mdb->cmd, " %7d  %-10s %10d %10d\n",
 		    jm.JobId, mr.VolumeName, jm.FirstIndex, jm.LastIndex);
 	       sendit(ctx, mdb->cmd);
 	       break;
@@ -184,7 +184,7 @@ void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
 /*
  * List Job records
  */
-void db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr, 
+void db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr,
 			 DB_LIST_HANDLER *sendit, void *ctx)
 {
    int jrlen;
@@ -200,7 +200,7 @@ void db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr,
       return;
    }
    fseek(mdb->jobfd, 0L, SEEK_SET);   /* rewind file */
-   /* 
+   /*
     * Linear search through Job records
     */
    sendit(ctx, "   JobId   StartTime   Type Level         Bytes      Files Stat JobName\n");
@@ -216,9 +216,9 @@ void db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr,
       }
       localtime_r(&ojr.StartTime, &tm);
       strftime(dt, sizeof(dt), "%m-%d %H:%M", &tm);
-      Mmsg(mdb->cmd, " %7d  %-10s   %c    %c   %14s %10s  %c  %s\n", 
-		ojr.JobId, dt, (char)ojr.JobType, (char)ojr.JobLevel, 
-		edit_uint64_with_commas(ojr.JobBytes, ewc1), 
+      Mmsg(mdb->cmd, " %7d  %-10s   %c    %c   %14s %10s  %c  %s\n",
+		ojr.JobId, dt, (char)ojr.JobType, (char)ojr.JobLevel,
+		edit_uint64_with_commas(ojr.JobBytes, ewc1),
 		edit_uint64_with_commas(ojr.JobFiles, ewc2),
 		(char)ojr.JobStatus, ojr.Name);
       sendit(ctx, mdb->cmd);
@@ -232,7 +232,7 @@ void db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr,
 /*
  * List Job Totals
  */
-void db_list_job_totals(JCR *jcr, B_DB *mdb, JOB_DBR *jr, 
+void db_list_job_totals(JCR *jcr, B_DB *mdb, JOB_DBR *jr,
 			DB_LIST_HANDLER *sendit, void *ctx)
 {
    char ewc1[30], ewc2[30], ewc3[30];
@@ -248,7 +248,7 @@ void db_list_job_totals(JCR *jcr, B_DB *mdb, JOB_DBR *jr,
       return;
    }
    fseek(mdb->jobfd, 0L, SEEK_SET);   /* rewind file */
-   /* 
+   /*
     * Linear search through JobStart records
     */
    sendit(ctx, "   NumJobs   NumFiles          NumBytes\n");
@@ -259,9 +259,9 @@ void db_list_job_totals(JCR *jcr, B_DB *mdb, JOB_DBR *jr,
       total_bytes += ojr.JobBytes;
       total_jobs++;
    }
-   Mmsg(mdb->cmd, " %7s  %10s   %15s\n", 
+   Mmsg(mdb->cmd, " %7s  %10s   %15s\n",
 	     edit_uint64_with_commas(total_jobs, ewc1),
-	     edit_uint64_with_commas(total_files, ewc2), 
+	     edit_uint64_with_commas(total_files, ewc2),
 	     edit_uint64_with_commas(total_bytes, ewc3));
    sendit(ctx, mdb->cmd);
    sendit(ctx, "=======================================\n");
@@ -277,27 +277,27 @@ void db_list_files_for_job(JCR *jcr, B_DB *mdb, uint32_t jobid, DB_LIST_HANDLER 
 void db_list_client_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ctx)
 { }
 
-int db_list_sql_query(JCR *jcr, B_DB *mdb, char *query, DB_LIST_HANDLER *sendit, 
+int db_list_sql_query(JCR *jcr, B_DB *mdb, char *query, DB_LIST_HANDLER *sendit,
 		      void *ctx, int verbose, e_list_type type)
 {
    return 0;
 }
 
 void
-db_list_pool_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ctx, e_list_type type) 
+db_list_pool_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
 { }
 
 void
-db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr, 
+db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
 		      DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
 { }
 
-void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId, 
+void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
 			      DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
 { }
 
 void
-db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr, DB_LIST_HANDLER *sendit, 
+db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr, DB_LIST_HANDLER *sendit,
 		    void *ctx, e_list_type type)
 { }
 

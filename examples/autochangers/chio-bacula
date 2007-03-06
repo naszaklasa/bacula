@@ -5,7 +5,7 @@
 #
 #  If you set in your Device resource
 #
-#  Changer Command = "path-to-this-script/chio-bacula" %c %o %S %a
+#  Changer Command = "path-to-this-script/chio-bacula %c %o %S %a"
 #    you will have the following input to this script:
 #
 #  chio-bacula "changer-device" "command" "slot" "archive-device"
@@ -26,7 +26,7 @@
 #
 
 # This simulates a barcode reader in the changer.
-# The labes of the virtual barcode reader are located in the BARCODE_FILE
+# The labels of the virtual barcode reader are located in the BARCODE_FILE
 SIMULATE_BARCODE=true
 BARCODE_FILE=/usr/local/etc/bacula-barcodes
 
@@ -78,7 +78,7 @@ usage()
   echo "list            Lists full storage slots"
   echo "loaded          Gives slot from where the tape was loaded."
   echo "                0 means the tape drive is empty."
-  echo "slots           Gives Number of aviable slots."
+  echo "slots           Gives Number of available slots."
   echo ""
   echo "Example:"
   echo "  mtx-changer /dev/changer load 1   loads a tape from slot 1"

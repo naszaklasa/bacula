@@ -1,0 +1,34 @@
+
+This patch (thanks to Frank Sweetser) should fix the timeout problem
+users are experiencing with MySQL versions greater than 5.0.13.  
+It can be applied to Bacula version 1.38.7 (and possibly 1.38.5 and 1.38.6)
+with:
+
+  cd <bacula-source>
+  patch -p0 <1.38.7-mysql.patch
+  make
+  make install
+
+Index: src/cats/mysql.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/cats/mysql.c,v
+retrieving revision 1.37.2.2
+diff -u -r1.37.2.2 mysql.c
+--- src/cats/mysql.c	4 Mar 2006 11:10:17 -0000	1.37.2.2
++++ src/cats/mysql.c	7 Apr 2006 14:10:23 -0000
+@@ -132,7 +132,6 @@
+    mysql_server_init(0, NULL, NULL);
+ #endif
+    mysql_init(&(mdb->mysql));
+-   mdb->mysql.reconnect = 1;             /* so connection does not timeout */
+    Dmsg0(50, "mysql_init done\n");
+    /* If connection fails, try at 5 sec intervals for 30 seconds. */
+    for (int retry=0; retry < 6; retry++) {
+@@ -153,6 +152,7 @@
+       bmicrosleep(5,0);
+    }
+ 
++   mdb->mysql.reconnect = 1;             /* so connection does not timeout */
+    Dmsg0(50, "mysql_real_connect done\n");
+    Dmsg3(50, "db_user=%s db_name=%s db_password=%s\n", mdb->db_user, mdb->db_name,
+             mdb->db_password==NULL?"(NULL)":mdb->db_password);

@@ -1,9 +1,9 @@
 /*
- *   Version $Id: protos.h,v 1.9 2004/07/04 19:22:15 kerns Exp $
+ *   Version $Id: protos.h,v 1.12 2005/01/12 09:41:20 kerns Exp $
  */
 
 /*
-   Copyright (C) 2000, 2001, 2002 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -35,3 +35,7 @@ void start_heartbeat_monitor(JCR *jcr);
 void stop_heartbeat_monitor(JCR *jcr);
 void start_dir_heartbeat(JCR *jcr);
 void stop_dir_heartbeat(JCR *jcr);
+
+/* From acl.c */
+int bacl_get(JCR *jcr, int acltype);
+int bacl_set(JCR *jcr, int acltype);

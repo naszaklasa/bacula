@@ -3,7 +3,7 @@
  *
  *     Nicolas Boichat, August MMIV
  *
- *    Version $Id: tray-monitor.h,v 1.6.6.1 2005/04/12 21:31:23 kerns Exp $
+ *    Version $Id: tray-monitor.h,v 1.7 2004/12/21 16:18:59 kerns Exp $
  */
 /*
    Copyright (C) 2004 Kern Sibbald and John Walker

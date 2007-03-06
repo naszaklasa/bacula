@@ -1,16 +1,16 @@
 /*
  * Bacula Catalog Database interface routines
- * 
+ *
  *     Almost generic set of SQL database interface routines
- *	(with a little more work)
+ *      (with a little more work)
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql.c,v 1.43 2004/10/07 16:23:25 kerns Exp $
+ *    Version $Id: sql.c,v 1.49.2.1 2006/01/12 15:04:35 kerns Exp $
  */
 
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -32,12 +32,12 @@
 /* The following is necessary so that we do not include
  * the dummy external definition of B_DB.
  */
-#define __SQL_C 		      /* indicate that this is sql.c */
+#define __SQL_C                       /* indicate that this is sql.c */
 
 #include "bacula.h"
 #include "cats.h"
 
-#if    HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
 
 uint32_t bacula_db_version = 0;
 
@@ -56,7 +56,7 @@ static int int_handler(void *ctx, int num_fields, char **row)
 
    if (row[0]) {
       Dmsg1(800, "int_handler finds '%s'\n", row[0]);
-      *val = atoi(row[0]);
+      *val = str_to_int64(row[0]);
    } else {
       Dmsg0(800, "int_handler finds zero\n");
       *val = 0;
@@ -64,7 +64,7 @@ static int int_handler(void *ctx, int num_fields, char **row)
    Dmsg0(800, "int_handler finishes\n");
    return 0;
 }
-       
+
 
 
 /* NOTE!!! The following routines expect that the
@@ -75,12 +75,12 @@ static int int_handler(void *ctx, int num_fields, char **row)
 int check_tables_version(JCR *jcr, B_DB *mdb)
 {
    const char *query = "SELECT VersionId FROM Version";
-  
+
    bacula_db_version = 0;
    db_sql_query(mdb, query, int_handler, (void *)&bacula_db_version);
    if (bacula_db_version != BDB_VERSION) {
       Mmsg(mdb->errmsg, "Version error for database \"%s\". Wanted %d, got %d\n",
-	  mdb->db_name, BDB_VERSION, bacula_db_version);
+          mdb->db_name, BDB_VERSION, bacula_db_version);
       Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
       return 0;
    }
@@ -106,10 +106,10 @@ QueryDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
    return mdb->result != NULL;
 }
 
-/* 
- * Utility routine to do inserts   
- * Returns: 0 on failure      
- *	    1 on success
+/*
+ * Utility routine to do inserts
+ * Returns: 0 on failure
+ *          1 on success
  */
 int
 InsertDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
@@ -129,8 +129,8 @@ InsertDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
    }
    if (mdb->num_rows != 1) {
       char ed1[30];
-      m_msg(file, line, &mdb->errmsg, _("Insertion problem: affected_rows=%s\n"), 
-	 edit_uint64(mdb->num_rows, ed1));
+      m_msg(file, line, &mdb->errmsg, _("Insertion problem: affected_rows=%s\n"),
+         edit_uint64(mdb->num_rows, ed1));
       if (verbose) {
          j_msg(file, line, jcr, M_INFO, 0, "%s\n", cmd);
       }
@@ -142,7 +142,7 @@ InsertDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
 
 /* Utility routine for updates.
  *  Returns: 0 on failure
- *	     1 on success  
+ *           1 on success
  */
 int
 UpdateDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
@@ -159,8 +159,8 @@ UpdateDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
    mdb->num_rows = sql_affected_rows(mdb);
    if (mdb->num_rows < 1) {
       char ed1[30];
-      m_msg(file, line, &mdb->errmsg, _("Update problem: affected_rows=%s\n"), 
-	 edit_uint64(mdb->num_rows, ed1));
+      m_msg(file, line, &mdb->errmsg, _("Update problem: affected_rows=%s\n"),
+         edit_uint64(mdb->num_rows, ed1));
       if (verbose) {
 //       j_msg(file, line, jcr, M_INFO, 0, "%s\n", cmd);
       }
@@ -170,10 +170,10 @@ UpdateDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
    return 1;
 }
 
-/* Utility routine for deletes	 
+/* Utility routine for deletes
  *
  * Returns: -1 on error
- *	     n number of rows affected
+ *           n number of rows affected
  */
 int
 DeleteDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
@@ -197,7 +197,7 @@ DeleteDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
  *  No locking done
  *
  * Returns: -1 on failure
- *	    count on success
+ *          count on success
  */
 int get_sql_record_max(JCR *jcr, B_DB *mdb)
 {
@@ -207,9 +207,9 @@ int get_sql_record_max(JCR *jcr, B_DB *mdb)
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
       if ((row = sql_fetch_row(mdb)) == NULL) {
          Mmsg1(&mdb->errmsg, _("error fetching row: %s\n"), sql_strerror(mdb));
-	 stat = -1;
+         stat = -1;
       } else {
-	 stat = atoi(row[0]);
+         stat = str_to_int64(row[0]);
       }
       sql_free_result(mdb);
    } else {
@@ -237,10 +237,10 @@ void _db_lock(const char *file, int line, B_DB *mdb)
    int errstat;
    if ((errstat=rwl_writelock(&mdb->lock)) != 0) {
       berrno be;
-      e_msg(file, line, M_ABORT, 0, "rwl_writelock failure. ERR=%s\n",
-	   be.strerror(errstat));
+      e_msg(file, line, M_FATAL, 0, "rwl_writelock failure. stat=%d: ERR=%s\n",
+           errstat, be.strerror(errstat));
    }
-}    
+}
 
 /*
  * Unlock the database. This can be called multiple times by the
@@ -252,18 +252,25 @@ void _db_unlock(const char *file, int line, B_DB *mdb)
    int errstat;
    if ((errstat=rwl_writeunlock(&mdb->lock)) != 0) {
       berrno be;
-      e_msg(file, line, M_ABORT, 0, "rwl_writeunlock failure. ERR=%s\n",
-	   be.strerror(errstat));
+      e_msg(file, line, M_FATAL, 0, "rwl_writeunlock failure. stat=%d: ERR=%s\n",
+           errstat, be.strerror(errstat));
    }
-}    
+}
 
 /*
  * Start a transaction. This groups inserts and makes things
- *  much more efficient. Usually started when inserting 
+ *  much more efficient. Usually started when inserting
  *  file attributes.
  */
 void db_start_transaction(JCR *jcr, B_DB *mdb)
 {
+   if (!jcr->attr) {
+      jcr->attr = get_pool_memory(PM_FNAME);
+   }
+   if (!jcr->ar) {
+      jcr->ar = (ATTR_DBR *)malloc(sizeof(ATTR_DBR));
+   }
+
 #ifdef HAVE_SQLITE
    if (!mdb->allow_transactions) {
       return;
@@ -273,7 +280,7 @@ void db_start_transaction(JCR *jcr, B_DB *mdb)
    if (mdb->transaction && mdb->changes > 10000) {
       db_end_transaction(jcr, mdb);
    }
-   if (!mdb->transaction) {   
+   if (!mdb->transaction) {
       my_sqlite_query(mdb, "BEGIN");  /* begin transaction */
       Dmsg0(400, "Start SQLite transaction\n");
       mdb->transaction = 1;
@@ -283,7 +290,7 @@ void db_start_transaction(JCR *jcr, B_DB *mdb)
 
 /*
  * This is turned off because transactions break
- * if multiple simultaneous jobs are run.    
+ * if multiple simultaneous jobs are run.
  */
 #ifdef HAVE_POSTGRESQL
    if (!mdb->allow_transactions) {
@@ -294,7 +301,7 @@ void db_start_transaction(JCR *jcr, B_DB *mdb)
    if (mdb->transaction && mdb->changes > 25000) {
       db_end_transaction(jcr, mdb);
    }
-   if (!mdb->transaction) {   
+   if (!mdb->transaction) {
       db_sql_query(mdb, "BEGIN", NULL, NULL);  /* begin transaction */
       Dmsg0(400, "Start PosgreSQL transaction\n");
       mdb->transaction = 1;
@@ -306,12 +313,21 @@ void db_start_transaction(JCR *jcr, B_DB *mdb)
 void db_end_transaction(JCR *jcr, B_DB *mdb)
 {
    /*
-    * This can be called during thread cleanup and 
-    *	the db may already be closed.  So simply return.
+    * This can be called during thread cleanup and
+    *   the db may already be closed.  So simply return.
     */
    if (!mdb) {
       return;
    }
+
+   if (jcr && jcr->cached_attribute) {
+      Dmsg0(400, "Flush last cached attribute.\n");
+      if (!db_create_file_attributes_record(jcr, mdb, jcr->ar)) {
+         Jmsg1(jcr, M_FATAL, 0, _("Attribute create error. %s"), db_strerror(jcr->db));
+      }
+      jcr->cached_attribute = false;
+   }
+
 #ifdef HAVE_SQLITE
    if (!mdb->allow_transactions) {
       return;
@@ -350,7 +366,7 @@ void split_path_and_file(JCR *jcr, B_DB *mdb, const char *fname)
 {
    const char *p, *f;
 
-   /* Find path without the filename.  
+   /* Find path without the filename.
     * I.e. everything after the last / is a "filename".
     * OK, maybe it is a directory name, but we treat it like
     * a filename. If we don't find a / then the whole name
@@ -358,31 +374,31 @@ void split_path_and_file(JCR *jcr, B_DB *mdb, const char *fname)
     */
    for (p=f=fname; *p; p++) {
       if (*p == '/') {
-	 f = p; 		      /* set pos of last slash */
+         f = p;                       /* set pos of last slash */
       }
    }
    if (*f == '/') {                   /* did we find a slash? */
-      f++;			      /* yes, point to filename */
-   } else {			      /* no, whole thing must be path name */
+      f++;                            /* yes, point to filename */
+   } else {                           /* no, whole thing must be path name */
       f = p;
    }
 
    /* If filename doesn't exist (i.e. root directory), we
-    * simply create a blank name consisting of a single 
+    * simply create a blank name consisting of a single
     * space. This makes handling zero length filenames
     * easier.
     */
    mdb->fnl = p - f;
    if (mdb->fnl > 0) {
       mdb->fname = check_pool_memory_size(mdb->fname, mdb->fnl+1);
-      memcpy(mdb->fname, f, mdb->fnl);	  /* copy filename */
+      memcpy(mdb->fname, f, mdb->fnl);    /* copy filename */
       mdb->fname[mdb->fnl] = 0;
    } else {
       mdb->fname[0] = 0;
       mdb->fnl = 0;
    }
 
-   mdb->pnl = f - fname;    
+   mdb->pnl = f - fname;
    if (mdb->pnl > 0) {
       mdb->path = check_pool_memory_size(mdb->path, mdb->pnl+1);
       memcpy(mdb->path, fname, mdb->pnl);
@@ -419,8 +435,8 @@ list_dashes(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx)
 }
 
 /*
- * If full_list is set, we list vertically, otherwise, we 
- * list on one line horizontally.      
+ * If full_list is set, we list vertically, otherwise, we
+ * list on one line horizontally.
  */
 void
 list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type type)
@@ -442,22 +458,22 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
    for (i = 0; i < sql_num_fields(mdb); i++) {
       Dmsg1(800, "list_result processing field %d\n", i);
       field = sql_fetch_field(mdb);
-      col_len = strlen(field->name);
+      col_len = cstrlen(field->name);
       if (type == VERT_LIST) {
-	 if (col_len > max_len) {
-	    max_len = col_len;
-	 }
+         if (col_len > max_len) {
+            max_len = col_len;
+         }
       } else {
-	 if (IS_NUM(field->type) && (int)field->max_length > 0) { /* fixup for commas */
-	    field->max_length += (field->max_length - 1) / 3;
-	 }
-	 if (col_len < (int)field->max_length) {
-	    col_len = field->max_length;
-	 }
-	 if (col_len < 4 && !IS_NOT_NULL(field->flags)) {
+         if (IS_NUM(field->type) && (int)field->max_length > 0) { /* fixup for commas */
+            field->max_length += (field->max_length - 1) / 3;
+         }
+         if (col_len < (int)field->max_length) {
+            col_len = field->max_length;
+         }
+         if (col_len < 4 && !IS_NOT_NULL(field->flags)) {
             col_len = 4;                 /* 4 = length of the word "NULL" */
-	 }
-	 field->max_length = col_len;	 /* reset column info */
+         }
+         field->max_length = col_len;    /* reset column info */
       }
    }
 
@@ -484,16 +500,16 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
       sql_field_seek(mdb, 0);
       send(ctx, "|");
       for (i = 0; i < sql_num_fields(mdb); i++) {
-	 field = sql_fetch_field(mdb);
-	 if (row[i] == NULL) {
+         field = sql_fetch_field(mdb);
+         if (row[i] == NULL) {
             bsnprintf(buf, sizeof(buf), " %-*s |", (int)field->max_length, "NULL");
-	 } else if (IS_NUM(field->type) && !jcr->gui && is_an_integer(row[i])) {
-            bsnprintf(buf, sizeof(buf), " %*s |", (int)field->max_length,       
-		      add_commas(row[i], ewc));
-	 } else {
+         } else if (IS_NUM(field->type) && !jcr->gui && is_an_integer(row[i])) {
+            bsnprintf(buf, sizeof(buf), " %*s |", (int)field->max_length,
+                      add_commas(row[i], ewc));
+         } else {
             bsnprintf(buf, sizeof(buf), " %-*s |", (int)field->max_length, row[i]);
-	 }
-	 send(ctx, buf);
+         }
+         send(ctx, buf);
       }
       send(ctx, "\n");
    }
@@ -501,21 +517,21 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
    return;
 
 vertical_list:
-   
+
    Dmsg1(800, "list_result starts vertical list at %d fields\n", sql_num_fields(mdb));
    while ((row = sql_fetch_row(mdb)) != NULL) {
       sql_field_seek(mdb, 0);
       for (i = 0; i < sql_num_fields(mdb); i++) {
-	 field = sql_fetch_field(mdb);
-	 if (row[i] == NULL) {
+         field = sql_fetch_field(mdb);
+         if (row[i] == NULL) {
             bsnprintf(buf, sizeof(buf), " %*s: %s\n", max_len, field->name, "NULL");
-	 } else if (IS_NUM(field->type) && !jcr->gui && is_an_integer(row[i])) {
-            bsnprintf(buf, sizeof(buf), " %*s: %s\n", max_len, field->name, 
-		add_commas(row[i], ewc));
-	 } else {
+         } else if (IS_NUM(field->type) && !jcr->gui && is_an_integer(row[i])) {
+            bsnprintf(buf, sizeof(buf), " %*s: %s\n", max_len, field->name,
+                add_commas(row[i], ewc));
+         } else {
             bsnprintf(buf, sizeof(buf), " %*s: %s\n", max_len, field->name, row[i]);
-	 }
-	 send(ctx, buf);
+         }
+         send(ctx, buf);
       }
       send(ctx, "\n");
    }
@@ -523,4 +539,4 @@ vertical_list:
 }
 
 
-#endif /* HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL */
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL*/

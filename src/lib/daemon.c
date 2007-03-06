@@ -1,7 +1,7 @@
 /*
  *  daemon.c by Kern Sibbald
  *
- *   Version $Id: daemon.c,v 1.14.4.1 2005/02/14 10:02:25 kerns Exp $
+ *   Version $Id: daemon.c,v 1.18 2005/09/20 12:36:00 kerns Exp $
  *
  *   this code is inspired by the Prentice Hall book
  *   "Unix Network Programming" by W. Richard Stevens
@@ -12,24 +12,18 @@
  * any terminal processes.
  *
  */
-
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -54,10 +48,12 @@ daemon_start()
     */
 
    Dmsg0(900, "Enter daemon_start\n");
-   if ( (cpid = fork() ) < 0)
-      Emsg1(M_ABORT, 0, "Cannot fork to become daemon: %s\n", strerror(errno));
-   else if (cpid > 0)
-      exit(0);		    /* parent exits */
+   if ( (cpid = fork() ) < 0) {
+      berrno be;
+      Emsg1(M_ABORT, 0, _("Cannot fork to become daemon: %s\n"), be.strerror());
+   } else if (cpid > 0) {
+      exit(0);              /* parent exits */
+   }
    /* Child continues */
 
    setsid();
@@ -101,7 +97,7 @@ daemon_start()
       close(fd);
    } else {
       for(i=1; fd + i <= 2; i++) {
-	 dup2(fd, fd+i);
+         dup2(fd, fd+i);
       }
    }
 

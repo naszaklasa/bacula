@@ -1,5 +1,14 @@
 <!-- Nu2Menu entry -->
-<!-- Copyright 2004 D. Scott Barninger -->
+<!-- Copyright (C) 2004 Kern Sibbald
+
+<!-- Thu Dec 09 2004 D. Scott Barninger <barninger at fairfieldcomputers.com> -->
+<!-- ASSIGNMENT OF COPYRIGHT -->
+<!-- FOR VALUE RECEIVED, D. Scott Barninger hereby sells, transfers and  -->
+<!-- assigns unto Kern Sibbald, his successors, assigns and personal representatives, --> 
+<!-- all right, title and interest in and to the copyright in this software. -->
+<!-- D. Scott Barninger warrants good title to said copyright, that it is  -->
+<!-- free of all liens, encumbrances or any known claims against said copyright. -->
+
 <!-- licensed under the GNU GPL v2 -->
 <NU2MENU>
 	<MENU ID="Programs">	   		

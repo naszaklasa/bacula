@@ -1,28 +1,23 @@
 /*
- *   Version $Id: alist.h,v 1.11.4.1 2005/02/14 10:02:24 kerns Exp $
+ *   Version $Id: alist.h,v 1.15.2.4 2006/03/28 16:42:19 kerns Exp $
+ *
+ *  Kern Sibbald, June MMIII
  */
-
 /*
-   Copyright (C) 2003-2005 Kern Sibbald
+   Copyright (C) 2003-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
-
-   Kern Sibbald, June MMIII
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
+
 
 /*
  * There is a lot of extra casting here to work around the fact
@@ -31,15 +26,16 @@
  *
  * Loop var through each member of list
  */
+#ifdef HAVE_GCC
+#define foreach_alist(var, list) \
+        for((var)=(typeof(var))(list)->first(); (var); (var)=(typeof(var))(list)->next() )
+#else
 #define foreach_alist(var, list) \
     for((*((void **)&(var))=(void*)((list)->first())); \
          (var); \
          (*((void **)&(var))=(void*)((list)->next())))
-
-#ifdef the_easy_way
-#define foreach_alist(var, list) \
-        for((void*(var))=(list)->first(); (var); (void *(var))=(list)->next(var)); )
 #endif
+
 
 
 /* Second arg of init */
@@ -77,6 +73,10 @@ public:
    int size() const;
    void destroy();
    void grow(int num);
+
+   /* Use it as a stack, pushing and poping from the end */
+   void push(void *item) { append(item); };
+   void *pop() { return remove(num_items-1); };
 };
 
 inline void * alist::operator [](int index) const {

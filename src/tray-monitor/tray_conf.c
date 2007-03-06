@@ -19,7 +19,7 @@
 *
 *     Nicolas Boichat, August MMIV
 *
-*     Version $Id: tray_conf.c,v 1.6.6.1 2005/04/12 21:31:23 kerns Exp $
+*     Version $Id: tray_conf.c,v 1.8 2005/08/10 16:35:38 nboichat Exp $
 */
 /*
    Copyright (C) 2004 Kern Sibbald and John Walker
@@ -149,7 +149,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
    char ed1[100], ed2[100];
 
    if (res == NULL) {
-      sendit(sock, "No %s resource defined\n", res_to_str(type));
+      sendit(sock, _("No %s resource defined\n"), res_to_str(type));
       return;
    }
    if (type < 0) {		      /* no recursion */
@@ -158,25 +158,25 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
    }
    switch (type) {
    case R_MONITOR:
-      sendit(sock, "Monitor: name=%s FDtimeout=%s SDtimeout=%s\n",
+      sendit(sock, _("Monitor: name=%s FDtimeout=%s SDtimeout=%s\n"),
    reshdr->name,
    edit_uint64(res->res_monitor.FDConnectTimeout, ed1),
    edit_uint64(res->res_monitor.SDConnectTimeout, ed2));
       break;
    case R_DIRECTOR:
-      sendit(sock, "Director: name=%s address=%s FDport=%d\n",
+      sendit(sock, _("Director: name=%s address=%s FDport=%d\n"),
    res->res_dir.hdr.name, res->res_dir.address, res->res_dir.DIRport);
       break;
    case R_CLIENT:
-      sendit(sock, "Client: name=%s address=%s FDport=%d\n",
+      sendit(sock, _("Client: name=%s address=%s FDport=%d\n"),
    res->res_client.hdr.name, res->res_client.address, res->res_client.FDport);
       break;
    case R_STORAGE:
-      sendit(sock, "Storage: name=%s address=%s SDport=%d\n",
+      sendit(sock, _("Storage: name=%s address=%s SDport=%d\n"),
    res->res_store.hdr.name, res->res_store.address, res->res_store.SDport);
       break;
    default:
-      sendit(sock, "Unknown resource type %d in dump_resource.\n", type);
+      sendit(sock, _("Unknown resource type %d in dump_resource.\n"), type);
       break;
    }
    if (recurse && res->res_monitor.hdr.next) {
@@ -229,7 +229,7 @@ void free_resource(RES *sres, int type)
       }
       break;
    default:
-      printf("Unknown resource type %d in free_resource.\n", type);
+      printf(_("Unknown resource type %d in free_resource.\n"), type);
    }
    /* Common stuff again -- free the resource, recurse to next one */
    if (res) {
@@ -259,13 +259,13 @@ void save_resource(int type, RES_ITEM *items, int pass)
    for (i=0; items[i].name; i++) {
       if (items[i].flags & ITEM_REQUIRED) {
 	 if (!bit_is_set(i, res_all.res_monitor.hdr.item_present)) {
-	       Emsg2(M_ERROR_TERM, 0, "%s item is required in %s resource, but not found.\n",
+	       Emsg2(M_ERROR_TERM, 0, _("%s item is required in %s resource, but not found.\n"),
 		  items[i].name, resources[rindex]);
 	 }
       }
       /* If this triggers, take a look at lib/parse_conf.h */
       if (i >= MAX_RES_ITEMS) {
-	 Emsg1(M_ERROR_TERM, 0, "Too many items in %s resource\n", resources[rindex]);
+	 Emsg1(M_ERROR_TERM, 0, _("Too many items in %s resource\n"), resources[rindex]);
       }
    }
 
@@ -284,7 +284,7 @@ void save_resource(int type, RES_ITEM *items, int pass)
       case R_DIRECTOR:
 	 break;
       default:
-	 Emsg1(M_ERROR, 0, "Unknown resource type %d in save_resource.\n", type);
+	 Emsg1(M_ERROR, 0, _("Unknown resource type %d in save_resource.\n"), type);
 	 error = 1;
 	 break;
       }
@@ -319,7 +319,7 @@ void save_resource(int type, RES_ITEM *items, int pass)
       size = sizeof(STORE);
       break;
    default:
-      printf("Unknown resource type %d in save_resrouce.\n", type);
+      printf(_("Unknown resource type %d in save_resrouce.\n"), type);
       error = 1;
       size = 1;
       break;

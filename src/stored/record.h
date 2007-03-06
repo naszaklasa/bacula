@@ -4,26 +4,21 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: record.h,v 1.17 2004/09/19 18:56:29 kerns Exp $
+ *   Version $Id: record.h,v 1.20.2.1 2006/03/14 21:41:45 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -32,15 +27,17 @@
 #define __RECORD_H 1
 
 /* Return codes from read_device_volume_label() */
-#define VOL_NOT_READ      0               /* Volume label not read */
-#define VOL_OK            1               /* volume name OK */
-#define VOL_NO_LABEL      2               /* volume not labeled */
-#define VOL_IO_ERROR      3               /* volume I/O error */
-#define VOL_NAME_ERROR    4               /* Volume name mismatch */
-#define VOL_CREATE_ERROR  5               /* Error creating label */
-#define VOL_VERSION_ERROR 6               /* Bacula version error */
-#define VOL_LABEL_ERROR   7               /* Bad label type */
-#define VOL_NO_MEDIA      8               /* Hard error -- no media present */
+enum {
+   VOL_NOT_READ = 1,                      /* Volume label not read */
+   VOL_OK,                                /* volume name OK */
+   VOL_NO_LABEL,                          /* volume not labeled */
+   VOL_IO_ERROR,                          /* volume I/O error */
+   VOL_NAME_ERROR,                        /* Volume name mismatch */
+   VOL_CREATE_ERROR,                      /* Error creating label */
+   VOL_VERSION_ERROR,                     /* Bacula version error */
+   VOL_LABEL_ERROR,                       /* Bad label type */
+   VOL_NO_MEDIA                           /* Hard error -- no media present */
+};
 
 
 /*  See block.h for RECHDR_LENGTH */
@@ -76,7 +73,7 @@
 /*
  * DEV_RECORD for reading and writing records.
  * It consists of a Record Header, and the Record Data
- * 
+ *
  *  This is the memory structure for the record header.
  */
 struct BSR;                           /* satisfy forward reference */
@@ -97,7 +94,7 @@ struct DEV_RECORD {
    BSR *bsr;                          /* pointer to bsr that matched */
    uint8_t  ser_buf[WRITE_RECHDR_LENGTH];   /* serialized record header goes here */
    POOLMEM *data;                     /* Record data. This MUST be a memory pool item */
-};           
+};
 
 
 /*
@@ -107,20 +104,20 @@ struct DEV_RECORD {
  */
 #define PRE_LABEL   -1                /* Vol label on unwritten tape */
 #define VOL_LABEL   -2                /* Volume label first file */
-#define EOM_LABEL   -3                /* Writen at end of tape */        
+#define EOM_LABEL   -3                /* Writen at end of tape */
 #define SOS_LABEL   -4                /* Start of Session */
 #define EOS_LABEL   -5                /* End of Session */
 #define EOT_LABEL   -6                /* End of physical tape (2 eofs) */
 
-/* 
+/*
  *   Volume Label Record.  This is the in-memory definition. The
  *     tape definition is defined in the serialization code itself
  *     ser_volume_label() and unser_volume_label() and is slightly different.
  */
 
- 
+
 struct Volume_Label {
-  /*  
+  /*
    * The first items in this structure are saved
    * in the DEVICE buffer, but are not actually written
    * to the tape.
@@ -128,7 +125,7 @@ struct Volume_Label {
   int32_t LabelType;                  /* This is written in header only */
   uint32_t LabelSize;                 /* length of serialized label */
   /*
-   * The items below this line are stored on 
+   * The items below this line are stored on
    * the tape
    */
   char Id[32];                        /* Bacula Immortal ... */
@@ -147,8 +144,8 @@ struct Volume_Label {
   float64_t write_date;               /* Date this label written */
   float64_t write_time;               /* Time this label written */
 
-  char VolName[MAX_NAME_LENGTH];      /* Volume name */
-  char PrevVolName[MAX_NAME_LENGTH];  /* Previous Volume Name */
+  char VolumeName[MAX_NAME_LENGTH];   /* Volume name */
+  char PrevVolumeName[MAX_NAME_LENGTH]; /* Previous Volume Name */
   char PoolName[MAX_NAME_LENGTH];     /* Pool name */
   char PoolType[MAX_NAME_LENGTH];     /* Pool type */
   char MediaType[MAX_NAME_LENGTH];    /* Type of this media */

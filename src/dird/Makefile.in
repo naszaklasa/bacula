@@ -1,7 +1,7 @@
 #
 #  Bacula Director Makefile
 #
-#  Version $Id: Makefile.in,v 1.36 2004/09/24 12:30:13 kerns Exp $
+#  Version $Id: Makefile.in,v 1.44.2.2 2005/11/10 20:11:20 kerns Exp $
 #  
 @MCOMMON@
 
@@ -18,6 +18,14 @@ thisdir = src/dird
 
 DEBUG=@DEBUG@
 
+GETTEXT_LIBS = @LIBINTL@
+
+OPENSSL_LIBS = @OPENSSL_LIBS@
+OPENSSL_INC = @OPENSSL_INC@
+
+PYTHON_LIBS = @PYTHON_LIBS@
+PYTHON_INC = @PYTHON_INCDIR@
+
 first_rule: all
 dummy:
 
@@ -28,6 +36,7 @@ SVRSRCS = dird.c admin.c authenticate.c \
 	  fd_cmds.c getmsg.c inc_conf.c job.c \
 	  jobq.c mac.c \
 	  mountreq.c msgchan.c next_vol.c newvol.c \
+	  pythondir.c \
 	  recycle.c restore.c run_conf.c \
 	  scheduler.c sql_cmds.c \
 	  ua_acl.c ua_cmds.c ua_dotcmds.c \
@@ -35,13 +44,14 @@ SVRSRCS = dird.c admin.c authenticate.c \
 	  ua_input.c ua_label.c ua_output.c ua_prune.c \
 	  ua_purge.c ua_restore.c ua_run.c \
 	  ua_select.c ua_server.c \
-	  ua_status.c ua_tree.c verify.c
+	  ua_status.c ua_tree.c ua_update.c verify.c
 SVROBJS = dird.o admin.o authenticate.o \
 	  autoprune.o backup.o bsr.o \
 	  catreq.o dird_conf.o expand.o \
 	  fd_cmds.o getmsg.o inc_conf.o job.o \
 	  jobq.o mac.o \
 	  mountreq.o msgchan.o next_vol.o newvol.o \
+	  pythondir.o \
 	  recycle.o restore.o run_conf.o \
 	  scheduler.o sql_cmds.o \
 	  ua_acl.o ua_cmds.o ua_dotcmds.o \
@@ -49,7 +59,7 @@ SVROBJS = dird.o admin.o authenticate.o \
 	  ua_input.o ua_label.o ua_output.o ua_prune.o \
 	  ua_purge.o ua_restore.o ua_run.o \
 	  ua_select.o ua_server.o \
-	  ua_status.o ua_tree.o verify.o
+	  ua_status.o ua_tree.o ua_update.o verify.o
 
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@
@@ -60,7 +70,7 @@ EXTRAOBJS = @OBJLIST@
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile bacula-dir @STATIC_DIR@
 	@echo "==== Make of dird is good ===="
@@ -68,11 +78,13 @@ all: Makefile bacula-dir @STATIC_DIR@
 
 bacula-dir:  $(SVROBJS) ../lib/libbac.a ../cats/libsql.a ../findlib/libfind.a
 	$(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
-	      -lsql -lfind -lbac -lm $(DLIB) $(DB_LIBS) $(LIBS) 
+	      -lsql -lfind -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
+	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 static-bacula-dir:  $(SVROBJS) ../lib/libbac.a ../cats/libsql.a ../findlib/libfind.a
 	$(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
-	      -lsql -lbac -lfind -lm $(DLIB) $(DB_LIBS) $(LIBS) 
+	      -lsql -lbac -lfind -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
+	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 	strip $@
 
 
@@ -89,7 +101,7 @@ realclean: clean
 
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
-	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+	(cd $(srcdir); $(RMF) Makefile)
 
 devclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
@@ -132,12 +144,12 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \
 	   $(MV) Makefile.bak Makefile; \
-	   echo -e "Something went wrong\n\a"; \
+	   echo " ===== Something went wrong in make depend ====="; \
 	fi
 
 # -----------------------------------------------------------------------

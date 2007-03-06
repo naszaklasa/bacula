@@ -1,0 +1,85 @@
+ This patch should fix a Segfault bug when a job is rescheduled.
+ The storage pointers were being released when they should not
+ have been.
+
+ Apply the patch with:
+
+ patch -p0 <1.36.2-reschedule.patch
+ make
+ ...
+
+Index: src/dird/dird.h
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/dird.h,v
+retrieving revision 1.7
+diff -u -r1.7 dird.h
+--- src/dird/dird.h	19 Apr 2004 14:27:00 -0000	1.7
++++ src/dird/dird.h	18 Mar 2005 17:39:38 -0000
+@@ -45,3 +45,4 @@
+ 
+ /* From job.c */
+ void dird_free_jcr(JCR *jcr);
++void dird_free_jcr_pointers(JCR *jcr);
+Index: src/dird/job.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/job.c,v
+retrieving revision 1.92.2.2
+diff -u -r1.92.2.2 job.c
+--- src/dird/job.c	27 Feb 2005 21:53:28 -0000	1.92.2.2
++++ src/dird/job.c	18 Mar 2005 17:39:38 -0000
+@@ -676,15 +676,9 @@
+    }
+ }
+ 
+-/*
+- * Free the Job Control Record if no one is still using it.
+- *  Called from main free_jcr() routine in src/lib/jcr.c so
+- *  that we can do our Director specific cleanup of the jcr.
+- */
+-void dird_free_jcr(JCR *jcr)
++/* Called directly from job rescheduling */
++void dird_free_jcr_pointers(JCR *jcr)
+ {
+-   Dmsg0(200, "Start dird free_jcr\n");
+-
+    if (jcr->sd_auth_key) {
+       free(jcr->sd_auth_key);
+       jcr->sd_auth_key = NULL;
+@@ -723,7 +717,21 @@
+    }
+    if (jcr->term_wait_inited) {
+       pthread_cond_destroy(&jcr->term_wait);
++      jcr->term_wait_inited = false;
+    }
++}
++
++/*
++ * Free the Job Control Record if no one is still using it.
++ *  Called from main free_jcr() routine in src/lib/jcr.c so
++ *  that we can do our Director specific cleanup of the jcr.
++ */
++void dird_free_jcr(JCR *jcr)
++{
++   Dmsg0(200, "Start dird free_jcr\n");
++
++   dird_free_jcr_pointers(jcr);
++
+    /* Delete lists setup to hold storage pointers */
+    for (int i=0; i<MAX_STORE; i++) {
+       if (jcr->storage[i]) {
+Index: src/dird/jobq.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/jobq.c,v
+retrieving revision 1.25.4.2
+diff -u -r1.25.4.2 jobq.c
+--- src/dird/jobq.c	15 Feb 2005 11:51:03 -0000	1.25.4.2
++++ src/dird/jobq.c	18 Mar 2005 17:39:38 -0000
+@@ -481,7 +481,7 @@
+ 	    bstrftime(dt, sizeof(dt), time(NULL));
+             Jmsg(jcr, M_INFO, 0, _("Rescheduled Job %s at %s to re-run in %d seconds.\n"),
+ 	       jcr->Job, dt, (int)jcr->job->RescheduleInterval);
+-	    dird_free_jcr(jcr); 	 /* partial cleanup old stuff */
++	    dird_free_jcr_pointers(jcr);     /* partial cleanup old stuff */
+ 	    jcr->JobStatus = JS_WaitStartTime;
+ 	    jcr->SDJobStatus = 0;
+ 	    if (jcr->JobBytes == 0) {

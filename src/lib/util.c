@@ -3,26 +3,20 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: util.c,v 1.63.2.1 2005/02/14 10:02:26 kerns Exp $
+ *   Version $Id: util.c,v 1.68.2.3 2006/03/04 11:10:18 kerns Exp $
  */
-
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -50,7 +44,7 @@ int is_buf_zero(char *buf, int len)
    len64 = len / sizeof(uint64_t);
    for (i=0; i < len64; i++) {
       if (ip[i] != 0) {
-	 return 0;
+         return 0;
       }
    }
    done = len64 * sizeof(uint64_t);  /* bytes already checked */
@@ -58,7 +52,7 @@ int is_buf_zero(char *buf, int len)
    rem = len - done;
    for (i = 0; i < rem; i++) {
       if (p[i] != 0) {
-	 return 0;
+         return 0;
       }
    }
    return 1;
@@ -70,7 +64,7 @@ void lcase(char *str)
 {
    while (*str) {
       if (B_ISUPPER(*str))
-	 *str = tolower((int)(*str));
+         *str = tolower((int)(*str));
        str++;
    }
 }
@@ -83,7 +77,7 @@ bash_spaces(char *str)
 {
    while (*str) {
       if (*str == ' ')
-	 *str = 0x1;
+         *str = 0x1;
       str++;
    }
 }
@@ -97,7 +91,7 @@ bash_spaces(POOL_MEM &pm)
    char *str = pm.c_str();
    while (*str) {
       if (*str == ' ')
-	 *str = 0x1;
+         *str = 0x1;
       str++;
    }
 }
@@ -109,7 +103,7 @@ unbash_spaces(char *str)
 {
    while (*str) {
      if (*str == 0x1)
-	*str = ' ';
+        *str = ' ';
      str++;
    }
 }
@@ -121,7 +115,7 @@ unbash_spaces(POOL_MEM &pm)
    char *str = pm.c_str();
    while (*str) {
      if (*str == 0x1)
-	*str = ' ';
+        *str = ' ';
      str++;
    }
 }
@@ -142,10 +136,10 @@ char *encode_time(time_t time, char *buf)
 #if    HAVE_WIN32 && !HAVE_CONSOLE && !HAVE_WXCONSOLE
     /*
      * Gross kludge to avoid a seg fault in Microsoft's CRT localtime_r(),
-     *	which incorrectly references a NULL returned from gmtime() if
-     *	the time (adjusted for the current timezone) is invalid.
-     *	This could happen if you have a bad date/time, or perhaps if you
-     *	moved a file from one timezone to another?
+     *  which incorrectly references a NULL returned from gmtime() if
+     *  the time (adjusted for the current timezone) is invalid.
+     *  This could happen if you have a bad date/time, or perhaps if you
+     *  moved a file from one timezone to another?
      */
     struct tm *gtm;
     time_t gtime;
@@ -157,14 +151,14 @@ char *encode_time(time_t time, char *buf)
     if (_daylight && _isindst(gtm)) {
        gtime -= _dstbias;
        if (!gmtime(&gtime)) {
-	  return buf;
+          return buf;
        }
     }
 #endif
    if (localtime_r(&time, &tm)) {
       n = sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d",
-		   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-		   tm.tm_hour, tm.tm_min, tm.tm_sec);
+                   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+                   tm.tm_hour, tm.tm_min, tm.tm_sec);
    }
    return buf+n;
 }
@@ -238,9 +232,9 @@ void jobstatus_to_ascii(int JobStatus, char *msg, int maxlen)
 
    default:
       if (JobStatus == 0) {
-	 buf[0] = 0;
+         buf[0] = 0;
       } else {
-	 bsnprintf(buf, sizeof(buf), _("Unknown Job termination status=%d"), JobStatus);
+         bsnprintf(buf, sizeof(buf), _("Unknown Job termination status=%d"), JobStatus);
       }
       jobstat = buf;
       break;
@@ -299,6 +293,12 @@ const char *job_type_to_str(int type)
       break;
    case JT_ADMIN:
       str = _("Admin");
+      break;
+   case JT_MIGRATE:
+      str = _("Migrate");
+      break;
+   case JT_COPY:
+      str = _("Copy");
       break;
    default:
       str = _("Unknown Type");
@@ -364,22 +364,22 @@ char *encode_mode(mode_t mode, char *buf)
   char *cp = buf;
 
   *cp++ = S_ISDIR(mode) ? 'd' : S_ISBLK(mode)  ? 'b' : S_ISCHR(mode)  ? 'c' :
-	  S_ISLNK(mode) ? 'l' : S_ISFIFO(mode) ? 'f' : S_ISSOCK(mode) ? 's' : '-';
+          S_ISLNK(mode) ? 'l' : S_ISFIFO(mode) ? 'f' : S_ISSOCK(mode) ? 's' : '-';
   *cp++ = mode & S_IRUSR ? 'r' : '-';
   *cp++ = mode & S_IWUSR ? 'w' : '-';
   *cp++ = (mode & S_ISUID
-	       ? (mode & S_IXUSR ? 's' : 'S')
-	       : (mode & S_IXUSR ? 'x' : '-'));
+               ? (mode & S_IXUSR ? 's' : 'S')
+               : (mode & S_IXUSR ? 'x' : '-'));
   *cp++ = mode & S_IRGRP ? 'r' : '-';
   *cp++ = mode & S_IWGRP ? 'w' : '-';
   *cp++ = (mode & S_ISGID
-	       ? (mode & S_IXGRP ? 's' : 'S')
-	       : (mode & S_IXGRP ? 'x' : '-'));
+               ? (mode & S_IXGRP ? 's' : 'S')
+               : (mode & S_IXGRP ? 'x' : '-'));
   *cp++ = mode & S_IROTH ? 'r' : '-';
   *cp++ = mode & S_IWOTH ? 'w' : '-';
   *cp++ = (mode & S_ISVTX
-	       ? (mode & S_IXOTH ? 't' : 'T')
-	       : (mode & S_IXOTH ? 'x' : '-'));
+               ? (mode & S_IXOTH ? 't' : 'T')
+               : (mode & S_IXOTH ? 'x' : '-'));
   *cp = '\0';
   return cp;
 }
@@ -399,15 +399,15 @@ int do_shell_expansion(char *name, int name_len)
    len = strlen(meta);
    for (i = 0; i < len; i++) {
       if (strchr(name, meta[i])) {
-	 found = true;
-	 break;
+         found = true;
+         break;
       }
    }
    if (found) {
       cmd =  get_pool_memory(PM_FNAME);
       /* look for shell */
       if ((shellcmd = getenv("SHELL")) == NULL) {
-	 shellcmd = "/bin/sh";
+         shellcmd = "/bin/sh";
       }
       pm_strcpy(&cmd, shellcmd);
       pm_strcat(&cmd, " -c \"echo ");
@@ -415,27 +415,27 @@ int do_shell_expansion(char *name, int name_len)
       pm_strcat(&cmd, "\"");
       Dmsg1(400, "Send: %s\n", cmd);
       if ((bpipe = open_bpipe(cmd, 0, "r"))) {
-	 *line = 0;
-	 fgets(line, sizeof(line), bpipe->rfd);
-	 strip_trailing_junk(line);
-	 stat = close_bpipe(bpipe);
-	 Dmsg2(400, "stat=%d got: %s\n", stat, line);
+         *line = 0;
+         fgets(line, sizeof(line), bpipe->rfd);
+         strip_trailing_junk(line);
+         stat = close_bpipe(bpipe);
+         Dmsg2(400, "stat=%d got: %s\n", stat, line);
       } else {
-	 stat = 1;		      /* error */
+         stat = 1;                    /* error */
       }
       free_pool_memory(cmd);
       if (stat == 0) {
-	 bstrncpy(name, line, name_len);
+         bstrncpy(name, line, name_len);
       }
    }
    return 1;
 }
 
 
-/*  MAKESESSIONKEY  --	Generate session key with optional start
-			key.  If mode is TRUE, the key will be
-			translated to a string, otherwise it is
-			returned as 16 binary bytes.
+/*  MAKESESSIONKEY  --  Generate session key with optional start
+                        key.  If mode is TRUE, the key will be
+                        translated to a string, otherwise it is
+                        returned as 16 binary bytes.
 
     from SpeakFreely by John Walker */
 
@@ -448,19 +448,19 @@ void make_session_key(char *key, char *seed, int mode)
 
      s[0] = 0;
      if (seed != NULL) {
-	bstrncat(s, seed, sizeof(s));
+        bstrncat(s, seed, sizeof(s));
      }
 
      /* The following creates a seed for the session key generator
-	based on a collection of volatile and environment-specific
-	information unlikely to be vulnerable (as a whole) to an
-	exhaustive search attack.  If one of these items isn't
-	available on your machine, replace it with something
-	equivalent or, if you like, just delete it. */
+        based on a collection of volatile and environment-specific
+        information unlikely to be vulnerable (as a whole) to an
+        exhaustive search attack.  If one of these items isn't
+        available on your machine, replace it with something
+        equivalent or, if you like, just delete it. */
 
      sprintf(s + strlen(s), "%lu", (unsigned long)getpid());
      sprintf(s + strlen(s), "%lu", (unsigned long)getppid());
-     getcwd(s + strlen(s), 256);
+     (void)getcwd(s + strlen(s), 256);
      sprintf(s + strlen(s), "%lu", (unsigned long)clock());
      sprintf(s + strlen(s), "%lu", (unsigned long)time(NULL));
 #ifdef Solaris
@@ -468,9 +468,6 @@ void make_session_key(char *key, char *seed, int mode)
 #endif
 #ifdef HAVE_GETHOSTID
      sprintf(s + strlen(s), "%lu", (unsigned long) gethostid());
-#endif
-#ifdef HAVE_GETDOMAINNAME
-     getdomainname(s + strlen(s), 256);
 #endif
      gethostname(s + strlen(s), 256);
      sprintf(s + strlen(s), "%u", (unsigned)getuid());
@@ -484,22 +481,22 @@ void make_session_key(char *key, char *seed, int mode)
      MD5Final(md5key1, &md5c);
 #define nextrand    (md5key[j] ^ md5key1[j])
      if (mode) {
-	for (j = k = 0; j < 16; j++) {
-	   unsigned char rb = nextrand;
+        for (j = k = 0; j < 16; j++) {
+           unsigned char rb = nextrand;
 
 #define Rad16(x) ((x) + 'A')
-	   key[k++] = Rad16((rb >> 4) & 0xF);
-	   key[k++] = Rad16(rb & 0xF);
+           key[k++] = Rad16((rb >> 4) & 0xF);
+           key[k++] = Rad16(rb & 0xF);
 #undef Rad16
-	   if (j & 1) {
-	      key[k++] = '-';
-	   }
-	}
-	key[--k] = 0;
+           if (j & 1) {
+              key[k++] = '-';
+           }
+        }
+        key[--k] = 0;
      } else {
-	for (j = 0; j < 16; j++) {
-	   key[j] = nextrand;
-	}
+        for (j = 0; j < 16; j++) {
+           key[j] = nextrand;
+        }
      }
 }
 #undef nextrand
@@ -513,9 +510,10 @@ void make_session_key(char *key, char *seed, int mode)
  *  %d = Director's name
  *  %e = Job Exit code
  *  %i = JobId
- *  %j = Unique Job name
+ *  %j = Unique Job id
  *  %l = job level
  *  %n = Unadorned Job name
+ *  %s = Since time
  *  %t = Job type (Backup, ...)
  *  %r = Recipients
  *  %v = Volume name
@@ -537,95 +535,102 @@ POOLMEM *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to)
    Dmsg1(200, "edit_job_codes: %s\n", imsg);
    for (p=imsg; *p; p++) {
       if (*p == '%') {
-	 switch (*++p) {
-	 case '%':
-	    str = "%";
-	    break;
-	 case 'c':
-	    if (jcr) {
-	       str = jcr->client_name;
-	    } else {
-	       str = "*none*";
-	    }
-	    break;
-	 case 'd':
-	    str = my_name;            /* Director's name */
-	    break;
-	 case 'e':
-	    if (jcr) {
-	       str = job_status_to_str(jcr->JobStatus);
-	    } else {
-	       str = "*none*";
-	    }
-	    break;
-	 case 'i':
-	    if (jcr) {
-	       bsnprintf(add, sizeof(add), "%d", jcr->JobId);
-	       str = add;
-	    } else {
-	       str = "*none*";
-	    }
-	    break;
-	 case 'j':                    /* Job name */
-	    if (jcr) {
-	       str = jcr->Job;
-	    } else {
-	       str = "*none*";
-	    }
-	    break;
-	 case 'l':
-	    if (jcr) {
-	       str = job_level_to_str(jcr->JobLevel);
-	    } else {
-	       str = "*none*";
-	    }
-	    break;
-	 case 'n':
-	     if (jcr) {
-		bstrncpy(name, jcr->Job, sizeof(name));
-		/* There are three periods after the Job name */
-		for (i=0; i<3; i++) {
-		   if ((q=strrchr(name, '.')) != NULL) {
-		       *q = 0;
-		   }
-		}
-		str = name;
-	     } else {
-		str = "*none*";
-	     }
-	     break;
-	 case 'r':
-	    str = to;
-	    break;
-	 case 't':
-	    if (jcr) {
-	       str = job_type_to_str(jcr->JobType);
-	    } else {
-	       str = "*none*";
-	    }
-	    break;
-	 case 'v':
-	    if (jcr) {
-	       if (jcr->VolumeName && jcr->VolumeName[0]) {
-		  str = jcr->VolumeName;
-	       } else {
-		  str = "";
-	       }
-	    } else {
-	       str = "*none*";
-	    }
-	    break;
-	 default:
-	    add[0] = '%';
-	    add[1] = *p;
-	    add[2] = 0;
-	    str = add;
-	    break;
-	 }
+         switch (*++p) {
+         case '%':
+            str = "%";
+            break;
+         case 'c':
+            if (jcr) {
+               str = jcr->client_name;
+            } else {
+               str = _("*none*");
+            }
+            break;
+         case 'd':
+            str = my_name;            /* Director's name */
+            break;
+         case 'e':
+            if (jcr) {
+               str = job_status_to_str(jcr->JobStatus);
+            } else {
+               str = _("*none*");
+            }
+            break;
+         case 'i':
+            if (jcr) {
+               bsnprintf(add, sizeof(add), "%d", jcr->JobId);
+               str = add;
+            } else {
+               str = _("*none*");
+            }
+            break;
+         case 'j':                    /* Job name */
+            if (jcr) {
+               str = jcr->Job;
+            } else {
+               str = _("*none*");
+            }
+            break;
+         case 'l':
+            if (jcr) {
+               str = job_level_to_str(jcr->JobLevel);
+            } else {
+               str = _("*none*");
+            }
+            break;
+         case 'n':
+             if (jcr) {
+                bstrncpy(name, jcr->Job, sizeof(name));
+                /* There are three periods after the Job name */
+                for (i=0; i<3; i++) {
+                   if ((q=strrchr(name, '.')) != NULL) {
+                       *q = 0;
+                   }
+                }
+                str = name;
+             } else {
+                str = _("*none*");
+             }
+             break;
+         case 'r':
+            str = to;
+            break;
+         case 's':                    /* since time */
+            if (jcr && jcr->stime) {
+               str = jcr->stime;
+            } else {
+               str = _("*none*");
+            }
+            break;
+         case 't':
+            if (jcr) {
+               str = job_type_to_str(jcr->JobType);
+            } else {
+               str = _("*none*");
+            }
+            break;
+         case 'v':
+            if (jcr) {
+               if (jcr->VolumeName && jcr->VolumeName[0]) {
+                  str = jcr->VolumeName;
+               } else {
+                  str = "";
+               }
+            } else {
+               str = _("*none*");
+            }
+            break;
+         default:
+            add[0] = '%';
+            add[1] = *p;
+            add[2] = 0;
+            str = add;
+            break;
+         }
       } else {
-	 add[0] = *p;
-	 add[1] = 0;
-	 str = add;
+         add[0] = *p;
+         add[1] = 0;
+         str = add;
       }
       Dmsg1(1200, "add_str %s\n", str);
       pm_strcat(&omsg, str);
@@ -643,11 +648,11 @@ void set_working_directory(char *wd)
    }
    if (stat(wd, &stat_buf) != 0) {
       Emsg1(M_ERROR_TERM, 0, _("Working Directory: \"%s\" not found. Cannot continue.\n"),
-	 wd);
+         wd);
    }
    if (!S_ISDIR(stat_buf.st_mode)) {
       Emsg1(M_ERROR_TERM, 0, _("Working Directory: \"%s\" is not a directory. Cannot continue.\n"),
-	 wd);
+         wd);
    }
-   working_directory = wd;	      /* set global */
+   working_directory = wd;            /* set global */
 }

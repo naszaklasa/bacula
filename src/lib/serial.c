@@ -3,8 +3,8 @@
 		   Serialisation Support Functions
 			  John Walker
 
-  
-     Version $Id: serial.c,v 1.6 2004/06/15 10:40:47 kerns Exp $
+
+     Version $Id: serial.c,v 1.7 2004/12/21 16:18:40 kerns Exp $
 */
 /*
    Copyright (C) 2000-2004 Kern Sibbald and John Walker
@@ -168,7 +168,7 @@ void serial_float64(uint8_t * * const ptr, const float64_t v)
 void serial_string(uint8_t * * const ptr, const char * const str)
 {
    int len = strlen(str) + 1;
-   
+
    memcpy(*ptr, str, len);
    *ptr += len;
 }

@@ -18,10 +18,10 @@
 
 /* Written by David MacKenzie <djm@gnu.ai.mit.edu> and Jim Meyering.  */
 
-/* 
+/*
  *   Modified by Kern Sibbald for use in Bacula, December 2000
  *
- *   Version $Id: makepath.c,v 1.11 2004/09/19 18:56:25 kerns Exp $
+ *   Version $Id: makepath.c,v 1.12 2004/12/21 16:18:37 kerns Exp $
  */
 
 #include "bacula.h"
@@ -106,19 +106,19 @@ make_dir(JCR *jcr, const char *dir, const char *dirpath, mode_t mode, int *creat
       /* The mkdir and stat calls below may appear to be reversed.
 	 They are not.	It is important to call mkdir first and then to
 	 call stat (to distinguish the three cases) only if mkdir fails.
-         The alternative to this approach is to `stat' each directory,
-         then to call mkdir if it doesn't exist.  But if some other process
+	 The alternative to this approach is to `stat' each directory,
+	 then to call mkdir if it doesn't exist.  But if some other process
 	 were to create the directory between the stat & mkdir, the mkdir
 	 would fail with EEXIST.  */
 
       if (stat(dir, &stats)) {
 	  berrno be;
 	  be.set_errno(save_errno);
-          Jmsg(jcr, M_ERROR, 0, _("Cannot create directory %s: ERR=%s\n"), 
+	  Jmsg(jcr, M_ERROR, 0, _("Cannot create directory %s: ERR=%s\n"),
 		  dirpath, be.strerror());
 	  fail = 1;
       } else if (!S_ISDIR(stats.st_mode)) {
-          Jmsg(jcr, M_ERROR, 0, _("%s exists but is not a directory\n"), quote(dirpath));
+	  Jmsg(jcr, M_ERROR, 0, _("%s exists but is not a directory\n"), quote(dirpath));
 	  fail = 1;
       } else {
 	  /* DIR (aka DIRPATH) already exists and is a directory. */
@@ -140,15 +140,15 @@ isAbsolute(const char *path)
     return path[1] == ':' || *path == '/' || *path == '\\';     /* drivespec:/blah is absolute */
 #else
     return *path == '/';
-#endif	  
+#endif
 }
-    
+
 /* Ensure that the directory ARGPATH exists.
    Remove any trailing slashes from ARGPATH before calling this function.
 
    Create any leading directories that don't already exist, with
    permissions PARENT_MODE.
-    
+
    If the last element of ARGPATH does not exist, create it as
    a new directory with permissions MODE.
 
@@ -224,8 +224,8 @@ make_path(
       cwd.do_chdir = !save_cwd(&cwd);
 
       /* If we've saved the cwd and DIRPATH is an absolute pathname,
-         we must chdir to `/' in order to enable the chdir optimization.
-         So if chdir ("/") fails, turn off the optimization.  */
+	 we must chdir to `/' in order to enable the chdir optimization.
+	 So if chdir ("/") fails, turn off the optimization.  */
       if (cwd.do_chdir && isAbsolute(dirpath) && (chdir("/") < 0)) {
 	 cwd.do_chdir = 0;
       }
@@ -243,18 +243,18 @@ make_path(
 	  /* slash points to the leftmost unprocessed component of dirpath.  */
 	  basename_dir = slash;
 
-          slash = strchr (slash, '/');
+	  slash = strchr (slash, '/');
 	  if (slash == NULL) {
 	     break;
 	  }
 
-          /* If we're *not* doing chdir before each mkdir, then we have to refer
+	  /* If we're *not* doing chdir before each mkdir, then we have to refer
 	     to the target using the full (multi-component) directory name.  */
 	  if (!cwd.do_chdir) {
 	     basename_dir = dirpath;
 	  }
 
-          *slash = '\0';
+	  *slash = '\0';
 	  fail = make_dir(jcr, basename_dir, dirpath, tmp_mode, &newly_created_dir);
 	  if (fail) {
 	      umask(oldmask);
@@ -263,7 +263,7 @@ make_path(
 	  }
 
 	  if (newly_created_dir) {
-              Dmsg0(300, "newly_created_dir\n");
+	      Dmsg0(300, "newly_created_dir\n");
 
 	      if ((owner != (uid_t)-1 || group != (gid_t)-1)
 		  && chown(basename_dir, owner, group)
@@ -273,10 +273,10 @@ make_path(
 		  ) {
 		 /* Note, if we are restoring as NON-root, this may not be fatal */
 		 berrno be;
-                 Jmsg(jcr, M_ERROR, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
+		 Jmsg(jcr, M_ERROR, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
 		      quote(dirpath), be.strerror());
 	      }
-              Dmsg0(300, "Chown done.\n");
+	      Dmsg0(300, "Chown done.\n");
 
 	      if (re_protect) {
 		 struct ptr_list *pnew = (struct ptr_list *)
@@ -284,7 +284,7 @@ make_path(
 		 pnew->dirname_end = slash;
 		 pnew->next = leading_dirs;
 		 leading_dirs = pnew;
-                 Dmsg0(300, "re_protect\n");
+		 Dmsg0(300, "re_protect\n");
 	      }
 	  }
 
@@ -294,18 +294,18 @@ make_path(
 	     stat and mkdir process O(n^2) file name components.  */
 	  if (cwd.do_chdir && chdir(basename_dir) < 0) {
 	      berrno be;
-              Jmsg(jcr, M_ERROR, 0, _("Cannot chdir to directory, %s: ERR=%s\n"),
+	      Jmsg(jcr, M_ERROR, 0, _("Cannot chdir to directory, %s: ERR=%s\n"),
 		     quote(dirpath), be.strerror());
 	      umask(oldmask);
 	      cleanup(&cwd);
 	      return 1;
 	  }
 
-          *slash++ = '/';
+	  *slash++ = '/';
 
-          /* Avoid unnecessary calls to `stat' when given
+	  /* Avoid unnecessary calls to `stat' when given
 	     pathnames containing multiple adjacent slashes.  */
-          while (*slash == '/')
+	  while (*slash == '/')
 	     slash++;
       } /* end while (1) */
 
@@ -334,7 +334,7 @@ make_path(
 	      )
 	    {
 	      berrno be;
-              Jmsg(jcr, M_WARNING, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
+	      Jmsg(jcr, M_WARNING, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
 		     quote(dirpath), be.strerror());
 	    }
       }
@@ -342,14 +342,14 @@ make_path(
       /* The above chown may have turned off some permission bits in MODE.
 	 Another reason we may have to use chmod here is that mkdir(2) is
 	 required to honor only the file permission bits.  In particular,
-         it need not honor the `special' bits, so if MODE includes any
+	 it need not honor the `special' bits, so if MODE includes any
 	 special bits, set them here.  */
       if (mode & ~S_IRWXUGO) {
-         Dmsg1(300, "Final chmod mode=%o\n", mode);
+	 Dmsg1(300, "Final chmod mode=%o\n", mode);
       }
       if ((mode & ~S_IRWXUGO) && chmod(basename_dir, mode)) {
 	  berrno be;
-          Jmsg(jcr, M_WARNING, 0, _("Cannot change permissions of %s: ERR=%s\n"), 
+	  Jmsg(jcr, M_WARNING, 0, _("Cannot change permissions of %s: ERR=%s\n"),
 	     quote(dirpath), be.strerror());
       }
 
@@ -361,11 +361,11 @@ make_path(
 	 privileges, we have to reset their protections to the correct
 	 value.  */
       for (p = leading_dirs; p != NULL; p = p->next) {
-          *(p->dirname_end) = '\0';
-          Dmsg2(300, "Reset parent mode=%o dir=%s\n", parent_mode, dirpath);
+	  *(p->dirname_end) = '\0';
+	  Dmsg2(300, "Reset parent mode=%o dir=%s\n", parent_mode, dirpath);
 	  if (chmod(dirpath, parent_mode)) {
 	      berrno be;
-              Jmsg(jcr, M_WARNING, 0, _("Cannot change permissions of %s: ERR=%s\n"),
+	      Jmsg(jcr, M_WARNING, 0, _("Cannot change permissions of %s: ERR=%s\n"),
 		     quote(dirpath), be.strerror());
 	  }
       }
@@ -375,17 +375,17 @@ make_path(
       const char *dirpath = argpath;
 
       if (!S_ISDIR(stats.st_mode)) {
-          Jmsg(jcr, M_ERROR, 0, _("%s exists but is not a directory\n"), quote(dirpath));
+	  Jmsg(jcr, M_ERROR, 0, _("%s exists but is not a directory\n"), quote(dirpath));
 	  return 1;
       }
 
       if (!preserve_existing) {
-          Dmsg0(300, "Do not preserve existing.\n");
+	  Dmsg0(300, "Do not preserve existing.\n");
 	  /* chown must precede chmod because on some systems,
 	     chown clears the set[ug]id bits for non-superusers,
 	     resulting in incorrect permissions.
 	     On System V, users can give away files with chown and then not
-             be able to chmod them.  So don't give files away.  */
+	     be able to chmod them.  So don't give files away.  */
 
 	  if ((owner != (uid_t)-1 || group != (gid_t)-1)
 	      && chown(dirpath, owner, group)
@@ -394,15 +394,15 @@ make_path(
 #endif
 	      ) {
 	      berrno be;
-              Jmsg(jcr, M_WARNING, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
+	      Jmsg(jcr, M_WARNING, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
 		     quote(dirpath), be.strerror());
 	    }
 	  if (chmod(dirpath, mode)) {
 	      berrno be;
-              Jmsg(jcr, M_WARNING, 0, _("Cannot change permissions of %s: ERR=%s\n"),
+	      Jmsg(jcr, M_WARNING, 0, _("Cannot change permissions of %s: ERR=%s\n"),
 				 quote(dirpath), be.strerror());
 	  }
-          Dmsg2(300, "pathexists chmod mode=%o dir=%s\n", mode, dirpath);
+	  Dmsg2(300, "pathexists chmod mode=%o dir=%s\n", mode, dirpath);
       }
   }
   return retval;

@@ -1,0 +1,146 @@
+# Microsoft Developer Studio Generated NMAKE File, Based on wx-console.dsp
+!IF "$(CFG)" == ""
+CFG=bconsole - Win32 Release
+!MESSAGE No configuration specified. Defaulting to bconsole - Win32 Release.
+!ENDIF 
+
+!IF "$(CFG)" != "bconsole - Win32 Release" && "$(CFG)" != "bconsole - Win32 Debug"
+!MESSAGE Invalid configuration "$(CFG)" specified.
+!MESSAGE You can specify a configuration when running NMAKE
+!MESSAGE by defining the macro CFG on the command line. For example:
+!MESSAGE 
+!MESSAGE NMAKE /f "bconsole.mak" CFG="bconsole - Win32 Debug"
+!MESSAGE 
+!MESSAGE Possible choices for configuration are:
+!MESSAGE 
+!MESSAGE "bconsole - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "bconsole - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE 
+!ERROR An invalid configuration is specified.
+!ENDIF 
+
+!IF "$(OS)" == "Windows_NT"
+NULL=
+!ELSE 
+NULL=nul
+!ENDIF 
+
+CPP=cl.exe
+RSC=rc.exe
+
+!IF  "$(CFG)" == "bconsole - Win32 Release"
+
+OUTDIR=.\Release
+INTDIR=.\Release
+# Begin Custom Macros
+OutDir=.\Release
+# End Custom Macros
+
+ALL : "$(OUTDIR)\bconsole.exe"
+
+
+CLEAN :
+        @@REL-CLEAN@@
+        -@erase "$(OUTDIR)\bconsole.exe"
+
+"$(OUTDIR)" :
+    if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
+
+CPP_PROJ=/nologo /MD /W3 /GX /I "../compat" /I "../.." /I "../../../../depkgs-win32/pthreads" /I "." /D "_DEBUG" /D "HAVE_CONSOLE" /D "_WINMAIN_" /D "PTW32_BUILD" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "HAVE_WIN32" /D "_AFXDLL" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /I /GZ /c 
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\bconsole.bsc" 
+BSC32_SBRS= \
+        
+LINK32=link.exe
+LINK32_FLAGS=wsock32.lib pthreadVCE.lib /nologo /subsystem:console /pdb:none /machine:I386 /out:"$(OUTDIR)\bconsole.exe" /libpath:"../../../../depkgs-win32/pthreads" 
+LINK32_OBJS= \
+        @@REL-OBJS@@
+
+
+"$(OUTDIR)\bconsole.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+    $(LINK32) @<<
+  $(LINK32_FLAGS) $(LINK32_OBJS)
+<<
+
+!ELSEIF  "$(CFG)" == "bconsole - Win32 Debug"
+
+OUTDIR=.\Debug
+INTDIR=.\Debug
+# Begin Custom Macros
+OutDir=.\Debug
+# End Custom Macros
+
+ALL : "$(OUTDIR)\bconsole.exe" "$(OUTDIR)\bconsole.bsc"
+
+CLEAN :
+        @@DEB-CLEAN@@
+        -@erase "$(OUTDIR)\bconsole.exe"
+        -@erase "$(OUTDIR)\bconsole.bsc"
+
+"$(OUTDIR)" :
+    if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
+
+
+CPP_PROJ=/nologo /MDd /W3 /Gm /GX /ZI /Od /I "../compat" /I "../.." /I "../../../../depkgs-win32/pthreads" /I "." /D "_DEBUG" /D "HAVE_CONSOLE" /D "_WINMAIN_" /D "PTW32_BUILD" /D "WIN32" /D "_CONSOLE" /D "_MBCS" /D "HAVE_WIN32" /D "_AFXDLL" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /I /GZ /c 
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\bconsole.bsc" 
+BSC32_SBRS= \
+        @@DEB-SBRS@@
+
+"$(OUTDIR)\bconsole.bsc" : "$(OUTDIR)" $(BSC32_SBRS)
+    $(BSC32) @<<
+  $(BSC32_FLAGS) $(BSC32_SBRS)
+<<
+
+LINK32=link.exe
+LINK32_FLAGS=wsock32.lib pthreadVCE.lib /nologo /subsystem:console /pdb:none /debug /machine:I386 /out:"$(OUTDIR)\bconsole.exe" /libpath:"../../../../depkgs-win32/pthreads" 
+LINK32_OBJS= \
+        @@DEB-OBJS@@
+
+"$(OUTDIR)\bconsole.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
+    $(LINK32) @<<
+  $(LINK32_FLAGS) $(LINK32_OBJS)
+<<
+
+!ENDIF 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+
+!IF "$(NO_EXTERNAL_DEPS)" != "1"
+!IF EXISTS("bconsole.dep")
+!INCLUDE "bconsole.dep"
+!ELSE 
+!MESSAGE Warning: cannot find "bconsole.dep"
+!ENDIF 
+!ENDIF 
+
+@@OBJTARGETS@@

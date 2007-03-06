@@ -14,25 +14,29 @@
 
 DIR_USER=@dir_user@
 DIR_GROUP=@dir_group@
+DIR_OPTIONS=''
 OS=`uname -s`
 
 # if /lib/tls exists, force Bacula to use the glibc pthreads instead
-if [ -d "/lib/tls" -a $OS = "Linux" ] ; then
+if [ -d "/lib/tls" -a $OS = "Linux" -a `uname -r | cut -c1-3` = "2.4" ] ; then
      export LD_ASSUME_KERNEL=2.4.19
 fi
+
+# pull in any user defined DIR_DIR_OPTIONS, DIR_USER, or DIR_GROUP
+[ -f /etc/sysconfig/bacula ] && . /etc/sysconfig/bacula
+
 RETVAL=0
 case "$1" in
     start)
-       OPTIONS=''
        if [ "${DIR_USER}" != '' ]; then
-	  OPTIONS="${OPTIONS} -u ${DIR_USER}"
+	  DIR_OPTIONS="${DIR_OPTIONS} -u ${DIR_USER}"
        fi
 										   
        if [ "${DIR_GROUP}" != '' ]; then
-	  OPTIONS="${OPTIONS} -g ${DIR_GROUP}"
+	  DIR_OPTIONS="${DIR_OPTIONS} -g ${DIR_GROUP}"
        fi
        echo -n "Starting Bacula Director services: "
-       daemon @sbindir@/bacula-dir $2 ${OPTIONS} -c @sysconfdir@/bacula-dir.conf
+       daemon @sbindir@/bacula-dir $2 ${DIR_OPTIONS} -c @sysconfdir@/bacula-dir.conf
        RETVAL=$?
        echo
        [ $RETVAL -eq 0 ] && touch @subsysdir@/bacula-dir

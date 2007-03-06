@@ -1,0 +1,63 @@
+
+ This patch fixes a bug in the bacula start/stop script where
+ the binary directory is used rather than the scripts directory.
+ Apply the patch to version 1.38.6 with:
+
+ cd <bacula-source>
+ patch -p0 <1.38.6-script.patch
+ make Makefiles
+ make install
+ ...
+
+Index: scripts/bacula.in
+===================================================================
+RCS file: /cvsroot/bacula/bacula/scripts/bacula.in,v
+retrieving revision 1.13.2.3
+diff -u -r1.13.2.3 bacula.in
+--- scripts/bacula.in	28 Mar 2006 16:42:19 -0000	1.13.2.3
++++ scripts/bacula.in	29 Mar 2006 16:24:51 -0000
+@@ -13,25 +13,22 @@
+ #  easier to "steal" this code for the development 
+ #  environment where they are different.
+ #  
+-BACFDBIN=@sbindir@
+ BACFDCFG=@sysconfdir@
+-BACSDBIN=@sbindir@
+ BACSDCFG=@sysconfdir@
+-BACDIRBIN=@sbindir@
+ BACDIRCFG=@sysconfdir@
+ 
+ case "$1" in
+    start)
+-      [ -x ${BACSDBIN}/bacula-ctl-sd ] && ${BACSDBIN}/bacula-ctl-sd $1 $2
+-      [ -x ${BACFDBIN}/bacula-ctl-fd ] && ${BACFDBIN}/bacula-ctl-fd $1 $2
+-      [ -x ${BACDIRBIN}/bacula-ctl-dir ] && ${BACDIRBIN}/bacula-ctl-dir $1 $2
++      [ -x ${BACSDCFG}/bacula-ctl-sd ] && ${BACSDCFG}/bacula-ctl-sd $1 $2
++      [ -x ${BACFDCFG}/bacula-ctl-fd ] && ${BACFDCFG}/bacula-ctl-fd $1 $2
++      [ -x ${BACDIRCFG}/bacula-ctl-dir ] && ${BACDIRCFG}/bacula-ctl-dir $1 $2
+       ;;
+ 
+    stop)
+       # Stop the FD first so that SD will fail jobs and update catalog
+-      [ -x ${BACFDBIN}/bacula-ctl-fd ] && ${BACFDBIN}/bacula-ctl-fd $1 $2
+-      [ -x ${BACSDBIN}/bacula-ctl-sd ] && ${BACSDBIN}/bacula-ctl-sd $1 $2
+-      [ -x ${BACDIRBIN}/bacula-ctl-dir ] && ${BACDIRBIN}/bacula-ctl-dir $1 $2
++      [ -x ${BACFDCFG}/bacula-ctl-fd ] && ${BACFDCFG}/bacula-ctl-fd $1 $2
++      [ -x ${BACSDCFG}/bacula-ctl-sd ] && ${BACSDCFG}/bacula-ctl-sd $1 $2
++      [ -x ${BACDIRCFG}/bacula-ctl-dir ] && ${BACDIRCFG}/bacula-ctl-dir $1 $2
+       echo
+       sleep 6
+       ;;
+@@ -42,9 +39,9 @@
+       ;;
+ 
+    status)
+-      [ -x ${BACSDBIN}/bacula-ctl-sd ] && ${BACSDBIN}/bacula-ctl-sd status
+-      [ -x ${BACFDBIN}/bacula-ctl-fd ] && ${BACFDBIN}/bacula-ctl-fd status
+-      [ -x ${BACDIRBIN}/bacula-ctl-dir ] && ${BACDIRBIN}/bacula-ctl-dir status
++      [ -x ${BACSDCFG}/bacula-ctl-sd ] && ${BACSDCFG}/bacula-ctl-sd status
++      [ -x ${BACFDCFG}/bacula-ctl-fd ] && ${BACFDCFG}/bacula-ctl-fd status
++      [ -x ${BACDIRCFG}/bacula-ctl-dir ] && ${BACDIRCFG}/bacula-ctl-dir status
+       ;;
+ 
+    *)

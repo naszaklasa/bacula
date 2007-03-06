@@ -19,26 +19,21 @@
  *
  *   Kern Sibbald, July MMIII
  *
- *   Version $Id: htable.c,v 1.7.4.1 2005/02/14 10:02:25 kerns Exp $
+ *   Version $Id: htable.c,v 1.11 2005/07/08 10:03:00 kerns Exp $
  *
  */
 /*
    Copyright (C) 2003-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -79,11 +74,11 @@ void htable::init(void *item, void *link, int tsize)
       tsize >>= 1;
    }
    loffset = (char *)link - (char *)item;
-   mask = ~((~0)<<pwr); 	      /* 3 bits => table size = 8 */
-   rshift = 30 - pwr;		      /* start using bits 28, 29, 30 */
-   num_items = 0;		      /* number of entries in table */
-   buckets = 1<<pwr;		      /* hash table size -- power of two */
-   max_items = buckets * 4;	      /* allow average 4 entries per chain */
+   mask = ~((~0)<<pwr);               /* 3 bits => table size = 8 */
+   rshift = 30 - pwr;                 /* start using bits 28, 29, 30 */
+   num_items = 0;                     /* number of entries in table */
+   buckets = 1<<pwr;                  /* hash table size -- power of two */
+   max_items = buckets * 4;           /* allow average 4 entries per chain */
    table = (hlink **)malloc(buckets * sizeof(hlink *));
    memset(table, 0, buckets * sizeof(hlink *));
    walkptr = NULL;
@@ -119,14 +114,14 @@ void htable::stats()
       p = table[i];
       j = 0;
       while (p) {
-	 p = (hlink *)(p->next);
-	 j++;
+         p = (hlink *)(p->next);
+         j++;
       }
       if (j > max) {
-	 max = j;
+         max = j;
       }
       if (j < MAX_COUNT) {
-	 hits[j]++;
+         hits[j]++;
       }
    }
    for (i=0; i < MAX_COUNT; i++) {
@@ -164,10 +159,10 @@ void htable::grow_table()
       Dmsg1(100, "Grow insert: %s\n", ((hlink *)((char *)item+loffset))->key);
       big->insert(((hlink *)((char *)item+loffset))->key, item);
       if (ni) {
-	 item = (void *)((char *)ni-loffset);
+         item = (void *)((char *)ni-loffset);
       } else {
-	 walkptr = NULL;
-	 item = next();
+         walkptr = NULL;
+         item = next();
       }
    }
    Dmsg1(100, "After copy new num_items=%d\n", big->num_items);
@@ -184,7 +179,7 @@ bool htable::insert(char *key, void *item)
 {
    hlink *hp;
    if (lookup(key)) {
-      return false;		      /* already exists */
+      return false;                   /* already exists */
    }
    sm_check(__FILE__, __LINE__, false);
    ASSERT(index < buckets);
@@ -215,7 +210,7 @@ void *htable::lookup(char *key)
 //    Dmsg2(100, "hp=0x%x key=%s\n", (long)hp, hp->key);
       if (hash == hp->hash && strcmp(key, hp->key) == 0) {
          Dmsg1(100, "lookup return %x\n", ((char *)hp)-loffset);
-	 return ((char *)hp)-loffset;
+         return ((char *)hp)-loffset;
       }
    }
    return NULL;
@@ -231,12 +226,12 @@ void *htable::next()
       walkptr = table[walk_index++];
       if (walkptr) {
          Dmsg3(100, "new walkptr=0x%x next=0x%x inx=%d\n", (unsigned)walkptr,
-	    (unsigned)(walkptr->next), walk_index-1);
+            (unsigned)(walkptr->next), walk_index-1);
       }
    }
    if (walkptr) {
       Dmsg2(100, "next: rtn 0x%x walk_index=%d\n",
-	 (unsigned)(((char *)walkptr)-loffset), walk_index);
+         (unsigned)(((char *)walkptr)-loffset), walk_index);
       return ((char *)walkptr)-loffset;
    }
    Dmsg0(100, "next: return NULL\n");
@@ -246,13 +241,13 @@ void *htable::next()
 void *htable::first()
 {
    Dmsg0(100, "Enter first\n");
-   walkptr = table[0];		      /* get first bucket */
-   walk_index = 1;		      /* Point to next index */
+   walkptr = table[0];                /* get first bucket */
+   walk_index = 1;                    /* Point to next index */
    while (!walkptr && walk_index < buckets) {
       walkptr = table[walk_index++];  /* go to next bucket */
       if (walkptr) {
          Dmsg3(100, "first new walkptr=0x%x next=0x%x inx=%d\n", (unsigned)walkptr,
-	    (unsigned)(walkptr->next), walk_index-1);
+            (unsigned)(walkptr->next), walk_index-1);
       }
    }
    if (walkptr) {
@@ -310,7 +305,7 @@ int main()
 
       jcrtbl->insert(jcr->key, jcr);
       if (i == 10) {
-	 save_jcr = jcr;
+         save_jcr = jcr;
       }
    }
    if (!(item = (MYJCR *)jcrtbl->lookup(save_jcr->key))) {

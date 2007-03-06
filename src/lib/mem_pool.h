@@ -3,25 +3,20 @@
  *
  *  Kern Sibbald, MM
  *
- *   Version $Id: mem_pool.h,v 1.10 2004/09/22 19:51:06 kerns Exp $
+ *   Version $Id: mem_pool.h,v 1.11.4.1 2006/01/15 11:18:45 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Copyright (C) 2000-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -46,8 +41,8 @@ extern POOLMEM  *sm_realloc_pool_memory(const char *fname, int line, POOLMEM *bu
 #define check_pool_memory_size(buf,size) sm_check_pool_memory_size(__FILE__, __LINE__, buf, size)
 extern POOLMEM  *sm_check_pool_memory_size(const char *fname, int line, POOLMEM *buf, int32_t size);
 
-#define free_pool_memory(x) sm_free_pool_memory(__FILE__, __LINE__, x) 
-#define free_memory(x) sm_free_pool_memory(__FILE__, __LINE__, x) 
+#define free_pool_memory(x) sm_free_pool_memory(__FILE__, __LINE__, x)
+#define free_memory(x) sm_free_pool_memory(__FILE__, __LINE__, x)
 extern void sm_free_pool_memory(const char *fname, int line, POOLMEM *buf);
 
 
@@ -62,11 +57,12 @@ extern POOLMEM  *check_pool_memory_size(POOLMEM *buf, int32_t size);
 extern void   free_pool_memory(POOLMEM *buf);
 
 #endif
- 
+
+extern void garbage_collect_memory_pool();
 extern void  close_memory_pool();
 extern void  print_memory_pool_stats();
 
-   
+
 
 #define PM_NOPOOL  0                  /* nonpooled memory */
 #define PM_NAME    1                  /* Bacula name */
@@ -83,7 +79,7 @@ public:
    ~POOL_MEM() { free_pool_memory(mem); mem = NULL; }
    char *c_str() const { return mem; }
    int size() const { return sizeof_pool_memory(mem); }
-   char *check_size(int32_t size) { 
+   char *check_size(int32_t size) {
       mem = check_pool_memory_size(mem, size);
       return mem;
    }

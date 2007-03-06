@@ -94,9 +94,9 @@ dummy:
 
 #
 LIBSRCS = find.c match.c find_one.c attibs.c create_file.c \
-	  bfile.c enable_priv.c makepath.c save-cwd.c winapi.c
+	  bfile.c enable_priv.c fstype.c makepath.c save-cwd.c winapi.c
 LIBOBJS = find.o match.o find_one.o attribs.o create_file.o \
-	  bfile.o enable_priv.o makepath.o save-cwd.o winapi.o
+	  bfile.o enable_priv.o fstype.o makepath.o save-cwd.o winapi.o
 
 .SUFFIXES:	.c .o
 .PHONY:

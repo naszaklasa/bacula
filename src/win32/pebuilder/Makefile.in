@@ -31,6 +31,7 @@ pebuilder:
 	cp -f ../console/Release/bconsole.exe bacula/files/
 	cp -f ../wx-console/Release/wx-console.exe bacula/files/
 	cp -f ../../../../depkgs-win32/pthreads/pthreadVCE.dll bacula/files/
+	cp -f c:/windows/system32/msvcr71.dll bacula/files
 	cp -f ../License.txt bacula/files/
 
 zip: pebuilder

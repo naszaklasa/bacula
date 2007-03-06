@@ -1,0 +1,47 @@
+
+25Oct04  1.36.0-sd-block.patch
+ This patch will keep the SD from blocking simultaneous Jobs during
+ a tape mount. 
+
+30Oct04 1.36.0-verify.patch
+ This patch fixes, at least partially, a Verify error where
+ the count of files expected did not agree with the count 
+ found. There are still some cases where the expected count
+ exceeds the found probably due to the same directory being
+ examined multiple times.
+
+04Nov04 1.36.0-verify-2.patch
+ This patch fixes the calculation for the total number of files
+ to be restored or verified by not double counting files that are
+ split across a tape file or across tapes.
+ To apply this patch, you must first have applied 1.36.0-verify.patch.
+  
+10Nov04 1.36.0-jobid-restore.patch
+ This patch fixes a restore to permit specifying both a JobId and
+ a filename or list of files to be restored.  Apply to 1.36.0 with:
+
+11Nov04 1.36.0-jobdefs.patch
+ This patch fixes JobDefs so that if a Storage resource is
+ specified in a Job, it is not overridden by the JobDefs.
+
+13Nov04 1.36.0-list.patch
+ This patch corrects a Bacula crash after a "list nextvol" followed
+ by "list media". 
+
+21Nov04 1.36.0-tree.patch
+ This patch fixes (hopefully) a segment fault in restore when an
+ empty path is found for a file.
+
+21Nov04 1.36.0-autochanger.patch
+ This patch should fix a problem where the autochanger thinks
+ a Volume is in the current magazine and loops a few times then
+ gives up.
+
+24Nov04 1.36.0-autochanger2.patch
+ This patch fixes an autochanger problem where Bacula was trying
+ to access a Volume that was not in the autochanger. You *must*
+ also apply patch 1.36.0-autochanger.patch for this patch to work
+ correctly. This patch will probably also correct some problems 
+ introduced with version 1.36 (dcrs) that make update slots
+ fail.
+

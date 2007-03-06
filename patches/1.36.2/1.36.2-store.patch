@@ -1,0 +1,29 @@
+
+ This patch fails a job if no Storage resource is specified and
+ the job attempts to call the SD.
+
+ Apply the patch to 1.36.2 with:
+
+ cd <bacula-source>
+ patch -p0 <1.36.2-store.patch
+ make
+ ...
+
+Index: src/dird/msgchan.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/msgchan.c,v
+retrieving revision 1.32.4.1
+diff -u -r1.32.4.1 msgchan.c
+--- src/dird/msgchan.c	14 Feb 2005 10:02:21 -0000	1.32.4.1
++++ src/dird/msgchan.c	18 Mar 2005 15:40:53 -0000
+@@ -66,6 +66,10 @@
+    BSOCK *sd;
+    STORE *store;
+ 
++   if (!jcr->storage[0]) {
++      Jmsg(jcr, M_FATAL, 0, _("Attempt to contact the Storage daemon with no Storage resource.\n"));
++      return false;
++   }
+    store = (STORE *)jcr->storage[0]->first();
+ 
+    /*

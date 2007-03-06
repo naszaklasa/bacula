@@ -35,12 +35,11 @@
 /* Define if you want to use SQLite */
 #undef HAVE_SQLITE
 
+/* Define if you want to use SQLite3 */
+#undef HAVE_SQLITE3
+
 /* Define if you want to use Berkeley DB */
 #undef HAVE_BERKELEY_DB
-
-
-/* Define if you want to use PostgreSQL */
-#undef HAVE_PGSQL
 
 /* Define if you want to use mSQL */
 #undef HAVE_MSQL
@@ -147,6 +146,9 @@
 /* Directory for PID files */
 #undef _PATH_BACULA_PIDDIR
 
+/* LOCALEDIR */
+#undef LOCALEDIR
+
 /* Define if you have zlib */
 #undef HAVE_LIBZ
 
@@ -188,6 +190,7 @@
 #undef llu
 
 #undef HAVE_READLINE 
+#undef HAVE_PYTHON
 
 #undef HAVE_GMP
 
@@ -216,3 +219,6 @@
 
 /* Defined if Gtk+-2.4 or greater is present */
 #undef HAVE_GTK_2_4
+
+/* Needed on HP-UX/g++ systems to support long long ints (int64) */
+#undef _INCLUDE_LONGLONG

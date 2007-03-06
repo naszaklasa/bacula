@@ -4,26 +4,20 @@
  *
  *     Kern Sibbald, September MM
  *
- *    Version $Id: ua_server.c,v 1.35.4.1 2005/02/14 10:02:22 kerns Exp $
+ *    Version $Id: ua_server.c,v 1.40.2.1 2005/12/20 23:15:01 kerns Exp $
  */
-
 /*
    Copyright (C) 2000-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -124,7 +118,7 @@ static void *handle_UA_client_request(void *arg)
    ua = new_ua_context(jcr);
    ua->UA_sock = (BSOCK *)arg;
 
-   bnet_recv(ua->UA_sock);	    /* Get first message */
+   bnet_recv(ua->UA_sock);          /* Get first message */
    if (!authenticate_user_agent(ua)) {
       goto getout;
    }
@@ -132,28 +126,28 @@ static void *handle_UA_client_request(void *arg)
    while (!ua->quit) {
       stat = bnet_recv(ua->UA_sock);
       if (stat >= 0) {
-	 pm_strcpy(ua->cmd, ua->UA_sock->msg);
-	 parse_ua_args(ua);
+         pm_strcpy(ua->cmd, ua->UA_sock->msg);
+         parse_ua_args(ua);
          if (ua->argc > 0 && ua->argk[0][0] == '.') {
-	    do_a_dot_command(ua, ua->cmd);
-	 } else {
-	    do_a_command(ua, ua->cmd);
-	 }
-	 if (!ua->quit) {
-	    if (ua->auto_display_messages) {
+            do_a_dot_command(ua, ua->cmd);
+         } else {
+            do_a_command(ua, ua->cmd);
+         }
+         if (!ua->quit) {
+            if (ua->auto_display_messages) {
                pm_strcpy(ua->cmd, "messages");
-	       qmessagescmd(ua, ua->cmd);
-	       ua->user_notified_msg_pending = FALSE;
-	    } else if (!ua->user_notified_msg_pending && console_msg_pending) {
+               qmessagescmd(ua, ua->cmd);
+               ua->user_notified_msg_pending = FALSE;
+            } else if (!ua->gui && !ua->user_notified_msg_pending && console_msg_pending) {
                bsendmsg(ua, _("You have messages.\n"));
-	       ua->user_notified_msg_pending = TRUE;
-	    }
-	    bnet_sig(ua->UA_sock, BNET_EOD); /* send end of command */
-	 }
+               ua->user_notified_msg_pending = TRUE;
+            }
+            bnet_sig(ua->UA_sock, BNET_EOD); /* send end of command */
+         }
       } else if (is_bnet_stop(ua->UA_sock)) {
-	 ua->quit = true;
+         ua->quit = true;
       } else { /* signal */
-	 bnet_sig(ua->UA_sock, BNET_POLL);
+         bnet_sig(ua->UA_sock, BNET_POLL);
       }
    }
 

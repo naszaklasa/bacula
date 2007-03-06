@@ -1,23 +1,17 @@
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+  Copyright (C) 2001-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
-
 /*
    Derived from a SMTPclient:
 
@@ -28,9 +22,9 @@
        www.engelschall.com
 
    Kern Sibbald, July 2001
-  
-   Version $Id: bsmtp.c,v 1.11 2004/06/15 10:40:48 kerns Exp $
-    
+
+   Version $Id: bsmtp.c,v 1.16.2.1 2006/03/20 07:16:40 kerns Exp $
+
  */
 
 #ifdef APCUPSD
@@ -51,6 +45,9 @@ UPSINFO *core_ups = &myUPS;
 
 #endif
 
+/* Dummy functions */
+int generate_daemon_event(JCR *jcr, const char *event) 
+   { return 1; }
 
 #ifndef MAXSTRING
 #define MAXSTRING 254
@@ -70,7 +67,7 @@ static char my_hostname[MAXSTRING];
 
 
 /*
- *  examine message from server 
+ *  examine message from server
  */
 static void get_response(void)
 {
@@ -79,18 +76,18 @@ static void get_response(void)
     Dmsg0(50, "Calling fgets on read socket rfp.\n");
     buf[3] = 0;
     while (fgets(buf, sizeof(buf), rfp)) {
-	int len = strlen(buf);
-	if (len > 0) {
-	   buf[len-1] = 0;
-	}
+        int len = strlen(buf);
+        if (len > 0) {
+           buf[len-1] = 0;
+        }
         Dmsg2(10, "%s --> %s\n", mailhost, buf);
         if (!isdigit((int)buf[0]) || buf[0] > '3') {
-            Pmsg2(0, "Fatal malformed reply from %s: %s\n", mailhost, buf);
-	    exit(1);
-	}
+            Pmsg2(0, _("Fatal malformed reply from %s: %s\n"), mailhost, buf);
+            exit(1);
+        }
         if (buf[3] != '-') {
-	    break;
-	}
+            break;
+        }
     }
     return;
 }
@@ -105,11 +102,11 @@ static void chat(const char *fmt, ...)
     va_start(ap, fmt);
     vfprintf(sfp, fmt, ap);
     if (debug_level >= 10) {
-       fprintf(stdout, "%s --> ", my_hostname); 
+       fprintf(stdout, "%s --> ", my_hostname);
        vfprintf(stdout, fmt, ap);
     }
     va_end(ap);
-  
+
     fflush(sfp);
     if (debug_level >= 10) {
        fflush(stdout);
@@ -121,15 +118,17 @@ static void chat(const char *fmt, ...)
 static void usage()
 {
    fprintf(stderr,
-"\n"
-"Usage: %s [-f from] [-h mailhost] [-s subject] [-c copy] [recepient ...]\n"
+_("\n"
+"Usage: %s [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]\n"
 "       -c          set the Cc: field\n"
 "       -dnn        set debug level to nn\n"
 "       -f          set the From: field\n"
 "       -h          use mailhost:port as the SMTP server\n"
 "       -s          set the Subject: field\n"
-"       -?          print this message.\n"  
-"\n", MY_NAME);
+"       -r          set the Reply-To: field\n"
+"       -l          set the maximum number of lines that should be sent (default: unlimited)\n"
+"       -?          print this message.\n"
+"\n"), MY_NAME);
 
    exit(1);
 }
@@ -145,62 +144,73 @@ int main (int argc, char *argv[])
     struct sockaddr_in sin;
     struct hostent *hp;
     int s, r, i, ch;
+    unsigned long maxlines, lines;
     struct passwd *pwd;
     char *cp, *p;
     time_t now = time(NULL);
     struct tm tm;
+    
+   setlocale(LC_ALL, "en_US");
+   bindtextdomain("bacula", LOCALEDIR);
+   textdomain("bacula");
 
    my_name_is(argc, argv, "bsmtp");
+   maxlines = 0;
 
-   while ((ch = getopt(argc, argv, "c:d:f:h:r:s:?")) != -1) {
+   while ((ch = getopt(argc, argv, "c:d:f:h:r:s:l:?")) != -1) {
       switch (ch) {
-      case 'c':                    
+      case 'c':
          Dmsg1(20, "cc=%s\n", optarg);
-	 cc_addr = optarg;
-	 break;
+         cc_addr = optarg;
+         break;
 
       case 'd':                    /* set debug level */
-	 debug_level = atoi(optarg);
-	 if (debug_level <= 0) {
-	    debug_level = 1; 
-	 }
+         debug_level = atoi(optarg);
+         if (debug_level <= 0) {
+            debug_level = 1;
+         }
          Dmsg1(20, "Debug level = %d\n", debug_level);
-	 break;
+         break;
 
       case 'f':                    /* from */
-	 from_addr = optarg;
-	 break;
+         from_addr = optarg;
+         break;
 
       case 'h':                    /* smtp host */
          Dmsg1(20, "host=%s\n", optarg);
          p = strchr(optarg, ':');
-	 if (p) {
-	    *p++ = 0;
-	    mailport = atoi(p);
-	 }
-	 mailhost = optarg;
-	 break;
+         if (p) {
+            *p++ = 0;
+            mailport = atoi(p);
+         }
+         mailhost = optarg;
+         break;
 
       case 's':                    /* subject */
          Dmsg1(20, "subject=%s\n", optarg);
-	 subject = optarg;
-	 break;
+         subject = optarg;
+         break;
 
       case 'r':                    /* reply address */
-	 reply_addr = optarg;
+         reply_addr = optarg;
+         break;
+
+      case 'l':
+	 Dmsg1(20, "maxlines=%s\n", optarg);
+	 maxlines = (unsigned long) atol(optarg);
 	 break;
 
       case '?':
       default:
-	 usage();
+         usage();
 
-      }  
+      }
    }
    argc -= optind;
    argv += optind;
 
    if (argc < 1) {
-      Pmsg0(0, "Fatal error: no recipient given.\n");
+      Pmsg0(0, _("Fatal error: no recipient given.\n"));
       usage();
       exit(1);
    }
@@ -210,23 +220,23 @@ int main (int argc, char *argv[])
     */
    if (mailhost == NULL) {
       if ((cp = getenv("SMTPSERVER")) != NULL) {
-	 mailhost = cp;
+         mailhost = cp;
       } else {
          mailhost = "localhost";
       }
    }
 
    /*
-    *  Find out my own host name for HELO; 
+    *  Find out my own host name for HELO;
     *  if possible, get the fully qualified domain name
     */
    if (gethostname(my_hostname, sizeof(my_hostname) - 1) < 0) {
-      Pmsg1(0, "Fatal gethostname error: ERR=%s\n", strerror(errno));
+      Pmsg1(0, _("Fatal gethostname error: ERR=%s\n"), strerror(errno));
       exit(1);
    }
    if ((hp = gethostbyname(my_hostname)) == NULL) {
-      Pmsg2(0, "Fatal gethostbyname for myself failed \"%s\": ERR=%s\n", my_hostname,
-	 strerror(errno));
+      Pmsg2(0, _("Fatal gethostbyname for myself failed \"%s\": ERR=%s\n"), my_hostname,
+         strerror(errno));
       exit(1);
    }
    strcpy(my_hostname, hp->h_name);
@@ -250,18 +260,18 @@ int main (int argc, char *argv[])
     */
 hp:
    if ((hp = gethostbyname(mailhost)) == NULL) {
-      Pmsg2(0, "Error unknown mail host \"%s\": ERR=%s\n", mailhost,
-	 strerror(errno));
+      Pmsg2(0, _("Error unknown mail host \"%s\": ERR=%s\n"), mailhost,
+         strerror(errno));
       if (strcasecmp(mailhost, "localhost") != 0) {
-         Pmsg0(0, "Retrying connection using \"localhost\".\n");
+         Pmsg0(0, _("Retrying connection using \"localhost\".\n"));
          mailhost = "localhost";
-	 goto hp;
+         goto hp;
       }
       exit(1);
    }
 
    if (hp->h_addrtype != AF_INET) {
-      Pmsg1(0, "Fatal error: Unknown address family for smtp host: %d\n", hp->h_addrtype);
+      Pmsg1(0, _("Fatal error: Unknown address family for smtp host: %d\n"), hp->h_addrtype);
       exit(1);
    }
    memset((char *)&sin, 0, sizeof(sin));
@@ -269,28 +279,28 @@ hp:
    sin.sin_family = hp->h_addrtype;
    sin.sin_port = htons(mailport);
    if ((s = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-      Pmsg1(0, "Fatal socket error: ERR=%s\n", strerror(errno));
+      Pmsg1(0, _("Fatal socket error: ERR=%s\n"), strerror(errno));
       exit(1);
    }
    if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) < 0) {
-      Pmsg2(0, "Fatal connect error to %s: ERR=%s\n", mailhost, strerror(errno));
+      Pmsg2(0, _("Fatal connect error to %s: ERR=%s\n"), mailhost, strerror(errno));
       exit(1);
    }
    Dmsg0(20, "Connected\n");
    if ((r = dup(s)) < 0) {
-      Pmsg1(0, "Fatal dup error: ERR=%s\n", strerror(errno));
+      Pmsg1(0, _("Fatal dup error: ERR=%s\n"), strerror(errno));
       exit(1);
    }
    if ((sfp = fdopen(s, "w")) == 0) {
-      Pmsg1(0, "Fatal fdopen error: ERR=%s\n", strerror(errno));
+      Pmsg1(0, _("Fatal fdopen error: ERR=%s\n"), strerror(errno));
       exit(1);
    }
    if ((rfp = fdopen(r, "r")) == 0) {
-      Pmsg1(0, "Fatal fdopen error: ERR=%s\n", strerror(errno));
+      Pmsg1(0, _("Fatal fdopen error: ERR=%s\n"), strerror(errno));
       exit(1);
    }
 
-   /* 
+   /*
     *  Send SMTP headers
     */
    get_response(); /* banner */
@@ -308,61 +318,82 @@ hp:
    Dmsg0(20, "Data\n");
    chat("data\r\n");
 
-   /* 
+   /*
     *  Send message header
     */
    fprintf(sfp, "From: %s\r\n", from_addr);
+   Dmsg1(10, "From: %s\r\n", from_addr);
    if (subject) {
       fprintf(sfp, "Subject: %s\r\n", subject);
+      Dmsg1(10, "Subject: %s\r\n", subject);
    }
    if (reply_addr) {
       fprintf(sfp, "Reply-To: %s\r\n", reply_addr);
+      Dmsg1(10, "Reply-To: %s\r\n", reply_addr);
    }
    if (err_addr) {
       fprintf(sfp, "Errors-To: %s\r\n", err_addr);
+      Dmsg1(10, "Errors-To: %s\r\n", err_addr);
    }
    if ((pwd = getpwuid(getuid())) == 0) {
       fprintf(sfp, "Sender: userid-%d@%s\r\n", (int)getuid(), my_hostname);
+      Dmsg2(10, "Sender: userid-%d@%s\r\n", (int)getuid(), my_hostname);
    } else {
       fprintf(sfp, "Sender: %s@%s\r\n", pwd->pw_name, my_hostname);
+      Dmsg2(10, "Sender: %s@%s\r\n", pwd->pw_name, my_hostname);
    }
 
    fprintf(sfp, "To: %s", argv[0]);
+   Dmsg1(10, "To: %s", argv[0]);
    for (i = 1; i < argc; i++) {
       fprintf(sfp, ",%s", argv[i]);
+      Dmsg1(10, ",%s", argv[i]);
    }
 
    fprintf(sfp, "\r\n");
+   Dmsg0(10, "\r\n");
    if (cc_addr) {
       fprintf(sfp, "Cc: %s\r\n", cc_addr);
+      Dmsg1(10, "Cc: %s\r\n", cc_addr);
    }
 
    /* Add RFC822 date */
    localtime_r(&now, &tm);
    strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %z", &tm);
    fprintf(sfp, "Date: %s\r\n", buf);
+   Dmsg1(10, "Date: %s\r\n", buf);
 
    fprintf(sfp, "\r\n");
 
-   /* 
-    *  Send message body 
+   /*
+    *  Send message body
     */
+   lines = 0;
    while (fgets(buf, sizeof(buf), stdin)) {
+      if (maxlines > 0 && ++lines > maxlines) {
+         Dmsg1(20, "skip line because of maxlines limit: %lu\n", maxlines);
+	 continue;
+      }
       buf[strlen(buf)-1] = 0;
       if (strcmp(buf, ".") == 0) { /* quote lone dots */
          fprintf(sfp, "..\r\n");
-      } else {			   /* pass body through unchanged */
+      } else {                     /* pass body through unchanged */
          fprintf(sfp, "%s\r\n", buf);
       }
    }
 
-   /* 
+   if (lines > maxlines) {
+      Dmsg1(10, "hit maxlines limit: %lu\n", maxlines);
+      fprintf(sfp, "\r\n[maximum of %lu lines exceeded, skipped %lu lines of output]\r\n", maxlines, lines-maxlines);
+   }
+
+   /*
     *  Send SMTP quit command
     */
    chat(".\r\n");
    chat("quit\r\n");
 
-   /* 
+   /*
     *  Go away gracefully ...
     */
    exit(0);

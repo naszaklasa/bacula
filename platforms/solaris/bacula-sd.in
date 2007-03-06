@@ -19,7 +19,7 @@ case "$1" in
        ;;
     stop)
        echo "Stopping the Bacula Storage daemon: "
-#      killproc @sbindir@/bacula-sd
+       pkill -x bacula-sd
        RETVAL=$?
        echo
        [ $RETVAL -eq 0 ] && rm -f @subsysdir@/bacula-sd

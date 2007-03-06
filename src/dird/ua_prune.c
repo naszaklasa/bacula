@@ -1,30 +1,24 @@
 /*
  *
  *   Bacula Director -- User Agent Database prune Command
- *	Applies retention periods
+ *      Applies retention periods
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id: ua_prune.c,v 1.36 2004/11/21 13:10:15 kerns Exp $
+ *   Version $Id: ua_prune.c,v 1.47.2.1 2006/03/04 11:10:18 kerns Exp $
  */
-
 /*
-   Copyright (C) 2002-2004 Kern Sibbald and John Walker
+   Copyright (C) 2002-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -32,7 +26,6 @@
 #include "dird.h"
 
 /* Imported functions */
-int mark_media_purged(UAContext *ua, MEDIA_DBR *mr);
 
 /* Forward referenced functions */
 
@@ -61,19 +54,19 @@ extern char *sel_JobMedia;
 /* In memory list of JobIds */
 struct s_file_del_ctx {
    JobId_t *JobId;
-   int num_ids; 		      /* ids stored */
-   int max_ids; 		      /* size of array */
-   int num_del; 		      /* number deleted */
-   int tot_ids; 		      /* total to process */
+   int num_ids;                       /* ids stored */
+   int max_ids;                       /* size of array */
+   int num_del;                       /* number deleted */
+   int tot_ids;                       /* total to process */
 };
 
 struct s_job_del_ctx {
-   JobId_t *JobId;		      /* array of JobIds */
-   char *PurgedFiles;		      /* Array of PurgedFile flags */
-   int num_ids; 		      /* ids stored */
-   int max_ids; 		      /* size of array */
-   int num_del; 		      /* number deleted */
-   int tot_ids; 		      /* total to process */
+   JobId_t *JobId;                    /* array of JobIds */
+   char *PurgedFiles;                 /* Array of PurgedFile flags */
+   int num_ids;                       /* ids stored */
+   int max_ids;                       /* size of array */
+   int num_del;                       /* number deleted */
+   int tot_ids;                       /* total to process */
 };
 
 struct s_count_ctx {
@@ -82,14 +75,14 @@ struct s_count_ctx {
 
 
 /*
- * Called here to count entries to be deleted 
+ * Called here to count entries to be deleted
  */
 static int count_handler(void *ctx, int num_fields, char **row)
 {
    struct s_count_ctx *cnt = (struct s_count_ctx *)ctx;
 
    if (row[0]) {
-      cnt->count = atoi(row[0]);
+      cnt->count = str_to_int64(row[0]);
    } else {
       cnt->count = 0;
    }
@@ -120,7 +113,7 @@ static int job_delete_handler(void *ctx, int num_fields, char **row)
 {
    struct s_job_del_ctx *del = (struct s_job_del_ctx *)ctx;
 
-   if (del->num_ids == MAX_DEL_LIST_LEN) {  
+   if (del->num_ids == MAX_DEL_LIST_LEN) {
       return 1;
    }
    if (del->num_ids == del->max_ids) {
@@ -137,13 +130,13 @@ static int file_delete_handler(void *ctx, int num_fields, char **row)
 {
    struct s_file_del_ctx *del = (struct s_file_del_ctx *)ctx;
 
-   if (del->num_ids == MAX_DEL_LIST_LEN) {  
+   if (del->num_ids == MAX_DEL_LIST_LEN) {
       return 1;
    }
    if (del->num_ids == del->max_ids) {
       del->max_ids = (del->max_ids * 3) / 2;
       del->JobId = (JobId_t *)brealloc(del->JobId, sizeof(JobId_t) *
-	 del->max_ids);
+         del->max_ids);
    }
    del->JobId[del->num_ids++] = (JobId_t)str_to_int64(row[0]);
    return 0;
@@ -154,7 +147,7 @@ static int file_delete_handler(void *ctx, int num_fields, char **row)
  *
  *    prune files (from) client=xxx
  *    prune jobs (from) client=xxx
- *    prune volume=xxx	
+ *    prune volume=xxx
  */
 int prunecmd(UAContext *ua, const char *cmd)
 {
@@ -170,38 +163,38 @@ int prunecmd(UAContext *ua, const char *cmd)
       NULL};
 
    if (!open_db(ua)) {
-      return 01;
+      return 0;
    }
 
    /* First search args */
-   kw = find_arg_keyword(ua, keywords);  
+   kw = find_arg_keyword(ua, keywords);
    if (kw < 0 || kw > 2) {
       /* no args, so ask user */
-      kw = do_keyword_prompt(ua, _("Choose item to prune"), keywords);  
-   }	   
-    
+      kw = do_keyword_prompt(ua, _("Choose item to prune"), keywords);
+   }
+
    switch (kw) {
    case 0:  /* prune files */
       client = get_client_resource(ua);
       if (!client || !confirm_retention(ua, &client->FileRetention, "File")) {
-	 return 0;
+         return 0;
       }
       prune_files(ua, client);
       return 1;
    case 1:  /* prune jobs */
       client = get_client_resource(ua);
       if (!client || !confirm_retention(ua, &client->JobRetention, "Job")) {
-	 return 0;
+         return 0;
       }
       /* ****FIXME**** allow user to select JobType */
       prune_jobs(ua, client, JT_BACKUP);
       return 1;
    case 2:  /* prune volume */
       if (!select_pool_and_media_dbr(ua, &pr, &mr)) {
-	 return 0;
+         return 0;
       }
       if (!confirm_retention(ua, &mr.VolRetention, "Volume")) {
-	 return 0;
+         return 0;
       }
       prune_volume(ua, &mr);
       return 1;
@@ -243,9 +236,10 @@ int prune_files(UAContext *ua, CLIENT *client)
 
    period = client->FileRetention;
    now = (utime_t)time(NULL);
-       
+
    /* Select Jobs -- for counting */
-   Mmsg(query, select_job, edit_uint64(now - period, ed1), cr.ClientId);
+   Mmsg(query, select_job, edit_uint64(now - period, ed1), 
+        edit_int64(cr.ClientId, ed2));
    Dmsg1(050, "select sql=%s\n", query);
    if (!db_sql_query(ua->db, query, file_count_handler, (void *)&del)) {
       if (ua->verbose) {
@@ -254,7 +248,7 @@ int prune_files(UAContext *ua, CLIENT *client)
       Dmsg0(050, "Count failed\n");
       goto bail_out;
    }
-      
+
    if (del.tot_ids == 0) {
       if (ua->verbose) {
          bsendmsg(ua, _("No Files found to prune.\n"));
@@ -265,7 +259,7 @@ int prune_files(UAContext *ua, CLIENT *client)
    if (del.tot_ids < MAX_DEL_LIST_LEN) {
       del.max_ids = del.tot_ids + 1;
    } else {
-      del.max_ids = MAX_DEL_LIST_LEN; 
+      del.max_ids = MAX_DEL_LIST_LEN;
    }
    del.tot_ids = 0;
 
@@ -275,29 +269,23 @@ int prune_files(UAContext *ua, CLIENT *client)
    db_sql_query(ua->db, query, file_delete_handler, (void *)&del);
 
    for (i=0; i < del.num_ids; i++) {
-      struct s_count_ctx cnt;
-      Dmsg1(050, "Delete JobId=%d\n", del.JobId[i]);
-      Mmsg(query, cnt_File, del.JobId[i]);
-      cnt.count = 0;
-      db_sql_query(ua->db, query, count_handler, (void *)&cnt);
-      del.tot_ids += cnt.count;
-      Mmsg(query, del_File, del.JobId[i]);
+      Mmsg(query, del_File, edit_int64(del.JobId[i], ed1));
+      Dmsg1(050, "Delete JobId=%s\n", ed1);
       db_sql_query(ua->db, query, NULL, (void *)NULL);
-      /* 
+      /*
        * Now mark Job as having files purged. This is necessary to
        * avoid having too many Jobs to process in future prunings. If
        * we don't do this, the number of JobId's in our in memory list
        * could grow very large.
        */
-      Mmsg(query, upd_Purged, del.JobId[i]);
+      Mmsg(query, upd_Purged, edit_int64(del.JobId[i], ed1));
       db_sql_query(ua->db, query, NULL, (void *)NULL);
       Dmsg1(050, "Del sql=%s\n", query);
    }
-   edit_uint64_with_commas(del.tot_ids, ed1);
-   edit_uint64_with_commas(del.num_ids, ed2);
-   bsendmsg(ua, _("Pruned %s Files from %s Jobs for client %s from catalog.\n"), 
-      ed1, ed2, client->hdr.name);
-   
+   edit_uint64_with_commas(del.num_ids, ed1);
+   bsendmsg(ua, _("Pruned Files from %s Jobs for client %s from catalog.\n"),
+      ed1, client->hdr.name);
+
 bail_out:
    db_unlock(ua->db);
    if (del.JobId) {
@@ -308,7 +296,7 @@ bail_out:
 }
 
 
-static void drop_temp_tables(UAContext *ua) 
+static void drop_temp_tables(UAContext *ua)
 {
    int i;
    for (i=0; drop_deltabs[i]; i++) {
@@ -316,7 +304,7 @@ static void drop_temp_tables(UAContext *ua)
    }
 }
 
-static int create_temp_tables(UAContext *ua) 
+static int create_temp_tables(UAContext *ua)
 {
    int i;
    /* Create temp tables and indicies */
@@ -324,7 +312,7 @@ static int create_temp_tables(UAContext *ua)
       if (!db_sql_query(ua->db, create_deltabs[i], NULL, (void *)NULL)) {
          bsendmsg(ua, "%s", db_strerror(ua->db));
          Dmsg0(050, "create DelTables table failed\n");
-	 return 0;
+         return 0;
       }
    }
    return 1;
@@ -352,7 +340,7 @@ int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
    int i;
    utime_t now, period;
    CLIENT_DBR cr;
-   char ed1[50];
+   char ed1[50], ed2[50];
 
    db_lock(ua->db);
    memset(&cr, 0, sizeof(cr));
@@ -374,12 +362,13 @@ int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
       goto bail_out;
    }
 
-   /* 
+   /*
     * Select all files that are older than the JobRetention period
     *  and stuff them into the "DeletionCandidates" table.
     */
    edit_uint64(now - period, ed1);
-   Mmsg(query, insert_delcand, (char)JobType, ed1, cr.ClientId);
+   Mmsg(query, insert_delcand, (char)JobType, ed1, 
+        edit_int64(cr.ClientId, ed2));
    if (!db_sql_query(ua->db, query, NULL, (void *)NULL)) {
       if (ua->verbose) {
          bsendmsg(ua, "%s", db_strerror(ua->db));
@@ -397,7 +386,7 @@ int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
       Dmsg0(050, "Count failed\n");
       goto bail_out;
    }
-      
+
    if (cnt.count == 0) {
       if (ua->verbose) {
          bsendmsg(ua, _("No Jobs found to prune.\n"));
@@ -408,51 +397,54 @@ int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
    if (cnt.count < MAX_DEL_LIST_LEN) {
       del.max_ids = cnt.count + 1;
    } else {
-      del.max_ids = MAX_DEL_LIST_LEN; 
+      del.max_ids = MAX_DEL_LIST_LEN;
    }
    del.JobId = (JobId_t *)malloc(sizeof(JobId_t) * del.max_ids);
    del.PurgedFiles = (char *)malloc(del.max_ids);
 
+   /* ed1 = JobTDate */
+   edit_int64(cr.ClientId, ed2);
    switch (JobType) {
    case JT_BACKUP:
-      Mmsg(query, select_backup_del, ed1, ed1, cr.ClientId);
+      Mmsg(query, select_backup_del, ed1, ed1, ed2);
       break;
    case JT_RESTORE:
-      Mmsg(query, select_restore_del, ed1, ed1, cr.ClientId);
+      Mmsg(query, select_restore_del, ed1, ed1, ed2);
       break;
    case JT_VERIFY:
-      Mmsg(query, select_verify_del, ed1, ed1, cr.ClientId);
+      Mmsg(query, select_verify_del, ed1, ed1, ed2);
       break;
    case JT_ADMIN:
-      Mmsg(query, select_admin_del, ed1, ed1, cr.ClientId);
+      Mmsg(query, select_admin_del, ed1, ed1, ed2);
       break;
    }
    if (!db_sql_query(ua->db, query, job_delete_handler, (void *)&del)) {
       bsendmsg(ua, "%s", db_strerror(ua->db));
    }
 
-   /* 
+   /*
     * OK, now we have the list of JobId's to be pruned, first check
     * if the Files have been purged, if not, purge (delete) them.
     * Then delete the Job entry, and finally and JobMedia records.
     */
    for (i=0; i < del.num_ids; i++) {
-      Dmsg1(050, "Delete JobId=%d\n", del.JobId[i]);
+      edit_int64(del.JobId[i], ed1);
+      Dmsg1(050, "Delete JobId=%s\n", ed1);
       if (!del.PurgedFiles[i]) {
-	 Mmsg(query, del_File, del.JobId[i]);
-	 if (!db_sql_query(ua->db, query, NULL, (void *)NULL)) {
+         Mmsg(query, del_File, ed1);
+         if (!db_sql_query(ua->db, query, NULL, (void *)NULL)) {
             bsendmsg(ua, "%s", db_strerror(ua->db));
-	 }
+         }
          Dmsg1(050, "Del sql=%s\n", query);
       }
 
-      Mmsg(query, del_Job, del.JobId[i]);
+      Mmsg(query, del_Job, ed1);
       if (!db_sql_query(ua->db, query, NULL, (void *)NULL)) {
          bsendmsg(ua, "%s", db_strerror(ua->db));
       }
       Dmsg1(050, "Del sql=%s\n", query);
 
-      Mmsg(query, del_JobMedia, del.JobId[i]);
+      Mmsg(query, del_JobMedia, ed1);
       if (!db_sql_query(ua->db, query, NULL, (void *)NULL)) {
          bsendmsg(ua, "%s", db_strerror(ua->db));
       }
@@ -460,7 +452,7 @@ int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
    }
    bsendmsg(ua, _("Pruned %d %s for client %s from catalog.\n"), del.num_ids,
       del.num_ids==1?_("Job"):_("Jobs"), client->hdr.name);
-   
+
 bail_out:
    drop_temp_tables(ua);
    db_unlock(ua->db);
@@ -485,27 +477,36 @@ int prune_volume(UAContext *ua, MEDIA_DBR *mr)
    int i, stat = 0;
    JOB_DBR jr;
    utime_t now, period;
+   char ed1[50];
 
    db_lock(ua->db);
    memset(&jr, 0, sizeof(jr));
    memset(&del, 0, sizeof(del));
 
    /*
-    * Find out how many Jobs remain on this Volume by 
+    * Find out how many Jobs remain on this Volume by
     *  counting the JobMedia records.
     */
    cnt.count = 0;
-   Mmsg(query, cnt_JobMedia, mr->MediaId);
+   Mmsg(query, cnt_JobMedia, edit_int64(mr->MediaId, ed1));
    if (!db_sql_query(ua->db, query, count_handler, (void *)&cnt)) {
       bsendmsg(ua, "%s", db_strerror(ua->db));
       Dmsg0(050, "Count failed\n");
       goto bail_out;
    }
-      
+
    if (cnt.count == 0) {
+      /* Don't mark appendable volume as purged */
+      if (strcmp(mr->VolStatus, "Append") == 0 && verbose) {
+         bsendmsg(ua, _("There are no Jobs associated with Volume \"%s\". Prune not needed.\n"),
+            mr->VolumeName);
+         stat = 1;
+         goto bail_out;
+      }
+      /* If volume not already purged, do so */
       if (strcmp(mr->VolStatus, "Purged") != 0 && verbose) {
-         bsendmsg(ua, "There are no Jobs associated with Volume \"%s\". Marking it purged.\n",
-	    mr->VolumeName);
+         bsendmsg(ua, _("There are no Jobs associated with Volume \"%s\". Marking it purged.\n"),
+            mr->VolumeName);
       }
       stat = mark_media_purged(ua, mr);
       goto bail_out;
@@ -514,15 +515,15 @@ int prune_volume(UAContext *ua, MEDIA_DBR *mr)
    if (cnt.count < MAX_DEL_LIST_LEN) {
       del.max_ids = cnt.count + 1;
    } else {
-      del.max_ids = MAX_DEL_LIST_LEN; 
+      del.max_ids = MAX_DEL_LIST_LEN;
    }
 
-   /* 
+   /*
     * Now get a list of JobIds for Jobs written to this Volume
-    *	Could optimize here by adding JobTDate > (now - period).
+    *   Could optimize here by adding JobTDate > (now - period).
     */
    del.JobId = (JobId_t *)malloc(sizeof(JobId_t) * del.max_ids);
-   Mmsg(query, sel_JobMedia, mr->MediaId);
+   Mmsg(query, sel_JobMedia, edit_int64(mr->MediaId, ed1));
    if (!db_sql_query(ua->db, query, file_delete_handler, (void *)&del)) {
       if (ua->verbose) {
          bsendmsg(ua, "%s", db_strerror(ua->db));
@@ -541,18 +542,19 @@ int prune_volume(UAContext *ua, MEDIA_DBR *mr)
    for (i=0; i < del.num_ids; i++) {
       jr.JobId = del.JobId[i];
       if (!db_get_job_record(ua->jcr, ua->db, &jr)) {
-	 continue;
+         continue;
       }
       Dmsg2(200, "Looking at %s JobTdate=%d\n", jr.Job, (int)jr.JobTDate);
       if (jr.JobTDate >= (now - period)) {
-	 continue;
+         continue;
       }
-      Dmsg2(200, "Delete JobId=%d Job=%s\n", del.JobId[i], jr.Job);
-      Mmsg(query, del_File, del.JobId[i]);
+      edit_int64(del.JobId[i], ed1);
+      Dmsg2(200, "Delete JobId=%s Job=%s\n", ed1, jr.Job);
+      Mmsg(query, del_File, ed1);
       db_sql_query(ua->db, query, NULL, (void *)NULL);
-      Mmsg(query, del_Job, del.JobId[i]);
+      Mmsg(query, del_Job, ed1);
       db_sql_query(ua->db, query, NULL, (void *)NULL);
-      Mmsg(query, del_JobMedia, del.JobId[i]);
+      Mmsg(query, del_JobMedia, ed1);
       db_sql_query(ua->db, query, NULL, (void *)NULL);
       Dmsg1(050, "Del sql=%s\n", query);
       del.num_del++;

@@ -91,12 +91,10 @@ clean:
 
 distclean:
 	@rm -f Makefile
-	@rm -rf CVS
 	@for subdir in ${SUBDIRS}; do \
 	    if [ -f $${subdir}/Makefile ]; then \
 		     (cd $${subdir}; $(MAKE) distclean) \
 	    fi; \
-	    (cd $${subdir}; rm -rf CVS) \
 	done
 
 devclean:

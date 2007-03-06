@@ -7,8 +7,8 @@
 
 		  http://www.fourmilab.ch/smartall/
 
-  
-	Version $Id: queue.c,v 1.3 2004/04/10 11:12:14 kerns Exp $
+
+	Version $Id: queue.c,v 1.4 2004/12/21 16:18:40 kerns Exp $
 
 */
 
@@ -44,10 +44,10 @@ struct b_queue {
 };
 #endif
 
-/* 
+/*
  * To define a queue, use the following
  *
- *  static BQUEUE xyz = { &xyz, &xyz }; 
+ *  static BQUEUE xyz = { &xyz, &xyz };
  *
  *   Also, note, that the only real requirement is that
  *   the object that is passed to these routines contain
@@ -82,7 +82,7 @@ void qinsert(BQUEUE *qhead, BQUEUE *object)
 
 
 /*  QREMOVE  --  Remove next object from the queue given
-		 the queue head (or any item). 
+		 the queue head (or any item).
      Returns NULL if queue is empty  */
 
 BQUEUE *qremove(BQUEUE *qhead)
@@ -118,13 +118,13 @@ BQUEUE *qnext(BQUEUE *qhead, BQUEUE *qitem)
 	   qitem = qhead;
 	ASSERT(qi->qprev->qnext == qi);
 	ASSERT(qi->qnext->qprev == qi);
-	
+
 	if ((object = qi->qnext) == qh)
 	   return NULL;
 	return object;
 #undef qh
 #undef qi
-}	   
+}
 
 
 /*  QDCHAIN  --  Dequeue an item from the middle of a queue.  Passed

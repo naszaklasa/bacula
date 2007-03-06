@@ -1,7 +1,7 @@
 #
 # Bacula Makefile for the File daemon
 #
-#  Version $Id: Makefile.mingw,v 1.1 2004/04/19 19:26:55 nboichat Exp $
+#  Version $Id: Makefile.mingw,v 1.2 2004/12/12 15:42:48 kerns Exp $
 #
 
 
@@ -98,10 +98,10 @@ first_rule: all
 dummy:
 
 #
-SVRSRCS = filed.c authenticate.c backup.c estimate.c \
+SVRSRCS = filed.c authenticate.c backup.c chksum.c estimate.c \
 	  filed_conf.c heartbeat.c job.c \
 	  restore.c status.c verify.c verify_vol.c
-SVROBJS = filed.o authenticate.o backup.o estimate.o \
+SVROBJS = filed.o authenticate.o backup.o chksum.o estimate.o \
 	  filed_conf.o heartbeat.o job.o \
 	  restore.o status.o verify.o verify_vol.o
 

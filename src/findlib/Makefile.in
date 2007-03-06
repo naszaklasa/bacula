@@ -3,6 +3,8 @@
 #
 @MCOMMON@
 
+python = @PYTHON_INCDIR@
+
 srcdir =	.
 VPATH = 	.
 .PATH:		.
@@ -21,9 +23,9 @@ dummy:
 
 #
 LIBSRCS = find.c match.c find_one.c attibs.c create_file.c \
-	  bfile.c enable_priv.c fstype.c makepath.c save-cwd.c winapi.c
+	  bfile.c enable_priv.c fstype.c makepath.c save-cwd.c
 LIBOBJS = find.o match.o find_one.o attribs.o create_file.o \
-	  bfile.o enable_priv.o fstype.o makepath.o save-cwd.o winapi.o
+	  bfile.o enable_priv.o fstype.o makepath.o save-cwd.o
 
 .SUFFIXES:	.c .o
 .PHONY:
@@ -31,7 +33,7 @@ LIBOBJS = find.o match.o find_one.o attribs.o create_file.o \
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile libfind.a ../lib/libbac.a
 	@echo "==== Make of findlib is good ===="
@@ -59,7 +61,7 @@ realclean: clean
 
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
-	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+	(cd $(srcdir); $(RMF) Makefile)
 
 devclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
@@ -81,12 +83,12 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \
 	   $(MV) Makefile.bak Makefile; \
-	   echo -e "Something went wrong\n\a"; \
+	   echo " ===== Something went wrong in make depend ====="; \
 	fi
 
 # -----------------------------------------------------------------------

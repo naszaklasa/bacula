@@ -1,0 +1,28 @@
+
+ This patch should fix "update slots" with two different magazines
+ in different pools by checking the pool when zapping the InChanger.
+ Apply to 1.36.1 with:
+
+ cd <bacula-source>
+ patch -p0 <1.36.1-slots.patch
+ make
+ make install
+  
+
+Index: src/cats/sql_update.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/cats/sql_update.c,v
+retrieving revision 1.52
+diff -u -r1.52 sql_update.c
+--- src/cats/sql_update.c	17 Nov 2004 22:48:21 -0000	1.52
++++ src/cats/sql_update.c	3 Dec 2004 21:11:09 -0000
+@@ -389,7 +389,8 @@
+ {
+    if (mr->InChanger != 0 && mr->Slot != 0) {
+       Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0 WHERE "
+-           "Slot=%d AND MediaId!=%u", mr->Slot, mr->MediaId);
++           "Slot=%d AND PoolId=%u AND MediaId!=%u", 
++	    mr->Slot, mr->PoolId, mr->MediaId);
+       Dmsg1(400, "%s\n", mdb->cmd);
+       UPDATE_DB(jcr, mdb, mdb->cmd);
+    }

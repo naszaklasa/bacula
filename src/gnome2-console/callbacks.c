@@ -1,5 +1,5 @@
-/* 
- *    Version $Id: callbacks.c,v 1.9 2004/06/21 13:46:11 kerns Exp $
+/*
+ *    Version $Id: callbacks.c,v 1.10 2004/12/21 16:18:37 kerns Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,7 +27,7 @@ gboolean
 on_console_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
 {
    gtk_main_quit();
-   terminate_console(0);     
+   terminate_console(0);
    return TRUE;
 }
 
@@ -105,8 +105,8 @@ on_connect_button_clicked(GtkButton *button, gpointer user_data)
    }
 }
 
-/* Define max length of history and how many to delete when it gets there.  
- * If you make HIST_DEL > HIST_MAX, you shoot yourself in the foot. 
+/* Define max length of history and how many to delete when it gets there.
+ * If you make HIST_DEL > HIST_MAX, you shoot yourself in the foot.
  */
 #define HIST_MAX 2500
 #define HIST_DEL  500
@@ -133,7 +133,7 @@ static void add_to_history(gchar *ecmd)
       }
       hist_len -= HIST_DEL;
    }
-   hc = NULL;		  
+   hc = NULL;
 }
 
 /*
@@ -298,12 +298,12 @@ static void set_run_defaults()
       }
       *def++ = 0;
       if (strcmp(UA_sock->msg, "job") == 0 ||
-          strcmp(UA_sock->msg, "when") == 0) {
+	  strcmp(UA_sock->msg, "when") == 0) {
 	 continue;
       }
       /* Where is an entry box */
       if (strcmp(UA_sock->msg, "where") == 0) {
-         entry = lookup_widget(run_dialog, "entry_where");
+	 entry = lookup_widget(run_dialog, "entry_where");
 	 gtk_entry_set_text(GTK_ENTRY(entry), def);
 	 continue;
       }
@@ -403,10 +403,10 @@ on_run_ok_clicked(GtkButton *button, gpointer user_data)
       set_status_ready();
       return;
    }
-      
-   bsnprintf(cmd, sizeof(cmd), 
-             "run job=\"%s\" fileset=\"%s\" level=%s client=\"%s\" pool=\"%s\" "
-             "when=\"%s\" where=\"%s\" storage=\"%s\"", 
+
+   bsnprintf(cmd, sizeof(cmd),
+	     "run job=\"%s\" fileset=\"%s\" level=%s client=\"%s\" pool=\"%s\" "
+	     "when=\"%s\" where=\"%s\" storage=\"%s\"",
 	     job, fileset, level, client, pool, when, where, storage);
    write_director(cmd);
    set_text(cmd, strlen(cmd));
@@ -477,9 +477,9 @@ on_label_ok_clicked(GtkButton *button, gpointer user_data)
       set_status_ready();
       return;
    }
-      
-   bsnprintf(cmd, sizeof(cmd), 
-             "label name=\"%s\" pool=\"%s\" storage=\"%s\" slot=%s", 
+
+   bsnprintf(cmd, sizeof(cmd),
+	     "label name=\"%s\" pool=\"%s\" storage=\"%s\" slot=%s",
 	     volume, pool, storage, slot);
    write_director(cmd);
    set_text(cmd, strlen(cmd));
@@ -514,10 +514,10 @@ on_select_files_button_clicked(GtkButton *button, gpointer user_data)
       set_status_ready();
       return;
    }
-      
-   bsnprintf(cmd, sizeof(cmd), 
-             "restore select current fileset=\"%s\" client=\"%s\" pool=\"%s\" "
-             "storage=\"%s\"", fileset, client, pool, storage);
+
+   bsnprintf(cmd, sizeof(cmd),
+	     "restore select current fileset=\"%s\" client=\"%s\" pool=\"%s\" "
+	     "storage=\"%s\"", fileset, client, pool, storage);
    write_director(cmd);
    set_text(cmd, strlen(cmd));
    gtk_widget_show(restore_file_selection);
@@ -672,11 +672,11 @@ void set_restore_dialog_defaults()
       }
       *def++ = 0;
       if (strcmp(UA_sock->msg, "job") == 0 ||
-          strcmp(UA_sock->msg, "when") == 0 ||
-          strcmp(UA_sock->msg, "where") == 0 ||
-          strcmp(UA_sock->msg, "messages") == 0 ||
-          strcmp(UA_sock->msg, "level") == 0 ||
-          strcmp(UA_sock->msg, "type") == 0) {
+	  strcmp(UA_sock->msg, "when") == 0 ||
+	  strcmp(UA_sock->msg, "where") == 0 ||
+	  strcmp(UA_sock->msg, "messages") == 0 ||
+	  strcmp(UA_sock->msg, "level") == 0 ||
+	  strcmp(UA_sock->msg, "type") == 0) {
 	 continue;
       }
 

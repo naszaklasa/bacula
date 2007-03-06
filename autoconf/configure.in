@@ -12,7 +12,7 @@ AC_CONFIG_AUX_DIR(${BUILD_DIR}/autoconf)
 AC_CONFIG_HEADER(src/config.h:autoconf/config.h.in)
 
 dnl require a recent autoconf
-AC_PREREQ(2.13)
+AC_PREREQ(2.59)
 
 
 dnl search for true and false programs.
@@ -40,9 +40,12 @@ AC_PROG_CXX
 AC_PROG_CC_C_O			dnl Determine if C compiler support -c -o.
 AC_PROG_GCC_TRADITIONAL 	dnl Determine if ioctl() need -traditional.
 
-if test "x$CC" = xgcc
-then
+if test "x$CC" = xgcc; then
    AC_DEFINE(HAVE_GCC)
+fi
+AC_PATH_PROG(CXX, $CXX, $CXX)
+if test ! -e $CXX; then
+   AC_MSG_ERROR(Unable to find C++ compiler)
 fi
 
 dnl -------------------------------------------------------
@@ -61,8 +64,19 @@ AC_PATH_PROG(AR, ar, ar)
 dnl AC_PATH_PROG(RANLIB, ranlib, ranlib)
 AC_PATH_PROG(OPENSSL, openssl, none)
 AC_PATH_PROG(MTX, mtx, mtx)
+AC_PATH_PROG(DD, dd, dd)
+AC_PATH_PROG(MKISOFS, mkisofs, mkisofs)
+AC_PATH_PROG(PYTHON, python, python)
+AC_PATH_PROG(GROWISOFS, growisofs, growisofs)
+AC_PATH_PROG(DVDRWMEDIAINFO, dvd+rw-mediainfo, dvd+rw-mediainfo)
+AC_PATH_PROG(DVDRWFORMAT, dvd+rw-format, dvd+rw-format)
 AC_PATH_PROG(PKGCONFIG, pkg-config, pkg-config)
-AC_PATH_PROG(WXCONFIG, wx-config, wx-config)
+AC_ARG_VAR(WXCONFIG, [wx-config command. On some systems, you must set it to wx-config-2.6 to use wxWidgets 2.6.])
+if test "x$WXCONFIG" = x; then
+  WXCONFIG=wx-config
+fi
+AC_PATH_PROG(WXCONFIG, ${WXCONFIG}, ${WXCONFIG})
+AC_ARG_VAR(WXFLAGS, [Parameters to pass to wx-config (e.g. --unicode=no).])
 AC_PATH_PROG(CDRECORD, cdrecord, cdrecord)
 AC_PATH_PROG(PIDOF, pidof, pidof)
 AC_PROG_AWK
@@ -80,7 +94,6 @@ fi
 THE_AWK=$AWK
 AC_PATH_PROG(AWK, $THE_AWK, $THE_AWK)
 
-
 test -n "$ARFLAG" || ARFLAGS="cr"
 AC_SUBST(ARFLAGS)
 
@@ -92,8 +105,6 @@ AC_SUBST(LOCAL_CFLAGS)
 AC_SUBST(LOCAL_LDFLAGS)
 AC_SUBST(LOCAL_DEFS)
 
-
-
 dnl --------------------------------------------------
 dnl Bacula OP Sys determination (see aclocal.m4)
 dnl --------------------------------------------------
@@ -104,10 +115,16 @@ dnl Bacula OPSys Distribution determination (see aclocal.m4)
 # ----------------------------------------------------------
 BA_CHECK_OPSYS_DISTNAME
 
-# -----------------------------------------------------------
-dnl Check for gnome stuff for gnome-console
-# ----------------------------------------------------------
-AM_ACLOCAL_INCLUDE(gnome-macros)
+# --------------------------------------------------
+# Suppport for gettext (translations)
+# By default, $datadir is ${prefix}/share
+# --------------------------------------------------
+AM_GNU_GETTEXT([external])
+if test x${prefix} = xNONE ; then
+   if test `eval echo ${datadir}` = NONE/share ; then
+      datadir=/usr/share
+   fi
+fi
 
 # ------------------------------------------------------------------
 #  If the user has not set --prefix, we set our default to nothing.
@@ -122,6 +139,9 @@ if test x${prefix} = xNONE ; then
     prefix=
 fi
 sysconfdir=`eval echo ${sysconfdir}`
+datadir=`eval echo ${datadir}`
+localedir=`eval echo ${datadir}/locale`
+AC_DEFINE_UNQUOTED(LOCALEDIR, "$localedir") 
 
 # -------------------------------------------------------------------------
 #  If the user has not set --exec-prefix, we default to ${prefix}
@@ -137,6 +157,14 @@ if test x$sbindir = x'${exec_prefix}/sbin' ; then
     sbindir=${exec_prefix}/sbin
 fi
 sbindir=`eval echo ${sbindir}`
+
+# -------------------------------------------------------------------------
+#  If the user has not set --mandir, we default to /usr/share/man
+# -------------------------------------------------------------------------
+if test x$mandir = x'${prefix}/man' ; then
+   mandir=/usr/share/man
+fi
+
 		      
 # ------------------------------------------------------------------
 # All list of languages for which a translation exist. Each
@@ -151,19 +179,22 @@ then
    USE_NLS=no
    USE_INCLUDED_LIBINTL=no
 #else
-#   AM_GNU_GETTEXT
+    AM_GNU_GETTEXT
 fi
 
 
 support_mysql=no
 support_sqlite=no
+support_sqlite3=no
 support_postgresql=no
 support_smartalloc=yes
 support_readline=yes
 support_conio=yes
 support_gnome=no
 support_wx_console=no
+support_tls=no
 gnome_version=
+wx_version=
 support_static_tools=no
 support_static_fd=no
 support_static_sd=no
@@ -171,6 +202,8 @@ support_static_dir=no
 support_static_cons=no
 support_python=no
 build_client_only=no
+build_dird=yes
+build_stored=yes
 cats=
 db_name=Internal
 DB_NAME=bdb
@@ -204,10 +237,7 @@ if test x$support_gnome = xyes; then
      GNOME_DIR=src/gnome2-console
      gnome_version="Version 2.x"
   else
-dnl do 1.4 stuff
-     GNOME_INIT
-     GNOME_DIR=src/gnome-console
-     gnome_version="Version 1.4"
+     AC_MSG_ERROR(Unable to find Gnome 2 installation)
   fi
 fi
 AC_SUBST(GNOME_DIR)
@@ -224,11 +254,13 @@ AC_ARG_ENABLE(wx-console,
 
 WX_DIR=
 if test x$support_wx_console = xyes; then
-  abc=`$WXCONFIG --cppflags`
+  abc=`$WXCONFIG $WXFLAGS --cppflags`
   pkg=$?
   if test $pkg = 0; then
-     WXCONS_CPPFLAGS=`$WXCONFIG --cppflags`
-     WXCONS_LDFLAGS=`$WXCONFIG --libs`
+     wx_version="wxWidgets `$WXCONFIG $WXFLAGS --release`"
+     WXCONS_CPPFLAGS=`$WXCONFIG $WXFLAGS --cppflags`
+     WXCONS_LDFLAGS=`$WXCONFIG $WXFLAGS --libs`
+
      AC_SUBST(WXCONS_CPPFLAGS)
      AC_SUBST(WXCONS_LDFLAGS)
      WX_DIR=src/wx-console
@@ -370,9 +402,9 @@ AC_SUBST(STATIC_WX_CONS)
 AC_ARG_ENABLE(client-only,
    [  --enable-client-only    build client (File daemon) only [disabled]],
    [if test x$enableval = xyes; then
-     build_client_only=yes
-    db_name=None
-    DB_NAME=none
+      build_client_only=yes
+      db_name=None
+      DB_NAME=none
    fi])
 if test x$build_client_only = xno; then
    ALL_DIRS="subdirs"
@@ -380,6 +412,39 @@ else
    ALL_DIRS=""
 fi
 AC_SUBST(ALL_DIRS)
+
+# -------------------------------------------
+# director  (default on)
+# -------------------------------------------
+AC_ARG_ENABLE(build-dird,
+   [  --enable-build-dird     enable building of dird (Director) [enabled]],
+   [if test x$enableval = xno; then
+      build_dird=no
+   fi])
+if test x$build_dird = xyes; then
+   DIRD_DIR="src/dird"
+   DIR_TOOLS="DIRTOOLS"
+else
+   DIRD_DIR=""
+   DIR_TOOLS="NODIRTOOLS"
+fi
+AC_SUBST(DIRD_DIR)
+AC_SUBST(DIR_TOOLS)
+
+# -------------------------------------------
+# stored  (default on)
+# -------------------------------------------
+AC_ARG_ENABLE(build-stored,
+   [  --enable-build-stored   enable building of stored (Storage daemon) [enabled]],
+   [if test x$enableval = xno; then
+      build_stored=no
+   fi])
+if test x$build_stored = xyes; then
+   STORED_DIR="src/stored"
+else
+   STORED_DIR=""
+fi
+AC_SUBST(STORED_DIR)
 
 # ---------------------------------------------------
 # Check for conio (Bacula readline substitute)(
@@ -454,15 +519,19 @@ if test x$support_readline = xyes; then
 	case "$with_readline" in
 	no) : ;;
 	yes|*)
-	  if test "$with_readline" != "yes"; then
-	    CONS_INC="-I${with_readline}"
-	    CONS_LDFLAGS="-L$with_readline"
+	  if test -f ${with_readline}/readline.h; then
+	     CONS_INC="-I${with_readline}"
+	     CONS_LDFLAGS="-L$with_readline"
+	  elif test -f ${with_readline}/include/readline/readline.h; then
+	     CONS_INC="-I${with_readline}/include/readline"
+	     CONS_LDFLAGS="-L${with_readline}/lib"
+	     with_readline="${with_readline}/include/readline"
 	  else
 	     with_readline="/usr/include/readline" 
 	  fi
 	  AC_CHECK_HEADER(${with_readline}/readline.h, 
 	     [ AC_DEFINE(HAVE_READLINE) 
-	       CONS_LIBS="-lreadline -ltermcap"
+	       CONS_LIBS="-lreadline -lhistory -ltermcap"
 	       got_readline="yes"   
 	     ],
 	     [ echo " "
@@ -514,149 +583,84 @@ MAKE_SHELL=/bin/sh
 AC_SUBST(MAKE_SHELL)
 AC_HEADER_STAT
 AC_HEADER_DIRENT
-AC_CHECK_FUNCS(strcasecmp select setenv putenv tcgetattr setlocale lstat lchown)
+AC_CHECK_FUNCS(strcasecmp select setenv putenv tcgetattr lstat lchown)
 AC_CHECK_FUNCS(nanosleep nl_langinfo)
 AC_CHECK_HEADERS(varargs.h)
 
 # End of readline/conio stuff
 # -----------------------------------------------------------------------
 
-# -------------------------------------------
-# check for cdrecord writer location
-# get scsibus,target,lun
-# -------------------------------------------
-CDSTL="3,0,0"
-if test ! x$CDRECORD = x ; then
-   CDSTL=`${CDRECORD} -scanbus 2>/dev/null | grep CD-RW | ${AWK} '{print $1}'`
-   if test x${CDSTL} = x ; then
-      CDSTL=`${CDRECORD} -scanbus 2>/dev/null | grep CD+RW | ${AWK} '{print $1}'`
-   fi
-   if test x${CDSTL} = x ; then
-      CDSTL="3,0,0"
-   fi
-fi
-AC_SUBST(CDSTL)
-
-
-# ---------------------------------------------------
-# Check for GMP support/directory
-# ---------------------------------------------------
-#GMP_SRC=
-#local_gmp="no"
-#AC_ARG_WITH(gmp,
-#  [  --with-gmp[=DIR]	 Specify gmp library directory],
-#  [
-#     case "$with_gmp" in
-#     no) : ;;
-#     yes|*)
-#	if test "$with_gmp" != "yes"; then
-#	  GMP_INC="-I$with_gmp"
-#	  GMP_LIBS="-lgmp"
-#	  GMP_LDFLAGS="-L$with_gmp"
-#	else
-#	   with_gmp="/usr/include" 
-#	fi
-#	AC_CHECK_HEADER($with_gmp/gmp.h, 
-#	   [ AC_MSG_RESULT(yes)
-#	     AC_DEFINE(HAVE_GMP) 
-#	     GMP_LIBS="-lgmp"
-#	     got_gmp="yes"   
-#	   ],
-#	   [ AC_MSG_ERROR([*** gmp library missing]) 
-#	   ]
-#	)
-#	;;
-#     esac
-#  ],[
-#    # check for standard gmp library
-#    AC_CHECK_HEADER(/usr/include/gmp.h,
-#    [ AC_MSG_RESULT(yes)
-#      AC_DEFINE(HAVE_GMP)
-#      got_gmp="yes"
-#      GMP_INC=
-#      GMP_LIBS="-lgmp"
-#    ], [
-#      # Did not find standard library, so use our own
-#      AC_MSG_RESULT(yes)
-#      AC_DEFINE(HAVE_GMP)
-#      got_gmp="yes"
-#      local_gmp="yes"
-#      GMP_INC="-I${TOP_DIR}/depkgs/gmp"
-#      GMP_LIBS="-lgmp"
-#      GMP_LDFLAGS="-L${TOP_DIR}/depkgs/gmp"
-#      GMP_SRC="${TOP_DIR}/depkgs/gmp"
-#    ])
-#  ]   
-#)
-#AC_SUBST(GMP_INC)
-#AC_SUBST(GMP_LIBS)
-#AC_SUBST(GMP_LDFLAGS)
-#AC_SUBST(GMP_SRC)
-
-# End of GMP stuff
 # -----------------------------------------------------------------------
-
-
-# ---------------------------------------------------
-# Check for CWEB support/directory
-# ---------------------------------------------------
-#CWEB_SRC=
-#CWEB=/bin
-#local_cweb="no"
-#AC_ARG_WITH(cweb,
-#  [  --with-cweb[=DIR]   Specify cweb library directory],
-#  [
-#     case "$with_cweb" in
-#     no) : ;;
-#     yes|*)
-#	if test "$with_cweb" != "yes"; then
-#	  CWEB_INC="-I$with_cweb"
-#	  CWEB_LIBS="-lcweb"
-#	  CWEB_LDFLAGS="-L$with_cweb"
-#	else
-#	   with_cweb="/usr/include" 
-#	fi
-#	AC_CHECK_HEADER($with_cweb/cweb.h, 
-#	   [ AC_MSG_RESULT(yes)
-#	     AC_DEFINE(HAVE_CWEB) 
-#	     CWEB_LIBS="-lcweb"
-#	     got_cweb="yes"   
-#	   ],
-#	   [ AC_MSG_ERROR([*** cweb library missing]) 
-#	   ]
-#	)
-#	;;
-#     esac
-#  ],[
-#    # check for standard cweb library
-#    AC_CHECK_HEADER(/usr/include/cweb.h,
-#    [ AC_MSG_RESULT(yes)
-#      AC_DEFINE(HAVE_CWEB)
-#      got_cweb="yes"
-#      CWEB_INC=
-#      CWEB_LIBS="-lcweb"
-#    ], [
-#      # Did not find starndard library, so use our own
-#      AC_MSG_RESULT(yes)
-#      AC_DEFINE(HAVE_CWEB)
-#      got_cweb="yes"
-#      local_cweb="yes"
-#      CWEB=${TOP_DIR}/depkgs/cweb
-#      CWEB_INC="-I${TOP_DIR}/depkgs/cweb"
-#      CWEB_LIBS="-lcweb"
-#      CWEB_LDFLAGS="-L${TOP_DIR}/depkgs/cweb"
-#      CWEB_SRC="${TOP_DIR}/depkgs/cweb"
-#    ])
-#  ]   
-#)
-#AC_SUBST(CWEB)
-#AC_SUBST(CWEB_INC)
-#AC_SUBST(CWEB_LIBS)
-#AC_SUBST(CWEB_LDFLAGS)
-#AC_SUBST(CWEB_SRC)
-
-# End of CWEB stuff
-# -----------------------------------------------------------------------
+#  Check for Python support
+#
+AC_MSG_CHECKING(for Python support)
+AC_ARG_WITH(python,
+[
+  --with-python[=DIR]	  Include Python support.  DIR is the Python base
+			  install directory, default is to search through
+			  a number of common places for the Python files.],
+[
+  PYTHON_INCDIR= 
+  PYTHON_LIBS=
+  if test "$withval" != "no"; then
+     if test "$withval" = "yes"; then
+	for python_root in /usr /usr/local /usr/sfw; do
+	  if test -f $python_root/include/python2.2/Python.h; then
+	     PYTHON_INCDIR=-I$python_root/include/python2.2
+	     PYTHON_LIBS="-L$python_root/lib/python2.2/config -lpython2.2"
+	     break
+	  elif test -f $python_root/include/python2.3/Python.h; then
+	     PYTHON_INCDIR=-I$python_root/include/python2.3
+	     PYTHON_LIBS="-L$python_root/lib/python2.3/config -lpython2.3"
+	     break
+	  elif test -f $python_root/include/python2.4/Python.h; then
+	     PYTHON_INCDIR=-I$python_root/include/python2.4
+	     PYTHON_LIBS="-L$python_root/lib/python2.4/config -lpython2.4"
+	     break
+	  fi
+	done
+	if test x$PYTHON_INCDIR = x; then
+	  if test -f $prefix/include/Python.h; then
+	     PYTHON_INCDIR=-I$prefix/include
+	     PYTHON_LIBS="-L$prefix/lib/config -lpython"
+	  else
+	   AC_MSG_RESULT(no)
+	   AC_MSG_ERROR(Unable to find Python.h in standard locations)
+	  fi
+	fi
+     else
+	if test -f $withval/Python.h; then
+	   PYTHON_INCDIR=-I$withval
+	   PYTHON_LIBS="-L$withval/config -lpython"
+	elif test -f $withval/include/Python.h; then
+	   PYTHON_INCDIR=-I$withval/include
+	   PYTHON_LIBS="-L$withval/lib/config -lpython"
+	elif test -f $withval/include/python/Python.h; then
+	   PYTHON_INCDIR=-I$withval/include/python
+	   PYTHON_LIBS="-L$withval/lib/python/config -lpython"
+	else
+	   AC_MSG_RESULT(no)
+	   AC_MSG_ERROR(Invalid Python directory $withval - unable to find Python.h under $withval)
+	fi
+     fi
+     AC_DEFINE([HAVE_PYTHON], 1)
+     AC_MSG_RESULT(yes)
+     support_python=yes
+     AC_MSG_NOTICE(checking for more Python libs)
+     saved_LIBS="$LIBS"; LIBS=
+     AC_SEARCH_LIBS(shm_open, [rt])
+     AC_CHECK_LIB(util, openpty)
+     PYTHON_LIBS="$PYTHON_LIBS $LIBS"
+     LIBS="$saved_LIBS"
+  else
+     AC_MSG_RESULT(no)
+  fi
+],[
+  AC_MSG_RESULT(no)
+])
+AC_SUBST(PYTHON_LIBS)
+AC_SUBST(PYTHON_INCDIR)
+  
 
 #
 # Find where sockets are (especially for Solaris)
@@ -674,6 +678,7 @@ AC_CHECK_FUNC(socket,
 # Check whether user wants TCP wrappers support (default off)
 # -----------------------------------------------------------
 TCPW_MSG="no" 
+WRAPLIBS=""
 AC_ARG_WITH(tcp-wrappers,
   [  --with-tcp-wrappers=DIR	 enable tcpwrappers support],
   [
@@ -681,8 +686,10 @@ AC_ARG_WITH(tcp-wrappers,
        saved_LIBS="$LIBS"
        LIBS="$saved_LIBS -lwrap"
        AC_MSG_CHECKING(for libwrap)
+       AC_SEARCH_LIBS(nanosleep, [rt])
        AC_TRY_LINK(
-	  [ #include <tcpd.h>
+	  [ #include <sys/types.h>
+	    #include <tcpd.h>
 	     int deny_severity = 0;
 	     int allow_severity = 0;
 	     struct request_info *req; ],
@@ -691,10 +698,14 @@ AC_ARG_WITH(tcp-wrappers,
 	    AC_MSG_RESULT(yes)
 	    AC_DEFINE(HAVE_LIBWRAP)
 	    TCPW_MSG="yes" 
+	    LIBS="$saved_LIBS"
+	    WRAPLIBS="-lwrap"
 	  ], [
 	    LIBS="$saved_LIBS -lwrap -lnsl"
+	    WRAPLIBS="$saved_LIBS -lwrap -lnsl"
 	    AC_TRY_LINK(
-	      [ #include <tcpd.h>
+	      [ #include <sys/types.h>
+		 #include <tcpd.h>
 		 int deny_severity = 0;
 		 int allow_severity = 0;
 		 struct request_info *req; ],
@@ -703,6 +714,8 @@ AC_ARG_WITH(tcp-wrappers,
 		 AC_MSG_RESULT(yes)
 		 AC_DEFINE(HAVE_LIBWRAP)
 		 TCPW_MSG="yes" 
+		 LIBS="$saved_LIBS"
+		 WRAPLIBS="-lwrap"
 	      ],
 	      [AC_MSG_ERROR([*** libwrap missing]) ] ]
 	    )
@@ -710,6 +723,63 @@ AC_ARG_WITH(tcp-wrappers,
     fi
   ]
 )
+
+# -----------------------------------------------------------
+# Check whether OpenSSL is available
+# -----------------------------------------------------------
+AC_MSG_CHECKING([for OpenSSL])
+dnl The following uses quadrigraphs:
+dnl '@<:@' = '['
+dnl '@:>@' = ']'
+AC_ARG_WITH(openssl,
+	AC_HELP_STRING([--with-openssl@<:@=DIR@:>@], [Include OpenSSL support. DIR is the OpenSSL base]),
+	[with_openssl_directory=${withval}])
+
+if test "x$with_openssl_directory" != "x"; then
+	OPENSSL_LIBS="-lssl -lcrypto"
+	OPENSSL_INC=""
+
+	if test "x$with_openssl_directory" != "xyes" && test x"${with_openssl_directory}" != "x"; then
+		OPENSSL_LIBS="-L$with_openssl_directory/lib $OPENSSL_LIBS"
+		OPENSSL_INC="-I$with_openssl_directory/include $OPENSSL_INC"
+	fi
+
+	saved_LIBS="$LIBS"
+	saved_CFLAGS="$CFLAGS"
+	LIBS="$saved_LIBS $OPENSSL_LIBS"
+	CFLAGS="$saved_CFLAGS $OPENSSL_INC"
+
+	AC_TRY_LINK([ #include <openssl/ssl.h> ],
+		[ CRYPTO_set_id_callback(NULL); ],
+		[ support_tls="yes" ],
+		[ support_tls="no" ]
+	)
+
+	LIBS="$saved_LIBS"
+	CFLAGS="$saved_CFLAGS"
+
+	if test "$support_tls" = "yes"; then
+		AC_DEFINE(HAVE_OPENSSL, 1, [Define if OpenSSL library is available])
+		AC_DEFINE(HAVE_TLS, 1, [Define if TLS support should be enabled])
+	fi
+else
+	support_tls="no"
+	OPENSSL_LIBS=""
+	OPENSSL_INC=""
+fi
+
+AC_MSG_RESULT([$support_tls])
+AC_SUBST(OPENSSL_LIBS)
+AC_SUBST(OPENSSL_INC)
+
+
+# -----------------------------------------------------------
+# Python and OpenSSL are using dlopen
+# -----------------------------------------------------------
+
+if test "$support_python" = "yes" -o "$support_tls" = "yes"; then
+   AC_SEARCH_LIBS(dlopen, [dl])
+fi
 
 # ------------------------------------------
 # Where to place working dir
@@ -861,7 +931,6 @@ AC_ARG_WITH(dir-password,
 
 if test "x$dir_password" = "x" ; then
    if test "x$OPENSSL" = "xnone" ; then
-#     key=`date | uuencode /dev/stdout | tr "\"@\\\`\\ \\=\\,\\(\\)\\#\\.\\!\\-$'" abcdefghijklmnopqrst | awk '{getline} {print} {exit}'`
       key=`autoconf/randpass 33`
    else
       key=`openssl rand -base64 33`
@@ -881,7 +950,6 @@ AC_ARG_WITH(fd-password,
 
 if test "x$fd_password" = "x" ; then
    if test "x$OPENSSL" = "xnone" ; then
-#     key=`date | uuencode /dev/stdout | tr "\"@\\\`\\ \\=\\,\\(\\)\\#\\.\\!\\-$'" tsrqponmlkjihgfedcba | awk '{getline} {print} {exit}'`
       key=`autoconf/randpass 37`
    else
       key=`openssl rand -base64 33`
@@ -901,7 +969,6 @@ AC_ARG_WITH(sd-password,
 
 if test "x$sd_password" = "x" ; then
    if test "x$OPENSSL" = "xnone" ; then
-#     key=`date | uuencode /dev/stdout | tr "\"@\\\`\\ \\=\\,\\(\\)\\#\\.\\!\\-$'" 123456789uvwxyzabcdef | awk '{getline} {print} {exit}'`
       key=`autoconf/randpass 41`
    else
       key=`openssl rand -base64 33`
@@ -921,7 +988,6 @@ AC_ARG_WITH(mon-dir-password,
 
 if test "x$mon_dir_password" = "x" ; then
    if test "x$OPENSSL" = "xnone" ; then
-#     key=`date | uuencode /dev/stdout | tr "\"@\\\`\\ \\=\\,\\(\\)\\#\\.\\!\\-$'" abcdefghijklmnopqrst | awk '{getline} {print} {exit}'`
       key=`autoconf/randpass 33`
    else
       key=`openssl rand -base64 33`
@@ -941,7 +1007,6 @@ AC_ARG_WITH(mon-fd-password,
 
 if test "x$mon_fd_password" = "x" ; then
    if test "x$OPENSSL" = "xnone" ; then
-#     key=`date | uuencode /dev/stdout | tr "\"@\\\`\\ \\=\\,\\(\\)\\#\\.\\!\\-$'" tsrqponmlkjihgfedcba | awk '{getline} {print} {exit}'`
       key=`autoconf/randpass 37`
    else
       key=`openssl rand -base64 33`
@@ -961,7 +1026,6 @@ AC_ARG_WITH(mon-sd-password,
 
 if test "x$mon_sd_password" = "x" ; then
    if test "x$OPENSSL" = "xnone" ; then
-#     key=`date | uuencode /dev/stdout | tr "\"@\\\`\\ \\=\\,\\(\\)\\#\\.\\!\\-$'" 123456789uvwxyzabcdef | awk '{getline} {print} {exit}'`
       key=`autoconf/randpass 41`
    else
       key=`openssl rand -base64 33`
@@ -976,75 +1040,6 @@ AC_SUBST(mon_dir_password)
 AC_SUBST(mon_fd_password)
 AC_SUBST(mon_sd_password)
 
-# -------------------------------------------------------------------------
-#  Set variables for bimagemgr installation
-# -------------------------------------------------------------------------
-bimagemgr_cgidir=/var/www/cgi-bin
-AC_ARG_WITH(bimagemgr-cgidir,
-   [  --with-bimagemgr-cgidir=DIR   specify bimagemgr cgi-bin dir],
-   [
-       if test "x$withval" != "xno" ; then     
-	   bimagemgr_cgidir=$withval
-       fi
-   ]
-)
-
-bimagemgr_docdir=/var/www/html
-AC_ARG_WITH(bimagemgr-docdir,
-   [  --with-bimagemgr-docdir=DIR   specify bimagemgr doc root dir],
-   [
-       if test "x$withval" != "xno" ; then     
-	   bimagemgr_docdir=$withval
-       fi
-   ]
-)
-
-bimagemgr_binowner=root
-AC_ARG_WITH(bimagemgr-binowner,
-   [  --with-bimagemgr-binowner=USER   specify bimagemgr binary file owner],
-   [
-       if test "x$withval" != "xno" ; then     
-	   bimagemgr_binowner=$withval
-       fi
-   ]
-)
-
-bimagemgr_bingroup=root
-AC_ARG_WITH(bimagemgr-bingroup,
-   [  --with-bimagemgr-bingroup=USER   specify bimagemgr binary file group],
-   [
-       if test "x$withval" != "xno" ; then     
-	   bimagemgr_bingroup=$withval
-       fi
-   ]
-)
-
-bimagemgr_dataowner=apache
-AC_ARG_WITH(bimagemgr-dataowner,
-   [  --with-bimagemgr-dataowner=USER	specify bimagemgr data file owner],
-   [
-       if test "x$withval" != "xno" ; then     
-	   bimagemgr_dataowner=$withval
-       fi
-   ]
-)
-
-bimagemgr_datagroup=apache
-AC_ARG_WITH(bimagemgr-datagroup,
-   [  --with-bimagemgr-datagroup=USER	specify bimagemgr data file group],
-   [
-       if test "x$withval" != "xno" ; then     
-	   bimagemgr_datagroup=$withval
-       fi
-   ]
-)
-
-AC_SUBST(bimagemgr_cgidir)
-AC_SUBST(bimagemgr_docdir)
-AC_SUBST(bimagemgr_binowner)
-AC_SUBST(bimagemgr_bingroup)
-AC_SUBST(bimagemgr_dataowner)
-AC_SUBST(bimagemgr_datagroup)
 
 #
 # Handle users and groups for each daemon
@@ -1140,6 +1135,8 @@ AC_SUBST(SBINPERM)
 BA_CHECK_POSTGRESQL_DB
 
 BA_CHECK_MYSQL_DB
+
+BA_CHECK_SQLITE3_DB
 
 BA_CHECK_SQLITE_DB
 
@@ -1274,6 +1271,8 @@ AC_TRY_CPP([#include <sys/mount.h>
 #include <sys/fs_types.h>], AC_DEFINE(FSTYPE_GETMNT) fstype=Ultrix)
 fi
 AC_MSG_RESULT($fstype)
+
+AC_CHECK_HEADER(sys/statvfs.h, [ AC_DEFINE(HAVE_SYS_STATVFS_H,1,[Defines if your system have the sys/statvfs.h header file])] , )
 
 dnl# --------------------------------------------------------------------------
 dnl# CHECKING FOR TYPEDEFS, STRUCTURES, AND COMPILER CHARACTERISTICS.
@@ -1504,7 +1503,7 @@ AC_CHECK_FUNCS(strtoll, [AC_DEFINE(HAVE_STRTOLL)])
 
 AC_CHECK_FUNCS(chflags) 
 
-AC_CHECK_FUNCS(snprintf vsnprintf gethostid getdomainname fseeko)
+AC_CHECK_FUNCS(snprintf vsnprintf gethostid fseeko)
 
 dnl# --------------------------------------------------------------------------
 dnl# CHECKING FOR THREAD SAFE FUNCTIONS
@@ -1560,6 +1559,7 @@ AC_FUNC_SETPGRP 		      dnl check for BSD setpgrp.
 
 dnl# FreeBSD needs to link libxpg4
 AC_CHECK_LIB(xpg4, setlocale, [LIBS="$LIBS -lxpg4"])
+AC_CHECK_LIB(intl, gettext, [LIBS="$LIBS -lintl"])
 
 
 AC_CHECK_LIB(sun, getpwnam)
@@ -1572,22 +1572,28 @@ if test x$FDLIBS = x-lz; then
   have_zlib=yes
 fi
 
-AC_CHECK_HEADER(sys/acl.h)
-AC_CHECK_LIB(acl, acl_get_file, [FDLIBS="-lacl $FDLIBS"])
+#
+# Check for ACL libraries
+#
 have_acl=no
-if test $ac_cv_lib_acl_acl_get_file = yes; then
+AC_CHECK_HEADER(sys/acl.h)
+AC_CHECK_FUNC(acl_get_file, [have_acl=yes],
+   [AC_CHECK_LIB(acl, acl_get_file, [have_acl=yes; FDLIBS="-lacl $FDLIBS"], 
+      [AC_CHECK_LIB(sec, acltotext, [have_acl=yes; FDLIBS="-lsec $FDLIBS"])]
+    )]
+)
+if test $have_acl = yes; then
    AC_DEFINE(HAVE_ACL)
-   have_acl=yes
 fi
 
 dnl Check for pthread libraries
 PTHREAD_LIB=""
 AC_CHECK_LIB(pthread, pthread_create, PTHREAD_LIB="-lpthread",
-	[AC_CHECK_LIB(pthreads, pthread_create, PTHREAD_LIB="-lpthreads",
-	    [AC_CHECK_LIB(c_r, pthread_create, PTHREAD_LIB="-lc_r",
-		[AC_CHECK_FUNC(pthread_create)]
-	    )]
-	)]
+   [AC_CHECK_LIB(pthreads, pthread_create, PTHREAD_LIB="-lpthreads",
+      [AC_CHECK_LIB(c_r, pthread_create, PTHREAD_LIB="-lc_r",
+	    [AC_CHECK_FUNC(pthread_create)]
+       )]
+    )]
 )
 
 AC_SUBST(FDLIBS)
@@ -1605,6 +1611,7 @@ AC_SUBST(CFLAGS)
 AC_SUBST(CPPFLAGS)
 AC_SUBST(LDFLAGS)
 AC_SUBST(X_CFLAGS)
+AC_SUBST(DEFS)
 AC_SUBST(LIBS)
 AC_SUBST(DLIB)
 AC_SUBST(DB_LIBS)
@@ -1612,6 +1619,7 @@ AC_SUBST(X_LIBS)
 AC_SUBST(X_EXTRA_LIBS)
 AC_SUBST(WCFLAGS)
 AC_SUBST(WLDFLAGS)
+AC_SUBST(WRAPLIBS)
 
 dnl# extra configurable objects
 OBJLIST=
@@ -1633,6 +1641,9 @@ PSCMD="ps -e"
 WIN32=
 MACOSX=
 hostname=`uname -n | cut -d '.' -f 1`
+if test x${hostname} = x ; then
+  hostname="localhost"
+fi
 case "$DISTNAME" in
 aix)
 	DISTVER=`uname -r`
@@ -1658,7 +1669,7 @@ bsdi)
 	TAPEDRIVE="/dev/nrmt0"
 	PTHREAD_LIB="-pthread"
 	CFLAGS="${CFLAGS} -pthread"
-	PSCMD="ps -x -o pid,command"
+	PSCMD="ps -ax -o pid,command"
 	lld="qd"
 	llu="qu"
 	PFILES="${PFILES} \
@@ -1698,7 +1709,7 @@ freebsd)
 	lld="qd"
 	llu="qu"
 	TAPEDRIVE="/dev/nrsa0"
-	PSCMD="ps -x -o pid,command"
+	PSCMD="ps -ax -o pid,command"
 	PFILES="${PFILES} \
 	    platforms/freebsd/Makefile \
 	    platforms/freebsd/bacula-fd \
@@ -1711,6 +1722,8 @@ hpux)
 	CFLAGS="$(CFLAGS) -D_XOPEN_SOURCE_EXTENDED=1"
 	DISTVER=`uname -r`
 	TAPEDRIVE="/dev/rmt/0hnb"
+	PTHREAD_LIB="-lpthread"
+	AC_DEFINE([_INCLUDE_LONGLONG])
   ;;
 irix)
 	DISTVER=`uname -r`
@@ -1727,7 +1740,7 @@ netbsd)
 	lld="qd"
 	llu="qu"
 	TAPEDRIVE="/dev/nrst0"
-	PSCMD="ps -a -o pid,command"
+	PSCMD="ps -ax -o pid,command"
 	PTHREAD_LIB="-pthread"
 	CFLAGS="${CFLAGS} -pthread"
   ;;
@@ -1768,7 +1781,6 @@ redhat)
 	    platforms/redhat/bacula-dir \
 	    platforms/redhat/bacula.spec \
 	    "
-	hostname=`hostname -s`
   ;;
 mandrake)
 	DISTVER=`cat /etc/mandrake-release | grep release |\
@@ -1817,6 +1829,7 @@ solaris)
 	if test x$DISTVER = x5.6 ; then
 	    AC_DEFINE(HAVE_OLD_SOCKOPT)
 	fi
+	LIBS="$LIBS -lresolv"
   ;;
 suse)
 	DISTVER=`cat /etc/SuSE-release |grep VERSION|\
@@ -1884,13 +1897,6 @@ fi
 
 AC_OUTPUT([autoconf/Make.common \
 	   Makefile \
-	   rescue/Makefile \
-	   rescue/linux/Makefile \
-	   rescue/linux/floppy/Makefile \
-	   rescue/linux/cdrom/Makefile \
-	   rescue/linux/cdrom/bacula/Makefile \
-	   rescue/freebsd/Makefile \
-	   rescue/solaris/Makefile \
 	   scripts/startmysql \
 	   scripts/stopmysql \
 	   scripts/btraceback \
@@ -1899,6 +1905,9 @@ AC_OUTPUT([autoconf/Make.common \
 	   scripts/bconsole \
 	   scripts/gconsole \
 	   scripts/bacula \
+	   scripts/bacula-ctl-dir \
+	   scripts/bacula-ctl-fd \
+	   scripts/bacula-ctl-sd \
 	   scripts/devel_bacula \
 	   scripts/Makefile \
 	   scripts/logrotate \
@@ -1910,16 +1919,15 @@ AC_OUTPUT([autoconf/Make.common \
 	   scripts/bacula.desktop.gnome2.xsu \
 	   scripts/gnome-console.console_apps \
 	   scripts/mtx-changer \
+	   scripts/disk-changer \
+	   scripts/dvd-handler \
 	   scripts/bacula-tray-monitor.desktop \
 	   scripts/logwatch/Makefile \
 	   scripts/logwatch/logfile.bacula.conf \
-	   doc/Makefile \
 	   src/Makefile \
 	   src/host.h \
 	   src/console/Makefile \
 	   src/console/bconsole.conf \
-	   src/gnome-console/Makefile \
-	   src/gnome-console/gnome-console.conf \
 	   src/gnome2-console/Makefile \
 	   src/gnome2-console/gnome-console.conf \
 	   src/wx-console/Makefile \
@@ -1955,6 +1963,12 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/cats/grant_sqlite_privileges \
 	   src/cats/drop_sqlite_tables \
 	   src/cats/drop_sqlite_database \
+	   src/cats/create_sqlite3_database \
+	   src/cats/update_sqlite3_tables \
+	   src/cats/make_sqlite3_tables \
+	   src/cats/grant_sqlite3_privileges \
+	   src/cats/drop_sqlite3_tables \
+	   src/cats/drop_sqlite3_database \
 	   src/cats/sqlite \
 	   src/cats/mysql \
 	   src/cats/create_bdb_database \
@@ -1976,15 +1990,15 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/win32/Makefile \
 	   src/win32/console/bconsole.conf \
 	   src/win32/wx-console/wx-console.conf \
-	src/win32/pebuilder/Makefile \
-	src/bimagemgr/Makefile \
-	src/bimagemgr/bacula-bimagemgr.spec \
+	   src/win32/pebuilder/Makefile \
+	   po/Makefile.in \
 	   $PFILES ],  
 	  [(echo "Doing make of dependencies"; ${MAKE:-make} depend;) ]
 )
 
 cd scripts
 chmod 755 startmysql stopmysql bacula startit stopit btraceback mtx-changer
+chmod 755 dvd-handler
 chmod 755 bconsole gconsole mtx-changer devel_bacula logrotate
 cd ..
 
@@ -2001,6 +2015,9 @@ chmod 755 $c/grant_mysql_privileges   $c/drop_mysql_tables     $c/drop_mysql_dat
 
 chmod 755 $c/create_sqlite_database   $c/update_sqlite_tables  $c/make_sqlite_tables
 chmod 755 $c/grant_sqlite_privileges  $c/drop_sqlite_tables    $c/drop_sqlite_database
+
+chmod 755 $c/create_sqlite3_database   $c/update_sqlite3_tables  $c/make_sqlite3_tables
+chmod 755 $c/grant_sqlite3_privileges  $c/drop_sqlite3_tables	 $c/drop_sqlite3_database
 
 chmod 755 $c/create_postgresql_database  $c/update_postgresql_tables $c/make_postgresql_tables
 chmod 755 $c/grant_postgresql_privileges $c/drop_postgresql_tables   $c/drop_postgresql_database
@@ -2043,7 +2060,7 @@ if test "x${db_name}" = "xInternal" ; then
    echo " "
    echo " "
    echo "You have not specified either --enable-client-only or one of the"
-   echo "  supported databases: MySQL, PostgreSQL, or SQLite".
+   echo "  supported databases: MySQL, PostgreSQL, SQLite3 or SQLite."
    echo "  This is not permitted. Please reconfigure."
    echo " "
    echo "Aborting the configuration ..."
@@ -2064,6 +2081,8 @@ Configuration on `date`:
   Working directory:	      ${working_dir}
   PID directory:	      ${piddir}
   Subsys directory:	      ${subsysdir}
+  Man directory:	      ${mandir}
+  Data directory:	      ${datadir}
   C Compiler:		      ${CC} ${CCVERSION}
   C++ Compiler: 	      ${CXX} ${CXXVERSION}
   Compiler flags:	      ${WCFLAGS} ${CFLAGS} 
@@ -2097,19 +2116,19 @@ Configuration on `date`:
   Large file support:	      $largefile_support
   Bacula conio support:       ${got_conio} ${CONS_LIBS}
   readline support:	      ${got_readline} ${PRTREADLINE_SRC}
-  TCP Wrappers support:       ${TCPW_MSG}
+  TCP Wrappers support:       ${TCPW_MSG} ${WRAPLIBS}
+  TLS support:		      ${support_tls}
   ZLIB support: 	      ${have_zlib}
   enable-smartalloc:	      ${support_smartalloc} 
   enable-gnome: 	      ${support_gnome} ${gnome_version}
-  enable-wx-console:	      ${support_wx_console}
+  enable-wx-console:	      ${support_wx_console} ${wx_version}
   enable-tray-monitor:	      ${support_tray_monitor}
   client-only:		      ${build_client_only}
+  build-dird:		      ${build_dird}
+  build-stored: 	      ${build_stored}
   ACL support:		      ${have_acl}
+  Python support:	      ${support_python} ${PYTHON_LIBS}
 
   " > config.out
 
 cat config.out
-
-# old stuff
-# cweb support: 	      ${got_cweb} ${CWEB_SRC}
-# gmp support:		      ${got_gmp} ${GMP_SRC}

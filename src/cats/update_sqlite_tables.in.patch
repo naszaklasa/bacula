@@ -1,4 +1,4 @@
 11c11
 < bindir=@SQL_BINDIR@
 ---
-> bindir=/usr/lib/sqlite
+> bindir=/usr/lib/bacula/sqlite

@@ -3,25 +3,20 @@
  *
  *     Written by Meno Abels, June MMIIII
  *
- *     Version $Id: address_conf.c,v 1.11.4.2 2005/02/25 09:47:07 kerns Exp $
+ *     Version $Id: address_conf.c,v 1.16.2.1 2005/10/26 14:02:05 kerns Exp $
  */
 /*
-   Copyright (C) 2004 Kern Sibbald and John Walker
+   Copyright (C) 2004-2005 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
  */
 
@@ -35,7 +30,7 @@
 #endif
 
 static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultport, int family,
-		const char *hostname_str, const char *port_str, char **errstr);
+                const char *hostname_str, const char *port_str, char **errstr);
 
 
 IPADDR::IPADDR(const IPADDR &src) : type(src.type)
@@ -59,6 +54,7 @@ IPADDR::IPADDR(int af) : type(R_EMPTY)
      Emsg1(M_ERROR_TERM, 0, _("Only ipv4 is supported (%d)\n"), af);
   }
 #endif
+  memset(&saddrbuf, 0, sizeof(saddrbuf));
   saddr  = &saddrbuf.dontuse;
   saddr4 = &saddrbuf.dontuse4;
 #ifdef HAVE_IPV6
@@ -185,8 +181,8 @@ const char *IPADDR::get_address(char *outputbuf, int outlen)
 #ifdef HAVE_INET_NTOP
 # ifdef HAVE_IPV6
    inet_ntop(saddr->sa_family, saddr->sa_family == AF_INET ?
-	      (void*)&(saddr4->sin_addr) : (void*)&(saddr6->sin6_addr),
-	      outputbuf, outlen);
+              (void*)&(saddr4->sin_addr) : (void*)&(saddr6->sin6_addr),
+              outputbuf, outlen);
 # else
    inet_ntop(saddr->sa_family, (void*)&(saddr4->sin_addr), outputbuf, outlen);
 # endif
@@ -201,7 +197,7 @@ const char *IPADDR::build_address_str(char *buf, int blen)
    char tmp[1024];
    bsnprintf(buf, blen, "host[%s:%s:%hu] ",
             get_family() == AF_INET ? "ipv4" : "ipv6",
-	    get_address(tmp, sizeof(tmp) - 1), get_port_host_order());
+            get_address(tmp, sizeof(tmp) - 1), get_port_host_order());
    return buf;
 }
 
@@ -217,7 +213,7 @@ const char *build_addresses_str(dlist *addrs, char *buf, int blen)
       char tmp[1024];
       int len = bsnprintf(work, blen, "%s", p->build_address_str(tmp, sizeof(tmp)));
       if (len < 0)
-	 break;
+         break;
       work += len;
       blen -= len;
    }
@@ -258,7 +254,7 @@ void init_default_addresses(dlist **out, int port)
 }
 
 static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultport, int family,
-		const char *hostname_str, const char *port_str, char **errstr)
+                const char *hostname_str, const char *port_str, char **errstr)
 {
    IPADDR *iaddr;
    IPADDR *jaddr;
@@ -273,22 +269,22 @@ static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultp
    }
 
    type = (type == IPADDR::R_SINGLE_PORT
-	   || type == IPADDR::R_SINGLE_ADDR) ? IPADDR::R_SINGLE : type;
+           || type == IPADDR::R_SINGLE_ADDR) ? IPADDR::R_SINGLE : type;
    if (type != IPADDR::R_DEFAULT) {
       IPADDR *def = 0;
       foreach_dlist(iaddr, addrs) {
-	 if (iaddr->get_type() == IPADDR::R_DEFAULT) {
-	    def = iaddr;
-	 } else if (iaddr->get_type() != type) {
-	    *errstr = (char *)malloc(1024);
-	    bsnprintf(*errstr, 1023,
-                      "the old style addresses cannot be mixed with new style");
-	    return 0;
-	 }
+         if (iaddr->get_type() == IPADDR::R_DEFAULT) {
+            def = iaddr;
+         } else if (iaddr->get_type() != type) {
+            *errstr = (char *)malloc(1024);
+            bsnprintf(*errstr, 1023,
+                      _("the old style addresses cannot be mixed with new style"));
+            return 0;
+         }
       }
       if (def) {
-	 addrs->remove(def);
-	 delete def;
+         addrs->remove(def);
+         delete def;
       }
    }
 
@@ -298,16 +294,16 @@ static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultp
    } else {
       int pnum = atol(port_str);
       if (0 < pnum && pnum < 0xffff) {
-	 port = htons(pnum);
+         port = htons(pnum);
       } else {
          struct servent *s = getservbyname(port_str, "tcp");
-	 if (s) {
-	    port = s->s_port;
-	 } else {
-	    *errstr = (char *)malloc(1024);
-            bsnprintf(*errstr, 1023, "can't resolve service(%s)", port_str);
-	    return 0;
-	 }
+         if (s) {
+            port = s->s_port;
+         } else {
+            *errstr = (char *)malloc(1024);
+            bsnprintf(*errstr, 1023, _("can't resolve service(%s)"), port_str);
+            return 0;
+         }
       }
    }
 
@@ -315,46 +311,46 @@ static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultp
    hostaddrs = bnet_host2ipaddrs(hostname_str, family, &myerrstr);
    if (!hostaddrs) {
       *errstr = (char *)malloc(1024);
-      bsnprintf(*errstr, 1023, "can't resolve hostname(%s) %s", hostname_str,
-		myerrstr);
+      bsnprintf(*errstr, 1023, _("can't resolve hostname(%s) %s"), hostname_str,
+                myerrstr);
       return 0;
    }
 
    if (intype == IPADDR::R_SINGLE_PORT || intype == IPADDR::R_SINGLE_ADDR) {
       IPADDR *addr;
       if (addrs->size()) {
-	 addr = (IPADDR *)addrs->first();
+         addr = (IPADDR *)addrs->first();
       } else {
-	 addr = New(IPADDR(family));
-	 addr->set_type(type);
-	 addr->set_port_net(defaultport);
-	 addr->set_addr_any();
-	 addrs->append(addr);
+         addr = New(IPADDR(family));
+         addr->set_type(type);
+         addr->set_port_net(defaultport);
+         addr->set_addr_any();
+         addrs->append(addr);
       }
       if (intype == IPADDR::R_SINGLE_PORT) {
-	 addr->set_port_net(port);
+         addr->set_port_net(port);
       }
       if (intype == IPADDR::R_SINGLE_ADDR) {
-	 addr->copy_addr((IPADDR *) (hostaddrs->first()));
+         addr->copy_addr((IPADDR *) (hostaddrs->first()));
       }
    } else {
       foreach_dlist(iaddr, hostaddrs) {
-	 IPADDR *clone;
-	 /* for duplicates */
-	 foreach_dlist(jaddr, addrs) {
-	    if (iaddr->get_sockaddr_len() == jaddr->get_sockaddr_len() &&
-	    !memcmp(iaddr->get_sockaddr(), jaddr->get_sockaddr(),
-		    iaddr->get_sockaddr_len()))
-		{
-	       goto skip;	   /* no price */
-	    }
-	 }
-	 clone = New(IPADDR(*iaddr));
-	 clone->set_type(type);
-	 clone->set_port_net(port);
-	 addrs->append(clone);
+         IPADDR *clone;
+         /* for duplicates */
+         foreach_dlist(jaddr, addrs) {
+            if (iaddr->get_sockaddr_len() == jaddr->get_sockaddr_len() &&
+            !memcmp(iaddr->get_sockaddr(), jaddr->get_sockaddr(),
+                    iaddr->get_sockaddr_len()))
+                {
+               goto skip;          /* no price */
+            }
+         }
+         clone = New(IPADDR(*iaddr));
+         clone->set_type(type);
+         clone->set_port_net(port);
+         addrs->append(clone);
        skip:
-	 continue;
+         continue;
       }
    }
    free_addresses(hostaddrs);
@@ -366,25 +362,25 @@ static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultp
  *   positiv
  *   = { ip = { addr = 1.2.3.4; port = 1205; } ipv4 = { addr = 1.2.3.4; port = http; } }
  *   = { ip = {
- *	   addr = 1.2.3.4; port = 1205; }
+ *         addr = 1.2.3.4; port = 1205; }
  *     ipv4 = {
- *	   addr = 1.2.3.4; port = http; }
+ *         addr = 1.2.3.4; port = http; }
  *     ipv6 = {
- *	 addr = 1.2.3.4;
- *	 port = 1205;
+ *       addr = 1.2.3.4;
+ *       port = 1205;
  *     }
  *     ip = {
- *	 addr = 1.2.3.4
- *	 port = 1205
+ *       addr = 1.2.3.4
+ *       port = 1205
  *     }
  *     ip = {
- *	 addr = 1.2.3.4
+ *       addr = 1.2.3.4
  *     }
  *     ip = {
- *	 addr = 2001:220:222::2
+ *       addr = 2001:220:222::2
  *     }
  *     ip = {
- *	 addr = bluedot.thun.net
+ *       addr = bluedot.thun.net
  (     }
  *   }
  *   negativ
@@ -416,11 +412,11 @@ void store_addresses(LEX * lc, RES_ITEM * item, int index, int pass)
          scan_err1(lc, _("Expected a string, got: %s"), lc->str);
       }
       if (strcasecmp("ip", lc->str) == 0 || strcasecmp("ipv4", lc->str) == 0) {
-	 family = AF_INET;
+         family = AF_INET;
       }
 #ifdef HAVE_IPV6
       else if (strcasecmp("ipv6", lc->str) == 0) {
-	 family = AF_INET6;
+         family = AF_INET6;
       } else {
          scan_err1(lc, _("Expected a string [ip|ipv4|ipv6], got: %s"), lc->str);
       }
@@ -441,50 +437,50 @@ void store_addresses(LEX * lc, RES_ITEM * item, int index, int pass)
       exist = EMPTYLINE;
       port_str[0] = hostname_str[0] = '\0';
       do {
-	 if (token != T_IDENTIFIER) {
+         if (token != T_IDENTIFIER) {
             scan_err1(lc, _("Expected a identifier [addr|port], got: %s"), lc->str);
-	 }
+         }
          if (strcasecmp("port", lc->str) == 0) {
-	    next_line = PORTLINE;
-	    if (exist & PORTLINE) {
+            next_line = PORTLINE;
+            if (exist & PORTLINE) {
                scan_err0(lc, _("Only one port per address block"));
-	    }
-	    exist |= PORTLINE;
+            }
+            exist |= PORTLINE;
          } else if (strcasecmp("addr", lc->str) == 0) {
-	    next_line = ADDRLINE;
-	    if (exist & ADDRLINE) {
+            next_line = ADDRLINE;
+            if (exist & ADDRLINE) {
                scan_err0(lc, _("Only one addr per address block"));
-	    }
-	    exist |= ADDRLINE;
-	 } else {
+            }
+            exist |= ADDRLINE;
+         } else {
             scan_err1(lc, _("Expected a identifier [addr|port], got: %s"), lc->str);
-	 }
-	 token = lex_get_token(lc, T_SKIP_EOL);
-	 if (token != T_EQUALS) {
+         }
+         token = lex_get_token(lc, T_SKIP_EOL);
+         if (token != T_EQUALS) {
             scan_err1(lc, _("Expected a equal =, got: %s"), lc->str);
-	 }
-	 token = lex_get_token(lc, T_SKIP_EOL);
-	 switch (next_line) {
-	 case PORTLINE:
-	    if (!
-		(token == T_UNQUOTED_STRING || token == T_NUMBER
-		 || token == T_IDENTIFIER)) {
+         }
+         token = lex_get_token(lc, T_SKIP_EOL);
+         switch (next_line) {
+         case PORTLINE:
+            if (!
+                (token == T_UNQUOTED_STRING || token == T_NUMBER
+                 || token == T_IDENTIFIER)) {
                scan_err1(lc, _("Expected a number or a string, got: %s"), lc->str);
-	    }
-	    bstrncpy(port_str, lc->str, sizeof(port_str));
-	    break;
-	 case ADDRLINE:
-	    if (!(token == T_UNQUOTED_STRING || token == T_IDENTIFIER)) {
+            }
+            bstrncpy(port_str, lc->str, sizeof(port_str));
+            break;
+         case ADDRLINE:
+            if (!(token == T_UNQUOTED_STRING || token == T_IDENTIFIER)) {
                scan_err1(lc, _("Expected an IP number or a hostname, got: %s"),
-			 lc->str);
-	    }
-	    bstrncpy(hostname_str, lc->str, sizeof(hostname_str));
-	    break;
-	 case EMPTYLINE:
+                         lc->str);
+            }
+            bstrncpy(hostname_str, lc->str, sizeof(hostname_str));
+            break;
+         case EMPTYLINE:
             scan_err0(lc, _("State machine missmatch"));
-	    break;
-	 }
-	 token = lex_get_token(lc, T_SKIP_EOL);
+            break;
+         }
+         token = lex_get_token(lc, T_SKIP_EOL);
       } while (token == T_IDENTIFIER);
       if (token != T_EOB) {
          scan_err1(lc, _("Expected a end of block }, got: %s"), lc->str);
@@ -492,11 +488,11 @@ void store_addresses(LEX * lc, RES_ITEM * item, int index, int pass)
 
       char *errstr;
       if (pass == 1 && !add_address((dlist **)(item->value), IPADDR::R_MULTIPLE,
-	       htons(item->default_value), family, hostname_str, port_str, &errstr)) {
+               htons(item->default_value), family, hostname_str, port_str, &errstr)) {
            scan_err3(lc, _("Can't add hostname(%s) and port(%s) to addrlist (%s)"),
-		   hostname_str, port_str, errstr);
-	   free(errstr);
-	}
+                   hostname_str, port_str, errstr);
+           free(errstr);
+        }
       token = scan_to_next_not_eol(lc);
    } while ((token == T_IDENTIFIER || token == T_UNQUOTED_STRING));
    if (token != T_EOB) {
@@ -513,7 +509,7 @@ void store_addresses_address(LEX * lc, RES_ITEM * item, int index, int pass)
    }
    char *errstr;
    if (pass == 1 && !add_address((dlist **) (item->value), IPADDR::R_SINGLE_ADDR,
-		    htons(item->default_value), AF_INET, lc->str, 0, &errstr)) {
+                    htons(item->default_value), AF_INET, lc->str, 0, &errstr)) {
       scan_err2(lc, _("can't add port (%s) to (%s)"), lc->str, errstr);
       free(errstr);
    }
@@ -527,7 +523,7 @@ void store_addresses_port(LEX * lc, RES_ITEM * item, int index, int pass)
    }
    char *errstr;
    if (pass == 1 && !add_address((dlist **)(item->value), IPADDR::R_SINGLE_PORT,
-		    htons(item->default_value), AF_INET, 0, lc->str, &errstr)) {
+                    htons(item->default_value), AF_INET, 0, lc->str, &errstr)) {
       scan_err2(lc, _("can't add port (%s) to (%s)"), lc->str, errstr);
       free(errstr);
    }
@@ -576,13 +572,13 @@ char *sockaddr_to_ascii(const struct sockaddr *sa, char *buf, int len)
    /* MA Bug 5 the problem was that i mixed up sockaddr and in_addr */
    inet_ntop(sa->sa_family,
 # ifdef HAVE_IPV6
-	     sa->sa_family == AF_INET ? 
-		 (void*)&(((struct sockaddr_in*)sa)->sin_addr) :
-		 (void*)&(((struct sockaddr_in6*)sa)->sin6_addr),
+             sa->sa_family == AF_INET ? 
+                 (void*)&(((struct sockaddr_in*)sa)->sin_addr) :
+                 (void*)&(((struct sockaddr_in6*)sa)->sin6_addr),
 # else
-		 (void*)&(((struct sockaddr_in*)sa)->sin_addr),
+                 (void*)&(((struct sockaddr_in*)sa)->sin_addr),
 # endif /* HAVE_IPV6 */
-	     buf, len);
+             buf, len);
 #else
    bstrncpy(buf, inet_ntoa(((struct sockaddr_in *)sa)->sin_addr), len);
 #endif

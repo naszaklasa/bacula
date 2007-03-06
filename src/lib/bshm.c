@@ -4,11 +4,11 @@
  * To avoid problems with several return arguments, we
  * pass a packet.
  *
- *  BSHM definition is in bshm.h  
+ *  BSHM definition is in bshm.h
  *
  *  By Kern Sibbald, May MM
  *
- *   Version $Id: bshm.c,v 1.5 2004/04/15 10:14:26 kerns Exp $
+ *   Version $Id: bshm.c,v 1.7 2005/08/10 16:35:19 nboichat Exp $
  *
  *  Note, this routine was originally written so that the DEVICE structures
  *  could be shared between the child processes.  Now that the Storage
@@ -66,20 +66,20 @@ void shm_create(BSHM *shm)
    Dmsg1(110, "shm_create size=%d\n", shm->size);
    for (i=0; i<MAX_TRIES; i++) {
       if ((shmid = shmget(shmkey, shm->size, shm->perms | IPC_CREAT)) < 0) {
-         Emsg1(M_WARN, 0, "shmget failure key = %x\n", shmkey);
+	 Emsg1(M_WARN, 0, _("shmget failure key = %x\n"), shmkey);
 	 shmkey++;
 	 continue;
       }
       not_found = FALSE;
       break;
    }
-   if (not_found) 
-      Emsg2(M_ABORT, 0, "Could not get %d bytes of shared memory: %s\n", shm->size, strerror(errno));
+   if (not_found)
+      Emsg2(M_ABORT, 0, _("Could not get %d bytes of shared memory: %s\n"), shm->size, strerror(errno));
    shm->shmkey = shmkey;
    shm->shmid = shmid;
    Dmsg2(110, "shm_create return key=%x id=%d\n", shmkey, shmid);
    shmkey++;			      /* leave set for next time */
-#else 
+#else
    shm->shmbuf = NULL;
    shm->shmkey = 0;		      /* reference count */
 #endif
@@ -96,10 +96,10 @@ void *shm_open(BSHM *shm)
    if ((shmid = shmget(shm->shmkey, shm->size, 0)) < 0)
       Emsg2(M_ABORT, 0, "Could not get %d bytes of shared memory: %s\n", shm->size, strerror(errno));
    Dmsg1(110, "shm_open shmat with id=%d\n", shmid);
-   shmbuf = shmat(shmid, NULL, 0);	
+   shmbuf = shmat(shmid, NULL, 0);
    Dmsg1(110, "shm_open buf=%x\n", shmbuf);
    if (shmbuf == (char *) -1)
-      Emsg1(M_ABORT, 0, "Could not attach shared memory: %s\n", strerror(errno));
+      Emsg1(M_ABORT, 0, _("Could not attach shared memory: %s\n"), strerror(errno));
    shm->shmbuf = shmbuf;
    shm->shmid = shmid;
    return shmbuf;
@@ -120,7 +120,7 @@ void shm_close(BSHM *shm)
 #ifdef NEED_SHARED_MEMORY
    if (shm->size) {
       if (shmdt(shm->shmbuf) < 0) {
-         Emsg1(M_ERROR, 0, "Error detaching shared memory: %s\n", strerror(errno));
+	 Emsg1(M_ERROR, 0, _("Error detaching shared memory: %s\n"), strerror(errno));
       }
    }
 #else
@@ -136,7 +136,7 @@ void shm_destroy(BSHM *shm)
 #ifdef NEED_SHARED_MEMORY
    if (shm->size) {
       if (shmctl(shm->shmid, IPC_RMID, NULL) < 0) {
-         Emsg1(M_ERROR, 0, "Could not destroy shared memory: %s\n", strerror(errno));
+	 Emsg1(M_ERROR, 0, _("Could not destroy shared memory: %s\n"), strerror(errno));
       }
    }
 #else
