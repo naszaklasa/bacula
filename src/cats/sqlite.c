@@ -3,28 +3,36 @@
  *
  *    Kern Sibbald, January 2002
  *
- *    Version $Id: sqlite.c,v 1.30 2005/05/07 17:21:58 kerns Exp $
+ *    Version $Id: sqlite.c,v 1.36.2.1 2007/01/26 11:16:35 kerns Exp $
  */
-
 /*
-   Copyright (C) 2002-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+
 
 
 /* The following is necessary so that we do not include
@@ -44,8 +52,6 @@
  * -----------------------------------------------------------------------
  */
 
-extern const char *working_directory;
-
 /* List of open databases */
 static BQUEUE db_list = {&db_list, &db_list};
 
@@ -53,6 +59,15 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int QueryDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
 
+
+/*
+ * Retrieve database type
+ */
+const char *
+db_get_type(void)
+{
+   return "SQLite";
+}
 
 /*
  * Initialize database data structure. In principal this should
@@ -69,7 +84,9 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
    /* Look to see if DB already open */
    if (!mult_db_connections) {
       for (mdb=NULL; (mdb=(B_DB *)qnext(&db_list, &mdb->bq)); ) {
-         if (strcmp(mdb->db_name, db_name) == 0) {
+         if (bstrcmp(mdb->db_name, db_name) &&
+             bstrcmp(mdb->db_address, db_address) &&
+             mdb->db_port == db_port) {
             Dmsg2(300, "DB REopen %d %s\n", mdb->ref_count, db_name);
             mdb->ref_count++;
             V(mutex);
@@ -144,6 +161,8 @@ db_open_database(JCR *jcr, B_DB *mdb)
    int stat = sqlite3_open(db_name, &mdb->db);
    if (stat != SQLITE_OK) {
       mdb->sqlite_errmsg = (char *)sqlite3_errmsg(mdb->db); 
+      sqlite3_close(mdb->db);
+      mdb->db = NULL;
    } else {
       mdb->sqlite_errmsg = NULL;
    }
@@ -331,15 +350,19 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
 /*
  * Submit a sqlite query and retrieve all the data
  */
-int my_sqlite_query(B_DB *mdb, char *cmd)
+int my_sqlite_query(B_DB *mdb, const char *cmd)
 {
    int stat;
 
    if (mdb->sqlite_errmsg) {
+#ifdef HAVE_SQLITE3
+      sqlite3_free(mdb->sqlite_errmsg);
+#else
       actuallyfree(mdb->sqlite_errmsg);
+#endif
       mdb->sqlite_errmsg = NULL;
    }
-   stat = sqlite_get_table(mdb->db, cmd, &mdb->result, &mdb->nrow, &mdb->ncolumn,
+   stat = sqlite_get_table(mdb->db, (char *)cmd, &mdb->result, &mdb->nrow, &mdb->ncolumn,
             &mdb->sqlite_errmsg);
    mdb->row = 0;                      /* row fetched */
    return stat;

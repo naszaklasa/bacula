@@ -20,19 +20,32 @@
  *     Kern Sibbald, January MM, September MM
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "console_conf.h"
@@ -54,15 +67,14 @@ RES **res_head = sres_head;
  * then move it to allocated memory when the resource
  * scan is complete.
  */
-#if defined(HAVE_WIN32) && !defined(HAVE_CYGWIN)  && !defined(HAVE_MINGW)
+#if defined(_MSC_VER)
 extern "C" { // work around visual compiler mangling variables
     URES res_all;
-    int  res_all_size = sizeof(res_all);
 }
 #else
 URES res_all;
-int  res_all_size = sizeof(res_all);
 #endif
+int  res_all_size = sizeof(res_all);
 
 /* Definition of records permitted within each
  * resource with the routine to process the record
@@ -76,13 +88,14 @@ static RES_ITEM cons_items[] = {
    {"rcfile",         store_dir,      ITEM(res_cons.rc_file), 0, 0, 0},
    {"historyfile",    store_dir,      ITEM(res_cons.hist_file), 0, 0, 0},
    {"password",       store_password, ITEM(res_cons.password), 0, ITEM_REQUIRED, 0},
-   {"tlsenable",      store_yesno,     ITEM(res_cons.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_yesno,     ITEM(res_cons.tls_require), 1, 0, 0},
+   {"tlsenable",      store_bit,     ITEM(res_cons.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_bit,     ITEM(res_cons.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(res_cons.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(res_cons.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(res_cons.tls_certfile), 0, 0, 0},
    {"tlskey",         store_dir,       ITEM(res_cons.tls_keyfile), 0, 0, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {"director",       store_str,       ITEM(res_cons.director), 0, 0, 0},
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 
@@ -93,13 +106,13 @@ static RES_ITEM dir_items[] = {
    {"dirport",        store_int,       ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",        store_str,       ITEM(res_dir.address),  0, 0, 0},
    {"password",       store_password,  ITEM(res_dir.password), 0, ITEM_REQUIRED, 0},
-   {"tlsenable",      store_yesno,     ITEM(res_dir.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_yesno,     ITEM(res_dir.tls_require), 1, 0, 0},
+   {"tlsenable",      store_bit,     ITEM(res_dir.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_bit,     ITEM(res_dir.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(res_dir.tls_certfile), 0, 0, 0},
    {"tlskey",         store_dir,       ITEM(res_dir.tls_keyfile), 0, 0, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 /*
@@ -297,15 +310,16 @@ void save_resource(int type, RES_ITEM *items, int pass)
       if (!res_head[rindex]) {
          res_head[rindex] = (RES *)res; /* store first entry */
       } else {
-         RES *next;
-         for (next=res_head[rindex]; next->next; next=next->next) {
+         RES *next, *last;
+         for (last=next=res_head[rindex]; next; next=next->next) {
+            last = next;
             if (strcmp(next->name, res->res_dir.hdr.name) == 0) {
                Emsg2(M_ERROR_TERM, 0,
                   _("Attempt to define second %s resource named \"%s\" is not permitted.\n"),
                   resources[rindex].name, res->res_dir.hdr.name);
             }
          }
-         next->next = (RES *)res;
+         last->next = (RES *)res;
          Dmsg2(90, "Inserting %s res: %s\n", res_to_str(type),
                res->res_dir.hdr.name);
       }

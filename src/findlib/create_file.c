@@ -3,23 +3,36 @@
  *
  *    Kern Sibbald, November MM
  *
- *   Version $Id: create_file.c,v 1.46.2.2 2006/05/02 14:48:16 kerns Exp $
+ *   Version $Id: create_file.c,v 1.57 2006/12/20 13:59:50 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "find.h"
@@ -72,10 +85,33 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
    }
 
    new_mode = attr->statp.st_mode;
-   Dmsg2(300, "newmode=%x file=%s\n", new_mode, attr->ofname);
+   Dmsg3(200, "type=%d newmode=%x file=%s\n", attr->type, new_mode, attr->ofname);
    parent_mode = S_IWUSR | S_IXUSR | new_mode;
    gid = attr->statp.st_gid;
    uid = attr->statp.st_uid;
+
+#ifdef HAVE_WIN32
+   if (!bfd->use_backup_api) {
+      // eliminate invalid windows filename characters from foreign filenames
+      char *ch = (char *)attr->ofname;
+      if (ch[0] != 0 && ch[1] != 0) {
+         ch+=2;
+         while (*ch) {
+            switch (*ch) {
+            case ':':
+            case '<':
+            case '>':
+            case '*':
+            case '?':
+            case '|':
+               *ch = '_';
+                break;
+            }
+            ch++;
+         }
+      }
+   }
+#endif
 
    Dmsg2(400, "Replace=%c %d\n", (char)replace, replace);
    if (lstat(attr->ofname, &mstatp) == 0) {
@@ -83,20 +119,20 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
       switch (replace) {
       case REPLACE_IFNEWER:
          if (attr->statp.st_mtime <= mstatp.st_mtime) {
-            Jmsg(jcr, M_SKIPPED, 0, _("File skipped. Not newer: %s\n"), attr->ofname);
+            Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Not newer: %s\n"), attr->ofname);
             return CF_SKIP;
          }
          break;
 
       case REPLACE_IFOLDER:
          if (attr->statp.st_mtime >= mstatp.st_mtime) {
-            Jmsg(jcr, M_SKIPPED, 0, _("File skipped. Not older: %s\n"), attr->ofname);
+            Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Not older: %s\n"), attr->ofname);
             return CF_SKIP;
          }
          break;
 
       case REPLACE_NEVER:
-         Jmsg(jcr, M_SKIPPED, 0, _("File skipped. Already exists: %s\n"), attr->ofname);
+         Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Already exists: %s\n"), attr->ofname);
          return CF_SKIP;
 
       case REPLACE_ALWAYS:
@@ -104,11 +140,11 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
       }
    }
    switch (attr->type) {
+   case FT_RAW:                       /* raw device to be written */
+   case FT_FIFO:                      /* FIFO to be written to */
    case FT_LNKSAVED:                  /* Hard linked, file already saved */
    case FT_LNK:
-   case FT_RAW:
-   case FT_FIFO:
-   case FT_SPEC:
+   case FT_SPEC:                      /* fifo, ... to be backed up */
    case FT_REGE:                      /* empty file */
    case FT_REG:                       /* regular file */
       /* 
@@ -121,7 +157,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
          /* Get rid of old copy */
          if (unlink(attr->ofname) == -1) {
             berrno be;
-            Jmsg(jcr, M_ERROR, 0, _("File %s already exists and could not be replaced. ERR=%s.\n"),
+            Qmsg(jcr, M_ERROR, 0, _("File %s already exists and could not be replaced. ERR=%s.\n"),
                attr->ofname, be.strerror());
             /* Continue despite error */
          }
@@ -173,75 +209,20 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
          }
          Dmsg1(50, "Create file: %s\n", attr->ofname);
          if (is_bopen(bfd)) {
-            Jmsg1(jcr, M_ERROR, 0, _("bpkt already open fid=%d\n"), bfd->fid);
+            Qmsg1(jcr, M_ERROR, 0, _("bpkt already open fid=%d\n"), bfd->fid);
             bclose(bfd);
          }
-         /*
-          * If the open fails, we attempt to cd into the directory
-          *  and create the file with a relative path rather than
-          *  the full absolute path.  This is for Win32 where
-          *  path names may be too long to create.
-          */
+      
+
          if ((bopen(bfd, attr->ofname, mode, S_IRUSR | S_IWUSR)) < 0) {
             berrno be;
-            int stat;
-            Dmsg2(000, "bopen failed errno=%d: ERR=%s\n", bfd->berrno,  
-               be.strerror(bfd->berrno));
-            if (strlen(attr->ofname) > 250) {   /* Microsoft limitation */
-               char savechr;
-               char *p, *e;
-               struct saved_cwd cwd;
-               savechr = attr->ofname[pnl];
-               attr->ofname[pnl] = 0;                 /* terminate path */
-               Dmsg1(000, "Do chdir %s\n", attr->ofname);
-               if (save_cwd(&cwd) != 0) {
-                  Jmsg0(jcr, M_ERROR, 0, _("Could not save_dirn"));
-                  attr->ofname[pnl] = savechr;
-                  return CF_ERROR;
-               }
-               p = attr->ofname;
-               while ((e = strchr(p, '/'))) {
-                  *e = 0;
-                  if (chdir(p) < 0) {
-                     berrno be;
-                     Jmsg2(jcr, M_ERROR, 0, _("Could not chdir to %s: ERR=%s\n"),
-                           attr->ofname, be.strerror());
-                     restore_cwd(&cwd, NULL, NULL);
-                     free_cwd(&cwd);
-                     attr->ofname[pnl] = savechr;
-                     *e = '/';
-                     return CF_ERROR;
-                  }
-                  *e = '/';
-                  p = e + 1;
-               }
-               if (chdir(p) < 0) {
-                  berrno be;
-                  Jmsg2(jcr, M_ERROR, 0, _("Could not chdir to %s: ERR=%s\n"),
-                        attr->ofname, be.strerror());
-                  restore_cwd(&cwd, NULL, NULL);
-                  free_cwd(&cwd);
-                  attr->ofname[pnl] = savechr;
-                  return CF_ERROR;
-               }
-               attr->ofname[pnl] = savechr;
-               Dmsg1(000, "Do open %s\n", &attr->ofname[pnl+1]);
-               if ((bopen(bfd, &attr->ofname[pnl+1], mode, S_IRUSR | S_IWUSR)) < 0) {
-                  stat = CF_ERROR;
-               } else {
-                  stat = CF_EXTRACT;
-               }
-               restore_cwd(&cwd, NULL, NULL);
-               free_cwd(&cwd);
-               if (stat == CF_EXTRACT) {
-                  return CF_EXTRACT;
-               }
-            }
-            Jmsg2(jcr, M_ERROR, 0, _("Could not create %s: ERR=%s\n"),
-                  attr->ofname, be.strerror(bfd->berrno));
+            be.set_errno(bfd->berrno);
+            Qmsg2(jcr, M_ERROR, 0, _("Could not create %s: ERR=%s\n"),
+                  attr->ofname, be.strerror());
             return CF_ERROR;
          }
          return CF_EXTRACT;
+
 #ifndef HAVE_WIN32  // none of these exists on MS Windows
       case FT_RAW:                    /* Bacula raw device e.g. /dev/sda1 */
       case FT_FIFO:                   /* Bacula fifo to save data */
@@ -250,15 +231,17 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
             Dmsg1(200, "Restore fifo: %s\n", attr->ofname);
             if (mkfifo(attr->ofname, attr->statp.st_mode) != 0 && errno != EEXIST) {
                berrno be;
-               Jmsg2(jcr, M_ERROR, 0, _("Cannot make fifo %s: ERR=%s\n"),
+               Qmsg2(jcr, M_ERROR, 0, _("Cannot make fifo %s: ERR=%s\n"),
                      attr->ofname, be.strerror());
                return CF_ERROR;
             }
+         } else if(S_ISSOCK(attr->statp.st_mode)) {
+             Dmsg1(200, "Skipping restore of socket: %s\n", attr->ofname);
          } else {
             Dmsg1(200, "Restore node: %s\n", attr->ofname);
             if (mknod(attr->ofname, attr->statp.st_mode, attr->statp.st_rdev) != 0 && errno != EEXIST) {
                berrno be;
-               Jmsg2(jcr, M_ERROR, 0, _("Cannot make node %s: ERR=%s\n"),
+               Qmsg2(jcr, M_ERROR, 0, _("Cannot make node %s: ERR=%s\n"),
                      attr->ofname, be.strerror());
                return CF_ERROR;
             }
@@ -269,17 +252,19 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
             mode =  O_WRONLY | O_BINARY;
             /* Timeout open() in 60 seconds */
             if (attr->type == FT_FIFO) {
+               Dmsg0(200, "Set FIFO timer\n");
                tid = start_thread_timer(pthread_self(), 60);
             } else {
                tid = NULL;
             }
             if (is_bopen(bfd)) {
-               Jmsg1(jcr, M_ERROR, 0, _("bpkt already open fid=%d\n"), bfd->fid);
+               Qmsg1(jcr, M_ERROR, 0, _("bpkt already open fid=%d\n"), bfd->fid);
             }
+            Dmsg2(200, "open %s mode=0x%x\n", attr->ofname, mode);
             if ((bopen(bfd, attr->ofname, mode, 0)) < 0) {
                berrno be;
                be.set_errno(bfd->berrno);
-               Jmsg2(jcr, M_ERROR, 0, _("Could not open %s: ERR=%s\n"),
+               Qmsg2(jcr, M_ERROR, 0, _("Could not open %s: ERR=%s\n"),
                      attr->ofname, be.strerror());
                stop_thread_timer(tid);
                return CF_ERROR;
@@ -294,7 +279,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
          Dmsg2(130, "FT_LNK should restore: %s -> %s\n", attr->ofname, attr->olname);
          if (symlink(attr->olname, attr->ofname) != 0 && errno != EEXIST) {
             berrno be;
-            Jmsg3(jcr, M_ERROR, 0, _("Could not symlink %s -> %s: ERR=%s\n"),
+            Qmsg3(jcr, M_ERROR, 0, _("Could not symlink %s -> %s: ERR=%s\n"),
                   attr->ofname, attr->olname, be.strerror());
             return CF_ERROR;
          }
@@ -304,9 +289,46 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
          Dmsg2(130, "Hard link %s => %s\n", attr->ofname, attr->olname);
          if (link(attr->olname, attr->ofname) != 0) {
             berrno be;
-            Jmsg3(jcr, M_ERROR, 0, _("Could not hard link %s -> %s: ERR=%s\n"),
+#ifdef HAVE_CHFLAGS
+            struct stat s;
+
+        /*
+            * If using BSD user flags, maybe has a file flag
+            * preventing this. So attempt to disable, retry link,
+            * and reset flags.
+            * Note that BSD securelevel may prevent disabling flag.
+	*/
+
+            if (stat(attr->olname, &s) == 0 && s.st_flags != 0) {
+               if (chflags(attr->olname, 0) == 0) {
+                  if (link(attr->olname, attr->ofname) != 0) {
+                     /* restore original file flags even when linking failed */
+                     if (chflags(attr->olname, s.st_flags) < 0) {
+                        Qmsg2(jcr, M_ERROR, 0, _("Could not restore file flags for file %s: ERR=%s\n"),
+                              attr->olname, be.strerror());
+                     }
+#endif /* HAVE_CHFLAGS */
+            Qmsg3(jcr, M_ERROR, 0, _("Could not hard link %s -> %s: ERR=%s\n"),
                   attr->ofname, attr->olname, be.strerror());
             return CF_ERROR;
+#ifdef HAVE_CHFLAGS
+                  }
+                  /* finally restore original file flags */
+                  if (chflags(attr->olname, s.st_flags) < 0) {
+                     Qmsg2(jcr, M_ERROR, 0, _("Could not restore file flags for file %s: ERR=%s\n"),
+                            attr->olname, be.strerror());
+                  }
+               } else {
+                 Qmsg2(jcr, M_ERROR, 0, _("Could not reset file flags for file %s: ERR=%s\n"),
+                       attr->olname, be.strerror());
+               }
+            } else {
+              Qmsg3(jcr, M_ERROR, 0, _("Could not hard link %s -> %s: ERR=%s\n"),
+                    attr->ofname, attr->olname, be.strerror());
+              return CF_ERROR;
+            }
+#endif /* HAVE_CHFLAGS */
+
          }
          return CF_CREATED;
 #endif
@@ -325,18 +347,20 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
        */
       if (!is_portable_backup(bfd)) {
          if (is_bopen(bfd)) {
-            Jmsg1(jcr, M_ERROR, 0, _("bpkt already open fid=%d\n"), bfd->fid);
+            Qmsg1(jcr, M_ERROR, 0, _("bpkt already open fid=%d\n"), bfd->fid);
          }
          if ((bopen(bfd, attr->ofname, O_WRONLY|O_BINARY, 0)) < 0) {
             berrno be;
             be.set_errno(bfd->berrno);
 #ifdef HAVE_WIN32
             /* Check for trying to create a drive, if so, skip */
-            if (attr->ofname[1] == ':' && attr->ofname[2] == '/' && attr->ofname[3] == 0) {
+            if (attr->ofname[1] == ':' && 
+                IsPathSeparator(attr->ofname[2]) && 
+                attr->ofname[3] == '\0') {
                return CF_SKIP;
             }
 #endif
-            Jmsg2(jcr, M_ERROR, 0, _("Could not open %s: ERR=%s\n"),
+            Qmsg2(jcr, M_ERROR, 0, _("Could not open %s: ERR=%s\n"),
                   attr->ofname, be.strerror());
             return CF_ERROR;
          }
@@ -355,10 +379,10 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
    case FT_NORECURSE:
    case FT_NOFSCHG:
    case FT_NOOPEN:
-      Jmsg2(jcr, M_ERROR, 0, _("Original file %s not saved: type=%d\n"), attr->fname, attr->type);
+      Qmsg2(jcr, M_ERROR, 0, _("Original file %s not saved: type=%d\n"), attr->fname, attr->type);
       break;
    default:
-      Jmsg2(jcr, M_ERROR, 0, _("Unknown file type %d; not restored: %s\n"), attr->type, attr->fname);
+      Qmsg2(jcr, M_ERROR, 0, _("Unknown file type %d; not restored: %s\n"), attr->type, attr->fname);
       break;
    }
    return CF_ERROR;
@@ -376,20 +400,23 @@ static int separate_path_and_file(JCR *jcr, char *fname, char *ofile)
 
    /* Separate pathname and filename */
    for (q=p=f=ofile; *p; p++) {
-      if (*p == '/') {
-         f = q;                    /* possible filename */
-      }
 #ifdef HAVE_WIN32
-      if (*p == '\\') {            /* strip backslashes on Win32 */
-         continue;
+      if (IsPathSeparator(*p)) {
+         f = q;
+         if (IsPathSeparator(p[1])) {
+            p++;
+         }
       }
       *q++ = *p;                   /* copy data */
 #else
+      if (IsPathSeparator(*p)) {
+         f = q;                    /* possible filename */
+      }
       q++;
 #endif
    }
 
-   if (*f == '/') {
+   if (IsPathSeparator(*f)) {
       f++;
    }
    *q = 0;                         /* terminate string */

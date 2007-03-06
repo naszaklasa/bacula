@@ -3,27 +3,39 @@
  *
  *    Kern Sibbald, June MMIII  (code pulled from filed/restore.c and updated)
  *
- *   Version $Id: attr.c,v 1.15 2005/07/08 10:02:59 kerns Exp $
+ *   Version $Id: attr.c,v 1.22 2006/11/21 16:45:11 robertnelson Exp $
  */
 /*
-   Copyright (C) 2003-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2003-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "jcr.h"
 
-extern const int win32_client;
 
 ATTR *new_attr()
 {
@@ -59,13 +71,13 @@ int unpack_attributes_record(JCR *jcr, int32_t stream, char *rec, ATTR *attr)
     *
     */
    attr->stream = stream;
-   Dmsg1(100, "Attr: %s\n", rec);
-   if (sscanf(rec, "%d %d", &attr->file_index, &attr->type) != 2) {
+   Dmsg1(400, "Attr: %s\n", rec);
+   if (sscanf(rec, "%ld %ld", &attr->file_index, &attr->type) != 2) {
       Jmsg(jcr, M_FATAL, 0, _("Error scanning attributes: %s\n"), rec);
       Dmsg1(100, "\nError scanning attributes. %s\n", rec);
       return 0;
    }
-   Dmsg2(100, "Got Attr: FilInx=%d type=%d\n", attr->file_index, attr->type);
+   Dmsg2(400, "Got Attr: FilInx=%d type=%d\n", attr->file_index, attr->type);
    if (attr->type & AR_DATA_STREAM) {
       attr->data_stream = 1;
    } else {
@@ -96,7 +108,7 @@ int unpack_attributes_record(JCR *jcr, int32_t stream, char *rec, ATTR *attr)
       from_base64(&val, p);
       attr->data_stream = (int32_t)val;
    }
-   Dmsg7(200, "unpack_attr FI=%d Type=%d fname=%s attr=%s lname=%s attrEx=%s ds=%d\n",
+   Dmsg7(400, "unpack_attr FI=%d Type=%d fname=%s attr=%s lname=%s attrEx=%s ds=%d\n",
       attr->file_index, attr->type, attr->fname, attr->attr, attr->lname,
       attr->attrEx, attr->data_stream);
    *attr->ofname = 0;
@@ -104,19 +116,21 @@ int unpack_attributes_record(JCR *jcr, int32_t stream, char *rec, ATTR *attr)
    return 1;
 }
 
+#if defined(HAVE_WIN32)
 static void strip_double_slashes(char *fname)
 {
    char *p = fname;
    while (p && *p) {
-      p = strchr(p, '/');
-      if (p && p[1] == '/') {
-         strcpy(p, p+1);
-      }      
-      if (p) {
+      p = strpbrk(p, "/\\");
+      if (p != NULL) {
+         if (IsPathSeparator(p[1])) {
+            strcpy(p, p+1);
+         }
          p++;
       }
    }
 }
+#endif
 
 /*
  * Build attr->ofname from attr->fname and
@@ -141,12 +155,14 @@ void build_attr_output_fnames(JCR *jcr, ATTR *attr)
       const char *fn;
       int wherelen = strlen(jcr->where);
       pm_strcpy(attr->ofname, jcr->where);  /* copy prefix */
-      if (win32_client && attr->fname[1] == ':') {
+#if defined(HAVE_WIN32)
+      if (attr->fname[1] == ':') {
          attr->fname[1] = '/';     /* convert : to / */
       }
+#endif
       fn = attr->fname;            /* take whole name */
       /* Ensure where is terminated with a slash */
-      if (jcr->where[wherelen-1] != '/' && fn[0] != '/') {
+      if (!IsPathSeparator(jcr->where[wherelen-1]) && !IsPathSeparator(fn[0])) {
          pm_strcat(attr->ofname, "/");
       }
       pm_strcat(attr->ofname, fn); /* copy rest of name */
@@ -158,7 +174,7 @@ void build_attr_output_fnames(JCR *jcr, ATTR *attr)
          /* Always add prefix to hard links (FT_LNKSAVED) and
           *  on user request to soft links
           */
-         if (attr->lname[0] == '/' &&
+         if (IsPathSeparator(attr->lname[0]) &&
              (attr->type == FT_LNKSAVED || jcr->prefix_links)) {
             pm_strcpy(attr->olname, jcr->where);
             add_link = true;
@@ -166,21 +182,26 @@ void build_attr_output_fnames(JCR *jcr, ATTR *attr)
             attr->olname[0] = 0;
             add_link = false;
          }
-         if (win32_client && attr->lname[1] == ':') {
+
+#if defined(HAVE_WIN32)
+         if (attr->lname[1] == ':') {
             attr->lname[1] = '/';    /* turn : into / */
          }
+#endif
          fn = attr->lname;       /* take whole name */
          /* Ensure where is terminated with a slash */
-         if (add_link && jcr->where[wherelen-1] != '/' && fn[0] != '/') {
+         if (add_link && 
+            !IsPathSeparator(jcr->where[wherelen-1]) && 
+            !IsPathSeparator(fn[0])) {
             pm_strcat(attr->olname, "/");
          }
          pm_strcat(attr->olname, fn);     /* copy rest of link */
       }
    }
-   if (win32_client) {
-      strip_double_slashes(attr->ofname);
-      strip_double_slashes(attr->olname);
-   }
+#if defined(HAVE_WIN32)
+   strip_double_slashes(attr->ofname);
+   strip_double_slashes(attr->olname);
+#endif
 }
 
 extern char *getuser(uid_t uid, char *name, int len);

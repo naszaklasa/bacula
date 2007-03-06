@@ -3,9 +3,7 @@
  *
  * Author: Landon Fuller <landonf@threerings.net>
  *
- * Version $Id: tls.h,v 1.1 2005/04/22 08:09:35 landonf Exp $
- *
- * Copyright (C) 2005 Kern Sibbald
+ * Version $Id: tls.h,v 1.4 2006/11/21 13:20:11 kerns Exp $
  *
  * This file was contributed to the Bacula project by Landon Fuller
  * and Three Rings Design, Inc.
@@ -21,22 +19,33 @@
  * under an alternate open source license please contact
  * Landon Fuller <landonf@threerings.net>.
  */
-/*  
-   This library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU Lesser General Public
-   License as published by the Free Software Foundation; either
-   version 2.1 of the License, or (at your option) any later version.
-  
-   This library is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU Lesser General 
+   Public License as published by the Free Software Foundation plus 
+   additions that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    Lesser General Public License for more details.
-  
-   You should have received a copy of the GNU Lesser General Public
-   License along with this library; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-   MA 02111-1307, USA.
- */
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark ofJohn Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #ifndef __TLS_H_
 #define __TLS_H_
@@ -49,8 +58,5 @@ typedef struct TLS_Context TLS_CONTEXT;
 
 /* Opaque TLS Connection Structure */
 typedef struct TLS_Connection TLS_CONNECTION;
-
-/* PEM Decryption Passphrase Callback */
-typedef int (TLS_PEM_PASSWD_CB) (char *buf, int size, const void *userdata);
 
 #endif /* __TLS_H_ */

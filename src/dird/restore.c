@@ -15,22 +15,35 @@
  *       to do the restore.
  *     Update the DB according to what files where restored????
  *
- *   Version $Id: restore.c,v 1.56.2.5 2006/06/04 12:24:39 kerns Exp $
+ *   Version $Id: restore.c,v 1.67 2006/12/09 13:54:30 ricozz Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
@@ -43,6 +56,7 @@ static char storaddr[]     = "storage address=%s port=%d ssl=0\n";
 /* Responses received from File daemon */
 static char OKrestore[]   = "2000 OK restore\n";
 static char OKstore[]     = "2000 OK storage\n";
+static char OKbootstrap[] = "2000 OK bootstrap\n";
 
 /*
  * Do a restore of the specified files
@@ -54,6 +68,8 @@ bool do_restore(JCR *jcr)
 {
    BSOCK   *fd;
    JOB_DBR rjr;                       /* restore job record */
+
+   free_wstorage(jcr);                /* we don't write */
 
    memset(&rjr, 0, sizeof(rjr));
    jcr->jr.JobLevel = L_FULL;         /* Full restore */
@@ -67,7 +83,9 @@ bool do_restore(JCR *jcr)
    Dmsg1(20, "RestoreJobId=%d\n", jcr->job->RestoreJobId);
 
    if (!jcr->RestoreBootstrap) {
-      Jmsg0(jcr, M_FATAL, 0, _("Cannot restore without bootstrap file.\n"));
+      Jmsg0(jcr, M_FATAL, 0, _("Cannot restore without a bootstrap file.\n"
+          "You probably ran a restore job directly. All restore jobs must\n"
+          "be run using the restore command.\n"));
       restore_cleanup(jcr, JS_ErrorTerminated);
       return false;
    }
@@ -94,7 +112,7 @@ bool do_restore(JCR *jcr)
    /*
     * Now start a job with the Storage daemon
     */
-   if (!start_storage_daemon_job(jcr, jcr->storage, NULL)) {
+   if (!start_storage_daemon_job(jcr, jcr->rstorage, NULL)) {
       restore_cleanup(jcr, JS_ErrorTerminated);
       return false;
    }
@@ -128,10 +146,10 @@ bool do_restore(JCR *jcr)
     *   then wait for File daemon to make connection
     *   with Storage daemon.
     */
-   if (jcr->store->SDDport == 0) {
-      jcr->store->SDDport = jcr->store->SDport;
+   if (jcr->rstore->SDDport == 0) {
+      jcr->rstore->SDDport = jcr->rstore->SDport;
    }
-   bnet_fsend(fd, storaddr, jcr->store->address, jcr->store->SDDport);
+   bnet_fsend(fd, storaddr, jcr->rstore->address, jcr->rstore->SDDport);
    Dmsg1(6, "dird>filed: %s\n", fd->msg);
    if (!response(jcr, fd, OKstore, "Storage", DISPLAY_ERROR)) {
       restore_cleanup(jcr, JS_ErrorTerminated);
@@ -141,13 +159,14 @@ bool do_restore(JCR *jcr)
    /*
     * Send the bootstrap file -- what Volumes/files to restore
     */
-   if (!send_bootstrap_file(jcr)) {
+   if (!send_bootstrap_file(jcr, fd) ||
+       !response(jcr, fd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
       restore_cleanup(jcr, JS_ErrorTerminated);
       return false;
    }
 
 
-   if (!send_run_before_and_after_commands(jcr)) {
+   if (!send_runscripts_commands(jcr)) {
       restore_cleanup(jcr, JS_ErrorTerminated);
       return false;
    }
@@ -189,6 +208,7 @@ bool do_restore(JCR *jcr)
 
 bool do_restore_init(JCR *jcr) 
 {
+   free_wstorage(jcr);
    return true;
 }
 
@@ -202,21 +222,17 @@ void restore_cleanup(JCR *jcr, int TermCode)
    char ec1[30], ec2[30], ec3[30];
    char term_code[100], fd_term_msg[100], sd_term_msg[100];
    const char *term_msg;
-   int msg_type;
+   int msg_type = M_INFO;
    double kbps;
 
    Dmsg0(20, "In restore_cleanup\n");
-   dequeue_messages(jcr);             /* display any queued messages */
-   set_jcr_job_status(jcr, TermCode);
+   update_job_end(jcr, TermCode);
 
    if (jcr->unlink_bsr && jcr->RestoreBootstrap) {
       unlink(jcr->RestoreBootstrap);
       jcr->unlink_bsr = false;
    }
 
-   update_job_end_record(jcr);
-
-   msg_type = M_INFO;                 /* by default INFO message */
    switch (TermCode) {
    case JS_Terminated:
       if (jcr->ExpectedFiles > jcr->jr.JobFiles) {

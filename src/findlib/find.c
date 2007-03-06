@@ -7,22 +7,35 @@
  *
  *  Kern E. Sibbald, MM
  *
- *   Version $Id: find.c,v 1.42.2.2 2006/04/12 20:49:17 kerns Exp $
+ *   Version $Id: find.c,v 1.49 2006/11/21 20:14:46 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
@@ -97,7 +110,7 @@ get_win32_driveletters(FF_PKT *ff, char* szDrives)
 {
    /* szDrives must be at least 27 bytes long */
 
-#ifndef WIN32
+#if !defined(HAVE_WIN32)
    return 0;
 #endif
 
@@ -174,12 +187,13 @@ find_files(JCR *jcr, FF_PKT *ff, int callback(FF_PKT *ff_pkt, void *hpkt, bool t
             ff->flags |= fo->flags;
             ff->GZIP_level = fo->GZIP_level;
             ff->fstypes = fo->fstype;
+            ff->drivetypes = fo->drivetype;
             bstrncat(ff->VerifyOpts, fo->VerifyOpts, sizeof(ff->VerifyOpts));
          }
          for (j=0; j<incexe->name_list.size(); j++) {
             Dmsg1(100, "F %s\n", (char *)incexe->name_list.get(j));
-            char *fname = (char *)incexe->name_list.get(j);
-            if (find_one_file(jcr, ff, our_callback, his_pkt, fname, (dev_t)-1, true) == 0) {
+            ff->top_fname = (char *)incexe->name_list.get(j);
+            if (find_one_file(jcr, ff, our_callback, his_pkt, ff->top_fname, (dev_t)-1, true) == 0) {
                return 0;                  /* error return */
             }
          }
@@ -191,32 +205,49 @@ find_files(JCR *jcr, FF_PKT *ff, int callback(FF_PKT *ff_pkt, void *hpkt, bool t
 static bool accept_file(FF_PKT *ff)
 {
    int i, j, k;
-   int ic;
+   int fnm_flags;
    findFILESET *fileset = ff->fileset;
    findINCEXE *incexe = fileset->incexe;
+   const char *basename;
+   int (*match_func)(const char *pattern, const char *string, int flags);
 
-   for (j=0; j<incexe->opts_list.size(); j++) {
+   if (ff->flags & FO_ENHANCEDWILD) {
+      match_func = enh_fnmatch;
+      if ((basename = last_path_separator(ff->fname)) != NULL)
+         basename++;
+      else
+         basename = ff->fname;
+   } else {
+      match_func = fnmatch;
+      basename = ff->fname;
+   }
+
+   for (j = 0; j < incexe->opts_list.size(); j++) {
       findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
       ff->flags = fo->flags;
       ff->GZIP_level = fo->GZIP_level;
       ff->reader = fo->reader;
       ff->writer = fo->writer;
       ff->fstypes = fo->fstype;
-      ic = (ff->flags & FO_IGNORECASE) ? FNM_CASEFOLD : 0;
+      ff->drivetypes = fo->drivetype;
+
+      fnm_flags = (ff->flags & FO_IGNORECASE) ? FNM_CASEFOLD : 0;
+      fnm_flags |= (ff->flags & FO_ENHANCEDWILD) ? FNM_PATHNAME : 0;
+
       if (S_ISDIR(ff->statp.st_mode)) {
          for (k=0; k<fo->wilddir.size(); k++) {
-            if (fnmatch((char *)fo->wilddir.get(k), ff->fname, fnmode|ic) == 0) {
+            if (match_func((char *)fo->wilddir.get(k), ff->fname, fnmode|fnm_flags) == 0) {
                if (ff->flags & FO_EXCLUDE) {
                   Dmsg2(100, "Exclude wilddir: %s file=%s\n", (char *)fo->wilddir.get(k),
                      ff->fname);
-                  return false;       /* reject file */
+                  return false;       /* reject dir */
                }
-               return true;           /* accept file */
+               return true;           /* accept dir */
             }
          }
       } else {
          for (k=0; k<fo->wildfile.size(); k++) {
-            if (fnmatch((char *)fo->wildfile.get(k), ff->fname, fnmode|ic) == 0) {
+            if (match_func((char *)fo->wildfile.get(k), ff->fname, fnmode|fnm_flags) == 0) {
                if (ff->flags & FO_EXCLUDE) {
                   Dmsg2(100, "Exclude wildfile: %s file=%s\n", (char *)fo->wildfile.get(k),
                      ff->fname);
@@ -225,9 +256,20 @@ static bool accept_file(FF_PKT *ff)
                return true;           /* accept file */
             }
          }
+
+         for (k=0; k<fo->wildbase.size(); k++) {
+            if (match_func((char *)fo->wildbase.get(k), basename, fnmode|fnm_flags) == 0) {
+               if (ff->flags & FO_EXCLUDE) {
+                  Dmsg2(100, "Exclude wildbase: %s file=%s\n", (char *)fo->wildbase.get(k),
+                     basename);
+                  return false;       /* reject file */
+               }
+               return true;           /* accept file */
+            }
+         }
       }
       for (k=0; k<fo->wild.size(); k++) {
-         if (fnmatch((char *)fo->wild.get(k), ff->fname, fnmode|ic) == 0) {
+         if (match_func((char *)fo->wild.get(k), ff->fname, fnmode|fnm_flags) == 0) {
             if (ff->flags & FO_EXCLUDE) {
                Dmsg2(100, "Exclude wild: %s file=%s\n", (char *)fo->wild.get(k),
                   ff->fname);
@@ -276,7 +318,8 @@ static bool accept_file(FF_PKT *ff)
       if (ff->flags & FO_EXCLUDE &&
           fo->regex.size() == 0     && fo->wild.size() == 0 &&
           fo->regexdir.size() == 0  && fo->wilddir.size() == 0 &&
-          fo->regexfile.size() == 0 && fo->wildfile.size() == 0) {
+          fo->regexfile.size() == 0 && fo->wildfile.size() == 0 &&
+          fo->wildbase.size() == 0) {
          return false;              /* reject file */
       }
    }
@@ -286,18 +329,18 @@ static bool accept_file(FF_PKT *ff)
       findINCEXE *incexe = (findINCEXE *)fileset->exclude_list.get(i);
       for (j=0; j<incexe->opts_list.size(); j++) {
          findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
-         ic = (fo->flags & FO_IGNORECASE) ? FNM_CASEFOLD : 0;
+         fnm_flags = (fo->flags & FO_IGNORECASE) ? FNM_CASEFOLD : 0;
          for (k=0; k<fo->wild.size(); k++) {
-            if (fnmatch((char *)fo->wild.get(k), ff->fname, fnmode|ic) == 0) {
+            if (fnmatch((char *)fo->wild.get(k), ff->fname, fnmode|fnm_flags) == 0) {
                Dmsg1(100, "Reject wild1: %s\n", ff->fname);
                return false;          /* reject file */
             }
          }
       }
-      ic = (incexe->current_opts != NULL && incexe->current_opts->flags & FO_IGNORECASE)
+      fnm_flags = (incexe->current_opts != NULL && incexe->current_opts->flags & FO_IGNORECASE)
              ? FNM_CASEFOLD : 0;
       for (j=0; j<incexe->name_list.size(); j++) {
-         if (fnmatch((char *)incexe->name_list.get(j), ff->fname, fnmode|ic) == 0) {
+         if (fnmatch((char *)incexe->name_list.get(j), ff->fname, fnmode|fnm_flags) == 0) {
             Dmsg1(100, "Reject wild2: %s\n", ff->fname);
             return false;          /* reject file */
          }
@@ -325,6 +368,7 @@ static int our_callback(FF_PKT *ff, void *hpkt, bool top_level)
    case FT_NORECURSE:
    case FT_NOFSCHG:
    case FT_INVALIDFS:
+   case FT_INVALIDDT:
    case FT_NOOPEN:
 //    return ff->callback(ff, hpkt, top_level);
 

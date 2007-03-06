@@ -3,22 +3,35 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: util.c,v 1.68.2.3 2006/03/04 11:10:18 kerns Exp $
+ *   Version $Id: util.c,v 1.81 2006/12/04 09:39:26 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "jcr.h"
@@ -30,21 +43,21 @@
  */
 
 /* Return true of buffer has all zero bytes */
-int is_buf_zero(char *buf, int len)
+bool is_buf_zero(char *buf, int len)
 {
    uint64_t *ip;
    char *p;
    int i, len64, done, rem;
 
    if (buf[0] != 0) {
-      return 0;
+      return false;
    }
    ip = (uint64_t *)buf;
    /* Optimize by checking uint64_t for zero */
    len64 = len / sizeof(uint64_t);
    for (i=0; i < len64; i++) {
       if (ip[i] != 0) {
-         return 0;
+         return false;
       }
    }
    done = len64 * sizeof(uint64_t);  /* bytes already checked */
@@ -52,10 +65,10 @@ int is_buf_zero(char *buf, int len)
    rem = len - done;
    for (i = 0; i < rem; i++) {
       if (p[i] != 0) {
-         return 0;
+         return false;
       }
    }
-   return 1;
+   return true;
 }
 
 
@@ -63,8 +76,9 @@ int is_buf_zero(char *buf, int len)
 void lcase(char *str)
 {
    while (*str) {
-      if (B_ISUPPER(*str))
+      if (B_ISUPPER(*str)) {
          *str = tolower((int)(*str));
+       }
        str++;
    }
 }
@@ -120,41 +134,28 @@ unbash_spaces(POOL_MEM &pm)
    }
 }
 
-#if    HAVE_WIN32 && !HAVE_CONSOLE && !HAVE_WXCONSOLE
-extern long _timezone;
-extern int _daylight;
-extern long _dstbias;
-extern "C" void __tzset(void);
-extern "C" int _isindst(struct tm *);
-#endif
-
 char *encode_time(time_t time, char *buf)
 {
    struct tm tm;
    int n = 0;
 
-#if    HAVE_WIN32 && !HAVE_CONSOLE && !HAVE_WXCONSOLE
-    /*
-     * Gross kludge to avoid a seg fault in Microsoft's CRT localtime_r(),
-     *  which incorrectly references a NULL returned from gmtime() if
-     *  the time (adjusted for the current timezone) is invalid.
-     *  This could happen if you have a bad date/time, or perhaps if you
-     *  moved a file from one timezone to another?
-     */
-    struct tm *gtm;
-    time_t gtime;
-    __tzset();
-    gtime = time - _timezone;
-    if (!(gtm = gmtime(&gtime))) {
-       return buf;
-    }
-    if (_daylight && _isindst(gtm)) {
-       gtime -= _dstbias;
-       if (!gmtime(&gtime)) {
-          return buf;
-       }
-    }
+#if defined(HAVE_WIN32)
+   /*
+    * Avoid a seg fault in Microsoft's CRT localtime_r(),
+    *  which incorrectly references a NULL returned from gmtime() if
+    *  time is negative before or after the timezone adjustment.
+    */
+   struct tm *gtm;
+
+   if ((gtm = gmtime(&time)) == NULL) {
+      return buf;
+   }
+
+   if (gtm->tm_year == 1970 && gtm->tm_mon == 1 && gtm->tm_mday < 3) {
+      return buf;
+   }
 #endif
+
    if (localtime_r(&time, &tm)) {
       n = sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d",
                    tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
@@ -300,6 +301,15 @@ const char *job_type_to_str(int type)
    case JT_COPY:
       str = _("Copy");
       break;
+   case JT_CONSOLE:
+      str = _("Console");
+      break;
+   case JT_SYSTEM:
+      str = _("System or Console");
+      break;
+   case JT_SCAN:
+      str = _("Scan");
+      break;
    default:
       str = _("Unknown Type");
       break;
@@ -384,7 +394,18 @@ char *encode_mode(mode_t mode, char *buf)
   return cp;
 }
 
+#if defined(HAVE_WIN32)
+int do_shell_expansion(char *name, int name_len)
+{
+   char *src = bstrdup(name);
 
+   ExpandEnvironmentStrings(src, name, name_len);
+
+   free(src);
+
+   return 1;
+}
+#else
 int do_shell_expansion(char *name, int name_len)
 {
    static char meta[] = "~\\$[]*?`'<>\"";
@@ -430,6 +451,7 @@ int do_shell_expansion(char *name, int name_len)
    }
    return 1;
 }
+#endif
 
 
 /*  MAKESESSIONKEY  --  Generate session key with optional start
@@ -441,63 +463,86 @@ int do_shell_expansion(char *name, int name_len)
 
 void make_session_key(char *key, char *seed, int mode)
 {
-     int j, k;
-     struct MD5Context md5c;
-     unsigned char md5key[16], md5key1[16];
-     char s[1024];
+   int j, k;
+   struct MD5Context md5c;
+   unsigned char md5key[16], md5key1[16];
+   char s[1024];
 
-     s[0] = 0;
-     if (seed != NULL) {
-        bstrncat(s, seed, sizeof(s));
-     }
+   s[0] = 0;
+   if (seed != NULL) {
+     bstrncat(s, seed, sizeof(s));
+   }
 
-     /* The following creates a seed for the session key generator
-        based on a collection of volatile and environment-specific
-        information unlikely to be vulnerable (as a whole) to an
-        exhaustive search attack.  If one of these items isn't
-        available on your machine, replace it with something
-        equivalent or, if you like, just delete it. */
+   /* The following creates a seed for the session key generator
+     based on a collection of volatile and environment-specific
+     information unlikely to be vulnerable (as a whole) to an
+     exhaustive search attack.  If one of these items isn't
+     available on your machine, replace it with something
+     equivalent or, if you like, just delete it. */
 
-     sprintf(s + strlen(s), "%lu", (unsigned long)getpid());
-     sprintf(s + strlen(s), "%lu", (unsigned long)getppid());
-     (void)getcwd(s + strlen(s), 256);
-     sprintf(s + strlen(s), "%lu", (unsigned long)clock());
-     sprintf(s + strlen(s), "%lu", (unsigned long)time(NULL));
-#ifdef Solaris
-     sysinfo(SI_HW_SERIAL,s + strlen(s), 12);
+#if defined(HAVE_WIN32)
+   {
+      LARGE_INTEGER     li;
+      DWORD             length;
+      FILETIME          ft;
+      char             *p;
+
+      p = s;
+      sprintf(s + strlen(s), "%lu", (unsigned long)GetCurrentProcessId());
+      (void)getcwd(s + strlen(s), 256);
+      sprintf(s + strlen(s), "%lu", (unsigned long)GetTickCount());
+      QueryPerformanceCounter(&li);
+      sprintf(s + strlen(s), "%lu", (unsigned long)li.LowPart);
+      GetSystemTimeAsFileTime(&ft);
+      sprintf(s + strlen(s), "%lu", (unsigned long)ft.dwLowDateTime);
+      sprintf(s + strlen(s), "%lu", (unsigned long)ft.dwHighDateTime);
+      length = 256;
+      GetComputerName(s + strlen(s), &length);
+      length = 256;
+      GetUserName(s + strlen(s), &length);
+   }
+#else
+   sprintf(s + strlen(s), "%lu", (unsigned long)getpid());
+   sprintf(s + strlen(s), "%lu", (unsigned long)getppid());
+   (void)getcwd(s + strlen(s), 256);
+   sprintf(s + strlen(s), "%lu", (unsigned long)clock());
+   sprintf(s + strlen(s), "%lu", (unsigned long)time(NULL));
+#if defined(Solaris)
+   sysinfo(SI_HW_SERIAL,s + strlen(s), 12);
 #endif
-#ifdef HAVE_GETHOSTID
-     sprintf(s + strlen(s), "%lu", (unsigned long) gethostid());
+#if defined(HAVE_GETHOSTID)
+   sprintf(s + strlen(s), "%lu", (unsigned long) gethostid());
 #endif
-     gethostname(s + strlen(s), 256);
-     sprintf(s + strlen(s), "%u", (unsigned)getuid());
-     sprintf(s + strlen(s), "%u", (unsigned)getgid());
-     MD5Init(&md5c);
-     MD5Update(&md5c, (unsigned char *)s, strlen(s));
-     MD5Final(md5key, &md5c);
-     sprintf(s + strlen(s), "%lu", (unsigned long)((time(NULL) + 65121) ^ 0x375F));
-     MD5Init(&md5c);
-     MD5Update(&md5c, (unsigned char *)s, strlen(s));
-     MD5Final(md5key1, &md5c);
+   gethostname(s + strlen(s), 256);
+   sprintf(s + strlen(s), "%u", (unsigned)getuid());
+   sprintf(s + strlen(s), "%u", (unsigned)getgid());
+#endif
+   MD5Init(&md5c);
+   MD5Update(&md5c, (unsigned char *)s, strlen(s));
+   MD5Final(md5key, &md5c);
+   sprintf(s + strlen(s), "%lu", (unsigned long)((time(NULL) + 65121) ^ 0x375F));
+   MD5Init(&md5c);
+   MD5Update(&md5c, (unsigned char *)s, strlen(s));
+   MD5Final(md5key1, &md5c);
 #define nextrand    (md5key[j] ^ md5key1[j])
-     if (mode) {
-        for (j = k = 0; j < 16; j++) {
-           unsigned char rb = nextrand;
+   if (mode) {
+     for (j = k = 0; j < 16; j++) {
+        unsigned char rb = nextrand;
 
 #define Rad16(x) ((x) + 'A')
-           key[k++] = Rad16((rb >> 4) & 0xF);
-           key[k++] = Rad16(rb & 0xF);
+        key[k++] = Rad16((rb >> 4) & 0xF);
+        key[k++] = Rad16(rb & 0xF);
 #undef Rad16
-           if (j & 1) {
-              key[k++] = '-';
-           }
-        }
-        key[--k] = 0;
-     } else {
-        for (j = 0; j < 16; j++) {
-           key[j] = nextrand;
+        if (j & 1) {
+           key[k++] = '-';
         }
      }
+     key[--k] = 0;
+   } else {
+     for (j = 0; j < 16; j++) {
+        key[j] = nextrand;
+     }
+   }
 }
 #undef nextrand
 
@@ -655,4 +700,16 @@ void set_working_directory(char *wd)
          wd);
    }
    working_directory = wd;            /* set global */
+}
+
+const char *last_path_separator(const char *str)
+{
+   if (*str != '\0') {
+      for (const char *p = &str[strlen(str) - 1]; p >= str; p--) {
+         if (IsPathSeparator(*p)) {
+            return p;
+         }
+      }
+   }
+   return NULL;
 }

@@ -1,29 +1,44 @@
 /*
  * Test program for find files
+ *
+ *  Kern Sibbald, MM
+ *
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
+#include "dird/dird.h"
 #include "findlib/find.h"
 
 
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
-int win32_client = 1;
-#else
-int win32_client = 0;
+#if defined(HAVE_WIN32)
+#define isatty(fd) (fd==0)
 #endif
 
 /* Dummy functions */
@@ -42,6 +57,8 @@ static JCR *jcr;
 
 static int print_file(FF_PKT *ff, void *pkt, bool);
 static void count_files(FF_PKT *ff);
+static bool copy_fileset(FF_PKT *ff, JCR *jcr);
+static void set_options(findFOPTS *fo, const char *opts);
 
 static void usage()
 {
@@ -50,9 +67,8 @@ static void usage()
 "Usage: testfind [-d debug_level] [-] [pattern1 ...]\n"
 "       -a          print extended attributes (Win32 debug)\n"
 "       -dnn        set debug level to nn\n"
-"       -e          specify file of exclude patterns\n"
-"       -i          specify file of include patterns\n"
-"       -           read pattern(s) from stdin\n"
+"       -c          specify config file containing FileSet resources\n"
+"       -f          specify which FileSet to use\n"
 "       -?          print this message.\n"
 "\n"
 "Patterns are used for file inclusion -- normally directories.\n"
@@ -71,20 +87,24 @@ int
 main (int argc, char *const *argv)
 {
    FF_PKT *ff;
-   char name[1000];
-   int i, ch, hard_links;
-   char *inc = NULL;
-   char *exc = NULL;
-   FILE *fd;
+   char *configfile = "bacula-dir.conf";
+   char *fileset_name = "Windows-Full-Set";
+   int ch, hard_links;
+
+   OSDependentInit();
 
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
 
-   while ((ch = getopt(argc, argv, "ad:e:i:?")) != -1) {
+   while ((ch = getopt(argc, argv, "ac:d:f:?")) != -1) {
       switch (ch) {
          case 'a':                    /* print extended attributes *debug* */
             attrs = 1;
+            break;
+
+         case 'c':                    /* set debug level */
+            configfile = optarg;
             break;
 
          case 'd':                    /* set debug level */
@@ -94,12 +114,8 @@ main (int argc, char *const *argv)
             }
             break;
 
-         case 'e':                    /* exclude patterns */
-            exc = optarg;
-            break;
-
-         case 'i':                    /* include patterns */
-            inc = optarg;
+         case 'f':                    /* exclude patterns */
+            fileset_name = optarg;
             break;
 
          case '?':
@@ -108,56 +124,105 @@ main (int argc, char *const *argv)
 
       }
    }
+
    argc -= optind;
    argv += optind;
 
+   parse_config(configfile);
+
+   MSGS *msg;
+
+   foreach_res(msg, R_MSGS)
+   {
+      init_msg(NULL, msg);
+   }
+
    jcr = new_jcr(sizeof(JCR), NULL);
+   jcr->fileset = (FILESET *)GetResWithName(R_FILESET, fileset_name);
+
+   if (jcr->fileset == NULL) {
+      fprintf(stderr, "%s: Fileset not found\n", fileset_name);
+
+      FILESET *var;
+
+      fprintf(stderr, "Valid FileSets:\n");
+      
+      foreach_res(var, R_FILESET) {
+         fprintf(stderr, "    %s\n", var->hdr.name);
+      }
+
+      exit(1);
+   }
 
    ff = init_find_files();
-   if (argc == 0 && !inc) {
-      add_fname_to_include_list(ff, 0, "/"); /* default to / */
-   } else {
-      for (i=0; i < argc; i++) {
-         if (strcmp(argv[i], "-") == 0) {
-             while (fgets(name, sizeof(name)-1, stdin)) {
-                strip_trailing_junk(name);
-                add_fname_to_include_list(ff, 0, name);
-              }
-              continue;
-         }
-         add_fname_to_include_list(ff, 0, argv[i]);
-      }
-   }
-   if (inc) {
-      fd = fopen(inc, "r");
-      if (!fd) {
-         printf(_("Could not open include file: %s\n"), inc);
-         exit(1);
-      }
-      while (fgets(name, sizeof(name)-1, fd)) {
-         strip_trailing_junk(name);
-         add_fname_to_include_list(ff, 0, name);
-      }
-      fclose(fd);
-   }
+   
+   copy_fileset(ff, jcr);
 
-   if (exc) {
-      fd = fopen(exc, "r");
-      if (!fd) {
-         printf(_("Could not open exclude file: %s\n"), exc);
-         exit(1);
+   find_files(jcr, ff, print_file, NULL);
+
+   free_jcr(jcr);
+   free_config_resources();
+   term_last_jobs_list();
+
+   /* Clean up fileset */
+   findFILESET *fileset = ff->fileset;
+
+   if (fileset) {
+      int i, j, k;
+      /* Delete FileSet Include lists */
+      for (i=0; i<fileset->include_list.size(); i++) {
+         findINCEXE *incexe = (findINCEXE *)fileset->include_list.get(i);
+         for (j=0; j<incexe->opts_list.size(); j++) {
+            findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
+            for (k=0; k<fo->regex.size(); k++) {
+               regfree((regex_t *)fo->regex.get(k));
+            }
+            fo->regex.destroy();
+            fo->regexdir.destroy();
+            fo->regexfile.destroy();
+            fo->wild.destroy();
+            fo->wilddir.destroy();
+            fo->wildfile.destroy();
+            fo->wildbase.destroy();
+            fo->fstype.destroy();
+            fo->drivetype.destroy();
+            if (fo->reader) {
+               free(fo->reader);
+            }
+            if (fo->writer) {
+               free(fo->writer);
+            }
+         }
+         incexe->opts_list.destroy();
+         incexe->name_list.destroy();
       }
-      while (fgets(name, sizeof(name)-1, fd)) {
-         strip_trailing_junk(name);
-         add_fname_to_exclude_list(ff, name);
+      fileset->include_list.destroy();
+
+      /* Delete FileSet Exclude lists */
+      for (i=0; i<fileset->exclude_list.size(); i++) {
+         findINCEXE *incexe = (findINCEXE *)fileset->exclude_list.get(i);
+         for (j=0; j<incexe->opts_list.size(); j++) {
+            findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
+            fo->regex.destroy();
+            fo->regexdir.destroy();
+            fo->regexfile.destroy();
+            fo->wild.destroy();
+            fo->wilddir.destroy();
+            fo->wildfile.destroy();
+            fo->wildbase.destroy();
+            fo->fstype.destroy();
+            fo->drivetype.destroy();
+         }
+         incexe->opts_list.destroy();
+         incexe->name_list.destroy();
       }
-      fclose(fd);
+      fileset->exclude_list.destroy();
+      free(fileset);
    }
-   match_files(jcr, ff, print_file, NULL);
-   term_include_exclude_files(ff);
+   ff->fileset = NULL;
    hard_links = term_find_files(ff);
 
-   printf(_(""
+   printf(_("\n"
 "Total files    : %d\n"
 "Max file length: %d\n"
 "Max path length: %d\n"
@@ -167,10 +232,11 @@ main (int argc, char *const *argv)
      num_files, max_file_len, max_path_len,
      trunc_fname, trunc_path, hard_links);
 
-  free_jcr(jcr);
-  close_memory_pool();
-  sm_dump(false);
-  exit(0);
+   term_msg();
+
+   close_memory_pool();
+   sm_dump(false);
+   exit(0);
 }
 
 static int print_file(FF_PKT *ff, void *pkt, bool top_level) 
@@ -213,6 +279,7 @@ static int print_file(FF_PKT *ff, void *pkt, bool top_level)
    case FT_NORECURSE:
    case FT_NOFSCHG:
    case FT_INVALIDFS:
+   case FT_INVALIDDT:
    case FT_DIREND:
       if (debug_level) {
          char errmsg[100] = "";
@@ -222,6 +289,8 @@ static int print_file(FF_PKT *ff, void *pkt, bool top_level)
             bstrncpy(errmsg, _("\t[will not descend: file system change not allowed]"), sizeof(errmsg));
          } else if (ff->type == FT_INVALIDFS) {
             bstrncpy(errmsg, _("\t[will not descend: disallowed file system]"), sizeof(errmsg));
+         } else if (ff->type == FT_INVALIDDT) {
+            bstrncpy(errmsg, _("\t[will not descend: disallowed drive type]"), sizeof(errmsg));
          }
          printf("%s%s%s\n", (debug_level > 1 ? "Dir: " : ""), ff->fname, errmsg);
       }
@@ -285,11 +354,11 @@ static void count_files(FF_PKT *ar)
     * must be a path name (e.g. c:).
     */
    for (p=l=ar->fname; *p; p++) {
-      if (*p == '/') {
+      if (IsPathSeparator(*p)) {
          l = p;                       /* set pos of last slash */
       }
    }
-   if (*l == '/') {                   /* did we find a slash? */
+   if (IsPathSeparator(*l)) {                   /* did we find a slash? */
       l++;                            /* yes, point to filename */
    } else {                           /* no, whole thing must be path name */
       l = p;
@@ -341,3 +410,230 @@ static void count_files(FF_PKT *ar)
 }
 
 bool python_set_prog(JCR*, char const*) { return false; }
+
+static bool copy_fileset(FF_PKT *ff, JCR *jcr)
+{
+   FILESET *jcr_fileset = jcr->fileset;
+   int num;
+   bool include = true;
+
+   findFILESET *fileset;
+   findFOPTS *current_opts;
+
+   fileset = (findFILESET *)malloc(sizeof(findFILESET));
+   memset(fileset, 0, sizeof(findFILESET));
+   ff->fileset = fileset;
+
+   fileset->state = state_none;
+   fileset->include_list.init(1, true);
+   fileset->exclude_list.init(1, true);
+
+   for ( ;; ) {
+      if (include) {
+         num = jcr_fileset->num_includes;
+      } else {
+         num = jcr_fileset->num_excludes;
+      }
+      for (int i=0; i<num; i++) {
+         INCEXE *ie;
+         int j, k;
+
+         if (include) {
+            ie = jcr_fileset->include_items[i];
+
+            /* New include */
+            fileset->incexe = (findINCEXE *)malloc(sizeof(findINCEXE));
+            memset(fileset->incexe, 0, sizeof(findINCEXE));
+            fileset->incexe->opts_list.init(1, true);
+            fileset->incexe->name_list.init(1, true);
+            fileset->include_list.append(fileset->incexe);
+         } else {
+            ie = jcr_fileset->exclude_items[i];
+
+            /* New exclude */
+            fileset->incexe = (findINCEXE *)malloc(sizeof(findINCEXE));
+            memset(fileset->incexe, 0, sizeof(findINCEXE));
+            fileset->incexe->opts_list.init(1, true);
+            fileset->incexe->name_list.init(1, true);
+            fileset->exclude_list.append(fileset->incexe);
+         }
+
+         for (j=0; j<ie->num_opts; j++) {
+            FOPTS *fo = ie->opts_list[j];
+
+            current_opts = (findFOPTS *)malloc(sizeof(findFOPTS));
+            memset(current_opts, 0, sizeof(findFOPTS));
+            fileset->incexe->current_opts = current_opts;
+            fileset->incexe->opts_list.append(current_opts);
+
+            current_opts->regex.init(1, true);
+            current_opts->regexdir.init(1, true);
+            current_opts->regexfile.init(1, true);
+            current_opts->wild.init(1, true);
+            current_opts->wilddir.init(1, true);
+            current_opts->wildfile.init(1, true);
+            current_opts->wildbase.init(1, true);
+            current_opts->fstype.init(1, true);
+            current_opts->drivetype.init(1, true);
+
+            set_options(current_opts, fo->opts);
+
+            for (k=0; k<fo->regex.size(); k++) {
+               // bnet_fsend(fd, "R %s\n", fo->regex.get(k));
+               current_opts->regex.append(bstrdup((const char *)fo->regex.get(k)));
+            }
+            for (k=0; k<fo->regexdir.size(); k++) {
+               // bnet_fsend(fd, "RD %s\n", fo->regexdir.get(k));
+               current_opts->regexdir.append(bstrdup((const char *)fo->regexdir.get(k)));
+            }
+            for (k=0; k<fo->regexfile.size(); k++) {
+               // bnet_fsend(fd, "RF %s\n", fo->regexfile.get(k));
+               current_opts->regexfile.append(bstrdup((const char *)fo->regexfile.get(k)));
+            }
+            for (k=0; k<fo->wild.size(); k++) {
+               current_opts->wild.append(bstrdup((const char *)fo->wild.get(k)));
+            }
+            for (k=0; k<fo->wilddir.size(); k++) {
+               current_opts->wilddir.append(bstrdup((const char *)fo->wilddir.get(k)));
+            }
+            for (k=0; k<fo->wildfile.size(); k++) {
+               current_opts->wildfile.append(bstrdup((const char *)fo->wildfile.get(k)));
+            }
+            for (k=0; k<fo->wildbase.size(); k++) {
+               current_opts->wildbase.append(bstrdup((const char *)fo->wildbase.get(k)));
+            }
+            for (k=0; k<fo->fstype.size(); k++) {
+               current_opts->fstype.append(bstrdup((const char *)fo->fstype.get(k)));
+            }
+            for (k=0; k<fo->drivetype.size(); k++) {
+               current_opts->drivetype.append(bstrdup((const char *)fo->drivetype.get(k)));
+            }
+            if (fo->reader) {
+               current_opts->reader = bstrdup(fo->reader);
+            }
+            if (fo->writer) {
+               current_opts->writer = bstrdup(fo->writer);
+            }
+         }
+
+         for (j=0; j<ie->name_list.size(); j++) {
+            fileset->incexe->name_list.append(bstrdup((const char *)ie->name_list.get(j)));
+         }
+      }
+
+      if (!include) {                 /* If we just did excludes */
+         break;                       /*   all done */
+      }
+
+      include = false;                /* Now do excludes */
+   }
+
+   return true;
+}
+
+static void set_options(findFOPTS *fo, const char *opts)
+{
+   int j;
+   const char *p;
+
+   for (p=opts; *p; p++) {
+      switch (*p) {
+      case 'a':                 /* alway replace */
+      case '0':                 /* no option */
+         break;
+      case 'e':
+         fo->flags |= FO_EXCLUDE;
+         break;
+      case 'f':
+         fo->flags |= FO_MULTIFS;
+         break;
+      case 'h':                 /* no recursion */
+         fo->flags |= FO_NO_RECURSION;
+         break;
+      case 'H':                 /* no hard link handling */
+         fo->flags |= FO_NO_HARDLINK;
+         break;
+      case 'i':
+         fo->flags |= FO_IGNORECASE;
+         break;
+      case 'M':                 /* MD5 */
+         fo->flags |= FO_MD5;
+         break;
+      case 'n':
+         fo->flags |= FO_NOREPLACE;
+         break;
+      case 'p':                 /* use portable data format */
+         fo->flags |= FO_PORTABLE;
+         break;
+      case 'R':                 /* Resource forks and Finder Info */
+         fo->flags |= FO_HFSPLUS;
+      case 'r':                 /* read fifo */
+         fo->flags |= FO_READFIFO;
+         break;
+      case 'S':
+         switch(*(p + 1)) {
+         case ' ':
+            /* Old director did not specify SHA variant */
+            fo->flags |= FO_SHA1;
+            break;
+         case '1':
+            fo->flags |= FO_SHA1;
+            p++;
+            break;
+#ifdef HAVE_SHA2
+         case '2':
+            fo->flags |= FO_SHA256;
+            p++;
+            break;
+         case '3':
+            fo->flags |= FO_SHA512;
+            p++;
+            break;
+#endif
+         default:
+            /* Automatically downgrade to SHA-1 if an unsupported
+             * SHA variant is specified */
+            fo->flags |= FO_SHA1;
+            p++;
+            break;
+         }
+         break;
+      case 's':
+         fo->flags |= FO_SPARSE;
+         break;
+      case 'm':
+         fo->flags |= FO_MTIMEONLY;
+         break;
+      case 'k':
+         fo->flags |= FO_KEEPATIME;
+         break;
+      case 'A':
+         fo->flags |= FO_ACL;
+         break;
+      case 'V':                  /* verify options */
+         /* Copy Verify Options */
+         for (j=0; *p && *p != ':'; p++) {
+            fo->VerifyOpts[j] = *p;
+            if (j < (int)sizeof(fo->VerifyOpts) - 1) {
+               j++;
+            }
+         }
+         fo->VerifyOpts[j] = 0;
+         break;
+      case 'w':
+         fo->flags |= FO_IF_NEWER;
+         break;
+      case 'W':
+         fo->flags |= FO_ENHANCEDWILD;
+         break;
+      case 'Z':                 /* gzip compression */
+         fo->flags |= FO_GZIP;
+         fo->GZIP_level = *++p - '0';
+         Dmsg1(200, "Compression level=%d\n", fo->GZIP_level);
+         break;
+      default:
+         Emsg1(M_ERROR, 0, _("Unknown include/exclude option: %c\n"), *p);
+         break;
+      }
+   }
+}

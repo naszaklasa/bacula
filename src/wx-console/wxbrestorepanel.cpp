@@ -4,22 +4,35 @@
  *
  *    Nicolas Boichat, April-July 2004
  *
- *    Version $Id: wxbrestorepanel.cpp,v 1.52.2.5 2005/12/20 23:15:01 kerns Exp $
+ *    Version $Id: wxbrestorepanel.cpp,v 1.71 2006/12/08 14:27:10 kerns Exp $
  */
 /*
-   Copyright (C) 2004-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 /* Note concerning "done" output (modifiable marked with +)
 Run Restore job
@@ -49,21 +62,24 @@ Parameters to modify:
 Select parameter to modify (1-11):
        */
 
+/*  Windows debug builds set _DEBUG which is used by wxWidgets to select their
+ *  debug memory allocator.  Unfortunately it conflicts with Bacula's SmartAlloc.
+ * So we turn _DEBUG off since we aren't interested in things it enables.
+ */
+
+#undef _DEBUG
+
+#include "bacula.h"
+
 #include "wxbrestorepanel.h"
-
 #include "wxbmainframe.h"
-
 #include "csprint.h"
-
 #include <wx/choice.h>
 #include <wx/datetime.h>
-
 #include <wx/timer.h>
-
 #include "unmarked.xpm"
 #include "marked.xpm"
 #include "partmarked.xpm"
-
 #include <wx/listimpl.cpp>
 
 /* A macro named Yield is defined under MinGW */
@@ -194,7 +210,8 @@ END_EVENT_TABLE()
 /*
  *  wxbRestorePanel constructor
  */
-wxbRestorePanel::wxbRestorePanel(wxWindow* parent): wxbPanel(parent) {
+wxbRestorePanel::wxbRestorePanel(wxWindow* parent): wxbPanel(parent) 
+{
    //pendingEvents = new wxbEventList(); //EVTQUEUE
    //processing = false; //EVTQUEUE
    SetWorking(false);
@@ -372,7 +389,8 @@ wxbRestorePanel::wxbRestorePanel(wxWindow* parent): wxbPanel(parent) {
 /*
  *  wxbRestorePanel destructor
  */
-wxbRestorePanel::~wxbRestorePanel() {
+wxbRestorePanel::~wxbRestorePanel() 
+{
    delete imagelist;
 }
 
@@ -380,17 +398,18 @@ wxbRestorePanel::~wxbRestorePanel() {
    wxbPanel overloadings
   ----------------------------------------------------------------------------*/
 
-wxString wxbRestorePanel::GetTitle() {
+wxString wxbRestorePanel::GetTitle() 
+{
    return _("Restore");
 }
 
-void wxbRestorePanel::EnablePanel(bool enable) {
+void wxbRestorePanel::EnablePanel(bool enable) 
+{
    if (enable) {
       if (status == disabled) {
          SetStatus(activable);
       }
-   }
-   else {
+   } else {
       SetStatus(disabled);
    }
 }
@@ -400,7 +419,8 @@ void wxbRestorePanel::EnablePanel(bool enable) {
   ----------------------------------------------------------------------------*/
 
 /* The main button has been clicked */
-void wxbRestorePanel::CmdStart() {
+void wxbRestorePanel::CmdStart() 
+{
    unsigned int i;
    if (status == activable) {
       wxbMainFrame::GetInstance()->SetStatusText(_("Getting parameters list."));
@@ -1304,7 +1324,7 @@ void wxbRestorePanel::CmdMark(wxTreeItemId treeitem, long* listitems, int listsi
       wxString file;
 
       if (dir != wxT("/")) {
-         if (dir.GetChar(dir.Length()-1) == '/') {
+         if (IsPathSeparator(dir.GetChar(dir.Length()-1))) {
             dir.RemoveLast();
          }
 
@@ -1397,7 +1417,8 @@ void wxbRestorePanel::CmdMark(wxTreeItemId treeitem, long* listitems, int listsi
   ----------------------------------------------------------------------------*/
 
 /* Run a dir command, and waits until result is fully received. */
-void wxbRestorePanel::UpdateTreeItem(wxTreeItemId item, bool updatelist, bool recurse) {
+void wxbRestorePanel::UpdateTreeItem(wxTreeItemId item, bool updatelist, bool recurse)
+{
 //   this->updatelist = updatelist;
    wxbDataTokenizer* dt;
 
@@ -1433,7 +1454,7 @@ void wxbRestorePanel::UpdateTreeItem(wxTreeItemId item, bool updatelist, bool re
 
       wxTreeItemId treeid;
 
-      if (entry.fullname.GetChar(entry.fullname.Length()-1) == '/') {
+      if (IsPathSeparator(entry.fullname.GetChar(entry.fullname.Length()-1))) {
          wxString itemStr;
 
 #if wxCHECK_VERSION(2, 6, 0)
@@ -1489,7 +1510,8 @@ void wxbRestorePanel::UpdateTreeItem(wxTreeItemId item, bool updatelist, bool re
 }
 
 /* Parse .dir command results, returns true if the result has been stored in entry, false otherwise. */
-int wxbRestorePanel::ParseList(wxString line, wxbDirEntry* entry) {
+int wxbRestorePanel::ParseList(wxString line, wxbDirEntry* entry) 
+{
    /* See ls_output in dird/ua_tree.c */
    //-rw-r-----,1,root,root,41575,2005-10-18 18:21:36, ,/usr/var/bacula/working/bacula.sql
 
@@ -1534,10 +1556,10 @@ int wxbRestorePanel::ParseList(wxString line, wxbDirEntry* entry) {
    
    if (!tkz.HasMoreTokens())
       return false;
-   entry->fullname = tkz.GetNextToken();
+   entry->fullname = tkz.GetString();
    
    /* Get only the filename (cut path by finding the last '/') */
-   if (entry->fullname.GetChar(entry->fullname.Length()-1) == '/') {
+   if (IsPathSeparator(entry->fullname.GetChar(entry->fullname.Length()-1))) {
       wxString tmp = entry->fullname;
       tmp.RemoveLast();
       entry->filename = entry->fullname.Mid(tmp.Find('/', true)+1);
@@ -1550,7 +1572,8 @@ int wxbRestorePanel::ParseList(wxString line, wxbDirEntry* entry) {
 }
 
 /* Sets a list item state, and update its parents and children if it is a directory */
-void wxbRestorePanel::SetListItemState(long listitem, int newstate) {
+void wxbRestorePanel::SetListItemState(long listitem, int newstate) 
+{
    wxbTreeItemData* itemdata = (wxbTreeItemData*)list->GetItemData(listitem);
    
    wxTreeItemId treeitem;
@@ -2223,7 +2246,7 @@ void wxbRestorePanel::OnListActivated(wxListEvent& event) {
       long cookie;
 #endif
 
-      if (name.GetChar(name.Length()-1) == '/') {
+      if (IsPathSeparator(name.GetChar(name.Length()-1))) {
          wxTreeItemId currentChild = tree->GetFirstChild(currentTreeItem, cookie);
 
          while (currentChild.IsOk()) {

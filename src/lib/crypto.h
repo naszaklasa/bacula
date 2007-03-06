@@ -3,9 +3,7 @@
  *
  * Author: Landon Fuller <landonf@opendarwin.org>
  *
- * Version $Id: crypto.h,v 1.3.2.2 2006/01/07 11:18:11 kerns Exp $
- *
- * Copyright (C) 2005 Kern Sibbald
+ * Version $Id: crypto.h,v 1.9 2006/11/21 13:20:10 kerns Exp $
  *
  * This file was contributed to the Bacula project by Landon Fuller.
  *
@@ -19,19 +17,32 @@
  * license please contact Landon Fuller <landonf@opendarwin.org>.
  */
 /*
-   Copyright (C) 2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #ifndef __CRYPTO_H_
 #define __CRYPTO_H_
@@ -46,7 +57,10 @@ typedef struct Digest DIGEST;
 typedef struct Signature SIGNATURE;
 
 /* Opaque PKI Symmetric Key Data Structure */
-typedef struct Crypto_Recipients CRYPTO_RECIPIENTS;
+typedef struct Crypto_Session CRYPTO_SESSION;
+
+/* Opaque Encryption/Decryption Context Structure */
+typedef struct Cipher_Context CIPHER_CONTEXT;
 
 /* PEM Decryption Passphrase Callback */
 typedef int (CRYPTO_PEM_PASSWD_CB) (char *buf, int size, const void *userdata);
@@ -74,9 +88,12 @@ typedef enum {
 typedef enum {
    CRYPTO_ERROR_NONE           = 0, /* No error */
    CRYPTO_ERROR_NOSIGNER       = 1, /* Signer not found */
-   CRYPTO_ERROR_INVALID_DIGEST = 2, /* Unsupported digest algorithm */
-   CRYPTO_ERROR_BAD_SIGNATURE  = 3, /* Signature is invalid */
-   CRYPTO_ERROR_INTERNAL       = 4  /* Internal Error */
+   CRYPTO_ERROR_NORECIPIENT    = 2, /* Recipient not found */
+   CRYPTO_ERROR_INVALID_DIGEST = 3, /* Unsupported digest algorithm */
+   CRYPTO_ERROR_INVALID_CRYPTO = 4, /* Unsupported encryption algorithm */
+   CRYPTO_ERROR_BAD_SIGNATURE  = 5, /* Signature is invalid */
+   CRYPTO_ERROR_DECRYPTION     = 6, /* Decryption error */
+   CRYPTO_ERROR_INTERNAL       = 7  /* Internal Error */
 } crypto_error_t;
 
 /* Message Digest Sizes */
@@ -88,8 +105,9 @@ typedef enum {
 /* Maximum Message Digest Size */
 #ifdef HAVE_OPENSSL
 
-/* Let OpenSSL define it */
-#define CRYPTO_DIGEST_MAX_SIZE EVP_MAX_MD_SIZE
+/* Let OpenSSL define a few things */
+#define CRYPTO_DIGEST_MAX_SIZE         EVP_MAX_MD_SIZE
+#define CRYPTO_CIPHER_MAX_BLOCK_SIZE   EVP_MAX_BLOCK_LENGTH
 
 #else /* HAVE_OPENSSL */
 
@@ -105,6 +123,9 @@ typedef enum {
 #else
 #define CRYPTO_DIGEST_MAX_SIZE CRYPTO_DIGEST_SHA512_SIZE
 #endif
+
+/* Dummy Value */
+#define CRYPTO_CIPHER_MAX_BLOCK_SIZE 0
 
 #endif /* HAVE_OPENSSL */
 

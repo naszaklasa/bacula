@@ -226,7 +226,7 @@ case "$1" in
       ;;
 
    status)
-      [ -x ${BACFDBIN}/bacula-fd   ] && status ${BACFDBIN}/bacula-fd  ${FD_PORT}
+      [ -x ${BACFDBIN}/bacula-fd ] && status ${BACFDBIN}/bacula-fd  ${FD_PORT}
       ;;
 
    *)

@@ -11,42 +11,47 @@
  *    Kern Sibbald, January MMI
  *
  *
- *    Version $Id: bdb_update.c,v 1.18 2004/12/21 16:18:30 kerns Exp $
+ *    Version $Id: bdb_update.c,v 1.22 2006/11/27 10:02:59 kerns Exp $
  */
-
 /*
-   Copyright (C) 2001-2003 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 /* The following is necessary so that we do not include
  * the dummy external definition of DB.
  */
-#define __SQL_C 		      /* indicate that this is sql.c */
+#define __SQL_C                       /* indicate that this is sql.c */
 
 #include "bacula.h"
 #include "cats.h"
 #include "bdb.h"
 
 #ifdef HAVE_BACULA_DB
-
-/* Forward referenced functions */
 
 /* -----------------------------------------------------------------------
  *
@@ -189,7 +194,7 @@ int db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
       Mmsg1(mdb->errmsg, _("Error updating DB Media file. ERR=%s\n"), strerror(errno));
       stat = 0;
    } else {
-      memcpy(pr, &opr, len);	      /* return record written */
+      memcpy(pr, &opr, len);          /* return record written */
    }
    fflush(mdb->poolfd);
 
@@ -197,7 +202,7 @@ int db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
    return stat;
 }
 
-int db_add_SIG_to_file_record(JCR *jcr, B_DB *mdb, FileId_t FileId, char *SIG, int type)
+int db_add_digest_to_file_record(JCR *jcr, B_DB *mdb, FileId_t FileId, char *digest, int type)
 {
    return 1;
 }
@@ -222,5 +227,9 @@ int db_update_media_defaults(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
    return 1;
 }
 
+void db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+{
+  return;
+}
 
 #endif /* HAVE_BACULA_DB */

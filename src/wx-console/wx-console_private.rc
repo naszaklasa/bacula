@@ -1,2 +1,8 @@
 
 A ICON MOVEABLE PURE LOADONCALL DISCARDABLE "wx-console.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// RT_MANIFEST
+//
+CREATEPROCESS_MANIFEST_RESOURCE_ID     RT_MANIFEST    "wx-console.manifest"

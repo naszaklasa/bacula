@@ -2,7 +2,7 @@
 #
 # Bacula interface to virtual autoloader using disk storage
 #
-#  $Id: disk-changer.in,v 1.2.2.2 2006/02/23 19:56:12 kerns Exp $
+#  $Id: disk-changer.in,v 1.5 2006/09/11 21:11:02 kerns Exp $
 #
 #  If you set in your Device resource
 #
@@ -107,7 +107,12 @@ check_parm_count() {
 #
 get_dir() {
    bn=`basename $device`
-   dir=`echo "$device" | sed -e s%/$bn%%g -`
+   dir=`echo "$device" | sed -e s%/$bn%%g`
+   if [ ! -d $dir ]; then
+      echo "ERROR: Autochanger directory \"$dir\" does not exist.\n"
+      echo "	   You must create it.\n"
+      exit 1
+   fi
 }
 
 
@@ -159,23 +164,39 @@ case $cmd in
    unload)
       debug "Doing disk -f $ctl unload $slot $device $drive"
       get_dir
-      echo "0" >$dir/loaded${drive}
-      unlink $device 2>/dev/null >/dev/null
-      rm -f $device
+      ld=`cat $dir/loaded${drive}`
+      if [ $slot -eq $ld ]; then
+	 echo "0" >$dir/loaded${drive}
+	 unlink $device 2>/dev/null >/dev/null
+	 rm -f $device
+      else
+	 echo "Storage Element $slot is Already Full"
+	 exit 1
+      fi
       ;;
 
    load)
       debug "Doing disk $ctl load $slot $device $drive"
       get_dir
-      echo "0" >$dir/loaded${drive}
-      unlink $device 2>/dev/null >/dev/null
-      rm -f $device
-      ln -s $dir/slot${slot} $device
-      rtn=$?
-      if [ $rtn -eq 0 ]; then
-	 echo $slot >$dir/loaded${drive}
+      if [ -f $dir/loaded${drive} ]; then
+	 ld=`cat $dir/loaded${drive}`
+      else
+	 ld=0
       fi
-      exit $rtn
+      if [ $ld -eq 0 ]; then
+	 echo "0" >$dir/loaded${drive}
+	 unlink $device 2>/dev/null >/dev/null
+	 rm -f $device
+	 ln -s $dir/slot${slot} $device
+	 rtn=$?
+	 if [ $rtn -eq 0 ]; then
+	    echo $slot >$dir/loaded${drive}
+	 fi
+	 exit $rtn
+      else
+	 echo "Drive ${drive} Full (Storage element ${ld} loaded)"
+	 exit 1
+      fi
       ;;
 
    list) 

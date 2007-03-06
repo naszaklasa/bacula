@@ -19,22 +19,35 @@
  *
  *     Kern Sibbald, January MM, September MM
  *
- *     Version $Id: console_conf.c,v 1.18 2005/09/09 09:40:04 kerns Exp $
+ *     Version $Id: console_conf.c,v 1.23 2006/12/22 15:40:16 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "console_conf.h"
@@ -69,34 +82,34 @@ static RES_ITEM dir_items[] = {
    {"dirport",     store_int,      ITEM(dir_res.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",     store_str,      ITEM(dir_res.address),  0, ITEM_REQUIRED, 0},
    {"password",    store_password, ITEM(dir_res.password), 0, 0, 0},
-   {"tlsenable",      store_yesno,     ITEM(dir_res.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_yesno,     ITEM(dir_res.tls_require), 1, 0, 0},
+   {"tlsenable",      store_bit,     ITEM(dir_res.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_bit,     ITEM(dir_res.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(dir_res.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(dir_res.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(dir_res.tls_certfile), 0, 0, 0},
    {"tlskey",         store_dir,       ITEM(dir_res.tls_keyfile), 0, 0, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 static RES_ITEM con_items[] = {
    {"name",        store_name,     ITEM(con_res.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(con_res.hdr.desc), 0, 0, 0},
    {"password",    store_password, ITEM(con_res.password), 0, ITEM_REQUIRED, 0},
-   {"tlsenable",      store_yesno,     ITEM(con_res.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_yesno,     ITEM(con_res.tls_require), 1, 0, 0},
+   {"tlsenable",      store_bit,     ITEM(con_res.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_bit,     ITEM(con_res.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(con_res.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(con_res.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(con_res.tls_certfile), 0, 0, 0},
    {"tlskey",         store_dir,       ITEM(con_res.tls_keyfile), 0, 0, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 static RES_ITEM con_font_items[] = {
    {"name",        store_name,     ITEM(con_font.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(con_font.hdr.desc), 0, 0, 0},
    {"font",        store_str,      ITEM(con_font.fontface), 0, 0, 0},
-   {"requiressl",  store_yesno,    ITEM(con_font.require_ssl), 1, ITEM_DEFAULT, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {"requiressl",  store_bit,    ITEM(con_font.require_ssl), 1, ITEM_DEFAULT, 0},
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 
@@ -306,16 +319,17 @@ void save_resource(int type, RES_ITEM *items, int pass)
       if (!res_head[rindex]) {
          res_head[rindex] = (RES *)res; /* store first entry */
       } else {
-         RES *next;
+         RES *next, *last;
          /* Add new res to end of chain */
-         for (next=res_head[rindex]; next->next; next=next->next) {
+         for (last=next=res_head[rindex]; next; next=next->next) {
+            last = next;
             if (strcmp(next->name, res->dir_res.hdr.name) == 0) {
                Emsg2(M_ERROR_TERM, 0,
                   _("Attempt to define second %s resource named \"%s\" is not permitted.\n"),
                   resources[rindex].name, res->dir_res.hdr.name);
             }
          }
-         next->next = (RES *)res;
+         last->next = (RES *)res;
          Dmsg2(90, "Inserting %s res: %s\n", res_to_str(type),
                res->dir_res.hdr.name);
       }

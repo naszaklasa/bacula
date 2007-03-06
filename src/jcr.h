@@ -6,22 +6,35 @@
  *
  * Kern Sibbald, Nov MM
  *
- *   Version $Id: jcr.h,v 1.97.2.7 2006/06/08 14:46:46 kerns Exp $
+ *   Version $Id: jcr.h,v 1.131 2006/12/14 11:41:00 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #ifndef __JCR_H_
@@ -43,6 +56,7 @@
 
 /* Job Types. These are stored in the DB */
 #define JT_BACKUP                'B'  /* Backup Job */
+#define JT_MIGRATED_JOB          'M'  /* A previous backup job that was migrated */
 #define JT_VERIFY                'V'  /* Verify Job */
 #define JT_RESTORE               'R'  /* Restore Job */
 #define JT_CONSOLE               'c'  /* console program */
@@ -50,7 +64,7 @@
 #define JT_ADMIN                 'D'  /* admin job */
 #define JT_ARCHIVE               'A'  /* Archive Job */
 #define JT_COPY                  'C'  /* Copy Job */
-#define JT_MIGRATE               'M'  /* Migration Job */
+#define JT_MIGRATE               'g'  /* Migration Job */
 #define JT_SCAN                  'S'  /* Scan Job */
 
 /* Job Status. Some of these are stored in the DB */
@@ -113,13 +127,13 @@ private:
    pthread_mutex_t mutex;             /* jcr mutex */
    volatile int _use_count;           /* use count */
 public:
-   void inc_use_count(void) {P(mutex); _use_count++; V(mutex); };
-   void dec_use_count(void) {P(mutex); _use_count--; V(mutex); };
+   void lock() {P(mutex); };
+   void unlock() {V(mutex); };
+   void inc_use_count(void) {lock(); _use_count++; unlock(); };
+   void dec_use_count(void) {lock(); _use_count--; unlock(); };
    int  use_count() { return _use_count; };
    void init_mutex(void) {pthread_mutex_init(&mutex, NULL); };
    void destroy_mutex(void) {pthread_mutex_destroy(&mutex); };
-   void lock() {P(mutex); };
-   void unlock() {V(mutex); };
    bool is_job_canceled() {return job_canceled(this); };
 
    /* Global part of JCR common to all daemons */
@@ -184,13 +198,20 @@ public:
    BSOCK *ua;                         /* User agent */
    JOB *job;                          /* Job resource */
    JOB *verify_job;                   /* Job resource of verify previous job */
-   alist *storage;                    /* Storage possibilities */
-   STORE *store;                      /* Storage daemon selected */
+   alist *rstorage;                   /* Read storage possibilities */
+   STORE *rstore;                     /* Selected read storage */
+   alist *wstorage;                   /* Write storage possibilities */
+   STORE *wstore;                     /* Selected write storage */
    CLIENT *client;                    /* Client resource */
-   POOL *pool;                        /* Pool resource */
+   POOL *pool;                        /* Pool resource = write for migration */
+   POOL *rpool;                       /* Read pool. Used only in migration */
    POOL *full_pool;                   /* Full backup pool resource */
    POOL *inc_pool;                    /* Incremental backup pool resource */
-   POOL *dif_pool;                    /* Differential backup pool resource */
+   POOL *diff_pool;                   /* Differential backup pool resource */
+   bool run_pool_override;
+   bool run_full_pool_override;
+   bool run_inc_pool_override;
+   bool run_diff_pool_override;
    FILESET *fileset;                  /* FileSet resource */
    CAT *catalog;                      /* Catalog resource */
    MSGS *messages;                    /* Default message handler */
@@ -201,14 +222,13 @@ public:
    volatile int FDJobStatus;          /* File daemon Job Status */
    uint32_t ExpectedFiles;            /* Expected restore files */
    uint32_t MediaId;                  /* DB record IDs associated with this job */
-   uint32_t PoolId;                   /* PoolId associated with Job */
    FileId_t FileId;                   /* Last file id inserted */
    uint32_t FileIndex;                /* Last FileIndex processed */
    POOLMEM *fname;                    /* name to put into catalog */
    JOB_DBR jr;                        /* Job DB record for current job */
    JOB_DBR previous_jr;               /* previous job database record */
    JOB *previous_job;                 /* Job resource of migration previous job */
-   JCR *previous_jcr;                 /* previous job control record */
+   JCR *mig_jcr;                      /* JCR for migration/copy job */
    char FSCreateTime[MAX_TIME_LENGTH]; /* FileSet CreateTime as returned from DB */
    char since[MAX_TIME_LENGTH];       /* since time */
    union {
@@ -216,6 +236,10 @@ public:
       JobId_t MigrateJobId;
    };
    POOLMEM *client_uname;             /* client uname */
+   POOLMEM *pool_source;              /* Where pool came from */
+   POOLMEM *rpool_source;             /* Where migrate read pool came from */
+   POOLMEM *rstore_source;            /* Where read storage came from */
+   POOLMEM *wstore_source;            /* Where write storage came from */
    int replace;                       /* Replace option */
    int NumVols;                       /* Number of Volume used in pool */
    int reschedule_count;              /* Number of times rescheduled */
@@ -227,6 +251,8 @@ public:
    bool needs_sd;                     /* set if SD needed by Job */
    bool cloned;                       /* set if cloned */
    bool unlink_bsr;                   /* Unlink bsr file created */
+   bool VSS;                          /* VSS used by FD */
+   bool Encrypt;                      /* Encryption used by FD */
 #endif /* DIRECTOR_DAEMON */
 
 
@@ -235,7 +261,7 @@ public:
    uint32_t num_files_examined;       /* files examined this job */
    POOLMEM *last_fname;               /* last file saved/verified */
    POOLMEM *acl_text;                 /* text of ACL for backup */
-   int last_type;                     /* last type saved/verified */
+   int last_type;                     /* type of last file saved/verified */
    /*********FIXME********* add missing files and files to be retried */
    int incremental;                   /* set if incremental for SINCE */
    time_t mtime;                      /* begin time for SINCE */
@@ -244,6 +270,7 @@ public:
    char *big_buf;                     /* I/O buffer */
    POOLMEM *compress_buf;             /* Compression buffer */
    int32_t compress_buf_size;         /* Length of compression buffer */
+   void *pZLIB_compress_workset;      /* zlib compression session data */
    int replace;                       /* Replace options */
    int buf_size;                      /* length of buffer */
    FF_PKT *ff;                        /* Find Files packet */
@@ -255,18 +282,19 @@ public:
    pthread_t heartbeat_id;            /* id of heartbeat thread */
    volatile BSOCK *hb_bsock;          /* duped SD socket */
    volatile BSOCK *hb_dir_bsock;      /* duped DIR socket */
-   POOLMEM *RunAfterJob;              /* Command to run after job */
+   alist *RunScripts;                 /* Commands to run before and after job */
    bool pki_sign;                     /* Enable PKI Signatures? */
    bool pki_encrypt;                  /* Enable PKI Encryption? */
    DIGEST *digest;                    /* Last file's digest context */
-// X509_KEYPAIR *pki_keypair;         /* Encryption key pair */
+   X509_KEYPAIR *pki_keypair;         /* Encryption key pair */
    alist *pki_signers;                /* Trusted Signers */
    alist *pki_recipients;             /* Trusted Recipients */
-// CRYPTO_SESSION *pki_session;       /* PKE Public Keys + Symmetric Session Keys */
-   void *pki_session_encoded;         /* Cached DER-encoded copy of pki_session */
-   size_t pki_session_encoded_size;   /* Size of DER-encoded pki_session */
+   CRYPTO_SESSION *pki_session;       /* PKE Public Keys + Symmetric Session Keys */
+   uint8_t *pki_session_encoded;      /* Cached DER-encoded copy of pki_session */
+   int32_t pki_session_encoded_size;  /* Size of DER-encoded pki_session */
    POOLMEM *crypto_buf;               /* Encryption/Decryption buffer */
    DIRRES* director;                  /* Director resource */
+   bool runscript_after;              /* Don't run After Script twice */
 #endif /* FILE_DAEMON */
 
 
@@ -283,8 +311,9 @@ public:
    POOLMEM *fileset_name;             /* FileSet */
    POOLMEM *fileset_md5;              /* MD5 for FileSet */
    VOL_LIST *VolList;                 /* list to read */
-   int32_t NumVolumes;                /* number of volumes used */
-   int32_t CurVolume;                 /* current volume number */
+   int32_t NumWriteVolumes;           /* number of volumes written */
+   int32_t NumReadVolumes;            /* total number of volumes to read */
+   int32_t CurReadVolume;             /* current read volume number */
    int label_errors;                  /* count of label errors */
    bool session_opened;
    long Ticket;                       /* ticket for this job */
@@ -294,7 +323,8 @@ public:
    bool spool_data;                   /* set to spool data */
    int CurVol;                        /* Current Volume count */
    DIRRES* director;                  /* Director resource */
-   alist *dirstore;                   /* list of storage devices sent by DIR */ 
+   alist *write_store;                /* list of write storage devices sent by DIR */ 
+   alist *read_store;                 /* list of read devices sent by DIR */
    alist *reserve_msgs;               /* reserve fail messages */
    bool write_part_after_job;         /* Set to write part after job */
    bool PreferMountedVols;            /* Prefer mounted vols rather than new */
@@ -322,8 +352,6 @@ public:
 
 };
 
-
-
 /*
  * Structure for all daemons that keeps some summary
  *  info on the last job run.
@@ -345,7 +373,7 @@ struct s_last_job {
 };
 
 extern struct s_last_job last_job;
-extern dlist *last_jobs;
+extern DLL_IMP_EXP dlist * last_jobs;
 
 
 /* The following routines are found in lib/jcr.c */
@@ -357,6 +385,7 @@ extern JCR *get_jcr_by_partial_name(char *Job);
 extern JCR *get_jcr_by_full_name(char *Job);
 extern JCR *get_next_jcr(JCR *jcr);
 extern void set_jcr_job_status(JCR *jcr, int JobStatus);
+extern int DLL_IMP_EXP num_jobs_run;
 
 #ifdef DEBUG
 extern void b_free_jcr(const char *file, int line, JCR *jcr);

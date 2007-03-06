@@ -7,22 +7,35 @@
  *
  *
  *
- *   Version $Id: ansi_label.c,v 1.12 2005/08/10 16:35:37 nboichat Exp $
+ *   Version $Id: ansi_label.c,v 1.15 2006/11/21 17:03:45 kerns Exp $
  */
 /*
-   Copyright (C) 2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"                   /* pull in global headers */
 #include "stored.h"                   /* pull in Storage Deamon headers */
@@ -74,11 +87,11 @@ int read_ansi_ibm_label(DCR *dcr)
    /* Read a maximum of 5 records VOL1, HDR1, ... HDR4 */
    for (i=0; i < 6; i++) {
       do {
-         stat = read(dev->fd, label, sizeof(label));
+         stat = tape_read(dev->fd, label, sizeof(label));
       } while (stat == -1 && errno == EINTR);
       if (stat < 0) {
          berrno be;
-         clrerror_dev(dev, -1);
+         dev->clrerror(-1);
          Dmsg1(100, "Read device got: ERR=%s\n", be.strerror());
          Mmsg2(jcr->errmsg, _("Read error on device %s in ANSI label. ERR=%s\n"),
             dev->dev_name, be.strerror());
@@ -296,7 +309,7 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
          } else {
             label[79] = '3';                /* ANSI label flag */
          }
-         stat = write(dev->fd, label, sizeof(label));
+         stat = tape_write(dev->fd, label, sizeof(label));
          if (stat != sizeof(label)) {
             berrno be;
             Jmsg1(jcr, M_FATAL, 0,  _("Could not write ANSI VOL1 label. ERR=%s\n"),
@@ -328,11 +341,11 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
        * This could come at the end of a tape, ignore
        *  EOT errors.
        */
-      stat = write(dev->fd, label, sizeof(label));
+      stat = tape_write(dev->fd, label, sizeof(label));
       if (stat != sizeof(label)) {
          berrno be;
          if (stat == -1) {
-            clrerror_dev(dev, -1);
+            dev->clrerror(-1);
             if (dev->dev_errno == 0) {
                dev->dev_errno = ENOSPC; /* out of space */
             }
@@ -357,11 +370,11 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
          label[4] = 'V';
          ascii_to_ebcdic(label, label, sizeof(label));
       }
-      stat = write(dev->fd, label, sizeof(label));
+      stat = tape_write(dev->fd, label, sizeof(label));
       if (stat != sizeof(label)) {
          berrno be;
          if (stat == -1) {
-            clrerror_dev(dev, -1);
+            dev->clrerror(-1);
             if (dev->dev_errno == 0) {
                dev->dev_errno = ENOSPC; /* out of space */
             }
@@ -370,14 +383,14 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
                be.strerror());
                return false;
             }
-            weof_dev(dev, 1);
+            dev->weof(1);
             return true;
          } else {
             Jmsg(jcr, M_FATAL, 0, _("Could not write ANSI HDR1 label.\n"));
             return false;
          }
       }
-      if (weof_dev(dev, 1) < 0) {
+      if (!dev->weof(1)) {
          Jmsg(jcr, M_FATAL, 0, _("Error writing EOF to tape. ERR=%s"), dev->errmsg);
          return false;
       }

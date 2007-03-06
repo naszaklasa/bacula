@@ -1,16 +1,8 @@
 
-As you will note, I don't follow the standard GNU release
-numbering conventions, but rather one that I started in
-1970.  My internal releases were 0.nn, the first release to
-another user was 1.0, each modified source code release then
-gets a new minor release (1.1, 1.2, ...) as well as a date.  Each
-major change in the software -- e.g.  new tape format will
-normally have the major release number incremented.
+Your best bet to get Bacula compiled and running is
+to read the online manual at:
 
-Your best bet for getting Bacula up and running is to read
-the manual, which can be found in
-<bacula-main-directory>/doc/html-manual, or in
-<bacula-main-directory>/doc/bacula.pdf.
+  http://www.bacula.org
 
 Barring reading the manual, you might try the
 following:
@@ -29,18 +21,6 @@ To Configure it:
     --with-dump-email=YOUR_EMAIL_ADDRESS \
     --with-job-email=YOUR_EMAIL_ADDRESS \
     --with-smtp-host=YOUR_SMTP_SERVER_ADDRESS
-
-Note, if you do not have readline installed on your
-system, you either need to add:
-     
-     --disable-readline 
-
-or add:
-
-     --with-readline=$HOME/bacula/depkgs1/readline
-
-where I assume you have loaded depkgs1 into $HOME/bacula
-and built the readline routine.      
 
 If you want to use SQLite, please download depkgs and
 build sqlite, then add something like:

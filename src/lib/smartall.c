@@ -14,24 +14,36 @@
                   http://www.fourmilab.ch/smartall/
 
 
-         Version $Id: smartall.c,v 1.17.2.4 2006/05/02 14:48:17 kerns Exp $
+         Version $Id: smartall.c,v 1.24 2006/12/16 15:30:22 kerns Exp $
 
 */
-
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 /* Use the real routines here */
@@ -132,6 +144,11 @@ static void *smalloc(const char *fname, int lineno, unsigned int nbytes)
       Emsg0(M_ABORT, 0, _("Out of memory\n"));
    }
    Dmsg4(1150, "smalloc %d at %x from %s:%d\n", nbytes, buf, fname, lineno);
+#if    SMALLOC_SANITY_CHECK > 0
+   if (sm_bytes > SMALLOC_SANITY_CHECK) {
+      Emsg0(M_ABORT, 0, _("Too much memory used."));
+   }
+#endif
    return (void *)buf;
 }
 
@@ -371,16 +388,16 @@ void sm_dump(bool bufdump)
       if (ap->abfname != NULL) {
          unsigned memsize = ap->ablen - (HEAD_SIZE + 1);
          char errmsg[500];
+         char *cp = ((char *)ap) + HEAD_SIZE;
 
          bsnprintf(errmsg, sizeof(errmsg),
-           _("Orphaned buffer:  %6u bytes allocated at line %d of %s %s\n"),
-            memsize, ap->ablineno, my_name, ap->abfname
+           _("Orphaned buffer:  %s %6u bytes buf=%p allocated at %s:%d\n"),
+            my_name, memsize, cp, ap->abfname, ap->ablineno
          );
          fprintf(stderr, "%s", errmsg);
          if (bufdump) {
             char buf[20];
             unsigned llen = 0;
-            char *cp = ((char *) ap) + HEAD_SIZE;
 
             errmsg[0] = EOS;
             while (memsize) {

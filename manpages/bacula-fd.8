@@ -1,0 +1,40 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH BACULA\-FD 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery & verification"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.SH NAME
+.B bacula\-fd
+\- Bacula's File Daemon
+.SH SYNOPSIS
+.B bacula\-fd
+.RI [ options ]
+.br
+.SH DESCRIPTION
+This manual page documents briefly the
+.B bacula
+command.
+.br
+Bacula's File Daemon acts as the interface between the Bacula
+network backup system and the filesystems to be backed up: it is
+responsible for reading/writing/verifying the files to be
+backup'd/verified/restored. Network transfer can optionally be
+compressed. 
+.SH OPTIONS
+.TP
+.BI \-c\  config
+Change location to read \fIbacula\-fd.conf\fP from (default $CWD)
+.TP
+.BI \-u\  user
+Set the username/uid to run as.
+.TP
+.BI \-g\  group
+Set the group/gid to run as.
+.SH SEE ALSO
+.BR bacula\-dir (8),
+.BR bacula\-sd (8).
+.br
+.SH AUTHOR
+This manual page was written by Jose Luis Tallon <joseluis@DarkCube.adv\-solutions.net>.

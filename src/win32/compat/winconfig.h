@@ -10,6 +10,10 @@
 #ifndef __WINCONFIG_H
 #define __WINCONFIG_H
 
+#define HAVE_OPENSSL 1
+#define HAVE_CRYPTO 1
+#define HAVE_TLS 1
+
 /* Define if you want to use MySQL as Catalog database */
 /* #undef USE_MYSQL_DB */
 
@@ -29,7 +33,7 @@
 /* #undef ssize_t */
 
 /* Define if you want to use MySQL */
-/* #undef HAVE_MYSQL */
+/* #define HAVE_MYSQL 1 */
 
 /* Defined if MySQL thread safe library is present */
 /* #undef HAVE_THREAD_SAFE_MYSQL */
@@ -372,7 +376,7 @@
 /* Enable NLS only if we are using the new VC++.
  * NLS should also work with VC++ 7.1, but the Makefiles are
  * not adapted to support it (include, lib...). */
-#define ENABLE_NLS 1
+//#define ENABLE_NLS 1
 #endif
 
 #undef  LOCALEDIR
@@ -394,9 +398,10 @@
 
 /* Define to 1 if you have the `snprintf' function. */
 #define HAVE_SNPRINTF 1
+#define HAVE_SNPRINTF_DECL 1
 
 /* Define to 1 if you have the <stdarg.h> header file. */
-/*#define HAVE_STDARG_H 1*/
+#define HAVE_STDARG_H 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
 /*#define HAVE_STDINT_H 1 */
@@ -521,6 +526,7 @@
 
 /* Define to 1 if you have the `vsnprintf' function. */
 #define HAVE_VSNPRINTF 1
+#define HAVE_VSNPRINTF_DECL 1
 
 /* Define to 1 if you have the <zlib.h> header file. */
 #define HAVE_ZLIB_H 1
@@ -567,6 +573,9 @@
 #define SIZEOF_INT_P 4
 
 /* The size of a `long int', as computed by sizeof. */
+#define SIZEOF_LONG 4
+
+/* The size of a `long int', as computed by sizeof. */
 #define SIZEOF_LONG_INT 4
 
 /* The size of a `long long int', as computed by sizeof. */
@@ -574,6 +583,12 @@
 
 /* The size of a `short int', as computed by sizeof. */
 #define SIZEOF_SHORT_INT 2
+
+/* The size of a `void *', as computed by sizeof. */
+#define SIZEOF_VOID_P 4
+
+/* The size of a `size_t', as computed by sizeof. */
+#define SIZEOF_SIZE_T 4
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be

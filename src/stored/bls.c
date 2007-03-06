@@ -1,33 +1,42 @@
 /*
  *
  *  Dumb program to do an "ls" of a Bacula 1.0 mortal file.
+ * 
+ *  Kern Sibbald, MM
  *
- *   Version $Id: bls.c,v 1.91.2.3 2006/03/14 21:41:41 kerns Exp $
+ *   Version $Id: bls.c,v 1.104 2006/12/13 19:42:12 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
 #include "findlib/find.h"
-
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
-int win32_client = 1;
-#else
-int win32_client = 0;
-#endif
 
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
@@ -65,7 +74,7 @@ static BSR *bsr = NULL;
 static void usage()
 {
    fprintf(stderr, _(
-"Copyright (C) 2000-2005 Kern Sibbald.\n"
+PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bls [options] <device-name>\n"
 "       -b <file>       specify a bootstrap file\n"
@@ -80,7 +89,7 @@ static void usage()
 "       -p              proceed inspite of errors\n"
 "       -v              be verbose\n"
 "       -V              specify Volume names (separated by |)\n"
-"       -?              print this message\n\n"), VERSION, BDATE);
+"       -?              print this message\n\n"), 2000, VERSION, BDATE);
    exit(1);
 }
 
@@ -97,10 +106,13 @@ int main (int argc, char *argv[])
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
+   init_stack_dump();
 
    working_directory = "/tmp";
    my_name_is(argc, argv, "bls");
    init_msg(NULL, NULL);              /* initialize message handler */
+
+   OSDependentInit();
 
    ff = init_find_files();
 
@@ -124,7 +136,7 @@ int main (int argc, char *argv[])
          break;
 
       case 'e':                    /* exclude list */
-         if ((fd = fopen(optarg, "r")) == NULL) {
+         if ((fd = fopen(optarg, "rb")) == NULL) {
             Pmsg2(0, _("Could not open exclude file: %s, ERR=%s\n"),
                optarg, strerror(errno));
             exit(1);
@@ -138,7 +150,7 @@ int main (int argc, char *argv[])
          break;
 
       case 'i':                    /* include list */
-         if ((fd = fopen(optarg, "r")) == NULL) {
+         if ((fd = fopen(optarg, "rb")) == NULL) {
             Pmsg2(0, _("Could not open include file: %s, ERR=%s\n"),
                optarg, strerror(errno));
             exit(1);
@@ -250,15 +262,15 @@ static void do_close(JCR *jcr)
    free_attr(attr);
    free_record(rec);
    free_jcr(jcr);
-   term_dev(dev);
+   dev->term();
 }
 
 
 /* List just block information */
 static void do_blocks(char *infname)
 {
-   char buf1[100], buf2[100];
    DEV_BLOCK *block = dcr->block;
+   char buf1[100], buf2[100];
    for ( ;; ) {
       if (!read_block_from_device(dcr, NO_BLOCK_NUMBER_CHECK)) {
          Dmsg1(100, "!read_block(): ERR=%s\n", dev->strerror());
@@ -272,7 +284,7 @@ static void do_blocks(char *infname)
             DEV_RECORD *record;
             record = new_record();
             read_block_from_device(dcr, NO_BLOCK_NUMBER_CHECK);
-            read_record_from_block(block, record);
+            read_record_from_block(dcr, block, record);
             get_session_record(dev, record, &sessrec);
             free_record(record);
             Jmsg(jcr, M_INFO, 0, _("Mounted Volume \"%s\".\n"), dcr->VolumeName);
@@ -300,7 +312,7 @@ static void do_blocks(char *infname)
         block->BlockNumber, block->block_len, block->BlockVer,
         block->VolSessionId, block->VolSessionTime);
       if (verbose == 1) {
-         read_record_from_block(block, rec);
+         read_record_from_block(dcr, block, rec);
          Pmsg9(-1, _("File:blk=%u:%u blk_num=%u blen=%u First rec FI=%s SessId=%u SessTim=%u Strm=%s rlen=%d\n"),
               dev->file, dev->block_num,
               block->BlockNumber, block->block_len,
@@ -407,6 +419,7 @@ static void get_session_record(DEVICE *dev, DEV_RECORD *rec, SESSION_LABEL *sess
    case EOS_LABEL:
       rtype = _("End Job Session");
       break;
+   case 0:
    case EOM_LABEL:
       rtype = _("End of Medium");
       break;
@@ -424,7 +437,6 @@ static void get_session_record(DEVICE *dev, DEV_RECORD *rec, SESSION_LABEL *sess
 
 
 /* Dummies to replace askdir.c */
-bool    dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing) { return 1;}
 bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
 bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
 bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
@@ -439,6 +451,16 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr)
    DEVICE *dev = dcr->dev;
    fprintf(stderr, _("Mount Volume \"%s\" on device %s and press return when ready: "),
       dcr->VolumeName, dev->print_name());
+   dev->close();
    getchar();
    return true;
+}
+
+bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing)
+{
+   Dmsg0(100, "Fake dir_get_volume_info\n");
+   bstrncpy(dcr->VolCatInfo.VolCatName, dcr->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
+   dcr->VolCatInfo.VolCatParts = find_num_dvd_parts(dcr);
+   Dmsg2(500, "Vol=%s num_parts=%d\n", dcr->VolCatInfo.VolCatName, dcr->VolCatInfo.VolCatParts);
+   return 1;
 }

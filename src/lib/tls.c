@@ -3,9 +3,7 @@
  *
  * Author: Landon Fuller <landonf@threerings.net>
  *
- * Version $Id: tls.c,v 1.6.2.1 2005/12/10 13:18:05 kerns Exp $
- *
- * Copyright (C) 2005 Kern Sibbald
+ * Version $Id: tls.c,v 1.10.4.1 2007/01/24 01:59:02 robertnelson Exp $
  *
  * This file was contributed to the Bacula project by Landon Fuller
  * and Three Rings Design, Inc.
@@ -22,19 +20,33 @@
  * Landon Fuller <landonf@threerings.net>.
  */
 /*
-   Copyright (C) 2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+
 
 #include "bacula.h"
 #include <assert.h>
@@ -48,41 +60,16 @@ extern time_t watchdog_time;
 /* No anonymous ciphers, no <128 bit ciphers, no export ciphers, no MD5 ciphers */
 #define TLS_DEFAULT_CIPHERS "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH"
 
-/* Array of mutexes for use with OpenSSL static locking */
-static pthread_mutex_t *mutexes;
-
-/* OpenSSL dynamic locking structure */
-struct CRYPTO_dynlock_value {
-   pthread_mutex_t mutex;
-};
-
-/* Are we initialized? */
-static int tls_initialized = false;
-
 /* TLS Context Structure */
 struct TLS_Context {
    SSL_CTX *openssl;
-   TLS_PEM_PASSWD_CB *pem_callback;
+   CRYPTO_PEM_PASSWD_CB *pem_callback;
    const void *pem_userdata;
 };
 
 struct TLS_Connection {
    SSL *openssl;
 };
-
-/* post all per-thread openssl errors */
-static void openssl_post_errors(int code, const char *errstring)
-{
-   char buf[512];
-   unsigned long sslerr;
-
-   /* Pop errors off of the per-thread queue */
-   while((sslerr = ERR_get_error()) != 0) {
-      /* Acquire the human readable string */
-      ERR_error_string_n(sslerr, (char *) &buf, sizeof(buf));
-      Emsg2(M_ERROR, 0, "%s: ERR=%s\n", errstring, buf);
-   }
-}
 
 /*
  * OpenSSL certificate verification callback.
@@ -111,18 +98,8 @@ static int openssl_verify_peer(int ok, X509_STORE_CTX *store)
    return ok;
 }
 
-/*
- * Default PEM encryption passphrase callback.
- * Returns an empty password.
- */
-static int tls_default_pem_callback(char *buf, int size, const void *userdata)
-{
-   bstrncpy(buf, "", size);
-   return (strlen(buf));
-}
-
 /* Dispatch user PEM encryption callbacks */
-static int openssl_pem_callback_dispatch (char *buf, int size, int rwflag, void *userdata)
+static int tls_pem_callback_dispatch (char *buf, int size, int rwflag, void *userdata)
 {
    TLS_CONTEXT *ctx = (TLS_CONTEXT *) userdata;
    return (ctx->pem_callback(buf, size, ctx->pem_userdata));
@@ -135,7 +112,7 @@ static int openssl_pem_callback_dispatch (char *buf, int size, int rwflag, void 
  */
 TLS_CONTEXT *new_tls_context(const char *ca_certfile, const char *ca_certdir,
                              const char *certfile, const char *keyfile,
-                             TLS_PEM_PASSWD_CB *pem_callback,
+                             CRYPTO_PEM_PASSWD_CB *pem_callback,
                              const void *pem_userdata, const char *dhfile,
                              bool verify_peer)
 {
@@ -158,10 +135,10 @@ TLS_CONTEXT *new_tls_context(const char *ca_certfile, const char *ca_certdir,
       ctx->pem_callback = pem_callback;
       ctx->pem_userdata = pem_userdata;
    } else {
-      ctx->pem_callback = tls_default_pem_callback;
+      ctx->pem_callback = crypto_default_pem_callback;
       ctx->pem_userdata = NULL;
    }
-   SSL_CTX_set_default_passwd_cb(ctx->openssl, openssl_pem_callback_dispatch);
+   SSL_CTX_set_default_passwd_cb(ctx->openssl, tls_pem_callback_dispatch);
    SSL_CTX_set_default_passwd_cb_userdata(ctx->openssl, (void *) ctx);
 
    /*
@@ -264,7 +241,7 @@ bool tls_postconnect_verify_cn(TLS_CONNECTION *tls, alist *verify_list)
    SSL *ssl = tls->openssl;
    X509 *cert;
    X509_NAME *subject;
-   int auth_success = false;
+   bool auth_success = false;
    char data[256];
 
    /* Check if peer provided a certificate */
@@ -303,7 +280,7 @@ bool tls_postconnect_verify_host(TLS_CONNECTION *tls, const char *host)
    SSL *ssl = tls->openssl;
    X509 *cert;
    X509_NAME *subject;
-   int auth_success = false;
+   bool auth_success = false;
    int extensions;
    char data[256];
    int i, j;
@@ -367,7 +344,7 @@ bool tls_postconnect_verify_host(TLS_CONNECTION *tls, const char *host)
             for (j = 0; j < sk_CONF_VALUE_num(val); j++) {
                nval = sk_CONF_VALUE_value(val, j);
                if (strcmp(nval->name, "DNS") == 0) {
-                  if (strcasecmp(nval->name, host) == 0) {
+                  if (strcasecmp(nval->value, host) == 0) {
                      auth_success = true;
                      goto success;
                   }
@@ -698,234 +675,6 @@ int tls_bsock_readn(BSOCK *bsock, char *ptr, int32_t nbytes) {
    return (openssl_bsock_readwrite(bsock, ptr, nbytes, false));
 }
 
-/*
- * Return an OpenSSL thread ID
- *  Returns: thread ID
- *
- */
-static unsigned long get_openssl_thread_id (void)
-{
-   /* Comparison without use of pthread_equal() is mandated by the OpenSSL API */
-   return ((unsigned long) pthread_self());
-}
-
-/*
- * Allocate a dynamic OpenSSL mutex
- */
-static struct CRYPTO_dynlock_value *openssl_create_dynamic_mutex (const char *file, int line)
-{
-   struct CRYPTO_dynlock_value *dynlock;
-   int stat;
-
-   dynlock = (struct CRYPTO_dynlock_value *) malloc(sizeof(struct CRYPTO_dynlock_value));
-
-   if ((stat = pthread_mutex_init(&dynlock->mutex, NULL)) != 0) {
-      Emsg1(M_ABORT, 0, _("Unable to init mutex: ERR=%s\n"), strerror(stat));
-   }
-
-   return dynlock;
-}
-
-static void openssl_update_dynamic_mutex (int mode, struct CRYPTO_dynlock_value *dynlock, const char *file, int line)
-{
-   if (mode & CRYPTO_LOCK) {
-      P(dynlock->mutex);
-   } else {
-      V(dynlock->mutex);
-   }
-}
-
-static void openssl_destroy_dynamic_mutex (struct CRYPTO_dynlock_value *dynlock, const char *file, int line)
-{
-   int stat;
-
-   if ((stat = pthread_mutex_destroy(&dynlock->mutex)) != 0) {
-      Emsg1(M_ABORT, 0, _("Unable to destroy mutex: ERR=%s\n"), strerror(stat));
-   }
-
-   free(dynlock);
-}
-
-/*
- * (Un)Lock a static OpenSSL mutex
- */
-static void openssl_update_static_mutex (int mode, int i, const char *file, int line)
-{
-   if (mode & CRYPTO_LOCK) {
-      P(mutexes[i]);
-   } else {
-      V(mutexes[i]);
-   }
-}
-
-/*
- * Initialize OpenSSL thread support
- *  Returns: 0 on success
- *           errno on failure
- */
-static int openssl_init_threads (void)
-{
-   int i, numlocks;
-   int stat;
-
-
-   /* Set thread ID callback */
-   CRYPTO_set_id_callback(get_openssl_thread_id);
-
-   /* Initialize static locking */
-   numlocks = CRYPTO_num_locks();
-   mutexes = (pthread_mutex_t *) malloc(numlocks * sizeof(pthread_mutex_t));
-   for (i = 0; i < numlocks; i++) {
-      if ((stat = pthread_mutex_init(&mutexes[i], NULL)) != 0) {
-         Emsg1(M_ERROR, 0, _("Unable to init mutex: ERR=%s\n"), strerror(stat));
-         return stat;
-      }
-   }
-
-   /* Set static locking callback */
-   CRYPTO_set_locking_callback(openssl_update_static_mutex);
-
-   /* Initialize dyanmic locking */
-   CRYPTO_set_dynlock_create_callback(openssl_create_dynamic_mutex);
-   CRYPTO_set_dynlock_lock_callback(openssl_update_dynamic_mutex);
-   CRYPTO_set_dynlock_destroy_callback(openssl_destroy_dynamic_mutex);
-
-   return 0;
-}
-
-/*
- * Clean up OpenSSL threading support
- */
-static void openssl_cleanup_threads (void)
-{
-   int i, numlocks;
-   int stat;
-
-   /* Unset thread ID callback */
-   CRYPTO_set_id_callback(NULL);
-  
-   /* Deallocate static lock mutexes */
-   numlocks = CRYPTO_num_locks();
-   for (i = 0; i < numlocks; i++) {
-      if ((stat = pthread_mutex_destroy(&mutexes[i])) != 0) {
-         /* We don't halt execution, reporting the error should be sufficient */
-         Emsg1(M_ERROR, 0, _("Unable to destroy mutex: ERR=%s\n"), strerror(stat));
-      }
-   }
-
-   /* Unset static locking callback */
-   CRYPTO_set_locking_callback(NULL);
-
-   /* Free static lock array */
-   free(mutexes);
-
-   /* Unset dynamic locking callbacks */
-   CRYPTO_set_dynlock_create_callback(NULL);
-   CRYPTO_set_dynlock_lock_callback(NULL);
-   CRYPTO_set_dynlock_destroy_callback(NULL);
-}
-
-
-/*
- * Seed TLS PRNG
- *  Returns: 1 on success
- *           0 on failure
- */
-static int seed_tls_prng (void)
-{
-   const char *names[]  = { "/dev/urandom", "/dev/random", NULL };
-   int i;
-
-   // ***FIXME***
-   // Win32 Support
-   // Read saved entropy?
-
-   for (i = 0; names[i]; i++) {
-      if (RAND_load_file(names[i], 1024) != -1) {
-         /* Success */
-         return 1;
-      }
-   }
-
-   /* Fail */
-   return 0;
-}
-
-/*
- * Save TLS Entropy
- *  Returns: 1 on success
- *           0 on failure
- */
-static int save_tls_prng (void)
-{
-   // ***FIXME***
-   // Implement PRNG state save
-   return 1;
-}
-
-/*
- * Perform global initialization of TLS
- * This function is not thread safe.
- *  Returns: 0 on success
- *           errno on failure
- */
-int init_tls (void)
-{
-   int stat;
-
-   if ((stat = openssl_init_threads()) != 0) {
-      Emsg1(M_ABORT, 0, _("Unable to init OpenSSL threading: ERR=%s\n"), strerror(stat));
-   }
-
-   /* Load libssl and libcrypto human-readable error strings */
-   SSL_load_error_strings();
-
-   /* Register OpenSSL ciphers */
-   SSL_library_init();
-
-   if (!seed_tls_prng()) {
-      Emsg0(M_ERROR_TERM, 0, _("Failed to seed OpenSSL PRNG\n"));
-   }
-
-   tls_initialized = true;
-
-   return stat;
-}
-
-/*
- * Perform global cleanup of TLS
- * All TLS connections must be closed before calling this function.
- * This function is not thread safe.
- *  Returns: 0 on success
- *           errno on failure
- */
-int cleanup_tls (void)
-{
-   /*
-    * Ensure that we've actually been initialized; Doing this here decreases the
-    * complexity of client's termination/cleanup code.
-    */
-   if (!tls_initialized) {
-      return 0;
-   }
-
-   if (!save_tls_prng()) {
-      Emsg0(M_ERROR, 0, _("Failed to save OpenSSL PRNG\n"));
-   }
-
-   openssl_cleanup_threads();
-
-   /* Free libssl and libcrypto error strings */
-   ERR_free_strings();
-
-   /* Free memory used by PRNG */
-   RAND_cleanup();
-
-   tls_initialized = false;
-
-   return 0;
-}
-
 #else /* HAVE_OPENSSL */
 # error No TLS implementation available.
 #endif /* !HAVE_OPENSSL */
@@ -933,11 +682,9 @@ int cleanup_tls (void)
 #else
 
 /* Dummy routines */
-int init_tls(void) { return 0; }
-int cleanup_tls (void) { return 0; }
 TLS_CONTEXT *new_tls_context(const char *ca_certfile, const char *ca_certdir,
                              const char *certfile, const char *keyfile,
-                             TLS_PEM_PASSWD_CB *pem_callback,
+                             CRYPTO_PEM_PASSWD_CB *pem_callback,
                              const void *pem_userdata, const char *dhfile,
                              bool verify_peer)
 {

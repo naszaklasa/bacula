@@ -3,22 +3,35 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_create.c,v 1.80.2.1 2006/05/02 14:48:14 kerns Exp $
+ *    Version $Id: sql_create.c,v 1.88 2006/11/27 10:02:59 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 /* The following is necessary so that we do not include
  * the dummy external definition of DB.
@@ -27,6 +40,8 @@
 
 #include "bacula.h"
 #include "cats.h"
+
+static const int dbglevel = 500;
 
 #if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
 
@@ -43,26 +58,17 @@ static int db_create_filename_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 static int db_create_path_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 
 
-/* Imported subroutines */
-extern void print_dashes(B_DB *mdb);
-extern void print_result(B_DB *mdb);
-extern int QueryDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
-extern int InsertDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
-extern int UpdateDB(const char *file, int line, JCR *jcr, B_DB *db, char *update_cmd);
-extern void split_path_and_file(JCR *jcr, B_DB *mdb, const char *fname);
-
-
 /* Create a new record for the Job
- * Returns: 0 on failure
- *          1 on success
+ * Returns: false on failure
+ *          true  on success
  */
-int
+bool
 db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 {
    char dt[MAX_TIME_LENGTH];
    time_t stime;
    struct tm tm;
-   int stat;
+   bool ok;
    utime_t JobTDate;
    char ed1[30];
 
@@ -71,8 +77,8 @@ db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    stime = jr->SchedTime;
    ASSERT(stime != 0);
 
-   localtime_r(&stime, &tm);
-   strftime(dt, sizeof(dt), "%Y-%m-%d %T", &tm);
+   (void)localtime_r(&stime, &tm);
+   strftime(dt, sizeof(dt), "%Y-%m-%d %H:%M:%S", &tm);
    JobTDate = (utime_t)stime;
 
    /* Must create it */
@@ -86,14 +92,15 @@ db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
       Mmsg2(&mdb->errmsg, _("Create DB Job record %s failed. ERR=%s\n"),
             mdb->cmd, sql_strerror(mdb));
       jr->JobId = 0;
-      stat = 0;
+      ok = false;
    } else {
       jr->JobId = sql_insert_id(mdb, NT_("Job"));
-      stat = 1;
+      ok = true;
    }
    db_unlock(mdb);
-   return stat;
+   return ok;
 }
+
 
 /* Create a JobMedia record for medium used this job
  * Returns: false on failure
@@ -117,15 +124,19 @@ db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
    }
    count++;
 
+   /* Note, jm->Strip is not used and is not likely to be used
+    * in the near future, so I have removed it from the insert
+    * to save space in the DB. KES June 2006.
+    */
    Mmsg(mdb->cmd,
         "INSERT INTO JobMedia (JobId,MediaId,FirstIndex,LastIndex,"
-        "StartFile,EndFile,StartBlock,EndBlock,VolIndex,Copy,Stripe) "
-        "VALUES (%s,%s,%u,%u,%u,%u,%u,%u,%u,%u,%u)",
+        "StartFile,EndFile,StartBlock,EndBlock,VolIndex,Copy) "
+        "VALUES (%s,%s,%u,%u,%u,%u,%u,%u,%u,%u)",
         edit_int64(jm->JobId, ed1),
         edit_int64(jm->MediaId, ed2),
         jm->FirstIndex, jm->LastIndex,
         jm->StartFile, jm->EndFile, jm->StartBlock, jm->EndBlock,count,
-        jm->Copy, jm->Stripe);
+        jm->Copy);
 
    Dmsg0(300, mdb->cmd);
    if (!INSERT_DB(jcr, mdb, mdb->cmd)) {
@@ -371,6 +382,7 @@ db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 {
    int stat;
    char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50], ed6[50], ed7[50], ed8[50];
+   char ed9[50], ed10[50], ed11[50], ed12[50];
    struct tm tm;
 
    db_lock(mdb);
@@ -391,11 +403,13 @@ db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 
    /* Must create it */
    Mmsg(mdb->cmd,
-"INSERT INTO Media (VolumeName,MediaType,PoolId,MaxVolBytes,VolCapacityBytes,"
-"Recycle,VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,"
+"INSERT INTO Media (VolumeName,MediaType,MediaTypeId,PoolId,MaxVolBytes,"
+"VolCapacityBytes,Recycle,VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,"
 "VolStatus,Slot,VolBytes,InChanger,VolReadTime,VolWriteTime,VolParts,"
-"EndFile,EndBlock,LabelType,StorageId) "
-"VALUES ('%s','%s',%u,%s,%s,%d,%s,%s,%u,%u,'%s',%d,%s,%d,%s,%s,%d,0,0,%d,%s)",
+"EndFile,EndBlock,LabelType,StorageId,DeviceId,LocationId,"
+"ScratchPoolId,RecyclePoolId,Enabled)"
+"VALUES ('%s','%s',0,%u,%s,%s,%d,%s,%s,%u,%u,'%s',%d,%s,%d,%s,%s,%d,0,0,%d,%s,"
+"%s,%s,%s,%s,%d)",
           mr->VolumeName,
           mr->MediaType, mr->PoolId,
           edit_uint64(mr->MaxVolBytes,ed1),
@@ -413,7 +427,12 @@ db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
           edit_uint64(mr->VolWriteTime, ed7),
           mr->VolParts,
           mr->LabelType,
-          edit_int64(mr->StorageId, ed8) 
+          edit_int64(mr->StorageId, ed8), 
+          edit_int64(mr->DeviceId, ed9), 
+          edit_int64(mr->LocationId, ed10), 
+          edit_int64(mr->ScratchPoolId, ed11), 
+          edit_int64(mr->RecyclePoolId, ed12), 
+          mr->Enabled
           );
 
 
@@ -430,8 +449,8 @@ db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
          if (mr->LabelDate == 0) {
             mr->LabelDate = time(NULL);
          }
-         localtime_r(&mr->LabelDate, &tm);
-         strftime(dt, sizeof(dt), "%Y-%m-%d %T", &tm);
+         (void)localtime_r(&mr->LabelDate, &tm);
+         strftime(dt, sizeof(dt), "%Y-%m-%d %H:%M:%S", &tm);
          Mmsg(mdb->cmd, "UPDATE Media SET LabelDate='%s' "
               "WHERE MediaId=%d", dt, mr->MediaId);
          stat = UPDATE_DB(jcr, mdb, mdb->cmd);
@@ -602,8 +621,8 @@ bool db_create_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
    if (fsr->CreateTime == 0 && fsr->cCreateTime[0] == 0) {
       fsr->CreateTime = time(NULL);
    }
-   localtime_r(&fsr->CreateTime, &tm);
-   strftime(fsr->cCreateTime, sizeof(fsr->cCreateTime), "%Y-%m-%d %T", &tm);
+   (void)localtime_r(&fsr->CreateTime, &tm);
+   strftime(fsr->cCreateTime, sizeof(fsr->cCreateTime), "%Y-%m-%d %H:%M:%S", &tm);
 
    /* Must create it */
       Mmsg(mdb->cmd, "INSERT INTO FileSet (FileSet,MD5,CreateTime) "
@@ -660,8 +679,8 @@ int db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
 {
 
    db_lock(mdb);
-   Dmsg1(300, "Fname=%s\n", ar->fname);
-   Dmsg0(500, "put_file_into_catalog\n");
+   Dmsg1(dbglevel, "Fname=%s\n", ar->fname);
+   Dmsg0(dbglevel, "put_file_into_catalog\n");
    /*
     * Make sure we have an acceptable attributes record.
     */
@@ -679,21 +698,21 @@ int db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
    if (!db_create_filename_record(jcr, mdb, ar)) {
       goto bail_out;
    }
-   Dmsg1(500, "db_create_filename_record: %s\n", mdb->esc_name);
+   Dmsg1(dbglevel, "db_create_filename_record: %s\n", mdb->esc_name);
 
 
    if (!db_create_path_record(jcr, mdb, ar)) {
       goto bail_out;
    }
-   Dmsg1(500, "db_create_path_record: %s\n", mdb->esc_name);
+   Dmsg1(dbglevel, "db_create_path_record: %s\n", mdb->esc_name);
 
    /* Now create master File record */
    if (!db_create_file_record(jcr, mdb, ar)) {
       goto bail_out;
    }
-   Dmsg0(500, "db_create_file_record OK\n");
+   Dmsg0(dbglevel, "db_create_file_record OK\n");
 
-   Dmsg3(300, "CreateAttributes Path=%s File=%s FilenameId=%d\n", mdb->path, mdb->fname, ar->FilenameId);
+   Dmsg3(dbglevel, "CreateAttributes Path=%s File=%s FilenameId=%d\n", mdb->path, mdb->fname, ar->FilenameId);
    db_unlock(mdb);
    return 1;
 
@@ -709,17 +728,17 @@ bail_out:
 static int db_create_file_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
 {
    int stat;
-   static char *no_sig = "0";
-   char *sig;
+   static char *no_digest = "0";
+   char *digest;
 
    ASSERT(ar->JobId);
    ASSERT(ar->PathId);
    ASSERT(ar->FilenameId);
 
-   if (ar->Sig == NULL || ar->Sig[0] == 0) {
-      sig = no_sig;
+   if (ar->Digest == NULL || ar->Digest[0] == 0) {
+      digest = no_digest;
    } else {
-      sig = ar->Sig;
+      digest = ar->Digest;
    }
 
    /* Must create it */
@@ -727,7 +746,7 @@ static int db_create_file_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
         "INSERT INTO File (FileIndex,JobId,PathId,FilenameId,"
         "LStat,MD5) VALUES (%u,%u,%u,%u,'%s','%s')",
         ar->FileIndex, ar->JobId, ar->PathId, ar->FilenameId,
-        ar->attr, sig);
+        ar->attr, digest);
 
    if (!INSERT_DB(jcr, mdb, mdb->cmd)) {
       Mmsg2(&mdb->errmsg, _("Create db File record %s failed. ERR=%s"),

@@ -22,10 +22,10 @@ first_rule: all
 dummy:
 
 #
-LIBSRCS = find.c match.c find_one.c attibs.c create_file.c \
-	  bfile.c enable_priv.c fstype.c makepath.c save-cwd.c
+LIBSRCS = find.c match.c find_one.c attribs.c create_file.c \
+	  bfile.c drivetype.c enable_priv.c fstype.c makepath.c save-cwd.c
 LIBOBJS = find.o match.o find_one.o attribs.o create_file.o \
-	  bfile.o enable_priv.o fstype.o makepath.o save-cwd.o
+	  bfile.o drivetype.o enable_priv.o fstype.o makepath.o save-cwd.o
 
 .SUFFIXES:	.c .o
 .PHONY:
@@ -33,14 +33,16 @@ LIBOBJS = find.o match.o find_one.o attribs.o create_file.o \
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile libfind.a ../lib/libbac.a
 	@echo "==== Make of findlib is good ===="
 	@echo " "
 
 libfind.a: $(LIBOBJS) 
-	$(RMF) $@
+	@echo "Making $@ ..."
+	@$(RMF) $@
 	$(AR) cr $@ $(LIBOBJS)
 	$(RANLIB) $@
 

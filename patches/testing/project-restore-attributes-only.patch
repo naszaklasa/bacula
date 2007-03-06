@@ -1,0 +1,69 @@
+diff -Naur cvs/src/baconfig.h my/src/baconfig.h
+--- cvs/src/baconfig.h	2006-12-30 17:01:49.000000000 +0100
++++ my/src/baconfig.h	2006-12-30 17:01:34.000000000 +0100
+@@ -571,10 +571,12 @@
+  * Replace codes needed in both file routines and non-file routines
+  * Job replace codes -- in "replace"
+  */
+-#define REPLACE_ALWAYS   'a'
+-#define REPLACE_IFNEWER  'w'
+-#define REPLACE_NEVER    'n'
+-#define REPLACE_IFOLDER  'o'
++#define REPLACE_ALWAYS        'a'
++#define REPLACE_IFNEWER       'w'
++#define REPLACE_NEVER         'n'
++#define REPLACE_IFOLDER       'o'
++#define REPLACE_ATTR_ALWAYS   'r'
++#define REPLACE_ATTR_IFEXISTS 's'
+ 
+ /* This probably should be done on a machine by machine basis, but it works */
+ /* This is critical for the smartalloc routines to properly align memory */
+diff -Naur cvs/src/dird/dird_conf.c my/src/dird/dird_conf.c
+--- cvs/src/dird/dird_conf.c	2006-12-22 20:47:00.000000000 +0100
++++ my/src/dird/dird_conf.c	2006-12-30 17:30:42.000000000 +0100
+@@ -467,6 +467,8 @@
+    {"ifnewer",        REPLACE_IFNEWER},
+    {"ifolder",        REPLACE_IFOLDER},
+    {"never",          REPLACE_NEVER},
++   {"attributes",     REPLACE_ATTR_ALWAYS},
++   {"attributesifexists", REPLACE_ATTR_IFEXISTS},
+    {NULL,               0}
+ };
+ 
+diff -Naur cvs/src/filed/restore.c my/src/filed/restore.c
+--- cvs/src/filed/restore.c	2006-12-21 13:53:48.000000000 +0100
++++ my/src/filed/restore.c	2006-12-30 17:22:29.000000000 +0100
+@@ -383,6 +383,12 @@
+                extract = true;
+             }
+ #endif
++            if (jcr->replace == REPLACE_ATTR_ALWAYS   ||
++                jcr->replace == REPLACE_ATTR_IFEXISTS)
++            {
++               extract = false;	/* we just want attributes */
++            }
++
+             if (!extract) {
+                /* set attributes now because file will not be extracted */
+                set_attributes(jcr, attr, &bfd);
+diff -Naur cvs/src/findlib/create_file.c my/src/findlib/create_file.c
+--- cvs/src/findlib/create_file.c	2006-12-20 20:48:59.000000000 +0100
++++ my/src/findlib/create_file.c	2006-12-30 17:29:17.000000000 +0100
+@@ -135,9 +135,17 @@
+          Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Already exists: %s\n"), attr->ofname);
+          return CF_SKIP;
+ 
++      case REPLACE_ATTR_ALWAYS:
++         return CF_CREATED;
++
+       case REPLACE_ALWAYS:
+          break;
+       }
++   } else { /* File doesn't exists anymore */
++      if (replace == REPLACE_ATTR_IFEXISTS) {
++         Qmsg(jcr, M_SKIPPED, 0, _("File skipped. Doesn't exists anymore: %s\n"), attr->ofname);         
++         return CF_SKIP;
++      }
+    }
+    switch (attr->type) {
+    case FT_RAW:                       /* raw device to be written */

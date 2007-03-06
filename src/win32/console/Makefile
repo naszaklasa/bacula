@@ -1,24 +1,54 @@
 #
-# Makefile to build the native Win32 console
-# VC++ and tools must be on your path
+# Makefile for win32 bacula executables
+# Using MinGW cross-compiler on GNU/Linux
 #
-#     Kern Sibbald, April 2004
+#  Written by Robert Nelson, June 2006
 #
 
-NMAKE=nmake
+include ../Makefile.inc
 
-first_rule: all
+INCLUDES = \
+	$(INCLUDE_BACULA) \
+	$(INCLUDE_PTHREADS) \
+	$(INCLUDE_OPENSSL)
 
-dummy:
+DEFINES = \
+	-DUSING_DLL \
+	$(HAVES)
 
-all:  console
+vpath %.c ../../console
+vpath %.cpp ../../console
 
+##########################################################################
 
-console:
-	(env MAKEFLAGS= ${NMAKE} CFG="console - Win32 Release" /f console.mak)
+CONSOLE_OBJS = \
+	$(OBJDIR)/authenticate.o \
+	$(OBJDIR)/console.o \
+	$(OBJDIR)/console_conf.o
 
+ALL_OBJS = $(CONSOLE_OBJS)
+
+CONSOLE_LIBS = \
+	-lwsock32
+
+######################################################################
+
+# Targets
+
+.PHONY: all clean
+
+all: $(BINDIR)/bconsole.exe
 
 clean:
-	rm -rf Debug/*.obj Release/*.obj
+	@echo "Cleaning `pwd`"
+	$(call clean_obj,$(ALL_OBJS))
+	$(call clean_exe,$(BINDIR)/bconsole.exe)
 
-distclean: clean
+#
+# Rules
+#
+
+$(BINDIR)/bconsole.exe: $(CONSOLE_OBJS) $(LIBS_BACULA)
+	$(call link_conapp,$(CONSOLE_LIBS))
+
+include ../Makefile.rules

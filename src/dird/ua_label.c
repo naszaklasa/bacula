@@ -4,22 +4,35 @@
  *
  *     Kern Sibbald, April MMIII
  *
- *   Version $Id: ua_label.c,v 1.58.2.10 2006/06/04 12:24:39 kerns Exp $
+ *   Version $Id: ua_label.c,v 1.81 2006/12/23 16:33:52 kerns Exp $
  */
 /*
-   Copyright (C) 2003-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2003-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -149,26 +162,39 @@ bail_out:
  */
 void update_slots(UAContext *ua)
 {
-   STORE *store;
+   USTORE store;
    vol_list_t *vl, *vol_list = NULL;
    MEDIA_DBR mr;
    char *slot_list;
    bool scan;
    int max_slots;
    int drive;
+   int Enabled = 1;
+   bool have_enabled;
+   int i;
 
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return;
    }
-   store = get_storage_resource(ua, true/*arg is storage*/);
-   if (!store) {
+   store.store = get_storage_resource(ua, true/*arg is storage*/);
+   if (!store.store) {
       return;
    }
-   set_storage(ua->jcr, store);
-   drive = get_storage_drive(ua, store);
+   pm_strcpy(store.store_source, _("command line"));
+   set_wstorage(ua->jcr, &store);
+   drive = get_storage_drive(ua, store.store);
 
    scan = find_arg(ua, NT_("scan")) >= 0;
+   if ((i=find_arg_with_value(ua, NT_("Enabled"))) >= 0) {
+      Enabled = get_enabled(ua, ua->argv[i]);
+      if (Enabled < 0) {
+         return;
+      }
+      have_enabled = true;
+   } else {
+      have_enabled = false;
+   }
 
    max_slots = get_num_slots_from_SD(ua);
    Dmsg1(100, "max_slots=%d\n", max_slots);
@@ -217,7 +243,7 @@ void update_slots(UAContext *ua)
       memset(&mr, 0, sizeof(mr));
       mr.Slot = vl->Slot;
       mr.InChanger = 1;
-      mr.StorageId = store->StorageId;
+      mr.StorageId = store.store->StorageId;
       /* Set InChanger to zero for this Slot */
       db_lock(ua->db);
       db_make_inchanger_unique(ua->jcr, ua->db, &mr);
@@ -231,10 +257,13 @@ void update_slots(UAContext *ua)
       bstrncpy(mr.VolumeName, vl->VolName, sizeof(mr.VolumeName));
       db_lock(ua->db);
       if (db_get_media_record(ua->jcr, ua->db, &mr)) {
-         if (mr.Slot != vl->Slot || !mr.InChanger || mr.StorageId != store->StorageId) {
+         if (mr.Slot != vl->Slot || !mr.InChanger || mr.StorageId != store.store->StorageId) {
             mr.Slot = vl->Slot;
             mr.InChanger = 1;
-            mr.StorageId = store->StorageId;
+            mr.StorageId = store.store->StorageId;
+            if (have_enabled) {
+               mr.Enabled = Enabled;
+            }
             if (!db_update_media_record(ua->jcr, ua->db, &mr)) {
                bsendmsg(ua, "%s", db_strerror(ua->db));
             } else {
@@ -256,7 +285,7 @@ void update_slots(UAContext *ua)
    }
    memset(&mr, 0, sizeof(mr));
    mr.InChanger = 1;
-   mr.StorageId = store->StorageId;
+   mr.StorageId = store.store->StorageId;
    db_lock(ua->db);
    for (int i=1; i <= max_slots; i++) {
       if (slot_list[i]) {
@@ -282,7 +311,7 @@ bail_out:
  */
 static int do_label(UAContext *ua, const char *cmd, int relabel)
 {
-   STORE *store;
+   USTORE store;
    BSOCK *sd;
    char dev_name[MAX_NAME_LENGTH];
    MEDIA_DBR mr, omr;
@@ -300,7 +329,7 @@ static int do_label(UAContext *ua, const char *cmd, int relabel)
 
 
    memset(&pr, 0, sizeof(pr));
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return 1;
    }
 
@@ -313,12 +342,13 @@ static int do_label(UAContext *ua, const char *cmd, int relabel)
       label_barcodes = true;
    }
 
-   store = get_storage_resource(ua, true/*use default*/);
-   if (!store) {
+   store.store = get_storage_resource(ua, true/*use default*/);
+   if (!store.store) {
       return 1;
    }
-   set_storage(ua->jcr, store);
-   drive = get_storage_drive(ua, store);
+   pm_strcpy(store.store_source, _("command line"));
+   set_wstorage(ua->jcr, &store);
+   drive = get_storage_drive(ua, store.store);
 
    if (label_barcodes) {
       label_from_barcodes(ua, drive);
@@ -388,16 +418,16 @@ checkName:
    if (i >= 0) {
       mr.Slot = atoi(ua->argv[i]);
       mr.InChanger = 1;               /* assumed if we are labeling it */
-   } else if (store->autochanger) {
+   } else if (store.store->autochanger) {
       if (!get_pint(ua, _("Enter slot (0 or Enter for none): "))) {
          return 1;
       }
       mr.Slot = ua->pint32_val;
       mr.InChanger = 1;               /* assumed if we are labeling it */
    }
-   mr.StorageId = store->StorageId;
+   mr.StorageId = store.store->StorageId;
 
-   bstrncpy(mr.MediaType, store->media_type, sizeof(mr.MediaType));
+   bstrncpy(mr.MediaType, store.store->media_type, sizeof(mr.MediaType));
 
    /* Must select Pool if not already done */
    if (pr.PoolId == 0) {
@@ -427,7 +457,7 @@ checkName:
          }
       }
       if (ua->automount) {
-         bstrncpy(dev_name, store->dev_name(), sizeof(dev_name));
+         bstrncpy(dev_name, store.store->dev_name(), sizeof(dev_name));
          bsendmsg(ua, _("Requesting to mount %s ...\n"), dev_name);
          bash_spaces(dev_name);
          bnet_fsend(sd, "mount %s drive=%d", dev_name, drive);
@@ -463,7 +493,7 @@ checkName:
  */
 static void label_from_barcodes(UAContext *ua, int drive)
 {
-   STORE *store = ua->jcr->store;
+   STORE *store = ua->jcr->wstore;
    POOL_DBR pr;
    MEDIA_DBR mr, omr;
    vol_list_t *vl, *vol_list = NULL;
@@ -540,7 +570,7 @@ static void label_from_barcodes(UAContext *ua, int drive)
        */
       if (is_cleaning_tape(ua, &mr, &pr)) {
          if (media_record_exists) {      /* we update it */
-            mr.VolBytes = 1;
+            mr.VolBytes = 1;             /* any bytes to indicate it exists */
             bstrncpy(mr.VolStatus, "Cleaning", sizeof(mr.VolStatus));
             mr.MediaType[0] = 0;
             mr.StorageId = store->StorageId;
@@ -629,11 +659,13 @@ static bool send_label_request(UAContext *ua, MEDIA_DBR *mr, MEDIA_DBR *omr,
    BSOCK *sd;
    char dev_name[MAX_NAME_LENGTH];
    bool ok = false;
+   bool is_dvd = false;
+   uint64_t VolBytes = 0;
 
    if (!(sd=open_sd_bsock(ua))) {
       return false;
    }
-   bstrncpy(dev_name, ua->jcr->store->dev_name(), sizeof(dev_name));
+   bstrncpy(dev_name, ua->jcr->wstore->dev_name(), sizeof(dev_name));
    bash_spaces(dev_name);
    bash_spaces(mr->VolumeName);
    bash_spaces(mr->MediaType);
@@ -658,8 +690,11 @@ static bool send_label_request(UAContext *ua, MEDIA_DBR *mr, MEDIA_DBR *omr,
    }
 
    while (bnet_recv(sd) >= 0) {
+      int dvd;
       bsendmsg(ua, "%s", sd->msg);
-      if (strncmp(sd->msg, "3000 OK label.", 14) == 0) {
+      if (sscanf(sd->msg, "3000 OK label. VolBytes=%llu DVD=%d ", &VolBytes,
+                 &dvd) == 2) {
+         is_dvd = dvd;
          ok = true;
       }
    }
@@ -668,20 +703,26 @@ static bool send_label_request(UAContext *ua, MEDIA_DBR *mr, MEDIA_DBR *omr,
    unbash_spaces(pr->Name);
    mr->LabelDate = time(NULL);
    mr->set_label_date = true;
+   if (is_dvd) {
+      /* We know that a freshly labelled DVD has 1 VolParts */
+      /* This does not apply to auto-labelled DVDs. */
+      mr->VolParts = 1;
+   }
    if (ok) {
       if (media_record_exists) {      /* we update it */
-         mr->VolBytes = 1;
+         mr->VolBytes = VolBytes;
          mr->InChanger = 1;
-         mr->StorageId = ua->jcr->store->StorageId;
+         mr->StorageId = ua->jcr->wstore->StorageId;
          if (!db_update_media_record(ua->jcr, ua->db, mr)) {
              bsendmsg(ua, "%s", db_strerror(ua->db));
              ok = false;
          }
       } else {                        /* create the media record */
          set_pool_dbr_defaults_in_media_dbr(mr, pr);
-         mr->VolBytes = 1;               /* flag indicating Volume labeled */
+         mr->VolBytes = VolBytes;
          mr->InChanger = 1;
-         mr->StorageId = ua->jcr->store->StorageId;
+         mr->StorageId = ua->jcr->wstore->StorageId;
+         mr->Enabled = 1;
          if (db_create_media_record(ua->jcr, ua->db, mr)) {
             bsendmsg(ua, _("Catalog record for Volume \"%s\", Slot %d  successfully created.\n"),
             mr->VolumeName, mr->Slot);
@@ -703,11 +744,11 @@ static bool send_label_request(UAContext *ua, MEDIA_DBR *mr, MEDIA_DBR *omr,
 
 static BSOCK *open_sd_bsock(UAContext *ua)
 {
-   STORE *store = ua->jcr->store;
+   STORE *store = ua->jcr->wstore;
 
    if (!ua->jcr->store_bsock) {
       bsendmsg(ua, _("Connecting to Storage daemon %s at %s:%d ...\n"),
-         store->hdr.name, store->address, store->SDport);
+         store->name(), store->address, store->SDport);
       if (!connect_to_storage_daemon(ua->jcr, 10, SDConnectTimeout, 1)) {
          bsendmsg(ua, _("Failed to connect to Storage daemon.\n"));
          return NULL;
@@ -727,7 +768,7 @@ static void close_sd_bsock(UAContext *ua)
 
 static char *get_volume_name_from_SD(UAContext *ua, int Slot, int drive)
 {
-   STORE *store = ua->jcr->store;
+   STORE *store = ua->jcr->wstore;
    BSOCK *sd;
    char dev_name[MAX_NAME_LENGTH];
    char *VolName = NULL;
@@ -768,7 +809,7 @@ static char *get_volume_name_from_SD(UAContext *ua, int Slot, int drive)
  */
 static vol_list_t *get_vol_list_from_SD(UAContext *ua, bool scan)
 {
-   STORE *store = ua->jcr->store;
+   STORE *store = ua->jcr->wstore;
    char dev_name[MAX_NAME_LENGTH];
    BSOCK *sd;
    vol_list_t *vl;
@@ -881,7 +922,7 @@ static void free_vol_list(vol_list_t *vol_list)
  */
 static int get_num_slots_from_SD(UAContext *ua)
 {
-   STORE *store = ua->jcr->store;
+   STORE *store = ua->jcr->wstore;
    char dev_name[MAX_NAME_LENGTH];
    BSOCK *sd;
    int slots = 0;
@@ -913,7 +954,7 @@ static int get_num_slots_from_SD(UAContext *ua)
  */
 int get_num_drives_from_SD(UAContext *ua)
 {
-   STORE *store = ua->jcr->store;
+   STORE *store = ua->jcr->wstore;
    char dev_name[MAX_NAME_LENGTH];
    BSOCK *sd;
    int drives = 0;

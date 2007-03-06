@@ -9,22 +9,35 @@
  *    daemon because we interact more directly with the user
  *    i.e. printf, ...
  *
- *   Version $Id: butil.c,v 1.41.2.3 2006/03/14 21:41:41 kerns Exp $
+ *   Version $Id: butil.c,v 1.49 2006/12/14 11:41:00 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
@@ -76,7 +89,8 @@ JCR *setup_jcr(const char *name, char *dev_name, BSR *bsr,
    jcr->bsr = bsr;
    jcr->VolSessionId = 1;
    jcr->VolSessionTime = (uint32_t)time(NULL);
-   jcr->NumVolumes = 0;
+   jcr->NumReadVolumes = 0;
+   jcr->NumWriteVolumes = 0;
    jcr->JobId = 0;
    jcr->JobType = JT_CONSOLE;
    jcr->JobLevel = L_FULL;
@@ -140,9 +154,9 @@ static DCR *setup_to_access_device(JCR *jcr, char *dev_name,
          /* Try stripping file part */
          p = dev_name + strlen(dev_name);
 
-         while (p >= dev_name && *p != '/')
+         while (p >= dev_name && !IsPathSeparator(*p))
             p--;
-         if (*p == '/') {
+         if (IsPathSeparator(*p)) {
             bstrncpy(VolName, p+1, sizeof(VolName));
             *p = 0;
          }

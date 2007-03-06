@@ -4,7 +4,7 @@
 #
 bindir=@SQL_BINDIR@
 
-if $bindir/psql -f - -d bacula $* <<END-OF-DATA
+$bindir/psql -f - -d bacula $* <<END-OF-DATA
 
 CREATE TABLE filename
 (
@@ -55,26 +55,37 @@ CREATE TABLE job
     name	      text	  not null,
     type	      char(1)	  not null,
     level	      char(1)	  not null,
-    clientid	      integer,
+    clientid	      integer	  default 0,
     jobstatus	      char(1)	  not null,
-    schedtime	      timestamp   without time zone not null,
+    schedtime	      timestamp   without time zone,
     starttime	      timestamp   without time zone,
     endtime	      timestamp   without time zone,
-    jobtdate	      bigint	  not null,
-    volsessionid      integer	  not null default 0,
-    volsessiontime    integer	  not null default 0,
-    jobfiles	      integer	  not null default 0,
-    jobbytes	      bigint	  not null default 0,
-    joberrors	      integer	  not null default 0,
-    jobmissingfiles   integer	  not null default 0,
-    poolid	      integer,
-    filesetid	      integer,
-    purgedfiles       smallint	  not null default 0,
-    hasbase	      smallint	  not null default 0,
+    realendtime       timestamp   without time zone,
+    jobtdate	      bigint	  default 0,
+    volsessionid      integer	  default 0,
+    volsessiontime    integer	  default 0,
+    jobfiles	      integer	  default 0,
+    jobbytes	      bigint	  default 0,
+    joberrors	      integer	  default 0,
+    jobmissingfiles   integer	  default 0,
+    poolid	      integer	  default 0,
+    filesetid	      integer	  default 0,
+    purgedfiles       smallint	  default 0,
+    hasbase	      smallint	  default 0,
+    priorjobid	      integer	  default 0,
     primary key (jobid)
 );
 
 CREATE INDEX job_name_idx on job (name);
+
+CREATE TABLE Location (
+   LocationId	      serial	  not null,
+   Location	      text	  not null,
+   Cost 	      integer	  default 0,
+   Enabled	      smallint,
+   primary key (LocationId)
+);
+
 
 CREATE TABLE fileset
 (
@@ -92,15 +103,14 @@ CREATE TABLE jobmedia
     jobmediaid	      serial	  not null,
     jobid	      integer	  not null,
     mediaid	      integer	  not null,
-    firstindex	      integer	  not null default 0,
-    lastindex	      integer	  not null default 0,
-    startfile	      integer	  not null default 0,
-    endfile	      integer	  not null default 0,
-    startblock	      bigint	  not null default 0,
-    endblock	      bigint	  not null default 0,
-    volindex	      integer	  not null default 0,
-    copy	      integer	  not null default 0,
-    stripe	      integer	  not null default 0,
+    firstindex	      integer	  default 0,
+    lastindex	      integer	  default 0,
+    startfile	      integer	  default 0,
+    endfile	      integer	  default 0,
+    startblock	      bigint	  default 0,
+    endblock	      bigint	  default 0,
+    volindex	      integer	  default 0,
+    copy	      integer	  default 0,
     primary key (jobmediaid)
 );
 
@@ -110,39 +120,48 @@ CREATE TABLE media
 (
     mediaid	      serial	  not null,
     volumename	      text	  not null,
-    slot	      integer	  not null default 0,
-    poolid	      integer	  not null,
+    slot	      integer	  default 0,
+    poolid	      integer	  default 0,
     mediatype	      text	  not null,
-    labeltype	      integer	  not null default 0,
+    mediatypeid       integer	  default 0,
+    labeltype	      integer	  default 0,
     firstwritten      timestamp   without time zone,
     lastwritten       timestamp   without time zone,
     labeldate	      timestamp   without time zone,
-    voljobs	      integer	  not null default 0,
-    volfiles	      integer	  not null default 0,
-    volblocks	      integer	  not null default 0,
-    volmounts	      integer	  not null default 0,
-    volbytes	      bigint	  not null default 0,
-    volparts	      integer	  not null default 0,
-    volerrors	      integer	  not null default 0,
-    volwrites	      integer	  not null default 0,
-    volcapacitybytes  bigint	  not null default 0,
+    voljobs	      integer	  default 0,
+    volfiles	      integer	  default 0,
+    volblocks	      integer	  default 0,
+    volmounts	      integer	  default 0,
+    volbytes	      bigint	  default 0,
+    volparts	      integer	  default 0,
+    volerrors	      integer	  default 0,
+    volwrites	      integer	  default 0,
+    volcapacitybytes  bigint	  default 0,
     volstatus	      text	  not null
 	check (volstatus in ('Full','Archive','Append',
 	      'Recycle','Purged','Read-Only','Disabled',
 	      'Error','Busy','Used','Cleaning','Scratch')),
-    recycle	      smallint	  not null default 0,
-    volretention      bigint	  not null default 0,
-    voluseduration    bigint	  not null default 0,
-    maxvoljobs	      integer	  not null default 0,
-    maxvolfiles       integer	  not null default 0,
-    maxvolbytes       bigint	  not null default 0,
-    inchanger	      smallint	  not null default 0,
-    StorageId	      integer		   default 0,
-    mediaaddressing   smallint	  not null default 0,
-    volreadtime       bigint	  not null default 0,
-    volwritetime      bigint	  not null default 0,
-    endfile	      integer	  not null default 0,
-    endblock	      bigint	  not null default 0,
+    enabled	      smallint	  default 1,
+    recycle	      smallint	  default 0,
+    volretention      bigint	  default 0,
+    voluseduration    bigint	  default 0,
+    maxvoljobs	      integer	  default 0,
+    maxvolfiles       integer	  default 0,
+    maxvolbytes       bigint	  default 0,
+    inchanger	      smallint	  default 0,
+    StorageId	      integer	  default 0,
+    DeviceId	      integer	  default 0,
+    mediaaddressing   smallint	  default 0,
+    volreadtime       bigint	  default 0,
+    volwritetime      bigint	  default 0,
+    endfile	      integer	  default 0,
+    endblock	      bigint	  default 0,
+    LocationId	      integer	  default 0,
+    recyclecount      integer	  default 0,
+    initialwrite      timestamp   without time zone,
+    scratchpoolid     integer	  default 0,
+    recyclepoolid     integer	  default 0,
+    comment	      text,
     primary key (mediaid)
 );
 
@@ -177,7 +196,7 @@ CREATE TABLE Device (
    DevWriteTime BIGINT NOT NULL DEFAULT 0,
    DevReadTimeSinceCleaning BIGINT NOT NULL DEFAULT 0,
    DevWriteTimeSinceCleaning BIGINT NOT NULL DEFAULT 0,
-   CleaningDate TIMESTAMP WITHOUT TIME ZONE,
+   CleaningDate timestamp without time zone,
    CleaningPeriod BIGINT NOT NULL DEFAULT 0,
    PRIMARY KEY(DeviceId)
    );
@@ -187,29 +206,29 @@ CREATE TABLE pool
 (
     poolid	      serial	  not null,
     name	      text	  not null,
-    numvols	      integer	  not null default 0,
-    maxvols	      integer	  not null default 0,
-    useonce	      smallint	  not null default 0,
-    usecatalog	      smallint	  not null default 0,
-    acceptanyvolume   smallint	  not null default 0,
-    volretention      bigint	  not null default 0,
-    voluseduration    bigint	  not null default 0,
-    maxvoljobs	      integer	  not null default 0,
-    maxvolfiles       integer	  not null default 0,
-    maxvolbytes       bigint	  not null default 0,
-    autoprune	      smallint	  not null default 0,
-    recycle	      smallint	  not null default 0,
+    numvols	      integer	  default 0,
+    maxvols	      integer	  default 0,
+    useonce	      smallint	  default 0,
+    usecatalog	      smallint	  default 0,
+    acceptanyvolume   smallint	  default 0,
+    volretention      bigint	  default 0,
+    voluseduration    bigint	  default 0,
+    maxvoljobs	      integer	  default 0,
+    maxvolfiles       integer	  default 0,
+    maxvolbytes       bigint	  default 0,
+    autoprune	      smallint	  default 0,
+    recycle	      smallint	  default 0,
     pooltype	      text			    
       check (pooltype in ('Backup','Copy','Cloned','Archive','Migration','Scratch')),
-    labeltype	      integer	  not null default 0,
+    labeltype	      integer	  default 0,
     labelformat       text	  not null,
-    enabled	      smallint	  not null default 1,
-    scratchpoolid     integer default 0,
-    recyclepoolid     integer default 0,
-    NextPoolId	      integer default 0,
-    MigrationHighBytes BIGINT DEFAULT 0,
-    MigrationLowBytes  BIGINT DEFAULT 0,
-    MigrationTime      BIGINT DEFAULT 0,
+    enabled	      smallint	  default 1,
+    scratchpoolid     integer	  default 0,
+    recyclepoolid     integer	  default 0,
+    NextPoolId	      integer	  default 0,
+    MigrationHighBytes BIGINT	  DEFAULT 0,
+    MigrationLowBytes  BIGINT	  DEFAULT 0,
+    MigrationTime      BIGINT	  DEFAULT 0,
     primary key (poolid)
 );
 
@@ -221,20 +240,45 @@ CREATE TABLE client
     name	      text	  not null,
     uname	      text	  not null,
     autoprune	      smallint	  default 0,
-    fileretention     bigint	  not null,
-    jobretention      bigint	  not null,
+    fileretention     bigint	  default 0,
+    jobretention      bigint	  default 0,
     primary key (clientid)
 );
 
 create unique index client_name_idx on client (name);
 
+CREATE TABLE Log
+(
+    LogId	      serial	  not null,
+    JobId	      integer	  not null,
+    Time	      timestamp   without time zone,
+    LogText	      text	  not null,
+    primary key (LogId)
+);
+create index log_name_idx on Log (JobId);
+
+CREATE TABLE LocationLog (
+   LocLogId SERIAL NOT NULL,
+   Date timestamp   without time zone,
+   Comment TEXT NOT NULL,
+   MediaId INTEGER DEFAULT 0,
+   LocationId INTEGER DEFAULT 0,
+   newvolstatus text not null
+	check (newvolstatus in ('Full','Archive','Append',
+	      'Recycle','Purged','Read-Only','Disabled',
+	      'Error','Busy','Used','Cleaning','Scratch')),
+   newenabled smallint,
+   PRIMARY KEY(LocLogId)
+);
+
+
 
 CREATE TABLE counters
 (
     counter	      text	  not null,
-    minvalue	      integer,
-    maxvalue	      integer,
-    currentvalue      integer,
+    minvalue	      integer	  default 0,
+    maxvalue	      integer	  default 0,
+    currentvalue      integer	  default 0,
     wrapcounter       text	  not null,
     primary key (counter)
 );
@@ -319,15 +363,17 @@ INSERT INTO Status (JobStatus,JobStatusLong) VALUES
    ('p', 'Waiting on higher priority jobs');
 
 
-INSERT INTO Version (VersionId) VALUES (9);
+INSERT INTO Version (VersionId) VALUES (10);
 
 -- Make sure we have appropriate permissions
 
 
 END-OF-DATA
+pstat=$?
+if test $pstat = 0; 
 then
    echo "Creation of Bacula PostgreSQL tables succeeded."
 else
    echo "Creation of Bacula PostgreSQL tables failed."
 fi
-exit 0
+exit $pstat

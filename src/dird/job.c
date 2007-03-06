@@ -4,22 +4,35 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c,v 1.117.2.5 2006/05/02 14:48:14 kerns Exp $
+ *    Version $Id: job.c,v 1.148.2.4 2007/01/28 11:15:01 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -36,7 +49,6 @@ extern void term_scheduler();
 extern void term_ua_server();
 
 /* Imported variables */
-extern time_t watchdog_time;
 
 jobq_t job_queue;
 
@@ -73,8 +85,23 @@ void term_job_server()
  */
 JobId_t run_job(JCR *jcr)
 {
-   int stat, errstat;
-   JobId_t JobId = 0;
+   int stat;
+   if (setup_job(jcr)) {
+      Dmsg0(200, "Add jrc to work queue\n");
+      /* Queue the job to be run */
+      if ((stat = jobq_add(&job_queue, jcr)) != 0) {
+         berrno be;
+         Jmsg(jcr, M_FATAL, 0, _("Could not add job queue: ERR=%s\n"), be.strerror(stat));
+         return 0;
+      }
+      return jcr->JobId;
+   }
+   return 0;
+}            
+
+bool setup_job(JCR *jcr) 
+{
+   int errstat;
 
    jcr->lock();
    sm_check(__FILE__, __LINE__, true);
@@ -88,7 +115,7 @@ JobId_t run_job(JCR *jcr)
    }
    jcr->term_wait_inited = true;
 
-   create_unique_job_name(jcr, jcr->job->hdr.name);
+   create_unique_job_name(jcr, jcr->job->name());
    set_jcr_job_status(jcr, JS_Created);
    jcr->unlock();
 
@@ -110,6 +137,21 @@ JobId_t run_job(JCR *jcr)
    }
    Dmsg0(50, "DB opened\n");
 
+   if (!jcr->fname) {
+      jcr->fname = get_pool_memory(PM_FNAME);
+   }
+   if (!jcr->pool_source) {
+      jcr->pool_source = get_pool_memory(PM_MESSAGE);
+      pm_strcpy(jcr->pool_source, _("unknown source"));
+   }
+   Dmsg2(500, "pool=%s (From %s)\n", jcr->pool->name(), jcr->pool_source);
+   if (jcr->JobType == JT_MIGRATE) {
+      if (!jcr->rpool_source) {
+         jcr->rpool_source = get_pool_memory(PM_MESSAGE);
+         pm_strcpy(jcr->rpool_source, _("unknown source"));
+      }
+   }
+
    /*
     * Create Job record
     */
@@ -118,77 +160,18 @@ JobId_t run_job(JCR *jcr)
       Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
       goto bail_out;
    }
-   JobId = jcr->JobId = jcr->jr.JobId;
+   jcr->JobId = jcr->jr.JobId;
    Dmsg4(100, "Created job record JobId=%d Name=%s Type=%c Level=%c\n",
        jcr->JobId, jcr->Job, jcr->jr.JobType, jcr->jr.JobLevel);
-
-   generate_daemon_event(jcr, "JobStart");
 
    if (!get_or_create_client_record(jcr)) {
       goto bail_out;
    }
 
+   generate_daemon_event(jcr, "JobStart");
+
    if (job_canceled(jcr)) {
       goto bail_out;
-   }
-
-   Dmsg0(200, "Add jrc to work queue\n");
-
-   /* Queue the job to be run */
-   if ((stat = jobq_add(&job_queue, jcr)) != 0) {
-      berrno be;
-      Jmsg(jcr, M_FATAL, 0, _("Could not add job queue: ERR=%s\n"), be.strerror(stat));
-      JobId = 0;
-      goto bail_out;
-   }
-   Dmsg0(100, "Done run_job()\n");
-
-   return JobId;
-
-bail_out:
-   if (jcr->fname) {
-      free_memory(jcr->fname);
-      jcr->fname = NULL;
-   }
-   return JobId;
-}
-
-
-/*
- * This is the engine called by jobq.c:jobq_add() when we were pulled
- *  from the work queue.
- *  At this point, we are running in our own thread and all
- *    necessary resources are allocated -- see jobq.c
- */
-static void *job_thread(void *arg)
-{
-   JCR *jcr = (JCR *)arg;
-
-   jcr->my_thread_id = pthread_self();
-   pthread_detach(jcr->my_thread_id);
-   sm_check(__FILE__, __LINE__, true);
-
-   Dmsg0(200, "=====Start Job=========\n");
-   jcr->start_time = time(NULL);      /* set the real start time */
-   jcr->jr.StartTime = jcr->start_time;
-
-   if (jcr->job->MaxStartDelay != 0 && jcr->job->MaxStartDelay <
-       (utime_t)(jcr->start_time - jcr->sched_time)) {
-      Jmsg(jcr, M_FATAL, 0, _("Job canceled because max start delay time exceeded.\n"));
-      set_jcr_job_status(jcr, JS_Canceled);
-   }
-
-   /*                                
-    * Note, we continue, even if the job is canceled above. This
-    *  will permit proper setting of the job start record and
-    *  the error (cancel) will be picked up below.
-    */
-
-   generate_job_event(jcr, "JobInit");
-   set_jcr_job_status(jcr, JS_Running);   /* this will be set only if no error */
-
-   if (!jcr->fname) {
-      jcr->fname = get_pool_memory(PM_FNAME);
    }
 
    /*
@@ -218,10 +201,8 @@ static void *job_thread(void *arg)
       }
       break;
    case JT_MIGRATE:
-   case JT_COPY:
-   case JT_ARCHIVE:
-      if (!do_mac_init(jcr)) {             /* migration, archive, copy */
-         mac_cleanup(jcr, JS_ErrorTerminated);
+      if (!do_migration_init(jcr)) { 
+         migration_cleanup(jcr, JS_ErrorTerminated);
       }
       break;
    default:
@@ -230,46 +211,71 @@ static void *job_thread(void *arg)
       break;
    }
 
+   generate_job_event(jcr, "JobInit");
+   return true;
+
+bail_out:
+   return false;
+}
+
+void update_job_end(JCR *jcr, int TermCode)
+{
+   dequeue_messages(jcr);             /* display any queued messages */
+   set_jcr_job_status(jcr, TermCode);
+   run_scripts(jcr, jcr->job->RunScripts, "AfterJob");
+   update_job_end_record(jcr);
+}
+
+/*
+ * This is the engine called by jobq.c:jobq_add() when we were pulled
+ *  from the work queue.
+ *  At this point, we are running in our own thread and all
+ *    necessary resources are allocated -- see jobq.c
+ */
+static void *job_thread(void *arg)
+{
+   JCR *jcr = (JCR *)arg;
+
+   jcr->my_thread_id = pthread_self();
+   pthread_detach(jcr->my_thread_id);
+   sm_check(__FILE__, __LINE__, true);
+
+   Dmsg0(200, "=====Start Job=========\n");
+   set_jcr_job_status(jcr, JS_Running);   /* this will be set only if no error */
+   jcr->start_time = time(NULL);      /* set the real start time */
+   jcr->jr.StartTime = jcr->start_time;
+
+   if (jcr->job->MaxStartDelay != 0 && jcr->job->MaxStartDelay <
+       (utime_t)(jcr->start_time - jcr->sched_time)) {
+      set_jcr_job_status(jcr, JS_Canceled);
+      Jmsg(jcr, M_FATAL, 0, _("Job canceled because max start delay time exceeded.\n"));
+   }
+
+   /* TODO : check if it is used somewhere */
+   if (jcr->job->RunScripts == NULL) {
+      Dmsg0(200, "Warning, job->RunScripts is empty\n");
+      jcr->job->RunScripts = New(alist(10, not_owned_by_alist));
+   }
+
    if (!db_update_job_start_record(jcr, jcr->db, &jcr->jr)) {
       Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
    }
 
+   /* Run any script BeforeJob on dird */
+   run_scripts(jcr, jcr->job->RunScripts, "BeforeJob");
+
    if (job_canceled(jcr)) {
-      update_job_end_record(jcr);
+      update_job_end(jcr, jcr->JobStatus);
 
    } else {
-
-      /* Run Job */
-      if (jcr->job->RunBeforeJob) {
-         POOLMEM *before = get_pool_memory(PM_FNAME);
-         int status;
-         BPIPE *bpipe;
-         char line[MAXSTRING];
-
-         before = edit_job_codes(jcr, before, jcr->job->RunBeforeJob, "");
-         bpipe = open_bpipe(before, 0, "r");
-         free_pool_memory(before);
-         while (fgets(line, sizeof(line), bpipe->rfd)) {
-            Jmsg(jcr, M_INFO, 0, _("RunBefore: %s"), line);
-         }
-         status = close_bpipe(bpipe);
-         if (status != 0) {
-            berrno be;
-            Jmsg(jcr, M_FATAL, 0, _("RunBeforeJob error: ERR=%s\n"), be.strerror(status));
-            set_jcr_job_status(jcr, JS_FatalError);
-            update_job_end_record(jcr);
-            goto bail_out;
-         }
-      }
-
-      /*    
+      /*
        * We re-update the job start record so that the start
-       *  time is set after the run before job.  This avoids 
+       *  time is set after the run before job.  This avoids
        *  that any files created by the run before job will
        *  be saved twice.  They will be backed up in the current
        *  job, but not in the next one unless they are changed.
        *  Without this, they will be backed up in this job and
-       *  in the next job run because in that case, their date 
+       *  in the next job run because in that case, their date
        *   is after the start of this run.
        */
       jcr->start_time = time(NULL);
@@ -311,54 +317,23 @@ static void *job_thread(void *arg)
       case JT_MIGRATE:
       case JT_COPY:
       case JT_ARCHIVE:
-         if (do_mac(jcr)) {              /* migration, archive, copy */
+         if (do_migration(jcr)) {
             do_autoprune(jcr);
          } else {
-            mac_cleanup(jcr, JS_ErrorTerminated);
+            migration_cleanup(jcr, JS_ErrorTerminated);
          }
          break;
       default:
          Pmsg1(0, _("Unimplemented job type: %d\n"), jcr->JobType);
          break;
       }
-      if ((jcr->job->RunAfterJob && jcr->JobStatus == JS_Terminated) ||
-          (jcr->job->RunAfterFailedJob && jcr->JobStatus != JS_Terminated)) {
-         POOLMEM *after = get_pool_memory(PM_FNAME);
-         int status;
-         BPIPE *bpipe;
-         char line[MAXSTRING];
 
-         if (jcr->JobStatus == JS_Terminated) {
-            after = edit_job_codes(jcr, after, jcr->job->RunAfterJob, "");
-         } else {
-            after = edit_job_codes(jcr, after, jcr->job->RunAfterFailedJob, "");
-         }
-         bpipe = open_bpipe(after, 0, "r");
-         free_pool_memory(after);
-         while (fgets(line, sizeof(line), bpipe->rfd)) {
-            Jmsg(jcr, M_INFO, 0, _("RunAfter: %s"), line);
-         }
-         status = close_bpipe(bpipe);
-         /*
-          * Note, if we get an error here, do not mark the
-          *  job in error, simply report the error condition.
-          */
-         if (status != 0) {
-            berrno be;
-            if (jcr->JobStatus == JS_Terminated) {
-               Jmsg(jcr, M_WARNING, 0, _("RunAfterJob error: ERR=%s\n"), be.strerror(status));
-            } else {
-               Jmsg(jcr, M_FATAL, 0, _("RunAfterFailedJob error: ERR=%s\n"), be.strerror(status));
-            }
-         }
-      }
       /* Send off any queued messages */
-      if (jcr->msg_queue->size() > 0) {
+      if (jcr->msg_queue && jcr->msg_queue->size() > 0) {
          dequeue_messages(jcr);
       }
    }
 
-bail_out:
    generate_daemon_event(jcr, "JobEnd");
    Dmsg1(50, "======== End Job stat=%c ==========\n", jcr->JobStatus);
    sm_check(__FILE__, __LINE__, true);
@@ -376,6 +351,7 @@ bail_out:
 bool cancel_job(UAContext *ua, JCR *jcr)
 {
    BSOCK *sd, *fd;
+   char ed1[50];
 
    set_jcr_job_status(jcr, JS_Canceled);
 
@@ -387,13 +363,12 @@ bool cancel_job(UAContext *ua, JCR *jcr)
    case JS_WaitPriority:
    case JS_WaitMaxJobs:
    case JS_WaitStartTime:
-      bsendmsg(ua, _("JobId %d, Job %s marked to be canceled.\n"),
-              jcr->JobId, jcr->Job);
+      bsendmsg(ua, _("JobId %s, Job %s marked to be canceled.\n"),
+              edit_uint64(jcr->JobId, ed1), jcr->Job);
       jobq_remove(&job_queue, jcr); /* attempt to remove it from queue */
       return true;
 
    default:
-
       /* Cancel File daemon */
       if (jcr->file_bsock) {
          ua->jcr->client = jcr->client;
@@ -414,11 +389,22 @@ bool cancel_job(UAContext *ua, JCR *jcr)
 
       /* Cancel Storage daemon */
       if (jcr->store_bsock) {
-         if (!ua->jcr->storage) {
-            copy_storage(ua->jcr, jcr);
+         if (!ua->jcr->wstorage) {
+            if (jcr->rstorage) {
+               copy_wstorage(ua->jcr, jcr->rstorage, _("Job resource")); 
+            } else {
+               copy_wstorage(ua->jcr, jcr->wstorage, _("Job resource")); 
+            }
          } else {
-            set_storage(ua->jcr, jcr->store);
+            USTORE store;
+            if (jcr->rstorage) {
+               store.store = jcr->rstore;
+            } else {
+               store.store = jcr->wstore;
+            }
+            set_wstorage(ua->jcr, &store);
          }
+
          if (!connect_to_storage_daemon(ua->jcr, 10, SDConnectTimeout, 1)) {
             bsendmsg(ua, _("Failed to connect to Storage daemon.\n"));
             return false;
@@ -455,34 +441,36 @@ static void job_monitor_watchdog(watchdog_t *self)
    Dmsg1(800, "job_monitor_watchdog %p called\n", self);
 
    foreach_jcr(jcr) {
-      bool cancel;
+      bool cancel = false;
 
-      if (jcr->JobId == 0) {
-         Dmsg2(800, "Skipping JCR %p (%s) with JobId 0\n",
-               jcr, jcr->Job);
+      if (jcr->JobId == 0 || job_canceled(jcr)) {
+         Dmsg2(800, "Skipping JCR=%p Job=%s\n", jcr, jcr->Job);
          continue;
       }
 
       /* check MaxWaitTime */
-      cancel = job_check_maxwaittime(control_jcr, jcr);
-
+      if (job_check_maxwaittime(control_jcr, jcr)) {
+         set_jcr_job_status(jcr, JS_Canceled);
+         Jmsg(jcr, M_FATAL, 0, _("Max wait time exceeded. Job canceled.\n"));
+         cancel = true;
       /* check MaxRunTime */
-      cancel |= job_check_maxruntime(control_jcr, jcr);
+      } else if (job_check_maxruntime(control_jcr, jcr)) {
+         set_jcr_job_status(jcr, JS_Canceled);
+         Jmsg(jcr, M_FATAL, 0, _("Max run time exceeded. Job canceled.\n"));
+         cancel = true;
+      }
 
       if (cancel) {
-         Dmsg3(800, "Cancelling JCR %p jobid %d (%s)\n",
-               jcr, jcr->JobId, jcr->Job);
-
+         Dmsg3(800, "Cancelling JCR %p jobid %d (%s)\n", jcr, jcr->JobId, jcr->Job);
          UAContext *ua = new_ua_context(jcr);
          ua->jcr = control_jcr;
          cancel_job(ua, jcr);
          free_ua_context(ua);
-
          Dmsg2(800, "Have cancelled JCR %p Job=%d\n", jcr, jcr->JobId);
       }
 
-      /* Keep reference counts correct */
    }
+   /* Keep reference counts correct */
    endeach_jcr(jcr);
 }
 
@@ -496,6 +484,9 @@ static bool job_check_maxwaittime(JCR *control_jcr, JCR *jcr)
    bool ok_to_cancel = false;
    JOB *job = jcr->job;
 
+   if (job_canceled(jcr)) {
+      return false;                /* already canceled */
+   }
    if (job->MaxWaitTime == 0 && job->FullMaxWaitTime == 0 &&
        job->IncMaxWaitTime == 0 && job->DiffMaxWaitTime == 0) {
       return false;
@@ -516,6 +507,11 @@ static bool job_check_maxwaittime(JCR *control_jcr, JCR *jcr)
    if (!ok_to_cancel) {
       return false;
    }
+
+/*
+ * I don't see the need for all this -- kes 17Dec06
+ */
+#ifdef xxx
    Dmsg3(800, "Job %d (%s): MaxWaitTime of %d seconds exceeded, "
          "checking status\n",
          jcr->JobId, jcr->Job, job->MaxWaitTime);
@@ -559,7 +555,7 @@ static bool job_check_maxwaittime(JCR *control_jcr, JCR *jcr)
    }
    Dmsg3(800, "MaxWaitTime result: %scancel JCR %p (%s)\n",
          cancel ? "" : "do not ", jcr, jcr->job);
-
+#endif
    return cancel;
 }
 
@@ -569,9 +565,7 @@ static bool job_check_maxwaittime(JCR *control_jcr, JCR *jcr)
  */
 static bool job_check_maxruntime(JCR *control_jcr, JCR *jcr)
 {
-   bool cancel = false;
-
-   if (jcr->job->MaxRunTime == 0) {
+   if (jcr->job->MaxRunTime == 0 || job_canceled(jcr)) {
       return false;
    }
    if ((watchdog_time - jcr->start_time) < jcr->job->MaxRunTime) {
@@ -580,6 +574,7 @@ static bool job_check_maxruntime(JCR *control_jcr, JCR *jcr)
       return false;
    }
 
+#ifdef xxx
    switch (jcr->JobStatus) {
    case JS_Created:
    case JS_Running:
@@ -608,8 +603,76 @@ static bool job_check_maxruntime(JCR *control_jcr, JCR *jcr)
 
    Dmsg3(200, "MaxRunTime result: %scancel JCR %p (%s)\n",
          cancel ? "" : "do not ", jcr, jcr->job);
+#endif
+   return true;
+}
 
-   return cancel;
+/*
+ * Get or create a Pool record with the given name.
+ * Returns: 0 on error
+ *          poolid if OK
+ */
+DBId_t get_or_create_pool_record(JCR *jcr, char *pool_name)
+{
+   POOL_DBR pr;
+
+   memset(&pr, 0, sizeof(pr));
+   bstrncpy(pr.Name, pool_name, sizeof(pr.Name));
+   Dmsg1(010, "get_or_create_pool=%s\n", pool_name);
+
+   while (!db_get_pool_record(jcr, jcr->db, &pr)) { /* get by Name */
+      /* Try to create the pool */
+      if (create_pool(jcr, jcr->db, jcr->pool, POOL_OP_CREATE) < 0) {
+         Jmsg(jcr, M_FATAL, 0, _("Pool %s not in database. %s"), pr.Name,
+            db_strerror(jcr->db));
+         return 0;
+      } else {
+         Jmsg(jcr, M_INFO, 0, _("Pool %s created in database.\n"), pr.Name);
+      }
+   }
+   return pr.PoolId;
+}
+
+void apply_pool_overrides(JCR *jcr)
+{
+   if (jcr->run_pool_override) {
+      pm_strcpy(jcr->pool_source, _("Run pool override"));
+   }
+   /*
+    * Apply any level related Pool selections
+    */
+   switch (jcr->JobLevel) {
+   case L_FULL:
+      if (jcr->full_pool) {
+         jcr->pool = jcr->full_pool;
+         if (jcr->run_full_pool_override) {
+            pm_strcpy(jcr->pool_source, _("Run FullPool override"));
+         } else {
+            pm_strcpy(jcr->pool_source, _("Job FullPool override"));
+         }
+      }
+      break;
+   case L_INCREMENTAL:
+      if (jcr->inc_pool) {
+         jcr->pool = jcr->inc_pool;
+         if (jcr->run_inc_pool_override) {
+            pm_strcpy(jcr->pool_source, _("Run IncPool override"));
+         } else {
+            pm_strcpy(jcr->pool_source, _("Job IncPool override"));
+         }
+      }
+      break;
+   case L_DIFFERENTIAL:
+      if (jcr->diff_pool) {
+         jcr->pool = jcr->diff_pool;
+         if (jcr->run_diff_pool_override) {
+            pm_strcpy(jcr->pool_source, _("Run DiffPool override"));
+         } else {
+            pm_strcpy(jcr->pool_source, _("Job DiffPool override"));
+         }
+      }
+      break;
+   }
 }
 
 
@@ -656,13 +719,17 @@ bool get_or_create_fileset_record(JCR *jcr)
    bstrncpy(fsr.FileSet, jcr->fileset->hdr.name, sizeof(fsr.FileSet));
    if (jcr->fileset->have_MD5) {
       struct MD5Context md5c;
-      unsigned char signature[16];
+      unsigned char digest[MD5HashSize];
       memcpy(&md5c, &jcr->fileset->md5c, sizeof(md5c));
-      MD5Final(signature, &md5c);
-      bin_to_base64(fsr.MD5, (char *)signature, 16); /* encode 16 bytes */
+      MD5Final(digest, &md5c);
+      /*
+       * Keep the flag (last arg) set to false otherwise old FileSets will
+       * get new MD5 sums and the user will get Full backups on everything
+       */
+      bin_to_base64(fsr.MD5, sizeof(fsr.MD5), (char *)digest, MD5HashSize, false);
       bstrncpy(jcr->fileset->MD5, fsr.MD5, sizeof(jcr->fileset->MD5));
    } else {
-      Jmsg(jcr, M_WARNING, 0, _("FileSet MD5 signature not found.\n"));
+      Jmsg(jcr, M_WARNING, 0, _("FileSet MD5 digest not found.\n"));
    }
    if (!jcr->fileset->ignore_fs_changes ||
        !db_get_fileset_record(jcr, jcr->db, &fsr)) {
@@ -688,7 +755,7 @@ void init_jcr_job_record(JCR *jcr)
    jcr->jr.JobLevel = jcr->JobLevel;
    jcr->jr.JobStatus = jcr->JobStatus;
    jcr->jr.JobId = jcr->JobId;
-   bstrncpy(jcr->jr.Name, jcr->job->hdr.name, sizeof(jcr->jr.Name));
+   bstrncpy(jcr->jr.Name, jcr->job->name(), sizeof(jcr->jr.Name));
    bstrncpy(jcr->jr.Job, jcr->Job, sizeof(jcr->jr.Job));
 }
 
@@ -705,6 +772,7 @@ void update_job_end_record(JCR *jcr)
    jcr->jr.JobBytes = jcr->JobBytes;
    jcr->jr.VolSessionId = jcr->VolSessionId;
    jcr->jr.VolSessionTime = jcr->VolSessionTime;
+   jcr->jr.JobErrors = jcr->Errors;
    if (!db_update_job_end_record(jcr, jcr->db, &jcr->jr)) {
       Jmsg(jcr, M_WARNING, 0, _("Error updating job record. %s"),
          db_strerror(jcr->db));
@@ -742,7 +810,7 @@ void create_unique_job_name(JCR *jcr, const char *base_name)
    V(mutex);                          /* allow creation of jobs */
    jcr->start_time = now;
    /* Form Unique JobName */
-   localtime_r(&now, &tm);
+   (void)localtime_r(&now, &tm);
    /* Use only characters that are permitted in Windows filenames */
    strftime(dt, sizeof(dt), "%Y-%m-%d_%H.%M.%S", &tm);
    bstrncpy(name, base_name, sizeof(name));
@@ -782,11 +850,6 @@ void dird_free_jcr_pointers(JCR *jcr)
       free_pool_memory(jcr->fname);
       jcr->fname = NULL;
    }
-   if (jcr->stime) {
-      Dmsg0(200, "Free JCR stime\n");
-      free_pool_memory(jcr->stime);
-      jcr->stime = NULL;
-   }
    if (jcr->RestoreBootstrap) {
       free(jcr->RestoreBootstrap);
       jcr->RestoreBootstrap = NULL;
@@ -794,10 +857,6 @@ void dird_free_jcr_pointers(JCR *jcr)
    if (jcr->client_uname) {
       free_pool_memory(jcr->client_uname);
       jcr->client_uname = NULL;
-   }
-   if (jcr->term_wait_inited) {
-      pthread_cond_destroy(&jcr->term_wait);
-      jcr->term_wait_inited = false;
    }
    if (jcr->attr) {
       free_pool_memory(jcr->attr);
@@ -819,13 +878,68 @@ void dird_free_jcr(JCR *jcr)
    Dmsg0(200, "Start dird free_jcr\n");
 
    dird_free_jcr_pointers(jcr);
+   if (jcr->term_wait_inited) {
+      pthread_cond_destroy(&jcr->term_wait);
+      jcr->term_wait_inited = false;
+   }
+   if (jcr->stime) {
+      Dmsg0(200, "Free JCR stime\n");
+      free_pool_memory(jcr->stime);
+      jcr->stime = NULL;
+   }
+   if (jcr->fname) {
+      Dmsg0(200, "Free JCR fname\n");
+      free_pool_memory(jcr->fname);
+      jcr->fname = NULL;
+   }
+   if (jcr->pool_source) {
+      free_pool_memory(jcr->pool_source);
+      jcr->pool_source = NULL;
+   }
+   if (jcr->rpool_source) {
+      free_pool_memory(jcr->rpool_source);
+      jcr->rpool_source = NULL;
+   }
+   if (jcr->wstore_source) {
+      free_pool_memory(jcr->wstore_source);
+      jcr->wstore_source = NULL;
+   }
+   if (jcr->rstore_source) {
+      free_pool_memory(jcr->rstore_source);
+      jcr->rstore_source = NULL;
+   }
 
    /* Delete lists setup to hold storage pointers */
-   if (jcr->storage) {
-      delete jcr->storage;
-   }
+   free_rwstorage(jcr);
+
    jcr->job_end_push.destroy();
    Dmsg0(200, "End dird free_jcr\n");
+}
+
+/* 
+ * The Job storage definition must be either in the Job record
+ *  or in the Pool record.  The Pool record overrides the Job 
+ *  record.
+ */
+void get_job_storage(USTORE *store, JOB *job, RUN *run) 
+{
+   if (run && run->pool && run->pool->storage) {
+      store->store = (STORE *)run->pool->storage->first();
+      pm_strcpy(store->store_source, _("Run pool override"));
+      return;
+   }
+   if (run && run->storage) {
+      store->store = run->storage;
+      pm_strcpy(store->store_source, _("Run storage override"));
+      return;
+   }
+   if (job->pool->storage) {
+      store->store = (STORE *)job->pool->storage->first();
+      pm_strcpy(store->store_source, _("Pool resource"));
+   } else {
+      store->store = (STORE *)job->storage->first();
+      pm_strcpy(store->store_source, _("Job resource"));
+   }
 }
 
 /*
@@ -837,7 +951,6 @@ void dird_free_jcr(JCR *jcr)
  */
 void set_jcr_defaults(JCR *jcr, JOB *job)
 {
-   STORE *st;
    jcr->job = job;
    jcr->JobType = job->JobType;
    switch (jcr->JobType) {
@@ -845,33 +958,41 @@ void set_jcr_defaults(JCR *jcr, JOB *job)
    case JT_RESTORE:
       jcr->JobLevel = L_NONE;
       break;
+   case JT_MIGRATE:
+      if (!jcr->rpool_source) {
+         jcr->rpool_source = get_pool_memory(PM_MESSAGE);
+         pm_strcpy(jcr->rpool_source, _("unknown source"));
+      }
+      /* Fall-through wanted */
    default:
       jcr->JobLevel = job->JobLevel;
       break;
    }
+   if (!jcr->fname) {
+      jcr->fname = get_pool_memory(PM_FNAME);
+   }
+   if (!jcr->pool_source) {
+      jcr->pool_source = get_pool_memory(PM_MESSAGE);
+      pm_strcpy(jcr->pool_source, _("unknown source"));
+   }
+
    jcr->JobPriority = job->Priority;
    /* Copy storage definitions -- deleted in dir_free_jcr above */
    if (job->storage) {
-      if (jcr->storage) {
-         delete jcr->storage;
-      }
-      jcr->storage = New(alist(10, not_owned_by_alist));
-      foreach_alist(st, job->storage) {
-         jcr->storage->append(st);
-      }
-   }
-   if (jcr->storage) {
-      jcr->store = (STORE *)jcr->storage->first();
+      copy_rwstorage(jcr, job->storage, _("Job resource"));
+   } else {
+      copy_rwstorage(jcr, job->pool->storage, _("Pool resource"));
    }
    jcr->client = job->client;
    if (!jcr->client_name) {
       jcr->client_name = get_pool_memory(PM_NAME);
    }
    pm_strcpy(jcr->client_name, jcr->client->hdr.name);
+   pm_strcpy(jcr->pool_source, _("Job resource"));
    jcr->pool = job->pool;
    jcr->full_pool = job->full_pool;
    jcr->inc_pool = job->inc_pool;
-   jcr->dif_pool = job->dif_pool;
+   jcr->diff_pool = job->diff_pool;
    jcr->catalog = job->client->catalog;
    jcr->fileset = job->fileset;
    jcr->messages = job->messages;
@@ -901,44 +1022,226 @@ void set_jcr_defaults(JCR *jcr, JOB *job)
          jcr->JobLevel = L_NONE;
          break;
       default:
+         jcr->JobLevel = L_FULL;
          break;
       }
    }
 }
 
-/*
- * copy the storage definitions from an old JCR to a new one
+/* 
+ * Copy the storage definitions from an alist to the JCR
  */
-void copy_storage(JCR *new_jcr, JCR *old_jcr)
+void copy_rwstorage(JCR *jcr, alist *storage, const char *where)
 {
-   if (old_jcr->storage) {
-      STORE *st;
-      if (new_jcr->storage) {
-         delete new_jcr->storage;
-      }
-      new_jcr->storage = New(alist(10, not_owned_by_alist));
-      foreach_alist(st, old_jcr->storage) {
-         new_jcr->storage->append(st);
-      }
-   }
-   if (old_jcr->store) {
-      new_jcr->store = old_jcr->store;
-   } else if (new_jcr->storage) {
-      new_jcr->store = (STORE *)new_jcr->storage->first();
+   switch(jcr->JobType) {
+   case JT_RESTORE:
+   case JT_VERIFY:
+   case JT_MIGRATE:
+      copy_rstorage(jcr, storage, where);
+      break;
+   default:
+      copy_wstorage(jcr, storage, where);
+      break;
    }
 }
 
+
 /* Set storage override */
-void set_storage(JCR *jcr, STORE *store)
+void set_rwstorage(JCR *jcr, USTORE *store)
+{
+   if (!store) {
+      Jmsg(jcr, M_FATAL, 0, _("No storage specified.\n"));
+      return;
+   }
+   switch(jcr->JobType) {
+   case JT_RESTORE:
+   case JT_VERIFY:
+   case JT_MIGRATE:
+      set_rstorage(jcr, store);
+      break;
+   default:
+      set_wstorage(jcr, store);
+      break;
+   }
+}
+
+void free_rwstorage(JCR *jcr)
+{
+   free_rstorage(jcr);
+   free_wstorage(jcr);
+}
+
+/* 
+ * Copy the storage definitions from an alist to the JCR
+ */
+void copy_rstorage(JCR *jcr, alist *storage, const char *where)
+{
+   if (storage) {
+      STORE *st;
+      if (jcr->rstorage) {
+         delete jcr->rstorage;
+      }
+      jcr->rstorage = New(alist(10, not_owned_by_alist));
+      foreach_alist(st, storage) {
+         jcr->rstorage->append(st);
+      }
+      if (!jcr->rstore_source) {
+         jcr->rstore_source = get_pool_memory(PM_MESSAGE);
+      }
+      pm_strcpy(jcr->rstore_source, where);
+      if (jcr->rstorage) {
+         jcr->rstore = (STORE *)jcr->rstorage->first();
+      }
+   }
+}
+
+
+/* Set storage override */
+void set_rstorage(JCR *jcr, USTORE *store)
 {
    STORE *storage;
 
-   jcr->store = store;
-   foreach_alist(storage, jcr->storage) {
-      if (store == storage) {
+   if (!store->store) {
+      return;
+   }
+   if (!jcr->rstorage) {
+      jcr->rstorage = New(alist(10, not_owned_by_alist));
+   }
+   jcr->rstore = store->store;
+   if (!jcr->rstore_source) {
+      jcr->rstore_source = get_pool_memory(PM_MESSAGE);
+   }
+   pm_strcpy(jcr->rstore_source, store->store_source);
+   foreach_alist(storage, jcr->rstorage) {
+      if (store->store == storage) {
          return;
       }
    }
    /* Store not in list, so add it */
-   jcr->storage->prepend(store);
+   jcr->rstorage->prepend(store->store);
+}
+
+void free_rstorage(JCR *jcr)
+{
+   if (jcr->rstorage) {
+      delete jcr->rstorage;
+      jcr->rstorage = NULL;
+   }
+   jcr->rstore = NULL;
+}
+
+/* 
+ * Copy the storage definitions from an alist to the JCR
+ */
+void copy_wstorage(JCR *jcr, alist *storage, const char *where)
+{
+   if (storage) {
+      STORE *st;
+      if (jcr->wstorage) {
+         delete jcr->wstorage;
+      }
+      jcr->wstorage = New(alist(10, not_owned_by_alist));
+      foreach_alist(st, storage) {
+         Dmsg1(50, "storage=%s\n", st->name());
+         jcr->wstorage->append(st);
+      }
+      if (!jcr->wstore_source) {
+         jcr->wstore_source = get_pool_memory(PM_MESSAGE);
+      }
+      pm_strcpy(jcr->wstore_source, where);
+      if (jcr->wstorage) {
+         jcr->wstore = (STORE *)jcr->wstorage->first();
+         Dmsg2(100, "wstore=%s where=%s\n", jcr->wstore->name(), jcr->wstore_source);
+      }
+   }
+}
+
+
+/* Set storage override */
+void set_wstorage(JCR *jcr, USTORE *store)
+{
+   STORE *storage;
+
+   if (!store->store) {
+      return;
+   }
+   if (!jcr->wstorage) {
+      jcr->wstorage = New(alist(10, not_owned_by_alist));
+   }
+   jcr->wstore = store->store;
+   if (!jcr->wstore_source) {
+      jcr->wstore_source = get_pool_memory(PM_MESSAGE);
+   }
+   pm_strcpy(jcr->wstore_source, store->store_source);
+   Dmsg2(50, "wstore=%s where=%s\n", jcr->wstore->name(), jcr->wstore_source);
+   foreach_alist(storage, jcr->wstorage) {
+      if (store->store == storage) {
+         return;
+      }
+   }
+   /* Store not in list, so add it */
+   jcr->wstorage->prepend(store->store);
+}
+
+void free_wstorage(JCR *jcr)
+{
+   if (jcr->wstorage) {
+      delete jcr->wstorage;
+      jcr->wstorage = NULL;
+   }
+   jcr->wstore = NULL;
+}
+
+void create_clones(JCR *jcr)
+{
+   /*
+    * Fire off any clone jobs (run directives)
+    */
+   Dmsg2(900, "cloned=%d run_cmds=%p\n", jcr->cloned, jcr->job->run_cmds);
+   if (!jcr->cloned && jcr->job->run_cmds) {
+      char *runcmd;
+      JOB *job = jcr->job;
+      POOLMEM *cmd = get_pool_memory(PM_FNAME);
+      UAContext *ua = new_ua_context(jcr);
+      ua->batch = true;
+      foreach_alist(runcmd, job->run_cmds) {
+         cmd = edit_job_codes(jcr, cmd, runcmd, "");              
+         Mmsg(ua->cmd, "run %s cloned=yes", cmd);
+         Dmsg1(900, "=============== Clone cmd=%s\n", ua->cmd);
+         parse_ua_args(ua);                 /* parse command */
+         int stat = run_cmd(ua, ua->cmd);
+         if (stat == 0) {
+            Jmsg(jcr, M_ERROR, 0, _("Could not start clone job.\n"));
+         } else {
+            Jmsg(jcr, M_INFO, 0, _("Clone JobId %d started.\n"), stat);
+         }
+      }
+      free_ua_context(ua);
+      free_pool_memory(cmd);
+   }
+}
+
+bool create_restore_bootstrap_file(JCR *jcr)
+{
+   RESTORE_CTX rx;
+   UAContext *ua;
+   memset(&rx, 0, sizeof(rx));
+   rx.bsr = new_bsr();
+   rx.JobIds = "";                       
+   rx.bsr->JobId = jcr->previous_jr.JobId;
+   ua = new_ua_context(jcr);
+   complete_bsr(ua, rx.bsr);
+   rx.bsr->fi = new_findex();
+   rx.bsr->fi->findex = 1;
+   rx.bsr->fi->findex2 = jcr->previous_jr.JobFiles;
+   jcr->ExpectedFiles = write_bsr_file(ua, rx);
+   if (jcr->ExpectedFiles == 0) {
+      free_ua_context(ua);
+      free_bsr(rx.bsr);
+      return false;
+   }
+   free_ua_context(ua);
+   free_bsr(rx.bsr);
+   jcr->needs_sd = true;
+   return true;
 }

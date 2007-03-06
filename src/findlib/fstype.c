@@ -3,28 +3,36 @@
  *
  *   Written by Preben 'Peppe' Guldberg, December MMIV
  *
- *   Version $Id: fstype.c,v 1.9.2.1 2005/10/26 14:02:04 kerns Exp $
+ *   Version $Id: fstype.c,v 1.12 2006/11/21 20:14:46 kerns Exp $
  */
-
 /*
-   Copyright (C) 2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+
 
 #ifndef TEST_PROGRAM
 
@@ -44,8 +52,8 @@
    "HAVE_LINUX_OS\n" \
    "HAVE_NETBSD_OS\n" \
    "HAVE_OPENBSD_OS\n" \
-   "HAVE_SUN_OS\n"
-#define bool               int
+   "HAVE_SUN_OS\n" \
+   "HAVE_WIN32\n"
 #define false              0
 #define true               1
 #define bstrncpy           strncpy
@@ -251,6 +259,38 @@ bool fstype(const char *fname, char *fs, int fslen)
    return false;
 }
 /* Tru64 */
+
+#elif defined (HAVE_WIN32)
+/* Windows */
+
+bool fstype(const char *fname, char *fs, int fslen)
+{
+   DWORD componentlength;
+   DWORD fsflags;
+   CHAR rootpath[4];
+   UINT oldmode;
+   BOOL result;
+
+   /* Copy Drive Letter, colon, and backslash to rootpath */
+   bstrncpy(rootpath, fname, sizeof(rootpath));
+
+   /* We don't want any popups if there isn't any media in the drive */
+   oldmode = SetErrorMode(SEM_FAILCRITICALERRORS);
+
+   result = GetVolumeInformation(rootpath, NULL, 0, NULL, &componentlength, &fsflags, fs, fslen);
+
+   SetErrorMode(oldmode);
+
+   if (result) {
+      /* Windows returns NTFS, FAT, etc.  Make it lowercase to be consistent with other OSes */
+      lcase(fs);
+   } else {
+      Dmsg2(10, "GetVolumeInformation() failed for \"%s\", Error = %d.\n", rootpath, GetLastError());
+   }
+
+   return result != 0;
+}
+/* Windows */
 
 #else    /* No recognised OS */
 

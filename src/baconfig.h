@@ -2,22 +2,35 @@
  * General header file configurations that apply to
  * all daemons.  System dependent stuff goes here.
  *
- *   Version $Id: baconfig.h,v 1.88.2.4 2006/06/08 15:28:18 kerns Exp $
+ *   Version $Id: baconfig.h,v 1.106 2006/12/17 13:36:35 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #ifndef _BACONFIG_H
@@ -30,14 +43,18 @@
 #define TRUE  1
 #define FALSE 0
 
+#ifndef MAX
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 #ifdef HAVE_TLS
 #define have_tls 1
 #else
 #define have_tls 0
 #endif
-/* For compatibility with 1.39 */
-#define cleanup_crypto cleanup_tls
-#define init_crypto init_tls
 
 #ifndef ETIME
 #define ETIME ETIMEDOUT
@@ -61,9 +78,40 @@
 /* Allow printing of NULL pointers */
 #define NPRT(x) (x)?(x):_("*None*")
  
-#ifdef WIN32
-#undef ENABLE_NLS
+#if defined(HAVE_WIN32)
+void InitWinAPIWrapper();
+
+#define  OSDependentInit()    InitWinAPIWrapper()
+
+
+#if defined(BUILDING_DLL)
+#  define DLL_IMP_EXP   _declspec(dllexport)
+#elif defined(USING_DLL)
+#  define DLL_IMP_EXP   _declspec(dllimport)
+#else
+#  define DLL_IMP_EXP
 #endif
+
+#if defined(USING_CATS)
+#  define CATS_IMP_EXP   _declspec(dllimport)
+#else
+#  define CATS_IMP_EXP
+#endif
+
+#else
+
+#define DLL_IMP_EXP
+#define CATS_IMP_EXP
+
+#define  OSDependentInit()
+#define  tape_open            open
+#define  tape_ioctl           ioctl
+#define  tape_read            read
+#define  tape_write           write
+#define  tape_close           ::close
+
+#endif
+
 
 #ifdef ENABLE_NLS
    #include <libintl.h>
@@ -75,6 +123,12 @@
       #define N_(s) (s)
    #endif /* N_ */
 #else /* !ENABLE_NLS */
+   #undef _
+   #undef N_
+   #undef textdomain
+   #undef bindtextdomain
+   #undef setlocale
+
    #ifndef _
       #define _(s) (s)
    #endif
@@ -91,6 +145,8 @@
       #define setlocale(p, d)
    #endif
 #endif /* ENABLE_NLS */
+
+
 /* Use the following for strings not to be translated */
 #define NT_(s) (s)   
 
@@ -149,6 +205,7 @@
  *   STREAM_SHA256_DIGEST
  *   STREAM_SHA512_DIGEST
  */
+#define STREAM_NONE               0    /* Reserved Non-Stream */
 #define STREAM_UNIX_ATTRIBUTES    1    /* Generic Unix attributes */
 #define STREAM_FILE_DATA          2    /* Standard uncompressed data */
 #define STREAM_MD5_SIGNATURE      3    /* deprecated */
@@ -170,11 +227,15 @@
 #define STREAM_UNIX_ATTRIBUTES_ACCESS_ACL 15 /* Standard ACL attributes on UNIX */
 #define STREAM_UNIX_ATTRIBUTES_DEFAULT_ACL 16 /* Default ACL attributes on UNIX */
 /*** FIXME ***/
-#define STREAM_SHA256_DIGEST     17    /* SHA-256 digest for the file */
-#define STREAM_SHA512_DIGEST     18    /* SHA-512 digest for the file */
-#define STREAM_SIGNED_DIGEST     19    /* Signed File Digest, ASN.1 Encoded */
-#define STREAM_ENCRYPTED_FILE_DATA 20  /* Encrypted, uncompressed data */
-#define STREAM_ENCRYPTED_WIN32_DATA 21 /* Encrypted, uncompressed Win32 BackupRead data */
+#define STREAM_SHA256_DIGEST              17   /* SHA-256 digest for the file */
+#define STREAM_SHA512_DIGEST              18   /* SHA-512 digest for the file */
+#define STREAM_SIGNED_DIGEST              19   /* Signed File Digest, ASN.1, DER Encoded */
+#define STREAM_ENCRYPTED_FILE_DATA        20   /* Encrypted, uncompressed data */
+#define STREAM_ENCRYPTED_WIN32_DATA       21   /* Encrypted, uncompressed Win32 BackupRead data */
+#define STREAM_ENCRYPTED_SESSION_DATA     22   /* Encrypted Session Data, ASN.1, DER Encoded */
+#define STREAM_ENCRYPTED_FILE_GZIP_DATA   23   /* Encrypted, compressed data */
+#define STREAM_ENCRYPTED_WIN32_GZIP_DATA  24   /* Encrypted, compressed Win32 BackupRead data */
+#define STREAM_ENCRYPTED_MACOS_FORK_DATA  25   /* Encrypted, uncompressed Mac resource fork */
 
 
 /*
@@ -209,16 +270,10 @@
  * or saved */
 #define FT_DIRBEGIN  18               /* Directory at beginning (not saved) */
 #define FT_INVALIDFS 19               /* File system not allowed for */
+#define FT_INVALIDDT 20               /* Drive type not allowed for */
 
 /* Definitions for upper part of type word (see above). */
 #define AR_DATA_STREAM (1<<16)        /* Data stream id present */
-
-/*
- * Internal code for Signature types
- */
-#define NO_SIG   0
-#define MD5_SIG  1
-#define SHA1_SIG 2
 
 /*
  * Tape label types -- stored in catalog
@@ -229,6 +284,9 @@
 
 /* Size of File Address stored in STREAM_SPARSE_DATA. Do NOT change! */
 #define SPARSE_FADDR_SIZE (sizeof(uint64_t))
+
+/* Size of crypto length stored at head of crypto buffer. Do NOT change! */
+#define CRYPTO_LEN_SIZE ((int)sizeof(uint32_t))
 
 
 /* This is for dumb compilers/libraries like Solaris. Linux GCC
@@ -290,7 +348,13 @@ typedef int (INTHANDLER)();
 #define MODE_RW 0666
 #endif
 
-#ifdef DEBUG_MUTEX
+#if defined(HAVE_WIN32)
+typedef int64_t   boffset_t;
+#else
+typedef off_t     boffset_t;
+#endif
+
+#if defined(DEBUG_MUTEX)
 extern void _p(char *file, int line, pthread_mutex_t *m);
 extern void _v(char *file, int line, pthread_mutex_t *m);
 
@@ -473,9 +537,17 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 
 
 /* Use our strdup with smartalloc */
-#ifndef __WXGTK__
+#ifndef HAVE_WXCONSOLE
 #undef strdup
 #define strdup(buf) bad_call_on_strdup_use_bstrdup(buf)
+#else 
+/* Groan, WxWidgets has its own way of doing NLS so cleanup */
+#ifndef ENABLE_NLS
+#undef _
+#undef setlocale
+#undef textdomain
+#undef bindtextdomain
+#endif  
 #endif
 
 /* Use our fgets which handles interrupts */
@@ -504,7 +576,7 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 #define REPLACE_NEVER    'n'
 #define REPLACE_IFOLDER  'o'
 
-/* This probably should be done on a machine by machine basic, but it works */
+/* This probably should be done on a machine by machine basis, but it works */
 /* This is critical for the smartalloc routines to properly align memory */
 #define ALIGN_SIZE (sizeof(double))
 #define BALIGN(x) (((x) + ALIGN_SIZE - 1) & ~(ALIGN_SIZE -1))
@@ -560,19 +632,25 @@ extern "C" int getdomainname(char *name, int len);
 extern "C" int mknod ( const char *path, int mode, dev_t device );
 #endif
 
-#ifdef HAVE_CYGWIN
-/* They don't really have it */
-#undef HAVE_GETDOMAINNAME
-#endif
 
+#if defined(HAVE_WIN32)
+#define DEFAULT_CONFIGDIR "C:\\Documents and Settings\\All Users\\Application Data\\Bacula"
+
+inline bool IsPathSeparator(int ch) { return ch == '/' || ch == '\\'; }
+inline char *first_path_separator(char *path) { return strpbrk(path, "/\\"); }
+inline const char *first_path_separator(const char *path) { return strpbrk(path, "/\\"); }
+
+#else
 /* Define Winsock functions if we aren't on Windows */
-#if (!defined HAVE_WIN32) || (defined HAVE_CYGWIN)
+
 #define WSA_Init() 0 /* 0 = success */
 #define WSACleanup() 0 /* 0 = success */
+
+inline bool IsPathSeparator(int ch) { return ch == '/'; }
+inline char *first_path_separator(char *path) { return strchr(path, '/'); }
+inline const char *first_path_separator(const char *path) { return strchr(path, '/'); }
 #endif
 
-#ifdef HAVE_AIX_OS
-#endif
 
 /* HP-UX 11 specific workarounds */
 
@@ -586,7 +664,6 @@ extern int h_errno;
  */
 extern "C" int getdomainname(char *name, int namelen);
 extern "C" int setdomainname(char *name, int namelen);
-#define uLong unsigned long
 #endif /* HAVE_HPUX_OS */
 
 
@@ -594,12 +671,6 @@ extern "C" int setdomainname(char *name, int namelen);
 #undef HAVE_CHFLAGS  /* chflags is incorrectly detected */
 extern "C" int fchdir(int filedes);
 extern "C" long gethostid(void);
-#endif
-
-
-/* Added by KES to deal with Win32 systems */
-#ifndef S_ISWIN32
-#define S_ISWIN32 020000
 #endif
 
 

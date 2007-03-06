@@ -6,22 +6,35 @@
  * Adapted and enhanced for Bacula, originally written
  * for inclusion in the Apcupsd package
  *
- *   Version $Id: bnet.c,v 1.96.2.2 2005/12/10 13:18:03 kerns Exp $
+ *   Version $Id: bnet.c,v 1.104 2006/11/21 16:13:57 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
@@ -437,18 +450,18 @@ bool bnet_send(BSOCK * bsock)
 
 /*
  * Establish a TLS connection -- server side
- *  Returns: 1 on success
- *           0 failure
+ *  Returns: true  on success
+ *           false on failure
  */
 #ifdef HAVE_TLS
-int bnet_tls_server(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
+bool bnet_tls_server(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
 {
    TLS_CONNECTION *tls;
    
    tls = new_tls_connection(ctx, bsock->fd);
    if (!tls) {
       Qmsg0(bsock->jcr, M_FATAL, 0, _("TLS connection initialization failed.\n"));
-      return 0;
+      return false;
    }
 
    bsock->tls = tls;
@@ -467,28 +480,27 @@ int bnet_tls_server(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
          goto err;
       }
    }
- 
-   return 1;
+   return true;
 
 err:
    free_tls_connection(tls);
    bsock->tls = NULL;
-   return 0;
+   return false;
 }
 
 /*
  * Establish a TLS connection -- client side
- * Returns: 1 on success
- *          0 failure
+ * Returns: true  on success
+ *          false on failure
  */
-int bnet_tls_client(TLS_CONTEXT *ctx, BSOCK * bsock)
+bool bnet_tls_client(TLS_CONTEXT *ctx, BSOCK * bsock)
 {
    TLS_CONNECTION *tls;
 
    tls  = new_tls_connection(ctx, bsock->fd);
    if (!tls) {
       Qmsg0(bsock->jcr, M_FATAL, 0, _("TLS connection initialization failed.\n"));
-      return 0;
+      return false;
    }
 
    bsock->tls = tls;
@@ -502,24 +514,23 @@ int bnet_tls_client(TLS_CONTEXT *ctx, BSOCK * bsock)
       Qmsg1(bsock->jcr, M_FATAL, 0, _("TLS host certificate verification failed. Host %s did not match presented certificate\n"), bsock->host);
       goto err;
    }
- 
-   return 1;
+   return true;
 
 err:
    free_tls_connection(tls);
    bsock->tls = NULL;
-   return 0;
+   return false;
 }
 #else
-int bnet_tls_server(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
+bool bnet_tls_server(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
 {
-   Jmsg(bsock->jcr, M_ABORT, 0, _("TLS not configured.\n"));
-   return 0;
+   Jmsg(bsock->jcr, M_ABORT, 0, _("TLS enabled but not configured.\n"));
+   return false;
 }
-int bnet_tls_client(TLS_CONTEXT *ctx, BSOCK * bsock)
+bool bnet_tls_client(TLS_CONTEXT *ctx, BSOCK * bsock)
 {
-   Jmsg(bsock->jcr, M_ABORT, 0, _("TLS not configured.\n"));
-   return 0;
+   Jmsg(bsock->jcr, M_ABORT, 0, _("TLS enable but not configured.\n"));
+   return false;
 }
 #endif /* HAVE_TLS */
 
@@ -808,7 +819,7 @@ static BSOCK *bnet_open(JCR * jcr, const char *name, char *host, char *service,
    }
 
    if (!connected) {
-         free_addresses(addr_list);
+      free_addresses(addr_list);
       errno = save_errno;
       return NULL;
    }
@@ -909,6 +920,21 @@ bool bnet_fsend(BSOCK * bs, const char *fmt, ...)
    return bnet_send(bs);
 }
 
+int bnet_get_peer(BSOCK *bs, char *buf, socklen_t buflen) {
+#if !defined(HAVE_WIN32)
+    if (bs->peer_addr.sin_family == 0) {
+        socklen_t salen = sizeof(bs->peer_addr);
+        int rval = (getpeername)(bs->fd, (struct sockaddr *)&bs->peer_addr, &salen);
+        if (rval < 0) return rval;
+    }
+    if (!inet_ntop(bs->peer_addr.sin_family, &bs->peer_addr.sin_addr, buf, buflen))
+        return -1;
+
+    return 0;
+#else
+    return -1;
+#endif
+}
 /*
  * Set the network buffer size, suggested size is in size.
  *  Actual size obtained is returned in bs->msglen
@@ -988,7 +1014,7 @@ bool bnet_set_buffer_size(BSOCK * bs, uint32_t size, int rw)
  * Returns previous socket flag
  */
 int bnet_set_nonblocking (BSOCK *bsock) {
-#ifndef WIN32
+#ifndef HAVE_WIN32
    int oflags;
 
    /* Get current flags */
@@ -1023,7 +1049,7 @@ int bnet_set_nonblocking (BSOCK *bsock) {
  */
 int bnet_set_blocking (BSOCK *bsock) 
 {
-#ifndef WIN32
+#ifndef HAVE_WIN32
    int oflags;
    /* Get current flags */
    if ((oflags = fcntl(bsock->fd, F_GETFL, 0)) < 0) {
@@ -1056,7 +1082,7 @@ int bnet_set_blocking (BSOCK *bsock)
  */
 void bnet_restore_blocking (BSOCK *bsock, int flags) 
 {
-#ifndef WIN32
+#ifndef HAVE_WIN32
    if ((fcntl(bsock->fd, F_SETFL, flags)) < 0) {
       berrno be;
       Jmsg1(bsock->jcr, M_ABORT, 0, _("fcntl F_SETFL error. ERR=%s\n"), be.strerror());
@@ -1137,6 +1163,7 @@ BSOCK *init_bsock(JCR * jcr, int sockfd, const char *who, const char *host, int 
    bsock->who = bstrdup(who);
    bsock->host = bstrdup(host);
    bsock->port = port;
+   memset(&bsock->peer_addr, 0, sizeof(bsock->peer_addr));
    memcpy(&bsock->client_addr, client_addr, sizeof(bsock->client_addr));
    /*
     * ****FIXME**** reduce this to a few hours once

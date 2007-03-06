@@ -1,22 +1,36 @@
 /*
- *   Version $Id: parse_conf.h,v 1.26.2.2 2006/06/04 12:24:40 kerns Exp $
+ *   Version $Id: parse_conf.h,v 1.34.2.1 2007/01/24 01:59:02 robertnelson Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 struct RES_ITEM;                    /* Declare forward referenced structure */
+class RES;                         /* Declare forware referenced structure */
 typedef void (MSG_RES_HANDLER)(LEX *lc, RES_ITEM *item, int index, int pass);
 
 /* This is the structure that defines
@@ -27,14 +41,25 @@ typedef void (MSG_RES_HANDLER)(LEX *lc, RES_ITEM *item, int index, int pass);
 struct RES_ITEM {
    const char *name;                  /* Resource name i.e. Director, ... */
    MSG_RES_HANDLER *handler;          /* Routine storing the resource item */
-   char **value;                      /* Where to store the item */
+   union {
+      char **value;                   /* Where to store the item */
+      char **charvalue;
+      uint32_t ui32value;
+      int32_t i32value;
+      uint64_t ui64value;
+      int64_t i64value;
+      bool boolvalue;
+      utime_t utimevalue;
+      RES *resvalue;
+      RES **presvalue;
+   };
    int  code;                         /* item code/additional info */
    int  flags;                        /* flags: default, required, ... */
    int  default_value;                /* default value */
 };
 
 /* For storing name_addr items in res_items table */
-#define ITEM(x) ((char **)&res_all.x)
+#define ITEM(x) {(char **)&res_all.x}
 
 #define MAX_RES_ITEMS 70              /* maximum resource items per RES */
 
@@ -42,7 +67,8 @@ struct RES_ITEM {
  * at the beginning of every resource
  * record.
  */
-struct RES {
+class RES {
+public:
    RES *next;                         /* pointer to next resource of this type */
    char *name;                        /* resource name */
    char *desc;                        /* resource description */
@@ -72,13 +98,19 @@ struct RES_TABLE {
 #define ITEM_NO_EQUALS   0x4          /* Don't scan = after name */
 
 /* Message Resource */
-struct MSGS {
+class MSGS {
+public:
    RES   hdr;
    char *mail_cmd;                    /* mail command */
    char *operator_cmd;                /* Operator command */
    DEST *dest_chain;                  /* chain of destinations */
    char send_msg[nbytes_for_bits(M_MAX+1)];  /* bit array of types */
+
+   /* Methods */
+   char *name() const;
 };
+
+inline char *MSGS::name() const { return hdr.name; }
 
 
 /* Define the Union of all the above common
@@ -131,7 +163,7 @@ void store_int(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_pint(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_msgs(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_int64(LEX *lc, RES_ITEM *item, int index, int pass);
-void store_yesno(LEX *lc, RES_ITEM *item, int index, int pass);
+void store_bit(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_bool(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_time(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_size(LEX *lc, RES_ITEM *item, int index, int pass);

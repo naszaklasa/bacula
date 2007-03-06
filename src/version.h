@@ -1,11 +1,43 @@
 /*
- *  Version $Id: version.h,v 1.554.2.55 2006/06/28 20:39:22 kerns Exp $
+ *  Version $Id: version.h,v 1.708.2.3 2007/01/28 11:15:00 kerns Exp $
  */
 
 #undef  VERSION
-#define VERSION "1.38.11"
-#define BDATE   "28 June 2006"
-#define LSMDATE "28Jun06"
+#define VERSION "2.0.2"
+#define BDATE   "28 January 2007"
+#define LSMDATE "28Jan07"
+
+#define PROG_COPYRIGHT "Copyright (C) %d-2007 Free Software Foundation Europe e.V.\n"
+#define BYEAR "2007"       /* year for copyright messages in progs */
+
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+
 
 /* Debug flags */
 #undef  DEBUG
@@ -17,19 +49,29 @@
 /* If this is set stdout will not be closed on startup */
 /* #define DEVELOPER 1 */
 
-/* #define USE_BSNPRINTF */
+#define DATA_ENCRYPTION 1
+
+#define USE_BSNPRINTF 1
+
+/* Disk file seeking is now controled by CAP_POSITIONBLOCKS */
 
 /* Debug flags not normally turned on */
-
-/* #define FILE_SEEK 1 */  
 
 /* #define TRACE_JCR_CHAIN 1 */
 /* #define TRACE_RES 1 */
 /* #define DEBUG_MEMSET 1 */
 /* #define DEBUG_MUTEX 1 */
 
+/*
+ * Set SMALLOC_SANITY_CHECK to zero to turn off, otherwise
+ *  it is the maximum memory malloced before Bacula will
+ *  abort.  Except for debug situations, this should be zero
+ */
+#define SMALLOC_SANITY_CHECK 0  /* 500000000  0.5 GB max */
+
+
 /* Check if header of tape block is zero before writing */
-#define DEBUG_BLOCK_ZEROING 1
+/* #define DEBUG_BLOCK_ZEROING 1 */
 
 /* #define FULL_DEBUG 1 */   /* normally on for testing only */
 

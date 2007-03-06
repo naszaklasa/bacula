@@ -8,22 +8,35 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id: ua_purge.c,v 1.28.2.1 2006/06/04 12:24:40 kerns Exp $
+ *   Version $Id: ua_purge.c,v 1.43 2006/12/22 15:01:05 kerns Exp $
  */
 /*
-   Copyright (C) 2002-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -156,21 +169,21 @@ int purgecmd(UAContext *ua, const char *cmd)
    MEDIA_DBR mr;
    JOB_DBR  jr;
    static const char *keywords[] = {
-      N_("files"),
-      N_("jobs"),
-      N_("volume"),
+      NT_("files"),
+      NT_("jobs"),
+      NT_("volume"),
       NULL};
 
    static const char *files_keywords[] = {
-      N_("Job"),
-      N_("JobId"),
-      N_("Client"),
-      N_("Volume"),
+      NT_("Job"),
+      NT_("JobId"),
+      NT_("Client"),
+      NT_("Volume"),
       NULL};
 
    static const char *jobs_keywords[] = {
-      N_("Client"),
-      N_("Volume"),
+      NT_("Client"),
+      NT_("Volume"),
       NULL};
 
    bsendmsg(ua, _(
@@ -191,7 +204,7 @@ int purgecmd(UAContext *ua, const char *cmd)
       case 0:                         /* Job */
       case 1:                         /* JobId */
          if (get_job_dbr(ua, &jr)) {
-            purge_files_from_job(ua, &jr);
+            purge_files_from_job(ua, jr.JobId);
          }
          return 1;
       case 2:                         /* client */
@@ -223,7 +236,7 @@ int purgecmd(UAContext *ua, const char *cmd)
       }
    /* Volume */
    case 2:
-      while ((i=find_arg(ua, N_("volume"))) >= 0) {
+      while ((i=find_arg(ua, NT_("volume"))) >= 0) {
          if (select_media_dbr(ua, &mr)) {
             purge_jobs_from_volume(ua, &mr);
          }
@@ -267,7 +280,7 @@ int purgecmd(UAContext *ua, const char *cmd)
 static int purge_files_from_client(UAContext *ua, CLIENT *client)
 {
    struct s_file_del_ctx del;
-   char *query = (char *)get_pool_memory(PM_MESSAGE);
+   POOLMEM *query = get_pool_memory(PM_MESSAGE);
    int i;
    CLIENT_DBR cr;
    char ed1[50];
@@ -275,7 +288,7 @@ static int purge_files_from_client(UAContext *ua, CLIENT *client)
    memset(&cr, 0, sizeof(cr));
    memset(&del, 0, sizeof(del));
 
-   bstrncpy(cr.Name, client->hdr.name, sizeof(cr.Name));
+   bstrncpy(cr.Name, client->name(), sizeof(cr.Name));
    if (!db_create_client_record(ua->jcr, ua->db, &cr)) {
       return 0;
    }
@@ -292,7 +305,7 @@ static int purge_files_from_client(UAContext *ua, CLIENT *client)
 
    if (del.tot_ids == 0) {
       bsendmsg(ua, _("No Files found for client %s to purge from %s catalog.\n"),
-         client->hdr.name, client->catalog->hdr.name);
+         client->name(), client->catalog->name());
       goto bail_out;
    }
 
@@ -308,22 +321,10 @@ static int purge_files_from_client(UAContext *ua, CLIENT *client)
    db_sql_query(ua->db, query, file_delete_handler, (void *)&del);
 
    for (i=0; i < del.num_ids; i++) {
-      edit_int64(del.JobId[i], ed1);
-      Dmsg1(050, "Delete JobId=%s\n", ed1);
-      Mmsg(query, "DELETE FROM File WHERE JobId=%s", ed1);
-      db_sql_query(ua->db, query, NULL, (void *)NULL);
-      /*
-       * Now mark Job as having files purged. This is necessary to
-       * avoid having too many Jobs to process in future prunings. If
-       * we don't do this, the number of JobId's in our in memory list
-       * will grow very large.
-       */
-      Mmsg(query, "UPDATE Job Set PurgedFiles=1 WHERE JobId=%s", ed1);
-      db_sql_query(ua->db, query, NULL, (void *)NULL);
-      Dmsg1(050, "Del sql=%s\n", query);
+      purge_files_from_job(ua, del.JobId[i]);
    }
    bsendmsg(ua, _("%d Files for client \"%s\" purged from %s catalog.\n"), del.num_ids,
-      client->hdr.name, client->catalog->hdr.name);
+      client->name(), client->catalog->name());
 
 bail_out:
    if (del.JobId) {
@@ -340,13 +341,12 @@ bail_out:
  * is older than the retention period, we unconditionally delete
  * it and all File records for that Job.  This is simple enough that no
  * temporary tables are needed. We simply make an in memory list of
- * the JobIds meeting the prune conditions, then delete the Job,
- * Files, and JobMedia records in that list.
+ * the JobIds then delete the Job, Files, and JobMedia records in that list.
  */
 static int purge_jobs_from_client(UAContext *ua, CLIENT *client)
 {
    struct s_job_del_ctx del;
-   char *query = (char *)get_pool_memory(PM_MESSAGE);
+   POOLMEM *query = get_pool_memory(PM_MESSAGE);
    int i;
    CLIENT_DBR cr;
    char ed1[50];
@@ -354,7 +354,7 @@ static int purge_jobs_from_client(UAContext *ua, CLIENT *client)
    memset(&cr, 0, sizeof(cr));
    memset(&del, 0, sizeof(del));
 
-   bstrncpy(cr.Name, client->hdr.name, sizeof(cr.Name));
+   bstrncpy(cr.Name, client->name(), sizeof(cr.Name));
    if (!db_create_client_record(ua->jcr, ua->db, &cr)) {
       return 0;
    }
@@ -371,7 +371,7 @@ static int purge_jobs_from_client(UAContext *ua, CLIENT *client)
    }
    if (del.tot_ids == 0) {
       bsendmsg(ua, _("No Jobs found for client %s to purge from %s catalog.\n"),
-         client->hdr.name, client->catalog->hdr.name);
+         client->name(), client->catalog->name());
       goto bail_out;
    }
 
@@ -394,24 +394,14 @@ static int purge_jobs_from_client(UAContext *ua, CLIENT *client)
     * Then delete the Job entry, and finally and JobMedia records.
     */
    for (i=0; i < del.num_ids; i++) {
-      edit_int64(del.JobId[i], ed1);
-      Dmsg1(050, "Delete JobId=%s\n", ed1); 
+      Dmsg1(050, "Delete Files JobId=%s\n", ed1); 
       if (!del.PurgedFiles[i]) {
-         Mmsg(query, "DELETE FROM File WHERE JobId=%s", ed1);
-         db_sql_query(ua->db, query, NULL, (void *)NULL);
-         Dmsg1(050, "Del sql=%s\n", query);
+         purge_files_from_job(ua, del.JobId[i]);
       }
-
-      Mmsg(query, "DELETE FROM Job WHERE JobId=%s", ed1);
-      db_sql_query(ua->db, query, NULL, (void *)NULL);
-      Dmsg1(050, "Del sql=%s\n", query);
-
-      Mmsg(query, "DELETE FROM JobMedia WHERE JobId=%s", ed1);
-      db_sql_query(ua->db, query, NULL, (void *)NULL);
-      Dmsg1(050, "Del sql=%s\n", query);
+      purge_job_from_catalog(ua, del.JobId[i]);
    }
    bsendmsg(ua, _("%d Jobs for client %s purged from %s catalog.\n"), del.num_ids,
-      client->hdr.name, client->catalog->hdr.name);
+      client->name(), client->catalog->name());
 
 bail_out:
    if (del.JobId) {
@@ -424,19 +414,65 @@ bail_out:
    return 1;
 }
 
-void purge_files_from_job(UAContext *ua, JOB_DBR *jr)
+void purge_job_from_catalog(UAContext *ua, JobId_t JobId)
 {
-   char *query = (char *)get_pool_memory(PM_MESSAGE);
+   POOL_MEM query(PM_MESSAGE);
    char ed1[50];
 
-   edit_int64(jr->JobId,ed1);
-   Mmsg(query, "DELETE FROM File WHERE JobId=%s", ed1);
-   db_sql_query(ua->db, query, NULL, (void *)NULL);
+   /* Delete (or purge) records associated with the job */
+   purge_job_records_from_catalog(ua, JobId);
 
-   Mmsg(query, "UPDATE Job Set PurgedFiles=1 WHERE JobId=%s", ed1);
-   db_sql_query(ua->db, query, NULL, (void *)NULL);
+   /* Now remove the Job record itself */
+   edit_int64(JobId, ed1);
+   Mmsg(query, "DELETE FROM Job WHERE JobId=%s", ed1);
+   db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
+   Dmsg1(050, "Delete Job sql=%s\n", query.c_str());
+}
 
-   free_pool_memory(query);
+/*
+ * This removes all the records associated with a Job from
+ *  the catalog (i.e. prunes it) without removing the Job
+ *  record itself.
+ */
+void purge_job_records_from_catalog(UAContext *ua, JobId_t JobId)
+{
+   POOL_MEM query(PM_MESSAGE);
+   char ed1[50];
+
+   purge_files_from_job(ua, JobId);
+
+   edit_int64(JobId, ed1);
+   Mmsg(query, "DELETE FROM JobMedia WHERE JobId=%s", ed1);
+   db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
+   Dmsg1(050, "Delete JobMedia sql=%s\n", query.c_str());
+
+   Mmsg(query, "DELETE FROM Log WHERE JobId=%s", ed1);
+   db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
+   Dmsg1(050, "Delete Log sql=%s\n", query.c_str());
+
+}
+
+
+/*
+ * Remove File records for a particular Job.
+ */
+void purge_files_from_job(UAContext *ua, JobId_t JobId)
+{
+   POOL_MEM query(PM_MESSAGE);
+   char ed1[50];
+
+   edit_int64(JobId, ed1);
+   Mmsg(query, del_File, ed1);
+   db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
+
+   /*
+    * Now mark Job as having files purged. This is necessary to
+    * avoid having too many Jobs to process in future prunings. If
+    * we don't do this, the number of JobId's in our in memory list
+    * could grow very large.
+    */
+   Mmsg(query, upd_Purged, ed1);
+   db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
 }
 
 void purge_files_from_volume(UAContext *ua, MEDIA_DBR *mr )
@@ -448,7 +484,7 @@ void purge_files_from_volume(UAContext *ua, MEDIA_DBR *mr )
  */
 int purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr)
 {
-   char *query = (char *)get_pool_memory(PM_MESSAGE);
+   POOLMEM *query = get_pool_memory(PM_MESSAGE);
    struct s_count_ctx cnt;
    struct s_file_del_ctx del;
    int i, stat = 0;
@@ -518,15 +554,8 @@ int purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr)
    }
 
    for (i=0; i < del.num_ids; i++) {
-      edit_int64(del.JobId[i], ed1);
-      Dmsg1(050, "Delete JobId=%s\n", ed1);
-      Mmsg(query, "DELETE FROM File WHERE JobId=%s", ed1);
-      db_sql_query(ua->db, query, NULL, (void *)NULL);
-      Mmsg(query, "DELETE FROM Job WHERE JobId=%s", ed1);
-      db_sql_query(ua->db, query, NULL, (void *)NULL);
-      Mmsg(query, "DELETE FROM JobMedia WHERE JobId=%s", ed1);
-      db_sql_query(ua->db, query, NULL, (void *)NULL);
-      Dmsg1(050, "Del sql=%s\n", query);
+      purge_files_from_job(ua, del.JobId[i]);
+      purge_job_from_catalog(ua, del.JobId[i]);
       del.num_del++;
    }
    if (del.JobId) {
@@ -576,9 +605,14 @@ bool mark_media_purged(UAContext *ua, MEDIA_DBR *mr)
       }
       pm_strcpy(jcr->VolumeName, mr->VolumeName);
       generate_job_event(jcr, "VolumePurged");
+      /* Send message to Job report, if it is a *real* job */           
+      if (jcr && jcr->JobId > 0) {
+         Jmsg1(jcr, M_INFO, 0, _("All records pruned from Volume \"%s\"; marking it \"Purged\"\n"),
+            mr->VolumeName); 
+      }
       return true;
    } else {
       bsendmsg(ua, _("Cannot purge Volume with VolStatus=%s\n"), mr->VolStatus);
    }
-   return strcpy(mr->VolStatus, "Purged") == 0;
+   return strcmp(mr->VolStatus, "Purged") == 0;
 }

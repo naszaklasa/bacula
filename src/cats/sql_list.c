@@ -3,22 +3,35 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_list.c,v 1.41.2.1 2006/03/04 11:10:17 kerns Exp $
+ *    Version $Id: sql_list.c,v 1.50 2006/11/27 10:02:59 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 /* The following is necessary so that we do not include
  * the dummy external definition of DB.
@@ -37,15 +50,10 @@
  * -----------------------------------------------------------------------
  */
 
-/* Imported subroutines */
-extern void list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ctx, e_list_type type);
-extern int QueryDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
-
-
 /*
  * Submit general SQL query
  */
-int db_list_sql_query(JCR *jcr, B_DB *mdb, char *query, DB_LIST_HANDLER *sendit,
+int db_list_sql_query(JCR *jcr, B_DB *mdb, const char *query, DB_LIST_HANDLER *sendit,
                       void *ctx, int verbose, e_list_type type)
 {
    db_lock(mdb);
@@ -148,27 +156,31 @@ db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
          Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,Slot,PoolId,"
             "MediaType,FirstWritten,LastWritten,LabelDate,VolJobs,"
             "VolFiles,VolBlocks,VolMounts,VolBytes,VolErrors,VolWrites,"
-            "VolCapacityBytes,VolStatus,Recycle,VolRetention,"
+            "VolCapacityBytes,VolStatus,Enabled,Recycle,VolRetention,"
             "VolUseDuration,MaxVolJobs,MaxVolFiles,MaxVolBytes,InChanger,"
-            "EndFile,EndBlock,VolParts,LabelType,StorageId"
+            "EndFile,EndBlock,VolParts,LabelType,StorageId,DeviceId,"
+            "LocationId,RecycleCount,InitialWrite,ScratchPoolId,RecyclePoolId, "
+            "Comment"
             " FROM Media WHERE Media.VolumeName='%s'", mdbr->VolumeName);
       } else {
          Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,Slot,PoolId,"
             "MediaType,FirstWritten,LastWritten,LabelDate,VolJobs,"
             "VolFiles,VolBlocks,VolMounts,VolBytes,VolErrors,VolWrites,"
-            "VolCapacityBytes,VolStatus,Recycle,VolRetention,"
+            "VolCapacityBytes,VolStatus,Enabled,Recycle,VolRetention,"
             "VolUseDuration,MaxVolJobs,MaxVolFiles,MaxVolBytes,InChanger,"
-            "EndFile,EndBlock,VolParts,LabelType,StorageId"
+            "EndFile,EndBlock,VolParts,LabelType,StorageId,DeviceId,"
+            "LocationId,RecycleCount,InitialWrite,ScratchPoolId,RecyclePoolId, "
+            "Comment"
             " FROM Media WHERE Media.PoolId=%s ORDER BY MediaId", 
             edit_int64(mdbr->PoolId, ed1));
       }
    } else {
       if (mdbr->VolumeName[0] != 0) {
-         Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,VolStatus,"
+         Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,VolStatus,Enabled,"
             "VolBytes,VolFiles,VolRetention,Recycle,Slot,InChanger,MediaType,LastWritten "
             "FROM Media WHERE Media.VolumeName='%s'", mdbr->VolumeName);
       } else {
-         Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,VolStatus,"
+         Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,VolStatus,Enabled,"
             "VolBytes,VolFiles,VolRetention,Recycle,Slot,InChanger,MediaType,LastWritten "
             "FROM Media WHERE Media.PoolId=%s ORDER BY MediaId", 
             edit_int64(mdbr->PoolId, ed1));
@@ -195,13 +207,13 @@ void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
       if (JobId > 0) {                   /* do by JobId */
          Mmsg(mdb->cmd, "SELECT JobMediaId,JobId,Media.MediaId,Media.VolumeName,"
             "FirstIndex,LastIndex,StartFile,JobMedia.EndFile,StartBlock,"
-            "JobMedia.EndBlock,Copy,Stripe "
+            "JobMedia.EndBlock,Copy "
             "FROM JobMedia,Media WHERE Media.MediaId=JobMedia.MediaId "
             "AND JobMedia.JobId=%s", edit_int64(JobId, ed1));
       } else {
          Mmsg(mdb->cmd, "SELECT JobMediaId,JobId,Media.MediaId,Media.VolumeName,"
             "FirstIndex,LastIndex,StartFile,JobMedia.EndFile,StartBlock,"
-            "JobMedia.EndBlock,Copy,Stripe "
+            "JobMedia.EndBlock,Copy "
             "FROM JobMedia,Media WHERE Media.MediaId=JobMedia.MediaId");
       }
 
@@ -250,10 +262,11 @@ db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr, DB_LIST_HANDLER *sendit,
       if (jr->JobId == 0 && jr->Job[0] == 0) {
          Mmsg(mdb->cmd,
             "SELECT JobId,Job,Job.Name,PurgedFiles,Type,Level,"
-            "Job.ClientId,Client.Name,JobStatus,SchedTime,"
-            "StartTime,EndTime,JobTDate,"
+            "Job.ClientId,Client.Name as ClientName,JobStatus,SchedTime,"
+            "StartTime,EndTime,RealEndTime,JobTDate,"
             "VolSessionId,VolSessionTime,JobFiles,JobErrors,"
-            "JobMissingFiles,Job.PoolId,Pool.Name,Job.FileSetId,FileSet.FileSet "
+            "JobMissingFiles,Job.PoolId,Pool.Name as PooLname,PriorJobId,"
+            "Job.FileSetId,FileSet.FileSet "
             "FROM Job,Client,Pool,FileSet WHERE "
             "Client.ClientId=Job.ClientId AND Pool.PoolId=Job.PoolId "
             "AND FileSet.FileSetId=Job.FileSetId  ORDER BY StartTime%s", limit);
@@ -261,9 +274,10 @@ db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr, DB_LIST_HANDLER *sendit,
          Mmsg(mdb->cmd,
             "SELECT JobId,Job,Job.Name,PurgedFiles,Type,Level,"
             "Job.ClientId,Client.Name,JobStatus,SchedTime,"
-            "StartTime,EndTime,JobTDate,"
+            "StartTime,EndTime,RealEndTime,JobTDate,"
             "VolSessionId,VolSessionTime,JobFiles,JobErrors,"
-            "JobMissingFiles,Job.PoolId,Pool.Name,Job.FileSetId,FileSet.FileSet "
+            "JobMissingFiles,Job.PoolId,Pool.Name as PooLname,PriorJobId,"
+            "Job.FileSetId,FileSet.FileSet "
             "FROM Job,Client,Pool,FileSet WHERE Job.JobId=%s AND "
             "Client.ClientId=Job.ClientId AND Pool.PoolId=Job.PoolId "
             "AND FileSet.FileSetId=Job.FileSetId", 

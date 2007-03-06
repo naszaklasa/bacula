@@ -3,25 +3,39 @@
  *
  *    Written by Kern E. Sibbald, March MM.
  *
- *   Version $Id: base64.c,v 1.8.2.1 2006/05/02 14:48:16 kerns Exp $
+ *   Version $Id: base64.c,v 1.14 2006/11/21 16:13:57 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
+
 
 #ifdef TEST_MODE
 #include <glob.h>
@@ -126,11 +140,14 @@ from_base64(intmax_t *value, char *where)
  * Encode binary data in bin of len bytes into
  * buf as base64 characters.
  *
+ * If compatible is true, the bin_to_base64 routine will be compatible
+ * with what the rest of the world uses.
+ *
  *  Returns: the number of characters stored not
  *           including the EOS
  */
 int
-bin_to_base64(char *buf, char *bin, int len)
+bin_to_base64(char *buf, int buflen, char *bin, int binlen, int compatible)
 {
    uint32_t reg, save, mask;
    int rem, i;
@@ -138,24 +155,32 @@ bin_to_base64(char *buf, char *bin, int len)
 
    reg = 0;
    rem = 0;
-   for (i=0; i<len; ) {
+   buflen--;                       /* allow for storing EOS */
+   for (i=0; i < binlen; ) {
       if (rem < 6) {
          reg <<= 8;
-         reg |= (int8_t)bin[i++];
+         if (compatible) {
+            reg |= (uint8_t)bin[i++];
+         } else {
+            reg |= (int8_t)bin[i++];
+         }
          rem += 8;
       }
       save = reg;
       reg >>= (rem - 6);
-      buf[j++] = base64_digits[reg & (uint32_t)0x3F];
+      if (j < buflen) {
+         buf[j++] = base64_digits[reg & 0x3F];
+      }
       reg = save;
       rem -= 6;
    }
-   if (rem) {
-      mask = 1;
-      for (i=1; i<rem; i++) {
-         mask = (mask << 1) | 1;
+   if (rem && j < buflen) {
+      mask = (1 << rem) - 1;
+      if (compatible) {
+         buf[j++] = base64_digits[(reg & mask) << 6 - rem];
+      } else {
+         buf[j++] = base64_digits[reg & mask];
       }
-      buf[j++] = base64_digits[reg & mask];
    }
    buf[j] = 0;
    return j;
@@ -172,7 +197,7 @@ int main(int argc, char *argv[])
 
 #ifdef xxxx
    for (i=0; i < 1000; i++) {
-      bin_to_base64(buf, (char *)&xx, 4);
+      bin_to_base64(buf, sizeof(buf), (char *)&xx, 4, true);
       printf("xx=%s\n", buf);
       xx++;
    }
@@ -181,7 +206,7 @@ int main(int argc, char *argv[])
    for (i=1; i<100; i++) {
       junk[i] = junk[i-1]-1;
    }
-   len = bin_to_base64(buf, junk, 16);
+   len = bin_to_base64(buf, sizeof(buf) junk, 16, true);
    printf("len=%d junk=%s\n", len, buf);
    return 0;
 }

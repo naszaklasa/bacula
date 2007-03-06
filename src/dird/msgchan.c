@@ -13,22 +13,35 @@
  *    Create a thread to interact with the Storage daemon
  *      who returns a job status and requests Catalog services, etc.
  *
- *   Version $Id: msgchan.c,v 1.54.2.5 2006/03/24 16:35:23 kerns Exp $
+ *   Version $Id: msgchan.c,v 1.66 2006/12/08 14:27:10 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -69,7 +82,13 @@ bool connect_to_storage_daemon(JCR *jcr, int retry_interval,
    if (jcr->store_bsock) {
       return true;                    /* already connected */
    }
-   store = (STORE *)jcr->storage->first();
+
+   /* If there is a write storage use it */
+   if (jcr->wstore) {
+      store = jcr->wstore;
+   } else {
+      store = jcr->rstore;
+   }
 
    /*
     *  Open message channel with the Storage daemon
@@ -180,11 +199,6 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
       return 0;
    }
 
-   pm_strcpy(pool_type, jcr->pool->pool_type);
-   pm_strcpy(pool_name, jcr->pool->hdr.name);
-   bash_spaces(pool_type);
-   bash_spaces(pool_name);
-
    /*
     * We have two loops here. The first comes from the 
     *  Storage = associated with the Job, and we need 
@@ -196,14 +210,24 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
     */
    /* Do read side of storage daemon */
    if (ok && rstore) {
+      /* For the moment, only migrate has rpool */
+      if (jcr->JobType == JT_MIGRATE) {
+         pm_strcpy(pool_type, jcr->rpool->pool_type);
+         pm_strcpy(pool_name, jcr->rpool->name());
+      } else {
+         pm_strcpy(pool_type, jcr->pool->pool_type);
+         pm_strcpy(pool_name, jcr->pool->name());
+      }
+      bash_spaces(pool_type);
+      bash_spaces(pool_name);
       foreach_alist(storage, rstore) {
-         pm_strcpy(store_name, storage->hdr.name);
+         Dmsg1(100, "Rstore=%s\n", storage->name());
          bash_spaces(store_name);
          pm_strcpy(media_type, storage->media_type);
          bash_spaces(media_type);
          bnet_fsend(sd, use_storage, store_name.c_str(), media_type.c_str(), 
                     pool_name.c_str(), pool_type.c_str(), 0, copy, stripe);
-
+         Dmsg1(100, "rstore >stored: %s", sd->msg);
          DEVICE *dev;
          /* Loop over alternative storage Devices until one is OK */
          foreach_alist(dev, storage->device) {
@@ -213,28 +237,32 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
             Dmsg1(100, ">stored: %s", sd->msg);
          }
          bnet_sig(sd, BNET_EOD);            /* end of Devices */
-         bnet_sig(sd, BNET_EOD);            /* end of Storages */
-         if (bget_dirmsg(sd) > 0) {
-            Dmsg1(100, "<stored: %s", sd->msg);
-            /* ****FIXME**** save actual device name */
-            ok = sscanf(sd->msg, OK_device, device_name.c_str()) == 1;
-         } else {
-            ok = false;
-         }
-         break;
+      }
+      bnet_sig(sd, BNET_EOD);            /* end of Storages */
+      if (bget_dirmsg(sd) > 0) {
+         Dmsg1(100, "<stored: %s", sd->msg);
+         /* ****FIXME**** save actual device name */
+         ok = sscanf(sd->msg, OK_device, device_name.c_str()) == 1;
+      } else {
+         ok = false;
       }
    }
 
    /* Do write side of storage daemon */
    if (ok && wstore) {
+      pm_strcpy(pool_type, jcr->pool->pool_type);
+      pm_strcpy(pool_name, jcr->pool->name());
+      bash_spaces(pool_type);
+      bash_spaces(pool_name);
       foreach_alist(storage, wstore) {
-         pm_strcpy(store_name, storage->hdr.name);
+         pm_strcpy(store_name, storage->name());
          bash_spaces(store_name);
          pm_strcpy(media_type, storage->media_type);
          bash_spaces(media_type);
          bnet_fsend(sd, use_storage, store_name.c_str(), media_type.c_str(), 
                     pool_name.c_str(), pool_type.c_str(), 1, copy, stripe);
 
+         Dmsg1(100, "wstore >stored: %s", sd->msg);
          DEVICE *dev;
          /* Loop over alternative storage Devices until one is OK */
          foreach_alist(dev, storage->device) {
@@ -244,15 +272,14 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
             Dmsg1(100, ">stored: %s", sd->msg);
          }
          bnet_sig(sd, BNET_EOD);            /* end of Devices */
-         bnet_sig(sd, BNET_EOD);            /* end of Storages */
-         if (bget_dirmsg(sd) > 0) {
-            Dmsg1(100, "<stored: %s", sd->msg);
-            /* ****FIXME**** save actual device name */
-            ok = sscanf(sd->msg, OK_device, device_name.c_str()) == 1;
-         } else {
-            ok = false;
-         }
-         break;
+      }
+      bnet_sig(sd, BNET_EOD);            /* end of Storages */
+      if (bget_dirmsg(sd) > 0) {
+         Dmsg1(100, "<stored: %s", sd->msg);
+         /* ****FIXME**** save actual device name */
+         ok = sscanf(sd->msg, OK_device, device_name.c_str()) == 1;
+      } else {
+         ok = false;
       }
    }
    if (!ok) {

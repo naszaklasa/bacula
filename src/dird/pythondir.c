@@ -4,23 +4,36 @@
  *
  * Kern Sibbald, November MMIV
  *
- *   Version $Id: pythondir.c,v 1.12.2.4 2006/05/02 14:48:15 kerns Exp $
+ *   Version $Id: pythondir.c,v 1.22 2006/11/21 13:20:09 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2004-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -74,6 +87,12 @@ static struct s_vars getvars[] = {
    { "Priority",   "i"},
    { "VolumeName", "s"},
    { "CatalogRes", "(sssssis)"},
+   { "JobErrors",  "i"},
+   { "JobFiles",   "i"},
+   { "SDJobFiles", "i"},
+   { "SDErrors",   "i"},
+   { "FDJobStatus","s"},
+   { "SDJobStatus","s"},
 
    { NULL,             NULL}
 };
@@ -140,13 +159,25 @@ PyObject *job_getattr(PyObject *self, char *attrname)
          goto bail_out;
       }
    case 6:                            /* Pool */
-      return Py_BuildValue(getvars[i].fmt, jcr->pool->hdr.name);
+      return Py_BuildValue(getvars[i].fmt, jcr->pool->name());
    case 7:                            /* Storage */
-      return Py_BuildValue(getvars[i].fmt, jcr->store->hdr.name);
+      if (jcr->wstore) {
+         return Py_BuildValue(getvars[i].fmt, jcr->wstore->name());
+      } else if (jcr->rstore) {
+         return Py_BuildValue(getvars[i].fmt, jcr->rstore->name());
+      } else {
+         goto bail_out;
+      }
    case 8:
-      return Py_BuildValue(getvars[i].fmt, jcr->catalog->hdr.name);
+      return Py_BuildValue(getvars[i].fmt, jcr->catalog->name());
    case  9:                           /* MediaType */
-      return Py_BuildValue(getvars[i].fmt, jcr->store->media_type);
+      if (jcr->wstore) {
+         return Py_BuildValue(getvars[i].fmt, jcr->wstore->media_type);
+      } else if (jcr->rstore) {
+         return Py_BuildValue(getvars[i].fmt, jcr->rstore->media_type);
+      } else {
+         goto bail_out;
+      }
    case 10:                           /* JobName */
       return Py_BuildValue(getvars[i].fmt, jcr->Job);
    case 11:                           /* JobStatus */
@@ -162,8 +193,23 @@ PyObject *job_getattr(PyObject *self, char *attrname)
          jcr->catalog->db_name, jcr->catalog->db_address, 
          jcr->catalog->db_user, jcr->catalog->db_password,
          jcr->catalog->db_socket, jcr->catalog->db_port,
-         catalog_db);
-
+         db_get_type());
+   case 15:                           /* JobErrors */
+      return Py_BuildValue(getvars[i].fmt, jcr->JobErrors);
+   case 16:                           /* JobFiles */
+      return Py_BuildValue(getvars[i].fmt, jcr->JobFiles);
+   case 17:                           /* SDJobFiles */
+      return Py_BuildValue(getvars[i].fmt, jcr->SDJobFiles);
+   case 18:                           /* SDErrors */
+      return Py_BuildValue(getvars[i].fmt, jcr->SDErrors);
+   case 19:                           /* FDJobStatus */
+      buf[1] = 0;
+      buf[0] = jcr->FDJobStatus;
+      return Py_BuildValue(getvars[i].fmt, buf);
+   case 29:                           /* SDJobStatus */
+      buf[1] = 0;
+      buf[0] = jcr->SDJobStatus;
+      return Py_BuildValue(getvars[i].fmt, buf);
    }
    bsnprintf(errmsg, sizeof(errmsg), _("Attribute %s not found."), attrname);
 bail_out:
@@ -252,6 +298,7 @@ int job_setattr(PyObject *self, char *attrname, PyObject *value)
          if (strcmp(strval, joblevels[i].level_name) == 0) {
             if (joblevels[i].job_type == jcr->JobType) {
                jcr->JobLevel = joblevels[i].level;
+               jcr->jr.JobLevel = jcr->JobLevel;
                return 0;
             }
          }

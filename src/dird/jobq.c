@@ -10,7 +10,7 @@
  *
  *  Kern Sibbald, July MMIII
  *
- *   Version $Id: jobq.c,v 1.37.2.2 2006/06/04 12:24:39 kerns Exp $
+ *   Version $Id: jobq.c,v 1.48.2.2 2007/01/25 11:26:02 kerns Exp $
  *
  *  This code was adapted from the Bacula workq, which was
  *    adapted from "Programming with POSIX Threads", by
@@ -18,19 +18,32 @@
  *
  */
 /*
-   Copyright (C) 2003-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -463,9 +476,17 @@ void *jobq_server(void *arg)
           *  put into the ready queue.
           */
          if (jcr->acquired_resource_locks) {
-            jcr->store->NumConcurrentJobs--;
+            if (jcr->rstore) {
+               jcr->rstore->NumConcurrentJobs = 0;
+               Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
+            }
+            if (jcr->wstore) {
+               jcr->wstore->NumConcurrentJobs--;
+               Dmsg1(200, "Dec wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+            }
             jcr->client->NumConcurrentJobs--;
             jcr->job->NumConcurrentJobs--;
+            jcr->acquired_resource_locks = false;
          }
 
          /*
@@ -474,7 +495,6 @@ void *jobq_server(void *arg)
          if (jcr->job->RescheduleOnError &&
              jcr->JobStatus != JS_Terminated &&
              jcr->JobStatus != JS_Canceled &&
-             jcr->job->RescheduleTimes > 0 &&
              jcr->JobType == JT_BACKUP &&
              (jcr->job->RescheduleTimes == 0 ||
               jcr->reschedule_count < jcr->job->RescheduleTimes)) {
@@ -519,7 +539,16 @@ void *jobq_server(void *arg)
             njcr->JobLevel = jcr->JobLevel;
             njcr->JobStatus = -1;
             set_jcr_job_status(njcr, jcr->JobStatus);
-            copy_storage(njcr, jcr);
+            if (jcr->rstore) {
+               copy_rstorage(njcr, jcr->rstorage, _("previous Job"));
+            } else {
+               free_rstorage(njcr);
+            }
+            if (jcr->wstore) {
+               copy_wstorage(njcr, jcr->wstorage, _("previous Job"));
+            } else {
+               free_wstorage(njcr);
+            }
             njcr->messages = jcr->messages;
             Dmsg0(2300, "Call to run new job\n");
             V(jq->mutex);
@@ -575,14 +604,19 @@ void *jobq_server(void *arg)
             }
 
             if (!acquire_resources(jcr)) {
-               je = jn;            /* point to next waiting job */
-               continue;
+               /* If resource conflict, job is canceled */
+               if (!job_canceled(jcr)) {
+                  je = jn;            /* point to next waiting job */
+                  continue;
+               }
             }
 
-            /* Got all locks, now remove it from wait queue and append it
-             *   to the ready queue
+            /*
+             * Got all locks, now remove it from wait queue and append it
+             *   to the ready queue.  Note, we may also get here if the
+             *    job was canceled.  Once it is "run", it will quickly
+             *    terminate.
              */
-            jcr->acquired_resource_locks = true;
             jq->waiting_jobs->remove(je);
             jq->ready_jobs->append(je);
             Dmsg1(2300, "moved JobId=%d from wait to ready queue\n", je->jcr->JobId);
@@ -649,26 +683,49 @@ static bool acquire_resources(JCR *jcr)
 {
    bool skip_this_jcr = false;
 
-   if (jcr->JobType == JT_RESTORE || jcr->JobType == JT_VERIFY) {
+   jcr->acquired_resource_locks = false;
+   if (jcr->rstore) {
+      Dmsg1(200, "Rstore=%s\n", jcr->rstore->name());
       /* 
        * Let only one Restore/verify job run at a time regardless
        *   of MaxConcurrentJobs.
        */ 
-      if (jcr->store->NumConcurrentJobs == 0) {
-         jcr->store->NumConcurrentJobs = 1;
+      if (jcr->rstore->NumConcurrentJobs == 0) {
+         jcr->rstore->NumConcurrentJobs = 1;
+         Dmsg0(200, "Set rncj=1\n");
       } else {
+         Dmsg1(200, "Fail rncj=%d\n", jcr->rstore->NumConcurrentJobs);
          set_jcr_job_status(jcr, JS_WaitStoreRes);
          return false;
       }
-   /* We are not doing a Restore or Verify */
-   } else if (jcr->store->NumConcurrentJobs == 0 &&
-              jcr->store->NumConcurrentJobs < jcr->store->MaxConcurrentJobs) {
-       /* Simple case, first job */
-       jcr->store->NumConcurrentJobs = 1;
-   } else if (jcr->store->NumConcurrentJobs < jcr->store->MaxConcurrentJobs) {
-       jcr->store->NumConcurrentJobs++;
-   } else {
-      skip_this_jcr = true;
+   }
+   
+   if (jcr->wstore) {
+      Dmsg1(200, "Wstore=%s\n", jcr->wstore->name());
+      if (jcr->rstore == jcr->wstore) {           /* deadlock */
+         jcr->rstore->NumConcurrentJobs = 0;      /* back out rstore */
+         Jmsg(jcr, M_FATAL, 0, _("Job canceled. Attempt to read and write same device.\n"
+            "    Read storage \"%s\" (From %s) -- Write storage \"%s\" (From %s)\n"), 
+            jcr->rstore->name(), jcr->rstore_source, jcr->wstore->name(), jcr->wstore_source);
+         set_jcr_job_status(jcr, JS_Canceled);
+         return false;
+      }
+      if (jcr->wstore->NumConcurrentJobs == 0 &&
+          jcr->wstore->NumConcurrentJobs < jcr->wstore->MaxConcurrentJobs) {
+         /* Simple case, first job */
+         jcr->wstore->NumConcurrentJobs = 1;
+         Dmsg0(200, "Set wncj=1\n");
+      } else if (jcr->wstore->NumConcurrentJobs < jcr->wstore->MaxConcurrentJobs) {
+         jcr->wstore->NumConcurrentJobs++;
+         Dmsg1(200, "Inc wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+      } else if (jcr->rstore) {
+         jcr->rstore->NumConcurrentJobs = 0;      /* back out rstore */
+         Dmsg1(200, "Fail wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+         skip_this_jcr = true;
+      } else {
+         Dmsg1(200, "Fail wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+         skip_this_jcr = true;
+      }
    }
    if (skip_this_jcr) {
       set_jcr_job_status(jcr, JS_WaitStoreRes);
@@ -679,7 +736,14 @@ static bool acquire_resources(JCR *jcr)
       jcr->client->NumConcurrentJobs++;
    } else {
       /* Back out previous locks */
-      jcr->store->NumConcurrentJobs--;
+      if (jcr->wstore) {
+         jcr->wstore->NumConcurrentJobs--;
+         Dmsg1(200, "Dec wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+      }
+      if (jcr->rstore) {
+         jcr->rstore->NumConcurrentJobs = 0;
+         Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
+      }
       set_jcr_job_status(jcr, JS_WaitClientRes);
       return false;
    }
@@ -687,12 +751,19 @@ static bool acquire_resources(JCR *jcr)
       jcr->job->NumConcurrentJobs++;
    } else {
       /* Back out previous locks */
-      jcr->store->NumConcurrentJobs--;
+      if (jcr->wstore) {
+         jcr->wstore->NumConcurrentJobs--;
+         Dmsg1(200, "Dec wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+      }
+      if (jcr->rstore) {
+         jcr->rstore->NumConcurrentJobs = 0;
+         Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
+      }
       jcr->client->NumConcurrentJobs--;
       set_jcr_job_status(jcr, JS_WaitJobRes);
       return false;
    }
-   /* Check actual device availability */
-   /* ***FIXME****/
+
+   jcr->acquired_resource_locks = true;
    return true;
 }

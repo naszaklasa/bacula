@@ -1,18 +1,58 @@
 
              Release Check List
 
+Assume release is in bacula/base bacula/gui bacula/docs bacula/rescue
+
 - Build it on Win32
-- Build it on Sun
-- Build FD on Irix
-- Make new .pdf manual
+- Build it on Solaris and run regression tests
+- Build it on FreeBSD and run regression tests
 - Update ChangeLog (add release date)
+- Update ReleaeNotes
 - Do a cvs commit
-- Do a cvs -q export -D now -d bacula-1.nn bacula
+- Run ./makerel base 2.0.x
 - Run the regression tests on the new bacula
-- Write ReleaseNotes
+  directory that is created.  Run regression on
+  Linux, Solaris, and Sun.
+- Run the production version over night in production.
+- Manually test Win32 version
+  (with Robert's work, it is now possible to run the
+   Regression scripts).
+- Write final ReleaseNotes
 - If everything is good
-- cd bacula/k
-- cvs -q tag Release-1_nn
 - cd bacula
-- rm -rf bacula-1.nn
-- cvs -z3 export -r Release-1_nn -d bacula-1.nn bacula
+- Run    
+  cd base
+  cvs update
+  cd ../gui
+  cvs update
+  cd ../docs
+  cvs update
+     cd manual
+     make tex
+     latex bacula.tex
+     (make sure the above finishes.  If it stops and asks
+      what to do, correct the problem).
+      cd ..
+  cd ../rescue
+  cvs update
+  cd ..
+  ./makerel base 2.0.x
+  ./makeguirel gui 2.0.x
+  ./makedocsrel docs 2.0.x
+  ./makerescuerel rescue 2.0.x
+  cd base/win32
+  make
+  cp release/winbacula-2.0.x.exe $HOME/bacula
+  cd $HOME/bacula
+  ./sign winbacula-2.0.x.exe
+
+- Upload everything to appropriate part of Source Forge
+  and release it.  I use releaseforge 
+- After releasing everything.
+- Either download everything and compare the signatures,
+  or simply check the upload sizes of everything.
+- cd docs/manual
+  make
+- Upload new release doc to web site.
+  Upload bacula.pdf to web site.
+      

@@ -1,0 +1,54 @@
+              Technical notes on version 2.0
+
+General:
+Version 2.0.2 released: xx January 2007
+28Jan08
+kes  Fix maxruntime bug #621.
+27Jan07
+kes  Get current main CVS .specs for RedHat, SuSE, Mandrake.
+26Jan07
+ebl  Implement the include JobID in spool file name project.
+kes  Reorder projects file in order determined by Jan 2007 vote.
+kes  Fix open of SQLite3 db where user does not have write permission
+     so that DIR does not crash. Fixes bug #761.
+25Jan07
+kes  Change 'Device not configured to autolabel' from INFO
+     to WARNING.
+kes  Fix jobq.c to restart failed jobs when Reschedule Times = 0
+     which should restart an indefinite # of times.
+kes  Fix configure --help to print --with-mysql[=DIR]. Same for
+     other DIR specifications.
+23Jan07
+rn   Fix msvc build problems. Fix bacula.dll exports for msvc build.
+     Fix path quoting in SQLite scripts.
+     Fix problems with SHGetFolderPath.
+19Jan07
+kes  Create patches/2.0.1-restart.patch. Fixes bug #755.
+18Jan07
+kes  Fix Job restart on error bug that promotes an Inc to a Full
+     backup.  This should fix bug #755.
+
+Version 2.0.1 released: 14 January 2007
+12Jan07
+kes  Fix Bacula->Documentation link on Win32 to point to index.html
+     instead of bacula.html. Fixed bug #750.
+kes  Return JobId in db_get_job_record() when JobId==0. This should
+     fix bug #741.
+kes  Do not release source pointers when restarting a failed job.
+11Jan07
+kes  Add dynamic dll entry point for SHGetFolderPath to Win32 code.
+     This *should* fix bug #747.
+kes  Modify winbacula.nsi to substitute with g bin_dir_cmd. Should fix
+     bug #742.
+09Jan07
+kes  Modify USTORE constructor to set an empty store_source string, 
+     and don't copy the store_source string in a cancel.  Hopefully
+     this will fix Arno's seg fault, bug #744.
+kes  Add back code to disable conio in configure. Fixes bug #743.
+kes  Correct the Options scanner in the FD to correctly handle  
+     SHA1 option, which was eating the next option.  Reported by    
+     Sebastien Guilbaud.
+kes  Add code to indicate when the SD is spooling, spool wait, and 
+     despooling as requested by Alan Brown.
+
+Version 2.0.0 released: 4 January 2007

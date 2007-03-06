@@ -4,7 +4,7 @@
  *
  *  Kern E. Sibbald, December 2000
  *
- *  Version $Id: jcr.c,v 1.75.2.8 2006/03/28 16:56:33 kerns Exp $
+ *  Version $Id: jcr.c,v 1.86 2006/11/21 16:13:57 kerns Exp $
  *
  *  These routines are thread safe.
  *
@@ -23,19 +23,32 @@
  *
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "jcr.h"
@@ -231,7 +244,6 @@ JCR *new_jcr(int size, JCR_free_HANDLER *daemon_free_jcr)
    jcr->daemon_free_jcr = daemon_free_jcr;    /* plug daemon free routine */
    jcr->init_mutex();
    jcr->inc_use_count();   
-   jcr->JobStatus = JS_Created;       /* ready to run */
    jcr->VolumeName = get_pool_memory(PM_FNAME);
    jcr->VolumeName[0] = 0;
    jcr->errmsg = get_pool_memory(PM_MESSAGE);
@@ -241,7 +253,7 @@ JCR *new_jcr(int size, JCR_free_HANDLER *daemon_free_jcr)
    jcr->JobId = 0;
    jcr->JobType = JT_SYSTEM;          /* internal job until defined */
    jcr->JobLevel = L_NONE;
-   jcr->JobStatus = JS_Created;
+   set_jcr_job_status(jcr, JS_Created);       /* ready to run */
 
    sigtimer.sa_flags = 0;
    sigtimer.sa_handler = timeout_handler;
@@ -331,7 +343,10 @@ static void free_common_jcr(JCR *jcr)
    }
    jcr->destroy_mutex();
 
-   delete jcr->msg_queue;
+   if (jcr->msg_queue) {
+      delete jcr->msg_queue;
+      jcr->msg_queue = NULL;
+   }
    close_msg(jcr);                    /* close messages for this job */
 
    /* do this after closing messages */

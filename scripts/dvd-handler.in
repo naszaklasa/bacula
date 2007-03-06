@@ -6,16 +6,36 @@
 #
 #  called:  dvd-handler <dvd-device-name> operation args
 #
-#  where operation is one of
-#    free
-#    write
+#  operations used by Bacula:
 #
-# in case of operation ``free'' returns:
-# Prints on the first output line the free space available in bytes.
-# If an error occurs, prints a negative number (-errno), followed,
-# on the second line, by an error message.
+#   free  (no arguments)
+#	      Scan the device and report the available space. It returns:
+#	      Prints on the first output line the free space available in bytes.
+#	      If an error occurs, prints a negative number (-errno), followed,
+#	      on the second line, by an error message.
+#
+#   write  op filename
+#	       Write a part file to disk.
+#	       This operation needs two additional arguments.
+#	       The first (op) indicates to
+#		   0 -- append
+#		   1 -- first write to a blank disk
+#		   2 -- blank or truncate a disk
+#
+#		The second is the filename to write
+#
+#   operations available but not used by Bacula:
+#
+#   test      Scan the device and report the information found.
+#	       This operation needs no further arguments.
+#   prepare   Prepare a DVD+/-RW for being used by Bacula.
+#	       Note: This is only useful if you already have some
+#	       non-Bacula data on a medium, and you want to use
+#	       it with Bacula. Don't run this on blank media, it
+#	       is useless.
+#
 # 
-# $Id: dvd-handler.in,v 1.7.2.3 2005/11/03 14:33:16 kerns Exp $
+# $Id: dvd-handler.in,v 1.14 2006/12/22 15:01:04 kerns Exp $
 #
 
 import popen2
@@ -52,23 +72,23 @@ class disk:
 # dvd-writepart doesn't not always need to know the free space).
 #
 # The following methods are implemented:
-# __init__       we need that...
-# __repr__       this seems to be a good idea to have.
-#                Quite minimalistic implementation, though.
-# __str__        For casts to string. Return the current disk information
-# is_empty       Returns TRUE if the disk is empty, blank... this needs more
-#                work, especially concerning non-RW media and blank vs. no
-#                filesystem considerations. Here, we should also look for
-#                other filesystems - probably we don't want to silently
-#                overwrite UDF or ext2 or anything not mentioned in fstab...
-#                (NB: I don't think it is a problem)
-# free           Returns the available free space.
-# write          Writes one part file to disk, either starting a new file
-#                system on disk, or appending to it.
-#                This method should also prepare a blank disk so that a
-#                certain part of the disk is used to allow detection of a
-#                used disk by all / more disk drives.
-# blank          Blank the device
+# __init__	 we need that...
+# __repr__	 this seems to be a good idea to have.
+#		 Quite minimalistic implementation, though.
+# __str__	 For casts to string. Return the current disk information
+# is_empty	 Returns TRUE if the disk is empty, blank... this needs more
+#		 work, especially concerning non-RW media and blank vs. no
+#		 filesystem considerations. Here, we should also look for
+#		 other filesystems - probably we don't want to silently
+#		 overwrite UDF or ext2 or anything not mentioned in fstab...
+#		 (NB: I don't think it is a problem)
+# free		 Returns the available free space.
+# write 	 Writes one part file to disk, either starting a new file
+#		 system on disk, or appending to it.
+#		 This method should also prepare a blank disk so that a
+#		 certain part of the disk is used to allow detection of a
+#		 used disk by all / more disk drives.
+# prepare 	 Blank the device
 #
 ###############################################################################
    def __init__(self, devicename):
@@ -87,10 +107,10 @@ class disk:
       self.growcmd += " -quiet"
 
       if self.is4gbsupported():
-         self.growcmd += " -use-the-force-luke=4gms"
+	 self.growcmd += " -use-the-force-luke=4gms"
 
       self.growparams = " -A 'Bacula Data' -input-charset=default -iso-level 3 -pad " + \
-                        "-p 'dvd-handler / growisofs' -sysid 'BACULADATA' -R"
+			"-p 'dvd-handler / growisofs' -sysid 'BACULADATA' -R"
 
       return
 
@@ -99,9 +119,9 @@ class disk:
 
    def __str__(self):
       if not self.freespace_collected:
-         self.collect_freespace();
+	 self.collect_freespace();
       if not self.mediumtype_collected:
-         self.collect_mediumtype();
+	 self.collect_mediumtype();
       
       self.me  = "Class disk, initialized with device '" + self.device + "'\n"
       self.me += "type = '" + self.disktype + "' mode='" + self.diskmode + "' status = '" + self.diskstatus + "'\n"
@@ -115,47 +135,47 @@ class disk:
       processi = popen2.Popen4("uname -s -r")
       status = processi.wait()
       if not os.WIFEXITED(status):
-         return 1
+	 return 1
       if os.WEXITSTATUS(status) != 0:
-         return 1
+	 return 1
       strres = processi.fromchild.readline()[0:-1]
       version = re.search(r"Linux (\d+)\.(\d+)\.(\d+)", strres)
       if not version: # Non-Linux: allow
-         return 1
+	 return 1
       
       if (int(version.group(1)) > 2) or (int(version.group(2)) > 6) or ((int(version.group(1)) == 2) and (int(version.group(2)) == 6) and (int(version.group(3)) >= 8)):
-         return 1
+	 return 1
       else:
-         return 0
+	 return 0
 
    def collect_freespace(self): # Collects current free space
       self.cmd = self.growcmd + " -F " + self.device
       processi = popen2.Popen4(self.cmd)
       status = processi.wait()
       if not os.WIFEXITED(status):
-         raise DVDError(0, "growisofs process did not exit correctly.")
+	 raise DVDError(0, "growisofs process did not exit correctly.")
       result = processi.fromchild.read()
       if os.WEXITSTATUS(status) != 0:
-         if (os.WEXITSTATUS(status) & 0x7F) == errno.ENOSPC:
-            # Kludge to force dvd-handler to return a free space of 0
-            self.next_session = 1
-            self.capacity = 1
-            self.freespace_collected = 1
-            return
-         else:
-            raise DVDError(os.WEXITSTATUS(status), "growisofs returned with an error " + result + ". Please check your are using a patched version of dvd+rw-tools.")
+	 if (os.WEXITSTATUS(status) & 0x7F) == errno.ENOSPC:
+	    # Kludge to force dvd-handler to return a free space of 0
+	    self.next_session = 1
+	    self.capacity = 1
+	    self.freespace_collected = 1
+	    return
+	 else:
+	    raise DVDError(os.WEXITSTATUS(status), "growisofs returned with an error " + result + ". Please check your are using a patched version of dvd+rw-tools.")
       next_sess = re.search(r"\snext_session=(\d+)\s", result, re.MULTILINE)
       capa = re.search(r"\scapacity=(\d+)\s", result, re.MULTILINE)
    
       if next_sess and capa:
-         self.next_session = long(next_sess.group(1))
-         self.capacity = long(capa.group(1))
-         
-         # testing cheat (emulate 4GB boundary at 100MB)
-         #if self.next_session > 100000000:
-         #   self.capacity = self.next_session
+	 self.next_session = long(next_sess.group(1))
+	 self.capacity = long(capa.group(1))
+	 
+	 # testing cheat (emulate 4GB boundary at 100MB)
+	 #if self.next_session > 100000000:
+	 #   self.capacity = self.next_session
       else:
-         raise DVDError(0, "Cannot get next_session and capacity from growisofs.\nReturned: " + result)
+	 raise DVDError(0, "Cannot get next_session and capacity from growisofs.\nReturned: " + result)
       
       self.freespace_collected = 1
       return
@@ -166,10 +186,10 @@ class disk:
       processi = popen2.Popen4(cmd)
       status = processi.wait()
       if not os.WIFEXITED(status):
-         raise DVDError(0, self.dvdrwmediainfo + " process did not exit correctly.")
+	 raise DVDError(0, self.dvdrwmediainfo + " process did not exit correctly.")
       if os.WEXITSTATUS(status) != 0:
-         raise DVDError(0, "Cannot get media info from " + self.dvdrwmediainfo)
-         return
+	 raise DVDError(0, "Cannot get media info from " + self.dvdrwmediainfo)
+	 return
       result = processi.fromchild.read()
       
       hardware = re.search(r"INQUIRY:\s+(.*)\n", result, re.MULTILINE)
@@ -178,23 +198,23 @@ class disk:
       status = re.search(r"\sDisc status:\s+(.*)\n", result, re.MULTILINE)
       
       if hardware:
-         self.hardwaredevice = hardware.group(1)
+	 self.hardwaredevice = hardware.group(1)
       
       if mediatype:
-         self.disktype = mediatype.group(2)
+	 self.disktype = mediatype.group(2)
       else:
-         raise DVDError(0, "Media type not found in " + self.dvdrwmediainfo + " output")
+	 raise DVDError(0, "Media type not found in " + self.dvdrwmediainfo + " output")
       
       if self.disktype == "DVD-RW":
-         if mediamode:
-            self.diskmode = mediamode.group(1)
-         else:
-            raise DVDError(0, "Media mode not found for DVD-RW in " + self.dvdrwmediainfo + " output")
+	 if mediamode:
+	    self.diskmode = mediamode.group(1)
+	 else:
+	    raise DVDError(0, "Media mode not found for DVD-RW in " + self.dvdrwmediainfo + " output")
       
       if status:
-         self.diskstatus = status.group(1)
+	 self.diskstatus = status.group(1)
       else:
-         raise DVDError(0, "Disc status not found in " + self.dvdrwmediainfo + " output")
+	 raise DVDError(0, "Disc status not found in " + self.dvdrwmediainfo + " output")
 
       
       self.mediumtype_collected = 1
@@ -202,73 +222,76 @@ class disk:
 
    def is_empty(self):
       if not self.freespace_collected:
-         self.collect_freespace();
+	 self.collect_freespace();
       
       return 0 == self.next_session
 
    def is_RW(self):
       if not self.mediumtype_collected:
-         self.collect_mediumtype();
+	 self.collect_mediumtype();
       return "DVD-RW" == self.disktype or "DVD+RW" == self.disktype or "DVD-RAM" == self.disktype
 
    def is_plus_RW(self):
       if not self.mediumtype_collected:
-         self.collect_mediumtype();
+	 self.collect_mediumtype();
       return "DVD+RW" == self.disktype
 
    def is_minus_RW(self):
       if not self.mediumtype_collected:
-         self.collect_mediumtype();
+	 self.collect_mediumtype();
       return "DVD-RW" == self.disktype
       
    def is_restricted_overwrite(self):
       if not self.mediumtype_collected:
-         self.collect_mediumtype();
+	 self.collect_mediumtype();
       return self.diskmode == "Restricted Overwrite"
 
    def is_blank(self):
       if not self.mediumtype_collected:
-         self.collect_mediumtype();
+	 self.collect_mediumtype();
       
       return self.diskstatus == "blank"
 
    def free(self):
       if not self.freespace_collected:
-         self.collect_freespace();
+	 self.collect_freespace();
       
       fr = self.capacity-self.next_session-self.margin
       if fr < 0:
-         return 0
+	 return 0
       else:
-         return fr
+	 return fr
 
    def term_handler(self, signum, frame):
       print 'dvd-handler: Signal term_handler called with signal', signum
       if self.pid != 0:
-         print "dvd-handler: Sending SIGTERM to pid", self.pid
-         os.kill(self.pid, signal.SIGTERM)
-         time.sleep(10)
-         print "dvd-handler: Sending SIGKILL to pid", self.pid
-         os.kill(self.pid, signal.SIGKILL)
-         sys.exit(1)
+	 print "dvd-handler: Sending SIGTERM to pid", self.pid
+	 os.kill(self.pid, signal.SIGTERM)
+	 time.sleep(10)
+	 print "dvd-handler: Sending SIGKILL to pid", self.pid
+	 os.kill(self.pid, signal.SIGKILL)
+	 sys.exit(1)
 
    def write(self, newvol, partfile):
       # Blank DVD+RW when there is no data on it
       if newvol and self.is_plus_RW() and self.is_blank():
-         print "DVD+RW looks brand-new, blank it to fix some DVD-writers bugs."
-         self.blank()
-         print "Done, now writing the part file."
+	 print "DVD+RW looks brand-new, blank it to fix some DVD-writers bugs."
+	 self.blank()
+	 print "Done, now writing the part file."
       
       if newvol and self.is_minus_RW() and (not self.is_restricted_overwrite()):
-         print "DVD-RW is in " + self.diskmode + " mode, reformating it to Restricted Overwrite"
-         self.reformat_minus_RW()
-         print "Done, now writing the part file."
+	 print "DVD-RW is in " + self.diskmode + " mode, reformating it to Restricted Overwrite"
+	 self.reformat_minus_RW()
+	 print "Done, now writing the part file."
       
       cmd = self.growcmd + self.growparams
       if newvol:
-         cmd += " -Z "
+	 # Ignore any existing iso9660 filesystem - used for truncate
+	 if newvol == 2:
+	     cmd += " -use-the-force-luke=tty"
+	 cmd += " -Z "
       else:
-         cmd += " -M "
+	 cmd += " -M "
       cmd += self.device + " " + str(partfile)
       print "Running " + cmd
       oldsig = signal.signal(signal.SIGTERM, self.term_handler)
@@ -276,38 +299,40 @@ class disk:
       self.pid = proc.pid
       status = proc.poll()
       while status == -1:
-         line = proc.fromchild.readline()
-         while len(line) > 0:
-            print line,
-            line = proc.fromchild.readline()
-         time.sleep(1)
-         status = proc.poll()
+	 line = proc.fromchild.readline()
+	 while len(line) > 0:
+	    print line,
+	    line = proc.fromchild.readline()
+	 time.sleep(1)
+	 status = proc.poll()
       self.pid = 0
       print
       signal.signal(signal.SIGTERM, oldsig)
+      if not os.WIFEXITED(status):
+	 raise DVDError(0, cmd + " process did not exit correctly, signal/status " + str(status))
       if os.WEXITSTATUS(status) != 0:
-         raise DVDError(os.WEXITSTATUS(status), cmd + " exited with status " + str(os.WEXITSTATUS(status)) + ", signal/status " + str(status))
+	 raise DVDError(os.WEXITSTATUS(status), cmd + " exited with status " + str(os.WEXITSTATUS(status)) + ", signal/status " + str(status))
 
    def prepare(self):
       if not self.is_RW():
-         raise DVDError(0, "I won't prepare a non-rewritable medium")
+	 raise DVDError(0, "I won't prepare a non-rewritable medium")
       
       # Blank DVD+RW when there is no data on it
       if self.is_plus_RW() and self.is_blank():
-         print "DVD+RW looks brand-new, blank it to fix some DVD-writers bugs."
-         self.blank()
-         return # It has been completely blanked: Medium is ready to be used by Bacula
+	 print "DVD+RW looks brand-new, blank it to fix some DVD-writers bugs."
+	 self.blank()
+	 return # It has been completely blanked: Medium is ready to be used by Bacula
       
       if self.is_minus_RW() and (not self.is_restricted_overwrite()):
-         print "DVD-RW is in " + self.diskmode + " mode, reformating it to Restricted Overwrite"
-         self.reformat_minus_RW()
-         return # Reformated: Medium is ready to be used by Bacula
+	 print "DVD-RW is in " + self.diskmode + " mode, reformating it to Restricted Overwrite"
+	 self.reformat_minus_RW()
+	 return # Reformated: Medium is ready to be used by Bacula
       
       # TODO: Check if /dev/fd/0 and /dev/zero exists, otherwise, run self.blank()
       if not os.path.exists("/dev/fd/0") or not os.path.exists("/dev/zero"):
-         print "/dev/fd/0 or /dev/zero doesn't exist, blank the medium completely."
-         self.blank()
-         return
+	 print "/dev/fd/0 or /dev/zero doesn't exist, blank the medium completely."
+	 self.blank()
+	 return
       
       cmd = self.dd + " if=/dev/zero bs=1024 count=512 | " + self.growcmd + " -Z " + self.device + "=/dev/fd/0"
       print "Running " + cmd
@@ -316,17 +341,17 @@ class disk:
       self.pid = proc.pid
       status = proc.poll() 
       while status == -1:
-         line = proc.fromchild.readline()
-         while len(line) > 0:
-            print line,
-            line = proc.fromchild.readline()
-         time.sleep(1)
-         status = proc.poll()
+	 line = proc.fromchild.readline()
+	 while len(line) > 0:
+	    print line,
+	    line = proc.fromchild.readline()
+	 time.sleep(1)
+	 status = proc.poll()
       self.pid = 0
       print
       signal.signal(signal.SIGTERM, oldsig)
       if os.WEXITSTATUS(status) != 0:
-         raise DVDError(os.WEXITSTATUS(status), cmd + " exited with status " + str(os.WEXITSTATUS(status)) + ", signal/status " + str(status))
+	 raise DVDError(os.WEXITSTATUS(status), cmd + " exited with status " + str(os.WEXITSTATUS(status)) + ", signal/status " + str(status))
 
    def blank(self):
       cmd = self.growcmd + " -Z " + self.device + "=/dev/zero"
@@ -336,17 +361,17 @@ class disk:
       self.pid = proc.pid
       status = proc.poll()
       while status == -1:
-         line = proc.fromchild.readline()
-         while len(line) > 0:
-            print line,
-            line = proc.fromchild.readline()
-         time.sleep(1)
-         status = proc.poll()
+	 line = proc.fromchild.readline()
+	 while len(line) > 0:
+	    print line,
+	    line = proc.fromchild.readline()
+	 time.sleep(1)
+	 status = proc.poll()
       self.pid = 0
       print
       signal.signal(signal.SIGTERM, oldsig)
       if os.WEXITSTATUS(status) != 0:
-         raise DVDError(os.WEXITSTATUS(status), cmd + " exited with status " + str(os.WEXITSTATUS(status)) + ", signal/status " + str(status))
+	 raise DVDError(os.WEXITSTATUS(status), cmd + " exited with status " + str(os.WEXITSTATUS(status)) + ", signal/status " + str(status))
 
    def reformat_minus_RW(self):
       cmd = self.dvdrwformat + " -force " + self.device
@@ -356,17 +381,17 @@ class disk:
       self.pid = proc.pid
       status = proc.poll()
       while status == -1:
-         line = proc.fromchild.readline()
-         while len(line) > 0:
-            print line,
-            line = proc.fromchild.readline()
-         time.sleep(1)
-         status = proc.poll()
+	 line = proc.fromchild.readline()
+	 while len(line) > 0:
+	    print line,
+	    line = proc.fromchild.readline()
+	 time.sleep(1)
+	 status = proc.poll()
       self.pid = 0
       print
       signal.signal(signal.SIGTERM, oldsig)
       if os.WEXITSTATUS(status) != 0:
-         raise DVDError(os.WEXITSTATUS(status), cmd + " exited with status " + str(os.WEXITSTATUS(status)) + ", signal/status " + str(status))
+	 raise DVDError(os.WEXITSTATUS(status), cmd + " exited with status " + str(os.WEXITSTATUS(status)) + ", signal/status " + str(status))
 
 # class disk ends here.
 
@@ -375,7 +400,7 @@ class DVDError(Exception):
       self.errno = errno
       self.value = value
       if self.value[-1] == '\n':
-         self.value = self.value[0:-1]
+	 self.value = self.value[0:-1]
    def __str__(self):
       return str(self.value) + " || errno = " + str(self.errno) + " (" + os.strerror(self.errno & 0x7F) + ")"
 
@@ -387,23 +412,24 @@ Usage:
 dvd-handler DEVICE test
 dvd-handler DEVICE free
 dvd-handler DEVICE write APPEND FILE
-dvd-handler DEVICE blank
+dvd-handler DEVICE prepare
 
 where DEVICE is a device name like /dev/sr0 or /dev/dvd.
 
 Operations:
-test      Scan the device and report the information found.
-           This operation needs no further arguments.
-free      Scan the device and report the available space.
-write     Write a part file to disk.
-           This operation needs two additional arguments.
-           The first indicates to append (0) or restart the
-           disk (1). The second is the file to write.
+test	  Scan the device and report the information found.
+	   This operation needs no further arguments.
+free	  Scan the device and report the available space.
+write	  Write a part file to disk.
+	   This operation needs two additional arguments.
+	   The first indicates to append (0), restart the
+	   disk (1) or restart existing disk (2). The second
+	   is the file to write.
 prepare   Prepare a DVD+/-RW for being used by Bacula.
-           Note: This is only useful if you already have some
-           non-Bacula data on a medium, and you want to use
-           it with Bacula. Don't run this on blank media, it
-           is useless.
+	   Note: This is only useful if you already have some
+	   non-Bacula data on a medium, and you want to use
+	   it with Bacula. Don't run this on blank media, it
+	   is useless.
 """
    sys.exit(1)
 
@@ -415,33 +441,33 @@ dvd = disk(sys.argv[1])
 if "free" == sys.argv[2]:
    if len(sys.argv) == 3:
       try:
-         free = dvd.free()
+	 free = dvd.free()
       except DVDError, e:
-         if e.errno != 0:
-            print -e.errno
-         else:
-            print errno.EPIPE
-         print str(e)
+	 if e.errno != 0:
+	    print -e.errno
+	 else:
+	    print errno.EPIPE
+	 print str(e)
       else:
-         print free
-         print "No Error reported."
+	 print free
+	 print "No Error reported."
    else:
-      print "Wrong number of arguments for free operation."
+      print "Wrong number of arguments for free operation. Wanted 3 got", len(sys.argv)
       usage()
 elif "prepare" == sys.argv[2]:
    if len(sys.argv) == 3:
       try:
-         dvd.prepare()
+	 dvd.prepare()
       except DVDError, e:
-         print "Error while preparing medium: ", str(e)
-         if e.errno != 0:
-            sys.exit(e.errno & 0x7F)
-         else:
-            sys.exit(errno.EPIPE)
+	 print "Error while preparing medium: ", str(e)
+	 if e.errno != 0:
+	    sys.exit(e.errno & 0x7F)
+	 else:
+	    sys.exit(errno.EPIPE)
       else:
-         print "Medium prepared successfully."
+	 print "Medium prepared successfully."
    else:
-      print "Wrong number of arguments for prepare operation."
+      print "Wrong number of arguments for prepare operation. Wanted 3 got", len(sys.argv)
       usage()
 elif "test" == sys.argv[2]:
    try:
@@ -453,17 +479,17 @@ elif "test" == sys.argv[2]:
 elif "write" == sys.argv[2]:
    if len(sys.argv) == 5:
       try:
-         dvd.write(long(sys.argv[3]), sys.argv[4])
+	 dvd.write(long(sys.argv[3]), sys.argv[4])
       except DVDError, e:
-         print "Error while writing part file: ", str(e)
-         if e.errno != 0:
-            sys.exit(e.errno & 0x7F)
-         else:
-            sys.exit(errno.EPIPE)
+	 print "Error while writing part file: ", str(e)
+	 if e.errno != 0:
+	    sys.exit(e.errno & 0x7F)
+	 else:
+	    sys.exit(errno.EPIPE)
       else:
-         print "Part file " + sys.argv[4] + " successfully written to disk."
+	 print "Part file " + sys.argv[4] + " successfully written to disk."
    else:
-      print "Wrong number of arguments for write operation."
+      print "Wrong number of arguments for write operation. Wanted 5 got", len(sys.argv)
       usage()
       sys.exit(1)
 else:

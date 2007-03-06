@@ -5,19 +5,32 @@
  *
 */
 /*
-   Copyright (C) 2002-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
@@ -178,7 +191,7 @@ TREE_NODE *insert_tree_node(char *path, char *fname, int type,
     */
    if (path_len > 0) {
       q = path + path_len - 1;
-      if (*q == '/') {
+      if (IsPathSeparator(*q)) {
          *q = 0;                      /* strip trailing slash */
       } else {
          q = NULL;                    /* no trailing slash */
@@ -188,10 +201,10 @@ TREE_NODE *insert_tree_node(char *path, char *fname, int type,
    }
    /* If no filename, strip last component of path as "filename" */
    if (*fname == 0) {
-      p = strrchr(path, '/');         /* separate path and filename */
+      p = (char *)last_path_separator(path);  /* separate path and filename */
       if (p) {
          fname = p + 1;               /* set new filename */
-         *p = 0;                      /* terminate new path */
+         *p = '\0';                   /* terminate new path */
       }
    } else {
       p = NULL;
@@ -245,7 +258,7 @@ TREE_NODE *make_tree_path(char *path, TREE_ROOT *root)
       Dmsg0(100, "make_tree_path: parent=*root*\n");
       return (TREE_NODE *)root;
    }
-   p = strrchr(path, '/');           /* get last dir component of path */
+   p = (char *)last_path_separator(path);           /* get last dir component of path */
    if (p) {
       fname = p + 1;
       *p = 0;                         /* terminate path */
@@ -319,15 +332,15 @@ int tree_getpath(TREE_NODE *node, char *buf, int buf_size)
     *    there is only a / in the buffer, remove it since
     *    win32 names don't generally start with /
     */
-   if (node->type == TN_DIR_NLS && buf[0] == '/' && buf[1] == 0) {
-      buf[0] = 0;
+   if (node->type == TN_DIR_NLS && IsPathSeparator(buf[0]) && buf[1] == '\0') {
+      buf[0] = '\0';
    }
    bstrncat(buf, node->fname, buf_size);
    /* Add a slash for all directories unless we are at the root,
     *  also add a slash to a soft linked file if it has children
     *  i.e. it is linked to a directory.
     */
-   if ((node->type != TN_FILE && !(buf[0] == '/' && buf[1] == 0)) ||
+   if ((node->type != TN_FILE && !(IsPathSeparator(buf[0]) && buf[1] == '\0')) ||
        (node->soft_link && tree_node_has_child(node))) {
       bstrncat(buf, "/", buf_size);
    }
@@ -339,17 +352,19 @@ int tree_getpath(TREE_NODE *node, char *buf, int buf_size)
  */
 TREE_NODE *tree_cwd(char *path, TREE_ROOT *root, TREE_NODE *node)
 {
-   if (strcmp(path, ".") == 0) {
+   if (path[0] == '.' && path[1] == '\0') {
       return node;
    }
-   if (strcmp(path, "..") == 0) {
-      if (node->parent) {
-         return node->parent;
+   /* Handle relative path */
+   if (path[0] == '.' && path[1] == '.' && (IsPathSeparator(path[2]) || path[2] == '\0')) {
+      TREE_NODE *parent = node->parent ? node->parent : node;
+      if (path[2] == 0) { 
+         return parent;
       } else {
-         return node;
+         return tree_cwd(path+3, root, parent);
       }
    }
-   if (path[0] == '/') {
+   if (IsPathSeparator(path[0])) {
       Dmsg0(100, "Doing absolute lookup.\n");
       return tree_relcwd(path+1, root, (TREE_NODE *)root);
    }
@@ -371,8 +386,7 @@ TREE_NODE *tree_relcwd(char *path, TREE_ROOT *root, TREE_NODE *node)
       return node;
    }
    /* Check the current segment only */
-   p = strchr(path, '/');
-   if (p) {
+   if ((p = first_path_separator(path)) != NULL) {
       len = p - path;
    } else {
       len = strlen(path);

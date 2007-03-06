@@ -4,29 +4,44 @@
  *
  *     Kern Sibbald, September MM
  *
- *     Version $Id: console.c,v 1.66 2005/08/10 16:35:19 nboichat Exp $
+ *     Version $Id: console.c,v 1.86 2006/11/27 10:02:59 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "console_conf.h"
 #include "jcr.h"
 
+
 #ifdef HAVE_CONIO
 #include "conio.h"
+//#define CONIO_FIX 1
 #else
 #define con_init(x)
 #define con_term()
@@ -36,25 +51,16 @@
 #define usrbrk() 0
 #endif
 
-#ifdef HAVE_WIN32
-#include <windows.h>
-#include "../lib/winapi.h"
+#if defined(HAVE_WIN32)
 #define isatty(fd) (fd==0)
 #endif
 
 /* Exported variables */
 
-#ifdef HAVE_CYGWIN
-int rl_catch_signals;
-#else
 extern int rl_catch_signals;
-#endif
 
 /* Imported functions */
 int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons);
-
-/* Dummy functions */
-int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
 
 /* Forward referenced functions */
 static void terminate_console(int sig);
@@ -73,12 +79,15 @@ extern "C" void got_sigtin(int sig);
 /* Static variables */
 static char *configfile = NULL;
 static BSOCK *UA_sock = NULL;
-static DIRRES *dir;
+static DIRRES *dir = NULL;
+static CONRES *cons = NULL;
 static FILE *output = stdout;
-static bool tee = false;                  /* output to output and stdout */
+static bool teeout = false;               /* output to output and stdout */
 static bool stop = false;
+static bool no_conio = false;
 static int argc;
 static int numdir;
+static int numcon;
 static POOLMEM *args;
 static char *argk[MAX_CMD_ARGS];
 static char *argv[MAX_CMD_ARGS];
@@ -90,24 +99,26 @@ static int inputcmd(FILE *input, BSOCK *UA_sock);
 static int outputcmd(FILE *input, BSOCK *UA_sock);
 static int teecmd(FILE *input, BSOCK *UA_sock);
 static int quitcmd(FILE *input, BSOCK *UA_sock);
+static int echocmd(FILE *input, BSOCK *UA_sock);
 static int timecmd(FILE *input, BSOCK *UA_sock);
 static int sleepcmd(FILE *input, BSOCK *UA_sock);
 
 
-#define CONFIG_FILE "./bconsole.conf"   /* default configuration file */
+#define CONFIG_FILE "bconsole.conf"   /* default configuration file */
 
 static void usage()
 {
    fprintf(stderr, _(
-"Copyright (C) 2000-2005 Kern Sibbald\n"
+PROG_COPYRIGHT
 "\nVersion: " VERSION " (" BDATE ") %s %s %s\n\n"
 "Usage: bconsole [-s] [-c config_file] [-d debug_level]\n"
 "       -c <file>   set configuration file to file\n"
 "       -dnn        set debug level to nn\n"
+"       -n          no conio\n"
 "       -s          no signals\n"
 "       -t          test - read configuration and exit\n"
 "       -?          print this message.\n"
-"\n"), HOST_OS, DISTNAME, DISTVER);
+"\n"), 2000, HOST_OS, DISTNAME, DISTVER);
 }
 
 
@@ -154,8 +165,9 @@ static struct cmdstruct commands[] = {
  { N_("sleep"),      sleepcmd,     _("sleep specified time")},
  { N_("time"),       timecmd,      _("print current time")},
  { N_("version"),    versioncmd,   _("print Console's version")},
+ { N_("echo"),       echocmd,      _("echo command string")},
  { N_("exit"),       quitcmd,      _("exit = quit")},
- { N_("zed_keyst"),  zed_keyscmd,  _("zed_keys = use zed keys instead of bash keys")},
+ { N_("zed_keys"),   zed_keyscmd,  _("zed_keys = use zed keys instead of bash keys")},
              };
 #define comsize (sizeof(commands)/sizeof(struct cmdstruct))
 
@@ -188,7 +200,7 @@ static int do_a_command(FILE *input, BSOCK *UA_sock)
       }
    }
    if (!found) {
-      pm_strcat(&UA_sock->msg, _(": is an illegal command\n"));
+      pm_strcat(&UA_sock->msg, _(": is an invalid command\n"));
       UA_sock->msglen = strlen(UA_sock->msg);
       sendit(UA_sock->msg);
    }
@@ -291,17 +303,28 @@ static void read_and_process_input(FILE *input, BSOCK *UA_sock)
 
 /*
  * Call-back for reading a passphrase for an encrypted PEM file
- * This function uses getpass(), which uses a static buffer and is NOT thread-safe.
+ * This function uses getpass(), 
+ *  which uses a static buffer and is NOT thread-safe.
  */
 static int tls_pem_callback(char *buf, int size, const void *userdata)
 {
 #ifdef HAVE_TLS
-   const char *prompt = (const char *) userdata;
+   const char *prompt = (const char *)userdata;
+# if defined(HAVE_WIN32)
+   sendit(prompt);
+   if (win32_cgets(buf, size) == NULL) {
+      buf[0] = 0;
+      return 0;
+   } else {
+      return strlen(buf);
+   }
+# else
    char *passwd;
 
    passwd = getpass(prompt);
    bstrncpy(buf, passwd, size);
-   return (strlen(buf));
+   return strlen(buf);
+# endif
 #else
    buf[0] = 0;
    return 0;
@@ -330,9 +353,8 @@ int main(int argc, char *argv[])
    init_msg(NULL, NULL);
    working_directory = "/tmp";
    args = get_pool_memory(PM_FNAME);
-   con_init(stdin);
 
-   while ((ch = getopt(argc, argv, "bc:d:r:st?")) != -1) {
+   while ((ch = getopt(argc, argv, "bc:d:nst?")) != -1) {
       switch (ch) {
       case 'c':                    /* configuration file */
          if (configfile != NULL) {
@@ -348,6 +370,10 @@ int main(int argc, char *argv[])
          }
          break;
 
+      case 'n':                    /* no conio */
+         no_conio = true;
+         break;
+
       case 's':                    /* turn off signals */
          no_signals = true;
          break;
@@ -359,7 +385,6 @@ int main(int argc, char *argv[])
       case '?':
       default:
          usage();
-         con_term();
          exit(1);
       }
    }
@@ -370,23 +395,21 @@ int main(int argc, char *argv[])
       init_signals(terminate_console);
    }
 
+
 #if !defined(HAVE_WIN32)
    /* Override Bacula default signals */
-// signal(SIGCHLD, SIG_IGN);
    signal(SIGQUIT, SIG_IGN);
    signal(SIGTSTP, got_sigstop);
    signal(SIGCONT, got_sigcontinue);
    signal(SIGTTIN, got_sigtin);
    signal(SIGTTOU, got_sigtout);
    trapctlc();
-#else
-   InitWinAPIWrapper();
 #endif
-     
+
+   OSDependentInit();
 
    if (argc) {
       usage();
-      con_term();
       exit(1);
    }
 
@@ -396,12 +419,16 @@ int main(int argc, char *argv[])
 
    parse_config(configfile);
 
-   if (init_tls() != 0) {
-      Emsg0(M_ERROR_TERM, 0, _("TLS library initialization failed.\n"));
+   if (init_crypto() != 0) {
+      Emsg0(M_ERROR_TERM, 0, _("Cryptography library initialization failed.\n"));
    }
 
    if (!check_resources()) {
       Emsg1(M_ERROR_TERM, 0, _("Please correct configuration file: %s\n"), configfile);
+   }
+
+   if (!no_conio) {
+      con_init(stdin);
    }
 
    if (test_config) {
@@ -412,6 +439,17 @@ int main(int argc, char *argv[])
    memset(&jcr, 0, sizeof(jcr));
 
    (void)WSA_Init();                        /* Initialize Windows sockets */
+
+   LockRes();
+   numdir = 0;
+   foreach_res(dir, R_DIRECTOR) {
+      numdir++;
+   }
+   numcon = 0;
+   foreach_res(cons, R_CONSOLE) {
+      numcon++;
+   }
+   UnlockRes();
 
    if (numdir > 1) {
       struct sockaddr client_addr;
@@ -435,22 +473,42 @@ try_again:
          senditf(_("You must enter a number between 1 and %d\n"), numdir);
          goto try_again;
       }
+      term_bsock(UA_sock);
       LockRes();
-      dir = NULL;
       for (i=0; i<item; i++) {
          dir = (DIRRES *)GetNextRes(R_DIRECTOR, (RES *)dir);
       }
+      /* Look for a console linked to this director */
+      for (i=0; i<numcon; i++) {
+         cons = (CONRES *)GetNextRes(R_CONSOLE, (RES *)cons);
+         if (cons->director && strcmp(cons->director, dir->hdr.name) == 0) {
+            break;
+         }
+         cons = NULL;
+      }
+      /* Look for the first non-linked console */
+      if (cons == NULL) {
+         for (i=0; i<numcon; i++) {
+            cons = (CONRES *)GetNextRes(R_CONSOLE, (RES *)cons);
+            if (cons->director == NULL)
+               break;
+            cons = NULL;
+        }
+      }
       UnlockRes();
-      term_bsock(UA_sock);
-   } else {
+   }
+   /* If no director, take first one */
+   if (!dir) {
       LockRes();
       dir = (DIRRES *)GetNextRes(R_DIRECTOR, NULL);
       UnlockRes();
    }
-
-   LockRes();
-   CONRES *cons = (CONRES *)GetNextRes(R_CONSOLE, (RES *)NULL);
-   UnlockRes();
+   /* If no console, take first one */
+   if (!cons) {
+      LockRes();
+      cons = (CONRES *)GetNextRes(R_CONSOLE, (RES *)NULL);
+      UnlockRes();
+   }
 
    senditf(_("Connecting to Director %s:%d\n"), dir->address,dir->DIRport);
 
@@ -473,7 +531,6 @@ try_again:
          terminate_console(0);
          return 1;
       }
-
    }
 
    /* Initialize Director TLS context */
@@ -520,7 +577,7 @@ try_again:
       FILE *fd;
       pm_strcpy(&UA_sock->msg, env);
       pm_strcat(&UA_sock->msg, "/.bconsolerc");
-      fd = fopen(UA_sock->msg, "r");
+      fd = fopen(UA_sock->msg, "rb");
       if (fd) {
          read_and_process_input(fd, UA_sock);
          fclose(fd);
@@ -549,9 +606,11 @@ static void terminate_console(int sig)
       exit(1);
    }
    already_here = true;
-   cleanup_tls();
+   cleanup_crypto();
    free_pool_memory(args);
-   con_term();
+   if (!no_conio) {
+      con_term();
+   }
    (void)WSACleanup();               /* Cleanup Windows sockets */
    if (sig != 0) {
       exit(1);
@@ -657,6 +716,16 @@ get_cmd(FILE *input, const char *prompt, BSOCK *sock, int sec)
 
 #else /* no readline, do it ourselves */
 
+#if !defined(HAVE_WIN32)
+static bool bisatty(int fd)
+{
+   if (no_conio) {
+      return false;
+   }
+   return isatty(fd);
+}
+#endif
+
 /*
  *   Returns: 1 if data available
  *            0 if timeout
@@ -665,11 +734,11 @@ get_cmd(FILE *input, const char *prompt, BSOCK *sock, int sec)
 static int
 wait_for_data(int fd, int sec)
 {
+#if defined(HAVE_WIN32)
+   return 1;
+#else
    fd_set fdset;
    struct timeval tv;
-#ifdef HAVE_WIN32
-   return 1;                          /* select doesn't seem to work on Win32 */
-#endif
 
    tv.tv_sec = sec;
    tv.tv_usec = 0;
@@ -688,6 +757,7 @@ wait_for_data(int fd, int sec)
          return 1;
       }
    }
+#endif
 }
 
 /*
@@ -702,7 +772,7 @@ get_cmd(FILE *input, const char *prompt, BSOCK *sock, int sec)
 {
    int len;
    if (!stop) {
-      if (output == stdout || tee) {
+      if (output == stdout || teeout) {
          sendit(prompt);
       }
    }
@@ -719,7 +789,7 @@ again:
          goto again;
       }
 #ifdef HAVE_CONIO
-      if (isatty(fileno(input))) {
+      if (bisatty(fileno(input))) {
          input_line(sock->msg, len);
          break;
       }
@@ -746,7 +816,7 @@ again:
    return 1;
 }
 
-#endif
+#endif /* end non-readline code */
 
 static int versioncmd(FILE *input, BSOCK *UA_sock)
 {
@@ -767,7 +837,7 @@ static int inputcmd(FILE *input, BSOCK *UA_sock)
       sendit(_("First argument to input command must be a filename.\n"));
       return 1;
    }
-   fd = fopen(argk[1], "r");
+   fd = fopen(argk[1], "rb");
    if (!fd) {
       senditf(_("Cannot open file %s for input. ERR=%s\n"),
          argk[1], strerror(errno));
@@ -781,14 +851,14 @@ static int inputcmd(FILE *input, BSOCK *UA_sock)
 /* Send output to both termina and specified file */
 static int teecmd(FILE *input, BSOCK *UA_sock)
 {
-   tee = true;
+   teeout = true;
    return do_outputcmd(input, UA_sock);
 }
 
 /* Send output to specified "file" */
 static int outputcmd(FILE *input, BSOCK *UA_sock)
 {
-   tee = false;
+   teeout = false;
    return do_outputcmd(input, UA_sock);
 }
 
@@ -796,7 +866,7 @@ static int outputcmd(FILE *input, BSOCK *UA_sock)
 static int do_outputcmd(FILE *input, BSOCK *UA_sock)
 {
    FILE *fd;
-   const char *mode = "a+";
+   const char *mode = "a+b";
 
    if (argc > 3) {
       sendit(_("Too many arguments on output/tee command.\n"));
@@ -806,7 +876,7 @@ static int do_outputcmd(FILE *input, BSOCK *UA_sock)
       if (output != stdout) {
          fclose(output);
          output = stdout;
-         tee = false;
+         teeout = false;
       }
       return 1;
    }
@@ -820,6 +890,16 @@ static int do_outputcmd(FILE *input, BSOCK *UA_sock)
       return 1;
    }
    output = fd;
+   return 1;
+}
+
+static int echocmd(FILE *intut, BSOCK *UA_sock)
+{
+   for (int i=1; i < argc; i++) {
+      senditf("%s", argk[i]);
+      sendit(" ");
+   }
+   sendit("\n");
    return 1;
 }
 
@@ -842,7 +922,7 @@ static int timecmd(FILE *input, BSOCK *UA_sock)
    char sdt[50];
    time_t ttime = time(NULL);
    struct tm tm;
-   localtime_r(&ttime, &tm);
+   (void)localtime_r(&ttime, &tm);
    strftime(sdt, sizeof(sdt), "%d-%b-%Y %H:%M:%S", &tm);
    sendit("\n");
    return 1;
@@ -853,48 +933,50 @@ static int timecmd(FILE *input, BSOCK *UA_sock)
  */
 void senditf(const char *fmt,...)
 {
-    char buf[3000];
-    va_list arg_ptr;
+   char buf[3000];
+   va_list arg_ptr;
 
-    va_start(arg_ptr, fmt);
-    bvsnprintf(buf, sizeof(buf), (char *)fmt, arg_ptr);
-    va_end(arg_ptr);
-    sendit(buf);
+   va_start(arg_ptr, fmt);
+   bvsnprintf(buf, sizeof(buf), (char *)fmt, arg_ptr);
+   va_end(arg_ptr);
+   sendit(buf);
 }
 
 void sendit(const char *buf)
 {
-#ifdef xHAVE_CONIO
-    if (output == stdout || tee) {
-       char *p, *q;
-       /*
-        * Here, we convert every \n into \r\n because the
-        *  terminal is in raw mode when we are using
-        *  conio.
-        */
-       for (p=q=buf; (p=strchr(q, '\n')); ) {
-          if (p-q > 0) {
-             t_sendl(q, p-q);
-          }
-          t_sendl("\r\n", 2);
-          q = ++p;                    /* point after \n */
-       }
-       if (*q) {
-          t_send(q);
-       }
-    }
-    if (output != stdout) {
-       fputs(buf, output);
-    }
+#ifdef CONIO_FIX
+   char obuf[3000];
+   if (output == stdout || teeout) {
+      const char *p, *q;
+      /*
+       * Here, we convert every \n into \r\n because the
+       *  terminal is in raw mode when we are using
+       *  conio.
+       */
+      for (p=q=buf; (p=strchr(q, '\n')); ) {
+         int len = p - q;
+         if (len > 0) {
+            memcpy(obuf, q, len);
+         }
+         memcpy(obuf+len, "\r\n", 3);
+         q = ++p;                    /* point after \n */
+         fputs(obuf, output);
+      }
+      if (*q) {
+         fputs(q, output);
+      }
+      fflush(output);
+   }
+   if (output != stdout) {
+      fputs(buf, output);
+   }
 #else
 
-    fputs(buf, output);
-    fflush(output);
-    if (tee) {
-       fputs(buf, stdout);
-    }
-    if (output != stdout || tee) {
-       fflush(stdout);
-    }
+   fputs(buf, output);
+   fflush(output);
+   if (teeout) {
+      fputs(buf, stdout);
+      fflush(stdout);
+   }
 #endif
 }

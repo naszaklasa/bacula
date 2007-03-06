@@ -1,5 +1,5 @@
 #
-#   Version $Id: Makefile.in,v 1.11.10.3 2005/12/23 09:45:39 kerns Exp $
+#   Version $Id: Makefile.in,v 1.13 2006/06/25 13:58:36 kerns Exp $
 #
 @MCOMMON@
 
@@ -42,8 +42,6 @@ CONS_INC=$(GNOME_INCLUDEDIR)
 CONS_LIBS=$(GNOME_LIBS)
 CONS_LDFLAGS=$(GNOME_LIBDIR) $(GNOMEUI_LIBS)
 
-OPENSSL_INC=@OPENSSL_INC@
-OPENSSL_LIBS=@OPENSSL_LIBS@
 
 .SUFFIXES:	.c .o
 .PHONY:
@@ -51,7 +49,8 @@ OPENSSL_LIBS=@OPENSSL_LIBS@
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile gnome-console @STATIC_GNOME_CONS@
 	@echo "==== Make of gnome-console is good ===="
@@ -61,17 +60,17 @@ support.o:   support.c
 	rm -f support.c.orig
 	mv support.c support.c.orig
 	sed "s%parent = g_object_get_data%parent = \(GtkWidget \*\)g_object_get_data%" support.c.orig >support.c
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
 gnome-console: $(CONSOBJS) ../lib/libbac.a 
 	$(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -o $@ $(CONSOBJS) \
-	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbac -lm $(OPENSSL_LIBS)
+	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbac -lm
 
 static-console: static-gnome-console
 
 static-gnome-console: $(CONSOBJS) ../lib/libbac.a 
 	$(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -o $@ $(CONSOBJS) \
-	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbac -lm $(OPENSSL_LIBS)
+	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbac -lm 
 	strip $@
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
@@ -124,7 +123,7 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(GNOME_INCLUDEDIR) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(GNOME_INCLUDEDIR) $(SQL_INC) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \

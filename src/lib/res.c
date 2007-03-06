@@ -4,26 +4,37 @@
  *     Kern Sibbald, January MM
  *       Split from parse_conf.c April MMV
  *
- *   Version $Id: res.c,v 1.4 2005/08/10 16:35:19 nboichat Exp $
+ *   Version $Id: res.c,v 1.8 2006/11/21 16:13:57 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
-
-extern int debug_level;
 
 /* Each daemon has a slightly different set of
  * resources, so it will define the following
@@ -33,17 +44,6 @@ extern int r_first;
 extern int r_last;
 extern RES_TABLE resources[];
 extern RES **res_head;
-
-#ifdef HAVE_WIN32
-// work around visual studio name manling preventing external linkage since res_all
-// is declared as a different type when instantiated.
-extern "C" CURES res_all;
-extern "C" int res_all_size;
-#else
-extern  CURES res_all;
-extern int res_all_size;
-#endif
-
 
 brwlock_t res_lock;                   /* resource lock */
 static int res_locked = 0;            /* set when resource chains locked -- for debug */

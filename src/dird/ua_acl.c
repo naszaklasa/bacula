@@ -4,28 +4,35 @@
  *
  *     Kern Sibbald, January MMIV
  *
- *   Version  $Id: ua_acl.c,v 1.5 2005/01/29 22:39:00 kerns Exp $
+ *   Version  $Id: ua_acl.c,v 1.8 2006/11/21 13:20:09 kerns Exp $
  */
-
 /*
-   Copyright (C) 2004-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -46,12 +53,15 @@ bool acl_access_ok(UAContext *ua, int acl, char *item, int len)
    /* If no console resource => default console and all is permitted */
    if (!ua->cons) {
       Dmsg0(1400, "Root cons access OK.\n");
-      return true;		      /* No cons resource -> root console OK for everything */
+      return true;                    /* No cons resource -> root console OK for everything */
    }
 
    alist *list = ua->cons->ACL_lists[acl];
-   if (!list) {
-      return false;		      /* List empty, reject everything */
+   if (!list) {                       /* empty list */
+      if (len == 0 && acl == Where_ACL) {
+         return true;                 /* Empty list for Where => empty where */
+      }
+      return false;                   /* List empty, reject everything */
    }
 
    /* Special case *all* gives full access */
@@ -63,7 +73,7 @@ bool acl_access_ok(UAContext *ua, int acl, char *item, int len)
    for (int i=0; i<list->size(); i++) {
       if (strcasecmp(item, (char *)list->get(i)) == 0) {
          Dmsg3(1400, "ACL found %s in %d %s\n", item, acl, (char *)list->get(i));
-	 return true;
+         return true;
       }
    }
    return false;

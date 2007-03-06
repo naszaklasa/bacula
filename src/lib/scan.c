@@ -3,22 +3,35 @@
  *
  *    Kern Sibbald, MM  separated from util.c MMIII
  *
- *   Version $Id: scan.c,v 1.15.2.2 2006/03/20 07:16:40 kerns Exp $
+ *   Version $Id: scan.c,v 1.21 2006/12/03 09:00:00 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
@@ -66,7 +79,7 @@ void strip_trailing_slashes(char *dir)
    p = dir + strlen(dir) - 1;
 
    /* strip trailing slashes */
-   while ((p >= dir) && (*p == '/'))
+   while (p >= dir && IsPathSeparator(*p))
       *p-- = 0;
 }
 
@@ -141,7 +154,18 @@ fstrsch(const char *a, const char *b)   /* folded case search */
 
 /*
  * Return next argument from command line.  Note, this
- * routine is destructive.
+ *   routine is destructive because it stored 0 at the end
+ *   of each argument.
+ * Called with pointer to pointer to command line. This
+ *   pointer is updated to point to the remainder of the
+ *   command line.
+ * 
+ * Returns pointer to next argument -- don't store the result
+ *   in the pointer you passed as an argument ...
+ *   The next argument is terminated by a space unless within
+ *   quotes. Double quote characters (unless preceded by a \) are
+ *   stripped.
+ *   
  */
 char *next_arg(char **s)
 {
@@ -154,8 +178,8 @@ char *next_arg(char **s)
    }
    Dmsg1(900, "Next arg=%s\n", p);
    for (n = q = p; *p ; ) {
-      if (*p == '\\') {
-         p++;
+      if (*p == '\\') {                 /* slash? */
+         p++;                           /* yes, skip it */
          if (*p) {
             *q++ = *p++;
          } else {
@@ -164,16 +188,11 @@ char *next_arg(char **s)
          continue;
       }
       if (*p == '"') {                  /* start or end of quote */
-         if (in_quote) {
-            p++;                        /* skip quote */
-            in_quote = false;
-            continue;
-         }
-         in_quote = true;
          p++;
+         in_quote = !in_quote;          /* change state */
          continue;
       }
-      if (!in_quote && B_ISSPACE(*p)) {     /* end of field */
+      if (!in_quote && B_ISSPACE(*p)) { /* end of field */
          p++;
          break;
       }
@@ -188,7 +207,7 @@ char *next_arg(char **s)
 /*
  * This routine parses the input command line.
  * It makes a copy in args, then builds an
- *  argc, argv like list where
+ *  argc, argk, argv list where:
  *
  *  argc = count of arguments
  *  argk[i] = argument keyword (part preceding =)
@@ -204,11 +223,60 @@ char *next_arg(char **s)
  *  argk[2] = arg3
  *  argv[2] =
  */
-
 int parse_args(POOLMEM *cmd, POOLMEM **args, int *argc,
                char **argk, char **argv, int max_args)
 {
-   char *p, *q, *n;
+   char *p;
+
+   parse_args_only(cmd, args, argc, argk, argv, max_args);
+
+   /* Separate keyword and value */
+   for (int i=0; i < *argc; i++) {
+      p = strchr(argk[i], '=');
+      if (p) {
+         *p++ = 0;                    /* terminate keyword and point to value */
+         if (strlen(p) > MAX_NAME_LENGTH-1) {
+            p[MAX_NAME_LENGTH-1] = 0; /* truncate to max len */
+         }
+      }
+      argv[i] = p;                    /* save ptr to value or NULL */
+   }
+#ifdef xxx_debug
+   for (int i=0; i < *argc; i++) {
+      Pmsg3(000, "Arg %d: kw=%s val=%s\n", i, argk[i], argv[i]?argv[i]:"NULL");
+   }
+#endif
+   return 1;
+}
+
+
+/*
+ * This routine parses the input command line.
+ *   It makes a copy in args, then builds an
+ *   argc, argk, but no argv (values).
+ *   This routine is useful for scanning command lines where the data 
+ *   is a filename and no keywords are expected.  If we scan a filename
+ *   for keywords, any = in the filename will be interpreted as the
+ *   end of a keyword, and this is not good.
+ *
+ *  argc = count of arguments
+ *  argk[i] = argument keyword (part preceding =)
+ *  argv[i] = NULL                         
+ *
+ *  example:  arg1 arg2=abc arg3=
+ *
+ *  argc = c
+ *  argk[0] = arg1
+ *  argv[0] = NULL
+ *  argk[1] = arg2=abc
+ *  argv[1] = NULL
+ *  argk[2] = arg3
+ *  argv[2] =
+ */
+int parse_args_only(POOLMEM *cmd, POOLMEM **args, int *argc,
+                    char **argk, char **argv, int max_args)
+{
+   char *p, *n;
 
    pm_strcpy(args, cmd);
    strip_trailing_junk(*args);
@@ -224,35 +292,9 @@ int parse_args(POOLMEM *cmd, POOLMEM **args, int *argc,
          break;
       }
    }
-   /* Separate keyword and value */
-   for (int i=0; i < *argc; i++) {
-      p = strchr(argk[i], '=');
-      if (p) {
-         *p++ = 0;                    /* terminate keyword and point to value */
-         /* Unquote quoted values */
-         if (*p == '"') {
-            for (n = q = ++p; *p && *p != '"'; ) {
-               if (*p == '\\') {
-                  p++;
-               }
-               *q++ = *p++;
-            }
-            *q = 0;                   /* terminate string */
-            p = n;                    /* point to string */
-         }
-         if (strlen(p) > MAX_NAME_LENGTH-1) {
-            p[MAX_NAME_LENGTH-1] = 0; /* truncate to max len */
-         }
-      }
-      argv[i] = p;                    /* save ptr to value or NULL */
-   }
-#ifdef xxxx
-   for (int i=0; i < *argc; i++) {
-      Pmsg3(000, "Arg %d: kw=%s val=%s\n", i, argk[i], argv[i]?argv[i]:"NULL");
-   }
-#endif
    return 1;
 }
+
 
 /*
  * Given a full filename, split it into its path
@@ -275,16 +317,16 @@ void split_path_and_filename(const char *fname, POOLMEM **path, int *pnl,
     */
    f = fname + len - 1;
    /* "strip" any trailing slashes */
-   while (slen > 1 && *f == '/') {
+   while (slen > 1 && IsPathSeparator(*f)) {
       slen--;
       f--;
    }
    /* Walk back to last slash -- begin of filename */
-   while (slen > 0 && *f != '/') {
+   while (slen > 0 && !IsPathSeparator(*f)) {
       slen--;
       f--;
    }
-   if (*f == '/') {                   /* did we find a slash? */
+   if (IsPathSeparator(*f)) {         /* did we find a slash? */
       f++;                            /* yes, point to filename */
    } else {                           /* no, whole thing must be path name */
       f = fname;
@@ -339,7 +381,9 @@ switch_top:
             }
             vp = (void *)va_arg(ap, void *);
 //          Dmsg2(000, "val=%lld at 0x%lx\n", value, (long unsigned)vp);
-            if (l < 2) {
+            if (l == 0) {
+               *((int *)vp) = (int)value;
+            } else if (l == 1) {
                *((uint32_t *)vp) = (uint32_t)value;
 //             Dmsg0(000, "Store 32 bit int\n");
             } else {

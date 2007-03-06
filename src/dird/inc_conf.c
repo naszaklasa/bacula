@@ -4,22 +4,35 @@
  *
  *     Kern Sibbald, March MMIII
  *
- *     Version $Id: inc_conf.c,v 1.40.2.2 2006/04/12 20:49:17 kerns Exp $
+ *     Version $Id: inc_conf.c,v 1.52 2006/11/21 16:45:09 robertnelson Exp $
  */
 /*
-   Copyright (C) 2003-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -37,6 +50,7 @@ static void store_newinc(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_regex(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_wild(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_fstype(LEX *lc, RES_ITEM *item, int index, int pass);
+static void store_drivetype(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_opts(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_fname(LEX *lc, RES_ITEM *item, int index, int pass);
 static void options_res(LEX *lc, RES_ITEM *item, int index, int pass);
@@ -51,7 +65,13 @@ static void setup_current_opts(void);
  * then move it to allocated memory when the resource
  * scan is complete.
  */
+#if defined(_MSC_VER)
+extern "C" { // work around visual compiler mangling variables
+    extern URES res_all;
+}
+#else
 extern URES res_all;
+#endif
 extern int  res_all_size;
 
 /* We build the current new Include and Exclude items here */
@@ -62,42 +82,45 @@ static INCEXE res_incexe;
  *   name             handler     value    code flags default_value
  */
 static RES_ITEM newinc_items[] = {
-   {"file",            store_fname,   NULL,     0, 0, 0},
-   {"options",         options_res,   NULL,     0, 0, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {"file",            store_fname,   {0},      0, 0, 0},
+   {"options",         options_res,   {0},      0, 0, 0},
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 /*
  * Items that are valid in an Options resource
  */
 static RES_ITEM options_items[] = {
-   {"compression",     store_opts,    NULL,     0, 0, 0},
-   {"signature",       store_opts,    NULL,     0, 0, 0},
-   {"verify",          store_opts,    NULL,     0, 0, 0},
-   {"onefs",           store_opts,    NULL,     0, 0, 0},
-   {"recurse",         store_opts,    NULL,     0, 0, 0},
-   {"sparse",          store_opts,    NULL,     0, 0, 0},
-   {"hardlinks",       store_opts,    NULL,     0, 0, 0},
-   {"readfifo",        store_opts,    NULL,     0, 0, 0},
-   {"replace",         store_opts,    NULL,     0, 0, 0},
-   {"portable",        store_opts,    NULL,     0, 0, 0},
-   {"mtimeonly",       store_opts,    NULL,     0, 0, 0},
-   {"keepatime",       store_opts,    NULL,     0, 0, 0},
-   {"regex",           store_regex,   NULL,     0, 0, 0},
-   {"regexdir",        store_regex,   NULL,     1, 0, 0},
-   {"regexfile",       store_regex,   NULL,     2, 0, 0},
-   {"base",            store_base,    NULL,     0, 0, 0},
-   {"wild",            store_wild,    NULL,     0, 0, 0},
-   {"wilddir",         store_wild,    NULL,     1, 0, 0},
-   {"wildfile",        store_wild,    NULL,     2, 0, 0},
-   {"exclude",         store_opts,    NULL,     0, 0, 0},
-   {"aclsupport",      store_opts,    NULL,     0, 0, 0},
-   {"reader",          store_reader,  NULL,     0, 0, 0},
-   {"writer",          store_writer,  NULL,     0, 0, 0},
-   {"ignorecase",      store_opts,    NULL,     0, 0, 0},
-   {"fstype",          store_fstype,  NULL,     0, 0, 0},
-   {"hfsplussupport",  store_opts,    NULL,     0, 0, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {"compression",     store_opts,    {0},     0, 0, 0},
+   {"signature",       store_opts,    {0},     0, 0, 0},
+   {"verify",          store_opts,    {0},     0, 0, 0},
+   {"onefs",           store_opts,    {0},     0, 0, 0},
+   {"recurse",         store_opts,    {0},     0, 0, 0},
+   {"sparse",          store_opts,    {0},     0, 0, 0},
+   {"hardlinks",       store_opts,    {0},     0, 0, 0},
+   {"readfifo",        store_opts,    {0},     0, 0, 0},
+   {"replace",         store_opts,    {0},     0, 0, 0},
+   {"portable",        store_opts,    {0},     0, 0, 0},
+   {"mtimeonly",       store_opts,    {0},     0, 0, 0},
+   {"keepatime",       store_opts,    {0},     0, 0, 0},
+   {"regex",           store_regex,   {0},     0, 0, 0},
+   {"regexdir",        store_regex,   {0},     1, 0, 0},
+   {"regexfile",       store_regex,   {0},     2, 0, 0},
+   {"base",            store_base,    {0},     0, 0, 0},
+   {"wild",            store_wild,    {0},     0, 0, 0},
+   {"wilddir",         store_wild,    {0},     1, 0, 0},
+   {"wildfile",        store_wild,    {0},     2, 0, 0},
+   {"exclude",         store_opts,    {0},     0, 0, 0},
+   {"aclsupport",      store_opts,    {0},     0, 0, 0},
+   {"reader",          store_reader,  {0},     0, 0, 0},
+   {"writer",          store_writer,  {0},     0, 0, 0},
+   {"ignorecase",      store_opts,    {0},     0, 0, 0},
+   {"fstype",          store_fstype,  {0},     0, 0, 0},
+   {"hfsplussupport",  store_opts,    {0},     0, 0, 0},
+   {"noatime",         store_opts,    {0},     0, 0, 0},
+   {"enhancedwild",    store_opts,    {0},     0, 0, 0},
+   {"drivetype",       store_drivetype, {0},     0, 0, 0},
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 
@@ -105,7 +128,7 @@ static RES_ITEM options_items[] = {
 enum {
    INC_KW_NONE,
    INC_KW_COMPRESSION,
-   INC_KW_SIGNATURE,
+   INC_KW_DIGEST,
    INC_KW_ENCRYPTION,
    INC_KW_VERIFY,
    INC_KW_ONEFS,
@@ -120,7 +143,9 @@ enum {
    INC_KW_EXCLUDE,
    INC_KW_ACL,
    INC_KW_IGNORECASE,
-   INC_KW_HFSPLUS
+   INC_KW_HFSPLUS,
+   INC_KW_NOATIME,
+   INC_KW_ENHANCEDWILD
 };
 
 /*
@@ -131,7 +156,7 @@ enum {
  */
 static struct s_kw FS_option_kw[] = {
    {"compression", INC_KW_COMPRESSION},
-   {"signature",   INC_KW_SIGNATURE},
+   {"signature",   INC_KW_DIGEST},
    {"encryption",  INC_KW_ENCRYPTION},
    {"verify",      INC_KW_VERIFY},
    {"onefs",       INC_KW_ONEFS},
@@ -147,6 +172,8 @@ static struct s_kw FS_option_kw[] = {
    {"aclsupport",  INC_KW_ACL},
    {"ignorecase",  INC_KW_IGNORECASE},
    {"hfsplussupport", INC_KW_HFSPLUS},
+   {"noatime",     INC_KW_NOATIME},
+   {"enhancedwild", INC_KW_ENHANCEDWILD},
    {NULL,          0}
 };
 
@@ -165,8 +192,10 @@ struct s_fs_opt {
  * included files.
  */
 static struct s_fs_opt FS_options[] = {
-   {"md5",      INC_KW_SIGNATURE,    "M"},
-   {"sha1",     INC_KW_SIGNATURE,    "S"},
+   {"md5",      INC_KW_DIGEST,        "M"},
+   {"sha1",     INC_KW_DIGEST,        "S"},
+   {"sha256",   INC_KW_DIGEST,       "S2"},
+   {"sha512",   INC_KW_DIGEST,       "S3"},
    {"gzip",     INC_KW_COMPRESSION,  "Z6"},
    {"gzip1",    INC_KW_COMPRESSION,  "Z1"},
    {"gzip2",    INC_KW_COMPRESSION,  "Z2"},
@@ -206,6 +235,10 @@ static struct s_fs_opt FS_options[] = {
    {"no",       INC_KW_IGNORECASE,    "0"},
    {"yes",      INC_KW_HFSPLUS,       "R"},   /* "R" for resource fork */
    {"no",       INC_KW_HFSPLUS,       "0"},
+   {"yes",      INC_KW_NOATIME,       "K"},
+   {"no",       INC_KW_NOATIME,       "0"},
+   {"yes",      INC_KW_ENHANCEDWILD,  "K"},
+   {"no",       INC_KW_ENHANCEDWILD,  "0"},
    {NULL,       0,                      0}
 };
 
@@ -239,7 +272,7 @@ static void scan_include_options(LEX *lc, int keyword, char *opts, int optlen)
     */
    } else {
       for (i=0; FS_options[i].name; i++) {
-         if (strcasecmp(lc->str, FS_options[i].name) == 0 && FS_options[i].keyword == keyword) {
+         if (FS_options[i].keyword == keyword && strcasecmp(lc->str, FS_options[i].name) == 0) {
             /* NOTE! maximum 2 letters here or increase option[3] */
             option[0] = FS_options[i].option[0];
             option[1] = FS_options[i].option[1];
@@ -475,9 +508,15 @@ static void store_wild(LEX *lc, RES_ITEM *item, int index, int pass)
             res_incexe.current_opts->wilddir.append(bstrdup(lc->str));
             newsize = res_incexe.current_opts->wilddir.size();
          } else if (item->code == 2) {
-            type = "wildfile";
-            res_incexe.current_opts->wildfile.append(bstrdup(lc->str));
-            newsize = res_incexe.current_opts->wildfile.size();
+            if (strpbrk(lc->str, "/\\") != NULL) {
+               type = "wildfile";
+               res_incexe.current_opts->wildfile.append(bstrdup(lc->str));
+               newsize = res_incexe.current_opts->wildfile.size();
+            } else {
+               type = "wildbase";
+               res_incexe.current_opts->wildbase.append(bstrdup(lc->str));
+               newsize = res_incexe.current_opts->wildbase.size();
+            }
          } else {
             type = "wild";
             res_incexe.current_opts->wild.append(bstrdup(lc->str));
@@ -511,6 +550,29 @@ static void store_fstype(LEX *lc, RES_ITEM *item, int index, int pass)
          break;
       default:
          scan_err1(lc, _("Expected an fstype string, got: %s\n"), lc->str);
+      }
+   }
+   scan_to_eol(lc);
+}
+
+/* Store drivetype info */
+static void store_drivetype(LEX *lc, RES_ITEM *item, int index, int pass)
+{
+   int token;
+
+   token = lex_get_token(lc, T_SKIP_EOL);
+   if (pass == 1) {
+      /* Pickup drivetype string */
+      switch (token) {
+      case T_IDENTIFIER:
+      case T_UNQUOTED_STRING:
+      case T_QUOTED_STRING:
+         res_incexe.current_opts->drivetype.append(bstrdup(lc->str));
+         Dmsg3(900, "set drivetype %p size=%d %s\n",
+            res_incexe.current_opts, res_incexe.current_opts->drivetype.size(), lc->str);
+         break;
+      default:
+         scan_err1(lc, _("Expected an drivetype string, got: %s\n"), lc->str);
       }
    }
    scan_to_eol(lc);
@@ -552,7 +614,6 @@ static void store_fname(LEX *lc, RES_ITEM *item, int index, int pass)
          scan_err1(lc, _("Expected a filename, got: %s"), lc->str);
       }
    }
-
    scan_to_eol(lc);
 }
 
@@ -645,8 +706,10 @@ static void setup_current_opts(void)
    fo->wild.init(1, true);
    fo->wilddir.init(1, true);
    fo->wildfile.init(1, true);
+   fo->wildbase.init(1, true);
    fo->base.init(1, true);
    fo->fstype.init(1, true);
+   fo->drivetype.init(1, true);
    res_incexe.current_opts = fo;
    if (res_incexe.num_opts == 0) {
       res_incexe.opts_list = (FOPTS **)malloc(sizeof(FOPTS *));

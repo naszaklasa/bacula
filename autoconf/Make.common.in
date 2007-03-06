@@ -23,8 +23,10 @@ manprefix =
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 scriptdir = @scriptdir@
-mandir = @mandir@/man8
+mandir = @mandir@
 manext = 8
+
+NO_ECHO = @
 
 # Tools & program stuff
 CC = @CC@
@@ -41,6 +43,7 @@ CMP = @CMP@
 TBL = @TBL@
 AR = @AR@
 RANLIB = @RANLIB@
+MKDIR = @BUILD_DIR@/autoconf/mkinstalldirs
 INSTALL = @INSTALL@
 # add the -s to the following in PRODUCTION mode
 INSTALL_PROGRAM = @INSTALL@ -m @SBINPERM@

@@ -3,28 +3,38 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: stored_conf.c,v 1.76.2.3 2006/03/14 21:41:45 kerns Exp $
+ *   Version $Id: stored_conf.c,v 1.85 2006/12/22 15:40:16 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
-
-extern int debug_level;
-
 
 /* First and last resource ids */
 int r_first = R_FIRST;
@@ -36,9 +46,16 @@ RES **res_head = sres_head;
 /* Forward referenced subroutines */
 static void store_devtype(LEX *lc, RES_ITEM *item, int index, int pass);
 
+
 /* We build the current resource here statically,
  * then move it to dynamic memory */
+#if defined(_MSC_VER)
+extern "C" { // work around visual compiler mangling variables
+    URES res_all;
+}
+#else
 URES res_all;
+#endif
 int res_all_size = sizeof(res_all);
 
 /* Definition of records permitted within each
@@ -60,16 +77,16 @@ static RES_ITEM store_items[] = {
    {"scriptsdirectory",      store_dir,  ITEM(res_store.scripts_directory), 0, 0, 0},
    {"maximumconcurrentjobs", store_pint, ITEM(res_store.max_concurrent_jobs), 0, ITEM_DEFAULT, 10},
    {"heartbeatinterval",     store_time, ITEM(res_store.heartbeat_interval), 0, ITEM_DEFAULT, 0},
-   {"tlsenable",             store_yesno,     ITEM(res_store.tls_enable), 1, 0, 0},
-   {"tlsrequire",            store_yesno,     ITEM(res_store.tls_require), 1, 0, 0},
-   {"tlsverifypeer",         store_yesno,     ITEM(res_store.tls_verify_peer), 1, ITEM_DEFAULT, 1},
+   {"tlsenable",             store_bit,     ITEM(res_store.tls_enable), 1, 0, 0},
+   {"tlsrequire",            store_bit,     ITEM(res_store.tls_require), 1, 0, 0},
+   {"tlsverifypeer",         store_bit,     ITEM(res_store.tls_verify_peer), 1, ITEM_DEFAULT, 1},
    {"tlscacertificatefile",  store_dir,       ITEM(res_store.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir",   store_dir,       ITEM(res_store.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate",        store_dir,       ITEM(res_store.tls_certfile), 0, 0, 0},
    {"tlskey",                store_dir,       ITEM(res_store.tls_keyfile), 0, 0, 0},
    {"tlsdhfile",             store_dir,       ITEM(res_store.tls_dhfile), 0, 0, 0},
    {"tlsallowedcn",          store_alist_str, ITEM(res_store.tls_allowed_cns), 0, 0, 0},
-   {NULL, NULL, 0, 0, 0, 0}
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 
@@ -78,17 +95,17 @@ static RES_ITEM dir_items[] = {
    {"name",        store_name,     ITEM(res_dir.hdr.name),   0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(res_dir.hdr.desc),   0, 0, 0},
    {"password",    store_password, ITEM(res_dir.password),   0, ITEM_REQUIRED, 0},
-   {"monitor",     store_yesno,    ITEM(res_dir.monitor),   1, ITEM_DEFAULT, 0},
-   {"tlsenable",            store_yesno,     ITEM(res_dir.tls_enable), 1, 0, 0},
-   {"tlsrequire",           store_yesno,     ITEM(res_dir.tls_require), 1, 0, 0},
-   {"tlsverifypeer",        store_yesno,     ITEM(res_dir.tls_verify_peer), 1, ITEM_DEFAULT, 1},
+   {"monitor",     store_bit,    ITEM(res_dir.monitor),   1, ITEM_DEFAULT, 0},
+   {"tlsenable",            store_bit,     ITEM(res_dir.tls_enable), 1, 0, 0},
+   {"tlsrequire",           store_bit,     ITEM(res_dir.tls_require), 1, 0, 0},
+   {"tlsverifypeer",        store_bit,     ITEM(res_dir.tls_verify_peer), 1, ITEM_DEFAULT, 1},
    {"tlscacertificatefile", store_dir,       ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir",  store_dir,       ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate",       store_dir,       ITEM(res_dir.tls_certfile), 0, 0, 0},
    {"tlskey",               store_dir,       ITEM(res_dir.tls_keyfile), 0, 0, 0},
    {"tlsdhfile",            store_dir,       ITEM(res_dir.tls_dhfile), 0, 0, 0},
    {"tlsallowedcn",         store_alist_str, ITEM(res_dir.tls_allowed_cns), 0, 0, 0},
-   {NULL, NULL, 0, 0, 0, 0}
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 /* Device definition */
@@ -98,28 +115,28 @@ static RES_ITEM dev_items[] = {
    {"mediatype",             store_strname,ITEM(res_dev.media_type),      0, ITEM_REQUIRED, 0},
    {"devicetype",            store_devtype,ITEM(res_dev.dev_type), 0, 0, 0},
    {"archivedevice",         store_strname,ITEM(res_dev.device_name),     0, ITEM_REQUIRED, 0},
-   {"hardwareendoffile",     store_yesno,  ITEM(res_dev.cap_bits), CAP_EOF,  ITEM_DEFAULT, 1},
-   {"hardwareendofmedium",   store_yesno,  ITEM(res_dev.cap_bits), CAP_EOM,  ITEM_DEFAULT, 1},
-   {"backwardspacerecord",   store_yesno,  ITEM(res_dev.cap_bits), CAP_BSR,  ITEM_DEFAULT, 1},
-   {"backwardspacefile",     store_yesno,  ITEM(res_dev.cap_bits), CAP_BSF,  ITEM_DEFAULT, 1},
-   {"bsfateom",              store_yesno,  ITEM(res_dev.cap_bits), CAP_BSFATEOM, ITEM_DEFAULT, 0},
-   {"twoeof",                store_yesno,  ITEM(res_dev.cap_bits), CAP_TWOEOF, ITEM_DEFAULT, 0},
-   {"forwardspacerecord",    store_yesno,  ITEM(res_dev.cap_bits), CAP_FSR,  ITEM_DEFAULT, 1},
-   {"forwardspacefile",      store_yesno,  ITEM(res_dev.cap_bits), CAP_FSF,  ITEM_DEFAULT, 1},
-   {"fastforwardspacefile",  store_yesno,  ITEM(res_dev.cap_bits), CAP_FASTFSF, ITEM_DEFAULT, 1},
-   {"removablemedia",        store_yesno,  ITEM(res_dev.cap_bits), CAP_REM,  ITEM_DEFAULT, 1},
-   {"randomaccess",          store_yesno,  ITEM(res_dev.cap_bits), CAP_RACCESS, 0, 0},
-   {"automaticmount",        store_yesno,  ITEM(res_dev.cap_bits), CAP_AUTOMOUNT,  ITEM_DEFAULT, 0},
-   {"labelmedia",            store_yesno,  ITEM(res_dev.cap_bits), CAP_LABEL,      ITEM_DEFAULT, 0},
-   {"alwaysopen",            store_yesno,  ITEM(res_dev.cap_bits), CAP_ALWAYSOPEN, ITEM_DEFAULT, 1},
-   {"autochanger",           store_yesno,  ITEM(res_dev.cap_bits), CAP_AUTOCHANGER, ITEM_DEFAULT, 0},
-   {"closeonpoll",           store_yesno,  ITEM(res_dev.cap_bits), CAP_CLOSEONPOLL, ITEM_DEFAULT, 0},
-   {"blockpositioning",      store_yesno,  ITEM(res_dev.cap_bits), CAP_POSITIONBLOCKS, ITEM_DEFAULT, 1},
-   {"usemtiocget",           store_yesno,  ITEM(res_dev.cap_bits), CAP_MTIOCGET, ITEM_DEFAULT, 1},
-   {"checklabels",           store_yesno,  ITEM(res_dev.cap_bits), CAP_CHECKLABELS, ITEM_DEFAULT, 0},
-   {"requiresmount",         store_yesno,  ITEM(res_dev.cap_bits), CAP_REQMOUNT, ITEM_DEFAULT, 0},
-   {"offlineonunmount",      store_yesno,  ITEM(res_dev.cap_bits), CAP_OFFLINEUNMOUNT, ITEM_DEFAULT, 0},
-   {"autoselect",            store_yesno,  ITEM(res_dev.autoselect), 1, ITEM_DEFAULT, 1},
+   {"hardwareendoffile",     store_bit,  ITEM(res_dev.cap_bits), CAP_EOF,  ITEM_DEFAULT, 1},
+   {"hardwareendofmedium",   store_bit,  ITEM(res_dev.cap_bits), CAP_EOM,  ITEM_DEFAULT, 1},
+   {"backwardspacerecord",   store_bit,  ITEM(res_dev.cap_bits), CAP_BSR,  ITEM_DEFAULT, 1},
+   {"backwardspacefile",     store_bit,  ITEM(res_dev.cap_bits), CAP_BSF,  ITEM_DEFAULT, 1},
+   {"bsfateom",              store_bit,  ITEM(res_dev.cap_bits), CAP_BSFATEOM, ITEM_DEFAULT, 0},
+   {"twoeof",                store_bit,  ITEM(res_dev.cap_bits), CAP_TWOEOF, ITEM_DEFAULT, 0},
+   {"forwardspacerecord",    store_bit,  ITEM(res_dev.cap_bits), CAP_FSR,  ITEM_DEFAULT, 1},
+   {"forwardspacefile",      store_bit,  ITEM(res_dev.cap_bits), CAP_FSF,  ITEM_DEFAULT, 1},
+   {"fastforwardspacefile",  store_bit,  ITEM(res_dev.cap_bits), CAP_FASTFSF, ITEM_DEFAULT, 1},
+   {"removablemedia",        store_bit,  ITEM(res_dev.cap_bits), CAP_REM,  ITEM_DEFAULT, 1},
+   {"randomaccess",          store_bit,  ITEM(res_dev.cap_bits), CAP_RACCESS, 0, 0},
+   {"automaticmount",        store_bit,  ITEM(res_dev.cap_bits), CAP_AUTOMOUNT,  ITEM_DEFAULT, 0},
+   {"labelmedia",            store_bit,  ITEM(res_dev.cap_bits), CAP_LABEL,      ITEM_DEFAULT, 0},
+   {"alwaysopen",            store_bit,  ITEM(res_dev.cap_bits), CAP_ALWAYSOPEN, ITEM_DEFAULT, 1},
+   {"autochanger",           store_bit,  ITEM(res_dev.cap_bits), CAP_AUTOCHANGER, ITEM_DEFAULT, 0},
+   {"closeonpoll",           store_bit,  ITEM(res_dev.cap_bits), CAP_CLOSEONPOLL, ITEM_DEFAULT, 0},
+   {"blockpositioning",      store_bit,  ITEM(res_dev.cap_bits), CAP_POSITIONBLOCKS, ITEM_DEFAULT, 1},
+   {"usemtiocget",           store_bit,  ITEM(res_dev.cap_bits), CAP_MTIOCGET, ITEM_DEFAULT, 1},
+   {"checklabels",           store_bit,  ITEM(res_dev.cap_bits), CAP_CHECKLABELS, ITEM_DEFAULT, 0},
+   {"requiresmount",         store_bit,  ITEM(res_dev.cap_bits), CAP_REQMOUNT, ITEM_DEFAULT, 0},
+   {"offlineonunmount",      store_bit,  ITEM(res_dev.cap_bits), CAP_OFFLINEUNMOUNT, ITEM_DEFAULT, 0},
+   {"autoselect",            store_bit,  ITEM(res_dev.autoselect), 1, ITEM_DEFAULT, 1},
    {"changerdevice",         store_strname,ITEM(res_dev.changer_name), 0, 0, 0},
    {"changercommand",        store_strname,ITEM(res_dev.changer_command), 0, 0, 0},
    {"alertcommand",          store_strname,ITEM(res_dev.alert_command), 0, 0, 0},
@@ -145,7 +162,7 @@ static RES_ITEM dev_items[] = {
    {"writepartcommand",      store_strname,ITEM(res_dev.write_part_command), 0, 0, 0},
    {"freespacecommand",      store_strname,ITEM(res_dev.free_space_command), 0, 0, 0},
    {"labeltype",             store_label,  ITEM(res_dev.label_type), 0, 0, 0},
-   {NULL, NULL, 0, 0, 0, 0}
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 /* Autochanger definition */
@@ -155,11 +172,11 @@ static RES_ITEM changer_items[] = {
    {"device",            store_alist_res, ITEM(res_changer.device),   R_DEVICE, ITEM_REQUIRED, 0},
    {"changerdevice",     store_strname,   ITEM(res_changer.changer_name),    0, ITEM_REQUIRED, 0},
    {"changercommand",    store_strname,   ITEM(res_changer.changer_command), 0, ITEM_REQUIRED, 0},
-   {NULL, NULL, 0, 0, 0, 0}
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 
-// {"mountanonymousvolumes", store_yesno,  ITEM(res_dev.cap_bits), CAP_ANONVOLS,   ITEM_DEFAULT, 0},
+// {"mountanonymousvolumes", store_bit,  ITEM(res_dev.cap_bits), CAP_ANONVOLS,   ITEM_DEFAULT, 0},
 
 
 /* Message resource */
@@ -265,7 +282,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
          res->res_dev.hdr.name,
          res->res_dev.media_type, res->res_dev.device_name,
          res->res_dev.label_type);
-      sendit(sock, "        rew_wait=%d min_bs=%d max_bs=%d chgr_wait=%d\n",
+      sendit(sock, "        rew_wait=%" lld " min_bs=%d max_bs=%d chgr_wait=%" lld "\n",
          res->res_dev.max_rewind_wait, res->res_dev.min_block_size,
          res->res_dev.max_block_size, res->res_dev.max_changer_wait);
       sendit(sock, "        max_jobs=%d max_files=%" lld " max_size=%" lld "\n",
@@ -642,16 +659,17 @@ void save_resource(int type, RES_ITEM *items, int pass)
       if (!res_head[rindex]) {
          res_head[rindex] = (RES *)res; /* store first entry */
       } else {
-         RES *next;
+         RES *next, *last;
          /* Add new res to end of chain */
-         for (next=res_head[rindex]; next->next; next=next->next) {
+         for (last=next=res_head[rindex]; next; next=next->next) {
+            last = next;
             if (strcmp(next->name, res->res_dir.hdr.name) == 0) {
                Emsg2(M_ERROR_TERM, 0,
                   _("Attempt to define second \"%s\" resource named \"%s\" is not permitted.\n"),
                   resources[rindex].name, res->res_dir.hdr.name);
             }
          }
-         next->next = (RES *)res;
+         last->next = (RES *)res;
          Dmsg2(90, "Inserting %s res: %s\n", res_to_str(type),
                res->res_dir.hdr.name);
       }

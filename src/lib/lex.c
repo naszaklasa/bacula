@@ -3,24 +3,36 @@
  *
  *   Kern Sibbald, 2000
  *
- *   Version $Id: lex.c,v 1.38.2.1 2006/06/04 12:24:40 kerns Exp $
+ *   Version $Id: lex.c,v 1.45 2006/11/21 16:13:57 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
 
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "lex.h"
@@ -155,7 +167,7 @@ LEX *lex_open_file(LEX *lf, const char *filename, LEX_ERROR_HANDLER *scan_error)
    char *fname = bstrdup(filename);
 
 
-   if ((fd = fopen(fname, "r")) == NULL) {
+   if ((fd = fopen(fname, "rb")) == NULL) {
       return NULL;
    }
    Dmsg1(400, "Open config file: %s\n", fname);
@@ -324,6 +336,7 @@ lex_get_token(LEX *lf, int expect)
    int ch;
    int token = T_NONE;
    bool esc_next = false;
+   int unicode_count = 0;
 
    Dmsg0(dbglvl, "enter lex_get_token\n");
    while (token == T_NONE) {
@@ -394,6 +407,16 @@ lex_get_token(LEX *lf, int expect)
          case '@':
             lf->state = lex_include;
             begin_str(lf, 0);
+            break;
+         case 0xEF:
+            if (lf->line_no != 1 || lf->col_no != 1)
+            {
+               lf->state = lex_string;
+               begin_str(lf, ch);
+               break;
+            }
+            lf->state = lex_unicode_mark;
+            unicode_count = 1;
             break;
          default:
             lf->state = lex_string;
@@ -525,6 +548,27 @@ lex_get_token(LEX *lf, int expect)
             break;
          }
          add_str(lf, ch);
+         break;
+      case lex_unicode_mark:
+         if (ch == L_EOF) {
+            token = T_ERROR;
+            break;
+         }
+         unicode_count++;
+         if (unicode_count == 2) {
+            if (ch != 0xBB) {
+               token = T_ERROR;
+               break;
+            }
+         } else if (unicode_count == 3) {
+            if (ch != 0xBF) {
+               token = T_ERROR;
+               break;
+            }
+            token = T_UNICODE_MARK;
+            lf->state = lex_none;
+            break;
+         }
          break;
       }
       Dmsg4(dbglvl, "ch=%d state=%s token=%s %c\n", ch, lex_state_to_str(lf->state),

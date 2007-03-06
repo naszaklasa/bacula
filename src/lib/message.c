@@ -3,34 +3,43 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: message.c,v 1.111.2.1 2005/12/16 16:39:02 kerns Exp $
+ *   Version $Id: message.c,v 1.134 2006/12/01 13:14:49 ricozz Exp $
  *
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
 
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
 #include "jcr.h"
 
-#if !defined(HAVE_CONSOLE)
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
-#include <windows.h>
-#endif
-#endif
+sql_query p_sql_query = NULL;
+sql_escape p_sql_escape = NULL;
 
 #define FULL_LOCATION 1               /* set for file:line in Debug messages */
 
@@ -51,25 +60,13 @@ char con_fname[500];                  /* Console filename */
 FILE *con_fd = NULL;                  /* Console file descriptor */
 brwlock_t con_lock;                   /* Console lock structure */
 
-#ifdef HAVE_POSTGRESQL
-char catalog_db[] = "PostgreSQL";
-#else
-#ifdef HAVE_MYSQL
-char catalog_db[] = "MySQL";
-#else
-#ifdef HAVE_SQLITE
-char catalog_db[] = "SQLite";
-#else
-char catalog_db[] = "Internal";
-#endif
-#endif
-#endif
+static char *catalog_db = NULL;       /* database type */
 
 const char *host_os = HOST_OS;
 const char *distname = DISTNAME;
 const char *distver = DISTVER;
 static FILE *trace_fd = NULL;
-#ifdef HAVE_WIN32
+#if defined(HAVE_WIN32)
 static bool trace = true;
 #else
 static bool trace = false;
@@ -108,15 +105,15 @@ void my_name_is(int argc, char *argv[], const char *name)
    if (argc>0 && argv && argv[0]) {
       /* strip trailing filename and save exepath */
       for (l=p=argv[0]; *p; p++) {
-         if (*p == '/') {
+         if (IsPathSeparator(*p)) {
             l = p;                       /* set pos of last slash */
          }
       }
-      if (*l == '/') {
+      if (IsPathSeparator(*l)) {
          l++;
       } else {
          l = argv[0];
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
+#if defined(HAVE_WIN32)
          /* On Windows allow c: junk */
          if (l[1] == ':') {
             l += 2;
@@ -138,7 +135,7 @@ void my_name_is(int argc, char *argv[], const char *name)
          *q++ = *p++;
       }
       *q = 0;
-      if (strchr(exepath, '.') || exepath[0] != '/') {
+      if (strchr(exepath, '.') || !IsPathSeparator(exepath[0])) {
          if (getcwd(cpath, sizeof(cpath))) {
             free(exepath);
             exepath = (char *)malloc(strlen(cpath) + 1 + len);
@@ -147,6 +144,23 @@ void my_name_is(int argc, char *argv[], const char *name)
       }
       Dmsg2(500, "exepath=%s\nexename=%s\n", exepath, exename);
    }
+}
+
+const char *
+get_db_type(void)
+{
+   return catalog_db != NULL ? catalog_db : "unknown";
+}
+
+void
+set_db_type(const char *name)
+{
+   if (catalog_db != NULL)
+   {
+      free(catalog_db);
+   }
+
+   catalog_db = bstrdup(name);
 }
 
 /*
@@ -167,7 +181,7 @@ init_msg(JCR *jcr, MSGS *msg)
       init_last_jobs_list();
    }
 
-#ifndef HAVE_WIN32
+#if !defined(HAVE_WIN32)
    /*
     * Make sure we have fd's 0, 1, 2 open
     *  If we don't do this one of our sockets may open
@@ -192,12 +206,10 @@ init_msg(JCR *jcr, MSGS *msg)
    if (msg == NULL) {
       daemon_msgs = (MSGS *)malloc(sizeof(MSGS));
       memset(daemon_msgs, 0, sizeof(MSGS));
-#ifndef WIN32
       for (i=1; i<=M_MAX; i++) {
          add_msg_dest(daemon_msgs, MD_STDOUT, i, NULL, NULL);
       }
-#endif
-      Dmsg1(050, "Create daemon global message resource 0x%x\n", daemon_msgs);
+      Dmsg1(050, "Create daemon global message resource %p\n", daemon_msgs);
       return;
    }
 
@@ -235,7 +247,7 @@ init_msg(JCR *jcr, MSGS *msg)
       daemon_msgs->dest_chain = temp_chain;
       memcpy(daemon_msgs->send_msg, msg->send_msg, sizeof(msg->send_msg));
    }
-   Dmsg2(250, "Copy message resource 0x%x to 0x%x\n", msg, temp_chain);
+   Dmsg2(250, "Copy message resource %p to %p\n", msg, temp_chain);
 
 }
 
@@ -257,7 +269,7 @@ void init_console_msg(const char *wd)
       console_msg_pending = 1;
    }
    close(fd);
-   con_fd = fopen(con_fname, "a+");
+   con_fd = fopen(con_fname, "a+b");
    if (!con_fd) {
       berrno be;
       Emsg2(M_ERROR, 0, _("Could not open console message file %s: ERR=%s\n"),
@@ -289,7 +301,7 @@ void add_msg_dest(MSGS *msg, int dest_code, int msg_type, char *where, char *mai
    for (d=msg->dest_chain; d; d=d->next) {
       if (dest_code == d->dest_code && ((where == NULL && d->where == NULL) ||
                      (strcmp(where, d->where) == 0))) {
-         Dmsg4(850, "Add to existing d=%x msgtype=%d destcode=%d where=%s\n",
+         Dmsg4(850, "Add to existing d=%p msgtype=%d destcode=%d where=%s\n",
              d, msg_type, dest_code, NPRT(where));
          set_bit(msg_type, d->msg_types);
          set_bit(msg_type, msg->send_msg);  /* set msg_type bit in our local */
@@ -309,7 +321,7 @@ void add_msg_dest(MSGS *msg, int dest_code, int msg_type, char *where, char *mai
    if (mail_cmd) {
       d->mail_cmd = bstrdup(mail_cmd);
    }
-   Dmsg5(850, "add new d=%x msgtype=%d destcode=%d where=%s mailcmd=%s\n",
+   Dmsg5(850, "add new d=%p msgtype=%d destcode=%d where=%s mailcmd=%s\n",
           d, msg_type, dest_code, NPRT(where), NPRT(d->mail_cmd));
    msg->dest_chain = d;
 }
@@ -324,11 +336,11 @@ void rem_msg_dest(MSGS *msg, int dest_code, int msg_type, char *where)
    DEST *d;
 
    for (d=msg->dest_chain; d; d=d->next) {
-      Dmsg2(850, "Remove_msg_dest d=%x where=%s\n", d, NPRT(d->where));
+      Dmsg2(850, "Remove_msg_dest d=%p where=%s\n", d, NPRT(d->where));
       if (bit_is_set(msg_type, d->msg_types) && (dest_code == d->dest_code) &&
           ((where == NULL && d->where == NULL) ||
                      (strcmp(where, d->where) == 0))) {
-         Dmsg3(850, "Found for remove d=%x msgtype=%d destcode=%d\n",
+         Dmsg3(850, "Found for remove d=%p msgtype=%d destcode=%d\n",
                d, msg_type, dest_code);
          clear_bit(msg_type, d->msg_types);
          Dmsg0(850, "Return rem_msg_dest\n");
@@ -393,7 +405,7 @@ void close_msg(JCR *jcr)
    POOLMEM *cmd, *line;
    int len, stat;
 
-   Dmsg1(850, "Close_msg jcr=0x%x\n", jcr);
+   Dmsg1(580, "Close_msg jcr=%p\n", jcr);
 
    if (jcr == NULL) {                /* NULL -> global chain */
       msgs = daemon_msgs;
@@ -405,7 +417,7 @@ void close_msg(JCR *jcr)
    if (msgs == NULL) {
       return;
    }
-   Dmsg1(850, "===Begin close msg resource at 0x%x\n", msgs);
+   Dmsg1(850, "===Begin close msg resource at %p\n", msgs);
    cmd = get_pool_memory(PM_MESSAGE);
    for (d=msgs->dest_chain; d; ) {
       if (d->fd) {
@@ -418,12 +430,18 @@ void close_msg(JCR *jcr)
             break;
          case MD_MAIL:
          case MD_MAIL_ON_ERROR:
-            Dmsg0(850, "Got MD_MAIL or MD_MAIL_ON_ERROR\n");
+         case MD_MAIL_ON_SUCCESS:
+            Dmsg0(850, "Got MD_MAIL, MD_MAIL_ON_ERROR or MD_MAIL_ON_SUCCESS\n");
             if (!d->fd) {
                break;
             }
-            if (d->dest_code == MD_MAIL_ON_ERROR && jcr &&
-                jcr->JobStatus == JS_Terminated) {
+            if (
+                (d->dest_code == MD_MAIL_ON_ERROR && jcr &&
+                 jcr->JobStatus == JS_Terminated) 
+                ||
+                (d->dest_code == MD_MAIL_ON_SUCCESS && jcr &&
+                 jcr->JobStatus == JS_ErrorTerminated)
+                ){
                goto rem_temp_file;
             }
 
@@ -548,7 +566,19 @@ void term_msg()
    term_last_jobs_list();
 }
 
-
+static bool open_dest_file(JCR *jcr, DEST *d, const char *mode) 
+{
+   d->fd = fopen(d->where, mode);
+   if (!d->fd) {
+      berrno be;
+      d->fd = stdout;
+      Qmsg2(jcr, M_ERROR, 0, _("fopen %s failed: ERR=%s\n"), d->where,
+            be.strerror());
+      d->fd = NULL;
+      return false;
+   }
+   return true;
+}
 
 /*
  * Handle sending the message to the appropriate place
@@ -561,6 +591,7 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
     int len, dtlen;
     MSGS *msgs;
     BPIPE *bpipe;
+    char *mode;
 
     Dmsg2(850, "Enter dispatch_msg type=%d msg=%s", type, msg);
 
@@ -584,11 +615,9 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
     }
 
     if (type == M_ABORT || type == M_ERROR_TERM) {
-#ifndef HAVE_WIN32
        fputs(dt, stdout);
        fputs(msg, stdout);         /* print this here to INSURE that it is printed */
        fflush(stdout);
-#endif
     }
 
     /* Now figure out where to send the message */
@@ -602,10 +631,32 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
     for (d=msgs->dest_chain; d; d=d->next) {
        if (bit_is_set(type, d->msg_types)) {
           switch (d->dest_code) {
+             case MD_CATALOG:
+                char ed1[50];
+                if (!jcr || !jcr->db) {
+                   break;
+                }
+                if (p_sql_query && p_sql_escape) {
+                   POOLMEM *cmd = get_pool_memory(PM_MESSAGE);
+                   POOLMEM *esc_msg = get_pool_memory(PM_MESSAGE);
+                   
+                   int len = strlen(msg) + 1;
+                   esc_msg = check_pool_memory_size(esc_msg, len*2+1);
+                   p_sql_escape(esc_msg, msg, len);
+
+                   bstrutime(dt, sizeof(dt), mtime);
+                   Mmsg(cmd, "INSERT INTO Log (JobId, Time, LogText) VALUES (%s,'%s','%s')",
+                         edit_int64(jcr->JobId, ed1), dt, esc_msg);
+                   p_sql_query(jcr, cmd);
+                   
+                   free_pool_memory(cmd);
+                   free_pool_memory(esc_msg);
+                }
+                break;
              case MD_CONSOLE:
                 Dmsg1(850, "CONSOLE for following msg: %s", msg);
                 if (!con_fd) {
-                   con_fd = fopen(con_fname, "a+");
+                   con_fd = fopen(con_fname, "a+b");
                    Dmsg0(850, "Console file not open.\n");
                 }
                 if (con_fd) {
@@ -629,7 +680,7 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
                 }
                 break;
              case MD_SYSLOG:
-                Dmsg1(850, "SYSLOG for collowing msg: %s\n", msg);
+                Dmsg1(850, "SYSLOG for following msg: %s\n", msg);
                 /*
                  * We really should do an openlog() here.
                  */
@@ -656,11 +707,12 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
                 break;
              case MD_MAIL:
              case MD_MAIL_ON_ERROR:
+             case MD_MAIL_ON_SUCCESS:
                 Dmsg1(850, "MAIL for following msg: %s", msg);
                 if (!d->fd) {
                    POOLMEM *name = get_pool_memory(PM_MESSAGE);
                    make_unique_mail_filename(jcr, name, d);
-                   d->fd = fopen(name, "w+");
+                   d->fd = fopen(name, "w+b");
                    if (!d->fd) {
                       berrno be;
                       d->fd = stdout;
@@ -679,37 +731,27 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
                 }
                 fputs(msg, d->fd);
                 break;
-             case MD_FILE:
-                Dmsg1(850, "FILE for following msg: %s", msg);
-                if (!d->fd) {
-                   d->fd = fopen(d->where, "w+");
-                   if (!d->fd) {
-                      berrno be;
-                      d->fd = stdout;
-                      Qmsg2(jcr, M_ERROR, 0, _("fopen %s failed: ERR=%s\n"), d->where,
-                            be.strerror());
-                      d->fd = NULL;
-                      break;
-                   }
-                }
-                fputs(dt, d->fd);
-                fputs(msg, d->fd);
-                break;
              case MD_APPEND:
                 Dmsg1(850, "APPEND for following msg: %s", msg);
-                if (!d->fd) {
-                   d->fd = fopen(d->where, "a");
-                   if (!d->fd) {
-                      berrno be;
-                      d->fd = stdout;
-                      Qmsg2(jcr, M_ERROR, 0, _("fopen %s failed: ERR=%s\n"), d->where,
-                            be.strerror());
-                      d->fd = NULL;
-                      break;
-                   }
+                mode = "ab";
+                goto send_to_file;
+             case MD_FILE:
+                Dmsg1(850, "FILE for following msg: %s", msg);
+                mode = "w+b";
+send_to_file:
+                if (!d->fd && !open_dest_file(jcr, d, mode)) {
+                   break;
                 }
                 fputs(dt, d->fd);
                 fputs(msg, d->fd);
+                /* On error, we close and reopen to handle log rotation */
+                if (ferror(d->fd)) {
+                   fclose(d->fd);
+                   if (open_dest_file(jcr, d, mode)) {
+                      fputs(dt, d->fd);
+                      fputs(msg, d->fd);
+                   }
+                }
                 break;
              case MD_DIRECTOR:
                 Dmsg1(850, "DIRECTOR for following msg: %s", msg);
@@ -723,12 +765,14 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
                 if (type != M_ABORT && type != M_ERROR_TERM) { /* already printed */
                    fputs(dt, stdout);
                    fputs(msg, stdout);
+                   fflush(stdout);
                 }
                 break;
              case MD_STDERR:
                 Dmsg1(850, "STDERR for following msg: %s", msg);
                 fputs(dt, stderr);
                 fputs(msg, stderr);
+                fflush(stdout);
                 break;
              default:
                 break;
@@ -737,6 +781,30 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
     }
 }
 
+/*********************************************************************
+ *
+ *  This subroutine returns the filename portion of a Windows 
+ *  path.  It is used because Microsoft Visual Studio sets __FILE__ 
+ *  to the full path.
+ */
+
+inline const char *
+get_basename(const char *pathname)
+{
+#if defined(_MSC_VER)
+   const char *basename;
+   
+   if ((basename = strrchr(pathname, '\\')) == NULL) {
+      basename = pathname;
+   } else {
+      basename++;
+   }
+
+   return basename;
+#else
+   return pathname;
+#endif
+}
 
 /*********************************************************************
  *
@@ -764,12 +832,7 @@ d_msg(const char *file, int line, int level, const char *fmt,...)
     if (level <= debug_level) {
 #ifdef FULL_LOCATION
        if (details) {
-          /* visual studio passes the whole path to the file as well
-           * which makes for very long lines
-           */
-          const char *f = strrchr(file, '\\');
-          if (f) file = f + 1;
-          len = bsnprintf(buf, sizeof(buf), "%s: %s:%d ", my_name, file, line);
+          len = bsnprintf(buf, sizeof(buf), "%s: %s:%d ", my_name, get_basename(file), line);
        } else {
           len = 0;
        }
@@ -787,8 +850,8 @@ d_msg(const char *file, int line, int level, const char *fmt,...)
        if (trace) {
           if (!trace_fd) {
              char fn[200];
-             bsnprintf(fn, sizeof(fn), "%s/bacula.trace", working_directory ? working_directory : ".");
-             trace_fd = fopen(fn, "a+");
+             bsnprintf(fn, sizeof(fn), "%s/%s.trace", working_directory ? working_directory : ".", my_name);
+             trace_fd = fopen(fn, "a+b");
           }
           if (trace_fd) {
              fputs(buf, trace_fd);
@@ -799,6 +862,7 @@ d_msg(const char *file, int line, int level, const char *fmt,...)
           }
        } else {   /* not tracing */
           fputs(buf, stdout);
+          fflush(stdout);
        }
     }
 }
@@ -844,7 +908,7 @@ p_msg(const char *file, int line, int level, const char *fmt,...)
 
 #ifdef FULL_LOCATION
     if (level >= 0) {
-       len = bsnprintf(buf, sizeof(buf), "%s: %s:%d ", my_name, file, line);
+       len = bsnprintf(buf, sizeof(buf), "%s: %s:%d ", my_name, get_basename(file), line);
     } else {
        len = 0;
     }
@@ -855,6 +919,7 @@ p_msg(const char *file, int line, int level, const char *fmt,...)
     bvsnprintf(buf+len, sizeof(buf)-len, (char *)fmt, arg_ptr);
     va_end(arg_ptr);
     fputs(buf, stdout);
+    fflush(stdout);
 }
 
 
@@ -883,13 +948,13 @@ t_msg(const char *file, int line, int level, const char *fmt,...)
 
     if (level <= debug_level) {
        if (!trace_fd) {
-          bsnprintf(buf, sizeof(buf), "%s/bacula.trace", working_directory);
-          trace_fd = fopen(buf, "a+");
+          bsnprintf(buf, sizeof(buf), "%s/%s.trace", working_directory ? working_directory : ".", my_name);
+          trace_fd = fopen(buf, "a+b");
        }
 
 #ifdef FULL_LOCATION
        if (details) {
-          len = bsnprintf(buf, sizeof(buf), "%s: %s:%d ", my_name, file, line);
+          len = bsnprintf(buf, sizeof(buf), "%s: %s:%d ", my_name, get_basename(file), line);
        } else {
           len = 0;
        }
@@ -931,23 +996,23 @@ e_msg(const char *file, int line, int type, int level, const char *fmt,...)
     switch (type) {
     case M_ABORT:
        len = bsnprintf(buf, sizeof(buf), _("%s: ABORTING due to ERROR in %s:%d\n"),
-               my_name, file, line);
+               my_name, get_basename(file), line);
        break;
     case M_ERROR_TERM:
        len = bsnprintf(buf, sizeof(buf), _("%s: ERROR TERMINATION at %s:%d\n"),
-               my_name, file, line);
+               my_name, get_basename(file), line);
        break;
     case M_FATAL:
        if (level == -1)            /* skip details */
           len = bsnprintf(buf, sizeof(buf), _("%s: Fatal Error because: "), my_name);
        else
-          len = bsnprintf(buf, sizeof(buf), _("%s: Fatal Error at %s:%d because:\n"), my_name, file, line);
+          len = bsnprintf(buf, sizeof(buf), _("%s: Fatal Error at %s:%d because:\n"), my_name, get_basename(file), line);
        break;
     case M_ERROR:
        if (level == -1)            /* skip details */
           len = bsnprintf(buf, sizeof(buf), _("%s: ERROR: "), my_name);
        else
-          len = bsnprintf(buf, sizeof(buf), _("%s: ERROR in %s:%d "), my_name, file, line);
+          len = bsnprintf(buf, sizeof(buf), _("%s: ERROR in %s:%d "), my_name, get_basename(file), line);
        break;
     case M_WARNING:
        len = bsnprintf(buf, sizeof(buf), _("%s: Warning: "), my_name);
@@ -1065,6 +1130,8 @@ Jmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...)
 
     if (type == M_ABORT){
        char *p = 0;
+       printf("Bacula forced SEG FAULT to obtain traceback.\n");
+       syslog(LOG_DAEMON|LOG_ERR, "Bacula forced SEG FAULT to obtain traceback.\n");
        p[0] = 0;                      /* generate segmentation violation */
     }
     if (type == M_ERROR_TERM) {
@@ -1083,7 +1150,7 @@ void j_msg(const char *file, int line, JCR *jcr, int type, time_t mtime, const c
    POOLMEM *pool_buf;
 
    pool_buf = get_pool_memory(PM_EMSG);
-   i = Mmsg(pool_buf, "%s:%d ", file, line);
+   i = Mmsg(pool_buf, "%s:%d ", get_basename(file), line);
 
    for (;;) {
       maxlen = sizeof_pool_memory(pool_buf) - i - 1;
@@ -1110,7 +1177,7 @@ int m_msg(const char *file, int line, POOLMEM **pool_buf, const char *fmt, ...)
    va_list   arg_ptr;
    int i, len, maxlen;
 
-   i = sprintf(*pool_buf, "%s:%d ", file, line);
+   i = sprintf(*pool_buf, "%s:%d ", get_basename(file), line);
 
    for (;;) {
       maxlen = sizeof_pool_memory(*pool_buf) - i - 1;
@@ -1131,7 +1198,7 @@ int m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
    va_list   arg_ptr;
    int i, len, maxlen;
 
-   i = sprintf(pool_buf, "%s:%d ", file, line);
+   i = sprintf(pool_buf, "%s:%d ", get_basename(file), line);
 
    for (;;) {
       maxlen = sizeof_pool_memory(pool_buf) - i - 1;
@@ -1253,7 +1320,6 @@ void Qmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...)
       P(msg_queue_mutex);
       jcr->msg_queue->append(item);
       V(msg_queue_mutex);
-//    Dmsg1(000, "queue item=%lu\n", (long unsigned)item);
    }
    free_memory(pool_buf);
 }
@@ -1265,13 +1331,17 @@ void dequeue_messages(JCR *jcr)
 {
    MQUEUE_ITEM *item;
    P(msg_queue_mutex);
+   if (!jcr->msg_queue) {
+      goto bail_out;
+   }
    jcr->dequeuing = true;
    foreach_dlist(item, jcr->msg_queue) {
-//    Dmsg1(000, "dequeue item=%lu\n", (long unsigned)item);
       Jmsg(jcr, item->type, item->mtime, "%s", item->msg);
    }
    jcr->msg_queue->destroy();
    jcr->dequeuing = false;
+
+bail_out:
    V(msg_queue_mutex);
 }
 

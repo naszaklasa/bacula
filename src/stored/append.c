@@ -2,22 +2,35 @@
  * Append code for Storage daemon
  *  Kern Sibbald, May MM
  *
- *  Version $Id: append.c,v 1.61.2.2 2005/12/10 13:18:06 kerns Exp $
+ *  Version $Id: append.c,v 1.79 2006/12/16 15:30:22 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
@@ -43,6 +56,7 @@ bool do_append_data(JCR *jcr)
    char buf1[100], buf2[100];
    DCR *dcr = jcr->dcr;
    DEVICE *dev;
+   char ec[50];
 
 
    if (!dcr) { 
@@ -78,7 +92,7 @@ bool do_append_data(JCR *jcr)
    if (dev->VolCatInfo.VolCatName[0] == 0) {
       Pmsg0(000, _("NULL Volume name. This shouldn't happen!!!\n"));
    }
-   Dmsg1(20, "Begin append device=%s\n", dev->print_name());
+   Dmsg1(50, "Begin append device=%s\n", dev->print_name());
 
    begin_data_spool(dcr);
    begin_attribute_spool(jcr);
@@ -92,7 +106,7 @@ bool do_append_data(JCR *jcr)
     */
    if (!write_session_label(dcr, SOS_LABEL)) {
       Jmsg1(jcr, M_FATAL, 0, _("Write session label failed. ERR=%s\n"),
-         strerror_dev(dev));
+         dev->bstrerror());
       set_jcr_job_status(jcr, JS_ErrorTerminated);
       ok = false;
    }
@@ -202,9 +216,7 @@ bool do_append_data(JCR *jcr)
                        rec.remainder);
             if (!write_block_to_device(dcr)) {
                Dmsg2(90, "Got write_block_to_dev error on device %s. %s\n",
-                  dev->print_name(), strerror_dev(dev));
-               Jmsg2(jcr, M_FATAL, 0, _("Fatal append error on device %s: ERR=%s\n"),
-                     dev->print_name(), strerror_dev(dev));
+                  dev->print_name(), dev->bstrerror());
                ok = false;
                break;
             }
@@ -219,8 +231,8 @@ bool do_append_data(JCR *jcr)
             stream_to_ascii(buf2, rec.Stream, rec.FileIndex), rec.data_len);
 
          /* Send attributes and digest to Director for Catalog */
-         if (stream == STREAM_UNIX_ATTRIBUTES    || stream == STREAM_MD5_SIGNATURE ||
-             stream == STREAM_UNIX_ATTRIBUTES_EX || stream == STREAM_SHA1_SIGNATURE) {
+         if (stream == STREAM_UNIX_ATTRIBUTES || stream == STREAM_UNIX_ATTRIBUTES_EX ||
+             crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
             if (!jcr->no_attributes) {
                if (are_attributes_spooled(jcr)) {
                   jcr->dir_bsock->spool = true;
@@ -239,6 +251,7 @@ bool do_append_data(JCR *jcr)
          Dmsg0(650, "Enter bnet_get\n");
       }
       Dmsg1(650, "End read loop with FD. Stat=%d\n", n);
+
       if (is_bnet_error(ds)) {
          Dmsg1(350, "Network read error from FD. ERR=%s\n", bnet_strerror(ds));
          Jmsg1(jcr, M_FATAL, 0, _("Network error on data channel. ERR=%s\n"),
@@ -248,22 +261,29 @@ bool do_append_data(JCR *jcr)
       }
    }
 
+   time_t job_elapsed = time(NULL) - jcr->run_time;
+
+   if (job_elapsed <= 0) {
+      job_elapsed = 1;
+   }
+
+   Jmsg(dcr->jcr, M_INFO, 0, _("Job write elapsed time = %02d:%02d:%02d, Transfer rate = %s bytes/second\n"),
+         job_elapsed / 3600, job_elapsed % 3600 / 60, job_elapsed % 60,
+         edit_uint64_with_suffix(jcr->JobBytes / job_elapsed, ec));
+
    /* Create Job status for end of session label */
    set_jcr_job_status(jcr, ok?JS_Terminated:JS_ErrorTerminated);
 
-   Dmsg1(200, "Write session label JobStatus=%d\n", jcr->JobStatus);
-   if ((!ok || job_canceled(jcr)) && dev->VolCatInfo.VolCatName[0] == 0) {
-      Pmsg0(000, _("NULL Volume name. This shouldn't happen!!!\n"));
-   }
+   Dmsg1(200, "Write EOS label JobStatus=%c\n", jcr->JobStatus);
 
    /*
-    * If !OK, check if we can still write. This may not be the case
+    * Check if we can still write. This may not be the case
     *  if we are at the end of the tape or we got a fatal I/O error.
     */
-   if (ok || dev->can_write()) {
+   if (dev->can_write()) {
       if (!write_session_label(dcr, EOS_LABEL)) {
          Jmsg1(jcr, M_FATAL, 0, _("Error writting end session label. ERR=%s\n"),
-               strerror_dev(dev));
+               dev->bstrerror());
          set_jcr_job_status(jcr, JS_ErrorTerminated);
          ok = false;
       }
@@ -274,7 +294,7 @@ bool do_append_data(JCR *jcr)
       /* Flush out final partial block of this session */
       if (!write_block_to_device(dcr)) {
          Jmsg2(jcr, M_FATAL, 0, _("Fatal append error on device %s: ERR=%s\n"),
-               dev->print_name(), strerror_dev(dev));
+               dev->print_name(), dev->bstrerror());
          Dmsg0(100, _("Set ok=FALSE after write_block_to_device.\n"));
          ok = false;
       }
@@ -286,6 +306,7 @@ bool do_append_data(JCR *jcr)
    if (!ok) {
       discard_data_spool(dcr);
    } else {
+      /* Note: if commit is OK, the device will remain locked */
       commit_data_spool(dcr);
    }
 
@@ -293,7 +314,10 @@ bool do_append_data(JCR *jcr)
       ok = dvd_close_job(dcr);  /* do DVD cleanup if any */
    }
    
-   /* Release the device -- and send final Vol info to DIR */
+   /*
+    * Release the device -- and send final Vol info to DIR
+    *  and unlock it.
+    */
    release_device(dcr);
 
    if (!ok || job_canceled(jcr)) {

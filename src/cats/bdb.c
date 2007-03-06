@@ -8,23 +8,36 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb.c,v 1.22.4.1 2005/10/01 10:20:17 kerns Exp $
+ *    Version $Id: bdb.c,v 1.30 2006/11/27 10:02:58 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 /* The following is necessary so that we do not include
@@ -38,10 +51,6 @@
 #ifdef HAVE_BACULA_DB
 
 uint32_t bacula_db_version = 0;
-
-/* Forward referenced functions */
-
-extern const char *working_directory;
 
 /* List of open databases */
 static BQUEUE db_list = {&db_list, &db_list};
@@ -69,7 +78,7 @@ static POOLMEM *make_filename(B_DB *mdb, char *name)
    POOLMEM *dbf;
 
    dbf = get_pool_memory(PM_FNAME);
-   if (working_directory[strlen(working_directory)-1] == '/') {
+   if (IsPathSeparator(working_directory[strlen(working_directory)-1])) {
       sep = 0;
    } else {
       sep = '/';
@@ -88,6 +97,15 @@ int bdb_write_control_file(B_DB *mdb)
       return 0;
    }
    return 1;
+}
+
+/*
+ * Retrieve database type
+ */
+const char *
+db_get_type(void)
+{
+   return "Internal";
 }
 
 /*
@@ -110,6 +128,7 @@ db_init_database(JCR *jcr, char const *db_name, char const *db_user, char const 
          return mdb;                  /* already open */
       }
    }
+
    Dmsg0(200, "db_open first time\n");
    mdb = (B_DB *)malloc(sizeof(B_DB));
    memset(mdb, 0, sizeof(B_DB));
@@ -296,7 +315,7 @@ int bdb_open_jobs_file(B_DB *mdb)
 
    if (!mdb->jobfd) {
       dbf = make_filename(mdb, DB_JOBS_FILENAME);
-      mdb->jobfd = fopen(dbf, "r+");
+      mdb->jobfd = fopen(dbf, "r+b");
       if (!mdb->jobfd) {
          Mmsg2(&mdb->errmsg, "Error opening DB Jobs file %s: ERR=%s\n",
             dbf, strerror(errno));
@@ -318,7 +337,7 @@ int bdb_open_jobmedia_file(B_DB *mdb)
 
    if (!mdb->jobmediafd) {
       dbf = make_filename(mdb, DB_JOBMEDIA_FILENAME);
-      mdb->jobmediafd = fopen(dbf, "r+");
+      mdb->jobmediafd = fopen(dbf, "r+b");
       if (!mdb->jobmediafd) {
          Mmsg2(&mdb->errmsg, "Error opening DB JobMedia file %s: ERR=%s\n",
             dbf, strerror(errno));
@@ -341,7 +360,7 @@ int bdb_open_pools_file(B_DB *mdb)
 
    if (!mdb->poolfd) {
       dbf = make_filename(mdb, DB_POOLS_FILENAME);
-      mdb->poolfd = fopen(dbf, "r+");
+      mdb->poolfd = fopen(dbf, "r+b");
       if (!mdb->poolfd) {
          Mmsg2(&mdb->errmsg, "Error opening DB Pools file %s: ERR=%s\n",
             dbf, strerror(errno));
@@ -364,7 +383,7 @@ int bdb_open_client_file(B_DB *mdb)
 
    if (!mdb->clientfd) {
       dbf = make_filename(mdb, DB_CLIENT_FILENAME);
-      mdb->clientfd = fopen(dbf, "r+");
+      mdb->clientfd = fopen(dbf, "r+b");
       if (!mdb->clientfd) {
          Mmsg2(&mdb->errmsg, "Error opening DB Clients file %s: ERR=%s\n",
             dbf, strerror(errno));
@@ -386,7 +405,7 @@ int bdb_open_fileset_file(B_DB *mdb)
 
    if (!mdb->filesetfd) {
       dbf = make_filename(mdb, DB_CLIENT_FILENAME);
-      mdb->filesetfd = fopen(dbf, "r+");
+      mdb->filesetfd = fopen(dbf, "r+b");
       if (!mdb->filesetfd) {
          Mmsg2(&mdb->errmsg, "Error opening DB FileSet file %s: ERR=%s\n",
             dbf, strerror(errno));
@@ -410,7 +429,7 @@ int bdb_open_media_file(B_DB *mdb)
 
    if (!mdb->mediafd) {
       dbf = make_filename(mdb, DB_MEDIA_FILENAME);
-      mdb->mediafd = fopen(dbf, "r+");
+      mdb->mediafd = fopen(dbf, "r+b");
       if (!mdb->mediafd) {
          Mmsg2(&mdb->errmsg, "Error opening DB Media file %s: ERR=%s\n",
             dbf, strerror(errno));
@@ -461,5 +480,9 @@ void
 db_list_pool_records(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr, 
                      DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
 { }
+
+int db_int64_handler(void *ctx, int num_fields, char **row)
+{ return 0; }
+
 
 #endif /* HAVE_BACULA_DB */

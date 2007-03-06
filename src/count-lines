@@ -1,9 +1,11 @@
 #!/bin/sh
 rm -f 1
 touch 1
-for i in . console gnome-console gnome2-console cats dird filed filed/win32 \
+for i in . console gnome2-console cats dird filed tray-monitor \
      win32 win32/compat findlib lib wx-console stored tools \
-     win32/wx-console win32/console win32/baculafd tray-monitor; do
+     win32/wx-console win32/console win32/baculafd win32/filed \
+     win32/dird win32/libwin32 win32/stored win32/stored/baculasd \
+     tray-monitor; do
   ls -1 $i/*.c $i/*.cpp $i/*.h $i/*.in 2>/dev/null >>1
 done
 cat 1 | $HOME/bin/lines

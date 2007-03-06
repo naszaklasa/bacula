@@ -10,22 +10,35 @@
  *  Basic tasks done here:
  *      If possible create a new Media entry
  *
- *   Version $Id: newvol.c,v 1.32 2005/07/08 10:02:53 kerns Exp $
+ *   Version $Id: newvol.c,v 1.37 2006/11/21 13:20:09 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -57,7 +70,7 @@ bool newVolume(JCR *jcr, MEDIA_DBR *mr)
       memset(mr, 0, sizeof(MEDIA_DBR));
       set_pool_dbr_defaults_in_media_dbr(mr, &pr);
       jcr->VolumeName[0] = 0;
-      bstrncpy(mr->MediaType, jcr->store->media_type, sizeof(mr->MediaType));
+      bstrncpy(mr->MediaType, jcr->wstore->media_type, sizeof(mr->MediaType));
       if (generate_job_event(jcr, "NewVolume") == 1 && jcr->VolumeName[0] &&
           is_volume_name_legal(NULL, jcr->VolumeName)) {
          bstrncpy(mr->VolumeName, jcr->VolumeName, sizeof(mr->VolumeName));
@@ -83,6 +96,7 @@ bool newVolume(JCR *jcr, MEDIA_DBR *mr)
          goto bail_out;
       }
       pr.NumVols++;
+      mr->Enabled = 1;
       if (db_create_media_record(jcr, jcr->db, mr) &&
          db_update_pool_record(jcr, jcr->db, &pr)) {
          db_unlock(jcr->db);

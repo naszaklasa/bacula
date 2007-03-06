@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.37.2.5 2006/04/12 20:49:17 kerns Exp $
+# $Id: Makefile.in,v 1.51 2006/11/21 16:13:57 kerns Exp $
 @MCOMMON@
 
 python = @PYTHON_INCDIR@
@@ -14,42 +14,41 @@ topdir = ../..
 # this dir relative to top dir
 thisdir = src/lib
 
+OPENSSL_LIBS = @OPENSSL_LIBS@
+OPENSSL_INC = @OPENSSL_INC@
 
 DEBUG=@DEBUG@
 
 first_rule: all
 dummy:
 
-LIBSRCS = alloc.c attr.c base64.c berrno.c bsys.c bget_msg.c \
-	  bnet.c bnet_server.c \
-	  bpipe.c bshm.c btime.c \
-	  cram-md5.c crc32.c daemon.c edit.c fnmatch.c \
+LIBSRCS = attr.c base64.c berrno.c bsys.c bget_msg.c \
+	  bnet.c bnet_server.c runscript.c \
+	  bpipe.c bsnprintf.c btime.c \
+	  cram-md5.c crc32.c crypto.c daemon.c edit.c fnmatch.c \
 	  hmac.c idcache.c jcr.c lex.c alist.c dlist.c \
-	  md5.c message.c mem_pool.c parse_conf.c \
+	  md5.c message.c mem_pool.c openssl.c parse_conf.c \
 	  queue.c bregex.c \
 	  res.c rwlock.c scan.c serial.c sha1.c \
-	  semlock.c signal.c smartall.c tls.c tree.c \
+	  signal.c smartall.c tls.c tree.c \
 	  util.c var.c watchdog.c workq.c btimers.c \
-	  address_conf.c pythonlib.c 
+	  address_conf.c pythonlib.c
 
 
-LIBOBJS = alloc.o attr.o base64.o berrno.o bsys.o bget_msg.o \
-	  bnet.o bnet_server.o \
-	  bpipe.o bshm.o btime.o \
-	  cram-md5.o crc32.o daemon.o edit.o fnmatch.o \
+LIBOBJS = attr.o base64.o berrno.o bsys.o bget_msg.o \
+	  bnet.o bnet_server.o runscript.o \
+	  bpipe.o bsnprintf.o btime.o \
+	  cram-md5.o crc32.o crypto.o daemon.o edit.o enh_fnmatch.o fnmatch.o \
 	  hmac.o idcache.o jcr.o lex.o alist.o dlist.o \
-	  md5.o message.o mem_pool.o parse_conf.o \
+	  md5.o message.o mem_pool.o openssl.o parse_conf.o \
 	  queue.o bregex.o \
 	  res.o rwlock.o scan.o serial.o sha1.o \
-	  semlock.o signal.o smartall.o tls.o tree.o \
+	  signal.o smartall.o tls.o tree.o \
 	  util.o var.o watchdog.o workq.o btimers.o \
 	  address_conf.o pythonlib.o
 
 
 EXTRAOBJS = @OBJLIST@
-
-OPENSSL_LIBS=@OPENSSL_LIBS@
-OPENSSL_INC=@OPENSSL_INC@
 
 
 .SUFFIXES:	.c .o .ch .dvi .pdf .tex .view .w .1
@@ -58,10 +57,12 @@ OPENSSL_INC=@OPENSSL_INC@
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(OPENSSL_INC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(OPENSSL_INC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
 .cc.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(OPENSSL_INC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(OPENSSL_INC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
 #-------------------------------------------------------------------------
 all: Makefile libbac.a
@@ -69,6 +70,7 @@ all: Makefile libbac.a
 	@echo " "
 
 libbac.a: $(LIBOBJS)
+	@echo "Making $@ ..."
 	$(AR) rc  $@ $(LIBOBJS)
 	$(RANLIB) $@
 
@@ -78,7 +80,8 @@ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
 pythonlib.o: pythonlib.c
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(python) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(OPENSSL_INC) $(python) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
 rwlock_test:
 	rm -f rwlock.o
@@ -100,7 +103,15 @@ sha1sum: sha1.o
 	$(CXX) -DSHA1_SUM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)	$(CFLAGS) sha1.c
 	$(CXX) $(LDFLAGS) -L. -o $@ sha1.o $(LIBS) $(DLIB) -lbac $(OPENSSL_LIBS) -lm
 	rm -f sha1.o
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) md5.c
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) sha1.c
+
+bsnprintf: bsnprintf.o
+	rm -f bsnprintf.o
+	$(CXX) -DTEST_PROGRAM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) bsnprintf.c
+	$(CXX) $(LDFLAGS) -L. -o $@ bsnprintf.o $(LIBS) $(DLIB) -lbac $(OPENSSL_LIBS) -lm
+	rm -f bsnprintf.o
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) bsnprintf.c
+	
 	 
 install:
 
@@ -123,7 +134,6 @@ distclean: realclean
 # `semi'-automatic since dependencies are generated at distribution time.
 
 depend:
-	@$(RMF) -f Makefile.bak
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
@@ -135,6 +145,5 @@ depend:
 	   echo " ===== Something went wrong in make depend ====="; \
 	fi
 
-
 # -----------------------------------------------------------------------
-# DO NOT DELETE: nice dependency list follows 
+# DO NOT DELETE: nice dependency list follows

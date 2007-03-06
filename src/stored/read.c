@@ -3,22 +3,35 @@
  *
  *     Kern Sibbald, November MM
  *
- *   Version $Id: read.c,v 1.48.2.1 2005/12/10 13:18:07 kerns Exp $
+ *   Version $Id: read.c,v 1.53 2006/12/14 11:41:02 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
@@ -51,14 +64,14 @@ bool do_read_data(JCR *jcr)
 
 
    create_restore_volume_list(jcr);
-   if (jcr->NumVolumes == 0) {
+   if (jcr->NumReadVolumes == 0) {
       Jmsg(jcr, M_FATAL, 0, _("No Volume names found for restore.\n"));
       free_restore_volume_list(jcr);
       bnet_fsend(fd, FD_error);
       return false;
    }
 
-   Dmsg2(200, "Found %d volumes names to restore. First=%s\n", jcr->NumVolumes,
+   Dmsg2(200, "Found %d volumes names to restore. First=%s\n", jcr->NumReadVolumes,
       jcr->VolList->VolumeName);
 
    /* Ready device for reading */
@@ -75,7 +88,7 @@ bool do_read_data(JCR *jcr)
    /* Send end of data to FD */
    bnet_sig(fd, BNET_EOD);
 
-   if (!release_device(dcr)) {
+   if (!release_device(jcr->read_dcr)) {
       ok = false;
    }
 

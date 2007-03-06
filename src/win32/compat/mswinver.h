@@ -1,8 +1,6 @@
 #ifndef __MSWINVER_H_
 #define __MSWINVER_H_
 
-#include "winbase.h"
-
 #define MS_MAJOR_WINDOWS_3	3
 #define MS_MAJOR_WINDOWS_95	4
 #define MS_MAJOR_WINDOWS_98	4

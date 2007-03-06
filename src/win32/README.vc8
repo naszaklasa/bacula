@@ -1,107 +1,223 @@
+Instructions to build Bacula with Microsoft Visual C++ 2005
+===========================================================
 
-Instructions to build Bacula with Microsoft Visual C++ 2005 Express Edition (free version).
----
+Using the Express Edition (free version)
+----------------------------------------
+  Download instructions:
+    - Visual C++ 2005 Express Edition (2MB + 66MB)
+      http://msdn.microsoft.com/vstudio/express/visualc/download/
+      NOTE: You may want to download the whole CD for offline usage
+      instead of the web installer, as Microsoft will
+      start to charge for VC++ one year after the product launch
+      (launch was in November 2005, see VC++ FAQ).
 
-(Note: for the moment VSS support has been disabled, and this is not
-the official way to build the released FD.  See README.win32 for the
-"official" instructions.)
+    - Windows® Server 2003 SP1 Platform SDK Full Download (385MB)
+      http://www.microsoft.com/downloads/details.aspx?FamilyId=A55B6B43-E24F-4EA3-A93E-40C0EC4F68E5&displaylang=en
+      NOTE: choose "Full Download" version on the bottom of that page.
 
-What you need to download:
-- Visual C++ 2005 Express Edition (2MB + 66MB)
-  http://msdn.microsoft.com/vstudio/express/visualc/download/  
-  NOTE: You may want to download the whole CD for offline usage 
-  instead of the web installer, as Microsoft will
-  start to charge for VC++ one year after the product launch 
-  (launch was in November 2005, see VC++ FAQ).
+  Installation instructions:
+    - Visual C++ Express Edition Beta 2:
+      + Run vcsetup.exe.
+      + When asked for Installation Options, only check "Graphical IDE"
+        (MSDN Library is NOT needed).
+      + Remember where you install it (e.g. E:\Microsoft Visual Studio 8\)
 
-- Windows® Server 2003 SP1 Platform SDK Full Download (385MB)
-  http://www.microsoft.com/downloads/details.aspx?FamilyId=A55B6B43-E24F-4EA3-A93E-40C0EC4F68E5&displaylang=en
-  NOTE: choose "Full Download" version on the bottom of that page.
+    - Windows® Server 2003 SP1 Platform SDK Full Download
+      + Run psdk-full.exe, type the directory where you downloaded the cab
+        files.
+      + In a command prompt, run "PSDK-full.bat <temp directory>"
+        (e.g. "PSDK-full.bat E:\temp")
+      + Run <temp directory>\setup.exe
+      + When asked for the installation directory, choose
+        <vc++ install dir>\VC\PlatformSDK (e.g.
+        E:\Microsoft Visual Studio 8\VC\PlatformSDK\)
+      + When asked for components, you can safely remove documentation,
+        samples, and all 64-bit tools and libs if you want to save disk
+        space.
 
-- wxWidgets for Win32 (17MB) (exe file)
-  http://www.wxwidgets.org/dl_msw2.htm#stable
+One-time Setup
+==============
 
-- gettext packages (2MB)
-  + http://mirror.switch.ch/ftp/mirror/gnu/gettext/gettext-runtime-0.13.1.bin.woe32.zip
-  + http://mirror.switch.ch/ftp/mirror/gnu/gettext/gettext-tools-0.13.1.bin.woe32.zip
-  + http://mirror.switch.ch/ftp/mirror/gnu/libiconv/libiconv-1.9.1.bin.woe32.zip
+If you're reading this file you've probably already enlisted in the CVS
+tree or extracted the contents of the source tar.  If not you need to do
+that first.
 
-- Bacula source files:
-  + deppkgs-win32 from SF download page (extracted in <dev dir>/deppkgs-win32)
-  + latest source from the CVS (maybe you want to use mingw-msys to checkout them) (in <dev dir>/bacula)
+You also need to download one of the doc tar balls and extract to your
+top level Bacula directory.  It is referred to as bacula-top in the
+diagram located in README.win32.  It will be signified in this file as ...
 
-Installation instructions:
- - Visual C++ Express Edition Beta 2:
-   + Run vcsetup.exe.
-   + When asked for Installation Options, only check "Graphical IDE" (MSDN Library is NOT needed).
-   + Remember where you install it (e.g. E:\Microsoft Visual Studio 8\)
+The extracted doc directory name will be bacula-docs-version where
+version is the version number.  The directory must be renamed to docs
+(ie remove the leading bacula- and the trailing -version portion of the
+name).
 
- - Windows® Server 2003 SP1 Platform SDK Full Download
-   + Run psdk-full.exe, type the directory where you downloaded the cab files.
-   + In a command prompt, run "PSDK-full.bat <temp directory>" (e.g. "PSDK-full.bat E:\temp")
-   + Run <temp directory>\setup.exe
-   + When asked for the installation directory, choose <vc++ install dir>\VC\PlatformSDK
-     (e.g. E:\Microsoft Visual Studio 8\VC\PlatformSDK\)
-   + When asked for components, you can safely remove documentation, samples, and all 64-bit tools and libs if you want to save disk space.
+The script build-depkgs-msvc.cmd is used to download and build all the
+third party dependencies required by Bacula.  In order to build the
+dependencies you need the following utilities.  Only the binaries listed
+in parenthesis are required.  Perl must be listed in the PATH, the other
+utilities can either be on the PATH or copied to ...\depkgs-msvc\tools.
 
- - gettext packages
-   + extract them all in <dev dir>/deppkgs-win32/gettext
+  Perl (Normal Install, with binaries in the PATH)
+    http://downloads.activestate.com/ActivePerl/Windows/5.8/ActivePerl-5.8.8.819-MSWin32-x86-267479.msi
 
- - wxWidgets for Win32
-   + delete <dev dir>/deppkgs-win32/wx directory
-   + run wxMSW-2.6.1-Setup.exe, and install it to <dev dir>/deppkgs-win32/wx
+  7-Zip (7z.exe)
+    http://prdownloads.sourceforge.net/sevenzip/7za443.zip?download
 
-Build instructions:
- - deppkgs:
-   + Start VC++ 2005 command prompt (in the start menu)
-   + run "<vc++ install dir>\VC\PlatformSDK\SetEnv.Cmd"
-   + cd <dev dir>/deppkgs-win32/zlib
-   + run "nmake -f win32\Makefile.msc" (don't worry about the warnings)
-   + cd <dev dir>/deppkgs-win32/pthreads
-   + run "nmake clean VCE" (again, don't worry about the warnings)
-   + (note pthreadVCE.dll has been created in this directory)
- - wxWidgets:
-   + Open <dev dir>\depkgs-win32\wx\build\msw\wx.dsw in VC++ 2005
-   + Click on "Yes to all"
-   + In the solution explorer, open core/Setup Headers/setup.h and add, at the end of the file (before the last #endif):
-#if (_MSC_VER >= 1400) // VC8+
-#pragma warning(disable : 4996) // Either disable all deprecation warnings,
-// #define _CRT_SECURE_NO_DEPRECATE // Or just turn off warnings about the newly deprecated CRT functions.
-#endif // VC8+
-     This is not absolutely necessary, but this will remove annoying warnings.
+  NASM (nasmw.exe)
+    http://prdownloads.sourceforge.net/nasm/nasm-0.98.39-win32.zip?download
 
-   + Launch Build->Configuration Manager, then select "Unicode Release"
-     and close this window. Then run Build->Build Solution.
-   + If the build of wx-console fails, try removing the comments around
-     #ifndef (line 145) and #endif (line 147) in file:
-     <dev dir>/bacula/src/win32/compat/compat.h
-   + Repeat the operation for the "Unicode Debug" configuration if needed.
-   + Open <dev dir>/bacula/src/win32/bacula.sln
-   + Launch Build->Configuration Manager, then select your configuration.
-   + Then run Build->Build Solution (this will build wx-console, bconsole 
-     and bacula-fd).
+  patch (patch.exe)
+    http://prdownloads.sourceforge.net/gnuwin32/patch-2.5.9-6-bin.zip?download
 
-Deploy instructions
- - Bacula:
-   + To deploy bacula on Windows clients, create a setup using NSIS 
-     (Nullsoft Scriptable Install System).
-     http://nsis.sourceforge.net/Download
-   + Modify the default <dev dir>\bacula\src\win32\winbacula.nsi.in 
-     script to include your own customizations.
-     These are the required modifications:
-     
-     * Remove all references to msvcr71.dll, as this is a pre VC++ 2005 library.
-     * VC++ 2005 compiled binaries require a new way of deploying DLLs: WinSxS.
-       More info: http://blogs.msdn.com/nikolad/archive/2005/03/18/398720.aspx
-       Collect the following 4 files from c:\WINDOWS\WinSxS and copy them into the
-       directory where winbacula.nsi resides. Also add them to winbacula.nsi where
-       msvcr71.dll was previously.
-       
-       File msvcm80.dll
-       File msvcp80.dll
-       File msvcr80.dll
-       File Microsoft.VC80.CRT.manifest
-       
-       Modify Microsoft.VC80.CRT.manifest to match the version number mentioned in
-       bacula-fd.exe.intermediate.manifest that is in /bacula/src/win32/baculafd/Release.
+  sed (sed.exe) Depends on libintl, libiconv
+    http://prdownloads.sourceforge.net/gnuwin32/sed-4.1.4-bin.zip?download
 
+  tee (tee.exe) Depends on libintl, libiconv
+    http://prdownloads.sourceforge.net/gnuwin32/coreutils-5.3.0-bin.zip?download
+
+  wget (wget.exe) Depends on libintl, libiconv, openssl
+    http://prdownloads.sourceforge.net/gnuwin32/wget-1.10.1-bin.zip?download
+
+  libintl (libintl3.dll) Dependency of sed, tee, wget
+    http://prdownloads.sourceforge.net/gnuwin32/libintl-0.14.4-bin.zip?download
+
+  libiconv (libiconv2.dll) Dependency of sed, tee, wget
+    http://prdownloads.sourceforge.net/gnuwin32/libiconv-1.9.2-1-bin.zip?download
+
+  openssl (libeay32.dll, ssleay32.dll) Dependency of wget
+    http://prdownloads.sourceforge.net/gnuwin32/openssl-0.9.7c-bin.zip?download
+
+Once the utilities are installed continue with the next steps.
+
+Start VC++ 2005 command prompt (in the start menu)
+
+   cd ...\bacula\src\win32 directory.
+
+Only if you are using Microsoft Visual C++ Express
+
+   "%VCINSTALLDIR%\PlatformSDK\SetEnv"
+
+The following step should only need to be done the first time and
+whenever the dependencies change.
+
+   build-depkgs-msvc
+
+At this point all of the dependencies should have been downloaded and
+built.  You need the header files from the Microsoft VSS SDK.  You can
+find it on Microsoft's web-site at:
+
+http://www.microsoft.com/downloads/details.aspx?FamilyID=0b4f56e4-0ccc-4626-826a-ed2c4c95c871&DisplayLang=en
+
+If that link doesn't work then go to http://www.microsoft.com and search
+for
+
+   "download volume shadow copy service sdk"
+
+Normally the files will be installed in:
+
+   C:\Program Files\Microsoft\VSSSDK72
+
+You only need to copy everything under the C:\Program Files\Microsoft\VSSSDK72\inc
+directory into .../depkgs-msvc/vss/inc.
+
+The above only needs to be done once unless we change the cross-tools or
+the dependencies versions.  In general, you can run the script multiple
+times with no problem.
+
+Building
+========
+
+Start VC++ 2005 command prompt (in the start menu)
+
+   cd ...\bacula\src\win32
+
+If you are using Microsoft Visual C++ Express
+
+   "%VCINSTALLDIR%\PlatformSDK\SetEnv"
+
+To build the debug version
+
+   build-msvc "Debug|Win32"
+
+To build the release version
+
+   build-msvc "Release|Win32"
+
+To cleanup all the built files
+
+   build-msvc /c
+
+To cleanup only the debug built files
+
+   build-msvc /c "Debug|Win32"
+
+To rebuild the debug version
+
+   build-msvc /r "Debug|Win32"
+
+
+Updating the 3rd party package patches
+======================================
+
+If one of the patches changes in ...\bacula\src\win32\patches, you will
+need to update the corresponding dependency.  You can install new patches
+by doing the following (we assume the patch in question is for openssl).
+
+   cd ...\bacula\src\win32
+   set CLOBBER_SOURCE=true
+   build-depkgs-msvc openssl
+   set CLOBBER_SOURCE=
+
+NOTE: Setting CLOBBER_SOURCE=true means that any local changes to the
+      source code in the .../depkgs-msvc/src directory will be lost.
+      The source will be reextracted from the archive and the current
+      patches will be applied.
+
+
+Adding a new global function or global data
+===========================================
+
+bacula.dll
+----------
+
+The code from the following directories is built into bacula.dll:
+
+   .../bacula/src/lib
+   .../bacula/src/libfind
+   .../bacula/src/win32/compat
+
+A new function or data variable which must be accessed from outside
+of bacula.dll requires special treatment.  It must be specifically
+exported.
+
+New data variables are exported by adding the macro DLL_IMP_EXP to
+the variable declaration in the header file.  All exported variables
+must be declared in a header file and MUST NOT be declared in a
+source file referencing the variable.
+
+Exporting a function requires a bit more work.  You must determine the
+C++ mangled name of the new function.  Fortunately it is displayed in
+parentheses in the linker error message.  Place it in the
+.../bacula/src/win32/libbac/bacula.def file.
+
+bacula_cats.dll
+---------------
+
+The code from the src/cats directory is built into database provider
+specific libraries of the form cats_<db>.dll.
+
+The database specific portion <db> is mysql for MySQL, pgsql for
+PostgreSQL, sqlite for SQLite, and bdb for the built-in Bacula database.
+
+During installation of the Director, one of the database libraries is
+copied to the system and renamed bacula_cats.dll.
+
+A new function or data variable which must be accessed from outside
+of bacula_cats.dll requires special treatment.  It must be specifically
+exported.
+
+New data variables and functions are exported by placing their mangled
+name in the file .../bacula/src/win32/cats/bacula_cats/bacula_cats.def.
+
+The mangled name is printed, surrounded by parentheses, in the Linker
+error message.

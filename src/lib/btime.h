@@ -3,29 +3,36 @@
 
   See btime.c for defintions.
 
-     Version $Id: btime.h,v 1.13 2004/12/21 16:18:38 kerns Exp $
+     Version $Id: btime.h,v 1.15 2006/11/21 13:20:10 kerns Exp $
 
  */
-
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #ifndef __btime_INCLUDED
@@ -48,47 +55,47 @@ utime_t str_to_utime(char *str);
 
 
 /* =========================================================== */
-/*	  old code deprecated below. Do not use.	       */
+/*        old code deprecated below. Do not use.               */
 
-typedef float64_t fdate_t;	       /* Date type */
-typedef float64_t ftime_t;	       /* Time type */
+typedef float64_t fdate_t;             /* Date type */
+typedef float64_t ftime_t;             /* Time type */
 
 struct date_time {
-    fdate_t julian_day_number;	       /* Julian day number */
+    fdate_t julian_day_number;         /* Julian day number */
     ftime_t julian_day_fraction;       /* Julian day fraction */
 };
 
 /*  In arguments and results of the following functions,
     quantities are expressed as follows.
 
-	year	Year in the Common Era.  The canonical
-		date of adoption of the Gregorian calendar
-		(October 5, 1582 in the Julian calendar)
-		is assumed.
+        year    Year in the Common Era.  The canonical
+                date of adoption of the Gregorian calendar
+                (October 5, 1582 in the Julian calendar)
+                is assumed.
 
-	month	Month index with January 0, December 11.
+        month   Month index with January 0, December 11.
 
-	day	Day number of month, 1 to 31.
+        day     Day number of month, 1 to 31.
 
 */
 
 
 extern fdate_t date_encode(uint32_t year, uint8_t month, uint8_t day);
 extern ftime_t time_encode(uint8_t hour, uint8_t minute, uint8_t second,
-			  float32_t second_fraction);
+                          float32_t second_fraction);
 extern void date_time_encode(struct date_time *dt,
-			     uint32_t year, uint8_t month, uint8_t day,
-			     uint8_t hour, uint8_t minute, uint8_t second,
-			     float32_t second_fraction);
+                             uint32_t year, uint8_t month, uint8_t day,
+                             uint8_t hour, uint8_t minute, uint8_t second,
+                             float32_t second_fraction);
 
 extern void date_decode(fdate_t date, uint32_t *year, uint8_t *month,
-			uint8_t *day);
+                        uint8_t *day);
 extern void time_decode(ftime_t time, uint8_t *hour, uint8_t *minute,
-			uint8_t *second, float32_t *second_fraction);
+                        uint8_t *second, float32_t *second_fraction);
 extern void date_time_decode(struct date_time *dt,
-			     uint32_t *year, uint8_t *month, uint8_t *day,
-			     uint8_t *hour, uint8_t *minute, uint8_t *second,
-			     float32_t *second_fraction);
+                             uint32_t *year, uint8_t *month, uint8_t *day,
+                             uint8_t *hour, uint8_t *minute, uint8_t *second,
+                             float32_t *second_fraction);
 
 extern int date_time_compare(struct date_time *dt1, struct date_time *dt2);
 

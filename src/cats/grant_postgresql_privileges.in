@@ -28,6 +28,9 @@ grant all on mediatype	  to ${USER};
 grant all on storage	  to ${USER};
 grant all on device	  to ${USER};
 grant all on status	  to ${USER};
+grant all on location	  to ${USER};
+grant all on locationlog  to ${USER};
+grant all on log	  to ${USER};
 
 -- for sequences on those tables
 
@@ -44,7 +47,9 @@ grant select, update on basefiles_baseid_seq	   to ${USER};
 grant select, update on storage_storageid_seq	   to ${USER};
 grant select, update on mediatype_mediatypeid_seq  to ${USER};
 grant select, update on device_deviceid_seq	   to ${USER};
-
+grant select, update on location_locationid_seq    to ${USER};
+grant select, update on locationlog_loclogid_seq   to ${USER};
+grant select, update on log_logid_seq		   to ${USER};
 
 END-OF-DATA
 then

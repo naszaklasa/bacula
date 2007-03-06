@@ -1,7 +1,7 @@
 #
 #  Bacula Director Makefile
 #
-#  Version $Id: Makefile.in,v 1.44.2.2 2005/11/10 20:11:20 kerns Exp $
+#  Version $Id: Makefile.in,v 1.51 2006/08/05 10:28:58 robertnelson Exp $
 #  
 @MCOMMON@
 
@@ -34,11 +34,11 @@ SVRSRCS = dird.c admin.c authenticate.c \
 	  autoprune.c backup.c bsr.c \
 	  catreq.c dird_conf.c expand.c \
 	  fd_cmds.c getmsg.c inc_conf.c job.c \
-	  jobq.c mac.c \
+	  jobq.c migrate.c \
 	  mountreq.c msgchan.c next_vol.c newvol.c \
 	  pythondir.c \
 	  recycle.c restore.c run_conf.c \
-	  scheduler.c sql_cmds.c \
+	  scheduler.c \
 	  ua_acl.c ua_cmds.c ua_dotcmds.c \
 	  ua_query.c \
 	  ua_input.c ua_label.c ua_output.c ua_prune.c \
@@ -49,11 +49,11 @@ SVROBJS = dird.o admin.o authenticate.o \
 	  autoprune.o backup.o bsr.o \
 	  catreq.o dird_conf.o expand.o \
 	  fd_cmds.o getmsg.o inc_conf.o job.o \
-	  jobq.o mac.o \
+	  jobq.o migrate.o \
 	  mountreq.o msgchan.o next_vol.o newvol.o \
 	  pythondir.o \
 	  recycle.o restore.o run_conf.o \
-	  scheduler.o sql_cmds.o \
+	  scheduler.o \
 	  ua_acl.o ua_cmds.o ua_dotcmds.o \
 	  ua_query.o \
 	  ua_input.o ua_label.o ua_output.o ua_prune.o \
@@ -70,16 +70,19 @@ EXTRAOBJS = @OBJLIST@
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile bacula-dir @STATIC_DIR@
 	@echo "==== Make of dird is good ===="
 	@echo " "
 
 bacula-dir:  $(SVROBJS) ../lib/libbac.a ../cats/libsql.a ../findlib/libfind.a
+	@echo "Linking $@ ..."
 	$(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
 	      -lsql -lfind -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
 	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+
 
 static-bacula-dir:  $(SVROBJS) ../lib/libbac.a ../cats/libsql.a ../findlib/libfind.a
 	$(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \

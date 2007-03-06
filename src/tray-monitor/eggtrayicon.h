@@ -17,6 +17,33 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #ifndef __EGG_TRAY_ICON_H__
 #define __EGG_TRAY_ICON_H__
@@ -26,14 +53,14 @@
 
 G_BEGIN_DECLS
 
-#define EGG_TYPE_TRAY_ICON		(egg_tray_icon_get_type ())
-#define EGG_TRAY_ICON(obj)		(G_TYPE_CHECK_INSTANCE_CAST ((obj), EGG_TYPE_TRAY_ICON, EggTrayIcon))
-#define EGG_TRAY_ICON_CLASS(klass)	(G_TYPE_CHECK_CLASS_CAST ((klass), EGG_TYPE_TRAY_ICON, EggTrayIconClass))
-#define EGG_IS_TRAY_ICON(obj)		(G_TYPE_CHECK_INSTANCE_TYPE ((obj), EGG_TYPE_TRAY_ICON))
-#define EGG_IS_TRAY_ICON_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass), EGG_TYPE_TRAY_ICON))
-#define EGG_TRAY_ICON_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj), EGG_TYPE_TRAY_ICON, EggTrayIconClass))
+#define EGG_TYPE_TRAY_ICON              (egg_tray_icon_get_type ())
+#define EGG_TRAY_ICON(obj)              (G_TYPE_CHECK_INSTANCE_CAST ((obj), EGG_TYPE_TRAY_ICON, EggTrayIcon))
+#define EGG_TRAY_ICON_CLASS(klass)      (G_TYPE_CHECK_CLASS_CAST ((klass), EGG_TYPE_TRAY_ICON, EggTrayIconClass))
+#define EGG_IS_TRAY_ICON(obj)           (G_TYPE_CHECK_INSTANCE_TYPE ((obj), EGG_TYPE_TRAY_ICON))
+#define EGG_IS_TRAY_ICON_CLASS(klass)   (G_TYPE_CHECK_CLASS_TYPE ((klass), EGG_TYPE_TRAY_ICON))
+#define EGG_TRAY_ICON_GET_CLASS(obj)    (G_TYPE_INSTANCE_GET_CLASS ((obj), EGG_TYPE_TRAY_ICON, EggTrayIconClass))
 
-typedef struct _EggTrayIcon	  EggTrayIcon;
+typedef struct _EggTrayIcon       EggTrayIcon;
 typedef struct _EggTrayIconClass  EggTrayIconClass;
 
 struct _EggTrayIcon
@@ -59,16 +86,16 @@ struct _EggTrayIconClass
 GType        egg_tray_icon_get_type       (void);
 
 EggTrayIcon *egg_tray_icon_new_for_screen (GdkScreen   *screen,
-					   const gchar *name);
+                                           const gchar *name);
 
 EggTrayIcon *egg_tray_icon_new            (const gchar *name);
 
 guint        egg_tray_icon_send_message   (EggTrayIcon *icon,
-					   gint         timeout,
-					   const char  *message,
-					   gint         len);
+                                           gint         timeout,
+                                           const char  *message,
+                                           gint         len);
 void         egg_tray_icon_cancel_message (EggTrayIcon *icon,
-					   guint        id);
+                                           guint        id);
 
 GtkOrientation egg_tray_icon_get_orientation (EggTrayIcon *icon);
 

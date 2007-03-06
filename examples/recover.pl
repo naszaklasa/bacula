@@ -474,7 +474,7 @@ The B<-d> option turns on debugging and the B<-v> option turns on
 verbose output.
 
 By specifying a I<catalogname>, the default options for connecting to
-the catalog database will be taken from the section of the inti file
+the catalog database will be taken from the section of the init file
 specified by that name.
 
 The B<-h> option will display this document.

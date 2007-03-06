@@ -2,7 +2,7 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id: mtx-changer.Adic-Scalar-24,v 1.2.16.1 2006/02/23 19:56:11 kerns Exp $
+#  $Id: mtx-changer.Adic-Scalar-24,v 1.3 2006/02/22 18:43:55 kerns Exp $
 #
 #  If you set in your Device resource
 #

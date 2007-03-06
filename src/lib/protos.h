@@ -1,22 +1,35 @@
 /*
  * Prototypes for lib directory of Bacula
  *
- *   Version $Id: protos.h,v 1.109.2.7 2006/06/04 12:24:40 kerns Exp $
+ *   Version $Id: protos.h,v 1.135 2006/12/03 09:00:00 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 class JCR;
 
@@ -31,18 +44,21 @@ void      print_ls_output(JCR *jcr, ATTR *attr);
 void      base64_init            (void);
 int       to_base64              (intmax_t value, char *where);
 int       from_base64            (intmax_t *value, char *where);
-int       bin_to_base64          (char *buf, char *bin, int len);
+int       bin_to_base64          (char *buf, int buflen, char *bin, int binlen, 
+                                  int compatible);
 
 /* bsys.c */
 char     *bstrncpy               (char *dest, const char *src, int maxlen);
 char     *bstrncpy               (char *dest, POOL_MEM &src, int maxlen);
 char     *bstrncat               (char *dest, const char *src, int maxlen);
 char     *bstrncat               (char *dest, POOL_MEM &src, int maxlen);
+bool      bstrcmp                (const char *s1, const char *s2);
 int       cstrlen                (const char *str);
 void     *b_malloc               (const char *file, int line, size_t size);
-#ifndef DEBUG
+#ifndef bmalloc
 void     *bmalloc                (size_t size);
 #endif
+void      bfree                  (void *buf);
 void     *brealloc               (void *buf, size_t size);
 void     *bcalloc                (size_t size1, size_t size2);
 int       bsnprintf              (char *str, int32_t size, const char *format, ...);
@@ -59,6 +75,7 @@ long long int strtoll            (const char *ptr, char **endptr, int base);
 #endif
 void      read_state_file(char *dir, const char *progname, int port);
 int       bstrerror(int errnum, char *buf, size_t bufsiz);
+char     *escape_filename(const char *file_path);
 
 /* bnet.c */
 int32_t    bnet_recv             (BSOCK *bsock);
@@ -66,15 +83,21 @@ bool       bnet_send             (BSOCK *bsock);
 bool       bnet_fsend            (BSOCK *bs, const char *fmt, ...);
 bool       bnet_set_buffer_size  (BSOCK *bs, uint32_t size, int rw);
 bool       bnet_sig              (BSOCK *bs, int sig);
-int        bnet_tls_server       (TLS_CONTEXT *ctx, BSOCK *bsock,
+bool       bnet_tls_server       (TLS_CONTEXT *ctx, BSOCK *bsock,
                                   alist *verify_list);
-int        bnet_tls_client       (TLS_CONTEXT *ctx, BSOCK *bsock);
+bool       bnet_tls_client       (TLS_CONTEXT *ctx, BSOCK *bsock);
 BSOCK *    bnet_connect          (JCR *jcr, int retry_interval,
                int max_retry_time, const char *name, char *host, char *service,
                int port, int verbose);
 void       bnet_close            (BSOCK *bsock);
 BSOCK *    init_bsock            (JCR *jcr, int sockfd, const char *who, const char *ip,
                                   int port, struct sockaddr *client_addr);
+#ifdef HAVE_WIN32
+#ifndef socklen_t
+#define socklen_t int
+#endif
+#endif
+int        bnet_get_peer           (BSOCK *bs, char *buf, socklen_t buflen);
 BSOCK *    dup_bsock             (BSOCK *bsock);
 void       term_bsock            (BSOCK *bsock);
 const char *bnet_strerror         (BSOCK *bsock);
@@ -99,14 +122,47 @@ int              close_wpipe(BPIPE *bpipe);
 int              close_bpipe(BPIPE *bpipe);
 
 /* cram-md5.c */
-int cram_md5_get_auth(BSOCK *bs, char *password, int *tls_remote_need);
-int cram_md5_auth(BSOCK *bs, char *password, int tls_local_need);
-void hmac_md5(uint8_t* text, int text_len, uint8_t*  key,
-              int key_len, uint8_t *hmac);
+bool cram_md5_respond(BSOCK *bs, char *password, int *tls_remote_need, int *compatible);
+bool cram_md5_challenge(BSOCK *bs, char *password, int tls_local_need, int compatible);
+void hmac_md5(uint8_t* text, int text_len, uint8_t* key, int key_len, uint8_t *hmac);
 
 /* crc32.c */
 
 uint32_t bcrc32(uint8_t *buf, int len);
+
+/* crypto.c */
+int                init_crypto                 (void);
+int                cleanup_crypto              (void);
+DIGEST *           crypto_digest_new           (crypto_digest_t type);
+bool               crypto_digest_update        (DIGEST *digest, const uint8_t *data, uint32_t length);
+bool               crypto_digest_finalize      (DIGEST *digest, uint8_t *dest, uint32_t *length);
+void               crypto_digest_free          (DIGEST *digest);
+SIGNATURE *        crypto_sign_new             (void);
+crypto_error_t     crypto_sign_get_digest      (SIGNATURE *sig, X509_KEYPAIR *keypair, DIGEST **digest);
+crypto_error_t     crypto_sign_verify          (SIGNATURE *sig, X509_KEYPAIR *keypair, DIGEST *digest);
+int                crypto_sign_add_signer      (SIGNATURE *sig, DIGEST *digest, X509_KEYPAIR *keypair);
+int                crypto_sign_encode          (SIGNATURE *sig, uint8_t *dest, uint32_t *length);
+SIGNATURE *        crypto_sign_decode          (const uint8_t *sigData, uint32_t length);
+void               crypto_sign_free            (SIGNATURE *sig);
+CRYPTO_SESSION *   crypto_session_new          (crypto_cipher_t cipher, alist *pubkeys);
+void               crypto_session_free         (CRYPTO_SESSION *cs);
+bool               crypto_session_encode       (CRYPTO_SESSION *cs, uint8_t *dest, uint32_t *length);
+crypto_error_t     crypto_session_decode       (const uint8_t *data, uint32_t length, alist *keypairs, CRYPTO_SESSION **session); 
+CRYPTO_SESSION *   crypto_session_decode       (const uint8_t *data, uint32_t length);
+CIPHER_CONTEXT *   crypto_cipher_new           (CRYPTO_SESSION *cs, bool encrypt, uint32_t *blocksize);
+bool               crypto_cipher_update        (CIPHER_CONTEXT *cipher_ctx, const uint8_t *data, uint32_t length, const uint8_t *dest, uint32_t *written);
+bool               crypto_cipher_finalize      (CIPHER_CONTEXT *cipher_ctx, uint8_t *dest, uint32_t *written);
+void               crypto_cipher_free          (CIPHER_CONTEXT *cipher_ctx);
+X509_KEYPAIR *     crypto_keypair_new          (void);
+X509_KEYPAIR *     crypto_keypair_dup          (X509_KEYPAIR *keypair);
+int                crypto_keypair_load_cert    (X509_KEYPAIR *keypair, const char *file);
+bool               crypto_keypair_has_key      (const char *file);
+int                crypto_keypair_load_key     (X509_KEYPAIR *keypair, const char *file, CRYPTO_PEM_PASSWD_CB *pem_callback, const void *pem_userdata);
+void               crypto_keypair_free         (X509_KEYPAIR *keypair);
+int                crypto_default_pem_callback (char *buf, int size, const void *userdata);
+const char *       crypto_digest_name          (DIGEST *digest);
+crypto_digest_t    crypto_digest_stream_type   (int stream);
+const char *       crypto_strerror             (crypto_error_t error);
 
 /* daemon.c */
 void     daemon_start            ();
@@ -114,9 +170,9 @@ void     daemon_start            ();
 /* edit.c */
 uint64_t         str_to_uint64(char *str);
 int64_t          str_to_int64(char *str);
-#define          str_to_int32(str) ((int32_t)str_to_int64(str))
-char *           edit_uint64_with_suffix   (uint64_t val, char *buf);
+#define str_to_int32(str) ((int32_t)str_to_int64(str))
 char *           edit_uint64_with_commas   (uint64_t val, char *buf);
+char *           edit_uint64_with_suffix   (uint64_t val, char *buf);
 char *           add_commas              (char *val, char *buf);
 char *           edit_uint64             (uint64_t val, char *buf);
 char *           edit_int64              (int64_t val, char *buf);
@@ -200,6 +256,7 @@ void             init_stack_dump          (void);
 void             strip_leading_space     (char *str);
 void             strip_trailing_junk     (char *str);
 void             strip_trailing_newline  (char *str);
+
 void             strip_trailing_slashes  (char *dir);
 bool             skip_spaces             (char **msg);
 bool             skip_nonspaces          (char **msg);
@@ -207,20 +264,19 @@ int              fstrsch                 (const char *a, const char *b);
 char            *next_arg(char **s);
 int              parse_args(POOLMEM *cmd, POOLMEM **args, int *argc,
                         char **argk, char **argv, int max_args);
+int              parse_args_only(POOLMEM *cmd, POOLMEM **args, int *argc,
+                        char **argk, char **argv, int max_args);
 void            split_path_and_filename(const char *fname, POOLMEM **path,
                         int *pnl, POOLMEM **file, int *fnl);
 int             bsscanf(const char *buf, const char *fmt, ...);
 
 
 /* tls.c */
-int              init_tls                (void);
-int              cleanup_tls             (void);
-
 TLS_CONTEXT      *new_tls_context        (const char *ca_certfile,
                                           const char *ca_certdir,
                                           const char *certfile,
                                           const char *keyfile,
-                                          TLS_PEM_PASSWD_CB *pem_callback,
+                                          CRYPTO_PEM_PASSWD_CB *pem_callback,
                                           const void *pem_userdata,
                                           const char *dhfile,
                                           bool verify_peer);
@@ -241,7 +297,7 @@ int              tls_bsock_readn         (BSOCK *bsock, char *ptr, int32_t nbyte
 
 
 /* util.c */
-int              is_buf_zero             (char *buf, int len);
+bool             is_buf_zero             (char *buf, int len);
 void             lcase                   (char *str);
 void             bash_spaces             (char *str);
 void             bash_spaces             (POOL_MEM &pm);
@@ -257,8 +313,9 @@ const char *     job_type_to_str         (int type);
 const char *     job_status_to_str       (int stat);
 const char *     job_level_to_str        (int level);
 void             make_session_key        (char *key, char *seed, int mode);
-POOLMEM         *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to);
-void             set_working_directory(char *wd);
+POOLMEM *        edit_job_codes          (JCR *jcr, char *omsg, char *imsg, const char *to);
+void             set_working_directory   (char *wd);
+const char *     last_path_separator     (const char *str);
 
 
 /* watchdog.c */

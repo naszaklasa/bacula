@@ -1,0 +1,23 @@
+This is the Bacula PyGTK Console project, its objective is to write a
+full featured administration console to allow administrators do simple
+and not-so-simple taks on Bacula in an easy manner.
+
+The GUI design as well as the program features are under construction
+right now, they all may change in the future...or not.
+
+Compiling requirements:
+----------------------
+* Bacula source code
+* Python devel files
+* SWIG wrapper generator
+
+Running requirements:
+--------------------
+* Python language
+* Python's GTK+ bindings
+* Python GTK MVC module (http://pygtkmvc.sf.net)
+*  which can be downloaded from:
+*  http://sourceforge.net/project/showfiles.php?group_id=123428
+* A running and configured Bacula system
+
+If you have any comments, please write me to lucas@lunix.com.ar

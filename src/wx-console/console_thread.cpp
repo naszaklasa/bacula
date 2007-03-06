@@ -4,27 +4,50 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: console_thread.cpp,v 1.38.2.3 2005/12/20 23:15:01 kerns Exp $
+ *    Version $Id: console_thread.cpp,v 1.49 2006/11/22 14:26:39 kerns Exp $
  */
 /*
-   Copyright (C) 2004-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 // http://66.102.9.104/search?q=cache:Djc1mPF3hRoJ:cvs.sourceforge.net/viewcvs.py/audacity/audacity-src/src/AudioIO.cpp%3Frev%3D1.102+macos+x+wxthread&hl=fr
 
 /* _("...") macro returns a wxChar*, so if we need a char*, we need to convert it with:
  * wxString(_("...")).mb_str(*wxConvCurrent) */
+
+/*  Windows debug builds set _DEBUG which is used by wxWidgets to select their
+ *  debug memory allocator.  Unfortunately it conflicts with Bacula's SmartAlloc.
+ * So we turn _DEBUG off since we aren't interested in things it enables.
+ */
+
+#undef _DEBUG
+
+#include "bacula.h"
+#include "console_conf.h"
 
 #include "console_thread.h" // class's header file
 
@@ -33,12 +56,9 @@
 #include <wx/thread.h>
 #include <wx/file.h>
 
-#include "console_conf.h"
-
 #include "csprint.h"
 
 #ifdef HAVE_WIN32
-#include <windows.h>
 char OK_msg[]   = "2000 OK\n";
 char TERM_msg[] = "2999 Terminate\n";
 #endif
@@ -58,7 +78,7 @@ int numdir = 0;
  */
 static int tls_pem_callback(char *buf, int size, const void *userdata)
 {
-#ifdef HAVE_TLS
+#if defined(HAVE_TLS) && !defined(HAVE_WIN32)
    const char *prompt = (const char *) userdata;
    char *passwd;
 
@@ -135,7 +155,7 @@ static int check_resources()
 
 
 void console_thread::SetWorkingDirectory(wxString w_dir) {
-   if ((w_dir.Last() == '/') || (w_dir.Last() == '\\')) {
+   if (IsPathSeparator(w_dir.Last())) {
       console_thread::working_dir = w_dir.Mid(0, w_dir.Length()-1);
    }
    else {
@@ -143,7 +163,8 @@ void console_thread::SetWorkingDirectory(wxString w_dir) {
    }
 }
 
-void console_thread::InitLib() {
+void console_thread::InitLib() 
+{
    if (WSA_Init() != 0) {
       csprint(_("Error while initializing windows sockets...\n"));
       inited = false;
@@ -157,7 +178,8 @@ void console_thread::InitLib() {
    inited = true;
 }
 
-void console_thread::FreeLib() {
+void console_thread::FreeLib() 
+{
    if (inited) {
       if (WSACleanup() != 0) {
          csprint(_("Error while cleaning up windows sockets...\n"));
@@ -194,7 +216,8 @@ static void scan_err(const char *file, int line, LEX *lc, const char *msg, ...)
    errmsg << err; 
 }
 
-wxString console_thread::LoadConfig(wxString configfile) {
+wxString console_thread::LoadConfig(wxString configfile) 
+{
    if (!inited) {
       InitLib();
       if (!inited)
@@ -203,12 +226,10 @@ wxString console_thread::LoadConfig(wxString configfile) {
    
    free_config_resources();
    
-   MSGS* msgs = (MSGS *)malloc(sizeof(MSGS));
+   MSGS* msgs = (MSGS *)bmalloc(sizeof(MSGS));
    memset(msgs, 0, sizeof(MSGS));
    for (int i=1; i<=M_MAX; i++) {
-#ifndef WIN32
       add_msg_dest(msgs, MD_STDOUT, i, NULL, NULL);
-#endif
 //    add_msg_dest(msgs, MD_SYSLOG, i, NULL, NULL);
       add_msg_dest(msgs, MD_CONSOLE, i, NULL, NULL);
    }
@@ -274,9 +295,9 @@ void* console_thread::Entry() {
       csprint(NULL, CS_END);
       csprint(NULL, CS_DISCONNECTED);
       csprint(NULL, CS_TERMINATED);
-      #ifdef HAVE_WIN32
-         Exit();
-      #endif
+#ifdef HAVE_WIN32
+      Exit();
+#endif
       return NULL;
    }
    
@@ -285,9 +306,9 @@ void* console_thread::Entry() {
       csprint(NULL, CS_END);
       csprint(NULL, CS_DISCONNECTED);
       csprint(NULL, CS_TERMINATED);
-      #ifdef HAVE_WIN32
-         Exit();
-      #endif
+#ifdef HAVE_WIN32
+      Exit();
+#endif
       return NULL;
    }
    
@@ -311,9 +332,9 @@ void* console_thread::Entry() {
       csprint(NULL, CS_END);
       csprint(NULL, CS_DISCONNECTED);
       csprint(NULL, CS_TERMINATED);
-      #ifdef HAVE_WIN32
-         Exit();
-      #endif
+#ifdef HAVE_WIN32
+      Exit();
+#endif
       return NULL;
    } else if (count == 1) {
       directorchoosen = 1;
@@ -404,9 +425,9 @@ void* console_thread::Entry() {
       csprint(NULL, CS_END);
       csprint(NULL, CS_DISCONNECTED);
       csprint(NULL, CS_TERMINATED);
-      #ifdef HAVE_WIN32
-         Exit();
-      #endif
+#ifdef HAVE_WIN32
+      Exit();
+#endif
       return NULL;
    }
 
@@ -419,9 +440,9 @@ void* console_thread::Entry() {
       csprint(NULL, CS_END);
       csprint(NULL, CS_DISCONNECTED);
       csprint(NULL, CS_TERMINATED);
-      #ifdef HAVE_WIN32
-         Exit();
-      #endif
+#ifdef HAVE_WIN32
+      Exit();
+#endif
       return NULL;
    }
    
@@ -493,9 +514,9 @@ void* console_thread::Entry() {
 
    csprint(NULL, CS_TERMINATED);
 
-   #ifdef HAVE_WIN32
-      Exit();
-   #endif
+#ifdef HAVE_WIN32
+   Exit();
+#endif
    
    return NULL;
 }

@@ -4,22 +4,35 @@
  *
  *     Kern Sibbald, September MM
  *
- *    Version $Id: ua_server.c,v 1.40.2.1 2005/12/20 23:15:01 kerns Exp $
+ *    Version $Id: ua_server.c,v 1.48 2006/11/21 13:20:10 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -28,8 +41,6 @@
 extern int r_first;
 extern int r_last;
 extern struct s_res resources[];
-extern int console_msg_pending;
-extern char my_name[];
 
 
 /* Forward referenced functions */
@@ -96,7 +107,7 @@ JCR *new_control_jcr(const char *base_name, int job_type)
    jcr->sched_time = jcr->start_time;
    jcr->JobType = job_type;
    jcr->JobLevel = L_NONE;
-   jcr->JobStatus = JS_Running;
+   set_jcr_job_status(jcr, JS_Running);
    jcr->JobId = 0;
    return jcr;
 }
@@ -134,13 +145,15 @@ static void *handle_UA_client_request(void *arg)
             do_a_command(ua, ua->cmd);
          }
          if (!ua->quit) {
-            if (ua->auto_display_messages) {
-               pm_strcpy(ua->cmd, "messages");
-               qmessagescmd(ua, ua->cmd);
-               ua->user_notified_msg_pending = FALSE;
-            } else if (!ua->gui && !ua->user_notified_msg_pending && console_msg_pending) {
-               bsendmsg(ua, _("You have messages.\n"));
-               ua->user_notified_msg_pending = TRUE;
+            if (acl_access_ok(ua, Command_ACL, "messages", 8)) {
+               if (ua->auto_display_messages) {
+                  pm_strcpy(ua->cmd, "messages");
+                  qmessagescmd(ua, ua->cmd);
+                  ua->user_notified_msg_pending = FALSE;
+               } else if (!ua->gui && !ua->user_notified_msg_pending && console_msg_pending) {
+                  bsendmsg(ua, _("You have messages.\n"));
+                  ua->user_notified_msg_pending = TRUE;
+               }
             }
             bnet_sig(ua->UA_sock, BNET_EOD); /* send end of command */
          }
@@ -176,8 +189,8 @@ UAContext *new_ua_context(JCR *jcr)
    ua->db = jcr->db;
    ua->cmd = get_pool_memory(PM_FNAME);
    ua->args = get_pool_memory(PM_FNAME);
-   ua->verbose = 1;
-   ua->automount = TRUE;
+   ua->verbose = true;
+   ua->automount = true;
    return ua;
 }
 

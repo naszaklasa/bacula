@@ -5,4 +5,7 @@
   <name>console</name>
   <program_name>gnome-console</program_name>
   <source_directory>gnome2-console</source_directory>
+  <output_main_file>FALSE</output_main_file>
+  <output_support_files>FALSE</output_support_files>
+  <output_build_files>FALSE</output_build_files>
 </glade-project>

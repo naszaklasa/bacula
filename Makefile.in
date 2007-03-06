@@ -1,5 +1,5 @@
 # 
-# Version $Id: Makefile.in,v 1.64.2.6 2006/05/02 14:48:06 kerns Exp $
+# Version $Id: Makefile.in,v 1.76 2006/11/21 16:13:57 kerns Exp $
 # 
 @MCOMMON@
 
@@ -19,13 +19,13 @@ dummy:
 
 # --client-only directories
 fd_subdirs = src scripts src/lib src/findlib src/filed \
-	     @READLINE_SRC@ src/console \
-	     @GNOME_DIR@ @TRAY_MONITOR_DIR@ @WX_DIR@
+       @READLINE_SRC@ @GNOME_DIR@ @TRAY_MONITOR_DIR@ @WX_DIR@ \
+       src/console
 
 # Non-client-only directores
 subdirs =    src/cats @DIRD_DIR@ @STORED_DIR@ src/tools
 
-all_subdirs = ${fd_subdirs} ${@ALL_DIRS@} 
+all_subdirs = ${fd_subdirs} ${@ALL_DIRS@} manpages
 
 DIST =	INSTALL README.configure configure Makefile Makefile.in ChangeLog
 
@@ -62,6 +62,7 @@ autoconf/aclocal.m4: autoconf/configure.in autoconf/bacula-macros/* autoconf/get
 configure: autoconf/configure.in autoconf/aclocal.m4 autoconf/acconfig.h autoconf/config.h.in
 	cd $(srcdir);
 	${RMF} -f config.cache config.log config.out config.status src/config.h
+	${RMF} -rf autoconf/autom4te.cache autom4te.cache
 	autoconf --prepend-include=$(srcdir)/autoconf \
 	autoconf/configure.in > configure
 	chmod 755 configure
@@ -70,7 +71,7 @@ old-configure: autoconf/configure.in autoconf/aclocal.m4 autoconf/acconfig.h
 	cd $(srcdir);
 	${RMF} -f config.cache config.log config.out config.status src/config.h
 	autoconf --include=$(srcdir)/autoconf \
-	    autoconf/configure.in > configure
+	autoconf/configure.in > configure
 	chmod 755 configure
 	@rm -f config.cache
 
@@ -99,7 +100,6 @@ installdirs:
 	-if test "x$(dir_group)" != "x" ; then \
 	   chgrp $(dir_group) $(DESTDIR)$(working_dir); \
 	fi
-#	$(MKDIR) $(DESTDIR)$(mandir)
 
 gnomedirs:
 	$(MKDIR) $(DESTDIR)/usr/share/pixmaps
@@ -189,13 +189,13 @@ Makefiles:
 	 chmod 755 make_catalog_backup delete_catalog_backup)
 
 clean:
-	@for I in ${all_subdirs}; \
+	@for I in ${all_subdirs} src/win32; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1); done
 	@(cd platforms; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1)
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
 	@$(RMF) examples/1 examples/2 examples/devices/1 examples/devices/2
 	@$(RMF) -r autom4te.cache
-	@find . -name .#* -exec $(RMF) {} \;
+	@find . -name ".#*" -exec $(RMF) {} \;
 
 
 # clean for distribution

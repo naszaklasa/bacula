@@ -7,22 +7,35 @@
  *   Kern E. Sibbald, December 2001
  *
  *
- *   Version $Id: bscan.c,v 1.90.2.4 2006/03/14 21:41:41 kerns Exp $
+ *   Version $Id: bscan.c,v 1.113 2006/12/01 08:45:13 robertnelson Exp $
  */
 /*
-   Copyright (C) 2001-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
@@ -48,15 +61,7 @@ static int  create_client_record(B_DB *db, CLIENT_DBR *cr);
 static int  create_fileset_record(B_DB *db, FILESET_DBR *fsr);
 static int  create_jobmedia_record(B_DB *db, JCR *jcr);
 static JCR *create_jcr(JOB_DBR *jr, DEV_RECORD *rec, uint32_t JobId);
-static int update_SIG_record(B_DB *db, char *SIGbuf, DEV_RECORD *rec, int type);
-
-
-/* Global variables */
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
-int win32_client = 1;
-#else
-int win32_client = 0;
-#endif
+static int update_digest_record(B_DB *db, char *digest, DEV_RECORD *rec, int type);
 
 
 /* Local variables */
@@ -106,7 +111,7 @@ pthread_cond_t wait_device_release = PTHREAD_COND_INITIALIZER;
 static void usage()
 {
    fprintf(stderr, _(
-"Copyright (C) 2001-2005 Kern Sibbald.\n"
+PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bscan [ options ] <bacula-archive>\n"
 "       -b bootstrap      specify a bootstrap file\n"
@@ -124,7 +129,7 @@ static void usage()
 "       -v                verbose\n"
 "       -V <Volumes>      specify Volume names (separated by |)\n"
 "       -w <dir>          specify working directory (default from conf file)\n"
-"       -?                print this message\n\n"), VERSION, BDATE);
+"       -?                print this message\n\n"), 2001, VERSION, BDATE);
    exit(1);
 }
 
@@ -137,10 +142,12 @@ int main (int argc, char *argv[])
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
+   init_stack_dump();
 
    my_name_is(argc, argv, "bscan");
    init_msg(NULL, NULL);
 
+   OSDependentInit();
 
    while ((ch = getopt(argc, argv, "b:c:d:h:mn:pP:rsSu:vV:w:?")) != -1) {
       switch (ch) {
@@ -292,7 +299,7 @@ int main (int argc, char *argv[])
    }
 
    free_jcr(bjcr);
-   term_dev(dev);
+   dev->term();
    return 0;
 }
 
@@ -373,6 +380,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    DEVICE *dev = dcr->dev;
    JCR *bjcr = dcr->jcr;
    DEV_BLOCK *block = dcr->block;
+   char digest[BASE64_SIZE(CRYPTO_DIGEST_MAX_SIZE)];
 
    if (rec->data_len > 0) {
       mr.VolBytes += rec->data_len + WRITE_RECHDR_LENGTH; /* Accumulate Volume bytes */
@@ -573,7 +581,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          /* Create JobMedia record */
          mjcr->read_dcr->VolLastIndex = dcr->VolLastIndex;
          create_jobmedia_record(db, mjcr);
-         dev->attached_dcrs->remove(mjcr->read_dcr);
+         detach_dcr_from_dev(mjcr->read_dcr);
          free_jcr(mjcr);
 
          break;
@@ -677,6 +685,13 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    case STREAM_WIN32_DATA:
    case STREAM_FILE_DATA:
    case STREAM_SPARSE_DATA:
+   case STREAM_ENCRYPTED_FILE_DATA:
+   case STREAM_ENCRYPTED_WIN32_DATA:
+   case STREAM_ENCRYPTED_MACOS_FORK_DATA:
+      /*
+       * For encrypted stream, this is an approximation.
+       * The data must be decrypted to know the correct length.
+       */
       mjcr->JobBytes += rec->data_len;
       if (rec->Stream == STREAM_SPARSE_DATA) {
          mjcr->JobBytes -= sizeof(uint64_t);
@@ -686,8 +701,13 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       break;
 
    case STREAM_GZIP_DATA:
-      mjcr->JobBytes += rec->data_len; /* No correct, we should expand it */
-      free_jcr(mjcr);                 /* done using JCR */
+   case STREAM_ENCRYPTED_FILE_GZIP_DATA:
+   case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
+      /* No correct, we should (decrypt and) expand it 
+         done using JCR 
+      */
+      mjcr->JobBytes += rec->data_len;
+      free_jcr(mjcr);                 
       break;
 
    case STREAM_SPARSE_GZIP_DATA:
@@ -701,24 +721,51 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       free_jcr(mjcr);                 /* done using JCR */
       break;
 
-   case STREAM_MD5_SIGNATURE:
-      char MD5buf[50];
-      bin_to_base64(MD5buf, (char *)rec->data, 16); /* encode 16 bytes */
+   case STREAM_MD5_DIGEST:
+      bin_to_base64(digest, sizeof(digest), (char *)rec->data, CRYPTO_DIGEST_MD5_SIZE, true);
       if (verbose > 1) {
-         Pmsg1(000, _("Got MD5 record: %s\n"), MD5buf);
+         Pmsg1(000, _("Got MD5 record: %s\n"), digest);
       }
-      update_SIG_record(db, MD5buf, rec, MD5_SIG);
+      update_digest_record(db, digest, rec, CRYPTO_DIGEST_MD5);
       break;
 
-   case STREAM_SHA1_SIGNATURE:
-      char SIGbuf[50];
-      bin_to_base64(SIGbuf, (char *)rec->data, 20); /* encode 20 bytes */
+   case STREAM_SHA1_DIGEST:
+      bin_to_base64(digest, sizeof(digest), (char *)rec->data, CRYPTO_DIGEST_SHA1_SIZE, true);
       if (verbose > 1) {
-         Pmsg1(000, _("Got SHA1 record: %s\n"), SIGbuf);
+         Pmsg1(000, _("Got SHA1 record: %s\n"), digest);
       }
-      update_SIG_record(db, SIGbuf, rec, SHA1_SIG);
+      update_digest_record(db, digest, rec, CRYPTO_DIGEST_SHA1);
       break;
 
+   case STREAM_SHA256_DIGEST:
+      bin_to_base64(digest, sizeof(digest), (char *)rec->data, CRYPTO_DIGEST_SHA256_SIZE, true);
+      if (verbose > 1) {
+         Pmsg1(000, _("Got SHA256 record: %s\n"), digest);
+      }
+      update_digest_record(db, digest, rec, CRYPTO_DIGEST_SHA256);
+      break;
+
+   case STREAM_SHA512_DIGEST:
+      bin_to_base64(digest, sizeof(digest), (char *)rec->data, CRYPTO_DIGEST_SHA512_SIZE, true);
+      if (verbose > 1) {
+         Pmsg1(000, _("Got SHA512 record: %s\n"), digest);
+      }
+      update_digest_record(db, digest, rec, CRYPTO_DIGEST_SHA512);
+      break;
+
+   case STREAM_ENCRYPTED_SESSION_DATA:
+      // TODO landonf: Investigate crypto support in bscan
+      if (verbose > 1) {
+         Pmsg0(000, _("Got signed digest record\n"));
+      }
+      break;
+
+   case STREAM_SIGNED_DIGEST:
+      // TODO landonf: Investigate crypto support in bscan
+      if (verbose > 1) {
+         Pmsg0(000, _("Got signed digest record\n"));
+      }
+      break;
 
    case STREAM_PROGRAM_NAMES:
       if (verbose) {
@@ -731,8 +778,14 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          Pmsg0(000, _("Got Prog Data Stream record.\n"));
       }
       break;
+
+   case STREAM_UNIX_ATTRIBUTES_ACCESS_ACL:   /* Standard ACL attributes on UNIX */
+   case STREAM_UNIX_ATTRIBUTES_DEFAULT_ACL:  /* Default ACL attributes on UNIX */
+      /* Ignore Unix attributes */
+      break;
+
    default:
-      Pmsg2(0, _("Unknown stream type!!! stream=%d data=%s\n"), rec->Stream, rec->data);
+      Pmsg2(0, _("Unknown stream type!!! stream=%d len=%i\n"), rec->Stream, rec->data_len);
       break;
    }
    return true;
@@ -818,6 +871,7 @@ static int create_media_record(B_DB *db, MEDIA_DBR *mr, VOLUME_LABEL *vl)
    /* We mark Vols as Archive to keep them from being re-written */
    bstrncpy(mr->VolStatus, "Archive", sizeof(mr->VolStatus));
    mr->VolRetention = 365 * 3600 * 24; /* 1 year */
+   mr->Enabled = 1;
    if (vl->VerNum >= 11) {
       mr->FirstWritten = btime_to_utime(vl->write_btime);
       mr->LabelDate    = btime_to_utime(vl->label_btime);
@@ -1046,8 +1100,8 @@ static int update_job_record(B_DB *db, JOB_DBR *jr, SESSION_LABEL *elabel,
       return 0;
    }
    if (verbose) {
-      Pmsg2(000, _("Updated Job termination record for JobId=%u TermStat=%c\n"), jr->JobId,
-         jr->JobStatus);
+      Pmsg3(000, _("Updated Job termination record for JobId=%u Level=%s TermStat=%c\n"), 
+         jr->JobId, job_level_to_str(mjcr->JobLevel), jr->JobStatus);
    }
    if (verbose > 1) {
       const char *term_msg;
@@ -1150,7 +1204,7 @@ static int create_jobmedia_record(B_DB *db, JCR *mjcr)
 /*
  * Simulate the database call that updates the MD5/SHA1 record
  */
-static int update_SIG_record(B_DB *db, char *SIGbuf, DEV_RECORD *rec, int type)
+static int update_digest_record(B_DB *db, char *digest, DEV_RECORD *rec, int type)
 {
    JCR *mjcr;
 
@@ -1170,7 +1224,7 @@ static int update_SIG_record(B_DB *db, char *SIGbuf, DEV_RECORD *rec, int type)
       return 1;
    }
 
-   if (!db_add_SIG_to_file_record(bjcr, db, mjcr->FileId, SIGbuf, type)) {
+   if (!db_add_digest_to_file_record(bjcr, db, mjcr->FileId, digest, type)) {
       Pmsg1(0, _("Could not add MD5/SHA1 to File record. ERR=%s\n"), db_strerror(db));
       free_jcr(mjcr);
       return 0;
@@ -1210,7 +1264,6 @@ static JCR *create_jcr(JOB_DBR *jr, DEV_RECORD *rec, uint32_t JobId)
 }
 
 /* Dummies to replace askdir.c */
-bool    dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing) { return 1;}
 bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
 bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
 bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
@@ -1224,12 +1277,18 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr)
    DEVICE *dev = dcr->dev;
    Dmsg0(20, "Enter dir_ask_sysop_to_mount_volume\n");
    /* Close device so user can use autochanger if desired */
-   if (dev_cap(dev, CAP_OFFLINEUNMOUNT)) {
-      offline_dev(dev);
-   }
-   force_close_device(dev);
    fprintf(stderr, _("Mount Volume \"%s\" on device %s and press return when ready: "),
          dcr->VolumeName, dev->print_name());
+   dev->close();
    getchar();
    return true;
+}
+
+bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing)
+{
+   Dmsg0(100, "Fake dir_get_volume_info\n");
+   bstrncpy(dcr->VolCatInfo.VolCatName, dcr->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
+   dcr->VolCatInfo.VolCatParts = find_num_dvd_parts(dcr);
+   Dmsg2(500, "Vol=%s num_parts=%d\n", dcr->VolCatInfo.VolCatName, dcr->VolCatInfo.VolCatParts);
+   return 1;
 }

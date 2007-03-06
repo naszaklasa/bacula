@@ -4,8 +4,7 @@
 	Version="8.00"
 	Name="console"
 	ProjectGUID="{A0F65E06-9F18-40AC-81F6-A080852F1104}"
-	Keyword="MFCProj"
-	SignManifests="true"
+	RootNamespace="console"
 	>
 	<Platforms>
 		<Platform
@@ -17,11 +16,10 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\Debug"
-			IntermediateDirectory=".\Debug"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets="UpgradeFromVC60.vsprops"
-			UseOfMFC="2"
+			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
 			>
@@ -45,16 +43,15 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../compat;../..;../../../../depkgs-win32/pthreads,../../../../depkgs-win32/gettext/include"
-				PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;HAVE_WIN32"
+				AdditionalIncludeDirectories="../compat;../../../../depkgs-msvc/include;../.."
+				PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;HAVE_WIN32;USING_DLL;_USE_32BIT_TIME_T;_WIN32_WINNT=0x0500;_CRT_SECURE_NO_DEPRECATE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
-				PrecompiledHeaderFile=".\Debug/console.pch"
-				AssemblerListingLocation=".\Debug/"
-				ObjectFile=".\Debug/"
-				ProgramDataBaseFileName=".\Debug/"
+				UsePrecompiledHeader="0"
+				BrowseInformation="1"
 				WarningLevel="3"
+				Detect64BitPortabilityProblems="false"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
 			/>
@@ -71,11 +68,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="wsock32.lib pthreadVCE.lib intl.lib"
-				OutputFile="Debug/bconsole.exe"
+				AdditionalDependencies="wsock32.lib pthreadVCE.lib atlsd.lib"
+				OutputFile="$(OutDir)\bconsole.exe"
 				LinkIncremental="0"
 				SuppressStartupBanner="true"
-				AdditionalLibraryDirectories="../../../../depkgs-win32/pthreads;,../../../../depkgs-win32/gettext/lib"
+				AdditionalLibraryDirectories="../../../../depkgs-msvc/lib"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -109,13 +106,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\Release"
-			IntermediateDirectory=".\Release"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets="UpgradeFromVC60.vsprops"
-			UseOfMFC="2"
+			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -137,16 +134,19 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="4"
-				AdditionalIncludeDirectories="../compat,../..,../../../../depkgs-win32/pthreads;../../../../depkgs-win32/gettext/include"
-				PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;HAVE_WIN32"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="true"
+				AdditionalIncludeDirectories="../compat;../../../../depkgs-msvc/include;../.."
+				PreprocessorDefinitions="NDEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;HAVE_WIN32;USING_DLL;_USE_32BIT_TIME_T;_WIN32_WINNT=0x0500;_CRT_SECURE_NO_DEPRECATE"
+				StringPooling="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="2"
-				PrecompiledHeaderFile=".\Release/console.pch"
-				AssemblerListingLocation=".\Release/"
-				ObjectFile=".\Release/"
-				ProgramDataBaseFileName=".\Release/"
+				UsePrecompiledHeader="0"
+				BrowseInformation="1"
 				WarningLevel="3"
+				Detect64BitPortabilityProblems="false"
 				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -161,11 +161,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="wsock32.lib pthreadVCE.lib intl.lib"
-				OutputFile="Release/bconsole.exe"
+				AdditionalDependencies="wsock32.lib pthreadVCE.lib atls.lib"
+				OutputFile="$(OutDir)\bconsole.exe"
 				LinkIncremental="0"
 				SuppressStartupBanner="true"
-				AdditionalLibraryDirectories="../../../../depkgs-win32/pthreads;../../../../depkgs-win32/gettext/lib"
+				AdditionalLibraryDirectories="../../../../depkgs-msvc/lib"
+				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -203,21 +204,17 @@
 		<Filter
 			Name="Source Files"
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\lib\address_conf.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\lib\alist.cpp"
+				RelativePath="..\..\console\authenticate.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
+						CompileAs="2"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -225,21 +222,21 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
+						CompileAs="2"
 					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="authenticate.cpp"
+				RelativePath="..\..\console\console.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						CompileAs="2"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -247,21 +244,23 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						CompileAs="2"
 					/>
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\lib\base64.cpp"
+				RelativePath="..\..\console\console_conf.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						CompileAs="2"
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -269,764 +268,23 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+						CompileAs="2"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\berrno.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\lib\bnet.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\bsys.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\btime.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\btimers.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\compat\compat.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="console.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="console_conf.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\cram-md5.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\crc32.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\dlist.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\edit.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\compat\getopt.c"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\hmac.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\idcache.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\jcr.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\lex.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\md5.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\mem_pool.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\message.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\parse_conf.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\compat\print.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\queue.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\res.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\lib\rwlock.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\scan.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\serial.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\sha1.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\smartall.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="StdAfx.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-						UsePrecompiledHeader="1"
-						PrecompiledHeaderThrough="stdafx.h"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-						UsePrecompiledHeader="1"
-						PrecompiledHeaderThrough="stdafx.h"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\tls.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\lib\util.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\watchdog.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions="_DEBUG;HAVE_CONSOLE;_WINMAIN_;PTW32_BUILD;WIN32;_CONSOLE;_MBCS;HAVE_WIN32;_AFXDLL;$(NoInherit)"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\lib\winapi.cpp"
-				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
+			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
-			<File
-				RelativePath="..\compat\alloca.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\compat.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\dirent.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\getopt.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\grp.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\mswinver.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\netdb.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\pwd.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\sched.h"
-				>
-			</File>
-			<File
-				RelativePath="StdAfx.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\stdint.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\strings.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\syslog.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\unistd.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\winconfig.h"
-				>
-			</File>
-			<File
-				RelativePath="..\compat\winhost.h"
-				>
-			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
 			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
+			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 		</Filter>
 	</Files>

@@ -5,23 +5,36 @@
  *
  *   Split from job.c and acquire.c June 2005
  *
- *   Version $Id: reserve.c,v 1.28.2.11 2006/03/24 16:35:23 kerns Exp $
+ *   Version $Id: reserve.c,v 1.51 2006/12/16 15:30:22 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
@@ -242,7 +255,7 @@ void free_unused_volume(DCR *dcr)
       if (vol->dcr == dcr && (vol->dev == NULL || 
           strcmp(vol->vol_name, vol->dev->VolHdr.VolumeName) != 0)) {
          vol_list->remove(vol);
-         Dmsg1(100, "free_unused_olume %s\n", vol->vol_name);
+         Dmsg1(100, "free_unused_volume %s\n", vol->vol_name);
          free(vol->vol_name);
          free(vol);
          break;
@@ -254,18 +267,27 @@ void free_unused_volume(DCR *dcr)
 /*
  * List Volumes -- this should be moved to status.c
  */
-void list_volumes(BSOCK *user)  
+void list_volumes(void sendit(const char *msg, int len, void *sarg), void *arg)
 {
    VOLRES *vol;
+   char *msg;
+   int len;
+
+   msg = (char *)get_pool_memory(PM_MESSAGE);
+
    P(vol_list_lock);
    for (vol=(VOLRES *)vol_list->first(); vol; vol=(VOLRES *)vol_list->next(vol)) {
       if (vol->dev) {
-         bnet_fsend(user, "%s on device %s\n", vol->vol_name, vol->dev->print_name());
+         len = Mmsg(msg, "%s on device %s\n", vol->vol_name, vol->dev->print_name());
+         sendit(msg, len, arg);
       } else {
-         bnet_fsend(user, "%s\n", vol->vol_name);
+         len = Mmsg(msg, "%s\n", vol->vol_name);
+         sendit(msg, len, arg);
       }
    }
    V(vol_list_lock);
+
+   free_pool_memory(msg);
 }
       
 /* Create the Volume list */
@@ -286,7 +308,7 @@ void free_volume_list()
    }
    P(vol_list_lock);
    for (vol=(VOLRES *)vol_list->first(); vol; vol=(VOLRES *)vol_list->next(vol)) {
-      Dmsg3(000, "Unreleased Volume=%s dcr=0x%x dev=0x%x\n", vol->vol_name,
+      Dmsg3(100, "Unreleased Volume=%s dcr=0x%x dev=0x%x\n", vol->vol_name,
          vol->dcr, vol->dev);
    }
    delete vol_list;
@@ -340,6 +362,7 @@ static bool use_storage_cmd(JCR *jcr)
    RCTX rctx;
    char *msg;
    alist *msgs;
+   alist *dirstore;
 
    memset(&rctx, 0, sizeof(RCTX));
    rctx.jcr = jcr;
@@ -347,7 +370,8 @@ static bool use_storage_cmd(JCR *jcr)
     * If there are multiple devices, the director sends us
     *   use_device for each device that it wants to use.
     */
-   jcr->dirstore = New(alist(10, not_owned_by_alist));
+   dirstore = New(alist(10, not_owned_by_alist));
+// Dmsg2(000, "dirstore=%p JobId=%u\n", dirstore, jcr->JobId);
    msgs = jcr->reserve_msgs = New(alist(10, not_owned_by_alist));  
    do {
       Dmsg1(100, "<dird: %s", dir->msg);
@@ -357,12 +381,18 @@ static bool use_storage_cmd(JCR *jcr)
       if (!ok) {
          break;
       }
+      if (append) {
+         jcr->write_store = dirstore;
+      } else {
+         jcr->read_store = dirstore;
+      }
+      rctx.append = append;
       unbash_spaces(store_name);
       unbash_spaces(media_type);
       unbash_spaces(pool_name);
       unbash_spaces(pool_type);
       store = new DIRSTORE;
-      jcr->dirstore->append(store);
+      dirstore->append(store);
       memset(store, 0, sizeof(DIRSTORE));
       store->device = New(alist(10));
       bstrncpy(store->name, store_name, sizeof(store->name));
@@ -387,7 +417,7 @@ static bool use_storage_cmd(JCR *jcr)
    /* This loop is debug code and can be removed */
    /* ***FIXME**** remove after 1.38 release */
    char *device_name;
-   foreach_alist(store, jcr->dirstore) {
+   foreach_alist(store, dirstore) {
       Dmsg5(110, "Storage=%s media_type=%s pool=%s pool_type=%s append=%d\n", 
          store->name, store->media_type, store->pool_name, 
          store->pool_type, store->append);
@@ -538,7 +568,13 @@ bool find_suitable_device_for_job(JCR *jcr, RCTX &rctx)
    bool ok;
    DIRSTORE *store;
    char *device_name;
+   alist *dirstore;
 
+   if (rctx.append) {
+      dirstore = jcr->write_store;
+   } else {
+      dirstore = jcr->read_store;
+   }
    /* 
     * For each storage device that the user specified, we
     *  search and see if there is a resource for that device.
@@ -547,7 +583,7 @@ bool find_suitable_device_for_job(JCR *jcr, RCTX &rctx)
       rctx.PreferMountedVols, rctx.exact_match, rctx.suitable_device,
       rctx.autochanger_only);
    ok = false;
-   foreach_alist(store, jcr->dirstore) {
+   foreach_alist(store, dirstore) {
       rctx.store = store;
       foreach_alist(device_name, store->device) {
          int stat;
@@ -568,7 +604,6 @@ bool find_suitable_device_for_job(JCR *jcr, RCTX &rctx)
          break;
       }
    }
-
    return ok;
 }
 
@@ -801,7 +836,10 @@ static bool reserve_device_for_append(DCR *dcr, RCTX &rctx)
 
    ASSERT(dcr);
 
+   /* Get locks in correct order */
+   unlock_reservations();
    P(dev->mutex);
+   lock_reservations();
 
    /* If device is being read, we cannot write it */
    if (dev->can_read()) {
@@ -888,7 +926,7 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
 
       /* Check for prefer mounted volumes */
       if (rctx.PreferMountedVols && !dev->VolHdr.VolumeName[0] && dev->is_tape()) {
-         Mmsg(jcr->errmsg, _("3606 JobId=%u wants mounted, but drive %s has no Volume.\n"), 
+         Mmsg(jcr->errmsg, _("3606 JobId=%u prefers mounted drives, but drive %s has no Volume.\n"), 
             jcr->JobId, dev->print_name());
          queue_reserve_message(jcr);
          Dmsg1(110, "failed: want mounted -- no vol JobId=%u\n", jcr->JobId);
@@ -977,7 +1015,7 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
          return 1;
       } else {
          /* Drive Pool not suitable for us */
-         Mmsg(jcr->errmsg, _("3609 JobId=%u wants Pool=\"%s\" but have Pool=\"%s\" on drive %s.\n"), 
+         Mmsg(jcr->errmsg, _("3609 JobId=%u wants Pool=\"%s\" but has Pool=\"%s\" on drive %s.\n"), 
                jcr->JobId, dcr->pool_name, dev->pool_name, dev->print_name());
          queue_reserve_message(jcr);
          Dmsg2(110, "failed: busy num_writers>0, can_append, pool=%s wanted=%s\n",
@@ -1032,7 +1070,7 @@ static void queue_reserve_message(JCR *jcr)
 /*
  * Send any reservation messages queued for this jcr
  */
-void send_drive_reserve_messages(JCR *jcr, BSOCK *user)
+void send_drive_reserve_messages(JCR *jcr, void sendit(const char *msg, int len, void *sarg), void *arg)
 {
    int i;
    alist *msgs;
@@ -1047,7 +1085,8 @@ void send_drive_reserve_messages(JCR *jcr, BSOCK *user)
    for (i=msgs->size()-1; i >= 0; i--) {
       msg = (char *)msgs->get(i);
       if (msg) {
-         bnet_fsend(user, "   %s", msg);
+         sendit("   ", 3, arg);
+         sendit(msg, strlen(msg), arg);
       } else {
          break;
       }

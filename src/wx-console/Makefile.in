@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in,v 1.18.2.2 2005/12/23 08:18:59 kerns Exp $
+#  Version $Id: Makefile.in,v 1.20 2006/06/25 13:58:37 kerns Exp $
 #
 @MCOMMON@
 
@@ -55,11 +55,13 @@ OPENSSL_LIBS = @OPENSSL_LIBS@
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_CPPFLAGS) $(CONS_INC) \
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_CPPFLAGS) $(CONS_INC) \
  $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(WCFLAGS) $(CFLAGS) $<
 
 .cpp.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_CPPFLAGS) $(CONS_INC) \
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_CPPFLAGS) $(CONS_INC) \
  $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(WCFLAGS) $(CFLAGS) $<
 
 
@@ -126,7 +128,7 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(CONS_CPPFLAGS) -I$(srcdir) -I$(basedir) $(OPENSSL_INC) $(CONSSRCS) >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(CONS_CPPFLAGS) -I$(srcdir) -I$(basedir) $(CONSSRCS) >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \

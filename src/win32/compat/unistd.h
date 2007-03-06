@@ -1,5 +1,3 @@
-#ifndef HAVE_MINGW
-#include "compat.h"
-#else
+#if defined(__GNUC__)
 #include_next<unistd.h>
 #endif

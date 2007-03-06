@@ -5,28 +5,35 @@
  *
  *     Kern Sibbald, May MMII
  *
- *   Version $Id: autoprune.c,v 1.14 2005/07/11 18:26:23 kerns Exp $
+ *   Version $Id: autoprune.c,v 1.19 2006/11/21 13:20:08 kerns Exp $
  */
-
 /*
-   Copyright (C) 2002-2004 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -39,14 +46,14 @@
  * Auto Prune Jobs and Files. This is called at the end of every
  *   Job.  We do not prune volumes here.
  */
-int do_autoprune(JCR *jcr)
+void do_autoprune(JCR *jcr)
 {
    UAContext *ua;
    CLIENT *client;
    bool pruned;
 
    if (!jcr->client) {                /* temp -- remove me */
-      return 1;
+      return;
    }
 
    ua = new_ua_context(jcr);
@@ -71,7 +78,7 @@ int do_autoprune(JCR *jcr)
    }
 
    free_ua_context(ua);
-   return 1;
+   return;
 }
 
 /*
@@ -101,7 +108,7 @@ int prune_volumes(JCR *jcr)
    db_lock(jcr->db);
 
    /* Get the List of all media ids in the current Pool */
-   if (!db_get_media_ids(jcr, jcr->db, jcr->PoolId, &num_ids, &ids)) {
+   if (!db_get_media_ids(jcr, jcr->db, jcr->jr.PoolId, &num_ids, &ids)) {
       Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));
       goto bail_out;
    }
@@ -114,7 +121,11 @@ int prune_volumes(JCR *jcr)
          continue;
       }
       /* Prune only Volumes from current Pool */
-      if (jcr->PoolId != mr.PoolId) {
+      if (jcr->jr.PoolId != mr.PoolId) {
+         continue;
+      }
+      /* Don't prune archived volumes */
+      if (mr.Enabled == 2) {
          continue;
       }
       /* Prune only Volumes with status "Full", or "Used" */

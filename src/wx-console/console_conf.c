@@ -20,27 +20,47 @@
  *     Kern Sibbald, January MM, September MM
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 /* _("...") macro returns a wxChar*, so if we need a char*, we need to convert it with:
  * wxString(_("...")).mb_str(*wxConvCurrent) */
 
-#include <wx/intl.h>
+/*  Windows debug builds set _DEBUG which is used by wxWidgets to select their
+ *  debug memory allocator.  Unfortunately it conflicts with Bacula's SmartAlloc.
+ * So we turn _DEBUG off since we aren't interested in things it enables.
+ */
+
+#undef _DEBUG
 
 #include "bacula.h"
 #include "console_conf.h"
+
+#include <wx/intl.h>
 
 /* Define the first and last resource ID record
  * types. Note, these should be unique for each
@@ -59,15 +79,14 @@ RES **res_head = sres_head;
  * then move it to allocated memory when the resource
  * scan is complete.
  */
-#if defined(HAVE_WIN32) && !defined(HAVE_CYGWIN)  && !defined(HAVE_MINGW)
+#if defined(_MSC_VER)
 extern "C" { // work around visual compiler mangling variables
     URES res_all;
-    int  res_all_size = sizeof(res_all);
 }
 #else
 URES res_all;
-int  res_all_size = sizeof(res_all);
 #endif
+int  res_all_size = sizeof(res_all);
 
 /* Definition of records permitted within each
  * resource with the routine to process the record
@@ -81,13 +100,13 @@ static RES_ITEM cons_items[] = {
    {"rcfile",      store_dir,      ITEM(res_cons.rc_file), 0, 0, 0},
    {"historyfile", store_dir,      ITEM(res_cons.hist_file), 0, 0, 0},
    {"password",    store_password, ITEM(res_cons.password), 0, ITEM_REQUIRED, 0},
-   {"tlsenable",      store_yesno,     ITEM(res_cons.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_yesno,     ITEM(res_cons.tls_require), 1, 0, 0},
+   {"tlsenable",      store_bit,     ITEM(res_cons.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_bit,     ITEM(res_cons.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(res_cons.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(res_cons.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(res_cons.tls_certfile), 0, 0, 0},
    {"tlskey",         store_dir,       ITEM(res_cons.tls_keyfile), 0, 0, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 
@@ -98,13 +117,13 @@ static RES_ITEM dir_items[] = {
    {"dirport",     store_int,      ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",     store_str,      ITEM(res_dir.address),  0, 0, 0},
    {"password",    store_password, ITEM(res_dir.password), 0, ITEM_REQUIRED, 0},
-   {"tlsenable",      store_yesno,     ITEM(res_dir.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_yesno,     ITEM(res_dir.tls_require), 1, 0, 0},
+   {"tlsenable",      store_bit,     ITEM(res_dir.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_bit,     ITEM(res_dir.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(res_dir.tls_certfile), 0, 0, 0},
    {"tlskey",         store_dir,       ITEM(res_dir.tls_keyfile), 0, 0, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 /*
@@ -133,16 +152,16 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
       recurse = 0;
    }
    switch (type) {
-      case R_CONSOLE:
-         printf(wxString(_("Console: name=%s rcfile=%s histfile=%s\n")).mb_str(*wxConvCurrent), reshdr->name,
-      res->res_cons.rc_file, res->res_cons.hist_file);
-    break;
-      case R_DIRECTOR:
-         printf(wxString(_("Director: name=%s address=%s DIRport=%d\n")).mb_str(*wxConvCurrent), reshdr->name,
-       res->res_dir.address, res->res_dir.DIRport);
-    break;
-      default:
-         printf(wxString(_("Unknown resource type %d\n")).mb_str(*wxConvCurrent), type);
+   case R_CONSOLE:
+      printf(wxString(_("Console: name=%s rcfile=%s histfile=%s\n")).mb_str(*wxConvCurrent), reshdr->name,
+             res->res_cons.rc_file, res->res_cons.hist_file);
+      break;
+   case R_DIRECTOR:
+      printf(wxString(_("Director: name=%s address=%s DIRport=%d\n")).mb_str(*wxConvCurrent), reshdr->name,
+             res->res_dir.address, res->res_dir.DIRport);
+      break;
+   default:
+      printf(wxString(_("Unknown resource type %d\n")).mb_str(*wxConvCurrent), type);
    }
    if (recurse && res->res_dir.hdr.next) {
       dump_resource(type, res->res_dir.hdr.next, sendit, sock);
@@ -167,60 +186,60 @@ void free_resource(RES *sres, int type)
    /* common stuff -- free the resource name */
    nres = (RES *)res->res_dir.hdr.next;
    if (res->res_dir.hdr.name) {
-      free(res->res_dir.hdr.name);
+      bfree(res->res_dir.hdr.name);
    }
    if (res->res_dir.hdr.desc) {
-      free(res->res_dir.hdr.desc);
+      bfree(res->res_dir.hdr.desc);
    }
 
    switch (type) {
    case R_CONSOLE:
       if (res->res_cons.rc_file) {
-         free(res->res_cons.rc_file);
+         bfree(res->res_cons.rc_file);
       }
       if (res->res_cons.hist_file) {
-         free(res->res_cons.hist_file);
+         bfree(res->res_cons.hist_file);
       }
       if (res->res_cons.tls_ctx) { 
          free_tls_context(res->res_cons.tls_ctx);
       }
       if (res->res_cons.tls_ca_certfile) {
-         free(res->res_cons.tls_ca_certfile);
+         bfree(res->res_cons.tls_ca_certfile);
       }
       if (res->res_cons.tls_ca_certdir) {
-         free(res->res_cons.tls_ca_certdir);
+         bfree(res->res_cons.tls_ca_certdir);
       }
       if (res->res_cons.tls_certfile) {
-         free(res->res_cons.tls_certfile);
+         bfree(res->res_cons.tls_certfile);
       }
       if (res->res_cons.tls_keyfile) {
-         free(res->res_cons.tls_keyfile);
+         bfree(res->res_cons.tls_keyfile);
       }
    case R_DIRECTOR:
       if (res->res_dir.address) {
-         free(res->res_dir.address);
+         bfree(res->res_dir.address);
       }
       if (res->res_dir.tls_ctx) { 
          free_tls_context(res->res_dir.tls_ctx);
       }
       if (res->res_dir.tls_ca_certfile) {
-         free(res->res_dir.tls_ca_certfile);
+         bfree(res->res_dir.tls_ca_certfile);
       }
       if (res->res_dir.tls_ca_certdir) {
-         free(res->res_dir.tls_ca_certdir);
+         bfree(res->res_dir.tls_ca_certdir);
       }
       if (res->res_dir.tls_certfile) {
-         free(res->res_dir.tls_certfile);
+         bfree(res->res_dir.tls_certfile);
       }
       if (res->res_dir.tls_keyfile) {
-         free(res->res_dir.tls_keyfile);
+         bfree(res->res_dir.tls_keyfile);
       }
       break;
    default:
          printf(wxString(_("Unknown resource type %d\n")).mb_str(*wxConvCurrent), type);
       }
    /* Common stuff again -- free the resource, recurse to next one */
-   free(res);
+   bfree(res);
    if (nres) {
       free_resource(nres, type);
    }
@@ -256,62 +275,63 @@ void save_resource(int type, RES_ITEM *items, int pass)
     */
    if (pass == 2) {
       switch (type) {
-    /* Resources not containing a resource */
-    case R_CONSOLE:
-    case R_DIRECTOR:
-       break;
+      /* Resources not containing a resource */
+      case R_CONSOLE:
+      case R_DIRECTOR:
+         break;
 
-    default:
-            Emsg1(M_ERROR, 0, wxString(_("Unknown resource type %d\n")).mb_str(*wxConvCurrent), type);
-       error = 1;
-       break;
+      default:
+         Emsg1(M_ERROR, 0, wxString(_("Unknown resource type %d\n")).mb_str(*wxConvCurrent), type);
+         error = 1;
+         break;
       }
       /* Note, the resoure name was already saved during pass 1,
        * so here, we can just release it.
        */
       if (res_all.res_dir.hdr.name) {
-    free(res_all.res_dir.hdr.name);
-    res_all.res_dir.hdr.name = NULL;
+         bfree(res_all.res_dir.hdr.name);
+         res_all.res_dir.hdr.name = NULL;
       }
       if (res_all.res_dir.hdr.desc) {
-    free(res_all.res_dir.hdr.desc);
-    res_all.res_dir.hdr.desc = NULL;
+         bfree(res_all.res_dir.hdr.desc);
+         res_all.res_dir.hdr.desc = NULL;
       }
       return;
    }
 
    /* The following code is only executed during pass 1 */
    switch (type) {
-      case R_CONSOLE:
-    size = sizeof(CONRES);
-    break;
-      case R_DIRECTOR:
-    size = sizeof(DIRRES);
-    break;
-      default:
-         printf(wxString(_("Unknown resource type %d\n")).mb_str(*wxConvCurrent), type);
-    error = 1;
-    size = 1;
-    break;
+   case R_CONSOLE:
+      size = sizeof(CONRES);
+      break;
+   case R_DIRECTOR:
+      size = sizeof(DIRRES);
+      break;
+   default:
+      printf(wxString(_("Unknown resource type %d\n")).mb_str(*wxConvCurrent), type);
+      error = 1;
+      size = 1;
+      break;
    }
    /* Common */
    if (!error) {
-      res = (URES *)malloc(size);
+      res = (URES *)bmalloc(size);
       memcpy(res, &res_all, size);
       if (!res_head[rindex]) {
-    res_head[rindex] = (RES *)res; /* store first entry */
+         res_head[rindex] = (RES *)res; /* store first entry */
       } else {
-    RES *next;
-    for (next=res_head[rindex]; next->next; next=next->next) {
-       if (strcmp(next->name, res->res_dir.hdr.name) == 0) {
-          Emsg2(M_ERROR_TERM, 0,
-                  wxString(_("Attempt to define second %s resource named \"%s\" is not permitted.\n")).mb_str(*wxConvCurrent),
-        resources[rindex].name, res->res_dir.hdr.name);
-       }
-    }
-    next->next = (RES *)res;
-         Dmsg2(90, "Inserting %s res: %s\n", res_to_str(type),
-          res->res_dir.hdr.name);
+         RES *next, *last;
+         for (last=next=res_head[rindex]; next; next=next->next) {
+            last = next;
+            if (strcmp(next->name, res->res_dir.hdr.name) == 0) {
+               Emsg2(M_ERROR_TERM, 0,
+                   wxString(_("Attempt to define second %s resource named \"%s\" is not permitted.\n")).mb_str(*wxConvCurrent),
+                   resources[rindex].name, res->res_dir.hdr.name);
+            }
+         }
+         last->next = (RES *)res;
+            Dmsg2(90, "Inserting %s res: %s\n", res_to_str(type),
+                  res->res_dir.hdr.name);
       }
    }
 }

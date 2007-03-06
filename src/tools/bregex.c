@@ -1,25 +1,49 @@
 /*
  * Test program for testing regular expressions.
+ *
+ *  Kern Sibbald, MMVI
+ *
  */
 /*
-   Copyright (C) 2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2006-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 
-//#define TESTLIB
-#ifdef TESTLIB
+/*
+ *  If you define BACULA_REGEX, bregex will be built with the
+ *  Bacula bregex library, which is the same code that we
+ *  use on Win32, thus using Linux, you can test your Win32
+ *  expressions. Otherwise, this program will link with the
+ *  system library routines.
+ */
+//#define BACULA_REGEX
+
+#ifdef BACULA_REGEX
 
 #include "lib/bregex.h"
 
@@ -100,6 +124,8 @@ int main(int argc, char *const *argv)
       printf("A data file must be specified.\n");
       usage();
    }
+
+   OSDependentInit();
 
    for ( ;; ) {
       printf("Enter regex pattern: ");

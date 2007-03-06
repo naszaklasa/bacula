@@ -1,6 +1,6 @@
 # Spanish translations for branch package
 # Traducciones al español para el paquete branch.
-# Copyright (C) 2006 Kern Sibbald
+# Copyright (C) 2006 Free Software Foundation Europe e.V.
 # This file is distributed under the same license as the branch package.
 #  <kern@sibbald.com>, 2006.
 #

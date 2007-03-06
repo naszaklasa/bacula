@@ -6,22 +6,35 @@
 
  *     Kern Sibbald, March MMI
  *
- *   Version $Id: next_vol.c,v 1.20.2.3 2006/04/11 08:05:18 kerns Exp $
+ *   Version $Id: next_vol.c,v 1.33 2006/12/22 15:01:05 kerns Exp $
  */
 /*
-   Copyright (C) 2001-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -32,7 +45,7 @@ static bool get_scratch_volume(JCR *jcr, MEDIA_DBR *mr, bool InChanger);
 /*
  *  Items needed:
  *   mr.PoolId must be set
- *   jcr->store
+ *   jcr->wstore
  *   jcr->db
  *   jcr->pool
  *   MEDIA_DBR mr (zeroed out)
@@ -43,7 +56,7 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index, bool create)
    int retry = 0;
    bool ok;
    bool InChanger;
-   STORE *store = jcr->store;
+   STORE *store = jcr->wstore;
 
    bstrncpy(mr->MediaType, store->media_type, sizeof(mr->MediaType));
    Dmsg2(100, "CatReq FindMedia: PoolId=%d, MediaType=%s\n", (int)mr->PoolId, mr->MediaType);
@@ -62,14 +75,15 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index, bool create)
        *  1. Look for volume with "Append" status.
        */
       ok = db_find_next_volume(jcr, jcr->db, index, InChanger, mr);
-      Dmsg2(100, "catreq after find_next_vol ok=%d FW=%d\n", ok, mr->FirstWritten);
+      Dmsg4(100, "after find_next_vol index=%d ok=%d InChanger=%d Vstat=%s\n",
+            index, ok, InChanger, mr->VolStatus);
 
       if (!ok) {
          /*
           * 2. Try finding a recycled volume
           */
          ok = find_recycled_volume(jcr, InChanger, mr);
-         Dmsg2(100, "find_recycled_volume %d FW=%d\n", ok, mr->FirstWritten);
+         Dmsg2(100, "find_recycled_volume ok=%d FW=%d\n", ok, mr->FirstWritten);
          if (!ok) {
             /*
              * 3. Try recycling any purged volume
@@ -312,6 +326,7 @@ static bool get_scratch_volume(JCR *jcr, MEDIA_DBR *mr, bool InChanger)
    MEDIA_DBR smr;
    POOL_DBR spr, pr;
    bool ok = false;
+   bool found = false;
    char ed1[50], ed2[50];
 
    /* Only one thread at a time can pull from the scratch pool */
@@ -329,7 +344,23 @@ static bool get_scratch_volume(JCR *jcr, MEDIA_DBR *mr, bool InChanger)
       }
       bstrncpy(smr.VolStatus, "Append", sizeof(smr.VolStatus));  /* want only appendable volumes */
       bstrncpy(smr.MediaType, mr->MediaType, sizeof(smr.MediaType));
+
+      /*
+       * If we do not find a valid Scratch volume, try
+       *  recycling any existing purged volumes, then
+       *  try to take the oldest volume.
+       */
       if (db_find_next_volume(jcr, jcr->db, 1, InChanger, &smr)) {
+         found = true;
+
+      } else if (find_recycled_volume(jcr, InChanger, &smr)) {
+         found = true;
+
+      } else if (recycle_oldest_purged_volume(jcr, InChanger, &smr)) {
+         found = true;
+      }
+
+      if (found) {
          POOL_MEM query(PM_MESSAGE);
 
          /*   
@@ -368,6 +399,9 @@ static bool get_scratch_volume(JCR *jcr, MEDIA_DBR *mr, bool InChanger)
          memcpy(mr, &smr, sizeof(MEDIA_DBR));
          /* Set default parameters from current pool */
          set_pool_dbr_defaults_in_media_dbr(mr, &pr);
+         /* set_pool_dbr_defaults_in_media_dbr set VolStatus to Append,
+          * we could have Recycled media */
+         bstrncpy(mr->VolStatus, smr.VolStatus, sizeof(smr.VolStatus));
          if (!db_update_media_record(jcr, jcr->db, mr)) {
             Jmsg(jcr, M_WARNING, 0, _("Unable to update Volume record: ERR=%s"), 
                  db_strerror(jcr->db));

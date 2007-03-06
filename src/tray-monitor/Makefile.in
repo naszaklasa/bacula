@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in,v 1.6.2.2 2005/11/10 20:11:21 kerns Exp $
+#  Version $Id: Makefile.in,v 1.9 2006/06/25 13:58:37 kerns Exp $
 #
 @MCOMMON@
 
@@ -38,7 +38,8 @@ OPENSSL_LIBS = @OPENSSL_LIBS@
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(MONITOR_CPPFLAGS) \
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(MONITOR_CPPFLAGS) \
  $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile bacula-tray-monitor

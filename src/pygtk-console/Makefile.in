@@ -1,0 +1,112 @@
+#
+#  Python Gtk Console
+#
+#   Written by Lucas Di Pentima
+#
+#  Version $Id: Makefile.in,v 1.1 2005/12/11 10:07:10 kerns Exp $
+#  
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/pygtk-console
+
+DEBUG=@DEBUG@
+
+GETTEXT_LIBS = @LIBINTL@
+
+OPENSSL_LIBS = @OPENSSL_LIBS@
+OPENSSL_INC = @OPENSSL_INC@
+
+PYTHON_LIBS = @PYTHON_LIBS@
+PYTHON_INC = @PYTHON_INCDIR@
+
+first_rule: all
+dummy:
+
+#
+# these are the objects that are changed by the .configure process
+EXTRAOBJS = @OBJLIST@
+
+.SUFFIXES:	.c .o
+.PHONY:
+.DONTCARE:
+
+# inference rules
+.c.o:
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
+#-------------------------------------------------------------------------
+all: Makefile bacula_wrapper
+
+bacula_wrapper: bacula.i
+	swig -c++ -python -I.. bacula.i
+	$(CXX) -c -fpic -I.. $(PYTHON_INC) $(OPENSSL_INC) bacula_wrap.cxx
+	$(CXX) -L../lib -shared bacula_wrap.o -o _bacula.so -lbac -lm $(PYTHON_LIBS) $(LIBS) $(OPENSSL_LIBS)
+	@echo "==== Make of pygtk-console is good ===="
+	@echo " "
+
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+clean:
+	@$(RMF) core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
+
+realclean: clean
+	@$(RMF) tags pygtk-console.conf
+
+distclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+
+devclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+
+install: all
+	$(INSTALL_PROGRAM) pygtk-console.py $(DESTDIR)$(sbindir)/pygtk-console.py
+	@srcconf=pygtk-console.conf; \
+	   if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
+	      destconf=$$srcconf.new; \
+	      echo "  ==> Found existing $$srcconf, installing new conf file as $$destconf"; \
+	   else \
+	      destconf=$$srcconf; \
+	   fi; \
+	   echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
+	   ${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
+
+
+uninstall:
+	(cd $(DESTDIR)$(sbindir); $(RMF) pygtk-console)
+	(cd $(DESTDIR)$(sysconfdir); $(RMF) pygtk-console.conf pygtk-console.conf.new)
+
+
+
+# Semi-automatic generation of dependencies:
+# Use gcc -MM because X11 `makedepend' doesn't work on all systems
+# and it also includes system headers.
+# `semi'-automatic since dependencies are generated at distribution time.
+
+depend:
+	@$(MV) Makefile Makefile.bak
+	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
+	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@if test -f Makefile ; then \
+	    $(RMF) Makefile.bak; \
+	else \
+	   $(MV) Makefile.bak Makefile; \
+	   echo " ===== Something went wrong in make depend ====="; \
+	fi
+
+# -----------------------------------------------------------------------
+# DO NOT DELETE: nice dependency list follows

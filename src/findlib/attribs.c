@@ -5,38 +5,47 @@
  *
  *    Kern Sibbald, October MMII
  *
- *   Version $Id: attribs.c,v 1.56 2005/09/24 13:11:31 kerns Exp $
+ *   Version $Id: attribs.c,v 1.67 2006/11/21 20:14:46 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "find.h"
 
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
-
-#include "../lib/winapi.h"
-
-
+#if defined(HAVE_WIN32)
 /* Forward referenced subroutines */
 static bool set_win32_attributes(JCR *jcr, ATTR *attr, BFILE *ofd);
 void unix_name_to_win32(POOLMEM **win32_name, char *name);
 void win_error(JCR *jcr, char *prefix, POOLMEM *ofile);
 HANDLE bget_handle(BFILE *bfd);
-#endif
+#endif /* HAVE_WIN32 */
 
 /* For old systems that don't have lchown() use chown() */
 #ifndef HAVE_LCHOWN
@@ -56,6 +65,15 @@ int select_data_stream(FF_PKT *ff_pkt)
 {
    int stream;
 
+   /*
+    *  Fix all incompatible options
+    */
+
+   /* No sparse option for encrypted data */
+   if (ff_pkt->flags & FO_ENCRYPT) {
+      ff_pkt->flags &= ~FO_SPARSE;
+   }
+
    /* Note, no sparse option for win32_data */
    if (!is_portable_backup(&ff_pkt->bfd)) {
       stream = STREAM_WIN32_DATA;
@@ -65,17 +83,65 @@ int select_data_stream(FF_PKT *ff_pkt)
    } else {
       stream = STREAM_FILE_DATA;
    }
+
+   /* Encryption is only supported for file data */
+   if (stream != STREAM_FILE_DATA && stream != STREAM_WIN32_DATA &&
+         stream != STREAM_MACOS_FORK_DATA) {
+      ff_pkt->flags &= ~FO_ENCRYPT;
+   }
+
+   /* Compression is not supported for Mac fork data */
+   if (stream == STREAM_MACOS_FORK_DATA) {
+      ff_pkt->flags &= ~FO_GZIP;
+   }
+
+   /*
+    * Handle compression and encryption options
+    */
 #ifdef HAVE_LIBZ
    if (ff_pkt->flags & FO_GZIP) {
-      if (stream == STREAM_WIN32_DATA) {
+      switch (stream) {
+      case STREAM_WIN32_DATA:
          stream = STREAM_WIN32_GZIP_DATA;
-      } else if (stream == STREAM_FILE_DATA) {
-         stream = STREAM_GZIP_DATA;
-      } else {
+         break;
+      case STREAM_SPARSE_DATA:
          stream = STREAM_SPARSE_GZIP_DATA;
+         break;
+      case STREAM_FILE_DATA:
+         stream = STREAM_GZIP_DATA;
+         break;
+      default:
+         /* All stream types that do not support gzip should clear out
+          * FO_GZIP above, and this code block should be unreachable. */
+         ASSERT(!(ff_pkt->flags & FO_GZIP));
+         return STREAM_NONE;
       }
    }
 #endif
+#ifdef HAVE_CRYPTO
+   if (ff_pkt->flags & FO_ENCRYPT) {
+      switch (stream) {
+      case STREAM_WIN32_DATA:
+         stream = STREAM_ENCRYPTED_WIN32_DATA;
+         break;
+      case STREAM_WIN32_GZIP_DATA:
+         stream = STREAM_ENCRYPTED_WIN32_GZIP_DATA;
+         break;
+      case STREAM_FILE_DATA:
+         stream = STREAM_ENCRYPTED_FILE_DATA;
+         break;
+      case STREAM_GZIP_DATA:
+         stream = STREAM_ENCRYPTED_FILE_GZIP_DATA;
+         break;
+      default:
+         /* All stream types that do not support encryption should clear out
+          * FO_ENCRYPT above, and this code block should be unreachable. */
+         ASSERT(!(ff_pkt->flags & FO_ENCRYPT));
+         return STREAM_NONE;
+      }
+   }
+#endif
+
    return stream;
 }
 
@@ -149,11 +215,17 @@ void encode_stat(char *buf, FF_PKT *ff_pkt, int data_stream)
 
 
 /* Do casting according to unknown type to keep compiler happy */
-#if !HAVE_GCC & HAVE_SUN_OS
-#define plug(st, val) st = val        /* brain damaged compiler */
+#ifdef HAVE_TYPEOF
+  #define plug(st, val) st = (typeof st)val
 #else
-template <class T> void plug(T &st, uint64_t val)
-    { st = static_cast<T>(val); }
+  #if !HAVE_GCC & HAVE_SUN_OS
+    /* Sun compiler does not handle templates correctly */
+    #define plug(st, val) st = val
+  #else
+    /* Use templates to do the casting */
+    template <class T> void plug(T &st, uint64_t val)
+      { st = static_cast<T>(val); }
+  #endif
 #endif
 
 
@@ -298,9 +370,9 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
    struct utimbuf ut;
    mode_t old_mask;
    bool ok = true;
-   off_t fsize;
+   boffset_t fsize;
 
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
+#if defined(HAVE_WIN32)
    if (attr->stream == STREAM_UNIX_ATTRIBUTES_EX &&
        set_win32_attributes(jcr, attr, ofd)) {
        if (is_bopen(ofd)) {
@@ -331,7 +403,7 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
       char ec1[50], ec2[50];
       fsize = blseek(ofd, 0, SEEK_END);
       bclose(ofd);                    /* first close file */
-      if (fsize > 0 && fsize != (off_t)attr->statp.st_size) {
+      if (attr->type == FT_REG && fsize > 0 && fsize != (boffset_t)attr->statp.st_size) {
          Jmsg3(jcr, M_ERROR, 0, _("File size of restored file %s not correct. Original %s, restored %s.\n"),
             attr->ofname, edit_uint64(attr->statp.st_size, ec1),
             edit_uint64(fsize, ec2));
@@ -405,7 +477,7 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
 /*                                                             */
 /*=============================================================*/
 
-#if !defined(HAVE_CYGWIN) && !defined(HAVE_WIN32)
+#if !defined(HAVE_WIN32)
 
 /*
  * It is possible to piggyback additional data e.g. ACLs on
@@ -445,7 +517,7 @@ int encode_attribsEx(JCR *jcr, char *attribsEx, FF_PKT *ff_pkt)
 /*                                                             */
 /*=============================================================*/
 
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
+#if defined(HAVE_WIN32)
 
 int encode_attribsEx(JCR *jcr, char *attribsEx, FF_PKT *ff_pkt)
 {
@@ -455,12 +527,12 @@ int encode_attribsEx(JCR *jcr, char *attribsEx, FF_PKT *ff_pkt)
 
    attribsEx[0] = 0;                  /* no extended attributes */
 
+   unix_name_to_win32(&ff_pkt->sys_fname, ff_pkt->fname);
+
    // try unicode version
    if (p_GetFileAttributesExW)  {
-      unix_name_to_win32(&ff_pkt->sys_fname, ff_pkt->fname);
-
       POOLMEM* pwszBuf = get_pool_memory (PM_FNAME);   
-      UTF8_2_wchar(&pwszBuf, ff_pkt->sys_fname);
+      make_win32_path_UTF8_2_wchar(&pwszBuf, ff_pkt->fname);
 
       BOOL b=p_GetFileAttributesExW((LPCWSTR) pwszBuf, GetFileExInfoStandard, (LPVOID)&atts);
       free_pool_memory(pwszBuf);
@@ -472,9 +544,7 @@ int encode_attribsEx(JCR *jcr, char *attribsEx, FF_PKT *ff_pkt)
    }
    else {
       if (!p_GetFileAttributesExA)
-         return STREAM_UNIX_ATTRIBUTES;
-
-      unix_name_to_win32(&ff_pkt->sys_fname, ff_pkt->fname);
+         return STREAM_UNIX_ATTRIBUTES;      
 
       if (!p_GetFileAttributesExA(ff_pkt->sys_fname, GetFileExInfoStandard,
                               (LPVOID)&atts)) {
@@ -575,8 +645,6 @@ static bool set_win32_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
    win32_ofile = get_pool_memory(PM_FNAME);
    unix_name_to_win32(&win32_ofile, attr->ofname);
 
-
-
    /* At this point, we have reconstructed the WIN32_FILE_ATTRIBUTE_DATA pkt */
 
    if (!is_bopen(ofd)) {
@@ -600,7 +668,7 @@ static bool set_win32_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
    {
       if (p_SetFileAttributesW) {
          POOLMEM* pwszBuf = get_pool_memory (PM_FNAME);   
-         UTF8_2_wchar(&pwszBuf, win32_ofile);
+         make_win32_path_UTF8_2_wchar(&pwszBuf, attr->ofname);
 
          BOOL b=p_SetFileAttributesW((LPCWSTR)pwszBuf, atts.dwFileAttributes & SET_ATTRS);
          free_pool_memory(pwszBuf);
@@ -655,17 +723,4 @@ void win_error(JCR *jcr, char *prefix, DWORD lerror)
    }
    LocalFree(msg);
 }
-
-
-/* Conversion of a Unix filename to a Win32 filename */
-extern void conv_unix_to_win32_path(const char *path, char *win32_path, DWORD dwSize);
-void unix_name_to_win32(POOLMEM **win32_name, char *name)
-{
-   /* One extra byte should suffice, but we double it */
-   /* add MAX_PATH bytes for VSS shadow copy name */
-   DWORD dwSize = 2*strlen(name)+MAX_PATH;
-   *win32_name = check_pool_memory_size(*win32_name, dwSize);
-   conv_unix_to_win32_path(name, *win32_name, dwSize);
-}
-
-#endif  /* HAVE_CYGWIN */
+#endif  /* HAVE_WIN32 */

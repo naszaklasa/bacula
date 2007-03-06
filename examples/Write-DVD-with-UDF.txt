@@ -1,0 +1,75 @@
+From stephan.ebelt@net-linx.com Fri Apr  7 21:01:24 2006
+From: Stephan Ebelt <stephan.ebelt@net-linx.com>
+Subject: [Bacula-devel] DVD + packet writing + UDF
+
+Hello,
+
+is anyone using this approach in production?
+
+I do for about a week now. And it appears to be easier to setup and is,
+in fact, quite media independent. (I actually gave up on trying the
+growisofs/dvd-handler method - bacula constantly rejected most of my
+media...)
+
+Here is how it works for me (all done with bacula 1.38.5 on FC4 with the
+udftools package installed):
+
+1. load udf file system support (modprobe udf)
+
+2. create a packet writing device on top of the dvd drive (pktsetup
+   dvd-writer /dev/hdc)
+
+3. format a blank media with UDF file system (mkudffs --media-type=dvd
+   /dev/pktcdvd/dvd-writer), I tried with DVD-RAM, DVD+RW and CD-RW
+   media. All appear to work fine - at different speeds of course.
+
+4. mount the freshly formatted media (mount -t udf
+   /dev/pktcdvd/dvd-writer /mnt/dvd-writer -o noatime). Note that
+   'noatime' makes the media living longer.
+
+5. configure the SD as it would write to hard disk:
+
+    Device {
+      Name       = DVD-Writer
+      Media Type = DVD
+
+      ArchiveDevice  = /mnt/dvd-writer
+
+      LabelMedia     = no      # I want only one Volume per DVD
+      AutomaticMount = yes
+      RemovableMedia = yes
+      AlwaysOpen     = no
+    }
+
+Now the whole thing can be automated further: steps 1, 2 and 5 are
+one-time system setup.
+
+Step 3 would require some logic to determine whether a media really is
+blank. I guess something the like is already in dvd-handler?.
+
+Step 4 should be automatic with 1.39.5+ (with the RequiresMount,
+MountPoint, MountCommand... etc... options being more general). I havn't
+tried this yet.
+
+I do not know how stable this is yet. I am a bit concerned because I
+read in a older mail (from Nicolas Boichat, end of 2004) that he
+considered packet-writing/UDF as not reliable enough at that time.
+
+However, the few restores I tried were all successful. Also I can read
+the DVDs on at least one other computer. Maybe the UDF and pkcdvd code
+matured in the meantime? I'll leave it running here and keep on testing...
+
+best regards,
+Stephan
+
+
+
+-------------------------------------------------------
+This SF.Net email is sponsored by xPML, a groundbreaking scripting language
+that extends applications into web and mobile media. Attend the live webcast
+and join the prime developer group breaking into this new coding territory!
+http://sel.as-us.falkag.net/sel?cmd=lnk&kid=110944&bid=241720&dat=121642
+_______________________________________________
+Bacula-devel mailing list
+Bacula-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/bacula-devel

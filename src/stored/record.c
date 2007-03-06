@@ -5,29 +5,40 @@
  *              Kern Sibbald, April MMI
  *                added BB02 format October MMII
  *
- *   Version $Id: record.c,v 1.36.2.2 2006/01/12 14:36:21 kerns Exp $
+ *   Version $Id: record.c,v 1.43 2006/12/13 19:42:12 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2001-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
 #include "stored.h"
-
-extern int debug_level;
 
 /*
  * Convert a FileIndex into a printable
@@ -115,6 +126,18 @@ const char *stream_to_ascii(char *buf, int stream, int fi)
        return "SHA512";
     case STREAM_SIGNED_DIGEST:
        return "SIGNED-DIGEST";
+    case STREAM_ENCRYPTED_SESSION_DATA:
+       return "ENCRYPTED-SESSION-DATA";
+    case STREAM_ENCRYPTED_FILE_DATA:
+       return "ENCRYPTED-FILE";
+    case STREAM_ENCRYPTED_FILE_GZIP_DATA:
+       return "ENCRYPTED-GZIP";
+    case STREAM_ENCRYPTED_WIN32_DATA:
+       return "ENCRYPTED-WIN32-DATA";
+    case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
+       return "ENCRYPTED-WIN32-GZIP";
+    case STREAM_ENCRYPTED_MACOS_FORK_DATA:
+       return "ENCRYPTED-MACOS-RSRC";
     case -STREAM_UNIX_ATTRIBUTES:
        return "contUATTR";
     case -STREAM_FILE_DATA:
@@ -149,6 +172,18 @@ const char *stream_to_ascii(char *buf, int stream, int fi)
        return "contSHA512";
     case -STREAM_SIGNED_DIGEST:
        return "contSIGNED-DIGEST";
+    case -STREAM_ENCRYPTED_SESSION_DATA:
+       return "contENCRYPTED-SESSION-DATA";
+    case -STREAM_ENCRYPTED_FILE_DATA:
+       return "contENCRYPTED-FILE";
+    case -STREAM_ENCRYPTED_FILE_GZIP_DATA:
+       return "contENCRYPTED-GZIP";
+    case -STREAM_ENCRYPTED_WIN32_DATA:
+       return "contENCRYPTED-WIN32-DATA";
+    case -STREAM_ENCRYPTED_WIN32_GZIP_DATA:
+       return "contENCRYPTED-WIN32-GZIP";
+    case -STREAM_ENCRYPTED_MACOS_FORK_DATA:
+       return "contENCRYPTED-MACOS-RSRC";
     default:
        sprintf(buf, "%d", stream);
        return buf;
@@ -391,7 +426,7 @@ bool can_write_record_to_block(DEV_BLOCK *block, DEV_RECORD *rec)
  *                 routine may have to be called again with a new
  *                 block if the entire record was not read.
  */
-bool read_record_from_block(DEV_BLOCK *block, DEV_RECORD *rec)
+bool read_record_from_block(DCR *dcr, DEV_BLOCK *block, DEV_RECORD *rec)
 {
    ser_declare;
    uint32_t remlen;
@@ -503,7 +538,18 @@ bool read_record_from_block(DEV_BLOCK *block, DEV_RECORD *rec)
       return false;
    }
 
-   ASSERT(data_bytes < MAX_BLOCK_LENGTH);       /* temp sanity check */
+   /* Sanity check */
+   if (data_bytes >= MAX_BLOCK_LENGTH) {
+      /*
+       * Something is wrong, force read of next block, abort 
+       *   continuing with this block.
+       */
+      rec->state |= (REC_NO_HEADER | REC_BLOCK_EMPTY);
+      empty_block(block);
+      Jmsg2(dcr->jcr, M_WARNING, 0, _("Sanity check failed. maxlen=%d datalen=%d. Block discarded.\n"),
+         MAX_BLOCK_LENGTH, data_bytes);
+      return false;
+   }
 
    rec->data = check_pool_memory_size(rec->data, rec->data_len+data_bytes);
 
@@ -530,7 +576,7 @@ bool read_record_from_block(DEV_BLOCK *block, DEV_RECORD *rec)
       rec->remainder = 1;             /* partial record transferred */
       Dmsg1(450, "read_record_block: partial xfered=%d\n", rec->data_len);
       rec->state |= (REC_PARTIAL_RECORD | REC_BLOCK_EMPTY);
-      return 1;
+      return true;
    }
    rec->remainder = 0;
    Dmsg4(450, "Rtn full rd_rec_blk FI=%s SessId=%d Strm=%s len=%d\n",

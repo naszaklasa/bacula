@@ -5,22 +5,35 @@
  *   Kern E. Sibbald, October 2002
  *
  *
- *   Version $Id: bcopy.c,v 1.42.2.1 2006/03/14 21:41:41 kerns Exp $
+ *   Version $Id: bcopy.c,v 1.50 2006/11/27 10:03:01 kerns Exp $
  */
 /*
-   Copyright (C) 2002-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
@@ -55,7 +68,7 @@ pthread_cond_t wait_device_release = PTHREAD_COND_INITIALIZER;
 static void usage()
 {
    fprintf(stderr, _(
-"Copyright (C) 2002-2005 Kern Sibbald.\n"
+PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bcopy [-d debug_level] <input-archive> <output-archive>\n"
 "       -b bootstrap      specify a bootstrap file\n"
@@ -66,7 +79,7 @@ static void usage()
 "       -p                proceed inspite of errors\n"
 "       -v                verbose\n"
 "       -w <dir>          specify working directory (default /tmp)\n"
-"       -?                print this message\n\n"), VERSION, BDATE);
+"       -?                print this message\n\n"), 2002, VERSION, BDATE);
    exit(1);
 }
 
@@ -80,6 +93,7 @@ int main (int argc, char *argv[])
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
+   init_stack_dump();
 
    my_name_is(argc, argv, "bcopy");
    init_msg(NULL, NULL);
@@ -138,6 +152,8 @@ int main (int argc, char *argv[])
       usage();
    }
 
+   OSDependentInit();
+
    working_directory = wd;
 
    if (configfile == NULL) {
@@ -147,6 +163,7 @@ int main (int argc, char *argv[])
    parse_config(configfile);
 
    /* Setup and acquire input device for reading */
+   Dmsg0(100, "About to setup input jcr\n");
    in_jcr = setup_jcr("bcopy", argv[0], bsr, iVolumeName, 1); /* read device */
    if (!in_jcr) {
       exit(1);
@@ -158,6 +175,7 @@ int main (int argc, char *argv[])
    }
 
    /* Setup output device for writing */
+   Dmsg0(100, "About to setup output jcr\n");
    out_jcr = setup_jcr("bcopy", argv[1], bsr, oVolumeName, 0); /* no acquire */
    if (!out_jcr) {
       exit(1);
@@ -166,6 +184,7 @@ int main (int argc, char *argv[])
    if (!out_dev) {
       exit(1);
    }
+   Dmsg0(100, "About to acquire device for writing\n");
    /* For we must now acquire the device for writing */
    lock_device(out_dev);
    if (out_dev->open(out_jcr->dcr, OPEN_READ_WRITE) < 0) {
@@ -190,8 +209,8 @@ int main (int argc, char *argv[])
    free_jcr(in_jcr);
    free_jcr(out_jcr);
 
-   term_dev(in_dev);
-   term_dev(out_dev);
+   in_dev->term();
+   out_dev->term();
    return 0;
 }
 
@@ -231,16 +250,16 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
                        rec->remainder);
             if (!write_block_to_device(out_jcr->dcr)) {
                Dmsg2(90, "Got write_block_to_dev error on device %s: ERR=%s\n",
-                  out_dev->print_name(), strerror_dev(out_dev));
+                  out_dev->print_name(), out_dev->bstrerror());
                Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
-                     strerror_dev(out_dev));
+                     out_dev->bstrerror());
             }
          }
          if (!write_block_to_device(out_jcr->dcr)) {
             Dmsg2(90, "Got write_block_to_dev error on device %s: ERR=%s\n",
-               out_dev->print_name(), strerror_dev(out_dev));
+               out_dev->print_name(), out_dev->bstrerror());
             Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
-                  strerror_dev(out_dev));
+                  out_dev->bstrerror());
          }
          break;
       case EOM_LABEL:
@@ -261,9 +280,9 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
                  rec->remainder);
       if (!write_block_to_device(out_jcr->dcr)) {
          Dmsg2(90, "Got write_block_to_dev error on device %s: ERR=%s\n",
-            out_dev->print_name(), strerror_dev(out_dev));
+            out_dev->print_name(), out_dev->bstrerror());
          Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
-               strerror_dev(out_dev));
+               out_dev->bstrerror());
          break;
       }
    }
@@ -272,7 +291,6 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
 
 
 /* Dummies to replace askdir.c */
-bool    dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing) { return 1;}
 bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
 bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
 bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
@@ -286,6 +304,16 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr)
    DEVICE *dev = dcr->dev;
    fprintf(stderr, _("Mount Volume \"%s\" on device %s and press return when ready: "),
       dcr->VolumeName, dev->print_name());
+   dev->close();
    getchar();
    return true;
+}
+
+bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing)
+{
+   Dmsg0(100, "Fake dir_get_volume_info\n");
+   bstrncpy(dcr->VolCatInfo.VolCatName, dcr->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
+   dcr->VolCatInfo.VolCatParts = find_num_dvd_parts(dcr);
+   Dmsg2(500, "Vol=%s num_parts=%d\n", dcr->VolCatInfo.VolCatName, dcr->VolCatInfo.VolCatParts);
+   return 1;
 }

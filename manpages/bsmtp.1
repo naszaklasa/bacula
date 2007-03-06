@@ -1,0 +1,63 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH BACULA\-SMTP 1 "26 May 2006" "Kern Sibbald" "Network backup"
+.\" Please adjust this date whenever revising the manpage.
+.SH NAME
+ bsmtp \- Bacula's SMTP (mail delivery program)
+.SH DESCRIPTION
+bsmtp is a simple mail transport program that permits more flexibility
+than the standard mail programs typically found on Unix systems. It can even
+be used on Windows machines. 
+
+It is called: 
+
+Usage: bsmtp [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]
+       -c          set the Cc: field
+       -dnn        set debug level to nn
+       -f          set the From: field
+       -h          use mailhost:port as the bsmtp server
+       -s          set the Subject: field
+       -?          print this message.
+
+If the  -f option is not specified, bsmtp will use your userid. If
+the option is not specified bsmtp will use the value in the environment
+variable bsmtpSERVER or if there is none localhost. By default
+port 25 is used. 
+
+recipients is a space separated list of email recipients. 
+
+The body of the email message is read from standard input. 
+
+An example of the use of bsmtp would be to put the following statement
+in the Messages resource of your bacula-dir.conf file. Note, these
+commands should appear on a single line each. 
+
+  mailcommand = "/home/bacula/bin/bsmtp -h mail.domain.com -f \"\(Bacula\) %r\"
+                 -s \"Bacula: %t %e of %c %l\" %r"
+  operatorcommand = "/home/bacula/bin/bsmtp -h mail.domain.com -f \"\(Bacula\) %r\"
+                    -s \"Bacula: Intervention needed for %j\" %r"
+
+Where you replace home/bacula/bin with the path to your Bacula
+binary directory, and you replace mail.domain.com with the fully
+qualified name of your bsmtp (email) server, which normally listens on port
+
+It is HIGHLY recommended that you test one or two cases by hand to make sure
+that the mailhost that you specified is correct and that it will accept
+your email requests. Since bsmtp always uses a TCP connection rather
+than writing in the spool file, you may find that your from address is
+being rejected because it does not contain a valid domain, or because your
+message is caught in your spam filtering rules. Generally, you should specify
+a fully qualified domain name in the from field, and depending on
+whether your bsmtp gateway is Exim or Sendmail, you may need to modify the
+syntax of the from part of the message. Please test. 
+
+When running bsmtp by hand, you will need to terminate the message by
+entering a ctl-d in column 1 of the last line. 
+
+If you are getting incorrect dates (e.g. 1970) and you are
+running with a non-English language setting, you might try adding
+a LANG="en_US" immediately before the bsmtp call.
+.br
+.SH AUTHOR
+This manual page was written by Jose Luis Tallon
+.nh 
+<jltallon@adv\-solutions.net>.

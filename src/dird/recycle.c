@@ -5,23 +5,35 @@
  *
  *     Kern Sibbald, May MMII
  *
- *   Version $Id: recycle.c,v 1.22.2.3 2006/02/23 19:56:12 kerns Exp $
+ *   Version $Id: recycle.c,v 1.32 2006/11/21 13:20:09 kerns Exp $
  */
-
 /*
-   Copyright (C) 2002-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -46,23 +58,23 @@ static int oldest_handler(void *ctx, int num_fields, char **row)
 
 /* Forward referenced functions */
 
-int find_recycled_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
+bool find_recycled_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
 {
    bstrncpy(mr->VolStatus, "Recycle", sizeof(mr->VolStatus));
    if (db_find_next_volume(jcr, jcr->db, 1, InChanger, mr)) {
       jcr->MediaId = mr->MediaId;
       Dmsg1(20, "Find_next_vol MediaId=%u\n", jcr->MediaId);
       pm_strcpy(jcr->VolumeName, mr->VolumeName);
-      return 1;
+      return true;
    }
-   return 0;
+   return false;
 }
 
 
 /*
  *   Look for oldest Purged volume
  */
-int recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
+bool recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
 {
    struct s_oldest_ctx oldest;
    char ed1[50];
@@ -70,7 +82,7 @@ int recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
    const char *select =
           "SELECT MediaId,LastWritten FROM Media "
           "WHERE PoolId=%s AND Recycle=1 AND VolStatus='Purged' "
-          "AND MediaType='%s' %s"
+          "AND Enabled=1 AND MediaType='%s' %s"
           "ORDER BY LastWritten ASC,MediaId LIMIT 1";
 
    Dmsg0(100, "Enter recycle_oldest_purged_volume\n");
@@ -88,7 +100,7 @@ int recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
       Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));
       Dmsg0(100, "return 0  recycle_oldest_purged_volume query\n");
       free_pool_memory(query);
-      return 0;
+      return false;
    }
    free_pool_memory(query);
    Dmsg1(100, "Oldest mediaid=%d\n", oldest.MediaId);
@@ -98,13 +110,13 @@ int recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
          if (recycle_volume(jcr, mr)) {
             Jmsg(jcr, M_INFO, 0, _("Recycled volume \"%s\"\n"), mr->VolumeName);
             Dmsg1(100, "return 1  recycle_oldest_purged_volume Vol=%s\n", mr->VolumeName);
-            return 1;
+            return true;
          }
       }
       Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));
    }
    Dmsg0(100, "return 0  recycle_oldest_purged_volume end\n");
-   return 0;
+   return false;
 }
 
 /*
@@ -116,6 +128,7 @@ int recycle_volume(JCR *jcr, MEDIA_DBR *mr)
    mr->VolJobs = mr->VolFiles = mr->VolBlocks = mr->VolErrors = 0;
    mr->VolBytes = 1;
    mr->FirstWritten = mr->LastWritten = 0;
+   mr->RecycleCount++;
    mr->set_first_written = true;
    return db_update_media_record(jcr, jcr->db, mr);
 }

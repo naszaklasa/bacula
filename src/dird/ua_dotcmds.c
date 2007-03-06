@@ -8,22 +8,35 @@
  *
  *     Kern Sibbald, April MMII
  *
- *   Version $Id: ua_dotcmds.c,v 1.23.2.7 2006/03/16 18:16:44 kerns Exp $
+ *   Version $Id: ua_dotcmds.c,v 1.45 2006/12/23 16:33:52 kerns Exp $
  */
 /*
-   Copyright (C) 2002-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -32,9 +45,6 @@
 extern int r_first;
 extern int r_last;
 extern struct s_res resources[];
-extern char my_name[];
-extern const char *client_backups;
-extern int console_msg_pending;
 
 /* Imported functions */
 extern void do_messages(UAContext *ua, const char *cmd);
@@ -58,22 +68,22 @@ static int getmsgscmd(UAContext *ua, const char *cmd);
 
 struct cmdstruct { const char *key; int (*func)(UAContext *ua, const char *cmd); const char *help; };
 static struct cmdstruct commands[] = {
- { N_(".die"),        diecmd,       NULL},
- { N_(".jobs"),       jobscmd,      NULL},
- { N_(".filesets"),   filesetscmd,  NULL},
- { N_(".clients"),    clientscmd,   NULL},
- { N_(".msgs"),       msgscmd,      NULL},
- { N_(".pools"),      poolscmd,     NULL},
- { N_(".types"),      typescmd,     NULL},
- { N_(".backups"),    backupscmd,   NULL},
- { N_(".levels"),     levelscmd,    NULL},
- { N_(".status"),     qstatus_cmd,  NULL},
- { N_(".storage"),    storagecmd,   NULL},
- { N_(".defaults"),   defaultscmd,  NULL},
- { N_(".messages"),   getmsgscmd,   NULL},
- { N_(".help"),       qhelp_cmd,    NULL},
- { N_(".quit"),       quit_cmd,     NULL},
- { N_(".exit"),       quit_cmd,     NULL}
+ { NT_(".backups"),    backupscmd,   NULL},
+ { NT_(".clients"),    clientscmd,   NULL},
+ { NT_(".defaults"),   defaultscmd,  NULL},
+ { NT_(".die"),        diecmd,       NULL},
+ { NT_(".exit"),       quit_cmd,     NULL},
+ { NT_(".filesets"),   filesetscmd,  NULL},
+ { NT_(".help"),       qhelp_cmd,    NULL},
+ { NT_(".jobs"),       jobscmd,      NULL},
+ { NT_(".levels"),     levelscmd,    NULL},
+ { NT_(".messages"),   getmsgscmd,   NULL},
+ { NT_(".msgs"),       msgscmd,      NULL},
+ { NT_(".pools"),      poolscmd,     NULL},
+ { NT_(".quit"),       quit_cmd,     NULL},
+ { NT_(".status"),     qstatus_cmd,  NULL},
+ { NT_(".storage"),    storagecmd,   NULL},
+ { NT_(".types"),      typescmd,     NULL} 
              };
 #define comsize (sizeof(commands)/sizeof(struct cmdstruct))
 
@@ -99,13 +109,16 @@ int do_a_dot_command(UAContext *ua, const char *cmd)
    }
    for (i=0; i<(int)comsize; i++) {     /* search for command */
       if (strncasecmp(ua->argk[0],  _(commands[i].key), len) == 0) {
+         bool gui = ua->gui;
+         ua->gui = true;
          stat = (*commands[i].func)(ua, cmd);   /* go execute command */
+         ua->gui = gui;
          found = true;
          break;
       }
    }
    if (!found) {
-      pm_strcat(ua->UA_sock->msg, _(": is an illegal command\n"));
+      pm_strcat(ua->UA_sock->msg, _(": is an invalid command\n"));
       ua->UA_sock->msglen = strlen(ua->UA_sock->msg);
       bnet_send(ua->UA_sock);
    }
@@ -139,8 +152,8 @@ static int jobscmd(UAContext *ua, const char *cmd)
    JOB *job = NULL;
    LockRes();
    while ( (job = (JOB *)GetNextRes(R_JOB, (RES *)job)) ) {
-      if (acl_access_ok(ua, Job_ACL, job->hdr.name)) {
-         bsendmsg(ua, "%s\n", job->hdr.name);
+      if (acl_access_ok(ua, Job_ACL, job->name())) {
+         bsendmsg(ua, "%s\n", job->name());
       }
    }
    UnlockRes();
@@ -152,8 +165,8 @@ static int filesetscmd(UAContext *ua, const char *cmd)
    FILESET *fs = NULL;
    LockRes();
    while ( (fs = (FILESET *)GetNextRes(R_FILESET, (RES *)fs)) ) {
-      if (acl_access_ok(ua, FileSet_ACL, fs->hdr.name)) {
-         bsendmsg(ua, "%s\n", fs->hdr.name);
+      if (acl_access_ok(ua, FileSet_ACL, fs->name())) {
+         bsendmsg(ua, "%s\n", fs->name());
       }
    }
    UnlockRes();
@@ -165,8 +178,8 @@ static int clientscmd(UAContext *ua, const char *cmd)
    CLIENT *client = NULL;
    LockRes();
    while ( (client = (CLIENT *)GetNextRes(R_CLIENT, (RES *)client)) ) {
-      if (acl_access_ok(ua, Client_ACL, client->hdr.name)) {
-         bsendmsg(ua, "%s\n", client->hdr.name);
+      if (acl_access_ok(ua, Client_ACL, client->name())) {
+         bsendmsg(ua, "%s\n", client->name());
       }
    }
    UnlockRes();
@@ -178,7 +191,7 @@ static int msgscmd(UAContext *ua, const char *cmd)
    MSGS *msgs = NULL;
    LockRes();
    while ( (msgs = (MSGS *)GetNextRes(R_MSGS, (RES *)msgs)) ) {
-      bsendmsg(ua, "%s\n", msgs->hdr.name);
+      bsendmsg(ua, "%s\n", msgs->name());
    }
    UnlockRes();
    return 1;
@@ -189,8 +202,8 @@ static int poolscmd(UAContext *ua, const char *cmd)
    POOL *pool = NULL;
    LockRes();
    while ( (pool = (POOL *)GetNextRes(R_POOL, (RES *)pool)) ) {
-      if (acl_access_ok(ua, Pool_ACL, pool->hdr.name)) {
-         bsendmsg(ua, "%s\n", pool->hdr.name);
+      if (acl_access_ok(ua, Pool_ACL, pool->name())) {
+         bsendmsg(ua, "%s\n", pool->name());
       }
    }
    UnlockRes();
@@ -202,8 +215,8 @@ static int storagecmd(UAContext *ua, const char *cmd)
    STORE *store = NULL;
    LockRes();
    while ( (store = (STORE *)GetNextRes(R_STORAGE, (RES *)store)) ) {
-      if (acl_access_ok(ua, Storage_ACL, store->hdr.name)) {
-         bsendmsg(ua, "%s\n", store->hdr.name);
+      if (acl_access_ok(ua, Storage_ACL, store->name())) {
+         bsendmsg(ua, "%s\n", store->name());
       }
    }
    UnlockRes();
@@ -217,20 +230,21 @@ static int typescmd(UAContext *ua, const char *cmd)
    bsendmsg(ua, "Restore\n");
    bsendmsg(ua, "Admin\n");
    bsendmsg(ua, "Verify\n");
+   bsendmsg(ua, "Migrate\n");
    return 1;
 }
 
 static int client_backups_handler(void *ctx, int num_field, char **row)
 {
    UAContext *ua = (UAContext *)ctx;
-   bsendmsg(ua, "| %s | %s | %s | %s | %s | %s | %s |\n",
-      row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]);
+   bsendmsg(ua, "| %s | %s | %s | %s | %s | %s | %s | %s |\n",
+      row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]);
    return 0;
 }
 
 static int backupscmd(UAContext *ua, const char *cmd)
 {
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return 1;
    }
    if (ua->argc != 3 || strcmp(ua->argk[1], "client") != 0 || strcmp(ua->argk[2], "fileset") != 0) {
@@ -281,80 +295,82 @@ static int defaultscmd(UAContext *ua, const char *cmd)
       }
       job = (JOB *)GetResWithName(R_JOB, ua->argv[1]);
       if (job) {
-         STORE *store;
-         bsendmsg(ua, "job=%s", job->hdr.name);
-         bsendmsg(ua, "pool=%s", job->pool->hdr.name);
-         bsendmsg(ua, "messages=%s", job->messages->hdr.name);
-         bsendmsg(ua, "client=%s", job->client->hdr.name);
-         store = (STORE *)job->storage->first();
-         bsendmsg(ua, "storage=%s", store->hdr.name);
+         USTORE store;
+         bsendmsg(ua, "job=%s", job->name());
+         bsendmsg(ua, "pool=%s", job->pool->name());
+         bsendmsg(ua, "messages=%s", job->messages->name());
+         bsendmsg(ua, "client=%s", job->client->name());
+         get_job_storage(&store, job, NULL);
+         bsendmsg(ua, "storage=%s", store.store->name());
          bsendmsg(ua, "where=%s", job->RestoreWhere?job->RestoreWhere:"");
          bsendmsg(ua, "level=%s", level_to_str(job->JobLevel));
          bsendmsg(ua, "type=%s", job_type_to_str(job->JobType));
-         bsendmsg(ua, "fileset=%s", job->fileset->hdr.name);
+         bsendmsg(ua, "fileset=%s", job->fileset->name());
          bsendmsg(ua, "enabled=%d", job->enabled);
+         bsendmsg(ua, "catalog=%s", job->client->catalog->name());
       }
    } 
    /* Client defaults */
    else if (strcmp(ua->argk[1], "client") == 0) {
-     if (!acl_access_ok(ua, Client_ACL, ua->argv[1])) {
-        return 1;   
-     }
-     client = (CLIENT *)GetResWithName(R_CLIENT, ua->argv[1]);
-     if (client) {
-       bsendmsg(ua, "client=%s", client->hdr.name);
-       bsendmsg(ua, "address=%s", client->address);
-       bsendmsg(ua, "fdport=%d", client->FDport);
-       bsendmsg(ua, "file_retention=%d", client->FileRetention);
-       bsendmsg(ua, "job_retention=%d", client->JobRetention);
-       bsendmsg(ua, "autoprune=%d", client->AutoPrune);
-     }
+      if (!acl_access_ok(ua, Client_ACL, ua->argv[1])) {
+         return 1;   
+      }
+      client = (CLIENT *)GetResWithName(R_CLIENT, ua->argv[1]);
+      if (client) {
+         bsendmsg(ua, "client=%s", client->name());
+         bsendmsg(ua, "address=%s", client->address);
+         bsendmsg(ua, "fdport=%d", client->FDport);
+         bsendmsg(ua, "file_retention=%d", client->FileRetention);
+         bsendmsg(ua, "job_retention=%d", client->JobRetention);
+         bsendmsg(ua, "autoprune=%d", client->AutoPrune);
+         bsendmsg(ua, "catalog=%s", client->catalog->name());
+      }
    }
    /* Storage defaults */
    else if (strcmp(ua->argk[1], "storage") == 0) {
-     if (!acl_access_ok(ua, Storage_ACL, ua->argv[1])) {
-        return 1;
-     }
-     storage = (STORE *)GetResWithName(R_STORAGE, ua->argv[1]);
-     DEVICE *device;
-     if (storage) {
-       bsendmsg(ua, "storage=%s", storage->hdr.name);
-       bsendmsg(ua, "address=%s", storage->address);
-       bsendmsg(ua, "enabled=%d", storage->enabled);
-       bsendmsg(ua, "media_type=%s", storage->media_type);
-       bsendmsg(ua, "sdport=%d", storage->SDport);
-       device = (DEVICE *)storage->device->first();
-       bsendmsg(ua, "device=%s", device->hdr.name);
-       if (storage->device->size() > 1) {
-         while ((device = (DEVICE *)storage->device->next()))
-           bsendmsg(ua, ",%s", device->hdr.name);
-       }
-     }
+      if (!acl_access_ok(ua, Storage_ACL, ua->argv[1])) {
+         return 1;
+      }
+      storage = (STORE *)GetResWithName(R_STORAGE, ua->argv[1]);
+      DEVICE *device;
+      if (storage) {
+         bsendmsg(ua, "storage=%s", storage->name());
+         bsendmsg(ua, "address=%s", storage->address);
+         bsendmsg(ua, "enabled=%d", storage->enabled);
+         bsendmsg(ua, "media_type=%s", storage->media_type);
+         bsendmsg(ua, "sdport=%d", storage->SDport);
+         device = (DEVICE *)storage->device->first();
+         bsendmsg(ua, "device=%s", device->name());
+         if (storage->device->size() > 1) {
+            while ((device = (DEVICE *)storage->device->next())) {
+               bsendmsg(ua, ",%s", device->name());
+            }
+         }
+      }
    }
    /* Pool defaults */
    else if (strcmp(ua->argk[1], "pool") == 0) {
-     if (!acl_access_ok(ua, Pool_ACL, ua->argv[1])) {
-        return 1;
-     }
-     pool = (POOL *)GetResWithName(R_POOL, ua->argv[1]);
-     if (pool) {
-       bsendmsg(ua, "pool=%s", pool->hdr.name);
-       bsendmsg(ua, "pool_type=%s", pool->pool_type);
-       bsendmsg(ua, "label_format=%s", pool->label_format?pool->label_format:"");
-       bsendmsg(ua, "use_volume_once=%d", pool->use_volume_once);
-       bsendmsg(ua, "accept_any_volume=%d", pool->accept_any_volume);
-       bsendmsg(ua, "purge_oldest_volume=%d", pool->purge_oldest_volume);
-       bsendmsg(ua, "recycle_oldest_volume=%d", pool->recycle_oldest_volume);
-       bsendmsg(ua, "recycle_current_volume=%d", pool->recycle_current_volume);
-       bsendmsg(ua, "max_volumes=%d", pool->max_volumes);
-       bsendmsg(ua, "vol_retention=%d", pool->VolRetention);
-       bsendmsg(ua, "vol_use_duration=%d", pool->VolUseDuration);
-       bsendmsg(ua, "max_vol_jobs=%d", pool->MaxVolJobs);
-       bsendmsg(ua, "max_vol_files=%d", pool->MaxVolFiles);
-       bsendmsg(ua, "max_vol_bytes=%d", pool->MaxVolBytes);
-       bsendmsg(ua, "auto_prune=%d", pool->AutoPrune);
-       bsendmsg(ua, "recycle=%d", pool->Recycle);
-     }
+      if (!acl_access_ok(ua, Pool_ACL, ua->argv[1])) {
+         return 1;
+      }
+      pool = (POOL *)GetResWithName(R_POOL, ua->argv[1]);
+      if (pool) {
+         bsendmsg(ua, "pool=%s", pool->name());
+         bsendmsg(ua, "pool_type=%s", pool->pool_type);
+         bsendmsg(ua, "label_format=%s", pool->label_format?pool->label_format:"");
+         bsendmsg(ua, "use_volume_once=%d", pool->use_volume_once);
+         bsendmsg(ua, "purge_oldest_volume=%d", pool->purge_oldest_volume);
+         bsendmsg(ua, "recycle_oldest_volume=%d", pool->recycle_oldest_volume);
+         bsendmsg(ua, "recycle_current_volume=%d", pool->recycle_current_volume);
+         bsendmsg(ua, "max_volumes=%d", pool->max_volumes);
+         bsendmsg(ua, "vol_retention=%d", pool->VolRetention);
+         bsendmsg(ua, "vol_use_duration=%d", pool->VolUseDuration);
+         bsendmsg(ua, "max_vol_jobs=%d", pool->MaxVolJobs);
+         bsendmsg(ua, "max_vol_files=%d", pool->MaxVolFiles);
+         bsendmsg(ua, "max_vol_bytes=%d", pool->MaxVolBytes);
+         bsendmsg(ua, "auto_prune=%d", pool->AutoPrune);
+         bsendmsg(ua, "recycle=%d", pool->Recycle);
+      }
    }
    return 1;
 }

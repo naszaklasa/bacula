@@ -26,7 +26,39 @@
  * Peters, Guido van Rossum, Ka-Ping Yee, Sjoerd Mullender, and
  * probably one or two others that I'm forgetting.
  *
- * $Id: bregex.c,v 1.1.2.2 2006/06/28 20:39:22 kerns Exp $ */
+ * $Id: bregex.c,v 1.5 2006/11/21 16:13:57 kerns Exp $   
+ *
+ * This file modified to work with Bacula and C++ by
+ *    Kern Sibbald, April 2006
+ */
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2006-2006 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+
 
 #include "bacula.h"
 #include "bregex.h"
@@ -484,51 +516,51 @@ void re_compile_initialize(void)
       plain_ops[(int)'\174'] = Ror;
    } else {
       quoted_ops[(int)'\174'] = Ror;
-      plain_ops[(int)'*'] = Rstar;
-      if (regexp_syntax & RE_BK_PLUS_QM) {
-         quoted_ops[(int)'+'] = Rplus;
-         quoted_ops[(int)'?'] = Roptional;
-      } else {
-         plain_ops[(int)'+'] = Rplus;
-         plain_ops[(int)'?'] = Roptional;
-      }
-      if (regexp_syntax & RE_NEWLINE_OR) {
-         plain_ops[(int)'\n'] = Ror;
-      }
-      plain_ops[(int)'\133'] = Ropenset;
-      plain_ops[(int)'\136'] = Rbol;
-      plain_ops[(int)'$'] = Reol;
-      plain_ops[(int)'.'] = Ranychar;
-      if (!(regexp_syntax & RE_NO_GNU_EXTENSIONS)) {
-         quoted_ops[(int)'w'] = Rwordchar;
-         quoted_ops[(int)'W'] = Rnotwordchar;
-         quoted_ops[(int)'<'] = Rwordbeg;
-         quoted_ops[(int)'>'] = Rwordend;
-         quoted_ops[(int)'b'] = Rwordbound;
-         quoted_ops[(int)'B'] = Rnotwordbound;
-         quoted_ops[(int)'`'] = Rbegbuf;
-         quoted_ops[(int)'\''] = Rendbuf;
-      }
-      if (regexp_syntax & RE_ANSI_HEX) {
-         quoted_ops[(int)'v'] = Rextended_memory;
-      }
-      for (a = 0; a < Rnum_ops; a++) {
-         precedences[a] = 4;
-      }
-      if (regexp_syntax & RE_TIGHT_VBAR) {
-         precedences[Ror] = 3;
-         precedences[Rbol] = 2;
-         precedences[Reol] = 2;
-      } else {
-         precedences[Ror] = 2;
-         precedences[Rbol] = 3;
-         precedences[Reol] = 3;
-      }
-      precedences[Rclosepar] = 1;
-      precedences[Rend] = 0;
-      regexp_context_indep_ops = (regexp_syntax & RE_CONTEXT_INDEP_OPS) != 0;
-      regexp_ansi_sequences = (regexp_syntax & RE_ANSI_HEX) != 0;
    }
+   plain_ops[(int)'*'] = Rstar;
+   if (regexp_syntax & RE_BK_PLUS_QM) {
+      quoted_ops[(int)'+'] = Rplus;
+      quoted_ops[(int)'?'] = Roptional;
+   } else {
+      plain_ops[(int)'+'] = Rplus;
+      plain_ops[(int)'?'] = Roptional;
+   }
+   if (regexp_syntax & RE_NEWLINE_OR) {
+      plain_ops[(int)'\n'] = Ror;
+   }
+   plain_ops[(int)'\133'] = Ropenset;
+   plain_ops[(int)'\136'] = Rbol;
+   plain_ops[(int)'$'] = Reol;
+   plain_ops[(int)'.'] = Ranychar;
+   if (!(regexp_syntax & RE_NO_GNU_EXTENSIONS)) {
+      quoted_ops[(int)'w'] = Rwordchar;
+      quoted_ops[(int)'W'] = Rnotwordchar;
+      quoted_ops[(int)'<'] = Rwordbeg;
+      quoted_ops[(int)'>'] = Rwordend;
+      quoted_ops[(int)'b'] = Rwordbound;
+      quoted_ops[(int)'B'] = Rnotwordbound;
+      quoted_ops[(int)'`'] = Rbegbuf;
+      quoted_ops[(int)'\''] = Rendbuf;
+   }
+   if (regexp_syntax & RE_ANSI_HEX) {
+      quoted_ops[(int)'v'] = Rextended_memory;
+   }
+   for (a = 0; a < Rnum_ops; a++) {
+      precedences[a] = 4;
+   }
+   if (regexp_syntax & RE_TIGHT_VBAR) {
+      precedences[Ror] = 3;
+      precedences[Rbol] = 2;
+      precedences[Reol] = 2;
+   } else {
+      precedences[Ror] = 2;
+      precedences[Rbol] = 3;
+      precedences[Reol] = 3;
+   }
+   precedences[Rclosepar] = 1;
+   precedences[Rend] = 0;
+   regexp_context_indep_ops = (regexp_syntax & RE_CONTEXT_INDEP_OPS) != 0;
+   regexp_ansi_sequences = (regexp_syntax & RE_ANSI_HEX) != 0;
 }
 
 int re_set_syntax(int syntax) {

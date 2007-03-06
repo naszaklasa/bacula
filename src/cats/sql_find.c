@@ -7,23 +7,35 @@
  *
  *    Kern Sibbald, December 2000
  *
- *    Version $Id: sql_find.c,v 1.54.2.3 2006/03/14 21:41:39 kerns Exp $
+ *    Version $Id: sql_find.c,v 1.62 2006/11/27 10:02:59 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
 
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 /* The following is necessary so that we do not include
@@ -42,10 +54,6 @@
  *
  * -----------------------------------------------------------------------
  */
-
-/* Imported subroutines */
-extern void print_result(B_DB *mdb);
-extern int QueryDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
 
 /*
  * Find job start time if JobId specified, otherwise
@@ -277,7 +285,7 @@ db_find_next_volume(JCR *jcr, B_DB *mdb, int item, bool InChanger, MEDIA_DBR *mr
           "FirstWritten,LastWritten,VolStatus,InChanger,VolParts,"
           "LabelType "
           "FROM Media WHERE PoolId=%s AND MediaType='%s' AND VolStatus IN ('Full',"
-          "'Recycle','Purged','Used','Append') "
+          "'Recycle','Purged','Used','Append') AND Enabled=1 "
           "ORDER BY LastWritten LIMIT 1", 
           edit_int64(mr->PoolId, ed1), mr->MediaType);
      item = 1;
@@ -301,12 +309,14 @@ db_find_next_volume(JCR *jcr, B_DB *mdb, int item, bool InChanger, MEDIA_DBR *mr
           "VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,Recycle,Slot,"
           "FirstWritten,LastWritten,VolStatus,InChanger,VolParts,"
           "LabelType "
-          "FROM Media WHERE PoolId=%s AND MediaType='%s' AND VolStatus='%s' "
+          "FROM Media WHERE PoolId=%s AND MediaType='%s' AND Enabled=1 "
+          "AND VolStatus='%s' "
           "%s "
           "%s LIMIT %d",
           edit_int64(mr->PoolId, ed1), mr->MediaType,
           mr->VolStatus, changer, order, item);
    }
+   Dmsg1(100, "fnextvol=%s\n", mdb->cmd);
    if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
       db_unlock(mdb);
       return 0;
@@ -314,7 +324,7 @@ db_find_next_volume(JCR *jcr, B_DB *mdb, int item, bool InChanger, MEDIA_DBR *mr
 
    numrows = sql_num_rows(mdb);
    if (item > numrows || item < 1) {
-      Mmsg2(&mdb->errmsg, _("Request for Volume item %d greater than max %d or less than 1.\n"), 
+      Mmsg2(&mdb->errmsg, _("Request for Volume item %d greater than max %d or less than 1\n"),
          item, numrows);
       db_unlock(mdb);
       return 0;
@@ -361,6 +371,7 @@ db_find_next_volume(JCR *jcr, B_DB *mdb, int item, bool InChanger, MEDIA_DBR *mr
    mr->InChanger = str_to_int64(row[20]);
    mr->VolParts = str_to_int64(row[21]);
    mr->LabelType = str_to_int64(row[22]);
+   mr->Enabled = 1;   /* ensured via query */
    sql_free_result(mdb);
 
    db_unlock(mdb);

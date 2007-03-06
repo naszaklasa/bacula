@@ -5,22 +5,35 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: mysql.c,v 1.37.2.3 2006/04/11 08:05:18 kerns Exp $
+ *    Version $Id: mysql.c,v 1.45 2006/12/08 06:49:28 robertnelson Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 /* The following is necessary so that we do not include
@@ -46,6 +59,15 @@ static BQUEUE db_list = {&db_list, &db_list};
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
+ * Retrieve database type
+ */
+const char *
+db_get_type(void)
+{
+   return "MySQL";
+}
+
+/*
  * Initialize database data structure. In principal this should
  * never have errors, or it is really fatal.
  */
@@ -64,7 +86,9 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
    /* Look to see if DB already open */
    if (!mult_db_connections) {
       for (mdb=NULL; (mdb=(B_DB *)qnext(&db_list, &mdb->bq)); ) {
-         if (strcmp(mdb->db_name, db_name) == 0) {
+         if (bstrcmp(mdb->db_name, db_name) &&
+             bstrcmp(mdb->db_address, db_address) &&
+             mdb->db_port == db_port) {
             Dmsg2(100, "DB REopen %d %s\n", mdb->ref_count, db_name);
             mdb->ref_count++;
             V(mutex);
@@ -189,7 +213,7 @@ db_close_database(JCR *jcr, B_DB *mdb)
    db_end_transaction(jcr, mdb);
    P(mutex);
    mdb->ref_count--;
-#ifdef HAVE_TREAD_SAFE_MYSQL
+#if defined(HAVE_THREAD_SAFE_MYSQL)
    my_thread_end();
 #endif
    if (mdb->ref_count == 0) {
@@ -324,7 +348,7 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
    }
    if (result_handler != NULL) {
       if ((mdb->result = sql_use_result(mdb)) != NULL) {
-         int num_fields = 0;                     
+         int num_fields = 0;
 
          /* We *must* fetch all rows */
          while ((row = sql_fetch_row(mdb)) != NULL) {

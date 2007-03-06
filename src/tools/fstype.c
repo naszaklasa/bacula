@@ -3,23 +3,36 @@
  *
  *   Written by Preben 'Peppe' Guldberg, December MMIV
  *
- *   Version $Id: fstype.c,v 1.7 2005/08/10 16:35:37 nboichat Exp $
+ *   Version $Id: fstype.c,v 1.11 2006/11/22 14:26:39 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2004-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "findlib/find.h"
@@ -32,7 +45,7 @@ static void usage()
 {
    fprintf(stderr, _(
 "\n"
-"Usage: fstype [-d debug_level] path ...\n"
+"Usage: fstype [-v] path ...\n"
 "\n"
 "       Print the file system type a given file/directory is on.\n"
 "       The following options are supported:\n"
@@ -74,6 +87,8 @@ main (int argc, char *const *argv)
    if (argc < 1) {
       usage();
    }
+
+   OSDependentInit();
 
    for (i = 0; i < argc; --argc, ++argv) {
       if (fstype(*argv, fs, sizeof(fs))) {

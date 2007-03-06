@@ -7,28 +7,35 @@
  *  Basic tasks done here:
  *     Display the job report.
  *
- *   Version $Id: admin.c,v 1.9 2005/02/28 14:02:07 kerns Exp $
+ *   Version $Id: admin.c,v 1.13 2006/12/09 13:54:29 ricozz Exp $
  */
-
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2003-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -37,12 +44,13 @@
 
 bool do_admin_init(JCR *jcr)
 {
+   free_rstorage(jcr);
    return true;
 }
 
 /*
  *  Returns:  false on failure
- *	      true  on success
+ *            true  on success
  */
 bool do_admin(JCR *jcr)
 {
@@ -53,7 +61,7 @@ bool do_admin(JCR *jcr)
 
    /* Print Job Start message */
    Jmsg(jcr, M_INFO, 0, _("Start Admin JobId %d, Job=%s\n"),
-	jcr->JobId, jcr->Job);
+        jcr->JobId, jcr->Job);
 
    set_jcr_job_status(jcr, JS_Running);
    admin_cleanup(jcr, JS_Terminated);
@@ -74,17 +82,16 @@ void admin_cleanup(JCR *jcr, int TermCode)
 
    Dmsg0(100, "Enter backup_cleanup()\n");
    memset(&mr, 0, sizeof(mr));
-   set_jcr_job_status(jcr, TermCode);
 
-   update_job_end_record(jcr);	      /* update database */
+   update_job_end(jcr, TermCode);
 
    if (!db_get_job_record(jcr, jcr->db, &jcr->jr)) {
       Jmsg(jcr, M_WARNING, 0, _("Error getting job record for stats: %s"),
-	 db_strerror(jcr->db));
+         db_strerror(jcr->db));
       set_jcr_job_status(jcr, JS_ErrorTerminated);
    }
 
-   msg_type = M_INFO;		      /* by default INFO message */
+   msg_type = M_INFO;                 /* by default INFO message */
    switch (jcr->JobStatus) {
    case JS_Terminated:
       term_msg = _("Admin OK");
@@ -92,7 +99,7 @@ void admin_cleanup(JCR *jcr, int TermCode)
    case JS_FatalError:
    case JS_ErrorTerminated:
       term_msg = _("*** Admin Error ***");
-      msg_type = M_ERROR;	   /* Generate error message */
+      msg_type = M_ERROR;          /* Generate error message */
       break;
    case JS_Canceled:
       term_msg = _("Admin Canceled");
@@ -111,12 +118,12 @@ void admin_cleanup(JCR *jcr, int TermCode)
 "  Start time:             %s\n"
 "  End time:               %s\n"
 "  Termination:            %s\n\n"),
-	edt,
-	jcr->jr.JobId,
-	jcr->jr.Job,
-	sdt,
-	edt,
-	term_msg);
+        edt,
+        jcr->jr.JobId,
+        jcr->jr.Job,
+        sdt,
+        edt,
+        term_msg);
 
    Dmsg0(100, "Leave admin_cleanup()\n");
 }

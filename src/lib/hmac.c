@@ -5,27 +5,35 @@
  *
  * Adapted to Bacula by Kern E. Sibbald, February MMI.
  *
- *   Version $Id: hmac.c,v 1.5.4.1 2006/01/07 11:18:11 kerns Exp $
+ *   Version $Id: hmac.c,v 1.7 2006/11/21 16:13:57 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU Lesser General Public
-   License as published by the Free Software Foundation; either
-   version 2.1 of the License, or (at your option) any later version.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This library is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU Lesser General 
+   Public License as published by the Free Software Foundation plus 
+   additions that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    Lesser General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public
-   License along with this library; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 
@@ -34,11 +42,11 @@
 
 void
 hmac_md5(
-    uint8_t*  text,	       /* pointer to data stream */
-    int   text_len,	       /* length of data stream */
-    uint8_t*  key,	       /* pointer to authentication key */
-    int   key_len,	       /* length of authentication key */
-    uint8_t  *hmac)	       /* returned hmac-md5 */
+    uint8_t*  text,            /* pointer to data stream */
+    int   text_len,            /* length of data stream */
+    uint8_t*  key,             /* pointer to authentication key */
+    int   key_len,             /* length of authentication key */
+    uint8_t  *hmac)            /* returned hmac-md5 */
 {
    MD5Context md5c;
    uint8_t k_ipad[PAD_LEN];    /* inner padding - key XORd with ipad */
@@ -82,39 +90,39 @@ hmac_md5(
    }
 
    /* perform inner MD5 */
-   MD5Init(&md5c);		      /* start inner hash */
+   MD5Init(&md5c);                    /* start inner hash */
    MD5Update(&md5c, k_ipad, PAD_LEN); /* hash inner pad */
    MD5Update(&md5c, text, text_len);  /* hash text */
-   MD5Final(hmac, &md5c);	      /* store inner hash */
+   MD5Final(hmac, &md5c);             /* store inner hash */
 
    /* perform outer MD5 */
-   MD5Init(&md5c);		      /* start outer hash */
+   MD5Init(&md5c);                    /* start outer hash */
    MD5Update(&md5c, k_opad, PAD_LEN); /* hash outer pad */
    MD5Update(&md5c, hmac, SIG_LEN);   /* hash inner hash */
-   MD5Final(hmac, &md5c);	      /* store results */
+   MD5Final(hmac, &md5c);             /* store results */
 }
 /*
 Test Vectors (Trailing '\0' of a character string not included in test):
 
-  key = 	0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b
-  key_len =	16 bytes
+  key =         0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b
+  key_len =     16 bytes
   data =        "Hi There"
-  data_len =	8  bytes
-  digest =	0x9294727a3638bb1c13f48ef8158bfc9d
+  data_len =    8  bytes
+  digest =      0x9294727a3638bb1c13f48ef8158bfc9d
 
   key =         "Jefe"
   data =        "what do ya want for nothing?"
-  data_len =	28 bytes
-  digest =	0x750c783e6ab0b503eaa86e310a5db738
+  data_len =    28 bytes
+  digest =      0x750c783e6ab0b503eaa86e310a5db738
 
-  key = 	0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  key =         0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
-  key_len	16 bytes
-  data =	0xDDDDDDDDDDDDDDDDDDDD...
-		..DDDDDDDDDDDDDDDDDDDD...
-		..DDDDDDDDDDDDDDDDDDDD...
-		..DDDDDDDDDDDDDDDDDDDD...
-		..DDDDDDDDDDDDDDDDDDDD
-  data_len =	50 bytes
-  digest =	0x56be34521d144c88dbb8c733f0e8b3f6
+  key_len       16 bytes
+  data =        0xDDDDDDDDDDDDDDDDDDDD...
+                ..DDDDDDDDDDDDDDDDDDDD...
+                ..DDDDDDDDDDDDDDDDDDDD...
+                ..DDDDDDDDDDDDDDDDDDDD...
+                ..DDDDDDDDDDDDDDDDDDDD
+  data_len =    50 bytes
+  digest =      0x56be34521d144c88dbb8c733f0e8b3f6
 */

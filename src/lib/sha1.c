@@ -490,7 +490,7 @@ int main(int argc, char *argv[])
       printf("Must have filename\n");
       exit(1);
    }
-   fd = fopen(argv[1], "r");
+   fd = fopen(argv[1], "rb");
    if (!fd) {
       printf("Could not open %s: ERR=%s\n", argv[1], strerror(errno));
       exit(1);

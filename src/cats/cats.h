@@ -11,22 +11,35 @@
  * for the external world. This is control with
  * the define __SQL_C, which is defined only in sql.c
  *
- *    Version $Id: cats.h,v 1.61.2.1 2006/02/25 07:47:44 kerns Exp $
+ *    Version $Id: cats.h,v 1.74 2006/11/27 10:02:59 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 /*
    Here is how database versions work. 
@@ -65,9 +78,10 @@ typedef int (DB_RESULT_HANDLER)(void *, int, char **);
 
 #ifdef __SQL_C
 
+#if defined(BUILDING_CATS)
 #ifdef HAVE_SQLITE
 
-#define BDB_VERSION 9
+#define BDB_VERSION 10
 
 #include <sqlite.h>
 
@@ -162,7 +176,7 @@ struct B_DB {
 /* In cats/sqlite.c */
 void       my_sqlite_free_table(B_DB *mdb);
 SQL_ROW    my_sqlite_fetch_row(B_DB *mdb);
-int        my_sqlite_query(B_DB *mdb, char *cmd);
+int        my_sqlite_query(B_DB *mdb, const char *cmd);
 void       my_sqlite_field_seek(B_DB *mdb, int field);
 SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb);
 
@@ -175,7 +189,7 @@ SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb);
 #ifdef HAVE_SQLITE3
 
 
-#define BDB_VERSION 9
+#define BDB_VERSION 10
 
 #include <sqlite3.h>
 
@@ -281,7 +295,7 @@ struct B_DB {
 /* In cats/sqlite.c */
 void       my_sqlite_free_table(B_DB *mdb);
 SQL_ROW    my_sqlite_fetch_row(B_DB *mdb);
-int        my_sqlite_query(B_DB *mdb, char *cmd);
+int        my_sqlite_query(B_DB *mdb, const char *cmd);
 void       my_sqlite_field_seek(B_DB *mdb, int field);
 SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb);
 
@@ -290,7 +304,7 @@ SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb);
 
 #ifdef HAVE_MYSQL
 
-#define BDB_VERSION 9
+#define BDB_VERSION 10
 
 #include <mysql.h>
 
@@ -355,7 +369,7 @@ struct B_DB {
 
 #ifdef HAVE_POSTGRESQL
 
-#define BDB_VERSION 9
+#define BDB_VERSION 10
 
 #include <libpq-fe.h>
 
@@ -490,6 +504,7 @@ struct B_DB {
 #endif /* HAVE_MYSQL */
 #endif /* HAVE_SQLITE */
 #endif /* HAVE_POSTGRESQL */
+#endif
 
 /* Use for better error location printing */
 #define UPDATE_DB(jcr, db, cmd) UpdateDB(__FILE__, __LINE__, jcr, db, cmd)
@@ -536,9 +551,11 @@ struct JOB_DBR {
    DBId_t ClientId;                   /* Id of client */
    DBId_t PoolId;                     /* Id of pool */
    DBId_t FileSetId;                  /* Id of FileSet */
+   DBId_t PriorJobId;                 /* Id of migrated (prior) job */
    time_t SchedTime;                  /* Time job scheduled */
    time_t StartTime;                  /* Job start time */
-   time_t EndTime;                    /* Job termination time */
+   time_t EndTime;                    /* Job termination time of orig job */
+   time_t RealEndTime;                /* Job termination time of this job */
    utime_t JobTDate;                  /* Backup time/date in seconds */
    uint32_t VolSessionId;
    uint32_t VolSessionTime;
@@ -546,6 +563,8 @@ struct JOB_DBR {
    uint32_t JobErrors;
    uint32_t JobMissingFiles;
    uint64_t JobBytes;
+   int PurgedFiles;
+   int HasBase;
 
    /* Note, FirstIndex, LastIndex, Start/End File and Block
     * are only used in the JobMedia record.
@@ -560,6 +579,7 @@ struct JOB_DBR {
    char cSchedTime[MAX_TIME_LENGTH];
    char cStartTime[MAX_TIME_LENGTH];
    char cEndTime[MAX_TIME_LENGTH];
+   char cRealEndTime[MAX_TIME_LENGTH];
    /* Extra stuff not in DB */
    int limit;                         /* limit records to display */
    faddr_t rec_addr;
@@ -580,7 +600,6 @@ struct JOBMEDIA_DBR {
    uint32_t StartBlock;               /* start block on tape */
    uint32_t EndBlock;                 /* last block */
    uint32_t Copy;                     /* identical copy */
-   uint32_t Stripe;                   /* RAIT strip number */
 };
 
 
@@ -588,6 +607,7 @@ struct JOBMEDIA_DBR {
 struct VOL_PARAMS {
    char VolumeName[MAX_NAME_LENGTH];  /* Volume name */
    char MediaType[MAX_NAME_LENGTH];   /* Media Type */
+   char Storage[MAX_NAME_LENGTH];     /* Storage name */
    uint32_t VolIndex;                 /* Volume seqence no. */
    uint32_t FirstIndex;               /* First index this Volume */
    uint32_t LastIndex;                /* Last index this Volume */
@@ -595,6 +615,7 @@ struct VOL_PARAMS {
    uint32_t EndFile;                  /* End file on Volume */
    uint32_t StartBlock;               /* start block on tape */
    uint32_t EndBlock;                 /* last block */
+   int32_t Slot;                      /* Slot */
 // uint32_t Copy;                     /* identical copy */
 // uint32_t Stripe;                   /* RAIT strip number */
 };
@@ -615,8 +636,8 @@ struct ATTR_DBR {
    DBId_t PathId;
    DBId_t FilenameId;
    FileId_t FileId;
-   char *Sig;
-   int SigType;
+   char *Digest;
+   int DigestType;
 };
 
 
@@ -629,8 +650,8 @@ struct FILE_DBR {
    DBId_t PathId;
    JobId_t  MarkId;
    char LStat[256];
-   char SIG[50];
-   int SigType;                       /* NO_SIG/MD5_SIG/SHA1_SIG */
+   char Digest[BASE64_SIZE(CRYPTO_DIGEST_MAX_SIZE)];
+   int DigestType;                    /* NO_SIG/MD5_SIG/SHA1_SIG */
 };
 
 /* Pool record -- same format as database */
@@ -698,9 +719,10 @@ struct MEDIA_DBR {
    char VolumeName[MAX_NAME_LENGTH];  /* Volume name */
    char MediaType[MAX_NAME_LENGTH];   /* Media type */
    DBId_t PoolId;                     /* Pool id */
-   time_t   FirstWritten;             /* Time Volume first written */
+   time_t   FirstWritten;             /* Time Volume first written this usage */
    time_t   LastWritten;              /* Time Volume last written */
    time_t   LabelDate;                /* Date/Time Volume labeled */
+   time_t   InitialWrite;             /* Date/Time Volume first written */
    int32_t  LabelType;                /* Label (Bacula/ANSI/IBM) */
    uint32_t VolJobs;                  /* number of jobs on this medium */
    uint32_t VolFiles;                 /* Number of files */
@@ -721,11 +743,17 @@ struct MEDIA_DBR {
    uint32_t MaxVolFiles;              /* Max files on Volume */
    int32_t  Recycle;                  /* recycle yes/no */
    int32_t  Slot;                     /* slot in changer */
+   int32_t  Enabled;                  /* 0=disabled, 1=enabled, 2=archived */
    int32_t  InChanger;                /* Volume currently in changer */
    DBId_t   StorageId;                /* Storage record Id */
    uint32_t EndFile;                  /* Last file on volume */
    uint32_t EndBlock;                 /* Last block on volume */
-   char VolStatus[20];                /* Volume status */
+   uint32_t RecycleCount;             /* Number of times recycled */
+   char     VolStatus[20];            /* Volume status */
+   DBId_t   DeviceId;                 /* Device where Vol last written */
+   DBId_t   LocationId;               /* Where Volume is -- user defined */
+   DBId_t   ScratchPoolId;            /* Where to move if scratch */
+   DBId_t   RecyclePoolId;            /* Where to move when recycled */
    /* Extra stuff not in DB */
    faddr_t rec_addr;                  /* found record address */
    /* Since the database returns times as strings, this is how we pass
@@ -734,6 +762,7 @@ struct MEDIA_DBR {
    char    cFirstWritten[MAX_TIME_LENGTH]; /* FirstWritten returned from DB */
    char    cLastWritten[MAX_TIME_LENGTH];  /* LastWritten returned from DB */
    char    cLabelDate[MAX_TIME_LENGTH];    /* LabelData returned from DB */
+   char    cInitialWrite[MAX_TIME_LENGTH]; /* InitialWrite returned from DB */
    bool    set_first_written;                
    bool    set_label_date;
 };
@@ -772,20 +801,34 @@ struct FILESET_DBR {
    bool created;                      /* set when record newly created */
 };
 
+/* Call back context for getting a 32/64 bit value from the database */
+struct db_int64_ctx {
+   int64_t value;                     /* value returned */
+   int count;                         /* number of values seen */
+};
 
 
 #include "protos.h"
 #include "jcr.h"
+#include "sql_cmds.h"
 
 /*
- * Some functions exported by sql.c for use withing the
+ * Some functions exported by sql.c for use within the
  *   cats directory.
  */
-void list_result(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type type);
+void list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type type);
 void list_dashes(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx);
 int get_sql_record_max(JCR *jcr, B_DB *mdb);
-int check_tables_version(JCR *jcr, B_DB *mdb);
+bool check_tables_version(JCR *jcr, B_DB *mdb);
 void _db_unlock(const char *file, int line, B_DB *mdb);
 void _db_lock(const char *file, int line, B_DB *mdb);
+const char *db_get_type(void);
 
+void print_dashes(B_DB *mdb);
+void print_result(B_DB *mdb);
+int QueryDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
+int InsertDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
+int DeleteDB(const char *file, int line, JCR *jcr, B_DB *db, char *delete_cmd);
+int UpdateDB(const char *file, int line, JCR *jcr, B_DB *db, char *update_cmd);
+void split_path_and_file(JCR *jcr, B_DB *mdb, const char *fname);
 #endif /* __SQL_H_ */

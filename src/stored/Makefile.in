@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.47.2.3 2006/03/14 21:41:41 kerns Exp $
+# $Id: Makefile.in,v 1.54 2006/09/18 20:56:21 kerns Exp $
 @MCOMMON@
 
 srcdir =	.
@@ -23,14 +23,14 @@ first_rule: all
 dummy:
 
 # bacula-sd
-SVROBJS = stored.o ansi_label.o \
+SDOBJS =  stored.o ansi_label.o \
 	  autochanger.o acquire.o append.o \
 	  askdir.o authenticate.o \
 	  block.o butil.o dev.o \
-	  device.o dircmd.o dvd.o ebcdic.c fd_cmds.o job.o \
-	  label.o match_bsr.o mount.o parse_bsr.o \
+	  device.o dircmd.o dvd.o ebcdic.o fd_cmds.o job.o \
+	  label.o mac.o match_bsr.o mount.o parse_bsr.o \
 	  pythonsd.o read.o read_record.o record.o \
-	  reserve.o \
+	  reserve.o scan.o \
 	  spool.o status.o stored_conf.o wait.o
 
 # btape
@@ -38,35 +38,33 @@ TAPEOBJS = btape.o block.o butil.o dev.o device.o label.o \
 	   ansi_label.o dvd.o ebcdic.o \
 	   autochanger.o acquire.o mount.o record.o read_record.o \
 	   reserve.o \
-	   stored_conf.o match_bsr.o parse_bsr.o spool.o wait.o
+	   stored_conf.o match_bsr.o parse_bsr.o scan.o spool.o wait.o
 
 # bls
 BLSOBJS = bls.o block.o butil.o device.o dev.o label.o match_bsr.o \
 	  ansi_label.o dvd.o ebcdic.o \
 	  autochanger.o acquire.o mount.o parse_bsr.o record.o	\
-	   reserve.o \
-	  read_record.o stored_conf.o spool.o wait.o
+	  read_record.o reserve.o scan.o stored_conf.o spool.o wait.o
 
 # bextract
 BEXTOBJS = bextract.o block.o device.o dev.o label.o record.o \
 	   ansi_label.o dvd.o ebcdic.o \
 	   autochanger.o acquire.o mount.o match_bsr.o parse_bsr.o butil.o \
-	   pythonsd.o reserve.o \
-	   read_record.o stored_conf.o spool.o wait.o
+	   pythonsd.o read_record.o reserve.o \
+	   scan.o stored_conf.o spool.o wait.o
 
 # bscan
 SCNOBJS = bscan.o block.o device.o dev.o label.o \
 	  ansi_label.o dvd.o ebcdic.o \
 	  autochanger.o acquire.o mount.o record.o match_bsr.o parse_bsr.o \
-	  reserve.o \
-	  butil.o read_record.o stored_conf.o spool.o wait.o
+	  butil.o read_record.o scan.o reserve.o stored_conf.o spool.o wait.o
 
 # bcopy
 COPYOBJS = bcopy.o block.o device.o dev.o label.o \
 	   ansi_label.o dvd.o ebcdic.o \
 	   autochanger.o acquire.o mount.o record.o match_bsr.o parse_bsr.o \
-	   reserve.o \
-	   butil.o read_record.o stored_conf.o spool.o wait.o
+	   butil.o read_record.o reserve.o \
+	   scan.o stored_conf.o spool.o wait.o
 
 
 
@@ -82,26 +80,29 @@ FDLIBS=@FDLIBS@
 
 # inference rules
 .c.o:
-	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 
 all: Makefile bacula-sd @STATIC_SD@ bls bextract bscan btape bcopy
 	@echo "===== Make of stored is good ===="
 	@echo " "
 
-bacula-sd: $(SVROBJS) ../lib/libbac.a
-	$(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -o $@ $(SVROBJS) $(FDLIBS) \
+bacula-sd: $(SDOBJS) ../lib/libbac.a
+	@echo "Linking $@ ..."
+	$(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -o $@ $(SDOBJS) $(FDLIBS) \
 	  -lbac -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
 	  $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-static-bacula-sd: $(SVROBJS) ../lib/libbac.a
-	$(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -o $@ $(SVROBJS) $(FDLIBS) \
+static-bacula-sd: $(SDOBJS) ../lib/libbac.a
+	$(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -o $@ $(SDOBJS) $(FDLIBS) \
 	 -lbac -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
 	 $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 	strip $@
 
 btape.o: btape.c
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) \
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) \
  -I$(basedir) $(OPENSSL_INC) $(DINCLUDE) $(CFLAGS) $<
 
 btape:	$(TAPEOBJS) ../lib/libbac.a ../cats/libsql.a
@@ -109,23 +110,28 @@ btape:	$(TAPEOBJS) ../lib/libbac.a ../cats/libsql.a
  -lsql $(DLIB) -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 bls.o:	bls.c
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) \
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) \
  -I$(basedir) $(OPENSSL_INC) $(DINCLUDE) $(CFLAGS) $<
 
 bls:	../findlib/libfind.a $(BLSOBJS) ../lib/libbac.a
-	$(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BLSOBJS) $(DLIB) -lfind \
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BLSOBJS) $(DLIB) -lfind \
  -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 bextract.o: bextract.c
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) \
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) \
  -I$(basedir) $(OPENSSL_INC) $(DINCLUDE) $(CFLAGS) $<
 
 bextract: ../findlib/libfind.a $(BEXTOBJS) ../lib/libbac.a
-	$(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BEXTOBJS) $(DLIB) $(FDLIBS) \
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BEXTOBJS) $(DLIB) $(FDLIBS) \
  -lfind -lbac -lm $(PYTHON_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 bscan.o: bscan.c
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) \
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) \
  -I$(basedir) $(OPENSSL_INC) $(DINCLUDE) $(CFLAGS) $<
 
 bscan:	../findlib/libfind.a $(SCNOBJS) ../cats/libsql.a
@@ -133,7 +139,8 @@ bscan:	../findlib/libfind.a $(SCNOBJS) ../cats/libsql.a
  -lsql $(DB_LIBS) $(FDLIBS) -lfind -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 bcopy.o: bcopy.c
-	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) \
+	@echo "Compiling $<"
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) \
  -I$(basedir) $(OPENSSL_INC) $(DINCLUDE) $(CFLAGS) $<
 
 bcopy:	$(COPYOBJS) ../findlib/libfind.a ../lib/libbac.a

@@ -1,3 +1,0 @@
-#!/bin/sh
-cp ../../../../depkgs-win32/pthreads/pthreadVCE.dll .
-cp /bacula/bin/bacula-fd.conf .

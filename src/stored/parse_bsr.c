@@ -3,23 +3,35 @@
  *
  *     Kern Sibbald, June MMII
  *
- *   Version $Id: parse_bsr.c,v 1.29.2.1 2006/03/14 21:41:44 kerns Exp $
+ *   Version $Id: parse_bsr.c,v 1.34 2006/12/14 11:41:01 kerns Exp $
  */
-
 /*
-   Copyright (C) 2002-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
@@ -739,9 +751,6 @@ void dump_sesstime(BSR_SESSTIME *sesstime)
 }
 
 
-
-
-
 void dump_bsr(BSR *bsr, bool recurse)
 {
    int save_debug = debug_level;
@@ -881,8 +890,8 @@ void create_restore_volume_list(JCR *jcr)
    /*
     * Build a list of volumes to be processed
     */
-   jcr->NumVolumes = 0;
-   jcr->CurVolume = 0;
+   jcr->NumReadVolumes = 0;
+   jcr->CurReadVolume = 0;
    if (jcr->bsr) {
       BSR *bsr = jcr->bsr;
       if (!bsr->volume || !bsr->volume->VolumeName) {
@@ -908,7 +917,7 @@ void create_restore_volume_list(JCR *jcr)
             vol->Slot = bsrvol->Slot;
             vol->start_file = sfile;
             if (add_restore_volume(jcr, vol)) {
-               jcr->NumVolumes++;
+               jcr->NumReadVolumes++;
                Dmsg2(400, "Added volume=%s mediatype=%s\n", vol->VolumeName,
                   vol->MediaType);
             } else {
@@ -929,7 +938,7 @@ void create_restore_volume_list(JCR *jcr)
          bstrncpy(vol->VolumeName, p, sizeof(vol->VolumeName));
          bstrncpy(vol->MediaType, jcr->dcr->media_type, sizeof(vol->MediaType));
          if (add_restore_volume(jcr, vol)) {
-            jcr->NumVolumes++;
+            jcr->NumReadVolumes++;
          } else {
             free((char *)vol);
          }

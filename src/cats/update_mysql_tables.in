@@ -1,9 +1,10 @@
 #!/bin/sh
 #
-# Shell script to update MySQL tables from version 1.36 to 1.38  
+# Shell script to update MySQL tables from version 1.38 to 2.0	
 #
 echo " "
-echo "This script will update a Bacula MySQL database from version 8 to 9"
+echo "This script will update a Bacula MySQL database from version 9 to 10"
+echo " which is needed to convert from Bacula version 1.38.x to 2.0.x or higher"
 echo "Depending on the size of your database,"
 echo "this script may take several minutes to run."
 echo " "
@@ -12,83 +13,59 @@ bindir=@SQL_BINDIR@
 if $bindir/mysql $* -f <<END-OF-DATA
 USE bacula;
 
-ALTER TABLE Media ADD COLUMN LabelType INTEGER UNSIGNED NOT NULL DEFAULT 0;
-ALTER TABLE Media ADD COLUMN StorageId INTEGER UNSIGNED DEFAULT 0 REFERENCES Storage;
-ALTER TABLE Media ADD COLUMN VolParts INTEGER UNSIGNED NOT NULL DEFAULT 0;
+DROP TABLE IF EXISTS MAC;
+DROP TABLE IF EXISTS Log;
+DROP TABLE IF EXISTS Location;
+DROP TABLE IF EXISTS LocationLog;
 
-ALTER TABLE Pool  ADD COLUMN LabelType INTEGER UNSIGNED NOT NULL DEFAULT 0;
-ALTER TABLE Pool  ADD COLUMN NextPoolId INTEGER UNSIGNED DEFAULT 0 REFERENCES Pool;
-ALTER TABLE Pool  ADD COLUMN MigrationHighBytes BIGINT UNSIGNED DEFAULT 0;
-ALTER TABLE Pool  ADD COLUMN MigrationLowBytes BIGINT UNSIGNED DEFAULT 0;
-ALTER TABLE Pool  ADD COLUMN MigrationTime BIGINT UNSIGNED DEFAULT 0;
-
-ALTER TABLE JobMedia ADD COLUMN Copy INTEGER UNSIGNED NOT NULL DEFAULT 0;
-ALTER TABLE JobMedia ADD COLUMN Stripe INTEGER UNSIGNED NOT NULL DEFAULT 0;
-
-
-CREATE TABLE MediaType (
-   MediaTypeId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
-   MediaType VARCHAR(128) NOT NULL,
-   ReadOnly TINYINT DEFAULT 0,
-   PRIMARY KEY(MediaTypeId)
+CREATE TABLE Log (
+   LogId INTEGER UNSIGNED AUTO_INCREMENT,
+   JobId INTEGER UNSIGNED DEFAULT 0 REFERENCES Job,
+   Time DATETIME DEFAULT 0,
+   LogText BLOB NOT NULL,
+   PRIMARY KEY(LogId),
+   INDEX (JobId)
    );
 
-CREATE TABLE Storage (
-   StorageId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
-   Name VARCHAR(128) NOT NULL,
-   AutoChanger TINYINT DEFAULT 0,
-   PRIMARY KEY(StorageId)
+CREATE TABLE Location (
+   LocationId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+   Location TINYBLOB NOT NULL,
+   Cost INTEGER DEFAULT 0,
+   Enabled TINYINT,
+   PRIMARY KEY(LocationId)
    );
 
-CREATE TABLE Device (
-   DeviceId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
-   Name VARCHAR(128) NOT NULL,
-   MediaTypeId INTEGER UNSIGNED NOT NULL REFERENCES MediaType,
-   StorageId INTEGER UNSIGNED REFERENCES Storage,
-   DevMounts INTEGER UNSIGNED DEFAULT 0,
-   DevReadBytes BIGINT UNSIGNED DEFAULT 0,
-   DevWriteBytes BIGINT UNSIGNED DEFAULT 0,
-   DevReadBytesSinceCleaning BIGINT UNSIGNED DEFAULT 0,
-   DevWriteBytesSinceCleaning BIGINT UNSIGNED DEFAULT 0,
-   DevReadTime BIGINT UNSIGNED DEFAULT 0,
-   DevWriteTime BIGINT UNSIGNED DEFAULT 0,
-   DevReadTimeSinceCleaning BIGINT UNSIGNED DEFAULT 0,
-   DevWriteTimeSinceCleaning BIGINT UNSIGNED DEFAULT 0,
-   CleaningDate DATETIME DEFAULT 0,
-   CleaningPeriod BIGINT UNSIGNED DEFAULT 0,
-   PRIMARY KEY(DeviceId)
-   );
+CREATE TABLE LocationLog (
+   LocLogId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+   Date DATETIME DEFAULT 0,
+   Comment BLOB,
+   MediaId INTEGER UNSIGNED DEFAULT 0 REFERENCES Media,
+   LocationId INTEGER UNSIGNED DEFAULT 0 REFERENCES Location,
+   NewVolStatus ENUM('Full', 'Archive', 'Append', 'Recycle', 'Purged',
+    'Read-Only', 'Disabled', 'Error', 'Busy', 'Used', 'Cleaning') NOT NULL,
+   NewEnabled TINYINT,
+   PRIMARY KEY(LocLogId)
+);
 
-CREATE TABLE Status (
-   JobStatus CHAR(1) BINARY NOT NULL,
-   JobStatusLong BLOB, 
-   PRIMARY KEY (JobStatus)
-   );
+ALTER TABLE Media ADD COLUMN MediaTypeId INTEGER UNSIGNED DEFAULT 0 REFERENCES MediaType;
+ALTER TABLE Media ADD COLUMN DeviceId INTEGER UNSIGNED DEFAULT 0 REFERENCES Device;
+ALTER TABLE Media ADD COLUMN LocationId INTEGER UNSIGNED DEFAULT 0 REFERENCES Location;
+ALTER TABLE Media ADD COLUMN RecycleCount INTEGER UNSIGNED DEFAULT 0;
+ALTER TABLE Media ADD COLUMN InitialWrite DATETIME DEFAULT 0;
+ALTER TABLE Media ADD COLUMN ScratchPoolId INTEGER UNSIGNED DEFAULT 0 REFERENCES Pool;
+ALTER TABLE Media ADD COLUMN RecyclePoolId INTEGER UNSIGNED DEFAULT 0 REFERENCES Pool;
+ALTER TABLE Media ADD COLUMN Enabled TINYINT DEFAULT 1;
+ALTER TABLE Media ADD COLUMN Comment BLOB;
 
-INSERT INTO Status (JobStatus,JobStatusLong) VALUES
-   ('C', 'Created, not yet running'),
-   ('R', 'Running'),
-   ('B', 'Blocked'),
-   ('T', 'Completed successfully'),
-   ('E', 'Terminated with errors'),
-   ('e', 'Non-fatal error'),
-   ('f', 'Fatal error'),
-   ('D', 'Verify found differences'),
-   ('A', 'Canceled by user'),
-   ('F', 'Waiting for Client'),
-   ('S', 'Waiting for Storage daemon'),
-   ('m', 'Waiting for new media'),
-   ('M', 'Waiting for media mount'),
-   ('s', 'Waiting for storage resource'),
-   ('j', 'Waiting for job resource'),
-   ('c', 'Waiting for client resource'),
-   ('d', 'Waiting on maximum jobs'),
-   ('t', 'Waiting on start time'),
-   ('p', 'Waiting on higher priority jobs');
+ALTER TABLE JobMedia DROP COLUMN Stripe;
+
+ALTER TABLE Job ADD COLUMN PriorJobId INTEGER UNSIGNED DEFAULT 0 REFERENCES Job;
+ALTER TABLE Job ADD COLUMN RealEndTime DATETIME DEFAULT 0;
+
 
 
 DELETE FROM Version;
-INSERT INTO Version (VersionId) VALUES (9);
+INSERT INTO Version (VersionId) VALUES (10);
 
 END-OF-DATA
 then

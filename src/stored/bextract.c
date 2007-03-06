@@ -4,33 +4,40 @@
  *
  *   Kern E. Sibbald, MM
  *
- *   Version $Id: bextract.c,v 1.77.2.4 2006/03/14 21:41:41 kerns Exp $
+ *   Version $Id: bextract.c,v 1.93 2006/12/01 08:45:13 robertnelson Exp $
  *
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
 #include "findlib/find.h"
-
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
-int win32_client = 1;
-#else
-int win32_client = 0;
-#endif
 
 static void do_extract(char *fname);
 static bool record_cb(DCR *dcr, DEV_RECORD *rec);
@@ -67,7 +74,7 @@ pthread_cond_t wait_device_release = PTHREAD_COND_INITIALIZER;
 static void usage()
 {
    fprintf(stderr, _(
-"Copyright (C) 2000-2005 Kern Sibbald.\n"
+PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bextract <options> <bacula-archive-device-name> <directory-to-store-files>\n"
 "       -b <file>       specify a bootstrap file\n"
@@ -78,7 +85,7 @@ static void usage()
 "       -p              proceed inspite of I/O errors\n"
 "       -v              verbose\n"
 "       -V <volumes>    specify Volume names (separated by |)\n"
-"       -?              print this message\n\n"), VERSION, BDATE);
+"       -?              print this message\n\n"), 2000, VERSION, BDATE);
    exit(1);
 }
 
@@ -93,10 +100,13 @@ int main (int argc, char *argv[])
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
+   init_stack_dump();
 
    working_directory = "/tmp";
    my_name_is(argc, argv, "bextract");
    init_msg(NULL, NULL);              /* setup message handler */
+
+   OSDependentInit();
 
    ff = init_find_files();
    binit(&bfd);
@@ -122,7 +132,7 @@ int main (int argc, char *argv[])
          break;
 
       case 'e':                    /* exclude list */
-         if ((fd = fopen(optarg, "r")) == NULL) {
+         if ((fd = fopen(optarg, "rb")) == NULL) {
             berrno be;
             Pmsg2(0, _("Could not open exclude file: %s, ERR=%s\n"),
                optarg, be.strerror());
@@ -137,7 +147,7 @@ int main (int argc, char *argv[])
          break;
 
       case 'i':                    /* include list */
-         if ((fd = fopen(optarg, "r")) == NULL) {
+         if ((fd = fopen(optarg, "rb")) == NULL) {
             berrno be;
             Pmsg2(0, _("Could not open include file: %s, ERR=%s\n"),
                optarg, be.strerror());
@@ -210,6 +220,9 @@ int main (int argc, char *argv[])
 static void do_extract(char *devname)
 {
    struct stat statp;
+
+   enable_backup_privileges(NULL, 1);
+
    jcr = setup_jcr("bextract", devname, bsr, VolumeName, 1); /* acquire for read */
    if (!jcr) {
       exit(1);
@@ -246,7 +259,7 @@ static void do_extract(char *devname)
    release_device(dcr);
    free_attr(attr);
    free_jcr(jcr);
-   term_dev(dev);
+   dev->term();
 
    printf(_("%u files restored.\n"), num_files);
    return;
@@ -342,7 +355,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
             unser_uint64(faddr);
             if (fileAddr != faddr) {
                fileAddr = faddr;
-               if (blseek(&bfd, (off_t)fileAddr, SEEK_SET) < 0) {
+               if (blseek(&bfd, (boffset_t)fileAddr, SEEK_SET) < 0) {
                   berrno be;
                   Emsg2(M_ERROR_TERM, 0, _("Seek error on %s: %s\n"),
                      attr->ofname, be.strerror());
@@ -382,7 +395,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
             unser_uint64(faddr);
             if (fileAddr != faddr) {
                fileAddr = faddr;
-               if (blseek(&bfd, (off_t)fileAddr, SEEK_SET) < 0) {
+               if (blseek(&bfd, (boffset_t)fileAddr, SEEK_SET) < 0) {
                   berrno be;
                   Emsg3(M_ERROR, 0, _("Seek to %s error on %s: ERR=%s\n"),
                      edit_uint64(fileAddr, ec1), attr->ofname, be.strerror());
@@ -432,7 +445,8 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       break;
 
    case STREAM_SIGNED_DIGEST:
-      // TODO landonf: Investigate signed digest support in the storage daemon
+   case STREAM_ENCRYPTED_SESSION_DATA:
+      // TODO landonf: Investigate crypto support in the storage daemon
       break;
 
    case STREAM_PROGRAM_NAMES:
@@ -461,7 +475,6 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
 }
 
 /* Dummies to replace askdir.c */
-bool    dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing) { return 1;}
 bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
 bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
 bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
@@ -475,6 +488,16 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr)
    DEVICE *dev = dcr->dev;
    fprintf(stderr, _("Mount Volume \"%s\" on device %s and press return when ready: "),
       dcr->VolumeName, dev->print_name());
+   dev->close();
    getchar();
    return true;
+}
+
+bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing)
+{
+   Dmsg0(100, "Fake dir_get_volume_info\n");
+   bstrncpy(dcr->VolCatInfo.VolCatName, dcr->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
+   dcr->VolCatInfo.VolCatParts = find_num_dvd_parts(dcr);
+   Dmsg2(500, "Vol=%s num_parts=%d\n", dcr->VolCatInfo.VolCatName, dcr->VolCatInfo.VolCatParts);
+   return 1;
 }

@@ -5,19 +5,32 @@
  *
 */
 /*
-   Copyright (C) 2002-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark ofJohn Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 struct s_mem {
    struct s_mem *next;                /* next buffer */
@@ -56,7 +69,8 @@ struct s_tree_node {
    unsigned int extract_dir: 1;       /* extract dir entry only */
    unsigned int hard_link: 1;         /* set if have hard link */
    unsigned int soft_link: 1;         /* set if is soft link */
-   unsigned int inserted: 1;          /* set when newly inserted */
+   unsigned int inserted: 1;          /* set when node newly inserted */
+   unsigned int loaded: 1;            /* set when the dir is in the tree */
    struct s_tree_node *parent;
    struct s_tree_node *next;          /* next hash of FileIndex */
 };
@@ -76,6 +90,7 @@ struct s_tree_root {
    unsigned int extract_dir: 1;       /* extract dir entry only */
    unsigned int have_link: 1;         /* set if have hard link */
    unsigned int inserted: 1;          /* set when newly inserted */
+   unsigned int loaded: 1;            /* set when the dir is in the tree */
    struct s_tree_node *parent;
    struct s_tree_node *next;          /* next hash of FileIndex */
 

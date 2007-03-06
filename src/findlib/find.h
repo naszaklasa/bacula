@@ -4,19 +4,32 @@
  *     Kern Sibbald MMI
  */
 /*
-   Copyright (C) 2001-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #ifndef __FILES_H
 #define __FILES_H
@@ -42,6 +55,7 @@ struct utimbuf {
 #define MODE_RALL (S_IRUSR|S_IRGRP|S_IROTH)
 
 #include "lib/fnmatch.h"
+#include "lib/enh_fnmatch.h"
 
 #ifndef HAVE_REGEX_H
 #include "lib/bregex.h"
@@ -91,6 +105,8 @@ enum {
 #define FO_SHA256       (1<<19)       /* Do SHA256 checksum */
 #define FO_SHA512       (1<<20)       /* Do SHA512 checksum */
 #define FO_ENCRYPT      (1<<21)       /* Encrypt data stream */
+#define FO_NOATIME      (1<<22)       /* Use O_NOATIME to prevent atime change */
+#define FO_ENHANCEDWILD (1<<23)       /* Enhanced wild card processing */
 
 struct s_included_file {
    struct s_included_file *next;
@@ -134,8 +150,10 @@ struct findFOPTS {
    alist wild;                        /* wild card strings */
    alist wilddir;                     /* wild card strings for directories */
    alist wildfile;                    /* wild card strings for files */
+   alist wildbase;                    /* wild card strings for basenames */
    alist base;                        /* list of base names */
    alist fstype;                      /* file system type limitation */
+   alist drivetype;                   /* drive type limitation */
    char *reader;                      /* reader program */
    char *writer;                      /* writer program */
 };
@@ -172,6 +190,7 @@ struct HFSPLUS_INFO {
  * first argument to the find_files callback subroutine.
  */
 struct FF_PKT {
+   char *top_fname;                   /* full filename before descending */
    char *fname;                       /* full filename */
    char *link;                        /* link if file linked */
    POOLMEM *sys_fname;                /* system filename */
@@ -199,9 +218,10 @@ struct FF_PKT {
    char *reader;                      /* reader program */
    char *writer;                      /* writer program */
    alist fstypes;                     /* allowed file system types */
+   alist drivetypes;                  /* allowed drive types */
 
    /* List of all hard linked files found */
-   struct f_link *linklist;           /* hard linked files */
+   struct f_link **linkhash;          /* hard linked files */
 
    /* Darwin specific things.
     * To avoid clutter, we always include rsrc_bfd and volhas_attrlist */

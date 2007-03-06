@@ -9,28 +9,36 @@
  *  the File daemon, control is passed here to handle the
  *  subsequent File daemon commands.
  *
- *   Version $Id: fd_cmds.c,v 1.28.2.2 2006/03/14 21:41:44 kerns Exp $
+ *   Version $Id: fd_cmds.c,v 1.37 2006/11/26 14:30:46 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
@@ -53,9 +61,10 @@ static bool append_end_session(JCR *jcr);
 static bool read_open_session(JCR *jcr);
 static bool read_data_cmd(JCR *jcr);
 static bool read_close_session(JCR *jcr);
+static bool bootstrap_cmd(JCR *jcr);
 
 /* Exported function */
-bool bootstrap_cmd(JCR *jcr);
+bool get_bootstrap_file(JCR *jcr, BSOCK *bs);
 
 struct s_cmds {
    const char *cmd;
@@ -93,7 +102,7 @@ static char ERROR_bootstrap[] = "3904 Error bootstrap\n";
 
 /* Information sent to the Director */
 static char Job_start[] = "3010 Job %s start\n";
-static char Job_end[]   =
+char Job_end[]   =
    "3099 Job %s end JobStatus=%d JobFiles=%d JobBytes=%s\n";
 
 /*
@@ -137,7 +146,7 @@ void run_job(JCR *jcr)
       for (i=0; fd_cmds[i].cmd; i++) {
          if (strncmp(fd_cmds[i].cmd, fd->msg, strlen(fd_cmds[i].cmd)) == 0) {
             found = true;               /* indicate command found */
-            if (!fd_cmds[i].func(jcr) || job_canceled(jcr)) { /* do command */
+            if (!fd_cmds[i].func(jcr) || job_canceled(jcr)) {    /* do command */
                set_jcr_job_status(jcr, JS_ErrorTerminated);
                quit = true;
             }
@@ -309,9 +318,16 @@ static bool read_open_session(JCR *jcr)
    return true;
 }
 
-bool bootstrap_cmd(JCR *jcr)
+static bool bootstrap_cmd(JCR *jcr)
 {
-   BSOCK *fd = jcr->file_bsock;
+   return get_bootstrap_file(jcr, jcr->file_bsock);
+}
+
+static pthread_mutex_t bsr_mutex = PTHREAD_MUTEX_INITIALIZER;
+static uint32_t bsr_uniq = 0;
+
+bool get_bootstrap_file(JCR *jcr, BSOCK *sock)
+{
    POOLMEM *fname = get_pool_memory(PM_FNAME);
    FILE *bs;
    bool ok = false;
@@ -320,27 +336,32 @@ bool bootstrap_cmd(JCR *jcr)
       unlink(jcr->RestoreBootstrap);
       free_pool_memory(jcr->RestoreBootstrap);
    }
-   Mmsg(fname, "%s/%s.%s.bootstrap", me->working_directory, me->hdr.name,
-      jcr->Job);
+   P(bsr_mutex);
+   bsr_uniq++;
+   Mmsg(fname, "%s/%s.%s.%d.bootstrap", me->working_directory, me->hdr.name,
+      jcr->Job, bsr_uniq);
+   V(bsr_mutex);
    Dmsg1(400, "bootstrap=%s\n", fname);
    jcr->RestoreBootstrap = fname;
-   bs = fopen(fname, "a+");           /* create file */
+   bs = fopen(fname, "a+b");           /* create file */
    if (!bs) {
       Jmsg(jcr, M_FATAL, 0, _("Could not create bootstrap file %s: ERR=%s\n"),
          jcr->RestoreBootstrap, strerror(errno));
       goto bail_out;
    }
-   while (bnet_recv(fd) >= 0) {
-       Dmsg1(400, "stored<filed: bootstrap file %s", fd->msg);
-       fputs(fd->msg, bs);
+   Dmsg0(10, "=== Bootstrap file ===\n");
+   while (bnet_recv(sock) >= 0) {
+       Dmsg1(10, "%s", sock->msg);
+       fputs(sock->msg, bs);
    }
    fclose(bs);
+   Dmsg0(10, "=== end bootstrap file ===\n");
    jcr->bsr = parse_bsr(jcr, jcr->RestoreBootstrap);
    if (!jcr->bsr) {
       Jmsg(jcr, M_FATAL, 0, _("Error parsing bootstrap file.\n"));
       goto bail_out;
    }
-   if (debug_level > 20) {
+   if (debug_level >= 10) {
       dump_bsr(jcr->bsr, true);
    }
    ok = true;
@@ -350,10 +371,10 @@ bail_out:
    free_pool_memory(jcr->RestoreBootstrap);
    jcr->RestoreBootstrap = NULL;
    if (!ok) {
-      bnet_fsend(fd, ERROR_bootstrap);
+      bnet_fsend(sock, ERROR_bootstrap);
       return false;
    }
-   return bnet_fsend(fd, OK_bootstrap);
+   return bnet_fsend(sock, OK_bootstrap);
 }
 
 

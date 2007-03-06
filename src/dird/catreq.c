@@ -10,25 +10,39 @@
  *  Basic tasks done here:
  *      Handle Catalog services.
  *
- *   Version $Id: catreq.c,v 1.77.2.5 2006/03/16 18:16:44 kerns Exp $
+ *   Version $Id: catreq.c,v 1.102 2006/12/23 16:33:52 kerns Exp $
  */
 /*
-   Copyright (C) 2001-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
+#include "findlib/find.h"
 
 /*
  * Handle catalog request
@@ -43,11 +57,11 @@ static char Update_media[] = "CatReq Job=%127s UpdateMedia VolName=%s"
    " VolJobs=%u VolFiles=%u VolBlocks=%u VolBytes=%" lld " VolMounts=%u"
    " VolErrors=%u VolWrites=%u MaxVolBytes=%" lld " EndTime=%d VolStatus=%10s"
    " Slot=%d relabel=%d InChanger=%d VolReadTime=%" lld " VolWriteTime=%" lld
-   " VolParts=%u\n";
+   " VolFirstWritten=%" lld " VolParts=%u\n";
 
 static char Create_job_media[] = "CatReq Job=%127s CreateJobMedia "
    " FirstIndex=%u LastIndex=%u StartFile=%u EndFile=%u "
-   " StartBlock=%u EndBlock=%u Copy=%d Strip=%d\n";
+   " StartBlock=%u EndBlock=%u Copy=%d Strip=%d MediaId=%" lld "\n";
 
 
 /* Responses  sent to Storage daemon */
@@ -55,7 +69,8 @@ static char OK_media[] = "1000 OK VolName=%s VolJobs=%u VolFiles=%u"
    " VolBlocks=%u VolBytes=%s VolMounts=%u VolErrors=%u VolWrites=%u"
    " MaxVolBytes=%s VolCapacityBytes=%s VolStatus=%s Slot=%d"
    " MaxVolJobs=%u MaxVolFiles=%u InChanger=%d VolReadTime=%s"
-   " VolWriteTime=%s EndFile=%u EndBlock=%u VolParts=%u LabelType=%d\n";
+   " VolWriteTime=%s EndFile=%u EndBlock=%u VolParts=%u LabelType=%d"
+   " MediaId=%s\n";
 
 static char OK_create[] = "1000 OK CreateJobMedia\n";
 
@@ -63,7 +78,7 @@ static char OK_create[] = "1000 OK CreateJobMedia\n";
 static int send_volume_info_to_storage_daemon(JCR *jcr, BSOCK *sd, MEDIA_DBR *mr)
 {
    int stat;
-   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50];
+   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50], ed6[50];
 
    jcr->MediaId = mr->MediaId;
    pm_strcpy(jcr->VolumeName, mr->VolumeName);
@@ -79,7 +94,8 @@ static int send_volume_info_to_storage_daemon(JCR *jcr, BSOCK *sd, MEDIA_DBR *mr
       edit_uint64(mr->VolWriteTime, ed5),
       mr->EndFile, mr->EndBlock,
       mr->VolParts,
-      mr->LabelType);
+      mr->LabelType,
+      edit_uint64(mr->MediaId, ed6));
    unbash_spaces(mr->VolumeName);
    Dmsg2(100, "Vol Info for %s: %s", jcr->Job, sd->msg);
    return stat;
@@ -94,6 +110,9 @@ void catalog_request(JCR *jcr, BSOCK *bs)
    int index, ok, label, writing;
    POOLMEM *omsg;
    POOL_DBR pr;
+   uint32_t Stripe;
+   uint64_t MediaId;
+   utime_t VolFirstWritten;
 
    memset(&mr, 0, sizeof(mr));
    memset(&sdmr, 0, sizeof(sdmr));
@@ -121,8 +140,9 @@ void catalog_request(JCR *jcr, BSOCK *bs)
       ok = db_get_pool_record(jcr, jcr->db, &pr);
       if (ok) {
          mr.PoolId = pr.PoolId;
-         mr.StorageId = jcr->store->StorageId;
+         mr.StorageId = jcr->wstore->StorageId;
          ok = find_next_volume_for_append(jcr, &mr, index, true /*permit create new vol*/);
+         Dmsg3(100, "find_media idx=%d ok=%d vol=%s\n", index, ok, mr.VolumeName);
       }
       /*
        * Send Find Media response to Storage daemon
@@ -157,9 +177,9 @@ void catalog_request(JCR *jcr, BSOCK *bs)
              *   Pool matches, and it is either Append or Recycle
              *   and Media Type matches and Pool allows any volume.
              */
-            if (mr.PoolId != jcr->PoolId) {
+            if (mr.PoolId != jcr->jr.PoolId) {
                reason = _("not in Pool");
-            } else if (strcmp(mr.MediaType, jcr->store->media_type) != 0) {
+            } else if (strcmp(mr.MediaType, jcr->wstore->media_type) != 0) {
                reason = _("not correct MediaType");
             } else {
                /*
@@ -168,6 +188,9 @@ void catalog_request(JCR *jcr, BSOCK *bs)
                 */
                check_if_volume_valid_or_recyclable(jcr, &mr, &reason);
             }
+         }
+         if (!reason && mr.Enabled != 1) {
+            reason = _("is not Enabled");
          }
          if (reason == NULL) {
             /*
@@ -194,7 +217,8 @@ void catalog_request(JCR *jcr, BSOCK *bs)
       &sdmr.VolJobs, &sdmr.VolFiles, &sdmr.VolBlocks, &sdmr.VolBytes,
       &sdmr.VolMounts, &sdmr.VolErrors, &sdmr.VolWrites, &sdmr.MaxVolBytes,
       &sdmr.LastWritten, &sdmr.VolStatus, &sdmr.Slot, &label, &sdmr.InChanger,
-      &sdmr.VolReadTime, &sdmr.VolWriteTime, &sdmr.VolParts) == 18) {
+      &sdmr.VolReadTime, &sdmr.VolWriteTime, &VolFirstWritten,
+      &sdmr.VolParts) == 19) {
 
       db_lock(jcr->db);
       Dmsg3(400, "Update media %s oldStat=%s newStat=%s\n", sdmr.VolumeName,
@@ -211,13 +235,20 @@ void catalog_request(JCR *jcr, BSOCK *bs)
       }
       /* Set first written time if this is first job */
       if (mr.FirstWritten == 0) {
-         mr.FirstWritten = jcr->start_time;   /* use Job start time as first write */
+         if (VolFirstWritten == 0) {
+            mr.FirstWritten = jcr->start_time;   /* use Job start time as first write */
+         } else {
+            mr.FirstWritten = VolFirstWritten;
+         }
          mr.set_first_written = true;
       }
       /* If we just labeled the tape set time */
       if (label || mr.LabelDate == 0) {
          mr.LabelDate = jcr->start_time;
          mr.set_label_date = true;
+         if (mr.InitialWrite == 0) {
+            mr.InitialWrite = jcr->start_time;
+         }
          Dmsg2(400, "label=%d labeldate=%d\n", label, mr.LabelDate);
       } else {
          /*
@@ -249,8 +280,8 @@ void catalog_request(JCR *jcr, BSOCK *bs)
       mr.VolWriteTime = sdmr.VolWriteTime;
       mr.VolParts     = sdmr.VolParts;
       bstrncpy(mr.VolStatus, sdmr.VolStatus, sizeof(mr.VolStatus));
-      if (jcr->store->StorageId) {
-         mr.StorageId = jcr->store->StorageId;
+      if (jcr->wstore->StorageId) {
+         mr.StorageId = jcr->wstore->StorageId;
       }
 
       Dmsg2(400, "db_update_media_record. Stat=%s Vol=%s\n", mr.VolStatus, mr.VolumeName);
@@ -274,10 +305,14 @@ void catalog_request(JCR *jcr, BSOCK *bs)
     */
    } else if (sscanf(bs->msg, Create_job_media, &Job,
       &jm.FirstIndex, &jm.LastIndex, &jm.StartFile, &jm.EndFile,
-      &jm.StartBlock, &jm.EndBlock, &jm.Copy, &jm.Stripe) == 9) {
+      &jm.StartBlock, &jm.EndBlock, &jm.Copy, &Stripe, &MediaId) == 10) {
 
-      jm.JobId = jcr->JobId;
-      jm.MediaId = jcr->MediaId;
+      if (jcr->mig_jcr) {
+         jm.JobId = jcr->mig_jcr->JobId;
+      } else {
+         jm.JobId = jcr->JobId;
+      }
+      jm.MediaId = MediaId;
       Dmsg6(400, "create_jobmedia JobId=%d MediaId=%d SF=%d EF=%d FI=%d LI=%d\n",
          jm.JobId, jm.MediaId, jm.StartFile, jm.EndFile, jm.FirstIndex, jm.LastIndex);
       if (!db_create_jobmedia_record(jcr, jcr->db, &jm)) {
@@ -386,47 +421,64 @@ void catalog_update(JCR *jcr, BSOCK *bs)
       ar->FileIndex = FileIndex;
       ar->Stream = Stream;
       ar->link = NULL;
-      ar->JobId = jcr->JobId;
-      ar->Sig = NULL;
-      ar->SigType = 0;
+      if (jcr->mig_jcr) {
+         ar->JobId = jcr->mig_jcr->JobId;
+      } else {
+         ar->JobId = jcr->JobId;
+      }
+      ar->Digest = NULL;
+      ar->DigestType = CRYPTO_DIGEST_NONE;
       jcr->cached_attribute = true;
 
       Dmsg2(400, "dird<filed: stream=%d %s\n", Stream, fname);
       Dmsg1(400, "dird<filed: attr=%s\n", attr);
 
-#ifdef xxx_old_code
-      if (!db_create_file_attributes_record(jcr, jcr->db, ar)) {
-         Jmsg1(jcr, M_FATAL, 0, _("Attribute create error. %s"), db_strerror(jcr->db));
-      }
-#endif
-   } else if (Stream == STREAM_MD5_SIGNATURE || Stream == STREAM_SHA1_SIGNATURE) {
+   } else if (crypto_digest_stream_type(Stream) != CRYPTO_DIGEST_NONE) {
       fname = p;
       if (ar->FileIndex != FileIndex) {
-         Jmsg(jcr, M_WARNING, 0, _("Got MD5/SHA1 but not same File as attributes\n"));
+         Jmsg(jcr, M_WARNING, 0, _("Got %s but not same File as attributes\n"), stream_to_ascii(Stream));
       } else {
-         /* Update signature in catalog */
-         char SIGbuf[50];           /* 24 bytes should be enough */
-         int len, type;
-         if (Stream == STREAM_MD5_SIGNATURE) {
-            len = 16;
-            type = MD5_SIG;
-         } else {
-            len = 20;
-            type = SHA1_SIG;
+         /* Update digest in catalog */
+         char digestbuf[BASE64_SIZE(CRYPTO_DIGEST_MAX_SIZE)];
+         int len = 0;
+         int type = CRYPTO_DIGEST_NONE;
+
+         switch(Stream) {
+         case STREAM_MD5_DIGEST:
+            len = CRYPTO_DIGEST_MD5_SIZE;
+            type = CRYPTO_DIGEST_MD5;
+            break;
+         case STREAM_SHA1_DIGEST:
+            len = CRYPTO_DIGEST_SHA1_SIZE;
+            type = CRYPTO_DIGEST_SHA1;
+            break;
+         case STREAM_SHA256_DIGEST:
+            len = CRYPTO_DIGEST_SHA256_SIZE;
+            type = CRYPTO_DIGEST_SHA256;
+            break;
+         case STREAM_SHA512_DIGEST:
+            len = CRYPTO_DIGEST_SHA512_SIZE;
+            type = CRYPTO_DIGEST_SHA512;
+            break;
+         default:
+            /* Never reached ... */
+            Jmsg(jcr, M_ERROR, 0, _("Catalog error updating file digest. Unsupported digest stream type: %d"),
+                 Stream);
          }
-         bin_to_base64(SIGbuf, fname, len);
-         Dmsg3(400, "SIGlen=%d SIG=%s type=%d\n", strlen(SIGbuf), SIGbuf, Stream);
+
+         bin_to_base64(digestbuf, sizeof(digestbuf), fname, len, true);
+         Dmsg3(400, "DigestLen=%d Digest=%s type=%d\n", strlen(digestbuf), digestbuf, Stream);
          if (jcr->cached_attribute) {
-            ar->Sig = SIGbuf;
-            ar->SigType = type;
-            Dmsg2(400, "Cached attr with SIG. Stream=%d fname=%s\n", ar->Stream, ar->fname);
+            ar->Digest = digestbuf;
+            ar->DigestType = type;
+            Dmsg2(400, "Cached attr with digest. Stream=%d fname=%s\n", ar->Stream, ar->fname);
             if (!db_create_file_attributes_record(jcr, jcr->db, ar)) {
                Jmsg1(jcr, M_FATAL, 0, _("Attribute create error. %s"), db_strerror(jcr->db));
             }
             jcr->cached_attribute = false; 
          } else {
-            if (!db_add_SIG_to_file_record(jcr, jcr->db, ar->FileId, SIGbuf, type)) {
-               Jmsg(jcr, M_ERROR, 0, _("Catalog error updating MD5/SHA1. %s"),
+            if (!db_add_digest_to_file_record(jcr, jcr->db, ar->FileId, digestbuf, type)) {
+               Jmsg(jcr, M_ERROR, 0, _("Catalog error updating file digest. %s"),
                   db_strerror(jcr->db));
             }
          }

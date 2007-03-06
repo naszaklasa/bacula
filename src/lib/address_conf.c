@@ -1,24 +1,37 @@
 /*
  *   Configuration file parser for IP-Addresse ipv4 and ipv6
  *
- *     Written by Meno Abels, June MMIIII
+ *     Written by Meno Abels, June MMIV
  *
- *     Version $Id: address_conf.c,v 1.16.2.1 2005/10/26 14:02:05 kerns Exp $
+ *     Version $Id: address_conf.c,v 1.19 2006/11/21 13:20:10 kerns Exp $
  */
 /*
-   Copyright (C) 2004-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark ofJohn Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
@@ -431,7 +444,7 @@ void store_addresses(LEX * lc, RES_ITEM * item, int index, int pass)
       }
       token = lex_get_token(lc, T_SKIP_EOL);
       if (token != T_BOB) {
-         scan_err1(lc, _("Expected a block beginn { , got: %s"), lc->str);
+         scan_err1(lc, _("Expected a block begin { , got: %s"), lc->str);
       }
       token = lex_get_token(lc, T_SKIP_EOL);
       exist = EMPTYLINE;
@@ -505,7 +518,7 @@ void store_addresses_address(LEX * lc, RES_ITEM * item, int index, int pass)
 
    int token = lex_get_token(lc, T_SKIP_EOL);
    if (!(token == T_UNQUOTED_STRING || token == T_NUMBER || token == T_IDENTIFIER)) {
-      scan_err1(lc, _("Expected a hostname or IP nummer, got: %s"), lc->str);
+      scan_err1(lc, _("Expected an IP number or a hostname, got: %s"), lc->str);
    }
    char *errstr;
    if (pass == 1 && !add_address((dlist **) (item->value), IPADDR::R_SINGLE_ADDR,

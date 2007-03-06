@@ -5,27 +5,46 @@
  *
  *     Kern Sibbald, May MM
  *
- *     Version $Id: run_conf.c,v 1.28 2005/08/17 13:48:38 kerns Exp $
+ *     Version $Id: run_conf.c,v 1.35 2006/11/21 13:20:09 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
 
+#if defined(_MSC_VER)
+extern "C" { // work around visual compiler mangling variables
+   extern URES res_all;
+}
+#else
 extern URES res_all;
+#endif
 extern struct s_jl joblevels[];
 
 /* Forward referenced subroutines */
@@ -54,64 +73,64 @@ struct s_keyw {
 
 /* Keywords understood by parser */
 static struct s_keyw keyw[] = {
-  {N_("on"),         s_none,    0},
-  {N_("at"),         s_at,      0},
+  {NT_("on"),         s_none,    0},
+  {NT_("at"),         s_at,      0},
 
-  {N_("sun"),        s_wday,    0},
-  {N_("mon"),        s_wday,    1},
-  {N_("tue"),        s_wday,    2},
-  {N_("wed"),        s_wday,    3},
-  {N_("thu"),        s_wday,    4},
-  {N_("fri"),        s_wday,    5},
-  {N_("sat"),        s_wday,    6},
-  {N_("jan"),        s_month,   0},
-  {N_("feb"),        s_month,   1},
-  {N_("mar"),        s_month,   2},
-  {N_("apr"),        s_month,   3},
-  {N_("may"),        s_month,   4},
-  {N_("jun"),        s_month,   5},
-  {N_("jul"),        s_month,   6},
-  {N_("aug"),        s_month,   7},
-  {N_("sep"),        s_month,   8},
-  {N_("oct"),        s_month,   9},
-  {N_("nov"),        s_month,  10},
-  {N_("dec"),        s_month,  11},
+  {NT_("sun"),        s_wday,    0},
+  {NT_("mon"),        s_wday,    1},
+  {NT_("tue"),        s_wday,    2},
+  {NT_("wed"),        s_wday,    3},
+  {NT_("thu"),        s_wday,    4},
+  {NT_("fri"),        s_wday,    5},
+  {NT_("sat"),        s_wday,    6},
+  {NT_("jan"),        s_month,   0},
+  {NT_("feb"),        s_month,   1},
+  {NT_("mar"),        s_month,   2},
+  {NT_("apr"),        s_month,   3},
+  {NT_("may"),        s_month,   4},
+  {NT_("jun"),        s_month,   5},
+  {NT_("jul"),        s_month,   6},
+  {NT_("aug"),        s_month,   7},
+  {NT_("sep"),        s_month,   8},
+  {NT_("oct"),        s_month,   9},
+  {NT_("nov"),        s_month,  10},
+  {NT_("dec"),        s_month,  11},
 
-  {N_("sunday"),     s_wday,    0},
-  {N_("monday"),     s_wday,    1},
-  {N_("tuesday"),    s_wday,    2},
-  {N_("wednesday"),  s_wday,    3},
-  {N_("thursday"),   s_wday,    4},
-  {N_("friday"),     s_wday,    5},
-  {N_("saturday"),   s_wday,    6},
-  {N_("january"),    s_month,   0},
-  {N_("february"),   s_month,   1},
-  {N_("march"),      s_month,   2},
-  {N_("april"),      s_month,   3},
-  {N_("june"),       s_month,   5},
-  {N_("july"),       s_month,   6},
-  {N_("august"),     s_month,   7},
-  {N_("september"),  s_month,   8},
-  {N_("october"),    s_month,   9},
-  {N_("november"),   s_month,  10},
-  {N_("december"),   s_month,  11},
+  {NT_("sunday"),     s_wday,    0},
+  {NT_("monday"),     s_wday,    1},
+  {NT_("tuesday"),    s_wday,    2},
+  {NT_("wednesday"),  s_wday,    3},
+  {NT_("thursday"),   s_wday,    4},
+  {NT_("friday"),     s_wday,    5},
+  {NT_("saturday"),   s_wday,    6},
+  {NT_("january"),    s_month,   0},
+  {NT_("february"),   s_month,   1},
+  {NT_("march"),      s_month,   2},
+  {NT_("april"),      s_month,   3},
+  {NT_("june"),       s_month,   5},
+  {NT_("july"),       s_month,   6},
+  {NT_("august"),     s_month,   7},
+  {NT_("september"),  s_month,   8},
+  {NT_("october"),    s_month,   9},
+  {NT_("november"),   s_month,  10},
+  {NT_("december"),   s_month,  11},
 
-  {N_("daily"),      s_daily,   0},
-  {N_("weekly"),     s_weekly,  0},
-  {N_("monthly"),    s_monthly, 0},
-  {N_("hourly"),     s_hourly,  0},
+  {NT_("daily"),      s_daily,   0},
+  {NT_("weekly"),     s_weekly,  0},
+  {NT_("monthly"),    s_monthly, 0},
+  {NT_("hourly"),     s_hourly,  0},
 
-  {N_("1st"),        s_wom,     0},
-  {N_("2nd"),        s_wom,     1},
-  {N_("3rd"),        s_wom,     2},
-  {N_("4th"),        s_wom,     3},
-  {N_("5th"),        s_wom,     4},
+  {NT_("1st"),        s_wom,     0},
+  {NT_("2nd"),        s_wom,     1},
+  {NT_("3rd"),        s_wom,     2},
+  {NT_("4th"),        s_wom,     3},
+  {NT_("5th"),        s_wom,     4},
 
-  {N_("first"),      s_wom,     0},
-  {N_("second"),     s_wom,     1},
-  {N_("third"),      s_wom,     2},
-  {N_("fourth"),     s_wom,     3},
-  {N_("fifth"),      s_wom,     4},
+  {NT_("first"),      s_wom,     0},
+  {NT_("second"),     s_wom,     1},
+  {NT_("third"),      s_wom,     2},
+  {NT_("fourth"),     s_wom,     3},
+  {NT_("fifth"),      s_wom,     4},
   {NULL,         s_none,    0}
 };
 
@@ -191,10 +210,10 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
             switch (RunFields[i].token) {
             case 's':                 /* Data spooling */
                token = lex_get_token(lc, T_NAME);
-               if (strcasecmp(lc->str, "yes") == 0) {
+               if (strcasecmp(lc->str, "yes") == 0 || strcasecmp(lc->str, "true") == 0) {
                   lrun.spool_data = true;
                   lrun.spool_data_set = true;
-               } else if (strcasecmp(lc->str, "no") == 0) {
+               } else if (strcasecmp(lc->str, "no") == 0 || strcasecmp(lc->str, "false") == 0) {
                   lrun.spool_data = false;
                   lrun.spool_data_set = true;
                } else {
@@ -203,10 +222,10 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
                break;
             case 'W':                 /* Write part after job */
                token = lex_get_token(lc, T_NAME);
-               if (strcasecmp(lc->str, "yes") == 0) {
+               if (strcasecmp(lc->str, "yes") == 0 || strcasecmp(lc->str, "true") == 0) {
                   lrun.write_part_after_job = true;
                   lrun.write_part_after_job_set = true;
-               } else if (strcasecmp(lc->str, "no") == 0) {
+               } else if (strcasecmp(lc->str, "no") == 0 || strcasecmp(lc->str, "false") == 0) {
                   lrun.write_part_after_job = false;
                   lrun.write_part_after_job_set = true;
                } else {
@@ -257,7 +276,7 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
                      lrun.inc_pool = (POOL *)res;
                      break;
                   case 'd':
-                     lrun.dif_pool = (POOL *)res;
+                     lrun.diff_pool = (POOL *)res;
                      break;
                   }
                }

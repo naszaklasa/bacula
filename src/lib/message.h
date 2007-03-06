@@ -2,27 +2,35 @@
  * Define Message Types for Bacula
  *    Kern Sibbald, 2000
  *
- *   Version $Id: message.h,v 1.19.4.1 2005/12/10 13:18:05 kerns Exp $
+ *   Version $Id: message.h,v 1.30 2006/11/21 13:20:10 kerns Exp $
  */
 /*
-   Copyright (C) 2000, 2001, 2002 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bits.h"
 
@@ -38,6 +46,7 @@
 #undef  M_RESTORED
 #undef  M_SECURITY
 #undef  M_ALERT
+#undef  M_VOLMGMT
 
 /*
  * Most of these message levels are more or less obvious.
@@ -68,6 +77,7 @@
  *
  *  M_ALERT       For Tape Alert messages.
  *
+ *  M_VOLMGMT     Volume Management message
  */
 
 enum {
@@ -86,10 +96,11 @@ enum {
    M_TERM,                            /* Terminating daemon normally */
    M_RESTORED,                        /* ls -l of restored files */
    M_SECURITY,                        /* security violation */
-   M_ALERT                            /* tape alert messages */
+   M_ALERT,                           /* tape alert messages */
+   M_VOLMGMT                          /* Volume management messages */
 };
 
-#define M_MAX      M_ALERT            /* keep this updated ! */
+#define M_MAX      M_VOLMGMT          /* keep this updated ! */
 
 /* Define message destination structure */
 /* *** FIXME **** where should be extended to handle multiple values */
@@ -105,16 +116,20 @@ typedef struct s_dest {
 } DEST;
 
 /* Message Destination values for dest field of DEST */
-#define MD_SYSLOG    1                /* send msg to syslog */
-#define MD_MAIL      2                /* email group of messages */
-#define MD_FILE      3                /* write messages to a file */
-#define MD_APPEND    4                /* append messages to a file */
-#define MD_STDOUT    5                /* print messages */
-#define MD_STDERR    6                /* print messages to stderr */
-#define MD_DIRECTOR  7                /* send message to the Director */
-#define MD_OPERATOR  8                /* email a single message to the operator */
-#define MD_CONSOLE   9                /* send msg to UserAgent or console */
-#define MD_MAIL_ON_ERROR 10           /* email messages if job errors */
+enum {
+   MD_SYSLOG = 1,                     /* send msg to syslog */
+   MD_MAIL,                           /* email group of messages */
+   MD_FILE,                           /* write messages to a file */
+   MD_APPEND,                         /* append messages to a file */
+   MD_STDOUT,                         /* print messages */
+   MD_STDERR,                         /* print messages to stderr */
+   MD_DIRECTOR,                       /* send message to the Director */
+   MD_OPERATOR,                       /* email a single message to the operator */
+   MD_CONSOLE,                        /* send msg to UserAgent or console */
+   MD_MAIL_ON_ERROR,                  /* email messages if job errors */
+   MD_MAIL_ON_SUCCESS,                /* email messages if job succeeds */
+   MD_CATALOG                         /* sent to catalog Log table */
+};
 
 /* Queued message item */
 struct MQUEUE_ITEM {
@@ -124,15 +139,25 @@ struct MQUEUE_ITEM {
    char msg[1];
 };
 
-
+ 
 void d_msg(const char *file, int line, int level, const char *fmt,...);
 void e_msg(const char *file, int line, int type, int level, const char *fmt,...);
 void Jmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...);
 void Qmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...);
+bool get_trace(void);
 
-extern int debug_level;
-extern int verbose;
-extern char my_name[];
-extern const char *working_directory;
-extern time_t daemon_start_time;
-extern char catalog_db[];
+typedef void (*sql_query)(JCR *jcr, const char *cmd);
+typedef void (*sql_escape)(char *snew, char *old, int len);
+
+extern DLL_IMP_EXP sql_query     p_sql_query;
+extern DLL_IMP_EXP sql_escape    p_sql_escape;
+
+extern DLL_IMP_EXP int           debug_level;
+extern DLL_IMP_EXP int           verbose;
+extern DLL_IMP_EXP char          my_name[];
+extern DLL_IMP_EXP const char *  working_directory;
+extern DLL_IMP_EXP time_t        daemon_start_time;
+
+extern DLL_IMP_EXP int           console_msg_pending;
+extern DLL_IMP_EXP FILE *        con_fd;                 /* Console file descriptor */
+extern DLL_IMP_EXP brwlock_t     con_lock;               /* Console lock structure */

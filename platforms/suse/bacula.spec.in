@@ -4,10 +4,58 @@
 # Platform Build Configuration
 
 # basic defines for every build
-%define depkgs ../depkgs
-%define depkgs_version 25Jun06
+%define _version @VERSION@
+%define _release 1
+%define depkgs_version 04Jan07
+%define _rescuever 2.0.0
+%define docs_version @VERSION@
+
+# any patches for this release
+# be sure to check the setup section for patch macros
+
+
+#--------------------------------------------------------------------------
+# it should not be necessary to change anything below here for a release
+# except for patch macros in the setup section
+#--------------------------------------------------------------------------
+
+# third party packagers
+%define _packager D. Scott Barninger <barninger@fairfieldcomputers.com>
+%{?contrib_packager:%define _packager %{contrib_packager}}
+
+Summary: Bacula - The Network Backup Solution
+Name: bacula
+Version: %{_version}
+Release: %{_release}
+Group: System Environment/Daemons
+License: GPL v2
+Source0: http://www.prdownloads.sourceforge.net/bacula/%{name}-%{version}.tar.gz
+Source1: http://www.prdownloads.sourceforge.net/bacula/depkgs-%{depkgs_version}.tar.gz
+Source2: Release_Notes-%{version}-%{release}.tar.gz
+Source3: http://www.prdownloads.sourceforge.net/bacula/%{name}-docs-%{docs_version}.tar.gz
+Source4: http://www.prdownloads.sourceforge.net/bacula/%{name}-rescue-%{_rescuever}.tar.gz
+BuildRoot: %{_tmppath}/%{name}-root
+URL: http://www.bacula.org/
+Vendor: The Bacula Team
+Packager: %{_packager}
+
+# define the basic package description
+%define blurb Bacula - It comes by night and sucks the vital essence from your computers.
+%define blurb2 Bacula is a set of computer programs that permit you (or the system
+%define blurb3 administrator) to manage backup, recovery, and verification of computer
+%define blurb4 data across a network of computers of different kinds. In technical terms,
+%define blurb5 it is a network client/server based backup program. Bacula is relatively
+%define blurb6 easy to use and efficient, while offering many advanced storage management
+%define blurb7 features that make it easy to find and recover lost or damaged files.
+%define blurb8 Bacula source code has been released under the GPL version 2 license.
+
+# directory locations
 %define sqlite_bindir /usr/lib/bacula/sqlite
 %define working_dir /var/bacula
+%define _docsrc ../%{name}-docs-%{docs_version}
+%define _rescuesrc ../%{name}-rescue-%{_rescuever}
+%define depkgs ../depkgs
+%define _mandir /usr/share/man
 
 # NOTE these defines are used in some rather complex useradd and groupadd
 # commands. If you change them examine the post scripts for consequences.
@@ -17,13 +65,13 @@
 %define daemon_group bacula
 # group that has write access to tape devices, usually disk on Linux
 %define storage_daemon_group disk
-
 %define user_file /etc/passwd
 %define group_file /etc/group
+
+# program locations
 %define useradd /usr/sbin/useradd
 %define groupadd /usr/sbin/groupadd
 %define usermod /usr/sbin/usermod
-%define _rescuever 1.8.4
 
 # platform defines - set one below or define the build_xxx on the command line
 # RedHat builds
@@ -42,6 +90,8 @@
 %{?build_fc4:%define fc4 1}
 %define fc5 0
 %{?build_fc5:%define fc5 1}
+%define fc6 0
+%{?build_fc6:%define fc6 1}
 # Whitebox Enterprise build
 %define wb3 0
 %{?build_wb3:%define wb3 1}
@@ -71,8 +121,12 @@
 %{?build_mdv:%define mdv 1}
 %{?build_mdv:%define mdk 1}
 
+# client only build
+%define client_only 0
+%{?build_client_only:%define client_only 1}
+
 # test for a platform definition
-%if ! %{rh7} && ! %{rh8} && ! %{rh9} && ! %{fc1} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{wb3} && ! %{su9} && ! %{su10} && ! %{mdk}
+%if ! %{rh7} && ! %{rh8} && ! %{rh9} && ! %{fc1} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{wb3} && ! %{su9} && ! %{su10} && ! %{mdk}
 %{error: You must specify a platform. Please examine the spec file.}
 exit 1
 %endif
@@ -97,7 +151,7 @@ exit 1
 %{?build_postgresql:%define postgresql 1}
 
 # test for a database definition
-%if ! %{mysql} && ! %{sqlite} && ! %{postgresql}
+%if ! %{mysql} && ! %{sqlite} && ! %{postgresql} && ! %{client_only}
 %{error: You must specify database support. Please examine the spec file.}
 exit 1
 %endif
@@ -120,7 +174,7 @@ exit 1
 %if %{rh7} || %{rh8} || %{rh9} || %{rhel3} || %{rhel4}
 %define _dist %(grep Red /etc/redhat-release)
 %endif
-%if %{fc1} || %{fc4} || %{fc5}
+%if %{fc1} || %{fc4} || %{fc5} || %{fc6}
 %define _dist %(grep Fedora /etc/redhat-release)
 %endif
 %if %{centos4} || %{centos3}
@@ -138,56 +192,62 @@ exit 1
 %if %{mdk}
 %define _dist %(grep Mand /etc/mandrake-release)
 %endif
+Distribution: %{_dist}
 
-# Should we build gconsole, possible only if gnome >= 2.0 available
-%if %{rh7}
-%define gconsole 0
-%else
+# Should we build gconsole, possible only if gtk= >= 2.4 available.
+# leaving all the BuildRequires and Requires in place below for now.
+
 %define gconsole 1
+%if %{rh7} || %{rh8} || %{rh9} || %{wb3} || %{fc1} || %{su9}
+%define gconsole 0
 %endif
+%if %{mdk} && ! %{mdv}
+%define gconsole 0
+%endif
+
 # specifically disallow gconsole if desired
 %{?nobuild_gconsole:%define gconsole 0}
 
 # Should we build wxconsole, only wxWidgets >=2.6 is supported
-# currently only SuSE 10 and FC4
+# currently only SuSE 10 and FC4/FC5
 %define wxconsole 0
 %{?build_wxconsole:%define wxconsole 1}
 
-# define the basic package description
-%define blurb Bacula - It comes by night and sucks the vital essence from your computers.
-%define blurb2 Bacula is a set of computer programs that permit you (or the system
-%define blurb3 administrator) to manage backup, recovery, and verification of computer
-%define blurb4 data across a network of computers of different kinds. In technical terms,
-%define blurb5 it is a network client/server based backup program. Bacula is relatively
-%define blurb6 easy to use and efficient, while offering many advanced storage management
-%define blurb7 features that make it easy to find and recover lost or damaged files.
-%define blurb8 Bacula source code has been released under the GPL version 2 license.
+# should we turn on python support
+%define python 0
+%{?build_python:%define python 1}
 
-Summary: Bacula - The Network Backup Solution
-Name: bacula
-Version: @VERSION@
-Release: 1
-Group: System Environment/Daemons
-License: GPL v2
-Source0: http://www.prdownloads.sourceforge.net/bacula/%{name}-%{version}.tar.gz
-Source1: http://www.prdownloads.sourceforge.net/bacula/depkgs-%{depkgs_version}.tar.gz
-Source2: Release_Notes-%{version}-%{release}.tar.gz
-Source3: http://www.prdownloads.sourceforge.net/bacula/%{name}-docs-%{version}.tar.gz
-Source4: http://www.prdownloads.sourceforge.net/bacula/%{name}-rescue-%{_rescuever}.tar.gz
-BuildRoot: %{_tmppath}/%{name}-root
-URL: http://www.bacula.org/
-Vendor: The Bacula Team
-Distribution: %{_dist}
-Packager: D. Scott Barninger <barninger@fairfieldcomputers.com>
+# Mandriva somehow forces the manpage file extension to bz2 rather than gz
+%if %{mdk}
+%define manpage_ext bz2
+%else
+%define manpage_ext gz
+%endif
 
-%define _docsrc ../%{name}-docs-%{version}
-%define _rescuesrc ../%{name}-rescue-%{_rescuever}
+# for client only build
+%if %{client_only}
+%define mysql 0
+%define mysql4 0
+%define mysql5 0
+%define postgresql 0
+%define sqlite 0
+%define gconsole 0
+%define wxconsole 0
+%endif
 
-BuildRequires: atk-devel, ncurses-devel, pango-devel, perl
-BuildRequires: libstdc++-devel, libxml2-devel, zlib-devel
+%{expand: %%define gccver %(rpm -q --queryformat %%{version} gcc)}
+%{expand: %%define gccrel %(rpm -q --queryformat %%{release} gcc)}
+
+BuildRequires: gcc, gcc-c++, make, autoconf
+BuildRequires: ncurses-devel, perl
+BuildRequires: libstdc++-devel = %{gccver}-%{gccrel}, libxml2-devel, zlib-devel
 BuildRequires: openssl-devel
+%if %{python}
+BuildRequires: python, python-devel
+%{expand: %%define pyver %(python -c 'import sys;print(sys.version[0:3])')}
+%endif
 %if %{gconsole}
-BuildRequires: pkgconfig
+BuildRequires: pkgconfig, pango-devel, atk-devel
 %endif
 %if %{rh7}
 BuildRequires: libtermcap-devel
@@ -302,11 +362,25 @@ BuildRequires: libbonoboui-devel >= 2.14
 BuildRequires: GConf2-devel
 BuildRequires: freetype-devel
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5}
+%if %{fc6}
+BuildRequires: libtermcap-devel
+BuildRequires: glibc-devel >= 2.5
+%endif
+%if %{fc6} && %{gconsole}
+BuildRequires: gtk2-devel >= 2.10
+BuildRequires: libgnomeui-devel >= 2.16
+BuildRequires: ORBit2-devel
+BuildRequires: libart_lgpl-devel >= 2.3
+BuildRequires: libbonobo-devel >= 2.16
+BuildRequires: libbonoboui-devel >= 2.16
+BuildRequires: GConf2-devel
+BuildRequires: freetype-devel
+%endif
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6}
 BuildRequires: libtermcap-devel
 BuildRequires: glibc-devel >= 2.3
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && %{gconsole}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && %{gconsole}
 BuildRequires: gtk2-devel >= 2.0
 BuildRequires: libgnomeui-devel >= 2.0
 BuildRequires: ORBit2-devel
@@ -369,6 +443,11 @@ Group: System Environment/Daemons
 Provides: bacula-dir, bacula-sd, bacula-fd, bacula-server
 Conflicts: bacula-client
 Obsoletes: bacula-rescue
+
+%if %{su9} || %{su10}
+Conflicts: bacula
+%endif
+
 Requires: ncurses, libstdc++, zlib, openssl, mtx
 
 %if %{rh7}
@@ -379,12 +458,16 @@ Requires: libtermcap
 Requires: glibc >= 2.3
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{fc5}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{fc5} && ! %{fc6}
 Requires: glibc >= 2.3
 Requires: libtermcap
 %endif
 %if %{fc5}
 Requires: glibc >= 2.4
+Requires: libtermcap
+%endif
+%if %{fc6}
+Requires: glibc >= 2.5
 Requires: libtermcap
 %endif
 
@@ -446,6 +529,10 @@ Requires: postgresql-server >= 7
 %description postgresql
 %endif
 
+%if %{python}
+Requires: python >= %{pyver}
+%endif
+
 %{blurb}
 
 %{blurb2}
@@ -465,7 +552,11 @@ This build requires PostgreSQL to be installed separately as the catalog databas
 %if %{sqlite}
 This build incorporates sqlite as the catalog database, statically compiled.
 %endif
+%if %{python}
+This build includes python scripting support.
+%endif
 
+%if ! %{client_only}
 %package mtx
 Summary: Bacula - The Network Backup Solution
 Group: System Environment/Daemons
@@ -474,6 +565,7 @@ Provides: mtx
 %description mtx
 This is Bacula's version of mtx tape utilities for Linux distributions that
 do not provide their own mtx package
+%endif
 
 %package client
 Summary: Bacula - The Network Backup Solution
@@ -483,6 +575,11 @@ Conflicts: bacula-mysql
 Conflicts: bacula-sqlite
 Conflicts: bacula-postgresql
 Obsoletes: bacula-rescue
+
+%if %{su9} || %{su10}
+Provides: bacula
+%endif
+
 Requires: libstdc++, zlib, openssl
 
 %if %{rh7}
@@ -493,13 +590,21 @@ Requires: libtermcap
 Requires: glibc >= 2.3
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{fc5}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{fc5} && ! %{fc6}
 Requires: glibc >= 2.3
 Requires: libtermcap
 %endif
 %if %{fc5}
 Requires: glibc >= 2.4
 Requires: libtermcap
+%endif
+%if %{fc6}
+Requires: glibc >= 2.5
+Requires: libtermcap
+%endif
+
+%if %{python}
+Requires: python >= %{pyver}
 %endif
 
 %description client
@@ -515,7 +620,11 @@ Requires: libtermcap
 
 This is the File daemon (Client) only package. It includes the command line 
 console program.
+%if %{python}
+This build includes python scripting support.
+%endif
 
+%if ! %{client_only}
 %package updatedb
 
 Summary: Bacula - The Network Backup Solution
@@ -534,6 +643,7 @@ Group: System Environment/Daemons
 
 This package installs scripts for updating older versions of the bacula
 database.
+%endif
 
 %if %{gconsole}
 %package gconsole
@@ -630,7 +740,18 @@ Requires: libbonoboui >= 2.14
 Requires: GConf2
 Requires: freetype
 %endif
-%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5}
+%if %{gconsole} && %{fc6}  
+Requires: gtk2 >= 2.10
+Requires: libgnomeui >= 2.16
+Requires: glibc >= 2.5
+Requires: ORBit2
+Requires: libart_lgpl >= 2.3
+Requires: libbonobo >= 2.16
+Requires: libbonoboui >= 2.16
+Requires: GConf2
+Requires: freetype
+%endif
+%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6}
 Requires: gtk2 >= 2.0
 Requires: libgnomeui >= 2.0
 Requires: glibc >= 2.3
@@ -692,6 +813,10 @@ Requires: gtk2 >= 2.6
 Requires: gtk2 >= 2.8
 %endif
 
+%if %{wxconsole} && %{fc6}  
+Requires: gtk2 >= 2.10
+%endif
+
 %if %{wxconsole}
 %description wxconsole
 %{blurb}
@@ -719,7 +844,7 @@ server packages.
 %build
 
 %if %{su9} || %{su10}
-export LDFLAGS="-L/usr/lib/termcap"
+export LDFLAGS="${LDFLAGS} -L/usr/lib/termcap"
 %endif
 
 cwd=${PWD}
@@ -727,20 +852,22 @@ cd %{depkgs}
 %if %{sqlite}
 make sqlite
 %endif
+%if ! %{client_only}
 make mtx
+%endif
 cd ${cwd}
 
 # patches for the bundled sqlite scripts
-# as of 1.38.0 first 3 patches no longer needed
 
 # patch the make_sqlite_tables script for installation bindir
-# patch src/cats/make_sqlite_tables.in src/cats/make_sqlite_tables.in.patch
+patch src/cats/make_sqlite_tables.in src/cats/make_sqlite_tables.in.patch
 
 # patch the create_sqlite_database script for installation bindir
+# not necessary after 1.39.26 no longer references sqlite binary
 #patch src/cats/create_sqlite_database.in src/cats/create_sqlite_database.in.patch
 
 # patch the make_catalog_backup script for installation bindir
-#patch src/cats/make_catalog_backup.in src/cats/make_catalog_backup.in.patch
+patch src/cats/make_catalog_backup.in src/cats/make_catalog_backup.in.patch
 
 # patch the update_sqlite_tables script for installation bindir
 patch src/cats/update_sqlite_tables.in src/cats/update_sqlite_tables.in.patch
@@ -754,11 +881,16 @@ patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
 %endif
 
 # 64 bit lib location hacks
+# as of 1.39.18 it should not be necessary to enable x86_64 as configure is
+# reported to be fixed to properly detect lib locations.
 %if %{x86_64}
-export LDFLAGS=-L/usr/lib64
+export LDFLAGS="${LDFLAGS} -L/usr/lib64"
 %endif
 %if %{mysql} && %{x86_64}
-export LDFLAGS=-L/usr/lib64/mysql
+export LDFLAGS="${LDFLAGS} -L/usr/lib64/mysql"
+%endif
+%if %{python} && %{x86_64}
+export LDFLAGS="${LDFLAGS} -L/usr/lib64/python%{pyver}"
 %endif
 
 %configure \
@@ -768,9 +900,9 @@ export LDFLAGS=-L/usr/lib64/mysql
         --with-scriptdir=/etc/bacula \
         --enable-smartalloc \
         --enable-client-only \
-        %if %{mdk}
-        --disable-nls \
-        %endif
+	%if %{mdk}
+	--disable-nls \
+	%endif
         --enable-static-fd
 
 make
@@ -797,8 +929,15 @@ make
         --with-postgresql \
 %endif
 %if %{wxconsole}
-        --enable-wx-console \
+	--enable-wx-console \
 %endif
+%if %{python}
+	--with-python \
+%endif
+%if %{client_only}
+	--enable-client-only \
+%endif
+	--mandir=%{_mandir} \
         --with-working-dir=%{working_dir} \
         --with-pid-dir=/var/run \
         --with-subsys-dir=/var/lock/subsys \
@@ -827,12 +966,20 @@ mkdir -p $RPM_BUILD_ROOT/etc/logrotate.d
 mkdir -p $RPM_BUILD_ROOT/etc/log.d/conf/logfiles
 mkdir -p $RPM_BUILD_ROOT/etc/log.d/conf/services
 mkdir -p $RPM_BUILD_ROOT/etc/log.d/scripts/services
-mkdir -p $RPM_BUILD_ROOT/usr/share/pixmaps
-%if %{gconsole}
-mkdir -p $RPM_BUILD_ROOT/usr/share/applications
-%endif
 mkdir -p $RPM_BUILD_ROOT/etc/bacula/updatedb
-%if %{gconsole} && ! %{su9} && ! %{su10}
+
+%if %{gconsole} || %{wxconsole}
+mkdir -p $RPM_BUILD_ROOT/usr/share/applications
+mkdir -p $RPM_BUILD_ROOT/usr/share/pixmaps
+%endif
+
+%if %{gconsole} || %{wxconsole}
+%define usermode_iftrick 1
+%else
+%define usermode_iftrick 0
+%endif
+
+%if %{usermode_iftrick} && ! %{su9} && ! %{su10}
 mkdir -p $RPM_BUILD_ROOT/etc/pam.d
 mkdir -p $RPM_BUILD_ROOT/etc/security/console.apps
 mkdir -p $RPM_BUILD_ROOT/usr/bin
@@ -848,17 +995,41 @@ make \
         sysconfdir=$RPM_BUILD_ROOT/etc/bacula \
         scriptdir=$RPM_BUILD_ROOT/etc/bacula \
         working_dir=$RPM_BUILD_ROOT%{working_dir} \
+	mandir=$RPM_BUILD_ROOT%{_mandir} \
         install
 
+%if ! %{client_only}
 cd %{depkgs}
 make \
         prefix=$RPM_BUILD_ROOT/usr \
         sbindir=$RPM_BUILD_ROOT/usr/sbin \
         sysconfdir=$RPM_BUILD_ROOT/etc/bacula \
         working_dir=$RPM_BUILD_ROOT%{working_dir} \
-        mandir=$RPM_BUILD_ROOT/usr/man \
+        mandir=$RPM_BUILD_ROOT%{_mandir} \
         mtx-install
 cd ${cwd}
+%endif
+
+# make install in manpages installs _everything_ shotgun style
+# so now delete what we will not be packaging
+%if ! %{wxconsole}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man1/bacula-wxconsole.1.gz
+%endif
+%if ! %{gconsole}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man1/bacula-console-gnome.1.gz
+rm -f $RPM_BUILD_ROOT%{_mandir}/man1/bacula-tray-monitor.1.gz
+%endif
+%if %{client_only}
+rm -f $RPM_BUILD_ROOT%{_mandir}/man1/bsmtp.1.gz
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bacula-dir.8.gz
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bacula-sd.8.gz
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bcopy.8.gz
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bextract.8.gz
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bls.8.gz
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/bscan.8.gz
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/btape.8.gz
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/dbcheck.8.gz
+%endif
 
 # fixme - make installs the mysql scripts for sqlite build
 %if %{sqlite}
@@ -897,6 +1068,10 @@ cp -p platforms/redhat/bacula-fd $RPM_BUILD_ROOT/etc/init.d/bacula-fd
 cp -p platforms/redhat/bacula-sd $RPM_BUILD_ROOT/etc/init.d/bacula-sd
 %endif
 chmod 0754 $RPM_BUILD_ROOT/etc/init.d/*
+%if %{client_only}
+rm -f $RPM_BUILD_ROOT/etc/init.d/bacula-dir
+rm -f $RPM_BUILD_ROOT/etc/init.d/bacula-sd
+%endif
 
 # install the menu stuff
 %if %{gconsole} && %{su9}
@@ -953,12 +1128,14 @@ cp -p scripts/logrotate $RPM_BUILD_ROOT/etc/logrotate.d/bacula
 cp -p updatedb/* $RPM_BUILD_ROOT/etc/bacula/updatedb/
 
 # install the logwatch scripts
+%if ! %{client_only}
 cp -p scripts/logwatch/bacula $RPM_BUILD_ROOT/etc/log.d/scripts/services/bacula
 cp -p scripts/logwatch/logfile.bacula.conf $RPM_BUILD_ROOT/etc/log.d/conf/logfiles/bacula.conf
 cp -p scripts/logwatch/services.bacula.conf $RPM_BUILD_ROOT/etc/log.d/conf/services/bacula.conf
 chmod 755 $RPM_BUILD_ROOT/etc/log.d/scripts/services/bacula
 chmod 644 $RPM_BUILD_ROOT/etc/log.d/conf/logfiles/bacula.conf
 chmod 644 $RPM_BUILD_ROOT/etc/log.d/conf/services/bacula.conf
+%endif
 
 # install the rescue files
 mkdir $RPM_BUILD_ROOT/etc/bacula/rescue
@@ -978,15 +1155,34 @@ mv $RPM_BUILD_ROOT/etc/bacula/wx-console.conf $RPM_BUILD_ROOT/etc/bacula/wxconso
 %endif
 
 # now clean up permissions that are left broken by the install
+%if ! %{client_only}
 chmod o-r $RPM_BUILD_ROOT/etc/bacula/query.sql
-chmod o-rwx $RPM_BUILD_ROOT/var/bacula
+%endif
+chmod o-rwx $RPM_BUILD_ROOT%{working_dir}
 %if %{gconsole} && ! %{rh8}
 chmod 755 $RPM_BUILD_ROOT/usr/sbin/bacula-tray-monitor
 chmod 644 $RPM_BUILD_ROOT/etc/bacula/tray-monitor.conf
 %endif
 
+# fix me - building enable-client-only installs files not included in bacula-client package
+%if %{client_only}
+rm -f $RPM_BUILD_ROOT/etc/bacula/bacula
+rm -f $RPM_BUILD_ROOT/etc/bacula/bacula-ctl-dir
+rm -f $RPM_BUILD_ROOT/etc/bacula/bacula-ctl-sd
+rm -f $RPM_BUILD_ROOT/etc/bacula/disk-changer
+rm -f $RPM_BUILD_ROOT/etc/bacula/dvd-handler
+rm -f $RPM_BUILD_ROOT/etc/bacula/mtx-changer
+rm -f $RPM_BUILD_ROOT/etc/bacula/startmysql
+rm -f $RPM_BUILD_ROOT/etc/bacula/stopmysql
+rm -rf $RPM_BUILD_ROOT/etc/bacula/updatedb
+%endif
+
 %clean
 [ "$RPM_BUILD_ROOT" != "/" ] && rm -rf "$RPM_BUILD_ROOT"
+rm -rf $RPM_BUILD_DIR/%{name}-docs-%{docs_version}
+rm -rf $RPM_BUILD_DIR/%{name}-rescue-%{_rescuever}
+rm -rf $RPM_BUILD_DIR/depkgs
+rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 
 %if %{mysql}
 # MySQL specific files
@@ -1028,6 +1224,7 @@ chmod 644 $RPM_BUILD_ROOT/etc/bacula/tray-monitor.conf
 %endif
 
 # The rest is DB backend independent
+%if ! %{client_only}
 %attr(-, root, %{daemon_group}) %dir /etc/bacula
 %attr(-, root, %{daemon_group}) /etc/bacula/bacula
 %attr(-, root, %{daemon_group}) /etc/bacula/bconsole
@@ -1063,8 +1260,9 @@ chmod 644 $RPM_BUILD_ROOT/etc/bacula/tray-monitor.conf
 %attr(-, root, %{daemon_group}) %config(noreplace) /etc/bacula/bconsole.conf
 %attr(-, root, %{daemon_group}) %config(noreplace) /etc/log.d/conf/logfiles/bacula.conf
 %attr(-, root, %{daemon_group}) %config(noreplace) /etc/log.d/conf/services/bacula.conf
-%attr(-, root, %{daemon_group}) /etc/bacula/query.sql
-%attr(-, root, %{daemon_group}) %dir %{working_dir}
+%attr(-, root, %{daemon_group}) %config(noreplace) /etc/bacula/query.sql
+
+%attr(-, %{storage_daemon_user}, %{daemon_group}) %dir %{working_dir}
 
 /usr/sbin/bacula-dir
 /usr/sbin/bacula-fd
@@ -1080,17 +1278,31 @@ chmod 644 $RPM_BUILD_ROOT/etc/bacula/tray-monitor.conf
 /usr/sbin/bsmtp
 /usr/sbin/bregex
 /usr/sbin/bwild
+%{_mandir}/man8/bacula-fd.8.%{manpage_ext}
+%{_mandir}/man8/bacula-dir.8.%{manpage_ext}
+%{_mandir}/man8/bacula-sd.8.%{manpage_ext}
+%{_mandir}/man8/bacula.8.%{manpage_ext}
+%{_mandir}/man8/bconsole.8.%{manpage_ext}
+%{_mandir}/man8/bcopy.8.%{manpage_ext}
+%{_mandir}/man8/bextract.8.%{manpage_ext}
+%{_mandir}/man8/bls.8.%{manpage_ext}
+%{_mandir}/man8/bscan.8.%{manpage_ext}
+%{_mandir}/man8/btape.8.%{manpage_ext}
+%{_mandir}/man8/btraceback.8.%{manpage_ext}
+%{_mandir}/man8/dbcheck.8.%{manpage_ext}
+%{_mandir}/man1/bsmtp.1.%{manpage_ext}
+%endif
 
 %if %{mysql}
 %pre mysql
-# test for bacula database older than version 8
+# test for bacula database older than version 9
 # note: this ASSUMES no password has been set for bacula database
 DB_VER=`mysql 2>/dev/null bacula -e 'select * from Version;'|tail -n 1`
 %endif
 
 %if %{sqlite}
 %pre sqlite
-# test for bacula database older than version 8
+# test for bacula database older than version 9
 if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite ];then
         DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
 %endif
@@ -1100,20 +1312,23 @@ if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite ];then
 DB_VER=`echo 'select * from Version;' | psql bacula 2>/dev/null | tail -3 | head -1`
 %endif
 
-if [ -n "$DB_VER" ] && [ "$DB_VER" -lt "8" ]; then
-        echo "This bacula upgrade will update a bacula database from version 8 to 9."
+%if ! %{client_only}
+if [ -n "$DB_VER" ] && [ "$DB_VER" -lt "9" ]; then
+        echo "This bacula upgrade will update a bacula database from version 9 to 10."
         echo "You appear to be running database version $DB_VER. You must first update"
-        echo "your database to version 8 and then install this upgrade. The alternative"
+        echo "your database to version 9 and then install this upgrade. The alternative"
         echo "is to use /etc/bacula/drop_%{db_backend}_tables to delete all your your current"
         echo "catalog information, then do the upgrade. Information on updating a"
-        echo "database older than version 8 can be found in the release notes."
+        echo "database older than version 9 can be found in the release notes."
         exit 1
 fi
+%endif
 
 %if %{sqlite}
 fi
 %endif
 
+%if ! %{client_only}
 # check for and copy /etc/bacula/console.conf to bconsole.conf
 if [ -s /etc/bacula/console.conf ];then
         cp -p /etc/bacula/console.conf /etc/bacula/bconsole.conf
@@ -1168,6 +1383,7 @@ IS_ROOT=%{file_daemon_user}
 if [ "$IS_ROOT" != "root" ]; then
 %{usermod} -G %{daemon_group} %{file_daemon_user}
 fi
+%endif
 
 %if %{mysql}
 %post mysql
@@ -1179,12 +1395,14 @@ fi
 %post postgresql
 %endif
 
+%if ! %{client_only}
 # add our links
 if [ "$1" -ge 1 ] ; then
 /sbin/chkconfig --add bacula-dir
 /sbin/chkconfig --add bacula-fd
 /sbin/chkconfig --add bacula-sd
 fi
+%endif
 
 %if %{mysql}
 # test for an existing database
@@ -1201,8 +1419,8 @@ if [ -z "$DB_VER" ]; then
         echo "Creating bacula tables..."
         /etc/bacula/make_mysql_tables
 
-# check to see if we need to upgrade a 1.36 or lower database
-elif [ "$DB_VER" -lt "9" ]; then
+# check to see if we need to upgrade a 1.38 or lower database
+elif [ "$DB_VER" -lt "10" ]; then
         echo "This release requires an upgrade to your bacula database."
         echo "Backing up your current database..."
         mysqldump -f --opt bacula | bzip2 > %{working_dir}/bacula_backup.sql.bz2
@@ -1217,8 +1435,8 @@ fi
 # test for an existing database
 if [ -s %{working_dir}/bacula.db ]; then
         DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
-        # check to see if we need to upgrade a 1.36 or lower database
-        if [ "$DB_VER" -lt "9" ] && [ "$DB_VER" -ge "8" ]; then
+        # check to see if we need to upgrade a 1.38 or lower database
+        if [ "$DB_VER" -lt "10" ] && [ "$DB_VER" -ge "9" ]; then
                 echo "This release requires an upgrade to your bacula database."
                 echo "Backing up your current database..."
                 echo ".dump" | %{sqlite_bindir}/sqlite %{working_dir}/bacula.db | bzip2 > %{working_dir}/bacula_backup.sql.bz2
@@ -1251,8 +1469,8 @@ if [ -z "$DB_VER" ]; then
         echo "Granting privileges for PostgreSQL user bacula..."
         /etc/bacula/grant_postgresql_privileges
 
-# check to see if we need to upgrade a 1.36 or lower database
-elif [ "$DB_VER" -lt "9" ]; then
+# check to see if we need to upgrade a 1.38 or lower database
+elif [ "$DB_VER" -lt "10" ]; then
         echo "This release requires an upgrade to your bacula database."
         echo "Backing up your current database..."
         pg_dump bacula | bzip2 > %{working_dir}/bacula_backup.sql.bz2
@@ -1263,6 +1481,7 @@ elif [ "$DB_VER" -lt "9" ]; then
 fi
 %endif
 
+%if ! %{client_only}
 # generate passwords if needed
 if [ -d /etc/bacula ]; then
         cd /etc/bacula
@@ -1277,6 +1496,7 @@ if [ -d /etc/bacula ]; then
                 done
         done
 fi
+%endif
 
 %if %{mysql}
 %preun mysql
@@ -1288,26 +1508,35 @@ fi
 %preun postgresql
 %endif
 
+%if ! %{client_only}
 # delete our links
 if [ $1 = 0 ]; then
 /sbin/chkconfig --del bacula-dir
 /sbin/chkconfig --del bacula-fd
 /sbin/chkconfig --del bacula-sd
 fi
+%endif
 
 
+%if ! %{client_only}
 %files mtx
+%defattr(-,root,root)
 %attr(-, root, %{storage_daemon_group}) /usr/sbin/loaderinfo
 %attr(-, root, %{storage_daemon_group}) /usr/sbin/mtx
 %attr(-, root, %{storage_daemon_group}) /usr/sbin/scsitape
 %attr(-, root, %{storage_daemon_group}) /usr/sbin/tapeinfo
-/usr/man/man1/*
+%{_mandir}/man1/loaderinfo.1.%{manpage_ext}
+%{_mandir}/man1/mtx.1.%{manpage_ext}
+%{_mandir}/man1/scsitape.1.%{manpage_ext}
+%{_mandir}/man1/tapeinfo.1.%{manpage_ext}
+%endif
 
 
 %files client
 %defattr(-,root,root)
 %attr(-, root, %{daemon_group}) %dir /etc/bacula
 %attr(-, root, %{daemon_group}) /etc/bacula/bconsole
+/etc/bacula/bacula-ctl-fd
 /etc/init.d/bacula-fd
 %attr(-, root, %{daemon_group}) /etc/bacula/rescue
 
@@ -1318,14 +1547,18 @@ fi
 
 %attr(-, root, %{daemon_group}) %config(noreplace) /etc/bacula/bacula-fd.conf
 %attr(-, root, %{daemon_group}) %config(noreplace) /etc/bacula/bconsole.conf
+
 %attr(-, root, %{daemon_group}) %dir %{working_dir}
 
 /usr/sbin/bacula-fd
 /usr/sbin/btraceback
 %attr(-, root, %{daemon_group}) /etc/bacula/btraceback.gdb
 %attr(-, root, %{daemon_group}) /etc/bacula/btraceback.dbx
-/usr/sbin/bsmtp
 /usr/sbin/bconsole
+%{_mandir}/man8/bacula-fd.8.%{manpage_ext}
+%{_mandir}/man8/bacula.8.%{manpage_ext}
+%{_mandir}/man8/bconsole.8.%{manpage_ext}
+%{_mandir}/man8/btraceback.8.%{manpage_ext}
 
 
 %pre client
@@ -1378,6 +1611,7 @@ if [ $1 = 0 ]; then
 /sbin/chkconfig --del bacula-fd
 fi
 
+%if ! %{client_only}
 %files updatedb
 %defattr(-,root,%{daemon_group})
 /etc/bacula/updatedb/*
@@ -1393,6 +1627,7 @@ fi
 
 %post updatedb
 echo "The database update scripts were installed to /etc/bacula/updatedb"
+%endif
 
 %if %{gconsole}
 %files gconsole
@@ -1403,6 +1638,7 @@ echo "The database update scripts were installed to /etc/bacula/updatedb"
 %attr(-, root, %{daemon_group}) %config(noreplace) /etc/bacula/gnome-console.conf
 /usr/share/pixmaps/bacula.png
 /usr/share/applications/bacula.desktop
+%{_mandir}/man1/bacula-console-gnome.1.%{manpage_ext}
 %endif
 
 %if %{gconsole} && ! %{rh8}
@@ -1410,6 +1646,7 @@ echo "The database update scripts were installed to /etc/bacula/updatedb"
 %config(noreplace) /etc/bacula/tray-monitor.conf
 /usr/share/pixmaps/bacula-tray-monitor.xpm
 /usr/share/applications/bacula-tray-monitor.desktop
+%{_mandir}/man1/bacula-tray-monitor.1.%{manpage_ext}
 %endif
 
 %if %{gconsole} && ! %{su9} && ! %{su10}
@@ -1454,6 +1691,7 @@ fi
 %attr(-, root, %{daemon_group}) %config(noreplace) /etc/bacula/wxconsole.conf
 /usr/share/pixmaps/wxwin16x16.xpm
 /usr/share/applications/wxconsole.desktop
+%{_mandir}/man1/bacula-wxconsole.1.%{manpage_ext}
 %endif
 
 %if %{wxconsole} && ! %{su9} && ! %{su10}
@@ -1491,6 +1729,54 @@ fi
 %endif
 
 %changelog
+* Sat Jan 20 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- correct bug 752
+- set query.sql as config file
+- correct bug 754
+* Sun Jan 14 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 2.0.1 release
+- change determination of gcc version per patch from Marc Hennes
+- move BuildRequire for atk-devel to gnome only builds
+- add fc6 build tag
+* Sat Jan 06 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 2.0.0 release
+* Sun Oct 15 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 1.39.26 remove create_sqlite_database.in.patch
+* Sun Sep 24 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- change ownership of working_dir on server packages to bacula.bacula so that
+- bacula-sd can create bootstrap files
+* Sat Sep 02 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 1.39.22 remove separate cd and make of manpages the main Makefile does it now
+* Sun Aug 06 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- fix manpages file extension for mdk
+* Sat Aug 05 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- bug 648 re-enable and update sqlite patches
+- 1.39.18 changes
+- updatedb 9 to 10
+- install man pages
+- lock out gconsole build for gtk+ < 2.4
+* Mon Jul 17 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- move pango-devel BuildRequires into gconsole only build
+* Sat Jul 15 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add provides and conflicts for standard suse packages
+- add third party packager tag support
+- add build_client_only tag
+- remove bsmtp from client package
+- add bacula-ctl-fd to client package
+* Thu Jul 13 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- fix directory creation when wxconsole and not gconsole
+* Tue Jul 04 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add check to buildrequires to make sure libstdc++ version matches gcc
+* Mon Jul 03 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add python build support
+- fix LDFLAGS declarations
+* Sun Jul 02 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add requires for standard compiler toolchain
+- move version and release tags up
+- move patches up
+- add docs_version tag
+* Sat Jul 01 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- update rescuever to 1.8.6
 * Sun Jun 25 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - update depkgs to 25Jun06
 - add mysql5 build tag

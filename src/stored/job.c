@@ -3,23 +3,36 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: job.c,v 1.70.2.3 2006/03/24 16:35:23 kerns Exp $
+ *   Version $Id: job.c,v 1.79 2006/12/16 15:30:22 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
@@ -31,6 +44,7 @@ extern uint32_t VolSessionTime;
 
 /* Imported functions */
 extern uint32_t newVolSessionId();
+extern bool do_mac(JCR *jcr);
 
 /* Requests from the Director daemon */
 static char jobcmd[] = "JobId=%d job=%127s job_name=%127s client_name=%127s "
@@ -143,7 +157,7 @@ bool run_cmd(JCR *jcr)
    case JT_COPY:
    case JT_ARCHIVE:
       jcr->authenticated = true;
-      run_job(jcr);
+      do_mac(jcr);
       return false;
    }
 
@@ -304,6 +318,7 @@ bool query_cmd(JCR *jcr)
  */
 void stored_free_jcr(JCR *jcr)
 {
+   Dmsg1(900, "stored_free_jcr JobId=%u\n", jcr->JobId);
    if (jcr->file_bsock) {
       bnet_close(jcr->file_bsock);
       jcr->file_bsock = NULL;
@@ -338,6 +353,7 @@ void stored_free_jcr(JCR *jcr)
       delete jcr->dcrs;
    }
    jcr->dcrs = NULL;
+
    if (jcr->dcr) {
       free_dcr(jcr->dcr);
       jcr->dcr = NULL;
@@ -346,14 +362,24 @@ void stored_free_jcr(JCR *jcr)
       free_dcr(jcr->read_dcr);
       jcr->read_dcr = NULL;
    }
-   if (jcr->dirstore) {
+
+   if (jcr->read_store) {
       DIRSTORE *store;
-      foreach_alist(store, jcr->dirstore) {
+      foreach_alist(store, jcr->read_store) {
          delete store->device;
          delete store;
       }
-      delete jcr->dirstore;
-      jcr->dirstore = NULL;
+      delete jcr->read_store;
+      jcr->read_store = NULL;
+   }
+   if (jcr->write_store) {
+      DIRSTORE *store;
+      foreach_alist(store, jcr->write_store) {
+         delete store->device;
+         delete store;
+      }
+      delete jcr->write_store;
+      jcr->write_store = NULL;
    }
    return;
 }

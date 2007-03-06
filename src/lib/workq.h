@@ -7,27 +7,35 @@
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
  *
- *   Version $Id: workq.h,v 1.6 2004/12/21 16:18:41 kerns Exp $
+ *   Version $Id: workq.h,v 1.8 2006/11/21 13:20:11 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2003 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark ofJohn Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #ifndef __WORKQ_H
 #define __WORKQ_H 1
@@ -59,10 +67,10 @@ typedef struct workq_tag {
 #define WORKQ_VALID  0xdec1992
 
 extern int workq_init(
-	      workq_t *wq,
-	      int     threads,        /* maximum threads */
-	      void   *(*engine)(void *)   /* engine routine */
-		    );
+              workq_t *wq,
+              int     threads,        /* maximum threads */
+              void   *(*engine)(void *)   /* engine routine */
+                    );
 extern int workq_destroy(workq_t *wq);
 extern int workq_add(workq_t *wq, void *element, workq_ele_t **work_item, int priority);
 extern int workq_remove(workq_t *wq, workq_ele_t *work_item);

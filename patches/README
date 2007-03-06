@@ -16,3 +16,11 @@ Sometimes there may be dependencies between the patches -- i.e. a
 later patch needs a prior patch to be applied first. I'll try to
 note those, but cannot guarantee it.
 
+
+It contains also interesting/experimental patches from users. For examples,
+ - Media statistics
+ - Use of RecyclePoolId
+ - Batch mode for mysql/sqlite/postgresql
+ - etc..
+
+You can find them on ebl sub-directory. 

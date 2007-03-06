@@ -37,40 +37,43 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 char *getuser(uid_t uid, char *name, int len)
 {
-  register struct userid *tail;
-  struct passwd *pwent;
-  char usernum_string[20];
+   register struct userid *tail;
+   char usernum_string[20];
 
-  P(mutex);
-  for (tail = user_alist; tail; tail = tail->next) {
-    if (tail->id.u == uid) {
-      goto uid_done;
-    }
-  }
+   P(mutex);
+   for (tail = user_alist; tail; tail = tail->next) {
+      if (tail->id.u == uid) {
+         goto uid_done;
+      }
+   }
 
-  pwent = getpwuid(uid);
-  tail = (struct userid *)malloc(sizeof (struct userid));
-  tail->id.u = uid;
-#ifndef HAVE_WIN32
-  if (pwent == NULL || strcmp(pwent->pw_name, "????????") == 0) {
-      sprintf(usernum_string, "%u", (uint32_t)uid);
-      tail->name = bstrdup(usernum_string);
-  } else {
-      tail->name = bstrdup(pwent->pw_name);
-  }
-#else
-      sprintf(usernum_string, "%u", (uint32_t)uid);
-      tail->name = bstrdup(usernum_string);
+   tail = (struct userid *)malloc(sizeof (struct userid));
+   tail->id.u = uid;
+   tail->name = NULL;
+
+#if !defined(HAVE_WIN32)
+   {
+      struct passwd *pwent = getpwuid(uid);
+
+      if (pwent != NULL && strcmp(pwent->pw_name, "????????") != 0) {
+         tail->name = bstrdup(pwent->pw_name);
+      }
+   }
 #endif
 
-  /* Add to the head of the list, so most recently used is first.  */
-  tail->next = user_alist;
-  user_alist = tail;
+   if (tail->name == NULL) {
+      sprintf(usernum_string, "%u", (uint32_t)uid);
+      tail->name = bstrdup(usernum_string);
+   }
+
+   /* Add to the head of the list, so most recently used is first.  */
+   tail->next = user_alist;
+   user_alist = tail;
 
 uid_done:
-  bstrncpy(name, tail->name, len);
-  V(mutex);
-  return name;
+   bstrncpy(name, tail->name, len);
+   V(mutex);
+   return name;
 }
 
 void free_getuser_cache()
@@ -91,42 +94,46 @@ void free_getuser_cache()
 
 
 /* Translate GID to a group name or a stringified number,
-   with cache.	*/
+   with cache. */
 char *getgroup(gid_t gid, char *name, int len)
 {
-  register struct userid *tail;
-  struct group *grent;
-  char groupnum_string[20];
+   register struct userid *tail;
+   char groupnum_string[20];
 
-  P(mutex);
-  for (tail = group_alist; tail; tail = tail->next) {
-    if (tail->id.g == gid) {
-      goto gid_done;
-    }
-  }
+   P(mutex);
+   for (tail = group_alist; tail; tail = tail->next) {
+      if (tail->id.g == gid) {
+         goto gid_done;
+      }
+   }
 
-  grent = getgrgid(gid);
-  tail = (struct userid *)malloc(sizeof (struct userid));
-  tail->id.g = gid;
-#ifndef HAVE_WIN32
-  if (grent == NULL || strcmp(grent->gr_name, "????????") == 0) {
-      sprintf (groupnum_string, "%u", (uint32_t)gid);
-      tail->name = bstrdup(groupnum_string);
-  } else {
-      tail->name = bstrdup(grent->gr_name);
-  }
-#else
-      sprintf (groupnum_string, "%u", (uint32_t)gid);
-      tail->name = bstrdup(groupnum_string);
+   tail = (struct userid *)malloc(sizeof (struct userid));
+   tail->id.g = gid;
+   tail->name = NULL;
+
+#if !defined(HAVE_WIN32)
+   {
+      struct group *grent = getgrgid(gid);
+
+      if (grent != NULL && strcmp(grent->gr_name, "????????") != 0) {
+         tail->name = bstrdup(grent->gr_name);
+      }
+   }
 #endif
-  /* Add to the head of the list, so most recently used is first.  */
-  tail->next = group_alist;
-  group_alist = tail;
+
+   if (tail->name == NULL) {
+      sprintf (groupnum_string, "%u", (uint32_t)gid);
+      tail->name = bstrdup(groupnum_string);
+   }
+
+   /* Add to the head of the list, so most recently used is first. */
+   tail->next = group_alist;
+   group_alist = tail;
 
 gid_done:
-  bstrncpy(name, tail->name, len);
-  V(mutex);
-  return name;
+   bstrncpy(name, tail->name, len);
+   V(mutex);
+   return name;
 }
 
 void free_getgroup_cache()

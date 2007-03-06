@@ -4,22 +4,35 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_cmds.c,v 1.153.2.6 2006/03/04 11:10:17 kerns Exp $
+ *   Version $Id: ua_cmds.c,v 1.181 2006/12/28 17:13:59 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -30,7 +43,6 @@
 extern int r_first;
 extern int r_last;
 extern struct s_res resources[];
-extern char my_name[];
 extern jobq_t job_queue;              /* job queue */
 
 
@@ -87,47 +99,47 @@ int quit_cmd(UAContext *ua, const char *cmd);
 
 struct cmdstruct { const char *key; int (*func)(UAContext *ua, const char *cmd); const char *help; };
 static struct cmdstruct commands[] = {
- { N_("add"),        add_cmd,         _("add media to a pool")},
- { N_("autodisplay"), autodisplay_cmd, _("autodisplay [on|off] -- console messages")},
- { N_("automount"),   automount_cmd,  _("automount [on|off] -- after label")},
- { N_("cancel"),     cancel_cmd,    _("cancel [<jobid=nnn> | <job=name>] -- cancel a job")},
- { N_("create"),     create_cmd,    _("create DB Pool from resource")},
- { N_("delete"),     delete_cmd,    _("delete [pool=<pool-name> | media volume=<volume-name>]")},
- { N_("disable"),    disable_cmd,   _("disable <job=name> -- disable a job")},
- { N_("enable"),     enable_cmd,    _("enable <job=name> -- enable a job")},
- { N_("estimate"),   estimate_cmd,  _("performs FileSet estimate, listing gives full listing")},
- { N_("exit"),       quit_cmd,      _("exit = quit")},
- { N_("gui"),        gui_cmd,       _("gui [on|off] -- non-interactive gui mode")},
- { N_("help"),       help_cmd,      _("print this command")},
- { N_("list"),       list_cmd,      _("list [pools | jobs | jobtotals | media <pool=pool-name> | files <jobid=nn>]; from catalog")},
- { N_("label"),      label_cmd,     _("label a tape")},
- { N_("llist"),      llist_cmd,     _("full or long list like list command")},
- { N_("messages"),   messagescmd,   _("messages")},
- { N_("mount"),      mount_cmd,     _("mount <storage-name>")},
- { N_("prune"),      prunecmd,      _("prune expired records from catalog")},
- { N_("purge"),      purgecmd,      _("purge records from catalog")},
- { N_("python"),     python_cmd,    _("python control commands")},
- { N_("quit"),       quit_cmd,      _("quit")},
- { N_("query"),      querycmd,      _("query catalog")},
- { N_("restore"),    restore_cmd,   _("restore files")},
- { N_("relabel"),    relabel_cmd,   _("relabel a tape")},
- { N_("release"),    release_cmd,   _("release <storage-name>")},
- { N_("reload"),     reload_cmd,    _("reload conf file")},
- { N_("run"),        run_cmd,       _("run <job-name>")},
- { N_("status"),     status_cmd,    _("status [storage | client]=<name>")},
- { N_("setdebug"),   setdebug_cmd,  _("sets debug level")},
- { N_("setip"),      setip_cmd,     _("sets new client address -- if authorized")},
- { N_("show"),       show_cmd,      _("show (resource records) [jobs | pools | ... | all]")},
- { N_("sqlquery"),   sqlquerycmd,   _("use SQL to query catalog")},
- { N_("time"),       time_cmd,      _("print current time")},
- { N_("trace"),      trace_cmd,     _("turn on/off trace to file")},
- { N_("unmount"),    unmount_cmd,   _("unmount <storage-name>")},
- { N_("umount"),     unmount_cmd,   _("umount <storage-name> for old-time Unix guys")},
- { N_("update"),     update_cmd,    _("update Volume, Pool or slots")},
- { N_("use"),        use_cmd,       _("use catalog xxx")},
- { N_("var"),        var_cmd,       _("does variable expansion")},
- { N_("version"),    version_cmd,   _("print Director version")},
- { N_("wait"),       wait_cmd,      _("wait until no jobs are running [<jobname=name> | <jobid=nnn> | <ujobid=complete_name>]")},
+ { NT_("add"),        add_cmd,         _("add media to a pool")},
+ { NT_("autodisplay"), autodisplay_cmd, _("autodisplay [on|off] -- console messages")},
+ { NT_("automount"),   automount_cmd,  _("automount [on|off] -- after label")},
+ { NT_("cancel"),     cancel_cmd,    _("cancel [<jobid=nnn> | <job=name>] -- cancel a job")},
+ { NT_("create"),     create_cmd,    _("create DB Pool from resource")},
+ { NT_("delete"),     delete_cmd,    _("delete [pool=<pool-name> | media volume=<volume-name>]")},
+ { NT_("disable"),    disable_cmd,   _("disable <job=name> -- disable a job")},
+ { NT_("enable"),     enable_cmd,    _("enable <job=name> -- enable a job")},
+ { NT_("estimate"),   estimate_cmd,  _("performs FileSet estimate, listing gives full listing")},
+ { NT_("exit"),       quit_cmd,      _("exit = quit")},
+ { NT_("gui"),        gui_cmd,       _("gui [on|off] -- non-interactive gui mode")},
+ { NT_("help"),       help_cmd,      _("print this command")},
+ { NT_("list"),       list_cmd,      _("list [pools | jobs | jobtotals | media <pool=pool-name> | files <jobid=nn>]; from catalog")},
+ { NT_("label"),      label_cmd,     _("label a tape")},
+ { NT_("llist"),      llist_cmd,     _("full or long list like list command")},
+ { NT_("messages"),   messagescmd,   _("messages")},
+ { NT_("mount"),      mount_cmd,     _("mount <storage-name>")},
+ { NT_("prune"),      prunecmd,      _("prune expired records from catalog")},
+ { NT_("purge"),      purgecmd,      _("purge records from catalog")},
+ { NT_("python"),     python_cmd,    _("python control commands")},
+ { NT_("quit"),       quit_cmd,      _("quit")},
+ { NT_("query"),      querycmd,      _("query catalog")},
+ { NT_("restore"),    restore_cmd,   _("restore files")},
+ { NT_("relabel"),    relabel_cmd,   _("relabel a tape")},
+ { NT_("release"),    release_cmd,   _("release <storage-name>")},
+ { NT_("reload"),     reload_cmd,    _("reload conf file")},
+ { NT_("run"),        run_cmd,       _("run <job-name>")},
+ { NT_("status"),     status_cmd,    _("status [storage | client]=<name>")},
+ { NT_("setdebug"),   setdebug_cmd,  _("sets debug level")},
+ { NT_("setip"),      setip_cmd,     _("sets new client address -- if authorized")},
+ { NT_("show"),       show_cmd,      _("show (resource records) [jobs | pools | ... | all]")},
+ { NT_("sqlquery"),   sqlquerycmd,   _("use SQL to query catalog")},
+ { NT_("time"),       time_cmd,      _("print current time")},
+ { NT_("trace"),      trace_cmd,     _("turn on/off trace to file")},
+ { NT_("unmount"),    unmount_cmd,   _("unmount <storage-name>")},
+ { NT_("umount"),     unmount_cmd,   _("umount <storage-name> for old-time Unix guys")},
+ { NT_("update"),     update_cmd,    _("update Volume, Pool or slots")},
+ { NT_("use"),        use_cmd,       _("use catalog xxx")},
+ { NT_("var"),        var_cmd,       _("does variable expansion")},
+ { NT_("version"),    version_cmd,   _("print Director version")},
+ { NT_("wait"),       wait_cmd,      _("wait until no jobs are running [<jobname=name> | <jobid=nnn> | <ujobid=complete_name>]")},
              };
 #define comsize (sizeof(commands)/sizeof(struct cmdstruct))
 
@@ -147,15 +159,15 @@ int do_a_command(UAContext *ua, const char *cmd)
       return 1;
    }
 
-   while (ua->jcr->storage->size()) {
-      ua->jcr->storage->remove(0);
+   while (ua->jcr->wstorage->size()) {
+      ua->jcr->wstorage->remove(0);
    }
 
    len = strlen(ua->argk[0]);
    for (i=0; i<comsize; i++) {     /* search for command */
-      if (strncasecmp(ua->argk[0],  _(commands[i].key), len) == 0) {
+      if (strncasecmp(ua->argk[0],  commands[i].key, len) == 0) {
          /* Check if command permitted, but "quit" is always OK */
-         if (strcmp(ua->argk[0], "quit") != 0 &&
+         if (strcmp(ua->argk[0], NT_("quit")) != 0 &&
              !acl_access_ok(ua, Command_ACL, ua->argk[0], len)) {
             break;
          }
@@ -165,7 +177,7 @@ int do_a_command(UAContext *ua, const char *cmd)
       }
    }
    if (!found) {
-      bnet_fsend(ua->UA_sock, _("%s: is an illegal command.\n"), ua->argk[0]);
+      bnet_fsend(ua->UA_sock, _("%s: is an invalid command.\n"), ua->argk[0]);
    }
    return stat;
 }
@@ -178,7 +190,7 @@ int do_a_command(UAContext *ua, const char *cmd)
 void set_pool_dbr_defaults_in_media_dbr(MEDIA_DBR *mr, POOL_DBR *pr)
 {
    mr->PoolId = pr->PoolId;
-   bstrncpy(mr->VolStatus, "Append", sizeof(mr->VolStatus));
+   bstrncpy(mr->VolStatus, NT_("Append"), sizeof(mr->VolStatus));
    mr->Recycle = pr->Recycle;
    mr->VolRetention = pr->VolRetention;
    mr->VolUseDuration = pr->VolUseDuration;
@@ -186,6 +198,7 @@ void set_pool_dbr_defaults_in_media_dbr(MEDIA_DBR *mr, POOL_DBR *pr)
    mr->MaxVolFiles = pr->MaxVolFiles;
    mr->MaxVolBytes = pr->MaxVolBytes;
    mr->LabelType = pr->LabelType;
+   mr->Enabled = 1;
 }
 
 
@@ -207,7 +220,7 @@ static int add_cmd(UAContext *ua, const char *cmd)
 "creates database records without labeling the Volumes.\n"
 "You probably want to use the \"label\" command.\n\n"));
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return 1;
    }
 
@@ -316,6 +329,7 @@ getVolName:
       mr.Slot = Slot++;
       mr.InChanger = InChanger;
       mr.StorageId = store->StorageId;
+      mr.Enabled = 1;
       Dmsg1(200, "Create Volume %s\n", mr.VolumeName);
       if (!db_create_media_record(ua->jcr, ua->db, &mr)) {
          bsendmsg(ua, "%s", db_strerror(ua->db));
@@ -355,7 +369,7 @@ int automount_cmd(UAContext *ua, const char *cmd)
       onoff = ua->argk[1];
    }
 
-   ua->automount = (strcasecmp(onoff, _("off")) == 0) ? 0 : 1;
+   ua->automount = (strcasecmp(onoff, NT_("off")) == 0) ? 0 : 1;
    return 1;
 }
 
@@ -370,12 +384,12 @@ static int cancel_cmd(UAContext *ua, const char *cmd)
    JCR *jcr = NULL;
    char JobName[MAX_NAME_LENGTH];
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return 1;
    }
 
    for (i=1; i<ua->argc; i++) {
-      if (strcasecmp(ua->argk[i], _("jobid")) == 0) {
+      if (strcasecmp(ua->argk[i], NT_("jobid")) == 0) {
          uint32_t JobId;
          if (!ua->argv[i]) {
             break;
@@ -386,7 +400,7 @@ static int cancel_cmd(UAContext *ua, const char *cmd)
             return 1;
          }
          break;
-      } else if (strcasecmp(ua->argk[i], _("job")) == 0) {
+      } else if (strcasecmp(ua->argk[i], NT_("job")) == 0) {
          if (!ua->argv[i]) {
             break;
          }
@@ -396,7 +410,7 @@ static int cancel_cmd(UAContext *ua, const char *cmd)
             bstrncpy(jcr->Job, ua->argv[i], sizeof(jcr->Job));
          }
          break;
-      } else if (strcasecmp(ua->argk[i], _("ujobid")) == 0) {
+      } else if (strcasecmp(ua->argk[i], NT_("ujobid")) == 0) {
          if (!ua->argv[i]) {
             break;
          }
@@ -483,7 +497,6 @@ void set_pooldbr_from_poolres(POOL_DBR *pr, POOL *pool, e_pool_op op)
    pr->LabelType = pool->LabelType;
    pr->UseOnce = pool->use_volume_once;
    pr->UseCatalog = pool->use_catalog;
-   pr->AcceptAnyVolume = pool->accept_any_volume;
    pr->Recycle = pool->Recycle;
    pr->VolRetention = pool->VolRetention;
    pr->VolUseDuration = pool->VolUseDuration;
@@ -514,7 +527,7 @@ int create_pool(JCR *jcr, B_DB *db, POOL *pool, e_pool_op op)
 
    memset(&pr, 0, sizeof(POOL_DBR));
 
-   bstrncpy(pr.Name, pool->hdr.name, sizeof(pr.Name));
+   bstrncpy(pr.Name, pool->name(), sizeof(pr.Name));
 
    if (db_get_pool_record(jcr, db, &pr)) {
       /* Pool Exists */
@@ -543,7 +556,7 @@ static int create_cmd(UAContext *ua, const char *cmd)
 {
    POOL *pool;
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return 1;
    }
 
@@ -555,7 +568,7 @@ static int create_cmd(UAContext *ua, const char *cmd)
    switch (create_pool(ua->jcr, ua->db, pool, POOL_OP_CREATE)) {
    case 0:
       bsendmsg(ua, _("Error: Pool %s already exists.\n"
-               "Use update to change it.\n"), pool->hdr.name);
+               "Use update to change it.\n"), pool->name());
       break;
 
    case -1:
@@ -565,7 +578,7 @@ static int create_cmd(UAContext *ua, const char *cmd)
    default:
      break;
    }
-   bsendmsg(ua, _("Pool %s created.\n"), pool->hdr.name);
+   bsendmsg(ua, _("Pool %s created.\n"), pool->name());
    return 1;
 }
 
@@ -578,9 +591,9 @@ extern DIRRES *director;
  */
 static int python_cmd(UAContext *ua, const char *cmd)
 {
-   if (ua->argc >= 1 && strcasecmp(ua->argk[1], _("restart")) == 0) {
+   if (ua->argc >= 2 && strcasecmp(ua->argk[1], NT_("restart")) == 0) {
       term_python_interpreter();
-      init_python_interpreter(director->hdr.name, 
+      init_python_interpreter(director->name(), 
          director->scripts_directory, "DirStartUp");
       bsendmsg(ua, _("Python interpreter restarted.\n"));
    } else {
@@ -599,15 +612,15 @@ static int setip_cmd(UAContext *ua, const char *cmd)
 {
    CLIENT *client;
    char buf[1024];
-   if (!ua->cons || !acl_access_ok(ua, Client_ACL, ua->cons->hdr.name)) {
-      bsendmsg(ua, _("Illegal command from this console.\n"));
+   if (!ua->cons || !acl_access_ok(ua, Client_ACL, ua->cons->name())) {
+      bsendmsg(ua, _("Unauthorized command from this console.\n"));
       return 1;
    }
    LockRes();
-   client = (CLIENT *)GetResWithName(R_CLIENT, ua->cons->hdr.name);
+   client = (CLIENT *)GetResWithName(R_CLIENT, ua->cons->name());
 
    if (!client) {
-      bsendmsg(ua, _("Client \"%s\" not found.\n"), ua->cons->hdr.name);
+      bsendmsg(ua, _("Client \"%s\" not found.\n"), ua->cons->name());
       goto get_out;
    }
    if (client->address) {
@@ -617,7 +630,7 @@ static int setip_cmd(UAContext *ua, const char *cmd)
    sockaddr_to_ascii(&(ua->UA_sock->client_addr), buf, sizeof(buf));
    client->address = bstrdup(buf);
    bsendmsg(ua, _("Client \"%s\" address set to %s\n"),
-            client->hdr.name, client->address);
+            client->name(), client->address);
 get_out:
    UnlockRes();
    return 1;
@@ -629,7 +642,7 @@ static void do_en_disable_cmd(UAContext *ua, bool setting)
    JOB *job;
    int i;
 
-   i = find_arg_with_value(ua, N_("job")); 
+   i = find_arg_with_value(ua, NT_("job")); 
    if (i < 0) { 
       job = select_job_resource(ua);
       if (!job) {
@@ -645,12 +658,12 @@ static void do_en_disable_cmd(UAContext *ua, bool setting)
       return;
    }
 
-   if (!acl_access_ok(ua, Job_ACL, job->hdr.name)) {
-      bsendmsg(ua, _("Illegal command from this console.\n"));
+   if (!acl_access_ok(ua, Job_ACL, job->name())) {
+      bsendmsg(ua, _("Unauthorized command from this console.\n"));
       return;
    }
    job->enabled = setting;
-   bsendmsg(ua, _("Job \"%s\" %sabled\n"), job->hdr.name, setting?"en":"dis");
+   bsendmsg(ua, _("Job \"%s\" %sabled\n"), job->name(), setting?"en":"dis");
    return;
 }
 
@@ -671,11 +684,14 @@ static void do_storage_setdebug(UAContext *ua, STORE *store, int level, int trac
 {
    BSOCK *sd;
    JCR *jcr = ua->jcr;
-
-   set_storage(jcr, store);
+   USTORE lstore;
+   
+   lstore.store = store;
+   pm_strcpy(lstore.store_source, _("unknown source"));
+   set_wstorage(jcr, &lstore);
    /* Try connecting for up to 15 seconds */
    bsendmsg(ua, _("Connecting to Storage daemon %s at %s:%d\n"),
-      store->hdr.name, store->address, store->SDport);
+      store->name(), store->address, store->SDport);
    if (!connect_to_storage_daemon(jcr, 1, 15, 0)) {
       bsendmsg(ua, _("Failed to connect to Storage daemon.\n"));
       return;
@@ -701,7 +717,7 @@ static void do_client_setdebug(UAContext *ua, CLIENT *client, int level, int tra
    ua->jcr->client = client;
    /* Try to connect for 15 seconds */
    bsendmsg(ua, _("Connecting to Client %s at %s:%d\n"),
-      client->hdr.name, client->address, client->FDport);
+      client->name(), client->address, client->FDport);
    if (!connect_to_file_daemon(ua->jcr, 1, 15, 0)) {
       bsendmsg(ua, _("Failed to connect to Client.\n"));
       return;
@@ -808,7 +824,7 @@ static int setdebug_cmd(UAContext *ua, const char *cmd)
    int trace_flag = -1;
    int i;
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return 1;
    }
    Dmsg1(120, "setdebug:%s:\n", cmd);
@@ -863,9 +879,9 @@ static int setdebug_cmd(UAContext *ua, const char *cmd)
          }
       }
 
-      if (strcasecmp(ua->argk[i], "store") == 0 ||
-          strcasecmp(ua->argk[i], "storage") == 0 ||
-          strcasecmp(ua->argk[i], "sd") == 0) {
+      if (strcasecmp(ua->argk[i], NT_("store")) == 0 ||
+          strcasecmp(ua->argk[i], NT_("storage")) == 0 ||
+          strcasecmp(ua->argk[i], NT_("sd")) == 0) {
          store = NULL;
          if (ua->argv[i]) {
             store = (STORE *)GetResWithName(R_STORAGE, ua->argv[i]);
@@ -886,10 +902,10 @@ static int setdebug_cmd(UAContext *ua, const char *cmd)
     * prompt the user.
     */
    start_prompt(ua, _("Available daemons are: \n"));
-   add_prompt(ua, "Director");
-   add_prompt(ua, "Storage");
-   add_prompt(ua, "Client");
-   add_prompt(ua, "All");
+   add_prompt(ua, _("Director"));
+   add_prompt(ua, _("Storage"));
+   add_prompt(ua, _("Client"));
+   add_prompt(ua, _("All"));
    switch(do_prompt(ua, "", _("Select daemon type to set debug level"), NULL, 0)) {
    case 0:                         /* Director */
       debug_level = level;
@@ -932,7 +948,7 @@ static int trace_cmd(UAContext *ua, const char *cmd)
       onoff = ua->argk[1];
    }
 
-   set_trace((strcasecmp(onoff, _("off")) == 0) ? false : true);
+   set_trace((strcasecmp(onoff, NT_("off")) == 0) ? false : true);
    return 1;
 
 }
@@ -942,7 +958,7 @@ static int var_cmd(UAContext *ua, const char *cmd)
    POOLMEM *val = get_pool_memory(PM_FNAME);
    char *var;
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return 1;
    }
    for (var=ua->cmd; *var != ' '; ) {    /* skip command */
@@ -969,30 +985,38 @@ static int estimate_cmd(UAContext *ua, const char *cmd)
 
    jcr->JobLevel = L_FULL;
    for (int i=1; i<ua->argc; i++) {
-      if (strcasecmp(ua->argk[i], "client") == 0 ||
-          strcasecmp(ua->argk[i], "fd") == 0) {
+      if (strcasecmp(ua->argk[i], NT_("client")) == 0 ||
+          strcasecmp(ua->argk[i], NT_("fd")) == 0) {
          if (ua->argv[i]) {
             client = (CLIENT *)GetResWithName(R_CLIENT, ua->argv[i]);
             continue;
          }
       }
-      if (strcasecmp(ua->argk[i], "job") == 0) {
+      if (strcasecmp(ua->argk[i], NT_("job")) == 0) {
          if (ua->argv[i]) {
             job = (JOB *)GetResWithName(R_JOB, ua->argv[i]);
+            if (job && !acl_access_ok(ua, Job_ACL, job->name())) {
+               bsendmsg(ua, _("No authorization for Job \"%s\"\n"), job->name());
+               return 1;
+            }
             continue;
          }
       }
-      if (strcasecmp(ua->argk[i], "fileset") == 0) {
+      if (strcasecmp(ua->argk[i], NT_("fileset")) == 0) {
          if (ua->argv[i]) {
             fileset = (FILESET *)GetResWithName(R_FILESET, ua->argv[i]);
+            if (fileset && !acl_access_ok(ua, FileSet_ACL, fileset->name())) {
+               bsendmsg(ua, _("No authorization for FileSet \"%s\"\n"), fileset->name());
+               return 1;
+            }
             continue;
          }
       }
-      if (strcasecmp(ua->argk[i], "listing") == 0) {
+      if (strcasecmp(ua->argk[i], NT_("listing")) == 0) {
          listing = 1;
          continue;
       }
-      if (strcasecmp(ua->argk[i], "level") == 0) {
+      if (strcasecmp(ua->argk[i], NT_("level")) == 0) {
          if (!get_level_from_name(ua->jcr, ua->argv[i])) {
             bsendmsg(ua, _("Level %s not valid.\n"), ua->argv[i]);
          }
@@ -1008,6 +1032,10 @@ static int estimate_cmd(UAContext *ua, const char *cmd)
       job = (JOB *)GetResWithName(R_JOB, ua->argk[1]);
       if (!job) {
          bsendmsg(ua, _("No job specified.\n"));
+         return 1;
+      }
+      if (!acl_access_ok(ua, Job_ACL, job->name())) {
+         bsendmsg(ua, _("No authorization for Job \"%s\"\n"), job->name());
          return 1;
       }
    }
@@ -1040,7 +1068,7 @@ static int estimate_cmd(UAContext *ua, const char *cmd)
    get_level_since_time(ua->jcr, since, sizeof(since));
 
    bsendmsg(ua, _("Connecting to Client %s at %s:%d\n"),
-      job->client->hdr.name, job->client->address, job->client->FDport);
+      job->client->name(), job->client->address, job->client->FDport);
    if (!connect_to_file_daemon(jcr, 1, 15, 0)) {
       bsendmsg(ua, _("Failed to connect to Client.\n"));
       return 1;
@@ -1083,7 +1111,7 @@ static int time_cmd(UAContext *ua, const char *cmd)
    char sdt[50];
    time_t ttime = time(NULL);
    struct tm tm;
-   localtime_r(&ttime, &tm);
+   (void)localtime_r(&ttime, &tm);
    strftime(sdt, sizeof(sdt), "%d-%b-%Y %H:%M:%S", &tm);
    bsendmsg(ua, "%s\n", sdt);
    return 1;
@@ -1110,12 +1138,12 @@ static int reload_cmd(UAContext *ua, const char *cmd)
 static int delete_cmd(UAContext *ua, const char *cmd)
 {
    static const char *keywords[] = {
-      N_("volume"),
-      N_("pool"),
-      N_("jobid"),
+      NT_("volume"),
+      NT_("pool"),
+      NT_("jobid"),
       NULL};
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return 1;
    }
 
@@ -1172,7 +1200,7 @@ static void delete_job(UAContext *ua)
    JobId_t JobId;
    char *s,*sep,*tok;
 
-   int i = find_arg_with_value(ua, N_("jobid"));
+   int i = find_arg_with_value(ua, NT_("jobid"));
    if (i >= 0) {
       if (strchr(ua->argv[i], ',') != NULL || strchr(ua->argv[i], '-') != NULL) {
         s = bstrdup(ua->argv[i]);
@@ -1237,21 +1265,15 @@ static void delete_job_id_range(UAContext *ua, char *tok)
 
 /*
  * do_job_delete now performs the actual delete operation atomically
- * we always return 1 because C++ is pissy about void functions
  */
 
 static void do_job_delete(UAContext *ua, JobId_t JobId)
 {
-   POOLMEM *query = get_pool_memory(PM_MESSAGE);
+   POOL_MEM query(PM_MESSAGE);
    char ed1[50];
 
-   Mmsg(query, "DELETE FROM Job WHERE JobId=%s", edit_int64(JobId, ed1));
-   db_sql_query(ua->db, query, NULL, (void *)NULL);
-   Mmsg(query, "DELETE FROM File WHERE JobId=%s", ed1);
-   db_sql_query(ua->db, query, NULL, (void *)NULL);
-   Mmsg(query, "DELETE FROM JobMedia WHERE JobId=%s", ed1);
-   db_sql_query(ua->db, query, NULL, (void *)NULL);
-   free_pool_memory(query);
+   purge_files_from_job(ua, JobId);
+   purge_job_from_catalog(ua, JobId);
    bsendmsg(ua, _("Job %s and associated records deleted from the catalog.\n"), edit_int64(JobId, ed1));
 }
 
@@ -1302,35 +1324,44 @@ static int delete_pool(UAContext *ua)
 
 static void do_mount_cmd(UAContext *ua, const char *command)
 {
-   STORE *store;
+   USTORE store;
    BSOCK *sd;
    JCR *jcr = ua->jcr;
    char dev_name[MAX_NAME_LENGTH];
    int drive;
+   int slot = -1;
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return;
    }
    Dmsg2(120, "%s: %s\n", command, ua->UA_sock->msg);
 
-   store = get_storage_resource(ua, true/*arg is storage*/);
-   if (!store) {
+   store.store = get_storage_resource(ua, true/*arg is storage*/);
+   pm_strcpy(store.store_source, _("unknown source"));
+   if (!store.store) {
       return;
    }
-   set_storage(jcr, store);
-   drive = get_storage_drive(ua, store);
+   set_wstorage(jcr, &store);
+   drive = get_storage_drive(ua, store.store);
+   if (strcmp(command, "mount") == 0) {
+      slot = get_storage_slot(ua, store.store);
+   }
 
    Dmsg3(120, "Found storage, MediaType=%s DevName=%s drive=%d\n",
-      store->media_type, store->dev_name(), drive);
+      store.store->media_type, store.store->dev_name(), drive);
 
    if (!connect_to_storage_daemon(jcr, 10, SDConnectTimeout, 1)) {
       bsendmsg(ua, _("Failed to connect to Storage daemon.\n"));
       return;
    }
    sd = jcr->store_bsock;
-   bstrncpy(dev_name, store->dev_name(), sizeof(dev_name));
+   bstrncpy(dev_name, store.store->dev_name(), sizeof(dev_name));
    bash_spaces(dev_name);
-   bnet_fsend(sd, "%s %s drive=%d", command, dev_name, drive);
+   if (slot > 0) {
+      bnet_fsend(sd, "%s %s drive=%d slot=%d", command, dev_name, drive, slot);
+   } else {
+      bnet_fsend(sd, "%s %s drive=%d", command, dev_name, drive);
+   }
    while (bnet_recv(sd) >= 0) {
       bsendmsg(ua, "%s", sd->msg);
    }
@@ -1340,7 +1371,7 @@ static void do_mount_cmd(UAContext *ua, const char *command)
 }
 
 /*
- * mount [storage=<name>] [drive=nn]
+ * mount [storage=<name>] [drive=nn] [slot=mm]
  */
 static int mount_cmd(UAContext *ua, const char *cmd)
 {
@@ -1388,7 +1419,7 @@ static int use_cmd(UAContext *ua, const char *cmd)
    }
    if (open_db(ua)) {
       bsendmsg(ua, _("Using Catalog name=%s DB=%s\n"),
-         ua->catalog->hdr.name, ua->catalog->db_name);
+         ua->catalog->name(), ua->catalog->db_name);
    }
    return 1;
 }
@@ -1446,7 +1477,7 @@ int wait_cmd(UAContext *ua, const char *cmd)
 
    uint32_t jobid = 0 ;
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       bsendmsg(ua, _("ERR: Can't open db\n")) ;
       return 1;
    }
@@ -1572,7 +1603,7 @@ int qhelp_cmd(UAContext *ua, const char *cmd)
    unsigned int i;
 
    for (i=0; i<comsize; i++) {
-      bsendmsg(ua, "%s %s\n", _(commands[i].key), _(commands[i].help));
+      bsendmsg(ua, "%s %s\n", commands[i].key, _(commands[i].help));
    }
    return 1;
 }
@@ -1583,10 +1614,88 @@ static int version_cmd(UAContext *ua, const char *cmd)
    return 1;
 }
 
+/* 
+ * This call explicitly checks for a catalog=xxx and
+ *  if given, opens that catalog.  It also checks for
+ *  client=xxx and if found, opens the catalog 
+ *  corresponding to that client. If we still don't 
+ *  have a catalog, look for a Job keyword and get the
+ *  catalog from its client record.
+ */
+bool open_client_db(UAContext *ua)
+{
+   int i;
+   CAT *catalog;
+   CLIENT *client;
+   JOB *job;
 
-/* A bit brain damaged in that if the user has not done
- * a "use catalog xxx" command, we simply find the first
- * catalog resource and open it.
+   /* Try for catalog keyword */
+   i = find_arg_with_value(ua, NT_("catalog"));
+   if (i >= 0) {
+      if (!acl_access_ok(ua, Catalog_ACL, ua->argv[i])) {
+         bsendmsg(ua, _("No authorization for Catalog \"%s\"\n"), ua->argv[i]);
+         return false;
+      }
+      catalog = (CAT *)GetResWithName(R_CATALOG, ua->argv[i]);
+      if (catalog) {
+         if (ua->catalog && ua->catalog != catalog) {
+            close_db(ua);
+         }
+         ua->catalog = catalog;
+         return open_db(ua);
+      }
+   }
+
+   /* Try for client keyword */
+   i = find_arg_with_value(ua, NT_("client"));
+   if (i >= 0) {
+      if (!acl_access_ok(ua, Client_ACL, ua->argv[i])) {
+         bsendmsg(ua, _("No authorization for Client \"%s\"\n"), ua->argv[i]);
+         return false;
+      }
+      client = (CLIENT *)GetResWithName(R_CLIENT, ua->argv[i]);
+      if (client) {
+         catalog = client->catalog;
+         if (ua->catalog && ua->catalog != catalog) {
+            close_db(ua);
+         }
+         if (!acl_access_ok(ua, Catalog_ACL, catalog->name())) {
+            bsendmsg(ua, _("No authorization for Catalog \"%s\"\n"), catalog->name());
+            return false;
+         }
+         ua->catalog = catalog;
+         return open_db(ua);
+      }
+   }
+
+   /* Try for Job keyword */
+   i = find_arg_with_value(ua, NT_("job"));
+   if (i >= 0) {
+      if (!acl_access_ok(ua, Job_ACL, ua->argv[i])) {
+         bsendmsg(ua, _("No authorization for Job \"%s\"\n"), ua->argv[i]);
+         return false;
+      }
+      job = (JOB *)GetResWithName(R_JOB, ua->argv[i]);
+      if (job) {
+         catalog = job->client->catalog;
+         if (ua->catalog && ua->catalog != catalog) {
+            close_db(ua);
+         }
+         if (!acl_access_ok(ua, Catalog_ACL, catalog->name())) {
+            bsendmsg(ua, _("No authorization for Catalog \"%s\"\n"), catalog->name());
+            return false;
+         }
+         ua->catalog = catalog;
+         return open_db(ua);
+      }
+   }
+
+   return open_db(ua);
+}
+
+
+/*
+ * Open the catalog database.
  */
 bool open_db(UAContext *ua)
 {
@@ -1594,19 +1703,10 @@ bool open_db(UAContext *ua)
       return true;
    }
    if (!ua->catalog) {
-      LockRes();
-      ua->catalog = (CAT *)GetNextRes(R_CATALOG, NULL);
-      UnlockRes();
+      ua->catalog = get_catalog_resource(ua);
       if (!ua->catalog) {
          bsendmsg(ua, _("Could not find a Catalog resource\n"));
          return false;
-      } else if (!acl_access_ok(ua, Catalog_ACL, ua->catalog->hdr.name)) {
-         bsendmsg(ua, _("You must specify a \"use <catalog-name>\" command before continuing.\n"));
-         ua->catalog = NULL;
-         return false;
-      } else {
-         bsendmsg(ua, _("Using default Catalog name=%s DB=%s\n"),
-            ua->catalog->hdr.name, ua->catalog->db_name);
       }
    }
 
@@ -1618,7 +1718,7 @@ bool open_db(UAContext *ua)
                              ua->catalog->db_port, ua->catalog->db_socket,
                              ua->catalog->mult_db_connections);
    if (!ua->db || !db_open_database(ua->jcr, ua->db)) {
-      bsendmsg(ua, _("Could not open database \"%s\".\n"),
+      bsendmsg(ua, _("Could not open catalog database \"%s\".\n"),
                  ua->catalog->db_name);
       if (ua->db) {
          bsendmsg(ua, "%s", db_strerror(ua->db));
@@ -1627,6 +1727,7 @@ bool open_db(UAContext *ua)
       return false;
    }
    ua->jcr->db = ua->db;
+   bsendmsg(ua, _("Using Catalog \"%s\"\n"), ua->catalog->name()); 
    Dmsg1(150, "DB %s opened\n", ua->catalog->db_name);
    return true;
 }

@@ -3,22 +3,35 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_update.c,v 1.63.2.6 2006/04/11 08:05:18 kerns Exp $
+ *    Version $Id: sql_update.c,v 1.75 2006/11/27 10:02:59 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 /* The following is necessary so that we do not include
  * the dummy external definition of DB.
@@ -37,10 +50,6 @@
  * -----------------------------------------------------------------------
  */
 
-/* Imported subroutines */
-extern void print_result(B_DB *mdb);
-extern int UpdateDB(const char *file, int line, JCR *jcr, B_DB *db, char *update_cmd);
-
 /* -----------------------------------------------------------------------
  *
  *   Generic Routines (or almost generic)
@@ -49,7 +58,7 @@ extern int UpdateDB(const char *file, int line, JCR *jcr, B_DB *db, char *update
  */
 /* Update the attributes record by adding the file digest */
 int
-db_add_SIG_to_file_record(JCR *jcr, B_DB *mdb, FileId_t FileId, char *digest,
+db_add_digest_to_file_record(JCR *jcr, B_DB *mdb, FileId_t FileId, char *digest,
                           int type)
 {
    int stat;
@@ -64,7 +73,7 @@ db_add_SIG_to_file_record(JCR *jcr, B_DB *mdb, FileId_t FileId, char *digest,
 }
 
 /* Mark the file record as being visited during database
- * verify compare. Stuff JobId into MarkId field
+ * verify compare. Stuff JobId into the MarkId field
  */
 int db_mark_file_record(JCR *jcr, B_DB *mdb, FileId_t FileId, JobId_t JobId)
 {
@@ -96,8 +105,8 @@ db_update_job_start_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    char ed1[50], ed2[50], ed3[50], ed4[50];
 
    stime = jr->StartTime;
-   localtime_r(&stime, &tm);
-   strftime(dt, sizeof(dt), "%Y-%m-%d %T", &tm);
+   (void)localtime_r(&stime, &tm);
+   strftime(dt, sizeof(dt), "%Y-%m-%d %H:%M:%S", &tm);
    JobTDate = (btime_t)stime;
 
    db_lock(mdb);
@@ -136,14 +145,13 @@ int
 db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 {
    char dt[MAX_TIME_LENGTH];
+   char rdt[MAX_TIME_LENGTH];
    time_t ttime;
    struct tm tm;
    int stat;
    char ed1[30], ed2[30], ed3[50];
    btime_t JobTDate;
-   char PoolId    [50];
-   char FileSetId [50];
-   char ClientId  [50];
+   char PoolId[50], FileSetId[50], ClientId[50], PriorJobId[50];
 
 
    /* some values are set to zero, which translates to NULL in SQL */
@@ -151,19 +159,36 @@ db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    edit_num_or_null(FileSetId, sizeof(FileSetId), jr->FileSetId);
    edit_num_or_null(ClientId,  sizeof(ClientId),  jr->ClientId);
 
+   if (jr->PriorJobId) {
+      bstrncpy(PriorJobId, edit_int64(jr->PriorJobId, ed1), sizeof(PriorJobId));
+   } else {
+      bstrncpy(PriorJobId, "0", sizeof(PriorJobId));
+   }
+
    ttime = jr->EndTime;
-   localtime_r(&ttime, &tm);
-   strftime(dt, sizeof(dt), "%Y-%m-%d %T", &tm);
+   (void)localtime_r(&ttime, &tm);
+   strftime(dt, sizeof(dt), "%Y-%m-%d %H:%M:%S", &tm);
+
+   if (jr->RealEndTime == 0) {
+      jr->RealEndTime = jr->EndTime;
+   }
+   ttime = jr->RealEndTime;
+   (void)localtime_r(&ttime, &tm);
+   strftime(rdt, sizeof(rdt), "%Y-%m-%d %H:%M:%S", &tm);
+
    JobTDate = ttime;
 
    db_lock(mdb);
    Mmsg(mdb->cmd,
-      "UPDATE Job SET JobStatus='%c', EndTime='%s', "
-"ClientId=%s, JobBytes=%s, JobFiles=%u, JobErrors=%u, VolSessionId=%u, "
-"VolSessionTime=%u, PoolId=%s, FileSetId=%s, JobTDate=%s WHERE JobId=%s",
+      "UPDATE Job SET JobStatus='%c',EndTime='%s',"
+"ClientId=%s,JobBytes=%s,JobFiles=%u,JobErrors=%u,VolSessionId=%u,"
+"VolSessionTime=%u,PoolId=%s,FileSetId=%s,JobTDate=%s,"
+"RealEndTime='%s',PriorJobId=%s WHERE JobId=%s",
       (char)(jr->JobStatus), dt, ClientId, edit_uint64(jr->JobBytes, ed1),
       jr->JobFiles, jr->JobErrors, jr->VolSessionId, jr->VolSessionTime,
       PoolId, FileSetId, edit_uint64(JobTDate, ed2), 
+      rdt,
+      PriorJobId,
       edit_int64(jr->JobId, ed3));
 
    stat = UPDATE_DB(jcr, mdb, mdb->cmd);
@@ -286,8 +311,9 @@ db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
    time_t ttime;
    struct tm tm;
    int stat;
-   char ed1[50], ed2[50], ed3[50], ed4[50]; 
-   char ed5[50], ed6[50], ed7[50], ed8[50];
+   char ed1[50], ed2[50],  ed3[50],  ed4[50]; 
+   char ed5[50], ed6[50],  ed7[50],  ed8[50];
+   char ed9[50], ed10[50], ed11[50];
 
 
    Dmsg1(100, "update_media: FirstWritten=%d\n", mr->FirstWritten);
@@ -295,8 +321,8 @@ db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
    if (mr->set_first_written) {
       Dmsg1(400, "Set FirstWritten Vol=%s\n", mr->VolumeName);
       ttime = mr->FirstWritten;
-      localtime_r(&ttime, &tm);
-      strftime(dt, sizeof(dt), "%Y-%m-%d %T", &tm);
+      (void)localtime_r(&ttime, &tm);
+      strftime(dt, sizeof(dt), "%Y-%m-%d %H:%M:%S", &tm);
       Mmsg(mdb->cmd, "UPDATE Media SET FirstWritten='%s'"
            " WHERE VolumeName='%s'", dt, mr->VolumeName);
       stat = UPDATE_DB(jcr, mdb, mdb->cmd);
@@ -309,8 +335,8 @@ db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
       if (ttime == 0) {
          ttime = time(NULL);
       }
-      localtime_r(&ttime, &tm);
-      strftime(dt, sizeof(dt), "%Y-%m-%d %T", &tm);
+      (void)localtime_r(&ttime, &tm);
+      strftime(dt, sizeof(dt), "%Y-%m-%d %H:%M:%S", &tm);
       Mmsg(mdb->cmd, "UPDATE Media SET LabelDate='%s' "
            "WHERE VolumeName='%s'", dt, mr->VolumeName);
       UPDATE_DB(jcr, mdb, mdb->cmd);
@@ -318,8 +344,8 @@ db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 
    if (mr->LastWritten != 0) {
       ttime = mr->LastWritten;
-      localtime_r(&ttime, &tm);
-      strftime(dt, sizeof(dt), "%Y-%m-%d %T", &tm);
+      (void)localtime_r(&ttime, &tm);
+      strftime(dt, sizeof(dt), "%Y-%m-%d %H:%M:%S", &tm);
       Mmsg(mdb->cmd, "UPDATE Media Set LastWritten='%s' "
            "WHERE VolumeName='%s'", dt, mr->VolumeName);
       UPDATE_DB(jcr, mdb, mdb->cmd);
@@ -330,7 +356,8 @@ db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
         "VolWrites=%u,MaxVolBytes=%s,VolStatus='%s',"
         "Slot=%d,InChanger=%d,VolReadTime=%s,VolWriteTime=%s,VolParts=%d,"
         "LabelType=%d,StorageId=%s,PoolId=%s,VolRetention=%s,VolUseDuration=%s,"
-        "MaxVolJobs=%d,MaxVolFiles=%d"
+        "MaxVolJobs=%d,MaxVolFiles=%d,Enabled=%d,LocationId=%s,"
+        "ScratchPoolId=%s,RecyclePoolId=%s,RecycleCount=%d"
         " WHERE VolumeName='%s'",
         mr->VolJobs, mr->VolFiles, mr->VolBlocks, edit_uint64(mr->VolBytes, ed1),
         mr->VolMounts, mr->VolErrors, mr->VolWrites,
@@ -345,6 +372,10 @@ db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
         edit_uint64(mr->VolRetention, ed7),
         edit_uint64(mr->VolUseDuration, ed8),
         mr->MaxVolJobs, mr->MaxVolFiles,
+        mr->Enabled, edit_uint64(mr->LocationId, ed9),
+        edit_uint64(mr->ScratchPoolId, ed10),
+        edit_uint64(mr->RecyclePoolId, ed11),
+        mr->RecycleCount,
         mr->VolumeName);
 
    Dmsg1(400, "%s\n", mdb->cmd);
@@ -421,15 +452,6 @@ db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
       Dmsg1(400, "%s\n", mdb->cmd);
       UPDATE_DB(jcr, mdb, mdb->cmd);
    }
-}
-
-#else
-
-void
-db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
-{
-  /* DUMMY func for Bacula_DB */
-  return;
 }
 
 #endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL*/

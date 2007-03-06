@@ -4,22 +4,35 @@
  *
  *     Kern Sibbald, December MMI
  *
- *   Version $Id: ua_query.c,v 1.13 2005/08/10 16:35:19 nboichat Exp $
+ *   Version $Id: ua_query.c,v 1.18 2006/12/23 16:33:52 kerns Exp $
  */
 /*
-   Copyright (C) 2001-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -52,10 +65,10 @@ int querycmd(UAContext *ua, const char *cmd)
    int nprompt = 0;;
    char *query_file = director->query_file;
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       goto bail_out;
    }
-   if ((fd=fopen(query_file, "r")) == NULL) {
+   if ((fd=fopen(query_file, "rb")) == NULL) {
       bsendmsg(ua, _("Could not open %s: ERR=%s\n"), query_file,
          strerror(errno));
       goto bail_out;
@@ -243,7 +256,7 @@ int sqlquerycmd(UAContext *ua, const char *cmd)
    int len;
    const char *msg;
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       free_pool_memory(query);
       return 1;
    }

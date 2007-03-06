@@ -4,52 +4,84 @@ db_found=no
 AC_MSG_CHECKING(for MySQL support)
 AC_ARG_WITH(mysql,
 [
-  --with-mysql[=DIR]      Include MySQL support.  DIR is the MySQL base
+  --with-mysql@<:@=DIR@:>@      Include MySQL support.  DIR is the MySQL base
                           install directory, default is to search through
                           a number of common places for the MySQL files.],
 [
   if test "$withval" != "no"; then
         if test "$withval" = "yes"; then
-                if test -f /usr/local/mysql/include/mysql/mysql.h; then
-                        MYSQL_INCDIR=/usr/local/mysql/include/mysql
-                        MYSQL_LIBDIR=/usr/local/mysql/lib/mysql
-                        MYSQL_BINDIR=/usr/local/mysql/bin
-                elif test -f /usr/include/mysql/mysql.h; then
-                        MYSQL_INCDIR=/usr/include/mysql
-                        MYSQL_LIBDIR=/usr/lib/mysql
-                        MYSQL_BINDIR=/usr/bin      
-                elif test -f /usr/include/mysql.h; then
-                        MYSQL_INCDIR=/usr/include
-                        MYSQL_LIBDIR=/usr/lib
-                        MYSQL_BINDIR=/usr/bin
-                elif test -f /usr/local/include/mysql/mysql.h; then
-                        MYSQL_INCDIR=/usr/local/include/mysql
-                        MYSQL_LIBDIR=/usr/local/lib/mysql
-                        MYSQL_BINDIR=/usr/local/bin
-                elif test -f /usr/local/include/mysql.h; then
-                        MYSQL_INCDIR=/usr/local/include
-                        MYSQL_LIBDIR=/usr/local/lib
-                        MYSQL_BINDIR=/usr/local/bin
-                else
-                   AC_MSG_RESULT(no)
-                   AC_MSG_ERROR(Unable to find mysql.h in standard locations)
-                fi
+           if test -f /usr/local/mysql/include/mysql/mysql.h; then
+                   MYSQL_INCDIR=/usr/local/mysql/include/mysql
+                   if test -f /usr/local/mysql/lib64/mysql/libmysqlclient.a; then
+                           MYSQL_LIBDIR=/usr/local/mysql/lib64/mysql
+                   else
+                           MYSQL_LIBDIR=/usr/local/mysql/lib/mysql
+                   fi
+                   MYSQL_BINDIR=/usr/local/mysql/bin
+           elif test -f /usr/include/mysql/mysql.h; then
+                   MYSQL_INCDIR=/usr/include/mysql
+                   if test -f /usr/lib64/mysql/libmysqlclient.a; then
+                           MYSQL_LIBDIR=/usr/lib64/mysql
+                   else
+                           MYSQL_LIBDIR=/usr/lib/mysql
+                   fi
+                   MYSQL_BINDIR=/usr/bin
+           elif test -f /usr/include/mysql.h; then
+                   MYSQL_INCDIR=/usr/include
+                   if test -f /usr/lib64/libmysqlclient.a; then
+                           MYSQL_LIBDIR=/usr/lib64
+                   else
+                           MYSQL_LIBDIR=/usr/lib
+                   fi
+                   MYSQL_BINDIR=/usr/bin
+           elif test -f /usr/local/include/mysql/mysql.h; then
+                   MYSQL_INCDIR=/usr/local/include/mysql
+                   if test -f /usr/local/lib64/mysql/libmysqlclient.a; then
+                           MYSQL_LIBDIR=/usr/local/lib64/mysql
+                   else
+                           MYSQL_LIBDIR=/usr/local/lib/mysql
+                   fi
+                   MYSQL_BINDIR=/usr/local/bin
+           elif test -f /usr/local/include/mysql.h; then
+                   MYSQL_INCDIR=/usr/local/include
+                   if test -f /usr/local/lib64/libmysqlclient.a; then
+                           MYSQL_LIBDIR=/usr/local/lib64
+                   else
+                           MYSQL_LIBDIR=/usr/local/lib
+                   fi
+                   MYSQL_BINDIR=/usr/local/bin
+           else
+              AC_MSG_RESULT(no)
+              AC_MSG_ERROR(Unable to find mysql.h in standard locations)
+           fi
         else
-                if test -f $withval/include/mysql/mysql.h; then
-                        MYSQL_INCDIR=$withval/include/mysql
-                        MYSQL_LIBDIR=$withval/lib/mysql
-                        MYSQL_BINDIR=$withval/bin
-                elif test -f $withval/include/mysql.h; then
-                        MYSQL_INCDIR=$withval/include
-                        MYSQL_LIBDIR=$withval/lib
-                        MYSQL_BINDIR=$withval/bin
-                else
-                   AC_MSG_RESULT(no)
-                   AC_MSG_ERROR(Invalid MySQL directory $withval - unable to find mysql.h under $withval)
-                fi
+           if test -f $withval/include/mysql/mysql.h; then
+              MYSQL_INCDIR=$withval/include/mysql
+              if test -f $withval/lib64/mysql/libmysqlclient.a; then
+                 MYSQL_LIBDIR=$withval/lib64/mysql
+              else
+                 MYSQL_LIBDIR=$withval/lib/mysql
+                 # Solaris ...
+                 if test -f $withval/lib/libmysqlclient.so; then
+                    MYSQL_LIBDIR=$withval/lib
+                 fi
+              fi
+              MYSQL_BINDIR=$withval/bin
+           elif test -f $withval/include/mysql.h; then
+              MYSQL_INCDIR=$withval/include
+              if test -f "$withval/lib64/libmysqlclient.a"; then
+                 MYSQL_LIBDIR=$withval/lib64
+              else
+                 MYSQL_LIBDIR=$withval/lib
+              fi
+              MYSQL_BINDIR=$withval/bin
+           else
+              AC_MSG_RESULT(no)
+              AC_MSG_ERROR(Invalid MySQL directory $withval - unable to find mysql.h under $withval)
+           fi
         fi
     SQL_INCLUDE=-I$MYSQL_INCDIR
-    if test -f $MYSQL_LIBDIR/libmysqlclient_r.a; then
+    if test -f "$MYSQL_LIBDIR/libmysqlclient_r.a"; then
        SQL_LFLAGS="-L$MYSQL_LIBDIR -lmysqlclient_r -lz"
        AC_DEFINE(HAVE_THREAD_SAFE_MYSQL)
     else
@@ -72,7 +104,7 @@ AC_ARG_WITH(mysql,
 
 AC_ARG_WITH(embedded-mysql,
 [
-  --with-embedded-mysql[=DIR] Include MySQL support.  DIR is the MySQL base
+  --with-embedded-mysql@<:@=DIR@:>@ Include MySQL support.  DIR is the MySQL base
                           install directory, default is to search through
                           a number of common places for the MySQL files.],
 [
@@ -80,23 +112,43 @@ AC_ARG_WITH(embedded-mysql,
         if test "$withval" = "yes"; then
                 if test -f /usr/local/mysql/include/mysql/mysql.h; then
                         MYSQL_INCDIR=/usr/local/mysql/include/mysql
-                        MYSQL_LIBDIR=/usr/local/mysql/lib/mysql
+                        if test -d /usr/local/mysql/lib64/mysql; then
+                                MYSQL_LIBDIR=/usr/local/mysql/lib64/mysql
+                        else
+                                MYSQL_LIBDIR=/usr/local/mysql/lib/mysql
+                        fi
                         MYSQL_BINDIR=/usr/local/mysql/bin
                 elif test -f /usr/include/mysql/mysql.h; then
                         MYSQL_INCDIR=/usr/include/mysql
-                        MYSQL_LIBDIR=/usr/lib/mysql
-                        MYSQL_BINDIR=/usr/bin      
+                        if test -d /usr/lib64/mysql; then
+                                MYSQL_LIBDIR=/usr/lib64/mysql
+                        else
+                                MYSQL_LIBDIR=/usr/lib/mysql
+                        fi
+                        MYSQL_BINDIR=/usr/bin
                 elif test -f /usr/include/mysql.h; then
                         MYSQL_INCDIR=/usr/include
-                        MYSQL_LIBDIR=/usr/lib
+                        if test -d /usr/lib64; then
+                                MYSQL_LIBDIR=/usr/lib64
+                        else
+                                MYSQL_LIBDIR=/usr/lib
+                        fi
                         MYSQL_BINDIR=/usr/bin
                 elif test -f /usr/local/include/mysql/mysql.h; then
                         MYSQL_INCDIR=/usr/local/include/mysql
-                        MYSQL_LIBDIR=/usr/local/lib/mysql
+                        if test -d /usr/local/lib64/mysql; then
+                                MYSQL_LIBDIR=/usr/local/lib64/mysql
+                        else
+                                MYSQL_LIBDIR=/usr/local/lib/mysql
+                        fi
                         MYSQL_BINDIR=/usr/local/bin
                 elif test -f /usr/local/include/mysql.h; then
                         MYSQL_INCDIR=/usr/local/include
-                        MYSQL_LIBDIR=/usr/local/lib
+                        if test -d /usr/local/lib64; then
+                                MYSQL_LIBDIR=/usr/local/lib64
+                        else
+                                MYSQL_LIBDIR=/usr/local/lib
+                        fi
                         MYSQL_BINDIR=/usr/local/bin
                 else
                    AC_MSG_RESULT(no)
@@ -105,11 +157,19 @@ AC_ARG_WITH(embedded-mysql,
         else
                 if test -f $withval/include/mysql/mysql.h; then
                         MYSQL_INCDIR=$withval/include/mysql
-                        MYSQL_LIBDIR=$withval/lib/mysql
+                        if test -d $withval/lib64/mysql; then
+                                MYSQL_LIBDIR=$withval/lib64/mysql
+                        else
+                                MYSQL_LIBDIR=$withval/lib/mysql
+                        fi
                         MYSQL_BINDIR=$withval/bin
                 elif test -f $withval/include/mysql.h; then
                         MYSQL_INCDIR=$withval/include
-                        MYSQL_LIBDIR=$withval/lib
+                        if test -d $withval/lib64; then
+                                MYSQL_LIBDIR=$withval/lib64
+                        else
+                                MYSQL_LIBDIR=$withval/lib
+                        fi
                         MYSQL_BINDIR=$withval/bin
                 else
                    AC_MSG_RESULT(no)
@@ -148,7 +208,7 @@ db_found=no
 AC_MSG_CHECKING(for SQLite support)
 AC_ARG_WITH(sqlite,
 [
-  --with-sqlite[=DIR]     Include SQLite support.  DIR is the SQLite base
+  --with-sqlite@<:@=DIR@:>@     Include SQLite support.  DIR is the SQLite base
                           install directory, default is to search through
                           a number of common places for the SQLite files.],
 [
@@ -156,15 +216,27 @@ AC_ARG_WITH(sqlite,
      if test "$withval" = "yes"; then
         if test -f /usr/local/include/sqlite.h; then
            SQLITE_INCDIR=/usr/local/include
-           SQLITE_LIBDIR=/usr/local/lib
+           if test -d /usr/local/lib64; then
+              SQLITE_LIBDIR=/usr/local/lib64
+           else
+              SQLITE_LIBDIR=/usr/local/lib
+           fi
            SQLITE_BINDIR=/usr/local/bin
         elif test -f /usr/include/sqlite.h; then
            SQLITE_INCDIR=/usr/include
-           SQLITE_LIBDIR=/usr/lib
+           if test -d /usr/lib64; then
+              SQLITE_LIBDIR=/usr/lib64
+           else
+              SQLITE_LIBDIR=/usr/lib
+           fi
            SQLITE_BINDIR=/usr/bin      
         elif test -f $prefix/include/sqlite.h; then
            SQLITE_INCDIR=$prefix/include
-           SQLITE_LIBDIR=$prefix/lib
+           if test -d $prefix/lib64; then
+              SQLITE_LIBDIR=$prefix/lib64
+           else
+              SQLITE_LIBDIR=$prefix/lib
+           fi
            SQLITE_BINDIR=$prefix/bin      
         else
            AC_MSG_RESULT(no)
@@ -177,7 +249,11 @@ AC_ARG_WITH(sqlite,
            SQLITE_BINDIR=$withval
         elif test -f $withval/include/sqlite.h; then
            SQLITE_INCDIR=$withval/include
-           SQLITE_LIBDIR=$withval/lib
+           if test -d $withval/lib64; then
+              SQLITE_LIBDIR=$withval/lib64
+           else
+              SQLITE_LIBDIR=$withval/lib
+           fi
            SQLITE_BINDIR=$withval/bin
         else
            AC_MSG_RESULT(no)
@@ -213,7 +289,7 @@ db_found=no
 AC_MSG_CHECKING(for SQLite3 support)
 AC_ARG_WITH(sqlite3,
 [
-  --with-sqlite3[=DIR]    Include SQLite3 support.  DIR is the SQLite3 base
+  --with-sqlite3@<:@=DIR@:>@    Include SQLite3 support.  DIR is the SQLite3 base
                           install directory, default is to search through
                           a number of common places for the SQLite3 files.],
 [
@@ -221,15 +297,27 @@ AC_ARG_WITH(sqlite3,
      if test "$withval" = "yes"; then
         if test -f /usr/local/include/sqlite3.h; then
            SQLITE_INCDIR=/usr/local/include
-           SQLITE_LIBDIR=/usr/local/lib
+           if test -d /usr/local/lib64; then
+              SQLITE_LIBDIR=/usr/local/lib64
+           else
+              SQLITE_LIBDIR=/usr/local/lib
+           fi
            SQLITE_BINDIR=/usr/local/bin
         elif test -f /usr/include/sqlite3.h; then
            SQLITE_INCDIR=/usr/include
-           SQLITE_LIBDIR=/usr/lib
+           if test -d /usr/lib64; then
+              SQLITE_LIBDIR=/usr/lib64
+           else
+              SQLITE_LIBDIR=/usr/lib
+           fi
            SQLITE_BINDIR=/usr/bin      
         elif test -f $prefix/include/sqlite3.h; then
            SQLITE_INCDIR=$prefix/include
-           SQLITE_LIBDIR=$prefix/lib
+           if test -d $prefix/lib64; then
+              SQLITE_LIBDIR=$prefix/lib64
+           else
+              SQLITE_LIBDIR=$prefix/lib
+           fi
            SQLITE_BINDIR=$prefix/bin      
         else
            AC_MSG_RESULT(no)
@@ -242,7 +330,11 @@ AC_ARG_WITH(sqlite3,
            SQLITE_BINDIR=$withval
         elif test -f $withval/include/sqlite3.h; then
            SQLITE_INCDIR=$withval/include
-           SQLITE_LIBDIR=$withval/lib
+           if test -d $withval/lib64; then
+              SQLITE_LIBDIR=$withval/lib64
+           else
+              SQLITE_LIBDIR=$withval/lib
+           fi
            SQLITE_BINDIR=$withval/bin
         else
            AC_MSG_RESULT(no)
@@ -279,7 +371,7 @@ AC_DEFUN(BA_CHECK_POSTGRESQL_DB,
 db_found=no
 AC_MSG_CHECKING(for PostgreSQL support)
 AC_ARG_WITH(postgresql,
-[  --with-postgresql[=DIR]      Include PostgreSQL support.  DIR is the PostgreSQL
+[  --with-postgresql@<:@=DIR@:>@      Include PostgreSQL support.  DIR is the PostgreSQL
                           base install directory, defaults to /usr/local/pgsql],
 [
   if test "$withval" != "no"; then
@@ -295,19 +387,35 @@ AC_ARG_WITH(postgresql,
               POSTGRESQL_BINDIR=`"$PG_CONFIG" --bindir`
           elif test -f /usr/local/include/libpq-fe.h; then
               POSTGRESQL_INCDIR=/usr/local/include
-              POSTGRESQL_LIBDIR=/usr/local/lib
+              if test -d /usr/local/lib64; then
+                 POSTGRESQL_LIBDIR=/usr/local/lib64
+              else
+                 POSTGRESQL_LIBDIR=/usr/local/lib
+              fi
               POSTGRESQL_BINDIR=/usr/local/bin
           elif test -f /usr/include/libpq-fe.h; then
               POSTGRESQL_INCDIR=/usr/include
-              POSTGRESQL_LIBDIR=/usr/lib
+              if test -d /usr/lib64; then
+                 POSTGRESQL_LIBDIR=/usr/lib64
+              else
+                 POSTGRESQL_LIBDIR=/usr/lib
+              fi
               POSTGRESQL_BINDIR=/usr/bin
           elif test -f /usr/include/pgsql/libpq-fe.h; then
               POSTGRESQL_INCDIR=/usr/include/pgsql
-              POSTGRESQL_LIBDIR=/usr/lib/pgsql
+              if test -d /usr/lib64/pgsql; then
+                 POSTGRESQL_LIBDIR=/usr/lib64/pgsql
+              else
+                 POSTGRESQL_LIBDIR=/usr/lib/pgsql
+              fi
               POSTGRESQL_BINDIR=/usr/bin
           elif test -f /usr/include/postgresql/libpq-fe.h; then
               POSTGRESQL_INCDIR=/usr/include/postgresql
-              POSTGRESQL_LIBDIR=/usr/lib/postgresql
+              if test -d /usr/lib64/postgresql; then
+                 POSTGRESQL_LIBDIR=/usr/lib64/postgresql
+              else
+                 POSTGRESQL_LIBDIR=/usr/lib/postgresql
+              fi
               POSTGRESQL_BINDIR=/usr/bin
           else
               AC_MSG_RESULT(no)
@@ -319,7 +427,11 @@ AC_ARG_WITH(postgresql,
           POSTGRESQL_BINDIR=$withval/bin
       elif test -f $withval/include/postgresql/libpq-fe.h; then
           POSTGRESQL_INCDIR=$withval/include/postgresql
-          POSTGRESQL_LIBDIR=$withval/lib
+     if test -d $withval/lib64; then
+         POSTGRESQL_LIBDIR=$withval/lib64
+     else
+         POSTGRESQL_LIBDIR=$withval/lib
+     fi
           POSTGRESQL_BINDIR=$withval/bin
       else
           AC_MSG_RESULT(no)
@@ -367,7 +479,7 @@ fi
 AC_MSG_CHECKING(for Berkeley DB support)
 AC_ARG_WITH(berkeleydb,
 [
-  --with-berkeleydb[=DIR] Include Berkeley DB support.  DIR is the Berkeley DB base
+  --with-berkeleydb@<:@=DIR@:>@ Include Berkeley DB support.  DIR is the Berkeley DB base
                           install directory, default is to search through
                           a number of common places for the DB files.],
 [
@@ -375,7 +487,11 @@ AC_ARG_WITH(berkeleydb,
         if test "$withval" = "yes"; then
                 if test -f /usr/include/db.h; then
                         BERKELEYDB_INCDIR=/usr/include
-                        BERKELEYDB_LIBDIR=/usr/lib
+                        if test -d /usr/lib64; then
+                                BERKELEYDB_LIBDIR=/usr/lib64
+                        else
+                                BERKELEYDB_LIBDIR=/usr/lib
+                        fi
                 else
                 AC_MSG_RESULT(no)
                 AC_MSG_ERROR(Invalid Berkeley DB directory - unable to find db.h)
@@ -383,7 +499,11 @@ AC_ARG_WITH(berkeleydb,
         else
                 if test -f $withval/include/db.h; then
                         BERKELEYDB_INCDIR=$withval/include
-                        BERKELEYDBL_LIBDIR=$withval/lib
+                        if test -d $withval/lib64; then
+                                BERKELEYDB_LIBDIR=$withval/lib64
+                        else
+                                BERKELEYDB_LIBDIR=$withval/lib
+                        fi
                 else
                 AC_MSG_RESULT(no)
                 AC_MSG_ERROR(Invalid Berkeley DB directory - unable to find db.h under $withval)
@@ -416,7 +536,7 @@ fi
 
 AC_MSG_CHECKING(for mSQL support)
 AC_ARG_WITH(msql,
-[  --with-msql[=DIR]       Include mSQL support.  DIR is the mSQL base
+[  --with-msql@<:@=DIR@:>       Include mSQL support.  DIR is the mSQL base
                           install directory, defaults to /usr/local/Hughes.],
 [
   if test "$withval" != "no"; then
@@ -427,10 +547,18 @@ AC_ARG_WITH(msql,
 
     if test "$withval" = "yes"; then
         MSQL_INCDIR=/usr/local/Hughes/include
-        MSQL_LIBDIR=/usr/local/Hughes/lib
+        if test -d /usr/local/Hughes/lib64; then
+            MSQL_LIBDIR=/usr/local/Hughes/lib64
+        else
+            MSQL_LIBDIR=/usr/local/Hughes/lib
+        fi
     else
         MSQL_INCDIR=$withval/include
-        MSQL_LIBDIR=$withval/lib
+        if test -d $withval/lib64; then
+            MSQL_LIBDIR=$withval/lib64
+        else
+            MSQL_LIBDIR=$withval/lib
+        fi
     fi
     MSQL_INCLUDE=-I$MSQL_INCDIR
     MSQL_LFLAGS="-L$MSQL_LIBDIR -lmsql"
@@ -450,7 +578,7 @@ AC_SUBST(MSQL_INCLUDE)
 
 AC_MSG_CHECKING(for iODBC support)
 AC_ARG_WITH(iodbc,
-[  --with-iodbc[=DIR]      Include iODBC support.  DIR is the iODBC base
+[  --with-iodbc@<:@=DIR@:>      Include iODBC support.  DIR is the iODBC base
                           install directory, defaults to /usr/local.],
 [
         if test "$withval" != "no"; then
@@ -467,7 +595,11 @@ AC_ARG_WITH(iodbc,
         if test "$withval" != "no"; then
                 if test -f $withval/include/isql.h; then
                         IODBC_INCDIR=$withval/include
-                        IODBC_LIBDIR=$withval/lib
+                        if test -d $withval/lib64; then
+                                IODBC_LIBDIR=$withval/lib64
+                        else
+                                IODBC_LIBDIR=$withval/lib
+                        fi
                 else
                         AC_MSG_RESULT(no)
                         AC_MSG_ERROR(Invalid iODBC directory - unable to find isql.h)
@@ -487,7 +619,7 @@ AC_SUBST(IODBC_INCLUDE)
 
 AC_MSG_CHECKING(for unixODBC support)
 AC_ARG_WITH(unixODBC,
-[  --with-unixODBC[=DIR]   Include unixODBC support.  DIR is the unixODBC base
+[  --with-unixODBC@<:@=DIR@:>   Include unixODBC support.  DIR is the unixODBC base
                           install directory, defaults to /usr/local.],
 [
         if test "$withval" != "no"; then
@@ -504,7 +636,11 @@ AC_ARG_WITH(unixODBC,
         if test "$withval" != "no"; then
                 if test -f $withval/include/sql.h; then
                         UNIXODBC_INCDIR=$withval/include
-                        UNIXODBC_LIBDIR=$withval/lib
+                        if test -d $withval/lib64; then
+                                UNIXODBC_LIBDIR=$withval/lib64
+                        else
+                                UNIXODBC_LIBDIR=$withval/lib
+                        fi
                 else
                         AC_MSG_RESULT(no)
                         AC_MSG_ERROR(Invalid unixODBC directory - unable to find sql.h)
@@ -524,7 +660,7 @@ AC_SUBST(UNIXODBC_INCLUDE)
 
 AC_MSG_CHECKING(for Solid support)
 AC_ARG_WITH(solid,
-[  --with-solid[=DIR]      Include Solid support.  DIR is the Solid base
+[  --with-solid@<:@=DIR@:>      Include Solid support.  DIR is the Solid base
                           install directory, defaults to /usr/local.],
 [
         if test "$withval" != "no"; then
@@ -541,7 +677,11 @@ AC_ARG_WITH(solid,
         if test "$withval" != "no"; then
                 if test -f $withval/include/cli0cli.h; then
                         SOLID_INCDIR=$withval/include
-                        SOLID_LIBDIR=$withval/lib
+                        if test -d $withval/lib64; then
+                                SOLID_LIBDIR=$withval/lib64
+                        else
+                                SOLID_LIBDIR=$withval/lib
+                        fi
                 else
                         AC_MSG_RESULT(no)
                         AC_MSG_ERROR(Invalid Solid directory - unable to find cli0cli.h)
@@ -560,7 +700,7 @@ AC_SUBST(SOLID_INCLUDE)
 
 AC_MSG_CHECKING(for OpenLink ODBC support)
 AC_ARG_WITH(openlink,
-[  --with-openlink[=DIR]   Include OpenLink ODBC support. 
+[  --with-openlink@<:@=DIR@:>   Include OpenLink ODBC support. 
                           DIR is the base OpenLink ODBC install directory],
 [
   if test "$withval" != "no"; then
@@ -573,13 +713,25 @@ AC_ARG_WITH(openlink,
 
                 if test -f /usr/local/virtuoso-ent/odbcsdk/include/isql.h; then
                         VIRT_INCDIR=/usr/local/virtuoso-ent/odbcsdk/include/
-                        VIRT_LIBDIR=/usr/local/virtuoso-ent/odbcsdk/lib/
+                        if test -d /usr/local/virtuoso-ent/odbcsdk/lib64/; then
+                                VIRT_LIBDIR=/usr/local/virtuoso-ent/odbcsdk/lib64/
+                        else
+                                VIRT_LIBDIR=/usr/local/virtuoso-ent/odbcsdk/lib/
+                        fi
                 elif test -f /usr/local/virtuoso-lite/odbcsdk/include/isql.h; then
                         VIRT_INCDIR=/usr/local/virtuoso-lite/odbcsdk/include/
-                        VIRT_LIBDIR=/usr/local/virtuoso-lite/odbcsdk/lib/
+                        if test -d /usr/local/virtuoso-lite/odbcsdk/lib64/; then
+                                VIRT_LIBDIR=/usr/local/virtuoso-lite/odbcsdk/lib64/
+                        else
+                                VIRT_LIBDIR=/usr/local/virtuoso-lite/odbcsdk/lib/
+                        fi
                 elif test -f /usr/local/virtuoso/odbcsdk/include/isql.h; then
                         VIRT_INCDIR=/usr/local/virtuoso/odbcsdk/include/
-                        VIRT_LIBDIR=/usr/local/virtuoso/odbcsdk/lib/
+                        if test -d /usr/local/virtuoso/odbcsdk/lib64/; then
+                                VIRT_LIBDIR=/usr/local/virtuoso/odbcsdk/lib64/
+                        else
+                                VIRT_LIBDIR=/usr/local/virtuoso/odbcsdk/lib/
+                        fi
                 else
                 AC_MSG_RESULT(no)
                 AC_MSG_ERROR(Invalid OpenLink ODBC directory - unable to find isql.h)
@@ -587,10 +739,18 @@ AC_ARG_WITH(openlink,
         else
                 if test -f $withval/odbcsdk/include/isql.h; then
                         VIRT_INCDIR=$withval/odbcsdk/include/
-                        VIRT_LIBDIR=$withval/odbcsdk/lib/
+                        if test -d $withval/odbcsdk/lib64/; then
+                                VIRT_LIBDIR=$withval/odbcsdk/lib64/
+                        else
+                                VIRT_LIBDIR=$withval/odbcsdk/lib/
+                        fi
                 elif test -f $withval/include/isql.h; then
                         VIRT_INCDIR=$withval/include/
-                        VIRT_LIBDIR=$withval/lib/
+                        if test -d $withval/lib64/; then
+                                VIRT_LIBDIR=$withval/lib64/
+                        else
+                                VIRT_LIBDIR=$withval/lib/
+                        fi
                 else
                 AC_MSG_RESULT(no)
                 AC_MSG_ERROR(Invalid OpenLink ODBC directory - unable to find isql.h under $withval)
@@ -615,7 +775,7 @@ AC_SUBST(VIRT_INCLUDE)
 
 AC_MSG_CHECKING(for EasySoft ODBC support)
 AC_ARG_WITH(easysoft,
-[  --with-easysoft[=DIR]   Include EasySoft ODBC support. 
+[  --with-easysoft@<:@=DIR@:>   Include EasySoft ODBC support. 
                           DIR is the base EasySoft ODBC install directory],
 [
   if test "$withval" != "no"; then
@@ -628,7 +788,11 @@ AC_ARG_WITH(easysoft,
 
                 if test -f /usr/local/easysoft/oob/client/include/sql.h; then
                         EASYSOFT_INCDIR=/usr/local/easysoft/oob/client/include/
-                        EASYSOFT_LFLAGS="-L/usr/local/easysoft/oob/client/lib/ -L/usr/local/easysoft/lib"
+                        if test -d /usr/local/easysoft/oob/client/lib64/; then
+                                EASYSOFT_LFLAGS="-L/usr/local/easysoft/oob/client/lib64/ -L/usr/local/easysoft/lib64"
+                        else
+                                EASYSOFT_LFLAGS="-L/usr/local/easysoft/oob/client/lib/ -L/usr/local/easysoft/lib"
+                        fi
                 else
                 AC_MSG_RESULT(no)
                 AC_MSG_ERROR(Invalid EasySoft ODBC directory - unable to find sql.h)
@@ -636,7 +800,11 @@ AC_ARG_WITH(easysoft,
         else
                 if test -f $withval/easysoft/oob/client/include/sql.h; then
                         EASYSOFT_INCDIR=$withval/easysoft/oob/client/include/
-                        EASYSOFT_LFLAGS="-L$withval/easysoft/oob/client/lib/ -L$withval/easysoft/lib"
+                        if test -d $withval/easysoft/oob/client/lib64/; then
+                                EASYSOFT_LFLAGS="-L$withval/easysoft/oob/client/lib64/ -L$withval/easysoft/lib64"
+                        else
+                                EASYSOFT_LFLAGS="-L$withval/easysoft/oob/client/lib/ -L$withval/easysoft/lib"
+                        fi
                 else
                 AC_MSG_RESULT(no)
                 AC_MSG_ERROR(Invalid EasySoft ODBC directory - unable to find sql.h under $withval)
@@ -662,7 +830,7 @@ AC_SUBST(EASYSOFT_INCLUDE)
 
 AC_MSG_CHECKING(for InterBase support)
 AC_ARG_WITH(ibase,
-[  --with-ibase[=DIR]      Include InterBase support.  DIR is the InterBase
+[  --with-ibase@<:@=DIR@:>      Include InterBase support.  DIR is the InterBase
                           install directory, defaults to /usr/interbase.],
 [
         if test "$withval" != "no"; then
@@ -679,7 +847,11 @@ AC_ARG_WITH(ibase,
         if test "$withval" != "no"; then
                 if test -f $withval/include/ibase.h; then
                         IBASE_INCDIR=$withval/include
-                        IBASE_LIBDIR=$withval/lib
+                        if test -d $withval/lib64; then
+                                IBASE_LIBDIR=$withval/lib64
+                        else
+                                IBASE_LIBDIR=$withval/lib
+                        fi
                 else
                         AC_MSG_RESULT(no)
                         AC_MSG_ERROR(Invalid InterBase directory - unable to find ibase.h)
@@ -698,7 +870,7 @@ AC_SUBST(IBASE_INCLUDE)
 
 AC_MSG_CHECKING(for Oracle8 support)
 AC_ARG_WITH(oracle8,
-[  --with-oracle8[=DIR]    Include Oracle8 support.  DIR is the Oracle
+[  --with-oracle8@<:@=DIR@:>    Include Oracle8 support.  DIR is the Oracle
                           home directory, defaults to $ORACLE_HOME or
                           /oracle8/app/oracle/product/8.0.5.],
 [
@@ -722,13 +894,25 @@ AC_ARG_WITH(oracle8,
                         ORACLE8_INCDIR2=$withval/rdbms/public/:
                         ORACLE8_INCDIR3=$withval/network/public/
                         ORACLE8_INCDIR4=$withval/plsql/public/
-                        ORACLE8_LIBDIR1=$withval/lib
-                        ORACLE8_LIBDIR2=$withval/rdbms/lib
+                        if test -d $withval/lib64; then
+                                ORACLE8_LIBDIR1=$withval/lib64
+                        else
+                                ORACLE8_LIBDIR1=$withval/lib
+                        fi
+                        if test -d $withval/rdbms/lib64; then
+                               ORACLE8_LIBDIR2=$withval/rdbms/lib64
+                        else
+                                ORACLE8_LIBDIR2=$withval/rdbms/lib
+                        fi
                 else
                         AC_MSG_RESULT(no)
                         AC_MSG_ERROR(Invalid ORACLE directory - unable to find oci.h)
                 fi
-                ORACLE8_LFLAGS="-L$ORACLE8_LIBDIR1 -L$ORACLE8_LIBDIR2 $withval/lib/libclntsh.so -lmm -lepc -lclient -lvsn -lcommon -lgeneric -lcore4 -lnlsrtl3 -lnsl -lm -ldl -lnetv2 -lnttcp -lnetwork -lncr -lsql"
+                if test -f $withval/lib64/libclntsh.so; then
+                        ORACLE8_LFLAGS="-L$ORACLE8_LIBDIR1 -L$ORACLE8_LIBDIR2 $withval/lib64/libclntsh.so -lmm -lepc -lclient -lvsn -lcommon -lgeneric -lcore4 -lnlsrtl3 -lnsl -lm -ldl -lnetv2 -lnttcp -lnetwork -lncr -lsql"
+                else
+                        ORACLE8_LFLAGS="-L$ORACLE8_LIBDIR1 -L$ORACLE8_LIBDIR2 $withval/lib/libclntsh.so -lmm -lepc -lclient -lvsn -lcommon -lgeneric -lcore4 -lnlsrtl3 -lnsl -lm -ldl -lnetv2 -lnttcp -lnetwork -lncr -lsql"
+                fi
                 ORACLE8_INCLUDE="-I$ORACLE8_INCDIR1 -I$ORACLE8_INCDIR2 -I$ORACLE8_INCDIR3 -I$ORACLE8_INCDIR4"
                 AC_DEFINE(HAVE_ORACLE8)
                 AC_MSG_RESULT(yes)
@@ -743,7 +927,7 @@ AC_SUBST(ORACLE8_INCLUDE)
 
 AC_MSG_CHECKING(for Oracle7 support)
 AC_ARG_WITH(oracle7,
-[  --with-oracle7[=DIR]    Include Oracle 7.3 support.  DIR is the Oracle
+[  --with-oracle7@<:@=DIR@:>    Include Oracle 7.3 support.  DIR is the Oracle
                           home directory, defaults to 
                           ORACLE_HOME [$ORACLE_HOME]],
 [
@@ -761,8 +945,16 @@ AC_ARG_WITH(oracle7,
         if test "$withval" != "no"; then
                 if test -f $withval/rdbms/demo/ocidfn.h; then
                         ORACLE7_INCDIR=$withval/rdbms/demo/
-                        ORACLE7_LIBDIR1=$withval/lib
-                        ORACLE7_LIBDIR2=$withval/rdbms/lib
+                        if test -d $withval/lib64; then
+                                ORACLE7_LIBDIR1=$withval/lib64
+                        else
+                                ORACLE7_LIBDIR1=$withval/lib
+                        fi
+                        if test -d $withval/rdbms/lib64; then
+                                ORACLE7_LIBDIR2=$withval/rdbms/lib64
+                        else
+                                ORACLE7_LIBDIR2=$withval/rdbms/lib
+                        fi
                 else
                         AC_MSG_RESULT(no)
                         AC_MSG_ERROR(Invalid ORACLE directory - unable to find ocidfn.h)
@@ -772,9 +964,15 @@ AC_ARG_WITH(oracle7,
         if test -f "$ORACLEINST_TOP/rdbms/lib/sysliblist"
         then
           ORA_SYSLIB="`cat $ORACLEINST_TOP/rdbms/lib/sysliblist`"
+        elif test -f "$ORACLEINST_TOP/rdbms/lib64/sysliblist"
+        then
+          ORA_SYSLIB="`cat $ORACLEINST_TOP/rdbms/lib64/sysliblist`"
         elif test -f "$ORACLEINST_TOP/lib/sysliblist"
             then
           ORA_SYSLIB="`cat $ORACLEINST_TOP/lib/sysliblist`"
+        elif test -f "$ORACLEINST_TOP/lib64/sysliblist"
+            then
+          ORA_SYSLIB="`cat $ORACLEINST_TOP/lib64/sysliblist`"
         else
           ORA_SYSLIB="-lm"
         fi

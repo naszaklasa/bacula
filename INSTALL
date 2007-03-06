@@ -2,7 +2,7 @@
 Using GNU autoconfig
 --------------------------------------------------------------------------
   1.    Read the Compiling and Installing section of the HTML manual
-        in the "doc" directory.
+        at http://www.bacula.org
 
   2.    Run   ./configure   to generate config.h and the various Makefiles.
         ./configure --help   gives a list of possible options.  Note, in
@@ -32,16 +32,15 @@ Using GNU autoconfig
             --with-pid-dir=$HOME/bacula/bin/working \
             --with-subsys-dir=$HOME/bacula/bin/working \
             --enable-smartalloc \
-            --with-mysql=$HOME/mysql \
+            --with-mysql \
             --with-working-dir=$HOME/bacula/bin/working \
             --with-dump-email=your@address.com \
             --with-job-email=your@address.com \
-            --with-smtp-host=localhost \
-            --with-baseport=9101
+            --with-smtp-host=localhost
 
 
         See the README for a few additional details and the online manual
-        for all the gory details:  http://www.bacula.org/html-manual
+        for all the gory details:  http://www.bacula.org/rel-manual
 
   3.    Carefully review the output from ./configure.  If it is not
         what you want, re-run the ./configure.  Often ./configure "caches"

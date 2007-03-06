@@ -3,31 +3,39 @@
  *
  *    Kern Sibbald, August MMI
  *
- *   Version $Id: status.c,v 1.51.2.4 2006/03/14 21:41:40 kerns Exp $
+ *   Version $Id: status.c,v 1.65 2006/11/21 17:03:45 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2001-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "filed.h"
-
-extern char my_name[];
-extern int num_jobs_run;
-extern time_t daemon_start_time;
-extern bool get_trace(void);
 
 /* Forward referenced functions */
 static void  list_terminated_jobs(void sendit(const char *msg, int len, void *sarg), void *arg);
@@ -40,7 +48,7 @@ static char qstatus[] = ".status %s\n";
 static char OKqstatus[]   = "2000 OK .status\n";
 static char DotStatusJob[] = "JobId=%d JobStatus=%c JobErrors=%d\n";
 
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
+#if defined(HAVE_WIN32)
 static int privs = 0;
 #endif
 #ifdef WIN32_VSS
@@ -54,16 +62,16 @@ extern VSSClient *g_pVSSClient;
 /*
  * General status generator
  */
-static void do_status(void sendit(const char *msg, int len, void *sarg), void *arg)
+void output_status(void sendit(const char *msg, int len, void *sarg), void *arg)
 {
    int sec, bps;
    char *msg, b1[32], b2[32], b3[32], b4[32];
-   int found, len;
+   int len;
+   bool found = false;
    JCR *njcr;
    char dt[MAX_TIME_LENGTH];
 
    msg = (char *)get_pool_memory(PM_MESSAGE);
-   found = 0;
    len = Mmsg(msg, _("%s Version: %s (%s) %s %s %s %s\n"), 
               my_name, VERSION, BDATE, VSS, HOST_OS, DISTNAME, DISTVER);
    sendit(msg, len, arg);
@@ -71,7 +79,7 @@ static void do_status(void sendit(const char *msg, int len, void *sarg), void *a
    len = Mmsg(msg, _("Daemon started %s, %d Job%s run since started.\n"),
         dt, num_jobs_run, num_jobs_run == 1 ? "" : "s");
    sendit(msg, len, arg);
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
+#if defined(HAVE_WIN32)
    if (debug_level > 0) {
       if (!privs) {
          privs = enable_backup_privileges(NULL, 1);
@@ -88,7 +96,6 @@ static void do_status(void sendit(const char *msg, int len, void *sarg), void *a
       len = Mmsg(msg, " %sWUL,%sWMKD,%sWOP,%sGFAA,%sGFAW,%sGFAEA,%sGFAEW,%sSFAA,%sSFAW,%sBR,%sBW,%sSPSP,\n",
                  p_wunlink?"":"!",
                  p_wmkdir?"":"!",
-                 p_wopen?"":"!",
                  p_GetFileAttributesA?"":"!",
                  p_GetFileAttributesW?"":"!",
                  p_GetFileAttributesExA?"":"!",
@@ -117,25 +124,21 @@ static void do_status(void sendit(const char *msg, int len, void *sarg), void *a
      sendit(msg, len, arg);
    }
 #endif
-   if (debug_level > 0) {
-      len = Mmsg(msg, _(" Heap: bytes=%s max_bytes=%s bufs=%s max_bufs=%s\n"),
-            edit_uint64_with_commas(sm_bytes, b1),
-            edit_uint64_with_commas(sm_max_bytes, b2),
-            edit_uint64_with_commas(sm_buffers, b3),
-            edit_uint64_with_commas(sm_max_buffers, b4));
-      sendit(msg, len, arg);
-      len = Mmsg(msg, _(" Sizeof: off_t=%d size_t=%d debug=%d trace=%d\n"),
-            sizeof(off_t), sizeof(size_t), debug_level, get_trace());
-      sendit(msg, len, arg);
-   }
-
-   list_terminated_jobs(sendit, arg);
+   len = Mmsg(msg, _(" Heap: bytes=%s max_bytes=%s bufs=%s max_bufs=%s\n"),
+         edit_uint64_with_commas(sm_bytes, b1),
+         edit_uint64_with_commas(sm_max_bytes, b2),
+         edit_uint64_with_commas(sm_buffers, b3),
+         edit_uint64_with_commas(sm_max_buffers, b4));
+   sendit(msg, len, arg);
+   len = Mmsg(msg, _(" Sizeof: boffset_t=%d size_t=%d debug=%d trace=%d\n"),
+         sizeof(boffset_t), sizeof(size_t), debug_level, get_trace());
+   sendit(msg, len, arg);
 
    /*
     * List running jobs
     */
    Dmsg0(1000, "Begin status jcr loop.\n");
-   len = Mmsg(msg, _("Running Jobs:\n"));
+   len = Mmsg(msg, _("\nRunning Jobs:\n"));
    sendit(msg, len, arg);
    char *vss = "";
 #ifdef WIN32_VSS
@@ -178,7 +181,7 @@ static void do_status(void sendit(const char *msg, int len, void *sarg), void *a
          sendit(msg, len, arg);
       }
 
-      found = 1;
+      found = true;
       if (njcr->store_bsock) {
          len = Mmsg(msg, "    SDReadSeqNo=%" lld " fd=%d\n",
              njcr->store_bsock->read_seqno, njcr->store_bsock->fd);
@@ -190,13 +193,14 @@ static void do_status(void sendit(const char *msg, int len, void *sarg), void *a
    }
    endeach_jcr(njcr);
 
-   Dmsg0(1000, "Begin status jcr loop.\n");
    if (!found) {
       len = Mmsg(msg, _("No Jobs running.\n"));
       sendit(msg, len, arg);
    }
-   len = Mmsg(msg, _("====\n"));
-   sendit(msg, len, arg);
+   sendit(_("====\n"), 5, arg);
+
+   list_terminated_jobs(sendit, arg);
+
    free_pool_memory(msg);
 }
 
@@ -207,16 +211,15 @@ static void  list_terminated_jobs(void sendit(const char *msg, int len, void *sa
    struct s_last_job *je;
    const char *msg;
 
+   msg =  _("\nTerminated Jobs:\n");
+   sendit(msg, strlen(msg), arg);
+
    if (last_jobs->size() == 0) {
-      msg = _("No Terminated Jobs.\n");
-      sendit(msg, strlen(msg), arg);
+      sendit(_("====\n"), 5, arg);
       return;
    }
    lock_last_jobs_list();
-   sendit("\n", 1, arg);               /* send separately */
-   msg =  _("Terminated Jobs:\n");
-   sendit(msg, strlen(msg), arg);
-   msg =  _(" JobId  Level     Files         Bytes  Status   Finished        Name \n");
+   msg =  _(" JobId  Level    Files      Bytes   Status   Finished        Name \n");
    sendit(msg, strlen(msg), arg);
    msg = _("======================================================================\n");
    sendit(msg, strlen(msg), arg);
@@ -265,11 +268,11 @@ static void  list_terminated_jobs(void sendit(const char *msg, int len, void *sa
             *p = 0;
          }
       }
-      bsnprintf(buf, sizeof(buf), _("%6d  %-6s %8s %14s %-7s  %-8s %s\n"),
+      bsnprintf(buf, sizeof(buf), _("%6d  %-6s %8s %10s  %-7s  %-8s %s\n"),
          je->JobId,
          level,
          edit_uint64_with_commas(je->JobFiles, b1),
-         edit_uint64_with_commas(je->JobBytes, b2),
+         edit_uint64_with_suffix(je->JobBytes, b2),
          termstat,
          dt, JobName);
       sendit(buf, strlen(buf), arg);
@@ -300,7 +303,7 @@ int status_cmd(JCR *jcr)
    BSOCK *user = jcr->dir_bsock;
 
    bnet_fsend(user, "\n");
-   do_status(bsock_sendit, (void *)user);
+   output_status(bsock_sendit, (void *)user);
 
    bnet_sig(user, BNET_EOD);
    return 1;
@@ -404,51 +407,16 @@ static const char *level_to_str(int level)
 }
 
 
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
-#include <windows.h>
-
+#if defined(HAVE_WIN32)
 int bacstat = 0;
-
-struct s_win32_arg {
-   HWND hwnd;
-   int idlist;
-};
 
 /*
  * Put message in Window List Box
  */
-static void win32_sendit(const char *msg, int len, void *marg)
-{
-   struct s_win32_arg *arg = (struct s_win32_arg *)marg;
-
-   if (len > 0 && msg[len-1] == '\n') {
-       // when compiling with visual studio some strings are read-only
-       // and cause access violations.  So we creat a tmp copy.
-       char *_msg = (char *)alloca(len);
-       bstrncpy(_msg, msg, len);
-       msg = _msg;
-   }
-   SendDlgItemMessage(arg->hwnd, arg->idlist, LB_ADDSTRING, 0, (LONG)msg);
-
-}
-
-void FillStatusBox(HWND hwnd, int idlist)
-{
-   struct s_win32_arg arg;
-
-   arg.hwnd = hwnd;
-   arg.idlist = idlist;
-
-   /* Empty box */
-   for ( ; SendDlgItemMessage(hwnd, idlist, LB_DELETESTRING, 0, (LONG)0) > 0; )
-      { }
-   do_status(win32_sendit, (void *)&arg);
-}
-
 char *bac_status(char *buf, int buf_len)
 {
    JCR *njcr;
-   const char *termstat = _("Bacula Idle");
+   const char *termstat = _("Bacula Client: Idle");
    struct s_last_job *job;
    int stat = 0;                      /* Idle */
 
@@ -459,7 +427,7 @@ char *bac_status(char *buf, int buf_len)
    foreach_jcr(njcr) {
       if (njcr->JobId != 0) {
          stat = JS_Running;
-         termstat = _("Bacula Running");
+         termstat = _("Bacula Client: Running");
          break;
       }
    }
@@ -473,15 +441,15 @@ char *bac_status(char *buf, int buf_len)
       stat = job->JobStatus;
       switch (job->JobStatus) {
       case JS_Canceled:
-         termstat = _("Last Job Canceled");
+         termstat = _("Bacula Client: Last Job Canceled");
          break;
       case JS_ErrorTerminated:
       case JS_FatalError:
-         termstat = _("Last Job Failed");
+         termstat = _("Bacula Client: Last Job Failed");
          break;
       default:
          if (job->Errors) {
-            termstat = _("Last Job had Warnings");
+            termstat = _("Bacula Client: Last Job had Warnings");
          }
          break;
       }
@@ -495,4 +463,4 @@ done:
    return buf;
 }
 
-#endif /* HAVE_CYGWIN */
+#endif /* HAVE_WIN32 */

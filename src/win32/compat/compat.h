@@ -4,129 +4,91 @@
 // Copyright transferred from Raider Solutions, Inc to
 //   Kern Sibbald and John Walker by express permission.
 //
-// Copyright (C) 2004-2005 Kern Sibbald
-//
-//   This program is free software; you can redistribute it and/or
-//   modify it under the terms of the GNU General Public License as
-//   published by the Free Software Foundation; either version 2 of
-//   the License, or (at your option) any later version.
-//
-//   This program is distributed in the hope that it will be useful,
-//   but WITHOUT ANY WARRANTY; without even the implied warranty of
-//   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-//   General Public License for more details.
-//
-//   You should have received a copy of the GNU General Public
-//   License along with this program; if not, write to the Free
-//   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-//   MA 02111-1307, USA.
 /*
- *
  * Author          : Christopher S. Hull
  * Created On      : Fri Jan 30 13:00:51 2004
  * Last Modified By: Thorsten Engel
  * Last Modified On: Fri Apr 22 19:30:00 2004
  * Update Count    : 218
- * $Id: compat.h,v 1.24.2.1 2005/10/01 10:20:18 kerns Exp $
+ * $Id: compat.h,v 1.41 2006/11/27 10:03:05 kerns Exp $
  */
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
-#ifndef __COMPAT_H_
+#if !defined(__COMPAT_H_)
 #define __COMPAT_H_
+#if !defined(_STAT_H)
+#define _STAT_H       /* don't pull in MinGW stat.h */
+#define _STAT_DEFINED /* don't pull in MinGW stat.h */
+#endif
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1400) // VC8+
+#if defined(_MSC_VER) && (_MSC_VER >= 1400) // VC8+
 #pragma warning(disable : 4996) // Either disable all deprecation warnings,
 // #define _CRT_SECURE_NO_DEPRECATE // Or just turn off warnings about the newly deprecated CRT functions.
-#define HAVE_VC8
-#endif // VC8+
-
-#if (!defined HAVE_MINGW) && (!defined HAVE_VC8) && (!defined HAVE_WXCONSOLE)
+#elif !defined(HAVE_MINGW) && !defined(HAVE_WXCONSOLE)
 #define __STDC__ 1
 #endif
 
-#include <stdio.h>
-#include <basetsd.h>
-#include <stdarg.h>
-#include <sys/types.h>
-#include <process.h>
-#include <direct.h>
-#include <winsock2.h>
-#include <windows.h>
-#include <wincon.h>
-#include <winbase.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <conio.h>
-#include <process.h>
-#include <errno.h>
-#include <string.h>
-#include <time.h>
-#include <signal.h>
 #include <malloc.h>
-#include <setjmp.h>
-#include <direct.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <io.h>
-
-#if defined HAVE_MINGW
-#include <stdint.h>
-#include <sys/stat.h>
-#endif
-
-#include "getopt.h"
-
-#define HAVE_WIN32 1
-
-#ifndef HAVE_MINGW
-#ifdef HAVE_CYGWIN
-#undef HAVE_CYGWIN
-#else
-#endif //HAVE_CYGWIN
-#endif //HAVE_MINGW
 
 typedef UINT64 u_int64_t;
 typedef UINT64 uint64_t;
 typedef INT64 int64_t;
 typedef UINT32 uint32_t;
-typedef long int32_t;
 typedef INT64 intmax_t;
 typedef unsigned char uint8_t;
-typedef float float32_t;
 typedef unsigned short uint16_t;
 typedef signed short int16_t;
 typedef signed char int8_t;
+typedef int __daddr_t;
+#if !defined(HAVE_MINGW)
+typedef long int32_t;
+typedef float float32_t;
+typedef double float64_t;
+#endif
 
-#ifndef HAVE_VC8
+#if !defined(_MSC_VER) || (_MSC_VER < 1400) // VC8+
 typedef long time_t;
 #endif
 
-#if __STDC__
-#ifndef HAVE_MINGW
+#if __STDC__ && !defined(HAVE_MINGW)
 typedef _dev_t dev_t;
-#ifndef HAVE_WXCONSOLE
+#if !defined(HAVE_WXCONSOLE)
 typedef __int64 ino_t;
-typedef __int64 off_t;          /* STDC=1 means we can define this */
-#endif
-#endif
-#else
-typedef long _off_t;            /* must be same as sys/types.h */
-#endif
-
-#ifndef HAVE_MINGW
-#ifndef HAVE_WXCONSOLE
-typedef int BOOL;
-#define bool BOOL
 #endif
 #endif
 
-typedef double float64_t;
 typedef UINT32 u_int32_t;
 typedef unsigned char u_int8_t;
 typedef unsigned short u_int16_t;
 
-#ifndef HAVE_MINGW
+#if !defined(HAVE_MINGW)
 #undef uint32_t
 #endif
 
@@ -134,8 +96,8 @@ void sleep(int);
 
 typedef UINT32 key_t;
 
-#ifdef HAVE_MINGW
-#ifndef uid_t
+#if defined(HAVE_MINGW)
+#if !defined(uid_t)
 typedef UINT32 uid_t;
 typedef UINT32 gid_t;
 #endif
@@ -143,10 +105,10 @@ typedef UINT32 gid_t;
 typedef UINT32 uid_t;
 typedef UINT32 gid_t;
 typedef UINT32 mode_t;
-/* #ifndef _WX_DEFS_H_  ssize_t is defined in wx/defs.h */
-typedef INT64  ssize_t;
-/* #endif */
-#endif //HAVE_MINGW
+typedef INT32  ssize_t;
+#define HAVE_SSIZE_T 1
+
+#endif /* HAVE_MINGW */
 
 struct dirent {
     uint64_t    d_ino;
@@ -154,14 +116,14 @@ struct dirent {
     uint16_t    d_reclen;
     char        d_name[256];
 };
-
 typedef void DIR;
 
-#ifndef __cplusplus
-#ifndef true
+
+#if !defined(__cplusplus)
+#if !defined(true)
 #define true 1
 #endif
-#ifndef false
+#if !defined(false)
 #define false 0
 #endif
 #endif
@@ -171,14 +133,20 @@ struct timezone {
 };
 
 int strcasecmp(const char*, const char *);
-int strncasecmp(const char*, const char *, int);
 int gettimeofday(struct timeval *, struct timezone *);
 
+#if !defined(EETXTBUSY)
+#define EETXTBUSY 26
+#endif
+
+#if !defined(ETIMEDOUT)
 #define ETIMEDOUT 55
+#endif
 
-#ifndef HAVE_MINGW
+#if !defined(ENOMEDIUM)
+#define ENOMEDIUM 123
+#endif
 
-#ifndef _STAT_DEFINED
 struct stat
 {
     _dev_t      st_dev;
@@ -195,7 +163,6 @@ struct stat
     uint32_t    st_blksize;
     uint64_t    st_blocks;
 };
-#endif
 
 #undef  S_IFMT
 #define S_IFMT         0170000         /* file type mask */
@@ -218,7 +185,6 @@ struct stat
 #define S_ISCHR(x) 0
 #define S_ISBLK(x)  (((x) & S_IFMT) == S_IFBLK)
 #define S_ISFIFO(x) 0
-#endif //HAVE_MINGW
 
 #define S_IRGRP         000040
 #define S_IWGRP         000020
@@ -249,40 +215,43 @@ struct stat
 #define iscsym  __iscsym
 #endif
 
-#ifndef HAVE_VC8
-int umask(int);
-off_t lseek(int, off_t, int);
-int dup2(int, int);
-int close(int fd);
-#ifndef HAVE_WXCONSOLE
-ssize_t read(int fd, void *, ssize_t nbytes);
-ssize_t write(int fd, const void *, ssize_t nbytes);
-#endif
-#endif
+typedef  BOOL (*t_pVSSPathConvert)(const char *szFilePath, char *szShadowPath, int nBuflen);
+typedef  BOOL (*t_pVSSPathConvertW)(const wchar_t  *szFilePath, wchar_t  *szShadowPath, int nBuflen);
+
+void SetVSSPathConvert(t_pVSSPathConvert pPathConvert, t_pVSSPathConvertW pPathConvertW);
+
 int lchown(const char *, uid_t uid, gid_t gid);
 int chown(const char *, uid_t uid, gid_t gid);
+#if !defined(HAVE_MINGW)
 int chmod(const char *, mode_t mode);
+#endif
+#define O_NONBLOCK   04000
+#define F_GETFL      3
+#define F_SETFL      4
+
+int tape_open(const char *file, int flags, int mode = 0);
+int tape_read(int fd, void *buffer, unsigned int count);
+int tape_write(int fd, const void *buffer, unsigned int count);
+int tape_ioctl(int fd, unsigned long int request, ...);
+int tape_close(int fd);
+
+#define open   _open
+
+int fcntl(int fd, int cmd, long arg);
+int fstat(int fd, struct stat *sb);
+
 int inet_aton(const char *cp, struct in_addr *inp);
 int kill(int pid, int signo);
 int pipe(int []);
 int fork();
 int waitpid(int, int *, int);
 
-#ifndef HAVE_MINGW
+#if !defined(HAVE_MINGW)
+#define strncasecmp strnicmp
+//int strncasecmp(const char*, const char *, int);
 int utime(const char *filename, struct utimbuf *buf);
-int open(const char *, int, int);
-#define vsnprintf __vsnprintf
-int __vsnprintf(char *s, size_t count, const char *format, va_list args);
-
-#define vsprintf __vsprintf
-int __vsprintf(char *s, const char *format, va_list args);
-
-#define snprintf __snprintf
-int __snprintf(char *str, size_t count, const char *fmt, ...);
-
-#define sprintf __sprintf
-int __sprintf(char *str, const char *fmt, ...);
-
+#define vsnprintf _vsnprintf
+#define snprintf _snprintf
 #endif //HAVE_MINGW
 
 
@@ -290,24 +259,23 @@ int __sprintf(char *str, const char *fmt, ...);
 #define WIFEXITED(x) 0
 #define WEXITSTATUS(x) x
 #define WIFSIGNALED(x) 0
+#define WTERMSIG(x) x
 #define SIGKILL 9
 #define SIGUSR2 9999
 
 #define HAVE_OLD_SOCKOPT
 
+struct timespec;
 int readdir(unsigned int fd, struct dirent *dirp, unsigned int count);
 int nanosleep(const struct timespec*, struct timespec *);
-struct tm *localtime_r(const time_t *, struct tm *);
-struct tm *gmtime_r(const time_t *, struct tm *);
 long int random(void);
 void srandom(unsigned int seed);
 int lstat(const char *, struct stat *);
+int stat(const char *file, struct stat *sb);
 long pathconf(const char *, int);
 int readlink(const char *, char *, int);
 #define _PC_PATH_MAX 1
 #define _PC_NAME_MAX 2
-
-
 
 int geteuid();
 
@@ -325,11 +293,6 @@ struct group {
 struct passwd *getpwuid(uid_t);
 struct group *getgrgid(uid_t);
 
-#ifndef HAVE_MINGW
-#define R_OK 04
-#define W_OK 02
-#endif //HAVE_MINGW
-
 struct sigaction {
     int sa_flags;
     void (*sa_handler)(int);
@@ -340,13 +303,16 @@ struct sigaction {
 #define mkdir(p, m) win32_mkdir(p)
 #define unlink win32_unlink
 #define chdir win32_chdir
-int syslog(int, const char *, const char *);
+extern "C" void syslog(int type, const char *fmt, ...);
+#if !defined(LOG_DAEMON)
 #define LOG_DAEMON 0
-#define LOG_ERR 0
+#endif
 
-#ifndef HAVE_MINGW
+#if !defined(HAVE_MINGW)
+#define R_OK 04
+#define W_OK 02
 int stat(const char *, struct stat *);
-#ifdef __cplusplus
+#if defined(__cplusplus)
 #define access _access
 extern "C" _CRTIMP int __cdecl _access(const char *, int);
 int execvp(const char *, char *[]);
@@ -372,15 +338,32 @@ int win32_unlink(const char *filename);
 
 char* win32_cgets (char* buffer, int len);
 
-
 int WSA_Init(void);
+void Win32ConvCleanupCache();
 
-#ifdef HAVE_MINGW
+#if defined(HAVE_MINGW)
 void closelog();
+void openlog(const char *ident, int option, int facility);
 #endif //HAVE_MINGW
 
-#ifndef INVALID_FILE_ATTRIBUTES
+#if !defined(INVALID_FILE_ATTRIBUTES)
 #define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
+#endif
+
+#if defined(_MSC_VER)
+inline unsigned long ffs(unsigned long word)
+{
+   unsigned long  index;
+   
+   if (_BitScanForward(&index, word) != 0)
+      return index + 1;
+   else
+      return 0;
+}
+
+#define ftruncate    _chsize_s
+#else
+#define  ffs   __builtin_ffs
 #endif
 
 #endif /* __COMPAT_H_ */

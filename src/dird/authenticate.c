@@ -7,29 +7,41 @@
  *
  *    This routine runs as a thread and must be thread reentrant.
  *
- *   Version $Id: authenticate.c,v 1.34.2.1 2005/11/04 09:16:49 kerns Exp $
+ *   Version $Id: authenticate.c,v 1.42 2006/11/21 13:20:08 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2001-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
 
 extern DIRRES *director;
-extern char my_name[];
 
 /* Commands sent to Storage daemon and File daemon and received
  *  from the User Agent */
@@ -53,6 +65,7 @@ bool authenticate_storage_daemon(JCR *jcr, STORE *store)
    char dirname[MAX_NAME_LENGTH];
    int tls_local_need = BNET_TLS_NONE;
    int tls_remote_need = BNET_TLS_NONE;
+   int compatible = true;
    bool auth_success = false;
 
    /*
@@ -78,25 +91,26 @@ bool authenticate_storage_daemon(JCR *jcr, STORE *store)
      }
    }
 
-   auth_success = cram_md5_get_auth(sd, store->password, &tls_remote_need);
+   auth_success = cram_md5_respond(sd, store->password, &tls_remote_need, &compatible);
    if (auth_success) {
-      auth_success = cram_md5_auth(sd, store->password, tls_local_need);
+      auth_success = cram_md5_challenge(sd, store->password, tls_local_need, compatible);
       if (!auth_success) {
-         Dmsg1(50, "cram_auth failed for %s\n", sd->who);
+         Dmsg1(50, "cram_challenge failed for %s\n", sd->who);
       }
    } else {
-      Dmsg1(50, "cram_get_auth failed for %s\n", sd->who);
+      Dmsg1(50, "cram_respond failed for %s\n", sd->who);
    }
 
    if (!auth_success) {
       stop_bsock_timer(tid);
       Dmsg0(50, _("Director and Storage daemon passwords or names not the same.\n"));
-      Jmsg0(jcr, M_FATAL, 0,
-            _("Director unable to authenticate with Storage daemon. Possible causes:\n"
+      Jmsg2(jcr, M_FATAL, 0,
+            _("Director unable to authenticate with Storage daemon on \"%s:%d\". Possible causes:\n"
             "Passwords or names not the same or\n"
             "Maximum Concurrent Jobs exceeded on the SD or\n"
             "SD networking messed up (restart daemon).\n"
-            "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"));
+            "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"),
+            sd->host, sd->port);
       return 0;
    }
 
@@ -114,30 +128,30 @@ bool authenticate_storage_daemon(JCR *jcr, STORE *store)
       return 0;
    }
 
-#ifdef HAVE_TLS
    /* Is TLS Enabled? */
    if (tls_local_need >= BNET_TLS_OK && tls_remote_need >= BNET_TLS_OK) {
       /* Engage TLS! Full Speed Ahead! */
       if (!bnet_tls_client(store->tls_ctx, sd)) {
          stop_bsock_timer(tid);
-         Jmsg(jcr, M_FATAL, 0, _("TLS negotiation failed.\n"));
+         Jmsg(jcr, M_FATAL, 0, _("TLS negotiation failed with SD on \"%s:%d\"\n"),
+            sd->host, sd->port);
          return 0;
       }
    }
-#endif
 
    Dmsg1(116, ">stored: %s", sd->msg);
    if (bnet_recv(sd) <= 0) {
       stop_bsock_timer(tid);
-      Jmsg1(jcr, M_FATAL, 0, _("bdird<stored: bad response to Hello command: ERR=%s\n"),
-         bnet_strerror(sd));
+      Jmsg3(jcr, M_FATAL, 0, _("bdird<stored: \"%s:%s\" bad response to Hello command: ERR=%s\n"),
+         sd->who, sd->host, bnet_strerror(sd));
       return 0;
    }
    Dmsg1(110, "<stored: %s", sd->msg);
    stop_bsock_timer(tid);
    if (strncmp(sd->msg, OKhello, sizeof(OKhello)) != 0) {
       Dmsg0(50, _("Storage daemon rejected Hello command\n"));
-      Jmsg0(jcr, M_FATAL, 0, _("Storage daemon rejected Hello command\n"));
+      Jmsg2(jcr, M_FATAL, 0, _("Storage daemon on \"%s:%d\" rejected Hello command\n"),
+         sd->host, sd->port);
       return 0;
    }
    return 1;
@@ -153,6 +167,7 @@ int authenticate_file_daemon(JCR *jcr)
    char dirname[MAX_NAME_LENGTH];
    int tls_local_need = BNET_TLS_NONE;
    int tls_remote_need = BNET_TLS_NONE;
+   int compatible = true;
    bool auth_success = false;
 
    /*
@@ -164,11 +179,12 @@ int authenticate_file_daemon(JCR *jcr)
    btimer_t *tid = start_bsock_timer(fd, AUTH_TIMEOUT);
    if (!bnet_fsend(fd, hello, dirname)) {
       stop_bsock_timer(tid);
-      Jmsg(jcr, M_FATAL, 0, _("Error sending Hello to File daemon. ERR=%s\n"), bnet_strerror(fd));
+      Jmsg(jcr, M_FATAL, 0, _("Error sending Hello to File daemon on \"%s:%d\". ERR=%s\n"), 
+           fd->host, fd->port, bnet_strerror(fd));
       return 0;
    }
+   Dmsg1(50, "Sent: %s", fd->msg);
 
-#ifdef HAVE_TLS
    /* TLS Requirement */
    if (client->tls_enable) {
      if (client->tls_require) {
@@ -177,11 +193,10 @@ int authenticate_file_daemon(JCR *jcr)
         tls_local_need = BNET_TLS_OK;
      }
    }
-#endif
 
-   auth_success = cram_md5_get_auth(fd, client->password, &tls_remote_need);
+   auth_success = cram_md5_respond(fd, client->password, &tls_remote_need, &compatible);
    if (auth_success) {
-      auth_success = cram_md5_auth(fd, client->password, tls_local_need);
+      auth_success = cram_md5_challenge(fd, client->password, tls_local_need, compatible);
       if (!auth_success) {
          Dmsg1(50, "cram_auth failed for %s\n", fd->who);
       }
@@ -192,54 +207,57 @@ int authenticate_file_daemon(JCR *jcr)
       stop_bsock_timer(tid);
       Dmsg0(50, _("Director and File daemon passwords or names not the same.\n"));
       Jmsg(jcr, M_FATAL, 0,
-            _("Unable to authenticate with File daemon. Possible causes:\n"
+            _("Unable to authenticate with File daemon on \"%s:%d\". Possible causes:\n"
             "Passwords or names not the same or\n"
             "Maximum Concurrent Jobs exceeded on the FD or\n"
             "FD networking messed up (restart daemon).\n"
-            "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"));
+            "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"),
+            fd->host, fd->port);
       return 0;
    }
 
    /* Verify that the remote host is willing to meet our TLS requirements */
    if (tls_remote_need < tls_local_need && tls_local_need != BNET_TLS_OK && tls_remote_need != BNET_TLS_OK) {
       stop_bsock_timer(tid);
-      Jmsg(jcr, M_FATAL, 0, _("Authorization problem: Remote server did not advertise required TLS support.\n"));
+      Jmsg(jcr, M_FATAL, 0, _("Authorization problem: FD \"%s:%s\" did not advertise required TLS support.\n"),
+           fd->who, fd->host);
       return 0;
    }
 
    /* Verify that we are willing to meet the remote host's requirements */
    if (tls_remote_need > tls_local_need && tls_local_need != BNET_TLS_OK && tls_remote_need != BNET_TLS_OK) {
       stop_bsock_timer(tid);
-      Jmsg(jcr, M_FATAL, 0, _("Authorization problem: Remote server requires TLS.\n"));
+      Jmsg(jcr, M_FATAL, 0, _("Authorization problem: FD on \"%s:%d\" requires TLS.\n"),
+           fd->host, fd->port);
       return 0;
    }
 
-#ifdef HAVE_TLS
    /* Is TLS Enabled? */
    if (tls_local_need >= BNET_TLS_OK && tls_remote_need >= BNET_TLS_OK) {
       /* Engage TLS! Full Speed Ahead! */
       if (!bnet_tls_client(client->tls_ctx, fd)) {
          stop_bsock_timer(tid);
-         Jmsg(jcr, M_FATAL, 0, _("TLS negotiation failed.\n"));
+         Jmsg(jcr, M_FATAL, 0, _("TLS negotiation failed with FD on \"%s:%d\".\n"),
+              fd->host, fd->port);
          return 0;
       }
    }
-#endif
 
    Dmsg1(116, ">filed: %s", fd->msg);
    if (bnet_recv(fd) <= 0) {
       stop_bsock_timer(tid);
       Dmsg1(50, _("Bad response from File daemon to Hello command: ERR=%s\n"),
          bnet_strerror(fd));
-      Jmsg(jcr, M_FATAL, 0, _("Bad response from File daemon to Hello command: ERR=%s\n"),
-         bnet_strerror(fd));
+      Jmsg(jcr, M_FATAL, 0, _("Bad response from File daemon on \"%s:%d\" to Hello command: ERR=%s\n"),
+         fd->host, fd->port, bnet_strerror(fd));
       return 0;
    }
    Dmsg1(110, "<stored: %s", fd->msg);
    stop_bsock_timer(tid);
    if (strncmp(fd->msg, FDOKhello, sizeof(FDOKhello)) != 0) {
       Dmsg0(50, _("File daemon rejected Hello command\n"));
-      Jmsg(jcr, M_FATAL, 0, _("File daemon rejected Hello command\n"));
+      Jmsg(jcr, M_FATAL, 0, _("File daemon on \"%s:%d\" rejected Hello command\n"),
+           fd->host, fd->port);
       return 0;
    }
    return 1;
@@ -253,13 +271,12 @@ int authenticate_user_agent(UAContext *uac)
    char name[MAX_NAME_LENGTH];
    int tls_local_need = BNET_TLS_NONE;
    int tls_remote_need = BNET_TLS_NONE;
+   int compatible = true;
    CONRES *cons = NULL;
    BSOCK *ua = uac->UA_sock;
    bool auth_success = false;
-#ifdef HAVE_TLS
    TLS_CONTEXT *tls_ctx = NULL;
    alist *verify_list = NULL;
-#endif /* HAVE_TLS */
  
 
 //  Emsg4(M_INFO, 0, _("UA Hello from %s:%s:%d is invalid. Len=%d\n"), ua->who,
@@ -279,7 +296,6 @@ int authenticate_user_agent(UAContext *uac)
 
    name[sizeof(name)-1] = 0;             /* terminate name */
    if (strcmp(name, "*UserAgent*") == 0) {  /* default console */
-#ifdef HAVE_TLS
       /* TLS Requirement */
       if (director->tls_enable) {
          if (director->tls_require) {
@@ -292,15 +308,14 @@ int authenticate_user_agent(UAContext *uac)
       if (director->tls_verify_peer) {
          verify_list = director->tls_allowed_cns;
       }
-#endif /* HAVE_TLS */
 
-      auth_success = cram_md5_auth(ua, director->password, tls_local_need) &&
-           cram_md5_get_auth(ua, director->password, &tls_remote_need);
+      auth_success = cram_md5_challenge(ua, director->password, tls_local_need,
+                                        compatible) &&
+                     cram_md5_respond(ua, director->password, &tls_remote_need, &compatible);
    } else {
       unbash_spaces(name);
       cons = (CONRES *)GetResWithName(R_CONSOLE, name);
       if (cons) {
-#ifdef HAVE_TLS
          /* TLS Requirement */
          if (cons->tls_enable) {
             if (cons->tls_require) {
@@ -313,10 +328,10 @@ int authenticate_user_agent(UAContext *uac)
          if (cons->tls_verify_peer) {
             verify_list = cons->tls_allowed_cns;
          }
-#endif /* HAVE_TLS */
 
-         auth_success = cram_md5_auth(ua, cons->password, tls_local_need) &&
-              cram_md5_get_auth(ua, cons->password, &tls_remote_need);
+         auth_success = cram_md5_challenge(ua, cons->password, tls_local_need,
+                                           compatible) &&
+                     cram_md5_respond(ua, cons->password, &tls_remote_need, &compatible);
 
          if (auth_success) {
             uac->cons = cons;         /* save console resource pointer */
@@ -343,7 +358,6 @@ int authenticate_user_agent(UAContext *uac)
       goto auth_done;
    }
 
-#ifdef HAVE_TLS
    if (tls_local_need >= BNET_TLS_OK && tls_remote_need >= BNET_TLS_OK) {
       if (cons) {
          tls_ctx = cons->tls_ctx;
@@ -358,7 +372,6 @@ int authenticate_user_agent(UAContext *uac)
          goto auth_done;
       }
    }
-#endif /* HAVE_TLS */
 
 
 /* Authorization Completed */

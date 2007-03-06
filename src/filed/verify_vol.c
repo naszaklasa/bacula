@@ -4,28 +4,36 @@
  *
  *    Kern Sibbald, July MMII
  *
- *   Version $Id: verify_vol.c,v 1.17.2.1 2006/03/14 21:41:40 kerns Exp $
+ *   Version $Id: verify_vol.c,v 1.22 2006/11/21 17:03:45 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "filed.h"
@@ -49,6 +57,7 @@ void do_verify_volume(JCR *jcr)
    uint32_t size;
    uint32_t VolSessionId, VolSessionTime, file_index;
    uint32_t record_file_index;
+   char digest[BASE64_SIZE(CRYPTO_DIGEST_MAX_SIZE)];
    int type, stat;
 
    sd = jcr->store_bsock;
@@ -203,32 +212,48 @@ void do_verify_volume(JCR *jcr)
          break;
 
       /* Data streams to ignore */
+      case STREAM_ENCRYPTED_SESSION_DATA:
       case STREAM_FILE_DATA:
       case STREAM_SPARSE_DATA:
       case STREAM_WIN32_DATA:
       case STREAM_WIN32_GZIP_DATA:
       case STREAM_GZIP_DATA:
       case STREAM_SPARSE_GZIP_DATA:
+      case STREAM_SIGNED_DIGEST:
 
         /* Do nothing */
         break;
 
-      case STREAM_MD5_SIGNATURE:
-         char MD5buf[30];
-         bin_to_base64(MD5buf, (char *)sd->msg, 16); /* encode 16 bytes */
-         Dmsg2(400, "send inx=%d MD5=%s\n", jcr->JobFiles, MD5buf);
-         bnet_fsend(dir, "%d %d %s *MD5-%d*", jcr->JobFiles, STREAM_MD5_SIGNATURE, MD5buf,
-            jcr->JobFiles);
+      case STREAM_MD5_DIGEST:
+         bin_to_base64(digest, sizeof(digest), (char *)sd->msg, CRYPTO_DIGEST_MD5_SIZE, true);
+         Dmsg2(400, "send inx=%d MD5=%s\n", jcr->JobFiles, digest);
+         bnet_fsend(dir, "%d %d %s *MD5-%d*", jcr->JobFiles, STREAM_MD5_DIGEST, digest,
+                    jcr->JobFiles);
          Dmsg2(20, "bfiled>bdird: MD5 len=%d: msg=%s\n", dir->msglen, dir->msg);
          break;
 
-      case STREAM_SHA1_SIGNATURE:
-         char SHA1buf[30];
-         bin_to_base64(SHA1buf, (char *)sd->msg, 20); /* encode 20 bytes */
-         Dmsg2(400, "send inx=%d SHA1=%s\n", jcr->JobFiles, SHA1buf);
-         bnet_fsend(dir, "%d %d %s *SHA1-%d*", jcr->JobFiles, STREAM_SHA1_SIGNATURE,
-            SHA1buf, jcr->JobFiles);
+      case STREAM_SHA1_DIGEST:
+         bin_to_base64(digest, sizeof(digest), (char *)sd->msg, CRYPTO_DIGEST_SHA1_SIZE, true);
+         Dmsg2(400, "send inx=%d SHA1=%s\n", jcr->JobFiles, digest);
+         bnet_fsend(dir, "%d %d %s *SHA1-%d*", jcr->JobFiles, STREAM_SHA1_DIGEST,
+                    digest, jcr->JobFiles);
          Dmsg2(20, "bfiled>bdird: SHA1 len=%d: msg=%s\n", dir->msglen, dir->msg);
+         break;
+
+      case STREAM_SHA256_DIGEST:
+         bin_to_base64(digest, sizeof(digest), (char *)sd->msg, CRYPTO_DIGEST_SHA256_SIZE, true);
+         Dmsg2(400, "send inx=%d SHA256=%s\n", jcr->JobFiles, digest);
+         bnet_fsend(dir, "%d %d %s *SHA256-%d*", jcr->JobFiles, STREAM_SHA256_DIGEST,
+                    digest, jcr->JobFiles);
+         Dmsg2(20, "bfiled>bdird: SHA256 len=%d: msg=%s\n", dir->msglen, dir->msg);
+         break;
+
+      case STREAM_SHA512_DIGEST:
+         bin_to_base64(digest, sizeof(digest), (char *)sd->msg, CRYPTO_DIGEST_SHA512_SIZE, true);
+         Dmsg2(400, "send inx=%d SHA512=%s\n", jcr->JobFiles, digest);
+         bnet_fsend(dir, "%d %d %s *SHA512-%d*", jcr->JobFiles, STREAM_SHA512_DIGEST,
+                    digest, jcr->JobFiles);
+         Dmsg2(20, "bfiled>bdird: SHA512 len=%d: msg=%s\n", dir->msglen, dir->msg);
          break;
 
       default:

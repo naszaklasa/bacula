@@ -3,23 +3,36 @@
  *
  *    Kern Sibbald, March MM
  *
- *   Version $Id: filed.c,v 1.51.2.1 2006/01/15 10:11:59 kerns Exp $
+ *   Version $Id: filed.c,v 1.64 2006/11/27 10:03:00 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "filed.h"
@@ -27,52 +40,39 @@
 /* Imported Functions */
 extern void *handle_client_request(void *dir_sock);
 
-/* Imported Variables */
-extern time_t watchdog_sleep_time;
-
 /* Forward referenced functions */
 void terminate_filed(int sig);
 static int check_resources();
 
 /* Exported variables */
 CLIENT *me;                           /* my resource */
-char OK_msg[]   = "2000 OK\n";
-char TERM_msg[] = "2999 Terminate\n";
 bool no_signals = false;
 
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
-const int win32_client = 1;
-#else
-const int win32_client = 0;
-#endif
 
-
-#define CONFIG_FILE "./bacula-fd.conf" /* default config file */
+#define CONFIG_FILE "bacula-fd.conf" /* default config file */
 
 char *configfile = NULL;
 static bool foreground = false;
-static bool inetd_request = false;
 static workq_t dir_workq;             /* queue of work from Director */
 static pthread_t server_tid;
 
 
 static void usage()
 {
-   Pmsg2(-1, _(
-"Copyright (C) 2000-2005 Kern Sibbald\n"
+   Pmsg3(-1, _(
+PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bacula-fd [-f -s] [-c config_file] [-d debug_level]\n"
 "        -c <file>   use <file> as configuration file\n"
 "        -dnn        set debug level to nn\n"
 "        -f          run in foreground (for debugging)\n"
 "        -g          groupid\n"
-"        -i          inetd request\n"
 "        -s          no signals (for debugging)\n"
 "        -t          test configuration file and exit\n"
 "        -u          userid\n"
 "        -v          verbose user messages\n"
 "        -?          print this message.\n"
-"\n"), VERSION, BDATE);
+"\n"), 2000, VERSION, BDATE);
    exit(1);
 }
 
@@ -82,7 +82,7 @@ static void usage()
  *  Main Bacula Unix Client Program
  *
  */
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
+#if defined(HAVE_WIN32)
 #define main BaculaMain
 #endif
 
@@ -102,7 +102,7 @@ int main (int argc, char *argv[])
    init_msg(NULL, NULL);
    daemon_start_time = time(NULL);
 
-   while ((ch = getopt(argc, argv, "c:d:fg:istu:v?")) != -1) {
+   while ((ch = getopt(argc, argv, "c:d:fg:stu:v?")) != -1) {
       switch (ch) {
       case 'c':                    /* configuration file */
          if (configfile != NULL) {
@@ -126,9 +126,6 @@ int main (int argc, char *argv[])
          gid = optarg;
          break;
 
-      case 'i':
-         inetd_request = true;
-         break;
       case 's':
          no_signals = true;
          break;
@@ -179,8 +176,8 @@ int main (int argc, char *argv[])
 
    parse_config(configfile);
 
-   if (init_tls() != 0) {
-      Emsg0(M_ERROR, 0, _("TLS library initialization failed.\n"));
+   if (init_crypto() != 0) {
+      Emsg0(M_ERROR, 0, _("Cryptography library initialization failed.\n"));
       terminate_filed(1);
    }
 
@@ -195,7 +192,7 @@ int main (int argc, char *argv[])
       terminate_filed(0);
    }
 
-   if (!foreground &&!inetd_request) {
+   if (!foreground) {
       daemon_start();
       init_stack_dump();              /* set new pid */
    }
@@ -220,25 +217,12 @@ int main (int argc, char *argv[])
    }
    server_tid = pthread_self();
 
-   if (inetd_request) {
-      /* Socket is on fd 0 */
-      struct sockaddr client_addr;
-      int port = -1;
-      socklen_t client_addr_len = sizeof(client_addr);
-      if (getsockname(0, &client_addr, &client_addr_len) == 0) {
-                /* MA BUG 6 remove ifdefs */
-                port = sockaddr_get_port_net_order(&client_addr);
-      }
-      BSOCK *bs = init_bsock(NULL, 0, "client", "unknown client", port, &client_addr);
-      handle_client_request((void *)bs);
-   } else {
-      /* Become server, and handle requests */
-      IPADDR *p;
-      foreach_dlist(p, me->FDaddrs) {
-         Dmsg1(10, "filed: listening on port %d\n", p->get_port_host_order());
-      }
-      bnet_thread_server(me->FDaddrs, me->MaxConcurrentJobs, &dir_workq, handle_client_request);
+   /* Become server, and handle requests */
+   IPADDR *p;
+   foreach_dlist(p, me->FDaddrs) {
+      Dmsg1(10, "filed: listening on port %d\n", p->get_port_host_order());
    }
+   bnet_thread_server(me->FDaddrs, me->MaxConcurrentJobs, &dir_workq, handle_client_request);
 
    terminate_filed(0);
    exit(0);                           /* should never get here */
@@ -260,7 +244,7 @@ void terminate_filed(int sig)
    free_config_resources();
    term_msg();
    stop_watchdog();
-   cleanup_tls();
+   cleanup_crypto();
    close_memory_pool();               /* release free memory in pool */
    sm_dump(false);                    /* dump orphaned buffers */
    exit(sig);
@@ -326,6 +310,118 @@ static int check_resources()
             Emsg2(M_FATAL, 0, _("Failed to initialize TLS context for File daemon \"%s\" in %s.\n"),
                                 me->hdr.name, configfile);
             OK = false;
+         }
+      }
+
+      if (me->pki_encrypt || me->pki_sign) {
+#ifndef HAVE_CRYPTO
+         Jmsg(NULL, M_FATAL, 0, _("PKI encryption/signing enabled but not compiled into Bacula.\n"));
+         OK = false;
+#endif
+      }
+
+      /* pki_encrypt implies pki_sign */
+      if (me->pki_encrypt) {
+         me->pki_sign = true;
+      }
+
+      if ((me->pki_encrypt || me->pki_sign) && !me->pki_keypair_file) {
+         Emsg2(M_FATAL, 0, _("\"PKI Key Pair\" must be defined for File"
+            " daemon \"%s\" in %s if either \"PKI Sign\" or"
+            " \"PKI Encrypt\" are enabled.\n"), me->hdr.name, configfile);
+         OK = false;
+      }
+
+      /* If everything is well, attempt to initialize our public/private keys */
+      if (OK && (me->pki_encrypt || me->pki_sign)) {
+         char *filepath;
+         /* Load our keypair */
+         me->pki_keypair = crypto_keypair_new();
+         if (!me->pki_keypair) {
+            Emsg0(M_FATAL, 0, _("Failed to allocate a new keypair object.\n"));
+            OK = false;
+         } else {
+            if (!crypto_keypair_load_cert(me->pki_keypair, me->pki_keypair_file)) {
+               Emsg2(M_FATAL, 0, _("Failed to load public certificate for File"
+                     " daemon \"%s\" in %s.\n"), me->hdr.name, configfile);
+               OK = false;
+            }
+
+            if (!crypto_keypair_load_key(me->pki_keypair, me->pki_keypair_file, NULL, NULL)) {
+               Emsg2(M_FATAL, 0, _("Failed to load private key for File"
+                     " daemon \"%s\" in %s.\n"), me->hdr.name, configfile);
+               OK = false;
+            }
+         }
+
+         /*
+          * Trusted Signers. We're always trusted.
+          */
+         me->pki_signers = New(alist(10, not_owned_by_alist));
+         if (me->pki_keypair) {
+            me->pki_signers->append(crypto_keypair_dup(me->pki_keypair));
+         }
+
+         /* If additional signing public keys have been specified, load them up */
+         if (me->pki_signing_key_files) {
+            foreach_alist(filepath, me->pki_signing_key_files) {
+               X509_KEYPAIR *keypair;
+
+               keypair = crypto_keypair_new();
+               if (!keypair) {
+                  Emsg0(M_FATAL, 0, _("Failed to allocate a new keypair object.\n"));
+                  OK = false;
+               } else {
+                  if (crypto_keypair_load_cert(keypair, filepath)) {
+                     me->pki_signers->append(keypair);
+
+                     /* Attempt to load a private key, if available */
+                     if (crypto_keypair_has_key(filepath)) {
+                        if (!crypto_keypair_load_key(keypair, filepath, NULL, NULL)) {
+                           Emsg3(M_FATAL, 0, _("Failed to load private key from file %s for File"
+                              " daemon \"%s\" in %s.\n"), filepath, me->hdr.name, configfile);
+                           OK = false;
+                        }
+                     }
+
+                  } else {
+                     Emsg3(M_FATAL, 0, _("Failed to load trusted signer certificate"
+                        " from file %s for File daemon \"%s\" in %s.\n"), filepath, me->hdr.name, configfile);
+                     OK = false;
+                  }
+               }
+            }
+         }
+
+         /*
+          * Crypto recipients. We're always included as a recipient.
+          * The symmetric session key will be encrypted for each of these readers.
+          */
+         me->pki_recipients = New(alist(10, not_owned_by_alist));
+         if (me->pki_keypair) {
+            me->pki_recipients->append(crypto_keypair_dup(me->pki_keypair));
+         }
+
+
+         /* If additional keys have been specified, load them up */
+         if (me->pki_master_key_files) {
+            foreach_alist(filepath, me->pki_master_key_files) {
+               X509_KEYPAIR *keypair;
+
+               keypair = crypto_keypair_new();
+               if (!keypair) {
+                  Emsg0(M_FATAL, 0, _("Failed to allocate a new keypair object.\n"));
+                  OK = false;
+               } else {
+                  if (crypto_keypair_load_cert(keypair, filepath)) {
+                     me->pki_recipients->append(keypair);
+                  } else {
+                     Emsg3(M_FATAL, 0, _("Failed to load master key certificate"
+                        " from file %s for File daemon \"%s\" in %s.\n"), filepath, me->hdr.name, configfile);
+                     OK = false;
+                  }
+               }
+            }
          }
       }
    }

@@ -1,1 +1,0 @@
-#include "../../findlib/fstype.c"

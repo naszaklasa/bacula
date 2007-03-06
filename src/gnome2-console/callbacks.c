@@ -1,6 +1,34 @@
 /*
- *    Version $Id: callbacks.c,v 1.10.4.1 2006/05/02 14:48:16 kerns Exp $
+ *    Version $Id: callbacks.c,v 1.17 2006/12/28 17:14:00 kerns Exp $
  */
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+
 
 #ifdef HAVE_CONFIG_H
 #  include <config.h>
@@ -383,8 +411,8 @@ static char *get_spin_text(GtkWidget *dialog, const char *spin_name)
 void
 on_run_ok_clicked(GtkButton *button, gpointer user_data)
 {
-   char *job, *fileset, *level, *client, *pool, *when, *where, *storage;
-
+   char *job, *fileset, *level, *client, *pool, *when, *where, *storage, *priority;
+   
    gtk_widget_hide(run_dialog);
    gtk_main_quit();
 
@@ -394,20 +422,20 @@ on_run_ok_clicked(GtkButton *button, gpointer user_data)
    pool    = get_combo_text(run_dialog, "combo_pool");
    storage = get_combo_text(run_dialog, "combo_storage");
    level   = get_combo_text(run_dialog, "combo_level");
-
+   priority = get_spin_text(run_dialog, "spinbutton1");
    when    = get_entry_text(run_dialog, "entry_when");
    where   = get_entry_text(run_dialog, "entry_where");
 
    if (!job || !fileset || !client || !pool || !storage ||
-       !level || !when || !where) {
+       !level || !priority || !when || !where) {
       set_status_ready();
       return;
    }
 
    bsnprintf(cmd, sizeof(cmd),
              "run job=\"%s\" fileset=\"%s\" level=%s client=\"%s\" pool=\"%s\" "
-             "when=\"%s\" where=\"%s\" storage=\"%s\"",
-             job, fileset, level, client, pool, when, where, storage);
+             "when=\"%s\" where=\"%s\" storage=\"%s\" priority=\"%s\"\n",
+             job, fileset, level, client, pool, when, where, storage, priority);
    write_director(cmd);
    set_text(cmd, strlen(cmd));
    write_director("yes");
@@ -479,7 +507,7 @@ on_label_ok_clicked(GtkButton *button, gpointer user_data)
    }
 
    bsnprintf(cmd, sizeof(cmd),
-             "label volume=\"%s\" pool=\"%s\" storage=\"%s\" slot=%s",
+             "label volume=\"%s\" pool=\"%s\" storage=\"%s\" slot=%s\n", 
              volume, pool, storage, slot);
    write_director(cmd);
    set_text(cmd, strlen(cmd));
@@ -517,7 +545,7 @@ on_select_files_button_clicked(GtkButton *button, gpointer user_data)
 
    bsnprintf(cmd, sizeof(cmd),
              "restore select current fileset=\"%s\" client=\"%s\" pool=\"%s\" "
-             "storage=\"%s\"", fileset, client, pool, storage);
+             "storage=\"%s\"\n", fileset, client, pool, storage);
    write_director(cmd);
    set_text(cmd, strlen(cmd));
    gtk_widget_show(restore_file_selection);
@@ -706,7 +734,7 @@ on_restore_job_entry_changed(GtkEditable *editable, gpointer user_data)
 }
 
 void
-on_dir_button_clicked(GtkToolButton *toolbutton, gpointer user_data)
+on_dir_button_clicked(GtkButton *toolbutton, gpointer user_data)
 {
    write_director("status dir");
 }

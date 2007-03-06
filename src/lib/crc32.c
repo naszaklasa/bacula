@@ -3,28 +3,36 @@
  *
  *   By Kern Sibbald, January 2001
  *
- *   Version $Id: crc32.c,v 1.5 2004/12/21 16:18:38 kerns Exp $
+ *   Version $Id: crc32.c,v 1.6 2006/11/21 16:13:57 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2001-2004 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU Lesser General Public
-   License as published by the Free Software Foundation; either
-   version 2.1 of the License, or (at your option) any later version.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This library is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   Lesser General Public License for more details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
-   You should have received a copy of the GNU Lesser General Public
-   License along with this library; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-   MA 02111-1307, USA.
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
 
- */
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #ifdef GENERATE_STATIC_CRC_TABLE
 /*
@@ -45,17 +53,17 @@ main()
    for (i = 0; i < 256; i++) {
       crc = (unsigned long)i;
       for (j = 0; j < 8; j++) {
-	 if (crc & 1) {
-	    crc = 0xedb88320L ^ (crc >> 1);
-	 } else {
-	    crc = crc >> 1;
-	 }
+         if (crc & 1) {
+            crc = 0xedb88320L ^ (crc >> 1);
+         } else {
+            crc = crc >> 1;
+         }
       }
       buf[k++] = crc;
       if (k == 5) {
-	 k = 0;
-	 printf("  0x%08x, 0x%08x, 0x%08x, 0x%08x, 0x%08x,\n",
-	    buf[0], buf[1], buf[2], buf[3], buf[4]);
+         k = 0;
+         printf("  0x%08x, 0x%08x, 0x%08x, 0x%08x, 0x%08x,\n",
+            buf[0], buf[1], buf[2], buf[3], buf[4]);
       }
    }
    printf("  0x%08x\n", buf[0]);

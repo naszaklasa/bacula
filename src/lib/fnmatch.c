@@ -41,10 +41,10 @@ fnmatch (const char *pattern, const char *string, int flags)
         case '?':
           if (*n == '\0')
             return FNM_NOMATCH;
-          else if ((flags & FNM_FILE_NAME) && *n == '/')
+          else if ((flags & FNM_FILE_NAME) && IsPathSeparator(*n))
             return FNM_NOMATCH;
           else if ((flags & FNM_PERIOD) && *n == '.' &&
-                   (n == string || ((flags & FNM_FILE_NAME) && n[-1] == '/')))
+                   (n == string || ((flags & FNM_FILE_NAME) && IsPathSeparator(n[-1]))))
             return FNM_NOMATCH;
           break;
 
@@ -63,12 +63,12 @@ fnmatch (const char *pattern, const char *string, int flags)
 
         case '*':
           if ((flags & FNM_PERIOD) && *n == '.' &&
-              (n == string || ((flags & FNM_FILE_NAME) && n[-1] == '/')))
+              (n == string || ((flags & FNM_FILE_NAME) && IsPathSeparator(n[-1]))))
             return FNM_NOMATCH;
 
           for (c = *p++; c == '?' || c == '*'; c = *p++)
             {
-              if ((flags & FNM_FILE_NAME) && *n == '/')
+              if ((flags & FNM_FILE_NAME) && IsPathSeparator(*n))
                 /* A slash does not match a wildcard under FNM_FILE_NAME.  */
                 return FNM_NOMATCH;
               else if (c == '?')
@@ -107,7 +107,7 @@ fnmatch (const char *pattern, const char *string, int flags)
               return FNM_NOMATCH;
 
             if ((flags & FNM_PERIOD) && *n == '.' &&
-                (n == string || ((flags & FNM_FILE_NAME) && n[-1] == '/')))
+                (n == string || ((flags & FNM_FILE_NAME) && IsPathSeparator(n[-1]))))
               return FNM_NOMATCH;
 
             nnot = (*p == '!' || *p == '^');
@@ -135,7 +135,7 @@ fnmatch (const char *pattern, const char *string, int flags)
                 c = *p++;
                 c = FOLD (c);
 
-                if ((flags & FNM_FILE_NAME) && c == '/')
+                if ((flags & FNM_FILE_NAME) && IsPathSeparator(c))
                   /* [/] can never match.  */
                   return FNM_NOMATCH;
 
@@ -194,7 +194,7 @@ fnmatch (const char *pattern, const char *string, int flags)
   if (*n == '\0')
     return 0;
 
-  if ((flags & FNM_LEADING_DIR) && *n == '/')
+  if ((flags & FNM_LEADING_DIR) && IsPathSeparator(*n))
     /* The FNM_LEADING_DIR flag says that "foo*" matches "foobar/frobozz".  */
     return 0;
 

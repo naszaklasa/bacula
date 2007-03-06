@@ -150,7 +150,7 @@ SELECT Path.Path,Filename.Name FROM File,Filename,Path WHERE File.JobId=%1
  AND Path.PathId=File.PathId ORDER BY
  Path.Path,Filename.Name;
 # 13
-:List Jobs stored in a selected MediaId
+:List Jobs stored on a selected MediaId
 *Enter MediaId:
 SELECT DISTINCT Job.JobId,Job.Name,Job.StartTime,Job.Type,
   Job.Level,Job.JobFiles,Job.JobBytes,Job.JobStatus

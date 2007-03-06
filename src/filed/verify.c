@@ -3,34 +3,42 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: verify.c,v 1.44.2.1 2006/03/14 21:41:40 kerns Exp $
+ *   Version $Id: verify.c,v 1.53 2006/11/21 17:03:45 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2004 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "filed.h"
 
 static int verify_file(FF_PKT *ff_pkt, void *my_pkt, bool);
-static int read_chksum(BFILE *bfd, CHKSUM *chksum, JCR *jcr);
+static int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr);
 
 /*
  * Find all the requested files and send attributes
@@ -67,9 +75,9 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
 {
    char attribs[MAXSTRING];
    char attribsEx[MAXSTRING];
+   int digest_stream = STREAM_NONE;
    int stat;
-   BFILE bfd;
-   struct CHKSUM chksum;
+   DIGEST *digest = NULL;
    BSOCK *dir;
    JCR *jcr = (JCR *)pkt;
 
@@ -201,64 +209,64 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
     * First we initialise, then we read files, other streams and Finder Info.
     */
    if (ff_pkt->type != FT_LNKSAVED && (S_ISREG(ff_pkt->statp.st_mode) &&
-            ff_pkt->flags & (FO_MD5|FO_SHA1))) {
-      chksum_init(&chksum, ff_pkt->flags);
-      binit(&bfd);
+            ff_pkt->flags & (FO_MD5|FO_SHA1|FO_SHA256|FO_SHA512))) {
+      /*
+       * Create our digest context. If this fails, the digest will be set to NULL
+       * and not used.
+       */
+      if (ff_pkt->flags & FO_MD5) {
+         digest = crypto_digest_new(CRYPTO_DIGEST_MD5);
+         digest_stream = STREAM_MD5_DIGEST;
 
-      if (ff_pkt->statp.st_size > 0 || ff_pkt->type == FT_RAW
-            || ff_pkt->type == FT_FIFO) {
-         if ((bopen(&bfd, ff_pkt->fname, O_RDONLY | O_BINARY, 0)) < 0) {
-            ff_pkt->ff_errno = errno;
-            berrno be;
-            be.set_errno(bfd.berrno);
-            Jmsg(jcr, M_NOTSAVED, 1, _("     Cannot open %s: ERR=%s.\n"),
-                 ff_pkt->fname, be.strerror());
-            jcr->Errors++;
-            return 1;
-         }
-         read_chksum(&bfd, &chksum, jcr);
-         bclose(&bfd);
+      } else if (ff_pkt->flags & FO_SHA1) {
+         digest = crypto_digest_new(CRYPTO_DIGEST_SHA1);
+         digest_stream = STREAM_SHA1_DIGEST;
+
+      } else if (ff_pkt->flags & FO_SHA256) {
+         digest = crypto_digest_new(CRYPTO_DIGEST_SHA256);
+         digest_stream = STREAM_SHA256_DIGEST;
+
+      } else if (ff_pkt->flags & FO_SHA512) {
+         digest = crypto_digest_new(CRYPTO_DIGEST_SHA512);
+         digest_stream = STREAM_SHA512_DIGEST;
       }
 
-#ifdef HAVE_DARWIN_OS
-      /* Open resource fork if necessary */
-      if (ff_pkt->flags & FO_HFSPLUS && ff_pkt->hfsinfo.rsrclength > 0) {
-         if (bopen_rsrc(&bfd, ff_pkt->fname, O_RDONLY | O_BINARY, 0) < 0) {
-            ff_pkt->ff_errno = errno;
-            berrno be;
-            Jmsg(jcr, M_NOTSAVED, -1, _("     Cannot open resource fork for %s: ERR=%s.\n"),
-                  ff_pkt->fname, be.strerror());
-            jcr->Errors++;
-            if (is_bopen(&ff_pkt->bfd)) {
-               bclose(&ff_pkt->bfd);
-            }
-            return 1;
-         }
-         read_chksum(&bfd, &chksum, jcr);
-         bclose(&bfd);
+      /* Did digest initialization fail? */
+      if (digest_stream != STREAM_NONE && digest == NULL) {
+         Jmsg(jcr, M_WARNING, 0, _("%s digest initialization failed\n"),
+              stream_to_ascii(digest_stream));
       }
-      if (ff_pkt->flags & FO_HFSPLUS) {
-         chksum_update(&chksum, ((unsigned char *)ff_pkt->hfsinfo.fndrinfo), 32);
-      }
-#endif
 
       /* compute MD5 or SHA1 hash */
-      if (chksum.updated) {
-         char chksumbuf[40];                  /* 24 should do */
-         int stream = 0;
+      if (digest) {
+         char md[CRYPTO_DIGEST_MAX_SIZE];
+         uint32_t size;
 
-         chksum_final(&chksum);
-         if (chksum.type == CHKSUM_MD5) {
-            stream = STREAM_MD5_SIGNATURE;
-         } else if (chksum.type == CHKSUM_SHA1) {
-            stream = STREAM_SHA1_SIGNATURE;
+         size = sizeof(md);
+         
+         if (digest_file(jcr, ff_pkt, digest) != 0) {
+            jcr->Errors++;
+            return 1;
          }
-         bin_to_base64(chksumbuf, (char *)chksum.signature, chksum.length);
-         Dmsg3(400, "send inx=%d %s=%s\n", jcr->JobFiles, chksum.name, chksumbuf);
-         bnet_fsend(dir, "%d %d %s *%s-%d*", jcr->JobFiles, stream, chksumbuf,
-               chksum.name, jcr->JobFiles);
-         Dmsg3(20, "bfiled>bdird: %s len=%d: msg=%s\n", chksum.name,
-               dir->msglen, dir->msg);
+
+         if (crypto_digest_finalize(digest, (uint8_t *)md, &size)) {
+            char *digest_buf;
+            const char *digest_name;
+            
+            digest_buf = (char *)malloc(BASE64_SIZE(size));
+            digest_name = crypto_digest_name(digest);
+
+            bin_to_base64(digest_buf, BASE64_SIZE(size), md, size, true);
+            Dmsg3(400, "send inx=%d %s=%s\n", jcr->JobFiles, digest_name, digest_buf);
+            bnet_fsend(dir, "%d %d %s *%s-%d*", jcr->JobFiles, digest_stream, digest_buf,
+                       digest_name, jcr->JobFiles);
+            Dmsg3(20, "bfiled>bdird: %s len=%d: msg=%s\n", digest_name,
+            dir->msglen, dir->msg);
+
+            free(digest_buf);
+         }
+
+         crypto_digest_free(digest);
       }
    }
 
@@ -266,15 +274,66 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
 }
 
 /*
- * Read checksum of bfd, updating chksum
+ * Compute message digest for the file specified by ff_pkt.
  * In case of errors we need the job control record and file name.
  */
-int read_chksum(BFILE *bfd, CHKSUM *chksum, JCR *jcr)
+int digest_file(JCR *jcr, FF_PKT *ff_pkt, DIGEST *digest)
 {
+   BFILE bfd;
+
+   binit(&bfd);
+
+   if (ff_pkt->statp.st_size > 0 || ff_pkt->type == FT_RAW
+         || ff_pkt->type == FT_FIFO) {
+      int noatime = ff_pkt->flags & FO_NOATIME ? O_NOATIME : 0;
+      if ((bopen(&bfd, ff_pkt->fname, O_RDONLY | O_BINARY | noatime, 0)) < 0) {
+         ff_pkt->ff_errno = errno;
+         berrno be;
+         be.set_errno(bfd.berrno);
+         Jmsg(jcr, M_NOTSAVED, 1, _("     Cannot open %s: ERR=%s.\n"),
+               ff_pkt->fname, be.strerror());
+         return 1;
+      }
+      read_digest(&bfd, digest, jcr);
+      bclose(&bfd);
+   }
+
+#ifdef HAVE_DARWIN_OS
+      /* Open resource fork if necessary */
+   if (ff_pkt->flags & FO_HFSPLUS && ff_pkt->hfsinfo.rsrclength > 0) {
+      if (bopen_rsrc(&bfd, ff_pkt->fname, O_RDONLY | O_BINARY, 0) < 0) {
+         ff_pkt->ff_errno = errno;
+         berrno be;
+         Jmsg(jcr, M_NOTSAVED, -1, _("     Cannot open resource fork for %s: ERR=%s.\n"),
+               ff_pkt->fname, be.strerror());
+         if (is_bopen(&ff_pkt->bfd)) {
+            bclose(&ff_pkt->bfd);
+         }
+         return 1;
+      }
+      read_digest(&bfd, digest, jcr);
+      bclose(&bfd);
+   }
+
+   if (digest && ff_pkt->flags & FO_HFSPLUS) {
+      crypto_digest_update(digest, (uint8_t *)ff_pkt->hfsinfo.fndrinfo, 32);
+   }
+#endif
+
+   return 0;
+}
+
+/*
+ * Read message digest of bfd, updating digest
+ * In case of errors we need the job control record and file name.
+ */
+int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr)
+{
+   char buf[DEFAULT_NETWORK_BUFFER_SIZE];
    int64_t n;
 
-   while ((n=bread(bfd, jcr->big_buf, jcr->buf_size)) > 0) {
-      chksum_update(chksum, ((unsigned char *)jcr->big_buf), (int)n);
+   while ((n=bread(bfd, buf, sizeof(buf))) > 0) {
+      crypto_digest_update(digest, (uint8_t *)buf, n);
       jcr->JobBytes += n;
       jcr->ReadBytes += n;
    }

@@ -1,0 +1,494 @@
+LIBRARY bacula.dll
+EXPORTS
+
+;
+; compat
+;
+; compat.c:
+_Z10open_bpipePciPKc
+_Z11close_bpipeP5BPIPE
+_Z11win32_cgetsPci
+_Z11win32_fputsPKcP6_iobuf
+_Z12gettimeofdayP7timevalP8timezone
+_Z12init_signalsPFviE
+_Z12wchar_2_UTF8PcPKwi
+_Z12win32_unlinkPKc
+_Z15init_stack_dumpv
+_Z17SetVSSPathConvertPFiPKcPciEPFiPKwPwiE
+_Z4killii
+_Z4statPKcP4stat
+_Z5fcntliil
+_Z5fstatiP4stat
+_Z5lstatPKcP4stat
+_Z5sleepi
+_Z6randomv
+_Z7opendirPKc
+_Z7srandomj
+_Z8closedirPv
+_Z8pathconfPKci
+_Z8WSA_Initv
+_Z9readdir_rPvP6direntPS1_
+
+; print.c:
+
+; winapi.c:
+_Z17InitWinAPIWrapperv
+
+;
+; findlib
+;
+; attribs.c:
+_Z11decode_statPcP4statPi
+_Z11encode_statPcP6FF_PKTi
+_Z13decode_LinkFIPcP4stat
+_Z14set_attributesP3JCRP4ATTRP5BFILE
+_Z16encode_attribsExP3JCRPcP6FF_PKT
+_Z18select_data_streamP6FF_PKT
+
+; bfile.c:
+_Z14have_win32_apiv
+_Z15is_win32_streami
+_Z15stream_to_asciii
+_Z18is_portable_backupP5BFILE
+_Z19set_portable_backupP5BFILE
+_Z26processWin32BackupAPIBlockP5BFILEPvl
+_Z27is_restore_stream_supportedi
+_Z5binitP5BFILE
+_Z5bopenP5BFILEPKcit
+_Z5breadP5BFILEPvj
+_Z6bcloseP5BFILE
+_Z6blseekP5BFILExi
+_Z6bwriteP5BFILEPvj
+_Z8is_bopenP5BFILE
+_Z8set_progP5BFILEPcP3JCR
+
+; create_file.c:
+_Z11create_fileP3JCRP4ATTRP5BFILEi
+
+; drivetype.c:
+_Z9drivetypePKcPci
+
+; enable_priv.c:
+_Z24enable_backup_privilegesP3JCRi
+
+; find.c:
+_Z10find_filesP3JCRP6FF_PKTPFiS2_PvbES3_
+_Z15init_find_filesv
+_Z15term_find_filesP6FF_PKT
+_Z16set_find_optionsP6FF_PKTil
+_Z22get_win32_drivelettersP6FF_PKTPc
+
+; find_one.c:
+_Z13find_one_fileP3JCRP6FF_PKTPFiS2_PvbES3_Pcjb
+
+; fstype.c:
+_Z6fstypePKcPci
+
+; makepath.c:
+
+; match.c:
+_Z11match_filesP3JCRP6FF_PKTPFiS2_PvbES3_
+_Z16file_is_excludedP6FF_PKTPKc
+_Z16file_is_includedP6FF_PKTPKc
+_Z25add_fname_to_exclude_listP6FF_PKTPKc
+_Z25add_fname_to_include_listP6FF_PKTiPKc
+_Z26term_include_exclude_filesP6FF_PKT
+
+; save-cwd.c:
+
+;
+; lib
+;
+; address_conf.c:
+_Z14free_addressesP5dlist
+_Z15store_addressesP13s_lex_contextP8RES_ITEMii
+_Z17get_first_addressP5dlistPci
+_Z17sockaddr_to_asciiPK8sockaddrPci
+_Z20store_addresses_portP13s_lex_contextP8RES_ITEMii
+_Z22init_default_addressesPP5dlisti
+_Z23store_addresses_addressP13s_lex_contextP8RES_ITEMii
+_Z25get_first_port_host_orderP5dlist
+_Z27sockaddr_get_port_net_orderPK8sockaddr
+_ZN6IPADDR11get_addressEPci
+_ZNK6IPADDR18get_port_net_orderEv
+
+; alist.c:
+_ZN5alist3getEi
+_ZN5alist4nextEv
+_ZN5alist5firstEv
+_ZN5alist6appendEPv
+_ZN5alist6removeEi
+_ZN5alist7destroyEv
+_ZN5alist7prependEPv
+
+; alloc.c:
+
+; attr.c:
+_Z15print_ls_outputP3JCRP4ATTR
+_Z24build_attr_output_fnamesP3JCRP4ATTR
+_Z24unpack_attributes_recordP3JCRiPcP4ATTR
+_Z8new_attrv
+_Z9free_attrP4ATTR
+
+; base64.c:
+_Z13bin_to_base64PciS_ii
+
+; berrno.c:
+_ZN6berrno20format_win32_messageEv
+_ZN6berrno8strerrorEv
+
+; bget_msg.c:
+_Z8bget_msgP5BSOCK
+
+; bnet.c:
+_Z10bnet_closeP5BSOCK
+_Z10bnet_fsendP5BSOCKPKcz
+_Z10init_bsockP3JCRiPKcS2_iP8sockaddr
+_Z10term_bsockP5BSOCK
+_Z12bnet_connectP3JCRiiPKcPcS3_ii
+_Z12is_bnet_stopP5BSOCK
+_Z13bnet_get_peerP5BSOCKPci
+_Z13bnet_strerrorP5BSOCK
+_Z13is_bnet_errorP5BSOCK
+_Z14bnet_wait_dataP5BSOCKi
+_Z15bnet_tls_clientP11TLS_ContextP5BSOCK
+_Z15bnet_tls_serverP11TLS_ContextP5BSOCKP5alist
+_Z17bnet_sig_to_asciiP5BSOCK
+_Z19bnet_wait_data_intrP5BSOCKi
+_Z20bnet_set_buffer_sizeP5BSOCKji
+_Z21bnet_despool_to_bsockP5BSOCKPFvlEl
+_Z28bnet_suppress_error_messagesP5BSOCKb
+_Z8bnet_sigP5BSOCKi
+_Z9bnet_recvP5BSOCK
+_Z9bnet_sendP5BSOCK
+_Z9dup_bsockP5BSOCK
+
+; bnet_server.c:
+_Z18bnet_thread_serverP5dlistiP9workq_tagPFPvS3_E
+_Z23bnet_stop_thread_serverP10pthread_t_
+
+; bpipe.c:
+_Z11run_programPciS_
+_Z23run_program_full_outputPciS_
+
+; bregex.c:
+b_regcomp
+b_regerror
+b_regexec
+b_regfree
+
+; bsnprintf.c:
+_Z10bvsnprintfPciPKcS_
+_Z9bsnprintfPciPKcz
+
+; bsys.c:
+_Z11bmicrosleepll
+_Z15create_pid_filePcPKci
+_Z15delete_pid_filePcPKci
+_Z15escape_filenamePKc
+_Z15read_state_filePcPKci
+_Z16write_state_filePcPKci
+_Z2_pPP16pthread_mutex_t_
+_Z2_vPP16pthread_mutex_t_
+_Z4dropPcS_
+_Z5bfreePv
+_Z6bfgetsPciP6_iobuf
+_Z7bstrcmpPKcS0_
+_Z7cstrlenPKc
+_Z8b_mallocPKcij
+_Z8breallocPvj
+_Z8bstrncatPcPKci
+_Z8bstrncpyPcPKci
+_Z8bstrncpyPcR8POOL_MEMi
+
+; btime.c:
+_Z10bstrftimesPcix
+_Z12bstrftime_ncPcix
+_Z12str_to_utimePc
+_Z13btime_to_unixx
+_Z14btime_to_utimex
+_Z16get_current_timeP9date_time
+_Z17get_current_btimev
+_Z6tm_woyl
+_Z9bstrftimePcix
+_Z9bstrutimePcix
+_Z9tm_decodeP9date_timeP2tm
+
+; btimers.c:
+_Z16stop_bsock_timerP10s_btimer_t
+_Z17start_bsock_timerP5BSOCKj
+_Z17stop_thread_timerP10s_btimer_t
+_Z18start_thread_timerP10pthread_t_j
+
+; btree.c:
+
+; cram-md5.c:
+_Z16cram_md5_respondP5BSOCKPcPiS2_
+_Z18cram_md5_challengeP5BSOCKPcii
+
+; crc32.c:
+_Z6bcrc32Phi
+
+; crypto.c:
+_Z11init_cryptov
+_Z14cleanup_cryptov
+_Z15crypto_sign_newv
+_Z15crypto_strerror14crypto_error_t
+_Z16crypto_sign_freeP9Signature
+_Z17crypto_cipher_newP14Crypto_SessionbPj
+_Z17crypto_digest_new15crypto_digest_t
+_Z18crypto_cipher_freeP14Cipher_Context
+_Z18crypto_digest_freeP6Digest
+_Z18crypto_digest_nameP6Digest
+_Z18crypto_keypair_dupP12X509_Keypair
+_Z18crypto_keypair_newv
+_Z18crypto_session_new15crypto_cipher_tP5alist
+_Z18crypto_sign_decodePKhj
+_Z18crypto_sign_encodeP9SignaturePhPj
+_Z18crypto_sign_verifyP9SignatureP12X509_KeypairP6Digest
+_Z19crypto_keypair_freeP12X509_Keypair
+_Z19crypto_session_freeP14Crypto_Session
+_Z20crypto_cipher_updateP14Cipher_ContextPKhjS2_Pj
+_Z20crypto_digest_updateP6DigestPKhj
+_Z21crypto_session_decodePKhjP5alistPP14Crypto_Session
+_Z21crypto_session_encodeP14Crypto_SessionPhPj
+_Z22crypto_cipher_finalizeP14Cipher_ContextPhPj
+_Z22crypto_digest_finalizeP6DigestPhPj
+_Z22crypto_keypair_has_keyPKc
+_Z22crypto_sign_add_signerP9SignatureP6DigestP12X509_Keypair
+_Z22crypto_sign_get_digestP9SignatureP12X509_KeypairPP6Digest
+_Z23crypto_keypair_load_keyP12X509_KeypairPKcPFiPciPKvES5_
+_Z24crypto_keypair_load_certP12X509_KeypairPKc
+_Z25crypto_digest_stream_typei
+
+; daemon.c:
+_Z12daemon_startv
+
+; dlist.c:
+_ZN5dlist13binary_insertEPvPFiS0_S0_E
+_ZN5dlist13binary_searchEPvPFiS0_S0_E
+_ZN5dlist13insert_beforeEPvS0_
+_ZN5dlist22binary_insert_multipleEPvPFiS0_S0_E
+_ZN5dlist6appendEPv
+_ZN5dlist6removeEPv
+_ZN5dlist7destroyEv
+_ZN5dlist7prependEPv
+_ZNK5dlist4nextEPKv
+
+; edit.c:
+_Z10add_commasPcS_
+_Z10edit_int64xPc
+_Z10edit_utimexPci
+_Z11edit_uint64yPc
+_Z11is_a_numberPKc
+_Z12str_to_int64Pc
+_Z13is_an_integerPKc
+_Z13is_name_validPcPS_
+_Z13str_to_uint64Pc
+_Z14size_to_uint64PciPy
+_Z17duration_to_utimePcPx
+_Z23edit_uint64_with_commasyPc
+_Z23edit_uint64_with_suffixyPc
+
+; enh_fnmatch.c:
+
+; fnmatch.c:
+fnmatch
+
+; hmac.c:
+
+; htable.c:
+
+; idcache.c:
+_Z7getuserjPci
+_Z8getgroupjPci
+
+; jcr.c:
+_Z10b_free_jcrPKciP3JCR
+_Z11unlock_jobsv
+_Z12jcr_walk_endP3JCR
+_Z12job_end_pushP3JCRPFvS0_PvES1_
+_Z13get_jcr_by_idj
+_Z13jcr_walk_nextP3JCR
+_Z14jcr_walk_startv
+_Z18get_jcr_by_sessionjj
+_Z18init_jcr_subsystemv
+_Z18set_jcr_job_statusP3JCRi
+_Z19lock_last_jobs_listv
+_Z19term_last_jobs_listv
+_Z20get_jcr_by_full_namePc
+_Z21unlock_last_jobs_listv
+_Z23get_jcr_by_partial_namePc
+_Z7new_jcriPFvP3JCRE
+_Z9lock_jobsv
+
+; lex.c:
+_Z11scan_to_eolP13s_lex_context
+_Z13lex_get_tokenP13s_lex_contexti
+_Z13lex_open_fileP13s_lex_contextPKcPFvS2_iS0_S2_zE
+_Z14lex_close_fileP13s_lex_context
+_Z14lex_tok_to_stri
+_Z29lex_set_default_error_handlerP13s_lex_context
+_Z32lex_set_error_handler_error_typeP13s_lex_contexti
+
+; md5.c:
+_Z7MD5InitP10MD5Context
+_Z8MD5FinalPhP10MD5Context
+_Z9MD5UpdateP10MD5ContextPhj
+
+; mem_pool.c:
+_Z13sm_get_memoryPKcii
+_Z17close_memory_poolv
+_Z18sm_get_pool_memoryPKcii
+_Z19sm_free_pool_memoryPKciPc
+_Z21sm_sizeof_pool_memoryPKciPc
+_Z22sm_realloc_pool_memoryPKciPci
+_Z23print_memory_pool_statsv
+_Z25sm_check_pool_memory_sizePKciPci
+_Z9pm_strcatPPcPKc
+_Z9pm_strcatR8POOL_MEMPKc
+_Z9pm_strcatRPcPKc
+_Z9pm_strcpyPPcPKc
+_Z9pm_strcpyR8POOL_MEMPKc
+_Z9pm_strcpyRPcPKc
+_Z9pm_strcpyRPcR8POOL_MEM
+
+; message.c:
+_Z10my_name_isiPPcPKc
+_Z12add_msg_destP4MSGSiiPcS1_
+_Z12rem_msg_destP4MSGSiiPc
+_Z13free_msgs_resP4MSGS
+_Z16dequeue_messagesP3JCR
+_Z16dispatch_messageP3JCRilPc
+_Z16init_console_msgPKc
+_Z4JmsgP3JCRilPKcz
+_Z4MmsgPPcPKcz
+_Z4MmsgR8POOL_MEMPKcz
+_Z4MmsgRPcPKcz
+_Z4QmsgP3JCRilPKcz
+_Z5d_msgPKciiS0_z
+_Z5e_msgPKciiiS0_z
+_Z5j_msgPKciP3JCRilS0_z
+_Z5m_msgPKciPPcS0_z
+_Z5m_msgPKciRPcS0_z
+_Z5p_msgPKciiS0_z
+_Z5q_msgPKciP3JCRilS0_z
+_Z8init_msgP3JCRP4MSGS
+_Z8term_msgv
+_Z9close_msgP3JCR
+_Z9get_tracev
+_Z9set_tracei
+
+; openssl.c:
+
+; pythonlib.c:
+_Z21generate_daemon_eventP3JCRPKc
+_Z23init_python_interpreterPKcS0_S0_
+_Z23term_python_interpreterv
+
+; queue.c:
+_Z5qnextP7b_queueS0_
+_Z7qdchainP7b_queue
+_Z7qinsertP7b_queueS0_
+
+; runscript.c:
+_Z11run_scriptsP3JCRP5alistPKc
+_Z13new_runscriptv
+_Z14copy_runscriptP9RUNSCRIPT
+_Z14free_runscriptP9RUNSCRIPT
+_Z15free_runscriptsP5alist
+_ZN9RUNSCRIPT10set_targetEPKc
+_ZN9RUNSCRIPT11set_commandEPKc
+_ZN9RUNSCRIPT13reset_defaultEb
+_ZN9RUNSCRIPT3runEP3JCRPKc
+_ZN9RUNSCRIPT5debugEv
+
+; rwlock.c:
+_Z11rwl_destroyP12s_rwlock_tag
+_Z13rwl_writelockP12s_rwlock_tag
+_Z15rwl_writeunlockP12s_rwlock_tag
+_Z8rwl_initP12s_rwlock_tag
+
+; scan.c:
+_Z10parse_argsPcPS_PiS0_S0_i
+_Z15parse_args_onlyPcPS_PiS0_S0_i
+_Z11skip_spacesPPc
+_Z14skip_nonspacesPPc
+_Z19strip_leading_spacePc
+_Z19strip_trailing_junkPc
+_Z22strip_trailing_newlinePc
+_Z7bsscanfPKcS0_z
+_Z7fstrschPKcS0_
+
+; semlock.c:
+
+; serial.c:
+_Z12serial_btimePPhx
+_Z12serial_int32PPhi
+_Z13serial_stringPPhPKc
+_Z13serial_uint32PPhj
+_Z13serial_uint64PPhy
+_Z14serial_float64PPhd
+_Z14unserial_btimePPh
+_Z14unserial_int32PPh
+_Z15unserial_stringPPhPc
+_Z15unserial_uint32PPh
+_Z15unserial_uint64PPh
+_Z16unserial_float64PPh
+
+; sha1.c:
+
+; signal.c:
+
+; smartall.c:
+_Z10sm_reallocPKciPvj
+_Z7sm_dumpb
+_Z7sm_freePKciPv
+_Z8sm_checkPKcib
+_Z9sm_callocPKcijj
+_Z9sm_mallocPKcij
+
+; tls.c:
+_Z15new_tls_contextPKcS0_S0_S0_PFiPciPKvES3_S0_b
+_Z16free_tls_contextP11TLS_Context
+
+; tree.c:
+_Z12tree_getpathP11s_tree_nodePci
+_Z16insert_tree_nodePcS_iP11s_tree_rootP11s_tree_node
+_Z8new_treei
+_Z8tree_cwdPcP11s_tree_rootP11s_tree_node
+_Z9free_treeP11s_tree_root
+
+; util.c:
+_Z11bash_spacesPc
+_Z11bash_spacesR8POOL_MEM
+_Z11encode_modetPc
+_Z11encode_timelPc
+_Z11is_buf_zeroPci
+_Z13unbash_spacesPc
+_Z13unbash_spacesR8POOL_MEM
+_Z14edit_job_codesP3JCRPcS1_PKc
+_Z15job_type_to_stri
+_Z16job_level_to_stri
+_Z16make_session_keyPcS_i
+_Z17job_status_to_stri
+_Z18do_shell_expansionPci
+_Z18jobstatus_to_asciiiPci
+_Z21set_working_directoryPc
+_Z5lcasePc
+
+; var.c:
+_Z10var_configP6var_st12var_config_tz
+_Z10var_createPP6var_st
+_Z10var_expandP6var_stPKciPPcPii
+_Z11var_destroyP6var_st
+_Z12var_strerrorP6var_st8var_rc_t
+_Z12var_unescapeP6var_stPKciPcii
+
+; watchdog.c:
+_Z12new_watchdogv
+_Z13stop_watchdogv
+_Z14start_watchdogv
+_Z17register_watchdogP12s_watchdog_t
+
+; workq.c:

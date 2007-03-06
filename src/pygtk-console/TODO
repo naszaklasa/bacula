@@ -1,0 +1,58 @@
+TO-DO Feature Notes for Bacula PyGTK Console
+============================================
+
+1) Always focus in the command line when in the Console tab. [DONE]
+2) Indicate in the status line when it is waiting on a command. [DONE]
+3) Implement some kind of tray monitor icon (see additional notes)
+4) Implement the most frequent restore use cases (see additional notes).
+5) Implement a good messages browser (see additional notes). [DONE:
+Instead of a message browser I did a very simple message log viewer]
+
+===========================================================================
+ADDITIONAL NOTES:
+
+Below I'll be adding more details to some of the points listed above.
+
+---------------------------------------------------------------------------
+Restore Use Cases
+-----------------
+
+a. Restore the most current view of the system (option 5 on the
+menu). Note, this could involve a lot of different jobs (full,
+differential, and any number of incrementals).
+
+b. Same as above, but at some given time in the past (presumably
+before some files got messed up).
+
+c. Restore files from a specified Job.
+
+d. Give me a list of where and when file X was backed up and allow me
+to choose.  This is not a direct option, but requires several steps.
+---------------------------------------------------------------------------
+Messages Browser
+----------------
+
+A messages browser similar to an e-mail browser can be very useful for
+various reasons:
+
+a. The admin(s) don't need to check out its email to receive notices.
+
+b. The GUI can take advantage of this data to enhance interactivity
+(ie: when running some job, the director ask the admin to label the
+Volume, this is received from a message that can be checked from the
+GUI and give the appropriate warning.
+
+Other features: the messages may be interesting to be saved on disk to
+have some sort of log between program executions.
+---------------------------------------------------------------------------
+Tray monitor icon
+-----------------
+
+Some ideas that I've collected from the mailing list:
+
+a. Be configurable: [] show errors | [] show messages
+b. Show the backup speed
+c. Error message: backup failures
+d. Error message: waiting for mount / label
+e. Running jobs number
+---------------------------------------------------------------------------

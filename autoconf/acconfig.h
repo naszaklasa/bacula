@@ -222,3 +222,22 @@
 
 /* Needed on HP-UX/g++ systems to support long long ints (int64) */
 #undef _INCLUDE_LONGLONG
+
+/* Define to system config directory */
+#undef SYSCONFDIR
+
+/* Define if OPENSSL is available */
+#undef HAVE_OPENSSL
+
+/* Define if comm encryption should be enabled */
+#undef HAVE_TLS
+
+/* Define if data encryption should be enabled */
+#undef HAVE_CRYPTO
+
+/* Define the LOCALEDIR if a translation */
+#undef LOCALEDIR
+
+/* Define if language support is enabled */
+#undef ENABLE_NLS
+

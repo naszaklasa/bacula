@@ -13,19 +13,32 @@
  *
  */
 /*
-   Copyright (C) 2001-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "find.h"
@@ -39,7 +52,7 @@
 #endif
 
 /* Fold case in fnmatch() on Win32 */
-#ifdef WIN32
+#ifdef HAVE_WIN32
 static const int fnmode = FNM_CASEFOLD;
 #else
 static const int fnmode = 0;
@@ -49,7 +62,6 @@ static const int fnmode = 0;
 #undef bmalloc
 #define bmalloc(x) sm_malloc(__FILE__, __LINE__, x)
 
-extern const int win32_client;
 
 int
 match_files(JCR *jcr, FF_PKT *ff, int callback(FF_PKT *ff_pkt, void *hpkt, bool), void *his_pkt)
@@ -180,6 +192,9 @@ void add_fname_to_include_list(FF_PKT *ff, int prefixed, const char *fname)
             inc->level = *++rp - '0';
             Dmsg1(200, "Compression level=%d\n", inc->level);
             break;
+         case 'K':
+            inc->options |= FO_NOATIME;
+            break;
          default:
             Emsg1(M_ERROR, 0, _("Unknown include/exclude option: %c\n"), *rp);
             break;
@@ -197,7 +212,7 @@ void add_fname_to_include_list(FF_PKT *ff, int prefixed, const char *fname)
    len = strlen(p);
    /* Zap trailing slashes.  */
    p += len - 1;
-   while (p > inc->fname && *p == '/') {
+   while (p > inc->fname && IsPathSeparator(*p)) {
       *p-- = 0;
       len--;
    }
@@ -210,7 +225,7 @@ void add_fname_to_include_list(FF_PKT *ff, int prefixed, const char *fname)
          break;
       }
    }
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
+#if defined(HAVE_WIN32)
    /* Convert any \'s into /'s */
    for (p=inc->fname; *p; p++) {
       if (*p == '\\') {
@@ -230,7 +245,8 @@ void add_fname_to_include_list(FF_PKT *ff, int prefixed, const char *fname)
          { }
       next->next = inc;
    }
-   Dmsg1(50, "add_fname_to_include fname=%s\n", inc->fname);
+   Dmsg3(00, "add_fname_to_include prefix=%d gzip=%d fname=%s\n", 
+         prefixed, !!(inc->options & FO_GZIP), inc->fname);
 }
 
 /*
@@ -244,11 +260,7 @@ void add_fname_to_exclude_list(FF_PKT *ff, const char *fname)
 
    Dmsg1(20, "Add name to exclude: %s\n", fname);
 
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
-   if (strchr(fname, '/') || strchr(fname, '\\')) {
-#else
-   if (strchr(fname, '/')) {
-#endif
+   if (first_path_separator(fname) != NULL) {
       list = &ff->excluded_paths_list;
    } else {
       list = &ff->excluded_files_list;
@@ -260,7 +272,7 @@ void add_fname_to_exclude_list(FF_PKT *ff, const char *fname)
    exc->next = *list;
    exc->len = len;
    strcpy(exc->fname, fname);
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
+#if defined(HAVE_WIN32)
    /* Convert any \'s into /'s */
    for (char *p=exc->fname; *p; p++) {
       if (*p == '\\') {
@@ -320,11 +332,11 @@ int file_is_included(FF_PKT *ff, const char *file)
       if (inc->len == len && strcmp(inc->fname, file) == 0) {
          return 1;
       }
-      if (inc->len < len && file[inc->len] == '/' &&
+      if (inc->len < len && IsPathSeparator(file[inc->len]) &&
           strncmp(inc->fname, file, inc->len) == 0) {
          return 1;
       }
-      if (inc->len == 1 && inc->fname[0] == '/') {
+      if (inc->len == 1 && IsPathSeparator(inc->fname[0])) {
          return 1;
       }
    }
@@ -363,13 +375,15 @@ int file_is_excluded(FF_PKT *ff, const char *file)
 {
    const char *p;
 
+#if defined(HAVE_WIN32)
    /*
     *  ***NB*** this removes the drive from the exclude
     *  rule.  Why?????
     */
-   if (win32_client && file[1] == ':') {
+   if (file[1] == ':') {
       file += 2;
    }
+#endif
 
    if (file_in_excluded_list(ff->excluded_paths_list, file)) {
       return 1;
@@ -378,7 +392,7 @@ int file_is_excluded(FF_PKT *ff, const char *file)
    /* Try each component */
    for (p = file; *p; p++) {
       /* Match from the beginning of a component only */
-      if ((p == file || (*p != '/' && *(p-1) == '/'))
+      if ((p == file || (!IsPathSeparator(*p) && IsPathSeparator(p[-1])))
            && file_in_excluded_list(ff->excluded_files_list, p)) {
          return 1;
       }

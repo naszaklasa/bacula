@@ -11,10 +11,12 @@
 #     (default "")
 #
 #
+BINDIR=@SQL_BINDIR@
+
 cd @working_dir@
 rm -f bacula.sql
 if test xsqlite = x@DB_NAME@ ; then
-  echo ".dump" | @SQL_BINDIR@/sqlite $1.db >$1.sql
+  echo ".dump" | ${BINDIR}/sqlite $1.db >$1.sql
 else
   if test xmysql = x@DB_NAME@ ; then
     if test $# -gt 2; then
@@ -22,23 +24,23 @@ else
     else
       MYSQLPASSWORD=""
     fi
-    @SQL_BINDIR@/mysqldump -u $2$MYSQLPASSWORD -f --opt $1 >$1.sql
+    ${BINDIR}/mysqldump -u $2$MYSQLPASSWORD -f --opt $1 >$1.sql
   else			      
     if test xpostgresql = x@DB_NAME@ ; then
       if test $# -gt 2; then
-        PGPASSWORD=$3
-		export PGPASSWORD
+	PGPASSWORD=$3
+	export PGPASSWORD
       fi
-      exec @SQL_BINDIR@/pg_dump -U $2 $1 >$1.sql
+      exec ${BINDIR}/pg_dump -c -U $2 $1 >$1.sql
     else
-      echo ".dump" | @SQL_BINDIR@/sqlite3 $1.db >$1.sql
+      echo ".dump" | ${BINDIR}/sqlite3 $1.db >$1.sql
     fi
   fi
 fi
 #
 #  To read back a MySQL database use: 
 #     cd @working_dir@
-#     rm -f @SQL_BINDIR@/../var/bacula/*
+#     rm -f ${BINDIR}/../var/bacula/*
 #     mysql <bacula.sql
 #
 #  To read back a SQLite database use:

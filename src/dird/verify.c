@@ -11,30 +11,40 @@
  *     When the File daemon sends the attributes, compare them to
  *       what is in the DB.
  *
- *   Version $Id: verify.c,v 1.70.2.5 2006/06/04 12:24:40 kerns Exp $
+ *   Version $Id: verify.c,v 1.85 2006/12/09 13:54:30 ricozz Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
 #include "dird.h"
 #include "findlib/find.h"
-
-/* Imported Global Variables */
-extern int debug_level;
 
 /* Commands sent to File daemon */
 static char verifycmd[]    = "verify level=%s\n";
@@ -43,6 +53,7 @@ static char storaddr[]     = "storage address=%s port=%d ssl=0\n";
 /* Responses received from File daemon */
 static char OKverify[]    = "2000 OK verify\n";
 static char OKstore[]     = "2000 OK storage\n";
+static char OKbootstrap[] = "2000 OK bootstrap\n";
 
 /* Forward referenced functions */
 static void prt_fname(JCR *jcr);
@@ -58,6 +69,8 @@ bool do_verify_init(JCR *jcr)
    JOB_DBR jr;
    JobId_t verify_jobid = 0;
    const char *Name;
+
+   free_wstorage(jcr);                   /* we don't write */
 
    memset(&jcr->previous_jr, 0, sizeof(jcr->previous_jr));
 
@@ -125,27 +138,9 @@ bool do_verify_init(JCR *jcr)
     *   File daemon but not used).
     */
    if (jcr->JobLevel == L_VERIFY_VOLUME_TO_CATALOG) {
-      RESTORE_CTX rx;
-      UAContext *ua;
-      memset(&rx, 0, sizeof(rx));
-      rx.bsr = new_bsr();
-      rx.JobIds = "";                       
-      rx.bsr->JobId = jcr->previous_jr.JobId;
-      ua = new_ua_context(jcr);
-      complete_bsr(ua, rx.bsr);
-      rx.bsr->fi = new_findex();
-      rx.bsr->fi->findex = 1;
-      rx.bsr->fi->findex2 = jcr->previous_jr.JobFiles;
-      jcr->ExpectedFiles = write_bsr_file(ua, rx);
-      if (jcr->ExpectedFiles == 0) {
-         free_ua_context(ua);
-         free_bsr(rx.bsr);
+      if (!create_restore_bootstrap_file(jcr)) {
          return false;
       }
-      free_ua_context(ua);
-      free_bsr(rx.bsr);
-      jcr->needs_sd = true;
-
    } else {
       jcr->sd_auth_key = bstrdup("dummy");    /* dummy Storage daemon key */
    }
@@ -191,7 +186,7 @@ bool do_verify(JCR *jcr)
       /*
        * Now start a job with the Storage daemon
        */
-      if (!start_storage_daemon_job(jcr, jcr->storage, NULL)) {
+      if (!start_storage_daemon_job(jcr, jcr->rstorage, NULL)) {
          return false;
       }
       if (!bnet_fsend(jcr->store_bsock, "run")) {
@@ -244,10 +239,10 @@ bool do_verify(JCR *jcr)
       /*
        * send Storage daemon address to the File daemon
        */
-      if (jcr->store->SDDport == 0) {
-         jcr->store->SDDport = jcr->store->SDport;
+      if (jcr->rstore->SDDport == 0) {
+         jcr->rstore->SDDport = jcr->rstore->SDport;
       }
-      bnet_fsend(fd, storaddr, jcr->store->address, jcr->store->SDDport);
+      bnet_fsend(fd, storaddr, jcr->rstore->address, jcr->rstore->SDDport);
       if (!response(jcr, fd, OKstore, "Storage", DISPLAY_ERROR)) {
          return false;
       }
@@ -255,7 +250,8 @@ bool do_verify(JCR *jcr)
       /*
        * Send the bootstrap file -- what Volumes/files to restore
        */
-      if (!send_bootstrap_file(jcr)) {
+      if (!send_bootstrap_file(jcr, fd) ||
+          !response(jcr, fd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
          return false;
       }
 
@@ -278,7 +274,7 @@ bool do_verify(JCR *jcr)
       return false;
    }
 
-   if (!send_run_before_and_after_commands(jcr)) {
+   if (!send_runscripts_commands(jcr)) {
       return false;
    }
 
@@ -353,7 +349,6 @@ void verify_cleanup(JCR *jcr, int TermCode)
    const char *Name;
 
 // Dmsg1(100, "Enter verify_cleanup() TermCod=%d\n", TermCode);
-   dequeue_messages(jcr);             /* display any queued messages */
 
    Dmsg3(900, "JobLevel=%c Expected=%u JobFiles=%u\n", jcr->JobLevel,
       jcr->ExpectedFiles, jcr->JobFiles);
@@ -369,9 +364,9 @@ void verify_cleanup(JCR *jcr, int TermCode)
    }
 
    JobId = jcr->jr.JobId;
-   set_jcr_job_status(jcr, TermCode);
 
-   update_job_end_record(jcr);
+   update_job_end(jcr, TermCode);
+
    if (jcr->unlink_bsr && jcr->RestoreBootstrap) {
       unlink(jcr->RestoreBootstrap);
       jcr->unlink_bsr = false;
@@ -495,7 +490,7 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
    int stat = JS_Terminated;
    char buf[MAXSTRING];
    POOLMEM *fname = get_pool_memory(PM_MESSAGE);
-   int do_SIG = NO_SIG;
+   int do_Digest = CRYPTO_DIGEST_NONE;
    int32_t file_index = 0;
 
    memset(&fdbr, 0, sizeof(FILE_DBR));
@@ -509,7 +504,7 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
     * We expect:
     *   FileIndex
     *   Stream
-    *   Options or SIG (MD5/SHA1)
+    *   Options or Digest (MD5/SHA1)
     *   Filename
     *   Attributes
     *   Link name  ???
@@ -517,11 +512,14 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
    while ((n=bget_dirmsg(fd)) >= 0 && !job_canceled(jcr)) {
       int stream;
       char *attr, *p, *fn;
-      char Opts_SIG[MAXSTRING];        /* Verify Opts or MD5/SHA1 signature */
+      char Opts_Digest[MAXSTRING];        /* Verify Opts or MD5/SHA1 digest */
 
+      if (job_canceled(jcr)) {
+         return false;
+      }
       fname = check_pool_memory_size(fname, fd->msglen);
       jcr->fname = check_pool_memory_size(jcr->fname, fd->msglen);
-      Dmsg1(200, "Atts+SIG=%s\n", fd->msg);
+      Dmsg1(200, "Atts+Digest=%s\n", fd->msg);
       if ((len = sscanf(fd->msg, "%ld %d %100s", &file_index, &stream,
             fname)) != 3) {
          Jmsg3(jcr, M_FATAL, 0, _("bird<filed: bad attributes, expected 3 fields got %d\n"
@@ -532,13 +530,13 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
        * We read the Options or Signature into fname
        *  to prevent overrun, now copy it to proper location.
        */
-      bstrncpy(Opts_SIG, fname, sizeof(Opts_SIG));
+      bstrncpy(Opts_Digest, fname, sizeof(Opts_Digest));
       p = fd->msg;
       skip_nonspaces(&p);             /* skip FileIndex */
       skip_spaces(&p);
       skip_nonspaces(&p);             /* skip Stream */
       skip_spaces(&p);
-      skip_nonspaces(&p);             /* skip Opts_SIG */
+      skip_nonspaces(&p);             /* skip Opts_Digest */
       p++;                            /* skip space */
       fn = fname;
       while (*p != 0) {
@@ -555,7 +553,7 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
          jcr->JobFiles++;
          jcr->FileIndex = file_index;    /* remember attribute file_index */
          decode_stat(attr, &statf, &LinkFIf);  /* decode file stat packet */
-         do_SIG = NO_SIG;
+         do_Digest = CRYPTO_DIGEST_NONE;
          jcr->fn_printed = false;
          pm_strcpy(jcr->fname, fname);  /* move filename into JCR */
 
@@ -581,13 +579,13 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
          }
 
          Dmsg3(400, "Found %s in catalog. inx=%d Opts=%s\n", jcr->fname,
-            file_index, Opts_SIG);
+            file_index, Opts_Digest);
          decode_stat(fdbr.LStat, &statc, &LinkFIc); /* decode catalog stat */
          /*
           * Loop over options supplied by user and verify the
           * fields he requests.
           */
-         for (p=Opts_SIG; *p; p++) {
+         for (p=Opts_Digest; *p; p++) {
             char ed1[30], ed2[30];
             switch (*p) {
             case 'i':                /* compare INODEs */
@@ -672,10 +670,10 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
                break;
             case '5':                /* compare MD5 */
                Dmsg1(500, "set Do_MD5 for %s\n", jcr->fname);
-               do_SIG = MD5_SIG;
+               do_Digest = CRYPTO_DIGEST_MD5;
                break;
             case '1':                 /* compare SHA1 */
-               do_SIG = SHA1_SIG;
+               do_Digest = CRYPTO_DIGEST_SHA1;
                break;
             case ':':
             case 'V':
@@ -684,13 +682,13 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
             }
          }
       /*
-       * Got SIG Signature from Storage daemon
-       *  It came across in the Opts_SIG field.
+       * Got Digest Signature from Storage daemon
+       *  It came across in the Opts_Digest field.
        */
-      } else if (stream == STREAM_MD5_SIGNATURE || stream == STREAM_SHA1_SIGNATURE) {
-         Dmsg2(400, "stream=SIG inx=%d SIG=%s\n", file_index, Opts_SIG);
+      } else if (crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
+         Dmsg2(400, "stream=Digest inx=%d Digest=%s\n", file_index, Opts_Digest);
          /*
-          * When ever we get a signature is MUST have been
+          * When ever we get a digest is MUST have been
           * preceded by an attributes record, which sets attr_file_index
           */
          if (jcr->FileIndex != (uint32_t)file_index) {
@@ -698,20 +696,20 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
                file_index, jcr->FileIndex);
             return false;
          }
-         if (do_SIG) {
-            db_escape_string(buf, Opts_SIG, strlen(Opts_SIG));
-            if (strcmp(buf, fdbr.SIG) != 0) {
+         if (do_Digest != CRYPTO_DIGEST_NONE) {
+            db_escape_string(buf, Opts_Digest, strlen(Opts_Digest));
+            if (strcmp(buf, fdbr.Digest) != 0) {
                prt_fname(jcr);
                if (debug_level >= 10) {
                   Jmsg(jcr, M_INFO, 0, _("      %s not same. File=%s Cat=%s\n"),
-                       stream==STREAM_MD5_SIGNATURE?"MD5":"SHA1", buf, fdbr.SIG);
+                       stream_to_ascii(stream), buf, fdbr.Digest);
                } else {
                   Jmsg(jcr, M_INFO, 0, _("      %s differs.\n"),
-                       stream==STREAM_MD5_SIGNATURE?"MD5":"SHA1");
+                       stream_to_ascii(stream));
                }
                stat = JS_Differences;
             }
-            do_SIG = FALSE;
+            do_Digest = CRYPTO_DIGEST_NONE;
          }
       }
       jcr->JobFiles = file_index;
@@ -728,11 +726,11 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
     */
    jcr->fn_printed = false;
    bsnprintf(buf, sizeof(buf),
-"SELECT Path.Path,Filename.Name FROM File,Path,Filename "
-"WHERE File.JobId=%d "
-"AND File.MarkId!=%d AND File.PathId=Path.PathId "
-"AND File.FilenameId=Filename.FilenameId",
-      JobId, jcr->JobId);
+      "SELECT Path.Path,Filename.Name FROM File,Path,Filename "
+      "WHERE File.JobId=%d "
+      "AND File.MarkId!=%d AND File.PathId=Path.PathId "
+      "AND File.FilenameId=Filename.FilenameId",
+         JobId, jcr->JobId);
    /* missing_handler is called for each file found */
    db_sql_query(jcr->db, buf, missing_handler, (void *)jcr);
    if (jcr->fn_printed) {
@@ -753,6 +751,9 @@ static int missing_handler(void *ctx, int num_fields, char **row)
 {
    JCR *jcr = (JCR *)ctx;
 
+   if (job_canceled(jcr)) {
+      return 1;
+   }
    if (!jcr->fn_printed) {
       Jmsg(jcr, M_INFO, 0, "\n");
       Jmsg(jcr, M_INFO, 0, _("The following files are missing:\n"));

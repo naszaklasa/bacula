@@ -21,6 +21,34 @@
  *      Mark McLoughlin <mark@skynet.ie>
  *      Nicolas Boichat <nicolas@boichat.ch> (add access to the underlying EggTrayIcon)
  */
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+
 
 #ifndef __EGG_STATUS_ICON_H__
 #define __EGG_STATUS_ICON_H__
@@ -37,7 +65,7 @@ G_BEGIN_DECLS
 #define EGG_IS_STATUS_ICON_CLASS(k)  (G_TYPE_CHECK_CLASS_TYPE ((k), EGG_TYPE_STATUS_ICON))
 #define EGG_STATUS_ICON_GET_CLASS(o) (G_TYPE_INSTANCE_GET_CLASS ((o), EGG_TYPE_STATUS_ICON, EggStatusIconClass))
 
-typedef struct _EggStatusIcon	     EggStatusIcon;
+typedef struct _EggStatusIcon        EggStatusIcon;
 typedef struct _EggStatusIconClass   EggStatusIconClass;
 typedef struct _EggStatusIconPrivate EggStatusIconPrivate;
 
@@ -54,10 +82,10 @@ struct _EggStatusIconClass
 
   void     (* activate)     (EggStatusIcon *status_icon);
   void     (* popup_menu)   (EggStatusIcon *status_icon,
-			     guint          buttton,
-			     guint32        activate_time);
+                             guint          buttton,
+                             guint32        activate_time);
   gboolean (* size_changed) (EggStatusIcon *status_icon,
-			     gint           size);
+                             gint           size);
 };
 
 GType                 egg_status_icon_get_type           (void);
@@ -69,13 +97,13 @@ EggStatusIcon        *egg_status_icon_new_from_stock     (const gchar        *st
 EggStatusIcon        *egg_status_icon_new_from_animation (GdkPixbufAnimation *animation);
 
 void                  egg_status_icon_set_from_pixbuf    (EggStatusIcon      *status_icon,
-							  GdkPixbuf          *pixbuf);
+                                                          GdkPixbuf          *pixbuf);
 void                  egg_status_icon_set_from_file      (EggStatusIcon      *status_icon,
-							  const gchar        *filename);
+                                                          const gchar        *filename);
 void                  egg_status_icon_set_from_stock     (EggStatusIcon      *status_icon,
-							  const gchar        *stock_id);
+                                                          const gchar        *stock_id);
 void                  egg_status_icon_set_from_animation (EggStatusIcon      *status_icon,
-							  GdkPixbufAnimation *animation);
+                                                          GdkPixbufAnimation *animation);
 
 GtkImageType          egg_status_icon_get_image_type     (EggStatusIcon      *status_icon);
 
@@ -86,15 +114,15 @@ GdkPixbufAnimation   *egg_status_icon_get_animation      (EggStatusIcon      *st
 gint                  egg_status_icon_get_size           (EggStatusIcon      *status_icon);
 
 void                  egg_status_icon_set_tooltip        (EggStatusIcon      *status_icon,
-							  const gchar        *tooltip_text,
-							  const gchar        *tooltip_private);
+                                                          const gchar        *tooltip_text,
+                                                          const gchar        *tooltip_private);
 
 void                  egg_status_icon_set_balloon_text   (EggStatusIcon      *status_icon,
-							  const gchar        *text);
+                                                          const gchar        *text);
 G_CONST_RETURN gchar *egg_status_icon_get_balloon_text   (EggStatusIcon      *status_icon);
 
 void                  egg_status_icon_set_is_blinking    (EggStatusIcon      *status_icon,
-							  guint            enable_blinking);
+                                                          guint            enable_blinking);
 gboolean              egg_status_icon_get_is_blinking    (EggStatusIcon      *status_icon);
 
 EggTrayIcon*          egg_status_icon_get_tray_icon      (EggStatusIcon      *status_icon);

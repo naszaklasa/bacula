@@ -1,3 +1,4 @@
+
 Notes about Bacula translations.
 --------------------------------
 
@@ -16,6 +17,9 @@ removed from the sources files, run:
 To refresh Bacula source files list (POTFILES.in), when a source file is
 added or removed from the repository, run:
 # make gen-potfiles && make update-po
+Note, the make gen-potfiles should not be done very often, in fact,
+it is probably better to edit POTFILES.in manually to prevent unwanted
+files from getting in the list.
 
 ---
 

@@ -4,22 +4,35 @@
  *
  *     Kern Sibbald, March MMII
  *
- *     Version $Id: console.c,v 1.23.2.2 2005/12/10 13:18:03 kerns Exp $
+ *     Version $Id: console.c,v 1.32 2006/12/08 14:27:10 kerns Exp $
  */
 /*
-   Copyright (C) 2002-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "console.h"
@@ -48,8 +61,8 @@ GtkWidget *restore_file_selection;
 GtkWidget *dir_select;
 GtkWidget *about1;           /* about box */
 GtkWidget *label_dialog;
-PangoFontDescription *font_desc;
-PangoFontDescription *console_font_desc = NULL;
+PangoFontDescription *font_desc = NULL;
+PangoFontDescription *text_font_desc = NULL;
 pthread_mutex_t cmd_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  cmd_wait;
 char cmd[1000];
@@ -85,7 +98,7 @@ static int numdir = 0;
 static void usage()
 {
    fprintf(stderr, _(
-"Copyright (C) 2002-2005 Kern Sibbald\n"
+PROG_COPYRIGHT
 "\nVersion: %s (%s) %s %s %s\n\n"
 "Usage: gnome-console [-s] [-c config_file] [-d debug_level] [config_file]\n"
 "       -c <file>   set configuration file to file\n"
@@ -93,7 +106,7 @@ static void usage()
 "       -s          no signals\n"
 "       -t          test - read configuration and exit\n"
 "       -?          print this message.\n"
-"\n"), VERSION, BDATE, HOST_OS, DISTNAME, DISTVER);
+"\n"), 2002, VERSION, BDATE, HOST_OS, DISTNAME, DISTVER);
 
    exit(1);
 }
@@ -124,7 +137,7 @@ static int tls_pem_callback(char *buf, int size, const void *userdata)
  */
 static int check_resources()
 {
-   int xOK = true;
+   bool ok = true;
    DIRRES *director;
 
    LockRes();
@@ -138,7 +151,7 @@ static int check_resources()
             director->tls_enable = true;
          } else {
             Jmsg(NULL, M_FATAL, 0, _("TLS required but not configured in Bacula.\n"));
-            xOK = false;
+            ok = false;
             continue;
          }
       }
@@ -148,14 +161,14 @@ static int check_resources()
                              " or \"TLS CA Certificate Dir\" are defined for Director \"%s\" in %s."
                              " At least one CA certificate store is required.\n"),
                              director->hdr.name, configfile);
-         xOK = false;
+         ok = false;
       }
    }
    
    if (numdir == 0) {
       Emsg1(M_FATAL, 0, _("No Director resource defined in %s\n"
                           "Without that I don't how to speak to the Director :-(\n"), configfile);
-      xOK = false;
+      ok = false;
    }
 
    CONRES *cons;
@@ -167,7 +180,7 @@ static int check_resources()
             cons->tls_enable = true;
          } else {
             Jmsg(NULL, M_FATAL, 0, _("TLS required but not configured in Bacula.\n"));
-            xOK = false;
+            ok = false;
             continue;
          }
       }
@@ -176,13 +189,13 @@ static int check_resources()
          Emsg2(M_FATAL, 0, _("Neither \"TLS CA Certificate\""
                              " or \"TLS CA Certificate Dir\" are defined for Console \"%s\" in %s.\n"),
                              cons->hdr.name, configfile);
-         xOK = false;
+         ok = false;
       }
    }
 
    UnlockRes();
 
-   return xOK;
+   return ok;
 }
 
 
@@ -200,9 +213,11 @@ int main(int argc, char *argv[])
    const char *gargv[2] = {"gnome-console", NULL};
    CONFONTRES *con_font;
 
+#ifdef ENABLE_NLS
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
+#endif
 
    init_stack_dump();
    my_name_is(argc, argv, "gnome-console");
@@ -267,8 +282,8 @@ int main(int argc, char *argv[])
 
    parse_config(configfile);
 
-   if (init_tls() != 0) {
-      Emsg0(M_ERROR_TERM, 0, _("TLS library initialization failed.\n"));
+   if (init_crypto() != 0) {
+      Emsg0(M_ERROR_TERM, 0, _("Cryptography library initialization failed.\n"));
    }
 
    if (!check_resources()) {
@@ -302,8 +317,8 @@ int main(int argc, char *argv[])
           continue;
        }
        Dmsg1(100, "Now loading: %s\n",con_font->fontface);
-        console_font_desc = pango_font_description_from_string(con_font->fontface);
-       if (console_font_desc == NULL) {
+       text_font_desc = pango_font_description_from_string(con_font->fontface);
+       if (text_font_desc == NULL) {
            Dmsg2(400, "Load of requested ConsoleFont \"%s\" (%s) failed!\n",
                   con_font->hdr.name, con_font->fontface);
        } else {
@@ -313,14 +328,21 @@ int main(int argc, char *argv[])
        }
    }
    UnlockRes();
-
+    
    font_desc = pango_font_description_from_string("LucidaTypewriter 9");
+   if (!text_font_desc) {
+      text_font_desc = pango_font_description_from_string("Monospace 10");
+   }
+   if (!text_font_desc) {
+      text_font_desc = pango_font_description_from_string("monospace");
+   }
+
    gtk_widget_modify_font(console, font_desc);
    gtk_widget_modify_font(entry1, font_desc);
    gtk_widget_modify_font(status1, font_desc);
-   if (console_font_desc) {
-      gtk_widget_modify_font(text1, console_font_desc);
-      pango_font_description_free(console_font_desc);
+   if (text_font_desc) {
+      gtk_widget_modify_font(text1, text_font_desc);
+      pango_font_description_free(text_font_desc);
    } else {
       gtk_widget_modify_font(text1, font_desc);
    }
@@ -672,7 +694,7 @@ void terminate_console(int sig)
    if (already_here)                  /* avoid recursive temination problems */
       exit(1);
    already_here = true;
-   cleanup_tls();
+   cleanup_crypto();
    disconnect_from_director((gpointer)NULL);
    gtk_main_quit();
    exit(0);

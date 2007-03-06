@@ -6,22 +6,35 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_tree.c,v 1.39.2.3 2006/06/04 12:24:40 kerns Exp $
+ *   Version $Id: ua_tree.c,v 1.50 2006/12/03 08:59:59 kerns Exp $
  */
 /*
-   Copyright (C) 2002-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -107,9 +120,10 @@ bool user_select_files_from_tree(TREE_CTX *tree)
       if (!get_cmd(ua, "$ ")) {
          break;
       }
-      parse_ua_args(ua);
+      parse_args_only(ua->cmd, &ua->args, &ua->argc, ua->argk, ua->argv, MAX_CMD_ARGS);
       if (ua->argc == 0) {
-         break;
+         bsendmsg(tree->ua, _("Illegal command. Enter \"done\" to exit.\n"));
+         continue;
       }
 
       len = strlen(ua->argk[0]);
@@ -160,8 +174,8 @@ int insert_tree_handler(void *ctx, int num_fields, char **row)
 
 // Dmsg4(000, "Path=%s%s FI=%s JobId=%s\n", row[0], row[1],
 //    row[2], row[3]);
-   if (*row[1] == 0) {                /* no filename => directory */
-      if (*row[0] != '/') {           /* Must be Win32 directory */
+   if (*row[1] == 0) {                 /* no filename => directory */
+      if (!IsPathSeparator(*row[0])) { /* Must be Win32 directory */
          type = TN_DIR_NLS;
       } else {
          type = TN_DIR;
@@ -374,7 +388,7 @@ static int findcmd(UAContext *ua, TREE_CTX *tree)
 
    if (ua->argc == 1) {
       bsendmsg(ua, _("No file specification given.\n"));
-      return 0;
+      return 1;      /* make it non-fatal */
    }
 
    for (int i=1; i < ua->argc; i++) {
@@ -496,7 +510,11 @@ static void ls_output(char *buf, const char *fname, const char *tag,
       p += n;
       n = sprintf(p, "%10.10s  ", edit_uint64(statp->st_size, ec1));
       p += n;
-      time = statp->st_mtime;
+      if (statp->st_ctime > statp->st_mtime) {
+         time = statp->st_ctime;
+      } else {
+         time = statp->st_mtime;
+      }
       /* Display most recent time */
       p = encode_time(time, p);
       *p++ = ' ';
@@ -643,10 +661,11 @@ static int cdcmd(UAContext *ua, TREE_CTX *tree)
    TREE_NODE *node;
    char cwd[2000];
 
+
    if (ua->argc != 2) {
+      bsendmsg(ua, _("Too many arguments. Try using double quotes.\n"));
       return 1;
    }
-   strip_leading_space(ua->argk[1]);
    node = tree_cwd(ua->argk[1], tree->root, tree->node);
    if (!node) {
       /* Try once more if Win32 drive -- make absolute */
@@ -698,7 +717,8 @@ static int unmarkcmd(UAContext *ua, TREE_CTX *tree)
    } else if (count == 1) {
       bsendmsg(ua, _("1 file unmarked.\n"));
    } else {
-      bsendmsg(ua, _("%d files unmarked.\n"), count);
+      char ed1[50];
+      bsendmsg(ua, _("%s files unmarked.\n"), edit_uint64_with_commas(count, ed1));
    }
    return 1;
 }

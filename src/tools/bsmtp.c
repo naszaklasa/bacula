@@ -1,18 +1,4 @@
 /*
-  Copyright (C) 2001-2006 Kern Sibbald
-
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
-
- */
-/*
    Derived from a SMTPclient:
 
        SMTPclient -- simple SMTP client
@@ -23,26 +9,44 @@
 
    Kern Sibbald, July 2001
 
-   Version $Id: bsmtp.c,v 1.16.2.1 2006/03/20 07:16:40 kerns Exp $
+   Version $Id: bsmtp.c,v 1.21 2006/11/22 14:26:39 kerns Exp $
 
  */
+/*
+   Bacula® - The Network Backup Solution
 
-#ifdef APCUPSD
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-#include "apc.h"
-#undef main
-#define my_name_is(x)
-#define bstrdup(x) strdup(x)
-UPSINFO myUPS;
-UPSINFO *core_ups = &myUPS;
-#define MY_NAME "smtp"
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
-#else
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+
 
 #include "bacula.h"
 #include "jcr.h"
 #define MY_NAME "bsmtp"
 
+#if defined(HAVE_WIN32)
+#include <lmcons.h>
 #endif
 
 /* Dummy functions */
@@ -80,6 +84,9 @@ static void get_response(void)
         if (len > 0) {
            buf[len-1] = 0;
         }
+        if (debug_level >= 10) {
+            fprintf(stderr, "%s <-- %s\n", mailhost, buf);
+        }
         Dmsg2(10, "%s --> %s\n", mailhost, buf);
         if (!isdigit((int)buf[0]) || buf[0] > '3') {
             Pmsg2(0, _("Fatal malformed reply from %s: %s\n"), mailhost, buf);
@@ -88,6 +95,9 @@ static void get_response(void)
         if (buf[3] != '-') {
             break;
         }
+    }
+    if (ferror(rfp)) {
+        fprintf(stderr, _("Fatal fgets error: ERR=%s\n"), strerror(errno));
     }
     return;
 }
@@ -143,9 +153,14 @@ int main (int argc, char *argv[])
     char buf[MAXSTRING];
     struct sockaddr_in sin;
     struct hostent *hp;
-    int s, r, i, ch;
+    int i, ch;
     unsigned long maxlines, lines;
+#if defined(HAVE_WIN32)
+    SOCKET s;
+#else
+    int s, r;
     struct passwd *pwd;
+#endif
     char *cp, *p;
     time_t now = time(NULL);
     struct tm tm;
@@ -196,9 +211,9 @@ int main (int argc, char *argv[])
          break;
 
       case 'l':
-	 Dmsg1(20, "maxlines=%s\n", optarg);
-	 maxlines = (unsigned long) atol(optarg);
-	 break;
+         Dmsg1(20, "maxlines=%s\n", optarg);
+         maxlines = (unsigned long) atol(optarg);
+         break;
 
       case '?':
       default:
@@ -215,6 +230,10 @@ int main (int argc, char *argv[])
       exit(1);
    }
 
+#if defined(HAVE_WIN32)
+   _setmode(0, _O_BINARY);
+#endif
+
    /*
     *  Determine SMTP server
     */
@@ -225,6 +244,12 @@ int main (int argc, char *argv[])
          mailhost = "localhost";
       }
    }
+
+#if defined(HAVE_WIN32)
+   WSADATA  wsaData;
+
+   WSAStartup(MAKEWORD(2,2), &wsaData);
+#endif
 
    /*
     *  Find out my own host name for HELO;
@@ -246,11 +271,22 @@ int main (int argc, char *argv[])
     *  Determine from address.
     */
    if (from_addr == NULL) {
+#if defined(HAVE_WIN32)
+      DWORD dwSize = UNLEN + 1;
+      LPSTR lpszBuffer = (LPSTR)alloca(dwSize);
+
+      if (GetUserName(lpszBuffer, &dwSize)) {
+         sprintf(buf, "%s@%s", lpszBuffer, my_hostname);
+      } else {
+         sprintf(buf, "unknown-user@%s", my_hostname);
+      }
+#else
       if ((pwd = getpwuid(getuid())) == 0) {
          sprintf(buf, "userid-%d@%s", (int)getuid(), my_hostname);
       } else {
          sprintf(buf, "%s@%s", pwd->pw_name, my_hostname);
       }
+#endif
       from_addr = bstrdup(buf);
    }
    Dmsg1(20, "From addr=%s\n", from_addr);
@@ -278,15 +314,41 @@ hp:
    memcpy((char *)&sin.sin_addr, hp->h_addr, hp->h_length);
    sin.sin_family = hp->h_addrtype;
    sin.sin_port = htons(mailport);
+#if defined(HAVE_WIN32)
+   if ((s = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, 0)) < 0) {
+      Pmsg1(0, _("Fatal socket error: ERR=%s\n"), strerror(errno));
+      exit(1);
+   }
+#else
    if ((s = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
       Pmsg1(0, _("Fatal socket error: ERR=%s\n"), strerror(errno));
       exit(1);
    }
+#endif
    if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) < 0) {
       Pmsg2(0, _("Fatal connect error to %s: ERR=%s\n"), mailhost, strerror(errno));
       exit(1);
    }
    Dmsg0(20, "Connected\n");
+
+#if defined(HAVE_WIN32)
+   int fdSocket = _open_osfhandle(s, _O_RDWR | _O_BINARY);
+   if (fdSocket == -1) {
+      Pmsg1(0, _("Fatal _open_osfhandle error: ERR=%s\n"), strerror(errno));
+      exit(1);
+   }
+
+   int fdSocket2 = dup(fdSocket);
+
+   if ((sfp = fdopen(fdSocket, "wb")) == NULL) {
+      Pmsg1(0, _("Fatal fdopen error: ERR=%s\n"), strerror(errno));
+      exit(1);
+   }
+   if ((rfp = fdopen(fdSocket2, "rb")) == NULL) {
+      Pmsg1(0, _("Fatal fdopen error: ERR=%s\n"), strerror(errno));
+      exit(1);
+   }
+#else
    if ((r = dup(s)) < 0) {
       Pmsg1(0, _("Fatal dup error: ERR=%s\n"), strerror(errno));
       exit(1);
@@ -299,6 +361,7 @@ hp:
       Pmsg1(0, _("Fatal fdopen error: ERR=%s\n"), strerror(errno));
       exit(1);
    }
+#endif
 
    /*
     *  Send SMTP headers
@@ -335,6 +398,19 @@ hp:
       fprintf(sfp, "Errors-To: %s\r\n", err_addr);
       Dmsg1(10, "Errors-To: %s\r\n", err_addr);
    }
+
+#if defined(HAVE_WIN32)
+   DWORD dwSize = UNLEN + 1;
+   LPSTR lpszBuffer = (LPSTR)alloca(dwSize);
+
+   if (GetUserName(lpszBuffer, &dwSize)) {
+      fprintf(sfp, "Sender: %s@%s\r\n", lpszBuffer, my_hostname);
+      Dmsg2(10, "Sender: %s@%s\r\n", lpszBuffer, my_hostname);
+   } else {
+      fprintf(sfp, "Sender: unknown-user@%s\r\n", my_hostname);
+      Dmsg1(10, "Sender: unknown-user@%s\r\n", my_hostname);
+   }
+#else
    if ((pwd = getpwuid(getuid())) == 0) {
       fprintf(sfp, "Sender: userid-%d@%s\r\n", (int)getuid(), my_hostname);
       Dmsg2(10, "Sender: userid-%d@%s\r\n", (int)getuid(), my_hostname);
@@ -342,6 +418,7 @@ hp:
       fprintf(sfp, "Sender: %s@%s\r\n", pwd->pw_name, my_hostname);
       Dmsg2(10, "Sender: %s@%s\r\n", pwd->pw_name, my_hostname);
    }
+#endif
 
    fprintf(sfp, "To: %s", argv[0]);
    Dmsg1(10, "To: %s", argv[0]);
@@ -358,8 +435,24 @@ hp:
    }
 
    /* Add RFC822 date */
-   localtime_r(&now, &tm);
+   (void)localtime_r(&now, &tm);
+#if defined(HAVE_WIN32)
+#if defined(HAVE_MINGW)
+__MINGW_IMPORT long     _dstbias;
+#endif
+   long tzoffset = 0;
+
+   _tzset();
+
+   tzoffset = _timezone;
+   tzoffset += _dstbias;
+   tzoffset /= 60;
+
+   size_t length = strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S", &tm);
+   sprintf(&buf[length], " %+2.2ld%2.2u", -tzoffset / 60, abs(tzoffset) % 60);
+#else
    strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %z", &tm);
+#endif
    fprintf(sfp, "Date: %s\r\n", buf);
    Dmsg1(10, "Date: %s\r\n", buf);
 
@@ -372,13 +465,15 @@ hp:
    while (fgets(buf, sizeof(buf), stdin)) {
       if (maxlines > 0 && ++lines > maxlines) {
          Dmsg1(20, "skip line because of maxlines limit: %lu\n", maxlines);
-	 continue;
+         break;
       }
-      buf[strlen(buf)-1] = 0;
-      if (strcmp(buf, ".") == 0) { /* quote lone dots */
-         fprintf(sfp, "..\r\n");
+      buf[sizeof(buf)-1] = '\0';
+      buf[strlen(buf)-1] = '\0';
+      if (buf[0] == '.' && buf[1] == '\0') { /* quote lone dots */
+         fputs("..\r\n", sfp);
       } else {                     /* pass body through unchanged */
-         fprintf(sfp, "%s\r\n", buf);
+         fputs(buf, sfp);
+         fputs("\r\n", sfp);
       }
    }
 

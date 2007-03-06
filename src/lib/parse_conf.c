@@ -30,27 +30,44 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.c,v 1.74.2.4 2006/06/04 12:24:40 kerns Exp $
+ *   Version $Id: parse_conf.c,v 1.90.4.1 2007/01/11 20:15:48 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
 
-extern int debug_level;
+#if defined(HAVE_WIN32)
+#include "shlobj.h"
+#else
+#define MAX_PATH  1024
+#endif
 
 /* Each daemon has a slightly different set of
  * resources, so it will define the following
@@ -61,22 +78,22 @@ extern int r_last;
 extern RES_TABLE resources[];
 extern RES **res_head;
 
-#ifdef HAVE_WIN32
-// work around visual studio name manling preventing external linkage since res_all
+#if defined(_MSC_VER)
+// work around visual studio name mangling preventing external linkage since res_all
 // is declared as a different type when instantiated.
 extern "C" CURES res_all;
-extern "C" int res_all_size;
 #else
 extern  CURES res_all;
-extern int res_all_size;
 #endif
+extern int res_all_size;
 
 extern brwlock_t res_lock;            /* resource lock */
 
 
 /* Forward referenced subroutines */
 static void scan_types(LEX *lc, MSGS *msg, int dest, char *where, char *cmd);
-
+static const char *get_default_configdir();
+static bool find_config_file(const char *config_file, char *full_path);
 
 /* Common Resource definitions */
 
@@ -91,6 +108,7 @@ RES_ITEM msgs_items[] = {
    {"syslog",      store_msgs, ITEM(res_msgs), MD_SYSLOG,   0, 0},
    {"mail",        store_msgs, ITEM(res_msgs), MD_MAIL,     0, 0},
    {"mailonerror", store_msgs, ITEM(res_msgs), MD_MAIL_ON_ERROR, 0, 0},
+   {"mailonsuccess", store_msgs, ITEM(res_msgs), MD_MAIL_ON_SUCCESS, 0, 0},
    {"file",        store_msgs, ITEM(res_msgs), MD_FILE,     0, 0},
    {"append",      store_msgs, ITEM(res_msgs), MD_APPEND,   0, 0},
    {"stdout",      store_msgs, ITEM(res_msgs), MD_STDOUT,   0, 0},
@@ -98,7 +116,8 @@ RES_ITEM msgs_items[] = {
    {"director",    store_msgs, ITEM(res_msgs), MD_DIRECTOR, 0, 0},
    {"console",     store_msgs, ITEM(res_msgs), MD_CONSOLE,  0, 0},
    {"operator",    store_msgs, ITEM(res_msgs), MD_OPERATOR, 0, 0},
-   {NULL, NULL,    NULL,       0,              0}
+   {"catalog",     store_msgs, ITEM(res_msgs), MD_CATALOG,  0, 0},
+   {NULL,          NULL,       {0},       0, 0, 0}
 };
 
 struct s_mtypes {
@@ -121,6 +140,7 @@ static struct s_mtypes msg_types[] = {
    {"restored",      M_RESTORED},
    {"security",      M_SECURITY},
    {"alert",         M_ALERT},
+   {"volmgmt",       M_VOLMGMT},
    {"all",           M_MAX+1},
    {NULL,            0}
 };
@@ -191,10 +211,10 @@ void init_resource(int type, RES_ITEM *items, int pass)
             (items[i].flags & ITEM_DEFAULT) ? "yes" : "no",
             items[i].default_value);
       if (items[i].flags & ITEM_DEFAULT && items[i].default_value != 0) {
-         if (items[i].handler == store_yesno) {
+         if (items[i].handler == store_bit) {
             *(int *)(items[i].value) |= items[i].code;
          } else if (items[i].handler == store_bool) {
-            *(bool *)(items[i].value) = items[i].default_value;
+            *(bool *)(items[i].value) = items[i].default_value != 0;
          } else if (items[i].handler == store_pint ||
                     items[i].handler == store_int) {
             *(int *)(items[i].value) = items[i].default_value;
@@ -231,12 +251,14 @@ void store_msgs(LEX *lc, RES_ITEM *item, int index, int pass)
       case MD_STDERR:
       case MD_SYSLOG:              /* syslog */
       case MD_CONSOLE:
+      case MD_CATALOG:
          scan_types(lc, (MSGS *)(item->value), item->code, NULL, NULL);
          break;
       case MD_OPERATOR:            /* send to operator */
       case MD_DIRECTOR:            /* send to Director */
       case MD_MAIL:                /* mail */
       case MD_MAIL_ON_ERROR:       /* mail if Job errors */
+      case MD_MAIL_ON_SUCCESS:     /* mail if Job succeeds */
          if (item->code == MD_OPERATOR) {
             cmd = res_all.res_msgs.operator_cmd;
          } else {
@@ -689,7 +711,7 @@ void store_time(LEX *lc, RES_ITEM *item, int index, int pass)
 
 
 /* Store a yes/no in a bit field */
-void store_yesno(LEX *lc, RES_ITEM *item, int index, int pass)
+void store_bit(LEX *lc, RES_ITEM *item, int index, int pass)
 {
    lex_get_token(lc, T_NAME);
    if (strcasecmp(lc->str, "yes") == 0 || strcasecmp(lc->str, "true") == 0) {
@@ -768,6 +790,12 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
    RES_ITEM *items = NULL;
    int level = 0;
 
+   char *full_path = (char *)alloca(MAX_PATH);
+
+   if (find_config_file(cf, full_path)) {
+      cf = full_path;
+   }
+
    /* Make two passes. The first builds the name symbol table,
     * and the second picks up the items.
     */
@@ -800,6 +828,9 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
             if (token == T_EOL) {
                break;
             }
+            if (token == T_UNICODE_MARK) {
+               break;
+            }
             if (token != T_IDENTIFIER) {
                scan_err1(lc, _("Expected a Resource name identifier, got: %s"), lc->str);
                return 0;
@@ -814,7 +845,7 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
                }
             if (state == p_none) {
                scan_err1(lc, _("expected resource name, got: %s"), lc->str);
-          return 0;
+               return 0;
             }
             break;
          case p_resource:
@@ -893,6 +924,64 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
    }
    Dmsg0(900, "Leave parse_config()\n");
    return 1;
+}
+
+const char *get_default_configdir()
+{
+#if defined(HAVE_WIN32)
+   HRESULT hr;
+   static char szConfigDir[MAX_PATH + 1] = { 0 };
+
+   if (!p_SHGetFolderPath) {
+      bstrncpy(szConfigDir, DEFAULT_CONFIGDIR, sizeof(szConfigDir));
+      return szConfigDir;
+   }
+
+   if (szConfigDir[0] == '\0') {
+      hr = p_SHGetFolderPath(NULL, CSIDL_COMMON_APPDATA, NULL, 0, szConfigDir);
+
+      if (SUCCEEDED(hr)) {
+         bstrncat(szConfigDir, "\\Bacula", sizeof(szConfigDir));
+      } else {
+         bstrncpy(szConfigDir, DEFAULT_CONFIGDIR, sizeof(szConfigDir));
+      }
+   }
+   return szConfigDir;
+#else
+   return SYSCONFDIR;
+#endif
+}
+
+bool
+find_config_file(const char *config_file, char *full_path)
+{
+   if (first_path_separator(config_file) != NULL) {
+      return false;
+   }
+
+   struct stat st;
+
+   if (stat(config_file, &st) == 0) {
+      return false;
+   }
+
+   const char *config_dir = get_default_configdir();
+   size_t dir_length = strlen(config_dir);
+   size_t file_length = strlen(config_file);
+
+   if ((dir_length + 1 + file_length + 1) > MAX_PATH) {
+      return false;
+   }
+
+   memcpy(full_path, config_dir, dir_length + 1);
+
+   if (!IsPathSeparator(full_path[dir_length - 1])) {
+      full_path[dir_length++] = '/';
+   }
+
+   memcpy(&full_path[dir_length], config_file, file_length + 1);
+
+   return true;
 }
 
 /*********************************************************************

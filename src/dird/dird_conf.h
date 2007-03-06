@@ -3,22 +3,35 @@
  *
  *     Kern Sibbald, Feb MM
  *
- *    Version $Id: dird_conf.h,v 1.89.2.3 2006/01/11 10:24:12 kerns Exp $
+ *    Version $Id: dird_conf.h,v 1.109.2.1 2007/01/11 16:38:34 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 /* NOTE:  #includes at the end of this file */
 
@@ -77,12 +90,13 @@ struct s_jt {
 
 /* Definition of the contents of each Resource */
 /* Needed for forward references */
-struct SCHED;
-struct CLIENT;
-struct FILESET;
-struct POOL;
-struct RUN;
-struct DEVICE;
+class SCHED;
+class CLIENT;
+class FILESET;
+class POOL;
+class RUN;
+class DEVICE;
+class RUNSCRIPT;
 
 /*
  *   Director Resource
@@ -102,9 +116,6 @@ public:
    uint32_t MaxConcurrentJobs;        /* Max concurrent jobs for whole director */
    utime_t FDConnectTimeout;          /* timeout for connect in seconds */
    utime_t SDConnectTimeout;          /* timeout in seconds */
-   int tls_enable;                    /* Enable TLS */
-   int tls_require;                   /* Require TLS */
-   int tls_verify_peer;              /* TLS Verify Client Certificate */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Server Certificate File */
@@ -112,7 +123,15 @@ public:
    char *tls_dhfile;                  /* TLS Diffie-Hellman Parameters */
    alist *tls_allowed_cns;            /* TLS Allowed Clients */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
+   bool tls_enable;                   /* Enable TLS */
+   bool tls_require;                  /* Require TLS */
+   bool tls_verify_peer;              /* TLS Verify Client Certificate */
+
+   /* Methods */
+   char *name() const;
 };
+
+inline char *DIRRES::name() const { return hdr.name; }
 
 /*
  * Device Resource
@@ -142,7 +161,12 @@ public:
    char ChangerName[MAX_NAME_LENGTH];
    char VolumeName[MAX_NAME_LENGTH];
    char MediaType[MAX_NAME_LENGTH];
+
+   /* Methods */
+   char *name() const;
 };
+
+inline char *DEVICE::name() const { return hdr.name; }
 
 /*
  * Console ACL positions
@@ -157,6 +181,7 @@ enum {
    Command_ACL,
    FileSet_ACL,
    Catalog_ACL,
+   Where_ACL,
    Num_ACL                            /* keep last */
 };
 
@@ -168,9 +193,6 @@ public:
    RES   hdr;
    char *password;                    /* UA server password */
    alist *ACL_lists[Num_ACL];         /* pointers to ACLs */
-   int tls_enable;                    /* Enable TLS */
-   int tls_require;                   /* Require TLS */
-   int tls_verify_peer;              /* TLS Verify Client Certificate */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Server Certificate File */
@@ -178,7 +200,15 @@ public:
    char *tls_dhfile;                  /* TLS Diffie-Hellman Parameters */
    alist *tls_allowed_cns;            /* TLS Allowed Clients */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
+   bool tls_enable;                   /* Enable TLS */
+   bool tls_require;                  /* Require TLS */
+   bool tls_verify_peer;              /* TLS Verify Client Certificate */
+
+   /* Methods */
+   char *name() const;
 };
+
+inline char *CONRES::name() const { return hdr.name; }
 
 
 /*
@@ -189,14 +219,19 @@ class CAT {
 public:
    RES   hdr;
 
-   int   db_port;                     /* Port -- not yet implemented */
+   int   db_port;                     /* Port */
    char *db_address;                  /* host name for remote access */
    char *db_socket;                   /* Socket for local access */
    char *db_password;
    char *db_user;
    char *db_name;
    int   mult_db_connections;         /* set if multiple connections wanted */
+
+   /* Methods */
+   char *name() const;
 };
+
+inline char *CAT::name() const { return hdr.name; }
 
 
 /*
@@ -208,7 +243,6 @@ public:
    RES   hdr;
 
    int   FDport;                      /* Where File daemon listens */
-   int   AutoPrune;                   /* Do automatic pruning? */
    utime_t FileRetention;             /* file retention period in seconds */
    utime_t JobRetention;              /* job retention period in seconds */
    char *address;
@@ -216,14 +250,21 @@ public:
    CAT *catalog;                      /* Catalog resource */
    uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
    uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
-   int tls_enable;                    /* Enable TLS */
-   int tls_require;                   /* Require TLS */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
    char *tls_keyfile;                 /* TLS Client Key File */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
+   bool tls_enable;                   /* Enable TLS */
+   bool tls_require;                  /* Require TLS */
+   bool AutoPrune;                    /* Do automatic pruning? */
+
+   /* Methods */
+   char *name() const;
 };
+
+inline char *CLIENT::name() const { return hdr.name; }
+
 
 /*
  *   Store Resource
@@ -239,19 +280,19 @@ public:
    char *password;
    char *media_type;
    alist *device;                     /* Alternate devices for this Storage */
-   int  autochanger;                  /* set if autochanger */
-   int  drives;                       /* number of drives in autochanger */
    uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
    uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
-   int tls_enable;                    /* Enable TLS */
-   int tls_require;                   /* Require TLS */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
    char *tls_keyfile;                 /* TLS Client Key File */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
+   bool tls_enable;                   /* Enable TLS */
+   bool tls_require;                  /* Require TLS */
+   bool enabled;                      /* Set if device is enabled */
+   bool  autochanger;                 /* set if autochanger */
    int64_t StorageId;                 /* Set from Storage DB record */
-   int enabled;                       /* Set if device is enabled */
+   int  drives;                       /* number of drives in autochanger */
 
    /* Methods */
    char *dev_name() const;
@@ -265,6 +306,41 @@ inline char *STORE::dev_name() const
 }
 
 inline char *STORE::name() const { return hdr.name; }
+
+/*
+ * This is a sort of "unified" store that has both the
+ *  storage pointer and the text of where the pointer was
+ *  found.
+ */
+class USTORE {
+public:
+   STORE *store;
+   POOLMEM *store_source;
+
+   /* Methods */
+   USTORE() { store = NULL; store_source = get_pool_memory(PM_MESSAGE); 
+              *store_source = 0; };
+   ~USTORE() { destroy(); }   
+   void set_source(const char *where);
+   void destroy();
+};
+
+inline void USTORE::destroy()
+{
+   if (store_source) {
+      free_pool_memory(store_source);
+      store_source = NULL;
+   }
+}
+
+
+inline void USTORE::set_source(const char *where)
+{
+   if (!store_source) {
+      store_source = get_pool_memory(PM_MESSAGE);
+   }
+   pm_strcpy(store_source, where);
+}
 
 
 /*
@@ -280,12 +356,11 @@ public:
    int   RestoreJobId;                /* What -- JobId to restore */
    char *RestoreWhere;                /* Where on disk to restore -- directory */
    char *RestoreBootstrap;            /* Bootstrap file */
-   char *RunBeforeJob;                /* Run program before Job */
-   char *RunAfterJob;                 /* Run program after Job */
-   char *RunAfterFailedJob;           /* Run program after Job that errs */
-   char *ClientRunBeforeJob;          /* Run client program before Job */
-   char *ClientRunAfterJob;           /* Run client program after Job */
-   char *WriteBootstrap;              /* Where to write bootstrap Job updates */
+   alist *RunScripts;                 /* Run {client} program {after|before} Job */
+   union {
+      char *WriteBootstrap;           /* Where to write bootstrap Job updates */
+      char *WriteVerifyList;          /* List of changed files */
+   };
    int   replace;                     /* How (overwrite, ..) */
    utime_t MaxRunTime;                /* max run time in seconds */
    utime_t MaxWaitTime;               /* max blocking time in seconds */
@@ -293,21 +368,21 @@ public:
    utime_t DiffMaxWaitTime;           /* Max Differential job wait time */
    utime_t IncMaxWaitTime;            /* Max Incremental job wait time */
    utime_t MaxStartDelay;             /* max start delay in seconds */
-   int PrefixLinks;                   /* prefix soft links with Where path */
-   int PruneJobs;                     /* Force pruning of Jobs */
-   int PruneFiles;                    /* Force pruning of Files */
-   int PruneVolumes;                  /* Force pruning of Volumes */
-   int SpoolAttributes;               /* Set to spool attributes in SD */
-   int spool_data;                    /* Set to spool data in SD */
-   int rerun_failed_levels;           /* Upgrade to rerun failed levels */
-   int PreferMountedVolumes;          /* Prefer vols mounted rather than new one */
-   uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
-   int RescheduleOnError;             /* Set to reschedule on error */
-   int RescheduleTimes;               /* Number of times to reschedule job */
    utime_t RescheduleInterval;        /* Reschedule interval */
    utime_t JobRetention;              /* job retention period in seconds */
-   int write_part_after_job;          /* Set to write part after job in SD */
-   int enabled;                       /* Set if device is enabled */
+   uint32_t MaxConcurrentJobs;        /* Maximum concurrent jobs */
+   int RescheduleTimes;               /* Number of times to reschedule job */
+   bool RescheduleOnError;            /* Set to reschedule on error */
+   bool PrefixLinks;                  /* prefix soft links with Where path */
+   bool PruneJobs;                    /* Force pruning of Jobs */
+   bool PruneFiles;                   /* Force pruning of Files */
+   bool PruneVolumes;                 /* Force pruning of Volumes */
+   bool SpoolAttributes;              /* Set to spool attributes in SD */
+   bool spool_data;                   /* Set to spool data in SD */
+   bool rerun_failed_levels;          /* Upgrade to rerun failed levels */
+   bool PreferMountedVolumes;         /* Prefer vols mounted rather than new one */
+   bool write_part_after_job;         /* Set to write part after job in SD */
+   bool enabled;                      /* Set if job enabled */
    
    MSGS      *messages;               /* How and where to send messages */
    SCHED     *schedule;               /* When -- Automatic schedule */
@@ -317,15 +392,21 @@ public:
    POOL      *pool;                   /* Where is media -- Media Pool */
    POOL      *full_pool;              /* Pool for Full backups */
    POOL      *inc_pool;               /* Pool for Incremental backups */
-   POOL      *dif_pool;               /* Pool for Differental backups */
+   POOL      *diff_pool;              /* Pool for Differental backups */
+   char      *selection_pattern;
+   int        selection_type;
    union {
       JOB       *verify_job;          /* Job name to verify */
-      JOB       *migration_job;       /* Job name to migrate */
    };
    JOB       *jobdefs;                /* Job defaults */
    alist     *run_cmds;               /* Run commands */
    uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
+
+   /* Methods */
+   char *name() const;
 };
+
+inline char *JOB::name() const { return hdr.name; }
 
 #undef  MAX_FOPTS
 #define MAX_FOPTS 34
@@ -339,8 +420,10 @@ struct FOPTS {
    alist wild;                        /* wild card strings */
    alist wilddir;                     /* wild card strings for directories */
    alist wildfile;                    /* wild card strings for files */
+   alist wildbase;                    /* wild card strings for files without '/' */
    alist base;                        /* list of base names */
    alist fstype;                      /* file system type limitation */
+   alist drivetype;                   /* drive type limitation */
    char *reader;                      /* reader program */
    char *writer;                      /* writer program */
 };
@@ -370,10 +453,14 @@ public:
    bool have_MD5;                     /* set if MD5 initialized */
    struct MD5Context md5c;            /* MD5 of include/exclude */
    char MD5[30];                      /* base 64 representation of MD5 */
-   int ignore_fs_changes;             /* Don't force Full if FS changed */
-   int enable_vss;                    /* Enable Volume Shadow Copy */
+   bool ignore_fs_changes;            /* Don't force Full if FS changed */
+   bool enable_vss;                   /* Enable Volume Shadow Copy */
+
+   /* Methods */
+   char *name() const;
 };
 
+inline char *FILESET::name() const { return hdr.name; }
 
 /*
  *   Schedule Resource
@@ -399,7 +486,11 @@ public:
    COUNTER *WrapCounter;              /* Wrap counter name */
    CAT     *Catalog;                  /* Where to store */
    bool     created;                  /* Created in DB */
+   /* Methods */
+   char *name() const;
 };
+
+inline char *COUNTER::name() const { return hdr.name; }
 
 /*
  *   Pool Resource
@@ -412,14 +503,7 @@ public:
    char *pool_type;                   /* Pool type */
    char *label_format;                /* Label format string */
    char *cleaning_prefix;             /* Cleaning label prefix */
-   int   LabelType;                   /* Bacula/ANSI/IBM label type */
-   int   use_catalog;                 /* maintain catalog for media */
-   int   catalog_files;               /* maintain file entries in catalog */
-   int   use_volume_once;             /* write on volume only once */
-   int   accept_any_volume;           /* accept any volume */
-   int   purge_oldest_volume;         /* purge oldest volume */
-   int   recycle_oldest_volume;       /* attempt to recycle oldest volume */
-   int   recycle_current_volume;      /* attempt recycle of current volume */
+   int32_t LabelType;                 /* Bacula/ANSI/IBM label type */
    uint32_t max_volumes;              /* max number of volumes */
    utime_t VolRetention;              /* volume retention period in seconds */
    utime_t VolUseDuration;            /* duration volume can be used */
@@ -427,12 +511,24 @@ public:
    uint32_t MaxVolFiles;              /* Maximum files on the Volume */
    uint64_t MaxVolBytes;              /* Maximum bytes on the Volume */
    utime_t MigrationTime;             /* Time to migrate to next pool */
-   uint32_t MigrationHighBytes;       /* When migration starts */
-   uint32_t MigrationLowBytes;        /* When migration stops */
+   uint64_t MigrationHighBytes;       /* When migration starts */
+   uint64_t MigrationLowBytes;        /* When migration stops */
    POOL  *NextPool;                   /* Next pool for migration */
-   int   AutoPrune;                   /* default for pool auto prune */
-   int   Recycle;                     /* default for media recycle yes/no */
+   alist *storage;                    /* Where is device -- list of Storage to be used */
+   bool  use_catalog;                 /* maintain catalog for media */
+   bool  catalog_files;               /* maintain file entries in catalog */
+   bool  use_volume_once;             /* write on volume only once */
+   bool  purge_oldest_volume;         /* purge oldest volume */
+   bool  recycle_oldest_volume;       /* attempt to recycle oldest volume */
+   bool  recycle_current_volume;      /* attempt recycle of current volume */
+   bool  AutoPrune;                   /* default for pool auto prune */
+   bool  Recycle;                     /* default for media recycle yes/no */
+
+   /* Methods */
+   char *name() const;
 };
+
+inline char *POOL::name() const { return hdr.name; }
 
 
 
@@ -454,6 +550,7 @@ union URES {
    COUNTER    res_counter;
    DEVICE     res_dev;
    RES        hdr;
+   RUNSCRIPT  res_runscript;
 };
 
 
@@ -473,7 +570,7 @@ public:
    POOL *pool;                        /* Pool override */
    POOL *full_pool;                   /* Pool override */
    POOL *inc_pool;                    /* Pool override */
-   POOL *dif_pool;                    /* Pool override */
+   POOL *diff_pool;                   /* Pool override */
    STORE *storage;                    /* Storage override */
    MSGS *msgs;                        /* Messages override */
    char *since;

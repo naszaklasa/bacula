@@ -4,22 +4,35 @@
  *
  *   Kern Sibbald, December 2000
  *
- *   Version $Id: askdir.c,v 1.88.2.5 2006/03/14 21:41:41 kerns Exp $
+ *   Version $Id: askdir.c,v 1.109 2006/12/08 14:27:10 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"                   /* pull in global headers */
 #include "stored.h"                   /* pull in Storage Deamon headers */
@@ -31,22 +44,20 @@ static char Update_media[] = "CatReq Job=%s UpdateMedia VolName=%s"
    " VolJobs=%u VolFiles=%u VolBlocks=%u VolBytes=%s VolMounts=%u"
    " VolErrors=%u VolWrites=%u MaxVolBytes=%s EndTime=%d VolStatus=%s"
    " Slot=%d relabel=%d InChanger=%d VolReadTime=%s VolWriteTime=%s"
-   " VolParts=%u\n";
+   " VolFirstWritten=%s VolParts=%u\n";
 static char Create_job_media[] = "CatReq Job=%s CreateJobMedia"
    " FirstIndex=%u LastIndex=%u StartFile=%u EndFile=%u"
-   " StartBlock=%u EndBlock=%u Copy=%d Strip=%d\n";
+   " StartBlock=%u EndBlock=%u Copy=%d Strip=%d MediaId=%s\n";
 static char FileAttributes[] = "UpdCat Job=%s FileAttributes ";
 static char Job_status[]     = "Status Job=%s JobStatus=%d\n";
 
-
-
 /* Responses received from the Director */
-static char OK_media[] = "1000 OK VolName=%127s VolJobs=%u VolFiles=%u"
-   " VolBlocks=%u VolBytes=%" lld " VolMounts=%u VolErrors=%u VolWrites=%u"
-   " MaxVolBytes=%" lld " VolCapacityBytes=%" lld " VolStatus=%20s"
-   " Slot=%d MaxVolJobs=%u MaxVolFiles=%u InChanger=%d"
-   " VolReadTime=%" lld " VolWriteTime=%" lld " EndFile=%u EndBlock=%u"
-   " VolParts=%u LabelType=%d";
+static char OK_media[] = "1000 OK VolName=%127s VolJobs=%u VolFiles=%lu"
+   " VolBlocks=%lu VolBytes=%lld VolMounts=%lu VolErrors=%lu VolWrites=%lu"
+   " MaxVolBytes=%lld VolCapacityBytes=%lld VolStatus=%20s"
+   " Slot=%ld MaxVolJobs=%lu MaxVolFiles=%lu InChanger=%ld"
+   " VolReadTime=%lld VolWriteTime=%lld EndFile=%lu EndBlock=%lu"
+   " VolParts=%lu LabelType=%ld MediaId=%lld\n";
 
 
 static char OK_create[] = "1000 OK CreateJobMedia\n";
@@ -153,16 +164,15 @@ static bool do_get_volume_info(DCR *dcr)
     BSOCK *dir = jcr->dir_bsock;
     VOLUME_CAT_INFO vol;
     int n;
-    int InChanger;
+    int32_t InChanger;
 
-    dcr->VolumeName[0] = 0;           /* No volume */
     if (bnet_recv(dir) <= 0) {
        Dmsg0(200, "getvolname error bnet_recv\n");
        Mmsg(jcr->errmsg, _("Network error on bnet_recv in req_vol_info.\n"));
        return false;
     }
     memset(&vol, 0, sizeof(vol));
-    Dmsg1(110, "<dird %s", dir->msg);
+    Dmsg1(100, "<dird %s", dir->msg);
     n = sscanf(dir->msg, OK_media, vol.VolCatName,
                &vol.VolCatJobs, &vol.VolCatFiles,
                &vol.VolCatBlocks, &vol.VolCatBytes,
@@ -172,18 +182,18 @@ static bool do_get_volume_info(DCR *dcr)
                &vol.Slot, &vol.VolCatMaxJobs, &vol.VolCatMaxFiles,
                &InChanger, &vol.VolReadTime, &vol.VolWriteTime,
                &vol.EndFile, &vol.EndBlock, &vol.VolCatParts,
-               &vol.LabelType);
-    if (n != 21) {
-       Dmsg2(110, "Bad response from Dir fields=%d: %s", n, dir->msg);
+               &vol.LabelType, &vol.VolMediaId);
+    if (n != 22) {
+       Dmsg2(100, "Bad response from Dir fields=%d: %s", n, dir->msg);
        Mmsg(jcr->errmsg, _("Error getting Volume info: %s"), dir->msg);
        return false;
     }
     vol.InChanger = InChanger;        /* bool in structure */
     unbash_spaces(vol.VolCatName);
     bstrncpy(dcr->VolumeName, vol.VolCatName, sizeof(dcr->VolumeName));
-    memcpy(&dcr->VolCatInfo, &vol, sizeof(dcr->VolCatInfo));
+    dcr->VolCatInfo = vol;            /* structure assignment */
 
-    Dmsg2(300, "do_reqest_vol_info return true slot=%d Volume=%s\n",
+    Dmsg2(100, "do_reqest_vol_info return true slot=%d Volume=%s\n",
           vol.Slot, vol.VolCatName);
     return true;
 }
@@ -209,6 +219,7 @@ bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw writing)
     bnet_fsend(dir, Get_Vol_Info, jcr->Job, dcr->VolCatInfo.VolCatName,
        writing==GET_VOL_INFO_FOR_WRITE?1:0);
     Dmsg1(100, ">dird: %s", dir->msg);
+    unbash_spaces(dcr->VolCatInfo.VolCatName);
     bool ok = do_get_volume_info(dcr);
     return ok;
 }
@@ -282,10 +293,15 @@ bool dir_update_volume_info(DCR *dcr, bool label)
    BSOCK *dir = jcr->dir_bsock;
    DEVICE *dev = dcr->dev;
    time_t LastWritten = time(NULL);
-   char ed1[50], ed2[50], ed3[50], ed4[50];
    VOLUME_CAT_INFO *vol = &dev->VolCatInfo;
+   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50];
    int InChanger;
    POOL_MEM VolumeName;
+
+   /* If system job, do not update catalog */
+   if (jcr->JobType == JT_SYSTEM) {
+      return true;
+   }
 
    if (vol->VolCatName[0] == 0) {
       Jmsg0(jcr, M_FATAL, 0, _("NULL Volume name. This shouldn't happen!!!\n"));
@@ -302,7 +318,6 @@ bool dir_update_volume_info(DCR *dcr, bool label)
    /* Just labeled or relabeled the tape */
    if (label) {
       bstrncpy(vol->VolCatStatus, "Append", sizeof(vol->VolCatStatus));
-      vol->VolCatBytes = 1;           /* indicates tape labeled */
    }
    pm_strcpy(VolumeName, vol->VolCatName);
    bash_spaces(VolumeName);
@@ -316,19 +331,20 @@ bool dir_update_volume_info(DCR *dcr, bool label)
       InChanger,                      /* bool in structure */
       edit_uint64(vol->VolReadTime, ed3),
       edit_uint64(vol->VolWriteTime, ed4),
+      edit_uint64(vol->VolFirstWritten, ed5),
       vol->VolCatParts);
     Dmsg1(100, ">dird: %s", dir->msg);
 
    /* Do not lock device here because it may be locked from label */
    if (!do_get_volume_info(dcr)) {
       Jmsg(jcr, M_FATAL, 0, "%s", jcr->errmsg);
-      Pmsg2(000, _("Didn't get vol info vol=%s: ERR=%s"), 
+      Dmsg2(100, _("Didn't get vol info vol=%s: ERR=%s"), 
          vol->VolCatName, jcr->errmsg);
       return false;
    }
    Dmsg1(420, "get_volume_info(): %s", dir->msg);
    /* Update dev Volume info in case something changed (e.g. expired) */
-   memcpy(&dev->VolCatInfo, &dcr->VolCatInfo, sizeof(dev->VolCatInfo));
+   dev->VolCatInfo = dcr->VolCatInfo;
    return true;
 }
 
@@ -339,6 +355,12 @@ bool dir_create_jobmedia_record(DCR *dcr)
 {
    JCR *jcr = dcr->jcr;
    BSOCK *dir = jcr->dir_bsock;
+   char ed1[50];
+
+   /* If system job, do not update catalog */
+   if (jcr->JobType == JT_SYSTEM) {
+      return true;
+   }
 
    if (!dcr->WroteVol) {
       return true;                    /* nothing written to tape */
@@ -349,7 +371,8 @@ bool dir_create_jobmedia_record(DCR *dcr)
       dcr->VolFirstIndex, dcr->VolLastIndex,
       dcr->StartFile, dcr->EndFile,
       dcr->StartBlock, dcr->EndBlock, 
-      dcr->Copy, dcr->Stripe);
+      dcr->Copy, dcr->Stripe, 
+      edit_uint64(dcr->dev->VolCatInfo.VolMediaId, ed1));
     Dmsg1(100, ">dird: %s", dir->msg);
    if (bnet_recv(dir) <= 0) {
       Dmsg0(190, "create_jobmedia error bnet_recv\n");
@@ -451,7 +474,7 @@ bool dir_ask_sysop_to_create_appendable_volume(DCR *dcr)
          }
       }
 
-      jcr->JobStatus = JS_WaitMedia;
+      set_jcr_job_status(jcr, JS_WaitMedia);
       dir_send_job_status(jcr);
 
       stat = wait_for_sysop(dcr);
@@ -517,7 +540,7 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr)
       }
 
       if (dev->is_dvd()) {   
-         unmount_dev(dev, 0);
+         dev->unmount(0);
       }
       
       /*
@@ -532,7 +555,7 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr)
                dcr->VolumeName, dev->print_name(), jcr->Job);
       }
 
-      jcr->JobStatus = JS_WaitMount;
+      set_jcr_job_status(jcr, JS_WaitMount);
       dir_send_job_status(jcr);
 
       stat = wait_for_sysop(dcr);          /* wait on device */

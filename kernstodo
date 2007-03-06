@@ -1,38 +1,402 @@
                     Kern's ToDo List
-                     11 January 2006
+                     12 November 2006
 
 Major development:      
 Project                     Developer
 =======                     =========                         
 
 Document:
-- Does ClientRunAfterJob fail the job on a bad return code?
 - Document cleaning up the spool files:
   db, pid, state, bsr, mail, conmsg, spool
 - Document the multiple-drive-changer.txt script.
 - Pruning with Admin job.
 - Does WildFile match against full name?  Doc.
 - %d and %v only valid on Director, not for ClientRunBefore/After.
+- During tests with the 260 char fix code, I found one problem:
+  if the system "sees" a long path once, it seems to forget it's
+  working drive (e.g.  c:\), which will lead to a problem during
+  the next job (create bootstrap file will fail).  Here is the
+  workaround: specify absolute working and pid directory in
+  bacula-fd.conf (e.g.  c:\bacula\working instead of
+  \bacula\working).
+- Document techniques for restoring large numbers of files.
+- Document setting my.cnf to big file usage.
+- Add example of proper index output to doc. show index from File;
+- Correct the Include syntax in the m4.xxx files in examples/conf
+- Document JobStatus and Termination codes.
+- Fix the error with the "DVI file can't be opened" while
+  building the French PDF.
+- Document more DVD stuff
+- Doc
+   { "JobErrors",  "i"},
+   { "JobFiles",   "i"},
+   { "SDJobFiles", "i"},
+   { "SDErrors",   "i"},
+   { "FDJobStatus","s"},
+   { "SDJobStatus","s"},
+- Document all the little details of setting up certificates for
+  the Bacula data encryption code.
+- Document more precisely how to use master keys -- especially
+  for disaster recovery.
+ 
 
 Priority:
-- Implement a way to disable a drive (so you can use the second
-  drive of an autochanger, and the first one will not be used or
-  even defined).
-- Implement code that makes the Dir aware that a drive is an             
-  autochanger (so the user doesn't need to use the Autochanger = yes 
-  directive).
+- Look at the possibility of adding "SET NAMES UTF8" for MySQL,
+  and possibly changing the blobs into varchar.
+- Check if gnome-console works with TLS.
+- Ensure that the SD re-reads the Media record if the JobFiles
+  does not match -- it may have been updated by another job.
+- Look at moving the Storage directive from the Job to the
+  Pool in the default conf files.
+- Test FIFO backup/restore -- make regression
+- Doc items
+- Test Volume compatibility between machine architectures
+- Encryption documentation
+- Wrong jobbytes with query 12 (todo)
+- bacula-1.38.2-ssl.patch
+- Bare-metal recovery Windows (todo)
+   
 
-For 1.39:
-- Make hardlink code at line 240 of find_one.c use binary search.
-- Queue warning/error messages during restore so that they
-  are reported at the end of the report rather than being
-  hidden in the file listing ...
-- Fix Maximum Changer Wait (and others) to accept qualifiers.
+Projects:
+- GUI
+  - Admin
+  - Management reports
+  - Add doc for bweb -- especially Installation
+  - Look at Webmin
+     http://www.orangecrate.com/modules.php?name=News&file=article&sid=501
+- Performance
+  - FD-SD quick disconnect
+  - Despool attributes in separate thread
+  - Database speedups
+  - Embedded MySQL
+- Features
+  - Better scheduling  
+  - Full at least once a month, ...
+  - Cancel Inc if Diff/Full running
+  - More intelligent re-run
+  - New/deleted file backup   
+  - FD plugins
+  - Incremental backup -- rsync, Stow
+
+
+
+
+For next release:
+- Look at mondo/mindi
+- Don't restore Solaris Door files:
+   #define   S_IFDOOR   in st_mode.
+  see: http://docs.sun.com/app/docs/doc/816-5173/6mbb8ae23?a=view#indexterm-360
+- Make Bacula by default not backup tmpfs, procfs, sysfs, ...
+- Fix hardlinked immutable files when linking a second file, the
+  immutable flag must be removed prior to trying to link it.
+- Implement Python event for backing up/restoring a file.
+- Change dbcheck to tell users to use native tools for fixing
+  broken databases, and to ensure they have the proper indexes.
+- add udev rules for Bacula devices.
+- If a job terminates, the DIR connection can close before the
+  Volume info is updated, leaving the File count wrong.
+- Look at why SIGPIPE during connection can cause seg fault in
+  writing the daemon message, when Dir dropped to bacula:bacula
+- Look at zlib 32 => 64 problems.
+- Possibly turn on St. Bernard code.
+- Fix bextract to restore ACLs, or better yet, use common routines.
+- Do we migrate appendable Volumes?
+- Remove queue.c code.
+- Print warning message if LANG environment variable does not specify
+  UTF-8.
+- New dot commands from Arno.
+  .show device=xxx lists information from one storage device, including 
+     devices (I'm not even sure that information exists in the DIR...)
+  .move eject device=xxx mostly the same as 'unmount xxx' but perhaps with 
+     better machine-readable output like "Ok" or "Error busy"
+  .move eject device=xxx toslot=yyy the same as above, but with a new 
+     target slot. The catalog should be updated accordingly.
+  .move transfer device=xxx fromslot=yyy toslot=zzz
+
+Low priority:
+- It appears to me that you have run into some sort of race
+  condition where two threads want to use the same Volume and they
+  were both given access.  Normally that is no problem.  However,
+  one thread wanted the particular Volume in drive 0, but it was
+  loaded into drive 1 so it decided to unload it from drive 1 and
+  then loaded it into drive 0, while the second thread went on
+  thinking that the Volume could be used in drive 1 not realizing
+  that in between time, it was loaded in drive 0.
+  I'll look at the code to see if there is some way we can avoid
+  this kind of problem.  Probably the best solution is to make the
+  first thread simply start using the Volume in drive 1 rather than
+  transferring it to drive 0.
+- Fix re-read of last block to check if job has actually written
+  a block, and check if block was written by a different job
+  (i.e. multiple simultaneous jobs writing).
+- Figure out how to configure query.sql.  Suggestion to use m4:
+    == changequote.m4 ===
+    changequote(`[',`]')dnl
+    ==== query.sql.in ===
+    :List next 20 volumes to expire
+    SELECT
+        Pool.Name AS PoolName,
+        Media.VolumeName,
+        Media.VolStatus,
+        Media.MediaType,
+    ifdef([MySQL],
+    [ FROM_UNIXTIME(UNIX_TIMESTAMP(Media.LastWritten) Media.VolRetention) AS Expire, ])dnl
+    ifdef([PostgreSQL],
+    [ media.lastwritten + interval '1 second' * media.volretention as expire, ])dnl
+      Media.LastWritten
+      FROM Pool
+      LEFT JOIN Media
+      ON Media.PoolId=Pool.PoolId
+      WHERE Media.LastWritten>0
+      ORDER BY Expire
+      LIMIT 20;
+    ====
+    Command: m4 -DmySQL changequote.m4 query.sql.in >query.sql
+
+  The problem is that it requires m4, which is not present on all machines
+  at ./configure time.
+- Given all the problems with FIFOs, I think the solution is to do something a
+  little different, though I will look at the code and see if there is not some
+  simple solution (i.e. some bug that was introduced).  What might be a better
+  solution would be to use a FIFO as a sort of "key" to tell Bacula to read and
+  write data to a program rather than the FIFO.  For example, suppose you
+  create a FIFO named:
+
+     /home/kern/my-fifo
+
+  Then, I could imagine if you backup and restore this file with a direct
+  reference as is currently done for fifos, instead, during backup Bacula will
+  execute:
+
+    /home/kern/my-fifo.backup
+
+  and read the data that my-fifo.backup writes to stdout. For restore, Bacula
+  will execute:
+
+    /home/kern/my-fifo.restore
+
+  and send the data backed up to stdout. These programs can either be an
+  executable or a shell script and they need only read/write to stdin/stdout.
+
+  I think this would give a lot of flexibility to the user without making any
+  significant changes to Bacula.
+
+
+==== SQL
+# get null file
+select FilenameId from Filename where Name='';
+# Get list of all directories referenced in a Backup.
+select Path.Path from Path,File where File.JobId=nnn and
+  File.FilenameId=(FilenameId-from-above) and File.PathId=Path.PathId
+  order by Path.Path ASC;
+
+- Look into using Dart for testing
+  http://public.kitware.com/Dart/HTML/Index.shtml
+
+- Look into replacing autotools with cmake
+  http://www.cmake.org/HTML/Index.html
+
+=== Migration from David ===
+What I'd like to see: 
+
+Job {
+  Name = "<poolname>-migrate"
+  Type = Migrate
+  Messages = Standard
+  Pool = Default
+  Migration Selection Type = LowestUtil | OldestVol | PoolOccupancy |
+Client | PoolResidence | Volume | JobName | SQLquery
+  Migration Selection Pattern = "regexp"
+  Next Pool = <override>
+}
+
+There should be no need for a Level (migration is always Full, since you
+don't calculate differential/incremental differences for migration),
+Storage should be determined by the volume types in the pool, and Client
+is really a selection issue.  Migration should always occur to the
+NextPool defined in the pool definition. If no nextpool is defined, the
+job should end with a reason of "no place to go". If Next Pool statement
+is present, we override the check in the pool definition and use the
+pool specified. 
+
+Here's how I'd define Migration Selection Types: 
+
+With Regexes:
+Client  -- Migrate data from selected client only. Migration Selection
+Pattern regexp provides pattern to select client names, eg ^FS00* makes
+all client names starting with FS00 eligible for migration. 
+
+Jobname -- Migration all jobs matching name. Migration Selection Pattern
+regexp provides pattern to select jobnames existing in pool. 
+
+Volume -- Migrate all data on specified volumes. Migration Selection
+Pattern regexp provides selection criteria for volumes to be migrated.
+Volumes must exist in pool to be eligible for migration. 
+
+
+With Regex optional:
+LowestUtil -- Identify the volume in the pool with the least data on it
+and empty it. No Migration Selection Pattern required. 
+
+OldestVol -- Identify the LRU volume with data written, and empty it. No
+Migration Selection Pattern required. 
+
+PoolOccupancy -- if pool occupancy exceeds <highmig>, migrate volumes
+(starting with most full volumes) until pool occupancy drops below
+<lowmig>. Pool highmig and lowmig values are in pool definition, no
+Migration Selection Pattern required.
+
+
+No regex:
+SQLQuery -- Migrate all jobuids returned by the supplied SQL query.
+Migration Selection Pattern contains SQL query to execute; should return
+a list of 1 or more jobuids to migrate.
+
+PoolResidence -- Migrate data sitting in pool for longer than
+PoolResidence value in pool definition. Migration Selection Pattern
+optional; if specified, override value in pool definition (value in
+minutes). 
+
+
+[ possibly a Python event -- kes ]
+===
+- Mount on an Autochanger with no tape in the drive causes:
+   Automatically selected Storage: LTO-changer
+   Enter autochanger drive[0]: 0
+   3301 Issuing autochanger "loaded drive 0" command.
+   3302 Autochanger "loaded drive 0", result: nothing loaded.
+   3301 Issuing autochanger "loaded drive 0" command.
+   3302 Autochanger "loaded drive 0", result: nothing loaded.
+   3902 Cannot mount Volume on Storage Device "LTO-Drive1" (/dev/nst0) because:
+   Couldn't rewind device "LTO-Drive1" (/dev/nst0): ERR=dev.c:678 Rewind error on "LTO-Drive1" (/dev/nst0). ERR=No medium found.
+   3905 Device "LTO-Drive1" (/dev/nst0) open but no Bacula volume is mounted.
+   If this is not a blank tape, try unmounting and remounting the Volume.
+- If Drive 0 is blocked, and drive 1 is set "Autoselect=no", drive 1 will
+  be used.
+- Autochanger did not change volumes.  
+   select * from Storage;
+   +-----------+-------------+-------------+
+   | StorageId | Name        | AutoChanger |
+   +-----------+-------------+-------------+
+   |         1 | LTO-changer |           0 |
+   +-----------+-------------+-------------+
+   05-May 03:50 roxie-sd: 3302 Autochanger "loaded drive 0", result is Slot 11.
+   05-May 03:50 roxie-sd: Tibs.2006-05-05_03.05.02 Warning: Director wanted Volume "LT
+    Current Volume "LT0-002" not acceptable because:
+    1997 Volume "LT0-002" not in catalog.
+   05-May 03:50 roxie-sd: Tibs.2006-05-05_03.05.02 Error: Autochanger Volume "LT0-002"
+    Setting InChanger to zero in catalog.
+   05-May 03:50 roxie-dir: Tibs.2006-05-05_03.05.02 Error: Unable to get Media record
+
+   05-May 03:50 roxie-sd: Tibs.2006-05-05_03.05.02 Fatal error: Error getting Volume i
+   05-May 03:50 roxie-sd: Tibs.2006-05-05_03.05.02 Fatal error: Job 530 canceled.
+   05-May 03:50 roxie-sd: Tibs.2006-05-05_03.05.02 Fatal error: spool.c:249 Fatal appe
+   05-May 03:49 Tibs: Tibs.2006-05-05_03.05.02 Fatal error: c:\cygwin\home\kern\bacula
+   , got
+     (missing)
+    llist volume=LTO-002
+              MediaId: 6
+           VolumeName: LTO-002
+                 Slot: 0
+               PoolId: 1
+            MediaType: LTO-2
+         FirstWritten: 2006-05-05 03:11:54
+          LastWritten: 2006-05-05 03:50:23
+            LabelDate: 2005-12-26 16:52:40
+              VolJobs: 1
+             VolFiles: 0
+            VolBlocks: 1
+            VolMounts: 0
+             VolBytes: 206
+            VolErrors: 0
+            VolWrites: 0
+     VolCapacityBytes: 0
+            VolStatus: 
+              Recycle: 1
+         VolRetention: 31,536,000
+       VolUseDuration: 0
+           MaxVolJobs: 0
+          MaxVolFiles: 0
+          MaxVolBytes: 0
+            InChanger: 0
+              EndFile: 0
+             EndBlock: 0
+             VolParts: 0
+            LabelType: 0
+            StorageId: 1
+
+   Note VolStatus is blank!!!!!
+   llist volume=LTO-003
+             MediaId: 7
+          VolumeName: LTO-003
+                Slot: 12
+              PoolId: 1
+           MediaType: LTO-2
+        FirstWritten: 0000-00-00 00:00:00
+         LastWritten: 0000-00-00 00:00:00
+           LabelDate: 2005-12-26 16:52:40
+             VolJobs: 0
+            VolFiles: 0
+           VolBlocks: 0
+           VolMounts: 0
+            VolBytes: 1
+           VolErrors: 0
+           VolWrites: 0
+    VolCapacityBytes: 0
+           VolStatus: Append
+             Recycle: 1
+        VolRetention: 31,536,000
+      VolUseDuration: 0
+          MaxVolJobs: 0
+         MaxVolFiles: 0
+         MaxVolBytes: 0
+           InChanger: 0
+             EndFile: 0
+            EndBlock: 0
+            VolParts: 0
+           LabelType: 0
+           StorageId: 1
+===
+   mount
+   Automatically selected Storage: LTO-changer
+   Enter autochanger drive[0]: 0
+   3301 Issuing autochanger "loaded drive 0" command.
+   3302 Autochanger "loaded drive 0", result: nothing loaded.
+   3301 Issuing autochanger "loaded drive 0" command.
+   3302 Autochanger "loaded drive 0", result: nothing loaded.
+   3902 Cannot mount Volume on Storage Device "LTO-Drive1" (/dev/nst0) because:
+   Couldn't rewind device "LTO-Drive1" (/dev/nst0): ERR=dev.c:678 Rewind error on "LTO-Drive1" (/dev/nst0). ERR=No medium found.
+
+   3905 Device "LTO-Drive1" (/dev/nst0) open but no Bacula volume is mounted.
+   If this is not a blank tape, try unmounting and remounting the Volume.
+
+- http://www.dwheeler.com/essays/commercial-floss.html
+- Add VolumeLock to prevent all but lock holder (SD) from updating
+  the Volume data (with the exception of VolumeState).
+- The btape fill command does not seem to use the Autochanger
+- Make Windows installer default to system disk drive.
+- Look at using ioctl(FIOBMAP, ...) on Linux, and 
+  DeviceIoControl(...,  FSCTL_QUERY_ALLOCATED_RANGES, ...) on
+  Win32 for sparse files.
+  http://www.flexhex.com/docs/articles/sparse-files.phtml
+  http://www.informatik.uni-frankfurt.de/~loizides/reiserfs/fibmap.html
+- Directive: at <event> "command"
+- Command: pycmd "command" generates "command" event.  How to
+  attach to a specific job?
+- Integrate Christopher's St. Bernard code.
+- run_cmd() returns int should return JobId_t
+- get_next_jobid_from_list() returns int should return JobId_t
+- Document export LDFLAGS=-L/usr/lib64
+- Don't attempt to restore from "Disabled" Volumes.
+- Network error on Win32 should set Win32 error code.
+- What happens when you rename a Disk Volume?
+- Job retention period in a Pool (and hence Volume).  The job would
+  then be migrated.
 - Look at -D_FORTIFY_SOURCE=2
 - Add Win32 FileSet definition somewhere
 - Look at fixing restore status stats in SD.
-- Make selection of Database used in restore correspond to
-  client.
+- Look at using ioctl(FIMAP) and FIGETBSZ for sparse files.
+  http://www.informatik.uni-frankfurt.de/~loizides/reiserfs/fibmap.html
 - Implement a mode that says when a hard read error is
   encountered, read many times (as it currently does), and if the
   block cannot be read, skip to the next block, and try again.  If
@@ -43,14 +407,13 @@ For 1.39:
   ("F","Full"),
   ("D","Diff"),
   ("I","Inc");
-- Add ACL to restore only to original location.
+- Show files/second in client status output.
 - Add a recursive mark command (rmark) to restore.
 - "Minimum Job Interval = nnn" sets minimum interval between Jobs
   of the same level and does not permit multiple simultaneous
   running of that Job (i.e. lets any previous invocation finish
   before doing Interval testing).
 - Look at simplifying File exclusions.
-- Fix store_yesno to be store_bitmask.
 - New directive "Delete purged Volumes"
 - new pool XXX with ScratchPoolId = MyScratchPool's PoolId and
   let it fill itself, and RecyclePoolId = XXX's PoolId so I can
@@ -58,8 +421,7 @@ For 1.39:
   MyScratchPool
 - If I want to remove this pool, I set RecyclePoolId = MyScratchPool's
   PoolId, and when it is empty remove it.
-- Figure out how to recycle Scratch volumes back to the Scratch
-  Pool.
+- Figure out how to recycle Scratch volumes back to the Scratch Pool.
 - Add Volume=SCRTCH
 - Allow Check Labels to be used with Bacula labels.
 - "Resuming" a failed backup (lost line for example) by using the
@@ -69,17 +431,6 @@ For 1.39:
   days before it needs changing.
 - Command to show next tape that will be used for a job even
   if the job is not scheduled.
---- create_file.c.orig  Fri Jul  8 12:13:05 2005
-+++ create_file.c       Fri Jul  8 12:13:07 2005
-@@ -195,6 +195,8 @@
-                     attr->ofname, be.strerror());
-               return CF_ERROR;
-            }
-+        } else if(S_ISSOCK(attr->statp.st_mode)) {
-+            Dmsg1(200, "Skipping socket: %s\n", attr->ofname);
-         } else {          
-             Dmsg1(200, "Restore node: %s\n", attr->ofname);
-            if (mknod(attr->ofname, attr->statp.st_mode, attr->statp.st_rdev) != 0 && errno != EEXIST) {
 - From: Arunav Mandal <amandal@trolltech.com>
   1. When jobs are running and bacula for some reason crashes or if I do a 
   restart it remembers and jobs it was running before it crashed or restarted 
@@ -104,12 +455,6 @@ For 1.39:
 
 - Fix bpipe.c so that it does not modify results pointer.
   ***FIXME*** calling sequence should be changed.
-1.xx Major Projects:
-#3   Migration (Move, Copy, Archive Jobs)
-#7   Single Job Writing to Multiple Storage Devices
-- Reserve blocks other restore jobs when first cannot connect
-  to SD.
-- Add true/false to conf same as yes/no
 - For Windows disaster recovery see http://unattended.sf.net/
 - regardless of the retention period, Bacula will not prune the
   last Full, Diff, or Inc File data until a month after the
@@ -139,10 +484,6 @@ For 1.39:
 
 - In restore don't compare byte count on a raw device -- directory
   entry does not contain bytes.
-- To mark files as deleted, run essentially a Verify to disk, and
-  when a file is found missing (MarkId != JobId), then create
-  a new File record with FileIndex == -1. This could be done
-  by the FD at the same time as the backup.
 === rate design
   jcr->last_rate
   jcr->last_runtime
@@ -191,7 +532,12 @@ For 1.39:
 - Bug: if a job is manually scheduled to run later, it does not appear
   in any status report and cannot be cancelled.
 
-==== Keeping track of deleted files ====
+==== Keeping track of deleted/new files ====
+- To mark files as deleted, run essentially a Verify to disk, and
+  when a file is found missing (MarkId != JobId), then create
+  a new File record with FileIndex == -1. This could be done
+  by the FD at the same time as the backup.
+
      My "trick" for keeping track of deletions is the following.
      Assuming the user turns on this option, after all the files
      have been backed up, but before the job has terminated, the
@@ -202,7 +548,14 @@ For 1.39:
      pass.  The DIR will then compare that to what is stored in
      the catalog.  Any files in the catalog but not in what the
      FD sent will receive a catalog File entry that indicates
-     that at that point in time the file was deleted.
+     that at that point in time the file was deleted. This
+     either transmitted to the FD or simultaneously computed in
+     the FD, so that the FD can put a record on the tape that
+     indicates that the file has been deleted at this point.
+     A delete file entry could potentially be one with a FileIndex
+     of 0 or perhaps -1 (need to check if FileIndex is used for
+     some other thing as many of the Bacula fields are "overloaded"
+     in the SD).
 
      During a restore, any file initially picked up by some
      backup (Full, ...) then subsequently having a File entry
@@ -229,6 +582,12 @@ For 1.39:
      Make sure this information is stored on the tape too so
      that it can be restored directly from the tape.
 
+     All the code (with the exception of formally generating and
+     saving the delete file entries) already exists in the Verify
+     Catalog command.  It explicitly recognizes added/deleted files since
+     the last InitCatalog.  It is more or less a "simple" matter of
+     taking that code and adapting it slightly to work for backups.
+
   Comments from Martin Simmons (I think they are all covered):
   Ok, that should cover the basics.  There are few issues though:
 
@@ -243,6 +602,50 @@ For 1.39:
 
   - It remains to be seen how the backup performance of the DIR's will be
   affected when comparing the catalog for a large filesystem.
+
+==== 
+From David:
+How about introducing a Type = MgmtPolicy job type? That job type would
+be responsible for scanning the Bacula environment looking for specific
+conditions, and submitting the appropriate jobs for implementing said
+policy, eg: 
+
+Job {
+   Name = "Migration-Policy"
+   Type = MgmtPolicy
+   Policy Selection Job Type = Migrate
+   Scope = "<keyword> <operator> <regexp>"
+   Threshold = "<keyword> <operator> <regexp>"
+   Job Template = <template-name>
+}
+
+Where <keyword> is any legal job keyword, <operator> is a comparison
+operator (=,<,>,!=, logical operators AND/OR/NOT) and <regexp> is a
+appropriate regexp. I could see an argument for Scope and Threshold
+being SQL queries if we want to support full flexibility. The
+Migration-Policy job would then get scheduled as frequently as a site
+felt necessary (suggested default: every 15 minutes). 
+
+Example: 
+
+Job {
+   Name = "Migration-Policy"
+   Type = MgmtPolicy
+   Policy Selection Job Type = Migration
+   Scope = "Pool=*"
+   Threshold = "Migration Selection Type = LowestUtil"
+   Job Template = "MigrationTemplate"
+}
+
+would select all pools for examination and generate a job based on
+MigrationTemplate to automatically select the volume with the lowest
+usage and migrate it's contents to the nextpool defined for that pool. 
+
+This policy abstraction would be really handy for adjusting the behavior
+of Bacula according to site-selectable criteria (one thing that pops
+into mind is Amanda's ability to automatically adjust backup levels
+depending on various criteria).
+
 
 =====
 
@@ -462,8 +865,6 @@ Documentation to do: (any release a little bit at a time)
   block numbers in btape "test".  Possibly adjust in Bacula.
 - Fix list volumes to output volume retention in some other
   units, perhaps via a directive.
-- If opening a tape in read/write mode fails attempt to open
-  it in read-only mode, and mark the tape for read only.
 - Allow Simultaneous Priorities = yes  => run up to Max concurrent jobs even
   with multiple priorities.
 - If you use restore replace=never, the directory attributes for
@@ -471,11 +872,6 @@ Documentation to do: (any release a little bit at a time)
 
 - see lzma401.zip in others directory for new compression
   algorithm/library.
-- Minimal autochanger handling in Bacula and in btape.
-- Look into how tar does not save sockets and the possiblity of
-  not saving them in Bacula (Martin Simmons reported this).
-- Fix restore jobs so that multiple jobs can run if they
-  are not using the same tape(s).
 - Allow the user to select JobType for manual pruning/purging.
 - bscan does not put first of two volumes back with all info in
   bscan-test.
@@ -525,8 +921,6 @@ Documentation to do: (any release a little bit at a time)
   are not restored. See bug 213. To fix this requires creating a
   list of newly restored directories so that those directory 
   permissions *can* be restored.
-- Compaction of Disk space by "migrating" Volumes that have pruned
-  Jobs (what criteria? size, #jobs, time).
 - Add prune all command
 - Document fact that purge can destroy a part of a restore by purging
   one volume while others remain valid -- perhaps mark Jobs.
@@ -547,9 +941,6 @@ Documentation to do: (any release a little bit at a time)
 - Add tree pane to left of window.
 - Add progress meter.
 - Max wait time or max run time causes seg fault -- see runtime-bug.txt
-- Document writing to a CD/DVD with Bacula.
-- Add a "base" package to the window installer for pthreadsVCE.dll
-  which is needed by all packages.
 - Add message to user to check for fixed block size when the forward
   space test fails in btape.
 - When unmarking a directory check if all files below are unmarked and
@@ -558,7 +949,6 @@ Documentation to do: (any release a little bit at a time)
 - Setup lrrd graphs: (http://www.linpro.no/projects/lrrd/) Mike Acar.
 - Revisit the question of multiple Volumes (disk) on a single device.
 - Add a block copy option to bcopy.
-- Investigate adding Mac Resource Forks.
 - Finish work on Gnome restore GUI.
 - Fix "llist jobid=xx" where no fileset or client exists.
 - For each job type (Admin, Restore, ...) require only the really necessary
@@ -708,11 +1098,6 @@ Documentation to do: (any release a little bit at a time)
   to start a job or pass its DHCP obtained IP number.
 - Implement a query tape prompt/replace feature for a console
 - Copy console @ code to gnome2-console
-- Make AES the only encryption algorithm see 
-  http://csrc.nist.gov/CryptoToolkit/aes/).  It's
-  an officially adopted standard, has survived peer
-  review, and provides keys up to 256 bits.
-- Take a careful look at SetACL http://setacl.sourceforge.net     
 - Make tree walk routines like cd, ls, ... more user friendly
   by handling spaces better.
 - Make sure that Bacula rechecks the tape after the 20 min wait.
@@ -729,7 +1114,6 @@ Documentation to do: (any release a little bit at a time)
     in the "short" pool to the "long" pool if this pool runs out of volume 
     space?
 - What to do about "list files job=xxx".
-- Get and test MySQL 4.0
 - Look at how fuser works and /proc/PID/fd that is how Nic found the
   file descriptor leak in Bacula.
 - Implement WrapCounters in Counters.
@@ -752,14 +1136,8 @@ Documentation to do: (any release a little bit at a time)
   run the job but don't save the files.
 - Make things like list where a file is saved case independent for
   Windows.
-- Implement migrate
 - Use autochanger to handle multiple devices.
-- On Windows with very long path names, it may be impossible to create 
-  a file (and thus restore it) because the total length is too long.
-  We must cd into the directory then create the file without the
-  full path name.
 - Implement a Recycle command
-- Test a second language e.g. french.
 - Start working on Base jobs.
 - Implement UnsavedFiles DB record.
 - From Phil Stracchino:
@@ -789,8 +1167,6 @@ Documentation to do: (any release a little bit at a time)
 - If SD cannot open a drive, make it periodically retry.
 - Add more of the config info to the tape label.
 
-- If tape is marked read-only, then try opening it read-only rather than
-  failing, and remember that it cannot be written.
 - Refine SD waiting output:
     Device is being positioned
     >     Device is being positioned for append
@@ -829,7 +1205,6 @@ Documentation to do: (any release a little bit at a time)
 - Compare tape to Client files (attributes, or attributes and data) 
 - Make all database Ids 64 bit.
 - Allow console commands to detach or run in background.
-- Fix status delay on storage daemon during rewind.
 - Add SD message variables to control operator wait time
   - Maximum Operator Wait
   - Minimum Message Interval
@@ -1054,16 +1429,6 @@ Longer term to do:
 Migration: Move a backup from one Volume to another
 Clone:     Copy a backup -- two Volumes
 
-Bacula Migration is based on Jobs (apparently Networker is file by file).
-
-Migration triggered by:
-  Number of Jobs
-  Number of Volumes
-  Age of Jobs
-  Highwater mark (keep total size)
-  Lowwater mark
-  
-
 
 ======================================================
         Base Jobs design
@@ -1276,3 +1641,94 @@ Block Position: 0
   integers.
 - Implement status that shows why a job is being held in reserve, or
   rather why none of the drives are suitable.
+- Implement a way to disable a drive (so you can use the second
+  drive of an autochanger, and the first one will not be used or
+  even defined).
+- Make sure Maximum Volumes is respected in Pools when adding
+  Volumes (e.g. when pulling a Scratch volume).
+- Keep same dcr when switching device ...
+- Implement code that makes the Dir aware that a drive is an             
+  autochanger (so the user doesn't need to use the Autochanger = yes 
+  directive).
+- Make catalog respect ACL.
+- Add recycle count to Media record.
+- Add initial write date to Media record.
+- Fix store_yesno to be store_bitmask.
+--- create_file.c.orig  Fri Jul  8 12:13:05 2005
++++ create_file.c       Fri Jul  8 12:13:07 2005
+@@ -195,6 +195,8 @@
+                     attr->ofname, be.strerror());
+               return CF_ERROR;
+            }
++        } else if(S_ISSOCK(attr->statp.st_mode)) {
++            Dmsg1(200, "Skipping socket: %s\n", attr->ofname);
+         } else {          
+             Dmsg1(200, "Restore node: %s\n", attr->ofname);
+            if (mknod(attr->ofname, attr->statp.st_mode, attr->statp.st_rdev) != 0 && errno != EEXIST) {
+- Add true/false to conf same as yes/no
+- Reserve blocks other restore jobs when first cannot connect to SD.
+- Fix Maximum Changer Wait, Maximum Open Wait, Maximum Rewind Wait to 
+  accept time qualifiers.
+- Does ClientRunAfterJob fail the job on a bad return code?
+- Make hardlink code at line 240 of find_one.c use binary search.
+- Add ACL error messages in src/filed/acl.c.
+- Make authentication failures single threaded.
+- Make Dir and SD authentication errors single threaded.
+- Fix catreq.c digestbuf at line 411 in src/dird/catreq.c 
+- Make base64.c (bin_to_base64) take a buffer length 
+  argument to avoid overruns.
+  and verify that other buffers cannot overrun.
+- Implement VolumeState as discussed with Arno.
+- Add LocationId to update volume
+- Add LocationLog
+    LogId
+    Date
+    User text
+    MediaId
+    LocationId
+    NewState???
+- Add Comment to Media record
+- Fix auth compatibility with 1.38
+- Update dbcheck to include Log table
+- Update llist to include new fields.
+- Make unmount unload autochanger.  Make mount load slot.
+- Fix bscan to report the JobType when restoring a job.
+- Fix wx-console scanning problem with commas in names.
+- Add manpages to the list of directories for make install. Notify
+  Scott
+- Add bconsole option to use stdin/out instead of conio.
+- Fix ClientRunBefore/AfterJob compatibility.
+- Ensure that connection to daemon failure always indicates what
+  daemon it was trying to connect to.
+- Freespace on DVD requested over and over even with no intervening
+  writes.
+- .update volume [enabled|disabled|*see below]
+    > However, I could easily imagine an option to "update slots" that says 
+    > "enable=yes|no" that would automatically enable or disable all the Volumes 
+    > found in the autochanger.  This will permit the user to optionally mark all 
+    > the Volumes in the magazine disabled prior to taking them offsite, and mark 
+    > them all enabled when bringing them back on site.   Coupled with the options 
+    > to the slots keyword, you can apply the enable/disable to any or all volumes.
+- Restricted consoles start in the Default catalog even if it
+  is not permitted.
+- When reading through parts on the DVD, the DVD is mounted and
+  unmounted for each part.
+- Make sure that the restore options don't permit "seeing" other
+  Client's job data.
+- Restore of a raw drive should not try to check the volume size.
+- Lock tape drive door when open()
+- Make release unload any autochanger.
+- Arno's reservation deadlock.
+- Eric's SD patch
+- Make sure the new level=Full syntax is used in all 
+  example conf files (especially in the manual).
+- Fix prog copyright (SD) all other files.
+- Document need for UTF-8 format
+- Try turning on disk seek code.
+- Some users claim that they must do two prune commands to get a
+  Volume marked as purged.
+- Document fact that CatalogACL now needed for Tray monitor (fixed).
+- If you have two Catalogs, it will take the first one.
+- Migration Volume span bug
+- Rescue release
+- Bug reports

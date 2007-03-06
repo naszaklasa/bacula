@@ -6,28 +6,35 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql.c,v 1.49.2.1 2006/01/12 15:04:35 kerns Exp $
+ *    Version $Id: sql.c,v 1.57 2006/11/27 10:02:59 kerns Exp $
  */
-
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 /* The following is necessary so that we do not include
  * the dummy external definition of B_DB.
@@ -65,6 +72,21 @@ static int int_handler(void *ctx, int num_fields, char **row)
    return 0;
 }
 
+/*
+ * Called here to retrieve a 32/64 bit integer from the database.
+ *   The returned integer will be extended to 64 bit.
+ */
+int db_int64_handler(void *ctx, int num_fields, char **row)
+{
+   db_int64_ctx *lctx = (db_int64_ctx *)ctx;
+
+   if (row[0]) {
+      lctx->value = str_to_int64(row[0]);
+      lctx->count++;
+   }
+   return 0;
+}
+
 
 
 /* NOTE!!! The following routines expect that the
@@ -72,19 +94,23 @@ static int int_handler(void *ctx, int num_fields, char **row)
  */
 
 /* Check that the tables correspond to the version we want */
-int check_tables_version(JCR *jcr, B_DB *mdb)
+bool check_tables_version(JCR *jcr, B_DB *mdb)
 {
    const char *query = "SELECT VersionId FROM Version";
 
    bacula_db_version = 0;
-   db_sql_query(mdb, query, int_handler, (void *)&bacula_db_version);
+   if (!db_sql_query(mdb, query, int_handler, (void *)&bacula_db_version)) {
+      Mmsg(mdb->errmsg, "Database not created or server not running.\n");
+      Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
+      return false;
+   }
    if (bacula_db_version != BDB_VERSION) {
       Mmsg(mdb->errmsg, "Version error for database \"%s\". Wanted %d, got %d\n",
           mdb->db_name, BDB_VERSION, bacula_db_version);
       Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
-      return 0;
+      return false;
    }
-   return 1;
+   return true;
 }
 
 /* Utility routine for queries. The database MUST be locked before calling here. */
@@ -373,11 +399,11 @@ void split_path_and_file(JCR *jcr, B_DB *mdb, const char *fname)
     * must be a path name (e.g. c:).
     */
    for (p=f=fname; *p; p++) {
-      if (*p == '/') {
+      if (IsPathSeparator(*p)) {
          f = p;                       /* set pos of last slash */
       }
    }
-   if (*f == '/') {                   /* did we find a slash? */
+   if (IsPathSeparator(*f)) {                   /* did we find a slash? */
       f++;                            /* yes, point to filename */
    } else {                           /* no, whole thing must be path name */
       f = p;

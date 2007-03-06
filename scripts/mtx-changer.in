@@ -2,7 +2,7 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id: mtx-changer.in,v 1.21.2.7 2006/05/02 14:48:12 kerns Exp $
+#  $Id: mtx-changer.in,v 1.29 2006/10/11 21:34:24 kerns Exp $
 #
 #  If you set in your Device resource
 #
@@ -35,6 +35,24 @@
 #
 
 MTX=@MTX@
+
+# mt status output
+# SunOS     No Additional Sense
+# FreeBSD   Current Driver State: at rest.
+# Linux     ONLINE
+
+OS=`uname`
+case ${OS} in
+  SunOS)
+    ready="No Additional Sense"
+    ;;
+  FreeBSD)
+    ready="Current Driver State: at rest."
+    ;;
+  *)
+    ready="ONLINE"
+  ;;
+esac
 
 #
 # log whats done
@@ -72,11 +90,13 @@ make_temp_file() {
 # Note, this is very system dependent, so if you are
 #   not running on Linux, you will probably need to
 #   re-write it, or at least change the grep target.
+#   We've attempted to get the appropriate OS grep targets
+#   in the code at the top of this script.
 #
 wait_for_drive() {
   i=0 
   while [ $i -le 300 ]; do  # Wait max 300 seconds
-    if mt -f $1 status | grep ONLINE  >/dev/null 2>&1; then
+    if mt -f $1 status | grep ${ready}	>/dev/null 2>&1; then
       break
     fi
     debug "Device $1 - not ready, retrying..."
@@ -153,7 +173,7 @@ case $cmd in
       debug "Doing mtx -f $ctl -- to list volumes"
       make_temp_file
 # Enable the following if you are using barcodes and need an inventory
-#     $(MTX) -f $ctl inventory
+#     ${MTX} -f $ctl inventory
       ${MTX} -f $ctl status >${TMPFILE}
       rtn=$?
       cat ${TMPFILE} | grep " *Storage Element [0-9]*:.*Full" | awk "{print \$3 \$4}" | sed "s/Full *\(:VolumeTag=\)*//"

@@ -26,30 +26,40 @@
  *
  *   Kern Sibbald, MM, MMI
  *
- *   Version $Id: device.c,v 1.85.2.2 2005/12/22 21:35:25 kerns Exp $
+ *   Version $Id: device.c,v 1.94 2006/12/14 11:41:01 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"                   /* pull in global headers */
 #include "stored.h"                   /* pull in Storage Deamon headers */
 
 /* Forward referenced functions */
-
-extern char my_name[];
-extern int debug_level;
 
 /*
  * This is the dreaded moment. We either have an end of
@@ -66,7 +76,8 @@ extern int debug_level;
  * We enter with device locked, and
  *     exit with device locked.
  *
- * Note, we are called only from one place in block.c
+ * Note, we are called only from one place in block.c for the daemons.  
+ *     The btape utility calls it from btape.c.
  *
  *  Returns: true  on success
  *           false on failure
@@ -192,7 +203,7 @@ void set_new_volume_parameters(DCR *dcr)
    /* Reset indicies */
    dcr->VolFirstIndex = 0;
    dcr->VolLastIndex = 0;
-   jcr->NumVolumes++;
+   jcr->NumWriteVolumes++;
    dcr->NewVol = false;
    dcr->WroteVol = false;
 }
@@ -256,7 +267,7 @@ bool first_open_device(DCR *dcr)
    }
 
     int mode;
-    if (dev_cap(dev, CAP_STREAM)) {
+    if (dev->has_cap(CAP_STREAM)) {
        mode = OPEN_WRITE_ONLY;
     } else {
        mode = OPEN_READ_ONLY;
@@ -282,7 +293,7 @@ bool open_device(DCR *dcr)
    DEVICE *dev = dcr->dev;
    /* Open device */
    int mode;
-   if (dev_cap(dev, CAP_STREAM)) {
+   if (dev->has_cap(CAP_STREAM)) {
       mode = OPEN_WRITE_ONLY;
    } else {
       mode = OPEN_READ_WRITE;
@@ -291,38 +302,17 @@ bool open_device(DCR *dcr)
       /* If polling, ignore the error */
       /* If DVD, also ignore the error, very often you cannot open the device
        * (when there is no DVD, or when the one inserted is a wrong one) */
-      if ((!dev->poll) && (!dev->is_dvd())) {
+      if (!dev->poll && !dev->is_dvd() && !dev->is_removable()) {
          Jmsg2(dcr->jcr, M_FATAL, 0, _("Unable to open device %s: ERR=%s\n"),
-            dev->print_name(), strerror_dev(dev));
+            dev->print_name(), dev->bstrerror());
          Pmsg2(000, _("Unable to open archive %s: ERR=%s\n"), 
-            dev->print_name(), strerror_dev(dev));
+            dev->print_name(), dev->bstrerror());
       }
       return false;
    }
    return true;
 }
 
-/*
- * Release any Volume attached to this device 
- *  then close the device.
- */
-void close_device(DEVICE *dev)
-{
-   free_volume(dev);
-   dev->close();
-}
-
-/*
- */
-void force_close_device(DEVICE *dev)
-{
-   if (!dev || dev->fd < 0) {
-      return;
-   }
-   Dmsg1(29, "Force close_dev %s\n", dev->print_name());
-   free_volume(dev);
-   dev->close();
-}
 
 
 void dev_lock(DEVICE *dev)

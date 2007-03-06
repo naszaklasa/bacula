@@ -1,0 +1,43 @@
+
+ This patch should fix the Job restart on error bug that promotes
+ an Incremental backup to a Full backup.
+
+ Apply it to version 2.0.1 (perhaps to 2.0.0) with:
+
+  cd <bacula-source>
+  patch -p0 <2.0.1-restart.patch
+  make
+  ...
+  make install
+
+Index: src/dird/job.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/job.c,v
+retrieving revision 1.148.2.2
+diff -u -r1.148.2.2 job.c
+--- src/dird/job.c	12 Jan 2007 09:58:04 -0000	1.148.2.2
++++ src/dird/job.c	17 Jan 2007 15:29:25 -0000
+@@ -852,11 +852,6 @@
+       free_pool_memory(jcr->fname);
+       jcr->fname = NULL;
+    }
+-   if (jcr->stime) {
+-      Dmsg0(200, "Free JCR stime\n");
+-      free_pool_memory(jcr->stime);
+-      jcr->stime = NULL;
+-   }
+    if (jcr->RestoreBootstrap) {
+       free(jcr->RestoreBootstrap);
+       jcr->RestoreBootstrap = NULL;
+@@ -889,6 +884,11 @@
+       pthread_cond_destroy(&jcr->term_wait);
+       jcr->term_wait_inited = false;
+    }
++   if (jcr->stime) {
++      Dmsg0(200, "Free JCR stime\n");
++      free_pool_memory(jcr->stime);
++      jcr->stime = NULL;
++   }
+    if (jcr->fname) {
+       Dmsg0(200, "Free JCR fname\n");
+       free_pool_memory(jcr->fname);

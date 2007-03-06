@@ -10,34 +10,41 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb_create.c,v 1.10 2005/01/29 22:38:57 kerns Exp $
+ *    Version $Id: bdb_create.c,v 1.13 2006/11/27 10:02:58 kerns Exp $
  */
-
 /*
-   Copyright (C) 2001-2003 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 /* The following is necessary so that we do not include
  * the dummy external definition of DB.
  */
-#define __SQL_C 		      /* indicate that this is sql.c */
+#define __SQL_C                       /* indicate that this is sql.c */
 
 #include "bacula.h"
 #include "cats.h"
@@ -74,9 +81,9 @@ int db_create_file_item(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
  *   it is updated in bdb_update.c when the Job terminates.
  *
  * Returns: 0 on failure
- *	    1 on success
+ *          1 on success
  */
-int db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
+bool db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 {
    int len;
 
@@ -103,7 +110,7 @@ int db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 
 /* Create a JobMedia record for Volume used this job
  * Returns: 0 on failure
- *	    record-id on success
+ *          record-id on success
  */
 bool db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
 {
@@ -135,7 +142,7 @@ bool db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
 /*
  *  Create a unique Pool record
  * Returns: 0 on failure
- *	    1 on success
+ *          1 on success
  */
 bool db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 {
@@ -182,12 +189,12 @@ bool db_create_mediatype_record(JCR *jcr, B_DB *mdb, MEDIATYPE_DBR *dr)
 
 
 /*
- * Create Unique Media record.	This record
+ * Create Unique Media record.  This record
  *   contains all the data pertaining to a specific
  *   Volume.
  *
  * Returns: 0 on failure
- *	    1 on success
+ *          1 on success
  */
 int db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 {
@@ -224,7 +231,7 @@ int db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 /*
  *  Create a unique Client record or return existing record
  * Returns: 0 on failure
- *	    1 on success
+ *          1 on success
  */
 int db_create_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr)
 {
@@ -266,7 +273,7 @@ int db_create_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr)
  *   Note, here we write the FILESET_DBR structure
  *
  * Returns: 0 on failure
- *	    1 on success
+ *          1 on success
  */
 bool db_create_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
 {

@@ -3,28 +3,36 @@
  *
  *    Kern Sibbald, May MMIII
  *
- *   Version $Id: enable_priv.c,v 1.6 2005/08/10 16:35:19 nboichat Exp $
+ *   Version $Id: enable_priv.c,v 1.10 2006/12/01 08:45:13 robertnelson Exp $
  *
  */
 /*
-   Copyright (C) 2003-2004 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2003-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
- */
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "find.h"
@@ -32,12 +40,12 @@
 
 
 /*=============================================================*/
-/*							       */
-/*		   * * *  U n i x * * * *		       */
-/*							       */
+/*                                                             */
+/*                 * * *  U n i x * * * *                      */
+/*                                                             */
 /*=============================================================*/
 
-#if !defined(HAVE_CYGWIN) && !defined(HAVE_WIN32)
+#if !defined(HAVE_WIN32)
 
 int enable_backup_privileges(JCR *jcr, int ignore_errors)
  { return 0; }
@@ -48,12 +56,12 @@ int enable_backup_privileges(JCR *jcr, int ignore_errors)
 
 
 /*=============================================================*/
-/*							       */
-/*		   * * *  W i n 3 2 * * * *		       */
-/*							       */
+/*                                                             */
+/*                 * * *  W i n 3 2 * * * *                    */
+/*                                                             */
 /*=============================================================*/
 
-#if defined(HAVE_CYGWIN) || defined(HAVE_WIN32)
+#if defined(HAVE_WIN32)
 
 void win_error(JCR *jcr, char *prefix, DWORD lerror);
 
@@ -64,14 +72,13 @@ enable_priv(JCR *jcr, HANDLE hToken, char *name, int ignore_errors)
     DWORD lerror;
 
     if (!(p_LookupPrivilegeValue && p_AdjustTokenPrivileges)) {
-       return 0;		      /* not avail on this OS */
+       return 0;                      /* not avail on this OS */
     }
 
     // Get the LUID for the security privilege.
     if (!p_LookupPrivilegeValue(NULL, name,  &tkp.Privileges[0].Luid)) {
-       if (!ignore_errors) {
-	  win_error(jcr, "LookupPrivilegeValue", GetLastError());
-       }
+       win_error(jcr, "LookupPrivilegeValue", GetLastError());
+       return 0;
     }
 
     /* Set the security privilege for this process. */
@@ -81,10 +88,10 @@ enable_priv(JCR *jcr, HANDLE hToken, char *name, int ignore_errors)
     lerror = GetLastError();
     if (lerror != ERROR_SUCCESS) {
        if (!ignore_errors) {
-	  char buf[200];
-	  strcpy(buf, _("AdjustTokenPrivileges set "));
-	  bstrncat(buf, name, sizeof(buf));
-	  win_error(jcr, buf, lerror);
+          char buf[200];
+          strcpy(buf, _("AdjustTokenPrivileges set "));
+          bstrncat(buf, name, sizeof(buf));
+          win_error(jcr, buf, lerror);
        }
        return 0;
     }
@@ -102,29 +109,30 @@ int enable_backup_privileges(JCR *jcr, int ignore_errors)
     int stat = 0;
 
     if (!p_OpenProcessToken) {
-       return 0;		      /* No avail on this OS */
+       return 0;                      /* No avail on this OS */
     }
 
     hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, GetCurrentProcessId());
 
     // Get a token for this process.
     if (!p_OpenProcessToken(hProcess,
-	    TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
+            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
        if (!ignore_errors) {
-	  win_error(jcr, "OpenProcessToken", GetLastError());
+          win_error(jcr, "OpenProcessToken", GetLastError());
        }
        /* Forge on anyway */
     }
 
     /* Return a bit map of permissions set. */
-    if (enable_priv(jcr, hToken, SE_SECURITY_NAME, ignore_errors)) {
-       stat |= 1<<0;
-    }
     if (enable_priv(jcr, hToken, SE_BACKUP_NAME, ignore_errors)) {
        stat |= 1<<1;
     }
     if (enable_priv(jcr, hToken, SE_RESTORE_NAME, ignore_errors)) {
        stat |= 1<<2;
+    }
+#if 0
+    if (enable_priv(jcr, hToken, SE_SECURITY_NAME, ignore_errors)) {
+       stat |= 1<<0;
     }
     if (enable_priv(jcr, hToken, SE_TAKE_OWNERSHIP_NAME, ignore_errors)) {
        stat |= 1<<3;
@@ -144,6 +152,10 @@ int enable_backup_privileges(JCR *jcr, int ignore_errors)
     if (enable_priv(jcr, hToken, SE_TCB_NAME, ignore_errors)) {
        stat |= 1<<8;
     }
+    if (enable_priv(jcr, hToken, SE_CREATE_PERMANENT_NAME, ignore_errors)) {
+       stat |= 1<<10;
+    }
+#endif
     if (stat) {
        stat |= 1<<9;
     }
@@ -153,4 +165,4 @@ int enable_backup_privileges(JCR *jcr, int ignore_errors)
     return stat;
 }
 
-#endif	/* HAVE_CYGWIN */
+#endif  /* HAVE_WIN32 */

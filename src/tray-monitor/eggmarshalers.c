@@ -1,7 +1,34 @@
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 extern "C" {
 
-#include	<glib-object.h>
+#include <glib-object.h>
 
 
 #ifdef G_ENABLE_DEBUG
@@ -52,16 +79,16 @@ extern "C" {
 /* VOID:OBJECT,OBJECT (eggmarshalers.list:1) */
 void
 _egg_marshal_VOID__OBJECT_OBJECT (GClosure     *closure,
-				  GValue       *return_value,
-				  guint         n_param_values,
-				  const GValue *param_values,
-				  gpointer      invocation_hint,
-				  gpointer      marshal_data)
+                                  GValue       *return_value,
+                                  guint         n_param_values,
+                                  const GValue *param_values,
+                                  gpointer      invocation_hint,
+                                  gpointer      marshal_data)
 {
   typedef void (*GMarshalFunc_VOID__OBJECT_OBJECT) (gpointer     data1,
-						    gpointer     arg_1,
-						    gpointer     arg_2,
-						    gpointer     data2);
+                                                    gpointer     arg_1,
+                                                    gpointer     arg_2,
+                                                    gpointer     data2);
   register GMarshalFunc_VOID__OBJECT_OBJECT callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -81,26 +108,26 @@ _egg_marshal_VOID__OBJECT_OBJECT (GClosure     *closure,
   callback = (GMarshalFunc_VOID__OBJECT_OBJECT) (marshal_data ? marshal_data : cc->callback);
 
   callback (data1,
-	    g_marshal_value_peek_object (param_values + 1),
-	    g_marshal_value_peek_object (param_values + 2),
-	    data2);
+            g_marshal_value_peek_object (param_values + 1),
+            g_marshal_value_peek_object (param_values + 2),
+            data2);
 }
 
 /* VOID:OBJECT,STRING,LONG,LONG (eggmarshalers.list:2) */
 void
 _egg_marshal_VOID__OBJECT_STRING_LONG_LONG (GClosure     *closure,
-					    GValue       *return_value,
-					    guint         n_param_values,
-					    const GValue *param_values,
-					    gpointer      invocation_hint,
-					    gpointer      marshal_data)
+                                            GValue       *return_value,
+                                            guint         n_param_values,
+                                            const GValue *param_values,
+                                            gpointer      invocation_hint,
+                                            gpointer      marshal_data)
 {
   typedef void (*GMarshalFunc_VOID__OBJECT_STRING_LONG_LONG) (gpointer     data1,
-							      gpointer     arg_1,
-							      gpointer     arg_2,
-							      glong        arg_3,
-							      glong        arg_4,
-							      gpointer     data2);
+                                                              gpointer     arg_1,
+                                                              gpointer     arg_2,
+                                                              glong        arg_3,
+                                                              glong        arg_4,
+                                                              gpointer     data2);
   register GMarshalFunc_VOID__OBJECT_STRING_LONG_LONG callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -120,26 +147,26 @@ _egg_marshal_VOID__OBJECT_STRING_LONG_LONG (GClosure     *closure,
   callback = (GMarshalFunc_VOID__OBJECT_STRING_LONG_LONG) (marshal_data ? marshal_data : cc->callback);
 
   callback (data1,
-	    g_marshal_value_peek_object (param_values + 1),
-	    g_marshal_value_peek_string (param_values + 2),
-	    g_marshal_value_peek_long (param_values + 3),
-	    g_marshal_value_peek_long (param_values + 4),
-	    data2);
+            g_marshal_value_peek_object (param_values + 1),
+            g_marshal_value_peek_string (param_values + 2),
+            g_marshal_value_peek_long (param_values + 3),
+            g_marshal_value_peek_long (param_values + 4),
+            data2);
 }
 
 /* VOID:OBJECT,LONG (eggmarshalers.list:3) */
 void
 _egg_marshal_VOID__OBJECT_LONG (GClosure     *closure,
-				GValue       *return_value,
-				guint         n_param_values,
-				const GValue *param_values,
-				gpointer      invocation_hint,
-				gpointer      marshal_data)
+                                GValue       *return_value,
+                                guint         n_param_values,
+                                const GValue *param_values,
+                                gpointer      invocation_hint,
+                                gpointer      marshal_data)
 {
   typedef void (*GMarshalFunc_VOID__OBJECT_LONG) (gpointer     data1,
-						  gpointer     arg_1,
-						  glong        arg_2,
-						  gpointer     data2);
+                                                  gpointer     arg_1,
+                                                  glong        arg_2,
+                                                  gpointer     data2);
   register GMarshalFunc_VOID__OBJECT_LONG callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -159,25 +186,25 @@ _egg_marshal_VOID__OBJECT_LONG (GClosure     *closure,
   callback = (GMarshalFunc_VOID__OBJECT_LONG) (marshal_data ? marshal_data : cc->callback);
 
   callback (data1,
-	    g_marshal_value_peek_object (param_values + 1),
-	    g_marshal_value_peek_long (param_values + 2),
-	    data2);
+            g_marshal_value_peek_object (param_values + 1),
+            g_marshal_value_peek_long (param_values + 2),
+            data2);
 }
 
 /* VOID:OBJECT,STRING,STRING (eggmarshalers.list:4) */
 void
 _egg_marshal_VOID__OBJECT_STRING_STRING (GClosure     *closure,
-					 GValue       *return_value,
-					 guint         n_param_values,
-					 const GValue *param_values,
-					 gpointer      invocation_hint,
-					 gpointer      marshal_data)
+                                         GValue       *return_value,
+                                         guint         n_param_values,
+                                         const GValue *param_values,
+                                         gpointer      invocation_hint,
+                                         gpointer      marshal_data)
 {
   typedef void (*GMarshalFunc_VOID__OBJECT_STRING_STRING) (gpointer     data1,
-							   gpointer     arg_1,
-							   gpointer     arg_2,
-							   gpointer     arg_3,
-							   gpointer     data2);
+                                                           gpointer     arg_1,
+                                                           gpointer     arg_2,
+                                                           gpointer     arg_3,
+                                                           gpointer     data2);
   register GMarshalFunc_VOID__OBJECT_STRING_STRING callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -197,25 +224,25 @@ _egg_marshal_VOID__OBJECT_STRING_STRING (GClosure     *closure,
   callback = (GMarshalFunc_VOID__OBJECT_STRING_STRING) (marshal_data ? marshal_data : cc->callback);
 
   callback (data1,
-	    g_marshal_value_peek_object (param_values + 1),
-	    g_marshal_value_peek_string (param_values + 2),
-	    g_marshal_value_peek_string (param_values + 3),
-	    data2);
+            g_marshal_value_peek_object (param_values + 1),
+            g_marshal_value_peek_string (param_values + 2),
+            g_marshal_value_peek_string (param_values + 3),
+            data2);
 }
 
 /* VOID:UINT,UINT (eggmarshalers.list:5) */
 void
 _egg_marshal_VOID__UINT_UINT (GClosure     *closure,
-			      GValue       *return_value,
-			      guint         n_param_values,
-			      const GValue *param_values,
-			      gpointer      invocation_hint,
-			      gpointer      marshal_data)
+                              GValue       *return_value,
+                              guint         n_param_values,
+                              const GValue *param_values,
+                              gpointer      invocation_hint,
+                              gpointer      marshal_data)
 {
   typedef void (*GMarshalFunc_VOID__UINT_UINT) (gpointer     data1,
-						guint        arg_1,
-						guint        arg_2,
-						gpointer     data2);
+                                                guint        arg_1,
+                                                guint        arg_2,
+                                                gpointer     data2);
   register GMarshalFunc_VOID__UINT_UINT callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -235,23 +262,23 @@ _egg_marshal_VOID__UINT_UINT (GClosure     *closure,
   callback = (GMarshalFunc_VOID__UINT_UINT) (marshal_data ? marshal_data : cc->callback);
 
   callback (data1,
-	    g_marshal_value_peek_uint (param_values + 1),
-	    g_marshal_value_peek_uint (param_values + 2),
-	    data2);
+            g_marshal_value_peek_uint (param_values + 1),
+            g_marshal_value_peek_uint (param_values + 2),
+            data2);
 }
 
 /* BOOLEAN:INT (eggmarshalers.list:6) */
 void
 _egg_marshal_BOOLEAN__INT (GClosure     *closure,
-			   GValue       *return_value,
-			   guint         n_param_values,
-			   const GValue *param_values,
-			   gpointer      invocation_hint,
-			   gpointer      marshal_data)
+                           GValue       *return_value,
+                           guint         n_param_values,
+                           const GValue *param_values,
+                           gpointer      invocation_hint,
+                           gpointer      marshal_data)
 {
   typedef gboolean (*GMarshalFunc_BOOLEAN__INT) (gpointer     data1,
-						 gint         arg_1,
-						 gpointer     data2);
+                                                 gint         arg_1,
+                                                 gpointer     data2);
   register GMarshalFunc_BOOLEAN__INT callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -273,8 +300,8 @@ _egg_marshal_BOOLEAN__INT (GClosure     *closure,
   callback = (GMarshalFunc_BOOLEAN__INT) (marshal_data ? marshal_data : cc->callback);
 
   v_return = callback (data1,
-		       g_marshal_value_peek_int (param_values + 1),
-		       data2);
+                       g_marshal_value_peek_int (param_values + 1),
+                       data2);
 
   g_value_set_boolean (return_value, v_return);
 }
@@ -282,15 +309,15 @@ _egg_marshal_BOOLEAN__INT (GClosure     *closure,
 /* BOOLEAN:ENUM (eggmarshalers.list:7) */
 void
 _egg_marshal_BOOLEAN__ENUM (GClosure     *closure,
-			    GValue       *return_value,
-			    guint         n_param_values,
-			    const GValue *param_values,
-			    gpointer      invocation_hint,
-			    gpointer      marshal_data)
+                            GValue       *return_value,
+                            guint         n_param_values,
+                            const GValue *param_values,
+                            gpointer      invocation_hint,
+                            gpointer      marshal_data)
 {
   typedef gboolean (*GMarshalFunc_BOOLEAN__ENUM) (gpointer     data1,
-						  gint         arg_1,
-						  gpointer     data2);
+                                                  gint         arg_1,
+                                                  gpointer     data2);
   register GMarshalFunc_BOOLEAN__ENUM callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -312,8 +339,8 @@ _egg_marshal_BOOLEAN__ENUM (GClosure     *closure,
   callback = (GMarshalFunc_BOOLEAN__ENUM) (marshal_data ? marshal_data : cc->callback);
 
   v_return = callback (data1,
-		       g_marshal_value_peek_enum (param_values + 1),
-		       data2);
+                       g_marshal_value_peek_enum (param_values + 1),
+                       data2);
 
   g_value_set_boolean (return_value, v_return);
 }
@@ -321,14 +348,14 @@ _egg_marshal_BOOLEAN__ENUM (GClosure     *closure,
 /* BOOLEAN:VOID (eggmarshalers.list:8) */
 void
 _egg_marshal_BOOLEAN__VOID (GClosure     *closure,
-			    GValue       *return_value,
-			    guint         n_param_values,
-			    const GValue *param_values,
-			    gpointer      invocation_hint,
-			    gpointer      marshal_data)
+                            GValue       *return_value,
+                            guint         n_param_values,
+                            const GValue *param_values,
+                            gpointer      invocation_hint,
+                            gpointer      marshal_data)
 {
   typedef gboolean (*GMarshalFunc_BOOLEAN__VOID) (gpointer     data1,
-						  gpointer     data2);
+                                                  gpointer     data2);
   register GMarshalFunc_BOOLEAN__VOID callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -350,7 +377,7 @@ _egg_marshal_BOOLEAN__VOID (GClosure     *closure,
   callback = (GMarshalFunc_BOOLEAN__VOID) (marshal_data ? marshal_data : cc->callback);
 
   v_return = callback (data1,
-		       data2);
+                       data2);
 
   g_value_set_boolean (return_value, v_return);
 }
@@ -358,14 +385,14 @@ _egg_marshal_BOOLEAN__VOID (GClosure     *closure,
 /* OBJECT:VOID (eggmarshalers.list:9) */
 void
 _egg_marshal_OBJECT__VOID (GClosure     *closure,
-			   GValue       *return_value,
-			   guint         n_param_values,
-			   const GValue *param_values,
-			   gpointer      invocation_hint,
-			   gpointer      marshal_data)
+                           GValue       *return_value,
+                           guint         n_param_values,
+                           const GValue *param_values,
+                           gpointer      invocation_hint,
+                           gpointer      marshal_data)
 {
   typedef GObject* (*GMarshalFunc_OBJECT__VOID) (gpointer     data1,
-						 gpointer     data2);
+                                                 gpointer     data2);
   register GMarshalFunc_OBJECT__VOID callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -387,7 +414,7 @@ _egg_marshal_OBJECT__VOID (GClosure     *closure,
   callback = (GMarshalFunc_OBJECT__VOID) (marshal_data ? marshal_data : cc->callback);
 
   v_return = callback (data1,
-		       data2);
+                       data2);
 
   g_value_set_object_take_ownership (return_value, v_return);
 }
@@ -397,16 +424,16 @@ _egg_marshal_OBJECT__VOID (GClosure     *closure,
 /* VOID:INT,INT (eggmarshalers.list:11) */
 void
 _egg_marshal_VOID__INT_INT (GClosure     *closure,
-			    GValue       *return_value,
-			    guint         n_param_values,
-			    const GValue *param_values,
-			    gpointer      invocation_hint,
-			    gpointer      marshal_data)
+                            GValue       *return_value,
+                            guint         n_param_values,
+                            const GValue *param_values,
+                            gpointer      invocation_hint,
+                            gpointer      marshal_data)
 {
   typedef void (*GMarshalFunc_VOID__INT_INT) (gpointer     data1,
-					      gint         arg_1,
-					      gint         arg_2,
-					      gpointer     data2);
+                                              gint         arg_1,
+                                              gint         arg_2,
+                                              gpointer     data2);
   register GMarshalFunc_VOID__INT_INT callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -426,9 +453,9 @@ _egg_marshal_VOID__INT_INT (GClosure     *closure,
   callback = (GMarshalFunc_VOID__INT_INT) (marshal_data ? marshal_data : cc->callback);
 
   callback (data1,
-	    g_marshal_value_peek_int (param_values + 1),
-	    g_marshal_value_peek_int (param_values + 2),
-	    data2);
+            g_marshal_value_peek_int (param_values + 1),
+            g_marshal_value_peek_int (param_values + 2),
+            data2);
 }
 
 /* VOID:UINT,UINT (eggmarshalers.list:12) */
@@ -438,17 +465,17 @@ _egg_marshal_VOID__INT_INT (GClosure     *closure,
 /* VOID:OBJECT,ENUM,BOXED (eggmarshalers.list:14) */
 void
 _egg_marshal_VOID__OBJECT_ENUM_BOXED (GClosure     *closure,
-				      GValue       *return_value,
-				      guint         n_param_values,
-				      const GValue *param_values,
-				      gpointer      invocation_hint,
-				      gpointer      marshal_data)
+                                      GValue       *return_value,
+                                      guint         n_param_values,
+                                      const GValue *param_values,
+                                      gpointer      invocation_hint,
+                                      gpointer      marshal_data)
 {
   typedef void (*GMarshalFunc_VOID__OBJECT_ENUM_BOXED) (gpointer     data1,
-							gpointer     arg_1,
-							gint         arg_2,
-							gpointer     arg_3,
-							gpointer     data2);
+                                                        gpointer     arg_1,
+                                                        gint         arg_2,
+                                                        gpointer     arg_3,
+                                                        gpointer     data2);
   register GMarshalFunc_VOID__OBJECT_ENUM_BOXED callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -468,10 +495,10 @@ _egg_marshal_VOID__OBJECT_ENUM_BOXED (GClosure     *closure,
   callback = (GMarshalFunc_VOID__OBJECT_ENUM_BOXED) (marshal_data ? marshal_data : cc->callback);
 
   callback (data1,
-	    g_marshal_value_peek_object (param_values + 1),
-	    g_marshal_value_peek_enum (param_values + 2),
-	    g_marshal_value_peek_boxed (param_values + 3),
-	    data2);
+            g_marshal_value_peek_object (param_values + 1),
+            g_marshal_value_peek_enum (param_values + 2),
+            g_marshal_value_peek_boxed (param_values + 3),
+            data2);
 }
 
 /* VOID:BOXED (eggmarshalers.list:15) */
@@ -479,15 +506,15 @@ _egg_marshal_VOID__OBJECT_ENUM_BOXED (GClosure     *closure,
 /* BOOLEAN:BOOLEAN (eggmarshalers.list:16) */
 void
 _egg_marshal_BOOLEAN__BOOLEAN (GClosure     *closure,
-			       GValue       *return_value,
-			       guint         n_param_values,
-			       const GValue *param_values,
-			       gpointer      invocation_hint,
-			       gpointer      marshal_data)
+                               GValue       *return_value,
+                               guint         n_param_values,
+                               const GValue *param_values,
+                               gpointer      invocation_hint,
+                               gpointer      marshal_data)
 {
   typedef gboolean (*GMarshalFunc_BOOLEAN__BOOLEAN) (gpointer     data1,
-						     gboolean     arg_1,
-						     gpointer     data2);
+                                                     gboolean     arg_1,
+                                                     gpointer     data2);
   register GMarshalFunc_BOOLEAN__BOOLEAN callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -509,8 +536,8 @@ _egg_marshal_BOOLEAN__BOOLEAN (GClosure     *closure,
   callback = (GMarshalFunc_BOOLEAN__BOOLEAN) (marshal_data ? marshal_data : cc->callback);
 
   v_return = callback (data1,
-		       g_marshal_value_peek_boolean (param_values + 1),
-		       data2);
+                       g_marshal_value_peek_boolean (param_values + 1),
+                       data2);
 
   g_value_set_boolean (return_value, v_return);
 }
@@ -518,17 +545,17 @@ _egg_marshal_BOOLEAN__BOOLEAN (GClosure     *closure,
 /* BOOLEAN:OBJECT,STRING,STRING (eggmarshalers.list:17) */
 void
 _egg_marshal_BOOLEAN__OBJECT_STRING_STRING (GClosure     *closure,
-					    GValue       *return_value,
-					    guint         n_param_values,
-					    const GValue *param_values,
-					    gpointer      invocation_hint,
-					    gpointer      marshal_data)
+                                            GValue       *return_value,
+                                            guint         n_param_values,
+                                            const GValue *param_values,
+                                            gpointer      invocation_hint,
+                                            gpointer      marshal_data)
 {
   typedef gboolean (*GMarshalFunc_BOOLEAN__OBJECT_STRING_STRING) (gpointer     data1,
-								  gpointer     arg_1,
-								  gpointer     arg_2,
-								  gpointer     arg_3,
-								  gpointer     data2);
+                                                                  gpointer     arg_1,
+                                                                  gpointer     arg_2,
+                                                                  gpointer     arg_3,
+                                                                  gpointer     data2);
   register GMarshalFunc_BOOLEAN__OBJECT_STRING_STRING callback;
   register GCClosure *cc = (GCClosure*) closure;
   register gpointer data1, data2;
@@ -550,10 +577,10 @@ _egg_marshal_BOOLEAN__OBJECT_STRING_STRING (GClosure     *closure,
   callback = (GMarshalFunc_BOOLEAN__OBJECT_STRING_STRING) (marshal_data ? marshal_data : cc->callback);
 
   v_return = callback (data1,
-		       g_marshal_value_peek_object (param_values + 1),
-		       g_marshal_value_peek_string (param_values + 2),
-		       g_marshal_value_peek_string (param_values + 3),
-		       data2);
+                       g_marshal_value_peek_object (param_values + 1),
+                       g_marshal_value_peek_string (param_values + 2),
+                       g_marshal_value_peek_string (param_values + 3),
+                       data2);
 
   g_value_set_boolean (return_value, v_return);
 }

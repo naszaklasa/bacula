@@ -1,0 +1,69 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH BACULA\-DIR 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery&verification"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.SH NAME
+.B bacula\-dir
+\- Bacula Director
+.SH SYNOPSIS
+.B bacula\-dir
+.RI [ options ]
+.br
+.SH DESCRIPTION
+This manual page documents briefly the
+.B bacula\-dir
+command.
+.br
+Bacula's Director Daemon acts as the controller of the
+network backup system: it is responsible for scheduling and 
+coordinating backups across the network.
+.SH OPTIONS
+.TP
+.BI \-c
+Change location to read \fIbacula-dir.conf\fP from (default $CWD)
+.TP
+.BI \-u
+Set the username/uid to run as.
+.TP
+.BI \-g
+Set the group/gid to run as.
+.SH TCP-WRAPPERS CONFIGURATION
+Tcpwrappers looks for the service name of the bacula daemons in
+.I hosts.allow
+, and the service names of these daemons is configured to be different from the
+binary.
+The service names are configured to be
+.B %hostname%-%component%
+rather than
+.B bacula-dir
+(As defined in the bacula-dir.conf.in file)
+
+
+So the hosts.allow entry has to match
+.B %hostname%-%component%
+(servername-dir for example) instead of bacula-%component%
+
+.B WARNING:
+This means that if the hosts.allow file has the entry:
+
+.B bacula-dir: ALL
+
+you will not be able to run bconsole to connect to the local director!
+
+The entry would have to read:
+
+.B server-dir: ALL
+
+and this will allow the console to connect to the director.
+(The process running is bacula-dir.)
+.SH SEE ALSO
+.BR bacula-fd (8),
+.BR bacula-sd (8).
+
+.SH AUTHOR
+This manual page was written by Jose Luis Tallon
+.nh
+<jltallon@adv\-solutions.net>.

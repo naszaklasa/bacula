@@ -3,6 +3,34 @@
  *  Kern Sibbald, March, 2004
  *
 */
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+
 
 #include "bacula.h"
 #include "console.h"
@@ -21,10 +49,10 @@ void FillDirectory(const char *path, Window *window);
 Window *new_window();
 static void click_column_cb(GtkCList *item, gint column, Window *restore);
 static void select_row_cb(GtkCList *item, gint row, gint column,
-	     GdkEventButton *event, Window *restore);
+             GdkEventButton *event, Window *restore);
 void row_data_destroy_cb(gpointer data);
 void split_path_and_filename(const char *fname, POOLMEM **path, int *pnl,
-	POOLMEM **file, int *fnl);
+        POOLMEM **file, int *fnl);
 
 #ifdef needed
 static GdkPixmap *check_pixmap = NULL;
@@ -33,8 +61,8 @@ static GdkPixmap *blank_pixmap = NULL;
 static GdkPixmap *blank_trans = NULL;
 #endif
 
-static GtkWidget *restore_dir;	      /* current directory edit box */
-static GtkWidget *scrolled;	      /* select files scrolled window */
+static GtkWidget *restore_dir;        /* current directory edit box */
+static GtkWidget *scrolled;           /* select files scrolled window */
 static Window *restore;
 
 const int NUM_COLUMNS = 7;
@@ -61,7 +89,7 @@ void
 on_restore_up_button_clicked(GtkButton *button, gpointer user_data)
 {
    split_path_and_filename(restore->fname, &restore->path, &restore->pnl,
-			      &restore->file, &restore->fnl);
+                              &restore->file, &restore->fnl);
    FillDirectory(restore->path, restore);
 }
 
@@ -134,11 +162,11 @@ void select_restore_setup()
 
 #ifdef needed
    check_pixmap = gdk_pixmap_colormap_create_from_xpm(NULL,
-		  gdk_colormap_get_system(), &check_trans, NULL,
-		  "check.xpm");
+                  gdk_colormap_get_system(), &check_trans, NULL,
+                  "check.xpm");
    blank_pixmap = gdk_pixmap_colormap_create_from_xpm(NULL,
-		  gdk_colormap_get_system(), &blank_trans, NULL,
-		  "blank.xpm");
+                  gdk_colormap_get_system(), &blank_trans, NULL,
+                  "blank.xpm");
 #endif
 
    /* XXX: Stupid gtk_clist_set_selection_mode() has incorrect declaration of the title argument */
@@ -149,9 +177,9 @@ void select_restore_setup()
    gtk_clist_set_sort_column(restore->list, FILE_COLUMN);
    gtk_clist_set_auto_sort(restore->list, true);
    gtk_signal_connect(GTK_OBJECT(restore->list), "click_column",
-		      G_CALLBACK(click_column_cb), restore);
+                      G_CALLBACK(click_column_cb), restore);
    gtk_signal_connect(GTK_OBJECT(restore->list), "select_row",
-		      G_CALLBACK(select_row_cb), restore);
+                      G_CALLBACK(select_row_cb), restore);
 
    gtk_container_add(GTK_CONTAINER(scrolled), GTK_WIDGET(restore->list));
    restore->buf   = get_pool_memory(PM_FNAME);
@@ -203,55 +231,55 @@ void FillDirectory(const char *path, Window *restore)
       char *l;
       strip_trailing_junk(UA_sock->msg);
       if (*p == '$') {
-	 break;
+         break;
       }
       Dmsg1(200, "Got: %s\n", p);
       if (!*p) {
-	 continue;
+         continue;
       }
       l = p;
-      skip_nonspaces(&p);	      /* permissions */
+      skip_nonspaces(&p);             /* permissions */
       *p++ = 0;
       bstrncpy(modes, l, sizeof(modes));
       skip_spaces(&p);
-      skip_nonspaces(&p);	      /* link count */
+      skip_nonspaces(&p);             /* link count */
       *p++ = 0;
       skip_spaces(&p);
       l = p;
-      skip_nonspaces(&p);	      /* user */
+      skip_nonspaces(&p);             /* user */
       *p++ = 0;
       skip_spaces(&p);
       bstrncpy(user, l, sizeof(user));
       l = p;
-      skip_nonspaces(&p);	      /* group */
+      skip_nonspaces(&p);             /* group */
       *p++ = 0;
       bstrncpy(group, l, sizeof(group));
       skip_spaces(&p);
       l = p;
-      skip_nonspaces(&p);	      /* size */
+      skip_nonspaces(&p);             /* size */
       *p++ = 0;
       bstrncpy(size, l, sizeof(size));
       skip_spaces(&p);
       l = p;
-      skip_nonspaces(&p);	      /* date/time */
+      skip_nonspaces(&p);             /* date/time */
       skip_spaces(&p);
       skip_nonspaces(&p);
       *p++ = 0;
       bstrncpy(date, l, sizeof(date));
       skip_spaces(&p);
       if (*p == '*') {
-	 bstrncpy(marked, "x", sizeof(marked));
-	 p++;
+         bstrncpy(marked, "x", sizeof(marked));
+         p++;
       } else {
-	 bstrncpy(marked, " ", sizeof(marked));
+         bstrncpy(marked, " ", sizeof(marked));
       }
       split_path_and_filename(p, &restore->path, &restore->pnl,
-			      &restore->file, &restore->fnl);
+                              &restore->file, &restore->fnl);
 
 //    Dmsg1(000, "restore->fname=%s\n", restore->fname);
       bstrncpy(file, restore->file, sizeof(file));
 //    printf("modes=%s user=%s group=%s size=%s date=%s file=%s\n",
-//	 modes, user, group, size, date, file);
+//       modes, user, group, size, date, file);
 
       gtk_clist_append(list, text);
 
@@ -284,7 +312,7 @@ static void click_column_cb(GtkCList *item, gint column, Window *restore)
  * User selected a row
  */
 static void select_row_cb(GtkCList *item, gint row, gint column,
-	     GdkEventButton *event, Window *restore)
+             GdkEventButton *event, Window *restore)
 {
    char *file;
    char *marked = NULL;
@@ -293,28 +321,28 @@ static void select_row_cb(GtkCList *item, gint row, gint column,
       gtk_clist_unselect_row(item, row, column);
       /* Double click on column 0 means to mark or unmark */
       if (column == 0) {
-	 gtk_clist_get_text(restore->list, row, CHECK_COLUMN, &marked);
-	 Dmsg1(200, "Marked=%s\n", marked);
-	 if (!marked || strcmp(marked, "x") != 0) {
-	    mark_row(row, true);
-	 } else {
-	    mark_row(row, false);
-	 }
+         gtk_clist_get_text(restore->list, row, CHECK_COLUMN, &marked);
+         Dmsg1(200, "Marked=%s\n", marked);
+         if (!marked || strcmp(marked, "x") != 0) {
+            mark_row(row, true);
+         } else {
+            mark_row(row, false);
+         }
       } else {
       /* Double clicking on directory means to move to it */
-	 int len;
-	 gtk_clist_get_text(item, row, FILE_COLUMN, &file);
-	 len = strlen(file);
-	 if (len > 0 && file[len-1] == '/') {
-	    /* Change to new directory */
-	    pm_strcpy(restore->path, restore->fname);
-	    if (*file == '*') {
-	       Mmsg(restore->fname, "%s%s", restore->path, file+1);
-	    } else {
-	       Mmsg(restore->fname, "%s%s", restore->path, file);
-	    }
-	    FillDirectory(restore->fname, restore);
-	 }
+         int len;
+         gtk_clist_get_text(item, row, FILE_COLUMN, &file);
+         len = strlen(file);
+         if (len > 0 && file[len-1] == '/') {
+            /* Change to new directory */
+            pm_strcpy(restore->path, restore->fname);
+            if (*file == '*') {
+               Mmsg(restore->fname, "%s%s", restore->path, file+1);
+            } else {
+               Mmsg(restore->fname, "%s%s", restore->path, file);
+            }
+            FillDirectory(restore->fname, restore);
+         }
       }
    }
 }
@@ -331,11 +359,11 @@ void row_data_destroy_cb(gpointer data)
 
 #ifdef xxx
    GdkPixmap *pixmap, *trans;
-	 utf8_mark = g_locale_to_utf8(new_mark, -1, NULL, NULL, NULL);
-	 gtk_clist_get_pixmap(restore->list, row, CHECK_COLUMN, &pixmap, &trans);
-	 if (pixmap == blank_pixmap) {
-	    bstrncpy(new_mark, "x", sizeof(new_mark));
-//	    gtk_clist_set_pixmap(item, row, CHECK_COLUMN, check_pixmap, check_trans);
+         utf8_mark = g_locale_to_utf8(new_mark, -1, NULL, NULL, NULL);
+         gtk_clist_get_pixmap(restore->list, row, CHECK_COLUMN, &pixmap, &trans);
+         if (pixmap == blank_pixmap) {
+            bstrncpy(new_mark, "x", sizeof(new_mark));
+//          gtk_clist_set_pixmap(item, row, CHECK_COLUMN, check_pixmap, check_trans);
 #endif
 #ifdef xxx
 static void window_delete_cb(GtkWidget *item, GdkEvent *event, Window *restore)
@@ -351,8 +379,8 @@ static void window_delete_cb(GtkWidget *item, GdkEvent *event, Window *restore)
 #endif
 #ifdef xxx
       if (marked) {
-	 gtk_clist_set_pixmap(list, row, CHECK_COLUMN, check_pixmap, check_trans);
+         gtk_clist_set_pixmap(list, row, CHECK_COLUMN, check_pixmap, check_trans);
       } else {
-	 gtk_clist_set_pixmap(list, row, CHECK_COLUMN, blank_pixmap, blank_trans);
+         gtk_clist_set_pixmap(list, row, CHECK_COLUMN, blank_pixmap, blank_trans);
       }
 #endif

@@ -4,28 +4,35 @@
  *
  *     Nicolas Boichat, August MMIV
  *
- *     Version $Id: tray-monitor.c,v 1.25.2.2 2005/11/22 10:50:55 kerns Exp $
+ *     Version $Id: tray-monitor.c,v 1.33 2006/12/01 08:45:14 robertnelson Exp $
  */
-
 /*
-   Copyright (C) 2004-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU Lesser General Public
-   License as published by the Free Software Foundation; either
-   version 2.1 of the License, or (at your option) any later version.
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
 
-   This library is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   Lesser General Public License for more details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
-   You should have received a copy of the GNU Lesser General Public
-   License along with this library; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-   MA 02111-1307, USA.
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
 
- */
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "tray-monitor.h"
@@ -99,7 +106,7 @@ static gboolean blinkstate = TRUE;
 static void usage()
 {
    fprintf(stderr, _(
-"Copyright (C) 2000-2004 Kern Sibbald and John Walker\n"
+PROG_COPYRIGHT
 "Written by Nicolas Boichat (2004)\n"
 "\nVersion: %s (%s) %s %s %s\n\n"
 "Usage: tray-monitor [-c config_file] [-d debug_level]\n"
@@ -107,7 +114,7 @@ static void usage()
 "       -dnn          set debug level to nn\n"
 "       -t            test - read configuration and exit\n"
 "       -?            print this message.\n"
-"\n"), VERSION, BDATE, HOST_OS, DISTNAME, DISTVER);
+"\n"), 2004, VERSION, BDATE, HOST_OS, DISTNAME, DISTVER);
 }
 
 static GtkWidget *new_image_button(const gchar *stock_id,
@@ -497,22 +504,24 @@ static void MonitorAbout(GtkWidget *widget, gpointer data) {
 #if HAVE_GTK_2_4
    GtkWidget* about = gtk_message_dialog_new_with_markup(GTK_WINDOW(window),GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE,
       "<span size='x-large' weight='bold'>%s</span>\n\n"
+      PROG_COPYRIGHT
       "%s"
       "\n<small>%s: %s (%s) %s %s %s</small>",
       _("Bacula Tray Monitor"),
-      _("Copyright (C) 2004-2005 Kern Sibbald\n"
-        "Written by Nicolas Boichat\n"),
-      _("Version:"),
+        2004,
+      _("Written by Nicolas Boichat\n"),
+      _("Version"),
       VERSION, BDATE, HOST_OS, DISTNAME, DISTVER);
 #else
    GtkWidget* about = gtk_message_dialog_new(GTK_WINDOW(window),GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE,   
       "%s\n\n"
+      PROG_COPYRIGHT
       "%s"
-      "\n%s %s (%s) %s %s %s",
+      "\n%s: %s (%s) %s %s %s",
       _("Bacula Tray Monitor"),
-      _("Copyright (C) 2004-2005 Kern Sibbald\n"
-        "Written by Nicolas Boichat\n"),
-      _("Version:"),
+        2004,
+      _("Written by Nicolas Boichat\n"),
+      _("Version"),
       VERSION, BDATE, HOST_OS, DISTNAME, DISTVER);
 #endif
    gtk_dialog_run(GTK_DIALOG(about));
@@ -596,7 +605,8 @@ static gboolean blink(gpointer data) {
    return true;
 }
 
-static gboolean fd_read(gpointer data) {
+static gboolean fd_read(gpointer data)
+{
    sm_line++;
 #if TRAY_DEBUG_MEMORY
    printf("sm_line=%d\n", sm_line);
@@ -672,7 +682,8 @@ void append_error_string(GString* str, int joberrors) {
    }
 }
 
-void getstatus(monitoritem* item, int current, GString** str) {
+void getstatus(monitoritem* item, int current, GString** str)
+{
    GSList *list, *it;
    stateenum ret = error;
    int jobid = 0, joberrors = 0;
@@ -824,7 +835,9 @@ void getstatus(monitoritem* item, int current, GString** str) {
 
    it = list;
    do {
-      if (it->data) g_string_free((GString*)it->data, TRUE);
+      if (it->data) {
+         g_string_free((GString*)it->data, TRUE);
+      }
    } while ((it = it->next) != NULL);
 
    g_slist_free(list);
@@ -837,7 +850,8 @@ void getstatus(monitoritem* item, int current, GString** str) {
    }
 }
 
-int docmd(monitoritem* item, const char* command, GSList** list) {
+int docmd(monitoritem* item, const char* command, GSList** list) 
+{
    int stat;
    GString* str = NULL;
 
@@ -881,7 +895,7 @@ int docmd(monitoritem* item, const char* command, GSList** list) {
       }
 
       if (item->D_sock == NULL) {
-         g_slist_append(*list, g_string_new(_("Cannot connect to daemon.\n")));
+         *list = g_slist_append(*list, g_string_new(_("Cannot connect to daemon.\n")));
          changeStatusMessage(item, _("Cannot connect to daemon."));
          item->state = error;
          item->oldstate = error;
@@ -891,7 +905,7 @@ int docmd(monitoritem* item, const char* command, GSList** list) {
       if (!authenticate_daemon(item, &jcr)) {
          str = g_string_sized_new(64);
          g_string_printf(str, "ERR=%s\n", item->D_sock->msg);
-         g_slist_append(*list, str);
+         *list = g_slist_append(*list, str);
          item->state = error;
          item->oldstate = error;
          changeStatusMessage(item, _("Authentication error : %s"), item->D_sock->msg);
@@ -920,14 +934,16 @@ int docmd(monitoritem* item, const char* command, GSList** list) {
       }
 
       if (item->type == R_DIRECTOR) { /* Read connection messages... */
-         GSList *list, *it;
-         docmd(item, "", &list); /* Usually invalid, but no matter */
-         it = list;
+         GSList *tlist, *it;
+         docmd(item, "", &tlist); /* Usually invalid, but no matter */
+         it = tlist;
          do {
-            if (it->data) g_string_free((GString*)it->data, TRUE);
+            if (it->data) {
+               g_string_free((GString*)it->data, TRUE);
+            }
          } while ((it = it->next) != NULL);
 
-         g_slist_free(list);
+         g_slist_free(tlist);
       }
    }
 
@@ -936,7 +952,7 @@ int docmd(monitoritem* item, const char* command, GSList** list) {
 
    while(1) {
       if ((stat = bnet_recv(item->D_sock)) >= 0) {
-         g_slist_append(*list, g_string_new(item->D_sock->msg));
+         *list = g_slist_append(*list, g_string_new(item->D_sock->msg));
       }
       else if (stat == BNET_SIGNAL) {
          if (item->D_sock->msglen == BNET_EOD) {
@@ -945,21 +961,21 @@ int docmd(monitoritem* item, const char* command, GSList** list) {
          }
          else if (item->D_sock->msglen == BNET_PROMPT) {
             //fprintf(stderr, "<< PROMPT >>\n");
-            g_slist_append(*list, g_string_new(_("<< Error: BNET_PROMPT signal received. >>\n")));
+            *list = g_slist_append(*list, g_string_new(_("<< Error: BNET_PROMPT signal received. >>\n")));
             return 0;
          }
          else if (item->D_sock->msglen == BNET_HEARTBEAT) {
             bnet_sig(item->D_sock, BNET_HB_RESPONSE);
-            g_slist_append(*list, g_string_new(_("<< Heartbeat signal received, answered. >>\n")));
+            *list = g_slist_append(*list, g_string_new(_("<< Heartbeat signal received, answered. >>\n")));
          }
          else {
             str = g_string_sized_new(64);
             g_string_printf(str, _("<< Unexpected signal received : %s >>\n"), bnet_sig_to_ascii(item->D_sock));
-            g_slist_append(*list, str);
+            *list = g_slist_append(*list, str);
          }
       }
       else { /* BNET_HARDEOF || BNET_ERROR */
-         g_slist_append(*list, g_string_new(_("<ERROR>\n")));
+         *list = g_slist_append(*list, g_string_new(_("<ERROR>\n")));
          item->D_sock = NULL;
          item->state = error;
          item->oldstate = error;
@@ -989,7 +1005,8 @@ void writecmd(monitoritem* item, const char* command) {
 }
 
 /* Note: Does not seem to work either on Gnome nor KDE... */
-void trayMessage(const char *fmt,...) {
+void trayMessage(const char *fmt,...)
+{
    char buf[512];
    va_list arg_ptr;
 

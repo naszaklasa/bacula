@@ -7,22 +7,35 @@
  *
  *     Kern Sibbald, May MM, major revision December MMIII
  *
- *   Version $Id: scheduler.c,v 1.33.2.3 2006/06/28 20:39:22 kerns Exp $
+ *   Version $Id: scheduler.c,v 1.43 2006/11/24 09:58:27 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -190,18 +203,25 @@ again:
    }
    if (run->pool) {
       jcr->pool = run->pool;          /* override pool */
+      jcr->run_pool_override = true;
    }
    if (run->full_pool) {
       jcr->full_pool = run->full_pool; /* override full pool */
+      jcr->run_full_pool_override = true;
    }
    if (run->inc_pool) {
       jcr->inc_pool = run->inc_pool;  /* override inc pool */
+      jcr->run_inc_pool_override = true;
    }
-   if (run->dif_pool) {
-      jcr->dif_pool = run->dif_pool;  /* override dif pool */
+   if (run->diff_pool) {
+      jcr->diff_pool = run->diff_pool;  /* override dif pool */
+      jcr->run_diff_pool_override = true;
    }
    if (run->storage) {
-      set_storage(jcr, run->storage); /* override storage */
+      USTORE store;
+      store.store = run->storage;
+      pm_strcpy(store.store_source, _("run override"));
+      set_rwstorage(jcr, &store);     /* override storage */
    }
    if (run->msgs) {
       jcr->messages = run->msgs;      /* override messages */
@@ -255,7 +275,7 @@ static void find_runs()
 
    /* compute values for time now */
    now = time(NULL);
-   localtime_r(&now, &tm);
+   (void)localtime_r(&now, &tm);
    hour = tm.tm_hour;
    minute = tm.tm_min;
    mday = tm.tm_mday - 1;
@@ -270,7 +290,7 @@ static void find_runs()
     * sleeping.
     */
    next_hour = now + 3600;
-   localtime_r(&next_hour, &tm);
+   (void)localtime_r(&next_hour, &tm);
    nh_hour = tm.tm_hour;
    nh_mday = tm.tm_mday - 1;
    nh_wday = tm.tm_wday;
@@ -332,7 +352,7 @@ static void find_runs()
          Dmsg3(dbglvl, "run@%p: run_now=%d run_nh=%d\n", run, run_now, run_nh);
 
          /* find time (time_t) job is to be run */
-         localtime_r(&now, &tm);      /* reset tm structure */
+         (void)localtime_r(&now, &tm);      /* reset tm structure */
          tm.tm_min = run->minute;     /* set run minute */
          tm.tm_sec = 0;               /* zero secs */
          if (run_now) {

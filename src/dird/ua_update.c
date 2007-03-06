@@ -5,37 +5,42 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_update.c,v 1.7.2.4 2006/05/02 14:48:16 kerns Exp $
+ *   Version $Id: ua_update.c,v 1.29 2006/12/23 16:33:52 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
 
-/* External variables */
-extern char *list_pool;               /* in sql_cmds.c */
-
-/* Imported functions */
-void update_slots(UAContext *ua);
-
-
-
 /* Forward referenced functions */
 static int update_volume(UAContext *ua);
-static int update_pool(UAContext *ua);
+static bool update_pool(UAContext *ua);
 
 /*
  * Update a Pool Record in the database.
@@ -57,7 +62,7 @@ int update_cmd(UAContext *ua, const char *cmd)
       NT_("slots"),  /* 3 */
       NULL};
 
-   if (!open_db(ua)) {
+   if (!open_client_db(ua)) {
       return 1;
    }
 
@@ -108,6 +113,7 @@ static void update_volstatus(UAContext *ua, const char *val, MEDIA_DBR *mr)
       NT_("Cleaning"),
       NT_("Recycle"),
       NT_("Read-Only"),
+      NT_("Error"),
       NULL};
    bool found = false;
    int i;
@@ -219,12 +225,9 @@ static void update_volrecycle(UAContext *ua, char *val, MEDIA_DBR *mr)
 {
    int recycle;
    char ed1[50];
+
    POOL_MEM query(PM_MESSAGE);
-   if (strcasecmp(val, _("yes")) == 0) {
-      recycle = 1;
-   } else if (strcasecmp(val, _("no")) == 0) {
-      recycle = 0;
-   } else {
+   if (!is_yesno(val, &recycle)) {
       bsendmsg(ua, _("Invalid value. It must be yes or no.\n"));
       return;
    }
@@ -244,11 +247,7 @@ static void update_volinchanger(UAContext *ua, char *val, MEDIA_DBR *mr)
    char ed1[50];
 
    POOL_MEM query(PM_MESSAGE);
-   if (strcasecmp(val, _("yes")) == 0) {
-      InChanger = 1;
-   } else if (strcasecmp(val, _("no")) == 0) {
-      InChanger = 0;
-   } else {
+   if (!is_yesno(val, &InChanger)) {
       bsendmsg(ua, _("Invalid value. It must be yes or no.\n"));
       return;
    }
@@ -372,6 +371,20 @@ static void update_all_vols_from_pool(UAContext *ua)
    }
 }
 
+static void update_volenabled(UAContext *ua, char *val, MEDIA_DBR *mr)
+{
+   mr->Enabled = get_enabled(ua, val);
+   if (mr->Enabled < 0) {
+      return;
+   }
+   if (!db_update_media_record(ua->jcr, ua->db, mr)) {
+      bsendmsg(ua, _("Error updating media record Enabled: ERR=%s"), db_strerror(ua->db));
+   } else {
+      bsendmsg(ua, _("New Enabled is: %d\n"), mr->Enabled);
+   }
+}
+
+
 
 /*
  * Update a media record -- allows you to change the
@@ -400,6 +413,7 @@ static int update_volume(UAContext *ua)
       _("Pool"),                     /* 9 */
       _("FromPool"),                 /* 10 */
       _("AllFromPool"),              /* 11 !!! see below !!! */
+      _("Enabled"),                  /* 12 */
       NULL };
 
 #define AllFromPool 11               /* keep this updated with above */
@@ -408,6 +422,7 @@ static int update_volume(UAContext *ua)
       int j;
       POOL_DBR pr;
       if ((j=find_arg_with_value(ua, kw[i])) > 0) {
+         /* If all from pool don't select a media record */
          if (i != AllFromPool && !select_media_dbr(ua, &mr)) {
             return 0;
          }
@@ -454,6 +469,9 @@ static int update_volume(UAContext *ua)
          case 11:
             update_all_vols_from_pool(ua);
             return 1;
+         case 12:
+            update_volenabled(ua, ua->argv[j], &mr);
+            break;
          }
          done = true;
       }
@@ -474,11 +492,12 @@ static int update_volume(UAContext *ua)
       add_prompt(ua, _("Pool"));                       /* 10 */
       add_prompt(ua, _("Volume from Pool"));           /* 11 */
       add_prompt(ua, _("All Volumes from Pool"));      /* 12 */
-      add_prompt(ua, _("Done"));                       /* 13 */
+      add_prompt(ua, _("Enabled")),                    /* 13 */
+      add_prompt(ua, _("Done"));                       /* 14 */
       i = do_prompt(ua, "", _("Select parameter to modify"), NULL, 0);  
 
-      /* For All Volumes from Pool we don't need a Volume record */
-      if (i != 12 && i != 13) {
+      /* For All Volumes from Pool and Done, we don't need a Volume record */
+      if (i != 12 && i != 14) {
          if (!select_media_dbr(ua, &mr)) {  /* Get Volume record */
             return 0;
          }
@@ -628,6 +647,24 @@ static int update_volume(UAContext *ua)
       case 12:
          update_all_vols_from_pool(ua);
          return 1;
+
+      case 13:
+         bsendmsg(ua, _("Current Enabled is: %d\n"), mr.Enabled);
+         if (!get_cmd(ua, _("Enter new Enabled: "))) {
+            return 0;
+         }
+         if (strcasecmp(ua->cmd, "yes") == 0 || strcasecmp(ua->cmd, "true") == 0) {
+            mr.Enabled = 1;
+         } else if (strcasecmp(ua->cmd, "no") == 0 || strcasecmp(ua->cmd, "false") == 0) {
+            mr.Enabled = 0;
+         } else if (strcasecmp(ua->cmd, "archived") == 0) { 
+            mr.Enabled = 2;
+         } else {
+            mr.Enabled = atoi(ua->cmd);
+         }
+         update_volenabled(ua, ua->cmd, &mr);
+         break;
+
       default:                        /* Done or error */
          bsendmsg(ua, _("Selection terminated.\n"));
          return 1;
@@ -639,7 +676,7 @@ static int update_volume(UAContext *ua)
 /*
  * Update pool record -- pull info from current POOL resource
  */
-static int update_pool(UAContext *ua)
+static bool update_pool(UAContext *ua)
 {
    POOL_DBR  pr;
    int id;
@@ -649,13 +686,13 @@ static int update_pool(UAContext *ua)
 
    pool = get_pool_resource(ua);
    if (!pool) {
-      return 0;
+      return false;
    }
 
    memset(&pr, 0, sizeof(pr));
    bstrncpy(pr.Name, pool->hdr.name, sizeof(pr.Name));
    if (!get_pool_dbr(ua, &pr)) {
-      return 0;
+      return false;
    }
 
    set_pooldbr_from_poolres(&pr, pool, POOL_OP_UPDATE); /* update */
@@ -670,5 +707,5 @@ static int update_pool(UAContext *ua)
    db_list_sql_query(ua->jcr, ua->db, query, prtit, ua, 1, HORZ_LIST);
    free_pool_memory(query);
    bsendmsg(ua, _("Pool DB record updated from resource.\n"));
-   return 1;
+   return true;
 }

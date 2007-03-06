@@ -3,33 +3,59 @@
  *
  *    Kern Sibbald, November MMII
  *
- *   Version $Id: bpipe.c,v 1.33.2.4 2006/03/04 11:10:18 kerns Exp $
+ *   Version $Id: bpipe.c,v 1.47 2006/11/21 16:13:57 kerns Exp $
  */
 /*
-   Copyright (C) 2002-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
 #include "jcr.h"
 
-int execvp_errors[] = {EACCES, ENOEXEC, EFAULT, EINTR, E2BIG,
-                     ENAMETOOLONG, ENOMEM, ETXTBSY, ENOENT};
+int execvp_errors[] = {
+        EACCES,
+        ENOEXEC,
+        EFAULT,
+        EINTR,
+        E2BIG,
+        ENAMETOOLONG,
+        ENOMEM,
+#ifndef HAVE_WIN32
+        ETXTBSY,
+#endif
+        ENOENT
+};
 int num_execvp_errors = (int)(sizeof(execvp_errors)/sizeof(int));
 
 
 #define MAX_ARGV 100
+
+#if !defined(HAVE_WIN32)
 static void build_argc_argv(char *cmd, int *bargc, char *bargv[], int max_arg);
 
 /*
@@ -67,8 +93,8 @@ BPIPE *open_bpipe(char *prog, int wait, const char *mode)
    if (mode_write && pipe(writep) == -1) {
       save_errno = errno;
       free(bpipe);
-      errno = save_errno;
       free_pool_memory(tprog);
+      errno = save_errno;
       return NULL;
    }
    if (mode_read && pipe(readp) == -1) {
@@ -78,8 +104,8 @@ BPIPE *open_bpipe(char *prog, int wait, const char *mode)
          close(writep[1]);
       }
       free(bpipe);
-      errno = save_errno;
       free_pool_memory(tprog);
+      errno = save_errno;
       return NULL;
    }
    /* Start worker process */
@@ -95,8 +121,8 @@ BPIPE *open_bpipe(char *prog, int wait, const char *mode)
          close(readp[1]);
       }
       free(bpipe);
-      errno = save_errno;
       free_pool_memory(tprog);
+      errno = save_errno;
       return NULL;
 
    case 0:                            /* child */
@@ -221,8 +247,12 @@ int close_bpipe(BPIPE *bpipe)
          }
          Dmsg1(800, "child status=%d\n", stat & ~b_errno_exit);
       } else if (WIFSIGNALED(chldstatus)) {  /* process died */
+#ifndef HAVE_WIN32
          stat = WTERMSIG(chldstatus);
-         Dmsg1(800, "Child died from signale %d\n", stat);
+#else
+         stat = 1;                    /* fake child status */
+#endif
+         Dmsg1(800, "Child died from signal %d\n", stat);
          stat |= b_errno_signal;      /* exit signal returned */
       }
    }
@@ -230,10 +260,57 @@ int close_bpipe(BPIPE *bpipe)
       stop_child_timer(bpipe->timer_id);
    }
    free(bpipe);
-   Dmsg1(800, "returning stat = %d\n", stat);
+   Dmsg2(800, "returning stat=%d,%d\n", stat & ~(b_errno_exit|b_errno_signal), stat);
    return stat;
 }
 
+/*
+ * Build argc and argv from a string
+ */
+static void build_argc_argv(char *cmd, int *bargc, char *bargv[], int max_argv)
+{
+   int i;
+   char *p, *q, quote;
+   int argc = 0;
+
+   argc = 0;
+   for (i=0; i<max_argv; i++)
+      bargv[i] = NULL;
+
+   p = cmd;
+   quote = 0;
+   while  (*p && (*p == ' ' || *p == '\t'))
+      p++;
+   if (*p == '\"' || *p == '\'') {
+      quote = *p;
+      p++;
+   }
+   if (*p) {
+      while (*p && argc < MAX_ARGV) {
+         q = p;
+         if (quote) {
+            while (*q && *q != quote)
+            q++;
+            quote = 0;
+         } else {
+            while (*q && *q != ' ')
+            q++;
+         }
+         if (*q)
+            *(q++) = '\0';
+         bargv[argc++] = p;
+         p = q;
+         while (*p && (*p == ' ' || *p == '\t'))
+            p++;
+         if (*p == '\"' || *p == '\'') {
+            quote = *p;
+            p++;
+         }
+      }
+   }
+   *bargc = argc;
+}
+#endif /* HAVE_WIN32 */
 
 /*
  * Run an external program. Optionally wait a specified number
@@ -356,15 +433,22 @@ int run_program_full_output(char *prog, int wait, POOLMEM *results)
          break;
       } else if (stat1 != 0) {
          Dmsg1(900, "Run program fgets stat=%d\n", stat1);
-         if (bpipe->timer_id) {
-            Dmsg1(150, "Run program fgets killed=%d\n", bpipe->timer_id->killed);
-            if (bpipe->timer_id->killed) {
-               pm_strcat(tmp, _("Program killed by Bacula watchdog (timeout)\n"));
-               stat1 = ETIME;
-               break;
-            }
+         if (bpipe->timer_id && bpipe->timer_id->killed) {
+            Dmsg1(250, "Run program saw fgets killed=%d\n", bpipe->timer_id->killed);
+            break;
          }
       }
+   }
+   /*
+    * We always check whether the timer killed the program. We would see
+    * an eof even when it does so we just have to trust the killed flag
+    * and set the timer values to avoid edge cases where the program ends
+    * just as the timer kills it.
+    */
+   if (bpipe->timer_id && bpipe->timer_id->killed) {
+      Dmsg1(150, "Run program fgets killed=%d\n", bpipe->timer_id->killed);
+      pm_strcat(tmp, _("Program killed by Bacula watchdog (timeout)\n"));
+      stat1 = ETIME;
    }
    int len = sizeof_pool_memory(results) - 1;
    bstrncpy(results, tmp, len);
@@ -376,51 +460,4 @@ int run_program_full_output(char *prog, int wait, POOLMEM *results)
    free_pool_memory(tmp);
    free(buf);
    return stat1;
-}
-
-/*
- * Build argc and argv from a string
- */
-static void build_argc_argv(char *cmd, int *bargc, char *bargv[], int max_argv)
-{
-   int i;
-   char *p, *q, quote;
-   int argc = 0;
-
-   argc = 0;
-   for (i=0; i<max_argv; i++)
-      bargv[i] = NULL;
-
-   p = cmd;
-   quote = 0;
-   while  (*p && (*p == ' ' || *p == '\t'))
-      p++;
-   if (*p == '\"' || *p == '\'') {
-      quote = *p;
-      p++;
-   }
-   if (*p) {
-      while (*p && argc < MAX_ARGV) {
-         q = p;
-         if (quote) {
-            while (*q && *q != quote)
-            q++;
-            quote = 0;
-         } else {
-            while (*q && *q != ' ')
-            q++;
-         }
-         if (*q)
-            *(q++) = '\0';
-         bargv[argc++] = p;
-         p = q;
-         while (*p && (*p == ' ' || *p == '\t'))
-            p++;
-         if (*p == '\"' || *p == '\'') {
-            quote = *p;
-            p++;
-         }
-      }
-   }
-   *bargc = argc;
 }

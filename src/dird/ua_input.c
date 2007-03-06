@@ -4,22 +4,35 @@
  *
  *     Kern Sibbald, October MMI
  *
- *   Version $Id: ua_input.c,v 1.27 2005/08/10 16:35:19 nboichat Exp $
+ *   Version $Id: ua_input.c,v 1.32 2006/11/21 13:20:10 kerns Exp $
  */
 /*
-   Copyright (C) 2001-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -99,6 +112,30 @@ bool get_pint(UAContext *ua, const char *prompt)
 }
 
 /*
+ * Test a yes or no response
+ *  Returns:  false if failure
+ *            true  if success => ret == 1 for yes
+ *                                ret == 0 for no
+ */
+bool is_yesno(char *val, int *ret)
+{
+   *ret = 0;
+   if ((strcasecmp(val,   _("yes")) == 0) ||
+       (strcasecmp(val, NT_("yes")) == 0))
+   {
+      *ret = 1;
+   } else if ((strcasecmp(val,   _("no")) == 0) ||
+              (strcasecmp(val, NT_("no")) == 0))
+   {
+      *ret = 0;
+   } else {
+      return false;
+   }
+
+   return true;
+}
+
+/*
  * Gets a yes or no response
  *  Returns:  false if failure
  *            true  if success => ua->pint32_val == 1 for yes
@@ -107,7 +144,7 @@ bool get_pint(UAContext *ua, const char *prompt)
 bool get_yesno(UAContext *ua, const char *prompt)
 {
    int len;
-
+   int ret;
    ua->pint32_val = 0;
    for (;;) {
       if (!get_cmd(ua, prompt)) {
@@ -117,17 +154,38 @@ bool get_yesno(UAContext *ua, const char *prompt)
       if (len < 1 || len > 3) {
          continue;
       }
-      if (strncasecmp(ua->cmd, _("yes"), len) == 0) {
-         ua->pint32_val = 1;
-         return true;
-      }
-      if (strncasecmp(ua->cmd, _("no"), len) == 0) {
+      if (is_yesno(ua->cmd, &ret)) {
+         ua->pint32_val = ret;
          return true;
       }
       bsendmsg(ua, _("Invalid response. You must answer yes or no.\n"));
    }
 }
 
+/* 
+ *  Gets an Enabled value => 0, 1, 2, yes, no, archived
+ *  Returns: 0, 1, 2 if OK
+ *           -1 on error
+ */
+int get_enabled(UAContext *ua, const char *val) 
+{
+   int Enabled = -1;
+
+   if (strcasecmp(val, "yes") == 0 || strcasecmp(val, "true") == 0) {
+     Enabled = 1;
+   } else if (strcasecmp(val, "no") == 0 || strcasecmp(val, "false") == 0) {
+      Enabled = 0;
+   } else if (strcasecmp(val, "archived") == 0) { 
+      Enabled = 2;
+   } else {
+      Enabled = atoi(val);
+   }
+   if (Enabled < 0 || Enabled > 2) {
+      bsendmsg(ua, _("Invalid Enabled value, it must be yes, no, archived, 0, 1, or 2\n"));
+      return -1;     
+   }
+   return Enabled;
+}
 
 void parse_ua_args(UAContext *ua)
 {

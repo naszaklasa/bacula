@@ -5,22 +5,35 @@
  *
  *  Bacula utility functions are in util.c
  *
- *   Version $Id: bsys.c,v 1.42.2.4 2005/12/22 21:35:24 kerns Exp $
+ *   Version $Id: bsys.c,v 1.60 2006/11/21 16:13:57 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 
 #include "bacula.h"
@@ -114,6 +127,16 @@ char *bstrncat(char *dest, POOL_MEM &src, int maxlen)
 }
 
 /*
+ * Allows one or both pointers to be NULL
+ */
+bool bstrcmp(const char *s1, const char *s2)
+{
+   if (s1 == s2) return true;
+   if (s1 == NULL || s2 == NULL) return false;
+   return strcmp(s1, s2) == 0;
+}
+
+/*
  * Get character length of UTF-8 string
  *
  * Valid UTF-8 codes
@@ -166,14 +189,19 @@ int cstrlen(const char *str)
 
 
 
-#ifndef DEBUG
+#ifndef bmalloc
 void *bmalloc(size_t size)
 {
   void *buf;
 
+#ifdef SMARTALLOC
+  buf = sm_malloc(file, line, size);
+#else
   buf = malloc(size);
+#endif
   if (buf == NULL) {
-     Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), strerror(errno));
+     berrno be;
+     Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.strerror());
   }
   return buf;
 }
@@ -189,17 +217,31 @@ void *b_malloc(const char *file, int line, size_t size)
   buf = malloc(size);
 #endif
   if (buf == NULL) {
-     e_msg(file, line, M_ABORT, 0, _("Out of memory: ERR=%s\n"), strerror(errno));
+     berrno be;
+     e_msg(file, line, M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.strerror());
   }
   return buf;
 }
+
+
+void bfree(void *buf)
+{
+#ifdef SMARTALLOC
+  sm_free(__FILE__, __LINE__, buf);
+#else
+  free(buf);
+#endif
+}
+
+
 
 
 void *brealloc (void *buf, size_t size)
 {
    buf = realloc(buf, size);
    if (buf == NULL) {
-      Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), strerror(errno));
+      berrno be;
+      Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.strerror());
    }
    return buf;
 }
@@ -211,7 +253,8 @@ void *bcalloc (size_t size1, size_t size2)
 
    buf = calloc(size1, size2);
    if (buf == NULL) {
-      Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), strerror(errno));
+      berrno be;
+      Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.strerror());
    }
    return buf;
 }
@@ -353,6 +396,7 @@ void _v(char *file, int line, pthread_mutex_t *m)
 {
    int errstat;
 
+   /* Note, this trylock *should* fail if the mutex is locked */
    if ((errstat=pthread_mutex_trylock(m)) == 0) {
       berrno be;
       e_msg(file, line, M_ERROR, 0, _("Mutex unlock not locked. ERR=%s\n"),
@@ -402,7 +446,7 @@ void b_memset(const char *file, int line, void *mem, int val, size_t num)
 }
 #endif
 
-#if !defined(HAVE_CYGWIN) && !defined(HAVE_WIN32)
+#if !defined(HAVE_WIN32)
 static int del_pid_file_ok = FALSE;
 #endif
 
@@ -411,7 +455,7 @@ static int del_pid_file_ok = FALSE;
  */
 void create_pid_file(char *dir, const char *progname, int port)
 {
-#if !defined(HAVE_CYGWIN) && !defined(HAVE_WIN32)
+#if !defined(HAVE_WIN32)
    int pidfd, len;
    int oldpid;
    char  pidbuf[20];
@@ -454,7 +498,7 @@ void create_pid_file(char *dir, const char *progname, int port)
  */
 int delete_pid_file(char *dir, const char *progname, int port)
 {
-#if !defined(HAVE_CYGWIN)  && !defined(HAVE_WIN32)
+#if !defined(HAVE_WIN32)
    POOLMEM *fname = get_pool_memory(PM_FNAME);
 
    if (!del_pid_file_ok) {
@@ -481,21 +525,6 @@ static struct s_state_hdr state_hdr = {
    3,
    0
 };
-
-#ifdef HAVE_WIN32
-#undef open
-#undef read
-#undef write
-#undef lseek
-#undef close
-#undef O_BINARY 
-#define open _open
-#define read _read
-#define write _write
-#define lseek _lseeki64
-#define close _close
-#define O_BINARY _O_BINARY
-#endif
 
 /*
  * Open and read the state file for the daemon
@@ -600,38 +629,69 @@ bail_out:
 /*
  * Drop to privilege new userid and new gid if non-NULL
  */
-void drop(char *uid, char *gid)
+void drop(char *uname, char *gname)
 {
-#ifdef HAVE_GRP_H
-   if (gid) {
-      struct group *group;
-      gid_t gr_list[1];
+#if   defined(HAVE_PWD_H) && defined(HAVE_GRP_H)
+   struct passwd *passw = NULL;
+   struct group *group = NULL;
+   gid_t gid;
+   uid_t uid;
+   char username[1000];         
 
-      if ((group = getgrnam(gid)) == NULL) {
-         Emsg1(M_ERROR_TERM, 0, _("Could not find specified group: %s\n"), gid);
+   Dmsg2(900, "uname=%s gname=%s\n", uname?uname:"NONE", gname?gname:"NONE");
+   if (!uname && !gname) {
+      return;                            /* Nothing to do */
+   }
+
+   if (uname) {
+      if ((passw = getpwnam(uname)) == NULL) {
+         berrno be;
+         Emsg2(M_ERROR_TERM, 0, _("Could not find userid=%s: ERR=%s\n"), uname,
+            be.strerror());
       }
-      if (setgid(group->gr_gid)) {
-         Emsg1(M_ERROR_TERM, 0, _("Could not set specified group: %s\n"), gid);
-      }
-      gr_list[0] = group->gr_gid;
-      if (setgroups(1, gr_list)) {
-         Emsg1(M_ERROR_TERM, 0, _("Could not set specified group: %s\n"), gid);
+   } else {
+      if ((passw = getpwuid(getuid())) == NULL) {
+         berrno be;
+         Emsg1(M_ERROR_TERM, 0, _("Could not find password entry. ERR=%s\n"),
+            be.strerror());
+      } else {
+         uname = passw->pw_name;
       }
    }
-#endif
-
-#ifdef HAVE_PWD_H
-   if (uid) {
-      struct passwd *passw;
-      if ((passw = getpwnam(uid)) == NULL) {
-         Emsg1(M_ERROR_TERM, 0, _("Could not find specified userid: %s\n"), uid);
+   /* Any OS uname pointer may get overwritten, so save name, uid, and gid */
+   bstrncpy(username, uname, sizeof(username));
+   uid = passw->pw_uid;
+   gid = passw->pw_gid;
+   if (gname) {
+      if ((group = getgrnam(gname)) == NULL) {
+         berrno be;
+         Emsg2(M_ERROR_TERM, 0, _("Could not find group=%s: ERR=%s\n"), gname,
+            be.strerror());
       }
-      if (setuid(passw->pw_uid)) {
-         Emsg1(M_ERROR_TERM, 0, _("Could not set specified userid: %s\n"), uid);
+      gid = group->gr_gid;
+   }
+   if (initgroups(username, gid)) {
+      berrno be;
+      if (gname) {
+         Emsg3(M_ERROR_TERM, 0, _("Could not initgroups for group=%s, userid=%s: ERR=%s\n"),         
+            gname, username, be.strerror());
+      } else {
+         Emsg2(M_ERROR_TERM, 0, _("Could not initgroups for userid=%s: ERR=%s\n"),         
+            username, be.strerror());
       }
    }
+   if (gname) {
+      if (setgid(gid)) {
+         berrno be;
+         Emsg2(M_ERROR_TERM, 0, _("Could not set group=%s: ERR=%s\n"), gname,
+            be.strerror());
+      }
+   }
+   if (setuid(uid)) {
+      berrno be;
+      Emsg1(M_ERROR_TERM, 0, _("Could not set specified userid: %s\n"), username);
+   }
 #endif
-
 }
 
 
@@ -658,8 +718,8 @@ char *bfgets(char *s, int size, FILE *fd)
       do {
          errno = 0;
          ch = fgetc(fd);
-      } while (ch == -1 && (errno == EINTR || errno == EAGAIN));
-      if (ch == -1) {
+      } while (ch == EOF && ferror(fd) && (errno == EINTR || errno == EAGAIN));
+      if (ch == EOF) {
          if (i == 0) {
             return NULL;
          } else {
@@ -670,13 +730,10 @@ char *bfgets(char *s, int size, FILE *fd)
       *p = 0;
       if (ch == '\r') { /* Support for Mac/Windows file format */
          ch = fgetc(fd);
-         if (ch == '\n') { /* Windows (\r\n) */
-            *p++ = ch;
-            *p = 0;
-         }
-         else { /* Mac (\r only) */
+         if (ch != '\n') { /* Mac (\r only) */
             (void)ungetc(ch, fd); /* Push next character back to fd */
          }
+         p[-1] = '\n';
          break;
       }
       if (ch == '\n') {
@@ -697,3 +754,26 @@ void make_unique_filename(POOLMEM **name, int Id, char *what)
 {
    Mmsg(name, "%s/%s.%s.%d.tmp", working_directory, my_name, what, Id);
 }
+
+char *escape_filename(const char *file_path)
+{
+   if (file_path == NULL || strpbrk(file_path, "\"\\") == NULL) {
+      return NULL;
+   }
+
+   char *escaped_path = (char *)bmalloc(2 * (strlen(file_path) + 1));
+   char *cur_char = escaped_path;
+
+   while (*file_path) {
+      if (*file_path == '\\' || *file_path == '"') {
+         *cur_char++ = '\\';
+      }
+
+      *cur_char++ = *file_path++;
+   }
+
+   *cur_char = '\0';
+
+   return escaped_path;
+}
+

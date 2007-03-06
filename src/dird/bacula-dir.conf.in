@@ -238,6 +238,13 @@ Messages {
 # NOTE! If you send to two email or more email addresses, you will need
 #  to replace the %r in the from field (-f part) with a single valid
 #  email address in both the mailcommand and the operatorcommand.
+#  What this does is, it sets the email address that emails would display
+#  in the FROM field, which is by default the same email as they're being
+#  sent to.  However, if you send email to more than one address, then
+#  you'll have to set the FROM address manually, to a single address. 
+#  for example, a 'no-reply@mydomain.com', is better since that tends to
+#  tell (most) people that its coming from an automated source.
+
 #
   mailcommand = "@sbindir@/bsmtp -h @smtp_host@ -f \"\(Bacula\) %r\" -s \"Bacula: %t %e of %c %l\" %r"
   operatorcommand = "@sbindir@/bsmtp -h @smtp_host@ -f \"\(Bacula\) %r\" -s \"Bacula: Intervention needed for %j\" %r"
@@ -273,7 +280,6 @@ Pool {
   Recycle = yes                       # Bacula can automatically recycle Volumes
   AutoPrune = yes                     # Prune expired volumes
   Volume Retention = 365 days         # one year
-  Accept Any Volume = yes             # write on any volume in the pool
 }
 
 #

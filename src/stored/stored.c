@@ -1,28 +1,43 @@
 /*
  * Second generation Storage daemon.
  *
+ *  Kern Sibbald, MM
+ *
  * It accepts a number of simple commands from the File daemon
  * and acts on them. When a request to append data is made,
  * it opens a data channel and accepts data from the
  * File daemon.
  *
- *   Version $Id: stored.c,v 1.73.2.4 2006/03/14 21:41:45 kerns Exp $
+ *   Version $Id: stored.c,v 1.88 2006/12/16 15:30:22 kerns Exp $
  *
  */
 /*
-   Copyright (C) 2000-2006 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "stored.h"
@@ -54,7 +69,7 @@ char *configfile = NULL;
 bool init_done = false;
 
 /* Global static variables */
-static int foreground = 0;
+static bool foreground = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static workq_t dird_workq;            /* queue for processing connections */
 
@@ -62,7 +77,7 @@ static workq_t dird_workq;            /* queue for processing connections */
 static void usage()
 {
    fprintf(stderr, _(
-"Copyright (C) 2000-2005 Kern Sibbald.\n"
+PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: stored [options] [-c config_file] [config_file]\n"
 "        -c <file>   use <file> as configuration file\n"
@@ -75,7 +90,7 @@ static void usage()
 "        -u <user>   userid to <user>\n"
 "        -v          verbose user messages\n"
 "        -?          print this message.\n"
-"\n"), VERSION, BDATE);
+"\n"), 2000, VERSION, BDATE);
    exit(1);
 }
 
@@ -84,11 +99,15 @@ static void usage()
  *  Main Bacula Unix Storage Daemon
  *
  */
+#if defined(HAVE_WIN32)
+#define main BaculaMain
+#endif
+
 int main (int argc, char *argv[])
 {
    int ch;
-   int no_signals = FALSE;
-   int test_config = FALSE;
+   bool no_signals = false;
+   bool test_config = false;
    pthread_t thid;
    char *uid = NULL;
    char *gid = NULL;
@@ -128,7 +147,7 @@ int main (int argc, char *argv[])
          break;
 
       case 'f':                    /* run in foreground */
-         foreground = TRUE;
+         foreground = true;
          break;
 
       case 'g':                    /* set group id */
@@ -140,11 +159,11 @@ int main (int argc, char *argv[])
          break;
 
       case 's':                    /* no signals */
-         no_signals = TRUE;
+         no_signals = true;
          break;
 
       case 't':
-         test_config = TRUE;
+         test_config = true;
          break;
 
       case 'u':                    /* set uid */
@@ -414,16 +433,20 @@ static void cleanup_old_files()
 {
    POOLMEM *cleanup = get_pool_memory(PM_MESSAGE);
    int len = strlen(me->working_directory);
+#if defined(HAVE_WIN32)
+   pm_strcpy(cleanup, "del /q ");
+#else
    pm_strcpy(cleanup, "/bin/rm -f ");
+#endif
    pm_strcat(cleanup, me->working_directory);
-   if (len > 0 && me->working_directory[len-1] != '/') {
+   if (len > 0 && !IsPathSeparator(me->working_directory[len-1])) {
       pm_strcat(cleanup, "/");
    }
    pm_strcat(cleanup, my_name);
    pm_strcat(cleanup, "*.spool");
    run_program(cleanup, 0, NULL);
    free_pool_memory(cleanup);
-}      
+}
 
 
 /*
@@ -451,7 +474,7 @@ void *device_initialization(void *arg)
 
    foreach_res(device, R_DEVICE) {
       Dmsg1(90, "calling init_dev %s\n", device->device_name);
-      device->dev = dev = init_dev(NULL, device);
+      dev = init_dev(NULL, device);
       Dmsg1(10, "SD init done %s\n", device->device_name);
       if (!dev) {
          Jmsg1(NULL, M_ERROR, 0, _("Could not initialize %s\n"), device->device_name);
@@ -487,6 +510,13 @@ void *device_initialization(void *arg)
       free_dcr(dcr);
       jcr->dcr = NULL;
    }
+#ifdef xxx
+   if (jcr->dcr) {
+      Dmsg1(000, "free_dcr=%p\n", jcr->dcr);
+      free_dcr(jcr->dcr);
+      jcr->dcr = NULL;
+   }
+#endif
    free_jcr(jcr); 
    init_done = true;
    UnlockRes();
@@ -550,7 +580,8 @@ void terminate_stored(int sig)
       Dmsg1(10, "Term device %s\n", device->device_name);
       if (device->dev) {
          free_volume(device->dev);
-         term_dev(device->dev);
+         device->dev->term();
+         device->dev = NULL;
       } else {
          Dmsg1(10, "No dev structure %s\n", device->device_name);
       }

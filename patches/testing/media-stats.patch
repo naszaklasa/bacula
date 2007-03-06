@@ -1,0 +1,352 @@
+diff -Naur org/bacula-2.0.0/src/baconfig.h bacula-2.0.0/src/baconfig.h
+--- org/bacula-2.0.0/src/baconfig.h	2006-12-17 14:36:35.000000000 +0100
++++ bacula-2.0.0/src/baconfig.h	2007-01-09 16:10:02.000000000 +0100
+@@ -106,8 +106,8 @@
+ #define  OSDependentInit()
+ #define  tape_open            open
+ #define  tape_ioctl           ioctl
+-#define  tape_read            read
+-#define  tape_write           write
++#define  tape_read            ::read
++#define  tape_write           ::write
+ #define  tape_close           ::close
+ 
+ #endif
+diff -Naur org/bacula-2.0.0/src/cats/sql_find.c bacula-2.0.0/src/cats/sql_find.c
+--- org/bacula-2.0.0/src/cats/sql_find.c	2006-11-27 11:02:59.000000000 +0100
++++ bacula-2.0.0/src/cats/sql_find.c	2007-01-09 16:10:02.000000000 +0100
+@@ -283,7 +283,7 @@
+           "VolBytes,VolMounts,VolErrors,VolWrites,MaxVolBytes,VolCapacityBytes,"
+           "VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,Recycle,Slot,"
+           "FirstWritten,LastWritten,VolStatus,InChanger,VolParts,"
+-          "LabelType "
++          "LabelType,VolReadTime,VolWriteTime "
+           "FROM Media WHERE PoolId=%s AND MediaType='%s' AND VolStatus IN ('Full',"
+           "'Recycle','Purged','Used','Append') AND Enabled=1 "
+           "ORDER BY LastWritten LIMIT 1", 
+@@ -308,7 +308,7 @@
+           "VolBytes,VolMounts,VolErrors,VolWrites,MaxVolBytes,VolCapacityBytes,"
+           "VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,Recycle,Slot,"
+           "FirstWritten,LastWritten,VolStatus,InChanger,VolParts,"
+-          "LabelType "
++          "LabelType,VolReadTime,VolWriteTime "
+           "FROM Media WHERE PoolId=%s AND MediaType='%s' AND Enabled=1 "
+           "AND VolStatus='%s' "
+           "%s "
+@@ -371,6 +371,8 @@
+    mr->InChanger = str_to_int64(row[20]);
+    mr->VolParts = str_to_int64(row[21]);
+    mr->LabelType = str_to_int64(row[22]);
++   mr->VolReadTime = str_to_uint64(row[23]);
++   mr->VolWriteTime = str_to_uint64(row[24]);
+    mr->Enabled = 1;   /* ensured via query */
+    sql_free_result(mdb);
+ 
+diff -Naur org/bacula-2.0.0/src/cats/sql_get.c bacula-2.0.0/src/cats/sql_get.c
+--- org/bacula-2.0.0/src/cats/sql_get.c	2006-11-27 11:02:59.000000000 +0100
++++ bacula-2.0.0/src/cats/sql_get.c	2007-01-09 16:10:02.000000000 +0100
+@@ -872,7 +872,7 @@
+          "MaxVolFiles,Recycle,Slot,FirstWritten,LastWritten,InChanger,"
+          "EndFile,EndBlock,VolParts,LabelType,LabelDate,StorageId,"
+          "Enabled,LocationId,RecycleCount,InitialWrite,"
+-         "ScratchPoolId,RecyclePoolId "
++         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime "
+          "FROM Media WHERE MediaId=%s", 
+          edit_int64(mr->MediaId, ed1));
+    } else {                           /* find by name */
+@@ -882,7 +882,7 @@
+          "MaxVolFiles,Recycle,Slot,FirstWritten,LastWritten,InChanger,"
+          "EndFile,EndBlock,VolParts,LabelType,LabelDate,StorageId,"
+          "Enabled,LocationId,RecycleCount,InitialWrite,"
+-         "ScratchPoolId,RecyclePoolId "
++         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime "
+          "FROM Media WHERE VolumeName='%s'", mr->VolumeName);
+    }
+ 
+@@ -938,6 +938,8 @@
+             mr->InitialWrite = (time_t)str_to_utime(mr->cInitialWrite);
+             mr->ScratchPoolId = str_to_int64(row[33]);
+             mr->RecyclePoolId = str_to_int64(row[34]);
++            mr->VolReadTime = str_to_int64(row[35]);
++            mr->VolWriteTime = str_to_int64(row[36]);
+             
+             ok = true;
+          }
+diff -Naur org/bacula-2.0.0/src/dird/catreq.c bacula-2.0.0/src/dird/catreq.c
+--- org/bacula-2.0.0/src/dird/catreq.c	2006-12-23 17:33:52.000000000 +0100
++++ bacula-2.0.0/src/dird/catreq.c	2007-01-09 16:10:02.000000000 +0100
+@@ -280,7 +280,7 @@
+       mr.VolWriteTime = sdmr.VolWriteTime;
+       mr.VolParts     = sdmr.VolParts;
+       bstrncpy(mr.VolStatus, sdmr.VolStatus, sizeof(mr.VolStatus));
+-      if (jcr->wstore->StorageId) {
++      if (jcr->wstore && jcr->wstore->StorageId) {
+          mr.StorageId = jcr->wstore->StorageId;
+       }
+ 
+diff -Naur org/bacula-2.0.0/src/dird/dird.c bacula-2.0.0/src/dird/dird.c
+--- org/bacula-2.0.0/src/dird/dird.c	2006-12-22 16:01:05.000000000 +0100
++++ bacula-2.0.0/src/dird/dird.c	2007-01-09 16:10:02.000000000 +0100
+@@ -269,6 +269,8 @@
+ 
+    init_job_server(director->MaxConcurrentJobs);
+ 
++//   init_device_resources();
++
+    Dmsg0(200, "wait for next job\n");
+    /* Main loop -- call scheduler to get next job to run */
+    while ( (jcr = wait_for_next_job(runjob)) ) {
+diff -Naur org/bacula-2.0.0/src/dird/getmsg.c bacula-2.0.0/src/dird/getmsg.c
+--- org/bacula-2.0.0/src/dird/getmsg.c	2006-11-21 14:20:09.000000000 +0100
++++ bacula-2.0.0/src/dird/getmsg.c	2007-01-09 16:10:02.000000000 +0100
+@@ -62,7 +62,9 @@
+    "open=%d labeled=%d offline=%d "
+    "reserved=%d max_writers=%d "
+    "autoselect=%d autochanger=%d "
+-   "changer_name=%127s media_type=%127s volume_name=%127s\n";
++   "changer_name=%127s media_type=%127s volume_name=%127s "
++   "DevReadTime=%d DevWriteTime=%d DevReadBytes=%d "
++   "DevWriteBytes=%d\n";
+ #endif
+ 
+ 
+@@ -243,6 +245,7 @@
+          int dev_open, dev_append, dev_read, dev_labeled;
+          int dev_offline, dev_autochanger, dev_autoselect;
+          int dev_num_writers, dev_max_writers, dev_reserved;
++         uint64_t dev_read_time, dev_write_time, dev_write_bytes, dev_read_bytes;
+          uint64_t dev_PoolId;
+          Dmsg1(100, "<stored: %s", bs->msg);
+          if (sscanf(bs->msg, Device_update,
+@@ -253,7 +256,9 @@
+              &dev_max_writers, &dev_autoselect, 
+              &dev_autochanger, 
+              changer_name.c_str(), media_type.c_str(),
+-             volume_name.c_str()) != 15) {
++             volume_name.c_str(),
++             &dev_read_time, &dev_write_time, &dev_read_bytes,
++             &dev_write_bytes) != 19) {
+             Emsg1(M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
+          } else {
+             unbash_spaces(dev_name);
+@@ -283,6 +288,10 @@
+             dev->max_writers = dev_max_writers;
+             dev->reserved = dev_reserved;
+             dev->found = true;
++            dev->DevReadTime = dev_read_time; /* TODO : have to update database */
++            dev->DevWriteTime = dev_write_time;
++            dev->DevReadBytes = dev_read_bytes;
++            dev->DevWriteBytes = dev_write_bytes;
+          }
+          continue;
+       }
+diff -Naur org/bacula-2.0.0/src/stored/acquire.c bacula-2.0.0/src/stored/acquire.c
+--- org/bacula-2.0.0/src/stored/acquire.c	2006-12-16 16:30:22.000000000 +0100
++++ bacula-2.0.0/src/stored/acquire.c	2007-01-09 16:10:02.000000000 +0100
+@@ -461,8 +461,8 @@
+ 
+    if (dev->can_read()) {
+       dev->clear_read();              /* clear read bit */
+-
+-      /******FIXME**** send read volume usage statistics to director */
++      Dmsg0(100, "dir_update_vol_info. Release0\n");
++      dir_update_volume_info(dcr, false); /* send Volume info to Director */
+ 
+    } else if (dev->num_writers > 0) {
+       /* 
+diff -Naur org/bacula-2.0.0/src/stored/ansi_label.c bacula-2.0.0/src/stored/ansi_label.c
+--- org/bacula-2.0.0/src/stored/ansi_label.c	2006-11-21 18:03:45.000000000 +0100
++++ bacula-2.0.0/src/stored/ansi_label.c	2007-01-09 16:10:02.000000000 +0100
+@@ -87,7 +87,7 @@
+    /* Read a maximum of 5 records VOL1, HDR1, ... HDR4 */
+    for (i=0; i < 6; i++) {
+       do {
+-         stat = tape_read(dev->fd, label, sizeof(label));
++         stat = dev->read(label, sizeof(label));
+       } while (stat == -1 && errno == EINTR);
+       if (stat < 0) {
+          berrno be;
+@@ -309,7 +309,7 @@
+          } else {
+             label[79] = '3';                /* ANSI label flag */
+          }
+-         stat = tape_write(dev->fd, label, sizeof(label));
++         stat = dev->write(label, sizeof(label));
+          if (stat != sizeof(label)) {
+             berrno be;
+             Jmsg1(jcr, M_FATAL, 0,  _("Could not write ANSI VOL1 label. ERR=%s\n"),
+@@ -341,7 +341,7 @@
+        * This could come at the end of a tape, ignore
+        *  EOT errors.
+        */
+-      stat = tape_write(dev->fd, label, sizeof(label));
++      stat = dev->write(label, sizeof(label));
+       if (stat != sizeof(label)) {
+          berrno be;
+          if (stat == -1) {
+@@ -370,7 +370,7 @@
+          label[4] = 'V';
+          ascii_to_ebcdic(label, label, sizeof(label));
+       }
+-      stat = tape_write(dev->fd, label, sizeof(label));
++      stat = dev->write(label, sizeof(label));
+       if (stat != sizeof(label)) {
+          berrno be;
+          if (stat == -1) {
+diff -Naur org/bacula-2.0.0/src/stored/askdir.c bacula-2.0.0/src/stored/askdir.c
+--- org/bacula-2.0.0/src/stored/askdir.c	2006-12-08 15:27:10.000000000 +0100
++++ bacula-2.0.0/src/stored/askdir.c	2007-01-09 16:10:02.000000000 +0100
+@@ -308,11 +308,6 @@
+       Pmsg0(000, _("NULL Volume name. This shouldn't happen!!!\n"));
+       return false;
+    }
+-   if (dev->can_read()) {
+-      Jmsg0(jcr, M_FATAL, 0, _("Attempt to update_volume_info in read mode!!!\n"));
+-      Pmsg0(000, _("Attempt to update_volume_info in read mode!!!\n"));
+-      return false;
+-   }
+ 
+    Dmsg1(100, "Update cat VolFiles=%d\n", dev->file);
+    /* Just labeled or relabeled the tape */
+diff -Naur org/bacula-2.0.0/src/stored/block.c bacula-2.0.0/src/stored/block.c
+--- org/bacula-2.0.0/src/stored/block.c	2006-12-16 12:10:17.000000000 +0100
++++ bacula-2.0.0/src/stored/block.c	2007-01-09 16:10:02.000000000 +0100
+@@ -537,11 +537,8 @@
+          bmicrosleep(5, 0);    /* pause a bit if busy or lots of errors */
+          dev->clrerror(-1);
+       }
+-      if (dev->is_tape()) {
+-         stat = tape_write(dev->fd, block->buf, (size_t)wlen);
+-      } else {
+-         stat = write(dev->fd, block->buf, (size_t)wlen);
+-      }
++      stat = dev->write(block->buf, (size_t)wlen);
++
+    } while (stat == -1 && (errno == EBUSY || errno == EIO) && retry++ < 3);
+ 
+ #ifdef DEBUG_BLOCK_ZEROING
+@@ -979,11 +976,8 @@
+          bmicrosleep(10, 0);    /* pause a bit if busy or lots of errors */
+          dev->clrerror(-1);
+       }
+-      if (dev->is_tape()) {
+-         stat = tape_read(dev->fd, block->buf, (size_t)block->buf_len);
+-      } else {
+-         stat = read(dev->fd, block->buf, (size_t)block->buf_len);
+-      }
++      stat = dev->read(block->buf, (size_t)block->buf_len);
++
+    } while (stat == -1 && (errno == EBUSY || errno == EINTR || errno == EIO) && retry++ < 3);
+    if (stat < 0) {
+       berrno be;
+diff -Naur org/bacula-2.0.0/src/stored/dev.c bacula-2.0.0/src/stored/dev.c
+--- org/bacula-2.0.0/src/stored/dev.c	2006-12-22 16:01:05.000000000 +0100
++++ bacula-2.0.0/src/stored/dev.c	2007-01-09 16:10:02.000000000 +0100
+@@ -1325,7 +1325,7 @@
+       mt_com.mt_count = 1;
+       while (num-- && !at_eot()) {
+          Dmsg0(100, "Doing read before fsf\n");
+-         if ((stat = tape_read(fd, (char *)rbuf, rbuf_len)) < 0) {
++         if ((stat = this->read((char *)rbuf, rbuf_len)) < 0) {
+             if (errno == ENOMEM) {     /* tape record exceeds buf len */
+                stat = rbuf_len;        /* This is OK */
+             /*
+@@ -2192,6 +2192,68 @@
+    }
+ }
+ 
++/* return the last timer interval (ms) */
++int DEVICE::get_timer_count()
++{
++   uint64_t old = last_timer;
++   struct timeval tv;
++   gettimeofday(&tv, NULL);
++   last_timer = tv.tv_usec + tv.tv_sec * 1000000;
++
++   return last_timer - old;
++}
++
++/* read from fd */
++ssize_t DEVICE::read(void *buf, size_t len)
++{
++   ssize_t read_len ;
++
++   get_timer_count();
++
++   if (this->is_tape()) {
++      read_len = tape_read(fd, buf, len);
++   } else {
++      read_len = ::read(fd, buf, len);
++   }
++
++   last_tick = get_timer_count();
++
++   DevReadTime += last_tick;
++   VolCatInfo.VolReadTime += last_tick;
++
++   if (read_len > 0) {		/* skip error */
++      DevReadBytes += read_len;
++      VolCatInfo.VolCatRBytes += read_len;
++   }
++
++   return read_len;   
++}
++
++/* write to fd */
++ssize_t DEVICE::write(const void *buf, size_t len)
++{
++   ssize_t write_len ;
++
++   get_timer_count();
++
++   if (this->is_tape()) {
++      write_len = tape_write(fd, buf, len);
++   } else {
++      write_len = ::write(fd, buf, len);
++   }
++
++   last_tick = get_timer_count();
++
++   DevWriteTime += last_tick;
++   VolCatInfo.VolWriteTime += last_tick;
++
++   if (write_len > 0) {		/* skip error */
++      DevWriteBytes += write_len;
++      VolCatInfo.VolCatBytes += write_len;
++   }
++
++   return write_len;   
++}
+ 
+ /* Return the resource name for the device */
+ const char *DEVICE::name() const
+diff -Naur org/bacula-2.0.0/src/stored/dev.h bacula-2.0.0/src/stored/dev.h
+--- org/bacula-2.0.0/src/stored/dev.h	2006-12-14 12:41:01.000000000 +0100
++++ bacula-2.0.0/src/stored/dev.h	2007-01-09 16:10:02.000000000 +0100
+@@ -280,7 +280,17 @@
+    int rem_wait_sec;
+    int num_wait;
+ 
++   uint64_t last_timer;		      /* used by read/write/seek to get stats (usec) */
++   int last_tick;		      /* contains last read/write time (usec) */
++
++   uint64_t DevReadTime;
++   uint64_t DevWriteTime;
++   uint64_t DevWriteBytes;
++   uint64_t DevReadBytes;
++
+    /* Methods */
++   int get_timer_count();	      /* return the last timer interval (ms) */
++
+    int has_cap(int cap) const { return capabilities & cap; }
+    void clear_cap(int cap) { capabilities &= ~cap; }
+    void set_cap(int cap) { capabilities |= cap; }
+@@ -363,6 +373,8 @@
+    bool truncate(DCR *dcr);      /* in dev.c */
+    int open(DCR *dcr, int mode); /* in dev.c */
+    void term(void);              /* in dev.c */
++   ssize_t read(void *buf, size_t len);	/* in dev.c */
++   ssize_t write(const void *buf, size_t len);	/* in dev.c */
+    bool rewind(DCR *dcr);        /* in dev.c */
+    bool mount(int timeout);      /* in dev.c */
+    bool unmount(int timeout);    /* in dev.c */

@@ -8,37 +8,45 @@
 *   1. The generic lexical scanner in lib/lex.c and lib/lex.h
 *
 *   2. The generic config  scanner in lib/parse_config.c and
-*	lib/parse_config.h.
-*	These files contain the parser code, some utility
-*	routines, and the common store routines (name, int,
-*	string).
+*       lib/parse_config.h.
+*       These files contain the parser code, some utility
+*       routines, and the common store routines (name, int,
+*       string).
 *
 *   3. The daemon specific file, which contains the Resource
-*	definitions as well as any specific store routines
-*	for the resource records.
+*       definitions as well as any specific store routines
+*       for the resource records.
 *
 *     Nicolas Boichat, August MMIV
 *
-*     Version $Id: tray_conf.c,v 1.8 2005/08/10 16:35:38 nboichat Exp $
+*     Version $Id: tray_conf.c,v 1.13 2006/12/22 15:40:16 kerns Exp $
 */
 /*
-   Copyright (C) 2004 Kern Sibbald and John Walker
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
+   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
 
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
 */
 
 #include "bacula.h"
@@ -69,17 +77,17 @@ int  res_all_size = sizeof(res_all);
 /*
 *    Monitor Resource
 *
-*   name	   handler     value		     code flags    default_value
+*   name           handler     value                 code flags    default_value
 */
 static RES_ITEM mon_items[] = {
    {"name",        store_name,     ITEM(res_monitor.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(res_monitor.hdr.desc), 0, 0, 0},
-   {"requiressl",  store_yesno,    ITEM(res_monitor.require_ssl), 1, ITEM_DEFAULT, 0},
+   {"requiressl",  store_bit,    ITEM(res_monitor.require_ssl), 1, ITEM_DEFAULT, 0},
    {"password",    store_password, ITEM(res_monitor.password), 0, ITEM_REQUIRED, 0},
    {"refreshinterval",  store_time,ITEM(res_monitor.RefreshInterval),  0, ITEM_DEFAULT, 5},
    {"fdconnecttimeout", store_time,ITEM(res_monitor.FDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
    {"sdconnecttimeout", store_time,ITEM(res_monitor.SDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 /*  Director's that we can contact */
@@ -88,14 +96,14 @@ static RES_ITEM dir_items[] = {
    {"description", store_str,      ITEM(res_dir.hdr.desc), 0, 0, 0},
    {"dirport",     store_int,      ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",     store_str,      ITEM(res_dir.address),  0, 0, 0},
-   {"enablessl",   store_yesno,    ITEM(res_dir.enable_ssl), 1, ITEM_DEFAULT, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {"enablessl",   store_bit,    ITEM(res_dir.enable_ssl), 1, ITEM_DEFAULT, 0},
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 /*
 *    Client or File daemon resource
 *
-*   name	   handler     value		     code flags    default_value
+*   name           handler     value                 code flags    default_value
 */
 
 static RES_ITEM cli_items[] = {
@@ -104,13 +112,13 @@ static RES_ITEM cli_items[] = {
    {"address",  store_str,        ITEM(res_client.address),  0, ITEM_REQUIRED, 0},
    {"fdport",   store_pint,       ITEM(res_client.FDport),   0, ITEM_DEFAULT, 9102},
    {"password", store_password,   ITEM(res_client.password), 0, ITEM_REQUIRED, 0},
-   {"enablessl", store_yesno,     ITEM(res_client.enable_ssl), 1, ITEM_DEFAULT, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {"enablessl", store_bit,     ITEM(res_client.enable_ssl), 1, ITEM_DEFAULT, 0},
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 /* Storage daemon resource
 *
-*   name	   handler     value		     code flags    default_value
+*   name           handler     value                 code flags    default_value
 */
 static RES_ITEM store_items[] = {
    {"name",        store_name,     ITEM(res_store.hdr.name),   0, ITEM_REQUIRED, 0},
@@ -120,8 +128,8 @@ static RES_ITEM store_items[] = {
    {"sdaddress",   store_str,      ITEM(res_store.address),    0, 0, 0},
    {"password",    store_password, ITEM(res_store.password),   0, ITEM_REQUIRED, 0},
    {"sdpassword",  store_password, ITEM(res_store.password),   0, 0, 0},
-   {"enablessl",   store_yesno,    ITEM(res_store.enable_ssl),  1, ITEM_DEFAULT, 0},
-   {NULL, NULL, NULL, 0, 0, 0}
+   {"enablessl",   store_bit,    ITEM(res_store.enable_ssl),  1, ITEM_DEFAULT, 0},
+   {NULL, NULL, {0}, 0, 0, 0}
 };
 
 /*
@@ -131,7 +139,7 @@ static RES_ITEM store_items[] = {
 *  NOTE!!! keep it in the same order as the R_codes
 *    or eliminate all resources[rindex].name
 *
-*  name	     items	  rcode        res_head
+*  name      items        rcode        res_head
 */
 RES_TABLE resources[] = {
    {"monitor",      mon_items,    R_MONITOR},
@@ -152,7 +160,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
       sendit(sock, _("No %s resource defined\n"), res_to_str(type));
       return;
    }
-   if (type < 0) {		      /* no recursion */
+   if (type < 0) {                    /* no recursion */
       type = - type;
       recurse = false;
    }
@@ -194,7 +202,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
 */
 void free_resource(RES *sres, int type)
 {
-   RES *nres;			      /* next resource if linked */
+   RES *nres;                         /* next resource if linked */
    URES *res = (URES *)sres;
 
    if (res == NULL)
@@ -258,14 +266,14 @@ void save_resource(int type, RES_ITEM *items, int pass)
    */
    for (i=0; items[i].name; i++) {
       if (items[i].flags & ITEM_REQUIRED) {
-	 if (!bit_is_set(i, res_all.res_monitor.hdr.item_present)) {
-	       Emsg2(M_ERROR_TERM, 0, _("%s item is required in %s resource, but not found.\n"),
-		  items[i].name, resources[rindex]);
-	 }
+         if (!bit_is_set(i, res_all.res_monitor.hdr.item_present)) {
+               Emsg2(M_ERROR_TERM, 0, _("%s item is required in %s resource, but not found.\n"),
+                  items[i].name, resources[rindex]);
+         }
       }
       /* If this triggers, take a look at lib/parse_conf.h */
       if (i >= MAX_RES_ITEMS) {
-	 Emsg1(M_ERROR_TERM, 0, _("Too many items in %s resource\n"), resources[rindex]);
+         Emsg1(M_ERROR_TERM, 0, _("Too many items in %s resource\n"), resources[rindex]);
       }
    }
 
@@ -282,22 +290,22 @@ void save_resource(int type, RES_ITEM *items, int pass)
       case R_CLIENT:
       case R_STORAGE:
       case R_DIRECTOR:
-	 break;
+         break;
       default:
-	 Emsg1(M_ERROR, 0, _("Unknown resource type %d in save_resource.\n"), type);
-	 error = 1;
-	 break;
+         Emsg1(M_ERROR, 0, _("Unknown resource type %d in save_resource.\n"), type);
+         error = 1;
+         break;
       }
       /* Note, the resource name was already saved during pass 1,
       * so here, we can just release it.
       */
       if (res_all.res_monitor.hdr.name) {
-	 free(res_all.res_monitor.hdr.name);
-	 res_all.res_monitor.hdr.name = NULL;
+         free(res_all.res_monitor.hdr.name);
+         res_all.res_monitor.hdr.name = NULL;
       }
       if (res_all.res_monitor.hdr.desc) {
-	 free(res_all.res_monitor.hdr.desc);
-	 res_all.res_monitor.hdr.desc = NULL;
+         free(res_all.res_monitor.hdr.desc);
+         res_all.res_monitor.hdr.desc = NULL;
       }
       return;
    }
@@ -319,7 +327,7 @@ void save_resource(int type, RES_ITEM *items, int pass)
       size = sizeof(STORE);
       break;
    default:
-      printf(_("Unknown resource type %d in save_resrouce.\n"), type);
+      printf(_("Unknown resource type %d in save_resource.\n"), type);
       error = 1;
       size = 1;
       break;
@@ -329,22 +337,23 @@ void save_resource(int type, RES_ITEM *items, int pass)
       res = (URES *)malloc(size);
       memcpy(res, &res_all, size);
       if (!res_head[rindex]) {
-   res_head[rindex] = (RES *)res; /* store first entry */
-	 Dmsg3(900, "Inserting first %s res: %s index=%d\n", res_to_str(type),
-	 res->res_monitor.hdr.name, rindex);
+        res_head[rindex] = (RES *)res; /* store first entry */
+         Dmsg3(900, "Inserting first %s res: %s index=%d\n", res_to_str(type),
+         res->res_monitor.hdr.name, rindex);
       } else {
-   RES *next;
-   /* Add new res to end of chain */
-   for (next=res_head[rindex]; next->next; next=next->next) {
-      if (strcmp(next->name, res->res_monitor.hdr.name) == 0) {
-	 Emsg2(M_ERROR_TERM, 0,
-		  _("Attempt to define second %s resource named \"%s\" is not permitted.\n"),
-	 resources[rindex].name, res->res_monitor.hdr.name);
-      }
-   }
-   next->next = (RES *)res;
-	 Dmsg4(900, "Inserting %s res: %s index=%d pass=%d\n", res_to_str(type),
-	 res->res_monitor.hdr.name, rindex, pass);
+         RES *next, *last;
+         /* Add new res to end of chain */
+         for (last=next=res_head[rindex]; next; next=next->next) {
+            last = next;
+            if (strcmp(next->name, res->res_monitor.hdr.name) == 0) {
+               Emsg2(M_ERROR_TERM, 0,
+                  _("Attempt to define second %s resource named \"%s\" is not permitted.\n"),
+               resources[rindex].name, res->res_monitor.hdr.name);
+            }
+         }
+         last->next = (RES *)res;
+         Dmsg4(900, "Inserting %s res: %s index=%d pass=%d\n", res_to_str(type),
+         res->res_monitor.hdr.name, rindex, pass);
       }
    }
 }

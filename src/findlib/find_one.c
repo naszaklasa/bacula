@@ -1,19 +1,4 @@
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
-
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
-
- */
-
-/*
 
    This file is based on GNU TAR source code. Except for a few key
    ideas, it has been entirely rewritten for Bacula.
@@ -22,9 +7,36 @@
 
    Thanks to the TAR programmers.
 
-     Version $Id: find_one.c,v 1.49.2.1 2005/12/10 13:18:03 kerns Exp $
+     Version $Id: find_one.c,v 1.55 2006/11/21 20:14:46 kerns Exp $
 
  */
+/*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "find.h"
@@ -52,6 +64,25 @@ struct f_link {
     uint32_t FileIndex;               /* Bacula FileIndex of this file */
     char name[1];                     /* The name */
 };
+
+typedef struct f_link link_t;
+#define LINK_HASHTABLE_BITS 16
+#define LINK_HASHTABLE_SIZE (1<<LINK_HASHTABLE_BITS)
+#define LINK_HASHTABLE_MASK (LINK_HASHTABLE_SIZE-1)
+
+static inline int LINKHASH(const struct stat &info)
+{
+    int hash = info.st_dev;
+    unsigned long long i = info.st_ino;
+    hash ^= i;
+    i >>= 16;
+    hash ^= i;
+    i >>= 16;
+    hash ^= i;
+    i >>= 16;
+    hash ^= i;
+    return hash & LINK_HASHTABLE_MASK;
+}
 
 static void free_dir_ff_pkt(FF_PKT *dir_ff_pkt)
 {
@@ -83,6 +114,34 @@ static int accept_fstype(FF_PKT *ff, void *dummy) {
             }
             Dmsg3(200, "fstype %s for \"%s\" does not match %s\n", fs,
                   ff->fname, ff->fstypes.get(i));
+         }
+      }
+   }
+   return accept;
+}
+
+/*
+ * Check to see if we allow the drive type of a file or directory.
+ * If we do not have a list of drive types, we accept anything.
+ */
+static int accept_drivetype(FF_PKT *ff, void *dummy) {
+   int i;
+   char dt[100];
+   bool accept = true;
+
+   if (ff->drivetypes.size()) {
+      accept = false;
+      if (!drivetype(ff->fname, dt, sizeof(dt))) {
+         Dmsg1(50, "Cannot determine drive type for \"%s\"\n", ff->fname);
+      } else {
+         for (i = 0; i < ff->drivetypes.size(); ++i) {
+            if (strcmp(dt, (char *)ff->drivetypes.get(i)) == 0) {
+               Dmsg2(100, "Accepting drive type %s for \"%s\"\n", dt, ff->fname);
+               accept = true;
+               break;
+            }
+            Dmsg3(200, "drive type %s for \"%s\" does not match %s\n", dt,
+                  ff->fname, ff->drivetypes.get(i));
          }
       }
    }
@@ -157,7 +216,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
    restore_times.modtime = ff_pkt->statp.st_mtime;
 
    /*
-    * We check for allowed fstypes at top_level and fstype change (below).
+    * We check for allowed fstypes and drivetypes at top_level and fstype change (below).
     */
    if (top_level) {
       if (!accept_fstype(ff_pkt, NULL)) {
@@ -165,7 +224,29 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
          if (ff_pkt->flags & FO_KEEPATIME) {
             utime(fname, &restore_times);
          }
-         Jmsg1(jcr, M_ERROR, 0, _("Top level directory \"%s\" has an unlisted fstype\n"), fname);
+
+         char fs[100];
+
+         if (!fstype(ff_pkt->fname, fs, sizeof(fs))) {
+             bstrncpy(fs, "unknown", sizeof(fs));
+         }
+
+         Jmsg(jcr, M_INFO, 0, _("Top level directory \"%s\" has unlisted fstype \"%s\"\n"), fname, fs);
+         return 1;      /* Just ignore this error - or the whole backup is cancelled */
+      }
+      if (!accept_drivetype(ff_pkt, NULL)) {
+         ff_pkt->type = FT_INVALIDDT;
+         if (ff_pkt->flags & FO_KEEPATIME) {
+            utime(fname, &restore_times);
+         }
+
+         char dt[100];
+
+         if (!drivetype(ff_pkt->fname, dt, sizeof(dt))) {
+             bstrncpy(dt, "unknown", sizeof(dt));
+         }
+
+         Jmsg(jcr, M_INFO, 0, _("Top level directory \"%s\" has an unlisted drive type \"%s\"\n"), fname, dt);
          return 1;      /* Just ignore this error - or the whole backup is cancelled */
       }
       ff_pkt->volhas_attrlist = volume_has_attrlist(fname);
@@ -231,9 +312,14 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
            || S_ISSOCK(ff_pkt->statp.st_mode))) {
 
        struct f_link *lp;
+       if (ff_pkt->linkhash == NULL) {
+           ff_pkt->linkhash = (link_t **)bmalloc(LINK_HASHTABLE_SIZE * sizeof(link_t *));
+           memset(ff_pkt->linkhash, 0, LINK_HASHTABLE_SIZE * sizeof(link_t *));
+       }
+       const int linkhash = LINKHASH(ff_pkt->statp);
 
       /* Search link list of hard linked files */
-      for (lp = ff_pkt->linklist; lp; lp = lp->next)
+       for (lp = ff_pkt->linkhash[linkhash]; lp; lp = lp->next)
          if (lp->ino == (ino_t)ff_pkt->statp.st_ino &&
              lp->dev == (dev_t)ff_pkt->statp.st_dev) {
              /* If we have already backed up the hard linked file don't do it again */
@@ -252,8 +338,8 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       lp->ino = ff_pkt->statp.st_ino;
       lp->dev = ff_pkt->statp.st_dev;
       bstrncpy(lp->name, fname, len);
-      lp->next = ff_pkt->linklist;
-      ff_pkt->linklist = lp;
+       lp->next = ff_pkt->linkhash[linkhash];
+       ff_pkt->linkhash[linkhash] = lp;
       ff_pkt->linked = lp;            /* mark saved link */
    } else {
       ff_pkt->linked = NULL;
@@ -261,7 +347,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
 
    /* This is not a link to a previously dumped file, so dump it.  */
    if (S_ISREG(ff_pkt->statp.st_mode)) {
-      off_t sizeleft;
+      boffset_t sizeleft;
 
       sizeleft = ff_pkt->statp.st_size;
 
@@ -342,7 +428,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       link = (char *)bmalloc(link_len + 2);
       bstrncpy(link, fname, link_len);
       /* Strip all trailing slashes */
-      while (len >= 1 && link[len - 1] == '/')
+      while (len >= 1 && IsPathSeparator(link[len - 1]))
         len--;
       link[len++] = '/';             /* add back one */
       link[len] = 0;
@@ -392,7 +478,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       dir_ff_pkt->included_files_list = NULL;
       dir_ff_pkt->excluded_files_list = NULL;
       dir_ff_pkt->excluded_paths_list = NULL;
-      dir_ff_pkt->linklist = NULL;
+      dir_ff_pkt->linkhash = NULL;
 
       /*
        * Do not descend into subdirectories (recurse) if the
@@ -551,9 +637,15 @@ int term_find_one(FF_PKT *ff)
 {
    struct f_link *lp, *lc;
    int count = 0;
+   int i;
 
+   
+   if (ff->linkhash == NULL) return 0;
+
+   for (i =0 ; i < LINK_HASHTABLE_SIZE; i ++) {
    /* Free up list of hard linked files */
-   for (lp = ff->linklist; lp;) {
+       lp = ff->linkhash[i];
+       while (lp) {
       lc = lp;
       lp = lp->next;
       if (lc) {
@@ -561,6 +653,9 @@ int term_find_one(FF_PKT *ff)
          count++;
       }
    }
-   ff->linklist = NULL;
+       ff->linkhash[i] = NULL;
+   }
+   free(ff->linkhash);
+   ff->linkhash = NULL;
    return count;
 }

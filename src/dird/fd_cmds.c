@@ -10,47 +10,58 @@
  *  Utility functions for sending info to File Daemon.
  *   These functions are used by both backup and verify.
  *
- *   Version $Id: fd_cmds.c,v 1.78.2.1 2006/03/24 16:35:23 kerns Exp $
+ *   Version $Id: fd_cmds.c,v 1.91 2006/11/21 13:20:09 kerns Exp $
  */
 /*
-   Copyright (C) 2000-2005 Kern Sibbald
+   Bacula® - The Network Backup Solution
 
-   This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License
-   version 2 as amended with additional clauses defined in the
-   file LICENSE in the main source directory.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-   the file LICENSE for additional details.
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
- */
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
 
 #include "bacula.h"
 #include "dird.h"
+#include "findlib/find.h"
 
 /* Commands sent to File daemon */
 static char filesetcmd[]  = "fileset%s\n"; /* set full fileset */
 static char jobcmd[]      = "JobId=%s Job=%s SDid=%u SDtime=%u Authorization=%s\n";
 /* Note, mtime_only is not used here -- implemented as file option */
 static char levelcmd[]    = "level = %s%s mtime_only=%d\n";
-static char runbefore[]   = "RunBeforeJob %s\n";
-static char runafter[]    = "RunAfterJob %s\n";
-
+static char runscript[]   = "Run OnSuccess=%u OnFailure=%u AbortOnError=%u When=%u Command=%s\n";
+static char runbeforenow[]= "RunBeforeNow\n";
 
 /* Responses received from File daemon */
-static char OKinc[]       = "2000 OK include\n";
-static char OKjob[]       = "2000 OK Job";
-static char OKbootstrap[] = "2000 OK bootstrap\n";
-static char OKlevel[]     = "2000 OK level\n";
-static char OKRunBefore[] = "2000 OK RunBefore\n";
-static char OKRunAfter[]  = "2000 OK RunAfter\n";
+static char OKinc[]          = "2000 OK include\n";
+static char OKjob[]          = "2000 OK Job";
+static char OKlevel[]        = "2000 OK level\n";
+static char OKRunScript[]    = "2000 OK RunScript\n";
+static char OKRunBeforeNow[] = "2000 OK RunBeforeNow\n";
 
 /* Forward referenced functions */
 
 /* External functions */
-extern int debug_level;
 extern DIRRES *director;
 extern int FDConnectTimeout;
 
@@ -162,14 +173,14 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
       if (!db_find_job_start_time(jcr, jcr->db, &jcr->jr, &jcr->stime)) {
          /* No job found, so upgrade this one to Full */
          Jmsg(jcr, M_INFO, 0, "%s", db_strerror(jcr->db));
-         Jmsg(jcr, M_INFO, 0, _("No prior or suitable Full backup found. Doing FULL backup.\n"));
+         Jmsg(jcr, M_INFO, 0, _("No prior or suitable Full backup found in catalog. Doing FULL backup.\n"));
          bsnprintf(since, since_len, _(" (upgraded from %s)"),
             level_to_str(jcr->JobLevel));
          jcr->JobLevel = jcr->jr.JobLevel = L_FULL;
       } else {
          if (jcr->job->rerun_failed_levels) {
             if (db_find_failed_job_since(jcr, jcr->db, &jcr->jr, jcr->stime, JobLevel)) {
-               Jmsg(jcr, M_INFO, 0, _("Prior failed job found. Upgrading to %s.\n"),
+               Jmsg(jcr, M_INFO, 0, _("Prior failed job found in catalog. Upgrading to %s.\n"),
                   level_to_str(JobLevel));
                bsnprintf(since, since_len, _(" (upgraded from %s)"),
                   level_to_str(jcr->JobLevel));
@@ -194,7 +205,7 @@ static void send_since_time(JCR *jcr)
    char ed1[50];
 
    stime = str_to_utime(jcr->stime);
-   bnet_fsend(fd, levelcmd, _("since_utime "), edit_uint64(stime, ed1), 0);
+   bnet_fsend(fd, levelcmd, NT_("since_utime "), edit_uint64(stime, ed1), 0);
    while (bget_dirmsg(fd) >= 0) {  /* allow him to poll us to sync clocks */
       Jmsg(jcr, M_INFO, 0, "%s\n", fd->msg);
    }
@@ -244,7 +255,7 @@ bool send_level_command(JCR *jcr)
 /*
  * Send either an Included or an Excluded list to FD
  */
-static int send_fileset(JCR *jcr)
+static bool send_fileset(JCR *jcr)
 {
    FILESET *fileset = jcr->fileset;
    BSOCK   *fd = jcr->file_bsock;
@@ -276,6 +287,15 @@ static int send_fileset(JCR *jcr)
          for (j=0; j<ie->num_opts; j++) {
             FOPTS *fo = ie->opts_list[j];
             bnet_fsend(fd, "O %s\n", fo->opts);
+
+            bool enhanced_wild = false;
+            for (k=0; fo->opts[k]!='\0'; k++) {
+               if (fo->opts[k]=='W') {
+                  enhanced_wild = true;
+                  break;
+               }
+            }
+
             for (k=0; k<fo->regex.size(); k++) {
                bnet_fsend(fd, "R %s\n", fo->regex.get(k));
             }
@@ -294,11 +314,17 @@ static int send_fileset(JCR *jcr)
             for (k=0; k<fo->wildfile.size(); k++) {
                bnet_fsend(fd, "WF %s\n", fo->wildfile.get(k));
             }
+            for (k=0; k<fo->wildbase.size(); k++) {
+               bnet_fsend(fd, "W%c %s\n", enhanced_wild ? 'B' : 'F', fo->wildbase.get(k));
+            }
             for (k=0; k<fo->base.size(); k++) {
                bnet_fsend(fd, "B %s\n", fo->base.get(k));
             }
             for (k=0; k<fo->fstype.size(); k++) {
                bnet_fsend(fd, "X %s\n", fo->fstype.get(k));
+            }
+            for (k=0; k<fo->drivetype.size(); k++) {
+               bnet_fsend(fd, "XD %s\n", fo->drivetype.get(k));
             }
             if (fo->reader) {
                bnet_fsend(fd, "D %s\n", fo->reader);
@@ -342,7 +368,7 @@ static int send_fileset(JCR *jcr)
                break;
             case '<':
                p++;                      /* skip over < */
-               if ((ffd = fopen(p, "r")) == NULL) {
+               if ((ffd = fopen(p, "rb")) == NULL) {
                   berrno be;
                   Jmsg(jcr, M_FATAL, 0, _("Cannot open included file: %s. ERR=%s\n"),
                      p, be.strerror());
@@ -386,11 +412,11 @@ static int send_fileset(JCR *jcr)
    if (!response(jcr, fd, OKinc, "Include", DISPLAY_ERROR)) {
       goto bail_out;
    }
-   return 1;
+   return true;
 
 bail_out:
    set_jcr_job_status(jcr, JS_ErrorTerminated);
-   return 0;
+   return false;
 
 }
 
@@ -422,73 +448,130 @@ bool send_exclude_list(JCR *jcr)
 
 
 /*
- * Send bootstrap file if any to the File daemon.
- *  This is used for restore and verify VolumeToCatalog
+ * Send bootstrap file if any to the socket given (FD or SD).
+ *  This is used for restore, verify VolumeToCatalog, and
+ *  for migration.
  */
-bool send_bootstrap_file(JCR *jcr)
+bool send_bootstrap_file(JCR *jcr, BSOCK *sock)
 {
    FILE *bs;
    char buf[1000];
-   BSOCK *fd = jcr->file_bsock;
    const char *bootstrap = "bootstrap\n";
 
    Dmsg1(400, "send_bootstrap_file: %s\n", jcr->RestoreBootstrap);
    if (!jcr->RestoreBootstrap) {
-      return 1;
+      return true;
    }
-   bs = fopen(jcr->RestoreBootstrap, "r");
+   bs = fopen(jcr->RestoreBootstrap, "rb");
    if (!bs) {
       berrno be;
       Jmsg(jcr, M_FATAL, 0, _("Could not open bootstrap file %s: ERR=%s\n"),
          jcr->RestoreBootstrap, be.strerror());
       set_jcr_job_status(jcr, JS_ErrorTerminated);
-      return 0;
+      return false;
    }
-   bnet_fsend(fd, bootstrap);
+   bnet_fsend(sock, bootstrap);
    while (fgets(buf, sizeof(buf), bs)) {
-      bnet_fsend(fd, "%s", buf);
+      bnet_fsend(sock, "%s", buf);
    }
-   bnet_sig(fd, BNET_EOD);
+   bnet_sig(sock, BNET_EOD);
    fclose(bs);
    if (jcr->unlink_bsr) {
       unlink(jcr->RestoreBootstrap);
       jcr->unlink_bsr = false;
    }                         
-   if (!response(jcr, fd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
-      return 0;
-   }
-   return 1;
+   return true;
 }
 
+/* TODO: drop this with runscript.old_proto in bacula 1.42 */
+static char runbefore[]   = "RunBeforeJob %s\n";
+static char runafter[]    = "RunAfterJob %s\n";
+static char OKRunBefore[] = "2000 OK RunBefore\n";
+static char OKRunAfter[]  = "2000 OK RunAfter\n";
+
+int send_runscript_with_old_proto(JCR *jcr, int when, POOLMEM *msg)
+{
+   int ret;
+   Dmsg1(120, "bdird: sending old runcommand to fd '%s'\n",msg);
+   if (when & SCRIPT_Before) {
+      bnet_fsend(jcr->file_bsock, runbefore, msg);
+      ret = response(jcr, jcr->file_bsock, OKRunBefore, "ClientRunBeforeJob", DISPLAY_ERROR);
+   } else {
+      bnet_fsend(jcr->file_bsock, runafter, msg);
+      ret = response(jcr, jcr->file_bsock, OKRunAfter, "ClientRunAfterJob", DISPLAY_ERROR);
+   }
+   return ret;
+} /* END OF TODO */
+
 /*
- * Send ClientRunBeforeJob and ClientRunAfterJob to File daemon
+ * Send RunScripts to File daemon
  */
-int send_run_before_and_after_commands(JCR *jcr)
+int send_runscripts_commands(JCR *jcr)
 {
    POOLMEM *msg = get_pool_memory(PM_FNAME);
    BSOCK *fd = jcr->file_bsock;
-   if (jcr->job->ClientRunBeforeJob) {
-      pm_strcpy(msg, jcr->job->ClientRunBeforeJob);
-      bash_spaces(msg);
-      bnet_fsend(fd, runbefore, msg);
-      if (!response(jcr, fd, OKRunBefore, "ClientRunBeforeJob", DISPLAY_ERROR)) {
-         set_jcr_job_status(jcr, JS_ErrorTerminated);
-         free_pool_memory(msg);
-         return 0;
-      }
+   RUNSCRIPT *cmd;
+   bool launch_before_cmd = false;
+   POOLMEM *ehost = get_pool_memory(PM_FNAME);
+   int result;
+
+   Dmsg0(120, "bdird: sending runscripts to fd\n");
+   
+   foreach_alist(cmd, jcr->job->RunScripts) {
+      
+      if (cmd->can_run_at_level(jcr->JobLevel) && cmd->target) {
+
+         ehost = edit_job_codes(jcr, ehost, cmd->target, "");
+         Dmsg2(200, "bdird: runscript %s -> %s\n", cmd->target, ehost);
+
+         if (strcmp(ehost, jcr->client->hdr.name) == 0) {
+            pm_strcpy(msg, cmd->command);
+            bash_spaces(msg);
+
+            Dmsg1(120, "bdird: sending runscripts to fd '%s'\n", cmd->command);
+            
+            /* TODO: remove this with bacula 1.42 */
+            if (cmd->old_proto) {
+               result = send_runscript_with_old_proto(jcr, cmd->when, msg);
+
+            } else {
+               bnet_fsend(fd, runscript, cmd->on_success, 
+                                         cmd->on_failure,
+                                         cmd->abort_on_error,
+                                         cmd->when,
+                                         msg);
+
+               result = response(jcr, fd, OKRunScript, "RunScript", DISPLAY_ERROR);
+               launch_before_cmd=true;
+            }
+            
+            if (!result) {
+               set_jcr_job_status(jcr, JS_ErrorTerminated);
+               free_pool_memory(msg);
+               free_pool_memory(ehost);
+               return 0;
+            }
+         }
+         /*
+           else {
+           send command to an other client
+           }
+         */
+      }        
    }
-   if (jcr->job->ClientRunAfterJob) {
-      fd->msglen = pm_strcpy(msg, jcr->job->ClientRunAfterJob);
-      bash_spaces(msg);
-      bnet_fsend(fd, runafter, msg);
-      if (!response(jcr, fd, OKRunAfter, "ClientRunAfterJob", DISPLAY_ERROR)) {
-         set_jcr_job_status(jcr, JS_ErrorTerminated);
-         free_pool_memory(msg);
-         return 0;
+   
+   /* TODO : we have to play with other client */
+   if (launch_before_cmd) {
+      bnet_fsend(fd, runbeforenow);
+      if (!response(jcr, fd, OKRunBeforeNow, "RunBeforeNow", DISPLAY_ERROR)) {
+        set_jcr_job_status(jcr, JS_ErrorTerminated);
+        free_pool_memory(msg);
+        free_pool_memory(ehost);
+        return 0;
       }
    }
    free_pool_memory(msg);
+   free_pool_memory(ehost);
    return 1;
 }
 
@@ -509,7 +592,7 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
    jcr->FileIndex = 0;
 
    Dmsg0(120, "bdird: waiting to receive file attributes\n");
-   /* Pickup file attributes and signature */
+   /* Pickup file attributes and digest */
    while (!fd->errors && (n = bget_dirmsg(fd)) > 0) {
 
    /*****FIXME****** improve error handling to stop only on
@@ -519,11 +602,11 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
       long file_index;
       int stream, len;
       char *attr, *p, *fn;
-      char Opts_SIG[MAXSTRING];      /* either Verify opts or MD5/SHA1 signature */
-      char SIG[MAXSTRING];
+      char Opts_Digest[MAXSTRING];      /* either Verify opts or MD5/SHA1 digest */
+      char digest[CRYPTO_DIGEST_MAX_SIZE];
 
       jcr->fname = check_pool_memory_size(jcr->fname, fd->msglen);
-      if ((len = sscanf(fd->msg, "%ld %d %s", &file_index, &stream, Opts_SIG)) != 3) {
+      if ((len = sscanf(fd->msg, "%ld %d %s", &file_index, &stream, Opts_Digest)) != 3) {
          Jmsg(jcr, M_FATAL, 0, _("<filed: bad attributes, expected 3 fields got %d\n"
 "msglen=%d msg=%s\n"), len, fd->msglen, fd->msg);
          set_jcr_job_status(jcr, JS_ErrorTerminated);
@@ -555,8 +638,8 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
          ar.ClientId = jcr->ClientId;
          ar.PathId = 0;
          ar.FilenameId = 0;
-         ar.Sig = NULL;
-         ar.SigType = 0;
+         ar.Digest = NULL;
+         ar.DigestType = CRYPTO_DIGEST_NONE;
 
          Dmsg2(111, "dird<filed: stream=%d %s\n", stream, jcr->fname);
          Dmsg1(120, "dird<filed: attr=%s\n", attr);
@@ -567,17 +650,17 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
             continue;
          }
          jcr->FileId = ar.FileId;
-      } else if (stream == STREAM_MD5_SIGNATURE || stream == STREAM_SHA1_SIGNATURE) {
+      } else if (crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
          if (jcr->FileIndex != (uint32_t)file_index) {
-            Jmsg2(jcr, M_ERROR, 0, _("MD5/SHA1 index %d not same as attributes %d\n"),
-               file_index, jcr->FileIndex);
+            Jmsg3(jcr, M_ERROR, 0, _("%s index %d not same as attributes %d\n"),
+               stream_to_ascii(stream), file_index, jcr->FileIndex);
             set_jcr_job_status(jcr, JS_Error);
             continue;
          }
-         db_escape_string(SIG, Opts_SIG, strlen(Opts_SIG));
-         Dmsg2(120, "SIGlen=%d SIG=%s\n", strlen(SIG), SIG);
-         if (!db_add_SIG_to_file_record(jcr, jcr->db, jcr->FileId, SIG,
-                   stream==STREAM_MD5_SIGNATURE?MD5_SIG:SHA1_SIG)) {
+         db_escape_string(digest, Opts_Digest, strlen(Opts_Digest));
+         Dmsg2(120, "DigestLen=%d Digest=%s\n", strlen(digest), digest);
+         if (!db_add_digest_to_file_record(jcr, jcr->db, jcr->FileId, digest,
+                   crypto_digest_stream_type(stream))) {
             Jmsg1(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));
             set_jcr_job_status(jcr, JS_Error);
          }
