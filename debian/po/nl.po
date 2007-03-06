@@ -1,3 +1,6 @@
+# translation of bacula 1.38.9-10_templates.po to Dutch
+# This file is distributed under the same license as the bacula package.
+# Please see debian/copyright.
 #
 #    Translators, if you are not familiar with the PO format, gettext
 #    documentation is worth reading, especially sections dedicated to
@@ -11,13 +14,17 @@
 #
 #    Developers do not need to manually edit POT or PO files.
 #
+# Luk Claes <luk.claes(AT)ugent(DOT)be>, 2004
+# Kurt De Bree <kdebree(AT)telenet(DOT)be>, 2006
+# This is an unofficial translation
+#
 msgid ""
 msgstr ""
-"Project-Id-Version: bacula 1.34.6-2\n"
+"Project-Id-Version: bacula 1.38.9-10\n"
 "Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
 "POT-Creation-Date: 2006-05-13 10:03-0500\n"
-"PO-Revision-Date: 2004-11-16 18:28+0100\n"
-"Last-Translator: Luk Claes <luk.claes@ugent.be>\n"
+"PO-Revision-Date: 2006-06-19 19:28+0100\n"
+"Last-Translator: Kurt De Bree <kdebree(AT)telenet(DOT)be>\n"
 "Language-Team: Debian l10n Dutch <debian-l10n-dutch@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -27,18 +34,17 @@ msgstr ""
 #. Description
 #: ../bacula-director-sqlite.templates:4
 msgid "Create tables for Bacula's Catalog?"
-msgstr "Tabellen creëren voor de Catalogus van Bacula?"
+msgstr "Tabellen creëren voor de catalogus van Bacula?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:4
-#, fuzzy
 msgid ""
 "The tables needed for Bacula's catalog are missing.  This is normal for a "
 "fresh install of Bacula."
 msgstr ""
-"De door de Catalogus van Bacula benodigde tabellen ontbreken (dit is "
-"waarschijnlijk een verse installatie). Moeten deze nu aangemaakt worden?"
+"De benodigde tabellen voor de Bacula catalogus ontbreken. Dit is normaal "
+"voor een verse installatie."
 
 #. Type: boolean
 #. Description
@@ -47,6 +53,8 @@ msgid ""
 "These tables are needed for the Bacula director to function. Should these "
 "tables be automatically set up for you?"
 msgstr ""
+"Deze tabellen zijn nodig voor de werking van de 'Bacula director'. Wilt u "
+"deze tabellen automatisch aanmaken?"
 
 #. Type: boolean
 #. Description
@@ -61,19 +69,5 @@ msgid ""
 "Do you want the Bacula Catalog to be removed if you purge the Bacula "
 "director?"
 msgstr ""
-
-#~ msgid ""
-#~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
-#~ "able to restore your backups unless you have another copy of the catalog "
-#~ "at hand."
-#~ msgstr ""
-#~ "Waarschuwing: dit is niet ongedaan te maken. Eens u de catalogus "
-#~ "verwijderd heeft, zult u niet in staat zijn om backups te herstellen "
-#~ "behalve als u nog een andere kopie van de catalogus bij de hand heeft."
-
-#~ msgid ""
-#~ "Shall I remove the Catalog / SQLite database at package purge time? This "
-#~ "will free all the used space."
-#~ msgstr ""
-#~ "Moet de Catalogus / SQLite-databank verwijderd worden bij wissen (purge)? "
-#~ "Dit zal alle ingenomen ruimte weer vrijgeven."
+"Wilt u dat de Bacula catalogus verwijderd wordt als de Bacula director "
+"wordt gewist (purge)?"

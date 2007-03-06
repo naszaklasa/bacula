@@ -1,3 +1,12 @@
+bacula (1.38.11-2) unstable; urgency=low
+
+  * Updated Brazilian Portugese translation from Felipe August van de Wiel.
+    Closes: #373992.
+  * Updated Dutch translation from Kurt De Bree.  Closes: #375128.
+  * New Portugese translation from Rui Branco.  Closes: #380675.
+
+ -- John Goerzen <jgoerzen@complete.org>  Sat, 12 Aug 2006 09:40:36 -0500
+
 bacula (1.38.11-1) unstable; urgency=low
 
   * New upstream release

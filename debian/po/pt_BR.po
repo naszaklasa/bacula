@@ -12,34 +12,32 @@
 #    Developers do not need to manually edit POT or PO files.
 #
 msgid ""
-msgstr ""
+msgstr "pt_BR utf-8\n"
 "Project-Id-Version: bacula\n"
 "Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
 "POT-Creation-Date: 2006-05-13 10:03-0500\n"
-"PO-Revision-Date: 2004-06-13 21:06+0200\n"
-"Last-Translator: AndrÈ LuÌs Lopes <andrelop@debian.org>\n"
-"Language-Team: Debian-BR Project <debian-l10n-portuguese@lists.debian.org>\n"
+"PO-Revision-Date: 2006-07-04 00:29-0300\n"
+"Last-Translator: Felipe Augusto van de Wiel (faw) <faw@cathedrallabs.org>\n"
+"Language-Team: l10n portuguese <debian-l10n-portuguese@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:4
 msgid "Create tables for Bacula's Catalog?"
-msgstr "Criar as tabelas para o Cat·logo do Bacula ?"
+msgstr "Criar as tabelas para o Cat√°logo do Bacula ?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:4
-#, fuzzy
 msgid ""
 "The tables needed for Bacula's catalog are missing.  This is normal for a "
 "fresh install of Bacula."
 msgstr ""
-"Foi detectado que as tabelas necess·rias para o Cat·logo do Bacula est„o "
-"faltando (esta provavelmente È uma nova instalaÁ„o). Tais tabelas devem ser "
-"criadas agora ?"
+"As tabelas necess√°rias para o cat√°logo do Bacula est√£o faltando. Isso "
+"√© normal para uma nova instala√ß√£o do Bacula."
 
 #. Type: boolean
 #. Description
@@ -48,12 +46,14 @@ msgid ""
 "These tables are needed for the Bacula director to function. Should these "
 "tables be automatically set up for you?"
 msgstr ""
+"Essas tabelas s√£o necess√°rias para que o \"Bacula director\" funcione. "
+"As mesmas devem ser criadas automaticamente para voc√™ ?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:14
 msgid "Remove Catalog on purge?"
-msgstr "Reomver Cat·logo ao expurgar o pacote ?"
+msgstr "Remover Cat√°logo ao expurgar o pacote ?"
 
 #. Type: boolean
 #. Description
@@ -62,19 +62,21 @@ msgid ""
 "Do you want the Bacula Catalog to be removed if you purge the Bacula "
 "director?"
 msgstr ""
+"Voc√™ deseja que o Cat√°logo do Bacula seja removido caso voc√™ expurge "
+"(remova com a op√ß√£o \"purge\") o \"Bacula director\" ?"
 
 #~ msgid ""
 #~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
 #~ "able to restore your backups unless you have another copy of the catalog "
 #~ "at hand."
 #~ msgstr ""
-#~ "Aviso : Isso È perigoso. Uma vez que o cat·logo tenha sido removido, n„o "
-#~ "ser· mais possÌvel restaurar seus backups a menos que vocÍ tenha uma "
-#~ "outra cÛpia da ca·logo em m„os."
+#~ "Aviso : Isso √© perigoso. Uma vez que o cat√°logo tenha sido removido, n√£o "
+#~ "ser√° mais poss√≠vel restaurar seus backups a menos que voc√™ tenha uma "
+#~ "outra c√≥pia da ca√°logo em m√£os."
 
 #~ msgid ""
 #~ "Shall I remove the Catalog / SQLite database at package purge time? This "
 #~ "will free all the used space."
 #~ msgstr ""
-#~ "O Cat·logo / base de dados SQLite dever· ser removido quando o pacote do "
-#~ "Bacula for expurgado ? Isso ir· liberar todo o espaÁo ocupado."
+#~ "O Cat√°logo / base de dados SQLite dever√° ser removido quando o pacote do "
+#~ "Bacula for expurgado ? Isso ir√° liberar todo o espa√ßo ocupado."
