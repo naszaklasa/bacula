@@ -1,0 +1,29 @@
+#!/bin/sh
+
+DEFCONFIGDIR="/usr/share/bacula-common/defconfig"
+DSTDIR="/etc/bacula"
+CONFIG="bacula-dir.conf"
+
+
+
+SOURCE=$DSTDIR/$CONFIG.dpkg-tmp
+if [ ! -f $DSTDIR/$CONFIG ]; then
+	TARGET=$DSTDIR/$CONFIG
+else
+	TARGET=$DSTDIR/$CONFIG.dist
+fi
+
+
+# Final config fix
+sed -e "s/@hostname@/`hostname`/" < $SOURCE > $TARGET
+
+# get rid of now unnecessary file
+rm -f $SOURCE
+
+# Harden permissions, so that passwords can not be looked at
+# Fixed by Philipp M Hahn
+chown root:bacula $TARGET
+chmod 640 $TARGET
+
+
+exit 0

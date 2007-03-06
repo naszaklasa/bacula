@@ -1,0 +1,46 @@
+#! /bin/sh
+# prerm script for bacula
+#
+# see: dh_installdeb(1)
+
+. /usr/share/debconf/confmodule
+
+dbc_first_version=1.38.9-3
+dbc_dbuser=bacula
+dbc_dbname=bacula
+
+. /usr/share/dbconfig-common/dpkg/prerm.mysql
+dbc_go bacula-director-mysql $@
+
+
+set -e
+
+# summary of how this script can be called:
+#        * <prerm> `remove'
+#        * <old-prerm> `upgrade' <new-version>
+#        * <new-prerm> `failed-upgrade' <old-version>
+#        * <conflictor's-prerm> `remove' `in-favour' <package> <new-version>
+#        * <deconfigured's-prerm> `deconfigure' `in-favour'
+#          <package-being-installed> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+
+
+case "$1" in
+    remove|deconfigure)
+		/usr/sbin/invoke-rc.d bacula-director stop
+        ;;
+    upgrade)
+	;;
+    failed-upgrade)
+        ;;
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

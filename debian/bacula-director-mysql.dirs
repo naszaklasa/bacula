@@ -1,0 +1,5 @@
+usr/sbin
+usr/lib/bacula
+etc/bacula
+usr/share/dbconfig-common/data/bacula-director-mysql/upgrade/mysql
+usr/share/dbconfig-common/data/bacula-director-mysql/install
