@@ -7,7 +7,7 @@ Build-Depends: autotools-dev, debhelper (>= 4.2), po-debconf (>= 0.8.2),
  libsqlite0-dev, libsqlite3-dev, libmysqlclient15-dev | libmysqlclient14-dev, libpq-dev | postgresql-dev, 
  libwrap0-dev, libssl-dev, python2.3-dev, 
  libgnome2-dev, libwxgtk2.6-dev | libwxgtk2.4-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
- libx11-dev, mtx, ssed, bc
+ libx11-dev, mtx, bc, libxt-dev
 Build-Conflicts: python2.2-dev
 Standards-Version: 3.7.0
 
@@ -81,7 +81,7 @@ Description: Network backup, recovery and verification (Director daemon)
 Package: bacula-director-mysql
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
-Depends: bacula-director-common (= ${Source-Version}), mysql-client, ${shlibs:Depends}
+Depends: bacula-director-common (= ${Source-Version}), dbconfig-common, mysql-client, ${shlibs:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -102,7 +102,7 @@ Depends: bacula-director-common (=${Source-Version}), dbconfig-common (>= 1.8.13
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
-Recommends: postgresql (>= 7.4)
+Recommends: postgresql-8.1 | postgresql-8.0 | postgresql (>= 7.4)
 Suggests: postgresql-contrib, postgresql-doc
 Description: Network backup, recovery and verification (Director daemon)
  The Bacula Director service supervises all the backup, restore, verify and

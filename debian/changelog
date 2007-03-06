@@ -1,3 +1,18 @@
+bacula (1.38.9-8) unstable; urgency=low
+
+  * Now use GNU sed instead of ssed for inplace editing -- GNU sed
+    now has this feature.  Closes: #367201.
+  * Include examples/ directory in bacula-common.
+  * Remove old bacula-doc files.
+  * Create additional PostgreSQL indices (like we alredy do for MySQL)
+  * Added dbconfig-common as a dep for bacula-director-mysql.
+    Closes: #367420.
+  * Added build-dep on libxt-dev.
+  * Listed postgresql-8.1 and postgresql-8.0 as recommends for
+    bacula-director-pgsql.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 15 May 2006 16:48:57 -0500
+
 bacula (1.38.9-7) unstable; urgency=low
 
   * Made bacula-sd-* also Replace the old bacula-sd package.  Closes: #367075.
