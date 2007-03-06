@@ -1,3 +1,11 @@
+bacula (1.38.11-8) unstable; urgency=high
+
+  * Rebuild to fix earlier binNMU.   Closes: #411652.
+  * debian/control switched to suggested source:Version approach from
+    debian-devel.
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 22 Feb 2007 12:58:55 -0600
+
 bacula (1.38.11-7) unstable; urgency=low
 
   * ACK NMU.  Closes: #394605.
