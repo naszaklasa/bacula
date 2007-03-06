@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=Bacula console
+Name[fr]=Console Bacula
+Comment=Bacula GNOME console
+Comment[es]=Consola GNOME para Bacula
+Comment[fr]=Console GNOME pour Bacula
+Exec=/usr/bin/bacula-console-gnome -c /etc/bacula/gnome-console.conf
+Terminal=false
+Categories=System;Application

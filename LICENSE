@@ -7,7 +7,7 @@ License:
 For the most part, Bacula is licensed under the GPL version 2         
 and any code that is Copyright Kern Sibbald and John Walker or
 Copyright Kern Sibbald (after November 2004) with the GPL
-indication is so licensed, but with the following five additions:
+indication is so licensed, but with the following four additions:
 
 Linking: 
 Bacula may be linked with any libraries permitted under the GPL,
@@ -15,19 +15,6 @@ or with any non-GPLed libraries, including OpenSSL, that are
 required for its proper functioning, providing the source code of
 those non-GPLed libraries is non-proprietary and freely
 available to the public.
-
-Termination for IP or Patent Action: 
-In addition to the termination clause specified in the GPL, this
-license shall terminate automatically and you may no longer
-exercise any of the rights granted to you by this license as of
-the date you commence an action, including a cross-claim or
-counterclaim, against any licensor of GPL software alleging that
-the software infringes an intellectual property right or a
-patent.  Special dispensation from or delay to the execution of
-this clause may be possible by applying directly to the license
-owner of this software.  Such a dispensation or delay is valid
-only in writing and signed by the one or more of the license
-holders.
 
 IP rights:
 Recipient understands that although each Contributor grants the
@@ -54,42 +41,45 @@ Code falling under the above conditions will be marked as follows:
    Copyright (C) 2000-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License.
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
 
-   You should have received a copy of the GNU General Public
-   License along with this program; if not, write to the Free
-   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-   MA 02111-1307, USA.
 
 Windows:
 Certain source code used to build the Windows version of the Bacula
 File daemon is copyrighted and or trademarked by Microsoft and may
 contain Microsoft intellectual property (examples: Microsoft VC++, the
 source to the VSS libraries, the Microsoft C runtime libraries).  As
-such we cannot and do not distribute that software. The compiler is
-available for purchase, and Microsoft provides a free version of the
-compiler. The source code and libraries are available for download from
-Microsoft public Web servers.  We have documented in the src/win32
-directory how we build the Windows File daemon and many users have
-succeeded in doing so themselves.  Our intention is to respect as
-closely as possible Open Source practices while maintaining full
-respect for proprietary and copyrighted code.
+such we cannot and do not distribute that software. We are permitted
+however to distribute Bacula in binary form with the necessary Microsoft
+libraries linked in.
+
+You may obtain the parts that we cannot distribute as follows.  The
+Microsoft compiler available for purchase, and Microsoft provides a free
+version of the compiler.  The source code and libraries are available for
+download from Microsoft public Web servers.  We have documented in the
+src/win32 directory the URLs from which we obtained the library source, and
+how we build the Windows File daemon and many users have succeeded in doing
+so themselves.  Our intention is to respect as closely as possible Open
+Source practices while maintaining full respect for proprietary and
+copyrighted code.
 
 =====================================
 
 The entire GPL is reproduced in the manuals distributed with the
 Bacula documentation and can also be found online on the GNU web site
-as well as at www.bacula.org.
+as well as at www.bacula.org. You may also obtain a copy of the
+GPL (or LGPL) by writing to: Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
 
 Certain parts of the Bacula software are licensed by their
-copyright holder(s) undert the GPL with no modifications.  These
+copyright holder(s) under the GPL with no modifications.  These
 software files are clearly marked as such.
 
 There are parts of Bacula that are licensed under the LGPL so

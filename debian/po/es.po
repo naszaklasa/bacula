@@ -1,0 +1,80 @@
+#
+#    Translators, if you are not familiar with the PO format, gettext
+#    documentation is worth reading, especially sections dedicated to
+#    this format, e.g. by running:
+#         info -n '(gettext)PO Files'
+#         info -n '(gettext)Header Entry'
+#
+#    Some information specific to po-debconf are available at
+#            /usr/share/doc/po-debconf/README-trans
+#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
+#
+#    Developers do not need to manually edit POT or PO files.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2006-05-13 10:03-0500\n"
+"PO-Revision-Date: 2004-09-08 03:35+CET\n"
+"Last-Translator: Jose Luis Tallon <jltallon@adv-solutions.net>\n"
+"Language-Team: Spanish <debian-l10n-spanish@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-15\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:4
+msgid "Create tables for Bacula's Catalog?"
+msgstr "¿Crear las tablas para el catálogo?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:4
+#, fuzzy
+msgid ""
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula."
+msgstr ""
+"Hemos detectado que las tablas necesarias para contener el catálogo de "
+"Bacula no están accesibles (tiene pinta de tratarse de una instalación "
+"nueva). ¿Debo crearlas ahora?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:4
+msgid ""
+"These tables are needed for the Bacula director to function. Should these "
+"tables be automatically set up for you?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:14
+msgid "Remove Catalog on purge?"
+msgstr "¿Borrar el catálogo al eliminar el paquete?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:14
+msgid ""
+"Do you want the Bacula Catalog to be removed if you purge the Bacula "
+"director?"
+msgstr ""
+
+#~ msgid ""
+#~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
+#~ "able to restore your backups unless you have another copy of the catalog "
+#~ "at hand."
+#~ msgstr ""
+#~ "Advertencia: Esta acción no se puede deshacer. Una vez que se elimine el "
+#~ "catálogo, no podrá restaurar sus copias de seguridad a menos que disponga "
+#~ "de otra copia del catálogo."
+
+#~ msgid ""
+#~ "Shall I remove the Catalog / SQLite database at package purge time? This "
+#~ "will free all the used space."
+#~ msgstr ""
+#~ "¿Debo borrar el catálogo cuando se elimine el paquete? Esto liberará todo "
+#~ "el espacio utilizado por el catálogo."

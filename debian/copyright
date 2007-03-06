@@ -1,0 +1,112 @@
+This package was debianized by Jose Luis Tallon <jltallon@adv-solutions.net> on
+Sun, 19 Oct 2003 14:36:45 +0200 and is now maintained by John Goerzen
+<jgoerzen@complete.org>.
+
+It was downloaded from http://www.bacula.org
+
+Upstream Authors: Kern Sibbald <kerns@users.sourceforge.net> and John Walker.
+
+Trademark:
+The name Bacula is a registered trademark.
+
+===================================
+License:
+For the most part, Bacula is licensed under the GPL version 2         
+and any code that is Copyright Kern Sibbald and John Walker or
+Copyright Kern Sibbald (after November 2004) with the GPL
+indication is so licensed, but with the following four additions:
+
+Linking: 
+Bacula may be linked with any libraries permitted under the GPL,
+or with any non-GPLed libraries, including OpenSSL, that are
+required for its proper functioning, providing the source code of
+those non-GPLed libraries is non-proprietary and freely
+available to the public.
+
+IP rights:
+Recipient understands that although each Contributor grants the
+licenses to its Contributions set forth herein, no assurances are
+provided by any Contributor that the Program does not infringe
+the patent or other intellectual property rights of any other
+entity.  Each Contributor disclaims any liability to Recipient
+for claims brought by any other entity based on infringement of
+intellectual property rights or otherwise.  As a condition to
+exercising the rights and licenses granted hereunder, each
+Recipient hereby assumes sole responsibility to secure any other
+intellectual property rights needed, if any.  For example, if a
+third party patent license is required to allow Recipient to
+distribute the Program, it is Recipient's responsibility to
+acquire that license before distributing the Program.
+
+Copyrights:
+Each Contributor represents that to its knowledge it has
+sufficient copyright rights in its Contribution, if any, to grant
+the copyright license set forth in this Agreement.
+
+Code falling under the above conditions will be marked as follows:
+
+   Copyright (C) 2000-2006 Kern Sibbald
+
+   This program is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public License
+   version 2 as amended with additional clauses defined in the
+   file LICENSE in the main source directory.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+   the file LICENSE for additional details.
+
+
+Windows:
+Certain source code used to build the Windows version of the Bacula
+File daemon is copyrighted and or trademarked by Microsoft and may
+contain Microsoft intellectual property (examples: Microsoft VC++, the
+source to the VSS libraries, the Microsoft C runtime libraries).  As
+such we cannot and do not distribute that software. We are permitted
+however to distribute Bacula in binary form with the necessary Microsoft
+libraries linked in.
+
+You may obtain the parts that we cannot distribute as follows.  The
+Microsoft compiler available for purchase, and Microsoft provides a free
+version of the compiler.  The source code and libraries are available for
+download from Microsoft public Web servers.  We have documented in the
+src/win32 directory the URLs from which we obtained the library source, and
+how we build the Windows File daemon and many users have succeeded in doing
+so themselves.  Our intention is to respect as closely as possible Open
+Source practices while maintaining full respect for proprietary and
+copyrighted code.
+
+=====================================
+
+The entire GPL is reproduced in the manuals distributed with the
+Bacula documentation and can also be found online on the GNU web site
+as well as at www.bacula.org. You may also obtain a copy of the
+GPL (or LGPL) by writing to: Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
+
+Certain parts of the Bacula software are licensed by their
+copyright holder(s) under the GPL with no modifications.  These
+software files are clearly marked as such.
+
+There are parts of Bacula that are licensed under the LGPL so
+that they may be used in proprietary code to interface with
+Bacula.
+
+Finally there are parts of Bacula that are in the public domain.
+             
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+On Debian systems, the complete text of the GNU General Public
+License and the GNU Lesser General Public License can be found
+in /usr/share/common-licenses/.

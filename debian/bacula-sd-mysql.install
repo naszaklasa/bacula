@@ -1,0 +1,2 @@
+debian/tmp-install-mysql/usr/sbin/bscan          usr/bin
+debian/tmp-install-mysql/usr/sbin/bcopy          usr/bin

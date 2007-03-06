@@ -1,0 +1,6 @@
+debian/tmp-install-pgsql/etc/bacula/scripts/make_postgresql_tables	usr/share/bacula-director
+debian/tmp-install-pgsql/etc/bacula/scripts/grant_postgresql_privileges usr/share/bacula-director
+debian/tmp-install-pgsql/etc/bacula/scripts/update_postgres* usr/share/bacula-director
+debian/tmp-install-pgsql/etc/bacula/scripts/*catalog_backup etc/bacula/scripts
+debian/tmp-install-pgsql/usr/sbin/bacula-dir                  usr/sbin
+debian/tmp-install-pgsql/usr/sbin/dbcheck                  usr/sbin

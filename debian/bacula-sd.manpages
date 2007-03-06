@@ -1,0 +1,4 @@
+debian/manpages/bacula-sd.8
+debian/manpages/btape.8
+debian/manpages/bls.8
+debian/manpages/bextract.8
