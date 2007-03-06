@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# shell script to Delete the Bacula database (same as deleting 
+#  the tables)
+#
+
+rm -f @working_dir@/control.db
+rm -f @working_dir@/jobs.db
+rm -f @working_dir@/pools.db
+rm -f @working_dir@/media.db
+rm -f @working_dir@/jobmedia.db
+rm -f @working_dir@/client.db
+rm -f @working_dir@/fileset.db

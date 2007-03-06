@@ -1,0 +1,57 @@
+# 
+# bootstrap/linux Makefile.in
+#
+
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+
+first_rule: all
+dummy:
+
+#-------------------------------------------------------------------------
+
+all:
+	./getdiskinfo
+	./make_rescue_disk
+	if test ! -e ../rpm_release ; then \
+	   ./make_static_bacula ; \
+	fi
+	./copy_to_roottree
+
+copy-static-fd:
+	./getdiskinfo
+	./make_rescue_disk
+	./copy_static_bacula $(DESTDIR)$(sbindir)/static-bacula-fd $(DESTDIR)$(sysconfdir)/bacula-fd.conf
+	./copy_to_roottree
+    
+
+depend:
+	
+
+#-------------------------------------------------------------------------
+
+
+install:
+
+uninstall:
+
+
+clean:
+	@$(RMF) *~ 1 2 3
+	@$(RMF) format.* partition.* start_network mount_drives
+	@$(RMF) sfdisk
+	@$(RMF) -r diskinfo etc.gz
+	@$(RMF) bin/bacula-fd
+
+# clean for distribution
+distclean: clean
+	 
+
+
+# ------------------------------------------------------------------------

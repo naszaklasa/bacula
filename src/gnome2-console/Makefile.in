@@ -1,0 +1,134 @@
+#
+#   Version $Id: Makefile.in,v 1.11 2004/09/24 12:30:32 kerns Exp $
+#
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/gnome2-console
+
+DEBUG=@DEBUG@
+
+first_rule: all
+dummy:
+
+GNOME_INCLUDEDIR = @GNOME_INCLUDEDIR@
+GNOMEUI_LIBS = @GNOMEUI_LIBS@
+GNOME_LIBDIR = @GNOME_LIBDIR@
+GNOME_LIBS = @GNOME_LIBS@
+
+
+#
+CONSSRCS = console.c console_conf.c authenticate.c support.c interface.c callbacks.c \
+	   restore.c
+CONSOBJS = console.o console_conf.o authenticate.o support.o interface.o callbacks.o \
+	   restore.o
+
+# these are the objects that are changed by the .configure process
+EXTRAOBJS = @OBJLIST@
+
+#CONS_INC=@CONS_INC@ $(GNOME_INCLUDEDIR)
+#CONS_LIBS=@CONS_LIBS@ $(GNOME_LIBS)
+#CONS_LDFLAGS=@CONS_LDFLAGS@ $(GNOME_LIBDIR) $(GNOMEUI_LIBS)
+
+CONS_INC=$(GNOME_INCLUDEDIR)
+CONS_LIBS=$(GNOME_LIBS)
+CONS_LDFLAGS=$(GNOME_LIBDIR) $(GNOMEUI_LIBS)
+
+
+.SUFFIXES:	.c .o
+.PHONY:
+.DONTCARE:
+
+# inference rules
+.c.o:
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+#-------------------------------------------------------------------------
+all: Makefile gnome-console @STATIC_GNOME_CONS@
+	@echo "==== Make of gnome-console is good ===="
+	@echo " "
+
+support.o:   support.c
+	rm -f support.c.orig
+	mv support.c support.c.orig
+	sed "s%parent = g_object_get_data%parent = \(GtkWidget \*\)g_object_get_data%" support.c.orig >support.c
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
+gnome-console: $(CONSOBJS) ../lib/libbac.a 
+	$(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -o $@ $(CONSOBJS) \
+	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbac -lm
+
+static-console: static-gnome-console
+
+static-gnome-console: $(CONSOBJS) ../lib/libbac.a 
+	$(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -o $@ $(CONSOBJS) \
+	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbac -lm 
+	strip $@
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+clean:
+	@$(RMF) gnome-console core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
+	@$(RMF) static-gnome-console gmon.out Makefile.am
+
+realclean: clean
+	@$(RMF) tags
+	@$(RM) -rf .deps gnome-console.conf
+
+distclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+
+devclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+
+install: all
+	$(INSTALL_PROGRAM) gnome-console $(DESTDIR)$(sbindir)/gnome-console
+	@srcconf=gnome-console.conf; \
+	if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
+	   destconf=$$srcconf.new; \
+	   echo "  ==> Found existing $$srcconf, installing new conf file as $$destconf"; \
+	else \
+	   destconf=$$srcconf; \
+	fi; \
+	echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
+	${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
+	if test -f static-gnome-console; then \
+	   $(INSTALL_PROGRAM) static-gnome-console $(DESTDIR)$(sbindir)/static-gnome-console; \
+	fi 
+
+uninstall:
+	(cd $(DESTDIR)$(sbindir); $(RMF) gnome-console static-gnome-console)
+	(cd $(DESTDIR)$(sysconfdir); $(RMF) gnome-console.conf gnome-console.conf.new)
+
+
+
+# Semi-automatic generation of dependencies:
+# Use gcc -MM because X11 `makedepend' doesn't work on all systems
+# and it also includes system headers.
+# `semi'-automatic since dependencies are generated at distribution time.
+
+depend:
+	@$(MV) Makefile Makefile.bak
+	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
+	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(GNOME_INCLUDEDIR) $(SQL_INC) *.c >> Makefile
+	@if test -f Makefile ; then \
+	    $(RMF) Makefile.bak; \
+	else \
+	   $(MV) Makefile.bak Makefile; \
+	   echo -e "Something went wrong\n\a"; \
+	fi
+
+# -----------------------------------------------------------------------
+# DO NOT DELETE: nice dependency list follows

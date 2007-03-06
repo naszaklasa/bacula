@@ -1,0 +1,73 @@
+#
+# $Id: Makefile.in,v 1.5 2004/03/10 21:38:43 kerns Exp $
+#
+@MCOMMON@
+
+srcdir =	@srcdir@
+VPATH = 	@srcdir@
+.PATH:		@srcdir@
+
+basedir = ..
+topdir = ..
+thisdir = doc
+
+#
+# Distribution variables
+#
+
+
+DIST	  = Makefile.in
+
+#-------------------------------------------------------------------------
+
+all:
+
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	    && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+
+SEDREPLACE = -e 's%@BACULA_VERSION@%$(VERSION)%g;'\
+	     -e 's%@BACULA_LSMDATE@%$(LSMDATE)%g;'\
+	     -e 's%@BACULA_DATE@%$(DATE)%g;'\
+	     -e 's%@BACULA_MAINTEMAIL@%$(MAINTEMAIL)%g;'\
+	     -e 's%@BACULA_MAINT@%$(MAINT)%g;'\
+	     -e 's%@BACULA_WEBPAGE@%$(WEBPAGE)%g;'\
+	     -e 's%@BACULA_WEBMAINTEMAIL@%$(WEBMAINTEMAIL)%g;'\
+	     -e 's%@BACULA_WEBMAINT@%$(WEBMAINT)%g;'\
+	     -e 's%@BACULA_FTPSITENAME@%$(FTPSITENAME)%g;'\
+	     -e 's%@BACULA_FTPSITEDIR@%$(FTPSITEDIR)%g;'
+
+
+$(basedir)/$(VERNAME).lsm: LSM.in $(srcdir)/../autoconf/Make.common.in $(srcdir)/../src/version.h
+	$(SED) $(SEDREPLACE) < $(srcdir)/LSM.in > $@
+
+clean:
+	$(RMF) *~ 1 2 3
+
+realclean: clean
+
+distclean:
+	$(RMF) Makefile
+	$(RMF) -r CVS html-manual/CVS home-page/CVS techlogs/CVS
+
+devclean:
+	$(RMF) Makefile
+
+depend:
+
+install:
+#	$(INSTALL_DATA) bacula.1 $(DESTDIR)$(mandir)/$(manprefix)bacula.$(manext)
+
+uninstall:
+#	-cd $(mandir); $(RMF) $(manprefix)bacula.$(manext)
+
+distdirs:
+	mkdir $(basedir)/../$(VERNAME)/$(thisdir)
+
+distcopy: distdepend
+	$(CP) -p $(basedir)/$(VERNAME).lsm $(basedir)/../$(VERNAME);
+	$(CP) -p $(DIST)      $(basedir)/../$(VERNAME)/$(thisdir)
+
+distdepend: alldoc

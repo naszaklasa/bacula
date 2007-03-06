@@ -1,0 +1,9 @@
+updatedb scripts
+13 Feb 2004
+
+These scripts may be used to update older versions of bacula
+databases. The scripts are designed using the standard install
+locations for mysql, sqlite and the bacula working directory
+as configured in the rpm builds. If you have different locations
+you will need to edit the $bindir variable and the working
+directory location before running them.

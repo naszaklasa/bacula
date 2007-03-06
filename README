@@ -1,0 +1,95 @@
+
+As you will note, I don't follow the standard GNU release
+numbering conventions, but rather one that I started in
+1970.  My internal releases were 0.nn, the first release to
+another user was 1.0, each modified source code release then
+gets a new minor release (1.1, 1.2, ...) as well as a date.  Each
+major change in the software -- e.g.  new tape format will
+normally have the major release number incremented.
+
+Your best bet for getting Bacula up and running is to read
+the manual, which can be found in
+<bacula-main-directory>/doc/html-manual, or in
+<bacula-main-directory>/doc/bacula.pdf.
+
+Barring reading the manual, you might try the
+following:
+
+To Configure it:
+
+  ./configure \
+    --sbindir=$HOME/bacula/bin \
+    --sysconfdir=$HOME/bacula/bin \
+    --with-pid-dir=$HOME/bacula/bin \
+    --with-subsys-dir=$HOME/bacula/bin \
+    --with-sqlite=$HOME/depkgs/sqlite \
+    --enable-gnome \
+    --with-mysql=$HOME/mysql \
+    --with-working-dir=$HOME/bacula/bin/working \
+    --with-dump-email=YOUR_EMAIL_ADDRESS \
+    --with-job-email=YOUR_EMAIL_ADDRESS \
+    --with-smtp-host=YOUR_SMTP_SERVER_ADDRESS
+
+Note, if you do not have readline installed on your
+system, you either need to add:
+     
+     --disable-readline 
+
+or add:
+
+     --with-readline=$HOME/bacula/depkgs1/readline
+
+where I assume you have loaded depkgs1 into $HOME/bacula
+and built the readline routine.      
+
+If you want to use SQLite, please download depkgs and
+build sqlite, then add something like:
+
+    --with-sqlite=$HOME/depkgs/sqlite
+
+
+Build Bacula:
+
+   make
+
+   If you are doing a port, there should be no errors.  The most
+   likely source of errors will probably come in the src/stored
+   directory in time.c or dev.c.  There may also be problems in
+   lib/signal.c as I currently pull in all Linux signals, some of
+   which may not be available on your system.
+
+To create the database:
+
+   src/cats/make_bacula_tables
+
+To install:
+
+   make install
+
+To start it:
+
+   cd $HOME/bacula/bin
+   ./bacula start
+
+To start it (as a developer). This is not appropriate if you
+are installing Bacula.
+
+   ./startit
+   ./console (or ./gnome-console)
+
+To stop it:
+
+  ./stopit
+
+Well, it is all just a bit more complicated than that,
+but you should have the idea.
+
+Be sure you read the chapter about testing your tape drive!
+Don't waste a lot of time setting up and running Bacula, if
+your drive is not supported.
+
+FreeBSD users, pay special attention to the Device configuration
+parameters needed to deal with FreeBSD tape drivers.
+
+License:
+Please see the file LICENSE for the terms of the license.

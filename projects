@@ -1,0 +1,169 @@
+                
+Projects:
+                     Bacula Projects Roadmap 
+                       24 October 2004
+
+Item 1:   Implement Base jobs.
+
+  What:   A base job is sort of like a Full save except that you 
+          will want the FileSet to contain only files that are
+          unlikely to change in the future (i.e.  a snapshot of
+          most of your system after installing it).  After the
+          base job has been run, when you are doing a Full save,
+          you specify one or more Base jobs to be used.  All
+          files that have been backed up in the Base job/jobs but
+          not modified will then be excluded from the backup.
+          During a restore, the Base jobs will be automatically
+          pulled in where necessary.
+
+  Why:    This is something none of the competition does, as far as
+          we know (except BackupPC, which is a Perl program that
+          saves to disk only).  It is big win for the user, it
+          makes Bacula stand out as offering a unique
+          optimization that immediately saves time and money.
+          Basically, imagine that you have 100 nearly identical
+          Windows or Linux machine containing the OS and user
+          files.  Now for the OS part, a Base job will be backed
+          up once, and rather than making 100 copies of the OS,
+          there will be only one.  If one or more of the systems
+          have some files updated, no problem, they will be
+          automatically restored.
+
+  Notes:  Huge savings in tape usage even for a single machine.
+          Will require more resources because the DIR must send
+          FD a list of files/attribs, and the FD must search the
+          list and compare it for each file to be saved.
+
+Item 2:   Add Plug-ins to the FileSet Include statements.
+
+  What:   Allow users to specify wild-card and/or regular
+          expressions to be matched in both the Include and
+          Exclude directives in a FileSet.  At the same time,
+          allow users to define plug-ins to be called (based on
+          regular expression/wild-card matching).
+
+  Why:    This would give the users the ultimate ability to control
+          how files are backed up/restored.  A user could write a
+          plug-in knows how to backup his Oracle database without
+          stopping/starting it, for example.
+
+Item 3:   Implement a Migration job type that will move the job
+          data from one device to another.
+Coding begun in 1.35:
+
+  What:   The ability to copy, move, or archive data that is on a
+          device to another device is very important. 
+
+  Why:    An ISP might want to backup to disk, but after 30 days
+          migrate the data to tape backup and delete it from
+          disk.  Bacula should be able to handle this
+          automatically.  It needs to know what was put where,
+          and when, and what to migrate -- it is a bit like
+          retention periods.  Doing so would allow space to be
+          freed up for current backups while maintaining older
+          data on tape drives.
+
+  Notes:  Migration could be triggered by:
+           Number of Jobs
+           Number of Volumes
+           Age of Jobs
+           Highwater size (keep total size)
+           Lowwater mark
+
+
+Item 4:   Embedded Perl Scripting (precursor to 5).
+Some testing done:
+
+  What:   On a configuration parameter, embed the Perl language in
+          Bacula.
+
+  Why:    The embedded Perl scripting can be called to implement
+          Events such as "Volume Name needed", "End of Tape",
+          "Tape at x% of rated capacity", "Job started", 
+          "Job Ended", "Job error", ...
+
+  Notes:  This needs Events.
+
+
+Item 5:   Implement Events that call the scripting language.
+
+  What:   When a particular user defined Event occurs, call the
+          embedded Perl interpreter.
+
+  Why:    This will provide the ultimate in user customization for
+          Bacula. Almost anything imaginable can be done if Events
+          are called at the appropriate place.
+
+  Notes:  There is a certain amount of work to be done on how
+          the user defines or "registers" events.
+
+
+Item 6:   Multiple Storage Devices for a Single Job
+Modifications to SD in progress: 1.35
+
+  What:   Allow any Job to use more than one Storage device.
+
+  Why:    With two devices, for example, the second device could
+          have the next backup tape pre-mounted reducing operator
+          intervention in the middle of the night.
+
+
+Item 7:   Backup a Single Job Simultaneously to Multiple Storage Devices
+Modifications to SD in progress: 1.35
+
+  What:   Make two copies of the backup data at the same time.
+
+  Why:    Large shops typically do this and then take one set of
+          backups off-site.  Some design work it needed in how to
+          specify the type of backup (backup, archive, ...) for
+          each Device.
+
+
+
+Item  8:  Break the one-to-one Relationship between a Job and a
+          Specific Storage Device (or Devices if #10 is implemented).
+
+  What:   Allow a Job to simply specify one or more MediaType, and
+          the Storage daemon will select a device for it.  In
+          fact, the user should be able to specify one or more
+          MediaType, Storage daemon, and/or device to be used.
+
+  Why:    To allow more flexibility in large shops that have multiple 
+          drives and/or multiple drives of different types.
+
+
+Item  9:  Implement data encryption (as opposed to communications
+          encryption)
+Assigned: to Meno Abels (both data and communications encryption).
+
+  What:   Currently the data that is stored on the Volume is not
+          encrypted. For confidentiality, encryption of data at
+          the File daemon level is essential. Note, communications
+          encryption encrypts the data when leaving the File daemon,
+          then decrypts the data on entry to the Storage daemon.
+          Data encryption encrypts the data in the File daemon and
+          decrypts the data in the File daemon during a restore.
+
+  Why:    Large sites require this.
+
+  Notes:  The only algorithm that is needed is AES.
+          http://csrc.nist.gov/CryptoToolkit/aes/
+
+
+
+Completed items from last year's list:
+Item 1:   Multiple simultaneous Jobs. (done)
+Item 3:   Write the bscan program -- also write a bcopy program (done).
+Item 5:   Implement Label templates (done).
+Item 6:   Write a regression script (done)
+Item 9:   Add SSL to daemon communications (For now, implement with
+          stunnel)
+Item 10:  Define definitive tape format (done)
+Item 3:   GUI for interactive restore. Partially Implemented in 1.34
+          Note, there is now a complete Webmin plugin, a partial
+          GNOME console, and an excellent wx-console GUI.
+Item 4:   GUI for interactive backup
+Item 2:   Job Data Spooling.
+    Done: Regular expression matching.
+Item 10:  New daemon communication protocol (this has been dropped).
+

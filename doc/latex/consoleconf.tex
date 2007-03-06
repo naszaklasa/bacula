@@ -1,0 +1,260 @@
+%%
+%%
+
+\section*{Console Configuration}
+\label{_ChapterStart36}
+\index[general]{Configuration!Console }
+\index[general]{Console Configuration }
+\addcontentsline{toc}{section}{Console Configuration}
+
+\subsection*{General}
+\index[general]{General }
+\addcontentsline{toc}{subsection}{General}
+
+The Console configuration file is the simplest of all the configuration files,
+and in general, you should not need to change it except for the password. It
+simply contains the information necessary to contact the Director or
+Directors. 
+
+For a general discussion of configuration file and resources including the
+data types recognized by {\bf Bacula}, please see the 
+\ilink{Configuration}{_ChapterStart16} chapter of this manual. 
+
+The following Console Resource definition must be defined: 
+
+\begin{itemize}
+\item 
+   \ilink{Director}{DirectorResource3} -- to  define the
+   Director's name and his access password. Note,  you may define more than one
+Director resource in the  Console configuration file. If you do so, the
+Console program  will ask you which one you want to use. 
+\end{itemize}
+
+\subsection*{The Director Resource}
+\label{DirectorResource3}
+\index[general]{Director Resource }
+\index[general]{Resource!Director }
+\addcontentsline{toc}{subsection}{Director Resource}
+
+The Director resource defines the attributes of the Director running on the
+network. You may have multiple Director resource specifications in a single
+Console configuration file. If you have more than one, you will be prompted to
+choose one when you start the {\bf Console} program. 
+
+\begin{description}
+
+\item [Director]
+   \index[console]{Director }
+   Start of the Director records. 
+
+\item [Name = \lt{}name\gt{}]
+   \index[console]{Name  }
+   The director name used to select  among different Directors, otherwise, this
+name is not used. 
+
+\item [DIRPort = \lt{}port-number\gt{}]
+   \index[dir]{DIRPort  }
+   Specify the port to use to connect  to the Director. This value will most
+likely already be set to the value  you specified on the {\bf
+\verb{--{with-base-port} option of the  {\bf ./configure} command. This port must be
+identical to the  {\bf DIRport} specified in the {\bf Director} resource of
+the 
+\ilink{Director's configuration}{_ChapterStart40} file.  The
+default is 9101 so this record is not normally specified. 
+
+\item [Address = \lt{}address\gt{}]
+   \index[dir]{Address  }
+   Where the address is a host name,  a fully qualified domain name, or a network
+address used to connect  to the Director. 
+
+\item [Password = \lt{}password\gt{}]
+   \index[dir]{Password  }
+   Where the password is the  password needed for the Director to accept the
+Console connection.  This password must be identical to the {\bf Password}
+specified in  the {\bf Director} resource of the 
+\ilink{Director's configuration}{_ChapterStart40} file. This 
+record is required. 
+\end{description}
+
+An actual example might be: 
+
+\footnotesize
+\begin{verbatim}
+Director {
+  Name = HeadMan
+  address = rufus.cats.com
+  password = xyz1erploit
+}
+\end{verbatim}
+\normalsize
+
+\subsection*{The ConsoleFont Resource}
+\index[general]{Resource!ConsoleFont }
+\index[general]{ConsoleFont Resource }
+\addcontentsline{toc}{subsection}{ConsoleFont Resource}
+
+The ConsoleFont resource is available only in the GNOME version of the
+console. It permits you to define the font that you want used to display in
+the main listing window. 
+
+\begin{description}
+
+\item [ConsoleFont]
+   \index[console]{ConsoleFont }
+   Start of the ConsoleFont records. 
+
+\item [Name = \lt{}name\gt{}]
+   \index[console]{Name  }
+   The name of the font. 
+
+\item [Font = \lt{}X-Window Font Specification\gt{}]
+   \index[console]{Font  }
+   The string value given here defines the desired font. It  is specified in the
+standard cryptic X Window format. For  example, the default specification is: 
+
+\footnotesize
+\begin{verbatim}
+Font = "-misc-fixed-medium-r-normal-*-*-130-*-*-c-*-iso8859-1"
+\end{verbatim}
+\normalsize
+
+\end{description}
+
+Thanks to Phil Stracchino for providing the code for this feature. 
+
+An actual example might be: 
+
+\footnotesize
+\begin{verbatim}
+ConsoleFont {
+  Name = Default
+Font = "-misc-fixed-medium-r-normal-*-*-130-*-*-c-*-iso8859-1"
+}
+\end{verbatim}
+\normalsize
+
+\subsection*{The Console Resource}
+\label{ConsoleResource}
+\index[general]{Console Resource }
+\index[general]{Resource!Console }
+\addcontentsline{toc}{subsection}{Console Resource}
+
+As of Bacula version 1.33 and higher, there are three different kinds of
+consoles, which the administrator or user can use to interact with the
+Director. These three kinds of consoles comprise three different security
+levels. 
+
+\begin{itemize}
+\item The first console type is an {\bf anonymous} or {\bf default}  console,
+   which has full privileges. There is no console  resource necessary for this
+   type since the password is  specified in the Director resource. This is the
+kind of  console that was initially implemented in versions prior to  1.33 and
+remains valid. Typically you would use it only  for administrators.  
+\item The second type of console, and new to version 1.33 and  higher is a
+   ``named'' console defined within a  Console resource in both the Director's
+   configuration file  and in the Console's configuration file. Both the names 
+and the passwords in these two entries must match much as  is the case for
+Client programs. 
+
+This second type of  console begins with absolutely no privileges except those
+explicitly specified in the Director's Console resource.  Thus you can have
+multiple Consoles with different names  and passwords, sort of like multiple
+users, each with  different privileges. As a default, these consoles can do 
+absolutely nothing -- no commands what so ever. You give  them privileges or
+rather access to commands and resources  by specifying access control lists in
+the Director's  Console resource. Note, if you are specifying such a  console,
+you will want to put a null password in the  Director resource.  
+\item The third type of console is similar to the above mentioned  one in that
+   it requires a Console resource definition in  both the Director and the
+   Console. In addition, if the  console name, provided on the {\bf Name =}
+directive, is  the same as a Client name, the user of that console is 
+permitted to use the {\bf SetIP} command to change the  Address directive in
+the Director's client resource to the  IP address of the Console. This permits
+portables or other  machines using DHCP (non-fixed IP addresses) to 
+``notify'' the Director of their current IP  address. 
+\end{itemize}
+
+The Console resource is optional and need not be specified. However, if it is
+specified, you can use ACLs (Access Control Lists) in the Director's
+configuration file to restrict the particular console (or user) to see only
+information pertaining to his jobs or client machine. 
+
+The following configuration files were supplied by Phil Stracchino. For
+example, if we define the following in the user's bconsole.conf file (or
+perhaps the wx-console.conf file): 
+
+\footnotesize
+\begin{verbatim}
+ Director {
+   Name = MyDirector
+   DIRport = 9101
+   Address = myserver
+   Password = "XXXXXXXXXXX"    # no, really.  this is not obfuscation.
+ }
+ 
+ Console {
+   Name = restricted-user
+   Password = "UntrustedUser"
+ }
+\end{verbatim}
+\normalsize
+
+Where the Password in the Director section is deliberately incorrect, and the
+Console resource is given a name, in this case {\bf restricted-client}. Then
+in the Director's bacula-dir.conf file (not directly accessible by the user),
+we define: 
+
+\footnotesize
+\begin{verbatim}
+Console {
+  Name = restricted-user
+  Password = "UntrustedUser"
+  JobACL = "Restricted Client Save"
+  ClientACL = restricted-client
+  StorageACL = main-storage
+  ScheduleACL = *all*
+  PoolACL = *all*
+  FileSetACL = "Restricted Client's FileSet"
+  CatalogACL = DefaultCatalog
+  CommandACL = run
+}
+\end{verbatim}
+\normalsize
+
+the user logging into the Director from his Console will get logged in as {\bf
+restricted-client}, and he will only be able to see or access a Job with the
+name {\bf Restricted Client Save} a Client with the name {\bf
+restricted-client}, a Storage device {\bf main-storage}, any Schedule or Pool,
+a FileSet named {\bf Restricted Client's File}, a Catalog named {\bf
+DefaultCatalog}, and the only command he can use in the Console is the {\bf
+run} command. In other words, this user is rather limited in what he can see
+and do with Bacula. 
+
+\subsection*{Console Commands}
+\index[general]{Console Commands }
+\index[general]{Commands!Console }
+\addcontentsline{toc}{subsection}{Console Commands}
+
+For more details on running the console and its commands, please see the 
+\ilink{Bacula Console}{_ChapterStart23} chapter of this manual. 
+
+\subsection*{Sample Console Configuration File}
+\label{SampleConfiguration2}
+\index[general]{File!Sample Console Configuration }
+\index[general]{Sample Console Configuration File }
+\addcontentsline{toc}{subsection}{Sample Console Configuration File}
+
+A example Console configuration file might be the following: 
+
+\footnotesize
+\begin{verbatim}
+#
+# Bacula Console Configuration File
+#
+Director {
+  Name = HeadMan
+  address = "my_machine.my_domain.com"
+  Password = Console_password
+}
+\end{verbatim}
+\normalsize

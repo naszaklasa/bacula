@@ -1,0 +1,134 @@
+#
+# Default Bacula Storage Daemon Configuration file
+#
+#  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@ @DISTVER@
+#
+# You may need to change the name of your tape drive
+#   on the "Archive Device" directive in the Device
+#   resource.  If you change the Name and/or the 
+#   "Media Type" in the Device resource, please ensure
+#   that dird.conf has corresponding changes.
+#
+
+Storage {                             # definition of myself
+  Name = @hostname@-sd
+  SDPort = @sd_port@                  # Director's port      
+  WorkingDirectory = "@working_dir@"
+  Pid Directory = "@piddir@"
+  Maximum Concurrent Jobs = 20
+}
+
+#
+# List Directors who are permitted to contact Storage daemon
+#
+Director {
+  Name = @hostname@-dir
+  Password = "@sd_password@"
+}
+
+#
+# Restricted Director, used by tray-monitor to get the
+#   status of the storage daemon
+#
+Director {
+  Name = @hostname@-mon
+  Password = "@mon_sd_password@"
+  Monitor = yes
+}
+
+#
+# Devices supported by this Storage daemon
+# To connect, the Director's bacula-dir.conf must have the
+#  same Name and MediaType. 
+#
+
+Device {
+  Name = FileStorage
+  Media Type = File
+  Archive Device = /tmp
+  LabelMedia = yes;                   # lets Bacula label unlabeled media
+  Random Access = Yes;
+  AutomaticMount = yes;               # when device opened, read it
+  RemovableMedia = no;
+  AlwaysOpen = no;
+}
+
+#
+# A Linux or Solaris tape drive
+#
+#Device {
+#  Name = DDS-4                        # 
+#  Media Type = DDS-4
+#  Archive Device = @TAPEDRIVE@
+#  AutomaticMount = yes;               # when device opened, read it
+#  AlwaysOpen = yes;
+#  RemovableMedia = yes;
+#  RandomAccess = no;
+## Changer Command = "@scriptdir@/mtx-changer %c %o %S %a %d"
+## Changer Device = /dev/sg0
+## AutoChanger = yes
+## Alert Command = "sh -c 'tapeinfo -f %c |grep TapeAlert|cat'"
+#}
+
+#
+# A FreeBSD tape drive
+#
+#Device {
+#  Name = DDS-4 
+#  Description = "DDS-4 for FreeBSD"
+#  Media Type = DDS-4
+#  Archive Device = /dev/nsa1
+#  AutomaticMount = yes;               # when device opened, read it
+#  AlwaysOpen = yes
+#  Offline On Unmount = no
+#  Hardware End of Medium = no
+#  BSF at EOM = yes
+#  Backward Space Record = no
+#  Fast Forward Space File = no
+#  TWO EOF = yes
+#}
+
+#
+# A OnStream tape drive. 
+# You need the kernel osst driver 0.9.14 or later, and
+#   do "mt -f /dev/nosst0 defblksize 32768" once as root.
+#
+#Device {
+#  Name = OnStream
+#  Description = "OnStream drive on Linux"
+#  Media Type = OnStream
+#  Archive Device = @TAPEDRIVE@
+#  AutomaticMount = yes;               # when device opened, read it
+#  AlwaysOpen = yes
+#  Offline On Unmount = no
+## The min/max blocksizes of 32768 are *required*
+#  Minimum Block Size = 32768
+#  Maximum Block Size = 32768
+#}
+ 
+
+ 
+
+
+#
+# A very old Exabyte with no end of media detection
+#
+#Device {
+#  Name = "Exabyte 8mm"
+#  Media Type = "8mm"
+#  Archive Device = @TAPEDRIVE@
+#  Hardware end of medium = No;
+#  AutomaticMount = yes;               # when device opened, read it
+#  AlwaysOpen = Yes;
+#  RemovableMedia = yes;
+#  RandomAccess = no;
+#}
+
+# 
+# Send all messages to the Director, 
+# mount messages also are sent to the email address
+#
+Messages {
+  Name = Standard
+  director = @hostname@-dir = all
+}

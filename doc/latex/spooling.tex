@@ -1,0 +1,126 @@
+%%
+%%
+
+\section*{Data Spooling}
+\label{_ChapterStart5}
+\index[general]{Data Spooling }
+\index[general]{Spooling!Data }
+\addcontentsline{toc}{section}{Data Spooling}
+
+Bacula allows you to specify that you want the Storage daemon to initially
+write your data to disk and then subsequently to tape. This serves several
+important purposes. 
+
+\begin{itemize}
+\item It can take a long time for data to come in from the File  daemon during
+   an Incremental backup. If it is directly  written to tape, the tape will start
+   and stop or shoe-shine  as it is often called causing tape wear. By first
+writing  the data to disk, then writing it to tape, the tape can be  kept in
+continual motion. 
+\item While the spooled data is being written to the tape, the  despooling
+   process has exclusive use of the tape. This  means that you can spool multiple
+   simultaneous jobs to disk,  then have them very efficiently despooled one at a
+time  without having the data blocks from several jobs  intermingled, thus
+substantially improving the time needed  to restore files.  
+\item Writing to a tape can be slow. By first spooling your  data to disk, you
+   can often reduce the time the File  daemon is running on a system, thus
+   reducing downtime,  and/or interference with users. 
+\end{itemize}
+
+Data spooling is exactly that ``spooling''. It is not a way to first write a
+``backup'' to a disk file and then to a tape. When the backup spooled to disk,
+it is not complete and cannot be restored until it is written to tape. In a
+future version, Bacula will support writing a backup to disk then later {\bf
+Migrating} or {\bf Copying} it to a tape. 
+
+The remainder of this chapter explains the various directives that you can use
+in the spooling process. 
+\label{directives}
+
+\subsection*{Data Spooling Directives}
+\index[general]{Directives!Data Spooling }
+\index[general]{Data Spooling Directives }
+\addcontentsline{toc}{subsection}{Data Spooling Directives}
+
+The following directives can be used to control data spooling. 
+
+\begin{itemize}
+\item To turn data spooling on/off at the Job level in  the Job resource in
+   the Director's conf file (default  {\bf no}).
+
+{\bf SpoolData = yes|no} 
+\item To override the Job specification in a Schedule Run  directive in the
+   Director's conf file.
+
+{\bf SpoolData = yes|no} 
+\item To limit the maximum total size of the spooled data  for a particular
+   device. Specified in the Device  resource of the Storage daemon's conf file
+   (default  unlimited).
+
+{\bf Maximum Spool Size = size}
+
+Where size is a the maximum spool size for all jobs  specified in bytes. 
+\item To limit the maximum total size of the spooled data  for a particular
+   device for a single job. Specified  in the Device Resource of the Storage
+   daemon's conf  file (default unlimited).
+
+{\bf Maximum Job Spool Size = size}
+
+Where size is the maximum spool file size for a single  job specified in
+bytes. 
+\item To specify the spool directory for a particular device.  Specified in
+   the Device Resource of the Storage daemon's conf  file (default, the working
+   directory).
+
+{\bf Spool Directory = directory} 
+\end{itemize}
+
+\label{warning}
+
+\subsection*{!!! MAJOR WARNING !!!}
+\index[general]{WARNING! MAJOR }
+\index[general]{ MAJOR WARNING  }
+\addcontentsline{toc}{subsection}{MAJOR WARNING !!!}
+
+Please be very careful to exclude the spool directory from any backup,
+otherwise, your job will write enormous amounts of data to the Volume, and
+most probably terminate in error. This is because in attempting to backup the
+spool file, the backup data will be written a second time to the spool file,
+and so on ad infinum. 
+
+Another advice is to always specify the maximum spool size so that your disk
+doesn't completely fill up. In principle, data spooling will properly detect a
+full disk, and despool data allowing the job to continue. However, attribute
+spooling is not so kind to the user. If the disk on which attributes are being
+spooled fills, the job will be canceled. 
+\label{points}
+
+\subsection*{Other Points}
+\index[general]{Points!Other }
+\index[general]{Other Points }
+\addcontentsline{toc}{subsection}{Other Points}
+
+\begin{itemize}
+\item When data spooling is enabled, Bacula automatically  turns on attribute
+   spooling. In other words, it also  spools the catalog entries to disk. This is
+   done so  that in case the job fails, there will be no catalog  entries
+pointing to non-existent tape backups. 
+\item Attribute despooling is done at the end of the job, as  a consequence,
+   after Bacula stops writing the data to  the tape, there may be a pause while
+   the attributes are sent  to the Directory and entered into the catalog before 
+the job terminates. 
+\item Attribute spool files are always placed in the  working directory. 
+\item When Bacula begins despooling data spooled to disk, it  takes exclusive
+   use of the tape. This has the major  advantage that in running multiple
+   simultaneous jobs at  the same time, the blocks of several jobs will not be 
+intermingled. 
+\item It probably does not make a lot of sense to enable data  spooling if you
+   are writing to disk files. 
+\item It is probably best to provide as large a spool file as  possible to
+   avoid repeatedly spooling/despooling. Also,  while a job is despooling to
+   tape, the File daemon must wait  (i.e. spooling stops for the job while it is 
+despooling).  
+\item If you are running multiple simultaneous jobs, Bacula  will continue
+   spooling other jobs while one is despooling  to tape, provided there is
+   sufficient spool file space. 
+\end{itemize}

@@ -1,0 +1,16 @@
+--- bacula-1.36.0/platforms/suse/bacula-dir.in	2004-10-19 09:35:09.000000000 -0400
++++ bacula-1.36.0/platforms/suse/bacula-dir.sqlite.in	2004-10-31 09:17:40.000000000 -0500
+@@ -11,10 +11,11 @@
+ # Added rc.status functions 3/13/2004 D. Scott Barninger <barninger at fairfieldcomputers.com>
+ # Added LSB init info 10/14/2004 D. Scott Barninger <barninger at fairfieldcomputers.com>
+ #
++# Configured for @DB_NAME@ support
+ ### BEGIN INIT INFO
+ # Provides:			bacula-dir
+-# Required-Start:		$local_fs $network @DB_NAME@
+-# Required-Stop:		$local_fs $network @DB_NAME@
++# Required-Start:		$local_fs $network
++# Required-Stop:		$local_fs $network
+ # Default-Start:		3 5
+ # Default-Stop: 	0 1 2 6
+ # Short-Description:	bacula director

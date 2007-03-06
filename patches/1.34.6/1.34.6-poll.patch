@@ -1,0 +1,64 @@
+
+This patch fixes two bugs:
+1. It ignores an device open failure if polling.
+2. It disables the insanity check on reading the 
+   tape label while polling. Normally the check
+   doesn't allow the label to be read more than 100
+   times.
+
+Apply the patch to version 1.34.6 (possibly earlier versions) with:
+
+ cd <bacula-source>
+ patch -p0 <1.34.6-poll.patch
+ make
+ ...
+
+Index: src/stored/label.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/stored/label.c,v
+retrieving revision 1.42.2.1
+diff -u -r1.42.2.1 label.c
+--- src/stored/label.c	20 Jun 2004 11:43:04 -0000	1.42.2.1
++++ src/stored/label.c	2 Sep 2004 12:21:00 -0000
+@@ -74,8 +74,8 @@
+ 	  * Cancel Job if too many label errors
+ 	  *  => we are in a loop
+ 	  */
+-	 if (jcr->label_errors++ > 100) {
+-            Jmsg(jcr, M_FATAL, 0, "%s", jcr->errmsg);
++	 if (!dev->poll && jcr->label_errors++ > 100) {
++            Jmsg(jcr, M_FATAL, 0, "Too many tries: %s", jcr->errmsg);
+ 	 }
+ 	 return jcr->label_status = VOL_NAME_ERROR;
+       }
+@@ -157,8 +157,8 @@
+        * Cancel Job if too many label errors
+        *  => we are in a loop
+        */
+-      if (jcr->label_errors++ > 100) {
+-         Jmsg(jcr, M_FATAL, 0, "%s", jcr->errmsg);
++      if (!dev->poll && jcr->label_errors++ > 100) {
++         Jmsg(jcr, M_FATAL, 0, "Too many tries: %s", jcr->errmsg);
+       }
+       return jcr->label_status = VOL_NAME_ERROR;
+    }
+Index: src/stored/mount.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/stored/mount.c,v
+retrieving revision 1.59.2.1
+diff -u -r1.59.2.1 mount.c
+--- src/stored/mount.c	20 Jun 2004 11:43:04 -0000	1.59.2.1
++++ src/stored/mount.c	2 Sep 2004 12:21:00 -0000
+@@ -154,7 +154,11 @@
+ 
+    /* Ensure the device is open */
+    if (!open_device(jcr, dev)) {
+-      return 0;
++      if (dev->poll) {
++	 goto mount_next_vol;
++      } else {
++	 return 0;
++      }
+    }
+ 
+    /*

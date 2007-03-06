@@ -1,0 +1,99 @@
+From: Mathieu Arnold <mat@mat.cc>
+To: bacula-users@lists.sourceforge.net
+Subject: Re: [Bacula-users] backup postgresql databases
+Date: Fri, 12 Mar 2004 22:31:58 +0100
+
++-Le 11/03/2004 15:20 +0100, Mathieu Arnold a dit :
+| Hi,
+| 
+| I was wondering if someone already had some script, or ways of doings
+| scripts to backup (and maybe restore) pgsql databases. I'm balancing
+| between taking a snapshot of the database directory and backuping that,
+| dumping the datas into .sql.gz files, into .tgz files, or into a pipe
+| letting bacula deal with the compression.
+| 
+| Any ideas ? :)
+
+Thanks to all ppl I got answers from (many used awfully hard way to get
+databases), I cooked up my scripts (I needed mysql too), and here they are :
+
+--------------------------------------------
+#!/bin/sh
+
+export TMPDIR="/usr/tmp/"
+export TEMP="/usr/tmp/"
+export SAVE="/usr/tmp/dumps/"
+export LANG="C"
+
+pg_user=pgsql
+pg_dbuser=pgsql
+pg_template=template1
+exclude=template
+host=plouf
+
+sed=/usr/bin/sed
+pg_dump=/usr/local/bin/pg_dump
+pg_dumpall=/usr/local/bin/pg_dumpall
+psql=/usr/local/bin/psql
+
+gzip="| /usr/bin/gzip -nc9"
+gzext=".gz"
+
+if [ ! -d $SAVE ]
+then
+ mkdir $SAVE
+else
+ rm -f $SAVE/$host-pgsql*
+fi
+
+su - $pg_user -c "$pg_dumpall -g $gzip" > $SAVE/$host-pgsql$gzext
+
+for i in $($psql -l $pg_template $pg_dbuser|sed -e '1,4d' -e 
+'/rows)$/,/\eof/d' -e '/template/d' -e 's/ \([^ ]*\).*$/\1/')
+do
+ su - $pg_user -c "$pg_dump -c -F p $i $gzip" > $SAVE/$host-pgsql-$i$gzext
+done
+--------------------------------------------
+
+For those using complicate selects to get databases list, I advise psql -l
+:)
+
+and for mysql :
+
+--------------------------------------------
+#!/bin/sh
+
+export TMPDIR="/usr/tmp/"
+export TEMP="/usr/tmp/"
+export SAVE="/usr/tmp/dumps/"
+export LANG="C"
+
+my_user=root
+my_passwd=password
+host=plouf
+
+sed=/usr/bin/sed
+mysql=/usr/local/bin/mysql
+mysqldump=/usr/local/bin/mysqldump
+
+gzip="/usr/bin/gzip -nc9"
+gzext=".gz"
+
+if [ ! -d $SAVE ]
+then
+ mkdir $SAVE
+else
+ rm -f $SAVE/$host-mysql*
+fi
+
+for i in $($mysql -u $my_user -p$my_passwd -e 'show databases'|$sed '1d')
+do
+ $mysqldump -u $my_user -p$my_passwd $i | $gzip > $SAVE/$host-mysql-$i$gzext
+done
+--------------------------------------------
+
+maybe those scripts will save some ppl some time :)
+
+-- 
+Mathieu Arnold
+

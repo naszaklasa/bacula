@@ -1,0 +1,1151 @@
+%%
+%%
+
+\section*{Installing Bacula}
+\label{_ChapterStart17}
+\index[general]{Bacula!Installing }
+\index[general]{Installing Bacula }
+\addcontentsline{toc}{section}{Installing Bacula}
+
+\subsection*{General}
+\index[general]{General }
+\addcontentsline{toc}{subsection}{General}
+
+In general, you will need the Bacula source release, and if you want to run a
+Windows client, you will need the Bacula Windows binary release. However,
+Bacula needs certain third party packages (such as {\bf SQLite}, {\bf MySQL}
+to build properly depending on the options you specify. To simplify your task,
+we have combined a number of these packages into two {\bf depkgs} releases
+(Dependency Packages). This can vastly simplify your life by providing you
+with all the necessary packages rather than requiring you to find them on the
+Web, load them, and install them. 
+\label{upgrading1}
+
+\subsection*{Upgrading Bacula}
+\index[general]{Bacula!Upgrading }
+\index[general]{Upgrading Bacula }
+\addcontentsline{toc}{subsection}{Upgrading Bacula}
+
+If you are upgrading from one Bacula version to another, you should first
+carefully read the ReleaseNotes of all versions between your current version
+and the version to which you are upgrading. If the Bacula catalog database has
+been upgraded, you will either need to reinitialize your database starting
+from scratch, or save an ASCII copy of your database, then proceed to upgrade
+it. If there are several database upgrades between your version and the
+version to which you are upgradding, you will need to apply each database
+upgrade script. For your convenience, you can find all the old upgrade scripts
+in the {\bf upgradedb} directory of the source code. You will need to edit the
+scripts to correspond to your system configuration. The final upgrade script,
+if any, will be in the {\bf src/cats} directory as described in the
+ReleaseNotes. 
+
+If you are upgrading from one major version to another, you will need to
+replace all your components at the same time as generally the inter-daemon
+protocol will change. However, within any particular release (e.g. version
+1.32.x) unless there is an oversight or bug, the daemon protocol will not
+change. If this is confusing, simply read the ReleaseNotes very carefully as
+they will note if all daemons must be upgraded at the same time. 
+
+Finally, please note that in general it is not necessary to do a 
+{\bf make uninstall} before doing an upgrade. In fact, if you do so, you will 
+most likely delete all your conf files, which could be disasterous.
+For additional information on upgrading, please see the \ilink{Upgrading Bacula
+Versions}{upgrading} in the Tips chapter of this manual.
+
+
+\subsection*{Dependency Packages}
+\label{Dependency}
+\index[general]{Dependency Packages }
+\index[general]{Packages!Dependency }
+\addcontentsline{toc}{subsection}{Dependency Packages}
+
+As discussed above, we have combined a number of third party packages that
+Bacula might need into the {\bf depkgs} and {\bf depkgs1} releases. You can,
+of course, get the latest packages from the original authors. The locations of
+where we obtained the packages are in the README file in each package.
+However, be aware that the packages in the depkgs files have been tested by us
+for compatibility with Bacula. 
+
+Typically, a dependency package will be named {\bf depkgs-ddMMMyy.tar.gz} and
+{\bf depkgs1-ddMMyy.tar.gz} where {\bf dd} is the day we release it, {\bf MMM}
+is the abbreviated month (e.g. Jan), and {\bf yy} is the year. An actual
+example is: {\bf depkgs-07Apr02.tar.gz}. To install and build this package (if
+needed), you do the following: 
+
+\begin{enumerate}
+\item Create a {\bf bacula} directory, into which you will place  both the
+   Bacula source as well as the dependency package.  
+\item Detar the {\bf depkg} into the {\bf bacula} directory.  
+\item cd bacula/depkgs  
+\item make 
+   \end{enumerate}
+
+Although the exact composition of the dependency packages may change from time
+to time, the current makeup is the following: 
+
+\addcontentsline{lot}{table}{Depedency Packages}
+\begin{longtable}{|l|l|l|l|}
+ \hline 
+\multicolumn{1}{|c| }{\bf 3rd Party Package } & \multicolumn{1}{c| }{\bf
+depkgs } & \multicolumn{1}{c| }{\bf depkgs1 } & \multicolumn{1}{c| }{\bf
+depkgs-win32  } \\
+ \hline {SQLite } & \multicolumn{1}{c| }{X } & \multicolumn{1}{c| }{- } &
+\multicolumn{1}{c| }{-  } \\
+ \hline {mtx } & \multicolumn{1}{c| }{X } & \multicolumn{1}{c| }{- } &
+\multicolumn{1}{c| }{-  } \\
+ \hline {readline } & \multicolumn{1}{c| }{- } & \multicolumn{1}{c| }{X } &
+\multicolumn{1}{c| }{-  } \\
+ \hline {pthreads } & \multicolumn{1}{c| }{- } & \multicolumn{1}{c| }{- } &
+\multicolumn{1}{c| }{X  } \\
+ \hline {zlib } & \multicolumn{1}{c| }{- } & \multicolumn{1}{c| }{- } &
+\multicolumn{1}{c| }{X  } \\
+ \hline {wxWidgits } & \multicolumn{1}{c| }{- } & \multicolumn{1}{c| }{- } &
+\multicolumn{1}{c| }{X }
+\\ \hline 
+
+\end{longtable}
+
+Note, some of these packages are quite large, so that building them can be a
+bit time consuming. The above instructions will build all the packages
+contained in the directory. However, when building Bacula, it will take only
+those pieces that it actually needs. 
+
+Alternatively, you can make just the packages that are needed. For example, 
+
+\footnotesize
+\begin{verbatim}
+cd bacula/depkgs
+make sqlite
+\end{verbatim}
+\normalsize
+
+will configure and build only the SQLite package. 
+
+You should build the packages that you will require in {\bf depkgs} and/or
+{\bf depkgs1} prior to configuring and building Bacula, since Bacula will need
+them during the build process. 
+
+Even if you do not use SQLite, you might find it worthwhile to build {\bf mtx}
+because the {\bf tapeinfo} program that comes with it can often provide you
+with valuable information about your SCSI tape drive (e.g. compression,
+min/max block sizes, ...). 
+
+The {\bf depkgs-win32} package contains the source code for the pthreads and
+zlib libraries used by the native Win32 client program. It will only be needed
+if you intend to build the Win32 client from source. 
+
+\subsection*{Supported Operating Systems}
+\label{Systems}
+\index[general]{Systems!Supported Operating }
+\index[general]{Supported Operating Systems }
+\addcontentsline{toc}{subsection}{Supported Operating Systems}
+
+Please see the 
+\ilink{ Supported Operating Systems}{SupportedOSes} section
+of the QuickStart chapter of this manual. 
+
+\subsection*{Building Bacula from Source}
+\label{Building}
+\index[general]{Source!Building Bacula from }
+\index[general]{Building Bacula from Source }
+\addcontentsline{toc}{subsection}{Building Bacula from Source}
+
+The basic installation is rather simple. 
+
+\begin{enumerate}
+\item Install and build any {\bf depkgs} as noted above.  
+\item Configure and install MySQL or PostgreSQL (if desired). 
+   \ilink{Installing and Configuring MySQL Phase I}{_ChapterStart} or  
+   \ilink{Installing and Configuring PostgreSQL Phase
+   I}{_ChapterStart10}.  If you are installing from rpms, and are
+   using MySQL, please be sure to install  {\bf mysql-devel}, so that the MySQL
+   header files are available  while compiling Bacula. In addition, the MySQL
+   client  library {\bf mysqlclient} requires the gzip compression library  {\bf
+   libz.a} or {\bf libz.so}. If you are using rpm packages,  these libraries are
+   in the {\bf libz-devel} package. On Debian  systems, you will need to load the
+   {\bf zlib1g-dev} package. If  you are not using rpms or debs, you will need to
+   find the  appropriate package for your system.  
+   Note, if you already have a running MySQL or PostgreSQL on your system, you 
+   can skip this phase provided that you have built the thread  safe libraries.
+   And you have already installed the additional  rpms noted above.  
+\item As an alternative to MySQL and PostgreSQL, configure and install SQLite,
+    which is part of the {\bf depkgs}.  
+   \ilink{Installing and Configuring SQLite}{_ChapterStart33}.  
+   \item Detar the Bacula source code preferably into the {\bf bacula}  directory
+   discussed above.  
+\item {\bf cd} to the directory containing the source code.  
+\item ./configure (with appropriate options as described below)  
+\item Check the output of ./configure very carefully, especially  the Install
+   binaries and Install config files directories.  If they are not correct,
+   please rerun ./configure until they  are. The output from ./configure is
+   stored in {\bf config.out}  and can be re-displayed at any time without
+   rerunning the  ./configure by doing {\bf cat config.out}.  
+\item If after running ./configure once, you decide to change options  and
+   re-run it, that is perfectly fine, but before re-running it,  you should run: 
+
+
+\footnotesize
+\begin{verbatim}
+      make distclean
+      
+\end{verbatim}
+\normalsize
+
+so that you are sure to start from scratch and not have a  mixture of the two
+options. This is because ./configure  caches much of the information. The {\bf
+make distclean}  is also critical if you move the source file from one 
+machine to another. If the {\bf make distclean} fails,  just ignore it and
+continue on.  
+\item make  
+
+   If you get errors while linking in the Storage daemon  directory (src/stored),
+it is probably because you have not  loaded the static libraries on your
+system. I noticed this  problem on a Solaris system. To correct it, make sure
+that you  have not added {\bf \verb{--{enable-static-tools} to the  {\bf ./configure}
+command. 
+\item make install  
+\item If you are new to Bacula, we {\bf strongly} recommend that you  skip the
+   next step and use the default configuration files,  then run the example
+   program in the next chapter, then  come back and modify your configuration
+files to suit your  particular needs.  
+\item Customize the configuration files for each of the three daemons 
+   (Directory, File, Storage) and for the Console program. For the  details of
+   how to do this, please see 
+\ilink{Setting Up Bacula Configuration Files}{_ChapterStart16} in
+the Configuration chapter of this manual.  We recommend that you start by
+modifying the default configuration  files supplied, making the minimum
+changes necessary.  Complete customization can be done after you have Bacula 
+up and running.  Please take care when modifying passwords, which  were
+randomly generated, and the {\bf Name}s as the  passwords and names must agree
+between the configuration files  for security reasons. 
+\item Create the Bacula MySQL database and tables (if using MySQL)  
+   \ilink{Installing and Configuring MySQL Phase II}{mysql_phase2} or 
+   create the Bacula PostgreSQL database and tables  
+\ilink{Installing and Configuring PostgreSQL Phase
+II}{PostgreSQL_phase2} or alternatively  if you are using
+SQLite  
+\ilink{Installing and Configuring SQLite Phase II}{phase2}.  
+\item Start Bacula ({\bf ./bacula start}) Note. the next chapter  shows you
+   how to do this in detail.  
+\item Interface with Bacula using the Console program  
+\item For the previous two items, please follow the instructions  in the 
+   \ilink{Running Bacula}{_ChapterStart1} chapter of  this manual,
+   where you will run a simple backup and do a  restore. Do this before you make
+heavy modifications to the  configuration files so that you are sure that
+Bacula works  and are familiar with it. After that changing the conf files 
+will be easier.  
+\item If after installing Bacula, you decide to ``move it'', that is  to
+   install it in a different set of directories, proceed  as follows:  
+
+\footnotesize
+\begin{verbatim}
+      make uninstall
+      make distclean
+      ./configure (your-new-options)
+      make
+      make install
+      
+\end{verbatim}
+\normalsize
+
+\end{enumerate}
+
+If all goes well, the {\bf ./configure} will correctly determine which
+operating system you are running and configure the source code appropriately.
+Currently, FreeBSD, Linux (RedHat), and Solaris are supported. MacOS X 10.3 is
+reported to work with the Client only as long as readline support is disabled.
+
+
+If you install Bacula on more than one system, and they are identical, you can
+simply transfer the source tree to that other system and do a ``make
+install''. However, if there are differences in the libraries or OS versions,
+or you wish to install on a different OS, you should start from the original
+compress tar file. If you do transfer the source tree, and you have previously
+done a ./configure command, you MUST do: 
+
+\footnotesize
+\begin{verbatim}
+make distclean
+\end{verbatim}
+\normalsize
+
+prior to doing your new ./configure. This is because the GNU autoconf tools
+cache the configuration, and if you re-use a configuration for a Linux machine
+on a Solaris, you can be sure your build will fail. To avoid this, as
+mentioned above, either start from the tar file, or do a ``make distclean''. 
+
+In general, you will probably want to supply a more complicated {\bf
+configure} statement to ensure that the modules you want are built and that
+everything is placed into the correct directories. 
+
+For example, on RedHat, one could use the following: 
+
+\footnotesize
+\begin{verbatim}
+CFLAGS="-g -Wall" \
+  ./configure \
+    --sbindir=$HOME/bacula/bin \
+    --sysconfdir=$HOME/bacula/bin \
+    --with-pid-dir=$HOME/bacula/bin/working \
+    --with-subsys-dir=$HOME/bacula/bin/working \
+    --with-mysql=$HOME/mysql \
+    --with-working-dir=$HOME/bacula/bin/working \
+    --with-dump-email=$USER
+\end{verbatim}
+\normalsize
+
+Note, the advantage of using the above configuration to start is that
+everything will be put into a single directory, which you can later delete
+once you have run the examples in the next chapter and learned how Bacula
+works. In addition, the above can be installed and run as non-root. 
+
+For the developer's convenience, I have added a {\bf defaultconfig} script to
+the {\bf examples} directory. This script contains the statements that you
+would normally use, and each developer/user may modify them to suit his needs.
+You should find additional useful examples in this directory as well. 
+
+The {\bf \verb{--{enable-conio} or {\bf \verb{--{enable-readline} options are useful because
+they provide a command line history and editing capability for the Console
+program. If you have included either option in the build, either the {\bf
+termcap} or the {\bf ncurses} package will be needed to link. On some systems,
+such as SuSE, the termcap library is not in the standard library directory. As
+a consequence, the option may be disabled or you may get an error message such
+as: 
+
+\footnotesize
+\begin{verbatim}
+/usr/lib/gcc-lib/i586-suse-linux/3.3.1/.../ld:
+cannot find -ltermcap
+collect2: ld returned 1 exit status
+\end{verbatim}
+\normalsize
+
+while building the Bacula Console. In that case, you will need to set the {\bf
+LDFLAGS} environment variable prior to building. 
+
+\footnotesize
+\begin{verbatim}
+export LDFLAGS="-L/usr/lib/termcap"
+\end{verbatim}
+\normalsize
+
+The same library requirements apply if you wish to use the readline
+subroutines for command line editing and history or
+ if you are using a MySQL library that requires encryption. If you need encryption,
+you can either export the appropriate additional library options as shown
+above or, alternatively, you can include them directly on the ./configure line
+as in: 
+
+\footnotesize
+\begin{verbatim}
+LDFLAGS="-lssl -lcyrpto" \
+   ./configure \
+      <your-options>
+\end{verbatim}
+\normalsize
+
+On some systems such as Mandrake, readline tends to
+gobble up prompts, which makes it totally useless. If this happens to you, use
+the disable option, or if you are using version 1.33 and above try using {\bf
+\verb{--{enable-conio} to use a built-in readline replacement. You will still need
+the either termcap or ncurses library, but it is unlikely that the {\bf conio}
+package will gobble up prompts. 
+
+readline is no longer supported after version 1.34. The code is still
+available and if users submit patches for it, I will be happy to apply them.
+However, due to the fact that each version of readline seems to be
+incompatible with previous versions, and that there are significant
+differences between systems, I can no longer afford to support it. 
+
+\subsection*{What Database to Use?}
+\label{DB}
+\index[general]{What Database to Use? }
+\index[general]{Use!What Database to }
+\addcontentsline{toc}{subsection}{What Database to Use?}
+
+Before building Bacula you need to decide if you want to use SQLite, MySQL, or
+PostgreSQL. If you are not already running MySQL or PostgreSQL, we recommend
+that you start by using SQLite. This will greatly simplify the setup for you
+because SQLite is compiled into Bacula an requires no administration. It
+performs well and is suitable for small to medium sized installations (maximum
+10-20 machines). 
+
+If you wish to use MySQL as the Bacula catalog, please see the 
+\ilink{Installing and Configuring MySQL}{_ChapterStart} chapter of
+this manual. You will need to install MySQL prior to continuing with the
+configuration of Bacula. MySQL is a high quality database that is very
+efficient and is suitable for any sized installation. It is slightly more
+complicated than SQLite to setup and administer because it has a number of
+sophisticated features such as userids and passwords. It runs as a separate
+process, is truly professional and can manage a database of any size. 
+
+If you wish to use PostgreSQL as the Bacula catalog, please see the 
+\ilink{Installing and Configuring PostgreSQL}{_ChapterStart10}
+chapter of this manual. You will need to install PostgreSQL prior to
+continuing with the configuration of Bacula. PostgreSQL is very similar to
+MySQL, though it tends to be slightly more SQL92 compliant and has many more
+advanced features such as transactions, stored procedures, and the such. It
+requires a certain knowledge to install and maintain. There are some important
+performance problems with PostgreSQL in Bacula versions prior to 1.35.5. 
+
+If you wish to use SQLite as the Bacula catalog, please see 
+\ilink{Installing and Configuring SQLite}{_ChapterStart33} chapter of
+this manual. 
+
+\subsection*{Quick Start}
+\index[general]{Quick Start }
+\index[general]{Start!Quick }
+\addcontentsline{toc}{subsection}{Quick Start}
+
+There are a number of options and important considerations given below
+that you can skip for the moment if you have not had any problems building
+Bacula with a simplified configuration as shown above. 
+
+If you want to dive right into it, we recommend you skip to the next chapter,
+and run the example program. It will teach you a lot about Bacula and as an
+example can be installed into a single directory (for easy removal) and run as
+non-root. If you have any problems or when you want to do a real installation,
+come back to this chapter and read the details presented below. 
+
+\subsection*{Configure Options}
+\label{Options}
+\index[general]{Options!Configure }
+\index[general]{Configure Options }
+\addcontentsline{toc}{subsection}{Configure Options}
+
+The following command line options are available for {\bf configure} to
+customize your installation. 
+
+\begin{description}
+
+\item [ \verb{--{sysbindir=\lt{}binary-path\gt{}]
+   \index[dir]{\verb{--{sysbindir }
+   Defines where the Bacula  binary (executable) files will be placed during a
+   {\bf make  install} command.  
+
+\item [ \verb{--{sysconfdir=\lt{}config-path\gt{}]
+   \index[dir]{\verb{--{sysconfdir }
+   Defines where the  Bacula configuration files should be placed during a {\bf
+   make  install} command.  
+
+\item [ \verb{--{enable-smartalloc ]
+   \index[dir]{\verb{--{enable-smartalloc }
+   This enables the inclusion of the  Smartalloc orphaned buffer detection code.
+   This option is highly  recommended. Because we never build without this
+   option, you may  experience problems if it is not enabled. In this case,
+   simply  re-enable the option. We strongly recommend keeping this option 
+   enabled as it helps detect memory leaks. This configuration  parameter is used
+   while building Bacula  
+
+\item [ \verb{--{enable-gnome ]
+   \index[dir]{\verb{--{enable-gnome }
+   If you have GNOME installed on your  computer and you want to use the GNOME
+   GUI Console interface  to Bacula, you must specify this option. Doing so  will
+   build everything in the {\bf src/gnome-console} directory.  
+
+\item [ \verb{--{enable-wx-console ]
+   \index[console]{\verb{--{enable-wx-console }
+   If you have wxWidgets installed on your  computer and you want to use the
+   wxWidgets GUI Console interface  to Bacula, you must specify this option.
+   Doing so  will build everything in the {\bf src/wx-console} directory. This 
+   could also be useful to users who want a GUI Console and don't  want to
+   install Gnome, as wxWidgets can work with GTK+, Motif or even X11  libraries. 
+
+
+\item [ \verb{--{enable-tray-monitor ]
+   \index[dir]{\verb{--{enable-tray-monitor }
+   If you have GTK installed on your  computer, you run an graphical environment
+   or a window manager compatible  with the FreeDesktop system tray standard
+   (like KDE and GNOME)  and you want to use a GUI to monitor Bacula daemons, you
+   must specify  this option. Doing so will build everything in the  {\bf
+   src/tray-monitor} directory.  
+
+\item [ \verb{--{enable-static-tools]
+   \index[dir]{\verb{--{enable-static-tools }
+   This option causes the linker  to link the Storage daemon utility tools ({\bf
+   bls},  {\bf bextract}, and {\bf bscan}) statically. This permits using  them
+   without having the shared libraries loaded. If you have  problems linking in
+   the {\bf src/stored} directory, make sure  you have not enabled this option,
+   or explicitly  disable static linking by adding {\bf \verb{--{disable-static-tools}. 
+
+
+\item [ \verb{--{enable-static-fd]
+   \index[fd]{\verb{--{enable-static-fd }
+   This option causes the make process  to build a {\bf static-bacula-fd} in
+   addition to the standard  File daemon. This static version will include
+   statically linked  libraries and is required for the Bare Metal recovery. This
+   option  is largely superseded by using {\bf make static-bacula-fd} from with 
+   in the {\bf src/filed} directory. Also, the {\bf \verb{--{enable-client-only}  option
+   described below is useful for just building a client so that  all the other
+   parts of the program are not compiled.  
+
+\item [ \verb{--{enable-static-sd]
+   \index[sd]{\verb{--{enable-static-sd }
+   This option causes the make process  to build a {\bf static-bacula-sd} in
+   addition to the standard  Storage daemon. This static version will include
+   statically linked  libraries and could be useful during a Bare Metal recovery.
+ 
+
+\item [ \verb{--{enable-static-dir]
+   \index[dir]{\verb{--{enable-static-dir }
+   This option causes the make process  to build a {\bf static-bacula-dir} in
+   addition to the standard  Director. This static version will include
+   statically linked  libraries and could be useful during a Bare Metal recovery.
+
+
+\item [ \verb{--{enable-static-cons]
+   \index[dir]{\verb{--{enable-static-cons }
+   This option causes the make process  to build a {\bf static-console} and a
+   {\bf static-gnome-console}  in addition to the standard console.  This static
+   version will include statically linked  libraries and could be useful during a
+   Bare Metal recovery.  
+
+\item [ \verb{--{enable-client-only]
+   \index[console]{\verb{--{enable-client-only }
+   This option causes the make process  to build only the File daemon and the
+   libraries that it needs.  None of the other daemons, storage tools, nor the
+   console will  be built. Likewise a {\bf make install} will then only install 
+   the File daemon. To cause all daemons to be built, you will need  to do a
+   configuration without this option. This option greatly  facilitates building a
+   Client on a client only machine.  
+
+\item [ \verb{--{enable-largefile]
+   \index[console]{\verb{--{enable-largefile }
+   This option (default) causes  Bacula to be built with 64 bit file address
+   support if it  is available on your system. This permits Bacula to read and 
+   write files greater than 2 GBytes in size. You may disable this  feature and
+   revert to 32 bit file addresses by using  {\bf \verb{--{disable-largefile}.  
+
+\item [ \verb{--{with-sqlite=\lt{}sqlite-path\gt{}]
+   \index[fd]{\verb{--{with-sqlite }
+   This enables use of  the SQLite database. The {\bf sqlite-path} is not
+   normally  specified as Bacula looks for the necessary components in  a
+   standard location ({\bf depkgs/sqlite}). See 
+   \ilink{Installing and Configuring SQLite}{_ChapterStart33} chapter of
+    this manual for more details.  
+
+\item [ \verb{--{with-mysql=\lt{}mysql-path\gt{}]
+   \index[fd]{\verb{--{with-mysql }
+   This enables building of the Catalog services for Bacula. It  assumes that
+   MySQL is running on your system, and expects  it to be installed in the {\bf
+   mysql-path} that you  specify. If this option is not present, the build will 
+   automatically include the internal Bacula database  code. We recommend that
+   you use this option if possible.  If you do use this option, please proceed to
+   installing  MySQL in the 
+   \ilink{Installing and Configuring MySQL}{_ChapterStart} chapter
+   before proceeding with the configuration.  
+
+\item [ \verb{--{with-postgresql=\lt{}path\gt{}]
+   \index[fd]{\verb{--{with-postgresql }
+   This provides an explicit  path to the PostgreSQL libraries if Bacula cannot
+   find it by  default.  
+
+\item [ \verb{--{enable-conio]
+   \index[fd]{\verb{--{enable-conio }
+   Tells Bacula to enable building the  small, light weight readline replacement
+   routine. It is generally  much easier to configure than readline, although,
+   like readline,  it needs either the termcap or ncurses library.  
+
+\item [ \verb{--{with-readline=\lt{}readline-path\gt{}]
+   \index[fd]{\verb{--{with-readline }
+   Tells Bacula  where {\bf readline} is installed. Normally, Bacula will  find
+   readline if it is in a standard library. If it is not found  and no
+   \verb{--{with-readline is specified, readline will be disabled.  This option affects
+   the Bacula build. Readline provides  the Console program with a command line
+   history and editing  capability and is no longer supports, so you are on your
+   own  if you have problems. 
+
+\item [ \verb{--{enable-readline]
+   \index[fd]{\verb{--{enable-readline }
+   Tells Bacula to enable readline support.  It is normally disabled due to the
+   large number of configuration  problems and the fact that the package seems to
+   change in incompatible  ways from version to version.  
+
+\item [ \verb{--{with-tcp-wrappers=\lt{}path\gt{}]
+   \index[fd]{\verb{--{with-tcp-wrappers }
+   This specifies that you  want TCP wrappers (man hosts\_access(5)) compiled in.
+   The path is optional since  Bacula will normally find the libraries in the
+   standard locations.  This option affects the Bacula build.  In specifying your
+   restrictions in the {\bf /etc/hosts.allow}  or {\bf /etc/hosts.deny} files, do
+   not use the {\bf twist}  option (hosts\_options(5)) or the Bacula process will
+   be terminated.  
+   
+   For more information on configuring and testing TCP wrappers, please  see the 
+   \ilink{Configuring and Testing TCP Wrappers}{wrappers}  section
+   in the Security Capter.  
+
+\item [ \verb{--{with-working-dir=\lt{}working-directory-path\gt{} ]
+   \index[dir]{\verb{--{with-working-dir }
+   This option is mandatory and specifies a directory  into which Bacula may
+   safely place files that  will remain between Bacula executions. For example, 
+   if the internal database is used, Bacula will keep  those files in this
+   directory.  This option is only used to modify the daemon  configuration
+   files. You may also accomplish the same  thing by directly editing them later.
+   The working directory  is not automatically created by the install process, so
+   you  must ensure that it exists before using Bacula for the  first time. 
+
+\item [ \verb{--{with-base-port=\lt{}port=number\gt{}]
+   \index[dir]{\verb{--{with-base-port }
+   In order to run,  Bacula needs three TCP/IP ports (one for the Bacula 
+   Console, one for the Storage daemon, and one for the File daemon).  The {\bf
+   \verb{--{with-baseport} option will automatically assign three  ports beginning at
+   the base port address specified. You may  also change the port number in the
+   resulting configuration  files. However, you need to take care that the
+   numbers  correspond correctly in each of the three daemon configuration 
+   files. The default base port is 9101, which assigns ports 9101  through 9103.
+   These ports (9101, 9102, and 9103) have been  officially assigned to Bacula by
+   IANA.  This option is only used  to modify the daemon configuration files. You
+   may also accomplish  the same thing by directly editing them later. 
+
+\item [ \verb{--{with-dump-email=\lt{}email-address\gt{}]
+   \index[dir]{\verb{--{with-dump-email }
+   This option specifies  the email address where any core dumps should be set.
+   This option  is normally only used by developers.  
+
+\item [ \verb{--{with-pid-dir=\lt{}PATH\gt{}  ]
+   \index[dir]{\verb{--{with-pid-dir }
+   This specifies where Bacula should place the process id  file during
+   execution. The default is: {\bf /var/run}.  This directory is not created by
+   the install process, so  you must ensure that it exists before using Bacula
+   the  first time.  
+
+\item [ \verb{--{with-subsys-dir=\lt{}PATH\gt{}]
+   \index[dir]{\verb{--{with-subsys-dir }
+   This specifies where Bacula should place the subsystem lock  file during
+   execution. The default is {\bf /var/run/subsys}.  Please make sure that you do
+   not specify the same directory  for this directory and for the {\bf sbindir}
+   directory.  This directory is used only within the autostart scripts.  The
+   subsys directory is not created by the Bacula install,  so you must be sure to
+   create it before using Bacula. 
+
+\item [ \verb{--{with-dir-password=\lt{}Password\gt{}]
+   \index[dir]{\verb{--{with-dir-password }
+   This option allows you to specify the password used to  access the Directory
+   (normally from the Console program).  If it is not specified, configure will
+   automatically create a random  password.  
+
+\item [ \verb{--{with-fd-password=\lt{}Password\gt{} ]
+   \index[fd]{\verb{--{with-fd-password }
+   This option allows you to specify the password used to  access the File daemon
+   (normally called from the Director).  If it is not specified, configure will
+   automatically create a random  password.  
+
+\item [ \verb{--{with-sd-password=\lt{}Password\gt{} ]
+   \index[sd]{\verb{--{with-sd-password }
+   This option allows you to specify the password used to  access the Directory
+   (normally called from the Director).  If it is not specified, configure will
+   automatically create a random  password.  
+
+\item [ \verb{--{with-dir-user=\lt{}User\gt{} ]
+   \index[dir]{\verb{--{with-dir-user }
+   This option allows you to specify the Userid used to  run the Director. The
+   Director must be started as root, but  doesn't need to run as root, and  after
+   doing preliminary initializations, it can ``drop''  to the UserId specified on
+   this option. 
+
+\item [ \verb{--{with-dir-group=\lt{}Group\gt{} ]
+   \index[dir]{\verb{--{with-dir-group }
+   This option allows you to specify the GroupId used to  run the Director. The
+   Director must be started as root, but  doesn't need to run as root, and  after
+   doing preliminary initializations, it can ``drop''  to the GroupId specified
+   on this option. 
+
+\item [ \verb{--{with-sd-user=\lt{}User\gt{} ]
+   \index[sd]{\verb{--{with-sd-user }
+   This option allows you to specify the Userid used to  run the Storage daemon.
+   The Storage daemon must be started as root, but  doesn't need to run as root,
+   and  after doing preliminary initializations, it can ``drop''  to the UserId
+   specified on this option. If you use this option,  you will need to take care
+   that the Storage daemon has access  to all the devices (tape drives, ...) that
+   it needs. 
+
+\item [ \verb{--{with-sd-group=\lt{}Group\gt{} ]
+   \index[sd]{\verb{--{with-sd-group }
+   This option allows you to specify the GroupId used to  run the Storage daemon.
+   The Storage daemon must be started as root, but  doesn't need to run as root,
+   and  after doing preliminary initializations, it can ``drop''  to the GroupId
+   specified on this option. 
+
+\item [ \verb{--{with-fd-user=\lt{}User\gt{} ]
+   \index[fd]{\verb{--{with-fd-user }
+   This option allows you to specify the Userid used to  run the File daemon. The
+   File daemon must be started as root,  and in most cases, it needs to run as
+   root, so this option is  used only in very special cases,  after doing
+   preliminary initializations, it can ``drop''  to the UserId specified on this
+   option. 
+
+\item [ \verb{--{with-fd-group=\lt{}Group\gt{} ]
+   \index[fd]{\verb{--{with-fd-group }
+   This option allows you to specify the GroupId used to  run the File daemon.
+   The File daemon must be started as root, and  in most cases, it must be run as
+   root, however,  after doing preliminary initializations, it can ``drop''  to
+   the GroupId specified on this option. 
+
+\end{description}
+
+Note, many other options are presented when you do a {\bf ./configure \verb{--{help},
+but they are not implemented. 
+
+\subsection*{Recommended Options for most Systems}
+\index[general]{Systems!Recommended Options for most }
+\index[general]{Recommended Options for most Systems }
+\addcontentsline{toc}{subsection}{Recommended Options for most Systems}
+
+For most systems, we recommend starting with the following options: 
+
+\footnotesize
+\begin{verbatim}
+./configure \
+  --enable-smartalloc \
+  --sbindir=$HOME/bacula/bin \
+  --sysconfdir=$HOME/bacula/bin \
+  --with-pid-dir=$HOME/bacula/bin/working \
+  --with-subsys-dir=$HOME/bacula/bin/working \
+  --with-mysql=$HOME/mysql \
+  --with-working-dir=$HOME/bacula/working
+\end{verbatim}
+\normalsize
+
+If you want to install Bacula in an installation directory rather than run it
+out of the build directory (as developers will do most of the time), you
+should also include the \verb{--{sbindir and \verb{--{sysconfdir options with appropriate
+paths. Neither are necessary if you do not use ``make install'' as is the case
+for most development work. The install process will create the sbindir and
+sysconfdir if they do not exist, but it will not automatically create the
+pid-dir, subsys-dir, or working-dir, so you must ensure that they exist before
+running Bacula for the first time. See below for an example of how Kern does
+it. 
+
+\subsection*{RedHat}
+\index[general]{RedHat }
+\addcontentsline{toc}{subsection}{RedHat}
+
+Using SQLite: 
+
+\footnotesize
+\begin{verbatim}
+ 
+CFLAGS="-g -Wall" ./configure \
+  --sbindir=$HOME/bacula/bin \
+  --sysconfdir=$HOME/bacula/bin \
+  --enable-smartalloc \
+  --with-sqlite=$HOME/bacula/depkgs/sqlite \
+  --with-working-dir=$HOME/bacula/working \
+  --with-pid-dir=$HOME/bacula/bin/working \
+  --with-subsys-dir=$HOME/bacula/bin/working \
+  --enable-gnome \
+  --enable-conio
+\end{verbatim}
+\normalsize
+
+or 
+
+\footnotesize
+\begin{verbatim}
+ 
+CFLAGS="-g -Wall" ./configure \
+  --sbindir=$HOME/bacula/bin \
+  --sysconfdir=$HOME/bacula/bin \
+  --enable-smartalloc \
+  --with-mysql=$HOME/mysql \
+  --with-working-dir=$HOME/bacula/working
+  --with-pid-dir=$HOME/bacula/bin/working \
+  --with-subsys-dir=$HOME/bacula/bin/working
+  --enable-gnome \
+  --enable-conio
+\end{verbatim}
+\normalsize
+
+or finally, a completely traditional RedHat Linux install: 
+
+\footnotesize
+\begin{verbatim}
+CFLAGS="-g -Wall" ./configure \
+  --prefix=/usr \
+  --sbindir=/usr/sbin \
+  --sysconfdir=/etc/bacula \
+  --with-scriptdir=/etc/bacula \
+  --enable-smartalloc \
+  --enable-gnome \
+  --with-mysql \
+  --with-working-dir=/var/bacula \
+  --with-pid-dir=/var/run \
+  --with-subsys-dir=/var/lock/subsys \
+  --enable-conio
+\end{verbatim}
+\normalsize
+
+Note, Bacula assumes that /var/bacula, /var/run, and /var/loc/subsys exist so
+it will not automatically create them during the install process. 
+
+\subsection*{Solaris}
+\index[general]{Solaris }
+\addcontentsline{toc}{subsection}{Solaris}
+
+To build Bacula from source, you will need the following installed on your
+system (they are not by default): libiconv, gcc 3.3.2, stdc++, libgcc (for
+stdc++ and gcc\_s libraries), make 3.8 or later. 
+
+You will probably also need to: Add /usr/local/bin to PATH and Add
+/usr/ccs/bin to PATH for ar. 
+
+\footnotesize
+\begin{verbatim}
+#!/bin/sh
+CFLAGS="-g" ./configure \
+  --sbindir=$HOME/bacula/bin \
+  --sysconfdir=$HOME/bacula/bin \
+  --with-mysql=$HOME/mysql \
+  --enable-smartalloc \
+  --with-pid-dir=$HOME/bacula/bin/working \
+  --with-subsys-dir=$HOME/bacula/bin/working \
+  --with-working-dir=$HOME/bacula/working
+\end{verbatim}
+\normalsize
+
+As mentioned above, the install process will create the sbindir and sysconfdir
+if they do not exist, but it will not automatically create the pid-dir,
+subsys-dir, or working-dir, so you must ensure that they exist before running
+Bacula for the first 
+
+\subsection*{FreeBSD}
+\index[general]{FreeBSD }
+\addcontentsline{toc}{subsection}{FreeBSD}
+
+Please see: 
+\elink{The FreeBSD Diary}{http://www.freebsddiary.org/bacula.php} for a
+detailed description on how to make Bacula work on your system. In addition,
+users of FreeBSD prior to 4.9-STABLE dated Mon Dec 29 15:18:01 2003 UTC who
+plan to use tape devices, please see the 
+\ilink{Tape Testing Chapter}{FreeBSDTapes} of this manual for
+{\bf important} information on how to configure your tape drive for
+compatibility with Bacula. 
+
+If you are using Bacula with MySQL, you should take care to compile MySQL with
+FreeBSD native threads rather than LinuxThreads, since Bacula is normal built
+with FreeBSD native threads rather than LinuxTreads. Mixing the two will
+probably not work. 
+
+\subsection*{Win32}
+\index[general]{Win32 }
+\addcontentsline{toc}{subsection}{Win32}
+
+To install the binary Win32 version of the File daemon please see the 
+\ilink{Win32 Installation Chapter}{_ChapterStart7} in this document. 
+
+\subsection*{Windows Systems with CYGWIN Installed}
+\label{Win32}
+\index[general]{Windows Systems with CYGWIN Installed }
+\index[general]{Installed!Windows Systems with CYGWIN }
+\addcontentsline{toc}{subsection}{Windows Systems with CYGWIN Installed}
+
+As of version 1.34, Bacula no longer uses CYGWIN for the Win32 File daemon.
+However, it is still built under a CYGWIN build environment -- though you can
+probably do it with VC Studio only. If you wish to build the Win32 File daemon
+from the source, you will need Microsoft C++ version 6.0 or greater. In Bacula
+prior to version 1.33, CYGWIN was used. Details for building it are in the
+README file of the src/win32 directory. 
+
+Note, although most parts of Bacula build on Windows systems, the only part
+that we have tested and used is the File daemon. 
+
+Finally, you should follow the installation instructions in the 
+\ilink{Win32 Installation}{_ChapterStart7} section of this document. 
+
+\subsection*{Kern's Configure Script}
+\index[general]{Script!Kern's Configure }
+\index[general]{Kern's Configure Script }
+\addcontentsline{toc}{subsection}{Kern's Configure Script}
+
+The script that I use for building on my ``production'' Linux machines is: 
+
+\footnotesize
+\begin{verbatim}
+#!/bin/sh
+# This is Kern's configure script for Bacula
+CFLAGS="-g -Wall" \
+  ./configure \
+    --sbindir=$HOME/bacula/bin \
+    --sysconfdir=$HOME/bacula/bin \
+    --enable-smartalloc \
+    --enable-gnome \
+    --with-pid-dir=$HOME/bacula/bin/working \
+    --with-subsys-dir=$HOME/bacula/bin/working \
+    --with-mysql=$HOME/mysql \
+    --with-working-dir=$HOME/bacula/bin/working \
+    --with-dump-email=$USER \
+    --with-smtp-host=mail.your-site.com \
+    --with-baseport=9101
+exit 0
+\end{verbatim}
+\normalsize
+
+Note that I define the base port as 9101, which means that Bacula will use
+port 9101 for the Director console, port 9102 for the File daemons, and port
+9103 for the Storage daemons. These ports should be available on all systems
+because they have been officially assigned to Bacula by IANA (Internet
+Assigned Numbers Authority). We strongly recommend that you use only these
+ports to prevent any conflicts with other programs. This is in fact the
+default if you do not specify a {\bf \verb{--{with-baseport} option. 
+
+You may also want to put the following entries in your {\bf /etc/services}
+file as it will make viewing the connections made by Bacula easier to
+recognize (i.e. netstat -a): 
+
+\footnotesize
+\begin{verbatim}
+bacula-dir      9101/tcp
+bacula-fd       9102/tcp
+bacula-sd       9103/tcp
+\end{verbatim}
+\normalsize
+
+\subsection*{Installing Bacula}
+\index[general]{Bacula!Installing }
+\index[general]{Installing Bacula }
+\addcontentsline{toc}{subsection}{Installing Bacula}
+
+Before setting up your configuration files, you will want to install Bacula in
+its final location. Simply enter: 
+
+\footnotesize
+\begin{verbatim}
+make install
+\end{verbatim}
+\normalsize
+
+If you have previously installed Bacula, the old binaries will be overwritten,
+but the old configuration files will remain unchanged, and the ``new''
+configuration files will be appended with a {\bf .new}. Generally if you have
+previously installed and run Bacula you will want to discard or ignore the
+configuration files with the appended {\bf .new}. 
+
+\subsection*{Building a File Daemon or Client}
+\index[general]{Client!Building a File Daemon or }
+\index[general]{Building a File Daemon or Client }
+\addcontentsline{toc}{subsection}{Building a File Daemon or Client}
+
+If you run the Director and the Storage daemon on one machine and you wish to
+back up another machine, you must have a copy of the File daemon for that
+machine. If the machine and the Operating System are identical, you can simply
+copy the Bacula File daemon binary file {\bf bacula-fd} as well as its
+configuration file {\bf bacula-fd.conf} then modify the name and password in
+the conf file to be unique. Be sure to make corresponding additions to the
+Director's configuration file ({\bf bacula-dir.conf}). 
+
+If the architecture or the O/S level are different, you will need to build a
+File daemon on the Client machine. To do so, you can use the same {\bf
+./configure} command as you did for your main program, starting either from a
+fresh copy of the source tree, or using {\bf make\ distclean} before the {\bf
+./configure}. 
+
+Since the File daemon does not access the Catalog database, you can remove the
+{\bf \verb{--{with-mysql} or {\bf \verb{--{with-sqlite} options, then add {\bf
+\verb{--{enable-client-only}. This will compile only the necessary libraries and the
+client programs and thus avoids the necessity of installing one or another of
+those database programs to build the File daemon. With the above option, you
+simply enter {\bf make} and just the client will be built. 
+\label{autostart}
+
+\subsection*{Auto Starting the Daemons}
+\index[general]{Daemons!Auto Starting the }
+\index[general]{Auto Starting the Daemons }
+\addcontentsline{toc}{subsection}{Auto Starting the Daemons}
+
+If you wish the daemons to be automatically started and stopped when your
+system is booted (a good idea), one more step is necessary. First, the
+./configure process must recognize your system -- that is it must be a
+supported platform and not {\bf unknown}, then you must install the platform
+dependent files by doing: 
+
+\footnotesize
+\begin{verbatim}
+(become root)
+make install-autostart
+\end{verbatim}
+\normalsize
+
+Please note, that the auto-start feature is implemented only on systems that
+we officially support (currently, FreeBSD, RedHat Linux, and Solaris), and has
+only been fully tested on RedHat Linux. 
+
+The {\bf make install-autostart} will cause the appropriate startup scripts to
+be installed with the necessary symbolic links. On RedHat Linux systems, these
+scripts reside in {\bf /etc/rc.d/init.d/bacula-dir} {\bf
+/etc/rc.d/init.d/bacula-fd}, and {\bf /etc/rc.d/init.d/bacula-sd}. However the
+exact location depends on what operating system you are using. 
+
+If you only wish to install the File daemon, you may do so with: 
+
+\footnotesize
+\begin{verbatim}
+make install-autostart-fd
+\end{verbatim}
+\normalsize
+
+\subsection*{Other Make Notes}
+\index[general]{Notes!Other Make }
+\index[general]{Other Make Notes }
+\addcontentsline{toc}{subsection}{Other Make Notes}
+
+To simply build a new executable in any directory, enter: 
+
+\footnotesize
+\begin{verbatim}
+make
+\end{verbatim}
+\normalsize
+
+To clean out all the objects and binaries (including the files named 1, 2, or
+3, which Kern uses as temporary files), enter: 
+
+\footnotesize
+\begin{verbatim}
+make clean
+\end{verbatim}
+\normalsize
+
+To really clean out everything for distribution, enter: 
+
+\footnotesize
+\begin{verbatim}
+make distclean
+\end{verbatim}
+\normalsize
+
+note, this cleans out the Makefiles and is normally done from the top level
+directory to prepare for distribution of the source. To recover from this
+state, you must redo the {\bf ./configure} in the top level directory, since
+all the Makefiles will be deleted. 
+
+To add a new file in a subdirectory, edit the Makefile.in in that directory,
+then simply do a {\bf make}. In most cases, the make will rebuild the Makefile
+from the new Makefile.in. In some case, you may need to issue the {\bf make} a
+second time. In extreme cases, cd to the top level directory and enter: {\bf
+make Makefiles}. 
+
+To add dependencies: 
+
+\footnotesize
+\begin{verbatim}
+make depend
+\end{verbatim}
+\normalsize
+
+The {\bf make depend} appends the header file dependencies for each of the
+object files to Makefile and Makefile.in. This command should be done in each
+directory where you change the dependencies. Normally, it only needs to be run
+when you add or delete source or header files. {\bf make depend} is normally
+automatically invoked during the configuration process. 
+
+To install: 
+
+\footnotesize
+\begin{verbatim}
+make install
+\end{verbatim}
+\normalsize
+
+This not normally done if you are developing Bacula, but is used if you are
+going to run it to backup your system. 
+
+After doing a {\bf make install} the following files will be installed on your
+system (more or less). The exact files and location (directory) for each file
+depends on your {\bf ./configure} command (e.g. gnome-console and
+gnome-console.conf are not installed if you do not configure GNOME. Also, if
+you are using SQLite instead of mysql, some of the files will be different). 
+
+\footnotesize
+\begin{verbatim}
+bacula
+bacula-dir
+bacula-dir.conf
+bacula-fd
+bacula-fd.conf
+bacula-sd
+bacula-sd.conf
+bacula-tray-monitor
+tray-monitor.conf
+bextract
+bls
+bscan
+btape
+btraceback
+btraceback.gdb
+bconsole
+bconsole.conf
+create_mysql_database
+dbcheck
+delete_catalog_backup
+drop_bacula_tables
+drop_mysql_tables
+fd
+gnome-console
+gnome-console.conf
+make_bacula_tables
+make_catalog_backup
+make_mysql_tables
+mtx-changer
+query.sql
+bsmtp
+startmysql
+stopmysql
+wx-console
+wx-console.conf
+\end{verbatim}
+\normalsize
+
+\label{monitor}
+
+\subsection*{Installing Tray Monitor}
+\index[general]{Monitor!Installing Tray }
+\index[general]{Installing Tray Monitor }
+\addcontentsline{toc}{subsection}{Installing Tray Monitor}
+
+The Tray Monitor is already installed if you used the {\bf
+\verb{--{enable-tray-monitor} configure option and ran {\bf make install}.
+
+As you don't run your graphical environment as root (if you do, you should
+change that bad habit), don't forget to allow your user to read {\bf
+tray-monitor.conf}, and to execute {\bf bacula-tray-monitor} (this is not a
+security issue).
+
+Then log into your graphical environment (KDE, Gnome or something else), run
+{\bf bacula-tray-monitor} as your user, and see if a cassette icon appear
+somewhere on the screen, usually on the task bar.
+If it doesn't, follow the instructions below related to your environment or
+window manager. 
+
+\subsubsection*{GNOME}
+\index[general]{GNOME }
+\addcontentsline{toc}{subsubsection}{GNOME}
+
+System tray, or notification area if you use the GNOME terminology, has been
+supported in GNOME since version 2.2. To activate it, right-click on one of
+your panels, open the menu {\bf Add to this Panel}, then {\bf Utility} and
+finally click on {\bf Notification Area}. 
+
+\subsubsection*{KDE}
+\index[general]{KDE }
+\addcontentsline{toc}{subsubsection}{KDE}
+
+System tray has been supported in KDE since version 3.1. To activate it,
+right-click on one of your panels, open the menu {\bf Add}, then {\bf Applet}
+and finally click on {\bf System Tray}. 
+
+\subsubsection*{Other window managers}
+\index[general]{Managers!Other window }
+\index[general]{Other window managers }
+\addcontentsline{toc}{subsubsection}{Other window managers}
+
+Read the documentation to know if the Freedesktop system tray standard is
+supported by your window manager, and if applicable, how to activate it. 
+
+\subsection*{Modifying the Bacula Configuration Files}
+\index[general]{Modifying the Bacula Configuration Files }
+\index[general]{Files!Modifying the Bacula Configuration }
+\addcontentsline{toc}{subsection}{Modifying the Bacula Configuration Files}
+
+See the chapter 
+\ilink{Configuring Bacula}{_ChapterStart16} in this manual for
+instructions on how to set Bacula configuration files. 

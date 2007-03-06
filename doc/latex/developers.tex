@@ -1,0 +1,69 @@
+%%
+%%
+
+\documentclass[11pt,a4paper]{report}
+\usepackage{html}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{bacula}
+\usepackage{longtable}
+\usepackage{makeidx}
+\usepackage{index}
+\usepackage{setspace}
+\usepackage{hyperref}
+
+
+\makeindex
+
+\sloppy
+
+\begin{document}
+\sloppy
+
+\newfont{\bighead}{cmr17 at 36pt}
+%% \topmargin -0.5in
+%% \textheight 9in
+\parskip 10pt
+\parindent 0pt
+%% \oddsidemargin -0.0in
+%% \evensidemargin -0.25in
+%% \textwidth 7in
+
+\title{\includegraphics{./bacula-logo.eps} \\ \bigskip
+   \Large{It comes in the night and sucks the essence
+        from your computers.} }
+\author{Kern Sibbald}
+\date{\vspace{2.0in}\today \\
+      This is the Bacula Developer's Guide}
+\maketitle
+
+\clearpage
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+\clearpage
+
+\include{generaldevel}
+\include{daemonprotocol}
+\include{director}
+\include{file}
+\include{storage}
+\include{mediaformat}
+\include{porting}
+\include{regression}
+\include{md5}
+\include{mempool}
+\include{netprotocol}
+\include{smartall}
+
+
+% The following line tells link_resolver.pl to not include these files:
+% nolinks developersi baculai-dir baculai-fd baculai-sd baculai-console baculai-main
+
+% pull in the index
+\clearpage
+\printindex
+
+\end{document}

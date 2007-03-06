@@ -1,0 +1,51 @@
+%%
+%%
+
+\section*{Supported Operating Systems}
+\label{_ChapterStart46}
+\index[general]{Systems!Supported Operating }
+\index[general]{Supported Operating Systems }
+\addcontentsline{toc}{section}{Supported Operating Systems}
+
+\subsection*{Supported Operating Systems}
+\label{SupportedOSes}
+\index[general]{Systems!Supported Operating }
+\index[general]{Supported Operating Systems }
+\addcontentsline{toc}{subsection}{Supported Operating Systems}
+
+\begin{itemize}
+\item Linux systems (built and tested on RedHat Enterprise Linux 3.0).  
+\item If you have a recent Red Hat Linux system running the 2.4.x kernel  and
+   you have the directory {\bf /lib/tls} installed on your  system (normally by
+   default), bacula will {\bf NOT} run. This is  the new pthreads library and it
+is defective. You must remove  this directory prior to running Bacula, or you
+can simply change  the name to {\bf /lib/tls-broken}) then you must reboot
+your  machine (one of the few times Linux must be rebooted). If  you are not
+able to remove/rename /lib/tls, an alternative is to  set the environment
+variable ``LD\_ASSUME\_KERNEL=2.4.19'' prior to  executing Bacula. For this
+option, you do not need to reboot, and  all programs other than Bacula will
+continue to use /lib/tls.  
+
+The feedback that we have for 2.6 kernels is that the  same problem exists.
+However, on 2.6 kernels, we would  probably recommend using the environment
+variable override  (LD\_ASSUME\_KERNEL=2.4.19) rather than removing /lib/tls. 
+
+\item Most flavors of Linux (Gentoo, SuSE, Mandrake, Debian, ...).  
+\item Solaris various versions.  
+\item FreeBSD (tape driver supported in 1.30 -- please see some  {\bf
+   important} considerations in the 
+   \ilink{ Tape Modes on FreeBSD}{FreeBSDTapes}  section of the
+   Tape Testing chapter of this manual.)  
+\item Windows (Win98/Me, WinNT/2K/XP) Client (File daemon) binaries.  
+\item MacOS X/Darwin (see \elink{ http://fink.sourceforge.net/}{http://fink.sourceforge.net/} for
+   obtaining the packages)  
+\item OpenBSD Client (File daemon).  
+\item Irix Client (File daemon).  
+\item Tru64  
+\item Bacula is said to work on other systems (AIX, BSDI, HPUX,  ...) but we
+   do not have first hand knowledge  of these systems. 
+\item  RHat 7.2 AS2, AS3, AS4, Fedora Core 2, SuSE SLES 7,8,9 and Debian Woody and Sarge Linux on
+   S/390 and Linux on zSeries.
+\item See the Porting chapter of the Bacula Developer's Guide  for information
+   on porting to other systems. 
+   \end{itemize}

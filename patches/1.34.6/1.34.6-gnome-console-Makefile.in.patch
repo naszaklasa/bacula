@@ -1,0 +1,25 @@
+--- Makefile.in	2004-07-29 15:29:56.000000000 -0400
++++ gnome-console-Makefile.in	2004-08-01 14:22:04.000000000 -0400
+@@ -12,7 +12,7 @@
+ # top dir
+ topdir = ../..
+ # this dir relative to top dir
+-thisdir = src/gnome2-console
++thisdir = src/gnome-console
+ 
+ DEBUG=@DEBUG@
+ 
+@@ -26,10 +26,9 @@
+ 
+ 
+ #
+-CONSSRCS = console.c console_conf.c authenticate.c support.c interface.c callbacks.c \
+-	   restore.c
+-CONSOBJS = console.o console_conf.o authenticate.o support.o interface.o callbacks.o \
+-	   restore.o
++CONSSRCS = console.c console_conf.c authenticate.c support.c interface.c callbacks.c
++
++CONSOBJS = console.o console_conf.o authenticate.o support.o interface.o callbacks.o 
+ 
+ # these are the objects that are changed by the .configure process
+ EXTRAOBJS = @OBJLIST@

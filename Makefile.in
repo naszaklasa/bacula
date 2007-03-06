@@ -1,0 +1,246 @@
+# 
+# Version $Id: Makefile.in,v 1.50.4.1 2005/02/25 09:46:48 kerns Exp $
+# 
+@MCOMMON@
+
+working_dir=@working_dir@
+
+srcdir =	@srcdir@
+VPATH = 	@srcdir@
+.PATH:		@srcdir@
+topdir = .
+thisdir = .
+
+
+first_rule: all
+dummy:
+
+# --client-only directories
+fd_subdirs = src scripts doc src/lib src/findlib src/filed \
+	     @READLINE_SRC@ src/console rescue rescue/linux \
+	     @GNOME_DIR@ @TRAY_MONITOR_DIR@ @WX_DIR@
+
+# Non-client-only directores
+subdirs =    src/cats src/dird src/stored src/tools
+
+all_subdirs = ${fd_subdirs} ${@ALL_DIRS@}
+
+DIST =	INSTALL README.configure configure Makefile Makefile.in ChangeLog
+
+DIST_CFG = autoconf/aclocal.m4 autoconf/configure.in \
+	autoconf/config.h.in  autoconf/acconfig.h  autoconf/Make.common.in \
+	autoconf/install-sh autoconf/mkinstalldirs
+
+MKDIR = $(srcdir)/autoconf/mkinstalldirs
+
+#-------------------------------------------------------------------------
+
+all: Makefile
+	@for I in ${all_subdirs}; \
+	  do (cd $$I; echo "==>Entering directory `pwd`"; \
+	      $(MAKE) $@ || (echo ""; echo ""; echo -e "  \a\a ====== Error in `pwd` ======\a\a"; \
+			    echo ""; echo "";)); \
+	done
+
+depend:
+	@for I in ${all_subdirs}; \
+	  do (cd $$I; echo "==>Entering directory `pwd`"; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
+	
+bacula-fd: Makefile	   
+	@for I in ${fd_subdirs}; \
+	  do (cd $$I; echo "==>Entering directory `pwd`"; \
+	      $(MAKE) all || (echo ""; echo ""; echo -e "  \a\a ====== Error in `pwd` ======\a\a"; \
+			    echo ""; echo "";)); \
+	done
+
+#-------------------------------------------------------------------------
+configure: autoconf/configure.in autoconf/aclocal.m4 autoconf/acconfig.h autoconf/config.h.in
+	cd $(srcdir);
+	${RMF} -f config.cache config.log config.out config.status src/config.h
+	autoconf --prepend-include=$(srcdir)/autoconf \
+	autoconf/configure.in > configure
+	chmod 755 configure
+
+old-configure: autoconf/configure.in autoconf/aclocal.m4 autoconf/acconfig.h
+	cd $(srcdir);
+	${RMF} -f config.cache config.log config.out config.status src/config.h
+	autoconf --include=$(srcdir)/autoconf \
+	autoconf/configure.in > configure
+	chmod 755 configure
+	@rm -f config.cache
+
+config.status:
+	if test -x config.status; then config.status --recheck; \
+	else $(SHELL) configure; fi
+
+autoconf/config.h.in: autoconf/configure.in autoconf/acconfig.h
+	cd $(srcdir);
+	${RMF} -f config.cache config.log config.out config.status src/config.h
+	autoheader --prepend-include=$(srcdir)/autoconf \
+	autoconf/configure.in > autoconf/config.h.in
+	chmod 644 autoconf/config.h.in
+
+installdirs:
+	$(MKDIR) $(DESTDIR)$(sbindir)
+	$(MKDIR) $(DESTDIR)$(sysconfdir)
+	$(MKDIR) $(DESTDIR)$(scriptdir)
+	$(MKDIR) $(DESTDIR)$(working_dir)
+#	$(MKDIR) $(DESTDIR)$(mandir)
+
+gnomedirs:
+	$(MKDIR) $(DESTDIR)/usr/share/pixmaps
+	$(MKDIR) $(DESTDIR)/usr/share/gnome/apps/System
+	$(MKDIR) $(DESTDIR)/usr/share/applications
+	$(MKDIR) $(DESTDIR)/etc/security/console.apps
+	$(MKDIR) $(DESTDIR)/etc/pam.d
+
+install-menu: gnomedirs
+	${INSTALL_DATA} scripts/bacula.png $(DESTDIR)/usr/share/pixmaps/bacula.png
+	${INSTALL_DATA} scripts/bacula.desktop.gnome1 $(DESTDIR)/usr/share/gnome/apps/System/bacula.desktop
+	${INSTALL_DATA} scripts/bacula.desktop.gnome2 $(DESTDIR)/usr/share/applications/bacula.desktop
+
+install-menu-xsu: gnomedirs
+	${INSTALL_DATA} scripts/bacula.png $(DESTDIR)/usr/share/pixmaps/bacula.png
+	${INSTALL_DATA} scripts/bacula.desktop.gnome1.xsu $(DESTDIR)/usr/share/gnome/apps/System/bacula.desktop
+	${INSTALL_DATA} scripts/bacula.desktop.gnome2.xsu $(DESTDIR)/usr/share/applications/bacula.desktop
+
+install-menu-consolehelper: gnomedirs
+	${INSTALL_DATA} scripts/bacula.png $(DESTDIR)/usr/share/pixmaps/bacula.png
+	${INSTALL_DATA} scripts/bacula.desktop.gnome1.consolehelper $(DESTDIR)/usr/share/gnome/apps/System/bacula.desktop
+	${INSTALL_DATA} scripts/bacula.desktop.gnome2.consolehelper $(DESTDIR)/usr/share/applications/bacula.desktop
+	${INSTALL_DATA} scripts/gnome-console.console_apps $(DESTDIR)/etc/security/console.apps/gnome-console
+	${INSTALL_DATA} scripts/gnome-console.pamd $(DESTDIR)/etc/pam.d/gnome-console
+	ln -s $(DESTDIR)/usr/bin/consolehelper $(DESTDIR)/usr/bin/gnome-console
+
+install: installdirs
+	@for I in $(all_subdirs); do (cd $$I; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
+
+uninstall:
+	@for I in $(all_subdirs); do (cd $$I; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
+
+install-autostart:
+	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
+
+install-autostart-dir:
+	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
+
+install-autostart-fd:
+	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
+
+install-autostart-sd:
+	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1) 
+
+uninstall-autostart:
+	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
+
+uninstall-autostart-dir:
+	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
+
+uninstall-autostart-fd:
+	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
+
+uninstall-autostart-sd:
+	(cd platforms; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
+
+uninstall-menu:
+	rm -f $(DESTDIR)/usr/share/pixmaps/bacula.png
+	rm -f $(DESTDIR)/usr/share/gnome/apps/System/bacula.desktop
+	rm -f $(DESTDIR)/usr/share/applications/bacula.desktop
+
+uninstall-menu-consolehelper:
+	rm -f $(DESTDIR)/usr/share/pixmaps/bacula.png
+	rm -f $(DESTDIR)/usr/share/gnome/apps/System/bacula.desktop
+	rm -f $(DESTDIR)/usr/share/applications/bacula.desktop
+	rm -f $(DESTDIR)/etc/security/console.apps/gnome-console
+	rm -f $(DESTDIR)/etc/pam.d/gnome-console
+	rm -f $(DESTDIR)/usr/bin/gnome-console
+
+
+Makefile: Makefile.in
+	cd $(topdir) \
+	    && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+Makefiles:
+	$(SHELL) config.status
+	(cd scripts; \
+	chmod 755 startmysql stopmysql bacula fd startit stopit btraceback; \
+	chmod 755 mtx-changer bconsole gconsole devel_bacula)
+
+	(cd src/cats; \
+	chmod 755 create_bacula_database      update_bacula_tables     make_bacula_tables; \
+	chmod 755 grant_bacula_privileges     drop_bacula_tables       drop_bacula_database; \
+	   \
+	chmod 755 create_@DB_NAME@_database   update_@DB_NAME@_tables  make_@DB_NAME@_tables; \
+	chmod 755 grant_@DB_NAME@_privileges  drop_@DB_NAME@_tables    drop_@DB_NAME@_database; \
+	   \
+	chmod 755 make_catalog_backup delete_catalog_backup)
+
+clean:
+	@for I in ${all_subdirs}; \
+	  do (cd $$I; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1); done
+	@(cd platforms; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1)
+	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
+	@$(RMF) examples/1 examples/2 examples/devices/1 examples/devices/2
+	@$(RMF) -r autom4te.cache
+	@find . -name .#* -exec $(RMF) {} \;
+
+
+# clean for distribution
+distclean:
+	@for I in $(all_subdirs); do (cd $$I; $(MAKE) $@ || exit 1); done
+	@for I in $(all_subdirs); do (cd $$I; $(RMF) startit stopit btraceback); done
+	@(cd $(srcdir); $(RMF) *~ config.cache config.h config.log config.status config.out)
+	@(cd $(srcdir); $(RMF) Makefile autoconf/Make.common)
+	@(cd platforms; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1)
+	@$(RMF) bacula fd Makefile startmysql stopmysql startit stopit btraceback
+	@$(RMF) bconsole gconsole
+	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
+	@$(RMF) working/*
+	@$(RMF) -r examples/devices/CVS autoconf/CVS autoconf/gnome-macros/CVS
+	@$(RMF) -r doc/techlogs/2002/CVS doc/techlogs/2001/CVS doc/techlogs/1.27/CVS
+	@$(RMF) -r examples/CVS intl/CVS scripts/CVS
+	@$(RMF) -r po/CVS src/immortal/CVS rescue/freebsd/CVS rescue/solaris/CVS
+	@$(RMF) -r CVS src/gnome-console/CVS src/tconsole/CVS
+
+devclean:
+	@for I in $(all_subdirs); do (cd $$I; $(MAKE) $@ || exit 1); done
+	@for I in $(all_subdirs); do (cd $$I; $(RMF) startit stopit btraceback); done
+	@(cd $(srcdir); $(RMF) *~ config.cache config.h config.log config.status config.out)
+	@(cd $(srcdir); $(RMF) Makefile autoconf/Make.common)
+	@(cd platforms; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1)
+	@$(RMF) bacula fd Makefile startmysql stopmysql startit stopit btraceback
+	@$(RMF) bconsole gconsole
+	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
+	@$(RMF) working/*
+
+distdirs:
+	mkdir ../$(VERNAME);
+	mkdir ../$(VERNAME)/autoconf;
+	@for I in $(all_subdirs); do (cd $$I; $(MAKE) DESTDIR=$(DESTDIR) $@ || (echo "Failed to make distclean in $$I"; exit 0) ); done
+
+distcopy:
+	$(CP) -p $(DIST) ../$(VERNAME);
+	$(CP) -p $(DIST_CFG) ../$(VERNAME)/autoconf;
+	@for I in $(all_subdirs); do (cd $$I; $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
+
+distrib: configure autoconf/config.h.in distdirs distcopy
+
+test:
+
+
+tar.gz:  ../$(VERNAME).tar.gz
+../$(VERNAME).tar.gz:
+	(cd ..; tar cvf - $(VERNAME) | gzip -f9 > $(VERNAME).tar.gz)
+
+tar.Z: ../$(VERNAME).tar.Z
+../$(VERNAME).tar.Z:
+	(cd ..; tar cvf - $(VERNAME) | compress > $(VERNAME).tar.Z)
+
+tar.bz2: ../$(VERNAME).tar.bz2
+../$(VERNAME).tar.bz2:
+	(cd ..; tar cvf - $(VERNAME) | bzip2 -f9 > $(VERNAME).tar.bz2)
+
+uuencode: tar.gz
+	uuencode ../$(VERNAME).tar.gz $(VERNAME).tar.gz > ../$(VERNAME).tgz.uu
+
+# ------------------------------------------------------------------------

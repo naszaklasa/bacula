@@ -1,0 +1,42 @@
+To: bacula-users@lists.sourceforge.net
+Subject: Re: [Bacula-users] backup postgresql databases
+From: Valtteri Vuorikoski <vuori@geo0-hel-fi.magenta.net>
+Date: 11 Mar 2004 14:56:13 +0000
+
+Mathieu Arnold <mat@mat.cc> writes:
+
+> I was wondering if someone already had some script, or ways of doings scripts
+> to backup (and maybe restore) pgsql databases. I'm balancing between taking a
+> snapshot of the database directory and backuping that, dumping the datas into
+> .sql.gz files, into .tgz files, or into a pipe letting bacula deal with the
+> compression.
+
+Here's a quick shell script hack to dump all databases into separate tars
+with pg_dump:
+
+do_pgsql() {
+ mkdir $dump_pg || exit 3
+ psql -Atc 'select datname from pg_database where datistemplate=false' template1 postgres > $dump_pg/databases || exit 4
+
+ touch $dump_pg/dump.log
+ for d in `cat $dump_pg/databases` ; do
+  pg_dump -U postgres -Ft "$d"  > $dump_pg/"$d.tar" >> $dump_pg/dump.log 2>&1
+  [ "$retval" -eq 0 ] && retval=$?
+ done
+}
+
+Set the variable dump_pg to point to the directly where you want the dump. Then
+back it up and delete when you're done.
+
+You could probably use fs snapshots if you LOCK EXCLUSIVE all tables and CHECKPOINT
+the transaction log, but as postgresql's relationship between files and tables is
+not very transparent (such as with mysql), I think particularly partial restores
+would end up being rather problematic.
+
+Backup/restore capability does not really appear to be postgresql's
+forte, unfortunately.
+
+-- 
+ Valtteri Vuorikoski <vuori@magenta.net>
+ MagentaSites Oy
+

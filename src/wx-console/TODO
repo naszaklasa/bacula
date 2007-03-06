@@ -1,0 +1,92 @@
+console_thread: Find an alternate way to get error messages, without using
+  a temporary file. (See Kern's mail 15.11.04 - 17:32)
+
+general : Show nice messages boxes when errors occurs.
+
+general : Bug reported by Kern:
+  I tried loading my current backup into the restore window. It
+  consisted of something like 10 jobs and was pretty big.  It was all
+  loaded, I double clicked on a directory, which was then marked, then
+  I opened it and clicked on subdirectory to unmark it, and I saw the
+  X appear on the top directory with a small check, then I'm not sure if I
+  clicked again, but my whole OS froze -- at first I could still move the
+  mouse a bit (very slowly) then after 30 seconds *everything* was dead.
+  I had to do a power off to get my system back.
+   
+wxbRestorePanel : list jobs and list jobid=# will probably crash if there
+   is nothing to show (db error or empty table)
+   
+GTK2 : The console control is not scrolled correctly (wxGTK bug)
+
+Win32 : Crash when quitting while trying to connect
+
+Mac OS X : "You must first get a unique identifier for your application, 
+  a so called creator, a four letter constant. All you need to know about
+  this step is at http://developer.apple.com/dev/cftype/" (wxWiki)
+  To be modified in Makefile.in wx-console target
+  
+Mac OS X : Ask kern for the status of this distribution (who is
+  the package releaser ?)
+
+wxbRestorePanel : Add images in add/remove/refresh buttons
+
+wxbRestorePanel : disable controls when working or (better) queue events
+  (see commented out code in wxbrestorepanel (marked with EVTQUEUE))
+
+wxbMainFrame : When exiting using menu, a messagebox is shown to ask the
+  user if he want to quit because the connection is lost. (doesn't
+  happen on Linux)
+
+wxbUtils : add clients, jobs, filesets, pools... list, merge patch file (wxbnewutils.patch)
+
+general : do not show some commands results (for example .help)
+
+general : add a tab containing messages
+
+wxbConfigFileEditor : create a more precise editor, with something like
+   a tree structure
+
+wxbRestorePanel : When cancelling, check for commands results
+
+wxbRestorePanel : Add a way to cancel restore when building tree
+   (needs director modifications)
+
+wxbMainFrame : set focus to type control when clicking on console
+
+wxbConfigPanel : Create a dialog for selecting dates and paths.
+
+wxbMainFrame : use more often status text
+   
+wxbRestorePanel : Use ".default job=RestoreFiles" to get defaults parameters
+	when changing a restore parameter fails.
+
+wxbDataParser : Add a boolean in the constructor to avoid storing data which 
+    will not be used.
+
+wxbRestorePanel : Check if commands ran successfully (cd, mark, mods...).
+
+GTK : Improve look
+
+wxblistctrl/wxbtreectrl : Find why events are not forwarded correctly 
+  to parent' parent, and correct bad actual implementation.
+   (remove handler parameter in wxTreeCtrl/wxListCtrl constructor)
+
+Win32 : find out why I had to modify string.cpp and string.h
+  + In include/wx/string.h, replace line 195 by
+      #if defined(__VISUALC__) // && defined(_MT) && !defined(_DLL)
+  + In src/common/string.cpp, replace line 167 by
+      #if defined(__VISUALC__) // && defined(_MT) && !defined(_DLL)
+
+mingw : correct findlib stat blocks and block size
+        (Note : nothing to do with wx-console)
+
+wxbRestorePanel : The + only appears when one selects a directory, 
+   to indicate it has subdirectories
+
+wxbRestorePanel : Add a timeout when waiting for commands results
+
+bacula-dir : correct director to handle correctly + marked status
+   (In fact there is a bug in the director : If you mark a directory
+   (not a file), and then unmark it, its parents keep the "+" status.)
+
+general : make a good documentation with snapshots

@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# Script to run lilo and re-create the MBR 
+#
+chroot /mnt/disk /sbin/lilo -v -C /etc/lilo.conf
+sync

@@ -1,0 +1,8 @@
+#!/bin/sh
+cd $HOME/bacula/k/src/gnome-console
+if [ $# = 1 ] ; then
+   echo "doing gnome-console $1.conf"
+   ./gnome-console -c $1.conf
+else
+   ./gnome-console
+fi

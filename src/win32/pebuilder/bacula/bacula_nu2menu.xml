@@ -1,0 +1,10 @@
+<!-- Nu2Menu entry -->
+<!-- Copyright 2004 D. Scott Barninger -->
+<!-- licensed under the GNU GPL v2 -->
+<NU2MENU>
+	<MENU ID="Programs">	   		
+		<MITEM TYPE="ITEM" DISABLED="@Not(@FileExists(@GetProgramDrive()\Programs\bacula\bacula-fd.exe))" CMD="RUN" FUNC="@Null(@ChangeDir(@GetProgramDrive()\Programs\bacula))@GetProgramDrive()\Programs\bacula\bacula-fd.exe /install">Install Bacula Client Service</MITEM>
+		<MITEM TYPE="ITEM" CMD="RUN" FUNC="net start bacula">Start Bacula Client Service</MITEM>
+		<MITEM TYPE="ITEM" DISABLED="@Not(@FileExists(@GetProgramDrive()\Programs\bacula\wx-console.exe))" CMD="RUN" FUNC="@Null(@ChangeDir(@GetProgramDrive()\Programs\bacula))@GetProgramDrive()\Programs\bacula\wx-console.exe -w b:\">Bacula WX-Console</MITEM>
+	</MENU>
+</NU2MENU>

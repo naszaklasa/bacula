@@ -1,0 +1,38 @@
+#!/bin/sh
+# 
+# Script to do a stackdump of a Bacula daemon/program.
+#
+# We attempt to attach to running program
+#
+# Arguments to this script are
+#  $1 = path to executable
+#  $2 = main pid of running program to be traced back.
+#
+
+gdb -quiet -batch -x /bacula/bin/btraceback.gdb $1 $2 2>&1 | mail -s "Bacula traceback" root
+
+# Below is some old code that did the traceback from a core
+#  dump. However, for some odd reason, core dumps are not
+#  always produced.
+#i=0
+#core=
+#echo "In modified btraceback"
+#echo "$1 $2"
+#pwd
+#while [ "$i" -lt 60 ] ; do
+#  if [ -f core ] ; then
+#     break;
+#  fi
+#  if [ -f core.$2 ] ; then
+#     core=core.$2
+#     break 
+#  fi 
+#  sleep 1
+#  i=`expr $i + 1`
+#done
+
+#if test x$core != x; then
+#   gdb -quiet -batch -x /home/kern/bacula/bin/btraceback.gdb $1 $core 2>&1 | mail -s "Bacula traceback" kern@sibbald.com
+#else
+#   gdb -quiet -batch -x /home/kern/bacula/bin/btraceback.gdb $1 $2 2>&1 | mail -s "Bacula traceback" kern@sibbald.com
+#fi

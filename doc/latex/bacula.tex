@@ -1,0 +1,114 @@
+%%
+%%
+
+\documentclass[11pt,a4paper]{book}
+\usepackage{html}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{bacula}
+\usepackage{longtable}
+\usepackage{makeidx}
+\usepackage{index}
+\usepackage{setspace}
+\usepackage{hyperref}
+
+
+\makeindex
+\newindex{dir}{ddx}{dnd}{Director Index}
+\newindex{fd}{fdx}{fnd}{File Daemon Index}
+\newindex{sd}{sdx}{snd}{Storage Daemon Index}
+\newindex{console}{cdx}{cnd}{Console Index}
+\newindex{general}{idx}{ind}{General Index}
+
+\sloppy
+
+\begin{document}
+\sloppy
+
+\newfont{\bighead}{cmr17 at 36pt}
+\parskip 10pt
+\parindent 0pt
+
+\title{\includegraphics{./bacula-logo.eps} \\ \bigskip
+  \begin{center}
+   \large{It comes in the night and sucks 
+          the essence from your computers. }
+  \end{center}
+}
+\author{Kern Sibbald}
+\date{\vspace{2.0in} 21 April 2005 \\
+      This manual documents Bacula version 1.36.3 \\
+      Copyright \copyright 1999-2005, Kern Sibbald }
+
+\maketitle
+
+\clearpage
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+\clearpage
+
+\include{general}
+\include{state}
+\include{requirements}
+\include{supportedoses}
+\include{supporteddrives}
+\include{quickstart}
+\include{install}
+\include{critical}
+\include{tutorial}
+\include{configure}
+\include{dirdconf}
+\include{filedconf}
+\include{storedconf}
+\include{messagesres}
+\include{consoleconf}
+\include{monitorconf}
+\include{console}
+\include{restore}
+\include{catmaintenance}
+\include{recycling}
+\include{disk}
+\include{pools}
+\include{strategies}
+\include{autochangers}
+\include{supportedchangers}
+\include{spooling}
+\include{faq}
+\include{tips}
+\include{progs}
+\include{tapetesting}
+\include{kaboom}
+\include{win32}
+\include{rescue}
+\include{stunnel}
+\include{security}
+\include{firewalls}
+\include{verify}
+\include{rpm-faq}
+\include{bootstrap}
+\include{catalog}
+\include{mysql}
+\include{postgresql}
+\include{sqlite}
+\include{internaldb}
+\include{rescuefloppy}
+\include{license}
+\include{gpl}
+\include{lesser}
+\include{projects}
+\include{thanks}
+\include{bugs}
+\include{vars}
+
+% pull in the index
+\clearpage
+\printindex[dir]
+\printindex[fd]
+\printindex[sd]
+\printindex[console]
+\printindex[general]
+
+\end{document}

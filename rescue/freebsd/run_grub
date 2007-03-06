@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# Script to run grub to recreate the MBR
+#
+# Find boot partition if any
+bootp=`grep "^/dev/.*\ on\ /boot" diskinfo/mount.bsi | cut -d ' ' -f 1`
+# find boot device
+if [ x$bootp != x ] ; then
+   bootdev=`echo $bootp | cut -c1-8`
+else
+   bootdev=`grep "^/dev/.*\ on\ /" diskinfo/mount.bsi | cut -c1-8`
+fi
+chroot /mnt/disk /sbin/grub-install $bootdev
+sync

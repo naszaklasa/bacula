@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+#  Drop Bacula database -- works for whatever is configured,
+#    MySQL, SQLite, PostgreSQL
+#
+if test xsqlite = x@DB_NAME@ ; then
+  @scriptdir@/drop_sqlite_database $*
+else
+  if test xmysql = x@DB_NAME@ ; then 
+    echo "Making MySQL database"
+    @scriptdir@/drop_mysql_database $*
+  else
+    @scriptdir@/drop_postgresql_database $*
+  fi
+fi

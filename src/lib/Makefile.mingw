@@ -1,0 +1,232 @@
+# $Id: Makefile.mingw,v 1.1 2004/04/17 17:37:42 nboichat Exp $
+
+# autoconf/Make.common.in	 -*- Makefile -*-
+# release date (man), LSM date, version number/name, current maintainer
+DATE="15 Apr 2004"
+LSMDATE=15Apr04
+VERSION=1.35.0
+VERNAME=bacula-$(VERSION)#
+MAINT=Kern Sibbald#
+MAINTEMAIL=<kern@sibbald.com>#
+WEBMAINT=#
+WEBMAINTEMAIL=#
+WEBPAGE=#
+FTPSITENAME=#
+FTPSITEDIR=#
+#-------------------------------------------------------------------------
+
+SHELL = /bin/sh
+
+# Installation target directories & other installation stuff
+prefix = 
+exec_prefix = 
+binprefix =
+manprefix =
+sbindir = /sbin
+sysconfdir = /etc/bacula
+scriptdir = /etc/bacula
+mandir = ${prefix}/man/man1
+manext = 1
+
+# Tools & program stuff
+CC = gcc
+CPP = gcc -E
+CXX = g++
+MV = /usr/bin/mv
+RM = /usr/bin/rm
+RMF = /usr/bin/rm -f
+CP = /usr/bin/cp
+SED = /usr/bin/sed
+AWK = /usr/bin/awk
+ECHO = /usr/bin/echo
+CMP = /usr/bin/cmp
+TBL = /usr/bin/tbl
+AR = ar
+RANLIB = ranlib
+INSTALL = /usr/bin/install -c
+# add the -s to the following in PRODUCTION mode
+INSTALL_PROGRAM = /usr/bin/install -c -m 754
+INSTALL_DATA = /usr/bin/install -c -m 644
+INSTALL_SCRIPT = /usr/bin/install -c -m 754
+INSTALL_CONFIG = /usr/bin/install -c -m 640
+
+# Flags & libs
+CFLAGS = -g -O2 -Wall
+CPPFLAGS = 
+LDFLAGS = -O
+TTOOL_LDFLAGS = 
+DEFS = -DHAVE_WIN32 -DHAVE_MINGW
+LIBS = -lpthread 
+DINCLUDE = 
+DLIB = 
+DB_LIBS = 
+
+# Windows (cygwin) flags 
+WCFLAGS = -mwindows
+WLDFLAGS = -mwindows
+
+# X Include directory
+#XINC =  @XPM_CFLAGS@
+
+# extra libraries needed by X on some systems, X library location
+#XLIB =  @XPM_LIBS@ -lX11 
+
+# End of common section of the Makefile
+#-------------------------------------------------------------------------
+
+CWEB = @CWEB@
+CTANGLE = $(CWEB)/ctangle
+CWEAVE = $(CWEB)/cweave
+TEXINPUTS = TEXINPUTS=.:$(CWEB):
+
+# FIXME -- These should be found by autoconf
+TEX = tex
+PDFTEX = pdftex
+XDVI = xdvi
+DVIPS = dvips
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/lib
+
+
+DEBUG=
+
+GMP_INC=@GMP_INC@
+
+first_rule: all
+dummy:
+
+LIBSRCS = alloc.c attr.c base64.c bsys.c bget_msg.c \
+	  bnet.c bnet_server.c \
+	  bpipe.c bshm.c btime.c \
+	  cram-md5.c crc32.c daemon.c edit.c fnmatch.c \
+	  hmac.c idcache.c jcr.c lex.c alist.c dlist.c \
+	  md5.c message.c mem_pool.c parse_conf.c \
+	  queue.c rwlock.c scan.c serial.c sha1.c \
+	  semlock.c signal.c smartall.c tree.c \
+	  util.c var.c watchdog.c workq.c timers.c
+
+
+LIBOBJS = alloc.o attr.o base64.o bsys.o bget_msg.o \
+	  bnet.o bnet_server.o \
+	  bpipe.o bshm.o btime.o \
+	  cram-md5.o crc32.o daemon.o edit.o fnmatch.o \
+	  hmac.o idcache.o jcr.o lex.o alist.o dlist.o \
+	  md5.o message.o mem_pool.o parse_conf.o \
+	  queue.o rwlock.o scan.o serial.o sha1.o \
+	  semlock.o signal.o smartall.o tree.o \
+	  util.o var.o watchdog.o workq.o timers.o
+	  
+
+
+EXTRAOBJS = 
+
+
+.SUFFIXES:	.c .o .ch .dvi .pdf .tex .view .w .1
+.PHONY:
+.DONTCARE:
+
+# inference rules
+compat.o: ../win32/compat/compat.cpp
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I../win32/compat \
+		-I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) -o compat.o ../win32/compat/compat.cpp
+
+.c.o:
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I../win32/compat -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
+.cc.o:
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I../win32/compat -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
+.w.c:
+	$(CTANGLE) $<
+
+.w.tex:
+	$(CWEAVE) $<
+
+.tex.dvi:
+	( $(TEXINPUTS) ; export TEXINPUTS; $(TEX) $< )
+
+.tex.pdf:
+	( $(TEXINPUTS) ; export TEXINPUTS; $(PDFTEX) $< )
+
+.dvi.view:
+	$(XDVI) -s 0 $<
+
+#-------------------------------------------------------------------------
+all: Makefile libbac.a
+	@echo "==== Make of lib is good ===="
+	@echo " "
+
+libbac.a: $(LIBOBJS) compat.o
+	$(AR) rc  $@ $(LIBOBJS) compat.o
+	$(RANLIB) $@
+
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+rwlock_test:
+	rm -f rwlock.o
+	$(CXX) -DTEST_RWLOCK $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) rwlock.c
+	$(CXX) $(LDFLAGS) -L. -o $@ rwlock.o $(LIBS) $(DLIB) -lbac -lm
+	rm -f rwlock.o
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) rwlock.c
+
+md5sum:
+	rm -f md5.o
+	$(CXX) -DMD5_SUM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) md5.c
+	$(CXX) $(LDFLAGS) -L. -o $@ md5.o $(LIBS) $(DLIB) -lbac -lm
+	rm -f md5.o
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) md5.c
+
+
+sha1sum:
+	rm -f sha1.o
+	$(CXX) -DSHA1_SUM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)	$(CFLAGS) sha1.c
+	$(CXX) $(LDFLAGS) -L. -o $@ sha1.o $(LIBS) $(DLIB) -lbac -lm
+	rm -f sha1.o
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) md5.c
+	 
+install:
+
+uninstall:
+
+clean:
+	$(RMF) *.a core a.out *.o *.bak *.tex *.pdf *~ *.intpro *.extpro 1 2 3
+	$(RMF) rwlock_test md5sum sha1sum
+
+realclean: clean
+	$(RMF) tags
+
+distclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+
+# Semi-automatic generation of dependencies:
+# Use gcc -MM because X11 `makedepend' doesn't work on all systems
+# and it also includes system headers.
+# `semi'-automatic since dependencies are generated at distribution time.
+
+depend:
+	@$(MV) Makefile Makefile.bak
+	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
+	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@if test -f Makefile ; then \
+	    $(RMF) Makefile.bak; \
+	else \
+	   $(MV) Makefile.bak Makefile; \
+	   echo -e "Something went wrong\n\a"; \
+	fi
+
+# -----------------------------------------------------------------------
+# DO NOT DELETE: nice dependency list follows

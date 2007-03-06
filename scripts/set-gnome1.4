@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# Simple script to change the package configuration to 
+#   Gnome 1.4 level.
+#
+MUID=`/usr/bin/id -u`
+if [ $MUID != 0 ] ; then
+   echo " "
+   echo "You must be root to run this script."
+   echo " "
+   exit 1
+fi
+cd /usr/lib/pkgconfig
+if test  -f libgnomeui-2.0.pc.orig ; then
+   rm -f libgnomeui-2.0.pc
+else
+   mv libgnomeui-2.0.pc libgnomeui-2.0.pc.orig
+fi

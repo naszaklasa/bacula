@@ -1,0 +1,60 @@
+#! /bin/sh
+#
+# bacula       This shell script takes care of starting and stopping
+#	       the bacula Director daemon
+#
+# chkconfig: 2345 92 9
+# description: It comes by night and sucks the vital essence from your computers.
+#
+#  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
+#
+
+# Source function library
+. /etc/rc.d/init.d/functions
+
+DIR_USER=@dir_user@
+DIR_GROUP=@dir_group@
+OS=`uname -s`
+
+# if /lib/tls exists, force Bacula to use the glibc pthreads instead
+if [ -d "/lib/tls" -a $OS = "Linux" ] ; then
+     export LD_ASSUME_KERNEL=2.4.19
+fi
+RETVAL=0
+case "$1" in
+    start)
+       OPTIONS=''
+       if [ "${DIR_USER}" != '' ]; then
+	  OPTIONS="${OPTIONS} -u ${DIR_USER}"
+       fi
+										   
+       if [ "${DIR_GROUP}" != '' ]; then
+	  OPTIONS="${OPTIONS} -g ${DIR_GROUP}"
+       fi
+       echo -n "Starting Bacula Director services: "
+       daemon @sbindir@/bacula-dir $2 ${OPTIONS} -c @sysconfdir@/bacula-dir.conf
+       RETVAL=$?
+       echo
+       [ $RETVAL -eq 0 ] && touch @subsysdir@/bacula-dir
+       ;;
+    stop)
+       echo -n "Stopping Bacula Director services: "
+       killproc @sbindir@/bacula-dir
+       RETVAL=$?
+       echo
+       [ $RETVAL -eq 0 ] && rm -f @subsysdir@/bacula-dir
+       ;;
+    restart)
+       $0 stop
+       sleep 5
+       $0 start
+       ;;
+    status)
+       status @sbindir@/bacula-dir
+       ;;
+    *)
+       echo "Usage: $0 {start|stop|restart|status}"
+       exit 1
+       ;;
+esac
+exit 0

@@ -1,0 +1,65 @@
+
+ This patch fixes two bugs in the job queue scheduling:
+ 1. It clears the SD status when rescheduling a job so that
+    the correct status will be displayed by the Director.
+ 2. When starting a reschedule thread, it decrements the jcr
+    use_count so that the job will not become a zombie.
+
+ Apply it to 1.34.6 (possibly to earlier versions with):
+
+ cd <bacula-source>
+ patch -p0 <1.34.6-resched.patch
+ make
+ ...
+
+Index: src/dird/jobq.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/jobq.c,v
+retrieving revision 1.19
+diff -u -r1.19 jobq.c
+--- src/dird/jobq.c	1 Jun 2004 20:10:04 -0000	1.19
++++ src/dird/jobq.c	1 Sep 2004 17:22:51 -0000
+@@ -160,11 +160,11 @@
+    Dmsg0(300, "Enter sched_wait.\n");
+    free(arg);
+    time_t wtime = jcr->sched_time - time(NULL);
++   set_jcr_job_status(jcr, JS_WaitStartTime);
+    /* Wait until scheduled time arrives */
+    if (wtime > 0 && verbose) {
+       Jmsg(jcr, M_INFO, 0, _("Job %s waiting %d seconds for scheduled start time.\n"), 
+ 	 jcr->Job, wtime);
+-      set_jcr_job_status(jcr, JS_WaitStartTime);
+    }
+    /* Check every 30 seconds if canceled */ 
+    while (wtime > 0) {
+@@ -217,10 +217,10 @@
+       sched_pkt = (wait_pkt *)malloc(sizeof(wait_pkt));
+       sched_pkt->jcr = jcr;
+       sched_pkt->jq = jq;
++      jcr->use_count--; 	   /* release our use of jcr */
+       stat = pthread_create(&id, &jq->attr, sched_wait, (void *)sched_pkt);	   
+       if (stat != 0) {		      /* thread not created */
+          Jmsg1(jcr, M_ERROR, 0, "pthread_thread_create: ERR=%s\n", strerror(stat));
+-	 jcr->use_count--;	      /* release jcr */
+       }
+       return stat;
+    }
+@@ -465,6 +465,7 @@
+             Dmsg2(300, "Rescheduled Job %s to re-run in %d seconds.\n", jcr->Job,
+ 	       (int)jcr->job->RescheduleInterval);
+ 	    jcr->JobStatus = JS_Created; /* force new status */
++	    jcr->SDJobStatus = 0;
+ 	    dird_free_jcr(jcr); 	 /* partial cleanup old stuff */
+ 	    if (jcr->JobBytes == 0) {
+                Dmsg1(300, "Requeue job=%d\n", jcr->JobId);
+@@ -501,8 +502,10 @@
+ 	    jcr->db = NULL;
+ 	 }
+          Dmsg1(300, "====== Termination job=%d\n", jcr->JobId);
++	 V(jq->mutex);		      /* release internal job queue lock */
+ 	 free_jcr(jcr);
+ 	 free(je);		      /* release job entry */
++	 P(jq->mutex);		      /* acquire internal job queue lock */
+       }
+       /*
+        * If any job in the wait queue can be run,

@@ -1,0 +1,78 @@
+#
+# Makefile to build the native Win32 File daemon
+# VC++ and tools must be on your path
+#
+#     Kern Sibbald, February 2004
+#
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/win32
+
+DEBUG=@DEBUG@
+
+
+NMAKE=nmake
+MAKENSIS="c:/Program Files/NSIS/makensis"
+
+first_rule: all
+
+dummy:
+
+all:  bacula bconsole wx-console pebuilder installer
+
+
+bacula: dummy
+	(cd baculafd; env MAKEFLAGS= ${NMAKE} CFG="baculafd - Win32 Release" /f baculafd.mak)
+
+bconsole: dummy
+	(cd console; env MAKEFLAGS= ${NMAKE} CFG="console - Win32 Release" /f console.mak)
+	
+wx-console: dummy
+	(cd wx-console; env MAKEFLAGS= ${NMAKE} CFG="wx-console - Win32 Release" /f wx-console.mak)
+
+pebuilder: bacula bconsole wx-console
+	(cd pebuilder; make)
+
+#
+# Quickie debug installation
+#
+install: bacula
+	cp -f ../../../depkgs-win32/pthreads/pthreadVCE.dll baculafd/Release
+	cp -f bacula-fd.conf baculafd/Release
+	(cd baculafd/Release; ./bacula-fd.exe /kill)
+	sleep 2
+	cp -f baculafd/Release/bacula-fd.exe /bacula/bin 
+	@echo "Please start Bacula from the Service Menu"
+
+installer: winbacula.exe
+
+#
+# Build installer
+#
+winbacula.exe: bacula
+	${MAKENSIS} /V2 winbacula.nsi
+
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status winbacula.nsi.in
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= \
+	  $(SHELL) ./config.status
+
+clean:
+	(cd baculafd; make clean)
+	(cd console; make clean)
+	(cd wx-console; make clean)
+	(cd pebuilder; make clean)
+
+distclean: clean
+	rm -rf baculafd/Release baculafd/Debug
+	rm -f winbacula-*.exe
+	rm -f winbacula-bartpe-*.zip

@@ -1,0 +1,26 @@
+; PE Builder v3 plug-in INF file for bacula
+; Copyright 2004 D. Scott Barninger
+; licensed under the GNU GPL v2
+
+[Version]
+Signature= "$Windows NT$"
+
+[PEBuilder]
+Name="Bacula Client"
+Enable=1
+
+[WinntDirectories]
+a="Programs\bacula",3
+
+[SourceDisksFiles]
+files\bacula-fd.exe=a,,1
+files\bacula-fd.conf=a,,1
+files\bconsole.exe=a,,1
+files\bconsole.conf=a,,1
+files\License.txt=a,,1
+files\pthreadVCE.dll=a,,1
+files\wx-console.exe=a,,1
+files\wx-console.conf=a,,1
+
+[Append]
+nu2menu.xml, bacula_nu2menu.xml

@@ -1,0 +1,35 @@
+# Makefile to install bimagemgr utility
+# 29 Aug 2004 D. Scott Barninger
+
+BINOWNER=@bimagemgr_binowner@
+BINGROUP=@bimagemgr_bingroup@
+DATAOWNER=@bimagemgr_dataowner@
+DATAGROUP=@bimagemgr_datagroup@
+CGIDIR=@bimagemgr_cgidir@
+DOCDIR=@bimagemgr_docdir@
+SYSCONFDIR=@sysconfdir@
+INSTALL=@INSTALL@
+
+all:	install
+
+install:
+	$(INSTALL) -d $(DESTDIR)$(CGIDIR)
+	$(INSTALL) -d $(DESTDIR)$(DOCDIR)
+	$(INSTALL) -d $(DESTDIR)$(SYSCONFDIR)
+
+	$(INSTALL) -o $(BINOWNER) -g $(BINGROUP) -m 755 bimagemgr.pl $(DESTDIR)$(CGIDIR)
+	$(INSTALL) -o $(BINOWNER) -g $(BINGROUP) -m 750 create_cdimage_table.pl $(DESTDIR)$(SYSCONFDIR)
+	$(INSTALL) -o $(BINOWNER) -g $(BINGROUP) -m 644 README $(DESTDIR)$(SYSCONFDIR)/README.bimagemgr
+	$(INSTALL) -o $(BINOWNER) -g $(BINGROUP) -m 644 bimagemgr.gif $(DESTDIR)$(DOCDIR)
+	$(INSTALL) -o $(BINOWNER) -g $(BINGROUP) -m 644 cdrom_spins.gif $(DESTDIR)$(DOCDIR)
+	$(INSTALL) -o $(BINOWNER) -g $(BINGROUP) -m 644 clearpixel.gif $(DESTDIR)$(DOCDIR)
+	$(INSTALL) -o $(DATAOWNER) -g $(DATAGROUP) -m 664 temp.html $(DESTDIR)$(DOCDIR)
+
+uninstall:
+	rm -f $(DESTDIR)$(DOCDIR)/bimagemgr.gif
+	rm -f $(DESTDIR)$(DOCDIR)/cdrom_spins.gif
+	rm -f $(DESTDIR)$(DOCDIR)/clearpixel.gif
+	rm -f $(DESTDIR)$(DOCDIR)/temp.html
+	rm -f $(DESTDIR)$(SYSCONFDIR)/create_cdimage_table.pl
+	rm -f $(DESTDIR)$(CGIDIR)/bimagemgr.pl
+	rm -f $(DESTDIR)$(SYSCONFDIR)/README.bimagemgr

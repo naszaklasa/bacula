@@ -1,0 +1,22 @@
+From: Volker Sauer <volker@volker-sauer.de>
+To: =?ISO-8859-1?Q?Daniel_Ch=E9nard?= <dchenard@croesus.com>
+CC: Bacula users <bacula-users@lists.sourceforge.net>
+Subject: Re: [Bacula-users] Bacula and the ACL
+Date: Tue, 20 Jan 2004 23:32:52 +0100
+
+You could use a script like that to dump the acls to a file which you 
+could restore with "setfacl --restore=<acl-file>" in case of a restore.
+
+
+#!/bin/bash
+
+BACKUP_DIRS="/foo /bar"
+
+STORE_ACL=/root/acl-backup
+umask 077
+
+for i in $BACKUP_DIRS; do
+    cd $i
+    /usr/bin/getfacl -R --skip-base . >$STORE_ACL/${i//\//_}
+done
+

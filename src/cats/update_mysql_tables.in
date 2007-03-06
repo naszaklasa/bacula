@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# Shell script to update MySQL tables from version 1.34 to 1.35.5
+#
+echo " "
+echo "This script will update a Bacula MySQL database from version 7 to 8"
+echo "Depending on the size of your database,"
+echo "this script may take several minutes to run."
+echo " "
+bindir=@SQL_BINDIR@
+
+if $bindir/mysql $* -f <<END-OF-DATA
+USE bacula;
+
+ALTER TABLE Media ADD COLUMN EndFile INTEGER UNSIGNED NOT NULL DEFAULT 0;
+ALTER TABLE Media ADD COLUMN EndBlock INTEGER UNSIGNED NOT NULL DEFAULT 0;
+
+ALTER TABLE File ADD INDEX (JobId, PathId, FilenameId);
+
+UPDATE Filename SET Name='' WHERE Name=' ';
+
+CREATE TABLE CDImages (
+   MediaId INTEGER UNSIGNED NOT NULL,
+   LastBurn DATETIME NOT NULL,
+   PRIMARY KEY (MediaId)
+   );
+
+DELETE FROM Version;
+INSERT INTO Version (VersionId) VALUES (8);
+
+END-OF-DATA
+then
+   echo "Update of Bacula MySQL tables succeeded."
+else
+   echo "Update of Bacula MySQL tables failed."
+fi
+exit 0

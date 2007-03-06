@@ -1,0 +1,37 @@
+# btraceback.dbx
+
+echo "******** RUNNING LWPS/THREADS:"
+echo
+lwps
+
+echo
+echo
+echo "******** STACK TRACE OF CURRENT LWP:"
+echo
+where
+
+echo
+echo
+echo "******** VARIABLES DUMP OF CURRENT LWP:"
+echo
+dump
+
+for LWP in 1 2 3 4 5 6 7 8; do
+	(
+	if lwp l@$LWP; then
+		echo 
+		echo 
+		echo "******** STACK TRACE OF LWP ${LWP}:"
+		echo
+		where
+
+		echo
+		echo
+		echo "******** VARIABLES DUMP OF LWP ${LWP}:"
+		echo
+		dump
+		
+	fi
+	)
+done
+quit

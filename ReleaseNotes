@@ -1,0 +1,197 @@
+
+          Release Notes for Bacula 1.36.3
+
+  Bacula code: Total files = 398 Total lines = 118,000 (*.h *.c *.in)
+
+Major Changes to version 1.36.3:
+- Applied all fixes for bugs since version 1.36.2 (see below)
+- Use fseeko and ftello so that attributes can exceed 4 GB.
+- Thanks to Karl Cunningham's hard work and skilled Perl      
+  programming, the manual is now in LaTeX format
+  and has an index!
+- Drop support of old style Include/Excludes (see below).
+
+New Directives in 1.36.3:
+- None, but see 1.36.2 additions below.
+
+New Commands:
+- None since 1.36.1
+
+Items to note for 1.36.3!!!
+- Drop support of old style Include/Excludes. Matt Howard has
+  supplied a handy Perl program that will do a good job of
+  converting your FileSets. It can be found in 
+  examples/conf/fileset_convert.pl
+- Dan has reminded us that the arguments for make_catalog_backup
+  changed from 1.34.x to 1.36.1. The old arguments were typically
+  "-U bacula".  The new arguments are typically "bacula bacula",
+  where the first is the database name, and the second is the
+  user name.
+
+Patches applied:
+
+04Mar05 1.36.2-level.patch
+ This patch should fix a problem with th %l editing in the 
+ client (FD) where it edited nothing. With this fix, it should
+ edit "since".  
+
+04Mar05 1.36.2-pool.patch
+ This patch corrects a problem preventing multiple 
+ simultaneous jobs from different pools.
+
+09Mar05 1.36.2-win32-drive.patch
+ This patch will prevent the Win32 FD from printing an error message
+ when it attempts to restore the permissions for a drive (which Win32
+ doesn't permit). The error is harmless in any case.
+
+15Mar05 1.36.2-netbsd.patch
+ This patch corrects a compile problem because of no statfs() 
+ on NetBSD. The patch was submitted by kardel with bug 258.
+
+16Mar05 1.36.2-console.patch
+ This patch causes the output directed to a file to be
+ flushed after every line. This is a bit overkill, IMO, but
+ a user complained about it.
+
+17Mar05 1.36.2-restore-speed.patch
+ This patch will fix a subtle bug that was introduced in 1.36.2
+ which causes Bacula to be very slow restoring a few files. This
+ is because it reads completely to the end of the Volume rather
+ than stopping when all the files on the Volume are loaded. The
+ introduction of the bug was caused by a patch that fixed 
+ Bacula truncating tapes after a restore.
+ Note that all source files will be rebuilt during the make.
+   
+18Mar05 1.36.2-store.patch
+ This patch fails a job if no Storage resource is specified and
+ the job attempts to call the SD.
+
+18Mar05 1.36.2-reschedule.patch
+ This patch should fix a Segfault bug when a job is rescheduled.
+ The storage pointers were being released when they should not
+ have been.
+
+24Mar05 1.36.2-wx-console-bugfixes.patch
+ Major wx-console fixes (see src/wx-console/CHANGELOG for details).
+
+28Mar05 1.36.2-tray-monitor-memleak.patch
+ This patch should fix memory leaks in tray-monitor.
+
+================================================================
+
+Items to note for 1.36.2!!!
+- Dan has reminded us that the arguments for make_catalog_backup
+  changed from 1.34.x to 1.36.1. The old arguments were typically
+  "-U bacula".  The new arguments are typically "bacula bacula",
+  where the first is the database name, and the second is the
+  user name.
+
+Patches applied:
+
+03Dec04  1.36.1-pool.patch
+ This patch should hold jobs in the Director's start queue if
+ more than one simultaneous backup job wants to use the same
+ Storage device with two different Pools (i.e. 2 Volumes).
+
+03Dec04  1.16.1-slots.patch
+ This patch should fix "update slots" with two different
+ magazines in different pools by checking the pool when zapping
+ the InChanger.
+
+18Dec04 1.36.1-spool.patch
+ This patch fixes the despooling size printed in the Job 
+ report. Previously, it reported the total size for the
+ device. This patch makes it report the size for the job.
+
+21Dec04 1.36.1-store.patch
+ This patch fixes a problem with overriding storage daemon
+ specifications. Previously they were not always honored.
+ This implements more uniform handling. It also eliminates
+ an orphaned buffer situation using JobDefs.
+
+21Dec04 1.36.1-reload.patch
+ This patch fixes Bacula so that it does not exit if there
+ is a syntax error in its conf file during a reload command.
+
+24Dec04 1.36.1-fileset.patch
+ This patch should correct a seg fault in the FD that occurs
+ at the end of a job when the job uses old style include/excludes.
+ Old style include/excludes are deprecated and should be
+ converted to the new style as soon as possible.
+
+30Jan05 1.36.1-acl.patch
+ This patch fixes some typos with ACL checking that results
+ in the incorrect name being used for the check.
+ This fixes possible security problems with unwanted 
+ access by restricted consoles.
+
+15Feb05 1.36.1-truncate.patch
+ This patch fixes a bug where a tape gets "truncated" after
+ doing a restore. The number of files in the catalog do not
+ agree with what Bacula thinks is on tape, then the tape is
+ marked in error.
+
+===
+Items to note for version 1.36.1:
+- The output from Job reports has been modified to include the 
+  seconds on the start/end times, the Storage device used, and to
+  indent the output differently.
+- If you created a PostgreSQL database under version 1.36.0, there
+  are two things you might want to do. 1. manually remove some
+  of the File table indexes to improve backup performance. See the
+  make_postgresql_tables script. 2. run fix_postgresql_tables (in
+  src/cats and updatedb) to correct a table. This is necessary only
+  if you are creating disk Volumes greater than 2GB.
+- As of 1.35.5 you MUST do a database update.
+  
+  cd scripts-dir (or src/cats)
+  ./update_bacula_tables
+   
+- All daemons should be compatible with 1.34 with the exception
+  of the new FileSet features such as regular expressions.
+- Regular expressions are not supported in the Win32 FD.
+
+
+Major Changes to version 1.36.1:
+- There is a new Win32 pebuilder rescue disk thanks to Scott. This
+  is worth the effort to checkout.
+- A number of indexes have been removed from the PostgreSQL
+  database to improve performance during backups. You may need to
+  add these indexes if you do Verifies. See the scripts.
+- We now have a Gentoo ebuild -- thanks Scott.
+- There are a number of new ./configure options for the 
+  bimagemgr. Please see the documentation or ./configure --help
+- The RedHat autostart scripts disable using /lib/tls. If you
+  don't want this you will need to turn it off.
+- Corrected a problem with the default SD and FD conf files that
+  incorrectly set Maximum Concurrent Jobs = 1. This prevented
+  running a job and obtaining the status at the same time.
+- All daemon messages are now prefixed with a short date/time,
+  and queued messages (generated in the comm routines) have the
+  time the message was generated rather than the time the message
+  was sent (usually much later).
+- Fixed a bug with the autochanger code not respecting the InChanger
+  flag.
+
+Other Items:
+- It is now possible to build the Rescue CDROM using a pre-installed
+  static Bacula FD.
+- Corrected a bug in the traceback code when Bacula was executed without
+  a path. Tracebacks should now work in more cases.
+- Corrected a typo in the traceback script.
+- Fixed the mtx autochanger script so that it correctly waits on
+  Linux systems (if you manually enable the code).
+- Added grant all on cdimages for PostgreSQL users of bimagemgr.
+- The actual Job start time is now correctly recorded in the catalog.
+- You can now specify a JobId (or multiple ones separated by commas) on
+  the restore command line.
+- A -d50 will now turn on lots of debug code if you are having
+  authentication errors.
+- Found a workaround to a /lib/tls pthreads bug (a library seg fault).
+- Added an ALERT message class for Alert messages.
+- Fixed a seg fault in the restore tree routine when attempting
+  to select certain files in the root directory.
+- Allow other jobs to request new Volumes while operator intervention
+  is needed -- previously all stalled.
+- Enhancements to btape test (don't loop if certain tape errors occur).
+- Improvements to the Win32 install.

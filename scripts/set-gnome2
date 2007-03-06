@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# Simple script to set the Gnome package level
+#   to Gnome 2.0
+#
+MUID=`/usr/bin/id -u`
+if [ $MUID != 0 ] ; then
+   echo " "
+   echo "You must be root to run this script."
+   echo " "
+   exit 1
+fi
+cd /usr/lib/pkgconfig
+if test -f libgnomeui-2.0.pc.orig ; then
+   cp -fp libgnomeui-2.0.pc.orig libgnomeui-2.0.pc
+fi

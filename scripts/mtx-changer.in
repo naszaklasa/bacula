@@ -1,0 +1,146 @@
+#!/bin/sh
+#
+# Bacula interface to mtx autoloader
+#
+#  $Id: mtx-changer.in,v 1.11.2.1 2004/11/05 21:53:52 kerns Exp $
+#
+#  If you set in your Device resource
+#
+#  Changer Command = "path-to-this-script/mtx-changer" %c %o %S %a %d
+#    you will have the following input to this script:
+#
+#  mtx-changer "changer-device" "command" "slot" "archive-device" "drive-index"
+#		   $1		   $2	    $3	      $4	       $5
+#
+#  for example:
+#
+#  mtx-changer /dev/sg0 load 1 /dev/nst0 0 (on a Linux system)
+#
+#  If you need to an offline, refer to the drive as $4
+#    e.g.   mt -f $4 offline
+#
+#  Many changers need an offline after the unload. Also many
+#   changers need a sleep 60 after the mtx load.
+#
+#  N.B. If you change the script, take care to return either 
+#   the mtx exit code or a 0. If the script exits with a non-zero
+#   exit code, Bacula will assume the request failed.
+#
+
+MTX=@MTX@
+
+#
+# The purpose of this function to wait a maximum 
+#   time for the drive. It will
+#   return as soon as the drive is ready, or after
+#   waiting a maximum of 180 seconds.
+# Note, this is very system dependent, so if you are
+#   not running on Linux, you will probably need to
+#   re-write it.
+#
+# If you have a FreeBSD system, you might want to change
+#  the $(seq 180) to $(jot 180) -- tip from Brian McDonald
+#
+wait_for_drive() {
+  for i in $(seq 180); do   # Wait max 180 seconds
+    if mt -f $1 status | grep ONLINE  >/dev/null 2>&1; then
+      break
+    fi
+#   echo "Device $1 - not ready, retrying..."
+    sleep 1
+  done
+}
+
+
+if test $# -lt 2 ; then
+  echo "usage: mtx-changer ctl-device command slot archive-device drive"
+  echo "  Insufficient number of arguments arguments given."
+  echo "  Mimimum usage is first two arguments ..."
+  exit 1
+fi
+
+# Setup arguments
+ctl=$1
+cmd="$2"
+slot=$3
+device=$4
+# If drive not given, default to 0
+if test $# = 5 ; then
+  drive=$5
+else
+  drive=0
+fi
+
+#
+# Check for special cases where only 2 arguments are needed, 
+#  all others are a minimum of 3
+case $cmd in
+   loaded)
+     ;;
+   unload)
+     ;;
+   list)
+     ;;
+   slots)
+     ;;
+   *)
+     if test $# -lt 3; then
+	echo "usage: mtx-changer ctl-device command slot archive-device drive"
+	echo "	Insufficient number of arguments arguments given."
+	echo "	Mimimum usage is first three arguments ..."
+	exit 1
+     fi
+     ;;
+esac
+
+
+case $cmd in 
+   unload)
+#     echo "Doing mtx -f $ctl unload $slot $drive"
+#
+# enable the following line if you need to eject the cartridge
+#     mt -f $device offline
+      if test x$slot = x; then
+	 ${MTX} -f $ctl unload
+      else
+	 ${MTX} -f $ctl unload $slot $drive
+      fi
+      ;;
+
+   load)
+#     echo "Doing mtx -f $ctl load $slot $drive"
+      ${MTX} -f $ctl load $slot $drive
+      rtn=$?
+#
+# Increase the sleep time if you have a slow device
+# or remove the sleep and add the following:
+#     wait_for_drive $device
+      sleep 15
+      exit $rtn
+      ;;
+
+   list) 
+#     echo "Requested list"
+      ${MTX} -f $ctl status | grep " *Storage Element [0-9]*:.*Full" | awk "{print \$3 \$4}" | sed "s/Full *\(:VolumeTag=\)*//"
+# Comment out the previous line and add a line here
+# to print "fake" barcodes.
+#
+# If you have a VXA PacketLoader and the above does not work, try
+#  turning it off and enabling the following line.
+#     ${MTX} -f $ctl status | grep " *Storage Element [0-9]*:.*Full" | sed "s/*Storage Element //" | sed "s/Full :VolumeTag=//"
+      ;;
+
+   loaded)
+      ${MTX} -f $ctl status >/tmp/mtx.$$
+      rtn=$?
+      cat /tmp/mtx.$$ | grep "^Data Transfer Element $drive:Full" | awk "{print \$7}"
+      cat /tmp/mtx.$$ | grep "^Data Transfer Element $drive:Empty" | awk "{print 0}"
+      rm -f /tmp/mtx.$$
+      exit $rtn
+      ;;
+
+   slots)
+#     echo "Request slots"
+      ${MTX} -f $ctl status | grep " *Storage Changer" | awk "{print \$5}"
+      ;;
+esac

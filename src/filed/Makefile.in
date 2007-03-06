@@ -1,0 +1,153 @@
+#
+# Bacula Makefile for the File daemon
+#
+#  Version $Id: Makefile.in,v 1.14 2004/09/24 12:30:14 kerns Exp $
+#
+
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/filed
+
+DEBUG=@DEBUG@
+
+first_rule: all
+dummy:
+
+#
+SVRSRCS = filed.c authenticate.c backup.c estimate.c \
+	  filed_conf.c heartbeat.c job.c \
+	  restore.c status.c verify.c verify_vol.c
+SVROBJS = filed.o authenticate.o backup.o estimate.o \
+	  filed_conf.o heartbeat.o job.o \
+	  restore.o status.o verify.o verify_vol.o
+
+# these are the objects that are changed by the .configure process
+EXTRAOBJS = @OBJLIST@
+
+FDLIBS = @FDLIBS@		  # extra libs for File daemon
+
+# extra items for linking on Win32
+WIN32OBJS = win32/winmain.o win32/winlib.a win32/winres.res
+win32 = $(WIN32OBJS) -luser32 -lgdi32
+
+WIN32LIBS = $(@WIN32@)
+
+.SUFFIXES:	.c .o
+.PHONY:
+.DONTCARE:
+
+# inference rules
+.c.o:
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+#-------------------------------------------------------------------------
+all: Makefile @WIN32@ bacula-fd @STATIC_FD@
+	@echo "==== Make of filed is good ===="
+	@echo " "
+
+win32/winlib.a:
+	(cd win32; $(MAKE) DESTDIR=$(DESTDIR))
+	@rm -f bacula-fd.exe
+
+win32/winmain.o:
+	(cd win32; $(MAKE) DESTDIR=$(DESTDIR))
+	@rm -f bacula-fd.exe
+
+win32/winres.res:
+	(cd win32; $(MAKE) DESTDIR=$(DESTDIR))
+	@rm -f bacula-fd.exe
+
+# win32 libraries if needed
+win32:	$(WIN32OBJS)
+	(cd win32; $(MAKE) DESTDIR=$(DESTDIR))
+	@rm -f bacula-fd.exe
+
+bacula-fd:  $(SVROBJS) ../findlib/libfind.a ../lib/libbac.a @WIN32@
+	$(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(SVROBJS) \
+	  $(WIN32LIBS) $(FDLIBS) -lfind -lbac -lm $(LIBS) $(DLIB)
+
+static-bacula-fd:  $(SVROBJS) ../findlib/libfind.a ../lib/libbac.a @WIN32@
+	$(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../findlib -o $@ $(SVROBJS) \
+	   $(WIN32LIBS) $(FDLIBS) -lfind -lbac -lm $(LIBS) $(DLIB)
+	strip $@
+
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+clean:
+	@$(RMF) bacula-fd filed core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
+	@$(RMF) static-bacula-fd
+	if test -f win32/Makefile; then \
+	   (cd win32; $(MAKE) clean); \
+	fi
+
+realclean: clean
+	@$(RMF) tags bacula-fd.conf
+
+distclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+	if test -f win32/Makefile; then \
+	   (cd win32; $(MAKE) distclean); \
+	fi
+
+devclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+	if test -f win32/Makefile; then \
+	   (cd win32; $(MAKE) devclean); \
+	fi
+
+install: all
+	$(INSTALL_PROGRAM) bacula-fd $(DESTDIR)$(sbindir)/bacula-fd 
+	@srcconf=bacula-fd.conf; \
+	if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
+	   destconf=$$srcconf.new; \
+	   echo "  ==> Found existing $$srcconf, installing new conf file as $$destconf"; \
+	else \
+	   destconf=$$srcconf; \
+	fi; \
+	echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
+	${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
+	@if test -f static-bacula-fd; then \
+	   $(INSTALL_PROGRAM) static-bacula-fd $(DESTDIR)$(sbindir)/static-bacula-fd; \
+	fi
+
+
+
+uninstall:
+	(cd $(DESTDIR)$(sbindir); $(RMF) bacula-fd)
+	(cd $(DESTDIR)$(sbindir); $(RMF) bacula-fd.conf)
+	(cd $(DESTDIR)$(sbindir); $(RMF) bacula-fd.conf.new)
+
+
+
+# Semi-automatic generation of dependencies:
+# Use gcc -MM because X11 `makedepend' doesn't work on all systems
+# and it also includes system headers.
+# `semi'-automatic since dependencies are generated at distribution time.
+
+depend:
+	@$(MV) Makefile Makefile.bak
+	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
+	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@if test -f Makefile ; then \
+	    $(RMF) Makefile.bak; \
+	else \
+	   $(MV) Makefile.bak Makefile; \
+	   echo -e "Something went wrong\n\a"; \
+	fi
+
+# -----------------------------------------------------------------------
+# DO NOT DELETE: nice dependency list follows

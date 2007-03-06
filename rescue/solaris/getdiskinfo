@@ -1,0 +1,92 @@
+#!/bin/sh
+#
+# Create bootstrap information files -- prelude to creating a
+#   Bacula Rescue Disk
+#
+#  Solaris version
+#
+#   Kern Sibbald, December MMII
+#      This source distributed under the GPL
+#
+di=diskinfo
+cwd=`pwd`
+host=`uname -s`
+case $host in
+ Linux)
+   echo ""
+   echo "This is the Solaris script. Please use the Linux version."
+   echo ""
+   exit 1
+   ;;
+ SunOS)
+   echo ""
+   echo "This is preliminary code and not yet"      
+   echo "tested or guaranteed to work ..."
+   echo ""
+   ;;
+ FreeBSD | IRIX)
+   echo ""
+   echo "This code is not yet adapted to this OS"     
+   exit 1
+   ;;
+ *)
+   echo ""
+   echo "Unknown operating system type: $host"     
+   exit 1
+   ;;
+esac
+uid=`id | cut -d'(' -f1 | cut -d'=' -f2`
+if [ "$uid" -ne "0" ]; then
+  echo ""
+  echo "You need to be root to run this, otherwise"
+  echo "the results are not optimal. Continuing anyway ..."
+  echo ""
+fi
+
+#
+#  First collect information
+#
+echo "Begin collecting system info"
+mkdir -p $di
+cd $di
+mount -p >mount.bsi
+if [ -e /etc/fstab ] ; then
+   cp /etc/fstab fstab.bsi
+fi
+if [ -e /etc/vfstab ] ; then
+   cp /etc/vfstab vfstab.bsi
+fi
+df -tkFnfs >df.bsi
+df -l >dflocal.bsi
+../SysAudit >sysaudit.bsi
+route -n >route.bsi
+ifconfig -a >ifconfig.bsi
+
+
+echo "Done collecting info. Building scripts ..."
+
+#
+# Done collecting information
+#
+
+
+cd $cwd
+
+#
+# Create network start script
+#
+dev=`cat $di/ifconfig.bsi | grep BROADCAST | awk -F: '{print $1}' | head -1`
+ip=`ifconfig $dev | grep inet | awk '{print $2}'`
+cat >start_network <<END_OF_DATA
+#!/bin/sh
+#
+#  Start network -- created by getdiskinfo
+#
+ip=$ip
+dev=$dev
+ifconfig leo up
+ifconfig \$dev up \$ip
+route add default gw \$ip dev \$dev
+END_OF_DATA
+
+chmod 755 start_network

@@ -1,0 +1,19 @@
+#! /bin/sh
+#
+#   Generate a random password, written to standard output
+#   By John Walker
+#
+if test "x$1" = "x" ; then
+   PWL=48      # Password length in characters
+else
+   PWL=$1
+fi 
+tmp=/tmp/p.tmp.$$    
+cp autoconf/randpass.bc $tmp
+ps | sum | tr -d ':[:alpha:] ' | sed 's/^/k=/' >>$tmp
+date | tr -d ':[:alpha:] ' | sed 's/^/k=k*/' >>$tmp
+ls -l /tmp | sum | tr -d ':[:alpha:] ' | sed 's/^/k=k*/' >>$tmp
+echo "j=s(k); for (i = 0; i < $PWL; i++) r()" >>$tmp
+echo "quit" >>$tmp
+bc $tmp | awk -f autoconf/randpass.awk
+rm $tmp

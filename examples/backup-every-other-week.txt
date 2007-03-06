@@ -1,0 +1,76 @@
+
+From: Robert L Mathews <lists@tigertech.com>
+To: <bacula-users@lists.sourceforge.net>
+Subject: [Bacula-users] Making Backups Run Every Other Week
+Date: Wed, 13 Aug 2003 10:04:23 -0700
+
+In case anyone is interested, here's a tip I came up with.
+
+My backup policy is such that I need backups to run every other week. I 
+have two separate "offsite" tape pools, and a backup is made to each of 
+them on alternating weeks.
+
+Bacula's scheduler currently doesn't handle "every two weeks", and using 
+something like "the first and third weeks for backup A, and the second 
+and fourth weeks for backup B" means there will be no backup done on the 
+fifth week if the month contains one. Scheduling a backup for the fifth 
+week doesn't help; it means that the same backup would sometimes run 
+twice in a row, which ruins the alternating week scheme.
+
+I first thought of poking around the code to make the scheduler support 
+"every two weeks", and I someday may still do so. However, I found an 
+easier way to do this is in the meantime: with a RunBeforeJob line.
+
+What I do is schedule both jobs to run every single week. Then the job 
+that runs my "Offsite Backup A" has this line:
+
+  RunBeforeJob = "/etc/bacula/two_week_script 'July 6 2003'"
+
+And the job with my "Offsite Backup B" has this one:
+
+  RunBeforeJob = "/etc/bacula/two_week_script 'July 13 2003'"
+
+And two_week_script is the following Perl script:
+
+----------------
+
+#!/usr/bin/perl -w
+
+use strict;
+use constant SECONDS_IN_WEEK => 86400 * 7;
+use constant SECONDS_IN_TWO_WEEKS => SECONDS_IN_WEEK * 2;
+
+# Calculate the elapsed seconds since the starting date,
+# which must be in a format that /bin/date can understand
+# Note that this relies on the GNU "%s" date extension
+my $start_date = shift;
+$start_date = `/bin/date -d '$start_date' +'%s'`;
+chomp $start_date;
+my $time_since_start_date = time - $start_date;
+
+# Now take those seconds modulo the number of seconds in
+# two weeks. If we're in the second half of the two week
+# period, exit with an error to stop the Bacula job. If
+# we're in the first half, the script will terminate normally
+# and the Bacula job will run.
+if ($time_since_start_date % SECONDS_IN_TWO_WEEKS
+        >= SECONDS_IN_WEEK)
+{
+        exit 1;
+}
+
+----------------
+
+The result is that the script cancels the job that should not be run that 
+week, while allowing the other job to continue.
+
+This idea could be trivially changed to support running every three 
+weeks, every two months, every prime number of days, etc.
+
+Anyway, just a tip in case anyone else needs to schedule things in a way 
+that the scheduler doesn't currently support. It's pretty obvious that 
+this is the right way to do it now, but I puzzled over it for a little 
+while before coming up with this.
+
+-- 
+Robert L Mathews, Tiger Technologies

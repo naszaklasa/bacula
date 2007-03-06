@@ -1,0 +1,2 @@
+#!/bin/sh
+@BUILD_DIR@/scripts/devel_bacula start $1

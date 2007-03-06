@@ -1,0 +1,949 @@
+%%
+%%
+
+\section*{Disaster Recovery Using a Bacula Rescue Floppy}
+\label{_ChapterStart24}
+\index[general]{Floppy!Disaster Recovery Using a Bacula Rescue }
+\index[general]{Disaster Recovery Using a Bacula Rescue Floppy }
+\addcontentsline{toc}{section}{Disaster Recovery Using a Bacula Rescue Floppy}
+
+\subsection*{General}
+\index[general]{General }
+\addcontentsline{toc}{subsection}{General}
+
+Please note that the Bacula Rescue Floppy is now deprecated and is 
+and is replaced by the Bacula Rescue CDROM described in another
+chapter of this manual.
+
+When disaster strikes, you must have a plan, and you must have prepared in
+advance otherwise the work of recovering your system and your files will be
+considerably greater. For example, if you have not previously saved the
+partitioning information for your hard disk, how can you properly rebuild it
+if the disk must be replaced? 
+
+Unfortunately, many of the steps one must take before and immediately after a
+disaster are very operating system dependent. As a consequence, this chapter
+will discuss in detail disaster recovery (also called Bare Metal Recovery) for
+{\bf Linux} and {\bf Solaris}. For Solaris, the procedures are still quite
+manual. For FreeBSD the same procedures may be used but they are not yet
+developed. For Win32, no luck. Apparently an ``emergency boot'' disk allowing
+access to the full system API without interference does not exist. 
+\label{considerations}
+
+\subsection*{Important Considerations}
+\index[general]{Important Considerations }
+\index[general]{Considerations!Important }
+\addcontentsline{toc}{subsection}{Important Considerations}
+
+Here are a few important considerations concerning disaster recovery that you
+should take into account before a disaster strikes. 
+
+\begin{itemize}
+\item If the building which houses your computers burns down or is otherwise 
+   destroyed, do you have off-site backup data? 
+\item Disaster recovery is much easier if you have several machines. If  you
+   have a single machine, how will you handle unforeseen events  if your only
+   machine is down? 
+\item Do you want to protect your whole system and use Bacula to  recover
+   everything? or do you want to try to restore your system from  the original
+   installation disks and apply any other updates and  only restore user files? 
+\end{itemize}
+
+\label{steps}
+
+\subsection*{Steps to Take Before Disaster Strikes}
+\index[general]{Steps to Take Before Disaster Strikes }
+\index[general]{Strikes!Steps to Take Before Disaster }
+\addcontentsline{toc}{subsection}{Steps to Take Before Disaster Strikes}
+
+\begin{itemize}
+\item Create a Bacula Rescue floppy for each of your Linux systems.  
+\item Ensure that you always have a valid bootstrap file that is  saved to an
+   alternate machine.  
+\item If possible copy your catalog nightly to an alternate machine.  If you
+   have a valid bootstrap file, this is not necessary, but  can be very useful if
+   you do not want to reload everything. .  
+\item Test using the Bacula Rescue floppy before you are forced to use  it in
+   an emergency situation. 
+   \end{itemize}
+
+\label{floppy}
+
+\subsection*{Bare Metal Floppy Recovery on Linux with a Bacula Floppy Rescue
+Disk}
+\index[general]{Disk!Bare Metal Floppy Recovery on Linux with a Bacula Floppy
+Rescue }
+\index[general]{Bare Metal Floppy Recovery on Linux with a Bacula Floppy
+Rescue Disk }
+\addcontentsline{toc}{subsection}{Bare Metal Floppy Recovery on Linux with a
+Bacula Floppy Rescue Disk}
+
+Since floppies are being used less and less, the Bacula Floppy rescue disk is
+deprecated, which means that it is no longer really supported. For those of
+you who have or need floppy rescue, we include the recovery instructions here
+for your reference. 
+
+The remainder of this section concerns recovering a {\bf Linux} computer using
+a floppy, and parts of it relate to the Red Hat version of Linux. 
+
+A so called ``Bare Metal'' recovery is one where you start with an empty hard
+disk and you restore your machine. There are also cases where you may lose a
+file or a directory and want it restored. Please see the previous chapter for
+more details for those cases. 
+
+Bare Metal Recovery assumes that you have the following four items for your
+system: 
+
+\begin{itemize}
+\item An emergency boot disk allowing you to boot without a  hard disk  
+\item A Bacula Rescue floppy containing your disk information and  a number of
+   helpful scripts (described below) including a  statically linked version of
+   the Bacula File daemon 
+\item A full Bacula backup of your system possibly including  Incremental or
+   Differential backups since the last Full  backup 
+\item A second system running the Bacula Director, the Catalog,  and the
+   Storage daemon. (this is not an absolute requirement,  but how to get around
+   it is not yet documented here) 
+\end{itemize}
+
+\subsection*{Restrictions}
+\index[general]{Restrictions }
+\addcontentsline{toc}{subsection}{Restrictions}
+
+In addition, to the above assumptions, the following conditions or
+restrictions apply: 
+
+\begin{itemize}
+\item Linux only -- tested only on Red Hat, but should work on other Linuxes  
+\item The scripts handle only SCSI and IDE disks  
+\item All partitions will be recreated, but only {\bf ext2},  {\bf ext3}, and
+   {\bf swap} partitions will be reformatted.  Any other partitions such as
+   Windows FAT partitions will  not be formatted by the scripts, but you can do
+it by hand  
+\item You are using either {\bf lilo} or {\bf grub} as a boot  loader, and you
+   know which one (not automatically detected)  
+\item The partitioning and reformating scripts will *should* work with RAID 
+   devices, but probably not with other ``complicated'' disk 
+   partitioning/formating schemes. Please check them carefully. You  will
+probably need to edit the scripts by hand to make them work. 
+\end{itemize}
+
+\subsection*{Directories}
+\index[general]{Directories }
+\addcontentsline{toc}{subsection}{Directories}
+
+If you are building a self-contained Bacula Rescue CDROM, you will find the
+necessary scripts in {\bf rescule/linux/cdrom} subdirectory of the Bacula
+source code. 
+
+If you wish to build the Bacula Rescue floppy disk, the scripts discussed
+below can be found in the {\bf rescue/linux/floppy} subdirectory of the Bacula
+source code. 
+
+\subsection*{Preparation for a Bare Metal Recovery}
+\index[general]{Recovery!Preparation for a Bare Metal }
+\index[general]{Preparation for a Bare Metal Recovery }
+\addcontentsline{toc}{subsection}{Preparation for a Bare Metal Recovery}
+
+There are two things you should do immediately on all (Linux) systems for
+which you wish to do a bare metal recovery: 
+
+\begin{enumerate}
+\item Create a system emergency boot disk or alternatively  a system
+   installation boot floppy. This step can be skipped  if you have an
+   Installation CDROM and your machine will boot  from CDROM (most modern
+computers will).  
+\item Create a Bacula Rescue floppy, which captures the current working  state
+   of your computer and creates scripts to restore it. In  addition, it creates a
+   statically linked version of the Bacula  File daemon (Client) program, which
+is key to successfully restoring  from scratch. 
+\end{enumerate}
+
+\subsubsection*{Creating an Emergency Boot Disk}
+\index[general]{Creating an Emergency Boot Disk }
+\index[general]{Disk!Creating an Emergency Boot }
+\addcontentsline{toc}{subsubsection}{Creating an Emergency Boot Disk}
+
+Here you have several choices: 
+
+\begin{itemize}
+\item Create a tomsrtbt disk (any Linux)  
+\item Create an emergency boot disk (any Linux I think) 
+\item Create a Red Hat Installation disk (Red Hat specific)  
+\item Others 
+   \end{itemize}
+
+\paragraph*{tomsrtbt:}
+
+If you have created a Bacula Rescue CDROM, you can skip this section. 
+
+If you *must* use a boot floppy, my preference is to create and use a {\bf
+tomsrtbt} emergency boot disk because it gives you a very clean Linux
+environment (with a 2.2 kernel) and the most utilities. See 
+\elink{http://www.toms.net/rb/}{http://www.toms.net/rb/} for more details on
+this. It is very easy to do and well worth the effort. However, I recommend
+that you create both especially if you have non-standard hardware. You may
+find that {\bf tomsrtbt} will not work with your network driver (he surely has
+one, but you must explicitly put it on the disk), whereas the Linux rescue is
+more likely to work. 
+
+\paragraph*{Emergency Boot Disk:}
+
+If you have created a Bacula Rescue CDROM, you can skip this section. 
+
+To create a standard Linux emergency boot disk you must first know the name of
+the kernel, which you can find with: 
+
+\footnotesize
+\begin{verbatim}
+  ls -l /boot
+\end{verbatim}
+\normalsize
+
+and looking on the {\bf vmlinux-...} line or alternative do an 
+
+\footnotesize
+\begin{verbatim}
+ uname -a
+\end{verbatim}
+\normalsize
+
+then become root and with a blank floppy in the drive, enter the following
+command: 
+
+\footnotesize
+\begin{verbatim}
+  mkbootdisk --device /dev/fd0 2.4.18-18
+\end{verbatim}
+\normalsize
+
+where you replace ``2.4.18-18'' by your system name. 
+
+This disk can then be booted and you will be in an environment with a number
+of important tools available. Some disadvantages of this environment as
+opposed to {\bf tomsrtbt} are that you must enter {\bf linux rescue} at the
+boot prompt or the boot will fail without a hard disk; it requires a disk boot
+image or a CDROM to be mounted, if the CDROM is released, you will loose a
+large number of the tools. 
+
+\paragraph*{Red Hat Installation Disk:}
+
+If you have created a Bacula Rescue CDROM, you can skip this section. 
+
+Specific to Red Hat Linux, is to create an Installation floppy, which can also
+be used as an emergency boot disk. The advantage of this method is that it
+works in conjunction with the installation CDROM and hence during the first
+part of restoring the system, you have a much larger number of tools available
+(on the CDROM). This can be extremely useful if you are not sure what really
+happened and you need to examine your system in detail. 
+
+To make a Red Hat Linux installation disk, do the following: 
+
+\footnotesize
+\begin{verbatim}
+mount the Installation CDROM (/mnt/cdrom)
+cd /mnt/cdrom/images
+dd if=boot.img of=/dev/fd0 bs=1440k
+\end{verbatim}
+\normalsize
+
+Now that you have either an emergency boot disk or an installation floppy, you
+will be able to reboot your system in the absence of your hard disk or with a
+damaged hard disk. This method has the same disadvantages compared to {\bf
+tomsrtbt} disk as mentioned above for the Emergency Boot Disk. 
+
+\subsubsection*{Creating a Bacula Rescue Disk}
+\index[general]{Creating a Bacula Rescue Disk }
+\index[general]{Disk!Creating a Bacula Rescue }
+\addcontentsline{toc}{subsubsection}{Creating a Bacula Rescue Disk}
+
+If you have created a Bacula Rescue CDROM, this step will be automatically
+done for you. 
+
+Simply having a boot disk is not sufficient to re-create things as they were.
+To solve this problem, we will create a Bacula Rescue disk. Everything that
+will be written to this disk will first be placed into the {\bf
+\lt{}bacula-src\gt{}/rescue/linux} directory. 
+
+The first step is while your system is up and running normally, you use a
+Bacula script called {\bf getdiskinfo} to capture certain important
+information about your hard disk configuration (partitioning, formatting,
+mount points, ...). {\bf getdiskinfo} will also create a number of scripts
+using the information found that can be used in an emergency to repartition
+your disks, reformat them, and restore a statically linked version of the
+Bacula file daemon so that your disk can be restored from within a minimal
+boot environment. 
+
+The first step is to run {\bf getdiskinfo} as follows: 
+
+\footnotesize
+\begin{verbatim}
+   su
+   cd <bacula-src>/rescue/linux
+   ./getdiskinfo
+\end{verbatim}
+\normalsize
+
+{\bf getdiskinfo} works for either IDE or SCSI drives and recognizes both ext2
+and ext3 file systems. If you wish to restore other file systems, you will
+need to modify the code. This script can be run multiple times, but really
+only needs to be run once unless you change your hard disk configuration. 
+
+Assuming you have a single hard disk on device /dev/hda, {\bf getdiskinfo}
+will create the following files: 
+
+\begin{description}
+
+\item [partition.hda]
+   \index[fd]{partition.hda }
+   This file contains the shell commands  to repartition your hard disk drive
+/dev/hda to the current  state. If you have additional drives (e.g. /dev/hdc),
+you  will find one of these files for each drive.  DO NOT EXECUTE THIS SCRIPT
+UNLESS YOU WANT YOUR HARD DISK  REPARTITIONED  
+
+\item [format.hda]
+   \index[fd]{format.hda }
+   This file contains the shell commands that  will format each of the partitions
+on your hard drive. It  knows about ext2, ext3, and swap partitions. All other
+partitions,  you must manually format. It is recommended that any Microsoft 
+partitions be partitioned with Microsoft's {\bf format} command  rather than
+using Unix tools.  DO NOT EXECUTE THIS SCRIPT UNLESS YOU WANT YOUR HARD DISK 
+REFORMATTED  
+
+\item [mount\_drives]
+   \index[fd]{mount\_drives }
+   This script will mount all ext2 and ext3  drives that were previously mounted.
+They will be mounted on  
+
+/mnt/drive/. This is used just before running the statically  linked Bacula so
+that it can access your drives for the restore.  
+
+\item [restore\_bacula]
+   \index[fd]{restore\_bacula }
+   This script will restore the File daemon  from the Bacula Rescue disk.
+Building the Bacula Rescue disk  will be described later. This will provide
+your emergency boot  environment with a Bacula file daemon. Note, this is a
+special  statically linked version of the file daemon (i.e. it does not  need
+or use shared libraries).  
+
+\item [start\_network]
+   \index[fd]{start\_network }
+   This script will start your network using  the simplest possible commands. You
+will need to verify that the  IP address used in this script is correct. In
+addition, if you  have several ethernet cards, you may need to make other
+modifications  to this script.  
+
+\item [sfdisk]
+   \index[fd]{sfdisk }
+   This is the program that will repartition your hard disk,  and it is normally
+found in {\bf /sbin/sfdisk}. It is placed in  this directory so that it will
+be included on the rescue disk as  it is not normally available with all
+emergency boot environments.  
+
+\item [sfdisk.gz]
+   \index[dir]{sfdisk.gz }
+   This is the version of sfdisk that works with  {\bf tomsrtbt}. The standard
+sfdisk described above will not  run under tomsrtbt. 
+\end{description}
+
+The {\bf getdiskinfo} program (actually a shell script) will also create a
+subdirectory named {\bf diskinfo}, which contains the following files: 
+
+\footnotesize
+\begin{verbatim}
+df.bsi
+disks.bsi
+fstab.bsi
+ifconfig.bsi
+mount.bsi
+mount.ext2.bsi
+mount.ext3.bsi
+mtab.bsi
+route.bsi
+sfdisk.disks.bsi
+sfdisk.hda.bsi
+sfdisk.make.hda.bsi
+\end{verbatim}
+\normalsize
+
+Each of these files contains some important piece of information (sometimes
+redundant) about your hard disk setup or your network. Normally, you will not
+need this information, but it will be written to the Bacula Rescue disk just
+in case. Since it is normally not used, we will leave it to you to examine
+those files at your leisure. 
+
+\paragraph*{Building a Static File Daemon:}
+
+If you have created a Bacula Rescue CDROM, this step will be automatically
+done for you. 
+
+The second of the three steps in creating your Bacula Rescue disk is to build
+a static version of the File daemon. Do so by either configuring Bacula as
+follows or by allowing the {\bf make\_rescue\_disk} script described below
+make it for you: 
+
+\footnotesize
+\begin{verbatim}
+cd <bacula-src>
+./configure <normal-options>
+make
+cd src/filed
+make static-bacula-fd
+strip static-bacula-fd
+cp static-bacula-fd ../../rescue/linux/bacula-fd
+cp bacula-fd.conf ../../rescue/linux
+\end{verbatim}
+\normalsize
+
+Note, above, we built {\bf static-bacula-fd} and changed its name to {\bf
+bacula-fd} when copying it to the rescue/linux directory. 
+
+Finally, in \lt{}bacula-src\gt{}/rescue/linux, ensure that the
+WorkingDirectory and PIDDirectory both point to reasonable locations on a
+stripped down system. If you are using {\bf tomsrtbt} you will also want to
+replace machine names with IP addresses since there is no resolver running.
+With the Linux Rescue disk, network address mapping seems to work. Don't
+forget that at the time this version of the Bacula File daemon runs, your file
+system will not be restored. In my bacula-fd.conf, I use {\bf /var/working}. 
+
+\paragraph*{Writing the Bacula Rescue Floppy:}
+
+When you have everything you need (output of getdiskinfo, Bacula File daemon,
+...), you create your rescue floppy by putting a blank tape into your floppy
+disk drive and entering: 
+
+\footnotesize
+\begin{verbatim}
+su
+./make_rescue_disk
+\end{verbatim}
+\normalsize
+
+This script will reformat the floppy and write everything in the current
+directory and all files in the {\bf diskinfo} directory to the floppy. If you
+supply the appropriate command line options, it will also build a static
+version of the Bacula file daemon and copy it along with the configuration
+file to the disk. Also using a command line option, you can make it write a
+compressed tar file containing all the files whose names are in {\bf
+backup.etc.list} to the floppy. The list as provided contains names of files
+in {\bf /etc} that you might need in a disaster situation. It is not needed,
+but in some cases such as a complex network setup, you may find it useful. 
+
+\paragraph*{Options for make\_rescue\_disk:}
+
+The following command line options are available for the make\_rescue\_disk
+script: 
+
+\footnotesize
+\begin{verbatim}
+Usage: make_rescue_disk
+  -h, --help             print this message
+  --make-static-bacula   make static File daemon and add to diskette
+  --copy-static-bacula   copy static File daemon to diskette
+  --copy-etc-files       copy files in etc list to diskette
+\end{verbatim}
+\normalsize
+
+Briefly the options are: 
+
+\begin{description}
+
+\item [\verb{--{make-static-bacula]
+   \index[fd]{\verb{--{make-static-bacula }
+   If this option is specified, the  script will assume that you have already
+configured and  built Bacula. It will then proceed to build a statically 
+linked version and copy it along with bacula-fd.conf to the  current
+directory, then write it to the rescue disk.  
+
+\item [\verb{--{copy-static-bacula]
+   \index[dir]{\verb{--{copy-static-bacula }
+   If this option is given, the  script will assume that you already have a copy
+of the  statically linked Bacula in the current directory named  {\bf
+bacula-fd} as well as the configuration script. They  will then be written to
+the rescue disk.  
+
+\item [\verb{--{copy-etc-files]
+   \index[fd]{\verb{--{copy-etc-files }
+   If this option is specified, the  script will tar the files in {\bf
+backup.etc.list} and write  them to the rescue disk. 
+\end{description}
+
+Please examine the contents of the rescue floppy to ensure that it has
+everything you want and need. If not modify the scripts as necessary and
+re-run it until it is correct. 
+
+Now that you have both a system boot floppy and a Bacula Rescue floppy,
+assuming you have a full backup of your system made by Bacula, you are ready
+to handle nearly any kind of emergency restoration situation. 
+\label{FloppyRestore}
+
+\subsection*{Restoring Your Linux Client with a Floppy}
+\index[general]{Restoring Your Linux Client with a Floppy }
+\index[general]{Floppy!Restoring Your Linux Client with a }
+\addcontentsline{toc}{subsection}{Restoring Your Linux Client with a Floppy}
+
+Now, let's assume that your hard disk has just died and that you have replaced
+it with an new identical drive. In addition, we assume that you have: 
+
+\begin{enumerate}
+\item A recent Bacula backup (Full plus Incrementals)  
+\item An emergency boot floppy (preferably {\bf tomsrtbt})  
+\item A Bacula Rescue Floppy Disk  
+\item Your Bacula Director, Catalog, and Storage daemon running  on another
+   machine on your local network. 
+   \end{enumerate}
+
+This is a relatively simple case, and later in this chapter, as time permits,
+we will discuss how you might recover from a situation where the machine that
+crashes is your main Bacula server (i.e. has the Director, the Catalog, and
+the Storage daemon). 
+
+You will take the following steps to get your system back up and running: 
+
+\begin{enumerate}
+\item Boot with your Emergency Floppy  
+\item Mount your Bacula Rescue floppy  
+\item Start the Network (local network)  
+\item Re-partition your hard disk(s) as it was before  
+\item Re-format your partitions  
+\item Restore the Bacula File daemon (static version)  
+\item Perform a Bacula restore of all your files  
+\item Re-install your boot loader  
+\item Reboot 
+   \end{enumerate}
+
+Now for the details ... 
+
+\subsubsection*{Boot with your Emergency Floppy}
+\index[general]{Floppy!Boot with your Emergency }
+\index[general]{Boot with your Emergency Floppy }
+\addcontentsline{toc}{subsubsection}{Boot with your Emergency Floppy}
+
+First you will boot with your emergency floppy. If you use the Installation
+floppy described above, when you get to the boot prompt: 
+
+\footnotesize
+\begin{verbatim}
+boot:
+\end{verbatim}
+\normalsize
+
+you enter {\bf linux rescue}. 
+
+If you are booting from {\bf tomsrtbt} simply enter the default responses. 
+
+When your machine finishes booting, you should be at the command prompt
+possibly with your hard disk mounted on {\bf /mount/sysimage} (Linux emergency
+only). To see what is actually mounted, use: 
+
+\footnotesize
+\begin{verbatim}
+df
+\end{verbatim}
+\normalsize
+
+\paragraph*{Mount your Bacula Rescue Floppy:}
+
+Make sure that the mount point {\bf /mnt/floppy} exists. If not, enter: 
+
+\footnotesize
+\begin{verbatim}
+mkdir -p /mnt/floppy
+\end{verbatim}
+\normalsize
+
+the mount your {\bf Bacula Rescue} disk and cd to it with: 
+
+\footnotesize
+\begin{verbatim}
+mount /dev/fd0 /mnt/floppy
+cd /mnt/floppy
+\end{verbatim}
+\normalsize
+
+To simplify running the scripts make sure the current directory is on your
+path by: 
+
+\footnotesize
+\begin{verbatim}
+PATH=$PATH:.
+\end{verbatim}
+\normalsize
+
+\paragraph*{Start the Network:}
+
+At this point, you should bring up your network. Normally, this is quite
+simple and requires just a few commands. If you have booted from your Bacula
+Rescue CDROM, please cd into the /bacula-hostname directory before continuing.
+To simplify your task, we have created a script that should work in most cases
+by typing: 
+
+\footnotesize
+\begin{verbatim}
+./start_network
+\end{verbatim}
+\normalsize
+
+You can test it by pinging another machine, or pinging your broken machine
+machine from another machine. Do not proceed until your network is up. 
+
+\paragraph*{Unmount Your Hard Disk (if mounted):}
+
+When you are sure you want to repartition your disk, normally, if your disk
+was damaged or if you are using {\bf tomsrtbt} your hard disk will not be
+mounted. However, if it is you must first unmount it so that it is not in use.
+Do so by entering {\bf df} and then enter the correct commands to unmount the
+disks. For example: 
+
+\footnotesize
+\begin{verbatim}
+umount /mnt/sysimage/boot
+umount /mnt/sysimage/usr
+umount /mnt/sysimage/proc
+umount /mnt/sysimage/
+\end{verbatim}
+\normalsize
+
+where you explicitly unmount ({\bf umount}) each sysimage partition and
+finally, the last one being the root. Do another {\bf df} command to be sure
+you successfully unmount all the sysimage partitions. 
+
+This is necessary because {\bf sfdisk} will refuse to partition a disk that is
+currently mounted. As mentioned, this should never be necessary with {\bf
+tomsrtbt}. 
+
+\paragraph*{Partition Your Hard Disk(s):}
+
+If you are using {\bf tomsrtbt}, you will need to do the following steps to
+get the correct sfdisk: 
+
+\footnotesize
+\begin{verbatim}
+rm -f sfdisk
+bzip2 -d sfdisk.bz2
+\end{verbatim}
+\normalsize
+
+{\bf Do not do the above steps if you are using a standard Linux boot disk or
+the Bacula Rescue CDROM.} 
+
+Then proceed with partitioning your hard disk by: 
+
+\footnotesize
+\begin{verbatim}
+./partition.hda
+\end{verbatim}
+\normalsize
+
+If you have multiple disks, do the same for each of them. For SCSI disks, the
+repartition script will be named: {\bf partition.sda}. If the script complains
+about the disk being in use, simply go back and redo the {\bf df} command and
+{\bf umount} commands until you no longer have your hard disk mounted. Note,
+in many cases, if your hard disk was seriously damaged or a new one installed,
+it will not automatically be mounted. If it is mounted, it is because the
+emergency kernel found one or more possibly valid partitions. 
+
+If for some reason this procedure does not work, you can use the information
+in {\bf partition.hda} to re-partition your disks by hand using {\bf fdisk}. 
+
+\paragraph*{Format Your Hard Disk(s):}
+
+After partitioning your disk, you must format it appropriately. The formatting
+script will put back swap partitions, normal Unix partitions (ext2) and
+journaled partitions (ext3). Do so by entering for each disk: 
+
+\footnotesize
+\begin{verbatim}
+./format.hda
+\end{verbatim}
+\normalsize
+
+The format script will ask you if you want a block check done. We recommend to
+answer yes, but realize that for very large disks this can take hours. 
+
+\paragraph*{Mount the Newly Formatted Disks:}
+
+Once the disks are partitioned and formatted, you can remount them with the
+{\bf mount\_drives} script. All your drives must be mounted for Bacula to be
+able to access them. Run the script as follows: 
+
+\footnotesize
+\begin{verbatim}
+./mount_drives
+df
+\end{verbatim}
+\normalsize
+
+The {\bf df} will tell you if the drives are mounted. If not, re-run the
+script again. It isn't always easy to figure out and create the mount points
+and the mounts in the proper order, so repeating the {\bf ./mount\_drives}
+command will not cause any harm and will most likely work the second time. If
+not, correct it by hand before continuing. 
+
+\paragraph*{Unmount the CDROM:}
+
+Next, if you are using the Red Hat installation disk, unmount the CDROM drive
+by doing: 
+
+\footnotesize
+\begin{verbatim}
+umount /mnt/cdrom
+\end{verbatim}
+\normalsize
+
+This is not necessary if you are running {\bf tomsrtbt}. In doing this, I find
+it is always busy, and I haven't figured out how to unmount it (Linux boot
+only). 
+
+\paragraph*{Restore and Start the File Daemon:}
+
+If you have booted with a Bacula Rescue CDROM, your statically linked Bacula
+File daemon and the bacula-fd.conf file with be in the /bacula-hostname/bin
+directory. Please skip the following paragraph and continue with editing the
+Bacula configuration file. 
+
+If you have not used a Bacula Rescue CDROM, now change (cd) to some directory
+where you want to put the image of the Bacula File daemon. I use the tmp
+directory my hard disk (mounted as {\bf /mnt/disk/tmp}) because it is easy.
+Then install into the current directory Bacula by running the {\bf
+restore\_bacula} script from the floppy drive. For example: 
+
+\footnotesize
+\begin{verbatim}
+cd /mnt/disk
+mkdir -p /mnt/disk/tmp
+mkdir -p /mnt/disk/tmp/working
+/mnt/floppy/restore_bacula
+ls -l
+\end{verbatim}
+\normalsize
+
+Make sure {\bf bacula-fd} and {\bf bacula-fd.conf} are both there. 
+
+Edit the Bacula configuration file, create the working/pid/subsys directory if
+you haven't already done so above, and start Bacula by entering: 
+
+\footnotesize
+\begin{verbatim}
+chroot /mnt/disk /tmp/bacula-fd -c /tmp/bacula-fd.conf
+\end{verbatim}
+\normalsize
+
+The above command starts the Bacula File daemon with your the proper root disk
+location (i.e. {\bf /mnt/disk/tmp}. If Bacula does not start correct the
+problem and start it. You can check if it is running by entering: 
+
+\footnotesize
+\begin{verbatim}
+ps fax
+\end{verbatim}
+\normalsize
+
+You can kill Bacula by entering: 
+
+\footnotesize
+\begin{verbatim}
+kill -TERM <pid>
+\end{verbatim}
+\normalsize
+
+where {\bf pid} is the first number printed in front of the first occurrence
+of {\bf bacula-fd} in the {\bf ps fax} command. 
+
+Now, you should be able to use another computer with Bacula installed to check
+the status by entering: 
+
+\footnotesize
+\begin{verbatim}
+status client=xxxx
+\end{verbatim}
+\normalsize
+
+into the Console program, where xxxx is the name of the client you are
+restoring. 
+
+One common problem is that your {\bf bacula-dir.conf} may contain machine
+addresses that are not properly resolved on the stripped down system to be
+restored because it is not running DNS. This is particularly true for the
+address in the Storage resource of the Director, which may be very well
+resolved on the Director's machine, but not on the machine being restored and
+running the File daemon. In that case, be prepared to edit {\bf
+bacula-dir.conf} to replace the name of the Storage daemon's domain name with
+its IP address. 
+
+\paragraph*{Restoring using the RedHat Installation Disk:}
+
+Suppose your system was damaged for one reason or another, so that the hard
+disk and the partitioning and much of the filesystems are intact, but you want
+to do a full restore. If you have booted into your system with the RedHat
+Installation Disk by specifying {\bf linux rescue} at the {\bf boot:} prompt,
+you will find yourself in a shell command with your disks already mounted (if
+it was possible) in {\bf /mnt/sysimage}. In this case, you can do much like
+you did above to restore your system: 
+
+\footnotesize
+\begin{verbatim}
+cd /mnt/sysimage/tmp
+mkdir -p /mnt/sysimage/tmp/working
+/mnt/floppy/restore_bacula
+ls -l
+\end{verbatim}
+\normalsize
+
+Make sure that {\bf bacula-fd} and {\bf bacula-fd.conf} are both in the
+current directory and that the directory names in the {\bf bacula-fd.conf}
+correctly point to the appropriate directories. Then start Bacula with: 
+
+\footnotesize
+\begin{verbatim}
+chroot /mnt/sysimage /tmp/bacula-fd -c /tmp/bacula-fd.conf
+\end{verbatim}
+\normalsize
+
+\paragraph*{Restore Your Files:}
+
+On the computer that is running the Director, you now run a {\bf restore}
+command and select the files to be restored (normally everything), but before
+starting the restore, there is one final change you must make using the {\bf
+mod} option. You must change the {\bf Where} directory to be the root by using
+the {\bf mod} option just before running the job and selecting {\bf Where}.
+Set it to: 
+
+\footnotesize
+\begin{verbatim}
+/
+\end{verbatim}
+\normalsize
+
+then run the restore. 
+
+You might be tempted to avoid using {\bf chroot} and running Bacula directly
+and then using a {\bf Where} to specify a destination of {\bf /mnt/disk}. This
+is possible, however, the current version of Bacula always restores files to
+the new location, and thus any soft links that have been specified with
+absolute paths will end up with {\bf /mnt/disk} prefixed to them. In general
+this is not fatal to getting your system running, but be aware that you will
+have to fix these links if you do not use {\bf chroot}. 
+
+\paragraph*{Final Step:}
+
+At this point, the restore should have finished with no errors, and all your
+files will be restored. One last task remains and that is to write a new boot
+sector so that your machine will boot. For {\bf lilo}, you enter the following
+command: 
+
+\footnotesize
+\begin{verbatim}
+run_lilo
+\end{verbatim}
+\normalsize
+
+If you are using grub instead of lilo, you must enter the following: 
+
+\footnotesize
+\begin{verbatim}
+run_grub
+\end{verbatim}
+\normalsize
+
+Note, I've had quite a number of problems with {\bf grub} because it is rather
+complicated and not designed to install easily under a simplified system. So,
+if you experience errors or end up unexpectedly in a {\bf chroot} shell,
+simply exit back to the normal shell and type in the appropriate commands from
+the {\bf run\_grub} script by hand until you get it to install. 
+
+\paragraph*{Reboot:}
+
+Reboot your machine by entering {\bf exit} until you get to the main prompt
+then enter {\bf ctl-d}. 
+
+If everything went well, you should now be back up and running. If not,
+re-insert the emergency boot floppy, boot, and figure out what is wrong. 
+
+At this point, you will probably want to remove the temporary copy of Bacula
+that you installed. Do so with: 
+
+\footnotesize
+\begin{verbatim}
+rm -f /bacula-fd /bacula-fd.conf
+rm -rf /working
+\end{verbatim}
+\normalsize
+
+\label{FloppyProblems}
+
+\subsection*{Linux Problems or Bugs}
+\index[general]{Bugs!Linux Problems or }
+\index[general]{Linux Problems or Bugs }
+\addcontentsline{toc}{subsection}{Linux Problems or Bugs}
+
+Since every flavor and every release of Linux is different, there are likely
+to be some small difficulties with the scripts, so please be prepared to edit
+them in a minimal environment. A rudimentary knowledge of {\bf vi} is very
+useful. Also, these scripts do not do everything. You will need to reformat
+Windows partitions by hand, for example. 
+
+Getting the boot loader back can be a problem if you are using {\bf grub}
+because it is so complicated. If all else fails, reboot your system from your
+floppy but using the restored disk image, then proceed to a reinstallation of
+grub (looking at the run-grub script can help). By contrast, lilo is a piece
+of cake. 
+
+\subsubsection*{Bugs}
+\index[general]{Bugs }
+\addcontentsline{toc}{subsubsection}{Bugs}
+
+When performing the bare metal recovery using the Red Hat emergency boot disk
+(actually the installation boot disk), I was never able to release the cdrom,
+and when the system came up {\bf /mnt/cdrom} was soft linked to {\bf
+/mnt/disk/dev/hdd}, which is not correct. I fixed this in each case by
+deleting and simply remaking it with {\bf mkdir -p /mnt/cdrom}. 
+
+\subsection*{tomsrtbt}
+\index[general]{Tomsrtbt }
+\addcontentsline{toc}{subsection}{tomsrtbt}
+
+This is a single floppy (1.722Meg) that really has A LOT of software. For
+example, by default (version 2.0.103) you get: 
+
+AHA152X AHA1542 AIC7XXX BUSLOGIC DAC960 DEC\_ELCP(TULIP) EATA
+EEXPRESS/PRO/PRO100 EL2 EL3 EXT2 EXT3 FAT FD IDE-CD/DISK/TAPE IMM INITRD
+ISO9660 JOLIET LOOP MATH\_EMULATION MINIX MSDOS NCR53C8XX NE2000 NFS NTFS
+PARPORT PCINE2K PCNET32 PLIP PPA RTL8139 SD SERIAL/\_CONSOLE SLIP SMC\_ULTRA
+SR ST VFAT VID\_SELECT VORTEX WD80x3 .exrc 3c589\_cs agetty ash badblocks
+basename boot.b buildit.s busybox bz2bzImage bzip2 cardmgr cardmgr.pid cat
+chain.b chattr chgrp chmod chown chroot clear clone.s cmp common config cp
+cpio cs cut date dd dd-lfs debugfs ddate df dhcpcd\verb{--{ dirname dmesg domainname
+ds du dumpe2fs e2fsck echo egrep elvis ex false fdflush fdformat fdisk
+filesize find findsuper fmt fstab grep group gunzip gzip halt head hexdump
+hexedit host.conf hostname hosts httpd i82365 ifconfig ile init inittab insmod
+install.s issue kernel key.lst kill killall killall5 ld ld-linux length less
+libc libcom\_err libe2p libext2fs libtermcap libuuid lilo lilo.conf ln
+loadkmap login ls lsattr lsmod lua luasocket man map md5sum miterm mkdir
+mkdosfs mke2fs mkfifo mkfs.minix mknod mkswap more more.help mount mt mtab mv
+nc necho network networks nmclan\_cs nslookup passwd pax pcmcia\_core
+pcnet\_cs pidof ping poweroff printf profile protocols ps pwd rc.0 rc.S
+rc.custom rc.custom.gz rc.pcmcia reboot rescuept reset resolv.conf rm rmdir
+rmmod route rsh rshd script sed serial serial\_cs services setserial
+settings.s sh shared slattach sleep sln sort split stab strings swapoff swapon
+sync tail tar tcic tee telnet telnetd termcap test tomshexd tomsrtbt.FAQ touch
+traceroute true tune2fs umount undeb\verb{--{ unpack.s unrpm\verb{--{ update utmp vi vi.help
+view watch wc wget which xargs xirc2ps\_cs yecho yes zcat 
+
+In addition, at 
+\elink{Tom's Web Site}{http://www.toms.net/rb}, you can find a lot of
+additional kernel drivers and other software (such as {\bf sdisk}, which is
+used by Bacula. 
+
+Building his floppy is a piece of cake. Simply download his .tar.gz file then:
+
+
+\footnotesize
+\begin{verbatim}
+- detar the .tar.gz archive
+- become root
+- cd to the tomsrtbt-<version> directory
+- load a blank floppy with no bad sectors
+- ./install.s
+\end{verbatim}
+\normalsize

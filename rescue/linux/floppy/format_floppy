@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+#  Format Floppy
+#
+export LANG=C
+echo ""
+echo "This script will format your floppy"
+echo ""
+echo "IT WILL DESTROY ALL DATA ON THE FLOPPY !!!!"
+echo ""
+echo -n "Are you sure you want to continue? (yes/no): "
+read a
+if [ x$a != xyes ] ; then
+   exit 1
+fi 
+echo -n "Do you want to do a block check (takes time)? (yes/no): "
+read a
+if [ x$a = xyes ] ; then
+   check="-c"
+else
+   check=
+fi
+echo ""
+echo "Formating /dev/fd0 -- ext2 partition"
+mke2fs -v $check /dev/fd0
+echo ""

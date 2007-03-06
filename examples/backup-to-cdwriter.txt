@@ -1,0 +1,813 @@
+From: "Johan Decock" <jdecock@abis.be>
+To: bacula-users@lists.sourceforge.net
+Subject: Re: [Bacula-users] cdwriter
+Date: Fri, 30 Jan 2004 17:11:34 +0100
+
+I thought it would be easy to find them in the archives.  I'll post them
+again.  I changed some things in them anyway in the mean time.  I also
+include the Director config.  Then you see how they are to be used in
+Runbefore- and RunafterJobs
+
+I'm interested in any remarks or improvements you might have.  (I'm
+still getting started in shell scripting)
+
+
+#
+# Default Bacula Director Configuration file
+#
+#  The only thing that MUST be changed is to add one or more
+#   file or directory names in the Include directive of the
+#   FileSet resource.
+#
+#  For Bacula release 1.32b (14 Oct 2003) -- mandrake (FiveStar)
+#
+#  You might also want to change the default email address
+#   from root to your address.  See the "mail" and "operator"
+#   directives in the Messages resource.
+#
+
+Director {                  # define myself
+  Name = tosfeb33-dir
+  DIRport = 9101            # where we listen for UA connections
+  QueryFile = "/etc/bacula/query.sql"
+  WorkingDirectory = "/var/bacula/working"
+  PidDirectory = "/var/run"
+  Maximum Concurrent Jobs = 1
+  Password = "abis"         # Console password
+  Messages = Standard
+}
+
+Job {
+  Name = "Tosfeb31AllHDD"
+  Type = Backup
+  Level = Full
+  Client = tosfeb31-fd
+  FileSet = "Tosfeb31All"
+  Schedule = "Weekdays"
+  Messages = Standard
+  Pool = HDD
+  Storage = HDdrive
+  RunBeforeJob = "/etc/bacula/prepare_DVDspool /mnt/backupdaily 1700000"
+  Write Bootstrap = "/var/bacula/working/Tosfeb31All.bsr"
+  Priority = 10
+}
+
+Job {
+  Name = "Tosfeb31AllUSB"
+  Type = Backup
+  Level = Full
+  Client = tosfeb31-fd
+  FileSet = "Tosfeb31All"
+  Schedule = "WeeklyUSB"
+  Messages = Standard
+  Pool = USB
+  Storage = USBdrive
+  Write Bootstrap = "/var/bacula/working/Tosfeb31All.bsr"
+  Priority = 10
+}
+
+Job {
+  Name = "Tosfeb31EssentialDVD"
+  Type = Backup
+  Level = Full
+  Client = tosfeb31-fd
+  FileSet = "Tosfeb31Essential"
+  Schedule = "MonthlyDVD"
+  Messages = Standard
+  Pool = DVD
+  Storage = DVDdrive
+  RunBeforeJob = "/etc/bacula/prepare_DVDspool /mnt/backupdaily 4700000"
+  Write Bootstrap = "/var/bacula/working/Tosfeb31Essential.bsr"
+  RunAfterJob = "/etc/bacula/inventorize_volumes %v"
+  Priority = 10
+}
+
+Job {
+  Name = "Tosfeb31AllCompressedDVD"
+  Type = Backup
+  Level = Full
+  Client = tosfeb31-fd
+  FileSet = "Tosfeb31AllCompressed"
+  Messages = Standard
+  Pool = DVD
+  Storage = DVDdrive
+  RunBeforeJob = "/etc/bacula/prepare_DVDspool /mnt/backupdaily 4700000"
+  Write Bootstrap = "/var/bacula/working/Tosfeb31Essential.bsr"
+  RunAfterJob = "/etc/bacula/inventorize_volumes %v"
+  Priority = 10
+}
+
+Job {
+  Name = "Tosfeb32AllHDD"
+  Type = Backup
+  Level = Full
+  Client = tosfeb32-fd
+  FileSet = "Tosfeb32All"
+  Schedule = "Weekdays"
+  Messages = Standard
+  Pool = HDD
+  Storage = HDdrive
+  Write Bootstrap = "/var/bacula/working/Tosfeb32All.bsr"
+  Priority = 20
+}
+
+Job {
+  Name = "Tosfeb32AllUSB"
+  Type = Backup
+  Level = Full
+  Client = tosfeb32-fd
+  FileSet = "Tosfeb32All"
+  Schedule = "WeeklyUSB"
+  Messages = Standard
+  Pool = USB
+  Storage = USBdrive
+  Write Bootstrap = "/var/bacula/working/Tosfeb32All.bsr"
+  Priority = 10
+}
+
+Job {
+  Name = "Tosfeb32EssentialDVD"
+  Type = Backup
+  Level = Full
+  Client = tosfeb32-fd
+  FileSet = "Tosfeb32Essential"
+  Schedule = "MonthlyDVD"
+  Messages = Standard
+  Pool = DVD
+  Storage = DVDdrive
+  Write Bootstrap = "/var/bacula/working/Tosfeb32System.bsr"
+  RunAfterJob = "/etc/bacula/inventorize_volumes %v"
+  Priority = 20
+}
+
+#Job {
+#  Name = "Tosfeb30System"
+#  Type = Backup
+#  Level = Full
+#  Client = tosfeb30-fd
+#  FileSet = "Tosfeb30System"
+#  Schedule = "WeeklyUSB"
+#  Messages = Standard
+#  Pool = USB
+#  Storage = USBdrive
+#  Write Bootstrap = "/etc/bacula/working/Tosfeb32System.bsr"
+#  Priority = 20
+#}
+
+Job {
+  Name = "Tosfeb33SystemHDD"
+  Type = Backup
+  Level = Full
+  Client = tosfeb33-fd
+  FileSet = "Tosfeb33System"
+  Schedule = "Weekdays"
+  Messages = Standard
+  Pool = HDD
+  Storage = HDdrive
+  Write Bootstrap = "/var/bacula/working/Tosfeb33System.bsr"
+  Priority = 30
+}
+
+Job {
+  Name = "Tosfeb33SystemUSB"
+  Type = Backup
+  Level = Full
+  Client = tosfeb33-fd
+  FileSet = "Tosfeb33System"
+  Schedule = "WeeklyUSB"
+  Messages = Standard
+  Pool = USB
+  Storage = USBdrive
+  Write Bootstrap = "/var/bacula/working/Tosfeb33All.bsr"
+  Priority = 30
+}
+
+Job {
+  Name = "Tosfeb33EssentialDVD"
+  Type = Backup
+  Level = Full
+  Client = tosfeb33-fd
+  FileSet = "Tosfeb33Essential"
+  Schedule = "MonthlyDVD"
+  Messages = Standard
+  Pool = DVD
+  Storage = DVDdrive
+  Write Bootstrap = "/var/bacula/working/Tosfeb33Essential.bsr"
+  RunAfterJob = "/etc/bacula/inventorize_volumes %v"
+  Priority = 30
+}
+
+Job {
+  Name = "BackupCatalogHDD"
+  Type = Backup
+  Level = Full
+  Client = tosfeb33-fd
+  FileSet="Catalog"
+  Schedule = "Weekdays"
+  Storage = HDdrive
+  Messages = Standard
+  Pool = HDD
+  # This creates an ASCII copy of the catalog
+  RunBeforeJob = "/etc/bacula/make_catalog_backup -u bacula"
+  # This deletes the copy of the catalog
+  RunAfterJob  = "/etc/bacula/delete_catalog_backup"
+  Write Bootstrap = "/var/bacula/working/BackupCatalog.bsr"
+  Priority = 90                   # run after main backup
+}
+
+Job {
+  Name = "BackupCatalogUSB"
+  Type = Backup
+  Level = Full
+  Client = tosfeb33-fd
+  FileSet="Catalog"
+  Schedule = "WeeklyUSB"
+  Storage = USBdrive
+  Messages = Standard
+  Pool = USB
+  # This creates an ASCII copy of the catalog
+  RunBeforeJob = "/etc/bacula/make_catalog_backup -u bacula"
+  # This writes the volume file to the proper USB device
+  RunAfterJob  = "/etc/bacula/write_to_USB %v"
+#  RunAfterJob  = "/etc/bacula/delete_catalog_backup"
+  Write Bootstrap = "/var/bacula/working/BackupCatalog.bsr"
+  Priority = 90                   # run after main backup
+}
+
+Job {
+  Name = "BackupCatalogDVD"
+  Type = Backup
+  Level = Full
+  Client = tosfeb33-fd
+  FileSet="Catalog"
+  Schedule = "MonthlyDVD"
+  Storage = DVDdrive
+  Messages = Standard
+  Pool = DVD
+  # This creates an ASCII copy of the catalog
+  RunBeforeJob = "/etc/bacula/make_catalog_backup -u bacula"
+  # This writes the volume file to a DVD
+  RunAfterJob = "/etc/bacula/write_to_DVD %v"
+  Write Bootstrap = "/var/bacula/working/BackupCatalog.bsr"
+  Priority = 90                   # run after main backup
+}
+
+# Standard Restore template, to be changed by Console program
+Job {
+  Name = "RestoreFiles"
+  Type = Restore
+  Client = tosfeb33-fd
+  FileSet="Full Set"
+  Storage = HDdrive
+  Messages = Standard
+  Pool = HDD
+  Where = /tmp/bacula-restores
+}
+
+# List of files to be backed up
+FileSet {
+  Name = "Full Set"
+  Include = signature=MD5 portable=yes {
+#
+#  Put your list of files here, one per line or include an
+#    external list with:
+#
+#    <file-name
+#
+#  Note: / backs up everything on the root partition.
+#    if you have other partitons such as /usr or /home
+#    you will probably want to add them too.
+#
+#  By default this is defined to point to the Bacula build
+#    directory to give a reasonable FileSet to backup to
+#    disk storage during initial testing.
+#
+    /tmp/bacula-1.32b
+  }
+
+#
+# If you backup the root directory, the following two excluded
+#   files can be useful
+#
+  Exclude = { /proc /tmp /.journal /.fsck }
+}
+
+#
+# When to do the backups, full backup on first sunday of the month,
+FileSet {
+  Name = "Tosfeb31All"
+  Include = signature=MD5 portable=yes {
+# System of Tosfeb31
+    "C:/"
+# Data1
+    "E:/"
+# Program
+    "F:/"
+# Finance
+    "G:/"
+# Home
+    "H:/"
+  }
+  Exclude = {pagefile.sys, *.[Dd][Mm][Pp]}
+}
+FileSet {
+  Name = "Tosfeb31AllCompressed"
+  Include = signature=MD5 compression=GZIP portable=yes {
+# System of Tosfeb31
+    "C:/"
+# Data1
+    "E:/"
+# Program
+    "F:/"
+# Finance
+    "G:/"
+# Home
+    "H:/"
+  }
+  Exclude = {pagefile.sys, *.[Dd][Mm][Pp]}
+}
+FileSet {
+  Name = "Tosfeb31Essential"
+  Include = signature=MD5  compression=GZIP portable=yes {
+# Data1
+    "E:/"
+# Finance
+    "G:/"
+  }
+  Exclude = {*.[Tt][Mm][Pp], *.backup.fm, *.backup.book}
+}
+FileSet {
+  Name = "Tosfeb32All"
+  Include = signature=MD5 portable=yes {
+# System of Tosfeb32
+    "C:/"
+# NotesData
+    "E:/"
+# Lib
+    "H:/"
+  }
+  Exclude = {pagefile.sys, *.[Dd][Mm][Pp]}
+}
+FileSet {
+  Name = "Tosfeb32Essential"
+  Include = signature=MD5  compression=GZIP portable=yes {
+# NotesData
+    "E:/"
+  }
+  Exclude = {*.[Tt][Mm][Pp]}
+}
+
+FileSet {
+  Name = "Tosfeb33System"
+  Include = signature=MD5 portable=yes {
+    "/bin"
+    "/boot"
+    "/etc"
+    "/home"
+    "/lib"
+    "/root"
+    "/sbin"
+    "/usr"
+  }
+  Exclude = {/var, /proc}
+}
+
+FileSet {
+  Name = "Tosfeb33Essential"
+  Include = signature=MD5 compression=GZIP portable=yes {
+    "/etc"
+    "/root"
+  }
+}
+
+Schedule {
+  Name = "Weekdays"
+  Run = Full tue-fri at 01:00
+}
+
+Schedule {
+  Name = "WeeklyUSB"
+  Run = Full sat at 01:00
+}
+
+Schedule {
+  Name = "MonthlyDVD"
+  Run = Full 1st sat at 04:00 # These will remain on site
+  Run = Full 3rd sat at 04:00 # These will be carried off site
+}
+
+# This is the backup of the catalog
+FileSet {
+  Name = "Catalog"
+  Include = signature=MD5 {
+     /var/bacula/working/bacula.sql
+  }
+}
+
+# Client (File Services) to backup
+Client {
+  Name = tosfeb33-fd
+  Address = tosfeb33.abis.be
+  FDPort = 9102
+  Catalog = MyCatalog
+  Password = "abis"          # password for FileDaemon
+  File Retention = 30 days            # 30 days
+  Job Retention = 6 months            # six months
+  AutoPrune = yes                     # Prune expired Jobs/Files
+}
+
+Client {
+  Name = tosfeb30-fd
+  Address = tosfeb30.abis.be
+  FDPort = 9102
+  Catalog = MyCatalog
+  Password = "abis"
+  File Retention = 30 days
+  Job Retention = 6 months
+  AutoPrune = yes
+}
+
+Client {
+  Name = tosfeb31-fd
+  Address = tosfeb31.abis.be
+  FDPort = 9102
+  Catalog = MyCatalog
+  Password = "abis"
+  File Retention = 30 days
+  Job Retention = 6 months
+  AutoPrune = yes
+}
+
+Client {
+  Name = tosfeb32-fd
+  Address = tosfeb32.abis.be
+  FDPort = 9102
+  Catalog = MyCatalog
+  Password = "abis"
+  File Retention = 30 days
+  Job Retention = 6 months
+  AutoPrune = yes
+}
+
+# Definiton of file storage device
+
+Storage {
+  Name = HDdrive
+  Address = tosfeb33.abis.be
+  SDPort = 9103
+  Password = "abis"
+  Device = HDdriveStorage
+  Media Type = File
+}
+
+Storage {
+  Name = USBdrive
+  Address = tosfeb33.abis.be
+  SDPort = 9103
+  Password = "abis"
+  Device = USBdriveStorage
+  Media Type = File
+}
+
+Storage {
+  Name = DVDdrive
+  Address = tosfeb33.abis.be
+  SDPort = 9103
+  Password = "abis"
+  Device = DVDdriveStorage
+  Media Type = File
+}
+
+# Generic catalog service
+Catalog {
+  Name = MyCatalog
+  dbname = bacula; user = bacula; password = ""
+}
+
+# Reasonable message delivery -- send most everything to email address
+#  and to the console
+Messages {
+  Name = Standard
+  mailcommand = "/usr/sbin/smtp -h tosfeb32.abis.be -f \"\(Bacula\) %r\" -s \"Bacula: %t %e of %c %l\" %r"
+  operatorcommand = "/usr/sbin/smtp -h tosfeb32.abis.be -f \"\(Bacula\) %r\" -s \"Bacula: Intervention needed for %j\" %r"
+  mail = jdecock@abis.be = all, !skipped
+  operator = jdecock@abis.be = mount
+  console = all, !skipped, !saved
+#
+# WARNING! the following will create a file that you must cycle from
+#          time to time as it will grow indefinitely. However, it will
+#          also keep all your messages if they scroll off the console.
+#
+  append = "/etc/bacula/working/log" = all, !skipped
+}
+
+# Pool definition for daily backup on hard disk in backup server
+Pool {
+  Name = HDD
+  Pool Type = Backup
+  Recycle = yes
+#  Recycle Oldest Volume = yes
+  Purge Oldest Volume = yes
+  Autoprune = yes
+  Maximum Volumes = 4 # Monday through Thursday
+  Volume Retention = 2 weeks
+  Accept Any Volume = yes
+  Maximum Volume Jobs = 4 # 31, 32, 33 and Catalog
+#  Maximum Volume Files = 2
+  Maximum Volume Bytes = 18g
+  Volume Use Duration = 1d
+  Label Format = "HDDVolume"
+}
+
+# Pool definition for weekly backup, first on hard disk,
+#then to be copied on removable USB2 hard disk drives in an AfterRunJob
+Pool {
+  Name = USB
+  Pool Type = Backup
+  Recycle = yes
+  Purge Oldest Volume = yes
+  Autoprune = yes
+  Maximum Volumes = 3 # We have 3 removable USB2 disks
+  Volume Retention = 2 months
+  Accept Any Volume = yes
+  Maximum Volume Jobs = 4 # 31, 32, 33 and Catalog
+  Maximum Volume Bytes = 18g
+  Volume Use Duration = 1d
+  Label Format = "USBVolume"
+}
+
+# Pool definition for monthly backups on DVDspool, to be copied to DVD+/-R media in an AfterRunJob
+Pool {
+  Name = DVD
+  Pool Type = Backup
+  Recycle = no
+  Autoprune = no
+  Volume Retention = 2 years
+  Accept Any Volume = yes
+  Maximum Volume Bytes = 2147483500 # 2 GB is the maximum size of a file on an ISO9660 file system
+  Maximum Volume Jobs = 1 # each backup job gets its own set of volumes
+#  Maximum Volume Bytes = 4699990000 # 4 700 000 000 # 4.38 GB is the actual size that will fit on a DVD
+  Volume Use Duration = 1d
+  Label Format = "DVD${Year}-${Month:p/2/0/r}-${Day:p/2/0/r}-${NumVols}"
+}
+
+
+
+prepare_DVDspool:
+
+
+
+#!/bin/bash
+#
+# shell script to initialize environment for creating a backup that will be written to DVD+/-R(W)
+
+# it will need to check whether there is enough space on the path supplied as the first parameter
+# and if there isn't it will need to remove some files.
+
+# it will also remove the file where all the volume names are collected during the backup run.
+
+path=$1 # /mnt/backupdaily
+quota=$2 # 4700000
+
+#Define global variable to hold return value from function
+
+freespace=
+
+# Define function to determine free space on a mount point
+
+FreeSpace () {
+     freespace=`df | grep $path | awk '{print $4}'`
+     if [ 0 -ne `expr index "$freespace" %` ] ; then
+          freespace=`df | grep $path | awk '{print $3}'`
+     fi
+     }
+#Define global variable to hold return value from function
+
+padded=
+
+# Define function to pad a number with spaces to the left for display
+
+PadSpacesToLeft () {
+     stringtopad=$1
+     wantedlength=$2
+
+     while [ ${#stringtopad} -lt $wantedlength ]
+     do
+          stringtopad=" "$stringtopad
+     done
+     padded=$stringtopad
+     }
+
+PadSpacesToLeft $quota 9
+
+echo "How much free space is needed on $path? $padded"
+
+# How much space is there left?
+
+FreeSpace
+
+PadSpacesToLeft $freespace 9
+
+echo "Free space currently available on $path:$padded"
+
+# As long as there isn't enough room, delete the oldest DVD volume files
+while [ $freespace -lt $quota ]
+do
+     # determine which is the oldest DVD volume file in /mnt/backupdaily
+     # ls puts the oldest file on top
+     # head grabs the first line
+     # and awk gets the 9th column of this line, i.e. the file name we were looking for
+     oldestfile=`ls -ralt $path/DVD* | head -n 1 | awk '{print $9}'`
+
+     echo "Deleting: $oldestfile"
+     rm  -f $oldestfile
+
+     # assess how much space there is now
+     FreeSpace
+     PadSpacesToLeft $freespace 9
+     echo "Free space currently available on $path:$padded"
+     # and then we test again.
+done
+
+# remove the file where all the volume names will be  collected.
+# so we can have a clean run
+
+rm -f /var/bacula/volumes
+
+exit 0
+
+
+inventorize_volumes:
+
+#!/bin/bash
+#
+# shell script to inventorize volumes used during a backup
+volumes=$1
+
+# Replace | character with spaces (necessary for the for command)
+
+volumes=${volumes//|/ }
+
+# For every volume do
+
+for i in $volumes ; do
+     echo $i >> /var/bacula/volumes
+done
+
+exit 0
+
+
+
+write_to_DVD:
+
+#!/bin/bash
+#
+# shell script to copy DVD volume files from /mnt/backupdaily to DVD+/-R(W)
+
+# The last volume was not added to the inventory list yet, so we do that first
+/etc/bacula/inventorize_volumes $1
+
+supermount -m=/mnt/cdrom disable
+
+umount /mnt/cdrom
+
+# another shell script run as a RunAfterJob has been putting the volume names into a text file
+# now we retrieve those names and write them to DVD
+
+# this awk command produces a space delimited list of the lines of the text file and assigns it to $lines
+
+lines=`awk '{print $1}' /var/bacula/volumes`
+
+# now we can iterate over those volume names
+
+let "count=1"
+for i in $lines ; do
+     if [ $count -le 1 ] ; then
+          # When creating a DVD with growisofs one needs to use -Z the first time
+          echo "Writing first volume file" $count
+          growisofs -Z /dev/scd0 -R -J /mnt/backupdaily/$i
+     else
+          # and -M the for the next volume files
+          echo "Writing another volume file" $count
+          growisofs -M /dev/scd0 -R -J /mnt/backupdaily/$i
+     fi
+     let count="$count+1"
+#    sleep 5
+     ls -al /mnt/cdrom
+#    sleep 5
+done
+
+ls -al /mnt/backupdaily
+mount /mnt/cdrom
+ls -al /mnt/cdrom
+umount /mnt/cdrom
+
+#supermount -m=/mnt/cdrom enable
+
+# This is run as a RunAfterJob of the catalog backup. It already had a RunAfterJob, so we execute that here
+/etc/bacula/delete_catalog_backup
+
+exit 0
+
+
+
+
+This last one is to write to removable USB-storage.
+
+write_to_USB
+
+#!/bin/bash
+#
+# shell script to finalize USB backup
+
+volumename=$1
+echo "   Creating mount points, if they don't exist"
+if ! [ -d /mnt/usbdrv ] ; then
+  mkdir /mnt/usbdrv
+fi
+if ! [ -d /mnt/usbdrv/bacula ] ; then
+  mkdir /mnt/usbdrv/bacula
+fi
+if ! [ -d /mnt/usbdrv/misc ] ; then
+  mkdir /mnt/usbdrv/misc
+fi
+ #unmount all mount points related to USB
+
+echo "   Making sure no USB devices are mounted"
+umount /mnt/usbdrv
+umount /mnt/usbdrv/bacula
+umount /mnt/usbdrv/misc
+umount /mnt/removable
+umount /mnt/removable2
+umount /mnt/removable3
+
+ #determine which /dev/sd? contains the right USBVolume for this backup
+
+echo "   Determining whether the right USB device containing our USBVolume is present physically"
+
+found=nothing
+for i in sda sdb sdc; do
+  sd=$i"1"
+  echo "   Trying with $sd"
+  mount /dev/$sd /mnt/usbdrv/bacula -t ext2
+  ls -al /mnt/usbdrv/bacula
+
+  if [ -f /mnt/usbdrv/bacula/$volumename ] ; then
+    found=/dev/$i
+  fi
+
+  umount /mnt/usbdrv/bacula
+done
+
+echo
+echo "    Found: $found containing $volumename "
+echo
+if [ $found != nothing ] ; then
+   # mount /mnt/usbdrv/bacula and /mnt/usbdrv/misc on /dev/sd?1 and /dev/sd?5 respectively
+  mount $found"1" /mnt/usbdrv/bacula -t ext2
+  mount $found"5" /mnt/usbdrv/misc -t vfat
+
+   # copy Ghost images of Windows system drives, the contents of /etc/bacula/*
+   # and a text file with restore instructions to /mnt/usbdrv/misc
+
+  echo "   Copying Ghost image of TOSFEB31 to /mnt/usbdrv/misc"
+  cp -v /mnt/Ghost/PROD/TOSFEB31/SYSTEMAG.GHO /mnt/usbdrv/misc
+  echo "   Copying Ghost image of TOSFEB32 to /mnt/usbdrv/misc"
+  cp -v /mnt/Ghost/PROD/TOSFEB32/COFTF32.GHO /mnt/usbdrv/misc
+  echo "   Copying /etc/bacula to /mnt/usbdrv/misc"
+  cp -Rfv /etc/bacula/ /mnt/usbdrv/misc
+  echo "   Copying Restore instructions to /mnt/usbdrv/misc"
+  cp -v /etc/bacula/How_To_Restore.txt /mnt/usbdrv/misc
+
+   # copy the current USBVolume to /mnt/usbdrv/bacula overwriting the previous volume file
+  echo
+  echo "   Copying Bacula USB-volume to /mnt/usbdrv/bacula"
+
+#  cp -fv /mnt/spool/$volumename /mnt/usbdrv/bacula
+
+   # give some feedback about what was done
+
+  echo
+  echo "   Directory contents of /mnt/usbdrv/bacula"
+  ls -al /mnt/usbdrv/bacula
+  echo
+  echo "   Directory contents of /mnt/usbdrv/misc"
+  ls -al /mnt/usbdrv/misc
+
+   # unmount /mnt/usbdrv/bacula and /mnt/usbdrv/misc
+  echo
+  echo "   Unmounting /mnt/usbdrv/... mount points"
+  umount /mnt/usbdrv/bacula
+  umount /mnt/usbdrv/misc
+
+else
+   # send emails if correct medium is not present
+#  /usr/sbin/smtp
+  echo "hello"
+fi
+
+# This is run as a RunAfterJob of the catalog backup.  It already had a
+# RunAfterJob, so we execute that here 
+
+/etc/bacula/delete_catalog_backup
+

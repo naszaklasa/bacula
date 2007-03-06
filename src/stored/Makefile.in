@@ -1,0 +1,190 @@
+# $Id: Makefile.in,v 1.33 2004/09/24 12:30:33 kerns Exp $
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/stored
+
+DEBUG=@DEBUG@
+
+first_rule: all
+dummy:
+
+# bacula-sd
+SVRSRCS = stored.c autochanger.c acquire.c append.c \
+	  askdir.c authenticate.c \
+	  block.c butil.c dev.c \
+	  device.c dircmd.c fd_cmds.c job.c \
+	  label.c match_bsr.c mount.c parse_bsr.c \
+	  read.c read_record.c record.c \
+	  spool.c status.c stored_conf.c
+SVROBJS = stored.o autochanger.o acquire.o append.o \
+	  askdir.o authenticate.o \
+	  block.o butil.o dev.o \
+	  device.o dircmd.o fd_cmds.o job.o \
+	  label.o match_bsr.o mount.o parse_bsr.o \
+	  read.o read_record.o record.o \
+	  spool.o status.o stored_conf.o
+
+# btape
+TAPESRCS = btape.c block.c butil.c dev.c device.c label.c \
+	   acquire.c mount.c record.c read_record.c \
+	   stored_conf.c match_bsr.c parse_bsr.c spool.c
+TAPEOBJS = btape.o block.o butil.o dev.o device.o label.o \
+	   autochanger.o acquire.o mount.o record.o read_record.o \
+	   stored_conf.o match_bsr.o parse_bsr.o spool.o
+
+# bls
+BLSOBJS = bls.o block.o butil.o device.o dev.o label.o match_bsr.o \
+	  autochanger.o acquire.o mount.o parse_bsr.o record.o	\
+	  read_record.o stored_conf.o spool.o
+
+# bextract
+BEXTOBJS = bextract.o block.o device.o dev.o label.o record.o \
+	   autochanger.o acquire.o mount.o match_bsr.o parse_bsr.o butil.o \
+	   read_record.o stored_conf.o spool.o
+
+# bscan
+SCNOBJS = bscan.o block.o device.o dev.o label.o \
+	  autochanger.o acquire.o mount.o record.o match_bsr.o parse_bsr.o \
+	  butil.o read_record.o stored_conf.o spool.o
+
+# bcopy
+COPYOBJS = bcopy.o block.o device.o dev.o label.o \
+	   autochanger.o acquire.o mount.o record.o match_bsr.o parse_bsr.o \
+	   butil.o read_record.o stored_conf.o spool.o
+
+
+
+# these are the objects that are changed by the .configure process
+EXTRAOBJS = @OBJLIST@
+
+FDLIBS=@FDLIBS@
+
+
+.SUFFIXES:	.c .o
+.PHONY:
+.DONTCARE:
+
+# inference rules
+.c.o:
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+#-------------------------------------------------------------------------
+
+all: Makefile bacula-sd @STATIC_SD@ bls bextract bscan btape bcopy
+	@echo "===== Make of stored is good ===="
+	@echo " "
+
+bacula-sd: $(SVROBJS) ../lib/libbac.a
+	$(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -o $@ $(SVROBJS) $(FDLIBS) -lbac -lm $(DLIB) $(LIBS) 
+
+static-bacula-sd: $(SVROBJS) ../lib/libbac.a
+	$(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -o $@ $(SVROBJS) $(FDLIBS) -lbac -lm $(DLIB) $(LIBS) 
+	strip $@
+
+btape.o: btape.c
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
+btape:	$(TAPEOBJS) ../lib/libbac.a ../cats/libsql.a
+	$(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../cats  -o $@ $(TAPEOBJS) -lsql $(DLIB) -lbac -lm $(LIBS) 
+
+bls.o:	bls.c
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
+bls:	../findlib/libfind.a $(BLSOBJS) ../lib/libbac.a
+	$(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BLSOBJS) $(DLIB) -lfind -lbac -lm $(LIBS) 
+
+bextract.o: bextract.c
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
+bextract: ../findlib/libfind.a $(BEXTOBJS) ../lib/libbac.a
+	$(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BEXTOBJS) $(DLIB) $(FDLIBS) -lfind -lbac -lm $(LIBS) 
+
+bscan.o: bscan.c
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
+bscan:	../findlib/libfind.a $(SCNOBJS) ../cats/libsql.a
+	$(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SCNOBJS) -lsql $(DB_LIBS) $(FDLIBS) -lfind -lbac -lm $(LIBS) 
+
+bcopy.o: bcopy.c
+	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
+bcopy:	$(COPYOBJS) ../findlib/libfind.a ../lib/libbac.a
+	$(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(COPYOBJS)  $(DB_LIBS) $(FDLIBS) -lfind -lbac -lm $(LIBS) 
+
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+install: all
+	$(INSTALL_PROGRAM) bacula-sd $(DESTDIR)$(sbindir)/bacula-sd
+	$(INSTALL_PROGRAM) bls $(DESTDIR)$(sbindir)/bls
+	$(INSTALL_PROGRAM) bextract $(DESTDIR)$(sbindir)/bextract
+	$(INSTALL_PROGRAM) bcopy $(DESTDIR)$(sbindir)/bcopy
+	$(INSTALL_PROGRAM) bscan $(DESTDIR)$(sbindir)/bscan
+	$(INSTALL_PROGRAM) btape $(DESTDIR)$(sbindir)/btape
+	@srcconf=bacula-sd.conf; \
+	if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
+	   destconf=$$srcconf.new; \
+	   echo "  ==> Found existing $$srcconf, installing new conf file as $$destconf"; \
+	else \
+	   destconf=$$srcconf; \
+	fi; \
+	echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
+	${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
+	@if test -f static-bacula-sd; then \
+	   $(INSTALL_PROGRAM) static-bacula-sd $(DESTDIR)$(sbindir)/static-bacula-sd; \
+	fi
+
+uninstall:
+	(cd $(DESTDIR)$(sbindir); $(RMF) bacula-sd)
+	(cd $(DESTDIR)$(sbindir); $(RMF) bls)
+	(cd $(DESTDIR)$(sbindir); $(RMF) bextract)
+	(cd $(DESTDIR)$(sbindir); $(RMF) bcopy)
+	(cd $(DESTDIR)$(sbindir); $(RMF) bscan)
+	(cd $(DESTDIR)$(sbindir); $(RMF) btape)
+	(cd $(DESTDIR)$(sysconfdir); $(RMF) bacula-sd.conf bacula-sd.conf.new)
+
+
+clean:
+	@$(RMF) bacula-sd stored bls bextract bpool btape shmfree core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
+	@$(RMF) bscan bcopy static-bacula-sd
+
+realclean: clean
+	@$(RMF) tags bacula-sd.conf
+
+distclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+
+devclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+
+# Semi-automatic generation of dependencies:
+# Use cc -M because X11 `makedepend' doesn't work on all systems
+# and it also includes system headers.
+# `semi'-automatic since dependencies are generated at distribution time.
+
+depend:
+	@$(MV) Makefile Makefile.bak
+	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
+	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@if test -f Makefile ; then \
+	    $(RMF) Makefile.bak; \
+	else \
+	   $(MV) Makefile.bak Makefile; \
+	   echo -e "Something went wrong with make depend\n\a"; \
+	fi
+
+# -----------------------------------------------------------------------
+# DO NOT DELETE: nice dependency list follows

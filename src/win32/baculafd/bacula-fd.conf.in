@@ -1,0 +1,32 @@
+#
+# Default  Bacula File Daemon Configuration file
+#
+#  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@ @DISTVER@
+#
+# There is not much to change here except perhaps the
+# File daemon Name to
+#
+
+#
+# List Directors who are permitted to contact this File daemon
+#
+Director {
+  Name = @hostname@-dir
+  Password = "@fd_password@"
+}
+
+#
+# "Global" File daemon configuration specifications
+#
+FileDaemon {                          # this is me
+  Name = @hostname@-fd
+  FDport = @fd_port@                  # where we listen for the director
+  WorkingDirectory = @working_dir@
+  Pid Directory = @piddir@
+}
+
+# Send all messages except skipped files back to Director
+Messages {
+  Name = Standard
+  director = @hostname@-dir = all, !skipped
+}

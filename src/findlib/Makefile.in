@@ -1,0 +1,93 @@
+#
+#  Find files library Makefile
+#
+@MCOMMON@
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/findlib
+
+DEBUG=@DEBUG@
+
+first_rule: all
+dummy:
+
+#
+LIBSRCS = find.c match.c find_one.c attibs.c create_file.c \
+	  bfile.c enable_priv.c fstype.c makepath.c save-cwd.c winapi.c
+LIBOBJS = find.o match.o find_one.o attribs.o create_file.o \
+	  bfile.o enable_priv.o fstype.o makepath.o save-cwd.o winapi.o
+
+.SUFFIXES:	.c .o
+.PHONY:
+.DONTCARE:
+
+# inference rules
+.c.o:
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+#-------------------------------------------------------------------------
+all: Makefile libfind.a ../lib/libbac.a
+	@echo "==== Make of findlib is good ===="
+	@echo " "
+
+libfind.a: $(LIBOBJS) 
+	$(RMF) $@
+	$(AR) cr $@ $(LIBOBJS)
+	$(RANLIB) $@
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+install:
+
+uninstall:
+
+
+clean:
+	$(RMF) find core a.out *.a *.o *.bak *~ *.intpro *.extpro 1 2 3
+
+realclean: clean
+	$(RMF) tags
+
+distclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+
+devclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+
+install:
+
+
+uninstall:
+
+
+
+# Semi-automatic generation of dependencies:
+# Use gcc -M  because X11 `makedepend' doesn't work on all systems
+# and it also includes system headers.
+# `semi'-automatic since dependencies are generated at distribution time.
+
+depend:
+	@$(MV) Makefile Makefile.bak
+	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
+	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@if test -f Makefile ; then \
+	    $(RMF) Makefile.bak; \
+	else \
+	   $(MV) Makefile.bak Makefile; \
+	   echo -e "Something went wrong\n\a"; \
+	fi
+
+# -----------------------------------------------------------------------
+# DO NOT DELETE: nice dependency list follows

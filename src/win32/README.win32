@@ -1,0 +1,200 @@
+
+This directory <bacula-src>/src/win32 contains the build
+environment for building the native Win32 Bacula File daemon,
+the native Win32 bconsole program and the wx-console GUI console
+program.
+
+The directory structure is:
+
+  bacula/src/win32      Makefiles and scripts
+    baculafd            Visual Studio Files
+      Release           Release objects, and bacula-fd.exe
+       Debug            Debug object, and bacula-fd.exe produced
+                           by VC++
+    console             Build of console program and bconsole.conf
+      Release           Release objects  and bconsole.exe
+      Debug             Debug objects 
+    wx-console          Buld of wx-console program and wx-console-conf
+      Release           Release objects and wx-console.exe
+      Debug             Debug objects.
+    filed               Links to core filed code
+    findlib             Links to core findlib code
+    lib                 Links to core lib code
+
+  depkgs-win32
+    pthreads            The POSIX pthreads library (third party)
+    zlib                The zlib library (third party)
+    wx                  The wxWidgets library (third party)
+
+depkgs-win32 is released in a separate .tar.gz file that contains the
+source for the above mentioned libraries needed to build the
+Win32 Bacula.  It can be found in the Source Forge Bacula project
+release section.
+
+To build it:
+- Make sure nmake is on your PATH.
+- Make sure your COMSPEC is properly setup (see full dump of
+  my cygwin environment below).
+- The build is done in an rxvt window under the latest version
+  of cygwin.
+- You need the Platform SDK installed.
+- You need Visual Studio installed.
+- You need to load depkgs-win32, then
+    (make the two patches described below to in Nicolas' notes to wx)
+    cd depkgs-win32
+    make
+    (after building zlib and pthreads, it fails in wx)
+    cd wx
+    ./configure
+    make
+    (if it succeeds skip the next item, otherwise do it) 
+- You may have to build wx with VC++.
+  After starting VC++, use File->Open Workspace then
+  open wx/src/wxWindows.dsw then use
+  Build->Build All or Build->build wxmsw.lib should work too.
+- cd bacula
+  ./configure --enable-client-only
+  cd src/win32
+  make
+
+That should be all there is too it. The winbacula-1.xx.y.exe should be
+in the current directory.
+
+
+See License.txt for the License.
+
+The native Win32 interface code was written by:
+
+   Christopher S. Hull, February 2004
+
+
+For more details of building wx, see depkgs-win32/wx/docs/msw/install.txt
+
+The easiest way to build this is to have a Visual Studio C++ 6.0. 
+However, you can use the free Microsoft C++ compiler with a bit
+of additional work.
+
+Here are additional pointers on building wx-console supplied by Nicolas Boichat:
+
+
+Tools I used (I think the 3 first one are included in VStudio) :
+- VC++ toolkit : http://msdn.microsoft.com/visualc/vctoolkit2003/
+- Windows Platform SDK :
+   http://www.microsoft.com/msdownload/platformsdk/sdkupdate/
+   (Core SDK and Internet Development SDK)
+- nmake (it got it with .Net Framework SDK)
+- lib.exe found in the SDK-base/Bin/win64 directory (works fine
+  on a 32 bit Windows).
+
+Instructions if you want to build wx-console :
+- wxWidgets 2.4.2 compilation
+  + In include/wx/string.h, replace line 195 by
+      #if defined(__VISUALC__) // && defined(_MT) && !defined(_DLL)
+  + In src/common/string.cpp, replace line 167 by
+      #if defined(__VISUALC__) // && defined(_MT) && !defined(_DLL)
+  + Follow the instructions in docs/msw/install.txt
+     (Visual C++ 6.0 compilation - Using makefiles)
+
+- Make sure that the environment variables are set as:
+  - PATH includes the directories bin of both the C++ Toolkit and the SDK
+  - INCLUDE includes the directories include of both the C++ Toolkit and the SDK
+  - LIB includes the directories Lib of both the C++ Toolkit and the SDK
+    
+- Compile bacula depkg-win32 with Visual Studio or try the
+  supplied makefiles as described in the doc.
+
+- Compile wx-console with nmake -f wx-console.mak in
+  src/win32/wx-console
+
+- Additional information on using the free Micrsosoft C++ see
+  http://sapdb.2scale.net/moin.cgi/MS_20C_2b_2b_20Toolkit
+
+NOTE! I (Kern) cannot build wxWindows with the Makefile until after
+I do a ./configure.  I can us VC Studio directly to do so
+following their instructions.
+
+Getting all the environment variables setup properly is not always so obvious.
+Here is what I have when I do a "set" in a rxvt window, in which I build
+Bacula. Probably what is important are INCLUDE, LIB, PATH, and WXWIN, but note
+there are a zillion other things set:
+!::='::\'
+!C:='C:\cygwin\home\kern'
+ALLUSERSPROFILE='C:\Documents and Settings\All Users'
+APPDATA='C:\Documents and Settings\kern\Application Data'
+BASEMAKE='C:\Program Files\Microsoft SDK\Include\BKOffice.Mak'
+BASH=/usr/bin/bash
+BASH_VERSINFO=([0]="2" [1]="05b" [2]="0" [3]="1" [4]="release" [5]="i686-pc-cygwin")
+BASH_VERSION='2.05b.0(1)-release'
+BKOFFICE='C:\Program Files\Microsoft SDK\.'
+CLIENTNAME=Console
+COLORFGBG='0;default;15'
+COLORTERM=rxvt-xpm
+COLUMNS=70
+COMMONPROGRAMFILES='C:\Program Files\Common Files'
+COMPUTERNAME=TIBS
+COMSPEC='C:\WINDOWS\system32\cmd.exe'
+CYGWIN=notty
+DIRSTACK=()
+DISPLAY=:0
+EDHELP=/home/kern/bin/ed.hlp
+EDTRM=/home/kern/bin/ed.trm
+EUID=1007
+GROUPS=()
+HISTFILE=/cygdrive/c/home/kern/.bash_history
+HISTFILESIZE=500
+HISTSIZE=500
+HOME=/cygdrive/c/home/kern
+HOMEDRIVE=C:
+HOMEPATH='\Documents and Settings\kern'
+HOSTNAME=Tibs
+HOSTTYPE=i686
+IFS=$' \t\n'
+INCLUDE='C:\Program Files\Microsoft SDK\Include\.;C:\Program Files\Microsoft Visual Studio\VC98\atl\include;C:\Program Files\Microsoft Visual Studio\VC98\mfc\include;C:\Program Files\Microsoft Visual Studio\VC98\include'
+INETSDK='C:\Program Files\Microsoft SDK\.'
+LIB='C:\Program Files\Microsoft SDK\Lib\.;C:\Program Files\Microsoft Visual Studio\VC98\mfc\lib;C:\Program Files\Microsoft Visual Studio\VC98\lib'
+LINES=65
+LOGONSERVER='\\TIBS'
+MACHTYPE=i686-pc-cygwin
+MAILCHECK=60
+MAKE_MODE=UNIX
+MOZILLA_HOME=/home/netscape
+MSDEVDIR='C:\Program Files\Microsoft Visual Studio\Common\MSDev98'
+MSSDK='C:\Program Files\Microsoft SDK\.'
+MSTOOLS='C:\Program Files\Microsoft SDK\.'
+NUMBER_OF_PROCESSORS=1
+OLDPWD=/home/kern/bacula
+OPTERR=1
+OPTIND=1
+OS=Windows_NT
+OSTYPE=cygwin
+PATH='/cygdrive/c/Program Files/Microsoft Visual Studio/VC98/Bin:/cygdrive/c/Program Files/Microsoft Visual Studio/VC98:/cygdrive/c/Program Files/Microsoft Visual Studio/Common/MSDev98/Bin:/cygdrive/c/Program Files/Microsoft Visual Studio/Common/Tools/WinNT:/cygdrive/c/Program Files/Microsoft Visual Studio/Common/Tools:c:/cygwin/bin:/usr/bin:/home/kern/bin:/sbin:/usr/sbin:'
+PATHEXT='.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH'
+PIPESTATUS=([0]="0")
+PPID=3864
+PROCESSOR_ARCHITECTURE=x86
+PROCESSOR_IDENTIFIER='x86 Family 15 Model 2 Stepping 7, GenuineIntel'
+PROCESSOR_LEVEL=15
+PROCESSOR_REVISION=0207
+PROGRAMFILES='C:\Program Files'
+PROMPT='$P$G'
+PS1='\e[34m\]\w\[\e[0m\]$\040'
+PS2='> '
+PS4='+ '
+PWD=/home/kern
+SESSIONNAME=Console
+SHELL=/bin/bash
+SHELLOPTS=braceexpand:emacs:hashall:histexpand:history:interactive-comments:monitor
+SHLVL=1
+SYSTEMDRIVE=C:
+SYSTEMROOT='C:\WINDOWS'
+TEMP=/cygdrive/c/DOCUME~1/kern/LOCALS~1/Temp
+TERM=xterm
+TMP=/cygdrive/c/DOCUME~1/kern/LOCALS~1/Temp
+UID=1007
+USERDOMAIN=TIBS
+USERNAME=kern
+USERPROFILE='C:\Documents and Settings\kern'
+WINDIR='C:\WINDOWS'
+WINDOWID=168050736
+WXWIN='c:\home\kern\bacula\depkgs-win32\wx'
+_=set

@@ -1,0 +1,84 @@
+# 
+# Version $Id: Makefile.in,v 1.11.2.1 2004/11/17 22:48:21 kerns Exp $
+# 
+@MCOMMON@
+
+working_dir=@working_dir@
+
+srcdir =	@srcdir@
+VPATH = 	@srcdir@
+.PATH:		@srcdir@
+topdir = ..
+thisdir = scripts
+
+
+first_rule: all
+dummy:
+
+MKDIR = $(topdir)/autoconf/mkinstalldirs
+
+#-------------------------------------------------------------------------
+
+all: Makefile
+
+depend:
+	
+
+#-------------------------------------------------------------------------
+
+installdirs:
+	$(MKDIR) $(DESTDIR)$(sysconfdir)
+	$(MKDIR) $(DESTDIR)$(sbindir)
+	$(MKDIR) $(DESTDIR)$(scriptdir)
+
+install: installdirs
+	$(INSTALL_SCRIPT) startmysql $(DESTDIR)$(scriptdir)/startmysql
+	$(INSTALL_SCRIPT) stopmysql $(DESTDIR)$(scriptdir)/stopmysql
+	$(INSTALL_SCRIPT) bconsole $(DESTDIR)$(scriptdir)/bconsole
+	$(INSTALL_SCRIPT) gconsole $(DESTDIR)$(scriptdir)/gconsole
+	$(INSTALL_SCRIPT) bacula $(DESTDIR)$(scriptdir)/bacula
+	@if  test -f ${DESTDIR}${scriptdir}/mtx-changer; then \
+	   echo "  ==> Saving existing mtx-changer to mtx-changer.old"; \
+	   $(MV) -f ${DESTDIR}${scriptdir}/mtx-changer ${DESTDIR}${scriptdir}/mtx-changer.old; \
+	fi
+	$(INSTALL_SCRIPT) mtx-changer $(DESTDIR)$(scriptdir)/mtx-changer
+	$(INSTALL_DATA)   btraceback.gdb $(DESTDIR)$(scriptdir)/btraceback.gdb
+	$(INSTALL_DATA)   btraceback.dbx $(DESTDIR)$(scriptdir)/btraceback.dbx
+	$(INSTALL_SCRIPT) btraceback $(DESTDIR)$(sbindir)/btraceback
+
+uninstall:
+	(cd $(DESTDIR)$(scriptdir); $(RMF) startmysql)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) stopmysql)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) bconsole)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) gconsole)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) bacula)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) fd)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) mtx-changer)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) btraceback.gdb)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) btraceback.dbx)
+	(cd $(DESTDIR)$(sbindir); $(RMF) btraceback)
+
+Makefile: Makefile.in
+	cd $(topdir) \
+	    && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+	chmod 755 startmysql stopmysql bacula startit stopit btraceback
+	chmod 755 mtx-changer bconsole gconsole
+
+Makefiles:
+	$(SHELL) config.status
+	chmod 755 startmysql stopmysql bacula startit stopit btraceback
+	chmod 755 mtx-changer bconsole gconsole
+
+clean:
+	@$(RMF) *~ 1 2 3
+
+# clean for distribution
+distclean: clean
+	@$(RMF) startmysql stopmysql bacula fd startit stopit btraceback
+	@$(RMF) bconsole gconsole logrotate bacula.desktop 
+	@$(RMF) bacula.desktop.gnome1 bacula.desktop.gnome2 mtx-changer
+	@$(RMF) gnome-console.console_apps bacula.desktop.gnome2.xsu
+	@$(RMF) bacula.desktop.gnome2.consolehelper bacula.desktop.gnome1.xsu
+	@$(RMF) bacula.desktop.gnome1.consolehelper
+
+# ------------------------------------------------------------------------

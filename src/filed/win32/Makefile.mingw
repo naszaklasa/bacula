@@ -1,0 +1,125 @@
+#
+# makefile to build Windows specific pieces of the Bacula File daemon
+#
+# Version $Id: Makefile.mingw,v 1.2 2004/06/27 11:23:22 kerns Exp $
+#
+CFLAGS=-g -O2 -DHAVE_WIN32 -DHAVE_MINGW
+WCFLAGS=-mwindows -I../../win32/compat
+CC = gcc
+CXX = g++
+RANLIB = /usr/bin/ranlib
+SHELL = /bin/sh
+
+# Program to install `make'.
+INSTALL_PROGRAM = ${INSTALL}
+# Program to install the man page.
+INSTALL_DATA = ${INSTALL} -m 644
+# Generic install program.
+INSTALL = /usr/bin/install -c
+
+VERSION = 1.35.0
+
+
+# this dir
+srcdir = .
+# main dir
+topdir = ../../..
+# this dir relative to top dir
+thisdir = src/filed/win32
+
+# Common prefix for machine-independent installed files.
+prefix = 
+sysconfdir = /etc/bacula
+sbindir = /sbin
+piddir = /var/run
+
+SRCS =	shutdown.c
+
+OBJS =	shutdown.o
+
+BACOBJS = winabout.o winevents.o winservice.o winstat.o wintray.o winmain.o
+
+all: winlib.a winres.res 
+
+win32: winlib.a
+
+winlib.a: $(BACOBJS) winres.res
+	ar rcs $@ $(BACOBJS)
+
+winres.res: winres.rc bacula.ico winres.h idle.ico running.ico error.ico warn.ico
+	windres -DHAVE_MINGW $< -O coff -o $@
+
+winmain.o: winmain.cpp winbacula.h
+	$(CC) -c $(WCFLAGS) $(CFLAGS) $<
+
+libmymapi32.a: mymapi32.def
+	dlltool --as=as -k --output-lib $@ --def $<
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+clean:
+	rm -f *.exe *.o *.res *.a 1 2 3
+	rm -f bin/smtp.exe bin/console.exe
+	rm -f bin/bacula-fd.exe bin/bsmtp.exe bin/testfind.exe
+
+distclean: clean
+	@rm -f Makefile
+	@rm -rf bin/CVS CVS
+
+devclean: clean
+	@rm -f Makefile
+
+install:
+	@mkdir -p $(DESTDIR)$(sbindir) $(DESTDIR)/tmp $(DESTDIR)$(sbindir)/../working
+	@echo "Installing system binary files ..."
+	@strip ../bacula-fd.exe
+	@strip ../../tools/bsmtp.exe
+	@strip ../../tools/testfind.exe
+	@strip ../../console/bconsole.exe
+	@cp -f ../bacula-fd.exe bin/
+	@cp -f ../../tools/bsmtp.exe bin/
+	@cp -f ../../tools/testfind.exe bin/
+	@cp -f ../../console/bconsole.exe bin/
+	@cp -f bin/* $(DESTDIR)$(sbindir)
+	@cp -f ../bacula-fd.conf $(DESTDIR)$(sysconfdir)/bacula-fd.conf.new
+	@cp -f ../../console/bconsole.conf $(DESTDIR)$(sysconfdir)/bconsole.conf.new
+
+# Make a Win32 binary release 
+binary-release:
+	@rm -rf wr
+	@mkdir -p wr
+	@mkdir -p wr/$(prefix) wr/$(sbindir) wr/$(sbindir)/../working wr/$(sysconfdir) wr/tmp
+	@echo "Copying system binary files ..."
+	@cp bin/* wr/$(sbindir)
+	@strip ../bacula-fd.exe
+	@strip ../../tools/bsmtp.exe
+	@strip ../../tools/testfind.exe
+	@strip ../../console/bconsole.exe
+	@echo "Copying executables ..."
+	@cp -f ../bacula-fd.exe wr/$(sbindir)/bacula-fd.exe 
+	@cp -f ../../tools/bsmtp.exe wr/$(sbindir)/bsmtp.exe 
+	@cp -f ../../tools/testfind.exe wr/$(sbindir)/testfind.exe 
+	@cp -f ../../console/bconsole.exe wr/$(sbindir)/bconsole.exe 
+	@echo "Copying bacula-fd.conf..."
+	@cp -f ../bacula-fd.conf wr/$(sysconfdir)/bacula-fd.conf.new
+	@cp -f ../../console/bconsole.conf wr/$(sysconfdir)/bconsole.conf.new
+# the two dummy files are necessary to insure that WinZip
+# actually creates the directories.
+	@echo "dummy" >wr/tmp/dummy.txt
+	@echo "dummy" >wr/$(sbindir)/../working/dummy.txt
+	@echo "Making tar file ..."
+	@tar cfz winbacula-${VERSION}.tar.gz -C wr bacula tmp
+	@mv -f winbacula-${VERSION}.tar.gz $(topdir)/..
+	@rm -rf wr
+	@(cd $(topdir)/..; \
+	   echo "Tar file in: `pwd`/winbacula-${VERSION}.tar.gz")
+
+dummy:
+
+.c.o:
+	$(CC) -c $(WCFLAGS) $(CFLAGS) $<
+
+.cpp.o:
+	$(CXX) -c $(WCFLAGS) $(CFLAGS) $<

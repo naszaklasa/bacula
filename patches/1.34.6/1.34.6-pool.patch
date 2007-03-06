@@ -1,0 +1,58 @@
+
+ This patch fixes a bug where Inc, Diff, and Full Pool overrides
+ would incorrectly override a Pool= on the Run card. The patch
+ also includes the Pool actually used in the Job Report.
+
+ Apply the patch to version 1.34.6 with:
+
+ cd <bacula-source>
+ patch -p0 <1.34.6-pool.patch
+ make
+ ...
+
+Index: src/dird/scheduler.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/scheduler.c,v
+retrieving revision 1.24
+diff -u -r1.24 scheduler.c
+--- src/dird/scheduler.c	13 Mar 2004 09:30:10 -0000	1.24
++++ src/dird/scheduler.c	11 Aug 2004 07:38:51 -0000
+@@ -147,15 +147,6 @@
+    if (run->pool) {
+       jcr->pool = run->pool;	      /* override pool */
+    }
+-   if (run->full_pool) {
+-      jcr->pool = run->full_pool;     /* override full pool */
+-   }
+-   if (run->inc_pool) {
+-      jcr->pool = run->inc_pool;      /* override inc pool */
+-   }
+-   if (run->dif_pool) {
+-      jcr->pool = run->dif_pool;      /* override dif pool */
+-   }
+    if (run->storage) {
+       jcr->store = run->storage;      /* override storage */
+    }
+Index: src/dird/backup.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/backup.c,v
+retrieving revision 1.65
+diff -u -r1.65 backup.c
+--- src/dird/backup.c	19 Apr 2004 14:27:00 -0000	1.65
++++ src/dird/backup.c	11 Aug 2004 07:38:52 -0000
+@@ -468,6 +468,7 @@
+ Backup Level:           %s%s\n\
+ Client:                 %s\n\
+ FileSet:                \"%s\" %s\n\
++Pool:                   \"%s\"\n\
+ Start time:             %s\n\
+ End time:               %s\n\
+ FD Files Written:       %s\n\
+@@ -491,6 +492,7 @@
+ 	level_to_str(jcr->JobLevel), since,
+ 	jcr->client->hdr.name,
+ 	jcr->fileset->hdr.name, fsr->cCreateTime,
++	jcr->pool->hdr.name,
+ 	sdt,
+ 	edt,
+ 	edit_uint64_with_commas(jcr->jr.JobFiles, ec1),

@@ -1,0 +1,13 @@
+/etc/exports
+/etc/fstab
+/etc/group
+/etc/gshadow
+/etc/host.conf
+/etc/hosts
+/etc/hosts.allow
+/etc/hosts.deny
+/etc/modules.conf
+/etc/passwd
+/etc/resolv.conf
+/etc/shadow
+/etc/sysconfig

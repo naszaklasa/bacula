@@ -1,0 +1,73 @@
+# autoconf/Make.common.in	 -*- Makefile -*-
+# release date (man), LSM date, version number/name, current maintainer
+DATE="@DATE@"
+LSMDATE=@LSMDATE@
+VERSION=@VERSION@
+VERNAME=bacula-$(VERSION)#
+MAINT=Kern Sibbald#
+MAINTEMAIL=<kern@sibbald.com>#
+WEBMAINT=#
+WEBMAINTEMAIL=#
+WEBPAGE=#
+FTPSITENAME=#
+FTPSITEDIR=#
+#-------------------------------------------------------------------------
+
+SHELL = /bin/sh
+
+# Installation target directories & other installation stuff
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+binprefix =
+manprefix =
+sbindir = @sbindir@
+sysconfdir = @sysconfdir@
+scriptdir = @scriptdir@
+mandir = @mandir@/man1
+manext = 1
+
+# Tools & program stuff
+CC = @CC@
+CPP = @CPP@
+CXX = @CXX@
+MV = @MV@
+RM = @RM@
+RMF = @RM@ -f
+CP = @CP@
+SED = @SED@
+AWK = @AWK@
+ECHO = @ECHO@
+CMP = @CMP@
+TBL = @TBL@
+AR = @AR@
+RANLIB = @RANLIB@
+INSTALL = @INSTALL@
+# add the -s to the following in PRODUCTION mode
+INSTALL_PROGRAM = @INSTALL@ -m @SBINPERM@
+INSTALL_DATA = @INSTALL@ -m 644
+INSTALL_SCRIPT = @INSTALL@ -m @SBINPERM@
+INSTALL_CONFIG = @INSTALL@ -m 640
+
+# Flags & libs
+CFLAGS = @CFLAGS@ 
+CPPFLAGS = @CPPFLAGS@
+LDFLAGS = @LDFLAGS@
+TTOOL_LDFLAGS = @TTOOL_LDFLAGS@
+#DEFS = @DEFS@
+LIBS = @LIBS@
+DINCLUDE = @DINCLUDE@
+DLIB = @DLIB@
+DB_LIBS = @DB_LIBS@
+
+# Windows (cygwin) flags 
+WCFLAGS = @WCFLAGS@
+WLDFLAGS = @WLDFLAGS@
+
+# X Include directory
+#XINC = @X_CFLAGS@ @XPM_CFLAGS@
+
+# extra libraries needed by X on some systems, X library location
+#XLIB = @X_LIBS@ @XPM_LIBS@ -lX11 @X_EXTRA_LIBS@
+
+# End of common section of the Makefile
+#-------------------------------------------------------------------------

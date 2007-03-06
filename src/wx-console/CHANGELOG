@@ -1,0 +1,233 @@
+24-03-2005 :
+ - wxbMainFrame : Fix a bug with GTK+-1.2 which caused wx-console to crash
+   when starting.
+ - wxbRestorePanel : Fix a major bug which caused wx-console to enter in an
+   infinite loop which allocate a lot of memory and could make the system crash.
+
+10-03-2005 :
+ - wxbMainFrame : Fix bug #0000221 (Debian 292517)
+
+13-08-2004 :
+ - wxbHistoryTextCtrl : Fixed Win32 build error
+ - general : implemented command completion and interactive help.
+
+06-08-2004 :
+ - wxbRestorePanel : now parsing '+' sent by the director when building
+     tree.
+ - wxbRestorePanel : implemented .backups client=xxx (2.1)
+ - wxbRestorePanel : implemented the director modification showing
+     jobid when a job is started.
+
+28-07-2004 :
+ - wxbRestorePanel : implemented restore before=<Date> parameter.
+
+17-07-2004 :
+ - wxbRestorePanel & wxbHistoryTextCtrl : Fixed unsigned comparisons.
+ - wxbRestorePanel : Fixed problem when the newly created job is not
+    at the end of the list.
+
+16-07-2004 :
+ - wxbRestorePanel : Fixed crash when an error occurs while querying
+    restore list (reported by Dan Langille).
+
+15-07-2004 :
+ - wxbMainFrame : When an unexpected question is in this format 
+    (***? (yes/mod/no):), a list is shown to choose one of these 
+    possibilities.
+ - wxbRestorePanel : Fixed crash when there is no backup available
+     (fresh install) 
+ - wxbHistoryTextCtrl : Created a new text control that keep an history
+     of typed commands.
+
+14-07-2004 :
+ - wxbMainFrame : Fixed config file problem when changing the default
+     configuration file (Linux)
+
+03-07-2004 :
+ - wxbConfigPanel : Fixed ?: operator cast problem with gcc 2.95.
+
+25-06-2004 :
+ - wxbRestorePanel : Fix file size truncated if >100mb.
+
+14-06-2004 :
+ - wxbConfigPanel : fixed tests
+
+22-05-2004 :
+ - wxbUtils : Created this class, containing general functions like
+    WaitForEnd
+
+21-05-2004 :
+ - wxbRestorePanel : Added functions to get/set working status
+
+17-05-2004 :
+ - wxbRestorePanel : Implemented refresh buttons
+
+15-05-2004 :
+ - wxbRestorePanel : The user can now mark/unmark a range of files selected
+     with shift-click or multiple files selected with ctl-click, by
+     right-clicking or using buttons.
+ - wxbRestorePanel : Added buttons to mark/unmark directories/files.
+ - wxbRestorePanel : Added buttons to force to refresh the whole tree/list
+
+14-05-2004 :
+ - wxbMainFrame : Fixed various reconnecting and disconnecting problems.
+ - console_thread : The user can now choose the director to use
+    when there's multiple directors in the configuration file.
+ - wxbRestorePanel : List's columns are now resized correctly in the
+     first directory.
+
+13-05-2004 :
+ - wxbRestorePanel : Width adjustments between the tree view window
+     and the file view window are now possible.
+
+10-05-2004 :
+ - wxbTableParser : wxHashMap replaced by wxArray
+
+09-05-2004 :
+ - wxbMainFrame : reconnecting/disconnecting implemented
+ - wxbMainFrame : Added menus to allow the user to change his config
+      file, and to edit it.
+
+08-05-2004 :
+ - wxbMainFrame : The user can now choose his configuration file,
+      and his choice is stored in a wxConfig (registry under Win32,
+      file under Linux)...
+ - wxbConfigFileEditor : Created a small text editor
+
+07-05-2004 :
+ - console_thread : Added support for the new parse_config which
+      returns a status code.
+ - wxbMainFrame/console_thread : A command line parameter now
+      allows the user to choose his config file.
+
+06-05-2004 :
+ - wxbMainFrame : Corrected font bug in GTK+ 1.2
+ - console_thread : Added support for Mac OS X configuration
+      file location.
+
+02-05-2004 :
+ - wxbMainFrame : Corrected incorrect casting of thread event
+      functions (reported by Aristedes Maniatis)
+ - wxbRestorePanel : Corrected incorrect casting of event
+      functions (reported by Aristedes Maniatis)
+
+01-05-2004 :
+ - wxbRestorePanel : Corrected a problem when you double-clicked an 
+      a folder in the list, the list was then refreshed two times
+      (instead of one) in the new directory
+ - wxbRestorePanel : Improved configuration panels' look
+ - wxbRestorePanel : Added titles to configuration panels
+ - wxbMainFrame : If the connection drops unexpectedly, it should say 
+   it lost the connection to the Director and then wait for you to
+   either manually exit or (when it becomes possible) reconnect.
+ - wxbMainFrame : corrected segmentation faults when exiting
+     (to be verified)
+ - wxbMainFrame : the user can quit however the state is
+
+30-04-2004 :
+ - wxbRestorePanel : Added "Cancel" button to cancel restore at
+     all state of restore process.
+ - wxbMainFrame : Added "Send" button
+ - wxbRestorePanel (first configure) : Changed defaults values when
+     Job Name changes
+ - wxbRestorePanel (first configure) : corrected problem when bad
+     parameters are chosen
+ - wxbRestorePanel : Checking more carefully which job we just have run
+ - wxbRestorePanel : Using wxStopWatch instead of GetTicks to manage
+     timeouts.
+ - wxbMainFrame : Added "Command: " in front of the command window
+     so that the user knows he can type into the command line
+     (thanks to Kern)
+ - wxbMainFrame : Fixed 100% CPU usage in GTK : added buffering when
+     receiving data to print to the console (thanks to Phil)
+ - wxbRestorePanel : Fixed 100% CPU usage in GTK : added sleeps between
+     Yields.
+
+29-04-2004 :
+ - wxbRestorePanel : Modified the way a restore is started : much
+     more parameters are modifiable.
+ - wxbConfigPanel : Created a generic panel which can be used
+     to setup configuration parameters (for example when restoring)
+
+27-04-2004 :
+ - wxbMainFrame : others panels are locked when a command is ran
+     directly by typing in the console.
+ - wxbRestorePanel : Updated update interval of the progress bar
+     when restoring
+     
+26-04-2004 :
+ - Corrected a bug in Windows which causes wx-console to crash when
+     typing quit before exiting the application.
+
+25-04-2004 :
+ - general : status text is more often used
+ - wxbRestorePanel : restore aborted if there's no client or no fileset
+ - wxbRestorePanel : corrected problem if one double clicks on a
+     directory X in the left "tree" window when the directory is 
+     not yet open, instead of selecting the directory and everything 
+     below, it opens the directory and nothing is selected.
+ - wxbRestorePanel : first client is selected when restore
+     mode starts.
+ - wxbRestorePanel : when the director is building tree, 
+     changes are made to the status in the gauge.
+ - wxbRestorePanel : Cursor set to hourglass when working
+ - wxbMainFrame : Automatically scrolling to the bottom of 
+     console text control.
+
+24-04-2004 :
+ - wxbMainFrame : When starting wx-console, the initial key 
+      input focus is set into the command window.
+ - wxbMainFrame : the user is now prompted when an 
+      unexpected "question" is asked).
+ - wxbRestorePanel : configure is allowed to change fileset
+ - wxbRestorePanel : using dot commands (.clients, .filesets)
+ - console_thread : implemented prompt and heartbeat messages
+
+23-04-2004 :
+ - general : Don't concatenate lines in csprint, but in wxbDataParser
+         (necessary for dot commands)
+
+22-04-2004 :
+ - wxbRestorePanel : improved restore appearance
+ - wxbRestorePanel : configure is allowed to change client
+
+19-04-2004 :
+ - wxbRestorePanel : Locked configure items until first 
+   configuration is received
+ - wxbRestorePanel : Removed estimate, which slows the restore
+   process
+
+18-04-2004 :
+ - wxbRestorePanel : wxTreeCtrl::GetParent changed in 
+   GetItemParent (thanks to Luca Berra)
+ - wxbRestorePanel : The user can now change a part of restore
+    configuration
+
+17-04-2004 :
+ - wxbRestorePanel modified to use wxbDataParsers
+ - created wxbDataTokenizer, which fetches commands results
+ - modified the way data is passed to panel (no Prints anymore,
+   but wxbDataParsers)
+ - win32 : Makefile.in corrected to use ressource file
+ - win32 : wx-console is now compatible with MinGW.
+ - wxbPanel/wxbMainFrame : Added a locking function (for example, 
+   the user can't type something in the console when a restore
+   is in progress)
+
+16-04-2004 :
+ - wxbRestorePanel : Allow the user to change the status by 
+   double-clicking on the check mark
+
+15-04-2004 :
+ - project renamed in wx-console
+ - console_thread : Uses wx-console.conf instead of console.conf
+ - wxbRestorePanel : Change the marked state without redoing a dir
+
+12-04-2004 :
+ - The source code is now better documented
+ - wxbRestorePanel : Check if a client was selected before
+   entering choose mode
+ - The source code is now right idented (3 spaces by level)
+ - Copyrights changed to Kern Sibbald and John Walker
+ - wxbPanel : super-class access rights problem corrected
+ - wxbRestorePanel : Added "nice" images to indicate restore status

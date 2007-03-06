@@ -1,0 +1,83 @@
+
+ This patch fixes two problems: 1. A deadlock between the job
+ queue scheduler and the watchdog thread. 2. A bad initialization
+ of the watchdog queue which could cause memory corruption. It also
+ reduces the watchdog granularity from 1 second to 10 seconds.
+
+ Apply the patch to Bacula 1.34.6 (probably any 1.34.x version) with:
+
+ cd <bacula-source>
+ patch -p0 <1.34.6-deadlock.patch
+ make
+ ...
+
+
+Index: src/dird/jobq.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/jobq.c,v
+retrieving revision 1.19
+diff -u -r1.19 jobq.c
+--- src/dird/jobq.c	1 Jun 2004 20:10:04 -0000	1.19
++++ src/dird/jobq.c	9 Aug 2004 06:08:08 -0000
+@@ -501,8 +501,10 @@
+ 	    jcr->db = NULL;
+ 	 }
+          Dmsg1(300, "====== Termination job=%d\n", jcr->JobId);
++	 V(jq->mutex);		      /* release internal job queue lock */
+ 	 free_jcr(jcr);
+ 	 free(je);		      /* release job entry */
++	 P(jq->mutex);		      /* acquire internal job queue lock */
+       }
+       /*
+        * If any job in the wait queue can be run,
+Index: src/lib/watchdog.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/lib/watchdog.c,v
+retrieving revision 1.27
+diff -u -r1.27 watchdog.c
+--- src/lib/watchdog.c	1 Apr 2004 16:37:01 -0000	1.27
++++ src/lib/watchdog.c	9 Aug 2004 06:08:08 -0000
+@@ -32,11 +32,12 @@
+ 
+ /* Exported globals */
+ time_t watchdog_time = 0;	      /* this has granularity of SLEEP_TIME */
++time_t watchdog_sleep_time = 10;      /* examine things every 10 seconds */
+ 
+-#define SLEEP_TIME 1		      /* examine things every second */
+ 
+ /* Forward referenced functions */
+-static void *watchdog_thread(void *arg);
++void *watchdog_thread(void *arg);
++
+ static void wd_lock();
+ static void wd_unlock();
+ 
+@@ -71,8 +72,8 @@
+       Emsg1(M_ABORT, 0, _("Unable to initialize watchdog lock. ERR=%s\n"), 
+ 	    strerror(errstat));
+    }
+-   wd_queue = new dlist(wd_queue, &dummy->link);
+-   wd_inactive = new dlist(wd_inactive, &dummy->link);
++   wd_queue = new dlist(dummy, &dummy->link);
++   wd_inactive = new dlist(dummy, &dummy->link);
+ 
+    if ((stat = pthread_create(&wd_tid, NULL, watchdog_thread, NULL)) != 0) {
+       return stat;
+@@ -214,7 +215,7 @@
+    return ret;
+ }
+ 
+-static void *watchdog_thread(void *arg)
++void *watchdog_thread(void *arg)
+ {
+    Dmsg0(400, "NicB-reworked watchdog thread entered\n");
+ 
+@@ -259,7 +260,7 @@
+       }
+       wd_unlock();
+       unlock_jcr_chain();
+-      bmicrosleep(SLEEP_TIME, 0);
++      bmicrosleep(watchdog_sleep_time, 0);
+    }
+ 
+    Dmsg0(400, "NicB-reworked watchdog thread exited\n");

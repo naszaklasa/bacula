@@ -1,0 +1,206 @@
+From: "Dan Langille" <dan@langille.org>
+To: bacula-users@lists.sourceforge.net
+Subject: [Bacula-users] FreeBSD - large backups to tape
+Date: Mon, 20 Oct 2003 15:29:18 -0400
+
+Kern and I have been working on a FreeBSD/Bacula problem.  
+He's asked me to post this to the list.  The problem was within the
+FreeBSD pthreads library.  A solution has been found.
+
+PROBLEM DESCRIPTION:
+
+The FreeBSD pthreads library does not properly handle End Of Tape.
+This problem will be fixed in FreeBSD 4.9.
+
+UPDATE 2004/02/24: Note, the problem was apparently not fixed in
+    4.9-RELEASE. 4.9-RELEASE contained a partial patch that did not
+    prevent data loss. To date, the latest FreeBSD -RELEASE versions
+    (4.9-RELEASE and 5.2.1-RELEASE) are *broken* as shipped. If
+    you are running one of these systems, please either patch
+    your system as described below or upgrade to -STABLE or
+    -CURRENT immediately.
+
+    We expect 4.10-RELEASE to be available within a few weeks
+    (written 24 Apr 2004) and 5.3-RELEASE to be available in a
+    few months.  4.10 and 5.3 *should* contain the fix, but we
+    can't know for sure until we've had a chance to test them.
+
+The bug results in more data being written than the tape will
+hold because of a lost status code.  Any backup which involving
+more than one tape would have data lost.
+
+DEMONSTRATION:
+
+To demonstrate the problem, tapetest.c can be obtained from 
+http://www.freebsd.org/cgi/query-pr.cgi?pr=56274
+
+tapetest.c can also be found in the Bacula source distribution
+in <bacula-source>/platforms/freebsd/tapetest.c
+
+This tests without pthreads:
+
+ *  If you build this program with:
+ *
+ *  c++ -g -O2 -Wall -c tapetest.c
+ *  c++ -g -O2 -Wall tapetest.o -o tapetest
+ *
+ *  Procedure for testing tape
+ *  ./tapetest /dev/your-tape-device
+ *  rewind
+ *  rawfill
+ *  rewind
+ *  scan
+ *
+ *  The output will be something like:
+ *
+ * ========
+ *  Rewound /dev/nsa0
+ *  *Begin writing blocks of 64512 bytes.
+ *  ++++++++++++++++++++ ...
+ *  Write failed.  Last block written=17294. stat=0 ERR=Unknown error: 0
+ *  weof_dev
+ *  Wrote EOF to /dev/nsa0
+ *  *Rewound /dev/nsa0
+ *  *Starting scan at file 0
+ *  17294 blocks of 64512 bytes in file 0
+ *  End of File mark.
+ *  End of File mark.
+ *  End of tape
+ *  Total files=1, blocks=17294, bytes = 1115670528
+ * ========
+ *
+ *  which is correct. Notice that the return status is
+ *  0, while in the example below, which fails, the return
+ *  status is -1.
+
+This tests with pthreads:
+
+ *  If you build this program with:
+ *
+ *  c++ -g -O2 -Wall -pthread -c tapetest.c
+ *  c++ -g -O2 -Wall -pthread tapetest.o -o tapetest
+ *    Note, we simply added -pthread compared to the
+ *    previous example.
+ *
+ *  Procedure for testing tape
+ *  ./tapetest /dev/your-tape-device
+ *  rewind
+ *  rawfill
+ *  rewind
+ *  scan
+ *
+ *  The output will be something like:
+ *
+ * ========
+ *    Rewound /dev/nsa0
+ *    *Begin writing blocks of 64512 bytes.
+ *    +++++++++++++++++++++++++++++ ...
+ *    Write failed.  Last block written=17926. stat=-1 ERR=No space left on device
+ *    weof_dev
+ *    Wrote EOF to /dev/nsa0
+ *    *Rewound /dev/nsa0
+ *    *Starting scan at file 0
+ *    17913 blocks of 64512 bytes in file 0
+ *    End of File mark.
+ *    End of File mark.
+ *    End of tape
+ *    Total files=1, blocks=17913, bytes = 1155603456
+ * ========
+ *
+ * which is incorrect because it wrote 17,926 blocks and the
+ * status on the last block written is stat=-1, which is incorrect.
+ * In addition only 17,913 blocks were read back.
+ *
+ * Similarly, if you ran this test on 4.9-RELEASE or 5.2.1-RELEASE
+ * (these versions contain an incomplete patch) then you would
+ * probably see something like this:
+ *
+ * ========
+ *    Rewound /dev/nsa0
+ *    *Begin writing blocks of 64512 bytes.
+ *    +++++++++++++++ [...]
+ *    weof_dev
+ *    Wrote EOF to /dev/nsa0
+ *    Write failed.  Last block written=271163. stat=-1 ERR=No space left on device
+ *    *Rewound /dev/nsa0
+ *    *Starting scan at file 0
+ *    Bad status from read -1. ERR=Input/output error
+ *    271163 blocks of 64512 bytes in file 0
+ * ========
+ *
+ * The above output is also incorrect. The block counts match,
+ * but note the -1 error code on the read and write. This is
+ * just as dangerous as the first example. If you see this
+ * output then you should patch or upgrade to -STABLE or -CURRENT
+ * immediately.
+
+If you get the same number of blocks written and read WHEN using 
+pthreads, AND the test with pthreads enabled returns a stat=0
+on the last write, and the scan operation returns no error
+code, then you've been correctly patched. It is important that
+stat=0 rather than -1 even if the correct number of blocks
+are read back. If the status is -1 on the pthreads test, you
+will lose data.
+
+SOLUTION:
+
+For FreeBSD versions prior to 4.10-RELEASE and 5.3-RELEASE you
+have two choices to ensure proper backups.  These instructions
+assume you are familiar with patching FreeBSD and already have
+the FreeBSD source code installed on your machine.
+
+For FreeBSD 4.x:
+
+Do one of the following:
+
+- cvsup and build your system to FreeBSD 4.x-STABLE after the
+  date Mon Dec 29 15:18:01 2003 UTC
+
+- Apply this patch.
+
+  http://www.freebsd.org/cgi/cvsweb.cgi/src/lib/libc_r/uthread/uthread_write.c.diff?r1=1.16.2.6&r2=1.16.2.8
+
+  To apply the patch, follow these instructions as root.  
+
+    cd /usr/src/lib/libc_r/uthread/
+    fetch -o pthread.diff 'http://www.freebsd.org/cgi/cvsweb.cgi/src/lib/libc_r/uthread/uthread_write.c.diff?r1=1.16.2.6&r2=1.16.2.8'
+    patch < pthread.diff
+    cd ..
+    make all install
+
+For FreeBSD 5.x:
+
+Do one of the following:
+
+- cvsup and build your system to FreeBSD -CURRENT after the
+  date Wed Dec 17 16:44:03 2003 UTC
+
+- Apply this patch.
+
+  http://www.freebsd.org/cgi/cvsweb.cgi/src/lib/libc_r/uthread/uthread_write.c.diff?r1=1.22&r2=1.23
+
+ Wed Dec 17 16:44:03 2003 UTC
+
+  To apply the patch, follow these instructions as root.  
+
+    cd /usr/src/lib/libc_r/uthread/
+    fetch -o pthread.diff 'http://www.freebsd.org/cgi/cvsweb.cgi/src/lib/libc_r/uthread/uthread_write.c.diff?r1=1.22&r2=1.23'
+    patch < pthread.diff
+    cd ..
+    make all install
+
+After patching your system as shown above, 
+you should then recompile Bacula to get the new library
+code included by doing:
+
+  cd <bacula-source>
+  make clean
+  make 
+  ...
+
+
+TESTING:
+
+I suggest running tapetest on your patched system and then
+conducting a backup which spans two tapes.  Restore the data
+and compare to the original.  If not identical, please let us know.

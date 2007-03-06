@@ -1,0 +1,2 @@
+/dev/root / ext2 rw 0 0
+/dev/cdrom /cdrom iso9660 ro 0 0

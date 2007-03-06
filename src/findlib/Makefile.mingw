@@ -1,0 +1,162 @@
+#
+#  Find files library Makefile
+#
+
+# autoconf/Make.common.in	 -*- Makefile -*-
+# release date (man), LSM date, version number/name, current maintainer
+DATE="15 Apr 2004"
+LSMDATE=15Apr04
+VERSION=1.35.0
+VERNAME=bacula-$(VERSION)#
+MAINT=Kern Sibbald#
+MAINTEMAIL=<kern@sibbald.com>#
+WEBMAINT=#
+WEBMAINTEMAIL=#
+WEBPAGE=#
+FTPSITENAME=#
+FTPSITEDIR=#
+#-------------------------------------------------------------------------
+
+SHELL = /bin/sh
+
+# Installation target directories & other installation stuff
+prefix = 
+exec_prefix = 
+binprefix =
+manprefix =
+sbindir = /sbin
+sysconfdir = /etc/bacula
+scriptdir = /etc/bacula
+mandir = ${prefix}/man/man1
+manext = 1
+
+# Tools & program stuff
+CC = gcc
+CPP = gcc -E
+CXX = g++
+MV = /usr/bin/mv
+RM = /usr/bin/rm
+RMF = /usr/bin/rm -f
+CP = /usr/bin/cp
+SED = /usr/bin/sed
+AWK = /usr/bin/awk
+ECHO = /usr/bin/echo
+CMP = /usr/bin/cmp
+TBL = /usr/bin/tbl
+AR = ar
+RANLIB = ranlib
+INSTALL = /usr/bin/install -c
+# add the -s to the following in PRODUCTION mode
+INSTALL_PROGRAM = /usr/bin/install -c -m 754
+INSTALL_DATA = /usr/bin/install -c -m 644
+INSTALL_SCRIPT = /usr/bin/install -c -m 754
+INSTALL_CONFIG = /usr/bin/install -c -m 640
+
+# Flags & libs
+CFLAGS = -g -O2 
+CPPFLAGS = 
+LDFLAGS = -O
+TTOOL_LDFLAGS = 
+DEFS = -DHAVE_WIN32 -DHAVE_MINGW
+LIBS = -lpthread
+DINCLUDE = 
+DLIB = 
+DB_LIBS = 
+
+# Windows (cygwin) flags 
+WCFLAGS = -mwindows
+WLDFLAGS = -mwindows
+
+# X Include directory
+#XINC =  @XPM_CFLAGS@
+
+# extra libraries needed by X on some systems, X library location
+#XLIB =  @XPM_LIBS@ -lX11 
+
+# End of common section of the Makefile
+#-------------------------------------------------------------------------
+
+srcdir =	.
+VPATH = 	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/findlib
+
+DEBUG=
+
+first_rule: all
+dummy:
+
+#
+LIBSRCS = find.c match.c find_one.c attibs.c create_file.c \
+	  bfile.c enable_priv.c makepath.c save-cwd.c winapi.c
+LIBOBJS = find.o match.o find_one.o attribs.o create_file.o \
+	  bfile.o enable_priv.o makepath.o save-cwd.o winapi.o
+
+.SUFFIXES:	.c .o
+.PHONY:
+.DONTCARE:
+
+# inference rules
+.c.o:
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) -I../win32/compat $(DINCLUDE) $(CFLAGS) $<
+#-------------------------------------------------------------------------
+all: libfind.a
+	@echo "==== Make of findlib is good ===="
+	@echo " "
+
+libfind.a: $(LIBOBJS)
+	$(RMF) $@
+	$(AR) cr $@ $(LIBOBJS)
+	$(RANLIB) $@
+
+install:
+
+uninstall:
+
+
+clean:
+	$(RMF) find core a.out *.a *.o *.bak *~ *.intpro *.extpro 1 2 3
+
+realclean: clean
+	$(RMF) tags
+
+distclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+
+devclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+
+install:
+
+
+uninstall:
+
+
+
+# Semi-automatic generation of dependencies:
+# Use gcc -M  because X11 `makedepend' doesn't work on all systems
+# and it also includes system headers.
+# `semi'-automatic since dependencies are generated at distribution time.
+
+depend:
+	@$(MV) Makefile Makefile.bak
+	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
+	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
+	@$(CC) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@if test -f Makefile ; then \
+	    $(RMF) Makefile.bak; \
+	else \
+	   $(MV) Makefile.bak Makefile; \
+	   echo -e "Something went wrong\n\a"; \
+	fi
+
+# -----------------------------------------------------------------------
+# DO NOT DELETE: nice dependency list follows

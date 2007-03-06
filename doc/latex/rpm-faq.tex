@@ -1,0 +1,154 @@
+%%
+%%
+
+\section*{Bacula\raisebox{.6ex}{{\footnotesize
+\textsuperscript{\textregistered}}} - RPM Packaging FAQ}
+\label{_ChapterStart34}
+\index[general]{FAQ!Bacula\textsuperscript{\textregistered} - RPM Packaging }
+\index[general]{Bacula\textsuperscript{\textregistered} - RPM Packaging FAQ }
+\addcontentsline{toc}{section}{Bacula\textsuperscript{\textregistered} - RPM
+Packaging FAQ}
+
+\begin{enumerate}
+\item 
+   \ilink{How do I build Bacula for platform xxx?}{faq1}  
+\item 
+   \ilink{How do I control which database support gets built?}{faq2} 
+
+\item 
+   \ilink{What other defines are used?}{faq3}  
+\item 
+   \ilink{I'm getting errors about not having permission when I try to build the
+   packages. Do I need to be root?}{faq4}  
+\item 
+   \ilink{I'm building my own rpms but on all platforms and compiles I get an
+   unresolved dependancy for something called
+/usr/afsws/bin/pagsh.}{faq5} 
+\end{enumerate}
+
+\subsection*{Answers}
+\index[general]{Answers }
+\addcontentsline{toc}{subsection}{Answers}
+
+\begin{enumerate}
+\item 
+   \label{faq1}
+   {\bf How do I build Bacula for platform xxx?}
+The bacula spec file contains defines to build for several platforms:  RedHat
+7.x (rh7), RedHat 8.0 (rh8), RedHat 9 (rh9), Fedora Core (fc1),  Whitebox
+Enterprise Linux (RHEL) 3.0 (wb3), Mandrake 10.x (mdk) and SuSE 9.x (su9). 
+The package build is controlled by a mandatory define set at the beginning of 
+the file. These defines basically just control the dependancy information that
+ gets coded into the finished rpm package. 
+The platform define may be edited in the spec file directly (by default all 
+defines are set to 0 or ``not set''). For example, to build the RedHat 7.x 
+package find the line in the spec file which reads  
+
+\footnotesize
+\begin{verbatim}
+        %define rh7 0
+        
+\end{verbatim}
+\normalsize
+
+and edit it to read  
+
+\footnotesize
+\begin{verbatim}
+        %define rh7 1
+        
+\end{verbatim}
+\normalsize
+
+Alternately you may pass the define on the command line when calling rpmbuild:
+ 
+
+\footnotesize
+\begin{verbatim}
+        rpmbuild -ba --define "build_rh7 1" bacula.spec
+        rpmbuild --rebuild --define build_rh7 1" bacula-x.x.x-x.src.rpm
+        
+\end{verbatim}
+\normalsize
+
+\item 
+   \label{faq2}
+   {\bf How do I control which database support gets built?}
+Another mandatory build define controls which database support is compiled,
+one of  build\_sqlite, build\_mysql or build\_postgresql. To get the MySQL
+package and support either  set the  
+
+\footnotesize
+\begin{verbatim}
+        %define mysql 0
+        
+\end{verbatim}
+\normalsize
+
+to  
+
+\footnotesize
+\begin{verbatim}
+        %define mysql 1
+        
+\end{verbatim}
+\normalsize
+
+in the spec file directly or pass it to rpmbuild on the command line:  
+
+\footnotesize
+\begin{verbatim}
+        rpmbuild -ba --define "build_rh7 1" --define "build_mysql 1" bacula.spec
+        
+\end{verbatim}
+\normalsize
+
+\item 
+   \label{faq3}
+   {\bf What other defines are used?}
+Two other building defines of note are the depkgs\_version and tomsrtbt
+identifiers. These  two defines are set with each release and must match the
+version of those sources that are  being used to build the packages. You would
+not ordinarily need to edit these.  
+\item 
+   \label{faq4}
+   {\bf I'm getting errors about not having permission when I try  to build the
+packages. Do I need to be root?}
+No, you do not need to be root and, in fact, it is better practice to build
+rpm packages  as a non-root user. Bacula packages are designed to be built by
+a regular user but you must  make a few changes on your system to do this. If
+you are building on your own system then  the simplest method is to add write
+permissions for all to the build directory  (/usr/src/redhat/). To accomplish
+this execute the following command as root:  
+
+\footnotesize
+\begin{verbatim}
+        chmod -R 777 /usr/src/redhat
+        
+\end{verbatim}
+\normalsize
+
+If you are working on a shared system where you can not use the method above
+then you need to  recreate the /usr/src/redhat directory tree with all of it's
+subdirectories inside your home  directory. Then create a file named  {\tt
+.rpmmacros} in your home directory (or edit  the file if it already exists)
+and add the following line:  
+
+\footnotesize
+\begin{verbatim}
+        %_topdir /home/myuser/redhat
+        
+\end{verbatim}
+\normalsize
+
+\item 
+   \label{faq5}
+   {\bf I'm building my own rpms but on all platforms and compiles  I get an
+unresolved dependancy for something called /usr/afsws/bin/pagsh.}
+This is a shell from the OpenAFS (Andrew File System). If you are seeing this
+then you  chose to include the docs/examples directory in your package. One of
+the example scripts  in this directory is a pagsh script. Rpmbuild, when
+scanning for dependancies, looks at  the shebang line of all packaged scripts
+in addition to checking shared libraries. To avoid  this do not package the
+examples directory.  
+\end{enumerate}

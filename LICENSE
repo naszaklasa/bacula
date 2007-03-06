@@ -1,0 +1,93 @@
+Trademark:
+The name Bacula is a registered trademark.
+
+===================================
+
+License:
+For the most part, Bacula is licensed under the GPL version 2 or greater         
+and any code that is Copyright Kern Sibbald and John Walker with the GPL
+indication is so licensed, but with the following four additions:
+
+Linking: 
+Bacula may be linked with any libraries permitted under
+the GPL, or with any non-GPLed libraries, including OpenSSL, that
+are required for its proper functioning, providing the source
+code of those non-GPLed libraries is non-proprietary and freely available.
+
+Termination for IP or Patent Action: 
+In addition to the termination clause specified in the GPL, this
+license shall terminate automatically and you may no longer
+exercise any of the rights granted to you by this license as of
+the date you commence an action, including a cross-claim or
+counterclaim, against any licensor of GPL software alleging that
+the software infringes an intellectual property right or a
+patent.  Special dispensation from or delay to the execution of
+this clause may be possible by applying directly to the license
+owner of this software.  Such a dispensation or delay is valid
+only in writing and signed by the one or more of the license
+holders.
+
+IP rights:
+Recipient understands that although each Contributor grants the
+licenses to its Contributions set forth herein, no assurances are
+provided by any Contributor that the Program does not infringe
+the patent or other intellectual property rights of any other
+entity.  Each Contributor disclaims any liability to Recipient
+for claims brought by any other entity based on infringement of
+intellectual property rights or otherwise.  As a condition to
+exercising the rights and licenses granted hereunder, each
+Recipient hereby assumes sole responsibility to secure any other
+intellectual property rights needed, if any.  For example, if a
+third party patent license is required to allow Recipient to
+distribute the Program, it is Recipient's responsibility to
+acquire that license before distributing the Program.
+
+Copyrights:
+Each Contributor represents that to its knowledge it has
+sufficient copyright rights in its Contribution, if any, to grant
+the copyright license set forth in this Agreement.
+
+Code falling under the above conditions will be marked as follows:
+
+   Copyright (C) 2000-2005 Kern Sibbald
+or
+   Copyright (C) 2000-2004 Kern Sibbald and John Walker
+
+   This program is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public License as
+   published by the Free Software Foundation; either version 2 of
+   the License, or (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public
+   License along with this program; if not, write to the Free
+   Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+   MA 02111-1307, USA.
+
+=====================================
+
+The entire GPL is reproduced in the html manual distributed with this 
+source and can also be found online on the GNU web site as well
+as at www.bacula.org.
+
+In addition to the GPL, there are parts of Bacula that are licensed
+under the LGPL so that they may be used in proprietary code to interface
+with Bacula. 
+
+Finally there are parts of Bacula that are in the public domain.
+             
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

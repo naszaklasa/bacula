@@ -1,0 +1,43 @@
+#!/bin/sh 
+#
+# Try mounting the CDROM drive
+#
+
+echo "Doing mount_cdrom ..."
+modprobe nls_iso8859-1 2>/dev/null >/dev/null
+modprobe cdrom 2>/dev/null >/dev/null
+modprobe scsi_mod 2>/dev/null >/dev/null
+
+DISKS="/dev/hd?"
+if [ -f /proc/scsi/scsi ] ; then 
+  HAVE_SCSI="yes"
+  DISKS="$DISKS /dev/scd? /dev/scd?? /dev/sd?[1-9] /dev/sd?[1-9][1-9]"
+else
+  HAVE_SCSI="no"
+fi
+DISKS="$DISKS /dev/hd?[1-9] /dev/hd?[1-9][1-9]"
+
+echo "Trying to find CDROM on ..."
+for disk in $DISKS; do
+   if [ x$DEBUG = xyes ] ; then
+      echo "Trying to mount device $disk"
+   fi
+   if test -b $disk && mount -t iso9660 -o ro -n $disk /cdrom 2>/dev/null >/dev/null ; then
+#  if test -b $disk && mount -t iso9660 -o ro -n $disk /cdrom ; then
+       if [ -e /cdrom/BaculaRescueCD ] ; then
+          echo "Found the Bacula Rescue CDROM on $disk"
+          sleep 2
+          exit
+       else
+         umount /cdrom
+       fi
+   else 
+      if [ x$DEBUG = xyes ] ; then
+         cat /proc/modules
+         sleep 2
+      fi
+   fi
+done
+
+echo "Sorry could not find the CDROM"
+sleep 3

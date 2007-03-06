@@ -1,0 +1,164 @@
+# 
+@MCOMMON@
+
+srcdir =	.
+.PATH:		.
+
+# one up
+basedir = ..
+# top dir
+topdir = ../..
+# this dir relative to top dir
+thisdir = src/cats
+
+DEBUG=@DEBUG@
+MKDIR=$(topdir)/autoconf/mkinstalldirs
+
+SQL_INC=@SQL_INCLUDE@
+
+first_rule: all
+dummy:
+
+#
+SVRSRCS = cats.c sql.c
+SVROBJS = cats.o sql.o
+
+LIBSRCS = mysql.c bdb.c bdb_create.c bdb_get.c bdb_update.c \
+	  bdb_delete.c bdb_find.c bdb_list.c \
+	  sql.c sql_create.c sql_delete.c sql_find.c \
+	  sql_get.c sql_list.c sql_update.c sqlite.c \
+	  postgresql.c
+LIBOBJS = mysql.o bdb.o bdb_create.o bdb_get.o bdb_update.o \
+	  bdb_delete.o bdb_find.o bdb_list.o \
+	  sql.o sql_create.o sql_delete.o sql_find.o \
+	  sql_get.o sql_list.o sql_update.o sqlite.o \
+	  postgresql.o
+
+.SUFFIXES:	.c .o
+.PHONY:
+.DONTCARE:
+
+# inference rules
+.c.o:
+	$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(SQL_INC) $(DINCLUDE) $(CFLAGS) $<
+#-------------------------------------------------------------------------
+all: Makefile libsql.a
+	@echo "==== Make of cats is good ===="
+	@echo " "
+
+libsql.a: $(LIBOBJS)
+	$(AR) rc  $@ $(LIBOBJS)
+	$(RANLIB) $@
+
+cats: $(SVROBJS) ../findlib/libfind.a
+	$(CC) $(WLDFLAGS) $(LDFLAGS) -L../findlib -L../lib -o $@ $(SVROBJS) $(LIBS) $(DB_LIBS) -lfind -lbac
+
+Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+	cd $(topdir) \
+	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+
+clean:
+	$(RMF) cats core a.out *.o *.a *.bak *~ *.intpro *.extpro 1 2 3
+
+realclean: clean
+	$(RMF) tags
+
+	$(RMF) create_bacula_database	   update_bacula_tables     make_bacula_tables
+	$(RMF) grant_bacula_privileges	   drop_bacula_tables	    drop_bacula_database
+
+	$(RMF) create_bdb_database	   update_bdb_tables	    make_bdb_tables
+	$(RMF) grant_bdb_privileges	   drop_bdb_tables	    drop_bdb_database
+
+	$(RMF) create_mysql_database	   update_mysql_tables	    make_mysql_tables
+	$(RMF) grant_mysql_privileges	   drop_mysql_tables	    drop_mysql_database
+
+	$(RMF) create_postgresql_database  update_postgresql_tables make_postgresql_tables
+	$(RMF) grant_postgresql_privileges drop_postgresql_tables   drop_postgresql_database
+
+	$(RMF) create_sqlite_database	   update_sqlite_tables     make_sqlite_tables
+	$(RMF) grant_sqlite_privileges	   drop_sqlite_tables	    drop_sqlite_database
+
+	$(RMF) mysql sqlite postgresql
+	$(RMF) make_catalog_backup delete_catalog_backup
+
+distclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile; $(RMF) -r CVS)
+
+devclean: realclean
+	if test $(srcdir) = .; then $(MAKE) realclean; fi
+	(cd $(srcdir); $(RMF) Makefile)
+
+install:
+	$(INSTALL_SCRIPT) create_@DB_NAME@_database $(DESTDIR)$(scriptdir)/create_@DB_NAME@_database
+	$(INSTALL_SCRIPT) update_@DB_NAME@_tables $(DESTDIR)$(scriptdir)/update_@DB_NAME@_tables
+	$(INSTALL_SCRIPT) make_@DB_NAME@_tables $(DESTDIR)$(scriptdir)/make_@DB_NAME@_tables
+	$(INSTALL_SCRIPT) grant_@DB_NAME@_privileges $(DESTDIR)$(scriptdir)/grant_@DB_NAME@_privileges
+	$(INSTALL_SCRIPT) drop_@DB_NAME@_tables $(DESTDIR)$(scriptdir)/drop_@DB_NAME@_tables
+	$(INSTALL_SCRIPT) drop_@DB_NAME@_database $(DESTDIR)$(scriptdir)/drop_@DB_NAME@_database
+
+	$(INSTALL_SCRIPT) create_bacula_database $(DESTDIR)$(scriptdir)/create_bacula_database
+	$(INSTALL_SCRIPT) update_bacula_tables $(DESTDIR)$(scriptdir)/update_bacula_tables
+	$(INSTALL_SCRIPT) make_bacula_tables $(DESTDIR)$(scriptdir)/make_bacula_tables
+	$(INSTALL_SCRIPT) grant_bacula_privileges $(DESTDIR)$(scriptdir)/grant_bacula_privileges
+	$(INSTALL_SCRIPT) drop_bacula_tables $(DESTDIR)$(scriptdir)/drop_bacula_tables
+	$(INSTALL_SCRIPT) drop_bacula_database $(DESTDIR)$(scriptdir)/drop_bacula_database
+
+	@filename=make_catalog_backup; \
+	   if  test -f ${DESTDIR}${scriptdir}/$$filename; then \
+	      destname=$$filename.new; \
+	      echo "  ==> Found existing $$filename, installing new file as $$destname"; \
+	   else \
+	      destname=$$filename; \
+	   fi; \
+	   echo "${INSTALL_SCRIPT} $$filename ${DESTDIR}${scriptdir}/$$destname"; \
+	   ${INSTALL_SCRIPT} $$filename ${DESTDIR}${scriptdir}/$$destname
+	@filename=delete_catalog_backup; \
+	   if  test -f ${DESTDIR}${scriptdir}/$$filename; then \
+	      destname=$$filename.new; \
+	      echo "  ==> Found existing $$filename, installing new file as $$destname"; \
+	   else \
+	      destname=$$filename; \
+	   fi; \
+	   echo "${INSTALL_SCRIPT} $$filename ${DESTDIR}${scriptdir}/$$destname"; \
+	   ${INSTALL_SCRIPT} $$filename ${DESTDIR}${scriptdir}/$$destname
+
+uninstall:
+	(cd $(DESTDIR)$(scriptdir); $(RMF) create_@DB_NAME@_database)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) update_@DB_NAME@_tables)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) make_@DB_NAME@_tables)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) grant_@DB_NAME@_privileges)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) drop_@DB_NAME@_tables)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) drop_@DB_NAME@_database)
+
+	(cd $(DESTDIR)$(scriptdir); $(RMF) create_bacula_database)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) update_bacula_tables)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) make_bacula_tables)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) grant_bacula_privileges)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) drop_bacula_tables)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) drop_bacula_database)
+
+	(cd $(DESTDIR)$(scriptdir); $(RMF) make_catalog_backup)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) delete_catalog_backup)
+
+
+# Semi-automatic generation of dependencies:
+# Use gcc -MM because X11 `makedepend' doesn't work on all systems
+# and it also includes system headers.
+# `semi'-automatic since dependencies are generated at distribution time.
+
+depend:
+	@$(MV) Makefile Makefile.bak
+	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
+	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@if test -f Makefile ; then \
+	    $(RMF) Makefile.bak; \
+	else \
+	   $(MV) Makefile.bak Makefile; \
+	   echo -e "Something went wrong\n\a"; \
+	fi
+
+# -----------------------------------------------------------------------
+# DO NOT DELETE: nice dependency list follows

@@ -1,0 +1,681 @@
+%%
+%%
+
+\section*{The Old FileSet Resource}
+\label{_ChapterStart}
+\label{FileSetResource}
+\index[general]{Resource!Old FileSet }
+\index[general]{Old FileSet Resource }
+\addcontentsline{toc}{section}{Old FileSet Resource}
+
+Note, this form of the FileSet resource still works but has been replaced by a
+new more flexible form in Bacula version 1.34.3. As a consequence, you are
+encouraged to convert to the new form as this one is deprecated and will be
+removed in a future version. 
+
+The FileSet resource defines what files are to be included in a backup job. At
+least one {\bf FileSet} resource is required. It consists of a list of files
+or directories to be included, a list of files or directories to be excluded
+and the various backup options such as compression, encryption, and signatures
+that are to be applied to each file. 
+
+Any change to the list of the included files will cause Bacula to
+automatically create a new FileSet (defined by the name and an MD5 checksum of
+the Include contents). Each time a new FileSet is created, Bacula will ensure
+that the first backup is always a Full save. 
+
+\begin{description}
+
+\item {\bf FileSet}
+\index[dir]{FileSet }
+Start of the FileSet records. At least one {\bf FileSet}  resource must be
+defined. 
+
+\item {\bf Name = \lt{}name\gt{}}
+\index[dir]{Name  }
+The name of the FileSet resource.  This record is required. 
+
+\item {\bf Include = \lt{}processing-options\gt{} 
+\ \ \{ \lt{}file-list\gt{} \} 
+}
+\index[dir]{Include  }
+
+The Include resource specifies the list of files and/or directories to be
+included in the backup job. There can be any number of {\bf Include} {\bf
+file-list} specifications within the FileSet, each having its own set of {\bf
+processing-options}. Normally, the {\bf file-list} consists of one file or
+directory name per line. Directory names should be specified without a
+trailing slash. Wild-card (or glob matching) does not work when used in an
+Include list. It does work in an Exclude list though. Just the same, any
+asterisk (*), question mark (?), or left-bracket ([) must be preceded by a
+slash (\textbackslash{}\textbackslash{}) if you want it to represent the
+literal character. 
+
+You should {\bf always} specify a full path for every directory and file that
+you list in the FileSet. In addition, on Windows machines, you should {\bf
+always} prefix the directory or filename with the drive specification (e.g.
+{\bf c:/xxx}) using Unix directory name separators (forward slash). However,
+within an {\bf Exclude} where for some reason the exclude will not work with a
+prefixed drive letter. If you want to specify a drive letter in exclusions on
+Win32 systems, you can do so by specifying: 
+
+\footnotesize
+\begin{verbatim}
+  Exclude = { /cygdrive/d/archive/Mulberry }
+\end{verbatim}
+\normalsize
+
+where in this case, the {\bf /cygdrive/d} \&nsbp; is Cygwin's way of referring
+to drives on Win32 (thanks to Mathieu Arnold for this tip). 
+
+Bacula's default for processing directories is to recursively descend in the
+directory saving all files and subdirectories. Bacula will not by default
+cross file systems (or mount points in Unix parlance). This means that if you
+specify the root partition (e.g. {\bf /}), Bacula will save only the root
+partition and not any of the other mounted file systems. Similarly on Windows
+systems, you must explicitly specify each of the drives you want saved (e.g.
+{\bf c:/} and {\bf d:/} ...). In addition, at least for Windows systems, you
+will most likely want to enclose each specification within double quotes. The
+{\bf df} command on Unix systems will show you which mount points you must
+specify to save everything. See below for an example. 
+
+Take special care not to include a directory twice or Bacula will backup the
+same files two times wasting a lot of space on your archive device. Including
+a directory twice is very easy to do. For example: 
+
+\footnotesize
+\begin{verbatim}
+  Include = { / /usr }
+\end{verbatim}
+\normalsize
+
+on a Unix system where /usr is a subdirectory (rather than a mounted
+filesystem) will cause /usr to be backed up twice. In this case, on Bacula
+versions prior to 1.32f-5-09Mar04 due to a bug, you will not be able to
+restore hard linked files that were backed up twice. 
+
+The {\bf \lt{}processing-options\gt{}} is optional. If specified, it is a list
+of {\bf keyword=value} options to be applied to the file-list. Multiple
+options may be specified by separating them with spaces. These options are
+used to modify the default processing behavior of the files included. Since
+there can be multiple {\bf Include} sets, this permits effectively specifying
+the desired options (compression, encryption, ...) on a file by file basis.
+The options may be one of the following: 
+
+\begin{description}
+
+\item {\bf compression=GZIP}
+\index[fd]{compression }
+All files saved will be software  compressed using the GNU ZIP compression
+format. The  compression is done on a file by file basis by the File daemon. 
+If there is a problem reading the tape in a  single record of a file, it will
+at most affect that file and none  of the other files on the tape. Normally
+this option is {\bf not} needed  if you have a modern tape drive as the drive
+will do its own  compression. However, compression is very important if you
+are writing  your Volumes to a file, and it can also be helpful if you have a 
+fast computer but a slow network.  
+
+Specifying {\bf GZIP} uses the default compression level six  (i.e. {\bf GZIP}
+is identical to {\bf GZIP6}). If you  want a different compression level (1
+through 9), you can specify  it by appending the level number with no
+intervening spaces  to {\bf GZIP}. Thus {\bf compression=GZIP1} would give
+minimum  compression but the fastest algorithm, and {\bf compression=GZIP9} 
+would give the highest level of compression, but requires more  computation.
+According to the GZIP documentation, compression levels  greater than 6
+generally give very little extra compression but are  rather CPU intensive. 
+
+\item {\bf signature=MD5}
+\index[fd]{signature }
+An MD5 signature will be computed for all  files saved. Adding this option
+generates about 5\% extra overhead  for each file saved. In addition to the
+additional CPU time,  the MD5 signature adds 16 more bytes per file to your
+catalog.  We strongly recommend that this option  be specified as a default
+for all files. 
+
+\item {\bf signature=SHA1}
+\index[fd]{signature }
+An SHA1 signature will be computed for all  The SHA1 algorithm is purported to
+be some  what slower than the MD5 algorithm, but at the same time is 
+significantly better from a cryptographic point of view (i.e.  much fewer
+collisions, much lower probability of being hacked.)  It adds four more bytes
+than the MD5 signature.  We strongly recommend that either this option  or MD5
+be specified as a default for all files. Note, only  one of the two options
+MD5 or SHA1 can be computed for any  file. 
+
+\item {\bf *encryption=\lt{}algorithm\gt{}}
+\index[fd]{*encryption }
+All files saved will be  encrypted using one of the following algorithms (NOT
+YET IMPLEMENTED):  
+
+\begin{description}
+
+\item {\bf *AES}
+\index[fd]{*AES }
+\end{description}
+
+\item {\bf verify=\lt{}options\gt{}}
+\index[fd]{verify }
+The options letters specified are used  when running a {\bf Verify
+Level=Catalog} job, and may be any  combination of the following:  
+
+\begin{description}
+
+\item {\bf i}
+compare the inodes  
+
+\item {\bf p}
+compare the permission bits  
+
+\item {\bf n}
+compare the number of links  
+
+\item {\bf u}
+compare the user id  
+
+\item {\bf g}
+compare the group id  
+
+\item {\bf s}
+compare the size  
+
+\item {\bf a}
+compare the access time  
+
+\item {\bf m}
+compare the modification time (st\_mtime)  
+
+\item {\bf c}
+compare the change time (st\_ctime)  
+
+\item {\bf s}
+report file size decreases  
+
+\item {\bf 5}
+compare the MD5 signature  
+
+\item {\bf 1}
+compare the SHA1 signature  
+\end{description}
+
+A useful set of general options on the {\bf Level=Catalog}  verify is {\bf
+pins5} i.e. compare permission bits, inodes, number  of links, size, and MD5
+changes. 
+
+\item {\bf onefs=yes|no}
+\index[fd]{onefs }
+If set to {\bf yes} (the default), {\bf Bacula}  will remain on a single file
+system. That is it will not backup  file systems that are mounted on a
+subdirectory.  In this case, you must explicitly list each file system you
+want saved.  If you set this option to {\bf no}, Bacula will backup  all
+mounted file systems (i.e. traverse mount points) that  are found within the
+{\bf FileSet}. Thus if  you have NFS or Samba file systems mounted on a
+directory included  in your FileSet, they will also be backed up. Normally, it
+is  preferable to set {\bf onefs=yes} and to explicitly name  each file system
+you want backed up.  See the example below for more details. 
+\label{portable}
+
+\item {\bf portable=yes|no}
+\index[fd]{portable }
+If set to {\bf yes} (default is  {\bf no}), the Bacula File daemon will backup
+Win32 files  in a portable format. By default, this option is set to  {\bf
+no}, which means that on Win32 systems, the data will  be backed up using
+Windows API calls and on WinNT/2K/XP,  the security and ownership data will be
+properly backed up  (and restored), but the data format is not portable to
+other  systems -- e.g. Unix, Win95/98/Me. On Unix systems, this  option is
+ignored, and unless you have a specific need to  have portable backups, we
+recommend accept the default  ({\bf no}) so that the maximum information
+concerning  your files is backed up. 
+
+\item {\bf recurse=yes|no}
+\index[fd]{recurse }
+If set to {\bf yes} (the default),  Bacula will recurse (or descend) into all
+subdirectories  found unless the directory is explicitly excluded  using an
+{\bf exclude} definition.  If you set  {\bf recurse=no}, Bacula will save the
+subdirectory entries,  but not descend into the subdirectories, and thus  will
+not save the contents of the subdirectories. Normally, you  will want the
+default ({\bf yes}).  
+
+\item {\bf sparse=yes|no}
+\index[dir]{sparse }
+Enable special code that checks for sparse files  such as created by ndbm. The
+default is {\bf no}, so no checks  are made for sparse files. You may specify
+{\bf sparse=yes} even  on files that are not sparse file. No harm will be
+done, but there  will be a small additional overhead to check for buffers of 
+all zero, and a small additional amount of space on the output  archive will
+be used to save the seek address of each non-zero  record read.  
+
+{\bf Restrictions:} Bacula reads files in 32K buffers.  If the whole buffer is
+zero, it will be treated as a sparse  block and not written to tape. However,
+if any part of the buffer  is non-zero, the whole buffer will be written to
+tape, possibly  including some disk sectors (generally 4098 bytes) that are
+all  zero. As a consequence, Bacula's detection of sparse blocks is in  32K
+increments rather than the system block size. If anyone  considers this to be
+a real problem, please send in a request  for change with the reason. The
+sparse code was first  implemented in version 1.27.  
+
+If you are not familiar with sparse files, an example is  say a file where you
+wrote 512 bytes at address zero, then  512 bytes at address 1 million. The
+operating system will  allocate only two blocks, and the empty space or hole 
+will have nothing allocated. However, when you read the  sparse file and read
+the addresses where nothing was written,  the OS will return all zeros as if
+the space were allocated,  and if you backup such a file, a lot of space will
+be used  to write zeros to the volume. Worse yet, when you restore  the file,
+all the previously empty space will now be allocated  using much more disk
+space. By turning on the {\bf sparse}  option, Bacula will specifically look
+for empty space in  the file, and any empty space will not be written to the
+Volume,  nor will it be restored. The price to pay for this is that  Bacula
+must search each block it reads before writing it.  On a slow system, this may
+be important. If you suspect  you have sparse files, you should benchmark the
+difference  or set sparse for only those files that are really sparse. 
+\label{readfifo}
+
+\item {\bf readfifo=yes|no}
+\index[fd]{readfifo }
+If enabled, tells the Client to  read the data on a backup and write the data
+on a restore  to any FIFO (pipe) that is explicitly mentioned  in the FileSet.
+In this case, you must have a program already  running that writes into the
+FIFO for a backup or reads  from the FIFO on a restore. This can be
+accomplished with  the {\bf RunBeforeJob} record. If this is not the case, 
+Bacula will hang indefinitely on reading/writing the FIFO.  When this is not
+enabled (default), the Client simply  saves the directory entry for the FIFO. 
+
+\item {\bf mtimeonly=yes|no}
+\index[dir]{mtimeonly }
+If enabled, tells the Client that  the selection of files during Incremental
+and Differential  backups should based only on the st\_mtime value in the
+stat()  packet. The default is {\bf no} which means that the  selection of
+files to be backed up will be based on both the  st\_mtime and the st\_ctime
+values. In general, it is not  recommended to use this option. 
+
+\item {\bf keepatime=yes|no}
+\index[dir]{keepatime }
+The default is {\bf no}. When  enabled, Bacula will reset the st\_atime
+(access time) field  of files that it backs up to their value prior to the 
+backup. This option is not generally recommended as there  are very few
+programs that use st\_atime, and the backup  overhead is increased because of
+the additional system  call necessary to reset the times. (I'm not sure this 
+works on Win32). 
+\end{description}
+
+{\bf \lt{}file-list\gt{}} is a space separated list of filenames and/or
+directory names. To include names containing spaces, enclose the name between
+double-quotes. The list may span multiple lines, in fact, normally it is good
+practice to specify each filename on a separate line. 
+
+There are a number of special cases when specifying files or directories in a
+{\bf file-list}. They are: 
+
+\begin{itemize}
+\item Any file-list item preceded by an at-sign (@) is assumed to be a 
+filename containing a list of files, which is read when  the configuration
+file is parsed during Director startup.  Note, that the file is read on the
+Director's machine  and not on the Client.  
+\item Any file-list item beginning with a vertical bar (|) is  assumed to be a
+program. This program will be executed  on the Director's machine at the time
+the Job starts (not  when the Director reads the configuration file), and any
+output  from that program will be assumed to be a list of files or 
+directories, one per line, to be included. This allows you to  have a job that
+for example includes all the local partitions even  if you change the
+partitioning by adding a disk. In general, you will  need to prefix your
+command or commands with a {\bf sh -c} so that  they are invoked by a shell.
+This will not be the case if you are  invoking a script as in the second
+example below. Also, you must  take care to escape wild-cards and ensure that
+any spaces in your  command are escaped as well. If you use a single quotes
+(') within  a double quote (``), Bacula will treat everything between  the
+single quotes as one field so it will not be necessary to  escape the spaces.
+In general, getting all the quotes and escapes  correct is a real pain as you
+can see by the next example. As a  consequence, it is often easier to put
+everything in a file, and simply  us the file name within Bacula. In that case
+the {\bf sh -c} will  not be necessary providing the first line of the file is
+ {\bf \#!/bin/sh}.  
+
+As an example: 
+
+\footnotesize
+\begin{verbatim}
+ 
+Include = signature=SHA1 {
+   "|sh -c 'df -l | grep \"^/dev/hd[ab]\" | grep -v \".*/tmp\" \
+      | awk \"{print \\$6}\"'"
+}
+\end{verbatim}
+\normalsize
+
+will produce a list of all the local partitions on a RedHat Linux  system.
+Note, the above line was split, but should normally  be written on one line. 
+Quoting is a real problem because you must quote for Bacula  which consists of
+preceding every \textbackslash{} and every '' with a \textbackslash{}, and 
+you must also quote for the shell command. In the end, it is probably  easier
+just to execute a small file with: 
+
+\footnotesize
+\begin{verbatim}
+Include = signature=MD5 {
+   "|my_partitions"
+}
+\end{verbatim}
+\normalsize
+
+where my\_partitions has: 
+
+\footnotesize
+\begin{verbatim}
+#!/bin/sh
+df -l | grep "^/dev/hd[ab]" | grep -v ".*/tmp" \
+      | awk "{print \$6}"
+\end{verbatim}
+\normalsize
+
+If the vertical bar (|) is preceded by a backslash as in \textbackslash{}|, 
+the program will be executed on the Client's machine instead  of on the
+Director's machine -- (this is implemented but  not tested, and very likely
+will not work on Windows). 
+\item Any file-list item preceded by a less-than sign (\lt{}) will be taken 
+to be a file. This file will be read on the Director's machine  at the time
+the Job starts, and the data will be assumed to be a  list of directories or
+files, one per line, to be included. This  feature allows you to modify the
+external file and change what  will be saved without stopping and restarting
+Bacula as would be  necessary if using the @ modifier noted above.  
+
+If you precede the less-than sign (\lt{}) with a backslash  as in
+\textbackslash{}\lt{}, the file-list will be read on the Client machine 
+instead of on the Director's machine (implemented but not  tested).  
+\item If you explicitly specify a block device such as {\bf /dev/hda1},  then
+Bacula (starting with version 1.28) will assume that this  is a raw partition
+to be backed up. In this case, you are strongly  urged to specify a {\bf
+sparse=yes} include option, otherwise, you  will save the whole partition
+rather than just the actual data that  the partition contains. For example: 
+
+\footnotesize
+\begin{verbatim}
+Include = signature=MD5 sparse=yes {
+   /dev/hd6
+}
+\end{verbatim}
+\normalsize
+
+will backup the data in device /dev/hd6.  
+
+Ludovic Strappazon has pointed out that this feature can be  used to backup a
+full Microsoft Windows disk. Simply boot into  the system using a Linux Rescue
+disk, then load a statically  linked Bacula as described in the 
+\ilink{ Disaster Recovery Using Bacula}{rescue.tex#_ChapterStart} chapter of
+this manual. Then  simply save the whole disk partition. In the case of a
+disaster, you  can then restore the desired partition. 
+\item If you explicitly specify a FIFO device name (created with mkfifo),  and
+you add the option {\bf readfifo=yes} as an option, Bacula  will read the FIFO
+and back its data up to the Volume. For  example: 
+
+\footnotesize
+\begin{verbatim}
+Include = signature=SHA1 readfifo=yes {
+   /home/abc/fifo
+}
+\end{verbatim}
+\normalsize
+
+if {\bf /home/abc/fifo} is a fifo device, Bacula will open the  fifo, read it,
+and store all data thus obtained on the Volume.  Please note, you must have a
+process on the system that is  writing into the fifo, or Bacula will hang, and
+after one  minute of waiting, it will go on to the next file. The data  read
+can be anything since Bacula treats it as a stream.  
+
+This feature can be an excellent way to do a ``hot''  backup of a very large
+database. You can use the {\bf RunBeforeJob}  to create the fifo and to start
+a program that dynamically reads  your database and writes it to the fifo.
+Bacula will then write  it to the Volume.  
+
+During the restore operation, the inverse is  true, after Bacula creates the
+fifo if there was any data stored  with it (no need to explicitly list it or
+add any options), that  data will be written back to the fifo. As a
+consequence, if  any such FIFOs exist in the fileset to be restored, you must 
+ensure that there is a reader program or Bacula will block,  and after one
+minute, Bacula will time out the write to the  fifo and move on to the next
+file. 
+\end{itemize}
+
+The Exclude Files specifies the list of files and/or directories to be
+excluded from the backup job. The {\bf \lt{}file-list\gt{}} is a comma or
+space separated list of filenames and/or directory names. To exclude names
+containing spaces, enclose the name between double-quotes. Most often each
+filename is on a separate line. 
+
+For exclusions on Windows systems, do not include a leading drive letter such
+as {\bf c:}. This does not work. Any filename preceded by an at-sign (@) is
+assumed to be a filename on the Director's machine containing a list of files.
+
+\end{description}
+
+The following is an example of a valid FileSet resource definition: 
+
+\footnotesize
+\begin{verbatim}
+FileSet {
+  Name = "Full Set"
+  Include = compression=GZIP signature=SHA1 sparse=yes {
+     @/etc/backup.list
+  }
+  Include = {
+     /root/myfile
+     /usr/lib/another_file
+  }
+  Exclude = { *.o }
+}
+\end{verbatim}
+\normalsize
+
+Note, in the above example, all the files contained in /etc/backup.list will
+be compressed with GZIP compression, an SHA1 signature will be computed on the
+file's contents (its data), and sparse file handling will apply. 
+
+The two files /root/myfile and /usr/lib/another\_file will also be saved but
+without any options. In addition, all files with the extension {\bf .o} will
+be excluded from the file set (i.e. from the backup). 
+
+Suppose you want to save everything except {\bf /tmp} on your system. Doing a
+{\bf df} command, you get the following output: 
+
+\footnotesize
+\begin{verbatim}
+[kern@rufus k]$ df
+Filesystem      1k-blocks      Used Available Use% Mounted on
+/dev/hda5         5044156    439232   4348692  10% /
+/dev/hda1           62193      4935     54047   9% /boot
+/dev/hda9        20161172   5524660  13612372  29% /home
+/dev/hda2           62217      6843     52161  12% /rescue
+/dev/hda8         5044156     42548   4745376   1% /tmp
+/dev/hda6         5044156   2613132   2174792  55% /usr
+none               127708         0    127708   0% /dev/shm
+//minimatou/c$   14099200   9895424   4203776  71% /mnt/mmatou
+lmatou:/          1554264    215884   1258056  15% /mnt/matou
+lmatou:/home      2478140   1589952    760072  68% /mnt/matou/home
+lmatou:/usr       1981000   1199960    678628  64% /mnt/matou/usr
+lpmatou:/          995116    484112    459596  52% /mnt/pmatou
+lpmatou:/home    19222656   2787880  15458228  16% /mnt/pmatou/home
+lpmatou:/usr      2478140   2038764    311260  87% /mnt/pmatou/usr
+deuter:/          4806936     97684   4465064   3% /mnt/deuter
+deuter:/home      4806904    280100   4282620   7% /mnt/deuter/home
+deuter:/files    44133352  27652876  14238608  67% /mnt/deuter/files
+\end{verbatim}
+\normalsize
+
+Now, if you specify only {\bf /} in your Include list, Bacula will only save
+the Filesystem {\bf /dev/hda5}. To save all file systems except {\bf /tmp}
+with out including any of the Samba or NFS mounted systems, and explicitly
+excluding a /tmp, /proc, .journal, and .autofsck, which you will not want to
+be saved and restored, you can use the following: 
+
+\footnotesize
+\begin{verbatim}
+FileSet {
+  Name = Everything
+  Include = {
+     /
+     /boot
+     /home
+     /rescue
+     /usr
+  }
+  Exclude = {
+     /proc
+     /tmp
+     .journal
+     .autofsck
+  }
+}
+\end{verbatim}
+\normalsize
+
+Since /tmp is on its own filesystem and it was not explicitly named in the
+Include list, it is not really needed in the exclude list. It is better to
+list it in the Exclude list for clarity, and in case the disks are changed so
+that it is no longer in its own partition. 
+
+Please be aware that allowing Bacula to traverse or change file systems can be
+{\bf very} dangerous. For example, with the following: 
+
+\footnotesize
+\begin{verbatim}
+FileSet {
+  Name = "Bad example"
+  Include = onefs=no {
+     /mnt/matou
+  }
+}
+\end{verbatim}
+\normalsize
+
+you will be backing up an NFS mounted partition ({\bf /mnt/matou}), and since
+{\bf onefs} is set to {\bf no}, Bacula will traverse file systems. However, if
+{\bf /mnt/matou} has the current machine's file systems mounted, as is often
+the case, you will get yourself into a recursive loop and the backup will
+never end. 
+
+The following FileSet definition will backup a raw partition: 
+
+\footnotesize
+\begin{verbatim}
+FileSet {
+  Name = "RawPartition"
+  Include = sparse=yes {
+     /dev/hda2
+  }
+}
+\end{verbatim}
+\normalsize
+
+Note, in backing up and restoring a raw partition, you should ensure that no
+other process including the system is writing to that partition. As a
+precaution, you are strongly urged to ensure that the raw partition is not
+mounted or is mounted read-only. If necessary, this can be done using the {\bf
+RunBeforeJob} record. 
+
+\subsection*{Additional Considerations for Using Excludes on Windows}
+\index[general]{Additional Considerations for Using Excludes on Windows }
+\index[general]{Windows!Additional Considerations for Using Excludes on }
+\addcontentsline{toc}{subsection}{Additional Considerations for Using Excludes
+on Windows}
+
+For exclude lists to work correctly on Windows, you must observe the following
+rules: 
+
+\begin{itemize}
+\item Filenames are case sensitive, so you must use the correct case.  
+\item To exclude a directory, you must not have a trailing slash on the 
+directory name.  
+\item If you have spaces in your filename, you must enclose the entire name 
+in double-quote characters (``). Trying to use a backslash before  the space
+will not work.  
+\item You must not precede the excluded file or directory with a drive  letter
+(such as {\bf c:}) otherwise it will not work. 
+\end{itemize}
+
+Thanks to Thiago Lima for summarizing the above items for us. If you are
+having difficulties getting includes or excludes to work, you might want to
+try using the {\bf estimate job=xxx listing} command documented in the 
+\ilink{Console chapter}{console.tex#estimate} of this manual. 
+\label{win32}
+
+\subsection*{Windows Considerations for FileSets}
+\index[general]{FileSets!Windows Considerations for }
+\index[general]{Windows Considerations for FileSets }
+\addcontentsline{toc}{subsection}{Windows Considerations for FileSets}
+
+If you are entering Windows file names, the directory path may be preceded by
+the drive and a colon (as in c:). However, the path separators must be
+specified in Unix convention (i.e. forward slash (/)). If you wish to include
+a quote in a file name, precede the quote with a backslash
+(\textbackslash{}\textbackslash{}). For example you might use the following
+for a Windows machine to backup the ''My Documents`` directory: 
+
+\footnotesize
+\begin{verbatim}
+FileSet {
+  Name = "Windows Set"
+  Include = {
+     "c:/My Documents"
+  }
+  Exclude = { *.obj *.exe }
+}
+\end{verbatim}
+\normalsize
+
+When using exclusion on Windows, do not use a drive prefix (i.e. {\bf c:}) as
+it will prevent the exclusion from working. However, if you need to specify a
+drive letter in exclusions on Win32 systems, you can do so by specifying: 
+
+\footnotesize
+\begin{verbatim}
+  Exclude = { /cygdrive/d/archive/Mulberry }
+\end{verbatim}
+\normalsize
+
+where in this case, the {\bf /cygdrive/d} is Cygwin's way of referring to
+drive {\bf d:} (thanks to Mathieu Arnold for this tip). 
+
+\subsection*{A Windows Example FileSet}
+\index[general]{FileSet!Windows Example }
+\index[general]{Windows Example FileSet }
+\addcontentsline{toc}{subsection}{Windows Example FileSet}
+
+The following example was contributed by Phil Stracchino: 
+
+\footnotesize
+\begin{verbatim}
+This is my Windows 2000 fileset:
+FileSet {
+  Name = "Windows 2000 Full Set"
+  Include = signature=MD5 {
+    c:/
+  }
+# Most of these files are excluded not because we don't want
+#  them, but because Win2K won't allow them to be backed up
+#  except via proprietary Win32 API calls.
+  Exclude = {
+    "/Documents and Settings/*/Application Data/*/Profiles/*/*/
+         Cache/*"
+    "/Documents and Settings/*/Local Settings/Application Data/
+         Microsoft/Windows/[Uu][Ss][Rr][Cc][Ll][Aa][Ss][Ss].*"
+    "/Documents and Settings/*/[Nn][Tt][Uu][Ss][Ee][Rr].*"
+    "/Documents and Settings/*/Cookies/*"
+    "/Documents and Settings/*/Local Settings/History/*"
+    "/Documents and Settings/*/Local Settings/
+         Temporary Internet Files/*"
+    "/Documents and Settings/*/Local Settings/Temp/*"
+    "/WINNT/CSC"
+    "/WINNT/security/logs/scepol.log"
+    "/WINNT/system32/config/*"
+    "/WINNT/msdownld.tmp/*"
+    "/WINNT/Internet Logs/*"
+    "/WINNT/$Nt*Uninstall*"
+    "/WINNT/Temp/*"
+    "/temp/*"
+    "/tmp/*"
+    "/pagefile.sys"
+  }
+}
+\end{verbatim}
+\normalsize
+
+Note, the three line of the above Exclude were split to fit on the document
+page, they should be written on a single line in real use. 

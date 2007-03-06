@@ -1,0 +1,8 @@
+#!/bin/sh
+rm -f 1
+touch 1
+for i in ../doc/html-manual; do
+  ls -1 $i/*.html >>1
+done
+cat 1 | lines
+rm -f 1

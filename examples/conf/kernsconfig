@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+# This is Kern's configure script for a test Bacula
+#
+CFLAGS="-g -O2 -Wall" ./configure \
+    --sbindir=$HOME/bacula/bin \
+    --sysconfdir=$HOME/bacula/bin \
+    --with-pid-dir=$HOME/bacula/bin/working \
+    --with-subsys-dir=$HOME/bacula/bin/working \
+    --enable-gnome \
+    --enable-smartalloc \
+    --with-mysql=$HOME/mysql \
+    --with-working-dir=$HOME/bacula/working \
+    --with-dump-email=$USER \
+    --with-job-email=$USER
+
+exit 0

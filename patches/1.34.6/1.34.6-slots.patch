@@ -1,0 +1,25 @@
+
+ This patch eliminates unwanted output (some 5000 lines) when doing
+ an "update slots" command.
+ Apply to version 1.34.6 with:
+
+ cd <bacula-source>
+ patch -p0 <1.34.6-slots.patch
+ make
+ ...
+
+Index: src/dird/ua_label.c
+===================================================================
+RCS file: /cvsroot/bacula/bacula/src/dird/ua_label.c,v
+retrieving revision 1.34
+diff -u -r1.34 ua_label.c
+--- src/dird/ua_label.c	10 Jun 2004 13:08:01 -0000	1.34
++++ src/dird/ua_label.c	5 Aug 2004 20:05:27 -0000
+@@ -255,7 +255,6 @@
+ 	 db_lock(ua->db);
+ 	 db_make_inchanger_unique(ua->jcr, ua->db, &mr);
+ 	 db_unlock(ua->db);
+-         bsendmsg(ua, _("No VolName for Slot=%d set InChanger to zero.\n"), i);
+       }
+    }
+       

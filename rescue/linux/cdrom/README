@@ -1,0 +1,161 @@
+
+This is the Bacula Rescue CD source directory. The some
+of the scripts in this directory were dervied from
+Martin L. Purschke's "Roll your own Linux Rescue or Setup CD".  
+See: http://www.phenix.bnl.gov/~purschke/RescueCD/ for more details.
+This information was invaluable in creating this rescue disk.
+However, not much of the original code (if any) remains.
+
+The idea is to build a boot CD that contains a copy of your current 
+system that can be booted in an emergency to either repair your filesystem,
+or to load Bacula to restore your filesystem.  At present, the Boot CD 
+does not contain any Bacula files ...  Though it is derived from 
+your system, it can be booted on almost any system.
+
+Requirements:
+- A Linux system (known only to work with RedHat Enterprise 3.0)
+- It will boot and run on any hardware that isolinux can boot
+  from.
+
+To build an ISO image for burning a CD, you do the following:
+
+  cd <bacula-source>
+  ./configure (your-options)
+  make
+  cd <bacula-source>/rescue/linux/cdrom
+  su
+  make all
+
+to burn it, do:
+
+  make burn
+
+to cleanup, do:
+
+  make clean
+
+When running these scripts, you should have few or no warnings.
+
+You will probably also have a number of "Could not finds" under
+updating binaries.                                           
+
+As long as the script runs to completion, you can probably ignore
+any such warnings.   
+
+The Makefile will copy your kernel and some files it needs, then copy
+your binary files as well as the shared libraries they need to run, and
+finally, it will copy certain configuration components from your /etc
+directory including your passwd file. And finally, it will collect the
+information necessary to restore all your harddisks. You can find that
+information in /bacula after the disk has booted.  /bacula/bin will
+contain a statically linked version of the current beta Bacula fd and
+a default bacula-fd.conf file.
+
+The ISO image will be left in:
+
+  <rescue>/bootcd.iso
+
+When you boot the CD, always choose the default by hitting return.
+When the system finishes booting you will be presented with a login 
+prompt at which point, you should login as root using the root password
+from your system. Boot options other than the default have not be tested  
+(actually, I am going to remove them), and logging into any user other
+than root is not likely to work.    
+
+What do you have when you boot?
+- Your kernel will be booted in a simplifed environment.
+- Everything is running in a RAM disk file.
+- Access to the CDROM in /cdrom and anything you put in cdtree will
+  be in the /cdrom directory.
+- You will start in /root, with nothing unless you put it in
+  roottree/root before making the ISO.
+- You will have a good number of standard Unix programs available.
+  Do an "ls -l /sbin" to see the list. To add more add them to
+  rootsbin.list
+- A /lib containing all the shared libraries used by the programs in
+  /sbin. If you add more programs other than to rootsbin.list, you
+  will need to manually add any required shared libraries.
+- A /lib/modules/kernel-name/ with all your kernel modules.
+- An /etc directory containing a stripped down and modified version
+  of your system files. Everything is *vastly* simplified, and probably
+  not in the usual places, but many things such as your passwd file
+  will be there.
+- A /bacula-hostname directory containing the basic rescue disk contents
+  mentioned in the manual concerning the floppy rescue.  Note,
+  hostname is the name of the host on which you built the CDROM
+  (this allows having multiple rescues on a single CDROM).
+- A /bacula-hostname/bin directory containing a statically linked Bacula
+  from the current development stream, and a bacula-fd.conf file.
+  With this and the contents of the /bacula-hostname directory, you have
+  all the scripts necessary to reconstruct your hard disks, and to
+  launch a Bacula File daemon for restoring the system.
+
+Adding your own files:
+- Anything you put in the directory roottree will be 
+  put into the initial ram disk, and loaded into memory.
+  This is the normal way to add files. However, the size of
+  the ramdisk file is limited to your machine's total 
+  memory size. Currently, with the contents of a single
+  machine (you can actually put multiple machines on a 
+  single CD), the size is about 50MB. Most machines today
+  should handle this.
+- Anything you put in the directory cdtree will go on the
+  CDROM, but will not be loaded in memory. This means that
+  you must be able to mount the CDROM to read it -- normally
+  the CDROM should be automatically mounted when the system
+  boots, but the detection is not yet too good, so you may
+  need to manually mount it. On the other hand, anything you
+  add to cdtree can be read without booting it by simply
+  mounting the CDROM -- it also does not use precious 
+  RAM.
+
+
+Other make targets:
+- make kernel    --- rebuild the kernel files
+- make binaries  --- rebuild the binary files
+- make bacula    --- rebuild a static Bacula File daemon
+                     and make a snapshot of your hard disk
+                     layout. 
+- make initrd    --- make a new ram disk image.
+- make iso       --- make a new ISO image.
+- make scan      --- use cdrecord to scan your scsi drivers for
+                     a cd burner.
+- make blank     --- blank a CD-RW disk (you may need to adjust
+                     the dev= specification using the "make scan"
+                     output.
+- make burn      --- burn the ISO (you may need to adjust the 
+                     dev= specification using the "make scan" output).
+
+
+Work to be done:
+- Test with SCSI boot.
+- Look at doing some hardware detection in the second half of
+  the boot process.
+
+The boot process works as follows:
+- isolinux puts up the boot screen. According to what options you
+  select, it will boot.
+- The whole roottree is in the initrd.img and will be loaded in
+  memory. It may take more time than you are used to to load.
+- The script "linuxrc" is run. 
+
+- When booting is complete, the init process is started and it calls
+  the script /etc/sysinit (in roottree).  
+
+- sysinit mounts the root filesystem as read write, sets up a few system
+  files, turns on logging, attempts to the cdrom on /cdrom. This is very
+  likely to fail. It is nothing to worry about, but means that unless
+  you manually mount the cdrom, you will not be able to access it.
+  To run the standard Bacula restore, there is no need to access the
+  cdrom after the boot. Then sysinit calls the
+  /etc/load_eth0.sh script and sets up the loop back interface.
+
+- load_eth0.sh attempts to find and load the ethernet module.
+
+- Then init follows the instructions in inittab for the run level
+  chosen (default 2), which is to call /etc/rc.d/rc 2
+
+- rc tells init to switch to single user mode 
+
+- If the run level is greater than 2, rc calls /etc/start_network.sh,
+  which attempts to setup the network with dhcp. (some work needed here) 

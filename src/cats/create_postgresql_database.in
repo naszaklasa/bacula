@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# shell script to create Bacula database(s)
+#
+
+bindir=@SQL_BINDIR@
+
+if $bindir/psql template1 $* -f - <<END-OF-DATA
+CREATE DATABASE bacula;
+END-OF-DATA
+then
+   echo "Creation of bacula database succeeded."
+else
+   echo "Creation of bacula database failed."
+fi
+exit 0

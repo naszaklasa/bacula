@@ -1,0 +1,278 @@
+%%
+%%
+
+\section*{Installing and Configuring PostgreSQL}
+\label{_ChapterStart10}
+\index[general]{PostgreSQL!Installing and Configuring }
+\index[general]{Installing and Configuring PostgreSQL }
+\addcontentsline{toc}{section}{Installing and Configuring PostgreSQL}
+
+\subsection*{Installing and Configuring PostgreSQL -- Phase I}
+\index[general]{Installing and Configuring PostgreSQL -- Phase I }
+\index[general]{Phase I!Installing and Configuring PostgreSQL -- }
+\addcontentsline{toc}{subsection}{Installing and Configuring PostgreSQL --
+Phase I}
+
+If you use the {\bf ./configure \verb{--{with-postgresql=PostgreSQL-Directory}
+statement for configuring {\bf Bacula}, you will need PostgreSQL version 7.3
+or later installed. NOTE! PostgreSQL versions earlier than 7.3 do not work
+with Bacula. If PostgreSQL is installed in the standard system location, you
+need only enter {\bf \verb{--{with-postgresql} since the configure program will
+search all the standard locations. If you install PostgreSQL in your home
+directory or some other non-standard directory, you will need to provide the
+full path with the {\bf \verb{--{with-postgresql} option. 
+
+Installing and configuring PostgreSQL is not difficult but can be confusing
+the first time. If you prefer, you may want to use a package provided by your
+chosen operating system. Binary packages are available on most PostgreSQL
+mirrors. 
+
+If you prefer to install from source, we recommend following the instructions
+found in the 
+\elink{PostgreSQL documentation}{http://www.postgresql.org/docs/}. 
+
+If you are using FreeBSD, 
+\elink{this FreeBSD Diary article}{http://www.freebsddiary.org/postgresql.php}
+will be useful. Even if you are not using FreeBSD, the article will contain
+useful configuration and setup information. 
+
+After installing PostgreSQL, you should return to completing the installation
+of {\bf Bacula}. Later, after Bacula is installed, come back to this chapter
+to complete the installation. Please note, the installation files used in the
+second phase of the PostgreSQL installation are created during the Bacula
+Installation. 
+\label{PostgreSQL_phase2}
+
+\subsection*{Installing and Configuring PostgreSQL -- Phase II}
+\index[general]{Phase II!Installing and Configuring PostgreSQL -- }
+\index[general]{Installing and Configuring PostgreSQL -- Phase II }
+\addcontentsline{toc}{subsection}{Installing and Configuring PostgreSQL --
+Phase II}
+
+At this point, you should have built and installed PostgreSQL, or already have
+a running PostgreSQL, and you should have configured, built and installed {\bf
+Bacula}. If not, please complete these items before proceeding. 
+
+Please note that the {\bf ./configure} used to build {\bf Bacula} will need to
+include {\bf \verb{--{with-postgresql=PostgreSQL-directory}, where {\bf
+PostgreSQL-directory} is the directory name that you specified on the
+./configure command for configuring PostgreSQL (if you didn't specify a
+directory or PostgreSQL is installed in a default location, you do not need to
+specify the directory). This is needed so that Bacula can find the necessary
+include headers and library files for interfacing to PostgreSQL. 
+
+{\bf Bacula} will install scripts for manipulating the database (create,
+delete, make tables etc) into the main installation directory. These files
+will be of the form *\_bacula\_* (e.g. create\_bacula\_database). These files
+are also available in the \lt{}bacula-src\gt{}/src/cats directory after
+running ./configure. If you inspect create\_bacula\_database, you will see
+that it calls create\_postgresql\_database. The *\_bacula\_* files are
+provided for convenience. It doesn't matter what database you have chosen;
+create\_bacula\_database will always create your database. 
+
+Now you will create the Bacula PostgreSQL database and the tables that Bacula
+uses. These instructions assume that you already have PostgreSQL running. You
+will need to perform these steps as a user that is able to create new
+databases. This can be the PostgreSQL user (on most systems, this is the pgsql
+user). 
+
+\begin{enumerate}
+\item cd \lt{}install-directory\gt{}
+
+   This directory contains the Bacula catalog  interface routines.  
+
+\item ./create\_bacula\_database
+
+   This script creates the PostgreSQL {\bf bacula} database.  
+
+\item ./make\_bacula\_tables
+
+   This script creates the PostgreSQL tables used by {\bf Bacula}.  
+\item ./grant\_bacula\_privileges
+
+   This script creates the database user {\bf bacula}  with restricted access
+rights. You may  want to modify it to suit your situation. Please note that 
+this database is not password protected.  
+
+\end{enumerate}
+
+Each of the three scripts (create\_bacula\_database, make\_bacula\_tables, and
+grant\_bacula\_privileges) allows the addition of a command line argument.
+This can be useful for specifying the user name. For example, you might need
+to add {\bf -h hostname} to the command line to specify a remote database
+server. 
+
+To take a closer look at the access privileges that you have setup with the
+above, you can do: 
+
+\footnotesize
+\begin{verbatim}
+PostgreSQL-directory/bin/psql --command \\dp bacula
+\end{verbatim}
+\normalsize
+
+\subsection*{Re-initializing the Catalog Database}
+\index[general]{Database!Re-initializing the Catalog }
+\index[general]{Re-initializing the Catalog Database }
+\addcontentsline{toc}{subsection}{Re-initializing the Catalog Database}
+
+After you have done some initial testing with {\bf Bacula}, you will probably
+want to re-initialize the catalog database and throw away all the test Jobs
+that you ran. To do so, you can do the following: 
+
+\footnotesize
+\begin{verbatim}
+  cd <install-directory>
+  ./drop_bacula_tables
+  ./make_bacula_tables
+  ./grant_bacula_privileges
+\end{verbatim}
+\normalsize
+
+Please note that all information in the database will be lost and you will be
+starting from scratch. If you have written on any Volumes, you must write and
+end of file mark on the volume so that Bacula can reuse it. Do so with: 
+
+\footnotesize
+\begin{verbatim}
+   (stop Bacula or unmount the drive)
+   mt -f /dev/nst0 rewind
+   mt -f /dev/nst0 weof
+\end{verbatim}
+\normalsize
+
+Where you should replace {\bf /dev/nst0} with the appropriate tape drive
+device name for your machine. 
+
+\subsection*{Converting from MySQL to PostgreSQL}
+\index[general]{PostgreSQL!Converting from MySQL to }
+\index[general]{Converting from MySQL to PostgreSQL }
+\addcontentsline{toc}{subsection}{Converting from MySQL to PostgreSQL}
+
+The conversion procedure presented here was worked out by Norm Dressler
+\lt{}ndressler at dinmar dot com\gt{} 
+
+This process was tested using the following software versions: 
+
+\begin{itemize}
+\item Linux Mandrake 10/Kernel 2.4.22-10 SMP 
+\item Mysql Ver 12.21 Distrib 4.0.15, for mandrake-linux-gnu (i586) 
+\item PostgreSQL 7.3.4 
+\item Bacula 1.34.5 
+   \end{itemize}
+
+WARNING: Always as a precaution, take a complete backup of your databases
+before proceeding with this process! 
+
+\begin{enumerate}
+\item Shutdown bacula (cd /etc/bacula;./bacula stop)  
+\item Run the following command to dump your Mysql database:  
+
+   \footnotesize
+\begin{verbatim}
+       mysqldump -f -t -n >bacula-backup.dmp>
+    
+\end{verbatim}
+\normalsize
+
+\item Make a backup of your /etc/bacula directory (but leave the  original in
+   place).  
+\item Go to your Bacula source directory and rebuild it to include  PostgreSQL
+   support rather then Mysql support. Check the  config.log file for your
+   original configure command and replace  enable-mysql with enable-postgresql.  
+\item Recompile Bacula with a make and if everything compiles  completely,
+   perform a make install.  
+\item Shutdown Mysql. 
+\item Start PostgreSQL on your system.  
+\item Create a bacula user in Postgres with createuser command.  Depending on
+   your Postgres install, you may have to SU to the  user who has privileges to
+   create a user.  
+\item Verify your pg\_hba.conf file contains sufficient permissions to  allow
+   bacula to access the server. Mine has the following since  it's on a secure
+   network:  
+
+\footnotesize
+\begin{verbatim}
+local all all trust
+                
+host all all 127.0.0.1 255.255.255.255 trust
+                
+NOTE: you should restart your postgres server if you
+      made changes
+      
+\end{verbatim}
+\normalsize
+
+\item Change into the /etc/bacula directory and prepare the database  and
+   tables with the following commands:  
+
+\footnotesize
+\begin{verbatim}
+./create_postgresql_database
+                                
+./make_postgresql_tables
+                                
+./grant_postgresql_privileges
+       
+\end{verbatim}
+\normalsize
+
+\item Verify you have access to the database:  
+
+   \footnotesize
+\begin{verbatim}
+  
+psql -Ubacula bacula
+      
+\end{verbatim}
+\normalsize
+
+You should not get any errors.  
+\item Load your database from the Mysql database dump with:  
+
+   \footnotesize
+\begin{verbatim}
+psql -Ubacula bacula <bacula-backup.dmp>
+      
+\end{verbatim}
+\normalsize
+
+\item Reseqence your tables with the following commands:  
+
+   \footnotesize
+\begin{verbatim}
+psql -Ubacula bacula
+                
+SELECT SETVAL('basefiles_baseid_seq', (SELECT
+MAX(baseid) FROM basefiles));
+SELECT SETVAL('client_clientid_seq', (SELECT
+MAX(clientid) FROM client));
+SELECT SETVAL('file_fileid_seq', (SELECT MAX(fileid)
+FROM file));
+SELECT SETVAL('filename_filenameid_seq', (SELECT
+MAX(filenameid) FROM filename));
+                
+SELECT SETVAL('fileset_filesetid_seq', (SELECT
+MAX(filesetid) FROM fileset));
+                
+SELECT SETVAL('job_jobid_seq', (SELECT MAX(jobid) FROM job));
+SELECT SETVAL('jobmedia_jobmediaid_seq', (SELECT
+MAX(jobmediaid) FROM jobmedia));
+SELECT SETVAL('media_mediaid_seq', (SELECT MAX(mediaid) FROM media));
+SELECT SETVAL('path_pathid_seq', (SELECT MAX(pathid) FROM path));
+                
+SELECT SETVAL('pool_poolid_seq', (SELECT MAX(poolid) FROM pool));
+       
+\end{verbatim}
+\normalsize
+
+\item At this point, start up Bacula, verify your volume library and  perform
+   a test backup to make sure everything is working  properly. 
+   \end{enumerate}
+
+\subsection*{Credits}
+\index[general]{Credits }
+\addcontentsline{toc}{subsection}{Credits}
+
+Many thanks to Dan Languille for writing the PostgreSQL driver. This will
+surely become the most popular database that Bacula supports. 

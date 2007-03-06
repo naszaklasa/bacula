@@ -1,0 +1,56 @@
+%%
+%%
+
+\section*{System Requirements}
+\label{_ChapterStart51}
+\index[general]{System Requirements }
+\index[general]{Requirements!System }
+\addcontentsline{toc}{section}{System Requirements}
+
+\label{SysReqs}
+
+\subsection*{System Requirements}
+\index[general]{System Requirements }
+\index[general]{Requirements!System }
+\addcontentsline{toc}{subsection}{System Requirements}
+
+\begin{itemize}
+\item {\bf Bacula} has been compiled and run on Linux RedHat, FreeBSD,  and
+   Solaris systems. 
+\item It requires GNU C++ version 2.95 or higher to compile. You can try  with
+   other compilers and older versions, but you are on your own.  We have
+   successfully compiled and used Bacula on RH8.0/RH9/RHEL 3.0  with GCC 3.2.
+Note, in general GNU C++ is a separate package (e.g.  RPM) from GNU C, so you
+need them both loaded. On RedHat systems,  the C++ compiler is part of the
+{\bf gcc-c++} rpm package. 
+\item There are certain third party packages that Bacula needs.  Except for
+   MySQL and PostgreSQL, they can all be found in the  {\bf depkgs} and {\bf
+   depkgs1} releases. 
+\item If you want to build the Win32 binaries, you will need a  Microsoft
+   Visual C++ compiler (or Visual Studio).  Although all components build
+   (console has  some warnings), only the File daemon has been tested. 
+\item {\bf Bacula} requires a good implementation of pthreads to work.  This
+   is not the case on some of the BSD systems. 
+\item The source code has been written with portability in mind and is  mostly
+   POSIX compatible. Thus porting to any POSIX compatible  operating system
+   should be relatively easy. 
+\item The GNOME Console program is developed and tested under GNOME 2.x. It 
+   also runs under GNOME 1.4 but this version is deprecated and  thus no longer
+   maintained. 
+\item The wxWidgets Console program is developed and tested with the latest 
+   stable version of 
+   \elink{wxWidgets}{http://www.wxwidgets.org/} (2.4.2).  It works fine with the
+Windows and GTK+-1.x version of wxWidgets, and should  also works on other
+platforms supported by wxWidgets. 
+\item The Tray Monitor program is developed for GTK+-2.x. It needs  Gnome less
+   or equal to 2.2, KDE greater or equal to 3.1 or any window manager supporting
+   the  
+\elink{ FreeDesktop system tray
+standard}{http://www.freedesktop.org/Standards/systemtray-spec}. 
+\item If you want to enable command line editing and history, you will  need
+   to have /usr/include/termcap.h and either the termcap or the  ncurses library
+   loaded (libtermcap-devel or ncurses-devel). 
+\item If you want to use DVD as backup medium, you will need to download  and
+   install the  
+   \elink{dvd+rw-tools}{http://fy.chalmers.se/~appro/linux/DVD+RW/}. 
+\end{itemize}

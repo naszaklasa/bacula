@@ -1,0 +1,16 @@
+15c15
+<   echo ".dump" | @SQL_BINDIR@/sqlite $1.db >$1.sql
+---
+>   echo ".dump" | /usr/lib/sqlite/sqlite $1.db >$1.sql
+18c18
+<     @SQL_BINDIR@/mysqldump -u $2 -f --opt $1 >$1.sql
+---
+>     /usr/bin/mysqldump -u $2 -f --opt $1 >$1.sql
+20c20
+<     @SQL_BINDIR@/pg_dump -U $2 $1 >$1.sql
+---
+>     /usr/bin/pg_dump -U $2 $1 >$1.sql
+26c26
+< #     rm -f @SQL_BINDIR@/../var/bacula/*
+---
+> #     rm -f /var/lib/mysql/bacula/*

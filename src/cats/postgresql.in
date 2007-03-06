@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+# shell script to create Bacula PostgreSQL tables
+#
+bindir=@SQL_BINDIR@
+
+$bindir/psql $* bacula

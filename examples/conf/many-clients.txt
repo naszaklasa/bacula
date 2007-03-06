@@ -1,0 +1,106 @@
+From: Dan Langille <dan@langille.org>
+To: bacula-devel@lists.sourceforge.net
+Subject: [Bacula-devel] script for creating many client FDs
+Date Tue, 2 Dec 2003 19:41:28 -0500 (EST)
+
+I created this script which may be useful to others.  If you have to
+create a bacula-fd.conf file for more than a few clients, it can become
+time consuming, not to mention error prone.
+
+Here is the usage:
+
+$ sh client-build.sh
+client-build.sh : usage client-build.sh DIRNAME DIRPASSWD CLIENTNAME
+[CLIENTNAME...]
+
+Where DIRNAME is the director name which can contact this client
+      PASSWD  is the passwd to be supplied by the director
+      CLIENTNAME is the name of the client file daemon
+
+The script creates ./tmp and places all output there.
+
+bacula-fd.conf.in is the template it uses for creating the client scripts
+and it must reside in the same directory as the script.
+
+Enjoy
+-- 
+Dan Langille - http://www.langille.org/
+
+==== bacula-fd.conf.in template ======
+#
+# Default  Bacula File Daemon Configuration file
+#
+#  For Bacula release 1.32b (14 Oct 2003) -- freebsd 4.8-STABLE
+#
+# There is not much to change here except perhaps the
+# File daemon Name to
+#
+
+#
+# List Directors who are permitted to contact this File daemon
+#
+Director {
+  Name     = @dir-name@
+  Password = "@dir-password@"
+}
+
+#
+# "Global" File daemon configuration specifications
+#
+FileDaemon {
+  Name             = @client-name@
+  FDport           = 9102          # where we listen for the director
+  WorkingDirectory = /var/db/bacula
+  Pid Directory    = /var/run
+}
+
+# Send all messages except skipped files back to Director
+Messages {
+  Name     = Standard
+  director = undef-dir = all, !skipped
+}
+=== end bacula-fd.conf.in template ========
+
+
+==== client-build.sh ===========
+#!/bin/sh
+#
+# Copyright 2003 Dan Langille <dan@langille.org>
+#
+# Use as you wish, but keep retain this copyright notice.
+# Please forward improvements.
+#
+# usage client-build.sh DIRNAME DIRPASSWD CLIENTNAME [CLIENTNAME...]
+#
+# Where DIRNAME is the director name which can contact this client
+#       PASSWD  is the passwd to be supplied by the director
+#       CLIENTNAME is the name of the client file daemon
+#
+# This script creates ./tmp and places all output there.
+#
+# bacula-fd.conf.in is the template it uses for creating the client scripts.
+#
+
+
+if [ $# -lt 3 ]
+then
+   echo $0 : usage $0 DIRNAME DIRPASSWD CLIENTNAME [CLIENTNAME...]
+   exit 1
+fi
+
+mkdir -p ./tmp
+
+DIRNAME=$1
+DIRPASSWD=$2
+
+shift 2
+
+echo creating stuff for $DIRNAME with password $DIRPASSWD
+
+while [ $# -gt 0 ] ; do
+        CLIENT=$1
+        shift
+        echo "creating config for " $CLIENT
+        sed "s/@dir-name@/undef-dir/;s/@dir-password@/password/;s/@client-name@/$CLIENT/" bacula-fd.conf.in > ./tmp/$CLIENT-bacula-fd.conf
+done
+=== end client-build.sh ===============

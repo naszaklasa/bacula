@@ -1,0 +1,1 @@
+#include "../../filed/verify.c"

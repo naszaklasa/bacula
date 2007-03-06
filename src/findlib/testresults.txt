@@ -1,0 +1,44 @@
+Ovni (Win2000 c:/) testfind results:
+Err: Could not stat /PAGEFILE.SYS: Permission denied
+Total files    : 68155
+Max file length: 69
+Max path length: 132
+Files truncated: 0
+Paths truncated: 0
+
+Minou (WinNT c:/ d:/) testfind results: 
+Err: Could not stat c:/pagefile.sys: Permission denied
+Err: Could not stat d:/pagefile.sys: Permission denied
+Total files    : 33112
+Max file length: 91
+Max path length: 85
+Files truncated: 0
+Paths truncated: 0
+
+Minimatou (Win98 c:/) testfind results:
+Total files    : 87276
+Max file length: 140
+Max path length: 107
+Files truncated: 0
+Paths truncated: 0
+
+moby (Solaris) testfind results:
+Total files    : 248263
+Max file length: 82
+Max path length: 114
+Files truncated: 0
+Paths truncated: 0
+
+polymatou (Linux) testfind results:
+Total files    : 207176
+Max file length: 82
+Max path length: 105
+Files truncated: 0
+Paths truncated: 0
+
+rufus (Linux) testfind results:
+Total files    : 170280
+Max file length: 84
+Max path length: 121
+Files truncated: 0
+Paths truncated: 0

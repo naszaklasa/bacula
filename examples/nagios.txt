@@ -1,0 +1,205 @@
+Subject: RE: [Bacula-users] monitoring bacula with Nagios
+From: "Julian Hein" <jhein@netways.de>
+To: <bacula-users@lists.sourceforge.net>
+
+Hi,
+
+> Anyway: I would really like to write such a check_bacula 
+> plugin. I just 
+> don't know what I need to implement to achive a successful 
+> authentication. And maybe to get some infos out. Like current 
+> number of 
+> jobs, runtime or so.
+
+We are checking bacula with Nagios in two ways: First we check all servers if the neccessary services are running, like the fd on all bacula clients (windows & linux), directors, sd, etc. And the second check is to look in baculas mysql database if there is a successful job for every host within the last 24 hours:
+
+
+1. Check if the fd is running
+=============================
+
+Services:
+---------
+
+# bacula-fd linux
+check_command                   check_spezial_procs_by_ssh!2:!1:!bacula-fd
+
+# bacula-sd
+check_command                   check_spezial_procs_by_ssh!2:!1:!bacula-sd
+
+# bacula-dir
+check_command                   check_spezial_procs_by_ssh!2:!1:!bacula-dir
+
+# bacula-fd windows
+check_command                   check_nt_service!bacula
+
+Commands:
+---------
+
+# check for services by name with ssh
+define command {
+  command_name  check_spezial_procs_by_ssh
+  command_line  $USER1$/check_by_ssh -t 60 -H $HOSTADDRESS$ -C "/opt/nagios/libexec/check_procs -w $ARG1$ -c $ARG2$ -C $ARG3$"
+}
+
+# check for the bacula-fd on windows with nsclient
+define command {
+  command_name  check_nt_service
+  command_line  $USER1$/check_nt -H $HOSTADDRESS$ -p portno. -s password -v SERVICESTATE -l $ARG1$
+}
+
+2. Is there a successful job in the database
+============================================
+
+Services:
+---------
+
+# bacula jobs
+check_command    check_bacula_by_ssh!27!1!1
+
+Commands:
+---------
+The name of our backup jobs have to match the hostname in Nagios. So we can check on the backup server, for a job called $HOSTNAME$:
+
+define command {
+  command_name    check_bacula_by_ssh
+  command_line    $USER1$/check_by_ssh  -t 60 -H my.backup.server -C "/opt/nagios/libexec/check_bacula.pl -H $ARG1$ -w $
+ARG2$ -c $ARG3$ -j $HOSTNAME$"
+}
+
+check_bacula.pl:
+----------------
+
+#!/usr/bin/perl -w
+use strict;
+use POSIX;
+use File::Basename;
+use DBI;
+use Getopt::Long;
+use vars qw(
+       $opt_help
+           $opt_job
+           $opt_critical
+           $opt_warning
+           $opt_hours
+           $opt_usage
+           $opt_version
+           $out
+           $sql
+           $date_start
+           $date_stop
+           $state
+           $count
+           );
+           
+sub print_help();
+sub print_usage();
+sub get_now();
+sub get_date;
+
+my $progname = basename($0);
+
+my %ERRORS = (  'UNKNOWN'       =>      '-1',
+                'OK'            =>      '0',
+                'WARNING'       =>      '1',
+                'CRITICAL'      =>      '2');
+
+Getopt::Long::Configure('bundling');
+GetOptions
+        (
+        "c=s"   =>      \$opt_critical, "critical=s"    =>      \$opt_critical,
+        "w=s"   =>      \$opt_warning,  "warning=s"     =>      \$opt_warning,
+        "H=s"   =>      \$opt_hours,    "hours=s"       =>      \$opt_hours,
+        "j=s"   =>      \$opt_job,      "job=s"         =>      \$opt_job,
+        "h"     =>      \$opt_help,     "help"          =>      \$opt_help,
+                                        "usage"         =>      \$opt_usage,
+        "V"     =>      \$opt_version,  "version"       =>      \$opt_version
+        ) || die "Try '$progname --help' for more information.\n";
+
+sub print_help() {
+print "\n";
+print "PRINT HELP...\n";
+print "\n";
+}
+
+sub print_usage() {
+ print "PRINT USAGE...\n";
+ print "\n";
+}
+
+sub get_now() {
+ my $now  = defined $_[0] ? $_[0] : time;
+ my $out = strftime("%Y-%m-%d %X", localtime($now));
+ return($out);
+}
+
+sub get_date {
+ my $day = shift;
+ my $now  = defined $_[0] ? $_[0] : time;
+ my $new = $now - ((60*60*1) * $day);
+ my $out = strftime("%Y-%m-%d %X", localtime($new));
+ return ($out);
+}
+
+if ($opt_help) {
+ print_help();
+ exit $ERRORS{'UNKNOWN'};
+}
+
+if ($opt_usage) {
+ print_usage();
+ exit $ERRORS{'UNKNOWN'};
+}
+
+if ($opt_version) {
+ print "$progname 0.0.1\n";
+ exit $ERRORS{'UNKNOWN'};
+}
+
+
+if ($opt_job && $opt_warning && $opt_critical) {
+ my $dsn = "DBI:mysql:database=bacula;host=localhost";
+ my $dbh = DBI->connect( $dsn,'root','' ) or die "Error connecting to: '$dsn': $DBI::errstr\n";
+ 
+ if ($opt_hours)
+ {
+  $date_stop = get_date($opt_hours);
+ }
+  else
+  {
+   $date_stop = '1970-01-01 01:00:00';
+  }
+ 
+ $date_start = get_now();
+ 
+ $sql = "SELECT count(*) as 'count' from Job where (Name='$opt_job') and (JobStatus='T') and (EndTime <> '') and ((EndTime <= '$date_start') and (EndTime >= '$date_stop'));";
+
+ my $sth = $dbh->prepare($sql) or die "Error preparing statemment",$dbh->errstr;
+ $sth->execute;
+ 
+ while (my @row = $sth->fetchrow_array()) {
+  ($count) = @row;
+ }
+$state = 'OK';
+if ($count<$opt_warning) { $state='WARNING' }
+if ($count<$opt_critical) { $state='CRITICAL' }
+
+print "Bacula $state: Found $count successfull jobs\n";
+exit $ERRORS{$state};
+ $dbh->disconnect();
+}
+ else {
+  print_usage();
+ }
+
+Well, this script is not really finished, but it works for us. Maybe it is helpful for you. If somebody makes enhancements, I would be happy to recieve a copy.
+
+cu,
+Julian
+
+-- 
+Julian Hein                   NETWAYS GmbH
+Managing Director             Deutschherrnstr. 47a
+Fon.0911/92885-0              D-90429 Nürnberg
+Fax.0911/92885-31                                        
+jhein@netways.de              www.netways.de     
+

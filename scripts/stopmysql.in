@@ -1,0 +1,2 @@
+#!/bin/sh
+@SQL_BINDIR@/mysqladmin shutdown
