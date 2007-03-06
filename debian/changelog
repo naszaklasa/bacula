@@ -1,3 +1,9 @@
+bacula (1.38.11-3) unstable; urgency=high
+
+  * Update postrm to new dbconfig-common method.  Closes: #383142.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 21 Aug 2006 09:19:49 -0500
+
 bacula (1.38.11-2) unstable; urgency=low
 
   * Updated Brazilian Portugese translation from Felipe August van de Wiel.
