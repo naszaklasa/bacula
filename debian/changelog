@@ -1,3 +1,11 @@
+bacula (1.38.9-7) unstable; urgency=low
+
+  * Made bacula-sd-* also Replace the old bacula-sd package.  Closes: #367075.
+  * Update debian/copyright from LICENSE.
+  * Remove bsmtp and btraceback manpages from debian/manpages.
+
+ -- John Goerzen <jgoerzen@complete.org>  Sat, 13 May 2006 11:09:03 -0500
+
 bacula (1.38.9-6) unstable; urgency=low
 
   * Rewrote remaining templates to use better language.
