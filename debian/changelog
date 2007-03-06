@@ -1,3 +1,10 @@
+bacula (1.38.11-6) unstable; urgency=high
+
+  * Only call dbconfig-common if it exists in maintainer scripts.
+    Closes: #388220, #388222.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 22 Sep 2006 10:06:22 -0500
+
 bacula (1.38.11-5) unstable; urgency=high
 
   * Added missing shlibs:Depends for bacula-director-pgsql.  Closes: #384837.
