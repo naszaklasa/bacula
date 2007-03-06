@@ -1,3 +1,26 @@
+bacula (1.38.9-3) unstable; urgency=low
+
+  * Clean up Sqlite3 postinst
+
+  * Added some more upstream docs to bacula-common
+
+  * Switched MySQL to use dbconfig-common.  Removed largs amounts of
+    old code for MySQL support.  Closes: #338884, #357386.
+
+  * No longer force removal of director conffiles on removal (only
+    purge).
+
+  * Removed obsolete templates for MySQL & PostgreSQL.
+
+  * Removed obsolete install-flavors templates in debian/rules.
+
+  * Install Sqlite and Sqlite3 scripts properly.
+
+  * Removed obsolete translations (they were causing build errors now
+    that the obsolete templates are gone)
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 11 May 2006 06:45:44 -0500
+
 bacula (1.38.9-2) unstable; urgency=low
 
   * Sanitize dependencies in control -- make sure everything that

@@ -6,6 +6,14 @@
 . /usr/share/debconf/confmodule
 db_version 2.0
 
+dbc_first_version=1.38.9-3
+dbc_dbuser=bacula
+dbc_dbname=bacula
+
+. /usr/share/dbconfig-common/dpkg/postrm.mysql
+dbc_go bacula-director-mysql $@
+
+
 set -e
 
 # summary of how this script can be called:
@@ -32,8 +40,6 @@ case "$1" in
 	;;
 
 	remove)
-		# ... so that a replacement bacula-director-* can do as needed.
-		rm -f $CONFFILE.dist
 	;;
 	upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
 

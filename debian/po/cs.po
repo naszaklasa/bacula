@@ -23,147 +23,20 @@ msgstr ""
 "Content-Type: text/plain; charset=ISO-8859-2\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#. Type: string
-#. Default
-#: ../bacula-director-mysql.templates:3 ../bacula-director-pgsql.templates:3
-msgid "localhost"
-msgstr "localhost"
-
-#. Type: string
-#. Description
-#: ../bacula-director-mysql.templates:4
-msgid "Where is the MySQL server?"
-msgstr "Kde se nachází MySQL server?"
-
-#. Type: string
-#. Description
-#: ../bacula-director-mysql.templates:4
-msgid ""
-"Enter the host where the MySQL server which is to hold Bacula's catalog is."
-msgstr ""
-"Zadejte poèítaè, na kterém bì¾í MySQL server, je¾ bude spravovat katalog "
-"balíèku bacula." 
-
-#. Type: string
-#. Default
-#: ../bacula-director-mysql.templates:10 ../bacula-director-pgsql.templates:10
-msgid "bacula"
-msgstr "bacula"
-
-#. Type: string
-#. Description
-#: ../bacula-director-mysql.templates:11
-msgid "MySQL username"
-msgstr "U¾ivatelské jméno pro MySQL"
-
-#. Type: string
-#. Description
-#: ../bacula-director-mysql.templates:11
-msgid "Please, enter the username which Bacula will use to connect to MySQL."
-msgstr ""
-"Zadejte prosím u¾ivatelské jméno, které bude Bacula pou¾ívat pro spojení s "
-"MySQL."
-
-#. Type: password
-#. Description
-#: ../bacula-director-mysql.templates:17
-msgid "MySQL password"
-msgstr "Heslo k MySQL"
-
-#. Type: password
-#. Description
-#: ../bacula-director-mysql.templates:17
-msgid "Please, enter the password which Bacula will use to connect to MySQL."
-msgstr "Zadejte prosím heslo, které bude Bacula pou¾ívat pro spojení s MySQL."
-
-
 #. Type: boolean
 #. Description
-#: ../bacula-director-mysql.templates:23 ../bacula-director-pgsql.templates:23
 #: ../bacula-director-sqlite.templates:4
 msgid "Create tables for Bacula's Catalog?"
 msgstr "Pøejete si vytvoøit tabulky pro katalog Baculy?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-mysql.templates:23 ../bacula-director-pgsql.templates:23
-msgid ""
-"I have detected that the tables needed for Bacula's Catalog are missing "
-"(this is probably a fresh install). Shall I create them now?"
-msgstr ""
-"Zjistil jsem, ¾e chybí tabulky potøebné pro katalog Baculy (pravdìpodobnì "
-"instalujete Baculu prvnì). Mám je nyní vytvoøit?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-mysql.templates:23
-msgid "A MySQL 'root' username & password will be required."
-msgstr ""
-"Budu potøebovat u¾ivatelské jméno superu¾ivatele (root) a pøíslu¹né heslo pro "
-"MySQL."
-
-#. Type: string
-#. Default
-#: ../bacula-director-mysql.templates:31
-msgid "root"
-msgstr "root"
-
-#. Type: string
-#. Description
-#: ../bacula-director-mysql.templates:32
-msgid "MySQL 'root' username"
-msgstr "Superu¾ivatelské (root) jméno pro MySQL"
-
-#. Type: string
-#. Description
-#: ../bacula-director-mysql.templates:32
-msgid "Please type the username to connect to MySQL as."
-msgstr "Zadejte prosím u¾ivatelské jméno, pod kterým se mám pøipojit k MySQL."
-
-#. Type: string
-#. Description
-#: ../bacula-director-mysql.templates:32 ../bacula-director-pgsql.templates:47
-msgid "This user needs to have 'create database' privileges."
-msgstr "Tento u¾ivatel musí mít práva pro vytváøení databází."
-
-#. Type: password
-#. Default
-#: ../bacula-director-mysql.templates:39 ../bacula-director-pgsql.templates:54
-msgid "NONE"
-msgstr "NIC"
-
-#. Type: password
-#. Description
-#: ../bacula-director-mysql.templates:40
-msgid "MySQL 'root' password"
-msgstr "Superu¾ivatelské (root) heslo k MySQL"
-
-#. Type: password
-#. Description
-#: ../bacula-director-mysql.templates:40 ../bacula-director-pgsql.templates:55
-msgid "Please type the password for the username entered before."
-msgstr "Zadejte prosím heslo pro u¾ivatele zadaného døíve."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-mysql.templates:46 ../bacula-director-pgsql.templates:61
 #: ../bacula-director-sqlite.templates:11
 msgid "Remove Catalog on purge?"
 msgstr "Odstranit pøi odstraòování balíèku také katalog?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-mysql.templates:46
-msgid ""
-"Shall I remove the Catalog from the MySQL server at package purge time? This "
-"will free all the used space."
-msgstr ""
-"Mohu odstranit katalog z MySQL serveru pøi odstraòování balíèku? Tím se "
-"uvolní ve¹keré zabrané místo."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-mysql.templates:46 ../bacula-director-pgsql.templates:61
 #: ../bacula-director-sqlite.templates:11
 msgid ""
 "Warning: This is not undoable. Once you remove the catalog, you won't be "
@@ -172,115 +45,6 @@ msgid ""
 msgstr ""
 "VAROVÁNÍ: Tato akce je nevratná! Jakmile odstraníte katalog, nebudete jej moci "
 "obnovit! (Pokud ov¹em nemáte vytvoøenou zálo¾ní kopii.)"
-
-#. Type: string
-#. Description
-#: ../bacula-director-pgsql.templates:4
-msgid "Where is the PostgreSQL server?"
-msgstr "Kde se nachází PosgreSQL server?"
-
-#. Type: string
-#. Description
-#: ../bacula-director-pgsql.templates:4
-msgid ""
-"Enter the host where the PostgreSQL server which is to hold Bacula's catalog "
-"is."
-msgstr ""
-"Zadejte poèítaè, na kterém bì¾í PostgreSQL server, který bude spravovat "
-"katalog balíèku bacula." 
-
-#. Type: string
-#. Description
-#: ../bacula-director-pgsql.templates:11
-msgid "PostgreSQL username"
-msgstr "U¾ivatelské jméno pro PostgreSQL"
-
-#. Type: string
-#. Description
-#: ../bacula-director-pgsql.templates:11
-msgid ""
-"Please, enter the username which Bacula will use to connect to PostgreSQL."
-msgstr ""
-"Zadejte prosím u¾ivatelské jméno, které bude Bacula pou¾ívat pro pøipojení k "
-"PostgreSQL."
-
-
-#. Type: password
-#. Description
-#: ../bacula-director-pgsql.templates:17
-msgid "PostgreSQL password"
-msgstr "Heslo k PostgreSQL"
-
-#. Type: password
-#. Description
-#: ../bacula-director-pgsql.templates:17
-msgid ""
-"Please, enter the password which Bacula will use to connect to PostgreSQL."
-msgstr ""
-"Zadejte prosím heslo, které bude Bacula pou¾ívat pro pøipojení k PostgreSQL."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-pgsql.templates:32
-msgid "Remove the Bacula Catalog?"
-msgstr "Odstranit katalog Baculy?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-pgsql.templates:32
-msgid ""
-"I have detected that a Bacula Catalog already exists.  Would you like to re-"
-"create it?"
-msgstr ""
-"Zjistil jsem, ¾e katalog Baculy ji¾ existuje. Pøejete si jej vytvoøit znovu?" 
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-pgsql.templates:32
-msgid "A PgSQL 'admin' username & password will be required."
-msgstr ""
-"Budu potøebovat u¾ivatelské jméno a heslo administrátora PostgreSQL."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-pgsql.templates:32
-msgid "If you are unsure, answer no."
-msgstr "Jestli¾e si nejste jisti, odpovìzte ne."
-
-#. Type: string
-#. Default
-#: ../bacula-director-pgsql.templates:46
-msgid "postgres"
-msgstr "postgres"
-
-#. Type: string
-#. Description
-#: ../bacula-director-pgsql.templates:47
-msgid "PostgreSQL 'root' username"
-msgstr "Superu¾ivatelské (root) jméno pro PostgreSQL"
-
-#. Type: string
-#. Description
-#: ../bacula-director-pgsql.templates:47
-msgid "Please type the username to connect to PostgreSQL as."
-msgstr ""
-"Zadejte prosím u¾ivatelské jméno, pod kterým se mám pøipojit k PostgreSQL."
-
-#. Type: password
-#. Description
-#: ../bacula-director-pgsql.templates:55
-msgid "PostgreSQL 'root' password"
-msgstr "Superu¾ivatelské (root) heslo k PostgreSQL"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-pgsql.templates:61
-msgid ""
-"Shall I remove the Catalog from the PostgreSQL server at package purge time? "
-"This will free all the used space."
-msgstr ""
-"Mohu odstranit katalog z PostgreSQL serveru pøi odstraòování balíèku? Tím se "
-"uvolní ve¹keré zabrané místo."
 
 #. Type: boolean
 #. Description

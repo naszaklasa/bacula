@@ -3,6 +3,16 @@
 #
 # see: dh_installdeb(1)
 
+. /usr/share/debconf/confmodule
+
+dbc_first_version=1.38.9-3
+dbc_dbuser=bacula
+dbc_dbname=bacula
+
+. /usr/share/dbconfig-common/dpkg/prerm.mysql
+dbc_go bacula-director-mysql $@
+
+
 set -e
 
 # summary of how this script can be called:

@@ -1,3 +1,1 @@
-[type: gettext/rfc822deb] bacula-director-mysql.templates
-[type: gettext/rfc822deb] bacula-director-pgsql.templates
 [type: gettext/rfc822deb] bacula-director-sqlite.templates

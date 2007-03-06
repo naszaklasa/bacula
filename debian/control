@@ -7,7 +7,7 @@ Build-Depends: autotools-dev, debhelper (>= 4.2), po-debconf (>= 0.8.2),
  libsqlite0-dev, libsqlite3-dev, libmysqlclient15-dev | libmysqlclient14-dev, libpq-dev | postgresql-dev, 
  libwrap0-dev, libssl-dev, python2.3-dev, 
  libgnome2-dev, libwxgtk2.6-dev | libwxgtk2.4-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
- libx11-dev, mtx
+ libx11-dev, mtx, ssed
 Build-Conflicts: python2.2-dev
 Standards-Version: 3.7.0
 

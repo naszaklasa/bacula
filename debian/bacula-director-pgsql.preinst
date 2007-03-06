@@ -9,12 +9,6 @@
 . /usr/share/debconf/confmodule
 db_version 2.0
 
-dbc_first_version=1.38.9-2
-dbc_dbuser=bacula
-dbc_dbname=bacula
-. /usr/share/dbconfig-common/dpkg/postinst.pgsql
-dbc_go bacula-director-pgsql $@
-
 set -e
 
 # summary of how this script can be called:
@@ -35,20 +29,12 @@ set -e
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
-## Globals
-CATALOG=bacula
-PGSQL=/usr/bin/psql
-LOGDIR="/var/log/bacula"
-GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_pgsql_privileges"
-POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
-DEFCONFIG="/usr/share/bacula-common/defconfig"
-CFGFILE="/etc/bacula/bacula-dir.conf"
-AUTHFILE=`getent passwd bacula | cut -d ':' -f 6`/.pgpass
-
 case "$1" in
 configure)
 	
 
+        #if dpkg --compare-versions "$2" lt "1.38.9-2" ; then
+        #    echo -n "Purging old debconf data for 
 	echo -n "Processing configuration ..."
         . /etc/dbconfig-common/bacula-director-pgsql.conf
 	TARGET=$CFGFILE.dpkg-tmp
