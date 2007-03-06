@@ -227,9 +227,12 @@ configure)
 		# "ident sameuser" which restricts db connections to the same 
 		# unix user, but the Bacula Director starts up as root and makes
 		# an initial db connection, before changing uid to the bacula user.
-		if [ "$PGSQL_HOST" = "localhost" ];  then
-			patch_pg_hba "/var/lib/postgres/data/pg_hba.conf"
-		fi
+                #
+                # Commented out by jgoerzen -- 2006/04/27
+                # Needs to be revamped to consider multiple PostgreSQL versions
+		#if [ "$PGSQL_HOST" = "localhost" ];  then
+		#	patch_pg_hba "/var/lib/postgres/data/pg_hba.conf"
+		#fi
         
 		# Since it's insecure to pass the password to postgres as an environment
  		# variable (www.postgresql.org/docs/7.4/interactive/libpq-envars.html),

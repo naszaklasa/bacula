@@ -287,7 +287,7 @@ AC_ARG_WITH(postgresql,
           AC_MSG_RESULT(error)
           AC_MSG_ERROR("You can configure for only one database.");
       fi
-      if test "$withval" = "yes"; then
+      if test "$withval" = "yes" || test -z "$withval"; then
           if test -f /usr/local/include/libpq-fe.h; then
               POSTGRESQL_INCDIR=/usr/local/include
               POSTGRESQL_LIBDIR=/usr/local/lib
@@ -304,6 +304,10 @@ AC_ARG_WITH(postgresql,
               POSTGRESQL_INCDIR=/usr/include/postgresql
               POSTGRESQL_LIBDIR=/usr/lib/postgresql
               POSTGRESQL_BINDIR=/usr/bin
+	  elif test -n `pg_config --includedir`; then
+		POSTGRESQL_INCDIR=`pg_config --includedir`
+		POSTGRESQL_LIBDIR=`pg_config --libdir`
+		POSTGRESQL_BINDIR=`pg_config --bindir`
           else
               AC_MSG_RESULT(no)
               AC_MSG_ERROR(Unable to find libpq-fe.h in standard locations)

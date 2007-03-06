@@ -15,6 +15,7 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 CFLAGS = -g -Wall
 INSTALL_PROGRAM = install
 
+SHELL := bash
 
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0
@@ -32,9 +33,15 @@ FLAVORS = $(shell grep '^Package: bacula-director-' debian/control \
 
 TEMPLATES = $(wildcard debian/*.templates)
 
-CONF_ALL	= --enable-smartalloc --with-tcp-wrappers=/usr/include
+CONF_ALL	= --enable-smartalloc \
+	--with-python --with-openssl --with-tcp-wrappers \
+	--with-libiconv-prefix=/usr/include
+
 CONF_common	= --without-mysql --without-sqlite --without-postgresql \
-	--enable-gnome --with-x --enable-wx-console --enable-tray-monitor
+	--enable-gnome --with-x --with-readline=yes \
+	--with-libintl-prefix=/usr/include \
+	--enable-wx-console --enable-tray-monitor
+
 CONF_sqlite	= --with-sqlite
 CONF_mysql	= --with-mysql
 CONF_pgsql	= --with-postgresql
@@ -43,15 +50,16 @@ FLAGS_mysql	= DEBUG=-DHAVE_MYSQL SQL_INC=-I/usr/include/mysql
 FLAGS_sqlite	= DEBUG=-DHAVE_SQLITE SQL_INC=-I/usr/include
 FLAGS_pgsql	= DEBUG=-DHAVE_POSTGRESQL SQL_INC=-I$(shell pg_config --includedir)
 
-LIBS_mysql	= -L/usr/lib/mysql -lmysqlclient -lz -lssl -lcrypto
-LIBS_sqlite	= -L/usr/lib -lsqlite
-LIBS_pgsql	= -L/usr/lib -lpq -lssl -lcrypto -lcrypt -lkrb5 -lk5crypto -lcom_err -lresolv
+LIBS_mysql	= -L/usr/lib/mysql -lmysqlclient -lz -ldl -lnsl
+LIBS_sqlite	= -L/usr/lib -lsqlite -ldl -lresolv -lnsl
+LIBS_pgsql	= -L/usr/lib -lpq -lcrypt -lkrb5 -lk5crypto -lkrb5support -lcom_err -lresolv -ldl -lz -lnsl
+
 
 export FLAGS_mysql LIBS_mysql
 export FLAGS_sqlite LIBS_sqlite
 export FLAGS_pgsql LIBS_pgsql
 
-export FLAVORED_BIN_RE = '^$$$||/bacula-dir$$$||/dbcheck$$$
+export FLAVORED_BIN_RE = '^$$$||/bacula-dir$$$||/dbcheck$$$||/bscan$$$||/bcopy$$$'
 
 ################################################################################
 
@@ -120,12 +128,6 @@ build-arch-flavor-stamp:
 				if [ -n "`echo $$file | grep -E $${FLAVORED_BIN_RE}`" ]; \
 				then echo " - $$file -> $$file.$$pkg"; mv $$file $$file.$$pkg; fi; \
 		done; \
-		$(RM) src/stored/bscan src/stored/bcopy ; \
-		$(MAKE) -C src/stored bscan bcopy $$FLAGS TTOOL_LDFLAGS=-static 2>/dev/null; \
-		strip src/stored/bscan ; \
-		strip src/stored/bcopy ; \
-		mv src/stored/bscan src/stored/bscan.$$pkg ; \
-		mv src/stored/bcopy src/stored/bcopy.$$pkg ; \
 	done
 
 	# Clean up after build -- reported by ezanard@debian.org
@@ -153,9 +155,9 @@ build-indep-stamp:
 	# Add here command to compile/build the arch indep package.
 	# It's ok not to do anything here, if you don't need to build
 	#  anything for this package.
-	#/usr/bin/docbook-to-man debian/bacula.sgml > bacula.1
 
-	( cd doc/latex ;	$(MAKE) tex dvipdf ; cd ../.. )
+	# Documentation is not included anymore :-S
+	#( cd doc/latex ;	$(MAKE) tex dvipdf ; cd ../.. )
 
 	touch $@
 
@@ -168,8 +170,9 @@ clean:
 	$(RM) config.cache
 
 	# Grrr... clean up after building "servers"
-	-for subdir in cats dird stored tools; do \
-		$(MAKE) -C src/$$subdir distclean; \
+	-for subdir in src/cats src/dird src/stored src/tools \
+		scripts/logwatch scripts po; do \
+		$(MAKE) -C $$subdir distclean; \
         done
 
 	# Add here commands to clean up after the build process.
@@ -180,10 +183,18 @@ clean:
 	$(RM) build-arch-stamp build-indep-stamp
 
 	dh_clean
-	$(RM) -r debian/tmp*
-	for dir in src/tconsole src/gnome-console src/gnome2-console src/wx-console \
+
+	$(RM) -r debian/tmp* debian/bacula-doc po/Makefile po/Makefile.in \
+		bacula-dir logwatch/Makefile  scripts/devel_bacula \
+		scripts/disk-changer scripts/bacula-tray-monitor.desktop \
+		src/cats/create_sqlite3_database \
+		src/cats/drop_sqlite3_database src/cats/drop_sqlite3_tables \
+		src/cats/grant_sqlite3_privileges src/cats/make_sqlite3_tables \
+		src/cats/update_sqlite3_tables 
+
+	-for dir in src/tconsole src/gnome-console src/gnome2-console src/wx-console \
 		scripts platforms src/win32 src/win32/pebuilder \
-		src/tray-monitor src/stored \
+		src/tray-monitor src/stored scripts/logwatch \
 		rescue rescue/solaris rescue/freebsd \
 		rescue/linux rescue/linux/cdrom rescue/linux/floppy; do \
 			$(RM) $$dir/Makefile ;\
@@ -196,7 +207,7 @@ clean:
 	## delete ${FLAVORED_BINARIES} 
 	$(RM) $(foreach pkg,$(FLAVORS), src/dird/bacula-dir.$(pkg) src/tools/dbcheck.$(pkg) src/stored/bscan.$(pkg) src/stored/bcopy.$(pkg))
 
-	-$(MAKE) -C doc/latex clean
+	#-$(MAKE) -C doc/latex clean
 
 	$(RM) build-arch-flavor-stamp
 
@@ -207,16 +218,10 @@ clean:
 	# Unpatch everything. By PMHahn@debian.org
 	#if test -f patch-stamp; then \
 	#	for p in `ls -1 debian/patches/*.patch | sort -r`; do \
-	#		patch -p1 -i $$p; \
+	#		patch -R -p1 -i $$p; \
 	#	done; \
-	#	$(RM) patch-stamp; \
 	#fi
 
-	#if test -f patch-stamp; then \
-	#	patch -R -p0 -i debian/patches/10-grant_pgsql_privileges.patch; \
-	#	patch -R -p0 -i debian/patches/12-enable-pgsql_indexes.patch; \
-	#	$(RM) patch-stamp; \
-	#fi
 	$(RM) patch-stamp
 
 
@@ -243,6 +248,8 @@ install-common: build
 	$(MAKE) -C src/tools install DESTDIR=$(CURDIR)/debian/tmp
 	$(MAKE) -C src/stored install DESTDIR=$(CURDIR)/debian/tmp
 
+	cp scripts/bacula.man		debian/tmp/bacula.8
+	cp src/tray-monitor/generic.xpm	debian/tmp/bacula-traymonitor.xpm
 
 	mv debian/tmp/usr/sbin/bconsole debian/tmp/usr/sbin/bacula-console
 	mv debian/tmp/usr/sbin/gnome-console debian/tmp/usr/sbin/bacula-console-gnome
@@ -252,15 +259,14 @@ install-common: build
 	for pkg in ${FLAVORS}; do \
 		eval flavor="`echo $$pkg | sed -e 's@pgsql@postgresql@'`"; \
 		for f in make update; do \
-			cat src/cats/$${f}_$${flavor}_tables.in | sed -f debian/patches/fix_ddl.sed \
+			cat src/cats/$${f}_$${flavor}_tables.in | sed -f debian/patches/fix_scripts.sed \
 			> debian/tmp/scripts/$${f}_$${pkg}_tables; \
 			chmod 755 debian/tmp/scripts/$${f}_$${pkg}_tables; \
 		done; \
 	done
-
-	# Fix DDL & scripts ...
-	/bin/bash debian/patches/fix_ddl
-	/bin/bash debian/patches/fix_scripts
+	cat src/cats/grant_postgresql_privileges.in | sed -f debian/patches/fix_scripts.sed \
+		> debian/tmp/scripts/grant_pgsql_privileges
+	chmod 755 debian/tmp/scripts/grant_pgsql_privileges
 
 	dh_install -pbacula-director-common
 
@@ -276,7 +282,7 @@ install-indep: build fixconfig
 	dh_link -pbacula-director-common
 	dh_link -pbacula-common var/lib/bacula/log var/log/bacula/log
 	chmod 755 $(CURDIR)/debian/bacula-director-common/usr/sbin/btraceback
-	dh_install -pbacula -pbacula-client -pbacula-server -pbacula-doc
+	dh_install -pbacula -pbacula-client -pbacula-server 
 	#install doc/html-manual/* \
 	#	$(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual
 	#$(RM) $(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual/*.wml
@@ -300,14 +306,6 @@ install-flavors: build install-common
 	@echo "Done"
 
 	for pkg in ${FLAVORS}; do \
-		dh_link -pbacula-sd \
-			usr/share/man/man8/bscan.8.gz \
-			usr/share/man/man8/bscan.$$pkg.8.gz \
-		; \
-		dh_link -pbacula-sd \
-			usr/share/man/man8/bcopy.8.gz \
-			usr/share/man/man8/bcopy.$$pkg.8.gz \
-		; \
 		echo "$$pkg" > debian/bacula-director-$${pkg}/etc/bacula/bacula_flavor ; \
 	done
 
@@ -373,6 +371,8 @@ binary-arch-common: build install
 	dh_testdir -a
 	dh_testroot -a
 	dh_install -a
+	rm debian/bacula-director-*/usr/sbin/bscan
+	rm debian/bacula-director-*/usr/sbin/bcopy
 	dh_installdebconf -a
 	dh_installdocs -a
 	dh_installexamples -a

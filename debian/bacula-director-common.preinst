@@ -27,8 +27,6 @@ case "$1" in
 			echo "Ok."
 		fi
 		usermod -d /var/lib/bacula bacula
-		chown bacula:bacula /var/lib/bacula
-		chmod 700 /var/lib/bacula
 	;;
 
 	upgrade)

@@ -87,7 +87,7 @@ static void usage()
    fprintf(stderr, _(
 "Copyright (C) 2002-2005 Kern Sibbald\n"
 "\nVersion: %s (%s) %s %s %s\n\n"
-"Usage: gnome-console [-s] [-c config_file] [-d debug_level] [config_file]\n"
+"Usage: gnome-console [-s] [-c config_file] [-d debug_level]\n"
 "       -c <file>   set configuration file to file\n"
 "       -dnn        set debug level to nn\n"
 "       -s          no signals\n"

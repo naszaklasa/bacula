@@ -1,3 +1,4 @@
 debian/tmp/scripts/make_mysql_tables	usr/share/bacula-director
 updatedb/update_mysql_tables_6_to_7	usr/share/bacula-director
 updatedb/update_mysql_tables_7_to_8	usr/share/bacula-director
+updatedb/update_mysql_tables_8_to_9	usr/share/bacula-director

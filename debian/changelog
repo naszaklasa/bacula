@@ -1,3 +1,77 @@
+bacula (1.38.8-0.1) unstable; urgency=low
+
+  * Non-maintainer upload by John Goerzen.
+  * Add missing build-deps: libgnomeui-dev, libx11-dev.
+  * Commented out code that attempts to patch pg_hba.conf.  This sort of
+    thing should never be done without prompting the user.  It was broken
+    for sid as written, and also failed to take into account the
+    possibility of Unix domain sockets or having multiple versions of
+    PostgreSQL on a machine.  Closes: #309601.
+  * Build-Conflicts on python2.2-dev.  The configure script will use it
+    by default, instead of python2.3-dev, if it's available.  This could
+    lead to different Python versions being linked in on different archs.
+  * Numerous fixes to clean target to make sure all sorts of otherwise-missed
+    generated files get removed.
+  * Removed spurious chown of /var/lib/bacula in 
+    bacula-director-common.preinst.  Having it there could lead to 
+    failure to install that package since that directory may not already
+    exist.  postinst for that package was already doing the same chown
+    anyway.
+  * Removed erreneous chown attempt of /var/log/bacula/log in
+    bacula-director-common.postinst.  This file is not installed
+    by this package.  Closes: #303862.
+  * Fixed distribution of bscan and bcopy such that they appear in their
+    bacula-sd-* properly, and not in bacula-director or bacula-sd.
+  * debian/rules contains bashisms and will not build if bash is not
+    the default shell.  Explicitly set SHELL in debian/rules.
+
+  * The below changes were made available by Jose Luis Tallon on SourceForge.
+
+  * New upstream version (Closes: #339322)
+    - fixes insecure temporary file creation (Closes: #329271)
+    - fixes error in online help (Closes: #303456)
+    - fixes segfault w/ fd (Closes: #346430)
+
+  * debian/rules : fix typo w/in build process (Closes: #337250)
+    - enable TLS functionality
+    - added upstream's generic 'bacula' manpage
+
+  * debian/control, dependency information
+    - simplify dependencies; allow transition to cdebconf (Closes: #331757)
+    - wrapped Build-Depends line
+    - upgrade to building with wxWidgets2.6 (Closes: #326178)
+    - upgrade to libmysqlclient15 (Closes: #358762)
+    - bacula-doc is now another set of packages
+    - splitted bacula-sd in 'flavors'(avoid static linking)
+
+  * init process: auto-create /var/run/bacula on startup (Closes: #357619)
+
+  * bacula-director-mysql: 
+    - fix db-autoconfig -- typo in grant sentence(improper quoting) (Closes: #312329)
+    - upgrade to libmysqlclient15-dev (Closes: #343762)
+    - Automatically add indexes to tables (Closes: #335809)
+
+  * bacula-director-pgqsl: 
+    - purge debconf data on purge (Closes: #314492)
+    - rebuild -- update postgresql-client dependency (Closes: #339341)
+
+  * bacula-sd
+    - Solves problem w/ Linux2.6 and no tapes on startup (Closes: #337376)
+    - Better handling of auto-labels (Closes: #322753)
+
+  * GUI
+    - bacula-wxconsole: Link against GNOME2 libs only (Closes: #326178)
+    - bacula-console-gnome: provide desktop entry (Closes: #326175)
+    - bacula-console-gnome: fix help (Closes: #305220)
+    - created bacula-traymonitor package (Closes: #281957)
+
+  * Localization
+    - se_SV (tack så mycket, Daniel) (Closes: #339084)
+
+  * Christoph Haas added to "Uploaders"
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 27 Apr 2006 10:04:07 -0500
+
 bacula (1.36.3-2) unstable; urgency=low
 
   * bacula-director-mysql: fix granting of privileges during postinst
@@ -7,8 +81,6 @@ bacula (1.36.3-2) unstable; urgency=low
     -- CREATE DATABASE $CATALOG WITH ENCODING = 'SQL_ASCII' (Closes: #313227)
 
   * bacula-sd: Fix MTX support (Closes: #308803)
-    -- recompilation/relink, addresses CAN-2005-2096 implications.
-       (Closes: #318014)
 
   * Localization enhancements:
     - JA (Closes: #310104)
@@ -17,16 +89,11 @@ bacula (1.36.3-2) unstable; urgency=low
     - VI (Closes: #313148)
 
   * Solved problem with bacula-sd's lib dependencies 
-    -- bcopy was being improperly compiled/linked (Closes: #309919)
-    -- we'll have to come up with a better solution for this...
+    -- bcopy was being improperly compiled (Closes: #309919)
 
-  * PostgreSQL transition completed:
-    - build-depend on libpq-dev instead
-    - migrated to 'pg_config' for all directory configurations
+  * PostgreSQL transition completed: build-depend on libpq-dev instead
 
-  * Dependencies: fix new? FTBFS, depend on libssl-dev (Closes: #317074)
-
- -- Jose Luis Tallon <jltallon@adv-solutions.net>  Thu, 14 Jul 2005 16:00:53 +0200
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Wed,  9 Jun 2005 02:33:13 +0200
 
 bacula (1.36.3-1) unstable; urgency=low
 
