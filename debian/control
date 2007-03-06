@@ -7,7 +7,7 @@ Build-Depends: autotools-dev, debhelper (>= 4.2), po-debconf (>= 0.8.2),
  libsqlite0-dev, libsqlite3-dev, libmysqlclient15-dev | libmysqlclient14-dev, libpq-dev | postgresql-dev, 
  libwrap0-dev, libssl-dev, python2.3-dev, 
  libgnome2-dev, libwxgtk2.6-dev | libwxgtk2.4-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
- libx11-dev, mtx, ssed
+ libx11-dev, mtx, ssed, bc
 Build-Conflicts: python2.2-dev
 Standards-Version: 3.7.0
 
@@ -146,8 +146,8 @@ Description: Network backup, recovery and verification (Server meta-package)
 Package: bacula-sd
 Architecture: any
 Pre-Depends: bacula-common (= ${Source-Version})
-Depends: ${shlibs:Depends}, mtx
-Recommends: mt-st, bacula-sd-tools, python2.3
+Depends: ${shlibs:Depends}, mtx, python
+Recommends: mt-st, bacula-sd-tools
 Suggests: dds2tar, scsitools, sg3-utils
 Description: Network backup, recovery and verification (Storage daemon)
  This program performs the storage and recovery of the file attributes and 

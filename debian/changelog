@@ -1,3 +1,17 @@
+bacula (1.38.9-6) unstable; urgency=low
+
+  * Rewrote remaining templates to use better language.
+    Closes: #236992, #313149.
+  * Removed obsolete file debian/RATIONALE.
+  * Added build-dependency on bc, which is used by autoconf/randpass.
+  * Changed Recommends in bacula-sd to dep on python for the dvd-changer
+    script.
+  * Rewrite most of README.Debian.  Include information about
+    users/security.  Closes: #304076.
+  * Remove obsolete directory debian/_pending.
+
+ -- John Goerzen <jgoerzen@complete.org>  Sat, 13 May 2006 10:02:24 -0500
+
 bacula (1.38.9-5) unstable; urgency=low
 
   * bacula-sd-*: added conflict on bacula-sd < 1.38.9, since some

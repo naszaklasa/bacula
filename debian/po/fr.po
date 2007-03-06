@@ -14,8 +14,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: bacula\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-05-11 01:35+0000\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2006-05-13 10:03-0500\n"
 "PO-Revision-Date: 2005-05-14 16:30+0200\n"
 "Last-Translator: Eric Madesclair <eric-m@wanadoo.fr>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
@@ -31,28 +31,11 @@ msgstr "Faut-il créer les tables du catalogue de Bacula ?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:11
-msgid "Remove Catalog on purge?"
-msgstr "Faut-il supprimer le catalogue lors de la purge du paquet ?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:11
-msgid ""
-"Warning: This is not undoable. Once you remove the catalog, you won't be "
-"able to restore your backups unless you have another copy of the catalog at "
-"hand."
-msgstr ""
-"Attention : cette opération est irréversible. Une fois que vous aurez "
-"supprimé le catalogue, vous ne serez plus en mesure de restaurer vos "
-"sauvegardes moins d'avoir une autre copie du catalogue actuel."
-
-#. Type: boolean
-#. Description
 #: ../bacula-director-sqlite.templates:4
+#, fuzzy
 msgid ""
-"I have detected that the tables needed for Bacula's Catalog are missing "
-"( this is probably a fresh install ). Shall I create them now?"
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula."
 msgstr ""
 "Les tables nécessaires au catalogue de Bacula sont absentes de la base de "
 "données (probablement parce que vous effectuez une nouvelle installation). "
@@ -60,11 +43,39 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:11
+#: ../bacula-director-sqlite.templates:4
 msgid ""
-"Shall I remove the Catalog / SQLite database at package purge time? This "
-"will free all the used space."
+"These tables are needed for the Bacula director to function. Should these "
+"tables be automatically set up for you?"
 msgstr ""
-"Le catalogue de la base de données SQLite peut être supprimé lors de la "
-"purge (désinstallation complète) du paquet. Ceci libérera tout l'espace "
-"utilisé."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:14
+msgid "Remove Catalog on purge?"
+msgstr "Faut-il supprimer le catalogue lors de la purge du paquet ?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:14
+msgid ""
+"Do you want the Bacula Catalog to be removed if you purge the Bacula "
+"director?"
+msgstr ""
+
+#~ msgid ""
+#~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
+#~ "able to restore your backups unless you have another copy of the catalog "
+#~ "at hand."
+#~ msgstr ""
+#~ "Attention : cette opération est irréversible. Une fois que vous aurez "
+#~ "supprimé le catalogue, vous ne serez plus en mesure de restaurer vos "
+#~ "sauvegardes moins d'avoir une autre copie du catalogue actuel."
+
+#~ msgid ""
+#~ "Shall I remove the Catalog / SQLite database at package purge time? This "
+#~ "will free all the used space."
+#~ msgstr ""
+#~ "Le catalogue de la base de données SQLite peut être supprimé lors de la "
+#~ "purge (désinstallation complète) du paquet. Ceci libérera tout l'espace "
+#~ "utilisé."

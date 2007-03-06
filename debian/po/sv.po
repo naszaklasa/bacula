@@ -14,8 +14,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: bacula 1.36.3-2\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-05-11 01:35+0000\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2006-05-13 10:03-0500\n"
 "PO-Revision-Date: 2005-11-14 22:11+0100\n"
 "Last-Translator: Daniel Nylander <po@danielnylander.se>\n"
 "Language-Team: Swedish <sv@li.org>\n"
@@ -33,25 +33,49 @@ msgstr "Skapa tabeller för Bacula:s katalog?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:11
+#: ../bacula-director-sqlite.templates:4
+#, fuzzy
+msgid ""
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula."
+msgstr ""
+"Jag har detekterat att tabellerna som behövs för Bacula-katalogen saknas "
+"(detta är antagligen en färsk installation). Ska jag skapa dom nu?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:4
+msgid ""
+"These tables are needed for the Bacula director to function. Should these "
+"tables be automatically set up for you?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:14
 msgid "Remove Catalog on purge?"
 msgstr "Ta bort katalog vid avinstallation?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:11
-msgid "Warning: This is not undoable. Once you remove the catalog, you won't be able to restore your backups unless you have another copy of the catalog at hand."
-msgstr "Varning: Detta är permanent. När du en gång tagit bort katalogen kommer du inte kunna återställa dina säkerhetskopior om du inte har en annan kopia av katalogen till hands."
+#: ../bacula-director-sqlite.templates:14
+msgid ""
+"Do you want the Bacula Catalog to be removed if you purge the Bacula "
+"director?"
+msgstr ""
 
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:4
-msgid "I have detected that the tables needed for Bacula's Catalog are missing ( this is probably a fresh install ). Shall I create them now?"
-msgstr "Jag har detekterat att tabellerna som behövs för Bacula-katalogen saknas (detta är antagligen en färsk installation). Ska jag skapa dom nu?"
+#~ msgid ""
+#~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
+#~ "able to restore your backups unless you have another copy of the catalog "
+#~ "at hand."
+#~ msgstr ""
+#~ "Varning: Detta är permanent. När du en gång tagit bort katalogen kommer "
+#~ "du inte kunna återställa dina säkerhetskopior om du inte har en annan "
+#~ "kopia av katalogen till hands."
 
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:11
-msgid "Shall I remove the Catalog / SQLite database at package purge time? This will free all the used space."
-msgstr "Ska jag ta bort katalogen/SQLite-databasen när paketet rensas ut? Detta kommer att lämna tillbaka all använd diskplats."
-
+#~ msgid ""
+#~ "Shall I remove the Catalog / SQLite database at package purge time? This "
+#~ "will free all the used space."
+#~ msgstr ""
+#~ "Ska jag ta bort katalogen/SQLite-databasen när paketet rensas ut? Detta "
+#~ "kommer att lämna tillbaka all använd diskplats."

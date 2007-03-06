@@ -14,8 +14,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: bacula\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-05-11 01:35+0000\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2006-05-13 10:03-0500\n"
 "PO-Revision-Date: 2004-06-13 21:06+0200\n"
 "Last-Translator: André Luís Lopes <andrelop@debian.org>\n"
 "Language-Team: Debian-BR Project <debian-l10n-portuguese@lists.debian.org>\n"
@@ -31,28 +31,11 @@ msgstr "Criar as tabelas para o Catálogo do Bacula ?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:11
-msgid "Remove Catalog on purge?"
-msgstr "Reomver Catálogo ao expurgar o pacote ?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:11
-msgid ""
-"Warning: This is not undoable. Once you remove the catalog, you won't be "
-"able to restore your backups unless you have another copy of the catalog at "
-"hand."
-msgstr ""
-"Aviso : Isso é perigoso. Uma vez que o catálogo tenha sido removido, não "
-"será mais possível restaurar seus backups a menos que você tenha uma outra "
-"cópia da caálogo em mãos."
-
-#. Type: boolean
-#. Description
 #: ../bacula-director-sqlite.templates:4
+#, fuzzy
 msgid ""
-"I have detected that the tables needed for Bacula's Catalog are missing "
-"( this is probably a fresh install ). Shall I create them now?"
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula."
 msgstr ""
 "Foi detectado que as tabelas necessárias para o Catálogo do Bacula estão "
 "faltando (esta provavelmente é uma nova instalação). Tais tabelas devem ser "
@@ -60,10 +43,38 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:11
+#: ../bacula-director-sqlite.templates:4
 msgid ""
-"Shall I remove the Catalog / SQLite database at package purge time? This "
-"will free all the used space."
+"These tables are needed for the Bacula director to function. Should these "
+"tables be automatically set up for you?"
 msgstr ""
-"O Catálogo / base de dados SQLite deverá ser removido quando o pacote do "
-"Bacula for expurgado ? Isso irá liberar todo o espaço ocupado."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:14
+msgid "Remove Catalog on purge?"
+msgstr "Reomver Catálogo ao expurgar o pacote ?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:14
+msgid ""
+"Do you want the Bacula Catalog to be removed if you purge the Bacula "
+"director?"
+msgstr ""
+
+#~ msgid ""
+#~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
+#~ "able to restore your backups unless you have another copy of the catalog "
+#~ "at hand."
+#~ msgstr ""
+#~ "Aviso : Isso é perigoso. Uma vez que o catálogo tenha sido removido, não "
+#~ "será mais possível restaurar seus backups a menos que você tenha uma "
+#~ "outra cópia da caálogo em mãos."
+
+#~ msgid ""
+#~ "Shall I remove the Catalog / SQLite database at package purge time? This "
+#~ "will free all the used space."
+#~ msgstr ""
+#~ "O Catálogo / base de dados SQLite deverá ser removido quando o pacote do "
+#~ "Bacula for expurgado ? Isso irá liberar todo o espaço ocupado."

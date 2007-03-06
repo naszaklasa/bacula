@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: bacula 1.36.3-1\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-05-11 01:35+0000\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2006-05-13 10:03-0500\n"
 "PO-Revision-Date: 2005-06-12 17:12+0930\n"
 "Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
 "Language-Team: Vietnamese <gnomevi-list@lists.sourceforge.net>\n"
@@ -23,37 +23,48 @@ msgstr "Tạo bảng cho phân loại của Bacula không?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:11
-msgid "Remove Catalog on purge?"
-msgstr "Loại bỏ phân loại khi tẩy không?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:11
-msgid ""
-"Warning: This is not undoable. Once you remove the catalog, you won't be "
-"able to restore your backups unless you have another copy of the catalog at "
-"hand."
-msgstr ""
-"Cảnh báo: không thể hủy bước này. Một khi đã loại bỏ phân loại, không thể "
-"phục hồi bản lưu trữ, trừ bạn có một bản sao phân loại nữa."
-
-#. Type: boolean
-#. Description
 #: ../bacula-director-sqlite.templates:4
+#, fuzzy
 msgid ""
-"I have detected that the tables needed for Bacula's Catalog are missing "
-"( this is probably a fresh install ). Shall I create them now?"
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula."
 msgstr ""
 "Thiếu bảng cần đến cho phân loại Bacula (rất có thể là lần cài đặt ban đầu). "
 "Bạn có muốn tạo những bảng ấy ngay bây giờ không?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:11
+#: ../bacula-director-sqlite.templates:4
 msgid ""
-"Shall I remove the Catalog / SQLite database at package purge time? This "
-"will free all the used space."
+"These tables are needed for the Bacula director to function. Should these "
+"tables be automatically set up for you?"
 msgstr ""
-"Bạn có muốn loại phân loại /bỏ cơ sở dữ liệu SQLite khi tẩy gói tin này? Làm "
-"như thế sẽ giải phóng các sức chứa đã dùng."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:14
+msgid "Remove Catalog on purge?"
+msgstr "Loại bỏ phân loại khi tẩy không?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:14
+msgid ""
+"Do you want the Bacula Catalog to be removed if you purge the Bacula "
+"director?"
+msgstr ""
+
+#~ msgid ""
+#~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
+#~ "able to restore your backups unless you have another copy of the catalog "
+#~ "at hand."
+#~ msgstr ""
+#~ "Cảnh báo: không thể hủy bước này. Một khi đã loại bỏ phân loại, không thể "
+#~ "phục hồi bản lưu trữ, trừ bạn có một bản sao phân loại nữa."
+
+#~ msgid ""
+#~ "Shall I remove the Catalog / SQLite database at package purge time? This "
+#~ "will free all the used space."
+#~ msgstr ""
+#~ "Bạn có muốn loại phân loại /bỏ cơ sở dữ liệu SQLite khi tẩy gói tin này? "
+#~ "Làm như thế sẽ giải phóng các sức chứa đã dùng."
