@@ -1,3 +1,9 @@
+bacula (1.38.11-5) unstable; urgency=high
+
+  * Added missing shlibs:Depends for bacula-director-pgsql.  Closes: #384837.
+
+ -- John Goerzen <jgoerzen@complete.org>  Sun, 27 Aug 2006 18:48:24 -0500
+
 bacula (1.38.11-4) unstable; urgency=high
 
   * Rebuild against newer libmysql15-dev.  Closes: #384433.
