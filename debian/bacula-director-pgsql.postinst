@@ -14,6 +14,7 @@ dbc_dbuser=bacula
 dbc_dbname=bacula
 . /usr/share/dbconfig-common/dpkg/postinst.pgsql
 dbc_pgsql_createdb_encoding="SQL_ASCII"
+dbc_sql_substitutions="1"
 dbc_go bacula-director-pgsql $@
 
 set -e

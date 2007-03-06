@@ -1,3 +1,12 @@
+bacula (1.38.10-1) unstable; urgency=low
+
+  * New upstream version.
+  * New French translation from Thomas Huriaux.  Closes: #370476.
+  * Update dep on dbconfig-common for new PostgreSQL date style config.
+  * Daemons listen only on localhost by default.  Closes: #367105.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 12 Jun 2006 15:44:23 -0500
+
 bacula (1.38.9-10) unstable; urgency=low
 
   * Update LICENSE with newer version from upstream.  Closes: #367970.

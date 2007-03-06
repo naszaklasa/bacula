@@ -22,6 +22,15 @@ files in /etc/bacula as described in the bacula manual.  Once you have
 edited the files you should issue an appropriate /etc/init.d/bacula-xx
 force-reload.
 
+NETWORK ENABLING
+----------------
+
+By default, Debian's Bacula packages install config files in which the
+servers listen only on localhost by default.  If you want to be able
+to do backups over the network, you'll need to find the lines in
+bacula-dir.conf, bacula-sd.conf, and bacula-fd.conf that reference
+127.0.0.1 and remove them.
+
 PACKAGES
 ========
 
