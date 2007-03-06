@@ -1,3 +1,11 @@
+bacula (1.38.9-10) unstable; urgency=low
+
+  * Update LICENSE with newer version from upstream.  Closes: #367970.
+  * Applied patch from Kern Sibbald, Bacula author, to fix odd
+    segfault in bacula-sd.  Closes: #367424.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 24 May 2006 22:25:03 -0500
+
 bacula (1.38.9-9) unstable; urgency=low
 
   * Remove LD_ASSUME_KERNEL from bacula-director-common init script.

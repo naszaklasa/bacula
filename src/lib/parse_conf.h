@@ -109,7 +109,7 @@ void save_resource(int type, RES_ITEM *item, int pass);
 const char *res_to_str(int rcode);
 
 /* Loop through each resource of type, returning in var */
-#ifdef HAVE_GCC
+#if defined(__GNUC__)
 #define foreach_res(var, type) \
         for((var)=NULL; ((var)=(typeof(var))GetNextRes((type), (RES *)var));)
 #else 
