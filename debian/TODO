@@ -25,7 +25,15 @@
 
   bacula-sd-*: var/run/bacula var/lib/bacula
 
-* defconfig stuff is broken
-
 * look at installed bins and make sure we've got 'em all
+
+* Give encoding on Debian DB create pgsql
+  Set datestyle on debian db create pgsql
+
+* Maybe:
+  
+  Remove old AUTHFILE=`getent passwd bacula | cut -d ':' -f 6`/.pgpass
+  and $AUTHFILE.bak
+
+* put db pass, user into director config
 

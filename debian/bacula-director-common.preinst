@@ -17,16 +17,6 @@ set -e
 case "$1" in
 
 	install)
-		# Should have been already done by -common's postinst...
-		# ... just be safe
-		if ! getent passwd bacula >/dev/null; then
-			echo -n "Adding user 'bacula'... "
-			adduser --system --no-create-home --group bacula 2>&1 > /dev/null
-			usermod -d /var/lib/bacula bacula
-			usermod -G tape bacula
-			echo "Ok."
-		fi
-		usermod -d /var/lib/bacula bacula
 	;;
 
 	upgrade)

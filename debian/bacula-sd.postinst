@@ -32,8 +32,6 @@ CONFIG="bacula-sd.conf"
 
 case "$1" in
     configure)
-	chown bacula:daemon /var/run/bacula
-	chmod 750 /var/run/bacula
  
 	if [ ! -f $DSTDIR/$CONFIG ]; then TARGET=$DSTDIR/$CONFIG
 	else TARGET=$DSTDIR/$CONFIG.dist; fi

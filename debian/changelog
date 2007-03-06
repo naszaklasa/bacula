@@ -1,3 +1,34 @@
+bacula (1.38.9-2) unstable; urgency=low
+
+  * Sanitize dependencies in control -- make sure everything that
+    needs to depends on bacula-common and use bacula-server and 
+    bacula-client.
+
+  * Reverse direction of /var/log/bacula/log symlink to have main
+    logfile written in /var/log/bacula.
+
+  * Install upstream's default logrotate (with Debian's path).
+    Previously, there was no logrotate installed by default.
+    Closes: #309675.
+
+  * Removed duplicate user-adding code from bacula-director-common.
+    bacula-common already does this.
+
+  * Removed spurious chown/chmod of /var/run/bacula from bacula-sd
+    and bacula-fd.  bacula-common already does this.
+
+  * Moved chmod/chown of /var/lib/bacula and /var/log/bacula
+    from bacula-director-common to bacula-common.  These areas may be
+    used by non-director packages as well.
+
+  * Slight simplification of debian/rules
+
+  * Switched to dbconfig-common for PostgreSQL.  Closes: #365096.
+  
+  * Removed large amounts of old code for PostgreSQL support.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 10 May 2006 22:17:29 -0500
+
 bacula (1.38.9-1) unstable; urgency=low
 
   * New maintainer: John Goerzen <jgoerzen@complete.org>.

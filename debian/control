@@ -13,7 +13,7 @@ Standards-Version: 3.7.0
 
 Package: bacula
 Architecture: all
-Depends: bacula-director-sqlite3(= ${Source-Version})|bacula-director, bacula-console (= ${Source-Version}), bacula-fd (= ${Source-Version}), bacula-sd (= ${Source-Version}),
+Depends: bacula-server, bacula-client
 Description: Network backup, recovery and verification (Meta-package)
  Bacula is a set of computer programs that permit you (or the system
  administrator) to manage backup, recovery and verification of computer data
@@ -39,8 +39,8 @@ Description: Network backup, recovery and verification (Common Support files)
 
 Package: bacula-director-common
 Architecture: any
-Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
-Depends: bacula-common (= ${Source-Version}), exim4|mail-transport-agent, ${shlibs:Depends}, adduser
+Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, bacula-common (= ${Source-Version})
+Depends: exim4|mail-transport-agent, ${shlibs:Depends}, adduser
 Description: Network backup, recovery and verification (Director common files)
  Bacula is a set of computer programs that permit you to manage backup,
  recovery, and verification of computer data across a network of computers
@@ -98,7 +98,7 @@ Description: Network backup, recovery and verification (Director daemon)
 Package: bacula-director-pgsql
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (=${Source-Version}), postgresql-client-8.1 | postgresql-client-8.0 | postgresql-client (>= 7.4)
+Depends: bacula-director-common (=${Source-Version}), dbconfig-common, postgresql-client-8.1 | postgresql-client-8.0 | postgresql-client (>= 7.4)
 Conflicts: bacula-director-sqlite, bacula-director-mysql, bacula-director-sqlite3
 Provides: bacula-director
 Replaces: bacula-director-sqlite, bacula-director-mysql, bacula-director-sqlite3
@@ -134,7 +134,7 @@ Description: Network backup, recovery and verification (Filer daemon)
 
 Package: bacula-server
 Architecture: all
-Depends: bacula-director-sqlite3 (= ${Source-Version})|bacula-director, bacula-sd (= ${Source-Version})
+Depends: bacula-director-sqlite3 (= ${Source-Version})|bacula-director, bacula-sd (= ${Source-Version}), bacula-sd-sqlite3 (= ${Source-Version})|bacula-sd-tools
 Recommends: bacula-fd
 Description: Network backup, recovery and verification (Server meta-package)
  Bacula system server: SQL-based catalog (SQLite, MySQL, or PgSQL) and 
@@ -237,7 +237,7 @@ Description: Network backup, recovery and verification (Console, Gnome version)
 
 Package: bacula-traymonitor
 Architecture: any
-Depends: ${shlibs:Depends}
+Depends: ${shlibs:Depends}, bacula-common (= ${Source-Version})
 Recommends: kde|desktop-environment
 Description: Network backup, recovery and verification (Tray monitor)
  The tray monitor for bacula; FreeDesktop standard's compatible

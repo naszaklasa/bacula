@@ -1,6 +1,5 @@
 #!/usr/bin/make -f
 # debian/rules for Bacula
-# by Jose Luis Tallon, 
 # based upon dh_make template, copyright 1997 by Joey Hess.
 #
 
@@ -42,6 +41,7 @@ TEMPLATES = $(wildcard debian/*.templates)
 BUILDDIR := $(CURDIR)/debian/tmp-build
 INSTALLDIR := $(CURDIR)/debian/tmp-install
 DEFAULTINSTALLDIR := $(INSTALLDIR)-$(DEFAULTVARIANT)
+DBC := usr/share/dbconfig-common/data/
 
 CONF_ALL	= --enable-smartalloc \
 	--with-python --with-openssl --with-tcp-wrappers \
@@ -65,17 +65,17 @@ export FLAVORED_BIN_RE = '^$$$||/bacula-dir$$$||/dbcheck$$$||/bscan$$$||/bcopy$$
 extract: extract-stamp
 extract-stamp: $(foreach s,$(VARIANTS),extract-stamp-$(s))
 extract-stamp-%:
-	@echo " *** DEBIAN *** VARIANT $(*): EXTRACTING to $(BUILDDIR)"
-	mkdir $(BUILDDIR)
-	tar -cSf - --exclude=./_darcs --exclude=./debian . | tar -xSpf - -C $(BUILDDIR)
+	@echo " *** DEBIAN *** VARIANT $(*): EXTRACTING to $(BUILDDIR)-$(*)"
+	mkdir $(BUILDDIR)-$(*)
+	tar -cSf - --exclude=./_darcs --exclude=./debian . | tar -xSpf - -C $(BUILDDIR)-$(*)
 	touch $@
 
 configure-stamp-%: extract-stamp-%
 	dh_testdir
 	@echo " *** DEBIAN *** CONFIGURING VARIANT $*"
 	cp /usr/share/misc/config.guess /usr/share/misc/config.sub \
-		$(BUILDDIR)/autoconf/
-	cd $(BUILDDIR) && \
+		$(BUILDDIR)-$(*)/autoconf/
+	cd $(BUILDDIR)-$(*) && \
 	 	$(SHELL) ./configure --config-cache \
 		--host=${DEB_HOST_GNU_TYPE} --build=${DEB_BUILD_GNU_TYPE} \
 		--prefix=/usr \
@@ -95,13 +95,11 @@ build-stamp-%: configure-stamp-%
 	@echo " *** DEBIAN *** BUILDING VARIANT $*"
 
 # Main building process
-	$(MAKE) -C $(BUILDDIR) 
+	$(MAKE) -C $(BUILDDIR)-$(*)
 
 # Grrr... client-only does not build needed db-independent 'bsmtp', 'stored'
-	$(MAKE) -C $(BUILDDIR)/src/tools
-	$(MAKE) -C $(BUILDDIR)/src/stored
-
-	mv -v $(BUILDDIR) $(BUILDDIR)-$(*)
+	$(MAKE) -C $(BUILDDIR)-$(*)/src/tools
+	$(MAKE) -C $(BUILDDIR)-$(*)/src/stored
 
 	chmod 755 debian/additions/postinst-common
 	chmod 755 debian/additions/bconsole
@@ -232,6 +230,18 @@ clean:
 debian/po/templates.pot: $(TEMPLATES)
 	@debconf-updatepo
 
+# Macro to extract a here document and put it in place
+# args: 1 -- db name, 2 -- file to extract, 3 -- version
+define ext-upgrade
+debian/patches/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/upgrade/$(1)/$(3)
+endef
+
+# Macro to extract a here document for install and put it in place
+# args: 1 -- db name, 2 -- file to extract
+define ext-install
+debian/patches/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/install/$(1)
+endef
+
 install: build install-stamp
 install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	dh_installdirs -a
@@ -242,6 +252,13 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	cp $(DEFAULTINSTALLDIR)/usr/sbin/bconsole debian/bacula-console/usr/sbin/bacula-console
 	cp $(DEFAULTINSTALLDIR)/usr/sbin/gnome-console debian/bacula-console-gnome/usr/bin/bacula-console-gnome
 	cp $(DEFAULTINSTALLDIR)/usr/sbin/wx-console debian/bacula-console-wx/usr/bin/bacula-console-wx
+
+######### dbconfig-common stuff
+
+	$(call ext-upgrade,pgsql,updatedb/update_postgresql_tables_7_to_8,1.36.0)
+	$(call ext-upgrade,pgsql,updatedb/update_postgresql_tables_8_to_9,1.38.0)
+	$(call ext-install,pgsql,src/cats/make_postgresql_tables.in)
+
 	dh_link -pbacula-console usr/share/man/man8/bconsole.8.gz usr/share/man/man8/bacula-console.8.gz
 
 	touch $@
@@ -262,7 +279,7 @@ install-indep: build install-stamp
 	dh_install -i
 	dh_installdirs -i
 	dh_link -pbacula-director-common
-	dh_link -pbacula-common var/lib/bacula/log var/log/bacula/log
+	dh_link -pbacula-common var/log/bacula/log var/lib/bacula/log
 	chmod 755 $(CURDIR)/debian/bacula-director-common/usr/sbin/btraceback
 	dh_install -pbacula -pbacula-client -pbacula-server 
 	#install doc/html-manual/* \
@@ -303,7 +320,8 @@ install-flavors: build install-common
 
 patch: patch-stamp
 patch-stamp:
-	chmod 755 debian/patches/fix_config debian/patches/fix_director
+	chmod 755 debian/patches/fix_config debian/patches/fix_director \
+		debian/patches/extract_here
 	chmod 755 debian/additions/bconsole
 	chmod 755 debian/additions/{start,stop}mysql 
 
@@ -318,7 +336,7 @@ binary-indep: build install-indep patch
 	dh_installdocs -i -X.cvsignore -X1 -X*.wml -X*.inc -X*.list -X*.pl -X*.apf -X*.book
 	dh_installexamples -i
 #	dh_installmenu -i
-#	dh_installlogrotate -i
+	dh_installlogrotate -i
 #	dh_installinit -i
 	dh_installcron -i
 	dh_installman -i
@@ -345,7 +363,7 @@ binary-arch-common: build install
 	dh_installdocs -a
 	dh_installexamples -a
 	dh_installmenu -pbacula-console -pbacula-console-gnome -pbacula-console-wx
-#	dh_installlogrotate -a
+	dh_installlogrotate -a
 	dh_installinit -pbacula-sd -- defaults 90
 	dh_installinit -pbacula-fd -- defaults 91
 	dh_installinit --name=bacula-director -pbacula-director-common --no-start -- defaults 92

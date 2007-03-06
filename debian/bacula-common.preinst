@@ -47,11 +47,18 @@ case "$1" in
 			usermod -c "Bacula" bacula
 			usermod -G tape bacula
 			echo "Ok."
+                        usermod -d /var/lib/bacula bacula
 		fi
 	;;
 
 	upgrade)
-		# All is good -- do nothing
+               # Before 1.38.9-2, logs were in the wrong place.  Fix.
+               if dpkg --compare-versions "$2" lt 1.38.9-2 && 
+                   test -h /var/log/bacula/log &&
+                   test -f /var/lib/bacula/log; then
+                   rm /var/log/bacula/log
+                   mv /var/lib/bacula/log /var/log/bacula/log
+               fi
 	;;
 
 	abort-upgrade)

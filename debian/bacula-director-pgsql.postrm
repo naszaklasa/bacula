@@ -6,6 +6,13 @@
 . /usr/share/debconf/confmodule
 db_version 2.0
 
+dbc_first_version=1.38.9-2
+dbc_dbuser=bacula
+dbc_dbname=bacula
+
+. /usr/share/dbconfig-common/dpkg/postrm.pgsql
+dbc_go bacula-director-pgsql $@
+
 set -e
 
 # summary of how this script can be called:
