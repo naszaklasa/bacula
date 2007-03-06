@@ -1,0 +1,493 @@
+bacula (1.36.3-2) unstable; urgency=low
+
+  * bacula-director-mysql: fix granting of privileges during postinst
+    -- typo in grant sentence('eval' missing) (Closes: #312329)
+
+  * bacula-director-pgsql: fix problems with unicode filenames
+    -- CREATE DATABASE $CATALOG WITH ENCODING = 'SQL_ASCII' (Closes: #313227)
+
+  * bacula-sd: Fix MTX support (Closes: #308803)
+    -- recompilation/relink, addresses CAN-2005-2096 implications.
+       (Closes: #318014)
+
+  * Localization enhancements:
+    - JA (Closes: #310104)
+    - FR (Closes: #309664)
+    - CS (Closes: #312148)
+    - VI (Closes: #313148)
+
+  * Solved problem with bacula-sd's lib dependencies 
+    -- bcopy was being improperly compiled/linked (Closes: #309919)
+    -- we'll have to come up with a better solution for this...
+
+  * PostgreSQL transition completed:
+    - build-depend on libpq-dev instead
+    - migrated to 'pg_config' for all directory configurations
+
+  * Dependencies: fix new? FTBFS, depend on libssl-dev (Closes: #317074)
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Thu, 14 Jul 2005 16:00:53 +0200
+
+bacula (1.36.3-1) unstable; urgency=low
+
+  * New upstream version; several bugfixes (Closes: #306176)
+
+  * bacula-director-mysql: link against libmysql12, in order
+    to better support MySQL-4.1 installations which have not 
+    been properly configured (Closes: #305669)
+
+  * bacula-director-mysql: Additional fixes for the solution of 
+    #303111 -- Add much more robustness to the autoconfig process
+
+  * Included patch from bugs.bacula.org to have proper behaviour on backup
+    attempts when FD is unreachable(Closes: #304531)
+
+  * Documentation: fix bscan and bls's manpage(rewritten).
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Wed, 11 May 2005 18:56:13 +0200
+
+bacula (1.36.2-2) unstable; urgency=low
+
+  * bacula-director-pgsql: postinst enhancements by Jamie Ffolliott
+
+  * bacula-fd: proper behaviour on restart (Closes: #293570)
+
+  * bacula-director-common: fix to template for make_catalog_backup
+    to force users to configure it properly (Closes: #299052)
+
+  * bacula-common: remove dup'd btraceback (Closes: #301219)
+
+  * Updated french translation (Closes: #303120)
+
+  * bacula-director-mysql:
+    - succeed also when password contains spaces (Closes: #303111)
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Sun, 10 Apr 2005 19:21:25 +0200
+
+bacula (1.36.2-1) unstable; urgency=low
+
+  * New upstream version. Some fixes and enhancements (Closes: #297477)
+
+  * bacula-director-pgsql: postinst fixed (Closes: #289838, #272191)
+    - connect to db, create tables, create user & grant privs
+    - use the configured root password
+    - support remote pgsql hosts
+    - patch the grant script to re-enable key indexes needed
+    - set create_tables to false after successful creation, and
+      reset variables configured by debconf if they result in an error
+      so they are re-entered on the next install attempt.
+    - fix the catalog upgrade process
+    - save .pgpass with user/pass, for secure use by bacula scripts,
+      package upgrades
+    - write bacula-dir.conf with correct bacula user/pass/db, and
+      correct the catalog backup command
+    - enable auth to the local bacula db in pg_hba.conf.  Fixes a
+      director startup error.
+  * bacula-director-pgsql: config fixed
+    - configure remote pgsql hosts
+    - add reconfigure
+    - add drop db option in reconfigure, to re-create the bacula db
+
+  * bacula-director-pgsql: postrm completed
+    - drop the db and user, & remove the .pgpass file
+
+  * Many thanks to Jamie ffolliott <jamieff@inline.net>, the author of
+    all of the PostgreSQL-related fixes. Long overdue, now in :-)
+
+  * UpdateDB: fix typo in 'update_mysql_tables_7_to_8' (Closes: #288107)
+
+  * bacula-director-mysql: fix typo in sql_cmds (Closes: #295823)
+
+  * bacula-director-sqlite: fix db upgrade logic (Closes: #282416, #289209)
+    (lines 62 & 71 of the postinst script)
+
+  * bacula-fd: new version apparently solves crashes (Closes: #277273)
+
+  * bacula-common: move symlink to proper package (Closes: #285659)
+
+  * Patch by Nicolas Boichat to fix "cancel" in wx-console (Closes: #292517)
+
+  * Updated Dutch translation (Closes: #281559)
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Tue, 22 Mar 2005 13:31:34 +0100
+
+bacula (1.36.1-1) unstable; urgency=low
+
+  * New upstream version. Includes several minor improvements.
+
+  * bacula-director-pgsql: really compile in support for PostgreSQL, after
+    latest breakages (Closes: #274997, #282788)
+
+  * bacula-director-sqlite: revised upgrade logic. Should work now --
+    feedback requested (Closes: #282416)
+
+  * Fix once and for all, broken variable assignment(hopefully)
+    (Closes: 275284)
+
+  * UpdateDB: robustness added to upstream scripts; should be able to better
+    detect broken setups. Integrated upstream. Thanks, Kern!
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Fri, 3 Dec 2004 18:22:05 +0100
+
+bacula (1.36.0-1) unstable; urgency=low
+
+  * New upstream version (Closes: #278605)
+    - hopefully solves problems where bacula-fd segfaulted
+    - database format changed to v8. Add upgrading v6 -> v7 -> v8 
+      capabilities to postinst scripts. (Closes: #271892)
+    - updatedb scripts patched, to avoid problem with PostgreSQL update.
+
+  * bacula-director-common: added "reload" action (send SIGHUP)
+
+  * bacula-fd:
+    - to avoid problems with broken setups, postinst scripts now use
+      '/bin/bash' instead of '/bin/sh' (Closes: #277127)
+
+  * bacula-doc: added missing image (Closes: #279913)
+
+  * UpdateDB: robustness added to upstream scripts; should be able to better
+    detect broken setups.
+
+  * Really close bug due to typo in 'config' (Closes: #275284)
+
+  * Fix a typo in package description, by <florz@gmx.de> (Closes: #277220)
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Wed, 17 Nov 2004 20:41:05 +0100
+
+bacula (1.34.6-2) unstable; urgency=low
+
+  * PgSQL "flavor":
+    - another little build improvement (Closes: #274997)
+    - typo in 'config', reported by PMHahn (Closes: #275284)
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Sat, 9 Oct 2004 16:04:05 +0200
+
+bacula (1.34.6-2) unstable; urgency=high
+
+  * Urgency high because the PostgreSQL "flavor" is not properly built.
+    It is linked against the "internal" database, which is not functional.
+    - The flag to enable PostgreSQL is called "HAVE_POSTGRESQL" instead of
+      HAVE_PGSQL -- Reported by E Zanardi <ezanard@debian.org>
+    - Newer libpq needs -lssl -lcrypto...
+
+  * bacula-director-mysql: fixed bogus update procedure 
+    - succeed when catalog is already up-to-date (Closes: #271998)
+    - work when admin user has a non-blank password.
+
+  * bacula-director-pgsql: fixed problem, where --regardless of specified
+    dbadmin-- root was used to connect to PgSQL (Closes: #272181)
+
+  * bacula-sd: daemon leaves FD 0,1,2 open; Close them.
+    Backported change to lib/daemon.c from 1.35.3 (Closes: #272083)
+
+  * bacula-director-common: 
+    - link /usr/lib/bacula/smtp to bsmtp to preserve older configurations 
+      (Closes: #272880)
+    - Integrated patch from Daniel Hermann, to ensure proper 'director'
+    termination in init.d script (Closes: #271579)
+
+  * Integrated some more of PMHahn build enhancements. Thanks!
+
+  * Properly building the static bscan "flavors" brings in 
+    many build dependencies..ggrrrr
+    ( libpq depends on libkrb5, libk5crypto, libcom_err, libcrypt,... )
+
+  * Corrected some more typos
+    - Missing cleanup after building "flavored" binaries
+    - Missing 'btraceback' component
+
+  * Package sponsored by Roberto Lumbreras <rover@debian.org>
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Wed, 29 Sep 2004 16:04:05 +0200
+
+bacula (1.34.6-1) unstable; urgency=high
+
+  * New upstream version
+  * Applied patch to avoid deadlocks in bacula-dir (urgency -> high)
+
+  * Several cleanups from both Philipp M Hahn & Filip Van Raemdonck. I can't
+    sufficiently express my gratitude here. Thanks!!
+    - fixed upgrade support
+    - build improvements
+    - several minor fixups/reorganization. I hope i got it right this time..
+
+  * Now bscan is a set of 3 statically-linked binaries, so that bacula-sd
+    does not pull all three client libs. This had been pending for a long time...
+
+  * Some more minor improvements
+    - Logfiles are already in /var/log/bacula/ (Closes: #254245)
+    - Fixed perms on /var/log/bacula/log (Closes: #252410)
+
+  * Bacula's GNOME console was already linked against v2 libs 
+    since 1.34.5-1 (Closes: #264975)
+
+  * MySQL flavor's postinst issues
+    - Wrong ordering of db_get / assignment (Closes: #270329)
+    - Split line changes meaning, other cleanups (Closes: #270197)
+
+  * Updated debconf translations
+    - FR (Closes: #269958)
+    - JA, by Hideki Yamane <henrich@samba.gr.jp> (Closes: #270765)
+
+  * Debconf-related fixes:
+    - Updated versioned dependency w/Debconf: v1.4.30 seems to work.
+    - Reset password's "seen" flag, so that it gets asked again
+    - Moved root password question back to 'config' grr...
+
+  * Several adjustments to descriptions; minor additions to Suggests:
+    Matthew Hawkins has provided invaluable feedback here. Thanks!!!
+
+  * The "fix all those typos" release.
+    - Shin-young Yune: -director-pgsql.postinst
+    - typos in -director-{my,pg}sql 's postinst scripts
+    - typos in dh_link commands to get manpages installed
+
+  * Misc fixes
+    - /var/lib/bacula absent from -director-common (Closes: #270196)
+    - /usr/share/bacula-common/defconfig dir was empty!
+    - grant_pgsql_privileges missing from -director-common
+    - adjusted dependencies so that meta-packages can be upgraded
+
+  * Package sponsored by Roberto Lumbreras <rover@debian.org>
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Wed, 2 Sep 2004 12:36:51 +0200
+
+bacula (1.34.5-1) unstable; urgency=high
+
+  * Urgency high, because:
+    - TLS libraries from libc6-i686 no longer break bacula. (Closes: #250351)
+
+  * New upstream version (Closes: #242725, #242735)
+    - Supports PostgreSQL for the catalog (Closes: #252244)
+    - Supports backup to disk.
+    - Supports backing up ACLs (enabled in this package)
+    - Several minor bugfixes since 1.34.2
+
+  * Completely redone, much more efficient, build system. Contributed by
+    Turbo Fredriksson <turbo@debian.org> and adapted by me: now only the
+    "flavor-dependent"(cats,dird,tools) are rebuilt, instead of the full
+    package. The scripts are also generated from 'rules' instead.
+
+  * Several upstream enhancements/changes;
+    + Database schema changes: `postinst' will try to upgrade MySQL & SQLite
+    + Added PostgreSQL support for the catalog
+    + Added support for disk-based backups, etc (see Documentation)
+
+  * Security related changes
+    - More secure password handling in configure/postinst (prompt during postinst,
+    delete password inmediately) -- breaks unattended installs unless one
+    uses debconf seeding, sorry; Warnings with lintian/linda, grrr...
+    - Added TCP wrappers(libwrap) support, after agreement with
+    Steve Smith (Closes: #245626)
+    - Ensured proper ownership and permissions for /var/lib/bacula, in order
+    for the PostgreSQL port to run securely.
+
+  * Upgrade to compiling/linking the console against Gnome2;
+    renamed to bconsole-gnome to avoid namespace pollution (Closes: #246953)
+
+  * Added wxWindows console version, bacula-wxconsole.
+
+  * Moved bcopy,bls,bextract,bscan,btape manpages to sect 8 - lintian's advice.
+    - Fix minor error in bconsole's displayed usage (Closes: #254427)
+
+  * Include bscan.sqlite, bscan.mysql, bscan.pgsql in bacula-sd, under /usr/lib
+  so that data recovery can be attempted with the supplied package in the event
+  that the catalog gets damaged; As politely asked by Christof Lehmann, and
+  later by Tilo Levante (Closes: #255059)
+
+  * PostgreSQL port of the maintainer scripts, merged from contributions by
+    Alvaro Hernandez Tortosa <aht@ahtech.net> and
+    Philipp Matthias Hahn <pmhahn@debian.org>. Many thanks!.
+
+  * Merged enhancements/patches by PMHahn: PgSQL support, docs, 
+    maint. scripts, debian/rules. I owe you one.
+
+  * Added pt_BR translation, by <andrelop@debian.org> (Closes: #254110)
+
+  * Misc minor bugfixes:
+    - Restart breakage if not running (Closes: #252360)
+    - Fixed wrong paths in scripts: added "flavor-independent" catalog backup
+      script for bacula-sd (Closes: #250863)
+    - Depend on exim4|mail-transport-agent (Closes: #255340)
+	
+  * Package sponsored by Filip Van Raemdonck <mechanix@debian.org>
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Sun, 29 Aug 2004 19:08:51 +0200
+
+bacula (1.32f-5-3.1) unstable; urgency=high
+
+  * NMU - acknowledged.
+
+  * Changes from NMUer Filip Van Raedmdonck:
+    - Build database specific catalog backup script and install it in the
+      respective packages. This fixes tests and paths. (Closes: #250863)
+    - Build GNOME 2 console. (Closes: #264975)
+      Rename to gnome-bconsole to avoid namespace pollution. (Closes: #246953)
+    - Retitle the menu entry to avoid conflict with the textual one, point it to
+      the right config file location and run it with help of gksu.
+    - Add Brazilian Portuguese debconf template translation. (Closes: #254110)
+    - Depend on exim4 instead of exim. (Closes: #255340)
+
+ -- Filip Van Raemdonck <mechanix@debian.org>  Mon, 11 Aug 2004 18:42:34 +0200
+
+bacula (1.32f-5-3) unstable; urgency=low
+
+  * Added *real* DE translation and some enhancements to the manual pages,
+    submitted by Philipp Hahn <pmhahn@debian.org>. Thanks! (Closes: #246676)
+
+  * Fix permissions problem in -director-sqlite's postinst (Closes: #246955)
+
+  * Package sponsored by Roberto Lumbreras <rover@debian.org>
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Sun,  2 May 2004 23:58:06 +0100
+
+bacula (1.32f-5-2) unstable; urgency=low
+
+  * Create '/var/lib/bacula/bacula.db' in postinst (Closes: #243983)
+
+  * Fix dependency goofup which made the 'bacula' meta-package uninstallable (Closes: #245259)
+
+  * Changed architecture for 'bacula', 'bacula-client' and 'bacula-server'
+    meta-packages from 'any' to 'all'. Thanks to Linda ;)
+
+  * Package sponsored by Roberto Lumbreras <rover@debian.org>
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Wed, 21 Apr 2004 12:48:01 +0100
+
+bacula (1.32f-5-1) unstable; urgency=low
+
+  * Do not provide same file as conserver-client: moved /usr/bin/console
+    to /usr/bin/bconsole. (Closes: #240282)
+
+  * Added menu entries for 'bacula-console' & 'bacula-console-gnome'.
+
+  * Added French translation of Bacula's templates (Closes: #238190)
+  * Added Dutch translation of Bacula's templates (Closes: #241310)
+    Thanks, guys!!! 
+
+  * Since Katie does not understand tham i am myself ;) when comparing my
+    name in changelog[UTF-8] & control[7bit ascii], remove accentuated vowels.
+
+  * Fix wrong substitutions in FD scripts: provide customized
+    {start,stop}mysql scripts for Debian (Closes: #238630)
+
+  * Tweak dependencies, so that one can install the "everything"
+    meta-package(`bacula_x.yy-*.deb') with the MySQL version of the director
+    [depend on the 'bacula-director' virtual package] (Closes: #240005)
+
+  * Package sponsored by Roberto Lumbreras <rover@debian.org>
+
+ -- Jose Luis Tallon <jltallon@adv-solutions.net>  Mon, 12 Apr 2004 22:03:19 +0200
+
+bacula (1.32f-4-3) unstable; urgency=low
+
+  * Fix typo in bacula-director-sqlite.postinst introduced in the previous
+    upload. Cosmetic enhancement when reinstalling/upgrading: avoid error
+    messages from SQLite.
+
+  * Package sponsored by Roberto Lumbreras <rover@debian.org>
+
+ -- José Luis Tallón <jltallon@adv-solutions.net>  Sun, 14 Mar 2004 01:18:31 +0100
+
+bacula (1.32f-4-2) unstable; urgency=low
+
+  * Add missing logic to bacula-director-sqlite's postinst so that
+    configuration succeeds (Closes: #236126)
+
+  * Fix compilation problem in Alpha platform (var.c file)
+
+  * Package sponsored by Roberto Lumbreras <rover@debian.org>
+
+ -- José Luis Tallón <jltallon@adv-solutions.net>  Sat, 13 Mar 2004 21:39:33 +0100
+
+bacula (1.32f-4-1) unstable; urgency=low
+
+  * Do *not* depend on OpenSSL, since it is not really needed, as confirmed
+    by upstream.
+
+  * Increase robustnes in bacula-director-mysql's postinst: succeed
+    also when MySQL runs at localhost and network connectivity is disabled.
+
+  * Increase robustness & polish some rough edges in the 'config' script:
+    detect whether tables are created and act accordingly.
+
+  * Make bacula-director-mysql *restart* bacula if there was a previous
+    version installed, do *stop* it on remove.
+
+  * Increase robustness of bacula-director-common's initscript : killall -15
+    if start-stop-daemon --stop did not succeed.
+
+  * Fix packaging bug in bacula-console introduced with prev. release changes.
+
+  * Fix several typos/leftovers from package polishing lately: mostly
+    forgetting to update vars to reflect changes in file location/name
+
+  * New upstream version
+
+  * RFP/ITP fullfilled (Closes: bug#188946)
+
+  * Package sponsored by Roberto Lumbreras <rover@debian.org>
+
+  * Moved /usr/sbin/console to /usr/sbin/bacula-console, and provided a
+    wrapper script so that it gets called with appropiate arguments, as a
+    convenience to users. Added corresponding manpage (linked to console.1)
+
+  * Previous changes, before first upload to the Debian archive:
+
+        - bacula (1.32f-3-1)	28 Jan 2004
+
+         * Fixed a typo in bacula-director-mysql, which made postinst stomp on
+           existing configuration file. Noticed by Dick Middleton.
+           Robustness features in bacula-director-mysql.postinst.
+
+         * Slightly better manpages.
+
+         * Readied for first upload to Debian's archive.
+
+        - bacula (1.32b-5)	24 Dec 2003
+
+          * Completely revamped the bacula-director-mysql postinst, based
+            upon suggestions/debugging by Frank Lenaerts.
+            Most work was done during the DebConf-ES, with assistance from
+            Alvaro Hernandez Tortosa <aht@ahtech.net>
+
+          * Added "chmod 755" for scripts in the patches subdir to rules,
+            fixing a sure FTBFS bug. Pointed by Frank Lenaerts
+            <lenaerts.frank@pandora.be>
+
+        - bacula (1.32b-4)	23 Nov 2003
+
+          * Polished 'purge' behaviour[postrm scripts] -- do remove files.
+
+          * Updated Build-Depends & debian/rules to better comply with policy,
+            following advice from Roberto Lumbreras <rover@debian.org>
+
+          * Strengthened permissions on /etc/bacula and FD/SD/Director config
+            files, to avoid giving away passwords to local users and thus
+            avoid attacks.  Problem reported/solution suggested by Frank
+            Lenaerts.
+
+          * Verified dependencies, loosened a bit so that backporting is easier.
+            Suggested by Frank Lenaerts <lenaerts.frank@pandora.be>
+
+        - bacula (1.32b-3)	10 Nov 2003
+
+          * Fixed several little packaging bugs:
+            - Dir & SD ports were mistakenly exchanged.
+            - SD privileges were a little too low.
+            - Gnome-Console's config file was missing.
+
+        - bacula (1.32b-2)	6 Nov 2003
+
+          * Polished Packaging a little bit
+
+          * Fixed daemon stop bug, based on suggestions
+            by Matthieu Racine <m.racine@free.fr>
+
+          * bacula-common's postinst now adds needed entries to /etc/services
+
+        - bacula (1.32b-1)	19 Oct 2003
+
+          * Initial Packaging: 12 binary packages built
+
+ -- José Luis Tallón <jltallon@adv-solutions.net>  Wed, 18 Feb 2004 00:04:11 +0100

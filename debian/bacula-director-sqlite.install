@@ -1,0 +1,3 @@
+debian/tmp/scripts/make_sqlite_tables	usr/share/bacula-director
+updatedb/update_sqlite_tables_6_to_7	usr/share/bacula-director
+updatedb/update_sqlite_tables_7_to_8	usr/share/bacula-director

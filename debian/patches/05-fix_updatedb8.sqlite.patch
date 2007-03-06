@@ -1,0 +1,11 @@
+--- updatedb/update_sqlite_tables_7_to_8~	2005-04-25 02:25:26.988552200 +0200
++++ updatedb/update_sqlite_tables_7_to_8	2005-04-25 02:25:26.989552048 +0200
+@@ -21,7 +21,7 @@
+        exit 1
+ fi
+ 
+-DB_VER="`echo "select * from Version;" | $bindir/sqlite bacula.db | tail -1 2>/dev/null`"
++DB_VER="`echo 'select * from Version;' | $bindir/sqlite bacula.db | tail -1 2>/dev/null`"
+ if [ -n "$DB_VER" ]; then
+ 
+        if [ "$DB_VER" = "8" ]; then

@@ -21,7 +21,7 @@ if [ ! -r bacula.db -o ! -s bacula.db ];then
        exit 1
 fi
 
-DB_VER="`echo "select * from Version;" | $bindir/sqlite bacula.db | tail -1 2>/dev/null`"
+DB_VER="`echo 'select * from Version;' | $bindir/sqlite bacula.db | tail -1 2>/dev/null`"
 if [ -n "$DB_VER" ]; then
 
        if [ "$DB_VER" = "8" ]; then

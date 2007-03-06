@@ -1,0 +1,11 @@
+--- updatedb/update_postgresql_tables_7_to_8.orig	2004-10-29 00:31:49.000000000 +0200
++++ updatedb/update_postgresql_tables_7_to_8	2004-10-29 00:33:01.000000000 +0200
+@@ -35,7 +35,7 @@
+ ALTER TABLE media ADD COLUMN EndFile integer;
+ UPDATE media SET EndFile=0;
+ ALTER TABLE media ALTER COLUMN EndFile SET NOT NULL;
+-ALTER TABLE media ADD COLUMN EndBlock integer;
++ALTER TABLE media ADD COLUMN EndBlock bigint;
+ UPDATE media SET EndBlock=0;
+ ALTER TABLE media ALTER COLUMN EndBlock SET NOT NULL;
+ 

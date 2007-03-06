@@ -1,0 +1,302 @@
+#
+#    Translators, if you are not familiar with the PO format, gettext
+#    documentation is worth reading, especially sections dedicated to
+#    this format, e.g. by running:
+#         info -n '(gettext)PO Files'
+#         info -n '(gettext)Header Entry'
+#
+#    Some information specific to po-debconf are available at
+#            /usr/share/doc/po-debconf/README-trans
+#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
+#
+#    Developers do not need to manually edit POT or PO files.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: bacula\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2005-05-11 01:35+0000\n"
+"PO-Revision-Date: 2004-06-13 21:06+0200\n"
+"Last-Translator: André Luís Lopes <andrelop@debian.org>\n"
+"Language-Team: Debian-BR Project <debian-l10n-portuguese@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: string
+#. Default
+#: ../bacula-director-mysql.templates:3 ../bacula-director-pgsql.templates:3
+msgid "localhost"
+msgstr "localhost"
+
+#. Type: string
+#. Description
+#: ../bacula-director-mysql.templates:4
+msgid "Where is the MySQL server?"
+msgstr "Onde o servidor MySQL está localizado ?"
+
+#. Type: string
+#. Description
+#: ../bacula-director-mysql.templates:4
+msgid ""
+"Enter the host where the MySQL server which is to hold Bacula's catalog is."
+msgstr ""
+"Informe o host onde o servidor MySQL que irá armazenar o catálogo do Bacula "
+"está localizado."
+
+#. Type: string
+#. Default
+#: ../bacula-director-mysql.templates:10 ../bacula-director-pgsql.templates:10
+msgid "bacula"
+msgstr "bacula"
+
+#. Type: string
+#. Description
+#: ../bacula-director-mysql.templates:11
+msgid "MySQL username"
+msgstr "Nome do usuário MySQL"
+
+#. Type: string
+#. Description
+#: ../bacula-director-mysql.templates:11
+msgid "Please, enter the username which Bacula will use to connect to MySQL."
+msgstr ""
+"Por favor, informe o nome do usuário que o Bacula utilizará para conexão ao "
+"MySQL."
+
+#. Type: password
+#. Description
+#: ../bacula-director-mysql.templates:17
+msgid "MySQL password"
+msgstr "Senha MySQL"
+
+#. Type: password
+#. Description
+#: ../bacula-director-mysql.templates:17
+msgid "Please, enter the password which Bacula will use to connect to MySQL."
+msgstr ""
+"Por afvor, informe a senha que o Bacula utilizará para conexão ao MySQL."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-mysql.templates:23 ../bacula-director-pgsql.templates:23
+#: ../bacula-director-sqlite.templates:4
+msgid "Create tables for Bacula's Catalog?"
+msgstr "Criar as tabelas para o Catálogo do Bacula ?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-mysql.templates:23 ../bacula-director-pgsql.templates:23
+msgid ""
+"I have detected that the tables needed for Bacula's Catalog are missing "
+"(this is probably a fresh install). Shall I create them now?"
+msgstr ""
+"Foi detectado que as tabelas necessárias para o Catálogo do Bacula estão "
+"faltando (esta provavelmente é uma nova instalação). Tais tabelas devem ser "
+"criadas agora ?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-mysql.templates:23
+msgid "A MySQL 'root' username & password will be required."
+msgstr "O nome do usuário e a senha do 'root' do MySQL serão necessários."
+
+#. Type: string
+#. Default
+#: ../bacula-director-mysql.templates:31
+msgid "root"
+msgstr "root"
+
+#. Type: string
+#. Description
+#: ../bacula-director-mysql.templates:32
+msgid "MySQL 'root' username"
+msgstr "Nome do usuário 'root' do MySQL"
+
+#. Type: string
+#. Description
+#: ../bacula-director-mysql.templates:32
+msgid "Please type the username to connect to MySQL as."
+msgstr "Por favor, informe o nome do usuário para conexão ao MySQL."
+
+#. Type: string
+#. Description
+#: ../bacula-director-mysql.templates:32 ../bacula-director-pgsql.templates:47
+msgid "This user needs to have 'create database' privileges."
+msgstr "Esse usuário precisa ter privilégios de criação de base de dados."
+
+#. Type: password
+#. Default
+#: ../bacula-director-mysql.templates:39 ../bacula-director-pgsql.templates:54
+msgid "NONE"
+msgstr "NONE"
+
+#. Type: password
+#. Description
+#: ../bacula-director-mysql.templates:40
+msgid "MySQL 'root' password"
+msgstr "Senha do 'root' do MySQL"
+
+#. Type: password
+#. Description
+#: ../bacula-director-mysql.templates:40 ../bacula-director-pgsql.templates:55
+msgid "Please type the password for the username entered before."
+msgstr "Por favor, informe a senha para o usuário informado anteriormente."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-mysql.templates:46 ../bacula-director-pgsql.templates:61
+#: ../bacula-director-sqlite.templates:11
+msgid "Remove Catalog on purge?"
+msgstr "Reomver Catálogo ao expurgar o pacote ?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-mysql.templates:46
+msgid ""
+"Shall I remove the Catalog from the MySQL server at package purge time? This "
+"will free all the used space."
+msgstr ""
+"O Catálogo do Bacula deverá ser removido do servidor MySQL quando o pacote "
+"do Bacula for expurgado ? Isso irá liberar todo o espaço ocupado."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-mysql.templates:46 ../bacula-director-pgsql.templates:61
+#: ../bacula-director-sqlite.templates:11
+msgid ""
+"Warning: This is not undoable. Once you remove the catalog, you won't be "
+"able to restore your backups unless you have another copy of the catalog at "
+"hand."
+msgstr ""
+"Aviso : Isso é perigoso. Uma vez que o catálogo tenha sido removido, não "
+"será mais possível restaurar seus backups a menos que você tenha uma outra "
+"cópia da caálogo em mãos."
+
+#. Type: string
+#. Description
+#: ../bacula-director-pgsql.templates:4
+msgid "Where is the PostgreSQL server?"
+msgstr "Onde o servidor PostgreSQL está localizado ?"
+
+#. Type: string
+#. Description
+#: ../bacula-director-pgsql.templates:4
+msgid ""
+"Enter the host where the PostgreSQL server which is to hold Bacula's catalog "
+"is."
+msgstr ""
+"Informe o host onde o servidor PostgreSQL que irá armazenar o catálogo do "
+"Bacula está localizado."
+
+#. Type: string
+#. Description
+#: ../bacula-director-pgsql.templates:11
+msgid "PostgreSQL username"
+msgstr "Nome do usuário PostgreSQL"
+
+#. Type: string
+#. Description
+#: ../bacula-director-pgsql.templates:11
+msgid ""
+"Please, enter the username which Bacula will use to connect to PostgreSQL."
+msgstr ""
+"Por favor, informe o nome do usuário que o Bacula utilizará para conexão ao "
+"PostgreSQL."
+
+#. Type: password
+#. Description
+#: ../bacula-director-pgsql.templates:17
+msgid "PostgreSQL password"
+msgstr "Senha PostgreSQL"
+
+#. Type: password
+#. Description
+#: ../bacula-director-pgsql.templates:17
+msgid ""
+"Please, enter the password which Bacula will use to connect to PostgreSQL."
+msgstr ""
+"Por afvor, informe a senha que o Bacula utilizará para conexão ao PostgreSQL."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-pgsql.templates:32
+#, fuzzy
+msgid "Remove the Bacula Catalog?"
+msgstr "Criar as tabelas para o Catálogo do Bacula ?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-pgsql.templates:32
+msgid ""
+"I have detected that a Bacula Catalog already exists.  Would you like to re-"
+"create it?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-pgsql.templates:32
+msgid "A PgSQL 'admin' username & password will be required."
+msgstr ""
+"O nome do usuário e a senha do 'admin' do PostgreSQL serão necessários."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-pgsql.templates:32
+msgid "If you are unsure, answer no."
+msgstr ""
+
+#. Type: string
+#. Default
+#: ../bacula-director-pgsql.templates:46
+msgid "postgres"
+msgstr "postgres"
+
+#. Type: string
+#. Description
+#: ../bacula-director-pgsql.templates:47
+msgid "PostgreSQL 'root' username"
+msgstr "Nome do usuário 'root' do PostgreSQL"
+
+#. Type: string
+#. Description
+#: ../bacula-director-pgsql.templates:47
+msgid "Please type the username to connect to PostgreSQL as."
+msgstr "Por favor, informe o nome do usuário para conexão ao PostgreSQL."
+
+#. Type: password
+#. Description
+#: ../bacula-director-pgsql.templates:55
+msgid "PostgreSQL 'root' password"
+msgstr "Senha do 'root' do PostgreSQL"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-pgsql.templates:61
+msgid ""
+"Shall I remove the Catalog from the PostgreSQL server at package purge time? "
+"This will free all the used space."
+msgstr ""
+"O Catálogo do Bacula deverá ser removido do servidor PostgreSQL quando o "
+"pacote do Bacula for expurgado ? Isso irá liberar todo o espaço ocupado."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:4
+msgid ""
+"I have detected that the tables needed for Bacula's Catalog are missing "
+"( this is probably a fresh install ). Shall I create them now?"
+msgstr ""
+"Foi detectado que as tabelas necessárias para o Catálogo do Bacula estão "
+"faltando (esta provavelmente é uma nova instalação). Tais tabelas devem ser "
+"criadas agora ?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:11
+msgid ""
+"Shall I remove the Catalog / SQLite database at package purge time? This "
+"will free all the used space."
+msgstr ""
+"O Catálogo / base de dados SQLite deverá ser removido quando o pacote do "
+"Bacula for expurgado ? Isso irá liberar todo o espaço ocupado."

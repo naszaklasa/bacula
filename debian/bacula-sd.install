@@ -1,0 +1,11 @@
+debian/tmp/usr/sbin/bacula-sd
+debian/tmp/usr/sbin/bls
+debian/tmp/usr/sbin/bextract
+debian/tmp/usr/sbin/btape
+debian/tmp/etc/bacula/scripts/mtx-changer
+src/stored/bscan.sqlite		usr/lib/bacula
+src/stored/bscan.mysql		usr/lib/bacula
+src/stored/bscan.pgsql		usr/lib/bacula
+src/stored/bcopy.sqlite		usr/lib/bacula
+src/stored/bcopy.mysql		usr/lib/bacula
+src/stored/bcopy.pgsql		usr/lib/bacula

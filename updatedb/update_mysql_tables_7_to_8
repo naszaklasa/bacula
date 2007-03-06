@@ -11,20 +11,20 @@ bindir=/usr/bin
 
 DB_VER="$bindir/mysql $* bacula -e 'select * from Version;'|tail -n 1 2>/dev/null"
 if [ -z "$DB_VER" ]; then
-       echo "Sorry, I can't seem to locate a bacula database."
-       exit 1
+	echo "Sorry, I can't seem to locate a bacula database."
+	exit 1
 fi
 
 if [ -n "$DB_VER" ]; then
 
-       if [ "$DB_VER" = "8" ]; then
-               echo "The Catalog is already at version 8. Nothing to do!"
-               exit 0
-       elif [ "$DB_VER" -ne "7" ]; then
-               echo "Sorry, this script is designed to update a version 7 database"
-               echo "and you have a version $DB_VER database."
-               exit 1
-       fi
+	if [ "$DB_VER" = "8" ]; then
+		echo "The Catalog is already at version 8. Nothing to do!"
+		exit 0
+	elif [ "$DB_VER" -ne "7" ]; then
+		echo "Sorry, this script is designed to update a version 7 database"
+		echo "and you have a version $DB_VER database."
+		exit 1
+	fi
 fi
 
 if $bindir/mysql $* -f << END_OF_DATA

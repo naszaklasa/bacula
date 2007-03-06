@@ -1,0 +1,118 @@
+#! /bin/sh
+# bacula-director     SysV init script for Bacula-Director.
+#
+#       Written by Miquel van Smoorenburg <miquels@cistron.nl>.
+#       Modified for Debian GNU/Linux by Ian Murdock <imurdock@gnu.ai.mit.edu>.
+#       Customized for Bacula by Jose Luis Tallon <jltallon@adv-solutions.net>
+#
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/sbin/bacula-dir
+NAME="bacula-dir"
+PORT=9101
+DESC="Bacula Director"
+ARGS="-c /etc/bacula/bacula-dir.conf -u bacula -g bacula"
+
+test -f $DAEMON || exit 0
+
+set -e
+
+if [ -n "`getent services bacula-dir`" ]; then
+        PORT=`getent services bacula-dir | awk '{ gsub("/tcp","",$2); print $2; }'`
+fi
+ 
+
+PIDFILE=/var/run/bacula/$NAME.$PORT.pid
+
+
+get_pid()
+{
+	if [ -r "$1" ]; then pid="`cat $1`"; 
+	else pid=""; fi
+}
+
+check_pid()
+{
+	/bin/ps -p $1 >/dev/null 2>&1; return $?
+}
+
+kill_pid()
+{
+	kill -$1 $2 2>/dev/null || true
+}
+
+# do_start()
+do_start()
+{
+	start-stop-daemon --start --quiet --pidfile $PIDFILE \
+	--exec $DAEMON -- $ARGS
+}
+
+# do_stop()
+do_stop()
+{
+	get_pid $PIDFILE ;
+	start-stop-daemon --oknodo --stop --quiet --pidfile $PIDFILE \
+		--exec $DAEMON
+ 	# make sure daemon is stopped/killed
+	if [ -n "$pid" ]; then
+	    if check_pid $pid ; then
+		# TERM first, then KILL if not dead
+		kill_pid TERM $pid
+		sleep 1
+		if check_pid $pid ; then
+		    sleep 1		# some time to die peacefully...
+		    if check_pid $pid ; then
+			sleep 3
+			if check_pid $pid ; then kill_pid KILL $pid ; fi
+		    fi
+		fi
+	    fi
+  	fi	
+}
+
+
+########################################################################
+
+case "$1" in
+  start)
+	if [ -f /etc/bacula/do_not_run ]; then
+		echo "Not starting $DESC: disabled via /etc/bacula/do_not_run"
+		exit 0
+	fi
+	echo -n "Starting $DESC: "
+	if do_start ; then echo "$NAME."
+	else echo "failed." ; fi
+  ;;
+
+  stop)
+	echo -n "Stopping $DESC: "
+	do_stop
+	echo "$NAME."
+  ;;
+
+  reload)
+  	echo -n "Reloading $DESC..."
+  	get_pid $PIDFILE
+	if [ -n "$pid" ]; then kill_pid HUP $pid ;
+  	else do_start ; 
+  	fi
+  	echo "$NAME."
+  ;;
+  
+  restart|force-reload)
+	echo -n "Restarting $DESC: "
+	# redirect STDOUT so that it looks prettier :-)
+	do_stop
+	do_start
+	echo "$NAME."
+  ;;
+  
+  *)
+	N=/etc/init.d/$NAME
+	# echo "Usage: $N {start|stop|restart|reload|force-reload}" >&2
+	echo "Usage: $N {start|stop|restart|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

@@ -1,0 +1,3 @@
+debian/tmp/scripts/make_pgsql_tables	usr/share/bacula-director
+debian/tmp/scripts/grant_pgsql_privileges	usr/share/bacula-director
+updatedb/update_postgresql_tables_7_to_8	usr/share/bacula-director

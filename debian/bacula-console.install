@@ -1,0 +1,2 @@
+debian/tmp/usr/sbin/bacula-console	usr/sbin
+debian/additions/bconsole		usr/bin

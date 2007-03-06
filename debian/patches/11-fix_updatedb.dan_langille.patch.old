@@ -1,0 +1,34 @@
+--- work/bacula-1.36.0/src/cats/update_postgresql_tables.in	Wed Oct 20 09:35:22 2004
++++ /home/dan/update_postgresql_tables.in	Wed Nov 10 19:36:14 2004
+@@ -12,6 +12,8 @@
+ if $bindir/psql $* -f - <<END-OF-DATA
+ \c bacula
+ 
++begin;
++
+ ALTER TABLE media ADD COLUMN EndFile integer;
+ UPDATE media SET EndFile=0;
+ ALTER TABLE media ALTER COLUMN EndFile SET NOT NULL;
+@@ -21,11 +23,11 @@
+ 
+ UPDATE Filename SET Name='' WHERE Name=' ';
+ 
+-alter table file alter column filenameid rename to filenameid-old;
++alter table file rename column filenameid to filenameid_old;
+ alter table file add column filenameid integer;
+-update file set filenameid = filenameid-old;
++update file set filenameid = filenameid_old;
+ alter table file alter column filenameid set not null;
+-alter table file drop column filenameid-old;
++alter table file drop column filenameid_old;
+ 
+ DELETE FROM Version;
+ INSERT INTO Version (VersionId) VALUES (8);
+@@ -41,6 +43,8 @@
+    LastBurn timestamp without time zone not null,
+    primary key (MediaId)
+ );
++
++commit;
+ 
+ vacuum;

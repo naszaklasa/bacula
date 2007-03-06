@@ -1,0 +1,17 @@
+Template: bacula-director-sqlite/create_tables
+Type: boolean
+Default: true
+_Description: Create tables for Bacula's Catalog?
+ I have detected that the tables needed for Bacula's Catalog are missing (
+ this is probably a fresh install ). Shall I create them now?
+
+Template: bacula-director-sqlite/remove_catalog_on_purge
+Type: boolean
+Default: false
+_Description: Remove Catalog on purge?
+ Shall I remove the Catalog / SQLite database at package purge time? This
+ will free all the used space.
+ .
+ Warning: This is not undoable. Once you remove the catalog, you won't be
+ able to restore your backups unless you have another copy of the catalog
+ at hand.
