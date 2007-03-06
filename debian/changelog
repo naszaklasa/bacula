@@ -1,3 +1,11 @@
+bacula (1.38.11-1) unstable; urgency=low
+
+  * New upstream release
+  * Update debian/copyright with new upstream LICENSE
+  * Add Suggests on bacula-doc
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 30 Jun 2006 08:02:36 -0500
+
 bacula (1.38.10-2) unstable; urgency=low
 
   * Applied 1.38.10-scheduler.patch and 1.38.10-dvd-eof.patch from upstream.

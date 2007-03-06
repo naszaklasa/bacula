@@ -14,6 +14,7 @@ Standards-Version: 3.7.0
 Package: bacula
 Architecture: all
 Depends: bacula-server, bacula-client
+Suggests: bacula-doc
 Description: Network backup, recovery and verification (Meta-package)
  Bacula is a set of computer programs that permit you (or the system
  administrator) to manage backup, recovery and verification of computer data
@@ -32,6 +33,7 @@ Package: bacula-common
 Architecture: all
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Depends: adduser (>= 3.0)
+Suggests: bacula-doc
 Description: Network backup, recovery and verification (Common Support files)
  Bacula is a set of computer programs that permit you to manage backup,
  recovery, and verification of computer data across a network of computers
