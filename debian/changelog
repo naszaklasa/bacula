@@ -1,3 +1,10 @@
+bacula (1.38.11-4) unstable; urgency=high
+
+  * Rebuild against newer libmysql15-dev.  Closes: #384433.
+  * Build build-dep on libmysql15-dev.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 25 Aug 2006 13:52:24 -0500
+
 bacula (1.38.11-3) unstable; urgency=high
 
   * Update postrm to new dbconfig-common method.  Closes: #383142.
