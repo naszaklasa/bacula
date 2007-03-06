@@ -151,6 +151,7 @@ again:
               free(next_job);
           }
           schedules_invalidated = false;
+          unlock_jobs();
           goto again;
       }
       unlock_jobs();
