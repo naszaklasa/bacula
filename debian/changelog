@@ -1,3 +1,13 @@
+bacula (1.38.9-5) unstable; urgency=low
+
+  * bacula-sd-*: added conflict on bacula-sd < 1.38.9, since some
+    manpages have moved around since that version and conflicts
+    could exist on upgrade.  Closes: #367075.
+  * Removed accidentally-copied bacula-director-pgsql.preinst.
+    Closes: #367066, #367069, #367070.
+
+ -- John Goerzen <jgoerzen@complete.org>  Sat, 13 May 2006 09:25:35 -0500
+
 bacula (1.38.9-4) unstable; urgency=low
 
   * Sanitize multi-variant deps with virtual packages

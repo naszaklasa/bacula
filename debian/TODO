@@ -19,3 +19,5 @@
 * check backup_catalog scripts & make sure they're getting installed
 
 * Sanitize consoles
+
+* Update debian/copyright

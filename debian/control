@@ -147,7 +147,7 @@ Package: bacula-sd
 Architecture: any
 Pre-Depends: bacula-common (= ${Source-Version})
 Depends: ${shlibs:Depends}, mtx
-Recommends: mt-st, bacula-sd-tools
+Recommends: mt-st, bacula-sd-tools, python2.3
 Suggests: dds2tar, scsitools, sg3-utils
 Description: Network backup, recovery and verification (Storage daemon)
  This program performs the storage and recovery of the file attributes and 
@@ -161,7 +161,7 @@ Description: Network backup, recovery and verification (Storage daemon)
 Package: bacula-sd-sqlite3
 Architecture: any
 Depends: bacula-sd (= ${Source-Version}), ${shlibs:Depends}
-Conflicts: bacula-sd-tools
+Conflicts: bacula-sd-tools, bacula-sd (< 1.38.9)
 Replaces: bacula-sd-tools
 Provides: bacula-sd-tools
 Description: Network backup, recovery and verification (SD tools-SQLite3)
@@ -171,7 +171,7 @@ Description: Network backup, recovery and verification (SD tools-SQLite3)
 Package: bacula-sd-sqlite
 Architecture: any
 Depends: bacula-sd (= ${Source-Version}), ${shlibs:Depends}
-Conflicts: bacula-sd-tools
+Conflicts: bacula-sd-tools, bacula-sd (< 1.38.9)
 Replaces: bacula-sd-tools
 Provides: bacula-sd-tools
 Description: Network backup, recovery and verification (SD tools-SQLite)
@@ -181,7 +181,7 @@ Description: Network backup, recovery and verification (SD tools-SQLite)
 Package: bacula-sd-mysql
 Architecture: any
 Depends: bacula-sd (= ${Source-Version}), ${shlibs:Depends}
-Conflicts: bacula-sd-tools
+Conflicts: bacula-sd-tools, bacula-sd (< 1.38.9)
 Replaces: bacula-sd-tools
 Provides: bacula-sd-tools
 Description: Network backup, recovery and verification (SD tools-MySQL)
@@ -191,7 +191,7 @@ Description: Network backup, recovery and verification (SD tools-MySQL)
 Package: bacula-sd-pgsql
 Architecture: any
 Depends: bacula-sd (= ${Source-Version}), ${shlibs:Depends}
-Conflicts: bacula-sd-tools
+Conflicts: bacula-sd-tools, bacula-sd (< 1.38.9)
 Replaces: bacula-sd-tools
 Provides: bacula-sd-tools
 Description: Network backup, recovery and verification (SD tools-PostgreSQL)
