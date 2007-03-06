@@ -1,7 +1,7 @@
 /*
  * Prototypes for lib directory of Bacula
  *
- *   Version $Id: protos.h,v 1.109.2.6 2006/05/02 14:48:16 kerns Exp $
+ *   Version $Id: protos.h,v 1.109.2.7 2006/06/04 12:24:40 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -151,6 +151,7 @@ void      lex_unget_char         (LEX *lf);
 const char *  lex_tok_to_str     (int token);
 int       lex_get_token          (LEX *lf, int expect);
 void      lex_set_default_error_handler (LEX *lf);
+int       lex_set_error_handler_error_type (LEX *lf, int err_type);
 
 /* message.c */
 void       my_name_is            (int argc, char *argv[], const char *name);

@@ -1,5 +1,5 @@
 /*
- *   Version $Id: parse_conf.h,v 1.26.2.1 2006/03/28 16:42:19 kerns Exp $
+ *   Version $Id: parse_conf.h,v 1.26.2.2 2006/06/04 12:24:40 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -91,7 +91,7 @@ union CURES {
 
 
 /* Configuration routines */
-int   parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error = NULL);
+int   parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error = NULL, int err_type=M_ERROR_TERM);
 void    free_config_resources(void);
 RES   **save_config_resources(void);
 RES   **new_res_head();
@@ -109,7 +109,7 @@ void save_resource(int type, RES_ITEM *item, int pass);
 const char *res_to_str(int rcode);
 
 /* Loop through each resource of type, returning in var */
-#ifdef HAVE_GCC
+#ifdef HAVE_TYPEOF
 #define foreach_res(var, type) \
         for((var)=NULL; ((var)=(typeof(var))GetNextRes((type), (RES *)var));)
 #else 
@@ -132,6 +132,7 @@ void store_pint(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_msgs(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_int64(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_yesno(LEX *lc, RES_ITEM *item, int index, int pass);
+void store_bool(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_time(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_size(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_defs(LEX *lc, RES_ITEM *item, int index, int pass);

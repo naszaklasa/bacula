@@ -2,6 +2,62 @@
                         Kern Sibbald
 
 General:
+Release 1.38.10 (08Jun06) released 12JunO6
+08Jun06
+- Modify setting ACLs to suppress error message if the file is a
+  symbolic link since the file linked to may not yet be created,
+  and symbolic links really should not have attributes ...
+- Remove old regex code from baconfig.h
+06Jun06
+- Complete implementation of acl.c error message during restore.
+  During backups, errors getting acls are silently ignored, as was
+  previously the case.
+04Jun06
+- Modify configure.in to check for typeof().
+- Better detection of postgresql installation if pg_conf works.
+- Fix RescheduleTimes = 0 bug (should not reschedule).
+- Down port from 1.39: fixes for reload, autochanger error messages,
+  scheduler fixes for reload and day light savings change, 
+01Jun06
+- Implement partial error messages for src/filed/acl.c
+- Fix return code to fail when doing update barcodes and
+  Pool resource is not found. This previously caused Volumes
+  to be labeled as cleaning tapes.
+- Small updates to projects file.
+26May06
+- Prevent DVD code from rewriting label if the device cannot be
+  opened read/write.
+- Fix Dir/SD run race in migrate.c, verify.c, and restore.c
+- Update projects file.
+24May06
+- Applied patch posted by Jaime Ventura to bug #570 to correct failure
+  of restarted jobs to complete (due to a destroyed pthreads conditional
+  variable used by the message thread).
+- Fixed bug #619 where Bacula would not restart jobs with MaxRestartTimes
+  set to zero. 
+- Apply patch from John Goerzen bug #611 to fix bad manual links in the code.
+- Apply patch from Rudolf Cejka bug #614 to removed trailing
+  colons in query.sql file.
+- Apply patch from Rudolf Cejka bug #613 to correct prunning of files
+  not to create orphans.
+- Apply patch from Rudolf Cejka bug #617 to use mtime instead of ctime
+  in restore long listing.
+- Apply patch from Rudolf Cejka bug #609 to use MarkId in verify.c instead
+  of incorrect MarkedId.
+- Apply patch from adioso bug #616 to correct text in manual (replace
+  Director with File daemon).
+21May06
+- Move DIR "run" command to SD before starting the message thread
+  as suggested by Cristopher Hull to avoid a race deadlock from
+  two threads using the bsock structure.
+- Modify LICENSE to correct some problems pointed out by Debian.
+05May06
+- Correct EOF with no \n lex.c problem.
+- Add additional INFO messages if autochanger cannot be used.
+- Add Eric Bollengier's lex error handler fix, which corrects most
+  of the reload problems.
+
+Release 1.38.9 (02May06) released 02MayO6
 02May06
 - Added code to strip backslashes from Windows filenames during
   a restore.

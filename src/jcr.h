@@ -6,7 +6,7 @@
  *
  * Kern Sibbald, Nov MM
  *
- *   Version $Id: jcr.h,v 1.97.2.6 2006/03/16 18:16:44 kerns Exp $
+ *   Version $Id: jcr.h,v 1.97.2.7 2006/06/08 14:46:46 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -235,6 +235,7 @@ public:
    uint32_t num_files_examined;       /* files examined this job */
    POOLMEM *last_fname;               /* last file saved/verified */
    POOLMEM *acl_text;                 /* text of ACL for backup */
+   int last_type;                     /* last type saved/verified */
    /*********FIXME********* add missing files and files to be retried */
    int incremental;                   /* set if incremental for SINCE */
    time_t mtime;                      /* begin time for SINCE */

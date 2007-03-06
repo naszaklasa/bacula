@@ -8,12 +8,16 @@
 %define depkgs_version 28Mar06
 %define sqlite_bindir /usr/lib/bacula/sqlite
 %define working_dir /var/bacula
+
+# NOTE these defines are used in some rather complex useradd and groupadd
+# commands. If you change them examine the post scripts for consequences.
 %define director_daemon_user bacula
 %define storage_daemon_user bacula
 %define file_daemon_user root
 %define daemon_group bacula
 # group that has write access to tape devices, usually disk on Linux
 %define storage_daemon_group disk
+
 %define user_file /etc/passwd
 %define group_file /etc/group
 %define useradd /usr/sbin/useradd
@@ -36,6 +40,8 @@
 %{?build_fc3:%define fc3 1}
 %define fc4 0
 %{?build_fc4:%define fc4 1}
+%define fc5 0
+%{?build_fc5:%define fc5 1}
 # Whitebox Enterprise build
 %define wb3 0
 %{?build_wb3:%define wb3 1}
@@ -58,12 +64,15 @@
 %{?build_su9:%define su9 1}
 %define su10 0
 %{?build_su10:%define su10 1}
-# Mandrake build
+# Mandrake builds
 %define mdk 0
 %{?build_mdk:%define mdk 1}
+%define mdv 0
+%{?build_mdv:%define mdv 1}
+%{?build_mdv:%define mdk 1}
 
 # test for a platform definition
-%if ! %{rh7} && ! %{rh8} && ! %{rh9} && ! %{fc1} && ! %{fc3} && ! %{fc4} && ! %{wb3} && ! %{su9} && ! %{su10} && ! %{mdk}
+%if ! %{rh7} && ! %{rh8} && ! %{rh9} && ! %{fc1} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{wb3} && ! %{su9} && ! %{su10} && ! %{mdk}
 %{error: You must specify a platform. Please examine the spec file.}
 exit 1
 %endif
@@ -73,7 +82,7 @@ exit 1
 %define mysql 0
 %{?build_mysql:%define mysql 1}
 # if using mysql 4.x define this and mysql above
-# currently: Mandrake 10.1, SuSE 9.2, RHEL4 and Fedora Core 4
+# currently: Mandrake 10.1, SuSE 9.x & 10.x, RHEL4 and Fedora Core 4 & 5
 %define mysql4 0
 %{?build_mysql4:%define mysql4 1}
 %{?build_mysql4:%define mysql 1}
@@ -106,7 +115,7 @@ exit 1
 %if %{rh7} || %{rh8} || %{rh9} || %{rhel3} || %{rhel4}
 %define _dist %(grep Red /etc/redhat-release)
 %endif
-%if %{fc1} || %{fc4}
+%if %{fc1} || %{fc4} || %{fc5}
 %define _dist %(grep Fedora /etc/redhat-release)
 %endif
 %if %{centos4} || %{centos3}
@@ -134,19 +143,32 @@ exit 1
 # specifically disallow gconsole if desired
 %{?nobuild_gconsole:%define gconsole 0}
 
+# Should we build wxconsole, only wxWidgets >=2.6 is supported
+# currently only SuSE 10 and FC4
+%define wxconsole 0
+%{?build_wxconsole:%define wxconsole 1}
+
+# define the basic package description
+%define blurb Bacula - It comes by night and sucks the vital essence from your computers.
+%define blurb2 Bacula is a set of computer programs that permit you (or the system
+%define blurb3 administrator) to manage backup, recovery, and verification of computer
+%define blurb4 data across a network of computers of different kinds. In technical terms,
+%define blurb5 it is a network client/server based backup program. Bacula is relatively
+%define blurb6 easy to use and efficient, while offering many advanced storage management
+%define blurb7 features that make it easy to find and recover lost or damaged files.
+%define blurb8 Bacula source code has been released under the GPL version 2 license.
+
 Summary: Bacula - The Network Backup Solution
 Name: bacula
 Version: @VERSION@
 Release: 1
 Group: System Environment/Daemons
 License: GPL v2
-Source0:http://www.prdownloads.sourceforge.net/bacula/%{name}-%{version}.tar.gz
-Source1:http://www.prdownloads.sourceforge.net/bacula/depkgs-%{depkgs_version}.tar.gz
+Source0: http://www.prdownloads.sourceforge.net/bacula/%{name}-%{version}.tar.gz
+Source1: http://www.prdownloads.sourceforge.net/bacula/depkgs-%{depkgs_version}.tar.gz
 Source2: Release_Notes-%{version}-%{release}.tar.gz
-Source3:http://www.prdownloads.sourceforge.net/bacula/%{name}-docs-%{version}.tar.gz
-Source4:http://www.prdownloads.sourceforge.net/bacula/%{name}-rescue-%{_rescuever}.tar.gz
-Patch0: bacula-1.38.6-script.patch
-Patch1: bacula-1.38.6-makefile.patch
+Source3: http://www.prdownloads.sourceforge.net/bacula/%{name}-docs-%{version}.tar.gz
+Source4: http://www.prdownloads.sourceforge.net/bacula/%{name}-rescue-%{_rescuever}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 URL: http://www.bacula.org/
 Vendor: The Bacula Team
@@ -209,11 +231,22 @@ BuildRequires: libstdc++-static-devel
 BuildRequires: glibc-static-devel
 BuildRequires: glibc-devel >= 2.3
 %endif
-%if %{mdk} && %{gconsole}
+%if %{mdk} && !%{mdv} && %{gconsole}
 BuildRequires: gtk2-devel >= 2.0
 BuildRequires: libgnomeui2-devel >= 2.0
 BuildRequires: libORBit2-devel
 BuildRequires: libart_lgpl-devel >= 2.0
+BuildRequires: libbonobo2_0-devel
+BuildRequires: libbonoboui2_0-devel
+BuildRequires: libbonobo-activation-devel
+BuildRequires: libGConf2-devel
+BuildRequires: freetype2-devel
+%endif
+%if %{mdv} && %{gconsole}
+BuildRequires: gtk2-devel >= 2.8
+BuildRequires: libgnomeui2-devel >= 2.10
+BuildRequires: libORBit2-devel
+BuildRequires: libart_lgpl-devel >= 2.3
 BuildRequires: libbonobo2_0-devel
 BuildRequires: libbonoboui2_0-devel
 BuildRequires: libbonobo-activation-devel
@@ -250,11 +283,25 @@ BuildRequires: bonobo-activation-devel
 BuildRequires: GConf2-devel
 BuildRequires: freetype-devel
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4}
+%if %{fc5}
+BuildRequires: libtermcap-devel
+BuildRequires: glibc-devel >= 2.4
+%endif
+%if %{fc5} && %{gconsole}
+BuildRequires: gtk2-devel >= 2.8
+BuildRequires: libgnomeui-devel >= 2.14
+BuildRequires: ORBit2-devel
+BuildRequires: libart_lgpl-devel >= 2.3
+BuildRequires: libbonobo-devel >= 2.14
+BuildRequires: libbonoboui-devel >= 2.14
+BuildRequires: GConf2-devel
+BuildRequires: freetype-devel
+%endif
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5}
 BuildRequires: libtermcap-devel
 BuildRequires: glibc-devel >= 2.3
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && %{gconsole}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && %{gconsole}
 BuildRequires: gtk2-devel >= 2.0
 BuildRequires: libgnomeui-devel >= 2.0
 BuildRequires: ORBit2-devel
@@ -283,16 +330,20 @@ BuildRequires: rh-postgresql-devel >= 7
 BuildRequires: postgresql-devel >= 7
 %endif
 
-%description
-Bacula - It comes by night and sucks the vital essence from your computers.
+%if %{wxconsole}
+BuildRequires: wxGTK-devel >= 2.6
+%endif
 
-Bacula is a set of computer programs that permit you (or the system 
-administrator) to manage backup, recovery, and verification of computer 
-data across a network of computers of different kinds. In technical terms, 
-it is a network client/server based backup program. Bacula is relatively 
-easy to use and efficient, while offering many advanced storage management 
-features that make it easy to find and recover lost or damaged files. 
-Bacula source code has been released under the GPL version 2 license.
+%description
+%{blurb}
+
+%{blurb2}
+%{blurb3}
+%{blurb4}
+%{blurb5}
+%{blurb6}
+%{blurb7}
+%{blurb8}
 
 %if %{mysql}
 %package mysql
@@ -319,8 +370,12 @@ Requires: libtermcap
 Requires: glibc >= 2.3
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{fc5}
 Requires: glibc >= 2.3
+Requires: libtermcap
+%endif
+%if %{fc5}
+Requires: glibc >= 2.4
 Requires: libtermcap
 %endif
 
@@ -374,15 +429,15 @@ Requires: postgresql-server >= 7
 %description postgresql
 %endif
 
-Bacula - It comes by night and sucks the vital essence from your computers.
+%{blurb}
 
-Bacula is a set of computer programs that permit you (or the system 
-administrator) to manage backup, recovery, and verification of computer 
-data across a network of computers of different kinds. In technical terms, 
-it is a network client/server based backup program. Bacula is relatively 
-easy to use and efficient, while offering many advanced storage management 
-features that make it easy to find and recover lost or damaged files. 
-Bacula source code has been released under the GPL version 2 license.
+%{blurb2}
+%{blurb3}
+%{blurb4}
+%{blurb5}
+%{blurb6}
+%{blurb7}
+%{blurb8}
 
 %if %{mysql}
 This build requires MySQL to be installed separately as the catalog database.
@@ -421,21 +476,25 @@ Requires: libtermcap
 Requires: glibc >= 2.3
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{fc5}
 Requires: glibc >= 2.3
+Requires: libtermcap
+%endif
+%if %{fc5}
+Requires: glibc >= 2.4
 Requires: libtermcap
 %endif
 
 %description client
-Bacula - It comes by night and sucks the vital essence from your computers.
+%{blurb}
 
-Bacula is a set of computer programs that permit you (or the system 
-administrator) to manage backup, recovery, and verification of computer 
-data across a network of computers of different kinds. In technical terms, 
-it is a network client/server based backup program. Bacula is relatively 
-easy to use and efficient, while offering many advanced storage management 
-features that make it easy to find and recover lost or damaged files. 
-Bacula source code has been released under the GPL version 2 license.
+%{blurb2}
+%{blurb3}
+%{blurb4}
+%{blurb5}
+%{blurb6}
+%{blurb7}
+%{blurb8}
 
 This is the File daemon (Client) only package. It includes the command line 
 console program.
@@ -446,15 +505,15 @@ Summary: Bacula - The Network Backup Solution
 Group: System Environment/Daemons
 
 %description updatedb
-Bacula - It comes by night and sucks the vital essence from your computers.
+%{blurb}
 
-Bacula is a set of computer programs that permit you (or the system 
-administrator) to manage backup, recovery, and verification of computer 
-data across a network of computers of different kinds. In technical terms, 
-it is a network client/server based backup program. Bacula is relatively 
-easy to use and efficient, while offering many advanced storage management 
-features that make it easy to find and recover lost or damaged files. 
-Bacula source code has been released under the GPL version 2 license.
+%{blurb2}
+%{blurb3}
+%{blurb4}
+%{blurb5}
+%{blurb6}
+%{blurb7}
+%{blurb8}
 
 This package installs scripts for updating older versions of the bacula
 database.
@@ -497,7 +556,7 @@ Requires: fontconfig >= 2.3
 Requires: gnome-vfs2 >= 2.12
 Requires: libpng
 %endif
-%if %{gconsole} && %{mdk}
+%if %{gconsole} && %{mdk} && !%{mdv}
 Requires: gtk2 >= 2.0
 Requires: libgnomeui2
 Requires: glibc >= 2.3
@@ -505,6 +564,17 @@ Requires: ORBit2
 Requires: libart_lgpl >= 2.0
 Requires: libbonobo >= 2.0
 Requires: libbonoboui >= 2.0
+Requires: GConf2
+Requires: freetype2
+%endif
+%if %{gconsole} && %{mdv}
+Requires: gtk2 >= 2.8
+Requires: libgnomeui2
+Requires: glibc >= 2.3
+Requires: ORBit2
+Requires: libart_lgpl >= 2.3
+Requires: libbonobo >= 2.10
+Requires: libbonoboui >= 2.10
 Requires: GConf2
 Requires: freetype2
 %endif
@@ -532,7 +602,18 @@ Requires: bonobo-activation
 Requires: GConf2
 Requires: freetype
 %endif
-%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4}
+%if %{gconsole} && %{fc5}  
+Requires: gtk2 >= 2.8
+Requires: libgnomeui >= 2.14
+Requires: glibc >= 2.4
+Requires: ORBit2
+Requires: libart_lgpl >= 2.3
+Requires: libbonobo >= 2.14
+Requires: libbonoboui >= 2.14
+Requires: GConf2
+Requires: freetype
+%endif
+%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5}
 Requires: gtk2 >= 2.0
 Requires: libgnomeui >= 2.0
 Requires: glibc >= 2.3
@@ -557,17 +638,56 @@ Requires: usermode
 
 %if %{gconsole}
 %description gconsole
-Bacula - It comes by night and sucks the vital essence from your computers.
+%{blurb}
 
-Bacula is a set of computer programs that permit you (or the system 
-administrator) to manage backup, recovery, and verification of computer 
-data across a network of computers of different kinds. In technical terms, 
-it is a network client/server based backup program. Bacula is relatively 
-easy to use and efficient, while offering many advanced storage management 
-features that make it easy to find and recover lost or damaged files. 
-Bacula source code has been released under the GPL version 2 license.
+%{blurb2}
+%{blurb3}
+%{blurb4}
+%{blurb5}
+%{blurb6}
+%{blurb7}
+%{blurb8}
 
 This is the Gnome Console package. It is an add-on to the client or
+server packages.
+%endif
+
+%if %{wxconsole}
+%package wxconsole
+Summary: Bacula - The Network Backup Solution
+Group: System Environment/Daemons
+Requires: wxGTK >= 2.6, libstdc++, openssl
+%endif
+
+%if %{wxconsole} && %{su10}
+Requires: gtk2 >= 2.8
+%endif
+
+%if %{wxconsole} && %{fc3}  
+Requires: gtk2 >= 2.4
+%endif
+
+%if %{wxconsole} && %{fc4}  
+Requires: gtk2 >= 2.6
+%endif
+
+%if %{wxconsole} && %{fc5}  
+Requires: gtk2 >= 2.8
+%endif
+
+%if %{wxconsole}
+%description wxconsole
+%{blurb}
+
+%{blurb2}
+%{blurb3}
+%{blurb4}
+%{blurb5}
+%{blurb6}
+%{blurb7}
+%{blurb8}
+
+This is the WXWindows Console package. It is an add-on to the client or
 server packages.
 %endif
 
@@ -578,9 +698,6 @@ server packages.
 %setup -T -D -b 2
 %setup -T -D -b 3
 %setup -T -D -b 4
-
-%patch0
-%patch1 -p1
 
 %build
 
@@ -620,7 +737,6 @@ patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
 %endif
 
 # 64 bit lib location hacks
-# this is the location on redhat type platforms, don't know about others yet
 %if %{x86_64}
 export LDFLAGS=-L/usr/lib64
 %endif
@@ -635,9 +751,9 @@ export LDFLAGS=-L/usr/lib64/mysql
         --with-scriptdir=/etc/bacula \
         --enable-smartalloc \
         --enable-client-only \
-        %if %{mdk}
-        --disable-nls \
-        %endif
+	%if %{mdk}
+	--disable-nls \
+	%endif
         --enable-static-fd
 
 make
@@ -662,6 +778,9 @@ make
 %endif
 %if %{postgresql}
         --with-postgresql \
+%endif
+%if %{wxconsole}
+	--enable-wx-console \
 %endif
         --with-working-dir=%{working_dir} \
         --with-pid-dir=/var/run \
@@ -775,7 +894,11 @@ cp -p scripts/bacula.desktop.gnome2.xsu $RPM_BUILD_ROOT/usr/share/applications/b
 cp -p src/tray-monitor/generic.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/bacula-tray-monitor.xpm
 cp -p scripts/bacula-tray-monitor.desktop $RPM_BUILD_ROOT/usr/share/applications/bacula-tray-monitor.desktop
 %endif
-%if %{rh8} || %{rh9} || %{wb3} || %{fc1} || %{fc3} || %{fc4} || %{mdk}
+%if %{wxconsole} && %{su10}
+cp -p src/wx-console/wxwin16x16.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/wxwin16x16.xpm
+cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxconsole.desktop
+%endif
+%if %{rh8} || %{rh9} || %{wb3} || %{fc1} || %{fc3} || %{fc4} || %{fc5} || %{mdk}
 %define iftrick 1
 %else
 %define iftrick 0
@@ -790,6 +913,13 @@ ln -sf consolehelper $RPM_BUILD_ROOT/usr/bin/gnome-console
 %if %{gconsole} && ! %{rh8}
 cp -p src/tray-monitor/generic.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/bacula-tray-monitor.xpm
 cp -p scripts/bacula-tray-monitor.desktop $RPM_BUILD_ROOT/usr/share/applications/bacula-tray-monitor.desktop
+%endif
+%if %{wxconsole} && %{iftrick}
+cp -p src/wx-console/wxwin16x16.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/wxwin16x16.xpm
+cp -p scripts/wxconsole.desktop.consolehelper $RPM_BUILD_ROOT/usr/share/applications/wxconsole.desktop
+cp -p scripts/wxconsole.console_apps $RPM_BUILD_ROOT/etc/security/console.apps/wxconsole
+cp -p scripts/wxconsole.pamd $RPM_BUILD_ROOT/etc/pam.d/wxconsole
+ln -sf consolehelper $RPM_BUILD_ROOT/usr/bin/wxconsole
 %endif
 
 # install sqlite
@@ -824,6 +954,11 @@ cp -pr %{_rescuesrc}/autoconf $RPM_BUILD_ROOT/etc/bacula/rescue/
 touch $RPM_BUILD_ROOT/etc/bacula/rescue/linux/cdrom/rpm_release
 cp -p src/filed/static-bacula-fd $RPM_BUILD_ROOT/etc/bacula/rescue/linux/cdrom/bacula/bin/bacula-fd
 rm -f src/filed/static-bacula-fd
+
+%if %{wxconsole}
+mv $RPM_BUILD_ROOT/usr/sbin/wx-console $RPM_BUILD_ROOT/usr/sbin/wxconsole
+mv $RPM_BUILD_ROOT/etc/bacula/wx-console.conf $RPM_BUILD_ROOT/etc/bacula/wxconsole.conf
+%endif
 
 # now clean up permissions that are left broken by the install
 chmod o-r $RPM_BUILD_ROOT/etc/bacula/query.sql
@@ -926,6 +1061,8 @@ chmod 644 $RPM_BUILD_ROOT/etc/bacula/tray-monitor.conf
 /usr/sbin/bconsole
 /usr/sbin/dbcheck
 /usr/sbin/bsmtp
+/usr/sbin/bregex
+/usr/sbin/bwild
 
 %if %{mysql}
 %pre mysql
@@ -984,19 +1121,19 @@ fi
 # this will be a unique group on redhat type systems or the group users on some systems
 HAVE_BACULA=`grep %{storage_daemon_user} %{user_file} 2>/dev/null`
 if [ -z "$HAVE_BACULA" ]; then
-        %{useradd} -r -c "Bacula" -d %{working_dir} -M -n -s /sbin/nologin %{storage_daemon_user} > /dev/null 2>&1
+        %{useradd} -r -c "Bacula" -d %{working_dir} -g %{storage_daemon_group} -M -s /sbin/nologin %{storage_daemon_user} > /dev/null 2>&1
         echo "The user %{storage_daemon_user} has been added to %{user_file}."
         echo "See the manual chapter \"Running Bacula\" for details."
 fi
 HAVE_BACULA=`grep %{director_daemon_user} %{user_file} 2>/dev/null`
 if [ -z "$HAVE_BACULA" ]; then
-        %{useradd} -r -c "Bacula" -d %{working_dir} -M -n -s /sbin/nologin %{director_daemon_user} > /dev/null 2>&1
+        %{useradd} -r -c "Bacula" -d %{working_dir} -g %{daemon_group} -M -s /sbin/nologin %{director_daemon_user} > /dev/null 2>&1
         echo "The user %{director_daemon_user} has been added to %{user_file}."
         echo "See the manual chapter \"Running Bacula\" for details."
 fi
 HAVE_BACULA=`grep %{file_daemon_user} %{user_file} 2>/dev/null`
 if [ -z "$HAVE_BACULA" ]; then
-        %{useradd} -r -c "Bacula" -d %{working_dir} -M -n -s /sbin/nologin %{file_daemon_user} > /dev/null 2>&1
+        %{useradd} -r -c "Bacula" -d %{working_dir} -g %{daemon_group} -M -s /sbin/nologin %{file_daemon_user} > /dev/null 2>&1
         echo "The user %{file_daemon_user} has been added to %{user_file}."
         echo "See the manual chapter \"Running Bacula\" for details."
 fi
@@ -1004,15 +1141,15 @@ fi
 # we only do this if the user is NOT root
 IS_ROOT=%{director_daemon_user}
 if [ "$IS_ROOT" != "root" ]; then
-%{usermod} %{director_daemon_user} -G %{daemon_group}
+%{usermod} -G %{daemon_group} %{director_daemon_user}
 fi
 IS_ROOT=%{storage_daemon_user}
 if [ "$IS_ROOT" != "root" ]; then
-%{usermod} %{storage_daemon_user} -G %{daemon_group},%{storage_daemon_group}
+%{usermod} -G %{daemon_group},%{storage_daemon_group} %{storage_daemon_user}
 fi
 IS_ROOT=%{file_daemon_user}
 if [ "$IS_ROOT" != "root" ]; then
-%{usermod} %{file_daemon_user} -G %{daemon_group}
+%{usermod} -G %{daemon_group} %{file_daemon_user}
 fi
 
 %if %{mysql}
@@ -1186,7 +1323,7 @@ fi
 # this will be a unique group on redhat type systems or the group users on some systems
 HAVE_BACULA=`grep %{file_daemon_user} %{user_file} 2>/dev/null`
 if [ -z "$HAVE_BACULA" ]; then
-        %{useradd} -r -c "Bacula" -d %{working_dir} -M -n -s /sbin/nologin %{file_daemon_user} > /dev/null 2>&1
+        %{useradd} -r -c "Bacula" -d %{working_dir} -g %{daemon_group} -M -s /sbin/nologin %{file_daemon_user} > /dev/null 2>&1
         echo "The user %{file_daemon_user} has been added to %{user_file}."
         echo "See the manual chapter \"Running Bacula\" for details."
 fi
@@ -1194,7 +1331,7 @@ fi
 # we only do this if the user is NOT root
 IS_ROOT=%{file_daemon_user}
 if [ "$IS_ROOT" != "root" ]; then
-%{usermod} %{file_daemon_user} -G %{daemon_group}
+%{usermod} -G %{daemon_group} %{file_daemon_user}
 fi
 
 %post client
@@ -1248,9 +1385,6 @@ echo "The database update scripts were installed to /etc/bacula/updatedb"
 %attr(-, root, %{daemon_group}) /etc/bacula/gconsole
 %attr(-, root, %{daemon_group}) %config(noreplace) /etc/bacula/gnome-console.conf
 /usr/share/pixmaps/bacula.png
-%endif
-
-%if %{gconsole}
 /usr/share/applications/bacula.desktop
 %endif
 
@@ -1295,7 +1429,66 @@ if [ -d /etc/bacula ]; then
 fi
 %endif
 
+%if %{wxconsole}
+%files wxconsole
+%defattr(-,root,root)
+/usr/sbin/wxconsole
+%attr(-, root, %{daemon_group}) %dir /etc/bacula
+%attr(-, root, %{daemon_group}) %config(noreplace) /etc/bacula/wxconsole.conf
+/usr/share/pixmaps/wxwin16x16.xpm
+/usr/share/applications/wxconsole.desktop
+%endif
+
+%if %{wxconsole} && ! %{su9} && ! %{su10}
+# add the console helper files
+%config(noreplace,missingok) /etc/pam.d/wxconsole
+%config(noreplace,missingok) /etc/security/console.apps/wxconsole
+/usr/bin/wxconsole
+%endif
+
+%if %{wxconsole}
+%pre wxconsole
+# create the daemon group
+HAVE_BACULA=`grep %{daemon_group} %{group_file} 2>/dev/null`
+if [ -z "$HAVE_BACULA" ]; then
+        %{groupadd} -r %{daemon_group} > /dev/null 2>&1
+        echo "The group %{daemon_group} has been added to %{group_file}."
+        echo "See the manual chapter \"Running Bacula\" for details."
+fi
+
+%post wxconsole
+# generate passwords if needed
+if [ -d /etc/bacula ]; then
+        cd /etc/bacula
+        for file in *.conf; do
+                for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
+                        need_password=`grep $string $file 2>/dev/null`
+                        if [ -n "$need_password" ]; then
+                                pass=`openssl rand -base64 33`
+                                sed "s-$string-$pass-g" $file > $file.new
+                                cp -f $file.new $file; rm -f $file.new
+                        fi
+                done
+        done
+fi
+%endif
+
 %changelog
+* Sun Jun 03 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- fix usermod statements
+- add fc5 target
+* Thu Apr 27 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add -g param back to useradd statements Bug 605
+* Mon Apr 17 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- redundant code cleanup
+* Sun Apr 16 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add wxconsole package
+* Fri Apr 14 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 1.38.8 release
+- dependency update for Mandriva
+* Sun Apr 08 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 1.38.7 release
+- remove -n option from useradd scripts
 * Sun Apr 02 2006 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - 1.38.6 release
 - fix problem specifying more than one primary group for user bacula

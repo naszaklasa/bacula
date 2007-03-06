@@ -8,7 +8,7 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id: ua_purge.c,v 1.28 2005/08/15 07:25:10 kerns Exp $
+ *   Version $Id: ua_purge.c,v 1.28.2.1 2006/06/04 12:24:40 kerns Exp $
  */
 /*
    Copyright (C) 2002-2005 Kern Sibbald
@@ -121,7 +121,7 @@ static int job_delete_handler(void *ctx, int num_fields, char **row)
       del->PurgedFiles = (char *)brealloc(del->PurgedFiles, del->max_ids);
    }
    del->JobId[del->num_ids] = (JobId_t)str_to_int64(row[0]);
-   del->PurgedFiles[del->num_ids++] = (char)str_to_int64(row[0]);
+   del->PurgedFiles[del->num_ids++] = (char)str_to_int64(row[1]);
    return 0;
 }
 

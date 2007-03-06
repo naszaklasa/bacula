@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: dird.c,v 1.96.2.2 2006/01/06 17:15:42 kerns Exp $
+ *   Version $Id: dird.c,v 1.96.2.3 2006/06/04 12:24:39 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -31,6 +31,7 @@ static int check_resources();
 /* Exported subroutines */
 
 extern "C" void reload_config(int sig);
+extern void invalidate_schedules();
 
 
 /* Imported subroutines */
@@ -291,7 +292,7 @@ struct RELOAD_TABLE {
    RES **res_table;
 };
 
-static const int max_reloads = 10;
+static const int max_reloads = 32;
 static RELOAD_TABLE reload_table[max_reloads];
 
 static void init_reload(void)
@@ -401,7 +402,7 @@ void reload_config(int sig)
    reload_table[table].res_table = save_config_resources();
    Dmsg1(100, "Saved old config in table %d\n", table);
 
-   ok = parse_config(configfile, 0);  /* no exit on error */
+   ok = parse_config(configfile, 0, M_ERROR);  /* no exit on error */
 
    Dmsg0(100, "Reloaded config file\n");
    if (!ok || !check_resources()) {
@@ -422,6 +423,7 @@ void reload_config(int sig)
       }
       table = rtable;                 /* release new, bad, saved table below */
    } else {
+      invalidate_schedules();
       /*
        * Hook all active jobs so that they release this table
        */
@@ -669,8 +671,8 @@ static int check_resources()
                          catalog->db_port, catalog->db_socket,
                          catalog->mult_db_connections);
       if (!db || !db_open_database(NULL, db)) {
-         Jmsg(NULL, M_FATAL, 0, _("Could not open database \"%s\".\n"),
-              catalog->db_name);
+         Jmsg(NULL, M_FATAL, 0, _("Could not open Catalog \"%s\", database \"%s\".\n"),
+              catalog->hdr.name, catalog->db_name);
          if (db) {
             Jmsg(NULL, M_FATAL, 0, _("%s"), db_strerror(db));
          }

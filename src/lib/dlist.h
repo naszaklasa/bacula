@@ -1,8 +1,8 @@
 /*
- *   Version $Id: dlist.h,v 1.20.2.1 2006/03/28 16:42:19 kerns Exp $
+ *   Version $Id: dlist.h,v 1.20.2.2 2006/06/04 12:24:40 kerns Exp $
  */
 /*
-   Copyright (C) 2004-2005 Kern Sibbald
+   Copyright (C) 2004-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
@@ -36,7 +36,7 @@
  *
  * Loop var through each member of list
  */
-#ifdef HAVE_GCC
+#ifdef HAVE_TYPEOF
 #define foreach_dlist(var, list) \
         for((var)=NULL; ((var)=(typeof(var))(list)->next(var)); )
 #else

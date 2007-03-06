@@ -2,7 +2,7 @@
  * General header file configurations that apply to
  * all daemons.  System dependent stuff goes here.
  *
- *   Version $Id: baconfig.h,v 1.88.2.3 2006/05/02 14:48:12 kerns Exp $
+ *   Version $Id: baconfig.h,v 1.88.2.4 2006/06/08 15:28:18 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -616,14 +616,5 @@ extern "C" long gethostid(void);
 #define nl_langinfo(x) ("ANSI_X3.4-1968")
 #endif
 */
-
-/* Fake entry points if regex does not exist */
-#ifndef HAVE_REGEX_H
-#define regcomp(x, y, z) 1
-#define regfree(x)
-#define regerror(rc, preg, prbuf, len) bstrncpy(prbuf, "REGEX not available on this system.", len)
-#define regex_t int
-#define regmatch_t char
-#endif
 
 #endif /* _BACONFIG_H */

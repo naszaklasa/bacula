@@ -7,7 +7,7 @@
  *
  *     Kern Sibbald, May MM, major revision December MMIII
  *
- *   Version $Id: scheduler.c,v 1.33.2.1 2006/01/11 10:24:12 kerns Exp $
+ *   Version $Id: scheduler.c,v 1.33.2.2 2006/06/04 12:24:39 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -27,8 +27,15 @@
 #include "bacula.h"
 #include "dird.h"
 
-/* #define SCHED_DEBUG */
+#if 0
+#define SCHED_DEBUG
+#define DBGLVL 0
+#else
+#undef SCHED_DEBUG
+#define DBGLVL 200
+#endif
 
+const int dbglvl = DBGLVL;
 
 /* Local variables */
 struct job_item {
@@ -43,7 +50,7 @@ struct job_item {
 static dlist *jobs_to_run;               /* list of jobs to be run */
 
 /* Time interval in secs to sleep if nothing to be run */
-static int const NEXT_CHECK_SECS = 60;
+static int const next_check_secs = 60;
 
 /* Forward referenced subroutines */
 static void find_runs();
@@ -54,6 +61,19 @@ static void dump_job(job_item *ji, const char *msg);
 
 /* Imported variables */
 
+/**
+ * called by reload_config to tell us that the schedules
+ * we may have based our next jobs to run queues have been
+ * invalidated.  In fact the schedules may not have changed
+ * but the run object that we have recorded the last_run time
+ * on are new and no longer have a valid last_run time which
+ * causes us to double run schedules that get put into the list
+ * because run_nh = 1.
+ */   
+static bool schedules_invalidated = false;
+void invalidate_schedules(void) {
+    schedules_invalidated = true;
+}
 
 /*********************************************************************
  *
@@ -65,11 +85,11 @@ JCR *wait_for_next_job(char *one_shot_job_to_run)
    JCR *jcr;
    JOB *job;
    RUN *run;
-   time_t now;
+   time_t now, prev;
    static bool first = true;
    job_item *next_job = NULL;
 
-   Dmsg0(200, "Enter wait_for_next_job\n");
+   Dmsg0(dbglvl, "Enter wait_for_next_job\n");
    if (first) {
       first = false;
       /* Create scheduled jobs list */
@@ -94,7 +114,7 @@ again:
       if (!jobs_to_run->empty()) {
          break;
       }
-      bmicrosleep(NEXT_CHECK_SECS, 0); /* recheck once per minute */
+      bmicrosleep(next_check_secs, 0); /* recheck once per minute */
    }
 
 #ifdef  list_chain
@@ -119,13 +139,37 @@ again:
    /* Now wait for the time to run the job */
    for (;;) {
       time_t twait;
-      now = time(NULL);
+      /** discard scheduled queue and rebuild with new schedule objects. **/
+      lock_jobs();
+      if (schedules_invalidated) { 
+          dump_job(next_job, "Invalidated job");
+          free(next_job);
+          while (!jobs_to_run->empty()) {
+              next_job = (job_item *)jobs_to_run->first();
+              jobs_to_run->remove(next_job);
+              dump_job(next_job, "Invalidated job");
+              free(next_job);
+          }
+          schedules_invalidated = false;
+          goto again;
+      }
+      unlock_jobs();
+      prev = now = time(NULL);
       twait = next_job->runtime - now;
       if (twait <= 0) {               /* time to run it */
          break;
       }
-      bmicrosleep(twait, 0);
+      /* Recheck at least once per minute */
+      bmicrosleep((next_check_secs < twait)?next_check_secs:twait, 0);
+      /* Attempt to handle clock shift from/to daylight savings time
+       * we allow a skew of 10 seconds before invalidating everything.
+       */
+      now = time(NULL);
+      if (now < prev+10 || now > (prev+next_check_secs+10)) {
+         schedules_invalidated = true;
+      }
    }
+   jcr = new_jcr(sizeof(JCR), dird_free_jcr);
    run = next_job->run;               /* pick up needed values */
    job = next_job->job;
    if (job->enabled) {
@@ -133,11 +177,11 @@ again:
    }
    free(next_job);
    if (!job->enabled) {
+      free_jcr(jcr);
       goto again;                     /* ignore this job */
    }
    run->last_run = now;               /* mark as run now */
 
-   jcr = new_jcr(sizeof(JCR), dird_free_jcr);
    ASSERT(job);
    set_jcr_defaults(jcr, job);
    if (run->level) {
@@ -170,7 +214,7 @@ again:
    if (run->write_part_after_job_set) {
       jcr->write_part_after_job = run->write_part_after_job;
    }
-   Dmsg0(200, "Leave wait_for_next_job()\n");
+   Dmsg0(dbglvl, "Leave wait_for_next_job()\n");
    return jcr;
 }
 
@@ -205,7 +249,7 @@ static void find_runs()
    /* Items corresponding to above at the next hour */
    int nh_hour, nh_mday, nh_wday, nh_month, nh_wom, nh_woy, nh_year;
 
-   Dmsg0(1200, "enter find_runs()\n");
+   Dmsg0(dbglvl, "enter find_runs()\n");
 
 
    /* compute values for time now */
@@ -241,7 +285,7 @@ static void find_runs()
       if (sched == NULL || !job->enabled) { /* scheduled? or enabled? */
          continue;                    /* no, skip this job */
       }
-      Dmsg1(1200, "Got job: %s\n", job->hdr.name);
+      Dmsg1(dbglvl, "Got job: %s\n", job->hdr.name);
       for (run=sched->run; run; run=run->next) {
          bool run_now, run_nh;
          /*
@@ -284,7 +328,7 @@ static void find_runs()
             bit_is_set(nh_wom, run->wom) &&
             bit_is_set(nh_woy, run->woy);
 
-         Dmsg2(1200, "run_now=%d run_nh=%d\n", run_now, run_nh);
+         Dmsg3(dbglvl, "run@%p: run_now=%d run_nh=%d\n", run, run_now, run_nh);
 
          /* find time (time_t) job is to be run */
          localtime_r(&now, &tm);      /* reset tm structure */
@@ -307,7 +351,7 @@ static void find_runs()
       }
    }
    UnlockRes();
-   Dmsg0(1200, "Leave find_runs()\n");
+   Dmsg0(dbglvl, "Leave find_runs()\n");
 }
 
 static void add_job(JOB *job, RUN *run, time_t now, time_t runtime)
@@ -324,12 +368,16 @@ static void add_job(JOB *job, RUN *run, time_t now, time_t runtime)
       bstrftime_nc(dt, sizeof(dt), runtime);
       bstrftime_nc(dt1, sizeof(dt1), run->last_run);
       bstrftime_nc(dt2, sizeof(dt2), now);
-      Dmsg4(000, "Drop: Job=\"%s\" run=%s. last_run=%s. now=%s\n", job->hdr.name,
-            dt, dt1, dt2);
+      Dmsg7(000, "Drop: Job=\"%s\" run=%s(%x). last_run=%s(%x). now=%s(%x)\n", job->hdr.name, 
+            dt, runtime, dt1, run->last_run, dt2, now);
       fflush(stdout);
 #endif
       return;
    }
+#ifdef SCHED_DEBUG
+   Dmsg4(000, "Add: Job=\"%s\" run=%x last_run=%x now=%x\n", job->hdr.name, 
+            runtime, run->last_run, now);
+#endif
    /* accept to run this job */
    job_item *je = (job_item *)malloc(sizeof(job_item));
    je->run = run;
@@ -369,12 +417,11 @@ static void dump_job(job_item *ji, const char *msg)
 #ifdef SCHED_DEBUG
    char dt[MAX_TIME_LENGTH];
    int save_debug = debug_level;
-   debug_level = 200;
-   if (debug_level < 200) {
+   if (debug_level < dbglvl) {
       return;
    }
    bstrftime_nc(dt, sizeof(dt), ji->runtime);
-   Dmsg4(200, "%s: Job=%s priority=%d run %s\n", msg, ji->job->hdr.name,
+   Dmsg4(dbglvl, "%s: Job=%s priority=%d run %s\n", msg, ji->job->hdr.name, 
       ji->Priority, dt);
    fflush(stdout);
    debug_level = save_debug;

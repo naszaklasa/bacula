@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, November MM
  *
- *   Version $Id: restore.c,v 1.65.2.3 2006/03/14 21:41:40 kerns Exp $
+ *   Version $Id: restore.c,v 1.65.2.5 2006/06/08 15:52:04 kerns Exp $
  *
  */
 /*
@@ -253,6 +253,7 @@ void do_restore(JCR *jcr)
          case CF_CREATED:        /* File created, but there is no content */
             jcr->lock();
             pm_strcpy(jcr->last_fname, attr->ofname);
+            jcr->last_type = attr->type;
             jcr->unlock();
             jcr->JobFiles++;
             fileAddr = 0;

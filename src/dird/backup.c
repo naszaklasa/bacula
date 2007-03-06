@@ -11,7 +11,7 @@
  *       to do the backup.
  *     When the File daemon finishes the job, update the DB.
  *
- *   Version $Id: backup.c,v 1.93.2.5 2006/05/02 14:48:14 kerns Exp $
+ *   Version $Id: backup.c,v 1.93.2.6 2006/06/04 12:24:39 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -175,6 +175,16 @@ bool do_backup(JCR *jcr)
    if (!start_storage_daemon_job(jcr, NULL, jcr->storage)) {
       return false;
    }
+
+   /*
+    * Start the job prior to starting the message thread below
+    * to avoid two threads from using the BSOCK structure at
+    * the same time.
+    */
+   if (!bnet_fsend(jcr->store_bsock, "run")) {
+      return false;
+   }
+
    /*
     * Now start a Storage daemon message thread.  Note,
     *   this thread is used to provide the catalog services
@@ -185,10 +195,6 @@ bool do_backup(JCR *jcr)
       return false;
    }
    Dmsg0(150, "Storage daemon connection OK\n");
-
-   if (!bnet_fsend(jcr->store_bsock, "run")) {
-      goto bail_out;
-   }
 
    set_jcr_job_status(jcr, JS_WaitFD);
    if (!connect_to_file_daemon(jcr, 10, FDConnectTimeout, 1)) {
@@ -227,8 +233,7 @@ bool do_backup(JCR *jcr)
       }
    }
 
-   bnet_fsend(fd, storaddr, store->address, store->SDDport,
-              tls_need);
+   bnet_fsend(fd, storaddr, store->address, store->SDDport, tls_need);
    if (!response(jcr, fd, OKstore, "Storage", DISPLAY_ERROR)) {
       goto bail_out;
    }

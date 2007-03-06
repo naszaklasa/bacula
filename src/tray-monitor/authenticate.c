@@ -76,8 +76,8 @@ int authenticate_director(JCR *jcr, MONITOR *mon, DIRRES *director)
        !cram_md5_auth(dir, password, tls_local_need)) {
       stop_bsock_timer(tid);
       Jmsg0(jcr, M_FATAL, 0, _("Director authorization problem.\n"
-	    "Most likely the passwords do not agree.\n"
-       "Please see http://www.bacula.org/html-manual/faq.html#AuthorizationErrors for help.\n"));
+            "Most likely the passwords do not agree.\n"
+       "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"));
       return 0;
    }
 
@@ -85,7 +85,7 @@ int authenticate_director(JCR *jcr, MONITOR *mon, DIRRES *director)
    if (bnet_recv(dir) <= 0) {
       stop_bsock_timer(tid);
       Jmsg1(jcr, M_FATAL, 0, _("Bad response to Hello command: ERR=%s\n"),
-	 bnet_strerror(dir));
+         bnet_strerror(dir));
       return 0;
    }
    Dmsg1(10, "<dird: %s", dir->msg);
@@ -125,14 +125,14 @@ int authenticate_storage_daemon(JCR *jcr, MONITOR *monitor, STORE* store)
        !cram_md5_auth(sd, store->password, tls_local_need)) {
       stop_bsock_timer(tid);
       Jmsg0(jcr, M_FATAL, 0, _("Director and Storage daemon passwords or names not the same.\n"
-       "Please see http://www.bacula.org/html-manual/faq.html#AuthorizationErrors for help.\n"));
+       "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"));
       return 0;
    }
    Dmsg1(116, ">stored: %s", sd->msg);
    if (bnet_recv(sd) <= 0) {
       stop_bsock_timer(tid);
       Jmsg1(jcr, M_FATAL, 0, _("bdird<stored: bad response to Hello command: ERR=%s\n"),
-	 bnet_strerror(sd));
+         bnet_strerror(sd));
       return 0;
    }
    Dmsg1(110, "<stored: %s", sd->msg);
@@ -170,14 +170,14 @@ int authenticate_file_daemon(JCR *jcr, MONITOR *monitor, CLIENT* client)
        !cram_md5_auth(fd, client->password, tls_local_need)) {
       stop_bsock_timer(tid);
       Jmsg(jcr, M_FATAL, 0, _("Director and File daemon passwords or names not the same.\n"
-       "Please see http://www.bacula.org/html-manual/faq.html#AuthorizationErrors for help.\n"));
+       "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"));
       return 0;
    }
    Dmsg1(116, ">filed: %s", fd->msg);
    if (bnet_recv(fd) <= 0) {
       stop_bsock_timer(tid);
       Jmsg(jcr, M_FATAL, 0, _("Bad response from File daemon to Hello command: ERR=%s\n"),
-	 bnet_strerror(fd));
+         bnet_strerror(fd));
       return 0;
    }
    Dmsg1(110, "<stored: %s", fd->msg);

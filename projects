@@ -37,7 +37,7 @@ Below, you will find more information on future projects:
 Item  1:  Implement data encryption (as opposed to comm encryption)
   Date:   28 October 2005
   Origin: Sponsored by Landon and 13 contributors to EFF.
-  Status: Landon Fuller is currently implementing this.
+  Status: Landon Fuller has implemented this in 1.39.x.
                   
   What:   Currently the data that is stored on the Volume is not
           encrypted. For confidentiality, encryption of data at
@@ -51,7 +51,7 @@ Item 2:   Implement Migration that moves Jobs from one Pool to another.
   Origin: Sponsored by Riege Software International GmbH. Contact:
           Daniel Holtkamp <holtkamp at riege dot com>
   Date:   28 October 2005
-  Status: Partially coded in 1.37 -- much more to do. Assigned to
+  Status: Partially working in 1.39, more to do. Assigned to
           Kern.
 
   What:   The ability to copy, move, or archive data that is on a
@@ -111,7 +111,7 @@ Item  3:  Accurate restoration of renamed/deleted files from
 Item 4:   Implement a Bacula GUI/management tool using Python.
   Origin: Kern
   Date:   28 October 2005
-  Status: 
+  Status: Lucus is working on this for Python GTK+.
 
   What:   Implement a Bacula console, and management tools
           using Python and Qt or GTK.
@@ -288,8 +288,8 @@ Item  8:  Implement creation and maintenance of copy pools
 
 Item  9:  Implement new {Client}Run{Before|After}Job feature.
   Date:   26 September 2005
-  Origin: Phil Stracchino <phil.stracchino at speakeasy dot net>
-  Status: 
+  Origin: Phil Stracchino
+  Status: Done. This has been implemented by Eric Bollengier
 
   What:   Some time ago, there was a discussion of RunAfterJob and
           ClientRunAfterJob, and the fact that they do not run after failed
@@ -298,45 +298,63 @@ Item  9:  Implement new {Client}Run{Before|After}Job feature.
           ClientRunAfterFailedJob directive), but to my knowledge these
           were never implemented.
 
+          The current implementation doesn't permit to add new feature easily.
+
           An alternate way of approaching the problem has just occurred to
           me.  Suppose the RunBeforeJob and RunAfterJob directives were
-          expanded in a manner something like this example:
+          expanded in a manner like this example:
 
-          RunBeforeJob {
+          RunScript {
               Command = "/opt/bacula/etc/checkhost %c"
-              RunsOnClient = No
-              RunsAtJobLevels = All       # All, Full, Diff, Inc
-              AbortJobOnError = Yes
+              RunsOnClient = No          # default
+              AbortJobOnError = Yes      # default
+              RunsWhen = Before
           }
-          RunBeforeJob {
+          RunScript {
               Command = c:/bacula/systemstate.bat
               RunsOnClient = yes
-              RunsAtJobLevels = All       # All, Full, Diff, Inc
               AbortJobOnError = No
+              RunsWhen = After
+              RunsOnFailure = yes
           }
 
-          RunAfterJob {
+          RunScript {
               Command = c:/bacula/deletestatefile.bat
-              RunsOnClient = Yes
-              RunsAtJobLevels = All       # All, Full, Diff, Inc
-              RunsOnSuccess = Yes
-              RunsOnFailure = Yes
-          }
-          RunAfterJob {
-              Command = c:/bacula/somethingelse.bat
-              RunsOnClient = Yes
-              RunsAtJobLevels = All
-              RunsOnSuccess = No
-              RunsOnFailure = Yes
-          }
-          RunAfterJob {
-              Command = "/opt/bacula/etc/checkhost -v %c"
-              RunsOnClient = No
-              RunsAtJobLevels = All
-              RunsOnSuccess = No
-              RunsOnFailure = Yes
+              Target = rico-fd
+              RunsWhen = Always
           }
 
+          It's now possible to specify more than 1 command per Job.
+          (you can stop your database and your webserver without a script)
+
+          ex :
+          Job {
+              Name = "Client1"
+              JobDefs = "DefaultJob"
+              Write Bootstrap = "/tmp/bacula/var/bacula/working/Client1.bsr"
+              FileSet = "Minimal"
+
+              RunBeforeJob = "echo test before ; echo test before2"       
+              RunBeforeJob = "echo test before (2nd time)"
+              RunBeforeJob = "echo test before (3rd time)"
+              RunAfterJob = "echo test after"
+              ClientRunAfterJob = "echo test after client"
+
+              RunScript {
+                Command = "echo test RunScript in error"
+                Runsonclient = yes
+                RunsOnSuccess = no
+                RunsOnFailure = yes
+                RunsWhen = After            # never by default
+              }
+              RunScript {
+                Command = "echo test RunScript on success"
+                Runsonclient = yes
+                RunsOnSuccess = yes # default
+                RunsOnFailure = no  # default
+                RunsWhen = After
+              }
+          }
 
   Why:    It would be a significant change to the structure of the
           directives, but allows for a lot more flexibility, including
@@ -344,19 +362,19 @@ Item  9:  Implement new {Client}Run{Before|After}Job feature.
           succeeds, or RunBefore tasks that still allow the job to run even
           if that specific RunBefore fails.
 
-  Notes:  By Kern: I would prefer to have a single new Resource called
-          RunScript. More notes from Phil:
+  Notes:  (More notes from Phil, Kern, David and Eric)
+          I would prefer to have a single new Resource called
+          RunScript.
 
-            RunBeforeJob = yes|no
-            RunAfterJob = yes|no
-            RunsAtJobLevels = All|Full|Diff|Inc
+            RunsWhen = After|Before|Always
+            RunsAtJobLevels = All|Full|Diff|Inc # not yet implemented
 
           The AbortJobOnError, RunsOnSuccess and RunsOnFailure directives
-          could be optional, and possibly RunsWhen as well.
+          could be optional, and possibly RunWhen as well.
 
           AbortJobOnError would be ignored unless RunsWhen was set to Before
-          (or RunsBefore Job set to Yes), and would default to Yes if
-          omitted.  If AbortJobOnError was set to No, failure of the script
+          and would default to Yes if omitted.
+          If AbortJobOnError was set to No, failure of the script
           would still generate a warning.
 
           RunsOnSuccess would be ignored unless RunsWhen was set to After
@@ -367,7 +385,6 @@ Item  9:  Implement new {Client}Run{Before|After}Job feature.
 
           Allow having the before/after status on the script command
           line so that the same script can be used both before/after.
-          David Boyes.
 
 Item 10:  Merge multiple backups (Synthetic Backup or Consolidation).
   Origin: Marc Cousin and Eric Bollengier 
@@ -470,7 +487,8 @@ Item 13:  Multiple threads in file daemon for the same job
 Item 14:  Implement red/black binary tree routines.
   Date:   28 October 2005
   Origin: Kern
-  Status: 
+  Status: Class code is complete. Code needs to be integrated into
+          restore tree code.
 
   What:   Implement a red/black binary tree class. This could 
           then replace the current binary insert/search routines
@@ -482,7 +500,8 @@ Item 14:  Implement red/black binary tree routines.
 Item 15:  Add support for FileSets in user directories  CACHEDIR.TAG
   Origin: Norbert Kiesel <nkiesel at tbdnetworks dot com>
   Date:   21 November 2005
-  Status:
+  Status: (I think this is better done using a Python event that I
+           will implement in version 1.39.x).
 
   What:   CACHDIR.TAG is a proposal for identifying directories which
           should be ignored for archiving/backup.  It works by ignoring
@@ -513,7 +532,7 @@ Item 15:  Add support for FileSets in user directories  CACHEDIR.TAG
 Item 16:  Implement extraction of Win32 BackupWrite data.
   Origin: Thorsten Engel <thorsten.engel at matrix-computer dot com>
   Date:   28 October 2005
-  Status: Assigned to Thorsten. Implemented in current CVS
+  Status: Done. Assigned to Thorsten. Implemented in current CVS
 
   What:   This provides the Bacula File daemon with code that
           can pick apart the stream output that Microsoft writes
@@ -643,7 +662,7 @@ Item 21:  Quick release of FD-SD connection after backup.
 
 Item 22:  Permit multiple Media Types in an Autochanger
   Origin: Kern
-  Status: Now implemented
+  Status: Done. Implemented in 1.38.9 (I think).  
 
   What:   Modify the Storage daemon so that multiple Media Types
           can be specified in an autochanger. This would be somewhat
@@ -719,18 +738,6 @@ Item 25:  Implement huge exclude list support using hashing.
           do a Bacula restore. By excluding the base OS files, the
           backup set will be *much* smaller.
 
-===============================================
-Not in Dec 2005 Vote:
-Item n:   Allow skipping execution of Jobs
-  Date:   29 November 2005
-  Origin: Florian Schnabel <florian.schnabel at docufy dot de>
-  Status:
-
-     What: An easy option to skip a certain job  on a certain date.
-     Why:  You could then easily skip tape backups on holidays.  Especially
-           if you got no autochanger and can only fit one backup on a tape
-           that would be really handy, other jobs could proceed normally
-           and you won't get errors that way.
 
 ============= Empty Feature Request form ===========
 Item n:   One line summary ...
@@ -744,3 +751,51 @@ Item n:   One line summary ...
 
   Notes:  Additional notes or features (omit if not used)
 ============== End Feature Request form ==============
+
+
+===============================================
+Feature requests submitted after cutoff for December 2005 vote
+===============================================
+Item n:   Allow skipping execution of Jobs
+  Date:   29 November 2005
+  Origin: Florian Schnabel <florian.schnabel at docufy dot de>
+  Status:
+
+     What: An easy option to skip a certain job  on a certain date.
+     Why:  You could then easily skip tape backups on holidays.  Especially
+           if you got no autochanger and can only fit one backup on a tape
+           that would be really handy, other jobs could proceed normally
+           and you won't get errors that way.
+
+===================================================
+
+Item n: archive data
+
+  Origin: calvin streeting calvin at absentdream dot com
+  Date:   15/5/2006
+
+  What:   The abilty to archive to media (dvd/cd) in a uncompressd format
+          for dead filing (archiving not backing up)
+
+  Why:  At my works when jobs are finished and moved off of the main file
+        servers (raid based systems) onto a simple linux file server (ide based
+        system) so users can find old information without contacting the IT
+        dept.
+
+        So this data dosn't realy change it only gets added to,
+        But it also needs backing up.  At the moment it takes
+        about 8 hours to back up our servers (working data) so
+        rather than add more time to existing backups i am trying
+        to implement a system where we backup the acrhive data to
+        cd/dvd these disks would only need to be appended to
+        (burn only new/changed files to new disks for off site
+        storage).  basialy understand the differnce between
+        achive data and live data.
+
+  Notes: scan the data and email me when it needs burning divide
+          into predifind chunks keep a recored of what is on what
+          disk make me a label (simple php->mysql=>pdf stuff) i
+          could do this bit ability to save data uncompresed so
+          it can be read in any other system (future proof data)
+          save the catalog with the disk as some kind of menu
+          system

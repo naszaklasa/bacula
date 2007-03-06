@@ -1,5 +1,5 @@
 /*
- *   Version $Id: alist.h,v 1.15.2.4 2006/03/28 16:42:19 kerns Exp $
+ *   Version $Id: alist.h,v 1.15.2.5 2006/06/04 12:24:40 kerns Exp $
  *
  *  Kern Sibbald, June MMIII
  */
@@ -26,7 +26,7 @@
  *
  * Loop var through each member of list
  */
-#ifdef HAVE_GCC
+#ifdef HAVE_TYPEOF
 #define foreach_alist(var, list) \
         for((var)=(typeof(var))(list)->first(); (var); (var)=(typeof(var))(list)->next() )
 #else

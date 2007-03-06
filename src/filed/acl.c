@@ -26,10 +26,10 @@
  *
  *   Written by Preben 'Peppe' Guldberg, December MMIV
  *
- *   Version $Id: acl.c,v 1.10.2.2 2005/11/22 10:50:55 kerns Exp $
+ *   Version $Id: acl.c,v 1.10.2.5 2006/06/08 14:46:46 kerns Exp $
  */
 /*
-   Copyright (C) 2004-2005 Kern Sibbald
+   Copyright (C) 2004-2006 Kern Sibbald
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
@@ -48,41 +48,6 @@
 #include "bacula.h"
 #include "filed.h"
 
-#else
-/*
- * Test program setup 
- *
- * Compile and set up with eg. with eg.
- *
- *    $ cc -DTEST_PROGRAM -DHAVE_SUN_OS -lsec -o acl acl.c
- *    $ ln -s acl aclcp
- *
- * You can then list ACLs with acl and copy them with aclcp.
- *
- * For a list of compiler flags, see the list preceding the big #if below.
- */
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include "acl.h"
-
-#define BACLLEN 65535
-#define pm_strcpy(d,s)     (strncpy(d, s, BACLLEN - 1) == NULL ? -1 : (int)strlen(d))
-#define Dmsg0(n,s)         fprintf(stderr, s)
-#define Dmsg1(n,s,a1)      fprintf(stderr, s, a1)
-#define Dmsg2(n,s,a1,a2)   fprintf(stderr, s, a1, a2)
-
-int aclls(char *fname);
-int aclcp(char *src, char *dst);
-
-struct JCRstruct {
-   char *last_fname;
-   char acl_text[BACLLEN];
-};
-typedef struct JCRstruct JCR;
-JCR jcr;
 #endif
 
 /*
@@ -121,11 +86,13 @@ JCR jcr;
 /* bacl_get() returns the lenght of the string, or -1 on error. */
 int bacl_get(JCR *jcr, int acltype)
 {
+   Jmsg(jcr, M_FATAL, 0, _("ACL support not configured for your machine.\n"));
    return -1;
 }
 
 int bacl_set(JCR *jcr, int acltype)
 {
+   Jmsg(jcr, M_FATAL, 0, _("ACL support not configured for your machine.\n"));
    return -1;
 }
 
@@ -200,6 +167,11 @@ int bacl_get(JCR *jcr, int acltype)
          acl_free(acl_text);
          return len;
       }
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("acl_to_text error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "acl_to_text error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
       acl_free(acl);
 #ifndef HAVE_OSF1_OS          /* BACL_ENOTSUP not defined for OSF1 */
    } else if (errno == BACL_ENOTSUP) {
@@ -224,11 +196,19 @@ int bacl_set(JCR *jcr, int acltype)
       if (acl_delete_def_file(jcr->last_fname) == 0) {
          return 0;
       }
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("acl_delete_def_file error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
       return -1;
    }
 
    acl = acl_from_text(jcr->acl_text);
    if (acl == NULL) {
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("acl_from_text error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "acl_from_text error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
       return -1;
    }
 
@@ -238,12 +218,26 @@ int bacl_set(JCR *jcr, int acltype)
     */
 #ifndef HAVE_FREEBSD_OS
    if (acl_valid(acl) != 0) {
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("ac_valid error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "acl_valid error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
       acl_free(acl);
       return -1;
    }
 #endif
 
-   if (acl_set_file(jcr->last_fname, ostype, acl) != 0) {
+   /*
+    * Restore the ACLs, but don't complain about links which really should
+    * not have attributes, and the file it is linked to may not yet be restored.
+    */
+   if (acl_set_file(jcr->last_fname, ostype, acl) != 0 && jcr->last_type != FT_LNK) {
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("acl_set_file error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "acl_set_file error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
       acl_free(acl);
       return -1;
    }
@@ -273,6 +267,12 @@ int bacl_get(JCR *jcr, int acltype)
          actuallyfree(acl_text);
          return len;
       }
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("acltostr error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "acltostr error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
+      return -1;
    }
    return -1;
 }
@@ -284,12 +284,31 @@ int bacl_set(JCR *jcr, int acltype)
 
    n = strtoacl(jcr->acl_text, 0, NACLENTRIES, acls, ACL_FILEOWNER, ACL_FILEGROUP);
    if (n <= 0) {
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("strtoacl error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "strtoacl error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
       return -1;
    }
    if (strtoacl(jcr->acl_text, n, NACLENTRIES, acls, ACL_FILEOWNER, ACL_FILEGROUP) != n) {
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("strtoacl error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "strtoacl error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
       return -1;
    }
-   if (setacl(jcr->last_fname, n, acls) != 0) {
+   /*
+    * Restore the ACLs, but don't complain about links which really should
+    * not have attributes, and the file it is linked to may not yet be restored.
+    */
+   if (setacl(jcr->last_fname, n, acls) != 0 && jcr->last_type != FT_LNK) {
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("setacl error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "setacl error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
       return -1;
    }
    return 0;
@@ -321,6 +340,11 @@ int bacl_get(JCR *jcr, int acltype)
          free(acls);
          return len;
       }
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("acltotext error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "acltotext error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
    }
    free(acls);
    return -1;
@@ -333,9 +357,23 @@ int bacl_set(JCR *jcr, int acltype)
 
    acls = aclfromtext(jcr->acl_text, &n);
    if (!acls) {
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("aclfromtext error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "aclfromtext error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
       return -1;
    }
-   if (acl(jcr->last_fname, SETACL, n, acls) == -1) {
+   /*
+    * Restore the ACLs, but don't complain about links which really should
+    * not have attributes, and the file it is linked to may not yet be restored.
+    */
+   if (acl(jcr->last_fname, SETACL, n, acls) == -1 && jcr->last_type != FT_LNK) {
+      berrno be;
+      Jmsg2(jcr, M_ERROR, 0, _("acl(SETACL) error on file \"%s\": ERR=%s\n"),
+         jcr->last_fname, be.strerror());
+      Dmsg3(100, "acl(SETACL) error acl=%s file=%s ERR=%s\n",  
+         jcr->acl_text, jcr->last_fname, be.strerror());
       actuallyfree(acls);
       return -1;
    }
@@ -347,6 +385,42 @@ int bacl_set(JCR *jcr, int acltype)
 
 
 #ifdef TEST_PROGRAM
+
+/*
+ * Test program setup 
+ *
+ * Compile and set up with eg. with eg.
+ *
+ *    $ cc -DTEST_PROGRAM -DHAVE_SUN_OS -lsec -o acl acl.c
+ *    $ ln -s acl aclcp
+ *
+ * You can then list ACLs with acl and copy them with aclcp.
+ *
+ * For a list of compiler flags, see the list preceding the big #if below.
+ */
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include "acl.h"
+
+#define BACLLEN 65535
+#define pm_strcpy(d,s)     (strncpy(d, s, BACLLEN - 1) == NULL ? -1 : (int)strlen(d))
+#define Dmsg0(n,s)         fprintf(stderr, s)
+#define Dmsg1(n,s,a1)      fprintf(stderr, s, a1)
+#define Dmsg2(n,s,a1,a2)   fprintf(stderr, s, a1, a2)
+
+int aclls(char *fname);
+int aclcp(char *src, char *dst);
+
+struct JCRstruct {
+   char *last_fname;
+   char acl_text[BACLLEN];
+};
+typedef struct JCRstruct JCR;
+JCR jcr;
+
 int main(int argc, char **argv)
 {
    char *prgname;

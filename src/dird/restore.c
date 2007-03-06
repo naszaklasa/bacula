@@ -15,7 +15,7 @@
  *       to do the restore.
  *     Update the DB according to what files where restored????
  *
- *   Version $Id: restore.c,v 1.56.2.4 2006/03/16 18:16:44 kerns Exp $
+ *   Version $Id: restore.c,v 1.56.2.5 2006/06/04 12:24:39 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -98,6 +98,9 @@ bool do_restore(JCR *jcr)
       restore_cleanup(jcr, JS_ErrorTerminated);
       return false;
    }
+   if (!bnet_fsend(jcr->store_bsock, "run")) {
+      return false;
+   }
    /*
     * Now start a Storage daemon message thread
     */
@@ -107,9 +110,6 @@ bool do_restore(JCR *jcr)
    }
    Dmsg0(50, "Storage daemon connection OK\n");
 
-   if (!bnet_fsend(jcr->store_bsock, "run")) {
-      return false;
-   }
 
    /*
     * Start conversation with File daemon

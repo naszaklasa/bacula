@@ -16486,7 +16486,12 @@ echo "$as_me: error: \"You can configure for only one database.\"" >&2;}
    { (exit 1); exit 1; }; };
       fi
       if test "$withval" = "yes"; then
-          if test -f /usr/local/include/libpq-fe.h; then
+          PG_CONFIG=`which pg_config`
+          if test -n "$PG_CONFIG";then
+              POSTGRESQL_INCDIR=`"$PG_CONFIG" --includedir`
+              POSTGRESQL_LIBDIR=`"$PG_CONFIG" --libdir`
+              POSTGRESQL_BINDIR=`"$PG_CONFIG" --bindir`
+          elif test -f /usr/local/include/libpq-fe.h; then
               POSTGRESQL_INCDIR=/usr/local/include
               POSTGRESQL_LIBDIR=/usr/local/lib
               POSTGRESQL_BINDIR=/usr/local/bin
@@ -20664,6 +20669,65 @@ test $ba_cv_bigendian = yes && cat >>confdefs.h <<\_ACEOF
 #define HAVE_BIGENDIAN 1
 _ACEOF
 
+
+ac_ext=cc
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+echo "$as_me:$LINENO: checking for typeof" >&5
+echo $ECHO_N "checking for typeof... $ECHO_C" >&6
+if test "${ba_cv_have_typeof+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test "$cross_compiling" = yes; then
+  ba_cv_have_typeof=no
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+main(){char *a = 0; a = (typeof a)a;}
+_ACEOF
+rm -f conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ba_cv_have_typeof=yes
+else
+  echo "$as_me: program exited with status $ac_status" >&5
+echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+( exit $ac_status )
+ba_cv_have_typeof=no
+fi
+rm -f core *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+fi
+fi
+echo "$as_me:$LINENO: result: $ba_cv_have_typeof" >&5
+echo "${ECHO_T}$ba_cv_have_typeof" >&6
+test $ba_cv_have_typeof = yes &&
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_TYPEOF 1
+_ACEOF
+
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 echo "$as_me:$LINENO: checking for an ANSI C-conforming const" >&5
@@ -29768,7 +29832,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ac_config_files="$ac_config_files autoconf/Make.common Makefile scripts/startmysql scripts/stopmysql scripts/btraceback scripts/startit scripts/stopit scripts/bconsole scripts/gconsole scripts/bacula scripts/bacula-ctl-dir scripts/bacula-ctl-fd scripts/bacula-ctl-sd scripts/devel_bacula scripts/Makefile scripts/logrotate scripts/bacula.desktop.gnome1 scripts/bacula.desktop.gnome2 scripts/bacula.desktop.gnome1.consolehelper scripts/bacula.desktop.gnome2.consolehelper scripts/bacula.desktop.gnome1.xsu scripts/bacula.desktop.gnome2.xsu scripts/gnome-console.console_apps scripts/mtx-changer scripts/disk-changer scripts/dvd-handler scripts/bacula-tray-monitor.desktop scripts/logwatch/Makefile scripts/logwatch/logfile.bacula.conf src/Makefile src/host.h src/console/Makefile src/console/bconsole.conf src/gnome2-console/Makefile src/gnome2-console/gnome-console.conf src/wx-console/Makefile src/wx-console/wx-console.conf src/tray-monitor/Makefile src/tray-monitor/tray-monitor.conf src/dird/Makefile src/dird/bacula-dir.conf src/lib/Makefile src/stored/Makefile src/stored/bacula-sd.conf src/filed/Makefile src/filed/bacula-fd.conf src/filed/win32/Makefile src/cats/Makefile src/cats/make_catalog_backup src/cats/delete_catalog_backup src/cats/create_postgresql_database src/cats/update_postgresql_tables src/cats/make_postgresql_tables src/cats/grant_postgresql_privileges src/cats/drop_postgresql_tables src/cats/drop_postgresql_database src/cats/create_mysql_database src/cats/update_mysql_tables src/cats/make_mysql_tables src/cats/grant_mysql_privileges src/cats/drop_mysql_tables src/cats/drop_mysql_database src/cats/create_sqlite_database src/cats/update_sqlite_tables src/cats/make_sqlite_tables src/cats/grant_sqlite_privileges src/cats/drop_sqlite_tables src/cats/drop_sqlite_database src/cats/create_sqlite3_database src/cats/update_sqlite3_tables src/cats/make_sqlite3_tables src/cats/grant_sqlite3_privileges src/cats/drop_sqlite3_tables src/cats/drop_sqlite3_database src/cats/sqlite src/cats/mysql src/cats/create_bdb_database src/cats/update_bdb_tables src/cats/make_bdb_tables src/cats/grant_bdb_privileges src/cats/drop_bdb_tables src/cats/drop_bdb_database src/cats/create_bacula_database src/cats/update_bacula_tables src/cats/grant_bacula_privileges src/cats/make_bacula_tables src/cats/drop_bacula_tables src/cats/drop_bacula_database src/findlib/Makefile src/tools/Makefile src/win32/winbacula.nsi src/win32/baculafd/bacula-fd.conf src/win32/Makefile src/win32/console/bconsole.conf src/win32/wx-console/wx-console.conf src/win32/pebuilder/Makefile po/Makefile.in $PFILES"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  ac_config_files="$ac_config_files autoconf/Make.common Makefile scripts/startmysql scripts/stopmysql scripts/btraceback scripts/startit scripts/stopit scripts/bconsole scripts/gconsole scripts/bacula scripts/bacula-ctl-dir scripts/bacula-ctl-fd scripts/bacula-ctl-sd scripts/devel_bacula scripts/Makefile scripts/logrotate scripts/bacula.desktop.gnome1 scripts/bacula.desktop.gnome2 scripts/bacula.desktop.gnome1.consolehelper scripts/bacula.desktop.gnome2.consolehelper scripts/bacula.desktop.gnome1.xsu scripts/bacula.desktop.gnome2.xsu scripts/gnome-console.console_apps scripts/mtx-changer scripts/disk-changer scripts/dvd-handler scripts/bacula-tray-monitor.desktop scripts/logwatch/Makefile scripts/logwatch/logfile.bacula.conf scripts/wxconsole.console_apps scripts/wxconsole.desktop.consolehelper scripts/wxconsole.desktop.xsu src/Makefile src/host.h src/console/Makefile src/console/bconsole.conf src/gnome2-console/Makefile src/gnome2-console/gnome-console.conf src/wx-console/Makefile src/wx-console/wx-console.conf src/tray-monitor/Makefile src/tray-monitor/tray-monitor.conf src/dird/Makefile src/dird/bacula-dir.conf src/lib/Makefile src/stored/Makefile src/stored/bacula-sd.conf src/filed/Makefile src/filed/bacula-fd.conf src/filed/win32/Makefile src/cats/Makefile src/cats/make_catalog_backup src/cats/delete_catalog_backup src/cats/create_postgresql_database src/cats/update_postgresql_tables src/cats/make_postgresql_tables src/cats/grant_postgresql_privileges src/cats/drop_postgresql_tables src/cats/drop_postgresql_database src/cats/create_mysql_database src/cats/update_mysql_tables src/cats/make_mysql_tables src/cats/grant_mysql_privileges src/cats/drop_mysql_tables src/cats/drop_mysql_database src/cats/create_sqlite_database src/cats/update_sqlite_tables src/cats/make_sqlite_tables src/cats/grant_sqlite_privileges src/cats/drop_sqlite_tables src/cats/drop_sqlite_database src/cats/create_sqlite3_database src/cats/update_sqlite3_tables src/cats/make_sqlite3_tables src/cats/grant_sqlite3_privileges src/cats/drop_sqlite3_tables src/cats/drop_sqlite3_database src/cats/sqlite src/cats/mysql src/cats/create_bdb_database src/cats/update_bdb_tables src/cats/make_bdb_tables src/cats/grant_bdb_privileges src/cats/drop_bdb_tables src/cats/drop_bdb_database src/cats/create_bacula_database src/cats/update_bacula_tables src/cats/grant_bacula_privileges src/cats/make_bacula_tables src/cats/drop_bacula_tables src/cats/drop_bacula_database src/findlib/Makefile src/tools/Makefile src/win32/winbacula.nsi src/win32/baculafd/bacula-fd.conf src/win32/Makefile src/win32/console/bconsole.conf src/win32/wx-console/wx-console.conf src/win32/pebuilder/Makefile po/Makefile.in $PFILES"
           ac_config_commands="$ac_config_commands default"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -30340,6 +30404,9 @@ do
   "scripts/bacula-tray-monitor.desktop" ) CONFIG_FILES="$CONFIG_FILES scripts/bacula-tray-monitor.desktop" ;;
   "scripts/logwatch/Makefile" ) CONFIG_FILES="$CONFIG_FILES scripts/logwatch/Makefile" ;;
   "scripts/logwatch/logfile.bacula.conf" ) CONFIG_FILES="$CONFIG_FILES scripts/logwatch/logfile.bacula.conf" ;;
+  "scripts/wxconsole.console_apps" ) CONFIG_FILES="$CONFIG_FILES scripts/wxconsole.console_apps" ;;
+  "scripts/wxconsole.desktop.consolehelper" ) CONFIG_FILES="$CONFIG_FILES scripts/wxconsole.desktop.consolehelper" ;;
+  "scripts/wxconsole.desktop.xsu" ) CONFIG_FILES="$CONFIG_FILES scripts/wxconsole.desktop.xsu" ;;
   "src/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
   "src/host.h" ) CONFIG_FILES="$CONFIG_FILES src/host.h" ;;
   "src/console/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/console/Makefile" ;;

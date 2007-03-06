@@ -11,7 +11,7 @@
  *     When the File daemon sends the attributes, compare them to
  *       what is in the DB.
  *
- *   Version $Id: verify.c,v 1.70.2.4 2006/04/11 08:05:18 kerns Exp $
+ *   Version $Id: verify.c,v 1.70.2.5 2006/06/04 12:24:40 kerns Exp $
  */
 /*
    Copyright (C) 2000-2006 Kern Sibbald
@@ -194,6 +194,9 @@ bool do_verify(JCR *jcr)
       if (!start_storage_daemon_job(jcr, jcr->storage, NULL)) {
          return false;
       }
+      if (!bnet_fsend(jcr->store_bsock, "run")) {
+         return false;
+      }
       /*
        * Now start a Storage daemon message thread
        */
@@ -202,9 +205,6 @@ bool do_verify(JCR *jcr)
       }
       Dmsg0(50, "Storage daemon connection OK\n");
 
-      if (!bnet_fsend(jcr->store_bsock, "run")) {
-         return false;
-      }
    }
    /*
     * OK, now connect to the File daemon
@@ -730,7 +730,7 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
    bsnprintf(buf, sizeof(buf),
 "SELECT Path.Path,Filename.Name FROM File,Path,Filename "
 "WHERE File.JobId=%d "
-"AND File.MarkeId!=%d AND File.PathId=Path.PathId "
+"AND File.MarkId!=%d AND File.PathId=Path.PathId "
 "AND File.FilenameId=Filename.FilenameId",
       JobId, jcr->JobId);
    /* missing_handler is called for each file found */

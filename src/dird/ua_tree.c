@@ -6,7 +6,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_tree.c,v 1.39.2.2 2006/05/02 14:48:16 kerns Exp $
+ *   Version $Id: ua_tree.c,v 1.39.2.3 2006/06/04 12:24:40 kerns Exp $
  */
 /*
    Copyright (C) 2002-2005 Kern Sibbald
@@ -484,7 +484,7 @@ static void ls_output(char *buf, const char *fname, const char *tag,
       p += n;
       n = sprintf(p, "%s,", edit_uint64(statp->st_size, ec1));
       p += n;
-      p = encode_time(statp->st_ctime, p);
+      p = encode_time(statp->st_mtime, p);
       *p++ = ',';
       *p++ = *tag;
       *p++ = ',';
@@ -496,11 +496,7 @@ static void ls_output(char *buf, const char *fname, const char *tag,
       p += n;
       n = sprintf(p, "%10.10s  ", edit_uint64(statp->st_size, ec1));
       p += n;
-      if (statp->st_ctime > statp->st_mtime) {
-         time = statp->st_ctime;
-      } else {
-         time = statp->st_mtime;
-      }
+      time = statp->st_mtime;
       /* Display most recent time */
       p = encode_time(time, p);
       *p++ = ' ';

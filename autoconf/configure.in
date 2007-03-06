@@ -1240,6 +1240,18 @@ AC_CACHE_CHECK([for bigendian], ba_cv_bigendian,
     [ba_cv_bigendian=no])])
 test $ba_cv_bigendian = yes && AC_DEFINE(HAVE_BIGENDIAN)
 
+dnl# --------------------------------------------------------------------------
+dnl# Check for typeof()
+dnl# --------------------------------------------------------------------------
+AC_LANG_PUSH(C++)
+AC_CACHE_CHECK(for typeof, ba_cv_have_typeof,
+  [AC_TRY_RUN(
+    [main(){char *a = 0; a = (typeof a)a;}],
+    [ba_cv_have_typeof=yes],
+    [ba_cv_have_typeof=no],
+    [ba_cv_have_typeof=no])])
+test $ba_cv_have_typeof = yes && AC_DEFINE([HAVE_TYPEOF], 1, [Defind to 1 if compiler has typeof])
+AC_LANG_POP(C++)
 
 AC_C_CONST
 
@@ -1924,6 +1936,9 @@ AC_OUTPUT([autoconf/Make.common \
 	   scripts/bacula-tray-monitor.desktop \
 	   scripts/logwatch/Makefile \
 	   scripts/logwatch/logfile.bacula.conf \
+	   scripts/wxconsole.console_apps \
+	   scripts/wxconsole.desktop.consolehelper \
+	   scripts/wxconsole.desktop.xsu \
 	   src/Makefile \
 	   src/host.h \
 	   src/console/Makefile \
