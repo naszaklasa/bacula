@@ -81,9 +81,6 @@ do_stop()
 
 ########################################################################
 
-# Sanity: avoid breakage with NPTL/2.6 kernels
-export LD_ASSUME_KERNEL=2.4.19
-
 case "$1" in
   start)
 	if [ -f /etc/bacula/do_not_run ]; then
