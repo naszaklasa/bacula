@@ -1,3 +1,35 @@
+bacula (1.38.9-4) unstable; urgency=low
+
+  * Sanitize multi-variant deps with virtual packages
+
+  * Move bwild and bregex into bacula-director-common instead of all
+    the bacula-director-* packages.  Change bacula-director-common
+    from arch all to arch any.
+
+  * Changed all URLs from html-manual to rel-manual, and forwarded
+    this patch upstream.  Closes: #363151.
+
+  * Fix bacula-director-sqlite postinst to properly handle the upgrade
+    to 1.38.
+
+  * Added missing scripts disk-changer and dvd-handler to bacula-sd.
+
+  * Removed cruft in debian/additions and debian/patches.
+
+  * Revert changes to:
+    + grant_postgresql_privileges.in (no longer necessary)
+    + gnome2-console/console.c (should respect upstream syntax choices)
+    + update_mysql_tables_6_to_7, 7_to_8 (irrelevant)
+    + update_sqlite_tables_7_to_8 (gratuitous)
+
+  * Thanks to new support in dbconfig-common 1.8.13, the encoding for
+    the PostgreSQL database can now be specified.  PostgreSQL encoding
+    should therefore be fixed.
+
+  * Removed obsolete per-arch build code from rules.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 12 May 2006 08:50:19 -0500
+
 bacula (1.38.9-3) unstable; urgency=low
 
   * Clean up Sqlite3 postinst

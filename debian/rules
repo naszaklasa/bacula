@@ -27,8 +27,7 @@ ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
 endif
 
 
-VARIANTS := $(shell grep '^Package: bacula-director-' debian/control \
-	| sed 's/Package: bacula-director-//' | grep -v 'common' )
+VARIANTS := sqlite sqlite3 pgsql mysql
 
 ######################################################################
 
@@ -57,8 +56,6 @@ CONF_sqlite	= --with-sqlite --without-mysql --without-postgresql --without-sqlit
 CONF_sqlite3	= --with-sqlite3 --without-mysql --without-postgresql --without-sqlite $(CONF_common)
 CONF_mysql	= --with-mysql --without-sqlite --without-postgresql --without-sqlite3 $(CONF_common)
 CONF_pgsql	= --with-postgresql --without-sqlite --without-mysql --without-sqlite3 $(CONF_common)
-
-export FLAVORED_BIN_RE = '^$$$||/bacula-dir$$$||/dbcheck$$$||/bscan$$$||/bcopy$$$'
 
 ###########################################################################
 
@@ -109,54 +106,6 @@ build-stamp-%: configure-stamp-%
 build-arch: build-stamp
 build-stamp: $(foreach v,$(VARIANTS),build-stamp-$(v))
 	touch $@
-
-#build-arch-flavor:	build-arch-flavor-stamp
-#build-arch-flavor-stamp:
-#	@for subdir in cats dird stored tools; do \
-#		(cd src/$$subdir; cp Makefile Makefile.orig ); \
-#	done
-#
-#	mv src/dird/bacula-dir src/dird/bacula-dir.orig
-#	mv src/tools/dbcheck src/tools/dbcheck.orig
-#	mv src/stored/bscan src/stored/bscan.orig
-#	mv src/stored/bcopy src/stored/bcopy.orig
-#
-#	@for pkg in ${VARIANTS}; do \
-#		eval FLAGS=$$`echo FLAGS_$$pkg`; \
-#		eval LIBS=$$`echo LIBS_$$pkg`; \
-#		echo ; echo "=== Building the $$pkg binaries: FLAGS=$$FLAGS $$LIBS" ===; \
-#		$(MAKE) -C src/cats clean depend all $$FLAGS; \
-#		for subdir in cats dird stored tools; do \
-#			(cd src/$$subdir && cat Makefile.orig | \
-#				sed "s@^DB_LIBS.*@DB_LIBS = $$LIBS@" > Makefile ; \
-#			); \
-#			$(MAKE) -C src/$$subdir clean depend all $$FLAGS ; \
-#		done; \
-#		echo "+ Renaming flavored binaries..."; \
-#		for file in `find src -type f -exec file {} \; | \
-#			grep 'ELF.*executable.*dynamically linked' | sed 's@:.*@@'`; do \
-#				if [ -n "`echo $$file | grep -E $${FLAVORED_BIN_RE}`" ]; \
-#				then echo " - $$file -> $$file.$$pkg"; mv $$file $$file.$$pkg; fi; \
-#		done; \
-#	done
-#
-#	# Clean up after build -- reported by ezanard@debian.org
-#	# Cleanup and recompile "neutral" bscan so that install works
-#	$(MAKE) -C src/cats clean depend all
-#	$(MAKE) -C src/stored bscan bcopy
-#
-#	@echo "* Restoring original(neutral) executables... "
-#	mv src/dird/bacula-dir.orig src/dird/bacula-dir
-#	mv src/tools/dbcheck.orig src/tools/dbcheck
-#	mv src/stored/bscan.orig src/stored/bscan
-#	mv src/stored/bcopy.orig src/stored/bcopy
-#	@echo "Done"
-#
-#	@for subdir in cats dird stored tools; do \
-#		(cd src/$$subdir; cp Makefile.orig Makefile); \
-#	done
-#
-#	touch $@
 
 build-indep: build-indep-stamp
 build-indep-stamp:
@@ -321,7 +270,6 @@ patch-stamp:
 	chmod 755 debian/patches/fix_config debian/patches/fix_director \
 		debian/patches/extract_here
 	chmod 755 debian/additions/bconsole
-	chmod 755 debian/additions/{start,stop}mysql 
 
 	touch patch-stamp
 

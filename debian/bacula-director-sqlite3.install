@@ -1,7 +1,5 @@
 debian/tmp-install-sqlite3/etc/bacula/scripts/make_sqlite*tables usr/share/bacula-director
 debian/tmp-install-sqlite3/etc/bacula/scripts/update_sqlite* usr/share/bacula-director
-debian/tmp-install-sqlite3/usr/sbin/bwild                        usr/sbin
-debian/tmp-install-sqlite3/usr/sbin/bregex                        usr/sbin
 debian/tmp-install-sqlite3/etc/bacula/scripts/*catalog_backup etc/bacula/scripts
 debian/tmp-install-sqlite3/usr/sbin/bacula-dir                  usr/sbin
 debian/tmp-install-sqlite3/usr/sbin/dbcheck                  usr/sbin

@@ -1,7 +1,5 @@
 debian/tmp-install-mysql/etc/bacula/scripts/make_mysql_tables usr/share/bacula-director
 debian/tmp-install-mysql/etc/bacula/scripts/update_mysql* usr/share/bacula-director
-debian/tmp-install-mysql/usr/sbin/bwild                        usr/sbin
-debian/tmp-install-mysql/usr/sbin/bregex                        usr/sbin
 debian/tmp-install-mysql/etc/bacula/scripts/*catalog_backup etc/bacula/scripts
 debian/tmp-install-mysql/usr/sbin/bacula-dir                  usr/sbin
 debian/tmp-install-mysql/usr/sbin/dbcheck                  usr/sbin

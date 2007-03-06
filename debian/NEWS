@@ -9,8 +9,11 @@ bacula (1.38.9-3) unstable; urgency=low
 
    Known bugs:
     * The PostgreSQL director packages currently are not properly
-      setting the encoding or date format when creating a new
+      setting the date format when creating a new
       database.  Upgrades are fine.  This is due to limitations
       in dbconfig-common, but those are being worked on.
+
+      Workaround:
+       for date format: run ALTER DATABASE bacula SET datestyle TO'ISO, YMD';
 
  -- John Goerzen <jgoerzen@complete.org>  Thu, 11 May 2006 06:46:55 -0500

@@ -30,6 +30,7 @@ MAKE_SQL_TABLES=/usr/share/bacula-director/make_sqlite_tables
 UPGRADE_SQL_DIR=/usr/share/bacula-director
 UPGRADE_TABLES1=update_sqlite_tables_6_to_7
 UPGRADE_TABLES2=update_sqlite_tables_7_to_8
+UPGRADE_TABLES3=update_sqlite_tables_8_to_9
 LOGDIR=/var/log/bacula
 POSTINST_COMMON=/usr/share/bacula-director/postinst-common
 DEFCONFIG=/usr/share/bacula-common/defconfig
@@ -69,6 +70,15 @@ case "$1" in
 			# On upgrade, unconditionally change Catalog 
 			echo -n "Upgrading SQLite tables to v8 format..."
 			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES2 >> $LOGDIR/upgrade.log  2>&1
+			then echo "Ok."
+			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
+			fi
+			fi
+
+			if dpkg --compare-versions "$2" lt '1.38.0' ; then
+			# On upgrade, unconditionally change Catalog 
+			echo -n "Upgrading SQLite tables to v9 format..."
+			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES3 >> $LOGDIR/upgrade.log  2>&1
 			then echo "Ok."
 			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
 			fi

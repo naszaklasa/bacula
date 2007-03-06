@@ -5,13 +5,9 @@
 USER=bacula
 bindir=@SQL_BINDIR@
 
-if test -n "$DBUSER"; then USER=$DBUSER; fi
-
-
-
 if $bindir/psql -f - -d bacula $* <<END-OF-DATA
 
-create user ${USER} password '$DBPASS';
+create user ${USER};
 
 -- for tables
 grant all on unsavedfiles to ${USER};

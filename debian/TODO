@@ -2,16 +2,7 @@
 
 * Verify upgrades work as expected
 
-* Bacula-SD
-	- Offer menu "which 'flavor' are you running?"
-	- Use update-alternatives to set a link from /usr/sbin/bscan
-	to /usr/lib/bacula/bscan.$flavor
-
-* look at installed bins and make sure we've got 'em all
-* Ditto for scripts
-
-* Give encoding on Debian DB create pgsql
-  Set datestyle on debian db create pgsql
+* Set datestyle on debian db create pgsql
 
 * Maybe:
   
@@ -25,4 +16,6 @@
 
 * Need a MySQL preinst?
 
+* check backup_catalog scripts & make sure they're getting installed
 
+* Sanitize consoles

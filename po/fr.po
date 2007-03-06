@@ -13368,21 +13368,21 @@ msgstr "Impossible d'ouvrir la base de données « %s ».\n"
 msgid ""
 "Director authorization problem.\n"
 "Most likely the passwords do not agree.\n"
-"Please see http://www.bacula.org/html-manual/faq.html#AuthorizationErrors "
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors "
 "for help.\n"
 msgstr ""
 
 #: src/tray-monitor/authenticate.c:127
 msgid ""
 "Director and Storage daemon passwords or names not the same.\n"
-"Please see http://www.bacula.org/html-manual/faq.html#AuthorizationErrors "
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors "
 "for help.\n"
 msgstr ""
 
 #: src/tray-monitor/authenticate.c:172
 msgid ""
 "Director and File daemon passwords or names not the same.\n"
-"Please see http://www.bacula.org/html-manual/faq.html#AuthorizationErrors "
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors "
 "for help.\n"
 msgstr ""
 

@@ -41,7 +41,7 @@ Using GNU autoconfig
 
 
         See the README for a few additional details and the online manual
-        for all the gory details:  http://www.bacula.org/html-manual
+        for all the gory details:  http://www.bacula.org/rel-manual
 
   3.    Carefully review the output from ./configure.  If it is not
         what you want, re-run the ./configure.  Often ./configure "caches"
