@@ -52,7 +52,7 @@ FLAGS_pgsql	= DEBUG=-DHAVE_POSTGRESQL SQL_INC=-I$(shell pg_config --includedir)
 
 LIBS_mysql	= -L/usr/lib/mysql -lmysqlclient -lz -ldl -lnsl
 LIBS_sqlite	= -L/usr/lib -lsqlite -ldl -lresolv -lnsl
-LIBS_pgsql	= -L/usr/lib -lpq -lcrypt -lkrb5 -lk5crypto -lkrb5support -lcom_err -lresolv -ldl -lz -lnsl
+LIBS_pgsql	= -L/usr/lib -lpq -lcrypt -lkrb5 -lk5crypto -lcom_err -lresolv -ldl -lz -lnsl
 
 
 export FLAGS_mysql LIBS_mysql

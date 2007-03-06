@@ -1,3 +1,9 @@
+bacula (1.38.9-0.1) unstable; urgency=low
+
+  * New upstream release: 1.38.9, which is mostly a bugfix release.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon,  8 May 2006 10:50:45 -0500
+
 bacula (1.38.8-0.1) unstable; urgency=low
 
   * Non-maintainer upload by John Goerzen.
@@ -66,7 +72,7 @@ bacula (1.38.8-0.1) unstable; urgency=low
     - created bacula-traymonitor package (Closes: #281957)
 
   * Localization
-    - se_SV (tack s� mycket, Daniel) (Closes: #339084)
+    - se_SV (tack så mycket, Daniel) (Closes: #339084)
 
   * Christoph Haas added to "Uploaders"
 
@@ -454,7 +460,7 @@ bacula (1.32f-4-3) unstable; urgency=low
 
   * Package sponsored by Roberto Lumbreras <rover@debian.org>
 
- -- José Luis Tallón <jltallon@adv-solutions.net>  Sun, 14 Mar 2004 01:18:31 +0100
+ -- JosÃ© Luis TallÃ³n <jltallon@adv-solutions.net>  Sun, 14 Mar 2004 01:18:31 +0100
 
 bacula (1.32f-4-2) unstable; urgency=low
 
@@ -465,7 +471,7 @@ bacula (1.32f-4-2) unstable; urgency=low
 
   * Package sponsored by Roberto Lumbreras <rover@debian.org>
 
- -- José Luis Tallón <jltallon@adv-solutions.net>  Sat, 13 Mar 2004 21:39:33 +0100
+ -- JosÃ© Luis TallÃ³n <jltallon@adv-solutions.net>  Sat, 13 Mar 2004 21:39:33 +0100
 
 bacula (1.32f-4-1) unstable; urgency=low
 
@@ -557,4 +563,4 @@ bacula (1.32f-4-1) unstable; urgency=low
 
           * Initial Packaging: 12 binary packages built
 
- -- José Luis Tallón <jltallon@adv-solutions.net>  Wed, 18 Feb 2004 00:04:11 +0100
+ -- JosÃ© Luis TallÃ³n <jltallon@adv-solutions.net>  Wed, 18 Feb 2004 00:04:11 +0100
