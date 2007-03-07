@@ -6,6 +6,8 @@ Project                     Developer
 =======                     =========                         
 
 Document:
+- !!! Cannot restore two jobs a the same time that were
+  written simultaneously unless they were totally spooled.
 - Document cleaning up the spool files:
   db, pid, state, bsr, mail, conmsg, spool
 - Document the multiple-drive-changer.txt script.
@@ -41,6 +43,34 @@ Document:
  
 
 Priority:
+- Add Catalog = to Pool resource so that pools will exist
+  in only one catalog -- currently Pools are "global".
+- Look at sg_logs -a /dev/sg0 for getting soft errors.
+- btape "test" command with Offline on Unmount = yes
+
+   This test is essential to Bacula.
+
+   I'm going to write one record  in file 0,
+   two records in file 1,
+   and three records in file 2
+
+   02-Feb 11:00 btape: ABORTING due to ERROR in dev.c:715
+   dev.c:714 Bad call to rewind. Device "LTO" (/dev/nst0) not open
+   02-Feb 11:00 btape: Fatal Error because: Bacula interrupted by signal 11: Segmentation violation
+   Kaboom! btape, btape got signal 11. Attempting traceback.
+
+- Why the heck doesn't bacula drop root priviledges before connecting to
+  the DB?
+- Ensure that moving a purged Volume in ua_purge.c to the RecyclePool
+  does the right thing.
+- Why doesn't @"xxx abc" work in a conf file?
+- Figure out some way to "automatically" backup conf changes.
+- Look at using posix_fadvise(2) for backups -- see bug #751.
+  Possibly add the code at findlib/bfile.c:795
+- Add the OS version back to the Win32 client info.
+- Restarted jobs have a NULL in the from field.
+- Modify SD status command to indicate when the SD is writing
+  to a DVD (the device is not open -- see bug #732).
 - Look at the possibility of adding "SET NAMES UTF8" for MySQL,
   and possibly changing the blobs into varchar.
 - Check if gnome-console works with TLS.
@@ -69,6 +99,9 @@ Projects:
   - Despool attributes in separate thread
   - Database speedups
   - Embedded MySQL
+  - Check why restore repeatedly sends Rechdrs between
+    each data chunk -- according to James Harper 9Jan07.
+  - Building the in memory restore tree is slow.
 - Features
   - Better scheduling  
   - Full at least once a month, ...
@@ -114,6 +147,14 @@ For next release:
   .move transfer device=xxx fromslot=yyy toslot=zzz
 
 Low priority:
+- Article: http://www.heise.de/open/news/meldung/83231
+- Article: http://www.golem.de/0701/49756.html
+- Article: http://lwn.net/Articles/209809/
+- Article: http://www.onlamp.com/pub/a/onlamp/2004/01/09/bacula.html
+- Article: http://www.linuxdevcenter.com/pub/a/linux/2005/04/07/bacula.html
+- Article: http://www.osreviews.net/reviews/admin/bacula
+- Article: http://www.debianhelp.co.uk/baculaweb.htm
+- Article: 
 - It appears to me that you have run into some sort of race
   condition where two threads want to use the same Volume and they
   were both given access.  Normally that is no problem.  However,

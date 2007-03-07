@@ -2,7 +2,7 @@
 
         Definitions for the smart memory allocator
 
-     Version $Id: smartall.h,v 1.17 2006/11/21 13:20:11 kerns Exp $
+     Version $Id: smartall.h 3668 2006-11-21 13:20:11Z kerns $
 
 */
 /*

@@ -5,7 +5,7 @@
  *              Kern Sibbald, April MMI
  *                added BB02 format October MMII
  *
- *   Version $Id: record.c,v 1.43 2006/12/13 19:42:12 kerns Exp $
+ *   Version $Id: record.c 3798 2006-12-13 19:42:12Z kerns $
  *
  */
 /*

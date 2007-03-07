@@ -3,7 +3,7 @@
  *
  *     Kern Sibbald, November MM
  *
- *   Version $Id: read.c,v 1.53 2006/12/14 11:41:02 kerns Exp $
+ *   Version $Id: read.c 3802 2006-12-14 11:41:02Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

@@ -31,8 +31,8 @@ OBJCPY := $(MINGW_BIN)/mingw32-objcopy
 NSIS_DIR := $(DEPKGS)/nsis
 STAB2CV := $(DEPKGS)/tools/bin/stab2cv
 
-CFLAGS := -Wall -mno-cygwin -m32 -mwin32 -mthreads -O3 -fno-strict-aliasing
-LDFLAGS := -Wall -mno-cygwin -Wl,--disable-auto-import
+CFLAGS := -g -Wall -mno-cygwin -m32 -mwin32 -mthreads -O3 -fno-strict-aliasing
+LDFLAGS := -g -Wall -mno-cygwin -Wl,--disable-auto-import
 
 INCLUDE_DDK := -I$(MINGW_INCLUDE)/ddk
 INCLUDE_BACULA := -I../.. -I../compat

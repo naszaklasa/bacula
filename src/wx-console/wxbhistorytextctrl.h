@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, July 2004
  *
- *    Version $Id: wxbhistorytextctrl.h,v 1.8 2006/11/22 14:26:40 kerns Exp $
+ *    Version $Id: wxbhistorytextctrl.h 3685 2006-11-22 14:26:40Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

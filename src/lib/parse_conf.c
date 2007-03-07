@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.c,v 1.90.4.1 2007/01/11 20:15:48 kerns Exp $
+ *   Version $Id: parse_conf.c 4331 2007-03-07 15:10:49Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

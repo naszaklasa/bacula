@@ -7,7 +7,7 @@
 //
 // Author          : Christopher S. Hull
 // Created On      : Sat Jan 31 15:55:00 2004
-// $Id: compat.cpp,v 1.88.2.1 2007/01/12 09:58:05 kerns Exp $
+// $Id: compat.cpp 3975 2007-01-12 09:59:05Z kerns $
 /*
    Bacula® - The Network Backup Solution
 

@@ -3,7 +3,7 @@
  *
  *   Written by Preben 'Peppe' Guldberg, December MMIV
  *
- *   Version $Id: fstype.c,v 1.12 2006/11/21 20:14:46 kerns Exp $
+ *   Version $Id: fstype.c 3676 2006-11-21 20:14:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

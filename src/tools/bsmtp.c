@@ -9,7 +9,7 @@
 
    Kern Sibbald, July 2001
 
-   Version $Id: bsmtp.c,v 1.21 2006/11/22 14:26:39 kerns Exp $
+   Version $Id: bsmtp.c 3685 2006-11-22 14:26:40Z kerns $
 
  */
 /*

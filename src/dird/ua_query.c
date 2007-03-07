@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, December MMI
  *
- *   Version $Id: ua_query.c,v 1.18 2006/12/23 16:33:52 kerns Exp $
+ *   Version $Id: ua_query.c 3844 2006-12-23 16:33:53Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

@@ -3,7 +3,7 @@
  *  Database routines that are exported by the cats library for
  *    use elsewhere in Bacula (mainly the Director).
  *
- *    Version $Id: protos.h,v 1.46 2006/11/27 10:02:59 kerns Exp $
+ *    Version $Id: protos.h 3709 2006-11-27 10:03:06Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

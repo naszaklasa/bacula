@@ -5,7 +5,7 @@
  *   Kern E. Sibbald, October 2002
  *
  *
- *   Version $Id: bcopy.c,v 1.50 2006/11/27 10:03:01 kerns Exp $
+ *   Version $Id: bcopy.c 3709 2006-11-27 10:03:06Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

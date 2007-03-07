@@ -4,7 +4,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: record.h,v 1.23 2006/11/21 17:03:47 kerns Exp $
+ *   Version $Id: record.h 3673 2006-11-21 17:03:47Z kerns $
  *
  */
 /*

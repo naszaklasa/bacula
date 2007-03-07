@@ -10,7 +10,7 @@
  *
  *  Kern Sibbald, July MMIII
  *
- *   Version $Id: jobq.c,v 1.48.2.2 2007/01/25 11:26:02 kerns Exp $
+ *   Version $Id: jobq.c 4116 2007-02-06 14:37:57Z kerns $
  *
  *  This code was adapted from the Bacula workq, which was
  *    adapted from "Programming with POSIX Threads", by
@@ -558,10 +558,6 @@ void *jobq_server(void *arg)
             Dmsg0(2300, "Back from running new job.\n");
          }
          /* Clean up and release old jcr */
-         if (jcr->db) {
-            db_close_database(jcr, jcr->db);
-            jcr->db = NULL;
-         }
          Dmsg2(2300, "====== Termination job=%d use_cnt=%d\n", jcr->JobId, jcr->use_count());
          jcr->SDJobStatus = 0;
          V(jq->mutex);                /* release internal lock */

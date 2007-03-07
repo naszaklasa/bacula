@@ -4,7 +4,7 @@
  *
  *   Kern Sibbald, August MMII
  *                            
- *   Version $Id: autochanger.c,v 1.68 2006/11/21 17:03:45 kerns Exp $
+ *   Version $Id: autochanger.c 3673 2006-11-21 17:03:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

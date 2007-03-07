@@ -10,7 +10,7 @@
  *  Basic tasks done here:
  *      If possible create a new Media entry
  *
- *   Version $Id: newvol.c,v 1.37 2006/11/21 13:20:09 kerns Exp $
+ *   Version $Id: newvol.c 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

@@ -3,7 +3,7 @@
  *
  *     Written by Meno Abels, June MMIV
  *
- *     Version $Id: address_conf.c,v 1.19 2006/11/21 13:20:10 kerns Exp $
+ *     Version $Id: address_conf.c 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

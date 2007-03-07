@@ -22,8 +22,8 @@ diff -u -r1.25 -r1.26
   *
   *  Kern Sibbald, July MMIII
   *
-- *   Version $Id: 1.36.1-pool.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
-+ *   Version $Id: 1.36.1-pool.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
+- *   Version $Id: 1.36.1-pool.patch 1866 2005-03-06 13:45:35Z kerns $
++ *   Version $Id: 1.36.1-pool.patch 1866 2005-03-06 13:45:35Z kerns $
   *
   *  This code was adapted from the Bacula workq, which was
   *    adapted from "Programming with POSIX Threads", by
@@ -136,8 +136,8 @@ diff -u -r1.61 -r1.62
   *
   *  Kern E. Sibbald, December 2000
   *
-- *  Version $Id: 1.36.1-pool.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
-+ *  Version $Id: 1.36.1-pool.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
+- *  Version $Id: 1.36.1-pool.patch 1866 2005-03-06 13:45:35Z kerns $
++ *  Version $Id: 1.36.1-pool.patch 1866 2005-03-06 13:45:35Z kerns $
   *
   *  These routines are thread safe.
   *

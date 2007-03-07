@@ -7,7 +7,7 @@
  *
  *     Kern Sibbald, May MM, major revision December MMIII
  *
- *   Version $Id: scheduler.c,v 1.43 2006/11/24 09:58:27 kerns Exp $
+ *   Version $Id: scheduler.c 3690 2006-11-24 09:58:28Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

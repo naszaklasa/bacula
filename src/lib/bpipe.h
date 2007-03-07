@@ -1,7 +1,7 @@
 /*
  *   Bi-directional pipe structure
  *
- *   Version $Id: bpipe.h,v 1.8 2006/11/21 13:20:10 kerns Exp $
+ *   Version $Id: bpipe.h 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

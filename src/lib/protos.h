@@ -1,7 +1,7 @@
 /*
  * Prototypes for lib directory of Bacula
  *
- *   Version $Id: protos.h,v 1.135 2006/12/03 09:00:00 kerns Exp $
+ *   Version $Id: protos.h 3734 2006-12-03 09:00:00Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

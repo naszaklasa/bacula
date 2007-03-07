@@ -3,7 +3,7 @@
  *
  *   Kern Sibbald, 2000
  *
- *   Version $Id: lex.c,v 1.45 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: lex.c 3670 2006-11-21 16:13:58Z kerns $
  *
  */
 /*

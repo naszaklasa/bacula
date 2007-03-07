@@ -1,5 +1,5 @@
 /*
- *   Version $Id: berrno.h,v 1.10 2006/11/21 13:20:10 kerns Exp $
+ *   Version $Id: berrno.h 3668 2006-11-21 13:20:11Z kerns $
  *
  * Kern Sibbald, July MMIV
  *

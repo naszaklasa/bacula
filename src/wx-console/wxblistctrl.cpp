@@ -5,7 +5,7 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: wxblistctrl.cpp,v 1.12 2006/11/22 14:26:40 kerns Exp $
+ *    Version $Id: wxblistctrl.cpp 3685 2006-11-22 14:26:40Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

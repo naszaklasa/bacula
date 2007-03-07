@@ -19,7 +19,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: filed_conf.c,v 1.50 2006/12/22 15:40:15 kerns Exp $
+ *   Version $Id: filed_conf.c 3843 2006-12-22 15:40:16Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

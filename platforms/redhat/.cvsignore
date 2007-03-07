@@ -1,0 +1,8 @@
+Makefile
+bacula-dir
+bacula-fd
+bacula-sd
+bacula.mysql.spec
+bacula.sqlite.spec
+bacula.sqlite.ul.spec
+bacula.spec

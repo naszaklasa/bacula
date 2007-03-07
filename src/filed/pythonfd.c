@@ -4,7 +4,7 @@
  *
  * Kern Sibbald, March MMV
  *
- *   Version $Id: pythonfd.c,v 1.8 2006/12/04 13:00:01 kerns Exp $
+ *   Version $Id: pythonfd.c 3745 2006-12-04 13:00:01Z kerns $
  *
  */
 /*

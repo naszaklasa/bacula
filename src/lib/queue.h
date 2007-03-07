@@ -1,7 +1,7 @@
 /*
  *  Written by John Walker MM
  *
- *   Version $Id: queue.h,v 1.4 2006/11/21 13:20:11 kerns Exp $
+ *   Version $Id: queue.h 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

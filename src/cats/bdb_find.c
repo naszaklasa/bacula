@@ -14,7 +14,7 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb_find.c,v 1.19 2006/11/27 10:02:58 kerns Exp $
+ *    Version $Id: bdb_find.c 3709 2006-11-27 10:03:06Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

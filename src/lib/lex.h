@@ -5,7 +5,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: lex.h,v 1.15 2006/11/21 13:20:10 kerns Exp $
+ *   Version $Id: lex.h 3668 2006-11-21 13:20:11Z kerns $
  *
  */
 /*

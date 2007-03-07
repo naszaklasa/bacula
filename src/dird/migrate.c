@@ -1,23 +1,7 @@
 /*
- *
- *   Bacula Director -- migrate.c -- responsible for doing
- *     migration jobs.
- *
- *     Kern Sibbald, September MMIV
- *
- *  Basic tasks done here:
- *     Open DB and create records for this job.
- *     Open Message Channel with Storage daemon to tell him a job will be starting.
- *     Open connection with Storage daemon and pass him commands
- *       to do the backup.
- *     When the Storage daemon finishes the job, update the DB.
- *
- *   Version $Id: migrate.c,v 1.51 2006/12/28 17:13:59 kerns Exp $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -41,6 +25,22 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- migrate.c -- responsible for doing
+ *     migration jobs.
+ *
+ *     Kern Sibbald, September MMIV
+ *
+ *  Basic tasks done here:
+ *     Open DB and create records for this job.
+ *     Open Message Channel with Storage daemon to tell him a job will be starting.
+ *     Open connection with Storage daemon and pass him commands
+ *       to do the backup.
+ *     When the Storage daemon finishes the job, update the DB.
+ *
+ *   Version $Id: migrate.c 4325 2007-03-06 20:02:31Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -587,7 +587,7 @@ const char *sql_pool_time =
  */
 static int get_job_to_migrate(JCR *jcr)
 {
-   char ed1[30];
+   char ed1[30], ed2[30];
    POOL_MEM query(PM_MESSAGE);
    JobId_t JobId;
    DBId_t  MediaId = 0;
@@ -726,22 +726,26 @@ static int get_job_to_migrate(JCR *jcr)
             ctx.count = 0;
             /* Find count of bytes from Jobs */
             Mmsg(query, sql_job_bytes, mid.list);
+            Dmsg1(dbglevel, "Jobbytes query: %s\n", query.c_str());
             if (!db_sql_query(jcr->db, query.c_str(), db_int64_handler, (void *)&ctx)) {
                Jmsg(jcr, M_FATAL, 0, _("SQL failed. ERR=%s\n"), db_strerror(jcr->db));
                goto bail_out;
             }
             pool_bytes -= ctx.value;
-            Dmsg1(dbglevel, "Job bytes=%d\n", (int)ctx.value);
-            Dmsg2(dbglevel, "lowbytes=%d pool=%d\n", (int)jcr->rpool->MigrationLowBytes,
-                  (int)pool_bytes);
+            Dmsg1(dbglevel, "Total migrate Job bytes=%s\n", edit_int64(ctx.value, ed1));
+            Dmsg2(dbglevel, "lowbytes=%s poolafter=%s\n", 
+                  edit_int64(jcr->rpool->MigrationLowBytes, ed1),
+                  edit_int64(pool_bytes, ed2));
             if (pool_bytes <= (int64_t)jcr->rpool->MigrationLowBytes) {
                Dmsg0(dbglevel, "We should be done.\n");
                break;
             }
 
          }
-         Dmsg2(dbglevel, "Pool Occupancy ids=%d JobIds=%s\n", jids.count, jids.list);
-
+         /* Transfer jids to ids, where the jobs list is expected */
+         ids.count = jids.count;
+         pm_strcpy(ids.list, jids.list);
+         Dmsg2(dbglevel, "Pool Occupancy ids=%d JobIds=%s\n", ids.count, ids.list);
          break;
 
       case MT_POOL_TIME:
@@ -779,8 +783,10 @@ static int get_job_to_migrate(JCR *jcr)
       Jmsg(jcr, M_INFO, 0, _("No JobIds found to migrate.\n"));
       goto ok_out;
    }
-   Jmsg(jcr, M_INFO, 0, _("The following %u JobId%s will be migrated: %s\n"),
+
+   Jmsg(jcr, M_INFO, 0, _("The following %u JobId%s were chosen to be migrated: %s\n"),
       ids.count, ids.count==0?"":"s", ids.list);
+
    Dmsg2(dbglevel, "Before loop count=%d ids=%s\n", ids.count, ids.list);
    for (int i=1; i < (int)ids.count; i++) {
       JobId = 0;
@@ -1002,6 +1008,9 @@ static bool regex_find_jobids(JCR *jcr, idpkt *ids, const char *query1,
 
 bail_out:
    Dmsg2(dbglevel, "Count=%d Jobids=%s\n", ids->count, ids->list);
+   foreach_dlist(item, item_chain) {
+      free(item->item);
+   }
    delete item_chain;
    return ok;
 }

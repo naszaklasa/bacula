@@ -1,17 +1,7 @@
 /*
- *  Encode and decode standard Unix attributes and
- *   Extended attributes for Win32 and
- *   other non-Unix systems, or Unix systems with ACLs, ...
- *
- *    Kern Sibbald, October MMII
- *
- *   Version $Id: attribs.c,v 1.67 2006/11/21 20:14:46 kerns Exp $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -35,6 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Encode and decode standard Unix attributes and
+ *   Extended attributes for Win32 and
+ *   other non-Unix systems, or Unix systems with ACLs, ...
+ *
+ *    Kern Sibbald, October MMII
+ *
+ *   Version $Id: attribs.c 4213 2007-02-19 18:00:26Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "find.h"
@@ -410,6 +410,14 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
       }
    }
 
+   /*
+    * We do not restore sockets, so skip trying to restore their
+    *   attributes.
+    */
+   if (attr->type == FT_SPEC && S_ISSOCK(attr->statp.st_mode)) {
+      goto bail_out;
+   }
+
    ut.actime = attr->statp.st_atime;
    ut.modtime = attr->statp.st_mtime;
 
@@ -465,6 +473,8 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
       }
 #endif
    }
+
+bail_out:
    pm_strcpy(attr->ofname, "*none*");
    umask(old_mask);
    return ok;

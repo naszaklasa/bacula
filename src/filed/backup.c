@@ -4,7 +4,7 @@
  *
  *    Kern Sibbald, March MM
  *
- *   Version $Id: backup.c,v 1.129.2.1 2007/01/12 09:58:04 kerns Exp $
+ *   Version $Id: backup.c 4312 2007-03-05 12:33:59Z kerns $
  *
  */
 /*
@@ -124,7 +124,7 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
 
       /* Get the session data size */
       if (crypto_session_encode(jcr->pki_session, (uint8_t *)0, &size) == false) {
-         Jmsg(jcr, M_FATAL, 0, _("An error occured while encrypting the stream.\n"));
+         Jmsg(jcr, M_FATAL, 0, _("An error occurred while encrypting the stream.\n"));
          return 0;
       }
 
@@ -136,7 +136,7 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
 
       /* Encode session data */
       if (crypto_session_encode(jcr->pki_session, jcr->pki_session_encoded, &size) == false) {
-         Jmsg(jcr, M_FATAL, 0, _("An error occured while encrypting the stream.\n"));
+         Jmsg(jcr, M_FATAL, 0, _("An error occurred while encrypting the stream.\n"));
          return 0;
       }
 
@@ -211,10 +211,13 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
  */
 static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
 {
-   int stat, data_stream;
+   int stat, data_stream; 
+   int rtnstat = 0;
    DIGEST *digest = NULL;
    DIGEST *signing_digest = NULL;
    int digest_stream = STREAM_NONE;
+   SIGNATURE *sig = NULL;
+   uint8_t *buf = NULL;
    bool has_file_data = false;
    // TODO landonf: Allow the user to specify the digest algorithm
 #ifdef HAVE_SHA2
@@ -364,12 +367,12 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
       if (jcr->pki_sign) {
          signing_digest = crypto_digest_new(signing_algorithm);
 
-         /* Full-stop if a failure occured initializing the signature digest */
+         /* Full-stop if a failure occurred initializing the signature digest */
          if (signing_digest == NULL) {
             Jmsg(jcr, M_NOTSAVED, 0, _("%s signature digest initialization failed\n"),
                stream_to_ascii(signing_algorithm));
             jcr->Errors++;
-            return 1;
+            goto good_rtn;
          }
       }
 
@@ -388,13 +391,13 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
       if (!set_prog(&ff_pkt->bfd, ff_pkt->reader, jcr)) {
          Jmsg(jcr, M_FATAL, 0, _("Python reader program \"%s\" not found.\n"), 
             ff_pkt->reader);
-         return 0;
+         goto bail_out;
       }
    }
 
    /* Send attributes -- must be done after binit() */
    if (!encode_and_send_attributes(jcr, ff_pkt, data_stream)) {
-      return 0;
+      goto bail_out;
    }
 
    /*
@@ -424,7 +427,7 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
             stop_thread_timer(tid);
             tid = NULL;
          }
-         return 1;
+         goto good_rtn;
       }
       if (tid) {
          stop_thread_timer(tid);
@@ -434,6 +437,7 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
       /* Set up the encryption context, send the session data to the SD */
       if (jcr->pki_encrypt) {
          /* Send our header */
+         Dmsg2(100, "Send hdr fi=%ld stream=%d\n", jcr->JobFiles, STREAM_ENCRYPTED_SESSION_DATA);
          bnet_fsend(sd, "%ld %d 0", jcr->JobFiles, STREAM_ENCRYPTED_SESSION_DATA);
 
          /* Grow the bsock buffer to fit our message if necessary */
@@ -446,6 +450,7 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
          sd->msglen = jcr->pki_session_encoded_size;
          jcr->JobBytes += sd->msglen;
 
+         Dmsg1(100, "Send data len=%d\n", sd->msglen);
          bnet_send(sd);
          bnet_sig(sd, BNET_EOD);
       }
@@ -453,7 +458,7 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
       stat = send_data(jcr, data_stream, ff_pkt, digest, signing_digest);
       bclose(&ff_pkt->bfd);
       if (!stat) {
-         return 0;
+         goto bail_out;
       }
    }
 
@@ -473,7 +478,7 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
             if (is_bopen(&ff_pkt->bfd)) {
                bclose(&ff_pkt->bfd);
             }
-            return 1;
+            goto good_rtn;
          }
          flags = ff_pkt->flags;
          ff_pkt->flags &= ~(FO_GZIP|FO_SPARSE);
@@ -486,7 +491,7 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
          ff_pkt->flags = flags;
          bclose(&ff_pkt->bfd);
          if (!stat) {
-            return 0;
+            goto bail_out;
          }
       }
 
@@ -509,49 +514,46 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
    if (ff_pkt->flags & FO_ACL) {
       /* Read access ACLs for files, dirs and links */
       if (!read_and_send_acl(jcr, BACL_TYPE_ACCESS, STREAM_UNIX_ATTRIBUTES_ACCESS_ACL)) {
-         return 0;
+         goto bail_out;
       }
       /* Directories can have default ACLs too */
       if (ff_pkt->type == FT_DIREND && (BACL_CAP & BACL_CAP_DEFAULTS_DIR)) {
          if (!read_and_send_acl(jcr, BACL_TYPE_DEFAULT, STREAM_UNIX_ATTRIBUTES_DEFAULT_ACL)) {
-            return 0;
+            goto bail_out;
          }
       }
    }
 
    /* Terminate the signing digest and send it to the Storage daemon */
    if (signing_digest) {
-      SIGNATURE *sig;
       uint32_t size = 0;
-      uint8_t *buf;
 
       if ((sig = crypto_sign_new()) == NULL) {
          Jmsg(jcr, M_FATAL, 0, _("Failed to allocate memory for stream signature.\n"));
-         return 0;
+         goto bail_out;
       }
 
       if (crypto_sign_add_signer(sig, signing_digest, jcr->pki_keypair) == false) {
-         Jmsg(jcr, M_FATAL, 0, _("An error occured while signing the stream.\n"));
-         return 0;
+         Jmsg(jcr, M_FATAL, 0, _("An error occurred while signing the stream.\n"));
+         goto bail_out;
       }
 
       /* Get signature size */
       if (crypto_sign_encode(sig, NULL, &size) == false) {
-         Jmsg(jcr, M_FATAL, 0, _("An error occured while signing the stream.\n"));
-         return 0;
+         Jmsg(jcr, M_FATAL, 0, _("An error occurred while signing the stream.\n"));
+         goto bail_out;
       }
 
       /* Allocate signature data buffer */
       buf = (uint8_t *)malloc(size);
       if (!buf) {
-         crypto_sign_free(sig);
-         return 0;
+         goto bail_out;
       }
 
       /* Encode signature data */
       if (crypto_sign_encode(sig, buf, &size) == false) {
-         Jmsg(jcr, M_FATAL, 0, _("An error occured while signing the stream.\n"));
-         return 0;
+         Jmsg(jcr, M_FATAL, 0, _("An error occurred while signing the stream.\n"));
+         goto bail_out;
       }
 
       /* Send our header */
@@ -568,10 +570,7 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
       sd->msglen = size;
       bnet_send(sd);
       bnet_sig(sd, BNET_EOD);              /* end of checksum */
-
-      crypto_digest_free(signing_digest);
-      crypto_sign_free(sig);        
-      free(buf);
+      goto good_rtn;
    }
 
    /* Terminate any digest and send it to Storage daemon and the Director */
@@ -589,11 +588,25 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
          bnet_send(sd);
          bnet_sig(sd, BNET_EOD);              /* end of checksum */
       }
-
-      crypto_digest_free(digest);
    }
 
-   return 1;
+good_rtn:
+   rtnstat = 1;                       /* good return */
+
+bail_out:
+   if (digest) {
+      crypto_digest_free(digest);
+   }
+   if (signing_digest) {
+      crypto_digest_free(signing_digest);
+   }
+   if (sig) {
+      crypto_sign_free(sig);        
+   }
+   if (buf) {
+      free(buf);
+   }
+   return rtnstat;
 }
 
 /*

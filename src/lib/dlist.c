@@ -6,7 +6,7 @@
  *
  *   Kern Sibbald, July MMIII
  *
- *   Version $Id: dlist.c,v 1.21 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: dlist.c 3670 2006-11-21 16:13:58Z kerns $
  *
  */
 /*

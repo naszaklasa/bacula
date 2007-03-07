@@ -21,8 +21,8 @@ diff -u -r1.92 job.c
   *
   *     Kern Sibbald, October MM
   *
-- *    Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
-+ *    Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
+- *    Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
++ *    Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
   */
  /*
 -   Copyright (C) 2000-2004 Kern Sibbald and John Walker
@@ -104,8 +104,8 @@ diff -u -r1.32 msgchan.c
   *    Create a thread to interact with the Storage daemon
   *	who returns a job status and requests Catalog services, etc.
   *
-- *   Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
-+ *   Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
+- *   Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
++ *   Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
   */
  /*
 -   Copyright (C) 2000-2004 Kern Sibbald and John Walker
@@ -201,8 +201,8 @@ diff -u -r1.56 protos.h
  /*
   * Director external function prototypes
   *
-- *   Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
-+ *   Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
+- *   Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
++ *   Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
   */
  /*
     Copyright (C) 2000-2004 Kern Sibbald and John Walker
@@ -301,7 +301,7 @@ diff -u -r1.27 scheduler.c
 --- src/dird/scheduler.c	3 Oct 2004 19:47:34 -0000	1.27
 +++ src/dird/scheduler.c	21 Dec 2004 13:04:08 -0000
 @@ -10,7 +10,7 @@
-  *   Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
+  *   Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
   */
  /*
 -   Copyright (C) 2000-2004 Kern Sibbald and John Walker
@@ -329,8 +329,8 @@ diff -u -r1.23 ua.h
   *
   *     Kern Sibbald, August MMI
   *
-- *     Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
-+ *     Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
+- *     Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
++ *     Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
   */
  /*
     Copyright (C) 2000-2004 Kern Sibbald and John Walker
@@ -353,8 +353,8 @@ diff -u -r1.127 ua_cmds.c
   *
   *     Kern Sibbald, September MM
   *
-- *   Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
-+ *   Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
+- *   Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
++ *   Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
   */
  
  /*
@@ -455,8 +455,8 @@ diff -u -r1.58 ua_run.c
   *
   *     Kern Sibbald, December MMI
   *
-- *   Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
-+ *   Version $Id: 1.36.1-store.patch,v 1.1 2005/03/06 13:45:35 kerns Exp $
+- *   Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
++ *   Version $Id: 1.36.1-store.patch 1866 2005-03-06 13:45:35Z kerns $
   */
  
  /*

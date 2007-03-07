@@ -7,7 +7,7 @@
  *
  *    This routine runs as a thread and must be thread reentrant.
  *
- *   Version $Id: authenticate.c,v 1.42 2006/11/21 13:20:08 kerns Exp $
+ *   Version $Id: authenticate.c 3668 2006-11-21 13:20:11Z kerns $
  *
  */
 /*

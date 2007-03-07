@@ -2,7 +2,7 @@
  * General header file configurations that apply to
  * all daemons.  System dependent stuff goes here.
  *
- *   Version $Id: baconfig.h,v 1.106 2006/12/17 13:36:35 kerns Exp $
+ *   Version $Id: baconfig.h 3812 2006-12-17 13:36:35Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

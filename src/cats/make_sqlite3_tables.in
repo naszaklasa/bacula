@@ -101,7 +101,7 @@ CREATE TABLE Log (
    LogText TEXT NOT NULL,
    PRIMARY KEY(LogId) 
    );
-CREATE INDEX LogInx1 ON File (JobId);
+CREATE INDEX LogInx1 ON Log (JobId);
 
 
 CREATE TABLE FileSet (

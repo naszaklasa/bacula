@@ -220,8 +220,6 @@ _Z17start_bsock_timerP5BSOCKj
 _Z17stop_thread_timerP10s_btimer_t
 _Z18start_thread_timerP10pthread_t_j
 
-; btree.c:
-
 ; cram-md5.c:
 _Z16cram_md5_respondP5BSOCKPcPiS2_
 _Z18cram_md5_challengeP5BSOCKPcii
@@ -390,6 +388,14 @@ _Z23term_python_interpreterv
 _Z5qnextP7b_queueS0_
 _Z7qdchainP7b_queue
 _Z7qinsertP7b_queueS0_
+
+; rblist.c:
+_ZN6rblist4nextEPv
+_ZN6rblist5firstEv
+_ZN6rblist6insertEPvPFiS0_S0_E
+_ZN6rblist6removeEPv
+_ZN6rblist6searchEPvPFiS0_S0_E
+_ZN6rblist7destroyEv
 
 ; runscript.c:
 _Z11run_scriptsP3JCRP5alistPKc

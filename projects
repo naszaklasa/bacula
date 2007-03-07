@@ -4,6 +4,11 @@ Projects:
                     Status updated 26 January 2007
                    After re-ordering in vote priority
 
+Items Completed:
+Item:  18   Quick release of FD-SD connection after backup.
+Item:  40   Include JobID in spool file name
+Item:  25   Implement huge exclude list support using dlist   
+
 Summary:
 Item:   1   Accurate restoration of renamed/deleted files
 Item:   2   Implement a Bacula GUI/management tool.
@@ -22,14 +27,14 @@ Item:  14   Cause daemons to use a specific IP address to source communications
 Item:  15   Multiple threads in file daemon for the same job
 Item:  16   Add Plug-ins to the FileSet Include statements.
 Item:  17   Restore only file attributes (permissions, ACL, owner, group...)
-Item:  18   Quick release of FD-SD connection after backup.
+Item:  18*  Quick release of FD-SD connection after backup.
 Item:  19   Implement a Python interface to the Bacula catalog.
 Item:  20   Archive data
 Item:  21   Split documentation
 Item:  22   Implement support for stacking arbitrary stream filters, sinks.
 Item:  23   Implement from-client and to-client on restore command line.
 Item:  24   Add an override in Schedule for Pools based on backup types.
-Item:  25   Implement huge exclude list support using hashing.
+Item:  25*  Implement huge exclude list support using hashing.
 Item:  26   Implement more Python events in Bacula.
 Item:  27   Incorporation of XACML2/SAML2 parsing
 Item:  28   Filesystem watch triggered backup.
@@ -44,7 +49,7 @@ Item:  36   An option to operate on all pools with update vol parameters
 Item:  37   Add an item to the restore option where you can select a pool
 Item:  38   Include timestamp of job launch in "stat clients" output
 Item:  39   Message mailing based on backup types
-Item:  40   Include JobID in spool file name
+Item:  40*  Include JobID in spool file name
 
 
 Item  1:  Accurate restoration of renamed/deleted files
@@ -82,7 +87,7 @@ Item  1:  Accurate restoration of renamed/deleted files
 Item  2:  Implement a Bacula GUI/management tool.
   Origin: Kern
   Date:   28 October 2005
-  Status:         
+  Status: In progress
 
   What:   Implement a Bacula console, and management tools
           probably using Qt3 and C++.
@@ -569,6 +574,7 @@ Item 17:  Restore only file attributes (permissions, ACL, owner, group...)
   Notes:  If the file is here, we skip restore and we change rights.
           If the file isn't here, we can create an empty one and apply
           rights or do nothing.
+
 Item 18:  Quick release of FD-SD connection after backup.
   Origin: Frank Volf (frank at deze dot org)
   Date:   17 November 2005
@@ -746,10 +752,12 @@ Status:
           backups, then the Full job would use the proper Storage device, which
           has more capacity (i.e. a 8TB tape library.
 
-Item 25:  Implement huge exclude list support using hashing.
+Item 25:  Implement huge exclude list support using hashing (dlists).
   Date:   28 October 2005
   Origin: Kern
-  Status: 
+  Status: Done in 2.1.2 but was done with dlists (doubly linked lists
+          since hashing will not help. The huge list also supports
+          large include lists).
 
   What:   Allow users to specify very large exclude list (currently
           more than about 1000 files is too many).
@@ -1121,6 +1129,102 @@ Item 40:  Include JobID in spool file name ****DONE****
           spoolfile name doesn't include that information. The date/time
           stamp is useful (and should be retained).
 
+============= New Freature Requests after vote of 26 Jan 2007 ========
+Item  n:  Enable to relocate files and directories when restoring
+  Date:   2007-03-01
+  Origin: Eric Bollengier <eric@eb.homelinux.org>
+  Status:
+
+  What:   The where= option is not powerful enough. It will be
+          a great feature if bacula can restore a file in the
+          same directory, but with a different name, or in 
+          an other directory without recreating the full path.
+
+  Why:    When i want to restore a production environment to a
+          development environment, i just want change the first
+          directory. ie restore /prod/data/file.dat to /rect/data/file.dat.
+          At this time, i have to move by hand files. You must have a big
+          dump space to restore and move data after.
+
+          When i use Linux or SAN snapshot, i mount them to /mnt/snap_xxx
+          so, when a restore a file, i have to move by hand
+          from /mnt/snap_xxx/file to /xxx/file. I can't replace a file
+          easily.
+
+          When a user ask me to restore a file in its personal folder,
+          (without replace the existing one), i can't restore from
+          my_file.txt to my_file.txt.old witch is very practical.
+
+          
+  Notes:  I think we can enhance the where= option very easily by
+          allowing regexp expression. (by replacing bregex by libpcre 
+          see http://en.wikipedia.org/wiki/PCRE and http://www.pcre.org/)
+
+          Since, many users think that regexp are not user friendly, i think
+          that bat, bconsole or brestore must provide a simple way to
+          configure where= option (i think to something like in
+          openoffice "search and replace").
+
+          Ie, if user uses where=/tmp/bacula-restore, we keep the old
+          fashion.
+
+          If user uses something like where=s!/prod!/test!, files will
+          be restored from /prod/xxx to /test/xxx.
+
+          If user uses something like where=s/$/.old/, files will
+          be restored from /prod/xxx.txt to /prod/xxx.txt.old.
+
+          If user uses something like where=s/txt$/old.txt/, files will
+          be restored from /prod/xxx.txt to /prod/xxx.old.txt
+
+          if user uses something like where=s/([a-z]+)$/old.$1/, files will
+          be restored from /prod/xxx.ext to /prod/xxx.old.ext
+
+Item n:   Implement Catalog directive for Pool resource in Director
+configuration 
+  Origin: Alan Davis adavis@ruckus.com
+  Date:   6 March 2007
+  Status: Submitted
+ 
+  What:   The current behavior is for the director to create all pools
+          found in the configuration file in all catalogs.  Add a
+          Catalog directive to the Pool resource to specify which
+          catalog to use for each pool definition.
+ 
+  Why:    This allows different catalogs to have different pool
+          attributes and eliminates the side-effect of adding
+          pools to catalogs that don't need/use them.
+ 
+  Notes:  
+
+
+Item n:   Implement NDMP protocol support
+  Origin: Alan Davis
+  Date:   06 March 2007
+  Status: Submitted
+
+  What:   Network Data Management Protocol is implemented by a number of
+          NAS filer vendors to enable backups using third-party
+          software.
+
+  Why:    This would allow NAS filer backups in Bacula without incurring
+          the overhead of NFS or SBM/CIFS.
+
+  Notes:  Further information is available:
+          http://www.ndmp.org
+          http://www.ndmp.org/wp/wp.shtml
+          http://www.traakan.com/ndmjob/index.html
+
+          There are currently no viable open-source NDMP
+          implementations.  There is a reference SDK and example
+          app available from ndmp.org but it has problems
+          compiling on recent Linux and Solaris OS'.  The ndmjob
+          reference implementation from Traakan is known to
+          compile on Solaris 10.
+
+  Notes (Kern): I am not at all in favor of this until NDMP becomes
+          an Open Standard or until there are Open Source libraries
+          that interface to it.
 ============= Empty Feature Request form ===========
 Item  n:  One line summary ...
   Date:   Date submitted 

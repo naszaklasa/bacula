@@ -5,12 +5,12 @@
  *   that we use within Bacula. bacula.h includes this
  *   file and thus picks up everything we need in lib.
  *
- *   Version $Id: lib.h,v 1.26 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: lib.h 4116 2007-02-06 14:37:57Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -38,6 +38,7 @@
 #include "smartall.h"
 #include "alist.h"
 #include "dlist.h"
+#include "rblist.h"
 #include "base64.h"
 #include "bits.h"
 #include "btime.h"

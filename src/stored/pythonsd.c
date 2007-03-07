@@ -4,7 +4,7 @@
  *
  * Kern Sibbald, January MMV
  *
- *   Version $Id: pythonsd.c,v 1.7 2006/12/16 11:10:17 kerns Exp $
+ *   Version $Id: pythonsd.c 3805 2006-12-16 11:10:17Z kerns $
  *
  */
 /*

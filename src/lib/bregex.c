@@ -26,7 +26,7 @@
  * Peters, Guido van Rossum, Ka-Ping Yee, Sjoerd Mullender, and
  * probably one or two others that I'm forgetting.
  *
- * $Id: bregex.c,v 1.5 2006/11/21 16:13:57 kerns Exp $   
+ * $Id: bregex.c 3670 2006-11-21 16:13:58Z kerns $   
  *
  * This file modified to work with Bacula and C++ by
  *    Kern Sibbald, April 2006

@@ -16,7 +16,7 @@
  *
  *     Kern Sibbald, May MMI
  *
- *   Version $Id: dircmd.c,v 1.144 2006/12/03 20:01:09 kerns Exp $
+ *   Version $Id: dircmd.c 3738 2006-12-03 20:01:09Z kerns $
  *
  */
 /*

@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, April-May 2004
  *
- *    Version $Id: console_thread.h,v 1.14 2006/12/08 14:27:10 kerns Exp $
+ *    Version $Id: console_thread.h 3774 2006-12-08 14:27:10Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

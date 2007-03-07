@@ -6,8 +6,8 @@
 + * Released under GNU General Public License V2 or Above
 + * See http://www.gnu.org for more information about the terms of
 + * the GNU General Public License.
-+ * $Date: 2006/08/12 23:18:24 $
-+ * $Revision: 1.1 $
++ * $Date: 2006-08-13 01:18:24 +0200 (Sun, 13 Aug 2006) $
++ * $Revision: 3282 $
 + */
 +
 +#ifndef CONFIG_H

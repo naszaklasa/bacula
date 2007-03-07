@@ -1,7 +1,7 @@
 /*
  * Storage daemon specific defines and includes
  *
- *  Version $Id: stored.h,v 1.24 2006/11/21 17:03:47 kerns Exp $
+ *  Version $Id: stored.h 3673 2006-11-21 17:03:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

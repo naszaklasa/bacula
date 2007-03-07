@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: block.h,v 1.19 2006/11/21 17:03:46 kerns Exp $
+ *   Version $Id: block.h 3673 2006-11-21 17:03:47Z kerns $
  *
  */
 /*

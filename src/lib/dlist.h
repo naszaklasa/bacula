@@ -1,7 +1,7 @@
 /*
  *  Written by Kern Sibbald MMIV
  *
- *   Version $Id: dlist.h,v 1.25 2006/11/21 13:20:10 kerns Exp $
+ *   Version $Id: dlist.h 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

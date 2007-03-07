@@ -1,5 +1,5 @@
 /*
- *    Version $Id: callbacks.c,v 1.17 2006/12/28 17:14:00 kerns Exp $
+ *    Version $Id: callbacks.c 3851 2006-12-28 17:14:00Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

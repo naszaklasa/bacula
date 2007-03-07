@@ -3,6 +3,7 @@
 #   Generate a random password, written to standard output
 #   By John Walker
 #
+LANG=C
 if test "x$1" = "x" ; then
    PWL=48      # Password length in characters
 else

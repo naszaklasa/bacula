@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, January MMIV
  *
- *   Version  $Id: ua_acl.c,v 1.8 2006/11/21 13:20:09 kerns Exp $
+ *   Version  $Id: ua_acl.c 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

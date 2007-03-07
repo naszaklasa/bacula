@@ -5,7 +5,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: mysql.c,v 1.45 2006/12/08 06:49:28 robertnelson Exp $
+ *    Version $Id: mysql.c 3772 2006-12-08 06:49:38Z robertnelson $
  */
 /*
    Bacula® - The Network Backup Solution

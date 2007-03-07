@@ -9,7 +9,7 @@
  *    daemon because we interact more directly with the user
  *    i.e. printf, ...
  *
- *   Version $Id: butil.c,v 1.49 2006/12/14 11:41:00 kerns Exp $
+ *   Version $Id: butil.c 3802 2006-12-14 11:41:02Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

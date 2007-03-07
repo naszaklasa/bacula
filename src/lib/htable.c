@@ -19,7 +19,7 @@
  *
  *   Kern Sibbald, July MMIII
  *
- *   Version $Id: htable.c,v 1.12 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: htable.c 3670 2006-11-21 16:13:58Z kerns $
  *
  */
 /*

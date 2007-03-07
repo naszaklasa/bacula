@@ -1,15 +1,7 @@
 /*
- *
- *   Bacula Director -- User Agent Status Command
- *
- *     Kern Sibbald, August MMI
- *
- *   Version $Id: ua_status.c,v 1.91 2006/12/23 16:33:52 kerns Exp $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- User Agent Status Command
+ *
+ *     Kern Sibbald, August MMI
+ *
+ *   Version $Id: ua_status.c 4183 2007-02-15 18:57:55Z kerns $
+ */
 
 
 #include "bacula.h"
@@ -100,9 +100,6 @@ int status_cmd(UAContext *ua, const char *cmd)
    CLIENT *client;
    int item, i;
 
-   if (!open_client_db(ua)) {
-      return 1;
-   }
    Dmsg1(20, "status:%s:\n", cmd);
 
    for (i=1; i<ua->argc; i++) {

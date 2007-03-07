@@ -2,7 +2,7 @@
 #
 # Bacula interface to virtual autoloader using disk storage
 #
-#  $Id: disk-changer.in,v 1.5 2006/09/11 21:11:02 kerns Exp $
+#  $Id: disk-changer.in 3457 2006-09-11 21:11:03Z kerns $
 #
 #  If you set in your Device resource
 #

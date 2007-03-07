@@ -14,7 +14,7 @@
  * needed on buffers full of bytes, and then call MD5Final, which
  * will fill a supplied 16-byte array with the digest.
  *
- *   Version $Id: md5.c,v 1.10 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: md5.c 3670 2006-11-21 16:13:58Z kerns $
  */
 
 /* Brutally hacked by John Walker back from ANSI C to K&R (no

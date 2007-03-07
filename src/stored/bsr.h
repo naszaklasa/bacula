@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, June 2002
  *
- *   Version $Id: bsr.h,v 1.20 2006/11/21 17:03:46 kerns Exp $
+ *   Version $Id: bsr.h 3673 2006-11-21 17:03:47Z kerns $
  *
  */
 /*

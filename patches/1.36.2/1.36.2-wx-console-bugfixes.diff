@@ -21,9 +21,9 @@ retrieving revision 1.30.6.2
 retrieving revision 1.30
 diff -r1.30.6.2 -r1.30
 7c7
-<  *    Version $Id: 1.36.2-wx-console-bugfixes.diff,v 1.1 2005/04/26 19:29:24 kerns Exp $
+<  *    Version $Id: 1.36.2-wx-console-bugfixes.diff 1961 2005-04-26 19:29:24Z kerns $
 ---
->  *    Version $Id: 1.36.2-wx-console-bugfixes.diff,v 1.1 2005/04/26 19:29:24 kerns Exp $
+>  *    Version $Id: 1.36.2-wx-console-bugfixes.diff 1961 2005-04-26 19:29:24Z kerns $
 210,211d209
 <    lockedbyconsole = false;
 <    
@@ -43,9 +43,9 @@ retrieving revision 1.40.8.1
 retrieving revision 1.40
 diff -r1.40.8.1 -r1.40
 7c7
-<  *    Version $Id: 1.36.2-wx-console-bugfixes.diff,v 1.1 2005/04/26 19:29:24 kerns Exp $
+<  *    Version $Id: 1.36.2-wx-console-bugfixes.diff 1961 2005-04-26 19:29:24Z kerns $
 ---
->  *    Version $Id: 1.36.2-wx-console-bugfixes.diff,v 1.1 2005/04/26 19:29:24 kerns Exp $
+>  *    Version $Id: 1.36.2-wx-console-bugfixes.diff 1961 2005-04-26 19:29:24Z kerns $
 411c411
 <    markWhenCommandDone = false;
 ---
@@ -114,9 +114,9 @@ retrieving revision 1.19.10.1
 retrieving revision 1.19
 diff -r1.19.10.1 -r1.19
 7c7
-<  *    Version $Id: 1.36.2-wx-console-bugfixes.diff,v 1.1 2005/04/26 19:29:24 kerns Exp $
+<  *    Version $Id: 1.36.2-wx-console-bugfixes.diff 1961 2005-04-26 19:29:24Z kerns $
 ---
->  *    Version $Id: 1.36.2-wx-console-bugfixes.diff,v 1.1 2005/04/26 19:29:24 kerns Exp $
+>  *    Version $Id: 1.36.2-wx-console-bugfixes.diff 1961 2005-04-26 19:29:24Z kerns $
 154c154
 <       bool markWhenCommandDone; //If an item should be (un)marked after the current listing/marking is done
 ---

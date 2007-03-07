@@ -8,7 +8,7 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id: ua_purge.c,v 1.43 2006/12/22 15:01:05 kerns Exp $
+ *   Version $Id: ua_purge.c 3842 2006-12-22 15:01:05Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

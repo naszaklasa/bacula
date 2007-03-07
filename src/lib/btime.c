@@ -3,7 +3,7 @@
  *
  * Later double precision integer time/date routines -- Kern Sibbald
  *
- *   Version $Id: btime.c,v 1.26 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: btime.c 3670 2006-11-21 16:13:58Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

@@ -4,7 +4,7 @@
  *
  *  Kern E. Sibbald, December 2000
  *
- *  Version $Id: jcr.c,v 1.86 2006/11/21 16:13:57 kerns Exp $
+ *  Version $Id: jcr.c 4331 2007-03-07 15:10:49Z kerns $
  *
  *  These routines are thread safe.
  *

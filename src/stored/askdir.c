@@ -4,12 +4,12 @@
  *
  *   Kern Sibbald, December 2000
  *
- *   Version $Id: askdir.c,v 1.109 2006/12/08 14:27:10 kerns Exp $
+ *   Version $Id: askdir.c 4146 2007-02-08 10:56:41Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -61,6 +61,8 @@ static char OK_media[] = "1000 OK VolName=%127s VolJobs=%u VolFiles=%lu"
 
 
 static char OK_create[] = "1000 OK CreateJobMedia\n";
+
+static pthread_mutex_t vol_info_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef needed
 
@@ -155,6 +157,11 @@ bool dir_send_job_status(JCR *jcr)
  * and
  *   dir_find_next_appendable_volume()
  *
+ *  NOTE!!! All calls to this routine must be protected by
+ *          locking vol_info_mutex before calling it so that
+ *          we don't have one thread modifying the parameters
+ *          and another reading them.
+ *
  *  Returns: true  on success and vol info in dcr->VolCatInfo
  *           false on failure
  */
@@ -214,6 +221,7 @@ bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw writing)
     JCR *jcr = dcr->jcr;
     BSOCK *dir = jcr->dir_bsock;
 
+    P(vol_info_mutex);
     bstrncpy(dcr->VolCatInfo.VolCatName, dcr->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
     bash_spaces(dcr->VolCatInfo.VolCatName);
     bnet_fsend(dir, Get_Vol_Info, jcr->Job, dcr->VolCatInfo.VolCatName,
@@ -221,6 +229,7 @@ bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw writing)
     Dmsg1(100, ">dird: %s", dir->msg);
     unbash_spaces(dcr->VolCatInfo.VolCatName);
     bool ok = do_get_volume_info(dcr);
+    V(vol_info_mutex);
     return ok;
 }
 
@@ -247,6 +256,7 @@ bool dir_find_next_appendable_volume(DCR *dcr)
      *   drive, so we continue looking for a not in use Volume.
      */
     lock_reservations();
+    P(vol_info_mutex);
     for (int vol_index=1;  vol_index < 20; vol_index++) {
        bash_spaces(dcr->media_type);
        bash_spaces(dcr->pool_name);
@@ -273,10 +283,12 @@ bool dir_find_next_appendable_volume(DCR *dcr)
     if (found) {
        Dmsg0(400, "dir_find_next_appendable_volume return true\n");
        new_volume(dcr, dcr->VolumeName);   /* reserve volume */
+       V(vol_info_mutex);
        unlock_reservations();
        return true;
     }
     dcr->VolumeName[0] = 0;
+    V(vol_info_mutex);
     unlock_reservations();
     return false;
 }
@@ -296,6 +308,7 @@ bool dir_update_volume_info(DCR *dcr, bool label)
    VOLUME_CAT_INFO *vol = &dev->VolCatInfo;
    char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50];
    int InChanger;
+   bool ok = false;
    POOL_MEM VolumeName;
 
    /* If system job, do not update catalog */
@@ -314,6 +327,8 @@ bool dir_update_volume_info(DCR *dcr, bool label)
       return false;
    }
 
+   /* Lock during Volume update */
+   P(vol_info_mutex);
    Dmsg1(100, "Update cat VolFiles=%d\n", dev->file);
    /* Just labeled or relabeled the tape */
    if (label) {
@@ -340,12 +355,16 @@ bool dir_update_volume_info(DCR *dcr, bool label)
       Jmsg(jcr, M_FATAL, 0, "%s", jcr->errmsg);
       Dmsg2(100, _("Didn't get vol info vol=%s: ERR=%s"), 
          vol->VolCatName, jcr->errmsg);
-      return false;
+      goto bail_out;
    }
    Dmsg1(420, "get_volume_info(): %s", dir->msg);
    /* Update dev Volume info in case something changed (e.g. expired) */
    dev->VolCatInfo = dcr->VolCatInfo;
-   return true;
+   ok = true;
+
+bail_out:
+   V(vol_info_mutex);
+   return ok;
 }
 
 /*

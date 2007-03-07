@@ -1,15 +1,7 @@
 /*
- *  Create a file, and reset the modes
- *
- *    Kern Sibbald, November MM
- *
- *   Version $Id: create_file.c,v 1.57 2006/12/20 13:59:50 kerns Exp $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Create a file, and reset the modes
+ *
+ *    Kern Sibbald, November MM
+ *
+ *   Version $Id: create_file.c 4213 2007-02-19 18:00:26Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "find.h"
@@ -235,7 +235,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
                      attr->ofname, be.strerror());
                return CF_ERROR;
             }
-         } else if(S_ISSOCK(attr->statp.st_mode)) {
+         } else if (S_ISSOCK(attr->statp.st_mode)) {
              Dmsg1(200, "Skipping restore of socket: %s\n", attr->ofname);
          } else {
             Dmsg1(200, "Restore node: %s\n", attr->ofname);
@@ -297,7 +297,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
             * preventing this. So attempt to disable, retry link,
             * and reset flags.
             * Note that BSD securelevel may prevent disabling flag.
-	*/
+        */
 
             if (stat(attr->olname, &s) == 0 && s.st_flags != 0) {
                if (chflags(attr->olname, 0) == 0) {

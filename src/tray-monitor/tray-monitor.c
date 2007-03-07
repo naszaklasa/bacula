@@ -4,7 +4,7 @@
  *
  *     Nicolas Boichat, August MMIV
  *
- *     Version $Id: tray-monitor.c,v 1.33 2006/12/01 08:45:14 robertnelson Exp $
+ *     Version $Id: tray-monitor.c 3718 2006-12-01 08:45:40Z robertnelson $
  */
 /*
    Bacula® - The Network Backup Solution

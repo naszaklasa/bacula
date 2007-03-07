@@ -7,7 +7,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: bsr.h,v 1.7 2006/11/21 13:20:08 kerns Exp $
+ *   Version $Id: bsr.h 3668 2006-11-21 13:20:11Z kerns $
  */
 
 /*

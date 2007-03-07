@@ -7,7 +7,7 @@
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
  *
- *   Version $Id: workq.h,v 1.8 2006/11/21 13:20:11 kerns Exp $
+ *   Version $Id: workq.h 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

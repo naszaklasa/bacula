@@ -24,7 +24,7 @@ DROP INDEX path_name_idx;
 CREATE UNIQUE INDEX path_name_idx on path (path);
 
 
-$Log: batch-insert.readme,v $
+$Log$
 Revision 1.2  2007/01/01 16:52:05  ricozz
 ebl  add #define in readme
 ebl  works with 2.0.0

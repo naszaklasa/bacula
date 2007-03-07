@@ -3,7 +3,7 @@ From: Eric Bollengier <eric AT eb.homelinux.org>
 This patch allow you to :
  - move Purged media to there RecyclePool
 
-$Log: scratch.readme,v $
+$Log$
 Revision 1.1.2.1  2007/01/12 10:23:14  kerns
 Pull in new spec files
 Update patches

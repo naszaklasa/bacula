@@ -3,7 +3,7 @@
  *
  *     Kern Sibbald, August MMI
  *
- *     Version $Id: ua.h,v 1.32 2006/11/21 13:20:09 kerns Exp $
+ *     Version $Id: ua.h 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

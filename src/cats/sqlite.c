@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, January 2002
  *
- *    Version $Id: sqlite.c,v 1.36.2.1 2007/01/26 11:16:35 kerns Exp $
+ *    Version $Id: sqlite.c 4045 2007-01-26 11:16:35Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

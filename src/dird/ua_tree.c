@@ -6,7 +6,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_tree.c,v 1.50 2006/12/03 08:59:59 kerns Exp $
+ *   Version $Id: ua_tree.c 3734 2006-12-03 09:00:00Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

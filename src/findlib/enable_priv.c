@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, May MMIII
  *
- *   Version $Id: enable_priv.c,v 1.10 2006/12/01 08:45:13 robertnelson Exp $
+ *   Version $Id: enable_priv.c 3718 2006-12-01 08:45:40Z robertnelson $
  *
  */
 /*

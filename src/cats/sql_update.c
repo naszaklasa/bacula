@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_update.c,v 1.75 2006/11/27 10:02:59 kerns Exp $
+ *    Version $Id: sql_update.c 3709 2006-11-27 10:03:06Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

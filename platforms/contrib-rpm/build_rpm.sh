@@ -25,14 +25,14 @@ VERSION=2.0.2
 RELEASE=1
 
 # build platform for spec
-# set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,wb3,rhel3,rhel4,centos3,centos4,su9,su10,mdk,mdv
+# set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,wb3,rhel3,rhel4,centos3,centos4,su9,su10,su102,mdk,mdv
 PLATFORM=su10
 
 # platform designator for file names
 # for RedHat/Fedora set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6 OR
 # for RHEL3/clones wb3, rhel3 & centos3 set to el3 OR
 # for RHEL4/clones rhel4 & centos4 set to el4 OR
-# for SuSE set to su90, su91, su92, su100 or su101 OR
+# for SuSE set to su90, su91, su92, su100 or su101 or su102 OR
 # for Mandrake set to 101mdk or 20060mdk
 FILENAME=su100
 

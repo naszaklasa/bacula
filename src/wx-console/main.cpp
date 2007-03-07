@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: main.cpp,v 1.25 2006/12/08 14:27:10 kerns Exp $
+ *    Version $Id: main.cpp 3774 2006-12-08 14:27:10Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

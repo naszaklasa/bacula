@@ -3,7 +3,7 @@
  *
  *      Kern Sibbald, March 2004
  *
- *  Version $Id: spool.c,v 1.51.2.1 2007/01/27 09:28:28 kerns Exp $
+ *  Version $Id: spool.c 4051 2007-01-27 09:28:28Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

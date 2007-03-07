@@ -7,7 +7,7 @@
  *
  *  Kern E. Sibbald, MM
  *
- *   Version $Id: find.c,v 1.49 2006/11/21 20:14:46 kerns Exp $
+ *   Version $Id: find.c 4116 2007-02-06 14:37:57Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -119,14 +119,14 @@ get_win32_driveletters(FF_PKT *ff, char* szDrives)
     
    findFILESET *fileset = ff->fileset;
    if (fileset) {
-      int i, j;
+      int i;
+      char *fname;
       
       for (i=0; i<fileset->include_list.size(); i++) {
          findINCEXE *incexe = (findINCEXE *)fileset->include_list.get(i);
          
          /* look through all files and check */
-         for (j=0; j<incexe->name_list.size(); j++) {
-            char *fname = (char *)incexe->name_list.get(j);
+         foreach_alist(fname, &incexe->name_list) {
             /* fname should match x:/ */
             if (strlen(fname) >= 2 && B_ISALPHA(fname[0]) 
                && fname[1] == ':') {
@@ -190,9 +190,10 @@ find_files(JCR *jcr, FF_PKT *ff, int callback(FF_PKT *ff_pkt, void *hpkt, bool t
             ff->drivetypes = fo->drivetype;
             bstrncat(ff->VerifyOpts, fo->VerifyOpts, sizeof(ff->VerifyOpts));
          }
-         for (j=0; j<incexe->name_list.size(); j++) {
-            Dmsg1(100, "F %s\n", (char *)incexe->name_list.get(j));
-            ff->top_fname = (char *)incexe->name_list.get(j);
+         char *fname;
+         foreach_alist(fname, &incexe->name_list) {
+            Dmsg1(100, "F %s\n", fname);
+            ff->top_fname = fname;
             if (find_one_file(jcr, ff, our_callback, his_pkt, ff->top_fname, (dev_t)-1, true) == 0) {
                return 0;                  /* error return */
             }
@@ -339,8 +340,9 @@ static bool accept_file(FF_PKT *ff)
       }
       fnm_flags = (incexe->current_opts != NULL && incexe->current_opts->flags & FO_IGNORECASE)
              ? FNM_CASEFOLD : 0;
-      for (j=0; j<incexe->name_list.size(); j++) {
-         if (fnmatch((char *)incexe->name_list.get(j), ff->fname, fnmode|fnm_flags) == 0) {
+      char *fname;
+      foreach_alist(fname, &incexe->name_list) {
+         if (fnmatch(fname, ff->fname, fnmode|fnm_flags) == 0) {
             Dmsg1(100, "Reject wild2: %s\n", ff->fname);
             return false;          /* reject file */
          }

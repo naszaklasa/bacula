@@ -7,7 +7,7 @@
  *   Kern E. Sibbald, December 2001
  *
  *
- *   Version $Id: bscan.c,v 1.113 2006/12/01 08:45:13 robertnelson Exp $
+ *   Version $Id: bscan.c 3718 2006-12-01 08:45:40Z robertnelson $
  */
 /*
    Bacula® - The Network Backup Solution

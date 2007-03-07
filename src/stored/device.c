@@ -26,7 +26,7 @@
  *
  *   Kern Sibbald, MM, MMI
  *
- *   Version $Id: device.c,v 1.94 2006/12/14 11:41:01 kerns Exp $
+ *   Version $Id: device.c 4146 2007-02-08 10:56:41Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -121,6 +121,9 @@ bool fixup_device_block_write_error(DCR *dcr)
       return false;                /* device locked */
    }
    P(dev->mutex);                  /* lock again */
+
+   dev->VolCatInfo.VolCatJobs++;              /* increment number of jobs on vol */
+   dir_update_volume_info(dcr, false);        /* send Volume info to Director */
 
    Jmsg(jcr, M_INFO, 0, _("New volume \"%s\" mounted on device %s at %s.\n"),
       dcr->VolumeName, dev->print_name(), bstrftime(dt, sizeof(dt), time(NULL)));

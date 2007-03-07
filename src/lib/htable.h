@@ -2,7 +2,7 @@
  *
  * Written by Kern Sibbald, MMIV
  *
- *   Version $Id: htable.h,v 1.12 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: htable.h 3670 2006-11-21 16:13:58Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

@@ -5,7 +5,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_update.c,v 1.29 2006/12/23 16:33:52 kerns Exp $
+ *   Version $Id: ua_update.c 4183 2007-02-15 18:57:55Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -290,7 +290,7 @@ static void update_volslot(UAContext *ua, char *val, MEDIA_DBR *mr)
 }
 
 /* Modify the Pool in which this Volume is located */
-static void update_vol_pool(UAContext *ua, char *val, MEDIA_DBR *mr, POOL_DBR *opr)
+void update_vol_pool(UAContext *ua, char *val, MEDIA_DBR *mr, POOL_DBR *opr)
 {
    POOL_DBR pr;
    POOLMEM *query;

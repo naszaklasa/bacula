@@ -5,7 +5,7 @@
  *
  *     Nicolas Boichat, August MMIV
  *
- *    Version $Id: tray_conf.h,v 1.7 2006/11/22 14:26:39 kerns Exp $
+ *    Version $Id: tray_conf.h 3685 2006-11-22 14:26:40Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

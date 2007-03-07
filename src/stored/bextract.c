@@ -4,7 +4,7 @@
  *
  *   Kern E. Sibbald, MM
  *
- *   Version $Id: bextract.c,v 1.93 2006/12/01 08:45:13 robertnelson Exp $
+ *   Version $Id: bextract.c 3718 2006-12-01 08:45:40Z robertnelson $
  *
  */
 /*

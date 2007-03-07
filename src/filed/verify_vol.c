@@ -4,7 +4,7 @@
  *
  *    Kern Sibbald, July MMII
  *
- *   Version $Id: verify_vol.c,v 1.22 2006/11/21 17:03:45 kerns Exp $
+ *   Version $Id: verify_vol.c 3673 2006-11-21 17:03:47Z kerns $
  *
  */
 /*

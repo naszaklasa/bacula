@@ -3,7 +3,7 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: signal.c,v 1.38 2006/11/21 16:45:11 robertnelson Exp $
+ *   Version $Id: signal.c 3671 2006-11-21 16:45:13Z robertnelson $
  *
  * Note, we probably should do a core dump for the serious
  * signals such as SIGBUS, SIGPFE, ...

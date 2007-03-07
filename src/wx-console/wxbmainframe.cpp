@@ -1,15 +1,7 @@
 /*
- *
- *   Main frame
- *
- *    Nicolas Boichat, July 2004
- *
- *    Version $Id: wxbmainframe.cpp,v 1.59 2006/11/22 14:26:40 kerns Exp $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Main frame
+ *
+ *    Nicolas Boichat, July 2004
+ *
+ *    Version $Id: wxbmainframe.cpp 4297 2007-03-03 08:50:30Z kerns $
+ */
 
 /*  Windows debug builds set _DEBUG which is used by wxWidgets to select their
  *  debug memory allocator.  Unfortunately it conflicts with Bacula's SmartAlloc.
@@ -513,7 +513,9 @@ void wxbMainFrame::OnQuit(wxCommandEvent& WXUNUSED(event))
 void wxbMainFrame::OnAbout(wxCommandEvent& WXUNUSED(event))
 {
    wxString msg;
-   msg.Printf(_("Welcome to Bacula wx-console.\nWritten by Nicolas Boichat <nicolas@boichat.ch>\n(C) 2005 Kern Sibbald\n"));
+   msg.Printf(_("Welcome to Bacula wx-console.\n"
+     "Written by Nicolas Boichat <nicolas@boichat.ch>\n"
+     "Copyright (C), 2005-2007 Free Software Foundation Europe, e.V.\n"));
 
    wxMessageBox(msg, _("About Bacula wx-console"), wxOK | wxICON_INFORMATION, this);
 }

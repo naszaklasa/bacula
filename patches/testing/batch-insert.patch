@@ -1,6 +1,6 @@
-diff -Naur cvs/src/cats/cats.h my/src/cats/cats.h
---- cvs/src/cats/cats.h	2006-12-06 15:11:53.000000000 +0100
-+++ my/src/cats/cats.h	2007-01-10 19:21:42.000000000 +0100
+diff -Naur --exclude=.svn --exclude='*~' bacula/src/cats/cats.h bacula.new/src/cats/cats.h
+--- bacula/src/cats/cats.h	2007-02-16 09:53:54.000000000 +0100
++++ bacula.new/src/cats/cats.h	2007-02-20 17:43:47.000000000 +0100
 @@ -141,6 +141,7 @@
     POOLMEM *fname;                    /* Filename only */
     POOLMEM *path;                     /* Path only */
@@ -154,9 +154,9 @@ diff -Naur cvs/src/cats/cats.h my/src/cats/cats.h
  #define SQL_ROW               POSTGRESQL_ROW
  #define SQL_FIELD             POSTGRESQL_FIELD
  
-diff -Naur cvs/src/cats/mysql.c my/src/cats/mysql.c
---- cvs/src/cats/mysql.c	2006-12-09 14:41:50.000000000 +0100
-+++ my/src/cats/mysql.c	2007-01-10 19:21:42.000000000 +0100
+diff -Naur --exclude=.svn --exclude='*~' bacula/src/cats/mysql.c bacula.new/src/cats/mysql.c
+--- bacula/src/cats/mysql.c	2007-02-16 09:53:54.000000000 +0100
++++ bacula.new/src/cats/mysql.c	2007-02-20 17:43:47.000000000 +0100
 @@ -121,6 +121,7 @@
     mdb->fname = get_pool_memory(PM_FNAME);
     mdb->path = get_pool_memory(PM_FNAME);
@@ -208,9 +208,9 @@ diff -Naur cvs/src/cats/mysql.c my/src/cats/mysql.c
 +
  #endif /* HAVE_MYSQL */
 +
-diff -Naur cvs/src/cats/postgresql.c my/src/cats/postgresql.c
---- cvs/src/cats/postgresql.c	2006-12-06 15:11:53.000000000 +0100
-+++ my/src/cats/postgresql.c	2007-01-10 19:25:47.000000000 +0100
+diff -Naur --exclude=.svn --exclude='*~' bacula/src/cats/postgresql.c bacula.new/src/cats/postgresql.c
+--- bacula/src/cats/postgresql.c	2007-02-16 09:53:54.000000000 +0100
++++ bacula.new/src/cats/postgresql.c	2007-02-20 17:43:47.000000000 +0100
 @@ -124,6 +124,7 @@
     mdb->fname          = get_pool_memory(PM_FNAME);
     mdb->path           = get_pool_memory(PM_FNAME);
@@ -430,9 +430,9 @@ diff -Naur cvs/src/cats/postgresql.c my/src/cats/postgresql.c
 +                                        "    WHERE NOT EXISTS               "
 +                                        "      (SELECT Name FROM Filename WHERE Name = a.Name)";
  #endif /* HAVE_POSTGRESQL */
-diff -Naur cvs/src/cats/protos.h my/src/cats/protos.h
---- cvs/src/cats/protos.h	2006-12-06 15:11:53.000000000 +0100
-+++ my/src/cats/protos.h	2007-01-10 19:21:42.000000000 +0100
+diff -Naur --exclude=.svn --exclude='*~' bacula/src/cats/protos.h bacula.new/src/cats/protos.h
+--- bacula/src/cats/protos.h	2007-02-16 09:53:54.000000000 +0100
++++ bacula.new/src/cats/protos.h	2007-02-20 17:43:47.000000000 +0100
 @@ -67,6 +67,10 @@
  bool db_create_device_record(JCR *jcr, B_DB *mdb, DEVICE_DBR *dr);
  bool db_create_storage_record(JCR *jcr, B_DB *mdb, STORAGE_DBR *sr);
@@ -444,9 +444,9 @@ diff -Naur cvs/src/cats/protos.h my/src/cats/protos.h
  
  /* delete.c */
  int db_delete_pool_record(JCR *jcr, B_DB *db, POOL_DBR *pool_dbr);
-diff -Naur cvs/src/cats/sql_create.c my/src/cats/sql_create.c
---- cvs/src/cats/sql_create.c	2006-12-06 15:11:53.000000000 +0100
-+++ my/src/cats/sql_create.c	2007-01-10 21:46:59.000000000 +0100
+diff -Naur --exclude=.svn --exclude='*~' bacula/src/cats/sql_create.c bacula.new/src/cats/sql_create.c
+--- bacula/src/cats/sql_create.c	2007-02-16 09:53:54.000000000 +0100
++++ bacula.new/src/cats/sql_create.c	2007-02-20 17:43:47.000000000 +0100
 @@ -664,9 +664,208 @@
   *  };
   */
@@ -479,7 +479,7 @@ diff -Naur cvs/src/cats/sql_create.c my/src/cats/sql_create.c
 +{
 +   size_t len;
 +   char *digest;
-+   char edi1[50];
++   char ed1[50];
 +
 +   mdb->esc_name = check_pool_memory_size(mdb->esc_name, mdb->fnl*2+1);
 +   db_escape_string(mdb->esc_name, mdb->fname, mdb->fnl);
@@ -665,9 +665,9 @@ diff -Naur cvs/src/cats/sql_create.c my/src/cats/sql_create.c
  /*
   * This is the master File entry containing the attributes.
   *  The filename and path records have already been created.
-diff -Naur cvs/src/cats/sqlite.c my/src/cats/sqlite.c
---- cvs/src/cats/sqlite.c	2006-12-06 15:11:53.000000000 +0100
-+++ my/src/cats/sqlite.c	2007-01-10 19:21:42.000000000 +0100
+diff -Naur --exclude=.svn --exclude='*~' bacula/src/cats/sqlite.c bacula.new/src/cats/sqlite.c
+--- bacula/src/cats/sqlite.c	2007-02-16 09:53:54.000000000 +0100
++++ bacula.new/src/cats/sqlite.c	2007-02-20 17:43:47.000000000 +0100
 @@ -108,6 +108,7 @@
     mdb->fname = get_pool_memory(PM_FNAME);
     mdb->path = get_pool_memory(PM_FNAME);
@@ -676,7 +676,7 @@ diff -Naur cvs/src/cats/sqlite.c my/src/cats/sqlite.c
     mdb->allow_transactions = mult_db_connections;
     qinsert(&db_list, &mdb->bq);            /* put db in list */
     V(mutex);
-@@ -213,6 +214,7 @@
+@@ -215,6 +216,7 @@
        free_pool_memory(mdb->fname);
        free_pool_memory(mdb->path);
        free_pool_memory(mdb->esc_name);
@@ -684,7 +684,7 @@ diff -Naur cvs/src/cats/sqlite.c my/src/cats/sqlite.c
        if (mdb->db_name) {
           free(mdb->db_name);
        }
-@@ -433,4 +435,16 @@
+@@ -435,4 +437,16 @@
     return mdb->fields[mdb->field++];
  }
  
@@ -701,9 +701,9 @@ diff -Naur cvs/src/cats/sqlite.c my/src/cats/sqlite.c
 +
 +
  #endif /* HAVE_SQLITE */
-diff -Naur cvs/src/dird/backup.c my/src/dird/backup.c
---- cvs/src/dird/backup.c	2006-12-13 11:57:52.000000000 +0100
-+++ my/src/dird/backup.c	2007-01-10 19:21:42.000000000 +0100
+diff -Naur --exclude=.svn --exclude='*~' bacula/src/dird/backup.c bacula.new/src/dird/backup.c
+--- bacula/src/dird/backup.c	2007-02-20 14:38:45.000000000 +0100
++++ bacula.new/src/dird/backup.c	2007-02-20 17:43:47.000000000 +0100
 @@ -233,6 +233,9 @@
  
     /* Pickup Job termination data */
@@ -714,28 +714,3 @@ diff -Naur cvs/src/dird/backup.c my/src/dird/backup.c
     if (stat == JS_Terminated) {
        backup_cleanup(jcr, stat);
        return true;
-diff -Naur cvs/src/dird/jobq.c my/src/dird/jobq.c
---- cvs/src/dird/jobq.c	2006-11-24 11:29:37.000000000 +0100
-+++ my/src/dird/jobq.c	2007-01-10 19:21:42.000000000 +0100
-@@ -563,6 +563,10 @@
-             db_close_database(jcr, jcr->db);
-             jcr->db = NULL;
-          }
-+         if (jcr->db_batch) {
-+            db_close_database(jcr, jcr->db_batch);
-+            jcr->db_batch = NULL;
-+         }
-          Dmsg2(2300, "====== Termination job=%d use_cnt=%d\n", jcr->JobId, jcr->use_count());
-          jcr->SDJobStatus = 0;
-          V(jq->mutex);                /* release internal lock */
-diff -Naur cvs/src/jcr.h my/src/jcr.h
---- cvs/src/jcr.h	2006-12-19 21:57:38.000000000 +0100
-+++ my/src/jcr.h	2007-01-10 19:21:42.000000000 +0100
-@@ -184,6 +184,7 @@
-    bool cached_attribute;             /* set if attribute is cached */
-    POOLMEM *attr;                     /* Attribute string from SD */
-    B_DB *db;                          /* database pointer */
-+   B_DB *db_batch;                    /* database pointer for batch insert */
-    ATTR_DBR *ar;                      /* DB attribute record */
- 
-    /* Daemon specific part of JCR */

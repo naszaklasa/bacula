@@ -7,7 +7,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: bsr.c,v 1.34 2006/11/24 11:34:18 kerns Exp $
+ *   Version $Id: bsr.c 3693 2006-11-24 11:34:19Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

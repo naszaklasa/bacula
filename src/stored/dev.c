@@ -26,7 +26,7 @@
  *     really necessary -- KES.  Note, this contortion has been
  *     corrected to a large extent by a rewrite (Apr MMI).
  *
- *   Version $Id: dev.c,v 1.207 2006/12/22 15:01:05 kerns Exp $
+ *   Version $Id: dev.c 4258 2007-02-26 09:58:57Z ricozz $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -382,7 +382,8 @@ void DEVICE::open_tape_device(DCR *dcr, int omode)
          Dmsg0(050, "Rewind after open\n");
          mt_com.mt_op = MTREW;
          mt_com.mt_count = 1;
-         if (ioctl(fd, MTIOCTOP, (char *)&mt_com) < 0) {
+         /* rewind only if dev is a tape */
+         if (is_tape() && (ioctl(fd, MTIOCTOP, (char *)&mt_com) < 0)) {
             berrno be;
             dev_errno = errno;           /* set error status from rewind */
             ::close(fd);

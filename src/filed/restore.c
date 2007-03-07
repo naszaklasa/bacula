@@ -1,15 +1,7 @@
 /*
- *  Bacula File Daemon  restore.c Restorefiles.
- *
- *    Kern Sibbald, November MM
- *
- *   Version $Id: restore.c,v 1.102 2006/12/21 12:53:48 ricozz Exp $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Bacula File Daemon  restore.c Restorefiles.
+ *
+ *    Kern Sibbald, November MM
+ *
+ *   Version $Id: restore.c 4190 2007-02-16 17:13:38Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "filed.h"
@@ -417,7 +417,7 @@ void do_restore(JCR *jcr)
             break;
          default:
             /* Shouldn't happen */
-            Jmsg1(jcr, M_ERROR, 0, _("An error occured while decoding encrypted session data stream: %s\n"), crypto_strerror(cryptoerr));
+            Jmsg1(jcr, M_ERROR, 0, _("An error occurred while decoding encrypted session data stream: %s\n"), crypto_strerror(cryptoerr));
             break;
          }
 
@@ -1006,16 +1006,14 @@ int32_t extract_data(JCR *jcr, BFILE *bfd, POOLMEM *buf, int32_t buflen,
       if (!decompress_data(jcr, &wbuf, &wsize)) {
          return -1;
       }
-   } else {
-      Dmsg2(30, "Write %u bytes, total before write=%s\n", wsize, edit_uint64(jcr->JobBytes, ec1));
    }
 
    if (!store_data(jcr, bfd, wbuf, wsize, (flags & FO_WIN32DECOMP) != 0)) {
       return -1;
    }
-
    jcr->JobBytes += wsize;
    *addr += wsize;
+   Dmsg2(30, "Write %u bytes, JobBytes=%s\n", wsize, edit_uint64(jcr->JobBytes, ec1));
 
    /* Clean up crypto buffers */
    if (flags & FO_ENCRYPT) {
@@ -1045,7 +1043,9 @@ bool flush_cipher(JCR *jcr, BFILE *bfd, uint64_t *addr, int flags,
    char *wbuf;                        /* write buffer */
    uint32_t wsize;                    /* write size */
    char ec1[50];                      /* Buffer printing huge values */
+   bool second_pass = false;
 
+again:
    /* Write out the remaining block and free the cipher context */
    cipher_ctx->buf = check_pool_memory_size(cipher_ctx->buf, cipher_ctx->buf_len + 
                      cipher_ctx->block_size);
@@ -1056,6 +1056,7 @@ bool flush_cipher(JCR *jcr, BFILE *bfd, uint64_t *addr, int flags,
       Jmsg1(jcr, M_FATAL, 0, _("Decryption error for %s\n"), jcr->last_fname);
    }
 
+   Dmsg2(30, "Flush decrypt len=%d buf_len=%d\n", decrypted_len, cipher_ctx->buf_len);
    /* If nothing new was decrypted, and our output buffer is empty, return */
    if (decrypted_len == 0 && cipher_ctx->buf_len == 0) {
       return true;
@@ -1067,16 +1068,18 @@ bool flush_cipher(JCR *jcr, BFILE *bfd, uint64_t *addr, int flags,
    Dmsg1(500, "Crypto unser block size=%d\n", cipher_ctx->packet_len - CRYPTO_LEN_SIZE);
    wsize = cipher_ctx->packet_len - CRYPTO_LEN_SIZE;
    wbuf = &cipher_ctx->buf[CRYPTO_LEN_SIZE]; /* Decrypted, possibly decompressed output here. */
+   cipher_ctx->buf_len -= cipher_ctx->packet_len;
+   Dmsg2(30, "Encryption writing full block, %u bytes, remaining %u bytes in buffer\n", wsize, cipher_ctx->buf_len);
 
-   if (cipher_ctx->buf_len != cipher_ctx->packet_len) {
+#ifdef xxx
+   Dmsg2(30, "check buf_len=%d pkt_len=%d\n", cipher_ctx->buf_len, cipher_ctx->packet_len);
+   if (second_pass && cipher_ctx->buf_len != cipher_ctx->packet_len) {
       Jmsg2(jcr, M_FATAL, 0,
             _("Unexpected number of bytes remaining at end of file, received %u, expected %u\n"),
             cipher_ctx->packet_len, cipher_ctx->buf_len);
       return false;
    }
-
-   cipher_ctx->buf_len = 0;
-   cipher_ctx->packet_len = 0;
+#endif
 
    if (flags & FO_SPARSE) {
       if (!sparse_data(jcr, bfd, addr, &wbuf, &wsize)) {
@@ -1085,16 +1088,36 @@ bool flush_cipher(JCR *jcr, BFILE *bfd, uint64_t *addr, int flags,
    }
 
    if (flags & FO_GZIP) {
-      decompress_data(jcr, &wbuf, &wsize);
-   } else {
-      Dmsg2(30, "Write %u bytes, total before write=%s\n", wsize, edit_uint64(jcr->JobBytes, ec1));
+      if (!decompress_data(jcr, &wbuf, &wsize)) {
+         return false;
+      }
    }
 
+   Dmsg0(30, "Call store_data\n");
    if (!store_data(jcr, bfd, wbuf, wsize, (flags & FO_WIN32DECOMP) != 0)) {
       return false;
    }
-
    jcr->JobBytes += wsize;
+   Dmsg2(30, "Flush write %u bytes, JobBytes=%s\n", wsize, edit_uint64(jcr->JobBytes, ec1));
+
+   /* Move any remaining data to start of buffer */
+   if (cipher_ctx->buf_len > 0) {
+      Dmsg1(30, "Moving %u buffered bytes to start of buffer\n", cipher_ctx->buf_len);
+      memmove(cipher_ctx->buf, &cipher_ctx->buf[cipher_ctx->packet_len], 
+         cipher_ctx->buf_len);
+   }
+   /* The packet was successfully written, reset the length so that the next
+    * packet length may be re-read by unser_crypto_packet_len() */
+   cipher_ctx->packet_len = 0;
+
+   if (cipher_ctx->buf_len >0 && !second_pass) {
+      second_pass = true;
+      goto again;
+   }
+
+   /* Stop decryption */
+   cipher_ctx->buf_len = 0;
+   cipher_ctx->packet_len = 0;
 
    return true;
 }

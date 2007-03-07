@@ -1,14 +1,7 @@
 /*
- * Configuration file parser for Bacula Storage daemon
- *
- *     Kern Sibbald, March MM
- *
- *   Version $Id: stored_conf.c,v 1.85 2006/12/22 15:40:16 kerns Exp $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Configuration file parser for Bacula Storage daemon
+ *
+ *     Kern Sibbald, March MM
+ *
+ *   Version $Id: stored_conf.c 4297 2007-03-03 08:50:30Z kerns $
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -86,6 +86,7 @@ static RES_ITEM store_items[] = {
    {"tlskey",                store_dir,       ITEM(res_store.tls_keyfile), 0, 0, 0},
    {"tlsdhfile",             store_dir,       ITEM(res_store.tls_dhfile), 0, 0, 0},
    {"tlsallowedcn",          store_alist_str, ITEM(res_store.tls_allowed_cns), 0, 0, 0},
+   {"clientconnectwait",     store_time,  ITEM(res_store.client_wait), 0, ITEM_DEFAULT, 30 * 60},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 

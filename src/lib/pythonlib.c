@@ -4,7 +4,7 @@
  *
  * Kern Sibbald, November MMIV
  *
- *   Version $Id: pythonlib.c,v 1.13 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: pythonlib.c 3670 2006-11-21 16:13:58Z kerns $
  *
  */
 /*

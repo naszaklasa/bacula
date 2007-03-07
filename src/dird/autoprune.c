@@ -5,7 +5,7 @@
  *
  *     Kern Sibbald, May MMII
  *
- *   Version $Id: autoprune.c,v 1.19 2006/11/21 13:20:08 kerns Exp $
+ *   Version $Id: autoprune.c 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

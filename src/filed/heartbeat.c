@@ -5,7 +5,7 @@
  *
  *    Kern Sibbald, May MMIII
  *
- *   Version $Id: heartbeat.c,v 1.21 2006/11/21 17:03:45 kerns Exp $
+ *   Version $Id: heartbeat.c 4190 2007-02-16 17:13:38Z kerns $
  *
  */
 /*
@@ -127,8 +127,6 @@ void stop_heartbeat_monitor(JCR *jcr)
    while (jcr->hb_bsock == NULL && cnt++ < 200) {
       bmicrosleep(0, 50000);         /* wait for start */
    }
-   if (!jcr->hb_bsock) {
-   }
 
    if (jcr->hb_bsock) {
       jcr->hb_bsock->timed_out = 1;   /* set timed_out to terminate read */
@@ -138,6 +136,7 @@ void stop_heartbeat_monitor(JCR *jcr)
       jcr->hb_dir_bsock->timed_out = 1;   /* set timed_out to terminate read */
       jcr->hb_dir_bsock->terminated = 1;  /* set to terminate read */
    }
+   Dmsg0(100, "Send kill to heartbeat id\n");
    pthread_kill(jcr->heartbeat_id, TIMEOUT_SIGNAL);  /* make heartbeat thread go away */
    bmicrosleep(0, 50000);
    cnt = 0;

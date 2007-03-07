@@ -114,6 +114,8 @@ Packager: %{_packager}
 %{?build_su9:%define su9 1}
 %define su10 0
 %{?build_su10:%define su10 1}
+%define su102 0
+%{?build_su102:%define su102 1}
 # Mandrake builds
 %define mdk 0
 %{?build_mdk:%define mdk 1}
@@ -126,7 +128,7 @@ Packager: %{_packager}
 %{?build_client_only:%define client_only 1}
 
 # test for a platform definition
-%if ! %{rh7} && ! %{rh8} && ! %{rh9} && ! %{fc1} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{wb3} && ! %{su9} && ! %{su10} && ! %{mdk}
+%if ! %{rh7} && ! %{rh8} && ! %{rh9} && ! %{fc1} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{wb3} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk}
 %{error: You must specify a platform. Please examine the spec file.}
 exit 1
 %endif
@@ -186,7 +188,7 @@ exit 1
 %if %{wb3} && ! %{rhel3} && ! %{centos3}
 %define _dist %(grep White /etc/whitebox-release)
 %endif
-%if %{su9} || %{su10}
+%if %{su9} || %{su10} || %{su102}
 %define _dist %(grep -i SuSE /etc/SuSE-release)
 %endif
 %if %{mdk}
@@ -290,6 +292,26 @@ BuildRequires: fontconfig-devel >= 2.3
 BuildRequires: gnome-vfs2-devel >= 2.12
 BuildRequires: libpng-devel
 %endif
+%if %{su102}
+BuildRequires: termcap
+BuildRequires: glibc-devel >= 2.5
+%endif
+%if %{su102} && %{gconsole}
+BuildRequires: libgnome >= 2.16
+BuildRequires: gtk2-devel >= 2.10
+BuildRequires: libgnomeui-devel >= 2.16
+BuildRequires: ORBit2-devel
+BuildRequires: libart_lgpl-devel >= 2.3
+BuildRequires: libbonobo-devel >= 2.16
+BuildRequires: libbonoboui-devel >= 2.16
+BuildRequires: bonobo-activation-devel
+BuildRequires: gconf2-devel
+BuildRequires: freetype2-devel
+BuildRequires: cairo-devel
+BuildRequires: fontconfig-devel >= 2.4
+BuildRequires: gnome-vfs2-devel >= 2.16
+BuildRequires: libpng-devel
+%endif
 %if %{mdk}
 BuildRequires: libtermcap-devel
 BuildRequires: libstdc++-static-devel
@@ -376,11 +398,11 @@ BuildRequires: libbonoboui-devel >= 2.16
 BuildRequires: GConf2-devel
 BuildRequires: freetype-devel
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6}
 BuildRequires: libtermcap-devel
 BuildRequires: glibc-devel >= 2.3
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && %{gconsole}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && %{gconsole}
 BuildRequires: gtk2-devel >= 2.0
 BuildRequires: libgnomeui-devel >= 2.0
 BuildRequires: ORBit2-devel
@@ -444,7 +466,7 @@ Provides: bacula-dir, bacula-sd, bacula-fd, bacula-server
 Conflicts: bacula-client
 Obsoletes: bacula-rescue
 
-%if %{su9} || %{su10}
+%if %{su9} || %{su10} || %{su102}
 Conflicts: bacula
 %endif
 
@@ -458,7 +480,11 @@ Requires: libtermcap
 Requires: glibc >= 2.3
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{fc5} && ! %{fc6}
+%if %{su102}
+Requires: glibc >= 2.5
+Requires: termcap
+%endif
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{fc5} && ! %{fc6}
 Requires: glibc >= 2.3
 Requires: libtermcap
 %endif
@@ -479,7 +505,7 @@ Requires: mysql-server >= 3.23
 Requires: mysql >= 4.0
 Requires: mysql-server >= 4.0
 %endif
-%if %{mysql} && ! %{su9} && ! %{su10} && ! %{mdk} && %{mysql5}
+%if %{mysql} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk} && %{mysql5}
 Requires: mysql >= 5.0
 Requires: mysql-server >= 5.0
 %endif
@@ -497,6 +523,10 @@ Requires: mysql >= 4.0
 Requires: mysql-client >= 4.0
 %endif
 %if %{mysql} && %{su10} && %{mysql5}
+Requires: mysql >= 5.0
+Requires: mysql-client >= 5.0
+%endif
+%if %{mysql} && %{su102} && %{mysql5}
 Requires: mysql >= 5.0
 Requires: mysql-client >= 5.0
 %endif
@@ -576,7 +606,7 @@ Conflicts: bacula-sqlite
 Conflicts: bacula-postgresql
 Obsoletes: bacula-rescue
 
-%if %{su9} || %{su10}
+%if %{su9} || %{su10} || %{su102}
 Provides: bacula
 %endif
 
@@ -590,7 +620,11 @@ Requires: libtermcap
 Requires: glibc >= 2.3
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{fc5} && ! %{fc6}
+%if %{su102}
+Requires: glibc >= 2.5
+Requires: termcap
+%endif
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{fc5} && ! %{fc6}
 Requires: glibc >= 2.3
 Requires: libtermcap
 %endif
@@ -683,6 +717,23 @@ Requires: fontconfig >= 2.3
 Requires: gnome-vfs2 >= 2.12
 Requires: libpng
 %endif
+%if %{gconsole} && %{su102}
+Requires: gtk2 >= 2.10
+Requires: libgnome >= 2.16
+Requires: libgnomeui >= 2.16
+Requires: glibc >= 2.5
+Requires: ORBit2
+Requires: libart_lgpl >= 2.3
+Requires: libbonobo >= 2.16
+Requires: libbonoboui >= 2.16
+Requires: bonobo-activation
+Requires: gconf2
+Requires: freetype2
+Requires: cairo
+Requires: fontconfig >= 2.4
+Requires: gnome-vfs2 >= 2.16
+Requires: libpng
+%endif
 %if %{gconsole} && %{mdk} && !%{mdv}
 Requires: gtk2 >= 2.0
 Requires: libgnomeui2
@@ -751,7 +802,7 @@ Requires: libbonoboui >= 2.16
 Requires: GConf2
 Requires: freetype
 %endif
-%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6}
+%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6}
 Requires: gtk2 >= 2.0
 Requires: libgnomeui >= 2.0
 Requires: glibc >= 2.3
@@ -770,7 +821,10 @@ Requires: xsu
 %if %{gconsole} && %{su10}
 Requires: xsu
 %endif
-%if %{gconsole} && ! %{su9} && ! %{su10}
+%if %{gconsole} && %{su102}
+Requires: xsu
+%endif
+%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102}
 Requires: usermode
 %endif
 
@@ -799,6 +853,10 @@ Requires: wxGTK >= 2.6, libstdc++, openssl
 
 %if %{wxconsole} && %{su10}
 Requires: gtk2 >= 2.8
+%endif
+
+%if %{wxconsole} && %{su102}
+Requires: gtk2 >= 2.10
 %endif
 
 %if %{wxconsole} && %{fc3}  
@@ -843,7 +901,7 @@ server packages.
 
 %build
 
-%if %{su9} || %{su10}
+%if %{su9} || %{su10} || %{su102}
 export LDFLAGS="${LDFLAGS} -L/usr/lib/termcap"
 %endif
 
@@ -877,6 +935,9 @@ patch src/cats/update_sqlite_tables.in src/cats/update_sqlite_tables.in.patch
 patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
 %endif
 %if %{sqlite} && %{su10}
+patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
+%endif
+%if %{sqlite} && %{su102}
 patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
 %endif
 
@@ -979,7 +1040,7 @@ mkdir -p $RPM_BUILD_ROOT/usr/share/pixmaps
 %define usermode_iftrick 0
 %endif
 
-%if %{usermode_iftrick} && ! %{su9} && ! %{su10}
+%if %{usermode_iftrick} && ! %{su9} && ! %{su10} && ! %{su102}
 mkdir -p $RPM_BUILD_ROOT/etc/pam.d
 mkdir -p $RPM_BUILD_ROOT/etc/security/console.apps
 mkdir -p $RPM_BUILD_ROOT/usr/bin
@@ -1052,7 +1113,7 @@ rm -f $RPM_BUILD_ROOT/etc/bacula/gconsole
 rm -f $RPM_BUILD_ROOT/usr/sbin/static-bacula-fd
 
 # install the init scripts
-%if %{su9} || %{su10}
+%if %{su9} || %{su10} || %{su102}
 cp -p platforms/suse/bacula-dir $RPM_BUILD_ROOT/etc/init.d/bacula-dir
 cp -p platforms/suse/bacula-fd $RPM_BUILD_ROOT/etc/init.d/bacula-fd
 cp -p platforms/suse/bacula-sd $RPM_BUILD_ROOT/etc/init.d/bacula-sd
@@ -1062,7 +1123,7 @@ cp -p platforms/mandrake/bacula-dir $RPM_BUILD_ROOT/etc/init.d/bacula-dir
 cp -p platforms/mandrake/bacula-fd $RPM_BUILD_ROOT/etc/init.d/bacula-fd
 cp -p platforms/mandrake/bacula-sd $RPM_BUILD_ROOT/etc/init.d/bacula-sd
 %endif
-%if ! %{su9} && ! %{su10} && ! %{mdk}
+%if ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk}
 cp -p platforms/redhat/bacula-dir $RPM_BUILD_ROOT/etc/init.d/bacula-dir
 cp -p platforms/redhat/bacula-fd $RPM_BUILD_ROOT/etc/init.d/bacula-fd
 cp -p platforms/redhat/bacula-sd $RPM_BUILD_ROOT/etc/init.d/bacula-sd
@@ -1086,7 +1147,17 @@ cp -p scripts/bacula.desktop.gnome2.xsu $RPM_BUILD_ROOT/usr/share/applications/b
 cp -p src/tray-monitor/generic.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/bacula-tray-monitor.xpm
 cp -p scripts/bacula-tray-monitor.desktop $RPM_BUILD_ROOT/usr/share/applications/bacula-tray-monitor.desktop
 %endif
+%if %{gconsole} && %{su102}
+cp -p scripts/bacula.png $RPM_BUILD_ROOT/usr/share/pixmaps/bacula.png
+cp -p scripts/bacula.desktop.gnome2.xsu $RPM_BUILD_ROOT/usr/share/applications/bacula.desktop
+cp -p src/tray-monitor/generic.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/bacula-tray-monitor.xpm
+cp -p scripts/bacula-tray-monitor.desktop $RPM_BUILD_ROOT/usr/share/applications/bacula-tray-monitor.desktop
+%endif
 %if %{wxconsole} && %{su10}
+cp -p src/wx-console/wxwin16x16.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/wxwin16x16.xpm
+cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxconsole.desktop
+%endif
+%if %{wxconsole} && %{su102}
 cp -p src/wx-console/wxwin16x16.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/wxwin16x16.xpm
 cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxconsole.desktop
 %endif
@@ -1649,7 +1720,7 @@ echo "The database update scripts were installed to /etc/bacula/updatedb"
 %{_mandir}/man1/bacula-tray-monitor.1.%{manpage_ext}
 %endif
 
-%if %{gconsole} && ! %{su9} && ! %{su10}
+%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102}
 # add the console helper files
 %config(noreplace,missingok) /etc/pam.d/gnome-console
 %config(noreplace,missingok) /etc/security/console.apps/gnome-console
@@ -1694,7 +1765,7 @@ fi
 %{_mandir}/man1/bacula-wxconsole.1.%{manpage_ext}
 %endif
 
-%if %{wxconsole} && ! %{su9} && ! %{su10}
+%if %{wxconsole} && ! %{su9} && ! %{su10} && ! %{su102}
 # add the console helper files
 %config(noreplace,missingok) /etc/pam.d/wxconsole
 %config(noreplace,missingok) /etc/security/console.apps/wxconsole
@@ -1729,6 +1800,8 @@ fi
 %endif
 
 %changelog
+* Mon Feb 26 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add SuSE 10.2 target
 * Sat Jan 20 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - correct bug 752
 - set query.sql as config file

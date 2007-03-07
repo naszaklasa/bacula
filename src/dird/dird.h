@@ -3,7 +3,7 @@
  *
  *     Kern Sibbald, December MM
  *
- *    Version $Id: dird.h,v 1.13 2006/11/21 13:20:08 kerns Exp $
+ *    Version $Id: dird.h 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

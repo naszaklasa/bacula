@@ -1,19 +1,6 @@
-diff -Naur org/bacula-2.0.0/src/dird/protos.h bacula-2.0.0/src/dird/protos.h
---- org/bacula-2.0.0/src/dird/protos.h	2006-12-23 17:33:52.000000000 +0100
-+++ bacula-2.0.0/src/dird/protos.h	2007-01-09 16:12:18.000000000 +0100
-@@ -195,6 +195,9 @@
- int get_num_drives_from_SD(UAContext *ua);
- void update_slots(UAContext *ua);
- 
-+/* ua_update.c */
-+void update_vol_pool(UAContext *ua, char *val, MEDIA_DBR *mr, POOL_DBR *opr);
-+
- /* ua_output.c */
- void prtit(void *ctx, const char *msg);
- int complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool);
-diff -Naur org/bacula-2.0.0/src/dird/ua_purge.c bacula-2.0.0/src/dird/ua_purge.c
---- org/bacula-2.0.0/src/dird/ua_purge.c	2006-12-22 16:01:05.000000000 +0100
-+++ bacula-2.0.0/src/dird/ua_purge.c	2007-01-09 16:12:18.000000000 +0100
+diff -Naur --exclude=.svn --exclude='*~' bacula/src/dird/ua_purge.c bacula.new/src/dird/ua_purge.c
+--- bacula/src/dird/ua_purge.c	2007-02-16 09:53:51.000000000 +0100
++++ bacula.new/src/dird/ua_purge.c	2007-02-20 18:02:46.000000000 +0100
 @@ -605,6 +605,18 @@
        }
        pm_strcpy(jcr->VolumeName, mr->VolumeName);
@@ -33,15 +20,3 @@ diff -Naur org/bacula-2.0.0/src/dird/ua_purge.c bacula-2.0.0/src/dird/ua_purge.c
        /* Send message to Job report, if it is a *real* job */           
        if (jcr && jcr->JobId > 0) {
           Jmsg1(jcr, M_INFO, 0, _("All records pruned from Volume \"%s\"; marking it \"Purged\"\n"),
-diff -Naur org/bacula-2.0.0/src/dird/ua_update.c bacula-2.0.0/src/dird/ua_update.c
---- org/bacula-2.0.0/src/dird/ua_update.c	2006-12-23 17:33:52.000000000 +0100
-+++ bacula-2.0.0/src/dird/ua_update.c	2007-01-09 16:12:18.000000000 +0100
-@@ -290,7 +290,7 @@
- }
- 
- /* Modify the Pool in which this Volume is located */
--static void update_vol_pool(UAContext *ua, char *val, MEDIA_DBR *mr, POOL_DBR *opr)
-+void update_vol_pool(UAContext *ua, char *val, MEDIA_DBR *mr, POOL_DBR *opr)
- {
-    POOL_DBR pr;
-    POOLMEM *query;

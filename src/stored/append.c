@@ -2,12 +2,12 @@
  * Append code for Storage daemon
  *  Kern Sibbald, May MM
  *
- *  Version $Id: append.c,v 1.79 2006/12/16 15:30:22 kerns Exp $
+ *  Version $Id: append.c 4183 2007-02-15 18:57:55Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -38,6 +38,7 @@
 
 /* Responses sent to the File daemon */
 static char OK_data[]    = "3000 OK data\n";
+static char OK_append[]  = "3000 OK append data\n";
 
 /* Forward referenced functions */
 
@@ -261,6 +262,14 @@ bool do_append_data(JCR *jcr)
       }
    }
 
+   /* Create Job status for end of session label */
+   set_jcr_job_status(jcr, ok?JS_Terminated:JS_ErrorTerminated);
+
+   /* Terminate connection with FD */
+   bnet_fsend(ds, OK_append);
+   do_fd_commands(jcr);               /* finish dialog with FD */
+
+
    time_t job_elapsed = time(NULL) - jcr->run_time;
 
    if (job_elapsed <= 0) {
@@ -271,8 +280,6 @@ bool do_append_data(JCR *jcr)
          job_elapsed / 3600, job_elapsed % 3600 / 60, job_elapsed % 60,
          edit_uint64_with_suffix(jcr->JobBytes / job_elapsed, ec));
 
-   /* Create Job status for end of session label */
-   set_jcr_job_status(jcr, ok?JS_Terminated:JS_ErrorTerminated);
 
    Dmsg1(200, "Write EOS label JobStatus=%c\n", jcr->JobStatus);
 
@@ -302,6 +309,8 @@ bool do_append_data(JCR *jcr)
    if (dev->VolCatInfo.VolCatName[0] == 0) {
       Pmsg0(000, _("NULL Volume name. This shouldn't happen!!!\n"));
    }
+
+
 
    if (!ok) {
       discard_data_spool(dcr);

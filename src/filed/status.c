@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, August MMI
  *
- *   Version $Id: status.c,v 1.65 2006/11/21 17:03:45 kerns Exp $
+ *   Version $Id: status.c 4096 2007-02-04 16:28:24Z robertnelson $
  *
  */
 /*
@@ -93,7 +93,7 @@ void output_status(void sendit(const char *msg, int len, void *sarg), void *arg)
                  p_CreateFileA?"":"!",
                  p_CreateFileW?"":"!");
       sendit(msg, len, arg);
-      len = Mmsg(msg, " %sWUL,%sWMKD,%sWOP,%sGFAA,%sGFAW,%sGFAEA,%sGFAEW,%sSFAA,%sSFAW,%sBR,%sBW,%sSPSP,\n",
+      len = Mmsg(msg, " %sWUL,%sWMKD,%sGFAA,%sGFAW,%sGFAEA,%sGFAEW,%sSFAA,%sSFAW,%sBR,%sBW,%sSPSP,\n",
                  p_wunlink?"":"!",
                  p_wmkdir?"":"!",
                  p_GetFileAttributesA?"":"!",

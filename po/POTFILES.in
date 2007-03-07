@@ -109,7 +109,6 @@
 ./src/lib/bsys.c
 ./src/lib/btime.c
 ./src/lib/btimers.c
-./src/lib/btree.c
 ./src/lib/cram-md5.c
 ./src/lib/crc32.c
 ./src/lib/crypto.c
@@ -244,7 +243,6 @@
 ./src/lib/bsock.h
 ./src/lib/btime.h
 ./src/lib/btimers.h
-./src/lib/btree.h
 ./src/lib/crypto.h
 ./src/lib/dlist.h
 ./src/lib/enh_fnmatch.h

@@ -11,7 +11,7 @@
  *     When the File daemon sends the attributes, compare them to
  *       what is in the DB.
  *
- *   Version $Id: verify.c,v 1.85 2006/12/09 13:54:30 ricozz Exp $
+ *   Version $Id: verify.c 4183 2007-02-15 18:57:55Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -756,7 +756,7 @@ static int missing_handler(void *ctx, int num_fields, char **row)
    }
    if (!jcr->fn_printed) {
       Jmsg(jcr, M_INFO, 0, "\n");
-      Jmsg(jcr, M_INFO, 0, _("The following files are missing:\n"));
+      Jmsg(jcr, M_INFO, 0, _("The following files are in the Catalog but not on disk:\n"));
       jcr->fn_printed = true;
    }
    Jmsg(jcr, M_INFO, 0, "      %s%s\n", row[0]?row[0]:"", row[1]?row[1]:"");

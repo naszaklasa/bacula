@@ -7,7 +7,7 @@
  *
  *   Kern Sibbald, June MMIII
  *
- *   Version $Id: alist.c,v 1.12 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: alist.c 3670 2006-11-21 16:13:58Z kerns $
  *
  */
 /*

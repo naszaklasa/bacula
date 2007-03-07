@@ -10,7 +10,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_restore.c,v 1.126 2006/12/23 16:33:52 kerns Exp $
+ *   Version $Id: ua_restore.c 4287 2007-02-28 20:20:05Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -625,23 +625,19 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
       }
    }
 
-   if (*rx->JobIds == 0) {
-      bsendmsg(ua, _("No Jobs selected.\n"));
-      return 0;
-   }
-   if (strchr(rx->JobIds,',')) {
-      bsendmsg(ua, _("You have selected the following JobIds: %s\n"), rx->JobIds);
-   }
-   else {
-      bsendmsg(ua, _("You have selected the following JobId: %s\n"), rx->JobIds);
-   }
-
-
+   POOLMEM *JobIds = get_pool_memory(PM_FNAME);
+   *JobIds = 0;
    rx->TotalFiles = 0;
+   /*        
+    * Find total number of files to be restored, and filter the JobId
+    *  list to contain only ones permitted by the ACL conditions.
+    */
    for (p=rx->JobIds; ; ) {
+      char ed1[50];
       int stat = get_next_jobid_from_list(&p, &JobId);
       if (stat < 0) {
          bsendmsg(ua, _("Invalid JobId in list.\n"));
+         free_pool_memory(JobIds);
          return 0;
       }
       if (stat == 0) {
@@ -653,17 +649,32 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
       memset(&jr, 0, sizeof(JOB_DBR));
       jr.JobId = JobId;
       if (!db_get_job_record(ua->jcr, ua->db, &jr)) {
-         char ed1[50];
          bsendmsg(ua, _("Unable to get Job record for JobId=%s: ERR=%s\n"),
             edit_int64(JobId, ed1), db_strerror(ua->db));
+         free_pool_memory(JobIds);
          return 0;
       }
       if (!acl_access_ok(ua, Job_ACL, jr.Name)) {
-         bsendmsg(ua, _("No authorization. Job \"%s\" not selected.\n"),
-            jr.Name);
+         bsendmsg(ua, _("No authorization for JobId=%s (Job \"%s\"). Not selected.\n"),
+            edit_int64(JobId, ed1), jr.Name);
          continue;
       }
+      if (*JobIds != 0) {
+         pm_strcat(JobIds, ",");
+      }
+      pm_strcat(JobIds, edit_int64(JobId, ed1));
       rx->TotalFiles += jr.JobFiles;
+   }
+   free_pool_memory(rx->JobIds);
+   rx->JobIds = JobIds;               /* Set ACL filtered list */
+   if (*rx->JobIds == 0) {
+      bsendmsg(ua, _("No Jobs selected.\n"));
+      return 0;
+   }
+   if (strchr(rx->JobIds,',')) {
+      bsendmsg(ua, _("You have selected the following JobIds: %s\n"), rx->JobIds);
+   } else {
+      bsendmsg(ua, _("You have selected the following JobId: %s\n"), rx->JobIds);
    }
    return 1;
 }

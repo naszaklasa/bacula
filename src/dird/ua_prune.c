@@ -1,16 +1,7 @@
 /*
- *
- *   Bacula Director -- User Agent Database prune Command
- *      Applies retention periods
- *
- *     Kern Sibbald, February MMII
- *
- *   Version $Id: ua_prune.c,v 1.62 2006/12/23 16:33:52 kerns Exp $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- User Agent Database prune Command
+ *      Applies retention periods
+ *
+ *     Kern Sibbald, February MMII
+ *
+ *   Version $Id: ua_prune.c 4278 2007-02-28 10:33:19Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -267,11 +267,15 @@ int prune_files(UAContext *ua, CLIENT *client)
    db_sql_query(ua->db, query, file_delete_handler, (void *)&del);
 
    for (i=0; i < del.num_ids; i++) {
-      purge_files_from_job(ua, del.JobId[i]);
+      /* Don't prune current job */
+      if (ua->jcr->JobId != del.JobId[i]) {
+         purge_files_from_job(ua, del.JobId[i]);
+         del.num_del++;
+      }
    }
-   edit_uint64_with_commas(del.num_ids, ed1);
+   edit_uint64_with_commas(del.num_del, ed1);
    bsendmsg(ua, _("Pruned Files from %s Jobs for client %s from catalog.\n"),
-      ed1, client->hdr.name);
+      ed1, client->name());
 
 bail_out:
    db_unlock(ua->db);
@@ -418,13 +422,17 @@ int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
     * Then delete the Job entry, and finally and JobMedia records.
     */
    for (i=0; i < del.num_ids; i++) {
-      if (!del.PurgedFiles[i]) {
-         purge_files_from_job(ua, del.JobId[i]);
+      /* Don't prune current job */
+      if (ua->jcr->JobId != del.JobId[i]) {
+         if (!del.PurgedFiles[i]) {
+            purge_files_from_job(ua, del.JobId[i]);
+         }
+         purge_job_from_catalog(ua, del.JobId[i]);
+         del.num_del++;
       }
-      purge_job_from_catalog(ua, del.JobId[i]);
    }
-   bsendmsg(ua, _("Pruned %d %s for client %s from catalog.\n"), del.num_ids,
-      del.num_ids==1?_("Job"):_("Jobs"), client->hdr.name);
+   bsendmsg(ua, _("Pruned %d %s for client %s from catalog.\n"), del.num_del,
+      del.num_del==1?_("Job"):_("Jobs"), client->name());
 
 bail_out:
    drop_temp_tables(ua);
@@ -523,7 +531,7 @@ bool prune_volume(UAContext *ua, MEDIA_DBR *mr)
          continue;
       }
       Dmsg2(200, "Looking at %s JobTdate=%d\n", jr.Job, (int)jr.JobTDate);
-      if (jr.JobTDate >= (now - period)) {
+      if (jr.JobTDate >= (now - period) || ua->jcr->JobId == del.JobId[i]) {
          continue;
       }
       purge_files_from_job(ua, del.JobId[i]);

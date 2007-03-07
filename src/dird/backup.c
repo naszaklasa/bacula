@@ -11,7 +11,7 @@
  *       to do the backup.
  *     When the File daemon finishes the job, update the DB.
  *
- *   Version $Id: backup.c,v 1.118.2.1 2007/01/12 09:58:04 kerns Exp $
+ *   Version $Id: backup.c 4222 2007-02-20 13:38:43Z ricozz $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -171,19 +171,15 @@ bool do_backup(JCR *jcr)
    set_jcr_job_status(jcr, JS_Running);
    fd = jcr->file_bsock;
 
-   if (!send_level_command(jcr)) {
-      goto bail_out;
-   }
-
-   if (!send_runscripts_commands(jcr)) {
-      goto bail_out;
-   }
-
    if (!send_include_list(jcr)) {
       goto bail_out;
    }
 
    if (!send_exclude_list(jcr)) {
+      goto bail_out;
+   }
+
+   if (!send_level_command(jcr)) {
       goto bail_out;
    }
 
@@ -206,6 +202,10 @@ bool do_backup(JCR *jcr)
 
    bnet_fsend(fd, storaddr, store->address, store->SDDport, tls_need);
    if (!response(jcr, fd, OKstore, "Storage", DISPLAY_ERROR)) {
+      goto bail_out;
+   }
+
+   if (!send_runscripts_commands(jcr)) {
       goto bail_out;
    }
 

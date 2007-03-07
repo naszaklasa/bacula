@@ -3,7 +3,7 @@
  *
  *  Kern Sibbald, February MMVI
  *
- *  Version $Id: reserve.h,v 1.4 2006/11/21 17:03:47 kerns Exp $
+ *  Version $Id: reserve.h 3673 2006-11-21 17:03:47Z kerns $
  */ 
 /*
    Bacula® - The Network Backup Solution

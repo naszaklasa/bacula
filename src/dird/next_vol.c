@@ -6,7 +6,7 @@
 
  *     Kern Sibbald, March MMI
  *
- *   Version $Id: next_vol.c,v 1.33 2006/12/22 15:01:05 kerns Exp $
+ *   Version $Id: next_vol.c 3842 2006-12-22 15:01:05Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

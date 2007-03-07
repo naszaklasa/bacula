@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, April-May 2004
  *
- *    Version $Id: wxbrestorepanel.h,v 1.25 2006/11/22 14:26:40 kerns Exp $
+ *    Version $Id: wxbrestorepanel.h 3685 2006-11-22 14:26:40Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

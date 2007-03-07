@@ -8,7 +8,7 @@
  *
  *   Kern Sibbald, July MMIV
  *
- *   Version $Id: berrno.c,v 1.9 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: berrno.c 3670 2006-11-21 16:13:58Z kerns $
  *
  */
 /*

@@ -4,7 +4,7 @@
  *
  *    Kern Sibbald, September MMI
  *
- *   Version $Id: estimate.c,v 1.18 2006/11/21 17:03:45 kerns Exp $
+ *   Version $Id: estimate.c 3673 2006-11-21 17:03:47Z kerns $
  *
  */
 /*

@@ -9,13 +9,13 @@
  *  the File daemon, control is passed here to handle the
  *  subsequent File daemon commands.
  *
- *   Version $Id: fd_cmds.c,v 1.37 2006/11/26 14:30:46 kerns Exp $
+ *   Version $Id: fd_cmds.c 4183 2007-02-15 18:57:55Z kerns $
  *
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -95,7 +95,6 @@ static char NOT_opened[]      = "3902 Error session not opened\n";
 static char OK_end[]          = "3000 OK end\n";
 static char OK_close[]        = "3000 OK close Status = %d\n";
 static char OK_open[]         = "3000 OK open ticket = %d\n";
-static char OK_append[]       = "3000 OK append data\n";
 static char ERROR_append[]    = "3903 Error append data\n";
 static char OK_bootstrap[]    = "3000 OK bootstrap\n";
 static char ERROR_bootstrap[] = "3904 Error bootstrap\n";
@@ -107,6 +106,7 @@ char Job_end[]   =
 
 /*
  * Run a File daemon Job -- File daemon already authorized
+ *  Director sends us this command.
  *
  * Basic task here is:
  * - Read a command from the File daemon
@@ -115,14 +115,9 @@ char Job_end[]   =
  */
 void run_job(JCR *jcr)
 {
-   int i;
-   bool found, quit;
-   BSOCK *fd = jcr->file_bsock;
    BSOCK *dir = jcr->dir_bsock;
    char ec1[30];
 
-
-   fd->jcr = jcr;
    dir->jcr = jcr;
    Dmsg1(120, "Start run Job=%s\n", jcr->Job);
    bnet_fsend(dir, Job_start, jcr->Job);
@@ -130,6 +125,27 @@ void run_job(JCR *jcr)
    jcr->run_time = jcr->start_time;
    set_jcr_job_status(jcr, JS_Running);
    dir_send_job_status(jcr);          /* update director */
+   do_fd_commands(jcr);
+   jcr->end_time = time(NULL);
+   dequeue_messages(jcr);             /* send any queued messages */
+   set_jcr_job_status(jcr, JS_Terminated);
+   generate_daemon_event(jcr, "JobEnd");
+   bnet_fsend(dir, Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,
+      edit_uint64(jcr->JobBytes, ec1));
+   bnet_sig(dir, BNET_EOD);           /* send EOD to Director daemon */
+   return;
+}
+
+/*
+ * Now talk to the FD and do what he says
+ */
+void do_fd_commands(JCR *jcr)
+{
+   int i;
+   bool found, quit;
+   BSOCK *fd = jcr->file_bsock;
+
+   fd->jcr = jcr;
    for (quit=false; !quit;) {
       int stat;
 
@@ -160,16 +176,7 @@ void run_job(JCR *jcr)
       }
    }
    bnet_sig(fd, BNET_TERMINATE);      /* signal to FD job is done */
-   jcr->end_time = time(NULL);
-   dequeue_messages(jcr);             /* send any queued messages */
-   set_jcr_job_status(jcr, JS_Terminated);
-   generate_daemon_event(jcr, "JobEnd");
-   bnet_fsend(dir, Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,
-      edit_uint64(jcr->JobBytes, ec1));
-   bnet_sig(dir, BNET_EOD);           /* send EOD to Director daemon */
-   return;
 }
-
 
 /*
  *   Append Data command
@@ -185,7 +192,7 @@ static bool append_data_cmd(JCR *jcr)
       Dmsg1(110, "<bfiled: %s", fd->msg);
       jcr->JobType = JT_BACKUP;
       if (do_append_data(jcr)) {
-         return bnet_fsend(fd, OK_append);
+         return true;
       } else {
          bnet_suppress_error_messages(fd, 1); /* ignore errors at this point */
          bnet_fsend(fd, ERROR_append);

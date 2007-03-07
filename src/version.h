@@ -1,11 +1,11 @@
 /*
- *  Version $Id: version.h,v 1.708.2.3 2007/01/28 11:15:00 kerns Exp $
+ *  Version $Id: version.h 4325 2007-03-06 20:02:31Z kerns $
  */
 
 #undef  VERSION
-#define VERSION "2.0.2"
-#define BDATE   "28 January 2007"
-#define LSMDATE "28Jan07"
+#define VERSION "2.0.3"
+#define BDATE   "06 March 2007"
+#define LSMDATE "06Mar07"
 
 #define PROG_COPYRIGHT "Copyright (C) %d-2007 Free Software Foundation Europe e.V.\n"
 #define BYEAR "2007"       /* year for copyright messages in progs */
@@ -53,7 +53,11 @@
 
 #define USE_BSNPRINTF 1
 
-/* Disk file seeking is now controled by CAP_POSITIONBLOCKS */
+/* Turn on the following flag to enable batch attribute inserts
+ *  in the catalog.  This gives a large speedup.
+ */
+/* #define HAVE_BATCH_FILE_INSERT 1 */
+
 
 /* Debug flags not normally turned on */
 

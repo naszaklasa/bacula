@@ -5,7 +5,7 @@
  *
  *     Kern Sibbald, June MMI
  *
- *     Version $Id: authenticate.c,v 1.13 2006/11/21 20:14:46 kerns Exp $
+ *     Version $Id: authenticate.c 3676 2006-11-21 20:14:47Z kerns $
  *
  *    This routine runs as a thread and must be thread reentrant.
  *

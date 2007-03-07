@@ -1,7 +1,7 @@
 /*
  * bacula.h -- main header file to include in all Bacula source
  *
- *   Version $Id: bacula.h,v 1.31 2006/11/21 20:14:45 kerns Exp $
+ *   Version $Id: bacula.h 3676 2006-11-21 20:14:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

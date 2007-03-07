@@ -3,7 +3,7 @@ REM
 REM
 REM Bacula interface to mtx autoloader
 REM
-REM  $Id: mtx-changer.cmd,v 1.4 2006/12/01 08:45:22 robertnelson Exp $
+REM  $Id: mtx-changer.cmd 3718 2006-12-01 08:45:40Z robertnelson $
 REM
 REM  If you set in your Device resource
 REM

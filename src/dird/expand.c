@@ -5,7 +5,7 @@
  *
  *     Kern Sibbald, June MMIII
  *
- *   Version $Id: expand.c,v 1.15 2006/11/21 13:20:09 kerns Exp $
+ *   Version $Id: expand.c 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

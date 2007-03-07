@@ -18,7 +18,7 @@
  *       Requests are any message that does not begin with a digit.
  *       In affect, they are commands.
  *
- *   Version $Id: getmsg.c,v 1.30 2006/11/21 13:20:09 kerns Exp $
+ *   Version $Id: getmsg.c 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

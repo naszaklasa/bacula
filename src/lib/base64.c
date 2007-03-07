@@ -3,7 +3,7 @@
  *
  *    Written by Kern E. Sibbald, March MM.
  *
- *   Version $Id: base64.c,v 1.14 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: base64.c 3670 2006-11-21 16:13:58Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

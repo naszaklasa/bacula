@@ -1990,8 +1990,9 @@ parse_variable_complex(
         rc = VAR_ERR_INCOMPLETE_VARIABLE_SPEC;
         goto error_return;
     }
-    inc = (*p == '+');                /* increment variable */
-    p++;
+    if ((inc = (*p++ == '+'))) {
+       p++;                           /* skip the + */ 
+    }
 
     /* lookup the variable value now */
     if (failed) {

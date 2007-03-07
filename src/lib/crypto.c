@@ -3,7 +3,7 @@
  *
  * Author: Landon Fuller <landonf@opendarwin.org>
  *
- * Version $Id: crypto.c,v 1.20 2006/12/03 08:59:59 kerns Exp $
+ * Version $Id: crypto.c 3734 2006-12-03 09:00:00Z kerns $
  *
  * This file was contributed to the Bacula project by Landon Fuller.
  *

@@ -11,7 +11,7 @@
  * for the external world. This is control with
  * the define __SQL_C, which is defined only in sql.c
  *
- *    Version $Id: cats.h,v 1.74 2006/11/27 10:02:59 kerns Exp $
+ *    Version $Id: cats.h 3709 2006-11-27 10:03:06Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

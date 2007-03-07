@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c,v 1.148.2.4 2007/01/28 11:15:01 kerns Exp $
+ *    Version $Id: job.c 4183 2007-02-15 18:57:55Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -156,6 +156,10 @@ bool setup_job(JCR *jcr)
     * Create Job record
     */
    init_jcr_job_record(jcr);
+   if (!get_or_create_client_record(jcr)) {
+      goto bail_out;
+   }
+
    if (!db_create_job_record(jcr, jcr->db, &jcr->jr)) {
       Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
       goto bail_out;
@@ -163,10 +167,6 @@ bool setup_job(JCR *jcr)
    jcr->JobId = jcr->jr.JobId;
    Dmsg4(100, "Created job record JobId=%d Name=%s Type=%c Level=%c\n",
        jcr->JobId, jcr->Job, jcr->jr.JobType, jcr->jr.JobLevel);
-
-   if (!get_or_create_client_record(jcr)) {
-      goto bail_out;
-   }
 
    generate_daemon_event(jcr, "JobStart");
 
@@ -554,7 +554,7 @@ static bool job_check_maxwaittime(JCR *control_jcr, JCR *jcr)
             jcr->JobStatus);
    }
    Dmsg3(800, "MaxWaitTime result: %scancel JCR %p (%s)\n",
-         cancel ? "" : "do not ", jcr, jcr->job);
+         cancel ? "" : "do not ", jcr, jcr->Job);
 #endif
    return cancel;
 }
@@ -602,7 +602,7 @@ static bool job_check_maxruntime(JCR *control_jcr, JCR *jcr)
    }
 
    Dmsg3(200, "MaxRunTime result: %scancel JCR %p (%s)\n",
-         cancel ? "" : "do not ", jcr, jcr->job);
+         cancel ? "" : "do not ", jcr, jcr->Job);
 #endif
    return true;
 }
@@ -881,6 +881,14 @@ void dird_free_jcr(JCR *jcr)
    if (jcr->term_wait_inited) {
       pthread_cond_destroy(&jcr->term_wait);
       jcr->term_wait_inited = false;
+   }
+   if (jcr->db) {
+      db_close_database(jcr, jcr->db);
+      jcr->db = NULL;
+   }
+   if (jcr->db_batch) {
+      db_close_database(jcr, jcr->db_batch);
+      jcr->db_batch = NULL;
    }
    if (jcr->stime) {
       Dmsg0(200, "Free JCR stime\n");

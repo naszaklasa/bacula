@@ -5,7 +5,7 @@
  *
  *   Kern E. Sibbald, August 2002
  *
- *   Version $Id: dbcheck.c,v 1.37.2.1 2007/01/12 09:58:05 kerns Exp $
+ *   Version $Id: dbcheck.c 4183 2007-02-15 18:57:55Z kerns $
  *
  */
 /*
@@ -702,135 +702,155 @@ static void eliminate_duplicate_paths()
 
 static void eliminate_orphaned_jobmedia_records()
 {
-   const char *query;
+   const char *query = "SELECT JobMedia.JobMediaId,Job.JobId FROM JobMedia "
+                "LEFT OUTER JOIN Job ON (JobMedia.JobId=Job.JobId) "
+                "WHERE Job.JobId IS NULL LIMIT 300000";
 
    printf(_("Checking for orphaned JobMedia entries.\n"));
-   query = "SELECT JobMedia.JobMediaId,Job.JobId FROM JobMedia "
-           "LEFT OUTER JOIN Job ON (JobMedia.JobId=Job.JobId) "
-           "WHERE Job.JobId IS NULL";
    if (!make_id_list(query, &id_list)) {
       exit(1);
    }
-   printf(_("Found %d orphaned JobMedia records.\n"), id_list.num_ids);
-   if (id_list.num_ids && verbose && yes_no(_("Print them? (yes/no): "))) {
-      for (int i=0; i < id_list.num_ids; i++) {
-         char ed1[50];
-         bsnprintf(buf, sizeof(buf),
+   /* Loop doing 300000 at a time */
+   while (id_list.num_ids != 0) {
+      printf(_("Found %d orphaned JobMedia records.\n"), id_list.num_ids);
+      if (id_list.num_ids && verbose && yes_no(_("Print them? (yes/no): "))) {
+         for (int i=0; i < id_list.num_ids; i++) {
+            char ed1[50];
+            bsnprintf(buf, sizeof(buf),
 "SELECT JobMedia.JobMediaId,JobMedia.JobId,Media.VolumeName FROM JobMedia,Media "
 "WHERE JobMedia.JobMediaId=%s AND Media.MediaId=JobMedia.MediaId", 
-            edit_int64(id_list.Id[i], ed1));
-         if (!db_sql_query(db, buf, print_jobmedia_handler, NULL)) {
-            printf("%s\n", db_strerror(db));
+               edit_int64(id_list.Id[i], ed1));
+            if (!db_sql_query(db, buf, print_jobmedia_handler, NULL)) {
+               printf("%s\n", db_strerror(db));
+            }
          }
       }
-   }
-   if (quit) {
-      return;
-   }
+      if (quit) {
+         return;
+      }
 
-   if (fix && id_list.num_ids > 0) {
-      printf(_("Deleting %d orphaned JobMedia records.\n"), id_list.num_ids);
-      delete_id_list("DELETE FROM JobMedia WHERE JobMediaId=%s", &id_list);
+      if (fix && id_list.num_ids > 0) {
+         printf(_("Deleting %d orphaned JobMedia records.\n"), id_list.num_ids);
+         delete_id_list("DELETE FROM JobMedia WHERE JobMediaId=%s", &id_list);
+      }
+      if (!make_id_list(query, &id_list)) {
+         exit(1);
+      }
    }
 }
 
 static void eliminate_orphaned_file_records()
 {
-   const char *query;
+   const char *query = "SELECT File.FileId,Job.JobId FROM File "
+                "LEFT OUTER JOIN Job ON (File.JobId=Job.JobId) "
+               "WHERE Job.JobId IS NULL LIMIT 300000";
 
    printf(_("Checking for orphaned File entries. This may take some time!\n"));
-   query = "SELECT File.FileId,Job.JobId FROM File "
-           "LEFT OUTER JOIN Job ON (File.JobId=Job.JobId) "
-           "WHERE Job.JobId IS NULL";
    if (verbose > 1) {
       printf("%s\n", query);
    }
    if (!make_id_list(query, &id_list)) {
       exit(1);
    }
-   printf(_("Found %d orphaned File records.\n"), id_list.num_ids);
-   if (name_list.num_ids && verbose && yes_no(_("Print them? (yes/no): "))) {
-      for (int i=0; i < id_list.num_ids; i++) {
-         char ed1[50];
-         bsnprintf(buf, sizeof(buf),
+   /* Loop doing 300000 at a time */
+   while (id_list.num_ids != 0) {
+      printf(_("Found %d orphaned File records.\n"), id_list.num_ids);
+      if (name_list.num_ids && verbose && yes_no(_("Print them? (yes/no): "))) {
+         for (int i=0; i < id_list.num_ids; i++) {
+            char ed1[50];
+            bsnprintf(buf, sizeof(buf),
 "SELECT File.FileId,File.JobId,Filename.Name FROM File,Filename "
 "WHERE File.FileId=%s AND File.FilenameId=Filename.FilenameId", 
-            edit_int64(id_list.Id[i], ed1));
-         if (!db_sql_query(db, buf, print_file_handler, NULL)) {
-            printf("%s\n", db_strerror(db));
+               edit_int64(id_list.Id[i], ed1));
+            if (!db_sql_query(db, buf, print_file_handler, NULL)) {
+               printf("%s\n", db_strerror(db));
+            }
          }
       }
-   }
-   if (quit) {
-      return;
-   }
-   if (fix && id_list.num_ids > 0) {
-      printf(_("Deleting %d orphaned File records.\n"), id_list.num_ids);
-      delete_id_list("DELETE FROM File WHERE FileId=%s", &id_list);
+      if (quit) {
+         return;
+      }
+      if (fix && id_list.num_ids > 0) {
+         printf(_("Deleting %d orphaned File records.\n"), id_list.num_ids);
+         delete_id_list("DELETE FROM File WHERE FileId=%s", &id_list);
+      }
+      if (!make_id_list(query, &id_list)) {
+         exit(1);
+      }
    }
 }
 
 static void eliminate_orphaned_path_records()
 {
-   const char *query;
+   const char *query = "SELECT DISTINCT Path.PathId,File.PathId FROM Path "
+               "LEFT OUTER JOIN File ON (Path.PathId=File.PathId) "
+               "WHERE File.PathId IS NULL LIMIT 300000";
 
    printf(_("Checking for orphaned Path entries. This may take some time!\n"));
-   query = "SELECT DISTINCT Path.PathId,File.PathId FROM Path "
-           "LEFT OUTER JOIN File ON (Path.PathId=File.PathId) "
-           "WHERE File.PathId IS NULL";
    if (verbose > 1) {
       printf("%s\n", query);
    }
    if (!make_id_list(query, &id_list)) {
       exit(1);
    }
-   printf(_("Found %d orphaned Path records.\n"), id_list.num_ids);
-   if (id_list.num_ids && verbose && yes_no(_("Print them? (yes/no): "))) {
-      for (int i=0; i < id_list.num_ids; i++) {
-         char ed1[50];
-         bsnprintf(buf, sizeof(buf), "SELECT Path FROM Path WHERE PathId=%s", 
-            edit_int64(id_list.Id[i], ed1));
-         db_sql_query(db, buf, print_name_handler, NULL);
+   /* Loop doing 300000 at a time */
+   while (id_list.num_ids != 0) {
+      printf(_("Found %d orphaned Path records.\n"), id_list.num_ids);
+      if (id_list.num_ids && verbose && yes_no(_("Print them? (yes/no): "))) {
+         for (int i=0; i < id_list.num_ids; i++) {
+            char ed1[50];
+            bsnprintf(buf, sizeof(buf), "SELECT Path FROM Path WHERE PathId=%s", 
+               edit_int64(id_list.Id[i], ed1));
+            db_sql_query(db, buf, print_name_handler, NULL);
+         }
       }
-   }
-   if (quit) {
-      return;
-   }
-   if (fix && id_list.num_ids > 0) {
-      printf(_("Deleting %d orphaned Path records.\n"), id_list.num_ids);
-      delete_id_list("DELETE FROM Path WHERE PathId=%s", &id_list);
+      if (quit) {
+         return;
+      }
+      if (fix && id_list.num_ids > 0) {
+         printf(_("Deleting %d orphaned Path records.\n"), id_list.num_ids);
+         delete_id_list("DELETE FROM Path WHERE PathId=%s", &id_list);
+      }
+      if (!make_id_list(query, &id_list)) {
+         exit(1);
+      }
    }
 }
 
 static void eliminate_orphaned_filename_records()
 {
-   const char *query;
+   const char *query = "SELECT Filename.FilenameId,File.FilenameId FROM Filename "
+                "LEFT OUTER JOIN File ON (Filename.FilenameId=File.FilenameId) "
+                "WHERE File.FilenameId IS NULL LIMIT 300000";
 
    printf(_("Checking for orphaned Filename entries. This may take some time!\n"));
-   query = "SELECT Filename.FilenameId,File.FilenameId FROM Filename "
-           "LEFT OUTER JOIN File ON (Filename.FilenameId=File.FilenameId) "
-           "WHERE File.FilenameId IS NULL";
    if (verbose > 1) {
       printf("%s\n", query);
    }
    if (!make_id_list(query, &id_list)) {
       exit(1);
    }
-   printf(_("Found %d orphaned Filename records.\n"), id_list.num_ids);
-   if (id_list.num_ids && verbose && yes_no(_("Print them? (yes/no): "))) {
-      for (int i=0; i < id_list.num_ids; i++) {
-         char ed1[50];
-         bsnprintf(buf, sizeof(buf), "SELECT Name FROM Filename WHERE FilenameId=%s", 
-            edit_int64(id_list.Id[i], ed1));
-         db_sql_query(db, buf, print_name_handler, NULL);
+   /* Loop doing 300000 at a time */
+   while (id_list.num_ids != 0) {
+      printf(_("Found %d orphaned Filename records.\n"), id_list.num_ids);
+      if (id_list.num_ids && verbose && yes_no(_("Print them? (yes/no): "))) {
+         for (int i=0; i < id_list.num_ids; i++) {
+            char ed1[50];
+            bsnprintf(buf, sizeof(buf), "SELECT Name FROM Filename WHERE FilenameId=%s", 
+               edit_int64(id_list.Id[i], ed1));
+            db_sql_query(db, buf, print_name_handler, NULL);
+         }
       }
-   }
-   if (quit) {
-      return;
-   }
-   if (fix && id_list.num_ids > 0) {
-      printf(_("Deleting %d orphaned Filename records.\n"), id_list.num_ids);
-      delete_id_list("DELETE FROM Filename WHERE FilenameId=%s", &id_list);
+      if (quit) {
+         return;
+      }
+      if (fix && id_list.num_ids > 0) {
+         printf(_("Deleting %d orphaned Filename records.\n"), id_list.num_ids);
+         delete_id_list("DELETE FROM Filename WHERE FilenameId=%s", &id_list);
+      }
+      if (!make_id_list(query, &id_list)) {
+         exit(1);
+      }
    }
 }
 

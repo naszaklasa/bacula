@@ -3,7 +3,7 @@
  *
  * Author: Landon Fuller <landonf@threerings.net>
  *
- * Version $Id: tls.h,v 1.4 2006/11/21 13:20:11 kerns Exp $
+ * Version $Id: tls.h 3668 2006-11-21 13:20:11Z kerns $
  *
  * This file was contributed to the Bacula project by Landon Fuller
  * and Three Rings Design, Inc.

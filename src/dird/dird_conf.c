@@ -19,12 +19,12 @@
  *
  *     Kern Sibbald, January MM
  *
- *     Version $Id: dird_conf.c,v 1.162 2006/12/22 15:40:15 kerns Exp $
+ *     Version $Id: dird_conf.c 4116 2007-02-06 14:37:57Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -1608,9 +1608,9 @@ static void store_runscript_target(LEX *lc, RES_ITEM *item, int index, int pass)
    if (pass == 2) {
       if (strcmp(lc->str, "%c") == 0) {
          ((RUNSCRIPT*) item->value)->set_target(lc->str);
-      } else if (strcmp(lc->str, "yes") == 0) {
+      } else if (strcasecmp(lc->str, "yes") == 0) {
          ((RUNSCRIPT*) item->value)->set_target("%c");
-      } else if (strcmp(lc->str, "no") == 0) {
+      } else if (strcasecmp(lc->str, "no") == 0) {
          ((RUNSCRIPT*) item->value)->set_target("");
       } else {
          RES *res = GetResWithName(R_CLIENT, lc->str);

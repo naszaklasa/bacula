@@ -4,7 +4,7 @@
  *
  *  NOTE:  base 0
  *
- *   Version $Id: bits.h,v 1.5 2006/11/21 13:20:10 kerns Exp $
+ *   Version $Id: bits.h 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

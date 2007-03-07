@@ -3,7 +3,7 @@
  *
  *   Written by Robert Nelson, June 2006
  *
- *   Version $Id: drivetype.c,v 1.3 2006/11/22 14:26:39 kerns Exp $
+ *   Version $Id: drivetype.c 3685 2006-11-22 14:26:40Z kerns $
  *
  */
 /*

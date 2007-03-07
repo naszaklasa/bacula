@@ -1,5 +1,5 @@
 /*
- * Version $Id: console_conf.h,v 1.9 2006/11/22 14:26:39 kerns Exp $
+ * Version $Id: console_conf.h 3685 2006-11-22 14:26:40Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

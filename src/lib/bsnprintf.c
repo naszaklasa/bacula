@@ -11,7 +11,7 @@
  *
  *   Kern Sibbald, November MMV
  *
- *   Version $Id: bsnprintf.c,v 1.6 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: bsnprintf.c 3670 2006-11-21 16:13:58Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

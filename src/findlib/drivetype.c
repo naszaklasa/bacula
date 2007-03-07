@@ -3,7 +3,7 @@
  *
  *   Written by Robert Nelson, June 2006
  *
- *   Version $Id: drivetype.c,v 1.3 2006/11/21 20:14:46 kerns Exp $
+ *   Version $Id: drivetype.c 3676 2006-11-21 20:14:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

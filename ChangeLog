@@ -2,7 +2,119 @@
 
 General:
 
-Version 2.0.2 released: xx January 2007
+Version 2.0.3 release: xx March 2007
+5Mar07
+kes  File migrate bug with Pool Occupancy using mediaid instead
+     of jobids.  Fixes bug #795.
+kes  Fix orphaned buffers in filed backup and verify due to
+     crypto buffers not freed during errors.  Fixes bug #789.
+04Mar07
+kes  Add smartctl call to bacula-sd.conf as an example of getting
+     tape alert info.
+02Mar07
+kes  Add Client Connect Wait to Storage daemon to permit users to
+     modify the time the SD waits for a FD connection.
+28Feb07 
+kes  Apply Command ACL filter to JobId list in restore command.
+kes  Correct typeo in var.c patch.
+27Feb07
+kes  Don't let Bacula prune File or Job records for the current Job.
+kes  Fix variable substitution pad + inc bug reported (with patch)
+     in bug #791.
+26Feb07
+kes  Correct SQLite log table index as reported by Luca Berra.
+24Feb07
+ebl  Fix FIFO stuff, bacula tries to rewind the FIFO... Thanks to Andreas
+22Feb07
+kes  Fix a few places in lib/message.c where the open fd may
+     not be zeroed.
+21Feb07
+kes  Add LANG=C to autoconf/randpass so it works with languages other
+     than English.  Fixes bug #788.
+20Feb07
+ebl  Revert ClientRunBeforeJob as it was in 1.38.x
+     This fixes bug #780
+     You will not be able to generate Include/Exclude list any more.
+     If you want to use this, you can apply 
+     trunk/bacula/patches/testing/clientrunbeforejob_can_generate_include_exclude_list.patch
+19Feb07
+kes  Restore of sockets created false error messages because Bacula
+     no longer restores sockets, but the code was still trying to
+     set the attributes on a non-existent file. Reported by a user.
+16Feb07
+kes  Fix encryption deblocking bug, which caused some restored files
+     to be truncated. This fixes bug #763.
+kes  Add FD event sequence order prepared by Eric -- for RunScripts.
+kes  Fix 12am/pm bug as reported in bug #782.
+15Feb07
+kes  Add quick disconnect FD code from 2.1.4 to 2.0.3.  This code
+     causes the SD to release the FD as soon as the FD has sent
+     all the data to the SD. After that the SD will do any final
+     despooling (data and attributes) that are necessary. This
+     allows laptops to disconnect much quicker from the network 
+     after a backup.
+13Feb07
+kes  Apply Eric's ClientRunScriptAfter patch to 2.0 and 2.1.
+11Feb07
+kes  Optimize the use of the database a bit in the Status dir command.
+     Only open it when needed, ensure that if any previous database
+     was opened, it is closed.
+10Feb07
+kes  Modify dbcheck to handle orphaned JobMedia, Path, Filename,
+     and File records in 300K chunks to be more efficient. This
+     idea came from Juan Luis Frances (if I remember right).
+09Feb07
+kes  Update projects list.
+08Feb07
+kes  Fix dird/ua_cmds.c so that a cancel command checks if the
+     console is authorized to cancel the job.  This fixes bug 
+     #767.
+kes  Modify SD so that the VolCatJobs medium record is updated
+     at the beginning of a Job rather than the end.  This
+     fixes bug #775 where exceeding MaxVolJobs caused jobs
+     to fail.
+kes  Added a mutex around getting and setting Volume information
+     so that multiple simultaneous jobs will single thread.
+07Feb07
+     Switch to using Subversion
+kes  Remove src/pygtk-console/ from configure
+06Feb07
+kes  Delete src/lib/btree.c from win32 build, then add rblist.c
+     plus the entrypoints.
+kes  Apply patch supplied that corrects debug print
+     in canceling jobs for max run time.  Supplied as
+     part of bug #621, which was previously fixed.
+05Feb07
+kes  Test on job_canceled() and sd_msg_thread_done inside
+     loop starting the message thread to avoid a race condition.
+     Fixes bug #771.
+kes  Remove rl_catch_signal from console.c as it conflicted
+     with the header definition. Fixes bug #765.
+ebl  Fixes bug #766 about RunsOnClient = Yes (case sensitive)
+04Feb07
+kes  Clarify some stored/acquire messages to indicate if the
+     problem is with read or append.
+02Feb07
+kes  Fix memory leak with storage ids in cats/sql_get.c
+kes  Terminate watchdog earlier to avoid reference to released
+     memory -- reported by Jason Austin.
+kes  Move closing the database from jobq.c to the director daemon
+     termination routine. This fixes memory leaks for shadow jobs
+     (i.e. migration jobs).
+kes  Free up the unique jobid chain items in migrate.c.  This fixes
+     a memory leak problem.
+kes  Convert some ugly looking for statements to use foreach_alist
+     in findlib/find.c.  This will facilitate converting the structures
+     to use dlist (for large include/exclude lists).
+kes  Fix a bug in the btree.c and btree.h routines, then rename them
+     rblist and add them to be built in src/lib.  Include some new
+     methods written by Rudolf Cejka that make the code more readable
+     (hides some of the ugly casting).
+26Jan07 (back port)
+kes  Implement item #12 on project list -- quick release of FD by
+     the SD. This is noted in more detail above.
+
+Version 2.0.2 released: 30 January 2007
 28Jan08
 kes  Fix maxruntime bug #621.
 27Jan07

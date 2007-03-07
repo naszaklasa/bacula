@@ -26,7 +26,7 @@
  *
  *   Written by Preben 'Peppe' Guldberg, December MMIV
  *
- *   Version $Id: acl.c,v 1.17 2006/11/21 17:03:45 kerns Exp $
+ *   Version $Id: acl.c 3673 2006-11-21 17:03:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

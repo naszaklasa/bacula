@@ -13,7 +13,7 @@
  *    Create a thread to interact with the Storage daemon
  *      who returns a job status and requests Catalog services, etc.
  *
- *   Version $Id: msgchan.c,v 1.66 2006/12/08 14:27:10 kerns Exp $
+ *   Version $Id: msgchan.c 4183 2007-02-15 18:57:55Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -302,7 +302,7 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
  * Start a thread to handle Storage daemon messages and
  *  Catalog requests.
  */
-int start_storage_daemon_message_thread(JCR *jcr)
+bool start_storage_daemon_message_thread(JCR *jcr)
 {
    int status;
    pthread_t thid;
@@ -318,9 +318,12 @@ int start_storage_daemon_message_thread(JCR *jcr)
    /* Wait for thread to start */
    while (jcr->SD_msg_chan == 0) {
       bmicrosleep(0, 50);
+      if (job_canceled(jcr) || jcr->sd_msg_thread_done) {
+         return false;
+      }
    }
    Dmsg1(100, "SD msg_thread started. use=%d\n", jcr->use_count());
-   return 1;
+   return true;
 }
 
 extern "C" void msg_thread_cleanup(void *arg)

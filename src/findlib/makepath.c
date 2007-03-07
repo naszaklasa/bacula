@@ -20,7 +20,7 @@
 /*
  *   Modified by Kern Sibbald for use in Bacula, December 2000
  *
- *   Version $Id: makepath.c,v 1.18 2006/11/21 20:14:46 kerns Exp $
+ *   Version $Id: makepath.c 3676 2006-11-21 20:14:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

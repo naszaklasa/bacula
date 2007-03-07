@@ -3,7 +3,7 @@
  *
  *   By Kern Sibbald, January 2001
  *
- *   Version $Id: crc32.c,v 1.6 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: crc32.c 3670 2006-11-21 16:13:58Z kerns $
  *
  */
 /*

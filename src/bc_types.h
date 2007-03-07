@@ -13,7 +13,7 @@
 
     Also, we define types such as file address lengths.
 
-    Version $Id: bc_types.h,v 1.25 2006/11/21 20:14:45 kerns Exp $
+    Version $Id: bc_types.h 3676 2006-11-21 20:14:47Z kerns $
 
  */
 /*

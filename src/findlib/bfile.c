@@ -5,7 +5,7 @@
  *
  *    Kern Sibbald, April MMIII
  *
- *   Version $Id: bfile.c,v 1.58 2006/11/21 20:14:46 kerns Exp $
+ *   Version $Id: bfile.c 3676 2006-11-21 20:14:47Z kerns $
  *
  */
 /*

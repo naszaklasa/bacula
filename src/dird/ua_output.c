@@ -1,16 +1,7 @@
 /*
- *
- *   Bacula Director -- User Agent Output Commands
- *     I.e. messages, listing database, showing resources, ...
- *
- *     Kern Sibbald, September MM
- *
- *   Version $Id: ua_output.c,v 1.80 2006/12/23 16:33:52 kerns Exp $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- User Agent Output Commands
+ *     I.e. messages, listing database, showing resources, ...
+ *
+ *     Kern Sibbald, September MM
+ *
+ *   Version $Id: ua_output.c 4183 2007-02-15 18:57:55Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -602,7 +602,7 @@ RUN *find_next_run(RUN *run, JOB *job, time_t &runtime, int ndays)
  * Fill in the remaining fields of the jcr as if it
  *  is going to run the job.
  */
-int complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool)
+bool complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool)
 {
    POOL_DBR pr;
 
@@ -610,6 +610,10 @@ int complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool)
    set_jcr_defaults(jcr, job);
    if (pool) {
       jcr->pool = pool;               /* override */
+   }
+   if (jcr->db) {
+      db_close_database(jcr, jcr->db);
+      jcr->db = NULL;
    }
    jcr->db = jcr->db=db_init_database(jcr, jcr->catalog->db_name, jcr->catalog->db_user,
                       jcr->catalog->db_password, jcr->catalog->db_address,
@@ -620,8 +624,10 @@ int complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool)
                  jcr->catalog->db_name);
       if (jcr->db) {
          Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
+         db_close_database(jcr, jcr->db);
+         jcr->db = NULL;
       }
-      return 0;
+      return false;
    }
    bstrncpy(pr.Name, jcr->pool->hdr.name, sizeof(pr.Name));
    while (!db_get_pool_record(jcr, jcr->db, &pr)) { /* get by Name */
@@ -633,13 +639,13 @@ int complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool)
             db_close_database(jcr, jcr->db);
             jcr->db = NULL;
          }
-         return 0;
+         return false;
       } else {
          Jmsg(jcr, M_INFO, 0, _("Pool %s created in database.\n"), pr.Name);
       }
    }
    jcr->jr.PoolId = pr.PoolId;
-   return 1;
+   return true;
 }
 
 

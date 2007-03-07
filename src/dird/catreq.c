@@ -10,7 +10,7 @@
  *  Basic tasks done here:
  *      Handle Catalog services.
  *
- *   Version $Id: catreq.c,v 1.102 2006/12/23 16:33:52 kerns Exp $
+ *   Version $Id: catreq.c 4183 2007-02-15 18:57:55Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -280,7 +280,7 @@ void catalog_request(JCR *jcr, BSOCK *bs)
       mr.VolWriteTime = sdmr.VolWriteTime;
       mr.VolParts     = sdmr.VolParts;
       bstrncpy(mr.VolStatus, sdmr.VolStatus, sizeof(mr.VolStatus));
-      if (jcr->wstore->StorageId) {
+      if (jcr->wstore && jcr->wstore->StorageId) {
          mr.StorageId = jcr->wstore->StorageId;
       }
 

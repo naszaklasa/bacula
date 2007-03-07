@@ -5,7 +5,7 @@
  *
  *  Bacula utility functions are in util.c
  *
- *   Version $Id: bsys.c,v 1.60 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: bsys.c 3670 2006-11-21 16:13:58Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

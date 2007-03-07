@@ -3,7 +3,7 @@
  *
  *     Kern Sibbald, June MMII
  *
- *   Version $Id: parse_bsr.c,v 1.34 2006/12/14 11:41:01 kerns Exp $
+ *   Version $Id: parse_bsr.c 3802 2006-12-14 11:41:02Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

@@ -3,7 +3,7 @@
  *
  *     Kern Sibbald, May MMIII
  *
- *   Version $Id: status.c,v 1.62.4.2 2007/01/12 09:58:04 kerns Exp $
+ *   Version $Id: status.c 3975 2007-01-12 09:59:05Z kerns $
  *
  */
 /*

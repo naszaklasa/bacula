@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: wxbconfigpanel.h,v 1.7 2006/11/22 14:26:40 kerns Exp $
+ *    Version $Id: wxbconfigpanel.h 3685 2006-11-22 14:26:40Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

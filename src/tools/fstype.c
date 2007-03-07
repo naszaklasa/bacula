@@ -3,7 +3,7 @@
  *
  *   Written by Preben 'Peppe' Guldberg, December MMIV
  *
- *   Version $Id: fstype.c,v 1.11 2006/11/22 14:26:39 kerns Exp $
+ *   Version $Id: fstype.c 3685 2006-11-22 14:26:40Z kerns $
  *
  */
 /*

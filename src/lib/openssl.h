@@ -3,7 +3,7 @@
  *
  * Author: Landon Fuller <landonf@opendarwin.org>
  *
- * Version $Id: openssl.h,v 1.4 2006/11/21 13:20:10 kerns Exp $
+ * Version $Id: openssl.h 3668 2006-11-21 13:20:11Z kerns $
  *
  * This file was contributed to the Bacula project by Landon Fuller.
  *

@@ -1,0 +1,6 @@
+Makefile
+bacula
+bacula-dir
+bacula-fd
+bacula-sd
+bacula.spec

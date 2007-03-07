@@ -7,7 +7,7 @@
  *
  *
  *
- *   Version $Id: ansi_label.c,v 1.15 2006/11/21 17:03:45 kerns Exp $
+ *   Version $Id: ansi_label.c 3673 2006-11-21 17:03:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

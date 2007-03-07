@@ -5,7 +5,7 @@
  *   Kern Sibbald, MM
  *
  *
- *   Version $Id: label.c,v 1.109 2006/12/14 11:41:01 kerns Exp $
+ *   Version $Id: label.c 3802 2006-12-14 11:41:02Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

@@ -76,6 +76,8 @@ Device {
 #  AutoChanger = yes
 #  # Enable the Alert command only if you have the mtx package loaded
 #  Alert Command = "sh -c 'tapeinfo -f %c |grep TapeAlert|cat'"
+#  If you have smartctl, enable this, it has more info than tapeinfo 
+#  Alert Command = "sh -c 'smartctl -H -l error %c'"  
 #}
 
 #Device {
@@ -90,6 +92,8 @@ Device {
 #  AutoChanger = yes
 #  # Enable the Alert command only if you have the mtx package loaded
 #  Alert Command = "sh -c 'tapeinfo -f %c |grep TapeAlert|cat'"
+#  If you have smartctl, enable this, it has more info than tapeinfo 
+#  Alert Command = "sh -c 'smartctl -H -l error %c'"  
 #}
 
 #
@@ -108,6 +112,8 @@ Device {
 ## AutoChanger = yes
 #  # Enable the Alert command only if you have the mtx package loaded
 ## Alert Command = "sh -c 'tapeinfo -f %c |grep TapeAlert|cat'"
+## If you have smartctl, enable this, it has more info than tapeinfo 
+## Alert Command = "sh -c 'smartctl -H -l error %c'"  
 #}
 
 #
@@ -126,6 +132,8 @@ Device {
 #  Backward Space Record = no
 #  Fast Forward Space File = no
 #  TWO EOF = yes
+#  If you have smartctl, enable this, it has more info than tapeinfo 
+#  Alert Command = "sh -c 'smartctl -H -l error %c'"  
 #}
 
 #
@@ -144,6 +152,8 @@ Device {
 ## The min/max blocksizes of 32768 are *required*
 #  Minimum Block Size = 32768
 #  Maximum Block Size = 32768
+#  If you have smartctl, enable this, it has more info than tapeinfo 
+#  Alert Command = "sh -c 'smartctl -H -l error %c'"  
 #}
  
 #
@@ -182,6 +192,8 @@ Device {
 #  AlwaysOpen = yes;
 #  RemovableMedia = yes;
 #  RandomAccess = no;
+#  If you have smartctl, enable this, it has more info than tapeinfo 
+#  Alert Command = "sh -c 'smartctl -H -l error %c'"  
 #}
 
 #
@@ -196,6 +208,8 @@ Device {
 #  AlwaysOpen = Yes;
 #  RemovableMedia = yes;
 #  RandomAccess = no;
+#  If you have smartctl, enable this, it has more info than tapeinfo 
+#  Alert Command = "sh -c 'smartctl -H -l error %c'"  
 #}
 
 # 

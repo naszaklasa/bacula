@@ -1,7 +1,7 @@
 /*
  * Prototypes for finlib directory of Bacula
  *
- *   Version $Id: protos.h,v 1.32 2006/11/21 20:14:46 kerns Exp $
+ *   Version $Id: protos.h 3676 2006-11-21 20:14:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

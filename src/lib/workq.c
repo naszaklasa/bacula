@@ -4,7 +4,7 @@
  *
  *  Kern Sibbald, January MMI
  *
- *   Version $Id: workq.c,v 1.13 2006/11/21 16:13:58 kerns Exp $
+ *   Version $Id: workq.c 3670 2006-11-21 16:13:58Z kerns $
  *
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof

@@ -8,7 +8,7 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb.c,v 1.30 2006/11/27 10:02:58 kerns Exp $
+ *    Version $Id: bdb.c 3709 2006-11-27 10:03:06Z kerns $
  *
  */
 /*

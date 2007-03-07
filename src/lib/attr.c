@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, June MMIII  (code pulled from filed/restore.c and updated)
  *
- *   Version $Id: attr.c,v 1.22 2006/11/21 16:45:11 robertnelson Exp $
+ *   Version $Id: attr.c 3671 2006-11-21 16:45:13Z robertnelson $
  */
 /*
    Bacula® - The Network Backup Solution

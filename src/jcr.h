@@ -6,7 +6,7 @@
  *
  * Kern Sibbald, Nov MM
  *
- *   Version $Id: jcr.h,v 1.131 2006/12/14 11:41:00 kerns Exp $
+ *   Version $Id: jcr.h 4183 2007-02-15 18:57:55Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -184,6 +184,7 @@ public:
    bool cached_attribute;             /* set if attribute is cached */
    POOLMEM *attr;                     /* Attribute string from SD */
    B_DB *db;                          /* database pointer */
+   B_DB *db_batch;                    /* database pointer for batch insert */
    ATTR_DBR *ar;                      /* DB attribute record */
 
    /* Daemon specific part of JCR */
@@ -294,7 +295,6 @@ public:
    int32_t pki_session_encoded_size;  /* Size of DER-encoded pki_session */
    POOLMEM *crypto_buf;               /* Encryption/Decryption buffer */
    DIRRES* director;                  /* Director resource */
-   bool runscript_after;              /* Don't run After Script twice */
 #endif /* FILE_DAEMON */
 
 

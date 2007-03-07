@@ -3,7 +3,7 @@
  *
  *     Kern Sibbald, March 2002
  *
- *     Version $Id: console.h,v 1.8 2006/11/21 20:14:46 kerns Exp $
+ *     Version $Id: console.h 3676 2006-11-21 20:14:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

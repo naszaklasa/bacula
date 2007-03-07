@@ -1,12 +1,4 @@
 /*
- *  Bacula File Daemon Job processing
- *
- *    Kern Sibbald, October MM
- *
- *   Version $Id: job.c,v 1.161.2.1 2007/01/11 16:38:35 kerns Exp $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Bacula File Daemon Job processing
+ *
+ *    Kern Sibbald, October MM
+ *
+ *   Version $Id: job.c 4185 2007-02-16 08:43:26Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "filed.h"
@@ -179,7 +179,23 @@ static char read_close[]   = "read close session %d\n";
  *   Accept commands one at a time from the Director
  *     and execute them.
  *
+ * Concerning ClientRunBefore/After, the sequence of events
+ * is rather critical. If they are not done in the right
+ * order one can easily get FD->SD timeouts if the script
+ * runs a long time.
+ *
+ * The current sequence of events is:
+ *  1. Dir starts job with FD
+ *  2. Dir connects to SD
+ *  3. Dir connects to FD
+ *  4. FD connects to SD
+ *  5. FD gets/runs ClientRunBeforeJob and sends ClientRunAfterJob
+ *  6. Dir sends include/exclude
+ *  7. FD sends data to SD
+ *  8. SD/FD disconnects while SD despools data and attributes (optionnal)
+ *  9. FD runs ClientRunAfterJob
  */
+
 void *handle_client_request(void *dirp)
 {
    int i;
@@ -244,15 +260,13 @@ void *handle_client_request(void *dirp)
       }
    }
 
-   if (!jcr->runscript_after) {
-      jcr->runscript_after=1;
-      run_scripts(jcr, jcr->RunScripts, "ClientAfterJob");
-   }
-
    /* Inform Storage daemon that we are done */
    if (jcr->store_bsock) {
       bnet_sig(jcr->store_bsock, BNET_TERMINATE);
    }
+
+   /* Run the after job */
+   run_scripts(jcr, jcr->RunScripts, "ClientAfterJob");
 
    generate_daemon_event(jcr, "JobEnd");
 
@@ -1387,16 +1401,8 @@ static int backup_cmd(JCR *jcr)
       bnet_suppress_error_messages(sd, 1);
       bget_msg(sd);                   /* Read final response from append_data */
       Dmsg0(110, "Error in blast_data.\n");
-      /* run shortly after end of data transmission */ 
-      run_scripts(jcr, jcr->RunScripts, "ClientAfterJob");
-      jcr->runscript_after=1;
-
    } else {
       set_jcr_job_status(jcr, JS_Terminated);
-
-      /* run shortly after end of data transmission */   
-      run_scripts(jcr, jcr->RunScripts, "ClientAfterJob");
-      jcr->runscript_after=1;
 
       if (jcr->JobStatus != JS_Terminated) {
          bnet_suppress_error_messages(sd, 1);

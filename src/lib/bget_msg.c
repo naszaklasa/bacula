@@ -4,7 +4,7 @@
  *
  *   Kern Sibbald, May MMI previously in src/stored/fdmsg.c
  *
- *   Version $Id: bget_msg.c,v 1.8 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: bget_msg.c 3670 2006-11-21 16:13:58Z kerns $
  *
  */
 /*

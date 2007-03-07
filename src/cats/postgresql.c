@@ -5,7 +5,7 @@
  *    Dan Langille, December 2003
  *    based upon work done by Kern Sibbald, March 2000
  *
- *    Version $Id: postgresql.c,v 1.29 2006/11/27 10:02:59 kerns Exp $
+ *    Version $Id: postgresql.c 3709 2006-11-27 10:03:06Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

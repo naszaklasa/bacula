@@ -1,15 +1,7 @@
 /*
- *  Bacula File Daemon  verify.c  Verify files.
- *
- *    Kern Sibbald, October MM
- *
- *   Version $Id: verify.c,v 1.53 2006/11/21 17:03:45 kerns Exp $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Bacula File Daemon  verify.c  Verify files.
+ *
+ *    Kern Sibbald, October MM
+ *
+ *   Version $Id: verify.c 4312 2007-03-05 12:33:59Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "filed.h"
@@ -102,6 +102,7 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
       Dmsg2(30, "FT_LNK saving: %s -> %s\n", ff_pkt->fname, ff_pkt->link);
       break;
    case FT_DIRBEGIN:
+      jcr->num_files_examined--;      /* correct file count */
       return 1;                       /* ignored */
    case FT_DIREND:
       Dmsg1(30, "FT_DIR saving: %s\n", ff_pkt->fname);
@@ -145,7 +146,8 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
       return 1;
    case FT_NORECURSE:
       Jmsg(jcr, M_SKIPPED, 1, _("     Recursion turned off. Directory skipped: %s\n"), ff_pkt->fname);
-      return 1;
+      ff_pkt->type = FT_DIREND;     /* directory entry was backed up */
+      break;
    case FT_NOFSCHG:
       Jmsg(jcr, M_SKIPPED, 1, _("     File system change prohibited. Directory skipped: %s\n"), ff_pkt->fname);
       return 1;
@@ -246,7 +248,7 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
          
          if (digest_file(jcr, ff_pkt, digest) != 0) {
             jcr->Errors++;
-            return 1;
+            goto good_rtn;
          }
 
          if (crypto_digest_finalize(digest, (uint8_t *)md, &size)) {
@@ -265,11 +267,13 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
 
             free(digest_buf);
          }
-
-         crypto_digest_free(digest);
       }
    }
 
+good_rtn:
+   if (digest) {
+      crypto_digest_free(digest);
+   }
    return 1;
 }
 

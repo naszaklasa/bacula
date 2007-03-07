@@ -7,7 +7,7 @@
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
  *
- *   Version $Id: rwlock.h,v 1.9 2006/11/21 13:20:11 kerns Exp $
+ *   Version $Id: rwlock.h 3668 2006-11-21 13:20:11Z kerns $
  *
  */
 /*

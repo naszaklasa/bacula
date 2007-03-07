@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, MM  separated from util.c MMIII
  *
- *   Version $Id: scan.c,v 1.21 2006/12/03 09:00:00 kerns Exp $
+ *   Version $Id: scan.c 3734 2006-12-03 09:00:00Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

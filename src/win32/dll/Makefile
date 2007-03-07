@@ -58,7 +58,6 @@ LIB_OBJS = \
 	$(OBJDIR)/bsys.o \
 	$(OBJDIR)/btime.o \
 	$(OBJDIR)/btimers.o \
-	$(OBJDIR)/btree.o \
 	$(OBJDIR)/cram-md5.o \
 	$(OBJDIR)/crc32.o \
 	$(OBJDIR)/crypto.o \
@@ -78,6 +77,7 @@ LIB_OBJS = \
 	$(OBJDIR)/openssl.o \
 	$(OBJDIR)/pythonlib.o \
 	$(OBJDIR)/queue.o \
+	$(OBJDIR)/rblist.o \
 	$(OBJDIR)/runscript.o \
 	$(OBJDIR)/rwlock.o \
 	$(OBJDIR)/scan.o \

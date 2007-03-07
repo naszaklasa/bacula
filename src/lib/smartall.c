@@ -14,7 +14,7 @@
                   http://www.fourmilab.ch/smartall/
 
 
-         Version $Id: smartall.c,v 1.24 2006/12/16 15:30:22 kerns Exp $
+         Version $Id: smartall.c 3806 2006-12-16 15:30:22Z kerns $
 
 */
 /*

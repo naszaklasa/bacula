@@ -1,16 +1,7 @@
 /*
- *
- *  Configuration parser for Director Run Configuration
- *   directives, which are part of the Schedule Resource
- *
- *     Kern Sibbald, May MM
- *
- *     Version $Id: run_conf.c,v 1.35 2006/11/21 13:20:09 kerns Exp $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  Configuration parser for Director Run Configuration
+ *   directives, which are part of the Schedule Resource
+ *
+ *     Kern Sibbald, May MM
+ *
+ *     Version $Id: run_conf.c 4185 2007-02-16 08:43:26Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -66,7 +66,7 @@ enum e_state {
 };
 
 struct s_keyw {
-  const char *name;                           /* keyword */
+  const char *name;                   /* keyword */
   enum e_state state;                 /* parser state */
   int code;                           /* state value */
 };
@@ -337,7 +337,8 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
    set_defaults();
 
    for ( ; token != T_EOL; (token = lex_get_token(lc, T_ALL))) {
-      int len, pm = 0;
+      int len; 
+      bool pm = false;
       switch (token) {
       case T_NUMBER:
          state = s_mday;
@@ -361,6 +362,7 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
             code = atoi(lc->str+1);
             if (code < 0 || code > 53) {
                scan_err0(lc, _("Week number out of range (0-53)"));
+              /* NOT REACHED */
             }
             state = s_woy;            /* week of year */
             break;
@@ -442,24 +444,31 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
          len = strlen(p);
          if (len > 2 && p[len-1] == 'm') {
             if (p[len-2] == 'a') {
-               pm = 0;
+               pm = false;
             } else if (p[len-2] == 'p') {
-               pm = 1;
+               pm = true;
             } else {
                scan_err0(lc, _("Bad time specification."));
                /* NOT REACHED */
             }
          } else {
-            pm = 0;
+            pm = false;
          }
          code2 = atoi(p);             /* pick up minutes */
+         /* 
+          * Note, according to NIST, 12am and 12pm are ambiguous and
+          *  can be defined to anything.  However, 12:01am is the same
+          *  as 00:01 and 12:01pm is the same as 12:01, so we define 
+          *  12am as 00:00 and 12pm as 12:00.
+          */
          if (pm) {
             /* Convert to 24 hour time */
-            if (code == 12) {
-               code -= 12;
-            } else {
+            if (code != 12) {
                code += 12;
             }
+         /* am */
+         } else if (code == 12) {
+            code -= 12;
          }
          if (code < 0 || code > 23 || code2 < 0 || code2 > 59) {
             scan_err0(lc, _("Bad time specification."));

@@ -2,7 +2,7 @@
   * Originally written by Kern Sibbald for inclusion in apcupsd,
   *  but heavily modified for Bacula
   *
-  *   Version $Id: bnet_server.c,v 1.41 2006/11/21 16:13:57 kerns Exp $
+  *   Version $Id: bnet_server.c 3670 2006-11-21 16:13:58Z kerns $
   */
 
 /*

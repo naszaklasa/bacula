@@ -15,7 +15,7 @@
  *       to do the restore.
  *     Update the DB according to what files where restored????
  *
- *   Version $Id: restore.c,v 1.67 2006/12/09 13:54:30 ricozz Exp $
+ *   Version $Id: restore.c 3776 2006-12-09 13:54:30Z ricozz $
  */
 /*
    Bacula® - The Network Backup Solution

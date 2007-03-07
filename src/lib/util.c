@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: util.c,v 1.81 2006/12/04 09:39:26 kerns Exp $
+ *   Version $Id: util.c 3743 2006-12-04 09:39:26Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

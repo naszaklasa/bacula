@@ -1,12 +1,12 @@
 /*
  * Director external function prototypes
  *
- *   Version $Id: protos.h,v 1.103 2006/12/23 16:33:52 kerns Exp $
+ *   Version $Id: protos.h 4183 2007-02-15 18:57:55Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -141,7 +141,7 @@ extern void mount_request(JCR *jcr, BSOCK *bs, char *buf);
 extern bool connect_to_storage_daemon(JCR *jcr, int retry_interval,
                               int max_retry_time, int verbose);
 extern bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore);
-extern int start_storage_daemon_message_thread(JCR *jcr);
+extern bool start_storage_daemon_message_thread(JCR *jcr);
 extern int bget_dirmsg(BSOCK *bs);
 extern void wait_for_storage_daemon_termination(JCR *jcr);
 
@@ -195,9 +195,12 @@ bool is_volume_name_legal(UAContext *ua, const char *name);
 int get_num_drives_from_SD(UAContext *ua);
 void update_slots(UAContext *ua);
 
+/* ua_update.c */
+void update_vol_pool(UAContext *ua, char *val, MEDIA_DBR *mr, POOL_DBR *opr);
+
 /* ua_output.c */
 void prtit(void *ctx, const char *msg);
-int complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool);
+bool complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool);
 RUN *find_next_run(RUN *run, JOB *job, time_t &runtime, int ndays);
 
 /* ua_restore.c */

@@ -7,7 +7,7 @@
  *
  *    Kern Sibbald, December 2000
  *
- *    Version $Id: sql_find.c,v 1.62 2006/11/27 10:02:59 kerns Exp $
+ *    Version $Id: sql_find.c 3709 2006-11-27 10:03:06Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

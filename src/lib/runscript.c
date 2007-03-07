@@ -3,7 +3,7 @@
  *
  *  Eric Bollengier, May 2006
  *
- *  Version $Id: runscript.c,v 1.8 2006/11/21 16:13:57 kerns Exp $
+ *  Version $Id: runscript.c 3670 2006-11-21 16:13:58Z kerns $
  *
  */
 /*

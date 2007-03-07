@@ -3,13 +3,13 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: message.c,v 1.134 2006/12/01 13:14:49 ricozz Exp $
+ *   Version $Id: message.c 4331 2007-03-07 15:10:49Z kerns $
  *
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +33,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula message handling routines
+ *
+ *   Kern Sibbald, April 2000
+ *
+ *   Version $Id: message.c 4331 2007-03-07 15:10:49Z kerns $
+ *
+ */
 
 
 #include "bacula.h"
@@ -426,6 +434,7 @@ void close_msg(JCR *jcr)
          case MD_APPEND:
             if (d->fd) {
                fclose(d->fd);            /* close open file descriptor */
+               d->fd = NULL;
             }
             break;
          case MD_MAIL:
@@ -486,6 +495,7 @@ void close_msg(JCR *jcr)
 rem_temp_file:
             /* Remove temp file */
             fclose(d->fd);
+            d->fd = NULL;
             unlink(d->mail_filename);
             free_pool_memory(d->mail_filename);
             d->mail_filename = NULL;
@@ -747,6 +757,7 @@ send_to_file:
                 /* On error, we close and reopen to handle log rotation */
                 if (ferror(d->fd)) {
                    fclose(d->fd);
+                   d->fd = NULL;
                    if (open_dest_file(jcr, d, mode)) {
                       fputs(dt, d->fd);
                       fputs(msg, d->fd);

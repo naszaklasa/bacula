@@ -4,7 +4,7 @@
  *
  * Kern Sibbald, November MMIV
  *
- *   Version $Id: pythondir.c,v 1.22 2006/11/21 13:20:09 kerns Exp $
+ *   Version $Id: pythondir.c 3668 2006-11-21 13:20:11Z kerns $
  *
  */
 /*

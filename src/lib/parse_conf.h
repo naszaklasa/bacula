@@ -1,10 +1,10 @@
 /*
- *   Version $Id: parse_conf.h,v 1.34.2.1 2007/01/24 01:59:02 robertnelson Exp $
+ *   Version $Id: parse_conf.h 4116 2007-02-06 14:37:57Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.

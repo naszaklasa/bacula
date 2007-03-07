@@ -7,7 +7,7 @@
  *  Basic tasks done here:
  *     Display the job report.
  *
- *   Version $Id: admin.c,v 1.13 2006/12/09 13:54:29 ricozz Exp $
+ *   Version $Id: admin.c 3776 2006-12-09 13:54:30Z ricozz $
  */
 /*
    Bacula® - The Network Backup Solution

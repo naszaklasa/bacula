@@ -1,0 +1,6 @@
+*.o
+*.d
+libcats.exp
+bdb
+mysql
+pgsql

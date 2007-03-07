@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: dird.c,v 1.114 2006/12/22 15:01:05 kerns Exp $
+ *   Version $Id: dird.c 4116 2007-02-06 14:37:57Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -301,6 +301,7 @@ void terminate_dird(int sig)
       exit(1);
    }
    already_here = true;
+   stop_watchdog();
    generate_daemon_event(NULL, "Exit");
    write_state_file(director->working_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
    delete_pid_file(director->pid_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
@@ -319,7 +320,6 @@ void terminate_dird(int sig)
    free_config_resources();
    term_ua_server();
    term_msg();                        /* terminate message handler */
-   stop_watchdog();
    cleanup_crypto();
    close_memory_pool();               /* release free memory in pool */
    sm_dump(false);

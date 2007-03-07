@@ -8,7 +8,7 @@
  * it opens a data channel and accepts data from the
  * File daemon.
  *
- *   Version $Id: stored.c,v 1.88 2006/12/16 15:30:22 kerns Exp $
+ *   Version $Id: stored.c 3806 2006-12-16 15:30:22Z kerns $
  *
  */
 /*

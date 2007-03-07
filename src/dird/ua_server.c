@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *    Version $Id: ua_server.c,v 1.48 2006/11/21 13:20:10 kerns Exp $
+ *    Version $Id: ua_server.c 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

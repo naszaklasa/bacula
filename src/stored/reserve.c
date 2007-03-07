@@ -5,7 +5,7 @@
  *
  *   Split from job.c and acquire.c June 2005
  *
- *   Version $Id: reserve.c,v 1.51 2006/12/16 15:30:22 kerns Exp $
+ *   Version $Id: reserve.c 3806 2006-12-16 15:30:22Z kerns $
  *
  */
 /*

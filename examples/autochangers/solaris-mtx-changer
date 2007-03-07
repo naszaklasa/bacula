@@ -4,7 +4,7 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id: solaris-mtx-changer,v 1.2 2006/02/22 18:43:55 kerns Exp $
+#  $Id: solaris-mtx-changer 2805 2006-02-22 18:43:55Z kerns $
 #
 #  If you set in your Device resource
 #

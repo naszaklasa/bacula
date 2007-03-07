@@ -1,7 +1,7 @@
 /*
  * Resource codes -- they must be sequential for indexing
  *
- *   Version $Id: stored_conf.h,v 1.41 2006/11/21 17:03:47 kerns Exp $
+ *   Version $Id: stored_conf.h 4297 2007-03-03 08:50:30Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -86,6 +86,7 @@ public:
    uint32_t max_concurrent_jobs;      /* maximum concurrent jobs to run */
    MSGS *messages;                    /* Daemon message handler */
    utime_t heartbeat_interval;        /* Interval to send hb to FD */
+   utime_t client_wait;               /* Time to wait for FD to connect */
    int tls_enable;                    /* Enable TLS */
    int tls_require;                   /* Require TLS */
    int tls_verify_peer;               /* TLS Verify Client Certificate */

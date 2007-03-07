@@ -1,20 +1,20 @@
 /*
  *  Bacula red-black binary tree routines.
  *
- *    btree is a binary tree with the links being in the data item.
+ *    rblist is a binary tree with the links being in the data item.
  *
  *   Developped in part from ideas obtained from several online University
  *    courses. 
  *
  *   Kern Sibbald, November MMV
  *
- *   Version $Id: btree.c,v 1.3 2006/11/21 16:13:57 kerns Exp $
+ *   Version $Id: rblist.c 4116 2007-02-06 14:37:57Z kerns $
  *
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -40,10 +40,9 @@
 */
 
 #include "bacula.h"
-#include "btree.h"
 
 /* ===================================================================
- *    btree
+ *    rblist
  */
 
 /*
@@ -56,11 +55,11 @@
  * Returns: item         if item inserted
  *          other_item   if same value already exists (item not inserted)
  */
-bnode *btree::insert(bnode *item, int compare(bnode *item1, bnode *item2))
+void *rblist::insert(void *item, int compare(void *item1, void *item2))
 {
-   bnode *x, *y;
-   bnode *last = NULL;        /* last leaf if not found */
-   bnode *found = NULL;
+   void *x, *y;
+   void *last = NULL;        /* last leaf if not found */
+   void *found = NULL;
    int comp = 0;
 
    /* Search */
@@ -69,9 +68,9 @@ bnode *btree::insert(bnode *item, int compare(bnode *item1, bnode *item2))
       last = x;
       comp = compare(item, x);
       if (comp < 0) {
-         x = x->left;
+         x = left(x);
       } else if (comp > 0) {
-         x = x->right;
+         x = right(x);
       } else {
          found = x;
       }
@@ -80,6 +79,10 @@ bnode *btree::insert(bnode *item, int compare(bnode *item1, bnode *item2))
    if (found) {                    /* found? */
       return found;                /* yes, return item found */
    }
+   set_left(item, NULL);
+   set_right(item, NULL);
+   set_parent(item, NULL);
+   set_red(item, false);
    /* Handle empty tree */
    if (num_items == 0) {
       head = item;
@@ -89,78 +92,77 @@ bnode *btree::insert(bnode *item, int compare(bnode *item1, bnode *item2))
    x = last;
    /* Not found, so insert it on appropriate side of tree */
    if (comp < 0) {
-      last->left = item;
+      set_left(last, item);
    } else {
-      last->right = item;
+      set_right(last, item);
    }
-   last->red = true;
-   item->parent = last;
+   set_red(last, true);
+   set_parent(item, last);
    num_items++;
 
    /* Now we must walk up the tree balancing it */
    x = last;
-   while (x != head && x->parent->red) {
-      if (x->parent == x->parent->parent->left) {
+   while (x != head && red(parent(x))) {
+      if (parent(x) == left(parent(parent(x)))) {
          /* Look at the right side of our grandparent */
-         y = x->parent->parent->right;
-         if (y && y->red) {
+         y = right(parent(parent(x)));
+         if (y && red(y)) {
             /* our parent must be black */
-            x->parent->red = false;
-            y->red = false;
-            x->parent->parent->red = true;
-            x = x->parent->parent;       /* move up to grandpa */
+            set_red(parent(x), false);
+            set_red(y, false);
+            set_red(parent(parent(x)), true);
+            x = parent(parent(x));       /* move up to grandpa */
          } else {
-            if (x == x->parent->right) { /* right side of parent? */
-               x = x->parent;
+            if (x == right(parent(x))) { /* right side of parent? */
+               x = parent(x);
                left_rotate(x);
             }
             /* make parent black too */
-            x->parent->red = false;
-            x->parent->parent->red = true;
-            right_rotate(x->parent->parent);
+            set_red(parent(x), false);
+            set_red(parent(parent(x)), true);
+            right_rotate(parent(parent(x)));
          }
       } else {
          /* Look at left side of our grandparent */
-         y = x->parent->parent->left;
-         if (y && y->red) {
-            x->parent->red = false;
-            y->red = false;
-            x->parent->parent->red = true;
-            x = x->parent->parent;       /* move up to grandpa */
+         y = left(parent(parent(x)));
+         if (y && red(y)) {
+            set_red(parent(x), false);
+            set_red(y, false);
+            set_red(parent(parent(x)), true);
+            x = parent(parent(x));       /* move up to grandpa */
          } else {
-            if (x == x->parent->left) {
-               x = x->parent;
+            if (x == left(parent(x))) {
+               x = parent(x);
                right_rotate(x);
             }
             /* make parent black too */
-            x->parent->red = false;
-            x->parent->parent->red = true;
-            left_rotate(x->parent->parent);
+            set_red(parent(x), false);
+            set_red(parent(parent(x)), true);
+            left_rotate(parent(parent(x)));
          }
       }
    }
    /* Make sure the head is always black */
-   head->red = false;
+   set_red(head, false);
    return item;
 }
-
 
 /*
  * Search for item
  */
-bnode *btree::search(bnode *item, int compare(bnode *item1, bnode *item2))
+void *rblist::search(void *item, int compare(void *item1, void *item2))
 {
-   bnode *found = NULL;
-   bnode *x;
+   void *found = NULL;
+   void *x;
    int comp;
 
    x = head;
    while (x) {
       comp = compare(item, x);
       if (comp < 0) {
-         x = x->left;
+         x = left(x);
       } else if (comp > 0) {
-         x = x->right;
+         x = right(x);
       } else {
          found = x;
          break;
@@ -172,15 +174,15 @@ bnode *btree::search(bnode *item, int compare(bnode *item1, bnode *item2))
 /* 
  * Get first item (i.e. lowest value) 
  */
-bnode *btree::first(void)
+void *rblist::first(void)
 {
-   bnode *x;
+   void *x;
 
    x = head;
    down = true;
    while (x) {
-      if (x->left) {
-         x = x->left;
+      if (left(x)) {
+         x = left(x);
          continue;
       }
       return x;
@@ -204,18 +206,22 @@ bnode *btree::first(void)
  * Returns: pointer to next larger item 
  *          NULL when no more items in tree
  */
-bnode *btree::next(bnode *item)
+void *rblist::next(void *item)
 {
-   bnode *x;
+   void *x;
+
+   if (!item) {
+      return first();
+   }
 
    x = item;
-   if ((down && !x->left && x->right) || (!down && x->right)) {
+   if ((down && !left(x) && right(x)) || (!down && right(x))) {
       /* Move down to right one */
       down = true;
-      x = x->right;                       
+      x = right(x);                       
       /* Then all the way down left */
-      while (x->left)  {
-         x = x->left;
+      while (left(x))  {
+         x = left(x);
       }
       return x;
    }
@@ -223,18 +229,18 @@ bnode *btree::next(bnode *item)
    /* We have gone down all we can, so now go up */
    for ( ;; ) {
       /* If at head, we are done */
-      if (!x->parent) {
+      if (!parent(x)) {
          return NULL;
       }
       /* Move up in tree */
       down = false;
       /* if coming from right, continue up */
-      if (x->parent->right == x) {
-         x = x->parent;
+      if (right(parent(x)) == x) {
+         x = parent(x);
          continue;
       }
       /* Coming from left, go up one -- ie. return parent */
-      return x->parent;
+      return parent(x);
    }
 }
 
@@ -242,18 +248,18 @@ bnode *btree::next(bnode *item)
  * Similer to next(), but visits all right nodes when
  *  coming up the tree.
  */
-bnode *btree::any(bnode *item)
+void *rblist::any(void *item)
 {
-   bnode *x;
+   void *x;
 
    x = item;
-   if ((down && !x->left && x->right) || (!down && x->right)) {
+   if ((down && !left(x) && right(x)) || (!down && right(x))) {
       /* Move down to right one */
       down = true;
-      x = x->right;                       
+      x = right(x);                       
       /* Then all the way down left */
-      while (x->left)  {
-         x = x->left;
+      while (left(x))  {
+         x = left(x);
       }
       return x;
    }
@@ -261,92 +267,92 @@ bnode *btree::any(bnode *item)
    /* We have gone down all we can, so now go up */
    for ( ;; ) {
       /* If at head, we are done */
-      if (!x->parent) {
+      if (!parent(x)) {
          return NULL;
       }
       down = false;
       /* Go up one and return parent */
-      return x->parent;
+      return parent(x);
    }
 }
 
 
 /* x is item, y is below and to right, then rotated to below left */
-void btree::left_rotate(bnode *item)
+void rblist::left_rotate(void *item)
 {
-   bnode *y;
-   bnode *x;
+   void *y;
+   void *x;
 
    x = item;
-   y = x->right;
-   x->right = y->left;
-   if (y->left) {
-      y->left->parent = x;
+   y = right(x);
+   set_right(x, left(y));
+   if (left(y)) {
+      set_parent(left(y), x);
    }
-   y->parent = x->parent;
+   set_parent(y, parent(x));
    /* if no parent then we have a new head */
-   if (!x->parent) {
+   if (!parent(x)) {
       head = y;
-   } else if (x == x->parent->left) {
-      x->parent->left = y;
+   } else if (x == left(parent(x))) {
+      set_left(parent(x), y);
    } else {
-      x->parent->right = y;
+      set_right(parent(x), y);
    }
-   y->left = x;
-   x->parent = y;
+   set_left(y, x);
+   set_parent(x, y);
 }
 
-void btree::right_rotate(bnode *item)
+void rblist::right_rotate(void *item)
 {
-   bnode *x, *y;
+   void *x, *y;
 
    y = item;
-   x = y->left;
-   y->left = x->right;
-   if (x->right) {
-      x->right->parent = y;
+   x = left(y);
+   set_left(y, right(x));
+   if (right(x)) {
+      set_parent(right(x), y);
    }
-   x->parent = y->parent;
+   set_parent(x, parent(y));
    /* if no parent then we have a new head */
-   if (!y->parent) {
+   if (!parent(y)) {
       head = x;
-   } else if (y == y->parent->left) {
-      y->parent->left = x;
+   } else if (y == left(parent(y))) {
+      set_left(parent(y), x);
    } else {
-      y->parent->right = x;
+      set_right(parent(y), x);
    }
-   x->right = y;
-   y->parent = x;
+   set_right(x, y);
+   set_parent(y, x);
 }
 
 
-void btree::remove(bnode *item)
+void rblist::remove(void *item)
 {
 }
 
 /* Destroy the tree contents.  Not totally working */
-void btree::destroy()
+void rblist::destroy()
 {
-   bnode *x, *y = NULL;
+   void *x, *y = NULL;
 
    x = first();
-// printf("head=%p first=%p left=%p right=%p\n", head, x, x->left, x->right);
+// printf("head=%p first=%p left=%p right=%p\n", head, x, left(x), right(x));
 
    for (  ; (y=any(x)); ) {
       /* Prune the last item */
-      if (x->parent) {
-         if (x == x->parent->left) {
-            x->parent->left = NULL;
-         } else if (x == x->parent->right) {
-            x->parent->right = NULL;
+      if (parent(x)) {
+         if (x == left(parent(x))) {
+            set_left(parent(x), NULL);
+         } else if (x == right(parent(x))) {
+            set_right(parent(x), NULL);
          }
       }
-      if (!x->left && !x->right) {
+      if (!left(x) && !right(x)) {
          if (head == x) {  
             head = NULL;
          }
 //       if (num_items<30) {
-//          printf("free nitems=%d item=%p left=%p right=%p\n", num_items, x, x->left, x->right);
+//          printf("free nitems=%d item=%p left=%p right=%p\n", num_items, x, left(x), right(x));
 //       }   
          free((void *)x);      /* free previous node */
          num_items--;
@@ -357,7 +363,7 @@ void btree::destroy()
       if (x == head) {
          head = NULL;
       }
-//    printf("free nitems=%d item=%p left=%p right=%p\n", num_items, x, x->left, x->right);
+//    printf("free nitems=%d item=%p left=%p right=%p\n", num_items, x, left(x), right(x));
       free((void *)x);
       num_items--;
    }
@@ -375,11 +381,11 @@ void btree::destroy()
 #ifdef TEST_PROGRAM
 
 struct MYJCR {
-   bnode link;
+   void link;
    char *buf;
 };
 
-static int my_compare(bnode *item1, bnode *item2)
+static int my_compare(void *item1, void *item2)
 {
    MYJCR *jcr1, *jcr2;
    int comp;
@@ -393,13 +399,13 @@ static int my_compare(bnode *item1, bnode *item2)
 int main()
 {
    char buf[30];
-   btree *jcr_chain;
+   rblist *jcr_chain;
    MYJCR *jcr = NULL;
    MYJCR *jcr1;
 
 
    /* Now do a binary insert for the tree */
-   jcr_chain = New(btree());
+   jcr_chain = New(rblist());
 #define CNT 26
    printf("append %d items\n", CNT*CNT*CNT);
    strcpy(buf, "ZZZ");
@@ -415,7 +421,7 @@ int main()
             memset(jcr, 0, sizeof(MYJCR));
             jcr->buf = bstrdup(buf);
 //          printf("buf=%p %s\n", jcr, jcr->buf);
-            jcr1 = (MYJCR *)jcr_chain->insert((bnode *)jcr, my_compare);
+            jcr1 = (MYJCR *)jcr_chain->insert((void *)jcr, my_compare);
             if (jcr != jcr1) {
                Dmsg2(000, "Insert of %s vs %s failed.\n", jcr->buf, jcr1->buf);
             }
@@ -434,7 +440,7 @@ int main()
    memset(jcr, 0, sizeof(MYJCR));
 
    jcr->buf = bstrdup("a");
-   if ((jcr1=(MYJCR *)jcr_chain->search((bnode *)jcr, my_compare))) {
+   if ((jcr1=(MYJCR *)jcr_chain->search((void *)jcr, my_compare))) {
       printf("One less failed!!!! Got: %s\n", jcr1->buf);
    } else {
       printf("One less: OK\n");
@@ -442,7 +448,7 @@ int main()
    free(jcr->buf);
 
    jcr->buf = bstrdup("ZZZZZZZZZZZZZZZZ");
-   if ((jcr1=(MYJCR *)jcr_chain->search((bnode *)jcr, my_compare))) {
+   if ((jcr1=(MYJCR *)jcr_chain->search((void *)jcr, my_compare))) {
       printf("One greater failed!!!! Got:%s\n", jcr1->buf);
    } else {
       printf("One greater: OK\n");
@@ -450,7 +456,7 @@ int main()
    free(jcr->buf);
 
    jcr->buf = bstrdup("AAA");
-   if ((jcr1=(MYJCR *)jcr_chain->search((bnode *)jcr, my_compare))) {
+   if ((jcr1=(MYJCR *)jcr_chain->search((void *)jcr, my_compare))) {
       printf("Search for AAA got %s\n", jcr1->buf);
    } else {
       printf("Search for AAA not found\n"); 
@@ -458,7 +464,7 @@ int main()
    free(jcr->buf);
 
    jcr->buf = bstrdup("ZZZ");
-   if ((jcr1 = (MYJCR *)jcr_chain->search((bnode *)jcr, my_compare))) {
+   if ((jcr1 = (MYJCR *)jcr_chain->search((void *)jcr, my_compare))) {
       printf("Search for ZZZ got %s\n", jcr1->buf);
    } else {
       printf("Search for ZZZ not found\n"); 
@@ -468,14 +474,14 @@ int main()
 
 
    printf("Find each of %d items in tree.\n", count);
-   for (jcr=(MYJCR *)jcr_chain->first(); jcr; (jcr=(MYJCR *)jcr_chain->next((bnode *)jcr)) ) {
+   for (jcr=(MYJCR *)jcr_chain->first(); jcr; (jcr=(MYJCR *)jcr_chain->next((void *)jcr)) ) {
 //    printf("Got: %s\n", jcr->buf);
-      if (!jcr_chain->search((bnode *)jcr, my_compare)) {
-         printf("btree binary_search item not found = %s\n", jcr->buf);
+      if (!jcr_chain->search((void *)jcr, my_compare)) {
+         printf("rblist binary_search item not found = %s\n", jcr->buf);
       }
    }
    printf("Free each of %d items in tree.\n", count);
-   for (jcr=(MYJCR *)jcr_chain->first(); jcr; (jcr=(MYJCR *)jcr_chain->next((bnode *)jcr)) ) {
+   for (jcr=(MYJCR *)jcr_chain->first(); jcr; (jcr=(MYJCR *)jcr_chain->next((void *)jcr)) ) {
 //    printf("Free: %p %s\n", jcr, jcr->buf);
       free(jcr->buf);
       jcr->buf = NULL;

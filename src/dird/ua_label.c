@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, April MMIII
  *
- *   Version $Id: ua_label.c,v 1.81 2006/12/23 16:33:52 kerns Exp $
+ *   Version $Id: ua_label.c 3844 2006-12-23 16:33:53Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

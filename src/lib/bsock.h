@@ -9,7 +9,7 @@
  * Negative msglen, is special "signal" (no data follows).
  *   See below for SIGNAL codes.
  *
- *   Version $Id: bsock.h,v 1.30 2006/11/21 13:20:10 kerns Exp $
+ *   Version $Id: bsock.h 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

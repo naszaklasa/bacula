@@ -8,7 +8,7 @@
                   http://www.fourmilab.ch/smartall/
 
 
-        Version $Id: queue.c,v 1.5 2006/11/21 16:13:57 kerns Exp $
+        Version $Id: queue.c 3670 2006-11-21 16:13:58Z kerns $
 
 */
 /*

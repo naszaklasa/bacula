@@ -4,6 +4,8 @@ to read the online manual at:
 
   http://www.bacula.org
 
+You will save yourself a lot of pain if you read
+the manual -- it is online at the above site.
 Barring reading the manual, you might try the
 following:
 
@@ -14,18 +16,12 @@ To Configure it:
     --sysconfdir=$HOME/bacula/bin \
     --with-pid-dir=$HOME/bacula/bin \
     --with-subsys-dir=$HOME/bacula/bin \
-    --with-sqlite=$HOME/depkgs/sqlite \
     --enable-gnome \
-    --with-mysql=$HOME/mysql \
+    --with-mysql \
     --with-working-dir=$HOME/bacula/bin/working \
     --with-dump-email=YOUR_EMAIL_ADDRESS \
     --with-job-email=YOUR_EMAIL_ADDRESS \
     --with-smtp-host=YOUR_SMTP_SERVER_ADDRESS
-
-If you want to use SQLite, please download depkgs and
-build sqlite, then add something like:
-
-    --with-sqlite=$HOME/depkgs/sqlite
 
 
 Build Bacula:

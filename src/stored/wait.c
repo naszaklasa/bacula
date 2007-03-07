@@ -6,7 +6,7 @@
  *
  *   Kern Sibbald, March 2005
  *
- *   Version $Id: wait.c,v 1.15 2006/12/16 11:10:17 kerns Exp $
+ *   Version $Id: wait.c 3805 2006-12-16 11:10:17Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

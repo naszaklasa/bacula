@@ -1,7 +1,7 @@
 /*
  * Bacula RUNSCRIPT Structure definition for FileDaemon and Director
  * Eric Bollengier May 2006
- * Version $Id: runscript.h,v 1.6 2006/11/21 13:20:11 kerns Exp $
+ * Version $Id: runscript.h 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

@@ -3,7 +3,7 @@
  *
  *   Kern Sibbald, October 2000
  *
- *   Version $Id: authenticate.c,v 1.26 2006/11/21 17:03:45 kerns Exp $
+ *   Version $Id: authenticate.c 3673 2006-11-21 17:03:47Z kerns $
  *
  */
 /*

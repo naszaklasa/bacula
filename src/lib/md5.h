@@ -3,7 +3,7 @@
  *
  *  Kern Sibbald, 2001
  *
- *   Version $Id: md5.h,v 1.6 2006/11/21 13:20:10 kerns Exp $
+ *   Version $Id: md5.h 3668 2006-11-21 13:20:11Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution

@@ -7,7 +7,7 @@
 
    Thanks to the TAR programmers.
 
-     Version $Id: find_one.c,v 1.55 2006/11/21 20:14:46 kerns Exp $
+     Version $Id: find_one.c 3676 2006-11-21 20:14:47Z kerns $
 
  */
 /*

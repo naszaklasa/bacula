@@ -5,13 +5,13 @@
  *              Kern Sibbald, March MMI
  *                 added BB02 format October MMII
  *
- *   Version $Id: block.c,v 1.149 2006/12/16 11:10:17 kerns Exp $
+ *   Version $Id: block.c 4146 2007-02-08 10:56:41Z kerns $
  *
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -729,7 +729,6 @@ static bool terminate_writing_volume(DCR *dcr)
    }
    bstrncpy(dev->VolCatInfo.VolCatStatus, "Full", sizeof(dev->VolCatInfo.VolCatStatus));
    dev->VolCatInfo.VolCatFiles = dev->file;   /* set number of files */
-   dev->VolCatInfo.VolCatJobs++;              /* increment number of jobs */
    
    if (dev->is_dvd()) {
       if (!dvd_write_part(dcr)) {             /* write last part */

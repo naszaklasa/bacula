@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, March MMIII
  *
- *     Version $Id: inc_conf.c,v 1.52 2006/11/21 16:45:09 robertnelson Exp $
+ *     Version $Id: inc_conf.c 3671 2006-11-21 16:45:13Z robertnelson $
  */
 /*
    Bacula® - The Network Backup Solution
