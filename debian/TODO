@@ -1,0 +1,23 @@
+* Make sure btraceback can be found in /usr/lib/bacula
+
+* Verify upgrades work as expected
+
+* Set datestyle on debian db create pgsql
+
+* Maybe:
+  
+  Remove old AUTHFILE=`getent passwd bacula | cut -d ':' -f 6`/.pgpass
+  and $AUTHFILE.bak
+
+* Make SQLite&sqlite3 purge actually remove the DB like the debconf questions
+  say it will
+ 
+* Should we zap old debconf stuff on install of the new version?
+
+* Need a MySQL preinst?
+
+* check backup_catalog scripts & make sure they're getting installed
+
+* Sanitize consoles
+
+* Update debian/copyright
