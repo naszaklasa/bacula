@@ -1,3 +1,11 @@
+bacula (2.0.3-1) experimental; urgency=low
+
+  * New upstream release.
+  * Local manpage bug should have been closed with 2.0.2-1.
+    Closes: #367643.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed,  7 Mar 2007 03:40:37 -0600
+
 bacula (2.0.2-1) experimental; urgency=low
 
   * New upstream release.  Closes: #408381.
