@@ -2,6 +2,8 @@ bacula (2.0.3-2) experimental; urgency=low
 
   * Added note to README.Debian about /etc/bacula/scripts
     and multiple versions of PostgreSQL.  Closes: #383357.
+  * Added dep from bacula-director-common on mailx, and drop explicit
+    deps on mail-transport-agent.  Closes: #386920.
 
  -- John Goerzen <jgoerzen@complete.org>  Tue, 13 Mar 2007 10:40:14 -0500
 
