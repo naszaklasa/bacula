@@ -8,6 +8,7 @@ bacula (2.0.3-2) experimental; urgency=low
     Closes: #391492.  (This should have been closed in 2.0.2-1 upload)
   * Properly remove password in sqlite/sqlite3 postinsts.
     Closes: #404866.
+  * Consoles connect to localhost by default.  Closes: #404868.
 
  -- John Goerzen <jgoerzen@complete.org>  Tue, 13 Mar 2007 10:40:14 -0500
 

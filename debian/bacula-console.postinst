@@ -42,7 +42,7 @@ case "$1" in
 	if [ ! -f $DSTDIR/$CONFIG ]; then TARGET=$DSTDIR/$CONFIG
 	else TARGET=$DSTDIR/$CONFIG.dist; fi
 
-	sed -e "s~@hostname@~`hostname`~" < $SRCDIR/$CONFIG > $TARGET
+	sed -e "s~@hostname@~localhost~" < $SRCDIR/$CONFIG > $TARGET
 
 	chown root:bacula $DSTDIR/$CONFIG
 	chmod 640 $DSTDIR/$CONFIG

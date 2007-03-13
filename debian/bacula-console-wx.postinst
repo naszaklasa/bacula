@@ -34,7 +34,7 @@ case "$1" in
 	else TARGET=$DSTDIR/$CFGFILE.dist; fi
 
 	# bconsole & wx-console use the same config file ;)
-	sed -e "s~@hostname@~`hostname`~" < $SRCDIR/$CFGFILE > $TARGET
+	sed -e "s~@hostname@~localhost~" < $SRCDIR/$CFGFILE > $TARGET
 
 	chown root:bacula $DSTDIR/$CFGFILE
 	chmod 640 $DSTDIR/$CFGFILE
