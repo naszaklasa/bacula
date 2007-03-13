@@ -1,3 +1,10 @@
+bacula (2.0.3-2) experimental; urgency=low
+
+  * Added note to README.Debian about /etc/bacula/scripts
+    and multiple versions of PostgreSQL.  Closes: #383357.
+
+ -- John Goerzen <jgoerzen@complete.org>  Tue, 13 Mar 2007 10:40:14 -0500
+
 bacula (2.0.3-1) experimental; urgency=low
 
   * New upstream release.
