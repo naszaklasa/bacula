@@ -1,5 +1,6 @@
 bacula (2.0.3-2) unstable; urgency=low
 
+  * Finally upload to unstable.
   * Added note to README.Debian about /etc/bacula/scripts
     and multiple versions of PostgreSQL.  Closes: #383357.
   * Added dep from bacula-director-common on mailx, and drop explicit
