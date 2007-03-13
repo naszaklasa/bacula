@@ -1,4 +1,4 @@
-bacula (2.0.3-2) experimental; urgency=low
+bacula (2.0.3-2) unstable; urgency=low
 
   * Added note to README.Debian about /etc/bacula/scripts
     and multiple versions of PostgreSQL.  Closes: #383357.
@@ -10,6 +10,8 @@ bacula (2.0.3-2) experimental; urgency=low
     Closes: #404866.
   * Consoles connect to localhost by default.  Closes: #404868, #407081.
   * Don't munge make_catalog_backup in bacula-dir.conf.  Closes: #407082.
+  * Remove spurious dep from bacula-director-pgsql on sqlite3.
+    Closes: #396921.
 
  -- John Goerzen <jgoerzen@complete.org>  Tue, 13 Mar 2007 10:40:14 -0500
 
