@@ -9,6 +9,7 @@ bacula (2.0.3-2) experimental; urgency=low
   * Properly remove password in sqlite/sqlite3 postinsts.
     Closes: #404866.
   * Consoles connect to localhost by default.  Closes: #404868, #407081.
+  * Don't munge make_catalog_backup in bacula-dir.conf.  Closes: #407082.
 
  -- John Goerzen <jgoerzen@complete.org>  Tue, 13 Mar 2007 10:40:14 -0500
 
