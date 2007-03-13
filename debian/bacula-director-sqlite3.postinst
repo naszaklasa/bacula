@@ -72,7 +72,7 @@ case "$1" in
 		# Preprocess configuration
 		TARGET=$CFGFILE.dpkg-tmp
 
-		sed -e 's/user = @db_user@;//' -e 's/password = "@db_passwd@";//' \
+		sed -e 's/ user = @db_user@;//' -e 's/ password = "@db_pswd@";//' \
 			$DEFCONFIG/bacula-dir.conf > $TARGET
 
 		/bin/bash $POSTINST_COMMON
