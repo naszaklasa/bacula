@@ -1,3 +1,9 @@
+bacula (2.0.3-3) unstable; urgency=low
+
+  * Make postrm scripts more versatile.  Closes: #416649.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 13 Apr 2007 03:13:05 -0500
+
 bacula (2.0.3-2) unstable; urgency=low
 
   * Finally upload to unstable.
