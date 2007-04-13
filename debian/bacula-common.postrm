@@ -20,7 +20,7 @@ set -e
 
 case "$1" in
 	purge)
-		userdel bacula 2>&1 > /dev/null
+		userdel bacula 2>&1 > /dev/null || true
 		rm -rf /var/run/bacula
 		rm -rf /etc/bacula
 	;;
