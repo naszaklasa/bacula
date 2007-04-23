@@ -6,4 +6,4 @@ projects
 AUTHORS
 SUPPORT
 technotes-2.0
-README.Debian
+debian/README.Debian
