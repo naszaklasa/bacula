@@ -844,10 +844,13 @@ next_run:
               NPRT(res->res_pool.label_format));
       sendit(sock, _("      CleaningPrefix=%s LabelType=%d\n"),
               NPRT(res->res_pool.cleaning_prefix), res->res_pool.LabelType);
-      sendit(sock, _("      RecyleOldest=%d PurgeOldest=%d MaxVolJobs=%d MaxVolFiles=%d\n"),
+      sendit(sock, _("      RecyleOldest=%d PurgeOldest=%d\n"), 
               res->res_pool.recycle_oldest_volume,
-              res->res_pool.purge_oldest_volume,
-              res->res_pool.MaxVolJobs, res->res_pool.MaxVolFiles);
+              res->res_pool.purge_oldest_volume);
+      sendit(sock, _("      MaxVolJobs=%d MaxVolFiles=%d MaxVolBytes=%s\n"),
+              res->res_pool.MaxVolJobs, 
+              res->res_pool.MaxVolFiles,
+              edit_uint64(res->res_pool.MaxVolFiles, ed1));
       sendit(sock, _("      MigTime=%s MigHiBytes=%s MigLoBytes=%s\n"),
               edit_utime(res->res_pool.MigrationTime, ed1, sizeof(ed1)),
               edit_uint64(res->res_pool.MigrationHighBytes, ed2),
