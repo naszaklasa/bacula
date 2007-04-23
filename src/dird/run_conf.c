@@ -339,6 +339,7 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
    for ( ; token != T_EOL; (token = lex_get_token(lc, T_ALL))) {
       int len; 
       bool pm = false;
+      bool am = false;
       switch (token) {
       case T_NUMBER:
          state = s_mday;
@@ -434,6 +435,7 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
          if (!have_hour) {
             clear_bits(0, 23, lrun.hour);
          }
+//       Dmsg1(000, "s_time=%s\n", lc->str);
          p = strchr(lc->str, ':');
          if (!p)  {
             scan_err0(lc, _("Time logic error.\n"));
@@ -441,20 +443,19 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
          }
          *p++ = 0;                 /* separate two halves */
          code = atoi(lc->str);     /* pick up hour */
+         code2 = atoi(p);          /* pick up minutes */
          len = strlen(p);
-         if (len > 2 && p[len-1] == 'm') {
-            if (p[len-2] == 'a') {
-               pm = false;
-            } else if (p[len-2] == 'p') {
-               pm = true;
-            } else {
-               scan_err0(lc, _("Bad time specification."));
-               /* NOT REACHED */
-            }
-         } else {
-            pm = false;
+         if (len >= 2) {
+            p += 2;
          }
-         code2 = atoi(p);             /* pick up minutes */
+         if (strcasecmp(p, "pm") == 0) {
+            pm = true;
+         } else if (strcasecmp(p, "am") == 0) {
+            am = true;
+         } else if (len != 2) {
+            scan_err0(lc, _("Bad time specification."));
+            /* NOT REACHED */
+         }   
          /* 
           * Note, according to NIST, 12am and 12pm are ambiguous and
           *  can be defined to anything.  However, 12:01am is the same
@@ -467,13 +468,14 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
                code += 12;
             }
          /* am */
-         } else if (code == 12) {
+         } else if (am && code == 12) {
             code -= 12;
          }
          if (code < 0 || code > 23 || code2 < 0 || code2 > 59) {
             scan_err0(lc, _("Bad time specification."));
             /* NOT REACHED */
          }
+//       Dmsg2(000, "hour=%d min=%d\n", code, code2);
          set_bit(code, lrun.hour);
          lrun.minute = code2;
          have_hour = true;
