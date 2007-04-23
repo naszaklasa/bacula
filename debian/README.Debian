@@ -90,6 +90,15 @@ PostgreSQL binaries.  As it is possible to have multiple PostgreSQL
 versions on a single Debian system, we cannot handle this in a completely
 automated way.
 
+UPGRADES
+========
+
+Debian packages will, unless you have asked them not to, attempt to
+automatically upgrade your catalog during a major Bacula upgrade.
+
+However, please be sure to examine /usr/share/doc/bacula-common/ReleaseNotes
+for potential changes in the configuration files.
+
 FURTHER READING
 ===============
 

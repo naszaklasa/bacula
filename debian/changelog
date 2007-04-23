@@ -1,3 +1,17 @@
+bacula (2.0.3-4) unstable; urgency=low
+
+  * Applied patches from upstream:
+    2.0.3-ampm
+    2.0.3-maxbyteslist
+    2.0.3-maxwaittime
+    2.0.3-schedule-next-hour
+  * Rebuild fixes binNMU problems.  Closes: #419843.
+  * Added README.Debian to bacula-common.  (It was already installed
+    in bacula).  This should make it easier to find.  Closes: #418498.
+  * Documented upgrade procedure in README.Debian.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 23 Apr 2007 07:09:31 -0500
+
 bacula (2.0.3-3) unstable; urgency=low
 
   * Make postrm scripts more versatile.  Closes: #416649.
