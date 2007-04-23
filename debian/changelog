@@ -9,6 +9,8 @@ bacula (2.0.3-4) unstable; urgency=low
   * Added README.Debian to bacula-common.  (It was already installed
     in bacula).  This should make it easier to find.  Closes: #418498.
   * Documented upgrade procedure in README.Debian.
+  * Don't try to rebuild configs when there is no need to and
+    when the source is unavailable.  Closes: #420197.
 
  -- John Goerzen <jgoerzen@complete.org>  Mon, 23 Apr 2007 07:09:31 -0500
 

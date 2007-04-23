@@ -4,8 +4,11 @@ DEFCONFIGDIR="/usr/share/bacula-common/defconfig"
 DSTDIR="/etc/bacula"
 CONFIG="bacula-dir.conf"
 
-
-SOURCE=$DSTDIR/$CONFIG.dpkg-tmp
+if [ -f $DSTDIR/$CONFIG.dpkg-tmp ]; then
+    SOURCE=$DSTDIR/$CONFIG.dpkg-tmp
+else
+    SOURCE=$DSTDIR/$CONFIG
+fi
 
 if [ -f $DSTDIR/$CONFIG -a ! -f $SOURCE ]; then
     echo "Target $DSTDIR/$CONFIG already exists and $SOURCE doesn't"
