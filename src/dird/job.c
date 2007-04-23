@@ -481,7 +481,6 @@ static void job_monitor_watchdog(watchdog_t *self)
 static bool job_check_maxwaittime(JCR *control_jcr, JCR *jcr)
 {
    bool cancel = false;
-   bool ok_to_cancel = false;
    JOB *job = jcr->job;
 
    if (job_canceled(jcr)) {
@@ -493,69 +492,18 @@ static bool job_check_maxwaittime(JCR *control_jcr, JCR *jcr)
    } 
    if (jcr->JobLevel == L_FULL && job->FullMaxWaitTime != 0 &&
          (watchdog_time - jcr->start_time) >= job->FullMaxWaitTime) {
-      ok_to_cancel = true;
+      cancel = true;
    } else if (jcr->JobLevel == L_DIFFERENTIAL && job->DiffMaxWaitTime != 0 &&
          (watchdog_time - jcr->start_time) >= job->DiffMaxWaitTime) {
-      ok_to_cancel = true;
+      cancel = true;
    } else if (jcr->JobLevel == L_INCREMENTAL && job->IncMaxWaitTime != 0 &&
          (watchdog_time - jcr->start_time) >= job->IncMaxWaitTime) {
-      ok_to_cancel = true;
+      cancel = true;
    } else if (job->MaxWaitTime != 0 &&
          (watchdog_time - jcr->start_time) >= job->MaxWaitTime) {
-      ok_to_cancel = true;
-   }
-   if (!ok_to_cancel) {
-      return false;
+      cancel = true;
    }
 
-/*
- * I don't see the need for all this -- kes 17Dec06
- */
-#ifdef xxx
-   Dmsg3(800, "Job %d (%s): MaxWaitTime of %d seconds exceeded, "
-         "checking status\n",
-         jcr->JobId, jcr->Job, job->MaxWaitTime);
-   switch (jcr->JobStatus) {
-   case JS_Created:
-   case JS_Blocked:
-   case JS_WaitFD:
-   case JS_WaitSD:
-   case JS_WaitStoreRes:
-   case JS_WaitClientRes:
-   case JS_WaitJobRes:
-   case JS_WaitPriority:
-   case JS_WaitMaxJobs:
-   case JS_WaitStartTime:
-      cancel = true;
-      Dmsg0(200, "JCR blocked in #1\n");
-      break;
-   case JS_Running:
-      Dmsg0(800, "JCR running, checking SD status\n");
-      switch (jcr->SDJobStatus) {
-      case JS_WaitMount:
-      case JS_WaitMedia:
-      case JS_WaitFD:
-         cancel = true;
-         Dmsg0(800, "JCR blocked in #2\n");
-         break;
-      default:
-         Dmsg0(800, "JCR not blocked in #2\n");
-         break;
-      }
-      break;
-   case JS_Terminated:
-   case JS_ErrorTerminated:
-   case JS_Canceled:
-   case JS_FatalError:
-      Dmsg0(800, "JCR already dead in #3\n");
-      break;
-   default:
-      Jmsg1(jcr, M_ERROR, 0, _("Unhandled job status code %d\n"),
-            jcr->JobStatus);
-   }
-   Dmsg3(800, "MaxWaitTime result: %scancel JCR %p (%s)\n",
-         cancel ? "" : "do not ", jcr, jcr->Job);
-#endif
    return cancel;
 }
 
@@ -574,36 +522,6 @@ static bool job_check_maxruntime(JCR *control_jcr, JCR *jcr)
       return false;
    }
 
-#ifdef xxx
-   switch (jcr->JobStatus) {
-   case JS_Created:
-   case JS_Running:
-   case JS_Blocked:
-   case JS_WaitFD:
-   case JS_WaitSD:
-   case JS_WaitStoreRes:
-   case JS_WaitClientRes:
-   case JS_WaitJobRes:
-   case JS_WaitPriority:
-   case JS_WaitMaxJobs:
-   case JS_WaitStartTime:
-   case JS_Differences:
-      cancel = true;
-      break;
-   case JS_Terminated:
-   case JS_ErrorTerminated:
-   case JS_Canceled:
-   case JS_FatalError:
-      cancel = false;
-      break;
-   default:
-      Jmsg1(jcr, M_ERROR, 0, _("Unhandled job status code %d\n"),
-            jcr->JobStatus);
-   }
-
-   Dmsg3(200, "MaxRunTime result: %scancel JCR %p (%s)\n",
-         cancel ? "" : "do not ", jcr, jcr->Job);
-#endif
    return true;
 }
 
