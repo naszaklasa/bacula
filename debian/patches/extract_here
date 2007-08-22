@@ -1,0 +1,8 @@
+#!/usr/bin/perl
+# Extract a shell-style here-document from a script
+$found = 0;
+while (<>) {
+      if (m/END.OF.DATA/ && !$found) {$found = 1; next;};
+      last if (m/END.OF.DATA/);
+      print if $found;
+}
