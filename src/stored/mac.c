@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, January MMVI
  *
- *   Version $Id: mac.c 3802 2006-12-14 11:41:02Z kerns $
+ *   Version $Id: mac.c 5066 2007-06-23 09:58:34Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -15,8 +15,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -100,9 +100,11 @@ bool do_mac(JCR *jcr)
 
    Dmsg2(200, "===== After acquire pos %u:%u\n", jcr->dcr->dev->file, jcr->dcr->dev->block_num);
      
-
    set_jcr_job_status(jcr, JS_Running);
    dir_send_job_status(jcr);
+
+   begin_data_spool(jcr->dcr);
+   begin_attribute_spool(jcr);
 
    jcr->dcr->VolFirstIndex = jcr->dcr->VolLastIndex = 0;
    jcr->run_time = time(NULL);
@@ -127,12 +129,24 @@ ok_out:
          Dmsg2(200, "Flush block to device pos %u:%u\n", dev->file, dev->block_num);
       }  
 
+      if (!ok) {
+         discard_data_spool(jcr->dcr);
+      } else {
+         /* Note: if commit is OK, the device will remain locked */
+         commit_data_spool(jcr->dcr);
+      }
 
       if (ok && dev->is_dvd()) {
          ok = dvd_close_job(jcr->dcr);   /* do DVD cleanup if any */
       }
       /* Release the device -- and send final Vol info to DIR */
       release_device(jcr->dcr);
+
+      if (!ok || job_canceled(jcr)) {
+         discard_attribute_spool(jcr);
+      } else {
+         commit_attribute_spool(jcr);
+      }
    }
 
    if (jcr->read_dcr) {
@@ -142,13 +156,6 @@ ok_out:
    }
 
    free_restore_volume_list(jcr);
-
-
-   if (!ok || job_canceled(jcr)) {
-      discard_attribute_spool(jcr);
-   } else {
-      commit_attribute_spool(jcr);
-   }
 
    dir_send_job_status(jcr);          /* update director */
 
@@ -164,7 +171,7 @@ ok_out:
       edit_uint64(jcr->JobBytes, ec1));
    Dmsg4(200, Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles, ec1); 
        
-   bnet_sig(dir, BNET_EOD);           /* send EOD to Director daemon */
+   dir->signal(BNET_EOD);             /* send EOD to Director daemon */
 
    return ok;
 }
@@ -233,16 +240,16 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
        crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
       if (!jcr->no_attributes) {
          if (are_attributes_spooled(jcr)) {
-            jcr->dir_bsock->spool = true;
+            jcr->dir_bsock->set_spooling();
          }
          Dmsg0(850, "Send attributes to dir.\n");
          if (!dir_update_file_attributes(jcr->dcr, rec)) {
-            jcr->dir_bsock->spool = false;
+            jcr->dir_bsock->clear_spooling();
             Jmsg(jcr, M_FATAL, 0, _("Error updating file attributes. ERR=%s\n"),
                bnet_strerror(jcr->dir_bsock));
             return false;
          }
-         jcr->dir_bsock->spool = false;
+         jcr->dir_bsock->clear_spooling();
       }
    }
 

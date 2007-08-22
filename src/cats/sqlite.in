@@ -3,4 +3,5 @@
 # shell script to invoke SQLite on Bacula database
 
 bindir=@SQL_BINDIR@
-$bindir/sqlite @working_dir@/bacula.db
+db_name=@db_name@
+$bindir/sqlite @working_dir@/${db_name}.db

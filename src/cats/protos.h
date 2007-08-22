@@ -1,21 +1,14 @@
 /*
- *
- *  Database routines that are exported by the cats library for
- *    use elsewhere in Bacula (mainly the Director).
- *
- *    Version $Id: protos.h 3709 2006-11-27 10:03:06Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  Database routines that are exported by the cats library for
+ *    use elsewhere in Bacula (mainly the Director).
+ *
+ *    Version $Id: protos.h 5117 2007-07-03 09:20:28Z kerns $
+ */
 
 #ifndef __SQL_PROTOS_H
 #define __SQL_PROTOS_H
@@ -53,10 +53,10 @@ int  db_sql_query(B_DB *mdb, const char *cmd, DB_RESULT_HANDLER *result_handler,
 void db_start_transaction(JCR *jcr, B_DB *mdb);
 void db_end_transaction(JCR *jcr, B_DB *mdb);
 int db_int64_handler(void *ctx, int num_fields, char **row);
+void db_thread_cleanup();
 
-
-/* create.c */
-int db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
+/* sql_create.c */
+bool db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 bool db_create_job_record(JCR *jcr, B_DB *db, JOB_DBR *jr);
 int db_create_media_record(JCR *jcr, B_DB *db, MEDIA_DBR *media_dbr);
 int db_create_client_record(JCR *jcr, B_DB *db, CLIENT_DBR *cr);
@@ -67,18 +67,22 @@ int db_create_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr);
 bool db_create_device_record(JCR *jcr, B_DB *mdb, DEVICE_DBR *dr);
 bool db_create_storage_record(JCR *jcr, B_DB *mdb, STORAGE_DBR *sr);
 bool db_create_mediatype_record(JCR *jcr, B_DB *mdb, MEDIATYPE_DBR *mr);
+bool db_write_batch_file_records(JCR *jcr);
+bool my_batch_start(JCR *jcr, B_DB *mdb);
+bool my_batch_end(JCR *jcr, B_DB *mdb, const char *error);
+bool my_batch_insert(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 
-/* delete.c */
+/* sql_delete.c */
 int db_delete_pool_record(JCR *jcr, B_DB *db, POOL_DBR *pool_dbr);
 int db_delete_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr);
 
-/* find.c */
+/* sql_find.c */
 bool db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime);
 bool db_find_last_jobid(JCR *jcr, B_DB *mdb, const char *Name, JOB_DBR *jr);
 int db_find_next_volume(JCR *jcr, B_DB *mdb, int index, bool InChanger, MEDIA_DBR *mr);
 bool db_find_failed_job_since(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM *stime, int &JobLevel);
 
-/* get.c */
+/* sql_get.c */
 bool db_get_pool_record(JCR *jcr, B_DB *db, POOL_DBR *pdbr);
 int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr);
 bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr);
@@ -90,13 +94,14 @@ int db_get_num_media_records(JCR *jcr, B_DB *mdb);
 int db_get_num_pool_records(JCR *jcr, B_DB *mdb);
 int db_get_pool_ids(JCR *jcr, B_DB *mdb, int *num_ids, DBId_t **ids);
 int db_get_client_ids(JCR *jcr, B_DB *mdb, int *num_ids, DBId_t **ids);
-bool db_get_media_ids(JCR *jcr, B_DB *mdb, DBId_t PoolId, int *num_ids, uint32_t **ids);
+bool db_get_media_ids(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr, int *num_ids, uint32_t **ids);
 int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS **VolParams);
 int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cdbr);
 int db_get_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr);
+bool db_get_query_dbids(JCR *jcr, B_DB *mdb, POOL_MEM &query, dbid_list &ids);
 
 
-/* list.c */
+/* sql_list.c */
 enum e_list_type {
    HORZ_LIST,
    VERT_LIST
@@ -110,7 +115,7 @@ void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, JobId_t JobId, DB_LIST_HANDLE
 int  db_list_sql_query(JCR *jcr, B_DB *mdb, const char *query, DB_LIST_HANDLER *sendit, void *ctx, int verbose, e_list_type type);
 void db_list_client_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ctx, e_list_type type);
 
-/* update.c */
+/* sql_update.c */
 bool db_update_job_start_record(JCR *jcr, B_DB *db, JOB_DBR *jr);
 int  db_update_job_end_record(JCR *jcr, B_DB *db, JOB_DBR *jr);
 int  db_update_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr);

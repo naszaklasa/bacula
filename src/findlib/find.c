@@ -1,25 +1,14 @@
 /*
- * Main routine for finding files on a file system.
- *  The heart of the work to find the files on the
- *    system is done in find_one.c. Here we have the
- *    higher level control as well as the matching
- *    routines for the new syntax Options resource.
- *
- *  Kern E. Sibbald, MM
- *
- *   Version $Id: find.c 4116 2007-02-06 14:37:57Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -36,6 +25,17 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Main routine for finding files on a file system.
+ *  The heart of the work to find the files on the
+ *    system is done in find_one.c. Here we have the
+ *    higher level control as well as the matching
+ *    routines for the new syntax Options resource.
+ *
+ *  Kern E. Sibbald, MM
+ *
+ *   Version $Id: find.c 5077 2007-06-24 17:27:12Z kerns $
+ */
 
 
 #include "bacula.h"
@@ -120,13 +120,14 @@ get_win32_driveletters(FF_PKT *ff, char* szDrives)
    findFILESET *fileset = ff->fileset;
    if (fileset) {
       int i;
-      char *fname;
+      dlistString *node;
       
       for (i=0; i<fileset->include_list.size(); i++) {
          findINCEXE *incexe = (findINCEXE *)fileset->include_list.get(i);
          
          /* look through all files and check */
-         foreach_alist(fname, &incexe->name_list) {
+         foreach_dlist(node, &incexe->name_list) {
+            char *fname = node->c_str();
             /* fname should match x:/ */
             if (strlen(fname) >= 2 && B_ISALPHA(fname[0]) 
                && fname[1] == ':') {
@@ -186,12 +187,14 @@ find_files(JCR *jcr, FF_PKT *ff, int callback(FF_PKT *ff_pkt, void *hpkt, bool t
             findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
             ff->flags |= fo->flags;
             ff->GZIP_level = fo->GZIP_level;
+            ff->strip_path = fo->strip_path;
             ff->fstypes = fo->fstype;
             ff->drivetypes = fo->drivetype;
             bstrncat(ff->VerifyOpts, fo->VerifyOpts, sizeof(ff->VerifyOpts));
          }
-         char *fname;
-         foreach_alist(fname, &incexe->name_list) {
+         dlistString *node;
+         foreach_dlist(node, &incexe->name_list) {
+            char *fname = node->c_str();
             Dmsg1(100, "F %s\n", fname);
             ff->top_fname = fname;
             if (find_one_file(jcr, ff, our_callback, his_pkt, ff->top_fname, (dev_t)-1, true) == 0) {
@@ -340,8 +343,9 @@ static bool accept_file(FF_PKT *ff)
       }
       fnm_flags = (incexe->current_opts != NULL && incexe->current_opts->flags & FO_IGNORECASE)
              ? FNM_CASEFOLD : 0;
-      char *fname;
-      foreach_alist(fname, &incexe->name_list) {
+      dlistString *node;
+      foreach_dlist(node, &incexe->name_list) {
+         char *fname = node->c_str();
          if (fnmatch(fname, ff->fname, fnmode|fnm_flags) == 0) {
             Dmsg1(100, "Reject wild2: %s\n", ff->fname);
             return false;          /* reject file */
@@ -372,6 +376,7 @@ static int our_callback(FF_PKT *ff, void *hpkt, bool top_level)
    case FT_INVALIDFS:
    case FT_INVALIDDT:
    case FT_NOOPEN:
+   case FT_REPARSE:
 //    return ff->callback(ff, hpkt, top_level);
 
    /* These items can be filtered */
@@ -407,10 +412,16 @@ static int our_callback(FF_PKT *ff, void *hpkt, bool top_level)
 int
 term_find_files(FF_PKT *ff)
 {
-  int hard_links;
+   int hard_links;
 
-  free_pool_memory(ff->sys_fname);
-  hard_links = term_find_one(ff);
-  free(ff);
-  return hard_links;
+   free_pool_memory(ff->sys_fname);
+   if (ff->fname_save) {
+      free_pool_memory(ff->fname_save);
+   }
+   if (ff->link_save) {
+      free_pool_memory(ff->link_save);
+   }
+   hard_links = term_find_one(ff);
+   free(ff);
+   return hard_links;
 }

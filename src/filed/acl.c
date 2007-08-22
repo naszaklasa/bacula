@@ -1,4 +1,31 @@
 /*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
  * Functions to handle ACL for bacula.
  *
  * We handle two different typers of ACLs: access and default ACLS.
@@ -26,35 +53,8 @@
  *
  *   Written by Preben 'Peppe' Guldberg, December MMIV
  *
- *   Version $Id: acl.c 3673 2006-11-21 17:03:47Z kerns $
+ *   Version $Id: acl.c 5234 2007-07-23 13:21:40Z ricozz $
  */
-/*
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-*/
 
 
 #ifndef TEST_PROGRAM
@@ -71,8 +71,8 @@
  */
 #if !defined(HAVE_ACL)              /* ACL support is required, of course */ \
    || !( defined(HAVE_AIX_OS)       /* man page -- may need flags         */ \
-      || defined(HAVE_FREEBSD_OS)   /* tested   -- compile wihtout flags  */ \
-      || defined(HAVE_DARWIN_OS)    /* tested   -- compile wihtout flags  */ \
+      || defined(HAVE_FREEBSD_OS)   /* tested   -- compile without flags  */ \
+      || defined(HAVE_DARWIN_OS)    /* tested   -- compile without flags  */ \
       || defined(HAVE_IRIX_OS)      /* man page -- compile without flags  */ \
       || defined(HAVE_OSF1_OS)      /* man page -- may need -lpacl        */ \
       || defined(HAVE_LINUX_OS)     /* tested   -- compile with -lacl     */ \
@@ -88,6 +88,7 @@
  *    with what we have and give all ACL streams a new number/type.
  */
 #endif
+
 #if !defined(HAVE_ACL) \
    || !( defined(HAVE_LINUX_OS) \
       || defined(HAVE_FREEBSD_OS) \
@@ -160,7 +161,7 @@ int bacl_set(JCR *jcr, int acltype)
 #endif
 #ifdef BACL_ALTERNATE_TEXT
 #include <acl/libacl.h>
-#define acl_to_text(acl,len)     ((len), acl_to_any_text((acl), NULL, ',', BACL_ALTERNATE_TEXT))
+#define acl_to_text(acl,len)     (acl_to_any_text((acl), NULL, ',', BACL_ALTERNATE_TEXT))
 #endif
 #endif
 
@@ -183,9 +184,9 @@ int bacl_get(JCR *jcr, int acltype)
       }
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("acl_to_text error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "acl_to_text error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
       acl_free(acl);
 #ifndef HAVE_OSF1_OS          /* BACL_ENOTSUP not defined for OSF1 */
    } else if (errno == BACL_ENOTSUP) {
@@ -212,7 +213,7 @@ int bacl_set(JCR *jcr, int acltype)
       }
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("acl_delete_def_file error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       return -1;
    }
 
@@ -220,9 +221,9 @@ int bacl_set(JCR *jcr, int acltype)
    if (acl == NULL) {
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("acl_from_text error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "acl_from_text error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
       return -1;
    }
 
@@ -234,9 +235,9 @@ int bacl_set(JCR *jcr, int acltype)
    if (acl_valid(acl) != 0) {
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("ac_valid error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "acl_valid error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
       acl_free(acl);
       return -1;
    }
@@ -249,9 +250,9 @@ int bacl_set(JCR *jcr, int acltype)
    if (acl_set_file(jcr->last_fname, ostype, acl) != 0 && jcr->last_type != FT_LNK) {
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("acl_set_file error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "acl_set_file error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
       acl_free(acl);
       return -1;
    }
@@ -283,9 +284,9 @@ int bacl_get(JCR *jcr, int acltype)
       }
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("acltostr error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "acltostr error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
       return -1;
    }
    return -1;
@@ -300,17 +301,17 @@ int bacl_set(JCR *jcr, int acltype)
    if (n <= 0) {
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("strtoacl error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "strtoacl error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
       return -1;
    }
    if (strtoacl(jcr->acl_text, n, NACLENTRIES, acls, ACL_FILEOWNER, ACL_FILEGROUP) != n) {
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("strtoacl error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "strtoacl error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
       return -1;
    }
    /*
@@ -320,9 +321,9 @@ int bacl_set(JCR *jcr, int acltype)
    if (setacl(jcr->last_fname, n, acls) != 0 && jcr->last_type != FT_LNK) {
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("setacl error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "setacl error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
       return -1;
    }
    return 0;
@@ -356,9 +357,9 @@ int bacl_get(JCR *jcr, int acltype)
       }
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("acltotext error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "acltotext error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
    }
    free(acls);
    return -1;
@@ -373,9 +374,9 @@ int bacl_set(JCR *jcr, int acltype)
    if (!acls) {
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("aclfromtext error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "aclfromtext error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
       return -1;
    }
    /*
@@ -385,9 +386,9 @@ int bacl_set(JCR *jcr, int acltype)
    if (acl(jcr->last_fname, SETACL, n, acls) == -1 && jcr->last_type != FT_LNK) {
       berrno be;
       Jmsg2(jcr, M_ERROR, 0, _("acl(SETACL) error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.strerror());
+         jcr->last_fname, be.bstrerror());
       Dmsg3(100, "acl(SETACL) error acl=%s file=%s ERR=%s\n",  
-         jcr->acl_text, jcr->last_fname, be.strerror());
+         jcr->acl_text, jcr->last_fname, be.bstrerror());
       actuallyfree(acls);
       return -1;
    }

@@ -1,26 +1,14 @@
 /*
- *
- *   Bacula UA authentication. Provides authentication with
- *     the Director.
- *
- *     Kern Sibbald, June MMI
- *
- *    This routine runs as a thread and must be thread reentrant.
- *
- *  Basic tasks done here:
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -37,6 +25,18 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula UA authentication. Provides authentication with
+ *     the Director.
+ *
+ *     Kern Sibbald, June MMI
+ *
+ *    This routine runs as a thread and must be thread reentrant.
+ *
+ *  Basic tasks done here:
+ *
+ */
 
 /* _("...") macro returns a wxChar*, so if we need a char*, we need to convert it with:
  * wxString(_("...")).mb_str(*wxConvCurrent) */
@@ -138,7 +138,7 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
    if (have_tls) {
       if (tls_local_need >= BNET_TLS_OK && tls_remote_need >= BNET_TLS_OK) {
          /* Engage TLS! Full Speed Ahead! */
-         if (!bnet_tls_client(tls_ctx, dir)) {
+         if (!bnet_tls_client(tls_ctx, dir, NULL)) {
             csprint(_("TLS negotiation failed\n"));
             goto bail_out;
          }

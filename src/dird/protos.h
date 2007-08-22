@@ -1,9 +1,4 @@
 /*
- * Director external function prototypes
- *
- *   Version $Id: protos.h 4183 2007-02-15 18:57:55Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
@@ -12,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,6 +25,11 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Director external function prototypes
+ *
+ *   Version $Id: protos.h 5144 2007-07-12 07:49:21Z kerns $
+ */
 
 /* admin.c */
 extern bool do_admin_init(JCR *jcr);
@@ -44,7 +44,7 @@ extern int authenticate_user_agent(UAContext *ua);
 
 /* autoprune.c */
 extern void do_autoprune(JCR *jcr);
-extern int prune_volumes(JCR *jcr);
+extern bool prune_volumes(JCR *jcr, bool InChanger, MEDIA_DBR *mr);
 
 /* autorecycle.c */
 extern bool recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr);
@@ -126,6 +126,8 @@ extern void free_rstorage(JCR *jcr);
 extern bool setup_job(JCR *jcr);
 extern void create_clones(JCR *jcr);
 extern bool create_restore_bootstrap_file(JCR *jcr);
+extern void dird_free_jcr(JCR *jcr);
+extern void dird_free_jcr_pointers(JCR *jcr);
 
 /* migration.c */
 extern bool do_migration(JCR *jcr);
@@ -146,9 +148,11 @@ extern int bget_dirmsg(BSOCK *bs);
 extern void wait_for_storage_daemon_termination(JCR *jcr);
 
 /* next_vol.c */
-int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index, bool create);
+int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
+                                bool create, bool purge);
 bool has_volume_expired(JCR *jcr, MEDIA_DBR *mr);
 void check_if_volume_valid_or_recyclable(JCR *jcr, MEDIA_DBR *mr, const char **reason);
+bool get_scratch_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr);
 
 /* newvol.c */
 bool newVolume(JCR *jcr, MEDIA_DBR *mr);
@@ -180,7 +184,9 @@ enum e_pool_op {
 };
 int create_pool(JCR *jcr, B_DB *db, POOL *pool, e_pool_op op);
 void set_pool_dbr_defaults_in_media_dbr(MEDIA_DBR *mr, POOL_DBR *pr);
+bool set_pooldbr_recyclepoolid(JCR *jcr, B_DB *db, POOL_DBR *pr, POOL *pool);
 void set_pooldbr_from_poolres(POOL_DBR *pr, POOL *pool, e_pool_op op);
+int update_pool_recyclepool(JCR *jcr, B_DB *db, POOL *pool);
 
 /* ua_input.c */
 int get_cmd(UAContext *ua, const char *prompt);
@@ -208,7 +214,10 @@ int get_next_jobid_from_list(char **p, JobId_t *JobId);
 void find_storage_resource(UAContext *ua, RESTORE_CTX &rx, char *Storage, char *MediaType);
 
 /* ua_server.c */
-void bsendmsg(void *sock, const char *fmt, ...);
+void bsendmsg(void *ua_ctx, const char *fmt, ...);
+void berrormsg(void *ua_ctx, const char *fmt, ...);
+void bwarningmsg(void *ua_ctx, const char *fmt, ...);
+void binfomsg(void *ua_ctx, const char *fmt, ...);
 UAContext *new_ua_context(JCR *jcr);
 JCR *new_control_jcr(const char *base_name, int job_type);
 void free_ua_context(UAContext *ua);
@@ -221,8 +230,8 @@ CLIENT  *select_client_resource(UAContext *ua);
 FILESET *select_fileset_resource(UAContext *ua);
 int     select_pool_and_media_dbr(UAContext *ua, POOL_DBR *pr, MEDIA_DBR *mr);
 int     select_media_dbr(UAContext *ua, MEDIA_DBR *mr);
-bool    select_pool_dbr(UAContext *ua, POOL_DBR *pr);
-int     select_client_dbr(UAContext *ua, CLIENT_DBR *cr);
+bool    select_pool_dbr(UAContext *ua, POOL_DBR *pr, char *argk="pool");
+bool    select_client_dbr(UAContext *ua, CLIENT_DBR *cr);
 
 void    start_prompt(UAContext *ua, const char *msg);
 void    add_prompt(UAContext *ua, const char *prompt);
@@ -232,8 +241,8 @@ STORE  *get_storage_resource(UAContext *ua, bool use_default);
 int     get_storage_drive(UAContext *ua, STORE *store);
 int     get_storage_slot(UAContext *ua, STORE *store);
 int     get_media_type(UAContext *ua, char *MediaType, int max_media);
-bool    get_pool_dbr(UAContext *ua, POOL_DBR *pr);
-int     get_client_dbr(UAContext *ua, CLIENT_DBR *cr);
+bool    get_pool_dbr(UAContext *ua, POOL_DBR *pr, char *argk="pool");
+bool    get_client_dbr(UAContext *ua, CLIENT_DBR *cr);
 POOL   *get_pool_resource(UAContext *ua);
 POOL   *select_pool_resource(UAContext *ua);
 CLIENT *get_client_resource(UAContext *ua);
@@ -246,6 +255,9 @@ int do_keyword_prompt(UAContext *ua, const char *msg, const char **list);
 int confirm_retention(UAContext *ua, utime_t *ret, const char *msg);
 bool get_level_from_name(JCR *jcr, const char *level_name);
 
+/* ua_status.c */
+void list_dir_status_header(UAContext *ua);
+
 /* ua_tree.c */
 bool user_select_files_from_tree(TREE_CTX *tree);
 int insert_tree_handler(void *ctx, int num_fields, char **row);
@@ -254,14 +266,20 @@ int insert_tree_handler(void *ctx, int num_fields, char **row);
 int prune_files(UAContext *ua, CLIENT *client);
 int prune_jobs(UAContext *ua, CLIENT *client, int JobType);
 bool prune_volume(UAContext *ua, MEDIA_DBR *mr);
+int job_delete_handler(void *ctx, int num_fields, char **row);
+int del_count_handler(void *ctx, int num_fields, char **row);
+int file_delete_handler(void *ctx, int num_fields, char **row);
+int get_prune_list_for_volume(UAContext *ua, MEDIA_DBR *mr, del_ctx *del);
 
 /* ua_purge.c */
+bool is_volume_purged(UAContext *ua, MEDIA_DBR *mr);
 bool mark_media_purged(UAContext *ua, MEDIA_DBR *mr);
 void purge_files_from_volume(UAContext *ua, MEDIA_DBR *mr );
-int purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr);
-void purge_files_from_job(UAContext *ua, JobId_t JobId);
-void purge_job_from_catalog(UAContext *ua, JobId_t JobId);
-void purge_job_records_from_catalog(UAContext *ua, JobId_t JobId);
+bool purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr);
+void purge_files_from_jobs(UAContext *ua, char *jobs);
+void purge_jobs_from_catalog(UAContext *ua, char *jobs);
+void purge_job_list_from_catalog(UAContext *ua, del_ctx &del);
+void purge_files_from_job_list(UAContext *ua, del_ctx &del);
 
 
 /* ua_run.c */

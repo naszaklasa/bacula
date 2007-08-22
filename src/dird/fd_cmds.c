@@ -1,28 +1,14 @@
 /*
- *
- *   Bacula Director -- fd_cmds.c -- send commands to File daemon
- *
- *     Kern Sibbald, October MM
- *
- *    This routine is run as a separate thread.  There may be more
- *    work to be done to make it totally reentrant!!!!
- *
- *  Utility functions for sending info to File Daemon.
- *   These functions are used by both backup and verify.
- *
- *   Version $Id: fd_cmds.c 4191 2007-02-17 10:13:40Z ricozz $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -39,10 +25,26 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- fd_cmds.c -- send commands to File daemon
+ *
+ *     Kern Sibbald, October MM
+ *
+ *    This routine is run as a separate thread.  There may be more
+ *    work to be done to make it totally reentrant!!!!
+ *
+ *  Utility functions for sending info to File Daemon.
+ *   These functions are used by both backup and verify.
+ *
+ *   Version $Id: fd_cmds.c 5228 2007-07-22 21:45:14Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
 #include "findlib/find.h"
+
+const int dbglvl = 400;
 
 /* Commands sent to File daemon */
 static char filesetcmd[]  = "fileset%s\n"; /* set full fileset */
@@ -79,9 +81,16 @@ int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
 {
    BSOCK   *fd;
    char ed1[30];
+   utime_t heart_beat;
+
+   if (jcr->client->heartbeat_interval) {
+      heart_beat = jcr->client->heartbeat_interval;
+   } else {           
+      heart_beat = director->heartbeat_interval;
+   }
 
    if (!jcr->file_bsock) {
-      fd = bnet_connect(jcr, retry_interval, max_retry_time,
+      fd = bnet_connect(jcr, retry_interval, max_retry_time, heart_beat,
            _("File daemon"), jcr->client->address,
            NULL, jcr->client->FDport, verbose);
       if (fd == NULL) {
@@ -345,7 +354,7 @@ static bool send_fileset(JCR *jcr)
                if (!bpipe) {
                   berrno be;
                   Jmsg(jcr, M_FATAL, 0, _("Cannot run program: %s. ERR=%s\n"),
-                     p, be.strerror());
+                     p, be.bstrerror());
                   goto bail_out;
                }
                bstrncpy(buf, "F ", sizeof(buf));
@@ -362,7 +371,7 @@ static bool send_fileset(JCR *jcr)
                if ((stat=close_bpipe(bpipe)) != 0) {
                   berrno be;
                   Jmsg(jcr, M_FATAL, 0, _("Error running program: %s. ERR=%s\n"),
-                     p, be.strerror(stat));
+                     p, be.bstrerror(stat));
                   goto bail_out;
                }
                break;
@@ -371,7 +380,7 @@ static bool send_fileset(JCR *jcr)
                if ((ffd = fopen(p, "rb")) == NULL) {
                   berrno be;
                   Jmsg(jcr, M_FATAL, 0, _("Cannot open included file: %s. ERR=%s\n"),
-                     p, be.strerror());
+                     p, be.bstrerror());
                   goto bail_out;
                }
                bstrncpy(buf, "F ", sizeof(buf));
@@ -466,7 +475,7 @@ bool send_bootstrap_file(JCR *jcr, BSOCK *sock)
    if (!bs) {
       berrno be;
       Jmsg(jcr, M_FATAL, 0, _("Could not open bootstrap file %s: ERR=%s\n"),
-         jcr->RestoreBootstrap, be.strerror());
+         jcr->RestoreBootstrap, be.bstrerror());
       set_jcr_job_status(jcr, JS_ErrorTerminated);
       return false;
    }
@@ -521,13 +530,11 @@ int send_runscripts_commands(JCR *jcr)
    Dmsg0(120, "bdird: sending runscripts to fd\n");
    
    foreach_alist(cmd, jcr->job->RunScripts) {
-      
       if (cmd->can_run_at_level(jcr->JobLevel) && cmd->target) {
-
          ehost = edit_job_codes(jcr, ehost, cmd->target, "");
          Dmsg2(200, "bdird: runscript %s -> %s\n", cmd->target, ehost);
 
-         if (strcmp(ehost, jcr->client->hdr.name) == 0) {
+         if (strcmp(ehost, jcr->client->name()) == 0) {
             pm_strcpy(msg, cmd->command);
             bash_spaces(msg);
 
@@ -540,23 +547,20 @@ int send_runscripts_commands(JCR *jcr)
             } else {
                bnet_fsend(fd, runscript, cmd->on_success, 
                                          cmd->on_failure,
-                                         cmd->abort_on_error,
+                                         cmd->fail_on_error,
                                          cmd->when,
                                          msg);
 
                result = response(jcr, fd, OKRunScript, "RunScript", DISPLAY_ERROR);
-               launch_before_cmd=true;
+               launch_before_cmd = true;
             }
             
             if (!result) {
-               set_jcr_job_status(jcr, JS_ErrorTerminated);
-               free_pool_memory(msg);
-               free_pool_memory(ehost);
-               return 0;
+               goto bail_out;
             }
          }
          /* TODO : we have to play with other client */
-	 /*
+         /*
            else {
            send command to an other client
            }
@@ -564,20 +568,24 @@ int send_runscripts_commands(JCR *jcr)
       }        
    } 
 
-   /* We tell to the FD that i can execute commands (ie ClientRunBeforeJob) */
+   /* Tell the FD to execute the ClientRunBeforeJob */
    if (launch_before_cmd) {
       bnet_fsend(fd, runbeforenow);
       if (!response(jcr, fd, OKRunBeforeNow, "RunBeforeNow", DISPLAY_ERROR)) {
-        set_jcr_job_status(jcr, JS_ErrorTerminated);
-        free_pool_memory(msg);
-        free_pool_memory(ehost);
-        return 0;
+        goto bail_out;
       }
    }
    free_pool_memory(msg);
    free_pool_memory(ehost);
    return 1;
+
+bail_out:
+   Jmsg(jcr, M_FATAL, 0, _("Client \"%s\" RunScript failed.\n"), ehost);
+   free_pool_memory(msg);
+   free_pool_memory(ehost);
+   return 0;
 }
+
 
 
 /*
@@ -588,97 +596,107 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
 {
    BSOCK   *fd;
    int n = 0;
-   ATTR_DBR ar;
+   ATTR_DBR *ar = NULL;
+   char digest[MAXSTRING];
 
    fd = jcr->file_bsock;
    jcr->jr.FirstIndex = 1;
-   memset(&ar, 0, sizeof(ar));
    jcr->FileIndex = 0;
+   /* Start transaction allocates jcr->attr and jcr->ar if needed */
+   db_start_transaction(jcr, jcr->db);     /* start transaction if not already open */
+   ar = jcr->ar;
 
    Dmsg0(120, "bdird: waiting to receive file attributes\n");
    /* Pickup file attributes and digest */
    while (!fd->errors && (n = bget_dirmsg(fd)) > 0) {
-
-   /*****FIXME****** improve error handling to stop only on
-    * really fatal problems, or the number of errors is too
-    * large.
-    */
-      long file_index;
+      uint32_t file_index;
       int stream, len;
-      char *attr, *p, *fn;
-      char Opts_Digest[MAXSTRING];      /* either Verify opts or MD5/SHA1 digest */
-      char digest[CRYPTO_DIGEST_MAX_SIZE];
+      char *p, *fn;
+      char Digest[MAXSTRING];      /* either Verify opts or MD5/SHA1 digest */
 
       jcr->fname = check_pool_memory_size(jcr->fname, fd->msglen);
-      if ((len = sscanf(fd->msg, "%ld %d %s", &file_index, &stream, Opts_Digest)) != 3) {
+      if ((len = sscanf(fd->msg, "%ld %d %s", &file_index, &stream, Digest)) != 3) {
          Jmsg(jcr, M_FATAL, 0, _("<filed: bad attributes, expected 3 fields got %d\n"
 "msglen=%d msg=%s\n"), len, fd->msglen, fd->msg);
          set_jcr_job_status(jcr, JS_ErrorTerminated);
          return 0;
       }
       p = fd->msg;
+      /* The following three fields were sscanf'ed above so skip them */
       skip_nonspaces(&p);             /* skip FileIndex */
       skip_spaces(&p);
       skip_nonspaces(&p);             /* skip Stream */
       skip_spaces(&p);
-      skip_nonspaces(&p);             /* skip Opts_SHA1 */
+      skip_nonspaces(&p);             /* skip Opts_Digest */
       p++;                            /* skip space */
-      fn = jcr->fname;
-      while (*p != 0) {
-         *fn++ = *p++;                /* copy filename */
-      }
-      *fn = *p++;                     /* term filename and point to attribs */
-      attr = p;
-
+      Dmsg1(dbglvl, "Stream=%d\n", stream);
       if (stream == STREAM_UNIX_ATTRIBUTES || stream == STREAM_UNIX_ATTRIBUTES_EX) {
+         if (jcr->cached_attribute) {
+            Dmsg3(dbglvl, "Cached attr. Stream=%d fname=%s\n", ar->Stream, ar->fname,
+               ar->attr);
+            if (!db_create_file_attributes_record(jcr, jcr->db, ar)) {
+               Jmsg1(jcr, M_FATAL, 0, _("Attribute create error. %s"), db_strerror(jcr->db));
+            }
+         }
+         /* Any cached attr is flushed so we can reuse jcr->attr and jcr->ar */
+         fn = jcr->fname;
+         while (*p != 0) {
+            *fn++ = *p++;                /* copy filename */
+         }
+         *fn = *p++;                     /* term filename and point p to attribs */
+         pm_strcpy(jcr->attr, p);        /* save attributes */
          jcr->JobFiles++;
          jcr->FileIndex = file_index;
-         ar.attr = attr;
-         ar.fname = jcr->fname;
-         ar.FileIndex = file_index;
-         ar.Stream = stream;
-         ar.link = NULL;
-         ar.JobId = jcr->JobId;
-         ar.ClientId = jcr->ClientId;
-         ar.PathId = 0;
-         ar.FilenameId = 0;
-         ar.Digest = NULL;
-         ar.DigestType = CRYPTO_DIGEST_NONE;
+         ar->attr = jcr->attr;
+         ar->fname = jcr->fname;
+         ar->FileIndex = file_index;
+         ar->Stream = stream;
+         ar->link = NULL;
+         ar->JobId = jcr->JobId;
+         ar->ClientId = jcr->ClientId;
+         ar->PathId = 0;
+         ar->FilenameId = 0;
+         ar->Digest = NULL;
+         ar->DigestType = CRYPTO_DIGEST_NONE;
+         jcr->cached_attribute = true;
 
-         Dmsg2(111, "dird<filed: stream=%d %s\n", stream, jcr->fname);
-         Dmsg1(120, "dird<filed: attr=%s\n", attr);
-
-         if (!db_create_file_attributes_record(jcr, jcr->db, &ar)) {
-            Jmsg1(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));
-            set_jcr_job_status(jcr, JS_Error);
-            continue;
-         }
-         jcr->FileId = ar.FileId;
+         Dmsg2(dbglvl, "dird<filed: stream=%d %s\n", stream, jcr->fname);
+         Dmsg1(dbglvl, "dird<filed: attr=%s\n", ar->attr);
+         jcr->FileId = ar->FileId;
+      /*
+       * First, get STREAM_UNIX_ATTRIBUTES and fill ATTR_DBR structure
+       * Next, we CAN have a CRYPTO_DIGEST, so we fill ATTR_DBR with it (or not)
+       * When we get a new STREAM_UNIX_ATTRIBUTES, we known that we can add file to the catalog
+       * At the end, we have to add the last file
+       */
       } else if (crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
          if (jcr->FileIndex != (uint32_t)file_index) {
             Jmsg3(jcr, M_ERROR, 0, _("%s index %d not same as attributes %d\n"),
                stream_to_ascii(stream), file_index, jcr->FileIndex);
-            set_jcr_job_status(jcr, JS_Error);
             continue;
          }
-         db_escape_string(digest, Opts_Digest, strlen(Opts_Digest));
-         Dmsg2(120, "DigestLen=%d Digest=%s\n", strlen(digest), digest);
-         if (!db_add_digest_to_file_record(jcr, jcr->db, jcr->FileId, digest,
-                   crypto_digest_stream_type(stream))) {
-            Jmsg1(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));
-            set_jcr_job_status(jcr, JS_Error);
-         }
+         ar->Digest = digest;
+         ar->DigestType = crypto_digest_stream_type(stream);
+         db_escape_string(digest, Digest, strlen(Digest));
+         Dmsg4(dbglvl, "stream=%d DigestLen=%d Digest=%s type=%d\n", stream,
+               strlen(digest), digest, ar->DigestType);
       }
       jcr->jr.JobFiles = jcr->JobFiles = file_index;
       jcr->jr.LastIndex = file_index;
    }
    if (is_bnet_error(fd)) {
       Jmsg1(jcr, M_FATAL, 0, _("<filed: Network error getting attributes. ERR=%s\n"),
-                        bnet_strerror(fd));
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+            fd->bstrerror());
       return 0;
    }
-
+   if (jcr->cached_attribute) {
+      Dmsg3(dbglvl, "Cached attr with digest. Stream=%d fname=%s attr=%s\n", ar->Stream,            
+         ar->fname, ar->attr);
+      if (!db_create_file_attributes_record(jcr, jcr->db, ar)) {
+         Jmsg1(jcr, M_FATAL, 0, _("Attribute create error. %s"), db_strerror(jcr->db));
+      }
+      jcr->cached_attribute = false; 
+   }
    set_jcr_job_status(jcr, JS_Terminated);
    return 1;
 }

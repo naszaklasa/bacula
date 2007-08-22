@@ -2,7 +2,7 @@
 #
 # Bacula interface to virtual autoloader using disk storage
 #
-#  $Id: disk-changer.in 3457 2006-09-11 21:11:03Z kerns $
+#  $Id: disk-changer.in 4982 2007-06-05 16:58:53Z kerns $
 #
 #  If you set in your Device resource
 #
@@ -64,7 +64,7 @@ wd=@working_dir@
 #
 dbgfile="$wd/disk-changer.log"
 debug() {
-    if test -e $dbgfile; then
+    if test -f $dbgfile; then
 	echo "`date +\"%Y%m%d-%H:%M:%S\"` $*" >> $dbgfile
     fi
 }

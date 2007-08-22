@@ -1,23 +1,14 @@
 /*
- * Tray Monitor specific configuration and defines
- *
- *   Adapted from dird_conf.c
- *
- *     Nicolas Boichat, August MMIV
- *
- *    Version $Id: tray_conf.h 3685 2006-11-22 14:26:40Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Tray Monitor specific configuration and defines
+ *
+ *   Adapted from dird_conf.c
+ *
+ *     Nicolas Boichat, August MMIV
+ *
+ *    Version $Id: tray_conf.h 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 /* NOTE:  #includes at the end of this file */
 
@@ -45,8 +45,9 @@ enum rescode {
    R_DIRECTOR,
    R_CLIENT,
    R_STORAGE,
+   R_CONSOLE_FONT,
    R_FIRST = R_MONITOR,
-   R_LAST  = R_STORAGE                /* keep this updated */
+   R_LAST  = R_CONSOLE_FONT                /* keep this updated */
 };
 
 
@@ -110,7 +111,10 @@ struct STORE {
    int enable_ssl;                    /* Use SSL */
 };
 
-
+struct CONFONTRES {
+   RES   hdr;
+   char *fontface;                    /* Console Font specification */
+};
 
 /* Define the Union of all the above
  * resource structure definitions.
@@ -120,5 +124,6 @@ union URES {
    DIRRES     res_dir;
    CLIENT     res_client;
    STORE      res_store;
+   CONFONTRES con_font;
    RES        hdr;
 };

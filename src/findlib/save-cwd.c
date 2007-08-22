@@ -18,35 +18,6 @@
 
 /* Written by Jim Meyering <meyering@na-net.ornl.gov>.  */
 
-/*
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-*/
-
-
 #include "bacula.h"
 #include "save-cwd.h"
 
@@ -74,7 +45,7 @@ save_cwd(struct saved_cwd *cwd)
       cwd->desc = open(".", O_RDONLY);
       if (cwd->desc < 0) {
          berrno be;
-         Emsg1(M_ERROR, 0, _("Cannot open current directory: %s\n"), be.strerror());
+         Emsg1(M_ERROR, 0, _("Cannot open current directory: %s\n"), be.bstrerror());
          return 1;
       }
 
@@ -88,7 +59,7 @@ save_cwd(struct saved_cwd *cwd)
               have_working_fchdir = 0;
           } else {
               berrno be;
-              Emsg1(M_ERROR, 0, _("Current directory: %s\n"), be.strerror());
+              Emsg1(M_ERROR, 0, _("Current directory: %s\n"), be.bstrerror());
               close(cwd->desc);
               cwd->desc = -1;
               return 1;
@@ -110,7 +81,7 @@ save_cwd(struct saved_cwd *cwd)
       cwd->name = (POOLMEM *)getcwd(buf, sizeof_pool_memory(buf));
       if (cwd->name == NULL) {
          berrno be;
-         Emsg1(M_ERROR, 0, _("Cannot get current directory: %s\n"), be.strerror());
+         Emsg1(M_ERROR, 0, _("Cannot get current directory: %s\n"), be.bstrerror());
          free_pool_memory(buf);
          return 1;
       }
@@ -132,28 +103,28 @@ restore_cwd(const struct saved_cwd *cwd, const char *dest, const char *from)
          if (from) {
             if (dest) {
                Emsg3(M_ERROR, 0, _("Cannot return to %s from %s: %s\n"),
-                  dest, from, be.strerror());
+                  dest, from, be.bstrerror());
             }
             else {
                Emsg2(M_ERROR, 0, _("Cannot return to saved working directory from %s: %s\n"),
-                  from, be.strerror());
+                  from, be.bstrerror());
             }
          }
          else {
             if (dest) {
                Emsg2(M_ERROR, 0, _("Cannot return to %s: %s\n"),
-                  dest, be.strerror());
+                  dest, be.bstrerror());
             }
             else {
                Emsg1(M_ERROR, 0, _("Cannot return to saved working directory: %s\n"),
-                  be.strerror());
+                  be.bstrerror());
             }
          }
          fail = 1;
       }
   } else if (chdir(cwd->name) < 0) {
       berrno be;
-      Emsg2(M_ERROR, 0, "%s: %s\n", cwd->name, be.strerror());
+      Emsg2(M_ERROR, 0, "%s: %s\n", cwd->name, be.bstrerror());
       fail = 1;
   }
   return fail;

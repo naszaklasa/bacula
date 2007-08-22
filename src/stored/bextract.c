@@ -4,7 +4,7 @@
  *
  *   Kern E. Sibbald, MM
  *
- *   Version $Id: bextract.c 3718 2006-12-01 08:45:40Z robertnelson $
+ *   Version $Id: bextract.c 4992 2007-06-07 14:46:43Z kerns $
  *
  */
 /*
@@ -16,8 +16,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -135,7 +135,7 @@ int main (int argc, char *argv[])
          if ((fd = fopen(optarg, "rb")) == NULL) {
             berrno be;
             Pmsg2(0, _("Could not open exclude file: %s, ERR=%s\n"),
-               optarg, be.strerror());
+               optarg, be.bstrerror());
             exit(1);
          }
          while (fgets(line, sizeof(line), fd) != NULL) {
@@ -150,7 +150,7 @@ int main (int argc, char *argv[])
          if ((fd = fopen(optarg, "rb")) == NULL) {
             berrno be;
             Pmsg2(0, _("Could not open include file: %s, ERR=%s\n"),
-               optarg, be.strerror());
+               optarg, be.bstrerror());
             exit(1);
          }
          while (fgets(line, sizeof(line), fd) != NULL) {
@@ -237,7 +237,7 @@ static void do_extract(char *devname)
    if (stat(where, &statp) < 0) {
       berrno be;
       Emsg2(M_ERROR_TERM, 0, _("Cannot stat %s. It must exist. ERR=%s\n"),
-         where, be.strerror());
+         where, be.bstrerror());
    }
    if (!S_ISDIR(statp.st_mode)) {
       Emsg1(M_ERROR_TERM, 0, _("%s must be a directory.\n"), where);
@@ -358,7 +358,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
                if (blseek(&bfd, (boffset_t)fileAddr, SEEK_SET) < 0) {
                   berrno be;
                   Emsg2(M_ERROR_TERM, 0, _("Seek error on %s: %s\n"),
-                     attr->ofname, be.strerror());
+                     attr->ofname, be.bstrerror());
                }
             }
          } else {
@@ -370,7 +370,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          if ((uint32_t)bwrite(&bfd, wbuf, wsize) != wsize) {
             berrno be;
             Emsg2(M_ERROR_TERM, 0, _("Write error on %s: %s\n"),
-               attr->ofname, be.strerror());
+               attr->ofname, be.bstrerror());
          }
          fileAddr += wsize;
       }
@@ -398,7 +398,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
                if (blseek(&bfd, (boffset_t)fileAddr, SEEK_SET) < 0) {
                   berrno be;
                   Emsg3(M_ERROR, 0, _("Seek to %s error on %s: ERR=%s\n"),
-                     edit_uint64(fileAddr, ec1), attr->ofname, be.strerror());
+                     edit_uint64(fileAddr, ec1), attr->ofname, be.bstrerror());
                   extract = false;
                   return true;
                }
@@ -420,7 +420,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
             berrno be;
             Pmsg0(0, _("===Write error===\n"));
             Emsg2(M_ERROR, 0, _("Write error on %s: %s\n"),
-               attr->ofname, be.strerror());
+               attr->ofname, be.bstrerror());
             extract = false;
             return true;
          }

@@ -39,11 +39,11 @@ You may also want to correct the language team to:
 
 Finally, add <language code>.mo (e.g. de.mo) to .cvsignore, and don't forget to
 run:
-# cvs add <language code>.po <language code>.gmo
+# svn add <language code>.po <language code>.gmo
 
 ---
 
-For more informations, see gettext manual:
+For more information, see the gettext manual:
 http://www.gnu.org/software/gettext/manual/
 
 ---

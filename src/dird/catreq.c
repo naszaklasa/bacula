@@ -1,28 +1,14 @@
 /*
- *
- *   Bacula Director -- catreq.c -- handles the message channel
- *    catalog request from the Storage daemon.
- *
- *     Kern Sibbald, March MMI
- *
- *    This routine runs as a thread and must be thread reentrant.
- *
- *  Basic tasks done here:
- *      Handle Catalog services.
- *
- *   Version $Id: catreq.c 4183 2007-02-15 18:57:55Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -39,6 +25,20 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- catreq.c -- handles the message channel
+ *    catalog request from the Storage daemon.
+ *
+ *     Kern Sibbald, March MMI
+ *
+ *    This routine runs as a thread and must be thread reentrant.
+ *
+ *  Basic tasks done here:
+ *      Handle Catalog services.
+ *
+ *   Version $Id: catreq.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -90,8 +90,8 @@ static int send_volume_info_to_storage_daemon(JCR *jcr, BSOCK *sd, MEDIA_DBR *mr
       edit_uint64(mr->VolCapacityBytes, ed3),
       mr->VolStatus, mr->Slot, mr->MaxVolJobs, mr->MaxVolFiles,
       mr->InChanger,
-      edit_uint64(mr->VolReadTime, ed4),
-      edit_uint64(mr->VolWriteTime, ed5),
+      edit_int64(mr->VolReadTime, ed4),
+      edit_int64(mr->VolWriteTime, ed5),
       mr->EndFile, mr->EndBlock,
       mr->VolParts,
       mr->LabelType,
@@ -117,6 +117,7 @@ void catalog_request(JCR *jcr, BSOCK *bs)
    memset(&mr, 0, sizeof(mr));
    memset(&sdmr, 0, sizeof(sdmr));
    memset(&jm, 0, sizeof(jm));
+   Dsm_check(1);      
 
    /*
     * Request to find next appendable Volume for this Job
@@ -141,8 +142,8 @@ void catalog_request(JCR *jcr, BSOCK *bs)
       if (ok) {
          mr.PoolId = pr.PoolId;
          mr.StorageId = jcr->wstore->StorageId;
-         ok = find_next_volume_for_append(jcr, &mr, index, true /*permit create new vol*/);
-         Dmsg3(100, "find_media idx=%d ok=%d vol=%s\n", index, ok, mr.VolumeName);
+         ok = find_next_volume_for_append(jcr, &mr, index, fnv_create_vol, fnv_prune);
+         Dmsg3(050, "find_media ok=%d idx=%d vol=%s\n", ok, index, mr.VolumeName);
       }
       /*
        * Send Find Media response to Storage daemon
@@ -356,6 +357,7 @@ void catalog_update(JCR *jcr, BSOCK *bs)
    ATTR_DBR *ar = NULL;
    POOLMEM *omsg;
 
+   Dsm_check(1);
    if (!jcr->pool->catalog_files) {
       return;                         /* user disabled cataloging */
    }

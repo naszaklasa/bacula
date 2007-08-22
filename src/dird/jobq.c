@@ -10,7 +10,7 @@
  *
  *  Kern Sibbald, July MMIII
  *
- *   Version $Id: jobq.c 4116 2007-02-06 14:37:57Z kerns $
+ *   Version $Id: jobq.c 4992 2007-06-07 14:46:43Z kerns $
  *
  *  This code was adapted from the Bacula workq, which was
  *    adapted from "Programming with POSIX Threads", by
@@ -26,8 +26,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -72,7 +72,7 @@ int jobq_init(jobq_t *jq, int threads, void *(*engine)(void *arg))
 
    if ((stat = pthread_attr_init(&jq->attr)) != 0) {
       berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_attr_init: ERR=%s\n"), be.strerror(stat));
+      Jmsg1(NULL, M_ERROR, 0, _("pthread_attr_init: ERR=%s\n"), be.bstrerror(stat));
       return stat;
    }
    if ((stat = pthread_attr_setdetachstate(&jq->attr, PTHREAD_CREATE_DETACHED)) != 0) {
@@ -81,13 +81,13 @@ int jobq_init(jobq_t *jq, int threads, void *(*engine)(void *arg))
    }
    if ((stat = pthread_mutex_init(&jq->mutex, NULL)) != 0) {
       berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_init: ERR=%s\n"), be.strerror(stat));
+      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_init: ERR=%s\n"), be.bstrerror(stat));
       pthread_attr_destroy(&jq->attr);
       return stat;
    }
    if ((stat = pthread_cond_init(&jq->work, NULL)) != 0) {
       berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_cond_init: ERR=%s\n"), be.strerror(stat));
+      Jmsg1(NULL, M_ERROR, 0, _("pthread_cond_init: ERR=%s\n"), be.bstrerror(stat));
       pthread_mutex_destroy(&jq->mutex);
       pthread_attr_destroy(&jq->attr);
       return stat;
@@ -120,7 +120,7 @@ int jobq_destroy(jobq_t *jq)
    }
    if ((stat = pthread_mutex_lock(&jq->mutex)) != 0) {
       berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.strerror(stat));
+      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.bstrerror(stat));
       return stat;
    }
    jq->valid = 0;                      /* prevent any more operations */
@@ -133,7 +133,7 @@ int jobq_destroy(jobq_t *jq)
       if (jq->idle_workers) {
          if ((stat = pthread_cond_broadcast(&jq->work)) != 0) {
             berrno be;
-            Jmsg1(NULL, M_ERROR, 0, _("pthread_cond_broadcast: ERR=%s\n"), be.strerror(stat));
+            Jmsg1(NULL, M_ERROR, 0, _("pthread_cond_broadcast: ERR=%s\n"), be.bstrerror(stat));
             pthread_mutex_unlock(&jq->mutex);
             return stat;
          }
@@ -141,7 +141,7 @@ int jobq_destroy(jobq_t *jq)
       while (jq->num_workers > 0) {
          if ((stat = pthread_cond_wait(&jq->work, &jq->mutex)) != 0) {
             berrno be;
-            Jmsg1(NULL, M_ERROR, 0, _("pthread_cond_wait: ERR=%s\n"), be.strerror(stat));
+            Jmsg1(NULL, M_ERROR, 0, _("pthread_cond_wait: ERR=%s\n"), be.bstrerror(stat));
             pthread_mutex_unlock(&jq->mutex);
             return stat;
          }
@@ -149,7 +149,7 @@ int jobq_destroy(jobq_t *jq)
    }
    if ((stat = pthread_mutex_unlock(&jq->mutex)) != 0) {
       berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_unlock: ERR=%s\n"), be.strerror(stat));
+      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_unlock: ERR=%s\n"), be.bstrerror(stat));
       return stat;
    }
    stat  = pthread_mutex_destroy(&jq->mutex);
@@ -225,7 +225,7 @@ int jobq_add(jobq_t *jq, JCR *jcr)
       /* Initialize termination condition variable */
       if ((stat = pthread_cond_init(&jcr->term_wait, NULL)) != 0) {
          berrno be;
-         Jmsg1(jcr, M_FATAL, 0, _("Unable to init job cond variable: ERR=%s\n"), be.strerror(stat));
+         Jmsg1(jcr, M_FATAL, 0, _("Unable to init job cond variable: ERR=%s\n"), be.bstrerror(stat));
          return stat;
       }
       jcr->term_wait_inited = true;
@@ -247,14 +247,14 @@ int jobq_add(jobq_t *jq, JCR *jcr)
       stat = pthread_create(&id, &jq->attr, sched_wait, (void *)sched_pkt);        
       if (stat != 0) {                /* thread not created */
          berrno be;
-         Jmsg1(jcr, M_ERROR, 0, _("pthread_thread_create: ERR=%s\n"), be.strerror(stat));
+         Jmsg1(jcr, M_ERROR, 0, _("pthread_thread_create: ERR=%s\n"), be.bstrerror(stat));
       }
       return stat;
    }
 
    if ((stat = pthread_mutex_lock(&jq->mutex)) != 0) {
       berrno be;
-      Jmsg1(jcr, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.strerror(stat));
+      Jmsg1(jcr, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.bstrerror(stat));
       free_jcr(jcr);                    /* release jcr */
       return stat;
    }
@@ -319,7 +319,7 @@ int jobq_remove(jobq_t *jq, JCR *jcr)
 
    if ((stat = pthread_mutex_lock(&jq->mutex)) != 0) {
       berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.strerror(stat));
+      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.bstrerror(stat));
       return stat;
    }
 
@@ -365,7 +365,7 @@ static int start_server(jobq_t *jq)
       Dmsg0(2300, "Signal worker to wake up\n");
       if ((stat = pthread_cond_broadcast(&jq->work)) != 0) {
          berrno be;
-         Jmsg1(NULL, M_ERROR, 0, _("pthread_cond_signal: ERR=%s\n"), be.strerror(stat));
+         Jmsg1(NULL, M_ERROR, 0, _("pthread_cond_signal: ERR=%s\n"), be.bstrerror(stat));
          return stat;
       }
    } else if (jq->num_workers < jq->max_workers) {
@@ -374,7 +374,7 @@ static int start_server(jobq_t *jq)
       set_thread_concurrency(jq->max_workers + 1);
       if ((stat = pthread_create(&id, &jq->attr, jobq_server, (void *)jq)) != 0) {
          berrno be;
-         Jmsg1(NULL, M_ERROR, 0, _("pthread_create: ERR=%s\n"), be.strerror(stat));
+         Jmsg1(NULL, M_ERROR, 0, _("pthread_create: ERR=%s\n"), be.bstrerror(stat));
          return stat;
       }
    }
@@ -400,7 +400,7 @@ void *jobq_server(void *arg)
    Dmsg0(2300, "Start jobq_server\n");
    if ((stat = pthread_mutex_lock(&jq->mutex)) != 0) {
       berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.strerror(stat));
+      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.bstrerror(stat));
       return NULL;
    }
    jq->num_workers++;
@@ -682,13 +682,14 @@ static bool acquire_resources(JCR *jcr)
    jcr->acquired_resource_locks = false;
    if (jcr->rstore) {
       Dmsg1(200, "Rstore=%s\n", jcr->rstore->name());
-      /* 
-       * Let only one Restore/verify job run at a time regardless
-       *   of MaxConcurrentJobs.
-       */ 
-      if (jcr->rstore->NumConcurrentJobs == 0) {
+      if (jcr->rstore->NumConcurrentJobs == 0 &&
+          jcr->rstore->NumConcurrentJobs < jcr->rstore->MaxConcurrentJobs) {
+         /* Simple case, first job */
          jcr->rstore->NumConcurrentJobs = 1;
          Dmsg0(200, "Set rncj=1\n");
+      } else if (jcr->rstore->NumConcurrentJobs < jcr->rstore->MaxConcurrentJobs) {
+         jcr->rstore->NumConcurrentJobs++;
+         Dmsg1(200, "Inc rncj=%d\n", jcr->rstore->NumConcurrentJobs);
       } else {
          Dmsg1(200, "Fail rncj=%d\n", jcr->rstore->NumConcurrentJobs);
          set_jcr_job_status(jcr, JS_WaitStoreRes);
@@ -699,7 +700,7 @@ static bool acquire_resources(JCR *jcr)
    if (jcr->wstore) {
       Dmsg1(200, "Wstore=%s\n", jcr->wstore->name());
       if (jcr->rstore == jcr->wstore) {           /* deadlock */
-         jcr->rstore->NumConcurrentJobs = 0;      /* back out rstore */
+         jcr->rstore->NumConcurrentJobs--;        /* back out rstore */
          Jmsg(jcr, M_FATAL, 0, _("Job canceled. Attempt to read and write same device.\n"
             "    Read storage \"%s\" (From %s) -- Write storage \"%s\" (From %s)\n"), 
             jcr->rstore->name(), jcr->rstore_source, jcr->wstore->name(), jcr->wstore_source);
@@ -715,7 +716,7 @@ static bool acquire_resources(JCR *jcr)
          jcr->wstore->NumConcurrentJobs++;
          Dmsg1(200, "Inc wncj=%d\n", jcr->wstore->NumConcurrentJobs);
       } else if (jcr->rstore) {
-         jcr->rstore->NumConcurrentJobs = 0;      /* back out rstore */
+         jcr->rstore->NumConcurrentJobs--;        /* back out rstore */
          Dmsg1(200, "Fail wncj=%d\n", jcr->wstore->NumConcurrentJobs);
          skip_this_jcr = true;
       } else {
@@ -737,7 +738,7 @@ static bool acquire_resources(JCR *jcr)
          Dmsg1(200, "Dec wncj=%d\n", jcr->wstore->NumConcurrentJobs);
       }
       if (jcr->rstore) {
-         jcr->rstore->NumConcurrentJobs = 0;
+         jcr->rstore->NumConcurrentJobs--;  
          Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
       }
       set_jcr_job_status(jcr, JS_WaitClientRes);
@@ -752,7 +753,7 @@ static bool acquire_resources(JCR *jcr)
          Dmsg1(200, "Dec wncj=%d\n", jcr->wstore->NumConcurrentJobs);
       }
       if (jcr->rstore) {
-         jcr->rstore->NumConcurrentJobs = 0;
+         jcr->rstore->NumConcurrentJobs--;
          Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
       }
       jcr->client->NumConcurrentJobs--;

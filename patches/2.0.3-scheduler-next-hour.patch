@@ -1,0 +1,88 @@
+
+ This patch should fix bug #812 where the DST time shift was 
+ incorrectly handled. This patch was submitted by Martin Simmons.
+ Apply it to Bacula version 2.0.3 with:
+
+  cd <bacula-source>
+  patch -p0 <2.0.3-scheduler-next-hour.patch
+  make
+  ...
+  make install
+
+Index: src/dird/scheduler.c
+===================================================================
+--- src/dird/scheduler.c	(revision 4445)
++++ src/dird/scheduler.c	(working copy)
+@@ -175,11 +175,11 @@
+       }
+       /* Recheck at least once per minute */
+       bmicrosleep((next_check_secs < twait)?next_check_secs:twait, 0);
+-      /* Attempt to handle clock shift from/to daylight savings time
++      /* Attempt to handle clock shift (but not daylight savings time changes)
+        * we allow a skew of 10 seconds before invalidating everything.
+        */
+       now = time(NULL);
+-      if (now < prev+10 || now > (prev+next_check_secs+10)) {
++      if (now < prev-10 || now > (prev+next_check_secs+10)) {
+          schedules_invalidated = true;
+       }
+    }
+@@ -284,6 +284,9 @@
+    wom = mday / 7;
+    woy = tm_woy(now);                     /* get week of year */
+ 
++   Dmsg7(dbglvl, "now = %x: h=%d m=%d md=%d wd=%d wom=%d woy=%d\n",
++	 now, hour, month, mday, wday, wom, woy);
++
+    /*
+     * Compute values for next hour from now.
+     * We do this to be sure we don't miss a job while
+@@ -299,6 +302,9 @@
+    nh_wom = nh_mday / 7;
+    nh_woy = tm_woy(now);                     /* get week of year */
+ 
++   Dmsg7(dbglvl, "nh = %x: h=%d m=%d md=%d wd=%d wom=%d woy=%d\n",
++	 next_hour, nh_hour, nh_month, nh_mday, nh_wday, nh_wom, nh_woy);
++
+    /* Loop through all jobs */
+    LockRes();
+    foreach_res(job, R_JOB) {
+@@ -351,24 +357,20 @@
+ 
+          Dmsg3(dbglvl, "run@%p: run_now=%d run_nh=%d\n", run, run_now, run_nh);
+ 
+-         /* find time (time_t) job is to be run */
+-         (void)localtime_r(&now, &tm);      /* reset tm structure */
+-         tm.tm_min = run->minute;     /* set run minute */
+-         tm.tm_sec = 0;               /* zero secs */
+-         if (run_now) {
+-            runtime = mktime(&tm);
+-            add_job(job, run, now, runtime);
+-         }
+-         /* If job is to be run in the next hour schedule it */
+-         if (run_nh) {
+-            /* Set correct values */
+-            tm.tm_hour = nh_hour;
+-            tm.tm_mday = nh_mday + 1; /* fixup because we biased for tests above */
+-            tm.tm_mon = nh_month;
+-            tm.tm_year = nh_year;
+-            runtime = mktime(&tm);
+-            add_job(job, run, now, runtime);
+-         }
++	 if (run_now || run_nh) {
++	   /* find time (time_t) job is to be run */
++	   (void)localtime_r(&now, &tm);      /* reset tm structure */
++	   tm.tm_min = run->minute;     /* set run minute */
++	   tm.tm_sec = 0;               /* zero secs */
++	   runtime = mktime(&tm);
++	   if (run_now) {
++	     add_job(job, run, now, runtime);
++	   }
++	   /* If job is to be run in the next hour schedule it */
++	   if (run_nh) {
++	     add_job(job, run, now, runtime + 3600);
++	   }
++	 }
+       }
+    }
+    UnlockRes();

@@ -1,25 +1,14 @@
 /*
- *
- *   Bacula Director -- admin.c -- responsible for doing admin jobs
- *
- *     Kern Sibbald, May MMIII
- *
- *  Basic tasks done here:
- *     Display the job report.
- *
- *   Version $Id: admin.c 3776 2006-12-09 13:54:30Z ricozz $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -36,6 +25,17 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- admin.c -- responsible for doing admin jobs
+ *
+ *     Kern Sibbald, May MMIII
+ *
+ *  Basic tasks done here:
+ *     Display the job report.
+ *
+ *   Version $Id: admin.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -86,7 +86,7 @@ void admin_cleanup(JCR *jcr, int TermCode)
    update_job_end(jcr, TermCode);
 
    if (!db_get_job_record(jcr, jcr->db, &jcr->jr)) {
-      Jmsg(jcr, M_WARNING, 0, _("Error getting job record for stats: %s"),
+      Jmsg(jcr, M_WARNING, 0, _("Error getting Job record for Job report: ERR=%s"),
          db_strerror(jcr->db));
       set_jcr_job_status(jcr, JS_ErrorTerminated);
    }

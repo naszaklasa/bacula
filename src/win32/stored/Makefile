@@ -39,6 +39,7 @@ COMMON_OBJS = \
 	$(OBJDIR)/dvd.o \
 	$(OBJDIR)/ebcdic.o \
 	$(OBJDIR)/label.o \
+	$(OBJDIR)/lock.o \
 	$(OBJDIR)/match_bsr.o \
 	$(OBJDIR)/mount.o \
 	$(OBJDIR)/parse_bsr.o \

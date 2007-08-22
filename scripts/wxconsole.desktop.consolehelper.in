@@ -2,7 +2,7 @@
 Name=Bacula WX Console
 Comment=Bacula Director Console
 Icon=/usr/share/pixmaps/wxwin16x16.xpm
-Exec=/usr/bin/wxconsole -c @sysconfdir@/wxconsole.conf
+Exec=/usr/bin/bwx-console -c @sysconfdir@/bwx-console.conf
 Terminal=false
 Type=Application
 Encoding=UTF-8

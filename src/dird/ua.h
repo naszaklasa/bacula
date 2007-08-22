@@ -1,21 +1,14 @@
 /*
- * Includes specific to the Director User Agent Server
- *
- *     Kern Sibbald, August MMI
- *
- *     Version $Id: ua.h 3668 2006-11-21 13:20:11Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,11 +25,19 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Includes specific to the Director User Agent Server
+ *
+ *     Kern Sibbald, August MMI
+ *
+ *     Version $Id: ua.h 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 #ifndef __UA_H_
 #define __UA_H_ 1
 
-struct UAContext {
+class UAContext {
+public:
    BSOCK *UA_sock;
    BSOCK *sd;
    JCR *jcr;
@@ -51,6 +52,7 @@ struct UAContext {
    char **prompt;                     /* list of prompts */
    int max_prompts;                   /* max size of list */
    int num_prompts;                   /* current number in list */
+   int api;                           /* For programs want an API */
    bool auto_display_messages;        /* if set, display messages */
    bool user_notified_msg_pending;    /* set when user notified */
    bool automount;                    /* if set, mount after label */
@@ -61,6 +63,14 @@ struct UAContext {
    uint32_t pint32_val;               /* positive integer */
    int32_t  int32_val;                /* positive/negative */
    int64_t  int64_val;                /* big int */
+
+   void signal(int sig) { UA_sock->signal(sig); };
+
+   /* The below are in ua_output.c */
+   void send_msg(const char *fmt, ...);
+   void error_msg(const char *fmt, ...);
+   void warning_msg(const char *fmt, ...);
+   void info_msg(const char *fmt, ...);
 };
 
 /* Context for insert_tree_handler() */
@@ -91,7 +101,8 @@ struct RESTORE_CTX {
    utime_t JobTDate;
    uint32_t TotalFiles;
    JobId_t JobId;
-   char ClientName[MAX_NAME_LENGTH];
+   char ClientName[MAX_NAME_LENGTH];  /* backup client */
+   char RestoreClientName[MAX_NAME_LENGTH];  /* restore client */
    char last_jobid[20];
    POOLMEM *JobIds;                   /* User entered string of JobIds */
    STORE  *store;
@@ -100,6 +111,7 @@ struct RESTORE_CTX {
    int restore_jobs;
    uint32_t selected_files;
    char *where;
+   char *RegexWhere;
    RBSR *bsr;
    POOLMEM *fname;                    /* filename only */
    POOLMEM *path;                     /* path only */
@@ -112,6 +124,5 @@ struct RESTORE_CTX {
 };
 
 #define MAX_ID_LIST_LEN 2000000
-
 
 #endif

@@ -1,9 +1,4 @@
 /*
- * Storage daemon specific defines and includes
- *
- *  Version $Id: stored.h 3673 2006-11-21 17:03:47Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
@@ -12,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,11 +25,20 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Storage daemon specific defines and includes
+ *
+ *  Version $Id: stored.h 5112 2007-06-28 11:57:03Z kerns $
+ */
 
 #ifndef __STORED_H_
 #define __STORED_H_
 
 #define STORAGE_DAEMON 1
+
+/* Set to debug mutexes */
+//#define SD_DEBUG_LOCK
+const int sd_dbglvl = 300;
 
 #ifdef HAVE_MTIO_H
 #include <mtio.h>
@@ -47,6 +51,7 @@
 #   endif
 # endif
 #endif
+#include "lock.h"
 #include "block.h"
 #include "record.h"
 #include "dev.h"

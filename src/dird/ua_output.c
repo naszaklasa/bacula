@@ -7,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_output.c 4183 2007-02-15 18:57:55Z kerns $
+ *   Version $Id: ua_output.c 5038 2007-06-18 19:29:26Z kerns $
  */
 
 #include "bacula.h"
@@ -70,7 +70,7 @@ int autodisplay_cmd(UAContext *ua, const char *cmd)
       ua->auto_display_messages = false;
       break;
    default:
-      bsendmsg(ua, _("ON or OFF keyword missing.\n"));
+      ua->error_msg(_("ON or OFF keyword missing.\n"));
       break;
    }
    return 1;
@@ -94,7 +94,7 @@ int gui_cmd(UAContext *ua, const char *cmd)
       ua->jcr->gui = ua->gui = false;
       break;
    default:
-      bsendmsg(ua, _("ON or OFF keyword missing.\n"));
+      ua->error_msg(_("ON or OFF keyword missing.\n"));
       break;
    }
    return 1;
@@ -182,16 +182,16 @@ int show_cmd(UAContext *ua, const char *cmd)
          }
          break;
       case -2:
-         bsendmsg(ua, _("Keywords for the show command are:\n"));
+         ua->send_msg(_("Keywords for the show command are:\n"));
          for (j=0; reses[j].res_name; j++) {
-            bsendmsg(ua, "%s\n", _(reses[j].res_name));
+            ua->error_msg("%s\n", _(reses[j].res_name));
          }
          goto bail_out;
       case -3:
-         bsendmsg(ua, _("%s resource %s not found.\n"), res_name, ua->argv[i]);
+         ua->error_msg(_("%s resource %s not found.\n"), res_name, ua->argv[i]);
          goto bail_out;
       case 0:
-         bsendmsg(ua, _("Resource %s not found\n"), res_name);
+         ua->error_msg(_("Resource %s not found\n"), res_name);
          goto bail_out;
       default:
          dump_resource(recurse?type:-type, res, bsendmsg, ua);
@@ -259,7 +259,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
    Dmsg1(20, "list: %s\n", cmd);
 
    if (!ua->db) {
-      bsendmsg(ua, _("Hey! DB is NULL\n"));
+      ua->error_msg(_("Hey! DB is NULL\n"));
    }
 
    /* Scan arguments looking for things to do */
@@ -373,7 +373,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
             }
             VolumeName = get_pool_memory(PM_FNAME);
             n = db_get_job_volume_names(ua->jcr, ua->db, jobid, &VolumeName);
-            bsendmsg(ua, _("Jobid %d used %d Volume(s): %s\n"), jobid, n, VolumeName);
+            ua->send_msg(_("Jobid %d used %d Volume(s): %s\n"), jobid, n, VolumeName);
             free_pool_memory(VolumeName);
             done = true;
          }
@@ -391,7 +391,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
             for (i=1; i<ua->argc; i++) {
                if (strcasecmp(ua->argk[i], NT_("pool")) == 0) {
                   if (!get_pool_dbr(ua, &pr)) {
-                     bsendmsg(ua, _("No Pool specified.\n"));
+                     ua->error_msg(_("No Pool specified.\n"));
                      return 1;
                   }
                   mr.PoolId = pr.PoolId;
@@ -402,7 +402,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
 
             /* List Volumes in all pools */
             if (!db_get_pool_ids(ua->jcr, ua->db, &num_pools, &ids)) {
-               bsendmsg(ua, _("Error obtaining pool ids. ERR=%s\n"),
+               ua->error_msg(_("Error obtaining pool ids. ERR=%s\n"),
                         db_strerror(ua->db));
                return 1;
             }
@@ -412,7 +412,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
             for (i=0; i < num_pools; i++) {
                pr.PoolId = ids[i];
                if (db_get_pool_record(ua->jcr, ua->db, &pr)) {
-                  bsendmsg(ua, _("Pool: %s\n"), pr.Name);
+                  ua->send_msg(_("Pool: %s\n"), pr.Name);
                }
                mr.PoolId = ids[i];
                db_list_media_records(ua->jcr, ua->db, &mr, prtit, ua, llist);
@@ -428,7 +428,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
          if (j >= 0) {
             n = atoi(ua->argv[j]);
             if ((n < 0) || (n > 50)) {
-              bsendmsg(ua, _("Ignoring invalid value for days. Max is 50.\n"));
+              ua->warning_msg(_("Ignoring invalid value for days. Max is 50.\n"));
               n = 1;
             }
          }
@@ -437,7 +437,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
                  || strcasecmp(ua->argk[i], NT_("days")) == 0) {
          /* Ignore it */
       } else {
-         bsendmsg(ua, _("Unknown list keyword: %s\n"), NPRT(ua->argk[i]));
+         ua->error_msg(_("Unknown list keyword: %s\n"), NPRT(ua->argk[i]));
       }
    }
    return 1;
@@ -447,7 +447,6 @@ static bool list_nextvol(UAContext *ua, int ndays)
 {
    JOB *job;
    JCR *jcr = ua->jcr;
-   POOL *pool;
    USTORE store;
    RUN *run;
    time_t runtime;
@@ -471,25 +470,28 @@ static bool list_nextvol(UAContext *ua, int ndays)
       }
    }
    for (run=NULL; (run = find_next_run(run, job, runtime, ndays)); ) {
-      pool = run->pool ? run->pool : NULL;
-      if (!complete_jcr_for_job(jcr, job, pool)) {
+      if (!complete_jcr_for_job(jcr, job, run->pool)) {
          return false;
+      }
+      if (!jcr->jr.PoolId) {
+         ua->error_msg(_("Could not Pool Job %s\n"), job->name());
+         continue;
       }
       memset(&pr, 0, sizeof(pr));
       pr.PoolId = jcr->jr.PoolId;
-      if (! db_get_pool_record(ua->jcr, ua->db, &pr)) {
+      if (!db_get_pool_record(ua->jcr, ua->db, &pr)) {
          bstrncpy(pr.Name, "*UnknownPool*", sizeof(pr.Name));
       }
       mr.PoolId = jcr->jr.PoolId;
       get_job_storage(&store, job, run);
       mr.StorageId = store.store->StorageId;
-      if (!find_next_volume_for_append(jcr, &mr, 1, false/*no create*/)) {
-         bsendmsg(ua, _("Could not find next Volume for Job %s (%s, %s).\n"),
-            job->hdr.name, pr.Name, level_to_str(run->level));
+      if (!find_next_volume_for_append(jcr, &mr, 1, fnv_no_create_vol, fnv_prune)) {
+         ua->error_msg(_("Could not find next Volume for Job %s (Pool=%s, Level=%s).\n"),
+            job->name(), pr.Name, level_to_str(run->level));
       } else {
-         bsendmsg(ua,
-            _("The next Volume to be used by Job \"%s\" (%s, %s) will be %s\n"),
-            job->hdr.name, pr.Name, level_to_str(run->level), mr.VolumeName);
+         ua->send_msg(
+            _("The next Volume to be used by Job \"%s\" (Pool=%s, Level=%s) will be %s\n"),
+            job->name(), pr.Name, level_to_str(run->level), mr.VolumeName);
          found = true;
       }
       if (jcr->db && jcr->db != ua->db) {
@@ -498,7 +500,7 @@ static bool list_nextvol(UAContext *ua, int ndays)
       }
    }
    if (!found) {
-      bsendmsg(ua, _("Could not find next Volume for Job %s.\n"),
+      ua->error_msg(_("Could not find next Volume for Job %s.\n"),
          job->hdr.name);
       return false;
    }
@@ -612,9 +614,12 @@ bool complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool)
       jcr->pool = pool;               /* override */
    }
    if (jcr->db) {
+      Dmsg0(100, "complete_jcr close db\n");
       db_close_database(jcr, jcr->db);
       jcr->db = NULL;
    }
+
+   Dmsg0(100, "complete_jcr open db\n");
    jcr->db = jcr->db=db_init_database(jcr, jcr->catalog->db_name, jcr->catalog->db_user,
                       jcr->catalog->db_password, jcr->catalog->db_address,
                       jcr->catalog->db_port, jcr->catalog->db_socket,
@@ -629,7 +634,7 @@ bool complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool)
       }
       return false;
    }
-   bstrncpy(pr.Name, jcr->pool->hdr.name, sizeof(pr.Name));
+   bstrncpy(pr.Name, jcr->pool->name(), sizeof(pr.Name));
    while (!db_get_pool_record(jcr, jcr->db, &pr)) { /* get by Name */
       /* Try to create the pool */
       if (create_pool(jcr, jcr->db, jcr->pool, POOL_OP_CREATE) < 0) {
@@ -716,10 +721,8 @@ void prtit(void *ctx, const char *msg)
  * agent, so we are being called from Bacula core. In
  * that case direct the messages to the Job.
  */
-void bsendmsg(void *ctx, const char *fmt, ...)
+void bmsg(UAContext *ua, const char *fmt, va_list arg_ptr)
 {
-   va_list arg_ptr;
-   UAContext *ua = (UAContext *)ctx;
    BSOCK *bs = ua->UA_sock;
    int maxlen, len;
    POOLMEM *msg;
@@ -732,9 +735,7 @@ void bsendmsg(void *ctx, const char *fmt, ...)
 
 again:
    maxlen = sizeof_pool_memory(msg) - 1;
-   va_start(arg_ptr, fmt);
    len = bvsnprintf(msg, maxlen, fmt, arg_ptr);
-   va_end(arg_ptr);
    if (len < 0 || len >= maxlen) {
       msg = realloc_pool_memory(msg, maxlen + maxlen/2);
       goto again;
@@ -749,4 +750,72 @@ again:
       free_pool_memory(msg);
    }
 
+}
+ 
+void bsendmsg(void *ctx, const char *fmt, ...)
+{
+   va_list arg_ptr;
+   va_start(arg_ptr, fmt);
+   bmsg((UAContext *)ctx, fmt, arg_ptr);
+   va_end(arg_ptr);
+}
+
+/*
+ * The following UA methods are mainly intended for GUI
+ * programs
+ */
+/*
+ * This is a message that should be displayed on the user's 
+ *  console.
+ */
+void UAContext::send_msg(const char *fmt, ...)
+{
+   va_list arg_ptr;
+   va_start(arg_ptr, fmt);
+   bmsg(this, fmt, arg_ptr);
+   va_end(arg_ptr);
+}
+
+
+/*
+ * This is an error condition with a command. The gui should put
+ *  up an error or critical dialog box.  The command is aborted.
+ */
+void UAContext::error_msg(const char *fmt, ...)
+{
+   BSOCK *bs = UA_sock;
+   va_list arg_ptr;
+   va_start(arg_ptr, fmt);
+   if (bs && api) bs->signal(BNET_ERROR_MSG);
+   bmsg(this, fmt, arg_ptr);
+   va_end(arg_ptr);
+}
+
+/*  
+ * This is a warning message, that should bring up a warning
+ *  dialog box on the GUI. The command is not aborted, but something
+ *  went wrong.
+ */
+void UAContext::warning_msg(const char *fmt, ...)
+{
+   BSOCK *bs = UA_sock;
+   va_list arg_ptr;
+   va_start(arg_ptr, fmt);
+   if (bs && api) bs->signal(BNET_WARNING_MSG);
+   bmsg(this, fmt, arg_ptr);
+   va_end(arg_ptr);
+}
+
+/* 
+ * This is an information message that should probably be put
+ *  into the status line of a GUI program.
+ */
+void UAContext::info_msg(const char *fmt, ...)
+{
+   BSOCK *bs = UA_sock;
+   va_list arg_ptr;
+   va_start(arg_ptr, fmt);
+   if (bs && api) bs->signal(BNET_INFO_MSG);
+   bmsg(this, fmt, arg_ptr);
+   va_end(arg_ptr);
 }

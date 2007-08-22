@@ -5,7 +5,7 @@
  *
  *    Kern Sibbald, MMVI
  *
- *   Version $Id: scan.c 3841 2006-12-22 09:22:02Z kerns $
+ *   Version $Id: scan.c 4992 2007-06-07 14:46:43Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -16,8 +16,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -75,7 +75,7 @@ bool DEVICE::scan_dir_for_volume(DCR *dcr)
       berrno be;
       dev_errno = errno;
       Dmsg3(29, "scan_dir_for_vol: failed to open dir %s (dev=%s), ERR=%s\n", 
-            mount_point, print_name(), be.strerror());
+            mount_point, print_name(), be.bstrerror());
       goto get_out;
    }
    

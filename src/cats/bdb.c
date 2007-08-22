@@ -8,7 +8,7 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb.c 3709 2006-11-27 10:03:06Z kerns $
+ *    Version $Id: bdb.c 5149 2007-07-12 10:32:35Z kerns $
  *
  */
 /*
@@ -20,8 +20,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -71,6 +71,20 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 #define DB_JOBMEDIA_FILENAME "jobmedia.db"
 #define DB_CLIENT_FILENAME   "client.db"
 #define DB_FILESET_FILENAME  "fileset.db"
+
+dbid_list::dbid_list() 
+{
+   memset(this, 0, sizeof(dbid_list));
+   max_ids = 1000;
+   DBId = (DBId_t *)malloc(max_ids * sizeof(DBId_t));
+   num_ids = num_seen = tot_ids = 0;
+   PurgedFiles = NULL;
+}
+
+dbid_list::~dbid_list() 
+{ 
+   free(DBId);
+}
 
 static POOLMEM *make_filename(B_DB *mdb, char *name)
 {
@@ -288,6 +302,9 @@ void db_close_database(JCR *jcr, B_DB *mdb)
    }
    V(mutex);
 }
+
+void db_thread_cleanup()
+{ }
 
 
 void db_escape_string(char *snew, char *old, int len)

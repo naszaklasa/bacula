@@ -3,6 +3,7 @@
 # shell script to Delete the SQLite tables, we simply delete and recreate
 #  the database.
 #
+db_name=@db_name@
 
-rm -f @working_dir@/bacula.db
-touch @working_dir@/bacula.db
+rm -f @working_dir@/${db_name}.db
+touch @working_dir@/${db_name}.db

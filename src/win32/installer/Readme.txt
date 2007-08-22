@@ -1,3 +1,25 @@
+Bacula - Windows Version Disclaimer
+===================================
+
+Please note, only the Win32 Client (File daemon) is supported.  All the
+other components (Director, Storage daemon, their utilities) are provided
+on an "as is" basis.  Unfortunately, they are neither properly tested,   
+documented, or supported.  This means that we cannot ensure that bug reports
+against the non-supported components will be fixed.  For them to be supported, 
+we need three things from the Open Source community:
+
+1. Full documentation of the Windows particularities of the Director,
+   the Storage daemon, and their utilities in the Bacula manual.
+
+2. Someone to periodically and on demand run the regressions tests.
+
+3. One or more developers who are willing to accept and correct Windows
+   related bugs as they occur.
+
+4. A certain Win32 community that will respond to user support questions
+   on the bacula-users list.  (This is probably already fullfilled). 
+             
+
 Bacula - Windows Version Notes
 ==============================
 
@@ -23,6 +45,20 @@ The programs and documentation are installed in the directory
 "C:\Program Files\Bacula" unless a different directory was selected during
 installation.  The configuration and other application data files are in the
 "C:\Documents and Settings\All Users\Application Data\Bacula" directory.
+
+Code Page Problems
+-------------------
+Please note that Bacula expects the contents of the configuration files to be 
+written in UTF-8 format. Some translations of "Application Data" have accented
+characters, and apparently the installer writes this translated data in the
+standard Windows code page coding.  This occurs for the Working Directory, and 
+when it happens the daemon will not start since Bacula cannot find the directory.
+The workaround is to manually edit the appropriate conf file and ensure that it
+is written out in UTF-8 format.
+
+The conf files can be edited with any UTF-8 compatible editor, or on most 
+modern Win32 machines, you can edit them with notepad, then choose UTF-8
+output encoding before saving them.
 
 
 Storage and Director Services

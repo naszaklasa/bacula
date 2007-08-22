@@ -9,9 +9,10 @@ echo "Depending on the size of your database,"
 echo "this script may take several minutes to run."
 echo " "
 bindir=@SQL_BINDIR@
+db_name=@db_name@
 
 if $bindir/mysql $* -f <<END-OF-DATA
-USE bacula;
+USE ${db_name};
 
 DROP TABLE IF EXISTS MAC;
 DROP TABLE IF EXISTS Log;

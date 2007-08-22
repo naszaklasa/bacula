@@ -1,22 +1,14 @@
 /*
- *
- *   Bacula Gnome Tray Monitor
- *
- *     Nicolas Boichat, August MMIV
- *
- *     Version $Id: tray-monitor.c 3718 2006-12-01 08:45:40Z robertnelson $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Gnome Tray Monitor
+ *
+ *     Nicolas Boichat, August MMIV
+ *
+ *     Version $Id: tray-monitor.c 4992 2007-06-07 14:46:43Z kerns $
+ */
+
 
 #include "bacula.h"
 #include "tray-monitor.h"
@@ -100,6 +101,8 @@ static GtkTextBuffer *buffer;
 static GtkWidget *timeoutspinner;
 char** xpm_generic_var;
 static gboolean blinkstate = TRUE;
+
+PangoFontDescription *font_desc = NULL;
 
 #define CONFIG_FILE "./tray-monitor.conf"   /* default configuration file */
 
@@ -188,6 +191,7 @@ int main(int argc, char *argv[])
    DIRRES* dird;
    CLIENT* filed;
    STORE* stored;
+   CONFONTRES *con_font;
 
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
@@ -204,7 +208,7 @@ int main(int argc, char *argv[])
    sigfillset(&sigignore.sa_mask);
    sigaction(SIGPIPE, &sigignore, NULL);
 
-   gtk_init (&argc, &argv);
+   gtk_init(&argc, &argv);
 
    while ((ch = getopt(argc, argv, "bc:d:th?f:s:")) != -1) {
       switch (ch) {
@@ -255,7 +259,7 @@ int main(int argc, char *argv[])
 
    if (nitems != 1) {
       Emsg2(M_ERROR_TERM, 0,
-         _("Error: %d Monitor resource defined in %s. You must define one and only one Monitor resource.\n"), nitems, configfile);
+         _("Error: %d Monitor resources defined in %s. You must define one and only one Monitor resource.\n"), nitems, configfile);
    }
 
    nitems = 0;
@@ -286,7 +290,7 @@ int main(int argc, char *argv[])
    UnlockRes();
 
    if (nitems == 0) {
-      Emsg1(M_ERROR_TERM, 0, _("No Client, Storage nor Director resource defined in %s\n"
+      Emsg1(M_ERROR_TERM, 0, _("No Client, Storage or Director resource defined in %s\n"
 "Without that I don't how to get status from the File, Storage or Director Daemon :-(\n"), configfile);
    }
 
@@ -412,7 +416,36 @@ int main(int argc, char *argv[])
 
    gtk_text_buffer_set_text(buffer, "", -1);
 
-   PangoFontDescription *font_desc = pango_font_description_from_string ("Fixed 10");
+  /*
+   * Gtk2/pango have different font names. Gnome2 comes with "Monospace 10"
+   */
+
+   LockRes();
+   foreach_res(con_font, R_CONSOLE_FONT) {
+       if (!con_font->fontface) {
+          Dmsg1(400, "No fontface for %s\n", con_font->hdr.name);
+          continue;
+       }
+       Dmsg1(100, "Now loading: %s\n",con_font->fontface);
+       font_desc = pango_font_description_from_string(con_font->fontface);
+       if (font_desc == NULL) {
+           Dmsg2(400, "Load of requested ConsoleFont \"%s\" (%s) failed!\n",
+                  con_font->hdr.name, con_font->fontface);
+       } else {
+           Dmsg2(400, "ConsoleFont \"%s\" (%s) loaded.\n",
+                  con_font->hdr.name, con_font->fontface);
+           break;
+       }
+   }
+   UnlockRes();
+
+   if (!font_desc) {
+      font_desc = pango_font_description_from_string("Monospace 10");
+   }
+   if (!font_desc) {
+      font_desc = pango_font_description_from_string("monospace");
+   }
+
    gtk_widget_modify_font(textview, font_desc);
    pango_font_description_free(font_desc);
 
@@ -871,21 +904,21 @@ int docmd(monitoritem* item, const char* command, GSList** list)
          dird = (DIRRES*)item->resource;
          trayMessage(_("Connecting to Director %s:%d\n"), dird->address, dird->DIRport);
          changeStatusMessage(item, _("Connecting to Director %s:%d"), dird->address, dird->DIRport);
-         item->D_sock = bnet_connect(NULL, 0, 0, _("Director daemon"), dird->address, NULL, dird->DIRport, 0);
+         item->D_sock = bnet_connect(NULL, 0, 0, 0, _("Director daemon"), dird->address, NULL, dird->DIRport, 0);
          jcr.dir_bsock = item->D_sock;
          break;
       case R_CLIENT:
          filed = (CLIENT*)item->resource;
          trayMessage(_("Connecting to Client %s:%d\n"), filed->address, filed->FDport);
          changeStatusMessage(item, _("Connecting to Client %s:%d"), filed->address, filed->FDport);
-         item->D_sock = bnet_connect(NULL, 0, 0, _("File daemon"), filed->address, NULL, filed->FDport, 0);
+         item->D_sock = bnet_connect(NULL, 0, 0, 0, _("File daemon"), filed->address, NULL, filed->FDport, 0);
          jcr.file_bsock = item->D_sock;
          break;
       case R_STORAGE:
          stored = (STORE*)item->resource;
          trayMessage(_("Connecting to Storage %s:%d\n"), stored->address, stored->SDport);
          changeStatusMessage(item, _("Connecting to Storage %s:%d"), stored->address, stored->SDport);
-         item->D_sock = bnet_connect(NULL, 0, 0, _("Storage daemon"), stored->address, NULL, stored->SDport, 0);
+         item->D_sock = bnet_connect(NULL, 0, 0, 0, _("Storage daemon"), stored->address, NULL, stored->SDport, 0);
          jcr.store_bsock = item->D_sock;
          break;
       default:

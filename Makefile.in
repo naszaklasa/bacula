@@ -1,5 +1,5 @@
 # 
-# Version $Id: Makefile.in 3670 2006-11-21 16:13:58Z kerns $
+# Version $Id: Makefile.in 4463 2007-03-30 21:46:04Z kerns $
 # 
 @MCOMMON@
 
@@ -19,7 +19,7 @@ dummy:
 
 # --client-only directories
 fd_subdirs = src scripts src/lib src/findlib src/filed \
-       @READLINE_SRC@ @GNOME_DIR@ @TRAY_MONITOR_DIR@ @WX_DIR@ \
+       @READLINE_SRC@ @BAT_DIR@ @GNOME_DIR@ @TRAY_MONITOR_DIR@ @WX_DIR@ \
        src/console
 
 # Non-client-only directores
@@ -184,8 +184,8 @@ Makefiles:
 	(cd src/cats; \
 	 chmod 755 create_bacula_database      update_bacula_tables	make_bacula_tables; \
 	 chmod 755 grant_bacula_privileges     drop_bacula_tables	drop_bacula_database; \
-	 chmod 755 create_@DB_NAME@_database   update_@DB_NAME@_tables	make_@DB_NAME@_tables; \
-	 chmod 755 grant_@DB_NAME@_privileges  drop_@DB_NAME@_tables	drop_@DB_NAME@_database; \
+	 chmod 755 create_@DB_TYPE@_database   update_@DB_TYPE@_tables	make_@DB_TYPE@_tables; \
+	 chmod 755 grant_@DB_TYPE@_privileges  drop_@DB_TYPE@_tables	drop_@DB_TYPE@_database; \
 	 chmod 755 make_catalog_backup delete_catalog_backup)
 
 clean:

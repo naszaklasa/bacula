@@ -196,6 +196,7 @@ support_smartalloc=yes
 support_readline=yes
 support_conio=yes
 support_gnome=no
+support_bat=no
 support_wx_console=no
 support_tls=no
 support_crypto=no
@@ -211,8 +212,8 @@ build_client_only=no
 build_dird=yes
 build_stored=yes
 cats=
-db_name=Internal
-DB_NAME=bdb
+db_type=Internal
+DB_TYPE=bdb
 
 dnl# --------------------------------------------------------------------------
 dnl# CHECKING COMMAND LINE OPTIONS
@@ -222,7 +223,7 @@ dnl# --------------------------------------------------------------------------
 # gnome (default off)
 # -------------------------------------------
 AC_ARG_ENABLE(gnome,
-  [  --enable-gnome	  enable build of gnome-console GUI [disabled]],
+  [  --enable-gnome	  enable build of bgnome-console GUI [disabled]],
   [if test x$enableval = xyes; then
     support_gnome=yes
   fi])
@@ -248,12 +249,88 @@ if test x$support_gnome = xyes; then
 fi
 AC_SUBST(GNOME_DIR)
 
+# -------------------------------------------
+# bat (default off)
+# -------------------------------------------
+AC_ARG_ENABLE(bat,
+  [  --enable-bat	enable build of bat Qt4 GUI [disabled]],
+  [if test x$enableval = xyes; then
+    AC_DEFINE(HAVE_BAT, 1, [Set if Bacula bat Qt4 GUI support enabled]) 
+    support_bat=yes
+  fi])
+
+BAT_DIR=
+if test x$support_bat = xyes; then
+  abc=`$PKGCONFIG --atleast-version=4.2 QtGui`
+  pkg=$?
+  if test $pkg = 0; then
+     BAT_DIR=src/qt-console
+  else
+     AC_MSG_ERROR(Unable to find Qt4 installation needed by bat)
+  fi
+fi
+
+# 
+#  If bat is enabled, we need the qwt library
+got_qwt=no
+QWT_INC=
+QWT_LDFLAGS=
+if test x$support_bat = xyes; then
+   AC_MSG_CHECKING(for qwt support)
+   AC_ARG_WITH(qwt,
+     [ --with-qwt@<:@=DIR@:>@		  specify qwt library directory],
+     [
+	case "$with_qwt" in
+	no)
+	  ;;
+	yes|*)
+	  if test -f ${with_qwt}/include/qwt.h; then
+	     QWT_INC="${with_qwt}/include"
+	     QWT_LDFLAGS="-L${with_qwt}/lib"
+	  fi
+	  ;;
+	esac
+     ]	 
+   )
+#
+# Search in standard places, or --with-qwt not specified
+#
+   if test x$QWT_INC = x; then
+      for root in /usr /usr/local; do
+	 for ver in qwt qwt5; do
+	    if test -f ${root}/include/${ver}/qwt.h; then
+	       QWT_INC="${root}/include/${ver}"
+	       if test -d ${root}/lib64/; then
+		  QWT_LDFLAGS="-L${root}/lib64"
+	       else
+		  QWT_LDFLAGS="-L${root}/lib"
+	       fi
+	       got_qwt=yes
+	       break;
+	    fi
+	 done
+      done
+   fi
+   if test x$QWT_INC = x; then
+      AC_MSG_RESULT(no)
+      AC_MSG_ERROR(Unable to find qwt package needed by bat)
+      BAT_DIR=
+      support_bat=no
+   else
+      AC_MSG_RESULT(yes)
+   fi
+fi
+
+AC_SUBST(BAT_DIR)
+AC_SUBST(QWT_INC)
+AC_SUBST(QWT_LDFLAGS)
+
 
 # -------------------------------------------
-# wx-console (default off)
+# bwx-console (default off)
 # -------------------------------------------
-AC_ARG_ENABLE(wx-console,
-  [  --enable-wx-console     enable build of wxWidgets console [disabled]],
+AC_ARG_ENABLE(bwx-console,
+  [  --enable-bwx-console     enable build of wxWidgets console [disabled]],
   [if test x$enableval = xyes; then
     support_wx_console=yes
   fi])
@@ -272,7 +349,7 @@ if test x$support_wx_console = xyes; then
      WX_DIR=src/wx-console
   else
      echo " "
-     echo "wx-config program not found. wx-console disabled."
+     echo "wx-config program not found. bwx-console disabled."
      echo " "
      support_wx_console=no
   fi
@@ -395,8 +472,8 @@ STATIC_GNOME_CONS=
 STATIC_WX_CONS=
 if test x$support_static_cons = xyes; then
    STATIC_CONS="static-bconsole"
-   STATIC_GNOME_CONS="static-gnome-console"
-   STATIC_WX_CONS="static-wx-console"
+   STATIC_GNOME_CONS="static-bgnome-console"
+   STATIC_WX_CONS="static-bwx-console"
 fi
 AC_SUBST(STATIC_CONS)
 AC_SUBST(STATIC_GNOME_CONS)
@@ -409,8 +486,8 @@ AC_ARG_ENABLE(client-only,
    [  --enable-client-only    build client (File daemon) only [disabled]],
    [if test x$enableval = xyes; then
       build_client_only=yes
-      db_name=None
-      DB_NAME=none
+      db_type=None
+      DB_TYPE=none
    fi])
 if test x$build_client_only = xno; then
    ALL_DIRS="subdirs"
@@ -807,6 +884,16 @@ if test "x$with_openssl_directory" != "x"; then
 		[ ac_cv_openssl_sha2="no" ]
 	)
 
+	# Solaris disables greater than 128+ bit encryption in their OpenSSL
+	# implementation, presumably for export reasons. If 192bit AES
+	# is available, we assume that we're running with a 'non-export'
+	# openssl library.
+	AC_TRY_LINK([ #include <openssl/evp.h> ],
+		[ EVP_aes_192_cbc(); ],
+		[ ac_cv_openssl_export="no" ],
+		[ ac_cv_openssl_export="yes" ]
+	)
+
 	LIBS="${saved_LIBS}"
 	CFLAGS="${saved_CFLAGS}"
 
@@ -818,6 +905,10 @@ if test "x$with_openssl_directory" != "x"; then
 
 	if test "$ac_cv_openssl_sha2" = "yes"; then
 		AC_DEFINE(HAVE_SHA2, 1, [Define if the SHA-2 family of digest algorithms is available])
+	fi
+
+	if test "$ac_cv_openssl_export" = "yes"; then
+		AC_DEFINE(HAVE_OPENSSL_EXPORT_LIBRARY, 1, [Define if the OpenSSL library is export-contrained to 128bit ciphers])
 	fi
 else
 	support_tls="no"
@@ -938,6 +1029,13 @@ AC_SUBST(piddir)
 # Where to place subsys "lock file"
 # ------------------------------------
 subsysdir=/var/run/subsys
+if test -d /var/run/subsys; then
+   subsysdir=/var/run/subsys
+elif test -d /var/lock/subsys; then
+   subsysdir=/var/lock/subsys
+else
+   subsysdir=/var/run/subsys
+fi
 AC_ARG_WITH(subsys-dir,
     [  --with-subsys-dir=PATH	 specify location of Bacula subsys file],
     [
@@ -1098,6 +1196,31 @@ AC_SUBST(mon_dir_password)
 AC_SUBST(mon_fd_password)
 AC_SUBST(mon_sd_password)
 
+#
+# Pickup any database name
+#
+db_name=bacula
+AC_ARG_WITH(db_name,
+    [  --with-db-name=DBNAME	       specify database name (default bacula)],
+    [
+	if test "x$withval" != "x" ; then	
+	     db_name=$withval
+	fi
+    ]
+)
+AC_SUBST(db_name)
+
+db_user=bacula
+AC_ARG_WITH(db_user,
+    [  --with-db-user=UNAME	       specify database user (default bacula)],
+    [
+	if test "x$withval" != "x" ; then	
+	     db_user=$withval
+	fi
+    ]
+)
+AC_SUBST(db_user)
+
 
 #
 # Handle users and groups for each daemon
@@ -1162,9 +1285,6 @@ AC_ARG_WITH(fd_group,
     ]
 )
 
-
-
-
 AC_SUBST(dir_user)
 AC_SUBST(dir_group)
 AC_SUBST(sd_user)
@@ -1190,6 +1310,7 @@ AC_SUBST(SBINPERM)
 # ------------------------------------------------
 # Bacula check for various SQL database engines
 # ------------------------------------------------
+SQL_LIB=
 BA_CHECK_POSTGRESQL_DB
 
 BA_CHECK_MYSQL_DB
@@ -1199,7 +1320,29 @@ BA_CHECK_SQLITE3_DB
 BA_CHECK_SQLITE_DB
 
 AC_SUBST(cats)
-AC_SUBST(DB_NAME)
+AC_SUBST(DB_TYPE)
+
+# -------------------------------------------
+# enable batch attribute DB insert (default on)
+# -------------------------------------------
+support_batch_insert=no
+A=`nm $SQL_LIB | grep pthread_mutex_lock`
+pkg=$?
+if test $pkg = 0; then
+   support_batch_insert=yes
+   AC_ARG_ENABLE(batch-insert,
+     [	--enable-batch-insert	    enable the DB batch insert code [disabled]],
+     [if test x$enableval = xno; then
+       support_batch_insert=no
+      else
+       support_batch_insert=yes
+     fi])
+fi
+							  
+if test $support_batch_insert = yes ; then
+   AC_DEFINE(HAVE_BATCH_FILE_INSERT, 1, [Set if DB batch insert code enabled])
+fi
+
 
 AC_DEFINE(PROTOTYPES)
 
@@ -1570,6 +1713,8 @@ AC_CHECK_FUNCS( \
 
 AC_CHECK_FUNCS(fchdir, [AC_DEFINE(HAVE_FCHDIR)])
 AC_CHECK_FUNCS(strtoll, [AC_DEFINE(HAVE_STRTOLL)])
+AC_CHECK_FUNCS(posix_fadvise)
+AC_CHECK_FUNCS(fdatasync)
 
 AC_CHECK_FUNCS(chflags) 
 
@@ -1779,7 +1924,7 @@ freebsd)
 	largefile_support="yes"
   ;;
 hpux)
-	PSCMD="UNIX95=1 ps -e -o pid,comm"
+	PSCMD="UNIX95=1; ps -e -o pid,comm"
 	CFLAGS="${CFLAGS} -D_XOPEN_SOURCE_EXTENDED=1"
 	DISTVER=`uname -r`
 	TAPEDRIVE="/dev/rmt/0hnb"
@@ -1979,7 +2124,7 @@ AC_OUTPUT([autoconf/Make.common \
 	   scripts/bacula.desktop.gnome2.consolehelper \
 	   scripts/bacula.desktop.gnome1.xsu \
 	   scripts/bacula.desktop.gnome2.xsu \
-	   scripts/gnome-console.console_apps \
+	   scripts/bgnome-console.console_apps \
 	   scripts/mtx-changer \
 	   scripts/disk-changer \
 	   scripts/dvd-handler \
@@ -1990,14 +2135,21 @@ AC_OUTPUT([autoconf/Make.common \
 	   scripts/wxconsole.console_apps \
 	   scripts/wxconsole.desktop.consolehelper \
 	   scripts/wxconsole.desktop.xsu \
+	   scripts/bat.desktop \
+	   scripts/bat.desktop.xsu \
+	   scripts/bat.desktop.consolehelper \
+	   scripts/bat.console_apps \
 	   src/Makefile \
 	   src/host.h \
 	   src/console/Makefile \
 	   src/console/bconsole.conf \
 	   src/gnome2-console/Makefile \
-	   src/gnome2-console/gnome-console.conf \
+	   src/gnome2-console/bgnome-console.conf \
+	   src/qt-console/bat.conf \
+	   src/qt-console/bat.pro \
+	   src/qt-console/install_conf_file \
 	   src/wx-console/Makefile \
-	   src/wx-console/wx-console.conf \
+	   src/wx-console/bwx-console.conf \
 	   src/tray-monitor/Makefile \
 	   src/tray-monitor/tray-monitor.conf \
 	   src/dird/Makefile \
@@ -2087,6 +2239,15 @@ chmod 755 $c/mysql
 
 chmod 755 src/win32/build-depkgs-mingw32
 
+if test "${support_bat}" = "yes" ; then
+  cd src/qt-console
+  chmod 755 install_conf_file build-depkgs-qt-console
+  echo "Creating bat Makefile"	
+  qmake
+  cd ${BUILD_DIR}
+fi
+
+
 if test "x$ac_cv_sys_largefile_CFLAGS" != "xno" ; then
    largefile_support="yes"
 fi
@@ -2117,7 +2278,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi 
 
-if test "x${db_name}" = "xInternal" ; then
+if test "x${db_type}" = "xInternal" ; then
    echo " "
    echo " "
    echo "You have not specified either --enable-client-only or one of the"
@@ -2154,8 +2315,10 @@ Configuration on `date`:
   Statically Linked SD:       ${support_static_sd}
   Statically Linked DIR:      ${support_static_dir}
   Statically Linked CONS:     ${support_static_cons}
-  Database type:	      ${db_name}
+  Database type:	      ${db_type}
   Database lib: 	      ${DB_LIBS}
+  Database name:	      ${db_name}
+  Database user:	      ${db_user}
 
   Job Output Email:	      ${job_email}
   Traceback Email:	      ${dump_email}
@@ -2182,14 +2345,16 @@ Configuration on `date`:
   Encryption support:	      ${support_crypto} 
   ZLIB support: 	      ${have_zlib}
   enable-smartalloc:	      ${support_smartalloc} 
+  bat support:		      ${support_bat} ${QWT_LDFLAGS}
   enable-gnome: 	      ${support_gnome} ${gnome_version}
-  enable-wx-console:	      ${support_wx_console} ${wx_version}
+  enable-bwx-console:	      ${support_wx_console} ${wx_version}
   enable-tray-monitor:	      ${support_tray_monitor}
   client-only:		      ${build_client_only}
   build-dird:		      ${build_dird}
   build-stored: 	      ${build_stored}
   ACL support:		      ${have_acl}
   Python support:	      ${support_python} ${PYTHON_LIBS}
+  Batch insert enabled:       ${support_batch_insert}
 
   " > config.out
 

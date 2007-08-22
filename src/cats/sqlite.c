@@ -1,21 +1,14 @@
 /*
- * Bacula Catalog Database routines specific to SQLite
- *
- *    Kern Sibbald, January 2002
- *
- *    Version $Id: sqlite.c 4045 2007-01-26 11:16:35Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula Catalog Database routines specific to SQLite
+ *
+ *    Kern Sibbald, January 2002
+ *
+ *    Version $Id: sqlite.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 
 
@@ -68,6 +68,26 @@ db_get_type(void)
 {
    return "SQLite";
 }
+
+/*
+ * When using mult_db_connections = 1, 
+ * sqlite can be BUSY. We just need sleep a little in this case.
+ */
+
+#ifdef HAVE_SQLITE3
+static int my_busy_handler(void *arg, int calls)
+{
+   bmicrosleep(0, 500);
+   return 1;
+}
+#else
+static int my_busy_handler(void *arg, const char* p, int calls)
+{
+   bmicrosleep(0, 500);
+   return 1;
+}
+#endif
+
 
 /*
  * Initialize database data structure. In principal this should
@@ -108,6 +128,7 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
    mdb->fname = get_pool_memory(PM_FNAME);
    mdb->path = get_pool_memory(PM_FNAME);
    mdb->esc_name = get_pool_memory(PM_FNAME);
+   mdb->esc_path = get_pool_memory(PM_FNAME);
    mdb->allow_transactions = mult_db_connections;
    qinsert(&db_list, &mdb->bq);            /* put db in list */
    V(mutex);
@@ -166,6 +187,9 @@ db_open_database(JCR *jcr, B_DB *mdb)
    } else {
       mdb->sqlite_errmsg = NULL;
    }
+#ifdef SQLITE3_INIT_QUERY
+   db_sql_query(mdb, SQLITE3_INIT_QUERY, NULL, NULL);
+#endif
 
 #else
    mdb->db = sqlite_open(
@@ -182,14 +206,21 @@ db_open_database(JCR *jcr, B_DB *mdb)
       free(db_name);
       V(mutex);
       return 0;
-   }
+   }       
+   mdb->connected = true;
    free(db_name);
    if (!check_tables_version(jcr, mdb)) {
       V(mutex);
       return 0;
    }
 
-   mdb->connected = true;
+   /* set busy handler to wait when we use mult_db_connections = 1 */
+#ifdef HAVE_SQLITE3
+   sqlite3_busy_handler(mdb->db, my_busy_handler, NULL);
+#else
+   sqlite_busy_handler(mdb->db, my_busy_handler, NULL);
+#endif
+
    V(mutex);
    return 1;
 }
@@ -202,6 +233,7 @@ db_close_database(JCR *jcr, B_DB *mdb)
    }
    db_end_transaction(jcr, mdb);
    P(mutex);
+   sql_free_result(mdb);
    mdb->ref_count--;
    if (mdb->ref_count == 0) {
       qdchain(&mdb->bq);
@@ -215,6 +247,7 @@ db_close_database(JCR *jcr, B_DB *mdb)
       free_pool_memory(mdb->fname);
       free_pool_memory(mdb->path);
       free_pool_memory(mdb->esc_name);
+      free_pool_memory(mdb->esc_path);
       if (mdb->db_name) {
          free(mdb->db_name);
       }
@@ -223,43 +256,19 @@ db_close_database(JCR *jcr, B_DB *mdb)
    V(mutex);
 }
 
+void db_thread_cleanup()
+{
+#ifdef HAVE_SQLITE3
+   sqlite3_thread_cleanup();
+#endif
+}
+
 /*
  * Return the next unique index (auto-increment) for
  * the given table.  Return 0 on error.
  */
 int db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index)
 {
-#ifdef xxxx
-   SQL_ROW row;
-
-   db_lock(mdb);
-
-   Mmsg(mdb->cmd,
-"SELECT id FROM NextId WHERE TableName=\"%s\"", table);
-   if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
-      Mmsg(mdb->errmsg, _("next_index query error: ERR=%s\n"), sql_strerror(mdb));
-      db_unlock(mdb);
-      return 0;
-   }
-   if ((row = sql_fetch_row(mdb)) == NULL) {
-      Mmsg(mdb->errmsg, _("Error fetching index: ERR=%s\n"), sql_strerror(mdb));
-      db_unlock(mdb);
-      return 0;
-   }
-   bstrncpy(index, row[0], 28);
-   sql_free_result(mdb);
-
-   Mmsg(mdb->cmd,
-"UPDATE NextId SET id=id+1 WHERE TableName=\"%s\"", table);
-   if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
-      Mmsg(mdb->errmsg, _("next_index update error: ERR=%s\n"), sql_strerror(mdb));
-      db_unlock(mdb);
-      return 0;
-   }
-   sql_free_result(mdb);
-
-   db_unlock(mdb);
-#endif
    strcpy(index, "NULL");
    return 1;
 }
@@ -354,6 +363,7 @@ int my_sqlite_query(B_DB *mdb, const char *cmd)
 {
    int stat;
 
+   my_sqlite_free_table(mdb);
    if (mdb->sqlite_errmsg) {
 #ifdef HAVE_SQLITE3
       sqlite3_free(mdb->sqlite_errmsg);
@@ -389,7 +399,10 @@ void my_sqlite_free_table(B_DB *mdb)
       free(mdb->fields);
       mdb->fields_defined = false;
    }
-   sqlite_free_table(mdb->result);
+   if (mdb->result) {
+      sqlite_free_table(mdb->result);
+      mdb->result = NULL;
+   }
    mdb->nrow = mdb->ncolumn = 0;
 }
 
@@ -434,5 +447,17 @@ SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb)
 {
    return mdb->fields[mdb->field++];
 }
+
+char *my_sqlite_batch_lock_query = "BEGIN";
+char *my_sqlite_batch_unlock_query = "COMMIT";
+char *my_sqlite_batch_fill_path_query = "INSERT INTO Path (Path)          " 
+                                        " SELECT DISTINCT Path FROM batch "
+                                        " EXCEPT SELECT Path FROM Path    ";
+
+char *my_sqlite_batch_fill_filename_query = "INSERT INTO Filename (Name)       " 
+                                            " SELECT DISTINCT Name FROM batch  "
+                                            " EXCEPT SELECT Name FROM Filename ";
+
+
 
 #endif /* HAVE_SQLITE */

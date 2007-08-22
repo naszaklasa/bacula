@@ -3,5 +3,6 @@
 # shell script to create Bacula PostgreSQL tables
 #
 bindir=@SQL_BINDIR@
+db_name=@db_name@
 
-$bindir/psql $* bacula
+$bindir/psql $* ${db_name}

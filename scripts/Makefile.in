@@ -1,5 +1,5 @@
 # 
-# Version $Id: Makefile.in 3030 2006-05-26 21:02:29Z kerns $
+# Version $Id: Makefile.in 4567 2007-04-18 17:06:43Z kerns $
 # 
 @MCOMMON@
 
@@ -103,6 +103,7 @@ distclean: clean
 	@$(RMF) bconsole gconsole logrotate bacula.desktop 
 	@$(RMF) bacula.desktop.gnome1 bacula.desktop.gnome2 mtx-changer dvd-handler
 	@$(RMF) gnome-console.console_apps bacula.desktop.gnome2.xsu
+	@$(RMF) bgnome-console.console_apps
 	@$(RMF) bacula.desktop.gnome2.consolehelper bacula.desktop.gnome1.xsu
 	@$(RMF) bacula.desktop.gnome1.consolehelper
 

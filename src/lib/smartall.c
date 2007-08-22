@@ -1,33 +1,14 @@
 /*
-
-                         S M A R T A L L O C
-                        Smart Memory Allocator
-
-        Evolved   over   several  years,  starting  with  the  initial
-        SMARTALLOC code for AutoSketch in 1986, guided  by  the  Blind
-        Watchbreaker,  John  Walker.  Isolated in this general-purpose
-        form in  September  of  1989.   Updated  with  be  more  POSIX
-        compliant  and  to  include Web-friendly HTML documentation in
-        October  of  1998  by  the  same  culprit.    For   additional
-        information and the current version visit the Web page:
-
-                  http://www.fourmilab.ch/smartall/
-
-
-         Version $Id: smartall.c 3806 2006-12-16 15:30:22Z kerns $
-
-*/
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -43,6 +24,25 @@
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
+
+                         S M A R T A L L O C
+                        Smart Memory Allocator
+
+        Evolved   over   several  years,  starting  with  the  initial
+        SMARTALLOC code for AutoSketch in 1986, guided  by  the  Blind
+        Watchbreaker,  John  Walker.  Isolated in this general-purpose
+        form in  September  of  1989.   Updated  with  be  more  POSIX
+        compliant  and  to  include Web-friendly HTML documentation in
+        October  of  1998  by  the  same  culprit.    For   additional
+        information and the current version visit the Web page:
+
+                  http://www.fourmilab.ch/smartall/
+
+
+         Version $Id: smartall.c 4992 2007-06-07 14:46:43Z kerns $
+
 */
 
 #include "bacula.h"
@@ -91,6 +91,7 @@ struct abufhead {
    unsigned ablen;             /* Buffer length in bytes */
    const char *abfname;        /* File name pointer */
    sm_ushort ablineno;         /* Line number of allocation */
+   bool abin_use;              /* set when malloced and cleared when free */
 };
 
 static struct b_queue abqueue = {    /* Allocated buffer queue */
@@ -128,7 +129,8 @@ static void *smalloc(const char *fname, int lineno, unsigned int nbytes)
       qinsert(&abqueue, (struct b_queue *) buf);
       head->ablen = nbytes;
       head->abfname = bufimode ? NULL : fname;
-      head->ablineno = (sm_ushort) lineno;
+      head->ablineno = (sm_ushort)lineno;
+      head->abin_use = true;
       /* Emplace end-clobber detector at end of buffer */
       buf[nbytes - 1] = (uint8_t)((((long) buf) & 0xFF) ^ 0xC5);
       buf += HEAD_SIZE;  /* Increment to user data start */
@@ -160,6 +162,7 @@ void sm_new_owner(const char *fname, int lineno, char *buf)
    buf -= HEAD_SIZE;  /* Decrement to header */
    ((struct abufhead *)buf)->abfname = bufimode ? NULL : fname;
    ((struct abufhead *)buf)->ablineno = (sm_ushort) lineno;
+   ((struct abufhead *)buf)->abin_use = true;
    return;
 }
 
@@ -178,13 +181,19 @@ void sm_free(const char *file, int line, void *fp)
    }
 
    cp -= HEAD_SIZE;
-   qp = (struct b_queue *) cp;
+   qp = (struct b_queue *)cp;
    struct abufhead *head = (struct abufhead *)cp;
 
    P(mutex);
    Dmsg4(1150, "sm_free %d at %x from %s:%d\n",
          head->ablen, fp,
          head->abfname, head->ablineno);
+
+   if (!head->abin_use) {
+      V(mutex);
+      Emsg2(M_ABORT, 0, _("double free from %s:%d\n"), file, line);
+   }
+   head->abin_use = false;
 
    /* The following assertions will catch virtually every release
       of an address which isn't an allocated buffer. */
@@ -217,9 +226,13 @@ void sm_free(const char *file, int line, void *fp)
       "designer  garbage"  (Duff  Kurland's  phrase) of alternating
       bits.  This is intended to ruin the day for any miscreant who
       attempts to access data through a pointer into storage that's
-      been previously released. */
+      been previously released.
 
-   memset(cp, 0xAA, (int) head->ablen);
+      Modified, kes May, 2007 to not zap the header. This allows us
+      to check the in_use bit and detect doubly freed buffers.
+   */
+
+   memset(cp+HEAD_SIZE, 0xAA, (int)(head->ablen - HEAD_SIZE));
 
    free(cp);
 }
@@ -282,14 +295,12 @@ void *sm_realloc(const char *fname, int lineno, void *ptr, unsigned int size)
    /*  If  the  old  block  pointer  is  NULL, treat realloc() as a
       malloc().  SVID is silent  on  this,  but  many  C  libraries
       permit this.  */
-
    if (ptr == NULL) {
       return sm_malloc(fname, lineno, size);
    }
 
    /* If the old and new sizes are the same, be a nice guy and just
       return the buffer passed in.  */
-
    cp -= HEAD_SIZE;
    struct abufhead *head = (struct abufhead *)cp;
    osize = head->ablen - (HEAD_SIZE + 1);
@@ -306,7 +317,7 @@ void *sm_realloc(const char *fname, int lineno, void *ptr, unsigned int size)
 // sm_bytes -= head->ablen;
 
    if ((buf = smalloc(fname, lineno, size)) != NULL) {
-      memcpy(buf, ptr, (int) sm_min(size, osize));
+      memcpy(buf, ptr, (int)sm_min(size, osize));
       /* If the new buffer is larger than the old, fill the balance
          of it with "designer garbage". */
       if (size > osize) {
@@ -314,7 +325,6 @@ void *sm_realloc(const char *fname, int lineno, void *ptr, unsigned int size)
       }
 
       /* All done.  Free and dechain the original buffer. */
-
       sm_free(__FILE__, __LINE__, ptr);
    }
    Dmsg4(150, _("sm_realloc %d at %x from %s:%d\n"), size, buf, fname, lineno);
@@ -365,7 +375,7 @@ void actuallyfree(void *cp)
  *  N.B. DO NOT USE any Bacula print routines (Dmsg, Jmsg, Emsg, ...)
  *    as they have all been shut down at this point.
  */
-void sm_dump(bool bufdump)
+void sm_dump(bool bufdump, bool in_use) 
 {
    struct abufhead *ap;
 
@@ -381,7 +391,7 @@ void sm_dump(bool bufdump)
          fprintf(stderr, _(
             "\nOrphaned buffers exist.  Dump terminated following\n"
             "  discovery of bad links in chain of orphaned buffers.\n"
-            "  Buffer address with bad links: %lx\n"), (long) ap);
+            "  Buffer address with bad links: %p\n"), ap);
          break;
       }
 
@@ -391,7 +401,8 @@ void sm_dump(bool bufdump)
          char *cp = ((char *)ap) + HEAD_SIZE;
 
          bsnprintf(errmsg, sizeof(errmsg),
-           _("Orphaned buffer:  %s %6u bytes buf=%p allocated at %s:%d\n"),
+           _("%s buffer:  %s %6u bytes buf=%p allocated at %s:%d\n"),
+            in_use?"In use":"Orphaned",
             my_name, memsize, cp, ap->abfname, ap->ablineno
          );
          fprintf(stderr, "%s", errmsg);
@@ -425,10 +436,10 @@ void sm_dump(bool bufdump)
 /*  SM_CHECK --  Check the buffers and dump if any damage exists. */
 void sm_check(const char *fname, int lineno, bool bufdump)
 {
-        if (!sm_check_rtn(fname, lineno, bufdump)) {
-           Emsg2(M_ABORT, 0, _("Damaged buffer found. Called from %s:%d\n"),
-              fname, lineno);
-        }
+   if (!sm_check_rtn(fname, lineno, bufdump)) {
+      Emsg2(M_ABORT, 0, _("Damaged buffer found. Called from %s:%d\n"),
+            fname, lineno);
+   }
 }
 
 #undef sm_check_rtn
@@ -468,7 +479,7 @@ int sm_check_rtn(const char *fname, int lineno, bool bufdump)
             fprintf(stderr, _("  discovery of data overrun.\n"));
          }
 
-         fprintf(stderr, _("  Buffer address: %lx\n"), (long) ap);
+         fprintf(stderr, _("  Buffer address: %p\n"), ap);
 
          if (ap->abfname != NULL) {
             unsigned memsize = ap->ablen - (HEAD_SIZE + 1);
@@ -518,9 +529,9 @@ int sm_check_rtn(const char *fname, int lineno, bool bufdump)
                    that all the other safeguards still apply to  buffers
                    allocated  when  sm_static(1)  mode is in effect.  */
 
-void sm_static(int mode)
+void sm_static(bool mode)
 {
-   bufimode = (bool) (mode != 0);
+   bufimode = mode;
 }
 
 /*

@@ -1,22 +1,14 @@
 /*
- *
- *   Bacula Director -- User Agent Input and scanning code
- *
- *     Kern Sibbald, October MMI
- *
- *   Version $Id: ua_input.c 3668 2006-11-21 13:20:11Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- User Agent Input and scanning code
+ *
+ *     Kern Sibbald, October MMI
+ *
+ *   Version $Id: ua_input.c 5237 2007-07-24 18:36:08Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -52,10 +52,10 @@ int get_cmd(UAContext *ua, const char *prompt)
    if (!sock) {                       /* No UA */
       return 0;
    }
-   bnet_fsend(sock, "%s", prompt);
-   bnet_sig(sock, BNET_PROMPT);       /* request more input */
+   sock->fsend("%s", prompt);
+   sock->signal(BNET_PROMPT);       /* request more input */
    for ( ;; ) {
-      stat = bnet_recv(sock);
+      stat = sock->recv();
       if (stat == BNET_SIGNAL) {
          continue;                    /* ignore signals */
       }
@@ -96,13 +96,13 @@ bool get_pint(UAContext *ua, const char *prompt)
          return true;
       }
       if (!is_a_number(ua->cmd)) {
-         bsendmsg(ua, _("Expected a positive integer, got: %s\n"), ua->cmd);
+         ua->warning_msg(_("Expected a positive integer, got: %s\n"), ua->cmd);
          continue;
       }
       errno = 0;
       dval = strtod(ua->cmd, NULL);
       if (errno != 0 || dval < 0) {
-         bsendmsg(ua, _("Expected a positive integer, got: %s\n"), ua->cmd);
+         ua->warning_msg(_("Expected a positive integer, got: %s\n"), ua->cmd);
          continue;
       }
       ua->pint32_val = (uint32_t)dval;
@@ -147,6 +147,7 @@ bool get_yesno(UAContext *ua, const char *prompt)
    int ret;
    ua->pint32_val = 0;
    for (;;) {
+      if (ua->api) ua->UA_sock->signal(BNET_YESNO);
       if (!get_cmd(ua, prompt)) {
          return false;
       }
@@ -158,7 +159,7 @@ bool get_yesno(UAContext *ua, const char *prompt)
          ua->pint32_val = ret;
          return true;
       }
-      bsendmsg(ua, _("Invalid response. You must answer yes or no.\n"));
+      ua->warning_msg(_("Invalid response. You must answer yes or no.\n"));
    }
 }
 
@@ -181,7 +182,7 @@ int get_enabled(UAContext *ua, const char *val)
       Enabled = atoi(val);
    }
    if (Enabled < 0 || Enabled > 2) {
-      bsendmsg(ua, _("Invalid Enabled value, it must be yes, no, archived, 0, 1, or 2\n"));
+      ua->error_msg(_("Invalid Enabled value, it must be yes, no, archived, 0, 1, or 2\n"));
       return -1;     
    }
    return Enabled;

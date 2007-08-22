@@ -1,21 +1,14 @@
 /*
- * Bacula File Daemon specific configuration
- *
- *     Kern Sibbald, Sep MM
- *
- *   Version $Id: filed_conf.h 3673 2006-11-21 17:03:47Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula File Daemon specific configuration
+ *
+ *     Kern Sibbald, Sep MM
+ *
+ *   Version $Id: filed_conf.h 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 /*
  * Resource codes -- they must be sequential for indexing
@@ -81,8 +81,8 @@ struct CLIENT {
    char *scripts_directory;
    MSGS *messages;                    /* daemon message handler */
    int MaxConcurrentJobs;
-   utime_t heartbeat_interval;        /* Interval to send heartbeats to Dir */
    utime_t SDConnectTimeout;          /* timeout in seconds */
+   utime_t heartbeat_interval;        /* Interval to send heartbeats */
    uint32_t max_network_buffer_size;  /* max network buf size */
    bool pki_sign;                     /* Enable Data Integrity Verification via Digital Signatures */
    bool pki_encrypt;                  /* Enable Data Encryption */

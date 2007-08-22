@@ -368,6 +368,12 @@ Pool {
   Volume Retention = 365 days         # one year
 }
 
+# Scratch pool definition
+Pool {
+  Name = Scratch
+  Pool Type = Backup
+}
+
 #
 # Restricted console used by tray-monitor to get the status of the director
 #

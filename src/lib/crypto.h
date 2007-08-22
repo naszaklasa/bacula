@@ -1,32 +1,14 @@
 /*
- * crypto.h Encryption support functions
- *
- * Author: Landon Fuller <landonf@opendarwin.org>
- *
- * Version $Id: crypto.h 3668 2006-11-21 13:20:11Z kerns $
- *
- * This file was contributed to the Bacula project by Landon Fuller.
- *
- * Landon Fuller has been granted a perpetual, worldwide, non-exclusive,
- * no-charge, royalty-free, irrevocable copyright * license to reproduce,
- * prepare derivative works of, publicly display, publicly perform,
- * sublicense, and distribute the original work contributed by Landon Fuller
- * to the Bacula project in source or object form.
- *
- * If you wish to license these contributions under an alternate open source
- * license please contact Landon Fuller <landonf@opendarwin.org>.
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -43,6 +25,24 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * crypto.h Encryption support functions
+ *
+ * Author: Landon Fuller <landonf@opendarwin.org>
+ *
+ * Version $Id: crypto.h 4992 2007-06-07 14:46:43Z kerns $
+ *
+ * This file was contributed to the Bacula project by Landon Fuller.
+ *
+ * Landon Fuller has been granted a perpetual, worldwide, non-exclusive,
+ * no-charge, royalty-free, irrevocable copyright * license to reproduce,
+ * prepare derivative works of, publicly display, publicly perform,
+ * sublicense, and distribute the original work contributed by Landon Fuller
+ * to the Bacula project in source or object form.
+ *
+ * If you wish to license these contributions under an alternate open source
+ * license please contact Landon Fuller <landonf@opendarwin.org>.
+ */
 
 #ifndef __CRYPTO_H_
 #define __CRYPTO_H_
@@ -51,6 +51,7 @@
 typedef struct X509_Keypair X509_KEYPAIR;
 
 /* Opaque Message Digest Structure */
+/* Digest is defined (twice) in crypto.c */
 typedef struct Digest DIGEST;
 
 /* Opaque Message Signature Structure */

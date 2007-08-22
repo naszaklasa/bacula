@@ -1,14 +1,14 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: job.c 4185 2007-02-16 08:43:26Z kerns $
+ *   Version $Id: job.c 5222 2007-07-22 12:21:06Z kerns $
  *
  */
 
@@ -115,11 +115,12 @@ static char storaddr[]    = "storage address=%s port=%d ssl=%d";
 static char sessioncmd[]  = "session %127s %ld %ld %ld %ld %ld %ld\n";
 static char restorecmd[]  = "restore replace=%c prelinks=%d where=%s\n";
 static char restorecmd1[] = "restore replace=%c prelinks=%d where=\n";
+static char restorecmdR[] = "restore replace=%c prelinks=%d regexwhere=%s\n";
 static char verifycmd[]   = "verify level=%30s";
 static char estimatecmd[] = "estimate listing=%d";
 static char runbefore[]   = "RunBeforeJob %s";
 static char runafter[]    = "RunAfterJob %s";
-static char runscript[]   = "Run OnSuccess=%u OnFailure=%u AbortOnError=%u When=%u Command=%s";
+static char runscript[]   = "Run OnSuccess=%d OnFailure=%d AbortOnError=%d When=%d Command=%s";
 
 /* Responses sent to Director */
 static char errmsg[]      = "2999 Invalid command\n";
@@ -217,7 +218,7 @@ void *handle_client_request(void *dirp)
    jcr->pki_keypair = me->pki_keypair;
    jcr->pki_signers = me->pki_signers;
    jcr->pki_recipients = me->pki_recipients;
-   dir->jcr = jcr;
+   dir->set_jcr(jcr);
    enable_backup_privileges(NULL, 1 /* ignore_errors */);
 
    /**********FIXME******* add command handler error code */
@@ -339,6 +340,7 @@ void *handle_client_request(void *dirp)
    Dmsg0(100, "Done with term_find_files\n");
    free_jcr(jcr);                     /* destroy JCR record */
    Dmsg0(100, "Done with free_jcr\n");
+   Dsm_check(1);
    return NULL;
 }
 
@@ -371,8 +373,8 @@ static int cancel_cmd(JCR *jcr)
          bnet_fsend(dir, _("2901 Job %s not found.\n"), Job);
       } else {
          if (cjcr->store_bsock) {
-            cjcr->store_bsock->timed_out = 1;
-            cjcr->store_bsock->terminated = 1;
+            cjcr->store_bsock->set_timed_out();
+            cjcr->store_bsock->set_terminated();
             pthread_kill(cjcr->my_thread_id, TIMEOUT_SIGNAL);
          }
          set_jcr_job_status(cjcr, JS_Canceled);
@@ -490,9 +492,13 @@ static int runbeforenow_cmd(JCR *jcr)
 
    run_scripts(jcr, jcr->RunScripts, "ClientBeforeJob");
    if (job_canceled(jcr)) {
-      return  bnet_fsend(dir, _("2905 Bad RunBeforeNow command.\n"));
+      bnet_fsend(dir, _("2905 Bad RunBeforeNow command.\n"));
+      Dmsg0(100, "Back from run_scripts ClientBeforeJob now: FAILED\n");
+      return 0;
    } else {
-      return  bnet_fsend(dir, OKRunBeforeNow);
+      bnet_fsend(dir, OKRunBeforeNow);
+      Dmsg0(100, "Back from run_scripts ClientBeforeJob now: OK\n");
+      return 1;
    }
 }
 
@@ -528,13 +534,15 @@ static int runscript_cmd(JCR *jcr)
 {
    BSOCK *dir = jcr->dir_bsock;
    POOLMEM *msg = get_memory(dir->msglen+1);
+   int on_success, on_failure, fail_on_error;
 
    RUNSCRIPT *cmd = new_runscript() ;
 
    Dmsg1(100, "runscript_cmd: '%s'\n", dir->msg);
-   if (sscanf(dir->msg, runscript, &cmd->on_success, 
-                                  &cmd->on_failure,
-                                  &cmd->abort_on_error,
+   /* Note, we cannot sscanf into bools */
+   if (sscanf(dir->msg, runscript, &on_success, 
+                                  &on_failure,
+                                  &fail_on_error,
                                   &cmd->when,
                                   msg) != 5) {
       pm_strcpy(jcr->errmsg, dir->msg);
@@ -544,6 +552,9 @@ static int runscript_cmd(JCR *jcr)
       free_memory(msg);
       return 0;
    }
+   cmd->on_success = on_success;
+   cmd->on_failure = on_failure;
+   cmd->fail_on_error = fail_on_error;
    unbash_spaces(msg);
 
    cmd->set_command(msg);
@@ -627,19 +638,19 @@ static void add_file_to_fileset(JCR *jcr, const char *fname, findFILESET *filese
       if (!bpipe) {
          berrno be;
          Jmsg(jcr, M_FATAL, 0, _("Cannot run program: %s. ERR=%s\n"),
-            p, be.strerror());
+            p, be.bstrerror());
          free_pool_memory(fn);
          return;
       }
       free_pool_memory(fn);
       while (fgets(buf, sizeof(buf), bpipe->rfd)) {
          strip_trailing_junk(buf);
-         fileset->incexe->name_list.append(bstrdup(buf));
+         fileset->incexe->name_list.append(new_dlistString(buf));
       }
       if ((stat=close_bpipe(bpipe)) != 0) {
          berrno be;
          Jmsg(jcr, M_FATAL, 0, _("Error running program: %s. stat=%d: ERR=%s\n"),
-            p, be.code(stat), be.strerror(stat));
+            p, be.code(stat), be.bstrerror(stat));
          return;
       }
       break;
@@ -649,18 +660,18 @@ static void add_file_to_fileset(JCR *jcr, const char *fname, findFILESET *filese
       if ((ffd = fopen(p, "rb")) == NULL) {
          berrno be;
          Jmsg(jcr, M_FATAL, 0, _("Cannot open FileSet input file: %s. ERR=%s\n"),
-            p, be.strerror());
+            p, be.bstrerror());
          return;
       }
       while (fgets(buf, sizeof(buf), ffd)) {
          strip_trailing_junk(buf);
          Dmsg1(100, "%s\n", buf);
-         fileset->incexe->name_list.append(bstrdup(buf));
+         fileset->incexe->name_list.append(new_dlistString(buf));
       }
       fclose(ffd);
       break;
    default:
-      fileset->incexe->name_list.append(bstrdup(fname));
+      fileset->incexe->name_list.append(new_dlistString(fname));
       break;
    }
 }
@@ -710,7 +721,7 @@ static void add_fileset(JCR *jcr, const char *item)
       fileset->incexe = (findINCEXE *)malloc(sizeof(findINCEXE));
       memset(fileset->incexe, 0, sizeof(findINCEXE));
       fileset->incexe->opts_list.init(1, true);
-      fileset->incexe->name_list.init(1, true);
+      fileset->incexe->name_list.init(); /* for dlist;  was 1,true for alist */
       fileset->include_list.append(fileset->incexe);
       break;
    case 'E':
@@ -718,7 +729,7 @@ static void add_fileset(JCR *jcr, const char *item)
       fileset->incexe = (findINCEXE *)malloc(sizeof(findINCEXE));
       memset(fileset->incexe, 0, sizeof(findINCEXE));
       fileset->incexe->opts_list.init(1, true);
-      fileset->incexe->name_list.init(1, true);
+      fileset->incexe->name_list.init();
       fileset->exclude_list.append(fileset->incexe);
       break;
    case 'N':
@@ -863,8 +874,9 @@ static bool term_fileset(JCR *jcr)
             Dmsg1(400, "T %s\n", fo->writer);
          }
       }
-      for (j=0; j<incexe->name_list.size(); j++) {
-         Dmsg1(400, "F %s\n", (char *)incexe->name_list.get(j));
+      dlistString *node;
+      foreach_dlist(node, &incexe->name_list) {
+         Dmsg1(400, "F %s\n", node->c_str());
       }
    }
    for (i=0; i<fileset->exclude_list.size(); i++) {
@@ -903,8 +915,9 @@ static bool term_fileset(JCR *jcr)
             Dmsg1(400, "XD %s\n", (char *)fo->drivetype.get(k));
          }
       }
-      for (j=0; j<incexe->name_list.size(); j++) {
-         Dmsg1(400, "F %s\n", (char *)incexe->name_list.get(j));
+      dlistString *node;
+      foreach_dlist(node, incexe->name_list) {
+         Dmsg1(400, "F %s\n", node->c_str());
       }
    }
 #endif
@@ -921,6 +934,7 @@ static void set_options(findFOPTS *fo, const char *opts)
 {
    int j;
    const char *p;
+   char strip[100];
 
    for (p=opts; *p; p++) {
       switch (*p) {
@@ -1006,6 +1020,20 @@ static void set_options(findFOPTS *fo, const char *opts)
          }
          fo->VerifyOpts[j] = 0;
          break;
+      case 'P':                  /* strip path */
+         /* Get integer */
+         p++;                    /* skip P */
+         for (j=0; *p && *p != ':'; p++) {
+            strip[j] = *p;
+            if (j < (int)sizeof(strip) - 1) {
+               j++;
+            }
+         }
+         strip[j] = 0;
+         fo->strip_path = atoi(strip);
+         fo->flags |= FO_STRIPPATH;
+         Dmsg2(100, "strip=%s strip_path=%d\n", strip, fo->strip_path);
+         break;
       case 'w':
          fo->flags |= FO_IF_NEWER;
          break;
@@ -1018,6 +1046,9 @@ static void set_options(findFOPTS *fo, const char *opts)
          break;
       case 'K':
          fo->flags |= FO_NOATIME;
+         break;
+      case 'c':
+         fo->flags |= FO_CHKCHANGES;
          break;
       default:
          Emsg1(M_ERROR, 0, _("Unknown include/exclude option: %c\n"), *p);
@@ -1090,7 +1121,7 @@ static int bootstrap_cmd(JCR *jcr)
    if (!bs) {
       berrno be;
       Jmsg(jcr, M_FATAL, 0, _("Could not create bootstrap file %s: ERR=%s\n"),
-         jcr->RestoreBootstrap, be.strerror());
+         jcr->RestoreBootstrap, be.bstrerror());
       /*
        * Suck up what he is sending to us so that he will then
        *   read our error message.
@@ -1190,8 +1221,15 @@ static int level_cmd(JCR *jcr)
       Dmsg2(100, "rt=%s adj=%s\n", edit_uint64(rt, ed1), edit_uint64(bt_adj, ed2));
       adj = btime_to_utime(bt_adj);
       since_time += adj;              /* adjust for clock difference */
-      if (adj != 0) {
-         Jmsg(jcr, M_INFO, 0, _("DIR and FD clocks differ by %d seconds, FD automatically adjusting.\n"), adj);
+      /* Don't notify if time within 3 seconds */
+      if (adj > 3 || adj < -3) {
+         int type;
+         if (adj > 600 || adj < -600) {
+            type = M_WARNING;
+         } else {
+            type = M_INFO;
+         }
+         Jmsg(jcr, type, 0, _("DIR and FD clocks differ by %d seconds, FD automatically adjusting.\n"), adj);
       }
       bnet_sig(dir, BNET_EOD);
 
@@ -1259,8 +1297,8 @@ static int storage_cmd(JCR *jcr)
    Dmsg3(110, "Open storage: %s:%d ssl=%d\n", jcr->stored_addr, stored_port, enable_ssl);
    /* Open command communications with Storage daemon */
    /* Try to connect for 1 hour at 10 second intervals */
-   sd = bnet_connect(jcr, 10, (int)me->SDConnectTimeout, _("Storage daemon"),
-                     jcr->stored_addr, NULL, stored_port, 1);
+   sd = bnet_connect(jcr, 10, (int)me->SDConnectTimeout, me->heartbeat_interval,
+                      _("Storage daemon"), jcr->stored_addr, NULL, stored_port, 1);
    if (sd == NULL) {
       Jmsg(jcr, M_FATAL, 0, _("Failed to connect to Storage daemon: %s:%d\n"),
           jcr->stored_addr, stored_port);
@@ -1387,7 +1425,7 @@ static int backup_cmd(JCR *jcr)
         }
       } else {
          berrno be;
-         Jmsg(jcr, M_WARNING, 0, _("VSS was not initialized properly. VSS support is disabled. ERR=%s\n"), be.strerror());
+         Jmsg(jcr, M_WARNING, 0, _("VSS was not initialized properly. VSS support is disabled. ERR=%s\n"), be.bstrerror());
       } 
    }
 #endif
@@ -1567,7 +1605,8 @@ static int restore_cmd(JCR *jcr)
 {
    BSOCK *dir = jcr->dir_bsock;
    BSOCK *sd = jcr->store_bsock;
-   POOLMEM *where;
+   POOLMEM *args;
+   bool use_regexwhere=false;
    int prefix_links;
    char replace;
    char ed1[50], ed2[50];
@@ -1577,26 +1616,40 @@ static int restore_cmd(JCR *jcr)
     */
    Dmsg0(150, "restore command\n");
    /* Pickup where string */
-   where = get_memory(dir->msglen+1);
-   *where = 0;
+   args = get_memory(dir->msglen+1);
+   *args = 0;
 
-   if (sscanf(dir->msg, restorecmd, &replace, &prefix_links, where) != 3) {
-      if (sscanf(dir->msg, restorecmd1, &replace, &prefix_links) != 2) {
-         pm_strcpy(jcr->errmsg, dir->msg);
-         Jmsg(jcr, M_FATAL, 0, _("Bad replace command. CMD=%s\n"), jcr->errmsg);
-         return 0;
+   if (sscanf(dir->msg, restorecmd, &replace, &prefix_links, args) != 3) {
+      if (sscanf(dir->msg, restorecmdR, &replace, &prefix_links, args) != 3){
+         if (sscanf(dir->msg, restorecmd1, &replace, &prefix_links) != 2) {
+            pm_strcpy(jcr->errmsg, dir->msg);
+            Jmsg(jcr, M_FATAL, 0, _("Bad replace command. CMD=%s\n"), jcr->errmsg);
+            return 0;
+         }
+         *args = 0;
       }
-      *where = 0;
+      use_regexwhere = true;
    }
    /* Turn / into nothing */
-   if (IsPathSeparator(where[0]) && where[1] == '\0') {
-      where[0] = '\0';
+   if (IsPathSeparator(args[0]) && args[1] == '\0') {
+      args[0] = '\0';
    }
 
-   Dmsg2(150, "Got replace %c, where=%s\n", replace, where);
-   unbash_spaces(where);
-   jcr->where = bstrdup(where);
-   free_pool_memory(where);
+   Dmsg2(150, "Got replace %c, where=%s\n", replace, args);
+   unbash_spaces(args);
+
+   if (use_regexwhere) {
+      jcr->where_bregexp = get_bregexps(args);
+      if (!jcr->where_bregexp) {
+         Jmsg(jcr, M_FATAL, 0, _("Bad where regexp. where=%s\n"), args);
+         free_pool_memory(args);
+         return 0;
+      }
+   } else {
+      jcr->where = bstrdup(args);
+   }
+
+   free_pool_memory(args);
    jcr->replace = replace;
    jcr->prefix_links = prefix_links;
 
@@ -1776,7 +1829,7 @@ static int send_bootstrap_file(JCR *jcr)
    if (!bs) {
       berrno be;
       Jmsg(jcr, M_FATAL, 0, _("Could not open bootstrap file %s: ERR=%s\n"),
-         jcr->RestoreBootstrap, be.strerror());
+         jcr->RestoreBootstrap, be.bstrerror());
       set_jcr_job_status(jcr, JS_ErrorTerminated);
       goto bail_out;
    }

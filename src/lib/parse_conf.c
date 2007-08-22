@@ -1,4 +1,31 @@
 /*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
  *   Master Configuration routines.
  *
  *   This file contains the common parts of the Bacula
@@ -30,35 +57,8 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.c 4331 2007-03-07 15:10:49Z kerns $
+ *   Version $Id: parse_conf.c 4992 2007-06-07 14:46:43Z kerns $
  */
-/*
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-*/
 
 
 #include "bacula.h"
@@ -93,7 +93,7 @@ extern brwlock_t res_lock;            /* resource lock */
 /* Forward referenced subroutines */
 static void scan_types(LEX *lc, MSGS *msg, int dest, char *where, char *cmd);
 static const char *get_default_configdir();
-static bool find_config_file(const char *config_file, char *full_path);
+static bool find_config_file(const char *config_file, char *full_path, int max_path);
 
 /* Common Resource definitions */
 
@@ -196,8 +196,9 @@ void init_resource(int type, RES_ITEM *items, int pass)
    int errstat;
 
    if (first && (errstat=rwl_init(&res_lock)) != 0) {
+      berrno be;
       Emsg1(M_ABORT, 0, _("Unable to initialize resource lock. ERR=%s\n"),
-            strerror(errstat));
+            be.bstrerror(errstat));
    }
    first = false;
 
@@ -790,9 +791,9 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
    RES_ITEM *items = NULL;
    int level = 0;
 
-   char *full_path = (char *)alloca(MAX_PATH);
+   char *full_path = (char *)alloca(MAX_PATH + 1);
 
-   if (find_config_file(cf, full_path)) {
+   if (find_config_file(cf, full_path, MAX_PATH +1)) {
       cf = full_path;
    }
 
@@ -816,7 +817,7 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
          bstrncpy(lc->str, cf, sizeof(lc->str));
          lc->fname = lc->str;
          scan_err2(lc, _("Cannot open config file \"%s\": %s\n"),
-            lc->str, be.strerror());
+            lc->str, be.bstrerror());
          free(lc);
          return 0;
       }
@@ -827,15 +828,18 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
          case p_none:
             if (token == T_EOL) {
                break;
-            }
-            if (token == T_UNICODE_MARK) {
+            } else if (token == T_UTF8_BOM) {
+               /* We can assume the file is UTF-8 as we have seen a UTF-8 BOM */
                break;
-            }
-            if (token != T_IDENTIFIER) {
+            } else if (token == T_UTF16_BOM) {
+               scan_err0(lc, _("Currently we cannot handle UTF-16 source files. "
+                   "Please convert the conf file to UTF-8\n"));
+               return 0;
+            } else if (token != T_IDENTIFIER) {
                scan_err1(lc, _("Expected a Resource name identifier, got: %s"), lc->str);
                return 0;
             }
-            for (i=0; resources[i].name; i++)
+            for (i=0; resources[i].name; i++) {
                if (strcasecmp(resources[i].name, lc->str) == 0) {
                   state = p_resource;
                   items = resources[i].items;
@@ -843,6 +847,7 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
                   init_resource(res_type, items, pass);
                   break;
                }
+            }
             if (state == p_none) {
                scan_err1(lc, _("expected resource name, got: %s"), lc->str);
                return 0;
@@ -953,7 +958,7 @@ const char *get_default_configdir()
 }
 
 bool
-find_config_file(const char *config_file, char *full_path)
+find_config_file(const char *config_file, char *full_path, int max_path)
 {
    if (first_path_separator(config_file) != NULL) {
       return false;
@@ -966,10 +971,10 @@ find_config_file(const char *config_file, char *full_path)
    }
 
    const char *config_dir = get_default_configdir();
-   size_t dir_length = strlen(config_dir);
-   size_t file_length = strlen(config_file);
+   int dir_length = strlen(config_dir);
+   int file_length = strlen(config_file);
 
-   if ((dir_length + 1 + file_length + 1) > MAX_PATH) {
+   if ((dir_length + 1 + file_length + 1) > max_path) {
       return false;
    }
 

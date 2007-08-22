@@ -1,23 +1,14 @@
 /*
- *
- *   Bacula Director -- Automatic Recycling of Volumes
- *      Recycles Volumes that have been purged
- *
- *     Kern Sibbald, May MMII
- *
- *   Version $Id: recycle.c 3668 2006-11-21 13:20:11Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,6 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- Automatic Recycling of Volumes
+ *      Recycles Volumes that have been purged
+ *
+ *     Kern Sibbald, May MMII
+ *
+ *   Version $Id: recycle.c 5124 2007-07-06 20:03:36Z kerns $
+ */
+
 
 #include "bacula.h"
 #include "dird.h"

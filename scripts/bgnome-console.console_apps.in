@@ -1,0 +1,3 @@
+USER=root
+PROGRAM=@sbindir@/bgnome-console
+SESSION=true

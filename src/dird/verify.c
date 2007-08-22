@@ -1,29 +1,14 @@
 /*
- *
- *   Bacula Director -- verify.c -- responsible for running file verification
- *
- *     Kern Sibbald, October MM
- *
- *  Basic tasks done here:
- *     Open DB
- *     Open connection with File daemon and pass him commands
- *       to do the verify.
- *     When the File daemon sends the attributes, compare them to
- *       what is in the DB.
- *
- *   Version $Id: verify.c 4183 2007-02-15 18:57:55Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,6 +25,21 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- verify.c -- responsible for running file verification
+ *
+ *     Kern Sibbald, October MM
+ *
+ *  Basic tasks done here:
+ *     Open DB
+ *     Open connection with File daemon and pass him commands
+ *       to do the verify.
+ *     When the File daemon sends the attributes, compare them to
+ *       what is in the DB.
+ *
+ *   Version $Id: verify.c 5300 2007-08-07 16:01:19Z kerns $
+ */
 
 
 #include "bacula.h"
@@ -66,6 +66,22 @@ static int missing_handler(void *ctx, int num_fields, char **row);
  */
 bool do_verify_init(JCR *jcr) 
 {
+   return true;
+}
+
+
+/*
+ * Do a verification of the specified files against the Catlaog
+ *
+ *  Returns:  false on failure
+ *            true  on success
+ */
+bool do_verify(JCR *jcr)
+{
+   const char *level;
+   BSOCK   *fd;
+   int stat;
+   char ed1[100];
    JOB_DBR jr;
    JobId_t verify_jobid = 0;
    const char *Name;
@@ -74,12 +90,16 @@ bool do_verify_init(JCR *jcr)
 
    memset(&jcr->previous_jr, 0, sizeof(jcr->previous_jr));
 
-   Dmsg1(9, "bdird: created client %s record\n", jcr->client->hdr.name);
-
    /*
-    * Find JobId of last job that ran.  E.g.
-    *   for VERIFY_CATALOG we want the JobId of the last INIT.
-    *   for VERIFY_VOLUME_TO_CATALOG, we want the JobId of the
+    * Find JobId of last job that ran. Note, we do this when
+    *   the job actually starts running, not at schedule time,
+    *   so that we find the last job that terminated before
+    *   this job runs rather than before it is scheduled. This
+    *   permits scheduling a Backup and Verify at the same time,
+    *   but with the Verify at a lower priority.
+    *
+    *   For VERIFY_CATALOG we want the JobId of the last INIT.
+    *   For VERIFY_VOLUME_TO_CATALOG, we want the JobId of the
     *       last backup Job.
     */
    if (jcr->JobLevel == L_VERIFY_CATALOG ||
@@ -89,7 +109,7 @@ bool do_verify_init(JCR *jcr)
       if (jcr->verify_job &&
           (jcr->JobLevel == L_VERIFY_VOLUME_TO_CATALOG ||
            jcr->JobLevel == L_VERIFY_DISK_TO_CATALOG)) {
-         Name = jcr->verify_job->hdr.name;
+         Name = jcr->verify_job->name();  
       } else {
          Name = NULL;
       }
@@ -149,22 +169,6 @@ bool do_verify_init(JCR *jcr)
       jcr->fileset = jcr->verify_job->fileset;
    }
    Dmsg2(100, "ClientId=%u JobLevel=%c\n", jcr->previous_jr.ClientId, jcr->JobLevel);
-   return true;
-}
-
-
-/*
- * Do a verification of the specified files against the Catlaog
- *
- *  Returns:  false on failure
- *            true  on success
- */
-bool do_verify(JCR *jcr)
-{
-   const char *level;
-   BSOCK   *fd;
-   int stat;
-   char ed1[100];
 
    if (!db_update_job_start_record(jcr, jcr->db, &jcr->jr)) {
       Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
@@ -318,6 +322,8 @@ bool do_verify(JCR *jcr)
       jcr->sd_msg_thread_done = true;   /* no SD msg thread, so it is done */
       jcr->SDJobStatus = JS_Terminated;
       get_attributes_and_put_in_catalog(jcr);
+      db_end_transaction(jcr, jcr->db);   /* terminate any open transaction */
+      db_write_batch_file_records(jcr);
       break;
 
    default:
@@ -408,7 +414,8 @@ void verify_cleanup(JCR *jcr, int TermCode)
    jobstatus_to_ascii(jcr->FDJobStatus, fd_term_msg, sizeof(fd_term_msg));
    if (jcr->JobLevel == L_VERIFY_VOLUME_TO_CATALOG) {
       jobstatus_to_ascii(jcr->SDJobStatus, sd_term_msg, sizeof(sd_term_msg));
-      Jmsg(jcr, msg_type, 0, _("Bacula %s (%s): %s\n"
+   Jmsg(jcr, msg_type, 0, _("Bacula %s %s (%s): %s\n"
+"  Build OS:               %s %s %s\n"
 "  JobId:                  %d\n"
 "  Job:                    %s\n"
 "  FileSet:                %s\n"
@@ -424,9 +431,8 @@ void verify_cleanup(JCR *jcr, int TermCode)
 "  FD termination status:  %s\n"
 "  SD termination status:  %s\n"
 "  Termination:            %s\n\n"),
-         VERSION,
-         LSMDATE,
-         edt,
+        my_name, VERSION, LSMDATE, edt,
+        HOST_OS, DISTNAME, DISTVER,
          jcr->jr.JobId,
          jcr->jr.Job,
          jcr->fileset->hdr.name,
@@ -443,7 +449,8 @@ void verify_cleanup(JCR *jcr, int TermCode)
          sd_term_msg,
          term_msg);
    } else {
-      Jmsg(jcr, msg_type, 0, _("Bacula %s (%s): %s\n"
+   Jmsg(jcr, msg_type, 0, _("Bacula %s %s (%s): %s\n"
+"  Build:                  %s %s %s\n"
 "  JobId:                  %d\n"
 "  Job:                    %s\n"
 "  FileSet:                %s\n"
@@ -457,14 +464,13 @@ void verify_cleanup(JCR *jcr, int TermCode)
 "  Non-fatal FD errors:    %d\n"
 "  FD termination status:  %s\n"
 "  Termination:            %s\n\n"),
-         VERSION,
-         LSMDATE,
-         edt,
+        my_name, VERSION, LSMDATE, edt,
+        HOST_OS, DISTNAME, DISTVER,
          jcr->jr.JobId,
          jcr->jr.Job,
          jcr->fileset->hdr.name,
          level_to_str(jcr->JobLevel),
-         jcr->client->hdr.name,
+         jcr->client->name(),
          jcr->previous_jr.JobId,
          Name,
          sdt,
@@ -688,7 +694,7 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
       } else if (crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
          Dmsg2(400, "stream=Digest inx=%d Digest=%s\n", file_index, Opts_Digest);
          /*
-          * When ever we get a digest is MUST have been
+          * When ever we get a digest it MUST have been
           * preceded by an attributes record, which sets attr_file_index
           */
          if (jcr->FileIndex != (uint32_t)file_index) {
@@ -717,7 +723,7 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
    if (is_bnet_error(fd)) {
       berrno be;
       Jmsg2(jcr, M_FATAL, 0, _("bdird<filed: bad attributes from filed n=%d : %s\n"),
-                        n, be.strerror());
+                        n, be.bstrerror());
       return false;
    }
 
@@ -755,8 +761,8 @@ static int missing_handler(void *ctx, int num_fields, char **row)
       return 1;
    }
    if (!jcr->fn_printed) {
-      Jmsg(jcr, M_INFO, 0, "\n");
-      Jmsg(jcr, M_INFO, 0, _("The following files are in the Catalog but not on disk:\n"));
+      Jmsg(jcr, M_INFO, 0, _("\nThe following files are in the Catalog but not on %s:\n"),
+       jcr->JobLevel == L_VERIFY_VOLUME_TO_CATALOG ? "the Volume(s)" : "disk");
       jcr->fn_printed = true;
    }
    Jmsg(jcr, M_INFO, 0, "      %s%s\n", row[0]?row[0]:"", row[1]?row[1]:"");
@@ -771,6 +777,6 @@ static void prt_fname(JCR *jcr)
 {
    if (!jcr->fn_printed) {
       Jmsg(jcr, M_INFO, 0, _("File: %s\n"), jcr->fname);
-      jcr->fn_printed = TRUE;
+      jcr->fn_printed = true;
    }
 }

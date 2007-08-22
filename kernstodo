@@ -1,9 +1,6 @@
                     Kern's ToDo List
-                     12 November 2006
+                       16 July 2007
 
-Major development:      
-Project                     Developer
-=======                     =========                         
 
 Document:
 - !!! Cannot restore two jobs a the same time that were
@@ -41,8 +38,44 @@ Document:
 - Document more precisely how to use master keys -- especially
   for disaster recovery.
  
+Professional Needs:
+- Migration from other vendors
+  - Date change
+  - Path change
+- Filesystem types
+- Backup conf/exe (all daemons) 
+- Backup up system state
+- Detect state change of system (verify)
+- Synthetic Full, Diff, Inc (Virtual, Reconstructed)
+- SD to SD
+- Modules for Databases, Exchange, ...
+- Novell NSS backup http://www.novell.com/coolsolutions/tools/18952.html
+- Compliance norms that compare restored code hash code.
+- When glibc crash, get address with
+    info symbol 0x809780c
+- How to sync remote offices.
+- Exchange backup:
+  http://www.microsoft.com/technet/itshowcase/content/exchbkup.mspx
 
 Priority:
+- Implement SDErrors (must return from SD)
+- Implement USB keyboard support in rescue CD.
+- Remove all install temp files in Win32 PLUGINSDIR.
+- Audit retention periods to make sure everything is 64 bit.
+- Use E'xxx' to escape PostgreSQL strings.
+- No where in restore causes kaboom.
+- Performance: multiple spool files for a single job.
+- Performance: despool attributes when despooling data (problem
+  multiplexing Dir connection).
+- Make restore use the in-use volume reservation algorithm.
+- Look at mincore: http://insights.oetiker.ch/linux/fadvise.html
+- Unicode input http://en.wikipedia.org/wiki/Byte_Order_Mark
+- Add TLS to bat (should be done).
+- When Pool specifies Storage command override does not work.
+- Implement wait_for_sysop() message display in wait_for_device(), which
+  now prints warnings too often.
+- Ensure that each device in an Autochanger has a different
+  Device Index.
 - Add Catalog = to Pool resource so that pools will exist
   in only one catalog -- currently Pools are "global".
 - Look at sg_logs -a /dev/sg0 for getting soft errors.
@@ -59,35 +92,48 @@ Priority:
    02-Feb 11:00 btape: Fatal Error because: Bacula interrupted by signal 11: Segmentation violation
    Kaboom! btape, btape got signal 11. Attempting traceback.
 
-- Why the heck doesn't bacula drop root priviledges before connecting to
-  the DB?
-- Ensure that moving a purged Volume in ua_purge.c to the RecyclePool
-  does the right thing.
+- Encryption -- email from Landon
+   > The backup encryption algorithm is currently not configurable, and is  
+   > set to AES_128_CBC in src/filed/backup.c. The encryption code  
+   > supports a number of different ciphers (as well as adding arbitrary  
+   > new ones) -- only a small bit of code would be required to map a  
+   > configuration string value to a CRYPTO_CIPHER_* value, if anyone is  
+   > interested in implementing this functionality.
+
 - Why doesn't @"xxx abc" work in a conf file?
 - Figure out some way to "automatically" backup conf changes.
-- Look at using posix_fadvise(2) for backups -- see bug #751.
-  Possibly add the code at findlib/bfile.c:795
 - Add the OS version back to the Win32 client info.
 - Restarted jobs have a NULL in the from field.
 - Modify SD status command to indicate when the SD is writing
   to a DVD (the device is not open -- see bug #732).
 - Look at the possibility of adding "SET NAMES UTF8" for MySQL,
   and possibly changing the blobs into varchar.
-- Check if gnome-console works with TLS.
 - Ensure that the SD re-reads the Media record if the JobFiles
   does not match -- it may have been updated by another job.
 - Look at moving the Storage directive from the Job to the
   Pool in the default conf files.
-- Test FIFO backup/restore -- make regression
 - Doc items
 - Test Volume compatibility between machine architectures
 - Encryption documentation
 - Wrong jobbytes with query 12 (todo)
-- bacula-1.38.2-ssl.patch
 - Bare-metal recovery Windows (todo)
    
 
 Projects:
+- Average tape size from Eric
+    SELECT COALESCE(media_avg_size.volavg,0) * count(Media.MediaId) AS volmax,                                                              GROUP BY Media.MediaType, Media.PoolId, media_avg_size.volavg
+           count(Media.MediaId)  AS volnum,
+           sum(Media.VolBytes)   AS voltotal,
+           Media.PoolId          AS PoolId,
+           Media.MediaType       AS MediaType
+    FROM Media
+    LEFT JOIN (SELECT avg(Media.VolBytes) AS volavg,
+                      Media.MediaType     AS MediaType
+               FROM Media
+              WHERE Media.VolStatus = 'Full'
+              GROUP BY Media.MediaType
+               ) AS media_avg_size ON (Media.MediaType = media_avg_size.MediaType)
+    GROUP BY Media.MediaType, Media.PoolId, media_avg_size.volavg
 - GUI
   - Admin
   - Management reports
@@ -95,13 +141,11 @@ Projects:
   - Look at Webmin
      http://www.orangecrate.com/modules.php?name=News&file=article&sid=501
 - Performance
-  - FD-SD quick disconnect
   - Despool attributes in separate thread
   - Database speedups
   - Embedded MySQL
   - Check why restore repeatedly sends Rechdrs between
     each data chunk -- according to James Harper 9Jan07.
-  - Building the in memory restore tree is slow.
 - Features
   - Better scheduling  
   - Full at least once a month, ...
@@ -110,8 +154,6 @@ Projects:
   - New/deleted file backup   
   - FD plugins
   - Incremental backup -- rsync, Stow
-
-
 
 
 For next release:
@@ -155,6 +197,26 @@ Low priority:
 - Article: http://www.osreviews.net/reviews/admin/bacula
 - Article: http://www.debianhelp.co.uk/baculaweb.htm
 - Article: 
+- Wikis mentioning Bacula
+  http://wiki.finkproject.org/index.php/Admin:Backups
+  http://wiki.linuxquestions.org/wiki/Bacula
+  http://www.openpkg.org/product/packages/?package=bacula
+  http://www.iterating.com/products/Bacula
+  http://net-snmp.sourceforge.net/wiki/index.php/Net-snmp_extensions
+  http://www.section6.net/wiki/index.php/Using_Bacula_for_Tape_Backups
+  http://bacula.darwinports.com/
+  http://wiki.mandriva.com/en/Releases/Corporate/Server_4/Notes#Bacula
+  http://en.wikipedia.org/wiki/Bacula
+
+- Bacula Wikis
+  http://www.devco.net/pubwiki/Bacula/
+  http://paramount.ind.wpi.edu/wiki/doku.php
+  http://gentoo-wiki.com/HOWTO_Backup
+  http://www.georglutz.de/wiki/Bacula
+  http://www.clarkconnect.com/wiki/index.php?title=Modules_-_LAN_Backup/Recovery
+  http://linuxwiki.de/Bacula   (in German)
+
+- Possibly allow SD to spool even if a tape is not mounted.
 - It appears to me that you have run into some sort of race
   condition where two threads want to use the same Volume and they
   were both given access.  Normally that is no problem.  However,
@@ -1669,107 +1731,35 @@ Block Position: 0
 
 
 === Done
-- Make sure that all do_prompt() calls in Dir check for
-  -1 (error) and -2 (cancel) returns.
-- Fix foreach_jcr() to have free_jcr() inside next().
-  jcr=jcr_walk_start();
-  for ( ; jcr; (jcr=jcr_walk_next(jcr)) )
-  ...
-  jcr_walk_end(jcr);
-- A Volume taken from Scratch should take on the retention period
-  of the new pool.
-- Correct doc for Maximum Changer Wait (and others) accepting only
-  integers.
-- Implement status that shows why a job is being held in reserve, or
-  rather why none of the drives are suitable.
-- Implement a way to disable a drive (so you can use the second
-  drive of an autochanger, and the first one will not be used or
-  even defined).
-- Make sure Maximum Volumes is respected in Pools when adding
-  Volumes (e.g. when pulling a Scratch volume).
-- Keep same dcr when switching device ...
-- Implement code that makes the Dir aware that a drive is an             
-  autochanger (so the user doesn't need to use the Autochanger = yes 
-  directive).
-- Make catalog respect ACL.
-- Add recycle count to Media record.
-- Add initial write date to Media record.
-- Fix store_yesno to be store_bitmask.
---- create_file.c.orig  Fri Jul  8 12:13:05 2005
-+++ create_file.c       Fri Jul  8 12:13:07 2005
-@@ -195,6 +195,8 @@
-                     attr->ofname, be.strerror());
-               return CF_ERROR;
-            }
-+        } else if(S_ISSOCK(attr->statp.st_mode)) {
-+            Dmsg1(200, "Skipping socket: %s\n", attr->ofname);
-         } else {          
-             Dmsg1(200, "Restore node: %s\n", attr->ofname);
-            if (mknod(attr->ofname, attr->statp.st_mode, attr->statp.st_rdev) != 0 && errno != EEXIST) {
-- Add true/false to conf same as yes/no
-- Reserve blocks other restore jobs when first cannot connect to SD.
-- Fix Maximum Changer Wait, Maximum Open Wait, Maximum Rewind Wait to 
-  accept time qualifiers.
-- Does ClientRunAfterJob fail the job on a bad return code?
-- Make hardlink code at line 240 of find_one.c use binary search.
-- Add ACL error messages in src/filed/acl.c.
-- Make authentication failures single threaded.
-- Make Dir and SD authentication errors single threaded.
-- Fix catreq.c digestbuf at line 411 in src/dird/catreq.c 
-- Make base64.c (bin_to_base64) take a buffer length 
-  argument to avoid overruns.
-  and verify that other buffers cannot overrun.
-- Implement VolumeState as discussed with Arno.
-- Add LocationId to update volume
-- Add LocationLog
-    LogId
-    Date
-    User text
-    MediaId
-    LocationId
-    NewState???
-- Add Comment to Media record
-- Fix auth compatibility with 1.38
-- Update dbcheck to include Log table
-- Update llist to include new fields.
-- Make unmount unload autochanger.  Make mount load slot.
-- Fix bscan to report the JobType when restoring a job.
-- Fix wx-console scanning problem with commas in names.
-- Add manpages to the list of directories for make install. Notify
-  Scott
-- Add bconsole option to use stdin/out instead of conio.
-- Fix ClientRunBefore/AfterJob compatibility.
-- Ensure that connection to daemon failure always indicates what
-  daemon it was trying to connect to.
-- Freespace on DVD requested over and over even with no intervening
-  writes.
-- .update volume [enabled|disabled|*see below]
-    > However, I could easily imagine an option to "update slots" that says 
-    > "enable=yes|no" that would automatically enable or disable all the Volumes 
-    > found in the autochanger.  This will permit the user to optionally mark all 
-    > the Volumes in the magazine disabled prior to taking them offsite, and mark 
-    > them all enabled when bringing them back on site.   Coupled with the options 
-    > to the slots keyword, you can apply the enable/disable to any or all volumes.
-- Restricted consoles start in the Default catalog even if it
-  is not permitted.
-- When reading through parts on the DVD, the DVD is mounted and
-  unmounted for each part.
-- Make sure that the restore options don't permit "seeing" other
-  Client's job data.
-- Restore of a raw drive should not try to check the volume size.
-- Lock tape drive door when open()
-- Make release unload any autochanger.
-- Arno's reservation deadlock.
-- Eric's SD patch
-- Make sure the new level=Full syntax is used in all 
-  example conf files (especially in the manual).
-- Fix prog copyright (SD) all other files.
-- Document need for UTF-8 format
-- Try turning on disk seek code.
-- Some users claim that they must do two prune commands to get a
-  Volume marked as purged.
-- Document fact that CatalogACL now needed for Tray monitor (fixed).
-- If you have two Catalogs, it will take the first one.
-- Migration Volume span bug
-- Rescue release
-- Bug reports
+- Why the heck doesn't bacula drop root priviledges before connecting to
+  the DB?
+- Look at using posix_fadvise(2) for backups -- see bug #751.
+  Possibly add the code at findlib/bfile.c:795
+/* TCP socket options */
+#define TCP_KEEPIDLE            4       /* Start keeplives after this period */
+- Fix bnet_connect() code to set a timer and to use time to
+  measure the time.
+- Implement 4th argument to make_catalog_backup that passes hostname.
+- Test FIFO backup/restore -- make regression
+- Please mount volume "xxx" on Storage device ... should also list
+  Pool and MediaType in case user needs to create a new volume.
+- On restore add Restore Client, Original Client.
+01-Apr 00:42 rufus-dir: Start Backup JobId 55, Job=kernsave.2007-04-01_00.42.48
+01-Apr 00:42 rufus-sd: Python SD JobStart: JobId=55 Client=Rufus
+01-Apr 00:42 rufus-dir: Created new Volume "Full0001" in catalog.
+01-Apr 00:42 rufus-dir: Using Device "File"
+01-Apr 00:42 rufus-sd: kernsave.2007-04-01_00.42.48 Warning: Device "File" (/tmp) not configured to autolabel Volumes.
+01-Apr 00:42 rufus-sd: kernsave.2007-04-01_00.42.48 Warning: Device "File" (/tmp) not configured to autolabel Volumes.
+01-Apr 00:42 rufus-sd: Please mount Volume "Full0001" on Storage Device "File" (/tmp) for Job kernsave.2007-04-01_00.42.48
+01-Apr 00:44 rufus-sd: Wrote label to prelabeled Volume "Full0001" on device "File" (/tmp)
+- Check if gnome-console works with TLS.
+- the director seg faulted when I omitted the pool directive from a 
+  job resource.  I was experimenting and thought it redundant that I had 
+  specified Pool, Full Backup Pool. and Differential Backup Pool. but 
+  apparently not.  This  happened when I removed the pool directive and 
+  started the director.
+- Add Where: client:/.... to restore job report.
+- Ensure that moving a purged Volume in ua_purge.c to the RecyclePool
+  does the right thing.
+- FD-SD quick disconnect
+- Building the in memory restore tree is slow.

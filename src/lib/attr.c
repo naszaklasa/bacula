@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, June MMIII  (code pulled from filed/restore.c and updated)
  *
- *   Version $Id: attr.c 3671 2006-11-21 16:45:13Z robertnelson $
+ *   Version $Id: attr.c 4992 2007-06-07 14:46:43Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -14,8 +14,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,7 +35,7 @@
 
 #include "bacula.h"
 #include "jcr.h"
-
+#include "lib/breg.h"
 
 ATTR *new_attr()
 {
@@ -148,9 +148,30 @@ void build_attr_output_fnames(JCR *jcr, ATTR *attr)
     *   every filename if a prefix is supplied.
     *
     */
-   if (jcr->where[0] == 0) {
+
+   if (jcr->where_bregexp) { 
+      char *ret;
+      apply_bregexps(attr->fname, jcr->where_bregexp, &ret);
+      pm_strcpy(attr->ofname, ret);
+
+      if (attr->type == FT_LNKSAVED || attr->type == FT_LNK) {
+         /* Always add prefix to hard links (FT_LNKSAVED) and
+          *  on user request to soft links
+          */
+
+         if ((attr->type == FT_LNKSAVED || jcr->prefix_links)) {
+            apply_bregexps(attr->lname, jcr->where_bregexp, &ret);
+            pm_strcpy(attr->olname, ret);
+
+         } else {
+            pm_strcpy(attr->olname, attr->lname);
+         }
+      }
+      
+   } else if (jcr->where[0] == 0) {
       pm_strcpy(attr->ofname, attr->fname);
       pm_strcpy(attr->olname, attr->lname);
+
    } else {
       const char *fn;
       int wherelen = strlen(jcr->where);

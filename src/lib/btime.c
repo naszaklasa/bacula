@@ -1,21 +1,14 @@
 /*
- * Bacula floating point time and date routines -- John Walker
- *
- * Later double precision integer time/date routines -- Kern Sibbald
- *
- *   Version $Id: btime.c 3670 2006-11-21 16:13:58Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula floating point time and date routines -- John Walker
+ *
+ * Later double precision integer time/date routines -- Kern Sibbald
+ *
+ *   Version $Id: btime.c 5012 2007-06-14 16:54:30Z kerns $
+ */
 
 
 /* Concerning times. There are a number of differnt time standards
@@ -94,12 +94,19 @@ char *bstrftime_nc(char *dt, int maxlen, utime_t tim)
 {
    time_t ttime = (time_t)tim;
    struct tm tm;
+   char *p, *q;
 
    /* ***FIXME**** the format and localtime_r() should be user configurable */
    (void)localtime_r(&ttime, &tm);
    /* NOTE! since the compiler complains about %y, I use %y and cut the century */
    strftime(dt, maxlen, "%d-%b-%Y %H:%M", &tm);
-   strcpy(dt+7, dt+9);
+   /* overlay the century */
+   p = dt+7;
+   q = dt+9;
+   while (*q) {
+      *p++ = *q++;
+   }
+   *p = 0;
    return dt;
 }
 
@@ -216,6 +223,7 @@ int tm_woy(time_t stime)
    tm_yday = tm.tm_yday;
    tm.tm_mon = 0;
    tm.tm_mday = 4;
+   tm.tm_isdst = 0;                   /* 4 Jan is not DST */ 
    time4 = mktime(&tm);
    (void)localtime_r(&time4, &tm);
    fty = 1 - tm.tm_wday;

@@ -5,7 +5,7 @@
  *
  *    Kern Sibbald, May MMIII
  *
- *   Version $Id: heartbeat.c 4190 2007-02-16 17:13:38Z kerns $
+ *   Version $Id: heartbeat.c 5066 2007-06-23 09:58:34Z kerns $
  *
  */
 /*
@@ -17,8 +17,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -129,12 +129,12 @@ void stop_heartbeat_monitor(JCR *jcr)
    }
 
    if (jcr->hb_bsock) {
-      jcr->hb_bsock->timed_out = 1;   /* set timed_out to terminate read */
-      jcr->hb_bsock->terminated = 1;  /* set to terminate read */
+      jcr->hb_bsock->set_timed_out();       /* set timed_out to terminate read */
+      jcr->hb_bsock->set_terminated();      /* set to terminate read */
    }
    if (jcr->hb_dir_bsock) {
-      jcr->hb_dir_bsock->timed_out = 1;   /* set timed_out to terminate read */
-      jcr->hb_dir_bsock->terminated = 1;  /* set to terminate read */
+      jcr->hb_dir_bsock->set_timed_out();     /* set timed_out to terminate read */
+      jcr->hb_dir_bsock->set_terminated();    /* set to terminate read */
    }
    Dmsg0(100, "Send kill to heartbeat id\n");
    pthread_kill(jcr->heartbeat_id, TIMEOUT_SIGNAL);  /* make heartbeat thread go away */

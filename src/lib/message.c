@@ -1,12 +1,4 @@
 /*
- * Bacula message handling routines
- *
- *   Kern Sibbald, April 2000
- *
- *   Version $Id: message.c 4331 2007-03-07 15:10:49Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
@@ -15,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -38,7 +30,7 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: message.c 4331 2007-03-07 15:10:49Z kerns $
+ *   Version $Id: message.c 4992 2007-06-07 14:46:43Z kerns $
  *
  */
 
@@ -57,18 +49,19 @@ sql_escape p_sql_escape = NULL;
  */
 const char *working_directory = NULL;       /* working directory path stored here */
 int verbose = 0;                      /* increase User messages */
-int debug_level = 0;                  /* debug level */
+int debug_level = 1;                  /* debug level */
 time_t daemon_start_time = 0;         /* Daemon start time */
 const char *version = VERSION " (" BDATE ")";
 char my_name[30];                     /* daemon name is stored here */
 char *exepath = (char *)NULL;
 char *exename = (char *)NULL;
-int console_msg_pending = 0;
+int console_msg_pending = false;
 char con_fname[500];                  /* Console filename */
 FILE *con_fd = NULL;                  /* Console file descriptor */
 brwlock_t con_lock;                   /* Console lock structure */
 
 static char *catalog_db = NULL;       /* database type */
+static void (*message_callback)(int type, char *msg) = NULL;
 
 const char *host_os = HOST_OS;
 const char *distname = DISTNAME;
@@ -91,6 +84,11 @@ static bool trace = false;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static MSGS *daemon_msgs;              /* global messages */
 
+void register_message_callback(void msg_callback(int type, char *msg))
+{
+   message_callback = msg_callback;
+}
+
 
 /*
  * Set daemon name. Also, find canonical execution
@@ -102,7 +100,6 @@ static MSGS *daemon_msgs;              /* global messages */
  *  Resource record. On the second call, generally,
  *  argv is NULL to avoid doing the path code twice.
  */
-#define BTRACE_EXTRA 20
 void my_name_is(int argc, char *argv[], const char *name)
 {
    char *l, *p, *q;
@@ -163,11 +160,9 @@ get_db_type(void)
 void
 set_db_type(const char *name)
 {
-   if (catalog_db != NULL)
-   {
+   if (catalog_db != NULL) {
       free(catalog_db);
    }
-
    catalog_db = bstrdup(name);
 }
 
@@ -266,12 +261,12 @@ void init_console_msg(const char *wd)
 {
    int fd;
 
-   bsnprintf(con_fname, sizeof(con_fname), "%s/%s.conmsg", wd, my_name);
+   bsnprintf(con_fname, sizeof(con_fname), "%s%c%s.conmsg", wd, PathSeparator, my_name);
    fd = open(con_fname, O_CREAT|O_RDWR|O_BINARY, 0600);
    if (fd == -1) {
       berrno be;
       Emsg2(M_ERROR_TERM, 0, _("Could not open console message file %s: ERR=%s\n"),
-          con_fname, be.strerror());
+          con_fname, be.bstrerror());
    }
    if (lseek(fd, 0, SEEK_END) > 0) {
       console_msg_pending = 1;
@@ -281,12 +276,12 @@ void init_console_msg(const char *wd)
    if (!con_fd) {
       berrno be;
       Emsg2(M_ERROR, 0, _("Could not open console message file %s: ERR=%s\n"),
-          con_fname, be.strerror());
+          con_fname, be.bstrerror());
    }
    if (rwl_init(&con_lock) != 0) {
       berrno be;
       Emsg1(M_ERROR_TERM, 0, _("Could not get con mutex: ERR=%s\n"),
-         be.strerror());
+         be.bstrerror());
    }
 }
 
@@ -390,7 +385,7 @@ static BPIPE *open_mail_pipe(JCR *jcr, POOLMEM *&cmd, DEST *d)
    if (!(bpipe = open_bpipe(cmd, 120, "rw"))) {
       berrno be;
       Jmsg(jcr, M_ERROR, 0, _("open mail pipe %s failed: ERR=%s\n"),
-         cmd, be.strerror());
+         cmd, be.bstrerror());
    }
 
    /* If we had to use sendmail, add subject */
@@ -467,7 +462,7 @@ void close_msg(JCR *jcr)
             }
             if (!close_wpipe(bpipe)) {       /* close write pipe sending mail */
                berrno be;
-               Pmsg1(000, _("close error: ERR=%s\n"), be.strerror());
+               Pmsg1(000, _("close error: ERR=%s\n"), be.bstrerror());
             }
 
             /*
@@ -489,7 +484,7 @@ void close_msg(JCR *jcr)
                Dmsg1(850, "Calling emsg. CMD=%s\n", cmd);
                Jmsg2(jcr, M_ERROR, 0, _("Mail program terminated in error.\n"
                                         "CMD=%s\n"
-                                        "ERR=%s\n"), cmd, be.strerror());
+                                        "ERR=%s\n"), cmd, be.bstrerror());
             }
             free_memory(line);
 rem_temp_file:
@@ -573,6 +568,10 @@ void term_msg()
       fclose(trace_fd);
       trace_fd = NULL;
    }
+   if (catalog_db) {
+      free(catalog_db);
+      catalog_db = NULL;
+   }
    term_last_jobs_list();
 }
 
@@ -583,7 +582,7 @@ static bool open_dest_file(JCR *jcr, DEST *d, const char *mode)
       berrno be;
       d->fd = stdout;
       Qmsg2(jcr, M_ERROR, 0, _("fopen %s failed: ERR=%s\n"), d->where,
-            be.strerror());
+            be.bstrerror());
       d->fd = NULL;
       return false;
    }
@@ -624,11 +623,18 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
        dt[dtlen] = 0;
     }
 
+    /* If the program registered a callback, send it there */
+    if (message_callback) {
+       message_callback(type, msg);
+       return;
+    }
+
     if (type == M_ABORT || type == M_ERROR_TERM) {
        fputs(dt, stdout);
        fputs(msg, stdout);         /* print this here to INSURE that it is printed */
        fflush(stdout);
     }
+
 
     /* Now figure out where to send the message */
     msgs = NULL;
@@ -685,7 +691,7 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
                       (void)fwrite("\n", 2, 1, con_fd);
                    }
                    fflush(con_fd);
-                   console_msg_pending = TRUE;
+                   console_msg_pending = true;
                    Vw(con_lock);
                 }
                 break;
@@ -710,7 +716,7 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
                       be.set_errno(stat);
                       Qmsg2(jcr, M_ERROR, 0, _("Operator mail program terminated in error.\n"
                             "CMD=%s\n"
-                            "ERR=%s\n"), mcmd, be.strerror());
+                            "ERR=%s\n"), mcmd, be.bstrerror());
                    }
                 }
                 free_pool_memory(mcmd);
@@ -727,7 +733,7 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
                       berrno be;
                       d->fd = stdout;
                       Qmsg2(jcr, M_ERROR, 0, _("fopen %s failed: ERR=%s\n"), name,
-                            be.strerror());
+                            be.bstrerror());
                       d->fd = NULL;
                       free_pool_memory(name);
                       break;

@@ -227,7 +227,7 @@ Storage {
 # Generic catalog service
 Catalog {
   Name = MyCatalog
-  dbname = bacula; user = bacula; password = ""
+  dbname = @db_name@; user = @db_user@; password = ""
 }
 
 # Reasonable message delivery -- send most everything to email address
@@ -246,8 +246,8 @@ Messages {
 #  tell (most) people that its coming from an automated source.
 
 #
-  mailcommand = "@sbindir@/bsmtp -h @smtp_host@ -f \"\(Bacula\) %r\" -s \"Bacula: %t %e of %c %l\" %r"
-  operatorcommand = "@sbindir@/bsmtp -h @smtp_host@ -f \"\(Bacula\) %r\" -s \"Bacula: Intervention needed for %j\" %r"
+  mailcommand = "@sbindir@/bsmtp -h @smtp_host@ -f \"\(Bacula\) \<%r\>\" -s \"Bacula: %t %e of %c %l\" %r"
+  operatorcommand = "@sbindir@/bsmtp -h @smtp_host@ -f \"\(Bacula\) \<%r\>\" -s \"Bacula: Intervention needed for %j\" %r"
   mail = @job_email@ = all, !skipped            
   operator = @job_email@ = mount
   console = all, !skipped, !saved
@@ -264,7 +264,7 @@ Messages {
 # Message delivery for daemon messages (no job).
 Messages {
   Name = Daemon
-  mailcommand = "@sbindir@/bsmtp -h @smtp_host@ -f \"\(Bacula\) %r\" -s \"Bacula daemon message\" %r"
+  mailcommand = "@sbindir@/bsmtp -h @smtp_host@ -f \"\(Bacula\) \<%r\>\" -s \"Bacula daemon message\" %r"
   mail = @job_email@ = all, !skipped            
   console = all, !skipped, !saved
   append = "@working_dir@/log" = all, !skipped
@@ -280,6 +280,12 @@ Pool {
   Recycle = yes                       # Bacula can automatically recycle Volumes
   AutoPrune = yes                     # Prune expired volumes
   Volume Retention = 365 days         # one year
+}
+
+# Scratch pool definition
+Pool {
+  Name = Scratch
+  Pool Type = Backup
 }
 
 #

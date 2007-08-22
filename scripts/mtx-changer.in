@@ -2,7 +2,7 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id: mtx-changer.in 3547 2006-10-11 21:34:24Z kerns $
+#  $Id: mtx-changer.in 5002 2007-06-09 09:25:27Z kerns $
 #
 #  If you set in your Device resource
 #
@@ -22,6 +22,18 @@
 #  will request to load the first cartidge into drive 0, where
 #   the SCSI control channel is /dev/sg0, and the read/write device
 #   is /dev/nst0.
+#
+#  The commands are:
+#      Command		  Function
+#      unload		  unload a given slot
+#      load		  load a given slot
+#      loaded		  which slot is loaded?
+#      list		  list Volume names (requires barcode reader)
+#      slots		  how many slots total?
+#
+#  Slots are numbered from 1 ...
+#  Drives are numbered from 0 ...
+#
 #
 #  If you need to an offline, refer to the drive as $4
 #    e.g.   mt -f $4 offline
@@ -112,7 +124,7 @@ check_parm_count() {
     pCountNeed=$2
     if test $pCount -lt $pCountNeed; then
 	echo "usage: mtx-changer ctl-device command [slot archive-device drive-index]"
-	echo "	Insufficient number of arguments arguments given."
+	echo "	Insufficient number of arguments given."
 	if test $pCount -lt 2; then
 	    echo "  Mimimum usage is first two arguments ..."
 	else
@@ -164,8 +176,8 @@ case $cmd in
 #
 # Increase the sleep time if you have a slow device
 # or remove the sleep and add the following:
-#     wait_for_drive $device
-      sleep 15
+#     sleep 15
+      wait_for_drive $device
       exit $rtn
       ;;
 
@@ -176,13 +188,14 @@ case $cmd in
 #     ${MTX} -f $ctl inventory
       ${MTX} -f $ctl status >${TMPFILE}
       rtn=$?
-      cat ${TMPFILE} | grep " *Storage Element [0-9]*:.*Full" | awk "{print \$3 \$4}" | sed "s/Full *\(:VolumeTag=\)*//"
-      cat ${TMPFILE} | grep "^Data Transfer Element [0-9]*:Full (Storage Element [0-9]" | awk '{printf "%s:%s\n",$7,$10}'
-      rm -f ${TMPFILE} >/dev/null 2>&1
+      cat ${TMPFILE} | grep " Storage Element [0-9]*:.*Full" | awk "{print \$3 \$4}" | sed "s/Full *\(:VolumeTag=\)*//"
 #
 # If you have a VXA PacketLoader and the above does not work, try
 #  turning it off and enabling the following line.
-#     ${MTX} -f $ctl status | grep " *Storage Element [0-9]*:.*Full" | sed "s/*Storage Element //" | sed "s/Full :VolumeTag=//"
+#     cat ${TMPFILE} | grep " *Storage Element [0-9]*:.*Full" | sed "s/ Storage Element //" | sed "s/Full :VolumeTag=//"
+#
+      cat ${TMPFILE} | grep "^Data Transfer Element [0-9]*:Full (Storage Element [0-9]" | awk '{printf "%s:%s\n",$7,$10}'
+      rm -f ${TMPFILE} >/dev/null 2>&1
       exit $rtn
       ;;
 

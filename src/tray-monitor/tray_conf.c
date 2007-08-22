@@ -1,4 +1,31 @@
 /*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
 *   Main configuration file parser for Bacula Tray Monitor.
 *
 *   Adapted from dird_conf.c
@@ -19,34 +46,7 @@
 *
 *     Nicolas Boichat, August MMIV
 *
-*     Version $Id: tray_conf.c 3843 2006-12-22 15:40:16Z kerns $
-*/
-/*
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
+*     Version $Id: tray_conf.c 4992 2007-06-07 14:46:43Z kerns $
 */
 
 #include "bacula.h"
@@ -132,6 +132,13 @@ static RES_ITEM store_items[] = {
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
+static RES_ITEM con_font_items[] = {
+   {"name",        store_name,     ITEM(con_font.hdr.name), 0, ITEM_REQUIRED, 0},
+   {"description", store_str,      ITEM(con_font.hdr.desc), 0, 0, 0},
+   {"font",        store_str,      ITEM(con_font.fontface), 0, 0, 0},
+   {NULL, NULL, {0}, 0, 0, 0}
+};
+
 /*
 * This is the master resource definition.
 * It must have one item for each of the resources.
@@ -146,6 +153,7 @@ RES_TABLE resources[] = {
    {"director",     dir_items,    R_DIRECTOR},
    {"client",       cli_items,    R_CLIENT},
    {"storage",      store_items,  R_STORAGE},
+   {"consolefont",   con_font_items, R_CONSOLE_FONT},
    {NULL,           NULL,         0}
 };
 
@@ -166,22 +174,26 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
    }
    switch (type) {
    case R_MONITOR:
-      sendit(sock, _("Monitor: name=%s FDtimeout=%s SDtimeout=%s\n"),
-   reshdr->name,
-   edit_uint64(res->res_monitor.FDConnectTimeout, ed1),
-   edit_uint64(res->res_monitor.SDConnectTimeout, ed2));
+      sendit(sock, _("Monitor: name=%s FDtimeout=%s SDtimeout=%s\n"), 
+             reshdr->name,
+             edit_uint64(res->res_monitor.FDConnectTimeout, ed1),
+             edit_uint64(res->res_monitor.SDConnectTimeout, ed2));
       break;
    case R_DIRECTOR:
       sendit(sock, _("Director: name=%s address=%s FDport=%d\n"),
-   res->res_dir.hdr.name, res->res_dir.address, res->res_dir.DIRport);
+             res->res_dir.hdr.name, res->res_dir.address, res->res_dir.DIRport);
       break;
    case R_CLIENT:
       sendit(sock, _("Client: name=%s address=%s FDport=%d\n"),
-   res->res_client.hdr.name, res->res_client.address, res->res_client.FDport);
+             res->res_client.hdr.name, res->res_client.address, res->res_client.FDport);
       break;
    case R_STORAGE:
       sendit(sock, _("Storage: name=%s address=%s SDport=%d\n"),
-   res->res_store.hdr.name, res->res_store.address, res->res_store.SDport);
+             res->res_store.hdr.name, res->res_store.address, res->res_store.SDport);
+      break;
+   case R_CONSOLE_FONT:
+      sendit(sock, _("ConsoleFont: name=%s font face=%s\n"),
+             reshdr->name, NPRT(res->con_font.fontface));
       break;
    default:
       sendit(sock, _("Unknown resource type %d in dump_resource.\n"), type);
@@ -222,23 +234,29 @@ void free_resource(RES *sres, int type)
       break;
    case R_CLIENT:
       if (res->res_client.address) {
-   free(res->res_client.address);
+         free(res->res_client.address);
       }
       if (res->res_client.password) {
-   free(res->res_client.password);
+         free(res->res_client.password);
       }
       break;
    case R_STORAGE:
       if (res->res_store.address) {
-   free(res->res_store.address);
+         free(res->res_store.address);
       }
       if (res->res_store.password) {
-   free(res->res_store.password);
+         free(res->res_store.password);
+      }
+      break;
+   case R_CONSOLE_FONT:
+      if (res->con_font.fontface) {
+         free(res->con_font.fontface);
       }
       break;
    default:
       printf(_("Unknown resource type %d in free_resource.\n"), type);
    }
+
    /* Common stuff again -- free the resource, recurse to next one */
    if (res) {
       free(res);
@@ -290,6 +308,7 @@ void save_resource(int type, RES_ITEM *items, int pass)
       case R_CLIENT:
       case R_STORAGE:
       case R_DIRECTOR:
+      case R_CONSOLE_FONT:
          break;
       default:
          Emsg1(M_ERROR, 0, _("Unknown resource type %d in save_resource.\n"), type);
@@ -325,6 +344,9 @@ void save_resource(int type, RES_ITEM *items, int pass)
       break;
    case R_STORAGE:
       size = sizeof(STORE);
+      break;
+   case R_CONSOLE_FONT:
+      size = sizeof(CONFONTRES);
       break;
    default:
       printf(_("Unknown resource type %d in save_resource.\n"), type);

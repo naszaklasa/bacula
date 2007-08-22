@@ -1,24 +1,14 @@
 /*
- * Bacula JCR Structure definition for Daemons and the Library
- *  This definition consists of a "Global" definition common
- *  to all daemons and used by the library routines, and a
- *  daemon specific part that is enabled with #defines.
- *
- * Kern Sibbald, Nov MM
- *
- *   Version $Id: jcr.h 4183 2007-02-15 18:57:55Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,6 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula JCR Structure definition for Daemons and the Library
+ *  This definition consists of a "Global" definition common
+ *  to all daemons and used by the library routines, and a
+ *  daemon specific part that is enabled with #defines.
+ *
+ * Kern Sibbald, Nov MM
+ *
+ *   Version $Id: jcr.h 5066 2007-06-23 09:58:34Z kerns $
+ */
 
 
 #ifndef __JCR_H_
@@ -173,6 +173,8 @@ public:
    MSGS *jcr_msgs;                    /* Copy of message resource -- actually used */
    uint32_t ClientId;                 /* Client associated with Job */
    char *where;                       /* prefix to restore files to */
+   char *RegexWhere;                  /* file relocation in restore */
+   alist *where_bregexp;              /* BREGEXP alist for path manipulation */
    int cached_pnl;                    /* cached path length */
    POOLMEM *cached_path;              /* cached path */
    bool prefix_links;                 /* Prefix links with Where path */
@@ -281,8 +283,8 @@ public:
    uint32_t StartBlock;
    uint32_t EndBlock;
    pthread_t heartbeat_id;            /* id of heartbeat thread */
-   volatile BSOCK *hb_bsock;          /* duped SD socket */
-   volatile BSOCK *hb_dir_bsock;      /* duped DIR socket */
+   BSOCK *hb_bsock;                   /* duped SD socket */
+   BSOCK *hb_dir_bsock;               /* duped DIR socket */
    alist *RunScripts;                 /* Commands to run before and after job */
    bool pki_sign;                     /* Enable PKI Signatures? */
    bool pki_encrypt;                  /* Enable PKI Encryption? */

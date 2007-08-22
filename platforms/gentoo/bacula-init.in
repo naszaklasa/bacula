@@ -6,7 +6,7 @@
 
 depend() {
 	need net
-	use @DB_NAME@
+	use @DB_TYPE@
 }
 
 opts="test"
@@ -25,7 +25,7 @@ start() {
 	OPTIONS=''
 	if [ "${SD_USER}" != '' ]; then
 		OPTIONS="${OPTIONS} -u ${SD_USER}"
- 	fi
+	fi
 										   
 	if [ "${SD_GROUP}" != '' ]; then
 		OPTIONS="${OPTIONS} -g ${SD_GROUP}"
@@ -38,7 +38,7 @@ start() {
 	OPTIONS=''
 	if [ "${FD_USER}" != '' ]; then
 		OPTIONS="${OPTIONS} -u ${FD_USER}"
- 	fi
+	fi
 										   
 	if [ "${FD_GROUP}" != '' ]; then
 		OPTIONS="${OPTIONS} -g ${FD_GROUP}"
@@ -52,7 +52,7 @@ start() {
 	OPTIONS=''
 	if [ "${DIR_USER}" != '' ]; then
 		OPTIONS="${OPTIONS} -u ${DIR_USER}"
- 	fi
+	fi
 										   
 	if [ "${DIR_GROUP}" != '' ]; then
 		OPTIONS="${OPTIONS} -g ${DIR_GROUP}"

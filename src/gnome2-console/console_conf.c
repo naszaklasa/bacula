@@ -19,7 +19,7 @@
  *
  *     Kern Sibbald, January MM, September MM
  *
- *     Version $Id: console_conf.c 3843 2006-12-22 15:40:16Z kerns $
+ *     Version $Id: console_conf.c 4992 2007-06-07 14:46:43Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -30,8 +30,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -108,7 +108,6 @@ static RES_ITEM con_font_items[] = {
    {"name",        store_name,     ITEM(con_font.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(con_font.hdr.desc), 0, 0, 0},
    {"font",        store_str,      ITEM(con_font.fontface), 0, 0, 0},
-   {"requiressl",  store_bit,    ITEM(con_font.require_ssl), 1, ITEM_DEFAULT, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 

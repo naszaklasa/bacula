@@ -4297,8 +4297,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++++  *  Basic tasks done here:
 +++++++  *      Handle Catalog services.
 +++++++  *
-+++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++++  */
 +++++++ /*
 +++++++    Copyright (C) 2001-2005 Kern Sibbald
@@ -4321,8 +4321,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++++  *
 +++++++  *     Kern Sibbald, July MMII
 +++++++  *
-+++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++++  */
 +++++++ /*
 +++++++    Copyright (C) 2002-2005 Kern Sibbald
@@ -4361,8 +4361,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++++  *
 +++++++  *     Kern Sibbald, October MMI
 +++++++  *
-+++++++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++++  */
 +++++++ /*
 +++++++    Copyright (C) 2001-2005 Kern Sibbald
@@ -4513,8 +4513,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++++  *
 +++++++  *   Written by Preben 'Peppe' Guldberg, December MMIV
 +++++++  *
-+++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++++  */
 +++++++ /*
 +++++++    Copyright (C) 2004-2005 Kern Sibbald
@@ -4585,8 +4585,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++++  *
 +++++++  *   Kern Sibbald, August MMII
 +++++++  *                            
-+++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++++  */
 +++++++ /*
 +++++++    Copyright (C) 2002-2005 Kern Sibbald
@@ -4617,8 +4617,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++++  *
 +++++++  *     Nicolas Boichat, August MMIV
 +++++++  *
-+++++++- *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++++- *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++++  */
 +++++++ 
 +++++++ /*
@@ -4687,8 +4687,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++++  *  Basic tasks done here:
 ++++++  *      Handle Catalog services.
 ++++++  *
-++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++++  */
 ++++++ /*
 ++++++    Copyright (C) 2001-2005 Kern Sibbald
@@ -4711,8 +4711,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++++  *
 ++++++  *     Kern Sibbald, July MMII
 ++++++  *
-++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++++  */
 ++++++ /*
 ++++++    Copyright (C) 2002-2005 Kern Sibbald
@@ -4751,8 +4751,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++++  *
 ++++++  *     Kern Sibbald, October MMI
 ++++++  *
-++++++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++++  */
 ++++++ /*
 ++++++    Copyright (C) 2001-2005 Kern Sibbald
@@ -4903,8 +4903,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++++  *
 ++++++  *   Written by Preben 'Peppe' Guldberg, December MMIV
 ++++++  *
-++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++++  */
 ++++++ /*
 ++++++    Copyright (C) 2004-2005 Kern Sibbald
@@ -4975,8 +4975,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++++  *
 ++++++  *   Kern Sibbald, August MMII
 ++++++  *                            
-++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++++  */
 ++++++ /*
 ++++++    Copyright (C) 2002-2005 Kern Sibbald
@@ -5080,8 +5080,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++++  *
 ++++++  *     Nicolas Boichat, August MMIV
 ++++++  *
-++++++- *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++++- *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++++  */
 ++++++ 
 ++++++ /*
@@ -5150,8 +5150,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++  *  Basic tasks done here:
 +++++  *      Handle Catalog services.
 +++++  *
-+++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++  */
 +++++ /*
 +++++    Copyright (C) 2001-2005 Kern Sibbald
@@ -5174,8 +5174,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++  *
 +++++  *     Kern Sibbald, July MMII
 +++++  *
-+++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++  */
 +++++ /*
 +++++    Copyright (C) 2002-2005 Kern Sibbald
@@ -5215,8 +5215,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++  *
 +++++  *     Kern Sibbald, October MMI
 +++++  *
-+++++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++  */
 +++++ /*
 +++++    Copyright (C) 2001-2005 Kern Sibbald
@@ -5367,8 +5367,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++  *
 +++++  *   Written by Preben 'Peppe' Guldberg, December MMIV
 +++++  *
-+++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++  */
 +++++ /*
 +++++    Copyright (C) 2004-2005 Kern Sibbald
@@ -5439,8 +5439,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++  *
 +++++  *   Kern Sibbald, August MMII
 +++++  *                            
-+++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++  */
 +++++ /*
 +++++    Copyright (C) 2002-2005 Kern Sibbald
@@ -5544,8 +5544,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++++  *
 +++++  *     Nicolas Boichat, August MMIV
 +++++  *
-+++++- *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++++- *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++++  */
 +++++ 
 +++++ /*
@@ -5614,8 +5614,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++  *  Basic tasks done here:
 ++++  *      Handle Catalog services.
 ++++  *
-++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++  */
 ++++ /*
 ++++    Copyright (C) 2001-2005 Kern Sibbald
@@ -5638,8 +5638,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++  *
 ++++  *     Kern Sibbald, July MMII
 ++++  *
-++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++  */
 ++++ /*
 ++++    Copyright (C) 2002-2005 Kern Sibbald
@@ -5679,8 +5679,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++  *
 ++++  *     Kern Sibbald, October MMI
 ++++  *
-++++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++  */
 ++++ /*
 ++++    Copyright (C) 2001-2005 Kern Sibbald
@@ -5831,8 +5831,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++  *
 ++++  *   Written by Preben 'Peppe' Guldberg, December MMIV
 ++++  *
-++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++  */
 ++++ /*
 ++++    Copyright (C) 2004-2005 Kern Sibbald
@@ -5903,8 +5903,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++  *
 ++++  *   Kern Sibbald, August MMII
 ++++  *                            
-++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++  */
 ++++ /*
 ++++    Copyright (C) 2002-2005 Kern Sibbald
@@ -6008,8 +6008,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++  *
 ++++  *     Nicolas Boichat, August MMIV
 ++++  *
-++++- *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++++- *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++++  */
 ++++ 
 ++++ /*
@@ -6078,8 +6078,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++  *  Basic tasks done here:
 +++  *      Handle Catalog services.
 +++  *
-+++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++  */
 +++ /*
 +++    Copyright (C) 2001-2005 Kern Sibbald
@@ -6102,8 +6102,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++  *
 +++  *     Kern Sibbald, July MMII
 +++  *
-+++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++  */
 +++ /*
 +++    Copyright (C) 2002-2005 Kern Sibbald
@@ -6143,8 +6143,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++  *
 +++  *     Kern Sibbald, October MMI
 +++  *
-+++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++  */
 +++ /*
 +++    Copyright (C) 2001-2005 Kern Sibbald
@@ -6295,8 +6295,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++  *
 +++  *   Written by Preben 'Peppe' Guldberg, December MMIV
 +++  *
-+++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++  */
 +++ /*
 +++    Copyright (C) 2004-2005 Kern Sibbald
@@ -6367,8 +6367,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++  *
 +++  *   Kern Sibbald, August MMII
 +++  *                            
-+++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++  */
 +++ /*
 +++    Copyright (C) 2002-2005 Kern Sibbald
@@ -6472,8 +6472,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +++  *
 +++  *     Nicolas Boichat, August MMIV
 +++  *
-+++- *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++++- *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +++  */
 +++ 
 +++ /*
@@ -6542,8 +6542,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++  *  Basic tasks done here:
 ++  *      Handle Catalog services.
 ++  *
-++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++  */
 ++ /*
 ++    Copyright (C) 2001-2005 Kern Sibbald
@@ -6566,8 +6566,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++  *
 ++  *     Kern Sibbald, July MMII
 ++  *
-++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++  */
 ++ /*
 ++    Copyright (C) 2002-2005 Kern Sibbald
@@ -6607,8 +6607,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++  *
 ++  *     Kern Sibbald, October MMI
 ++  *
-++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++  */
 ++ /*
 ++    Copyright (C) 2001-2005 Kern Sibbald
@@ -6759,8 +6759,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++  *
 ++  *   Written by Preben 'Peppe' Guldberg, December MMIV
 ++  *
-++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++  */
 ++ /*
 ++    Copyright (C) 2004-2005 Kern Sibbald
@@ -6831,8 +6831,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++  *
 ++  *   Kern Sibbald, August MMII
 ++  *                            
-++- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++  */
 ++ /*
 ++    Copyright (C) 2002-2005 Kern Sibbald
@@ -6936,8 +6936,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++  *
 ++  *     Nicolas Boichat, August MMIV
 ++  *
-++- *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+++ *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+++- *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++++ *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 ++  */
 ++ 
 ++ /*
@@ -7011,8 +7011,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 ++++ src/version.h	22 Nov 2005 10:50:55 -0000	1.554.2.15
 +@@ -1,11 +1,11 @@
 + /*
-+- *  Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *  Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *  Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *  Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  */
 + 
 + #undef  VERSION
@@ -7037,8 +7037,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *  Basic tasks done here:
 +  *      Handle Catalog services.
 +  *
-+- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  */
 + /*
 +    Copyright (C) 2001-2005 Kern Sibbald
@@ -7062,8 +7062,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *
 +  *     Kern Sibbald, July MMII
 +  *
-+- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  */
 + /*
 +    Copyright (C) 2002-2005 Kern Sibbald
@@ -7088,8 +7088,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *
 +  *     Kern Sibbald, December MMI
 +  *
-+- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  */
 + /*
 +    Copyright (C) 2001-2005 Kern Sibbald
@@ -7114,8 +7114,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *
 +  *     Kern Sibbald, October MMI
 +  *
-+- *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  */
 + /*
 +    Copyright (C) 2001-2005 Kern Sibbald
@@ -7251,8 +7251,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *
 +  *     Kern Sibbald, September MM
 +  *
-+- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  */
 + /*
 +    Copyright (C) 2000-2005 Kern Sibbald
@@ -7277,8 +7277,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *
 +  *   Written by Preben 'Peppe' Guldberg, December MMIV
 +  *
-+- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  */
 + /*
 +    Copyright (C) 2004-2005 Kern Sibbald
@@ -7312,8 +7312,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *
 +  *    Kern Sibbald, April MMIII
 +  *
-+- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  *
 +  */
 + /*
@@ -7345,8 +7345,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +   * Originally written by Kern Sibbald for inclusion in apcupsd,
 +   *  but heavily modified for Bacula
 +   *
-+-  *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++  *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++-  *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++  *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +   */
 + 
 + #include "bacula.h"
@@ -7370,8 +7370,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *
 +  *   Kern Sibbald, August MMII
 +  *                            
-+- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  */
 + /*
 +    Copyright (C) 2002-2005 Kern Sibbald
@@ -7403,8 +7403,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *
 +  *     Kern Sibbald, May MMIII
 +  *
-+- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  *
 +  */
 + /*
@@ -7458,8 +7458,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *
 +  *     Kern Sibbald, March MM
 +  *
-+- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  */
 + /*
 +    Copyright (C) 2000-2005 Kern Sibbald
@@ -7496,8 +7496,8 @@ diff -N patches/1.38.1-to-1.38.2.patch
 +  *
 +  *     Nicolas Boichat, August MMIV
 +  *
-+- *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-++ *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
++- *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
+++ *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
 +  */
 + 
 + /*
@@ -7571,8 +7571,8 @@ diff -u -r1.554.2.14 -r1.554.2.15
 +++ src/version.h	22 Nov 2005 10:50:55 -0000	1.554.2.15
 @@ -1,11 +1,11 @@
  /*
-- *  Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *  Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *  Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *  Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   */
  
  #undef  VERSION
@@ -7597,8 +7597,8 @@ diff -u -r1.77.2.1 -r1.77.2.2
   *  Basic tasks done here:
   *      Handle Catalog services.
   *
-- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   */
  /*
     Copyright (C) 2001-2005 Kern Sibbald
@@ -7622,8 +7622,8 @@ diff -u -r1.101.2.1 -r1.101.2.2
   *
   *     Kern Sibbald, July MMII
   *
-- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   */
  /*
     Copyright (C) 2002-2005 Kern Sibbald
@@ -7648,8 +7648,8 @@ diff -u -r1.71 -r1.71.2.1
   *
   *     Kern Sibbald, December MMI
   *
-- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   */
  /*
     Copyright (C) 2001-2005 Kern Sibbald
@@ -7674,8 +7674,8 @@ diff -u -r1.65.2.1 -r1.65.2.2
   *
   *     Kern Sibbald, October MMI
   *
-- *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *   Version  $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *   Version  $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   */
  /*
     Copyright (C) 2001-2005 Kern Sibbald
@@ -7811,8 +7811,8 @@ diff -u -r1.7 -r1.7.2.1
   *
   *     Kern Sibbald, September MM
   *
-- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   */
  /*
     Copyright (C) 2000-2005 Kern Sibbald
@@ -7837,8 +7837,8 @@ diff -u -r1.10.2.1 -r1.10.2.2
   *
   *   Written by Preben 'Peppe' Guldberg, December MMIV
   *
-- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   */
  /*
     Copyright (C) 2004-2005 Kern Sibbald
@@ -7872,8 +7872,8 @@ diff -u -r1.40 -r1.40.2.1
   *
   *    Kern Sibbald, April MMIII
   *
-- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   *
   */
  /*
@@ -7905,8 +7905,8 @@ diff -u -r1.39 -r1.39.2.1
    * Originally written by Kern Sibbald for inclusion in apcupsd,
    *  but heavily modified for Bacula
    *
--  *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+  *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+-  *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++  *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
    */
  
  #include "bacula.h"
@@ -7930,8 +7930,8 @@ diff -u -r1.47.2.3 -r1.47.2.4
   *
   *   Kern Sibbald, August MMII
   *                            
-- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   */
  /*
     Copyright (C) 2002-2005 Kern Sibbald
@@ -7963,8 +7963,8 @@ diff -u -r1.44.2.1 -r1.44.2.2
   *
   *     Kern Sibbald, May MMIII
   *
-- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   *
   */
  /*
@@ -8018,8 +8018,8 @@ diff -u -r1.76 -r1.76.2.1
   *
   *     Kern Sibbald, March MM
   *
-- *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *   Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *   Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   */
  /*
     Copyright (C) 2000-2005 Kern Sibbald
@@ -8056,8 +8056,8 @@ diff -u -r1.25.2.1 -r1.25.2.2
   *
   *     Nicolas Boichat, August MMIV
   *
-- *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
-+ *     Version $Id: 1.38.1-to-1.38.2.patch 3982 2007-01-12 10:23:14Z kerns $
+- *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
++ *     Version $Id: 1.38.1-to-1.38.2.patch 3983 2007-01-12 10:23:46Z kerns $
   */
  
  /*

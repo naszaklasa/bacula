@@ -1,22 +1,14 @@
 /*
- *
- *   Bacula Director -- User Agent Server
- *
- *     Kern Sibbald, September MM
- *
- *    Version $Id: ua_server.c 3668 2006-11-21 13:20:11Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- User Agent Server
+ *
+ *     Kern Sibbald, September MM
+ *
+ *    Version $Id: ua_server.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -69,7 +69,7 @@ void start_UA_server(dlist *addrs)
 
    if ((status=pthread_create(&thid, NULL, connect_thread, (void *)myaddrs)) != 0) {
       berrno be;
-      Emsg1(M_ABORT, 0, _("Cannot create UA thread: %s\n"), be.strerror(status));
+      Emsg1(M_ABORT, 0, _("Cannot create UA thread: %s\n"), be.bstrerror(status));
    }
    started = TRUE;
    return;
@@ -80,8 +80,8 @@ void *connect_thread(void *arg)
 {
    pthread_detach(pthread_self());
 
-   /* Permit 10 console connections */
-   bnet_thread_server((dlist*)arg, 10, &ua_workq, handle_UA_client_request);
+   /* Permit 20 console connections */
+   bnet_thread_server((dlist*)arg, 20, &ua_workq, handle_UA_client_request);
    return NULL;
 }
 
@@ -121,21 +121,23 @@ static void *handle_UA_client_request(void *arg)
    int stat;
    UAContext *ua;
    JCR *jcr;
+   BSOCK *user = (BSOCK *)arg;
 
    pthread_detach(pthread_self());
 
-   jcr = new_control_jcr("*Console*", JT_CONSOLE);
+   jcr = new_control_jcr("-Console-", JT_CONSOLE);
 
    ua = new_ua_context(jcr);
-   ua->UA_sock = (BSOCK *)arg;
+   ua->UA_sock = user;
 
-   bnet_recv(ua->UA_sock);          /* Get first message */
+   user->recv();             /* Get first message */
    if (!authenticate_user_agent(ua)) {
       goto getout;
    }
 
    while (!ua->quit) {
-      stat = bnet_recv(ua->UA_sock);
+      if (ua->api) user->signal(BNET_MAIN_PROMPT);
+      stat = user->recv();
       if (stat >= 0) {
          pm_strcpy(ua->cmd, ua->UA_sock->msg);
          parse_ua_args(ua);
@@ -145,22 +147,26 @@ static void *handle_UA_client_request(void *arg)
             do_a_command(ua, ua->cmd);
          }
          if (!ua->quit) {
-            if (acl_access_ok(ua, Command_ACL, "messages", 8)) {
+            if (console_msg_pending && acl_access_ok(ua, Command_ACL, "messages", 8)) {
                if (ua->auto_display_messages) {
                   pm_strcpy(ua->cmd, "messages");
                   qmessagescmd(ua, ua->cmd);
-                  ua->user_notified_msg_pending = FALSE;
+                  ua->user_notified_msg_pending = false;
                } else if (!ua->gui && !ua->user_notified_msg_pending && console_msg_pending) {
-                  bsendmsg(ua, _("You have messages.\n"));
-                  ua->user_notified_msg_pending = TRUE;
+                  if (ua->api) {
+                     user->signal(BNET_MSGS_PENDING);
+                  } else {
+                     bsendmsg(ua, _("You have messages.\n"));
+                  }
+                  ua->user_notified_msg_pending = true;
                }
             }
-            bnet_sig(ua->UA_sock, BNET_EOD); /* send end of command */
+            if (!ua->api) user->signal(BNET_EOD);     /* send end of command */
          }
-      } else if (is_bnet_stop(ua->UA_sock)) {
+      } else if (is_bnet_stop(user)) {
          ua->quit = true;
       } else { /* signal */
-         bnet_sig(ua->UA_sock, BNET_POLL);
+         user->signal(BNET_POLL);
       }
    }
 

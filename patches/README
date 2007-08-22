@@ -18,9 +18,9 @@ note those, but cannot guarantee it.
 
 
 It contains also interesting/experimental patches from users. For examples,
- - Media statistics
- - Use of RecyclePoolId
- - Batch mode for mysql/sqlite/postgresql
+ - SpoolSize defined per job (backup tunning)
+ - fix for maxwaittime option
+ - new maxschedruntime option
  - etc..
 
-You can find them on ebl sub-directory. 
+You can find them on testing sub-directory. 

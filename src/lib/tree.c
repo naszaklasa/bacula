@@ -1,20 +1,14 @@
 /*
- * Directory tree build/traverse routines
- *
- *    Kern Sibbald, June MMII
- *
-*/
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,6 +24,12 @@
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
+ * Directory tree build/traverse routines
+ *
+ *    Kern Sibbald, June MMII
+ *
 */
 
 
@@ -294,7 +294,7 @@ static TREE_NODE *search_and_insert_tree_node(char *fname, int type,
    TREE_NODE *node, *found_node;
    node = new_tree_node(root);
    node->fname = fname;
-   found_node = (TREE_NODE *)parent->child.binary_insert(node, node_compare);
+   found_node = (TREE_NODE *)parent->child.insert(node, node_compare);
    if (found_node != node) {          /* already in list */
       free_tree_node(root);           /* free node allocated above */
       found_node->inserted = false;
@@ -485,7 +485,8 @@ void FillDirectoryTree(char *path, TREE_ROOT *root, TREE_NODE *parent)
       bstrncpy(file, dir->d_name, sizeof(file));
       snprintf(pathbuf, MAXPATHLEN-1, "%s/%s", path, file);
       if (lstat(pathbuf, &statbuf) < 0) {
-         printf("lstat() failed. ERR=%s\n", strerror(errno));
+         berrno be;
+         printf("lstat() failed. ERR=%s\n", be.bstrerror(errno));
          continue;
       }
 //      printf("got file=%s, pathbuf=%s\n", file, pathbuf);

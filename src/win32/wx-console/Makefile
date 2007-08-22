@@ -64,17 +64,18 @@ CONSOLE_LIBS = \
 
 .PHONY: all clean
 
-all: $(BINDIR)/wx-console.exe
+all: $(BINDIR)/bwx-console.exe
 
 clean:
 	$(call clean_obj,$(ALL_OBJS))
+	$(call clean_exe,$(BINDIR)/bwx-console.exe)
 	$(call clean_exe,$(BINDIR)/wx-console.exe)
 
 #
 # Rules
 #
 
-$(BINDIR)/wx-console.exe: $(CONSOLE_OBJS) $(LIBS_BACULA)
+$(BINDIR)/bwx-console.exe: $(CONSOLE_OBJS) $(LIBS_BACULA)
 	$(call link_winapp,$(CONSOLE_LIBS))
 
 $(OBJDIR)/wx-console_private.res: wx-console_private.rc

@@ -1,10 +1,4 @@
 /*
- * Append code for Storage daemon
- *  Kern Sibbald, May MM
- *
- *  Version $Id: append.c 4183 2007-02-15 18:57:55Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
@@ -13,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,6 +25,12 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Append code for Storage daemon
+ *  Kern Sibbald, May MM
+ *
+ *  Version $Id: append.c 5112 2007-06-28 11:57:03Z kerns $
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -76,7 +76,7 @@ bool do_append_data(JCR *jcr)
 
    ds = fd_sock;
 
-   if (!bnet_set_buffer_size(ds, dcr->device->max_network_buffer_size, BNET_SETBUF_WRITE)) {
+   if (!ds->set_buffer_size(dcr->device->max_network_buffer_size, BNET_SETBUF_WRITE)) {
       set_jcr_job_status(jcr, JS_ErrorTerminated);
       Jmsg0(jcr, M_FATAL, 0, _("Unable to set network buffer size.\n"));
       return false;
@@ -116,10 +116,10 @@ bool do_append_data(JCR *jcr)
    }
 
    /* Tell File daemon to send data */
-   if (!bnet_fsend(fd_sock, OK_data)) {
+   if (!fd_sock->fsend(OK_data)) {
       berrno be;
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to FD. ERR=%s\n"),
-            be.strerror(fd_sock->b_errno));
+            be.bstrerror(fd_sock->b_errno));
       ok = false;
    }
 
@@ -156,7 +156,7 @@ bool do_append_data(JCR *jcr)
             break;                    /* end of data */
          }
          Jmsg1(jcr, M_FATAL, 0, _("Error reading data header from FD. ERR=%s\n"),
-               bnet_strerror(ds));
+               ds->bstrerror());
          ok = false;
          break;
       }
@@ -236,17 +236,17 @@ bool do_append_data(JCR *jcr)
              crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
             if (!jcr->no_attributes) {
                if (are_attributes_spooled(jcr)) {
-                  jcr->dir_bsock->spool = true;
+                  jcr->dir_bsock->set_spooling();
                }
                Dmsg0(850, "Send attributes to dir.\n");
                if (!dir_update_file_attributes(dcr, &rec)) {
-                  jcr->dir_bsock->spool = false;
+                  jcr->dir_bsock->clear_spooling();
                   Jmsg(jcr, M_FATAL, 0, _("Error updating file attributes. ERR=%s\n"),
-                     bnet_strerror(jcr->dir_bsock));
+                     jcr->dir_bsock->bstrerror());
                   ok = false;
                   break;
                }
-               jcr->dir_bsock->spool = false;
+               jcr->dir_bsock->clear_spooling();
             }
          }
          Dmsg0(650, "Enter bnet_get\n");
@@ -254,9 +254,9 @@ bool do_append_data(JCR *jcr)
       Dmsg1(650, "End read loop with FD. Stat=%d\n", n);
 
       if (is_bnet_error(ds)) {
-         Dmsg1(350, "Network read error from FD. ERR=%s\n", bnet_strerror(ds));
+         Dmsg1(350, "Network read error from FD. ERR=%s\n", ds->bstrerror());
          Jmsg1(jcr, M_FATAL, 0, _("Network error on data channel. ERR=%s\n"),
-               bnet_strerror(ds));
+               ds->bstrerror());
          ok = false;
          break;
       }
@@ -266,7 +266,7 @@ bool do_append_data(JCR *jcr)
    set_jcr_job_status(jcr, ok?JS_Terminated:JS_ErrorTerminated);
 
    /* Terminate connection with FD */
-   bnet_fsend(ds, OK_append);
+   ds->fsend(OK_append);
    do_fd_commands(jcr);               /* finish dialog with FD */
 
 
@@ -305,11 +305,10 @@ bool do_append_data(JCR *jcr)
          Dmsg0(100, _("Set ok=FALSE after write_block_to_device.\n"));
          ok = false;
       }
+      if (dev->VolCatInfo.VolCatName[0] == 0) {
+         Pmsg0(000, _("NULL Volume name. This shouldn't happen!!!\n"));
+      }
    }
-   if (dev->VolCatInfo.VolCatName[0] == 0) {
-      Pmsg0(000, _("NULL Volume name. This shouldn't happen!!!\n"));
-   }
-
 
 
    if (!ok) {

@@ -1,11 +1,4 @@
 /*
- * Director specific configuration and defines
- *
- *     Kern Sibbald, Feb MM
- *
- *    Version $Id: dird_conf.h 4116 2007-02-06 14:37:57Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
@@ -14,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Director specific configuration and defines
+ *
+ *     Kern Sibbald, Feb MM
+ *
+ *    Version $Id: dird_conf.h 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 /* NOTE:  #includes at the end of this file */
 
@@ -116,6 +116,7 @@ public:
    uint32_t MaxConcurrentJobs;        /* Max concurrent jobs for whole director */
    utime_t FDConnectTimeout;          /* timeout for connect in seconds */
    utime_t SDConnectTimeout;          /* timeout in seconds */
+   utime_t heartbeat_interval;        /* Interval to send heartbeats */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Server Certificate File */
@@ -245,6 +246,7 @@ public:
    int   FDport;                      /* Where File daemon listens */
    utime_t FileRetention;             /* file retention period in seconds */
    utime_t JobRetention;              /* job retention period in seconds */
+   utime_t heartbeat_interval;        /* Interval to send heartbeats */
    char *address;
    char *password;
    CAT *catalog;                      /* Catalog resource */
@@ -254,6 +256,7 @@ public:
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
    char *tls_keyfile;                 /* TLS Client Key File */
+   alist *tls_allowed_cns;            /* TLS Allowed Clients */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
    bool tls_enable;                   /* Enable TLS */
    bool tls_require;                  /* Require TLS */
@@ -292,6 +295,7 @@ public:
    bool enabled;                      /* Set if device is enabled */
    bool  autochanger;                 /* set if autochanger */
    int64_t StorageId;                 /* Set from Storage DB record */
+   utime_t heartbeat_interval;        /* Interval to send heartbeats */
    int  drives;                       /* number of drives in autochanger */
 
    /* Methods */
@@ -355,6 +359,11 @@ public:
    int   Priority;                    /* Job priority */
    int   RestoreJobId;                /* What -- JobId to restore */
    char *RestoreWhere;                /* Where on disk to restore -- directory */
+   char *RegexWhere;                  /* RegexWhere option */
+   char *strip_prefix;                /* remove prefix from filename  */
+   char *add_prefix;                  /* add prefix to filename  */
+   char *add_suffix;                  /* add suffix to filename -- .old */
+   bool  where_use_regexp;            /* true if RestoreWhere is a BREGEXP */
    char *RestoreBootstrap;            /* Bootstrap file */
    alist *RunScripts;                 /* Run {client} program {after|before} Job */
    union {
@@ -523,7 +532,7 @@ public:
    bool  recycle_current_volume;      /* attempt recycle of current volume */
    bool  AutoPrune;                   /* default for pool auto prune */
    bool  Recycle;                     /* default for media recycle yes/no */
-
+   POOL  *RecyclePool;                /* RecyclePool destination when media is purged */
    /* Methods */
    char *name() const;
 };
@@ -585,3 +594,10 @@ public:
    char wom[nbytes_for_bits(5)];      /* week of month */
    char woy[nbytes_for_bits(54)];     /* week of year */
 };
+
+#define GetPoolResWithName(x) ((POOL *)GetResWithName(R_POOL, (x)))
+#define GetStoreResWithName(x) ((STORE *)GetResWithName(R_STORAGE, (x)))
+#define GetClientResWithName(x) ((CLIENT *)GetResWithName(R_CLIENT, (x)))
+#define GetJobResWithName(x) ((JOB *)GetResWithName(R_JOB, (x)))
+#define GetFileSetResWithName(x) ((FILESET *)GetResWithName(R_FILESET, (x)))
+#define GetCatalogResWithName(x) ((CAT *)GetResWithName(R_CATALOG, (x)))

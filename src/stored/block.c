@@ -1,14 +1,4 @@
 /*
- *
- *   block.c -- tape block handling functions
- *
- *              Kern Sibbald, March MMI
- *                 added BB02 format October MMII
- *
- *   Version $Id: block.c 4146 2007-02-08 10:56:41Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
@@ -17,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,6 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   block.c -- tape block handling functions
+ *
+ *              Kern Sibbald, March MMI
+ *                 added BB02 format October MMII
+ *
+ *   Version $Id: block.c 5114 2007-06-29 12:12:26Z kerns $
+ *
+ */
 
 
 #include "bacula.h"
@@ -345,8 +345,9 @@ bool write_block_to_device(DCR *dcr)
       return stat;
    }
 
-   if (!dcr->dev_locked) {            /* device already locked? */
-      lock_device(dev);               /* no, lock it */
+   if (!dcr->is_dev_locked()) {        /* device already locked? */
+      /* note, do not change this to dcr->r_dlock */
+      dev->r_dlock();                  /* no, lock it */
    }
 
    /*
@@ -387,8 +388,9 @@ bool write_block_to_device(DCR *dcr)
    }
 
 bail_out:
-   if (!dcr->dev_locked) {            /* did we lock dev above? */
-      unlock_device(dev);             /* unlock it now */
+   if (!dcr->is_dev_locked()) {        /* did we lock dev above? */
+      /* note, do not change this to dcr->dunlock */
+      dev->dunlock();                  /* unlock it now */
    }
    return stat;
 }
@@ -440,7 +442,7 @@ bool write_block_to_dev(DCR *dcr)
    if (wlen != block->buf_len) {
       uint32_t blen;                  /* current buffer length */
 
-      Dmsg2(200, "binbuf=%d buf_len=%d\n", block->binbuf, block->buf_len);
+      Dmsg2(250, "binbuf=%d buf_len=%d\n", block->binbuf, block->buf_len);
       blen = wlen;
 
       /* Adjust write size to min/max for tapes only */
@@ -471,7 +473,7 @@ bool write_block_to_dev(DCR *dcr)
    if (hit_max1 || hit_max2) {
       char ed1[50];
       uint64_t max_cap;
-      Dmsg0(10, "==== Output bytes Triggered medium max capacity.\n");
+      Dmsg0(100, "==== Output bytes Triggered medium max capacity.\n");
       if (hit_max1) {
          max_cap = dev->max_volume_size;
       } else {
@@ -533,15 +535,12 @@ bool write_block_to_dev(DCR *dcr)
       if (retry > 0 && stat == -1 && errno == EBUSY) {
          berrno be;
          Dmsg4(100, "===== write retry=%d stat=%d errno=%d: ERR=%s\n",
-               retry, stat, errno, be.strerror());
+               retry, stat, errno, be.bstrerror());
          bmicrosleep(5, 0);    /* pause a bit if busy or lots of errors */
          dev->clrerror(-1);
       }
-      if (dev->is_tape()) {
-         stat = tape_write(dev->fd, block->buf, (size_t)wlen);
-      } else {
-         stat = write(dev->fd, block->buf, (size_t)wlen);
-      }
+      stat = dev->write(block->buf, (size_t)wlen);
+
    } while (stat == -1 && (errno == EBUSY || errno == EIO) && retry++ < 3);
 
 #ifdef DEBUG_BLOCK_ZEROING
@@ -566,7 +565,7 @@ bool write_block_to_dev(DCR *dcr)
          if (dev->dev_errno != ENOSPC) {
             dev->VolCatInfo.VolCatErrors++;
             Jmsg4(jcr, M_ERROR, 0, _("Write error at %u:%u on device %s. ERR=%s.\n"),
-               dev->file, dev->block_num, dev->print_name(), be.strerror());
+               dev->file, dev->block_num, dev->print_name(), be.bstrerror());
          }
       } else {
         dev->dev_errno = ENOSPC;            /* out of space */
@@ -577,7 +576,7 @@ bool write_block_to_dev(DCR *dcr)
             dev->file, dev->block_num, dev->print_name(), wlen, stat);
       }
       Dmsg7(100, "=== Write error. fd=%d size=%u rtn=%d dev_blk=%d blk_blk=%d errno=%d: ERR=%s\n",
-         dev->fd, wlen, stat, dev->block_num, block->BlockNumber, 
+         dev->fd(), wlen, stat, dev->block_num, block->BlockNumber, 
          dev->dev_errno, strerror(dev->dev_errno));
 
       ok = terminate_writing_volume(dcr);
@@ -649,20 +648,20 @@ static void reread_last_block(DCR *dcr)
          berrno be;
          ok = false;
          Jmsg(jcr, M_ERROR, 0, _("Backspace file at EOT failed. ERR=%s\n"), 
-              be.strerror(dev->dev_errno));
+              be.bstrerror(dev->dev_errno));
       }
       if (ok && dev->has_cap(CAP_TWOEOF) && !dev->bsf(1)) {
          berrno be;
          ok = false;
          Jmsg(jcr, M_ERROR, 0, _("Backspace file at EOT failed. ERR=%s\n"), 
-              be.strerror(dev->dev_errno));
+              be.bstrerror(dev->dev_errno));
       }
       /* Backspace over record */
       if (ok && !dev->bsr(1)) {
          berrno be;
          ok = false;
          Jmsg(jcr, M_ERROR, 0, _("Backspace record at EOT failed. ERR=%s\n"), 
-              be.strerror(dev->dev_errno));
+              be.bstrerror(dev->dev_errno));
          /*
           *  On FreeBSD systems, if the user got here, it is likely that his/her
           *    tape drive is "frozen".  The correct thing to do is a
@@ -862,7 +861,7 @@ static bool do_dvd_size_checks(DCR *dcr)
    
    if (!dev->is_freespace_ok()) { /* Error while getting free space */
       char ed1[50], ed2[50];
-      Dmsg1(10, "Cannot get free space on the device ERR=%s.\n", dev->errmsg);
+      Dmsg1(100, "Cannot get free space on the device ERR=%s.\n", dev->errmsg);
       Jmsg(jcr, M_FATAL, 0, _("End of Volume \"%s\" at %u:%u on device %s "
          "(part_size=%s, free_space=%s, free_space_errno=%d, errmsg=%s).\n"),
            dev->VolCatInfo.VolCatName,
@@ -875,7 +874,7 @@ static bool do_dvd_size_checks(DCR *dcr)
    
    if ((dev->is_freespace_ok() && (dev->part_size + block->binbuf) >= dev->free_space)) {
       char ed1[50], ed2[50];
-      Dmsg0(10, "==== Just enough free space on the device to write the current part...\n");
+      Dmsg0(100, "==== Just enough free space on the device to write the current part...\n");
       Jmsg(jcr, M_INFO, 0, _("End of Volume \"%s\" at %u:%u on device %s "
          "(part_size=%s, free_space=%s, free_space_errno=%d).\n"),
             dev->VolCatInfo.VolCatName,
@@ -898,11 +897,11 @@ bool read_block_from_device(DCR *dcr, bool check_block_numbers)
 {
    bool ok;
    DEVICE *dev = dcr->dev;
-   Dmsg0(200, "Enter read_block_from_device\n");
-   lock_device(dev);
+   Dmsg0(250, "Enter read_block_from_device\n");
+   dev->r_dlock();
    ok = read_block_from_dev(dcr, check_block_numbers);
-   unlock_device(dev);
-   Dmsg0(200, "Leave read_block_from_device\n");
+   dev->dunlock();
+   Dmsg0(250, "Leave read_block_from_device\n");
    return ok;
 }
 
@@ -927,7 +926,7 @@ bool read_block_from_dev(DCR *dcr, bool check_block_numbers)
       return false;
    }
    looping = 0;
-   Dmsg1(200, "Full read in read_block_from_device() len=%d\n",
+   Dmsg1(250, "Full read in read_block_from_device() len=%d\n",
          block->buf_len);
 reread:
    if (looping > 1) {
@@ -944,7 +943,7 @@ reread:
    if (dev->at_eof() && dev->is_dvd()) {
       Dmsg1(100, "file_size=%u\n",(unsigned int)dev->file_size);
       Dmsg1(100, "file_addr=%u\n",(unsigned int)dev->file_addr);
-      Dmsg1(100, "lseek=%u\n",(unsigned int)lseek(dev->fd, 0, SEEK_CUR));
+      Dmsg1(100, "lseek=%u\n",(unsigned int)lseek(dev->fd(), 0, SEEK_CUR));
       Dmsg1(100, "part_start=%u\n",(unsigned int)dev->part_start);
       Dmsg1(100, "part_size=%u\n", (unsigned int)dev->part_size);
       Dmsg2(100, "part=%u num_dvd_parts=%u\n", dev->part, dev->num_dvd_parts);
@@ -974,30 +973,27 @@ reread:
       if ((retry > 0 && stat == -1 && errno == EBUSY)) {
          berrno be;
          Dmsg4(100, "===== read retry=%d stat=%d errno=%d: ERR=%s\n",
-               retry, stat, errno, be.strerror());
+               retry, stat, errno, be.bstrerror());
          bmicrosleep(10, 0);    /* pause a bit if busy or lots of errors */
          dev->clrerror(-1);
       }
-      if (dev->is_tape()) {
-         stat = tape_read(dev->fd, block->buf, (size_t)block->buf_len);
-      } else {
-         stat = read(dev->fd, block->buf, (size_t)block->buf_len);
-      }
+      stat = dev->read(block->buf, (size_t)block->buf_len);
+
    } while (stat == -1 && (errno == EBUSY || errno == EINTR || errno == EIO) && retry++ < 3);
    if (stat < 0) {
       berrno be;
       dev->clrerror(-1);
-      Dmsg1(200, "Read device got: ERR=%s\n", be.strerror());
+      Dmsg1(250, "Read device got: ERR=%s\n", be.bstrerror());
       block->read_len = 0;
       Mmsg5(dev->errmsg, _("Read error on fd=%d at file:blk %u:%u on device %s. ERR=%s.\n"),
-         dev->fd, dev->file, dev->block_num, dev->print_name(), be.strerror());
+         dev->fd(), dev->file, dev->block_num, dev->print_name(), be.bstrerror());
       Jmsg(jcr, M_ERROR, 0, "%s", dev->errmsg);
       if (dev->at_eof()) {        /* EOF just seen? */
          dev->set_eot();          /* yes, error => EOT */
       }
       return false;
    }
-   Dmsg3(200, "Read device got %d bytes at %u:%u\n", stat,
+   Dmsg3(250, "Read device got %d bytes at %u:%u\n", stat,
       dev->file, dev->block_num);
    if (stat == 0) {             /* Got EOF ! */
       dev->block_num = 0;
@@ -1046,14 +1042,14 @@ reread:
       Pmsg1(000, "%s", dev->errmsg);
       /* Attempt to reposition to re-read the block */
       if (dev->is_tape()) {
-         Dmsg0(200, "BSR for reread; block too big for buffer.\n");
+         Dmsg0(250, "BSR for reread; block too big for buffer.\n");
          if (!dev->bsr(1)) {
             Jmsg(jcr, M_ERROR, 0, "%s", dev->bstrerror());
             block->read_len = 0;
             return false;
          }
       } else {
-         Dmsg0(200, "Seek to beginning of block for reread.\n");
+         Dmsg0(250, "Seek to beginning of block for reread.\n");
          boffset_t pos = dev->lseek(dcr, (boffset_t)0, SEEK_CUR); /* get curr pos */
          pos -= block->read_len;
          dev->lseek(dcr, pos, SEEK_SET);
@@ -1087,11 +1083,6 @@ reread:
    dev->VolCatInfo.VolCatReads++;
    dev->VolCatInfo.VolCatRBytes += block->read_len;
 
-   dev->VolCatInfo.VolCatBytes += block->block_len;
-   dev->VolCatInfo.VolCatBlocks++;
-   if (dev->VolCatInfo.VolFirstWritten == 0) {
-      dev->VolCatInfo.VolFirstWritten = (utime_t)time(NULL);    /* Set first written time */
-   }
    dev->EndBlock = dev->block_num;
    dev->EndFile  = dev->file;
    dev->block_num++;
@@ -1123,20 +1114,20 @@ reread:
     *   lseek(). One to get the position, then the second to do an
     *   absolute positioning -- so much for efficiency.  KES Sep 02.
     */
-   Dmsg0(200, "At end of read block\n");
+   Dmsg0(250, "At end of read block\n");
    if (block->read_len > block->block_len && !dev->is_tape()) {
       char ed1[50];
       boffset_t pos = dev->lseek(dcr, (boffset_t)0, SEEK_CUR); /* get curr pos */
-      Dmsg1(200, "Current lseek pos=%s\n", edit_int64(pos, ed1));
+      Dmsg1(250, "Current lseek pos=%s\n", edit_int64(pos, ed1));
       pos -= (block->read_len - block->block_len);
       dev->lseek(dcr, pos, SEEK_SET);
-      Dmsg3(200, "Did lseek pos=%s blk_size=%d rdlen=%d\n", 
+      Dmsg3(250, "Did lseek pos=%s blk_size=%d rdlen=%d\n", 
          edit_int64(pos, ed1), block->block_len,
             block->read_len);
       dev->file_addr = pos;
       dev->file_size = pos;
    }
-   Dmsg2(200, "Exit read_block read_len=%d block_len=%d\n",
+   Dmsg2(250, "Exit read_block read_len=%d block_len=%d\n",
       block->read_len, block->block_len);
    block->block_read = true;
    return true;

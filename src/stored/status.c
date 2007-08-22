@@ -1,12 +1,4 @@
 /*
- *  This file handles the status command
- *
- *     Kern Sibbald, May MMIII
- *
- *   Version $Id: status.c 3975 2007-01-12 09:59:05Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
@@ -15,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  This file handles the status command
+ *
+ *     Kern Sibbald, May MMIII
+ *
+ *   Version $Id: status.c 5144 2007-07-12 07:49:21Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -43,6 +43,7 @@
 extern BSOCK *filed_chan;
 extern int r_first, r_last;
 extern struct s_res resources[];
+extern void *start_heap;
 
 /* Static variables */
 static char qstatus[] = ".status %127s\n";
@@ -68,11 +69,12 @@ void output_status(void sendit(const char *msg, int len, void *sarg), void *arg)
    AUTOCHANGER *changer;
    DEVICE *dev;
    char dt[MAX_TIME_LENGTH];
-   char *msg, b1[35], b2[35], b3[35], b4[35];
+   char b1[35], b2[35], b3[35], b4[35], b5[35];
+   POOLMEM *msg;
    int bpb;
    int len;
 
-   msg = (char *)get_pool_memory(PM_MESSAGE);
+   msg = get_pool_memory(PM_MESSAGE);
 
    len = Mmsg(msg, _("%s Version: %s (%s) %s %s %s\n"), 
               my_name, VERSION, BDATE, HOST_OS, DISTNAME, DISTVER);
@@ -85,11 +87,16 @@ void output_status(void sendit(const char *msg, int len, void *sarg), void *arg)
         dt, num_jobs_run, num_jobs_run == 1 ? "" : "s");
    sendit(msg, len, arg);
 
-   len = Mmsg(msg, _(" Heap: bytes=%s max_bytes=%s bufs=%s max_bufs=%s\n"),
-         edit_uint64_with_commas(sm_bytes, b1),
-         edit_uint64_with_commas(sm_max_bytes, b2),
-         edit_uint64_with_commas(sm_buffers, b3),
-         edit_uint64_with_commas(sm_max_buffers, b4));
+   len = Mmsg(msg, _(" Heap: heap=%s smbytes=%s max_bytes=%s bufs=%s max_bufs=%s\n"),
+         edit_uint64_with_commas((char *)sbrk(0)-(char *)start_heap, b1),
+         edit_uint64_with_commas(sm_bytes, b2),
+         edit_uint64_with_commas(sm_max_bytes, b3),
+         edit_uint64_with_commas(sm_buffers, b4),
+         edit_uint64_with_commas(sm_max_buffers, b5));
+   sendit(msg, len, arg);
+   len = Mmsg(msg, "Sizes: boffset_t=%d size_t=%d int32_t=%d int64_t=%d\n", 
+         (int)sizeof(boffset_t), (int)sizeof(size_t), (int)sizeof(int32_t),
+         (int)sizeof(int64_t));
    sendit(msg, len, arg);
 
    /*
@@ -132,9 +139,14 @@ void output_status(void sendit(const char *msg, int len, void *sarg), void *arg)
       dev = device->dev;
       if (dev && dev->is_open()) {
          if (dev->is_labeled()) {
-            len = Mmsg(msg, _("Device %s is mounted with Volume=\"%s\" Pool=\"%s\"\n"),
-               dev->print_name(), dev->VolHdr.VolumeName, 
-               dev->pool_name[0]?dev->pool_name:"*unknown*");
+            len = Mmsg(msg, _("Device %s is mounted with:\n"
+                              "    Volume:      %s\n"
+                              "    Pool:        %s\n"
+                              "    Media type:  %s\n"),
+               dev->print_name(), 
+               dev->VolHdr.VolumeName, 
+               dev->pool_name[0]?dev->pool_name:"*unknown*",
+               dev->device->media_type);
             sendit(msg, len, arg);
          } else {
             len = Mmsg(msg, _("Device %s open but no Bacula volume is currently mounted.\n"), 
@@ -193,9 +205,9 @@ void output_status(void sendit(const char *msg, int len, void *sarg), void *arg)
 
 #ifdef xxx
    if (debug_level > 10) {
-      bnet_fsend(user, _("====\n\n"));
+      user->fsend(_("====\n\n"));
       dump_resource(R_DEVICE, resources[R_DEVICE-r_first].res_head, sendit, user);
-      bnet_fsend(user, _("====\n\n"));
+      user->fsend(_("====\n\n"));
    }
 #endif
 
@@ -217,7 +229,7 @@ static void send_blocked_status(DEVICE *dev, void sendit(const char *msg, int le
       free_pool_memory(msg);
       return;
    }
-   switch (dev->dev_blocked) {
+   switch (dev->blocked()) {
    case BST_UNMOUNTED:
       len = Mmsg(msg, _("    Device is BLOCKED. User unmounted.\n"));
       sendit(msg, len, arg);
@@ -233,11 +245,22 @@ static void send_blocked_status(DEVICE *dev, void sendit(const char *msg, int le
 
          if (dcrs != NULL) {
             DCR *dcr;
-
             for (dcr = (DCR *)dcrs->first(); dcr != NULL; dcr = (DCR *)dcrs->next(dcr)) {
                if (dcr->jcr->JobStatus == JS_WaitMount) {
-                  len = Mmsg(msg, _("    Device is BLOCKED waiting for mount of volume \"%s\".\n"),
-                     dcr->VolumeName);
+                  len = Mmsg(msg, _("    Device is BLOCKED waiting for mount of volume \"%s\",\n"
+                                    "       Pool:        %s\n"
+                                    "       Media type:  %s\n"),
+                             dcr->VolumeName,
+                             dcr->pool_name,
+                             dcr->media_type);
+                  sendit(msg, len, arg);
+                  found_jcr = true;
+               } else if (dcr->jcr->JobStatus == JS_WaitMedia) {
+                  len = Mmsg(msg, _("    Device is BLOCKED waiting to create a volume for:\n"
+                                    "       Pool:        %s\n"
+                                    "       Media type:  %s\n"),
+                             dcr->pool_name,
+                             dcr->media_type);
                   sendit(msg, len, arg);
                   found_jcr = true;
                }
@@ -312,7 +335,7 @@ static void send_blocked_status(DEVICE *dev, void sendit(const char *msg, int le
          dev->state & ST_MOUNTED ? "" : "!");
       sendit(msg, len, arg);
 
-      len = Mmsg(msg, _("num_writers=%d block=%d\n\n"), dev->num_writers, dev->dev_blocked);
+      len = Mmsg(msg, _("num_writers=%d block=%d\n\n"), dev->num_writers, dev->blocked());
       sendit(msg, len, arg);
 
       len = Mmsg(msg, _("Device parameters:\n"));
@@ -366,7 +389,7 @@ static void list_running_jobs(void sendit(const char *msg, int len, void *sarg),
          }
          if (rdcr && rdcr->device) {
             len = Mmsg(msg, _("Reading: %s %s job %s JobId=%d Volume=\"%s\"\n"
-                            "    pool=\"%s\" device=\"%s\"\n"),
+                            "    pool=\"%s\" device=%s\n"),
                    job_level_to_str(jcr->JobLevel),
                    job_type_to_str(jcr->JobType),
                    JobName,
@@ -379,7 +402,7 @@ static void list_running_jobs(void sendit(const char *msg, int len, void *sarg),
          }
          if (dcr && dcr->device) {
             len = Mmsg(msg, _("Writing: %s %s job %s JobId=%d Volume=\"%s\"\n"
-                            "    pool=\"%s\" device=\"%s\"\n"),
+                            "    pool=\"%s\" device=%s\n"),
                    job_level_to_str(jcr->JobLevel),
                    job_type_to_str(jcr->JobType),
                    JobName,
@@ -409,7 +432,7 @@ static void list_running_jobs(void sendit(const char *msg, int len, void *sarg),
             len = Mmsg(msg, _("    FDReadSeqNo=%s in_msg=%u out_msg=%d fd=%d\n"),
                edit_uint64_with_commas(jcr->file_bsock->read_seqno, b1),
                jcr->file_bsock->in_msg_no, jcr->file_bsock->out_msg_no,
-               jcr->file_bsock->fd);
+               jcr->file_bsock->m_fd);
             sendit(msg, len, arg);
          } else {
             len = Mmsg(msg, _("    FDSocket closed\n"));
@@ -575,13 +598,13 @@ static const char *level_to_str(int level)
 /*
  * Send to Director
  */
-static void bsock_sendit(const char *msg, int len, void *arg)
+static void dir_sendit(const char *msg, int len, void *arg)
 {
    BSOCK *user = (BSOCK *)arg;
 
    memcpy(user->msg, msg, len+1);
    user->msglen = len+1;
-   bnet_send(user);
+   user->send();
 }
 
 /*
@@ -591,10 +614,10 @@ bool status_cmd(JCR *jcr)
 {
    BSOCK *user = jcr->dir_bsock;
 
-   bnet_fsend(user, "\n");
-   output_status(bsock_sendit, (void *)user);
+   user->fsend("\n");
+   output_status(dir_sendit, (void *)user);
 
-   bnet_sig(user, BNET_EOD);
+   user->signal(BNET_EOD);
    return 1;
 }
 
@@ -611,34 +634,34 @@ bool qstatus_cmd(JCR *jcr)
    if (sscanf(dir->msg, qstatus, time.c_str()) != 1) {
       pm_strcpy(jcr->errmsg, dir->msg);
       Jmsg1(jcr, M_FATAL, 0, _("Bad .status command: %s\n"), jcr->errmsg);
-      bnet_fsend(dir, _("3900 Bad .status command, missing argument.\n"));
-      bnet_sig(dir, BNET_EOD);
+      dir->fsend(_("3900 Bad .status command, missing argument.\n"));
+      dir->signal(BNET_EOD);
       return false;
    }
    unbash_spaces(time);
 
    if (strcmp(time.c_str(), "current") == 0) {
-      bnet_fsend(dir, OKqstatus, time.c_str());
+      dir->fsend(OKqstatus, time.c_str());
       foreach_jcr(njcr) {
          if (njcr->JobId != 0) {
-            bnet_fsend(dir, DotStatusJob, njcr->JobId, njcr->JobStatus, njcr->JobErrors);
+            dir->fsend(DotStatusJob, njcr->JobId, njcr->JobStatus, njcr->JobErrors);
          }
       }
       endeach_jcr(njcr);
    } else if (strcmp(time.c_str(), "last") == 0) {
-      bnet_fsend(dir, OKqstatus, time.c_str());
+      dir->fsend(OKqstatus, time.c_str());
       if ((last_jobs) && (last_jobs->size() > 0)) {
          job = (s_last_job*)last_jobs->last();
-         bnet_fsend(dir, DotStatusJob, job->JobId, job->JobStatus, job->Errors);
+         dir->fsend(DotStatusJob, job->JobId, job->JobStatus, job->Errors);
       }
    } else {
       pm_strcpy(jcr->errmsg, dir->msg);
       Jmsg1(jcr, M_FATAL, 0, _("Bad .status command: %s\n"), jcr->errmsg);
-      bnet_fsend(dir, _("3900 Bad .status command, wrong argument.\n"));
-      bnet_sig(dir, BNET_EOD);
+      dir->fsend(_("3900 Bad .status command, wrong argument.\n"));
+      dir->signal(BNET_EOD);
       return false;
    }
-   bnet_sig(dir, BNET_EOD);
+   dir->signal(BNET_EOD);
    return true;
 }
 

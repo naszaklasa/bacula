@@ -1,29 +1,14 @@
 /*
- *
- *   Bacula Tape manipulation program
- *
- *    Has various tape manipulation commands -- mostly for
- *    use in determining how tapes really work.
- *
- *     Kern Sibbald, April MM
- *
- *   Note, this program reads stored.conf, and will only
- *     talk to devices that are configured.
- *
- *   Version $Id: btape.c 3802 2006-12-14 11:41:02Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,6 +25,21 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Tape manipulation program
+ *
+ *    Has various tape manipulation commands -- mostly for
+ *    use in determining how tapes really work.
+ *
+ *     Kern Sibbald, April MM
+ *
+ *   Note, this program reads stored.conf, and will only
+ *     talk to devices that are configured.
+ *
+ *   Version $Id: btape.c 4992 2007-06-07 14:46:43Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -355,21 +355,23 @@ static void terminate_btape(int stat)
 static bool open_the_device()
 {
    DEV_BLOCK *block;
+   bool ok = true;
 
    block = new_block(dev);
-   lock_device(dev);
+   dev->r_dlock();
    Dmsg1(200, "Opening device %s\n", dcr->VolumeName);
    if (dev->open(dcr, OPEN_READ_WRITE) < 0) {
       Emsg1(M_FATAL, 0, _("dev open failed: %s\n"), dev->errmsg);
-      unlock_device(dev);
-      free_block(block);
-      return false;
+      ok = false;
+      goto bail_out;
    }
    Pmsg1(000, _("open device %s: OK\n"), dev->print_name());
    dev->set_append();                 /* put volume in append mode */
-   unlock_device(dev);
+
+bail_out:
+   dev->dunlock();
    free_block(block);
-   return true;
+   return ok;
 }
 
 
@@ -747,13 +749,13 @@ static int re_read_block_test()
    Pmsg0(0, _("Backspace record OK.\n"));
    if (!read_block_from_dev(dcr, NO_BLOCK_NUMBER_CHECK)) {
       berrno be;
-      Pmsg1(0, _("Read block failed! ERR=%s\n"), be.strerror(dev->dev_errno));
+      Pmsg1(0, _("Read block failed! ERR=%s\n"), be.bstrerror(dev->dev_errno));
       goto bail_out;
    }
    memset(rec->data, 0, rec->data_len);
    if (!read_record_from_block(dcr, block, rec)) {
       berrno be;
-      Pmsg1(0, _("Read block failed! ERR=%s\n"), be.strerror(dev->dev_errno));
+      Pmsg1(0, _("Read block failed! ERR=%s\n"), be.bstrerror(dev->dev_errno));
       goto bail_out;
    }
    for (int i=0; i<len; i++) {
@@ -859,13 +861,13 @@ read_again:
                goto read_again;
             }
          }
-         Pmsg2(0, _("Read block %d failed! ERR=%s\n"), i, be.strerror(dev->dev_errno));
+         Pmsg2(0, _("Read block %d failed! ERR=%s\n"), i, be.bstrerror(dev->dev_errno));
          goto bail_out;
       }
       memset(rec->data, 0, rec->data_len);
       if (!read_record_from_block(dcr, block, rec)) {
          berrno be;
-         Pmsg2(0, _("Read record failed. Block %d! ERR=%s\n"), i, be.strerror(dev->dev_errno));
+         Pmsg2(0, _("Read record failed. Block %d! ERR=%s\n"), i, be.bstrerror(dev->dev_errno));
          goto bail_out;
       }
       p = (int *)rec->data;
@@ -1015,7 +1017,7 @@ read_again:
             }
          }
          Pmsg4(0, _("Read block %d failed! file=%d blk=%d. ERR=%s\n\n"),
-            recno, file, blk, be.strerror(dev->dev_errno));
+            recno, file, blk, be.bstrerror(dev->dev_errno));
          Pmsg0(0, _("This may be because the tape drive block size is not\n"
                     " set to variable blocking as normally used by Bacula.\n"
                     " Please see the Tape Testing chapter in the manual and \n"
@@ -1032,7 +1034,7 @@ read_again:
       memset(rec->data, 0, rec->data_len);
       if (!read_record_from_block(dcr, block, rec)) {
          berrno be;
-         Pmsg1(0, _("Read record failed! ERR=%s\n"), be.strerror(dev->dev_errno));
+         Pmsg1(0, _("Read record failed! ERR=%s\n"), be.bstrerror(dev->dev_errno));
          goto bail_out;
       }
       p = (int *)rec->data;
@@ -1166,7 +1168,7 @@ try_again:
    } else {
       berrno be;
       Pmsg1(-1, _("3991 Bad autochanger command: %s\n"), changer);
-      Pmsg2(-1, _("3991 result=\"%s\": ERR=%s\n"), results, be.strerror(status));
+      Pmsg2(-1, _("3991 result=\"%s\": ERR=%s\n"), results, be.bstrerror(status));
       goto bail_out;
    }
    if (loaded) {
@@ -1188,7 +1190,7 @@ try_again:
       if (status != 0) {
          berrno be;
          Pmsg1(-1, _("3992 Bad autochanger command: %s\n"), changer);
-         Pmsg2(-1, _("3992 result=\"%s\": ERR=%s\n"), results, be.strerror(status));
+         Pmsg2(-1, _("3992 result=\"%s\": ERR=%s\n"), results, be.bstrerror(status));
       }
    }
 
@@ -1211,7 +1213,7 @@ try_again:
    } else {
       berrno be;
       Pmsg1(-1, _("3993 Bad autochanger command: %s\n"), changer);
-      Pmsg2(-1, _("3993 result=\"%s\": ERR=%s\n"), results, be.strerror(status));
+      Pmsg2(-1, _("3993 result=\"%s\": ERR=%s\n"), results, be.bstrerror(status));
       goto bail_out;
    }
 
@@ -1594,13 +1596,13 @@ static void rrcmd()
       len = 1024;
    }
    buf = (char *)malloc(len);
-   stat = read(dev->fd, buf, len);
+   stat = read(dev->fd(), buf, len);
    if (stat > 0 && stat <= len) {
       errno = 0;
    }
    berrno be;
    Pmsg3(0, _("Read of %d bytes gives stat=%d. ERR=%s\n"),
-      len, stat, be.strerror());
+      len, stat, be.bstrerror());
    free(buf);
 }
 
@@ -1629,11 +1631,11 @@ static void scancmd()
    tot_files = dev->file;
    Pmsg1(0, _("Starting scan at file %u\n"), dev->file);
    for (;;) {
-      if ((stat = read(dev->fd, buf, sizeof(buf))) < 0) {
+      if ((stat = read(dev->fd(), buf, sizeof(buf))) < 0) {
          berrno be;
          dev->clrerror(-1);
          Mmsg2(dev->errmsg, _("read error on %s. ERR=%s.\n"),
-            dev->dev_name, be.strerror());
+            dev->dev_name, be.bstrerror());
          Pmsg2(0, _("Bad status from read %d. ERR=%s\n"), stat, dev->bstrerror());
          if (blocks > 0) {
             if (blocks==1) {
@@ -2045,7 +2047,7 @@ static void fillcmd()
    } else {
       berrno be;
       Pmsg2(-1, _("Could not create state file: %s ERR=%s\n"), buf,
-                 be.strerror());
+                 be.bstrerror());
    }
 
    now = time(NULL);
@@ -2102,7 +2104,7 @@ static void unfillcmd()
    } else {
       berrno be;
       Pmsg2(-1, _("\nCould not find the state file: %s ERR=%s\n"
-             "You must redo the fill command.\n"), buf, be.strerror());
+             "You must redo the fill command.\n"), buf, be.bstrerror());
       return;
    }
    do_unfill();
@@ -2328,7 +2330,7 @@ static int flush_block(DEV_BLOCK *block, int dump)
    DEV_BLOCK *tblock;
    uint32_t this_file, this_block_num;
 
-   lock_device(dev);
+   dev->r_dlock();
    if (!this_block) {
       this_block = new_block(dev);
    }
@@ -2383,12 +2385,12 @@ static int flush_block(DEV_BLOCK *block, int dump)
          if (!fixup_device_block_write_error(jcr->dcr)) {
             Pmsg1(000, _("Cannot fixup device error. %s\n"), dev->bstrerror());
             ok = false;
-            unlock_device(dev);
+            dev->dunlock();
             return 0;
          }
          BlockNumber = 0;             /* start counting for second tape */
       }
-      unlock_device(dev);
+      dev->dunlock();
       return 1;                       /* end of tape reached */
    }
 
@@ -2407,7 +2409,7 @@ static int flush_block(DEV_BLOCK *block, int dump)
    last_file = this_file;
    last_block_num = this_block_num;
 
-   unlock_device(dev);
+   dev->dunlock();
    return 1;
 }
 
@@ -2495,9 +2497,9 @@ static void rawfill_cmd()
    for ( ;; ) {
       *p = block_num;
       if (dev->is_tape()) {
-         stat = tape_write(dev->fd, block->buf, block->buf_len);
+         stat = tape_write(dev->fd(), block->buf, block->buf_len);
       } else {
-         stat = write(dev->fd, block->buf, block->buf_len);
+         stat = write(dev->fd(), block->buf, block->buf_len);
       }
       if (stat == (int)block->buf_len) {
          if ((block_num++ % 100) == 0) {
@@ -2516,7 +2518,7 @@ static void rawfill_cmd()
    printf("\n");
    berrno be;
    printf(_("Write failed at block %u. stat=%d ERR=%s\n"), block_num, stat,
-      be.strerror(my_errno));
+      be.bstrerror(my_errno));
    weofcmd();
 }
 

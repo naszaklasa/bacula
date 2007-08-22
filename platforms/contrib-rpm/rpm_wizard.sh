@@ -38,7 +38,7 @@ then
 fi
 
 # select build platform
-PLATFORM=`zenity --title "Select Platform" --text "Please choose a build platform." --list --radiolist --column "Select" --column "Platform" False rh7 False rh8 False rh9 False fc1 False fc3 False fc4 False fc5 False fc6 False wb3 False rhel3 False rhel4 False centos3 False centos4 False su9 False su10 False mdk False mdv`
+PLATFORM=`zenity --title "Select Platform" --text "Please choose a build platform." --list --radiolist --column "Select" --column "Platform" False rh7 False rh8 False rh9 False fc1 False fc3 False fc4 False fc5 False fc6 False fc7 False wb3 False rhel3 False rhel4 False centos3 False centos4 False sl3 False sl4 False su9 False su10 False su102 False mdk False mdv`
 
 RESULT="$?"
 if [ "$RESULT" = "1" ];
@@ -47,7 +47,7 @@ then
 fi
 
 # select database support
-DATABASE=`zenity --title "Select Database" --text "Please choose database support." --list --radiolist --column "Select" --column "Platform" False sqlite False mysql False mysql4 False mysql5 False postgresql False client_only`
+DATABASE=`zenity --title "Select Database" --text "Please choose database support." --list --radiolist --column "Select" --column "Database" False sqlite False mysql False mysql4 False mysql5 False postgresql False client_only`
 
 RESULT="$?"
 if [ "$RESULT" = "1" ];
@@ -56,7 +56,7 @@ then
 fi
 
 # select other build options
-OPTIONS=`zenity --title "Select Options" --text "Please choose other options." --list --checklist --column "Select" --column "Platform" False build_wxconsole False nobuild_gconsole False build_x86_64 False build_python`
+OPTIONS=`zenity --title "Select Options" --text "Please choose other options." --list --checklist --column "Select" --column "Other" False build_bat False build_wxconsole False nobuild_gconsole False build_x86_64 False build_python`
 
 RESULT="$?"
 if [ "$RESULT" = "1" ];
@@ -68,6 +68,7 @@ OPTION1=`echo $OPTIONS|cut --delimiter=\| -f1`
 OPTION2=`echo $OPTIONS|cut --delimiter=\| -f2`
 OPTION3=`echo $OPTIONS|cut --delimiter=\| -f3`
 OPTION4=`echo $OPTIONS|cut --delimiter=\| -f4`
+OPTION5=`echo $OPTIONS|cut --delimiter=\| -f5`
 
 # construct rpmbuild command
 COMMAND="rpmbuild --rebuild --define 'build_$PLATFORM 1' --define 'build_$DATABASE 1' --define 'contrib_packager ${PACKAGER}'"
@@ -88,6 +89,10 @@ if [ ! -z $OPTION4 ];
 then
         COMMAND="${COMMAND} --define '$OPTION4 1'";
 fi
+if [ ! -z $OPTION5 ];
+then
+        COMMAND="${COMMAND} --define '$OPTION5 1'";
+fi
 
 COMMAND="${COMMAND} ${SELECTED_FILE}"
 
@@ -106,3 +111,5 @@ echo $COMMAND | sh
 # 30 Jul 2006 initial release
 # 05 Aug 2006 add option for build_python
 # 27 Jan 2007 add fc6
+# 29 Apr 2007 add sl3 & sl4 target and bat option
+# 06 May 2007 add fc7 target

@@ -38,6 +38,7 @@ LIB_OBJS = \
 	$(OBJDIR)/bregex.o \
 	$(OBJDIR)/bshm.o \
 	$(OBJDIR)/bsnprintf.o \
+	$(OBJDIR)/bsock.o \
 	$(OBJDIR)/bsys.o \
 	$(OBJDIR)/btime.o \
 	$(OBJDIR)/btimers.o \

@@ -1,21 +1,14 @@
- /*
-  * Originally written by Kern Sibbald for inclusion in apcupsd,
-  *  but heavily modified for Bacula
-  *
-  *   Version $Id: bnet_server.c 3670 2006-11-21 16:13:58Z kerns $
-  */
-
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,7 +25,12 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
-
+ /*
+  * Originally written by Kern Sibbald for inclusion in apcupsd,
+  *  but heavily modified for Bacula
+  *
+  *   Version $Id: bnet_server.c 5270 2007-07-31 12:45:41Z kerns $
+  */
 
 #include "bacula.h"
 #include <netinet/in.h>
@@ -98,7 +96,7 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
    Dmsg1(100, "Addresses %s\n", build_addresses_str(addrs, allbuf, sizeof(allbuf)));
 
    foreach_dlist(p, addrs) {
-      /* Allocate on stack frame -- no need to free */
+      /* Allocate on stack from -- no need to free */
       fd_ptr = (s_sockfd *)alloca(sizeof(s_sockfd));
       fd_ptr->port = p->get_port_net_order();
       /*
@@ -109,7 +107,7 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
             berrno be;
             char curbuf[256];
             Emsg3(M_ABORT, 0, _("Cannot open stream socket. ERR=%s. Current %s All %s\n"),
-                       be.strerror(),
+                       be.bstrerror(),
                        p->build_address_str(curbuf, sizeof(curbuf)),
                        build_addresses_str(addrs, allbuf, sizeof(allbuf)));
          }
@@ -122,7 +120,7 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
            sizeof(turnon)) < 0) {
          berrno be;
          Emsg1(M_WARNING, 0, _("Cannot set SO_REUSEADDR on socket: %s\n"),
-               be.strerror());
+               be.bstrerror());
       }
 
       int tmax = 30 * (60 / 5);    /* wait 30 minutes max */
@@ -131,12 +129,12 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
          if (tlog <= 0) {
             tlog = 2 * 60;         /* Complain every 2 minutes */
             Emsg2(M_WARNING, 0, _("Cannot bind port %d: ERR=%s: Retrying ...\n"),
-                  ntohs(fd_ptr->port), be.strerror());
+                  ntohs(fd_ptr->port), be.bstrerror());
          }
          bmicrosleep(5, 0);
          if (--tmax <= 0) {
             Emsg2(M_ABORT, 0, _("Cannot bind port %d: ERR=%s.\n"), ntohs(fd_ptr->port),
-                  be.strerror());
+                  be.bstrerror());
          }
       }
       listen(fd_ptr->fd, 5);       /* tell system we are ready */
@@ -146,7 +144,7 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
    if ((stat = workq_init(client_wq, max_clients, handle_client_request)) != 0) {
       berrno be;
       be.set_errno(stat);
-      Emsg1(M_ABORT, 0, _("Could not init client queue: ERR=%s\n"), be.strerror());
+      Emsg1(M_ABORT, 0, _("Could not init client queue: ERR=%s\n"), be.bstrerror());
    }
    /*
     * Wait for a connection from the client process.
@@ -165,11 +163,7 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
          if (errno == EINTR) {
             continue;
          }
-         /* Error, get out */
-         foreach_dlist(fd_ptr, &sockfds) {
-            close(fd_ptr->fd);
-         }
-         Emsg1(M_FATAL, 0, _("Error in select: %s\n"), be.strerror());
+         Emsg1(M_FATAL, 0, _("Error in select: %s\n"), be.bstrerror());
          break;
       }
 
@@ -206,7 +200,7 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
                  sizeof(turnon)) < 0) {
                berrno be;
                Emsg1(M_WARNING, 0, _("Cannot set SO_KEEPALIVE on socket: %s\n"),
-                     be.strerror());
+                     be.bstrerror());
             }
 
             /* see who client is. i.e. who connected to us. */
@@ -224,10 +218,16 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
                berrno be;
                be.set_errno(stat);
                Jmsg1(NULL, M_ABORT, 0, _("Could not add job to client queue: ERR=%s\n"),
-                     be.strerror());
+                     be.bstrerror());
             }
          }
       }
+   }
+
+   /* Cleanup open files and pointers to them */
+   while ((fd_ptr = (s_sockfd *)sockfds.first())) {
+      close(fd_ptr->fd);
+      sockfds.remove(fd_ptr);     /* don't free() item it is on stack */
    }
 
    /* Stop work queue thread */
@@ -235,7 +235,7 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
       berrno be;
       be.set_errno(stat);
       Emsg1(M_FATAL, 0, _("Could not destroy client queue: ERR=%s\n"),
-            be.strerror());
+            be.bstrerror());
    }
 }
 
@@ -256,12 +256,13 @@ BSOCK *bnet_bind(int port)
     * Open a TCP socket
     */
    for (tlog = 0; (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0; tlog -= 10) {
+      berrno be;
       if (errno == EINTR || errno == EAGAIN) {
          continue;
       }
       if (tlog <= 0) {
          tlog = 2 * 60;
-         Emsg1(M_ERROR, 0, _("Cannot open stream socket: %s\n"), strerror(errno));
+         Emsg1(M_ERROR, 0, _("Cannot open stream socket: %s\n"), be.bstrerror());
       }
       bmicrosleep(60, 0);
    }
@@ -270,8 +271,9 @@ BSOCK *bnet_bind(int port)
     * Reuse old sockets
     */
    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (sockopt_val_t)&turnon, sizeof(turnon)) < 0) {
+      berrno be;
       Emsg1(M_WARNING, 0, _("Cannot set SO_REUSEADDR on socket: %s\n"),
-            strerror(errno));
+            be.bstrerror());
    }
 
    /*
@@ -291,7 +293,7 @@ BSOCK *bnet_bind(int port)
       if (tlog <= 0) {
          tlog = 2 * 60;
          Emsg2(M_WARNING, 0, _("Cannot bind port %d: ERR=%s: retrying ...\n"), port,
-               be.strerror());
+               be.bstrerror());
       }
       bmicrosleep(5, 0);
    }
@@ -328,11 +330,12 @@ BSOCK *bnet_accept(BSOCK * bsock, char *who)
        */
       ready = sockset;
       if ((stat = select(bsock->fd + 1, &ready, NULL, NULL, NULL)) < 0) {
+         berrno be;
          if (errno == EINTR || errno = EAGAIN) {
             errno = 0;
             continue;
          }
-         Emsg1(M_FATAL, 0, _("Error in select: %s\n"), strerror(errno));
+         Emsg1(M_FATAL, 0, _("Error in select: %s\n"), be.bstrerror());
          newsockfd = -1;
          break;
       }
@@ -363,8 +366,9 @@ BSOCK *bnet_accept(BSOCK * bsock, char *who)
     * Receive notification when connection dies.
     */
    if (setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, (sockopt_val_t)&turnon, sizeof(turnon)) < 0) {
+      berrno be;
       Emsg1(M_WARNING, 0, _("Cannot set SO_KEEPALIVE on socket: %s\n"),
-            strerror(errno));
+            be.bstrerror());
    }
 
    /* see who client is. I.e. who connected to us.
@@ -378,8 +382,9 @@ BSOCK *bnet_accept(BSOCK * bsock, char *who)
    bsock->msglen = strlen(bsock->msg);
 
    if (newsockfd < 0) {
+      berrno be;
       Emsg2(M_FATAL, 0, _("Socket accept error for %s. ERR=%s\n"), who,
-            strerror(errno));
+            be.bstrerror());
       return NULL;
    } else {
       if (caller == NULL) {

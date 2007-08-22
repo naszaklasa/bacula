@@ -7,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: job.c 4297 2007-03-03 08:50:30Z kerns $
+ *   Version $Id: job.c 5318 2007-08-09 09:52:28Z kerns $
  *
  */
 
@@ -150,6 +150,7 @@ bool run_cmd(JCR *jcr)
    struct timespec timeout;
    int errstat;
 
+   Dsm_check(1);
    Dmsg1(200, "Run_cmd: %s\n", jcr->dir_bsock->msg);
    /* The following jobs don't need the FD */
    switch (jcr->JobType) {
@@ -166,7 +167,7 @@ bool run_cmd(JCR *jcr)
 
    gettimeofday(&tv, &tz);
    timeout.tv_nsec = tv.tv_usec * 1000;
-   timeout.tv_sec = tv.tv_sec + me->client_wait; 
+   timeout.tv_sec = tv.tv_sec + me->client_wait;
 
    Dmsg2(100, "%s waiting %d sec for FD to contact SD\n", 
         jcr->Job, (int)me->client_wait);
@@ -176,7 +177,7 @@ bool run_cmd(JCR *jcr)
     *  expires.
     */
    P(mutex);
-   for ( ;!job_canceled(jcr); ) {
+   for ( ; !job_canceled(jcr); ) {
       errstat = pthread_cond_timedwait(&jcr->job_start_wait, &mutex, &timeout);
       if (errstat == 0 || errstat == ETIMEDOUT) {
          break;
@@ -209,7 +210,7 @@ void handle_filed_connection(BSOCK *fd, char *job_name)
    }
 
    jcr->file_bsock = fd;
-   jcr->file_bsock->jcr = jcr;
+   jcr->file_bsock->set_jcr(jcr);
 
    Dmsg1(110, "Found Job %s\n", job_name);
 
@@ -264,7 +265,7 @@ bool query_cmd(JCR *jcr)
       unbash_spaces(dev_name);
       foreach_res(device, R_DEVICE) {
          /* Find resource, and make sure we were able to open it */
-         if (fnmatch(dev_name.c_str(), device->hdr.name, 0) == 0) {
+         if (strcmp(dev_name.c_str(), device->hdr.name) == 0) {
             if (!device->dev) {
                device->dev = init_dev(jcr, device);
             }
@@ -282,7 +283,7 @@ bool query_cmd(JCR *jcr)
       }
       foreach_res(changer, R_AUTOCHANGER) {
          /* Find resource, and make sure we were able to open it */
-         if (fnmatch(dev_name.c_str(), changer->hdr.name, 0) == 0) {
+         if (strcmp(dev_name.c_str(), changer->hdr.name) == 0) {
             if (!changer->device || changer->device->size() == 0) {
                continue;              /* no devices */
             }
@@ -355,6 +356,10 @@ void stored_free_jcr(JCR *jcr)
    }
    jcr->dcrs = NULL;
 
+   /* Avoid a double free */
+   if (jcr->dcr == jcr->read_dcr) {
+      jcr->read_dcr = NULL;
+   }
    if (jcr->dcr) {
       free_dcr(jcr->dcr);
       jcr->dcr = NULL;
@@ -382,5 +387,6 @@ void stored_free_jcr(JCR *jcr)
       delete jcr->write_store;
       jcr->write_store = NULL;
    }
+   Dsm_check(1);
    return;
 }

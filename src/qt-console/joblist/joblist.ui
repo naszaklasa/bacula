@@ -1,0 +1,455 @@
+<ui version="4.0" >
+ <class>JobListForm</class>
+ <widget class="QWidget" name="JobListForm" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>739</width>
+    <height>790</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>Form</string>
+  </property>
+  <widget class="QTableWidget" name="mp_tableWidget" >
+   <property name="geometry" >
+    <rect>
+     <x>60</x>
+     <y>10</y>
+     <width>457</width>
+     <height>131</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QFrame" name="frame" >
+   <property name="geometry" >
+    <rect>
+     <x>30</x>
+     <y>170</y>
+     <width>533</width>
+     <height>172</height>
+    </rect>
+   </property>
+   <property name="maximumSize" >
+    <size>
+     <width>900</width>
+     <height>172</height>
+    </size>
+   </property>
+   <property name="frameShape" >
+    <enum>QFrame::StyledPanel</enum>
+   </property>
+   <property name="frameShadow" >
+    <enum>QFrame::Raised</enum>
+   </property>
+   <layout class="QGridLayout" >
+    <property name="margin" >
+     <number>9</number>
+    </property>
+    <property name="spacing" >
+     <number>6</number>
+    </property>
+    <item row="0" column="4" >
+     <layout class="QGridLayout" >
+      <property name="margin" >
+       <number>0</number>
+      </property>
+      <property name="spacing" >
+       <number>6</number>
+      </property>
+      <item row="1" column="1" >
+       <spacer>
+        <property name="orientation" >
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeType" >
+         <enum>QSizePolicy::Ignored</enum>
+        </property>
+        <property name="sizeHint" >
+         <size>
+          <width>16</width>
+          <height>75</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="1" column="0" >
+       <layout class="QGridLayout" >
+        <property name="margin" >
+         <number>3</number>
+        </property>
+        <property name="spacing" >
+         <number>3</number>
+        </property>
+        <item row="0" column="0" >
+         <widget class="QPushButton" name="refreshButton" >
+          <property name="text" >
+           <string>Refresh</string>
+          </property>
+          <property name="icon" >
+           <iconset resource="../main.qrc" >:/images/view-refresh.png</iconset>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" >
+         <widget class="QPushButton" name="graphButton" >
+          <property name="text" >
+           <string>Graph</string>
+          </property>
+          <property name="icon" >
+           <iconset resource="../main.qrc" >:/images/graph1.png</iconset>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="0" column="0" colspan="2" >
+       <layout class="QVBoxLayout" >
+        <property name="margin" >
+         <number>3</number>
+        </property>
+        <property name="spacing" >
+         <number>6</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="fileSetLabel" >
+          <property name="maximumSize" >
+           <size>
+            <width>16777215</width>
+            <height>20</height>
+           </size>
+          </property>
+          <property name="text" >
+           <string>FileSet</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="fileSetComboBox" />
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="3" >
+     <layout class="QVBoxLayout" >
+      <property name="margin" >
+       <number>3</number>
+      </property>
+      <property name="spacing" >
+       <number>6</number>
+      </property>
+      <item>
+       <layout class="QVBoxLayout" >
+        <property name="margin" >
+         <number>3</number>
+        </property>
+        <property name="spacing" >
+         <number>6</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="statusLabel" >
+          <property name="text" >
+           <string>Status</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="statusComboBox" />
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" >
+        <property name="margin" >
+         <number>3</number>
+        </property>
+        <property name="spacing" >
+         <number>6</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="purgedLabel" >
+          <property name="text" >
+           <string>Purged</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="purgedComboBox" />
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="0" >
+     <layout class="QVBoxLayout" >
+      <property name="margin" >
+       <number>3</number>
+      </property>
+      <property name="spacing" >
+       <number>6</number>
+      </property>
+      <item>
+       <layout class="QVBoxLayout" >
+        <property name="margin" >
+         <number>3</number>
+        </property>
+        <property name="spacing" >
+         <number>6</number>
+        </property>
+        <item>
+         <widget class="QCheckBox" name="limitCheckBox" >
+          <property name="text" >
+           <string>Record Limit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="limitSpinBox" >
+          <property name="maximum" >
+           <number>10000</number>
+          </property>
+          <property name="minimum" >
+           <number>1</number>
+          </property>
+          <property name="singleStep" >
+           <number>25</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" >
+        <property name="margin" >
+         <number>3</number>
+        </property>
+        <property name="spacing" >
+         <number>6</number>
+        </property>
+        <item>
+         <widget class="QCheckBox" name="daysCheckBox" >
+          <property name="text" >
+           <string>Days Limit</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="daysSpinBox" >
+          <property name="singleStep" >
+           <number>7</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="1" >
+     <layout class="QVBoxLayout" >
+      <property name="margin" >
+       <number>3</number>
+      </property>
+      <property name="spacing" >
+       <number>6</number>
+      </property>
+      <item>
+       <layout class="QVBoxLayout" >
+        <property name="margin" >
+         <number>3</number>
+        </property>
+        <property name="spacing" >
+         <number>6</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="clientsLabel" >
+          <property name="text" >
+           <string>Clients</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="clientComboBox" />
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" >
+        <property name="margin" >
+         <number>3</number>
+        </property>
+        <property name="spacing" >
+         <number>6</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="volumeLabel" >
+          <property name="text" >
+           <string>Volume</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="volumeComboBox" />
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="2" >
+     <layout class="QVBoxLayout" >
+      <property name="margin" >
+       <number>3</number>
+      </property>
+      <property name="spacing" >
+       <number>6</number>
+      </property>
+      <item>
+       <layout class="QVBoxLayout" >
+        <property name="margin" >
+         <number>3</number>
+        </property>
+        <property name="spacing" >
+         <number>6</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="jobLabel" >
+          <property name="text" >
+           <string>Job</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="jobComboBox" />
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" >
+        <property name="margin" >
+         <number>3</number>
+        </property>
+        <property name="spacing" >
+         <number>6</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="levelLabel" >
+          <property name="text" >
+           <string>Level</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="levelComboBox" />
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <action name="actionRefreshJobList" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/view-refresh.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Refresh Job List</string>
+   </property>
+   <property name="statusTip" >
+    <string>Requery the director for the list of jobs.</string>
+   </property>
+  </action>
+  <action name="actionListJobid" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/utilities-terminal.png</iconset>
+   </property>
+   <property name="text" >
+    <string>ListJobid</string>
+   </property>
+  </action>
+  <action name="actionListFilesOnJob" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/utilities-terminal.png</iconset>
+   </property>
+   <property name="text" >
+    <string>List Files On Job</string>
+   </property>
+  </action>
+  <action name="actionListJobMedia" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/utilities-terminal.png</iconset>
+   </property>
+   <property name="text" >
+    <string>ListJobMedia</string>
+   </property>
+  </action>
+  <action name="actionListVolumes" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/utilities-terminal.png</iconset>
+   </property>
+   <property name="text" >
+    <string>ListVolumes</string>
+   </property>
+  </action>
+  <action name="actionDeleteJob" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/weather-severe-alert.png</iconset>
+   </property>
+   <property name="text" >
+    <string>DeleteJob</string>
+   </property>
+  </action>
+  <action name="actionPurgeFiles" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/weather-severe-alert.png</iconset>
+   </property>
+   <property name="text" >
+    <string>PurgeFiles</string>
+   </property>
+  </action>
+  <action name="actionRestoreFromJob" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/restore.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Restore From Job</string>
+   </property>
+  </action>
+  <action name="actionRestoreFromTime" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/restore.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Restore From Time</string>
+   </property>
+  </action>
+  <action name="actionShowLogForJob" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/joblog.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Show Log for Job</string>
+   </property>
+  </action>
+  <action name="actionCancelJob" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/unmark.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Cancel Currently Running Job</string>
+   </property>
+  </action>
+  <action name="actionListJobTotals" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/utilities-terminal.png</iconset>
+   </property>
+   <property name="text" >
+    <string>List Job Totals in Console</string>
+   </property>
+  </action>
+ </widget>
+ <resources>
+  <include location="../main.qrc" />
+ </resources>
+ <connections/>
+</ui>

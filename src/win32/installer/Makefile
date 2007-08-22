@@ -35,7 +35,7 @@ BACULA_BINARIES := \
 	btape.exe \
 	dbcheck.exe \
 	scsilist.exe \
-	wx-console.exe
+	bwx-console.exe
 
 DEPKGS_BINARIES := \
 	libeay32.dll \

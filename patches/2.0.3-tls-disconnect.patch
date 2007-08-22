@@ -1,0 +1,50 @@
+
+This patch should fix the spurious connection drops that fail jobs
+as reported in bug #888.
+Apply it to version 2.0.3 (possibly earlier versions of 2.0) with:
+
+  cd <bacula-source>
+  patch -p0 <2.0.3-tls-disconnect.patch
+  make
+  ...
+  make install
+
+Index: src/lib/tls.c
+===================================================================
+--- src/lib/tls.c	(revision 4668)
++++ src/lib/tls.c	(working copy)
+@@ -540,14 +540,6 @@
+     * The first time to initiate the shutdown handshake, and the second to
+     * receive the peer's reply.
+     *
+-    * However, it is valid to close the SSL connection after the initial
+-    * shutdown notification is sent to the peer, without waiting for the
+-    * peer's reply, as long as you do not plan to re-use that particular
+-    * SSL connection object.
+-    *
+-    * Because we do not re-use SSL connection objects, I do not bother
+-    * calling SSL_shutdown a second time.
+-    *
+     * In addition, if the underlying socket is blocking, SSL_shutdown()
+     * will not return until the current stage of the shutdown process has
+     * completed or an error has occured. By setting the socket blocking
+@@ -560,6 +552,10 @@
+    flags = bnet_set_blocking(bsock);
+ 
+    err = SSL_shutdown(bsock->tls->openssl);
++   if (err == 0) {
++      /* Finish up the closing */
++      err = SSL_shutdown(bsock->tls->openssl);
++   }
+ 
+    switch (SSL_get_error(bsock->tls->openssl, err)) {
+       case SSL_ERROR_NONE:
+@@ -574,8 +570,6 @@
+          break;
+    }
+ 
+-   /* Restore saved flags */
+-   bnet_restore_blocking(bsock, flags);
+ }
+ 
+ /* Does all the manual labor for tls_bsock_readn() and tls_bsock_writen() */

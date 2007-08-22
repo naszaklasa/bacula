@@ -4,8 +4,9 @@
 
 bindir=@SQL_BINDIR@
 cd @working_dir@
-sqlite=@DB_NAME@
+sqlite=@DB_TYPE@
+db_name=@db_name@
 
-${bindir}/${sqlite} $* bacula.db <<END-OF-DATA
+${bindir}/${sqlite} $* ${db_name}.db <<END-OF-DATA
 END-OF-DATA
 exit 0

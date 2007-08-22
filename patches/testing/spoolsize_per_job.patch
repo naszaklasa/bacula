@@ -1,0 +1,159 @@
+Index: src/dird/msgchan.c
+===================================================================
+--- src/dird/msgchan.c	(revision 5108)
++++ src/dird/msgchan.c	(working copy)
+@@ -51,7 +51,7 @@
+ /* Commands sent to Storage daemon */
+ static char jobcmd[]     = "JobId=%s job=%s job_name=%s client_name=%s "
+    "type=%d level=%d FileSet=%s NoAttr=%d SpoolAttr=%d FileSetMD5=%s "
+-   "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d\n";
++   "SpoolData=%d SpoolSize=%s WritePartAfterJob=%d PreferMountedVols=%d\n";
+ static char use_storage[] = "use storage=%s media_type=%s pool_name=%s "
+    "pool_type=%s append=%d copy=%d stripe=%d\n";
+ static char use_device[] = "use device=%s\n";
+@@ -157,7 +157,7 @@
+    POOL_MEM job_name, client_name, fileset_name;
+    int copy = 0;
+    int stripe = 0;
+-   char ed1[30];
++   char ed1[30], ed2[30];
+ 
+    sd = jcr->store_bsock;
+    /*
+@@ -186,8 +186,9 @@
+               job_name.c_str(), client_name.c_str(), 
+               jcr->JobType, jcr->JobLevel,
+               fileset_name.c_str(), !jcr->pool->catalog_files,
+-              jcr->job->SpoolAttributes, jcr->fileset->MD5, jcr->spool_data, 
+-              jcr->write_part_after_job, jcr->job->PreferMountedVolumes);
++              jcr->job->SpoolAttributes, jcr->fileset->MD5, jcr->spool_data,
++              edit_int64(jcr->spool_size, ed2), jcr->write_part_after_job, 
++              jcr->job->PreferMountedVolumes);
+    Dmsg1(100, ">stored: %s\n", sd->msg);
+    if (bget_dirmsg(sd) > 0) {
+        Dmsg1(100, "<stored: %s", sd->msg);
+Index: src/dird/job.c
+===================================================================
+--- src/dird/job.c	(revision 5108)
++++ src/dird/job.c	(working copy)
+@@ -927,6 +927,7 @@
+    jcr->fileset = job->fileset;
+    jcr->messages = job->messages;
+    jcr->spool_data = job->spool_data;
++   jcr->spool_size = job->spool_size;
+    jcr->write_part_after_job = job->write_part_after_job;
+    if (jcr->RestoreBootstrap) {
+       free(jcr->RestoreBootstrap);
+Index: src/dird/dird_conf.c
+===================================================================
+--- src/dird/dird_conf.c	(revision 5108)
++++ src/dird/dird_conf.c	(working copy)
+@@ -295,6 +295,7 @@
+    {"enabled",     store_bool, ITEM(res_job.enabled), 0, ITEM_DEFAULT, true},
+    {"spoolattributes",store_bool, ITEM(res_job.SpoolAttributes), 0, ITEM_DEFAULT, false},
+    {"spooldata",   store_bool, ITEM(res_job.spool_data), 0, ITEM_DEFAULT, false},
++   {"spoolsize",   store_size, ITEM(res_job.spool_size), 0, 0, 0},
+    {"rerunfailedlevels",   store_bool, ITEM(res_job.rerun_failed_levels), 0, ITEM_DEFAULT, false},
+    {"prefermountedvolumes", store_bool, ITEM(res_job.PreferMountedVolumes), 0, ITEM_DEFAULT, true},
+    {"runbeforejob", store_short_runscript,  ITEM(res_job.RunScripts),  0, 0, 0},
+@@ -600,6 +601,9 @@
+          res->res_job.RescheduleOnError, res->res_job.RescheduleTimes,
+          edit_uint64_with_commas(res->res_job.RescheduleInterval, ed1),
+          res->res_job.spool_data, res->res_job.write_part_after_job);
++      if (res->res_job.spool_size) {
++         sendit(sock, _("     SpoolSize=%s\n"),	edit_uint64(res->res_job.spool_size, ed1));
++      }
+       if (res->res_job.JobType == JT_MIGRATE) {
+          sendit(sock, _("     SelectionType=%d\n"), res->res_job.selection_type);
+       }
+Index: src/dird/dird_conf.h
+===================================================================
+--- src/dird/dird_conf.h	(revision 5108)
++++ src/dird/dird_conf.h	(working copy)
+@@ -380,6 +380,7 @@
+    utime_t RescheduleInterval;        /* Reschedule interval */
+    utime_t JobRetention;              /* job retention period in seconds */
+    uint32_t MaxConcurrentJobs;        /* Maximum concurrent jobs */
++   int64_t spool_size;                /* Size of spool file for this job */
+    int RescheduleTimes;               /* Number of times to reschedule job */
+    bool RescheduleOnError;            /* Set to reschedule on error */
+    bool PrefixLinks;                  /* prefix soft links with Where path */
+Index: src/stored/job.c
+===================================================================
+--- src/stored/job.c	(revision 5108)
++++ src/stored/job.c	(working copy)
+@@ -49,7 +49,7 @@
+ /* Requests from the Director daemon */
+ static char jobcmd[] = "JobId=%d job=%127s job_name=%127s client_name=%127s "
+       "type=%d level=%d FileSet=%127s NoAttr=%d SpoolAttr=%d FileSetMD5=%127s "
+-      "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d\n";
++      "SpoolData=%d SpoolSize=%s WritePartAfterJob=%d PreferMountedVols=%d\n";
+ 
+ 
+ /* Responses sent to Director daemon */
+@@ -73,6 +73,7 @@
+ {
+    int JobId;
+    char auth_key[100];
++   char spool_size[30];
+    BSOCK *dir = jcr->dir_bsock;
+    POOL_MEM job_name, client_name, job, fileset_name, fileset_md5;
+    int JobType, level, spool_attributes, no_attributes, spool_data;
+@@ -87,9 +88,9 @@
+    stat = sscanf(dir->msg, jobcmd, &JobId, job.c_str(), job_name.c_str(),
+               client_name.c_str(),
+               &JobType, &level, fileset_name.c_str(), &no_attributes,
+-              &spool_attributes, fileset_md5.c_str(), &spool_data, 
++              &spool_attributes, fileset_md5.c_str(), &spool_data, spool_size,
+               &write_part_after_job, &PreferMountedVols);
+-   if (stat != 13) {
++   if (stat != 14) {
+       pm_strcpy(jcr->errmsg, dir->msg);
+       bnet_fsend(dir, BAD_job, stat, jcr->errmsg);
+       Dmsg1(100, ">dird: %s", dir->msg);
+@@ -124,6 +125,7 @@
+    jcr->no_attributes = no_attributes;
+    jcr->spool_attributes = spool_attributes;
+    jcr->spool_data = spool_data;
++   jcr->spool_size = str_to_int64(spool_size);
+    jcr->write_part_after_job = write_part_after_job;
+    jcr->fileset_md5 = get_pool_memory(PM_NAME);
+    pm_strcpy(jcr->fileset_md5, fileset_md5);
+Index: src/stored/acquire.c
+===================================================================
+--- src/stored/acquire.c	(revision 5108)
++++ src/stored/acquire.c	(working copy)
+@@ -609,7 +609,12 @@
+       if (dcr->attached_to_dev) {
+          detach_dcr_from_dev(dcr);
+       }
+-      dcr->max_job_spool_size = dev->device->max_job_spool_size;
++      /* Use job spoolsize prior to device spoolsize*/
++      if (jcr->spool_size) {
++	 dcr->max_job_spool_size = jcr->spool_size;
++      } else {
++	 dcr->max_job_spool_size = dev->device->max_job_spool_size;
++      }
+       dcr->device = dev->device;
+       dcr->dev = dev;
+       attach_dcr_to_dev(dcr);
+Index: src/jcr.h
+===================================================================
+--- src/jcr.h	(revision 5108)
++++ src/jcr.h	(working copy)
+@@ -246,6 +246,7 @@
+    int replace;                       /* Replace option */
+    int NumVols;                       /* Number of Volume used in pool */
+    int reschedule_count;              /* Number of times rescheduled */
++   int64_t spool_size;                /* Spool size for this job */
+    bool spool_data;                   /* Spool data in SD */
+    bool acquired_resource_locks;      /* set if resource locks acquired */
+    bool term_wait_inited;             /* Set when cond var inited */
+@@ -323,6 +324,7 @@
+    bool spool_attributes;             /* set if spooling attributes */
+    bool no_attributes;                /* set if no attributes wanted */
+    bool spool_data;                   /* set to spool data */
++   int64_t spool_size;                /* Spool size for this job */
+    int CurVol;                        /* Current Volume count */
+    DIRRES* director;                  /* Director resource */
+    alist *write_store;                /* list of write storage devices sent by DIR */ 

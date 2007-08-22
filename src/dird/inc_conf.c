@@ -1,22 +1,14 @@
 /*
- *   Configuration file parser for new and old Include and
- *      Exclude records
- *
- *     Kern Sibbald, March MMIII
- *
- *     Version $Id: inc_conf.c 3671 2006-11-21 16:45:13Z robertnelson $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   Configuration file parser for new and old Include and
+ *      Exclude records
+ *
+ *     Kern Sibbald, March MMIII
+ *
+ *     Version $Id: inc_conf.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -120,6 +120,8 @@ static RES_ITEM options_items[] = {
    {"noatime",         store_opts,    {0},     0, 0, 0},
    {"enhancedwild",    store_opts,    {0},     0, 0, 0},
    {"drivetype",       store_drivetype, {0},     0, 0, 0},
+   {"checkfilechanges",store_opts,    {0},     0, 0, 0},
+   {"strippath",       store_opts,    {0},     0, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -145,7 +147,9 @@ enum {
    INC_KW_IGNORECASE,
    INC_KW_HFSPLUS,
    INC_KW_NOATIME,
-   INC_KW_ENHANCEDWILD
+   INC_KW_ENHANCEDWILD,
+   INC_KW_CHKCHANGES,
+   INC_KW_STRIPPATH
 };
 
 /*
@@ -174,6 +178,8 @@ static struct s_kw FS_option_kw[] = {
    {"hfsplussupport", INC_KW_HFSPLUS},
    {"noatime",     INC_KW_NOATIME},
    {"enhancedwild", INC_KW_ENHANCEDWILD},
+   {"checkfilechanges", INC_KW_CHKCHANGES},
+   {"strippath",    INC_KW_STRIPPATH},
    {NULL,          0}
 };
 
@@ -239,6 +245,8 @@ static struct s_fs_opt FS_options[] = {
    {"no",       INC_KW_NOATIME,       "0"},
    {"yes",      INC_KW_ENHANCEDWILD,  "K"},
    {"no",       INC_KW_ENHANCEDWILD,  "0"},
+   {"yes",      INC_KW_CHKCHANGES,    "c"},
+   {"no",       INC_KW_CHKCHANGES,    "0"},
    {NULL,       0,                      0}
 };
 
@@ -266,7 +274,14 @@ static void scan_include_options(LEX *lc, int keyword, char *opts, int optlen)
       bstrncat(opts, lc->str, optlen);
       bstrncat(opts, ":", optlen);         /* terminate it */
       Dmsg3(900, "Catopts=%s option=%s optlen=%d\n", opts, option,optlen);
-
+   } else if (keyword == INC_KW_STRIPPATH) { /* another special case */
+      if (!is_an_integer(lc->str)) {
+         scan_err1(lc, _("Expected a strip path positive integer, got:%s:"), lc->str);
+      }
+      bstrncat(opts, "P", optlen);         /* indicate strip path */
+      bstrncat(opts, lc->str, optlen);
+      bstrncat(opts, ":", optlen);         /* terminate it */
+      Dmsg3(900, "Catopts=%s option=%s optlen=%d\n", opts, option,optlen);
    /*
     * Standard keyword options for Include/Exclude
     */

@@ -1,25 +1,14 @@
-/*                               -*- Mode: C -*-
- * vss.h --
- */
-//
-// Copyright transferred from MATRIX-Computer GmbH to
-//   Kern Sibbald by express permission.
-/*
- *
- * Author          : Thorsten Engel
- * Created On      : Fri May 06 21:44:00 2006 
- */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -36,6 +25,17 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*                               -*- Mode: C -*-
+ * vss.h --
+ */
+//
+// Copyright transferred from MATRIX-Computer GmbH to
+//   Kern Sibbald by express permission.
+/*
+ *
+ * Author          : Thorsten Engel
+ * Created On      : Fri May 06 21:44:00 2006 
+ */
 
 #ifndef __VSS_H_
 #define __VSS_H_
@@ -125,6 +125,22 @@ private:
    virtual void QuerySnapshotSet(GUID snapshotSetID);
    BOOL CheckWriterStatus();
 };
+
+class VSSClientVista:public VSSClient
+{
+public:
+   VSSClientVista();
+   virtual ~VSSClientVista();
+   virtual BOOL CreateSnapshots(char* szDriveLetters);
+   virtual BOOL CloseBackup();   
+   virtual const char* GetDriverName() { return "VSS Vista"; };
+private:
+   virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore);
+   virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync*  pAsync);
+   virtual void QuerySnapshotSet(GUID snapshotSetID);
+   BOOL CheckWriterStatus();
+};
+
 
 extern VSSClient *g_pVSSClient;
 

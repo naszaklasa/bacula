@@ -1,17 +1,23 @@
                 
 Projects:
                      Bacula Projects Roadmap 
-                    Status updated 26 January 2007
+                    Status updated 7 July 2007
                    After re-ordering in vote priority
 
 Items Completed:
+Item:   2   Implement a Bacula GUI/management tool.
 Item:  18   Quick release of FD-SD connection after backup.
-Item:  40   Include JobID in spool file name
+Item:  23   Implement from-client and to-client on restore command line.
 Item:  25   Implement huge exclude list support using dlist   
+Item:  41   Enable to relocate files and directories when restoring
+Item:  42   Batch attribute inserts (ten times faster)
+Item:  43   More concurrency in SD using micro-locking
+Item:  44   Performance enhancements (POSIX/Win32 OS file access hints).
+Item:  40   Include JobID in spool file name
 
 Summary:
 Item:   1   Accurate restoration of renamed/deleted files
-Item:   2   Implement a Bacula GUI/management tool.
+Item:   2*  Implement a Bacula GUI/management tool.
 Item:   3   Allow FD to initiate a backup
 Item:   4   Merge multiple backups (Synthetic Backup or Consolidation).
 Item:   5   Deletion of Disk-Based Bacula Volumes
@@ -32,7 +38,7 @@ Item:  19   Implement a Python interface to the Bacula catalog.
 Item:  20   Archive data
 Item:  21   Split documentation
 Item:  22   Implement support for stacking arbitrary stream filters, sinks.
-Item:  23   Implement from-client and to-client on restore command line.
+Item:  23*  Implement from-client and to-client on restore command line.
 Item:  24   Add an override in Schedule for Pools based on backup types.
 Item:  25*  Implement huge exclude list support using hashing.
 Item:  26   Implement more Python events in Bacula.
@@ -50,7 +56,10 @@ Item:  37   Add an item to the restore option where you can select a pool
 Item:  38   Include timestamp of job launch in "stat clients" output
 Item:  39   Message mailing based on backup types
 Item:  40*  Include JobID in spool file name
-
+Item:  41*  Enable to relocate files and directories when restoring
+Item:  42*  Batch attribute inserts (ten times faster)
+Item:  43*  More concurrency in SD using micro-locking
+Item:  44*  Performance enhancements (POSIX/Win32 OS file access hints).
 
 Item  1:  Accurate restoration of renamed/deleted files
   Date:   28 November 2005
@@ -1130,10 +1139,10 @@ Item 40:  Include JobID in spool file name ****DONE****
           stamp is useful (and should be retained).
 
 ============= New Freature Requests after vote of 26 Jan 2007 ========
-Item  n:  Enable to relocate files and directories when restoring
+Item  41: Enable to relocate files and directories when restoring
   Date:   2007-03-01
   Origin: Eric Bollengier <eric@eb.homelinux.org>
-  Status:
+  Status: Done.
 
   What:   The where= option is not powerful enough. It will be
           a great feature if bacula can restore a file in the
@@ -1157,8 +1166,7 @@ Item  n:  Enable to relocate files and directories when restoring
 
           
   Notes:  I think we can enhance the where= option very easily by
-          allowing regexp expression. (by replacing bregex by libpcre 
-          see http://en.wikipedia.org/wiki/PCRE and http://www.pcre.org/)
+          allowing regexp expression. 
 
           Since, many users think that regexp are not user friendly, i think
           that bat, bconsole or brestore must provide a simple way to
@@ -1225,6 +1233,34 @@ Item n:   Implement NDMP protocol support
   Notes (Kern): I am not at all in favor of this until NDMP becomes
           an Open Standard or until there are Open Source libraries
           that interface to it.
+
+Item n: make changing "spooldata=yes|no" possible for
+        manual/interactive jobs
+
+Origin: Marc Schiffbauer <marc@schiffbauer.net>
+
+Date:   12 April 2007)
+
+Status: NEW
+
+What:   Make it possible to modify the spooldata option
+        for a job when being run from within the console.
+        Currently it is possible to modify the backup level
+        and the spooldata setting in a Schedule resource.
+        It is also possible to modify the backup level when using
+        the "run" command in the console. 
+        But it is currently not possible to to the same 
+        with "spooldata=yes|no" like:
+
+        run job=MyJob level=incremental spooldata=yes
+
+Why:    In some situations it would be handy to be able to switch
+        spooldata on or off for interactive/manual jobs based on
+        which data the admin expects or how fast the LAN/WAN
+        connection currently is.
+
+Notes:  ./.
+
 ============= Empty Feature Request form ===========
 Item  n:  One line summary ...
   Date:   Date submitted 

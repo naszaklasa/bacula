@@ -1,7 +1,7 @@
 #
 # Bacula Tools Makefile
 #
-# Version $Id: Makefile.in 3743 2006-12-04 09:39:26Z kerns $
+# Version $Id: Makefile.in 5210 2007-07-21 18:22:47Z kerns $
 #
 @MCOMMON@
 
@@ -27,9 +27,6 @@ dummy:
 
 GETTEXT_LIBS = @LIBINTL@
 
-OPENSSL_INC = @OPENSSL_INC@
-OPENSSL_LIBS = @OPENSSL_LIBS@
-
 FINDOBJS = testfind.o ../dird/dird_conf.o ../dird/inc_conf.o ../dird/run_conf.o
 
 # these are the objects that are changed by the .configure process
@@ -38,7 +35,7 @@ EXTRAOBJS = @OBJLIST@
 DIRCONFOBJS = ../dird/dird_conf.o ../dird/run_conf.o ../dird/inc_conf.o
 
 NODIRTOOLS = bsmtp
-DIRTOOLS = bsmtp dbcheck drivetype fstype testfind testls bregex bwild
+DIRTOOLS = bsmtp dbcheck drivetype fstype testfind testls bregex bwild bbatch bregtest
 TOOLS = $(@DIR_TOOLS@)
 
 INSNODIRTOOLS = bsmtp
@@ -55,12 +52,15 @@ INSTOOLS = $(INS@DIR_TOOLS@)
 	@echo "Compiling $<"
 	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile $(TOOLS) gigaslam
+all: Makefile $(TOOLS) gigaslam grow
 	@echo "==== Make of tools is good ===="
 	@echo " "
 
 bsmtp:	bsmtp.o ../lib/libbac.a        
 	$(CXX) $(LDFLAGS) -L../lib -o $@ bsmtp.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+
+bregtest:	bregtest.o ../lib/libbac.a	  
+	$(CXX) $(LDFLAGS) -L../lib -o $@ bregtest.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 dbcheck: dbcheck.o ../lib/libbac.a ../cats/libsql.a $(DIRCONFOBJS)
 	$(CXX) $(LDFLAGS) -L../lib -L../cats -o $@ dbcheck.o $(DIRCONFOBJS) -lsql -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
@@ -96,12 +96,18 @@ bwild:	../findlib/libfind.a ../lib/libbac.a bwild.o
 	$(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bwild.o \
 	  $(DLIB) -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
+bbatch: ../lib/libbac.a bbatch.o
+	$(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -o $@ bbatch.o \
+	  -lsql -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+
 gigaslam.o: gigaslam.c
 	$(CC) -c $<  
 
 gigaslam: gigaslam.o
 	$(CC) -o $@ gigaslam.o
 
+grow: grow.o ../lib/libbac.a
+	$(CXX) $(LDFLAGS) -L../lib -o $@ grow.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
@@ -145,7 +151,7 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \

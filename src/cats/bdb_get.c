@@ -13,7 +13,7 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb_get.c 3709 2006-11-27 10:03:06Z kerns $
+ *    Version $Id: bdb_get.c 5142 2007-07-11 16:38:14Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -24,8 +24,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -492,7 +492,8 @@ int db_get_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
    return stat;
 }
 
-
+bool db_get_query_dbids(JCR *jcr, B_DB *mdb, POOL_MEM &query, dbid_list &ids)
+{ return false; }
 
 int db_get_file_attributes_record(JCR *jcr, B_DB *mdb, char *fname, JOB_DBR *jr, FILE_DBR *fdbr)
 { return 0; }

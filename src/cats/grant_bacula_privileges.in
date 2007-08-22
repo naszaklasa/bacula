@@ -4,17 +4,17 @@
 #  Bacula tables for PostgreSQL or MySQL.
 # SQLite does not have permissions.
 #
-if test xmysql = x@DB_NAME@ ; then 
+if test xmysql = x@DB_TYPE@ ; then 
   echo "Granting MySQL privileges"
   @scriptdir@/grant_mysql_privileges $*
 else
-  if test xpostgresql = x@DB_NAME@ ; then 
+  if test xpostgresql = x@DB_TYPE@ ; then 
     echo "Granting PostgreSQL privileges"
     @scriptdir@/grant_postgresql_privileges $*
   else
-    if test xsqlite = x@DB_NAME@ -o xsqlite3 = x@DB_NAME@ ; then 
+    if test xsqlite = x@DB_TYPE@ -o xsqlite3 = x@DB_TYPE@ ; then 
       echo "Granting SQLite privileges"
-      @scriptdir@/grant_@DB_NAME@_privileges $*
+      @scriptdir@/grant_@DB_TYPE@_privileges $*
     fi
   fi
 fi

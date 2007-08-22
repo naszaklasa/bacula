@@ -1,7 +1,7 @@
 #
 # Bacula Makefile for the File daemon
 #
-#  Version $Id: Makefile.in 3074 2006-06-25 13:58:36Z kerns $
+#  Version $Id: Makefile.in 4914 2007-05-27 09:34:40Z kerns $
 #
 
 @MCOMMON@
@@ -20,9 +20,6 @@ thisdir = src/filed
 DEBUG=@DEBUG@
 
 GETTEXT_LIBS = @LIBINTL@
-
-OPENSSL_LIBS = @OPENSSL_LIBS@
-OPENSSL_INC = @OPENSSL_INC@
 
 PYTHON_LIBS = @PYTHON_LIBS@
 PYTHON_INC = @PYTHON_INCDIR@
@@ -56,7 +53,7 @@ WIN32LIBS = $(@WIN32@)
 # inference rules
 .c.o:
 	@echo "Compiling $<"
-	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile @WIN32@ bacula-fd @STATIC_FD@
 	@echo "==== Make of filed is good ===="
@@ -153,7 +150,7 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \

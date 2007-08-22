@@ -1,0 +1,198 @@
+Index: src/dird/getmsg.c
+===================================================================
+--- src/dird/getmsg.c	(révision 4696)
++++ src/dird/getmsg.c	(copie de travail)
+@@ -70,6 +70,33 @@
+ 
+ static char OK_msg[] = "1000 OK\n";
+ 
++
++void set_jcr_sd_job_status(JCR *jcr, int SDJobStatus)
++{
++   bool set_waittime=false;
++   Dmsg2(800, "set_jcr_sd_job_status(%s, %c)\n", jcr->Job, SDJobStatus);
++   /* if wait state is new, we keep current time for watchdog MaxWaitTime */
++   switch (SDJobStatus) {
++      case JS_WaitMedia:
++      case JS_WaitMount:
++      case JS_WaitMaxJobs:
++	 set_waittime = true;
++      default:
++	 break;
++   }
++
++   if (job_waiting(jcr)) {
++      set_waittime = false;
++   }
++
++   if (set_waittime) {
++      /* set it before JobStatus */
++      Dmsg0(800, "Setting wait_time\n");
++      jcr->wait_time = time(NULL);
++   }
++   jcr->SDJobStatus = SDJobStatus;
++}
++
+ /*
+  * Get a message
+  *  Call appropriate processing routine
+@@ -230,7 +257,7 @@
+          int JobStatus;
+          char Job[MAX_NAME_LENGTH];
+          if (sscanf(bs->msg, Job_status, &Job, &JobStatus) == 2) {
+-            jcr->SDJobStatus = JobStatus; /* current status */
++            set_jcr_sd_job_status(jcr,JobStatus); /* current status */
+          } else {
+             Emsg1(M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
+          }
+Index: src/dird/job.c
+===================================================================
+--- src/dird/job.c	(révision 4696)
++++ src/dird/job.c	(copie de travail)
+@@ -484,24 +484,25 @@
+    bool cancel = false;
+    JOB *job = jcr->job;
+ 
+-   if (job_canceled(jcr)) {
+-      return false;                /* already canceled */
++   if (!job_waiting(jcr)) {
++      return false;
+    }
+    if (job->MaxWaitTime == 0 && job->FullMaxWaitTime == 0 &&
+        job->IncMaxWaitTime == 0 && job->DiffMaxWaitTime == 0) {
+       return false;
+    } 
++   Dmsg3(20, "check maxwaittime %u - %u >= %u\n", watchdog_time, jcr->wait_time, job->MaxWaitTime);
+    if (jcr->JobLevel == L_FULL && job->FullMaxWaitTime != 0 &&
+-         (watchdog_time - jcr->start_time) >= job->FullMaxWaitTime) {
++         (watchdog_time - jcr->wait_time) >= job->FullMaxWaitTime) {
+       cancel = true;
+    } else if (jcr->JobLevel == L_DIFFERENTIAL && job->DiffMaxWaitTime != 0 &&
+-         (watchdog_time - jcr->start_time) >= job->DiffMaxWaitTime) {
++         (watchdog_time - jcr->wait_time) >= job->DiffMaxWaitTime) {
+       cancel = true;
+    } else if (jcr->JobLevel == L_INCREMENTAL && job->IncMaxWaitTime != 0 &&
+-         (watchdog_time - jcr->start_time) >= job->IncMaxWaitTime) {
++         (watchdog_time - jcr->wait_time) >= job->IncMaxWaitTime) {
+       cancel = true;
+    } else if (job->MaxWaitTime != 0 &&
+-         (watchdog_time - jcr->start_time) >= job->MaxWaitTime) {
++         (watchdog_time - jcr->wait_time) >= job->MaxWaitTime) {
+       cancel = true;
+    }
+ 
+Index: src/dird/dird_conf.c
+===================================================================
+--- src/dird/dird_conf.c	(révision 4696)
++++ src/dird/dird_conf.c	(copie de travail)
+@@ -627,6 +627,15 @@
+       if (res->res_job.WriteBootstrap) {
+          sendit(sock, _("  --> WriteBootstrap=%s\n"), NPRT(res->res_job.WriteBootstrap));
+       }
++      if (res->res_job.MaxRunTime) {
++         sendit(sock, _("  --> MaxRunTime=%u\n"), res->res_job.MaxRunTime);
++      }
++      if (res->res_job.MaxWaitTime) {
++         sendit(sock, _("  --> MaxWaitTime=%u\n"), res->res_job.MaxWaitTime);
++      }
++      if (res->res_job.MaxStartDelay) {
++         sendit(sock, _("  --> MaxStartDelay=%u\n"), res->res_job.MaxStartDelay);
++      }
+       if (res->res_job.storage) {
+          STORE *store;
+          foreach_alist(store, res->res_job.storage) {
+Index: src/jcr.h
+===================================================================
+--- src/jcr.h	(révision 4696)
++++ src/jcr.h	(copie de travail)
+@@ -105,6 +105,22 @@
+    jcr->JobStatus == JS_ErrorTerminated || \
+    jcr->JobStatus == JS_FatalError)
+ 
++#define job_waiting(jcr) \
++  (jcr->JobStatus == JS_WaitFD       || \
++   jcr->JobStatus == JS_WaitSD	     || \
++   jcr->JobStatus == JS_WaitMedia    || \
++   jcr->JobStatus == JS_WaitMount    || \
++   jcr->JobStatus == JS_WaitStoreRes || \
++   jcr->JobStatus == JS_WaitJobRes   || \
++   jcr->JobStatus == JS_WaitClientRes|| \
++   jcr->JobStatus == JS_WaitMaxJobs  || \
++   jcr->JobStatus == JS_WaitPriority || \
++   jcr->SDJobStatus == JS_WaitMedia  || \
++   jcr->SDJobStatus == JS_WaitMount  || \
++   jcr->SDJobStatus == JS_WaitMaxJobs)
++
++
++
+ #define foreach_jcr(jcr) \
+    for (jcr=jcr_walk_start(); jcr; (jcr=jcr_walk_next(jcr)) )
+ 
+@@ -166,6 +182,7 @@
+    time_t start_time;                 /* when job actually started */
+    time_t run_time;                   /* used for computing speed */
+    time_t end_time;                   /* job end time */
++   time_t wait_time;                  /* when job have started to wait */
+    POOLMEM *client_name;              /* client name */
+    POOLMEM *RestoreBootstrap;         /* Bootstrap file to restore */
+    POOLMEM *stime;                    /* start time for incremental/differential */
+Index: src/lib/jcr.c
+===================================================================
+--- src/lib/jcr.c	(révision 4696)
++++ src/lib/jcr.c	(copie de travail)
+@@ -546,18 +546,54 @@
+ 
+ void set_jcr_job_status(JCR *jcr, int JobStatus)
+ {
++   bool set_waittime=false;
++   Dmsg2(800, "set_jcr_job_status(%s, %c)\n", jcr->Job, JobStatus);
++   /* if wait state is new, we keep current time for watchdog MaxWaitTime */
++   switch (JobStatus) {
++      case JS_WaitFD:
++      case JS_WaitSD:
++      case JS_WaitMedia:
++      case JS_WaitMount:
++      case JS_WaitStoreRes:
++      case JS_WaitJobRes:
++      case JS_WaitClientRes:
++      case JS_WaitMaxJobs:
++      case JS_WaitPriority:
++	 set_waittime = true;
++      default:
++	 break;
++   }
++
++   switch (jcr->JobStatus) {
+    /*
+     * For a set of errors, ... keep the current status
+     *   so it isn't lost. For all others, set it.
+     */
+-   switch (jcr->JobStatus) {
+    case JS_ErrorTerminated:
+    case JS_Error:
+    case JS_FatalError:
+    case JS_Differences:
+    case JS_Canceled:
+       break;
++   /*
++    * For a set of Wait situation, keep old time.
++    */
++   case JS_WaitFD:
++   case JS_WaitSD:
++   case JS_WaitMedia:
++   case JS_WaitMount:
++   case JS_WaitStoreRes:
++   case JS_WaitJobRes:
++   case JS_WaitClientRes:
++   case JS_WaitMaxJobs:
++   case JS_WaitPriority:  
++      set_waittime = false;	/* keep old time */
+    default:
++      if (set_waittime) {
++	 /* set it before JobStatus */
++	 Dmsg0(800, "Setting wait_time\n");
++	 jcr->wait_time = time(NULL);
++      }
+       jcr->JobStatus = JobStatus;
+    }
+ }

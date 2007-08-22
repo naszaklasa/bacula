@@ -7,7 +7,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: bsr.c 3693 2006-11-24 11:34:19Z kerns $
+ *   Version $Id: bsr.c 4992 2007-06-07 14:46:43Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -18,8 +18,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -140,13 +140,13 @@ static bool is_volume_selected(RBSR_FINDEX *fi,
 
 static void print_findex(UAContext *ua, RBSR_FINDEX *fi)
 {
-   bsendmsg(ua, "fi=0x%lx\n", fi);
+   ua->send_msg("fi=0x%lx\n", fi);
    for ( ; fi; fi=fi->next) {
       if (fi->findex == fi->findex2) {
-         bsendmsg(ua, "FileIndex=%d\n", fi->findex);
+         ua->send_msg("FileIndex=%d\n", fi->findex);
          Dmsg1(1000, "FileIndex=%d\n", fi->findex);
       } else {
-         bsendmsg(ua, "FileIndex=%d-%d\n", fi->findex, fi->findex2);
+         ua->send_msg("FileIndex=%d-%d\n", fi->findex, fi->findex2);
          Dmsg2(1000, "FileIndex=%d-%d\n", fi->findex, fi->findex2);
       }
    }
@@ -185,14 +185,14 @@ bool complete_bsr(UAContext *ua, RBSR *bsr)
       memset(&jr, 0, sizeof(jr));
       jr.JobId = bsr->JobId;
       if (!db_get_job_record(ua->jcr, ua->db, &jr)) {
-         bsendmsg(ua, _("Unable to get Job record. ERR=%s\n"), db_strerror(ua->db));
+         ua->error_msg(_("Unable to get Job record. ERR=%s\n"), db_strerror(ua->db));
          return false;
       }
       bsr->VolSessionId = jr.VolSessionId;
       bsr->VolSessionTime = jr.VolSessionTime;
       if ((bsr->VolCount=db_get_job_volume_parameters(ua->jcr, ua->db, bsr->JobId,
            &(bsr->VolParams))) == 0) {
-         bsendmsg(ua, _("Unable to get Job Volume Parameters. ERR=%s\n"), db_strerror(ua->db));
+         ua->error_msg(_("Unable to get Job Volume Parameters. ERR=%s\n"), db_strerror(ua->db));
          if (bsr->VolParams) {
             free(bsr->VolParams);
             bsr->VolParams = NULL;
@@ -244,8 +244,8 @@ uint32_t write_bsr_file(UAContext *ua, RESTORE_CTX &rx)
    fd = fopen(fname.c_str(), "w+b");
    if (!fd) {
       berrno be;
-      bsendmsg(ua, _("Unable to create bootstrap file %s. ERR=%s\n"),
-         fname.c_str(), be.strerror());
+      ua->error_msg(_("Unable to create bootstrap file %s. ERR=%s\n"),
+         fname.c_str(), be.bstrerror());
       goto bail_out;
    }
    /* Write them to file */
@@ -253,21 +253,21 @@ uint32_t write_bsr_file(UAContext *ua, RESTORE_CTX &rx)
    err = ferror(fd);
    fclose(fd);
    if (count == 0) {
-      bsendmsg(ua, _("No files found to restore/migrate. No bootstrap file written.\n"));
+      ua->info_msg(_("No files found to restore/migrate. No bootstrap file written.\n"));
       goto bail_out;
    }
    if (err) {
-      bsendmsg(ua, _("Error writing bsr file.\n"));
+      ua->error_msg(_("Error writing bsr file.\n"));
       count = 0;
       goto bail_out;
    }
 
 
-   bsendmsg(ua, _("Bootstrap records written to %s\n"), fname.c_str());
+   ua->send_msg(_("Bootstrap records written to %s\n"), fname.c_str());
 
    /* Tell the user what he will need to mount */
-   bsendmsg(ua, "\n");
-   bsendmsg(ua, _("The job will require the following\n"
+   ua->send_msg("\n");
+   ua->send_msg(_("The job will require the following\n"
                   "   Volume(s)                 Storage(s)                SD Device(s)\n"
                   "===========================================================================\n"));
    /* Create Unique list of Volumes using prompt list */
@@ -309,15 +309,15 @@ uint32_t write_bsr_file(UAContext *ua, RESTORE_CTX &rx)
       }
    }
    for (int i=0; i < ua->num_prompts; i++) {
-      bsendmsg(ua, "   %s\n", ua->prompt[i]);
+      ua->send_msg("   %s\n", ua->prompt[i]);
       free(ua->prompt[i]);
    }
    if (ua->num_prompts == 0) {
-      bsendmsg(ua, _("No Volumes found to restore.\n"));
+      ua->send_msg(_("No Volumes found to restore.\n"));
       count = 0;
    }
    ua->num_prompts = 0;
-   bsendmsg(ua, "\n");
+   ua->send_msg("\n");
 
 bail_out:
    return count;
@@ -470,13 +470,13 @@ void print_bsr(UAContext *ua, RBSR *bsr)
 {
    for ( ; bsr; bsr=bsr->next) {
       for (int i=0; i < bsr->VolCount; i++) {
-         bsendmsg(ua, "Volume=\"%s\"\n", bsr->VolParams[i].VolumeName);
-         bsendmsg(ua, "MediaType\"%s\"\n", bsr->VolParams[i].MediaType);
-         bsendmsg(ua, "VolSessionId=%u\n", bsr->VolSessionId);
-         bsendmsg(ua, "VolSessionTime=%u\n", bsr->VolSessionTime);
-         bsendmsg(ua, "VolFile=%u-%u\n", bsr->VolParams[i].StartFile,
+         ua->send_msg("Volume=\"%s\"\n", bsr->VolParams[i].VolumeName);
+         ua->send_msg("MediaType\"%s\"\n", bsr->VolParams[i].MediaType);
+         ua->send_msg("VolSessionId=%u\n", bsr->VolSessionId);
+         ua->send_msg("VolSessionTime=%u\n", bsr->VolSessionTime);
+         ua->send_msg("VolFile=%u-%u\n", bsr->VolParams[i].StartFile,
                   bsr->VolParams[i].EndFile);
-         bsendmsg(ua, "VolBlock=%u-%u\n", bsr->VolParams[i].StartBlock,
+         ua->send_msg("VolBlock=%u-%u\n", bsr->VolParams[i].StartBlock,
                   bsr->VolParams[i].EndBlock);
          print_findex(ua, bsr->fi);
       }

@@ -63,50 +63,57 @@ EXPORTS
 ?blseek@@YA_JPAUBFILE@@_JH@Z
  
 ; bget_msg.obj 
-?bget_msg@@YAHPAUBSOCK@@@Z
+?bget_msg@@YAHPAVBSOCK@@@Z
  
 ; bnet.obj 
-?bnet_recv@@YAJPAUBSOCK@@@Z
-?is_bnet_stop@@YA_NPAUBSOCK@@@Z
-?is_bnet_error@@YAHPAUBSOCK@@@Z
-?bnet_suppress_error_messages@@YAXPAUBSOCK@@_N@Z
-?bnet_despool_to_bsock@@YAHPAUBSOCK@@P6AXH@ZH@Z
-?bnet_send@@YA_NPAUBSOCK@@@Z
-?bnet_tls_server@@YA_NPAUTLS_Context@@PAUBSOCK@@PAValist@@@Z
-?bnet_tls_client@@YA_NPAUTLS_Context@@PAUBSOCK@@@Z
-?bnet_wait_data@@YAHPAUBSOCK@@H@Z
-?bnet_wait_data_intr@@YAHPAUBSOCK@@H@Z
-?bnet_connect@@YAPAUBSOCK@@PAVJCR@@HHPBDPAD2HH@Z
-?bnet_strerror@@YAPBDPAUBSOCK@@@Z
-?bnet_fsend@@YA_NPAUBSOCK@@PBDZZ
-?bnet_get_peer@@YAHPAUBSOCK@@PADH@Z
-?bnet_set_buffer_size@@YA_NPAUBSOCK@@IH@Z
-?bnet_sig@@YA_NPAUBSOCK@@H@Z
-?bnet_sig_to_ascii@@YAPBDPAUBSOCK@@@Z
-?init_bsock@@YAPAUBSOCK@@PAVJCR@@HPBD1HPAUsockaddr@@@Z
-?dup_bsock@@YAPAUBSOCK@@PAU1@@Z
-?bnet_close@@YAXPAUBSOCK@@@Z
-?term_bsock@@YAXPAUBSOCK@@@Z
- 
-; bnet_server.obj 
+?bnet_recv@@YAJPAVBSOCK@@@Z
+?is_bnet_stop@@YA_NPAVBSOCK@@@Z
+?is_bnet_error@@YAHPAVBSOCK@@@Z
+?bnet_suppress_error_messages@@YAXPAVBSOCK@@_N@Z
+?bnet_despool_to_bsock@@YAHPAVBSOCK@@P6AXH@ZH@Z
+?bnet_send@@YA_NPAVBSOCK@@@Z
+?bnet_tls_server@@YA_NPAUTLS_Context@@PAVBSOCK@@PAValist@@@Z
+?bnet_tls_client@@YA_NPAUTLS_Context@@PAVBSOCK@@@Z
+?bnet_wait_data@@YAHPAVBSOCK@@H@Z
+?bnet_wait_data_intr@@YAHPAVBSOCK@@H@Z
+?bnet_connect@@YAPAVBSOCK@@PAVJCR@@HHPBDPAD2HH@Z
+?bnet_strerror@@YAPBDPAVBSOCK@@@Z
+?bnet_fsend@@YA_NPAVBSOCK@@PBDZZ
+?bnet_get_peer@@YAHPAVBSOCK@@PADH@Z
+?bnet_set_buffer_size@@YA_NPAVBSOCK@@IH@Z
+?bnet_sig@@YA_NPAVBSOCK@@H@Z
+?bnet_sig_to_ascii@@YAPBDPAVBSOCK@@@Z
+?bnet_close@@YAXPAVBSOCK@@@Z
+?term_bsock@@YAXPAVBSOCK@@@Z
+
+; bnet_server.obj
 ?bnet_stop_thread_server@@YAXPAUpthread_t_@@@Z
 ?bnet_thread_server@@YAXPAVdlist@@HPAUworkq_tag@@P6APAXPAX@Z@Z
- 
-; bpipe.obj 
+
+; bpipe.obj
 ?run_program@@YAHPADH0@Z
 ?run_program_full_output@@YAHPADH0@Z
- 
-; bregex.obj 
+
+; bregex.obj
 b_regcomp
 b_regexec
 b_regerror
 b_regfree
 
-; bsnprintf.obj 
+; bsnprintf.obj
 ?bsnprintf@@YAHPADJPBDZZ
 ?bvsnprintf@@YAHPADJPBD0@Z
- 
-; bsys.obj 
+
+; bsock.obj
+?close@BSOCK@@QAEXXZ
+?dup_bsock@@YAPAVBSOCK@@PAV1@@Z
+?fsend@BSOCK@@QAA_NPBDZZ
+?init_bsock@@YAPAVBSOCK@@PAVJCR@@HPBD1HPAUsockaddr@@@Z
+?recv@BSOCK@@QAEJXZ
+?send@BSOCK@@QAE_NXZ
+?signal@BSOCK@@QAE_NH@Z
+
+; bsys.obj
 ?bmicrosleep@@YAHJJ@Z
 ?bstrncpy@@YAPADPADPBDH@Z
 ?bstrncpy@@YAPADPADAAVPOOL_MEM@@H@Z
@@ -141,7 +148,7 @@ b_regfree
  
 ; btimers.obj 
 ?start_thread_timer@@YAPAUs_btimer_t@@PAUpthread_t_@@I@Z
-?start_bsock_timer@@YAPAUs_btimer_t@@PAUBSOCK@@I@Z
+?start_bsock_timer@@YAPAUs_btimer_t@@PAVBSOCK@@I@Z
 ?stop_bsock_timer@@YAXPAUs_btimer_t@@@Z
 ?stop_thread_timer@@YAXPAUs_btimer_t@@@Z
  
@@ -173,8 +180,8 @@ b_regfree
 ?utime@@YAHPBDPAUutimbuf@@@Z
  
 ; cram-md5.obj 
-?cram_md5_challenge@@YA_NPAUBSOCK@@PADHH@Z
-?cram_md5_respond@@YA_NPAUBSOCK@@PADPAH2@Z
+?cram_md5_challenge@@YA_NPAVBSOCK@@PADHH@Z
+?cram_md5_respond@@YA_NPAVBSOCK@@PADPAH2@Z
  
 ; crc32.obj 
 ?bcrc32@@YAIPAEH@Z
@@ -228,13 +235,14 @@ b_regfree
 ?binary_insert_multiple@dlist@@QAEXPAXP6AH00@Z@Z
 ?binary_search@dlist@@QAEPAXPAXP6AH00@Z@Z
 ?remove@dlist@@QAEXPAX@Z
-?next@dlist@@QBEPAXPBX@Z
+?next@dlist@@QAEPAXPAX@Z
 ?destroy@dlist@@QAEXXZ
- 
-; drivetype.obj 
+?new_dlistString@@YAPAVdlistString@@PBD@Z
+
+; drivetype.obj
 ?drivetype@@YA_NPBDPADH@Z
- 
-; edit.obj 
+
+; edit.obj
 ?str_to_uint64@@YA_KPAD@Z
 ?str_to_int64@@YA_JPAD@Z
 ?edit_uint64_with_commas@@YAPAD_KPAD@Z
@@ -391,7 +399,7 @@ fnmatch
 ?qinsert@@YAXPAUb_queue@@0@Z
 ?qnext@@YAPAUb_queue@@PAU1@0@Z
 ?qdchain@@YAPAUb_queue@@PAU1@@Z
- 
+
 ; runscript.obj 
 ?new_runscript@@YAPAVRUNSCRIPT@@XZ
 ?reset_default@RUNSCRIPT@@QAEX_N@Z
@@ -450,19 +458,22 @@ fnmatch
 ?sm_dump@@YAX_N@Z
 ?sm_check@@YAXPBDH_N@Z
 ?sm_static@@YAXH@Z
- 
-; tls.obj 
+
+; tls.obj
 ?new_tls_context@@YAPAUTLS_Context@@PBD000P6AHPADHPBX@Z20_N@Z
 ?free_tls_context@@YAXPAUTLS_Context@@@Z
- 
-; tree.obj 
+
+; tree.obj
 ?new_tree@@YAPAUs_tree_root@@H@Z
 ?free_tree@@YAXPAUs_tree_root@@@Z
 ?insert_tree_node@@YAPAUs_tree_node@@PAD0HPAUs_tree_root@@PAU1@@Z
 ?strrchr@@YAPADPADH@Z
 ?tree_getpath@@YAHPAUs_tree_node@@PADH@Z
 ?tree_cwd@@YAPAUs_tree_node@@PADPAUs_tree_root@@PAU1@@Z
- 
+; rblist
+?insert@rblist@@QAEPAXPAXP6AH00@Z@Z
+?next@rblist@@QAEPAXPAX@Z
+
 ; util.obj 
 ?is_buf_zero@@YA_NPADH@Z
 ?lcase@@YAXPAD@Z

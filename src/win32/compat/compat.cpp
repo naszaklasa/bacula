@@ -1,13 +1,3 @@
-//                              -*- Mode: C++ -*-
-// compat.cpp -- compatibilty layer to make bacula-fd run
-//               natively under windows
-//
-// Copyright transferred from Raider Solutions, Inc to
-//   Kern Sibbald and John Walker by express permission.
-//
-// Author          : Christopher S. Hull
-// Created On      : Sat Jan 31 15:55:00 2004
-// $Id: compat.cpp 3975 2007-01-12 09:59:05Z kerns $
 /*
    Bacula® - The Network Backup Solution
 
@@ -17,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,6 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+//                              -*- Mode: C++ -*-
+// compat.cpp -- compatibilty layer to make bacula-fd run
+//               natively under windows
+//
+// Copyright transferred from Raider Solutions, Inc to
+//   Kern Sibbald and John Walker by express permission.
+//
+// Author          : Christopher S. Hull
+// Created On      : Sat Jan 31 15:55:00 2004
+// $Id: compat.cpp 5077 2007-06-24 17:27:12Z kerns $
 
 
 #include "bacula.h"
@@ -50,8 +50,8 @@
    conversion is called 3 times (lstat, attribs, open),
    by using the cache this is reduced to 1 time */
 
-static POOLMEM *g_pWin32ConvUTF8Cache = get_pool_memory (PM_FNAME);
-static POOLMEM *g_pWin32ConvUCS2Cache = get_pool_memory (PM_FNAME);
+static POOLMEM *g_pWin32ConvUTF8Cache = get_pool_memory(PM_FNAME);
+static POOLMEM *g_pWin32ConvUCS2Cache = get_pool_memory(PM_FNAME);
 static DWORD g_dwWin32ConvUTF8strlen = 0;
 static pthread_mutex_t Win32Convmutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -603,7 +603,7 @@ statDir(const char *file, struct stat *sb)
 
    HANDLE h = INVALID_HANDLE_VALUE;
 
-   // use unicode or ascii
+   // use unicode
    if (p_FindFirstFileW) {
       POOLMEM* pwszBuf = get_pool_memory (PM_FNAME);
       make_win32_path_UTF8_2_wchar(&pwszBuf, file);
@@ -617,8 +617,9 @@ statDir(const char *file, struct stat *sb)
       pftLastAccessTime = &info_w.ftLastAccessTime;
       pftLastWriteTime  = &info_w.ftLastWriteTime;
       pftCreationTime   = &info_w.ftCreationTime;
-   }
-   else if (p_FindFirstFileA) {
+
+   // use ASCII
+   } else if (p_FindFirstFileA) {
       h = p_FindFirstFileA(file, &info_a);
 
       pdwFileAttributes = &info_a.dwFileAttributes;
@@ -629,127 +630,135 @@ statDir(const char *file, struct stat *sb)
       pftCreationTime   = &info_a.ftCreationTime;
    }
 
-    if (h == INVALID_HANDLE_VALUE) {
-        const char *err = errorString();
-        Dmsg2(99, "FindFirstFile(%s):%s\n", file, err);
-        LocalFree((void *)err);
-        errno = b_errno_win32;
-        return -1;
-    }
+   if (h == INVALID_HANDLE_VALUE) {
+      const char *err = errorString();
+      Dmsg2(99, "FindFirstFile(%s):%s\n", file, err);
+      LocalFree((void *)err);
+      errno = b_errno_win32;
+      return -1;
+   }
 
-    sb->st_mode = 0777;               /* start with everything */
-    if (*pdwFileAttributes & FILE_ATTRIBUTE_READONLY)
-        sb->st_mode &= ~(S_IRUSR|S_IRGRP|S_IROTH);
-    if (*pdwFileAttributes & FILE_ATTRIBUTE_SYSTEM)
-        sb->st_mode &= ~S_IRWXO; /* remove everything for other */
-    if (*pdwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
-        sb->st_mode |= S_ISVTX; /* use sticky bit -> hidden */
-    sb->st_mode |= S_IFDIR;
+   sb->st_mode = 0777;               /* start with everything */
+   if (*pdwFileAttributes & FILE_ATTRIBUTE_READONLY)
+       sb->st_mode &= ~(S_IRUSR|S_IRGRP|S_IROTH);
+   if (*pdwFileAttributes & FILE_ATTRIBUTE_SYSTEM)
+       sb->st_mode &= ~S_IRWXO; /* remove everything for other */
+   if (*pdwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
+       sb->st_mode |= S_ISVTX; /* use sticky bit -> hidden */
+   sb->st_mode |= S_IFDIR;
 
-    sb->st_size = *pnFileSizeHigh;
-    sb->st_size <<= 32;
-    sb->st_size |= *pnFileSizeLow;
-    sb->st_blksize = 4096;
-    sb->st_blocks = (uint32_t)(sb->st_size + 4095)/4096;
+   /* Use st_rdev to store reparse attribute */
+   sb->st_rdev = (*pdwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0; 
 
-    sb->st_atime = cvt_ftime_to_utime(*pftLastAccessTime);
-    sb->st_mtime = cvt_ftime_to_utime(*pftLastWriteTime);
-    sb->st_ctime = cvt_ftime_to_utime(*pftCreationTime);
-    FindClose(h);
 
-    return 0;
+   sb->st_size = *pnFileSizeHigh;
+   sb->st_size <<= 32;
+   sb->st_size |= *pnFileSizeLow;
+   sb->st_blksize = 4096;
+   sb->st_blocks = (uint32_t)(sb->st_size + 4095)/4096;
+
+   sb->st_atime = cvt_ftime_to_utime(*pftLastAccessTime);
+   sb->st_mtime = cvt_ftime_to_utime(*pftLastWriteTime);
+   sb->st_ctime = cvt_ftime_to_utime(*pftCreationTime);
+   FindClose(h);
+
+   return 0;
 }
 
 int
 fstat(int fd, struct stat *sb)
 {
-    BY_HANDLE_FILE_INFORMATION info;
-    char tmpbuf[1024];
+   BY_HANDLE_FILE_INFORMATION info;
+   char tmpbuf[1024];
 
-    if (!GetFileInformationByHandle((HANDLE)fd, &info)) {
-        const char *err = errorString();
-        Dmsg2(99, "GetfileInformationByHandle(%s): %s\n", tmpbuf, err);
-        LocalFree((void *)err);
-        errno = b_errno_win32;
-        return -1;
-    }
+   if (!GetFileInformationByHandle((HANDLE)fd, &info)) {
+       const char *err = errorString();
+       Dmsg2(99, "GetfileInformationByHandle(%s): %s\n", tmpbuf, err);
+       LocalFree((void *)err);
+       errno = b_errno_win32;
+       return -1;
+   }
 
-    sb->st_dev = info.dwVolumeSerialNumber;
-    sb->st_ino = info.nFileIndexHigh;
-    sb->st_ino <<= 32;
-    sb->st_ino |= info.nFileIndexLow;
-    sb->st_nlink = (short)info.nNumberOfLinks;
-    if (sb->st_nlink > 1) {
-       Dmsg1(99,  "st_nlink=%d\n", sb->st_nlink);
-    }
+   sb->st_dev = info.dwVolumeSerialNumber;
+   sb->st_ino = info.nFileIndexHigh;
+   sb->st_ino <<= 32;
+   sb->st_ino |= info.nFileIndexLow;
+   sb->st_nlink = (short)info.nNumberOfLinks;
+   if (sb->st_nlink > 1) {
+      Dmsg1(99,  "st_nlink=%d\n", sb->st_nlink);
+   }
 
-    sb->st_mode = 0777;               /* start with everything */
-    if (info.dwFileAttributes & FILE_ATTRIBUTE_READONLY)
-        sb->st_mode &= ~(S_IRUSR|S_IRGRP|S_IROTH);
-    if (info.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM)
-        sb->st_mode &= ~S_IRWXO; /* remove everything for other */
-    if (info.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
-        sb->st_mode |= S_ISVTX; /* use sticky bit -> hidden */
-    sb->st_mode |= S_IFREG;
+   sb->st_mode = 0777;               /* start with everything */
+   if (info.dwFileAttributes & FILE_ATTRIBUTE_READONLY)
+       sb->st_mode &= ~(S_IRUSR|S_IRGRP|S_IROTH);
+   if (info.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM)
+       sb->st_mode &= ~S_IRWXO; /* remove everything for other */
+   if (info.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN)
+       sb->st_mode |= S_ISVTX; /* use sticky bit -> hidden */
+   sb->st_mode |= S_IFREG;
 
-    sb->st_size = info.nFileSizeHigh;
-    sb->st_size <<= 32;
-    sb->st_size |= info.nFileSizeLow;
-    sb->st_blksize = 4096;
-    sb->st_blocks = (uint32_t)(sb->st_size + 4095)/4096;
-    sb->st_atime = cvt_ftime_to_utime(info.ftLastAccessTime);
-    sb->st_mtime = cvt_ftime_to_utime(info.ftLastWriteTime);
-    sb->st_ctime = cvt_ftime_to_utime(info.ftCreationTime);
+   /* Use st_rdev to store reparse attribute */
+   sb->st_rdev = (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0; 
 
-    return 0;
+   sb->st_size = info.nFileSizeHigh;
+   sb->st_size <<= 32;
+   sb->st_size |= info.nFileSizeLow;
+   sb->st_blksize = 4096;
+   sb->st_blocks = (uint32_t)(sb->st_size + 4095)/4096;
+   sb->st_atime = cvt_ftime_to_utime(info.ftLastAccessTime);
+   sb->st_mtime = cvt_ftime_to_utime(info.ftLastWriteTime);
+   sb->st_ctime = cvt_ftime_to_utime(info.ftCreationTime);
+
+   return 0;
 }
 
 static int
 stat2(const char *file, struct stat *sb)
 {
-    HANDLE h;
-    int rval = 0;
-    char tmpbuf[1024];
-    conv_unix_to_win32_path(file, tmpbuf, 1024);
+   HANDLE h;
+   int rval = 0;
+   char tmpbuf[1024];
+   conv_unix_to_win32_path(file, tmpbuf, 1024);
 
-    DWORD attr = (DWORD)-1;
+   DWORD attr = (DWORD)-1;
 
-    if (p_GetFileAttributesW) {
+   if (p_GetFileAttributesW) {
       POOLMEM* pwszBuf = get_pool_memory(PM_FNAME);
       make_win32_path_UTF8_2_wchar(&pwszBuf, tmpbuf);
 
       attr = p_GetFileAttributesW((LPCWSTR) pwszBuf);
       free_pool_memory(pwszBuf);
-    } else if (p_GetFileAttributesA) {
-       attr = p_GetFileAttributesA(tmpbuf);
-    }
+   } else if (p_GetFileAttributesA) {
+      attr = p_GetFileAttributesA(tmpbuf);
+   }
 
-    if (attr == (DWORD)-1) {
-        const char *err = errorString();
-        Dmsg2(99, "GetFileAttributes(%s): %s\n", tmpbuf, err);
-        LocalFree((void *)err);
-        errno = b_errno_win32;
-        return -1;
-    }
+   if (attr == (DWORD)-1) {
+      const char *err = errorString();
+      Dmsg2(99, "GetFileAttributes(%s): %s\n", tmpbuf, err);
+      LocalFree((void *)err);
+      errno = b_errno_win32;
+      return -1;
+   }
 
-    if (attr & FILE_ATTRIBUTE_DIRECTORY)
-        return statDir(tmpbuf, sb);
+   if (attr & FILE_ATTRIBUTE_DIRECTORY) {
+      return statDir(tmpbuf, sb);
+   }
 
-    h = CreateFileA(tmpbuf, GENERIC_READ,
-                   FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+   h = CreateFileA(tmpbuf, GENERIC_READ,
+                  FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 
-    if (h == INVALID_HANDLE_VALUE) {
-        const char *err = errorString();
-        Dmsg2(99, "Cannot open file for stat (%s):%s\n", tmpbuf, err);
-        LocalFree((void *)err);
-        errno = b_errno_win32;
-        return -1;
-    }
+   if (h == INVALID_HANDLE_VALUE) {
+      const char *err = errorString();
+      Dmsg2(99, "Cannot open file for stat (%s):%s\n", tmpbuf, err);
+      LocalFree((void *)err);
+      errno = b_errno_win32;
+      return -1;
+   }
 
-    rval = fstat((int)h, sb);
-    CloseHandle(h);
- 
-    return rval;
+   rval = fstat((int)h, sb);
+   CloseHandle(h);
+
+   return rval;
 }
 
 int
@@ -803,6 +812,9 @@ stat(const char *file, struct stat *sb)
       sb->st_mode |= S_IFREG;
    }
 
+   /* Use st_rdev to store reparse attribute */
+   sb->st_rdev = (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0; 
+
    sb->st_nlink = 1;
    sb->st_size = data.nFileSizeHigh;
    sb->st_size <<= 32;
@@ -812,6 +824,31 @@ stat(const char *file, struct stat *sb)
    sb->st_atime = cvt_ftime_to_utime(data.ftLastAccessTime);
    sb->st_mtime = cvt_ftime_to_utime(data.ftLastWriteTime);
    sb->st_ctime = cvt_ftime_to_utime(data.ftCreationTime);
+   return 0;
+}
+
+/*
+ * We write our own ftruncate because the one in the
+ *  Microsoft library mrcrt.dll does not truncate
+ *  files greater than 2GB.
+ *  KES - May 2007
+ */
+int win32_ftruncate(int fd, int64_t length) 
+{
+   /* Set point we want to truncate file */
+   __int64 pos = _lseeki64(fd, (__int64)length, SEEK_SET);
+
+   if (pos != (__int64)length) {
+      errno = EACCES;         /* truncation failed, get out */
+      return -1;
+   }
+
+   /* Truncate file */
+   if (SetEndOfFile((HANDLE)_get_osfhandle(fd)) == 0) {
+      errno = b_errno_win32;
+      return -1;
+   }
+   errno = 0;
    return 0;
 }
 
@@ -942,6 +979,7 @@ gettimeofday(struct timeval *tv, struct timezone *)
 {
     SYSTEMTIME now;
     FILETIME tmp;
+
     GetSystemTime(&now);
 
     if (tv == NULL) {
@@ -958,8 +996,8 @@ gettimeofday(struct timeval *tv, struct timezone *)
     _100nsec |= tmp.dwLowDateTime;
     _100nsec -= WIN32_FILETIME_ADJUST;
 
-    tv->tv_sec =(long) (_100nsec / 10000000);
-    tv->tv_usec = (long) ((_100nsec % 10000000)/10);
+    tv->tv_sec = (long)(_100nsec / 10000000);
+    tv->tv_usec = (long)((_100nsec % 10000000)/10);
     return 0;
 
 }
@@ -1342,15 +1380,16 @@ win32_fputs(const char *string, FILE *stream)
       POOLMEM* pszBuf = get_pool_memory(PM_MESSAGE);
       pszBuf = check_pool_memory_size(pszBuf, dwChars+1);
 
-      dwChars = p_WideCharToMultiByte(GetConsoleOutputCP(),0,(LPCWSTR) pwszBuf,-1,pszBuf,dwChars,NULL,NULL);
+      dwChars = p_WideCharToMultiByte(GetConsoleOutputCP(),0,(LPCWSTR)pwszBuf,-1,pszBuf,dwChars,NULL,NULL);
       free_pool_memory(pwszBuf);
 
       if (WriteConsoleA (hOut, pszBuf, dwChars-1, &dwCharsWritten, NULL)) {
          free_pool_memory(pszBuf);
          return dwCharsWritten;
       }
+      free_pool_memory(pszBuf);
    }
-
+   /* Fall back */
    return fputs(string, stream);
 }
 
@@ -1488,7 +1527,7 @@ winver::winver(void)
                                    osvinfo.dwMajorVersion,
                                    osvinfo.dwMinorVersion);
         snprintf(WIN_RAWVERSION, sizeof(WIN_RAWVERSION), "Windows %#08x", ver);
-         switch (ver)
+        switch (ver)
         {
         case MS_WINDOWS_95: (version =  "Windows 95"); break;
         case MS_WINDOWS_98: (version =  "Windows 98"); break;

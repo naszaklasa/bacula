@@ -129,6 +129,7 @@
 ./src/lib/parse_conf.c
 ./src/lib/pythonlib.c
 ./src/lib/queue.c
+./src/lib/rblist.c
 ./src/lib/res.c
 ./src/lib/runscript.c
 ./src/lib/rwlock.c
@@ -247,7 +248,6 @@
 ./src/lib/dlist.h
 ./src/lib/enh_fnmatch.h
 ./src/lib/fnmatch.h
-./src/lib/getopt.h
 ./src/lib/htable.h
 ./src/lib/lex.h
 ./src/lib/lib.h
@@ -258,12 +258,12 @@
 ./src/lib/parse_conf.h
 ./src/lib/protos.h
 ./src/lib/queue.h
+./src/lib/rblist.h
 ./src/lib/runscript.h
 ./src/lib/rwlock.h
 ./src/lib/serial.h
 ./src/lib/sha1.h
 ./src/lib/smartall.h
-./src/lib/tcpd.h
 ./src/lib/tls.h
 ./src/lib/tree.h
 ./src/lib/var.h
@@ -302,7 +302,6 @@
 ./src/win32/compat/mswinver.h
 ./src/win32/compat/netdb.h
 ./src/win32/compat/pwd.h
-./src/win32/compat/sched.h
 ./src/win32/compat/stdint.h
 ./src/win32/compat/strings.h
 ./src/win32/compat/syslog.h

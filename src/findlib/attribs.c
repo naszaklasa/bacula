@@ -7,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, October MMII
  *
- *   Version $Id: attribs.c 4213 2007-02-19 18:00:26Z kerns $
+ *   Version $Id: attribs.c 4992 2007-06-07 14:46:43Z kerns $
  *
  */
 
@@ -403,7 +403,8 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
       char ec1[50], ec2[50];
       fsize = blseek(ofd, 0, SEEK_END);
       bclose(ofd);                    /* first close file */
-      if (attr->type == FT_REG && fsize > 0 && fsize != (boffset_t)attr->statp.st_size) {
+      if (attr->type == FT_REG && fsize > 0 && attr->statp.st_size > 0 && 
+                        fsize != (boffset_t)attr->statp.st_size) {
          Jmsg3(jcr, M_ERROR, 0, _("File size of restored file %s not correct. Original %s, restored %s.\n"),
             attr->ofname, edit_uint64(attr->statp.st_size, ec1),
             edit_uint64(fsize, ec2));
@@ -431,20 +432,20 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
       if (lchown(attr->ofname, attr->statp.st_uid, attr->statp.st_gid) < 0) {
          berrno be;
          Jmsg2(jcr, M_ERROR, 0, _("Unable to set file owner %s: ERR=%s\n"),
-            attr->ofname, be.strerror());
+            attr->ofname, be.bstrerror());
          ok = false;
       }
    } else {
       if (chown(attr->ofname, attr->statp.st_uid, attr->statp.st_gid) < 0) {
          berrno be;
          Jmsg2(jcr, M_ERROR, 0, _("Unable to set file owner %s: ERR=%s\n"),
-            attr->ofname, be.strerror());
+            attr->ofname, be.bstrerror());
          ok = false;
       }
       if (chmod(attr->ofname, attr->statp.st_mode) < 0) {
          berrno be;
          Jmsg2(jcr, M_ERROR, 0, _("Unable to set file modes %s: ERR=%s\n"),
-            attr->ofname, be.strerror());
+            attr->ofname, be.bstrerror());
          ok = false;
       }
 
@@ -454,7 +455,7 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
       if (utime(attr->ofname, &ut) < 0) {
          berrno be;
          Jmsg2(jcr, M_ERROR, 0, _("Unable to set file times %s: ERR=%s\n"),
-            attr->ofname, be.strerror());
+            attr->ofname, be.bstrerror());
          ok = false;
       }
 #ifdef HAVE_CHFLAGS
@@ -468,7 +469,7 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
       if (chflags(attr->ofname, attr->statp.st_flags) < 0) {
          berrno be;
          Jmsg2(jcr, M_ERROR, 0, _("Unable to set file flags %s: ERR=%s\n"),
-            attr->ofname, be.strerror());
+            attr->ofname, be.bstrerror());
          ok = false;
       }
 #endif

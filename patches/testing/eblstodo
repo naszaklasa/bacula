@@ -1,0 +1,85 @@
+Idees
+------
+
+Cryptage :
+ - Pouvoir configurer les algos de cryptage
+ - Pouvoir choisir de crypter dans le fileset
+ - Pouvoir choisir de forcer le cryptage dans la definition
+   du client.
+
+
+Sauvegarde des postes nomades :
+ - Le client doit pouvoir initier les sauvegardes
+ - Au niveau firewall, il ne doit y avoir que 1 connexion (1)
+		    
+					      
+	     Localhost 	   |   	       	      
+	      	       	   |   +-------+ (4) +---------------+
+	    	       	   |   |       |<----|               |
++--------+  (5)	 +-------+ |   |       |     |   DIRECTOR    |
+|        |<------+       | |   |       |---->|               |
+|   FD 	 |     	 | PROXY | |   | PROXY | (3) +-------+-------+
+|        +------->       <-+--->       |      	     |
++--------+  (6)  +-^-----+ (2) |       |     +-------v-------+
+    	          /-\ 	   |   |       | (7) |               |
+    	           |   	   |   |       +----->   STORAGE     |
+    	           |       |   |       |     |               |
+  Initiate backup  |       |   +-------+     +---------------+
+     --------------+ 	   |   		      	      
+       	   (1)	        Network       		      	      
+       	       	     	       		      	      
+    			       		      
+(1) & (2) BEGIN Backup	       
+(3) Bconsole like - Run command
+(4) & (5) DIR -> (PROX <-> PROX) -> FD connection (fileset, storage..)
+(6) & (7) FD -> (PROX <-> PROX) -> SD
+
+
+
+Bconsole :
+ - Ajouter l'historique dans la bconsole
+ - Ajouter une commande pour bloquer un drive
+
+Sauvegarde SAN :
+ - Avoir un SD sur chaque FD
+ - Avoir une serie de script qui :
+   * bascule le lecteur en local
+   * lance le SD
+   * le script de mtx doit faire ses demandes au director sur
+     un autochanger commun
+
+Gestion des stats :
+ - Ajouter la gestion des stats dans le client et le sd
+   - Ajouter un M_STATS dans la gestion des messages
+   - générer un format simple UNIXSTAMP|label|unit|value
+   - possibilité d'ajouter ça dans la base de donnée ou dans rrd
+
+
+TODO
+----
+
+bweb :
+
+ - Ajouter la liste des fichiers (quand il n'y en a pas trop)
+ - Ajouter un mode qui compte le nombre de fichier sous bfileview
+ - Integrer brestore en mode javascript
+   o ajouter une api 
+       .ls_dir(jobid,pathid)
+       .ls_file(jobid,pathid)
+       .get_pathid(jobid,"/")
+       .genbsr (fileid, fileid, fileid, fileid, fileid...)
+
+bacula :
+
+ - Faire un test de non regression avec pleins d'erreur
+   o pb inclusion (distante, locale)
+   o pb exclusion (distante, locale)
+   o pb execution de commande
+ - Utiliser la lib pcre
+ - Rendre les scripts bacula-ctl-xxx LSB
+ x Pouvoir utiliser les uid numeriques dans le backup des acl
+ - Avoir un script qui dump la configuration pour faire
+   des bug reports
+ - modifier l'organisation de la table version (pour pouvoir ajouter
+   les versions de bweb par exemple)
+

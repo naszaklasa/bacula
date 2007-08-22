@@ -1,22 +1,14 @@
 /*
- *  Enable backup privileges for Win32 systems.
- *
- *    Kern Sibbald, May MMIII
- *
- *   Version $Id: enable_priv.c 3718 2006-12-01 08:45:40Z robertnelson $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Enable backup privileges for Win32 systems.
+ *
+ *    Kern Sibbald, May MMIII
+ *
+ *   Version $Id: enable_priv.c 5063 2007-06-22 17:21:58Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "find.h"

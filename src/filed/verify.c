@@ -7,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: verify.c 4312 2007-03-05 12:33:59Z kerns $
+ *   Version $Id: verify.c 5077 2007-06-24 17:27:12Z kerns $
  *
  */
 
@@ -104,6 +104,7 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
    case FT_DIRBEGIN:
       jcr->num_files_examined--;      /* correct file count */
       return 1;                       /* ignored */
+   case FT_REPARSE: 
    case FT_DIREND:
       Dmsg1(30, "FT_DIR saving: %s\n", ff_pkt->fname);
       break;
@@ -119,21 +120,21 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
    case FT_NOACCESS: {
       berrno be;
       be.set_errno(ff_pkt->ff_errno);
-      Jmsg(jcr, M_NOTSAVED, 1, _("     Could not access %s: ERR=%s\n"), ff_pkt->fname, be.strerror());
+      Jmsg(jcr, M_NOTSAVED, 1, _("     Could not access %s: ERR=%s\n"), ff_pkt->fname, be.bstrerror());
       jcr->Errors++;
       return 1;
    }
    case FT_NOFOLLOW: {
       berrno be;
       be.set_errno(ff_pkt->ff_errno);
-      Jmsg(jcr, M_NOTSAVED, 1, _("     Could not follow link %s: ERR=%s\n"), ff_pkt->fname, be.strerror());
+      Jmsg(jcr, M_NOTSAVED, 1, _("     Could not follow link %s: ERR=%s\n"), ff_pkt->fname, be.bstrerror());
       jcr->Errors++;
       return 1;
    }
    case FT_NOSTAT: {
       berrno be;
       be.set_errno(ff_pkt->ff_errno);
-      Jmsg(jcr, M_NOTSAVED, 1, _("     Could not stat %s: ERR=%s\n"), ff_pkt->fname, be.strerror());
+      Jmsg(jcr, M_NOTSAVED, 1, _("     Could not stat %s: ERR=%s\n"), ff_pkt->fname, be.bstrerror());
       jcr->Errors++;
       return 1;
    }
@@ -154,7 +155,7 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
    case FT_NOOPEN: {
       berrno be;
       be.set_errno(ff_pkt->ff_errno);
-      Jmsg(jcr, M_NOTSAVED, 1, _("     Could not open directory %s: ERR=%s\n"), ff_pkt->fname, be.strerror());
+      Jmsg(jcr, M_NOTSAVED, 1, _("     Could not open directory %s: ERR=%s\n"), ff_pkt->fname, be.bstrerror());
       jcr->Errors++;
       return 1;
    }
@@ -190,7 +191,7 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
       stat = bnet_fsend(dir, "%d %d %s %s%c%s%c%s%c", jcr->JobFiles,
             STREAM_UNIX_ATTRIBUTES, ff_pkt->VerifyOpts, ff_pkt->fname,
             0, attribs, 0, ff_pkt->link, 0);
-   } else if (ff_pkt->type == FT_DIREND) {
+   } else if (ff_pkt->type == FT_DIREND || ff_pkt->type == FT_REPARSE) {
          /* Here link is the canonical filename (i.e. with trailing slash) */
          stat = bnet_fsend(dir,"%d %d %s %s%c%s%c%c", jcr->JobFiles,
                STREAM_UNIX_ATTRIBUTES, ff_pkt->VerifyOpts, ff_pkt->link,
@@ -217,19 +218,19 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
        * and not used.
        */
       if (ff_pkt->flags & FO_MD5) {
-         digest = crypto_digest_new(CRYPTO_DIGEST_MD5);
+         digest = crypto_digest_new(jcr, CRYPTO_DIGEST_MD5);
          digest_stream = STREAM_MD5_DIGEST;
 
       } else if (ff_pkt->flags & FO_SHA1) {
-         digest = crypto_digest_new(CRYPTO_DIGEST_SHA1);
+         digest = crypto_digest_new(jcr, CRYPTO_DIGEST_SHA1);
          digest_stream = STREAM_SHA1_DIGEST;
 
       } else if (ff_pkt->flags & FO_SHA256) {
-         digest = crypto_digest_new(CRYPTO_DIGEST_SHA256);
+         digest = crypto_digest_new(jcr, CRYPTO_DIGEST_SHA256);
          digest_stream = STREAM_SHA256_DIGEST;
 
       } else if (ff_pkt->flags & FO_SHA512) {
-         digest = crypto_digest_new(CRYPTO_DIGEST_SHA512);
+         digest = crypto_digest_new(jcr, CRYPTO_DIGEST_SHA512);
          digest_stream = STREAM_SHA512_DIGEST;
       }
 
@@ -285,6 +286,7 @@ int digest_file(JCR *jcr, FF_PKT *ff_pkt, DIGEST *digest)
 {
    BFILE bfd;
 
+   Dmsg0(50, "=== digest_file\n");
    binit(&bfd);
 
    if (ff_pkt->statp.st_size > 0 || ff_pkt->type == FT_RAW
@@ -294,8 +296,9 @@ int digest_file(JCR *jcr, FF_PKT *ff_pkt, DIGEST *digest)
          ff_pkt->ff_errno = errno;
          berrno be;
          be.set_errno(bfd.berrno);
-         Jmsg(jcr, M_NOTSAVED, 1, _("     Cannot open %s: ERR=%s.\n"),
-               ff_pkt->fname, be.strerror());
+         Dmsg2(100, "Cannot open %s: ERR=%s\n", ff_pkt->fname, be.bstrerror());
+         Jmsg(jcr, M_ERROR, 1, _("     Cannot open %s: ERR=%s.\n"),
+               ff_pkt->fname, be.bstrerror());
          return 1;
       }
       read_digest(&bfd, digest, jcr);
@@ -308,8 +311,8 @@ int digest_file(JCR *jcr, FF_PKT *ff_pkt, DIGEST *digest)
       if (bopen_rsrc(&bfd, ff_pkt->fname, O_RDONLY | O_BINARY, 0) < 0) {
          ff_pkt->ff_errno = errno;
          berrno be;
-         Jmsg(jcr, M_NOTSAVED, -1, _("     Cannot open resource fork for %s: ERR=%s.\n"),
-               ff_pkt->fname, be.strerror());
+         Jmsg(jcr, M_ERROR, -1, _("     Cannot open resource fork for %s: ERR=%s.\n"),
+               ff_pkt->fname, be.bstrerror());
          if (is_bopen(&ff_pkt->bfd)) {
             bclose(&ff_pkt->bfd);
          }
@@ -336,6 +339,7 @@ int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr)
    char buf[DEFAULT_NETWORK_BUFFER_SIZE];
    int64_t n;
 
+   Dmsg0(50, "=== read_digest\n");
    while ((n=bread(bfd, buf, sizeof(buf))) > 0) {
       crypto_digest_update(digest, (uint8_t *)buf, n);
       jcr->JobBytes += n;
@@ -344,8 +348,9 @@ int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr)
    if (n < 0) {
       berrno be;
       be.set_errno(bfd->berrno);
+      Dmsg2(100, "Error reading file %s: ERR=%s\n", jcr->last_fname, be.bstrerror());
       Jmsg(jcr, M_ERROR, 1, _("Error reading file %s: ERR=%s\n"),
-            jcr->last_fname, be.strerror());
+            jcr->last_fname, be.bstrerror());
       jcr->Errors++;
       return -1;
    }

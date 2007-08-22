@@ -1,10 +1,37 @@
 /*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
  * Manipulation routines for Job Control Records and
  *  handling of last_jobs_list.
  *
  *  Kern E. Sibbald, December 2000
  *
- *  Version $Id: jcr.c 4331 2007-03-07 15:10:49Z kerns $
+ *  Version $Id: jcr.c 5222 2007-07-22 12:21:06Z kerns $
  *
  *  These routines are thread safe.
  *
@@ -22,39 +49,15 @@
  *  re-reading of the config file, no recursion is needed.
  *
  */
-/*
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-*/
 
 #include "bacula.h"
 #include "jcr.h"
 
 /* External variables we reference */
 extern time_t watchdog_time;
+
+/* External referenced functions */
+void free_bregexps(alist *bregexps);
 
 /* Forward referenced functions */
 extern "C" void timeout_handler(int sig);
@@ -139,7 +142,8 @@ bool read_last_jobs_list(int fd, uint64_t addr)
    }
    for ( ; num; num--) {
       if (read(fd, &job, sizeof(job)) != sizeof(job)) {
-         Dmsg1(000, "Read job entry. ERR=%s\n", strerror(errno));
+         berrno be;
+         Pmsg1(000, "Read job entry. ERR=%s\n", be.bstrerror());
          return false;
       }
       if (job.JobId > 0) {
@@ -172,12 +176,14 @@ uint64_t write_last_jobs_list(int fd, uint64_t addr)
       /* First record is number of entires */
       num = last_jobs->size();
       if (write(fd, &num, sizeof(num)) != sizeof(num)) {
-         Dmsg1(000, "Error writing num_items: ERR=%s\n", strerror(errno));
+         berrno be;
+         Pmsg1(000, "Error writing num_items: ERR=%s\n", be.bstrerror());
          return 0;
       }
       foreach_dlist(je, last_jobs) {
          if (write(fd, je, sizeof(struct s_last_job)) != sizeof(struct s_last_job)) {
-            Dmsg1(000, "Error writing job: ERR=%s\n", strerror(errno));
+            berrno be;
+            Pmsg1(000, "Error writing job: ERR=%s\n", be.bstrerror());
             return 0;
          }
       }
@@ -381,6 +387,15 @@ static void free_common_jcr(JCR *jcr)
       free(jcr->where);
       jcr->where = NULL;
    }
+   if (jcr->RegexWhere) {
+      free(jcr->RegexWhere);
+      jcr->RegexWhere = NULL;
+   }
+   if (jcr->where_bregexp) {
+      free_bregexps(jcr->where_bregexp);
+      delete jcr->where_bregexp;
+      jcr->where_bregexp = NULL;
+   }
    if (jcr->cached_path) {
       free_pool_memory(jcr->cached_path);
       jcr->cached_path = NULL;
@@ -436,6 +451,52 @@ void free_jcr(JCR *jcr)
    garbage_collect_memory_pool();
    Dmsg0(3400, "Exit free_jcr\n");
 }
+ 
+/*
+ * Find which JobId corresponds to the current thread
+ */
+uint32_t get_jobid_from_tid()                              
+{
+   return get_jobid_from_tid(pthread_self());
+}
+
+uint32_t get_jobid_from_tid(pthread_t tid)
+{
+   JCR *jcr;
+   uint32_t JobId = 0;
+   foreach_jcr(jcr) {
+      if (pthread_equal(jcr->my_thread_id, tid)) {
+         JobId = (uint32_t)jcr->JobId;
+         break;
+      }
+   }
+   endeach_jcr(jcr);
+   return JobId;
+}
+
+/*
+ * Find the jcr that corresponds to the current thread
+ */
+JCR *get_jcr_from_tid()                              
+{
+   return get_jcr_from_tid(pthread_self());
+}
+
+JCR *get_jcr_from_tid(pthread_t tid)
+{
+   JCR *jcr;
+   JCR *rtn_jcr = NULL;
+
+   foreach_jcr(jcr) {
+      if (pthread_equal(jcr->my_thread_id, tid)) {
+         rtn_jcr = jcr;
+         break;
+      }
+   }
+   endeach_jcr(jcr);
+   return rtn_jcr;
+}
+
 
 
 /*
@@ -538,16 +599,28 @@ void set_jcr_job_status(JCR *jcr, int JobStatus)
     * For a set of errors, ... keep the current status
     *   so it isn't lost. For all others, set it.
     */
+   Dmsg2(100, "OnEntry JobStatus=%c set=%c\n", jcr->JobStatus, JobStatus);
    switch (jcr->JobStatus) {
    case JS_ErrorTerminated:
-   case JS_Error:
    case JS_FatalError:
-   case JS_Differences:
    case JS_Canceled:
       break;
+   case JS_Error:
+   case JS_Differences:
+      switch (JobStatus) {
+      case JS_ErrorTerminated:
+      case JS_FatalError:
+      case JS_Canceled:
+         /* Override more minor status */
+         jcr->JobStatus = JobStatus;
+         break;
+      default:
+         break;
+      }
    default:
       jcr->JobStatus = JobStatus;
    }
+   Dmsg2(100, "OnExit JobStatus=%c set=%c\n", jcr->JobStatus, JobStatus);
 }
 
 #ifdef TRACE_JCR_CHAIN
@@ -564,8 +637,7 @@ static void lock_jcr_chain()
 #endif
 {
 #ifdef TRACE_JCR_CHAIN
-   Dmsg3(3400, "Lock jcr chain %d from %s:%d\n", ++lock_count,
-      fname, line);
+   Dmsg3(3400, "Lock jcr chain %d from %s:%d\n", ++lock_count, fname, line);
 #endif
    P(jcr_lock);
 }
@@ -580,8 +652,7 @@ static void unlock_jcr_chain()
 #endif
 {
 #ifdef TRACE_JCR_CHAIN
-   Dmsg3(3400, "Unlock jcr chain %d from %s:%d\n", lock_count--,
-      fname, line);
+   Dmsg3(3400, "Unlock jcr chain %d from %s:%d\n", lock_count--, fname, line);
 #endif
    V(jcr_lock);
 }
@@ -610,8 +681,7 @@ JCR *jcr_walk_start()
    jcr = (JCR *)jcrs->first();
    if (jcr) {
       jcr->inc_use_count();
-      Dmsg3(3400, "Inc jcr_walk_start 0x%x job=%d use_count=%d\n", jcr, 
-            jcr->JobId, jcr->use_count());
+      Dmsg3(3400, "Inc jcr_walk_start 0x%x job=%d use_count=%d\n", jcr, jcr->JobId, jcr->use_count());
    }
    unlock_jcr_chain();
    return jcr;
@@ -628,8 +698,7 @@ JCR *jcr_walk_next(JCR *prev_jcr)
    jcr = (JCR *)jcrs->next(prev_jcr);
    if (jcr) {
       jcr->inc_use_count();
-      Dmsg3(3400, "Inc jcr_walk_next 0x%x job=%d use_count=%d\n", jcr, 
-         jcr->JobId, jcr->use_count());
+      Dmsg3(3400, "Inc jcr_walk_next 0x%x job=%d use_count=%d\n", jcr, jcr->JobId, jcr->use_count());
    }
    unlock_jcr_chain();
    if (prev_jcr) {
@@ -688,7 +757,7 @@ static void jcr_timeout_check(watchdog_t *self)
          timer_start = fd->timer_start;
          if (timer_start && (watchdog_time - timer_start) > fd->timeout) {
             fd->timer_start = 0;      /* turn off timer */
-            fd->timed_out = true;
+            fd->set_timed_out();
             Jmsg(jcr, M_ERROR, 0, _(
 "Watchdog sending kill after %d secs to thread stalled reading Storage daemon.\n"),
                  watchdog_time - timer_start);
@@ -700,7 +769,7 @@ static void jcr_timeout_check(watchdog_t *self)
          timer_start = fd->timer_start;
          if (timer_start && (watchdog_time - timer_start) > fd->timeout) {
             fd->timer_start = 0;      /* turn off timer */
-            fd->timed_out = true;
+            fd->set_timed_out();
             Jmsg(jcr, M_ERROR, 0, _(
 "Watchdog sending kill after %d secs to thread stalled reading File daemon.\n"),
                  watchdog_time - timer_start);
@@ -712,7 +781,7 @@ static void jcr_timeout_check(watchdog_t *self)
          timer_start = fd->timer_start;
          if (timer_start && (watchdog_time - timer_start) > fd->timeout) {
             fd->timer_start = 0;      /* turn off timer */
-            fd->timed_out = true;
+            fd->set_timed_out();
             Jmsg(jcr, M_ERROR, 0, _(
 "Watchdog sending kill after %d secs to thread stalled reading Director.\n"),
                  watchdog_time - timer_start);

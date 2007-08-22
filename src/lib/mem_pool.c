@@ -1,4 +1,31 @@
 /*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
  *  Bacula memory pool routines.
  *
  *  The idea behind these routines is that there will be
@@ -17,35 +44,8 @@
  *
  *           Kern E. Sibbald
  *
- *   Version $Id: mem_pool.c 3670 2006-11-21 16:13:58Z kerns $
+ *   Version $Id: mem_pool.c 4992 2007-06-07 14:46:43Z kerns $
  */
-/*
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-*/
 
 #include "bacula.h"
 
@@ -90,6 +90,7 @@ struct abufhead {
    int32_t ablen;                     /* Buffer length in bytes */
    int32_t pool;                      /* pool */
    struct abufhead *next;             /* pointer to next free buffer */
+   int32_t bnet_size;                 /* dummy for bnet_send() */
 };
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -457,8 +458,11 @@ void print_memory_pool_stats() {}
 int pm_strcat(POOLMEM **pm, const char *str)
 {
    int pmlen = strlen(*pm);
-   int len = strlen(str) + 1;
+   int len;
 
+   if (!str) str = "";
+
+   len = strlen(str) + 1;
    *pm = check_pool_memory_size(*pm, pmlen + len);
    memcpy(*pm+pmlen, str, len);
    return pmlen + len - 1;
@@ -467,8 +471,11 @@ int pm_strcat(POOLMEM **pm, const char *str)
 int pm_strcat(POOLMEM *&pm, const char *str)
 {
    int pmlen = strlen(pm);
-   int len = strlen(str) + 1;
+   int len;
 
+   if (!str) str = "";
+
+   len = strlen(str) + 1;
    pm = check_pool_memory_size(pm, pmlen + len);
    memcpy(pm+pmlen, str, len);
    return pmlen + len - 1;
@@ -488,8 +495,11 @@ int pm_strcat(POOLMEM *&pm, POOL_MEM &str)
 int pm_strcat(POOL_MEM &pm, const char *str)
 {
    int pmlen = strlen(pm.c_str());
-   int len = strlen(str) + 1;
+   int len;
 
+   if (!str) str = "";
+
+   len = strlen(str) + 1;
    pm.check_size(pmlen + len);
    memcpy(pm.c_str()+pmlen, str, len);
    return pmlen + len - 1;
@@ -502,8 +512,11 @@ int pm_strcat(POOL_MEM &pm, const char *str)
  */
 int pm_strcpy(POOLMEM **pm, const char *str)
 {
-   int len = strlen(str) + 1;
+   int len;
 
+   if (!str) str = "";
+
+   len = strlen(str) + 1;
    *pm = check_pool_memory_size(*pm, len);
    memcpy(*pm, str, len);
    return len - 1;
@@ -511,8 +524,11 @@ int pm_strcpy(POOLMEM **pm, const char *str)
 
 int pm_strcpy(POOLMEM *&pm, const char *str)
 {
-   int len = strlen(str) + 1;
+   int len;
 
+   if (!str) str = "";
+
+   len = strlen(str) + 1;
    pm = check_pool_memory_size(pm, len);
    memcpy(pm, str, len);
    return len - 1;
@@ -530,7 +546,11 @@ int pm_strcpy(POOLMEM *&pm, POOL_MEM &str)
 
 int pm_strcpy(POOL_MEM &pm, const char *str)
 {
-   int len = strlen(str) + 1;
+   int len;
+
+   if (!str) str = "";
+
+   len = strlen(str) + 1;
    pm.check_size(len);
    memcpy(pm.c_str(), str, len);
    return len - 1;
@@ -576,8 +596,11 @@ void POOL_MEM::realloc_pm(int32_t size)
 int POOL_MEM::strcat(const char *str)
 {
    int pmlen = strlen(mem);
-   int len = strlen(str) + 1;
+   int len;
 
+   if (!str) str = "";
+
+   len = strlen(str) + 1;
    check_size(pmlen + len);
    memcpy(mem+pmlen, str, len);
    return pmlen + len - 1;
@@ -586,7 +609,11 @@ int POOL_MEM::strcat(const char *str)
 
 int POOL_MEM::strcpy(const char *str)
 {
-   int len = strlen(str) + 1;
+   int len;
+
+   if (!str) str = "";
+
+   len = strlen(str) + 1;
    check_size(len);
    memcpy(mem, str, len);
    return len - 1;

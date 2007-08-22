@@ -23,6 +23,12 @@ CREATE UNIQUE INDEX filename_name_idx on filename (name);
 DROP INDEX path_name_idx;
 CREATE UNIQUE INDEX path_name_idx on path (path);
 
+sqlite)
+
+drop index inx2;   
+drop index inx1;   
+CREATE UNIQUE INDEX path_name_idx on path (path);
+CREATE UNIQUE INDEX filename_name_idx on filename (name);
 
 $Log$
 Revision 1.2  2007/01/01 16:52:05  ricozz

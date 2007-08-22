@@ -1,31 +1,14 @@
 /*
- *
- *   Bacula Director -- msgchan.c -- handles the message channel
- *    to the Storage daemon and the File daemon.
- *
- *     Kern Sibbald, August MM
- *
- *    This routine runs as a thread and must be thread reentrant.
- *
- *  Basic tasks done here:
- *    Open a message channel with the Storage daemon
- *      to authenticate ourself and to pass the JobId.
- *    Create a thread to interact with the Storage daemon
- *      who returns a job status and requests Catalog services, etc.
- *
- *   Version $Id: msgchan.c 4183 2007-02-15 18:57:55Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -42,6 +25,23 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- msgchan.c -- handles the message channel
+ *    to the Storage daemon and the File daemon.
+ *
+ *     Kern Sibbald, August MM
+ *
+ *    This routine runs as a thread and must be thread reentrant.
+ *
+ *  Basic tasks done here:
+ *    Open a message channel with the Storage daemon
+ *      to authenticate ourself and to pass the JobId.
+ *    Create a thread to interact with the Storage daemon
+ *      who returns a job status and requests Catalog services, etc.
+ *
+ *   Version $Id: msgchan.c 5304 2007-08-08 13:20:28Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -78,6 +78,7 @@ bool connect_to_storage_daemon(JCR *jcr, int retry_interval,
 {
    BSOCK *sd;
    STORE *store;
+   utime_t heart_beat;    
 
    if (jcr->store_bsock) {
       return true;                    /* already connected */
@@ -90,12 +91,18 @@ bool connect_to_storage_daemon(JCR *jcr, int retry_interval,
       store = jcr->rstore;
    }
 
+   if (store->heartbeat_interval) {
+      heart_beat = store->heartbeat_interval;
+   } else {           
+      heart_beat = director->heartbeat_interval;
+   }
+
    /*
     *  Open message channel with the Storage daemon
     */
    Dmsg2(100, "bnet_connect to Storage daemon %s:%d\n", store->address,
       store->SDport);
-   sd = bnet_connect(jcr, retry_interval, max_retry_time,
+   sd = bnet_connect(jcr, retry_interval, max_retry_time, heart_beat,
           _("Storage daemon"), store->address,
           NULL, store->SDport, verbose);
    if (sd == NULL) {
@@ -105,7 +112,7 @@ bool connect_to_storage_daemon(JCR *jcr, int retry_interval,
    jcr->store_bsock = sd;
 
    if (!authenticate_storage_daemon(jcr, store)) {
-      bnet_close(sd);
+      sd->close();
       jcr->store_bsock = NULL;
       return false;
    }
@@ -125,9 +132,9 @@ bool update_device_res(JCR *jcr, DEVICE *dev)
       return false;
    }
    sd = jcr->store_bsock;
-   pm_strcpy(device_name, dev->hdr.name);
+   pm_strcpy(device_name, dev->name());
    bash_spaces(device_name);
-   bnet_fsend(sd, query_device, device_name.c_str());
+   sd->fsend(query_device, device_name.c_str());
    Dmsg1(100, ">stored: %s\n", sd->msg);
    /* The data is returned through Device_update */
    if (bget_dirmsg(sd) <= 0) {
@@ -156,11 +163,11 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
    /*
     * Now send JobId and permissions, and get back the authorization key.
     */
-   pm_strcpy(job_name, jcr->job->hdr.name);
+   pm_strcpy(job_name, jcr->job->name());
    bash_spaces(job_name);
-   pm_strcpy(client_name, jcr->client->hdr.name);
+   pm_strcpy(client_name, jcr->client->name());
    bash_spaces(client_name);
-   pm_strcpy(fileset_name, jcr->fileset->hdr.name);
+   pm_strcpy(fileset_name, jcr->fileset->name());
    bash_spaces(fileset_name);
    if (jcr->fileset->MD5[0] == 0) {
       bstrncpy(jcr->fileset->MD5, "**Dummy**", sizeof(jcr->fileset->MD5));
@@ -171,16 +178,16 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
     *  for the same jobid.
     */
    if (jcr->reschedule_count) {
-      bnet_fsend(sd, "cancel Job=%s\n", jcr->Job);
-      while (bnet_recv(sd) >= 0)
+      sd->fsend("cancel Job=%s\n", jcr->Job);
+      while (sd->recv() >= 0)
          { }
    } 
-   bnet_fsend(sd, jobcmd, edit_int64(jcr->JobId, ed1), jcr->Job, 
-              job_name.c_str(), client_name.c_str(), 
-              jcr->JobType, jcr->JobLevel,
-              fileset_name.c_str(), !jcr->pool->catalog_files,
-              jcr->job->SpoolAttributes, jcr->fileset->MD5, jcr->spool_data, 
-              jcr->write_part_after_job, jcr->job->PreferMountedVolumes);
+   sd->fsend(jobcmd, edit_int64(jcr->JobId, ed1), jcr->Job, 
+             job_name.c_str(), client_name.c_str(), 
+             jcr->JobType, jcr->JobLevel,
+             fileset_name.c_str(), !jcr->pool->catalog_files,
+             jcr->job->SpoolAttributes, jcr->fileset->MD5, jcr->spool_data, 
+             jcr->write_part_after_job, jcr->job->PreferMountedVolumes);
    Dmsg1(100, ">stored: %s\n", sd->msg);
    if (bget_dirmsg(sd) > 0) {
        Dmsg1(100, "<stored: %s", sd->msg);
@@ -195,7 +202,7 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
        }
    } else {
       Jmsg(jcr, M_FATAL, 0, _("<stored: bad response to Job command: %s\n"),
-         bnet_strerror(sd));
+         sd->bstrerror());
       return 0;
    }
 
@@ -225,20 +232,20 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
          bash_spaces(store_name);
          pm_strcpy(media_type, storage->media_type);
          bash_spaces(media_type);
-         bnet_fsend(sd, use_storage, store_name.c_str(), media_type.c_str(), 
-                    pool_name.c_str(), pool_type.c_str(), 0, copy, stripe);
+         sd->fsend(use_storage, store_name.c_str(), media_type.c_str(), 
+                   pool_name.c_str(), pool_type.c_str(), 0, copy, stripe);
          Dmsg1(100, "rstore >stored: %s", sd->msg);
          DEVICE *dev;
          /* Loop over alternative storage Devices until one is OK */
          foreach_alist(dev, storage->device) {
-            pm_strcpy(device_name, dev->hdr.name);
+            pm_strcpy(device_name, dev->name());
             bash_spaces(device_name);
-            bnet_fsend(sd, use_device, device_name.c_str());
+            sd->fsend(use_device, device_name.c_str());
             Dmsg1(100, ">stored: %s", sd->msg);
          }
-         bnet_sig(sd, BNET_EOD);            /* end of Devices */
+         sd->signal(BNET_EOD);           /* end of Devices */
       }
-      bnet_sig(sd, BNET_EOD);            /* end of Storages */
+      sd->signal(BNET_EOD);              /* end of Storages */
       if (bget_dirmsg(sd) > 0) {
          Dmsg1(100, "<stored: %s", sd->msg);
          /* ****FIXME**** save actual device name */
@@ -259,21 +266,21 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
          bash_spaces(store_name);
          pm_strcpy(media_type, storage->media_type);
          bash_spaces(media_type);
-         bnet_fsend(sd, use_storage, store_name.c_str(), media_type.c_str(), 
-                    pool_name.c_str(), pool_type.c_str(), 1, copy, stripe);
+         sd->fsend(use_storage, store_name.c_str(), media_type.c_str(), 
+                   pool_name.c_str(), pool_type.c_str(), 1, copy, stripe);
 
          Dmsg1(100, "wstore >stored: %s", sd->msg);
          DEVICE *dev;
          /* Loop over alternative storage Devices until one is OK */
          foreach_alist(dev, storage->device) {
-            pm_strcpy(device_name, dev->hdr.name);
+            pm_strcpy(device_name, dev->name());
             bash_spaces(device_name);
-            bnet_fsend(sd, use_device, device_name.c_str());
+            sd->fsend(use_device, device_name.c_str());
             Dmsg1(100, ">stored: %s", sd->msg);
          }
-         bnet_sig(sd, BNET_EOD);            /* end of Devices */
+         sd->signal(BNET_EOD);           /* end of Devices */
       }
-      bnet_sig(sd, BNET_EOD);            /* end of Storages */
+      sd->signal(BNET_EOD);              /* end of Storages */
       if (bget_dirmsg(sd) > 0) {
          Dmsg1(100, "<stored: %s", sd->msg);
          /* ****FIXME**** save actual device name */
@@ -294,6 +301,8 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
               "     Storage daemon didn't accept Device \"%s\" command.\n"), 
               device_name.c_str());
       }
+   } else {
+      Jmsg(jcr, M_INFO, 0, _("Using Device \"%s\"\n"), device_name.c_str());
    }
    return ok;
 }
@@ -313,7 +322,7 @@ bool start_storage_daemon_message_thread(JCR *jcr)
    Dmsg0(100, "Start SD msg_thread.\n");
    if ((status=pthread_create(&thid, NULL, msg_thread, (void *)jcr)) != 0) {
       berrno be;
-      Jmsg1(jcr, M_ABORT, 0, _("Cannot create message thread: %s\n"), be.strerror(status));
+      Jmsg1(jcr, M_ABORT, 0, _("Cannot create message thread: %s\n"), be.bstrerror(status));
    }
    /* Wait for thread to start */
    while (jcr->SD_msg_chan == 0) {
@@ -335,6 +344,7 @@ extern "C" void msg_thread_cleanup(void *arg)
    pthread_cond_broadcast(&jcr->term_wait); /* wakeup any waiting threads */
    Dmsg1(100, "=== End msg_thread. use=%d\n", jcr->use_count());
    free_jcr(jcr);                     /* release jcr */
+   db_thread_cleanup();               /* remove thread specific data */
 }
 
 /*
@@ -399,8 +409,8 @@ void wait_for_storage_daemon_termination(JCR *jcr)
       V(mutex);
       if (job_canceled(jcr)) {
          if (jcr->SD_msg_chan) {
-            jcr->store_bsock->timed_out = 1;
-            jcr->store_bsock->terminated = 1;
+            jcr->store_bsock->set_timed_out();
+            jcr->store_bsock->set_terminated();
             Dmsg2(400, "kill jobid=%d use=%d\n", (int)jcr->JobId, jcr->use_count());
             pthread_kill(jcr->SD_msg_chan, TIMEOUT_SIGNAL);
          }
@@ -434,9 +444,9 @@ extern "C" void *device_thread(void *arg)
       LockRes();
       foreach_res(dev, R_DEVICE) {
          if (!update_device_res(jcr, dev)) {
-            Dmsg1(900, "Error updating device=%s\n", dev->hdr.name);
+            Dmsg1(900, "Error updating device=%s\n", dev->name());
          } else {
-            Dmsg1(900, "Updated Device=%s\n", dev->hdr.name);
+            Dmsg1(900, "Updated Device=%s\n", dev->name());
          }
       }
       UnlockRes();
@@ -461,7 +471,7 @@ void init_device_resources()
    Dmsg0(100, "Start Device thread.\n");
    if ((status=pthread_create(&thid, NULL, device_thread, NULL)) != 0) {
       berrno be;
-      Jmsg1(NULL, M_ABORT, 0, _("Cannot create message thread: %s\n"), be.strerror(status));
+      Jmsg1(NULL, M_ABORT, 0, _("Cannot create message thread: %s\n"), be.bstrerror(status));
    }
 }
 #endif

@@ -11,17 +11,18 @@ following:
 
 To Configure it:
 
-  ./configure \
-    --sbindir=$HOME/bacula/bin \
-    --sysconfdir=$HOME/bacula/bin \
-    --with-pid-dir=$HOME/bacula/bin \
-    --with-subsys-dir=$HOME/bacula/bin \
-    --enable-gnome \
-    --with-mysql \
-    --with-working-dir=$HOME/bacula/bin/working \
-    --with-dump-email=YOUR_EMAIL_ADDRESS \
-    --with-job-email=YOUR_EMAIL_ADDRESS \
-    --with-smtp-host=YOUR_SMTP_SERVER_ADDRESS
+        CFLAGS="-g -O2" \
+          ./configure \
+            --sbindir=$HOME/bacula/bin \
+            --sysconfdir=$HOME/bacula/bin \
+            --with-pid-dir=$HOME/bacula/bin/working \
+            --with-subsys-dir=$HOME/bacula/bin/working \
+            --enable-smartalloc \
+            --with-mysql \
+            --with-working-dir=$HOME/bacula/bin/working \
+            --with-dump-email=your@address.com \
+            --with-job-email=your@address.com \
+            --with-smtp-host=localhost
 
 
 Build Bacula:

@@ -225,11 +225,11 @@ REM	do_patch postgresql.patch
 	XCOPY ..\pgsql\include\libpq-fe.h ..\..\include\ /Y 2>&1
 	XCOPY ..\pgsql\include\postgres_ext.h ..\..\include\ /Y 2>&1
 	LIB /def:src\interfaces\libpq\libpqdll.def /out:..\..\lib\libpqdll.lib /machine:x86 /subsystem:console
-	XCOPY ..\pgsql\lib\libpq.dll ..\..\bin\ /Y
-	XCOPY ..\pgsql\lib\comerr32.dll ..\..\bin\ /Y
-	XCOPY ..\pgsql\lib\krb5_32.dll ..\..\bin\ /Y
-	XCOPY ..\pgsql\lib\libintl-2.dll ..\..\bin\ /Y
-	XCOPY ..\pgsql\lib\libiconv-2.dll ..\..\bin\ /Y
+	XCOPY ..\pgsql\bin\libpq.dll ..\..\bin\ /Y
+	XCOPY ..\pgsql\bin\comerr32.dll ..\..\bin\ /Y
+	XCOPY ..\pgsql\bin\krb5_32.dll ..\..\bin\ /Y
+	XCOPY ..\pgsql\bin\libintl-2.dll ..\..\bin\ /Y
+	XCOPY ..\pgsql\bin\libiconv-2.dll ..\..\bin\ /Y
 	EXIT /B 0
 :pstgreSQL_Error1
 	ECHO Unable to download postgreSQL binaries from %URL_POSTGRESQL%

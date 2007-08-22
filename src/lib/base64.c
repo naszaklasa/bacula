@@ -1,21 +1,14 @@
 /*
- *   Generic base 64 input and output routines
- *
- *    Written by Kern E. Sibbald, March MM.
- *
- *   Version $Id: base64.c 3670 2006-11-21 16:13:58Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   Generic base 64 input and output routines
+ *
+ *    Written by Kern E. Sibbald, March MM.
+ *
+ *   Version $Id: base64.c 5165 2007-07-13 04:44:08Z kerns $
+ */
 
 
 #include "bacula.h"
@@ -247,7 +247,8 @@ int main(int argc, char *argv[])
    for (i=0; my_glob.gl_pathv[i]; i++) {
       fname = my_glob.gl_pathv[i];
       if (lstat(fname, &statp) < 0) {
-         printf("Cannot stat %s: %s\n", fname, strerror(errno));
+         berrno be;
+         printf("Cannot stat %s: %s\n", fname, be.bstrerror(errno));
          continue;
       }
       encode_stat(where, &statp);

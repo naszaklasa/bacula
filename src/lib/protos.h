@@ -1,7 +1,7 @@
 /*
  * Prototypes for lib directory of Bacula
  *
- *   Version $Id: protos.h 3734 2006-12-03 09:00:00Z kerns $
+ *   Version $Id: protos.h 5018 2007-06-16 08:25:03Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -12,8 +12,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -74,7 +74,7 @@ void      make_unique_filename   (POOLMEM **name, int Id, char *what);
 long long int strtoll            (const char *ptr, char **endptr, int base);
 #endif
 void      read_state_file(char *dir, const char *progname, int port);
-int       bstrerror(int errnum, char *buf, size_t bufsiz);
+int       b_strerror(int errnum, char *buf, size_t bufsiz);
 char     *escape_filename(const char *file_path);
 
 /* bnet.c */
@@ -85,9 +85,11 @@ bool       bnet_set_buffer_size  (BSOCK *bs, uint32_t size, int rw);
 bool       bnet_sig              (BSOCK *bs, int sig);
 bool       bnet_tls_server       (TLS_CONTEXT *ctx, BSOCK *bsock,
                                   alist *verify_list);
-bool       bnet_tls_client       (TLS_CONTEXT *ctx, BSOCK *bsock);
+bool       bnet_tls_client       (TLS_CONTEXT *ctx, BSOCK *bsock,
+                                  alist *verify_list);
 BSOCK *    bnet_connect          (JCR *jcr, int retry_interval,
-               int max_retry_time, const char *name, char *host, char *service,
+               utime_t max_retry_time, utime_t heart_beat, 
+               const char *name, char *host, char *service,
                int port, int verbose);
 void       bnet_close            (BSOCK *bsock);
 BSOCK *    init_bsock            (JCR *jcr, int sockfd, const char *who, const char *ip,
@@ -104,7 +106,6 @@ const char *bnet_strerror         (BSOCK *bsock);
 const char *bnet_sig_to_ascii     (BSOCK *bsock);
 int        bnet_wait_data        (BSOCK *bsock, int sec);
 int        bnet_wait_data_intr   (BSOCK *bsock, int sec);
-int        bnet_despool_to_bsock (BSOCK *bsock, void update(ssize_t size), ssize_t size);
 bool       is_bnet_stop          (BSOCK *bsock);
 int        is_bnet_error         (BSOCK *bsock);
 void       bnet_suppress_error_messages(BSOCK *bsock, bool flag);
@@ -122,8 +123,8 @@ int              close_wpipe(BPIPE *bpipe);
 int              close_bpipe(BPIPE *bpipe);
 
 /* cram-md5.c */
-bool cram_md5_respond(BSOCK *bs, char *password, int *tls_remote_need, int *compatible);
-bool cram_md5_challenge(BSOCK *bs, char *password, int tls_local_need, int compatible);
+bool cram_md5_respond(BSOCK *bs, const char *password, int *tls_remote_need, int *compatible);
+bool cram_md5_challenge(BSOCK *bs, const char *password, int tls_local_need, int compatible);
 void hmac_md5(uint8_t* text, int text_len, uint8_t* key, int key_len, uint8_t *hmac);
 
 /* crc32.c */
@@ -133,16 +134,17 @@ uint32_t bcrc32(uint8_t *buf, int len);
 /* crypto.c */
 int                init_crypto                 (void);
 int                cleanup_crypto              (void);
-DIGEST *           crypto_digest_new           (crypto_digest_t type);
+DIGEST *           crypto_digest_new           (JCR *jcr, crypto_digest_t type);
 bool               crypto_digest_update        (DIGEST *digest, const uint8_t *data, uint32_t length);
 bool               crypto_digest_finalize      (DIGEST *digest, uint8_t *dest, uint32_t *length);
 void               crypto_digest_free          (DIGEST *digest);
-SIGNATURE *        crypto_sign_new             (void);
-crypto_error_t     crypto_sign_get_digest      (SIGNATURE *sig, X509_KEYPAIR *keypair, DIGEST **digest);
+SIGNATURE *        crypto_sign_new             (JCR *jcr);
+crypto_error_t     crypto_sign_get_digest      (SIGNATURE *sig, X509_KEYPAIR *keypair, 
+                                                crypto_digest_t &algorithm, DIGEST **digest);
 crypto_error_t     crypto_sign_verify          (SIGNATURE *sig, X509_KEYPAIR *keypair, DIGEST *digest);
 int                crypto_sign_add_signer      (SIGNATURE *sig, DIGEST *digest, X509_KEYPAIR *keypair);
 int                crypto_sign_encode          (SIGNATURE *sig, uint8_t *dest, uint32_t *length);
-SIGNATURE *        crypto_sign_decode          (const uint8_t *sigData, uint32_t length);
+SIGNATURE *        crypto_sign_decode          (JCR *jcr, const uint8_t *sigData, uint32_t length);
 void               crypto_sign_free            (SIGNATURE *sig);
 CRYPTO_SESSION *   crypto_session_new          (crypto_cipher_t cipher, alist *pubkeys);
 void               crypto_session_free         (CRYPTO_SESSION *cs);
@@ -197,6 +199,10 @@ void unlock_jobs();
 JCR *jcr_walk_start();
 JCR *jcr_walk_next(JCR *prev_jcr);
 void jcr_walk_end(JCR *jcr);
+uint32_t get_jobid_from_tid(pthread_t tid);
+uint32_t get_jobid_from_tid();             
+JCR *get_jcr_from_tid(pthread_t tid);
+JCR *get_jcr_from_tid();
 
 
 /* lex.c */
@@ -222,6 +228,8 @@ void       init_console_msg      (const char *wd);
 void       free_msgs_res         (MSGS *msgs);
 void       dequeue_messages      (JCR *jcr);
 void       set_trace             (int trace_flag);
+void       set_db_type           (const char *name);
+void       register_message_callback(void msg_callback(int type, char *msg));
 
 /* bnet_server.c */
 void       bnet_thread_server(dlist *addr, int max_clients, workq_t *client_wq,
@@ -287,13 +295,15 @@ bool             tls_postconnect_verify_host  (TLS_CONNECTION *tls,
 bool             tls_postconnect_verify_cn    (TLS_CONNECTION *tls,
                                                alist *verify_list);
 TLS_CONNECTION   *new_tls_connection     (TLS_CONTEXT *ctx, int fd);
-void             free_tls_connection     (TLS_CONNECTION *tls);
-bool             tls_bsock_connect       (BSOCK *bsock);
 bool             tls_bsock_accept        (BSOCK *bsock);
-void             tls_bsock_shutdown      (BSOCK *bsock);
 int              tls_bsock_writen        (BSOCK *bsock, char *ptr, int32_t nbytes);
 int              tls_bsock_readn         (BSOCK *bsock, char *ptr, int32_t nbytes);
 #endif /* HAVE_TLS */
+bool             tls_bsock_connect       (BSOCK *bsock);
+void             tls_bsock_shutdown      (BSOCK *bsock);
+void             free_tls_connection     (TLS_CONNECTION *tls);
+bool             get_tls_require         (TLS_CONTEXT *ctx);
+bool             get_tls_enable          (TLS_CONTEXT *ctx);
 
 
 /* util.c */
