@@ -1,6 +1,6 @@
 bacula (2.2.0-1) unstable; urgency=low
 
-  * New upstream version.
+  * New upstream version.  Closes: #438806.
     * make_catalog_backup script now takes a host parameter.  Closes: #419885.
   * Deal with moving wx-console.conf to bwx-console.conf
   * Add new bacula-console-qt package.
