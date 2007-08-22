@@ -100,7 +100,7 @@ Description: Network backup, recovery and verification (Director daemon)
 Package: bacula-director-pgsql
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), postgresql-client-8.1 | postgresql-client-8.0 | postgresql-client (>= 7.4), ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), postgresql-client (>= 7.4) | postgresql-client-8.1 | postgresql-client-7.4 , ${shlibs:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
