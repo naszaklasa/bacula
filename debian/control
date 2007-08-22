@@ -51,7 +51,7 @@ Description: Network backup, recovery and verification (Director common files)
 Package: bacula-director-sqlite
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
-Depends: bacula-director-common (= ${source:Version}), sqlite, ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), sqlite, ${shlibs:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -67,7 +67,7 @@ Description: Network backup, recovery and verification (Director daemon)
 Package: bacula-director-sqlite3
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (= ${source:Version}), sqlite3, ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), sqlite3, ${shlibs:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -83,7 +83,7 @@ Description: Network backup, recovery and verification (Director daemon)
 Package: bacula-director-mysql
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
-Depends: bacula-director-common (= ${source:Version}), dbconfig-common (>= 1.8.19), mysql-client, ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), mysql-client, ${shlibs:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -100,7 +100,7 @@ Description: Network backup, recovery and verification (Director daemon)
 Package: bacula-director-pgsql
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (=${source:Version}), dbconfig-common (>= 1.8.19), postgresql-client-8.1 | postgresql-client-8.0 | postgresql-client (>= 7.4), ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), postgresql-client-8.1 | postgresql-client-8.0 | postgresql-client (>= 7.4), ${shlibs:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -117,7 +117,7 @@ Description: Network backup, recovery and verification (Director daemon)
 
 Package: bacula-client
 Architecture: all
-Depends: bacula-console (= ${source:Version}), bacula-fd (= ${source:Version})
+Depends: bacula-console (= ${binary:Version}), bacula-fd (= ${binary:Version})
 Recommends: bacula-traymonitor
 Description: Network backup, recovery and verification (Client meta-package)
  Minimal Bacula system client (File Daemon and Console only)
@@ -136,7 +136,7 @@ Description: Network backup, recovery and verification (Filer daemon)
 
 Package: bacula-server
 Architecture: all
-Depends: bacula-director-sqlite3 (= ${source:Version})|bacula-director, bacula-sd (= ${source:Version}), bacula-sd-sqlite3 (= ${source:Version})|bacula-sd-tools
+Depends: bacula-director-sqlite3 (= ${binary:Version})|bacula-director, bacula-sd (= ${binary:Version}), bacula-sd-sqlite3 (= ${binary:Version})|bacula-sd-tools
 Recommends: bacula-fd
 Description: Network backup, recovery and verification (Server meta-package)
  Bacula system server: SQL-based catalog (SQLite, MySQL, or PgSQL) and 
@@ -162,7 +162,7 @@ Description: Network backup, recovery and verification (Storage daemon)
 
 Package: bacula-sd-sqlite3
 Architecture: any
-Depends: bacula-sd (= ${source:Version}), ${shlibs:Depends}
+Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}
 Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Provides: bacula-sd-tools
@@ -172,7 +172,7 @@ Description: Network backup, recovery and verification (SD tools-SQLite3)
 
 Package: bacula-sd-sqlite
 Architecture: any
-Depends: bacula-sd (= ${source:Version}), ${shlibs:Depends}
+Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}
 Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Provides: bacula-sd-tools
@@ -182,7 +182,7 @@ Description: Network backup, recovery and verification (SD tools-SQLite)
 
 Package: bacula-sd-mysql
 Architecture: any
-Depends: bacula-sd (= ${source:Version}), ${shlibs:Depends}
+Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}
 Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Provides: bacula-sd-tools
@@ -192,7 +192,7 @@ Description: Network backup, recovery and verification (SD tools-MySQL)
 
 Package: bacula-sd-pgsql
 Architecture: any
-Depends: bacula-sd (= ${source:Version}), ${shlibs:Depends}
+Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}
 Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Provides: bacula-sd-tools
@@ -240,7 +240,7 @@ Description: Network backup, recovery and verification (Console, Qt version)
 
 Package: bacula-traymonitor
 Architecture: any
-Depends: ${shlibs:Depends}, bacula-common (= ${Source-Version})
+Depends: ${shlibs:Depends}, bacula-common (= ${source:Version})
 Recommends: kde|desktop-environment
 Description: Network backup, recovery and verification (Tray monitor)
  The tray monitor for bacula; FreeDesktop standard's compatible
