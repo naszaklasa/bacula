@@ -35,8 +35,8 @@ else
   else			      
     if test xpostgresql = x@DB_TYPE@ ; then
       if test $# -gt 2; then
-        PGPASSWORD="$3"
-        export PGPASSWORD
+	PGPASSWORD="$3"
+	export PGPASSWORD
       fi
       if test $# -gt 3; then
 	PGHOST=" --host=$4"
