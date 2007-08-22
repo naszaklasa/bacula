@@ -4,8 +4,9 @@ bacula (2.2.0-1) unstable; urgency=low
   * Deal with moving wx-console.conf to bwx-console.conf
   * Add new bacula-console-qt package.
   * Update Standards-Version to 3.7.2.  No changes required.
+  * Remove postgresql-dev Build-Dep.  Closes: #429963.
 
- -- Mark Hymers <mhy@debian.org>  Wed, 22 Aug 2007 10:45:07 +0100
+ -- Mark Hymers <mhy@debian.org>  Wed, 22 Aug 2007 10:46:06 +0100
 
 bacula (2.0.3-4) unstable; urgency=low
 
