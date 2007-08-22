@@ -25,7 +25,7 @@ set -e
 
 SRCDIR="/usr/share/bacula-common/defconfig"
 DSTDIR="/etc/bacula"
-CFGFILE="wx-console.conf"
+CFGFILE="bwx-console.conf"
 
 case "$1" in
     configure)
