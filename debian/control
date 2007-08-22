@@ -7,7 +7,7 @@ Build-Depends: autotools-dev, debhelper (>= 4.2), po-debconf (>= 0.8.2),
  libsqlite0-dev, libsqlite3-dev, libmysqlclient15-dev (>= 5.0.24-1) | libmysqlclient14-dev, libpq-dev | postgresql-dev, 
  libwrap0-dev, libssl-dev, python-dev, 
  libgnome2-dev, libwxgtk2.6-dev | libwxgtk2.4-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
- libx11-dev, mtx, bc, libxt-dev, dpkg-dev (>= 1.13.19)
+ libx11-dev, mtx, bc, libxt-dev, dpkg-dev (>= 1.13.19), libqt4-dev, libqwt5-qt4-dev
 Build-Conflicts: python2.2-dev, python2.3
 Standards-Version: 3.7.0
 
@@ -225,6 +225,18 @@ Description: Network backup, recovery and verification (Console, Gnome version)
  .
  There is a Win32 version of this program available for download from
  Bacula's website: www.bacula.org
+
+Package: bacula-console-qt
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30)
+Depends: bacula-common (= ${source:Version}), ${shlibs:Depends}
+Description: Network backup, recovery and verification (Console, Qt version)
+ The Bacula QT-Console (known as bat) allows the administrator or user to
+ communicate with the  Bacula Director. It provides a graphical interface
+ to the backup/restore operations.
+ .
+ This GUI interface has been designed to ease restore operations as much as
+ possible as compared to the "conventional" console.
 
 Package: bacula-traymonitor
 Architecture: any

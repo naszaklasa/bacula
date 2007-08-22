@@ -2,6 +2,7 @@ bacula (2.2.0-1) unstable; urgency=low
 
   * New upstream version.
   * Deal with moving wx-console.conf to bwx-console.conf
+  * Add new bacula-console-qt package.
 
  -- Mark Hymers <mhy@debian.org>  Wed, 22 Aug 2007 00:48:29 +0100
 
