@@ -1,6 +1,9 @@
 bacula (2.2.0-1) unstable; urgency=low
 
   * Update debian/copyright from LICENSE.
+  * Disable OpenSSL support due to licensing concerns
+    See thread at
+    http://lists.debian.org/debian-legal/2007/07/msg00144.html
   * Applied updated Vietnamese translation from Clytie Siddall.
     Closes: #427042.
   * Following changes prepared by Mark Hymers <mhy@debian.org>:
