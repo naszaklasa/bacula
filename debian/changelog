@@ -1,5 +1,7 @@
 bacula (2.2.0-1) unstable; urgency=low
 
+  * Applied updated Vietnamese translation from Clytie Siddall.
+    Closes: #427042.
   * Following changes prepared by Mark Hymers <mhy@debian.org>:
     * New upstream version.  Closes: #438806.
       * make_catalog_backup script now takes a host parameter.  
