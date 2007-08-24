@@ -13,8 +13,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of

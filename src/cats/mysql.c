@@ -1,23 +1,14 @@
 /*
- * Bacula Catalog Database routines specific to MySQL
- *   These are MySQL specific routines -- hopefully all
- *    other files are generic.
- *
- *    Kern Sibbald, March 2000
- *
- *    Version $Id: mysql.c 3772 2006-12-08 06:49:38Z robertnelson $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula Catalog Database routines specific to MySQL
+ *   These are MySQL specific routines -- hopefully all
+ *    other files are generic.
+ *
+ *    Kern Sibbald, March 2000
+ *
+ *    Version $Id: mysql.c 5038 2007-06-18 19:29:26Z kerns $
+ */
 
 
 /* The following is necessary so that we do not include
@@ -92,12 +92,14 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
             Dmsg2(100, "DB REopen %d %s\n", mdb->ref_count, db_name);
             mdb->ref_count++;
             V(mutex);
+            Dmsg3(100, "initdb ref=%d connected=%d db=%p\n", mdb->ref_count,
+                  mdb->connected, mdb->db);
             return mdb;                  /* already open */
          }
       }
    }
    Dmsg0(100, "db_open first time\n");
-   mdb = (B_DB *) malloc(sizeof(B_DB));
+   mdb = (B_DB *)malloc(sizeof(B_DB));
    memset(mdb, 0, sizeof(B_DB));
    mdb->db_name = bstrdup(db_name);
    mdb->db_user = bstrdup(db_user);
@@ -111,7 +113,7 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
       mdb->db_socket = bstrdup(db_socket);
    }
    mdb->db_port = db_port;
-   mdb->have_insert_id = TRUE;
+   mdb->have_insert_id = true;
    mdb->errmsg = get_pool_memory(PM_EMSG); /* get error message buffer */
    *mdb->errmsg = 0;
    mdb->cmd = get_pool_memory(PM_EMSG);    /* get command buffer */
@@ -121,7 +123,10 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
    mdb->fname = get_pool_memory(PM_FNAME);
    mdb->path = get_pool_memory(PM_FNAME);
    mdb->esc_name = get_pool_memory(PM_FNAME);
+   mdb->esc_path = get_pool_memory(PM_FNAME);
    qinsert(&db_list, &mdb->bq);            /* put db in list */
+   Dmsg3(100, "initdb ref=%d connected=%d db=%p\n", mdb->ref_count,
+         mdb->connected, mdb->db);
    V(mutex);
    return mdb;
 }
@@ -142,7 +147,6 @@ db_open_database(JCR *jcr, B_DB *mdb)
       V(mutex);
       return 1;
    }
-   mdb->connected = FALSE;
 
    if ((errstat=rwl_init(&mdb->lock)) != 0) {
       Mmsg1(&mdb->errmsg, _("Unable to initialize DB lock. ERR=%s\n"),
@@ -152,10 +156,11 @@ db_open_database(JCR *jcr, B_DB *mdb)
    }
 
    /* connect to the database */
-#ifdef HAVE_EMBEDDED_MYSQL
-   mysql_server_init(0, NULL, NULL);
+#ifdef xHAVE_EMBEDDED_MYSQL
+// mysql_server_init(0, NULL, NULL);
 #endif
-   mysql_init(&(mdb->mysql));
+   mysql_init(&mdb->mysql);
+
    Dmsg0(50, "mysql_init done\n");
    /* If connection fails, try at 5 sec intervals for 30 seconds. */
    for (int retry=0; retry < 6; retry++) {
@@ -182,24 +187,23 @@ db_open_database(JCR *jcr, B_DB *mdb)
             mdb->db_password==NULL?"(NULL)":mdb->db_password);
 
    if (mdb->db == NULL) {
-      Mmsg2(&mdb->errmsg, _("Unable to connect to MySQL server. \n"
+      Mmsg2(&mdb->errmsg, _("Unable to connect to MySQL server.\n"
 "Database=%s User=%s\n"
-"It is probably not running or your password is incorrect.\n"),
+"MySQL connect failed either server not running or your authorization is incorrect.\n"),
          mdb->db_name, mdb->db_user);
       V(mutex);
       return 0;
    }
 
+   mdb->connected = true;
    if (!check_tables_version(jcr, mdb)) {
       V(mutex);
       return 0;
    }
 
-#ifdef HAVE_THREAD_SAFE_MYSQL
-   my_thread_init();
-#endif
+   Dmsg3(100, "opendb ref=%d connected=%d db=%p\n", mdb->ref_count,
+         mdb->connected, mdb->db);
 
-   mdb->connected = TRUE;
    V(mutex);
    return 1;
 }
@@ -212,16 +216,18 @@ db_close_database(JCR *jcr, B_DB *mdb)
    }
    db_end_transaction(jcr, mdb);
    P(mutex);
+   sql_free_result(mdb);
    mdb->ref_count--;
-#if defined(HAVE_THREAD_SAFE_MYSQL)
-   my_thread_end();
-#endif
+   Dmsg3(100, "closedb ref=%d connected=%d db=%p\n", mdb->ref_count,
+         mdb->connected, mdb->db);
    if (mdb->ref_count == 0) {
       qdchain(&mdb->bq);
-      if (mdb->connected && mdb->db) {
-         sql_close(mdb);
-#ifdef HAVE_EMBEDDED_MYSQL
-         mysql_server_end();
+      if (mdb->connected) {
+         Dmsg1(100, "close db=%p\n", mdb->db);
+         mysql_close(&mdb->mysql);
+
+#ifdef xHAVE_EMBEDDED_MYSQL
+//       mysql_server_end();
 #endif
       }
       rwl_destroy(&mdb->lock);
@@ -231,6 +237,7 @@ db_close_database(JCR *jcr, B_DB *mdb)
       free_pool_memory(mdb->fname);
       free_pool_memory(mdb->path);
       free_pool_memory(mdb->esc_name);
+      free_pool_memory(mdb->esc_path);
       if (mdb->db_name) {
          free(mdb->db_name);
       }
@@ -249,6 +256,21 @@ db_close_database(JCR *jcr, B_DB *mdb)
       free(mdb);
    }
    V(mutex);
+}
+
+/*
+ * This call is needed because the message channel thread
+ *  opens a database on behalf of a jcr that was created in
+ *  a different thread. MySQL then allocates thread specific
+ *  data, which is NOT freed when the original jcr thread
+ *  closes the database.  Thus the msgchan must call here
+ *  to cleanup any thread specific data that it created.
+ */
+void db_thread_cleanup()
+{ 
+#ifndef HAVE_WIN32
+   my_thread_end();
+#endif
 }
 
 /*
@@ -277,7 +299,7 @@ db_escape_string(char *snew, char *old, int len)
 {
    mysql_escape_string(snew, old, len);
 
-#ifdef DO_IT_MYSELF
+#ifdef xDO_IT_MYSELF
 
 /* Should use mysql_real_escape_string ! */
 unsigned long mysql_real_escape_string(MYSQL *mysql, char *to, const char *from, unsigned long length);
@@ -348,7 +370,7 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
    }
    if (result_handler != NULL) {
       if ((mdb->result = sql_use_result(mdb)) != NULL) {
-         int num_fields = 0;
+         int num_fields = sql_num_fields(mdb);
 
          /* We *must* fetch all rows */
          while ((row = sql_fetch_row(mdb)) != NULL) {
@@ -357,7 +379,6 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
                 *  seen all the data it wants.  However, we
                 *  loop to the end of the data.
                 */
-               num_fields++;
                if (result_handler(ctx, num_fields, row)) {
                   send = false;
                }
@@ -371,5 +392,44 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
    return 1;
 
 }
+
+void my_mysql_free_result(B_DB *mdb)
+{
+   db_lock(mdb);
+   if (mdb->result) {
+      mysql_free_result(mdb->result);
+      mdb->result = NULL;
+   }
+   db_unlock(mdb);
+}
+
+char *my_mysql_batch_lock_path_query = "LOCK TABLES Path write,     " 
+                                       "            batch write,    " 
+                                       "            Path as p write ";
+
+
+char *my_mysql_batch_lock_filename_query = "LOCK TABLES Filename write,     "
+                                           "            batch write,        "
+                                           "            Filename as f write ";
+
+char *my_mysql_batch_unlock_tables_query = "UNLOCK TABLES";
+
+char *my_mysql_batch_fill_path_query = "INSERT INTO Path (Path)        "
+                                       " SELECT a.Path FROM            " 
+                                       "  (SELECT DISTINCT Path        "
+                                       "     FROM batch) AS a          " 
+                                       " WHERE NOT EXISTS              "
+                                       "  (SELECT Path                 "
+                                       "     FROM Path AS p            "
+                                       "    WHERE p.Path = a.Path)     ";     
+
+char *my_mysql_batch_fill_filename_query = "INSERT INTO Filename (Name)       "
+                                           "  SELECT a.Name FROM              " 
+                                           "   (SELECT DISTINCT Name          "
+                                           "      FROM batch) AS a            " 
+                                           "  WHERE NOT EXISTS                "
+                                           "   (SELECT Name                   "
+                                           "      FROM Filename AS f          "
+                                           "      WHERE f.Name = a.Name)      ";
 
 #endif /* HAVE_MYSQL */

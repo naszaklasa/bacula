@@ -1,14 +1,4 @@
 /*
- * Bacula Catalog Database Get record interface routines
- *  Note, these routines generally get a record by id or
- *        by name.  If more logic is involved, the routine
- *        should be in find.c
- *
- *    Kern Sibbald, March 2000
- *
- *    Version $Id: sql_get.c 4116 2007-02-06 14:37:57Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
@@ -17,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,7 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
-
+/*
+ * Bacula Catalog Database Get record interface routines
+ *  Note, these routines generally get a record by id or
+ *        by name.  If more logic is involved, the routine
+ *        should be in find.c
+ *
+ *    Kern Sibbald, March 2000
+ *
+ *    Version $Id: sql_get.c 5117 2007-07-03 09:20:28Z kerns $
+ */
 
 
 /* The following is necessary so that we do not include
@@ -275,12 +274,14 @@ bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    if (jr->JobId == 0) {
       Mmsg(mdb->cmd, "SELECT VolSessionId,VolSessionTime,"
 "PoolId,StartTime,EndTime,JobFiles,JobBytes,JobTDate,Job,JobStatus,"
-"Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId "
+"Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId,FileSetId,"
+"SchedTime,RealEndTime "
 "FROM Job WHERE Job='%s'", jr->Job);
     } else {
       Mmsg(mdb->cmd, "SELECT VolSessionId,VolSessionTime,"
 "PoolId,StartTime,EndTime,JobFiles,JobBytes,JobTDate,Job,JobStatus,"
-"Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId "
+"Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId,FileSetId,"
+"SchedTime,RealEndTime "
 "FROM Job WHERE JobId=%s", 
           edit_int64(jr->JobId, ed1));
     }
@@ -305,9 +306,9 @@ bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    jr->JobBytes = str_to_int64(row[6]);
    jr->JobTDate = str_to_int64(row[7]);
    bstrncpy(jr->Job, row[8]!=NULL?row[8]:"", sizeof(jr->Job));
-   jr->JobStatus = (int)*row[9];
-   jr->JobType = (int)*row[10];
-   jr->JobLevel = (int)*row[11];
+   jr->JobStatus = row[9]!=NULL?(int)*row[9]:JS_FatalError;
+   jr->JobType = row[10]!=NULL?(int)*row[10]:JT_BACKUP;
+   jr->JobLevel = row[11]!=NULL?(int)*row[11]:L_NONE;
    jr->ClientId = str_to_uint64(row[12]!=NULL?row[12]:(char *)"");
    bstrncpy(jr->Name, row[13]!=NULL?row[13]:"", sizeof(jr->Name));
    jr->PriorJobId = str_to_uint64(row[14]!=NULL?row[14]:(char *)"");
@@ -315,6 +316,13 @@ bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    if (jr->JobId == 0) {
       jr->JobId = str_to_int64(row[16]);
    }
+   jr->FileSetId = str_to_int64(row[17]);
+   bstrncpy(jr->cSchedTime, row[3]!=NULL?row[18]:"", sizeof(jr->cSchedTime));
+   bstrncpy(jr->cRealEndTime, row[3]!=NULL?row[19]:"", sizeof(jr->cRealEndTime));
+   jr->StartTime = str_to_utime(jr->cStartTime);
+   jr->SchedTime = str_to_utime(jr->cSchedTime);
+   jr->EndTime = str_to_utime(jr->cEndTime);
+   jr->RealEndTime = str_to_utime(jr->cRealEndTime);
    sql_free_result(mdb);
 
    db_unlock(mdb);
@@ -445,7 +453,7 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
                Mmsg(mdb->cmd, "SELECT Name from Storage WHERE StorageId=%s",
                   edit_int64(SId[i], ed1));
                if (QUERY_DB(jcr, mdb, mdb->cmd)) {
-                  if ((row = sql_fetch_row(mdb)) != NULL) {
+                  if ((row = sql_fetch_row(mdb)) && row[0]) {
                      bstrncpy(Vols[i].Storage, row[0], MAX_NAME_LENGTH);
                   }
                }
@@ -574,13 +582,13 @@ bool db_get_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr)
       Mmsg(mdb->cmd,
 "SELECT PoolId,Name,NumVols,MaxVols,UseOnce,UseCatalog,AcceptAnyVolume,"
 "AutoPrune,Recycle,VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,"
-"MaxVolBytes,PoolType,LabelType,LabelFormat FROM Pool WHERE Pool.PoolId=%s", 
+"MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId FROM Pool WHERE Pool.PoolId=%s", 
          edit_int64(pdbr->PoolId, ed1));
    } else {                           /* find by name */
       Mmsg(mdb->cmd,
 "SELECT PoolId,Name,NumVols,MaxVols,UseOnce,UseCatalog,AcceptAnyVolume,"
 "AutoPrune,Recycle,VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,"
-"MaxVolBytes,PoolType,LabelType,LabelFormat FROM Pool WHERE Pool.Name='%s'", 
+"MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId FROM Pool WHERE Pool.Name='%s'", 
          pdbr->Name);
    }
 
@@ -613,6 +621,7 @@ bool db_get_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr)
             bstrncpy(pdbr->PoolType, row[14]!=NULL?row[14]:"", sizeof(pdbr->PoolType));
             pdbr->LabelType = str_to_int64(row[15]);
             bstrncpy(pdbr->LabelFormat, row[16]!=NULL?row[16]:"", sizeof(pdbr->LabelFormat));
+            pdbr->RecyclePoolId = str_to_int64(row[17]);
             ok = true;
          }
       }
@@ -812,13 +821,13 @@ int db_get_num_media_records(JCR *jcr, B_DB *mdb)
 
 /*
  * This function returns a list of all the Media record ids for
- *     the current Pool.
+ *     the current Pool with the correct Media Type.
  *  The caller must free ids if non-NULL.
  *
  *  Returns false: on failure
  *          true:  on success
  */
-bool db_get_media_ids(JCR *jcr, B_DB *mdb, uint32_t PoolId, int *num_ids, uint32_t *ids[])
+bool db_get_media_ids(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr, int *num_ids, uint32_t *ids[])
 {
    SQL_ROW row;
    int i = 0;
@@ -828,8 +837,9 @@ bool db_get_media_ids(JCR *jcr, B_DB *mdb, uint32_t PoolId, int *num_ids, uint32
 
    db_lock(mdb);
    *ids = NULL;
-   Mmsg(mdb->cmd, "SELECT MediaId FROM Media WHERE PoolId=%s", 
-       edit_int64(PoolId, ed1));
+   Mmsg(mdb->cmd, "SELECT DISTINCT MediaId FROM Media WHERE PoolId=%s "
+         " AND MediaType='%s'",
+       edit_int64(mr->PoolId, ed1), mr->MediaType);
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
       *num_ids = sql_num_rows(mdb);
       if (*num_ids > 0) {
@@ -849,6 +859,45 @@ bool db_get_media_ids(JCR *jcr, B_DB *mdb, uint32_t PoolId, int *num_ids, uint32
    db_unlock(mdb);
    return ok;
 }
+
+
+/*
+ * This function returns a list of all the DBIds that are returned
+ *   for the query.
+ *
+ *  Returns false: on failure
+ *          true:  on success
+ */
+bool db_get_query_dbids(JCR *jcr, B_DB *mdb, POOL_MEM &query, dbid_list &ids)
+{
+   SQL_ROW row;
+   int i = 0;
+   bool ok = false;
+
+   db_lock(mdb);
+   ids.num_ids = 0;
+   if (QUERY_DB(jcr, mdb, query.c_str())) {
+      ids.num_ids = sql_num_rows(mdb);
+      if (ids.num_ids > 0) {
+         if (ids.max_ids < ids.num_ids) {
+            free(ids.DBId);
+            ids.DBId = (DBId_t *)malloc(ids.num_ids * sizeof(DBId_t));
+         }
+         while ((row = sql_fetch_row(mdb)) != NULL) {
+            ids.DBId[i++] = str_to_uint64(row[0]);
+         }
+      }
+      sql_free_result(mdb);
+      ok = true;
+   } else {
+      Mmsg(mdb->errmsg, _("query dbids failed: ERR=%s\n"), sql_strerror(mdb));
+      Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
+      ok = false;
+   }
+   db_unlock(mdb);
+   return ok;
+}
+
 
 
 /* Get Media Record
@@ -876,7 +925,7 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
          "MaxVolFiles,Recycle,Slot,FirstWritten,LastWritten,InChanger,"
          "EndFile,EndBlock,VolParts,LabelType,LabelDate,StorageId,"
          "Enabled,LocationId,RecycleCount,InitialWrite,"
-         "ScratchPoolId,RecyclePoolId "
+         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime "
          "FROM Media WHERE MediaId=%s", 
          edit_int64(mr->MediaId, ed1));
    } else {                           /* find by name */
@@ -886,7 +935,7 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
          "MaxVolFiles,Recycle,Slot,FirstWritten,LastWritten,InChanger,"
          "EndFile,EndBlock,VolParts,LabelType,LabelDate,StorageId,"
          "Enabled,LocationId,RecycleCount,InitialWrite,"
-         "ScratchPoolId,RecyclePoolId "
+         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime "
          "FROM Media WHERE VolumeName='%s'", mr->VolumeName);
    }
 
@@ -942,6 +991,8 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
             mr->InitialWrite = (time_t)str_to_utime(mr->cInitialWrite);
             mr->ScratchPoolId = str_to_int64(row[33]);
             mr->RecyclePoolId = str_to_int64(row[34]);
+            mr->VolReadTime = str_to_int64(row[35]);
+            mr->VolWriteTime = str_to_int64(row[36]);
             
             ok = true;
          }

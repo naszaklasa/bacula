@@ -1,7 +1,7 @@
 #
 #  Bacula Director Makefile
 #
-#  Version $Id: Makefile.in 3240 2006-08-05 10:29:01Z robertnelson $
+#  Version $Id: Makefile.in 4914 2007-05-27 09:34:40Z kerns $
 #  
 @MCOMMON@
 
@@ -19,9 +19,6 @@ thisdir = src/dird
 DEBUG=@DEBUG@
 
 GETTEXT_LIBS = @LIBINTL@
-
-OPENSSL_LIBS = @OPENSSL_LIBS@
-OPENSSL_INC = @OPENSSL_INC@
 
 PYTHON_LIBS = @PYTHON_LIBS@
 PYTHON_INC = @PYTHON_INCDIR@
@@ -71,7 +68,7 @@ EXTRAOBJS = @OBJLIST@
 # inference rules
 .c.o:
 	@echo "Compiling $<"
-	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile bacula-dir @STATIC_DIR@
 	@echo "==== Make of dird is good ===="
@@ -147,7 +144,7 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \

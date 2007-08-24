@@ -1,27 +1,14 @@
 /*
- *
- *  Utility routines for "tool" programs such as bscan, bls,
- *    bextract, ...  Some routines also used by Bacula.
- *
- *    Kern Sibbald, MM
- *
- *  Normally nothing in this file is called by the Storage
- *    daemon because we interact more directly with the user
- *    i.e. printf, ...
- *
- *   Version $Id: butil.c 3802 2006-12-14 11:41:02Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -38,6 +25,19 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  Utility routines for "tool" programs such as bscan, bls,
+ *    bextract, ...  Some routines also used by Bacula.
+ *
+ *    Kern Sibbald, MM
+ *
+ *  Normally nothing in this file is called by the Storage
+ *    daemon because we interact more directly with the user
+ *    i.e. printf, ...
+ *
+ *   Version $Id: butil.c 5038 2007-06-18 19:29:26Z kerns $
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -175,8 +175,7 @@ static DCR *setup_to_access_device(JCR *jcr, char *dev_name,
       return NULL;
    }
    device->dev = dev;
-   dcr = new_dcr(jcr, dev);
-   jcr->dcr = dcr;
+   jcr->dcr = dcr = new_dcr(jcr, NULL, dev);
    if (VolName[0]) {
       bstrncpy(dcr->VolumeName, VolName, sizeof(dcr->VolumeName));
    }

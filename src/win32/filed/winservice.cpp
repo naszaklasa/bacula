@@ -171,9 +171,9 @@ bacService::RunningAsService()
 BOOL
 bacService::KillRunningCopy()
 {
-  while (PostToBacula(WM_CLOSE, 0, 0)) {
-     Sleep(500);
-  }
+//while (PostToBacula(WM_CLOSE, 0, 0)) {
+//   Sleep(500);
+//}
   return TRUE;
 }
 
@@ -334,7 +334,7 @@ bacService::InstallService(const char *pszCmdLine)
    }
 
    // Append the service-start flag to the end of the path:
-   if ((int)strlen(path) + 5 + (int)strlen(BaculaRunService) + (int)strlen(pszCmdLine) < pathlength) {
+   if ((int)strlen(path) + 20 + (int)strlen(BaculaRunService) + (int)strlen(pszCmdLine) < pathlength) {
       sprintf(servicecmd, "\"%s\" %s %s", path, BaculaRunService, pszCmdLine);
    } else {
       log_error_message(_("Service command length too long")); 
@@ -636,8 +636,6 @@ void LogErrorMsg(char *message, char *fname, int lineno)
    strings[2] = msg;
 
    if (heventsrc != NULL) {
-      MessageBeep(MB_OK);
-
       ReportEvent(
               heventsrc,              // handle of event source
               EVENTLOG_ERROR_TYPE,    // event type
@@ -653,6 +651,7 @@ void LogErrorMsg(char *message, char *fname, int lineno)
    }
    LocalFree(msg);
 }
+
 typedef BOOL  (WINAPI * WinAPI)(SC_HANDLE, DWORD, LPVOID);
 
 void set_service_description(SC_HANDLE hSCManager, SC_HANDLE hService,

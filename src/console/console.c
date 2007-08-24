@@ -1,22 +1,14 @@
 /*
- *
- *   Bacula Console interface to the Director
- *
- *     Kern Sibbald, September MM
- *
- *     Version $Id: console.c 4116 2007-02-06 14:37:57Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Console interface to the Director
+ *
+ *     Kern Sibbald, September MM
+ *
+ *     Version $Id: console.c 5002 2007-06-09 09:25:27Z kerns $
+ */
 
 #include "bacula.h"
 #include "console_conf.h"
@@ -57,7 +57,7 @@
 
 /* Exported variables */
 
-extern int rl_catch_signals;
+//extern int rl_catch_signals;
 
 /* Imported functions */
 int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons);
@@ -102,6 +102,7 @@ static int quitcmd(FILE *input, BSOCK *UA_sock);
 static int echocmd(FILE *input, BSOCK *UA_sock);
 static int timecmd(FILE *input, BSOCK *UA_sock);
 static int sleepcmd(FILE *input, BSOCK *UA_sock);
+static int execcmd(FILE *input, BSOCK *UA_sock);
 
 
 #define CONFIG_FILE "bconsole.conf"   /* default configuration file */
@@ -166,6 +167,7 @@ static struct cmdstruct commands[] = {
  { N_("time"),       timecmd,      _("print current time")},
  { N_("version"),    versioncmd,   _("print Console's version")},
  { N_("echo"),       echocmd,      _("echo command string")},
+ { N_("exec"),       execcmd,      _("execute an external command")},
  { N_("exit"),       quitcmd,      _("exit = quit")},
  { N_("zed_keys"),   zed_keyscmd,  _("zed_keys = use zed keys instead of bash keys")},
              };
@@ -343,6 +345,7 @@ int main(int argc, char *argv[])
    bool no_signals = false;
    bool test_config = false;
    JCR jcr;
+   utime_t heart_beat;
 
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
@@ -460,13 +463,18 @@ try_again:
       LockRes();
       numdir = 0;
       foreach_res(dir, R_DIRECTOR) {
-         senditf( _("%d  %s at %s:%d\n"), 1+numdir++, dir->hdr.name, dir->address,
+         senditf( _("%2d:  %s at %s:%d\n"), 1+numdir++, dir->hdr.name, dir->address,
             dir->DIRport);
       }
       UnlockRes();
-      if (get_cmd(stdin, _("Select Director: "), UA_sock, 600) < 0) {
+      if (get_cmd(stdin, _("Select Director by entering a number: "), UA_sock, 600) < 0) {
          (void)WSACleanup();               /* Cleanup Windows sockets */
          return 1;
+      }
+      if (!is_a_number(UA_sock->msg)) {
+         senditf(_("%s is not a number. You must enter a number between 1 and %d\n"), 
+                 UA_sock->msg, numdir);
+         goto try_again;
       }
       item = atoi(UA_sock->msg);
       if (item < 0 || item > numdir) {
@@ -520,7 +528,8 @@ try_again:
 
       /* Initialize TLS context:
        * Args: CA certfile, CA certdir, Certfile, Keyfile,
-       * Keyfile PEM Callback, Keyfile CB Userdata, DHfile, Verify Peer */
+       * Keyfile PEM Callback, Keyfile CB Userdata, DHfile, Verify Peer   
+       */
       cons->tls_ctx = new_tls_context(cons->tls_ca_certfile,
          cons->tls_ca_certdir, cons->tls_certfile,
          cons->tls_keyfile, tls_pem_callback, &buf, NULL, true);
@@ -553,7 +562,14 @@ try_again:
       }
    }
 
-   UA_sock = bnet_connect(NULL, 5, 15, "Director daemon", dir->address,
+   if (dir->heartbeat_interval) {
+      heart_beat = dir->heartbeat_interval;
+   } else if (cons) {
+      heart_beat = cons->heartbeat_interval;
+   } else {
+      heart_beat = 0;
+   }
+   UA_sock = bnet_connect(NULL, 5, 15, heart_beat, "Director daemon", dir->address,
                           NULL, dir->DIRport, 0);
    if (UA_sock == NULL) {
       terminate_console(0);
@@ -587,8 +603,8 @@ try_again:
    read_and_process_input(stdin, UA_sock);
 
    if (UA_sock) {
-      bnet_sig(UA_sock, BNET_TERMINATE); /* send EOF */
-      bnet_close(UA_sock);
+      UA_sock->signal(BNET_TERMINATE); /* send EOF */
+      UA_sock->close();
    }
 
    terminate_console(0);
@@ -885,15 +901,54 @@ static int do_outputcmd(FILE *input, BSOCK *UA_sock)
    }
    fd = fopen(argk[1], mode);
    if (!fd) {
+      berrno be;
       senditf(_("Cannot open file %s for output. ERR=%s\n"),
-         argk[1], strerror(errno));
+         argk[1], be.bstrerror(errno));
       return 1;
    }
    output = fd;
    return 1;
 }
 
-static int echocmd(FILE *intut, BSOCK *UA_sock)
+/*
+ * exec "some-command" [wait-seconds]
+*/
+static int execcmd(FILE *input, BSOCK *UA_sock)
+{
+   BPIPE *bpipe;
+   char line[5000];
+   int stat;
+   int wait = 0;
+
+   if (argc > 3) {
+      sendit(_("Too many arguments. Enclose command in double quotes.\n"));
+      return 1;
+   }
+   if (argc == 3) {
+      wait = atoi(argk[2]);
+   }
+   bpipe = open_bpipe(argk[1], wait, "r");
+   if (!bpipe) {
+      berrno be;
+      senditf(_("Cannot popen(\"%s\", \"r\"): ERR=%s\n"),
+         argk[1], be.bstrerror(errno));
+      return 1;
+   }
+  
+   while (fgets(line, sizeof(line), bpipe->rfd)) {
+      senditf("%s", line);
+   }
+   stat = close_bpipe(bpipe);
+   if (stat != 0) {
+      berrno be;
+      be.set_errno(stat);
+     senditf(_("Autochanger error: ERR=%s\n"), be.bstrerror());
+   }
+   return 1;
+}
+
+
+static int echocmd(FILE *input, BSOCK *UA_sock)
 {
    for (int i=1; i < argc; i++) {
       senditf("%s", argk[i]);

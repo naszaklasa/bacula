@@ -20,36 +20,8 @@
 /*
  *   Modified by Kern Sibbald for use in Bacula, December 2000
  *
- *   Version $Id: makepath.c 3676 2006-11-21 20:14:47Z kerns $
+ *   Version $Id: makepath.c 5170 2007-07-13 13:33:34Z kerns $
  */
-/*
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-*/
-
 
 #include "bacula.h"
 #include "jcr.h"
@@ -142,7 +114,7 @@ make_dir(JCR *jcr, const char *dir, const char *dirpath, mode_t mode, int *creat
           berrno be;
           be.set_errno(save_errno);
           Jmsg(jcr, M_ERROR, 0, _("Cannot create directory %s: ERR=%s\n"),
-                  dirpath, be.strerror());
+                  dirpath, be.bstrerror());
           fail = 1;
       } else if (!S_ISDIR(stats.st_mode)) {
           Jmsg(jcr, M_ERROR, 0, _("%s exists but is not a directory\n"), quote(dirpath));
@@ -322,7 +294,7 @@ make_path(
                  /* Note, if we are restoring as NON-root, this may not be fatal */
                  berrno be;
                  Jmsg(jcr, M_ERROR, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
-                      quote(dirpath), be.strerror());
+                      quote(dirpath), be.bstrerror());
               }
               Dmsg0(300, "Chown done.\n");
 
@@ -343,7 +315,7 @@ make_path(
           if (cwd.do_chdir && chdir(basename_dir) < 0) {
               berrno be;
               Jmsg(jcr, M_ERROR, 0, _("Cannot chdir to directory, %s: ERR=%s\n"),
-                     quote(dirpath), be.strerror());
+                     quote(dirpath), be.bstrerror());
               umask(oldmask);
               cleanup(&cwd);
               return 1;
@@ -383,7 +355,7 @@ make_path(
             {
               berrno be;
               Jmsg(jcr, M_WARNING, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
-                     quote(dirpath), be.strerror());
+                     quote(dirpath), be.bstrerror());
             }
       }
 
@@ -398,7 +370,7 @@ make_path(
       if ((mode & ~S_IRWXUGO) && chmod(basename_dir, mode)) {
           berrno be;
           Jmsg(jcr, M_WARNING, 0, _("Cannot change permissions of %s: ERR=%s\n"),
-             quote(dirpath), be.strerror());
+             quote(dirpath), be.bstrerror());
       }
 
      if (cleanup(&cwd)) {
@@ -414,7 +386,7 @@ make_path(
           if (chmod(dirpath, parent_mode)) {
               berrno be;
               Jmsg(jcr, M_WARNING, 0, _("Cannot change permissions of %s: ERR=%s\n"),
-                     quote(dirpath), be.strerror());
+                     quote(dirpath), be.bstrerror());
           }
       }
   } else {
@@ -443,12 +415,12 @@ make_path(
               ) {
               berrno be;
               Jmsg(jcr, M_WARNING, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
-                     quote(dirpath), be.strerror());
+                     quote(dirpath), be.bstrerror());
             }
           if (chmod(dirpath, mode)) {
               berrno be;
               Jmsg(jcr, M_WARNING, 0, _("Cannot change permissions of %s: ERR=%s\n"),
-                                 quote(dirpath), be.strerror());
+                                 quote(dirpath), be.bstrerror());
           }
           Dmsg2(300, "pathexists chmod mode=%o dir=%s\n", mode, dirpath);
       }

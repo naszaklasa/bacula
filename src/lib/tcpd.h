@@ -4,14 +4,6 @@
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   */
 
-/*
- * This version of the file has been hacked over by
- *   Kern Sibbald to make it compatible with C++ for
- *   the few functions that Bacula uses.  19 April 2002
- *  It now compiles with C++ but remains untested.
- *  A correct fix would require significantly more work.
- */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -144,7 +136,7 @@ extern void sock_host(struct request_info *);
 extern void sock_hostname();            /* translate address to hostname */
 extern void sock_hostaddr();            /* address to printable address */
 #define sock_methods(r) \
-	{ (r)->hostname = sock_hostname; (r)->hostaddr = sock_hostaddr; }
+        { (r)->hostname = sock_hostname; (r)->hostaddr = sock_hostaddr; }
 
 /* The System V Transport-Level Interface (TLI) interface. */
 

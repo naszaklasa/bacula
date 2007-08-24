@@ -7,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -37,6 +37,7 @@ extern const char CATS_IMP_EXP *select_restore_del;
 extern const char CATS_IMP_EXP *select_admin_del;
 extern const char CATS_IMP_EXP *select_migrate_del;
 extern const char CATS_IMP_EXP *select_job;
+extern const char CATS_IMP_EXP *count_select_job;
 extern const char CATS_IMP_EXP *del_File;
 extern const char CATS_IMP_EXP *cnt_File;
 extern const char CATS_IMP_EXP *cnt_DelCand;

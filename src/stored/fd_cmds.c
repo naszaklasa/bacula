@@ -9,7 +9,7 @@
  *  the File daemon, control is passed here to handle the
  *  subsequent File daemon commands.
  *
- *   Version $Id: fd_cmds.c 4183 2007-02-15 18:57:55Z kerns $
+ *   Version $Id: fd_cmds.c 4992 2007-06-07 14:46:43Z kerns $
  *
  */
 /*
@@ -21,8 +21,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -118,7 +118,7 @@ void run_job(JCR *jcr)
    BSOCK *dir = jcr->dir_bsock;
    char ec1[30];
 
-   dir->jcr = jcr;
+   dir->set_jcr(jcr);
    Dmsg1(120, "Start run Job=%s\n", jcr->Job);
    bnet_fsend(dir, Job_start, jcr->Job);
    jcr->start_time = time(NULL);
@@ -145,7 +145,7 @@ void do_fd_commands(JCR *jcr)
    bool found, quit;
    BSOCK *fd = jcr->file_bsock;
 
-   fd->jcr = jcr;
+   fd->set_jcr(jcr);
    for (quit=false; !quit;) {
       int stat;
 

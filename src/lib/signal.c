@@ -1,29 +1,14 @@
 /*
- *  Signal handlers for Bacula daemons
- *
- *   Kern Sibbald, April 2000
- *
- *   Version $Id: signal.c 3671 2006-11-21 16:45:13Z robertnelson $
- *
- * Note, we probably should do a core dump for the serious
- * signals such as SIGBUS, SIGPFE, ...
- * Also, for SIGHUP and SIGUSR1, we should re-read the
- * configuration file.  However, since this is a "general"
- * routine, we leave it to the individual daemons to
- * tweek their signals after calling this routine.
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,6 +25,21 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Signal handlers for Bacula daemons
+ *
+ *   Kern Sibbald, April 2000
+ *
+ *   Version $Id: signal.c 4992 2007-06-07 14:46:43Z kerns $
+ *
+ * Note, we probably should do a core dump for the serious
+ * signals such as SIGBUS, SIGPFE, ...
+ * Also, for SIGHUP and SIGUSR1, we should re-read the
+ * configuration file.  However, since this is a "general"
+ * routine, we leave it to the individual daemons to
+ * tweek their signals after calling this routine.
+ *
+ */
 
 #ifndef HAVE_WIN32
 #include "bacula.h"
@@ -91,7 +91,7 @@ extern "C" void signal_handler(int sig)
    if (sig == SIGTERM) {
 //    Emsg1(M_TERM, -1, "Shutting down Bacula service: %s ...\n", my_name);
    } else {
-      Emsg2(M_FATAL, -1, _("Bacula interrupted by signal %d: %s\n"), sig, sig_names[sig]);
+      Emsg2(M_FATAL, -1, _("Bacula interrupted by signal %d: %s\n"), sig, get_signal_name(sig));
    }
 
 #ifdef TRACEBACK
@@ -104,8 +104,8 @@ extern "C" void signal_handler(int sig)
       pid_t pid;
       int exelen = strlen(exepath);
 
-      fprintf(stderr, _("Kaboom! %s, %s got signal %d. Attempting traceback.\n"),
-              exename, my_name, sig);
+      fprintf(stderr, _("Kaboom! %s, %s got signal %d - %s. Attempting traceback.\n"),
+              exename, my_name, sig, get_signal_name(sig));
       fprintf(stderr, _("Kaboom! exepath=%s\n"), exepath);
 
       if (exelen + 12 > (int)sizeof(btpath)) {
@@ -130,7 +130,7 @@ extern "C" void signal_handler(int sig)
       }
       if (chdir(working_directory) != 0) {  /* dump in working directory */
          berrno be;
-         Pmsg2(000, "chdir to %s failed. ERR=%s\n", working_directory,  be.strerror());
+         Pmsg2(000, "chdir to %s failed. ERR=%s\n", working_directory,  be.bstrerror());
          strcpy((char *)working_directory, "/tmp/");
       }
       unlink("./core");               /* get rid of any old core file */
@@ -149,7 +149,8 @@ extern "C" void signal_handler(int sig)
          argv[3] = (char *)NULL;
          fprintf(stderr, _("Calling: %s %s %s\n"), btpath, exepath, pid_buf);
          if (execv(btpath, argv) != 0) {
-            printf(_("execv: %s failed: ERR=%s\n"), btpath, strerror(errno));
+            berrno be;
+            printf(_("execv: %s failed: ERR=%s\n"), btpath, be.bstrerror());
          }
          exit(-1);
       default:                        /* parent */
@@ -296,16 +297,16 @@ void init_signals(void terminate(int sig))
    sigaction(SIGQUIT,   &sighandle, NULL);
    sigaction(SIGILL,    &sighandle, NULL);
    sigaction(SIGTRAP,   &sighandle, NULL);
-/* sigaction(SIGABRT,   &sighandle, NULL);   */
+   sigaction(SIGABRT,   &sighandle, NULL);
 #ifdef SIGEMT
    sigaction(SIGEMT,    &sighandle, NULL);
 #endif
 #ifdef SIGIOT
-/* sigaction(SIGIOT,    &sighandle, NULL);  used by debugger */
+   sigaction(SIGIOT,    &sighandle, NULL);                     
 #endif
    sigaction(SIGBUS,    &sighandle, NULL);
    sigaction(SIGFPE,    &sighandle, NULL);
-   sigaction(SIGKILL,   &sighandle, NULL);
+/* sigaction(SIGKILL,   &sighandle, NULL);  cannot be trapped */
    sigaction(SIGUSR1,   &sighandle, NULL);
    sigaction(SIGSEGV,   &sighandle, NULL);
    sigaction(SIGUSR2,   &sighandle, NULL);
@@ -314,7 +315,7 @@ void init_signals(void terminate(int sig))
 #ifdef SIGSTKFLT
    sigaction(SIGSTKFLT, &sighandle, NULL);
 #endif
-   sigaction(SIGSTOP,   &sighandle, NULL);
+/* sigaction(SIGSTOP,   &sighandle, NULL); cannot be trapped */
    sigaction(SIGTSTP,   &sighandle, NULL);
    sigaction(SIGTTIN,   &sighandle, NULL);
    sigaction(SIGTTOU,   &sighandle, NULL);

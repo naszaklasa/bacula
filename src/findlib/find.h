@@ -1,19 +1,14 @@
 /*
- * File types as returned by find_files()
- *
- *     Kern Sibbald MMI
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,6 +25,11 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * File types as returned by find_files()
+ *
+ *     Kern Sibbald MMI
+ */
 
 #ifndef __FILES_H
 #define __FILES_H
@@ -107,6 +107,8 @@ enum {
 #define FO_ENCRYPT      (1<<21)       /* Encrypt data stream */
 #define FO_NOATIME      (1<<22)       /* Use O_NOATIME to prevent atime change */
 #define FO_ENHANCEDWILD (1<<23)       /* Enhanced wild card processing */
+#define FO_CHKCHANGES   (1<<24)       /* Check if file have been modified during backup */
+#define FO_STRIPPATH    (1<<25)       /* Check for stripping path */
 
 struct s_included_file {
    struct s_included_file *next;
@@ -143,6 +145,7 @@ enum {
 struct findFOPTS {
    uint32_t flags;                    /* options in bits */
    int GZIP_level;                    /* GZIP level */
+   int strip_path;                    /* strip path count */
    char VerifyOpts[MAX_FOPTS];        /* verify options */
    alist regex;                       /* regex string(s) */
    alist regexdir;                    /* regex string(s) for directories */
@@ -163,7 +166,7 @@ struct findFOPTS {
 struct findINCEXE {
    findFOPTS *current_opts;           /* points to current options structure */
    alist opts_list;                   /* options list */
-   alist name_list;                   /* filename list -- holds char * */
+   dlist name_list;                   /* filename list -- holds dlistString */
 };
 
 /*
@@ -194,6 +197,8 @@ struct FF_PKT {
    char *fname;                       /* full filename */
    char *link;                        /* link if file linked */
    POOLMEM *sys_fname;                /* system filename */
+   POOLMEM *fname_save;               /* save when stripping path */
+   POOLMEM *link_save;                /* save when stripping path */
    struct stat statp;                 /* stat packet */
    int32_t FileIndex;                 /* FileIndex of this file */
    int32_t LinkFI;                    /* FileIndex of main hard linked file */
@@ -215,6 +220,7 @@ struct FF_PKT {
    /* Values set by accept_file while processing Options */
    uint32_t flags;                    /* backup options */
    int GZIP_level;                    /* compression level */
+   int strip_path;                    /* strip path count */
    char *reader;                      /* reader program */
    char *writer;                      /* writer program */
    alist fstypes;                     /* allowed file system types */

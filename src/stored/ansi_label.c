@@ -7,7 +7,7 @@
  *
  *
  *
- *   Version $Id: ansi_label.c 3673 2006-11-21 17:03:47Z kerns $
+ *   Version $Id: ansi_label.c 4992 2007-06-07 14:46:43Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -18,8 +18,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -87,14 +87,14 @@ int read_ansi_ibm_label(DCR *dcr)
    /* Read a maximum of 5 records VOL1, HDR1, ... HDR4 */
    for (i=0; i < 6; i++) {
       do {
-         stat = tape_read(dev->fd, label, sizeof(label));
+         stat = dev->read(label, sizeof(label));
       } while (stat == -1 && errno == EINTR);
       if (stat < 0) {
          berrno be;
          dev->clrerror(-1);
-         Dmsg1(100, "Read device got: ERR=%s\n", be.strerror());
+         Dmsg1(100, "Read device got: ERR=%s\n", be.bstrerror());
          Mmsg2(jcr->errmsg, _("Read error on device %s in ANSI label. ERR=%s\n"),
-            dev->dev_name, be.strerror());
+            dev->dev_name, be.bstrerror());
          Jmsg(jcr, M_ERROR, 0, "%s", dev->errmsg);
          dev->VolCatInfo.VolCatErrors++;
          return VOL_IO_ERROR;
@@ -145,7 +145,7 @@ int read_ansi_ibm_label(DCR *dcr)
                   *q++ = *p++;
                }
                *q = 0;
-               new_volume(dcr, dev->VolHdr.VolumeName);
+               reserve_volume(dcr, dev->VolHdr.VolumeName);
                Dmsg2(100, "Wanted ANSI Vol %s got %6s\n", VolName, dev->VolHdr.VolumeName);
                Mmsg2(jcr->errmsg, _("Wanted ANSI Volume \"%s\" got \"%s\"\n"), VolName, dev->VolHdr.VolumeName);
                return VOL_NAME_ERROR;
@@ -309,11 +309,11 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
          } else {
             label[79] = '3';                /* ANSI label flag */
          }
-         stat = tape_write(dev->fd, label, sizeof(label));
+         stat = dev->write(label, sizeof(label));
          if (stat != sizeof(label)) {
             berrno be;
             Jmsg1(jcr, M_FATAL, 0,  _("Could not write ANSI VOL1 label. ERR=%s\n"),
-               be.strerror());
+               be.bstrerror());
             return false;
          }
       }
@@ -341,7 +341,7 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
        * This could come at the end of a tape, ignore
        *  EOT errors.
        */
-      stat = tape_write(dev->fd, label, sizeof(label));
+      stat = dev->write(label, sizeof(label));
       if (stat != sizeof(label)) {
          berrno be;
          if (stat == -1) {
@@ -351,7 +351,7 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
             }
             if (dev->dev_errno != ENOSPC) {
                Jmsg1(jcr, M_FATAL, 0, _("Could not write ANSI HDR1 label. ERR=%s\n"),
-               be.strerror());
+               be.bstrerror());
                return false;
             }
          } else {
@@ -370,7 +370,7 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
          label[4] = 'V';
          ascii_to_ebcdic(label, label, sizeof(label));
       }
-      stat = tape_write(dev->fd, label, sizeof(label));
+      stat = dev->write(label, sizeof(label));
       if (stat != sizeof(label)) {
          berrno be;
          if (stat == -1) {
@@ -380,7 +380,7 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
             }
             if (dev->dev_errno != ENOSPC) {
                Jmsg1(jcr, M_FATAL, 0, _("Could not write ANSI HDR1 label. ERR=%s\n"),
-               be.strerror());
+               be.bstrerror());
                return false;
             }
             dev->weof(1);

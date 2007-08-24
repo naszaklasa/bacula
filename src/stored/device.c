@@ -1,44 +1,14 @@
 /*
- *
- *  Higher Level Device routines.
- *  Knows about Bacula tape labels and such
- *
- *  NOTE! In general, subroutines that have the word
- *        "device" in the name do locking.  Subroutines
- *        that have the word "dev" in the name do not
- *        do locking.  Thus if xxx_device() calls
- *        yyy_dev(), all is OK, but if xxx_device()
- *        calls yyy_device(), everything will hang.
- *        Obviously, no zzz_dev() is allowed to call
- *        a www_device() or everything falls apart.
- *
- * Concerning the routines lock_device() and block_device()
- *  see the end of this module for details.  In general,
- *  blocking a device leaves it in a state where all threads
- *  other than the current thread block when they attempt to
- *  lock the device. They remain suspended (blocked) until the device
- *  is unblocked. So, a device is blocked during an operation
- *  that takes a long time (initialization, mounting a new
- *  volume, ...) locking a device is done for an operation
- *  that takes a short time such as writing data to the
- *  device.
- *
- *
- *   Kern Sibbald, MM, MMI
- *
- *   Version $Id: device.c 4146 2007-02-08 10:56:41Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -55,6 +25,36 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  Higher Level Device routines.
+ *  Knows about Bacula tape labels and such
+ *
+ *  NOTE! In general, subroutines that have the word
+ *        "device" in the name do locking.  Subroutines
+ *        that have the word "dev" in the name do not
+ *        do locking.  Thus if xxx_device() calls
+ *        yyy_dev(), all is OK, but if xxx_device()
+ *        calls yyy_device(), everything will hang.
+ *        Obviously, no zzz_dev() is allowed to call
+ *        a www_device() or everything falls apart.
+ *
+ * Concerning the routines dev->r_lock()() and block_device()
+ *  see the end of this module for details.  In general,
+ *  blocking a device leaves it in a state where all threads
+ *  other than the current thread block when they attempt to
+ *  lock the device. They remain suspended (blocked) until the device
+ *  is unblocked. So, a device is blocked during an operation
+ *  that takes a long time (initialization, mounting a new
+ *  volume, ...) locking a device is done for an operation
+ *  that takes a short time such as writing data to the
+ *  device.
+ *
+ *
+ *   Kern Sibbald, MM, MMI
+ *
+ *   Version $Id: device.c 5114 2007-06-29 12:12:26Z kerns $
+ */
 
 #include "bacula.h"                   /* pull in global headers */
 #include "stored.h"                   /* pull in Storage Deamon headers */
@@ -92,14 +92,23 @@ bool fixup_device_block_write_error(DCR *dcr)
    char dt[MAX_TIME_LENGTH];
    JCR *jcr = dcr->jcr;
    DEVICE *dev = dcr->dev;
+   int blocked = dev->blocked();         /* save any previous blocked status */
+   bool ok = false;
 
    wait_time = time(NULL);
 
    Dmsg0(100, "Enter fixup_device_block_write_error\n");
 
+   /*
+    * If we are blocked at entry, unblock it, and set our own block status
+    */
+   if (blocked != BST_NOT_BLOCKED) {
+      unblock_device(dev);
+   }
    block_device(dev, BST_DOING_ACQUIRE);
-   /* Unlock, but leave BLOCKED */
-   unlock_device(dev);
+
+   /* Continue unlocked, but leave BLOCKED */
+   dev->dunlock();
 
    bstrncpy(PrevVolName, dev->VolCatInfo.VolCatName, sizeof(PrevVolName));
    bstrncpy(dev->VolHdr.PrevVolumeName, PrevVolName, sizeof(dev->VolHdr.PrevVolumeName));
@@ -116,11 +125,10 @@ bool fixup_device_block_write_error(DCR *dcr)
    if (!mount_next_write_volume(dcr, 1)) {
       free_block(label_blk);
       dcr->block = block;
-      P(dev->mutex);
-      unblock_device(dev);
-      return false;                /* device locked */
+      dev->dlock();  
+      goto bail_out;
    }
-   P(dev->mutex);                  /* lock again */
+   dev->dlock();                    /* lock again */
 
    dev->VolCatInfo.VolCatJobs++;              /* increment number of jobs on vol */
    dir_update_volume_info(dcr, false);        /* send Volume info to Director */
@@ -138,11 +146,10 @@ bool fixup_device_block_write_error(DCR *dcr)
    if (!write_block_to_dev(dcr)) {
       berrno be;
       Pmsg1(0, _("write_block_to_device Volume label failed. ERR=%s"),
-        be.strerror(dev->dev_errno));
+        be.bstrerror(dev->dev_errno));
       free_block(label_blk);
       dcr->block = block;
-      unblock_device(dev);
-      return false;                /* device locked */
+      goto bail_out;
    }
    free_block(label_blk);
    dcr->block = block;
@@ -174,13 +181,22 @@ bool fixup_device_block_write_error(DCR *dcr)
    if (!write_block_to_dev(dcr)) {
       berrno be;
       Pmsg1(0, _("write_block_to_device overflow block failed. ERR=%s"),
-        be.strerror(dev->dev_errno));
-      unblock_device(dev);
-      return false;                /* device locked */
+        be.bstrerror(dev->dev_errno));
+      goto bail_out;
    }
+   ok = true;
 
+bail_out:
+   /*
+    * At this point, the device is locked and blocked.
+    * Unblock the device, restore any entry blocked condition, then
+    *   return leaving the device locked (as it was on entry).
+    */
    unblock_device(dev);
-   return true;                             /* device locked */
+   if (blocked != BST_NOT_BLOCKED) {
+      block_device(dev, blocked);
+   }
+   return ok;                               /* device locked */
 }
 
 /*
@@ -261,7 +277,7 @@ bool first_open_device(DCR *dcr)
       return false;
    }
 
-   lock_device(dev);
+   dev->r_dlock();
 
    /* Defer opening files */
    if (!dev->is_tape()) {
@@ -284,7 +300,7 @@ bool first_open_device(DCR *dcr)
    Dmsg1(129, "open dev %s OK\n", dev->print_name());
 
 bail_out:
-   unlock_device(dev);
+   dev->dunlock();
    return ok;
 }
 
@@ -314,131 +330,4 @@ bool open_device(DCR *dcr)
       return false;
    }
    return true;
-}
-
-
-
-void dev_lock(DEVICE *dev)
-{
-   int errstat;
-   if ((errstat=rwl_writelock(&dev->lock))) {
-      Emsg1(M_ABORT, 0, _("Device write lock failure. ERR=%s\n"), strerror(errstat));
-   }
-}
-
-void dev_unlock(DEVICE *dev)
-{
-   int errstat;
-   if ((errstat=rwl_writeunlock(&dev->lock))) {
-      Emsg1(M_ABORT, 0, _("Device write unlock failure. ERR=%s\n"), strerror(errstat));
-   }
-}
-
-/*
- * When dev_blocked is set, all threads EXCEPT thread with id no_wait_id
- * must wait. The no_wait_id thread is out obtaining a new volume
- * and preparing the label.
- */
-void _lock_device(const char *file, int line, DEVICE *dev)
-{
-   int stat;
-   Dmsg3(500, "lock %d from %s:%d\n", dev->dev_blocked, file, line);
-   P(dev->mutex);
-   if (dev->dev_blocked && !pthread_equal(dev->no_wait_id, pthread_self())) {
-      dev->num_waiting++;             /* indicate that I am waiting */
-      while (dev->dev_blocked) {
-         if ((stat = pthread_cond_wait(&dev->wait, &dev->mutex)) != 0) {
-            V(dev->mutex);
-            Emsg1(M_ABORT, 0, _("pthread_cond_wait failure. ERR=%s\n"),
-               strerror(stat));
-         }
-      }
-      dev->num_waiting--;             /* no longer waiting */
-   }
-}
-
-/*
- * Check if the device is blocked or not
- */
-bool is_device_unmounted(DEVICE *dev)
-{
-   bool stat;
-   int blocked = dev->dev_blocked;
-   stat = (blocked == BST_UNMOUNTED) ||
-          (blocked == BST_UNMOUNTED_WAITING_FOR_SYSOP);
-   return stat;
-}
-
-void _unlock_device(const char *file, int line, DEVICE *dev)
-{
-   Dmsg2(500, "unlock from %s:%d\n", file, line);
-   V(dev->mutex);
-}
-
-/*
- * Block all other threads from using the device
- *  Device must already be locked.  After this call,
- *  the device is blocked to any thread calling lock_device(),
- *  but the device is not locked (i.e. no P on device).  Also,
- *  the current thread can do slip through the lock_device()
- *  calls without blocking.
- */
-void _block_device(const char *file, int line, DEVICE *dev, int state)
-{
-   Dmsg3(500, "block set %d from %s:%d\n", state, file, line);
-   ASSERT(dev->get_blocked() == BST_NOT_BLOCKED);
-   dev->set_blocked(state);           /* make other threads wait */
-   dev->no_wait_id = pthread_self();  /* allow us to continue */
-}
-
-
-
-/*
- * Unblock the device, and wake up anyone who went to sleep.
- */
-void _unblock_device(const char *file, int line, DEVICE *dev)
-{
-   Dmsg3(500, "unblock %s from %s:%d\n", dev->print_blocked(), file, line);
-   ASSERT(dev->dev_blocked);
-   dev->set_blocked(BST_NOT_BLOCKED);
-   dev->no_wait_id = 0;
-   if (dev->num_waiting > 0) {
-      pthread_cond_broadcast(&dev->wait); /* wake them up */
-   }
-}
-
-/*
- * Enter with device locked and blocked
- * Exit with device unlocked and blocked by us.
- */
-void _steal_device_lock(const char *file, int line, DEVICE *dev, bsteal_lock_t *hold, int state)
-{
-
-   Dmsg3(400, "steal lock. old=%s from %s:%d\n", dev->print_blocked(),
-      file, line);
-   hold->dev_blocked = dev->get_blocked();
-   hold->dev_prev_blocked = dev->dev_prev_blocked;
-   hold->no_wait_id = dev->no_wait_id;
-   dev->set_blocked(state);
-   Dmsg1(400, "steal lock. new=%s\n", dev->print_blocked());
-   dev->no_wait_id = pthread_self();
-   V(dev->mutex);
-}
-
-/*
- * Enter with device blocked by us but not locked
- * Exit with device locked, and blocked by previous owner
- */
-void _give_back_device_lock(const char *file, int line, DEVICE *dev, bsteal_lock_t *hold)
-{
-   Dmsg3(400, "return lock. old=%s from %s:%d\n",
-      dev->print_blocked(), file, line);
-   P(dev->mutex);
-   dev->dev_blocked = hold->dev_blocked;
-   dev->dev_prev_blocked = hold->dev_prev_blocked;
-   dev->no_wait_id = hold->no_wait_id;
-   Dmsg1(400, "return lock. new=%s\n", dev->print_blocked());
-   if (dev->num_waiting > 0) {
-      pthread_cond_broadcast(&dev->wait); /* wake them up */
-   }
 }

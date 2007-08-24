@@ -16,11 +16,11 @@
 BINDIR=@SQL_BINDIR@
 
 cd @working_dir@
-rm -f bacula.sql
-if test xsqlite = x@DB_NAME@ ; then
+rm -f $1.sql
+if test xsqlite = x@DB_TYPE@ ; then
   echo ".dump" | ${BINDIR}/sqlite $1.db >$1.sql
 else
-  if test xmysql = x@DB_NAME@ ; then
+  if test xmysql = x@DB_TYPE@ ; then
     if test $# -gt 2; then
       MYSQLPASSWORD=" --password=$3"
     else
@@ -33,17 +33,16 @@ else
     fi
     ${BINDIR}/mysqldump -u $2$MYSQLPASSWORD$MYSQLHOST -f --opt $1 >$1.sql
   else			      
-    if test xpostgresql = x@DB_NAME@ ; then
+    if test xpostgresql = x@DB_TYPE@ ; then
       if test $# -gt 2; then
-        PGPASSWORD="$3"
-        export PGPASSWORD
+	PGPASSWORD=$3
+	export PGPASSWORD
       fi
       if test $# -gt 3; then
-        PGHOST=" --host=$4"
+	PGHOST=" --host=$4"
       else
-        PGHOST=""
+	PGHOST=""
       fi
-
       exec ${BINDIR}/pg_dump -c $PGHOST -U $2 $1 >$1.sql
     else
       echo ".dump" | ${BINDIR}/sqlite3 $1.db >$1.sql

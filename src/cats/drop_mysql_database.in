@@ -4,15 +4,16 @@
 #
 
 bindir=@SQL_BINDIR@
+db_name=@db_name@
 
-if test xmysql = x@DB_NAME@ ; then 
+if test xmysql = x@DB_TYPE@ ; then 
   $bindir/mysql $* -f <<END-OF-DATA
-    DROP DATABASE bacula;
+    DROP DATABASE ${db_name};
 END-OF-DATA
   if test $? -eq 0 ; then
-    echo "Drop of bacula database succeeded."
+    echo "Drop of ${db_name} database succeeded."
   else
-    echo "Drop of bacula database failed."
+    echo "Drop of ${db_name} database failed."
   fi
 else
   echo "Bacula is not configured for a MySQL database."

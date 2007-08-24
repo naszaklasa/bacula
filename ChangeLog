@@ -1,20 +1,786 @@
-              Technical notes on version 2.0
+              Technical notes on version 2.1
 
 General:
+08Aug07
+kes  Update bat README file.
+kes  Apply patch from Allan Black <Allan.Black@btconnect.com> that     
+     corrects a typo in the Recycle status check in db_find_next_volume().
+     This will probably fix a number of annoying problems with multiple
+     Recycled volumes.
+kes  Modify most of dird/msgchan.c to use bsock class calls rather than
+     bnet calls -- no functionality change.
+07Aug07 
+kes  Modify the Verify output to specify if files are missing on    
+     the Volume(s) or disk.  Fixes confusion in bug #916.
+kes  When more than one Volume is read in a migration job, the last
+     Volume bytes reported are from the last read volume rather than
+     the last written volume. Fixed. This fixes bug #910.
+kes  Fix display of Recycle flag after update volume=foo recycle=yes.
+     It previously printed New Recyle flag is: no. This fixes bug
+     #917.
+06Aug07
+kes  Correct seg fault when switching tape drives during restore.
+kes  Commit uid_gid_name.c (replacement for idcache.c), but will not
+     be used until after 2.2.0 release.
+04Aug07
+kes  Remove fnmatch() in SD that permitted wild card specifications.
+     This fixes bug #914.
+31Jul07
+kes  Fix %g in filename returned by SQL for browse tree reported by
+     Dirk.
+kes  Fix configure so that it puts config.out in the cwd rather than
+     in src/qt-console
+kes  Attempt to fix the locking problem reported by Eric in bug #906.
+kes  Make berrno class to leave errno unchanged after constructor call.
+kes  Make bnet_server use the heap rather than the stack to allocate
+     its socket fd pointers to avoid a crash at termination. Problem
+     reported by Ryan Novosielski and bugs pointed out by Martin Simmons.
+30Jul07 
+kes  Create new depkgs and depkgs-qt separating the qwt out of depkgs
+     and putting it in depkgs-qt along with Qt4.3.
+29Jul07
+kes  Rework code in acquire.c that switches drives for reading when
+     the Media Type does not match. This should fix bug #906
+28Jul07
+ebl  Fix a director segfault during job setup #907
+kes  Correct seg fault in postgresql when first operation returns no
+     rows.  Fixes Dirks File browser problem seg fault with bat.
+25Jul07
+kes  Apply patch from Felix Schwarz <Felix.Schwarz@web.de> that allows
+     building wxconsole on Fedora 7 with wxWidgets 2.8 (it works with
+     2.6 as well).
+24Jul07 
+kes  Implement PopUp YES/NO dialog for bat.
+23Jul07
+ebl  Fix a compilation bug when using #define BACL_WANT_NUMERIC_IDS
+22Jul07
+kes  Correct RunScript to terminate job in FD on failure.
+kes  Change abort_on_error and AbortJobOnError to fail_on_error
+     and FailJobOnError in RunScripts.
+kes  Minor tweaks of code formating in RunScripts, principally to
+     avoid depassing 80 columns.
+21Jul07
+kes  Eliminate one #ifdef Win32 in bsmtp
+kes  Implement grow tool to grow a file for testing very large databases.
+kes  Add big-vol-test to test Bacula seeking with > 5GB.
+Release 2.1.28 beta
+19Jul07
+kes  Modify find_next_volume() to return all values in Media record.
+kes  Ensure that we keep Recycle Pool when moving Scratch volumes.
 
-Version 2.0.3 release: xx March 2007
-5Mar07
+Release 2.1.28 beta
+18Jul08
+kes  Update Release notes 
+17Jul07
+ebl  fix a bug in get_scratch_volume() report by Andreas Helmcke
+     Warning, in previous beta version, all media get from scratch keep their
+     old retention.
+16Jul07
+kes  Tweaked Win32 installer to remove temp conf files at uninstall time.
+     This should fix bug #842. Made a note to look at removing the temp
+     files at the end of the install.
+kes  Add ability to mount and unmount a file device providing it is
+     marked as being removable and has the appropriate mount and unmount
+     commands defined in the Device resource. This fixes bug #830.
+kes  When applying a storage override, release all previous storage
+     definitions rather than just prepending the new storage.
+     This should prevent a good deal of confusion.
+14Jul07
+kes  Implement ./configure search for qwt libraries.
+13Jul07
+kes  Disable posting the WM_CLOSE message in KillRunningCopy of the 
+     Win32 FD.  This should fix bug #893.
+kes  Remove an unnecessary beep in Win32 init code.
+kes  Update copyright dates in Win32 executable about boxes.
+kes  Replace the FSF copyrighted getopt.c and getopt.h in the Win32
+     code with a BSD getopt.c and getopt.h.
+kes  Remove sched.h from the Win32 compat directory -- not used.
+kes  Remove the Exit menu item from the Win32 tray monitor. If you really
+     need to shut it down, do it through the services panel or the command
+     line.
+kes  Remove some inappropriate Bacula FSFE copyrights.
+ebl  Tweak status client=xxx to be more easy to parse (more like in 2.0.x)
+kes  Fix regress config non-portable test as pointed out by
+     Florian Heigl <florian.heigl@gmail.com>
+kes  Fix PSCMD for HP-UX in configure.in to have proper syntax.
+     as pointed out by Florian Heigl <florian.heigl@gmail.com>
+12Jul07
+kes  Fix missing rctx. prefixes on the Darwin code in src/filed/restore.c
+     Reported by Frank Sweetser.
+
+Release 2.1.26 beta
+12Jul07
+kes  Fix client-only build.
+kes  Integrate client-only fixes for bsys (initgroups) and conio from
+     Sergey Svishchev <svs@ropnet.ru> for the AIX platform.
+kes  Make arguments to get_scratch_volume() in same order as other
+     such calls.
+kes  Rework the prune_volumes() subroutine so that after purging and
+     no volume found in desired pool, it will check for a scratch 
+     volume. This prevents recycling the whole scratch pool.
+kes  Add code to status storage to print boffset_t (largefile support).
+11Jul07
+kes  Move qwt (Graphics libarary for Qt4) to depkgs.
+kes  You now need a --with-qwt=<dir> to be able to build bat.
+kes  Update src/win32/cats/bacula_cats.def to include the new       
+     db_get_query_dbids() call on Win32.
+07Jul07
+kes  Correct a problem when selecting a scratch volume and moving
+     it to another pool that lost some columns.
+kes  Tweak some code in ua_update.c to use POOL_MEM instead of POOLMEM.
+kes  Enhance Autochanger error messages to include Volume and device name.
+kes  Rework prune_volumes() code to take account of InChanger flag,
+     and to handle recycling volumes going to the Scratch pool and
+     current pool because the RecyclePool directive.
+kes  Implement a better and more efficient db_get_query_dbids() to
+     handle creating and passing back a list of DBIds.
+
+Release 2.1.24 beta
+03Jul07
+kes  Start work on new more efficient DBId subroutine. First use
+     will be for recycling volume to Scratch inchanger.
+kes  Increase number of JobIds in pruning from 1000 to 10000. 
+     This to be replaced by above routine.
+kes  Begin implementation of building Qt4 on Win32.
+kes  Correct typo in fix I added for bad TLS shutdown.
+kes  Pull 2.0.3 patches into patches directory.
+kes  Update Release notes.  Include qt-console in line count.
+kes  Update Projects file.
+30Jun07
+kes  Integrate patch from Sergey Svishchev <svs@ropnet.ru> that fixes 
+     bug in migration code where a job that spanned two volumes
+     was migrated twice.
+29Jun07
+kes  Implement new BST_DESPOOLING blocked state. Change from locking
+     during despooling in SD to blocking. This means that other threads
+     can work with the device structure, in particular the reservations
+     system while despooling.
+28Jun07
+kes  Fix return in reservation message queue that missed clearing
+     the jcr lock (implemented 26Jun07 below).
+kes  Rename a number of dev methods to make locking function names
+     a bit clearer.
+kes  Document locking in lock.c. Move lock structures to new file
+     lock.h.
+26Jun07
+kes  Move reservations message lock to lock jcr only this
+     fixes bug #861.
+kes  Move main SD locking code into lock.c (new file).
+kes  Update Win32 build to include lock.c
+
+Release 2.1.22 beta
+26Jun07
+kes  Dirk committed the qwt library code for drawing graphs in bat.
+kes  Tweak install of qwt so that it is integrated with ./configure.
+25Jun07
+kes  Fix HAVE_BATCH_INSERT to be HAVE_BATCH_FILE_INSERT, pointed
+     out by Eric (my typo).
+ebl  Fix configure.in to get batch mode enable
+kes  Return correct string from authenticate.cpp in bat when connecting
+     to Dir.
+kes  Apply patch suggested by Frank Sweetser to fix bug #888 --     
+     spurious line drops when using TLS.  
+kes  Do not file reparse points when restoring a file that already
+     exists -- Win32.
+24Jun07
+kes  Implement Windows reparse points -- similar to directories, but
+     we do not descend into it. This is a first cut. They seem to 
+     be backed up, but restore is not yet tested.
+kes  Remove restore_blocking in tls code when shutting a socket to leave
+     it in blocking mode. Hopefully this will fix the encryption bug  
+     reported by Frank Sweetser.
+kes  When opening a file for backup, tell the OS that we are going to
+     read it sequentially -- optimization.
+kes  Change variable names in authenticate_director() to not conflict
+     with member names in bat. Caused great confusion with compiler,
+     but no warnings.
+23Jun07
+kes  Queue openssl error messages in case of comm problem.
+kes  Do shutdown() call if socket terminated.
+kes  Remove some duplicated code in tls.c
+kes  Move more of the bsock member variables into private and access
+     them with methods.
+kes  Add Frank Sweetser's tls-test to the regression suite.
+22Jun07
+kes  Add Swedish sv.po file
+21Jun07
+kes  Don't print clock skew message in FD if less than 3 seconds diff.
+kes  Add a bit of VSS info to status client.
+kes  Implement a first cut of Vista VSS, using Win2003 code.
+
+
+Release: 2.1.20 beta
+20Jun07
+kes  Fixed bug #886 (multidrive autochanger: SD doesn't use drive with
+     loaded tape but uses first drive).
+kes  Fixed bug #807 Restore encrypted backup failed on Windows 2003
+     This was indeed a Win32 issue.
+19Jun07 
+kes  Simplify search of autochanger for in-use Volume.  
+kes  Fix exit condition of check for in-use volume.  kes Remove
+     inappropriate my_postgresql_free_result() in db_close()
+     routine.
+kes  Fix bad return in FD when encryption signature not found.
+     Probably caused a crash.
+kes  Inhibit missing encryption signature error messages for 
+     file types where no signature computed.
+kes  Correct inverted check on autochanger in reservation system.
+kes  Tweak debug code in autochanger reservation.
+18Jun07
+kes  Add some additional locking in the cats directory in subroutines
+     that modify packet variables called from batch insert.
+kes  Rework how dcrs are allocated. new_dcr() can now be called
+     with an existing pointer, and it will simply clean it up.
+     This allows the reservation system to test various different
+     devices, and will permit easy device changes.
+kes  A bunch of changes all over to handle new new_dcr() calling
+     sequence.
+kes  Work more on the Volume management in the SD. Remember Volumes
+     for tape drives and for autochangers (even virtual disk changers).
+kes  When looking at the Volume list to reserve a drive, handle 
+     autochanger names correctly by interating through the changer 
+     devices.  Also call the Director to see if a Volume is suitable
+     for the current job.
+kes  Fix some bugs in bscan. Make sure all media records are written.
+     Make sure that valid JobMedia records are written for disk files.
+     Previously they were completely wrong.
+kes  Move source tar files for depkgs-mingw32 to www.bacula.org so
+     that the URLs don't change and so that the developers will all
+     work off the same copy. Rebuild from scrach.
+kes  Upgrade Win32 SQLite3 from 3.3.8 to 3.3.17.
+
+Release: 2.1.18 beta
+16Jun07
+kes  Fix seg fault in FD from incorrect digest size. 
+kes  Fix argument to non-OpenSSL crypto.c subroutine.      
+
+Release: 2.1.16 beta
+16Jun07
+kes  Remove a few malloc()s from the encryption code.
+kes  Use the class calls to bsock in filed/backup.c and restore.c in
+     place of the old bnet_xxx code.
+kes  Implement code that does an on the fly calculation of the  
+     signing digest during restore of encrypted files.  It makes
+     a best guess at the algorithm, and if it is not correct, will
+     then revert to the old code which reads the file after it is
+     restored.
+kes  Implement at least one missing crypto stream in stream_to_ascii()
+kes  Apply patch from William <chowmeined@gmail.com> that fixes bug
+     #877 where a reload with bad syntax causes Dir to exit.
+
+Cut: 2.1.14 beta (not released)
+14Jun07
+kes  Do not free a volume on a tape drive until another volume is
+     mounted and read, or the autochanger unloads the volume.
+     This should help the SD re-use volumes that are already mounted,
+     and should fix bug #886.
+kes  Apply patch from user brettedgar that allows gnome2-console include
+     the OpenSSL libraries, and hence work with SSL.  Fixes bug #885.
+kes  Apply patch from Lucien Weller that fixes day of week calculation
+     because of DST flag problem. Fixes bug #887.
+10Jun08
+kes  Move find_next_appendable_volume() to after acquiring a valid device
+     in reserve.c.  This fixes bug #864 -- confirmed by reporter.
+09Jun07
+kes  Unable to reproduce bug 872. However added additional testing for
+     integer.
+kes  Bug #874 resolved by documenting SQLite limitations.
+kes  Bug #882 resolved by documenting mtx-changer script for new drive code.
+kes  Bug #881 resolved by removing typo in mtx-changer script.
+kes  Made Frank Sweetser's wiki the official Bacula wiki with his
+     approval. Added a link to the wiki on the web page, and implemented
+     a backup from http://paramount.ind.wpi.edu                                          
+08Jun07
+kes  Fix update allfrompool to pass pool name.
+07Jun07
+kes  Convert to pure GPL v2 license.
+kes  Fix sscanf problems reported by Peter Buschman that caused
+     a bus error on Solaris.
+kes  Rework (simplify) the select prompt in bat.
+kes  Move get_jobid_from_tid() into lib and create a 
+     get_jcr_from_tid().
+kes  Use get_jcr_from_tid() to conver all tls Emsg() to Jmsg().  This
+     should definitely fix the problem of lost error messages in the
+     encryption code.
+kes  Remove over zellous addition of FSFE copyright in a few eggxxx files.
+kes  Eliminate tcpd.h from the project. Enclose the #include from the
+     library with extern C ...
+kes  Add print of signal name when a signal is trapped.
+
+Release: 2.1.12 beta
+04Jun07
+kes  Fix a seg fault in the PostgreSQL driver dereferencing a NULL pointer.
+03Jun07
+kes  Implement SQLITE3_INIT_QUERY in version.h that can do an initial
+     query for SQLite3. Use it to set PRAGMA synchronous = OFF. This
+     makes SQLit3 run 30 times faster, though a bit less safe.
+kes  Implement --with-batch-insert in configure and detection of thread
+     safe libraries.  It is on by default, but turned off if no thread
+     safe library (e.g. SQLite 2) is available.
+02Jun07
+kes  Fix Bacula PostgreSQL buffer overruns.
+kes  Do better checking for NULL results returned from PostgreSQL;
+     implement retry for failed queries; clear results buffer after
+     failed query. Hopefully this will correct the PostgreSQL failures.
+01Jun07
+kes  Implement algorithm to handle only one appendable volume with
+     Prefer Mounted Volumes = no.
+kes  Fix a Bacula PostgreSQL bug dereferencing a NULL pointer      
+     returned from a query.
+kes  Make volume lock recursive.
+kes  Implement an additional volume reservation algorithm that
+     starts by considering all reserved volumes then uses the
+     old brute force algorithm of searching the resources to
+     find a suitable device.
+kes  Add new reservations debug code and refine the old code.
+kes  Update the win32/dll/bacula.defs file.
+29May07
+kes  Tweak reservations algorithm to permit a few more cases, i.e.
+     volume reserved, but on different drive, ...
+kes  Enhance SD status to include Pool and Media Type for drive in a
+     more readable format (a bit longer). 
+kes  Fix PostgreSQL double free.
+28May07
+kes  Minor refactoring of restore decryption code.
+kes  Add code to smartall.c to detect double free of a buffer.
+27May07
+kes  Add < > around %r in from field on mail command of bacula-dir.conf.in
+     so that bsmtp will create a correct email address (mailbox only).
+kes  Modify 'memory' command so that the buffers are listed as 'In use'
+     to avoid confusion with Orphaned buffers.
+kes  I reworked the OpenSSL include/lib flags to be handled in     
+     the standard Bacula way, which should fix bug #863 concerning
+     non-standard OpenSSL libraries.
+26May07
+kes  Implement Help Browser window for bat.
+kes  Fix reload bug that reset StorageId to zero.
+25May07
+kes  Fix TLS #ifdefing when TLS turned off.
+kes  Ensure that when labelling a tape with Slot=0 that InChanger
+     is not set.
+kes  Use DISTINCT to make MySQL and PostgreSQL uar_list_temp query        
+     the same.
+kes  Add StartTime to final uar_sel_jobid_temp query so that we can
+     add DISTINCT (required by PostgreSQL).
+kes  Implement BSOCK authenticate_director() method. Eventually will
+     authenicate all daemons.
+kes  Move several more functions into the BSOCK class.
+24May07
+kes  Add code to tell the OS that we no longer need a cached
+     file that we were reading. In findlib/bfile.c.  Also,
+     only cache files that we are reading. Thanks to
+     Tobias Oetiker <tobi@oetiker.ch> for the idea.
+kes  Tweak to bsmtp to eliminate compiler warnings on Win32.
+kes  Implement script to automatically generate cats and dll .def
+     files for Win32 dll.
+kes  Update README.mingw32 to include new .def file generation.
+kes  Correct typo in UTF-8 error message as reported by:
+     jhernandez <julianhernandez@gmail.com>
+kes  Add additional sm_check() code on debug level 1.
+kes  Set default debug level to 1.
+kes  Trap SIGABRT in attempt to get traceback.
+23May07
+kes  Reduce bat connect timeout from 30 to 15 seconds.
+kes  More restructuring and implementing BSOCK class in place of
+     old bnet.c code.
+kes  Remove a few unnecessary malloc() tests in crypto code.
+kes  Turn off crypto calls for > 128 bits in crypto.c if HAVE_SHA2
+     not defined. Bug reported by Allan Black <Allan.Black@btconnect.com>
+kes  Remove duplicate HAVE_CRYPTO definition in config.h.in
+22May07
+kes  Fix Verify InitCatalog mysql_escape_string() trashing memory.
+     Make buffer bigger.
+kes  Fix Verify InitCatalog. The attributes were not pointing to the
+     correct saved location.
+kes  Implement message callback so that GUI is sure to get all
+     daemon messages. Currently displayed in a dialog in bat.
+kes  Ignore SIGUSR2 (Bacula timer) in bat.
+kes  Apply regress patch from bug #859 to allow regress to work 
+     with Solaris compiler.
+21May07
+kes  Begin adding TLS support to bat.
+kes  Apply UTF-8/16 patch from Yves Orton <demerphq@gmail.com> to
+     clean up lex.c and make it more readable.
+20May07
+kes  Move more bnet functions into the BSOCK class.
+kes  Fix tray-monitor by not requiring a timer interval in bnet_connect()
+kes  Complete change of berrno strerror() method to bstrerror() 
+
+Release: 2.1.10 beta
+18May07
+kes  Cleanup incorrect email addresses in bsmtp.
+kes  Make bat display initial messages rather than discard them.
+16May07
+kes  First cut of adding .mod to the run command.    
+kes  Implement auto display of messages in bat.
+kes  Enhanced preferences to allow all Bacula output to be
+     displayed in bat.
+15May07
+kes  Fixed bug #856 autochanger documentation.
+kes  Rework bsmtp date editing for Win32. This fixes bug #854.
+kes  Add new cats entry point so Win32 builds.
+14May07 
+kes  Attempt to fix bsmtp date editing on OSes without %z editing. 
+kes  Do better checking for the MySQL 64 bit libraries looking for both
+     .a and .so libraries.
+kes  Add a kludge for Ubuntu's non-standard locations for MySQL -- allow
+     /usr/include/mysql/mysql.h AND /usr/lib/... rather than /usr/lib/mysql/...
+kes  Require the thread safe version of MySQL during configure. Thanks
+     to Andre Noll for pointing this out.
+kes  Ensure that calls to find_jobids_from_mediaid_list() check count before
+     continuing in migration code.
+kes  Apply implementation of tray-monitor font derived from gnome-console
+     submitted by Andreas Piesk <a.piesk@gmx.net>
+13May07
+kes  Eliminate important memory loss in SQLite
+kes  Fixed the batch insert MySQL thread specific data that was not
+     being freed. See cats/mysql.c:db_thread_cleanup().
+kes  Fix restore before command.
+kes  Convert old hdr.name to name() in a few places.
+kes  Implement update jobid command.
+kes  Return all time_t dates in db_get_job_record()
+kes  Stop watchdog in SD earlier.
+kes  Put Pool just after Storage in please mount message.
+kes  Fix pointer usage bugs in Verify InitCatalog pointed out by
+     Eric.
+12May07
+kes  Update the po files.
+kes  Fix Verify InitCatalog by making it cache attributes.
+11May07
+kes  Change name bacula-bat to bat for man 1 page to correspond to
+     Makefile.
+kes  Check for client and store NULL pointers in status command.  This
+     fixes bug #845.
+kes  Fix non-ssl build so that it works (add JCR *jcr to crypto structures).
+kes  Fix sign extended editing of %p.
+kes  Clean out a little old #ifdefing in cats/mysql.c
+10May07
+kes  If time diff between DIR and FD is more than 600 seconds convert
+     INFO message to WARNING.
+kes  Implement heap size display in status for all daemons.
+kes  Attempt to fix MySQL db open memory loss (not successfull).
+kes  Don't set SIGKILL and SIGSTOP neither can be trapped.
+kes  Eliminate memory loss in MySQL (possibly other SQLs) during
+     Query. This looks like a MySQL but but by doing extra releases,
+     the memory goes away.  This should fix bug #847.
+09May07 
+kes  When backup fails, cancel SD before waiting for sd termination.
+kes  If SD is waiting for FD to connect during cancel, wake up the 
+     thread.
+kes  Fix fsf code so that errno is correctly reported.
+kes  Apply migration patch (with changes) from Sergey Svishchev <svs@ropnet.ru>
+08May07
+kes  Merge patch from Sergey Svishchev <svs@ropnet.ru> that preserves 
+     the original jobb's FileSetId.
+kes  Merge patch from Sergey Svishchev <svs@ropnet.ru> that implements
+     spooling in migration jobs.  Not yet tested.
+kes  Merge patch from Jorj Bauer <jorj@seas.upenn.edu> that implements
+     reading conf file from a pipe.  However, do it with open_bpipe()
+     rather than popen.  Not yet tested.
+07May07 
+kes  Fix an ugly bug where the VolCatBytes were getting updated
+     during a restore.
+kes  Implement bconsole memory command that prints current memory
+     usage, plus smartalloc dump.
+kes  Clarify some error messages in backup, admin, and migrate.
+kes  Shrink label dialog to smaller size.
+kes  Invert Cancel OK buttons on restore to be OK Cancel.
+kes  More strerror() to bstrerror() conversions.
+06May07 
+kes  Start implementing bstrerror() in place of strerror().
+kes  First cut at stripping path -- seems to work.
+04May07
+kes  Prevent door and port files from being restored (mostly
+     Solaris stuff).
+kes  Free an unreleased buffer in compat code.
+kes  Change console Job name from *Console* to -Console- to eliminate
+     Win32 filename problems.  Put Win32 path separator when creating
+     Console file.  This fixes bug #846.
+kes  Change berrno::strerror() to berrno::bstrerror().  Not yet full
+     implemented.
+kes  Pass jcr to crypt_sign_decode because it creates a new SIGNATURE
+     structure.
+kes  Define b_errno_win32 on Linux to be zero so that it can be or'ed in
+     to force Win32 error message.
+03May07
+kes  First cut strip path. The data should be passed to the FD,
+     but nothing is done with it yet.
+kes  Enhance the digest and signature routines in the crypto
+     library to accept a JCR and to use it to print error messages
+     so that they will go in the Job report rather than the daemon's
+     messages.
+kes  Simplify some of the verify signature code.
+kes  Simplify a few of the alternative returns in the signature 
+     code.
+02May07
+ebl  Use only POSIX regex instead of GNU regex in breg.c for
+     File relocation. It fix broken freebsd compilation.
+kes  Convert all other Dir files to use ne ua class message 
+     routines for bat.
+kes  Tentative fix for missing digest signature in bug 807.
+kes  Correct handle problem in new win32_ftruncate routine.
+kes  Convert ua_purge.c and ua_update.c to use new ua class
+     message routines for bat.
+29Apr07 
+kes  Correct incorrect installation of LICENSE in Win32 installer.
+kes  Display LICENSE at the beginning of the Win32 install.
+kes  Attempt to correct the need for the png files to be installed 
+     for bat.
+kes  Reapply my bat.conf install script in qt-console. I think I 
+     editted bat.pro instead of bat.pro.in and it was lost.
+kes  Apply CentOS patches someone sent me. Checks for /var/run/subsys,
+     the /var/lock/subsys for subsysdir.  Also corrects typos in the
+     doc.
+28Apr07
+kes  First cut update job.
+kes  Correct configure to include qmake of src/qt-console directory.
+26Apr07
+kes  Make restore job yes/mod/no print in one command so GUI works.
+kes  First cut implementing backup and restore client.
+kes  Correct editing in Verify output that caused a seg fault.
+25Apr07
+kes  Insure that bat.conf is not overwritten during installation.
+kes  Fix important bug in db_sql_query() in mysql.c.  It was introduced
+     while I was implementing migration in March 2006 !
+24Apr07
+ebl  Cleanup file relocation, using char *RegexWhere instead of
+     char *where + bool where_use_regexp
+kes  Update some manpages and add bat manpage.
+kes  Make a first cut at converting bacula.spec.in for bwx-console
+     and bgnome-console.
+kes  Apply patch from John Goerzen to add hostname as fourth argument
+     to make_catalog_backup script.
+kes  Fix typos I introduced into bsmtp.c
+kes  Make pm_strxxx() routines handle input of NULL pointer. This
+     is to protect from NULL pointers returned from SQL databases.
+kes  Correct typo in bacula-sd manpage as pointed out by John Goerzen.
+kes  Add more debug to FIFO code -- fix fifo regression test.
+23Apr07
+kes  Implement posix_fadvise in FD, and for reading spool files in SD.
+kes  Add thread timer to bnet_connect() to break from OS if wait time
+     expires.
+22Apr07
+kes  Update Win32 build to include new files, new symbols, and    
+     renamed files.
+kes  Implement socket level heartbeat (tcp_keepidle)
+ebl  Commit File relocation patch
+kes  Make bat have 'make install' target.
+kes  Warn during install if old gnome-console binary found.
+kes  Warn during install if old wx-console binary found.
+kes  Add -8 option to bsmtp command line to add content type utf-8. 
+     Fixes bug #809. (Character coding problem in bsmtp).
+kes  If < is found in target (from, to, cc) then do not enclose the
+     target in < >  in bsmtp. Fixes bug #772  (malformed address).
+kes  When printing certain items in dbcheck, stop after 300000.
+     Fixes bug #822. (dbcheck loops).
+kes  Incorrect status in Dir after waiting for mount with poll set.
+     Fixes bug #825.
+21Apr07 
+kes  Extend idea of Prefer Mounted Volumes to mean a volume about
+     to be mounted.
+kes  Print waiting to reserve a device every 5 mins.           
+20Apr07
+kes  Don't call close_part in label.c if tape and relabel.
+kes  Don't free volume if busy in close() -- should help with
+     bug 801.
+ebl  Fix #824 RunScript bug (After script could be execute twice)
+     Now, Before Script can use RunsOnSuccess and RunsOnFailure options
+     By default (like before) RunsOnSuccess=true and RunsOnFailure=false
+     Add a regression script to test RunScript
+19Apr07
+kes  Correct usage of MTIOCLRERR ioctl for clearing persistant errors
+     on Solaris.
+18Apr07
+kes  The bgnome-console (gnome-console) and bwx-console (wx-console) are
+     deprecated. No additional bugs will be fixed, and they will be dropped
+     in a future release (probably 2.4.0).
+kes  Change name of wx-console to bwx-console to make it more Bacula
+     unique.
+kes  Change the name of gnome-console to bgnome-console to make it
+     more Bacula unique.
+14Apr07
+kes  Some time in March, a Feature Request with patch from Jorj Bauer
+     <jorj@seas.upenn.edu> was committed by Landon (with my approval).
+     It implements:
+     The ability for the director to validate a Client (FD) CN against
+     an arbitrary set of patterns rather than the hostname, with
+     A new 'TLS Allowed CN' set of directives which are implemented
+     in the Client resource.  Then pattern matching is used in place
+     of hostname matching against the Certificate's CN. As an example, we
+     have certificates which (a) use a local CA, and (b) have a CN of the
+     form client_123.
+kes  Add new/changed entry points to Win32 build
+kes  Create unaccepted-projects for projects that are not accepted.
+kes  Simplify locking in the reservations system.
+kes  Add more debug code in reservations.
+kes  Make sure error condition on reserving a volume is handled correctly.
+kes  Correct handling of volume_in_use.
+kes  Correct handling of initializing a device.
+kes  Move handling of broadcasting releasing a device into release_device().
+kes  Correct attaching dcr to dev so that it is only done if device
+     is properly initiated.
+12Apr07
+kes  Locking debug level tweaks in SD.
+kes  Tweak new Volume code.
+11Apr07
+kes  Add exec external-command [wait-seconds] to bconsole. This
+     executes the external-command.  Note! normally external-command
+     should be enclosed in double quotes.
+kes  Turn the .die command on only if DEVELOPER is defined -- i.e.
+     it should normally be off in a production system.
+10Apr07
+kes  Implement die command for SD so that we can force it to dump.
+kes  Implement SD lock debug code.
+kes  Implement new algorithm for keeping Volume list in SD.  It
+     is now owned by the device.
+04Apr07
+kes  Implement new code for freeing in use volumes that should 
+     resolve if not all, some of the problems of multiple drive
+     tape conflicts described in bug 801.
+03Apr07
+kes  Fix gui/bacula-web/images files in svn.
+kes  Turn on FreeBSD/OpenBSD code to set EOT model on tape.
+02Apr07
+ebl  Fix a bug in batch mode (in string escape)
+kes  Correct migration prune SQL typo that crept in in a    
+     recent 2.1.x change.
+01Apr07
+kes  Move bnet_despool() into class in bsock.c
+kes  Modify job report to include director name and Build OS.
+kes  Move drop root privilege and check_catalog() before fork.
+kes  Add update database scripts (version 9 to 10) to updatedb directory.
+31Mar07
+ebl  Check size and age of each file after its backup to see if
+     it has changed during backup, if 'checkfilechanges' is set.
+     The FD will do an extra check (stat(2)) after
+     each file backup. mtime, ctime and size are compared with
+     'before backup' information. If time or size mismatch, an
+     error message will be generated. You must upgrade FD to use it.
+30Mar07
+kes  Make database name and user configurable
+     --with-db-name=xxx --with-db-user=xxx
+kes  Add back database type to message.c for debugging.
+29Mar07
+kes  Implement dir_sql() which issues an SQL query.
+kes  Modify bat medialist to use dir_sql() and do some minor C++
+     formatting as well as eliminating a number of pointers, simplifing
+     the code.
+28Mar07
+kes  Fix some of the mtx-changer grep commands for tape label readers.
+kes  Convert a number of bsendmsg into the appropriate send/warning/error
+     message class calls.
+kes  Suppress the using database message in the .sql command.
+kes  Correct an incorrect bnet_tls_client prototype -- patch from Martin.
+27Mar07
+kes  Add context menu for floating a window.
+kes  Some minor cleanup and name changes in qt-console
+kes  Add doing mt setblk 0 in Win32 mtx-changer.
+kes  Apply Martin's bug fix to move definition of ENODATA for 
+     FreeBSD to bsock.c
+ebl  Add a BUSY handler to sqlite to be able to use multi_db = 1 with
+     sqlite2 and sqlite3.
+26Mar07
+kes  More pruning cleanup.
+kes  Turn on wait_for_drive by default in mtx-changer.
+kes  Turn on Batch insert code by default as it now passes regression.
+kes  Add ./configure --enable-bat to enable building of Bat.   
+     No install yet though.
+25Mar07
+kes  Implement a new .sql command for bat.
+kes  Implement code to turn off pruning in obtaining the next volume.
+     Pruning is turned off for the status dir command, but turned on
+     for SD requests and for the list nextvolume command.
+24Mar07
+kes  Correct Qmsg() that was not updated correctly when committing a
+     previous change (probably the recent TLS patch).
+23Mar07
+kes  Write new subroutine is_volume_purged() that explicitly checks
+     if the Volume is purged, and if so marks it as such. This should
+     resolve problems reported about needing to mount twice to recycle
+     volumes.
+kes  Rewrite pruning algorithm to do more work in the SQL engine, and
+     to pass a list of JobIds to be deleted to SQL.  Also, minimize the
+     amount of duplicated code.     
+kes  Do volume pruning only for the Media Type desired (reduces pruning time
+     if multiple Media Types are in the same pool).
+kes  Implement more detailed info in the Job report for the Bacula version
+     and architecture.
+kes  Switch from POOLMEM to POOL_MEM (a real class) in ua_prune.c and
+     ua_purge.c.
+ebl  Add bbatch tool to bench database and insert mode.
+     Fix sql quote stuff in batch mode
+     Fix sql stuff for mysql
+22Mar07
+kes  Correct problems with am/pm scheduling. Fixes bug #808.
+kes  Implement new prunning code that prunes up to 1000 jobs at
+     the same time.  The same technique can be applied to a number
+     of other prune/purge subroutines.
+kes  Add an insanity check when starting a new tape job to ensure
+     that the tape position has not been changed. If so fail the
+     job.
+kes  Fix Win32 build for dlls to add the folllowing:
+     src/lib/bsock.c -- new file with new entry points
+     src/lib/dlist.c  -- new entry points
+     src/cats/sql_create.c -- new entry point
+     src/cats/sql_cmds.c -- new DATA item exported
+21Mar07
+ebl  batch mode cleanup bscan-test is ok now.
+kes  Implement SD code to check length of disk volume before appending.
+18Mar07
+kes  Correct return status on db_batch... routines.
+kes  Add call to db_write_batch_file_records() to migration code.
+ebl  Fix AfterJob timing
+kes  Move the checking of the database in initializion of the Director
+     to after we drop privileges.  This avoids the need for both root
+     and bacula access to the DB.
+kes  Correct a misplaced variable definition in src/filed/backup.c
+kes  Correct how the new batch insert db_create_attributes_record()
+     uses the arguments.  Caused a seg fault in bscan.
+kes  Implement lock() and unlock() methods in DEVICE class.
+     Implement block() and set_block(xx) methods in DEVICE class.
+kes  Modify bnet_connect() so that it uses time() to check for the
+     wait time expiring (on some OSes, some system calls may not
+     return immediately).
+kes  Modify Verify to obtain the previous JobId when it is actually
+     running rather than at schedule time (as it was in 1.38.x).     
+kes  Fix src/job.c to handle MaxWaitTime correctly.  This should
+     fix bug #802.
+kes  When checking pid in pid file, continue running if the pid is
+     the same as ours. This occurs on IRIX after a system crash.
+     Fixes bug #797.
+10Mar07
+kes  Extend new GUI API.
+kes  Make the ua structure a class, and implement send_msg(),
+     error_msg(), warning_msg(), and info_msg().
+08Mar07
+kes  Apply fix from for building wx-console on the Mac from
+     bug #798.
+kes  Implement new select mechanism for GUI programs.
+kes  Reorganize initialization of stackedWidgets in bat.
+07Mar07
+kes  Add updated nagios plugin supplied by Christian Masopust.
+05Mar07
+kes  More bat implementation.
 kes  File migrate bug with Pool Occupancy using mediaid instead
      of jobids.  Fixes bug #795.
 kes  Fix orphaned buffers in filed backup and verify due to
      crypto buffers not freed during errors.  Fixes bug #789.
+kes  Extend new GUI api code to tree commands.
+kes  Ensure that tree and dot commands check console ACLs.
+kes  Permit marking directory with trailing slash.
+kes  Allow 20 console connections (instead of only 10).
 04Mar07
 kes  Add smartctl call to bacula-sd.conf as an example of getting
      tape alert info.
 02Mar07
+kes  Modify jobq.c to let simultaneous restore jobs run. This may 
+     cause them to fail if they cannot get a drive.
 kes  Add Client Connect Wait to Storage daemon to permit users to
      modify the time the SD waits for a FD connection.
-28Feb07 
+29Feb07
+kes  Correct virtual changer check which was backwards. This caused
+     volumes to be unloaded into slots already occupied.
+28Feb07
 kes  Apply Command ACL filter to JobId list in restore command.
 kes  Correct typeo in var.c patch.
 27Feb07
@@ -24,48 +790,90 @@ kes  Fix variable substitution pad + inc bug reported (with patch)
 26Feb07
 kes  Correct SQLite log table index as reported by Luca Berra.
 24Feb07
-ebl  Fix FIFO stuff, bacula tries to rewind the FIFO... Thanks to Andreas
+ebl  fix fifo stuff, bacula tries to rewind the fifo... Thanks to Andreas
 22Feb07
-kes  Fix a few places in lib/message.c where the open fd may
+kes  Begin implementing new comm signals for API.
+kes  Fix a few places in lib/message.c where the open fd may 
      not be zeroed.
+kes  Continue implementing lib/bsock.c (real class).  Make jcr,
+     who, host, and port private. There are new methods to access
+     them for non-class use. This required touching a number of files.
 21Feb07
 kes  Add LANG=C to autoconf/randpass so it works with languages other
      than English.  Fixes bug #788.
 20Feb07
-ebl  Revert ClientRunBeforeJob as it was in 1.38.x
+ebl  Revert ClientRunBeforeJob to old position as in 1.38.X.
      This fixes bug #780
      You will not be able to generate Include/Exclude list any more.
-     If you want to use this, you can apply 
+     It will be fixed soon.
+     If you want to use this, you can apply
      trunk/bacula/patches/testing/clientrunbeforejob_can_generate_include_exclude_list.patch
 19Feb07
 kes  Restore of sockets created false error messages because Bacula
      no longer restores sockets, but the code was still trying to
      set the attributes on a non-existent file. Reported by a user.
+ebl  finish RecyclePool feature
+     Media will takes Pool.RecyclePool
+     when moving from Scratch to a Pool or when user will do
+     update volume=xxx frompool
+     To use it, add RecyclePool = aPool to your Pool resource
+        Pool {
+                Name = Default
+                RecyclePool = Scratch
+                ...
+        }
+     TODO: update manual
+kes  Expand new BSOCK class adding signal() and new BNET signals.
+kes  Begin enhancing the dot commands adding a new API function
+     that returns more information and will make it easier
+     to interface to the Director from a program.
+18Feb07
+kes  Make DEVICE fd private. Its new name is m_fd, and can be
+     obtained with dev->fd() outside the class.  This is the
+     first of many DEVICE members to be made private.
+kes  Implement Michael Renner's idea on having a virtual disk
+     changer. I made some minor modifications (e.g. I did not
+     implement the Virtual Changer directive, but simply set
+     the Changer Command to an empty string.
+17Feb07
+kes  Implement a BSOCK send() method that writes the whole record
+     in a single write() request rather than in two.
+ebl  add update volume=xxx recyclepool=yyyy
+     volume takes recyclepool from pool when using update volume=xxx from pool
 16Feb07
 kes  Fix encryption deblocking bug, which caused some restored files
      to be truncated. This fixes bug #763.
 kes  Add FD event sequence order prepared by Eric -- for RunScripts.
 kes  Fix 12am/pm bug as reported in bug #782.
-15Feb07
-kes  Add quick disconnect FD code from 2.1.4 to 2.0.3.  This code
-     causes the SD to release the FD as soon as the FD has sent
-     all the data to the SD. After that the SD will do any final
-     despooling (data and attributes) that are necessary. This
-     allows laptops to disconnect much quicker from the network 
-     after a backup.
 13Feb07
 kes  Apply Eric's ClientRunScriptAfter patch to 2.0 and 2.1.
+ebl  Use btime_t instead of uint64_t in media patch.
 11Feb07
 kes  Optimize the use of the database a bit in the Status dir command.
      Only open it when needed, ensure that if any previous database
      was opened, it is closed.
 10Feb07
+kes  Correct VolCatBytes bug from media patch.
+kes  Apply patch from bug #612 by Rudolf Cejka to speedup pruning
+     in the case of orphaned records.
 kes  Modify dbcheck to handle orphaned JobMedia, Path, Filename,
      and File records in 300K chunks to be more efficient. This
      idea came from Juan Luis Frances (if I remember right).
+kes  Apply Eric's scratch patch that moves a purged Volume to
+     the RecyclePool.  Question: how is RecyclePool set? what
+     happens to the ScratchPool?
+kes  Apply Eric's media patch that collects read/write media
+     times as well as byte counts.  This patch requires a
+     simultaneous upgrade of the DIR and SD.  Note, there
+     should be some way to turn off timing. I'm not sure
+     times are in Bacula units.
+kes  Apply Eric's batch-insert patch.
 09Feb07
 kes  Update projects list.
 08Feb07
+kes  Implement Include/Exclude file lists in FD as dlists using
+     the new dlistString class. This permits efficiently having
+     large include/exclude lists and completes project Item 25.
 kes  Fix dird/ua_cmds.c so that a cancel command checks if the
      console is authorized to cancel the job.  This fixes bug 
      #767.
@@ -110,24 +918,29 @@ kes  Fix a bug in the btree.c and btree.h routines, then rename them
      rblist and add them to be built in src/lib.  Include some new
      methods written by Rudolf Cejka that make the code more readable
      (hides some of the ugly casting).
-26Jan07 (back port)
-kes  Implement item #12 on project list -- quick release of FD by
-     the SD. This is noted in more detail above.
-
-Version 2.0.2 released: 30 January 2007
-28Jan08
+kes  Add set_next() and set_prev() methods which make the code much more 
+     readable. Also add a new dlistString class that facilitates storing
+     strings in dlists.  To be used in the large include/exclude lists.
+kes  Make some trivial modifications to lib/tree.h that use rblist
+     rather than dlist for storing the tree links. This was suggested
+     by Rudolf Cejka.  The result of this is that the restore tree now
+     uses red-black binary trees rather than simple linked lists. This
+     should give rather dramatic speed improvements for directories
+     contining large numbers of directories/files (more than 10000).
+28Jan07 
 kes  Fix maxruntime bug #621.
-27Jan07
-kes  Get current main CVS .specs for RedHat, SuSE, Mandrake.
 26Jan07
 ebl  Implement the include JobID in spool file name project.
 kes  Reorder projects file in order determined by Jan 2007 vote.
+kes  Implement item #12 on project list -- quick release of FD by
+     the SD.
 kes  Fix open of SQLite3 db where user does not have write permission
      so that DIR does not crash. Fixes bug #761.
 25Jan07
+kes  Add back missing @ in Win32 Makefile.
 kes  Change 'Device not configured to autolabel' from INFO
      to WARNING.
-kes  Fix jobq.c to restart failed jobs when Reschedule Times = 0
+kes  Fix jobq.c to restart failed jobs when Reschedule Times = 0 
      which should restart an indefinite # of times.
 kes  Fix configure --help to print --with-mysql[=DIR]. Same for
      other DIR specifications.
@@ -140,6 +953,7 @@ kes  Create patches/2.0.1-restart.patch. Fixes bug #755.
 18Jan07
 kes  Fix Job restart on error bug that promotes an Inc to a Full
      backup.  This should fix bug #755.
+kes  Add qt-console and first cut of code.
 
 Version 2.0.1
 12Jan07
@@ -164,1801 +978,4 @@ kes  Correct the Options scanner in the FD to correctly handle
 kes  Add code to indicate when the SD is spooling, spool wait, and 
      despooling as requested by Alan Brown.
 
-
-=========== ChangeLog prior to 2.0.0 follow =================
 Version 2.0.0 released: 4 January 2007
-03Jan07
-kes  Apply Eric's fix for client name editing on RunScripts.
-kes  Fix an incorrect dbcheck reference to Id.
-
-Version 1.39.34 Released:
-28Dec06
-kes  Convert dbcheck to use 64 bit DB IDs.
-kes  Update projects
-kes  Make rescue work.      
-kes  Clarify Volume migration error message.
-kes  Look for Job keyword when opening DB in console.
-23Dec06
-kes  Add code in catreq.c to reject volumes not marked Enabled.
-kes  Add a few more ACL access checks.
-kes  Add \n in gnome2-console restore command so that output prints 
-     nicer -- i.e. lines do not run together.
-kes  Fix autolabeling so that it will not mark a volume in error
-     if the volume was not actually opened. This should fix bugs
-     #737 and 738.
-kes  Require tape drive to be open before autolabeling.
-kes  Require explicit mount command on non-tapes before autolabeling.
-kes  Implement an open_client_db() that searches the keywords for
-     either a catolg or client, and opens the appropriate catalog.
-     This makes Bacula adjust better to multiple catalogs.
-kes  Use more name() methods for resources rather than hdr.name.
-22Dec06
-kes  Fix code to check for two resources of same name. It forgot
-     to check the last entry.  Fixes bug #734.
-kes  Apply scanvolume patch from Richard Mortimer that fixes bug
-     #738.
-kes  Apply Eric's patch for recycling the Scratch pool.
-kes  Note, for the tray-monitor (or almost any restricted console_
-     to work, in version 1.39.x you must add CatalogACL = catalog-name
-kes  Add appropriate new #undefs to autoconf/acconfig.h so that 
-     configure works correctly.
-kes  Implement configure code to allow the user to disable IPv6 with
-     --disable-ipv6 
-kes  Apply Richard Mortimer's patch to prevent seg fault if mount point
-     not specified -- SD refuses to start.
-kes  Add magic.bacula from bug #715 to the scripts directory along with
-     Arno's explanation of how to install it.
-kes  Convert a bunch of hdr.name into name() method calls.
-kes  Fix the code to remove .bsr files.  Fixes bug #736 -- Martin.
-
-Version 1.39.32 released: 
-20Dec06
-kes  Take first catalog if gui is set, or if using dotcmd.
-kes  Fix a couple of compiler warnings in wx-console
-kes  Apply the immutable patch for FreeBSD hardlinked files supplied
-     by Olivier Lehmann.
-kes  Add Volume name to Forward spacing message.
-kes  Update migration job start time (so it is not zero) to prevent
-     immediate recycling of the job.  This *should* fix bug #733.
-19Dec06
-ebl  Fix runscript configuration parsing bug.
-17Dec06
-kes  Add ENABLE_NLS (as suggested by Eric) to correct NLS problems.
-     Remove NLS kludge from baconfig.h.  This fixes bug #729.
-kes  Allow seeking on DVD.
-kes  Add additional messages when Job canceled automatically for
-     max run time or max start wait exceeded.  This fixes bug #621.
-kes  Update maxruntime-test in regression script to properly test
-     max run time -- from info given in bug #621.
-kes  Simplify automatic cancel code.
-kes  Add check for job_canceled() in FD when contacting SD so that if
-     job is canceled from max runtime, it terminates faster.
-16Dec06
-kes  Save and restore volume name in stored/mount.c fixed bug #712
-     where wrong tape was requested in a mount.
-kes  Implement cleaner orphan buffer dumping with buf address.
-kes  Fix orphaned buffer when canceling job waiting on op intervention.
-kes  Update projects file for next vote.
-kes  Implement a fix (more could be done) for bug #728 where a double
-     EOF is writing on the Volume when spooling is enabled and the    
-     connection with the FD fails (FD crash, comm error).
-kes  Disable attempting to autolabel when polling and device is not
-     a tape. This fixes bug #730 where polling with a removable disk
-     not mounted caused lots of new Volumes to be created then marked
-     in error.
-15Dec06
-kes  Enable VSS by default.
-
-Version 1.39.30 released: 
-14Dec06
-kes  Complete hopefully the last of the copyright transfer changes.
-kes  Separate NumVolumes in SD to NumReadVolumes and NumWrite volumes so
-     that migration writing to multiple volumes doesn't mess up reading
-     Volumes. This should fix bug #720 -- multivol migration fails.
-kes  Make migration SQL look only for Type='B' jobs to migrate.  This should
-     fix bug #724 jobs getting migrated twice.
-kes  Convert remaining dev_cap(dev, ...) to use dev->has_cap().
-kes  Implement dev->clear_cap() and dev->set_cap() methods.
-kes  Turn off disk seeking on restore for DVDs since I am not 100%
-     sure it works.
-13Dec06
-kes  Implement code that should properly set that a job was migrated,    
-     if the migration was successful even if there were no file to
-     migrate.
-kes  Apply Richard's patch to fix building or filed/restore.c without
-     OpenSSL support.
-kes  Ensure that at least one block is written by the SD even if the
-     FD dies or fails -- should fix bug #728.
-kes  Convert stored/record.c ASSERT into a soft fail if the length of   
-     a record is too insanely long. This should fix bug #???
-12Dec06
-kes  Fix automatic labeling of File volumes, which was broken by new
-     removable device code.
-10Dec06
-kes  Remove typedef uLong for HP in baconfig.h.  It broke things.
-lf   Fix job byte reporting -- the digest code runs in verify.c and
-     increases this value.  The better solution is to digest the
-     stream as we receive it, thus removing the need to re-read
-     from disk at all, but that requires more extensive and
-     potentially destabilizing changes.
-lf   This commit fixes backup and restore of HFS+ resource forks.
-lf   Add a long-missing 'break' statement in HFS+ attribute
-     handling that resulted in restore failures.
-09Dec06
-ebl  Fix runscript to always execute command after all job type.
-
-Version 1.39.30 released: 
-08Dec06
-kes  Mark build-depkgs-mingw3 executable in configure process.
-kes  Update autoconf/config.h.in to include LOCALEDIR
-kes  Undefine NLS settings for wxWidgets as there is a conflict with
-     their way of doing things.
-kes  Implement a rpool and rpool_source in jcr.h for Migration jobs.
-kes  Change a bunch of ->hdr.name to ->name()
-kes  Straighten out handling of read and write pools for Migration, including
-     getting the code in the proper order.
-kes  Improve migration error messages and debug output.
-kes  Shorten code path in migration if nothing found to do.
-kes  Implement read/write pool in migration job report.
-kes  Move ua_run.c select_job_level code into a subroutine (readability).
-kes  Move ua_run.c display_job_parameters into a subroutine.
-kes  Do not bash dcr->VolumeName in get_volume_info() because it makes
-     restore dependent on a valid catalog containing the Volume name.
-06Dec06
-kes  Put make_catalog_backup SQL_BINDIR in an environment variable to
-     make it easier for the user to change.
-kes  Fail any backup job that tries to use encryption and sparse options.
-     Hopefully this is a temporary change.
-kes  Correct the EndJob return string for non-backup jobs.
-kes  Review the encryption restore code.
-kes  Implement a new encryption regression test with compression.
-kes  Modify migrate not to fail if nothing found to migrate. 
-kes  Add #undef HAVE_OPENSSL, HAVE_TLS, HAVE_CYRPTO to autoconf/config.h.in
-     because they were not always set correctly.
-05Dec06
-kes  Update configure.in to include python 2.5 search.
-kes  Back out unwanted migration change reported by Richard Mortimer.
-04Dec06
-kes  Make migration with no files to migrate set normal termination.
-kes  Change message when job manually started to say Job queued. ... 
-kes  Add job report indication of whether or not VSS and Encryption were
-     used by the FD.
-kes  Modify sparseBlock variable name to make the code clearer.
-kes  Add more sparse tests to regress using gigaslam sparse file
-     generator.
-kes  Enable data encryption code.
-kes  Add gigaslam.c to src/tools. It creates a 1GB file that contains
-     only two blocks -- i.e. it is a real sparse file.
-03Dec06
-kes  Enable disk seeking on restore.
-kes  Implement the SD 'Block Positioning = yes|no' directive. This
-     allows the user to turn off block level seeking, but restores
-     will be much slower.
-kes  Change the word illegal to read invalid in a few places.
-kes  Fix Win32 build, which broke when I added parse_args_only in
-     lib. I'm not sure I got the entry point right for msvc.
-kes  Turn off data encryption. It can be enabled by defining
-     DATA_ENCRYPTION in src/version.h and recompiling.
-kes  Implement flag to turn off data encryption feature.
-kes  Move unserial code in restore.c to a subroutine. Add a bit of debug
-     code.
-kes  Rework a bit of code in backup.c to handle sparse blocks correctly.
-     The main problem was that signatures were being generated on blocks
-     of zeros, which is unnecessary.
-02Dec06
-kes  Fix scanner (next_arg) to handle leading double quote correctly.     
-kes  Modify cd command in restore tree to look at full argument without
-     keywords.  This fixes bug #716.
-01Dec06
-kes  Do not update Migrated Job type if migration does not terminate
-     normally. This fixes bug #719.
-kes  Update ReleaseNotes
-kes  Purge Job records from the catalog for Migration. This was
-     not properly done previously. This fixes bug #718.
-28Nov06
-kes  Initialize msg_type to M_INFO in migration. Pointed out by
-     Robert Nelson.
-kes  Add some fflush() statements for debug output. This should not
-     really be necessary and defeats buffering but users continue
-     to complain.
-27Nov06
-kes  More copyright changes.
-kes  Make sure we don't detach from the despool read device since it
-     is a temporary structure where the condition variables are not
-     initialized.  Bug #711.
-26Nov06
-kes  Add Bacula version+date to Client record. This is a very minor
-     security problem in that passing the version facilitates a hacker's
-     life, but it will make support easier.
-kes  Implement fixes to make disk seeking work.  Currently turned
-     off in version.h pending reserch on what problems it will cause
-     because of the previous bsnprinf() sign extension bug.
-25Nov06
-kes  Add Landon's refactor of restore Feature request to the
-     projects file.
-kes  Tweak debug levels and messages for examining the disk
-     seek problem.
-22Nov06
-kes  Cleanup some of the error termination code in migration.
-kes  Separate read/write source strings to keep track of where
-     storage devices are used in a job.
-kes  Implement a new method of keeping track of which storage 
-     device is used in a Job.  USTORE keeps both a pointer to the
-     resource and to the source string.
-kes  Modify all code to use new storage set subroutines in job.c
-kes  Modify migrate.c so that the definitive selection of the storage
-     resource is done in the do_migration_init() routine prior to
-     the job going into the job queue.  This permits accurate 
-     deadlock detection (same read and write storage resource).
-kes  Remove bfill from btape (I think it was a left over stub).
-22Nov06
-kes  Make sure that the storage for a job is pulled first from
-     the Pool and if not from the Job.  
-kes  Ensure that either the Pool or the Job specifies a Storage
-     resource.
-21Nov06 
-kes  Start applying new FSFE copyright.
-20Nov06
-kes  Add additional error messages in acquiring a drive for read.   
-kes  Make WritePartAfterJob the default so that the last DVD part 
-     always gets written to the DVD by default.
-kes  Add additional error messages in migration. 
-kes  Suppress redundant error messages in migration (possibly more to do).
-kes  Apply Martin's fix (updated to 1.39) that takes into account
-     run storage overrides in the Director status display.
-kes  Implement, but turn off the submitted code that sets the EOT
-     model on FreeBSD machines. Turning on this code is too risky at
-     this point in the development.
-19Nov06
-kes  Implement unique dbid routine for migration to prevent the same
-     JobId from being migrated twice. This should fix bug #709.
-18Nov06
-kes  Apply Jaime Ventura's 'mail on success' patch.
-kes  Add a SMALLOC_SANITY_CHECK for Arno, which aborts Bacula
-     if memory usage gets too big.
-kes  Tweak migration to ensure that read/write devices are different.
-17Nov06
-kes  Create an AUTHORS file to list Bacula contributors.
-kes  Add Richard Stallman's four GPL freedoms to LICENSE 
-kes  Require the conf file to have a valid NextPool for writing the
-     migration output.
-16Nov06
-ebl  Enable RecycleCount in catalog.
-ebl  Fix "echo python | bconsole" segfault
-14Nov06
-kes  Implement code to pass the MediaId to the SD. The SD then uses
-     this MediaId when creating JobMedia records. This fixes a bug
-     with Migration where the MediaId got set to the second Volume
-     read rather than the write Volume.  Possibly (unlikely) fixes
-     bug #709.
-kes  Remove NextPool from Job resource.
-kes  Edit a few numbers in the restore dialog with commas.
-kes  Note, the DIR<->SD protocol has changed.
-13Nov06
-kes  Replace () by {} in configure.in for proper HP configuration.
-kes  Shorten some lines over 80 characters in filed/backup.c
-kes  Cast sizeof() in filed/backup.c to avoid compiler warning.
-
-Version 1.39.28 released: 
-12Nov06
-kes  Change error message 'illegal' to 'invalid' -- bug #707
-kes  Add rather primitive device resource deadlock detection in
-     the job queue handler. It detects the same read and write device
-     for migration and cancels the job. 
-kes  Start adding a unique_dbid_hander() routine in migration to avoid
-     duplicate mediaids and duplicate jobids.
-kes  Add patch from bug #708 to permit relative paths such as ../xxx
-     in the restore tree routine.
-kes  Add Eric Bollengier's patch to reduce locking time in the SD after
-     despooling, and thus many jobs finish faster.
-kes  Correct locking order of reservations lock and device mutex in
-     reserve.c -- this should correct Arno's deadlock that occurred
-     when doing mount/unmount at the same time a job is reserving a
-     drive.
-05Nov06
-rbn  Fixed problems with encryption when combined with compression 
-     or sparse files.  Unfortunately this means that all previous 
-     encrypted backups can't be restored.
-rbn  Fixed problem in bfgets with Windows and Mac end of lines.
-rbn  Fixed bug in Windows version of close_bpipe() that cause programs
-     like bsmtp() to hang waiting for the pipe to be closed.  Fixed 
-     binary file type problems in open_bpipe().
-rbn  Fixed a number of bugs in the mysql DB scripts.
-03Nov06
-ebl  Fix broken runscript on director. (RunBefore, RunAfter)
-ebl  Use M_ERROR instead of M_FATAL in runscript.c
-31Oct06
-ebl  Small fix src/dird/job.c to add JobErrors count to catalog.
-rbn  Ignore UTF-8 marker at the start of .conf files.
-rbn  Add stab2cv to 3rd party dependencies.  This is a utility I 
-     wrote that is licensed under the GPL and available on SourceForge.  
-     It converts the stab debugging info generated by gcc into Codeview 
-     format.  Currently it just translates function names to global 
-     symbols.  This is sufficient to get reasonable stack traces from 
-     Dr Watson and to look at minidumps.
-rbn  Fix bug # 699 - winbacula client crashes whilerunning bat scripts.
-rbn  Enable Windows XP look and feel for the tray icons and wx-console.
-rbn  Add Windows specific FileSet example to bacula-dir.conf.
-rbn  Reorganize Start menu so that documentation and configuration are 
-     in subfolders.
-21Oct06
-rbn  Change daemons and utilities so that if -c is omitted from the 
-     command line AND there is no configuration file in the current 
-     directory then the 'standard' configuration file (eg 
-     /etc/bacula/bacula-*.conf) will be used.  If the argument to -c 
-     doesn't contain any path separators AND there is no configuration 
-     file by that name in the current directory then the 'standard' 
-     configuration file directory will be searched for a file by that 
-     name.
-rbn  Fixed restore on Windows so that backslashes as path separators works.
-rbn  Add missing query.sql file to Windows installer.
-rbn  Fixed Windows versions of catalog backup scripts.
-20Oct06
-kes  Fix optional files in Makefile.in of src/filed that caused
-     a syntax error when using no optional files.
-15Oct06
-lf   Fix a cosmetic bug in filed.c that caused spurious OpenSSL error
-     messages; there is no reason to attempt to load a private key.
-     from master key files.  
-
-Version 1.39.26 released: 
-12Oct06
-kes  Apply the three patches from Richard Mortimer. 
-     bacula-reposition.patch, bacula-tape-reopen.patch, and
-     bacula-eod.patch. This corrects tape positioning on older devices,
-     and also a problem with btape.
-kes  Apply fix from bug report #696 where writing to a FIFO does not
-     work due to a dumb typo.
-kes  Unlock the tape door before the file descriptor is released. This
-     should fix lots of somewhat subtle failures when using an autochanger.
-11Oct06
-kes  Correct mtx-changer bug that I introduced in a recent commit, and
-     pointed out by Robert Nelson -- thanks.
-rbn  Fix Windows' daemons so that messages print to stdout if not 
-     running as a service.
-rbn  Add daemon name to trace file name (eg bacula-dir.trace).
-rbn  Fix environment variable expansion in directory names on Windows.
-rbn  Fix autochanger support in fill command.
-rbn  Update SQL scripts to match Unix versions.
-rbn  Fix daemon usage displays.
-rbn  Cleanup bacula-dir.conf template.
-rbn  Install openssl.cnf so that the openssl.exe installed in the
-     Bacula\bin directory can be used to generate keys and 
-     certificates for TLS and encryption.
-rbn  Fix cleanup of spool files on Windows.
-rbn  Remove /silent option from daemons on Windows.  The new default 
-     is the same as the old /silent.  To enable the message boxes that 
-     previously were suppressed by /silent you must add /debug instead.
-     NOTE: As a result of this change, the first time you upgrade from 
-           a previous version of 1.39.x you will receive the message 
-           boxes when the remove of the old services succeeds.  This 
-           is the same behaviour as when migrating from a version prior 
-           to 1.39.0.
-     However, going forward, these message boxes will not appear on 
-     upgrades or new installs.
-rbn  Add new /debug option. This option enables the message boxes that 
-     previously were suppressed by the /silent option.  In addition the 
-     daemons running as services will open a console window if this 
-     option is used.
-rbn  Fix bug with service not being removed on migrated installs.  This 
-     should correct those cases where the file daemon install was failing
-     when upgrading from versions prior to 1.39.x.
-
-08Oct06
-kes  Turn on heap reporting in Dir with zero debug level.
-kes  Send a message to the sys log when Bacula forces a SEG FAULT, and
-     send the same message to stdout.
-07Oct06
-kes  Begin work on new GUI "console".
-kes  Make configure look in non-standard MySQL library directory 
-     for Solaris.
-kes  Make mtx-changer automatically configure the autochanger wait
-     procedure for Solaris, FreeBSD, and Linux.  Previously, only Linux
-     was implemented.
-kes  Correct drop_sqlite_tables.in script to not delete the database.
-kes  When writing to a log file, close and reopen the file descriptor
-     if there is an error writing the file.
-kes  Modify the autochanger loaded?, load, and unload commands to print
-     the full text of any mtx output if there is an error.  Helps to
-     ease diagnosis of autochanger problems.
-kes  Correct a few Win32 errno returns in the VSS code so that hopefully
-     a resonable Win32 error message will be printed.
-kes  Convert a few strcat()... to bstrncat() in the Win32 code.
-06Oct06
-rbn  Added Windows version of bsmtp.
-rbn  Fixed path search for Windows so that Bacula\bin is automatically 
-     searched for programs and scripts.
-rbn  Fixed bugs in mtx-changer.cmd and made template bacula-sd.conf
-     Windows specific.
-
-Version 1.39.24 beta released:
-02Oct06
-rbn  Fix restore problem with c:\ prefix bug #676.
-rbn  Verify that drive letter is valid on restore.
-rbn  Fix re-open() options for tape.
-kes  Apply dvd find volume patch from Richard Mortimer.
-kes  Eliminate the dvd specific mount routines using only the
-     dev->mount/unmount.
-kes  Make update_free_space a method of DEVICE and rename 
-     update_freespace.
-01Oct06
-kes  Require a messages command acl to be able to receive messages
-     in a console.
-kes  Add console, system, and scan job types in util.c.
-28Sep06
-kes  Print the Volume purged message only for real jobs to keep
-     from cluttering up the daemon messages.
-kes  Lock the tape drive door while Bacula is using the device.
-kes  Add back the 'No Jobs running' message to FD and SD status because
-     my regression script depends on it, and I'm too lazy to change the
-     scripts.
-kes  Start using structure assignments (not too happy about it ...).
-kes  Fix a bug in the tools Makefile that broke on Solaris.
-kes  Unload any autochanger drive during a 'release' command.
-26Sep06
-kes  Enhance error message when restoring without bootstrap file.
-kes  Check restored size only for regular files.
-kes  Store Python job level in job record in Dir.
-kes  Add back code to open tape device nonblocking, but if rewind fails
-     release file descriptor.
-kes  Modify acquire.c to first try autoloading the device. Also, ask operator
-     to mount tape if drive cannot be opened.
-rbn  Made Windows service tray status windows resizable.
-rbn  Fixed horizontal scrolling of text in status window.
-rbn  Preserve horizontal and vertical scroll position while 
-     updating.  This prevents the display being reset to the
-     top line every 5 seconds.
-rbn  Fix Windows cross-compile compatibilty problems with 
-     *nix variants such as OS X without the zic command.
-rbn  Eliminate dependency on man2html.
-25Sep06
-kes  Update src/win32/dll/bacula.def for change in BPIPE definition for
-     Win32 build.                 
-kes  Fix a compiler warning in compat.cpp
-kes  Change strcpy to bstrncpy in compat.cpp
-kes  Remove some broken code in bdb_list.c
-kes  Fix, hopefully the last, ACL problem in the restore command.
-kes  Update the README.mingw32
-kes  Add new version of upgrade-win32-client.txt to examples directory.
-     Submitted by Michel Meyers.
-kes  Print an INFO message in the job report when a Volume is marked Purged.
-rbn  Fixed handling of external program and script execution
-     so that the format of the command line is more flexible.
-     Now executable path names containing spaces are translated
-     to the equivalent short name automatically.  The result is
-     passed to cmd.exe with the quotes removed.
-24Sep06
-kes  Apply the recycle patch from Richard Mortimer.
-kes  Convert a few if statements in dev.c to switch statements.
-kes  Start using print_errmsg instead of bstrerror().
-kes  Print a job message in SD when a job is marked to be canceled.
-23Sep06
-kes  All code added back. Fixed block.c read/write to loop only 3
-     times. This apparently keeps the OS from crashing (at least     
-     most of the time).
-kes  The kernel bug still persists. Backup something then immediately
-     do a bscan on the same tape, and the kernel will crash.     
-kes  Simplifed tape open().  It no longer uses nonblocking mode, which 
-     means that opening with no tape loaded will probably take at least
-     6 minutes before an error is reported.
-kes  Do not use MTSETDRVBUFFER if not running as root.  Do a MTRESET
-     when doing set_os_device_parameters.
-kes  Report open error in mount.c
-kes  Remove all .exe files from the installer directory on make clean.
-20Sep06
-kes  Start adding back removed code.
-kes  Back out a number of changes because backups to tape crash my
-     system.
-kes  Remove the inetd code from the File daemon.
-18Sep06
-kes  Add -c option to pg_dump so that it initializes tables when   
-     restored.
-kes  Fix FirstWritten time on Volume to be obtained from SD so that
-     it is the actual time the volume was first written.
-kes  Minor Makefile changes.
-kes  Handle EBUSY during read(). Improve how EBUSY is handled in write().
-ebl  Add yes keyword to prune/purge command
-16Sep06
-kes  Correct a test in block.c that prevented restore of a DVD from
-     looking at the last part in the spool directory.
-kes  Make some error messages clearer mostly by using the word DVD
-     in the message. Improve infor message in read_record for DVDs.
-kes  Remove DVD kludges in dircmd.c label/relabel.
-kes  Move the dvd relabel code from dircmd.c into      
-     write_new_volume_label_to_dvd() adding a relabel argument.
-kes  Rewrite the truncate_dvd() code to be much simpler and
-     more logical. First blow away any spool part, then create a
-     new empty part and write to the DVD.
-kes  Rewrite the can_write_on_non_blank_dvd() code making it
-     only ensure that no valid data is on the DVD -- i.e. it
-     can be overwritten.
-15Sep06
-kes  Minor Makefile fixes.
-kes  Put attach_dcr_to_dev in a subroutine.
-kes  Make attaching/detaching to/from a device use a flag and 
-     only detach if actually attached.
-kes  Add dvd-simulator.in to scripts directory and add to configure.
-kes  Fix code in acquire.c that checks fd != 0 to use dev->is_open().  
-     This could be a cause of a number of drive reservation problems.
-     Note, this code is now in attach_dcr_to_dev().
-kes  Suppress doing Volume updates if it is a system job.  This should
-     prevent the DVD label blocking.
-kes  Clear the freespace ok flag in a couple of strategic places.
-14Sep06
-kes  Put removing zero sized spool part file in subroutine and
-     call from release_device().
-kes  Add Richard's patch for relabel to dircmd.c, but save and restore
-     dev Volume name.
-kes  Rework a lot of subroutines in dev.c to take dcr as an
-     argument. This is done to eliminate the usage of attached_dcrs
-     in lseek().
-kes  Change truncated_dvd to blank_dvd, which seems more suitable.
-kes  Apply most of Richard Mortimer's truncate patch.
-kes  Create lseek() method for DEVICE that takes dcr as an
-     argument. This is to eliminate the use of attached_dcrs in
-     lseek().  The calls to lseek_dev() must still be changed.
-13Sep06
-kes  Apply Richard Mortimer's patches for printing an error 
-     message in btape when a DVD is used, and to initialize traceback.
-kes  Added error message to btape when trying to access a file.
-kes  Move prototype of update_slots() to protos.h.
-12Sep06
-kes  Add JobErrors, JobFiles, SDJobFiles, SDJobErrors, SDJobStatus,
-     and FDJobStatus to the Director Python variables.
-kes  Make sure valid argument passed to str_to_utime() where Arno
-     had a seg fault.
-kes  Apply Richard Mortimer's patch for bcopy, bextract, and bscan.
-     I.e. part of two different patches.
-11Sep06
-kes  Modify disk changer to simulate some of the error conditions
-     of mtx-changer.
-kes  Make sure the close() call in the SD tools is just before the
-     getchar() call.
-kes  Implement dir_get_volume_info() in bls using the patch from
-     Richard Mortimer but call find_num_dvd_parts().
-kes  Implement find_num_dvd_parts() that mounts and scans a DVD
-     and counts the parts. 
-kes  Move the omode code in open_dvd() up so that the cannot
-     write on blank disk can check can be bypassed for read mode.
-     Not yet implemented.
-10Sep06
-kes  Disable normal data spooling for DVD writing which uses  
-     a different spooling mechanism.
-kes  Apply patch from Richard Mortimer to ensure that the number
-     of DVD parts is correctly updated.
-rbn  Save installer details log in the Bacula directory as 
-     install.log.
-rbn  Add installer generation of client and storage templates
-     suitable for @inclusion on the director.
-rbn  Mark previously installed components for Win32 read-only since 
-     deselection doesn't do anything.
-
-Version 1.39.22 beta released:
-08Sep06
-kes  Fix logic error in handling error return from mtx-changer 
-     script.
-kes  Make status from SD aware of -1 (unknown) Slot status.
-kes  At Eric's suggestion make both the 'slots' and 'drive' commands
-     to the Storage daemon work even if the drive is busy.
-kes  Make two separate Win32 menu links for starting bconsole and
-     wx-console in winbacula.nsi
-kes  Apply DVD part_spooled patch from Richard Mortimer 
-     richm@oldelvet.org.uk 
-kes  Put installer/Readme.txt into Win32 EOL format for Notebook.
-rbn  Fixed problems migrating settings from previous releases in
-     Win32 installer. Add Readme.txt with an option to show it on 
-     the installer Finish page.
-07Sep06
-kes  Use get_catalog_resource() to open catalog database
-     to ensure that ACLs are respected and that user is
-     correctly prompted for database.
-kes  Integrate multiple console/director patch from 
-     Carsten Paeth calle@calle.in-berlin.de
-ebl  Add character substitution in Job/JobDefs WriteBootStrap.
-     You can use now 'WriteBootStrap = '/path/%c_%n.bsr''
-kes  Apply patch supplied in bug #656 to pass priority field
-     in the run dialog to the Director in gnome console
-kes  Restore DCR after VOL_NAME_ERROR in mount.c.  Hopefully
-     this will fix bug #627 where Bacula eventually gets 
-     confused about what Volume it wants.
-kes  Add a new close_part() class in the SD to save the device
-     state around open/close_part/open for DVD writing.  This
-     should fix the num_dvd_parts getting zeroed as reported by
-     Richard Mortimer.
-kes  Apply patch from Richard Mortimer that correct edit code
-     for debug output of st_size.
-ebl  Add support of encrypted data stream to bscan.
-     display data_len instead of data content (may be binary)
-06Sep06
-kes  Add dev->close() in dir_ask_sysop_to_mount_volume() in
-     bcopy. Fixes bug #669 reported by Eric.
-kes  Fix incorrect number of arguments in SQL statement in
-     sql_get.c as reported by Eric.
-kes  Manual updates.
-kes  Update examples directory.
-kes  Remove unused variable in winservice.cpp
-kes  Make Win32 make command build installer.
-rbn  Add new Install Type page, used to select between Automatic
-     and Custom installs.  Automatic installs only prompt for
-     configuration items that can't be reasonably defaulted.
-rbn  Added Bacula logo to page headers.
-rbn  Added Upgrade support
-     - Configuration and component selection are migrated from
-       pre-1.39 installs.
-     - Configuration of upgraded components is preserved and 
-       not prompted for
-     - Configuration of new components is handled according to
-       the Automatic / Custom selection.
-     - Component selection is defaulted to previously selected 
-       components.
-rbn  Installation of Server components is disabled on 
-     Windows 95, 98 and ME.
-rbn  Added URLs for support, info and upgrades to Bacula entry
-     in Add/Remove Programs.
-rbn  Added Version info to Bacula entry in Add/Remove Programs.
-04Sep06
-kes  Correct dvd code that breaks tape labeling.      
-kes  Implement Enabled on update slots.
-02Sep06
-kes  When doing a label, pass the VolBytes back to the Director,
-     which puts it in the catalog.
-kes  Print an error message if the user attempts to prune an
-     archived Volume.
-kes  Need to start using %ld when sscanfing 32 bit values.
-kes  Update the free
-kes  Correct the counting of VolCatBytes for DVDs. 
-kes  Add code to mount.c to require that VolCatBytes corresponds to
-     what is actually found when doing an append.
-kes  Update freespace only after writing on the DVD.
-kes  Remove code that blows away the current part in the spool file.
-01Sep06
-kes  Apply new dvd-handler patch from Richard Mortimer.
-kes  Tweak so that debug level 20 shows only DVD commands.
-kes  Correct spooled_part flag in dev.c close() so that it is cleared
-     when the spool file is deleted or does not exist.
-kes  Print part number in read_records when eof hit (restore).
-rbn  Installer default changed to start services on new install.
-31Aug06
-kes  Make find with no args in tree restore return error rather than
-     stopping the selection. Fixes bug #665
-kes  Rework DVD writing to ensure that the last part is written
-     on open_next_part when dealing with a spool file.
-kes  Correct the lseek_dev() routine to handle end point correctly
-     (bug introduced by me).
-kes  Allow part number to exceed num_dvd_parts in lseek_dev().
-rbn  Change make_session_key on Windows to use WIN32 APIs to produce 
-     a better seed.
-rbn  Add new tool scsilist.exe which displays the changer, tape and 
-     CD/DVD (1394, SCSI, SATA, ATAPI) devices and the information required 
-     to add them to bacula-sd.conf.
-30Aug06
-kes  Apply dvd-handler patch from Richard Mortimer.
-kes  Apply dvd error check patch from Richard Mortimer.
-kes  Apply bpipe race patch from Richard Mortimer.
-kes  Rework how DVD labels are handled and set append only
-     when part > num_dvd_parts.
-27Aug06
-kes  Rework many features of DVD writing and reading. Added many error
-     messages.  Most importantly changed part to represent the current
-     part number base zero. This makes current DVD writing incompatible
-     with previous version.
-26Aug06
-kes  Add host:port to connect failure messages to FD and SD from Dir.
-kes  Add WhereACL to console ACL list.  If nothing is specified, only
-     the default is permitted for restore. Otherwise, *all* allows any
-     path, or you can specify permitted paths. This should allow control
-     over where users can restore files. This is untested.
-kes  Modified message to add a ? (as in loaded?) when querying the autochanger
-     for what Slot is loaded.  
-kes  Fixed the use of Slot, so that is more correctly maintained, thus
-     eliminating unneeded duplicate calls to determine what Slot is loaded.
-25Aug06
-kes  Install man pages with 'make install'
-kes  wx-console crashes because of differences between Bacula and wxWidgets
-     malloc()/free().  Tweak wx-console to use bmalloc()/bfree() for Bacula
-     calls.     
-kes  correct improper indenting in wx-console/console_conf.c
-kes  update wx-console header copyrights
-kes  Fix bug #658 where wx-console mangles file/directory names containing
-     commas.
-24Aug06
-kes  Add Media.Enabled flag to client backups for dotcmds.c
-kes  Enforce Media.Enabled=1 for a current restore to work.
-kes  Require restore case 3 to have sqlquery permission to work.
-kes  Remove obsolete del_MAC sql command.
-kes  Ensure that bscan creates Volumes with Enabled=1.
-
-Version 1.39.20 beta released:
-22Aug06
-kes  Correct missing Client table reference in SQL pointed out by
-     Marc.
-21Aug06
-kes  Fix Win32 build (new entrypoint, start baculafd).
-20Aug06
-kes  Add -n option to bconsole to turn off conio.
-kes  Print JobIds to be migrated in Job Report.
-kes  Add additional user supplied notes to the messages part of 
-     bacula-dir.conf concerning multiple email addresses.
-kes  Fix an incorrect comment pointed out by a user in dvd_handler.in
-kes  Add more recent Feature requests to Projects file.
-19Aug06
-kes  Apply Maritn's fix to src/win32/Makefile.
-kes  Apply Martin's fix to configure.in for pthreads on FreeBSD 4.x
-kes  Implement pruning for Migration and migrated jobs.
-kes  Implement PoolOccupancy migration.
-kes  Implement PoolTime migration.
-16Aug06
-kes  If doing a mount, look for a slot, and if specified pass it to
-     the SD so that it can load the autochanger.
-kes  Return DVD=1 flag if a label command is done to a DVD. This
-     permits setting VolParts to 1.
-kes  Apply DVD patch from Richard Mortimer <richm@oldelvet.org.uk>, but
-     rework ua_label code based on DVD media type to use DVD flag returned.
-15Aug06
-kes  Eliminate some compile warnings in dird_conf.c
-kes  Format the bytes field in the terminated jobs part of the status
-     command for the three daemons with suffixes to reduce print size 
-     of backup bytes.  Suggested by a user.
-kes  When not descending into a directory, print the File= name that
-     triggered it -- makes why not descending a bit clearer.
-kes  Do not unload autochanger when doing a list command -- basic code
-     from Eric Bollengier.
-12Aug06
-rbn  Reworked the MinGW32 build-dependencies script, it has been renamed
-     to build-depkgs-mingw32.  It now handles two options -h to display
-     help and -C to reextract the source and apply the patches.  The -C
-     option is useful for updating the source after new patches are 
-     released.
-rbn  Moved the 3rd party package URLs to a separate file External-mingw32.
-     This allows updating to new versions without having to modify the
-     script and makes it easier to figure out which packages and which
-     versions are used.
-rbn  Added a new script build-depkgs-msvc.cmd which does the same thing
-     as build-depkgs-mingw32 except they are built using Microsoft Visual C
-     and placed in the depkgs-msvc directory.  There is also an 
-     External-msvc file to describe the packages.
-08Aug06
-rbn  Fix Windows cross-compile compatibilty problems with FreeBSD.
-07Aug06
-kes  Fix bug #462 incorrect error message printed when client script called
-     from File= was not found.
-kes  Fix bug #558 (waiting for feedback) where Bacula needs too much time to
-     do a rewind on Solaris when no tape is in the drive (Solaris does not
-     have the detailed errno found on Linux).  Added Solaris specific code.
-     Note, this may apply to other OSes as well.
-06Aug06
-kes  Defined BUILDING_CATS in src/cats/cats.h so that *nix builds.
-dsb  Updated rpm spec for 1.39 - updatedb 9 to 10, add new man pages,
-     fix bug 648 - update sqlite script patches, lock out gnome2console
-     builds for platforms with gtk+ < 2.4.
-     Updated build_rpm.sh - add remote source directory, add switch for 
-     signing, refine file names.
-     Updated spec file again for Mandriva build as they have this curious
-     custom of silently converting all manpages to bzip2 format just before
-     the final packaging step.
-05Aug06
-rbn  Fixed the Windows Makefiles so that they won't accidentally try and
-     pickup binaries for the Unix build.  This allows both the Unix
-     build and the Windows build to be built in the same tree without
-     interfering with each other.
-rbn  Fixed error handling and cleaned up mtx-changer.cmd.
-rbn  Added the rest of the database scripts.  These are installed but are
-     not yet edited for variable replacement.
-rbn  Broke out the cats functionality from bacula.dll and put into new
-     separate dlls for each database type.  At installation time the
-     correct one is copied to bacula_cats.dll.
-rbn  Eliminate the need to install the mysql.dll on client only builds.
-rbn  Moved dird/sql_cmds.c into the cats directory so all the database
-     specific #ifdefs were in the cats directory.
-rbn  Added a new sql_cmds.h with all the declarations for the variables
-     exported from sql_cmds.c.
-rbn  Moved catalog_db[] from lib/message.c to a new routine db_get_type()
-     which is implemented in bdb.c, mysql.c, postgresql.c and sqlite.c in
-     src/cats.
-kes  Correct improperly formatted list command output reported by Dan.
-04Aug06
-kes  Correct despool time calculation.
-03Aug06
-kes  Remove previous changes to compat.cpp as they create problems.
-kes  Use old style MD5 for FileSets to avoid Full saves on every Job.
-kes  Attempt to fix problems with the msg_queue crashing on Solaris
-     when Bacula is terminating, but problems remain.
-kes  Add WIN32_VSS to HAVES in src/Makefile.inc.in to correct VSS
-     name editing problems with too many \\?\es.
-kes  Fix some Bacula source code style problems in compat.cpp.
-kes  Add debug code to compat.cpp and convert non-Bacula debug code
-     to Bacula style.
-02Aug06
-kes  Change the name of the technical notes file from kes-1.39 to
-     technotes-1.39.  Prefix my messages with 'kes  '.
-kes  Allow dequeue_messages() to be called twice. Should fix bug  
-     # 649.
-kes  Add Job type to bscan Job information output.
-01Aug06
-kes  Update copyright date in program files, and for the most part
-     put it on a #define.
-kes  Implement %q in bsnprintf.c apparently I forgot it.
-31Jul06
-kes  Make disk-changer sed command compatible with FreeBSD.
-kes  Make a first cut at a ReleaseNotes and ChangeLog for a 
-     beta release.
-kes  Make make clean descend into the src/win32 directory.
-kes  Fix some #ifdefing so that Solaris and FreeBSD compile 
-     sys/stat.h was turned off.
-kes  Use suffix editing for new transfer rate messages.
-kes  Attempt to come up with a workaround which seems to be an OS
-     bug where write() returns EBUSY.  IMO this should not happen.
-     It triggered in truncatebug test. The workaround retries using
-     a 100 ms wait.
-kes  Eliminate a strerror() call in a class method that failed with
-     older C++ compilers.
-kes  Use rm -rf rather than rmdir to delete the src/win32/release
-     directory during make clean.
-30Jul06
-kes  Make bscan ignore ACL streams.
-kes  Update projects files with new Feature Requests.
-kes  Generate current English and French manuals and upload
-     them to the site.
-kes  Update the home page to include the new British/French flags to
-     switch between translations. Work done by Alexandre Baron.
-kes  Make disk-changer script print an error message if the changer
-     directory is not defined.
-kes  Create a generic DB routine for getting an int (32/64 bit) from
-     the DB.
-kes  Add more migration code.
-kes  Add a few more files to .cvsignore here and there.
-kes  Minor fixes for SD write rate and despooling rate.
-kes  Turn off new test code in src/console.c
-
-Version 1.39.18
-29Jul06
-kes  Incremented the version number to signify that all of Robert's code
-     for Win32 that was in the branch is now integrated into the HEAD,
-     and that Eric has submitted code that we hope will provide limited
-     backward compatibility with 1.38 file daemons (more testing to be
-     done).
-kes  I rationalized a few of the names of the variables (mainly jcr names)
-     that are used during migration as keeping three different jcrs at the
-     same time clear in ones head is not easy.
-
-Version 1.39.17
-28Jul06
-eb   Tweak new runscript feature to work with 1.38.x FDs. 
-eb   Correct crypto.c to fix segfault when restoring an encrypted stream 
-     on fd which don't use rsa keys.
-eb   Add yes/no English keywords on localized yes/no questions.
-27Jul06
-kes  Several important commits from Robert Nelson for code cleanup and
-     Win32 build.
-kes  Modify console.c so that when conio is enabled, it converts \n to
-     \n\r before outputting to the console.  Hopefully this will fix
-     the problems with expect in Perl that Eric saw.
-24Jul06
-kes  Change cats/sql.c to eliminate %-*s format, which I think is turned
-     off in bsnprintf.
-kes  Add Comment field to llist of a volume.
-kes  Allow true/false in some yes/no questions.
-kes  Implement update volume enable=(on|off|true|false|archived|0|1|2)
-kes  Remove a few /n's when scanning commands from another daemon. This
-     permits adding additional fields later.
-kes  Modify dbcheck to handle ctl-d and to delete Log table entries.
-kes  Update README.mingw
-22Jul06
-kes  Tweak authentication to work with 1.38.x FDs. 
-kes  Tweak catalog make scripts.
-kes  Fix catalog upgrade scripts so that they work.
-kes  Correct despooling debug code to eliminate race condition.
-19Jul06
-kes  Add additional fields as specified by Arno to LocationLog.
-kes  Add comment field to the Media record.
-kes  Add Time field to the Log record.
-kes  Correct migration SQL (thanks to Bill Moran) so that it
-     runs with PostgreSQL also.
-kes  Add spooling/despooling info in status output of SD.
-17Jul06
-kes  Spend a lot of time integrating mkcdrec with the rescue disk.
-kes  Add VOLMGMT message class for volume management messages (none yet).
-kes  Add CATALOG as a destination.     It goes into the LOG table.
-kes  Implement the Log table in the DB.
-kes  Implement the Location Log table in the DB (for user use).
-kes  At Eric's request add a run_scripts() just after blast_data in
-     src/filed/job.c
-10Jul06
-kes  Add Enabled column to Location, correct some typos in DB schemas.
-kes  Correct bug I introduced into RunScripts enum.
-kes  Add log table to Catalog
-kes  Purge original job migrated if the migration terminates normally.
-kes  Cleanup purging of files/jobs so that it is done only in a 
-     single subroutine.
-kes  Add new VOLMGMT message class.
-kes  Add Catalog message destination (user conf code remains to be written).
-09Jul06
-kes  Modify read_record and friends to properly deal with migration         
-     needs.
-kes  Update debug code in read_record.       
-08Jul06
-     ======================= Warning ==========================
-     Separate read and write storage in Jobs in the Director. This
-     is a major rewrite of some of the low level code and hence has
-     a high probability of introducing bugs.
-     ==========================================================
-
-kes  Move the job init code up to *before* the job is put into
-     the job queue (resource allocation queue). This permits the
-     job to establish whether it will read or write or do both.
-kes  Add name() methods to all the resource classes.
-kes  Implement separate read and write storage resource 
-     allocation/deallocation in jobq.c
-
-     ======================= Warning ==========================
-     Implemented new method of getting the default Storage from the Media
-     record rather than from the MediaType for restore.  As a fall
-     back, if no Storage is defined, use the MediaType.  This
-     eliminates most all prompts if there are multiple MediaTypes
-     used. This is an important and fundamental change.
-     ==========================================================
-
-kes  Add more detail (Storage, Device) to list of volumes printed
-     for restore.
-kes  More code in migrate. In particular start multiple jobs if
-     migrating a volume.
-kes  Probably overkill, but ensure that the bsr is unique even within a 
-     job in FD and SD.
-kes  Rework bsys.c drop() so that it now should work as expected.
-kes  Update a bunch of old copyrights -kes  particularly in .h files.
-kes  Remove src/lib/bshm.c/h
-05Jul06
-kes  Migration fixes
-04Jul06
-     ======================= Warning ==========================
-        All hash codes in the database are now kept in world
-        compatible base64 format (no = filling). This means that
-        all FileSets will be updated and if you are running
-        verify jobs, you must do an InitCatalog.
-        Authentication uses the new algorithm, but should be
-        backward compatible with 1.38.x
-     ===========================================================
-
-kes  Modify the authentication routines so that the 1.39.15 Director
-     always runs with the compatible binary to base64 code (same as
-     the rest of the world).  It will however detect if an SD or
-     FD is running the old code and if that is the case, will use
-     the old algorithm for authentication.  However, all consoles must
-     use the compatible algorithm, and all data entered into the database
-     (all hash signatures, MD5, SHA1, ..., and all FileSet hashes) will
-     use the compatible algorithm.
-kes  Rename the cram_md5 routine names to be slightly more appropriate
-     to what they are doing (challenge and respond).
-kes  Robert committed his #ifdef and header cleanup.
-30Jun06
-kes  Fix a compiler warning in files/backup.c
-kes  Cleanup NOT NULL vs DEFAULT 0 in database creation.
-kes  Tweak btape.
-kes  Robert committed his low impact changes.
-kes  I removed a size_t from the jcr.h definition.
-kes  Update the tape regression scripts (still to be tested).
-kes  Add gcc and gcc-c++ requires to srm as suggested by a user.
-kes  Require done or quit to exit from in memory tree restore.
-26Jun06
-kes  Write install/uninstall of new manpages. There are now a
-     pile of man pages. Some of which need a lot of work.
-
-     ======================= Warning ==========================
-        The --mandir ./configure option now points to the top level
-        man directory.  The man files will be installed under
-        mandir/man8 and mandir/man1 as appropriate.
-     ==========================================================
-
-kes  Add complete text of GPL to LICENSE.
-kes  Implement job report that indicates where Storage and Pool
-     came from -kes  with overrides and Pool storage and NextPool,
-     it is all very complicated.
-kes  Create a few common subroutines for backup.c and migrate.c
-kes  Eliminate warning messages from tray-monitor.c
-25Jun06
-kes  Apply fix for scheduler for missing unlock_jobs().
-kes  Clean out autoconf caches before rebuilding configure
-kes  Fix the FreeBSD pthreads lib define updated by Dan.
-kes  Add missing semicolon in src/console/console.c
-kes  Add Robert's enhanced version of build-win32-cross-tools
-     as well as his patch file.
-kes  Note, the new gcc options are likely to break building of
-     wx-console or the tray-monitor ...
-24Jun06
-kes  Implement Robert's suggestion to suppress printing compile lines.
-kes  Detect GCC correctly (I hope)
-kes  If using GCC (actually g++) add the following compiler flags
-     -fno-strict-aliasing -fno-exceptions -fno-rtti
-
-     ===================== Warning =============================
-     Turn on new bsnprintf() code.  This could cause print output
-     to look different.
-     ===========================================================
-
-kes  Fix crypto when not using openssl. I previously overlooked this.
-kes  Eliminate crypto type punning problems by eliminating void * and
-     using uint8_t * instead.
-kes  Harden authentication failure in FD by single threading errors
-     and forcing a 6 second wait.
-
-     ===================== Warning =============================
-          Removed  'Accept Any Volume' directive.
-     ===========================================================
-
-kes  Major cleanup and simplification of regress using shell functions
-     (more tests to be converted to new format)   
-kes  Add detection of 64 bit Irix as indicated by user.
-kes  Increment catalog database id from 9 to 10.
-kes  Add a few of the new database fields to the various C++
-     structures.
-kes  Implement code to fill in the most important new fields (e.g.
-     Media Enable).
-kes  Ensure that most of the new fields are in create/get/insert/update.
-     More work to be done.
-22Jun06
-kes  Update some very old licenses in src/cats.
-kes  Modify the database format for handling Migration jobs:
-      Add PriorJobId, RealEndTime to Job table
-      Delete MAC table
-      Remove Stripe from JobMedia record (not used, wasting space)
-      Add ScratchPoolId, RecyclePoolId, Enabled to Media record
-      Add Cost to Location table.
-kes  Delete mac_record subroutines.
-kes  Add new table values to create/update/get routines as appropriate.
-kes  Update the update_tables and make_tables scripts.
-kes  Make a first cut in using a union where multiple pointers (actually
-     pointers to pointers) are stored.
-kes  Make some changes to base64.c suggested by Robert and others and add
-     a small amount of documentation.
-kes  Add some changes suggested by Peter for Solaris (bregex...)
-kes  Make runscript.h always built because it needs to be pulled into
-     more places.  In particular its RES was left out of a union.
-kes  Renumber the enum{} list in runscript.h to avoid starting from zero.
-     This makes it slightly easier to detect uninitialized variables.
-14Jun06
-kes  Remove xpg4 lib from FreeBSD build as it is no longer needed and
-     sometimes creates install problems.
-kes  Change a couple of %T in strftime to %H:%M:%S as seen in Robert
-     Nelson's code.  More to do.
-kes  Convert a few store_bit to store_bool in filed_conf.c.       
-kes  DVD tweak to block.c as supplied by Uwe Muessel.
-04Jun06
-kes  Modify configure.in to check for typeof().
-kes  In findlib/attribs.c use typeof instead of templates if possible.
-01Jun06
-kes  Implement partial error messages for src/filed/acl.c
-kes  Fix return code to fail when doing update barcodes and
-     Pool resource is not found. This previously caused Volumes
-     to be labeled as cleaning tapes.
-kes  Small updates to projects.
-27May06
-kes  Add Eric Bollengier patch for new RunScript directive. It breaks
-     compatibility between dird and fd.
-26May06
-kes  Prevent DVD code from rewriting label if the device cannot be
-     opened read/write.
-kes  Used __GNUC__ to detect GNU g++ as suggested by John Goerzen to
-     fix Debian build bug.
-kes  Fix Dir/SD run race in migrate.c, verify.c, and restore.c
-kes  Integrate manpages contributed by Jose Luis.
-kes  Update projects file.
-kes  Add manpages Makefile.in to configure.in
-kes  Remove installation of bacula.8 in scripts directory.
-24May06
-kes  Implement patch submitted by cesarb in bug #606 to implement O_NOATIME
-     support.
-       O_NOATIME is a open() flag which makes it possible to read a file without
-       updating the inode atime (and also without the inode ctime update which
-       happens if you try to set the atime back to its previous value). It also
-       prevents a race condition when two programs are reading the same file, but
-       only one does not want to change the atime. It's most useful for backup
-       programs and file integrity checkers (and bacula can fit on both
-       categories).
-
-       Recent versions of the Linux kernel and glibc have support for it (the
-       glibc support being mostly copying the O_NOATIME definition to
-       bits/fcntl.h). If there's no support for it on the kernel, trying to use
-       it does nothing (since the kernel ignores unknown flags).
-
-       If the kernel has support for it, trying to use it either works, fails
-       silently (mostly in remote filesystems), or returns errno=EPERM (if you
-       are not either the owner of the file or root). A simple way to prevent the
-       failure is to open the file without the flag and set it later with
-       fcntl(F_SETFL), ignoring any EPERM errors.
-kes  Applied patch posted by Jaime Ventura to bug #570 to correct failure
-     of restarted jobs to complete (due to a destroyed pthreads conditional
-     variable used by the message thread).
-kes  Fixed bug #619 where Bacula would not restart jobs with MaxRestartTimes
-     set to zero. 
-kes  Apply patch from John Goerzen bug #611 to fix bad manual links in the code.
-kes  Apply patch from Rudolf Cejka bug #614 to removed trailing
-     colons in query.sql file.
-kes  Apply patch from Rudolf Cejka bug #613 to correct prunning of files
-     not to create orphans.
-kes  Apply patch from Rudolf Cejka bug #617 to use mtime instead of ctime
-     in restore long listing.
-kes  Apply patch from Rudolf Cejka bug #609 to use MarkId in verify.c instead
-     of incorrect MarkedId.
-kes  Apply patch from adioso bug #616 to correct text in manual (replace
-     Director with File daemon).
-kes  Rework a few of the zlib changes so that they build properly.
-
-21May06
-kes  Move DIR 'run' command to SD before starting the message thread
-     as suggested by Cristopher Hull to avoid a race deadlock from
-     two threads using the bsock structure.
-kes  Modify LICENSE to correct some problems pointed out by Debian.
-05May06
-kes  Correct EOF with no \n lex.c problem.
-kes  Tweak compat.h compat.cpp and merge with apcupsd
-kes  Add additional INFO messages if autochanger cannot be used.
-
-02May06
-kes  Simplify Win32 Makefile
-kes  Correct count of buffers/bytes used by smartall.c
-kes  Updated compat.h after porting apcupsd to MinGW.
-01May06
-kes  Work on getting wx-console building on MinGW. wxWidgets now builds
-     started adding Makefile ...
-kes  Moved MinGW library objects to src/win32/lib to reduce clutter.
-30Apr06
-kes  Reloading a bad configuration file doesn't kill director any more.
-     Thanks to fix from Eric Bollengier.
-29Apr06
-kes  Fix problem of accents with new Win32 code.
-kes  Integrate Howard's VSS patch. Tweak it a bit. VSS now
-     works in the MinGW build with the exception that there
-     is a problem with accented characters -kes  i.e. there is
-     some mapping problem with wide characters.
-kes  The code no longer compiles with Microsoft VC++.
-28Apr06
-kes  Start implementing Christopher's St.Bernard code.
-kes  Add Christopher's mods for opening files.
-kes  Strip \r \n from Win32 error messages (Christopher)
-kes  Add more info about Win32 system if unknown (Christopher)
-kes  Use bstrn(cpy, cat) routines to avoid overrun in compat.cpp
-kes  Fix a number of incorrect strings marked for translation, when
-     they should not be (e.g. commands).
-kes  Fix StartTime bug reported for ClientRunBeforeJob and RunBeforeJob
-     Patches supplied by user in bugs #608 and #599.
-kes  Use most recent of st_ctime and st_mtime in restore tree DIR
-     listing. This fixes some problems with Win32 printing incorrect
-     values.
-kes  Correct the clock shift comm time calculation between the DIR
-     and the FD. It was added rather than subtracted.
-kes  Strip all backslashes in filenames to be restored on Win32
-     machines -kes  the names should all be in Unix format, and if
-     there are any backslashes it is most likely due to an improper
-     FileSet definition, and the files will not otherwise be 
-     restorable.
-kes  Remove lib/regex.c (replaced by bregex.c).
-kes  Delete src/win32/License.txt
-kes  Modify installer to install LICENSE
-26Apr06
-kes  Fix bug in build-win32-cross-tools script reported by Howard
-kes  Implement cross compiled bconsole
-25Apr06
-kes  Fix barcode test, eliminate BOOL (doesn't exist on Linux).
-kes  Write first cut of README.mingw32
-kes  Add back ua_label barcode fix from Rufolf Cejka.
-kes  Integrate the majority of the Mingw cross-tools submission
-     made by Howard Thomson. Everything compiles, with zlib, openssl,
-     and VSS turned off. Linking needs a pthreads library ...
-23Apr06
-kes  Add 'Dir Status' button to the gnome console.
-kes  More work on migration.
-kes  Restore non-compatible base64 coding to permit compatibility.
-kes  Display heap stats in Storage daemon without debug level.
-22Apr06
-kes  Integrate most of the MinGW changes -kes  more to do.
-21Apr06
-kes  Implement using pg_config for finding PostgreSQL files.
-     Fixes bug #600. Patch supplied by user.
-kes  Remove -t option from mktemp in mtx_changer.in and use
-     working directory. Fixes bug #578.
-kes  Update job start time after the any run before job so that
-     files created by the script are only backed up once. Fixes
-     bug #599.
-kes  Strip trailing newline only from filenames entered in
-     the restore command when reading a file. This permits
-     the user to enter filenames with trailing spaces. Fixes
-     bug #549. The user supplied a patch that I modified slightly.
-kes  Use the most recent time (st_mtime, st_ctime) in the dir
-     command in restore. This gives the user a better idea of what
-     the newest file really is. This fixes bug #574. The fix
-     was suggested by the user.
-kes  Implement a compatible version of base64. This permits external
-     programs to duplicate Bacula's base64 algorithm using standard
-     routines. This fixes bugs #296, and 565. Patch submitted by   
-     author of bug #565.  
-     ================= Note ========================
-     Previous Signatures stored in the database are no longer
-     compatible with this. The main downside is for Verify jobs,
-     and doing an InitCatalog run will fix the problem. Also, the
-     authentication between the deamons is changed, so all daemons
-     must be simultaneously upgraded.
-     ==============================================
-     If you don't like this fix, set:
-       const bool compatible = true;
-     to
-       const bool compatible = false;
-     in src/lib/base64.c
-20Apr06
-kes  Ensure that DB signature is never NULL.
-kes  Ensure that DB table names are not translated.
-kes  Fix scheduler to handle time skew (eg daylight savings).
-kes  Fix scheduler to use lock_jobs() to avoid most problems
-     with reload. Window is now milliseconds.
-19Apr06
-kes  Apply patch from Christopher Hull
-     kes  Allow multiple connections to database with different
-       parameters.
-     kes  Invalidate the scheduler when doing a reload. Fixes seg
-       fault, but still 60 second window.
-     kes  Additional info in Reschedule message.
-     kes  Use set_jcr_job_status() everywhere to prevent loss of
-       cancel, error.
-     kes  Display peer IP in FD if error from connecting DIR.
-     kes  Don't increment file count for DIRBEGIN.
-     kes  Replace illegal characters in Win32 filename by _.
-     kes  Add SE_CREATE_PERMANENT_NAME privilege in Win32.
-     kes  Hash hard link filenames rather than linked list.
-     kes  Fix for security failure in chdir on Win32.
-     kes  Add CreateDirectoryA/W win32 API entry points.
-kes  Add /silent option to Win32 FD for Install/Remove service.
-kes  Always print Heap statistics in FD.
-18Apr06
-kes  Remove the -f option from the chown in Makefile.in for more
-     portability.
-kes  Change setting the group in Makefile.in to use chgrp for
-     more portability.
-kes  Implement a write_store and read_store to replace
-     dirstore in reserve.c
-kes  Implement a Bacula read/write lock for Python rather
-     than using the Python lock to avoid recursive problems.
-kes  Correct the uninstall directory names in filed/Makefile.in
-     as reported by a user.
-17Apr06
-kes  Correct some problems with database creation (new tables).
-kes  Replace a bunch of old 0x%x by %p.
-kes  Get first cut of Migration with Job selection working.
-16Apr06
-kes  Change store_bit() to store_bool() for the Spooling in 
-     dird_conf.c -kes  bug reported by Robert Nelson.
-15Apr06
-kes  Correct Makefile bug found by Dan Langille.
-14Apr06
-kes  Correct Makefile for Solaris /bin/sh
-kes  Correct mtx-changer.in for Solaris /bin/sh
-kes  Abort if a conf resource does not have a Name =
-12Apr06
-kes  Change the name of the regex program to bregex.
-kes  Add the bwild program to the tools directory. It is similar
-     to the bregex program.
-kes  Implement create bregex.h and bregex.c in src/lib from the
-     Python regexp program.  
-kes  Use the new bregex.c to implement Regex expressions on Win32.
-11Apr06
-kes  More work on migration.
-kes  Implement wild program in tools directory for testing
-     wild-cards. Almost identical to the regex program.
-kes  Up port VSS single thread locking code.
-kes  Replace N_(..) by NT_(...) to inhibit translation of
-     commands.
-kes  Modify Makefile to change the permissions on Working Directory
-     to 770 if the directory is created.
-kes  Do not fail the Makefile if changing the permissions or 
-     owner/group on WorkingDir fails.
-kes  Remove early selection of Scratch Volumes in the recycling
-     algorithm.
-kes  Correct the old recycling algorithm so that Scratch Volumes
-     are selected when looking for a Volume in the changer.
-kes  Correct a typo in the Verify SQL reported by Joe Park.
-10Apr06
-kes  Remove automatic case folding on Windows FDs. You must
-     explictly use the 'Ignore Case = yes' option.
-kes  Remove the code added to 1.38.6 and 1.38.7 that pulls a
-     scratch volume in an Autochanger early in the 'recycling'
-     algorithm.  
-09Apr06
-kes  Make weof() and clrerror() methods of class DEVICE.
-08Apr06
-kes  Tweak license to include Microsoft restrictions.
-kes  Move mysql.reconnect to after real_connect().     Thanks to
-     Frank Sweetser for the patch.
-kes  Disallow a backslash in a File = directive (Windows junk)
-     unless the string is quoted.                     
-kes  Apply Eric's patch to ua_label.c so that daemon protocol
-     is not translated.
-kes  Add NT_ definition for strings that should not be translated.
-kes  Apply NT_() to ua_label.c
-kes  Remove timed wait for VSS on Win2K3 as it is not yet
-     implemented.
-kes  Correct bacula.in script to reference bacula-ctl-xx in the
-     sysconfig directory rather than the bin directory.
-26Mar06
-kes  Fix a long standing bug in the bacula start/stop scripts.
-kes  Attempt to add the new bacula-ctl-* files to the rpm.
-kes  Switch to using typeof() for list traversing to avoid
-     as many FC5 g++ compiler warnings as possible.
-25Mar06
-kes  Split the bacula start/start script into four files:
-      bacula         -kes  starts and stops calling other scripts
-      bacula-ctl-dir -kes  starts/stops the director
-      bacula-ctl-fd  -kes  starts/stops the File daemon
-      bacula-ctl-sd  -kes  starts/stops the Storage daemon
-24Mar06
-kes  Create datestyle fix for PostgreSQL. Fixes bug #574.
-kes  Correct editing of JobId from int to int64 in fd_cmds.c
-kes  Eliminate FileSet name race with bash_spaces() and multiple
-     threads by bashing in a local.
-kes  Fix error return from 'use storage' to print a correct error
-     message rather than nothing.
-kes  Correct false re-read last block error message when two jobs 
-     are simultaneously writing at the end of a tape.
-kes  Simplify exit conditions in the reserve.c code to avoid     
-     possible non-release of reservation_lock().
-kes  Suffle lock order in reserve to avoid deadlock between
-     reservation lock and device mutex.
-21Mar06
-kes  Initialize jcr mutex before first use. Thanks to Thorsten for
-     tracking this down for me !!!! as it broke the Win32 build.
-20Mar06
-kes  Integrate addition of line count limitation to bsmtp -l from
-     Sebastian Stark <stark at tuebingen.mpg.de>
-17Mar06
-kes  Implement regex test program in tools directory.
-kes  Attempt to fix time problem with bsmtp with foreign langs.
-kes  Add strip_trailing_newline() submitted by user.
-kes  Implement regex matching in migrate.c
-16Mar06
-kes  Fix bug #537 to allow arbitrary time to mount a volume for
-     restore, if polling is turned on.     
-kes  If dir_user or dir-group is specified in ./configure apply it to
-     the working-dir. Fixes bug #533.
-kes  If rescheduling a job cancel the previous incarnation with the SD.
-     Fixes bugs #566 and 557.
-kes  Fix bug #567 do_message() definition type conflict.
-
-14Mar06
-kes  Add more jcr methods and make mutex and use_count private.
-kes  Create lock/unlock methods for jcr.
-kes  Fix PostgreSQL bug doing sql_data_seeek() by explicitly reading
-     records to get to seek position.
-kes  Integrate patch from bug #561 to correct conio.c signal definitions.
-kes  Fix Rescheduling failed Jobs. Ensure that SD message thread 
-     terminates correctly by doing pthread_kill(). Do not destroy
-     SD cond wait variable between executions of the job. Use local
-     mutex for cond variable to avoid blocking jcr chain. Fix poor 
-     use of jcr use count in jobq.c for restarted jobs.
-kes  Fix obsolete usage of foreach_dlist() to use foreach_jcr() in
-     lib/jcr.c -kes  prevents locking the jcr chaing.
-kes  Apply patch from bug #564, which corrects listing volumes with
-     multiple autochangers. Apply same fix to next volume list.
-kes  Fix bug #562 where restore bootstrap file is not unique.
-kes  More details in implementing David's migration syntax proposal.
-kes  Save and restore dcr when swapping drives so that if we have
-     a write dcr it is not lost.
-kes  Use new routine lock_reservations() to lock the reservations
-     system, and call it while looking for a volume in askdir.c.
-     This could possibly fix bug #543.
-kes  Stop SD command loop if job is canceled.
-
-08Mar06
-kes  Remove old code from findlib/create_file.c
-kes  Rename mac.c migrate.c
-kes  Add user friendly display of VolBytes in job report.
-kes  Rename target... to previous... to make it a bit easier to
-     understand.
-kes  Add selection type and selection pattern to Migration (idea
-     given by David Boyes). 
-
-04Mar06
-kes  The po files should now be current.
-kes  Fix new sql_use_result() code to properly release the
-     buffers in all cases.
-kes  Use the keyword ujobid to mean the unique job id; job or jobname
-     to mean the Job name given on the Name directive, and jobid to
-     be the numeric (non-unique) job id.
-kes  Allow listing by any of the above.
-kes  Add the user friendly job report code for reporting job elapsed time
-     and rates with suffexes from John Kodis <kodis at comcast.net>.
-kes  Add Priority and JobLevel as Python settable items.
-kes  Use TEMPORARY table creation where the table is created by
-     Bacula.
-kes  Add new code submitted by Eric for waiting on specific jobid.
-kes  Add ACL checking for the dot commands.
-kes  Fix restore of writable FIFOs.
-kes  Fix a bug in bpipe where the string was freed too early.
-27Feb06
-kes  Modify the Python class examples to inherit object -kes  new way
-     of defining classes. Patch from Felix Schwarz.
-kes  Implement jobuid to replace old usage of job in keywords as
-     suggested by Eric Bollengier.
-kes  Apply patch for enhancing wait from Eric Bollengier. On can now:
-      wait  (wait for all jobs to stop)
-      wait jobid=nn
-      wait jobuid=unique id
-      wait job=job-name
-kes  Implement write variables for Python to set Priority (anytime), and
-     Job Level, only during JobInit event.
-26Feb06
-kes  Fix the block listing bug pointed out by Arno.
-kes  Update the po files at Eric's request.
-24Feb06
-kes  Fix Maximum Changer Wait, Maximum Open Wait, Maximum Rewind Wait to 
-     accept time qualifiers.
-kes  Make catalog respect ACL.
-kes  Add recycle count to Media record.
-
-Changes to 1.39.6-beta1 24Feb04
-23Feb06
-kes  Add Rudolf Cejka's new rc-chio-changer.
-kes  Implement pulling Volume from Scratch Pool if the
-     Volume is in the autochanger.
-kes  Implement additional command arguments for update Volume.
-
-Changes to 1.39.5 
-22Feb06
-kes  Back port changes to 1.38.5
-kes  Fix recycle SQL for StorageId.
-kes  Fix misplaced quote in mtx-changer script.
-20Feb06
-kes  Note. Your database must be updated, or you must create 
-     a new database. I have not yet incremented the database level.
-kes  Add Location table. 
-kes  Add LocationId, DeviceId, and MediaTypeId to Media record.
-18Feb06
-kes  Implement create/get mac record in database for adding extended
-     Migration data to the job record.
-kes  Add new MAC table to update/make database scripts.
-kes  Return Storage name used when getting VolumeNames for a job.
-kes  Change bsr file keyword Storage to Device, which is more accurate.
-kes  Ensure that Mac records are pruned/purged.
-kes  Tweak SD tools to deal with changing media type.
-kes  Integrate more dev.c subroutines as methods (e.g. strerror, bsr, ...)
-kes  Pass pointer to dcr pointer to acquire_device_for_read() so
-     that the subroutine can switch devices, and hence dcrs.
-kes  Modify the multiple MediaType read code to re-use the same
-     dcr when switching devices. This makes the code much more
-     robust.
-kes  Integrate patch from Karl Hakimian that reads JobIds, FileIndexes
-     from a table for restore.
-kes  Add Storage name to VolParams, but it really should be Device.
-14Feb06
-kes  Add disk-changer to scripts directory + configure/Makefile
-kes  Eliminate PoolId from jcr -kes  it is in jcr->jr.PoolId
-kes  Implement store_bit scanner to replace store_yesno.     Mostly done.
-kes  Implement new store_bool that stores in a bool. 
-kes  Add true/false to yes/no conf directives.
-kes  Make first cut at changing appropriate store_yesno to store_bool.
-kes  Complete implementation of Pool storage devices.
-kes  Move starting clones to job.c
-kes  Move create_restore_bootstrap_file() to job.c
-kes  Make copy_storage() more general to be able to handle
-     Pool storage.
-kes  Cleanup a lot of migration code for manual running, including
-     using Pool storage.
-kes  Move getting a scratch Volume into a subroutine.
-kes  Make all places a Volume that is added to a pool to 
-     respect max vols.
-kes  Fix bug in autochanger recycle code (improper edit 64 bit).
-kes  Fix segfault in restore command when no value specified.
-kes  Start adding code to handle multiple MediaTypes in restore.
-kes  Eliminate race condition in getting Volume name for
-     two drive autochanger.
-kes  More debug code in autochanger.
-kes  Add storage keyword to bootstrap file, add parsing.
-kes  Move slot in bsr file into Volume record as there will be
-     a different slot for each Volume.
-kes  Create reserve.h
-07Feb06
-kes  Implement Pool storage overrides.
-06Feb06
-kes  Implement first cut of Migration.
-kes  Implement mysql_use_result() from patch by Karl Hakimian.
-     This reduces significantly the memory consumption during
-     the restore tree building, and hence runs faster too.
-kes  Implement StorageId patch supplied by user (reggie) in bug
-     #536.  This should permit Bacula to work correctly with two
-     autochangers.
-kes  Implement Job listing variations suggested by a user.
-kes  Move updating bootstrap code in backup.c to subroutine
-     update_bootstrap_file().
-kes  Add new job status elapsed time and bytes written user
-     friendly job report output patch sent by John Kodis
-     <kodis at comcast.ne>.
-kes  Implement a storage list in Pools.
-kes  Separate out setup_job() code from run_job().
-kes  Get migration working -kes  lots of changes in mac.c in both
-     DIR and SD.
-kes  Apply patch from user (Eric Bollengier I think) that fixes a     
-     DIR crash when no arguments are supplied to a dot command.
-kes  Fix typo (strcpy->strcmp) in ua_prune.c as reported by Martin.
-kes  Fix command arg name->volume in label command of gnome-console.
-kes  Fix SD acquire.c to release correct DCR by explicitly testing
-     on the dcr address rather than trying to devine if it is a read
-     or write dcr.  This failed in error conditions when the device was
-     not fully setup.
- 
-30Jan06
-kes  Apply user supplied patch for more readable rate output
-     in job report.
-kes  Continue implementing migration.
-kes  Implement support for removable filesystems in SD.
-kes  Ensure that btraceback scripts can be read by anyone.
-kes  Replace dvd-freespace and dvd-writepart by dvd-handler.
-kes  Correct bug where canceling restore before the FD contacts
-     the SD causes the drive to be left in read mode.
-kes  Move ofline_or_rewind into DEVICE::close().
-kes  Eliminate close_device.
-kes  Convert several dev subroutines to methods (e.g. bsf,
-     eod, ...)
-kes  Eliminate force_close_device().
-kes  Implement Device Type directive in Device resource that
-     can have values File, Tape, Fifo, DVD, or Prog.
-kes  Add has_cap() method to Device.
-Changes to 1.39.4
-17Jan06
-kes  Add patch from bug #527 to allow RedHat user to specify
-     options/user/group for starting each daemon in      
-     /etc/sysconf/bacula.
-16Jan06
-kes  Add two new queries to query.sql provided by Arno. One
-     list volumes known to the Storage device, and the other
-     lists volumes possibly needing replacement (error, ...).
-15Jan06
-kes  Add periodic (every 24 hours) garbage collection of memory 
-     pool by releasing free buffers.
-14Jan06
-kes  Correct bug counting sized (for display only) in smartall.c
-kes  Print FD mempool stats if debug > 0 rather than 5.
-12Jan06
-kes  Make db_lock() mutex error fail the job rather than abort
-     Bacula.  Canceling the job caused the mutex to fail.
-kes  Correct bug in alist.c that re-allocated the list if the
-     number of items goes to zero.
-kes  Move the reservation system thread locking to the top level
-     so that one job at a time tries all possible drives before
-     waiting.
-kes  Implement a reservation 'fail' message queue that is built            
-     and destroyed on each pass through the reservation system.
-     These messages are displayed in a 'Jobs waiting to reserve
-     a drive' list during a 'status storage='.  Note, multiple
-     messages will generally print for each JobId because they
-     represent the different problems with either the same drive
-     or different drives.  If this output proves too confusing
-     of voluminous, I will display it only when debug level 1
-     or greater is enabled in the SD.
-11Jan06
-kes  Add enable/disable job=<job-name>.     This command prevents
-     the specified job from being scheduled. Even when disabled,
-     the job can be manually started from the console.
-kes  During 'update slots' clear all InChanger flags where the
-     StorageId is zero (old Media records).
-
-Beta release 1.38.4:
-09Jan06
-kes  Fix autochanger code to strip leading spaces from returned
-     slots number. Remove bc from chio-changer.
-kes  Back port a bit of 1.39 crypto code to reduce diffs.
-kes  Fix first call to autochanger that missed close()ing the
-     drive. Put close() just before each run_program().  Fixes
-     Arno's changer bug.
-07Jan06
-kes  Add PoolId to Job record when updating it at job start time.
-06Jan06
-kes  Pull in more code from 1.39 so that there are fewer file
-     differences (the new ua_dotcmds.c, base64.h, crypto.h
-     hmac.c jcr.c (dird and lib) lib.h md5.h parse_conf.c 
-     util.c. Aside from ua_dotcmds.c these are mostly crypto
-     upgrades.
-kes  Implement new method of walking the jcr chain. The
-     incr/dec of the use_count is done within the walking
-     routines.  This should prevent a jcr from being freed
-     from under the walk routines.
-
-
-Changes to 1.39.3:
-04Jan06
-kes  Start implementing Verify list output.
-kes  Move the suitable_drive flag to a better place to prevent
-     premature termination of the reservation if all drives
-     are busy -kes  should fix Arno's diff/inc pool failures.
-26Dec05
-kes  Add mutex to single thread VSS code in Win32.
-22Dec05
-kes  Simplify code in askdir.c that waits for creating an appendable
-     volume so that it can handle multiple returns from the wait
-     code.
-kes  Modify the wait code to permit multiple returns.
-kes  Return a zero when 'autochanger drives' is called and
-     it is not an autochanger.
-kes  Make rewind_dev() a method taking a DCR as an argument.
-     This permits closing and reopening the drive if the
-     rewind fails as happens if the drive was loaded while the
-     file descriptor was open. This refreshes the file descriptor.
-kes  Remove the ST_OPENED flag and always rely on fd < 0 for knowing
-     if the device is open or not.  This should eliminate
-     Arnos problem.
-kes  Return error if reserve cannot find at least one suitable device.
-kes  Make wait_for_sysop() return correct state information.
-kes  Fix Win32 state file problem. write was not using compat
-     code. This should fix bug #500.
-21Dec05
-kes  Modify gui on command to set only GUI mode and not batch.
-kes  Modify .messages command to always print messages regardless
-     of the mode.
-kes  If GUI mode is on, suppress automatic printing of 
-     You have messages. 
-kes  Delete old bnet packet code.
-kes  Ignore new BNET_START_SELECT and BNET_END_SELECT signals in
-     wx-console. -kes  not implemented because bconsole must be updated.
-kes  Modify restore command in wx-console to set gui on and to use
-     only .messages instead of messages.  Hopefully this fixes bug
-     #514.
-kes  Fix seg fault in exit of acquire when canceling a job --
-     reported by Wolfgang Denk
-kes  Pull in latest reservation system changes from 1.38
-kes  Make .messages command always print messages regardless
-     of the automessages flag.
-17Dec05
-kes  Fix seg fault if user labels a drive directory bug #513
-kes  Remove quotes around Version as it breaks things.
-16Dec05
-kes  Merge in Aleksandar Milivojevic's mods to the spec file.
-kes  Apply sparse code fix for raw drives and fifos. Bug 506
-kes  Thorsten fixed Unicode cd problem with wx-console bug 505.
-14Dec05
-kes  Correct reservation system to do a last ditch try
-     for any mounted volume, then anyone anywhere.
-kes  Add quotes around table Version because of
-     error in MySQL 4.1.15 -kes  bug report submitted.
-kes  Correct some minor problems with btape in the fill
-     command.
-kes  Updates to ssh-tunnel from Joshua Kugler.
-kes  Added a report.pl program from Jonas Bjorklund.               
-kes  Simplify the O_NONBLOCK open() code for tape drives,
-     and always open nonblocking.
-kes  Do not wait for open() if EIO returned (shouldn't happen).
-kes  Eliminate 3 argument to tape open().
-kes  Correct the slot # edited in the 3995 Bad autochanger unload
-     message.
-kes  With -S on bscan (show progress) do not divide by zero.
-13Dec05
-kes  Make cancel pthread_cond_signal() pthread_cond_broadcast().
-kes  When dcr is freed, also broadcast dev->wait_next_vol signal.
-kes  Remove unused code in wait_for_device.     
-kes  Make wait_for_device() always return after 60 seconds of wait.
-
-Changes to 1.39.2:
-13Dec05
-kes  Add stubs for non-crypto build.
-12Dec05
-kes  Use localhost if no network configured
-11Dec05
-kes  Eliminated duplicate MaxVolBytes in cat update -kes  bug 509.
-kes  Remove debug print.
-kes  Add bail_out in error during state file reading.
-10Dec05
-kes  Merge changes made to 1.38.3 into HEAD
-kes  Add stubs for pygtk-console code
-kes  Create Makefile.in for pygtk-console code
-09Dec05
-kes  Merge updates into 1.38 branch
-kes  Update specs to include mysql4 define.
-kes  Fix when attributes are sent, must be after binit().
-kes  Stop read_record() if status not ok in second loop.
-kes  Return rec->FileIndex in dcr->VolLastIndex for normal
-     and partial records in read_record().  This allows bscan
-     to get FileIndex at EOT correct.
-kes  Fix butil.c to correctly set dcr -kes  fixes seg fault in bls.
-08Dec05
-kes  Fix Win32 built to work with new crypto code.
-kes  Apply patch supplied by user (slightly modified) to fix
-     correct detection of holes in block devices and FIFOs. 
-     Bug # 506.
-kes  Apply patch supplied by user (slightly modified) 
-     to fix SD hang with multiple pools and bad client
-     IP. Fixes bug # 508.
-07Dec05
-kes  Add nagios plugin to the examples directory. Submitted by
-     Christian Masopust.
-kes  Remove warning message about multiple saves of hardlinked files
-     from find_one.c as it can generate too many warning messages.
-kes  Modify most restore error messages to be queued so that they
-     appear at the end of the job rather than mixted with the restore
-     listing where they could be 'lost'.
-06Dec05
-kes  Reset timeout values before select() per patch from 
-     Frank Sweetser for problems with non-blocking sockets.
-kes  Unlink the state file if either reading or writing it gets
-     errors.  Hopefully this will fix Win32 exit problems.
-kes  Add sanity check in append.c to ensure that dcr is not NULL.
-     This can happen if multiple drive autochanger SCSI control
-     channel and drive indicies do not correspond.
-05Dec05
-kes  Get next volume from Scratch pool before creating a volume.
-kes  Set new Pool defaults in Vol when moved from Scratch Pool.
-kes  Remove argument from create_bacula_database for SQLite as it
-     caused an error.
-kes  Add back index code so that two drive autochangers can get
-     a second tape.
-kes  Change a bunch of debug levels to aid debugging autochangers.
-kes  Fix reservation so that mutexes are properly applied.
-kes  Rework reservation algorithm so that two drives can be used
-     at the same time.
-04Dec05
-kes  Landon merged his data encription changes into the HEAD
-kes  Apply days keyword patch from Alexander.Bergolth at wu-wien.ac.at 
-     If this patch is applied, the number of days can be specified with
-     'list nextvol days=xx'
-     or
-     'status dir days=xx'
-     My use case is to be able to preview the next scheduled job (and the 
-     next tape to be used) on fridays if there are no scheduled jobs during 
-     the weekend.
-Changes to 1.39.1:
-03Dec05
-kes  Fix font code in gnome2 console user patch. Fixes bug #501.
-kes  Fix malformatted bnet error message that caused seg fault
-     fixes bug 502
-kes  Applied user patch to improve README.vc8 in src/win32.
-29Nov05
-kes  Add Migrate, Copy, Archive Job types (some where there)
-kes  Correct some more editing of JobId's (for 64 bit compatibility).
-kes  Ensure that StorageId is stored in Media record when ever possible.
-kes  Add Migration Job to Job.
-kes  Add Migration Time, Migration High Bytes, Migration Low Bytes
-     Next Pool to Pool resource.
-kes  Add more code to mac.c (migration archive copy).
-kes  Change Start Storage daemon job to require read and write storage
-     pointers.
-kes  Pass read storage data to SD as well as write storage data.
-kes  Remove old code from winservice.cpp
-kes  Break on error in scan.
-kes  Fix typo in signal.c
-kes  Separate read/write DCR in SD.     Add jcr->read_dcr.
-kes  Cleanup how find_device() works.
-kes  Add read output to Status in SD.
-Changes to 1.39.0:
-23Nov05
-kes  Add red-black btree routines
-21Nov05
-kes  Remove abs() in bfile.c so that it compiles on Solaris. 
-     Bug #491.
-20Nov05
-kes  Fix crash in tray-monitor when daemon disconnects. Bug #479.
-kes  Fix bnet-server bug found on OpenBSD. Bug #486
-kes  Fix cancel failure bug. Bug #481
-kes  Fix failure when Pool name has spaces. Bug #487      
-kes  Fix SD crash in autochanger code. Mutex failure. Bug #488
-kes  Fix a couple of free()s in src/filed/acl.c
-kes  Fix memory overrun in bfile.c in building OS X resource
-     fork filename. Bug #489 
-kes  Add Pool name to SD status output.
-14Nov05
-kes  Apply SunOS patch for ACLs submitted by David Duchscher.                     
-kes  Make sure to set storage before trying to set drive.
-kes  Add bacula_mail_summary.sh to examples directory. It makes
-     a single email summary of any number of jobs. Submitted
-     by Adrew J. Millar.
-kes  Make sure when we do a mount to unblock the device even
-     if the drive could not be opened.  
-13Nov05
-kes  Remove the USE_WIN32STREAMEXTRACTION #defines (always on)
-     and correct a few minor problems to make it build on Linux.
-10Nov05
-kes  Remove delete of CVS from all Makefiles
-kes  Fix seg fault when clicking on Add button in wx-console
-     restore panel.  Bug #470.
-kes  Fix copyright date and URL typo -kes  bug #468.
-kes  Change autostart install for FreeBSD to look for rc.conf     
-     rather than rc.local as suggested fix for bug #466.
-kes  Apply patch supplied by Eric Bollengier to fix PostgreSQL       
-     grant on status. Bug #465
-kes  Apply patch supplied by Eric Bollengier to fix PostgreSQL
-     update script. Bug #464
-kes  Tweak #ifdefing a bit in new Win32 stream code.
-kes  Fix #ifdeffing for FD_NO_SEND_TEST.
-kes  Add documentation of performance #defines

@@ -1,26 +1,14 @@
 /*
- *
- *   Bacula UA authentication. Provides authentication with
- *     the Director.
- *
- *     Kern Sibbald, June MMI
- *
- *    This routine runs as a thread and must be thread reentrant.
- *
- *  Basic tasks done here:
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -37,6 +25,18 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula UA authentication. Provides authentication with
+ *     the Director.
+ *
+ *     Kern Sibbald, June MMI
+ *
+ *    This routine runs as a thread and must be thread reentrant.
+ *
+ *  Basic tasks done here:
+ *
+ */
 
 #include "bacula.h"
 #include "console_conf.h"
@@ -102,7 +102,7 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
    
    /* Timeout Hello after 5 mins */
    btimer_t *tid = start_bsock_timer(dir, 60 * 5);
-   bnet_fsend(dir, hello, bashed_name);
+   dir->fsend(hello, bashed_name);
 
    if (!cram_md5_respond(dir, password, &tls_remote_need, &compatible) ||
        !cram_md5_challenge(dir, password, tls_local_need, compatible)) {
@@ -127,7 +127,7 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
    if (have_tls) {
       if (tls_local_need >= BNET_TLS_OK && tls_remote_need >= BNET_TLS_OK) {
          /* Engage TLS! Full Speed Ahead! */
-         if (!bnet_tls_client(tls_ctx, dir)) {
+         if (!bnet_tls_client(tls_ctx, dir, NULL)) {
             sendit(_("TLS negotiation failed\n"));
             goto bail_out;
          }
@@ -139,9 +139,9 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
     * be dropped here if an invalid client certificate was presented
     */
    Dmsg1(6, ">dird: %s", dir->msg);
-   if (bnet_recv(dir) <= 0) {
+   if (dir->recv() <= 0) {
       senditf(_("Bad response to Hello command: ERR=%s\n"),
-         bnet_strerror(dir));
+         dir->bstrerror());
       goto bail_out;
    }
 

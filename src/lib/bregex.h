@@ -32,8 +32,8 @@ extern "C" {
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -106,6 +106,8 @@ struct regex_t
    int num_registers;     /* number of registers used */
    unsigned char anchor;           /* anchor: 0=none 1=begline 2=begbuf */
    char *errmsg;
+   int cflags;			   /* compilation flags */
+   POOLMEM *lcase;		   /* used by REG_ICASE */
 };        
 
 

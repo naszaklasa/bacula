@@ -1,13 +1,4 @@
 /*
- *
- *  Routines for handling mounting tapes for reading and for
- *    writing.
- *
- *   Kern Sibbald, August MMII
- *
- *   Version $Id: mount.c 4036 2007-01-25 11:26:57Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
@@ -16,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  Routines for handling mounting tapes for reading and for
+ *    writing.
+ *
+ *   Kern Sibbald, August MMII
+ *
+ *   Version $Id: mount.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 #include "bacula.h"                   /* pull in global headers */
 #include "stored.h"                   /* pull in Storage Deamon headers */
@@ -387,7 +387,7 @@ read_volume:
                  " part=%d size=%s\n"), dcr->VolumeName, 
                  dev->part, edit_uint64(dev->VolCatInfo.VolCatBytes,ed1));
          } else {
-            Jmsg(jcr, M_ERROR, 0, _("I cannot write on Volume \"%s\" because: "
+            Jmsg(jcr, M_ERROR, 0, _("Bacula cannot write on DVD Volume \"%s\" because: "
                  "The sizes do not match! Volume=%s Catalog=%s\n"),
                  dcr->VolumeName,
                  edit_uint64(dev->part_start + dev->part_size, ed1),
@@ -395,9 +395,7 @@ read_volume:
             mark_volume_in_error(dcr);
             goto mount_next_vol;
          }
-      }
-      /* *****FIXME**** we should do some checking for files too */
-      if (dev->is_tape()) {
+      } else if (dev->is_tape()) {
          /*
           * Check if we are positioned on the tape at the same place
           * that the database says we should be.
@@ -406,9 +404,26 @@ read_volume:
             Jmsg(jcr, M_INFO, 0, _("Ready to append to end of Volume \"%s\" at file=%d.\n"),
                  dcr->VolumeName, dev->get_file());
          } else {
-            Jmsg(jcr, M_ERROR, 0, _("I cannot write on Volume \"%s\" because:\n"
+            Jmsg(jcr, M_ERROR, 0, _("Bacula cannot write on tape Volume \"%s\" because:\n"
                  "The number of files mismatch! Volume=%u Catalog=%u\n"),
                  dcr->VolumeName, dev->get_file(), dev->VolCatInfo.VolCatFiles);
+            mark_volume_in_error(dcr);
+            goto mount_next_vol;
+         }
+      } else if (dev->is_file()) {
+         char ed1[50], ed2[50];
+         boffset_t pos;
+         pos = dev->lseek(dcr, (boffset_t)0, SEEK_END);
+         if (dev->VolCatInfo.VolCatBytes == (uint64_t)pos) {
+            Jmsg(jcr, M_INFO, 0, _("Ready to append to end of Volume \"%s\""
+                 " size=%s\n"), dcr->VolumeName, 
+                 edit_uint64(dev->VolCatInfo.VolCatBytes, ed1));
+         } else {
+            Jmsg(jcr, M_ERROR, 0, _("Bacula cannot write on disk Volume \"%s\" because: "
+                 "The sizes do not match! Volume=%s Catalog=%s\n"),
+                 dcr->VolumeName,
+                 edit_uint64(pos, ed1),
+                 edit_uint64(dev->VolCatInfo.VolCatBytes, ed2));
             mark_volume_in_error(dcr);
             goto mount_next_vol;
          }
@@ -438,9 +453,9 @@ read_volume:
                  dcr->VolumeName, (unsigned int)dev->file_addr);
          }
          else {
-            Jmsg(jcr, M_ERROR, 0, _("I cannot write on Volume \"%s\" because:\n"
+            Jmsg(jcr, M_ERROR, 0, _("Bacula cannot write on Volume \"%s\" because:\n"
                                     "The EOD file address is wrong: Volume file address=%u != Catalog Endblock=%u(+1)\n"
-                                    "You probably removed DVD last part in spool directory.\n"),
+                                    "Perhaps You removed the DVD last part in spool directory.\n"),
                  dcr->VolumeName, (unsigned int)dev->file_addr, (unsigned int)dev->VolCatInfo.EndBlock);
             mark_volume_in_error(dcr);
             goto mount_next_vol;
@@ -575,8 +590,7 @@ void release_volume(DCR *dcr)
    dev->EndBlock = dev->EndFile = 0;
    memset(&dev->VolCatInfo, 0, sizeof(dev->VolCatInfo));
    memset(&dcr->VolCatInfo, 0, sizeof(dcr->VolCatInfo));
-   free_volume(dev);
-   memset(&dev->VolHdr, 0, sizeof(dev->VolHdr));
+   dev->clear_volhdr();
    /* Force re-read of label */
    dev->clear_labeled();
    dev->clear_read();

@@ -1,22 +1,14 @@
 /*
- *   Match Bootstrap Records (used for restores) against
- *     Volume Records
- *
- *     Kern Sibbald, June MMII
- *
- *   Version $Id: match_bsr.c 3738 2006-12-03 20:01:09Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   Match Bootstrap Records (used for restores) against
+ *     Volume Records
+ *
+ *     Kern Sibbald, June MMII
+ *
+ *   Version $Id: match_bsr.c 5282 2007-08-04 16:46:32Z kerns $
+ */
 
 /*
  * ***FIXME***
@@ -60,7 +60,7 @@
 #include "lib/fnmatch.h"
 #endif
 
-const int dbglevel = 10;
+const int dbglevel = 500;
 
 /* Forward references */
 static int match_volume(BSR *bsr, BSR_VOLUME *volume, VOLUME_LABEL *volrec, bool done);
@@ -433,7 +433,7 @@ static int match_client(BSR *bsr, BSR_CLIENT *client, SESSION_LABEL *sessrec, bo
    if (!client) {
       return 1;                       /* no specification matches all */
    }
-   if (fnmatch(client->ClientName, sessrec->ClientName, 0) == 0) {
+   if (strcmp(client->ClientName, sessrec->ClientName) == 0) {
       return 1;
    }
    if (client->next) {
@@ -447,7 +447,7 @@ static int match_job(BSR *bsr, BSR_JOB *job, SESSION_LABEL *sessrec, bool done)
    if (!job) {
       return 1;                       /* no specification matches all */
    }
-   if (fnmatch(job->Job, sessrec->Job, 0) == 0) {
+   if (strcmp(job->Job, sessrec->Job) == 0) {
       return 1;
    }
    if (job->next) {

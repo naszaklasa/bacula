@@ -1,24 +1,14 @@
 /*
- *
- *   Bacula Director -- next_vol -- handles finding the next
- *    volume for append.  Split out of catreq.c August MMIII
- *    catalog request from the Storage daemon.
-
- *     Kern Sibbald, March MMI
- *
- *   Version $Id: next_vol.c 3842 2006-12-22 15:01:05Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,12 +25,19 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- next_vol -- handles finding the next
+ *    volume for append.  Split out of catreq.c August MMIII
+ *    catalog request from the Storage daemon.
+
+ *     Kern Sibbald, March MMI
+ *
+ *   Version $Id: next_vol.c 5202 2007-07-19 15:31:46Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
-
-static bool get_scratch_volume(JCR *jcr, MEDIA_DBR *mr, bool InChanger);
-
 
 /*
  *  Items needed:
@@ -48,10 +45,11 @@ static bool get_scratch_volume(JCR *jcr, MEDIA_DBR *mr, bool InChanger);
  *   jcr->wstore
  *   jcr->db
  *   jcr->pool
- *   MEDIA_DBR mr (zeroed out)
+ *   MEDIA_DBR mr with PoolId set
  *   create -- whether or not to create a new volume
  */
-int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index, bool create)
+int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,             
+                                bool create, bool prune)
 {
    int retry = 0;
    bool ok;
@@ -59,7 +57,7 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index, bool create)
    STORE *store = jcr->wstore;
 
    bstrncpy(mr->MediaType, store->media_type, sizeof(mr->MediaType));
-   Dmsg2(100, "CatReq FindMedia: PoolId=%d, MediaType=%s\n", (int)mr->PoolId, mr->MediaType);
+   Dmsg2(150, "find_next_vol_for_append: PoolId=%d, MediaType=%s\n", (int)mr->PoolId, mr->MediaType);
    /*
     * If we are using an Autochanger, restrict Volume
     *   search to the Autochanger on the first pass
@@ -75,15 +73,15 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index, bool create)
        *  1. Look for volume with "Append" status.
        */
       ok = db_find_next_volume(jcr, jcr->db, index, InChanger, mr);
-      Dmsg4(100, "after find_next_vol index=%d ok=%d InChanger=%d Vstat=%s\n",
-            index, ok, InChanger, mr->VolStatus);
 
       if (!ok) {
+         Dmsg4(050, "after find_next_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
+               ok, index, InChanger, mr->VolStatus);
          /*
           * 2. Try finding a recycled volume
           */
          ok = find_recycled_volume(jcr, InChanger, mr);
-         Dmsg2(100, "find_recycled_volume ok=%d FW=%d\n", ok, mr->FirstWritten);
+         Dmsg2(150, "find_recycled_volume ok=%d FW=%d\n", ok, mr->FirstWritten);
          if (!ok) {
             /*
              * 3. Try recycling any purged volume
@@ -93,13 +91,18 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index, bool create)
                /*
                 * 4. Try pruning Volumes
                 */
-               prune_volumes(jcr);
+               if (prune) {
+                  Dmsg0(150, "Call prune_volumes\n");
+                  prune_volumes(jcr, InChanger, mr);
+               }
                ok = recycle_oldest_purged_volume(jcr, InChanger, mr);
                if (!ok) {
+                  Dmsg4(050, "after prune volumes_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
+                        ok, index, InChanger, mr->VolStatus);
                   /*
                    * 5. Try pulling a volume from the Scratch pool
                    */ 
-                  ok = get_scratch_volume(jcr, mr, InChanger);
+                  ok = get_scratch_volume(jcr, InChanger, mr);
                }
                /*
                 * If we are using an Autochanger and have not found
@@ -131,7 +134,7 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index, bool create)
             /* Find oldest volume to recycle */
             ok = db_find_next_volume(jcr, jcr->db, -1, InChanger, mr);
             Dmsg1(400, "Find oldest=%d\n", ok);
-            if (ok) {
+            if (ok && prune) {
                UAContext *ua;
                Dmsg0(400, "Try purge.\n");
                /*
@@ -171,6 +174,7 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index, bool create)
       break;
    } /* end for loop */
    db_unlock(jcr->db);
+   Dmsg1(150, "return ok=%d find_next_vol\n", ok);
    return ok;
 }
 
@@ -321,13 +325,12 @@ void check_if_volume_valid_or_recyclable(JCR *jcr, MEDIA_DBR *mr, const char **r
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static bool get_scratch_volume(JCR *jcr, MEDIA_DBR *mr, bool InChanger)
+bool get_scratch_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
 {
-   MEDIA_DBR smr;
+   MEDIA_DBR smr;                        /* for searching scratch pool */
    POOL_DBR spr, pr;
    bool ok = false;
    bool found = false;
-   char ed1[50], ed2[50];
 
    /* Only one thread at a time can pull from the scratch pool */
    P(mutex);
@@ -368,45 +371,44 @@ static bool get_scratch_volume(JCR *jcr, MEDIA_DBR *mr, bool InChanger)
           * that we can add a Volume.
           */
          memset(&pr, 0, sizeof(pr));
-         bstrncpy(pr.Name, jcr->pool->hdr.name, sizeof(pr.Name));
+         bstrncpy(pr.Name, jcr->pool->name(), sizeof(pr.Name));
+
          if (!db_get_pool_record(jcr, jcr->db, &pr)) {
             Jmsg(jcr, M_WARNING, 0, _("Unable to get Pool record: ERR=%s"), 
                  db_strerror(jcr->db));
             goto bail_out;
          }
+         
+         /* Make sure there is room for another volume */
          if (pr.MaxVols > 0 && pr.NumVols >= pr.MaxVols) {
             Jmsg(jcr, M_WARNING, 0, _("Unable add Scratch Volume, Pool \"%s\" full MaxVols=%d\n"),
-               jcr->pool->hdr.name, pr.MaxVols);
+                 jcr->pool->name(), pr.MaxVols);
             goto bail_out;
          }
 
-         /* OK, now move Scratch Volume */
-         db_lock(jcr->db);
-         Mmsg(query, "UPDATE Media SET PoolId=%s WHERE MediaId=%s",
-              edit_int64(mr->PoolId, ed1),
-              edit_int64(smr.MediaId, ed2));
-         ok = db_sql_query(jcr->db, query.c_str(), NULL, NULL);  
-         db_unlock(jcr->db);
-         if (!ok) {
-            Jmsg(jcr, M_WARNING, 0, _("Failed to move Scratch Volume. ERR=%s\n"),
-               db_strerror(jcr->db));
-           goto bail_out;
-          }
-         Jmsg(jcr, M_INFO, 0, _("Using Volume \"%s\" from 'Scratch' pool.\n"), 
-              smr.VolumeName);
-         /* Set new Pool Id in smr record, then copy it to mr */
-         smr.PoolId = mr->PoolId;
-         memcpy(mr, &smr, sizeof(MEDIA_DBR));
+         memcpy(mr, &smr, sizeof(MEDIA_DBR)); 
+
          /* Set default parameters from current pool */
          set_pool_dbr_defaults_in_media_dbr(mr, &pr);
-         /* set_pool_dbr_defaults_in_media_dbr set VolStatus to Append,
-          * we could have Recycled media */
+
+         /*
+          * set_pool_dbr_defaults_in_media_dbr set VolStatus to Append,
+          *   we could have Recycled media, also, we retain the old
+          *   RecyclePoolId.
+          */
          bstrncpy(mr->VolStatus, smr.VolStatus, sizeof(smr.VolStatus));
+         mr->RecyclePoolId = smr.RecyclePoolId;
+
          if (!db_update_media_record(jcr, jcr->db, mr)) {
-            Jmsg(jcr, M_WARNING, 0, _("Unable to update Volume record: ERR=%s"), 
+            Jmsg(jcr, M_WARNING, 0, _("Failed to move Scratch Volume. ERR=%s\n"),
                  db_strerror(jcr->db));
-            ok = false;
+            goto bail_out;
          }
+
+         Jmsg(jcr, M_INFO, 0, _("Using Volume \"%s\" from 'Scratch' pool.\n"), 
+              mr->VolumeName);
+         
+         ok = true;
       }
    }
 bail_out:

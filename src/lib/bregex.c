@@ -26,10 +26,13 @@
  * Peters, Guido van Rossum, Ka-Ping Yee, Sjoerd Mullender, and
  * probably one or two others that I'm forgetting.
  *
- * $Id: bregex.c 3670 2006-11-21 16:13:58Z kerns $   
+ * $Id: bregex.c 4992 2007-06-07 14:46:43Z kerns $   
  *
  * This file modified to work with Bacula and C++ by
  *    Kern Sibbald, April 2006
+ *
+ * This file modified to work with REG_ICASE and Bacula by
+ *    Eric Bollengier April 2007
  */
 /*
    Bacula® - The Network Backup Solution
@@ -40,8 +43,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -1099,7 +1102,7 @@ const char *re_compile_pattern(regex_t * bufp, unsigned char *regex)
    alloc = bufp->allocated;
    if (alloc == 0 || pattern == NULL) {
       alloc = 256;
-      pattern = (unsigned char *)malloc(alloc);
+      bufp->buffer = pattern = (unsigned char *)malloc(alloc);
       if (!pattern)
          goto out_of_memory;
    }
@@ -1459,12 +1462,38 @@ if (translate) \
 int regcomp(regex_t * bufp, const char *regex, int cflags)
 {
    memset(bufp, 0, sizeof(regex_t));
-   re_compile_pattern(bufp, (unsigned char *)regex);
+   bufp->cflags = cflags;
+   if (bufp->cflags & REG_ICASE) {
+      char *p, *lcase = bstrdup(regex);
+      for( p = lcase; *p ; p++) {
+	 *p = tolower(*p);
+      } 
+      re_compile_pattern(bufp, (unsigned char *)lcase);
+      bfree(lcase);
+   } else {
+      re_compile_pattern(bufp, (unsigned char *)regex);
+   }
    if (got_error) {
       return -1;
    }
    return 0;
 }
+
+void re_registers_to_regmatch(regexp_registers_t old_regs, 
+			      regmatch_t pmatch[], 
+			      size_t nmatch)
+{
+   size_t i=0;
+   
+   /* We have to set the last entry to -1 */
+   nmatch = nmatch - 1;
+   for (i=0; (i < nmatch) && (old_regs->start[i] > -1) ; i++) {
+      pmatch[i].rm_so = old_regs->start[i];
+      pmatch[i].rm_eo = old_regs->end[i];
+   }
+
+   pmatch[i].rm_eo = pmatch[i].rm_so = -1;
+} 
 
 int regexec(regex_t * preg, const char *string, size_t nmatch,
             regmatch_t pmatch[], int eflags)
@@ -1473,6 +1502,7 @@ int regexec(regex_t * preg, const char *string, size_t nmatch,
    int len = strlen(string);
    struct re_registers regs;
    stat = re_search(preg, (unsigned char *)string, len, 0, len, &regs);
+   re_registers_to_regmatch(&regs, pmatch, nmatch);
    /* stat is the start position in the string base 0 where       
     *  the pattern was found or negative if not found.
     */
@@ -1487,6 +1517,14 @@ size_t regerror(int errcode, regex_t * preg, char *errbuf, size_t errbuf_size)
 
 void regfree(regex_t * preg)
 {
+   if (preg->lcase) {
+      free_pool_memory(preg->lcase);
+      preg->lcase = NULL;
+   }
+   if (preg->buffer) {
+      free(preg->buffer);
+      preg->buffer = NULL;
+   }
 }
 
 int re_match(regex_t * bufp, unsigned char *string, int size, int pos,
@@ -1885,7 +1923,7 @@ int re_match(regex_t * bufp, unsigned char *string, int size, int pos,
 #undef PREFETCH
 #undef NEXTCHAR
 
-int re_search(regex_t * bufp, unsigned char *string, int size, int pos,
+int re_search(regex_t * bufp, unsigned char *str, int size, int pos,
               int range, regexp_registers_t regs)
 {
    unsigned char *fastmap;
@@ -1896,6 +1934,21 @@ int re_search(regex_t * bufp, unsigned char *string, int size, int pos,
    int dir;
    int ret;
    unsigned char anchor;
+   unsigned char *string = str;
+
+   if (bufp->cflags & REG_ICASE) { /* we must use string in lowercase */
+      int len = strlen((const char *)str);
+      if (!bufp->lcase) {
+	 bufp->lcase = get_pool_memory(PM_FNAME);
+      }
+      check_pool_memory_size(bufp->lcase, len+1);
+      unsigned char *dst = (unsigned char *)bufp->lcase;
+      while (*string) {
+	 *dst++ = tolower(*string++);
+      }
+      *dst = '\0';
+      string = (unsigned char *)bufp->lcase;
+   }
 
 // assert(size >= 0 && pos >= 0);
 // assert(pos + range >= 0 && pos + range <= size);     /* Bugfix by ylo */

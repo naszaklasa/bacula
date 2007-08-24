@@ -1,9 +1,4 @@
 /*
- * Protypes for stored -- Kern Sibbald MM  
- *
- *   Version $Id: protos.h 4183 2007-02-15 18:57:55Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
@@ -12,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,6 +25,11 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Protypes for stored -- Kern Sibbald MM  
+ *
+ *   Version $Id: protos.h 5112 2007-06-28 11:57:03Z kerns $
+ */
 
 /* From stored.c */
 uint32_t new_VolSessionId();
@@ -38,7 +38,7 @@ uint32_t new_VolSessionId();
 DCR     *acquire_device_for_append(DCR *dcr);
 bool     acquire_device_for_read(DCR *dcr);
 bool     release_device(DCR *dcr);
-DCR     *new_dcr(JCR *jcr, DEVICE *dev);
+DCR     *new_dcr(JCR *jcr, DCR *dcr, DEVICE *dev);
 void     free_dcr(DCR *dcr);
 void     detach_dcr_from_dev(DCR *dcr);
 
@@ -126,17 +126,9 @@ void    dvd_remove_empty_part(DCR *dcr);
 bool     open_device(DCR *dcr);
 bool     first_open_device(DCR *dcr);
 bool     fixup_device_block_write_error(DCR *dcr);
-void     _lock_device(const char *file, int line, DEVICE *dev);
-void     _unlock_device(const char *file, int line, DEVICE *dev);
-void     _block_device(const char *file, int line, DEVICE *dev, int state);
-void     _unblock_device(const char *file, int line, DEVICE *dev);
-void     _steal_device_lock(const char *file, int line, DEVICE *dev, bsteal_lock_t *hold, int state);
-void     _give_back_device_lock(const char *file, int line, DEVICE *dev, bsteal_lock_t *hold);
 void     set_new_volume_parameters(DCR *dcr);
 void     set_new_file_parameters(DCR *dcr);
 bool     is_device_unmounted(DEVICE *dev);
-void     dev_lock(DEVICE *dev);
-void     dev_unlock(DEVICE *dev);
 
 /* From dircmd.c */
 void     *handle_connection_request(void *arg);
@@ -171,6 +163,15 @@ void     dump_volume_label(DEVICE *dev);
 void     dump_label_record(DEVICE *dev, DEV_RECORD *rec, int verbose);
 bool     unser_volume_label(DEVICE *dev, DEV_RECORD *rec);
 bool     unser_session_label(SESSION_LABEL *label, DEV_RECORD *rec);
+
+/* From locks.c */
+void     _lock_device(const char *file, int line, DEVICE *dev);
+void     _unlock_device(const char *file, int line, DEVICE *dev);
+void     _block_device(const char *file, int line, DEVICE *dev, int state);
+void     _unblock_device(const char *file, int line, DEVICE *dev);
+void     _steal_device_lock(const char *file, int line, DEVICE *dev, bsteal_lock_t *hold, int state);
+void     _give_back_device_lock(const char *file, int line, DEVICE *dev, bsteal_lock_t *hold);
+
 
 /* From match_bsr.c */
 int      match_bsr(BSR *bsr, DEV_RECORD *rec, VOLUME_LABEL *volrec,
@@ -212,13 +213,16 @@ bool read_records(DCR *dcr,
 /* From reserve.c */
 void    init_reservations_lock();
 void    term_reservations_lock();
-void    lock_reservations();
-void    unlock_reservations();
+void    _lock_reservations();
+void    _unlock_reservations();
+void    _lock_volumes();
+void    _unlock_volumes();
 void    release_volume(DCR *dcr);
-VOLRES *new_volume(DCR *dcr, const char *VolumeName);
+VOLRES *reserve_volume(DCR *dcr, const char *VolumeName);
 VOLRES *find_volume(const char *VolumeName);
 bool    free_volume(DEVICE *dev);
-void    free_unused_volume(DCR *dcr);
+void    unreserve_device(DCR *dcr);
+bool    volume_unused(DCR *dcr);
 void    create_volume_list();
 void    free_volume_list();
 void    list_volumes(void sendit(const char *msg, int len, void *sarg), void *arg);
@@ -226,7 +230,51 @@ bool    is_volume_in_use(DCR *dcr);
 void    send_drive_reserve_messages(JCR *jcr, void sendit(const char *msg, int len, void *sarg), void *arg);
 bool    find_suitable_device_for_job(JCR *jcr, RCTX &rctx);
 int     search_res_for_device(RCTX &rctx);
-void    release_msgs(JCR *jcr);
+void    release_reserve_messages(JCR *jcr);
+
+extern int reservations_lock_count;
+extern int vol_list_lock_count;
+
+#ifdef  SD_DEBUG_LOCK
+
+#define lock_reservations() \
+         do { Dmsg4(sd_dbglvl, "lock_reservations at %s:%d precnt=%d JobId=%u\n", \
+              __FILE__, __LINE__, \
+              reservations_lock_count, get_jobid_from_tid(pthread_self())); \
+              _lock_reservations(); \
+              Dmsg1(sd_dbglvl, "lock_reservations: got lock JobId=%u\n", \
+               get_jobid_from_tid(pthread_self())); \
+         } while (0)
+#define unlock_reservations() \
+         do { Dmsg4(sd_dbglvl, "unlock_reservations at %s:%d precnt=%d JobId=%u\n", \
+              __FILE__, __LINE__, \
+              reservations_lock_count, get_jobid_from_tid(pthread_self())); \
+                   _unlock_reservations(); } while (0)
+
+#define lock_volumes() \
+         do { Dmsg4(sd_dbglvl, "lock_volumes at %s:%d precnt=%d JobId=%u\n", \
+              __FILE__, __LINE__, \
+              vol_list_lock_count, get_jobid_from_tid(pthread_self())); \
+              _lock_volumes(); \
+              Dmsg1(sd_dbglvl, "lock_volumes: got lock JobId=%u\n", \
+               get_jobid_from_tid(pthread_self())); \
+         } while (0)
+
+#define unlock_volumes() \
+         do { Dmsg4(sd_dbglvl, "unlock_volumes at %s:%d precnt=%d JobId=%u\n", \
+              __FILE__, __LINE__, \
+              vol_list_lock_count, get_jobid_from_tid(pthread_self())); \
+                   _unlock_volumes(); } while (0)
+
+#else
+
+#define lock_reservations() _lock_reservations()
+#define unlock_reservations() _unlock_reservations()
+#define lock_volumes() _lock_volumes()
+#define unlock_volumes() _unlock_volumes()
+
+#endif
+
 
 
 /* From spool.c */
@@ -242,4 +290,4 @@ void    list_spool_stats          (void sendit(const char *msg, int len, void *s
 
 /* From wait.c */
 int wait_for_sysop(DCR *dcr);
-bool wait_for_device(JCR *jcr, bool first);
+bool wait_for_device(JCR *jcr, int &retries);

@@ -1,20 +1,14 @@
 /*
- * General header file configurations that apply to
- * all daemons.  System dependent stuff goes here.
- *
- *   Version $Id: baconfig.h 3812 2006-12-17 13:36:35Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,6 +25,12 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * General header file configurations that apply to
+ * all daemons.  System dependent stuff goes here.
+ *
+ *   Version $Id: baconfig.h 5077 2007-06-24 17:27:12Z kerns $
+ */
 
 
 #ifndef _BACONFIG_H
@@ -83,6 +83,8 @@ void InitWinAPIWrapper();
 
 #define  OSDependentInit()    InitWinAPIWrapper()
 
+#define sbrk(x)  0
+
 
 #if defined(BUILDING_DLL)
 #  define DLL_IMP_EXP   _declspec(dllexport)
@@ -106,8 +108,8 @@ void InitWinAPIWrapper();
 #define  OSDependentInit()
 #define  tape_open            open
 #define  tape_ioctl           ioctl
-#define  tape_read            read
-#define  tape_write           write
+#define  tape_read            ::read
+#define  tape_write           ::write
 #define  tape_close           ::close
 
 #endif
@@ -265,12 +267,13 @@ void InitWinAPIWrapper();
 #define FT_NOOPEN    15               /* Could not open directory */
 #define FT_RAW       16               /* Raw block device */
 #define FT_FIFO      17               /* Raw fifo device */
-/* This directory packet is sent to the FD file processing routine so
+/* The DIRBEGIN packet is sent to the FD file processing routine so
  * that it can filter packets, but otherwise, it is not used
  * or saved */
 #define FT_DIRBEGIN  18               /* Directory at beginning (not saved) */
 #define FT_INVALIDFS 19               /* File system not allowed for */
 #define FT_INVALIDDT 20               /* Drive type not allowed for */
+#define FT_REPARSE   21               /* Win NTFS reparse point */
 
 /* Definitions for upper part of type word (see above). */
 #define AR_DATA_STREAM (1<<16)        /* Data stream id present */
@@ -635,12 +638,14 @@ extern "C" int mknod ( const char *path, int mode, dev_t device );
 
 #if defined(HAVE_WIN32)
 #define DEFAULT_CONFIGDIR "C:\\Documents and Settings\\All Users\\Application Data\\Bacula"
+#define PathSeparator '\\'
 
 inline bool IsPathSeparator(int ch) { return ch == '/' || ch == '\\'; }
 inline char *first_path_separator(char *path) { return strpbrk(path, "/\\"); }
 inline const char *first_path_separator(const char *path) { return strpbrk(path, "/\\"); }
 
 #else
+#define PathSeparator '/'
 /* Define Winsock functions if we aren't on Windows */
 
 #define WSA_Init() 0 /* 0 = success */

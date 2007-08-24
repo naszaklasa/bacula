@@ -2,4 +2,6 @@
 #
 # This script deletes a catalog dump
 #
-rm -f @working_dir@/bacula.sql
+db_name=@db_name@
+
+rm -f @working_dir@/${db_name}.sql

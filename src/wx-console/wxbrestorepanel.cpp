@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, April-July 2004
  *
- *    Version $Id: wxbrestorepanel.cpp 3774 2006-12-08 14:27:10Z kerns $
+ *    Version $Id: wxbrestorepanel.cpp 5240 2007-07-25 21:13:54Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -15,8 +15,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -80,6 +80,7 @@ Select parameter to modify (1-11):
 #include "unmarked.xpm"
 #include "marked.xpm"
 #include "partmarked.xpm"
+#include <wx/imaglist.h>
 #include <wx/listimpl.cpp>
 
 /* A macro named Yield is defined under MinGW */
@@ -728,7 +729,7 @@ void wxbRestorePanel::CmdStart()
             }
             
             int res = ::wxGetSingleChoiceIndex(message,
-               _("wx-console: unexpected restore question."), n, choices, this);
+               _("bwx-console: unexpected restore question."), n, choices, this);
             if (res == -1) {
                delete promptparser;
                promptparser = wxbUtils::WaitForPrompt(wxT(".\n"), true);
@@ -750,7 +751,7 @@ void wxbRestorePanel::CmdStart()
             delete promptparser;
             
             promptparser = wxbUtils::WaitForPrompt(::wxGetTextFromUser(message,
-               _("wx-console: unexpected restore question."),
+               _("bwx-console: unexpected restore question."),
                wxT(""), this) + wxT("\n"));
          }
       }
@@ -807,9 +808,9 @@ void wxbRestorePanel::CmdStart()
       int j;
             
       for (i = 0; i < dt->GetCount(); i++) {
-         if ((j = (*dt)[i].Find(_("Job started. JobId="))) > -1) {
+         if ((j = (*dt)[i].Find(_("Job queued. JobId="))) > -1) {
             jobid = (*dt)[i].Mid(j+19);
-            wxbMainFrame::GetInstance()->SetStatusText(_("Restore started, jobid=") + jobid);
+            wxbMainFrame::GetInstance()->SetStatusText(_("Restore queued, jobid=") + jobid);
             break;
          }
 
@@ -848,8 +849,8 @@ void wxbRestorePanel::CmdStart()
       }
 
       if (scheduledtime.Subtract(currenttime).IsLongerThan(wxTimeSpan::Seconds(150))) {
-         wxbMainFrame::GetInstance()->Print(_("Restore is scheduled in more than two minutes, wx-console will not wait for its completion.\n"), CS_DEBUG);
-         wxbMainFrame::GetInstance()->SetStatusText(_("Restore is scheduled in more than two minutes, wx-console will not wait for its completion."));
+         wxbMainFrame::GetInstance()->Print(_("Restore is scheduled in more than two minutes, bwx-console will not wait for its completion.\n"), CS_DEBUG);
+         wxbMainFrame::GetInstance()->SetStatusText(_("Restore is scheduled in more than two minutes, bwx-console will not wait for its completion."));
          SetStatus(finished);
          return;
       }
@@ -988,8 +989,8 @@ void wxbRestorePanel::CmdStart()
          }
          
          if ((!waitforever) && (sw.Time() > 60000)) {
-            wxbMainFrame::GetInstance()->Print(_("The restore job has not been started within one minute, wx-console will not wait for its completion anymore.\n"), CS_DEBUG);
-            wxbMainFrame::GetInstance()->SetStatusText(_("The restore job has not been started within one minute, wx-console will not wait for its completion anymore."));
+            wxbMainFrame::GetInstance()->Print(_("The restore job has not been started within one minute, bwx-console will not wait for its completion anymore.\n"), CS_DEBUG);
+            wxbMainFrame::GetInstance()->SetStatusText(_("The restore job has not been started within one minute, bwx-console will not wait for its completion anymore."));
             break;
          }
       }
@@ -1888,6 +1889,7 @@ bool wxbRestorePanel::UpdateSecondConfig(wxbDataTokenizer* dt) {
    restorePanel->SetRowString(_("Storage"), (*dt)[i].Mid(10).Trim(false).RemoveLast());
    if ((k = (*dt)[++i].Find(_("When:"))) != 0) return false;
    restorePanel->SetRowString(_("When"), (*dt)[i].Mid(10).Trim(false).RemoveLast());
+   i++;        /* Skip catalog field */
    if ((k = (*dt)[++i].Find(_("Priority:"))) != 0) return false;
    restorePanel->SetRowString(_("Priority"), (*dt)[i].Mid(10).Trim(false).RemoveLast());
    cfgUpdated = 0;

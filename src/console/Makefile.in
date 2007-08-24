@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in 3474 2006-09-15 21:38:33Z kerns $
+#  Version $Id: Makefile.in 4914 2007-05-27 09:34:40Z kerns $
 #
 @MCOMMON@
 
@@ -28,9 +28,6 @@ EXTRAOBJS = @OBJLIST@
 
 GETTEXT_LIBS = @LIBINTL@
 
-OPENSSL_INC = @OPENSSL_INC@
-OPENSSL_LIBS = @OPENSSL_LIBS@
-
 CONS_INC=@CONS_INC@
 CONS_LIBS=@CONS_LIBS@
 CONS_LDFLAGS=@CONS_LDFLAGS@
@@ -42,7 +39,7 @@ CONS_LDFLAGS=@CONS_LDFLAGS@
 # inference rules
 .c.o:
 	@echo "Compiling $<"
-	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile bconsole @STATIC_CONS@
 	@echo "==== Make of console is good ===="

@@ -1,14 +1,4 @@
 /*
- *
- *  Program to check a Bacula database for consistency and to
- *   make repairs
- *
- *   Kern E. Sibbald, August 2002
- *
- *   Version $Id: dbcheck.c 4183 2007-02-15 18:57:55Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
@@ -17,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,6 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  Program to check a Bacula database for consistency and to
+ *   make repairs
+ *
+ *   Kern E. Sibbald, August 2002
+ *
+ *   Version $Id: dbcheck.c 4992 2007-06-07 14:46:43Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "cats/cats.h"
@@ -732,6 +732,8 @@ static void eliminate_orphaned_jobmedia_records()
       if (fix && id_list.num_ids > 0) {
          printf(_("Deleting %d orphaned JobMedia records.\n"), id_list.num_ids);
          delete_id_list("DELETE FROM JobMedia WHERE JobMediaId=%s", &id_list);
+      } else {
+         break;                       /* get out if not updating db */
       }
       if (!make_id_list(query, &id_list)) {
          exit(1);
@@ -773,6 +775,8 @@ static void eliminate_orphaned_file_records()
       if (fix && id_list.num_ids > 0) {
          printf(_("Deleting %d orphaned File records.\n"), id_list.num_ids);
          delete_id_list("DELETE FROM File WHERE FileId=%s", &id_list);
+      } else {
+         break;                       /* get out if not updating db */
       }
       if (!make_id_list(query, &id_list)) {
          exit(1);
@@ -810,6 +814,8 @@ static void eliminate_orphaned_path_records()
       if (fix && id_list.num_ids > 0) {
          printf(_("Deleting %d orphaned Path records.\n"), id_list.num_ids);
          delete_id_list("DELETE FROM Path WHERE PathId=%s", &id_list);
+      } else {
+         break;                       /* get out if not updating db */
       }
       if (!make_id_list(query, &id_list)) {
          exit(1);
@@ -847,6 +853,8 @@ static void eliminate_orphaned_filename_records()
       if (fix && id_list.num_ids > 0) {
          printf(_("Deleting %d orphaned Filename records.\n"), id_list.num_ids);
          delete_id_list("DELETE FROM Filename WHERE FilenameId=%s", &id_list);
+      } else {
+         break;                       /* get out if not updating db */
       }
       if (!make_id_list(query, &id_list)) {
          exit(1);

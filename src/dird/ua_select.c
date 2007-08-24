@@ -1,22 +1,14 @@
 /*
- *
- *   Bacula Director -- User Agent Prompt and Selection code
- *
- *     Kern Sibbald, October MMI
- *
- *   Version  $Id: ua_select.c 3842 2006-12-22 15:01:05Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- User Agent Prompt and Selection code
+ *
+ *     Kern Sibbald, October MMI
+ *
+ *   Version  $Id: ua_select.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -52,7 +52,7 @@ int confirm_retention(UAContext *ua, utime_t *ret, const char *msg)
    int yes_in_arg = find_arg(ua, NT_("yes"));
 
    for ( ;; ) {
-       bsendmsg(ua, _("The current %s retention period is: %s\n"),
+       ua->info_msg(_("The current %s retention period is: %s\n"),
           msg, edit_utime(*ret, ed1, sizeof(ed1)));
        if (yes_in_arg != -1) {
           return 1;
@@ -65,7 +65,7 @@ int confirm_retention(UAContext *ua, utime_t *ret, const char *msg)
              return 0;
           }
           if (!duration_to_utime(ua->cmd, ret)) {
-             bsendmsg(ua, _("Invalid period.\n"));
+             ua->error_msg(_("Invalid period.\n"));
              continue;
           }
           continue;
@@ -218,10 +218,10 @@ CAT *get_catalog_resource(UAContext *ua)
       catalog = (CAT *)GetNextRes(R_CATALOG, NULL);
       UnlockRes();
       if (!catalog) {
-         bsendmsg(ua, _("Could not find a Catalog resource\n"));
+         ua->error_msg(_("Could not find a Catalog resource\n"));
          return NULL;
       } else if (!acl_access_ok(ua, Catalog_ACL, catalog->name())) {
-         bsendmsg(ua, _("You must specify a \"use <catalog-name>\" command before continuing.\n"));
+         ua->error_msg(_("You must specify a \"use <catalog-name>\" command before continuing.\n"));
          return NULL;
       }
       return catalog;
@@ -335,7 +335,7 @@ CLIENT *get_client_resource(UAContext *ua)
          if (client) {
             return client;
          }
-         bsendmsg(ua, _("Error: Client resource %s does not exist.\n"), ua->argv[i]);
+         ua->error_msg(_("Error: Client resource %s does not exist.\n"), ua->argv[i]);
          break;
       }
    }
@@ -352,7 +352,7 @@ CLIENT *get_client_resource(UAContext *ua)
  *   returns: 0 on error
  *            1 on success and fills in CLIENT_DBR
  */
-int get_client_dbr(UAContext *ua, CLIENT_DBR *cr)
+bool get_client_dbr(UAContext *ua, CLIENT_DBR *cr)
 {
    int i;
 
@@ -360,7 +360,7 @@ int get_client_dbr(UAContext *ua, CLIENT_DBR *cr)
       if (db_get_client_record(ua->jcr, ua->db, cr)) {
          return 1;
       }
-      bsendmsg(ua, _("Could not find Client %s: ERR=%s"), cr->Name, db_strerror(ua->db));
+      ua->error_msg(_("Could not find Client %s: ERR=%s"), cr->Name, db_strerror(ua->db));
    }
    for (i=1; i<ua->argc; i++) {
       if ((strcasecmp(ua->argk[i], NT_("client")) == 0 ||
@@ -370,7 +370,7 @@ int get_client_dbr(UAContext *ua, CLIENT_DBR *cr)
          }
          bstrncpy(cr->Name, ua->argv[i], sizeof(cr->Name));
          if (!db_get_client_record(ua->jcr, ua->db, cr)) {
-            bsendmsg(ua, _("Could not find Client \"%s\": ERR=%s"), ua->argv[i],
+            ua->error_msg(_("Could not find Client \"%s\": ERR=%s"), ua->argv[i],
                      db_strerror(ua->db));
             cr->ClientId = 0;
             break;
@@ -389,7 +389,7 @@ int get_client_dbr(UAContext *ua, CLIENT_DBR *cr)
  *  Returns 1 on success
  *          0 on failure
  */
-int select_client_dbr(UAContext *ua, CLIENT_DBR *cr)
+bool select_client_dbr(UAContext *ua, CLIENT_DBR *cr)
 {
    CLIENT_DBR ocr;
    char name[MAX_NAME_LENGTH];
@@ -399,11 +399,11 @@ int select_client_dbr(UAContext *ua, CLIENT_DBR *cr)
 
    cr->ClientId = 0;
    if (!db_get_client_ids(ua->jcr, ua->db, &num_clients, &ids)) {
-      bsendmsg(ua, _("Error obtaining client ids. ERR=%s\n"), db_strerror(ua->db));
+      ua->error_msg(_("Error obtaining client ids. ERR=%s\n"), db_strerror(ua->db));
       return 0;
    }
    if (num_clients <= 0) {
-      bsendmsg(ua, _("No clients defined. You must run a job before using this command.\n"));
+      ua->error_msg(_("No clients defined. You must run a job before using this command.\n"));
       return 0;
    }
 
@@ -424,18 +424,18 @@ int select_client_dbr(UAContext *ua, CLIENT_DBR *cr)
    bstrncpy(ocr.Name, name, sizeof(ocr.Name));
 
    if (!db_get_client_record(ua->jcr, ua->db, &ocr)) {
-      bsendmsg(ua, _("Could not find Client \"%s\": ERR=%s"), name, db_strerror(ua->db));
+      ua->error_msg(_("Could not find Client \"%s\": ERR=%s"), name, db_strerror(ua->db));
       return 0;
    }
    memcpy(cr, &ocr, sizeof(ocr));
    return 1;
 }
 
-
-
 /* Scan what the user has entered looking for:
  *
- *  pool=<pool-name>
+ *  argk=<pool-name>
+ *
+ *  where argk can be : pool, recyclepool, scratchpool, nextpool etc..
  *
  *  if error or not found, put up a list of pool DBRs
  *  to choose from.
@@ -443,25 +443,26 @@ int select_client_dbr(UAContext *ua, CLIENT_DBR *cr)
  *   returns: false on error
  *            true  on success and fills in POOL_DBR
  */
-bool get_pool_dbr(UAContext *ua, POOL_DBR *pr)
+bool get_pool_dbr(UAContext *ua, POOL_DBR *pr, char *argk)
 {
    if (pr->Name[0]) {                 /* If name already supplied */
       if (db_get_pool_record(ua->jcr, ua->db, pr) &&
           acl_access_ok(ua, Pool_ACL, pr->Name)) {
          return true;
       }
-      bsendmsg(ua, _("Could not find Pool \"%s\": ERR=%s"), pr->Name, db_strerror(ua->db));
+      ua->error_msg(_("Could not find Pool \"%s\": ERR=%s"), pr->Name, db_strerror(ua->db));
    }
-   if (!select_pool_dbr(ua, pr)) {  /* try once more */
+   if (!select_pool_dbr(ua, pr, argk)) {  /* try once more */
       return false;
    }
    return true;
 }
 
 /*
- * Select a Pool record from the catalog
+ * Select a Pool record from catalog
+ * argk can be pool, recyclepool, scratchpool etc..
  */
-bool select_pool_dbr(UAContext *ua, POOL_DBR *pr)
+bool select_pool_dbr(UAContext *ua, POOL_DBR *pr, char *argk)
 {
    POOL_DBR opr;
    char name[MAX_NAME_LENGTH];
@@ -469,11 +470,11 @@ bool select_pool_dbr(UAContext *ua, POOL_DBR *pr)
    uint32_t *ids;
 
    for (i=1; i<ua->argc; i++) {
-      if (strcasecmp(ua->argk[i], NT_("pool")) == 0 && ua->argv[i] &&
+      if (strcasecmp(ua->argk[i], argk) == 0 && ua->argv[i] &&
           acl_access_ok(ua, Pool_ACL, ua->argv[i])) {
          bstrncpy(pr->Name, ua->argv[i], sizeof(pr->Name));
          if (!db_get_pool_record(ua->jcr, ua->db, pr)) {
-            bsendmsg(ua, _("Could not find Pool \"%s\": ERR=%s"), ua->argv[i],
+            ua->error_msg(_("Could not find Pool \"%s\": ERR=%s"), ua->argv[i],
                      db_strerror(ua->db));
             pr->PoolId = 0;
             break;
@@ -484,11 +485,11 @@ bool select_pool_dbr(UAContext *ua, POOL_DBR *pr)
 
    pr->PoolId = 0;
    if (!db_get_pool_ids(ua->jcr, ua->db, &num_pools, &ids)) {
-      bsendmsg(ua, _("Error obtaining pool ids. ERR=%s\n"), db_strerror(ua->db));
+      ua->error_msg(_("Error obtaining pool ids. ERR=%s\n"), db_strerror(ua->db));
       return 0;
    }
    if (num_pools <= 0) {
-      bsendmsg(ua, _("No pools defined. Use the \"create\" command to create one.\n"));
+      ua->error_msg(_("No pools defined. Use the \"create\" command to create one.\n"));
       return false;
    }
 
@@ -509,7 +510,7 @@ bool select_pool_dbr(UAContext *ua, POOL_DBR *pr)
    bstrncpy(opr.Name, name, sizeof(opr.Name));
 
    if (!db_get_pool_record(ua->jcr, ua->db, &opr)) {
-      bsendmsg(ua, _("Could not find Pool \"%s\": ERR=%s"), name, db_strerror(ua->db));
+      ua->error_msg(_("Could not find Pool \"%s\": ERR=%s"), name, db_strerror(ua->db));
       return false;
    }
    memcpy(pr, &opr, sizeof(opr));
@@ -528,11 +529,11 @@ int select_pool_and_media_dbr(UAContext *ua, POOL_DBR *pr, MEDIA_DBR *mr)
    memset(pr, 0, sizeof(POOL_DBR));
    pr->PoolId = mr->PoolId;
    if (!db_get_pool_record(ua->jcr, ua->db, pr)) {
-      bsendmsg(ua, "%s", db_strerror(ua->db));
+      ua->error_msg("%s", db_strerror(ua->db));
       return 0;
    }
    if (!acl_access_ok(ua, Pool_ACL, pr->Name)) {
-      bsendmsg(ua, _("No access to Pool \"%s\"\n"), pr->Name);
+      ua->error_msg(_("No access to Pool \"%s\"\n"), pr->Name);
       return 0;
    }
    return 1;
@@ -569,7 +570,7 @@ int select_media_dbr(UAContext *ua, MEDIA_DBR *mr)
    }
 
    if (!db_get_media_record(ua->jcr, ua->db, mr)) {
-      bsendmsg(ua, "%s", db_strerror(ua->db));
+      ua->error_msg("%s", db_strerror(ua->db));
       return 0;
    }
    return 1;
@@ -616,7 +617,7 @@ POOL *get_pool_resource(UAContext *ua)
       if (pool) {
          return pool;
       }
-      bsendmsg(ua, _("Error: Pool resource \"%s\" does not exist.\n"), ua->argv[i]);
+      ua->error_msg(_("Error: Pool resource \"%s\" does not exist.\n"), ua->argv[i]);
    }
    return select_pool_resource(ua);
 }
@@ -632,7 +633,7 @@ int select_job_dbr(UAContext *ua, JOB_DBR *jr)
    }
    jr->JobId = ua->int64_val;
    if (!db_get_job_record(ua->jcr, ua->db, jr)) {
-      bsendmsg(ua, "%s", db_strerror(ua->db));
+      ua->error_msg("%s", db_strerror(ua->db));
       return 0;
    }
    return jr->JobId;
@@ -665,7 +666,7 @@ int get_job_dbr(UAContext *ua, JOB_DBR *jr)
          continue;
       }
       if (!db_get_job_record(ua->jcr, ua->db, jr)) {
-         bsendmsg(ua, _("Could not find Job \"%s\": ERR=%s"), ua->argv[i],
+         ua->error_msg(_("Could not find Job \"%s\": ERR=%s"), ua->argv[i],
                   db_strerror(ua->db));
          jr->JobId = 0;
          break;
@@ -730,10 +731,12 @@ void add_prompt(UAContext *ua, const char *prompt)
  *               is copied to prompt if not NULL
  *             prompt is set to the chosen prompt item string
  */
-int do_prompt(UAContext *ua, const char *automsg, const char *msg, char *prompt, int max_prompt)
+int do_prompt(UAContext *ua, const char *automsg, const char *msg, 
+              char *prompt, int max_prompt)
 {
    int i, item;
    char pmsg[MAXSTRING];
+   BSOCK *user = ua->UA_sock;
 
    if (prompt) {
       *prompt = 0;
@@ -743,32 +746,36 @@ int do_prompt(UAContext *ua, const char *automsg, const char *msg, char *prompt,
       if (prompt) {
          bstrncpy(prompt, ua->prompt[1], max_prompt);
       }
-      bsendmsg(ua, _("Automatically selected %s: %s\n"), automsg, ua->prompt[1]);
+      ua->send_msg(_("Automatically selected %s: %s\n"), automsg, ua->prompt[1]);
       goto done;
    }
    /* If running non-interactive, bail out */
    if (ua->batch) {
-      bsendmsg(ua, _("Cannot select %s in batch mode.\n"), automsg);
+      ua->send_msg(_("Cannot select %s in batch mode.\n"), automsg);
       item = -1;
       goto done;
    }
-// bnet_sig(ua->UA_sock, BNET_START_SELECT);
-   bsendmsg(ua, ua->prompt[0]);
+   if (ua->api) user->signal(BNET_START_SELECT);
+   ua->send_msg(ua->prompt[0]);
    for (i=1; i < ua->num_prompts; i++) {
-      bsendmsg(ua, "%6d: %s\n", i, ua->prompt[i]);
+      if (ua->api) {
+         ua->send_msg("%s", ua->prompt[i]);
+      } else {
+         ua->send_msg("%6d: %s\n", i, ua->prompt[i]);
+      }
    }
-// bnet_sig(ua->UA_sock, BNET_END_SELECT);
+   if (ua->api) user->signal(BNET_END_SELECT);
 
    for ( ;; ) {
       /* First item is the prompt string, not the items */
       if (ua->num_prompts == 1) {
-         bsendmsg(ua, _("Selection list for \"%s\" is empty!\n"), automsg);
+         ua->error_msg(_("Selection list for \"%s\" is empty!\n"), automsg);
          item = -1;                    /* list is empty ! */
          break;
       }
       if (ua->num_prompts == 2) {
          item = 1;
-         bsendmsg(ua, _("Item 1 selected automatically.\n"));
+         ua->send_msg(_("Automatically selected: %s\n"), ua->prompt[1]);
          if (prompt) {
             bstrncpy(prompt, ua->prompt[1], max_prompt);
          }
@@ -777,14 +784,15 @@ int do_prompt(UAContext *ua, const char *automsg, const char *msg, char *prompt,
          sprintf(pmsg, "%s (1-%d): ", msg, ua->num_prompts-1);
       }
       /* Either a . or an @ will get you out of the loop */
+      if (ua->api) user->signal(BNET_SELECT_INPUT);
       if (!get_pint(ua, pmsg)) {
          item = -1;                   /* error */
-         bsendmsg(ua, _("Selection aborted, nothing done.\n"));
+         ua->info_msg(_("Selection aborted, nothing done.\n"));
          break;
       }
       item = ua->pint32_val;
       if (item < 1 || item >= ua->num_prompts) {
-         bsendmsg(ua, _("Please enter a number between 1 and %d\n"), ua->num_prompts-1);
+         ua->warning_msg(_("Please enter a number between 1 and %d\n"), ua->num_prompts-1);
          continue;
       }
       if (prompt) {
@@ -833,7 +841,7 @@ STORE *get_storage_resource(UAContext *ua, bool use_default)
          }
          /* Default argument is storage */
          if (store_name) {
-            bsendmsg(ua, _("Storage name given twice.\n"));
+            ua->error_msg(_("Storage name given twice.\n"));
             return NULL;
          }
          store_name = ua->argk[i];
@@ -850,11 +858,11 @@ STORE *get_storage_resource(UAContext *ua, bool use_default)
          } else if (strcasecmp(ua->argk[i], NT_("jobid")) == 0) {
             jobid = str_to_int64(ua->argv[i]);
             if (jobid <= 0) {
-               bsendmsg(ua, _("Expecting jobid=nn command, got: %s\n"), ua->argk[i]);
+               ua->error_msg(_("Expecting jobid=nn command, got: %s\n"), ua->argk[i]);
                return NULL;
             }
             if (!(jcr=get_jcr_by_id(jobid))) {
-               bsendmsg(ua, _("JobId %s is not running.\n"), edit_int64(jobid, ed1));
+               ua->error_msg(_("JobId %s is not running.\n"), edit_int64(jobid, ed1));
                return NULL;
             }
             store = jcr->wstore;
@@ -864,11 +872,11 @@ STORE *get_storage_resource(UAContext *ua, bool use_default)
          } else if (strcasecmp(ua->argk[i], NT_("job")) == 0 ||
                     strcasecmp(ua->argk[i], NT_("jobname")) == 0) {
             if (!ua->argv[i]) {
-               bsendmsg(ua, _("Expecting job=xxx, got: %s.\n"), ua->argk[i]);
+               ua->error_msg(_("Expecting job=xxx, got: %s.\n"), ua->argk[i]);
                return NULL;
             }
             if (!(jcr=get_jcr_by_partial_name(ua->argv[i]))) {
-               bsendmsg(ua, _("Job \"%s\" is not running.\n"), ua->argv[i]);
+               ua->error_msg(_("Job \"%s\" is not running.\n"), ua->argv[i]);
                return NULL;
             }
             store = jcr->wstore;
@@ -876,11 +884,11 @@ STORE *get_storage_resource(UAContext *ua, bool use_default)
             break;
          } else if (strcasecmp(ua->argk[i], NT_("ujobid")) == 0) {
             if (!ua->argv[i]) {
-               bsendmsg(ua, _("Expecting ujobid=xxx, got: %s.\n"), ua->argk[i]);
+               ua->error_msg(_("Expecting ujobid=xxx, got: %s.\n"), ua->argk[i]);
                return NULL;
             }
             if (!(jcr=get_jcr_by_full_name(ua->argv[i]))) {
-               bsendmsg(ua, _("Job \"%s\" is not running.\n"), ua->argv[i]);
+               ua->error_msg(_("Job \"%s\" is not running.\n"), ua->argv[i]);
                return NULL;
             }
             store = jcr->wstore;
@@ -896,7 +904,7 @@ STORE *get_storage_resource(UAContext *ua, bool use_default)
    if (!store && store_name && store_name[0] != 0) {
       store = (STORE *)GetResWithName(R_STORAGE, store_name);
       if (!store) {
-         bsendmsg(ua, _("Storage resource \"%s\": not found\n"), store_name);
+         ua->error_msg(_("Storage resource \"%s\": not found\n"), store_name);
       }
    }
    if (store && !acl_access_ok(ua, Storage_ACL, store->name())) {

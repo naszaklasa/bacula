@@ -7,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, November MM
  *
- *   Version $Id: create_file.c 4213 2007-02-19 18:00:26Z kerns $
+ *   Version $Id: create_file.c 5077 2007-06-24 17:27:12Z kerns $
  *
  */
 
@@ -78,6 +78,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
    bool exists = false;
    struct stat mstatp;
 
+   bfd->reparse_point = false;
    if (is_win32_stream(attr->data_stream)) {
       set_win32_backup(bfd);
    } else {
@@ -95,7 +96,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
       // eliminate invalid windows filename characters from foreign filenames
       char *ch = (char *)attr->ofname;
       if (ch[0] != 0 && ch[1] != 0) {
-         ch+=2;
+         ch += 2;
          while (*ch) {
             switch (*ch) {
             case ':':
@@ -155,10 +156,11 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
        */
       if (exists && attr->type != FT_RAW && attr->type != FT_FIFO) {
          /* Get rid of old copy */
+         Dmsg1(400, "unlink %s\n", attr->ofname);
          if (unlink(attr->ofname) == -1) {
             berrno be;
             Qmsg(jcr, M_ERROR, 0, _("File %s already exists and could not be replaced. ERR=%s.\n"),
-               attr->ofname, be.strerror());
+               attr->ofname, be.bstrerror());
             /* Continue despite error */
          }
       }
@@ -183,7 +185,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
          attr->ofname[pnl] = 0;                 /* terminate path */
 
          if (!path_already_seen(jcr, attr->ofname, pnl)) {
-            Dmsg1(100, "Make path %s\n", attr->ofname);
+            Dmsg1(400, "Make path %s\n", attr->ofname);
             /*
              * If we need to make the directory, ensure that it is with
              * execute bit set (i.e. parent_mode), and preserve what already
@@ -218,7 +220,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
             berrno be;
             be.set_errno(bfd->berrno);
             Qmsg2(jcr, M_ERROR, 0, _("Could not create %s: ERR=%s\n"),
-                  attr->ofname, be.strerror());
+                  attr->ofname, be.bstrerror());
             return CF_ERROR;
          }
          return CF_EXTRACT;
@@ -228,31 +230,45 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
       case FT_FIFO:                   /* Bacula fifo to save data */
       case FT_SPEC:
          if (S_ISFIFO(attr->statp.st_mode)) {
-            Dmsg1(200, "Restore fifo: %s\n", attr->ofname);
+            Dmsg1(400, "Restore fifo: %s\n", attr->ofname);
             if (mkfifo(attr->ofname, attr->statp.st_mode) != 0 && errno != EEXIST) {
                berrno be;
                Qmsg2(jcr, M_ERROR, 0, _("Cannot make fifo %s: ERR=%s\n"),
-                     attr->ofname, be.strerror());
+                     attr->ofname, be.bstrerror());
                return CF_ERROR;
             }
          } else if (S_ISSOCK(attr->statp.st_mode)) {
              Dmsg1(200, "Skipping restore of socket: %s\n", attr->ofname);
+#ifdef S_IFDOOR     // Solaris high speed RPC mechanism
+         } else if (S_ISDOOR(attr->statp.st_mode)) {
+             Dmsg1(200, "Skipping restore of door file: %s\n", attr->ofname);
+#endif
+#ifdef S_IFPORT     // Solaris event port for handling AIO
+         } else if (S_ISPORT(attr->statp.st_mode)) {
+             Dmsg1(200, "Skipping restore of event port file: %s\n", attr->ofname);
+#endif
          } else {
-            Dmsg1(200, "Restore node: %s\n", attr->ofname);
+            Dmsg1(400, "Restore node: %s\n", attr->ofname);
             if (mknod(attr->ofname, attr->statp.st_mode, attr->statp.st_rdev) != 0 && errno != EEXIST) {
                berrno be;
                Qmsg2(jcr, M_ERROR, 0, _("Cannot make node %s: ERR=%s\n"),
-                     attr->ofname, be.strerror());
+                     attr->ofname, be.bstrerror());
                return CF_ERROR;
             }
          }
+         /*
+          * Here we are going to attempt to restore to a FIFO, which
+          *   means that the FIFO must already exist, AND there must
+          *   be some process already attempting to read from the
+          *   FIFO, so we open it write-only. 
+          */
          if (attr->type == FT_RAW || attr->type == FT_FIFO) {
             btimer_t *tid;
-            Dmsg1(200, "FT_RAW|FT_FIFO %s\n", attr->ofname);
+            Dmsg1(400, "FT_RAW|FT_FIFO %s\n", attr->ofname);
             mode =  O_WRONLY | O_BINARY;
             /* Timeout open() in 60 seconds */
             if (attr->type == FT_FIFO) {
-               Dmsg0(200, "Set FIFO timer\n");
+               Dmsg0(400, "Set FIFO timer\n");
                tid = start_thread_timer(pthread_self(), 60);
             } else {
                tid = NULL;
@@ -260,19 +276,20 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
             if (is_bopen(bfd)) {
                Qmsg1(jcr, M_ERROR, 0, _("bpkt already open fid=%d\n"), bfd->fid);
             }
-            Dmsg2(200, "open %s mode=0x%x\n", attr->ofname, mode);
+            Dmsg2(400, "open %s mode=0x%x\n", attr->ofname, mode);
             if ((bopen(bfd, attr->ofname, mode, 0)) < 0) {
                berrno be;
                be.set_errno(bfd->berrno);
                Qmsg2(jcr, M_ERROR, 0, _("Could not open %s: ERR=%s\n"),
-                     attr->ofname, be.strerror());
+                     attr->ofname, be.bstrerror());
+               Dmsg2(400, "Could not open %s: ERR=%s\n", attr->ofname, be.bstrerror());
                stop_thread_timer(tid);
                return CF_ERROR;
             }
             stop_thread_timer(tid);
             return CF_EXTRACT;
          }
-         Dmsg1(200, "FT_SPEC %s\n", attr->ofname);
+         Dmsg1(400, "FT_SPEC %s\n", attr->ofname);
          return CF_CREATED;
 
       case FT_LNK:
@@ -280,7 +297,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
          if (symlink(attr->olname, attr->ofname) != 0 && errno != EEXIST) {
             berrno be;
             Qmsg3(jcr, M_ERROR, 0, _("Could not symlink %s -> %s: ERR=%s\n"),
-                  attr->ofname, attr->olname, be.strerror());
+                  attr->ofname, attr->olname, be.bstrerror());
             return CF_ERROR;
          }
          return CF_CREATED;
@@ -305,26 +322,26 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
                      /* restore original file flags even when linking failed */
                      if (chflags(attr->olname, s.st_flags) < 0) {
                         Qmsg2(jcr, M_ERROR, 0, _("Could not restore file flags for file %s: ERR=%s\n"),
-                              attr->olname, be.strerror());
+                              attr->olname, be.bstrerror());
                      }
 #endif /* HAVE_CHFLAGS */
             Qmsg3(jcr, M_ERROR, 0, _("Could not hard link %s -> %s: ERR=%s\n"),
-                  attr->ofname, attr->olname, be.strerror());
+                  attr->ofname, attr->olname, be.bstrerror());
             return CF_ERROR;
 #ifdef HAVE_CHFLAGS
                   }
                   /* finally restore original file flags */
                   if (chflags(attr->olname, s.st_flags) < 0) {
                      Qmsg2(jcr, M_ERROR, 0, _("Could not restore file flags for file %s: ERR=%s\n"),
-                            attr->olname, be.strerror());
+                            attr->olname, be.bstrerror());
                   }
                } else {
                  Qmsg2(jcr, M_ERROR, 0, _("Could not reset file flags for file %s: ERR=%s\n"),
-                       attr->olname, be.strerror());
+                       attr->olname, be.bstrerror());
                }
             } else {
               Qmsg3(jcr, M_ERROR, 0, _("Could not hard link %s -> %s: ERR=%s\n"),
-                    attr->ofname, attr->olname, be.strerror());
+                    attr->ofname, attr->olname, be.bstrerror());
               return CF_ERROR;
             }
 #endif /* HAVE_CHFLAGS */
@@ -334,6 +351,9 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
 #endif
       } /* End inner switch */
 
+   case FT_REPARSE:
+      bfd->reparse_point = true;
+      /* Fall through wanted */
    case FT_DIRBEGIN:
    case FT_DIREND:
       Dmsg2(200, "Make dir mode=%o dir=%s\n", new_mode, attr->ofname);
@@ -361,7 +381,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
             }
 #endif
             Qmsg2(jcr, M_ERROR, 0, _("Could not open %s: ERR=%s\n"),
-                  attr->ofname, be.strerror());
+                  attr->ofname, be.bstrerror());
             return CF_ERROR;
          }
          return CF_EXTRACT;

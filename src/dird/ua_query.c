@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, December MMI
  *
- *   Version $Id: ua_query.c 3844 2006-12-23 16:33:53Z kerns $
+ *   Version $Id: ua_query.c 4992 2007-06-07 14:46:43Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -15,8 +15,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -69,7 +69,7 @@ int querycmd(UAContext *ua, const char *cmd)
       goto bail_out;
    }
    if ((fd=fopen(query_file, "rb")) == NULL) {
-      bsendmsg(ua, _("Could not open %s: ERR=%s\n"), query_file,
+      ua->error_msg(_("Could not open %s: ERR=%s\n"), query_file,
          strerror(errno));
       goto bail_out;
    }
@@ -95,7 +95,7 @@ int querycmd(UAContext *ua, const char *cmd)
       }
    }
    if (i != item) {
-      bsendmsg(ua, _("Could not find query.\n"));
+      ua->error_msg(_("Could not find query.\n"));
       goto bail_out;
    }
    query[0] = 0;
@@ -113,7 +113,7 @@ int querycmd(UAContext *ua, const char *cmd)
       len = strlen(line);
       if (line[0] == '*') {            /* prompt */
          if (nprompt >= 9) {
-            bsendmsg(ua, _("Too many prompts in query, max is 9.\n"));
+            ua->error_msg(_("Too many prompts in query, max is 9.\n"));
          } else {
             line[len++] = ' ';
             line[len] = 0;
@@ -135,7 +135,7 @@ int querycmd(UAContext *ua, const char *cmd)
          if (query[0] == '!') {
             db_list_sql_query(ua->jcr, ua->db, query+1, prtit, ua, 0, VERT_LIST);
          } else if (!db_list_sql_query(ua->jcr, ua->db, query, prtit, ua, 1, HORZ_LIST)) {
-            bsendmsg(ua, "%s\n", query);
+            ua->send_msg("%s\n", query);
          }
          query[0] = 0;
       }
@@ -147,7 +147,7 @@ int querycmd(UAContext *ua, const char *cmd)
          if (query[0] == '!') {
             db_list_sql_query(ua->jcr, ua->db, query+1, prtit, ua, 0, VERT_LIST);
          } else if (!db_list_sql_query(ua->jcr, ua->db, query, prtit, ua, 1, HORZ_LIST)) {
-            bsendmsg(ua, "%s\n", query);
+            ua->error_msg("%s\n", query);
          }
    }
 
@@ -216,7 +216,7 @@ static POOLMEM *substitute_prompts(UAContext *ua,
                   *o++ = *p++;
                }
             } else {
-               bsendmsg(ua, _("Warning prompt %d missing.\n"), n+1);
+               ua->error_msg(_("Warning prompt %d missing.\n"), n+1);
             }
             q += 2;
             break;
@@ -252,17 +252,16 @@ static POOLMEM *substitute_prompts(UAContext *ua,
  */
 int sqlquerycmd(UAContext *ua, const char *cmd)
 {
-   POOLMEM *query = get_pool_memory(PM_MESSAGE);
+   POOL_MEM query(PM_MESSAGE);
    int len;
    const char *msg;
 
    if (!open_client_db(ua)) {
-      free_pool_memory(query);
       return 1;
    }
-   *query = 0;
+   *query.c_str() = 0;
 
-   bsendmsg(ua, _("Entering SQL query mode.\n"
+   ua->send_msg(_("Entering SQL query mode.\n"
 "Terminate each query with a semicolon.\n"
 "Terminate query mode with a blank line.\n"));
    msg = _("Enter SQL query: ");
@@ -272,22 +271,20 @@ int sqlquerycmd(UAContext *ua, const char *cmd)
       if (len == 0) {
          break;
       }
-      query = check_pool_memory_size(query, len + 1);
-      if (*query != 0) {
+      if (*query.c_str() != 0) {
          pm_strcat(query, " ");
       }
       pm_strcat(query, ua->cmd);
       if (ua->cmd[len-1] == ';') {
          ua->cmd[len-1] = 0;          /* zap ; */
          /* Submit query */
-         db_list_sql_query(ua->jcr, ua->db, query, prtit, ua, 1, HORZ_LIST);
-         *query = 0;                  /* start new query */
+         db_list_sql_query(ua->jcr, ua->db, query.c_str(), prtit, ua, 1, HORZ_LIST);
+         *query.c_str() = 0;         /* start new query */
          msg = _("Enter SQL query: ");
       } else {
          msg = _("Add to SQL query: ");
       }
    }
-   free_pool_memory(query);
-   bsendmsg(ua, _("End query mode.\n"));
+   ua->send_msg(_("End query mode.\n"));
    return 1;
 }

@@ -1,26 +1,14 @@
 /*
- *
- *   Bacula authentication. Provides authentication with
- *     File and Storage daemons.
- *
- *     Nicolas Boichat, August MMIV
- *
- *    This routine runs as a thread and must be thread reentrant.
- *
- *  Basic tasks done here:
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -37,6 +25,18 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula authentication. Provides authentication with
+ *     File and Storage daemons.
+ *
+ *     Nicolas Boichat, August MMIV
+ *
+ *    This routine runs as a thread and must be thread reentrant.
+ *
+ *  Basic tasks done here:
+ *
+ */
 
 #include "bacula.h"
 #include "tray-monitor.h"
@@ -80,7 +80,7 @@ int authenticate_director(JCR *jcr, MONITOR *mon, DIRRES *director)
 
    /* Timeout Hello after 5 mins */
    btimer_t *tid = start_bsock_timer(dir, 60 * 5);
-   bnet_fsend(dir, DIRhello, bashed_name);
+   dir->fsend(DIRhello, bashed_name);
 
    if (!cram_md5_respond(dir, password, &tls_remote_need, &compatible) ||
        !cram_md5_challenge(dir, password, tls_local_need, compatible)) {
@@ -92,10 +92,10 @@ int authenticate_director(JCR *jcr, MONITOR *mon, DIRRES *director)
    }
 
    Dmsg1(6, ">dird: %s", dir->msg);
-   if (bnet_recv(dir) <= 0) {
+   if (dir->recv() <= 0) {
       stop_bsock_timer(tid);
       Jmsg1(jcr, M_FATAL, 0, _("Bad response to Hello command: ERR=%s\n"),
-         bnet_strerror(dir));
+         dir->bstrerror());
       return 0;
    }
    Dmsg1(10, "<dird: %s", dir->msg);
@@ -104,7 +104,7 @@ int authenticate_director(JCR *jcr, MONITOR *mon, DIRRES *director)
       Jmsg0(jcr, M_FATAL, 0, _("Director rejected Hello command\n"));
       return 0;
    } else {
-      Jmsg0(jcr, M_FATAL, 0, dir->msg);
+      Jmsg0(jcr, M_INFO, 0, dir->msg);
    }
    return 1;
 }
@@ -127,7 +127,7 @@ int authenticate_storage_daemon(JCR *jcr, MONITOR *monitor, STORE* store)
    bash_spaces(dirname);
    /* Timeout Hello after 5 mins */
    btimer_t *tid = start_bsock_timer(sd, 60 * 5);
-   if (!bnet_fsend(sd, SDFDhello, dirname)) {
+   if (!sd->fsend(SDFDhello, dirname)) {
       stop_bsock_timer(tid);
       Jmsg(jcr, M_FATAL, 0, _("Error sending Hello to Storage daemon. ERR=%s\n"), bnet_strerror(sd));
       return 0;
@@ -140,10 +140,10 @@ int authenticate_storage_daemon(JCR *jcr, MONITOR *monitor, STORE* store)
       return 0;
    }
    Dmsg1(116, ">stored: %s", sd->msg);
-   if (bnet_recv(sd) <= 0) {
+   if (sd->recv() <= 0) {
       stop_bsock_timer(tid);
       Jmsg1(jcr, M_FATAL, 0, _("bdird<stored: bad response to Hello command: ERR=%s\n"),
-         bnet_strerror(sd));
+         sd->bstrerror());
       return 0;
    }
    Dmsg1(110, "<stored: %s", sd->msg);
@@ -173,7 +173,7 @@ int authenticate_file_daemon(JCR *jcr, MONITOR *monitor, CLIENT* client)
    bash_spaces(dirname);
    /* Timeout Hello after 5 mins */
    btimer_t *tid = start_bsock_timer(fd, 60 * 5);
-   if (!bnet_fsend(fd, SDFDhello, dirname)) {
+   if (!fd->fsend(SDFDhello, dirname)) {
       stop_bsock_timer(tid);
       Jmsg(jcr, M_FATAL, 0, _("Error sending Hello to File daemon. ERR=%s\n"), bnet_strerror(fd));
       return 0;
@@ -186,10 +186,10 @@ int authenticate_file_daemon(JCR *jcr, MONITOR *monitor, CLIENT* client)
       return 0;
    }
    Dmsg1(116, ">filed: %s", fd->msg);
-   if (bnet_recv(fd) <= 0) {
+   if (fd->recv() <= 0) {
       stop_bsock_timer(tid);
       Jmsg(jcr, M_FATAL, 0, _("Bad response from File daemon to Hello command: ERR=%s\n"),
-         bnet_strerror(fd));
+         fd->bstrerror());
       return 0;
    }
    Dmsg1(110, "<stored: %s", fd->msg);

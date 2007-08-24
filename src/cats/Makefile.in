@@ -84,7 +84,7 @@ realclean: clean
 	$(RMF) grant_sqlite_privileges	   drop_sqlite_tables	    drop_sqlite_database
 
 	$(RMF) create_sqlite3_database	   update_sqlite3_tables     make_sqlite3_tables
-	$(RMF) grant_sqlite3_privileges	   drop_sqlite3_tables	    drop_sqlite3_database
+	$(RMF) grant_sqlite3_privileges    drop_sqlite3_tables	    drop_sqlite3_database
 
 	$(RMF) mysql sqlite postgresql
 	$(RMF) make_catalog_backup delete_catalog_backup
@@ -98,12 +98,12 @@ devclean: realclean
 	(cd $(srcdir); $(RMF) Makefile)
 
 install:
-	$(INSTALL_SCRIPT) create_@DB_NAME@_database $(DESTDIR)$(scriptdir)/create_@DB_NAME@_database
-	$(INSTALL_SCRIPT) update_@DB_NAME@_tables $(DESTDIR)$(scriptdir)/update_@DB_NAME@_tables
-	$(INSTALL_SCRIPT) make_@DB_NAME@_tables $(DESTDIR)$(scriptdir)/make_@DB_NAME@_tables
-	$(INSTALL_SCRIPT) grant_@DB_NAME@_privileges $(DESTDIR)$(scriptdir)/grant_@DB_NAME@_privileges
-	$(INSTALL_SCRIPT) drop_@DB_NAME@_tables $(DESTDIR)$(scriptdir)/drop_@DB_NAME@_tables
-	$(INSTALL_SCRIPT) drop_@DB_NAME@_database $(DESTDIR)$(scriptdir)/drop_@DB_NAME@_database
+	$(INSTALL_SCRIPT) create_@DB_TYPE@_database $(DESTDIR)$(scriptdir)/create_@DB_TYPE@_database
+	$(INSTALL_SCRIPT) update_@DB_TYPE@_tables $(DESTDIR)$(scriptdir)/update_@DB_TYPE@_tables
+	$(INSTALL_SCRIPT) make_@DB_TYPE@_tables $(DESTDIR)$(scriptdir)/make_@DB_TYPE@_tables
+	$(INSTALL_SCRIPT) grant_@DB_TYPE@_privileges $(DESTDIR)$(scriptdir)/grant_@DB_TYPE@_privileges
+	$(INSTALL_SCRIPT) drop_@DB_TYPE@_tables $(DESTDIR)$(scriptdir)/drop_@DB_TYPE@_tables
+	$(INSTALL_SCRIPT) drop_@DB_TYPE@_database $(DESTDIR)$(scriptdir)/drop_@DB_TYPE@_database
 
 	$(INSTALL_SCRIPT) create_bacula_database $(DESTDIR)$(scriptdir)/create_bacula_database
 	$(INSTALL_SCRIPT) update_bacula_tables $(DESTDIR)$(scriptdir)/update_bacula_tables
@@ -132,12 +132,12 @@ install:
 	   ${INSTALL_SCRIPT} $$filename ${DESTDIR}${scriptdir}/$$destname
 
 uninstall:
-	(cd $(DESTDIR)$(scriptdir); $(RMF) create_@DB_NAME@_database)
-	(cd $(DESTDIR)$(scriptdir); $(RMF) update_@DB_NAME@_tables)
-	(cd $(DESTDIR)$(scriptdir); $(RMF) make_@DB_NAME@_tables)
-	(cd $(DESTDIR)$(scriptdir); $(RMF) grant_@DB_NAME@_privileges)
-	(cd $(DESTDIR)$(scriptdir); $(RMF) drop_@DB_NAME@_tables)
-	(cd $(DESTDIR)$(scriptdir); $(RMF) drop_@DB_NAME@_database)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) create_@DB_TYPE@_database)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) update_@DB_TYPE@_tables)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) make_@DB_TYPE@_tables)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) grant_@DB_TYPE@_privileges)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) drop_@DB_TYPE@_tables)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) drop_@DB_TYPE@_database)
 
 	(cd $(DESTDIR)$(scriptdir); $(RMF) create_bacula_database)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) update_bacula_tables)

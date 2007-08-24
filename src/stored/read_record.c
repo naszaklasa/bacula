@@ -1,29 +1,14 @@
 /*
- *
- *  This routine provides a routine that will handle all
- *    the gory little details of reading a record from a Bacula
- *    archive. It uses a callback to pass you each record in turn,
- *    as well as a callback for mounting the next tape.  It takes
- *    care of reading blocks, applying the bsr, ...
- *    Note, this routine is really the heart of the restore routines,
- *    and we are *really* bit pushing here so be careful about making
- *    any modifications.
- *
- *    Kern E. Sibbald, August MMII
- *
- *   Version $Id: read_record.c 3819 2006-12-20 11:35:40Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,6 +25,21 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  This routine provides a routine that will handle all
+ *    the gory little details of reading a record from a Bacula
+ *    archive. It uses a callback to pass you each record in turn,
+ *    as well as a callback for mounting the next tape.  It takes
+ *    care of reading blocks, applying the bsr, ...
+ *    Note, this routine is really the heart of the restore routines,
+ *    and we are *really* bit pushing here so be careful about making
+ *    any modifications.
+ *
+ *    Kern E. Sibbald, August MMII
+ *
+ *   Version $Id: read_record.c 5293 2007-08-06 18:20:26Z kerns $
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -103,9 +103,10 @@ bool read_records(DCR *dcr,
             jcr->mount_next_volume = false;
             /*  
              * The Device can change at the end of a tape, so refresh it
-             *   from the dcr.
+             *   and the block from the dcr.
              */
             dev = dcr->dev;
+            block = dcr->block;
             /*
              * We just have a new tape up, now read the label (first record)
              *  and pass it off to the callback routine, then continue

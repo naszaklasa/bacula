@@ -1,26 +1,14 @@
 /*
-
-   This file is based on GNU TAR source code. Except for a few key
-   ideas, it has been entirely rewritten for Bacula.
-
-      Kern Sibbald, MM
-
-   Thanks to the TAR programmers.
-
-     Version $Id: find_one.c 3676 2006-11-21 20:14:47Z kerns $
-
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -37,6 +25,18 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+
+   This file was derived from GNU TAR source code. Except for a few key
+   ideas, it has been entirely rewritten for Bacula.
+
+      Kern Sibbald, MM
+
+   Thanks to the TAR programmers.
+
+     Version $Id: find_one.c 5077 2007-06-24 17:27:12Z kerns $
+
+ */
 
 #include "bacula.h"
 #include "find.h"
@@ -84,11 +84,42 @@ static inline int LINKHASH(const struct stat &info)
     return hash & LINK_HASHTABLE_MASK;
 }
 
+/*
+ * Create a new directory Find File packet, but copy
+ *   some of the essential info from the current packet.
+ *   However, be careful to zero out the rest of the 
+ *   packet.
+ */
+static FF_PKT *new_dir_ff_pkt(FF_PKT *ff_pkt)
+{
+   FF_PKT *dir_ff_pkt = (FF_PKT *)bmalloc(sizeof(FF_PKT));
+   memcpy(dir_ff_pkt, ff_pkt, sizeof(FF_PKT));
+   dir_ff_pkt->fname = bstrdup(ff_pkt->fname);
+   dir_ff_pkt->link = bstrdup(ff_pkt->link);
+   dir_ff_pkt->sys_fname = get_pool_memory(PM_FNAME);
+   dir_ff_pkt->included_files_list = NULL;
+   dir_ff_pkt->excluded_files_list = NULL;
+   dir_ff_pkt->excluded_paths_list = NULL;
+   dir_ff_pkt->linkhash = NULL;
+   dir_ff_pkt->fname_save = NULL;
+   dir_ff_pkt->link_save = NULL;
+   return dir_ff_pkt;
+}
+
+/*
+ * Free the temp directory ff_pkt
+ */
 static void free_dir_ff_pkt(FF_PKT *dir_ff_pkt)
 {
    free(dir_ff_pkt->fname);
    free(dir_ff_pkt->link);
    free_pool_memory(dir_ff_pkt->sys_fname);
+   if (dir_ff_pkt->fname_save) {
+      free_pool_memory(dir_ff_pkt->fname_save);
+   }
+   if (dir_ff_pkt->link_save) {
+      free_pool_memory(dir_ff_pkt->link_save);
+   }
    free(dir_ff_pkt);
 }
 
@@ -178,6 +209,51 @@ static bool volume_has_attrlist(const char *fname)
       }
    }
 #endif
+   return false;
+}
+
+/* check if a file have changed during backup and display an error */
+bool has_file_changed(JCR *jcr, FF_PKT *ff_pkt)
+{
+   struct stat statp;
+   Dmsg1(500, "has_file_changed fname=%s\n",ff_pkt->fname);
+
+   if (ff_pkt->type != FT_REG) { /* not a regular file */
+      return false;
+   }
+
+   if (lstat(ff_pkt->fname, &statp) != 0) {
+      berrno be;
+      Jmsg(jcr, M_WARNING, 0, 
+           _("Cannot stat file %s: ERR=%s\n"),ff_pkt->fname,be.bstrerror());
+      return true;
+   }
+
+   if (statp.st_mtime != ff_pkt->statp.st_mtime) {
+      /* TODO: add time of changes */
+      Jmsg(jcr, M_ERROR, 0, _("%s mtime changed during backup.\n"), ff_pkt->fname);
+      return true;
+   }
+
+   if (statp.st_ctime != ff_pkt->statp.st_ctime) {
+      /* TODO: add time of changes */
+      Jmsg(jcr, M_ERROR, 0, _("%s ctime changed during backup.\n"), ff_pkt->fname);
+      return true;
+   }
+  
+   if (statp.st_size != ff_pkt->statp.st_size) {
+      /* TODO: add size change */
+      Jmsg(jcr, M_ERROR, 0, _("%s size changed during backup.\n"),ff_pkt->fname);
+      return true;
+   }
+
+   if ((statp.st_blksize != ff_pkt->statp.st_blksize) ||
+       (statp.st_blocks  != ff_pkt->statp.st_blocks)) {
+      /* TODO: add size change */
+      Jmsg(jcr, M_ERROR, 0, _("%s size changed during backup.\n"),ff_pkt->fname);
+      return true;
+   }
+
    return false;
 }
 
@@ -287,14 +363,6 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
    }
 #endif
 
-/* ***FIXME*** implement this */
-#if xxxxxxx
-   /* See if we are trying to dump the archive.  */
-   if (ar_dev && ff_pkt->statp.st_dev == ar_dev && ff_pkt->statp.st_ino == ar_ino) {
-       ff_pkt->type = FT_ISARCH;
-       return handle_file(ff_pkt, pkt, top_level);
-   }
-#endif
    ff_pkt->LinkFI = 0;
    /*
     * Handle hard linked files
@@ -443,6 +511,10 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       } else {
          ff_pkt->type = FT_DIRBEGIN;
       }
+      /* We have set st_rdev to 1 if it is a reparse point, otherwise 0 */
+      if (have_win32_api() && ff_pkt->statp.st_rdev) {
+         ff_pkt->type = FT_REPARSE;
+      }
       /*
        * Note, we return the directory to the calling program (handle_file)
        * when we first see the directory (FT_DIRBEGIN.
@@ -452,7 +524,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
        * in the directory is seen (i.e. the FT_DIREND).
        */
       rtn_stat = handle_file(ff_pkt, pkt, top_level);
-      if (rtn_stat < 1) {             /* ignore or error status */
+      if (rtn_stat < 1 || ff_pkt->type == FT_REPARSE) {   /* ignore or error status */
          free(link);
          return rtn_stat;
       }
@@ -470,15 +542,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
        *   be reset after all the files have been restored.
        */
       Dmsg1(300, "Create temp ff packet for dir: %s\n", ff_pkt->fname);
-      FF_PKT *dir_ff_pkt = (FF_PKT *)bmalloc(sizeof(FF_PKT));
-      memcpy(dir_ff_pkt, ff_pkt, sizeof(FF_PKT));
-      dir_ff_pkt->fname = bstrdup(ff_pkt->fname);
-      dir_ff_pkt->link = bstrdup(ff_pkt->link);
-      dir_ff_pkt->sys_fname = get_pool_memory(PM_FNAME);
-      dir_ff_pkt->included_files_list = NULL;
-      dir_ff_pkt->excluded_files_list = NULL;
-      dir_ff_pkt->excluded_paths_list = NULL;
-      dir_ff_pkt->linkhash = NULL;
+      FF_PKT *dir_ff_pkt = new_dir_ff_pkt(ff_pkt);
 
       /*
        * Do not descend into subdirectories (recurse) if the

@@ -1,32 +1,14 @@
 /*
- * openssl.c OpenSSL support functions
- *
- * Author: Landon Fuller <landonf@opendarwin.org>
- *
- * Version $Id: openssl.c 3670 2006-11-21 16:13:58Z kerns $
- *
- * This file was contributed to the Bacula project by Landon Fuller.
- *
- * Landon Fuller has been granted a perpetual, worldwide, non-exclusive,
- * no-charge, royalty-free, irrevocable copyright license to reproduce,
- * prepare derivative works of, publicly display, publicly perform,
- * sublicense, and distribute the original work contributed by Landon Fuller
- * to the Bacula project in source or object form.
- *
- * If you wish to license these contributions under an alternate open source
- * license please contact Landon Fuller <landonf@opendarwin.org>.
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -43,6 +25,24 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * openssl.c OpenSSL support functions
+ *
+ * Author: Landon Fuller <landonf@opendarwin.org>
+ *
+ * Version $Id: openssl.c 5068 2007-06-23 10:13:00Z kerns $
+ *
+ * This file was contributed to the Bacula project by Landon Fuller.
+ *
+ * Landon Fuller has been granted a perpetual, worldwide, non-exclusive,
+ * no-charge, royalty-free, irrevocable copyright license to reproduce,
+ * prepare derivative works of, publicly display, publicly perform,
+ * sublicense, and distribute the original work contributed by Landon Fuller
+ * to the Bacula project in source or object form.
+ *
+ * If you wish to license these contributions under an alternate open source
+ * license please contact Landon Fuller <landonf@opendarwin.org>.
+ */
 
 
 #include "bacula.h"
@@ -58,11 +58,22 @@ struct CRYPTO_dynlock_value {
    pthread_mutex_t mutex;
 };
 
+/*
+ * ***FIXME*** this is a sort of dummy to avoid having to
+ *   change all the existing code to pass either a jcr or
+ *   a NULL.  Passing a NULL causes the messages to be
+ *   printed by the daemon -- not very good :-(
+ */
+void openssl_post_errors(int code, const char *errstring)
+{
+   openssl_post_errors(get_jcr_from_tid(), code, errstring);
+}
+
 
 /*
  * Post all per-thread openssl errors
  */
-void openssl_post_errors(int code, const char *errstring)
+void openssl_post_errors(JCR *jcr, int code, const char *errstring)
 {
    char buf[512];
    unsigned long sslerr;
@@ -70,8 +81,9 @@ void openssl_post_errors(int code, const char *errstring)
    /* Pop errors off of the per-thread queue */
    while((sslerr = ERR_get_error()) != 0) {
       /* Acquire the human readable string */
-      ERR_error_string_n(sslerr, (char *) &buf, sizeof(buf));
-      Emsg2(M_ERROR, 0, "%s: ERR=%s\n", errstring, buf);
+      ERR_error_string_n(sslerr, buf, sizeof(buf));
+      Dmsg3(100, "jcr=%p %s: ERR=%s\n", jcr, errstring, buf);
+      Qmsg2(jcr, M_ERROR, 0, "%s: ERR=%s\n", errstring, buf);
    }
 }
 
@@ -80,10 +92,15 @@ void openssl_post_errors(int code, const char *errstring)
  *  Returns: thread ID
  *
  */
-static unsigned long get_openssl_thread_id (void)
+static unsigned long get_openssl_thread_id(void)
 {
    /* Comparison without use of pthread_equal() is mandated by the OpenSSL API */
-   return ((unsigned long) pthread_self());
+   /*
+    * Note that this creates problems with the new Win32 pthreads
+    *   emulation code, which defines pthread_t as a structure. For
+    *   this reason, we continue to use a very old implementation.
+    */
+   return ((unsigned long)pthread_self());
 }
 
 /*
@@ -94,16 +111,18 @@ static struct CRYPTO_dynlock_value *openssl_create_dynamic_mutex (const char *fi
    struct CRYPTO_dynlock_value *dynlock;
    int stat;
 
-   dynlock = (struct CRYPTO_dynlock_value *) malloc(sizeof(struct CRYPTO_dynlock_value));
+   dynlock = (struct CRYPTO_dynlock_value *)malloc(sizeof(struct CRYPTO_dynlock_value));
 
    if ((stat = pthread_mutex_init(&dynlock->mutex, NULL)) != 0) {
-      Emsg1(M_ABORT, 0, _("Unable to init mutex: ERR=%s\n"), strerror(stat));
+      berrno be;
+      Jmsg1(get_jcr_from_tid(), M_ABORT, 0, _("Unable to init mutex: ERR=%s\n"), 
+            be.bstrerror(stat));
    }
 
    return dynlock;
 }
 
-static void openssl_update_dynamic_mutex (int mode, struct CRYPTO_dynlock_value *dynlock, const char *file, int line)
+static void openssl_update_dynamic_mutex(int mode, struct CRYPTO_dynlock_value *dynlock, const char *file, int line)
 {
    if (mode & CRYPTO_LOCK) {
       P(dynlock->mutex);
@@ -112,12 +131,14 @@ static void openssl_update_dynamic_mutex (int mode, struct CRYPTO_dynlock_value 
    }
 }
 
-static void openssl_destroy_dynamic_mutex (struct CRYPTO_dynlock_value *dynlock, const char *file, int line)
+static void openssl_destroy_dynamic_mutex(struct CRYPTO_dynlock_value *dynlock, const char *file, int line)
 {
    int stat;
 
    if ((stat = pthread_mutex_destroy(&dynlock->mutex)) != 0) {
-      Emsg1(M_ABORT, 0, _("Unable to destroy mutex: ERR=%s\n"), strerror(stat));
+      berrno be;
+      Jmsg1(get_jcr_from_tid(), M_ABORT, 0, _("Unable to destroy mutex: ERR=%s\n"), 
+            be.bstrerror(stat));
    }
 
    free(dynlock);
@@ -154,7 +175,9 @@ int openssl_init_threads (void)
    mutexes = (pthread_mutex_t *) malloc(numlocks * sizeof(pthread_mutex_t));
    for (i = 0; i < numlocks; i++) {
       if ((stat = pthread_mutex_init(&mutexes[i], NULL)) != 0) {
-         Emsg1(M_ERROR, 0, _("Unable to init mutex: ERR=%s\n"), strerror(stat));
+         berrno be;
+         Jmsg1(get_jcr_from_tid(), M_ERROR, 0, _("Unable to init mutex: ERR=%s\n"), 
+               be.bstrerror(stat));
          return stat;
       }
    }
@@ -173,7 +196,7 @@ int openssl_init_threads (void)
 /*
  * Clean up OpenSSL threading support
  */
-void openssl_cleanup_threads (void)
+void openssl_cleanup_threads(void)
 {
    int i, numlocks;
    int stat;
@@ -185,8 +208,10 @@ void openssl_cleanup_threads (void)
    numlocks = CRYPTO_num_locks();
    for (i = 0; i < numlocks; i++) {
       if ((stat = pthread_mutex_destroy(&mutexes[i])) != 0) {
+         berrno be;
          /* We don't halt execution, reporting the error should be sufficient */
-         Emsg1(M_ERROR, 0, _("Unable to destroy mutex: ERR=%s\n"), strerror(stat));
+         Jmsg1(get_jcr_from_tid(), M_ERROR, 0, _("Unable to destroy mutex: ERR=%s\n"), 
+               be.bstrerror(stat));
       }
    }
 

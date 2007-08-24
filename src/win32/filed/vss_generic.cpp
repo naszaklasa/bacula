@@ -1,22 +1,14 @@
-//                              -*- Mode: C++ -*-
-// vss.cpp -- Interface to Volume Shadow Copies (VSS)
-//
-// Copyright transferred from MATRIX-Computer GmbH to
-//   Kern Sibbald by express permission.
-//
-// Author          : Thorsten Engel
-// Created On      : Fri May 06 21:44:00 2005
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+//                              -*- Mode: C++ -*-
+// vss.cpp -- Interface to Volume Shadow Copies (VSS)
+//
+// Copyright transferred from MATRIX-Computer GmbH to
+//   Kern Sibbald by express permission.
+//
+// Author          : Thorsten Engel
+// Created On      : Fri May 06 21:44:00 2005
 
 
 #ifdef WIN32_VSS
@@ -52,6 +52,18 @@ using namespace std;
 #include "ms_atl.h"
 #include <objbase.h>
 
+/* 
+ * Kludges to get Vista code to compile.             
+ *  KES - June 2007
+ */
+#define __in  IN
+#define __out OUT
+#define __RPC_unique_pointer
+#define __RPC_string
+#define __RPC__out_ecount_part(x, y)
+#define __RPC__deref_inout_opt
+#define __RPC__out
+
 #if !defined(ENABLE_NLS)
 #define setlocale(p, d)
 #endif
@@ -68,6 +80,9 @@ BOOL VSSPathConvertW(const wchar_t *szFilePath, wchar_t *szShadowPath, int nBufl
 class IXMLDOMDocument;
 #endif
 
+/* Reduce compiler warnings from Windows vss code */
+#define uuid(x)
+
 #ifdef B_VSS_XP
    #pragma message("compile VSS for Windows XP")   
    #define VSSClientGeneric VSSClientXP
@@ -75,15 +90,7 @@ class IXMLDOMDocument;
    #include "inc/WinXP/vss.h"
    #include "inc/WinXP/vswriter.h"
    #include "inc/WinXP/vsbackup.h"
-   
-   /* In VSSAPI.DLL */
-   typedef HRESULT (STDAPICALLTYPE* t_CreateVssBackupComponents)(OUT IVssBackupComponents **);
-   typedef void (APIENTRY* t_VssFreeSnapshotProperties)(IN VSS_SNAPSHOT_PROP*);
-   
-   static t_CreateVssBackupComponents p_CreateVssBackupComponents = NULL;
-   static t_VssFreeSnapshotProperties p_VssFreeSnapshotProperties = NULL;
 
-   #define VSSVBACK_ENTRY "?CreateVssBackupComponents@@YGJPAPAVIVssBackupComponents@@@Z"
 #endif
 
 #ifdef B_VSS_W2K3
@@ -93,6 +100,16 @@ class IXMLDOMDocument;
    #include "inc/Win2003/vss.h"
    #include "inc/Win2003/vswriter.h"
    #include "inc/Win2003/vsbackup.h"
+#endif
+
+#ifdef B_VSS_VISTA
+   #pragma message("compile VSS for Vista")
+   #define VSSClientGeneric VSSClientVista
+
+   #include "inc/Win2003/vss.h"
+   #include "inc/Win2003/vswriter.h"
+   #include "inc/Win2003/vsbackup.h"
+#endif
    
    /* In VSSAPI.DLL */
    typedef HRESULT (STDAPICALLTYPE* t_CreateVssBackupComponents)(OUT IVssBackupComponents **);
@@ -102,7 +119,7 @@ class IXMLDOMDocument;
    static t_VssFreeSnapshotProperties p_VssFreeSnapshotProperties = NULL;
 
    #define VSSVBACK_ENTRY "?CreateVssBackupComponents@@YGJPAPAVIVssBackupComponents@@@Z"
-#endif
+
 
 #include "vss.h"
 
@@ -266,7 +283,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
       return FALSE;
    }
 
-#ifdef B_VSS_W2K3
+#if   defined(B_VSS_W2K3) || defined(B_VSS_VISTA)
    if (dwContext != VSS_CTX_BACKUP) {
       hr = ((IVssBackupComponents*) m_pVssObject)->SetContext(dwContext);
       if (FAILED(hr)) {
@@ -541,9 +558,9 @@ void VSSClientGeneric::QuerySnapshotSet(GUID snapshotSetID)
 
       // Print the shadow copy (if not filtered out)
       if (Snap.m_SnapshotSetId == snapshotSetID)  {
-         for (char ch='A'-'A';ch<='Z'-'A';ch++) {
+         for (int ch='A'-'A';ch<='Z'-'A';ch++) {
             if (wcscmp(Snap.m_pwszOriginalVolumeName, m_wszUniqueVolumeName[ch]) == 0) {       
-               wcsncpy (m_szShadowCopyName[ch],Snap.m_pwszSnapshotDeviceObject, MAX_PATH-1);               
+               wcsncpy(m_szShadowCopyName[ch],Snap.m_pwszSnapshotDeviceObject, MAX_PATH-1);               
                break;
             }
          }
@@ -614,7 +631,7 @@ BOOL VSSClientGeneric::CheckWriterStatus()
             case VSS_WS_FAILED_AT_BACKUP_COMPLETE:
             case VSS_WS_FAILED_AT_PRE_RESTORE:
             case VSS_WS_FAILED_AT_POST_RESTORE:
-    #ifdef B_VSS_W2K3
+    #if  defined(B_VSS_W2K3) || defined(B_VSS_VISTA)
             case VSS_WS_FAILED_AT_BACKUPSHUTDOWN:
     #endif
                 /* failed */                

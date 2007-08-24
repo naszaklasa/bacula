@@ -1,23 +1,14 @@
 /*
- * Miscellaneous Bacula memory and thread safe routines
- *   Generally, these are interfaces to system or standard
- *   library routines.
- *
- *  Bacula utility functions are in util.c
- *
- *   Version $Id: bsys.c 3670 2006-11-21 16:13:58Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,7 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
-
+/*
+ * Miscellaneous Bacula memory and thread safe routines
+ *   Generally, these are interfaces to system or standard
+ *   library routines.
+ *
+ *  Bacula utility functions are in util.c
+ *
+ *   Version $Id: bsys.c 5254 2007-07-28 07:54:02Z kerns $
+ */
 
 #include "bacula.h"
 #ifdef HAVE_PWD_H
@@ -43,6 +42,11 @@
 #ifdef HAVE_GRP_H
 #include <grp.h>
 #endif
+
+#ifdef HAVE_AIX_OS
+extern "C" int initgroups(char *,int);
+#endif
+
 
 static pthread_mutex_t timer_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t timer = PTHREAD_COND_INITIALIZER;
@@ -87,7 +91,7 @@ int bmicrosleep(time_t sec, long usec)
    if (stat != 0) {
       berrno be;
       Dmsg2(200, "pthread_cond_timedwait stat=%d ERR=%s\n", stat,
-         be.strerror(stat));
+         be.bstrerror(stat));
    }
    V(timer_mutex);
    return stat;
@@ -201,7 +205,7 @@ void *bmalloc(size_t size)
 #endif
   if (buf == NULL) {
      berrno be;
-     Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.strerror());
+     Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.bstrerror());
   }
   return buf;
 }
@@ -218,7 +222,7 @@ void *b_malloc(const char *file, int line, size_t size)
 #endif
   if (buf == NULL) {
      berrno be;
-     e_msg(file, line, M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.strerror());
+     e_msg(file, line, M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.bstrerror());
   }
   return buf;
 }
@@ -233,28 +237,29 @@ void bfree(void *buf)
 #endif
 }
 
-
-
-
 void *brealloc (void *buf, size_t size)
 {
+#ifdef SMARTALOC
+   buf = sm_realloc(__FILE__, __LINE__, buf, size);
+#else
    buf = realloc(buf, size);
+#endif
    if (buf == NULL) {
       berrno be;
-      Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.strerror());
+      Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.bstrerror());
    }
    return buf;
 }
 
 
-void *bcalloc (size_t size1, size_t size2)
+void *bcalloc(size_t size1, size_t size2)
 {
   void *buf;
 
    buf = calloc(size1, size2);
    if (buf == NULL) {
       berrno be;
-      Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.strerror());
+      Emsg1(M_ABORT, 0, _("Out of memory: ERR=%s\n"), be.bstrerror());
    }
    return buf;
 }
@@ -352,7 +357,7 @@ int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
 #endif /* HAVE_READDIR_R */
 
 
-int bstrerror(int errnum, char *buf, size_t bufsiz)
+int b_strerror(int errnum, char *buf, size_t bufsiz)
 {
     static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     int stat = 0;
@@ -384,7 +389,7 @@ void _p(char *file, int line, pthread_mutex_t *m)
       if ((errstat=pthread_mutex_lock(m))) {
          berrno be;
          e_msg(file, line, M_ABORT, 0, _("Mutex lock failure. ERR=%s\n"),
-               be.strerror(errstat));
+               be.bstrerror(errstat));
       } else {
          e_msg(file, line, M_ERROR, 0, _("Possible mutex deadlock resolved.\n"));
       }
@@ -400,12 +405,12 @@ void _v(char *file, int line, pthread_mutex_t *m)
    if ((errstat=pthread_mutex_trylock(m)) == 0) {
       berrno be;
       e_msg(file, line, M_ERROR, 0, _("Mutex unlock not locked. ERR=%s\n"),
-           be.strerror(errstat));
+           be.bstrerror(errstat));
     }
     if ((errstat=pthread_mutex_unlock(m))) {
        berrno be;
        e_msg(file, line, M_ABORT, 0, _("Mutex unlock failure. ERR=%s\n"),
-              be.strerror(errstat));
+              be.bstrerror(errstat));
     }
 }
 
@@ -417,7 +422,7 @@ void _p(pthread_mutex_t *m)
    if ((errstat=pthread_mutex_lock(m))) {
       berrno be;
       e_msg(__FILE__, __LINE__, M_ABORT, 0, _("Mutex lock failure. ERR=%s\n"),
-            be.strerror(errstat));
+            be.bstrerror(errstat));
    }
 }
 
@@ -427,7 +432,7 @@ void _v(pthread_mutex_t *m)
    if ((errstat=pthread_mutex_unlock(m))) {
       berrno be;
       e_msg(__FILE__, __LINE__, M_ABORT, 0, _("Mutex unlock failure. ERR=%s\n"),
-            be.strerror(errstat));
+            be.bstrerror(errstat));
    }
 }
 
@@ -469,10 +474,22 @@ void create_pid_file(char *dir, const char *progname, int port)
       if ((pidfd = open(fname, O_RDONLY|O_BINARY, 0)) < 0 ||
            read(pidfd, &pidbuf, sizeof(pidbuf)) < 0 ||
            sscanf(pidbuf, "%d", &oldpid) != 1) {
-         Emsg2(M_ERROR_TERM, 0, _("Cannot open pid file. %s ERR=%s\n"), fname, strerror(errno));
+         berrno be;
+         Emsg2(M_ERROR_TERM, 0, _("Cannot open pid file. %s ERR=%s\n"), fname, 
+               be.bstrerror());
       }
-      /* See if other Bacula is still alive */
-      if (kill(oldpid, 0) != -1 || errno != ESRCH) {
+      /* Some OSes (IRIX) don't bother to clean out the old pid files after a crash, and
+       * since they use a deterministic algorithm for assigning PIDs, we can have
+       * pid conflicts with the old PID file after a reboot.
+       * The intent the following code is to check if the oldpid read from the pid
+       * file is the same as the currently executing process's pid,
+       * and if oldpid == getpid(), skip the attempt to
+       * kill(oldpid,0), since the attempt is guaranteed to succeed,
+       * but the success won't actually mean that there is an
+       * another Bacula process already running.
+       * For more details see bug #797.
+       */
+       if ((oldpid != (int)getpid()) && (kill(oldpid, 0) != -1 || errno != ESRCH)) {
          Emsg3(M_ERROR_TERM, 0, _("%s is already running. pid=%d\nCheck file %s\n"),
                progname, oldpid, fname);
       }
@@ -486,7 +503,9 @@ void create_pid_file(char *dir, const char *progname, int port)
       close(pidfd);
       del_pid_file_ok = TRUE;         /* we created it so we can delete it */
    } else {
-      Emsg2(M_ERROR_TERM, 0, _("Could not open pid file. %s ERR=%s\n"), fname, strerror(errno));
+      berrno be;
+      Emsg2(M_ERROR_TERM, 0, _("Could not open pid file. %s ERR=%s\n"), fname, 
+            be.bstrerror());
    }
    free_pool_memory(fname);
 #endif
@@ -542,13 +561,15 @@ void read_state_file(char *dir, const char *progname, int port)
    /* If file exists, see what we have */
 // Dmsg1(10, "O_BINARY=%d\n", O_BINARY);
    if ((sfd = open(fname, O_RDONLY|O_BINARY)) < 0) {
+      berrno be;
       Dmsg3(010, "Could not open state file. sfd=%d size=%d: ERR=%s\n",
-                    sfd, sizeof(hdr), strerror(errno));
+                    sfd, sizeof(hdr), be.bstrerror());
       goto bail_out;
    }
    if ((stat=read(sfd, &hdr, hdr_size)) != hdr_size) {
+      berrno be;
       Dmsg4(010, "Could not read state file. sfd=%d stat=%d size=%d: ERR=%s\n",
-                    sfd, (int)stat, hdr_size, strerror(errno));
+                    sfd, (int)stat, hdr_size, be.bstrerror());
       goto bail_out;
    }
    if (hdr.version != state_hdr.version) {
@@ -590,13 +611,13 @@ void write_state_file(char *dir, const char *progname, int port)
    unlink(fname);
    if ((sfd = open(fname, O_CREAT|O_WRONLY|O_BINARY, 0640)) < 0) {
       berrno be;
-      Dmsg2(000, "Could not create state file. %s ERR=%s\n", fname, be.strerror());
-      Emsg2(M_ERROR, 0, _("Could not create state file. %s ERR=%s\n"), fname, be.strerror());
+      Dmsg2(000, "Could not create state file. %s ERR=%s\n", fname, be.bstrerror());
+      Emsg2(M_ERROR, 0, _("Could not create state file. %s ERR=%s\n"), fname, be.bstrerror());
       goto bail_out;
    }
    if (write(sfd, &state_hdr, sizeof(state_hdr)) != sizeof(state_hdr)) {
       berrno be;
-      Dmsg1(000, "Write hdr error: ERR=%s\n", be.strerror());
+      Dmsg1(000, "Write hdr error: ERR=%s\n", be.bstrerror());
       goto bail_out;
    }
 // Dmsg1(010, "Wrote header of %d bytes\n", sizeof(state_hdr));
@@ -605,12 +626,12 @@ void write_state_file(char *dir, const char *progname, int port)
 // Dmsg1(010, "write last job end = %d\n", (int)state_hdr.reserved[0]);
    if (lseek(sfd, 0, SEEK_SET) < 0) {
       berrno be;
-      Dmsg1(000, "lseek error: ERR=%s\n", be.strerror());
+      Dmsg1(000, "lseek error: ERR=%s\n", be.bstrerror());
       goto bail_out;
    }
    if (write(sfd, &state_hdr, sizeof(state_hdr)) != sizeof(state_hdr)) {
       berrno be;
-      Pmsg1(000, _("Write final hdr error: ERR=%s\n"), be.strerror());
+      Pmsg1(000, _("Write final hdr error: ERR=%s\n"), be.bstrerror());
       goto bail_out;
    }
    ok = true;
@@ -647,13 +668,13 @@ void drop(char *uname, char *gname)
       if ((passw = getpwnam(uname)) == NULL) {
          berrno be;
          Emsg2(M_ERROR_TERM, 0, _("Could not find userid=%s: ERR=%s\n"), uname,
-            be.strerror());
+            be.bstrerror());
       }
    } else {
       if ((passw = getpwuid(getuid())) == NULL) {
          berrno be;
          Emsg1(M_ERROR_TERM, 0, _("Could not find password entry. ERR=%s\n"),
-            be.strerror());
+            be.bstrerror());
       } else {
          uname = passw->pw_name;
       }
@@ -666,7 +687,7 @@ void drop(char *uname, char *gname)
       if ((group = getgrnam(gname)) == NULL) {
          berrno be;
          Emsg2(M_ERROR_TERM, 0, _("Could not find group=%s: ERR=%s\n"), gname,
-            be.strerror());
+            be.bstrerror());
       }
       gid = group->gr_gid;
    }
@@ -674,17 +695,17 @@ void drop(char *uname, char *gname)
       berrno be;
       if (gname) {
          Emsg3(M_ERROR_TERM, 0, _("Could not initgroups for group=%s, userid=%s: ERR=%s\n"),         
-            gname, username, be.strerror());
+            gname, username, be.bstrerror());
       } else {
          Emsg2(M_ERROR_TERM, 0, _("Could not initgroups for userid=%s: ERR=%s\n"),         
-            username, be.strerror());
+            username, be.bstrerror());
       }
    }
    if (gname) {
       if (setgid(gid)) {
          berrno be;
          Emsg2(M_ERROR_TERM, 0, _("Could not set group=%s: ERR=%s\n"), gname,
-            be.strerror());
+            be.bstrerror());
       }
    }
    if (setuid(uid)) {
@@ -776,4 +797,3 @@ char *escape_filename(const char *file_path)
 
    return escaped_path;
 }
-

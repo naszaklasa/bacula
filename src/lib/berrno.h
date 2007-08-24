@@ -1,20 +1,14 @@
 /*
- *   Version $Id: berrno.h 3668 2006-11-21 13:20:11Z kerns $
- *
- * Kern Sibbald, July MMIV
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -31,12 +25,20 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   Version $Id: berrno.h 5269 2007-07-31 12:10:32Z kerns $
+ *
+ * Kern Sibbald, July MMIV
+ *
+ */
 
 /*
  * Extra bits set to interpret errno value differently from errno
  */
 #ifdef HAVE_WIN32
 #define b_errno_win32  (1<<29)        /* user reserved bit */
+#else
+#define b_errno_win32  0              /* On Unix/Linix system */
 #endif
 #define b_errno_exit   (1<<28)        /* child exited, exit code returned */
 #define b_errno_signal (1<<27)        /* child died, signal code returned */
@@ -49,48 +51,49 @@
  *  for editing the message. strerror() does the actual editing, and
  *  it is thread safe.
  *
- * If bit 29 in berrno_ is set then it is a Win32 error, and we
+ * If bit 29 in m_berrno is set then it is a Win32 error, and we
  *  must do a GetLastError() to get the error code for formatting.
- * If bit 29 in berrno_ is not set, then it is a Unix errno.
+ * If bit 29 in m_berrno is not set, then it is a Unix errno.
  *
  */
 class berrno : public SMARTALLOC {
-   POOLMEM *buf_;
-   int berrno_;
+   POOLMEM *m_buf;
+   int m_berrno;
    void format_win32_message();
 public:
    berrno(int pool=PM_EMSG);
    ~berrno();
-   const char *strerror();
-   const char *strerror(int errnum);
+   const char *bstrerror();
+   const char *bstrerror(int errnum);
    void set_errno(int errnum);
-   int code() { return berrno_ & ~(b_errno_exit|b_errno_signal); }
+   int code() { return m_berrno & ~(b_errno_exit|b_errno_signal); }
    int code(int stat) { return stat & ~(b_errno_exit|b_errno_signal); }
 };
 
 /* Constructor */
 inline berrno::berrno(int pool)
 {
-   berrno_ = errno;
-   buf_ = get_pool_memory(pool);
+   m_berrno = errno;
+   m_buf = get_pool_memory(pool);
 #ifdef HAVE_WIN32
    format_win32_message();
 #endif
+   errno = m_berrno;
 }
 
 inline berrno::~berrno()
 {
-   free_pool_memory(buf_);
+   free_pool_memory(m_buf);
 }
 
-inline const char *berrno::strerror(int errnum)
+inline const char *berrno::bstrerror(int errnum)
 {
-   berrno_ = errnum;
-   return berrno::strerror();
+   m_berrno = errnum;
+   return berrno::bstrerror();
 }
 
 
 inline void berrno::set_errno(int errnum)
 {
-   berrno_ = errnum;
+   m_berrno = errnum;
 }

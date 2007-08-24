@@ -1,27 +1,14 @@
 /*
- *  Bacula errno handler
- *
- *    berrno is a simplistic errno handler that works for
- *      Unix, Win32, and Bacula bpipes.
- *
- *    See berrno.h for how to use berrno.
- *
- *   Kern Sibbald, July MMIV
- *
- *   Version $Id: berrno.c 3670 2006-11-21 16:13:58Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -38,6 +25,19 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Bacula errno handler
+ *
+ *    berrno is a simplistic errno handler that works for
+ *      Unix, Win32, and Bacula bpipes.
+ *
+ *    See berrno.h for how to use berrno.
+ *
+ *   Kern Sibbald, July MMIV
+ *
+ *   Version $Id: berrno.c 4992 2007-06-07 14:46:43Z kerns $
+ *
+ */
 
 #include "bacula.h"
 
@@ -47,52 +47,52 @@ extern int num_execvp_errors;
 extern int execvp_errors[];
 #endif
 
-const char *berrno::strerror()
+const char *berrno::bstrerror()
 {
 #ifdef HAVE_WIN32
-   if (berrno_ & b_errno_win32) {
-      return (const char *)buf_;
+   if (m_berrno & b_errno_win32) {
+      return (const char *)m_buf;
    }
 #else
    int stat = 0;
 
-   if (berrno_ & b_errno_exit) {
-      stat = (berrno_ & ~b_errno_exit);       /* remove bit */
+   if (m_berrno & b_errno_exit) {
+      stat = (m_berrno & ~b_errno_exit);       /* remove bit */
       if (stat == 0) {
          return _("Child exited normally.");    /* this really shouldn't happen */
       } else {
          /* Maybe an execvp failure */
          if (stat >= 200) {
             if (stat < 200 + num_execvp_errors) {
-               berrno_ = execvp_errors[stat - 200];
+               m_berrno = execvp_errors[stat - 200];
             } else {
                return _("Unknown error during program execvp");
             }
          } else {
-            Mmsg(buf_, _("Child exited with code %d"), stat);
-            return buf_;
+            Mmsg(m_buf, _("Child exited with code %d"), stat);
+            return m_buf;
          }
-         /* If we drop out here, berrno_ is set to an execvp errno */
+         /* If we drop out here, m_berrno is set to an execvp errno */
       }
    }
-   if (berrno_ & b_errno_signal) {
-      stat = (berrno_ & ~b_errno_signal);        /* remove bit */
-      Mmsg(buf_, _("Child died from signal %d: %s"), stat, get_signal_name(stat));
-      return buf_;
+   if (m_berrno & b_errno_signal) {
+      stat = (m_berrno & ~b_errno_signal);        /* remove bit */
+      Mmsg(m_buf, _("Child died from signal %d: %s"), stat, get_signal_name(stat));
+      return m_buf;
    }
 #endif
    /* Normal errno */
-   if (bstrerror(berrno_, buf_, 1024) < 0) {
+   if (b_strerror(m_berrno, m_buf, 1024) < 0) {
       return _("Invalid errno. No error message possible.");
    }
-   return buf_;
+   return m_buf;
 }
 
 void berrno::format_win32_message()
 {
 #ifdef HAVE_WIN32
    LPVOID msg;
-   if (berrno_ & b_errno_win32) {
+   if (m_berrno & b_errno_win32) {
       FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
           FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
           NULL,
@@ -102,7 +102,7 @@ void berrno::format_win32_message()
           0,
           NULL);
 
-      pm_strcpy(&buf_, (const char *)msg);
+      pm_strcpy(&m_buf, (const char *)msg);
       LocalFree(msg);
    }
 #endif

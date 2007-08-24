@@ -1,12 +1,4 @@
 /*
- *
- *   Bacula Director Job processing routines
- *
- *     Kern Sibbald, October MM
- *
- *    Version $Id: job.c 4183 2007-02-15 18:57:55Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
@@ -15,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director Job processing routines
+ *
+ *     Kern Sibbald, October MM
+ *
+ *    Version $Id: job.c 5186 2007-07-16 12:54:42Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -59,7 +59,7 @@ void init_job_server(int max_workers)
 
    if ((stat = jobq_init(&job_queue, max_workers, job_thread)) != 0) {
       berrno be;
-      Emsg1(M_ABORT, 0, _("Could not init job queue: ERR=%s\n"), be.strerror(stat));
+      Emsg1(M_ABORT, 0, _("Could not init job queue: ERR=%s\n"), be.bstrerror(stat));
    }
    wd = new_watchdog();
    wd->callback = job_monitor_watchdog;
@@ -91,7 +91,7 @@ JobId_t run_job(JCR *jcr)
       /* Queue the job to be run */
       if ((stat = jobq_add(&job_queue, jcr)) != 0) {
          berrno be;
-         Jmsg(jcr, M_FATAL, 0, _("Could not add job queue: ERR=%s\n"), be.strerror(stat));
+         Jmsg(jcr, M_FATAL, 0, _("Could not add job queue: ERR=%s\n"), be.bstrerror(stat));
          return 0;
       }
       return jcr->JobId;
@@ -110,7 +110,7 @@ bool setup_job(JCR *jcr)
    /* Initialize termination condition variable */
    if ((errstat = pthread_cond_init(&jcr->term_wait, NULL)) != 0) {
       berrno be;
-      Jmsg1(jcr, M_FATAL, 0, _("Unable to init job cond variable: ERR=%s\n"), be.strerror(errstat));
+      Jmsg1(jcr, M_FATAL, 0, _("Unable to init job cond variable: ERR=%s\n"), be.bstrerror(errstat));
       goto bail_out;
    }
    jcr->term_wait_inited = true;
@@ -122,7 +122,7 @@ bool setup_job(JCR *jcr)
    /*
     * Open database
     */
-   Dmsg0(50, "Open database\n");
+   Dmsg0(100, "Open database\n");
    jcr->db=db_init_database(jcr, jcr->catalog->db_name, jcr->catalog->db_user,
                             jcr->catalog->db_password, jcr->catalog->db_address,
                             jcr->catalog->db_port, jcr->catalog->db_socket,
@@ -132,10 +132,11 @@ bool setup_job(JCR *jcr)
                  jcr->catalog->db_name);
       if (jcr->db) {
          Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
+         db_close_database(jcr, jcr->db);
       }
       goto bail_out;
    }
-   Dmsg0(50, "DB opened\n");
+   Dmsg0(150, "DB opened\n");
 
    if (!jcr->fname) {
       jcr->fname = get_pool_memory(PM_FNAME);
@@ -212,6 +213,7 @@ bool setup_job(JCR *jcr)
    }
 
    generate_job_event(jcr, "JobInit");
+   Dsm_check(1);
    return true;
 
 bail_out:
@@ -222,7 +224,6 @@ void update_job_end(JCR *jcr, int TermCode)
 {
    dequeue_messages(jcr);             /* display any queued messages */
    set_jcr_job_status(jcr, TermCode);
-   run_scripts(jcr, jcr->job->RunScripts, "AfterJob");
    update_job_end_record(jcr);
 }
 
@@ -238,7 +239,7 @@ static void *job_thread(void *arg)
 
    jcr->my_thread_id = pthread_self();
    pthread_detach(jcr->my_thread_id);
-   sm_check(__FILE__, __LINE__, true);
+   Dsm_check(1);
 
    Dmsg0(200, "=====Start Job=========\n");
    set_jcr_job_status(jcr, JS_Running);   /* this will be set only if no error */
@@ -327,11 +328,13 @@ static void *job_thread(void *arg)
          Pmsg1(0, _("Unimplemented job type: %d\n"), jcr->JobType);
          break;
       }
+   }
 
-      /* Send off any queued messages */
-      if (jcr->msg_queue && jcr->msg_queue->size() > 0) {
-         dequeue_messages(jcr);
-      }
+   run_scripts(jcr, jcr->job->RunScripts, "AfterJob");
+
+   /* Send off any queued messages */
+   if (jcr->msg_queue && jcr->msg_queue->size() > 0) {
+      dequeue_messages(jcr);
    }
 
    generate_daemon_event(jcr, "JobEnd");
@@ -363,7 +366,7 @@ bool cancel_job(UAContext *ua, JCR *jcr)
    case JS_WaitPriority:
    case JS_WaitMaxJobs:
    case JS_WaitStartTime:
-      bsendmsg(ua, _("JobId %s, Job %s marked to be canceled.\n"),
+      ua->info_msg(_("JobId %s, Job %s marked to be canceled.\n"),
               edit_uint64(jcr->JobId, ed1), jcr->Job);
       jobq_remove(&job_queue, jcr); /* attempt to remove it from queue */
       return true;
@@ -373,14 +376,14 @@ bool cancel_job(UAContext *ua, JCR *jcr)
       if (jcr->file_bsock) {
          ua->jcr->client = jcr->client;
          if (!connect_to_file_daemon(ua->jcr, 10, FDConnectTimeout, 1)) {
-            bsendmsg(ua, _("Failed to connect to File daemon.\n"));
+            ua->error_msg(_("Failed to connect to File daemon.\n"));
             return 0;
          }
          Dmsg0(200, "Connected to file daemon\n");
          fd = ua->jcr->file_bsock;
          bnet_fsend(fd, "cancel Job=%s\n", jcr->Job);
          while (bnet_recv(fd) >= 0) {
-            bsendmsg(ua, "%s", fd->msg);
+            ua->send_msg("%s", fd->msg);
          }
          bnet_sig(fd, BNET_TERMINATE);
          bnet_close(fd);
@@ -406,17 +409,17 @@ bool cancel_job(UAContext *ua, JCR *jcr)
          }
 
          if (!connect_to_storage_daemon(ua->jcr, 10, SDConnectTimeout, 1)) {
-            bsendmsg(ua, _("Failed to connect to Storage daemon.\n"));
+            ua->error_msg(_("Failed to connect to Storage daemon.\n"));
             return false;
          }
          Dmsg0(200, "Connected to storage daemon\n");
          sd = ua->jcr->store_bsock;
-         bnet_fsend(sd, "cancel Job=%s\n", jcr->Job);
-         while (bnet_recv(sd) >= 0) {
-            bsendmsg(ua, "%s", sd->msg);
+         sd->fsend("cancel Job=%s\n", jcr->Job);
+         while (sd->recv() >= 0) {
+            ua->send_msg("%s", sd->msg);
          }
-         bnet_sig(sd, BNET_TERMINATE);
-         bnet_close(sd);
+         sd->signal(BNET_TERMINATE);
+         sd->close();
          ua->jcr->store_bsock = NULL;
       }
    }
@@ -438,6 +441,7 @@ static void job_monitor_watchdog(watchdog_t *self)
 
    control_jcr = (JCR *)self->data;
 
+   Dsm_check(1);
    Dmsg1(800, "job_monitor_watchdog %p called\n", self);
 
    foreach_jcr(jcr) {
@@ -536,7 +540,7 @@ DBId_t get_or_create_pool_record(JCR *jcr, char *pool_name)
 
    memset(&pr, 0, sizeof(pr));
    bstrncpy(pr.Name, pool_name, sizeof(pr.Name));
-   Dmsg1(010, "get_or_create_pool=%s\n", pool_name);
+   Dmsg1(110, "get_or_create_pool=%s\n", pool_name);
 
    while (!db_get_pool_record(jcr, jcr->db, &pr)) { /* get by Name */
       /* Try to create the pool */
@@ -800,13 +804,13 @@ void dird_free_jcr(JCR *jcr)
       pthread_cond_destroy(&jcr->term_wait);
       jcr->term_wait_inited = false;
    }
+   if (jcr->db_batch && jcr->db_batch != jcr->db) {
+      db_close_database(jcr, jcr->db_batch);
+   }
+   jcr->db_batch = NULL;
    if (jcr->db) {
       db_close_database(jcr, jcr->db);
       jcr->db = NULL;
-   }
-   if (jcr->db_batch) {
-      db_close_database(jcr, jcr->db_batch);
-      jcr->db_batch = NULL;
    }
    if (jcr->stime) {
       Dmsg0(200, "Free JCR stime\n");
@@ -972,7 +976,7 @@ void copy_rwstorage(JCR *jcr, alist *storage, const char *where)
 }
 
 
-/* Set storage override */
+/* Set storage override.  Releases any previous storage definition */
 void set_rwstorage(JCR *jcr, USTORE *store)
 {
    if (!store) {
@@ -1022,13 +1026,16 @@ void copy_rstorage(JCR *jcr, alist *storage, const char *where)
 }
 
 
-/* Set storage override */
+/* Set storage override.  Remove all previous storage */
 void set_rstorage(JCR *jcr, USTORE *store)
 {
    STORE *storage;
 
    if (!store->store) {
       return;
+   }
+   if (jcr->rstorage) {
+      free_rstorage(jcr);
    }
    if (!jcr->rstorage) {
       jcr->rstorage = New(alist(10, not_owned_by_alist));
@@ -1068,7 +1075,7 @@ void copy_wstorage(JCR *jcr, alist *storage, const char *where)
       }
       jcr->wstorage = New(alist(10, not_owned_by_alist));
       foreach_alist(st, storage) {
-         Dmsg1(50, "storage=%s\n", st->name());
+         Dmsg1(100, "wstorage=%s\n", st->name());
          jcr->wstorage->append(st);
       }
       if (!jcr->wstore_source) {
@@ -1083,13 +1090,16 @@ void copy_wstorage(JCR *jcr, alist *storage, const char *where)
 }
 
 
-/* Set storage override */
+/* Set storage override. Remove all previous storage */
 void set_wstorage(JCR *jcr, USTORE *store)
 {
    STORE *storage;
 
    if (!store->store) {
       return;
+   }
+   if (jcr->wstorage) {
+      free_wstorage(jcr);
    }
    if (!jcr->wstorage) {
       jcr->wstorage = New(alist(10, not_owned_by_alist));

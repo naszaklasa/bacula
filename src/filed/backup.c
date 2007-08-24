@@ -1,13 +1,4 @@
 /*
- *  Bacula File Daemon  backup.c  send file attributes and data
- *   to the Storage daemon.
- *
- *    Kern Sibbald, March MM
- *
- *   Version $Id: backup.c 4312 2007-03-05 12:33:59Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
@@ -16,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,12 +25,23 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Bacula File Daemon  backup.c  send file attributes and data
+ *   to the Storage daemon.
+ *
+ *    Kern Sibbald, March MM
+ *
+ *   Version $Id: backup.c 5077 2007-06-24 17:27:12Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "filed.h"
 
 /* Forward referenced functions */
 static int save_file(FF_PKT *ff_pkt, void *pkt, bool top_level);
+static void strip_path(FF_PKT *ff_pkt);
+static void unstrip_path(FF_PKT *ff_pkt);
 static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest, DIGEST *signature_digest);
 static bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream);
 static bool read_and_send_acl(JCR *jcr, int acltype, int stream);
@@ -68,7 +70,7 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
 
    set_jcr_job_status(jcr, JS_Running);
 
-   Dmsg1(300, "bfiled: opened data connection %d to stored\n", sd->fd);
+   Dmsg1(300, "bfiled: opened data connection %d to stored\n", sd->m_fd);
 
    LockRes();
    CLIENT *client = (CLIENT *)GetNextRes(R_CLIENT, NULL);
@@ -130,9 +132,6 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
 
       /* Allocate buffer */
       jcr->pki_session_encoded = (uint8_t *)malloc(size);
-      if (!jcr->pki_session_encoded) {
-         return 0;
-      }
 
       /* Encode session data */
       if (crypto_session_encode(jcr->pki_session, jcr->pki_session_encoded, &size) == false) {
@@ -159,14 +158,13 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
    if (!find_files(jcr, (FF_PKT *)jcr->ff, save_file, (void *)jcr)) {
       ok = false;                     /* error */
       set_jcr_job_status(jcr, JS_ErrorTerminated);
-//    Jmsg(jcr, M_FATAL, 0, _("Find files error.\n"));
    }
 
    free_pool_memory(jcr->acl_text);
 
    stop_heartbeat_monitor(jcr);
 
-   bnet_sig(sd, BNET_EOD);            /* end of sending data */
+   sd->signal(BNET_EOD);            /* end of sending data */
 
    if (jcr->big_buf) {
       free(jcr->big_buf);
@@ -193,6 +191,7 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
    }
    if (jcr->pki_session_encoded) {
       free(jcr->pki_session_encoded);
+      jcr->pki_session_encoded = NULL;
    }
 
    Dmsg1(100, "end blast_data ok=%d\n", ok);
@@ -211,13 +210,13 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
  */
 static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
 {
+   bool do_read = false;
    int stat, data_stream; 
    int rtnstat = 0;
    DIGEST *digest = NULL;
    DIGEST *signing_digest = NULL;
    int digest_stream = STREAM_NONE;
    SIGNATURE *sig = NULL;
-   uint8_t *buf = NULL;
    bool has_file_data = false;
    // TODO landonf: Allow the user to specify the digest algorithm
 #ifdef HAVE_SHA2
@@ -274,6 +273,7 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
       Jmsg(jcr, M_INFO, 1, _("     Disallowed drive type. Will not descend into %s\n"),
            ff_pkt->fname);
       break;
+   case FT_REPARSE:
    case FT_DIREND:
       Dmsg1(130, "FT_DIREND: %s\n", ff_pkt->link);
       break;
@@ -290,21 +290,21 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
    case FT_NOACCESS: {
       berrno be;
       Jmsg(jcr, M_NOTSAVED, 0, _("     Could not access %s: ERR=%s\n"), ff_pkt->fname,
-         be.strerror(ff_pkt->ff_errno));
+         be.bstrerror(ff_pkt->ff_errno));
       jcr->Errors++;
       return 1;
    }
    case FT_NOFOLLOW: {
       berrno be;
-      Jmsg(jcr, M_NOTSAVED, 0, _("     Could not follow link %s: ERR=%s\n"), ff_pkt->fname,
-         be.strerror(ff_pkt->ff_errno));
+      Jmsg(jcr, M_NOTSAVED, 0, _("     Could not follow link %s: ERR=%s\n"), 
+           ff_pkt->fname, be.bstrerror(ff_pkt->ff_errno));
       jcr->Errors++;
       return 1;
    }
    case FT_NOSTAT: {
       berrno be;
       Jmsg(jcr, M_NOTSAVED, 0, _("     Could not stat %s: ERR=%s\n"), ff_pkt->fname,
-         be.strerror(ff_pkt->ff_errno));
+         be.bstrerror(ff_pkt->ff_errno));
       jcr->Errors++;
       return 1;
    }
@@ -317,13 +317,14 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
       return 1;
    case FT_NOOPEN: {
       berrno be;
-      Jmsg(jcr, M_NOTSAVED, 0, _("     Could not open directory %s: ERR=%s\n"), ff_pkt->fname,
-         be.strerror(ff_pkt->ff_errno));
+      Jmsg(jcr, M_NOTSAVED, 0, _("     Could not open directory %s: ERR=%s\n"), 
+           ff_pkt->fname, be.bstrerror(ff_pkt->ff_errno));
       jcr->Errors++;
       return 1;
    }
    default:
-      Jmsg(jcr, M_NOTSAVED, 0,  _("     Unknown file type %d; not saved: %s\n"), ff_pkt->type, ff_pkt->fname);
+      Jmsg(jcr, M_NOTSAVED, 0,  _("     Unknown file type %d; not saved: %s\n"), 
+           ff_pkt->type, ff_pkt->fname);
       jcr->Errors++;
       return 1;
    }
@@ -334,22 +335,29 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
    if (has_file_data) {
       /*
        * Setup for digest handling. If this fails, the digest will be set to NULL
-       * and not used.
+       * and not used. Note, the digest (file hash) can be any one of the four
+       * algorithms below.
+       *
+       * The signing digest is a single algorithm depending on
+       * whether or not we have SHA2.              
+       *   ****FIXME****  the signing algoritm should really be
+       *   determined a different way!!!!!!  What happens if
+       *   sha2 was available during backup but not restore?
        */
       if (ff_pkt->flags & FO_MD5) {
-         digest = crypto_digest_new(CRYPTO_DIGEST_MD5);
+         digest = crypto_digest_new(jcr, CRYPTO_DIGEST_MD5);
          digest_stream = STREAM_MD5_DIGEST;
 
       } else if (ff_pkt->flags & FO_SHA1) {
-         digest = crypto_digest_new(CRYPTO_DIGEST_SHA1);
+         digest = crypto_digest_new(jcr, CRYPTO_DIGEST_SHA1);
          digest_stream = STREAM_SHA1_DIGEST;
 
       } else if (ff_pkt->flags & FO_SHA256) {
-         digest = crypto_digest_new(CRYPTO_DIGEST_SHA256);
+         digest = crypto_digest_new(jcr, CRYPTO_DIGEST_SHA256);
          digest_stream = STREAM_SHA256_DIGEST;
 
       } else if (ff_pkt->flags & FO_SHA512) {
-         digest = crypto_digest_new(CRYPTO_DIGEST_SHA512);
+         digest = crypto_digest_new(jcr, CRYPTO_DIGEST_SHA512);
          digest_stream = STREAM_SHA512_DIGEST;
       }
 
@@ -365,7 +373,7 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
        */
       // TODO landonf: We should really only calculate the digest once, for both verification and signing.
       if (jcr->pki_sign) {
-         signing_digest = crypto_digest_new(signing_algorithm);
+         signing_digest = crypto_digest_new(jcr, signing_algorithm);
 
          /* Full-stop if a failure occurred initializing the signature digest */
          if (signing_digest == NULL) {
@@ -400,16 +408,46 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
       goto bail_out;
    }
 
+   /* Set up the encryption context and send the session data to the SD */
+   if (has_file_data && jcr->pki_encrypt) {
+      /* Send our header */
+      Dmsg2(100, "Send hdr fi=%ld stream=%d\n", jcr->JobFiles, STREAM_ENCRYPTED_SESSION_DATA);
+      sd->fsend("%ld %d 0", jcr->JobFiles, STREAM_ENCRYPTED_SESSION_DATA);
+
+      /* Grow the bsock buffer to fit our message if necessary */
+      if (sizeof_pool_memory(sd->msg) < jcr->pki_session_encoded_size) {
+         sd->msg = realloc_pool_memory(sd->msg, jcr->pki_session_encoded_size);
+      }
+
+      /* Copy our message over and send it */
+      memcpy(sd->msg, jcr->pki_session_encoded, jcr->pki_session_encoded_size);
+      sd->msglen = jcr->pki_session_encoded_size;
+      jcr->JobBytes += sd->msglen;
+
+      Dmsg1(100, "Send data len=%d\n", sd->msglen);
+      sd->send();
+      sd->signal(BNET_EOD);
+   }
+
    /*
     * Open any file with data that we intend to save, then save it.
     *
     * Note, if is_win32_backup, we must open the Directory so that
     * the BackupRead will save its permissions and ownership streams.
     */
-   if (ff_pkt->type != FT_LNKSAVED && (S_ISREG(ff_pkt->statp.st_mode) &&
-         ff_pkt->statp.st_size > 0) ||
-         ff_pkt->type == FT_RAW || ff_pkt->type == FT_FIFO ||
+   if (ff_pkt->type != FT_LNKSAVED && S_ISREG(ff_pkt->statp.st_mode)) {
+#ifdef HAVE_WIN32
+      do_read = !is_portable_backup(&ff_pkt->bfd) || ff_pkt->statp.st_size > 0;
+#else
+      do_read = ff_pkt->statp.st_size > 0;
+#endif
+   } else if (ff_pkt->type == FT_RAW || ff_pkt->type == FT_FIFO ||
+              ff_pkt->type == FT_REPARSE ||
          (!is_portable_backup(&ff_pkt->bfd) && ff_pkt->type == FT_DIREND)) {
+      do_read = true;
+   }
+
+   if (do_read) {
       btimer_t *tid;
       if (ff_pkt->type == FT_FIFO) {
          tid = start_thread_timer(pthread_self(), 60);
@@ -417,11 +455,12 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
          tid = NULL;
       }
       int noatime = ff_pkt->flags & FO_NOATIME ? O_NOATIME : 0;
+      ff_pkt->bfd.reparse_point = ff_pkt->type == FT_REPARSE;
       if (bopen(&ff_pkt->bfd, ff_pkt->fname, O_RDONLY | O_BINARY | noatime, 0) < 0) {
          ff_pkt->ff_errno = errno;
          berrno be;
          Jmsg(jcr, M_NOTSAVED, 0, _("     Cannot open %s: ERR=%s.\n"), ff_pkt->fname,
-              be.strerror());
+              be.bstrerror());
          jcr->Errors++;
          if (tid) {
             stop_thread_timer(tid);
@@ -434,29 +473,14 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
          tid = NULL;
       }
 
-      /* Set up the encryption context, send the session data to the SD */
-      if (jcr->pki_encrypt) {
-         /* Send our header */
-         Dmsg2(100, "Send hdr fi=%ld stream=%d\n", jcr->JobFiles, STREAM_ENCRYPTED_SESSION_DATA);
-         bnet_fsend(sd, "%ld %d 0", jcr->JobFiles, STREAM_ENCRYPTED_SESSION_DATA);
+      stat = send_data(jcr, data_stream, ff_pkt, digest, signing_digest);
 
-         /* Grow the bsock buffer to fit our message if necessary */
-         if (sizeof_pool_memory(sd->msg) < jcr->pki_session_encoded_size) {
-            sd->msg = realloc_pool_memory(sd->msg, jcr->pki_session_encoded_size);
-         }
-
-         /* Copy our message over and send it */
-         memcpy(sd->msg, jcr->pki_session_encoded, jcr->pki_session_encoded_size);
-         sd->msglen = jcr->pki_session_encoded_size;
-         jcr->JobBytes += sd->msglen;
-
-         Dmsg1(100, "Send data len=%d\n", sd->msglen);
-         bnet_send(sd);
-         bnet_sig(sd, BNET_EOD);
+      if (ff_pkt->flags & FO_CHKCHANGES) {
+         has_file_changed(jcr, ff_pkt);
       }
 
-      stat = send_data(jcr, data_stream, ff_pkt, digest, signing_digest);
       bclose(&ff_pkt->bfd);
+      
       if (!stat) {
          goto bail_out;
       }
@@ -472,8 +496,8 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
          if (!bopen_rsrc(&ff_pkt->bfd, ff_pkt->fname, O_RDONLY | O_BINARY, 0) < 0) {
             ff_pkt->ff_errno = errno;
             berrno be;
-            Jmsg(jcr, M_NOTSAVED, -1, _("     Cannot open resource fork for %s: ERR=%s.\n"), ff_pkt->fname,
-                  be.strerror());
+            Jmsg(jcr, M_NOTSAVED, -1, _("     Cannot open resource fork for %s: ERR=%s.\n"), 
+                 ff_pkt->fname, be.bstrerror());
             jcr->Errors++;
             if (is_bopen(&ff_pkt->bfd)) {
                bclose(&ff_pkt->bfd);
@@ -496,7 +520,7 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
       }
 
       Dmsg1(300, "Saving Finder Info for \"%s\"\n", ff_pkt->fname);
-      bnet_fsend(sd, "%ld %d 0", jcr->JobFiles, STREAM_HFSPLUS_ATTRIBUTES);
+      sd->fsend("%ld %d 0", jcr->JobFiles, STREAM_HFSPLUS_ATTRIBUTES);
       Dmsg1(300, "bfiled>stored:header %s\n", sd->msg);
       memcpy(sd->msg, ff_pkt->hfsinfo.fndrinfo, 32);
       sd->msglen = 32;
@@ -506,8 +530,8 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
       if (signing_digest) {
          crypto_digest_update(signing_digest, (uint8_t *)sd->msg, sd->msglen);
       }
-      bnet_send(sd);
-      bnet_sig(sd, BNET_EOD);
+      sd->send();
+      sd->signal(BNET_EOD);
    }
 #endif
 
@@ -528,66 +552,64 @@ static int save_file(FF_PKT *ff_pkt, void *vjcr, bool top_level)
    if (signing_digest) {
       uint32_t size = 0;
 
-      if ((sig = crypto_sign_new()) == NULL) {
-         Jmsg(jcr, M_FATAL, 0, _("Failed to allocate memory for stream signature.\n"));
+      if ((sig = crypto_sign_new(jcr)) == NULL) {
+         Jmsg(jcr, M_FATAL, 0, _("Failed to allocate memory for crypto signature.\n"));
          goto bail_out;
       }
 
-      if (crypto_sign_add_signer(sig, signing_digest, jcr->pki_keypair) == false) {
+      if (!crypto_sign_add_signer(sig, signing_digest, jcr->pki_keypair)) {
          Jmsg(jcr, M_FATAL, 0, _("An error occurred while signing the stream.\n"));
          goto bail_out;
       }
 
       /* Get signature size */
-      if (crypto_sign_encode(sig, NULL, &size) == false) {
+      if (!crypto_sign_encode(sig, NULL, &size)) {
          Jmsg(jcr, M_FATAL, 0, _("An error occurred while signing the stream.\n"));
          goto bail_out;
       }
-
-      /* Allocate signature data buffer */
-      buf = (uint8_t *)malloc(size);
-      if (!buf) {
-         goto bail_out;
-      }
-
-      /* Encode signature data */
-      if (crypto_sign_encode(sig, buf, &size) == false) {
-         Jmsg(jcr, M_FATAL, 0, _("An error occurred while signing the stream.\n"));
-         goto bail_out;
-      }
-
-      /* Send our header */
-      bnet_fsend(sd, "%ld %d 0", jcr->JobFiles, STREAM_SIGNED_DIGEST);
-      Dmsg1(300, "bfiled>stored:header %s\n", sd->msg);
 
       /* Grow the bsock buffer to fit our message if necessary */
       if (sizeof_pool_memory(sd->msg) < (int32_t)size) {
          sd->msg = realloc_pool_memory(sd->msg, size);
       }
 
-      /* Copy our message over and send it */
-      memcpy(sd->msg, buf, size);
+      /* Send our header */
+      sd->fsend("%ld %d 0", jcr->JobFiles, STREAM_SIGNED_DIGEST);
+      Dmsg1(300, "bfiled>stored:header %s\n", sd->msg);
+
+      /* Encode signature data */
+      if (!crypto_sign_encode(sig, (uint8_t *)sd->msg, &size)) {
+         Jmsg(jcr, M_FATAL, 0, _("An error occurred while signing the stream.\n"));
+         goto bail_out;
+      }
+
       sd->msglen = size;
-      bnet_send(sd);
-      bnet_sig(sd, BNET_EOD);              /* end of checksum */
-      goto good_rtn;
+      sd->send();
+      sd->signal(BNET_EOD);              /* end of checksum */
    }
 
    /* Terminate any digest and send it to Storage daemon and the Director */
    if (digest) {
-      uint8_t md[CRYPTO_DIGEST_MAX_SIZE];
       uint32_t size;
 
-      size = sizeof(md);
+      sd->fsend("%ld %d 0", jcr->JobFiles, digest_stream);
+      Dmsg1(300, "bfiled>stored:header %s\n", sd->msg);
 
-      if (crypto_digest_finalize(digest, md, &size)) {
-         bnet_fsend(sd, "%ld %d 0", jcr->JobFiles, digest_stream);
-         Dmsg1(300, "bfiled>stored:header %s\n", sd->msg);
-         memcpy(sd->msg, md, size);
-         sd->msglen = size;
-         bnet_send(sd);
-         bnet_sig(sd, BNET_EOD);              /* end of checksum */
+      size = CRYPTO_DIGEST_MAX_SIZE;
+
+      /* Grow the bsock buffer to fit our message if necessary */
+      if (sizeof_pool_memory(sd->msg) < (int32_t)size) {
+         sd->msg = realloc_pool_memory(sd->msg, size);
       }
+
+      if (!crypto_digest_finalize(digest, (uint8_t *)sd->msg, &size)) {
+         Jmsg(jcr, M_FATAL, 0, _("An error occurred finalizing signing the stream.\n"));
+         goto bail_out;
+      }
+
+      sd->msglen = size;
+      sd->send();
+      sd->signal(BNET_EOD);              /* end of checksum */
    }
 
 good_rtn:
@@ -602,9 +624,6 @@ bail_out:
    }
    if (sig) {
       crypto_sign_free(sig);        
-   }
-   if (buf) {
-      free(buf);
    }
    return rtnstat;
 }
@@ -712,9 +731,9 @@ int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
     * Send Data header to Storage daemon
     *    <file-index> <stream> <info>
     */
-   if (!bnet_fsend(sd, "%ld %d 0", jcr->JobFiles, stream)) {
+   if (!sd->fsend("%ld %d 0", jcr->JobFiles, stream)) {
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            bnet_strerror(sd));
+            sd->bstrerror());
       goto err;
    }
    Dmsg1(300, ">stored: datahdr %s\n", sd->msg);
@@ -868,9 +887,9 @@ int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
          sd->msglen += SPARSE_FADDR_SIZE; /* include fileAddr in size */
       }
       sd->msg = wbuf;              /* set correct write buffer */
-      if (!bnet_send(sd)) {
+      if (!sd->send()) {
          Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-               bnet_strerror(sd));
+               sd->bstrerror());
          goto err;
       }
       Dmsg1(130, "Send data to SD len=%d\n", sd->msglen);
@@ -883,7 +902,7 @@ int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
    if (sd->msglen < 0) {                 /* error */
       berrno be;
       Jmsg(jcr, M_ERROR, 0, _("Read error on file %s. ERR=%s\n"),
-         ff_pkt->fname, be.strerror(ff_pkt->bfd.berrno));
+         ff_pkt->fname, be.bstrerror(ff_pkt->bfd.berrno));
       if (jcr->Errors++ > 1000) {       /* insanity check */
          Jmsg(jcr, M_FATAL, 0, _("Too many errors.\n"));
       }
@@ -903,9 +922,9 @@ int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
       if (encrypted_len > 0) {
          sd->msglen = encrypted_len;      /* set encrypted length */
          sd->msg = jcr->crypto_buf;       /* set correct write buffer */
-         if (!bnet_send(sd)) {
+         if (!sd->send()) {
             Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-                  bnet_strerror(sd));
+                  sd->bstrerror());
             goto err;
          }
          Dmsg1(130, "Send data to SD len=%d\n", sd->msglen);
@@ -914,9 +933,9 @@ int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
       }
    }
 
-   if (!bnet_sig(sd, BNET_EOD)) {        /* indicate end of file data */
+   if (!sd->signal(BNET_EOD)) {        /* indicate end of file data */
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            bnet_strerror(sd));
+            sd->bstrerror());
       goto err;
    }
 
@@ -960,9 +979,9 @@ static bool read_and_send_acl(JCR *jcr, int acltype, int stream)
    }
 
    /* Send header */
-   if (!bnet_fsend(sd, "%ld %d 0", jcr->JobFiles, stream)) {
+   if (!sd->fsend("%ld %d 0", jcr->JobFiles, stream)) {
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            bnet_strerror(sd));
+            sd->bstrerror());
       return false;
    }
 
@@ -971,19 +990,19 @@ static bool read_and_send_acl(JCR *jcr, int acltype, int stream)
    msgsave = sd->msg;
    sd->msg = jcr->acl_text;
    sd->msglen = len + 1;
-   if (!bnet_send(sd)) {
+   if (!sd->send()) {
       sd->msg = msgsave;
       sd->msglen = 0;
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            bnet_strerror(sd));
+            sd->bstrerror());
       return false;
    }
 
    jcr->JobBytes += sd->msglen;
    sd->msg = msgsave;
-   if (!bnet_sig(sd, BNET_EOD)) {
+   if (!sd->signal(BNET_EOD)) {
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            bnet_strerror(sd));
+            sd->bstrerror());
       return false;
    }
 
@@ -1003,6 +1022,7 @@ static bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_strea
    return true;
 #endif
 
+   Dmsg1(300, "encode_and_send_attrs fname=%s\n", ff_pkt->fname);
    /* Find what data stream we will use, then encode the attributes */
    if ((data_stream = select_data_stream(ff_pkt)) == STREAM_NONE) {
       /* This should not happen */
@@ -1026,9 +1046,9 @@ static bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_strea
     * Send Attributes header to Storage daemon
     *    <file-index> <stream> <info>
     */
-   if (!bnet_fsend(sd, "%ld %d 0", jcr->JobFiles, attr_stream)) {
+   if (!sd->fsend("%ld %d 0", jcr->JobFiles, attr_stream)) {
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            bnet_strerror(sd));
+            sd->bstrerror());
       return false;
    }
    Dmsg1(300, ">stored: attrhdr %s\n", sd->msg);
@@ -1045,26 +1065,112 @@ static bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_strea
     * For a directory, link is the same as fname, but with trailing
     * slash. For a linked file, link is the link.
     */
+   strip_path(ff_pkt);
    if (ff_pkt->type == FT_LNK || ff_pkt->type == FT_LNKSAVED) {
       Dmsg2(300, "Link %s to %s\n", ff_pkt->fname, ff_pkt->link);
-      stat = bnet_fsend(sd, "%ld %d %s%c%s%c%s%c%s%c", jcr->JobFiles,
+      stat = sd->fsend("%ld %d %s%c%s%c%s%c%s%c", jcr->JobFiles,
                ff_pkt->type, ff_pkt->fname, 0, attribs, 0, ff_pkt->link, 0,
                attribsEx, 0);
-   } else if (ff_pkt->type == FT_DIREND) {
+   } else if (ff_pkt->type == FT_DIREND || ff_pkt->type == FT_REPARSE) {
       /* Here link is the canonical filename (i.e. with trailing slash) */
-      stat = bnet_fsend(sd, "%ld %d %s%c%s%c%c%s%c", jcr->JobFiles,
+      stat = sd->fsend("%ld %d %s%c%s%c%c%s%c", jcr->JobFiles,
                ff_pkt->type, ff_pkt->link, 0, attribs, 0, 0, attribsEx, 0);
    } else {
-      stat = bnet_fsend(sd, "%ld %d %s%c%s%c%c%s%c", jcr->JobFiles,
+      stat = sd->fsend("%ld %d %s%c%s%c%c%s%c", jcr->JobFiles,
                ff_pkt->type, ff_pkt->fname, 0, attribs, 0, 0, attribsEx, 0);
    }
+   unstrip_path(ff_pkt);
 
    Dmsg2(300, ">stored: attr len=%d: %s\n", sd->msglen, sd->msg);
    if (!stat) {
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            bnet_strerror(sd));
+            sd->bstrerror());
       return false;
    }
-   bnet_sig(sd, BNET_EOD);            /* indicate end of attributes data */
+   sd->signal(BNET_EOD);            /* indicate end of attributes data */
    return true;
+}
+
+/* 
+ * Do in place strip of path
+ */
+static bool do_strip(int count, char *in)
+{
+   char *out = in;
+   int stripped;
+   int numsep = 0;
+
+   /* Copy to first path separator -- Win32 might have c: ... */
+   while (*in && !IsPathSeparator(*in)) {    
+      *out++ = *in++;
+   }
+   *out++ = *in++;
+   numsep++;                     /* one separator seen */
+   for (stripped=0; stripped<count && *in; stripped++) {
+      while (*in && !IsPathSeparator(*in)) {
+         in++;                   /* skip chars */
+      }
+      if (*in) {
+         numsep++;               /* count separators seen */
+         in++;                   /* skip separator */
+      }
+   }
+   /* Copy to end */
+   while (*in) {                /* copy to end */
+      if (IsPathSeparator(*in)) {
+         numsep++;
+      }
+      *out++ = *in++;
+   }
+   *out = 0;
+   Dmsg4(500, "stripped=%d count=%d numsep=%d sep>count=%d\n", 
+         stripped, count, numsep, numsep>count);
+   return stripped==count && numsep>count;
+}
+
+/*
+ * If requested strip leading components of the path
+ */
+static void strip_path(FF_PKT *ff_pkt)
+{
+   if (!(ff_pkt->flags & FO_STRIPPATH) || ff_pkt->strip_path <= 0) {
+      Dmsg1(200, "No strip for %s\n", ff_pkt->fname);
+      return;
+   }
+   if (!ff_pkt->fname_save) {
+     ff_pkt->fname_save = get_pool_memory(PM_FNAME); 
+     ff_pkt->link_save = get_pool_memory(PM_FNAME);
+   }
+   pm_strcpy(ff_pkt->fname_save, ff_pkt->fname);
+
+   /* 
+    * Strip path.  If it doesn't succeed put it back.  If
+    *  it does, and there is a different link string,
+    *  attempt to strip the link. If it fails, but them
+    *  both back.
+    * I.e. if either stripping fails don't strip anything.
+    */
+   if (do_strip(ff_pkt->strip_path, ff_pkt->fname)) {
+      if (ff_pkt->fname != ff_pkt->link) {
+         pm_strcpy(ff_pkt->link_save, ff_pkt->link);
+         if (!do_strip(ff_pkt->strip_path, ff_pkt->link)) {
+            strcpy(ff_pkt->link, ff_pkt->link_save);
+            strcpy(ff_pkt->fname, ff_pkt->fname_save);
+         }
+      }
+   } else {
+      strcpy(ff_pkt->fname, ff_pkt->fname_save);
+   } 
+   Dmsg2(200, "fname=%s stripped=%s\n", ff_pkt->fname_save, ff_pkt->fname);
+}
+
+static void unstrip_path(FF_PKT *ff_pkt)
+{
+   if (!(ff_pkt->flags & FO_STRIPPATH) || ff_pkt->strip_path <= 0) {
+      return;
+   }
+   strcpy(ff_pkt->fname, ff_pkt->fname_save);
+   if (ff_pkt->fname != ff_pkt->link) {
+      strcpy(ff_pkt->link, ff_pkt->link_save);
+   }
 }

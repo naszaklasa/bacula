@@ -1,3 +1,3 @@
 USER=root
-PROGRAM=@sbindir@/wxconsole
+PROGRAM=@sbindir@/bwx-console
 SESSION=true

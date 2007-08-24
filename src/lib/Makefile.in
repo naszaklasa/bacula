@@ -1,4 +1,4 @@
-# $Id: Makefile.in 3670 2006-11-21 16:13:58Z kerns $
+# $Id: Makefile.in 4914 2007-05-27 09:34:40Z kerns $
 @MCOMMON@
 
 python = @PYTHON_INCDIR@
@@ -14,9 +14,6 @@ topdir = ../..
 # this dir relative to top dir
 thisdir = src/lib
 
-OPENSSL_LIBS = @OPENSSL_LIBS@
-OPENSSL_INC = @OPENSSL_INC@
-
 DEBUG=@DEBUG@
 
 first_rule: all
@@ -24,28 +21,28 @@ dummy:
 
 LIBSRCS = attr.c base64.c berrno.c bsys.c bget_msg.c \
 	  bnet.c bnet_server.c runscript.c \
-	  bpipe.c bsnprintf.c btime.c \
+	  bsock.c bpipe.c bsnprintf.c btime.c \
 	  cram-md5.c crc32.c crypto.c daemon.c edit.c fnmatch.c \
 	  hmac.c idcache.c jcr.c lex.c alist.c dlist.c \
 	  md5.c message.c mem_pool.c openssl.c parse_conf.c \
 	  queue.c bregex.c \
 	  res.c rwlock.c scan.c serial.c sha1.c \
-	  signal.c smartall.c tls.c tree.c \
+	  signal.c smartall.c rblist.c tls.c tree.c \
 	  util.c var.c watchdog.c workq.c btimers.c \
-	  address_conf.c pythonlib.c
+	  address_conf.c pythonlib.c breg.c
 
 
 LIBOBJS = attr.o base64.o berrno.o bsys.o bget_msg.o \
 	  bnet.o bnet_server.o runscript.o \
-	  bpipe.o bsnprintf.o btime.o \
+	  bsock.o bpipe.o bsnprintf.o btime.o \
 	  cram-md5.o crc32.o crypto.o daemon.o edit.o enh_fnmatch.o fnmatch.o \
 	  hmac.o idcache.o jcr.o lex.o alist.o dlist.o \
 	  md5.o message.o mem_pool.o openssl.o parse_conf.o \
 	  queue.o bregex.o \
 	  res.o rwlock.o scan.o serial.o sha1.o \
-	  signal.o smartall.o tls.o tree.o \
+	  signal.o smartall.o rblist.o tls.o tree.o \
 	  util.o var.o watchdog.o workq.o btimers.o \
-	  address_conf.o pythonlib.o
+	  address_conf.o pythonlib.o breg.o
 
 
 EXTRAOBJS = @OBJLIST@
@@ -58,11 +55,11 @@ EXTRAOBJS = @OBJLIST@
 # inference rules
 .c.o:
 	@echo "Compiling $<"
-	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(OPENSSL_INC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
 .cc.o:
 	@echo "Compiling $<"
-	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(OPENSSL_INC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
 #-------------------------------------------------------------------------
 all: Makefile libbac.a
@@ -81,7 +78,7 @@ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 
 pythonlib.o: pythonlib.c
 	@echo "Compiling $<"
-	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(OPENSSL_INC) $(python) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(python) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
 rwlock_test:
 	rm -f rwlock.o

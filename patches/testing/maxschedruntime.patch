@@ -1,0 +1,305 @@
+Index: src/dird/getmsg.c
+===================================================================
+--- src/dird/getmsg.c	(révision 4696)
++++ src/dird/getmsg.c	(copie de travail)
+@@ -70,6 +70,33 @@
+ 
+ static char OK_msg[] = "1000 OK\n";
+ 
++
++void set_jcr_sd_job_status(JCR *jcr, int SDJobStatus)
++{
++   bool set_waittime=false;
++   Dmsg2(800, "set_jcr_sd_job_status(%s, %c)\n", jcr->Job, SDJobStatus);
++   /* if wait state is new, we keep current time for watchdog MaxWaitTime */
++   switch (SDJobStatus) {
++      case JS_WaitMedia:
++      case JS_WaitMount:
++      case JS_WaitMaxJobs:
++	 set_waittime = true;
++      default:
++	 break;
++   }
++
++   if (job_waiting(jcr)) {
++      set_waittime = false;
++   }
++
++   if (set_waittime) {
++      /* set it before JobStatus */
++      Dmsg0(800, "Setting wait_time\n");
++      jcr->wait_time = time(NULL);
++   }
++   jcr->SDJobStatus = SDJobStatus;
++}
++
+ /*
+  * Get a message
+  *  Call appropriate processing routine
+@@ -230,7 +257,7 @@
+          int JobStatus;
+          char Job[MAX_NAME_LENGTH];
+          if (sscanf(bs->msg, Job_status, &Job, &JobStatus) == 2) {
+-            jcr->SDJobStatus = JobStatus; /* current status */
++            set_jcr_sd_job_status(jcr,JobStatus); /* current status */
+          } else {
+             Emsg1(M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
+          }
+Index: src/dird/job.c
+===================================================================
+--- src/dird/job.c	(révision 4696)
++++ src/dird/job.c	(copie de travail)
+@@ -41,8 +41,9 @@
+ static void *job_thread(void *arg);
+ static void job_monitor_watchdog(watchdog_t *self);
+ static void job_monitor_destructor(watchdog_t *self);
+-static bool job_check_maxwaittime(JCR *control_jcr, JCR *jcr);
+-static bool job_check_maxruntime(JCR *control_jcr, JCR *jcr);
++static bool job_check_maxwaittime(JCR *jcr);
++static bool job_check_maxruntime(JCR *jcr);
++static bool job_check_maxschedruntime(JCR *jcr);
+ 
+ /* Imported subroutines */
+ extern void term_scheduler();
+@@ -250,6 +251,11 @@
+       Jmsg(jcr, M_FATAL, 0, _("Job canceled because max start delay time exceeded.\n"));
+    }
+ 
++   if (job_check_maxschedruntime(jcr)) {
++      set_jcr_job_status(jcr, JS_Canceled);
++      Jmsg(jcr, M_FATAL, 0, _("Job canceled because max sched run time exceeded.\n"));
++   }
++
+    /* TODO : check if it is used somewhere */
+    if (jcr->job->RunScripts == NULL) {
+       Dmsg0(200, "Warning, job->RunScripts is empty\n");
+@@ -450,15 +456,20 @@
+       }
+ 
+       /* check MaxWaitTime */
+-      if (job_check_maxwaittime(control_jcr, jcr)) {
++      if (job_check_maxwaittime(jcr)) {
+          set_jcr_job_status(jcr, JS_Canceled);
+          Jmsg(jcr, M_FATAL, 0, _("Max wait time exceeded. Job canceled.\n"));
+          cancel = true;
+       /* check MaxRunTime */
+-      } else if (job_check_maxruntime(control_jcr, jcr)) {
++      } else if (job_check_maxruntime(jcr)) {
+          set_jcr_job_status(jcr, JS_Canceled);
+          Jmsg(jcr, M_FATAL, 0, _("Max run time exceeded. Job canceled.\n"));
+          cancel = true;
++      /* check MaxSchedRunTime */ 
++      } else if (job_check_maxschedruntime(jcr)) {
++         set_jcr_job_status(jcr, JS_Canceled);
++         Jmsg(jcr, M_FATAL, 0, _("Max sched run time exceeded. Job canceled.\n"));
++         cancel = true;
+       }
+ 
+       if (cancel) {
+@@ -479,29 +490,30 @@
+  * Check if the maxwaittime has expired and it is possible
+  *  to cancel the job.
+  */
+-static bool job_check_maxwaittime(JCR *control_jcr, JCR *jcr)
++static bool job_check_maxwaittime(JCR *jcr)
+ {
+    bool cancel = false;
+    JOB *job = jcr->job;
+ 
+-   if (job_canceled(jcr)) {
+-      return false;                /* already canceled */
++   if (!job_waiting(jcr)) {
++      return false;
+    }
+    if (job->MaxWaitTime == 0 && job->FullMaxWaitTime == 0 &&
+        job->IncMaxWaitTime == 0 && job->DiffMaxWaitTime == 0) {
+       return false;
+    } 
++   Dmsg3(20, "check maxwaittime %u - %u >= %u\n", watchdog_time, jcr->wait_time, job->MaxWaitTime);
+    if (jcr->JobLevel == L_FULL && job->FullMaxWaitTime != 0 &&
+-         (watchdog_time - jcr->start_time) >= job->FullMaxWaitTime) {
++         (watchdog_time - jcr->wait_time) >= job->FullMaxWaitTime) {
+       cancel = true;
+    } else if (jcr->JobLevel == L_DIFFERENTIAL && job->DiffMaxWaitTime != 0 &&
+-         (watchdog_time - jcr->start_time) >= job->DiffMaxWaitTime) {
++         (watchdog_time - jcr->wait_time) >= job->DiffMaxWaitTime) {
+       cancel = true;
+    } else if (jcr->JobLevel == L_INCREMENTAL && job->IncMaxWaitTime != 0 &&
+-         (watchdog_time - jcr->start_time) >= job->IncMaxWaitTime) {
++         (watchdog_time - jcr->wait_time) >= job->IncMaxWaitTime) {
+       cancel = true;
+    } else if (job->MaxWaitTime != 0 &&
+-         (watchdog_time - jcr->start_time) >= job->MaxWaitTime) {
++         (watchdog_time - jcr->wait_time) >= job->MaxWaitTime) {
+       cancel = true;
+    }
+ 
+@@ -512,7 +524,7 @@
+  * Check if maxruntime has expired and if the job can be
+  *   canceled.
+  */
+-static bool job_check_maxruntime(JCR *control_jcr, JCR *jcr)
++static bool job_check_maxruntime(JCR *jcr)
+ {
+    if (jcr->job->MaxRunTime == 0 || job_canceled(jcr)) {
+       return false;
+@@ -527,6 +539,24 @@
+ }
+ 
+ /*
++ * Check if MaxSchedRunTime has expired and if the job can be
++ *   canceled.
++ */
++static bool job_check_maxschedruntime(JCR *jcr)
++{
++   if (jcr->job->MaxSchedRunTime == 0 || job_canceled(jcr)) {
++      return false;
++   }
++   if ((watchdog_time - jcr->sched_time) < jcr->job->MaxSchedRunTime) {
++      Dmsg3(200, "Job %p (%s) with MaxSchedRunTime %d not expired\n",
++            jcr, jcr->Job, jcr->job->MaxSchedRunTime);
++      return false;
++   }
++
++   return true;
++}
++
++/*
+  * Get or create a Pool record with the given name.
+  * Returns: 0 on error
+  *          poolid if OK
+Index: src/dird/dird_conf.c
+===================================================================
+--- src/dird/dird_conf.c	(révision 4696)
++++ src/dird/dird_conf.c	(copie de travail)
+@@ -281,6 +281,7 @@
+    {"writebootstrap",store_dir, ITEM(res_job.WriteBootstrap), 0, 0, 0},
+    {"writeverifylist",store_dir, ITEM(res_job.WriteVerifyList), 0, 0, 0},
+    {"replace",  store_replace,  ITEM(res_job.replace), 0, ITEM_DEFAULT, REPLACE_ALWAYS},
++   {"maxschedruntime", store_time, ITEM(res_job.MaxSchedRunTime), 0, 0, 0},
+    {"maxruntime",   store_time, ITEM(res_job.MaxRunTime), 0, 0, 0},
+    {"fullmaxwaittime",  store_time, ITEM(res_job.FullMaxWaitTime), 0, 0, 0},
+    {"incrementalmaxwaittime",  store_time, ITEM(res_job.IncMaxWaitTime), 0, 0, 0},
+@@ -627,6 +628,15 @@
+       if (res->res_job.WriteBootstrap) {
+          sendit(sock, _("  --> WriteBootstrap=%s\n"), NPRT(res->res_job.WriteBootstrap));
+       }
++      if (res->res_job.MaxRunTime) {
++         sendit(sock, _("  --> MaxRunTime=%u\n"), res->res_job.MaxRunTime);
++      }
++      if (res->res_job.MaxWaitTime) {
++         sendit(sock, _("  --> MaxWaitTime=%u\n"), res->res_job.MaxWaitTime);
++      }
++      if (res->res_job.MaxStartDelay) {
++         sendit(sock, _("  --> MaxStartDelay=%u\n"), res->res_job.MaxStartDelay);
++      }
+       if (res->res_job.storage) {
+          STORE *store;
+          foreach_alist(store, res->res_job.storage) {
+Index: src/dird/dird_conf.h
+===================================================================
+--- src/dird/dird_conf.h	(révision 4696)
++++ src/dird/dird_conf.h	(copie de travail)
+@@ -371,6 +371,7 @@
+       char *WriteVerifyList;          /* List of changed files */
+    };
+    int   replace;                     /* How (overwrite, ..) */
++   utime_t MaxSchedRunTime;           /* max run time in seconds from Scheduled time*/
+    utime_t MaxRunTime;                /* max run time in seconds */
+    utime_t MaxWaitTime;               /* max blocking time in seconds */
+    utime_t FullMaxWaitTime;           /* Max Full job wait time */
+Index: src/jcr.h
+===================================================================
+--- src/jcr.h	(révision 4696)
++++ src/jcr.h	(copie de travail)
+@@ -105,6 +105,22 @@
+    jcr->JobStatus == JS_ErrorTerminated || \
+    jcr->JobStatus == JS_FatalError)
+ 
++#define job_waiting(jcr) \
++  (jcr->JobStatus == JS_WaitFD       || \
++   jcr->JobStatus == JS_WaitSD	     || \
++   jcr->JobStatus == JS_WaitMedia    || \
++   jcr->JobStatus == JS_WaitMount    || \
++   jcr->JobStatus == JS_WaitStoreRes || \
++   jcr->JobStatus == JS_WaitJobRes   || \
++   jcr->JobStatus == JS_WaitClientRes|| \
++   jcr->JobStatus == JS_WaitMaxJobs  || \
++   jcr->JobStatus == JS_WaitPriority || \
++   jcr->SDJobStatus == JS_WaitMedia  || \
++   jcr->SDJobStatus == JS_WaitMount  || \
++   jcr->SDJobStatus == JS_WaitMaxJobs)
++
++
++
+ #define foreach_jcr(jcr) \
+    for (jcr=jcr_walk_start(); jcr; (jcr=jcr_walk_next(jcr)) )
+ 
+@@ -166,6 +182,7 @@
+    time_t start_time;                 /* when job actually started */
+    time_t run_time;                   /* used for computing speed */
+    time_t end_time;                   /* job end time */
++   time_t wait_time;                  /* when job have started to wait */
+    POOLMEM *client_name;              /* client name */
+    POOLMEM *RestoreBootstrap;         /* Bootstrap file to restore */
+    POOLMEM *stime;                    /* start time for incremental/differential */
+Index: src/lib/jcr.c
+===================================================================
+--- src/lib/jcr.c	(révision 4696)
++++ src/lib/jcr.c	(copie de travail)
+@@ -546,18 +546,54 @@
+ 
+ void set_jcr_job_status(JCR *jcr, int JobStatus)
+ {
++   bool set_waittime=false;
++   Dmsg2(800, "set_jcr_job_status(%s, %c)\n", jcr->Job, JobStatus);
++   /* if wait state is new, we keep current time for watchdog MaxWaitTime */
++   switch (JobStatus) {
++      case JS_WaitFD:
++      case JS_WaitSD:
++      case JS_WaitMedia:
++      case JS_WaitMount:
++      case JS_WaitStoreRes:
++      case JS_WaitJobRes:
++      case JS_WaitClientRes:
++      case JS_WaitMaxJobs:
++      case JS_WaitPriority:
++	 set_waittime = true;
++      default:
++	 break;
++   }
++
++   switch (jcr->JobStatus) {
+    /*
+     * For a set of errors, ... keep the current status
+     *   so it isn't lost. For all others, set it.
+     */
+-   switch (jcr->JobStatus) {
+    case JS_ErrorTerminated:
+    case JS_Error:
+    case JS_FatalError:
+    case JS_Differences:
+    case JS_Canceled:
+       break;
++   /*
++    * For a set of Wait situation, keep old time.
++    */
++   case JS_WaitFD:
++   case JS_WaitSD:
++   case JS_WaitMedia:
++   case JS_WaitMount:
++   case JS_WaitStoreRes:
++   case JS_WaitJobRes:
++   case JS_WaitClientRes:
++   case JS_WaitMaxJobs:
++   case JS_WaitPriority:  
++      set_waittime = false;	/* keep old time */
+    default:
++      if (set_waittime) {
++	 /* set it before JobStatus */
++	 Dmsg0(800, "Setting wait_time\n");
++	 jcr->wait_time = time(NULL);
++      }
+       jcr->JobStatus = JobStatus;
+    }
+ }

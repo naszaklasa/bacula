@@ -1,11 +1,11 @@
 /*
- *  Version $Id: version.h 4325 2007-03-06 20:02:31Z kerns $
+ *  Version $Id: version.h 5333 2007-08-10 21:06:40Z kerns $
  */
 
 #undef  VERSION
-#define VERSION "2.0.3"
-#define BDATE   "06 March 2007"
-#define LSMDATE "06Mar07"
+#define VERSION "2.2.0"
+#define BDATE   "08 August 2007"
+#define LSMDATE "08Aug07"
 
 #define PROG_COPYRIGHT "Copyright (C) %d-2007 Free Software Foundation Europe e.V.\n"
 #define BYEAR "2007"       /* year for copyright messages in progs */
@@ -19,8 +19,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -43,21 +43,42 @@
 #undef  DEBUG
 #define DEBUG 1
 #define TRACEBACK 1
-#define SMCHECK
 #define TRACE_FILE 1
 
 /* If this is set stdout will not be closed on startup */
 /* #define DEVELOPER 1 */
 
+/*
+ * SMCHECK does orphaned buffer checking (memory leaks)
+ *  it can always be turned on, but has some minor performance
+ *  penalties.
+ */
+#ifdef DEVELOPER
+#define SMCHECK
+#endif
+
+/* 
+ * for fastest speed but you must have a UPS to avoid unwanted shutdowns
+ */
+#define SQLITE3_INIT_QUERY "PRAGMA synchronous = OFF"
+
+/*
+ * for more safety, but is 30 times slower than above
+ */
+//#define SQLITE3_INIT_QUERY "PRAGMA synchronous = NORMAL"
+
+/*
+ * This should always be on. It enables data encryption code 
+ *  providing it is configured.
+ */
 #define DATA_ENCRYPTION 1
 
-#define USE_BSNPRINTF 1
-
-/* Turn on the following flag to enable batch attribute inserts
- *  in the catalog.  This gives a large speedup.
+/*
+ * This uses a Bacula specific bsnprintf rather than the sys lib
+ *  version because it is much more secure. It should always be 
+ *  on.
  */
-/* #define HAVE_BATCH_FILE_INSERT 1 */
-
+#define USE_BSNPRINTF 1
 
 /* Debug flags not normally turned on */
 

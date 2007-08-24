@@ -1,22 +1,14 @@
 /*
- *
- *  This file contains all the SQL commands issued by the Director
- *
- *     Kern Sibbald, July MMII
- *
- *   Version $Id: sql_cmds.c 3709 2006-11-27 10:03:06Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,21 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  This file contains all the SQL commands issued by the Director
+ *
+ *     Kern Sibbald, July MMII
+ *
+ *   Version $Id: sql_cmds.c 5240 2007-07-25 21:13:54Z kerns $
+ */
+/*
+ * Note, PostgreSQL imposes some constraints on using DISTINCT and GROUP BY
+ *  for example, the following is illegal in PostgreSQL:
+ *  SELECT DISTINCT JobId FROM temp ORDER BY StartTime ASC;
+ *  because all the ORDER BY expressions must appear in the SELECT list!
+ */
+
 
 #include "bacula.h"
 #include "cats.h"
@@ -62,11 +69,23 @@ const char *cnt_DelCand  = "SELECT count(*) FROM DelCandidates";
 const char *del_Job      = "DELETE FROM Job WHERE JobId=%s";
 const char *del_JobMedia = "DELETE FROM JobMedia WHERE JobId=%s";
 const char *cnt_JobMedia = "SELECT count(*) FROM JobMedia WHERE MediaId=%s";
-const char *sel_JobMedia = "SELECT JobId FROM JobMedia WHERE MediaId=%s";
+
+const char *sel_JobMedia = 
+   "SELECT DISTINCT JobMedia.JobId FROM JobMedia,Job "
+   "WHERE MediaId=%s AND Job.JobId=JobMedia.JobId "
+   "AND Job.JobTDate<%s";
+
+/* Count Select JobIds for File deletion */
+const char *count_select_job = 
+   "SELECT count(*) from Job "
+   "WHERE JobTDate<%s "
+   "AND ClientId=%s "
+   "AND PurgedFiles=0";
+
 
 /* Select JobIds for File deletion. */
 const char *select_job =
-   "SELECT JobId from Job "
+   "SELECT DISTINCT JobId from Job "
    "WHERE JobTDate<%s "
    "AND ClientId=%s "
    "AND PurgedFiles=0";
@@ -120,6 +139,7 @@ const char *insert_delcand =
  * At the same time, we select "orphanned" jobs
  * (i.e. no files, ...) for deletion.
  */
+#ifdef old_way
 const char *select_backup_del =
    "SELECT DISTINCT DelCandidates.JobId,DelCandidates.PurgedFiles "
    "FROM Job,DelCandidates "
@@ -177,6 +197,68 @@ const char *select_migrate_del =
    "(Job.JobTDate>%s "
    "AND Job.ClientId=%s "
    "AND Job.Type='g')";
+
+#else
+/* Faster way */
+const char *select_backup_del =
+   "SELECT DISTINCT DelCandidates.JobId,DelCandidates.PurgedFiles "
+   "FROM Job,DelCandidates "
+   "WHERE (Job.JobId=DelCandidates.JobId AND ((DelCandidates.JobFiles=0) OR "
+   "(DelCandidates.JobStatus!='T'))) OR "
+   "(Job.JobTDate>%s "
+   "AND Job.ClientId=%s "
+   "AND Job.Level='F' AND Job.JobStatus='T' AND Job.Type IN ('B','M') "
+   "AND Job.FileSetId=DelCandidates.FileSetId)";
+
+/* Select Jobs from the DelCandidates table that have a
+ * more recent InitCatalog -- i.e. are not the only InitCatalog
+ * This is the list of Jobs to delete for a Verify Job.
+ */
+const char *select_verify_del =
+   "SELECT DISTINCT DelCandidates.JobId,DelCandidates.PurgedFiles "
+   "FROM Job,DelCandidates "
+   "WHERE (Job.JobId=DelCandidates.JobId AND DelCandidates.JobStatus!='T') OR "
+   "(Job.JobTDate>%s "
+   "AND Job.ClientId=%s "
+   "AND Job.Type='V' AND Job.Level='V' AND Job.JobStatus='T' "
+   "AND Job.FileSetId=DelCandidates.FileSetId)";
+
+
+/* Select Jobs from the DelCandidates table.
+ * This is the list of Jobs to delete for a Restore Job.
+ */
+const char *select_restore_del =
+   "SELECT DISTINCT DelCandidates.JobId,DelCandidates.PurgedFiles "
+   "FROM Job,DelCandidates "
+   "WHERE (Job.JobId=DelCandidates.JobId AND DelCandidates.JobStatus!='T') OR "
+   "(Job.JobTDate>%s "
+   "AND Job.ClientId=%s "
+   "AND Job.Type='R')";
+
+/* Select Jobs from the DelCandidates table.
+ * This is the list of Jobs to delete for an Admin Job.
+ */
+const char *select_admin_del =
+   "SELECT DISTINCT DelCandidates.JobId,DelCandidates.PurgedFiles "
+   "FROM Job,DelCandidates "
+   "WHERE (Job.JobId=DelCandidates.JobId AND DelCandidates.JobStatus!='T') OR "
+   "(Job.JobTDate>%s "
+   "AND Job.ClientId=%s "
+   "AND Job.Type='D')";
+
+/*
+ * Select Jobs from the DelCandidates table.
+ * This is the list of Jobs to delete for an Migrate Job.
+ */
+const char *select_migrate_del =
+   "SELECT DISTINCT DelCandidates.JobId,DelCandidates.PurgedFiles "
+   "FROM Job,DelCandidates "
+   "WHERE (Job.JobId=DelCandidates.JobId AND DelCandidates.JobStatus!='T') OR "
+   "(Job.JobTDate>%s "
+   "AND Job.ClientId=%s "
+   "AND Job.Type='g')";
+
+#endif
 
 /* ======= ua_restore.c */
 const char *uar_count_files =
@@ -323,23 +405,14 @@ const char *uar_inc =
    "AND FileSet.FileSet='%s' "
    "%s";
 
-#ifdef HAVE_POSTGRESQL
-/* Note, the PostgreSQL will have a much uglier looking
- * list since it cannot do GROUP BY of different values.
- */
 const char *uar_list_temp =
-   "SELECT JobId,Level,JobFiles,JobBytes,StartTime,VolumeName,StartFile"
+   "SELECT DISTINCT JobId,Level,JobFiles,JobBytes,StartTime,VolumeName"
    " FROM temp"
-   " ORDER BY StartTime,StartFile ASC";
-#else
-const char *uar_list_temp =
-   "SELECT JobId,Level,JobFiles,JobBytes,StartTime,VolumeName,StartFile"
-   " FROM temp"
-   " GROUP BY JobId ORDER BY StartTime,StartFile ASC";
-#endif
+   " ORDER BY StartTime ASC";
 
 
-const char *uar_sel_jobid_temp = "SELECT JobId FROM temp ORDER BY StartTime ASC";
+const char *uar_sel_jobid_temp = 
+   "SELECT DISTINCT JobId,StartTime FROM temp ORDER BY StartTime ASC";
 
 const char *uar_sel_all_temp1 = "SELECT * FROM temp1";
 
@@ -364,9 +437,9 @@ const char *uar_mediatype =
  *  for use when inserting individual files into the tree.
  */
 const char *uar_jobid_fileindex =
-   "SELECT Job.JobId, File.FileIndex FROM Job,File,Path,Filename,Client "
+   "SELECT Job.JobId,File.FileIndex FROM Job,File,Path,Filename,Client "
    "WHERE Job.JobId=File.JobId "
-   "AND Job.StartTime<'%s' "
+   "AND Job.StartTime<='%s' "
    "AND Path.Path='%s' "
    "AND Filename.Name='%s' "
    "AND Client.Name='%s' "
@@ -376,10 +449,10 @@ const char *uar_jobid_fileindex =
    "ORDER BY Job.StartTime DESC LIMIT 1";
 
 const char *uar_jobids_fileindex =
-   "SELECT Job.JobId, File.FileIndex FROM Job,File,Path,Filename,Client "
+   "SELECT Job.JobId,File.FileIndex FROM Job,File,Path,Filename,Client "
    "WHERE Job.JobId IN (%s) "
    "AND Job.JobId=File.JobId "
-   "AND Job.StartTime<'%s' "
+   "AND Job.StartTime<='%s' "
    "AND Path.Path='%s' "
    "AND Filename.Name='%s' "
    "AND Client.Name='%s' "
@@ -420,4 +493,4 @@ const char *uar_jobid_fileindex_from_dir =
  
 /* Query to get list of files from table -- presuably built by an external program */
 const char *uar_jobid_fileindex_from_table = 
-   "SELECT JobId, FileIndex from %s";
+   "SELECT JobId,FileIndex from %s";

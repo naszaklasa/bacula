@@ -1,22 +1,14 @@
 /*
- * Bacula thread watchdog routine. General routine that 
- *  allows setting a watchdog timer with a callback that is
- *  called when the timer goes off.
- *
- *  Kern Sibbald, January MMII
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula thread watchdog routine. General routine that 
+ *  allows setting a watchdog timer with a callback that is
+ *  called when the timer goes off.
+ *
+ *  Kern Sibbald, January MMII
+ *
+ */
 
 #include "bacula.h"
 #include "jcr.h"
@@ -79,16 +79,17 @@ int start_watchdog(void)
    watchdog_time = time(NULL);
 
    if ((errstat=rwl_init(&lock)) != 0) {
+      berrno be;
       Emsg1(M_ABORT, 0, _("Unable to initialize watchdog lock. ERR=%s\n"),
-            strerror(errstat));
+            be.bstrerror(errstat));
    }
    wd_queue = New(dlist(dummy, &dummy->link));
    wd_inactive = New(dlist(dummy, &dummy->link));
+   wd_is_init = true;
 
    if ((stat = pthread_create(&wd_tid, NULL, watchdog_thread, NULL)) != 0) {
       return stat;
    }
-   wd_is_init = true;
    return 0;
 }
 
@@ -101,6 +102,7 @@ static void ping_watchdog()
    P(timer_mutex);
    pthread_cond_signal(&timer);
    V(timer_mutex);
+   bmicrosleep(0, 100);
 }
 
 /*
@@ -119,9 +121,8 @@ int stop_watchdog(void)
    }
 
    quit = true;                       /* notify watchdog thread to stop */
-   wd_is_init = false;
-
    ping_watchdog();
+
    stat = pthread_join(wd_tid, NULL);
 
    while (!wd_queue->empty()) {
@@ -148,6 +149,7 @@ int stop_watchdog(void)
    delete wd_inactive;
    wd_inactive = NULL;
    rwl_destroy(&lock);
+   wd_is_init = false;
 
    return stat;
 }
@@ -319,8 +321,9 @@ static void wd_lock()
 {
    int errstat;
    if ((errstat=rwl_writelock(&lock)) != 0) {
+      berrno be;
       Emsg1(M_ABORT, 0, _("rwl_writelock failure. ERR=%s\n"),
-           strerror(errstat));
+           be.bstrerror(errstat));
    }
 }
 
@@ -333,7 +336,8 @@ static void wd_unlock()
 {
    int errstat;
    if ((errstat=rwl_writeunlock(&lock)) != 0) {
+      berrno be;
       Emsg1(M_ABORT, 0, _("rwl_writeunlock failure. ERR=%s\n"),
-           strerror(errstat));
+           be.bstrerror(errstat));
    }
 }

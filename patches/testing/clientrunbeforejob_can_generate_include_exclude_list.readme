@@ -1,0 +1,16 @@
+From: Eric Bollengier <eric at homelinux dot org>
+
+This patch allow you to create include/exclude file list
+with ClientRunBeforeJob command.
+
+Job {
+...
+	ClientRunBeforeJob = "gen_exclude.pl /tmp/lst.exc"
+}
+
+FileSet {
+...
+	Include {
+		File="\\</tmp/lst.exc"
+	}
+}

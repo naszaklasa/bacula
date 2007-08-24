@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, April-July 2004
  *
- *    Version $Id: wxbutils.cpp 3685 2006-11-22 14:26:40Z kerns $
+ *    Version $Id: wxbutils.cpp 4992 2007-06-07 14:46:43Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -15,8 +15,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of

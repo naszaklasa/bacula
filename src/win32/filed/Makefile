@@ -42,6 +42,7 @@ FILED_OBJS = \
 	$(OBJDIR)/vss.o \
 	$(OBJDIR)/vss_XP.o \
 	$(OBJDIR)/vss_W2K3.o \
+	$(OBJDIR)/vss_Vista.o \
 	$(OBJDIR)/winabout.o \
 	$(OBJDIR)/winservice.o \
 	$(OBJDIR)/winstat.o \

@@ -1,13 +1,4 @@
 /*
- *   Library includes for Bacula lib directory
- *
- *   This file contains an include for each library file
- *   that we use within Bacula. bacula.h includes this
- *   file and thus picks up everything we need in lib.
- *
- *   Version $Id: lib.h 4116 2007-02-06 14:37:57Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
@@ -16,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   Library includes for Bacula lib directory
+ *
+ *   This file contains an include for each library file
+ *   that we use within Bacula. bacula.h includes this
+ *   file and thus picks up everything we need in lib.
+ *
+ *   Version $Id: lib.h 5170 2007-07-13 13:33:34Z kerns $
+ */
 
 #include "smartall.h"
 #include "alist.h"

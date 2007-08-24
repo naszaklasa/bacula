@@ -18,7 +18,7 @@ your questions on the bacula-devel list, but we can't guarantee anything.
 One-time Setup
 ==============
 
-If you're reading this file you've probably already enlisted in the CVS tree or
+If you're reading this file you've probably already enlisted in the SVN tree or
 extracted the contents of the source tar.  If not you need to do that first.
 
 You also need to download one of the doc tar balls and extract to your
@@ -29,6 +29,16 @@ The extracted doc directory name will be bacula-docs-version where version
 is the version number.  The directory must be renamed to docs (ie remove
 the leading bacula- and the -version portion of the name).
 
+Note, a number of packages must be installed to build the cross-tools
+and the depkgs files.  Most are rather standard such as gcc, g++,
+make, ...  However a few that you may not have are:
+
+  texinfo
+  flex
+  bison
+  m4
+  ...
+
 Once the source is on your system, change to the win32 directory
         cd .../bacula/src/win32
 
@@ -37,6 +47,26 @@ Download and build the cross compiler tools
 
 Download and build the 3rd party dependencies
         ./build-depkgs-mingw32
+
+Note, that during the build process you will see a moderate amount of
+output. If something fails, it is probably because you don't have one
+of the build dependencies (hopefully all mentioned above) loaded on your  
+system. To find out what is going wrong, do the following:
+
+  cd .../depkgs-mingw32/src/<package-name>
+   
+where <package-name> is where the package is unpacked and built. Normally
+it is relatively obvious when looking at the src directory.             
+
+In that directory, you should find a make.log, which has the full details
+of the compiles, links, and installs done for that package.
+
+Note, if you are building on a 64 bit machine, please know that
+the build for the depkgs-mingw32/scons puts the python scons libraries
+in depkgs-mingw32/scons/lib64 but when running scons it looks for the
+libs in depkgs-mingw32/scons/lib. So adding symlink from
+depkgs-mingw32/scons/lib64 to depkgs-mingw32/scons/lib will fix the
+problem.
 
 You need the header files from the Microsoft VSS SDK.  Unfortunately the SDK
 can only be downloaded and installed on a Windows system.  You can find it on
@@ -48,12 +78,16 @@ If that link doesn't work then go to http://www.microsoft.com and search for
 
         "download volume shadow copy service sdk"
 
+we are currently using version 7.2 released 8/3/2005.
+
 Normally the files will be installed in:
 
         c:\Program Files\Microsoft\VSSSDK72
 
 You only need to copy everything under the c:\Program Files\Microsoft\VSSSDK72\inc
-directory into .../depkgs-mingw32/vss/inc.
+directory into .../depkgs-mingw32/vss/inc.  In doing so, please ensure that
+the case in maintained on the directory and filenames -- some contain uppercase 
+characters !!!
 
 The above only needs to be done once unless we change the cross-tools
 or the dependencies versions.  In general, you can run the script multiple
@@ -130,6 +164,18 @@ the variable declaration in the header file.  All exported variables
 must be declared in a header file and MUST NOT be declared in a
 source file referencing the variable.
 
+Exporting functions is now more or less automated.  If you find that
+a function name has been added, changed, or an argument modified,    
+simply do the following:
+
+   cd .../bacula/src/win32/dll 
+   make                  (to build the .o files, note the link will fail)
+   ./make_def >bacula.def
+
+This should rebuild the bacula.def file.
+
+===== manual changing of bacula.def no longer necessary =====
+If you want to do it manually, please see below:
 Exporting a function requires a bit more work.  You must determine the
 C++ mangled name of the new function.
 
@@ -143,7 +189,16 @@ use:
 Replace <file> with the base part of the name of the source code file
 which contains the new function.  Replace <symbol> with the name of
 the new function.  Remove the leading underscore and place the result
-in the .../bacula/src/win32/dll/bacula.def file.
+in the file
+
+   .../bacula/src/win32/dll/bacula.def
+=== end manual changing of bacula.def ==========
+
+If you add a new file, you will need to specify its name in
+
+   .../bacula/src/win32/dll/Makefile
+and
+   .../bacula/src/win32/libbac/Makefile
 
 bacula_cats.dll
 ---------------
@@ -164,6 +219,20 @@ exported.
 New data variables are exported by placing their name in the file
 .../bacula/src/win32/cats/bacula_cats.def.
 
+As with the bacula.def file above, this is now more or less automated.
+When the link dies, simply do the following:
+
+   cd .../bacula/src/win32
+   make                  (to build the .o files, note the link will fail)
+   cd cats
+   ./make_def >bacula_cats.def
+
+This should rebuild the bacula_cats.def file. Note, if you have
+changed any data entry points, you will need to modify the make_def
+script -- it should be rather obvious.
+
+
+===== manual changing of bacula_cats.def no longer necessary =====
 Exporting a function requires a bit more work.  You must determine the
 C++ mangled name of the new function.
 
@@ -178,6 +247,7 @@ Replace <file> with the base part of the name of the source code file
 which contains the new function.  Replace <symbol> with the name of
 the new function.  Remove the leading underscore and place the result
 in the .../bacula/src/win32/cats/bacula_cats.def file.
+=== end manual changing of bacula_cats.def ==========
 
 
 Structure of the MinGW32 build environment

@@ -276,6 +276,12 @@
 /* Define to 1 if you have the <assert.h> header file. */
 #undef HAVE_ASSERT_H
 
+/* Set if Bacula bat Qt4 GUI support enabled */
+#undef HAVE_BAT
+
+/* Set if DB batch insert code enabled */
+#undef HAVE_BATCH_FILE_INSERT
+
 /* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
    CoreFoundation framework. */
 #undef HAVE_CFLOCALECOPYCURRENT
@@ -336,6 +342,9 @@
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
+
+/* Define to 1 if you have the `fdatasync' function. */
+#undef HAVE_FDATASYNC
 
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
@@ -496,6 +505,12 @@
 
 /* Define if OpenSSL library is available */
 #undef HAVE_OPENSSL
+
+/* Define if the OpenSSL library is export-contrained to 128bit ciphers */
+#undef HAVE_OPENSSL_EXPORT_LIBRARY
+
+/* Define to 1 if you have the `posix_fadvise' function. */
+#undef HAVE_POSIX_FADVISE
 
 /* Define if your printf() function supports format strings with positions. */
 #undef HAVE_POSIX_PRINTF

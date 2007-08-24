@@ -1,28 +1,14 @@
-/*                               -*- Mode: C -*-
- * compat.h --
- */
-// Copyright transferred from Raider Solutions, Inc to
-//   Kern Sibbald and John Walker by express permission.
-//
-/*
- * Author          : Christopher S. Hull
- * Created On      : Fri Jan 30 13:00:51 2004
- * Last Modified By: Thorsten Engel
- * Last Modified On: Fri Apr 22 19:30:00 2004
- * Update Count    : 218
- * $Id: compat.h 3709 2006-11-27 10:03:06Z kerns $
- */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -39,6 +25,20 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*                               -*- Mode: C -*-
+ * compat.h --
+ */
+// Copyright transferred from Raider Solutions, Inc to
+//   Kern Sibbald and John Walker by express permission.
+//
+/*
+ * Author          : Christopher S. Hull
+ * Created On      : Fri Jan 30 13:00:51 2004
+ * Last Modified By: Thorsten Engel
+ * Last Modified On: Fri Apr 22 19:30:00 2004
+ * Update Count    : 218
+ * $Id: compat.h 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 
 #if !defined(__COMPAT_H_)
@@ -145,6 +145,10 @@ int gettimeofday(struct timeval *, struct timezone *);
 
 #if !defined(ENOMEDIUM)
 #define ENOMEDIUM 123
+#endif
+
+#if !defined(ENODATA)
+#define ENODATA 61
 #endif
 
 struct stat
@@ -361,9 +365,14 @@ inline unsigned long ffs(unsigned long word)
       return 0;
 }
 
-#define ftruncate    _chsize_s
 #else
 #define  ffs   __builtin_ffs
 #endif
+
+
+int win32_ftruncate(int fd, int64_t length);
+
+#undef ftruncate
+#define ftruncate win32_ftruncate
 
 #endif /* __COMPAT_H_ */

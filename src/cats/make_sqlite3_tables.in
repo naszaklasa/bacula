@@ -4,9 +4,10 @@
 
 bindir=@SQL_BINDIR@
 cd @working_dir@
-sqlite=@DB_NAME@
+sqlite=@DB_TYPE@
+db_name=@db_name@
 
-${bindir}/${sqlite} $* bacula.db <<END-OF-DATA
+${bindir}/${sqlite} $* ${db_name}.db <<END-OF-DATA
 CREATE TABLE Filename (
   FilenameId INTEGER,
   Name TEXT DEFAULT "",
@@ -352,10 +353,10 @@ INSERT INTO Status (JobStatus,JobStatusLong) VALUES
 INSERT INTO Version (VersionId) VALUES (10);
 
 
-PRAGMA default_synchronous = OFF;
-PRAGMA default_cache_size = 10000;
+PRAGMA default_cache_size = 100000;
+PRAGMA synchronous = NORMAL;
 
 END-OF-DATA
 
-chmod 640 bacula.db
+chmod 640 ${db_name}.db
 exit 0

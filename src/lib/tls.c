@@ -1,35 +1,14 @@
 /*
- * tls.c TLS support functions
- *
- * Author: Landon Fuller <landonf@threerings.net>
- *
- * Version $Id: tls.c 4033 2007-01-24 01:59:13Z robertnelson $
- *
- * This file was contributed to the Bacula project by Landon Fuller
- * and Three Rings Design, Inc.
- *
- * Three Rings Design, Inc. has been granted a perpetual, worldwide,
- * non-exclusive, no-charge, royalty-free, irrevocable copyright
- * license to reproduce, prepare derivative works of, publicly
- * display, publicly perform, sublicense, and distribute the original
- * work contributed by Three Rings Design, Inc. and its employees to
- * the Bacula project in source or object form.
- *
- * If you wish to license contributions from Three Rings Design, Inc,
- * under an alternate open source license please contact
- * Landon Fuller <landonf@threerings.net>.
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -46,6 +25,27 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * tls.c TLS support functions
+ *
+ * Author: Landon Fuller <landonf@threerings.net>
+ *
+ * Version $Id: tls.c 5117 2007-07-03 09:20:28Z kerns $
+ *
+ * This file was contributed to the Bacula project by Landon Fuller
+ * and Three Rings Design, Inc.
+ *
+ * Three Rings Design, Inc. has been granted a perpetual, worldwide,
+ * non-exclusive, no-charge, royalty-free, irrevocable copyright
+ * license to reproduce, prepare derivative works of, publicly
+ * display, publicly perform, sublicense, and distribute the original
+ * work contributed by Three Rings Design, Inc. and its employees to
+ * the Bacula project in source or object form.
+ *
+ * If you wish to license contributions from Three Rings Design, Inc,
+ * under an alternate open source license please contact
+ * Landon Fuller <landonf@threerings.net>.
+ */
 
 
 #include "bacula.h"
@@ -65,6 +65,8 @@ struct TLS_Context {
    SSL_CTX *openssl;
    CRYPTO_PEM_PASSWD_CB *pem_callback;
    const void *pem_userdata;
+   bool tls_enable;
+   bool tls_require;
 };
 
 struct TLS_Connection {
@@ -78,7 +80,6 @@ struct TLS_Connection {
  */
 static int openssl_verify_peer(int ok, X509_STORE_CTX *store)
 {
-
    if (!ok) {
       X509 *cert = X509_STORE_CTX_get_current_cert(store);
       int depth = X509_STORE_CTX_get_error_depth(store);
@@ -89,7 +90,7 @@ static int openssl_verify_peer(int ok, X509_STORE_CTX *store)
       X509_NAME_oneline(X509_get_issuer_name(cert), issuer, 256);
       X509_NAME_oneline(X509_get_subject_name(cert), subject, 256);
 
-      Emsg5(M_ERROR, 0, _("Error with certificate at depth: %d, issuer = %s,"
+      Jmsg5(get_jcr_from_tid(), M_ERROR, 0, _("Error with certificate at depth: %d, issuer = %s,"
                           " subject = %s, ERR=%d:%s\n"), depth, issuer,
                           subject, err, X509_verify_cert_error_string(err));
 
@@ -101,7 +102,7 @@ static int openssl_verify_peer(int ok, X509_STORE_CTX *store)
 /* Dispatch user PEM encryption callbacks */
 static int tls_pem_callback_dispatch (char *buf, int size, int rwflag, void *userdata)
 {
-   TLS_CONTEXT *ctx = (TLS_CONTEXT *) userdata;
+   TLS_CONTEXT *ctx = (TLS_CONTEXT *)userdata;
    return (ctx->pem_callback(buf, size, ctx->pem_userdata));
 }
 
@@ -120,7 +121,7 @@ TLS_CONTEXT *new_tls_context(const char *ca_certfile, const char *ca_certdir,
    BIO *bio;
    DH *dh;
 
-   ctx = (TLS_CONTEXT *) malloc(sizeof(TLS_CONTEXT));
+   ctx = (TLS_CONTEXT *)malloc(sizeof(TLS_CONTEXT));
 
    /* Allocate our OpenSSL TLSv1 Context */
    ctx->openssl = SSL_CTX_new(TLSv1_method());
@@ -152,7 +153,7 @@ TLS_CONTEXT *new_tls_context(const char *ca_certfile, const char *ca_certdir,
       }
    } else if (verify_peer) {
       /* At least one CA is required for peer verification */
-      Emsg0(M_ERROR, 0, _("Either a certificate file or a directory must be"
+      Jmsg0(get_jcr_from_tid(), M_ERROR, 0, _("Either a certificate file or a directory must be"
                          " specified as a verification store\n"));
       goto err;
    }
@@ -198,16 +199,17 @@ TLS_CONTEXT *new_tls_context(const char *ca_certfile, const char *ca_certdir,
    }
 
    if (SSL_CTX_set_cipher_list(ctx->openssl, TLS_DEFAULT_CIPHERS) != 1) {
-      Emsg0(M_ERROR, 0, _("Error setting cipher list, no valid ciphers available\n"));
+      Jmsg0(get_jcr_from_tid(), M_ERROR, 0,
+             _("Error setting cipher list, no valid ciphers available\n"));
       goto err;
    }
 
    /* Verify Peer Certificate */
    if (verify_peer) {
-           /* SSL_VERIFY_FAIL_IF_NO_PEER_CERT has no effect in client mode */
-           SSL_CTX_set_verify(ctx->openssl,
-                              SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                              openssl_verify_peer);
+      /* SSL_VERIFY_FAIL_IF_NO_PEER_CERT has no effect in client mode */
+      SSL_CTX_set_verify(ctx->openssl,
+                         SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                         openssl_verify_peer);
    }
 
    return ctx;
@@ -230,6 +232,17 @@ void free_tls_context(TLS_CONTEXT *ctx)
    free(ctx);
 }
 
+bool get_tls_require(TLS_CONTEXT *ctx) 
+{
+   return ctx->tls_require;
+}
+
+bool get_tls_enable(TLS_CONTEXT *ctx) 
+{
+   return ctx->tls_enable;
+}
+
+
 /*
  * Verifies a list of common names against the certificate
  * commonName attribute.
@@ -246,7 +259,7 @@ bool tls_postconnect_verify_cn(TLS_CONNECTION *tls, alist *verify_list)
 
    /* Check if peer provided a certificate */
    if (!(cert = SSL_get_peer_certificate(ssl))) {
-      Emsg0(M_ERROR, 0, _("Peer failed to present a TLS certificate\n"));
+      Jmsg0(get_jcr_from_tid(), M_ERROR, 0, _("Peer failed to present a TLS certificate\n"));
       return false;
    }
 
@@ -288,7 +301,8 @@ bool tls_postconnect_verify_host(TLS_CONNECTION *tls, const char *host)
 
    /* Check if peer provided a certificate */
    if (!(cert = SSL_get_peer_certificate(ssl))) {
-      Emsg1(M_ERROR, 0, _("Peer %s failed to present a TLS certificate\n"), host);
+      Jmsg1(get_jcr_from_tid(), M_ERROR, 0, 
+            _("Peer %s failed to present a TLS certificate\n"), host);
       return false;
    }
 
@@ -367,7 +381,6 @@ bool tls_postconnect_verify_host(TLS_CONNECTION *tls, const char *host)
       }
    }
 
-
 success:
    X509_free(cert);
 
@@ -380,7 +393,7 @@ success:
  * Returns: Pointer to TLS_CONNECTION instance on success
  *          NULL on failure;
  */
-TLS_CONNECTION *new_tls_connection (TLS_CONTEXT *ctx, int fd)
+TLS_CONNECTION *new_tls_connection(TLS_CONTEXT *ctx, int fd)
 {
    BIO *bio;
 
@@ -397,7 +410,7 @@ TLS_CONNECTION *new_tls_connection (TLS_CONTEXT *ctx, int fd)
    BIO_set_fd(bio, fd, BIO_NOCLOSE);
 
    /* Allocate our new tls connection */
-   TLS_CONNECTION *tls = (TLS_CONNECTION *) malloc(sizeof(TLS_CONNECTION));
+   TLS_CONNECTION *tls = (TLS_CONNECTION *)malloc(sizeof(TLS_CONNECTION));
 
    /* Create the SSL object and attach the socket BIO */
    if ((tls->openssl = SSL_new(ctx->openssl)) == NULL) {
@@ -411,21 +424,20 @@ TLS_CONNECTION *new_tls_connection (TLS_CONTEXT *ctx, int fd)
    /* Non-blocking partial writes */
    SSL_set_mode(tls->openssl, SSL_MODE_ENABLE_PARTIAL_WRITE|SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
-   return (tls);
+   return tls;
 
 err:
    /* Clean up */
    BIO_free(bio);
    SSL_free(tls->openssl);
    free(tls);
-
    return NULL;
 }
 
 /*
  * Free TLS_CONNECTION instance
  */
-void free_tls_connection (TLS_CONNECTION *tls)
+void free_tls_connection(TLS_CONNECTION *tls)
 {
    SSL_free(tls->openssl);
    free(tls);
@@ -443,14 +455,14 @@ static inline bool openssl_bsock_session_start(BSOCK *bsock, bool server)
 
    /* Zero the fdset, we'll set our fd prior to each invocation of select() */
    FD_ZERO(&fdset);
-   fdmax = bsock->fd + 1;
+   fdmax = bsock->m_fd + 1;
 
    /* Ensure that socket is non-blocking */
-   flags = bnet_set_nonblocking(bsock);
+   flags = bsock->set_nonblocking();
 
    /* start timer */
    bsock->timer_start = watchdog_time;
-   bsock->timed_out = 0;
+   bsock->clear_timed_out();
 
    for (;;) { 
       if (server) {
@@ -471,7 +483,7 @@ static inline bool openssl_bsock_session_start(BSOCK *bsock, bool server)
          goto cleanup;
       case SSL_ERROR_WANT_READ:
          /* If we timeout of a select, this will be unset */
-         FD_SET((unsigned) bsock->fd, &fdset);
+         FD_SET((unsigned) bsock->m_fd, &fdset);
          /* Set our timeout */
          tv.tv_sec = 10;
          tv.tv_usec = 0;
@@ -480,7 +492,7 @@ static inline bool openssl_bsock_session_start(BSOCK *bsock, bool server)
          break;
       case SSL_ERROR_WANT_WRITE:
          /* If we timeout of a select, this will be unset */
-         FD_SET((unsigned) bsock->fd, &fdset);
+         FD_SET((unsigned) bsock->m_fd, &fdset);
          /* Set our timeout */
          tv.tv_sec = 10;
          tv.tv_usec = 0;
@@ -494,14 +506,14 @@ static inline bool openssl_bsock_session_start(BSOCK *bsock, bool server)
          goto cleanup;
       }
 
-      if (bsock->timed_out) {
+      if (bsock->is_timed_out()) {
          goto cleanup;
       }
    }
 
 cleanup:
    /* Restore saved flags */
-   bnet_restore_blocking(bsock, flags);
+   bsock->restore_blocking(flags);
    /* Clear timer */
    bsock->timer_start = 0;
 
@@ -516,7 +528,7 @@ cleanup:
 bool tls_bsock_connect(BSOCK *bsock)
 {
    /* SSL_connect(bsock->tls) */
-   return (openssl_bsock_session_start(bsock, false));
+   return openssl_bsock_session_start(bsock, false);
 }
 
 /*
@@ -527,26 +539,18 @@ bool tls_bsock_connect(BSOCK *bsock)
 bool tls_bsock_accept(BSOCK *bsock)
 {
    /* SSL_accept(bsock->tls) */
-   return (openssl_bsock_session_start(bsock, true));
+   return openssl_bsock_session_start(bsock, true);
 }
 
 /*
  * Shutdown TLS_CONNECTION instance
  */
-void tls_bsock_shutdown (BSOCK *bsock)
+void tls_bsock_shutdown(BSOCK *bsock)
 {
    /*
     * SSL_shutdown must be called twice to fully complete the process -
     * The first time to initiate the shutdown handshake, and the second to
     * receive the peer's reply.
-    *
-    * However, it is valid to close the SSL connection after the initial
-    * shutdown notification is sent to the peer, without waiting for the
-    * peer's reply, as long as you do not plan to re-use that particular
-    * SSL connection object.
-    *
-    * Because we do not re-use SSL connection objects, I do not bother
-    * calling SSL_shutdown a second time.
     *
     * In addition, if the underlying socket is blocking, SSL_shutdown()
     * will not return until the current stage of the shutdown process has
@@ -554,28 +558,28 @@ void tls_bsock_shutdown (BSOCK *bsock)
     * we can avoid the ugly for()/switch()/select() loop.
     */
    int err;
-   int flags;
 
    /* Set socket blocking for shutdown */
-   flags = bnet_set_blocking(bsock);
+   bsock->set_blocking();
 
    err = SSL_shutdown(bsock->tls->openssl);
-
-   switch (SSL_get_error(bsock->tls->openssl, err)) {
-      case SSL_ERROR_NONE:
-         break;
-      case SSL_ERROR_ZERO_RETURN:
-         /* TLS connection was shut down on us via a TLS protocol-level closure */
-         openssl_post_errors(M_ERROR, _("TLS shutdown failure."));
-         break;
-      default:
-         /* Socket Error Occured */
-         openssl_post_errors(M_ERROR, _("TLS shutdown failure."));
-         break;
+   if (err == 0) {
+      /* Complete shutdown */
+      err = SSL_shutdown(bsock->tls->openssl);
    }
 
-   /* Restore saved flags */
-   bnet_restore_blocking(bsock, flags);
+   switch (SSL_get_error(bsock->tls->openssl, err)) {
+   case SSL_ERROR_NONE:
+      break;
+   case SSL_ERROR_ZERO_RETURN:
+      /* TLS connection was shut down on us via a TLS protocol-level closure */
+      openssl_post_errors(M_ERROR, _("TLS shutdown failure."));
+      break;
+   default:
+      /* Socket Error Occurred */
+      openssl_post_errors(M_ERROR, _("TLS shutdown failure."));
+      break;
+   }
 }
 
 /* Does all the manual labor for tls_bsock_readn() and tls_bsock_writen() */
@@ -590,19 +594,18 @@ static inline int openssl_bsock_readwrite(BSOCK *bsock, char *ptr, int nbytes, b
 
    /* Zero the fdset, we'll set our fd prior to each invocation of select() */
    FD_ZERO(&fdset);
-   fdmax = bsock->fd + 1;
+   fdmax = bsock->m_fd + 1;
 
    /* Ensure that socket is non-blocking */
-   flags = bnet_set_nonblocking(bsock);
+   flags = bsock->set_nonblocking();
 
    /* start timer */
    bsock->timer_start = watchdog_time;
-   bsock->timed_out = 0;
+   bsock->clear_timed_out();
 
    nleft = nbytes;
 
    while (nleft > 0) { 
-
       if (write) {
          nwritten = SSL_write(tls->openssl, ptr, nleft);
       } else {
@@ -617,26 +620,20 @@ static inline int openssl_bsock_readwrite(BSOCK *bsock, char *ptr, int nbytes, b
             ptr += nwritten;
          }
          break;
-      case SSL_ERROR_ZERO_RETURN:
-         /* TLS connection was cleanly shut down */
-         openssl_post_errors(M_ERROR, _("TLS read/write failure."));
-         goto cleanup;
+
       case SSL_ERROR_WANT_READ:
-         /* If we timeout of a select, this will be unset */
-         FD_SET((unsigned) bsock->fd, &fdset);
-         tv.tv_sec = 10;
-         tv.tv_usec = 0;
-         /* Block until we can read */
-         select(fdmax, &fdset, NULL, &fdset, &tv);
-         break;
       case SSL_ERROR_WANT_WRITE:
-         /* If we timeout of a select, this will be unset */
-         FD_SET((unsigned) bsock->fd, &fdset);
+         /* If we timeout on a select, this will be unset */
+         FD_SET((unsigned)bsock->m_fd, &fdset);
          tv.tv_sec = 10;
          tv.tv_usec = 0;
-         /* Block until we can write */
+         /* Block until we can read or write */
          select(fdmax, NULL, &fdset, &fdset, &tv);
          break;
+
+      case SSL_ERROR_ZERO_RETURN:
+         /* TLS connection was cleanly shut down */
+         /* Fall through wanted */
       default:
          /* Socket Error Occured */
          openssl_post_errors(M_ERROR, _("TLS read/write failure."));
@@ -649,37 +646,40 @@ static inline int openssl_bsock_readwrite(BSOCK *bsock, char *ptr, int nbytes, b
       }
 
       /* Timeout/Termination, let's take what we can get */
-      if (bsock->timed_out || bsock->terminated) {
+      if (bsock->is_timed_out() || bsock->is_terminated()) {
          goto cleanup;
       }
    }
 
 cleanup:
    /* Restore saved flags */
-   bnet_restore_blocking(bsock, flags);
+   bsock->restore_blocking(flags);
 
    /* Clear timer */
    bsock->timer_start = 0;
-
    return nbytes - nleft;
 }
 
 
-int tls_bsock_writen(BSOCK *bsock, char *ptr, int32_t nbytes) {
+int tls_bsock_writen(BSOCK *bsock, char *ptr, int32_t nbytes) 
+{
    /* SSL_write(bsock->tls->openssl, ptr, nbytes) */
-   return (openssl_bsock_readwrite(bsock, ptr, nbytes, true));
+   return openssl_bsock_readwrite(bsock, ptr, nbytes, true);
 }
 
-int tls_bsock_readn(BSOCK *bsock, char *ptr, int32_t nbytes) {
+int tls_bsock_readn(BSOCK *bsock, char *ptr, int32_t nbytes) 
+{
    /* SSL_read(bsock->tls->openssl, ptr, nbytes) */
-   return (openssl_bsock_readwrite(bsock, ptr, nbytes, false));
+   return openssl_bsock_readwrite(bsock, ptr, nbytes, false);
 }
 
 #else /* HAVE_OPENSSL */
 # error No TLS implementation available.
 #endif /* !HAVE_OPENSSL */
 
-#else
+
+#else     /* TLS NOT enabled, dummy routines substituted */
+
 
 /* Dummy routines */
 TLS_CONTEXT *new_tls_context(const char *ca_certfile, const char *ca_certdir,
@@ -691,5 +691,19 @@ TLS_CONTEXT *new_tls_context(const char *ca_certfile, const char *ca_certdir,
    return NULL;
 }
 void free_tls_context(TLS_CONTEXT *ctx) { }
+
+void tls_bsock_shutdown(BSOCK *bsock) { }
+
+void free_tls_connection(TLS_CONNECTION *tls) { }
+
+bool get_tls_require(TLS_CONTEXT *ctx) 
+{
+   return false;
+}
+
+bool get_tls_enable(TLS_CONTEXT *ctx) 
+{
+   return false;
+}
 
 #endif /* HAVE_TLS */

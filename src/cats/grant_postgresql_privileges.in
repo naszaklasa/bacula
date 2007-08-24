@@ -2,10 +2,11 @@
 #
 # shell script to grant privileges to the bacula database
 #
-USER=bacula
+USER=@db_user@
 bindir=@SQL_BINDIR@
+db_name=@db_name@
 
-if $bindir/psql -f - -d bacula $* <<END-OF-DATA
+if $bindir/psql -f - -d ${db_name} $* <<END-OF-DATA
 
 create user ${USER};
 
@@ -53,7 +54,7 @@ grant select, update on log_logid_seq		   to ${USER};
 
 END-OF-DATA
 then
-   echo "Privileges for ${USER} granted."
+   echo "Privileges for ${USER} granted on ${db_name}."
    exit 0
 else
    echo "Error creating privileges."

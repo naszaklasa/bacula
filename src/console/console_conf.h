@@ -1,21 +1,14 @@
 /*
- * Bacula User Agent specific configuration and defines
- *
- *     Kern Sibbald, Sep MM
- *
- *     Version $Id: console_conf.h 3676 2006-11-21 20:14:47Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula User Agent specific configuration and defines
+ *
+ *     Kern Sibbald, Sep MM
+ *
+ *     Version $Id: console_conf.h 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 /*
  * Resource codes -- they must be sequential for indexing
@@ -71,6 +71,7 @@ struct CONRES {
    char *tls_certfile;                /* TLS Client Certificate File */
    char *tls_keyfile;                 /* TLS Client Key File */
    char *director;                    /* bind to director */
+   utime_t heartbeat_interval;        /* Interval to send heartbeats to Dir */
 
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
 };
@@ -87,6 +88,7 @@ struct DIRRES {
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
    char *tls_keyfile;                 /* TLS Client Key File */
+   utime_t heartbeat_interval;        /* Interval to send heartbeats to Dir */
 
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
 };

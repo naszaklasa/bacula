@@ -1,43 +1,14 @@
 /*
- * Bacula work queue routines. Permits passing work to
- *  multiple threads.
- *
- *  Kern Sibbald, January MMI
- *
- *   Version $Id: workq.c 3670 2006-11-21 16:13:58Z kerns $
- *
- *  This code adapted from "Programming with POSIX Threads", by
- *    David R. Butenhof
- *
- * Example:
- *
- * static workq_t job_wq;    define work queue
- *
- *  Initialize queue
- *  if ((stat = workq_init(&job_wq, max_workers, job_thread)) != 0) {
- *     Emsg1(M_ABORT, 0, "Could not init job work queue: ERR=%s\n", strerror(errno));
- *   }
- *
- *  Add an item to the queue
- *  if ((stat = workq_add(&job_wq, (void *)jcr)) != 0) {
- *      Emsg1(M_ABORT, 0, "Could not add job to work queue: ERR=%s\n", strerror(errno));
- *   }
- *
- *  Terminate the queue
- *  workq_destroy(workq_t *wq);
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -54,6 +25,37 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula work queue routines. Permits passing work to
+ *  multiple threads.
+ *
+ *  Kern Sibbald, January MMI
+ *
+ *   Version $Id: workq.c 4992 2007-06-07 14:46:43Z kerns $
+ *
+ *  This code adapted from "Programming with POSIX Threads", by
+ *    David R. Butenhof
+ *
+ * Example:
+ *
+ * static workq_t job_wq;    define work queue
+ *
+ *  Initialize queue
+ *  if ((stat = workq_init(&job_wq, max_workers, job_thread)) != 0) {
+ *     berrno be;
+ *     Emsg1(M_ABORT, 0, "Could not init job work queue: ERR=%s\n", be.bstrerror(errno));
+ *   }
+ *
+ *  Add an item to the queue
+ *  if ((stat = workq_add(&job_wq, (void *)jcr)) != 0) {
+ *      berrno be;
+ *      Emsg1(M_ABORT, 0, "Could not add job to work queue: ERR=%s\n", be.bstrerror(errno));
+ *   }
+ *
+ *  Terminate the queue
+ *  workq_destroy(workq_t *wq);
+ *
+ */
 
 #include "bacula.h"
 

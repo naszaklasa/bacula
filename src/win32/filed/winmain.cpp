@@ -10,8 +10,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -116,8 +116,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
    /* Build Unix style argc *argv[] */      
 
    /* Don't NULL command_args[0] !!! */
-   for (i=1;i<MAX_COMMAND_ARGS;i++)
+   for (i=1;i<MAX_COMMAND_ARGS;i++) {
       command_args[i] = NULL;
+   }
 
    char *pszArgs = bstrdup(szCmdLine);
    wordPtr = pszArgs;
@@ -231,7 +232,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
       return 1;
    }
-
    return BaculaAppMain();
 }
 

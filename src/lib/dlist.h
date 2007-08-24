@@ -1,19 +1,14 @@
 /*
- *  Written by Kern Sibbald MMIV
- *
- *   Version $Id: dlist.h 3668 2006-11-21 13:20:11Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,13 +25,21 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Written by Kern Sibbald MMIV
+ *
+ *   Version $Id: dlist.h 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 
 /* ========================================================================
  *
  *   Doubly linked list  -- dlist
+ * 
+ *   See the end of the file for the dlistString class which
+ *     facilitates storing strings in a dlist.
  *
- *    Kern Sibbald, MMIV
+ *    Kern Sibbald, MMIV and MMVII
  *
  */
 
@@ -59,8 +62,6 @@
     for((var)=NULL; (*((void **)&(var))=(void*)((list)->next(var))); )
 #endif
 
-
-
 struct dlink {
    void *next;
    void *prev;
@@ -76,8 +77,14 @@ public:
    dlist(void);
    ~dlist() { destroy(); }
    void init(void *item, dlink *link);
+   void init();
    void prepend(void *item);
    void append(void *item);
+   void set_prev(void *item, void *prev);
+   void set_next(void *item, void *next);
+   void *get_prev(void *item);
+   void *get_next(void *item);
+   dlink *get_link(void *item);
    void insert_before(void *item, void *where);
    void insert_after(void *item, void *where);
    void *binary_insert(void *item, int compare(void *item1, void *item2));
@@ -86,8 +93,8 @@ public:
    void remove(void *item);
    bool empty() const;
    int  size() const;
-   void *next(const void *item) const;
-   void *prev(const void *item) const;
+   void *next(void *item);      
+   void *prev(void *item);
    void destroy();
    void *first() const;
    void *last() const;
@@ -109,6 +116,14 @@ inline void dlist::init(void *item, dlink *link)
    num_items = 0;
 }
 
+inline void dlist::init()
+{
+   head = tail = NULL;
+   loffset = 0;
+   num_items = 0;
+}
+
+
 /*
  * Constructor called with the address of a
  *   member of the list (not the list head), and
@@ -126,6 +141,34 @@ inline dlist::dlist(void *item, dlink *link)
 inline dlist::dlist(void) : head(0), tail(0), loffset(0), num_items(0)
 {
 }
+
+inline void dlist::set_prev(void *item, void *prev)
+{
+   ((dlink *)(((char *)item)+loffset))->prev = prev;
+}
+
+inline void dlist::set_next(void *item, void *next)
+{
+   ((dlink *)(((char *)item)+loffset))->next = next;
+}
+
+inline void *dlist::get_prev(void *item)
+{
+   return ((dlink *)(((char *)item)+loffset))->prev;
+}
+
+inline void *dlist::get_next(void *item)
+{
+   return ((dlink *)(((char *)item)+loffset))->next;
+}
+
+
+inline dlink *dlist::get_link(void *item)
+{
+   return (dlink *)(((char *)item)+loffset);
+}
+
+
 
 inline bool dlist::empty() const
 {
@@ -148,3 +191,26 @@ inline void * dlist::last() const
 {
    return tail;
 }
+
+/*
+ * C string helper routines for dlist   
+ *   The string (char *) is kept in the node
+ *
+ *   Kern Sibbald, February 2007
+ *
+ */
+class dlistString
+{
+public:   
+   char *c_str() { return m_str; };
+
+private:
+   dlink m_link;
+   char m_str[1];                                
+   /* !!! Don't put anything after this as this space is used
+    *     to hold the string in inline
+    */
+};
+
+extern dlistString *new_dlistString(const char *str, int len);
+extern dlistString *new_dlistString(const char *str);

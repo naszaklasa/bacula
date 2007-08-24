@@ -1,0 +1,133 @@
+Index: src/filed/job.c
+===================================================================
+--- src/filed/job.c	(revision 5235)
++++ src/filed/job.c	(working copy)
+@@ -266,9 +266,6 @@
+       bnet_sig(jcr->store_bsock, BNET_TERMINATE);
+    }
+ 
+-   /* Run the after job */
+-   run_scripts(jcr, jcr->RunScripts, "ClientAfterJob");
+-
+    generate_daemon_event(jcr, "JobEnd");
+ 
+    dequeue_messages(jcr);             /* send any queued messages */
+@@ -1321,7 +1318,25 @@
+    return bnet_fsend(dir, OKstore);
+ }
+ 
++static void job_end(JCR *jcr)
++{   
++   char ed1[50], ed2[50];
+ 
++   /* Inform Storage daemon that we are done */
++   if (jcr->store_bsock) {
++      bnet_sig(jcr->store_bsock, BNET_TERMINATE);
++   }
++
++   /* Run the after job */
++   run_scripts(jcr, jcr->RunScripts, "ClientAfterJob");
++
++   bnet_fsend(jcr->dir_bsock, EndJob, jcr->JobStatus, jcr->JobFiles,
++	      edit_uint64(jcr->ReadBytes, ed1),
++	      edit_uint64(jcr->JobBytes, ed2), jcr->Errors, (int)jcr->VSS, 
++	      jcr->pki_encrypt);
++   Dmsg1(110, "End FD msg: %s\n", jcr->dir_bsock->msg);
++}
++
+ /*
+  * Do a backup.
+  */
+@@ -1331,15 +1346,13 @@
+    BSOCK *sd = jcr->store_bsock;
+    int ok = 0;
+    int SDJobStatus;
+-   char ed1[50], ed2[50];
+-   bool bDoVSS = false;
+ 
+ #if defined(WIN32_VSS)
+    // capture state here, if client is backed up by multiple directors
+    // and one enables vss and the other does not then enable_vss can change
+    // between here and where its evaluated after the job completes.
+-   bDoVSS = g_pVSSClient && enable_vss;
+-   if (bDoVSS) {
++   jcr->VSS = g_pVSSClient && enable_vss;
++   if (jcr->VSS) {
+       /* Run only one at a time */
+       P(vss_mutex);
+    }
+@@ -1395,7 +1408,7 @@
+ 
+ #if defined(WIN32_VSS)
+    /* START VSS ON WIN 32 */
+-   if (bDoVSS) {      
++   if (jcr->VSS) {      
+       if (g_pVSSClient->InitializeForBackup()) {   
+         /* tell vss which drives to snapshot */   
+         char szWinDriveLetters[27];   
+@@ -1488,7 +1501,7 @@
+ #if defined(WIN32_VSS)
+    /* STOP VSS ON WIN 32 */
+    /* tell vss to close the backup session */
+-   if (bDoVSS) {
++   if (jcr->VSS) {
+       if (g_pVSSClient->CloseBackup()) {             
+          /* inform user about writer states */
+          for (int i=0; i<(int)g_pVSSClient->GetWriterCount(); i++) {
+@@ -1504,12 +1517,8 @@
+    }
+ #endif
+ 
+-   bnet_fsend(dir, EndJob, jcr->JobStatus, jcr->JobFiles,
+-      edit_uint64(jcr->ReadBytes, ed1),
+-      edit_uint64(jcr->JobBytes, ed2), jcr->Errors, (int)bDoVSS, 
+-      jcr->pki_encrypt);
+-   Dmsg1(110, "End FD msg: %s\n", dir->msg);
+-   
++   job_end(jcr);
++
+    return 0;                          /* return and stop command loop */
+ }
+ 
+@@ -1585,12 +1594,7 @@
+ 
+    bnet_sig(dir, BNET_EOD);
+ 
+-   /* Send termination status back to Dir */
+-   bnet_fsend(dir, EndJob, jcr->JobStatus, jcr->JobFiles,
+-      edit_uint64(jcr->ReadBytes, ed1),
+-      edit_uint64(jcr->JobBytes, ed2), jcr->Errors, 0,
+-      jcr->pki_encrypt);
+-   Dmsg1(110, "End FD msg: %s\n", dir->msg);
++   job_end(jcr);
+ 
+    /* Inform Director that we are done */
+    bnet_sig(dir, BNET_TERMINATE);
+@@ -1696,13 +1700,9 @@
+    if (jcr->Errors) {
+       set_jcr_job_status(jcr, JS_ErrorTerminated);
+    }
+-   /* Send termination status back to Dir */
+-   bnet_fsend(dir, EndJob, jcr->JobStatus, jcr->JobFiles,
+-      edit_uint64(jcr->ReadBytes, ed1),
+-      edit_uint64(jcr->JobBytes, ed2), jcr->Errors, 0,
+-      jcr->pki_encrypt);
+-   Dmsg1(110, "End FD msg: %s\n", dir->msg);
+ 
++   job_end(jcr);
++
+    /* Inform Director that we are done */
+    bnet_sig(dir, BNET_TERMINATE);
+ 
+Index: src/jcr.h
+===================================================================
+--- src/jcr.h	(revision 5235)
++++ src/jcr.h	(working copy)
+@@ -297,6 +297,7 @@
+    int32_t pki_session_encoded_size;  /* Size of DER-encoded pki_session */
+    POOLMEM *crypto_buf;               /* Encryption/Decryption buffer */
+    DIRRES* director;                  /* Director resource */
++   bool VSS;                          /* VSS used by FD */
+ #endif /* FILE_DAEMON */
+ 
+ 

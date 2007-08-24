@@ -1,24 +1,14 @@
 /*
- *   lex.h
- *
- *    Lexical scanning of configuration files, used by parsers.
- *
- *   Kern Sibbald, MM
- *
- *   Version $Id: lex.h 3668 2006-11-21 13:20:11Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,6 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   lex.h
+ *
+ *    Lexical scanning of configuration files, used by parsers.
+ *
+ *   Kern Sibbald, MM
+ *
+ *   Version $Id: lex.h 4992 2007-06-07 14:46:43Z kerns $
+ *
+ */
 
 #ifndef _LEX_H
 #define _LEX_H
@@ -59,7 +59,8 @@
 #define T_COMMA                       111
 #define T_EOL                         112
 #define T_ERROR                       200
-#define T_UNICODE_MARK                201
+#define T_UTF8_BOM                    201 /* File starts with a UTF-8 BOM*/
+#define T_UTF16_BOM                   202 /* File starts with a UTF-16LE BOM*/
 
 /*
  * The following will be returned only if
@@ -85,13 +86,16 @@ enum lex_state {
    lex_string,
    lex_quoted_string,
    lex_include,
-   lex_unicode_mark
+   lex_utf8_bom,      /* we are parsing out a utf8 byte order mark */ 
+   lex_utf16_le_bom   /* we are parsing out a utf-16 (little endian) byte order mark */
 };
 
 /* Lex scan options */
 #define LOPT_NO_IDENT            0x1  /* No Identifiers -- use string */
 #define LOPT_STRING              0x2  /* Force scan for string */
 
+class BPIPE;                          /* forward reference */
+  
 /* Lexical context */
 typedef struct s_lex_context {
    struct s_lex_context *next;        /* pointer to next lexical context */
@@ -114,6 +118,7 @@ typedef struct s_lex_context {
    void (*scan_error)(const char *file, int line, struct s_lex_context *lc, const char *msg, ...);
    int err_type;                      /* message level for scan_error (M_..) */
    void *caller_ctx;                  /* caller private data */
+   BPIPE *bpipe;                      /* set if we are piping */
 } LEX;
 
 typedef void (LEX_ERROR_HANDLER)(const char *file, int line, LEX *lc, const char *msg, ...);

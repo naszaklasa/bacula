@@ -4,15 +4,17 @@
 Assume release is in bacula/base bacula/gui bacula/docs bacula/rescue
 
 - Build it on Win32
-- Build it on Solaris and run regression tests
-- Build it on FreeBSD and run regression tests
+#  No longer done
+#  - Build it on Solaris and run regression tests
+# - Build it on FreeBSD and run regression tests
 - Update ChangeLog (add release date)
 - Update ReleaeNotes
-- Do a cvs commit
-- Run ./makerel base 2.0.x
+- Do a svn commit
+#     ./makerel <branch-name> <local-branch-source-dir> <release>
+- Run ./makerel Branch-2.0 branch-2.0 2.0.x
 - Run the regression tests on the new bacula
   directory that is created.  Run regression on
-  Linux, Solaris, and Sun.
+  Linux.
 - Run the production version over night in production.
 - Manually test Win32 version
   (with Robert's work, it is now possible to run the
@@ -20,13 +22,14 @@ Assume release is in bacula/base bacula/gui bacula/docs bacula/rescue
 - Write final ReleaseNotes
 - If everything is good
 - cd bacula
+# The below needs to be updated more
 - Run    
   cd base
-  cvs update
+  svn update
   cd ../gui
-  cvs update
+  svn update
   cd ../docs
-  cvs update
+  svn update
      cd manual
      make tex
      latex bacula.tex
@@ -34,7 +37,7 @@ Assume release is in bacula/base bacula/gui bacula/docs bacula/rescue
       what to do, correct the problem).
       cd ..
   cd ../rescue
-  cvs update
+  svn update
   cd ..
   ./makerel base 2.0.x
   ./makeguirel gui 2.0.x
@@ -55,4 +58,4 @@ Assume release is in bacula/base bacula/gui bacula/docs bacula/rescue
   make
 - Upload new release doc to web site.
   Upload bacula.pdf to web site.
-      
+- Update news on web site.

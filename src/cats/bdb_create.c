@@ -10,7 +10,7 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb_create.c 3709 2006-11-27 10:03:06Z kerns $
+ *    Version $Id: bdb_create.c 5149 2007-07-12 10:32:35Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -21,8 +21,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -62,10 +62,10 @@ bool db_create_pool_record(B_DB *mdb, POOL_DBR *pr);
  * -----------------------------------------------------------------------
  */
 
-int db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
+bool db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
 {
    /* *****FIXME***** implement this */
-   return 1;
+   return true;
 }
 
 int db_create_file_item(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
@@ -312,5 +312,10 @@ bool db_create_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
 int db_create_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
 { return 0; }
 
+bool db_write_batch_file_records(JCR *jcr) { return false; }
+bool my_batch_start(JCR *jcr, B_DB *mdb) { return false; }
+bool my_batch_end(JCR *jcr, B_DB *mdb, const char *error) { return false; }
+bool my_batch_insert(JCR *jcr, B_DB *mdb, ATTR_DBR *ar) { return false; }
+                                 
 
 #endif /* HAVE_BACULA_DB */

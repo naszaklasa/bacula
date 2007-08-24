@@ -7,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: stored_conf.c 4297 2007-03-03 08:50:30Z kerns $
+ *   Version $Id: stored_conf.c 4992 2007-06-07 14:46:43Z kerns $
  */
 
 #include "bacula.h"
@@ -609,7 +609,7 @@ void save_resource(int type, RES_ITEM *items, int pass)
          if ((errstat = pthread_mutex_init(&res->res_changer.changer_mutex, NULL)) != 0) {
             berrno be;
             Jmsg1(NULL, M_ERROR_TERM, 0, _("Unable to init mutex: ERR=%s\n"), 
-                  be.strerror(errstat));
+                  be.bstrerror(errstat));
          }
          break;
       default:

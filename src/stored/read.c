@@ -1,21 +1,14 @@
 /*
- * Read code for Storage daemon
- *
- *     Kern Sibbald, November MM
- *
- *   Version $Id: read.c 3802 2006-12-14 11:41:02Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Read code for Storage daemon
+ *
+ *     Kern Sibbald, November MM
+ *
+ *   Version $Id: read.c 5293 2007-08-06 18:20:26Z kerns $
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -67,7 +67,7 @@ bool do_read_data(JCR *jcr)
    if (jcr->NumReadVolumes == 0) {
       Jmsg(jcr, M_FATAL, 0, _("No Volume names found for restore.\n"));
       free_restore_volume_list(jcr);
-      bnet_fsend(fd, FD_error);
+      fd->fsend(FD_error);
       return false;
    }
 
@@ -77,16 +77,16 @@ bool do_read_data(JCR *jcr)
    /* Ready device for reading */
    if (!acquire_device_for_read(dcr)) {
       free_restore_volume_list(jcr);
-      bnet_fsend(fd, FD_error);
+      fd->fsend(FD_error);
       return false;
    }
 
    /* Tell File daemon we will send data */
-   bnet_fsend(fd, OK_data);
+   fd->fsend(OK_data);
    ok = read_records(dcr, record_cb, mount_next_read_volume);
 
    /* Send end of data to FD */
-   bnet_sig(fd, BNET_EOD);
+   fd->signal(BNET_EOD);
 
    if (!release_device(jcr->read_dcr)) {
       ok = false;
@@ -117,11 +117,11 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       rec->data_len);
 
    /* Send record header to File daemon */
-   if (!bnet_fsend(fd, rec_header, rec->VolSessionId, rec->VolSessionTime,
+   if (!fd->fsend(rec_header, rec->VolSessionId, rec->VolSessionTime,
           rec->FileIndex, rec->Stream, rec->data_len)) {
       Pmsg1(000, _(">filed: Error Hdr=%s\n"), fd->msg);
       Jmsg1(jcr, M_FATAL, 0, _("Error sending to File daemon. ERR=%s\n"),
-         bnet_strerror(fd));
+         fd->bstrerror());
       return false;
    } else {
       Dmsg1(400, ">filed: Hdr=%s\n", fd->msg);
@@ -130,13 +130,13 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
 
    /* Send data record to File daemon */
    save_msg = fd->msg;          /* save fd message pointer */
-   fd->msg = rec->data;         /* pass data directly to bnet_send */
+   fd->msg = rec->data;         /* pass data directly to the FD */
    fd->msglen = rec->data_len;
    Dmsg1(400, ">filed: send %d bytes data.\n", fd->msglen);
-   if (!bnet_send(fd)) {
-      Pmsg1(000, _("Error sending to FD. ERR=%s\n"), bnet_strerror(fd));
+   if (!fd->send()) {
+      Pmsg1(000, _("Error sending to FD. ERR=%s\n"), fd->bstrerror());
       Jmsg1(jcr, M_FATAL, 0, _("Error sending to File daemon. ERR=%s\n"),
-         bnet_strerror(fd));
+         fd->bstrerror());
 
       ok = false;
    }

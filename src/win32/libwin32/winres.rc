@@ -31,8 +31,8 @@ BEGIN
         MENUITEM N_("&Status"),                     ID_STATUS
         MENUITEM SEPARATOR
         MENUITEM N_("&About Bacula"),               ID_ABOUT
-        MENUITEM SEPARATOR
-        MENUITEM N_("&Close Bacula"),               ID_CLOSE
+//      MENUITEM SEPARATOR
+//      MENUITEM N_("&Close Bacula"),               ID_CLOSE
     END
 END
 
@@ -64,7 +64,7 @@ BEGIN
             VALUE "FileDescription", "Bacula File daemon for Win32\0"
             VALUE "FileVersion", VERSION "\0"
             VALUE "InternalName", "Bacula\0"
-            VALUE "LegalCopyright", "Copyright Free Software Foundation Europe e.V., 1999-2006\0"
+            VALUE "LegalCopyright", "Copyright Free Software Foundation Europe e.V., 1999-2007\0"
             VALUE "LegalTrademarks", "Licensed under GNU GPL 2.0\0"
             VALUE "OriginalFilename", "bacula-fd.exe\0"
             VALUE "PrivateBuild", "\0"
@@ -125,7 +125,7 @@ BEGIN
     LTEXT           "         www.bacula.org",-1,115,70,100,10
 //    LTEXT           "                 ",-1,69,81,100,10
 //    LTEXT           "                 ",-1,90,70,100,10
-    LTEXT           "Copyright (C) 1999-2006, Free Software Foundation Europe e.V.",-1,7,120,175,10
+    LTEXT           "Copyright (C) 1999-2007, Free Software Foundation Europe e.V.",-1,7,120,175,10
     LTEXT           N_("Licensed under GNU GPL 2.0."),-1,7,130,175,10
     RTEXT           N_("Build Date:"),-1,108,24,42,8
     RTEXT           N_("Bacula Version:"),-1,100,9,50,8

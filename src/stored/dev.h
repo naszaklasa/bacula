@@ -1,23 +1,14 @@
 /*
- * Definitions for using the Device functions in Bacula
- *  Tape and File storage access
- *
- * Kern Sibbald, MM
- *
- *   Version $Id: dev.h 3802 2006-12-14 11:41:02Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,25 +25,21 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Definitions for using the Device functions in Bacula
+ *  Tape and File storage access
+ *
+ * Kern Sibbald, MM
+ *
+ *   Version $Id: dev.h 5293 2007-08-06 18:20:26Z kerns $
+ *
+ */
 
 
 #ifndef __DEV_H
 #define __DEV_H 1
 
 #undef DCR                            /* used by Bacula */
-
-/* #define NEW_LOCK 1 */
-
-#define new_lock_device(dev)             _new_lock_device(__FILE__, __LINE__, (dev))
-#define new_lock_device_state(dev,state) _new_lock_device(__FILE__, __LINE__, (dev), (state))
-#define new_unlock_device(dev)           _new_unlock_device(__FILE__, __LINE__, (dev))
-
-#define lock_device(d) _lock_device(__FILE__, __LINE__, (d))
-#define unlock_device(d) _unlock_device(__FILE__, __LINE__, (d))
-#define block_device(d, s) _block_device(__FILE__, __LINE__, (d), s)
-#define unblock_device(d) _unblock_device(__FILE__, __LINE__, (d))
-#define steal_device_lock(d, p, s) _steal_device_lock(__FILE__, __LINE__, (d), (p), s)
-#define give_back_device_lock(d, p) _give_back_device_lock(__FILE__, __LINE__, (d), (p))
 
 /* Return values from wait_for_sysop() */
 enum {
@@ -144,16 +131,6 @@ enum {
 #define ST_PART_SPOOLED    (1<<18)    /* spooling part */
 #define ST_FREESPACE_OK    (1<<19)    /* Have valid freespace for DVD */
 
-/* dev_blocked states (mutually exclusive) */
-enum {
-   BST_NOT_BLOCKED = 0,               /* not blocked */
-   BST_UNMOUNTED,                     /* User unmounted device */
-   BST_WAITING_FOR_SYSOP,             /* Waiting for operator to mount tape */
-   BST_DOING_ACQUIRE,                 /* Opening/validating/moving tape */
-   BST_WRITING_LABEL,                 /* Labeling a tape */
-   BST_UNMOUNTED_WAITING_FOR_SYSOP,   /* User unmounted during wait for op */
-   BST_MOUNT                          /* Mount request */
-};
 
 /* Volume Catalog Information structure definition */
 struct VOLUME_CAT_INFO {
@@ -177,9 +154,9 @@ struct VOLUME_CAT_INFO {
    uint32_t VolCatMaxFiles;           /* Maximum files to write to volume */
    uint64_t VolCatMaxBytes;           /* Max bytes to write to volume */
    uint64_t VolCatCapacityBytes;      /* capacity estimate */
-   uint64_t VolReadTime;              /* time spent reading */
-   uint64_t VolWriteTime;             /* time spent writing this Volume */
-   int64_t VolMediaId;                /* MediaId */
+   btime_t  VolReadTime;              /* time spent reading */
+   btime_t  VolWriteTime;             /* time spent writing this Volume */
+   int64_t  VolMediaId;               /* MediaId */
    utime_t  VolFirstWritten;          /* Time of first write */
    bool     InChanger;                /* Set if vol in current magazine */
    char VolCatStatus[20];             /* Volume status */
@@ -187,38 +164,34 @@ struct VOLUME_CAT_INFO {
 };
 
 
-typedef struct s_steal_lock {
-   pthread_t  no_wait_id;             /* id of no wait thread */
-   int        dev_blocked;            /* state */
-   int        dev_prev_blocked;       /* previous blocked state */
-} bsteal_lock_t;
-
 class DEVRES;                        /* Device resource defined in stored_conf.h */
 
 class DCR; /* forward reference */
+class VOLRES; /* forward reference */
+
+
 /*
  * Device structure definition. There is one of these for
  *  each physical device. Everything here is "global" to
  *  that device and effects all jobs using the device.
  */
 class DEVICE {
+private:
+   int m_fd;                          /* file descriptor */
+   int m_blocked;                     /* set if we must wait (i.e. change tape) */
+   int m_count;                       /* Mutex use count -- DEBUG only */
+   pthread_t m_pid;                   /* Thread that locked -- DEBUG only */
 public:
    dlist *attached_dcrs;              /* attached DCR list */
-   pthread_mutex_t mutex;             /* access control */
+   pthread_mutex_t m_mutex;           /* access control */
    pthread_mutex_t spool_mutex;       /* mutex for updating spool_size */
    pthread_cond_t wait;               /* thread wait variable */
    pthread_cond_t wait_next_vol;      /* wait for tape to be mounted */
    pthread_t no_wait_id;              /* this thread must not wait */
-   int dev_blocked;                   /* set if we must wait (i.e. change tape) */
    int dev_prev_blocked;              /* previous blocked state */
    int num_waiting;                   /* number of threads waiting */
    int num_writers;                   /* number of writing threads */
    int reserved_device;               /* number of device reservations */
-
-   /* New access control in process of being implemented */
-   brwlock_t lock;                    /* New mutual exclusion lock */
-
-   int fd;                            /* file descriptor */
    int capabilities;                  /* capabilities mask */
    int state;                         /* state mask */
    int dev_errno;                     /* Our own errno */
@@ -226,6 +199,7 @@ public:
    int openmode;                      /* parameter passed to open_dev (useful to reopen the device) */
    int dev_type;                      /* device type */
    bool autoselect;                   /* Autoselect in autochanger */
+   bool initiated;                    /* set when init_dev() called */
    int label_type;                    /* Bacula/ANSI/IBM label types */
    uint32_t drive_index;              /* Autochanger drive index (base 0) */
    int32_t  Slot;                     /* Slot currently in drive (base 1) */
@@ -263,6 +237,7 @@ public:
    
    utime_t  vol_poll_interval;        /* interval between polling Vol mount */
    DEVRES *device;                    /* pointer to Device Resource */
+   VOLRES *vol;                       /* Pointer to Volume reservation item */
    btimer_t *tid;                     /* timer id */
 
    VOLUME_CAT_INFO VolCatInfo;        /* Volume Catalog Information */
@@ -280,7 +255,17 @@ public:
    int rem_wait_sec;
    int num_wait;
 
+   btime_t last_timer;        /* used by read/write/seek to get stats (usec) */
+   btime_t last_tick;         /* contains last read/write time (usec) */
+
+   btime_t  DevReadTime;
+   btime_t  DevWriteTime;
+   uint64_t DevWriteBytes;
+   uint64_t DevReadBytes;
+
    /* Methods */
+   btime_t get_timer_count();         /* return the last timer interval (ms) */
+
    int has_cap(int cap) const { return capabilities & cap; }
    void clear_cap(int cap) { capabilities &= ~cap; }
    void set_cap(int cap) { capabilities |= cap; }
@@ -292,10 +277,11 @@ public:
    int is_fifo() const { return dev_type == B_FIFO_DEV; }
    int is_dvd() const  { return dev_type == B_DVD_DEV; }
    int is_prog() const  { return dev_type == B_PROG_DEV; }
-   int is_open() const { return fd >= 0; }
+   int is_open() const { return m_fd >= 0; }
    int is_offline() const { return state & ST_OFFLINE; }
    int is_labeled() const { return state & ST_LABEL; }
    int is_mounted() const { return state & ST_MOUNTED; }
+   int is_unmountable() const { return (is_dvd() || (is_file() && is_removable())); }
    int is_part_spooled() const { return state & ST_PART_SPOOLED; }
    int have_media() const { return state & ST_MEDIA; }
    int is_short_block() const { return state & ST_SHORT; }
@@ -313,14 +299,14 @@ public:
    int can_write() const { return is_open() && can_append() &&
                             is_labeled() && !at_weot(); }
    int can_read() const   { return state & ST_READ; }
-   bool can_steal_lock() const { return dev_blocked &&
-                    (dev_blocked == BST_UNMOUNTED ||
-                     dev_blocked == BST_WAITING_FOR_SYSOP ||
-                     dev_blocked == BST_UNMOUNTED_WAITING_FOR_SYSOP); };
+   bool can_steal_lock() const { return m_blocked &&
+                    (m_blocked == BST_UNMOUNTED ||
+                     m_blocked == BST_WAITING_FOR_SYSOP ||
+                     m_blocked == BST_UNMOUNTED_WAITING_FOR_SYSOP); };
    bool waiting_for_mount() const { return 
-                    (dev_blocked == BST_UNMOUNTED ||
-                     dev_blocked == BST_WAITING_FOR_SYSOP ||
-                     dev_blocked == BST_UNMOUNTED_WAITING_FOR_SYSOP); };
+                    (m_blocked == BST_UNMOUNTED ||
+                     m_blocked == BST_WAITING_FOR_SYSOP ||
+                     m_blocked == BST_UNMOUNTED_WAITING_FOR_SYSOP); };
    const char *strerror() const;
    const char *archive_name() const;
    const char *name() const;
@@ -348,7 +334,7 @@ public:
    void clear_offline() { state &= ~ST_OFFLINE; };
    void clear_eot() { state &= ~ST_EOT; };
    void clear_eof() { state &= ~ST_EOF; };
-   void clear_opened() { fd = -1; };
+   void clear_opened() { m_fd = -1; };
    void clear_mounted() { state &= ~ST_MOUNTED; };
    void clear_media() { state &= ~ST_MEDIA; };
    void clear_short_block() { state &= ~ST_SHORT; };
@@ -356,13 +342,15 @@ public:
    char *bstrerror(void) { return errmsg; };
    char *print_errmsg() { return errmsg; };
 
-   void block(int why);          /* in dev.c */
-   void unblock();               /* in dev.c */
+
+   void clear_volhdr();          /* in dev.c */
    void close();                 /* in dev.c */
    void close_part(DCR *dcr);    /* in dev.c */
    bool truncate(DCR *dcr);      /* in dev.c */
    int open(DCR *dcr, int mode); /* in dev.c */
    void term(void);              /* in dev.c */
+   ssize_t read(void *buf, size_t len); /* in dev.c */
+   ssize_t write(const void *buf, size_t len);  /* in dev.c */
    bool rewind(DCR *dcr);        /* in dev.c */
    bool mount(int timeout);      /* in dev.c */
    bool unmount(int timeout);    /* in dev.c */
@@ -377,6 +365,7 @@ public:
    bool weof(int num);           /* in dev.c */
    void lock_door();             /* in dev.c */
    void unlock_door();           /* in dev.c */
+   int32_t get_os_tape_file();   /* in dev.c */
    bool scan_dir_for_volume(DCR *dcr); /* in scan.c */
    bool reposition(DCR *dcr, uint32_t rfile, uint32_t rblock); /* in dev.c */
    void clrerror(int func);      /* in dev.c */
@@ -384,12 +373,30 @@ public:
    bool update_pos(DCR *dcr);    /* in dev.c */
    bool update_freespace();      /* in dvd.c */
 
-   void set_blocked(int block) { dev_blocked = block; };
-   int  get_blocked() const { return dev_blocked; };
    uint32_t get_file() const { return file; };
-   uint32_t get_block() const { return block_num; };
-   const char *print_blocked() const; /* in dev.c */
-   bool is_blocked() const { return dev_blocked != BST_NOT_BLOCKED; };
+   uint32_t get_block_num() const { return block_num; };
+   int fd() const { return m_fd; };
+
+   /* 
+    * Locking and blocking calls
+    */
+#ifdef  SD_DEBUG_LOCK
+   void _r_dlock(const char *, int);      /* in lock.c */
+   void _r_dunlock(const char *, int);    /* in lock.c */
+   void _dlock(const char *, int);        /* in lock.c */
+   void _dunlock(const char *, int);      /* in lock.c */
+#else
+   void r_dlock();                        /* in lock.c */
+   void r_dunlock() { dunlock(); }
+   void dlock() { P(m_mutex); } 
+   void dunlock() { V(m_mutex); } 
+#endif
+   void dblock(int why);                  /* in lock.c */
+   void dunblock(bool locked=false);      /* in lock.c */
+   void set_blocked(int block) { m_blocked = block; };
+   int blocked() const { return m_blocked; };
+   bool is_blocked() const { return m_blocked != BST_NOT_BLOCKED; };
+   const char *print_blocked() const;     /* in dev.c */
 
 private:
    bool do_mount(int mount, int timeout);      /* in dev.c */
@@ -399,7 +406,6 @@ private:
    void open_dvd_device(DCR *dcr, int omode);  /* in dev.c */
 };
 
-/* Note, these return int not bool! */
 inline const char *DEVICE::strerror() const { return errmsg; }
 inline const char *DEVICE::archive_name() const { return dev_name; }
 inline const char *DEVICE::print_name() const { return prt_name; }
@@ -419,18 +425,21 @@ public:
    DEVRES *device;                    /* pointer to device resource */
    DEV_BLOCK *block;                  /* pointer to block */
    DEV_RECORD *rec;                   /* pointer to record */
+   pthread_t tid;                     /* Thread running this dcr */
    int spool_fd;                      /* fd if spooling */
    bool spool_data;                   /* set to spool data */
    bool spooling;                     /* set when actually spooling */
    bool despooling;                   /* set when despooling */
    bool despool_wait;                 /* waiting for despooling */
-   bool dev_locked;                   /* set if dev already locked */
+   bool m_dev_locked;                 /* set if dev already locked */
    bool NewVol;                       /* set if new Volume mounted */
    bool WroteVol;                     /* set if Volume written */
    bool NewFile;                      /* set when EOF written */
    bool reserved_device;              /* set if reserve done */
    bool any_volume;                   /* Any OK for dir_find_next... */
    bool attached_to_dev;              /* set when attached to dev */
+   bool volume_in_use;                /* set in dir_find_next_appendable_volume() */
+   bool keep_dcr;                     /* do not free dcr in release_dcr */
    uint32_t VolFirstIndex;            /* First file index this Volume */
    uint32_t VolLastIndex;             /* Last file index this Volume */
    uint32_t FileIndex;                /* Current File Index */
@@ -448,6 +457,13 @@ public:
    int Copy;                          /* identical copy number */
    int Stripe;                        /* RAIT stripe */
    VOLUME_CAT_INFO VolCatInfo;        /* Catalog info for desired volume */
+
+   /* Methods */
+   bool is_dev_locked() { return m_dev_locked; }
+   void dlock() { dev->dlock(); m_dev_locked = true; }
+   void dunlock() { dev->dunlock(); m_dev_locked = false;}
+   void dblock(int why) { dev->dblock(why); }
+
 };
 
 /*
@@ -458,7 +474,6 @@ public:
    dlink link;
    char *vol_name;
    DEVICE *dev;
-   DCR *dcr;
 };
 
 

@@ -1,19 +1,14 @@
 /*
- * Prototypes for finlib directory of Bacula
- *
- *   Version $Id: protos.h 3676 2006-11-21 20:14:47Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -30,6 +25,11 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Prototypes for finlib directory of Bacula
+ *
+ *   Version $Id: protos.h 5170 2007-07-13 13:33:34Z kerns $
+ */
 
 /* from attribs.c */
 void    encode_stat       (char *buf, FF_PKT *ff_pkt, int data_stream);
@@ -65,7 +65,7 @@ int   find_one_file(JCR *jcr, FF_PKT *ff,
                int handle_file(FF_PKT *ff_pkt, void *hpkt, bool top_level),
                void *pkt, char *p, dev_t parent_device, bool top_level);
 int   term_find_one(FF_PKT *ff);
-
+bool  has_file_changed(JCR *jcr, FF_PKT *ff_pkt);
 
 /* From get_priv.c */
 int enable_backup_privileges(JCR *jcr, int ignore_errors);

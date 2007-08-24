@@ -19,7 +19,7 @@
  *
  *   Kern Sibbald, July MMIII
  *
- *   Version $Id: htable.c 3670 2006-11-21 16:13:58Z kerns $
+ *   Version $Id: htable.c 5012 2007-06-14 16:54:30Z kerns $
  *
  */
 /*
@@ -31,8 +31,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -71,7 +71,6 @@ void htable::hash_index(char *key)
    /* Multiply by large prime number, take top bits, mask for remainder */
    index = ((hash * 1103515249) >> rshift) & mask;
    Dmsg2(100, "Leave hash_index hash=0x%x index=%d\n", hash, index);
-   return;
 }
 
 htable::htable(void *item, void *link, int tsize)

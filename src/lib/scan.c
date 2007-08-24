@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, MM  separated from util.c MMIII
  *
- *   Version $Id: scan.c 3734 2006-12-03 09:00:00Z kerns $
+ *   Version $Id: scan.c 4992 2007-06-07 14:46:43Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -14,8 +14,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -235,9 +235,6 @@ int parse_args(POOLMEM *cmd, POOLMEM **args, int *argc,
       p = strchr(argk[i], '=');
       if (p) {
          *p++ = 0;                    /* terminate keyword and point to value */
-         if (strlen(p) > MAX_NAME_LENGTH-1) {
-            p[MAX_NAME_LENGTH-1] = 0; /* truncate to max len */
-         }
       }
       argv[i] = p;                    /* save ptr to value or NULL */
    }

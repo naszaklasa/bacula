@@ -1,24 +1,14 @@
 /*
- *  Bacula low level File I/O routines.  This routine simulates
- *    open(), read(), write(), and close(), but using native routines.
- *    I.e. on Windows, we use Windows APIs.
- *
- *    Kern Sibbald, April MMIII
- *
- *   Version $Id: bfile.c 3676 2006-11-21 20:14:47Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,6 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Bacula low level File I/O routines.  This routine simulates
+ *    open(), read(), write(), and close(), but using native routines.
+ *    I.e. on Windows, we use Windows APIs.
+ *
+ *    Kern Sibbald, April MMIII
+ *
+ *   Version $Id: bfile.c 5081 2007-06-25 08:13:53Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "find.h"
@@ -48,6 +48,11 @@ ssize_t (*python_write)(BFILE *bfd, void *buf, size_t count) = NULL;
 #ifdef HAVE_DARWIN_OS
 #include <sys/paths.h>
 #endif
+
+#if !defined(HAVE_FDATASYNC)
+#define fdatasync(fd)
+#endif
+
 
 /* ===============================================================
  *
@@ -73,34 +78,38 @@ const char *stream_to_ascii(int stream)
    static char buf[20];
 
    switch (stream) {
-   case STREAM_GZIP_DATA:
-      return _("GZIP data");
-   case STREAM_SPARSE_GZIP_DATA:
-      return _("GZIP sparse data");
-   case STREAM_WIN32_DATA:
-      return _("Win32 data");
-   case STREAM_WIN32_GZIP_DATA:
-      return _("Win32 GZIP data");
    case STREAM_UNIX_ATTRIBUTES:
-      return _("File attributes");
+      return _("Unix attributes");
    case STREAM_FILE_DATA:
       return _("File data");
    case STREAM_MD5_DIGEST:
       return _("MD5 digest");
+   case STREAM_GZIP_DATA:
+      return _("GZIP data");
    case STREAM_UNIX_ATTRIBUTES_EX:
       return _("Extended attributes");
    case STREAM_SPARSE_DATA:
       return _("Sparse data");
+   case STREAM_SPARSE_GZIP_DATA:
+      return _("GZIP sparse data");
    case STREAM_PROGRAM_NAMES:
       return _("Program names");
    case STREAM_PROGRAM_DATA:
       return _("Program data");
    case STREAM_SHA1_DIGEST:
       return _("SHA1 digest");
+   case STREAM_WIN32_DATA:
+      return _("Win32 data");
+   case STREAM_WIN32_GZIP_DATA:
+      return _("Win32 GZIP data");
    case STREAM_MACOS_FORK_DATA:
-      return _("HFS+ resource fork");
+      return _("MacOS Fork data");
    case STREAM_HFSPLUS_ATTRIBUTES:
-      return _("HFS+ Finder Info");
+      return _("HFS+ attribs");
+   case STREAM_UNIX_ATTRIBUTES_ACCESS_ACL:
+      return _("Standard Unix ACL attribs");
+   case STREAM_UNIX_ATTRIBUTES_DEFAULT_ACL:
+      return _("Default Unix ACL attribs");
    case STREAM_SHA256_DIGEST:
       return _("SHA256 digest");
    case STREAM_SHA512_DIGEST:
@@ -109,14 +118,16 @@ const char *stream_to_ascii(int stream)
       return _("Signed digest");
    case STREAM_ENCRYPTED_FILE_DATA:
       return _("Encrypted File data");
-   case STREAM_ENCRYPTED_FILE_GZIP_DATA:
-      return _("Encrypted GZIP data");
    case STREAM_ENCRYPTED_WIN32_DATA:
       return _("Encrypted Win32 data");
+   case STREAM_ENCRYPTED_SESSION_DATA:
+      return _("Encrypted session data");
+   case STREAM_ENCRYPTED_FILE_GZIP_DATA:
+      return _("Encrypted GZIP data");
    case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
       return _("Encrypted Win32 GZIP data");
    case STREAM_ENCRYPTED_MACOS_FORK_DATA:
-      return _("Encrypted HFS+ resource fork");
+      return _("Encrypted MacOS fork data");
    default:
       sprintf(buf, "%d", stream);
       return (const char *)buf;
@@ -406,8 +417,8 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
          dwflags = 0;
       }
 
-      // unicode or ansii open for create write
       if (p_CreateFileW && p_MultiByteToWideChar) {   
+         // unicode open for create write
          bfd->fh = p_CreateFileW((LPCWSTR)win32_fname_wchar,
                 dwaccess,                /* Requested access */
                 0,                       /* Shared mode */
@@ -416,6 +427,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
                 dwflags,                 /* Flags and attributes */
                 NULL);                   /* TemplateFile */
       } else {
+         // ascii open
          bfd->fh = p_CreateFileA(win32_fname,
                 dwaccess,                /* Requested access */
                 0,                       /* Shared mode */
@@ -430,14 +442,14 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
    } else if (flags & O_WRONLY) {     /* Open existing for write */
       if (bfd->use_backup_api) {
          dwaccess = GENERIC_WRITE|WRITE_OWNER|WRITE_DAC;
-         dwflags = FILE_FLAG_BACKUP_SEMANTICS;
+         dwflags = FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT;
       } else {
          dwaccess = GENERIC_WRITE;
          dwflags = 0;
       }
 
-      // unicode or ansii open for open existing write
       if (p_CreateFileW && p_MultiByteToWideChar) {   
+         // unicode open for open existing write
          bfd->fh = p_CreateFileW((LPCWSTR)win32_fname_wchar,
                 dwaccess,                /* Requested access */
                 0,                       /* Shared mode */
@@ -446,6 +458,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
                 dwflags,                 /* Flags and attributes */
                 NULL);                   /* TemplateFile */
       } else {
+         // ascii open
          bfd->fh = p_CreateFileA(win32_fname,
                 dwaccess,                /* Requested access */
                 0,                       /* Shared mode */
@@ -461,7 +474,8 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
    } else {                           /* Read */
       if (bfd->use_backup_api) {
          dwaccess = GENERIC_READ|READ_CONTROL|ACCESS_SYSTEM_SECURITY;
-         dwflags = FILE_FLAG_BACKUP_SEMANTICS;
+         dwflags = FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_SEQUENTIAL_SCAN |
+                   FILE_FLAG_OPEN_REPARSE_POINT;
          dwshare = FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE;
       } else {
          dwaccess = GENERIC_READ;
@@ -469,8 +483,8 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
          dwshare = FILE_SHARE_READ|FILE_SHARE_WRITE;
       }
 
-      // unicode or ansii open for open existing read
       if (p_CreateFileW && p_MultiByteToWideChar) {   
+         // unicode open for open existing read
          bfd->fh = p_CreateFileW((LPCWSTR)win32_fname_wchar,
                 dwaccess,                /* Requested access */
                 dwshare,                 /* Share modes */
@@ -479,6 +493,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
                 dwflags,                 /* Flags and attributes */
                 NULL);                   /* TemplateFile */
       } else {
+         // ascii open 
          bfd->fh = p_CreateFileA(win32_fname,
                 dwaccess,                /* Requested access */
                 dwshare,                 /* Share modes */
@@ -796,11 +811,19 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
       }
    }
    bfd->berrno = errno;
+   bfd->m_flags = flags;
    Dmsg1(400, "Open file %d\n", bfd->fid);
    errno = bfd->berrno;
 
    bfd->win32DecompContext.bIsInData = false;
    bfd->win32DecompContext.liNextHeader = 0;
+
+#if defined(HAVE_POSIX_FADVISE) && defined(POSIX_FADV_WILLNEED)
+   if (bfd->fid != -1 && flags & O_RDONLY) {
+      int stat = posix_fadvise(bfd->fid, 0, 0, POSIX_FADV_WILLNEED);
+      Dmsg2(400, "Did posix_fadvise on %s stat=%d\n", fname, stat);
+   }
+#endif
 
    return bfd->fid;
 }
@@ -835,6 +858,13 @@ int bclose(BFILE *bfd)
    if (bfd->fid == -1) {
       return 0;
    }
+#if defined(HAVE_POSIX_FADVISE) && defined(POSIX_FADV_DONTNEED)
+   if (bfd->m_flags & O_RDONLY) {
+      fdatasync(bfd->fid);            /* sync the file */
+      /* Tell OS we don't need it any more */
+      posix_fadvise(bfd->fid, 0, 0, POSIX_FADV_DONTNEED);
+   }
+#endif
 
    /* Close normal file */
    stat = close(bfd->fid);

@@ -1,23 +1,14 @@
 /*
- *  Subroutines to receive network data and handle
- *   network signals for the FD and the SD.
- *
- *   Kern Sibbald, May MMI previously in src/stored/fdmsg.c
- *
- *   Version $Id: bget_msg.c 3670 2006-11-21 16:13:58Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Subroutines to receive network data and handle
+ *   network signals for the FD and the SD.
+ *
+ *   Kern Sibbald, May MMI previously in src/stored/fdmsg.c
+ *
+ *   Version $Id: bget_msg.c 5165 2007-07-13 04:44:08Z kerns $
+ *
+ */
 
 #include "bacula.h"                   /* pull in global headers */
 
@@ -57,7 +57,7 @@ int bget_msg(BSOCK *sock)
 {
    int n;
    for ( ;; ) {
-      n = bnet_recv(sock);
+      n = sock->recv();
       if (n >= 0) {                  /* normal return */
          return n;
       }
@@ -72,22 +72,22 @@ int bget_msg(BSOCK *sock)
          return n;
       case BNET_EOD_POLL:
          Dmsg0(msglvl, "Got BNET_EOD_POLL\n");
-         if (sock->terminated) {
-            bnet_fsend(sock, TERM_msg);
+         if (sock->is_terminated()) {
+            sock->fsend(TERM_msg);
          } else {
-            bnet_fsend(sock, OK_msg); /* send response */
+            sock->fsend(OK_msg); /* send response */
          }
          return n;                 /* end of data */
       case BNET_TERMINATE:
          Dmsg0(msglvl, "Got BNET_TERMINATE\n");
-         sock->terminated = 1;
+         sock->set_terminated();
          return n;
       case BNET_POLL:
          Dmsg0(msglvl, "Got BNET_POLL\n");
-         if (sock->terminated) {
-            bnet_fsend(sock, TERM_msg);
+         if (sock->is_terminated()) {
+            sock->fsend(TERM_msg);
          } else {
-            bnet_fsend(sock, OK_msg); /* send response */
+            sock->fsend(OK_msg); /* send response */
          }
          break;
       case BNET_HEARTBEAT:
@@ -96,8 +96,8 @@ int bget_msg(BSOCK *sock)
       case BNET_STATUS:
          /* *****FIXME***** Implement BNET_STATUS */
          Dmsg0(msglvl, "Got BNET_STATUS\n");
-         bnet_fsend(sock, _("Status OK\n"));
-         bnet_sig(sock, BNET_EOD);
+         sock->fsend(_("Status OK\n"));
+         sock->signal(BNET_EOD);
          break;
       default:
          Emsg1(M_ERROR, 0, _("bget_msg: unknown signal %d\n"), sock->msglen);

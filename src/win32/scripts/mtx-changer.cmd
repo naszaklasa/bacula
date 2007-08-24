@@ -102,6 +102,8 @@ GOTO :cmdUnknown
 REM %MT% -f %device% load
 REM bsleep 5
    CALL :wait_for_drive %device%
+   REM Force block size to 0 for variable
+   %MT% -f %device% setblk 0
    GOTO :cmdExit
 
 :cmdList

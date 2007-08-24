@@ -113,7 +113,7 @@ bacMenu::bacMenu()
 bacMenu::~bacMenu()
 {
    // Remove the tray icon
-   SendTrayMsg(NIM_DELETE, 0);
+   DelTrayIcon();
         
    // Destroy the loaded menu
    if (m_hmenu != NULL)
@@ -136,7 +136,7 @@ bacMenu::DelTrayIcon()
 void
 bacMenu::UpdateTrayIcon(int bacstat)
 {
-   (void *)bac_status(NULL, 0);
+   (void)bac_status(NULL, 0);
    SendTrayMsg(NIM_MODIFY, bacstat);
 }
 
@@ -215,7 +215,6 @@ LRESULT CALLBACK bacMenu::WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lP
 
    // Every five seconds, a timer message causes the icon to update
    case WM_TIMER:
-      // *** HACK for running servicified
       if (bacService::RunningAsService()) {
           // Attempt to add the icon if it's not already there
           _this->AddTrayIcon();
@@ -297,6 +296,9 @@ LRESULT CALLBACK bacMenu::WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lP
       }
 
    case WM_CLOSE:
+      if (bacService::RunningAsService()) {
+         _this->DelTrayIcon();
+      }
       terminate_stored(0);
       break;
 

@@ -1,13 +1,13 @@
---- make_catalog_backup.in	2006-12-09 10:17:05.000000000 -0500
-+++ make_catalog_backup.in.fixed	2006-12-09 10:24:40.000000000 -0500
+--- make_catalog_backup.in      2006-12-09 10:17:05.000000000 -0500
++++ make_catalog_backup.in.fixed        2006-12-09 10:24:40.000000000 -0500
 @@ -16,7 +16,7 @@
  cd @working_dir@
  rm -f bacula.sql
- if test xsqlite = x@DB_NAME@ ; then
+ if test xsqlite = x@DB_TYPE@ ; then
 -  echo ".dump" | ${BINDIR}/sqlite $1.db >$1.sql
 +  echo ".dump" | /usr/lib/bacula/sqlite/sqlite $1.db >$1.sql
  else
-   if test xmysql = x@DB_NAME@ ; then
+   if test xmysql = x@DB_TYPE@ ; then
      if test $# -gt 2; then
 @@ -33,7 +33,7 @@
        fi

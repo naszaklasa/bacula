@@ -1,4 +1,31 @@
 /*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
  *   Main configuration file parser for Bacula Directors,
  *    some parts may be split into separate files such as
  *    the schedule configuration (run_config.c).
@@ -19,35 +46,9 @@
  *
  *     Kern Sibbald, January MM
  *
- *     Version $Id: dird_conf.c 4116 2007-02-06 14:37:57Z kerns $
+ *     Version $Id: dird_conf.c 5219 2007-07-22 10:14:48Z kerns $
  */
-/*
-   Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -120,6 +121,7 @@ static RES_ITEM dir_items[] = {
    {"password",    store_password, ITEM(res_dir.password), 0, ITEM_REQUIRED, 0},
    {"fdconnecttimeout", store_time,ITEM(res_dir.FDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
    {"sdconnecttimeout", store_time,ITEM(res_dir.SDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
+   {"heartbeatinterval", store_time, ITEM(res_dir.heartbeat_interval), 0, ITEM_DEFAULT, 0},
    {"tlsenable",            store_bool,      ITEM(res_dir.tls_enable), 0, 0, 0},
    {"tlsrequire",           store_bool,      ITEM(res_dir.tls_require), 0, 0, 0},
    {"tlsverifypeer",        store_bool,      ITEM(res_dir.tls_verify_peer), 0, ITEM_DEFAULT, true},
@@ -181,6 +183,7 @@ static RES_ITEM cli_items[] = {
    {"catalog",  store_res,        ITEM(res_client.catalog),  R_CATALOG, ITEM_REQUIRED, 0},
    {"fileretention", store_time,  ITEM(res_client.FileRetention), 0, ITEM_DEFAULT, 60*60*24*60},
    {"jobretention",  store_time,  ITEM(res_client.JobRetention),  0, ITEM_DEFAULT, 60*60*24*180},
+   {"heartbeatinterval", store_time, ITEM(res_client.heartbeat_interval), 0, ITEM_DEFAULT, 0},
    {"autoprune", store_bool,      ITEM(res_client.AutoPrune), 0, ITEM_DEFAULT, true},
    {"maximumconcurrentjobs", store_pint, ITEM(res_client.MaxConcurrentJobs), 0, ITEM_DEFAULT, 1},
    {"tlsenable",            store_bool,      ITEM(res_client.tls_enable), 0, 0, 0},
@@ -189,6 +192,7 @@ static RES_ITEM cli_items[] = {
    {"tlscacertificatedir",  store_dir,       ITEM(res_client.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate",       store_dir,       ITEM(res_client.tls_certfile), 0, 0, 0},
    {"tlskey",               store_dir,       ITEM(res_client.tls_keyfile), 0, 0, 0},
+   {"tlsallowedcn",         store_alist_str, ITEM(res_client.tls_allowed_cns), 0, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -208,6 +212,7 @@ static RES_ITEM store_items[] = {
    {"mediatype",   store_strname,  ITEM(res_store.media_type), 0, ITEM_REQUIRED, 0},
    {"autochanger", store_bool,     ITEM(res_store.autochanger), 0, ITEM_DEFAULT, 0},
    {"enabled",     store_bool,     ITEM(res_store.enabled),     0, ITEM_DEFAULT, true},
+   {"heartbeatinterval", store_time, ITEM(res_store.heartbeat_interval), 0, ITEM_DEFAULT, 0},
    {"maximumconcurrentjobs", store_pint, ITEM(res_store.MaxConcurrentJobs), 0, ITEM_DEFAULT, 1},
    {"sddport", store_pint, ITEM(res_store.SDDport), 0, 0, 0}, /* deprecated */
    {"tlsenable",            store_bool,      ITEM(res_store.tls_enable), 0, 0, 0},
@@ -266,6 +271,10 @@ RES_ITEM job_items[] = {
    {"run",       store_alist_str, ITEM(res_job.run_cmds), 0, 0, 0},
    /* Root of where to restore files */
    {"where",    store_dir,      ITEM(res_job.RestoreWhere), 0, 0, 0},
+   {"regexwhere",    store_str,   ITEM(res_job.RegexWhere), 0, 0, 0},
+   {"stripprefix",    store_str,  ITEM(res_job.strip_prefix), 0, 0, 0},
+   {"addprefix",    store_str,  ITEM(res_job.add_prefix), 0, 0, 0},
+   {"addsuffix",    store_str,  ITEM(res_job.add_suffix), 0, 0, 0},
    /* Where to find bootstrap during restore */
    {"bootstrap",store_dir,      ITEM(res_job.RestoreBootstrap), 0, 0, 0},
    /* Where to write bootstrap file during backup */
@@ -361,6 +370,7 @@ static RES_ITEM pool_items[] = {
    {"storage",       store_alist_res, ITEM(res_pool.storage),  R_STORAGE, 0, 0},
    {"autoprune",       store_bool,    ITEM(res_pool.AutoPrune), 0, ITEM_DEFAULT, true},
    {"recycle",         store_bool,    ITEM(res_pool.Recycle),   0, ITEM_DEFAULT, true},
+   {"recyclepool",     store_res,     ITEM(res_pool.RecyclePool), R_POOL, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -605,8 +615,11 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
          sendit(sock, _("  --> "));
          dump_resource(-R_SCHEDULE, (RES *)res->res_job.schedule, sendit, sock);
       }
-      if (res->res_job.RestoreWhere) {
-         sendit(sock, _("  --> Where=%s\n"), NPRT(res->res_job.RestoreWhere));
+      if (res->res_job.RestoreWhere && !res->res_job.RegexWhere) {
+           sendit(sock, _("  --> Where=%s\n"), NPRT(res->res_job.RestoreWhere));
+      }
+      if (res->res_job.RegexWhere) {
+           sendit(sock, _("  --> RegexWhere=%s\n"), NPRT(res->res_job.RegexWhere));
       }
       if (res->res_job.RestoreBootstrap) {
          sendit(sock, _("  --> Bootstrap=%s\n"), NPRT(res->res_job.RestoreBootstrap));
@@ -629,7 +642,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
            sendit(sock, _("  --> Target=%s\n"),  NPRT(script->target));
            sendit(sock, _("  --> RunOnSuccess=%u\n"),  script->on_success);
            sendit(sock, _("  --> RunOnFailure=%u\n"),  script->on_failure);
-           sendit(sock, _("  --> AbortJobOnError=%u\n"),  script->abort_on_error);
+           sendit(sock, _("  --> FailJobOnError=%u\n"),  script->fail_on_error);
            sendit(sock, _("  --> RunWhen=%u\n"),  script->when);
         }
       }
@@ -856,8 +869,10 @@ next_run:
               edit_uint64(res->res_pool.MigrationHighBytes, ed2),
               edit_uint64(res->res_pool.MigrationLowBytes, ed3));
       if (res->res_pool.NextPool) {
-         sendit(sock, _("  --> "));
-         dump_resource(-R_POOL, (RES *)res->res_pool.NextPool, sendit, sock);
+         sendit(sock, _("      NextPool=%s\n"), res->res_pool.NextPool->name());
+      }
+      if (res->res_pool.RecyclePool) {
+         sendit(sock, _("      RecyclePool=%s\n"), res->res_pool.RecyclePool->name());
       }
       if (res->res_pool.storage) {
          STORE *store;
@@ -1042,6 +1057,9 @@ void free_resource(RES *sres, int type)
       if (res->res_client.tls_keyfile) {
          free(res->res_client.tls_keyfile);
       }
+      if (res->res_client.tls_allowed_cns) {
+         delete res->res_client.tls_allowed_cns;
+      }
       break;
    case R_STORAGE:
       if (res->res_store.address) {
@@ -1134,6 +1152,18 @@ void free_resource(RES *sres, int type)
    case R_JOBDEFS:
       if (res->res_job.RestoreWhere) {
          free(res->res_job.RestoreWhere);
+      }
+      if (res->res_job.RegexWhere) {
+         free(res->res_job.RegexWhere);
+      }
+      if (res->res_job.strip_prefix) {
+         free(res->res_job.strip_prefix);
+      }
+      if (res->res_job.add_prefix) {
+         free(res->res_job.add_prefix);
+      }
+      if (res->res_job.add_suffix) {
+         free(res->res_job.add_suffix);
       }
       if (res->res_job.RestoreBootstrap) {
          free(res->res_job.RestoreBootstrap);
@@ -1248,6 +1278,7 @@ void save_resource(int type, RES_ITEM *items, int pass)
          }
          /* Explicitly copy resource pointers from this pass (res_all) */
          res->res_pool.NextPool = res_all.res_pool.NextPool;
+         res->res_pool.RecyclePool = res_all.res_pool.RecyclePool;
          res->res_pool.storage    = res_all.res_pool.storage;
          break;
       case R_CONSOLE:
@@ -1290,6 +1321,36 @@ void save_resource(int type, RES_ITEM *items, int pass)
          res->res_job.jobdefs    = res_all.res_job.jobdefs;
          res->res_job.run_cmds   = res_all.res_job.run_cmds;
          res->res_job.RunScripts = res_all.res_job.RunScripts;
+
+         /* TODO: JobDefs where/regexwhere doesn't work well (but this
+          * is not very useful) 
+          * We have to set_bit(index, res_all.hdr.item_present);
+          * or something like that
+          */
+
+         /* we take RegexWhere before all other options */
+         if (!res->res_job.RegexWhere 
+             &&
+             (res->res_job.strip_prefix ||
+              res->res_job.add_suffix   ||
+              res->res_job.add_prefix))
+         {
+            int len = bregexp_get_build_where_size(res->res_job.strip_prefix,
+                                                   res->res_job.add_prefix,
+                                                   res->res_job.add_suffix);
+            res->res_job.RegexWhere = (char *) bmalloc (len * sizeof(char));
+            bregexp_build_where(res->res_job.RegexWhere, len,
+                                res->res_job.strip_prefix,
+                                res->res_job.add_prefix,
+                                res->res_job.add_suffix);
+            /* TODO: test bregexp */
+         }
+
+         if (res->res_job.RegexWhere && res->res_job.RestoreWhere) {
+            free(res->res_job.RestoreWhere);
+            res->res_job.RestoreWhere = NULL;
+         }
+
          break;
       case R_COUNTER:
          if ((res = (URES *)GetResWithName(R_COUNTER, res_all.res_counter.hdr.name)) == NULL) {
@@ -1304,6 +1365,7 @@ void save_resource(int type, RES_ITEM *items, int pass)
             Emsg1(M_ERROR_TERM, 0, _("Cannot find Client resource %s\n"), res_all.res_client.hdr.name);
          }
          res->res_client.catalog = res_all.res_client.catalog;
+         res->res_client.tls_allowed_cns = res_all.res_client.tls_allowed_cns;
          break;
       case R_SCHEDULE:
          /*
@@ -1655,7 +1717,7 @@ static void store_short_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
 
       if (strcmp(item->name, "runbeforejob") == 0) {
          script->when = SCRIPT_Before;
-         script->abort_on_error = true;
+         script->fail_on_error = true;
          script->set_target("");
 
       } else if (strcmp(item->name, "runafterjob") == 0) {
@@ -1675,7 +1737,7 @@ static void store_short_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
          script->old_proto = true;
          script->when = SCRIPT_Before;
          script->set_target("%c");
-         script->abort_on_error = true;
+         script->fail_on_error = true;
 
       } else if (strcmp(item->name, "runafterfailedjob") == 0) {
          script->when = SCRIPT_After;
@@ -1720,7 +1782,8 @@ static RES_ITEM runscript_items[] = {
  {"target",         store_runscript_target,{(char **)&res_runscript},          0,  0, 0}, 
  {"runsonsuccess",  store_runscript_bool, {(char **)&res_runscript.on_success},0,  0, 0},
  {"runsonfailure",  store_runscript_bool, {(char **)&res_runscript.on_failure},0,  0, 0},
- {"abortjobonerror",store_runscript_bool, {(char **)&res_runscript.abort_on_error},0, 0, 0},
+ {"failjobonerror",store_runscript_bool, {(char **)&res_runscript.fail_on_error},0, 0, 0},
+ {"abortjobonerror",store_runscript_bool, {(char **)&res_runscript.fail_on_error},0, 0, 0},
  {"runswhen",       store_runscript_when, {(char **)&res_runscript.when},      0,  0, 0},
  {"runsonclient",   store_runscript_target,{(char **)&res_runscript},          0,  0, 0}, /* TODO */
  {NULL, NULL, {0}, 0, 0, 0}
@@ -1740,7 +1803,7 @@ static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
 
    Dmsg1(200, "store_runscript: begin store_runscript pass=%i\n", pass);
 
-   res_runscript.reset_default();      /* setting on_success, on_failure, abort_on_error */
+   res_runscript.reset_default();      /* setting on_success, on_failure, fail_on_error */
    
    token = lex_get_token(lc, T_SKIP_EOL);
    

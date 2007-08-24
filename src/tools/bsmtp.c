@@ -1,28 +1,14 @@
 /*
-   Derived from a SMTPclient:
-
-       SMTPclient -- simple SMTP client
-
-       Copyright (C) 1997 Ralf S. Engelschall, All Rights Reserved.
-       rse@engelschall.com
-       www.engelschall.com
-
-   Kern Sibbald, July 2001
-
-   Version $Id: bsmtp.c 3685 2006-11-22 14:26:40Z kerns $
-
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -39,6 +25,20 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+   Derived from a SMTPclient:
+
+       SMTPclient -- simple SMTP client
+
+       Copyright (C) 1997 Ralf S. Engelschall, All Rights Reserved.
+       rse@engelschall.com
+       www.engelschall.com
+
+   Kern Sibbald, July 2001
+
+   Version $Id: bsmtp.c 5211 2007-07-21 18:32:04Z kerns $
+
+ */
 
 
 #include "bacula.h"
@@ -68,14 +68,39 @@ static const char *mailhost = NULL;
 static char *reply_addr = NULL;
 static int mailport = 25;
 static char my_hostname[MAXSTRING];
+static bool content_utf8 = false;
 
+/* 
+ * Take input that may have names and other stuff and strip
+ *  it down to the mail box address ... i.e. what is enclosed
+ *  in < >.  Otherwise add < >.
+ */
+static char *cleanup_addr(char *addr, char *buf, int buf_len)
+{
+   char *p, *q;
+
+   if ((p = strchr(from_addr, '<')) == NULL) {
+      snprintf(buf, buf_len, "<%s>", addr);
+   } else {
+      /* Copy <addr> */
+      for (q=buf; *p && *p!='>'; ) {
+         *q++ = *p++;
+      }
+      if (*p) {
+         *q++ = *p;
+      }
+      *q = 0;
+  }
+  Dmsg2(100, "cleanup in=%s out=%s\n", addr, buf);
+  return buf;    
+}
 
 /*
  *  examine message from server
  */
 static void get_response(void)
 {
-    char buf[MAXSTRING];
+    char buf[1000];
 
     Dmsg0(50, "Calling fgets on read socket rfp.\n");
     buf[3] = 0;
@@ -130,6 +155,7 @@ static void usage()
    fprintf(stderr,
 _("\n"
 "Usage: %s [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]\n"
+"       -8          set charset utf-8\n"
 "       -c          set the Cc: field\n"
 "       -dnn        set debug level to nn\n"
 "       -f          set the From: field\n"
@@ -143,6 +169,38 @@ _("\n"
    exit(1);
 }
 
+static void get_date_string(char *buf, int buf_len)
+{
+   time_t now = time(NULL);
+   struct tm tm;
+   char tzbuf[MAXSTRING];
+   long my_timezone;
+
+   /* Add RFC822 date */
+   (void)localtime_r(&now, &tm);
+
+#if defined(HAVE_WIN32)
+#if defined(HAVE_MINGW)
+__MINGW_IMPORT long     _dstbias;
+#endif
+   _tzset();
+   my_timezone = _timezone;
+   my_timezone += _dstbias;
+   my_timezone /= 60;
+
+#else
+   struct timeval tv;
+   struct timezone tz;
+   gettimeofday(&tv, &tz);
+   my_timezone = tz.tz_minuteswest; /* timezone offset in mins */
+#endif
+   strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S", &tm);
+   sprintf(tzbuf, " %+2.2ld%2.2u", -my_timezone / 60, abs(my_timezone) % 60);
+   strcat(buf, tzbuf);              /* add +0100 */
+   strftime(tzbuf, sizeof(tzbuf), " (%Z)", &tm);
+   strcat(buf, tzbuf);              /* add (CEST) */
+}
+
 
 /*********************************************************************
  *
@@ -150,7 +208,7 @@ _("\n"
  */
 int main (int argc, char *argv[])
 {
-    char buf[MAXSTRING];
+    char buf[1000];
     struct sockaddr_in sin;
     struct hostent *hp;
     int i, ch;
@@ -162,8 +220,6 @@ int main (int argc, char *argv[])
     struct passwd *pwd;
 #endif
     char *cp, *p;
-    time_t now = time(NULL);
-    struct tm tm;
     
    setlocale(LC_ALL, "en_US");
    bindtextdomain("bacula", LOCALEDIR);
@@ -172,8 +228,11 @@ int main (int argc, char *argv[])
    my_name_is(argc, argv, "bsmtp");
    maxlines = 0;
 
-   while ((ch = getopt(argc, argv, "c:d:f:h:r:s:l:?")) != -1) {
+   while ((ch = getopt(argc, argv, "8c:d:f:h:r:s:l:?")) != -1) {
       switch (ch) {
+      case '8':
+         content_utf8 = true;
+         break;
       case 'c':
          Dmsg1(20, "cc=%s\n", optarg);
          cc_addr = optarg;
@@ -230,9 +289,6 @@ int main (int argc, char *argv[])
       exit(1);
    }
 
-#if defined(HAVE_WIN32)
-   _setmode(0, _O_BINARY);
-#endif
 
    /*
     *  Determine SMTP server
@@ -248,6 +304,7 @@ int main (int argc, char *argv[])
 #if defined(HAVE_WIN32)
    WSADATA  wsaData;
 
+   _setmode(0, _O_BINARY);
    WSAStartup(MAKEWORD(2,2), &wsaData);
 #endif
 
@@ -364,19 +421,21 @@ hp:
 #endif
 
    /*
-    *  Send SMTP headers
+    *  Send SMTP headers.  Note, if any of the strings have a <
+    *   in them already, we do not enclose the string in < >, otherwise
+    *   we do.
     */
    get_response(); /* banner */
    chat("helo %s\r\n", my_hostname);
-   chat("mail from:<%s>\r\n", from_addr);
-
+   chat("mail from:%s\r\n", cleanup_addr(from_addr, buf, sizeof(buf)));
+   
    for (i = 0; i < argc; i++) {
       Dmsg1(20, "rcpt to: %s\n", argv[i]);
-      chat("rcpt to:<%s>\r\n", argv[i]);
+      chat("rcpt to:%s\r\n", cleanup_addr(argv[i], buf, sizeof(buf)));
    }
 
    if (cc_addr) {
-      chat("rcpt to:<%s>\r\n", cc_addr);
+      chat("rcpt to:%s\r\n", cleanup_addr(cc_addr, buf, sizeof(buf)));
    }
    Dmsg0(20, "Data\n");
    chat("data\r\n");
@@ -434,25 +493,12 @@ hp:
       Dmsg1(10, "Cc: %s\r\n", cc_addr);
    }
 
-   /* Add RFC822 date */
-   (void)localtime_r(&now, &tm);
-#if defined(HAVE_WIN32)
-#if defined(HAVE_MINGW)
-__MINGW_IMPORT long     _dstbias;
-#endif
-   long tzoffset = 0;
+   if (content_utf8) {
+      fprintf(sfp, "Content-Type: text/plain; charset=UTF-8\r\n");
+      Dmsg0(10, "Content-Type: text/plain; charset=UTF-8\r\n");
+   }
 
-   _tzset();
-
-   tzoffset = _timezone;
-   tzoffset += _dstbias;
-   tzoffset /= 60;
-
-   size_t length = strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S", &tm);
-   sprintf(&buf[length], " %+2.2ld%2.2u", -tzoffset / 60, abs(tzoffset) % 60);
-#else
-   strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S %z", &tm);
-#endif
+   get_date_string(buf, sizeof(buf));
    fprintf(sfp, "Date: %s\r\n", buf);
    Dmsg1(10, "Date: %s\r\n", buf);
 

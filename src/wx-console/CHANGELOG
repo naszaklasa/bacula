@@ -15,12 +15,12 @@
  - Fixes compile error with unicode-enabled wxWidgets.
 
 25-04-2005 :
- - Fixes to make wx-console compatible with wxWidgets 2.6.0.
+ - Fixes to make bwx-console compatible with wxWidgets 2.6.0.
 
 24-03-2005 :
- - wxbMainFrame : Fix a bug with GTK+-1.2 which caused wx-console to crash
+ - wxbMainFrame : Fix a bug with GTK+-1.2 which caused bwx-console to crash
    when starting.
- - wxbRestorePanel : Fix a major bug which caused wx-console to enter in an
+ - wxbRestorePanel : Fix a major bug which caused bwx-console to enter in an
    infinite loop which allocate a lot of memory and could make the system crash.
 
 10-03-2005 :
@@ -175,7 +175,7 @@
      when restoring
      
 26-04-2004 :
- - Corrected a bug in Windows which causes wx-console to crash when
+ - Corrected a bug in Windows which causes bwx-console to crash when
      typing quit before exiting the application.
 
 25-04-2004 :
@@ -194,7 +194,7 @@
      console text control.
 
 24-04-2004 :
- - wxbMainFrame : When starting wx-console, the initial key 
+ - wxbMainFrame : When starting bwx-console, the initial key 
       input focus is set into the command window.
  - wxbMainFrame : the user is now prompted when an 
       unexpected "question" is asked).
@@ -228,7 +228,7 @@
  - modified the way data is passed to panel (no Prints anymore,
    but wxbDataParsers)
  - win32 : Makefile.in corrected to use ressource file
- - win32 : wx-console is now compatible with MinGW.
+ - win32 : bwx-console is now compatible with MinGW.
  - wxbPanel/wxbMainFrame : Added a locking function (for example, 
    the user can't type something in the console when a restore
    is in progress)
@@ -238,8 +238,8 @@
    double-clicking on the check mark
 
 15-04-2004 :
- - project renamed in wx-console
- - console_thread : Uses wx-console.conf instead of console.conf
+ - project renamed in bwx-console
+ - console_thread : Uses bwx-console.conf instead of console.conf
  - wxbRestorePanel : Change the marked state without redoing a dir
 
 12-04-2004 :

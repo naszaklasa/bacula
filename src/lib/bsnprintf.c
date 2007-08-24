@@ -11,7 +11,7 @@
  *
  *   Kern Sibbald, November MMV
  *
- *   Version $Id: bsnprintf.c 3670 2006-11-21 16:13:58Z kerns $
+ *   Version $Id: bsnprintf.c 4992 2007-06-07 14:46:43Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -22,8 +22,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -326,8 +326,15 @@ int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args)
             currlen = fmtstr(buffer, currlen, maxlen, strvalue, flags, min, max);
             break;
          case 'p':
-            strvalue = va_arg(args, char *);
-            currlen = fmtint(buffer, currlen, maxlen, (long)strvalue, 16, min, max, flags);
+            flags |= DP_F_UNSIGNED;
+            if (sizeof(char *) == 4) {
+               value = va_arg(args, uint32_t);
+            } else if (sizeof(char *) == 8) {
+               value = va_arg(args, uint64_t);
+            } else {
+               value = 0;             /* we have a problem */
+            }
+            currlen = fmtint(buffer, currlen, maxlen, value, 16, min, max, flags);
             break;
          case 'n':
             if (cflags == DP_C_INT16) {

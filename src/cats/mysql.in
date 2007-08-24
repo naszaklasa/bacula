@@ -3,5 +3,6 @@
 # shell script to create Bacula MySQL tables
 #
 bindir=@SQL_BINDIR@
+db_name=@db_name@
 
-$bindir/mysql $* bacula
+$bindir/mysql $* ${db_name}

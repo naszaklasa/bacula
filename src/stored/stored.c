@@ -1,27 +1,14 @@
 /*
- * Second generation Storage daemon.
- *
- *  Kern Sibbald, MM
- *
- * It accepts a number of simple commands from the File daemon
- * and acts on them. When a request to append data is made,
- * it opens a data channel and accepts data from the
- * File daemon.
- *
- *   Version $Id: stored.c 3806 2006-12-16 15:30:22Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -38,6 +25,19 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Second generation Storage daemon.
+ *
+ *  Kern Sibbald, MM
+ *
+ * It accepts a number of simple commands from the File daemon
+ * and acts on them. When a request to append data is made,
+ * it opens a data channel and accepts data from the
+ * File daemon.
+ *
+ *   Version $Id: stored.c 5066 2007-06-23 09:58:34Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -61,6 +61,7 @@ STORES *me = NULL;                    /* our Global resource */
 bool forge_on = false;                /* proceed inspite of I/O errors */
 pthread_mutex_t device_release_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t wait_device_release = PTHREAD_COND_INITIALIZER;
+void *start_heap;
 
 
 static uint32_t VolSessionId = 0;
@@ -112,6 +113,7 @@ int main (int argc, char *argv[])
    char *uid = NULL;
    char *gid = NULL;
 
+   start_heap = sbrk(0);
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
@@ -481,7 +483,7 @@ void *device_initialization(void *arg)
          continue;
       }
 
-      jcr->dcr = dcr = new_dcr(jcr, dev);
+      jcr->dcr = dcr = new_dcr(jcr, NULL, dev);
       if (dev->is_autochanger()) {
          /* If autochanger set slot in dev sturcture */
          get_autochanger_loaded_slot(dcr);
@@ -535,6 +537,7 @@ void terminate_stored(int sig)
       exit(1);
    }
    in_here = true;
+   stop_watchdog();
 
    if (sig == SIGTERM) {              /* normal shutdown request? */
       /*
@@ -552,15 +555,16 @@ void terminate_stored(int sig)
          set_jcr_job_status(jcr, JS_Canceled);
          fd = jcr->file_bsock;
          if (fd) {
-            fd->timed_out = true;
+            fd->set_timed_out();
             Dmsg1(100, "term_stored killing JobId=%d\n", jcr->JobId);
             pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
             /* ***FIXME*** wiffle through all dcrs */
-            if (jcr->dcr && jcr->dcr->dev && jcr->dcr->dev->dev_blocked) {
+            if (jcr->dcr && jcr->dcr->dev && jcr->dcr->dev->blocked()) {
                pthread_cond_broadcast(&jcr->dcr->dev->wait_next_vol);
+               Dmsg1(100, "JobId=%u broadcast wait_device_release\n", (uint32_t)jcr->JobId);
                pthread_cond_broadcast(&wait_device_release);
             }
-            if (jcr->read_dcr && jcr->read_dcr->dev && jcr->read_dcr->dev->dev_blocked) {
+            if (jcr->read_dcr && jcr->read_dcr->dev && jcr->read_dcr->dev->blocked()) {
                pthread_cond_broadcast(&jcr->read_dcr->dev->wait_next_vol);
                pthread_cond_broadcast(&wait_device_release);
             }
@@ -579,7 +583,7 @@ void terminate_stored(int sig)
    foreach_res(device, R_DEVICE) {
       Dmsg1(10, "Term device %s\n", device->device_name);
       if (device->dev) {
-         free_volume(device->dev);
+         device->dev->clear_volhdr();
          device->dev->term();
          device->dev = NULL;
       } else {
@@ -598,7 +602,6 @@ void terminate_stored(int sig)
    }
    term_reservations_lock();
    term_msg();
-   stop_watchdog();
    cleanup_crypto();
    free_volume_list();
    close_memory_pool();

@@ -1,4 +1,31 @@
 /*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
  *   Main configuration file parser for Bacula File Daemon (Client)
  *    some parts may be split into separate files such as
  *    the schedule configuration (sch_config.c).
@@ -19,35 +46,8 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: filed_conf.c 3843 2006-12-22 15:40:16Z kerns $
+ *   Version $Id: filed_conf.c 4992 2007-06-07 14:46:43Z kerns $
  */
-/*
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-*/
 
 #include "bacula.h"
 #include "filed.h"
@@ -98,8 +98,8 @@ static RES_ITEM cli_items[] = {
    {"scriptsdirectory",  store_dir,  ITEM(res_client.scripts_directory),  0, 0, 0},
    {"maximumconcurrentjobs", store_pint,  ITEM(res_client.MaxConcurrentJobs), 0, ITEM_DEFAULT, 10},
    {"messages",      store_res, ITEM(res_client.messages), R_MSGS, 0, 0},
-   {"heartbeatinterval", store_time, ITEM(res_client.heartbeat_interval), 0, ITEM_DEFAULT, 0},
    {"sdconnecttimeout", store_time,ITEM(res_client.SDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
+   {"heartbeatinterval", store_time, ITEM(res_client.heartbeat_interval), 0, ITEM_DEFAULT, 0},
    {"maximumnetworkbuffersize", store_pint, ITEM(res_client.max_network_buffer_size), 0, 0, 0},
 #ifdef DATA_ENCRYPTION
    {"pkisignatures",         store_bool,    ITEM(res_client.pki_sign), 0, ITEM_DEFAULT, 0},

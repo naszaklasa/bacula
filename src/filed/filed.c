@@ -1,22 +1,14 @@
 /*
- *  Bacula File Daemon
- *
- *    Kern Sibbald, March MM
- *
- *   Version $Id: filed.c 3709 2006-11-27 10:03:06Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Bacula File Daemon
+ *
+ *    Kern Sibbald, March MM
+ *
+ *   Version $Id: filed.c 4992 2007-06-07 14:46:43Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "filed.h"
@@ -42,11 +42,12 @@ extern void *handle_client_request(void *dir_sock);
 
 /* Forward referenced functions */
 void terminate_filed(int sig);
-static int check_resources();
+static bool check_resources();
 
 /* Exported variables */
 CLIENT *me;                           /* my resource */
 bool no_signals = false;
+void *start_heap;
 
 
 #define CONFIG_FILE "bacula-fd.conf" /* default config file */
@@ -93,6 +94,7 @@ int main (int argc, char *argv[])
    char *uid = NULL;
    char *gid = NULL;
 
+   start_heap = sbrk(0);
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
@@ -254,7 +256,7 @@ void terminate_filed(int sig)
 * Make a quick check to see that we have all the
 * resources needed.
 */
-static int check_resources()
+static bool check_resources()
 {
    bool OK = true;
    DIRRES *director;

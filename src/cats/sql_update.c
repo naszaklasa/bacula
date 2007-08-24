@@ -1,21 +1,14 @@
 /*
- * Bacula Catalog Database Update record interface routines
- *
- *    Kern Sibbald, March 2000
- *
- *    Version $Id: sql_update.c 3709 2006-11-27 10:03:06Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula Catalog Database Update record interface routines
+ *
+ *    Kern Sibbald, March 2000
+ *
+ *    Version $Id: sql_update.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 /* The following is necessary so that we do not include
  * the dummy external definition of DB.
@@ -251,11 +251,10 @@ int db_update_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
 }
 
 
-int
-db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
+int db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 {
    int stat;
-   char ed1[50], ed2[50], ed3[50], ed4[50];
+   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50];
 
    db_lock(mdb);
    Mmsg(mdb->cmd, "SELECT count(*) from Media WHERE PoolId=%s",
@@ -267,14 +266,14 @@ db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 "UPDATE Pool SET NumVols=%u,MaxVols=%u,UseOnce=%d,UseCatalog=%d,"
 "AcceptAnyVolume=%d,VolRetention='%s',VolUseDuration='%s',"
 "MaxVolJobs=%u,MaxVolFiles=%u,MaxVolBytes=%s,Recycle=%d,"
-"AutoPrune=%d,LabelType=%d,LabelFormat='%s' WHERE PoolId=%s",
+"AutoPrune=%d,LabelType=%d,LabelFormat='%s',RecyclePoolId=%s WHERE PoolId=%s",
       pr->NumVols, pr->MaxVols, pr->UseOnce, pr->UseCatalog,
       pr->AcceptAnyVolume, edit_uint64(pr->VolRetention, ed1),
       edit_uint64(pr->VolUseDuration, ed2),
       pr->MaxVolJobs, pr->MaxVolFiles,
       edit_uint64(pr->MaxVolBytes, ed3),
       pr->Recycle, pr->AutoPrune, pr->LabelType,
-      pr->LabelFormat, 
+      pr->LabelFormat, edit_int64(pr->RecyclePoolId,ed5),
       ed4);
 
    stat = UPDATE_DB(jcr, mdb, mdb->cmd);
@@ -363,8 +362,8 @@ db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
         mr->VolMounts, mr->VolErrors, mr->VolWrites,
         edit_uint64(mr->MaxVolBytes, ed2),
         mr->VolStatus, mr->Slot, mr->InChanger,
-        edit_uint64(mr->VolReadTime, ed3),
-        edit_uint64(mr->VolWriteTime, ed4),
+        edit_int64(mr->VolReadTime, ed3),
+        edit_int64(mr->VolWriteTime, ed4),
         mr->VolParts,
         mr->LabelType,
         edit_int64(mr->StorageId, ed5),
@@ -399,30 +398,32 @@ int
 db_update_media_defaults(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 {
    int stat;
-   char ed1[50], ed2[50], ed3[50], ed4[50];
+   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50];
 
 
    db_lock(mdb);
    if (mr->VolumeName[0]) {
       Mmsg(mdb->cmd, "UPDATE Media SET "
            "Recycle=%d,VolRetention=%s,VolUseDuration=%s,"
-           "MaxVolJobs=%u,MaxVolFiles=%u,MaxVolBytes=%s"
+           "MaxVolJobs=%u,MaxVolFiles=%u,MaxVolBytes=%s,RecyclePoolId=%s"
            " WHERE VolumeName='%s'",
            mr->Recycle,edit_uint64(mr->VolRetention, ed1),
            edit_uint64(mr->VolUseDuration, ed2),
            mr->MaxVolJobs, mr->MaxVolFiles,
            edit_uint64(mr->MaxVolBytes, ed3),
+           edit_uint64(mr->RecyclePoolId, ed4),
            mr->VolumeName);
    } else {
       Mmsg(mdb->cmd, "UPDATE Media SET "
            "Recycle=%d,VolRetention=%s,VolUseDuration=%s,"
-           "MaxVolJobs=%u,MaxVolFiles=%u,MaxVolBytes=%s"
+           "MaxVolJobs=%u,MaxVolFiles=%u,MaxVolBytes=%s,RecyclePoolId=%s"
            " WHERE PoolId=%s",
            mr->Recycle,edit_uint64(mr->VolRetention, ed1),
            edit_uint64(mr->VolUseDuration, ed2),
            mr->MaxVolJobs, mr->MaxVolFiles,
            edit_uint64(mr->MaxVolBytes, ed3),
-           edit_int64(mr->PoolId, ed4));
+           edit_int64(mr->RecyclePoolId, ed4),
+           edit_int64(mr->PoolId, ed5));
    }
 
    Dmsg1(400, "%s\n", mdb->cmd);

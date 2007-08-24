@@ -1,25 +1,14 @@
 /*
- *
- *  Program to scan a Bacula Volume and compare it with
- *    the catalog and optionally synchronize the catalog
- *    with the tape.
- *
- *   Kern E. Sibbald, December 2001
- *
- *
- *   Version $Id: bscan.c 3718 2006-12-01 08:45:40Z robertnelson $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -36,6 +25,17 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  Program to scan a Bacula Volume and compare it with
+ *    the catalog and optionally synchronize the catalog
+ *    with the tape.
+ *
+ *   Kern E. Sibbald, December 2001
+ *
+ *
+ *   Version $Id: bscan.c 5038 2007-06-18 19:29:26Z kerns $
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -270,7 +270,7 @@ int main (int argc, char *argv[])
    if (showProgress) {
       char ed1[50];
       struct stat sb;
-      fstat(dev->fd, &sb);
+      fstat(dev->fd(), &sb);
       currentVolumeSize = sb.st_size;
       Pmsg1(000, _("First Volume Size = %sn"), 
          edit_uint64(currentVolumeSize, ed1));
@@ -315,25 +315,26 @@ static bool bscan_mount_next_read_volume(DCR *dcr)
    Dmsg1(100, "Walk attached jcrs. Volume=%s\n", dev->VolCatInfo.VolCatName);
    foreach_dlist(mdcr, dev->attached_dcrs) {
       JCR *mjcr = mdcr->jcr;
+      Dmsg1(000, "========== JobId=%u ========\n", mjcr->JobId);
       if (mjcr->JobId == 0) {
          continue;
       }
       if (verbose) {
          Pmsg1(000, _("Create JobMedia for Job %s\n"), mjcr->Job);
       }
-      if (dev->is_tape()) {
-         mdcr->EndBlock = dcr->EndBlock;
-         mdcr->EndFile = dcr->EndFile;
-//    } else {
-//       mdcr->EndBlock = (uint32_t)dcr->file_addr;
-//       mdcr->EndFile = (uint32_t)(dcr->file_addr >> 32);
-      }
+      mdcr->StartBlock = dcr->StartBlock;
+      mdcr->StartFile = dcr->StartFile;
+      mdcr->EndBlock = dcr->EndBlock;
+      mdcr->EndFile = dcr->EndFile;
       mjcr->read_dcr->VolLastIndex = dcr->VolLastIndex;
       if (!create_jobmedia_record(db, mjcr)) {
          Pmsg2(000, _("Could not create JobMedia record for Volume=%s Job=%s\n"),
             dev->VolCatInfo.VolCatName, mjcr->Job);
       }
    }
+
+   update_media_record(db, &mr);
+
    /* Now let common read routine get up next tape. Note,
     * we call mount_next... with bscan's jcr because that is where we
     * have the Volume list, but we get attached.
@@ -343,7 +344,7 @@ static bool bscan_mount_next_read_volume(DCR *dcr)
    if (showProgress) {
       char ed1[50];
       struct stat sb;
-      fstat(dev->fd, &sb);
+      fstat(dev->fd(), &sb);
       currentVolumeSize = sb.st_size;
       Pmsg1(000, _("First Volume Size = %sn"), 
          edit_uint64(currentVolumeSize, ed1));
@@ -366,6 +367,9 @@ static void do_scan()
 
    read_records(bjcr->read_dcr, record_cb, bscan_mount_next_read_volume);
 
+   if (update_db) {
+      db_write_batch_file_records(bjcr); /* used by bulk batch file insert */
+   }
    free_attr(attr);
 }
 
@@ -887,6 +891,12 @@ static int create_media_record(B_DB *db, MEDIA_DBR *mr, VOLUME_LABEL *vl)
       mr->LabelDate = mktime(&tm);
    }
    lasttime = mr->LabelDate;
+   if (mr->VolJobs == 0) {
+      mr->VolJobs = 1;
+   }
+   if (mr->VolMounts == 0) {
+      mr->VolMounts = 1;
+   }
 
    if (!update_db) {
       return 1;
@@ -1165,15 +1175,8 @@ static int create_jobmedia_record(B_DB *db, JCR *mjcr)
    JOBMEDIA_DBR jmr;
    DCR *dcr = mjcr->read_dcr;
 
-   if (dev->is_tape()) {
-      dcr->EndBlock = dev->EndBlock;
-      dcr->EndFile  = dev->EndFile;
-#ifdef needed
-   } else {
-      dcr->EndBlock = (uint32_t)dev->file_addr;
-      dcr->EndFile = (uint32_t)(dev->file_addr >> 32);
-#endif
-   } 
+   dcr->EndBlock = dev->EndBlock;
+   dcr->EndFile  = dev->EndFile;
 
    memset(&jmr, 0, sizeof(jmr));
    jmr.JobId = mjcr->JobId;
@@ -1258,7 +1261,7 @@ static JCR *create_jcr(JOB_DBR *jr, DEV_RECORD *rec, uint32_t JobId)
    jobjcr->VolSessionId = rec->VolSessionId;
    jobjcr->VolSessionTime = rec->VolSessionTime;
    jobjcr->ClientId = jr->ClientId;
-   jobjcr->read_dcr = new_dcr(jobjcr, dev);
+   jobjcr->dcr = jobjcr->read_dcr = new_dcr(jobjcr, NULL, dev);
 
    return jobjcr;
 }

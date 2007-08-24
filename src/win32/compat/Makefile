@@ -31,7 +31,8 @@ LIB_OBJS = \
 	$(OBJDIR)/print.o \
 	$(OBJDIR)/vss.o \
 	$(OBJDIR)/vss_XP.o \
-	$(OBJDIR)/vss_W2K3.o
+	$(OBJDIR)/vss_W2K3.o \
+	$(OBJDIR)/vss_Vista.o
 
 ######################################################################
 

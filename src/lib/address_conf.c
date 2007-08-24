@@ -1,21 +1,14 @@
 /*
- *   Configuration file parser for IP-Addresse ipv4 and ipv6
- *
- *     Written by Meno Abels, June MMIV
- *
- *     Version $Id: address_conf.c 3668 2006-11-21 13:20:11Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   Configuration file parser for IP-Addresse ipv4 and ipv6
+ *
+ *     Written by Meno Abels, June MMIV
+ *
+ *     Version $Id: address_conf.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 
 #include "bacula.h"
@@ -43,7 +43,7 @@
 #endif
 
 static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultport, int family,
-                const char *hostname_str, const char *port_str, char **errstr);
+                const char *hostname_str, const char *port_str, char *buf, int buflen);
 
 
 IPADDR::IPADDR(const IPADDR &src) : type(src.type)
@@ -233,12 +233,12 @@ const char *build_addresses_str(dlist *addrs, char *buf, int blen)
    return buf;
 }
 
-const char *get_first_address(dlist * addrs, char *outputbuf, int outlen)
+const char *get_first_address(dlist *addrs, char *outputbuf, int outlen)
 {
    return ((IPADDR *)(addrs->first()))->get_address(outputbuf, outlen);
 }
 
-int get_first_port_net_order(dlist * addrs)
+int get_first_port_net_order(dlist *addrs)
 {
    if (!addrs) {
       return 0;
@@ -247,7 +247,7 @@ int get_first_port_net_order(dlist * addrs)
    }
 }
 
-int get_first_port_host_order(dlist * addrs)
+int get_first_port_host_order(dlist *addrs)
 {
    if (!addrs) {
       return 0;
@@ -258,16 +258,15 @@ int get_first_port_host_order(dlist * addrs)
 
 void init_default_addresses(dlist **out, int port)
 {
-   char *errstr;
+   char buf[1024];
    unsigned short sport = port;
-   if (!add_address(out, IPADDR::R_DEFAULT, htons(sport), AF_INET, 0, 0, &errstr)) {
-      Emsg1(M_ERROR_TERM, 0, _("Can't add default address (%s)\n"), errstr);
-      free(errstr);
+   if (!add_address(out, IPADDR::R_DEFAULT, htons(sport), AF_INET, 0, 0, buf, sizeof(buf))) {
+      Emsg1(M_ERROR_TERM, 0, _("Can't add default address (%s)\n"), buf);
    }
 }
 
 static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultport, int family,
-                const char *hostname_str, const char *port_str, char **errstr)
+                const char *hostname_str, const char *port_str, char *buf, int buflen)
 {
    IPADDR *iaddr;
    IPADDR *jaddr;
@@ -275,6 +274,7 @@ static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultp
    unsigned short port;
    IPADDR::i_type intype = type;
 
+   buf[0] = 0;
    dlist *addrs = (dlist *)(*(out));
    if (!addrs) {
       IPADDR *tmp = 0;
@@ -289,8 +289,7 @@ static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultp
          if (iaddr->get_type() == IPADDR::R_DEFAULT) {
             def = iaddr;
          } else if (iaddr->get_type() != type) {
-            *errstr = (char *)malloc(1024);
-            bsnprintf(*errstr, 1023,
+            bsnprintf(buf, buflen,
                       _("the old style addresses cannot be mixed with new style"));
             return 0;
          }
@@ -300,7 +299,6 @@ static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultp
          delete def;
       }
    }
-
 
    if (!port_str || port_str[0] == '\0') {
       port = defaultport;
@@ -313,8 +311,7 @@ static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultp
          if (s) {
             port = s->s_port;
          } else {
-            *errstr = (char *)malloc(1024);
-            bsnprintf(*errstr, 1023, _("can't resolve service(%s)"), port_str);
+            bsnprintf(buf, buflen, _("can't resolve service(%s)"), port_str);
             return 0;
          }
       }
@@ -323,8 +320,7 @@ static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultp
    const char *myerrstr;
    hostaddrs = bnet_host2ipaddrs(hostname_str, family, &myerrstr);
    if (!hostaddrs) {
-      *errstr = (char *)malloc(1024);
-      bsnprintf(*errstr, 1023, _("can't resolve hostname(%s) %s"), hostname_str,
+      bsnprintf(buf, buflen, _("can't resolve hostname(%s) %s"), hostname_str,
                 myerrstr);
       return 0;
    }
@@ -344,7 +340,7 @@ static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultp
          addr->set_port_net(port);
       }
       if (intype == IPADDR::R_SINGLE_ADDR) {
-         addr->copy_addr((IPADDR *) (hostaddrs->first()));
+         addr->copy_addr((IPADDR *)(hostaddrs->first()));
       }
    } else {
       foreach_dlist(iaddr, hostaddrs) {
@@ -409,6 +405,7 @@ void store_addresses(LEX * lc, RES_ITEM * item, int index, int pass)
    char hostname_str[1024];
    char port_str[128];
    int family = 0;
+   char errmsg[1024];
 
 
    token = lex_get_token(lc, T_SKIP_EOL);
@@ -499,12 +496,11 @@ void store_addresses(LEX * lc, RES_ITEM * item, int index, int pass)
          scan_err1(lc, _("Expected a end of block }, got: %s"), lc->str);
       }
 
-      char *errstr;
       if (pass == 1 && !add_address((dlist **)(item->value), IPADDR::R_MULTIPLE,
-               htons(item->default_value), family, hostname_str, port_str, &errstr)) {
+               htons(item->default_value), family, hostname_str, port_str, 
+               errmsg, sizeof(errmsg))) {
            scan_err3(lc, _("Can't add hostname(%s) and port(%s) to addrlist (%s)"),
-                   hostname_str, port_str, errstr);
-           free(errstr);
+                   hostname_str, port_str, errmsg);
         }
       token = scan_to_next_not_eol(lc);
    } while ((token == T_IDENTIFIER || token == T_UNQUOTED_STRING));
@@ -515,30 +511,29 @@ void store_addresses(LEX * lc, RES_ITEM * item, int index, int pass)
 
 void store_addresses_address(LEX * lc, RES_ITEM * item, int index, int pass)
 {
-
+   char errmsg[1024];
    int token = lex_get_token(lc, T_SKIP_EOL);
    if (!(token == T_UNQUOTED_STRING || token == T_NUMBER || token == T_IDENTIFIER)) {
       scan_err1(lc, _("Expected an IP number or a hostname, got: %s"), lc->str);
    }
-   char *errstr;
-   if (pass == 1 && !add_address((dlist **) (item->value), IPADDR::R_SINGLE_ADDR,
-                    htons(item->default_value), AF_INET, lc->str, 0, &errstr)) {
-      scan_err2(lc, _("can't add port (%s) to (%s)"), lc->str, errstr);
-      free(errstr);
+   if (pass == 1 && !add_address((dlist **)(item->value), IPADDR::R_SINGLE_ADDR,
+                    htons(item->default_value), AF_INET, lc->str, 0, 
+                    errmsg, sizeof(errmsg))) {
+      scan_err2(lc, _("can't add port (%s) to (%s)"), lc->str, errmsg);
    }
 }
 
 void store_addresses_port(LEX * lc, RES_ITEM * item, int index, int pass)
 {
+   char errmsg[1024];
    int token = lex_get_token(lc, T_SKIP_EOL);
    if (!(token == T_UNQUOTED_STRING || token == T_NUMBER || token == T_IDENTIFIER)) {
       scan_err1(lc, _("Expected a port number or string, got: %s"), lc->str);
    }
-   char *errstr;
    if (pass == 1 && !add_address((dlist **)(item->value), IPADDR::R_SINGLE_PORT,
-                    htons(item->default_value), AF_INET, 0, lc->str, &errstr)) {
-      scan_err2(lc, _("can't add port (%s) to (%s)"), lc->str, errstr);
-      free(errstr);
+                    htons(item->default_value), AF_INET, 0, lc->str, 
+                    errmsg, sizeof(errmsg))) {
+      scan_err2(lc, _("can't add port (%s) to (%s)"), lc->str, errmsg);
    }
 }
 

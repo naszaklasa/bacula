@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+#  This file is driven by the parameters that are defined in
+#    the file External-mingw32
+#
 
 usage()
 {
@@ -59,6 +63,7 @@ export PATH=${BIN_DIR}:${PATH}
 
 OLD_IFS=${IFS};IFS="|";
 while read package url dir mkd; do
+        echo "Got package ${package}"
         case ${package} in
         \#*) ;;
         *) eval "URL_${package}=${url};DIR_${package}=${dir};MKD_${package}=${mkd}";;
@@ -71,6 +76,7 @@ get_source()
         URL=$1
         SRC_DIR=$2
         MAKE_DIR=$3
+        echo "Processing ${URL}"
         ARCHIVE=`basename ${URL}`
         
         case ${ARCHIVE} in
@@ -344,12 +350,12 @@ process_wx()
 process_scons()
 {
         get_source "${URL_SCONS}" "${DIR_SCONS}" "${MKD_SCONS}"
-        echo Installing scons
+        echo "Installing scons"
         if python setup.py install --prefix=${DEPPKG_DIR}/scons > make.log 2>&1
         then
                 :
         else
-                echo Make failed - Check `pwd`/make.log
+                echo "Make failed - Check `pwd`/make.log"
                 exit 1
         fi
 }
@@ -362,11 +368,11 @@ process_nsis()
         mv nsis-2.17 ../nsis
         if get_source "${URL_NSIS_SRC}" "${DIR_NSIS_SRC}" "${MKD_NSIS_SRC}"
         then
-                echo Patching nsis
+                echo "Patching nsis"
                 >patch.log
                 do_patch nsis.patch
         fi
-        echo Building nsis
+        echo "Building nsis"
         if ../../scons/bin/scons SKIPSTUBS=all SKIPPLUGINS=all SKIPUTILS=all SKIPMISC=all \
                 PREFIX=${DEPPKG_DIR}/nsis PREFIX_BIN=${DEPPKG_DIR}/nsis/Bin \
                 PREFIX_CONF=${DEPPKG_DIR}/nsis PREFIX_DATA=${DEPPKG_DIR}/nsis \
@@ -374,10 +380,10 @@ process_nsis()
         then
                 :
         else
-                echo Scons failed - Check `pwd`/make.log
+                echo "Scons failed - Check `pwd`/make.log"
                 exit 1
         fi
-        echo Installing nsis
+        echo "Installing nsis"
         cp -p build/release/makensis/makensis ../../nsis
 }
 
@@ -404,11 +410,11 @@ process_mt()
 {
         if get_source "${URL_MT}" "${DIR_MT}" "${MKD_MT}"
         then
-                echo Patching mt
+                echo "Patching mt"
                 >patch.log
                 do_patch mt.patch
         fi
-        echo Building mt
+        echo "Building mt"
         do_make Makefile PREFIX=${DEPPKG_DIR} all
         echo Installing mt
         do_make Makefile PREFIX=${DEPPKG_DIR} install
@@ -482,10 +488,16 @@ process_dvd_rw_tools()
                 >patch.log
                 do_patch dvd+rw-tools.patch
         fi
-        echo Building dvd+rw-tools
-	m4 -DOS=XMINGW32 Makefile.m4 | make -f - dvd+rw-tools >make.log 2>&1
-        echo Installing dvd+rw-tools
-	m4 -DOS=XMINGW32 Makefile.m4 | make -f - prefix=${DEPPKG_DIR} install >>make.log 2>&1
+        echo "Building dvd+rw-tools"
+        m4 -DOS=XMINGW32 Makefile.m4 | make -f - dvd+rw-tools >make.log 2>&1
+        echo "Installing dvd+rw-tools"
+        m4 -DOS=XMINGW32 Makefile.m4 | make -f - prefix=${DEPPKG_DIR} manprefix=${DEPPKG_DIR} install >>make.log 2>&1
+}
+
+process_qt4()
+{
+   get_source "${URL_Qt4}" "${DIR_Qt4}" "${MKD_Qt4}"
+
 }
 
 if [ "$#" -eq 0 ]
@@ -507,6 +519,7 @@ then
         process_cmd_utils
         process_mkisofs
         process_dvd_rw_tools
+        process_qt4
 else
         for dependency in "$@"
         do

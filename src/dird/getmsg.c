@@ -1,4 +1,31 @@
 /*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of John Walker.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
  *
  *   Bacula Director -- routines to receive network data and
  *    handle network signals. These routines handle the connections
@@ -18,35 +45,8 @@
  *       Requests are any message that does not begin with a digit.
  *       In affect, they are commands.
  *
- *   Version $Id: getmsg.c 3668 2006-11-21 13:20:11Z kerns $
+ *   Version $Id: getmsg.c 5237 2007-07-24 18:36:08Z kerns $
  */
-/*
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-*/
 
 #include "bacula.h"
 #include "dird.h"
@@ -62,7 +62,9 @@ static char Device_update[]   = "DevUpd Job=%127s "
    "open=%d labeled=%d offline=%d "
    "reserved=%d max_writers=%d "
    "autoselect=%d autochanger=%d "
-   "changer_name=%127s media_type=%127s volume_name=%127s\n";
+   "changer_name=%127s media_type=%127s volume_name=%127s "
+   "DevReadTime=%d DevWriteTime=%d DevReadBytes=%d "
+   "DevWriteBytes=%d\n";
 #endif
 
 
@@ -104,8 +106,8 @@ int bget_dirmsg(BSOCK *bs)
    char *msg;
 
    for (;;) {
-      n = bnet_recv(bs);
-      Dmsg2(900, "bget_dirmsg %d: %s", n, bs->msg);
+      n = bs->recv();
+      Dmsg2(100, "bget_dirmsg %d: %s", n, bs->msg);
 
       if (is_bnet_stop(bs)) {
          return n;                    /* error or terminate */
@@ -116,13 +118,13 @@ int bget_dirmsg(BSOCK *bs)
          case BNET_EOD:            /* end of data */
             return n;
          case BNET_EOD_POLL:
-            bnet_fsend(bs, OK_msg);/* send response */
+            bs->fsend(OK_msg);/* send response */
             return n;              /* end of data */
          case BNET_TERMINATE:
-            bs->terminated = 1;
+            bs->set_terminated();
             return n;
          case BNET_POLL:
-            bnet_fsend(bs, OK_msg); /* send response */
+            bs->fsend(OK_msg); /* send response */
             break;
          case BNET_HEARTBEAT:
 //          encode_time(time(NULL), Job);
@@ -132,12 +134,12 @@ int bget_dirmsg(BSOCK *bs)
             break;
          case BNET_STATUS:
             /* *****FIXME***** Implement more completely */
-            bnet_fsend(bs, "Status OK\n");
-            bnet_sig(bs, BNET_EOD);
+            bs->fsend("Status OK\n");
+            bs->signal(BNET_EOD);
             break;
          case BNET_BTIME:             /* send Bacula time */
             char ed1[50];
-            bnet_fsend(bs, "btime %s\n", edit_uint64(get_current_btime(),ed1));
+            bs->fsend("btime %s\n", edit_uint64(get_current_btime(),ed1));
             break;
          default:
             Emsg1(M_WARNING, 0, _("bget_dirmsg: unknown bnet signal %d\n"), bs->msglen);
@@ -243,6 +245,7 @@ int bget_dirmsg(BSOCK *bs)
          int dev_open, dev_append, dev_read, dev_labeled;
          int dev_offline, dev_autochanger, dev_autoselect;
          int dev_num_writers, dev_max_writers, dev_reserved;
+         uint64_t dev_read_time, dev_write_time, dev_write_bytes, dev_read_bytes;
          uint64_t dev_PoolId;
          Dmsg1(100, "<stored: %s", bs->msg);
          if (sscanf(bs->msg, Device_update,
@@ -253,7 +256,9 @@ int bget_dirmsg(BSOCK *bs)
              &dev_max_writers, &dev_autoselect, 
              &dev_autochanger, 
              changer_name.c_str(), media_type.c_str(),
-             volume_name.c_str()) != 15) {
+             volume_name.c_str(),
+             &dev_read_time, &dev_write_time, &dev_read_bytes,
+             &dev_write_bytes) != 19) {
             Emsg1(M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
          } else {
             unbash_spaces(dev_name);
@@ -283,6 +288,10 @@ int bget_dirmsg(BSOCK *bs)
             dev->max_writers = dev_max_writers;
             dev->reserved = dev_reserved;
             dev->found = true;
+            dev->DevReadTime = dev_read_time; /* TODO : have to update database */
+            dev->DevWriteTime = dev_write_time;
+            dev->DevReadBytes = dev_read_bytes;
+            dev->DevWriteBytes = dev_write_bytes;
          }
          continue;
       }

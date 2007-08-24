@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in 3074 2006-06-25 13:58:36Z kerns $
+#  Version $Id: Makefile.in 4914 2007-05-27 09:34:40Z kerns $
 #
 @MCOMMON@
 
@@ -29,9 +29,6 @@ EXTRAOBJS = @OBJLIST@
 MONITOR_CPPFLAGS=@TRAY_MONITOR_CPPFLAGS@
 MONITOR_LDFLAGS=@TRAY_MONITOR_LDFLAGS@ @X_LIBS@ -lX11
 
-OPENSSL_INC = @OPENSSL_INC@
-OPENSSL_LIBS = @OPENSSL_LIBS@
-
 .SUFFIXES:	.c .o
 .PHONY:
 .DONTCARE:
@@ -40,7 +37,7 @@ OPENSSL_LIBS = @OPENSSL_LIBS@
 .c.o:
 	@echo "Compiling $<"
 	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(MONITOR_CPPFLAGS) \
- $(OPENSSL_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+ -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile bacula-tray-monitor
 	@echo "==== Make of bacula-tray-monitor is good ===="

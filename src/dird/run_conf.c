@@ -7,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, May MM
  *
- *     Version $Id: run_conf.c 4185 2007-02-16 08:43:26Z kerns $
+ *     Version $Id: run_conf.c 4992 2007-06-07 14:46:43Z kerns $
  */
 
 #include "bacula.h"

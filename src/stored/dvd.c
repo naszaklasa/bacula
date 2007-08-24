@@ -5,7 +5,7 @@
  *
  *    Nicolas Boichat, MMV
  *
- *   Version $Id: dvd.c 3673 2006-11-21 17:03:47Z kerns $
+ *   Version $Id: dvd.c 4992 2007-06-07 14:46:43Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -16,8 +16,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -144,7 +144,7 @@ bool DEVICE::update_freespace()
       free_space_errno = EPIPE;
       clear_freespace_ok();         /* no valid freespace */
       Mmsg2(errmsg, _("Cannot run free space command. Results=%s ERR=%s\n"), 
-            results, be.strerror(status));
+            results, be.bstrerror(status));
       
       if (--timeout > 0) {
          Dmsg4(40, "Cannot get free space on device %s. free_space=%s, "
@@ -318,7 +318,7 @@ int dvd_open_next_part(DCR *dcr)
    if (dev->can_append() && (dev->part > dev->num_dvd_parts) && 
        (dev->part_size == 0)) {
       Dmsg0(29, "open_next_part exited immediately (dev->part_size == 0).\n");
-      return dev->fd;
+      return dev->fd();
    }
 
    dev->close_part(dcr);               /* close current part */
@@ -376,7 +376,7 @@ int dvd_open_next_part(DCR *dcr)
             dev->set_part_spooled(false);
             dev->dev_errno = errno;
             Mmsg2(dev->errmsg, _("open_next_part can't unlink existing part %s, ERR=%s\n"), 
-                   archive_name.c_str(), be.strerror());
+                   archive_name.c_str(), be.bstrerror());
             return -1;
          }
       }
@@ -392,7 +392,7 @@ int dvd_open_next_part(DCR *dcr)
    } 
    dev->set_labeled();                   /* all next parts are "labeled" */
    
-   return dev->fd;
+   return dev->fd();
 }
 
 /*
@@ -435,7 +435,7 @@ boffset_t lseek_dvd(DCR *dcr, boffset_t offset, int whence)
    boffset_t pos;
    char ed1[50], ed2[50];
    
-   Dmsg5(400, "Enter lseek_dvd fd=%d off=%s w=%d part=%d nparts=%d\n", dev->fd,
+   Dmsg5(400, "Enter lseek_dvd fd=%d off=%s w=%d part=%d nparts=%d\n", dev->fd(),
       edit_int64(offset, ed1), whence, dev->part, dev->num_dvd_parts);
 
    switch(whence) {
@@ -447,9 +447,9 @@ boffset_t lseek_dvd(DCR *dcr, boffset_t offset, int whence)
              (uint64_t)offset < dev->part_start+dev->part_size) {
             /* We are staying in the current part, just seek */
 #if defined(HAVE_WIN32)
-            pos = _lseeki64(dev->fd, offset-dev->part_start, SEEK_SET);
+            pos = _lseeki64(dev->fd(), offset-dev->part_start, SEEK_SET);
 #else
-            pos = lseek(dev->fd, offset-dev->part_start, SEEK_SET);
+            pos = lseek(dev->fd(), offset-dev->part_start, SEEK_SET);
 #endif
             if (pos < 0) {
                return pos;
@@ -486,7 +486,7 @@ boffset_t lseek_dvd(DCR *dcr, boffset_t offset, int whence)
       break;
    case SEEK_CUR:
       Dmsg1(400, "lseek_dvd SEEK_CUR to %s\n", edit_int64(offset, ed1));
-      if ((pos = lseek(dev->fd, (off_t)0, SEEK_CUR)) < 0) {
+      if ((pos = lseek(dev->fd(), (off_t)0, SEEK_CUR)) < 0) {
          Dmsg0(400, "Seek error.\n");
          return pos;                  
       }
@@ -518,7 +518,7 @@ boffset_t lseek_dvd(DCR *dcr, boffset_t offset, int whence)
        *  right part number, simply seek
        */
       if (dev->is_part_spooled() && dev->part > dev->num_dvd_parts) {
-         if ((pos = lseek(dev->fd, (off_t)0, SEEK_END)) < 0) {
+         if ((pos = lseek(dev->fd(), (off_t)0, SEEK_END)) < 0) {
             return pos;   
          } else {
             Dmsg1(400, "lseek_dvd SEEK_END returns %s\n", 
@@ -720,7 +720,7 @@ bool check_can_write_on_non_blank_dvd(DCR *dcr)
       berrno be;
       dev->dev_errno = errno;
       Dmsg3(29, "check_can_write_on_non_blank_dvd: failed to open dir %s (dev=%s), ERR=%s\n", 
-            dev->device->mount_point, dev->print_name(), be.strerror());
+            dev->device->mount_point, dev->print_name(), be.bstrerror());
       return false;
    }
    
@@ -747,7 +747,7 @@ bool check_can_write_on_non_blank_dvd(DCR *dcr)
                berrno be;
                dev->dev_errno = errno;
                Dmsg2(29, "check_can_write_on_non_blank_dvd: cannot stat file (file=%s), ERR=%s\n", 
-                  filename.c_str(), be.strerror());
+                  filename.c_str(), be.bstrerror());
                ok = false;
                break;
             }
@@ -796,7 +796,7 @@ int find_num_dvd_parts(DCR *dcr)
          berrno be;
          dev->dev_errno = errno;
          Dmsg3(29, "find_num_dvd_parts: failed to open dir %s (dev=%s), ERR=%s\n", 
-               dev->device->mount_point, dev->print_name(), be.strerror());
+               dev->device->mount_point, dev->print_name(), be.bstrerror());
          goto get_out;
       }
       

@@ -1,24 +1,14 @@
 /*
- *  Subroutines to handle waiting for operator intervention
- *   or waiting for a Device to be released
- *
- *  Code for wait_for_sysop() pulled from askdir.c
- *
- *   Kern Sibbald, March 2005
- *
- *   Version $Id: wait.c 3805 2006-12-16 11:10:17Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,6 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  Subroutines to handle waiting for operator intervention
+ *   or waiting for a Device to be released
+ *
+ *  Code for wait_for_sysop() pulled from askdir.c
+ *
+ *   Kern Sibbald, March 2005
+ *
+ *   Version $Id: wait.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 
 #include "bacula.h"                   /* pull in global headers */
@@ -61,7 +61,7 @@ int wait_for_sysop(DCR *dcr)
    DEVICE *dev = dcr->dev;
    JCR *jcr = dcr->jcr;
 
-   P(dev->mutex);
+   dev->dlock();  
    Dmsg1(100, "Enter blocked=%s\n", dev->print_blocked());
    unmounted = is_device_unmounted(dev);
 
@@ -85,7 +85,7 @@ int wait_for_sysop(DCR *dcr)
 
    if (!unmounted) {
       Dmsg1(400, "blocked=%s\n", dev->print_blocked());
-      dev->dev_prev_blocked = dev->dev_blocked;
+      dev->dev_prev_blocked = dev->blocked();
       dev->set_blocked(BST_WAITING_FOR_SYSOP); /* indicate waiting for mount */
    }
 
@@ -100,7 +100,7 @@ int wait_for_sysop(DCR *dcr)
          dev->print_name(), (int)me->heartbeat_interval, dev->wait_sec, add_wait);
       start = time(NULL);
       /* Wait required time */
-      stat = pthread_cond_timedwait(&dev->wait_next_vol, &dev->mutex, &timeout);
+      stat = pthread_cond_timedwait(&dev->wait_next_vol, &dev->m_mutex, &timeout);
       Dmsg2(400, "Wokeup from sleep on device stat=%d blocked=%s\n", stat,
          dev->print_blocked());
 
@@ -112,11 +112,11 @@ int wait_for_sysop(DCR *dcr)
          if (now - last_heartbeat >= me->heartbeat_interval) {
             /* send heartbeats */
             if (jcr->file_bsock) {
-               bnet_sig(jcr->file_bsock, BNET_HEARTBEAT);
+               jcr->file_bsock->signal(BNET_HEARTBEAT);
                Dmsg0(400, "Send heartbeat to FD.\n");
             }
             if (jcr->dir_bsock) {
-               bnet_sig(jcr->dir_bsock, BNET_HEARTBEAT);
+               jcr->dir_bsock->signal(BNET_HEARTBEAT);
             }
             last_heartbeat = now;
          }
@@ -124,7 +124,7 @@ int wait_for_sysop(DCR *dcr)
 
       if (stat == EINVAL) {
          berrno be;
-         Jmsg1(jcr, M_FATAL, 0, _("pthread timedwait error. ERR=%s\n"), be.strerror(stat));
+         Jmsg1(jcr, M_FATAL, 0, _("pthread timedwait error. ERR=%s\n"), be.bstrerror(stat));
          stat = W_ERROR;               /* error */
          break;
       }
@@ -151,7 +151,7 @@ int wait_for_sysop(DCR *dcr)
       /*
        * Check if user mounted the device while we were waiting
        */
-      if (dev->get_blocked() == BST_MOUNT) {   /* mount request ? */
+      if (dev->blocked() == BST_MOUNT) {   /* mount request ? */
          stat = W_MOUNT;
          break;
       }
@@ -184,47 +184,52 @@ int wait_for_sysop(DCR *dcr)
       Dmsg1(400, "set %s\n", dev->print_blocked());
    }
    Dmsg1(400, "Exit blocked=%s\n", dev->print_blocked());
-   V(dev->mutex);
+   dev->dunlock();
    return stat;
 }
 
 
 /*
  * Wait for any device to be released, then we return, so 
- *  higher level code can rescan possible devices.
+ *  higher level code can rescan possible devices.  Since there
+ *  could be a job waiting for a drive to free up, we wait a maximum
+ *  of 1 minute then retry just in case a broadcast was lost, and 
+ *  we return to rescan the devices.
  * 
  * Returns: true  if a device has changed state
  *          false if the total wait time has expired.
  */
-bool wait_for_device(JCR *jcr, bool first)
+bool wait_for_device(JCR *jcr, int &retries)
 {
    struct timeval tv;
    struct timezone tz;
    struct timespec timeout;
    int stat = 0;
    bool ok = true;
-   const int wait_time = 5 * 60;       /* wait 5 minutes */
+   const int max_wait_time = 1 * 60;       /* wait 1 minute */
+   char ed1[50];
 
    Dmsg0(100, "Enter wait_for_device\n");
    P(device_release_mutex);
 
-   if (first) {
-      Jmsg(jcr, M_MOUNT, 0, _("Job %s waiting to reserve a device.\n"), jcr->Job);
+   if (++retries % 5 == 0) {
+      /* Print message every 5 minutes */
+      Jmsg(jcr, M_MOUNT, 0, _("JobId=%s, Job %s waiting to reserve a device.\n"), 
+         edit_uint64(jcr->JobId, ed1), jcr->Job);
    }
 
    gettimeofday(&tv, &tz);
    timeout.tv_nsec = tv.tv_usec * 1000;
-   timeout.tv_sec = tv.tv_sec + wait_time;
+   timeout.tv_sec = tv.tv_sec + max_wait_time;
 
-   Dmsg0(100, "I'm going to wait for a device.\n");
+   Dmsg1(100, "JobId=%u going to wait for a device.\n", (uint32_t)jcr->JobId);
 
    /* Wait required time */
    stat = pthread_cond_timedwait(&wait_device_release, &device_release_mutex, &timeout);
-   Dmsg1(100, "Wokeup from sleep on device stat=%d\n", stat);
-
+   Dmsg2(100, "JobId=%u wokeup from sleep on device stat=%d\n", (uint32_t)jcr->JobId, stat);
 
    V(device_release_mutex);
-   Dmsg1(100, "Return from wait_device ok=%d\n", ok);
+   Dmsg2(100, "JobId=%u return from wait_device ok=%d\n", (uint32_t)jcr->JobId, ok);
    return ok;
 }
 

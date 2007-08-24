@@ -1,22 +1,14 @@
 /*
- *
- *   Bacula GNOME Console interface to the Director
- *
- *     Kern Sibbald, March MMII
- *
- *     Version $Id: console.c 3774 2006-12-08 14:27:10Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula GNOME Console interface to the Director
+ *
+ *     Kern Sibbald, March MMII
+ *
+ *     Version $Id: console.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 #include "bacula.h"
 #include "console.h"
@@ -93,14 +93,14 @@ static bool quit = false;
 static guint initial;
 static int numdir = 0;
 
-#define CONFIG_FILE "./gnome-console.conf"   /* default configuration file */
+#define CONFIG_FILE "./bgnome-console.conf"   /* default configuration file */
 
 static void usage()
 {
    fprintf(stderr, _(
 PROG_COPYRIGHT
 "\nVersion: %s (%s) %s %s %s\n\n"
-"Usage: gnome-console [-s] [-c config_file] [-d debug_level] [config_file]\n"
+"Usage: bgnome-console [-s] [-c config_file] [-d debug_level] [config_file]\n"
 "       -c <file>   set configuration file to file\n"
 "       -dnn        set debug level to nn\n"
 "       -s          no signals\n"
@@ -210,7 +210,7 @@ int main(int argc, char *argv[])
    int no_signals = TRUE;
    int test_config = FALSE;
    int gargc = 1;
-   const char *gargv[2] = {"gnome-console", NULL};
+   const char *gargv[2] = {"bgnome-console", NULL};
    CONFONTRES *con_font;
 
 #ifdef ENABLE_NLS
@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
 #endif
 
    init_stack_dump();
-   my_name_is(argc, argv, "gnome-console");
+   my_name_is(argc, argv, "bgnome-console");
    init_msg(NULL, NULL);
    working_directory  = "/tmp";
 
@@ -554,7 +554,7 @@ int connect_to_director(gpointer data)
    }
 
 
-   UA_sock = bnet_connect(NULL, 5, 15, _("Director daemon"), dir->address,
+   UA_sock = bnet_connect(NULL, 5, 15, 0, _("Director daemon"), dir->address,
                           NULL, dir->DIRport, 0);
    if (UA_sock == NULL) {
       return 0;
@@ -626,10 +626,10 @@ void read_director(gpointer data, gint fd, GdkInputCondition condition)
 {
    int stat;
 
-   if (!UA_sock || UA_sock->fd != fd) {
+   if (!UA_sock || UA_sock->m_fd != fd) {
       return;
    }
-   stat = bnet_recv(UA_sock);
+   stat = UA_sock->recv();
    if (stat >= 0) {
       if (at_prompt) {
          set_text("\n", 1);
@@ -661,7 +661,7 @@ void start_director_reader(gpointer data)
    if (director_reader_running || !UA_sock) {
       return;
    }
-   tag = gdk_input_add(UA_sock->fd, GDK_INPUT_READ, read_director, NULL);
+   tag = gdk_input_add(UA_sock->m_fd, GDK_INPUT_READ, read_director, NULL);
    director_reader_running = true;
 }
 

@@ -1,5 +1,5 @@
 #
-#   Version $Id: Makefile.in 3074 2006-06-25 13:58:36Z kerns $
+#   Version $Id: Makefile.in 5012 2007-06-14 16:54:30Z kerns $
 #
 @MCOMMON@
 
@@ -39,7 +39,7 @@ EXTRAOBJS = @OBJLIST@
 #CONS_LDFLAGS=@CONS_LDFLAGS@ $(GNOME_LIBDIR) $(GNOMEUI_LIBS)
 
 CONS_INC=$(GNOME_INCLUDEDIR)
-CONS_LIBS=$(GNOME_LIBS)
+CONS_LIBS=$(GNOME_LIBS) $(OPENSSL_LIBS)
 CONS_LDFLAGS=$(GNOME_LIBDIR) $(GNOMEUI_LIBS)
 
 
@@ -52,8 +52,8 @@ CONS_LDFLAGS=$(GNOME_LIBDIR) $(GNOMEUI_LIBS)
 	@echo "Compiling $<"
 	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile gnome-console @STATIC_GNOME_CONS@
-	@echo "==== Make of gnome-console is good ===="
+all: Makefile bgnome-console @STATIC_GNOME_CONS@
+	@echo "==== Make of bgnome-console is good ===="
 	@echo " "
 
 support.o:   support.c
@@ -62,13 +62,13 @@ support.o:   support.c
 	sed "s%parent = g_object_get_data%parent = \(GtkWidget \*\)g_object_get_data%" support.c.orig >support.c
 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
-gnome-console: $(CONSOBJS) ../lib/libbac.a 
+bgnome-console: $(CONSOBJS) ../lib/libbac.a 
 	$(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -o $@ $(CONSOBJS) \
 	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbac -lm
 
-static-console: static-gnome-console
+static-console: static-bgnome-console
 
-static-gnome-console: $(CONSOBJS) ../lib/libbac.a 
+static-bgnome-console: $(CONSOBJS) ../lib/libbac.a 
 	$(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -o $@ $(CONSOBJS) \
 	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbac -lm 
 	strip $@
@@ -78,12 +78,12 @@ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
 clean:
-	@$(RMF) gnome-console core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
-	@$(RMF) static-gnome-console gmon.out Makefile.am
+	@$(RMF) bgnome-console core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
+	@$(RMF) static-bgnome-console gmon.out Makefile.am
 
 realclean: clean
 	@$(RMF) tags
-	@$(RM) -rf .deps gnome-console.conf
+	@$(RM) -rf .deps bgnome-console.conf
 
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
@@ -94,8 +94,15 @@ devclean: realclean
 	(cd $(srcdir); $(RMF) Makefile)
 
 install: all
-	$(INSTALL_PROGRAM) gnome-console $(DESTDIR)$(sbindir)/gnome-console
-	@srcconf=gnome-console.conf; \
+	@if test -f ${DESTDIR}${sbindir}/gnome-console; then \
+	   echo " "; \
+	   echo "Warning!!!  ${DESTDIR}${sbindir}gnome-console found."; \
+	   echo " gnome-console has been renamed bgnome-console, so gnome-console"; \
+	   echo " is no longer used, and you might want to delete it."; \
+	   echo " "; \
+	fi
+	$(INSTALL_PROGRAM) bgnome-console $(DESTDIR)$(sbindir)/bgnome-console
+	@srcconf=bgnome-console.conf; \
 	if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
 	   destconf=$$srcconf.new; \
 	   echo "  ==> Found existing $$srcconf, installing new conf file as $$destconf"; \
@@ -104,13 +111,16 @@ install: all
 	fi; \
 	echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
 	${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
-	if test -f static-gnome-console; then \
-	   $(INSTALL_PROGRAM) static-gnome-console $(DESTDIR)$(sbindir)/static-gnome-console; \
+	if test -f static-bgnome-console; then \
+	   $(INSTALL_PROGRAM) static-bgnome-console $(DESTDIR)$(sbindir)/static-bgnome-console; \
 	fi 
 
 uninstall:
+	(cd $(DESTDIR)$(sbindir); $(RMF) bgnome-console static-bgnome-console)
+	(cd $(DESTDIR)$(sysconfdir); $(RMF) bgnome-console.conf bgnome-console.conf.new)
 	(cd $(DESTDIR)$(sbindir); $(RMF) gnome-console static-gnome-console)
 	(cd $(DESTDIR)$(sysconfdir); $(RMF) gnome-console.conf gnome-console.conf.new)
+
 
 
 

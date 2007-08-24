@@ -276,6 +276,12 @@
 /* Define to 1 if you have the <assert.h> header file. */
 #undef HAVE_ASSERT_H
 
+/* Set if Bacula bat Qt4 GUI support enabled */
+#undef HAVE_BAT
+
+/* Set if DB batch insert code enabled */
+#undef HAVE_BATCH_FILE_INSERT
+
 /* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
    CoreFoundation framework. */
 #undef HAVE_CFLOCALECOPYCURRENT
@@ -312,10 +318,6 @@
    don't. */
 #undef HAVE_DECL_GETC_UNLOCKED
 
-/* Define to 1 if you have the declaration of `tzname', and to 0 if you don't.
-   */
-#undef HAVE_DECL_TZNAME
-
 /* Define to 1 if you have the declaration of `_snprintf', and to 0 if you
    don't. */
 #undef HAVE_DECL__SNPRINTF
@@ -336,6 +338,9 @@
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
+
+/* Define to 1 if you have the `fdatasync' function. */
+#undef HAVE_FDATASYNC
 
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
@@ -496,6 +501,12 @@
 
 /* Define if OpenSSL library is available */
 #undef HAVE_OPENSSL
+
+/* Define if the OpenSSL library is export-contrained to 128bit ciphers */
+#undef HAVE_OPENSSL_EXPORT_LIBRARY
+
+/* Define to 1 if you have the `posix_fadvise' function. */
+#undef HAVE_POSIX_FADVISE
 
 /* Define if your printf() function supports format strings with positions. */
 #undef HAVE_POSIX_PRINTF
@@ -786,22 +797,22 @@
 /* Define to 1 if the `setpgrp' function takes no argument. */
 #undef SETPGRP_VOID
 
-/* The size of `char', as computed by sizeof. */
+/* The size of a `char', as computed by sizeof. */
 #undef SIZEOF_CHAR
 
-/* The size of `int', as computed by sizeof. */
+/* The size of a `int', as computed by sizeof. */
 #undef SIZEOF_INT
 
-/* The size of `int *', as computed by sizeof. */
+/* The size of a `int *', as computed by sizeof. */
 #undef SIZEOF_INT_P
 
-/* The size of `long int', as computed by sizeof. */
+/* The size of a `long int', as computed by sizeof. */
 #undef SIZEOF_LONG_INT
 
-/* The size of `long long int', as computed by sizeof. */
+/* The size of a `long long int', as computed by sizeof. */
 #undef SIZEOF_LONG_LONG_INT
 
-/* The size of `short int', as computed by sizeof. */
+/* The size of a `short int', as computed by sizeof. */
 #undef SIZEOF_SHORT_INT
 
 /* Define as the maximum value of type 'size_t', if the system doesn't define
@@ -810,7 +821,7 @@
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
-   automatically deduced at runtime.
+   automatically deduced at run-time.
 	STACK_DIRECTION > 0 => grows toward higher addresses
 	STACK_DIRECTION < 0 => grows toward lower addresses
 	STACK_DIRECTION = 0 => direction of growth unknown */
@@ -870,7 +881,7 @@
 /* Define to `int' if <sys/types.h> does not define. */
 #undef mode_t
 
-/* Define to `long int' if <sys/types.h> does not define. */
+/* Define to `long' if <sys/types.h> does not define. */
 #undef off_t
 
 /* Define to `int' if <sys/types.h> does not define. */
@@ -883,7 +894,7 @@
 /* Define to empty if the C compiler doesn't support this keyword. */
 #undef signed
 
-/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* Define to `unsigned' if <sys/types.h> does not define. */
 #undef size_t
 
 /* Define to `int' if <sys/types.h> does not define. */

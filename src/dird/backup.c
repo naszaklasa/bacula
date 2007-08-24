@@ -1,19 +1,4 @@
 /*
- *
- *   Bacula Director -- backup.c -- responsible for doing backup jobs
- *
- *     Kern Sibbald, March MM
- *
- *  Basic tasks done here:
- *     Open DB and create records for this job.
- *     Open Message Channel with Storage daemon to tell him a job will be starting.
- *     Open connection with File daemon and pass him commands
- *       to do the backup.
- *     When the File daemon finishes the job, update the DB.
- *
- *   Version $Id: backup.c 4222 2007-02-20 13:38:43Z ricozz $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
@@ -22,8 +7,8 @@
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,6 +25,21 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- backup.c -- responsible for doing backup jobs
+ *
+ *     Kern Sibbald, March MM
+ *
+ *  Basic tasks done here:
+ *     Open DB and create records for this job.
+ *     Open Message Channel with Storage daemon to tell him a job will be starting.
+ *     Open connection with File daemon and pass him commands
+ *       to do the backup.
+ *     When the File daemon finishes the job, update the DB.
+ *
+ *   Version $Id: backup.c 5237 2007-07-24 18:36:08Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -233,6 +233,7 @@ bool do_backup(JCR *jcr)
 
    /* Pickup Job termination data */
    stat = wait_for_job_termination(jcr);
+   db_write_batch_file_records(jcr);    /* used by bulk batch file insert */
    if (stat == JS_Terminated) {
       backup_cleanup(jcr, stat);
       return true;
@@ -243,6 +244,10 @@ bool do_backup(JCR *jcr)
 bail_out:
    set_jcr_job_status(jcr, JS_ErrorTerminated);
    Dmsg1(400, "wait for sd. use=%d\n", jcr->use_count());
+   /* Cancel SD */
+   if (jcr->store_bsock) {
+      jcr->store_bsock->fsend("cancel Job=%s\n", jcr->Job);
+   }
    wait_for_storage_daemon_termination(jcr);
    Dmsg1(400, "after wait for sd. use=%d\n", jcr->use_count());
    return false;
@@ -288,7 +293,7 @@ int wait_for_job_termination(JCR *jcr)
 
    if (is_bnet_error(fd)) {
       Jmsg(jcr, M_FATAL, 0, _("Network error with FD during %s: ERR=%s\n"),
-          job_type_to_str(jcr->JobType), bnet_strerror(fd));
+          job_type_to_str(jcr->JobType), fd->bstrerror());
    }
    bnet_sig(fd, BNET_TERMINATE);   /* tell Client we are terminating */
 
@@ -347,14 +352,14 @@ void backup_cleanup(JCR *jcr, int TermCode)
    update_job_end(jcr, TermCode);
 
    if (!db_get_job_record(jcr, jcr->db, &jcr->jr)) {
-      Jmsg(jcr, M_WARNING, 0, _("Error getting job record for stats: %s"),
+      Jmsg(jcr, M_WARNING, 0, _("Error getting Job record for Job report: ERR=%s"),
          db_strerror(jcr->db));
       set_jcr_job_status(jcr, JS_ErrorTerminated);
    }
 
-   bstrncpy(cr.Name, jcr->client->hdr.name, sizeof(cr.Name));
+   bstrncpy(cr.Name, jcr->client->name(), sizeof(cr.Name));
    if (!db_get_client_record(jcr, jcr->db, &cr)) {
-      Jmsg(jcr, M_WARNING, 0, _("Error getting client record for stats: %s"),
+      Jmsg(jcr, M_WARNING, 0, _("Error getting Client record for Job report: ERR=%s"),
          db_strerror(jcr->db));
    }
 
@@ -437,7 +442,8 @@ void backup_cleanup(JCR *jcr, int TermCode)
 
 // bmicrosleep(15, 0);                /* for debugging SIGHUP */
 
-   Jmsg(jcr, msg_type, 0, _("Bacula %s (%s): %s\n"
+   Jmsg(jcr, msg_type, 0, _("Bacula %s %s (%s): %s\n"
+"  Build OS:               %s %s %s\n"
 "  JobId:                  %d\n"
 "  Job:                    %s\n"
 "  Backup Level:           %s%s\n"
@@ -467,9 +473,8 @@ void backup_cleanup(JCR *jcr, int TermCode)
 "  FD termination status:  %s\n"
 "  SD termination status:  %s\n"
 "  Termination:            %s\n\n"),
-        VERSION,
-        LSMDATE,
-        edt,
+        my_name, VERSION, LSMDATE, edt,
+        HOST_OS, DISTNAME, DISTVER,
         jcr->jr.JobId,
         jcr->jr.Job,
         level_to_str(jcr->JobLevel), jcr->since,
@@ -568,7 +573,7 @@ void update_bootstrap_file(JCR *jcr)
       } else {
          berrno be;
          Jmsg(jcr, M_ERROR, 0, _("Could not open WriteBootstrap file:\n"
-              "%s: ERR=%s\n"), fname, be.strerror());
+              "%s: ERR=%s\n"), fname, be.bstrerror());
          set_jcr_job_status(jcr, JS_ErrorTerminated);
       }
       free_pool_memory(fname);

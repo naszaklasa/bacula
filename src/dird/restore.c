@@ -1,33 +1,14 @@
 /*
- *   Bacula Director -- restore.c -- responsible for restoring files
- *
- *     Kern Sibbald, November MM
- *
- *    This routine is run as a separate thread.
- *
- * Current implementation is Catalog verification only (i.e. no
- *  verification versus tape).
- *
- *  Basic tasks done here:
- *     Open DB
- *     Open Message Channel with Storage daemon to tell him a job will be starting.
- *     Open connection with File daemon and pass him commands
- *       to do the restore.
- *     Update the DB according to what files where restored????
- *
- *   Version $Id: restore.c 3776 2006-12-09 13:54:30Z ricozz $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -44,14 +25,34 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   Bacula Director -- restore.c -- responsible for restoring files
+ *
+ *     Kern Sibbald, November MM
+ *
+ *    This routine is run as a separate thread.
+ *
+ * Current implementation is Catalog verification only (i.e. no
+ *  verification versus tape).
+ *
+ *  Basic tasks done here:
+ *     Open DB
+ *     Open Message Channel with Storage daemon to tell him a job will be starting.
+ *     Open connection with File daemon and pass him commands
+ *       to do the restore.
+ *     Update the DB according to what files where restored????
+ *
+ *   Version $Id: restore.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 
 #include "bacula.h"
 #include "dird.h"
 
 /* Commands sent to File daemon */
-static char restorecmd[]   = "restore replace=%c prelinks=%d where=%s\n";
-static char storaddr[]     = "storage address=%s port=%d ssl=0\n";
+static char restorecmd[]        = "restore replace=%c prelinks=%d where=%s\n";
+static char restorecmdR[] = "restore replace=%c prelinks=%d regexwhere=%s\n";
+static char storaddr[]   = "storage address=%s port=%d ssl=0\n";
 
 /* Responses received from File daemon */
 static char OKrestore[]   = "2000 OK restore\n";
@@ -172,7 +173,7 @@ bool do_restore(JCR *jcr)
    }
 
    /* Send restore command */
-   char replace, *where;
+   char replace, *where, *cmd=NULL;
    char empty = '\0';
 
    if (jcr->replace != 0) {
@@ -182,16 +183,28 @@ bool do_restore(JCR *jcr)
    } else {
       replace = REPLACE_ALWAYS;       /* always replace */
    }
-   if (jcr->where) {
+   
+   where = &empty;                    /* default */
+
+   if (jcr->RegexWhere) {
+      where = jcr->RegexWhere;             /* override */
+      cmd = restorecmdR;
+   } else if (jcr->job->RegexWhere) {
+      where = jcr->job->RegexWhere; /* no override take from job */
+      cmd = restorecmdR;
+
+   } else if (jcr->where) {
       where = jcr->where;             /* override */
+      cmd = restorecmd;
    } else if (jcr->job->RestoreWhere) {
       where = jcr->job->RestoreWhere; /* no override take from job */
-   } else {
-      where = &empty;                 /* None */
-   }
+      cmd = restorecmd;
+   } 
+   
    jcr->prefix_links = jcr->job->PrefixLinks;
+
    bash_spaces(where);
-   bnet_fsend(fd, restorecmd, replace, jcr->prefix_links, where);
+   bnet_fsend(fd, cmd, replace, jcr->prefix_links, where);
    unbash_spaces(where);
 
    if (!response(jcr, fd, OKrestore, "Restore", DISPLAY_ERROR)) {
@@ -280,10 +293,11 @@ void restore_cleanup(JCR *jcr, int TermCode)
    jobstatus_to_ascii(jcr->FDJobStatus, fd_term_msg, sizeof(fd_term_msg));
    jobstatus_to_ascii(jcr->SDJobStatus, sd_term_msg, sizeof(sd_term_msg));
 
-   Jmsg(jcr, msg_type, 0, _("Bacula %s (%s): %s\n"
+   Jmsg(jcr, msg_type, 0, _("Bacula %s %s (%s): %s\n"
+"  Build OS:               %s %s %s\n"
 "  JobId:                  %d\n"
 "  Job:                    %s\n"
-"  Client:                 %s\n"
+"  Restore Client:         %s\n"
 "  Start time:             %s\n"
 "  End time:               %s\n"
 "  Files Expected:         %s\n"
@@ -294,12 +308,11 @@ void restore_cleanup(JCR *jcr, int TermCode)
 "  FD termination status:  %s\n"
 "  SD termination status:  %s\n"
 "  Termination:            %s\n\n"),
-        VERSION,
-        LSMDATE,
-        edt,
+        my_name, VERSION, LSMDATE, edt,
+        HOST_OS, DISTNAME, DISTVER,
         jcr->jr.JobId,
         jcr->jr.Job,
-        jcr->client->hdr.name,
+        jcr->client->name(),
         sdt,
         edt,
         edit_uint64_with_commas((uint64_t)jcr->ExpectedFiles, ec1),

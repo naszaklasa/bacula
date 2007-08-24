@@ -6,7 +6,7 @@
 ;    added a number of elements from Christopher Hull's installer
 ;
 ; D. Scott Barninger Nov 13 2004
-; added configuration editing for bconsole.conf and wx-console.conf
+; added configuration editing for bconsole.conf and bwx-console.conf
 ; better explanation in dialog boxes for editing config files
 ; added Start Menu items
 ; fix uninstall of config files to do all not just bacula-fd.conf
@@ -22,16 +22,20 @@
 ; add pdf manual and menu shortcut
 ;
 ; Robert Nelson May 15 2006
-; Pretty much rewritten
+; Added server installs and implemented Microsoft install locations
 ; Use LogicLib.nsh
 ; Added Bacula-SD and Bacula-DIR
 ; Replaced ParameterGiven with standard GetOptions
-
+;
+; Version $Id: winbacula.nsi 5255 2007-07-28 09:16:24Z kerns $
 ;
 ; Command line options:
 ;
 ; /service    - 
 ; /start
+;
+; netsh firewall add portopening protocol=tcp port=9102 name="Bacula-FD"
+
 
 !define PRODUCT "Bacula"
 
@@ -76,7 +80,7 @@ ${StrTrimNewLines}
 !define      MUI_HEADERIMAGE_BITMAP     "bacula-logo.bmp"
 
 !InsertMacro MUI_PAGE_WELCOME
-;  !InsertMacro MUI_PAGE_LICENSE "..\..\LICENSE"
+!InsertMacro MUI_PAGE_LICENSE "..\..\..\LICENSE"
 Page custom EnterInstallType
 !define      MUI_PAGE_CUSTOMFUNCTION_SHOW PageComponentsShow
 !InsertMacro MUI_PAGE_COMPONENTS
@@ -414,6 +418,7 @@ Section "-Initialize"
   CreateDirectory "$APPDATA\Bacula\Work"
   CreateDirectory "$APPDATA\Bacula\Spool"
 
+  SetOutPath "$INSTDIR"
   File "..\..\..\LICENSE"
   Delete /REBOOTOK "$INSTDIR\bin\License.txt"
 
@@ -794,21 +799,21 @@ Section "Graphical Console" SecWxConsole
   File "${SRC_DIR}\wxmsw270_core_gcc_bacula.dll"
 !endif
 
-  File "${SRC_DIR}\wx-console.exe"
+  File "${SRC_DIR}\bwx-console.exe"
 
   ${If} $InstallType = ${MigrateInstall}
-  ${AndIf} ${FileExists} "$OldInstallDir\bin\wx-console.conf"
-    CopyFiles "$OldInstallDir\bin\wx-console.conf" "$APPDATA\Bacula"
+  ${AndIf} ${FileExists} "$OldInstallDir\bin\bwx-console.conf"
+    CopyFiles "$OldInstallDir\bin\bwx-console.conf" "$APPDATA\Bacula"
   ${Else}
-    File "/oname=$PLUGINSDIR\wx-console.conf" "wx-console.conf.in"
+    File "/oname=$PLUGINSDIR\bwx-console.conf" "bwx-console.conf.in"
     StrCpy $0 "$APPDATA\Bacula"
-    StrCpy $1 wx-console.conf
+    StrCpy $1 bwx-console.conf
     Call ConfigEditAndCopy
   ${EndIf}
 
   ; Create Start Menu entry
-  CreateShortCut "$SMPROGRAMS\Bacula\wx-console.lnk" "$INSTDIR\bin\wx-console.exe" '-c "$APPDATA\Bacula\wx-console.conf"' "$INSTDIR\bin\wx-console.exe" 0
-  CreateShortCut "$SMPROGRAMS\Bacula\Configuration\Edit Graphical Console Configuration.lnk" "write.exe" '"$APPDATA\Bacula\wx-console.conf"'
+  CreateShortCut "$SMPROGRAMS\Bacula\bwx-console.lnk" "$INSTDIR\bin\bwx-console.exe" '-c "$APPDATA\Bacula\bwx-console.conf"' "$INSTDIR\bin\bwx-console.exe" 0
+  CreateShortCut "$SMPROGRAMS\Bacula\Configuration\Edit Graphical Console Configuration.lnk" "write.exe" '"$APPDATA\Bacula\bwx-console.conf"'
 SectionEnd
 
 SectionGroupEnd
@@ -943,13 +948,25 @@ Section "Uninstall"
 
   ; Check for existing installation
   MessageBox MB_YESNO|MB_ICONQUESTION \
-  "Would you like to delete the current configuration files and the working state file?" IDNO +7
+  "Would you like to delete the current configuration files and the working state file?" IDNO NoDel
     Delete /REBOOTOK "$APPDATA\Bacula\*"
     Delete /REBOOTOK "$APPDATA\Bacula\Work\*"
     Delete /REBOOTOK "$APPDATA\Bacula\Spool\*"
+    Delete /REBOOTOK "$PLUGINSDIR\bacula-*.conf"
+    Delete /REBOOTOK "$PLUGINSDIR\*console.conf"
+    Delete /REBOOTOK "$PLUGINSDIR\*conf.in"
+    Delete /REBOOTOK "$PLUGINSDIR\openssl.exe"
+    Delete /REBOOTOK "$PLUGINSDIR\libeay32.dll"
+    Delete /REBOOTOK "$PLUGINSDIR\ssleay32.dll"
+    Delete /REBOOTOK "$PLUGINSDIR\sed.exe"    
+    Delete /REBOOTOK "$PLUGINSDIR\pw.txt"     
+    Delete /REBOOTOK "$PLUGINSDIR\*.sed" 
+    Delete /REBOOTOK "$PLUGINSDIR\*.cmd"    
+    Delete /REBOOTOK "$PLUGINSDIR\*.sql"    
     RMDir "$APPDATA\Bacula\Work"
     RMDir "$APPDATA\Bacula\Spool"
     RMDir "$APPDATA\Bacula"
+NoDel:
 
   ; remove directories used
   RMDir "$INSTDIR\bin"

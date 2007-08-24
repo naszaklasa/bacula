@@ -1,24 +1,14 @@
 /*
- * Bacula Catalog Database interface routines
- *
- *     Almost generic set of SQL database interface routines
- *      (with a little more work)
- *
- *    Kern Sibbald, March 2000
- *
- *    Version $Id: sql.c 3709 2006-11-27 10:03:06Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,6 +25,16 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula Catalog Database interface routines
+ *
+ *     Almost generic set of SQL database interface routines
+ *      (with a little more work)
+ *
+ *    Kern Sibbald, March 2000
+ *
+ *    Version $Id: sql.c 5117 2007-07-03 09:20:28Z kerns $
+ */
 
 /* The following is necessary so that we do not include
  * the dummy external definition of B_DB.
@@ -51,6 +51,21 @@ uint32_t bacula_db_version = 0;
 /* Forward referenced subroutines */
 void print_dashes(B_DB *mdb);
 void print_result(B_DB *mdb);
+
+dbid_list::dbid_list() 
+{
+   memset(this, 0, sizeof(dbid_list));
+   max_ids = 1000;
+   DBId = (DBId_t *)malloc(max_ids * sizeof(DBId_t));
+   num_ids = num_seen = tot_ids = 0;
+   PurgedFiles = NULL;
+}
+
+dbid_list::~dbid_list() 
+{ 
+   free(DBId);
+}
+
 
 /*
  * Called here to retrieve an integer from the database
@@ -118,6 +133,8 @@ int
 QueryDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
 {
    int status;
+
+   sql_free_result(mdb);
    if ((status=sql_query(mdb, cmd)) != 0) {
       m_msg(file, line, &mdb->errmsg, _("query %s failed:\n%s\n"), cmd, sql_strerror(mdb));
       j_msg(file, line, jcr, M_FATAL, 0, "%s", mdb->errmsg);
@@ -185,8 +202,8 @@ UpdateDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
    mdb->num_rows = sql_affected_rows(mdb);
    if (mdb->num_rows < 1) {
       char ed1[30];
-      m_msg(file, line, &mdb->errmsg, _("Update problem: affected_rows=%s\n"),
-         edit_uint64(mdb->num_rows, ed1));
+      m_msg(file, line, &mdb->errmsg, _("Update failed: affected_rows=%s for %s\n"),
+         edit_uint64(mdb->num_rows, ed1), cmd);
       if (verbose) {
 //       j_msg(file, line, jcr, M_INFO, 0, "%s\n", cmd);
       }
@@ -264,7 +281,7 @@ void _db_lock(const char *file, int line, B_DB *mdb)
    if ((errstat=rwl_writelock(&mdb->lock)) != 0) {
       berrno be;
       e_msg(file, line, M_FATAL, 0, "rwl_writelock failure. stat=%d: ERR=%s\n",
-           errstat, be.strerror(errstat));
+           errstat, be.bstrerror(errstat));
    }
 }
 
@@ -279,7 +296,7 @@ void _db_unlock(const char *file, int line, B_DB *mdb)
    if ((errstat=rwl_writeunlock(&mdb->lock)) != 0) {
       berrno be;
       e_msg(file, line, M_FATAL, 0, "rwl_writeunlock failure. stat=%d: ERR=%s\n",
-           errstat, be.strerror(errstat));
+           errstat, be.bstrerror(errstat));
    }
 }
 

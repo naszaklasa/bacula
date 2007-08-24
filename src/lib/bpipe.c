@@ -1,21 +1,14 @@
 /*
- *   bpipe.c bi-directional pipe
- *
- *    Kern Sibbald, November MMII
- *
- *   Version $Id: bpipe.c 3670 2006-11-21 16:13:58Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation plus additions
-   that are listed in the file LICENSE.
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   bpipe.c bi-directional pipe
+ *
+ *    Kern Sibbald, November MMII
+ *
+ *   Version $Id: bpipe.c 4992 2007-06-07 14:46:43Z kerns $
+ */
 
 
 #include "bacula.h"
@@ -222,9 +222,10 @@ int close_bpipe(BPIPE *bpipe)
          wpid = waitpid(bpipe->worker_pid, &chldstatus, wait_option);
       } while (wpid == -1 && (errno == EINTR || errno == EAGAIN));
       if (wpid == bpipe->worker_pid || wpid == -1) {
+         berrno be;
          stat = errno;
          Dmsg3(800, "Got break wpid=%d status=%d ERR=%s\n", wpid, chldstatus,
-            wpid==-1?strerror(errno):"none");
+            wpid==-1?be.bstrerror():"none");
          break;
       }
       Dmsg3(800, "Got wpid=%d status=%d ERR=%s\n", wpid, chldstatus,
@@ -347,7 +348,8 @@ int run_program(char *prog, int wait, POOLMEM *results)
          stat1 = ferror(bpipe->rfd);
       }
       if (stat1 < 0) {
-         Dmsg2(150, "Run program fgets stat=%d ERR=%s\n", stat1, strerror(errno));
+         berrno be;
+         Dmsg2(150, "Run program fgets stat=%d ERR=%s\n", stat1, be.bstrerror(errno));
       } else if (stat1 != 0) {
          Dmsg1(150, "Run program fgets stat=%d\n", stat1);
          if (bpipe->timer_id) {
@@ -429,7 +431,7 @@ int run_program_full_output(char *prog, int wait, POOLMEM *results)
       }
       if (stat1 < 0) {
          berrno be;
-         Dmsg2(200, "Run program fgets stat=%d ERR=%s\n", stat1, be.strerror());
+         Dmsg2(200, "Run program fgets stat=%d ERR=%s\n", stat1, be.bstrerror());
          break;
       } else if (stat1 != 0) {
          Dmsg1(900, "Run program fgets stat=%d\n", stat1);
