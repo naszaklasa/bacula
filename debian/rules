@@ -43,7 +43,7 @@ DEFAULTINSTALLDIR := $(INSTALLDIR)-$(DEFAULTVARIANT)
 DBC := usr/share/dbconfig-common/data/
 
 CONF_ALL	= --enable-smartalloc \
-	--with-python --with-openssl --with-tcp-wrappers \
+	--with-python --with-tcp-wrappers \
 	--with-libiconv-prefix=/usr/include --with-readline=yes \
 	--with-libintl-prefix=/usr/include --with-x --with-readline=yes
 
