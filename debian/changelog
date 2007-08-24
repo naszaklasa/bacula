@@ -1,16 +1,17 @@
 bacula (2.2.0-1) unstable; urgency=low
 
-  * New upstream version.  Closes: #438806.
-    * make_catalog_backup script now takes a host parameter.  Closes: #419885.
-  * Deal with moving wx-console.conf to bwx-console.conf
-  * Add new bacula-console-qt package.
-  * Update Standards-Version to 3.7.2.  No changes required.
-  * Remove postgresql-dev Build-Dep.  Closes: #429963.
-  * Make binNMU safe.  Based on patch from Lior Kaplan.  Closes: #430106.
-  * Re-order postgresql-client Depends.  Closes: #419311.
-  * Remove libwxgtk2.4-dev Build-Depends.  Closes: #425159.
+  * Following changes prepared by Mark Hymers <mhy@debian.org>:
+    * New upstream version.  Closes: #438806.
+      * make_catalog_backup script now takes a host parameter.  
+        Closes: #419885.
+    * Deal with moving wx-console.conf to bwx-console.conf
+    * Add new bacula-console-qt package.
+    * Update Standards-Version to 3.7.2.  No changes required.
+    * Remove postgresql-dev Build-Dep.  Closes: #429963.
+    * Make binNMU safe.  Based on patch from Lior Kaplan.  Closes: #430106.
+    * Re-order postgresql-client Depends.  Closes: #419311.
+    * Remove libwxgtk2.4-dev Build-Depends.  Closes: #425159.
 
- -- Mark Hymers <mhy@debian.org>  Wed, 22 Aug 2007 11:49:09 +0100
  -- John Goerzen <jgoerzen@complete.org>  Fri, 24 Aug 2007 02:13:34 -0500
 
 bacula (2.0.3-4) unstable; urgency=low
