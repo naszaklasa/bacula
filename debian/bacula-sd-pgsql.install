@@ -1,0 +1,2 @@
+debian/tmp-install-pgsql/usr/sbin/bscan          usr/bin
+debian/tmp-install-pgsql/usr/sbin/bcopy          usr/bin

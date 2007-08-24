@@ -270,6 +270,12 @@ if test x$support_bat = xyes; then
   fi
 fi
 
+AC_ARG_VAR(QMAKE, [path to qmake. Defaults to qmake])
+if test "x$QMAKE" = "x"; then
+  QMAKE=qmake
+fi
+AC_PATH_PROG(QMAKE, ${QMAKE}, ${QMAKE})
+
 # 
 #  If bat is enabled, we need the qwt library
 got_qwt=no
@@ -297,7 +303,7 @@ if test x$support_bat = xyes; then
 #
    if test x$QWT_INC = x; then
       for root in /usr /usr/local; do
-	 for ver in qwt qwt5; do
+	 for ver in qwt-qt4 qwt qwt5; do
 	    if test -f ${root}/include/${ver}/qwt.h; then
 	       QWT_INC="${root}/include/${ver}"
 	       if test -d ${root}/lib64/; then
@@ -2243,7 +2249,7 @@ if test "${support_bat}" = "yes" ; then
   cd src/qt-console
   chmod 755 install_conf_file build-depkgs-qt-console
   echo "Creating bat Makefile"	
-  qmake
+  $QMAKE
   cd ${BUILD_DIR}
 fi
 
