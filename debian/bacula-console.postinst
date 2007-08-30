@@ -31,13 +31,6 @@ CONSOLE=/usr/sbin/bacula-console
 
 case "$1" in
     configure)
-	if [ -n "$2" ] && dpkg --compare-versions "$2" le '1.32f-5-*' ; then	
-		# Upgrading ...
-		if dpkg --compare-versions "$2" eq "1.32f"; then
-			mv $DSTDIR/console.conf $DSTDIR/$CONFIG
-		fi
-	fi
-
 	if [ ! -f $DSTDIR/$CONFIG ]; then
 		TARGET=$DSTDIR/$CONFIG
 	else
