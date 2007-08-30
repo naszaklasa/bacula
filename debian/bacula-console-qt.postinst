@@ -30,14 +30,17 @@ CFGFILE="bat.conf"
 case "$1" in
     configure)
 
-	if [ ! -f $DSTDIR/$CFGFILE ]; then TARGET=$DSTDIR/$CFGFILE
-	else TARGET=$DSTDIR/$CFGFILE.dist; fi
+	if [ ! -f $DSTDIR/$CFGFILE ]; then
+		TARGET=$DSTDIR/$CFGFILE
+	else
+		TARGET=$DSTDIR/$CFGFILE.dist
+	fi
 
 	# bconsole & wx-console use the same config file ;)
 	sed -e "s~@hostname@~localhost~" < $SRCDIR/$CFGFILE > $TARGET
 
-	chown root:bacula $DSTDIR/$CFGFILE
-	chmod 640 $DSTDIR/$CFGFILE
+	chown root:bacula $TARGET
+	chmod 640 $TARGET
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

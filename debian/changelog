@@ -3,8 +3,10 @@ bacula (2.2.0-2) unstable; urgency=low
   * Update libmysqlclient-dev Build-Dep.  Closes: #439969.
   * Use correct path to mtx-changer.  Closes: #435627.
   * Install tray-monitor.conf file.  Closes: #413754.
+  * Only alter permissions and ownership on files in /etc/bacula when we
+    install them; don't clobber local changes.
 
- -- Mark Hymers <mhy@debian.org>  Thu, 30 Aug 2007 21:46:14 +0100
+ -- Mark Hymers <mhy@debian.org>  Thu, 30 Aug 2007 22:22:37 +0100
 
 bacula (2.2.0-1) unstable; urgency=low
 
