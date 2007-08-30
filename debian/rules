@@ -268,7 +268,7 @@ install-indep: build install-stamp
 	#	$(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual
 	#$(RM) $(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual/*.wml
 	for f in bconsole.conf bwx-console.conf bat.conf \
-		bacula-sd.conf bacula-fd.conf; do \
+		bacula-sd.conf bacula-fd.conf tray-monitor.conf; do \
 		debian/patches/fix_config \
 			debian/tmp-install-sqlite/etc/bacula/$$f \
 			debian/bacula-common/usr/share/bacula-common/defconfig/$$f; \
