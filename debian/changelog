@@ -1,8 +1,9 @@
 bacula (2.2.0-2) unstable; urgency=low
 
   * Update libmysqlclient-dev Build-Dep.  Closes: #439969.
+  * Use correct path to mtx-changer.  Closes: #435627. 
 
- -- Mark Hymers <mhy@debian.org>  Wed, 29 Aug 2007 10:27:48 +0100
+ -- Mark Hymers <mhy@debian.org>  Wed, 29 Aug 2007 10:31:28 +0100
 
 bacula (2.2.0-1) unstable; urgency=low
 
