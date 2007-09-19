@@ -37,7 +37,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_restore.c 5319 2007-08-09 11:38:24Z kerns $
+ *   Version $Id: ua_restore.c 5402 2007-08-24 16:24:59Z kerns $
  */
 
 
@@ -967,9 +967,8 @@ static void split_path_and_filename(RESTORE_CTX *rx, char *name)
     */
    rx->fnl = p - f;
    if (rx->fnl > 0) {
-      rx->fname = check_pool_memory_size(rx->fname, rx->fnl+1);
-      memcpy(rx->fname, f, rx->fnl);    /* copy filename */
-      rx->fname[rx->fnl] = 0;
+      rx->fname = check_pool_memory_size(rx->fname, 2*(rx->fnl)+1);
+      db_escape_string(rx->fname, f, rx->fnl);
    } else {
       rx->fname[0] = 0;
       rx->fnl = 0;
@@ -977,9 +976,8 @@ static void split_path_and_filename(RESTORE_CTX *rx, char *name)
 
    rx->pnl = f - name;
    if (rx->pnl > 0) {
-      rx->path = check_pool_memory_size(rx->path, rx->pnl+1);
-      memcpy(rx->path, name, rx->pnl);
-      rx->path[rx->pnl] = 0;
+      rx->path = check_pool_memory_size(rx->path, 2*(rx->pnl)+1);
+      db_escape_string(rx->path, name, rx->pnl);
    } else {
       rx->path[0] = 0;
       rx->pnl = 0;

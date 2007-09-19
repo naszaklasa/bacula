@@ -11,12 +11,12 @@
  *
  *   Kern Sibbald, November MMV
  *
- *   Version $Id: bsnprintf.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: bsnprintf.c 5412 2007-08-29 09:30:22Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -45,6 +45,7 @@
 
 #include "bacula.h"
 #define FP_OUTPUT 1 /* Bacula uses floating point */
+
 /* Define the following if you want all the features of
  *  normal printf, but with all the security problems.
  *  For Bacula we turn this off, and it silently ignores
@@ -400,14 +401,14 @@ static int32_t fmtstr(char *buffer, int32_t currlen, int32_t maxlen,
    int padlen, strln;              /* amount to pad */
    int cnt = 0;
 
-   if (value == 0) {
-      value = "<NULL>";
-   }
 
    if (flags & DP_F_DOT && max < 0) {   /* Max not specified */
       max = 0;
    } else if (max < 0) {
       max = maxlen;
+   }
+   if (!value) {
+      value = "<NULL>";
    }
    strln = strlen(value);
    if (strln > max) {
@@ -578,6 +579,7 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
    char iconvert[311];
    char fconvert[311];
    char *result;
+   char dummy[10];
    int dec_pt, sig;
    int r_length;
    extern char *fcvt(double value, int ndigit, int *decpt, int *sign);
@@ -630,6 +632,7 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
       intpart++;
       fracpart -= (int64_t)pow10(max);
    }
+
 #ifdef DEBUG_SNPRINTF
    printf("fmtfp: %g %d.%d min=%d max=%d\n",
           (double)fvalue, intpart, fracpart, min, max);
@@ -663,7 +666,12 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
    result = fcvt(ufvalue, max, &dec_pt, &sig);
 # endif
 
-   r_length = strlen(result);
+   if (!result) {
+      r_length = 0;
+      result = dummy;
+   } else {
+      r_length = strlen(result);
+   }
 
    /*
     * Fix broken fcvt implementation returns..
@@ -685,8 +693,9 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
 
       fplace = 0;
 
-      while (r_length)
+      while (r_length) {
          fconvert[fplace++] = result[--r_length];
+      }
 
       while ((dec_pt < 0) && (fplace < max)) {
          fconvert[fplace++] = '0';

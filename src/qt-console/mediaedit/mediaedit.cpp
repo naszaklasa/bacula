@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: mediaedit.cpp 5267 2007-07-30 23:35:57Z bartleyd2 $
+ *   Version $Id: mediaedit.cpp 5386 2007-08-21 02:09:38Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -72,7 +72,7 @@ MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId)
    poolCombo->addItems(m_console->pool_list);
 
    /* The media's Status */
-   QStringList statusList = (QStringList() << "Full" << "Used" << "Append" << "Error" << "Purged" << "Recycled");
+   QStringList statusList = (QStringList() << "Full" << "Used" << "Append" << "Error" << "Purged" << "Recycle" << "Read-Only" << "Cleaning");
    statusCombo->addItems(statusList);
 
    /* Set up the query for the default values */
@@ -96,10 +96,9 @@ MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId)
       i += 1;
    }
    query += " FROM Media"
-            " LEFT OUTER JOIN Pool ON (Media.PoolId=Pool.PoolId)"
+            " JOIN Pool ON (Media.PoolId=Pool.PoolId)"
             " LEFT OUTER JOIN Pool AS Pol ON (Media.recyclepoolid=Pol.PoolId)"
-            " WHERE Media.MediaId='" + mediaId + "'"
-            " ORDER BY Pool.Name";
+            " WHERE Media.MediaId='" + mediaId + "'";
 
    if (mainWin->m_sqlDebug) {
       Pmsg1(000, "MediaList query cmd : %s\n",query.toUtf8().data());

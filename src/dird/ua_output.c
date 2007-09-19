@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_output.c 5038 2007-06-18 19:29:26Z kerns $
+ *   Version $Id: ua_output.c 5450 2007-09-04 10:04:42Z kerns $
  */
 
 #include "bacula.h"
@@ -673,7 +673,7 @@ void do_messages(UAContext *ua, const char *cmd)
       ua->UA_sock->msg = check_pool_memory_size(ua->UA_sock->msg, mlen+1);
       strcpy(ua->UA_sock->msg, msg);
       ua->UA_sock->msglen = mlen;
-      bnet_send(ua->UA_sock);
+      ua->UA_sock->send();
       do_truncate = true;
    }
    if (do_truncate) {
@@ -699,7 +699,7 @@ int messagescmd(UAContext *ua, const char *cmd)
    if (console_msg_pending) {
       do_messages(ua, cmd);
    } else {
-      bnet_fsend(ua->UA_sock, _("You have no messages.\n"));
+      ua->UA_sock->fsend(_("You have no messages.\n"));
    }
    return 1;
 }
@@ -711,7 +711,7 @@ void prtit(void *ctx, const char *msg)
 {
    UAContext *ua = (UAContext *)ctx;
 
-   bnet_fsend(ua->UA_sock, "%s", msg);
+   ua->UA_sock->fsend("%s", msg);
 }
 
 /*
@@ -721,21 +721,26 @@ void prtit(void *ctx, const char *msg)
  * agent, so we are being called from Bacula core. In
  * that case direct the messages to the Job.
  */
+#ifdef HAVE_VA_COPY
 void bmsg(UAContext *ua, const char *fmt, va_list arg_ptr)
 {
    BSOCK *bs = ua->UA_sock;
    int maxlen, len;
-   POOLMEM *msg;
+   POOLMEM *msg = NULL;
+   va_list ap;
 
    if (bs) {
       msg = bs->msg;
-   } else {
+   }
+   if (!msg) {
       msg = get_pool_memory(PM_EMSG);
    }
 
 again:
    maxlen = sizeof_pool_memory(msg) - 1;
-   len = bvsnprintf(msg, maxlen, fmt, arg_ptr);
+   va_copy(ap, arg_ptr);
+   len = bvsnprintf(msg, maxlen, fmt, ap);
+   va_end(ap);
    if (len < 0 || len >= maxlen) {
       msg = realloc_pool_memory(msg, maxlen + maxlen/2);
       goto again;
@@ -744,13 +749,51 @@ again:
    if (bs) {
       bs->msg = msg;
       bs->msglen = len;
-      bnet_send(bs);
+      bs->send();
    } else {                           /* No UA, send to Job */
       Jmsg(ua->jcr, M_INFO, 0, "%s", msg);
       free_pool_memory(msg);
    }
 
 }
+
+#else /* no va_copy() -- brain damaged version of variable arguments */
+
+void bmsg(UAContext *ua, const char *fmt, va_list arg_ptr)
+{
+   BSOCK *bs = ua->UA_sock;
+   int maxlen, len;
+   POOLMEM *msg = NULL;
+
+   if (bs) {
+      msg = bs->msg;
+   }
+   if (!msg) {
+      msg = get_memory(5000);
+   }
+
+   maxlen = sizeof_pool_memory(msg) - 1;
+   if (maxlen < 4999) {
+      msg = realloc_pool_memory(msg, 5000);
+      maxlen = 4999;
+   }
+   len = bvsnprintf(msg, maxlen, fmt, arg_ptr);
+   if (len < 0 || len >= maxlen) {
+      pm_strcpy(msg, _("Message too long to display.\n"));
+      len = strlen(msg);
+   }
+
+   if (bs) {
+      bs->msg = msg;
+      bs->msglen = len;
+      bs->send();
+   } else {                           /* No UA, send to Job */
+      Jmsg(ua->jcr, M_INFO, 0, "%s", msg);
+      free_pool_memory(msg);
+   }
+
+}
+#endif
  
 void bsendmsg(void *ctx, const char *fmt, ...)
 {
@@ -785,8 +828,9 @@ void UAContext::error_msg(const char *fmt, ...)
 {
    BSOCK *bs = UA_sock;
    va_list arg_ptr;
-   va_start(arg_ptr, fmt);
+
    if (bs && api) bs->signal(BNET_ERROR_MSG);
+   va_start(arg_ptr, fmt);
    bmsg(this, fmt, arg_ptr);
    va_end(arg_ptr);
 }
@@ -800,8 +844,9 @@ void UAContext::warning_msg(const char *fmt, ...)
 {
    BSOCK *bs = UA_sock;
    va_list arg_ptr;
-   va_start(arg_ptr, fmt);
+
    if (bs && api) bs->signal(BNET_WARNING_MSG);
+   va_start(arg_ptr, fmt);
    bmsg(this, fmt, arg_ptr);
    va_end(arg_ptr);
 }
@@ -814,8 +859,9 @@ void UAContext::info_msg(const char *fmt, ...)
 {
    BSOCK *bs = UA_sock;
    va_list arg_ptr;
-   va_start(arg_ptr, fmt);
+
    if (bs && api) bs->signal(BNET_INFO_MSG);
+   va_start(arg_ptr, fmt);
    bmsg(this, fmt, arg_ptr);
    va_end(arg_ptr);
 }

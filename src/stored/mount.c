@@ -32,7 +32,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: mount.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: mount.c 5552 2007-09-14 09:49:06Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -276,6 +276,8 @@ read_volume:
       bstrncpy(VolumeName, dcr->VolumeName, sizeof(VolumeName));
       bstrncpy(dcr->VolumeName, dev->VolHdr.VolumeName, sizeof(dcr->VolumeName));
       if (!dir_get_volume_info(dcr, GET_VOL_INFO_FOR_WRITE)) {
+         POOL_MEM vol_info_msg;
+         pm_strcpy(vol_info_msg, jcr->dir_bsock->msg);  /* save error message */
          /* Restore desired volume name, note device info out of sync */
          /* This gets the info regardless of the Pool */
          bstrncpy(dcr->VolumeName, dev->VolHdr.VolumeName, sizeof(dcr->VolumeName));
@@ -293,7 +295,7 @@ read_volume:
               "    Current Volume \"%s\" not acceptable because:\n"
               "    %s"),
              dcrVolCatInfo.VolCatName, dev->VolHdr.VolumeName,
-             jcr->dir_bsock->msg);
+             vol_info_msg.c_str());
          ask = true;
          /* Restore saved DCR before continuing */
          bstrncpy(dcr->VolumeName, VolumeName, sizeof(dcr->VolumeName));

@@ -28,7 +28,7 @@
 /*
  * Director external function prototypes
  *
- *   Version $Id: protos.h 5144 2007-07-12 07:49:21Z kerns $
+ *   Version $Id: protos.h 5552 2007-09-14 09:49:06Z kerns $
  */
 
 /* admin.c */
@@ -128,6 +128,7 @@ extern void create_clones(JCR *jcr);
 extern bool create_restore_bootstrap_file(JCR *jcr);
 extern void dird_free_jcr(JCR *jcr);
 extern void dird_free_jcr_pointers(JCR *jcr);
+extern void cancel_storage_daemon_job(JCR *jcr);
 
 /* migration.c */
 extern bool do_migration(JCR *jcr);

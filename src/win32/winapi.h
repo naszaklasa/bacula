@@ -1,11 +1,4 @@
 /*
- * Windows APIs that are different for each system.
- *   We use pointers to the entry points so that a
- *   single binary will run on all Windows systems.
- *
- *     Kern Sibbald MMIII
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Windows APIs that are different for each system.
+ *   We use pointers to the entry points so that a
+ *   single binary will run on all Windows systems.
+ *
+ *     Kern Sibbald MMIII
+ */
 
 #ifndef __WINAPI_H
 #define __WINAPI_H
@@ -58,6 +58,7 @@ typedef char POOLMEM;
 // as opposed to UCS2 which means characters 0x10000-0x10ffff are
 // valid and result in 4 byte UTF-8 encodings.
 #define MAX_PATH_UTF8    MAX_PATH*4  // strict upper bound on UTF-16 to UTF-8 conversion
+
 // from
 // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/fileio/fs/getfileattributesex.asp
 // In the ANSI version of this function, the name is limited to

@@ -34,13 +34,18 @@
 
 // This class handles creation of a system-tray icon & menu
 
+
+
 class bacMenu;
 
 #if (!defined(_win_bacMENU))
 #define _win_bacMENU
 
-#include "winabout.h"
-#include "winstat.h"
+#include "aboutDialog.h"
+#include "statusDialog.h"
+
+// Message used for system tray notifications
+#define WM_TRAYNOTIFY  WM_USER+1
 
 // Constants
 extern const UINT MENU_ABOUTBOX_SHOW;
@@ -67,10 +72,10 @@ protected:
 protected:
 
    // About dialog for this server
-   bacAbout  m_about;
+   aboutDialog  m_about;
 
    // Status dialog for this server
-   bacStatus m_status;
+   statusDialog m_status;
 
    HWND  m_hwnd;
    HMENU m_hmenu;

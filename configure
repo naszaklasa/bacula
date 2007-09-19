@@ -1529,7 +1529,6 @@ done
 test -n "$FALSEPRG" || FALSEPRG=":"
 
 
-#AC_CANONICAL_HOST
 
 VERSION=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
 DATE=`sed -n -e 's/^.* \t*BDATE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
@@ -4330,6 +4329,7 @@ echo "${ECHO_T}no" >&6
 fi
 
 
+
 test -n "$ARFLAG" || ARFLAGS="cr"
 
 
@@ -4412,7 +4412,7 @@ else
   HAVE_SUN_OS_TRUE='#'
   HAVE_SUN_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_SUN_OS 1
 _ACEOF
 
@@ -4439,7 +4439,7 @@ else
   HAVE_OSF1_OS_TRUE='#'
   HAVE_OSF1_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_OSF1_OS 1
 _ACEOF
 
@@ -4466,7 +4466,7 @@ else
   HAVE_AIX_OS_TRUE='#'
   HAVE_AIX_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_AIX_OS 1
 _ACEOF
 
@@ -4493,7 +4493,7 @@ else
   HAVE_HPUX_OS_TRUE='#'
   HAVE_HPUX_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_HPUX_OS 1
 _ACEOF
 
@@ -4520,7 +4520,7 @@ else
   HAVE_LINUX_OS_TRUE='#'
   HAVE_LINUX_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_LINUX_OS 1
 _ACEOF
 
@@ -4547,7 +4547,7 @@ else
   HAVE_FREEBSD_OS_TRUE='#'
   HAVE_FREEBSD_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_FREEBSD_OS 1
 _ACEOF
 
@@ -4574,7 +4574,7 @@ else
   HAVE_NETBSD_OS_TRUE='#'
   HAVE_NETBSD_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_NETBSD_OS 1
 _ACEOF
 
@@ -4601,7 +4601,7 @@ else
   HAVE_OPENBSD_OS_TRUE='#'
   HAVE_OPENBSD_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_OPENBSD_OS 1
 _ACEOF
 
@@ -4628,7 +4628,7 @@ else
   HAVE_BSDI_OS_TRUE='#'
   HAVE_BSDI_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_BSDI_OS 1
 _ACEOF
 
@@ -4655,7 +4655,7 @@ else
   HAVE_SGI_OS_TRUE='#'
   HAVE_SGI_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_SGI_OS 1
 _ACEOF
 
@@ -4682,7 +4682,7 @@ else
   HAVE_IRIX_OS_TRUE='#'
   HAVE_IRIX_OS_FALSE=
 fi
-	cat >>confdefs.h <<\_ACEOF
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_IRIX_OS 1
 _ACEOF
 
@@ -4735,70 +4735,70 @@ then
         echo "distname set to $DISTNAME"
 elif test $HAVE_UNAME=yes -a x`uname -s` = xOSF1
 then
-	DISTNAME=alpha
+        DISTNAME=alpha
 elif test $HAVE_UNAME=yes -a x`uname -s` = xAIX
 then
-	DISTNAME=aix
+        DISTNAME=aix
 elif test $HAVE_UNAME=yes -a x`uname -s` = xHP-UX
 then
-	DISTNAME=hpux
+        DISTNAME=hpux
 elif test $HAVE_UNAME=yes -a x`uname -s` = xSunOS
 then
-	DISTNAME=solaris
+        DISTNAME=solaris
 elif test $HAVE_UNAME=yes -a x`uname -s` = xFreeBSD
 then
-	DISTNAME=freebsd
+        DISTNAME=freebsd
 elif test $HAVE_UNAME=yes -a x`uname -s` = xNetBSD
 then
-	DISTNAME=netbsd
+        DISTNAME=netbsd
 elif test $HAVE_UNAME=yes -a x`uname -s` = xOpenBSD
 then
-	DISTNAME=openbsd
+        DISTNAME=openbsd
 elif test $HAVE_UNAME=yes -a x`uname -s` = xIRIX
 then
-	DISTNAME=irix
+        DISTNAME=irix
 elif test $HAVE_UNAME=yes -a x`uname -s` = xBSD/OS
 then
-	DISTNAME=bsdi
+        DISTNAME=bsdi
 elif test -f /etc/SuSE-release
 then
-	DISTNAME=suse
+        DISTNAME=suse
 elif test -d /etc/SuSEconfig
 then
-	DISTNAME=suse5
+        DISTNAME=suse5
 elif test -f /etc/mandrake-release
 then
-	DISTNAME=mandrake
+        DISTNAME=mandrake
 elif test -f /etc/whitebox-release
 then
        DISTNAME=redhat
 elif test -f /etc/redhat-release
 then
-	DISTNAME=redhat
+        DISTNAME=redhat
 elif test -f /etc/gentoo-release
 then
-	DISTNAME=gentoo
+        DISTNAME=gentoo
 elif test -f /etc/debian_version
 then
-	DISTNAME=debian
+        DISTNAME=debian
 elif test -f /etc/slackware-version
 then
-	DISTNAME=slackware
+        DISTNAME=slackware
 elif test $HAVE_UNAME=yes -a x`uname -s` = xDarwin
 then
     DISTNAME=darwin
 elif test -f /etc/engarde-version
 then
-	DISTNAME=engarde
+        DISTNAME=engarde
 elif test "$CYGWIN" = yes
 then
-	DISTNAME=cygwin
-	cat >>confdefs.h <<\_ACEOF
+        DISTNAME=cygwin
+        cat >>confdefs.h <<\_ACEOF
 #define HAVE_CYGWIN 1
 _ACEOF
 
 else
-	DISTNAME=unknown
+        DISTNAME=unknown
 fi
 echo "$as_me:$LINENO: result: done" >&5
 echo "${ECHO_T}done" >&6
@@ -6770,12 +6770,6 @@ if test x$mandir = x'${prefix}/man' ; then
    mandir=/usr/share/man
 fi
 
-
-# ------------------------------------------------------------------
-# All list of languages for which a translation exist. Each
-#  language is separated by a space.
-# ------------------------------------------------------------------
-ALL_LINGUAS=""
 
 for ac_prog in msgfmt
 do
@@ -12842,7 +12836,7 @@ fi;
 #
    if test x$QWT_INC = x; then
       for root in /usr /usr/local; do
-	 for ver in qwt qwt5; do
+	 for ver in qwt qwt5 qwt-qt4; do
 	    if test -f ${root}/include/${ver}/qwt.h; then
 	       QWT_INC="${root}/include/${ver}"
 	       if test -d ${root}/lib64/; then
@@ -12932,7 +12926,8 @@ if test x$support_tray_monitor = xyes; then
      abc=`$PKGCONFIG --atleast-version=2.4 gtk+-2.0`
      pkg=$?
      if test $pkg = 0; then
-     cat >>confdefs.h <<\_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
 #define HAVE_GTK_2_4 1
 _ACEOF
 
@@ -12953,7 +12948,8 @@ if test "${enable_smartalloc+set}" = set; then
 fi;
 
 if test x$support_smartalloc = xyes; then
-   cat >>confdefs.h <<\_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
 #define SMARTALLOC 1
 _ACEOF
 
@@ -13961,7 +13957,8 @@ echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
 
 fi
 if test `eval echo '${'$as_ac_Header'}'` = yes; then
-   cat >>confdefs.h <<\_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
 #define HAVE_READLINE 1
 _ACEOF
 
@@ -14121,7 +14118,8 @@ echo "${ECHO_T}$ac_cv_header__usr_include_readline_readline_h" >&6
 
 fi
 if test $ac_cv_header__usr_include_readline_readline_h = yes; then
-   cat >>confdefs.h <<\_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
 #define HAVE_READLINE 1
 _ACEOF
 
@@ -14271,7 +14269,8 @@ echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
 
 fi
 if test `eval echo '${'$as_ac_Header'}'` = yes; then
-   cat >>confdefs.h <<\_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
 #define HAVE_READLINE 1
 _ACEOF
 
@@ -15870,7 +15869,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
 
 	    echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6
-	    cat >>confdefs.h <<\_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
 #define HAVE_LIBWRAP 1
 _ACEOF
 
@@ -15929,7 +15929,8 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
 
 		 echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6
-		 cat >>confdefs.h <<\_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
 #define HAVE_LIBWRAP 1
 _ACEOF
 
@@ -17500,6 +17501,15 @@ if test "${enable_batch_insert+set}" = set; then
        support_batch_insert=yes
      fi
 fi;
+fi
+
+# Check if postgresql support batch mode
+if test x$DB_TYPE = xpostgresql; then
+   A=`nm $SQL_LIB | grep PQputCopyData`
+   pkg=$?
+   if test $pkg != 0; then
+      support_batch_insert=no
+   fi
 fi
 
 if test $support_batch_insert = yes ; then
@@ -21015,7 +21025,8 @@ rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
 fi
 echo "$as_me:$LINENO: result: $ba_cv_header_utime_h" >&5
 echo "${ECHO_T}$ba_cv_header_utime_h" >&6
-test $ba_cv_header_utime_h = yes && cat >>confdefs.h <<\_ACEOF
+test $ba_cv_header_utime_h = yes &&
+cat >>confdefs.h <<\_ACEOF
 #define HAVE_UTIME_H 1
 _ACEOF
 
@@ -21802,8 +21813,8 @@ int
 main ()
 {
 
-	  int mask = sigmask(SIGINT);
-	  sigsetmask(mask); sigblock(mask); sigpause(mask);
+          int mask = sigmask(SIGINT);
+          sigsetmask(mask); sigblock(mask); sigpause(mask);
 
   ;
   return 0;
@@ -21837,22 +21848,22 @@ else
 sed 's/^/| /' conftest.$ac_ext >&5
 
 
-	cat >conftest.$ac_ext <<_ACEOF
+        cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-	  #include <signal.h>
-	  RETSIGTYPE foo() { }
+          #include <signal.h>
+          RETSIGTYPE foo() { }
 int
 main ()
 {
 
-		  int mask = sigmask(SIGINT);
-		  sigset(SIGINT, foo); sigrelse(SIGINT);
-		  sighold(SIGINT); sigpause(SIGINT);
+                  int mask = sigmask(SIGINT);
+                  sigset(SIGINT, foo); sigrelse(SIGINT);
+                  sighold(SIGINT); sigpause(SIGINT);
 
   ;
   return 0;
@@ -27080,6 +27091,71 @@ fi
 done
 
 
+echo "$as_me:$LINENO: checking for va_copy" >&5
+echo $ECHO_N "checking for va_copy... $ECHO_C" >&6
+if test "${ba_cv_va_copy+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+#include <stdarg.h>
+void use_va_copy(va_list args){va_list args2; va_copy(args2,args); va_end(args2);}
+void call_use_va_copy(int junk,...){va_list args; va_start(args,junk); use_va_copy(args); va_end(args);}
+
+int
+main ()
+{
+call_use_va_copy(1,2,3)
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ba_cv_va_copy=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ba_cv_va_copy=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ba_cv_va_copy" >&5
+echo "${ECHO_T}$ba_cv_va_copy" >&6
+test $ba_cv_va_copy = yes &&
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_VA_COPY 1
+_ACEOF
+
+
+
 
 
 
@@ -31990,7 +32066,7 @@ echo "$as_me: executing $ac_dest commands" >&6;}
         ;;
       esac
     done ;;
-    default ) (echo "Doing make of dependencies"; ${MAKE:-make} depend;)
+    default )
  ;;
   esac
 done
@@ -32026,6 +32102,17 @@ if test "$no_create" != yes; then
 fi
 
 
+if test "${support_bat}" = "yes" ; then
+  cd src/qt-console
+  chmod 755 install_conf_file build-depkgs-qt-console
+  echo "Creating bat Makefile"
+  qmake
+  cd ${BUILD_DIR}
+fi
+
+echo "Doing make of dependencies"
+${MAKE:-make} depend
+
 cd scripts
 chmod 755 startmysql stopmysql bacula startit stopit btraceback mtx-changer
 chmod 755 dvd-handler dvd-simulator
@@ -32058,13 +32145,6 @@ chmod 755 $c/mysql
 
 chmod 755 src/win32/build-depkgs-mingw32
 
-if test "${support_bat}" = "yes" ; then
-  cd src/qt-console
-  chmod 755 install_conf_file build-depkgs-qt-console
-  echo "Creating bat Makefile"
-  qmake
-  cd ${BUILD_DIR}
-fi
 
 
 if test "x$ac_cv_sys_largefile_CFLAGS" != "xno" ; then

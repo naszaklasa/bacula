@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: filed_conf.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: filed_conf.c 5358 2007-08-15 16:54:21Z kerns $
  */
 
 #include "bacula.h"
@@ -96,7 +96,7 @@ static RES_ITEM cli_items[] = {
    {"piddirectory",  store_dir,     ITEM(res_client.pid_directory),     0, ITEM_REQUIRED, 0},
    {"subsysdirectory",  store_dir,  ITEM(res_client.subsys_directory),  0, 0, 0},
    {"scriptsdirectory",  store_dir,  ITEM(res_client.scripts_directory),  0, 0, 0},
-   {"maximumconcurrentjobs", store_pint,  ITEM(res_client.MaxConcurrentJobs), 0, ITEM_DEFAULT, 10},
+   {"maximumconcurrentjobs", store_pint,  ITEM(res_client.MaxConcurrentJobs), 0, ITEM_DEFAULT, 20},
    {"messages",      store_res, ITEM(res_client.messages), R_MSGS, 0, 0},
    {"sdconnecttimeout", store_time,ITEM(res_client.SDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
    {"heartbeatinterval", store_time, ITEM(res_client.heartbeat_interval), 0, ITEM_DEFAULT, 0},

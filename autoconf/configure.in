@@ -20,7 +20,6 @@ dnl search for true and false programs.
 AC_PATH_PROGS(TRUEPRG, true, :)
 AC_PATH_PROGS(FALSEPRG, false, :)
 
-#AC_CANONICAL_HOST
 
 dnl bacula version
 VERSION=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
@@ -98,6 +97,7 @@ fi
 THE_AWK=$AWK
 AC_PATH_PROG(AWK, $THE_AWK, $THE_AWK)
 
+
 test -n "$ARFLAG" || ARFLAGS="cr"
 AC_SUBST(ARFLAGS)
 
@@ -171,12 +171,6 @@ if test x$mandir = x'${prefix}/man' ; then
 fi
 
 		      
-# ------------------------------------------------------------------
-# All list of languages for which a translation exist. Each
-#  language is separated by a space.
-# ------------------------------------------------------------------
-ALL_LINGUAS=""
-
 AC_PATH_PROGS(MSGFMT, msgfmt, no)
 if test "$MSGFMT" = "no"
 then
@@ -297,7 +291,7 @@ if test x$support_bat = xyes; then
 #
    if test x$QWT_INC = x; then
       for root in /usr /usr/local; do
-	 for ver in qwt qwt5; do
+	 for ver in qwt qwt5 qwt-qt4; do
 	    if test -f ${root}/include/${ver}/qwt.h; then
 	       QWT_INC="${root}/include/${ver}"
 	       if test -d ${root}/lib64/; then
@@ -379,7 +373,7 @@ if test x$support_tray_monitor = xyes; then
      abc=`$PKGCONFIG --atleast-version=2.4 gtk+-2.0`
      pkg=$?
      if test $pkg = 0; then
-     AC_DEFINE(HAVE_GTK_2_4)
+	AC_DEFINE(HAVE_GTK_2_4, 1, [Set if you have GTK 4.2 or greater loaded])
      fi
   fi
 fi
@@ -395,7 +389,7 @@ AC_ARG_ENABLE(smartalloc,
   fi])
 
 if test x$support_smartalloc = xyes; then
-   AC_DEFINE(SMARTALLOC)
+   AC_DEFINE(SMARTALLOC, 1, [Set if you want Smartalloc enabled])
 fi
 
 # -------------------------------------------
@@ -641,7 +635,7 @@ if test x$support_readline = xyes; then
 	     with_readline="/usr/include/readline" 
 	  fi
 	  AC_CHECK_HEADER(${with_readline}/readline.h, 
-	     [ AC_DEFINE(HAVE_READLINE) 
+	     [ AC_DEFINE(HAVE_READLINE, 1, [Set to enable readline support])
 	       CONS_LIBS="-lreadline -lhistory -ltermcap"
 	       got_readline="yes"   
 	     ],
@@ -655,14 +649,14 @@ if test x$support_readline = xyes; then
      ],[
        # check for standard readline library
        AC_CHECK_HEADER(/usr/include/readline/readline.h, 
-	 [ AC_DEFINE(HAVE_READLINE)
+	 [ AC_DEFINE(HAVE_READLINE, 1, [Set to enable readline support])
 	   got_readline="yes"
 	   CONS_INC="-I/usr/include/readline"
 	   CONS_LIBS="-lreadline -ltermcap"
 	 ], [
 	   # Did not find standard library, so try Bacula's default
 	    AC_CHECK_HEADER(${TOP_DIR}/depkgs/readline/readline.h, 
-	      [ AC_DEFINE(HAVE_READLINE) 
+	      [ AC_DEFINE(HAVE_READLINE, 1, [Set to enable readline support])
 		 got_readline="yes"   
 		 CONS_INC="-I${TOP_DIR}/depkgs/readline"
 		 CONS_LIBS="-lreadline -lhistory -ltermcap"
@@ -816,7 +810,7 @@ AC_ARG_WITH(tcp-wrappers,
 	  [ hosts_access(req); ],
 	  [
 	    AC_MSG_RESULT(yes)
-	    AC_DEFINE(HAVE_LIBWRAP)
+	    AC_DEFINE(HAVE_LIBWRAP, 1, [Set to enable libwraper support])
 	    TCPW_MSG="yes" 
 	    LIBS="$saved_LIBS"
 	    WRAPLIBS="-lwrap"
@@ -832,7 +826,7 @@ AC_ARG_WITH(tcp-wrappers,
 	      [ hosts_access(req); ],
 	      [
 		 AC_MSG_RESULT(yes)
-		 AC_DEFINE(HAVE_LIBWRAP)
+		 AC_DEFINE(HAVE_LIBWRAP, 1, [Set to enable libwraper support])
 		 TCPW_MSG="yes" 
 		 LIBS="$saved_LIBS"
 		 WRAPLIBS="-lwrap"
@@ -1338,7 +1332,16 @@ if test $pkg = 0; then
        support_batch_insert=yes
      fi])
 fi
-							  
+	
+# Check if postgresql support batch mode	
+if test x$DB_TYPE = xpostgresql; then
+   A=`nm $SQL_LIB | grep PQputCopyData`
+   pkg=$?
+   if test $pkg != 0; then
+      support_batch_insert=no
+   fi
+fi
+
 if test $support_batch_insert = yes ; then
    AC_DEFINE(HAVE_BATCH_FILE_INSERT, 1, [Set if DB batch insert code enabled])
 fi
@@ -1417,7 +1420,7 @@ AC_CACHE_CHECK(for utime.h, ba_cv_header_utime_h,
 #include <sys/types.h>
 #include <utime.h>], [struct utimbuf foo],
   ba_cv_header_utime_h=yes, ba_cv_header_utime_h=no)])
-test $ba_cv_header_utime_h = yes && AC_DEFINE(HAVE_UTIME_H)
+test $ba_cv_header_utime_h = yes && AC_DEFINE(HAVE_UTIME_H, 1, [Set if utime.h exists])
 
 dnl# --------------------------------------------------------------------------
 dnl# Check for socklen_t
@@ -1719,6 +1722,17 @@ AC_CHECK_FUNCS(fdatasync)
 AC_CHECK_FUNCS(chflags) 
 
 AC_CHECK_FUNCS(snprintf vsnprintf gethostid fseeko)
+
+AC_CACHE_CHECK(for va_copy, ba_cv_va_copy,
+  [AC_TRY_LINK([
+#include <stdarg.h>
+void use_va_copy(va_list args){va_list args2; va_copy(args2,args); va_end(args2);}
+void call_use_va_copy(int junk,...){va_list args; va_start(args,junk); use_va_copy(args); va_end(args);}
+],
+  [call_use_va_copy(1,2,3)],
+  ba_cv_va_copy=yes, ba_cv_va_copy=no)])
+test $ba_cv_va_copy = yes && AC_DEFINE(HAVE_VA_COPY, 1, [Set if va_copy exists])
+
 
 dnl# --------------------------------------------------------------------------
 dnl# CHECKING FOR THREAD SAFE FUNCTIONS
@@ -2204,8 +2218,19 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/tools/Makefile \
 	   po/Makefile.in \
 	   $PFILES ],  
-	  [(echo "Doing make of dependencies"; ${MAKE:-make} depend;) ]
+	  [ ]
 )
+
+if test "${support_bat}" = "yes" ; then
+  cd src/qt-console
+  chmod 755 install_conf_file build-depkgs-qt-console
+  echo "Creating bat Makefile"	
+  qmake
+  cd ${BUILD_DIR}
+fi
+
+echo "Doing make of dependencies"
+${MAKE:-make} depend
 
 cd scripts
 chmod 755 startmysql stopmysql bacula startit stopit btraceback mtx-changer
@@ -2239,13 +2264,6 @@ chmod 755 $c/mysql
 
 chmod 755 src/win32/build-depkgs-mingw32
 
-if test "${support_bat}" = "yes" ; then
-  cd src/qt-console
-  chmod 755 install_conf_file build-depkgs-qt-console
-  echo "Creating bat Makefile"	
-  qmake
-  cd ${BUILD_DIR}
-fi
 
 
 if test "x$ac_cv_sys_largefile_CFLAGS" != "xno" ; then

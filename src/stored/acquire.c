@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: acquire.c 5293 2007-08-06 18:20:26Z kerns $
+ *   Version $Id: acquire.c 5552 2007-09-14 09:49:06Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -292,7 +292,14 @@ get_out:
       Dmsg2(50, "Dec reserve=%d dev=%s\n", dev->reserved_device, dev->print_name());
       dcr->reserved_device = false;
    }
-   dev->dunblock(DEV_LOCKED);
+   /* 
+    * Normally we are blocked, but in at least one error case above 
+    *   we are not blocked because we unsuccessfully tried changing
+    *   devices.  
+    */
+   if (dev->is_blocked()) {
+      dev->dunblock(DEV_LOCKED);
+   }
    Dmsg1(950, "jcr->dcr=%p\n", jcr->dcr);
    return ok;
 }

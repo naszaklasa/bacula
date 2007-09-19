@@ -29,7 +29,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: bat.h 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: bat.h 5366 2007-08-17 10:18:43Z kerns $
  *
  *   Kern Sibbald, January 2007
  */
@@ -42,9 +42,7 @@
 #include "bat_conf.h"
 #include "jcr.h"
 #include "console.h"
-#include "qstd.h"
 
-using namespace qstd;
 
 extern MainWin *mainWin;
 extern QApplication *app;

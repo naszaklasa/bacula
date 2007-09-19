@@ -3,7 +3,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: pages.h 5257 2007-07-28 10:36:28Z kerns $
+ *   Version $Id: pages.h 5372 2007-08-17 12:17:04Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
@@ -40,7 +40,7 @@
  *  The Pages Class
  *
  *  This class is inherited by all widget windows which are on the stack
- *  It is for the purpos of having a conistant set of functions and properties
+ *  It is for the purpose of having a consistent set of functions and properties
  *  in all of the subclasses to accomplish tasks such as pulling a window out
  *  of or into the stack.  It also provides virtual functions called
  *  from in mainwin so that subclasses can contain functions to allow them

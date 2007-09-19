@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, Feb MM
  *
- *    Version $Id: dird_conf.h 4992 2007-06-07 14:46:43Z kerns $
+ *    Version $Id: dird_conf.h 5406 2007-08-25 19:33:46Z kerns $
  */
 
 /* NOTE:  #includes at the end of this file */
@@ -533,6 +533,8 @@ public:
    bool  AutoPrune;                   /* default for pool auto prune */
    bool  Recycle;                     /* default for media recycle yes/no */
    POOL  *RecyclePool;                /* RecyclePool destination when media is purged */
+   alist *CopyPool;                   /* List of copy pools */
+   CAT *Catalog;                      /* Catalog to be used */
    /* Methods */
    char *name() const;
 };

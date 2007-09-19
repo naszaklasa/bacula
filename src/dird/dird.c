@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: dird.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: dird.c 5552 2007-09-14 09:49:06Z kerns $
  */
 
 #include "bacula.h"
@@ -228,6 +228,17 @@ int main (int argc, char *argv[])
       Jmsg((JCR *)NULL, M_ERROR_TERM, 0, _("Please correct configuration file: %s\n"), configfile);
    }
 
+   if (!test_config) {                /* we don't need to do this block in test mode */
+      if (background) {
+         daemon_start();
+         init_stack_dump();              /* grab new pid */
+      }
+   
+      /* Create pid must come after we are a daemon -- so we have our final pid */
+      create_pid_file(director->pid_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
+      read_state_file(director->working_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
+   }
+
    drop(uid, gid);                    /* reduce privileges if requested */
 
    if (!check_catalog()) {
@@ -246,15 +257,6 @@ int main (int argc, char *argv[])
 
    FDConnectTimeout = (int)director->FDConnectTimeout;
    SDConnectTimeout = (int)director->SDConnectTimeout;
-
-   if (background) {
-      daemon_start();
-      init_stack_dump();              /* grab new pid */
-   }
-
-   /* Create pid must come after we are a daemon -- so we have our final pid */
-   create_pid_file(director->pid_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
-   read_state_file(director->working_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
 
 
 #if !defined(HAVE_WIN32)
@@ -317,6 +319,7 @@ void terminate_dird(int sig)
    static bool already_here = false;
 
    if (already_here) {                /* avoid recursive temination problems */
+      bmicrosleep(2, 0);              /* yield */
       exit(1);
    }
    already_here = true;
@@ -324,7 +327,6 @@ void terminate_dird(int sig)
    generate_daemon_event(NULL, "Exit");
    write_state_file(director->working_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
    delete_pid_file(director->pid_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
-// signal(SIGCHLD, SIG_IGN);          /* don't worry about children now */
    term_scheduler();
    term_job_server();
    if (runjob) {

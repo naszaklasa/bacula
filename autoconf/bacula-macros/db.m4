@@ -1,4 +1,4 @@
-AC_DEFUN(BA_CHECK_MYSQL_DB,
+AC_DEFUN([BA_CHECK_MYSQL_DB],
 [
 db_found=no
 AC_MSG_CHECKING(for MySQL support)
@@ -213,7 +213,7 @@ AC_SUBST(SQL_BINDIR)
 ])
 
 
-AC_DEFUN(BA_CHECK_SQLITE_DB,
+AC_DEFUN([BA_CHECK_SQLITE_DB],
 [
 db_found=no
 AC_MSG_CHECKING(for SQLite support)
@@ -295,7 +295,7 @@ AC_SUBST(SQL_BINDIR)
   
 ])
 
-AC_DEFUN(BA_CHECK_SQLITE3_DB,
+AC_DEFUN([BA_CHECK_SQLITE3_DB],
 [
 db_found=no
 AC_MSG_CHECKING(for SQLite3 support)
@@ -379,7 +379,7 @@ AC_SUBST(SQL_BINDIR)
 
 
 
-AC_DEFUN(BA_CHECK_POSTGRESQL_DB,
+AC_DEFUN([BA_CHECK_POSTGRESQL_DB],
 [
 db_found=no
 AC_MSG_CHECKING(for PostgreSQL support)
@@ -477,7 +477,7 @@ AC_SUBST(SQL_BINDIR)
 
 
 
-AC_DEFUN(BA_CHECK_SQL_DB, 
+AC_DEFUN([BA_CHECK_SQL_DB], 
 [AC_MSG_CHECKING(Checking for various databases)
 dnl# --------------------------------------------------------------------------
 dnl# CHECKING FOR VARIOUS DATABASES (thanks to UdmSearch team)
@@ -1010,7 +1010,7 @@ AC_SUBST(ORACLE7_INCLUDE)
 ])
   
 
-AC_DEFUN(AM_CONDITIONAL,
+AC_DEFUN([AM_CONDITIONAL],
 [AC_SUBST($1_TRUE)
 AC_SUBST($1_FALSE)
 if $2; then

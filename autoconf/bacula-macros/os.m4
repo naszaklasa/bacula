@@ -1,6 +1,6 @@
 dnl Check type of signal routines (posix, 4.2bsd, 4.1bsd or v7)
 
-AC_DEFUN(SIGNAL_CHECK,
+AC_DEFUN([SIGNAL_CHECK],
  [AC_REQUIRE([AC_TYPE_SIGNAL])
   AC_MSG_CHECKING(for type of signal functions)
   AC_CACHE_VAL(bash_cv_signal_vintage,
@@ -14,18 +14,18 @@ AC_DEFUN(SIGNAL_CHECK,
     ], bash_cv_signal_vintage="posix",
     [
       AC_TRY_LINK([#include <signal.h>], [
-	  int mask = sigmask(SIGINT);
-	  sigsetmask(mask); sigblock(mask); sigpause(mask);
+          int mask = sigmask(SIGINT);
+          sigsetmask(mask); sigblock(mask); sigpause(mask);
       ], bash_cv_signal_vintage="4.2bsd",
       [
-	AC_TRY_LINK([
-	  #include <signal.h>
-	  RETSIGTYPE foo() { }], [
-		  int mask = sigmask(SIGINT);
-		  sigset(SIGINT, foo); sigrelse(SIGINT);
-		  sighold(SIGINT); sigpause(SIGINT);
+        AC_TRY_LINK([
+          #include <signal.h>
+          RETSIGTYPE foo() { }], [
+                  int mask = sigmask(SIGINT);
+                  sigset(SIGINT, foo); sigrelse(SIGINT);
+                  sighold(SIGINT); sigpause(SIGINT);
           ], bash_cv_signal_vintage="svr3", bash_cv_signal_vintage="v7"
-	)]
+        )]
       )]
     )
   ])
@@ -39,7 +39,7 @@ AC_DEFUN(SIGNAL_CHECK,
   fi
 ])
 
-AC_DEFUN(BA_CONDITIONAL,
+AC_DEFUN([BA_CONDITIONAL],
 [AC_SUBST($1_TRUE)
 AC_SUBST($1_FALSE)
 if $2; then
@@ -51,95 +51,95 @@ else
 fi])
 
 
-AC_DEFUN(BA_CHECK_OPSYS,
+AC_DEFUN([BA_CHECK_OPSYS],
 [
 AC_CYGWIN
 if test $HAVE_UNAME=yes -a x`uname -s` = xSunOS
 then
-	BA_CONDITIONAL(HAVE_SUN_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_SUN_OS)
+        BA_CONDITIONAL(HAVE_SUN_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_SUN_OS)
 else
-	BA_CONDITIONAL(HAVE_SUN_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_SUN_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xOSF1
 then
-	BA_CONDITIONAL(HAVE_OSF1_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_OSF1_OS)
+        BA_CONDITIONAL(HAVE_OSF1_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_OSF1_OS)
 else
-	BA_CONDITIONAL(HAVE_OSF1_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_OSF1_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xAIX
 then
-	BA_CONDITIONAL(HAVE_AIX_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_AIX_OS)
+        BA_CONDITIONAL(HAVE_AIX_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_AIX_OS)
 else
-	BA_CONDITIONAL(HAVE_AIX_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_AIX_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xHP-UX
 then
-	BA_CONDITIONAL(HAVE_HPUX_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_HPUX_OS)
+        BA_CONDITIONAL(HAVE_HPUX_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_HPUX_OS)
 else
-	BA_CONDITIONAL(HAVE_HPUX_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_HPUX_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xLinux
 then
-	BA_CONDITIONAL(HAVE_LINUX_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_LINUX_OS)
+        BA_CONDITIONAL(HAVE_LINUX_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_LINUX_OS)
 else
-	BA_CONDITIONAL(HAVE_LINUX_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_LINUX_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xFreeBSD
 then
-	BA_CONDITIONAL(HAVE_FREEBSD_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_FREEBSD_OS)
+        BA_CONDITIONAL(HAVE_FREEBSD_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_FREEBSD_OS)
 else
-	BA_CONDITIONAL(HAVE_FREEBSD_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_FREEBSD_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xNetBSD
 then
-	BA_CONDITIONAL(HAVE_NETBSD_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_NETBSD_OS)
+        BA_CONDITIONAL(HAVE_NETBSD_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_NETBSD_OS)
 else
-	BA_CONDITIONAL(HAVE_NETBSD_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_NETBSD_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xOpenBSD
 then
-	BA_CONDITIONAL(HAVE_OPENBSD_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_OPENBSD_OS)
+        BA_CONDITIONAL(HAVE_OPENBSD_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_OPENBSD_OS)
 else
-	BA_CONDITIONAL(HAVE_OPENBSD_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_OPENBSD_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xBSD/OS
 then
-	BA_CONDITIONAL(HAVE_BSDI_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_BSDI_OS)
+        BA_CONDITIONAL(HAVE_BSDI_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_BSDI_OS)
 else
-	BA_CONDITIONAL(HAVE_BSDI_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_BSDI_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xSGI
 then
-	BA_CONDITIONAL(HAVE_SGI_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_SGI_OS)
+        BA_CONDITIONAL(HAVE_SGI_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_SGI_OS)
 else
-	BA_CONDITIONAL(HAVE_SGI_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_SGI_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xIRIX -o x`uname -s` = xIRIX64
 then
-	BA_CONDITIONAL(HAVE_IRIX_OS, $TRUEPRG)
-	AC_DEFINE(HAVE_IRIX_OS)
+        BA_CONDITIONAL(HAVE_IRIX_OS, $TRUEPRG)
+        AC_DEFINE(HAVE_IRIX_OS)
 else
-	BA_CONDITIONAL(HAVE_IRIX_OS, $FALSEPRG)
+        BA_CONDITIONAL(HAVE_IRIX_OS, $FALSEPRG)
 fi
 
 if test $HAVE_UNAME=yes -a x`uname -s` = xDarwin
@@ -151,74 +151,74 @@ else
 fi
 ])
 
-AC_DEFUN(BA_CHECK_OPSYS_DISTNAME,
+AC_DEFUN([BA_CHECK_OPSYS_DISTNAME],
 [AC_MSG_CHECKING(for Operating System Distribution)
 if test "x$DISTNAME" != "x"
 then
         echo "distname set to $DISTNAME"
 elif test $HAVE_UNAME=yes -a x`uname -s` = xOSF1
 then
-	DISTNAME=alpha
+        DISTNAME=alpha
 elif test $HAVE_UNAME=yes -a x`uname -s` = xAIX
 then
-	DISTNAME=aix
+        DISTNAME=aix
 elif test $HAVE_UNAME=yes -a x`uname -s` = xHP-UX
 then
-	DISTNAME=hpux
+        DISTNAME=hpux
 elif test $HAVE_UNAME=yes -a x`uname -s` = xSunOS
 then
-	DISTNAME=solaris
+        DISTNAME=solaris
 elif test $HAVE_UNAME=yes -a x`uname -s` = xFreeBSD
 then
-	DISTNAME=freebsd
+        DISTNAME=freebsd
 elif test $HAVE_UNAME=yes -a x`uname -s` = xNetBSD
 then
-	DISTNAME=netbsd
+        DISTNAME=netbsd
 elif test $HAVE_UNAME=yes -a x`uname -s` = xOpenBSD
 then
-	DISTNAME=openbsd
+        DISTNAME=openbsd
 elif test $HAVE_UNAME=yes -a x`uname -s` = xIRIX
 then
-	DISTNAME=irix
+        DISTNAME=irix
 elif test $HAVE_UNAME=yes -a x`uname -s` = xBSD/OS
 then
-	DISTNAME=bsdi
+        DISTNAME=bsdi
 elif test -f /etc/SuSE-release
 then
-	DISTNAME=suse
+        DISTNAME=suse
 elif test -d /etc/SuSEconfig
 then
-	DISTNAME=suse5
+        DISTNAME=suse5
 elif test -f /etc/mandrake-release
 then
-	DISTNAME=mandrake
+        DISTNAME=mandrake
 elif test -f /etc/whitebox-release
 then
        DISTNAME=redhat
 elif test -f /etc/redhat-release
 then
-	DISTNAME=redhat
+        DISTNAME=redhat
 elif test -f /etc/gentoo-release
 then
-	DISTNAME=gentoo
+        DISTNAME=gentoo
 elif test -f /etc/debian_version
 then
-	DISTNAME=debian
+        DISTNAME=debian
 elif test -f /etc/slackware-version
 then
-	DISTNAME=slackware
+        DISTNAME=slackware
 elif test $HAVE_UNAME=yes -a x`uname -s` = xDarwin
 then
     DISTNAME=darwin
 elif test -f /etc/engarde-version
 then
-	DISTNAME=engarde
+        DISTNAME=engarde
 elif test "$CYGWIN" = yes
 then
-	DISTNAME=cygwin
-	AC_DEFINE(HAVE_CYGWIN)
+        DISTNAME=cygwin
+        AC_DEFINE(HAVE_CYGWIN)
 else
-	DISTNAME=unknown
+        DISTNAME=unknown
 fi
 AC_MSG_RESULT(done)
 ])

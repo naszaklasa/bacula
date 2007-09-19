@@ -29,7 +29,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: restoretree.h 5301 2007-08-08 00:33:08Z bartleyd2 $
+ *   Version $Id: restoretree.h 5376 2007-08-19 03:06:56Z bartleyd2 $
  *
  *  Kern Sibbald, February 2007
  */
@@ -117,7 +117,8 @@ private:
    QMultiHash<QString, QString> m_fileExceptionMulti;
    QHash<QString, int> m_versionExceptionHash;
    QHash<QString, int> m_directoryIconStateHash;
-   int m_toggleUpIndex, m_toggleDownIndex;
+   QHash<QString, int> m_directoryPathIdHash;
+   int m_toggleUpIndex, m_toggleDownIndex, m_nullFileNameId;
 };
 
 #endif /* _RESTORETREE_H_ */

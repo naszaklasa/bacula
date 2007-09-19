@@ -126,5 +126,34 @@ to the server by the other interfaces.
 Restore.  These indicate to the user the time it may take to complete any tasks
 that could take a long time period.
 
+<h2>Version Browser Performance</h2>
+
+<p>If you have used the version browser with a large database, you may have
+noticed that the performance can begin to be quite slow.  A way to improve the
+response time of the database server is to add indexes that will assist a 
+couple of the specific queries that are made.
+
+<p>For postgresql add 2 indexes with the following commands in psql:
+<br>CREATE INDEX file_filenameid_jobid ON file USING btree (filenameid,
+jobid);
+<br>CREATE INDEX file_pathid_idx ON file USING btree (pathid);
+
+<p>For mysql add 2 indexes with the following commands in mysql:
+<br>CREATE INDEX file_filenameid_jobid ON File (FilenameId, JobId);
+<br>CREATE INDEX file_pathid_idx ON File (PathId);
+
+<p>There is one way to make the first of those two indexes perform just a 
+little better.  It is to create a partial index.  First, at least one backup 
+must be in the database that has at least one directory.  Then in psql or mysql
+perform the command:
+<br>SELECT FilenameId FROM Filename WHERE name='';
+<br>Use the results of this command and replace for XXX in the following command:
+<br>CREATE INDEX file_filenameid_jobid2 ON File (JobId) WHERE FilenameId=XXX;
+<br>This index will use less disk space and will perform better.  Don't forget to
+remove the index it replaces, file_filenameid_jobid.
+
+<p>If you have sqlite and would be willing to test out the creation of these
+indexes to see if they work, please let me know the commands.
+
 </BODY>
 </HTML>

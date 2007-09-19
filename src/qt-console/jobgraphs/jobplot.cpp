@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: jobplot.cpp 5296 2007-08-07 03:00:36Z bartleyd2 $
+ *   Version $Id: jobplot.cpp 5386 2007-08-21 02:09:38Z bartleyd2 $
  *
  *  JobPlots Class
  *
@@ -117,7 +117,7 @@ void JobPlot::currentStackItem()
 }
 
 /*
- * Slot for the refrehs push button, also called from constructor.
+ * Slot for the refresh push button, also called from constructor.
  */
 void JobPlot::reGraph()
 {
@@ -220,11 +220,10 @@ void JobPlot::runQuery()
             " Job.JobBytes AS Bytes,"
             " Job.JobId AS JobId"
             " FROM Job"
-            " LEFT OUTER JOIN Client ON (Client.ClientId=Job.ClientId)"
-            " LEFT OUTER JOIN FileSet ON (FileSet.FileSetId=Job.FileSetId)"
-            " LEFT OUTER JOIN Status ON (Job.JobStatus=Status.JobStatus)"
-            " LEFT OUTER JOIN JobMedia ON (JobMedia.JobId=Job.JobId)"
-            " LEFT OUTER JOIN Media ON (JobMedia.MediaId=Media.MediaId)";
+            " JOIN Client ON (Client.ClientId=Job.ClientId)"
+            " JOIN Status ON (Job.JobStatus=Status.JobStatus)"
+            " LEFT OUTER JOIN FileSet ON (FileSet.FileSetId=Job.FileSetId)";
+
    QStringList conditions;
    int jobIndex = controls->jobComboBox->currentIndex();
    if ((jobIndex != -1) && (controls->jobComboBox->itemText(jobIndex) != "Any"))
@@ -233,8 +232,11 @@ void JobPlot::runQuery()
    if ((clientIndex != -1) && (controls->clientComboBox->itemText(clientIndex) != "Any"))
       conditions.append("Client.Name='" + controls->clientComboBox->itemText(clientIndex) + "'");
    int volumeIndex = controls->volumeComboBox->currentIndex();
-   if ((volumeIndex != -1) && (controls->volumeComboBox->itemText(volumeIndex) != "Any"))
+   if ((volumeIndex != -1) && (controls->volumeComboBox->itemText(volumeIndex) != "Any")) {
+      query += " LEFT OUTER JOIN JobMedia ON (JobMedia.JobId=Job.JobId)"
+	       " LEFT OUTER JOIN Media ON (JobMedia.MediaId=Media.MediaId)";
       conditions.append("Media.VolumeName='" + controls->volumeComboBox->itemText(volumeIndex) + "'");
+   }
    int fileSetIndex = controls->fileSetComboBox->currentIndex();
    if ((fileSetIndex != -1) && (controls->fileSetComboBox->itemText(fileSetIndex) != "Any"))
       conditions.append("FileSet.FileSet='" + controls->fileSetComboBox->itemText(fileSetIndex) + "'");

@@ -29,7 +29,7 @@
  * General header file configurations that apply to
  * all daemons.  System dependent stuff goes here.
  *
- *   Version $Id: baconfig.h 5077 2007-06-24 17:27:12Z kerns $
+ *   Version $Id: baconfig.h 5415 2007-08-30 07:58:28Z kerns $
  */
 
 
@@ -631,9 +631,6 @@ extern int thr_setconcurrency(int);
 extern "C" int getdomainname(char *name, int len);
 #endif
 
-#ifdef HAVE_OSF1_OS
-extern "C" int mknod ( const char *path, int mode, dev_t device );
-#endif
 
 
 #if defined(HAVE_WIN32)
@@ -673,9 +670,9 @@ extern "C" int setdomainname(char *name, int namelen);
 
 
 #ifdef HAVE_OSF1_OS
-#undef HAVE_CHFLAGS  /* chflags is incorrectly detected */
 extern "C" int fchdir(int filedes);
 extern "C" long gethostid(void);
+extern "C" int mknod ( const char *path, int mode, dev_t device );
 #endif
 
 

@@ -1,27 +1,7 @@
 /*
- * mtops.cpp - Emulate the Linux st (scsi tape) driver on Microsoft Windows.
- *
- * Author: Robert Nelson, May, 2006 <robertn@the-nelsons.org>
- *
- * Version $Id: mtops.cpp 4992 2007-06-07 14:46:43Z kerns $
- *
- * This file was contributed to the Bacula project by Robert Nelson.
- *
- * Robert Nelson has been granted a perpetual, worldwide,
- * non-exclusive, no-charge, royalty-free, irrevocable copyright
- * license to reproduce, prepare derivative works of, publicly
- * display, publicly perform, sublicense, and distribute the original
- * work contributed by Robert Nelson to the Bacula project in source 
- * or object form.
- *
- * If you wish to license contributions from Robert Nelson
- * under an alternate open source license please contact
- * Robert Nelson <robertn@the-nelsons.org>.
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -45,6 +25,26 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * mtops.cpp - Emulate the Linux st (scsi tape) driver on Microsoft Windows.
+ *
+ * Author: Robert Nelson, May, 2006 <robertn@the-nelsons.org>
+ *
+ * Version $Id: mtops.cpp 5358 2007-08-15 16:54:21Z kerns $
+ *
+ * This file was contributed to the Bacula project by Robert Nelson.
+ *
+ * Robert Nelson has been granted a perpetual, worldwide,
+ * non-exclusive, no-charge, royalty-free, irrevocable copyright
+ * license to reproduce, prepare derivative works of, publicly
+ * display, publicly perform, sublicense, and distribute the original
+ * work contributed by Robert Nelson to the Bacula project in source 
+ * or object form.
+ *
+ * If you wish to license contributions from Robert Nelson
+ * under an alternate open source license please contact
+ * Robert Nelson <robertn@the-nelsons.org>.
+ */
 
 #include <stdarg.h>
 #include <stddef.h>

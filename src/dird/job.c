@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c 5186 2007-07-16 12:54:42Z kerns $
+ *    Version $Id: job.c 5552 2007-09-14 09:49:06Z kerns $
  */
 
 #include "bacula.h"
@@ -427,6 +427,46 @@ bool cancel_job(UAContext *ua, JCR *jcr)
    return true;
 }
 
+void cancel_storage_daemon_job(JCR *jcr)
+{
+   UAContext *ua = new_ua_context(jcr);
+   JCR *control_jcr = new_control_jcr("*JobCancel*", JT_SYSTEM);
+   BSOCK *sd;
+
+   ua->jcr = control_jcr;
+   if (jcr->store_bsock) {
+      if (!ua->jcr->wstorage) {
+         if (jcr->rstorage) {
+            copy_wstorage(ua->jcr, jcr->rstorage, _("Job resource")); 
+         } else {
+            copy_wstorage(ua->jcr, jcr->wstorage, _("Job resource")); 
+         }
+      } else {
+         USTORE store;
+         if (jcr->rstorage) {
+            store.store = jcr->rstore;
+         } else {
+            store.store = jcr->wstore;
+         }
+         set_wstorage(ua->jcr, &store);
+      }
+
+      if (!connect_to_storage_daemon(ua->jcr, 10, SDConnectTimeout, 1)) {
+         goto bail_out;
+      }
+      Dmsg0(200, "Connected to storage daemon\n");
+      sd = ua->jcr->store_bsock;
+      sd->fsend("cancel Job=%s\n", jcr->Job);
+      while (sd->recv() >= 0) {
+      }
+      sd->signal(BNET_TERMINATE);
+      sd->close();
+      ua->jcr->store_bsock = NULL;
+   }
+bail_out:
+   free_jcr(control_jcr);
+   free_ua_context(ua);
+}
 
 static void job_monitor_destructor(watchdog_t *self)
 {

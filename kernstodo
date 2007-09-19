@@ -120,6 +120,19 @@ Priority:
    
 
 Projects:
+- Pool enhancements
+  - Access Mode = Read-Only, Read-Write, Unavailable, Destroyed, Offsite
+  - Pool Type = Copy
+  - Maximum number of scratch volumes
+  - Maximum File size
+  - Next Pool (already have)
+  - Reclamation threshold
+  - Reclamation Pool
+  - Reuse delay (after all files purged from volume before it can be used)
+  - Copy Pool = xx, yyy (or multiple lines).
+  - Catalog = xxx
+  - Allow pool selection during restore.
+
 - Average tape size from Eric
     SELECT COALESCE(media_avg_size.volavg,0) * count(Media.MediaId) AS volmax,                                                              GROUP BY Media.MediaType, Media.PoolId, media_avg_size.volavg
            count(Media.MediaId)  AS volnum,

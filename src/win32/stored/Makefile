@@ -10,6 +10,7 @@
 include ../Makefile.inc
 
 INCLUDES = \
+	-I. \
 	-I../../stored \
 	$(INCLUDE_DDK) \
 	$(INCLUDE_PTHREADS) \
@@ -19,12 +20,13 @@ INCLUDES = \
 	$(INCLUDE_ICONS)
 
 DEFINES = \
+	-DHAVE_TRAY_MONITOR \
 	-DUSING_DLL \
 	-DWINVER=0x500 \
 	$(HAVES)
 
-vpath %.c ../../stored baculasd
-vpath %.cpp ../../stored baculasd
+vpath %.c ../../stored ../libwin32
+vpath %.cpp ../../stored ../libwin32
 
 ##########################################################################
 
@@ -72,12 +74,12 @@ BEXTRACT_OBJS = \
 	$(OBJDIR)/pythonsd.o
 
 OBJS_WIN = \
-	$(OBJDIR)/winabout.o \
-	$(OBJDIR)/winservice.o \
-	$(OBJDIR)/winstat.o \
-	$(OBJDIR)/wintray.o \
-	$(OBJDIR)/winmain.o \
-	$(OBJDIR)/winres.res
+	$(OBJDIR)/aboutDialog.o \
+	$(OBJDIR)/service.o \
+	$(OBJDIR)/statusDialog.o \
+	$(OBJDIR)/trayMonitor.o \
+	$(OBJDIR)/main.o \
+	$(OBJDIR)/bacula.res
 
 ALL_OBJS = \
 	$(COMMON_OBJS) \
@@ -91,7 +93,10 @@ ALL_OBJS = \
 
 LIBS_STORED = \
 	$(LIBS_PTHREADS) \
+	-lole32 \
+	-loleaut32 \
 	-lwsock32 \
+	-luuid \
 	-lcomctl32
 
 ######################################################################

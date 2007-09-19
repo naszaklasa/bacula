@@ -1,0 +1,117 @@
+Index: fd_cmds.c
+===================================================================
+--- fd_cmds.c	(.../tags/Release-2.2.2/bacula/src/stored)	(revision 5508)
++++ fd_cmds.c	(.../branches/Branch-2.2/bacula/src/stored)	(revision 5508)
+@@ -1,18 +1,4 @@
+ /*
+- * This file handles commands from the File daemon.
+- *
+- *  Kern Sibbald, MM
+- *
+- * We get here because the Director has initiated a Job with
+- *  the Storage daemon, then done the same with the File daemon,
+- *  then when the Storage daemon receives a proper connection from
+- *  the File daemon, control is passed here to handle the
+- *  subsequent File daemon commands.
+- *
+- *   Version $Id$
+- *
+- */
+-/*
+    Bacula® - The Network Backup Solution
+ 
+    Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+@@ -39,6 +25,20 @@
+    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+    Switzerland, email:ftf@fsfeurope.org.
+ */
++/*
++ * This file handles commands from the File daemon.
++ *
++ *  Kern Sibbald, MM
++ *
++ * We get here because the Director has initiated a Job with
++ *  the Storage daemon, then done the same with the File daemon,
++ *  then when the Storage daemon receives a proper connection from
++ *  the File daemon, control is passed here to handle the
++ *  subsequent File daemon commands.
++ *
++ *   Version $Id$
++ *
++ */
+ 
+ #include "bacula.h"
+ #include "stored.h"
+Index: bscan.c
+===================================================================
+--- bscan.c	(.../tags/Release-2.2.2/bacula/src/stored)	(revision 5508)
++++ bscan.c	(.../branches/Branch-2.2/bacula/src/stored)	(revision 5508)
+@@ -326,6 +326,7 @@
+       mdcr->StartFile = dcr->StartFile;
+       mdcr->EndBlock = dcr->EndBlock;
+       mdcr->EndFile = dcr->EndFile;
++      mdcr->VolMediaId = dcr->VolMediaId;
+       mjcr->read_dcr->VolLastIndex = dcr->VolLastIndex;
+       if (!create_jobmedia_record(db, mjcr)) {
+          Pmsg2(000, _("Could not create JobMedia record for Volume=%s Job=%s\n"),
+@@ -476,6 +477,7 @@
+             dcr->VolFirstIndex = dcr->FileIndex = 0;
+             dcr->StartBlock = dcr->EndBlock = 0;
+             dcr->StartFile = dcr->EndFile = 0;
++            dcr->VolMediaId = 0;
+          }
+ 
+          Pmsg1(000, _("VOL_LABEL: OK for Volume: %s\n"), mr.VolumeName);
+@@ -1177,6 +1179,7 @@
+ 
+    dcr->EndBlock = dev->EndBlock;
+    dcr->EndFile  = dev->EndFile;
++   dcr->VolMediaId = dev->VolCatInfo.VolMediaId;
+ 
+    memset(&jmr, 0, sizeof(jmr));
+    jmr.JobId = mjcr->JobId;
+Index: askdir.c
+===================================================================
+--- askdir.c	(.../tags/Release-2.2.2/bacula/src/stored)	(revision 5508)
++++ askdir.c	(.../branches/Branch-2.2/bacula/src/stored)	(revision 5508)
+@@ -398,7 +398,7 @@
+       dcr->StartFile, dcr->EndFile,
+       dcr->StartBlock, dcr->EndBlock, 
+       dcr->Copy, dcr->Stripe, 
+-      edit_uint64(dcr->dev->VolCatInfo.VolMediaId, ed1));
++      edit_uint64(dcr->VolMediaId, ed1));
+     Dmsg1(100, ">dird: %s", dir->msg);
+    if (bnet_recv(dir) <= 0) {
+       Dmsg0(190, "create_jobmedia error bnet_recv\n");
+Index: dev.h
+===================================================================
+--- dev.h	(.../tags/Release-2.2.2/bacula/src/stored)	(revision 5508)
++++ dev.h	(.../branches/Branch-2.2/bacula/src/stored)	(revision 5508)
+@@ -447,6 +447,7 @@
+    uint32_t StartFile;                /* Start write file */
+    uint32_t StartBlock;               /* Start write block */
+    uint32_t EndBlock;                 /* Ending block written */
++   int64_t  VolMediaId;               /* MediaId */
+    int64_t job_spool_size;            /* Current job spool size */
+    int64_t max_job_spool_size;        /* Max job spool size */
+    char VolumeName[MAX_NAME_LENGTH];  /* Volume name */
+Index: block.c
+===================================================================
+--- block.c	(.../tags/Release-2.2.2/bacula/src/stored)	(revision 5508)
++++ block.c	(.../branches/Branch-2.2/bacula/src/stored)	(revision 5508)
+@@ -611,6 +611,7 @@
+       dev->block_num = dcr->EndBlock;
+       dev->file = dcr->EndFile;
+    }
++   dcr->VolMediaId = dev->VolCatInfo.VolMediaId;
+    if (dcr->VolFirstIndex == 0 && block->FirstIndex > 0) {
+       dcr->VolFirstIndex = block->FirstIndex;
+    }
+@@ -1098,6 +1099,7 @@
+       dev->block_num = dcr->EndBlock;
+       dev->file = dcr->EndFile;
+    }
++   dcr->VolMediaId = dev->VolCatInfo.VolMediaId;
+    dev->file_addr += block->read_len;
+    dev->file_size += block->read_len;
+ 

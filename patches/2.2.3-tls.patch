@@ -1,0 +1,43 @@
+
+ This patch was supplied by Landon Fuller and corrects a bug that
+ caused high CPU usage when connecting from bconsole to the Director.
+ This fixes bug #944.
+
+ Apply this patch to version 2.2.3 (it should work with any 2.2.x 
+ version with:
+
+  cd <bacula-source>
+  patch -p0 <2.2.3-tls.patch
+  ./configure (your options)
+  make
+  ...
+  make install
+
+Index: src/lib/tls.c
+===================================================================
+--- src/lib/tls.c	(revision 5507)
++++ src/lib/tls.c	(working copy)
+@@ -622,13 +622,21 @@
+          break;
+ 
+       case SSL_ERROR_WANT_READ:
++         /* If we timeout on a select, this will be unset */
++         FD_SET((unsigned)bsock->m_fd, &fdset);
++         tv.tv_sec = 10;
++         tv.tv_usec = 0;
++         /* Block until we can read */
++         select(fdmax, &fdset, NULL, NULL, &tv);
++         break;
++
+       case SSL_ERROR_WANT_WRITE:
+          /* If we timeout on a select, this will be unset */
+          FD_SET((unsigned)bsock->m_fd, &fdset);
+          tv.tv_sec = 10;
+          tv.tv_usec = 0;
+-         /* Block until we can read or write */
+-         select(fdmax, NULL, &fdset, &fdset, &tv);
++         /* Block until we can write */
++         select(fdmax, NULL, &fdset, NULL, &tv);
+          break;
+ 
+       case SSL_ERROR_ZERO_RETURN:

@@ -8,6 +8,7 @@
 include ../Makefile.inc
 
 INCLUDES = \
+	-I. \
 	$(INCLUDE_PTHREADS) \
 	$(INCLUDE_BACULA) \
 	$(INCLUDE_ZLIB) \
@@ -20,8 +21,8 @@ DEFINES = \
 	-DWINVER=0x500 \
 	$(HAVES)
 
-vpath %.c ../../dird
-vpath %.cpp ../../dird
+vpath %.c ../../dird ../libwin32
+vpath %.cpp ../../dird ../libwin32
 
 ##########################################################################
 
@@ -67,16 +68,20 @@ DIRD_OBJS = \
 	$(OBJDIR)/ua_tree.o \
 	$(OBJDIR)/ua_update.o \
 	$(OBJDIR)/verify.o \
-	$(OBJDIR)/winservice.o \
-	$(OBJDIR)/winmain.o \
-	$(OBJDIR)/winres.res
+	$(OBJDIR)/service.o \
+	$(OBJDIR)/main.o \
+	$(OBJDIR)/bacula.res
 
 ALL_OBJS = $(DIRD_OBJS)
 
 
 DIRD_LIBS = \
 	$(LIBS_PTHREADS) \
-	-lwsock32
+	-lole32 \
+	-loleaut32 \
+	-lwsock32 \
+	-luuid \
+	-lcomctl32
 
 ######################################################################
 

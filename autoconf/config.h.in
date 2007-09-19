@@ -396,6 +396,9 @@
 /* Define to 1 if you have the <grp.h> header file. */
 #undef HAVE_GRP_H
 
+/* Set if you have GTK 4.2 or greater loaded */
+#undef HAVE_GTK_2_4
+
 /* Define if you have the iconv() function. */
 #undef HAVE_ICONV
 
@@ -447,6 +450,9 @@
 
 /* Define to 1 if you have the `util' library (-lutil). */
 #undef HAVE_LIBUTIL
+
+/* Set to enable libwraper support */
+#undef HAVE_LIBWRAP
 
 /* Define to 1 if you have the `xnet' library (-lxnet). */
 #undef HAVE_LIBXNET
@@ -519,6 +525,9 @@
 
 /* Define to 1 if you have the `readdir_r' function. */
 #undef HAVE_READDIR_R
+
+/* Set to enable readline support */
+#undef HAVE_READLINE
 
 /* Define to 1 if you have the <regex.h> header file. */
 #undef HAVE_REGEX_H
@@ -720,8 +729,14 @@
 /* Define if you have the 'unsigned long long' type. */
 #undef HAVE_UNSIGNED_LONG_LONG
 
+/* Set if utime.h exists */
+#undef HAVE_UTIME_H
+
 /* Define to 1 if you have the <varargs.h> header file. */
 #undef HAVE_VARARGS_H
+
+/* Set if va_copy exists */
+#undef HAVE_VA_COPY
 
 /* Define to 1 if you have the `vfprintf' function. */
 #undef HAVE_VFPRINTF
@@ -818,6 +833,9 @@
 /* Define as the maximum value of type 'size_t', if the system doesn't define
    it. */
 #undef SIZE_MAX
+
+/* Set if you want Smartalloc enabled */
+#undef SMARTALLOC
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be

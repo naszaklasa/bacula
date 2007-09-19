@@ -61,6 +61,7 @@ TODO
 bweb :
 
  - Ajouter la liste des fichiers (quand il n'y en a pas trop)
+ - Ajouter la liste des medias qui vont expirer ?
  - Ajouter un mode qui compte le nombre de fichier sous bfileview
  - Integrer brestore en mode javascript
    o ajouter une api 
@@ -75,6 +76,7 @@ bacula :
    o pb inclusion (distante, locale)
    o pb exclusion (distante, locale)
    o pb execution de commande
+ - Utiliser PQescapeStringConn a la place de PQescapeString
  - Utiliser la lib pcre
  - Rendre les scripts bacula-ctl-xxx LSB
  x Pouvoir utiliser les uid numeriques dans le backup des acl

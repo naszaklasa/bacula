@@ -3,6 +3,7 @@
 # Using MinGW cross-compiler on GNU/Linux
 #  
 #  Written for Bacula by Howard Thomson, April 2006
+#    for building using cross-complilation.
 # 
 
 include ../Makefile.inc

@@ -10,16 +10,31 @@ To edit .po files, I recommend poedit, downloadable at http://www.poedit.org/ .
 
 To refresh bacula.pot and *.po, when some strings have been added, modified or
 removed from the sources files, run:
+
 # make update-po
 
 ---
 
 To refresh Bacula source files list (POTFILES.in), when a source file is
 added or removed from the repository, run:
+
 # make gen-potfiles && make update-po
-Note, the make gen-potfiles should not be done very often, in fact,
-it is probably better to edit POTFILES.in manually to prevent unwanted
-files from getting in the list.
+
+Note, the gen-potfiles pulls in all files found under the top
+directory, so it is much better to do something like:
+
+cd bacula
+rm -rf x
+svn checkout https://bacula.svn.sourceforge.net/svnroot/bacula x
+cd x
+./configure <options>
+cd po
+make gen-potfiles
+cp POTFILES.in <real-source-tree/po>
+cd ..
+./configure <options>
+
+This avoids picking up any files that are not in the SVN.
 
 ---
 
