@@ -20,7 +20,7 @@ DEPENDPATH  += .
 INCLUDEPATH += .. . ./console ./restore ./select
 INCLUDEPATH += @QWT_INC@ 
 LIBS        += -L../lib -lbac @OPENSSL_LIBS@
-LIBS        += @QWT_LDFLAGS@ -lqwt
+LIBS        += @QWT_LDFLAGS@ -lqwt-qt4
 
 RESOURCES    = main.qrc
 MOC_DIR      = moc

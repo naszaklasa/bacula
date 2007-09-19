@@ -45,9 +45,9 @@ CREATE INDEX file_fp_idx on file (filenameid, pathid);
 -- Possibly add one or more of the following indexes
 --  if your Verifies are too slow.
 --
--- CREATE INDEX file_pathid_idx on file(pathid);
--- CREATE INDEX file_filenameid_idx on file(filenameid);
--- CREATE INDEX file_jpfid_idx on file (jobid, pathid, filenameid);
+CREATE INDEX file_pathid_idx on file(pathid);
+CREATE INDEX file_filenameid_idx on file(filenameid);
+CREATE INDEX file_jpfid_idx on file (jobid, pathid, filenameid);
 
 CREATE TABLE job
 (
