@@ -1,3 +1,12 @@
+bacula (2.2.4-1) unstable; urgency=high
+
+  * New upstream version.  Closes: #441849, #441855, #441878, #441990.
+  * Documented lack of SSL/TLS in NEWS.Debian and README.Debian.
+    Closes: #440034.
+  * Enhance traymonitor description in control.  Closes: #442117.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 19 Sep 2007 09:17:02 -0500
+
 bacula (2.2.0-1) unstable; urgency=low
 
   * Update debian/copyright from LICENSE.
