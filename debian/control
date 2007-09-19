@@ -8,7 +8,7 @@ Build-Depends: autotools-dev, debhelper (>= 4.2), po-debconf (>= 0.8.2),
  libwrap0-dev, python-dev, 
  libgnome2-dev, libwxgtk2.6-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
  libx11-dev, mtx, bc, libxt-dev, dpkg-dev (>= 1.13.19), libqt4-dev, libqwt5-qt4-dev
-Build-Conflicts: python2.2-dev, python2.3
+Build-Conflicts: python2.2-dev, python2.3, qt3-dev-tools
 Standards-Version: 3.7.2
 
 Package: bacula
