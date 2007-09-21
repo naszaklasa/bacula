@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: bacula\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-02-23 04:30+0100\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2007-08-30 22:42+0100\n"
 "PO-Revision-Date: 2007-02-24 18:33+0100\n"
 "Last-Translator: Jacobo Tarrio <jtarrio@debian.org>\n"
 "Language-Team: Galician <proxecto@trasno.net>\n"
@@ -17,40 +17,48 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
 msgid "Create tables for Bacula's Catalog?"
 msgstr "¿Crear táboas para o Catálogo de Bacula?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+#, fuzzy
 msgid ""
 "The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula."
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
 msgstr ""
 "Fallan as táboas necesarias para o catálogo de Bacula. Isto é normal nunha "
 "instalación nova de Bacula."
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:1001
-msgid ""
-"These tables are needed for the Bacula director to function. Should these "
-"tables be automatically set up for you?"
-msgstr ""
-"Esas táboas son necesarias para que funcione o director de Bacula. ¿Quere "
-"que se configuren automaticamente esas taboas?"
-
-#. Type: boolean
-#. Description
 #: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid "Remove Catalog on purge?"
 msgstr "¿Eliminar o Catálogo ao purgar?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"Do you want the Bacula Catalog to be removed if you purge the Bacula "
-"director?"
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
 msgstr ""
-"¿Quere que se elimine o Catálogo de Bácula ao purgar o director de Bacula?"
+
+#~ msgid ""
+#~ "These tables are needed for the Bacula director to function. Should these "
+#~ "tables be automatically set up for you?"
+#~ msgstr ""
+#~ "Esas táboas son necesarias para que funcione o director de Bacula. ¿Quere "
+#~ "que se configuren automaticamente esas taboas?"
+
+#~ msgid ""
+#~ "Do you want the Bacula Catalog to be removed if you purge the Bacula "
+#~ "director?"
+#~ msgstr ""
+#~ "¿Quere que se elimine o Catálogo de Bácula ao purgar o director de Bacula?"

@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: bacula 1.38.11-7\n"
-"Report-Msgid-Bugs-To: bacula@bugs.debian.org\n"
-"POT-Creation-Date: 2006-10-29 04:30+0100\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2007-08-30 22:42+0100\n"
 "PO-Revision-Date: 2007-01-11 20:55+0100\n"
 "Last-Translator: Helge Kreutzmann <debian@helgefjell.de>\n"
 "Language-Team: German <debian-l10n-german@lists.debian.org>\n"
@@ -18,44 +18,52 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
 msgid "Create tables for Bacula's Catalog?"
 msgstr "Tabellen für Baculas Katalog erzeugen?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+#, fuzzy
 msgid ""
 "The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula."
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
 msgstr ""
 "Die für Baculas Katalog benötigten Tabellen fehlen. Dies ist bei einer "
 "frischen Installation von Bacula normal."
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:1001
-msgid ""
-"These tables are needed for the Bacula director to function. Should these "
-"tables be automatically set up for you?"
-msgstr ""
-"Diese Tabellen werden benötigt, damit Baculas Director funktioniert. Sollen "
-"diese Tabellen automatisch für Sie eingerichtet werden?"
-
-#. Type: boolean
-#. Description
 #: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid "Remove Catalog on purge?"
 msgstr "Katalog beim vollständigen Entfernen löschen?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"Do you want the Bacula Catalog to be removed if you purge the Bacula "
-"director?"
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
 msgstr ""
-"Soll Baculas Katalog entfernt werden, falls Sie Baculas Director vollständig "
-"löschen?"
+
+#~ msgid ""
+#~ "These tables are needed for the Bacula director to function. Should these "
+#~ "tables be automatically set up for you?"
+#~ msgstr ""
+#~ "Diese Tabellen werden benötigt, damit Baculas Director funktioniert. "
+#~ "Sollen diese Tabellen automatisch für Sie eingerichtet werden?"
+
+#~ msgid ""
+#~ "Do you want the Bacula Catalog to be removed if you purge the Bacula "
+#~ "director?"
+#~ msgstr ""
+#~ "Soll Baculas Katalog entfernt werden, falls Sie Baculas Director "
+#~ "vollständig löschen?"
 
 #~ msgid ""
 #~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
