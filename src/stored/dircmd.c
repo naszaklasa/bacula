@@ -43,7 +43,7 @@
  *
  *     Kern Sibbald, May MMI
  *
- *   Version $Id: dircmd.c 5282 2007-08-04 16:46:32Z kerns $
+ *   Version $Id: dircmd.c 5552 2007-09-14 09:49:06Z kerns $
  *
  */
 
@@ -148,7 +148,7 @@ void *handle_connection_request(void *arg)
    int i;
    bool found, quit;
    int bnet_stat = 0;
-   char name[MAX_NAME_LENGTH];
+   char name[500];
 
    if (bs->recv() <= 0) {
       Emsg0(M_ERROR, 0, _("Connection request failed.\n"));
@@ -159,7 +159,7 @@ void *handle_connection_request(void *arg)
    /*
     * Do a sanity check on the message received
     */
-   if (bs->msglen < 25 || bs->msglen > (int)sizeof(name)-25) {
+   if (bs->msglen < 25 || bs->msglen > (int)sizeof(name)) {
       Emsg1(M_ERROR, 0, _("Invalid connection. Len=%d\n"), bs->msglen);
       bnet_close(bs);
       return NULL;
@@ -294,13 +294,11 @@ static bool cancel_cmd(JCR *cjcr)
       if (!(jcr=get_jcr_by_full_name(Job))) {
          bnet_fsend(dir, _("3904 Job %s not found.\n"), Job);
       } else {
-         jcr->lock();
          oldStatus = jcr->JobStatus;
          set_jcr_job_status(jcr, JS_Canceled);
          if (!jcr->authenticated && oldStatus == JS_WaitFD) {
             pthread_cond_signal(&jcr->job_start_wait); /* wake waiting thread */
          }
-         jcr->unlock();
          if (jcr->file_bsock) {
             bnet_sig(jcr->file_bsock, BNET_TERMINATE);
          } else {

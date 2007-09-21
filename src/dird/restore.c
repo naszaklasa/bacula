@@ -42,7 +42,7 @@
  *       to do the restore.
  *     Update the DB according to what files where restored????
  *
- *   Version $Id: restore.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: restore.c 5552 2007-09-14 09:49:06Z kerns $
  */
 
 
@@ -245,6 +245,10 @@ void restore_cleanup(JCR *jcr, int TermCode)
       unlink(jcr->RestoreBootstrap);
       jcr->unlink_bsr = false;
    }
+
+   if (job_canceled(jcr)) {
+      cancel_storage_daemon_job(jcr);
+   }  
 
    switch (TermCode) {
    case JS_Terminated:

@@ -1,0 +1,28 @@
+  This patch corrects a bug where the last volume of a migration 
+  job is incorrectly found producing an error.  This fixes bug #936.
+  Apply the patch to 2.2.3 (and possibly earlier 2.2.x versions) with:
+
+  cd <bacula-source>
+  patch -p0 <2.2.3-migrate-vol.patch
+  ./configure (your options)
+  make
+  ...
+  make install
+
+Index: src/dird/migrate.c
+===================================================================
+--- src/dird/migrate.c	(revision 5507)
++++ src/dird/migrate.c	(working copy)
+@@ -1098,8 +1098,10 @@
+       if (mig_jcr->VolumeName[0]) {
+          /* Find last volume name. Multiple vols are separated by | */
+          char *p = strrchr(mig_jcr->VolumeName, '|');
+-         if (!p) {
+-            p = mig_jcr->VolumeName;
++         if (p) {
++            p++;                         /* skip | */
++         } else {
++            p = mig_jcr->VolumeName;     /* no |, take full name */
+          }
+          bstrncpy(mr.VolumeName, p, sizeof(mr.VolumeName));
+          if (!db_get_media_record(jcr, jcr->db, &mr)) {

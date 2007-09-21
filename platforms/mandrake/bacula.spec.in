@@ -109,6 +109,9 @@ Packager: %{_packager}
 %define rhel4 0
 %{?build_rhel4:%define rhel4 1}
 %{?build_rhel4:%define fc3 1}
+%define rhel5 0
+%{?build_rhel5:%define rhel5 1}
+%{?build_rhel5:%define fc6 1}
 # CentOS build
 %define centos3 0
 %{?build_centos3:%define centos3 1}
@@ -116,6 +119,9 @@ Packager: %{_packager}
 %define centos4 0
 %{?build_centos4:%define centos4 1}
 %{?build_centos4:%define fc3 1}
+%define centos5 0
+%{?build_centos5:%define centos5 1}
+%{?build_centos5:%define fc6 1}
 # SL build
 %define sl3 0
 %{?build_sl3:%define sl3 1}
@@ -123,6 +129,9 @@ Packager: %{_packager}
 %define sl4 0
 %{?build_sl4:%define sl4 1}
 %{?build_sl4:%define fc3 1}
+%define sl5 0
+%{?build_sl5:%define sl5 1}
+%{?build_sl5:%define fc6 1}
 # SuSE build
 %define su9 0
 %{?build_su9:%define su9 1}
@@ -187,16 +196,16 @@ exit 1
 %{?build_x86_64:%define x86_64 1}
 
 # check what distribution we are
-%if %{rh7} || %{rh8} || %{rh9} || %{rhel3} || %{rhel4}
+%if %{rh7} || %{rh8} || %{rh9} || %{rhel3} || %{rhel4} || %{rhel5}
 %define _dist %(grep Red /etc/redhat-release)
 %endif
 %if %{fc1} || %{fc4} || %{fc5} || %{fc6} || %{fc7}
 %define _dist %(grep Fedora /etc/redhat-release)
 %endif
-%if %{centos4} || %{centos3}
+%if %{centos5} || %{centos4} || %{centos3}
 %define _dist %(grep CentOS /etc/redhat-release)
 %endif
-%if %{sl4} || %{sl3}
+%if %{sl5} ||%{sl4} || %{sl3}
 %define _dist %(grep 'Scientific Linux' /etc/redhat-release)
 %endif
 %if %{fc3} && ! %{rhel4} && ! %{centos4} && ! %{sl4}
@@ -215,9 +224,11 @@ Distribution: %{_dist}
 
 # Should we build gconsole, possible only if gtk= >= 2.4 available.
 # leaving all the BuildRequires and Requires in place below for now.
+# su10, fc3 and fc4 now nobuild, tray monitor fails to build as of 2.2.1 
+# release as it needs 2.10
 
 %define gconsole 1
-%if %{rh7} || %{rh8} || %{rh9} || %{wb3} || %{fc1} || %{su9}
+%if %{rh7} || %{rh8} || %{rh9} || %{wb3} || %{fc1} || %{fc3} || %{fc4} || %{su9} || %{su10}
 %define gconsole 0
 %endif
 %if %{mdk} && ! %{mdv}
@@ -1144,6 +1155,9 @@ make
 %endif
 %if %{client_only}
 	--enable-client-only \
+%if %{rh7} || %{rh8} || %{rh9} || %{fc1} || %{fc3} || %{wb3} 
+	--disable-batch-insert \
+%endif
 %endif
 	--mandir=%{_mandir} \
         --with-subsys-dir=/var/lock/subsys \
@@ -2007,6 +2021,15 @@ fi
 %endif
 
 %changelog
+* Fri Sep 14 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 2.2.4 release
+- turn off gconsole build for fc3, tray monitor fails to build
+* Sat Sep 08 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add --disable-batch-insert for older platforms
+- add build targets for rhel5 and clones
+* Mon Sep 03 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 2.2.1 release
+- turn off gconsole build for su10 & fc4, tray monitor fails to build
 * Sat Jul 14 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - 2.1.26 add make of qwt in depkgs for bat
 * Sat Jun 02 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>

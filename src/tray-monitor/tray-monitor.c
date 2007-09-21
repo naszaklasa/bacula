@@ -31,14 +31,12 @@
  *
  *     Nicolas Boichat, August MMIV
  *
- *     Version $Id: tray-monitor.c 4992 2007-06-07 14:46:43Z kerns $
+ *     Version $Id: tray-monitor.c 5359 2007-08-16 08:44:39Z kerns $
  */
 
 
 #include "bacula.h"
 #include "tray-monitor.h"
-
-#include "eggstatusicon.h"
 
 #include "generic.xpm"
 
@@ -93,7 +91,7 @@ static void DaemonChanged(GtkWidget *widget, monitoritem* data);
 static gboolean delete_event(GtkWidget *widget, GdkEvent  *event, gpointer   data);
 
 static guint timerTag;
-static EggStatusIcon *mTrayIcon;
+static GtkStatusIcon *mTrayIcon;
 static GtkWidget *mTrayMenu;
 static GtkWidget *window;
 static GtkWidget *textview;
@@ -121,7 +119,8 @@ PROG_COPYRIGHT
 }
 
 static GtkWidget *new_image_button(const gchar *stock_id,
-                                   const gchar *label_text) {
+                                   const gchar *label_text)
+{
     GtkWidget *button;
     GtkWidget *box;
     GtkWidget *label;
@@ -317,8 +316,9 @@ int main(int argc, char *argv[])
    }
 
    GdkPixbuf* pixbuf = gdk_pixbuf_new_from_xpm_data(generateXPM(warn, warn));
-   // This should be ideally replaced by a completely libpr0n-based icon rendering.
-   mTrayIcon = egg_status_icon_new_from_pixbuf(pixbuf);
+
+   mTrayIcon = gtk_status_icon_new_from_pixbuf(pixbuf);
+   gtk_status_icon_set_tooltip(mTrayIcon, _("Bacula daemon status monitor"));
    g_signal_connect(G_OBJECT(mTrayIcon), "activate", G_CALLBACK(TrayIconActivate), NULL);
    g_signal_connect(G_OBJECT(mTrayIcon), "popup-menu", G_CALLBACK(TrayIconPopupMenu), NULL);
    g_object_unref(G_OBJECT(pixbuf));
@@ -341,7 +341,7 @@ int main(int argc, char *argv[])
 
    timerTag = g_timeout_add( 1000*monitor->RefreshInterval/nitems, fd_read, NULL );
 
-   g_timeout_add( 1000, blink, NULL );
+   g_timeout_add( 1000, blink, NULL);
 
    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
@@ -478,7 +478,7 @@ int main(int argc, char *argv[])
    gtk_box_pack_start(GTK_BOX(hbox), button, TRUE, FALSE, 0);
 
    button = new_image_button("gtk-close", _("Close"));
-   g_signal_connect_swapped(G_OBJECT(button), "clicked", G_CALLBACK(gtk_widget_hide), G_OBJECT(window));
+// g_signal_connect_swapped(G_OBJECT(button), "clicked", G_CALLBACK(gtk_widget_hide), G_OBJECT(window));
    gtk_box_pack_start(GTK_BOX(hbox), button, TRUE, FALSE, 0);
 
    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
@@ -533,7 +533,8 @@ int main(int argc, char *argv[])
    return 0;
 }
 
-static void MonitorAbout(GtkWidget *widget, gpointer data) {
+static void MonitorAbout(GtkWidget *widget, gpointer data)
+{
 #if HAVE_GTK_2_4
    GtkWidget* about = gtk_message_dialog_new_with_markup(GTK_WINDOW(window),GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE,
       "<span size='x-large' weight='bold'>%s</span>\n\n"
@@ -561,33 +562,46 @@ static void MonitorAbout(GtkWidget *widget, gpointer data) {
    gtk_widget_destroy(about);
 }
 
-static void MonitorRefresh(GtkWidget *widget, gpointer data) {
+static void MonitorRefresh(GtkWidget *widget, gpointer data)
+{
    for (int i = 0; i < nitems; i++) {
       fd_read(NULL);
    }
 }
 
-static gboolean delete_event( GtkWidget *widget,
-                              GdkEvent  *event,
-                              gpointer   data ) {
+static gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
+{
    gtk_widget_hide(window);
    return TRUE; /* do not destroy the window */
 }
 
-static void TrayIconActivate(GtkWidget *widget, gpointer data) {
-    gtk_widget_show(window);
+/*
+ * Come here when the user right clicks on the icon.
+ *   We display the icon menu.
+ */
+static void TrayIconActivate(GtkWidget *widget, gpointer data)
+{
+   gtk_widget_show(window);
 }
 
-static void TrayIconPopupMenu(unsigned int activateTime, unsigned int button) {
-  gtk_menu_popup(GTK_MENU(mTrayMenu), NULL, NULL, NULL, NULL, 1, 0);
-  gtk_widget_show_all(mTrayMenu);
+/*
+ * Come here when the user left clicks on the icon. 
+ *  We popup the status window.
+ */
+static void TrayIconPopupMenu(unsigned int activateTime, unsigned int button) 
+{
+   gtk_menu_popup(GTK_MENU(mTrayMenu), NULL, NULL, NULL, NULL, button,
+                  gtk_get_current_event_time());
+   gtk_widget_show(mTrayMenu);
 }
 
-static void TrayIconExit(unsigned int activateTime, unsigned int button) {
+static void TrayIconExit(unsigned int activateTime, unsigned int button)
+{
    gtk_main_quit();
 }
 
-static void IntervalChanged(GtkWidget *widget, gpointer data) {
+static void IntervalChanged(GtkWidget *widget, gpointer data)
+{
    g_source_remove(timerTag);
    timerTag = g_timeout_add(
       (guint)(
@@ -595,7 +609,8 @@ static void IntervalChanged(GtkWidget *widget, gpointer data) {
       ), fd_read, NULL );
 }
 
-static void DaemonChanged(GtkWidget *widget, monitoritem* data) {
+static void DaemonChanged(GtkWidget *widget, monitoritem* data) 
+{
    if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget))) {
       fullitem = -1;
       for (int i = 0; i < nitems; i++) {
@@ -1049,7 +1064,7 @@ void trayMessage(const char *fmt,...)
 
    fprintf(stderr, buf);
 
-   egg_tray_icon_send_message(egg_status_icon_get_tray_icon(mTrayIcon), 5000, (const char*)&buf, -1);
+// gtk_tray_icon_send_message(gtk_status_icon_get_tray_icon(mTrayIcon), 5000, (const char*)&buf, -1);
 }
 
 void changeStatusMessage(monitoritem* item, const char *fmt,...) {
@@ -1108,7 +1123,7 @@ void updateStatusIcon(monitoritem* item) {
 
    GdkPixbuf* pixbuf = gdk_pixbuf_new_from_xpm_data(xpm);
    if (item == NULL) {
-      egg_status_icon_set_from_pixbuf(mTrayIcon, pixbuf);
+      gtk_status_icon_set_from_pixbuf(mTrayIcon, pixbuf);
       gtk_window_set_icon(GTK_WINDOW(window), pixbuf);
    }
    else {
@@ -1118,7 +1133,8 @@ void updateStatusIcon(monitoritem* item) {
 }
 
 /* Note: result should not be stored, as it is a reference to xpm_generic_var */
-static const char** generateXPM(stateenum newstate, stateenum oldstate) {
+static const char** generateXPM(stateenum newstate, stateenum oldstate) 
+{
    char* address = &xpm_generic_var[xpm_generic_first_color][xpm_generic_column];
    switch (newstate) {
    case error:

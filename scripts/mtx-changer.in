@@ -2,7 +2,7 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id: mtx-changer.in 5002 2007-06-09 09:25:27Z kerns $
+#  $Id: mtx-changer.in 5360 2007-08-16 13:01:19Z pbuschman $
 #
 #  If you set in your Device resource
 #
@@ -108,7 +108,7 @@ make_temp_file() {
 wait_for_drive() {
   i=0 
   while [ $i -le 300 ]; do  # Wait max 300 seconds
-    if mt -f $1 status | grep ${ready}	>/dev/null 2>&1; then
+    if mt -f $1 status | grep "${ready}" >/dev/null 2>&1; then
       break
     fi
     debug "Device $1 - not ready, retrying..."

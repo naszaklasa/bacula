@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_cmds.c 5237 2007-07-24 18:36:08Z kerns $
+ *   Version $Id: ua_cmds.c 5552 2007-09-14 09:49:06Z kerns $
  */
  
 #include "bacula.h"
@@ -116,8 +116,8 @@ static struct cmdstruct commands[] = {
  { NT_("list"),       list_cmd,      _("list [pools | jobs | jobtotals | media <pool=pool-name> | files <jobid=nn>]; from catalog")},
  { NT_("label"),      label_cmd,     _("label a tape")},
  { NT_("llist"),      llist_cmd,     _("full or long list like list command")},
- { NT_("memory"),     memory_cmd,    _("print current memory usage")},
  { NT_("messages"),   messagescmd,   _("messages")},
+ { NT_("memory"),     memory_cmd,    _("print current memory usage")},
  { NT_("mount"),      mount_cmd,     _("mount <storage-name>")},
  { NT_("prune"),      prunecmd,      _("prune expired records from catalog")},
  { NT_("purge"),      purgecmd,      _("purge records from catalog")},

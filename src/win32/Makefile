@@ -43,7 +43,10 @@ Makefile.inc: Makefile.inc.in
 		echo -e "You must run build-win32-cross-tools and build-dependencies first.\n"; \
 		exit 1; \
 	fi ; \
-	sed -e "s^@TOPDIR@^$${TOPDIR}^" \
+	$(ECHO_CMD)BUILDDIR=`(pwd)`; \
+	sed \
+		-e "s^@BUILDDIR@^$${BUILDDIR}^" \
+		-e "s^@TOPDIR@^$${TOPDIR}^" \
 		-e "s^@BINDIR@^$${BINDIR}^" \
 		-e "s^@INCDIR@^$${INCDIR}^" \
 		-e "s^@DLLDIR@^$${DLLDIR}^" < Makefile.inc.in > $@

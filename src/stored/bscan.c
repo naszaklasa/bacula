@@ -34,7 +34,7 @@
  *   Kern E. Sibbald, December 2001
  *
  *
- *   Version $Id: bscan.c 5038 2007-06-18 19:29:26Z kerns $
+ *   Version $Id: bscan.c 5503 2007-09-09 10:03:23Z kerns $
  */
 
 #include "bacula.h"
@@ -120,7 +120,7 @@ PROG_COPYRIGHT
 "       -m                update media info in database\n"
 "       -n <name>         specify the database name (default bacula)\n"
 "       -u <user>         specify database user name (default bacula)\n"
-"       -P <password      specify database password (default none)\n"
+"       -P <password>     specify database password (default none)\n"
 "       -h <host>         specify database host (default NULL)\n"
 "       -p                proceed inspite of I/O errors\n"
 "       -r                list records\n"
@@ -326,6 +326,7 @@ static bool bscan_mount_next_read_volume(DCR *dcr)
       mdcr->StartFile = dcr->StartFile;
       mdcr->EndBlock = dcr->EndBlock;
       mdcr->EndFile = dcr->EndFile;
+      mdcr->VolMediaId = dcr->VolMediaId;
       mjcr->read_dcr->VolLastIndex = dcr->VolLastIndex;
       if (!create_jobmedia_record(db, mjcr)) {
          Pmsg2(000, _("Could not create JobMedia record for Volume=%s Job=%s\n"),
@@ -476,6 +477,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
             dcr->VolFirstIndex = dcr->FileIndex = 0;
             dcr->StartBlock = dcr->EndBlock = 0;
             dcr->StartFile = dcr->EndFile = 0;
+            dcr->VolMediaId = 0;
          }
 
          Pmsg1(000, _("VOL_LABEL: OK for Volume: %s\n"), mr.VolumeName);
@@ -1177,6 +1179,7 @@ static int create_jobmedia_record(B_DB *db, JCR *mjcr)
 
    dcr->EndBlock = dev->EndBlock;
    dcr->EndFile  = dev->EndFile;
+   dcr->VolMediaId = dev->VolCatInfo.VolMediaId;
 
    memset(&jmr, 0, sizeof(jmr));
    jmr.JobId = mjcr->JobId;

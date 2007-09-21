@@ -1,5 +1,5 @@
 
-          Release Notes for Bacula 2.2.0 
+          Release Notes for Bacula 2.2.4 
 
   Bacula code: Total files = 520 Total lines = 195,550 (*.h *.c *.in)
   82 new files, 41,221 new lines of code, 208,380 lines of change from 2.0.3
@@ -9,6 +9,68 @@ but they should be compatible with all 2.0.x File daemons, unless you
 use some of the new features that affect the FD.  In other words, you should
 not have to upgrade all your File daemons when you upgrade. There is
 no database upgrade needed from version 2.0.x to 2.2.0.
+
+Version 2.2.4 is a minor bug fix release to version 2.2.3
+- Possible fix for authorization problems bug #953.
+- Possible fix for bug #908.
+- Add waits to multiple exit detection code to try to force pid
+  file to always be deleted.
+- Restore good dev.tar.gz to rescue set appropriate binary property.
+  This fixes bug #950.
+- Fix seg fault in error exit of acquire_for_read after unsuccessfully
+  trying to switch drives by checking for blocking before unblocking.
+  Fixes bug #906.
+- Cancel storage daemon in all cases where FD reports error. This
+  should fix virtually all cases of bug #920 and will ensure that Devices
+  are released as soon as possible.
+- Fix error message that was clobbered when Dir tells SD it does not
+  have write permission on Volume.  This should fix a minor point
+  in bug #942, but not the main problem.
+- Fix migration code to get correct Volume name with multiple volumes 
+  by skipping |.  Fixes bug #936.
+- Implement patch supplied by Landon to fix bug #944 where using
+  TLS with bconsole uses 99+% of the CPU.
+- Fix bug #946 about "bacula-dir -t" which doesn't works
+  as expected.
+- Using "m" in bconsole will show messages as in prior versions
+  and not memory usage.
+
+- Note, you need GTK >= 2.10 to be able to link the Tray Monitor
+  program.
+
+Version 2.2.3 is a critical bug fix release to version 2.2.2
+- Fix bug #935, and possibly also bug #903 where files were not
+  restored. MediaId was not properly set in JobMedia record after 
+  a Volume change. This bug is known to affect all versions from 
+  2.0.0 on, and probably versions prior to that.  A detailed analysis
+  of the bug can be found at:
+    
+      http://www.bacula.org/downloads/bug-395.txt
+      
+- Add ./configure search in qwt-qt4 for qwt package
+- Apply Martin Simmons patch that should turn off the new API usage
+  when batch insert is turned off allowing building on older
+  PostgreSQLs.
+- Note, you need GTK >= 2.10 to be able to link the Tray Monitor 
+  program.
+
+Version 2.2.2 is a minor bug fix release to 2.2.1
+- Detect if new PosgreSQL batch insert API is present.
+- Correct incorrect mempool call causing Director crash on older
+  systems that do not have va_copy().
+- Update spec files for 2.2.1 release
+
+Version 2.2.1 is mainly a minor bug fix release to version 2.2.0,
+  the main changes since 2.2.0 are:
+- Fixed bugs #921, 930, and 923.
+- More portable timezone offset in bsmtp thaks to Attila Fülöp.
+- Fix several bat issues.                           
+- Use GTK+ calls instead of egg files in tray-monitor.
+- Win32 service routines rewritten
+- Updated projects file
+Please see the ChangeLog for details.
+
+Notes on 2.2.0 release follow:
 
 Areas requiring caution or testing:
 - You must have the thread safe version of MySQL client libraries loaded

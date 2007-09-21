@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March MM
  *
- *   Version $Id: filed.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: filed.c 5552 2007-09-14 09:49:06Z kerns $
  *
  */
 
@@ -232,6 +232,15 @@ int main (int argc, char *argv[])
 
 void terminate_filed(int sig)
 {
+   static bool already_here = false;
+
+   if (already_here) {
+      bmicrosleep(2, 0);              /* yield */
+      exit(1);                        /* prevent loops */
+   }
+   already_here = true;
+   stop_watchdog();
+
    bnet_stop_thread_server(server_tid);
    generate_daemon_event(NULL, "Exit");
    write_state_file(me->working_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
@@ -240,12 +249,12 @@ void terminate_filed(int sig)
    if (configfile != NULL) {
       free(configfile);
    }
+
    if (debug_level > 0) {
       print_memory_pool_stats();
    }
-   free_config_resources();
    term_msg();
-   stop_watchdog();
+   free_config_resources();
    cleanup_crypto();
    close_memory_pool();               /* release free memory in pool */
    sm_dump(false);                    /* dump orphaned buffers */

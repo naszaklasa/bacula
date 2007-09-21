@@ -38,7 +38,7 @@
  *     When the File daemon sends the attributes, compare them to
  *       what is in the DB.
  *
- *   Version $Id: verify.c 5300 2007-08-07 16:01:19Z kerns $
+ *   Version $Id: verify.c 5552 2007-09-14 09:49:06Z kerns $
  */
 
 
@@ -211,7 +211,7 @@ bool do_verify(JCR *jcr)
     */
    set_jcr_job_status(jcr, JS_Blocked);
    if (!connect_to_file_daemon(jcr, 10, FDConnectTimeout, 1)) {
-      return false;
+      goto bail_out;
    }
 
    set_jcr_job_status(jcr, JS_Running);
@@ -220,12 +220,12 @@ bool do_verify(JCR *jcr)
 
    Dmsg0(30, ">filed: Send include list\n");
    if (!send_include_list(jcr)) {
-      return false;
+      goto bail_out;
    }
 
    Dmsg0(30, ">filed: Send exclude list\n");
    if (!send_exclude_list(jcr)) {
-      return false;
+      goto bail_out;
    }
 
    /*
@@ -248,7 +248,7 @@ bool do_verify(JCR *jcr)
       }
       bnet_fsend(fd, storaddr, jcr->rstore->address, jcr->rstore->SDDport);
       if (!response(jcr, fd, OKstore, "Storage", DISPLAY_ERROR)) {
-         return false;
+         goto bail_out;
       }
 
       /*
@@ -256,12 +256,12 @@ bool do_verify(JCR *jcr)
        */
       if (!send_bootstrap_file(jcr, fd) ||
           !response(jcr, fd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
-         return false;
+         goto bail_out;
       }
 
       if (!jcr->RestoreBootstrap) {
          Jmsg0(jcr, M_FATAL, 0, _("Deprecated feature ... use bootstrap.\n"));
-         return false;
+         goto bail_out;
       }
 
       level = "volume";
@@ -275,19 +275,19 @@ bool do_verify(JCR *jcr)
    default:
       Jmsg2(jcr, M_FATAL, 0, _("Unimplemented Verify level %d(%c)\n"), jcr->JobLevel,
          jcr->JobLevel);
-      return false;
+      goto bail_out;
    }
 
    if (!send_runscripts_commands(jcr)) {
-      return false;
+      goto bail_out;
    }
 
    /*
     * Send verify command/level to File daemon
     */
-   bnet_fsend(fd, verifycmd, level);
+   fd->fsend(verifycmd, level);
    if (!response(jcr, fd, OKverify, "Verify", DISPLAY_ERROR)) {
-      return false;
+      goto bail_out;
    }
 
    /*
@@ -328,7 +328,7 @@ bool do_verify(JCR *jcr)
 
    default:
       Jmsg1(jcr, M_FATAL, 0, _("Unimplemented verify level %d\n"), jcr->JobLevel);
-      return false;
+      goto bail_out;
    }
 
    stat = wait_for_job_termination(jcr);
@@ -336,6 +336,9 @@ bool do_verify(JCR *jcr)
       verify_cleanup(jcr, stat);
       return true;
    }
+
+bail_out:
+   verify_cleanup(jcr, JS_ErrorTerminated);
    return false;
 }
 
@@ -372,6 +375,10 @@ void verify_cleanup(JCR *jcr, int TermCode)
    JobId = jcr->jr.JobId;
 
    update_job_end(jcr, TermCode);
+
+   if (job_canceled(jcr)) {
+      cancel_storage_daemon_job(jcr);
+   }
 
    if (jcr->unlink_bsr && jcr->RestoreBootstrap) {
       unlink(jcr->RestoreBootstrap);

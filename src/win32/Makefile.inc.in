@@ -9,6 +9,7 @@
 
 ECHO_CMD = @
 
+BUILDDIR := @BUILDDIR@
 TOPDIR := @TOPDIR@
 DEPKGS := $(TOPDIR)/depkgs-mingw32
 
@@ -45,41 +46,41 @@ INCLUDE_WX := -I$(DEPKGS)/lib/wx_dll/msw -I$(DEPKGS)/include
 INCLUDE_MYSQL := -I$(DEPKGS)/include/mysql
 
 LIBS_PTHREADS := \
-	$(DEPKGS)/lib/libpthreadGCE.a
+        $(DEPKGS)/lib/libpthreadGCE.a
 
 LIBS_ZLIB := \
-	$(DEPKGS)/lib/libz.a
+        $(DEPKGS)/lib/libz.a
 
 LIBS_MYSQL := \
-	$(DEPKGS)/lib/libmysql.a
+        $(DEPKGS)/lib/libmysql.a
 
 LIBS_POSTGRESQL := \
-	$(DEPKGS)/lib/libpq.a
+        $(DEPKGS)/lib/libpq.a
 
 LIBS_SQLITE := \
-	$(DEPKGS)/lib/libsqlite3.a
+        $(DEPKGS)/lib/libsqlite3.a
 
 LIBS_SSL := \
-	$(DEPKGS)/lib/libssl.dll.a
+        $(DEPKGS)/lib/libssl.dll.a
 
 LIBS_CRYPTO := \
-	$(DEPKGS)/lib/libcrypto.dll.a
+        $(DEPKGS)/lib/libcrypto.dll.a
 
 LIBS_WX := \
-	$(DEPKGS)/lib/wx_dll/libwxmsw27_core.a \
-	$(DEPKGS)/lib/wx_dll/libwxbase27.a
+        $(DEPKGS)/lib/wx_dll/libwxmsw27_core.a \
+        $(DEPKGS)/lib/wx_dll/libwxbase27.a
 
 LIBS_CATS := \
-	$(LIBDIR)/libcats.a
+        $(LIBDIR)/libcats.a
 
 LIBS_BACULA := \
-	$(LIBDIR)/libbacula.a
+        $(LIBDIR)/libbacula.a
 
 HAVES := \
-	-DHAVE_WIN32 \
-	-DHAVE_MINGW \
-	-DHAVE_ZLIB_H \
-	-DHAVE_LIBZ \
-	-DHAVE_CRYPTO \
-	-DHAVE_OPENSSL \
-	-DHAVE_TLS
+        -DHAVE_WIN32 \
+        -DHAVE_MINGW \
+        -DHAVE_ZLIB_H \
+        -DHAVE_LIBZ \
+        -DHAVE_CRYPTO \
+        -DHAVE_OPENSSL \
+        -DHAVE_TLS

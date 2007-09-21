@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: joblist.cpp 5301 2007-08-08 00:33:08Z bartleyd2 $
+ *   Version $Id: joblist.cpp 5386 2007-08-21 02:09:38Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -154,20 +154,21 @@ void JobList::populateTable()
    int volumeIndex = volumeComboBox->currentIndex();
    if (volumeIndex != -1)
       m_mediaName = volumeComboBox->itemText(volumeIndex);
-   query += "SELECT DISTINCT Job.Jobid AS Id, Job.Name AS JobName, Client.Name AS Client,"
+   query += "SELECT Job.Jobid AS Id, Job.Name AS JobName, " 
+            " Client.Name AS Client,"
             " Job.Starttime AS JobStart, Job.Type AS JobType,"
             " Job.Level AS BackupLevel, Job.Jobfiles AS FileCount,"
             " Job.JobBytes AS Bytes,"
             " Job.JobStatus AS Status, Status.JobStatusLong AS StatusLong,"
             " Job.PurgedFiles AS Purged, FileSet.FileSet"
             " FROM Job"
-            " LEFT OUTER JOIN Client ON (Client.ClientId=Job.ClientId)"
-            " LEFT OUTER JOIN FileSet ON (FileSet.FileSetId=Job.FileSetId)"
-            " LEFT OUTER JOIN Status ON (Job.JobStatus=Status.JobStatus)"
-            " LEFT OUTER JOIN JobMedia ON (JobMedia.JobId=Job.JobId)"
-            " LEFT OUTER JOIN Media ON (JobMedia.MediaId=Media.MediaId)";
+            " JOIN Client ON (Client.ClientId=Job.ClientId)"
+            " JOIN Status ON (Job.JobStatus=Status.JobStatus)"
+            " LEFT OUTER JOIN FileSet ON (FileSet.FileSetId=Job.FileSetId) ";
    QStringList conditions;
    if (m_mediaName != "Any") {
+      query += " LEFT OUTER JOIN JobMedia ON (JobMedia.JobId=Job.JobId) "
+               " LEFT OUTER JOIN Media ON (JobMedia.MediaId=Media.MediaId) ";
       conditions.append("Media.VolumeName='" + m_mediaName + "'");
    }
    int clientIndex = clientComboBox->currentIndex();

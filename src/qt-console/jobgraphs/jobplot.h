@@ -3,7 +3,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: jobplot.h 5257 2007-07-28 10:36:28Z kerns $
+ *   Version $Id: jobplot.h 5371 2007-08-17 11:55:05Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
@@ -83,7 +83,7 @@ public:
 };
 
 /*
- *Class to Change the display of the time scale to display dates.
+ * Class to Change the display of the time scale to display dates.
  */
 class DateTimeScaleDraw : public QwtScaleDraw
 {

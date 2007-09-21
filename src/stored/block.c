@@ -32,7 +32,7 @@
  *              Kern Sibbald, March MMI
  *                 added BB02 format October MMII
  *
- *   Version $Id: block.c 5114 2007-06-29 12:12:26Z kerns $
+ *   Version $Id: block.c 5503 2007-09-09 10:03:23Z kerns $
  *
  */
 
@@ -611,6 +611,7 @@ bool write_block_to_dev(DCR *dcr)
       dev->block_num = dcr->EndBlock;
       dev->file = dcr->EndFile;
    }
+   dcr->VolMediaId = dev->VolCatInfo.VolMediaId;
    if (dcr->VolFirstIndex == 0 && block->FirstIndex > 0) {
       dcr->VolFirstIndex = block->FirstIndex;
    }
@@ -1098,6 +1099,7 @@ reread:
       dev->block_num = dcr->EndBlock;
       dev->file = dcr->EndFile;
    }
+   dcr->VolMediaId = dev->VolCatInfo.VolMediaId;
    dev->file_addr += block->read_len;
    dev->file_size += block->read_len;
 

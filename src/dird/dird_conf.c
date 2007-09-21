@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *     Version $Id: dird_conf.c 5219 2007-07-22 10:14:48Z kerns $
+ *     Version $Id: dird_conf.c 5406 2007-08-25 19:33:46Z kerns $
  */
 
 
@@ -368,9 +368,11 @@ static RES_ITEM pool_items[] = {
    {"migrationlowbytes", store_size,  ITEM(res_pool.MigrationLowBytes), 0, 0, 0},
    {"nextpool",      store_res,       ITEM(res_pool.NextPool), R_POOL, 0, 0},
    {"storage",       store_alist_res, ITEM(res_pool.storage),  R_STORAGE, 0, 0},
-   {"autoprune",       store_bool,    ITEM(res_pool.AutoPrune), 0, ITEM_DEFAULT, true},
-   {"recycle",         store_bool,    ITEM(res_pool.Recycle),   0, ITEM_DEFAULT, true},
-   {"recyclepool",     store_res,     ITEM(res_pool.RecyclePool), R_POOL, 0, 0},
+   {"autoprune",     store_bool,      ITEM(res_pool.AutoPrune), 0, ITEM_DEFAULT, true},
+   {"recycle",       store_bool,      ITEM(res_pool.Recycle),   0, ITEM_DEFAULT, true},
+   {"recyclepool",   store_res,       ITEM(res_pool.RecyclePool), R_POOL, 0, 0},
+   {"copypool",      store_alist_res, ITEM(res_pool.CopyPool), R_POOL, 0, 0},
+   {"catalog",       store_res,       ITEM(res_pool.Catalog), R_CATALOG, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -560,6 +562,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
          dump_resource(-R_CATALOG, (RES *)res->res_client.catalog, sendit, sock);
       }
       break;
+
    case R_DEVICE:
       dev = &res->res_dev;
       char ed1[50];
@@ -572,6 +575,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
          edit_uint64(dev->PoolId, ed1),
          dev->VolumeName, dev->MediaType);
       break;
+
    case R_STORAGE:
       sendit(sock, _("Storage: name=%s address=%s SDport=%d MaxJobs=%u\n"
 "      DeviceName=%s MediaType=%s StorageId=%s\n"),
@@ -581,6 +585,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
          res->res_store.media_type,
          edit_int64(res->res_store.StorageId, ed1));
       break;
+
    case R_CATALOG:
       sendit(sock, _("Catalog: name=%s address=%s DBport=%d db_name=%s\n"
 "      db_user=%s MutliDBConn=%d\n"),
@@ -588,6 +593,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
          res->res_cat.db_port, res->res_cat.db_name, NPRT(res->res_cat.db_user),
          res->res_cat.mult_db_connections);
       break;
+
    case R_JOB:
    case R_JOBDEFS:
       sendit(sock, _("%s: name=%s JobType=%d level=%s Priority=%d Enabled=%d\n"),
@@ -680,6 +686,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
          dump_resource(-R_MSGS, (RES *)res->res_job.messages, sendit, sock);
       }
       break;
+
    case R_FILESET:
    {
       int i, j, k;
@@ -755,6 +762,7 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
       }
       break;
    }
+
    case R_SCHEDULE:
       if (res->res_sch.run) {
          int i;
@@ -842,6 +850,7 @@ next_run:
          sendit(sock, _("Schedule: name=%s\n"), res->res_sch.hdr.name);
       }
       break;
+
    case R_POOL:
       sendit(sock, _("Pool: name=%s PoolType=%s\n"), res->res_pool.hdr.name,
               res->res_pool.pool_type);
@@ -874,6 +883,9 @@ next_run:
       if (res->res_pool.RecyclePool) {
          sendit(sock, _("      RecyclePool=%s\n"), res->res_pool.RecyclePool->name());
       }
+      if (res->res_pool.Catalog) {
+         sendit(sock, _("      Catalog=%s\n"), res->res_pool.Catalog->name());
+      }
       if (res->res_pool.storage) {
          STORE *store;
          foreach_alist(store, res->res_pool.storage) {
@@ -881,7 +893,16 @@ next_run:
             dump_resource(-R_STORAGE, (RES *)store, sendit, sock);
          }
       }
+      if (res->res_pool.CopyPool) {
+         POOL *copy;
+         foreach_alist(copy, res->res_pool.CopyPool) {
+            sendit(sock, _("  --> "));
+            dump_resource(-R_POOL, (RES *)copy, sendit, sock);
+         }
+      }
+
       break;
+
    case R_MSGS:
       sendit(sock, _("Messages: name=%s\n"), res->res_msgs.hdr.name);
       if (res->res_msgs.mail_cmd)
@@ -889,6 +910,7 @@ next_run:
       if (res->res_msgs.operator_cmd)
          sendit(sock, _("      opcmd=%s\n"), res->res_msgs.operator_cmd);
       break;
+
    default:
       sendit(sock, _("Unknown resource type %d in dump_resource.\n"), type);
       break;

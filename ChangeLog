@@ -1,6 +1,126 @@
-              Technical notes on version 2.1
+              Technical notes on version 2.2.x
 
 General:
+Release Version 2.2.4
+14Sep07
+kes  Increase size of name string when FD making connection to SD.
+     May fix bug #953.
+13Sep07
+kes  Add code to try to fix bug #908.
+kes  Add waits to multiple exit detection code to try to force pid
+     file to always be deleted.
+kes  Restore good dev.tar.gz to rescue set appropriate binary property.
+     This fixes bug #950.
+kes  Fix seg fault in error exit of acquire_for_read after unsuccessfully
+     trying to switch drives by checking for blocking before unblocking.
+     Fixes bug #906.
+kes  Cancel storage daemon in all cases where FD reports error. This
+     should fix virtually all cases of bug #920.
+12Sep07
+kes  Fix error message that was clobbered when Dir tells SD it does not
+     have write permission on Volume.  This should fix a minor point
+     in bug #942, but not the main problem.
+kes  Add code to cancel job in SD if FD connection fails. This should
+     fix bug #920.
+kes  Add code in FD exit to prevent loops and a crash on FreeBSD.
+kes  Fix migration code to get correct Volume name with multiple volumes 
+     by skipping |.  Fixes bug #936.
+kes  Implement patch supplied by Landon to fix bug #944 where using
+     TLS with bconsole uses 99+% of the CPU.
+kes  Note, you need GTK >= 2.10 to be able to link the Tray Monitor
+     program.
+kes  Move patches into patches directory.
+11Sep07 
+ebl  Fix bug #946 about "bacula-dir -t" which doesn't works
+     as expected.
+09Sep07 
+ebl  Using "m" in bconsole will show messages like before,
+     and not memory usage.
+
+Release Version 2.2.3
+kes  Note, you need GTK >= 2.10 to be able to link the Tray Monitor
+     program.
+09Sep07
+kes  Fix bug #935, and probably also bug #903 where files were not
+     restored. MediaId was not properly set in JobMedia record after 
+     a Volume change.
+07Sep07
+kes  Add ./configure search in qwt-qt4 for qwt package
+kes  Apply Martin Simmons patch that should turn off the new API usage
+     when batch insert is turned off allowing building on older
+     PostgreSQLs.
+
+Release Version 2.2.2
+04Sep07
+ebl  Detect if new PosgreSQL batch insert API is present.
+kes  Correct incorrect mempool call causing Director crash.
+sb   Update spec files for 2.2.1 release
+
+Release Version 2.2.1
+30Aug07
+kes  Update POTFILES.in
+kes  Cleanup a few underquoted AC_DEFUNs in configure
+kes  Apply patch from Martin Simmons that adds a test for va_copy to
+     ./configure
+29Aug07
+kes  Fix bug 921 by increasing the number of tries to create a new volume
+     from 11 to 100.
+kes  Rework bmsg in ua_output to use va_copy() so that bvsnprintf()
+     can be called multiple times.  Implement a version for machines
+     without va_copy() that gets a big buffer.
+25Aug07
+kes  Integrate more portable zone offset code into bsmtp.c
+     Submitted by Attila Fülöp.
+24Aug07
+kes  Fix bad SD->FD return status reported by 
+     (James Harper) <james.harper@bendigoit.com.au>
+ebl  Fix a bug in read_close_session which return random status
+     thanks to James Harper
+23Aug07
+kes  Fix (hopefully) bug #930 by doing a db_escape_string() on file  
+     and directory names during restore of single file/directories.
+kes  Add sanity checks to .sql command when string is empty. Hopefully
+     that will resolve Dirks Director crash.
+22Aug07 
+kes  Apply patch submitted by Martin Simmons that corrects a seg fault
+     in the bsmtp chat subroutine when debug is >= 10.
+21Aug07
+kes  Fix Director crash when running bat SQL queries.
+kes  Add David's notes on Item 8: Copy pools.
+18Aug07
+kes  Rework projects file to be current and ready for a vote.
+kes  Enhance lex scanner error message.
+17Aug07
+kes  Tweak LICENSE file to mention BSD code.
+kes  Fix bat.pro.in so that it includes the OpenSSL libraries only
+     if specified on the ./configure.
+kes  Add first (not yet tested) cut of bcomm to the qt-console directory.
+     This class is intended to allow us to open a second bsock to the
+     Director while in the restore subdialog.  
+16Aug07
+kes  Fix configure to create bat Makefile before creating dependencies.
+kes  Eliminate the egg files from the tray-monitor. Use gtk calls.
+kes  Add a tooltip to the tray monitor.
+dvl  Set the Director's PID file before dropping privs. This fixes
+     bug #923.
+15Aug07
+kes  Update AUTHORs file
+kes  Increase the default max concurrent jobs to 20 in FD and SD to
+     correspond with the default .conf files.
+kes  Rewrite the Win32 service routines.  This eliminates the 3 copies
+     some different, of the same file created by RN when porting the 
+     Win32 SD and Dir.
+kes  Rearrange some of the Win32 directories and the placement of the files
+     in them.
+kes  Set DEVELOPER flag in version.h
+
+========================================================================
+Release Version 2.2.0
+09Aug07
+kes  Apply a second doc patch from Marc.
+kes  Apply a doc patch from Marc Schiffbauer <marc@schiffbauer.net> that
+     improves the tips section that discusses how to setup multiple
+     simultaneous jobs.
 08Aug07
 kes  Update bat README file.
 kes  Apply patch from Allan Black <Allan.Black@btconnect.com> that     

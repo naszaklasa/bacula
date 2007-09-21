@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: console.cpp 5237 2007-07-24 18:36:08Z kerns $
+ *   Version $Id: console.cpp 5366 2007-08-17 10:18:43Z kerns $
  *
  *  Console Class
  *
@@ -34,7 +34,6 @@
  *
  */ 
 
-//#include <QAbstractEventDispatcher>
 #include "bat.h"
 #include "console.h"
 #include "restore.h"

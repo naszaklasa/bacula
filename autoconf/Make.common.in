@@ -1,5 +1,8 @@
-# autoconf/Make.common.in	 -*- Makefile -*-
-# release date (man), LSM date, version number/name, current maintainer
+#
+# This file is pulled in by all the Unix Bacula Makefiles
+#   so it has all the "common" definitions
+#
+
 DATE="@DATE@"
 LSMDATE=@LSMDATE@
 VERSION=@VERSION@

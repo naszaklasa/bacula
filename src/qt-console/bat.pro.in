@@ -1,5 +1,5 @@
 ######################################################################
-# Version $Id: bat.pro.in 5258 2007-07-28 18:59:49Z bartleyd2 $
+# Version $Id: bat.pro.in 5366 2007-08-17 10:18:43Z kerns $
 #
 #   !!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
@@ -14,19 +14,18 @@ bins.files = ./bat
 confs.path = /$(DESTDIR)@sysconfdir@
 confs.commands = ./install_conf_file   
 
-TEMPLATE = app
-TARGET = bat
-DEPENDPATH += .
+TEMPLATE     = app
+TARGET       = bat
+DEPENDPATH  += .
 INCLUDEPATH += .. . ./console ./restore ./select
-INCLUDEPATH += @QWT_INC@
-LIBS        += -L../lib            
-LIBS        += -lbac
-LIBS        += -lssl -lcrypto
+INCLUDEPATH += @QWT_INC@ 
+LIBS        += -L../lib -lbac @OPENSSL_LIBS@
 LIBS        += @QWT_LDFLAGS@ -lqwt-qt4
-RESOURCES = main.qrc
-MOC_DIR = moc
-OBJECTS_DIR = obj
-UI_DIR = ui
+
+RESOURCES    = main.qrc
+MOC_DIR      = moc
+OBJECTS_DIR  = obj
+UI_DIR       = ui
 
 # Main window
 FORMS += main.ui 
@@ -45,8 +44,13 @@ FORMS += joblog/joblog.ui jobs/jobs.ui
 FORMS += help/help.ui
 FORMS += jobgraphs/jobplotcontrols.ui
 
-HEADERS += mainwin.h bat.h bat_conf.h qstd.h
-SOURCES += main.cpp bat_conf.cpp mainwin.cpp qstd.cpp
+# Main directory
+HEADERS += mainwin.h bat.h bat_conf.h qstd.h pages.h
+SOURCES += main.cpp bat_conf.cpp mainwin.cpp qstd.cpp pages.cpp
+
+# bcomm
+HEADERS += bcomm/dircomm.h
+SOURCES += bcomm/dircomm.cpp bcomm/dircomm_auth.cpp
 
 # Console
 HEADERS += console/console.h
@@ -75,10 +79,6 @@ SOURCES += run/run.cpp run/runcmd.cpp run/estimate.cpp run/prune.cpp
 # Select dialog
 HEADERS += select/select.h
 SOURCES += select/select.cpp
-
-## Pages
-HEADERS += pages.h
-SOURCES += pages.cpp
 
 ## MediaList
 HEADERS += medialist/medialist.h

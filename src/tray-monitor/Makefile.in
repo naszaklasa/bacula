@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in 4914 2007-05-27 09:34:40Z kerns $
+#  Version $Id: Makefile.in 5359 2007-08-16 08:44:39Z kerns $
 #
 @MCOMMON@
 
@@ -20,8 +20,8 @@ first_rule: all
 dummy:
 
 #
-MONITORSRCS = tray-monitor.c tray_conf.c authenticate.c eggmarshalers.c eggstatusicon.c eggtrayicon.c
-MONITOROBJS = tray-monitor.o tray_conf.o authenticate.o eggmarshalers.o eggstatusicon.o eggtrayicon.o
+MONITORSRCS = tray-monitor.c tray_conf.c authenticate.c
+MONITOROBJS = tray-monitor.o tray_conf.o authenticate.o
 
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@

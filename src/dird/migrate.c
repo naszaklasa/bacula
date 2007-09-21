@@ -39,7 +39,7 @@
  *       to do the backup.
  *     When the Storage daemon finishes the job, update the DB.
  *
- *   Version $Id: migrate.c 5300 2007-08-07 16:01:19Z kerns $
+ *   Version $Id: migrate.c 5529 2007-09-12 07:17:50Z kerns $
  */
 
 #include "bacula.h"
@@ -1098,8 +1098,10 @@ void migration_cleanup(JCR *jcr, int TermCode)
       if (mig_jcr->VolumeName[0]) {
          /* Find last volume name. Multiple vols are separated by | */
          char *p = strrchr(mig_jcr->VolumeName, '|');
-         if (!p) {
-            p = mig_jcr->VolumeName;
+         if (p) {
+            p++;                         /* skip | */
+         } else {
+            p = mig_jcr->VolumeName;     /* no |, take full name */
          }
          bstrncpy(mr.VolumeName, p, sizeof(mr.VolumeName));
          if (!db_get_media_record(jcr, jcr->db, &mr)) {

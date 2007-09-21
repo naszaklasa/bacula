@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: job.c 5222 2007-07-22 12:21:06Z kerns $
+ *   Version $Id: job.c 5404 2007-08-25 06:03:26Z kerns $
  *
  */
 
@@ -1229,7 +1229,7 @@ static int level_cmd(JCR *jcr)
          } else {
             type = M_INFO;
          }
-         Jmsg(jcr, type, 0, _("DIR and FD clocks differ by %d seconds, FD automatically adjusting.\n"), adj);
+         Jmsg(jcr, type, 0, _("DIR and FD clocks differ by %d seconds, FD automatically compensating.\n"), adj);
       }
       bnet_sig(dir, BNET_EOD);
 

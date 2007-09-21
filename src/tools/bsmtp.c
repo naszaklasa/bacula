@@ -36,7 +36,7 @@
 
    Kern Sibbald, July 2001
 
-   Version $Id: bsmtp.c 5211 2007-07-21 18:32:04Z kerns $
+   Version $Id: bsmtp.c 5405 2007-08-25 13:28:54Z kerns $
 
  */
 
@@ -136,11 +136,13 @@ static void chat(const char *fmt, ...)
 
     va_start(ap, fmt);
     vfprintf(sfp, fmt, ap);
+    va_end(ap);
     if (debug_level >= 10) {
        fprintf(stdout, "%s --> ", my_hostname);
+       va_start(ap, fmt);
        vfprintf(stdout, fmt, ap);
+       va_end(ap);
     }
-    va_end(ap);
 
     fflush(sfp);
     if (debug_level >= 10) {
@@ -169,6 +171,37 @@ _("\n"
    exit(1);
 }
 
+/*
+ * Return the offset west from localtime to UTC in minutes
+  * Same as timezone.tz_minuteswest
+  *   Unix tz_offset coded by:  Attila Fülöp
+  */
+
+static long tz_offset(time_t lnow, struct tm &tm)
+{
+#if defined(HAVE_WIN32)
+#if defined(HAVE_MINGW)
+__MINGW_IMPORT long     _dstbias;
+#endif
+
+   /* Win32 code */
+   long offset;
+   _tzset();
+   offset = _timezone;
+   offset += _dstbias;
+   return offset /= 60;
+#else
+
+   /* Unix/Linux code */
+   struct tm tm_utc;
+   time_t now = lnow;
+
+   (void)gmtime_r(&now, &tm_utc);
+   tm_utc.tm_isdst = tm.tm_isdst;
+   return (long)difftime(mktime(&tm_utc), now) / 60;
+#endif
+}
+
 static void get_date_string(char *buf, int buf_len)
 {
    time_t now = time(NULL);
@@ -179,21 +212,7 @@ static void get_date_string(char *buf, int buf_len)
    /* Add RFC822 date */
    (void)localtime_r(&now, &tm);
 
-#if defined(HAVE_WIN32)
-#if defined(HAVE_MINGW)
-__MINGW_IMPORT long     _dstbias;
-#endif
-   _tzset();
-   my_timezone = _timezone;
-   my_timezone += _dstbias;
-   my_timezone /= 60;
-
-#else
-   struct timeval tv;
-   struct timezone tz;
-   gettimeofday(&tv, &tz);
-   my_timezone = tz.tz_minuteswest; /* timezone offset in mins */
-#endif
+   my_timezone = tz_offset(now, tm);
    strftime(buf, buf_len, "%a, %d %b %Y %H:%M:%S", &tm);
    sprintf(tzbuf, " %+2.2ld%2.2u", -my_timezone / 60, abs(my_timezone) % 60);
    strcat(buf, tzbuf);              /* add +0100 */

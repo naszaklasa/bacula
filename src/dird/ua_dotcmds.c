@@ -35,7 +35,7 @@
  *
  *     Kern Sibbald, April MMII
  *
- *   Version $Id: ua_dotcmds.c 5271 2007-07-31 18:18:59Z kerns $
+ *   Version $Id: ua_dotcmds.c 5398 2007-08-23 07:05:47Z kerns $
  */
 
 #include "bacula.h"
@@ -468,13 +468,17 @@ static int sql_handler(void *ctx, int num_field, char **row)
 
    for (int i=0; num_field--; i++) {
       if (i == 0) {
-         pm_strcpy(rows, row[0]);
+         pm_strcpy(rows, NPRT(row[0]));
       } else {
-         pm_strcat(rows, row[i]);
+         pm_strcat(rows, NPRT(row[i]));
       }
       pm_strcat(rows, "\t");
    }
-   ua->send_msg("%s", rows.c_str());
+   if (!rows.c_str() || !*rows.c_str()) {
+      ua->send_msg("\t");
+   } else {
+      ua->send_msg("%s", rows.c_str());
+   }
    return 0;
 }
 
