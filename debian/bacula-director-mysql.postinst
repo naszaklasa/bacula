@@ -1,0 +1,83 @@
+#! /bin/bash
+# postinst script for bacula-director-mysql
+#
+
+. /usr/share/debconf/confmodule
+db_version 2.0
+
+set -e
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+#
+# quoting from the policy:
+#     Any necessary prompting should almost always be confined to the
+#     post-installation script, and should be protected with a conditional
+#     so that unnecessary prompting doesn't happen if a package's
+#     installation fails and the `postinst' is called with `abort-upgrade',
+#     `abort-remove' or `abort-deconfigure'.
+
+LOGDIR=/var/log/bacula
+POSTINST_COMMON=/usr/share/bacula-director/postinst-common
+DEFCONFIG=/usr/share/bacula-common/defconfig
+CFGFILE=/etc/bacula/bacula-dir.conf
+
+. /usr/share/debconf/confmodule
+dbc_first_version=1.38.9-3
+dbc_dbuser=bacula
+dbc_dbname=bacula
+
+# source dbconfig-common shell library, and call the hook function
+if [ -f /usr/share/dbconfig-common/dpkg/config.mysql ]; then
+  . /usr/share/dbconfig-common/dpkg/postinst.mysql
+  dbc_go bacula-director-mysql $@
+fi
+
+case "$1" in
+configure)
+	
+	# PreProcess configuration
+	echo -n "Processing configuration ..."
+        . /etc/dbconfig-common/bacula-director-mysql.conf
+	TARGET=$CFGFILE.dpkg-tmp
+
+	sed -e "s/dbname = bacula;/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\";/" \
+	-e "s/@db_user@/$dbc_dbuser/" -e "s/@db_pswd@/$dbc_dbpass/" \
+		$DEFCONFIG/bacula-dir.conf > $TARGET
+
+	/bin/bash $POSTINST_COMMON
+
+	echo "Ok."
+	;;
+
+abort-upgrade|abort-remove|abort-deconfigure)
+
+	;;
+
+*)
+	echo "postinst called with unknown argument \`$1'" >&2
+	exit 1
+	;;
+esac
+
+# Do start daemon
+db_stop
+
+if [ -n "$2" ]; then
+	/etc/init.d/bacula-director stop
+	sleep 1
+fi
+
+invoke-rc.d --quiet bacula-director start
+
+#DEBHELPER#
+
+exit 0
