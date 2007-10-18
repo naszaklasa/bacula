@@ -1,3 +1,10 @@
+bacula (2.2.5-1) unstable; urgency=medium
+
+  * New upstream release.
+    urgency=medium due to a number of major bugfixes
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 18 Oct 2007 11:47:33 -0500
+
 bacula (2.2.4-1) unstable; urgency=high
 
   * New upstream version.  Closes: #441849, #441855, #441878, #441990.
