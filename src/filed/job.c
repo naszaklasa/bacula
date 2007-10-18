@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: job.c 5404 2007-08-25 06:03:26Z kerns $
+ *   Version $Id: job.c 5713 2007-10-03 11:36:47Z kerns $
  *
  */
 
@@ -406,7 +406,7 @@ static int setdebug_cmd(JCR *jcr)
    }
    debug_level = level;
    set_trace(trace_flag);
-   return bnet_fsend(dir, OKsetdebug, level);
+   return dir->fsend(OKsetdebug, level);
 }
 
 
@@ -418,11 +418,11 @@ static int estimate_cmd(JCR *jcr)
    if (sscanf(dir->msg, estimatecmd, &jcr->listing) != 1) {
       pm_strcpy(jcr->errmsg, dir->msg);
       Jmsg(jcr, M_FATAL, 0, _("Bad estimate command: %s"), jcr->errmsg);
-      bnet_fsend(dir, _("2992 Bad estimate command.\n"));
+      dir->fsend(_("2992 Bad estimate command.\n"));
       return 0;
    }
    make_estimate(jcr);
-   bnet_fsend(dir, OKest, jcr->num_files_examined,
+   dir->fsend(OKest, jcr->num_files_examined,
       edit_uint64_with_commas(jcr->JobBytes, ed2));
    bnet_sig(dir, BNET_EOD);
    return 1;
@@ -449,7 +449,7 @@ static int job_cmd(JCR *jcr)
    jcr->sd_auth_key = bstrdup(sd_auth_key);
    free_pool_memory(sd_auth_key);
    Dmsg2(120, "JobId=%d Auth=%s\n", jcr->JobId, jcr->sd_auth_key);
-   return bnet_fsend(dir, OKjob, VERSION, LSMDATE, HOST_OS, DISTNAME, DISTVER);
+   return dir->fsend(OKjob, VERSION, LSMDATE, HOST_OS, DISTNAME, DISTVER);
 }
 
 static int runbefore_cmd(JCR *jcr)
@@ -463,7 +463,7 @@ static int runbefore_cmd(JCR *jcr)
    if (sscanf(dir->msg, runbefore, cmd) != 1) {
       pm_strcpy(jcr->errmsg, dir->msg);
       Jmsg1(jcr, M_FATAL, 0, _("Bad RunBeforeJob command: %s\n"), jcr->errmsg);
-      bnet_fsend(dir, _("2905 Bad RunBeforeJob command.\n"));
+      dir->fsend(_("2905 Bad RunBeforeJob command.\n"));
       free_memory(cmd);
       return 0;
    }
@@ -1310,7 +1310,7 @@ static int storage_cmd(JCR *jcr)
 
    jcr->store_bsock = sd;
 
-   bnet_fsend(sd, "Hello Start Job %s\n", jcr->Job);
+   sd->fsend("Hello Start Job %s\n", jcr->Job);
    if (!authenticate_storagedaemon(jcr)) {
       Jmsg(jcr, M_FATAL, 0, _("Failed to authenticate Storage daemon.\n"));
       return 0;
@@ -1318,7 +1318,7 @@ static int storage_cmd(JCR *jcr)
    Dmsg0(110, "Authenticated with SD.\n");
 
    /* Send OK to Director */
-   return bnet_fsend(dir, OKstore);
+   return dir->fsend(OKstore);
 }
 
 

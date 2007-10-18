@@ -10,8 +10,15 @@ Using the Express Edition (free version)
       instead of the web installer, as Microsoft will
       start to charge for VC++ one year after the product launch
       (launch was in November 2005, see VC++ FAQ).
+      NOTE: last modifications in order to compile have been tested with 
+      Visual C++ Standard Edition, not with Express Edition, but this shouldn't change anything.
 
-    - Windows® Server 2003 SP1 Platform SDK Full Download (385MB)
+       - Microsoft VSS SDK.  You can find it on Microsoft's web-site at:
+      http://www.microsoft.com/downloads/details.aspx?FamilyID=0b4f56e4-0ccc-4626-826a-ed2c4c95c871&DisplayLang=en
+      If that link doesn't work then go to http://www.microsoft.com and search for
+      "download volume shadow copy service sdk"
+
+    - Windows Server 2003 SP1 Platform SDK Full Download (385MB)
       http://www.microsoft.com/downloads/details.aspx?FamilyId=A55B6B43-E24F-4EA3-A93E-40C0EC4F68E5&displaylang=en
       NOTE: choose "Full Download" version on the bottom of that page.
 
@@ -22,7 +29,7 @@ Using the Express Edition (free version)
         (MSDN Library is NOT needed).
       + Remember where you install it (e.g. E:\Microsoft Visual Studio 8\)
 
-    - Windows® Server 2003 SP1 Platform SDK Full Download
+    - Windows Server 2003 SP1 Platform SDK Full Download
       + Run psdk-full.exe, type the directory where you downloaded the cab
         files.
       + In a command prompt, run "PSDK-full.bat <temp directory>"
@@ -34,6 +41,20 @@ Using the Express Edition (free version)
       + When asked for components, you can safely remove documentation,
         samples, and all 64-bit tools and libs if you want to save disk
         space.
+      NOTE: Just after having installed "Windows® Server 2003 SP1 Platform SDK Full Download", 
+      my XP was no more considered as "genuine". You are warned.
+      That's why it is recommended to download "volume shadow copy service sdk" before installing SDK
+
+    - Microsoft VSS SDK
+      + Normally the files will be installed in:  C:\Program Files\Microsoft\VSSSDK72
+      + You only need to copy everything under the C:\Program Files\Microsoft\VSSSDK72\inc
+        directory into .../depkgs-msvc/vss/inc.
+
+    - Verify what you've got in your system variables :
+      + %INCLUDE% (echo %INCLUDE%) must contain 
+        <vc++ install dir>\VC\include;<vc++ install dir>\VC\PlatformSDK\Include;
+      + %LIB% (echo %LIB%) must contain 
+        <vc++ install dir>\VC\lib;<vc++ install dir>\VC\PlatformSDK\Lib
 
 One-time Setup
 ==============
@@ -103,26 +124,11 @@ whenever the dependencies change.
    build-depkgs-msvc
 
 At this point all of the dependencies should have been downloaded and
-built.  You need the header files from the Microsoft VSS SDK.  You can
-find it on Microsoft's web-site at:
-
-http://www.microsoft.com/downloads/details.aspx?FamilyID=0b4f56e4-0ccc-4626-826a-ed2c4c95c871&DisplayLang=en
-
-If that link doesn't work then go to http://www.microsoft.com and search
-for
-
-   "download volume shadow copy service sdk"
-
-Normally the files will be installed in:
-
-   C:\Program Files\Microsoft\VSSSDK72
-
-You only need to copy everything under the C:\Program Files\Microsoft\VSSSDK72\inc
-directory into .../depkgs-msvc/vss/inc.
-
+built.  
 The above only needs to be done once unless we change the cross-tools or
 the dependencies versions.  In general, you can run the script multiple
 times with no problem.
+
 
 Building
 ========
@@ -200,6 +206,10 @@ C++ mangled name of the new function.  Fortunately it is displayed in
 parentheses in the linker error message.  Place it in the
 .../bacula/src/win32/libbac/bacula.def file.
 
+In .../bacula/src/win32/libbac/msvc there is a shell "make_def_msvc" that creates 
+a def file (not really clean way). 
+In cygwin,  one has to type ./make_def_msvc > bacula.def 
+
 bacula_cats.dll
 ---------------
 
@@ -221,3 +231,7 @@ name in the file .../bacula/src/win32/cats/bacula_cats/bacula_cats.def.
 
 The mangled name is printed, surrounded by parentheses, in the Linker
 error message.
+
+In .../bacula/src/win32/bacula_cats/ there is a shell "make_def_msvc" that creates 
+a def file (not really clean way). 
+In cygwin,  one has to type ./make_def_msvc > bacula_cats.def 

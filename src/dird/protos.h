@@ -28,7 +28,7 @@
 /*
  * Director external function prototypes
  *
- *   Version $Id: protos.h 5552 2007-09-14 09:49:06Z kerns $
+ *   Version $Id: protos.h 5714 2007-10-03 16:22:07Z kerns $
  */
 
 /* admin.c */
@@ -169,8 +169,8 @@ extern void restore_cleanup(JCR *jcr, int TermCode);
 
 
 /* ua_acl.c */
-bool acl_access_ok(UAContext *ua, int acl, char *item);
-bool acl_access_ok(UAContext *ua, int acl, char *item, int len);
+bool acl_access_ok(UAContext *ua, int acl, const char *item);
+bool acl_access_ok(UAContext *ua, int acl, const char *item, int len);
 
 /* ua_cmds.c */
 int do_a_command(UAContext *ua, const char *cmd);
@@ -231,7 +231,7 @@ CLIENT  *select_client_resource(UAContext *ua);
 FILESET *select_fileset_resource(UAContext *ua);
 int     select_pool_and_media_dbr(UAContext *ua, POOL_DBR *pr, MEDIA_DBR *mr);
 int     select_media_dbr(UAContext *ua, MEDIA_DBR *mr);
-bool    select_pool_dbr(UAContext *ua, POOL_DBR *pr, char *argk="pool");
+bool    select_pool_dbr(UAContext *ua, POOL_DBR *pr, const char *argk="pool");
 bool    select_client_dbr(UAContext *ua, CLIENT_DBR *cr);
 
 void    start_prompt(UAContext *ua, const char *msg);
@@ -242,7 +242,7 @@ STORE  *get_storage_resource(UAContext *ua, bool use_default);
 int     get_storage_drive(UAContext *ua, STORE *store);
 int     get_storage_slot(UAContext *ua, STORE *store);
 int     get_media_type(UAContext *ua, char *MediaType, int max_media);
-bool    get_pool_dbr(UAContext *ua, POOL_DBR *pr, char *argk="pool");
+bool    get_pool_dbr(UAContext *ua, POOL_DBR *pr, const char *argk="pool");
 bool    get_client_dbr(UAContext *ua, CLIENT_DBR *cr);
 POOL   *get_pool_resource(UAContext *ua);
 POOL   *select_pool_resource(UAContext *ua);

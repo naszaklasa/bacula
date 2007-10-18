@@ -1,15 +1,7 @@
 /*
- *
- *   Bacula Director -- User Agent Access Control List (ACL) handling
- *
- *     Kern Sibbald, January MMIV
- *
- *   Version  $Id: ua_acl.c 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- User Agent Access Control List (ACL) handling
+ *
+ *     Kern Sibbald, January MMIV
+ *
+ *   Version  $Id: ua_acl.c 5714 2007-10-03 16:22:07Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -40,14 +40,14 @@
 /*
  * Check if access is permitted to item in acl
  */
-bool acl_access_ok(UAContext *ua, int acl, char *item)
+bool acl_access_ok(UAContext *ua, int acl, const char *item)
 {
    return acl_access_ok(ua, acl, item, strlen(item));
 }
 
 
 /* This version expects the length of the item which we must check. */
-bool acl_access_ok(UAContext *ua, int acl, char *item, int len)
+bool acl_access_ok(UAContext *ua, int acl, const char *item, int len)
 {
 
    /* If no console resource => default console and all is permitted */

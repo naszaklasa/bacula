@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: restore.cpp 5267 2007-07-30 23:35:57Z bartleyd2 $
+ *   Version $Id: restore.cpp 5725 2007-10-05 14:59:31Z kerns $
  *
  *  Restore Class 
  *
@@ -181,7 +181,6 @@ void restorePage::addDirectory(QString &newdirr)
 {
    QString newdir = newdirr;
    QString fullpath = m_cwd + newdirr;
-   QRegExp regex("^/[a-z]:/$");
    bool ok = true;
    bool windrive = false;
 
@@ -193,7 +192,7 @@ void restorePage::addDirectory(QString &newdirr)
    }
 
    /* add unix '/' directory first */
-   if (m_dirPaths.empty() && (regex.indexIn(fullpath,0) == -1)) {
+   if (m_dirPaths.empty() && !isWin32Path(fullpath)) {
       QTreeWidgetItem *item = new QTreeWidgetItem(directoryWidget);
       item->setIcon(0,QIcon(QString::fromUtf8(":images/folder.png")));
       
@@ -206,12 +205,11 @@ void restorePage::addDirectory(QString &newdirr)
       m_dirTreeItems.insert(item, text);
    }
 
-   if (regex.indexIn(fullpath,0) == 0) {
+   if (isWin32Path(fullpath)) {
       /* this is a windows drive */
       if (mainWin->m_miscDebug) {
          Pmsg0(000, "Need to do windows \"letter\":/\n");
       }
-      fullpath.replace(0,1,"");
       windrive = true;
    }
  
@@ -316,10 +314,6 @@ void restorePage::fileDoubleClicked(QTreeWidgetItem *item, int column)
     */
    if (item->text(1).endsWith("/")) {
       QString fullpath = m_cwd + item->text(1);
-      /* check for fullpath = "/c:/" */
-      QRegExp regex("^/[a-z]:/");
-      if (regex.indexIn(fullpath,0) == 0)  /* remove leading '/' */
-         fullpath.replace(0,1,"");
       QTreeWidgetItem *item = m_dirPaths.value(fullpath);
       if (item) {
          directoryWidget->setCurrentItem(item);

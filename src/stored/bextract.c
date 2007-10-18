@@ -4,7 +4,7 @@
  *
  *   Kern E. Sibbald, MM
  *
- *   Version $Id: bextract.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: bextract.c 5713 2007-10-03 11:36:47Z kerns $
  *
  */
 /*
@@ -245,7 +245,7 @@ static void do_extract(char *devname)
 
    free(jcr->where);
    jcr->where = bstrdup(where);
-   attr = new_attr();
+   attr = new_attr(jcr);
 
    compress_buf = get_memory(compress_buf_size);
 

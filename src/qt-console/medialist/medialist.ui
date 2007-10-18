@@ -99,6 +99,23 @@
     <string>Update all Volumes From Pool</string>
    </property>
   </action>
+  <action name="actionAllVolumes" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/cartridge-edit.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Update all Volumes from all Pools</string>
+   </property>
+   <property name="iconText" >
+    <string>Update all Volumes from all Pools</string>
+   </property>
+   <property name="toolTip" >
+    <string>Update all Volumes from all Pools</string>
+   </property>
+   <property name="statusTip" >
+    <string>Update all Volumes from all Pools</string>
+   </property>
+  </action>
   <action name="actionVolumeFromPool" >
    <property name="icon" >
     <iconset resource="../main.qrc" >:/images/cartridge-edit.png</iconset>

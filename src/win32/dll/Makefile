@@ -68,9 +68,9 @@ LIB_OBJS = \
 	$(OBJDIR)/edit.o \
 	$(OBJDIR)/enh_fnmatch.o \
 	$(OBJDIR)/fnmatch.o \
+	$(OBJDIR)/guid_to_name.o \
 	$(OBJDIR)/hmac.o \
 	$(OBJDIR)/htable.o \
-	$(OBJDIR)/idcache.o \
 	$(OBJDIR)/jcr.o \
 	$(OBJDIR)/lex.o \
 	$(OBJDIR)/md5.o \

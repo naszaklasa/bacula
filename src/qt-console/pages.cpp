@@ -26,13 +26,22 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: pages.cpp 5372 2007-08-17 12:17:04Z kerns $
+ *   Version $Id: pages.cpp 5725 2007-10-05 14:59:31Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
 
 #include "pages.h"
 #include "bat.h"
+
+/* A global function */
+bool isWin32Path(QString &fullPath) 
+{
+   char *buf = fullPath.left(2).toUtf8().data();
+
+   return buf[1] == ':' && B_ISALPHA(buf[0]);
+}
+
 
 /*
  * dockPage

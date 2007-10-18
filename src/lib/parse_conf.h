@@ -29,7 +29,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.h 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: parse_conf.h 5713 2007-10-03 11:36:47Z kerns $
  *
  */
 
@@ -134,7 +134,7 @@ RES   **new_res_head();
 
 
 /* Resource routines */
-RES *GetResWithName(int rcode, char *name);
+RES *GetResWithName(int rcode, const char *name);
 RES *GetNextRes(int rcode, RES *res);
 void b_LockRes(const char *file, int line);
 void b_UnlockRes(const char *file, int line);

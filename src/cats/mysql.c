@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: mysql.c 5038 2007-06-18 19:29:26Z kerns $
+ *    Version $Id: mysql.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 
@@ -149,8 +149,9 @@ db_open_database(JCR *jcr, B_DB *mdb)
    }
 
    if ((errstat=rwl_init(&mdb->lock)) != 0) {
+      berrno be;
       Mmsg1(&mdb->errmsg, _("Unable to initialize DB lock. ERR=%s\n"),
-            strerror(errstat));
+            be.bstrerror(errstat));
       V(mutex);
       return 0;
    }
@@ -295,62 +296,9 @@ int db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index)
  *         the escaped output.
  */
 void
-db_escape_string(char *snew, char *old, int len)
+db_escape_string(JCR *jcr, B_DB *mdb, char *snew, char *old, int len)
 {
-   mysql_escape_string(snew, old, len);
-
-#ifdef xDO_IT_MYSELF
-
-/* Should use mysql_real_escape_string ! */
-unsigned long mysql_real_escape_string(MYSQL *mysql, char *to, const char *from, unsigned long length);
-
-   char *n, *o;
-
-   n = snew;
-   o = old;
-   while (len--) {
-      switch (*o) {
-      case 0:
-         *n++= '\\';
-         *n++= '0';
-         o++;
-         break;
-      case '\n':
-         *n++= '\\';
-         *n++= 'n';
-         o++;
-         break;
-      case '\r':
-         *n++= '\\';
-         *n++= 'r';
-         o++;
-         break;
-      case '\\':
-         *n++= '\\';
-         *n++= '\\';
-         o++;
-         break;
-      case '\'':
-         *n++= '\\';
-         *n++= '\'';
-         o++;
-         break;
-      case '"':
-         *n++= '\\';
-         *n++= '"';
-         o++;
-         break;
-      case '\032':
-         *n++= '\\';
-         *n++= 'Z';
-         o++;
-         break;
-      default:
-         *n++= *o++;
-      }
-   }
-   *n = 0;
-#endif
+   mysql_real_escape_string(mdb->db, snew, old, len);
 }
 
 /*
@@ -403,33 +351,27 @@ void my_mysql_free_result(B_DB *mdb)
    db_unlock(mdb);
 }
 
-char *my_mysql_batch_lock_path_query = "LOCK TABLES Path write,     " 
-                                       "            batch write,    " 
-                                       "            Path as p write ";
+#ifdef HAVE_BATCH_FILE_INSERT
+const char *my_mysql_batch_lock_path_query = 
+   "LOCK TABLES Path write, batch write, Path as p write";
 
 
-char *my_mysql_batch_lock_filename_query = "LOCK TABLES Filename write,     "
-                                           "            batch write,        "
-                                           "            Filename as f write ";
+const char *my_mysql_batch_lock_filename_query = 
+   "LOCK TABLES Filename write, batch write, Filename as f write";
 
-char *my_mysql_batch_unlock_tables_query = "UNLOCK TABLES";
+const char *my_mysql_batch_unlock_tables_query = "UNLOCK TABLES";
 
-char *my_mysql_batch_fill_path_query = "INSERT INTO Path (Path)        "
-                                       " SELECT a.Path FROM            " 
-                                       "  (SELECT DISTINCT Path        "
-                                       "     FROM batch) AS a          " 
-                                       " WHERE NOT EXISTS              "
-                                       "  (SELECT Path                 "
-                                       "     FROM Path AS p            "
-                                       "    WHERE p.Path = a.Path)     ";     
+const char *my_mysql_batch_fill_path_query = 
+   "INSERT INTO Path (Path) "
+    "SELECT a.Path FROM " 
+     "(SELECT DISTINCT Path FROM batch) AS a WHERE NOT EXISTS "
+     "(SELECT Path FROM Path AS p WHERE p.Path = a.Path)";     
 
-char *my_mysql_batch_fill_filename_query = "INSERT INTO Filename (Name)       "
-                                           "  SELECT a.Name FROM              " 
-                                           "   (SELECT DISTINCT Name          "
-                                           "      FROM batch) AS a            " 
-                                           "  WHERE NOT EXISTS                "
-                                           "   (SELECT Name                   "
-                                           "      FROM Filename AS f          "
-                                           "      WHERE f.Name = a.Name)      ";
+const char *my_mysql_batch_fill_filename_query = 
+   "INSERT INTO Filename (Name) "
+    "SELECT a.Name FROM " 
+     "(SELECT DISTINCT Name FROM batch) AS a WHERE NOT EXISTS "
+     "(SELECT Name FROM Filename AS f WHERE f.Name = a.Name)";
+#endif /* HAVE_BATCH_FILE_INSERT */
 
 #endif /* HAVE_MYSQL */

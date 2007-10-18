@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: job.c 5318 2007-08-09 09:52:28Z kerns $
+ *   Version $Id: job.c 5686 2007-09-28 22:01:16Z kerns $
  *
  */
 
@@ -73,6 +73,7 @@ bool job_cmd(JCR *jcr)
 {
    int JobId;
    char auth_key[100];
+   char seed[100];
    BSOCK *dir = jcr->dir_bsock;
    POOL_MEM job_name, client_name, job, fileset_name, fileset_md5;
    int JobType, level, spool_attributes, no_attributes, spool_data;
@@ -91,7 +92,7 @@ bool job_cmd(JCR *jcr)
               &write_part_after_job, &PreferMountedVols);
    if (stat != 13) {
       pm_strcpy(jcr->errmsg, dir->msg);
-      bnet_fsend(dir, BAD_job, stat, jcr->errmsg);
+      dir->fsend(BAD_job, stat, jcr->errmsg);
       Dmsg1(100, ">dird: %s", dir->msg);
       set_jcr_job_status(jcr, JS_ErrorTerminated);
       return false;
@@ -134,9 +135,10 @@ bool job_cmd(JCR *jcr)
    /*
     * Pass back an authorization key for the File daemon
     */
-   make_session_key(auth_key, NULL, 1);
-   bnet_fsend(dir, OKjob, jcr->VolSessionId, jcr->VolSessionTime, auth_key);
-   Dmsg1(100, ">dird: %s", dir->msg);
+   bsnprintf(seed, sizeof(seed), "%p%d", jcr, JobId);
+   make_session_key(auth_key, seed, 1);
+   dir->fsend(OKjob, jcr->VolSessionId, jcr->VolSessionTime, auth_key);
+   Dmsg2(100, ">dird jid=%u: %s", (uint32_t)jcr->JobId, dir->msg);
    jcr->sd_auth_key = bstrdup(auth_key);
    memset(auth_key, 0, sizeof(auth_key));
    generate_daemon_event(jcr, "JobStart");
@@ -169,17 +171,18 @@ bool run_cmd(JCR *jcr)
    timeout.tv_nsec = tv.tv_usec * 1000;
    timeout.tv_sec = tv.tv_sec + me->client_wait;
 
-   Dmsg2(100, "%s waiting %d sec for FD to contact SD\n", 
-        jcr->Job, (int)me->client_wait);
+   Dmsg3(050, "%s waiting %d sec for FD to contact SD key=%s\n",
+         jcr->Job, (int)me->client_wait, jcr->sd_auth_key);
+
    /*
     * Wait for the File daemon to contact us to start the Job,
     *  when he does, we will be released, unless the 30 minutes
     *  expires.
     */
    P(mutex);
-   for ( ; !job_canceled(jcr); ) {
+   while ( !jcr->authenticated && !job_canceled(jcr) ) {
       errstat = pthread_cond_timedwait(&jcr->job_start_wait, &mutex, &timeout);
-      if (errstat == 0 || errstat == ETIMEDOUT) {
+      if (errstat == ETIMEDOUT || errstat == EINVAL || errstat == EPERM) {
          break;
       }
    }
@@ -195,7 +198,7 @@ bool run_cmd(JCR *jcr)
 }
 
 /*
- * After receiving a connection (in job.c) if it is
+ * After receiving a connection (in dircmd.c) if it is
  *   from the File daemon, this routine is called.
  */
 void handle_filed_connection(BSOCK *fd, char *job_name)
@@ -204,8 +207,8 @@ void handle_filed_connection(BSOCK *fd, char *job_name)
 
    bmicrosleep(0, 50000);             /* wait 50 millisecs */
    if (!(jcr=get_jcr_by_full_name(job_name))) {
-      Jmsg1(NULL, M_FATAL, 0, _("Job name not found: %s\n"), job_name);
-      Dmsg1(100, "Job name not found: %s\n", job_name);
+      Jmsg1(NULL, M_FATAL, 0, _("FD connect failed: Job name not found: %s\n"), job_name);
+      Dmsg1(3, "**** Job \"%s\" not found", job_name);
       return;
    }
 
@@ -216,7 +219,7 @@ void handle_filed_connection(BSOCK *fd, char *job_name)
 
    if (jcr->authenticated) {
       Jmsg2(jcr, M_FATAL, 0, _("Hey!!!! JobId %u Job %s already authenticated.\n"),
-         jcr->JobId, jcr->Job);
+         (uint32_t)jcr->JobId, jcr->Job);
       free_jcr(jcr);
       return;
    }
@@ -229,7 +232,7 @@ void handle_filed_connection(BSOCK *fd, char *job_name)
       Jmsg(jcr, M_FATAL, 0, _("Unable to authenticate File daemon\n"));
    } else {
       jcr->authenticated = true;
-      Dmsg1(110, "OK Authentication Job %s\n", jcr->Job);
+      Dmsg2(110, "OK Authentication jid=%u Job %s\n", (uint32_t)jcr->JobId, jcr->Job);
    }
 
    if (!jcr->authenticated) {
@@ -274,9 +277,9 @@ bool query_cmd(JCR *jcr)
             }  
             ok = dir_update_device(jcr, device->dev);
             if (ok) {
-               ok = bnet_fsend(dir, OK_query);
+               ok = dir->fsend(OK_query);
             } else {
-               bnet_fsend(dir, NO_query);
+               dir->fsend(NO_query);
             }
             return ok;
          }
@@ -289,9 +292,9 @@ bool query_cmd(JCR *jcr)
             }
             ok = dir_update_changer(jcr, changer);
             if (ok) {
-               ok = bnet_fsend(dir, OK_query);
+               ok = dir->fsend(OK_query);
             } else {
-               bnet_fsend(dir, NO_query);
+               dir->fsend(NO_query);
             }
             return ok;
          }
@@ -299,12 +302,12 @@ bool query_cmd(JCR *jcr)
       /* If we get here, the device/autochanger was not found */
       unbash_spaces(dir->msg);
       pm_strcpy(jcr->errmsg, dir->msg);
-      bnet_fsend(dir, NO_device, dev_name.c_str());
+      dir->fsend(NO_device, dev_name.c_str());
       Dmsg1(100, ">dird: %s\n", dir->msg);
    } else {
       unbash_spaces(dir->msg);
       pm_strcpy(jcr->errmsg, dir->msg);
-      bnet_fsend(dir, BAD_query, jcr->errmsg);
+      dir->fsend(BAD_query, jcr->errmsg);
       Dmsg1(100, ">dird: %s\n", dir->msg);
    }
 
@@ -322,7 +325,7 @@ void stored_free_jcr(JCR *jcr)
 {
    Dmsg1(900, "stored_free_jcr JobId=%u\n", jcr->JobId);
    if (jcr->file_bsock) {
-      bnet_close(jcr->file_bsock);
+      jcr->file_bsock->close();
       jcr->file_bsock = NULL;
    }
    if (jcr->job_name) {

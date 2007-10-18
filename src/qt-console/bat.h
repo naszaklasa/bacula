@@ -29,7 +29,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: bat.h 5366 2007-08-17 10:18:43Z kerns $
+ *   Version $Id: bat.h 5725 2007-10-05 14:59:31Z kerns $
  *
  *   Kern Sibbald, January 2007
  */
@@ -48,5 +48,6 @@ extern MainWin *mainWin;
 extern QApplication *app;
 
 int bvsnprintf(char *str, int32_t size, const char *format, va_list ap);
+bool isWin32Path(QString &fullPath);
 
 #endif /* _BAT_H_ */

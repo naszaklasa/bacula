@@ -11,7 +11,7 @@
  *
  *   Kern Sibbald, November MMV
  *
- *   Version $Id: bsnprintf.c 5412 2007-08-29 09:30:22Z kerns $
+ *   Version $Id: bsnprintf.c 5713 2007-10-03 11:36:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -63,7 +63,7 @@
 
 int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args);
 static int32_t fmtstr(char *buffer, int32_t currlen, int32_t maxlen,
-                   char *value, int flags, int min, int max);
+                   const char *value, int flags, int min, int max);
 static int32_t fmtint(char *buffer, int32_t currlen, int32_t maxlen,
                    int64_t value, int base, int min, int max, int flags);
 
@@ -396,7 +396,7 @@ int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args)
 }
 
 static int32_t fmtstr(char *buffer, int32_t currlen, int32_t maxlen,
-                   char *value, int flags, int min, int max)
+                   const char *value, int flags, int min, int max)
 {
    int padlen, strln;              /* amount to pad */
    int cnt = 0;

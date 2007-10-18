@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: restoretree.cpp 5376 2007-08-19 03:06:56Z bartleyd2 $
+ *   Version $Id: restoretree.cpp 5732 2007-10-06 10:40:13Z kerns $
  *
  *  Restore Class 
  *
@@ -51,9 +51,6 @@ restoreTree::restoreTree()
    m_populated = false;
 
    dockPage();
-   m_winRegExpDrive.setPattern("^[a-z]:/$");
-   m_winRegExpPath.setPattern("^[a-z]:/");
-   m_slashregex.setPattern("/");
    m_debugCnt = 0;
    m_debugTrap = true;
 
@@ -259,8 +256,10 @@ void restoreTree::populateDirectoryTree()
             Pmsg1(000, "Done with query %i results\n", results.count());
          QStringList fieldlist;
          foreach(QString resultline, results) {
-            m_debugCnt += 1;
-            prBar2->setValue(m_debugCnt);
+            /* Update progress bar periodically */
+            if ((++m_debugCnt && 0x3FF) == 0) {
+               prBar2->setValue(m_debugCnt);
+            }
             fieldlist = resultline.split("\t");
             int fieldcnt = 0;
             QString field;
@@ -324,15 +323,14 @@ void restoreTree::setJobsCheckedList()
  */
 void restoreTree::parseDirectory(QString &dir_in)
 {
-   /* m_debugTrap is to only print debugs for a few occurances of calling parseDirectory
+   /* m_debugTrap is to only print debugs for a few occurennces of calling parseDirectory
     * instead of printing out what could potentially a whole bunch */
    if (m_debugCnt > 2)
       m_debugTrap = false;
-   /* Clean up the directory string remove some funny char after last '/' */
-   QRegExp rgx("[^/]$");
-   int lastslash = rgx.indexIn(dir_in);
-   if (lastslash != -1)
-      dir_in.replace(lastslash, dir_in.length()-lastslash, "");
+   /* Truncate everything after the last / */
+   if (dir_in.right(1) != "/") {
+      dir_in.truncate(dir_in.lastIndexOf("/") + 1);
+   }
    if ((mainWin->m_miscDebug) && (m_debugTrap))
       Pmsg1(000, "parsing %s\n", dir_in.toUtf8().data());
 
@@ -344,7 +342,7 @@ void restoreTree::parseDirectory(QString &dir_in)
    /* start from the end, turn /etc/somedir/subdir/ into /etc/somedir and subdir/ 
     * if not added into tree, then try /etc/ and somedir/ if not added, then try
     * / and etc/ .  That should succeed, then add the ones that failed in reverse */
-   while (((index = m_slashregex.lastIndexIn(dir_in, -2)) != -1) && (!done)) {
+   while (((index = dir_in.lastIndexOf("/", -2)) != -1) && (!done)) {
       direct = path = dir_in;
       path.replace(index+1, dir_in.length()-index-1,"");
       direct.replace(0, index+1, "");
@@ -373,6 +371,7 @@ void restoreTree::parseDirectory(QString &dir_in)
    }
 }
 
+
 /*
  * Function called from fill directory when a directory is found to see if this
  * directory exists in the directory pane and then add it to the directory pane
@@ -392,7 +391,7 @@ bool restoreTree::addDirectory(QString &m_cwd, QString &newdirr)
 
    if (!m_slashTrap) {
       /* add unix '/' directory first */
-      if (m_dirPaths.empty() && (m_winRegExpPath.indexIn(fullPath, 0) == -1)) {
+      if (m_dirPaths.empty() && !isWin32Path(fullPath)) {
          m_slashTrap = true;
          QTreeWidgetItem *item = new QTreeWidgetItem(directoryTree);
          QString text("/");
@@ -406,7 +405,7 @@ bool restoreTree::addDirectory(QString &m_cwd, QString &newdirr)
          m_dirPaths.insert(text, item);
       }
       /* no need to check for windows drive if unix */
-      if (m_winRegExpDrive.indexIn(m_cwd, 0) == 0) {
+      if (isWin32Path(m_cwd)) {
          if (!m_dirPaths.contains(m_cwd)) {
             /* this is a windows drive add the base widget */
             QTreeWidgetItem *item = new QTreeWidgetItem(directoryTree);
@@ -1280,7 +1279,7 @@ void restoreTree::fullPathtoSubPaths(QStringList &subPaths, QString &fullPath_in
    bool done = false;
    QString fullPath = fullPath_in;
    QString direct, path;
-   while (((index = m_slashregex.lastIndexIn(fullPath, -2)) != -1) && (!done)) {
+   while (((index = fullPath.lastIndexOf("/", -2)) != -1) && (!done)) {
       direct = path = fullPath;
       path.replace(index+1, fullPath.length()-index-1, "");
       direct.replace(0, index+1, "");
@@ -1730,7 +1729,7 @@ int restoreTree::mostRecentVersionfromFullPath(QString &fullPath)
 {
    int qversion = 0;
    QString directory, fileName;
-   int index = m_slashregex.lastIndexIn(fullPath, -2);
+   int index = fullPath.lastIndexOf("/", -2);
    if (index != -1) {
       directory = fileName = fullPath;
       directory.replace(index+1, fullPath.length()-index-1, "");
@@ -1783,7 +1782,7 @@ int restoreTree::queryFileIndex(QString &fullPath, int jobId)
 {
    int qfileIndex = 0;
    QString directory, fileName;
-   int index = m_slashregex.lastIndexIn(fullPath, -2);
+   int index = fullPath.lastIndexOf("/", -2);
    if (index != -1) {
       directory = fileName = fullPath;
       directory.replace(index+1, fullPath.length()-index-1, "");

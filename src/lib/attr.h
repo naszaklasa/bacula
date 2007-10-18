@@ -30,8 +30,11 @@
  *
  *    Kern Sibbald, June MMIII
  *
- *   Version $Id: attr.h 5018 2007-06-16 08:25:03Z kerns $
+ *   Version $Id: attr.h 5713 2007-10-03 11:36:47Z kerns $
  */
+
+#ifndef __ATTR_H_
+#define __ATTR_H_ 1
 
 
 struct ATTR {
@@ -40,6 +43,7 @@ struct ATTR {
    int32_t type;                      /* file type FT */
    int32_t file_index;                /* file index */
    int32_t LinkFI;                    /* file index to data if hard link */
+   uid_t uid;                         /* userid */
    struct stat statp;                 /* decoded stat packet */
    POOLMEM *attrEx;                   /* extended attributes if any */
    POOLMEM *ofname;                   /* output filename */
@@ -52,4 +56,7 @@ struct ATTR {
    char *attr;                        /* attributes position */
    char *fname;                       /* filename */
    char *lname;                       /* link name if any */
+   JCR *jcr;                          /* jcr pointer */
 };
+
+#endif /* __ATTR_H_ */

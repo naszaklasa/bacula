@@ -39,7 +39,7 @@ JobDefs {
 
 #
 # Define the main nightly save backup job
-#   By default, this job will back up to disk in /tmp
+#   By default, this job will back up to disk in @archivedir@
 Job {
   Name = "Client1"
   JobDefs = "DefaultJob"
@@ -80,7 +80,7 @@ Job {
   Storage = File                      
   Pool = Default
   Messages = Standard
-  Where = /tmp/bacula-restores
+  Where = @archivedir@/bacula-restores
 }
 
 

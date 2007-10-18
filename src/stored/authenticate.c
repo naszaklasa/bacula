@@ -1,15 +1,7 @@
 /*
- * Authenticate caller
- *
- *   Kern Sibbald, October 2000
- *
- *   Version $Id: authenticate.c 4992 2007-06-07 14:46:43Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,9 +25,20 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Authenticate caller
+ *
+ *   Kern Sibbald, October 2000
+ *
+ *   Version $Id: authenticate.c 5713 2007-10-03 11:36:47Z kerns $
+ *
+ */
+
 
 #include "bacula.h"
 #include "stored.h"
+
+const int dbglvl = 50;
 
 static char Dir_sorry[] = "3999 No go\n";
 static char OK_hello[]  = "3000 OK Hello\n";
@@ -56,12 +59,12 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
    alist *verify_list = NULL;
 
    if (rcode != R_DIRECTOR) {
-      Dmsg1(50, "I only authenticate Directors, not %d\n", rcode);
+      Dmsg1(dbglvl, "I only authenticate Directors, not %d\n", rcode);
       Emsg1(M_FATAL, 0, _("I only authenticate Directors, not %d\n"), rcode);
       return 0;
    }
    if (bs->msglen < 25 || bs->msglen > 500) {
-      Dmsg2(50, "Bad Hello command from Director at %s. Len=%d.\n",
+      Dmsg2(dbglvl, "Bad Hello command from Director at %s. Len=%d.\n",
             bs->who(), bs->msglen);
       Emsg2(M_FATAL, 0, _("Bad Hello command from Director at %s. Len=%d.\n"),
             bs->who(), bs->msglen);
@@ -72,7 +75,7 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
 
    if (sscanf(bs->msg, "Hello Director %127s calling", dirname) != 1) {
       bs->msg[100] = 0;
-      Dmsg2(50, "Bad Hello command from Director at %s: %s\n",
+      Dmsg2(dbglvl, "Bad Hello command from Director at %s: %s\n",
             bs->who(), bs->msg);
       Emsg2(M_FATAL, 0, _("Bad Hello command from Director at %s: %s\n"),
             bs->who(), bs->msg);
@@ -85,7 +88,7 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
          break;
    }
    if (!director) {
-      Dmsg2(50, "Connection from unknown Director %s at %s rejected.\n",
+      Dmsg2(dbglvl, "Connection from unknown Director %s at %s rejected.\n",
             dirname, bs->who());
       Emsg2(M_FATAL, 0, _("Connection from unknown Director %s at %s rejected.\n"
        "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"),
@@ -113,10 +116,10 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
    if (auth_success) {
       auth_success = cram_md5_respond(bs, director->password, &tls_remote_need, &compatible);
       if (!auth_success) {
-         Dmsg1(50, "cram_get_auth failed with %s\n", bs->who());
+         Dmsg1(dbglvl, "cram_get_auth failed with %s\n", bs->who());
       }
    } else {
-      Dmsg1(50, "cram_auth failed with %s\n", bs->who());
+      Dmsg1(dbglvl, "cram_auth failed with %s\n", bs->who());
    }
 
    if (!auth_success) {
@@ -174,13 +177,13 @@ int authenticate_director(JCR *jcr)
    BSOCK *dir = jcr->dir_bsock;
 
    if (!authenticate(R_DIRECTOR, dir, jcr)) {
-      bnet_fsend(dir, "%s", Dir_sorry);
-      Dmsg1(50, "Unable to authenticate Director at %s.\n", dir->who());
+      dir->fsend("%s", Dir_sorry);
+      Dmsg1(dbglvl, "Unable to authenticate Director at %s.\n", dir->who());
       Emsg1(M_ERROR, 0, _("Unable to authenticate Director at %s.\n"), dir->who());
       bmicrosleep(5, 0);
       return 0;
    }
-   return bnet_fsend(dir, "%s", OK_hello);
+   return dir->fsend("%s", OK_hello);
 }
 
 int authenticate_filed(JCR *jcr)
@@ -213,10 +216,10 @@ int authenticate_filed(JCR *jcr)
        /* Respond to his challenge */
        auth_success = cram_md5_respond(fd, jcr->sd_auth_key, &tls_remote_need, &compatible);
        if (!auth_success) {
-          Dmsg1(50, "cram-get-auth failed with %s\n", fd->who());
+          Dmsg1(dbglvl, "cram-get-auth failed with %s\n", fd->who());
        }
    } else {
-      Dmsg1(50, "cram-auth failed with %s\n", fd->who());
+      Dmsg1(dbglvl, "cram-auth failed with %s\n", fd->who());
    }
 
    if (!auth_success) {

@@ -1,12 +1,91 @@
               Technical notes on version 2.2
 
 General:
+09Oct07
+kes  Add JobId in place of Job name in all the Jmsg() output.  
+kes  Correct the APP_DESC for the Win32 storage service (remove an e).
+06Oct07
+kes  Add new SD despooling attributes and Dir inserting attributes 
+     job status codes.  This fixes bug #961.
+kes  Fix Win32 drive display in bat version browser. Fixes bug #962.
+05Oct07
+kes  Fix doc issue. This fixes bug #963.
+kes  Fix listing performance problems in bat. Pointed out by 
+     Chris Howells.
+ebl  Fix replace on restore. This fixes bug #969
+kes  Fix bat code that tests for Win32. This should fix bug #968
+kes  Query 5 list wrong Vol after migration. This fixes bug #960
+04Oct07 
+kes  Correct lib/Makefile.in to include enh_fnmatch.o that was removed
+     in back porting from 2.3.x
+03Oct07
+kes  Backport almost 4000 lines of 2.3 code that fixes a number of bugs.
+     The details are included in the notes in this file.
+28Sep07
+kes  Backport 2.3 code that fixes: it fixes incorrect or incomplete error
+     messages; it fixes a problem opening the SQLite3 database when multiple
+     simultaneous jobs were running; it fixes a bug with certain versions of
+     MySQL where batch inserts failed because of table name character case
+     (upper/lower) differences.
+kes  Fix race condition that drops final block written to volume.
+     This happens in rare cases with multiple simultaneous jobs 
+     when the Volume fills.  This fixes bug #964.  May be related
+     to bug #935 and possibly #903.
+27Sep07 
+kes  Fix FD->SD authorization failure, which was due to spurious
+     wakeups from a pthread_cond_timedwait().  Simply check the
+     predicate before continuing.  This fixes bug #953
+dvl  Add new configuration item --archivedir
+dvl  Adjust regression tests to use tmp not /tmp.  This will allow
+     multiple concurrent runs of the regression tests.
+28Sep07
+kes  Eliminate more strerror() and replace with bstrerror().
+kes  Remove BSD getopt and replace with unrestricted IBM version.
+kes  Fix Win32 build for changed calling sequences.
+27Sep07 
+kes  Fix FD->SD authorization failure, which was due to spurious
+     wakeups from a pthread_cond_timedwait().  Simply check the
+     predicate before continuing.  This fixes bug #953.
+kes  Add const char where needed (more to do).
+26Sep07
+kes  Setup SQLite busy handler before doing queries. Fixes bug #967.
+kes  Don't overwrite error message in check_tables_version.
+     Fixes bug #966.
+kes  Unlock batch insert tables with same calls used elsewhere.
+kes  Allow starting 59 jobs a second.
+kes  Make SD session key more random.
+kes  Add retry for SQLite opening db if it fails. Probably helps
+     for bug #967.
+kes  Suppress extra error messages during batch insert failure.
+     Fixes bug #966.
+kes  Put some FD auth code on dbglvl rather than fixed.
+kes  Return insert attributes error message in db msg buffer to avoid
+     false error messages. Helps fix bug #966.
+kes  Separate batch init error messages. Probably helps fix bug #966.
+kes  If Dir gets an error during inserting attributes, cancel SD.  
+     This reduces unnecessary error messages.
+24Sep07 
+ebl  Cleanup batch insert code. Probably fixes bug #965.
+23Sep07 
+kes  Turn off some code when batch insert not enabled.
+kes  Edit FD name in connect error messages.
+22Sep07
+kes  Add code to handle tray monitor separated from Win32 FD.
+kes  Fix display of Win32 tray monitor after reboot. Fixes bug #952.
+20Sep07
+kes  Fix ANSI tape labeling.  This fixes bug #954.
+kes  Increase the max block size to 4MB fixes bug #957.
+kes  Apply 2.2.4-poll-mount fix, that resolves bug #908 where a tape 
+     is not properly mounted (recognized) during a poll.
+kes  Apply 2.2.4-verify patch that resolves bug #958.  A Verify catalog 
+     Job that has differences reports Verify OK.
+ebl  Fixes #955 bug seg fault in Dir introduced  with regexwhere relocation.
+
 Release Version 2.2.4
 14Sep07
 kes  Increase size of name string when FD making connection to SD.
      May fix bug #953.
 13Sep07
-kes  Add code to try to fix bug #908.
 kes  Add waits to multiple exit detection code to try to force pid
      file to always be deleted.
 kes  Restore good dev.tar.gz to rescue set appropriate binary property.

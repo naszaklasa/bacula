@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: util.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: util.c 5735 2007-10-06 12:49:33Z kerns $
  */
 
 #include "bacula.h"
@@ -229,6 +229,12 @@ void jobstatus_to_ascii(int JobStatus, char *msg, int maxlen)
       break;
    case JS_WaitPriority:
       jobstat = _("Waiting on Priority");
+      break;
+   case JS_AttrDespooling:
+      jobstat = _("SD despooling Attributes");
+      break;
+   case JS_AttrInserting:
+      jobstat = _("Dir inserting Attributes");
       break;
 
    default:

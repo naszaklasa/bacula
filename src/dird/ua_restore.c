@@ -37,7 +37,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_restore.c 5402 2007-08-24 16:24:59Z kerns $
+ *   Version $Id: ua_restore.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 
@@ -58,7 +58,7 @@ static void free_name_list(NAME_LIST *name_list);
 static bool select_backups_before_date(UAContext *ua, RESTORE_CTX *rx, char *date);
 static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx);
 static void free_rx(RESTORE_CTX *rx);
-static void split_path_and_filename(RESTORE_CTX *rx, char *fname);
+static void split_path_and_filename(UAContext *ua, RESTORE_CTX *rx, char *fname);
 static int jobid_fileindex_handler(void *ctx, int num_fields, char **row);
 static bool insert_file_into_findex_list(UAContext *ua, RESTORE_CTX *rx, char *file,
                                          char *date);
@@ -581,7 +581,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
          }
          len = strlen(ua->cmd);
          fname = (char *)malloc(len * 2 + 1);
-         db_escape_string(fname, ua->cmd, len);
+         db_escape_string(ua->jcr, ua->db, fname, ua->cmd, len);
          Mmsg(rx->query, uar_file, rx->ClientName, fname);
          free(fname);
          gui_save = ua->jcr->gui;
@@ -868,7 +868,7 @@ static bool insert_file_into_findex_list(UAContext *ua, RESTORE_CTX *rx, char *f
                                         char *date)
 {
    strip_trailing_newline(file);
-   split_path_and_filename(rx, file);
+   split_path_and_filename(ua, rx, file);
    if (*rx->JobIds == 0) {
       Mmsg(rx->query, uar_jobid_fileindex, date, rx->path, rx->fname, 
            rx->ClientName);
@@ -939,7 +939,7 @@ static bool insert_table_into_findex_list(UAContext *ua, RESTORE_CTX *rx, char *
    return true;
 }
 
-static void split_path_and_filename(RESTORE_CTX *rx, char *name)
+static void split_path_and_filename(UAContext *ua, RESTORE_CTX *rx, char *name)
 {
    char *p, *f;
 
@@ -968,7 +968,7 @@ static void split_path_and_filename(RESTORE_CTX *rx, char *name)
    rx->fnl = p - f;
    if (rx->fnl > 0) {
       rx->fname = check_pool_memory_size(rx->fname, 2*(rx->fnl)+1);
-      db_escape_string(rx->fname, f, rx->fnl);
+      db_escape_string(ua->jcr, ua->db, rx->fname, f, rx->fnl);
    } else {
       rx->fname[0] = 0;
       rx->fnl = 0;
@@ -977,7 +977,7 @@ static void split_path_and_filename(RESTORE_CTX *rx, char *name)
    rx->pnl = f - name;
    if (rx->pnl > 0) {
       rx->path = check_pool_memory_size(rx->path, 2*(rx->pnl)+1);
-      db_escape_string(rx->path, name, rx->pnl);
+      db_escape_string(ua->jcr, ua->db, rx->path, name, rx->pnl);
    } else {
       rx->path[0] = 0;
       rx->pnl = 0;

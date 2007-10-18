@@ -32,7 +32,7 @@
  *    Dan Langille, December 2003
  *    based upon work done by Kern Sibbald, March 2000
  *
- *    Version $Id: postgresql.c 5491 2007-09-07 12:57:05Z kerns $
+ *    Version $Id: postgresql.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 
@@ -211,6 +211,12 @@ db_open_database(JCR *jcr, B_DB *mdb)
    }
 
    sql_query(mdb, "SET datestyle TO 'ISO, YMD'");
+   
+   /* tell PostgreSQL we are using standard conforming strings
+      and avoid warnings such as:
+       WARNING:  nonstandard use of \\ in a string literal
+   */
+   sql_query(mdb, "set standard_conforming_strings=on");
 
    V(mutex);
    return 1;
@@ -284,9 +290,17 @@ int db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index)
  *         the escaped output.
  */
 void
-db_escape_string(char *snew, char *old, int len)
+db_escape_string(JCR *jcr, B_DB *mdb, char *snew, char *old, int len)
 {
-   PQescapeString(snew, old, len);
+   int error;
+  
+   PQescapeStringConn(mdb->db, snew, old, len, &error);
+   if (error) {
+      Jmsg(jcr, M_FATAL, 0, _("PQescapeStringConn returned non-zero.\n"));
+      /* error on encoding, probably invalid multibyte encoding in the source string
+        see PQescapeStringConn documentation for details. */
+      Dmsg0(500, "PQescapeStringConn failed\n");
+   }
 }
 
 /*
@@ -605,13 +619,13 @@ int my_postgresql_batch_start(JCR *jcr, B_DB *mdb)
    Dmsg0(500, "my_postgresql_batch_start started\n");
 
    if (my_postgresql_query(mdb,
-                           " CREATE TEMPORARY TABLE batch "
-                           "        (fileindex int,       "
-                           "        jobid int,            "
-                           "        path varchar,         "
-                           "        name varchar,         "
-                           "        lstat varchar,        "
-                           "        md5 varchar)") == 1)
+                           "CREATE TEMPORARY TABLE batch ("
+                               "fileindex int,"
+                               "jobid int,"
+                               "path varchar,"
+                               "name varchar,"
+                               "lstat varchar,"
+                               "md5 varchar)") == 1)
    {
       Dmsg0(500, "my_postgresql_batch_start failed\n");
       return 1;
@@ -785,22 +799,29 @@ char *my_postgresql_copy_escape(char *dest, char *src, size_t len)
    return dest;
 }
 
-char *my_pg_batch_lock_path_query = "BEGIN; LOCK TABLE Path IN SHARE ROW EXCLUSIVE MODE";
+#ifdef HAVE_BATCH_FILE_INSERT
+const char *my_pg_batch_lock_path_query = 
+   "BEGIN; LOCK TABLE Path IN SHARE ROW EXCLUSIVE MODE";
 
 
-char *my_pg_batch_lock_filename_query = "BEGIN; LOCK TABLE Filename IN SHARE ROW EXCLUSIVE MODE";
+const char *my_pg_batch_lock_filename_query = 
+   "BEGIN; LOCK TABLE Filename IN SHARE ROW EXCLUSIVE MODE";
 
-char *my_pg_batch_unlock_tables_query = "COMMIT";
+const char *my_pg_batch_unlock_tables_query = "COMMIT";
 
-char *my_pg_batch_fill_path_query = "INSERT INTO Path (Path)                                    "
-                                    "  SELECT a.Path FROM                                       "
-                                    "      (SELECT DISTINCT Path FROM batch) AS a               "
-                                    "  WHERE NOT EXISTS (SELECT Path FROM Path WHERE Path = a.Path) ";
+const char *my_pg_batch_fill_path_query = 
+   "INSERT INTO Path (Path) "
+    "SELECT a.Path FROM "
+     "(SELECT DISTINCT Path FROM batch) AS a "
+      "WHERE NOT EXISTS (SELECT Path FROM Path WHERE Path = a.Path) ";
 
 
-char *my_pg_batch_fill_filename_query = "INSERT INTO Filename (Name)        "
-                                        "  SELECT a.Name FROM               "
-                                        "    (SELECT DISTINCT Name FROM batch) as a "
-                                        "    WHERE NOT EXISTS               "
-                                        "      (SELECT Name FROM Filename WHERE Name = a.Name)";
+const char *my_pg_batch_fill_filename_query = 
+   "INSERT INTO Filename (Name) "
+    "SELECT a.Name FROM "
+     "(SELECT DISTINCT Name FROM batch) as a "
+      "WHERE NOT EXISTS "
+       "(SELECT Name FROM Filename WHERE Name = a.Name)";
+#endif /* HAVE_BATCH_FILE_INSERT */
+
 #endif /* HAVE_POSTGRESQL */

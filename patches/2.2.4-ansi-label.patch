@@ -1,0 +1,77 @@
+ 
+ This patch fixes bug #954.
+ WEOF on non-appendable error when trying to label a tape with ANSI labels turned on.
+
+ Apply it to version 2.2.4 (possibly earlier versions with):
+
+ cd <bacula-source>
+ patch -p0 <2.2.4-verify.patch
+ ./configure (your options)
+ make
+ ...
+ make install
+
+Index: block.c
+===================================================================
+--- src/stored/block.c	(revision 5615)
++++ src/stored/block.c	(revision 5615)
+@@ -273,6 +273,7 @@
+       dev->dev_errno = EIO;
+       Mmsg4(dev->errmsg, _("Volume data error at %u:%u! Wanted ID: \"%s\", got \"%s\". Buffer discarded.\n"),
+           dev->file, dev->block_num, BLKHDR2_ID, Id);
++      Dmsg1(50, "%s", dev->errmsg);
+       if (block->read_errors == 0 || verbose >= 2) {
+          Jmsg(jcr, M_ERROR, 0, "%s", dev->errmsg);
+       }
+@@ -1008,8 +1009,19 @@
+       dev->set_ateof();
+       return false;             /* return eof */
+    }
++
+    /* Continue here for successful read */
++
+    block->read_len = stat;      /* save length read */
++   if (dev->at_eof() && block->read_len == 80 && 
++        (dcr->VolCatInfo.LabelType != B_BACULA_LABEL ||
++         dcr->device->label_type != B_BACULA_LABEL)) {
++      /* ***FIXME*** should check label */
++      Dmsg2(100, "Ignore 80 byte ANSI label at %u:%u\n", dev->file, dev->block_num);
++      dev->clear_eof();
++      goto reread;             /* skip ANSI/IBM label */
++   }
++                                          
+    if (block->read_len < BLKHDR2_LENGTH) {
+       dev->dev_errno = EIO;
+       Mmsg4(dev->errmsg, _("Volume data error at %u:%u! Very short block of %d bytes on device %s discarded.\n"),
+
+Index: label.c
+===================================================================
+--- src/stored/label.c	(revision 5602)
++++ src/stored/label.c	(working copy)
+@@ -119,7 +119,6 @@
+    bstrncpy(dev->VolHdr.Id, "**error**", sizeof(dev->VolHdr.Id));
+ 
+   /* Read ANSI/IBM label if so requested */
+-  
+   want_ansi_label = dcr->VolCatInfo.LabelType != B_BACULA_LABEL ||
+                     dcr->device->label_type != B_BACULA_LABEL;
+   if (want_ansi_label || dev->has_cap(CAP_CHECKLABELS)) {
+@@ -344,6 +343,9 @@
+       }
+    }
+ 
++   /* Temporarily mark in append state to enable writing */
++   dev->set_append();
++
+    /* Create PRE_LABEL or VOL_LABEL if DVD */
+    create_volume_label(dev, VolName, PoolName, dvdnow);
+ 
+@@ -364,8 +366,6 @@
+    create_volume_label_record(dcr, dcr->rec);
+    dcr->rec->Stream = 0;
+ 
+-   /* Temporarily mark in append state to enable writing */
+-   dev->set_append();
+    if (!write_record_to_block(dcr->block, dcr->rec)) {
+       Dmsg2(130, "Bad Label write on %s: ERR=%s\n", dev->print_name(), dev->print_errmsg());
+       goto bail_out;

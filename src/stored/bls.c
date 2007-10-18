@@ -1,15 +1,7 @@
 /*
- *
- *  Dumb program to do an "ls" of a Bacula 1.0 mortal file.
- * 
- *  Kern Sibbald, MM
- *
- *   Version $Id: bls.c 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  Dumb program to do an "ls" of a Bacula 1.0 mortal file.
+ * 
+ *  Kern Sibbald, MM
+ *
+ *   Version $Id: bls.c 5713 2007-10-03 11:36:47Z kerns $
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -137,8 +137,9 @@ int main (int argc, char *argv[])
 
       case 'e':                    /* exclude list */
          if ((fd = fopen(optarg, "rb")) == NULL) {
+            berrno be;
             Pmsg2(0, _("Could not open exclude file: %s, ERR=%s\n"),
-               optarg, strerror(errno));
+               optarg, be.bstrerror());
             exit(1);
          }
          while (fgets(line, sizeof(line), fd) != NULL) {
@@ -151,8 +152,9 @@ int main (int argc, char *argv[])
 
       case 'i':                    /* include list */
          if ((fd = fopen(optarg, "rb")) == NULL) {
+            berrno be;
             Pmsg2(0, _("Could not open include file: %s, ERR=%s\n"),
-               optarg, strerror(errno));
+               optarg, be.bstrerror());
             exit(1);
          }
          while (fgets(line, sizeof(line), fd) != NULL) {
@@ -227,7 +229,7 @@ int main (int argc, char *argv[])
       }
       dcr = jcr->dcr;
       rec = new_record();
-      attr = new_attr();
+      attr = new_attr(jcr);
       /*
        * Assume that we have already read the volume label.
        * If on second or subsequent volume, adjust buffer pointer
@@ -273,7 +275,7 @@ static void do_blocks(char *infname)
    char buf1[100], buf2[100];
    for ( ;; ) {
       if (!read_block_from_device(dcr, NO_BLOCK_NUMBER_CHECK)) {
-         Dmsg1(100, "!read_block(): ERR=%s\n", dev->strerror());
+         Dmsg1(100, "!read_block(): ERR=%s\n", dev->bstrerror());
          if (dev->at_eot()) {
             if (!mount_next_read_volume(dcr)) {
                Jmsg(jcr, M_INFO, 0, _("Got EOM at file %u on device %s, Volume \"%s\"\n"),

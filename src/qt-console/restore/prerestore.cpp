@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: prerestore.cpp 5257 2007-07-28 10:36:28Z kerns $
+ *   Version $Id: prerestore.cpp 5713 2007-10-03 11:36:47Z kerns $
  *
  *  preRestore -> dialog put up to determine the restore type
  *
@@ -170,17 +170,19 @@ void prerestorePage::okButtonPushed()
    if (mainWin->m_commandDebug) {
       Pmsg1(000, "preRestore command \'%s\'\n", cmd.toUtf8().data());
    }
-   consoleCommand(cmd);
+   m_console->write_dir(cmd.toUtf8().data());
+// consoleCommand(cmd);
+
    /* Note, do not turn notifier back on here ... */
    if (selectFilesRadio->isChecked()) {
       setConsoleCurrent();
-      new restorePage();
+//    new restorePage();
       closeStackPage();
    } else {
-      m_console->notify(true);
       closeStackPage();
       mainWin->resetFocus();
    }
+   m_console->notify(true);
 }
 
 

@@ -30,7 +30,7 @@
  *  Database routines that are exported by the cats library for
  *    use elsewhere in Bacula (mainly the Director).
  *
- *    Version $Id: protos.h 5117 2007-07-03 09:20:28Z kerns $
+ *    Version $Id: protos.h 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #ifndef __SQL_PROTOS_H
@@ -46,7 +46,7 @@ B_DB *db_init_database(JCR *jcr, const char *db_name, const char *db_user, const
                        int mult_db_connections);
 int  db_open_database(JCR *jcr, B_DB *db);
 void db_close_database(JCR *jcr, B_DB *db);
-void db_escape_string(char *snew, char *old, int len);
+void db_escape_string(JCR *jcr, B_DB *db, char *snew, char *old, int len);
 char *db_strerror(B_DB *mdb);
 int  db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index);
 int  db_sql_query(B_DB *mdb, const char *cmd, DB_RESULT_HANDLER *result_handler, void *ctx);

@@ -38,7 +38,7 @@
  *     When the File daemon sends the attributes, compare them to
  *       what is in the DB.
  *
- *   Version $Id: verify.c 5552 2007-09-14 09:49:06Z kerns $
+ *   Version $Id: verify.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 
@@ -193,7 +193,7 @@ bool do_verify(JCR *jcr)
       if (!start_storage_daemon_job(jcr, jcr->rstorage, NULL)) {
          return false;
       }
-      if (!bnet_fsend(jcr->store_bsock, "run")) {
+      if (!jcr->store_bsock->fsend("run")) {
          return false;
       }
       /*
@@ -332,13 +332,10 @@ bool do_verify(JCR *jcr)
    }
 
    stat = wait_for_job_termination(jcr);
-   if (stat == JS_Terminated) {
-      verify_cleanup(jcr, stat);
-      return true;
-   }
+   verify_cleanup(jcr, stat);
+   return true;
 
 bail_out:
-   verify_cleanup(jcr, JS_ErrorTerminated);
    return false;
 }
 
@@ -421,7 +418,7 @@ void verify_cleanup(JCR *jcr, int TermCode)
    jobstatus_to_ascii(jcr->FDJobStatus, fd_term_msg, sizeof(fd_term_msg));
    if (jcr->JobLevel == L_VERIFY_VOLUME_TO_CATALOG) {
       jobstatus_to_ascii(jcr->SDJobStatus, sd_term_msg, sizeof(sd_term_msg));
-   Jmsg(jcr, msg_type, 0, _("Bacula %s %s (%s): %s\n"
+      Jmsg(jcr, msg_type, 0, _("Bacula %s %s (%s): %s\n"
 "  Build OS:               %s %s %s\n"
 "  JobId:                  %d\n"
 "  Job:                    %s\n"
@@ -456,7 +453,7 @@ void verify_cleanup(JCR *jcr, int TermCode)
          sd_term_msg,
          term_msg);
    } else {
-   Jmsg(jcr, msg_type, 0, _("Bacula %s %s (%s): %s\n"
+      Jmsg(jcr, msg_type, 0, _("Bacula %s %s (%s): %s\n"
 "  Build:                  %s %s %s\n"
 "  JobId:                  %d\n"
 "  Job:                    %s\n"
@@ -710,7 +707,7 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
             return false;
          }
          if (do_Digest != CRYPTO_DIGEST_NONE) {
-            db_escape_string(buf, Opts_Digest, strlen(Opts_Digest));
+            db_escape_string(jcr, jcr->db, buf, Opts_Digest, strlen(Opts_Digest));
             if (strcmp(buf, fdbr.Digest) != 0) {
                prt_fname(jcr);
                if (debug_level >= 10) {
@@ -750,7 +747,9 @@ int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId)
       stat = JS_Differences;
    }
    free_pool_memory(fname);
-   set_jcr_job_status(jcr, stat);
+   if (!job_canceled(jcr)) {
+      jcr->JobStatus = stat;
+   }
    return stat == JS_Terminated;
 }
 

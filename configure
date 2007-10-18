@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS BUILD_DIR TOP_DIR TRUEPRG FALSEPRG VERSION DATE LSMDATE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX CPP EGREP INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA RANLIB ac_ct_RANLIB MV RM CP SED ECHO CMP TBL AR OPENSSL MTX DD MKISOFS PYTHON GROWISOFS DVDRWMEDIAINFO DVDRWFORMAT PKGCONFIG WXCONFIG WXFLAGS CDRECORD PIDOF AWK ARFLAGS MAKE_SHELL LOCAL_LIBS LOCAL_CFLAGS LOCAL_LDFLAGS LOCAL_DEFS build build_cpu build_vendor build_os host host_cpu host_vendor host_os HAVE_SUN_OS_TRUE HAVE_SUN_OS_FALSE HAVE_OSF1_OS_TRUE HAVE_OSF1_OS_FALSE HAVE_AIX_OS_TRUE HAVE_AIX_OS_FALSE HAVE_HPUX_OS_TRUE HAVE_HPUX_OS_FALSE HAVE_LINUX_OS_TRUE HAVE_LINUX_OS_FALSE HAVE_FREEBSD_OS_TRUE HAVE_FREEBSD_OS_FALSE HAVE_NETBSD_OS_TRUE HAVE_NETBSD_OS_FALSE HAVE_OPENBSD_OS_TRUE HAVE_OPENBSD_OS_FALSE HAVE_BSDI_OS_TRUE HAVE_BSDI_OS_FALSE HAVE_SGI_OS_TRUE HAVE_SGI_OS_FALSE HAVE_IRIX_OS_TRUE HAVE_IRIX_OS_FALSE HAVE_DARWIN_OS_TRUE HAVE_DARWIN_OS_FALSE SET_MAKE MKINSTALLDIRS USE_NLS MSGFMT GMSGFMT XGETTEXT MSGMERGE INTL_MACOSX_LIBS LIBICONV LTLIBICONV INTLLIBS LIBINTL LTLIBINTL POSUB GLIBC2 ALLOCA GLIBC21 HAVE_POSIX_PRINTF HAVE_ASPRINTF HAVE_SNPRINTF HAVE_WPRINTF INTLBISON BUILD_INCLUDED_LIBINTL USE_INCLUDED_LIBINTL CATOBJEXT DATADIRNAME INSTOBJEXT GENCAT INTLOBJS INTL_LIBTOOL_SUFFIX_PREFIX GNOME_INCLUDEDIR GNOMEUI_LIBS GNOME_LIBDIR GNOME_LIBS GNOME_DIR BAT_DIR QWT_INC QWT_LDFLAGS WXCONS_CPPFLAGS WXCONS_LDFLAGS WX_DIR TRAY_MONITOR_CPPFLAGS TRAY_MONITOR_LDFLAGS TRAY_MONITOR_DIR TTOOL_LDFLAGS STATIC_FD STATIC_SD STATIC_DIR STATIC_CONS STATIC_GNOME_CONS STATIC_WX_CONS ALL_DIRS DIRD_DIR DIR_TOOLS STORED_DIR CONS_INC CONS_OBJ CONS_SRC CONS_LIBS CONS_LDFLAGS READLINE_SRC PYTHON_LIBS PYTHON_INCDIR OPENSSL_LIBS OPENSSL_INC working_dir scriptdir dump_email job_email smtp_host piddir subsysdir baseport dir_port fd_port sd_port dir_password fd_password sd_password mon_dir_password mon_fd_password mon_sd_password db_name db_user dir_user dir_group sd_user sd_group fd_user fd_group SBINPERM SQL_LFLAGS SQL_INCLUDE SQL_BINDIR cats DB_TYPE GETCONF ac_ct_GETCONF X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS LIBOBJS FDLIBS DEBUG DINCLUDE DLIB DB_LIBS WCFLAGS WLDFLAGS WRAPLIBS OBJLIST hostname TAPEDRIVE PSCMD WIN32 MACOSX DISTNAME DISTVER LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir archivedir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS BUILD_DIR TOP_DIR TRUEPRG FALSEPRG VERSION DATE LSMDATE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX CPP EGREP INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA RANLIB ac_ct_RANLIB MV RM CP SED ECHO CMP TBL AR OPENSSL MTX DD MKISOFS PYTHON GROWISOFS DVDRWMEDIAINFO DVDRWFORMAT PKGCONFIG WXCONFIG WXFLAGS CDRECORD PIDOF AWK ARFLAGS MAKE_SHELL LOCAL_LIBS LOCAL_CFLAGS LOCAL_LDFLAGS LOCAL_DEFS build build_cpu build_vendor build_os host host_cpu host_vendor host_os HAVE_SUN_OS_TRUE HAVE_SUN_OS_FALSE HAVE_OSF1_OS_TRUE HAVE_OSF1_OS_FALSE HAVE_AIX_OS_TRUE HAVE_AIX_OS_FALSE HAVE_HPUX_OS_TRUE HAVE_HPUX_OS_FALSE HAVE_LINUX_OS_TRUE HAVE_LINUX_OS_FALSE HAVE_FREEBSD_OS_TRUE HAVE_FREEBSD_OS_FALSE HAVE_NETBSD_OS_TRUE HAVE_NETBSD_OS_FALSE HAVE_OPENBSD_OS_TRUE HAVE_OPENBSD_OS_FALSE HAVE_BSDI_OS_TRUE HAVE_BSDI_OS_FALSE HAVE_SGI_OS_TRUE HAVE_SGI_OS_FALSE HAVE_IRIX_OS_TRUE HAVE_IRIX_OS_FALSE HAVE_DARWIN_OS_TRUE HAVE_DARWIN_OS_FALSE SET_MAKE MKINSTALLDIRS USE_NLS MSGFMT GMSGFMT XGETTEXT MSGMERGE INTL_MACOSX_LIBS LIBICONV LTLIBICONV INTLLIBS LIBINTL LTLIBINTL POSUB GLIBC2 ALLOCA GLIBC21 HAVE_POSIX_PRINTF HAVE_ASPRINTF HAVE_SNPRINTF HAVE_WPRINTF INTLBISON BUILD_INCLUDED_LIBINTL USE_INCLUDED_LIBINTL CATOBJEXT DATADIRNAME INSTOBJEXT GENCAT INTLOBJS INTL_LIBTOOL_SUFFIX_PREFIX GNOME_INCLUDEDIR GNOMEUI_LIBS GNOME_LIBDIR GNOME_LIBS GNOME_DIR BAT_DIR QWT_INC QWT_LDFLAGS WXCONS_CPPFLAGS WXCONS_LDFLAGS WX_DIR TRAY_MONITOR_CPPFLAGS TRAY_MONITOR_LDFLAGS TRAY_MONITOR_DIR TTOOL_LDFLAGS STATIC_FD STATIC_SD STATIC_DIR STATIC_CONS STATIC_GNOME_CONS STATIC_WX_CONS ALL_DIRS DIRD_DIR DIR_TOOLS STORED_DIR CONS_INC CONS_OBJ CONS_SRC CONS_LIBS CONS_LDFLAGS READLINE_SRC PYTHON_LIBS PYTHON_INCDIR OPENSSL_LIBS OPENSSL_INC working_dir scriptdir dump_email job_email smtp_host piddir subsysdir baseport dir_port fd_port sd_port dir_password fd_password sd_password mon_dir_password mon_fd_password mon_sd_password db_name db_user dir_user dir_group sd_user sd_group fd_user fd_group SBINPERM SQL_LFLAGS SQL_INCLUDE SQL_BINDIR cats DB_TYPE GETCONF ac_ct_GETCONF X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS LIBOBJS FDLIBS DEBUG DINCLUDE DLIB DB_LIBS WCFLAGS WLDFLAGS WRAPLIBS OBJLIST hostname TAPEDRIVE PSCMD WIN32 MACOSX DISTNAME DISTVER LTLIBOBJS'
 ac_subst_files='MCOMMON'
 
 # Initialize some variables set by options.
@@ -349,6 +349,8 @@ includedir='${prefix}/include'
 oldincludedir='/usr/include'
 infodir='${prefix}/info'
 mandir='${prefix}/man'
+
+archivedir='/tmp'
 
 ac_prev=
 for ac_option
@@ -544,6 +546,13 @@ do
   | --sbi=* | --sb=*)
     sbindir=$ac_optarg ;;
 
+  -archivedir | --archivedir | --archivedi | --archived | --archive | --archiv \
+  | --archi | --arch | --arc | --ar | --a)
+    ac_prev=archivedir ;;
+  -archivedir=* | --archivedir=* | --archivedi=* | --archived=* | --archive=* \
+  | --archiv=* | --archi=* | --arch=* | --arc=* | --ar=* | --a=*)
+    archivedir=$ac_optarg ;;
+
   -sharedstatedir | --sharedstatedir | --sharedstatedi \
   | --sharedstated | --sharedstate | --sharedstat | --sharedsta \
   | --sharedst | --shareds | --shared | --share | --shar \
@@ -667,7 +676,7 @@ do
 done
 
 # Be sure to have absolute paths.
-for ac_var in bindir sbindir libexecdir datadir sysconfdir sharedstatedir \
+for ac_var in bindir sbindir libexecdir datadir sysconfdir sharedstatedir archivedir \
 	      localstatedir libdir includedir oldincludedir infodir mandir
 do
   eval ac_val=$`echo $ac_var`
@@ -843,6 +852,7 @@ Fine tuning of the installation directories:
   --oldincludedir=DIR    C header files for non-gcc [/usr/include]
   --infodir=DIR          info documentation [PREFIX/info]
   --mandir=DIR           man documentation [PREFIX/man]
+  --archivedir=DIR       archive destination for disk-based backups [/tmp]
 _ACEOF
 
   cat <<\_ACEOF
@@ -6762,6 +6772,14 @@ if test x$sbindir = x'${exec_prefix}/sbin' ; then
     sbindir=${exec_prefix}/sbin
 fi
 sbindir=`eval echo ${sbindir}`
+
+# ------------------------------------------------------------------
+# If the user has not set --archivedir, we set our default as /tmp
+# ------------------------------------------------------------------
+if test x$archivedir = x'/tmp' ; then
+    archivedir=/tmp
+fi
+archivedir=`eval echo ${archivedir}`
 
 # -------------------------------------------------------------------------
 #  If the user has not set --mandir, we default to /usr/share/man
@@ -31155,6 +31173,7 @@ s,@prefix@,$prefix,;t t
 s,@program_transform_name@,$program_transform_name,;t t
 s,@bindir@,$bindir,;t t
 s,@sbindir@,$sbindir,;t t
+s,@archivedir@,$archivedir,;t t
 s,@libexecdir@,$libexecdir,;t t
 s,@datadir@,$datadir,;t t
 s,@sysconfdir@,$sysconfdir,;t t
@@ -32199,6 +32218,7 @@ Configuration on `date`:
   Install binaries:	      ${sbindir}
   Install config files:       ${sysconfdir}
   Scripts directory:	      ${scriptdir}
+  Archive directory:	      ${archivedir}
   Working directory:	      ${working_dir}
   PID directory:	      ${piddir}
   Subsys directory:	      ${subsysdir}

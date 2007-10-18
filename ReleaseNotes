@@ -1,5 +1,5 @@
 
-          Release Notes for Bacula 2.2.4 
+          Release Notes for Bacula 2.2.5 
 
   Bacula code: Total files = 520 Total lines = 195,550 (*.h *.c *.in)
   82 new files, 41,221 new lines of code, 208,380 lines of change from 2.0.3
@@ -9,6 +9,13 @@ but they should be compatible with all 2.0.x File daemons, unless you
 use some of the new features that affect the FD.  In other words, you should
 not have to upgrade all your File daemons when you upgrade. There is
 no database upgrade needed from version 2.0.x to 2.2.0.
+
+Version 2.2.5 is a major bug fix release to version 2.2.4 
+- It fixes the following bugs: #961, 962, 963, 969, 968, 960,
+  964, (possibly 935 and 903), 953, 953, 967, 966, 965, 954, 
+  957, 908, 958, and 955.
+- It also improves listing performance problems in bat pointed
+  out by Chris Howells.
 
 Version 2.2.4 is a minor bug fix release to version 2.2.3
 - Possible fix for authorization problems bug #953.

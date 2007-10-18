@@ -29,7 +29,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: restoretree.h 5376 2007-08-19 03:06:56Z bartleyd2 $
+ *   Version $Id: restoretree.h 5725 2007-10-05 14:59:31Z kerns $
  *
  *  Kern Sibbald, February 2007
  */
@@ -102,7 +102,6 @@ private:
    bool m_dropdownChanged;
    QRegExp m_winRegExpDrive;
    QRegExp m_winRegExpPath;
-   QRegExp m_slashregex;
    bool m_slashTrap;
    QHash<QString, QTreeWidgetItem *> m_dirPaths;
    QString m_checkedJobs, m_prevJobCombo, m_prevClientCombo, m_prevFileSetCombo;

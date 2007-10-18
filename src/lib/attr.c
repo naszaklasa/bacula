@@ -1,14 +1,7 @@
 /*
- *   attr.c  Unpack an Attribute record returned from the tape
- *
- *    Kern Sibbald, June MMIII  (code pulled from filed/restore.c and updated)
- *
- *   Version $Id: attr.c 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,18 +25,28 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   attr.c  Unpack an Attribute record returned from the tape
+ *
+ *    Kern Sibbald, June MMIII  (code pulled from filed/restore.c and updated)
+ *
+ *   Version $Id: attr.c 5713 2007-10-03 11:36:47Z kerns $
+ */
+
 
 #include "bacula.h"
 #include "jcr.h"
 #include "lib/breg.h"
 
-ATTR *new_attr()
+ATTR *new_attr(JCR *jcr)
 {
    ATTR *attr = (ATTR *)malloc(sizeof(ATTR));
    memset(attr, 0, sizeof(ATTR));
    attr->ofname = get_pool_memory(PM_FNAME);
    attr->olname = get_pool_memory(PM_FNAME);
    attr->attrEx = get_pool_memory(PM_FNAME);
+   attr->jcr = jcr;
+   attr->uid = getuid();
    return attr;
 }
 
@@ -237,11 +240,17 @@ void print_ls_output(JCR *jcr, ATTR *attr)
    char ec1[30];
    char en1[30], en2[30];
    char *p, *f;
+   guid_list *guid;
 
+   if (!jcr->id_list) {
+      jcr->id_list = new_guid_list();
+   }
+   guid = jcr->id_list;
    p = encode_mode(attr->statp.st_mode, buf);
    p += sprintf(p, "  %2d ", (uint32_t)attr->statp.st_nlink);
-   p += sprintf(p, "%-8.8s %-8.8s", getuser(attr->statp.st_uid, en1, sizeof(en1)),
-                getgroup(attr->statp.st_gid, en2, sizeof(en2)));
+   p += sprintf(p, "%-8.8s %-8.8s", 
+                guid->uid_to_name(attr->statp.st_uid, en1, sizeof(en1)),
+                guid->gid_to_name(attr->statp.st_gid, en2, sizeof(en2)));
    p += sprintf(p, "%10.10s ", edit_uint64(attr->statp.st_size, ec1));
    p = encode_time(attr->statp.st_ctime, p);
    *p++ = ' ';

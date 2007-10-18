@@ -32,7 +32,7 @@
  *              Kern Sibbald, March MMI
  *                 added BB02 format October MMII
  *
- *   Version $Id: block.c 5503 2007-09-09 10:03:23Z kerns $
+ *   Version $Id: block.c 5713 2007-10-03 11:36:47Z kerns $
  *
  */
 
@@ -273,6 +273,7 @@ static bool unser_block_header(JCR *jcr, DEVICE *dev, DEV_BLOCK *block)
       dev->dev_errno = EIO;
       Mmsg4(dev->errmsg, _("Volume data error at %u:%u! Wanted ID: \"%s\", got \"%s\". Buffer discarded.\n"),
           dev->file, dev->block_num, BLKHDR2_ID, Id);
+      Dmsg1(50, "%s", dev->errmsg);
       if (block->read_errors == 0 || verbose >= 2) {
          Jmsg(jcr, M_ERROR, 0, "%s", dev->errmsg);
       }
@@ -575,9 +576,12 @@ bool write_block_to_dev(DCR *dcr)
             dev->VolCatInfo.VolCatName,
             dev->file, dev->block_num, dev->print_name(), wlen, stat);
       }
-      Dmsg7(100, "=== Write error. fd=%d size=%u rtn=%d dev_blk=%d blk_blk=%d errno=%d: ERR=%s\n",
-         dev->fd(), wlen, stat, dev->block_num, block->BlockNumber, 
-         dev->dev_errno, strerror(dev->dev_errno));
+      if (debug_level >= 100) {
+         berrno be;
+         Dmsg7(100, "=== Write error. fd=%d size=%u rtn=%d dev_blk=%d blk_blk=%d errno=%d: ERR=%s\n",
+            dev->fd(), wlen, stat, dev->block_num, block->BlockNumber, 
+            dev->dev_errno, be.bstrerror(dev->dev_errno));
+      }
 
       ok = terminate_writing_volume(dcr);
       if (!ok && !forge_on) {
@@ -766,9 +770,10 @@ static bool terminate_writing_volume(DCR *dcr)
       /* This may not be fatal since we already wrote an EOF */
       Jmsg(dcr->jcr, M_ERROR, 0, "%s", dev->errmsg);
    }
+
 bail_out:
    dev->set_ateot();                  /* no more writing this tape */
-   Dmsg1(100, "Leave terminate_writing_volume -- %s\n", ok?"OK":"ERROR");
+   Dmsg1(50, "*** Leave terminate_writing_volume -- %s\n", ok?"OK":"ERROR");
    return ok;
 }
 
@@ -1008,8 +1013,19 @@ reread:
       dev->set_ateof();
       return false;             /* return eof */
    }
+
    /* Continue here for successful read */
+
    block->read_len = stat;      /* save length read */
+   if (block->read_len == 80 && 
+        (dcr->VolCatInfo.LabelType != B_BACULA_LABEL ||
+         dcr->device->label_type != B_BACULA_LABEL)) {
+      /* ***FIXME*** should check label */
+      Dmsg2(100, "Ignore 80 byte ANSI label at %u:%u\n", dev->file, dev->block_num);
+      dev->clear_eof();
+      goto reread;             /* skip ANSI/IBM label */
+   }
+                                          
    if (block->read_len < BLKHDR2_LENGTH) {
       dev->dev_errno = EIO;
       Mmsg4(dev->errmsg, _("Volume data error at %u:%u! Very short block of %d bytes on device %s discarded.\n"),

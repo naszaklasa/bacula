@@ -38,7 +38,7 @@
  * for the external world. This is control with
  * the define __SQL_C, which is defined only in sql.c
  *
- *    Version $Id: cats.h 5117 2007-07-03 09:20:28Z kerns $
+ *    Version $Id: cats.h 5710 2007-10-03 05:59:42Z kerns $
  */
 
 /*
@@ -187,10 +187,10 @@ SQL_ROW    my_sqlite_fetch_row(B_DB *mdb);
 int        my_sqlite_query(B_DB *mdb, const char *cmd);
 void       my_sqlite_field_seek(B_DB *mdb, int field);
 SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb);
-extern char* my_sqlite_batch_lock_query;
-extern char* my_sqlite_batch_unlock_query;
-extern char* my_sqlite_batch_fill_filename_query;
-extern char* my_sqlite_batch_fill_path_query;
+extern const char* my_sqlite_batch_lock_query;
+extern const char* my_sqlite_batch_unlock_query;
+extern const char* my_sqlite_batch_fill_filename_query;
+extern const char* my_sqlite_batch_fill_path_query;
 
 
 #else
@@ -317,10 +317,10 @@ SQL_ROW    my_sqlite_fetch_row(B_DB *mdb);
 int        my_sqlite_query(B_DB *mdb, const char *cmd);
 void       my_sqlite_field_seek(B_DB *mdb, int field);
 SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb);
-extern char* my_sqlite_batch_lock_query;
-extern char* my_sqlite_batch_unlock_query;
-extern char* my_sqlite_batch_fill_filename_query;
-extern char* my_sqlite_batch_fill_path_query;
+extern const char* my_sqlite_batch_lock_query;
+extern const char* my_sqlite_batch_unlock_query;
+extern const char* my_sqlite_batch_fill_filename_query;
+extern const char* my_sqlite_batch_fill_path_query;
 
 
 #else
@@ -398,11 +398,11 @@ struct B_DB {
 #define sql_batch_fill_path_query       my_mysql_batch_fill_path_query
 
 
-extern char* my_mysql_batch_lock_path_query;
-extern char* my_mysql_batch_lock_filename_query;
-extern char* my_mysql_batch_unlock_tables_query;
-extern char* my_mysql_batch_fill_filename_query;
-extern char* my_mysql_batch_fill_path_query;
+extern const char* my_mysql_batch_lock_path_query;
+extern const char* my_mysql_batch_lock_filename_query;
+extern const char* my_mysql_batch_unlock_tables_query;
+extern const char* my_mysql_batch_fill_filename_query;
+extern const char* my_mysql_batch_fill_path_query;
 extern void  my_mysql_free_result(B_DB *mdb);
 
 #else
@@ -486,11 +486,11 @@ typedef struct ATTR_DBR ATTR_DBR;
 int my_postgresql_batch_insert(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 char *my_postgresql_copy_escape(char *dest, char *src, size_t len);
 
-extern char* my_pg_batch_lock_path_query;
-extern char* my_pg_batch_lock_filename_query;
-extern char* my_pg_batch_unlock_tables_query;
-extern char* my_pg_batch_fill_filename_query;
-extern char* my_pg_batch_fill_path_query;
+extern const char* my_pg_batch_lock_path_query;
+extern const char* my_pg_batch_lock_filename_query;
+extern const char* my_pg_batch_unlock_tables_query;
+extern const char* my_pg_batch_fill_filename_query;
+extern const char* my_pg_batch_fill_path_query;
 
 /* "Generic" names for easier conversion */
 #define sql_store_result(x)   ((x)->result)

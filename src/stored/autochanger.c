@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, August MMII
  *                            
- *   Version $Id: autochanger.c 5126 2007-07-07 11:16:18Z kerns $
+ *   Version $Id: autochanger.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -493,9 +493,9 @@ bool autochanger_cmd(DCR *dcr, BSOCK *dir, const char *cmd)
    if (!dev->is_autochanger() || !dcr->device->changer_name ||
        !dcr->device->changer_command) {
       if (strcmp(cmd, "drives") == 0) {
-         bnet_fsend(dir, "drives=1\n");
+         dir->fsend("drives=1\n");
       }
-      bnet_fsend(dir, _("3993 Device %s not an autochanger device.\n"),
+      dir->fsend(_("3993 Device %s not an autochanger device.\n"),
          dev->print_name());
       return false;
    }
@@ -506,7 +506,7 @@ bool autochanger_cmd(DCR *dcr, BSOCK *dir, const char *cmd)
       if (changer_res) {
          drives = changer_res->device->size();
       }
-      bnet_fsend(dir, "drives=%d\n", drives);
+      dir->fsend("drives=%d\n", drives);
       Dmsg1(100, "drives=%d\n", drives);
       return true;
    }
@@ -516,10 +516,10 @@ bool autochanger_cmd(DCR *dcr, BSOCK *dir, const char *cmd)
    /* Now issue the command */
    changer = edit_device_codes(dcr, changer, 
                  dcr->device->changer_command, cmd);
-   bnet_fsend(dir, _("3306 Issuing autochanger \"%s\" command.\n"), cmd);
+   dir->fsend(_("3306 Issuing autochanger \"%s\" command.\n"), cmd);
    bpipe = open_bpipe(changer, timeout, "r");
    if (!bpipe) {
-      bnet_fsend(dir, _("3996 Open bpipe failed.\n"));
+      dir->fsend(_("3996 Open bpipe failed.\n"));
       goto bail_out;
    }
    if (strcmp(cmd, "list") == 0) {
@@ -538,7 +538,7 @@ bool autochanger_cmd(DCR *dcr, BSOCK *dir, const char *cmd)
       /* Strip any leading space in front of # of slots */
       for (p=buf; B_ISSPACE(*p); p++)
         { }
-      bnet_fsend(dir, "slots=%s", p);
+      dir->fsend("slots=%s", p);
       Dmsg1(100, "<stored: %s", dir->msg);
    } 
                  
@@ -546,7 +546,7 @@ bool autochanger_cmd(DCR *dcr, BSOCK *dir, const char *cmd)
    if (stat != 0) {
       berrno be;
       be.set_errno(stat);
-      bnet_fsend(dir, _("Autochanger error: ERR=%s\n"), be.bstrerror());
+      dir->fsend(_("Autochanger error: ERR=%s\n"), be.bstrerror());
    }
    bnet_sig(dir, BNET_EOD);
    ok = true;

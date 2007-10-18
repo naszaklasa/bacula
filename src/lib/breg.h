@@ -61,18 +61,18 @@
  */
 class BREGEXP {
 public:
-   POOLMEM *result;		/* match result */
-   bool success;		/* match is ok */
+   POOLMEM *result;             /* match result */
+   bool success;                /* match is ok */
 
    char *replace(const char *fname); /* return this.result */
    void debug();
 
    /* private */
-   POOLMEM *expr;		/* search epression */
-   POOLMEM *subst;		/* substitution */
-   regex_t preg;		/* regex_t result of regcomp() */
+   POOLMEM *expr;               /* search epression */
+   POOLMEM *subst;              /* substitution */
+   regex_t preg;                /* regex_t result of regcomp() */
    regmatch_t regs[BREG_NREGS]; /* contains match */
-   char *eor;			/* end of regexp in expr */
+   char *eor;                   /* end of regexp in expr */
 
    char *return_fname(const char *fname, int len); /* return fname as result */
    char *edit_subst(const char *fname, regmatch_t regs[]);
@@ -100,20 +100,20 @@ void free_bregexps(alist *bregexps); /* you have to free alist */
 
 /* get regexp size */
 int bregexp_get_build_where_size(char *strip_prefix, 
-				 char *add_prefix, 
-				 char *add_suffix);
+                                 char *add_prefix, 
+                                 char *add_suffix);
 
 /* get a bregexp string from user arguments 
  * you must allocate it with bregexp_get_build_where_size();
  */
 char *bregexp_build_where(char *dest, int str_size,
-			  char *strip_prefix, 
+                          char *strip_prefix, 
                           char *add_prefix, 
                           char *add_suffix);
 
 /* escape a string to regexp format (sep and \) 
  * dest must be long enough (dest = 2*src + 1)
  */
-char *bregexp_escape_string(char *dest, char *src, char sep);
+char *bregexp_escape_string(char *dest, const char *src, const char sep);
 
 #endif /* __BREG_H_ */

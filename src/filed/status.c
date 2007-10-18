@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, August MMI
  *
- *   Version $Id: status.c 5168 2007-07-13 12:34:19Z ricozz $
+ *   Version $Id: status.c 5713 2007-10-03 11:36:47Z kerns $
  *
  */
 
@@ -143,7 +143,7 @@ void output_status(void sendit(const char *msg, int len, void *sarg), void *arg)
    Dmsg0(1000, "Begin status jcr loop.\n");
    len = Mmsg(msg, _("\nRunning Jobs:\n"));
    sendit(msg.c_str(), len, arg);
-   char *vss = "";
+   const char *vss = "";
 #ifdef WIN32_VSS
    if (g_pVSSClient && g_pVSSClient->IsInitialized()) {
       vss = "VSS ";

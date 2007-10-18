@@ -8,7 +8,7 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb.c 5149 2007-07-12 10:32:35Z kerns $
+ *    Version $Id: bdb.c 5713 2007-10-03 11:36:47Z kerns $
  *
  */
 /*
@@ -307,7 +307,7 @@ void db_thread_cleanup()
 { }
 
 
-void db_escape_string(char *snew, char *old, int len)
+void db_escape_string(JCR *jcr, B_DB *db, char *snew, char *old, int len)
 {
    memset(snew, 0, len);
    bstrncpy(snew, old, len);

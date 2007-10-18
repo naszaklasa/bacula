@@ -34,7 +34,7 @@
  *   Kern E. Sibbald, December 2001
  *
  *
- *   Version $Id: bscan.c 5503 2007-09-09 10:03:23Z kerns $
+ *   Version $Id: bscan.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"
@@ -355,7 +355,7 @@ static bool bscan_mount_next_read_volume(DCR *dcr)
 
 static void do_scan()
 {
-   attr = new_attr();
+   attr = new_attr(bjcr);
 
    memset(&ar, 0, sizeof(ar));
    memset(&pr, 0, sizeof(pr));

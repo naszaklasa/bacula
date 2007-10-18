@@ -26,15 +26,19 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- * Written by Kern Sibbald, July 2005 to replace idcache.c
+ * Written by Kern Sibbald, July 2007 to replace idcache.c
  * 
  *  Program to convert uid and gid into names, and cache the results
  *   for preformance reasons.
+ *
+ *  Version $Id: guid_to_name.c 5502 2007-09-09 08:00:09Z kerns $
  */
 
 #include "bacula.h"
 
+#ifndef WIN32
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 struct guitem {
    dlink link;
@@ -45,14 +49,6 @@ struct guitem {
    };
 };
 
-class guid_list {
-public:
-   dlist *uid_list;
-   dlist *gid_list;
-
-   char *uid_to_name(uid_t uid, char *name, int maxlen);
-   char *gid_to_name(gid_t gid, char *name, int maxlen);
-};
 
 guid_list *new_guid_list()
 {
@@ -165,7 +161,7 @@ char *guid_list::gid_to_name(gid_t gid, char *name, int maxlen)
    sitem.gid = gid;
    char buf[50];
 
-   item = (guitem *)uid_list->binary_search(&sitem, gid_compare);
+   item = (guitem *)gid_list->binary_search(&sitem, gid_compare);
    if (!item) {
       item = (guitem *)malloc(sizeof(guitem));
       item->gid = gid;

@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: medialist.cpp 5386 2007-08-21 02:09:38Z bartleyd2 $
+ *   Version $Id: medialist.cpp 5713 2007-10-03 11:36:47Z kerns $
  *
  *  MediaList Class
  *
@@ -251,6 +251,7 @@ void MediaList::createContextMenu()
    /* connect to the action specific to this pages class */
    connect(actionRefreshMediaList, SIGNAL(triggered()), this,
                 SLOT(populateTree()));
+   connect(actionAllVolumes, SIGNAL(triggered()), this, SLOT(allVolumes()));
    connect(actionAllVolumesFromPool, SIGNAL(triggered()), this, SLOT(allVolumesFromPool()));
    connect(actionVolumeFromPool, SIGNAL(triggered()), this, SLOT(volumeFromPool()));
 }
@@ -336,6 +337,13 @@ void MediaList::relabelVolume()
 void MediaList::allVolumesFromPool()
 {
    QString cmd = "update volume AllFromPool=" + m_currentVolumeName;
+   consoleCommand(cmd);
+   populateTree();
+}
+
+void MediaList::allVolumes()
+{
+   QString cmd = "update volume allfrompools";
    consoleCommand(cmd);
    populateTree();
 }

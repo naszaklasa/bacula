@@ -47,7 +47,7 @@
  *     daemon. More complicated coding (double buffering, writer
  *     thread, ...) is left for a later version.
  *
- *   Version $Id: dev.c 5112 2007-06-28 11:57:03Z kerns $
+ *   Version $Id: dev.c 5609 2007-09-20 13:22:04Z kerns $
  */
 
 /*
@@ -109,6 +109,7 @@ init_dev(JCR *jcr, DEVRES *device)
    int errstat;
    DCR *dcr = NULL;
    DEVICE *dev;
+   uint32_t max_bs;
 
 
    /* If no device type specified, try to guess */
@@ -199,7 +200,17 @@ init_dev(JCR *jcr, DEVRES *device)
       }
    }
 
-   if (dev->max_block_size > 1000000) {
+   /* Sanity check */
+   if (dev->max_block_size == 0) {
+      max_bs = DEFAULT_BLOCK_SIZE;
+   } else {
+      max_bs = dev->max_block_size;
+   }
+   if (dev->min_block_size > max_bs) {
+      Jmsg(jcr, M_ERROR_TERM, 0, _("Min block size > max on device %s\n"), 
+           dev->print_name());
+   }
+   if (dev->max_block_size > 4096000) {
       Jmsg3(jcr, M_ERROR, 0, _("Block size %u on device %s is too large, using default %u\n"),
          dev->max_block_size, dev->print_name(), DEFAULT_BLOCK_SIZE);
       dev->max_block_size = 0;
@@ -1844,7 +1855,8 @@ void DEVICE::close()
 
    /* Clean up device packet so it can be reused */
    clear_opened();
-   state &= ~(ST_LABEL|ST_READ|ST_APPEND|ST_EOT|ST_WEOT|ST_EOF);
+   state &= ~(ST_LABEL|ST_READ|ST_APPEND|ST_EOT|ST_WEOT|ST_EOF|
+              ST_MOUNTED|ST_MEDIA|ST_SHORT|ST_FREESPACE_OK|ST_PART_SPOOLED);
    label_type = B_BACULA_LABEL;
    file = block_num = 0;
    file_size = 0;

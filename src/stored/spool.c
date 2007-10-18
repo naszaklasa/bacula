@@ -30,7 +30,7 @@
  *
  *      Kern Sibbald, March 2004
  *
- *  Version $Id: spool.c 5114 2007-06-29 12:12:26Z kerns $
+ *  Version $Id: spool.c 5735 2007-10-06 12:49:33Z kerns $
  */
 
 #include "bacula.h"
@@ -631,6 +631,8 @@ bool commit_attribute_spool(JCR *jcr)
       }
       spool_stats.attr_size += size;
       V(mutex);
+      set_jcr_job_status(jcr, JS_AttrDespooling);
+      dir_send_job_status(jcr);
       Jmsg(jcr, M_INFO, 0, _("Sending spooled attrs to the Director. Despooling %s bytes ...\n"),
             edit_uint64_with_commas(size, ec1));
       jcr->dir_bsock->despool(update_attr_spool_size, size);

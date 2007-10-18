@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, November MM
  *
- *   Version $Id: restore.c 5293 2007-08-06 18:20:26Z kerns $
+ *   Version $Id: restore.c 5713 2007-10-03 11:36:47Z kerns $
  *
  */
 
@@ -240,7 +240,7 @@ void do_restore(JCR *jcr)
     */
    binit(&rctx.bfd);
    binit(&rctx.forkbfd);
-   attr = new_attr();
+   attr = new_attr(jcr);
    jcr->acl_text = get_pool_memory(PM_MESSAGE);
 
    

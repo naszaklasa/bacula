@@ -42,7 +42,7 @@
  *       to do the restore.
  *     Update the DB according to what files where restored????
  *
- *   Version $Id: restore.c 5552 2007-09-14 09:49:06Z kerns $
+ *   Version $Id: restore.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 
@@ -173,7 +173,7 @@ bool do_restore(JCR *jcr)
    }
 
    /* Send restore command */
-   char replace, *where, *cmd=NULL;
+   char replace, *where, *cmd;
    char empty = '\0';
 
    if (jcr->replace != 0) {
@@ -184,13 +184,11 @@ bool do_restore(JCR *jcr)
       replace = REPLACE_ALWAYS;       /* always replace */
    }
    
-   where = &empty;                    /* default */
-
    if (jcr->RegexWhere) {
       where = jcr->RegexWhere;             /* override */
       cmd = restorecmdR;
    } else if (jcr->job->RegexWhere) {
-      where = jcr->job->RegexWhere; /* no override take from job */
+      where = jcr->job->RegexWhere;   /* no override take from job */
       cmd = restorecmdR;
 
    } else if (jcr->where) {
@@ -199,7 +197,11 @@ bool do_restore(JCR *jcr)
    } else if (jcr->job->RestoreWhere) {
       where = jcr->job->RestoreWhere; /* no override take from job */
       cmd = restorecmd;
-   } 
+
+   } else {			      /* nothing was specified */
+      where = &empty;		      /* use default */
+      cmd   = restorecmd;		     
+   }
    
    jcr->prefix_links = jcr->job->PrefixLinks;
 

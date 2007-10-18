@@ -5,24 +5,15 @@
 #
 #  Kern Sibbald, June 2007
 #
+
+NM=../../../../cross-tools/mingw32/mingw32/bin/nm
  
 echo "LIBRARY bacula.dll"
 echo "EXPORTS"
 echo " "
 
-OBJS="compat.o print.o winapi.o attribs.o bfile.o create_file.o \
-      drivetype.o enable_priv.o find.o find_one.o fstype.o match.o \
-      address_conf.o alist.o attr.o base64.o berrno.o bget_msg.o \
-      bnet.o bnet_server.o bpipe.o breg.o bregex.o bsnprintf.o \
-      bsock.o bsys.o btime.o btimers.o cram-md5.o crc32.o crypto.o \
-      daemon.o dlist.o edit.o fnmatch.o idcache.o jcr.o lex.o md5.o \
-      mem_pool.o message.o pythonlib.o queue.o rblist.o runscript.o \
-      rwlock.o scan.o serial.o smartall.o tls.o tree.o util.o var.o \
-      watchdog.o"
-
-
-for i in ${OBJS}; do \
+for i in *.o ; do \
    echo "; $i"; \
-   nm $i | grep "^[0-9a-f]* T _" | cut -c21-; \
+   ${NM} $i | grep "^[0-9a-f]* T _" | cut -c13- ; \
    echo " "; \
 done
