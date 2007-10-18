@@ -243,6 +243,8 @@ Architecture: any
 Depends: ${shlibs:Depends}, bacula-common (= ${source:Version})
 Recommends: kde|desktop-environment
 Description: Network backup, recovery and verification (Tray monitor)
- The tray monitor for Bacula.  FreeDesktop standards compatible.
+ This is the tray monitor for the Bacula backup system.  It is
+ FreeDesktop-compatible, which means it will work under both KDE and
+ GNOME.
  .
  This lets you easily keep an eye on the status of Bacula.
