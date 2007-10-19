@@ -52,7 +52,8 @@ sql_escape p_sql_escape = NULL;
  */
 const char *working_directory = NULL;       /* working directory path stored here */
 int verbose = 0;                      /* increase User messages */
-int debug_level = 1;                  /* debug level */
+/* Keep debug level set to zero by default */
+int debug_level = 0;                  /* debug level */
 time_t daemon_start_time = 0;         /* Daemon start time */
 const char *version = VERSION " (" BDATE ")";
 char my_name[30];                     /* daemon name is stored here */
@@ -1338,7 +1339,7 @@ void Qmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...)
       jcr = get_jcr_from_tsd();
    }
    /* If no jcr or dequeuing send to daemon to avoid recursion */
-   if (!jcr || jcr->dequeuing) {
+   if ((jcr && !jcr->msg_queue) || !jcr || jcr->dequeuing) {
       /* jcr==NULL => daemon message, safe to send now */
       Jmsg(jcr, item->type, item->mtime, "%s", item->msg);
       free(item);
