@@ -1,0 +1,89 @@
+#
+#    Translators, if you are not familiar with the PO format, gettext
+#    documentation is worth reading, especially sections dedicated to
+#    this format, e.g. by running:
+#         info -n '(gettext)PO Files'
+#         info -n '(gettext)Header Entry'
+#
+#    Some information specific to po-debconf are available at
+#            /usr/share/doc/po-debconf/README-trans
+#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
+#
+#    Developers do not need to manually edit POT or PO files.
+#
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: bacula 1.38.11-6\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2007-08-30 22:42+0100\n"
+"PO-Revision-Date: 2006-10-09 00:52+0900\n"
+"Last-Translator: Hideki Yamane (Debian-JP) <henrich@debian.or.jp>\n"
+"Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+msgid "Create tables for Bacula's Catalog?"
+msgstr "Bacula のカタログ用テーブルを作成しますか?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+#, fuzzy
+msgid ""
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
+msgstr ""
+"Bacula のカタログに必要なテーブルが存在していません。Bacula を初めてインス"
+"トールする場合は問題ありません。"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
+msgid "Remove Catalog on purge?"
+msgstr "purge の際にカタログを削除しますか?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
+msgid ""
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
+msgstr ""
+
+#~ msgid ""
+#~ "These tables are needed for the Bacula director to function. Should these "
+#~ "tables be automatically set up for you?"
+#~ msgstr ""
+#~ "これらのテーブルは Bacula director が動作するために必要です。自動的にテー"
+#~ "ブルを作成しますか?"
+
+#~ msgid ""
+#~ "Do you want the Bacula Catalog to be removed if you purge the Bacula "
+#~ "director?"
+#~ msgstr ""
+#~ "Bacula director を完全に削除する際に Bacula のカタログを削除しますか?"
+
+#~ msgid ""
+#~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
+#~ "able to restore your backups unless you have another copy of the catalog "
+#~ "at hand."
+#~ msgstr ""
+#~ "警告: これはやり直しがききません。一旦カタログを削除すると、手動でカタログ"
+#~ "のコピーを行っていない限り、バックアップをリストアできません。"
+
+#~ msgid ""
+#~ "Shall I remove the Catalog / SQLite database at package purge time? This "
+#~ "will free all the used space."
+#~ msgstr ""
+#~ "パッケージを purge する際にカタログ・SQLite データベースを削除しますか? こ"
+#~ "れを行うと、利用していた領域を全て開放します。"

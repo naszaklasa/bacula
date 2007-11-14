@@ -1,0 +1,2 @@
+?package(bacula-traymonitor):needs="X11" section="Apps/System"\
+  title="Bacula tray monitor" command="/usr/bin/bacula-tray-monitor"

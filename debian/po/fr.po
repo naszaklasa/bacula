@@ -1,0 +1,75 @@
+# 
+#    Translators, if you are not familiar with the PO format, gettext
+#    documentation is worth reading, especially sections dedicated to
+#    this format, e.g. by running:
+#         info -n '(gettext)PO Files'
+#         info -n '(gettext)Header Entry'
+# 
+#    Some information specific to po-debconf are available at
+#            /usr/share/doc/po-debconf/README-trans
+#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
+# 
+#    Developers do not need to manually edit POT or PO files.
+#
+# Initial translator: Eric Madesclair <eric-m@wanadoo.fr>
+msgid ""
+msgstr ""
+"Project-Id-Version: bacula\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2007-08-30 22:42+0100\n"
+"PO-Revision-Date: 2006-05-25 15:04+0200\n"
+"Last-Translator: Thomas Huriaux <thomas.huriaux@gmail.com>\n"
+"Language-Team: French <debian-l10n-french@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+msgid "Create tables for Bacula's Catalog?"
+msgstr "Faut-il créer les tables du catalogue de Bacula ?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+#, fuzzy
+msgid ""
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
+msgstr ""
+"Les tables nécessaires au catalogue de Bacula sont absentes. Cette situation "
+"est normale pour une nouvelle installation."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
+msgid "Remove Catalog on purge?"
+msgstr "Faut-il supprimer le catalogue lors de la purge du paquet ?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
+msgid ""
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
+msgstr ""
+
+#~ msgid ""
+#~ "These tables are needed for the Bacula director to function. Should these "
+#~ "tables be automatically set up for you?"
+#~ msgstr ""
+#~ "Ces tables sont nécessaires pour le bon fonctionnement de Bacula. "
+#~ "Choisissez cette option pour configurer automatiquement ces tables."
+
+#~ msgid ""
+#~ "Do you want the Bacula Catalog to be removed if you purge the Bacula "
+#~ "director?"
+#~ msgstr ""
+#~ "Choisissez cette option pour supprimer le catalogue de Bacula lors de la "
+#~ "purge du « Director » de Bacula."
