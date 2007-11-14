@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: joblist.cpp 5386 2007-08-21 02:09:38Z bartleyd2 $
+ *   Version $Id: joblist.cpp 5881 2007-11-09 04:31:14Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
@@ -490,7 +490,6 @@ void JobList::consoleListVolumes()
 void JobList::consoleListJobTotals()
 {
    QString cmd("list jobtotals");
-   cmd += m_currentJob;
    if (mainWin->m_longList) { cmd.prepend("l"); }
    consoleCommand(cmd);
 }

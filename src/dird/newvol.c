@@ -37,7 +37,7 @@
  *  Basic tasks done here:
  *      If possible create a new Media entry
  *
- *   Version $Id: newvol.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: newvol.c 5750 2007-10-13 16:46:27Z kerns $
  */
 
 #include "bacula.h"
@@ -124,7 +124,7 @@ static bool create_simple_name(JCR *jcr, MEDIA_DBR *mr, POOL_DBR *pr)
    mr->VolumeName[0] = 0;
    bstrncpy(name, pr->LabelFormat, sizeof(name));
    ctx.value = 0;
-   Mmsg(query, "SELECT MAX(MediaId) FROM Media,POOL WHERE Pool.PoolId=%s", 
+   Mmsg(query, "SELECT MAX(MediaId) FROM Media,Pool WHERE Pool.PoolId=%s", 
         edit_int64(pr->PoolId, ed1));
    if (!db_sql_query(jcr->db, query.c_str(), db_int64_handler, (void *)&ctx)) {
       Jmsg(jcr, M_WARNING, 0, _("SQL failed, but ignored. ERR=%s\n"), db_strerror(jcr->db));

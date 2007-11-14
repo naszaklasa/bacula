@@ -31,7 +31,7 @@
  *
  *     Nicolas Boichat, August MMIV
  *
- *     Version $Id: tray-monitor.c 5359 2007-08-16 08:44:39Z kerns $
+ *     Version $Id: tray-monitor.c 5752 2007-10-16 19:00:51Z kerns $
  */
 
 
@@ -478,7 +478,7 @@ int main(int argc, char *argv[])
    gtk_box_pack_start(GTK_BOX(hbox), button, TRUE, FALSE, 0);
 
    button = new_image_button("gtk-close", _("Close"));
-// g_signal_connect_swapped(G_OBJECT(button), "clicked", G_CALLBACK(gtk_widget_hide), G_OBJECT(window));
+   g_signal_connect_swapped(G_OBJECT(button), "clicked", G_CALLBACK(gtk_widget_hide), G_OBJECT(window));
    gtk_box_pack_start(GTK_BOX(hbox), button, TRUE, FALSE, 0);
 
    gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);

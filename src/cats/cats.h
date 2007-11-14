@@ -38,7 +38,7 @@
  * for the external world. This is control with
  * the define __SQL_C, which is defined only in sql.c
  *
- *    Version $Id: cats.h 5710 2007-10-03 05:59:42Z kerns $
+ *    Version $Id: cats.h 5778 2007-10-22 10:31:08Z kerns $
  */
 
 /*
@@ -498,7 +498,7 @@ extern const char* my_pg_batch_fill_path_query;
 #define sql_fetch_row(x)      my_postgresql_fetch_row(x)
 #define sql_query(x, y)       my_postgresql_query((x), (y))
 #define sql_close(x)          PQfinish((x)->db)
-#define sql_strerror(x)       PQresultErrorMessage((x)->result)
+#define sql_strerror(x)       PQerrorMessage((x)->db)
 #define sql_num_rows(x)       ((unsigned) PQntuples((x)->result))
 #define sql_data_seek(x, i)   my_postgresql_data_seek((x), (i))
 #define sql_affected_rows(x)  ((unsigned) atoi(PQcmdTuples((x)->result)))

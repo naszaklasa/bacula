@@ -2,6 +2,40 @@
 
 General:
 Release Version 2.2.5
+09Nov07
+kes  Get fix for joblist bug in bat from trunk.
+04Nov07
+kes  This patch fixes bug #1003 where putting the message output from
+     a Verify job into the catalog results in a recursive loop.  The problem
+     seems to show up only with postgresql (to be verified).
+02Nov07
+kes  Fix bug #942 where lots of emails where generated when the heartbeat
+     interval was low and Bacula wanted a different tape from the one in
+     the drive.
+26Oct07
+ebl  Apply 2.2.5-lastwritten.patch to fix the LastWritten field 
+     which was updated during a restore (or a reading migration) bug #982
+24Oct07
+ebl  Use qmake-qt4 instead of qmake when available (debian system). 
+22Oct07
+kes  Add a security warning to src/cats/make_catalog_backup.in indicating
+     that passing the password via the command line (arg 3) is insecure.
+     This responds to bug #990 (it doesn't fix it).
+kes  Apply 2.2.5-postgresql-errors.patch
+kes  Remove unneeded File table index on JobId, which is already
+     present as the first index of another multi-index.
+19Oct07
+kes  Set default debug_level to zero. This corrects bugs #991 and #993. 
+kes  Fix a crash in bat when it cannot connect to the Director for example
+     if the Director is not running.
+16Oct07
+kes  Activate Close button on tray-monitor window. This fixes
+     bug #986.
+12Oct07
+kes  Fix spurious warning message printed when creating a volume with
+     a LabelFormat. This fixes bug #976.
+
+Release Version 2.2.5
 09Oct07
 kes  Add JobId in place of Job name in all the Jmsg() output.  
 kes  Correct the APP_DESC for the Win32 storage service (remove an e).

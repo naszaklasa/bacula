@@ -5,14 +5,13 @@
 
 # basic defines for every build
 %define _version @VERSION@
-%define _release 1
+%define _release 2
 %define depkgs_version 09Sep07
 %define _rescuever @VERSION@
 %define docs_version @VERSION@
 
 # any patches for this release
 # be sure to check the setup section for patch macros
-
 
 #--------------------------------------------------------------------------
 # it should not be necessary to change anything below here for a release
@@ -139,6 +138,8 @@ Packager: %{_packager}
 %{?build_su10:%define su10 1}
 %define su102 0
 %{?build_su102:%define su102 1}
+%define su103 0
+%{?build_su103:%define su103 1}
 # Mandrake builds
 %define mdk 0
 %{?build_mdk:%define mdk 1}
@@ -151,7 +152,7 @@ Packager: %{_packager}
 %{?build_client_only:%define client_only 1}
 
 # test for a platform definition
-%if ! %{rh7} && ! %{rh8} && ! %{rh9} && ! %{fc1} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7} && ! %{wb3} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk}
+%if ! %{rh7} && ! %{rh8} && ! %{rh9} && ! %{fc1} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7} && ! %{wb3} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk}
 %{error: You must specify a platform. Please examine the spec file.}
 exit 1
 %endif
@@ -199,7 +200,7 @@ exit 1
 %if %{rh7} || %{rh8} || %{rh9} || %{rhel3} || %{rhel4} || %{rhel5}
 %define _dist %(grep Red /etc/redhat-release)
 %endif
-%if %{fc1} || %{fc4} || %{fc5} || %{fc6} || %{fc7}
+%if %{fc1} || %{fc4} || %{fc5} || %{fc7}
 %define _dist %(grep Fedora /etc/redhat-release)
 %endif
 %if %{centos5} || %{centos4} || %{centos3}
@@ -211,10 +212,13 @@ exit 1
 %if %{fc3} && ! %{rhel4} && ! %{centos4} && ! %{sl4}
 %define _dist %(grep Fedora /etc/redhat-release)
 %endif
+%if %{fc6} && ! %{rhel5} && ! %{centos5} && ! %{sl5}
+%define _dist %(grep Fedora /etc/redhat-release)
+%endif
 %if %{wb3} && ! %{rhel3} && ! %{centos3} && ! %{sl3}
 %define _dist %(grep White /etc/whitebox-release)
 %endif
-%if %{su9} || %{su10} || %{su102}
+%if %{su9} || %{su10} || %{su102} || %{su103}
 %define _dist %(grep -i SuSE /etc/SuSE-release)
 %endif
 %if %{mdk}
@@ -284,9 +288,20 @@ BuildRequires: python, python-devel
 %if %{gconsole}
 BuildRequires: pkgconfig, pango-devel, atk-devel
 %endif
-%if %{bat}
+
+# Rh qt4 packages don't provide, guess what, qt!
+# so fix for broken rh
+%define broken_rh 0
+%if %{rhel5} || %{centos5} || %{sl5} || %{fc5} || %{fc6} || %{fc7}
+%define broken_rh 1"
+%endif
+%if %{bat} && ! %{broken_rh}
 BuildRequires: qt-devel >= 4.2
 %endif
+%if %{bat} && %{broken_rh}
+BuildRequires: qt4-devel >= 4.2
+%endif
+
 %if %{rh7}
 BuildRequires: libtermcap-devel
 BuildRequires: glibc-devel >= 2.2
@@ -346,6 +361,26 @@ BuildRequires: freetype2-devel
 BuildRequires: cairo-devel
 BuildRequires: fontconfig-devel >= 2.4
 BuildRequires: gnome-vfs2-devel >= 2.16
+BuildRequires: libpng-devel
+%endif
+%if %{su103}
+BuildRequires: termcap
+BuildRequires: glibc-devel >= 2.6
+%endif
+%if %{su103} && %{gconsole}
+BuildRequires: libgnome >= 2.20
+BuildRequires: gtk2-devel >= 2.12
+BuildRequires: libgnomeui-devel >= 2.20
+BuildRequires: ORBit2-devel
+BuildRequires: libart_lgpl-devel >= 2.3
+BuildRequires: libbonobo-devel >= 2.20
+BuildRequires: libbonoboui-devel >= 2.20
+BuildRequires: bonobo-activation-devel
+BuildRequires: gconf2-devel
+BuildRequires: freetype2-devel
+BuildRequires: cairo-devel
+BuildRequires: fontconfig-devel >= 2.4
+BuildRequires: gnome-vfs2-devel >= 2.20
 BuildRequires: libpng-devel
 %endif
 %if %{mdk}
@@ -448,11 +483,11 @@ BuildRequires: libbonoboui-devel >= 2.18
 BuildRequires: GConf2-devel
 BuildRequires: freetype-devel
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7}
 BuildRequires: libtermcap-devel
 BuildRequires: glibc-devel >= 2.3
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7} && %{gconsole}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7} && %{gconsole}
 BuildRequires: gtk2-devel >= 2.0
 BuildRequires: libgnomeui-devel >= 2.0
 BuildRequires: ORBit2-devel
@@ -516,7 +551,7 @@ Provides: bacula-dir, bacula-sd, bacula-fd, bacula-server
 Conflicts: bacula-client
 Obsoletes: bacula-rescue
 
-%if %{su9} || %{su10} || %{su102}
+%if %{su9} || %{su10} || %{su102} || %{su103}
 Conflicts: bacula
 %endif
 
@@ -532,6 +567,10 @@ Requires: termcap
 %endif
 %if %{su102}
 Requires: glibc >= 2.5
+Requires: termcap
+%endif
+%if %{su103}
+Requires: glibc >= 2.6
 Requires: termcap
 %endif
 %if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{fc5} && ! %{fc6} && ! %{fc7}
@@ -555,7 +594,7 @@ Requires: mysql-server >= 3.23
 Requires: mysql >= 4.0
 Requires: mysql-server >= 4.0
 %endif
-%if %{mysql} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk} && %{mysql5}
+%if %{mysql} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk} && %{mysql5}
 Requires: mysql >= 5.0
 Requires: mysql-server >= 5.0
 %endif
@@ -577,6 +616,10 @@ Requires: mysql >= 5.0
 Requires: mysql-client >= 5.0
 %endif
 %if %{mysql} && %{su102} && %{mysql5}
+Requires: mysql >= 5.0
+Requires: mysql-client >= 5.0
+%endif
+%if %{mysql} && %{su103} && %{mysql5}
 Requires: mysql >= 5.0
 Requires: mysql-client >= 5.0
 %endif
@@ -674,7 +717,11 @@ Requires: termcap
 Requires: glibc >= 2.5
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{fc5} && ! %{fc6}
+%if %{su102}
+Requires: glibc >= 2.6
+Requires: termcap
+%endif
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{fc5} && ! %{fc6}
 Requires: glibc >= 2.3
 Requires: libtermcap
 %endif
@@ -784,6 +831,23 @@ Requires: fontconfig >= 2.4
 Requires: gnome-vfs2 >= 2.16
 Requires: libpng
 %endif
+%if %{gconsole} && %{su103}
+Requires: gtk2 >= 2.12
+Requires: libgnome >= 2.20
+Requires: libgnomeui >= 2.20
+Requires: glibc >= 2.6
+Requires: ORBit2
+Requires: libart_lgpl >= 2.3
+Requires: libbonobo >= 2.20
+Requires: libbonoboui >= 2.20
+Requires: bonobo-activation
+Requires: gconf2
+Requires: freetype2
+Requires: cairo
+Requires: fontconfig >= 2.4
+Requires: gnome-vfs2 >= 2.20
+Requires: libpng
+%endif
 %if %{gconsole} && %{mdk} && !%{mdv}
 Requires: gtk2 >= 2.0
 Requires: libgnomeui2
@@ -863,7 +927,7 @@ Requires: libbonoboui >= 2.18
 Requires: GConf2
 Requires: freetype
 %endif
-%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7}
+%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7}
 Requires: gtk2 >= 2.0
 Requires: libgnomeui >= 2.0
 Requires: glibc >= 2.3
@@ -885,7 +949,10 @@ Requires: xsu
 %if %{gconsole} && %{su102}
 Requires: xsu
 %endif
-%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102}
+%if %{gconsole} && %{su103}
+Requires: xsu
+%endif
+%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103}
 Requires: usermode
 %endif
 
@@ -918,6 +985,10 @@ Requires: gtk2 >= 2.8
 
 %if %{wxconsole} && %{su102}
 Requires: gtk2 >= 2.10
+%endif
+
+%if %{wxconsole} && %{su103}
+Requires: gtk2 >= 2.12
 %endif
 
 %if %{wxconsole} && %{fc3}  
@@ -986,6 +1057,18 @@ Requires: libstdc++
 Requires: zlib
 %endif
 
+%if %{bat} && %{su103}
+Requires: openssl
+Requires: glibc >= 2.6
+Requires: fontconfig
+Requires: freetype2
+Requires: libgcc
+Requires: libpng
+Requires: qt >= 4.2
+Requires: libstdc++
+Requires: zlib
+%endif
+
 %if %{bat} && %{fc5}
 Requires: openssl
 Requires: glibc >= 2.4
@@ -993,7 +1076,7 @@ Requires: fontconfig
 Requires: freetype
 Requires: libgcc
 Requires: libpng
-Requires: qt >= 4.2
+Requires: qt4 >= 4.2
 Requires: libstdc++
 Requires: zlib
 %endif
@@ -1005,7 +1088,7 @@ Requires: fontconfig
 Requires: freetype
 Requires: libgcc
 Requires: libpng
-Requires: qt >= 4.2
+Requires: qt4 >= 4.2
 Requires: libstdc++
 Requires: zlib
 %endif
@@ -1017,7 +1100,7 @@ Requires: fontconfig
 Requires: freetype
 Requires: libgcc
 Requires: libpng
-Requires: qt >= 4.2
+Requires: qt4 >= 4.2
 Requires: libstdc++
 Requires: zlib
 %endif
@@ -1048,7 +1131,7 @@ the client or server packages.
 
 %build
 
-%if %{su9} || %{su10} || %{su102}
+%if %{su9} || %{su10} || %{su102} || %{su103}
 export LDFLAGS="${LDFLAGS} -L/usr/lib/termcap"
 %endif
 
@@ -1090,6 +1173,9 @@ patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
 %if %{sqlite} && %{su102}
 patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
 %endif
+%if %{sqlite} && %{su103}
+patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
+%endif
 
 # 64 bit lib location hacks
 # as of 1.39.18 it should not be necessary to enable x86_64 as configure is
@@ -1102,6 +1188,18 @@ export LDFLAGS="${LDFLAGS} -L/usr/lib64/mysql"
 %endif
 %if %{python} && %{x86_64}
 export LDFLAGS="${LDFLAGS} -L/usr/lib64/python%{pyver}"
+%endif
+
+# Red Hat's 64 bit installation of QT4 appears to be broken so:
+%define qt_path 0
+%if %{rhel5} || %{centos5} || %{sl5}
+%define qt_path 1
+%endif
+%if %{bat} && %{qt_path} && %{x86_64}
+export PATH=/usr/lib64/qt4/bin/:$PATH
+export QTDIR=/usr/lib64/qt4/
+export QTINC=/usr/lib64/qt4/include/
+export QTLIB=/usr/lib64/qt4/
 %endif
 
 %configure \
@@ -1199,7 +1297,7 @@ mkdir -p $RPM_BUILD_ROOT/usr/share/pixmaps
 %define usermode_iftrick 0
 %endif
 
-%if %{usermode_iftrick} && ! %{su9} && ! %{su10} && ! %{su102}
+%if %{usermode_iftrick} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103}
 mkdir -p $RPM_BUILD_ROOT/etc/pam.d
 mkdir -p $RPM_BUILD_ROOT/etc/security/console.apps
 mkdir -p $RPM_BUILD_ROOT/usr/bin
@@ -1278,7 +1376,7 @@ rm -f $RPM_BUILD_ROOT%{script_dir}/gconsole
 rm -f $RPM_BUILD_ROOT/usr/sbin/static-bacula-fd
 
 # install the init scripts
-%if %{su9} || %{su10} || %{su102}
+%if %{su9} || %{su10} || %{su102} || %{su103}
 cp -p platforms/suse/bacula-dir $RPM_BUILD_ROOT/etc/init.d/bacula-dir
 cp -p platforms/suse/bacula-fd $RPM_BUILD_ROOT/etc/init.d/bacula-fd
 cp -p platforms/suse/bacula-sd $RPM_BUILD_ROOT/etc/init.d/bacula-sd
@@ -1288,7 +1386,7 @@ cp -p platforms/mandrake/bacula-dir $RPM_BUILD_ROOT/etc/init.d/bacula-dir
 cp -p platforms/mandrake/bacula-fd $RPM_BUILD_ROOT/etc/init.d/bacula-fd
 cp -p platforms/mandrake/bacula-sd $RPM_BUILD_ROOT/etc/init.d/bacula-sd
 %endif
-%if ! %{su9} && ! %{su10} && ! %{su102} && ! %{mdk}
+%if ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk}
 cp -p platforms/redhat/bacula-dir $RPM_BUILD_ROOT/etc/init.d/bacula-dir
 cp -p platforms/redhat/bacula-fd $RPM_BUILD_ROOT/etc/init.d/bacula-fd
 cp -p platforms/redhat/bacula-sd $RPM_BUILD_ROOT/etc/init.d/bacula-sd
@@ -1318,6 +1416,12 @@ cp -p scripts/bacula.desktop.gnome2.xsu $RPM_BUILD_ROOT/usr/share/applications/b
 cp -p src/tray-monitor/generic.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/bacula-tray-monitor.xpm
 cp -p scripts/bacula-tray-monitor.desktop $RPM_BUILD_ROOT/usr/share/applications/bacula-tray-monitor.desktop
 %endif
+%if %{gconsole} && %{su103}
+cp -p scripts/bacula.png $RPM_BUILD_ROOT/usr/share/pixmaps/bacula.png
+cp -p scripts/bacula.desktop.gnome2.xsu $RPM_BUILD_ROOT/usr/share/applications/bacula.desktop
+cp -p src/tray-monitor/generic.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/bacula-tray-monitor.xpm
+cp -p scripts/bacula-tray-monitor.desktop $RPM_BUILD_ROOT/usr/share/applications/bacula-tray-monitor.desktop
+%endif
 %if %{wxconsole} && %{su10}
 cp -p src/wx-console/wxwin16x16.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/wxwin16x16.xpm
 cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxconsole.desktop
@@ -1326,7 +1430,15 @@ cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxcon
 cp -p src/wx-console/wxwin16x16.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/wxwin16x16.xpm
 cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxconsole.desktop
 %endif
+%if %{wxconsole} && %{su103}
+cp -p src/wx-console/wxwin16x16.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/wxwin16x16.xpm
+cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxconsole.desktop
+%endif
 %if %{bat} && %{su102}
+cp -p src/qt-console/images/bat_icon.png $RPM_BUILD_ROOT/usr/share/pixmaps/bat_icon.png
+cp -p scripts/bat.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
+%endif
+%if %{bat} && %{su103}
 cp -p src/qt-console/images/bat_icon.png $RPM_BUILD_ROOT/usr/share/pixmaps/bat_icon.png
 cp -p scripts/bat.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
 %endif
@@ -1697,6 +1809,7 @@ else
         echo "Hmm, doesn't look like you have an existing database."
         echo "Creating SQLite database..."
 	%{script_dir}/create_sqlite_database
+	chown %{director_daemon_user}.%{daemon_group} %{working_dir}/bacula.db
         echo "Creating the SQLite tables..."
 	%{script_dir}/make_sqlite_tables
 fi
@@ -1899,7 +2012,7 @@ echo "The database update scripts were installed to %{script_dir}/updatedb"
 %{_mandir}/man1/bacula-tray-monitor.1.%{manpage_ext}
 %endif
 
-%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102}
+%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103}
 # add the console helper files
 %config(noreplace,missingok) /etc/pam.d/bgnome-console
 %config(noreplace,missingok) /etc/security/console.apps/bgnome-console
@@ -1944,7 +2057,7 @@ fi
 %{_mandir}/man1/bacula-bwxconsole.1.%{manpage_ext}
 %endif
 
-%if %{wxconsole} && ! %{su9} && ! %{su10} && ! %{su102}
+%if %{wxconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103}
 # add the console helper files
 %config(noreplace,missingok) /etc/pam.d/bwx-console
 %config(noreplace,missingok) /etc/security/console.apps/bwx-console
@@ -1989,7 +2102,7 @@ fi
 %{_mandir}/man1/bat.1.%{manpage_ext}
 %endif
 
-%if %{bat} && ! %{su9} && ! %{su10} && ! %{su102}
+%if %{bat} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103}
 # add the console helper files
 %config(noreplace,missingok) /etc/pam.d/bat
 %config(noreplace,missingok) /etc/security/console.apps/bat
@@ -2024,6 +2137,14 @@ fi
 %endif
 
 %changelog
+* Sat Nov 10 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add su103 build target
+* Sun Nov 04 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- fix dist defines for rhel5 and clones
+- fix rhel broken 64 bit QT4 paths
+- rh qt4 packages don't provide qt so fix that too
+* Mon Oct 29 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- correct ownership when creating sqlite db file in post script
 * Sun Sep 16 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - fix disable-batch-insert
 * Fri Sep 14 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>

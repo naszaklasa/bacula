@@ -38,7 +38,7 @@ then
 fi
 
 # select build platform
-PLATFORM=`zenity --title "Select Platform" --text "Please choose a build platform." --list --radiolist --column "Select" --column "Platform" False rh7 False rh8 False rh9 False fc1 False fc3 False fc4 False fc5 False fc6 False fc7 False wb3 False rhel3 False rhel4 False centos3 False centos4 False sl3 False sl4 False su9 False su10 False su102 False mdk False mdv`
+PLATFORM=`zenity --title "Select Platform" --text "Please choose a build platform." --list --radiolist --column "Select" --column "Platform" False rh7 False rh8 False rh9 False fc1 False fc3 False fc4 False fc5 False fc6 False fc7 False wb3 False rhel3 False rhel4 False rhel5 False centos3 False centos4 False centos5 False sl3 False sl4 False sl5 False su9 False su10 False su102 False su103 False mdk False mdv`
 
 RESULT="$?"
 if [ "$RESULT" = "1" ];
@@ -113,3 +113,4 @@ echo $COMMAND | sh
 # 27 Jan 2007 add fc6
 # 29 Apr 2007 add sl3 & sl4 target and bat option
 # 06 May 2007 add fc7 target
+# 10 Nov 2007 add rhel5 and su103 targets

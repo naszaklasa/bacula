@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, December MMI
  *
- *   Version $Id: ua_run.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: ua_run.c 5774 2007-10-21 17:36:17Z ricozz $
  */
 
 #include "bacula.h"
@@ -424,6 +424,7 @@ try_again:
          }
          opt = do_prompt(ua, "", _("Select replace option"), NULL, 0);
          if (opt >=  0) {
+            rc.replace = ReplaceOptions[opt].name;
             jcr->replace = ReplaceOptions[opt].token;
          }
          goto try_again;

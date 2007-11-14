@@ -2,7 +2,34 @@
 #
 # Bacula interface to virtual autoloader using disk storage
 #
-#  $Id: disk-changer.in 4982 2007-06-05 16:58:53Z kerns $
+#  Written by Kern Sibbald
+#
+#  Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+#
+#  The main author of Bacula is Kern Sibbald, with contributions from
+#  many others, a complete list can be found in the file AUTHORS.
+#  This program is Free Software; you can redistribute it and/or
+#  modify it under the terms of version two of the GNU General Public
+#  License as published by the Free Software Foundation, which is 
+#  listed in the file LICENSE.
+3
+#  This program is distributed in the hope that it will be useful, but
+#  WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+#  General Public License for more details.
+3
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+#  02110-1301, USA.
+#
+#  Bacula® is a registered trademark of John Walker.
+#  The licensor of Bacula is the Free Software Foundation Europe
+#  (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+#  Switzerland, email:ftf@fsfeurope.org.
+#
+#
+#  $Id: disk-changer.in 5905 2007-11-11 15:14:25Z kerns $
 #
 #  If you set in your Device resource
 #

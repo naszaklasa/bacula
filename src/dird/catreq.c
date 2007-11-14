@@ -37,7 +37,7 @@
  *  Basic tasks done here:
  *      Handle Catalog services.
  *
- *   Version $Id: catreq.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: catreq.c 5814 2007-10-26 17:19:39Z ricozz $
  */
 
 #include "bacula.h"
@@ -266,6 +266,11 @@ void catalog_request(JCR *jcr, BSOCK *bs)
          }
       }
       Dmsg2(400, "Update media: BefVolJobs=%u After=%u\n", mr.VolJobs, sdmr.VolJobs);
+      /* Check if the volume has been written by the job, 
+       * and update the LastWritten field if needed */
+      if (mr.VolBlocks != sdmr.VolBlocks) {
+         mr.LastWritten = sdmr.LastWritten;
+      }
       /* Copy updated values to original media record */
       mr.VolJobs      = sdmr.VolJobs;
       mr.VolFiles     = sdmr.VolFiles;
@@ -274,7 +279,6 @@ void catalog_request(JCR *jcr, BSOCK *bs)
       mr.VolMounts    = sdmr.VolMounts;
       mr.VolErrors    = sdmr.VolErrors;
       mr.VolWrites    = sdmr.VolWrites;
-      mr.LastWritten  = sdmr.LastWritten;
       mr.Slot         = sdmr.Slot;
       mr.InChanger    = sdmr.InChanger;
       mr.VolReadTime  = sdmr.VolReadTime;

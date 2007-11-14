@@ -1,0 +1,29 @@
+
+  This bug fixes the warning message that prints each time an automatic
+  Volume name is created.  This fixes bug #979
+
+  This patch applies to Bacula version 2.2.5 (not to previous versions),
+  and can be applied with the following:
+
+  cd <bacula-source>
+  patch -p0 <2.2.5-newvol.patch
+  ./configure (your options)
+  make
+  ...
+  make install
+
+
+
+Index: src/dird/newvol.c
+===================================================================
+--- src/dird/newvol.c	(revision 5717)
++++ src/dird/newvol.c	(working copy)
+@@ -124,7 +124,7 @@
+    mr->VolumeName[0] = 0;
+    bstrncpy(name, pr->LabelFormat, sizeof(name));
+    ctx.value = 0;
+-   Mmsg(query, "SELECT MAX(MediaId) FROM Media,POOL WHERE Pool.PoolId=%s", 
++   Mmsg(query, "SELECT MAX(MediaId) FROM Media,Pool WHERE Pool.PoolId=%s", 
+         edit_int64(pr->PoolId, ed1));
+    if (!db_sql_query(jcr->db, query.c_str(), db_int64_handler, (void *)&ctx)) {
+       Jmsg(jcr, M_WARNING, 0, _("SQL failed, but ignored. ERR=%s\n"), db_strerror(jcr->db));

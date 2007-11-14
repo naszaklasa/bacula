@@ -144,7 +144,6 @@
 ./src/tray-monitor/tray_conf.c
 ./src/lib/btime.c
 ./src/lib/workq.c
-./src/lib/uid_gid_name.c
 ./src/lib/cram-md5.c
 ./src/lib/mem_pool.c
 ./src/lib/hmac.c
@@ -168,7 +167,6 @@
 ./src/lib/attr.c
 ./src/lib/jcr.c
 ./src/lib/parse_conf.c
-./src/lib/idcache.c
 ./src/lib/scan.c
 ./src/lib/res.c
 ./src/lib/sha1.c
@@ -194,6 +192,7 @@
 ./src/lib/var.c
 ./src/lib/runscript.c
 ./src/lib/address_conf.c
+./src/lib/guid_to_name.c
 ./src/findlib/create_file.c
 ./src/findlib/attribs.c
 ./src/findlib/save-cwd.c
@@ -310,7 +309,6 @@
 ./src/win32/compat/grp.h
 ./src/win32/libwin32/res.h
 ./src/win32/libwin32/aboutDialog.h
-./src/win32/libwin32/wintray.h
 ./src/win32/libwin32/win32.h
 ./src/win32/libwin32/statusDialog.h
 ./src/win32/libwin32/protos.h
@@ -358,6 +356,7 @@
 ./src/lib/base64.h
 ./src/lib/lex.h
 ./src/lib/var.h
+./src/lib/guid_to_name.h
 ./src/findlib/save-cwd.h
 ./src/findlib/find.h
 ./src/findlib/bfile.h
