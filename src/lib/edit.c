@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, December MMII
  *
- *   Version $Id: edit.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: edit.c 5713 2007-10-03 11:36:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -120,7 +120,7 @@ char *edit_uint64_with_suffix(uint64_t val, char *buf)
 {
   int commas = 0;
   char *c, mbuf[50];
-  char *suffix[] =
+  const char *suffix[] =
     { "", "K", "M", "G", "T", "P", "E", "Z", "Y", "FIX ME" };
   int suffixes = sizeof(suffix) / sizeof(*suffix);
 

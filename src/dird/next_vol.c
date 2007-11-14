@@ -33,7 +33,7 @@
 
  *     Kern Sibbald, March MMI
  *
- *   Version $Id: next_vol.c 5202 2007-07-19 15:31:46Z kerns $
+ *   Version $Id: next_vol.c 5714 2007-10-03 16:22:07Z kerns $
  */
 
 #include "bacula.h"
@@ -57,7 +57,8 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
    STORE *store = jcr->wstore;
 
    bstrncpy(mr->MediaType, store->media_type, sizeof(mr->MediaType));
-   Dmsg2(150, "find_next_vol_for_append: PoolId=%d, MediaType=%s\n", (int)mr->PoolId, mr->MediaType);
+   Dmsg3(100, "find_next_vol_for_append: JobId=%u PoolId=%d, MediaType=%s\n", 
+         (uint32_t)jcr->JobId, (int)mr->PoolId, mr->MediaType);
    /*
     * If we are using an Autochanger, restrict Volume
     *   search to the Autochanger on the first pass
@@ -209,6 +210,8 @@ bool has_volume_expired(JCR *jcr, MEDIA_DBR *mr)
       } else if (mr->MaxVolJobs > 0 && mr->MaxVolJobs <= mr->VolJobs) {
          Jmsg(jcr, M_INFO, 0, _("Max Volume jobs exceeded. "
              "Marking Volume \"%s\" as Used.\n"), mr->VolumeName);
+         Dmsg3(100, "MaxVolJobs=%d JobId=%d Vol=%s\n", mr->MaxVolJobs,
+               (uint32_t)jcr->JobId, mr->VolumeName);
          bstrncpy(mr->VolStatus, "Used", sizeof(mr->VolStatus));
          expired = true;
 

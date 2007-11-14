@@ -56,8 +56,8 @@ SELECT DISTINCT Job.JobId as JobId,Client.Name as Client,
    JobFiles,JobBytes,VolumeName
  FROM Client,Job,JobMedia,Media,FileSet
  WHERE Client.Name='%1'
- AND Client.ClientId=Job.ClientId
- AND JobStatus='T' AND Job.FileSetId=FileSet.FileSetId
+ AND Client.ClientId=Job.ClientId AND Job.Type='B'
+ AND Job.JobStatus='T' AND Job.FileSetId=FileSet.FileSetId
  AND JobMedia.JobId=Job.JobId AND JobMedia.MediaId=Media.MediaId
  ORDER BY Job.StartTime;
 # 6

@@ -87,8 +87,8 @@ int
 main (int argc, char *const *argv)
 {
    FF_PKT *ff;
-   char *configfile = "bacula-dir.conf";
-   char *fileset_name = "Windows-Full-Set";
+   const char *configfile = "bacula-dir.conf";
+   const char *fileset_name = "Windows-Full-Set";
    int ch, hard_links;
 
    OSDependentInit();

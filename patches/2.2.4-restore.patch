@@ -1,0 +1,49 @@
+
+ This patch resolves bug #955 where the director segfault when
+ where= option isn't specified anywhere.
+
+ Apply to version 2.2.4 (and perhaps older 2.2.x versions) with
+
+ cd <bacula-source>
+ patch -p0 <2.2.4-restore.patch
+ ./configure (your options)
+ make
+ ...
+ make install
+
+
+Index: src/dird/restore.c
+===================================================================
+--- src/dird/restore.c	(revision 5601)
++++ src/dird/restore.c	(working copy)
+@@ -173,7 +173,7 @@
+    }
+ 
+    /* Send restore command */
+-   char replace, *where, *cmd=NULL;
++   char replace, *where, *cmd;
+    char empty = '\0';
+ 
+    if (jcr->replace != 0) {
+@@ -183,8 +183,6 @@
+    } else {
+       replace = REPLACE_ALWAYS;       /* always replace */
+    }
+-   
+-   where = &empty;                    /* default */
+ 
+    if (jcr->RegexWhere) {
+       where = jcr->RegexWhere;             /* override */
+@@ -199,7 +197,11 @@
+    } else if (jcr->job->RestoreWhere) {
+       where = jcr->job->RestoreWhere; /* no override take from job */
+       cmd = restorecmd;
+-   } 
++
++   } else {			      /* nothing was specified */
++      where = &empty;		      /* use default */
++      cmd   = restorecmd;		     
++   }
+    
+    jcr->prefix_links = jcr->job->PrefixLinks;
+ 

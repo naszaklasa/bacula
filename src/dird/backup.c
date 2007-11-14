@@ -38,7 +38,7 @@
  *       to do the backup.
  *     When the File daemon finishes the job, update the DB.
  *
- *   Version $Id: backup.c 5552 2007-09-14 09:49:06Z kerns $
+ *   Version $Id: backup.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"
@@ -200,7 +200,7 @@ bool do_backup(JCR *jcr)
       }
    }
 
-   bnet_fsend(fd, storaddr, store->address, store->SDDport, tls_need);
+   fd->fsend(storaddr, store->address, store->SDDport, tls_need);
    if (!response(jcr, fd, OKstore, "Storage", DISPLAY_ERROR)) {
       goto bail_out;
    }
@@ -226,7 +226,7 @@ bool do_backup(JCR *jcr)
    }
 
    /* Send backup command */
-   bnet_fsend(fd, backupcmd);
+   fd->fsend(backupcmd);
    if (!response(jcr, fd, OKbackup, "backup", DISPLAY_ERROR)) {
       goto bail_out;
    }
@@ -293,7 +293,7 @@ int wait_for_job_termination(JCR *jcr)
       Jmsg(jcr, M_FATAL, 0, _("Network error with FD during %s: ERR=%s\n"),
           job_type_to_str(jcr->JobType), fd->bstrerror());
    }
-   bnet_sig(fd, BNET_TERMINATE);   /* tell Client we are terminating */
+   fd->signal(BNET_TERMINATE);   /* tell Client we are terminating */
 
    /* Force cancel in SD if failing */
    if (job_canceled(jcr) || !fd_ok) {
@@ -388,7 +388,7 @@ void backup_cleanup(JCR *jcr, int TermCode)
          term_msg = _("*** Backup Error ***");
          msg_type = M_ERROR;          /* Generate error message */
          if (jcr->store_bsock) {
-            bnet_sig(jcr->store_bsock, BNET_TERMINATE);
+            jcr->store_bsock->signal(BNET_TERMINATE);
             if (jcr->SD_msg_chan) {
                pthread_cancel(jcr->SD_msg_chan);
             }
@@ -397,7 +397,7 @@ void backup_cleanup(JCR *jcr, int TermCode)
       case JS_Canceled:
          term_msg = _("Backup Canceled");
          if (jcr->store_bsock) {
-            bnet_sig(jcr->store_bsock, BNET_TERMINATE);
+            jcr->store_bsock->signal(BNET_TERMINATE);
             if (jcr->SD_msg_chan) {
                pthread_cancel(jcr->SD_msg_chan);
             }

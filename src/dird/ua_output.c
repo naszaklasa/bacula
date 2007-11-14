@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_output.c 5450 2007-09-04 10:04:42Z kerns $
+ *   Version $Id: ua_output.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"
@@ -557,12 +557,12 @@ RUN *find_next_run(RUN *run, JOB *job, time_t &runtime, int ndays)
             bit_is_set(woy, run->woy);
  
 #ifdef xxx
-         Dmsg2(000, "day=%d is_scheduled=%d\n", day, is_scheduled);
-         Dmsg1(000, "bit_set_mday=%d\n", bit_is_set(mday, run->mday));
-         Dmsg1(000, "bit_set_wday=%d\n", bit_is_set(wday, run->wday));
-         Dmsg1(000, "bit_set_month=%d\n", bit_is_set(month, run->month));
-         Dmsg1(000, "bit_set_wom=%d\n", bit_is_set(wom, run->wom));
-         Dmsg1(000, "bit_set_woy=%d\n", bit_is_set(woy, run->woy));
+         Pmsg2(000, "day=%d is_scheduled=%d\n", day, is_scheduled);
+         Pmsg1(000, "bit_set_mday=%d\n", bit_is_set(mday, run->mday));
+         Pmsg1(000, "bit_set_wday=%d\n", bit_is_set(wday, run->wday));
+         Pmsg1(000, "bit_set_month=%d\n", bit_is_set(month, run->month));
+         Pmsg1(000, "bit_set_wom=%d\n", bit_is_set(wom, run->wom));
+         Pmsg1(000, "bit_set_woy=%d\n", bit_is_set(woy, run->woy));
 #endif
 
          if (is_scheduled) { /* Jobs scheduled on that day */
@@ -576,7 +576,7 @@ RUN *find_next_run(RUN *run, JOB *job, time_t &runtime, int ndays)
                }
             }
             bstrncat(buf, "\n", sizeof(buf));
-            Dmsg1(000, "%s", buf);
+            Pmsg1(000, "%s", buf);
 #endif
             /* find time (time_t) job is to be run */
             (void)localtime_r(&future, &runtm);

@@ -45,7 +45,7 @@
  *       Requests are any message that does not begin with a digit.
  *       In affect, they are commands.
  *
- *   Version $Id: getmsg.c 5237 2007-07-24 18:36:08Z kerns $
+ *   Version $Id: getmsg.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"
@@ -213,7 +213,7 @@ int bget_dirmsg(BSOCK *bs)
          free_jcr(jcr);
          continue;
       }
-      if (bs->msg[0] == 'U') {        /* Catalog update */
+      if (bs->msg[0] == 'U') {        /* SD sending attributes */
          Dmsg2(900, "Catalog upd jcr 0x%x: %s", jcr, bs->msg);
          catalog_update(jcr, bs);
          Dmsg1(900, "Calling freejcr 0x%x\n", jcr);

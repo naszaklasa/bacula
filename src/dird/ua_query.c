@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, December MMI
  *
- *   Version $Id: ua_query.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: ua_query.c 5713 2007-10-03 11:36:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -69,8 +69,9 @@ int querycmd(UAContext *ua, const char *cmd)
       goto bail_out;
    }
    if ((fd=fopen(query_file, "rb")) == NULL) {
+      berrno be;
       ua->error_msg(_("Could not open %s: ERR=%s\n"), query_file,
-         strerror(errno));
+         be.bstrerror());
       goto bail_out;
    }
 
@@ -207,7 +208,7 @@ static POOLMEM *substitute_prompts(UAContext *ua,
                }
                len = strlen(ua->cmd);
                p = (char *)malloc(len * 2 + 1);
-               db_escape_string(p, ua->cmd, len);
+               db_escape_string(ua->jcr, ua->db, p, ua->cmd, len);
                subst[n] = p;
                olen = o - new_query;
                new_query = check_pool_memory_size(new_query, olen + strlen(p) + 10);

@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MMI
  *
- *   Version  $Id: ua_select.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version  $Id: ua_select.c 5714 2007-10-03 16:22:07Z kerns $
  */
 
 #include "bacula.h"
@@ -443,7 +443,7 @@ bool select_client_dbr(UAContext *ua, CLIENT_DBR *cr)
  *   returns: false on error
  *            true  on success and fills in POOL_DBR
  */
-bool get_pool_dbr(UAContext *ua, POOL_DBR *pr, char *argk)
+bool get_pool_dbr(UAContext *ua, POOL_DBR *pr, const char *argk)
 {
    if (pr->Name[0]) {                 /* If name already supplied */
       if (db_get_pool_record(ua->jcr, ua->db, pr) &&
@@ -462,7 +462,7 @@ bool get_pool_dbr(UAContext *ua, POOL_DBR *pr, char *argk)
  * Select a Pool record from catalog
  * argk can be pool, recyclepool, scratchpool etc..
  */
-bool select_pool_dbr(UAContext *ua, POOL_DBR *pr, char *argk)
+bool select_pool_dbr(UAContext *ua, POOL_DBR *pr, const char *argk)
 {
    POOL_DBR opr;
    char name[MAX_NAME_LENGTH];

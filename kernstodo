@@ -56,10 +56,27 @@ Professional Needs:
 - How to sync remote offices.
 - Exchange backup:
   http://www.microsoft.com/technet/itshowcase/content/exchbkup.mspx
+- David's priorities
+   Copypools
+   Extract capability (#25)
+   Continued enhancement of bweb
+   Threshold triggered migration jobs (not currently in list, but will be
+    needed ASAP)
+   Client triggered backups
+   Complete rework of the scheduling system (not in list)
+   Performance and usage instrumentation (not in list)
+   See email of 21Aug2007 for details.
 
 Priority:
+- Erabt if min_block_size > max_block_size
+- KIWI
+- Implement wait on multiple objects
+   - Multiple max times
+   - pthread signal
+   - socket input ready
 - Implement SDErrors (must return from SD)
 - Implement USB keyboard support in rescue CD.
+- Implement continue spooling while despooling.
 - Remove all install temp files in Win32 PLUGINSDIR.
 - Audit retention periods to make sure everything is 64 bit.
 - Use E'xxx' to escape PostgreSQL strings.
@@ -170,6 +187,7 @@ Projects:
 
 
 For next release:
+- Try to fix bscan not working with multiple DVD volumes bug #912.
 - Look at mondo/mindi
 - Don't restore Solaris Door files:
    #define   S_IFDOOR   in st_mode.

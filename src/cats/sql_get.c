@@ -33,7 +33,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_get.c 5117 2007-07-03 09:20:28Z kerns $
+ *    Version $Id: sql_get.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 
@@ -169,7 +169,7 @@ static int db_get_filename_record(JCR *jcr, B_DB *mdb)
    int FilenameId = 0;
 
    mdb->esc_name = check_pool_memory_size(mdb->esc_name, 2*mdb->fnl+2);
-   db_escape_string(mdb->esc_name, mdb->fname, mdb->fnl);
+   db_escape_string(jcr, mdb, mdb->esc_name, mdb->fname, mdb->fnl);
 
    Mmsg(mdb->cmd, "SELECT FilenameId FROM Filename WHERE Name='%s'", mdb->esc_name);
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
@@ -213,7 +213,7 @@ static int db_get_path_record(JCR *jcr, B_DB *mdb)
    uint32_t PathId = 0;
 
    mdb->esc_name = check_pool_memory_size(mdb->esc_name, 2*mdb->pnl+2);
-   db_escape_string(mdb->esc_name, mdb->path, mdb->pnl);
+   db_escape_string(jcr, mdb, mdb->esc_name, mdb->path, mdb->pnl);
 
    if (mdb->cached_path_id != 0 && mdb->cached_path_len == mdb->pnl &&
        strcmp(mdb->cached_path, mdb->path) == 0) {

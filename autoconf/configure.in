@@ -163,6 +163,14 @@ if test x$sbindir = x'${exec_prefix}/sbin' ; then
 fi
 sbindir=`eval echo ${sbindir}`
 
+# ------------------------------------------------------------------
+# If the user has not set --archivedir, we set our default as /tmp
+# ------------------------------------------------------------------
+if test x$archivedir = x'${archivedir}' ; then
+    archivedir=${archivedir}
+fi
+archivedir=`eval echo ${archivedir}`
+
 # -------------------------------------------------------------------------
 #  If the user has not set --mandir, we default to /usr/share/man
 # -------------------------------------------------------------------------
@@ -2318,6 +2326,7 @@ Configuration on `date`:
   Install binaries:	      ${sbindir}
   Install config files:       ${sysconfdir}
   Scripts directory:	      ${scriptdir}
+  Archive directory:	      ${archivedir}
   Working directory:	      ${working_dir}
   PID directory:	      ${piddir}
   Subsys directory:	      ${subsysdir}

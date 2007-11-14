@@ -28,7 +28,7 @@
 /*
  * Kern Sibbald, August 2007
  *
- * Version $Id: who.h 5358 2007-08-15 16:54:21Z kerns $
+ * Version $Id: who.h 5739 2007-10-09 15:06:15Z kerns $
  *
  * This file is pulled in by certain generic routines in libwin32
  *   to define the names of the daemon that is being built.
@@ -36,7 +36,7 @@
 
 #define APP_NAME "Bacula-sd"
 #define LC_APP_NAME "bacula-sd"
-#define APP_DESC "Bacula Storagee Service"
+#define APP_DESC "Bacula Storage Service"
 
 #define terminate_app(x) terminate_stored(x)
 extern void terminate_stored(int sig);

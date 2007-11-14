@@ -28,7 +28,7 @@
 /*
  * Kern Sibbald, August 2007
  *
- *   Version $Id: trayMonitor.h 5358 2007-08-15 16:54:21Z kerns $
+ *   Version $Id: trayMonitor.h 5622 2007-09-22 09:08:29Z kerns $
  */
 
 #ifndef __TRAY_MONITOR_H_
@@ -52,6 +52,7 @@ public:
 
    bool m_visible;
    bool m_installed;
+   UINT m_tbcreated_msg;
 
    aboutDialog m_about;
    statusDialog m_status;

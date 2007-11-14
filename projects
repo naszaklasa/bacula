@@ -38,7 +38,7 @@ Item 25:  Archival (removal) of User Files to Tape
 Item  1:  Accurate restoration of renamed/deleted files
   Date:   28 November 2005
   Origin: Martin Simmons (martin at lispworks dot com)
-  Status: Robert Nelson will implement this
+  Status: 
 
   What:   When restoring a fileset for a specified date (including "most
           recent"), Bacula should give you exactly the files and directories
@@ -497,7 +497,7 @@ Item 12:  Add Plug-ins to the FileSet Include statements.
 Item 13:  Restore only file attributes (permissions, ACL, owner, group...)
   Origin: Eric Bollengier
   Date:   30/12/2006
-  Status:
+  Status: Implemented by Eric, see project-restore-attributes-only.patch
 
   What:   The goal of this project is to be able to restore only rights
           and attributes of files without crushing them.
@@ -513,7 +513,8 @@ Item 13:  Restore only file attributes (permissions, ACL, owner, group...)
           If the file isn't here, we can create an empty one and apply
           rights or do nothing.
 
-
+          This will not work with win32 stream, because it seems that we 
+          can't split the WriteBackup stream to get only ACL and ownerchip.
 
 Item 14:  Add an override in Schedule for Pools based on backup types
 Date:     19 Jan 2005
@@ -679,7 +680,7 @@ Item 19:  Automatic disabling of devices
 Item 20:  An option to operate on all pools with update vol parameters
   Origin: Dmitriy Pinchukov <absh@bossdev.kiev.ua>
    Date:  16 August 2006
-  Status:
+  Status: Patch made by  Nigel Stepp
 
    What:  When I do update -> Volume parameters -> All Volumes
           from Pool, then I have to select pools one by one.  I'd like
@@ -1163,7 +1164,7 @@ Item  n:  make changing "spooldata=yes|no" possible for
           manual/interactive jobs
   Origin: Marc Schiffbauer <marc@schiffbauer.net>
   Date:   12 April 2007)
-  Status: Already implemented by Eric
+  Status: 
 
   What:   Make it possible to modify the spooldata option
           for a job when being run from within the console.

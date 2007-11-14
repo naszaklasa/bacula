@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, January 2002
  *
- *    Version $Id: sqlite.c 4992 2007-06-07 14:46:43Z kerns $
+ *    Version $Id: sqlite.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 
@@ -148,6 +148,7 @@ db_open_database(JCR *jcr, B_DB *mdb)
    int len;
    struct stat statbuf;
    int errstat;
+   int retry = 0;
 
    P(mutex);
    if (mdb->connected) {
@@ -157,8 +158,9 @@ db_open_database(JCR *jcr, B_DB *mdb)
    mdb->connected = FALSE;
 
    if ((errstat=rwl_init(&mdb->lock)) != 0) {
+      berrno be;
       Mmsg1(&mdb->errmsg, _("Unable to initialize DB lock. ERR=%s\n"),
-            strerror(errstat));
+            be.bstrerror(errstat));
       V(mutex);
       return 0;
    }
@@ -178,28 +180,28 @@ db_open_database(JCR *jcr, B_DB *mdb)
       return 0;
    }
 
+   for (mdb->db=NULL; !mdb->db && retry++ < 10; ) {
 #ifdef HAVE_SQLITE3
-   int stat = sqlite3_open(db_name, &mdb->db);
-   if (stat != SQLITE_OK) {
-      mdb->sqlite_errmsg = (char *)sqlite3_errmsg(mdb->db); 
-      sqlite3_close(mdb->db);
-      mdb->db = NULL;
-   } else {
-      mdb->sqlite_errmsg = NULL;
-   }
-#ifdef SQLITE3_INIT_QUERY
-   db_sql_query(mdb, SQLITE3_INIT_QUERY, NULL, NULL);
-#endif
-
+      int stat = sqlite3_open(db_name, &mdb->db);
+      if (stat != SQLITE_OK) {
+         mdb->sqlite_errmsg = (char *)sqlite3_errmsg(mdb->db); 
+         sqlite3_close(mdb->db);
+         mdb->db = NULL;
+      } else {
+         mdb->sqlite_errmsg = NULL;
+      }
 #else
-   mdb->db = sqlite_open(
-        db_name,                      /* database name */
-        644,                          /* mode */
-        &mdb->sqlite_errmsg);         /* error message */
+      mdb->db = sqlite_open(
+           db_name,                      /* database name */
+           644,                          /* mode */
+           &mdb->sqlite_errmsg);         /* error message */
 #endif
 
-   Dmsg0(300, "sqlite_open\n");
-
+      Dmsg0(300, "sqlite_open\n");
+      if (!mdb->db) {
+         bmicrosleep(1, 0);
+      }
+   }
    if (mdb->db == NULL) {
       Mmsg2(&mdb->errmsg, _("Unable to open Database=%s. ERR=%s\n"),
          db_name, mdb->sqlite_errmsg ? mdb->sqlite_errmsg : _("unknown"));
@@ -209,10 +211,6 @@ db_open_database(JCR *jcr, B_DB *mdb)
    }       
    mdb->connected = true;
    free(db_name);
-   if (!check_tables_version(jcr, mdb)) {
-      V(mutex);
-      return 0;
-   }
 
    /* set busy handler to wait when we use mult_db_connections = 1 */
 #ifdef HAVE_SQLITE3
@@ -220,6 +218,16 @@ db_open_database(JCR *jcr, B_DB *mdb)
 #else
    sqlite_busy_handler(mdb->db, my_busy_handler, NULL);
 #endif
+
+#if  defined(HAVE_SQLITE3) && defined(SQLITE3_INIT_QUERY)
+   db_sql_query(mdb, SQLITE3_INIT_QUERY, NULL, NULL);
+#endif
+
+   if (!check_tables_version(jcr, mdb)) {
+      V(mutex);
+      return 0;
+   }
+
 
    V(mutex);
    return 1;
@@ -282,7 +290,7 @@ int db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index)
  *         the escaped output.
  */
 void
-db_escape_string(char *snew, char *old, int len)
+db_escape_string(JCR *jcr, B_DB *db, char *snew, char *old, int len)
 {
    char *n, *o;
 
@@ -448,16 +456,20 @@ SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb)
    return mdb->fields[mdb->field++];
 }
 
-char *my_sqlite_batch_lock_query = "BEGIN";
-char *my_sqlite_batch_unlock_query = "COMMIT";
-char *my_sqlite_batch_fill_path_query = "INSERT INTO Path (Path)          " 
-                                        " SELECT DISTINCT Path FROM batch "
-                                        " EXCEPT SELECT Path FROM Path    ";
+#ifdef HAVE_BATCH_FILE_INSERT
+const char *my_sqlite_batch_lock_query = "BEGIN";
+const char *my_sqlite_batch_unlock_query = "COMMIT";
 
-char *my_sqlite_batch_fill_filename_query = "INSERT INTO Filename (Name)       " 
-                                            " SELECT DISTINCT Name FROM batch  "
-                                            " EXCEPT SELECT Name FROM Filename ";
+const char *my_sqlite_batch_fill_path_query = 
+   "INSERT INTO Path (Path)" 
+   " SELECT DISTINCT Path FROM batch"
+   " EXCEPT SELECT Path FROM Path";
 
+const char *my_sqlite_batch_fill_filename_query = 
+   "INSERT INTO Filename (Name)"
+   " SELECT DISTINCT Name FROM batch "
+   " EXCEPT SELECT Name FROM Filename";
+#endif /* HAVE_BATCH_FILE_INSERT */
 
 
 #endif /* HAVE_SQLITE */

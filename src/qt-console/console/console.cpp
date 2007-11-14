@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: console.cpp 5366 2007-08-17 10:18:43Z kerns $
+ *   Version $Id: console.cpp 5713 2007-10-03 11:36:47Z kerns $
  *
  *  Console Class
  *
@@ -688,6 +688,13 @@ int Console::read()
       case BNET_RUN_CMD:
          if (mainWin->m_commDebug) Pmsg0(000, "RUN CMD\n");
          new runCmdPage();
+         break;
+      case BNET_START_RTREE:
+         if (mainWin->m_commDebug) Pmsg0(000, "START RTREE CMD\n");
+         new restorePage();
+         break;
+      case BNET_END_RTREE:
+         if (mainWin->m_commDebug) Pmsg0(000, "END RTREE CMD\n");
          break;
       case BNET_ERROR_MSG:
          if (mainWin->m_commDebug) Pmsg0(000, "ERROR MSG\n");

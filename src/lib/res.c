@@ -4,7 +4,7 @@
  *     Kern Sibbald, January MM
  *       Split from parse_conf.c April MMV
  *
- *   Version $Id: res.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: res.c 5713 2007-10-03 11:36:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -87,7 +87,7 @@ void b_UnlockRes(const char *file, int line)
  * Return resource of type rcode that matches name
  */
 RES *
-GetResWithName(int rcode, char *name)
+GetResWithName(int rcode, const char *name)
 {
    RES *res;
    int rindex = rcode - r_first;

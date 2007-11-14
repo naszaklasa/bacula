@@ -35,7 +35,7 @@
  * it opens a data channel and accepts data from the
  * File daemon.
  *
- *   Version $Id: stored.c 5552 2007-09-14 09:49:06Z kerns $
+ *   Version $Id: stored.c 5713 2007-10-03 11:36:47Z kerns $
  *
  */
 
@@ -253,7 +253,8 @@ int main (int argc, char *argv[])
      */
    create_volume_list();              /* do before device_init */
    if (pthread_create(&thid, NULL, device_initialization, NULL) != 0) {
-      Emsg1(M_ABORT, 0, _("Unable to create thread. ERR=%s\n"), strerror(errno));
+      berrno be;
+      Emsg1(M_ABORT, 0, _("Unable to create thread. ERR=%s\n"), be.bstrerror());
    }
 
    start_watchdog();                  /* start watchdog thread */
@@ -471,7 +472,8 @@ void *device_initialization(void *arg)
    /* Initialize FD start condition variable */
    int errstat = pthread_cond_init(&jcr->job_start_wait, NULL);
    if (errstat != 0) {
-      Jmsg1(jcr, M_ABORT, 0, _("Unable to init job cond variable: ERR=%s\n"), strerror(errstat));
+      berrno be;
+      Jmsg1(jcr, M_ABORT, 0, _("Unable to init job cond variable: ERR=%s\n"), be.bstrerror(errstat));
    }
 
    foreach_res(device, R_DEVICE) {

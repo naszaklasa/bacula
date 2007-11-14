@@ -29,7 +29,7 @@
  * 
  *  Kern Sibbald, August 2007
  *
- *  Version $Id: trayMonitor.cpp 5358 2007-08-15 16:54:21Z kerns $
+ *  Version $Id: trayMonitor.cpp 5622 2007-09-22 09:08:29Z kerns $
  *
  * This is a generic tray monitor routine, which is used by all three
  *  of the daemons. Each one compiles it with slightly different
@@ -43,6 +43,9 @@
 
 trayMonitor::trayMonitor()
 {
+
+// m_tbcreated_msg = RegisterWindowMessage("TaskbarCreated");
+   
    /* Create a window to handle tray icon messages */
    WNDCLASSEX trayclass;
 
@@ -72,8 +75,6 @@ trayMonitor::trayMonitor()
    /* Save our class pointer */
    SetWindowLong(m_hwnd, GWL_USERDATA, (LONG)this);
 
-   /* Timer to trigger icon updating */
-   SetTimer(m_hwnd, 1, 5000, NULL);
 
    // Load the icons for the tray
    m_idle_icon    = LoadIcon(appInstance, MAKEINTRESOURCE(IDI_IDLE));
@@ -84,9 +85,13 @@ trayMonitor::trayMonitor()
    /* Load the menu */
    m_hmenu = LoadMenu(appInstance, MAKEINTRESOURCE(IDR_TRAYMENU));
    m_visible = false;
+   m_installed = false;
 
    /* Install the icon in the tray */
    install();
+
+   /* Timer to trigger icon updating */
+   SetTimer(m_hwnd, 1, 5000, NULL);
 }
 
 trayMonitor::~trayMonitor()
@@ -102,8 +107,8 @@ trayMonitor::~trayMonitor()
 
 void trayMonitor::install()
 {
-   sendMessage(NIM_ADD, bacstat);
    m_installed = true;
+   sendMessage(NIM_ADD, bacstat);
 }
 
 void trayMonitor::update(int bacstat)
@@ -179,9 +184,10 @@ LRESULT CALLBACK trayMonitor::trayWinProc(HWND hwnd, UINT iMsg, WPARAM wParam, L
    /* Every five seconds, a timer message causes the icon to update */
    case WM_TIMER:
       if (isAService()) {
-         mon->update(bacstat);
+         mon->install();
       }
-     break;
+      mon->update(bacstat);
+      break;
 
    case WM_CREATE:
       return 0;
@@ -255,6 +261,13 @@ LRESULT CALLBACK trayMonitor::trayWinProc(HWND hwnd, UINT iMsg, WPARAM wParam, L
          return TRUE;
       }
       return TRUE;
+
+    default:
+       /* Need to redraw tray icon */
+//     if (iMsg == mon->m_tbcreated_msg) {
+//        mon->install();    
+//     }
+       break;
    }
 
    return DefWindowProc(hwnd, iMsg, wParam, lParam);

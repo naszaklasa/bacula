@@ -32,7 +32,7 @@
  *   Kern Sibbald, MM
  *
  *
- *   Version $Id: label.c 5112 2007-06-28 11:57:03Z kerns $
+ *   Version $Id: label.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -119,7 +119,6 @@ int read_dev_volume_label(DCR *dcr)
    bstrncpy(dev->VolHdr.Id, "**error**", sizeof(dev->VolHdr.Id));
 
   /* Read ANSI/IBM label if so requested */
-  
   want_ansi_label = dcr->VolCatInfo.LabelType != B_BACULA_LABEL ||
                     dcr->device->label_type != B_BACULA_LABEL;
   if (want_ansi_label || dev->has_cap(CAP_CHECKLABELS)) {
@@ -344,6 +343,9 @@ bool write_new_volume_label_to_dev(DCR *dcr, const char *VolName,
       }
    }
 
+   /* Temporarily mark in append state to enable writing */
+   dev->set_append();
+
    /* Create PRE_LABEL or VOL_LABEL if DVD */
    create_volume_label(dev, VolName, PoolName, dvdnow);
 
@@ -364,8 +366,6 @@ bool write_new_volume_label_to_dev(DCR *dcr, const char *VolName,
    create_volume_label_record(dcr, dcr->rec);
    dcr->rec->Stream = 0;
 
-   /* Temporarily mark in append state to enable writing */
-   dev->set_append();
    if (!write_record_to_block(dcr->block, dcr->rec)) {
       Dmsg2(130, "Bad Label write on %s: ERR=%s\n", dev->print_name(), dev->print_errmsg());
       goto bail_out;
@@ -733,16 +733,11 @@ bool write_session_label(DCR *dcr, int label)
       Dmsg0(150, "Cannot write session label to block.\n");
       if (!write_block_to_device(dcr)) {
          Dmsg0(130, "Got session label write_block_to_dev error.\n");
-         /* ****FIXME***** errno is not set here */
-         Jmsg(jcr, M_FATAL, 0, _("Error writing Session label to %s: %s\n"),
-                           dev_vol_name(dev), strerror(errno));
          free_record(rec);
          return false;
       }
    }
    if (!write_record_to_block(block, rec)) {
-      Jmsg(jcr, M_FATAL, 0, _("Error writing Session label to %s: %s\n"),
-                        dev_vol_name(dev), strerror(errno));
       free_record(rec);
       return false;
    }

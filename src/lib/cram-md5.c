@@ -32,10 +32,12 @@
  *
  * Written for Bacula by Kern E. Sibbald, May MMI.
  *
- *   Version $Id: cram-md5.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: cram-md5.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"
+
+const int dbglvl = 50;
 
 /* Authorize other end
  * Codes that tls_local_need and tls_remote_need can take:
@@ -68,23 +70,23 @@ bool cram_md5_challenge(BSOCK *bs, const char *password, int tls_local_need, int
    /* Send challenge -- no hashing yet */
    bsnprintf(chal, sizeof(chal), "<%u.%u@%s>", (uint32_t)random(), (uint32_t)time(NULL), host);
    if (compatible) {
-      Dmsg2(50, "send: auth cram-md5 %s ssl=%d\n", chal, tls_local_need);
+      Dmsg2(dbglvl, "send: auth cram-md5 %s ssl=%d\n", chal, tls_local_need);
       if (!bs->fsend("auth cram-md5 %s ssl=%d\n", chal, tls_local_need)) {
-         Dmsg1(50, "Bnet send challenge error.\n", bs->bstrerror());
+         Dmsg1(dbglvl, "Bnet send challenge error.\n", bs->bstrerror());
          return false;
       }
    } else {
       /* Old non-compatible system */
-      Dmsg2(50, "send: auth cram-md5 %s ssl=%d\n", chal, tls_local_need);
+      Dmsg2(dbglvl, "send: auth cram-md5 %s ssl=%d\n", chal, tls_local_need);
       if (!bs->fsend("auth cram-md5 %s ssl=%d\n", chal, tls_local_need)) {
-         Dmsg1(50, "Bnet send challenge error.\n", bs->bstrerror());
+         Dmsg1(dbglvl, "Bnet send challenge error.\n", bs->bstrerror());
          return false;
       }
    }
 
    /* Read hashed response to challenge */
    if (bs->wait_data(180) <= 0 || bs->recv() <= 0) {
-      Dmsg1(50, "Bnet receive challenge response error.\n", bs->bstrerror());
+      Dmsg1(dbglvl, "Bnet receive challenge response error.\n", bs->bstrerror());
       bmicrosleep(5, 0);
       return false;
    }
@@ -94,18 +96,18 @@ bool cram_md5_challenge(BSOCK *bs, const char *password, int tls_local_need, int
    bin_to_base64(host, sizeof(host), (char *)hmac, 16, compatible);
    ok = strcmp(bs->msg, host) == 0;
    if (ok) {
-      Dmsg1(50, "Authenticate OK %s\n", host);
+      Dmsg1(dbglvl, "Authenticate OK %s\n", host);
    } else {
       bin_to_base64(host, sizeof(host), (char *)hmac, 16, false);     
       ok = strcmp(bs->msg, host) == 0;
       if (!ok) {
-         Dmsg2(50, "Authenticate NOT OK: wanted %s, got %s\n", host, bs->msg);
+         Dmsg2(dbglvl, "Authenticate NOT OK: wanted %s, got %s\n", host, bs->msg);
       }
    }
    if (ok) {
       bs->fsend("1000 OK auth\n");
    } else {
-      Dmsg1(50, "Auth failed PW: %s\n", password);
+      Dmsg1(dbglvl, "Auth failed PW: %s\n", password);
       bs->fsend(_("1999 Authorization failed.\n"));
       bmicrosleep(5, 0);
    }
@@ -124,16 +126,16 @@ bool cram_md5_respond(BSOCK *bs, const char *password, int *tls_remote_need, int
       return false;
    }
    if (bs->msglen >= MAXSTRING) {
-      Dmsg1(50, "Msg too long wanted auth cram... Got: %s", bs->msg);
+      Dmsg1(dbglvl, "Msg too long wanted auth cram... Got: %s", bs->msg);
       bmicrosleep(5, 0);
       return false;
    }
-   Dmsg1(100, "cram-get: %s", bs->msg);
+   Dmsg1(100, "cram-get received: %s", bs->msg);
    if (sscanf(bs->msg, "auth cram-md5c %s ssl=%d", chal, tls_remote_need) == 2) {
       *compatible = true;
    } else if (sscanf(bs->msg, "auth cram-md5 %s ssl=%d", chal, tls_remote_need) != 2) {
       if (sscanf(bs->msg, "auth cram-md5 %s\n", chal) != 1) {
-         Dmsg1(50, "Cannot scan challenge: %s", bs->msg);
+         Dmsg1(dbglvl, "Cannot scan challenge: %s", bs->msg);
          bs->fsend(_("1999 Authorization failed.\n"));
          bmicrosleep(5, 0);
          return false;
@@ -144,19 +146,19 @@ bool cram_md5_respond(BSOCK *bs, const char *password, int *tls_remote_need, int
    bs->msglen = bin_to_base64(bs->msg, 50, (char *)hmac, 16, *compatible) + 1;
 // Dmsg3(100, "get_auth: chal=%s pw=%s hmac=%s\n", chal, password, bs->msg);
    if (!bs->send()) {
-      Dmsg1(50, "Send challenge failed. ERR=%s\n", bs->bstrerror());
+      Dmsg1(dbglvl, "Send challenge failed. ERR=%s\n", bs->bstrerror());
       return false;
    }
    Dmsg1(99, "sending resp to challenge: %s\n", bs->msg);
    if (bs->wait_data(180) <= 0 || bs->recv() <= 0) {
-      Dmsg1(50, "Receive chanllenge response failed. ERR=%s\n", bs->bstrerror());
+      Dmsg1(dbglvl, "Receive chanllenge response failed. ERR=%s\n", bs->bstrerror());
       bmicrosleep(5, 0);
       return false;
    }
    if (strcmp(bs->msg, "1000 OK auth\n") == 0) {
       return true;
    }
-   Dmsg1(50, "Bad auth response: %s\n", bs->msg);
+   Dmsg1(dbglvl, "Received bad response: %s\n", bs->msg);
    bmicrosleep(5, 0);
    return false;
 }

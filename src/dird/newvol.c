@@ -1,21 +1,7 @@
 /*
- *
- *   Bacula Director -- newvol.c -- creates new Volumes in
- *    catalog Media table from the LabelFormat specification.
- *
- *     Kern Sibbald, May MMI
- *
- *    This routine runs as a thread and must be thread reentrant.
- *
- *  Basic tasks done here:
- *      If possible create a new Media entry
- *
- *   Version $Id: newvol.c 5413 2007-08-29 10:46:56Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -39,6 +25,20 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- newvol.c -- creates new Volumes in
+ *    catalog Media table from the LabelFormat specification.
+ *
+ *     Kern Sibbald, May MMI
+ *
+ *    This routine runs as a thread and must be thread reentrant.
+ *
+ *  Basic tasks done here:
+ *      If possible create a new Media entry
+ *
+ *   Version $Id: newvol.c 5713 2007-10-03 11:36:47Z kerns $
+ */
 
 #include "bacula.h"
 #include "dird.h"
@@ -116,11 +116,21 @@ static bool create_simple_name(JCR *jcr, MEDIA_DBR *mr, POOL_DBR *pr)
 {
    char name[MAXSTRING];
    char num[20];
+   db_int64_ctx ctx;
+   POOL_MEM query(PM_MESSAGE);
+   char ed1[50];
 
    /* See if volume already exists */
    mr->VolumeName[0] = 0;
    bstrncpy(name, pr->LabelFormat, sizeof(name));
-   for (int i=pr->NumVols+1; i<(int)pr->NumVols+100; i++) {
+   ctx.value = 0;
+   Mmsg(query, "SELECT MAX(MediaId) FROM Media,POOL WHERE Pool.PoolId=%s", 
+        edit_int64(pr->PoolId, ed1));
+   if (!db_sql_query(jcr->db, query.c_str(), db_int64_handler, (void *)&ctx)) {
+      Jmsg(jcr, M_WARNING, 0, _("SQL failed, but ignored. ERR=%s\n"), db_strerror(jcr->db));
+      ctx.value = pr->NumVols+1;
+   }
+   for (int i=(int)ctx.value+1; i<(int)ctx.value+100; i++) {
       MEDIA_DBR tmr;
       memset(&tmr, 0, sizeof(tmr));
       sprintf(num, "%04d", i);

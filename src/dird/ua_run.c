@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, December MMI
  *
- *   Version $Id: ua_run.c 5256 2007-07-28 10:12:44Z ricozz $
+ *   Version $Id: ua_run.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"
@@ -46,7 +46,7 @@ public:
    char *when, *verify_job_name, *catalog_name;
    char *previous_job_name;
    char *since;
-   char *verify_list;
+   const char *verify_list;
    JOB *job;
    JOB *verify_job;
    JOB *previous_job;
@@ -69,7 +69,7 @@ public:
 /* Forward referenced subroutines */
 static void select_job_level(UAContext *ua, JCR *jcr);
 static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, 
-                char *verify_list, char *jid, const char *replace,
+                const char *verify_list, char *jid, const char *replace,
                 char *client_name);
 static void select_where_regexp(UAContext *ua, JCR *jcr);
 static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc);
@@ -245,7 +245,6 @@ try_again:
 
    if (strncasecmp(ua->cmd, ".mod ", 5) == 0 || 
        (strncasecmp(ua->cmd, "mod ", 4) == 0 && strlen(ua->cmd) > 6)) {
-      Dmsg1(000, "got: %s\n", ua->cmd);
       parse_ua_args(ua);
       rc.mod = true;
       if (!scan_command_line_arguments(ua, rc)) {
@@ -377,8 +376,9 @@ try_again:
             jcr->RestoreBootstrap = bstrdup(ua->cmd);
             fd = fopen(jcr->RestoreBootstrap, "rb");
             if (!fd) {
+               berrno be;
                ua->send_msg(_("Warning cannot open %s: ERR=%s\n"),
-                  jcr->RestoreBootstrap, strerror(errno));
+                  jcr->RestoreBootstrap, be.bstrerror());
                free(jcr->RestoreBootstrap);
                jcr->RestoreBootstrap = NULL;
             } else {
@@ -659,7 +659,7 @@ static void select_job_level(UAContext *ua, JCR *jcr)
    return;
 }
 
-static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, char *verify_list,
+static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char *verify_list,
    char *jid, const char *replace, char *client_name) 
 {
    Dmsg1(800, "JobType=%c\n", jcr->JobType);
@@ -933,7 +933,7 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
             /* Note, yes and run have no value, so do not fail */
             if (!ua->argv[i] && j != YES_POS /*yes*/) {
                ua->send_msg(_("Value missing for keyword %s\n"), ua->argk[i]);
-               return true;
+               return false;
             }
             Dmsg1(800, "Got keyword=%s\n", NPRT(kw[j]));
             switch (j) {

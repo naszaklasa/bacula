@@ -32,7 +32,7 @@
  *   that we use within Bacula. bacula.h includes this
  *   file and thus picks up everything we need in lib.
  *
- *   Version $Id: lib.h 5170 2007-07-13 13:33:34Z kerns $
+ *   Version $Id: lib.h 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "smartall.h"
@@ -67,5 +67,6 @@
 #include "attr.h"
 #include "var.h"
 #include "address_conf.h"
+#include "guid_to_name.h"
 
 #include "protos.h"

@@ -31,7 +31,7 @@
  *
  *  Kern E. Sibbald, December 2000
  *
- *  Version $Id: jcr.c 5222 2007-07-22 12:21:06Z kerns $
+ *  Version $Id: jcr.c 5713 2007-10-03 11:36:47Z kerns $
  *
  *  These routines are thread safe.
  *
@@ -401,8 +401,10 @@ static void free_common_jcr(JCR *jcr)
       jcr->cached_path = NULL;
       jcr->cached_pnl = 0;
    }
-   free_getuser_cache();
-   free_getgroup_cache();
+   if (jcr->id_list) {
+      free_guid_list(jcr->id_list);
+      jcr->id_list = NULL;
+   }
    free(jcr);
 }
 
@@ -413,7 +415,6 @@ static void free_common_jcr(JCR *jcr)
 void b_free_jcr(const char *file, int line, JCR *jcr)
 {
    Dmsg3(3400, "Enter free_jcr 0x%x from %s:%d\n", jcr, file, line);
-
 #else
 
 void free_jcr(JCR *jcr)
@@ -614,9 +615,8 @@ void set_jcr_job_status(JCR *jcr, int JobStatus)
          /* Override more minor status */
          jcr->JobStatus = JobStatus;
          break;
-      default:
-         break;
       }
+      break;
    default:
       jcr->JobStatus = JobStatus;
    }

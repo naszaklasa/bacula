@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: medialist.h 5372 2007-08-17 12:17:04Z kerns $
+ *   Version $Id: medialist.h 5713 2007-10-03 11:36:47Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
@@ -60,6 +60,7 @@ private slots:
    void pruneVolume();
    void relabelVolume();
    void allVolumesFromPool();
+   void allVolumes();
    void volumeFromPool();
 
 private:

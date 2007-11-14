@@ -1,18 +1,7 @@
 /*
- *
- *  ansi_label.c routines to handle ANSI (and perhaps one day IBM)
- *   tape labels.
- *
- *   Kern Sibbald, MMV
- *
- *
- *
- *   Version $Id: ansi_label.c 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -36,6 +25,17 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  ansi_label.c routines to handle ANSI (and perhaps one day IBM)
+ *   tape labels.
+ *
+ *   Kern Sibbald, MMV
+ *
+ *
+ *
+ *   Version $Id: ansi_label.c 5713 2007-10-03 11:36:47Z kerns $
+ */
 
 #include "bacula.h"                   /* pull in global headers */
 #include "stored.h"                   /* pull in Storage Deamon headers */
@@ -115,6 +115,7 @@ int read_ansi_ibm_label(DCR *dcr)
             if (strncmp("VOL1", label, 4) == 0) {
                ok = true;
                dev->label_type = B_ANSI_LABEL;
+               Dmsg0(100, "Got ANSI VOL1 label\n");
             } else {
                /* Try EBCDIC */
                ebcdic_to_ascii(label, label, sizeof(label));
@@ -122,6 +123,7 @@ int read_ansi_ibm_label(DCR *dcr)
                   ok = true;;
                   dev->label_type = B_IBM_LABEL;
                   Dmsg0(100, "Found IBM label.\n");
+                  Dmsg0(100, "Got IBM VOL1 label\n");
                }
             }       
          }
@@ -168,6 +170,7 @@ int read_ansi_ibm_label(DCR *dcr)
                dev->VolHdr.VolumeName);
             return VOL_NAME_ERROR;     /* Not a Bacula label */
          }
+         Dmsg0(100, "Got HDR1 label\n");
          break;
       case 2:
          if (dev->label_type == B_IBM_LABEL) {
@@ -178,6 +181,7 @@ int read_ansi_ibm_label(DCR *dcr)
             Mmsg0(jcr->errmsg, _("No HDR2 label while reading ANSI/IBM label.\n"));
             return VOL_LABEL_ERROR;
          }
+         Dmsg0(100, "Got ANSI HDR2 label\n");
          break;
       default:
          if (stat == 0) {
@@ -192,6 +196,7 @@ int read_ansi_ibm_label(DCR *dcr)
             Mmsg0(jcr->errmsg, _("Unknown or bad ANSI/IBM label record.\n"));
             return VOL_LABEL_ERROR;
          }
+         Dmsg0(100, "Got HDR label\n");
          break;
       }
    }

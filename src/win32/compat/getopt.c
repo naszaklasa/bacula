@@ -1,250 +1,187 @@
 /*****************************************************************************
-* getopt.c - competent and free getopt library.
-* $Header: /cvsroot/freegetopt/freegetopt/getopt.c,v 1.2 2003/10/26 03:10:20 vindaci Exp $
-*
-* Copyright (c)2002-2003 Mark K. Kim
-* All rights reserved.
-* 
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-*
-*   * Redistributions of source code must retain the above copyright
-*     notice, this list of conditions and the following disclaimer.
-*
-*   * Redistributions in binary form must reproduce the above copyright
-*     notice, this list of conditions and the following disclaimer in
-*     the documentation and/or other materials provided with the
-*     distribution.
-*
-*   * Neither the original author of this software nor the names of its
-*     contributors may be used to endorse or promote products derived
-*     from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-* FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-* COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-* OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-* AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
-* THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-* DAMAGE.
-*/
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+ *
+ *  MODULE NAME : GETOPT.C
+ *
+ *  COPYRIGHTS:
+ *             This module contains code made available by IBM
+ *             Corporation on an AS IS basis.  Any one receiving the
+ *             module is considered to be licensed under IBM copyrights
+ *             to use the IBM-provided source code in any way he or she
+ *             deems fit, including copying it, compiling it, modifying
+ *             it, and redistributing it, with or without
+ *             modifications.  No license under any IBM patents or
+ *             patent applications is to be implied from this copyright
+ *             license.
+ *
+ *             A user of the module should understand that IBM cannot
+ *             provide technical support for the module and will not be
+ *             responsible for any consequences of use of the program.
+ *
+ *             Any notices, including this one, are not to be removed
+ *             from the module without the prior written consent of
+ *             IBM.
+ *
+ *  AUTHOR:   Original author:
+ *                 G. R. Blair (BOBBLAIR at AUSVM1)
+ *                 Internet: bobblair@bobblair.austin.ibm.com
+ *
+ *            Extensively revised by:
+ *                 John Q. Walker II, Ph.D. (JOHHQ at RALVM6)
+ *                 Internet: johnq@ralvm6.vnet.ibm.com
+ *
+ *            Tweaked by Kern Sibbald for use in Bacula September 2007
+ *
+ *****************************************************************************/
+
+/******************************************************************************
+ * getopt()
+ *
+ * The getopt() function is a command line parser.  It returns the next
+ * option character in argv that matches an option character in opstring.
+ *
+ * The argv argument points to an array of argc+1 elements containing argc
+ * pointers to character strings followed by a null pointer.
+ *
+ * The opstring argument points to a string of option characters; if an
+ * option character is followed by a colon, the option is expected to have
+ * an argument that may or may not be separated from it by white space.
+ * The external variable optarg is set to point to the start of the option
+ * argument on return from getopt().
+ *
+ * The getopt() function places in optind the argv index of the next argument
+ * to be processed.  The system initializes the external variable optind to
+ * 1 before the first call to getopt().
+ *
+ * When all options have been processed (that is, up to the first nonoption
+ * argument), getopt() returns EOF.  The special option "--" may be used to
+ * delimit the end of the options; EOF will be returned, and "--" will be
+ * skipped.
+ *
+ * The getopt() function returns a question mark (?) when it encounters an
+ * option character not included in opstring.  This error message can be
+ * disabled by setting opterr to zero.  Otherwise, it returns the option
+ * character that was detected.
+ *
+ * If the special option "--" is detected, or all options have been
+ * processed, EOF is returned.
+ *
+ * Options are marked by either a minus sign (-) or a slash (/) if
+ * GETOPT_USE_SLASH is defined.
+ *
+ * No errors are defined.
+ *****************************************************************************/
+
+#include <stdio.h>              /* for EOF */
+#include <string.h>             /* for strchr() */
 #include "getopt.h"
 
 
-static const char* ID = "$Id: getopt.c 5170 2007-07-13 13:33:34Z kerns $";
+/* static (global) variables that are specified as exported by getopt() */
+char *optarg = NULL;            /* pointer to the start of the option argument  */
+int optind = 1;                 /* number of the next argv[] to be evaluated    */
+int opterr = 1;                 /* non-zero if a question mark should be returned
+                                   when a non-valid option character is detected */
+int optopt = '?';               /* Not used */
 
+/* handle possible future character set concerns by putting this in a macro */
+#define _next_char(string)  (char)(*(string+1))
 
-char* optarg = NULL;
-int optind = 0;
-int opterr = 1;
-int optopt = '?';
-
-
-static char** prev_argv = NULL;        /* Keep a copy of argv and argc to */
-static int prev_argc = 0;              /*    tell if getopt params change */
-static int argv_index = 0;             /* Option we're checking */
-static int argv_index2 = 0;            /* Option argument we're checking */
-static int opt_offset = 0;             /* Index into compounded "-option" */
-static int dashdash = 0;               /* True if "--" option reached */
-static int nonopt = 0;                 /* How many nonopts we've found */
-
-static void increment_index()
+int getopt(int argc, char *const argv[], const char *opstring)
 {
-        /* Move onto the next option */
-        if(argv_index < argv_index2)
-        {
-                while(prev_argv[++argv_index] && prev_argv[argv_index][0] != '-'
-                                && argv_index < argv_index2+1);
-        }
-        else argv_index++;
-        opt_offset = 1;
+   static char *pIndexPosition = NULL;  /* place inside current argv string */
+   char *pArgString = NULL;     /* where to start from next */
+   char *pOptString;            /* the string in our program */
+
+
+   if (pIndexPosition != NULL) {
+      /* we last left off inside an argv string */
+      if (*(++pIndexPosition)) {
+         /* there is more to come in the most recent argv */
+         pArgString = pIndexPosition;
+      }
+   }
+
+   if (pArgString == NULL) {
+      /* we didn't leave off in the middle of an argv string */
+      if (optind >= argc) {
+         /* more command-line arguments than the argument count */
+         pIndexPosition = NULL; /* not in the middle of anything */
+         return EOF;            /* used up all command-line arguments */
+      }
+
+      /*---------------------------------------------------------------------
+       * If the next argv[] is not an option, there can be no more options.
+       *-------------------------------------------------------------------*/
+      pArgString = argv[optind++];      /* set this to the next argument ptr */
+
+#ifdef GETOPT_USE_SLASH
+      if (('/' != *pArgString) &&       /* doesn't start with a slash or a dash? */
+          ('-' != *pArgString)) {
+         --optind;              /* point to current arg once we're done */
+         optarg = NULL;         /* no argument follows the option */
+         pIndexPosition = NULL; /* not in the middle of anything */
+         return EOF;            /* used up all the command-line flags */
+      }
+#else
+      if ('-' != *pArgString) { /* doesn't start with a dash? */
+         --optind;              /* point to current arg once we're done */
+         optarg = NULL;         /* no argument follows the option */
+         pIndexPosition = NULL; /* not in the middle of anything */
+         return EOF;            /* used up all the command-line flags */
+      }
+#endif
+
+      /* check for special end-of-flags markers */
+      if ((strcmp(pArgString, "-") == 0) ||
+          (strcmp(pArgString, "--") == 0)) {
+         optarg = NULL;         /* no argument follows the option */
+         pIndexPosition = NULL; /* not in the middle of anything */
+         return EOF;            /* encountered the special flag */
+      }
+
+      pArgString++;             /* look past the / or - */
+   }
+
+   if (':' == *pArgString) {    /* is it a colon? */
+      /*---------------------------------------------------------------------
+       * Rare case: if opterr is non-zero, return a question mark;
+       * otherwise, just return the colon we're on.
+       *-------------------------------------------------------------------*/
+      return (opterr ? (int) '?' : (int) ':');
+   } else if ((pOptString = strchr(opstring, *pArgString)) == 0) {
+      /*---------------------------------------------------------------------
+       * The letter on the command-line wasn't any good.
+       *-------------------------------------------------------------------*/
+      optarg = NULL;            /* no argument follows the option */
+      pIndexPosition = NULL;    /* not in the middle of anything */
+      return (opterr ? (int) '?' : (int) *pArgString);
+   } else {
+      /*---------------------------------------------------------------------
+       * The letter on the command-line matches one we expect to see
+       *-------------------------------------------------------------------*/
+      if (':' == _next_char(pOptString)) {      /* is the next letter a colon? */
+         /* It is a colon.  Look for an argument string. */
+         if ('\0' != _next_char(pArgString)) {  /* argument in this argv? */
+            optarg = &pArgString[1];    /* Yes, it is */
+         } else {
+        /*-------------------------------------------------------------
+         * The argument string must be in the next argv.
+         * But, what if there is none (bad input from the user)?
+         * In that case, return the letter, and optarg as NULL.
+         *-----------------------------------------------------------*/
+            if (optind < argc)
+               optarg = argv[optind++];
+            else {
+               optarg = NULL;
+               return (opterr ? (int) '?' : (int) *pArgString);
+            }
+         }
+         pIndexPosition = NULL; /* not in the middle of anything */
+      } else {
+         /* it's not a colon, so just return the letter */
+         optarg = NULL;         /* no argument follows the option */
+         pIndexPosition = pArgString;   /* point to the letter we're on */
+      }
+      return (int) *pArgString; /* return the letter that matched */
+   }
 }
-
-
-/*
-* Permutes argv[] so that the argument currently being processed is moved
-* to the end.
-*/
-static int permute_argv_once()
-{
-        /* Movability check */
-        if(argv_index + nonopt >= prev_argc) return 1;
-        /* Move the current option to the end, bring the others to front */
-        else
-        {
-                char* tmp = prev_argv[argv_index];
-
-                /* Move the data */
-                memmove(&prev_argv[argv_index], &prev_argv[argv_index+1],
-                                sizeof(char**) * (prev_argc - argv_index - 1));
-                prev_argv[prev_argc - 1] = tmp;
-
-                nonopt++;
-                return 0;
-        }
-}
-
-
-int getopt(int argc, char *const *argv, const char *optstr)
-{
-        int c = 0;
-
-        /* If we have new argv, reinitialize */
-        if(prev_argv != argv || prev_argc != argc)
-        {
-                /* Initialize variables */
-                prev_argv = argv;
-                prev_argc = argc;
-                argv_index = 1;
-                argv_index2 = 1;
-                opt_offset = 1;
-                dashdash = 0;
-                nonopt = 0;
-        }
-
-        /* Jump point in case we want to ignore the current argv_index */
-        getopt_top:
-
-        /* Misc. initializations */
-        optarg = NULL;
-
-        /* Dash-dash check */
-        if(argv[argv_index] && !strcmp(argv[argv_index], "--"))
-        {
-                dashdash = 1;
-                increment_index();
-        }
-
-        /* If we're at the end of argv, that's it. */
-        if(argv[argv_index] == NULL)
-        {
-                c = -1;
-        }
-        /* Are we looking at a string? Single dash is also a string */
-        else if(dashdash || argv[argv_index][0] != '-' || !strcmp(argv[argv_index], "-"))
-        {
-                /* If we want a string... */
-                if(optstr[0] == '-')
-                {
-                        c = 1;
-                        optarg = argv[argv_index];
-                        increment_index();
-                }
-                /* If we really don't want it (we're in POSIX mode), we're done */
-                else if(optstr[0] == '+' || getenv("POSIXLY_CORRECT"))
-                {
-                        c = -1;
-
-                        /* Everything else is a non-opt argument */
-                        nonopt = argc - argv_index;
-                }
-                /* If we mildly don't want it, then move it back */
-                else
-                {
-                        if(!permute_argv_once()) goto getopt_top;
-                        else c = -1;
-                }
-        }
-        /* Otherwise we're looking at an option */
-        else
-        {
-                char* opt_ptr = NULL;
-
-                /* Grab the option */
-                c = argv[argv_index][opt_offset++];
-
-                /* Is the option in the optstr? */
-                if(optstr[0] == '-') opt_ptr = strchr(optstr+1, c);
-                else opt_ptr = strchr(optstr, c);
-                /* Invalid argument */
-                if(!opt_ptr)
-                {
-                        if(opterr)
-                        {
-                                fprintf(stderr, "%s: invalid option -- %c\n", argv[0], c);
-                        }
-
-                        optopt = c;
-                        c = '?';
-
-                        /* Move onto the next option */
-                        increment_index();
-                }
-                /* Option takes argument */
-                else if(opt_ptr[1] == ':')
-                {
-                        /* ie, -oARGUMENT, -xxxoARGUMENT, etc. */
-                        if(argv[argv_index][opt_offset] != '\0')
-                        {
-                                optarg = &argv[argv_index][opt_offset];
-                                increment_index();
-                        }
-                        /* ie, -o ARGUMENT (only if it's a required argument) */
-                        else if(opt_ptr[2] != ':')
-                        {
-                                /* One of those "you're not expected to understand this" moment */
-                                if(argv_index2 < argv_index) argv_index2 = argv_index;
-                                while(argv[++argv_index2] && argv[argv_index2][0] == '-');
-                                optarg = argv[argv_index2];
-
-                                /* Don't cross into the non-option argument list */
-                                if(argv_index2 + nonopt >= prev_argc) optarg = NULL;
-
-                                /* Move onto the next option */
-                                increment_index();
-                        }
-                        else
-                        {
-                                /* Move onto the next option */
-                                increment_index();
-                        }
-
-                        /* In case we got no argument for an option with required argument */
-                        if(optarg == NULL && opt_ptr[2] != ':')
-                        {
-                                optopt = c;
-                                c = '?';
-
-                                if(opterr)
-                                {
-                                        fprintf(stderr,"%s: option requires an argument -- %c\n",
-                                                        argv[0], optopt);
-                                }
-                        }
-                }
-                /* Option does not take argument */
-                else
-                {
-                        /* Next argv_index */
-                        if(argv[argv_index][opt_offset] == '\0')
-                        {
-                                increment_index();
-                        }
-                }
-        }
-
-        /* Calculate optind */
-        if(c == -1)
-        {
-                optind = argc - nonopt;
-        }
-        else
-        {
-                optind = argv_index;
-        }
-
-        return c;
-}
-
-
-/* vim:ts=3
-*/

@@ -39,7 +39,7 @@
  *       to do the backup.
  *     When the Storage daemon finishes the job, update the DB.
  *
- *   Version $Id: migrate.c 5529 2007-09-12 07:17:50Z kerns $
+ *   Version $Id: migrate.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"
@@ -1147,7 +1147,6 @@ void migration_cleanup(JCR *jcr, int TermCode)
         /* Mark previous job as migrated */
         Mmsg(query, "UPDATE Job SET Type='%c' WHERE JobId=%s",
              (char)JT_MIGRATED_JOB, edit_uint64(jcr->previous_jr.JobId, ec1));
-        Dmsg1(000, "Mark: %s\n", query.c_str());
         db_sql_query(jcr->db, query.c_str(), NULL, NULL);
      }
      term_msg = _("%s -- no files to migrate");

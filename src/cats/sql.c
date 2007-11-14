@@ -33,7 +33,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql.c 5117 2007-07-03 09:20:28Z kerns $
+ *    Version $Id: sql.c 5710 2007-10-03 05:59:42Z kerns $
  */
 
 /* The following is necessary so that we do not include
@@ -115,7 +115,6 @@ bool check_tables_version(JCR *jcr, B_DB *mdb)
 
    bacula_db_version = 0;
    if (!db_sql_query(mdb, query, int_handler, (void *)&bacula_db_version)) {
-      Mmsg(mdb->errmsg, "Database not created or server not running.\n");
       Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
       return false;
    }

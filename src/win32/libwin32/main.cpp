@@ -30,7 +30,7 @@
  * 
  *  Kern Sibbald, August 2007
  *
- *  Version $Id: main.cpp 5358 2007-08-15 16:54:21Z kerns $
+ *  Version $Id: main.cpp 5622 2007-09-22 09:08:29Z kerns $
  *
  * Note, some of the original Bacula Windows startup and service handling code
  *  was derived from VNC code that was used in apcupsd then ported to 
@@ -244,6 +244,19 @@ int WINAPI WinMain(HINSTANCE Instance, HINSTANCE /*PrevInstance*/, PSTR CmdLine,
    return BaculaAppMain();
 }
 
+#ifndef HAVE_TRAY_MONITOR
+/* Minimalist winproc when don't have tray monitor */
+LRESULT CALLBACK bacWinProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
+{
+   switch (iMsg) {
+   case WM_DESTROY:
+      PostQuitMessage(0);
+      return 0;
+   }
+   return DefWindowProc(hwnd, iMsg, wParam, lParam);
+}
+#endif
+
 
 /*
  * Called as a thread from BaculaAppMain()
@@ -266,6 +279,31 @@ void *Main_Msg_Loop(LPVOID lpwThreadParam)
    /* Create tray icon & menu if we're running as an app */
    trayMonitor *monitor = new trayMonitor();
    if (monitor == NULL) {
+      PostQuitMessage(0);
+   }
+
+#else
+   /* Create a window to handle Windows messages */
+   WNDCLASSEX baclass;
+
+   baclass.cbSize         = sizeof(baclass);
+   baclass.style          = 0;
+   baclass.lpfnWndProc    = bacWinProc;
+   baclass.cbClsExtra     = 0;
+   baclass.cbWndExtra     = 0;
+   baclass.hInstance      = appInstance;
+   baclass.hIcon          = NULL;
+   baclass.hCursor        = NULL;
+   baclass.hbrBackground  = NULL;
+   baclass.lpszMenuName   = NULL;
+   baclass.lpszClassName  = APP_NAME;
+   baclass.hIconSm        = NULL;
+
+   RegisterClassEx(&baclass);
+
+   if (CreateWindow(APP_NAME, APP_NAME, WS_OVERLAPPEDWINDOW,
+                CW_USEDEFAULT, CW_USEDEFAULT, 0, 0,
+                NULL, NULL, appInstance, NULL) == NULL) {
       PostQuitMessage(0);
    }
 #endif

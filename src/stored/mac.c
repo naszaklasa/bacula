@@ -4,7 +4,7 @@
  *
  *     Kern Sibbald, January MMVI
  *
- *   Version $Id: mac.c 5066 2007-06-23 09:58:34Z kerns $
+ *   Version $Id: mac.c 5713 2007-10-03 11:36:47Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -167,7 +167,7 @@ ok_out:
       set_jcr_job_status(jcr, JS_Terminated);
    }
    generate_daemon_event(jcr, "JobEnd");
-   bnet_fsend(dir, Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,
+   dir->fsend(Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,
       edit_uint64(jcr->JobBytes, ec1));
    Dmsg4(200, Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles, ec1); 
        
@@ -239,17 +239,18 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    if (stream == STREAM_UNIX_ATTRIBUTES || stream == STREAM_UNIX_ATTRIBUTES_EX ||
        crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
       if (!jcr->no_attributes) {
+         BSOCK *dir = jcr->dir_bsock;
          if (are_attributes_spooled(jcr)) {
-            jcr->dir_bsock->set_spooling();
+            dir->set_spooling();
          }
          Dmsg0(850, "Send attributes to dir.\n");
          if (!dir_update_file_attributes(jcr->dcr, rec)) {
-            jcr->dir_bsock->clear_spooling();
+            dir->clear_spooling();
             Jmsg(jcr, M_FATAL, 0, _("Error updating file attributes. ERR=%s\n"),
-               bnet_strerror(jcr->dir_bsock));
+               dir->bstrerror());
             return false;
          }
-         jcr->dir_bsock->clear_spooling();
+         dir->clear_spooling();
       }
    }
 

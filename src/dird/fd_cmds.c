@@ -37,7 +37,7 @@
  *  Utility functions for sending info to File Daemon.
  *   These functions are used by both backup and verify.
  *
- *   Version $Id: fd_cmds.c 5228 2007-07-22 21:45:14Z kerns $
+ *   Version $Id: fd_cmds.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"
@@ -90,9 +90,11 @@ int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
    }
 
    if (!jcr->file_bsock) {
+      char name[MAX_NAME_LENGTH + 100];
+      bstrncpy(name, _("Client: "), sizeof(name));
+      bstrncat(name, jcr->client->name(), sizeof(name));
       fd = bnet_connect(jcr, retry_interval, max_retry_time, heart_beat,
-           _("File daemon"), jcr->client->address,
-           NULL, jcr->client->FDport, verbose);
+           name, jcr->client->address, NULL, jcr->client->FDport, verbose);
       if (fd == NULL) {
          set_jcr_job_status(jcr, JS_ErrorTerminated);
          return 0;
@@ -113,7 +115,7 @@ int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
    /*
     * Now send JobId and authorization key
     */
-   bnet_fsend(fd, jobcmd, edit_int64(jcr->JobId, ed1), jcr->Job, jcr->VolSessionId,
+   fd->fsend(jobcmd, edit_int64(jcr->JobId, ed1), jcr->Job, jcr->VolSessionId,
       jcr->VolSessionTime, jcr->sd_auth_key);
    if (strcmp(jcr->sd_auth_key, "dummy") != 0) {
       memset(jcr->sd_auth_key, 0, strlen(jcr->sd_auth_key));
@@ -437,7 +439,7 @@ bool send_include_list(JCR *jcr)
 {
    BSOCK *fd = jcr->file_bsock;
    if (jcr->fileset->new_include) {
-      bnet_fsend(fd, filesetcmd, jcr->fileset->enable_vss ? " vss=1" : "");
+      fd->fsend(filesetcmd, jcr->fileset->enable_vss ? " vss=1" : "");
       return send_fileset(jcr);
    }
    return true;
@@ -479,11 +481,11 @@ bool send_bootstrap_file(JCR *jcr, BSOCK *sock)
       set_jcr_job_status(jcr, JS_ErrorTerminated);
       return false;
    }
-   bnet_fsend(sock, bootstrap);
+   sock->fsend(bootstrap);
    while (fgets(buf, sizeof(buf), bs)) {
-      bnet_fsend(sock, "%s", buf);
+      sock->fsend("%s", buf);
    }
-   bnet_sig(sock, BNET_EOD);
+   sock->signal(BNET_EOD);
    fclose(bs);
    if (jcr->unlink_bsr) {
       unlink(jcr->RestoreBootstrap);
@@ -545,11 +547,11 @@ int send_runscripts_commands(JCR *jcr)
                result = send_runscript_with_old_proto(jcr, cmd->when, msg);
 
             } else {
-               bnet_fsend(fd, runscript, cmd->on_success, 
-                                         cmd->on_failure,
-                                         cmd->fail_on_error,
-                                         cmd->when,
-                                         msg);
+               fd->fsend(runscript, cmd->on_success, 
+                                    cmd->on_failure,
+                                    cmd->fail_on_error,
+                                    cmd->when,
+                                    msg);
 
                result = response(jcr, fd, OKRunScript, "RunScript", DISPLAY_ERROR);
                launch_before_cmd = true;
@@ -570,7 +572,7 @@ int send_runscripts_commands(JCR *jcr)
 
    /* Tell the FD to execute the ClientRunBeforeJob */
    if (launch_before_cmd) {
-      bnet_fsend(fd, runbeforenow);
+      fd->fsend(runbeforenow);
       if (!response(jcr, fd, OKRunBeforeNow, "RunBeforeNow", DISPLAY_ERROR)) {
         goto bail_out;
       }
@@ -677,7 +679,7 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
          }
          ar->Digest = digest;
          ar->DigestType = crypto_digest_stream_type(stream);
-         db_escape_string(digest, Digest, strlen(Digest));
+         db_escape_string(jcr, jcr->db, digest, Digest, strlen(Digest));
          Dmsg4(dbglvl, "stream=%d DigestLen=%d Digest=%s type=%d\n", stream,
                strlen(digest), digest, ar->DigestType);
       }

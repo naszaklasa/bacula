@@ -36,7 +36,7 @@
  *  the File daemon, control is passed here to handle the
  *  subsequent File daemon commands.
  *
- *   Version $Id: fd_cmds.c 5503 2007-09-09 10:03:23Z kerns $
+ *   Version $Id: fd_cmds.c 5713 2007-10-03 11:36:47Z kerns $
  *
  */
 
@@ -352,8 +352,9 @@ bool get_bootstrap_file(JCR *jcr, BSOCK *sock)
    jcr->RestoreBootstrap = fname;
    bs = fopen(fname, "a+b");           /* create file */
    if (!bs) {
+      berrno be;
       Jmsg(jcr, M_FATAL, 0, _("Could not create bootstrap file %s: ERR=%s\n"),
-         jcr->RestoreBootstrap, strerror(errno));
+         jcr->RestoreBootstrap, be.bstrerror());
       goto bail_out;
    }
    Dmsg0(10, "=== Bootstrap file ===\n");

@@ -10,6 +10,8 @@ echo "LIBRARY bacula_cats.dll"
 echo "EXPORTS"
 echo " "
 
+NM=../../../../../cross-tools/mingw32/mingw32/bin/nm
+
 OBJS="sql.o sql_create.o sql_delete.o sql_find.o sql_get.o \
       sql_list.o sql_update.o"
 
@@ -64,11 +66,11 @@ DATA="\
 cd cats_mysql
 for i in ${OBJS}; do \
    echo "; $i"; \
-   nm $i | grep "^[0-9a-f]* T _" | cut -c21-; \
+   ${NM} $i | grep "^[0-9a-f]* T _" | cut -c13-; \
    echo " "; \
 done
 
-nm mysql.o | grep "^[0-9a-f]* T _" | cut -c21- | grep -v "my_mysql"
+${NM} mysql.o | grep "^[0-9a-f]* T _" | cut -c13- | grep -v "my_mysql"
 
 for i in ${DATA}; do \
    echo "$i DATA"; \

@@ -38,7 +38,7 @@
  * Negative msglen, is special "signal" (no data follows).
  *   See below for SIGNAL codes.
  *
- *   Version $Id: bsock.h 5237 2007-07-24 18:36:08Z kerns $
+ *   Version $Id: bsock.h 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #ifndef __BSOCK_H_
@@ -167,7 +167,9 @@ enum {
    BNET_ERROR_MSG      = -21,         /* Error message -- command failed */
    BNET_INFO_MSG       = -22,         /* Info message -- status line */
    BNET_RUN_CMD        = -23,         /* Run command follows */
-   BNET_YESNO          = -24          /* Request yes no response */
+   BNET_YESNO          = -24,         /* Request yes no response */
+   BNET_START_RTREE    = -25,         /* Start restore tree mode */
+   BNET_END_RTREE      = -26          /* End restore tree mode */ 
 };
 
 #define BNET_SETBUF_READ  1           /* Arg for bnet_set_buffer_size */

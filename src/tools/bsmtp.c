@@ -28,15 +28,43 @@
 /*
    Derived from a SMTPclient:
 
+  ======== Original copyrights ==========  
+
        SMTPclient -- simple SMTP client
 
-       Copyright (C) 1997 Ralf S. Engelschall, All Rights Reserved.
-       rse@engelschall.com
-       www.engelschall.com
+       Copyright (c) 1997 Ralf S. Engelschall, All rights reserved.
+
+       This program is free software; it may be redistributed and/or modified
+       only under the terms of either the Artistic License or the GNU General
+       Public License, which may be found in the SMTP source distribution.
+       Look at the file COPYING.
+
+       This program is distributed in the hope that it will be useful, but
+       WITHOUT ANY WARRANTY; without even the implied warranty of
+       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+       GNU General Public License for more details.
+
+       ======================================================================
+
+       smtpclient_main.c -- program source
+
+       Based on smtp.c as of August 11, 1995 from
+           W.Z. Venema,
+           Eindhoven University of Technology,
+           Department of Mathematics and Computer Science,
+           Den Dolech 2, P.O. Box 513, 5600 MB Eindhoven, The Netherlands.
+
+   =========
+
 
    Kern Sibbald, July 2001
 
-   Version $Id: bsmtp.c 5405 2007-08-25 13:28:54Z kerns $
+     Note, the original W.Z. Venema smtp.c had no license and no
+     copyright.  See:
+        http://archives.neohapsis.com/archives/postfix/2000-05/1520.html
+ 
+
+   Version $Id: bsmtp.c 5725 2007-10-05 14:59:31Z kerns $
 
  */
 
@@ -79,7 +107,7 @@ static char *cleanup_addr(char *addr, char *buf, int buf_len)
 {
    char *p, *q;
 
-   if ((p = strchr(from_addr, '<')) == NULL) {
+   if ((p = strchr(addr, '<')) == NULL) {
       snprintf(buf, buf_len, "<%s>", addr);
    } else {
       /* Copy <addr> */

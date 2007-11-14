@@ -32,12 +32,17 @@
  *
  *    Kern Sibbald, October MMII
  *
- *   Version $Id: attribs.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: attribs.c 5714 2007-10-03 16:22:07Z kerns $
  *
  */
 
 #include "bacula.h"
 #include "find.h"
+
+static uid_t my_uid = 1;
+static gid_t my_gid = 1;                        
+static bool uid_set = false;
+
 
 #if defined(HAVE_WIN32)
 /* Forward referenced subroutines */
@@ -372,6 +377,12 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
    bool ok = true;
    boffset_t fsize;
 
+   if (uid_set) {
+      my_uid = getuid();
+      my_gid = getgid();
+      uid_set = true;
+   }
+
 #if defined(HAVE_WIN32)
    if (attr->stream == STREAM_UNIX_ATTRIBUTES_EX &&
        set_win32_attributes(jcr, attr, ofd)) {
@@ -429,20 +440,20 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
     */
    if (attr->type == FT_LNK) {
       /* Change owner of link, not of real file */
-      if (lchown(attr->ofname, attr->statp.st_uid, attr->statp.st_gid) < 0) {
+      if (lchown(attr->ofname, attr->statp.st_uid, attr->statp.st_gid) < 0 && my_uid == 0) {
          berrno be;
          Jmsg2(jcr, M_ERROR, 0, _("Unable to set file owner %s: ERR=%s\n"),
             attr->ofname, be.bstrerror());
          ok = false;
       }
    } else {
-      if (chown(attr->ofname, attr->statp.st_uid, attr->statp.st_gid) < 0) {
+      if (chown(attr->ofname, attr->statp.st_uid, attr->statp.st_gid) < 0 && my_uid == 0) {
          berrno be;
          Jmsg2(jcr, M_ERROR, 0, _("Unable to set file owner %s: ERR=%s\n"),
             attr->ofname, be.bstrerror());
          ok = false;
       }
-      if (chmod(attr->ofname, attr->statp.st_mode) < 0) {
+      if (chmod(attr->ofname, attr->statp.st_mode) < 0 && my_uid == 0) {
          berrno be;
          Jmsg2(jcr, M_ERROR, 0, _("Unable to set file modes %s: ERR=%s\n"),
             attr->ofname, be.bstrerror());
@@ -452,7 +463,7 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
       /*
        * Reset file times.
        */
-      if (utime(attr->ofname, &ut) < 0) {
+      if (utime(attr->ofname, &ut) < 0 && my_uid == 0) {
          berrno be;
          Jmsg2(jcr, M_ERROR, 0, _("Unable to set file times %s: ERR=%s\n"),
             attr->ofname, be.bstrerror());
@@ -466,7 +477,7 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
        *  but if the immutable bit is set, it will make the utimes()
        *  fail.
        */
-      if (chflags(attr->ofname, attr->statp.st_flags) < 0) {
+      if (chflags(attr->ofname, attr->statp.st_flags) < 0 && my_uid == 0) {
          berrno be;
          Jmsg2(jcr, M_ERROR, 0, _("Unable to set file flags %s: ERR=%s\n"),
             attr->ofname, be.bstrerror());

@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c 5552 2007-09-14 09:49:06Z kerns $
+ *    Version $Id: job.c 5713 2007-10-03 11:36:47Z kerns $
  */
 
 #include "bacula.h"
@@ -237,8 +237,7 @@ static void *job_thread(void *arg)
 {
    JCR *jcr = (JCR *)arg;
 
-   jcr->my_thread_id = pthread_self();
-   pthread_detach(jcr->my_thread_id);
+   pthread_detach(pthread_self());
    Dsm_check(1);
 
    Dmsg0(200, "=====Start Job=========\n");
@@ -745,6 +744,10 @@ void update_job_end_record(JCR *jcr)
  * Takes base_name and appends (unique) current
  *   date and time to form unique job name.
  *
+ *  Note, the seconds are actually a sequence number. This
+ *   permits us to start a maximum fo 59 unique jobs a second, which
+ *   should be sufficient.
+ *
  *  Returns: unique job name in jcr->Job
  *    date/time in jcr->start_time
  */
@@ -753,6 +756,7 @@ void create_unique_job_name(JCR *jcr, const char *base_name)
    /* Job start mutex */
    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
    static time_t last_start_time = 0;
+   static int seq = 0;
    time_t now;
    struct tm tm;
    char dt[MAX_TIME_LENGTH];
@@ -764,9 +768,13 @@ void create_unique_job_name(JCR *jcr, const char *base_name)
     */
    P(mutex);                          /* lock creation of jobs */
    now = time(NULL);
-   while (now == last_start_time) {
-      bmicrosleep(0, 500000);
-      now = time(NULL);
+   seq++;
+   if (seq > 59) {                    /* wrap as if it is seconds */
+      seq = 0;
+      while (now == last_start_time) {
+         bmicrosleep(0, 500000);
+         now = time(NULL);
+      }
    }
    last_start_time = now;
    V(mutex);                          /* allow creation of jobs */
@@ -774,10 +782,10 @@ void create_unique_job_name(JCR *jcr, const char *base_name)
    /* Form Unique JobName */
    (void)localtime_r(&now, &tm);
    /* Use only characters that are permitted in Windows filenames */
-   strftime(dt, sizeof(dt), "%Y-%m-%d_%H.%M.%S", &tm);
+   strftime(dt, sizeof(dt), "%Y-%m-%d_%H.%M", &tm);
    bstrncpy(name, base_name, sizeof(name));
    name[sizeof(name)-22] = 0;          /* truncate if too long */
-   bsnprintf(jcr->Job, sizeof(jcr->Job), "%s.%s", name, dt); /* add date & time */
+   bsnprintf(jcr->Job, sizeof(jcr->Job), "%s.%s.%02d", name, dt, seq); /* add date & time */
    /* Convert spaces into underscores */
    for (p=jcr->Job; *p; p++) {
       if (*p == ' ') {
@@ -1203,7 +1211,7 @@ bool create_restore_bootstrap_file(JCR *jcr)
    UAContext *ua;
    memset(&rx, 0, sizeof(rx));
    rx.bsr = new_bsr();
-   rx.JobIds = "";                       
+   rx.JobIds = (char *)"";                       
    rx.bsr->JobId = jcr->previous_jr.JobId;
    ua = new_ua_context(jcr);
    complete_bsr(ua, rx.bsr);

@@ -340,7 +340,7 @@ char *BREGEXP::edit_subst(const char *fname, regmatch_t regs[])
 /* escape sep char and \
  * dest must be long enough (src*2+1)
  * return end of the string */
-char *bregexp_escape_string(char *dest, char *src, char sep)
+char *bregexp_escape_string(char *dest, const char *src, const char sep)
 {
    char *ret = dest;
    while (*src)
@@ -357,10 +357,10 @@ char *bregexp_escape_string(char *dest, char *src, char sep)
    return ret; 
 }
 
-static char regexp_sep = '!';
-static char *str_strip_prefix = "!%s!!i";
-static char *str_add_prefix   = "!^!%s!";
-static char *str_add_suffix   = "!([^/])$!$1%s!";
+static const char regexp_sep = '!';
+static const char *str_strip_prefix = "!%s!!i";
+static const char *str_add_prefix   = "!^!%s!";
+static const char *str_add_suffix   = "!([^/])$!$1%s!";
 
 int bregexp_get_build_where_size(char *strip_prefix, 
                                  char *add_prefix, 
