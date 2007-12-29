@@ -1,0 +1,82 @@
+# Translation of glpi debconf templates to German
+# Copyright (C) Philipp Hahn <pmhahn@debian.org>, 2004.
+# Copyright (C) Helge Kreutzmann <debian@helgefjell.de>, 2006, 2007.
+# This file is distributed under the same license as the glpi package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: bacula 1.38.11-7\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2007-08-30 22:42+0100\n"
+"PO-Revision-Date: 2007-01-11 20:55+0100\n"
+"Last-Translator: Helge Kreutzmann <debian@helgefjell.de>\n"
+"Language-Team: German <debian-l10n-german@lists.debian.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-15\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+msgid "Create tables for Bacula's Catalog?"
+msgstr "Tabellen für Baculas Katalog erzeugen?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+#, fuzzy
+msgid ""
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
+msgstr ""
+"Die für Baculas Katalog benötigten Tabellen fehlen. Dies ist bei einer "
+"frischen Installation von Bacula normal."
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
+msgid "Remove Catalog on purge?"
+msgstr "Katalog beim vollständigen Entfernen löschen?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
+msgid ""
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
+msgstr ""
+
+#~ msgid ""
+#~ "These tables are needed for the Bacula director to function. Should these "
+#~ "tables be automatically set up for you?"
+#~ msgstr ""
+#~ "Diese Tabellen werden benötigt, damit Baculas Director funktioniert. "
+#~ "Sollen diese Tabellen automatisch für Sie eingerichtet werden?"
+
+#~ msgid ""
+#~ "Do you want the Bacula Catalog to be removed if you purge the Bacula "
+#~ "director?"
+#~ msgstr ""
+#~ "Soll Baculas Katalog entfernt werden, falls Sie Baculas Director "
+#~ "vollständig löschen?"
+
+#~ msgid ""
+#~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
+#~ "able to restore your backups unless you have another copy of the catalog "
+#~ "at hand."
+#~ msgstr ""
+#~ "Warnung: Dies kann nicht rückgängig gemacht werden. Sobald der Katalog "
+#~ "entfernt ist, können keine Backups mehr wiederhergestellt werden, außer "
+#~ "es existiert noch eine Kopie des Katalogs."
+
+#~ msgid ""
+#~ "Shall I remove the Catalog / SQLite database at package purge time? This "
+#~ "will free all the used space."
+#~ msgstr ""
+#~ "Soll der Katalog / SQLite Datenbanken beim Löschen des Pakets entfernt "
+#~ "werden? Dies wird allen belegten Speicher freigeben."

@@ -1,0 +1,2 @@
+debian/tmp-install-sqlite3/usr/sbin/bscan usr/bin
+debian/tmp-install-sqlite3/usr/sbin/bcopy usr/bin

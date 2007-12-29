@@ -1,0 +1,5 @@
+usr/sbin
+var/lib/bacula
+var/run/bacula
+etc/bacula
+etc/bacula/scripts

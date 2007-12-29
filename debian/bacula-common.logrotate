@@ -1,0 +1,6 @@
+/var/log/bacula/log {
+    monthly
+    rotate 5
+    notifempty
+    missingok
+}

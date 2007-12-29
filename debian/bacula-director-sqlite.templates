@@ -1,0 +1,15 @@
+Template: bacula-director-sqlite/create_tables
+Type: boolean
+Default: true
+_Description: Create tables for Bacula's Catalog?
+ The tables needed for Bacula's catalog are missing.  This is normal
+ for a fresh install of Bacula.  These tables are needed for the
+ Bacula director to function.
+
+Template: bacula-director-sqlite/remove_catalog_on_purge
+Type: boolean
+Default: false
+_Description: Remove Catalog on purge?
+ If you want to remove the Bacula catalog when the package is purged,
+ you should choose this option.
+
