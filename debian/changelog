@@ -1,3 +1,9 @@
+bacula (2.2.7-1) unstable; urgency=low
+
+  * New upstream release. 
+
+ -- Mark Hymers <mhy@debian.org>  Sat, 29 Dec 2007 15:37:11 +0000
+
 bacula (2.2.6-1) unstable; urgency=low
 
   * New upstream release
