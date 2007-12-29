@@ -1,8 +1,10 @@
 bacula (2.2.7-1) unstable; urgency=low
 
   * New upstream release. 
+  * Bump Build-Dep for libgtk2.0-dev to be >= 2.10 as the traymonitor
+    code needs it.
 
- -- Mark Hymers <mhy@debian.org>  Sat, 29 Dec 2007 15:37:11 +0000
+ -- Mark Hymers <mhy@debian.org>  Sat, 29 Dec 2007 17:26:23 +0000
 
 bacula (2.2.6-1) unstable; urgency=low
 
