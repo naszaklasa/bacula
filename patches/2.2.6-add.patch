@@ -1,0 +1,35 @@
+
+ This patch fixes the infinite loop when trying to increase the
+ maximum number of volumes in a Pool during the add command.
+ This patch fixes bug #1008. 
+
+ It can be applied to Bacula version 2.2.6 (and probably earlier
+ 2.2.x versions) with:
+
+ cd <bacula-source>
+ ./configure <your options>
+ patch -p0 <2.2.6-add.patch
+ make
+ ...
+ make install
+
+Index: src/dird/ua_cmds.c
+===================================================================
+--- src/dird/ua_cmds.c	(revision 5901)
++++ src/dird/ua_cmds.c	(working copy)
+@@ -244,12 +244,10 @@
+ 
+    while (pr.MaxVols > 0 && pr.NumVols >= pr.MaxVols) {
+       ua->warning_msg(_("Pool already has maximum volumes=%d\n"), pr.MaxVols);
+-      for (;;) {
+-         if (!get_pint(ua, _("Enter new maximum (zero for unlimited): "))) {
+-            return 1;
+-         }
+-         pr.MaxVols = ua->pint32_val;
++      if (!get_pint(ua, _("Enter new maximum (zero for unlimited): "))) {
++         return 1;
+       }
++      pr.MaxVols = ua->pint32_val;
+    }
+ 
+    /* Get media type */

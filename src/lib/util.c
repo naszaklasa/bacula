@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: util.c 5735 2007-10-06 12:49:33Z kerns $
+ *   Version $Id: util.c 6130 2007-12-24 10:41:44Z kerns $
  */
 
 #include "bacula.h"
@@ -574,6 +574,7 @@ void make_session_key(char *key, char *seed, int mode)
  *  to = recepients list
  *
  */
+//POOLMEM *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to, job_code_callback_t callback)
 POOLMEM *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to)
 {
    char *p, *q;
@@ -672,10 +673,17 @@ POOLMEM *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to)
             }
             break;
          default:
-            add[0] = '%';
-            add[1] = *p;
-            add[2] = 0;
-            str = add;
+            str = NULL;
+//          if (callback != NULL) {
+//              str = callback(jcr, p);
+//          }
+
+            if (!str) {
+                add[0] = '%';
+                add[1] = *p;
+                add[2] = 0;
+                str = add;
+            }
             break;
          }
       } else {

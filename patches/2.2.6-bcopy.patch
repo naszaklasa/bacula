@@ -1,0 +1,78 @@
+
+ This patch fixes bcopy so that it produces correct Volumes.
+ It fixes bug #1022.
+
+ Apply this patch to version 2.2.6 and possibly any 2.2.x version with:
+
+ cd <bacula-source>
+ patch -p0 2.2.6-bcopy.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+Index: src/stored/bcopy.c
+===================================================================
+--- src/stored/bcopy.c	(revision 6010)
++++ src/stored/bcopy.c	(working copy)
+@@ -89,6 +89,7 @@
+    char *iVolumeName = NULL;
+    char *oVolumeName = NULL;
+    bool ignore_label_errors = false;
++   bool ok;
+ 
+    setlocale(LC_ALL, "");
+    bindtextdomain("bacula", LOCALEDIR);
+@@ -199,9 +200,11 @@
+    }
+    out_block = out_jcr->dcr->block;
+ 
+-   read_records(in_jcr->dcr, record_cb, mount_next_read_volume);
+-   if (!write_block_to_device(out_jcr->dcr)) {
+-      Pmsg0(000, _("Write of last block failed.\n"));
++   ok = read_records(in_jcr->dcr, record_cb, mount_next_read_volume);
++   if (ok || out_dev->can_write()) {
++      if (!write_block_to_device(out_jcr->dcr)) {
++         Pmsg0(000, _("Write of last block failed.\n"));
++      }
+    }
+ 
+    Pmsg2(000, _("%u Jobs copied. %u records copied.\n"), jobs, records);
+@@ -253,6 +256,7 @@
+                   out_dev->print_name(), out_dev->bstrerror());
+                Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
+                      out_dev->bstrerror());
++               return false;
+             }
+          }
+          if (!write_block_to_device(out_jcr->dcr)) {
+@@ -260,8 +264,9 @@
+                out_dev->print_name(), out_dev->bstrerror());
+             Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
+                   out_dev->bstrerror());
++            return false;
+          }
+-         break;
++         return true;
+       case EOM_LABEL:
+          Pmsg0(000, _("EOM label not copied.\n"));
+          return true;
+@@ -269,7 +274,7 @@
+          Pmsg0(000, _("EOT label not copied.\n"));
+          return true;
+       default:
+-         break;
++         return true;
+       }
+    }
+ 
+@@ -283,7 +288,7 @@
+             out_dev->print_name(), out_dev->bstrerror());
+          Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
+                out_dev->bstrerror());
+-         break;
++         return false;
+       }
+    }
+    return true;

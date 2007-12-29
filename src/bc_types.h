@@ -13,7 +13,7 @@
 
     Also, we define types such as file address lengths.
 
-    Version $Id: bc_types.h 4992 2007-06-07 14:46:43Z kerns $
+    Version $Id: bc_types.h 5984 2007-11-25 16:12:14Z kerns $
 
  */
 /*
@@ -62,7 +62,7 @@ typedef unsigned int u_int;
 
 #ifndef HAVE_INTXX_T
 # if (SIZEOF_CHAR == 1)
-typedef char int8_t;
+typedef signed char int8_t;
 # else
 #  error "8 bit int type not found."
 # endif

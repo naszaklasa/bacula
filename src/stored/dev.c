@@ -47,7 +47,7 @@
  *     daemon. More complicated coding (double buffering, writer
  *     thread, ...) is left for a later version.
  *
- *   Version $Id: dev.c 5609 2007-09-20 13:22:04Z kerns $
+ *   Version $Id: dev.c 6011 2007-12-02 18:03:17Z kerns $
  */
 
 /*
@@ -1856,7 +1856,7 @@ void DEVICE::close()
    /* Clean up device packet so it can be reused */
    clear_opened();
    state &= ~(ST_LABEL|ST_READ|ST_APPEND|ST_EOT|ST_WEOT|ST_EOF|
-              ST_MOUNTED|ST_MEDIA|ST_SHORT|ST_FREESPACE_OK|ST_PART_SPOOLED);
+              ST_MOUNTED|ST_MEDIA|ST_SHORT);
    label_type = B_BACULA_LABEL;
    file = block_num = 0;
    file_size = 0;

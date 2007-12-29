@@ -9,9 +9,15 @@ db_name=@db_name@
 # use SQL_ASCII to be able to put any filename into
 #  the database even those created with unusual character sets
 ENCODING="ENCODING 'SQL_ASCII'"
+ 
 # use UTF8 if you are using standard Unix/Linux LANG specifications
 #  that use UTF8 -- this is normally the default and *should* be
-#  your standard.  Bacula consoles work correctly *only* with UTF8.
+#  your standard.  Bacula works correctly *only* with correct UTF8.
+#
+#  Note, with this encoding, if you have any "weird" filenames on
+#  your system (names generated from Win32 or Mac OS), you may
+#  get Bacula batch insert failures.
+#
 #ENCODING="ENCODING 'UTF8'"
      
 

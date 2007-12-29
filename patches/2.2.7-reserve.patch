@@ -1,0 +1,1467 @@
+
+ This patch has a number of cleanups and improvements to the SD          
+ reservations system. It should fix a number of problems with
+ dual drive autochangers as well ensure that volume use durations
+ and max volume jobs are better respected.
+
+ Apply it to version 2.2.7 (possibly some earlier versions) with:
+
+ cd <bacula-source>
+ patch -p1 <2.2.7-reserve.patch
+ ./configure <your options>
+ make
+ ...
+ make install
+
+
+diff -ur k1/src/lib/message.c k3/src/lib/message.c
+--- k1/src/lib/message.c	2007-10-19 13:47:58.000000000 +0200
++++ k3/src/lib/message.c	2007-12-22 19:13:00.000000000 +0100
+@@ -54,6 +54,7 @@
+ int verbose = 0;                      /* increase User messages */
+ /* Keep debug level set to zero by default */
+ int debug_level = 0;                  /* debug level */
++bool dbg_timestamp = false;           /* print timestamp in debug output */
+ time_t daemon_start_time = 0;         /* Daemon start time */
+ const char *version = VERSION " (" BDATE ")";
+ char my_name[30];                     /* daemon name is stored here */
+diff -ur k1/src/lib/message.h k3/src/lib/message.h
+--- k1/src/lib/message.h	2007-10-03 13:36:47.000000000 +0200
++++ k3/src/lib/message.h	2007-12-22 19:13:06.000000000 +0100
+@@ -154,6 +154,7 @@
+ extern DLL_IMP_EXP sql_escape    p_sql_escape;
+ 
+ extern DLL_IMP_EXP int           debug_level;
++extern DLL_IMP_EXP bool          dbg_timestamp;            /* print timestamp in debug output */
+ extern DLL_IMP_EXP int           verbose;
+ extern DLL_IMP_EXP char          my_name[];
+ extern DLL_IMP_EXP const char *  working_directory;
+diff -ur k1/src/stored/acquire.c k3/src/stored/acquire.c
+--- k1/src/stored/acquire.c	2007-09-14 11:49:06.000000000 +0200
++++ k3/src/stored/acquire.c	2007-12-22 19:12:23.000000000 +0100
+@@ -30,7 +30,7 @@
+  *
+  *   Kern Sibbald, August MMII
+  *
+- *   Version $Id: acquire.c 5552 2007-09-14 09:49:06Z kerns $
++ *   Version $Id: acquire.c 6081 2007-12-21 14:11:40Z kerns $
+  */
+ 
+ #include "bacula.h"                   /* pull in global headers */
+@@ -38,6 +38,7 @@
+ 
+ /* Forward referenced functions */
+ static void attach_dcr_to_dev(DCR *dcr);
++static bool is_suitable_volume_mounted(DCR *dcr);
+ 
+ 
+ /*********************************************************************
+@@ -316,9 +317,9 @@
+  */
+ DCR *acquire_device_for_append(DCR *dcr)
+ {
+-   bool release = false;
+-   bool recycle = false;
+    bool do_mount = false;
++   bool release = false;
++   bool have_vol;
+    DEVICE *dev = dcr->dev;
+    JCR *jcr = dcr->jcr;
+ 
+@@ -337,6 +338,11 @@
+       goto get_out;
+    }
+ 
++   /*
++    * have_vol defines whether or not mount_next_write_volume should
++    *   ask the Director again about what Volume to use.
++    */
++   have_vol = is_suitable_volume_mounted(dcr);
+    if (dev->can_append()) {
+       Dmsg0(190, "device already in append.\n");
+       /*
+@@ -351,25 +357,11 @@
+        *  dcr->VolumeName is what we pass into the routines, or
+        *    get back from the subroutines.
+        */
+-      bstrncpy(dcr->VolumeName, dev->VolHdr.VolumeName, sizeof(dcr->VolumeName));
+-      if (!dir_get_volume_info(dcr, GET_VOL_INFO_FOR_WRITE) &&
++      if (!have_vol &&
+           !(dir_find_next_appendable_volume(dcr) &&
+             strcmp(dev->VolHdr.VolumeName, dcr->VolumeName) == 0)) { /* wrong tape mounted */
+-         Dmsg2(190, "Wrong tape mounted: %s. wants:%s\n", dev->VolHdr.VolumeName,
+-            dcr->VolumeName);
+-         /* Release volume reserved by dir_find_next_appendable_volume() */
+-         if (dcr->VolumeName[0]) {
+-            volume_unused(dcr);
+-         }
+-         if (dev->num_writers != 0) {
+-            Jmsg3(jcr, M_FATAL, 0, _("Wanted to append to Volume \"%s\", but device %s is busy writing on \"%s\" .\n"), 
+-                 dcr->VolumeName, dev->print_name(), dev->VolHdr.VolumeName);
+-            Dmsg3(200, "Wanted to append to Volume \"%s\", but device %s is busy writing on \"%s\" .\n",  
+-                 dcr->VolumeName, dev->print_name(), dev->VolHdr.VolumeName);
+-            goto get_out;
+-         }
+          /* Wrong tape mounted, release it, then fall through to get correct one */
+-         Dmsg0(190, "Wrong tape mounted, release and try mount.\n");
++         Dmsg0(50, "Wrong tape mounted, release and try mount.\n");
+          release = true;
+          do_mount = true;
+       } else {
+@@ -378,14 +370,17 @@
+           *   we do not need to do mount_next_write_volume(), unless
+           *   we need to recycle the tape.
+           */
+-          recycle = strcmp(dcr->VolCatInfo.VolCatStatus, "Recycle") == 0;
+-          Dmsg1(190, "Correct tape mounted. recycle=%d\n", recycle);
+-          if (recycle && dev->num_writers != 0) {
++          do_mount = strcmp(dcr->VolCatInfo.VolCatStatus, "Recycle") == 0;
++          Dmsg2(190, "jid=%u Correct tape mounted. recycle=%d\n", 
++                (uint32_t)jcr->JobId, do_mount);
++#ifdef xxx
++          if (do_mount && dev->num_writers != 0) {
+              Jmsg(jcr, M_FATAL, 0, _("Cannot recycle volume \"%s\""
+                   " on device %s because it is in use by another job.\n"),
+                   dev->VolHdr.VolumeName, dev->print_name());
+              goto get_out;
+           }
++#endif
+           if (dev->num_writers == 0) {
+              memcpy(&dev->VolCatInfo, &dcr->VolCatInfo, sizeof(dev->VolCatInfo));
+           }
+@@ -415,21 +410,23 @@
+       }
+    } else {
+       /* Not already in append mode, so mount the device */
+-      Dmsg0(190, "Not in append mode, try mount.\n");
++      Dmsg2(190, "jid=%u Not in append mode, try mount have_vol=%d\n", 
++            (uint32_t)jcr->JobId, have_vol);
++
+       ASSERT(dev->num_writers == 0);
+       do_mount = true;
+    }
+ 
+-   if (do_mount || recycle) {
+-      Dmsg0(190, "Do mount_next_write_vol\n");
+-      bool mounted = mount_next_write_volume(dcr, release);
++   if (do_mount || !have_vol) {
++      Dmsg1(190, "jid=%u Do mount_next_write_vol\n", (uint32_t)jcr->JobId);
++      bool mounted = mount_next_write_volume(dcr, have_vol, release);
+       if (!mounted) {
+          if (!job_canceled(jcr)) {
+             /* Reduce "noise" -- don't print if job canceled */
+             Jmsg(jcr, M_FATAL, 0, _("Could not ready device %s for append.\n"),
+                dev->print_name());
+-            Dmsg1(200, "Could not ready device %s for append.\n", 
+-               dev->print_name());
++            Dmsg2(200, "jid=%u Could not ready device %s for append.\n", 
++               (uint32_t)jcr->JobId, dev->print_name());
+          }
+          goto get_out;
+       }
+@@ -441,11 +438,12 @@
+       jcr->NumWriteVolumes = 1;
+    }
+    dev->VolCatInfo.VolCatJobs++;              /* increment number of jobs on vol */
+-   dir_update_volume_info(dcr, false);        /* send Volume info to Director */
++   dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
+    dev->dlock();
+    if (dcr->reserved_device) {
+       dev->reserved_device--;
+-      Dmsg2(100, "Dec reserve=%d dev=%s\n", dev->reserved_device, dev->print_name());
++      Dmsg3(100, "jid=%u Dec reserve=%d dev=%s\n", (uint32_t)jcr->JobId,
++            dev->reserved_device, dev->print_name());
+       dcr->reserved_device = false;
+    }
+    dev->dunblock(DEV_LOCKED);
+@@ -458,7 +456,8 @@
+    dev->dlock();
+    if (dcr->reserved_device) {
+       dev->reserved_device--;
+-      Dmsg2(100, "Dec reserve=%d dev=%s\n", dev->reserved_device, dev->print_name());
++      Dmsg3(100, "jid=%u Dec reserve=%d dev=%s\n", (uint32_t)jcr->JobId, 
++            dev->reserved_device, dev->print_name());
+       dcr->reserved_device = false;
+    }
+    dev->dunblock(DEV_LOCKED);
+@@ -466,6 +465,18 @@
+ }
+ 
+ 
++static bool is_suitable_volume_mounted(DCR *dcr)
++{
++   DEVICE *dev = dcr->dev;
++
++   /* Volume mounted? */
++   if (dev->VolHdr.VolumeName[0] == 0) {
++      return false;                      /* no */
++   }
++   bstrncpy(dcr->VolumeName, dev->VolHdr.VolumeName, sizeof(dcr->VolumeName));
++   return dir_get_volume_info(dcr, GET_VOL_INFO_FOR_WRITE);
++}
++
+ /*
+  * This job is done, so release the device. From a Unix standpoint,
+  *  the device remains open.
+@@ -496,7 +507,7 @@
+    if (dev->can_read()) {
+       dev->clear_read();              /* clear read bit */
+       Dmsg0(100, "dir_update_vol_info. Release0\n");
+-      dir_update_volume_info(dcr, false); /* send Volume info to Director */
++      dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
+ 
+    } else if (dev->num_writers > 0) {
+       /* 
+@@ -522,7 +533,7 @@
+             dev->VolCatInfo.VolCatFiles = dev->file;   /* set number of files */
+             /* Note! do volume update before close, which zaps VolCatInfo */
+             Dmsg0(100, "dir_update_vol_info. Release0\n");
+-            dir_update_volume_info(dcr, false); /* send Volume info to Director */
++            dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
+          }
+       }
+ 
+@@ -621,7 +632,12 @@
+       if (dcr->attached_to_dev) {
+          detach_dcr_from_dev(dcr);
+       }
+-      dcr->max_job_spool_size = dev->device->max_job_spool_size;
++      /* Use job spoolsize prior to device spoolsize */
++      if (jcr->spool_size) {
++         dcr->max_job_spool_size = jcr->spool_size;
++      } else {
++         dcr->max_job_spool_size = dev->device->max_job_spool_size;
++      }
+       dcr->device = dev->device;
+       dcr->dev = dev;
+       attach_dcr_to_dev(dcr);
+diff -ur k1/src/stored/askdir.c k3/src/stored/askdir.c
+--- k1/src/stored/askdir.c	2007-09-09 12:03:23.000000000 +0200
++++ k3/src/stored/askdir.c	2007-12-22 19:11:50.000000000 +0100
+@@ -31,7 +31,7 @@
+  *
+  *   Kern Sibbald, December 2000
+  *
+- *   Version $Id: askdir.c 5503 2007-09-09 10:03:23Z kerns $
++ *   Version $Id: askdir.c 5852 2007-11-04 19:57:42Z kerns $
+  */
+ 
+ #include "bacula.h"                   /* pull in global headers */
+@@ -42,7 +42,7 @@
+ static char Get_Vol_Info[] = "CatReq Job=%s GetVolInfo VolName=%s write=%d\n";
+ static char Update_media[] = "CatReq Job=%s UpdateMedia VolName=%s"
+    " VolJobs=%u VolFiles=%u VolBlocks=%u VolBytes=%s VolMounts=%u"
+-   " VolErrors=%u VolWrites=%u MaxVolBytes=%s EndTime=%d VolStatus=%s"
++   " VolErrors=%u VolWrites=%u MaxVolBytes=%s EndTime=%s VolStatus=%s"
+    " Slot=%d relabel=%d InChanger=%d VolReadTime=%s VolWriteTime=%s"
+    " VolFirstWritten=%s VolParts=%u\n";
+ static char Create_job_media[] = "CatReq Job=%s CreateJobMedia"
+@@ -98,7 +98,7 @@
+    } else {
+       pm_strcpy(ChangerName, "*");
+    }
+-   ok =bnet_fsend(dir, Device_update, 
++   ok = dir->fsend(Device_update, 
+       jcr->Job,
+       dev_name.c_str(),
+       dev->can_append()!=0,
+@@ -125,7 +125,7 @@
+    pm_strcpy(MediaType, device->media_type);
+    bash_spaces(MediaType);
+    /* This is mostly to indicate that we are here */
+-   ok = bnet_fsend(dir, Device_update,
++   ok = dir->fsend(Device_update,
+       jcr->Job,
+       dev_name.c_str(),         /* Changer name */
+       0, 0, 0,                  /* append, read, num_writers */
+@@ -148,7 +148,7 @@
+  */
+ bool dir_send_job_status(JCR *jcr)
+ {
+-   return bnet_fsend(jcr->dir_bsock, Job_status, jcr->Job, jcr->JobStatus);
++   return jcr->dir_bsock->fsend(Job_status, jcr->Job, jcr->JobStatus);
+ }
+ 
+ /*
+@@ -179,7 +179,7 @@
+        return false;
+     }
+     memset(&vol, 0, sizeof(vol));
+-    Dmsg1(100, "<dird %s\n", dir->msg);
++    Dmsg1(100, "<dird %s", dir->msg);
+     n = sscanf(dir->msg, OK_media, vol.VolCatName,
+                &vol.VolCatJobs, &vol.VolCatFiles,
+                &vol.VolCatBlocks, &vol.VolCatBytes,
+@@ -191,7 +191,8 @@
+                &vol.EndFile, &vol.EndBlock, &vol.VolCatParts,
+                &vol.LabelType, &vol.VolMediaId);
+     if (n != 22) {
+-       Dmsg3(100, "Bad response from Dir fields=%d, len=%d: %s", n, dir->msglen, dir->msg);
++       Dmsg3(100, "Bad response from Dir fields=%d, len=%d: %s", 
++             n, dir->msglen, dir->msg);
+        Mmsg(jcr->errmsg, _("Error getting Volume info: %s"), dir->msg);
+        return false;
+     }
+@@ -226,7 +227,7 @@
+     bash_spaces(dcr->VolCatInfo.VolCatName);
+     dir->fsend(Get_Vol_Info, jcr->Job, dcr->VolCatInfo.VolCatName,
+        writing==GET_VOL_INFO_FOR_WRITE?1:0);
+-    Dmsg1(100, ">dird: %s\n", dir->msg);
++    Dmsg1(100, ">dird %s", dir->msg);
+     unbash_spaces(dcr->VolCatInfo.VolCatName);
+     bool ok = do_get_volume_info(dcr);
+     V(vol_info_mutex);
+@@ -253,7 +254,9 @@
+     BSOCK *dir = jcr->dir_bsock;
+     bool found = false;
+ 
+-    Dmsg0(200, "dir_find_next_appendable_volume\n");
++    Dmsg2(200, "dir_find_next_appendable_volume: reserved=%d Vol=%s\n", 
++       dcr->reserved_device, dcr->VolumeName);
++
+     /*
+      * Try the twenty oldest or most available volumes.  Note,
+      *   the most available could already be mounted on another
+@@ -268,7 +271,7 @@
+        dir->fsend(Find_media, jcr->Job, vol_index, dcr->pool_name, dcr->media_type);
+        unbash_spaces(dcr->media_type);
+        unbash_spaces(dcr->pool_name);
+-       Dmsg1(100, ">dird: %s", dir->msg);
++       Dmsg1(100, ">dird %s", dir->msg);
+        bool ok = do_get_volume_info(dcr);
+        if (ok) {
+           if (!is_volume_in_use(dcr)) {
+@@ -311,14 +314,13 @@
+  * back to the director. The information comes from the
+  * dev record.
+  */
+-bool dir_update_volume_info(DCR *dcr, bool label)
++bool dir_update_volume_info(DCR *dcr, bool label, bool update_LastWritten)
+ {
+    JCR *jcr = dcr->jcr;
+    BSOCK *dir = jcr->dir_bsock;
+    DEVICE *dev = dcr->dev;
+-   time_t LastWritten = time(NULL);
+    VOLUME_CAT_INFO *vol = &dev->VolCatInfo;
+-   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50];
++   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50], ed6[50];
+    int InChanger;
+    bool ok = false;
+    POOL_MEM VolumeName;
+@@ -341,21 +343,25 @@
+    if (label) {
+       bstrncpy(vol->VolCatStatus, "Append", sizeof(vol->VolCatStatus));
+    }
++// if (update_LastWritten) {
++      vol->VolLastWritten = time(NULL);
++// }
+    pm_strcpy(VolumeName, vol->VolCatName);
+    bash_spaces(VolumeName);
+    InChanger = vol->InChanger;
+-   bnet_fsend(dir, Update_media, jcr->Job,
++   dir->fsend(Update_media, jcr->Job,
+       VolumeName.c_str(), vol->VolCatJobs, vol->VolCatFiles,
+       vol->VolCatBlocks, edit_uint64(vol->VolCatBytes, ed1),
+       vol->VolCatMounts, vol->VolCatErrors,
+       vol->VolCatWrites, edit_uint64(vol->VolCatMaxBytes, ed2),
+-      LastWritten, vol->VolCatStatus, vol->Slot, label,
++      edit_uint64(vol->VolLastWritten, ed6), 
++      vol->VolCatStatus, vol->Slot, label,
+       InChanger,                      /* bool in structure */
+       edit_int64(vol->VolReadTime, ed3),
+       edit_int64(vol->VolWriteTime, ed4),
+       edit_uint64(vol->VolFirstWritten, ed5),
+       vol->VolCatParts);
+-    Dmsg1(100, ">dird: %s", dir->msg);
++    Dmsg1(100, ">dird %s", dir->msg);
+ 
+    /* Do not lock device here because it may be locked from label */
+    if (!do_get_volume_info(dcr)) {
+@@ -364,7 +370,7 @@
+          vol->VolCatName, jcr->errmsg);
+       goto bail_out;
+    }
+-   Dmsg1(420, "get_volume_info(): %s", dir->msg);
++   Dmsg1(420, "get_volume_info() %s", dir->msg);
+    /* Update dev Volume info in case something changed (e.g. expired) */
+    dev->VolCatInfo = dcr->VolCatInfo;
+    ok = true;
+@@ -393,20 +399,20 @@
+    }
+ 
+    dcr->WroteVol = false;
+-   bnet_fsend(dir, Create_job_media, jcr->Job,
++   dir->fsend(Create_job_media, jcr->Job,
+       dcr->VolFirstIndex, dcr->VolLastIndex,
+       dcr->StartFile, dcr->EndFile,
+       dcr->StartBlock, dcr->EndBlock, 
+       dcr->Copy, dcr->Stripe, 
+       edit_uint64(dcr->VolMediaId, ed1));
+-    Dmsg1(100, ">dird: %s", dir->msg);
++    Dmsg1(100, ">dird %s", dir->msg);
+    if (bnet_recv(dir) <= 0) {
+       Dmsg0(190, "create_jobmedia error bnet_recv\n");
+       Jmsg(jcr, M_FATAL, 0, _("Error creating JobMedia record: ERR=%s\n"),
+-           bnet_strerror(dir));
++           dir->bstrerror());
+       return false;
+    }
+-   Dmsg1(100, "<dir: %s", dir->msg);
++   Dmsg1(100, "<dird %s", dir->msg);
+    if (strcmp(dir->msg, OK_create) != 0) {
+       Dmsg1(130, "Bad response from Dir: %s\n", dir->msg);
+       Jmsg(jcr, M_FATAL, 0, _("Error creating JobMedia record: %s\n"), dir->msg);
+@@ -429,9 +435,10 @@
+    return true;
+ #endif
+ 
+-   dir->msglen = sprintf(dir->msg, FileAttributes, jcr->Job);
+-   dir->msg = check_pool_memory_size(dir->msg, dir->msglen +
+-                sizeof(DEV_RECORD) + rec->data_len);
++   dir->msg = check_pool_memory_size(dir->msg, sizeof(FileAttributes) +
++                MAX_NAME_LENGTH + sizeof(DEV_RECORD) + rec->data_len + 1);
++   dir->msglen = bsnprintf(dir->msg, sizeof(FileAttributes) +
++                MAX_NAME_LENGTH + 1, FileAttributes, jcr->Job);
+    ser_begin(dir->msg + dir->msglen, 0);
+    ser_uint32(rec->VolSessionId);
+    ser_uint32(rec->VolSessionTime);
+@@ -440,8 +447,8 @@
+    ser_uint32(rec->data_len);
+    ser_bytes(rec->data, rec->data_len);
+    dir->msglen = ser_length(dir->msg);
+-   Dmsg1(1800, ">dird: %s\n", dir->msg);    /* Attributes */
+-   return bnet_send(dir);
++   Dmsg1(1800, ">dird %s\n", dir->msg);    /* Attributes */
++   return dir->send();
+ }
+ 
+ 
+diff -ur k1/src/stored/bcopy.c k3/src/stored/bcopy.c
+--- k1/src/stored/bcopy.c	2007-12-03 20:27:38.000000000 +0100
++++ k3/src/stored/bcopy.c	2007-12-22 19:10:29.000000000 +0100
+@@ -32,7 +32,7 @@
+  *   Kern E. Sibbald, October 2002
+  *
+  *
+- *   Version $Id: bcopy.c 6017 2007-12-03 19:27:38Z kerns $
++ *   Version $Id: bcopy.c 6016 2007-12-03 19:27:21Z kerns $
+  */
+ 
+ #include "bacula.h"
+@@ -42,6 +42,7 @@
+ int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
+ 
+ /* Forward referenced functions */
++static void get_session_record(DEVICE *dev, DEV_RECORD *rec, SESSION_LABEL *sessrec);
+ static bool record_cb(DCR *dcr, DEV_RECORD *rec);
+ 
+ 
+@@ -52,10 +53,11 @@
+ static JCR *out_jcr;                   /* output jcr */
+ static BSR *bsr = NULL;
+ static const char *wd = "/tmp";
+-static int list_records = 0;
++static bool list_records = false;
+ static uint32_t records = 0;
+ static uint32_t jobs = 0;
+ static DEV_BLOCK *out_block;
++static SESSION_LABEL sessrec;
+ 
+ #define CONFIG_FILE "bacula-sd.conf"
+ char *configfile = NULL;
+@@ -73,7 +75,7 @@
+ "Usage: bcopy [-d debug_level] <input-archive> <output-archive>\n"
+ "       -b bootstrap      specify a bootstrap file\n"
+ "       -c <file>         specify configuration file\n"
+-"       -d <nn>           set debug level to nn\n"
++"       -d <nn>           set debug level to <nn>\n"
+ "       -i                specify input Volume names (separated by |)\n"
+ "       -o                specify output Volume names (separated by |)\n"
+ "       -p                proceed inspite of errors\n"
+@@ -113,9 +115,14 @@
+          break;
+ 
+       case 'd':                    /* debug level */
+-         debug_level = atoi(optarg);
+-         if (debug_level <= 0)
+-            debug_level = 1;
++         if (*optarg == 't') {
++            dbg_timestamp = true;
++         } else {
++            debug_level = atoi(optarg);
++            if (debug_level <= 0) {
++               debug_level = 1;
++            }
++         }
+          break;
+ 
+       case 'i':                    /* input Volume name */
+@@ -201,6 +208,7 @@
+    out_block = out_jcr->dcr->block;
+ 
+    ok = read_records(in_jcr->dcr, record_cb, mount_next_read_volume);
++
+    if (ok || out_dev->can_write()) {
+       if (!write_block_to_device(out_jcr->dcr)) {
+          Pmsg0(000, _("Write of last block failed.\n"));
+@@ -233,6 +241,7 @@
+     *
+     */
+    if (rec->FileIndex < 0) {
++      get_session_record(in_dcr->dev, rec, &sessrec);
+ 
+       if (verbose > 1) {
+          dump_label_record(in_dcr->dev, rec, 1);
+@@ -294,10 +303,46 @@
+    return true;
+ }
+ 
++static void get_session_record(DEVICE *dev, DEV_RECORD *rec, SESSION_LABEL *sessrec)
++{
++   const char *rtype;
++   memset(sessrec, 0, sizeof(sessrec));
++   switch (rec->FileIndex) {
++   case PRE_LABEL:
++      rtype = _("Fresh Volume Label");
++      break;
++   case VOL_LABEL:
++      rtype = _("Volume Label");
++      unser_volume_label(dev, rec);
++      break;
++   case SOS_LABEL:
++      rtype = _("Begin Job Session");
++      unser_session_label(sessrec, rec);
++      break;
++   case EOS_LABEL:
++      rtype = _("End Job Session");
++      unser_session_label(sessrec, rec);
++      break;
++   case 0:
++   case EOM_LABEL:
++      rtype = _("End of Medium");
++      break;
++   default:
++      rtype = _("Unknown");
++      break;
++   }
++   Dmsg5(10, "%s Record: VolSessionId=%d VolSessionTime=%d JobId=%d DataLen=%d\n",
++         rtype, rec->VolSessionId, rec->VolSessionTime, rec->Stream, rec->data_len);
++   if (verbose) {
++      Pmsg5(-1, _("%s Record: VolSessionId=%d VolSessionTime=%d JobId=%d DataLen=%d\n"),
++            rtype, rec->VolSessionId, rec->VolSessionTime, rec->Stream, rec->data_len);
++   }
++}
++
+ 
+ /* Dummies to replace askdir.c */
+ bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
+-bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
++bool    dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten) { return 1; }
+ bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
+ bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr) { return 1; }
+ bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}
+diff -ur k1/src/stored/bextract.c k3/src/stored/bextract.c
+--- k1/src/stored/bextract.c	2007-10-03 13:36:47.000000000 +0200
++++ k3/src/stored/bextract.c	2007-12-22 19:10:20.000000000 +0100
+@@ -4,7 +4,7 @@
+  *
+  *   Kern E. Sibbald, MM
+  *
+- *   Version $Id: bextract.c 5713 2007-10-03 11:36:47Z kerns $
++ *   Version $Id: bextract.c 5852 2007-11-04 19:57:42Z kerns $
+  *
+  */
+ /*
+@@ -79,7 +79,7 @@
+ "Usage: bextract <options> <bacula-archive-device-name> <directory-to-store-files>\n"
+ "       -b <file>       specify a bootstrap file\n"
+ "       -c <file>       specify a configuration file\n"
+-"       -d <nn>         set debug level to nn\n"
++"       -d <nn>         set debug level to <nn>\n"
+ "       -e <file>       exclude list\n"
+ "       -i <file>       include list\n"
+ "       -p              proceed inspite of I/O errors\n"
+@@ -126,9 +126,14 @@
+          break;
+ 
+       case 'd':                    /* debug level */
+-         debug_level = atoi(optarg);
+-         if (debug_level <= 0)
+-            debug_level = 1;
++         if (*optarg == 't') {
++            dbg_timestamp = true;
++         } else {
++            debug_level = atoi(optarg);
++            if (debug_level <= 0) {
++               debug_level = 1;
++            }
++         }
+          break;
+ 
+       case 'e':                    /* exclude list */
+@@ -476,7 +481,7 @@
+ 
+ /* Dummies to replace askdir.c */
+ bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
+-bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
++bool    dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten) { return 1; }
+ bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
+ bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr) { return 1; }
+ bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}
+diff -ur k1/src/stored/block.c k3/src/stored/block.c
+--- k1/src/stored/block.c	2007-10-03 13:36:47.000000000 +0200
++++ k3/src/stored/block.c	2007-12-22 19:12:33.000000000 +0100
+@@ -32,7 +32,7 @@
+  *              Kern Sibbald, March MMI
+  *                 added BB02 format October MMII
+  *
+- *   Version $Id: block.c 5713 2007-10-03 11:36:47Z kerns $
++ *   Version $Id: block.c 5852 2007-11-04 19:57:42Z kerns $
+  *
+  */
+ 
+@@ -746,7 +746,7 @@
+       dev->VolCatInfo.VolCatParts = dev->num_dvd_parts;
+    }
+    
+-   if (!dir_update_volume_info(dcr, false)) {
++   if (!dir_update_volume_info(dcr, false, true)) {
+       ok = false;
+    }
+    Dmsg1(100, "dir_update_volume_info terminate writing -- %s\n", ok?"OK":"ERROR");
+@@ -798,7 +798,7 @@
+       return false;
+    }
+    dev->VolCatInfo.VolCatFiles = dev->file;
+-   if (!dir_update_volume_info(dcr, false)) {
++   if (!dir_update_volume_info(dcr, false, false)) {
+       Dmsg0(190, "Error from update_vol_info.\n");
+       terminate_writing_volume(dcr);
+       dev->dev_errno = EIO;
+@@ -856,7 +856,7 @@
+       
+       dev->VolCatInfo.VolCatParts = dev->num_dvd_parts;
+             
+-      if (!dir_update_volume_info(dcr, false)) {
++      if (!dir_update_volume_info(dcr, false, false)) {
+          Dmsg0(190, "Error from update_vol_info.\n");
+          dev->dev_errno = EIO;
+          return false;
+diff -ur k1/src/stored/bls.c k3/src/stored/bls.c
+--- k1/src/stored/bls.c	2007-10-03 13:36:47.000000000 +0200
++++ k3/src/stored/bls.c	2007-12-22 19:10:57.000000000 +0100
+@@ -31,7 +31,7 @@
+  * 
+  *  Kern Sibbald, MM
+  *
+- *   Version $Id: bls.c 5713 2007-10-03 11:36:47Z kerns $
++ *   Version $Id: bls.c 5852 2007-11-04 19:57:42Z kerns $
+  */
+ 
+ #include "bacula.h"
+@@ -79,7 +79,7 @@
+ "Usage: bls [options] <device-name>\n"
+ "       -b <file>       specify a bootstrap file\n"
+ "       -c <file>       specify a config file\n"
+-"       -d <level>      specify debug level\n"
++"       -d <nn>         set debug level to <nn>\n"
+ "       -e <file>       exclude list\n"
+ "       -i <file>       include list\n"
+ "       -j              list jobs\n"
+@@ -130,9 +130,14 @@
+          break;
+ 
+       case 'd':                    /* debug level */
+-         debug_level = atoi(optarg);
+-         if (debug_level <= 0)
+-            debug_level = 1;
++         if (*optarg == 't') {
++            dbg_timestamp = true;
++         } else {
++            debug_level = atoi(optarg);
++            if (debug_level <= 0) {
++               debug_level = 1;
++            }
++         }
+          break;
+ 
+       case 'e':                    /* exclude list */
+@@ -440,7 +445,7 @@
+ 
+ /* Dummies to replace askdir.c */
+ bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
+-bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
++bool    dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten) { return 1; }
+ bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
+ bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr) { return 1; }
+ bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}
+diff -ur k1/src/stored/bscan.c k3/src/stored/bscan.c
+--- k1/src/stored/bscan.c	2007-10-03 13:36:47.000000000 +0200
++++ k3/src/stored/bscan.c	2007-12-22 19:11:05.000000000 +0100
+@@ -34,7 +34,7 @@
+  *   Kern E. Sibbald, December 2001
+  *
+  *
+- *   Version $Id: bscan.c 5713 2007-10-03 11:36:47Z kerns $
++ *   Version $Id: bscan.c 5852 2007-11-04 19:57:42Z kerns $
+  */
+ 
+ #include "bacula.h"
+@@ -116,7 +116,7 @@
+ "Usage: bscan [ options ] <bacula-archive>\n"
+ "       -b bootstrap      specify a bootstrap file\n"
+ "       -c <file>         specify configuration file\n"
+-"       -d <nn>           set debug level to nn\n"
++"       -d <nn>           set debug level to <nn>\n"
+ "       -m                update media info in database\n"
+ "       -n <name>         specify the database name (default bacula)\n"
+ "       -u <user>         specify database user name (default bacula)\n"
+@@ -166,9 +166,14 @@
+          break;
+ 
+       case 'd':                    /* debug level */
+-         debug_level = atoi(optarg);
+-         if (debug_level <= 0)
+-            debug_level = 1;
++         if (*optarg == 't') {
++            dbg_timestamp = true;
++         } else {
++            debug_level = atoi(optarg);
++            if (debug_level <= 0) {
++               debug_level = 1;
++            }
++         }
+          break;
+ 
+       case 'h':
+@@ -1271,7 +1276,7 @@
+ 
+ /* Dummies to replace askdir.c */
+ bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
+-bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
++bool    dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten) { return 1; }
+ bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
+ bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr) { return 1; }
+ bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}
+diff -ur k1/src/stored/btape.c k3/src/stored/btape.c
+--- k1/src/stored/btape.c	2007-06-07 16:46:43.000000000 +0200
++++ k3/src/stored/btape.c	2007-12-22 19:11:14.000000000 +0100
+@@ -37,7 +37,7 @@
+  *   Note, this program reads stored.conf, and will only
+  *     talk to devices that are configured.
+  *
+- *   Version $Id: btape.c 4992 2007-06-07 14:46:43Z kerns $
++ *   Version $Id: btape.c 5852 2007-11-04 19:57:42Z kerns $
+  *
+  */
+ 
+@@ -220,9 +220,13 @@
+          break;
+ 
+       case 'd':                    /* set debug level */
+-         debug_level = atoi(optarg);
+-         if (debug_level <= 0) {
+-            debug_level = 1;
++         if (*optarg == 't') {
++            dbg_timestamp = true;
++         } else {
++            debug_level = atoi(optarg);
++            if (debug_level <= 0) {
++               debug_level = 1;
++            }
+          }
+          break;
+ 
+@@ -2598,7 +2602,7 @@
+ "Usage: btape <options> <device_name>\n"
+ "       -b <file>   specify bootstrap file\n"
+ "       -c <file>   set configuration file to file\n"
+-"       -d <nn>     set debug level to nn\n"
++"       -d <nn>     set debug level to <nn>\n"
+ "       -p          proceed inspite of I/O errors\n"
+ "       -s          turn off signals\n"
+ "       -v          be verbose\n"
+@@ -2644,7 +2648,7 @@
+ bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}
+ bool    dir_send_job_status(JCR *jcr) {return 1;}
+ 
+-bool dir_update_volume_info(DCR *dcr, bool relabel)
++bool dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten)
+ {
+    return 1;
+ }
+diff -ur k1/src/stored/dev.c k3/src/stored/dev.c
+--- k1/src/stored/dev.c	2007-12-02 19:03:17.000000000 +0100
++++ k3/src/stored/dev.c	2007-12-22 19:11:57.000000000 +0100
+@@ -47,7 +47,7 @@
+  *     daemon. More complicated coding (double buffering, writer
+  *     thread, ...) is left for a later version.
+  *
+- *   Version $Id: dev.c 6011 2007-12-02 18:03:17Z kerns $
++ *   Version $Id: dev.c 5999 2007-11-29 21:36:36Z ricozz $
+  */
+ 
+ /*
+@@ -89,7 +89,7 @@
+ /* Forward referenced functions */
+ void set_os_device_parameters(DCR *dcr);   
+ static bool dev_get_os_pos(DEVICE *dev, struct mtget *mt_stat);
+-static char *mode_to_str(int mode);
++static const char *mode_to_str(int mode);
+ 
+ /*
+  * Allocate and initialize the DEVICE structure
+@@ -490,7 +490,7 @@
+       Mmsg2(errmsg, _("Could not open: %s, ERR=%s\n"), archive_name.c_str(), 
+             be.bstrerror());
+       Dmsg1(100, "open failed: %s", errmsg);
+-      Emsg0(M_FATAL, 0, errmsg);
++      Jmsg1(NULL, M_WARNING, 0, "%s", errmsg);
+    } else {
+       dev_errno = 0;
+       file = 0;
+@@ -2468,7 +2468,7 @@
+           mt_stat->mt_fileno >= 0;
+ }
+ 
+-static char *modes[] = {
++static const char *modes[] = {
+    "CREATE_READ_WRITE",
+    "OPEN_READ_WRITE",
+    "OPEN_READ_ONLY",
+@@ -2476,7 +2476,7 @@
+ };
+ 
+ 
+-static char *mode_to_str(int mode)  
++static const char *mode_to_str(int mode)  
+ {
+    static char buf[100];
+    if (mode < 1 || mode > 4) {
+diff -ur k1/src/stored/dev.h k3/src/stored/dev.h
+--- k1/src/stored/dev.h	2007-09-09 12:03:23.000000000 +0200
++++ k3/src/stored/dev.h	2007-12-22 19:12:14.000000000 +0100
+@@ -31,7 +31,7 @@
+  *
+  * Kern Sibbald, MM
+  *
+- *   Version $Id: dev.h 5503 2007-09-09 10:03:23Z kerns $
++ *   Version $Id: dev.h 5852 2007-11-04 19:57:42Z kerns $
+  *
+  */
+ 
+@@ -158,6 +158,7 @@
+    btime_t  VolWriteTime;             /* time spent writing this Volume */
+    int64_t  VolMediaId;               /* MediaId */
+    utime_t  VolFirstWritten;          /* Time of first write */
++   utime_t  VolLastWritten;           /* Time of last write */
+    bool     InChanger;                /* Set if vol in current magazine */
+    char VolCatStatus[20];             /* Volume status */
+    char VolCatName[MAX_NAME_LENGTH];  /* Desired volume to mount */
+@@ -473,8 +474,9 @@
+ class VOLRES { 
+ public:
+    dlink link;
+-   char *vol_name;
+-   DEVICE *dev;
++   char *vol_name;                    /* Volume name */
++   DEVICE *dev;                       /* Pointer to device to which we are attached */
++   bool released;                     /* set when the Volume can be released */
+ };
+ 
+ 
+diff -ur k1/src/stored/device.c k3/src/stored/device.c
+--- k1/src/stored/device.c	2007-06-29 14:12:26.000000000 +0200
++++ k3/src/stored/device.c	2007-12-22 19:11:23.000000000 +0100
+@@ -53,7 +53,7 @@
+  *
+  *   Kern Sibbald, MM, MMI
+  *
+- *   Version $Id: device.c 5114 2007-06-29 12:12:26Z kerns $
++ *   Version $Id: device.c 5852 2007-11-04 19:57:42Z kerns $
+  */
+ 
+ #include "bacula.h"                   /* pull in global headers */
+@@ -122,7 +122,8 @@
+         edit_uint64_with_commas(dev->VolCatInfo.VolCatBlocks, b2),
+         bstrftime(dt, sizeof(dt), time(NULL)));
+ 
+-   if (!mount_next_write_volume(dcr, 1)) {
++   /* Called with have_vol=false, release=true */
++   if (!mount_next_write_volume(dcr, false, true)) {
+       free_block(label_blk);
+       dcr->block = block;
+       dev->dlock();  
+@@ -131,7 +132,7 @@
+    dev->dlock();                    /* lock again */
+ 
+    dev->VolCatInfo.VolCatJobs++;              /* increment number of jobs on vol */
+-   dir_update_volume_info(dcr, false);        /* send Volume info to Director */
++   dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
+ 
+    Jmsg(jcr, M_INFO, 0, _("New volume \"%s\" mounted on device %s at %s.\n"),
+       dcr->VolumeName, dev->print_name(), bstrftime(dt, sizeof(dt), time(NULL)));
+diff -ur k1/src/stored/dvd.c k3/src/stored/dvd.c
+--- k1/src/stored/dvd.c	2007-06-07 16:46:43.000000000 +0200
++++ k3/src/stored/dvd.c	2007-12-22 19:26:23.000000000 +0100
+@@ -1,16 +1,7 @@
+ /*
+- *
+- *   dvd.c  -- Routines specific to DVD devices (and
+- *             possibly other removable hard media). 
+- *
+- *    Nicolas Boichat, MMV
+- *
+- *   Version $Id: dvd.c 4992 2007-06-07 14:46:43Z kerns $
+- */
+-/*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
++   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -34,6 +25,15 @@
+    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+    Switzerland, email:ftf@fsfeurope.org.
+ */
++/*
++ *
++ *   dvd.c  -- Routines specific to DVD devices (and
++ *             possibly other removable hard media). 
++ *
++ *    Nicolas Boichat, MMV
++ *
++ *   Version $Id: dvd.c 5852 2007-11-04 19:57:42Z kerns $
++ */
+ 
+ #include "bacula.h"
+ #include "stored.h"
+@@ -686,7 +686,7 @@
+    dcr->VolCatInfo.VolCatBytes = 0;
+ 
+    /* Update catalog */
+-   if (!dir_update_volume_info(dcr, false)) {
++   if (!dir_update_volume_info(dcr, false, true)) {
+       return false;
+    }
+    
+diff -ur k1/src/stored/job.c k3/src/stored/job.c
+--- k1/src/stored/job.c	2007-09-29 00:01:16.000000000 +0200
++++ k3/src/stored/job.c	2007-12-22 19:11:41.000000000 +0100
+@@ -30,7 +30,7 @@
+  *
+  *   Kern Sibbald, MM
+  *
+- *   Version $Id: job.c 5686 2007-09-28 22:01:16Z kerns $
++ *   Version $Id: job.c 5697 2007-09-30 17:40:08Z ricozz $
+  *
+  */
+ 
+@@ -49,9 +49,13 @@
+ /* Requests from the Director daemon */
+ static char jobcmd[] = "JobId=%d job=%127s job_name=%127s client_name=%127s "
+       "type=%d level=%d FileSet=%127s NoAttr=%d SpoolAttr=%d FileSetMD5=%127s "
++      "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d SpoolSize=%s\n";
++static char oldjobcmd[] = "JobId=%d job=%127s job_name=%127s client_name=%127s "
++      "type=%d level=%d FileSet=%127s NoAttr=%d SpoolAttr=%d FileSetMD5=%127s "
+       "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d\n";
+ 
+ 
++
+ /* Responses sent to Director daemon */
+ static char OKjob[]     = "3000 OK Job SDid=%u SDtime=%u Authorization=%s\n";
+ static char BAD_job[]   = "3915 Bad Job command. stat=%d CMD: %s\n";
+@@ -73,6 +77,7 @@
+ {
+    int JobId;
+    char auth_key[100];
++   char spool_size[30];
+    char seed[100];
+    BSOCK *dir = jcr->dir_bsock;
+    POOL_MEM job_name, client_name, job, fileset_name, fileset_md5;
+@@ -85,17 +90,26 @@
+     * Get JobId and permissions from Director
+     */
+    Dmsg1(100, "<dird: %s", dir->msg);
++   bstrncpy(spool_size, "0", sizeof(spool_size));
+    stat = sscanf(dir->msg, jobcmd, &JobId, job.c_str(), job_name.c_str(),
+               client_name.c_str(),
+               &JobType, &level, fileset_name.c_str(), &no_attributes,
+-              &spool_attributes, fileset_md5.c_str(), &spool_data, 
++              &spool_attributes, fileset_md5.c_str(), &spool_data,
++              &write_part_after_job, &PreferMountedVols, spool_size);
++   if (stat != 14) {
++      /* Try old version */
++      stat = sscanf(dir->msg, oldjobcmd, &JobId, job.c_str(), job_name.c_str(),
++              client_name.c_str(),
++              &JobType, &level, fileset_name.c_str(), &no_attributes,
++              &spool_attributes, fileset_md5.c_str(), &spool_data,
+               &write_part_after_job, &PreferMountedVols);
+-   if (stat != 13) {
+-      pm_strcpy(jcr->errmsg, dir->msg);
+-      dir->fsend(BAD_job, stat, jcr->errmsg);
+-      Dmsg1(100, ">dird: %s", dir->msg);
+-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+-      return false;
++      if (stat != 13) {
++         pm_strcpy(jcr->errmsg, dir->msg);
++         dir->fsend(BAD_job, stat, jcr->errmsg);
++         Dmsg1(100, ">dird: %s", dir->msg);
++         set_jcr_job_status(jcr, JS_ErrorTerminated);
++         return false;
++      }
+    }
+    /*
+     * Since this job could be rescheduled, we
+@@ -125,6 +139,7 @@
+    jcr->no_attributes = no_attributes;
+    jcr->spool_attributes = spool_attributes;
+    jcr->spool_data = spool_data;
++   jcr->spool_size = str_to_int64(spool_size);
+    jcr->write_part_after_job = write_part_after_job;
+    jcr->fileset_md5 = get_pool_memory(PM_NAME);
+    pm_strcpy(jcr->fileset_md5, fileset_md5);
+diff -ur k1/src/stored/label.c k3/src/stored/label.c
+--- k1/src/stored/label.c	2007-10-03 13:36:47.000000000 +0200
++++ k3/src/stored/label.c	2007-12-22 19:10:49.000000000 +0100
+@@ -32,7 +32,7 @@
+  *   Kern Sibbald, MM
+  *
+  *
+- *   Version $Id: label.c 5713 2007-10-03 11:36:47Z kerns $
++ *   Version $Id: label.c 5852 2007-11-04 19:57:42Z kerns $
+  */
+ 
+ #include "bacula.h"                   /* pull in global headers */
+@@ -505,7 +505,7 @@
+    }
+    Dmsg0(150, "dir_update_vol_info. Set Append\n");
+    bstrncpy(dev->VolCatInfo.VolCatStatus, "Append", sizeof(dev->VolCatInfo.VolCatStatus));
+-   if (!dir_update_volume_info(dcr, true)) {  /* indicate doing relabel */
++   if (!dir_update_volume_info(dcr, true, true)) {  /* indicate doing relabel */
+       return false;
+    }
+    if (recycle) {
+@@ -716,7 +716,7 @@
+       }
+       break;
+    default:
+-      Jmsg1(jcr, M_ABORT, 0, _("Bad session label = %d\n"), label);
++      Jmsg1(jcr, M_ABORT, 0, _("Bad Volume session label = %d\n"), label);
+       break;
+    }
+    create_session_label(dcr, rec, label);
+diff -ur k1/src/stored/mount.c k3/src/stored/mount.c
+--- k1/src/stored/mount.c	2007-09-14 11:49:06.000000000 +0200
++++ k3/src/stored/mount.c	2007-12-22 19:11:30.000000000 +0100
+@@ -32,7 +32,7 @@
+  *
+  *   Kern Sibbald, August MMII
+  *
+- *   Version $Id: mount.c 5552 2007-09-14 09:49:06Z kerns $
++ *   Version $Id: mount.c 5852 2007-11-04 19:57:42Z kerns $
+  */
+ 
+ #include "bacula.h"                   /* pull in global headers */
+@@ -60,7 +60,7 @@
+  *  impossible to get the requested Volume.
+  *
+  */
+-bool mount_next_write_volume(DCR *dcr, bool release)
++bool mount_next_write_volume(DCR *dcr, bool have_vol, bool release)
+ {
+    int retry = 0;
+    bool ask = false, recycle, autochanger;
+@@ -108,12 +108,16 @@
+     *    in dcr->VolCatInfo
+     */
+    Dmsg0(200, "Before dir_find_next_appendable_volume.\n");
+-   while (!dir_find_next_appendable_volume(dcr)) {
+-       Dmsg0(200, "not dir_find_next\n");
+-       if (!dir_ask_sysop_to_create_appendable_volume(dcr)) {
+-         return false;
++   if (!have_vol) {
++      while (!dir_find_next_appendable_volume(dcr)) {
++         Dmsg0(200, "not dir_find_next\n");
++         if (!dir_ask_sysop_to_create_appendable_volume(dcr)) {
++            return false;
++          }
++          Dmsg0(200, "Again dir_find_next_append...\n");
+        }
+-       Dmsg0(200, "Again dir_find_next_append...\n");
++   } else {
++      have_vol = false;               /* set false for next pass if any */
+    }
+    if (job_canceled(jcr)) {
+       return false;
+@@ -144,7 +148,7 @@
+     * If we autochanged to correct Volume or (we have not just
+     *   released the Volume AND we can automount) we go ahead
+     *   and read the label. If there is no tape in the drive,
+-    *   we will err, recurse and ask the operator the next time.
++    *   we will fail, recurse and ask the operator the next time.
+     */
+    if (!release && dev->is_tape() && dev->has_cap(CAP_AUTOMOUNT)) {
+       Dmsg0(150, "(1)Ask=0\n");
+@@ -432,7 +436,7 @@
+       }
+       dev->VolCatInfo.VolCatMounts++;      /* Update mounts */
+       Dmsg1(150, "update volinfo mounts=%d\n", dev->VolCatInfo.VolCatMounts);
+-      if (!dir_update_volume_info(dcr, false)) {
++      if (!dir_update_volume_info(dcr, false, false)) {
+          return false;
+       }
+       
+@@ -519,7 +523,7 @@
+       Dmsg0(150, "dir_update_vol_info. Set Append\n");
+       /* Copy Director's info into the device info */
+       dev->VolCatInfo = dcr->VolCatInfo;    /* structure assignment */
+-      if (!dir_update_volume_info(dcr, true)) {  /* indicate tape labeled */
++      if (!dir_update_volume_info(dcr, true, true)) {  /* indicate tape labeled */
+          return try_error;
+       }
+       Jmsg(dcr->jcr, M_INFO, 0, _("Labeled new Volume \"%s\" on device %s.\n"),
+@@ -552,7 +556,7 @@
+    dev->VolCatInfo = dcr->VolCatInfo;     /* structure assignment */
+    bstrncpy(dev->VolCatInfo.VolCatStatus, "Error", sizeof(dev->VolCatInfo.VolCatStatus));
+    Dmsg0(150, "dir_update_vol_info. Set Error.\n");
+-   dir_update_volume_info(dcr, false);
++   dir_update_volume_info(dcr, false, false);
+ }
+ 
+ /*
+@@ -570,7 +574,7 @@
+    dcr->VolCatInfo.InChanger = false;
+    dev->VolCatInfo.InChanger = false;
+    Dmsg0(400, "update vol info in mount\n");
+-   dir_update_volume_info(dcr, true);  /* set new status */
++   dir_update_volume_info(dcr, true, false);  /* set new status */
+ }
+ 
+ /*
+@@ -588,6 +592,7 @@
+    /*
+     * First erase all memory of the current volume
+     */
++   free_volume(dev);
+    dev->block_num = dev->file = 0;
+    dev->EndBlock = dev->EndFile = 0;
+    memset(&dev->VolCatInfo, 0, sizeof(dev->VolCatInfo));
+diff -ur k1/src/stored/protos.h k3/src/stored/protos.h
+--- k1/src/stored/protos.h	2007-06-28 13:57:03.000000000 +0200
++++ k3/src/stored/protos.h	2007-12-22 19:12:43.000000000 +0100
+@@ -28,7 +28,7 @@
+ /*
+  * Protypes for stored -- Kern Sibbald MM  
+  *
+- *   Version $Id: protos.h 5112 2007-06-28 11:57:03Z kerns $
++ *   Version $Id: protos.h 5852 2007-11-04 19:57:42Z kerns $
+  */
+ 
+ /* From stored.c */
+@@ -49,7 +49,7 @@
+ };
+ bool    dir_get_volume_info(DCR *dcr, enum get_vol_info_rw);
+ bool    dir_find_next_appendable_volume(DCR *dcr);
+-bool    dir_update_volume_info(DCR *dcr, bool label);
++bool    dir_update_volume_info(DCR *dcr, bool label, bool update_LastWritten);
+ bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr);
+ bool    dir_ask_sysop_to_mount_volume(DCR *dcr);
+ bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec);
+@@ -182,7 +182,7 @@
+ bool     is_this_bsr_done(BSR *bsr, DEV_RECORD *rec);
+ 
+ /* From mount.c */
+-bool     mount_next_write_volume(DCR *dcr, bool release);
++bool     mount_next_write_volume(DCR *dcr, bool have_vol, bool release);
+ bool     mount_next_read_volume(DCR *dcr);
+ void     mark_volume_in_error(DCR *dcr);
+ 
+diff -ur k1/src/stored/record.c k3/src/stored/record.c
+--- k1/src/stored/record.c	2007-06-07 16:46:43.000000000 +0200
++++ k3/src/stored/record.c	2007-12-22 19:12:06.000000000 +0100
+@@ -1,14 +1,4 @@
+ /*
+- *
+- *   record.c -- tape record handling functions
+- *
+- *              Kern Sibbald, April MMI
+- *                added BB02 format October MMII
+- *
+- *   Version $Id: record.c 4992 2007-06-07 14:46:43Z kerns $
+- *
+- */
+-/*
+    Bacula® - The Network Backup Solution
+ 
+    Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+@@ -35,6 +25,16 @@
+    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+    Switzerland, email:ftf@fsfeurope.org.
+ */
++/*
++ *
++ *   record.c -- tape record handling functions
++ *
++ *              Kern Sibbald, April MMI
++ *                added BB02 format October MMII
++ *
++ *   Version $Id: record.c 6014 2007-12-03 18:14:27Z kerns $
++ *
++ */
+ 
+ 
+ #include "bacula.h"
+@@ -254,7 +254,7 @@
+    ASSERT(block->buf_len >= block->binbuf);
+ 
+    Dmsg6(890, "write_record_to_block() FI=%s SessId=%d Strm=%s len=%d\n"
+-"rem=%d remainder=%d\n",
++      "rem=%d remainder=%d\n",
+       FI_to_ascii(buf1, rec->FileIndex), rec->VolSessionId,
+       stream_to_ascii(buf2, rec->Stream, rec->FileIndex), rec->data_len,
+       remlen, rec->remainder);
+@@ -365,7 +365,7 @@
+          if (!sm_check_rtn(__FILE__, __LINE__, False)) {
+             /* We damaged a buffer */
+             Dmsg6(0, "Damaged block FI=%s SessId=%d Strm=%s len=%d\n"
+-"rem=%d remainder=%d\n",
++               "rem=%d remainder=%d\n",
+                FI_to_ascii(buf1, rec->FileIndex), rec->VolSessionId,
+                stream_to_ascii(buf2, rec->Stream, rec->FileIndex), rec->data_len,
+                remlen, rec->remainder);
+diff -ur k1/src/stored/reserve.c k3/src/stored/reserve.c
+--- k1/src/stored/reserve.c	2007-08-04 18:46:32.000000000 +0200
++++ k3/src/stored/reserve.c	2007-12-22 19:09:56.000000000 +0100
+@@ -212,11 +212,11 @@
+       if (dev) {
+          len = Mmsg(msg, "%s on device %s\n", vol->vol_name, dev->print_name());
+          sendit(msg.c_str(), len, arg);
+-         len = Mmsg(msg, "    Reader=%d writers=%d reserved=%d\n", dev->can_read()?1:0,
+-            dev->num_writers, dev->reserved_device);
++         len = Mmsg(msg, "    Reader=%d writers=%d reserved=%d released=%d\n", 
++            dev->can_read()?1:0, dev->num_writers, dev->reserved_device, vol->released);
+          sendit(msg.c_str(), len, arg);
+       } else {
+-         len = Mmsg(msg, "%s no dev\n", vol->vol_name);
++         len = Mmsg(msg, "%s no device. released=%d\n", vol->vol_name, vol->released);
+          sendit(msg.c_str(), len, arg);
+       }
+    }
+@@ -292,11 +292,11 @@
+  *  already exist and are correctly programmed and will need no changes -- use 
+  *  counts are always very tricky.
+  *
+- *  The old code had a concept of "reserving" a Volume, but it needs to be changed 
++ *  The old code had a concept of "reserving" a Volume, but was changed 
+  *  to reserving and using a drive.  A volume is must be attached to (owned by) a 
+  *  drive and can move from drive to drive or be unused given certain specific 
+  *  conditions of the drive.  The key is that the drive must "own" the Volume.  
+- *  The old code has the job (dcr) owning the volume (more or less).  The job is 
++ *  The old code had the job (dcr) owning the volume (more or less).  The job was
+  *  to change the insertion and removal of the volumes from the list to be based 
+  *  on the drive rather than the job.  
+  *
+@@ -329,13 +329,14 @@
+        *  because it was probably inserted by another job.
+        */
+       if (strcmp(vol->vol_name, VolumeName) == 0) {
++         Dmsg1(dbglvl, "OK, vol=%s on device.\n", VolumeName);
+          goto get_out;                  /* Volume already on this device */
+       } else {
+-         Dmsg3(dbglvl, "jid=%u reserve_vol free vol=%s at %p\n", 
++         Dmsg3(dbglvl, "jid=%u reserve_vol free vol=%s at %p\n",
+                (int)dcr->jcr->JobId, vol->vol_name, vol->vol_name);
+-         debug_list_volumes("reserve_vol free");
+          vol_list->remove(vol);
+          free_vol_item(vol);
++         debug_list_volumes("reserve_vol free");
+       }
+    }
+ 
+@@ -378,12 +379,16 @@
+             Dmsg4(dbglvl, "jid=%u Volume busy could not swap vol=%s from dev=%s to %s\n", 
+                jid(), VolumeName, vol->dev->print_name(), dev->print_name());
+             vol = NULL;                /* device busy */
++            goto get_out;
+          }
+       }
+    }
+    dev->vol = vol;
+ 
+ get_out:
++   if (vol) {
++      vol->released = false;
++   }
+    debug_list_volumes("end new volume");
+    unlock_volumes();
+    return vol;
+@@ -462,6 +467,7 @@
+     *  explicitly read in this drive. This allows the SD to remember
+     *  where the tapes are or last were.
+     */
++   dev->vol->released = true;
+    if (dev->is_tape() || dev->is_autochanger()) {
+       return true;
+    } else {
+@@ -837,6 +843,7 @@
+       dlist *temp_vol_list, *save_vol_list;
+       VOLRES *vol = NULL;
+       lock_volumes();
++      Dmsg0(dbglvl, "lock volumes\n");                           
+ 
+       /*  
+        * Create a temporary copy of the volume list.  We do this,
+@@ -1122,6 +1129,26 @@
+              */
+             if (dcr->volume_in_use && !rctx.PreferMountedVols) {
+                rctx.PreferMountedVols = true;
++               if (dcr->VolumeName[0]) {
++                  volume_unused(dcr);
++               }
++               goto bail_out;
++            }
++            /*
++             * Note. Under some circumstances, the Director can hand us
++             *  a Volume name that is no the same as the one on the current
++             *  drive, and in that case, the call above to find the next
++             *  volume will fail because in attempting to reserve the Volume
++             *  the code will realize that we already have a tape mounted,
++             *  and it will fail.  This *should* only happen if there are 
++             *  writers, thus the following test.  In that case, we simply
++             *  bail out, and continue waiting, rather than plunging on
++             *  and hoping that the operator can resolve the problem. 
++             */
++            if (dcr->dev->num_writers != 0) {
++               if (dcr->VolumeName[0]) {
++                  volume_unused(dcr);
++               }
+                goto bail_out;
+             }
+          }
+@@ -1270,6 +1297,51 @@
+    return ok;
+ }
+ 
++static int is_pool_ok(DCR *dcr)
++{
++   DEVICE *dev = dcr->dev;
++   JCR *jcr = dcr->jcr;
++
++   /* Now check if we want the same Pool and pool type */
++   if (strcmp(dev->pool_name, dcr->pool_name) == 0 &&
++       strcmp(dev->pool_type, dcr->pool_type) == 0) {
++      /* OK, compatible device */
++      Dmsg1(dbglvl, "OK dev: %s num_writers=0, reserved, pool matches\n", dev->print_name());
++      return 1;
++   } else {
++      /* Drive Pool not suitable for us */
++      Mmsg(jcr->errmsg, _(
++"3608 JobId=%u wants Pool=\"%s\" but have Pool=\"%s\" nreserve=%d on drive %s.\n"), 
++            (uint32_t)jcr->JobId, dcr->pool_name, dev->pool_name,
++            dev->reserved_device, dev->print_name());
++      queue_reserve_message(jcr);
++      Dmsg2(dbglvl, "failed: busy num_writers=0, reserved, pool=%s wanted=%s\n",
++         dev->pool_name, dcr->pool_name);
++   }
++   return 0;
++}
++
++static bool is_max_jobs_ok(DCR *dcr) 
++{
++   DEVICE *dev = dcr->dev;
++   JCR *jcr = dcr->jcr;
++
++   Dmsg4(dbglvl, "MaxJobs=%d Jobs=%d reserves=%d Vol=%s\n",
++         dcr->VolCatInfo.VolCatMaxJobs,
++         dcr->VolCatInfo.VolCatJobs, dev->reserved_device,
++         dcr->VolumeName);
++   if (dcr->VolCatInfo.VolCatMaxJobs > 0 && dcr->VolCatInfo.VolCatMaxJobs <=
++        (dcr->VolCatInfo.VolCatJobs + dev->reserved_device)) {
++      /* Max Job Vols depassed or already reserved */
++      Mmsg(jcr->errmsg, _("3610 JobId=%u Volume max jobs exceeded on drive %s.\n"), 
++            (uint32_t)jcr->JobId, dev->print_name());
++      queue_reserve_message(jcr);
++      Dmsg1(dbglvl, "reserve dev failed: %s", jcr->errmsg);
++      return false;                /* wait */
++   }
++   return true;
++}
++
+ /*
+  * Returns: 1 if drive can be reserved
+  *          0 if we should wait
+@@ -1285,6 +1357,11 @@
+          rctx.PreferMountedVols, rctx.exact_match, rctx.suitable_device,
+          rctx.autochanger_only, rctx.any_drive);
+ 
++   /* Check for max jobs on this Volume */
++   if (!is_max_jobs_ok(dcr)) {
++      return 0;
++   }
++
+    /* setting any_drive overrides PreferMountedVols flag */
+    if (!rctx.any_drive) {
+       /*
+@@ -1374,32 +1451,10 @@
+    if (dev->num_writers == 0) {
+       /* Now check if there are any reservations on the drive */
+       if (dev->reserved_device) {           
+-         /* Now check if we want the same Pool and pool type */
+-         if (strcmp(dev->pool_name, dcr->pool_name) == 0 &&
+-             strcmp(dev->pool_type, dcr->pool_type) == 0) {
+-            /* OK, compatible device */
+-            Dmsg2(dbglvl, "jid=%u OK dev: %s num_writers=0, reserved, pool matches\n",
+-               jcr->JobId, dev->print_name());
+-            return 1;
+-         } else {
+-            /* Drive Pool not suitable for us */
+-            Mmsg(jcr->errmsg, _(
+-"3608 JobId=%u wants Pool=\"%s\" but have Pool=\"%s\" nreserve=%d on drive %s.\n"), 
+-                  jcr->JobId, dcr->pool_name, dev->pool_name,
+-                  dev->reserved_device, dev->print_name());
+-            queue_reserve_message(jcr);
+-            Dmsg3(dbglvl, "jid=%u failed: busy num_writers=0, reserved, pool=%s wanted=%s\n",
+-               (int)jcr->JobId, dev->pool_name, dcr->pool_name);
+-            return 0;                 /* wait */
+-         }
++         return is_pool_ok(dcr);
+       } else if (dev->can_append()) {
+-         /* Device in append mode, check if changing pool */
+-         if (strcmp(dev->pool_name, dcr->pool_name) == 0 &&
+-             strcmp(dev->pool_type, dcr->pool_type) == 0) {
+-            Dmsg2(dbglvl, "jid=%u OK dev: %s num_writers=0, can_append, pool matches.\n",
+-               jcr->JobId, dev->print_name());
+-            /* OK, compatible device */
+-            return 1;
++         if (is_pool_ok(dcr)) {
++            return 1; 
+          } else {
+             /* Changing pool, unload old tape if any in drive */
+             Dmsg1(dbglvl, "jid=%u OK dev: num_writers=0, not reserved, pool change, unload changer\n",
+@@ -1419,22 +1474,7 @@
+     *  available if pool is the same).
+     */
+    if (dev->can_append() || dev->num_writers > 0) {
+-      /* Yes, now check if we want the same Pool and pool type */
+-      if (strcmp(dev->pool_name, dcr->pool_name) == 0 &&
+-          strcmp(dev->pool_type, dcr->pool_type) == 0) {
+-         Dmsg2(dbglvl, "jid=%u OK dev: %s num_writers>=0, can_append, pool matches.\n",
+-            jcr->JobId, dev->print_name());
+-         /* OK, compatible device */
+-         return 1;
+-      } else {
+-         /* Drive Pool not suitable for us */
+-         Mmsg(jcr->errmsg, _("3609 JobId=%u wants Pool=\"%s\" but has Pool=\"%s\" on drive %s.\n"), 
+-               jcr->JobId, dcr->pool_name, dev->pool_name, dev->print_name());
+-         queue_reserve_message(jcr);
+-         Dmsg3(dbglvl, "jid=%u failed: busy num_writers>0, can_append, pool=%s wanted=%s\n",
+-            (int)jcr->JobId, dev->pool_name, dcr->pool_name);
+-         return 0;                    /* wait */
+-      }
++      return is_pool_ok(dcr);
+    } else {
+       Pmsg1(000, _("Logic error!!!! JobId=%u Should not get here.\n"), (int)jcr->JobId);
+       Mmsg(jcr->errmsg, _("3910 JobId=%u Logic error!!!! drive %s Should not get here.\n"),

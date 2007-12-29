@@ -1,7 +1,74 @@
               Technical notes on version 2.2.x
 
 General:
-Release Version 2.2.5
+Release Version 2.2.7
+24Dec07
+kes  Partial back out (disabled) %f job code editing because it
+     does not build on Win32.
+kes  Fix seg fault Frank Sweetser reports in regression testing
+     on his systems. The problem was that the original author of
+     bsnprintf.c did not take into account the side effects of
+     using ++x in the argument to a #define.
+14Dec07
+kes  Apply patch from  Michael Stapelberg <michael@stapelberg.de>
+     that implements double quoting include names in conf files,
+     and also allows piping input by having the first character 
+     be a vertical bar (|). 
+kes  Apply patch from Bastian Friedrich <bastian.friedrich@collax.com>
+     that implement %f in RunScripts to pass the FileSet name.
+kes  Skip leading | when lex input comes from a pipe as suggested
+     by Michael Stapelberg <michael@stapelberg.de>.
+13Dec07
+kes  Apply patch for bsmtp Win32 daylight savings time fix supplied by
+     Nerijus Baliunas <nerijus@users.sourceforge.net>
+10Dec07
+kes  This patch corrects a problem where the maximum concurrent storage
+     jobs counter gets out of sync during restore jobs causing jobs to
+     'wait on max Storage jobs'.  This patch fixes bug #1009.
+08Dec07
+kes  Add new include to postgresql.c suggested by Marc Cousins so
+     that it compiles correctly with pgre version 8.3.  Also fix
+     misuse of %x with pointer (should be %p).
+03Dec07
+kes  This patch fixes bcopy so that it produces correct Volumes.
+     It fixes bug #1022.
+kes  This patch eliminates spurious output to the console during a VerifyVolume
+     job that contains encrypted data. It fixes bug #1024.
+02Dec07
+kes  This patch prevents the 'status dir' command from trying to use a scratch
+     volume and possibly moving it from one pool to another.  This patch fixes
+     bug #1019.
+30Nov07
+kes  Fix --archivedir addition to configure. Replace it with
+     --with-archivedir in configure.in  This fixes the regression
+     test builds.
+kes  This patch fixes bug #1012 where the job is canceled because
+     of Max Run Time exceeded when the job has not yet started.
+29Nov07
+ebl  Apply Richard Mortimer patch that fixes #1016 when there are more than
+     one 'part' to write.  Instead of each part being stored on disk,
+     written to DVD, then deleted from disk, all parts are written to disk,
+     and only the last is written and deleted from disk.
+27Nov07
+kes  Correct typos in disk-changer.in
+25Nov07
+kes  This patch fixes the status command to include the formating string for
+     JS_AttrInserting.  It fixes bug #1021.
+kes  This patch should fix the Mac OS X build problem on the latest
+     Darwin, where sys/types.h was not included correctly (apparently
+     due to a change in the Mac headers).  The solution was to explicitly
+     ensure that it is defined for the ./configure.
+     This patch also has a rebuild of configure that includes the Debian
+     qt4 patch to check for qmake-qt4. This patch fixes bug #1020.
+kes  This patch should ensure that queued messages to the console are
+     displayed as soon as possible.  It should fix bug #1007, but has been
+     reported not to work.
+14Nov07
+kes  This patch fixes the infinite loop when trying to increase the
+     maximum number of volumes in a Pool during the add command.
+     This patch fixes bug #1008. 
+
+Release Version 2.2.6
 09Nov07
 kes  Get fix for joblist bug in bat from trunk.
 04Nov07

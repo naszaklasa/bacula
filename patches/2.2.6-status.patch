@@ -1,0 +1,46 @@
+  This patch fixes the status command to include the formating string for
+  JS_AttrInsterting.  It fixes bug #1021.
+
+  Apply it to version 2.2.6 (and possibly earlier versions) with:
+
+  cd <bacula-source>
+  patch -p0 <2.2.6-status.patch
+  ./configure <your-options>
+  make
+  ...
+  make install
+
+
+Index: src/dird/ua_status.c
+===================================================================
+--- src/dird/ua_status.c	(revision 5979)
++++ src/dird/ua_status.c	(working copy)
+@@ -636,6 +636,12 @@
+       case JS_WaitPriority:
+          msg = _("is waiting for higher priority jobs to finish");
+          break;
++      case JS_AttrDespooling:
++         msg = _("SD despooling Attributes");
++         break;
++      case JS_AttrInserting:
++         msg = _("Dir inserting Attributes");
++         break;
+ 
+       default:
+          emsg = (char *)get_pool_memory(PM_FNAME);
+@@ -673,8 +679,14 @@
+             Mmsg(emsg, _("is waiting for Client %s to connect to Storage %s"),
+                  jcr->client->name(), jcr->wstore->name());
+         }
+-         msg = emsg;
++        msg = emsg;
++        break;
++      case JS_AttrDespooling:
++         msg = _("SD despooling Attributes");
+          break;
++      case JS_AttrInserting:
++         msg = _("Dir inserting Attributes");
++         break;
+       }
+       switch (jcr->JobType) {
+       case JT_ADMIN:

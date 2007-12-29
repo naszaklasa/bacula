@@ -4,7 +4,7 @@
  *
  *    Kern Sibbald, July MMII
  *
- *   Version $Id: verify_vol.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: verify_vol.c 6017 2007-12-03 19:27:38Z kerns $
  *
  */
 /*
@@ -211,19 +211,6 @@ void do_verify_volume(JCR *jcr)
          }
          break;
 
-      /* Data streams to ignore */
-      case STREAM_ENCRYPTED_SESSION_DATA:
-      case STREAM_FILE_DATA:
-      case STREAM_SPARSE_DATA:
-      case STREAM_WIN32_DATA:
-      case STREAM_WIN32_GZIP_DATA:
-      case STREAM_GZIP_DATA:
-      case STREAM_SPARSE_GZIP_DATA:
-      case STREAM_SIGNED_DIGEST:
-
-        /* Do nothing */
-        break;
-
       case STREAM_MD5_DIGEST:
          bin_to_base64(digest, sizeof(digest), (char *)sd->msg, CRYPTO_DIGEST_MD5_SIZE, true);
          Dmsg2(400, "send inx=%d MD5=%s\n", jcr->JobFiles, digest);
@@ -256,9 +243,10 @@ void do_verify_volume(JCR *jcr)
          Dmsg2(20, "bfiled>bdird: SHA512 len=%d: msg=%s\n", dir->msglen, dir->msg);
          break;
 
+      /* Ignore everything else */
       default:
-         Pmsg2(0, "None of above!!! stream=%d data=%s\n", stream,sd->msg);
          break;
+
       } /* end switch */
    } /* end while bnet_get */
    set_jcr_job_status(jcr, JS_Terminated);

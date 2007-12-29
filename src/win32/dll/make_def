@@ -6,7 +6,7 @@
 #  Kern Sibbald, June 2007
 #
 
-NM=../../../../cross-tools/mingw32/mingw32/bin/nm
+NM=../../../../../cross-tools/mingw32/mingw32/bin/nm
  
 echo "LIBRARY bacula.dll"
 echo "EXPORTS"

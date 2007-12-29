@@ -32,7 +32,7 @@
  *   Kern E. Sibbald, October 2002
  *
  *
- *   Version $Id: bcopy.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: bcopy.c 6017 2007-12-03 19:27:38Z kerns $
  */
 
 #include "bacula.h"
@@ -89,6 +89,7 @@ int main (int argc, char *argv[])
    char *iVolumeName = NULL;
    char *oVolumeName = NULL;
    bool ignore_label_errors = false;
+   bool ok;
 
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
@@ -199,9 +200,11 @@ int main (int argc, char *argv[])
    }
    out_block = out_jcr->dcr->block;
 
-   read_records(in_jcr->dcr, record_cb, mount_next_read_volume);
-   if (!write_block_to_device(out_jcr->dcr)) {
-      Pmsg0(000, _("Write of last block failed.\n"));
+   ok = read_records(in_jcr->dcr, record_cb, mount_next_read_volume);
+   if (ok || out_dev->can_write()) {
+      if (!write_block_to_device(out_jcr->dcr)) {
+         Pmsg0(000, _("Write of last block failed.\n"));
+      }
    }
 
    Pmsg2(000, _("%u Jobs copied. %u records copied.\n"), jobs, records);
@@ -253,6 +256,7 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
                   out_dev->print_name(), out_dev->bstrerror());
                Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
                      out_dev->bstrerror());
+               return false;
             }
          }
          if (!write_block_to_device(out_jcr->dcr)) {
@@ -260,8 +264,9 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
                out_dev->print_name(), out_dev->bstrerror());
             Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
                   out_dev->bstrerror());
+            return false;
          }
-         break;
+         return true;
       case EOM_LABEL:
          Pmsg0(000, _("EOM label not copied.\n"));
          return true;
@@ -269,7 +274,7 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
          Pmsg0(000, _("EOT label not copied.\n"));
          return true;
       default:
-         break;
+         return true;
       }
    }
 
@@ -283,7 +288,7 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
             out_dev->print_name(), out_dev->bstrerror());
          Jmsg(out_jcr, M_FATAL, 0, _("Cannot fixup device error. %s\n"),
                out_dev->bstrerror());
-         break;
+         return false;
       }
    }
    return true;

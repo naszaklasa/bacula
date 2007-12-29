@@ -5,7 +5,7 @@
 
 # basic defines for every build
 %define _version @VERSION@
-%define _release 2
+%define _release 1
 %define depkgs_version 09Sep07
 %define _rescuever @VERSION@
 %define docs_version @VERSION@
@@ -186,7 +186,7 @@ exit 1
 %define db_backend mysql
 %endif
 %if %{sqlite}
-%define db_backend sqlite
+%define db_backend sqlite3
 %endif
 %if %{postgresql}
 %define db_backend postgresql
@@ -293,7 +293,7 @@ BuildRequires: pkgconfig, pango-devel, atk-devel
 # so fix for broken rh
 %define broken_rh 0
 %if %{rhel5} || %{centos5} || %{sl5} || %{fc5} || %{fc6} || %{fc7}
-%define broken_rh 1"
+%define broken_rh 1
 %endif
 %if %{bat} && ! %{broken_rh}
 BuildRequires: qt-devel >= 4.2
@@ -673,7 +673,7 @@ This build requires MySQL to be installed separately as the catalog database.
 This build requires PostgreSQL to be installed separately as the catalog database.
 %endif
 %if %{sqlite}
-This build incorporates sqlite as the catalog database, statically compiled.
+This build incorporates sqlite3 as the catalog database, statically compiled.
 %endif
 %if %{python}
 This build includes python scripting support.
@@ -1138,7 +1138,7 @@ export LDFLAGS="${LDFLAGS} -L/usr/lib/termcap"
 cwd=${PWD}
 cd %{depkgs}
 %if %{sqlite}
-make sqlite
+make sqlite3
 %endif
 %if ! %{client_only}
 make mtx
@@ -1151,17 +1151,19 @@ cd ${cwd}
 # patches for the bundled sqlite scripts
 
 # patch the make_sqlite_tables script for installation bindir
-patch src/cats/make_sqlite_tables.in src/cats/make_sqlite_tables.in.patch
+#patch src/cats/make_sqlite_tables.in src/cats/make_sqlite_tables.in.patch
+patch src/cats/make_sqlite3_tables.in src/cats/make_sqlite3_tables.in.patch
 
 # patch the create_sqlite_database script for installation bindir
-# not necessary after 1.39.26 no longer references sqlite binary
 #patch src/cats/create_sqlite_database.in src/cats/create_sqlite_database.in.patch
+patch src/cats/create_sqlite3_database.in src/cats/create_sqlite3_database.in.patch
 
 # patch the make_catalog_backup script for installation bindir
 patch src/cats/make_catalog_backup.in src/cats/make_catalog_backup.in.patch
 
 # patch the update_sqlite_tables script for installation bindir
-patch src/cats/update_sqlite_tables.in src/cats/update_sqlite_tables.in.patch
+#patch src/cats/update_sqlite_tables.in src/cats/update_sqlite_tables.in.patch
+patch src/cats/update_sqlite3_tables.in src/cats/update_sqlite3_tables.in.patch
 
 # patch the bacula-dir init script to remove sqlite service
 %if %{sqlite} && %{su9}
@@ -1236,7 +1238,7 @@ make
         --with-mysql \
 %endif
 %if %{sqlite}
-        --with-sqlite=${cwd}/%{depkgs}/sqlite \
+        --with-sqlite3=${cwd}/%{depkgs}/sqlite3 \
 %endif
 %if %{postgresql}
         --with-postgresql \
@@ -1475,9 +1477,9 @@ ln -sf consolehelper $RPM_BUILD_ROOT/usr/bin/bat
 
 # install sqlite
 %if %{sqlite}
-cp -p %{depkgs}/sqlite/sqlite $RPM_BUILD_ROOT%{sqlite_bindir}/sqlite
-cp -p %{depkgs}/sqlite/sqlite.h $RPM_BUILD_ROOT%{sqlite_bindir}/sqlite.h
-cp -p %{depkgs}/sqlite/libsqlite.a $RPM_BUILD_ROOT%{sqlite_bindir}/libsqlite.a
+cp -p %{depkgs}/sqlite3/sqlite3 $RPM_BUILD_ROOT%{sqlite_bindir}/sqlite3
+cp -p %{depkgs}/sqlite3/sqlite3.h $RPM_BUILD_ROOT%{sqlite_bindir}/sqlite3.h
+cp -p %{depkgs}/sqlite3/libsqlite3.a $RPM_BUILD_ROOT%{sqlite_bindir}/libsqlite3.a
 %endif
 
 # install the logrotate file
@@ -1498,12 +1500,17 @@ chmod 644 $RPM_BUILD_ROOT/etc/log.d/conf/services/bacula.conf
 
 # install the rescue files
 mkdir $RPM_BUILD_ROOT%{sysconf_dir}/rescue
+mkdir $RPM_BUILD_ROOT%{sysconf_dir}/rescue/freebsd
+mkdir $RPM_BUILD_ROOT%{sysconf_dir}/rescue/solaris
 cp -p %{_rescuesrc}/Makefile* $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
+cp -p %{_rescuesrc}/freebsd/Makefile* $RPM_BUILD_ROOT%{sysconf_dir}/rescue/freebsd/
+cp -p %{_rescuesrc}/solaris/Makefile* $RPM_BUILD_ROOT%{sysconf_dir}/rescue/solaris/
 cp -p %{_rescuesrc}/README $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
 cp -p %{_rescuesrc}/configure $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
 cp -p %{_rescuesrc}/version.h $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
 cp -pr %{_rescuesrc}/linux $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
 cp -pr %{_rescuesrc}/autoconf $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
+cp -pr %{_rescuesrc}/knoppix $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
 touch $RPM_BUILD_ROOT%{sysconf_dir}/rescue/linux/cdrom/rpm_release
 cp -p src/filed/static-bacula-fd $RPM_BUILD_ROOT%{sysconf_dir}/rescue/linux/cdrom/bacula/bin/bacula-fd
 rm -f src/filed/static-bacula-fd
@@ -1561,15 +1568,15 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %if %{sqlite}
 %files sqlite
 %defattr(-,root,root)
-%attr(-, root, %{daemon_group}) %{script_dir}/create_sqlite_database
-%attr(-, root, %{daemon_group}) %{script_dir}/drop_sqlite_database
-%attr(-, root, %{daemon_group}) %{script_dir}/grant_sqlite_privileges
-%attr(-, root, %{daemon_group}) %{script_dir}/make_sqlite_tables
-%attr(-, root, %{daemon_group}) %{script_dir}/drop_sqlite_tables
-%attr(-, root, %{daemon_group}) %{script_dir}/update_sqlite_tables
-%{sqlite_bindir}/libsqlite.a
-%{sqlite_bindir}/sqlite.h
-%{sqlite_bindir}/sqlite
+%attr(-, root, %{daemon_group}) %{script_dir}/create_sqlite3_database
+%attr(-, root, %{daemon_group}) %{script_dir}/drop_sqlite3_database
+%attr(-, root, %{daemon_group}) %{script_dir}/grant_sqlite3_privileges
+%attr(-, root, %{daemon_group}) %{script_dir}/make_sqlite3_tables
+%attr(-, root, %{daemon_group}) %{script_dir}/drop_sqlite3_tables
+%attr(-, root, %{daemon_group}) %{script_dir}/update_sqlite3_tables
+%{sqlite_bindir}/libsqlite3.a
+%{sqlite_bindir}/sqlite3.h
+%{sqlite_bindir}/sqlite3
 %endif
 
 %if %{postgresql}
@@ -1662,9 +1669,29 @@ DB_VER=`mysql 2>/dev/null bacula -e 'select * from Version;'|tail -n 1`
 
 %if %{sqlite}
 %pre sqlite
-# test for bacula database older than version 9
+# are we upgrading from sqlite to sqlite3?
 if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite ];then
-        DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
+        echo "This version of bacula-sqlite involves an upgrade to sqlite3."
+	echo "Your catalog database file is not compatible with sqlite3, thus"
+	echo "you will need to dump the data, delete the old file, and re-run"
+	echo "this rpm upgrade."
+	echo ""
+	echo "Backing up your current database..."
+        echo ".dump" | %{sqlite_bindir}/sqlite %{working_dir}/bacula.db > %{working_dir}/bacula_backup.sql
+	mv %{working_dir}/bacula.db %{working_dir}/bacula.db.old
+	echo "Your catalog data has been saved in %{working_dir}/bacula_backup.sql and your"
+	echo "catalog file has been renamed %{working_dir}/bacula.db.old."
+	echo ""
+	echo "Please re-run this rpm package upgrade."
+	echo "After the upgrade is complete, restore your catalog"
+	echo "with the following commands:"
+	echo "%{script_dir}/drop_sqlite3_tables"
+	echo "%{sqlite_bindir}/sqlite3 $* bacula.db < %{working_dir}/bacula_backup.sql"
+	exit 1
+fi
+# test for bacula database older than version 9 and sqlite3
+if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite3 ];then
+        DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite3 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
 %endif
 
 %if %{postgresql}
@@ -1794,24 +1821,24 @@ fi
 %if %{sqlite}
 # test for an existing database
 if [ -s %{working_dir}/bacula.db ]; then
-        DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
+        DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite3 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
         # check to see if we need to upgrade a 1.38 or lower database
         if [ "$DB_VER" -lt "10" ] && [ "$DB_VER" -ge "9" ]; then
                 echo "This release requires an upgrade to your bacula database."
                 echo "Backing up your current database..."
-                echo ".dump" | %{sqlite_bindir}/sqlite %{working_dir}/bacula.db | bzip2 > %{working_dir}/bacula_backup.sql.bz2
+                echo ".dump" | %{sqlite_bindir}/sqlite3 %{working_dir}/bacula.db | bzip2 > %{working_dir}/bacula_backup.sql.bz2
                 echo "Upgrading bacula database ..."
-		%{script_dir}/update_sqlite_tables
+		%{script_dir}/update_sqlite3_tables
                 echo "If bacula works correctly you can remove the backup file %{working_dir}/bacula_backup.sql.bz2"
         fi
 else
         # create the database and tables
         echo "Hmm, doesn't look like you have an existing database."
         echo "Creating SQLite database..."
-	%{script_dir}/create_sqlite_database
+	%{script_dir}/create_sqlite3_database
 	chown %{director_daemon_user}.%{daemon_group} %{working_dir}/bacula.db
         echo "Creating the SQLite tables..."
-	%{script_dir}/make_sqlite_tables
+	%{script_dir}/make_sqlite3_tables
 fi
 %endif
 
@@ -2137,6 +2164,10 @@ fi
 %endif
 
 %changelog
+* Sat Nov 17 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- switch to sqlite3
+* Sun Nov 11 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add new files required by rescue makefile
 * Sat Nov 10 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - add su103 build target
 * Sun Nov 04 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>

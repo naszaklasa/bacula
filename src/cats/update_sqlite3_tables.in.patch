@@ -1,0 +1,11 @@
+--- update_sqlite3_tables.in	2007-11-17 08:33:18.000000000 -0500
++++ update_sqlite3_tables.in.fixed	2007-11-17 08:35:50.000000000 -0500
+@@ -9,7 +9,7 @@
+ echo "this script may take several minutes to run."
+ echo " "
+ 
+-bindir=@SQL_BINDIR@
++bindir=/usr/lib/bacula/sqlite
+ cd @working_dir@
+ sqlite=@DB_TYPE@
+ db_name=@db_name@

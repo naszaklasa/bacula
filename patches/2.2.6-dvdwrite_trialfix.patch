@@ -1,0 +1,28 @@
+  This patch should fix #1016 when there are more than one "part" to write.
+  Instead of each part being stored on disk, written to DVD, then deleted from
+  disk, all parts are written to disk, and only the last is written and deleted
+  from disk.
+
+  Apply it to 2.2.6 (and possibly previous 2.2.x versions) with:
+
+  cd <bacula-source>
+  patch -p0 <2.2.6-dvdwrite_trialfix.patch
+  ./configure <your-options>
+  make
+  ...
+  make install
+
+
+Index: src/stored/dev.c
+===================================================================
+--- src/stored/dev.c	(revision 5996)
++++ src/stored/dev.c	(working copy)
+@@ -1856,7 +1856,7 @@
+    /* Clean up device packet so it can be reused */
+    clear_opened();
+    state &= ~(ST_LABEL|ST_READ|ST_APPEND|ST_EOT|ST_WEOT|ST_EOF|
+-              ST_MOUNTED|ST_MEDIA|ST_SHORT|ST_FREESPACE_OK|ST_PART_SPOOLED);
++              ST_MOUNTED|ST_MEDIA|ST_SHORT);
+    label_type = B_BACULA_LABEL;
+    file = block_num = 0;
+    file_size = 0;

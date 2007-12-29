@@ -1,0 +1,25 @@
+ This patch should ensure that queued messages to the console are
+ displayed as soon as possible.  It should fix bug 1007, but has been
+ reported not to work.
+
+ Apply it to version 2.2.6 (or any prior 2.2.x) with:
+
+ cd <bacula-source>
+ ./configure <your-options>
+ patch -p0 <2.2.6-queued-msg.patch
+ make
+ ...
+ make install
+
+Index: src/dird/ua_server.c
+===================================================================
+--- src/dird/ua_server.c	(revision 5979)
++++ src/dird/ua_server.c	(working copy)
+@@ -146,6 +146,7 @@
+          } else {
+             do_a_command(ua, ua->cmd);
+          }
++         dequeue_messages(ua->jcr);
+          if (!ua->quit) {
+             if (console_msg_pending && acl_access_ok(ua, Command_ACL, "messages", 8)) {
+                if (ua->auto_display_messages) {

@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, 2000
  *
- *   Version $Id: lex.c 5377 2007-08-19 06:13:00Z kerns $
+ *   Version $Id: lex.c 6067 2007-12-14 16:25:59Z kerns $
  *
  */
 
@@ -174,7 +174,7 @@ LEX *lex_open_file(LEX *lf, const char *filename, LEX_ERROR_HANDLER *scan_error)
 
 
    if (fname[0] == '|') {
-      if ((bpipe = open_bpipe(fname, 0, "rb")) == NULL) {
+      if ((bpipe = open_bpipe(fname+1, 0, "rb")) == NULL) {
          free(fname);
          return NULL;
       }
@@ -297,6 +297,8 @@ static const char *lex_state_to_str(int state)
    case lex_identifier:    return _("identifier");
    case lex_string:        return _("string");
    case lex_quoted_string: return _("quoted_string");
+   case lex_include:       return _("include");
+   case lex_include_quoted_string: return _("include_quoted_string");
    case lex_utf8_bom:      return _("UTF-8 Byte Order Mark");
    case lex_utf16_le_bom:  return _("UTF-16le Byte Order Mark");
    default:                return "??????";
@@ -567,11 +569,49 @@ lex_get_token(LEX *lf, int expect)
          }
          add_str(lf, ch);
          break;
+      case lex_include_quoted_string:
+         if (ch == L_EOF) {
+            token = T_ERROR;
+            break;
+         }
+         if (esc_next) {
+            add_str(lf, ch);
+            esc_next = false;
+            break;
+         }
+         if (ch == '\\') {
+            esc_next = true;
+            break;
+         }
+         if (ch == '"') {
+            /* Keep the original LEX so we can print an error if the included file can't be opened. */
+            LEX* lfori = lf;
+            /* Skip the double quote when restarting parsing */
+            lex_get_char(lf);
+
+            lf->state = lex_none;
+            lf = lex_open_file(lf, lf->str, lf->scan_error);
+            if (lf == NULL) {
+               berrno be;
+               scan_err2(lfori, _("Cannot open included config file %s: %s\n"),
+                  lfori->str, be.bstrerror());
+               return T_ERROR;
+            }
+            break;
+         }
+         add_str(lf, ch);
+         break;
       case lex_include:            /* scanning a filename */
          if (ch == L_EOF) {
             token = T_ERROR;
             break;
          }
+         if (ch == '"') {
+            lf->state = lex_include_quoted_string;
+            break;
+         }
+
+
          if (B_ISSPACE(ch) || ch == '\n' || ch == L_EOL || ch == '}' || ch == '{' ||
              ch == ';' || ch == ','   || ch == '"' || ch == '#') {
             /* Keep the original LEX so we can print an error if the included file can't be opened. */

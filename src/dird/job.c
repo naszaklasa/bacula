@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c 5713 2007-10-03 11:36:47Z kerns $
+ *    Version $Id: job.c 6000 2007-11-30 21:28:39Z kerns $
  */
 
 #include "bacula.h"
@@ -556,7 +556,7 @@ static bool job_check_maxwaittime(JCR *control_jcr, JCR *jcr)
  */
 static bool job_check_maxruntime(JCR *control_jcr, JCR *jcr)
 {
-   if (jcr->job->MaxRunTime == 0 || job_canceled(jcr)) {
+   if (jcr->job->MaxRunTime == 0 || job_canceled(jcr) || jcr->JobStatus == JS_Created) {
       return false;
    }
    if ((watchdog_time - jcr->start_time) < jcr->job->MaxRunTime) {
@@ -931,6 +931,7 @@ void set_jcr_defaults(JCR *jcr, JOB *job)
 {
    jcr->job = job;
    jcr->JobType = job->JobType;
+   jcr->JobStatus = JS_Created;
    switch (jcr->JobType) {
    case JT_ADMIN:
    case JT_RESTORE:
