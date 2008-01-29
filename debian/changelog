@@ -17,6 +17,8 @@ bacula (2.2.8-1) unstable; urgency=low
     Applied patch ac7bb3384082 from James Westby.  Closes: #452683.
   * Init script updates to have dependency information.
     Applied patch from Petter Reinholdtsen.  CLoses: #460252.
+  * Make bacula-common Pre-Depends instead of Depends on adduser.
+    Closes: #452684.
   * Merged the following changes from Mark Hymer's Mercurial tree:
     + Upstream 2.2.6 and 2.2.7.  Closes: #458780.
     + Bump Build-Dep for libgtk2.0-dev to be >= 2.10 as the traymonitor

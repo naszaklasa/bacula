@@ -32,8 +32,8 @@ Description: Network backup, recovery and verification (Meta-package)
 
 Package: bacula-common
 Architecture: any
-Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
-Depends: adduser (>= 3.0), ${shlibs:Depends}
+Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, adduser (>= 3.0)
+Depends: ${shlibs:Depends}
 Suggests: bacula-doc
 Description: Network backup, recovery and verification (Common Support files)
  Bacula is a set of computer programs that permit you to manage backup,
