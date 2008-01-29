@@ -39,7 +39,7 @@ CREATE TABLE File (
    MD5 TINYBLOB,
    PRIMARY KEY(FileId),
    INDEX (PathId),
-   INDEX (FileNameId, PathId),
+   INDEX (FilenameId, PathId),
    INDEX (JobId, PathId, FilenameId)
    );
 

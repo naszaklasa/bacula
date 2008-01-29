@@ -8,4 +8,4 @@ if [ -z "$1" -o -z "$2" ]; then
 	exit 1
 fi
 	
-cat $1 | sed -e s~`hostname`~@hostname@~g | sed -r -f `dirname $0`/fix_config.sed > $2
+cat $1 | sed -e s~`uname -n | cut -d '.' -f 1`~@hostname@~g | sed -r -f `dirname $0`/fix_config.sed > $2
