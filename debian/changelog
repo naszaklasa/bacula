@@ -1,23 +1,19 @@
 bacula (2.2.7-1) unstable; urgency=low
 
   * New upstream release. 
-  * Bump Build-Dep for libgtk2.0-dev to be >= 2.10 as the traymonitor
-    code needs it.
+  * Merged the following changes from Mark Hymer's Mercurial tree:
+    + Upstream 2.2.6 and 2.2.7.  Closes: #458780.
+    + Bump Build-Dep for libgtk2.0-dev to be >= 2.10 as the traymonitor
+      code needs it.
+    + Update libmysqlclient-dev Build-Dep.  Closes: #439969.
+    + Use correct path to mtx-changer.  Closes: #435627.
+    + Install tray-monitor.conf file.  Closes: #413754.
+    + Only alter permissions and ownership on files in /etc/bacula when we
+      install them; don't clobber local changes.
+    + Simplify scripts by removing support for upgrading from versions which
+      are pre-sarge.
 
- -- Mark Hymers <mhy@debian.org>  Sat, 29 Dec 2007 17:26:23 +0000
-
-bacula (2.2.6-1) unstable; urgency=low
-
-  * New upstream release
-  * Update libmysqlclient-dev Build-Dep.  Closes: #439969.
-  * Use correct path to mtx-changer.  Closes: #435627.
-  * Install tray-monitor.conf file.  Closes: #413754.
-  * Only alter permissions and ownership on files in /etc/bacula when we
-    install them; don't clobber local changes.
-  * Simplify scripts by removing support for upgrading from versions which
-    are pre-sarge.
-
- -- Mark Hymers <mhy@debian.org>  Wed, 14 Nov 2007 08:21:45 +0000
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 14 Nov 2007 08:21:45 +0000
 
 bacula (2.2.5-1) unstable; urgency=medium
 
