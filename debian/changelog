@@ -35,7 +35,7 @@ bacula (2.2.8-1) unstable; urgency=low
     + Simplify scripts by removing support for upgrading from versions which
       are pre-sarge.
 
- -- John Goerzen <jgoerzen@complete.org>  Wed, 14 Nov 2007 08:21:45 +0000
+ -- John Goerzen <jgoerzen@complete.org>  Tue, 29 Jan 2008 04:12:36 -0600
 
  bacula (2.2.6-0.1) unstable; urgency=low
 
