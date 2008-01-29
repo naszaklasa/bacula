@@ -2,6 +2,9 @@ bacula (2.2.8-1) unstable; urgency=low
 
   * New upstream release.  (2.2.8 prepared by John Goerzen)
   * Added build-dep on postgresql-server-dev-8.2.  Closes: #462502.
+  * Moved btraceback and btraceback.gdb from bacula-director-common
+    to bacula-common.  Closes: #452183.  This change meant that
+    bacula-common changes from arch all to arch any.
   * Fixed debian/watch file.  Thanks to Raphael Geissert for the
     patch.  Closes: #449666.
   * New German debconf translation from Helge Kreutzmann.
