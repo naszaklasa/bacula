@@ -21,9 +21,9 @@ clean: $(DIRS)
 $(DIRS):
 	@if test -f Makefile.inc; then \
 	   if $(MAKE) -C $@ $(MAKECMDGOALS); then \
-		echo -e "\n===== Make of $@ succeeded =====\n\n" ; \
+		echo "\n===== Make of $@ succeeded =====\n\n" ; \
 	   else  \
-		echo -e "\n!!!!! Make of $@ failed !!!!!\n\n" ; \
+		echo "\n!!!!! Make of $@ failed !!!!!\n\n" ; \
 	   fi ; \
 	fi
 
@@ -39,8 +39,8 @@ Makefile.inc: Makefile.inc.in
 		INCDIR=/mingw/include; \
 		DLLDIR=/mingw/bin; \
 	else \
-		echo -e "\nThe GCC cross compiler isn't installed."; \
-		echo -e "You must run build-win32-cross-tools and build-dependencies first.\n"; \
+		echo "\nThe GCC cross compiler isn't installed."; \
+		echo "You must run build-win32-cross-tools and build-dependencies first.\n"; \
 		exit 1; \
 	fi ; \
 	$(ECHO_CMD)BUILDDIR=`(pwd)`; \

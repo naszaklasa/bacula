@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: mount.c 5552 2007-09-14 09:49:06Z kerns $
+ *   Version $Id: mount.c 6185 2008-01-03 14:08:43Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -60,7 +60,7 @@ enum {
  *  impossible to get the requested Volume.
  *
  */
-bool mount_next_write_volume(DCR *dcr, bool release)
+bool mount_next_write_volume(DCR *dcr, bool have_vol, bool release)
 {
    int retry = 0;
    bool ask = false, recycle, autochanger;
@@ -108,12 +108,16 @@ mount_next_vol:
     *    in dcr->VolCatInfo
     */
    Dmsg0(200, "Before dir_find_next_appendable_volume.\n");
-   while (!dir_find_next_appendable_volume(dcr)) {
-       Dmsg0(200, "not dir_find_next\n");
-       if (!dir_ask_sysop_to_create_appendable_volume(dcr)) {
-         return false;
+   if (!have_vol) {
+      while (!dir_find_next_appendable_volume(dcr)) {
+         Dmsg0(200, "not dir_find_next\n");
+         if (!dir_ask_sysop_to_create_appendable_volume(dcr)) {
+            return false;
+          }
+          Dmsg0(200, "Again dir_find_next_append...\n");
        }
-       Dmsg0(200, "Again dir_find_next_append...\n");
+   } else {
+      have_vol = false;               /* set false for next pass if any */
    }
    if (job_canceled(jcr)) {
       return false;
@@ -144,7 +148,7 @@ mount_next_vol:
     * If we autochanged to correct Volume or (we have not just
     *   released the Volume AND we can automount) we go ahead
     *   and read the label. If there is no tape in the drive,
-    *   we will err, recurse and ask the operator the next time.
+    *   we will fail, recurse and ask the operator the next time.
     */
    if (!release && dev->is_tape() && dev->has_cap(CAP_AUTOMOUNT)) {
       Dmsg0(150, "(1)Ask=0\n");
@@ -432,7 +436,7 @@ read_volume:
       }
       dev->VolCatInfo.VolCatMounts++;      /* Update mounts */
       Dmsg1(150, "update volinfo mounts=%d\n", dev->VolCatInfo.VolCatMounts);
-      if (!dir_update_volume_info(dcr, false)) {
+      if (!dir_update_volume_info(dcr, false, false)) {
          return false;
       }
       
@@ -519,7 +523,7 @@ static int try_autolabel(DCR *dcr, bool opened)
       Dmsg0(150, "dir_update_vol_info. Set Append\n");
       /* Copy Director's info into the device info */
       dev->VolCatInfo = dcr->VolCatInfo;    /* structure assignment */
-      if (!dir_update_volume_info(dcr, true)) {  /* indicate tape labeled */
+      if (!dir_update_volume_info(dcr, true, true)) {  /* indicate tape labeled */
          return try_error;
       }
       Jmsg(dcr->jcr, M_INFO, 0, _("Labeled new Volume \"%s\" on device %s.\n"),
@@ -552,7 +556,7 @@ void mark_volume_in_error(DCR *dcr)
    dev->VolCatInfo = dcr->VolCatInfo;     /* structure assignment */
    bstrncpy(dev->VolCatInfo.VolCatStatus, "Error", sizeof(dev->VolCatInfo.VolCatStatus));
    Dmsg0(150, "dir_update_vol_info. Set Error.\n");
-   dir_update_volume_info(dcr, false);
+   dir_update_volume_info(dcr, false, false);
 }
 
 /*
@@ -570,7 +574,7 @@ static void mark_volume_not_inchanger(DCR *dcr)
    dcr->VolCatInfo.InChanger = false;
    dev->VolCatInfo.InChanger = false;
    Dmsg0(400, "update vol info in mount\n");
-   dir_update_volume_info(dcr, true);  /* set new status */
+   dir_update_volume_info(dcr, true, false);  /* set new status */
 }
 
 /*
@@ -588,6 +592,7 @@ void release_volume(DCR *dcr)
    /*
     * First erase all memory of the current volume
     */
+   free_volume(dev);
    dev->block_num = dev->file = 0;
    dev->EndBlock = dev->EndFile = 0;
    memset(&dev->VolCatInfo, 0, sizeof(dev->VolCatInfo));

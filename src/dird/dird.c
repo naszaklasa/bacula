@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: dird.c 5552 2007-09-14 09:49:06Z kerns $
+ *   Version $Id: dird.c 6184 2008-01-03 14:05:33Z kerns $
  */
 
 #include "bacula.h"
@@ -58,6 +58,7 @@ void term_job_server();
 void store_jobtype(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_level(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_replace(LEX *lc, RES_ITEM *item, int index, int pass);
+void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass);
 void init_device_resources();
 
 static char *runjob = NULL;
@@ -698,6 +699,7 @@ static bool check_resources()
                           job_items[i].handler == store_jobtype ||
                           job_items[i].handler == store_level   ||
                           job_items[i].handler == store_pint    ||
+                          job_items[i].handler == store_migtype ||
                           job_items[i].handler == store_replace) {
                   def_ivalue = (int *)((char *)(job->jobdefs) + offset);
                   Dmsg5(400, "Job \"%s\", field \"%s\" def_ivalue=%d item %d offset=%u\n",

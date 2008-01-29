@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: acquire.c 5552 2007-09-14 09:49:06Z kerns $
+ *   Version $Id: acquire.c 6185 2008-01-03 14:08:43Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -38,6 +38,7 @@
 
 /* Forward referenced functions */
 static void attach_dcr_to_dev(DCR *dcr);
+static bool is_suitable_volume_mounted(DCR *dcr);
 
 
 /*********************************************************************
@@ -316,9 +317,9 @@ get_out:
  */
 DCR *acquire_device_for_append(DCR *dcr)
 {
-   bool release = false;
-   bool recycle = false;
    bool do_mount = false;
+   bool release = false;
+   bool have_vol;
    DEVICE *dev = dcr->dev;
    JCR *jcr = dcr->jcr;
 
@@ -337,6 +338,11 @@ DCR *acquire_device_for_append(DCR *dcr)
       goto get_out;
    }
 
+   /*
+    * have_vol defines whether or not mount_next_write_volume should
+    *   ask the Director again about what Volume to use.
+    */
+   have_vol = is_suitable_volume_mounted(dcr);
    if (dev->can_append()) {
       Dmsg0(190, "device already in append.\n");
       /*
@@ -351,25 +357,11 @@ DCR *acquire_device_for_append(DCR *dcr)
        *  dcr->VolumeName is what we pass into the routines, or
        *    get back from the subroutines.
        */
-      bstrncpy(dcr->VolumeName, dev->VolHdr.VolumeName, sizeof(dcr->VolumeName));
-      if (!dir_get_volume_info(dcr, GET_VOL_INFO_FOR_WRITE) &&
+      if (!have_vol &&
           !(dir_find_next_appendable_volume(dcr) &&
             strcmp(dev->VolHdr.VolumeName, dcr->VolumeName) == 0)) { /* wrong tape mounted */
-         Dmsg2(190, "Wrong tape mounted: %s. wants:%s\n", dev->VolHdr.VolumeName,
-            dcr->VolumeName);
-         /* Release volume reserved by dir_find_next_appendable_volume() */
-         if (dcr->VolumeName[0]) {
-            volume_unused(dcr);
-         }
-         if (dev->num_writers != 0) {
-            Jmsg3(jcr, M_FATAL, 0, _("Wanted to append to Volume \"%s\", but device %s is busy writing on \"%s\" .\n"), 
-                 dcr->VolumeName, dev->print_name(), dev->VolHdr.VolumeName);
-            Dmsg3(200, "Wanted to append to Volume \"%s\", but device %s is busy writing on \"%s\" .\n",  
-                 dcr->VolumeName, dev->print_name(), dev->VolHdr.VolumeName);
-            goto get_out;
-         }
          /* Wrong tape mounted, release it, then fall through to get correct one */
-         Dmsg0(190, "Wrong tape mounted, release and try mount.\n");
+         Dmsg0(50, "Wrong tape mounted, release and try mount.\n");
          release = true;
          do_mount = true;
       } else {
@@ -378,14 +370,17 @@ DCR *acquire_device_for_append(DCR *dcr)
           *   we do not need to do mount_next_write_volume(), unless
           *   we need to recycle the tape.
           */
-          recycle = strcmp(dcr->VolCatInfo.VolCatStatus, "Recycle") == 0;
-          Dmsg1(190, "Correct tape mounted. recycle=%d\n", recycle);
-          if (recycle && dev->num_writers != 0) {
+          do_mount = strcmp(dcr->VolCatInfo.VolCatStatus, "Recycle") == 0;
+          Dmsg2(190, "jid=%u Correct tape mounted. recycle=%d\n", 
+                (uint32_t)jcr->JobId, do_mount);
+#ifdef xxx
+          if (do_mount && dev->num_writers != 0) {
              Jmsg(jcr, M_FATAL, 0, _("Cannot recycle volume \"%s\""
                   " on device %s because it is in use by another job.\n"),
                   dev->VolHdr.VolumeName, dev->print_name());
              goto get_out;
           }
+#endif
           if (dev->num_writers == 0) {
              memcpy(&dev->VolCatInfo, &dcr->VolCatInfo, sizeof(dev->VolCatInfo));
           }
@@ -415,21 +410,23 @@ DCR *acquire_device_for_append(DCR *dcr)
       }
    } else {
       /* Not already in append mode, so mount the device */
-      Dmsg0(190, "Not in append mode, try mount.\n");
+      Dmsg2(190, "jid=%u Not in append mode, try mount have_vol=%d\n", 
+            (uint32_t)jcr->JobId, have_vol);
+
       ASSERT(dev->num_writers == 0);
       do_mount = true;
    }
 
-   if (do_mount || recycle) {
-      Dmsg0(190, "Do mount_next_write_vol\n");
-      bool mounted = mount_next_write_volume(dcr, release);
+   if (do_mount || !have_vol) {
+      Dmsg1(190, "jid=%u Do mount_next_write_vol\n", (uint32_t)jcr->JobId);
+      bool mounted = mount_next_write_volume(dcr, have_vol, release);
       if (!mounted) {
          if (!job_canceled(jcr)) {
             /* Reduce "noise" -- don't print if job canceled */
             Jmsg(jcr, M_FATAL, 0, _("Could not ready device %s for append.\n"),
                dev->print_name());
-            Dmsg1(200, "Could not ready device %s for append.\n", 
-               dev->print_name());
+            Dmsg2(200, "jid=%u Could not ready device %s for append.\n", 
+               (uint32_t)jcr->JobId, dev->print_name());
          }
          goto get_out;
       }
@@ -441,11 +438,12 @@ DCR *acquire_device_for_append(DCR *dcr)
       jcr->NumWriteVolumes = 1;
    }
    dev->VolCatInfo.VolCatJobs++;              /* increment number of jobs on vol */
-   dir_update_volume_info(dcr, false);        /* send Volume info to Director */
+   dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
    dev->dlock();
    if (dcr->reserved_device) {
       dev->reserved_device--;
-      Dmsg2(100, "Dec reserve=%d dev=%s\n", dev->reserved_device, dev->print_name());
+      Dmsg3(100, "jid=%u Dec reserve=%d dev=%s\n", (uint32_t)jcr->JobId,
+            dev->reserved_device, dev->print_name());
       dcr->reserved_device = false;
    }
    dev->dunblock(DEV_LOCKED);
@@ -458,13 +456,26 @@ get_out:
    dev->dlock();
    if (dcr->reserved_device) {
       dev->reserved_device--;
-      Dmsg2(100, "Dec reserve=%d dev=%s\n", dev->reserved_device, dev->print_name());
+      Dmsg3(100, "jid=%u Dec reserve=%d dev=%s\n", (uint32_t)jcr->JobId, 
+            dev->reserved_device, dev->print_name());
       dcr->reserved_device = false;
    }
    dev->dunblock(DEV_LOCKED);
    return NULL;
 }
 
+
+static bool is_suitable_volume_mounted(DCR *dcr)
+{
+   DEVICE *dev = dcr->dev;
+
+   /* Volume mounted? */
+   if (dev->VolHdr.VolumeName[0] == 0) {
+      return false;                      /* no */
+   }
+   bstrncpy(dcr->VolumeName, dev->VolHdr.VolumeName, sizeof(dcr->VolumeName));
+   return dir_get_volume_info(dcr, GET_VOL_INFO_FOR_WRITE);
+}
 
 /*
  * This job is done, so release the device. From a Unix standpoint,
@@ -496,7 +507,7 @@ bool release_device(DCR *dcr)
    if (dev->can_read()) {
       dev->clear_read();              /* clear read bit */
       Dmsg0(100, "dir_update_vol_info. Release0\n");
-      dir_update_volume_info(dcr, false); /* send Volume info to Director */
+      dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
 
    } else if (dev->num_writers > 0) {
       /* 
@@ -522,7 +533,7 @@ bool release_device(DCR *dcr)
             dev->VolCatInfo.VolCatFiles = dev->file;   /* set number of files */
             /* Note! do volume update before close, which zaps VolCatInfo */
             Dmsg0(100, "dir_update_vol_info. Release0\n");
-            dir_update_volume_info(dcr, false); /* send Volume info to Director */
+            dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
          }
       }
 
@@ -621,7 +632,12 @@ DCR *new_dcr(JCR *jcr, DCR *dcr, DEVICE *dev)
       if (dcr->attached_to_dev) {
          detach_dcr_from_dev(dcr);
       }
-      dcr->max_job_spool_size = dev->device->max_job_spool_size;
+      /* Use job spoolsize prior to device spoolsize */
+      if (jcr->spool_size) {
+         dcr->max_job_spool_size = jcr->spool_size;
+      } else {
+         dcr->max_job_spool_size = dev->device->max_job_spool_size;
+      }
       dcr->device = dev->device;
       dcr->dev = dev;
       attach_dcr_to_dev(dcr);

@@ -1,0 +1,56 @@
+
+ This patch permits to use migration options with JobDefs.
+ This patch fixes bug #1028.
+
+ Apply the patch to 2.2.7 (and possibly any 2.2.x version with):
+
+ cd <bacula-source>
+ patch -p0 <2.2.7-jobdefs-migtype.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+Index: src/dird/dird.c
+===================================================================
+--- src/dird/dird.c	(revision 6183)
++++ src/dird/dird.c	(working copy)
+@@ -58,6 +58,7 @@
+ void store_jobtype(LEX *lc, RES_ITEM *item, int index, int pass);
+ void store_level(LEX *lc, RES_ITEM *item, int index, int pass);
+ void store_replace(LEX *lc, RES_ITEM *item, int index, int pass);
++void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass);
+ void init_device_resources();
+ 
+ static char *runjob = NULL;
+@@ -698,6 +699,7 @@
+                           job_items[i].handler == store_jobtype ||
+                           job_items[i].handler == store_level   ||
+                           job_items[i].handler == store_pint    ||
++                          job_items[i].handler == store_migtype ||
+                           job_items[i].handler == store_replace) {
+                   def_ivalue = (int *)((char *)(job->jobdefs) + offset);
+                   Dmsg5(400, "Job \"%s\", field \"%s\" def_ivalue=%d item %d offset=%u\n",
+Index: src/dird/dird_conf.c
+===================================================================
+--- src/dird/dird_conf.c	(revision 6183)
++++ src/dird/dird_conf.c	(working copy)
+@@ -74,8 +74,8 @@
+ void store_level(LEX *lc, RES_ITEM *item, int index, int pass);
+ void store_replace(LEX *lc, RES_ITEM *item, int index, int pass);
+ void store_acl(LEX *lc, RES_ITEM *item, int index, int pass);
++void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass);
+ static void store_device(LEX *lc, RES_ITEM *item, int index, int pass);
+-static void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass);
+ static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass);
+ static void store_runscript_when(LEX *lc, RES_ITEM *item, int index, int pass);
+ static void store_runscript_cmd(LEX *lc, RES_ITEM *item, int index, int pass);
+@@ -1548,7 +1548,7 @@
+  * Store JobType (backup, verify, restore)
+  *
+  */
+-static void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass)
++void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass)
+ {
+    int token, i;
+ 

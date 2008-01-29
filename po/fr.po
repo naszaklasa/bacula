@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Bacula 1.38\n"
 "Report-Msgid-Bugs-To: bacula-devel@lists.sourceforge.net\n"
-"POT-Creation-Date: 2007-12-24 12:44+0100\n"
-"PO-Revision-Date: 2007-05-05 20:09+0200\n"
+"POT-Creation-Date: 2008-01-26 09:48+0100\n"
+"PO-Revision-Date: 2008-01-24 22:54+0100\n"
 "Last-Translator: Eric Bollengier <eric@eb.homelinux.org>\n"
 "Language-Team: French <bacula-devel-fr@lists.sourceforge.net>\n"
 "MIME-Version: 1.0\n"
@@ -479,15 +479,15 @@ msgstr ""
 msgid "Backup OK -- with warnings"
 msgstr "Backup OK -- avec des erreurs"
 
-#: src/dird/backup.c:383 src/stored/bscan.c:1126
+#: src/dird/backup.c:383 src/stored/bscan.c:1140
 msgid "Backup OK"
 msgstr "Backup OK"
 
-#: src/dird/backup.c:388 src/stored/bscan.c:1130
+#: src/dird/backup.c:388 src/stored/bscan.c:1144
 msgid "*** Backup Error ***"
 msgstr "*** Backup en erreur ***"
 
-#: src/dird/backup.c:398 src/stored/bscan.c:1133
+#: src/dird/backup.c:398 src/stored/bscan.c:1147
 msgid "Backup Canceled"
 msgstr "Backup annulé"
 
@@ -520,7 +520,7 @@ msgid ""
 "  Rate:                   %.1f KB/s\n"
 "  Software Compression:   %s\n"
 "  VSS:                    %s\n"
-"  Encryption:             %s\n"
+"  Storage Encryption:     %s\n"
 "  Volume name(s):         %s\n"
 "  Volume Session Id:      %d\n"
 "  Volume Session Time:    %d\n"
@@ -553,7 +553,7 @@ msgstr ""
 "  Débit :                  %.1f Ko/s\n"
 "  Compression logicielle : %s\n"
 "  VSS :                    %s\n"
-"  Cryptage :               %s\n"
+"  Cryptage des médias :    %s\n"
 "  Nom des Volumes :        %s\n"
 "  Volume Session Id :      %d\n"
 "  Volume Session date :    %d\n"
@@ -728,7 +728,7 @@ msgid "Error updating media record Enabled: ERR=%s"
 msgstr "Impossible de mettre à jour les informations du Volume : ERR=%s"
 
 #: src/dird/ua_update.c:414
-#, fuzzy, c-format
+#, c-format
 msgid "New Enabled is: %d\n"
 msgstr "Le nouveau flag Enabled est : %d\n"
 
@@ -895,9 +895,9 @@ msgid "Current InChanger flag is: %d\n"
 msgstr "Le flag InChanger courant est : %d\n"
 
 #: src/dird/ua_update.c:626
-#, fuzzy, c-format
+#, c-format
 msgid "Set InChanger flag for Volume \"%s\": yes/no: "
-msgstr "Positionner le flag InChanger ? oui/non : "
+msgstr "Positionner le flag InChanger du volume « %s » ? oui/non : "
 
 #: src/dird/ua_update.c:639
 #, c-format
@@ -929,9 +929,8 @@ msgstr ""
 "Logiquement, vous devez augmenter le nombre de fichier du Volume d'un !\n"
 
 #: src/dird/ua_update.c:655
-#, fuzzy
 msgid "Increase Volume Files? (yes/no): "
-msgstr "Le nouveau nombre de fichier du Volume est : %u\n"
+msgstr "Augmenter le nombre de fichier du Volume ? (oui/non) : \n"
 
 #: src/dird/ua_update.c:665
 #, c-format
@@ -1258,7 +1257,7 @@ msgid ""
 msgstr ""
 
 #: src/dird/msgchan.c:305
-#, fuzzy, c-format
+#, c-format
 msgid "Using Device \"%s\"\n"
 msgstr "Using Device \"%s\"\n"
 
@@ -2938,13 +2937,12 @@ msgid "is waiting for higher priority jobs to finish"
 msgstr "attend qu'un job plus prioritaire se termine"
 
 #: src/dird/ua_status.c:640 src/dird/ua_status.c:685 src/lib/util.c:234
-#, fuzzy
 msgid "SD despooling Attributes"
-msgstr "Spooling des données...\n"
+msgstr "SD envoie les attributs...\n"
 
 #: src/dird/ua_status.c:643 src/dird/ua_status.c:688 src/lib/util.c:237
 msgid "Dir inserting Attributes"
-msgstr ""
+msgstr "Dir insert les attributs"
 
 #: src/dird/ua_status.c:648
 #, c-format
@@ -3009,7 +3007,7 @@ msgid "Diffs"
 msgstr ""
 
 #: src/dird/ua_status.c:775 src/filed/status.c:259 src/stored/status.c:524
-#: src/stored/btape.c:1189 src/lib/util.c:188 src/lib/util.c:261
+#: src/stored/btape.c:1193 src/lib/util.c:188 src/lib/util.c:261
 #: src/wx-console/wxbconfigpanel.cpp:201
 msgid "OK"
 msgstr "OK"
@@ -3023,7 +3021,7 @@ msgstr "Autre"
 msgid "%6d  %-6s %8s %10s  %-7s  %-8s %s\n"
 msgstr "%6d  %-6s %8s %10s %-7s  %-8s %s\n"
 
-#: src/dird/ua_status.c:789 src/stored/btape.c:195
+#: src/dird/ua_status.c:789
 msgid "\n"
 msgstr "\n"
 
@@ -3127,7 +3125,7 @@ msgstr ""
 msgid "Job DiffPool override"
 msgstr ""
 
-#: src/dird/job.c:657 src/stored/bscan.c:974
+#: src/dird/job.c:657 src/stored/bscan.c:988
 #, c-format
 msgid "Could not create Client record. ERR=%s\n"
 msgstr ""
@@ -3208,7 +3206,7 @@ msgstr "exit = quit"
 msgid "gui [on|off] -- non-interactive gui mode"
 msgstr "gui [on|off] -- mode non interactif (pour interface graphique)"
 
-#: src/dird/ua_cmds.c:115 src/stored/btape.c:2540
+#: src/dird/ua_cmds.c:115 src/stored/btape.c:2544
 msgid "print this command"
 msgstr "affiche cette commande"
 
@@ -3616,7 +3614,7 @@ msgstr ""
 msgid "ERR: Job was not found\n"
 msgstr "ERR: Job %s non trouvé\n"
 
-#: src/dird/ua_cmds.c:1693 src/dird/ua_tree.c:665 src/stored/btape.c:2587
+#: src/dird/ua_cmds.c:1693 src/dird/ua_tree.c:665 src/stored/btape.c:2591
 #, c-format
 msgid ""
 "  Command    Description\n"
@@ -3679,7 +3677,7 @@ msgid "Expecting keyword, got: %s\n"
 msgstr "Attendait un mot clef, eu : %s\n"
 
 #: src/dird/inc_conf.c:368 src/dird/inc_conf.c:666 src/dird/dird_conf.c:1848
-#: src/lib/parse_conf.c:874
+#: src/lib/parse_conf.c:887
 #, c-format
 msgid "expected an equals, got: %s"
 msgstr "attendait un égale, eu : %s"
@@ -4014,7 +4012,7 @@ msgstr ""
 "Fin de la purge automatique.\n"
 "\n"
 
-#: src/dird/dird.c:94
+#: src/dird/dird.c:95
 #, c-format
 msgid ""
 "\n"
@@ -4049,51 +4047,51 @@ msgstr ""
 "      -?             affiche ce message.\n"
 "\n"
 
-#: src/dird/dird.c:224 src/filed/filed.c:182 src/gnome2-console/console.c:286
+#: src/dird/dird.c:225 src/filed/filed.c:182 src/gnome2-console/console.c:286
 #: src/stored/stored.c:210 src/console/console.c:426
 #: src/qt-console/main.cpp:132
 msgid "Cryptography library initialization failed.\n"
 msgstr ""
 
-#: src/dird/dird.c:228 src/dird/dird.c:245 src/dird/dird.c:476
-#: src/dird/dird.c:479 src/filed/filed.c:187 src/gnome2-console/console.c:290
+#: src/dird/dird.c:229 src/dird/dird.c:246 src/dird/dird.c:477
+#: src/dird/dird.c:480 src/filed/filed.c:187 src/gnome2-console/console.c:290
 #: src/stored/stored.c:214 src/console/console.c:430
 #: src/qt-console/main.cpp:136
 #, c-format
 msgid "Please correct configuration file: %s\n"
 msgstr "Merci de corriger le fichier de configuration : %s\n"
 
-#: src/dird/dird.c:462
+#: src/dird/dird.c:463
 msgid "Too many open reload requests. Request ignored.\n"
 msgstr ""
 
-#: src/dird/dird.c:477
+#: src/dird/dird.c:478
 msgid "Out of reload table entries. Giving up.\n"
 msgstr ""
 
-#: src/dird/dird.c:480
+#: src/dird/dird.c:481
 msgid "Resetting previous configuration.\n"
 msgstr "Retour à la dernière configuration.\n"
 
-#: src/dird/dird.c:543
+#: src/dird/dird.c:544
 #, c-format
 msgid ""
 "No Director resource defined in %s\n"
 "Without that I don't know who I am :-(\n"
 msgstr ""
 
-#: src/dird/dird.c:551 src/filed/filed.c:290
+#: src/dird/dird.c:552 src/filed/filed.c:290
 #, c-format
 msgid "No Messages resource defined in %s\n"
 msgstr ""
 
-#: src/dird/dird.c:556
+#: src/dird/dird.c:557
 #, c-format
 msgid "Only one Director resource permitted in %s\n"
 msgstr ""
 
-#: src/dird/dird.c:565 src/dird/dird.c:766 src/dird/dird.c:818
-#: src/dird/dird.c:922 src/filed/filed.c:297 src/filed/filed.c:455
+#: src/dird/dird.c:566 src/dird/dird.c:768 src/dird/dird.c:820
+#: src/dird/dird.c:924 src/filed/filed.c:297 src/filed/filed.c:455
 #: src/gnome2-console/console.c:153 src/gnome2-console/console.c:182
 #: src/stored/stored.c:333 src/console/console.c:657 src/console/console.c:686
 #: src/qt-console/main.cpp:209 src/qt-console/main.cpp:238
@@ -4101,17 +4099,17 @@ msgstr ""
 msgid "TLS required but not configured in Bacula.\n"
 msgstr ""
 
-#: src/dird/dird.c:571 src/filed/filed.c:464 src/stored/stored.c:385
+#: src/dird/dird.c:572 src/filed/filed.c:464 src/stored/stored.c:385
 #, c-format
 msgid "\"TLS Certificate\" file not defined for Director \"%s\" in %s.\n"
 msgstr ""
 
-#: src/dird/dird.c:577 src/filed/filed.c:470 src/stored/stored.c:391
+#: src/dird/dird.c:578 src/filed/filed.c:470 src/stored/stored.c:391
 #, c-format
 msgid "\"TLS Key\" file not defined for Director \"%s\" in %s.\n"
 msgstr ""
 
-#: src/dird/dird.c:583 src/filed/filed.c:476 src/stored/stored.c:397
+#: src/dird/dird.c:584 src/filed/filed.c:476 src/stored/stored.c:397
 #, c-format
 msgid ""
 "Neither \"TLS CA Certificate\" or \"TLS CA Certificate Dir\" are defined for "
@@ -4119,46 +4117,46 @@ msgid ""
 "using \"TLS Verify Peer\".\n"
 msgstr ""
 
-#: src/dird/dird.c:602 src/filed/filed.c:495 src/stored/stored.c:416
+#: src/dird/dird.c:603 src/filed/filed.c:495 src/stored/stored.c:416
 #, c-format
 msgid "Failed to initialize TLS context for Director \"%s\" in %s.\n"
 msgstr ""
 
-#: src/dird/dird.c:610
+#: src/dird/dird.c:611
 #, c-format
 msgid "No Job records defined in %s\n"
 msgstr ""
 
-#: src/dird/dird.c:668 src/dird/dird.c:681
+#: src/dird/dird.c:669 src/dird/dird.c:682
 #, c-format
 msgid "Hey something is wrong. p=0x%lu\n"
 msgstr ""
 
-#: src/dird/dird.c:740
+#: src/dird/dird.c:742
 #, c-format
 msgid "\"%s\" directive in Job \"%s\" resource is required, but not found.\n"
 msgstr ""
 
-#: src/dird/dird.c:747
+#: src/dird/dird.c:749
 msgid "Too many items in Job resource\n"
 msgstr ""
 
-#: src/dird/dird.c:751
+#: src/dird/dird.c:753
 #, c-format
 msgid "No storage specified in Job \"%s\" nor in Pool.\n"
 msgstr "Pas de Storage spécifié dans le job « %s » ni dans le Pool.\n"
 
-#: src/dird/dird.c:773
+#: src/dird/dird.c:775
 #, c-format
 msgid "\"TLS Certificate\" file not defined for Console \"%s\" in %s.\n"
 msgstr ""
 
-#: src/dird/dird.c:779
+#: src/dird/dird.c:781
 #, c-format
 msgid "\"TLS Key\" file not defined for Console \"%s\" in %s.\n"
 msgstr ""
 
-#: src/dird/dird.c:785
+#: src/dird/dird.c:787
 #, c-format
 msgid ""
 "Neither \"TLS CA Certificate\" or \"TLS CA Certificate Dir\" are defined for "
@@ -4166,37 +4164,37 @@ msgid ""
 "using \"TLS Verify Peer\".\n"
 msgstr ""
 
-#: src/dird/dird.c:802 src/dird/dird.c:842 src/filed/filed.c:321
+#: src/dird/dird.c:804 src/dird/dird.c:844 src/filed/filed.c:321
 #, c-format
 msgid "Failed to initialize TLS context for File daemon \"%s\" in %s.\n"
 msgstr ""
 
-#: src/dird/dird.c:825
+#: src/dird/dird.c:827
 #, c-format
 msgid ""
 "Neither \"TLS CA Certificate\" or \"TLS CA Certificate Dir\" are defined for "
 "File daemon \"%s\" in %s.\n"
 msgstr ""
 
-#: src/dird/dird.c:874 src/dird/dird.c:876
+#: src/dird/dird.c:876 src/dird/dird.c:878
 #, c-format
 msgid "Could not open Catalog \"%s\", database \"%s\".\n"
 msgstr ""
 "Impossible d'ouvrir le catalogue « %s », sur la base de données « %s ».\n"
 
-#: src/dird/dird.c:879
+#: src/dird/dird.c:881
 #, c-format
 msgid "%s"
 msgstr "%s"
 
-#: src/dird/dird.c:928
+#: src/dird/dird.c:930
 #, c-format
 msgid ""
 "Neither \"TLS CA Certificate\" or \"TLS CA Certificate Dir\" are defined for "
 "Storage \"%s\" in %s.\n"
 msgstr ""
 
-#: src/dird/dird.c:944 src/stored/stored.c:371
+#: src/dird/dird.c:946 src/stored/stored.c:371
 #, c-format
 msgid "Failed to initialize TLS context for Storage \"%s\" in %s.\n"
 msgstr ""
@@ -4804,7 +4802,7 @@ msgid "%s item is required in %s resource, but not found.\n"
 msgstr ""
 
 #: src/dird/dird_conf.c:1259 src/tray-monitor/tray_conf.c:294
-#: src/lib/parse_conf.c:234
+#: src/lib/parse_conf.c:233
 #, c-format
 msgid "Too many items in %s resource\n"
 msgstr "Trop d'élément dans la ressource %s\n"
@@ -4925,30 +4923,6 @@ msgstr "Admin Annulé"
 #: src/dird/admin.c:115
 msgid "Bacula "
 msgstr "Bacula "
-
-#: src/dird/admin.c:115 src/console/console.c:114
-#, c-format
-msgid " ("
-msgstr " ("
-
-#: src/dird/admin.c:115
-#, c-format
-msgid ""
-"): %s\n"
-"  JobId:                  %d\n"
-"  Job:                    %s\n"
-"  Start time:             %s\n"
-"  End time:               %s\n"
-"  Termination:            %s\n"
-"\n"
-msgstr ""
-") : %s\n"
-"  JobId :                  %d\n"
-"  Job :                    %s\n"
-"  Début :                  %s\n"
-"  Fin :                    %s\n"
-"  Statut de fin :          %s\n"
-"\n"
 
 #: src/dird/ua_run.c:152 src/dird/ua_run.c:337
 msgid "Invalid time, using current time.\n"
@@ -6230,12 +6204,12 @@ msgid "Logic error: output file should not be open\n"
 msgstr ""
 
 #: src/filed/restore.c:326 src/filed/verify_vol.c:151
-#: src/stored/bextract.c:302 src/stored/bls.c:385 src/stored/bscan.c:665
+#: src/stored/bextract.c:307 src/stored/bls.c:390 src/stored/bscan.c:670
 #, c-format
 msgid "Record header file index %ld not equal record index %ld\n"
 msgstr ""
 
-#: src/filed/restore.c:339 src/stored/bextract.c:311
+#: src/filed/restore.c:339 src/stored/bextract.c:316
 #, c-format
 msgid "%s stream not supported on this Client.\n"
 msgstr ""
@@ -6313,7 +6287,7 @@ msgstr ""
 msgid "Failed to decode message signature for %s\n"
 msgstr ""
 
-#: src/filed/restore.c:655 src/stored/bextract.c:469
+#: src/filed/restore.c:655 src/stored/bextract.c:474
 #, c-format
 msgid "Unknown stream=%d ignored. This shouldn't happen!\n"
 msgstr ""
@@ -6372,9 +6346,9 @@ msgstr ""
 msgid "Zlib version error"
 msgstr ""
 
-#: src/filed/restore.c:773 src/lib/util.c:598 src/lib/util.c:608
-#: src/lib/util.c:616 src/lib/util.c:623 src/lib/util.c:630 src/lib/util.c:644
-#: src/lib/util.c:654 src/lib/util.c:661 src/lib/util.c:672
+#: src/filed/restore.c:773 src/lib/util.c:597 src/lib/util.c:607
+#: src/lib/util.c:615 src/lib/util.c:622 src/lib/util.c:629 src/lib/util.c:643
+#: src/lib/util.c:653 src/lib/util.c:660 src/lib/util.c:671
 msgid "*none*"
 msgstr ""
 
@@ -6398,7 +6372,7 @@ msgstr "Impossible de créer le fichier bootstrap %s : ERR=%s\n"
 msgid "Signature validation failed for %s: %s\n"
 msgstr ""
 
-#: src/filed/restore.c:909 src/stored/bextract.c:400
+#: src/filed/restore.c:909 src/stored/bextract.c:405
 #, c-format
 msgid "Seek to %s error on %s: ERR=%s\n"
 msgstr ""
@@ -6408,7 +6382,7 @@ msgstr ""
 msgid "Uncompression error on file %s. ERR=%s\n"
 msgstr ""
 
-#: src/filed/restore.c:945 src/stored/bextract.c:434
+#: src/filed/restore.c:945 src/stored/bextract.c:439
 msgid "GZIP data stream found, but GZIP not configured!\n"
 msgstr ""
 
@@ -6417,7 +6391,7 @@ msgstr ""
 msgid "Write error in Win32 Block Decomposition on %s: %s\n"
 msgstr ""
 
-#: src/filed/restore.c:974 src/stored/bextract.c:372 src/stored/bextract.c:422
+#: src/filed/restore.c:974 src/stored/bextract.c:377 src/stored/bextract.c:427
 #, c-format
 msgid "Write error on %s: %s\n"
 msgstr ""
@@ -7924,7 +7898,7 @@ msgstr ""
 msgid "Unable to create thread. ERR=%s\n"
 msgstr ""
 
-#: src/stored/stored.c:289 src/stored/bscan.c:241
+#: src/stored/stored.c:289 src/stored/bscan.c:246
 #, c-format
 msgid "No Storage resource defined in %s. Cannot continue.\n"
 msgstr ""
@@ -7949,7 +7923,7 @@ msgstr ""
 msgid "No Messages resource defined in %s. Cannot continue.\n"
 msgstr ""
 
-#: src/stored/stored.c:320 src/stored/bscan.c:249
+#: src/stored/stored.c:320 src/stored/bscan.c:254
 #, c-format
 msgid "No Working Directory defined in %s. Cannot continue.\n"
 msgstr ""
@@ -8093,11 +8067,11 @@ msgstr "Repositionnement de (fichier:bloc) %u:%u à %u:%u\n"
 msgid "Forward spacing Volume \"%s\" to file:block %u:%u.\n"
 msgstr "Postionnement en avant du Volume « %s » sur le fichier:bloc %u:%u.\n"
 
-#: src/stored/read_record.c:388 src/stored/bls.c:411
+#: src/stored/read_record.c:388 src/stored/bcopy.c:312 src/stored/bls.c:416
 msgid "Fresh Volume Label"
 msgstr ""
 
-#: src/stored/read_record.c:391 src/stored/bls.c:414
+#: src/stored/read_record.c:391 src/stored/bcopy.c:315 src/stored/bls.c:419
 msgid "Volume Label"
 msgstr ""
 
@@ -8118,7 +8092,7 @@ msgstr ""
 msgid "Unknown code %d\n"
 msgstr ""
 
-#: src/stored/read_record.c:409 src/stored/bls.c:435
+#: src/stored/read_record.c:409 src/stored/bcopy.c:337 src/stored/bls.c:440
 #, c-format
 msgid "%s Record: VolSessionId=%d VolSessionTime=%d JobId=%d DataLen=%d\n"
 msgstr ""
@@ -8152,22 +8126,22 @@ msgstr "Impossible d'initialiser le verrou sur la base. ERR=%s\n"
 msgid "Unable to initialize volume list lock. ERR=%s\n"
 msgstr "Impossible d'initialiser le verrou sur la base. ERR=%s\n"
 
-#: src/stored/reserve.c:429
+#: src/stored/reserve.c:434
 #, c-format
 msgid "Hey! num_writers=%d!!!!\n"
 msgstr ""
 
-#: src/stored/reserve.c:643
+#: src/stored/reserve.c:649
 #, fuzzy
 msgid "3939 Could not get dcr\n"
 msgstr "Impossible de créer la structure BSOCK cliente.\n"
 
-#: src/stored/reserve.c:766 src/stored/reserve.c:777
+#: src/stored/reserve.c:772 src/stored/reserve.c:783
 #, c-format
 msgid "Failed command: %s\n"
 msgstr "Erreur sur la commande : %s\n"
 
-#: src/stored/reserve.c:767
+#: src/stored/reserve.c:773
 #, c-format
 msgid ""
 "\n"
@@ -8175,7 +8149,7 @@ msgid ""
 "Device resources.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1069 src/stored/dircmd.c:596
+#: src/stored/reserve.c:1076 src/stored/dircmd.c:596
 #, c-format
 msgid ""
 "\n"
@@ -8183,35 +8157,35 @@ msgid ""
 "does not exist.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1073 src/stored/dircmd.c:574
+#: src/stored/reserve.c:1080 src/stored/dircmd.c:574
 #, c-format
 msgid ""
 "\n"
 "     Device \"%s\" requested by DIR could not be opened or does not exist.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1085
+#: src/stored/reserve.c:1092
 #, c-format
 msgid "3926 Could not get dcr for device: %s\n"
 msgstr ""
 
-#: src/stored/reserve.c:1180
+#: src/stored/reserve.c:1207
 #, c-format
 msgid "3601 JobId=%u device %s is BLOCKED due to user unmount.\n"
 msgstr ""
 "3601 JobId=%u device %s est BLOQUÉ car il a été demonté par l'utilisateur.\n"
 
-#: src/stored/reserve.c:1190
+#: src/stored/reserve.c:1217
 #, c-format
 msgid "3602 JobId=%u device %s is busy (already reading/writing).\n"
 msgstr "3602 JobId=%u device %s est occupé (à lire ou écrire).\n"
 
-#: src/stored/reserve.c:1237
+#: src/stored/reserve.c:1264
 #, c-format
 msgid "3603 JobId=%u device %s is busy reading.\n"
 msgstr "3603 JobId=%u device %s est occupé en lecture.\n"
 
-#: src/stored/reserve.c:1246
+#: src/stored/reserve.c:1273
 #, c-format
 msgid "3604 JobId=%u device %s is BLOCKED due to user unmount.\n"
 msgstr ""
@@ -8219,24 +8193,6 @@ msgstr ""
 "(unmount).\n"
 
 #: src/stored/reserve.c:1314
-#, c-format
-msgid "3605 JobId=%u wants free drive but device %s is busy.\n"
-msgstr ""
-"3605 JobId=%u voulait libérer le lecteur, mais le device %s est occupé.\n"
-
-#: src/stored/reserve.c:1322
-#, c-format
-msgid "3606 JobId=%u prefers mounted drives, but drive %s has no Volume.\n"
-msgstr "3606 JobId=%u voulait un lecteur monté, mais le lecteur %s est vide.\n"
-
-#: src/stored/reserve.c:1345
-#, c-format
-msgid "3607 JobId=%u wants Vol=\"%s\" drive has Vol=\"%s\" on drive %s.\n"
-msgstr ""
-"3607 JobId=%u voulait Vol=« %s », c'est le Vol=« %s » qui est dans le drive %"
-"s.\n"
-
-#: src/stored/reserve.c:1387
 #, fuzzy, c-format
 msgid ""
 "3608 JobId=%u wants Pool=\"%s\" but have Pool=\"%s\" nreserve=%d on drive %"
@@ -8245,31 +8201,51 @@ msgstr ""
 "3608 JobId=%u voulait le Pool=« %s », mais c'est le Pool=« %s » qui est dans "
 "le drive %s.\n"
 
-#: src/stored/reserve.c:1431
-#, c-format
-msgid "3609 JobId=%u wants Pool=\"%s\" but has Pool=\"%s\" on drive %s.\n"
+#: src/stored/reserve.c:1336
+#, fuzzy, c-format
+msgid "3610 JobId=%u Volume max jobs exceeded on drive %s.\n"
 msgstr ""
+"3607 JobId=%u voulait Vol=« %s », c'est le Vol=« %s » qui est dans le drive %"
+"s.\n"
 
-#: src/stored/reserve.c:1439
+#: src/stored/reserve.c:1391
+#, c-format
+msgid "3605 JobId=%u wants free drive but device %s is busy.\n"
+msgstr ""
+"3605 JobId=%u voulait libérer le lecteur, mais le device %s est occupé.\n"
+
+#: src/stored/reserve.c:1399
+#, c-format
+msgid "3606 JobId=%u prefers mounted drives, but drive %s has no Volume.\n"
+msgstr "3606 JobId=%u voulait un lecteur monté, mais le lecteur %s est vide.\n"
+
+#: src/stored/reserve.c:1422
+#, c-format
+msgid "3607 JobId=%u wants Vol=\"%s\" drive has Vol=\"%s\" on drive %s.\n"
+msgstr ""
+"3607 JobId=%u voulait Vol=« %s », c'est le Vol=« %s » qui est dans le drive %"
+"s.\n"
+
+#: src/stored/reserve.c:1479
 #, c-format
 msgid "Logic error!!!! JobId=%u Should not get here.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1440
+#: src/stored/reserve.c:1480
 #, c-format
 msgid "3910 JobId=%u Logic error!!!! drive %s Should not get here.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1443
+#: src/stored/reserve.c:1483
 msgid "Logic error!!!! Should not get here.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1446
+#: src/stored/reserve.c:1486
 #, c-format
 msgid "3911 JobId=%u failed reserve drive %s.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:72
+#: src/stored/bcopy.c:74
 #, fuzzy, c-format
 msgid ""
 "\n"
@@ -8278,7 +8254,7 @@ msgid ""
 "Usage: bcopy [-d debug_level] <input-archive> <output-archive>\n"
 "       -b bootstrap      specify a bootstrap file\n"
 "       -c <file>         specify configuration file\n"
-"       -d <nn>           set debug level to nn\n"
+"       -d <nn>           set debug level to <nn>\n"
 "       -i                specify input Volume names (separated by |)\n"
 "       -o                specify output Volume names (separated by |)\n"
 "       -p                proceed inspite of errors\n"
@@ -8303,54 +8279,70 @@ msgstr ""
 "      -?             affiche ce message.\n"
 "\n"
 
-#: src/stored/bcopy.c:152 src/stored/bextract.c:187 src/stored/bscan.c:228
+#: src/stored/bcopy.c:159 src/stored/bextract.c:192 src/stored/bscan.c:233
 #: src/tools/bbatch.c:161
 msgid "Wrong number of arguments: \n"
 msgstr ""
 
-#: src/stored/bcopy.c:192 src/stored/btape.c:364 src/stored/device.c:296
+#: src/stored/bcopy.c:199 src/stored/btape.c:368 src/stored/device.c:297
 #, c-format
 msgid "dev open failed: %s\n"
 msgstr ""
 
-#: src/stored/bcopy.c:206
+#: src/stored/bcopy.c:214
 msgid "Write of last block failed.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:210
+#: src/stored/bcopy.c:218
 #, c-format
 msgid "%u Jobs copied. %u records copied.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:227 src/stored/bscan.c:403
+#: src/stored/bcopy.c:235 src/stored/bscan.c:408
 #, c-format
 msgid "Record: SessId=%u SessTim=%u FileIndex=%d Stream=%d len=%u\n"
 msgstr ""
 
-#: src/stored/bcopy.c:242
+#: src/stored/bcopy.c:251
 msgid "Volume is prelabeled. This volume cannot be copied.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:245
+#: src/stored/bcopy.c:254
 msgid "Volume label not copied.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:257 src/stored/bcopy.c:265 src/stored/bcopy.c:289
-#: src/stored/btape.c:2386
+#: src/stored/bcopy.c:266 src/stored/bcopy.c:274 src/stored/bcopy.c:298
+#: src/stored/btape.c:2390
 #, c-format
 msgid "Cannot fixup device error. %s\n"
 msgstr ""
 
-#: src/stored/bcopy.c:271
+#: src/stored/bcopy.c:280
 msgid "EOM label not copied.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:274
+#: src/stored/bcopy.c:283
 msgid "EOT label not copied.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:310 src/stored/bextract.c:489 src/stored/bls.c:454
-#: src/stored/bscan.c:1286 src/stored/btape.c:2685
+#: src/stored/bcopy.c:319 src/stored/label.c:1026 src/stored/bls.c:423
+msgid "Begin Job Session"
+msgstr ""
+
+#: src/stored/bcopy.c:323 src/stored/label.c:1029 src/stored/bls.c:427
+msgid "End Job Session"
+msgstr ""
+
+#: src/stored/bcopy.c:328 src/stored/bls.c:431
+msgid "End of Medium"
+msgstr ""
+
+#: src/stored/bcopy.c:331 src/stored/label.c:1038 src/stored/bls.c:434
+msgid "Unknown"
+msgstr ""
+
+#: src/stored/bcopy.c:355 src/stored/bextract.c:494 src/stored/bls.c:459
+#: src/stored/bscan.c:1300 src/stored/btape.c:2689
 #, c-format
 msgid "Mount Volume \"%s\" on device %s and press return when ready: "
 msgstr ""
@@ -8365,7 +8357,7 @@ msgid ""
 "files>\n"
 "       -b <file>       specify a bootstrap file\n"
 "       -c <file>       specify a configuration file\n"
-"       -d <nn>         set debug level to nn\n"
+"       -d <nn>         set debug level to <nn>\n"
 "       -e <file>       exclude list\n"
 "       -i <file>       include list\n"
 "       -p              proceed inspite of I/O errors\n"
@@ -8391,64 +8383,64 @@ msgstr ""
 "      -?             affiche ce message.\n"
 "\n"
 
-#: src/stored/bextract.c:137 src/stored/bls.c:141
+#: src/stored/bextract.c:142 src/stored/bls.c:146
 #, c-format
 msgid "Could not open exclude file: %s, ERR=%s\n"
 msgstr ""
 
-#: src/stored/bextract.c:152 src/stored/bls.c:156
+#: src/stored/bextract.c:157 src/stored/bls.c:161
 #, c-format
 msgid "Could not open include file: %s, ERR=%s\n"
 msgstr ""
 
-#: src/stored/bextract.c:208
+#: src/stored/bextract.c:213
 #, c-format
 msgid "%d Program Name and/or Program Data Stream records ignored.\n"
 msgstr ""
 
-#: src/stored/bextract.c:212
+#: src/stored/bextract.c:217
 #, c-format
 msgid "%d Win32 data or Win32 gzip data stream records. Ignored.\n"
 msgstr ""
 
-#: src/stored/bextract.c:239
+#: src/stored/bextract.c:244
 #, c-format
 msgid "Cannot stat %s. It must exist. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bextract.c:243
+#: src/stored/bextract.c:248
 #, c-format
 msgid "%s must be a directory.\n"
 msgstr "%s doit être un répertoire.\n"
 
-#: src/stored/bextract.c:264
+#: src/stored/bextract.c:269
 #, c-format
 msgid "%u files restored.\n"
 msgstr "%u fichiers restaurés.\n"
 
-#: src/stored/bextract.c:291 src/stored/bextract.c:464
+#: src/stored/bextract.c:296 src/stored/bextract.c:469
 msgid "Logic error output file should be open but is not.\n"
 msgstr ""
 
-#: src/stored/bextract.c:298 src/stored/bls.c:378 src/stored/bscan.c:661
+#: src/stored/bextract.c:303 src/stored/bls.c:383 src/stored/bscan.c:666
 msgid "Cannot continue.\n"
 msgstr ""
 
-#: src/stored/bextract.c:360
+#: src/stored/bextract.c:365
 #, c-format
 msgid "Seek error on %s: %s\n"
 msgstr ""
 
-#: src/stored/bextract.c:413
+#: src/stored/bextract.c:418
 #, c-format
 msgid "Uncompression error. ERR=%d\n"
 msgstr "Erreur de décompression. ERR=%d\n"
 
-#: src/stored/bextract.c:421
+#: src/stored/bextract.c:426
 msgid "===Write error===\n"
 msgstr "===Erreur d'écriture===\n"
 
-#: src/stored/bextract.c:455
+#: src/stored/bextract.c:460
 msgid "Got Program Name or Data Stream. Ignored.\n"
 msgstr ""
 
@@ -8593,9 +8585,9 @@ msgstr ""
 "Écriture du label sur le Volume pré-labélisé « %s » sur le lecteur %s\n"
 
 #: src/stored/label.c:719
-#, c-format
-msgid "Bad session label = %d\n"
-msgstr ""
+#, fuzzy, c-format
+msgid "Bad Volume session label = %d\n"
+msgstr "Le Volume n'a pas de label.\n"
 
 #: src/stored/label.c:774
 #, c-format
@@ -8687,20 +8679,8 @@ msgstr ""
 msgid "Volume"
 msgstr ""
 
-#: src/stored/label.c:1026 src/stored/bls.c:418
-msgid "Begin Job Session"
-msgstr ""
-
-#: src/stored/label.c:1029 src/stored/bls.c:422
-msgid "End Job Session"
-msgstr ""
-
 #: src/stored/label.c:1035
 msgid "End of Tape"
-msgstr ""
-
-#: src/stored/label.c:1038 src/stored/bls.c:429
-msgid "Unknown"
 msgstr ""
 
 #: src/stored/label.c:1055 src/stored/label.c:1063 src/stored/label.c:1096
@@ -8886,7 +8866,7 @@ msgid ""
 "Usage: bls [options] <device-name>\n"
 "       -b <file>       specify a bootstrap file\n"
 "       -c <file>       specify a config file\n"
-"       -d <level>      specify debug level\n"
+"       -d <nn>         set debug level to <nn>\n"
 "       -e <file>       exclude list\n"
 "       -i <file>       include list\n"
 "       -j              list jobs\n"
@@ -8916,51 +8896,47 @@ msgstr ""
 "      -?             affiche ce message.\n"
 "\n"
 
-#: src/stored/bls.c:203
+#: src/stored/bls.c:208
 msgid "No archive name specified\n"
 msgstr ""
 
-#: src/stored/bls.c:238
+#: src/stored/bls.c:243
 #, c-format
 msgid ""
 "\n"
 "Warning, this Volume is a continuation of Volume %s\n"
 msgstr ""
 
-#: src/stored/bls.c:281
+#: src/stored/bls.c:286
 #, c-format
 msgid "Got EOM at file %u on device %s, Volume \"%s\"\n"
 msgstr ""
 
-#: src/stored/bls.c:292
+#: src/stored/bls.c:297
 #, c-format
 msgid "Mounted Volume \"%s\".\n"
 msgstr ""
 
-#: src/stored/bls.c:294
+#: src/stored/bls.c:299
 #, c-format
 msgid "End of file %u on device %s, Volume \"%s\"\n"
 msgstr ""
 
-#: src/stored/bls.c:318
+#: src/stored/bls.c:323
 #, c-format
 msgid ""
 "File:blk=%u:%u blk_num=%u blen=%u First rec FI=%s SessId=%u SessTim=%u Strm=%"
 "s rlen=%d\n"
 msgstr ""
 
-#: src/stored/bls.c:327
+#: src/stored/bls.c:332
 #, c-format
 msgid "Block: %d size=%d\n"
 msgstr "Bloc : %d taille=%d\n"
 
-#: src/stored/bls.c:394
+#: src/stored/bls.c:399
 #, c-format
 msgid "FileIndex=%d VolSessionId=%d VolSessionTime=%d Stream=%d DataLen=%d\n"
-msgstr ""
-
-#: src/stored/bls.c:426
-msgid "End of Medium"
 msgstr ""
 
 #: src/stored/status.c:120
@@ -9091,7 +9067,7 @@ msgstr "    Le lecteur %d n'est pas chargé.\n"
 msgid "    Drive %d status unknown.\n"
 msgstr "    Le statut du lecteur %d est inconnu.\n"
 
-#: src/stored/status.c:302 src/stored/btape.c:580
+#: src/stored/status.c:302 src/stored/btape.c:584
 #, c-format
 msgid "Configured device capabilities:\n"
 msgstr ""
@@ -9107,7 +9083,7 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/status.c:341 src/stored/btape.c:612
+#: src/stored/status.c:341 src/stored/btape.c:616
 #, c-format
 msgid "Device parameters:\n"
 msgstr ""
@@ -9218,7 +9194,7 @@ msgid ""
 "Usage: bscan [ options ] <bacula-archive>\n"
 "       -b bootstrap      specify a bootstrap file\n"
 "       -c <file>         specify configuration file\n"
-"       -d <nn>           set debug level to nn\n"
+"       -d <nn>           set debug level to <nn>\n"
 "       -m                update media info in database\n"
 "       -n <name>         specify the database name (default bacula)\n"
 "       -u <user>         specify database user name (default bacula)\n"
@@ -9251,278 +9227,283 @@ msgstr ""
 "      -?             affiche ce message.\n"
 "\n"
 
-#: src/stored/bscan.c:257
+#: src/stored/bscan.c:262
 #, c-format
 msgid "Working Directory: %s not found. Cannot continue.\n"
 msgstr ""
 
-#: src/stored/bscan.c:261
+#: src/stored/bscan.c:266
 #, c-format
 msgid "Working Directory: %s is not a directory. Cannot continue.\n"
 msgstr ""
 
-#: src/stored/bscan.c:275 src/stored/bscan.c:350
+#: src/stored/bscan.c:280 src/stored/bscan.c:355
 #, c-format
 msgid "First Volume Size = %sn"
 msgstr ""
 
-#: src/stored/bscan.c:281 src/tools/bbatch.c:196
+#: src/stored/bscan.c:286 src/tools/bbatch.c:196
 msgid "Could not init Bacula database\n"
 msgstr ""
 
-#: src/stored/bscan.c:288 src/tools/bbatch.c:203
+#: src/stored/bscan.c:293 src/tools/bbatch.c:203
 #, c-format
 msgid "Using Database: %s, User: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:323
+#: src/stored/bscan.c:328
 #, c-format
 msgid "Create JobMedia for Job %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:332
+#: src/stored/bscan.c:337
 #, c-format
 msgid "Could not create JobMedia record for Volume=%s Job=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:395
+#: src/stored/bscan.c:400
 #, c-format
 msgid "done: %d%%\n"
 msgstr ""
 
-#: src/stored/bscan.c:419
+#: src/stored/bscan.c:424
 msgid "Volume is prelabeled. This tape cannot be scanned.\n"
 msgstr ""
 
-#: src/stored/bscan.c:431
+#: src/stored/bscan.c:436
 #, c-format
 msgid "Pool record for %s found in DB.\n"
 msgstr ""
 
-#: src/stored/bscan.c:435
+#: src/stored/bscan.c:440
 #, c-format
 msgid "VOL_LABEL: Pool record not found for Pool: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:441
+#: src/stored/bscan.c:446
 #, c-format
 msgid "VOL_LABEL: PoolType mismatch. DB=%s Vol=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:445
+#: src/stored/bscan.c:450
 #, c-format
 msgid "Pool type \"%s\" is OK.\n"
 msgstr ""
 
-#: src/stored/bscan.c:455
+#: src/stored/bscan.c:460
 #, c-format
 msgid "Media record for %s found in DB.\n"
 msgstr ""
 
-#: src/stored/bscan.c:462
+#: src/stored/bscan.c:467
 #, c-format
 msgid "VOL_LABEL: Media record not found for Volume: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:469
+#: src/stored/bscan.c:474
 #, c-format
 msgid "VOL_LABEL: MediaType mismatch. DB=%s Vol=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:473
+#: src/stored/bscan.c:478
 #, c-format
 msgid "Media type \"%s\" is OK.\n"
 msgstr ""
 
-#: src/stored/bscan.c:483
+#: src/stored/bscan.c:488
 #, c-format
 msgid "VOL_LABEL: OK for Volume: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:490
+#: src/stored/bscan.c:495
 #, c-format
 msgid "%d \"errors\" ignored before first Start of Session record.\n"
 msgstr ""
 
-#: src/stored/bscan.c:501
+#: src/stored/bscan.c:506
 #, c-format
 msgid "SOS_LABEL: Found Job record for JobId: %d\n"
 msgstr ""
 
-#: src/stored/bscan.c:506
+#: src/stored/bscan.c:511
 #, c-format
 msgid "SOS_LABEL: Job record not found for JobId: %d\n"
 msgstr ""
 
-#: src/stored/bscan.c:546
+#: src/stored/bscan.c:551
 #, c-format
 msgid "SOS_LABEL: VolSessId mismatch for JobId=%u. DB=%d Vol=%d\n"
 msgstr ""
 
-#: src/stored/bscan.c:552
+#: src/stored/bscan.c:557
 #, c-format
 msgid "SOS_LABEL: VolSessTime mismatch for JobId=%u. DB=%d Vol=%d\n"
 msgstr ""
 
-#: src/stored/bscan.c:558
+#: src/stored/bscan.c:563
 #, c-format
 msgid "SOS_LABEL: PoolId mismatch for JobId=%u. DB=%d Vol=%d\n"
 msgstr ""
 
-#: src/stored/bscan.c:576 src/stored/bscan.c:1079
+#: src/stored/bscan.c:581 src/stored/bscan.c:1093
 #, c-format
 msgid "Could not find SessId=%d SessTime=%d for EOS record.\n"
 msgstr ""
 
-#: src/stored/bscan.c:620
+#: src/stored/bscan.c:625
 #, c-format
 msgid "Could not update job record. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:631
+#: src/stored/bscan.c:636
 #, c-format
 msgid "End of all Volumes. VolFiles=%u VolBlocks=%u VolBytes=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:643
+#: src/stored/bscan.c:648
 #, c-format
 msgid "Could not find Job for SessId=%d SessTime=%d record.\n"
 msgstr ""
 
-#: src/stored/bscan.c:679
+#: src/stored/bscan.c:684
 #, c-format
 msgid "%s file records. At file:blk=%s:%s bytes=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:733
+#: src/stored/bscan.c:738
 #, c-format
 msgid "Got MD5 record: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:741
+#: src/stored/bscan.c:746
 #, c-format
 msgid "Got SHA1 record: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:749
+#: src/stored/bscan.c:754
 #, c-format
 msgid "Got SHA256 record: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:757
+#: src/stored/bscan.c:762
 #, c-format
 msgid "Got SHA512 record: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:765 src/stored/bscan.c:772
+#: src/stored/bscan.c:770 src/stored/bscan.c:777
 msgid "Got signed digest record\n"
 msgstr ""
 
-#: src/stored/bscan.c:778
+#: src/stored/bscan.c:783
 #, c-format
 msgid "Got Prog Names Stream: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:784
+#: src/stored/bscan.c:789
 msgid "Got Prog Data Stream record.\n"
 msgstr ""
 
-#: src/stored/bscan.c:794
+#: src/stored/bscan.c:799
 #, c-format
 msgid "Unknown stream type!!! stream=%d len=%i\n"
 msgstr ""
 
-#: src/stored/bscan.c:858
+#: src/stored/bscan.c:863
 #, c-format
 msgid "Could not create File Attributes record. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:864
+#: src/stored/bscan.c:869
 #, c-format
 msgid "Created File record: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:908
+#: src/stored/bscan.c:913
 #, c-format
 msgid "Could not create media record. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:912 src/stored/bscan.c:933
+#: src/stored/bscan.c:917 src/stored/bscan.c:938
 #, c-format
 msgid "Could not update media record. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:916
+#: src/stored/bscan.c:921
 #, c-format
 msgid "Created Media record for Volume: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:937
+#: src/stored/bscan.c:942
 #, c-format
 msgid "Updated Media record at end of Volume: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:954
+#: src/stored/bscan.c:959
 #, c-format
 msgid "Could not create pool record. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:958
+#: src/stored/bscan.c:963
 #, c-format
 msgid "Created Pool record for Pool: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:978
+#: src/stored/bscan.c:982
+#, fuzzy, c-format
+msgid "Could not get Client record. ERR=%s\n"
+msgstr "Impossible d'initialiser la queue cliente : ERR=%s\n"
+
+#: src/stored/bscan.c:992
 #, c-format
 msgid "Created Client record for Client: %s\n"
 msgstr ""
 
-#: src/stored/bscan.c:995
+#: src/stored/bscan.c:1009
 #, c-format
 msgid "Fileset \"%s\" already exists.\n"
 msgstr ""
 
-#: src/stored/bscan.c:999
+#: src/stored/bscan.c:1013
 #, c-format
 msgid "Could not create FileSet record \"%s\". ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:1004
+#: src/stored/bscan.c:1018
 #, c-format
 msgid "Created FileSet record \"%s\"\n"
 msgstr ""
 
-#: src/stored/bscan.c:1051
+#: src/stored/bscan.c:1065
 #, c-format
 msgid "Could not create JobId record. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:1057
+#: src/stored/bscan.c:1071
 #, c-format
 msgid "Could not update job start record. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:1060
+#: src/stored/bscan.c:1074
 #, c-format
 msgid "Created new JobId=%u record for original JobId=%u\n"
 msgstr ""
 
-#: src/stored/bscan.c:1110
+#: src/stored/bscan.c:1124
 #, c-format
 msgid "Could not update JobId=%u record. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:1115
+#: src/stored/bscan.c:1129
 #, c-format
 msgid "Updated Job termination record for JobId=%u Level=%s TermStat=%c\n"
 msgstr ""
 
-#: src/stored/bscan.c:1137
+#: src/stored/bscan.c:1151
 #, c-format
 msgid "Job Termination code: %d"
 msgstr ""
 
-#: src/stored/bscan.c:1142
+#: src/stored/bscan.c:1156
 #, c-format
 msgid ""
 "%s\n"
@@ -9542,27 +9523,27 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/bscan.c:1200
+#: src/stored/bscan.c:1214
 #, c-format
 msgid "Could not create JobMedia record. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:1204
+#: src/stored/bscan.c:1218
 #, c-format
 msgid "Created JobMedia record JobId %d, MediaId %d\n"
 msgstr ""
 
-#: src/stored/bscan.c:1220
+#: src/stored/bscan.c:1234
 #, c-format
 msgid "Could not find SessId=%d SessTime=%d for MD5/SHA1 record.\n"
 msgstr ""
 
-#: src/stored/bscan.c:1234
+#: src/stored/bscan.c:1248
 #, c-format
 msgid "Could not add MD5/SHA1 to File record. ERR=%s\n"
 msgstr ""
 
-#: src/stored/bscan.c:1239
+#: src/stored/bscan.c:1253
 msgid "Updated MD5/SHA1 record\n"
 msgstr ""
 
@@ -9596,155 +9577,151 @@ msgstr ""
 msgid "64 bit printf/scanf problem. i=%d x64=%"
 msgstr ""
 
-#: src/stored/btape.c:195
-msgid " y64=%"
-msgstr ""
-
 #: src/stored/btape.c:200
 #, c-format
 msgid "Tape block granularity is %d bytes.\n"
 msgstr ""
 
-#: src/stored/btape.c:269
+#: src/stored/btape.c:273
 msgid "No archive name specified.\n"
 msgstr ""
 
-#: src/stored/btape.c:273
+#: src/stored/btape.c:277
 msgid "Improper number of arguments specified.\n"
 msgstr ""
 
-#: src/stored/btape.c:287
+#: src/stored/btape.c:291
 msgid "btape does not work with DVD storage.\n"
 msgstr ""
 
-#: src/stored/btape.c:292
+#: src/stored/btape.c:296
 msgid "btape only works with tape storage.\n"
 msgstr ""
 
-#: src/stored/btape.c:368
+#: src/stored/btape.c:372
 #, c-format
 msgid "open device %s: OK\n"
 msgstr ""
 
-#: src/stored/btape.c:391
+#: src/stored/btape.c:395
 msgid "Enter Volume Name: "
 msgstr "Saisissez un nom de Volume : "
 
-#: src/stored/btape.c:398
+#: src/stored/btape.c:402
 #, c-format
 msgid "Device open failed. ERR=%s\n"
 msgstr "Erreur sur l'ouverture du périphérique. ERR=%s\n"
 
-#: src/stored/btape.c:404
+#: src/stored/btape.c:408
 #, c-format
 msgid "Wrote Volume label for volume \"%s\".\n"
 msgstr ""
 
-#: src/stored/btape.c:418
+#: src/stored/btape.c:422
 msgid "Volume has no label.\n"
 msgstr "Le Volume n'a pas de label.\n"
 
-#: src/stored/btape.c:421
+#: src/stored/btape.c:425
 msgid "Volume label read correctly.\n"
 msgstr ""
 
-#: src/stored/btape.c:424
+#: src/stored/btape.c:428
 #, c-format
 msgid "I/O error on device: ERR=%s"
 msgstr ""
 
-#: src/stored/btape.c:427
+#: src/stored/btape.c:431
 msgid "Volume name error\n"
 msgstr ""
 
-#: src/stored/btape.c:430
+#: src/stored/btape.c:434
 #, c-format
 msgid "Error creating label. ERR=%s"
 msgstr ""
 
-#: src/stored/btape.c:433
+#: src/stored/btape.c:437
 msgid "Volume version error.\n"
 msgstr ""
 
-#: src/stored/btape.c:436
+#: src/stored/btape.c:440
 msgid "Bad Volume label type.\n"
 msgstr ""
 
-#: src/stored/btape.c:439
+#: src/stored/btape.c:443
 msgid "Unknown error.\n"
 msgstr ""
 
-#: src/stored/btape.c:457
+#: src/stored/btape.c:461
 #, c-format
 msgid "Bad status from load. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:459
+#: src/stored/btape.c:463
 #, c-format
 msgid "Loaded %s\n"
 msgstr ""
 
-#: src/stored/btape.c:468 src/stored/btape.c:807 src/stored/btape.c:849
-#: src/stored/btape.c:919 src/stored/btape.c:961 src/stored/btape.c:1229
+#: src/stored/btape.c:472 src/stored/btape.c:811 src/stored/btape.c:853
+#: src/stored/btape.c:923 src/stored/btape.c:965 src/stored/btape.c:1233
 #, c-format
 msgid "Bad status from rewind. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:471 src/stored/btape.c:1237
+#: src/stored/btape.c:475 src/stored/btape.c:1241
 #, c-format
 msgid "Rewound %s\n"
 msgstr ""
 
-#: src/stored/btape.c:497 src/stored/btape.c:1241
+#: src/stored/btape.c:501 src/stored/btape.c:1245
 #, c-format
 msgid "Bad status from weof. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:501
+#: src/stored/btape.c:505
 #, c-format
 msgid "Wrote 1 EOF to %s\n"
 msgstr ""
 
-#: src/stored/btape.c:504
+#: src/stored/btape.c:508
 #, c-format
 msgid "Wrote %d EOFs to %s\n"
 msgstr ""
 
-#: src/stored/btape.c:522
+#: src/stored/btape.c:526
 msgid "Moved to end of medium.\n"
 msgstr ""
 
-#: src/stored/btape.c:549
+#: src/stored/btape.c:553
 #, c-format
 msgid "Bad status from bsf. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:551
+#: src/stored/btape.c:555
 #, c-format
 msgid "Backspaced %d file%s.\n"
 msgstr ""
 
-#: src/stored/btape.c:568
+#: src/stored/btape.c:572
 #, c-format
 msgid "Bad status from bsr. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:570
+#: src/stored/btape.c:574
 #, c-format
 msgid "Backspaced %d record%s.\n"
 msgstr ""
 
-#: src/stored/btape.c:598
+#: src/stored/btape.c:602
 #, c-format
 msgid "Device status:\n"
 msgstr ""
 
-#: src/stored/btape.c:617
+#: src/stored/btape.c:621
 #, c-format
 msgid "Status:\n"
 msgstr "Statut :\n"
 
-#: src/stored/btape.c:632
+#: src/stored/btape.c:636
 msgid ""
 "Test writting larger and larger records.\n"
 "This is a torture test for records.\n"
@@ -9753,24 +9730,24 @@ msgid ""
 "plus the header exceeds the block size (by default about 64K)\n"
 msgstr ""
 
-#: src/stored/btape.c:638
+#: src/stored/btape.c:642
 msgid "Do you want to continue? (y/n): "
 msgstr "Voulez vous continuer ? (y/n) : "
 
-#: src/stored/btape.c:640 src/stored/btape.c:1857
+#: src/stored/btape.c:644 src/stored/btape.c:1861
 msgid "Command aborted.\n"
 msgstr "Commande annulée.\n"
 
-#: src/stored/btape.c:656
+#: src/stored/btape.c:660
 #, c-format
 msgid "Block %d i=%d\n"
 msgstr ""
 
-#: src/stored/btape.c:682
+#: src/stored/btape.c:686
 msgid "Skipping read backwards test because BSR turned off.\n"
 msgstr ""
 
-#: src/stored/btape.c:686
+#: src/stored/btape.c:690
 msgid ""
 "\n"
 "=== Write, backup, and re-read test ===\n"
@@ -9784,73 +9761,73 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:699 src/stored/btape.c:710 src/stored/btape.c:721
-#: src/stored/btape.c:819 src/stored/btape.c:835 src/stored/btape.c:931
-#: src/stored/btape.c:947 src/stored/btape.c:1566 src/stored/btape.c:2451
-msgid "Error writing record to block.\n"
-msgstr ""
-
 #: src/stored/btape.c:703 src/stored/btape.c:714 src/stored/btape.c:725
 #: src/stored/btape.c:823 src/stored/btape.c:839 src/stored/btape.c:935
 #: src/stored/btape.c:951 src/stored/btape.c:1570 src/stored/btape.c:2455
+msgid "Error writing record to block.\n"
+msgstr ""
+
+#: src/stored/btape.c:707 src/stored/btape.c:718 src/stored/btape.c:729
+#: src/stored/btape.c:827 src/stored/btape.c:843 src/stored/btape.c:939
+#: src/stored/btape.c:955 src/stored/btape.c:1574 src/stored/btape.c:2459
 msgid "Error writing block to device.\n"
 msgstr ""
 
-#: src/stored/btape.c:706
+#: src/stored/btape.c:710
 #, c-format
 msgid "Wrote first record of %d bytes.\n"
 msgstr ""
 
-#: src/stored/btape.c:717
+#: src/stored/btape.c:721
 #, c-format
 msgid "Wrote second record of %d bytes.\n"
 msgstr ""
 
-#: src/stored/btape.c:728
+#: src/stored/btape.c:732
 #, c-format
 msgid "Wrote third record of %d bytes.\n"
 msgstr ""
 
-#: src/stored/btape.c:735 src/stored/btape.c:740
+#: src/stored/btape.c:739 src/stored/btape.c:744
 #, c-format
 msgid "Backspace file failed! ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:744
+#: src/stored/btape.c:748
 msgid "Backspaced over EOF OK.\n"
 msgstr ""
 
-#: src/stored/btape.c:746
+#: src/stored/btape.c:750
 #, c-format
 msgid "Backspace record failed! ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:749
+#: src/stored/btape.c:753
 msgid "Backspace record OK.\n"
 msgstr ""
 
-#: src/stored/btape.c:752 src/stored/btape.c:758
+#: src/stored/btape.c:756 src/stored/btape.c:762
 #, c-format
 msgid "Read block failed! ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:763
+#: src/stored/btape.c:767
 msgid "Bad data in record. Test failed!\n"
 msgstr ""
 
-#: src/stored/btape.c:767
+#: src/stored/btape.c:771
 msgid ""
 "\n"
 "Block re-read correct. Test succeeded!\n"
 msgstr ""
 
-#: src/stored/btape.c:768
+#: src/stored/btape.c:772
 msgid ""
 "=== End Write, backup, and re-read test ===\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:775
+#: src/stored/btape.c:779
 msgid ""
 "This is not terribly serious since Bacula only uses\n"
 "this function to verify the last block written to the\n"
@@ -9862,7 +9839,7 @@ msgid ""
 "to your Storage daemon's Device resource definition.\n"
 msgstr ""
 
-#: src/stored/btape.c:799
+#: src/stored/btape.c:803
 msgid ""
 "\n"
 "=== Write, rewind, and re-read test ===\n"
@@ -9875,46 +9852,46 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:827 src/stored/btape.c:843 src/stored/btape.c:939
-#: src/stored/btape.c:955
+#: src/stored/btape.c:831 src/stored/btape.c:847 src/stored/btape.c:943
+#: src/stored/btape.c:959
 #, c-format
 msgid "Wrote 1000 blocks of %d bytes.\n"
 msgstr "Ecriture de 1000 blocs de %d octets.\n"
 
-#: src/stored/btape.c:852 src/stored/btape.c:964
+#: src/stored/btape.c:856 src/stored/btape.c:968
 msgid "Rewind OK.\n"
 msgstr ""
 
-#: src/stored/btape.c:859 src/stored/btape.c:1013
+#: src/stored/btape.c:863 src/stored/btape.c:1017
 msgid "Got EOF on tape.\n"
 msgstr ""
 
-#: src/stored/btape.c:864
+#: src/stored/btape.c:868
 #, c-format
 msgid "Read block %d failed! ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:870
+#: src/stored/btape.c:874
 #, c-format
 msgid "Read record failed. Block %d! ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:876 src/stored/btape.c:1043
+#: src/stored/btape.c:880 src/stored/btape.c:1047
 #, c-format
 msgid "Bad data in record. Expected %d, got %d at byte %d. Test failed!\n"
 msgstr ""
 
-#: src/stored/btape.c:883
+#: src/stored/btape.c:887
 msgid "1000 blocks re-read correctly.\n"
 msgstr "1000 blocs relus correctement.\n"
 
-#: src/stored/btape.c:886 src/stored/btape.c:1050
+#: src/stored/btape.c:890 src/stored/btape.c:1054
 msgid ""
 "=== Test Succeeded. End Write, rewind, and re-read test ===\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:911
+#: src/stored/btape.c:915
 msgid ""
 "\n"
 "=== Write, rewind, and position test ===\n"
@@ -9927,23 +9904,23 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1004
+#: src/stored/btape.c:1008
 #, c-format
 msgid "Reposition to file:block %d:%d\n"
 msgstr ""
 
-#: src/stored/btape.c:1006
+#: src/stored/btape.c:1010
 msgid "Reposition error.\n"
 msgstr ""
 
-#: src/stored/btape.c:1019
+#: src/stored/btape.c:1023
 #, c-format
 msgid ""
 "Read block %d failed! file=%d blk=%d. ERR=%s\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1021
+#: src/stored/btape.c:1025
 msgid ""
 "This may be because the tape drive block size is not\n"
 " set to variable blocking as normally used by Bacula.\n"
@@ -9957,17 +9934,17 @@ msgid ""
 " in your Device resource.\n"
 msgstr ""
 
-#: src/stored/btape.c:1037
+#: src/stored/btape.c:1041
 #, c-format
 msgid "Read record failed! ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1048
+#: src/stored/btape.c:1052
 #, c-format
 msgid "Block %d re-read correctly.\n"
 msgstr ""
 
-#: src/stored/btape.c:1069
+#: src/stored/btape.c:1073
 msgid ""
 "\n"
 "\n"
@@ -9981,58 +9958,58 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1093
+#: src/stored/btape.c:1097
 msgid "Now moving to end of medium.\n"
 msgstr ""
 
-#: src/stored/btape.c:1095 src/stored/btape.c:1324
+#: src/stored/btape.c:1099 src/stored/btape.c:1328
 #, c-format
 msgid "We should be in file 3. I am at file %d. %s\n"
 msgstr ""
 
-#: src/stored/btape.c:1096 src/stored/btape.c:1114 src/stored/btape.c:1313
-#: src/stored/btape.c:1325 src/stored/btape.c:1338 src/stored/btape.c:1355
+#: src/stored/btape.c:1100 src/stored/btape.c:1118 src/stored/btape.c:1317
+#: src/stored/btape.c:1329 src/stored/btape.c:1342 src/stored/btape.c:1359
 msgid "This is correct!"
 msgstr ""
 
-#: src/stored/btape.c:1096 src/stored/btape.c:1114 src/stored/btape.c:1313
-#: src/stored/btape.c:1325 src/stored/btape.c:1338 src/stored/btape.c:1355
+#: src/stored/btape.c:1100 src/stored/btape.c:1118 src/stored/btape.c:1317
+#: src/stored/btape.c:1329 src/stored/btape.c:1342 src/stored/btape.c:1359
 msgid "This is NOT correct!!!!"
 msgstr ""
 
-#: src/stored/btape.c:1102
+#: src/stored/btape.c:1106
 msgid ""
 "\n"
 "Now the important part, I am going to attempt to append to the tape.\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1109
+#: src/stored/btape.c:1113
 msgid ""
 "Done appending, there should be no I/O errors\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1110
+#: src/stored/btape.c:1114
 msgid "Doing Bacula scan of blocks:\n"
 msgstr ""
 
-#: src/stored/btape.c:1112
+#: src/stored/btape.c:1116
 msgid "End scanning the tape.\n"
 msgstr ""
 
-#: src/stored/btape.c:1113 src/stored/btape.c:1337
+#: src/stored/btape.c:1117 src/stored/btape.c:1341
 #, c-format
 msgid "We should be in file 4. I am at file %d. %s\n"
 msgstr ""
 
-#: src/stored/btape.c:1138
+#: src/stored/btape.c:1142
 msgid ""
 "\n"
 "Autochanger enabled, but no name or no command device specified.\n"
 msgstr ""
 
-#: src/stored/btape.c:1142
+#: src/stored/btape.c:1146
 msgid ""
 "\n"
 "Ah, I see you have an autochanger configured.\n"
@@ -10040,13 +10017,13 @@ msgid ""
 " that I can write on in Slot 1.\n"
 msgstr ""
 
-#: src/stored/btape.c:1145
+#: src/stored/btape.c:1149
 msgid ""
 "\n"
 "Do you wish to continue with the Autochanger test? (y/n): "
 msgstr ""
 
-#: src/stored/btape.c:1152
+#: src/stored/btape.c:1156
 msgid ""
 "\n"
 "\n"
@@ -10054,74 +10031,74 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1161
+#: src/stored/btape.c:1165
 msgid "3301 Issuing autochanger \"loaded\" command.\n"
 msgstr ""
 
-#: src/stored/btape.c:1170
+#: src/stored/btape.c:1174
 #, c-format
 msgid "3991 Bad autochanger command: %s\n"
 msgstr ""
 
-#: src/stored/btape.c:1171
+#: src/stored/btape.c:1175
 #, c-format
 msgid "3991 result=\"%s\": ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1175
+#: src/stored/btape.c:1179
 #, c-format
 msgid "Slot %d loaded. I am going to unload it.\n"
 msgstr ""
 
-#: src/stored/btape.c:1177
+#: src/stored/btape.c:1181
 msgid "Nothing loaded in the drive. OK.\n"
 msgstr ""
 
-#: src/stored/btape.c:1184
+#: src/stored/btape.c:1188
 #, c-format
 msgid "3302 Issuing autochanger \"unload %d %d\" command.\n"
 msgstr ""
 
-#: src/stored/btape.c:1189
+#: src/stored/btape.c:1193
 #, c-format
 msgid "unload status=%s %d\n"
 msgstr ""
 
-#: src/stored/btape.c:1189
+#: src/stored/btape.c:1193
 msgid "Bad"
 msgstr ""
 
-#: src/stored/btape.c:1192
+#: src/stored/btape.c:1196
 #, c-format
 msgid "3992 Bad autochanger command: %s\n"
 msgstr ""
 
-#: src/stored/btape.c:1193
+#: src/stored/btape.c:1197
 #, c-format
 msgid "3992 result=\"%s\": ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1203
+#: src/stored/btape.c:1207
 #, c-format
 msgid "3303 Issuing autochanger \"load %d %d\" command.\n"
 msgstr ""
 
-#: src/stored/btape.c:1211
+#: src/stored/btape.c:1215
 #, c-format
 msgid "3303 Autochanger \"load %d %d\" status is OK.\n"
 msgstr ""
 
-#: src/stored/btape.c:1215
+#: src/stored/btape.c:1219
 #, c-format
 msgid "3993 Bad autochanger command: %s\n"
 msgstr ""
 
-#: src/stored/btape.c:1216
+#: src/stored/btape.c:1220
 #, c-format
 msgid "3993 result=\"%s\": ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1231
+#: src/stored/btape.c:1235
 msgid ""
 "\n"
 "The test failed, probably because you need to put\n"
@@ -10129,12 +10106,12 @@ msgid ""
 "Adding a 30 second sleep and trying again ...\n"
 msgstr ""
 
-#: src/stored/btape.c:1244
+#: src/stored/btape.c:1248
 #, c-format
 msgid "Wrote EOF to %s\n"
 msgstr ""
 
-#: src/stored/btape.c:1248
+#: src/stored/btape.c:1252
 #, c-format
 msgid ""
 "\n"
@@ -10146,18 +10123,18 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1253
+#: src/stored/btape.c:1257
 msgid ""
 "\n"
 "The test autochanger worked!!\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1264
+#: src/stored/btape.c:1268
 msgid "You must correct this error or the Autochanger will not work.\n"
 msgstr ""
 
-#: src/stored/btape.c:1282
+#: src/stored/btape.c:1286
 msgid ""
 "\n"
 "\n"
@@ -10169,30 +10146,30 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1307
+#: src/stored/btape.c:1311
 msgid "Now forward spacing 1 file.\n"
 msgstr ""
 
-#: src/stored/btape.c:1309 src/stored/btape.c:1321 src/stored/btape.c:1334
-#: src/stored/btape.c:1352 src/stored/btape.c:1521
+#: src/stored/btape.c:1313 src/stored/btape.c:1325 src/stored/btape.c:1338
+#: src/stored/btape.c:1356 src/stored/btape.c:1525
 #, c-format
 msgid "Bad status from fsr. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1312
+#: src/stored/btape.c:1316
 #, c-format
 msgid "We should be in file 1. I am at file %d. %s\n"
 msgstr ""
 
-#: src/stored/btape.c:1319
+#: src/stored/btape.c:1323
 msgid "Now forward spacing 2 files.\n"
 msgstr ""
 
-#: src/stored/btape.c:1332
+#: src/stored/btape.c:1336
 msgid "Now forward spacing 4 files.\n"
 msgstr ""
 
-#: src/stored/btape.c:1344
+#: src/stored/btape.c:1348
 msgid ""
 "The test worked this time. Please add:\n"
 "\n"
@@ -10201,35 +10178,35 @@ msgid ""
 "to your Device resource for this drive.\n"
 msgstr ""
 
-#: src/stored/btape.c:1350
+#: src/stored/btape.c:1354
 msgid "Now forward spacing 1 more file.\n"
 msgstr ""
 
-#: src/stored/btape.c:1354
+#: src/stored/btape.c:1358
 #, c-format
 msgid "We should be in file 5. I am at file %d. %s\n"
 msgstr ""
 
-#: src/stored/btape.c:1359
+#: src/stored/btape.c:1363
 msgid ""
 "\n"
 "=== End Forward space files test ===\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1363
+#: src/stored/btape.c:1367
 msgid ""
 "\n"
 "The forward space file test failed.\n"
 msgstr ""
 
-#: src/stored/btape.c:1365
+#: src/stored/btape.c:1369
 msgid ""
 "You have Fast Forward Space File enabled.\n"
 "I am turning it off then retrying the test.\n"
 msgstr ""
 
-#: src/stored/btape.c:1371
+#: src/stored/btape.c:1375
 msgid ""
 "You must correct this error or Bacula will not work.\n"
 "Some systems, e.g. OpenBSD, require you to set\n"
@@ -10237,7 +10214,7 @@ msgid ""
 "in your device resource. Use with caution.\n"
 msgstr ""
 
-#: src/stored/btape.c:1403
+#: src/stored/btape.c:1407
 msgid ""
 "\n"
 "Append test failed. Attempting again.\n"
@@ -10247,7 +10224,7 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1411
+#: src/stored/btape.c:1415
 msgid ""
 "\n"
 "\n"
@@ -10259,14 +10236,14 @@ msgid ""
 "to your Device resource in the Storage conf file.\n"
 msgstr ""
 
-#: src/stored/btape.c:1418
+#: src/stored/btape.c:1422
 msgid ""
 "\n"
 "\n"
 "That appears *NOT* to have corrected the problem.\n"
 msgstr ""
 
-#: src/stored/btape.c:1423
+#: src/stored/btape.c:1427
 msgid ""
 "\n"
 "\n"
@@ -10274,7 +10251,7 @@ msgid ""
 "Setting \"BSF at EOM = yes\" and retrying append test.\n"
 msgstr ""
 
-#: src/stored/btape.c:1428
+#: src/stored/btape.c:1432
 msgid ""
 "\n"
 "\n"
@@ -10287,7 +10264,7 @@ msgid ""
 "to your Device resource in the Storage conf file.\n"
 msgstr ""
 
-#: src/stored/btape.c:1439
+#: src/stored/btape.c:1443
 msgid ""
 "\n"
 "Append test failed.\n"
@@ -10314,7 +10291,7 @@ msgid ""
 "in your device resource. Use with caution.\n"
 msgstr ""
 
-#: src/stored/btape.c:1460
+#: src/stored/btape.c:1464
 msgid ""
 "\n"
 "The above Bacula scan should have output identical to what follows.\n"
@@ -10338,116 +10315,116 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:1499
+#: src/stored/btape.c:1503
 #, c-format
 msgid "Bad status from fsf. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1503
+#: src/stored/btape.c:1507
 msgid "Forward spaced 1 file.\n"
 msgstr ""
 
-#: src/stored/btape.c:1506
+#: src/stored/btape.c:1510
 #, c-format
 msgid "Forward spaced %d files.\n"
 msgstr ""
 
-#: src/stored/btape.c:1525
+#: src/stored/btape.c:1529
 msgid "Forward spaced 1 record.\n"
 msgstr ""
 
-#: src/stored/btape.c:1528
+#: src/stored/btape.c:1532
 #, c-format
 msgid "Forward spaced %d records.\n"
 msgstr ""
 
-#: src/stored/btape.c:1573
+#: src/stored/btape.c:1577
 #, c-format
 msgid "Wrote one record of %d bytes.\n"
 msgstr ""
 
-#: src/stored/btape.c:1575
+#: src/stored/btape.c:1579
 msgid "Wrote block to device.\n"
 msgstr ""
 
-#: src/stored/btape.c:1590
+#: src/stored/btape.c:1594
 msgid "Enter length to read: "
 msgstr ""
 
-#: src/stored/btape.c:1595
+#: src/stored/btape.c:1599
 msgid "Bad length entered, using default of 1024 bytes.\n"
 msgstr ""
 
-#: src/stored/btape.c:1604
+#: src/stored/btape.c:1608
 #, c-format
 msgid "Read of %d bytes gives stat=%d. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1627 src/stored/btape.c:1676
+#: src/stored/btape.c:1631 src/stored/btape.c:1680
 #, c-format
 msgid "End of tape\n"
 msgstr ""
 
-#: src/stored/btape.c:1632
+#: src/stored/btape.c:1636
 #, c-format
 msgid "Starting scan at file %u\n"
 msgstr ""
 
-#: src/stored/btape.c:1637 src/stored/dev.c:1325
+#: src/stored/btape.c:1641 src/stored/dev.c:1325
 #, c-format
 msgid "read error on %s. ERR=%s.\n"
 msgstr ""
 
-#: src/stored/btape.c:1639
+#: src/stored/btape.c:1643
 #, c-format
 msgid "Bad status from read %d. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1642 src/stored/btape.c:1656 src/stored/btape.c:1720
-#: src/stored/btape.c:1732 src/stored/btape.c:1745 src/stored/btape.c:1761
+#: src/stored/btape.c:1646 src/stored/btape.c:1660 src/stored/btape.c:1724
+#: src/stored/btape.c:1736 src/stored/btape.c:1749 src/stored/btape.c:1765
 #, c-format
 msgid "1 block of %d bytes in file %d\n"
 msgstr ""
 
-#: src/stored/btape.c:1645 src/stored/btape.c:1659 src/stored/btape.c:1723
-#: src/stored/btape.c:1735 src/stored/btape.c:1748 src/stored/btape.c:1764
+#: src/stored/btape.c:1649 src/stored/btape.c:1663 src/stored/btape.c:1727
+#: src/stored/btape.c:1739 src/stored/btape.c:1752 src/stored/btape.c:1768
 #, c-format
 msgid "%d blocks of %d bytes in file %d\n"
 msgstr ""
 
-#: src/stored/btape.c:1667 src/stored/btape.c:1739
+#: src/stored/btape.c:1671 src/stored/btape.c:1743
 #, c-format
 msgid "End of File mark.\n"
 msgstr ""
 
-#: src/stored/btape.c:1688 src/stored/btape.c:1792
+#: src/stored/btape.c:1692 src/stored/btape.c:1796
 #, c-format
 msgid "Total files=%d, blocks=%d, bytes = %s\n"
 msgstr ""
 
-#: src/stored/btape.c:1752
+#: src/stored/btape.c:1756
 #, c-format
 msgid "Short block read.\n"
 msgstr ""
 
-#: src/stored/btape.c:1755
+#: src/stored/btape.c:1759
 #, c-format
 msgid "Error reading block. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1779
+#: src/stored/btape.c:1783
 #, c-format
 msgid ""
 "Blk_block: %u dev_blk=%u blen=%u First rec FI=%s SessId=%u SessTim=%u Strm=%"
 "s rlen=%d\n"
 msgstr ""
 
-#: src/stored/btape.c:1801
+#: src/stored/btape.c:1805
 #, c-format
 msgid "Device status: %u. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1831
+#: src/stored/btape.c:1835
 msgid ""
 "\n"
 "This command simulates Bacula writing to a tape.\n"
@@ -10491,7 +10468,7 @@ msgstr ""
 "\n"
 "Ce test peut durer longtemps (voir des heures).\n"
 
-#: src/stored/btape.c:1848
+#: src/stored/btape.c:1852
 msgid ""
 "Do you want to run the simplified test (s) with one tape\n"
 "or the complete multiple tape (m) test: (s/m) "
@@ -10499,71 +10476,71 @@ msgstr ""
 "Voulez vous lancer le test simplifié (s) utilisant une seule bande\n"
 "ou bien le test multi-bande complet (m) : (s/m) "
 
-#: src/stored/btape.c:1851
+#: src/stored/btape.c:1855
 msgid "Simple test (single tape) selected.\n"
 msgstr "Sélection du test simplifié (utilisant une seule bande).\n"
 
-#: src/stored/btape.c:1854
+#: src/stored/btape.c:1858
 msgid "Multiple tape test selected.\n"
 msgstr "Sélection du test multiple.\n"
 
-#: src/stored/btape.c:1889 src/stored/append.c:109
+#: src/stored/btape.c:1893 src/stored/append.c:109
 #, c-format
 msgid "Write session label failed. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:1893
+#: src/stored/btape.c:1897
 msgid "Wrote Start of Session label.\n"
 msgstr "Écriture du label de début de session.\n"
 
-#: src/stored/btape.c:1924
+#: src/stored/btape.c:1928
 #, c-format
 msgid "%s Begin writing Bacula records to tape ...\n"
 msgstr ""
 
-#: src/stored/btape.c:1926
+#: src/stored/btape.c:1930
 #, c-format
 msgid "%s Begin writing Bacula records to first tape ...\n"
 msgstr ""
 
-#: src/stored/btape.c:1967
+#: src/stored/btape.c:1971
 #, c-format
 msgid "Wrote blk_block=%u, dev_blk_num=%u VolBytes=%s rate=%.1f KB/s\n"
 msgstr "Écriture blk_block=%u, dev_blk_num=%u VolBytes=%s rate=%.1f KB/s\n"
 
-#: src/stored/btape.c:1977
+#: src/stored/btape.c:1981
 #, c-format
 msgid "%s Flush block, write EOF\n"
 msgstr "Flush de %s blocs, écriture de EOF\n"
 
-#: src/stored/btape.c:1988
+#: src/stored/btape.c:1992
 msgid "Not OK\n"
 msgstr ""
 
-#: src/stored/btape.c:2013 src/stored/append.c:292
+#: src/stored/btape.c:2017 src/stored/append.c:292
 #, c-format
 msgid "Error writting end session label. ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:2018
+#: src/stored/btape.c:2022
 msgid "Set ok=false after write_block_to_device.\n"
 msgstr ""
 
-#: src/stored/btape.c:2021
+#: src/stored/btape.c:2025
 msgid "Wrote End of Session label.\n"
 msgstr "Écriture du label de fin de session.\n"
 
-#: src/stored/btape.c:2045
+#: src/stored/btape.c:2049
 #, c-format
 msgid "Wrote state file last_block_num1=%d last_block_num2=%d\n"
 msgstr "Écriture du fichier d'état last_block_num1=%d last_block_num2=%d\n"
 
-#: src/stored/btape.c:2049
+#: src/stored/btape.c:2053
 #, c-format
 msgid "Could not create state file: %s ERR=%s\n"
 msgstr "Impossible de créer le fichier d'état : %s ERR=%s\n"
 
-#: src/stored/btape.c:2057
+#: src/stored/btape.c:2061
 #, c-format
 msgid ""
 "\n"
@@ -10571,7 +10548,7 @@ msgid ""
 "%s Done filling tape at %d:%d. Now beginning re-read of tape ...\n"
 msgstr ""
 
-#: src/stored/btape.c:2061
+#: src/stored/btape.c:2065
 #, c-format
 msgid ""
 "\n"
@@ -10579,14 +10556,14 @@ msgid ""
 "%s Done filling tapes at %d:%d. Now beginning re-read of first tape ...\n"
 msgstr ""
 
-#: src/stored/btape.c:2100
+#: src/stored/btape.c:2104
 msgid ""
 "\n"
 "The state file level has changed. You must redo\n"
 "the fill command.\n"
 msgstr ""
 
-#: src/stored/btape.c:2106
+#: src/stored/btape.c:2110
 #, c-format
 msgid ""
 "\n"
@@ -10597,95 +10574,95 @@ msgstr ""
 "Impossible de trouver le fichier d'état : %s ERR=%s\n"
 "Vous devez relancer la commande « fill ».\n"
 
-#: src/stored/btape.c:2162
+#: src/stored/btape.c:2166
 msgid "Mount first tape. Press enter when ready: "
 msgstr "Chargez la première bande et appuyez sur « Entrée » : "
 
-#: src/stored/btape.c:2177
+#: src/stored/btape.c:2181
 msgid "Rewinding.\n"
 msgstr "Rembobinage.\n"
 
-#: src/stored/btape.c:2182
+#: src/stored/btape.c:2186
 #, c-format
 msgid "Reading the first 10000 records from %u:%u.\n"
 msgstr "Lecture des 10000 premiers enregistrements depuis %u:%u.\n"
 
-#: src/stored/btape.c:2186 src/stored/btape.c:2251
+#: src/stored/btape.c:2190 src/stored/btape.c:2255
 #, c-format
 msgid "Reposition from %u:%u to %u:%u\n"
 msgstr "Re-positionnement de %u:%u à %u:%u\n"
 
-#: src/stored/btape.c:2189 src/stored/btape.c:2238 src/stored/btape.c:2254
+#: src/stored/btape.c:2193 src/stored/btape.c:2242 src/stored/btape.c:2258
 #, c-format
 msgid "Reposition error. ERR=%s\n"
 msgstr "Erreur pendant le re-positionnement. ERR=%s\n"
 
-#: src/stored/btape.c:2192
+#: src/stored/btape.c:2196
 #, c-format
 msgid "Reading block %u.\n"
 msgstr "Lecture du bloc %u.\n"
 
-#: src/stored/btape.c:2194 src/stored/btape.c:2243 src/stored/btape.c:2259
+#: src/stored/btape.c:2198 src/stored/btape.c:2247 src/stored/btape.c:2263
 #, c-format
 msgid "Error reading block: ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:2199
+#: src/stored/btape.c:2203
 msgid ""
 "\n"
 "The last block on the tape matches. Test succeeded.\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:2201
+#: src/stored/btape.c:2205
 msgid ""
 "\n"
 "The last block of the first tape matches.\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:2224
+#: src/stored/btape.c:2228
 msgid "Mount second tape. Press enter when ready: "
 msgstr "Chargez une deuxième bande et appuyez sur « Entrée » : "
 
-#: src/stored/btape.c:2236
+#: src/stored/btape.c:2240
 #, c-format
 msgid "Reposition from %u:%u to 0:1\n"
 msgstr "Re-positionnement de %u:%u à 0:1\n"
 
-#: src/stored/btape.c:2241 src/stored/btape.c:2257
+#: src/stored/btape.c:2245 src/stored/btape.c:2261
 #, c-format
 msgid "Reading block %d.\n"
 msgstr "Lecture du bloc %d.\n"
 
-#: src/stored/btape.c:2247
+#: src/stored/btape.c:2251
 msgid ""
 "\n"
 "The first block on the second tape matches.\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:2263
+#: src/stored/btape.c:2267
 msgid ""
 "\n"
 "The last block on the second tape matches. Test succeeded.\n"
 "\n"
 msgstr ""
 
-#: src/stored/btape.c:2278
+#: src/stored/btape.c:2282
 #, c-format
 msgid "10000 records read now at %d:%d\n"
 msgstr "10000 enregistrements lus maintenant à %d:%d\n"
 
-#: src/stored/btape.c:2301 src/stored/btape.c:2312 src/stored/btape.c:2360
+#: src/stored/btape.c:2305 src/stored/btape.c:2316 src/stored/btape.c:2364
 msgid "Last block written"
 msgstr "Dernier bloc écrit"
 
-#: src/stored/btape.c:2303 src/stored/btape.c:2313
+#: src/stored/btape.c:2307 src/stored/btape.c:2317
 msgid "Block read back"
 msgstr ""
 
-#: src/stored/btape.c:2304
+#: src/stored/btape.c:2308
 #, c-format
 msgid ""
 "\n"
@@ -10693,7 +10670,7 @@ msgid ""
 "The blocks differ at byte %u\n"
 msgstr ""
 
-#: src/stored/btape.c:2305
+#: src/stored/btape.c:2309
 msgid ""
 "\n"
 "\n"
@@ -10703,167 +10680,167 @@ msgid ""
 "to write multi-tape Volumes.!!!!\n"
 msgstr ""
 
-#: src/stored/btape.c:2344
+#: src/stored/btape.c:2348
 #, c-format
 msgid "Last block at: %u:%u this_dev_block_num=%d\n"
 msgstr ""
 
-#: src/stored/btape.c:2358
+#: src/stored/btape.c:2362
 #, c-format
 msgid "Block not written: FileIndex=%u blk_block=%u Size=%u\n"
 msgstr ""
 
-#: src/stored/btape.c:2362
+#: src/stored/btape.c:2366
 msgid "Block not written"
 msgstr "Bloc non écrit"
 
-#: src/stored/btape.c:2377
+#: src/stored/btape.c:2381
 #, c-format
 msgid "End of tape %d:%d. VolumeCapacity=%s. Write rate = %.1f KB/s\n"
 msgstr ""
 
-#: src/stored/btape.c:2427
+#: src/stored/btape.c:2431
 msgid "Test writing blocks of 64512 bytes to tape.\n"
 msgstr ""
 
-#: src/stored/btape.c:2429
+#: src/stored/btape.c:2433
 msgid "How many blocks do you want to write? (1000): "
 msgstr ""
 
-#: src/stored/btape.c:2444
+#: src/stored/btape.c:2448
 #, c-format
 msgid "Begin writing %d Bacula blocks to tape ...\n"
 msgstr ""
 
-#: src/stored/btape.c:2496
+#: src/stored/btape.c:2500
 #, c-format
 msgid "Begin writing raw blocks of %u bytes.\n"
 msgstr ""
 
-#: src/stored/btape.c:2520
+#: src/stored/btape.c:2524
 #, c-format
 msgid "Write failed at block %u. stat=%d ERR=%s\n"
 msgstr ""
 
-#: src/stored/btape.c:2529
+#: src/stored/btape.c:2533
 msgid "test autochanger"
 msgstr ""
 
-#: src/stored/btape.c:2530
+#: src/stored/btape.c:2534
 msgid "backspace file"
 msgstr ""
 
-#: src/stored/btape.c:2531
+#: src/stored/btape.c:2535
 msgid "backspace record"
 msgstr ""
 
-#: src/stored/btape.c:2532
+#: src/stored/btape.c:2536
 msgid "list device capabilities"
 msgstr ""
 
-#: src/stored/btape.c:2533
+#: src/stored/btape.c:2537
 msgid "clear tape errors"
 msgstr ""
 
-#: src/stored/btape.c:2534
+#: src/stored/btape.c:2538
 msgid "go to end of Bacula data for append"
 msgstr ""
 
-#: src/stored/btape.c:2535
+#: src/stored/btape.c:2539
 msgid "go to the physical end of medium"
 msgstr ""
 
-#: src/stored/btape.c:2536
+#: src/stored/btape.c:2540
 msgid "fill tape, write onto second volume"
 msgstr ""
 
-#: src/stored/btape.c:2537
+#: src/stored/btape.c:2541
 msgid "read filled tape"
 msgstr ""
 
-#: src/stored/btape.c:2538
+#: src/stored/btape.c:2542
 msgid "forward space a file"
 msgstr ""
 
-#: src/stored/btape.c:2539
+#: src/stored/btape.c:2543
 msgid "forward space a record"
 msgstr ""
 
-#: src/stored/btape.c:2541
+#: src/stored/btape.c:2545
 msgid "write a Bacula label to the tape"
 msgstr ""
 
-#: src/stored/btape.c:2542
+#: src/stored/btape.c:2546
 msgid "load a tape"
 msgstr ""
 
-#: src/stored/btape.c:2543
+#: src/stored/btape.c:2547
 msgid "quit btape"
 msgstr ""
 
-#: src/stored/btape.c:2544
+#: src/stored/btape.c:2548
 msgid "use write() to fill tape"
 msgstr ""
 
-#: src/stored/btape.c:2545
+#: src/stored/btape.c:2549
 msgid "read and print the Bacula tape label"
 msgstr ""
 
-#: src/stored/btape.c:2546
+#: src/stored/btape.c:2550
 msgid "test record handling functions"
 msgstr ""
 
-#: src/stored/btape.c:2547
+#: src/stored/btape.c:2551
 msgid "rewind the tape"
 msgstr "rembobine la bande"
 
-#: src/stored/btape.c:2548
+#: src/stored/btape.c:2552
 msgid "read() tape block by block to EOT and report"
 msgstr ""
 
-#: src/stored/btape.c:2549
+#: src/stored/btape.c:2553
 msgid "Bacula read block by block to EOT and report"
 msgstr "Bacula lit bloc par bloc jusqu'à la fin de la bande (EOT) et résume"
 
-#: src/stored/btape.c:2550
+#: src/stored/btape.c:2554
 msgid "print tape status"
 msgstr ""
 
-#: src/stored/btape.c:2551
+#: src/stored/btape.c:2555
 msgid "General test Bacula tape functions"
 msgstr "test général des fonctions Bacula sur un lecteur de bande"
 
-#: src/stored/btape.c:2552
+#: src/stored/btape.c:2556
 msgid "write an EOF on the tape"
 msgstr "écrit un EOF sur la bande"
 
-#: src/stored/btape.c:2553
+#: src/stored/btape.c:2557
 msgid "write a single Bacula block"
 msgstr "écrit un seul bloc bacula"
 
-#: src/stored/btape.c:2554
+#: src/stored/btape.c:2558
 msgid "read a single record"
 msgstr "lit un seul enregistrement"
 
-#: src/stored/btape.c:2555
+#: src/stored/btape.c:2559
 msgid "read a single Bacula block"
 msgstr "lit un seul bloc bacula"
 
-#: src/stored/btape.c:2556
+#: src/stored/btape.c:2560
 msgid "quick fill command"
 msgstr ""
 
-#: src/stored/btape.c:2577
+#: src/stored/btape.c:2581
 #, c-format
 msgid "\"%s\" is an invalid command\n"
 msgstr "« %s » est une commande invalide.\n"
 
-#: src/stored/btape.c:2586
+#: src/stored/btape.c:2590
 #, c-format
 msgid "Interactive commands:\n"
 msgstr ""
 
-#: src/stored/btape.c:2597
+#: src/stored/btape.c:2601
 #, fuzzy, c-format
 msgid ""
 "\n"
@@ -10872,7 +10849,7 @@ msgid ""
 "Usage: btape <options> <device_name>\n"
 "       -b <file>   specify bootstrap file\n"
 "       -c <file>   set configuration file to file\n"
-"       -d <nn>     set debug level to nn\n"
+"       -d <nn>     set debug level to <nn>\n"
 "       -p          proceed inspite of I/O errors\n"
 "       -s          turn off signals\n"
 "       -v          be verbose\n"
@@ -10888,27 +10865,27 @@ msgstr ""
 "       -t          test - lecture de la configuration et sortie\n"
 "\n"
 
-#: src/stored/btape.c:2682
+#: src/stored/btape.c:2686
 #, c-format
 msgid "Mount second Volume on device %s and press return when ready: "
 msgstr ""
 
-#: src/stored/btape.c:2709
+#: src/stored/btape.c:2713
 #, c-format
 msgid "Mount blank Volume on device %s and press return when ready: "
 msgstr ""
 
-#: src/stored/btape.c:2727
+#: src/stored/btape.c:2731
 #, fuzzy, c-format
 msgid "End of Volume \"%s\" %d records.\n"
 msgstr "Le volume « %s » existe déjà en base.\n"
 
-#: src/stored/btape.c:2740
+#: src/stored/btape.c:2744
 #, c-format
 msgid "Read block=%u, VolBytes=%s rate=%.1f KB/s\n"
 msgstr ""
 
-#: src/stored/btape.c:2752 src/stored/mount.c:629
+#: src/stored/btape.c:2756 src/stored/mount.c:634
 #, c-format
 msgid "Cannot open Dev=%s, Vol=%s\n"
 msgstr ""
@@ -11057,27 +11034,27 @@ msgstr "Impossible d'ouvrir le fichier de spool des attributs %s : ERR=%s\n"
 msgid "End of medium on Volume \"%s\" Bytes=%s Blocks=%s at %s.\n"
 msgstr "Fin de média sur le Volume « %s » Octets=%s Blocs=%s à %s.\n"
 
-#: src/stored/device.c:136
+#: src/stored/device.c:137
 #, c-format
 msgid "New volume \"%s\" mounted on device %s at %s.\n"
 msgstr "Nouveau volume « %s » monté sur le device %s à %s.\n"
 
-#: src/stored/device.c:148
+#: src/stored/device.c:149
 #, c-format
 msgid "write_block_to_device Volume label failed. ERR=%s"
 msgstr ""
 
-#: src/stored/device.c:183
+#: src/stored/device.c:184
 #, c-format
 msgid "write_block_to_device overflow block failed. ERR=%s"
 msgstr ""
 
-#: src/stored/device.c:325 src/stored/dev.c:432
+#: src/stored/device.c:326 src/stored/dev.c:432
 #, c-format
 msgid "Unable to open device %s: ERR=%s\n"
 msgstr ""
 
-#: src/stored/device.c:327
+#: src/stored/device.c:328
 #, c-format
 msgid "Unable to open archive %s: ERR=%s\n"
 msgstr ""
@@ -11110,17 +11087,17 @@ msgstr ""
 msgid "Job %d canceled.\n"
 msgstr "Le job %d est annulé.\n"
 
-#: src/stored/mount.c:211
+#: src/stored/mount.c:215
 #, fuzzy, c-format
 msgid "Could not open device %s: ERR=%s\n"
 msgstr "Impossible d'ouvrir %s : ERR=%s\n"
 
-#: src/stored/mount.c:254 src/stored/mount.c:535
+#: src/stored/mount.c:258 src/stored/mount.c:539
 #, c-format
 msgid "Volume \"%s\" not on device %s.\n"
 msgstr "Le volume « %s » n'est pas dans le device %s.\n"
 
-#: src/stored/mount.c:294
+#: src/stored/mount.c:298
 #, c-format
 msgid ""
 "Director wanted Volume \"%s\".\n"
@@ -11131,25 +11108,25 @@ msgstr ""
 "    Le volume courant « %s » n'est pas utilisable car :\n"
 "    %s"
 
-#: src/stored/mount.c:377
+#: src/stored/mount.c:381
 #, c-format
 msgid "Volume \"%s\" previously written, moving to end of data.\n"
 msgstr "Le volume « %s » contient des données, re-positionnement à la fin.\n"
 
-#: src/stored/mount.c:380
+#: src/stored/mount.c:384
 #, c-format
 msgid "Unable to position to end of data on device %s: ERR=%s\n"
 msgstr ""
 "Impossible de se positionner à la fin du média sur le device %s : ERR=%s\n"
 
-#: src/stored/mount.c:388
+#: src/stored/mount.c:392
 #, c-format
 msgid "Ready to append to end of Volume \"%s\" part=%d size=%s\n"
 msgstr ""
 "Prêt à ajouter des données à la fin du volume « %s » part=%d size=%s\n"
 "\n"
 
-#: src/stored/mount.c:392
+#: src/stored/mount.c:396
 #, fuzzy, c-format
 msgid ""
 "Bacula cannot write on DVD Volume \"%s\" because: The sizes do not match! "
@@ -11158,12 +11135,12 @@ msgstr ""
 "Impossible d'écrire sur le volume « %s » car :\n"
 "Les tailles ne correspondent pas. Volume=%s Catalogue=%s\n"
 
-#: src/stored/mount.c:406
+#: src/stored/mount.c:410
 #, c-format
 msgid "Ready to append to end of Volume \"%s\" at file=%d.\n"
 msgstr "Prêt à ajouter des données à la fin du volume « %s » file=%d.\n"
 
-#: src/stored/mount.c:409
+#: src/stored/mount.c:413
 #, fuzzy, c-format
 msgid ""
 "Bacula cannot write on tape Volume \"%s\" because:\n"
@@ -11172,28 +11149,26 @@ msgstr ""
 "Impossible d'écrire sur le volume « %s » \n"
 "car le nombre de fichiers ne correspond pas. Volume=%u Catalogue=%u\n"
 
-#: src/stored/mount.c:420
-#, fuzzy, c-format
-msgid "Ready to append to end of Volume \"%s\" size=%s\n"
-msgstr ""
-"Prêt à ajouter des données à la fin du volume « %s » part=%d size=%s\n"
-"\n"
-
 #: src/stored/mount.c:424
-#, fuzzy, c-format
+#, c-format
+msgid "Ready to append to end of Volume \"%s\" size=%s\n"
+msgstr "Prêt à ajouter des données à la fin du volume « %s » size=%s\n"
+
+#: src/stored/mount.c:428
+#, c-format
 msgid ""
 "Bacula cannot write on disk Volume \"%s\" because: The sizes do not match! "
 "Volume=%s Catalog=%s\n"
 msgstr ""
-"Impossible d'écrire sur le volume « %s » car :\n"
-"Les tailles ne correspondent pas. Volume=%s Catalogue=%s\n"
+"Impossible d'écrire sur le volume « %s » car : Les tailles ne correspondent "
+"pas. Volume=%s Catalogue=%s\n"
 
-#: src/stored/mount.c:454
+#: src/stored/mount.c:458
 #, c-format
 msgid "Ready to append to end of Volume \"%s\" at file address=%u.\n"
 msgstr "Prêt à ajouter des données à la fin du volume « %s » file adress=%u.\n"
 
-#: src/stored/mount.c:458
+#: src/stored/mount.c:462
 #, c-format
 msgid ""
 "Bacula cannot write on Volume \"%s\" because:\n"
@@ -11202,31 +11177,31 @@ msgid ""
 "Perhaps You removed the DVD last part in spool directory.\n"
 msgstr ""
 
-#: src/stored/mount.c:525
+#: src/stored/mount.c:529
 #, c-format
 msgid "Labeled new Volume \"%s\" on device %s.\n"
 msgstr "Le nouveau volume « %s » a été labélisé sur le device %s.\n"
 
-#: src/stored/mount.c:530
-#, fuzzy, c-format
+#: src/stored/mount.c:534
+#, c-format
 msgid "Device %s not configured to autolabel Volumes.\n"
 msgstr ""
 "Attention, le device %s n'est pas configuré pour labéliser automatiquement "
 "les volumes.\n"
 
-#: src/stored/mount.c:550
+#: src/stored/mount.c:554
 #, c-format
 msgid "Marking Volume \"%s\" in Error in Catalog.\n"
 msgstr "Le volume « %s » est marqué en Erreur dans le catalogue.\n"
 
-#: src/stored/mount.c:566
+#: src/stored/mount.c:570
 #, c-format
 msgid ""
 "Autochanger Volume \"%s\" not found in slot %d.\n"
 "    Setting InChanger to zero in catalog.\n"
 msgstr ""
 
-#: src/stored/mount.c:585
+#: src/stored/mount.c:589
 msgid "Hey!!!!! WroteVol non-zero !!!!!\n"
 msgstr ""
 
@@ -11250,9 +11225,9 @@ msgid "3904 Job %s not found.\n"
 msgstr "3904 Job %s non trouvé.\n"
 
 #: src/stored/dircmd.c:324
-#, fuzzy, c-format
+#, c-format
 msgid "Job %s marked to be canceled.\n"
-msgstr "Le job va être marqué annulé.\n"
+msgstr "Le job %s est marqué pour être annulé.\n"
 
 #: src/stored/dircmd.c:325
 #, c-format
@@ -11300,9 +11275,9 @@ msgid "3912 Failed to label Volume: ERR=%s\n"
 msgstr "3912 Impossible de labéliser le Volume : ERR=%s\n"
 
 #: src/stored/dircmd.c:506
-#, fuzzy, c-format
+#, c-format
 msgid "3914 Failed to label Volume (no media): ERR=%s\n"
-msgstr "3912 Impossible de labéliser le Volume : ERR=%s\n"
+msgstr "3914 Impossible de labéliser le Volume (pas de volume): ERR=%s\n"
 
 #: src/stored/dircmd.c:509
 #, c-format
@@ -11520,8 +11495,8 @@ msgid "Unable to set network buffer size.\n"
 msgstr ""
 
 #: src/stored/append.c:94 src/stored/append.c:103 src/stored/append.c:115
-#: src/stored/append.c:298 src/stored/append.c:309 src/stored/askdir.c:332
-#: src/stored/askdir.c:333
+#: src/stored/append.c:298 src/stored/append.c:309 src/stored/askdir.c:334
+#: src/stored/askdir.c:335
 msgid "NULL Volume name. This shouldn't happen!!!\n"
 msgstr ""
 
@@ -11555,21 +11530,21 @@ msgid ""
 "Job write elapsed time = %02d:%02d:%02d, Transfer rate = %s bytes/second\n"
 msgstr "Temps d'écriture du job = %02d:%02d:%02d, Taux de transfert = %s o/s\n"
 
-#: src/stored/job.c:210
+#: src/stored/job.c:225
 #, fuzzy, c-format
 msgid "FD connect failed: Job name not found: %s\n"
 msgstr "Job non trouvé : %s\n"
 
-#: src/stored/job.c:221
+#: src/stored/job.c:236
 #, c-format
 msgid "Hey!!!! JobId %u Job %s already authenticated.\n"
 msgstr ""
 
-#: src/stored/job.c:232
+#: src/stored/job.c:247
 msgid "Unable to authenticate File daemon\n"
 msgstr ""
 
-#: src/stored/job.c:354
+#: src/stored/job.c:369
 msgid "In free_jcr(), but still attached to device!!!!\n"
 msgstr ""
 
@@ -11577,35 +11552,35 @@ msgstr ""
 msgid "Network error on bnet_recv in req_vol_info.\n"
 msgstr ""
 
-#: src/stored/askdir.c:195
+#: src/stored/askdir.c:196
 #, c-format
 msgid "Error getting Volume info: %s"
 msgstr "Erreur pendant la récupération des informations sur un Volume : %s"
 
-#: src/stored/askdir.c:363
+#: src/stored/askdir.c:369
 #, c-format
 msgid "Didn't get vol info vol=%s: ERR=%s"
 msgstr ""
 
-#: src/stored/askdir.c:405
+#: src/stored/askdir.c:411
 #, c-format
 msgid "Error creating JobMedia record: ERR=%s\n"
 msgstr ""
 
-#: src/stored/askdir.c:412
+#: src/stored/askdir.c:418
 #, c-format
 msgid "Error creating JobMedia record: %s\n"
 msgstr ""
 
-#: src/stored/askdir.c:478
+#: src/stored/askdir.c:485
 #, c-format
 msgid "Job %s canceled while waiting for mount on Storage Device \"%s\".\n"
 msgstr ""
 "Le job %s a été annulé alors qu'il attendait un montage sur le Storage "
 "Device « %s ».\n"
 
-#: src/stored/askdir.c:491
-#, fuzzy, c-format
+#: src/stored/askdir.c:498
+#, c-format
 msgid ""
 "Job %s waiting. Cannot find any appendable volumes.\n"
 "Please use the \"label\"  command to create a new Volume for:\n"
@@ -11616,31 +11591,31 @@ msgstr ""
 "Le Job %s est en attente. Bacula n'a pas pu trouver de media disponible.\n"
 "Merci de créer un nouveau volume via la commande « label » pour :\n"
 "    Storage :       %s\n"
-"    Type du Media : %s\n"
 "    Pool :          %s\n"
+"    Type du Media : %s\n"
 
-#: src/stored/askdir.c:515 src/stored/askdir.c:605
+#: src/stored/askdir.c:522 src/stored/askdir.c:612
 #, c-format
 msgid "Max time exceeded waiting to mount Storage Device %s for Job %s\n"
 msgstr ""
 
-#: src/stored/askdir.c:525
+#: src/stored/askdir.c:532
 msgid "pthread error in mount_next_volume.\n"
 msgstr ""
 
-#: src/stored/askdir.c:557
+#: src/stored/askdir.c:564
 msgid "Cannot request another volume: no volume name given.\n"
 msgstr ""
 
-#: src/stored/askdir.c:563
+#: src/stored/askdir.c:570
 #, c-format
 msgid "Job %s canceled while waiting for mount on Storage Device %s.\n"
 msgstr ""
 "Le Job %s a été annulé pendant qu'il attendait le montage sur le Storage "
 "Device %s.\n"
 
-#: src/stored/askdir.c:578
-#, fuzzy, c-format
+#: src/stored/askdir.c:585
+#, c-format
 msgid ""
 "Please mount Volume \"%s\" or label a new one for:\n"
 "    Job:          %s\n"
@@ -11648,13 +11623,13 @@ msgid ""
 "    Pool:         %s\n"
 "    Media type:   %s\n"
 msgstr ""
-"Le Job %s est en attente. Bacula n'a pas pu trouver de media disponible.\n"
-"Merci de créer un nouveau volume via la commande « label » pour :\n"
+"Merci de monter ou de créer un nouveau volume pour :\n"
+"    Job :           %s\n"
 "    Storage :       %s\n"
-"    Type du Media : %s\n"
 "    Pool :          %s\n"
+"    Type du Media : %s\n"
 
-#: src/stored/askdir.c:615
+#: src/stored/askdir.c:622
 msgid "pthread error in mount_volume\n"
 msgstr ""
 
@@ -12046,72 +12021,64 @@ msgstr ""
 msgid "Unexpected Tape is Off-line\n"
 msgstr ""
 
-#: src/stored/acquire.c:69
+#: src/stored/acquire.c:70
 #, c-format
 msgid "Acquire read: num_writers=%d not zero. Job %d canceled.\n"
 msgstr ""
 
-#: src/stored/acquire.c:78
-#, fuzzy, c-format
+#: src/stored/acquire.c:79
+#, c-format
 msgid "No volumes specified for reading. Job %s canceled.\n"
-msgstr "Pas de volume spécifié. Abandon du job %s.\n"
+msgstr "Pas de volume spécifié pour la lecture. Abandon du job %s.\n"
 
-#: src/stored/acquire.c:87
+#: src/stored/acquire.c:88
 #, c-format
 msgid "Logic error: no next volume to read. Numvol=%d Curvol=%d\n"
 msgstr ""
 
-#: src/stored/acquire.c:113
+#: src/stored/acquire.c:114
 #, c-format
 msgid ""
 "Changing device. Want Media Type=\"%s\" have=\"%s\"\n"
 "  device=%s\n"
 msgstr ""
 
-#: src/stored/acquire.c:151
+#: src/stored/acquire.c:152
 #, c-format
 msgid "Media Type change.  New device %s chosen.\n"
 msgstr ""
 
-#: src/stored/acquire.c:162
+#: src/stored/acquire.c:163
 #, c-format
 msgid "No suitable device found to read Volume \"%s\"\n"
 msgstr ""
 
-#: src/stored/acquire.c:191
-#, fuzzy, c-format
+#: src/stored/acquire.c:192
+#, c-format
 msgid "Job %s canceled.\n"
 msgstr "Le job %s est annulé.\n"
 
-#: src/stored/acquire.c:205
+#: src/stored/acquire.c:206
 #, c-format
 msgid "Read open device %s Volume \"%s\" failed: ERR=%s\n"
 msgstr ""
 
-#: src/stored/acquire.c:276
+#: src/stored/acquire.c:277
 #, c-format
 msgid "Too many errors trying to mount device %s for reading.\n"
 msgstr ""
 
-#: src/stored/acquire.c:285
+#: src/stored/acquire.c:286
 #, c-format
 msgid "Ready to read from volume \"%s\" on device %s.\n"
 msgstr "Prêt à lire les données du volume « %s » depuis le device %s.\n"
 
-#: src/stored/acquire.c:335
+#: src/stored/acquire.c:336
 #, fuzzy, c-format
 msgid "Want to append, but device %s is busy reading.\n"
 msgstr "3603 JobId=%u device %s est occupé en lecture.\n"
 
-#: src/stored/acquire.c:365
-#, fuzzy, c-format
-msgid ""
-"Wanted to append to Volume \"%s\", but device %s is busy writing on \"%s"
-"\" .\n"
-msgstr ""
-"Voulait le Volume « %s », mais le Device %s est occupé à écrire sur « %s ».\n"
-
-#: src/stored/acquire.c:384
+#: src/stored/acquire.c:378
 #, c-format
 msgid ""
 "Cannot recycle volume \"%s\" on device %s because it is in use by another "
@@ -12120,7 +12087,7 @@ msgstr ""
 "Impossible de recycler le volume « %s » sur le device %s car il est utilisé "
 "par un autre job.\n"
 
-#: src/stored/acquire.c:409
+#: src/stored/acquire.c:404
 #, fuzzy, c-format
 msgid ""
 "Invalid tape position on volume \"%s\" on device %s. Expected %d, got %d\n"
@@ -12128,23 +12095,23 @@ msgstr ""
 "Fin du volume « %s » à %u:%u sur le device %s. Ecriture de %u octets, eu %"
 "d.\n"
 
-#: src/stored/acquire.c:429
+#: src/stored/acquire.c:426
 #, c-format
 msgid "Could not ready device %s for append.\n"
 msgstr ""
 
-#: src/stored/acquire.c:513 src/stored/block.c:368 src/stored/block.c:718
+#: src/stored/acquire.c:524 src/stored/block.c:368 src/stored/block.c:718
 #: src/stored/block.c:794
 #, c-format
 msgid "Could not create JobMedia record for Volume=\"%s\" Job=%s\n"
 msgstr "Impossible de créer un JobMedia en base pour le Volume=%s Job=%s\n"
 
-#: src/stored/acquire.c:554
+#: src/stored/acquire.c:565
 #, c-format
 msgid "Alert: %s"
 msgstr "Alert: %s"
 
-#: src/stored/acquire.c:562
+#: src/stored/acquire.c:573
 #, c-format
 msgid "3997 Bad alert command: %s: ERR=%s.\n"
 msgstr ""
@@ -13056,29 +13023,6 @@ msgstr ""
 "\n"
 "Version : "
 
-#: src/console/console.c:114
-#, fuzzy, c-format
-msgid ""
-") %s %s %s\n"
-"\n"
-"Usage: bconsole [-s] [-c config_file] [-d debug_level]\n"
-"       -c <file>   set configuration file to file\n"
-"       -dnn        set debug level to nn\n"
-"       -n          no conio\n"
-"       -s          no signals\n"
-"       -t          test - read configuration and exit\n"
-"       -?          print this message.\n"
-"\n"
-msgstr ""
-") %s %s %s\n"
-"\n"
-"Usage : bconsole [-s] [-c config_file] [-d niveau_debug]\n"
-"       -c <file>   set configuration file to file\n"
-"       -dnn        set debug level to nn\n"
-"       -s          no signals\n"
-"       -t          test - lecture de la configuration et sortie\n"
-"\n"
-
 #: src/console/console.c:162
 msgid "input from file"
 msgstr ""
@@ -13129,9 +13073,9 @@ msgid "Select Director by entering a number: "
 msgstr ""
 
 #: src/console/console.c:475
-#, fuzzy, c-format
+#, c-format
 msgid "%s is not a number. You must enter a number between 1 and %d\n"
-msgstr "Vous devez saisir un nombre entre 1 et %d\n"
+msgstr "%s n'est pas un nombre. Vous devez saisir un nombre entre 1 et %d\n"
 
 #: src/console/console.c:481
 #, c-format
@@ -13744,54 +13688,54 @@ msgstr ""
 msgid "Verify Data"
 msgstr ""
 
-#: src/lib/util.c:706
+#: src/lib/util.c:705
 msgid "Working directory not defined. Cannot continue.\n"
 msgstr ""
 
-#: src/lib/util.c:709
+#: src/lib/util.c:708
 #, c-format
 msgid "Working Directory: \"%s\" not found. Cannot continue.\n"
 msgstr ""
 
-#: src/lib/util.c:713
+#: src/lib/util.c:712
 #, c-format
 msgid "Working Directory: \"%s\" is not a directory. Cannot continue.\n"
 msgstr ""
 
-#: src/lib/message.c:273 src/lib/message.c:283
+#: src/lib/message.c:274 src/lib/message.c:284
 #, c-format
 msgid "Could not open console message file %s: ERR=%s\n"
 msgstr ""
 
-#: src/lib/message.c:288
+#: src/lib/message.c:289
 #, c-format
 msgid "Could not get con mutex: ERR=%s\n"
 msgstr ""
 
-#: src/lib/message.c:392
+#: src/lib/message.c:393
 #, c-format
 msgid "open mail pipe %s failed: ERR=%s\n"
 msgstr ""
 
-#: src/lib/message.c:398
+#: src/lib/message.c:399
 msgid "Bacula Message"
 msgstr "Message de Bacula"
 
-#: src/lib/message.c:458
+#: src/lib/message.c:459
 msgid "open mail pipe failed.\n"
 msgstr ""
 
-#: src/lib/message.c:470
+#: src/lib/message.c:471
 #, c-format
 msgid "close error: ERR=%s\n"
 msgstr "erreur de fermeture : ERR=%s\n"
 
-#: src/lib/message.c:481
+#: src/lib/message.c:482
 #, c-format
 msgid "Mail prog: %s"
 msgstr ""
 
-#: src/lib/message.c:490
+#: src/lib/message.c:491
 #, c-format
 msgid ""
 "Mail program terminated in error.\n"
@@ -13802,12 +13746,12 @@ msgstr ""
 "CMD=%s\n"
 "ERR=%s\n"
 
-#: src/lib/message.c:589 src/lib/message.c:742
+#: src/lib/message.c:590 src/lib/message.c:743
 #, c-format
 msgid "fopen %s failed: ERR=%s\n"
 msgstr "fopen %s en erreur : ERR=%s\n"
 
-#: src/lib/message.c:724
+#: src/lib/message.c:725
 #, c-format
 msgid ""
 "Operator mail program terminated in error.\n"
@@ -13815,72 +13759,72 @@ msgid ""
 "ERR=%s\n"
 msgstr ""
 
-#: src/lib/message.c:1023
+#: src/lib/message.c:1024
 #, c-format
 msgid "%s: ABORTING due to ERROR in %s:%d\n"
 msgstr ""
 
-#: src/lib/message.c:1027
+#: src/lib/message.c:1028
 #, c-format
 msgid "%s: ERROR TERMINATION at %s:%d\n"
 msgstr ""
 
-#: src/lib/message.c:1032
+#: src/lib/message.c:1033
 #, c-format
 msgid "%s: Fatal Error because: "
 msgstr "%s : Erreur Fatale car : "
 
-#: src/lib/message.c:1034
+#: src/lib/message.c:1035
 #, c-format
 msgid "%s: Fatal Error at %s:%d because:\n"
 msgstr "%s : Erreur Fatale à %s:%d car :\n"
 
-#: src/lib/message.c:1038
+#: src/lib/message.c:1039
 #, c-format
 msgid "%s: ERROR: "
 msgstr "%s : ERREUR : "
 
-#: src/lib/message.c:1040
+#: src/lib/message.c:1041
 #, c-format
 msgid "%s: ERROR in %s:%d "
 msgstr "%s : ERREUR dans %s:%d "
 
-#: src/lib/message.c:1043
+#: src/lib/message.c:1044
 #, c-format
 msgid "%s: Warning: "
 msgstr "%s : Attention : "
 
-#: src/lib/message.c:1046
+#: src/lib/message.c:1047
 #, c-format
 msgid "%s: Security violation: "
 msgstr ""
 
-#: src/lib/message.c:1121
+#: src/lib/message.c:1122
 #, c-format
 msgid "%s ABORTING due to ERROR\n"
 msgstr ""
 
-#: src/lib/message.c:1124
+#: src/lib/message.c:1125
 #, c-format
 msgid "%s ERROR TERMINATION\n"
 msgstr ""
 
-#: src/lib/message.c:1127
-#, fuzzy, c-format
+#: src/lib/message.c:1128
+#, c-format
 msgid "%s JobId %u: Fatal error: "
-msgstr "%s : %s Erreur fatale : "
+msgstr "%s JobId %u: Erreur fatale : "
 
-#: src/lib/message.c:1133
-#, fuzzy, c-format
+#: src/lib/message.c:1134
+#, c-format
 msgid "%s JobId %u: Error: "
-msgstr "%s : %s Erreur : "
+msgstr "%s JobId %u : Erreur : "
 
-#: src/lib/message.c:1139
-#, fuzzy, c-format
+#: src/lib/message.c:1140
+#, c-format
 msgid "%s JobId %u: Warning: "
-msgstr "%s : Attention : "
+msgstr "%s JobId %u : Attention : "
 
-#: src/lib/message.c:1142
+#: src/lib/message.c:1143
 #, c-format
 msgid "%s JobId %u: Security violation: "
 msgstr ""
@@ -13912,7 +13856,7 @@ msgstr ""
 msgid "Attr spool write error. ERR=%s\n"
 msgstr "Erreur pendant l'écriture des attributs dans le spool. ERR=%s\n"
 
-#: src/lib/bnet.c:244 src/lib/bnet.c:283
+#: src/lib/bnet.c:244 src/lib/bnet.c:284
 msgid "TLS connection initialization failed.\n"
 msgstr "Initialisation de la connexion TLS échouée.\n"
 
@@ -13920,52 +13864,52 @@ msgstr "Initialisation de la connexion TLS échouée.\n"
 msgid "TLS Negotiation failed.\n"
 msgstr "Négociation TLS échouée.\n"
 
-#: src/lib/bnet.c:258 src/lib/bnet.c:298
+#: src/lib/bnet.c:258 src/lib/bnet.c:299
 msgid ""
 "TLS certificate verification failed. Peer certificate did not match a "
 "required commonName\n"
 msgstr ""
 
-#: src/lib/bnet.c:305
+#: src/lib/bnet.c:306
 #, c-format
 msgid ""
 "TLS host certificate verification failed. Host %s did not match presented "
 "certificate\n"
 msgstr ""
 
-#: src/lib/bnet.c:322
+#: src/lib/bnet.c:323
 msgid "TLS enabled but not configured.\n"
 msgstr "TLS activé mais non configuré.\n"
 
-#: src/lib/bnet.c:328
+#: src/lib/bnet.c:329
 msgid "TLS enable but not configured.\n"
 msgstr "TLS actif mais non configuré.\n"
 
-#: src/lib/bnet.c:386
+#: src/lib/bnet.c:387
 msgid "No problem."
 msgstr "Pas de problème."
 
-#: src/lib/bnet.c:389
+#: src/lib/bnet.c:390
 msgid "Authoritative answer for host not found."
 msgstr ""
 
-#: src/lib/bnet.c:392
+#: src/lib/bnet.c:393
 msgid "Non-authoritative for host not found, or ServerFail."
 msgstr ""
 
-#: src/lib/bnet.c:395
+#: src/lib/bnet.c:396
 msgid "Non-recoverable errors, FORMERR, REFUSED, or NOTIMP."
 msgstr ""
 
-#: src/lib/bnet.c:398
+#: src/lib/bnet.c:399
 msgid "Valid name, no data record of resquested type."
 msgstr ""
 
-#: src/lib/bnet.c:401
+#: src/lib/bnet.c:402
 msgid "Unknown error."
 msgstr "Erreur inconnue."
 
-#: src/lib/bnet.c:655
+#: src/lib/bnet.c:656
 #, c-format
 msgid "Unknown sig %d"
 msgstr "sig inconnu %d"
@@ -14245,16 +14189,11 @@ msgstr ""
 "Le watchdog a envoyé un signal après %d secs au thread bloqué en écoute du "
 "Director.\n"
 
-#: src/lib/parse_conf.c:180
+#: src/lib/parse_conf.c:188
 msgid "***UNKNOWN***"
 msgstr ""
 
-#: src/lib/parse_conf.c:200
-#, c-format
-msgid "Unable to initialize resource lock. ERR=%s\n"
-msgstr ""
-
-#: src/lib/parse_conf.c:287 src/lib/parse_conf.c:306
+#: src/lib/parse_conf.c:286 src/lib/parse_conf.c:306
 #, c-format
 msgid "expected an =, got: %s"
 msgstr "attendait un =, eu : %s"
@@ -14314,54 +14253,59 @@ msgstr ""
 msgid "Expected a Tape Label keyword, got: %s"
 msgstr "Attendait un Label de lecteur, a pas : %s"
 
-#: src/lib/parse_conf.c:819
+#: src/lib/parse_conf.c:798
+#, c-format
+msgid "Unable to initialize resource lock. ERR=%s\n"
+msgstr ""
+
+#: src/lib/parse_conf.c:828
 #, c-format
 msgid "Cannot open config file \"%s\": %s\n"
 msgstr "Impossible d'ouvrir le fichier de configuration « %s » : %s\n"
 
-#: src/lib/parse_conf.c:835
+#: src/lib/parse_conf.c:845
 msgid ""
 "Currently we cannot handle UTF-16 source files. Please convert the conf file "
 "to UTF-8\n"
 msgstr ""
 
-#: src/lib/parse_conf.c:839
+#: src/lib/parse_conf.c:849
 #, c-format
 msgid "Expected a Resource name identifier, got: %s"
 msgstr "Attendait un identifiant de Ressource, a pas : %s"
 
-#: src/lib/parse_conf.c:852
+#: src/lib/parse_conf.c:865
 #, c-format
 msgid "expected resource name, got: %s"
 msgstr "attendait un nom de ressource, eu : %s"
 
-#: src/lib/parse_conf.c:863
+#: src/lib/parse_conf.c:876
 #, c-format
 msgid "not in resource definition: %s"
 msgstr ""
 
-#: src/lib/parse_conf.c:888
+#: src/lib/parse_conf.c:901
 #, c-format
 msgid ""
 "Keyword \"%s\" not permitted in this resource.\n"
 "Perhaps you left the trailing brace off of the previous resource."
 msgstr ""
 
-#: src/lib/parse_conf.c:899
+#: src/lib/parse_conf.c:912
 msgid "Name not specified for resource"
 msgstr ""
 
-#: src/lib/parse_conf.c:908
+#: src/lib/parse_conf.c:921
 #, c-format
 msgid "unexpected token %d %s in resource definition"
 msgstr "mot clés inattendu %d %s dans la définition de la ressource"
 
-#: src/lib/parse_conf.c:914
+#: src/lib/parse_conf.c:927
 #, c-format
 msgid "Unknown parser state %d\n"
 msgstr ""
 
-#: src/lib/parse_conf.c:919
+#: src/lib/parse_conf.c:932
 msgid "End of conf file reached with unclosed resource."
 msgstr ""
 
@@ -14465,8 +14409,8 @@ msgid "data %02d: value %d, %d updates\n"
 msgstr ""
 
 #: src/lib/daemon.c:66
-#, c-format
-msgid "Cannot fork to become daemon: %s\n"
+#, fuzzy, c-format
+msgid "Cannot fork to become daemon: ERR=%s\n"
 msgstr "Impossible de forker pour passer en mode démon : %s\n"
 
 #: src/lib/tls.c:93
@@ -16922,11 +16866,6 @@ msgstr ""
 msgid "The Bacula service: "
 msgstr "Bacula Storage : Dernier Job annulé"
 
-#: src/win32/libwin32/service.cpp:290 src/win32/libwin32/service.cpp:319
-#, fuzzy
-msgid " could not be installed"
-msgstr "Bacula Storage : Dernier Job en erreur"
-
 #: src/win32/libwin32/service.cpp:297
 msgid ""
 "Provides file backup and restore services. Bacula -- the network backup "
@@ -16951,34 +16890,8 @@ msgstr ""
 msgid "The "
 msgstr ""
 
-#: src/win32/libwin32/service.cpp:329
-msgid ""
-"was successfully installed.\n"
-"The service may be started by double clicking on the\n"
-"Bacula \"Start\" icon and will be automatically\n"
-"be run the next time this machine is rebooted. "
-msgstr ""
-
-#: src/win32/libwin32/service.cpp:366
-msgid " could not be stopped"
-msgstr ""
-
-#: src/win32/libwin32/service.cpp:373
-#, fuzzy
-msgid " has been removed"
-msgstr "a été annulé"
-
-#: src/win32/libwin32/service.cpp:377
-#, fuzzy
-msgid " could not be removed"
-msgstr "Impossible d'ouvrir le device %s\n"
-
 #: src/win32/libwin32/service.cpp:384
 msgid "A existing Bacula service: "
-msgstr ""
-
-#: src/win32/libwin32/service.cpp:384
-msgid " could not be found for removal. This is not normally an error."
 msgstr ""
 
 #: src/win32/libwin32/service.cpp:392
@@ -16998,13 +16911,6 @@ msgstr ""
 #, fuzzy
 msgid "Could not delete Registry key for "
 msgstr "Impossible de détruire la mémoire partagée : %s\n"
-
-#: src/win32/libwin32/service.cpp:410
-#, fuzzy
-msgid ""
-".\n"
-"The Bacula service could not be removed"
-msgstr "Ressource %s introuvable\n"
 
 #: src/win32/libwin32/service.cpp:420
 msgid "Bacula could not be contacted, probably not running"
@@ -17044,6 +16950,74 @@ msgstr "Impossible d'ouvrir la base de données « %s ».\n"
 #: src/win32/libwin32/main.cpp:237
 msgid "Bad Command Line Option"
 msgstr ""
+
+#~ msgid " ("
+#~ msgstr " ("
+
+#~ msgid ""
+#~ "): %s\n"
+#~ "  JobId:                  %d\n"
+#~ "  Job:                    %s\n"
+#~ "  Start time:             %s\n"
+#~ "  End time:               %s\n"
+#~ "  Termination:            %s\n"
+#~ "\n"
+#~ msgstr ""
+#~ ") : %s\n"
+#~ "  JobId :                  %d\n"
+#~ "  Job :                    %s\n"
+#~ "  Début :                  %s\n"
+#~ "  Fin :                    %s\n"
+#~ "  Statut de fin :          %s\n"
+#~ "\n"
+
+#~ msgid ""
+#~ ") %s %s %s\n"
+#~ "\n"
+#~ "Usage: bconsole [-s] [-c config_file] [-d debug_level]\n"
+#~ "       -c <file>   set configuration file to file\n"
+#~ "       -dnn        set debug level to nn\n"
+#~ "       -n          no conio\n"
+#~ "       -s          no signals\n"
+#~ "       -t          test - read configuration and exit\n"
+#~ "       -?          print this message.\n"
+#~ "\n"
+#~ msgstr ""
+#~ ") %s %s %s\n"
+#~ "\n"
+#~ "Usage : bconsole [-s] [-c config_file] [-d niveau_debug]\n"
+#~ "       -c <file>   utilise le fichier de configuration file\n"
+#~ "       -dnn        positionne le niveau de debug a nn\n"
+#~ "       -n          n'utilise pas conio\n"
+#~ "       -s          no signals\n"
+#~ "       -t          test - lecture de la configuration et sortie\n"
+#~ "       -?          affiche ce message\n"
+
+#, fuzzy
+#~ msgid " could not be installed"
+#~ msgstr "Bacula Storage : Dernier Job en erreur"
+
+#, fuzzy
+#~ msgid " has been removed"
+#~ msgstr "a été annulé"
+
+#, fuzzy
+#~ msgid " could not be removed"
+#~ msgstr "Impossible d'ouvrir le device %s\n"
+
+#, fuzzy
+#~ msgid ""
+#~ ".\n"
+#~ "The Bacula service could not be removed"
+#~ msgstr "Ressource %s introuvable\n"
+
+#, fuzzy
+#~ msgid ""
+#~ "Wanted to append to Volume \"%s\", but device %s is busy writing on \"%s"
+#~ "\" .\n"
+#~ msgstr ""
+#~ "Voulait le Volume « %s », mais le Device %s est occupé à écrire sur « %"
+#~ "s ».\n"
 
 #~ msgid "%s: %s Warning: "
 #~ msgstr "%s : %s Attention : "

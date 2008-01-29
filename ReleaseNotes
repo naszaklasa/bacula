@@ -1,5 +1,5 @@
 
-          Release Notes for Bacula 2.2.7 
+          Release Notes for Bacula 2.2.8 
 
   Bacula code: Total files = 520 Total lines = 195,550 (*.h *.c *.in)
   82 new files, 41,221 new lines of code, 208,380 lines of change from 2.0.3
@@ -10,7 +10,14 @@ use some of the new features that affect the FD.  In other words, you should
 not have to upgrade all your File daemons when you upgrade. There is
 no database upgrade needed from version 2.0.x to 2.2.0.
 
-Version 2.2.7 has several new features and several importatn bug fixes
+Version 2.2.8 is a bug fix to version 2.2.7:
+- It fixes bugs: 1036, 1033(doc), 1028, 1040, 1045(doc), 1030,
+  1042(partially), and possibly bugs 1018 and 1032.
+  Bugs 1018 and 1032 involve problems with multiple-drive autochangers,
+  and are difficult to reproduce.         
+  See the ChangeLog for more details.
+
+Version 2.2.7 has several new features and several important bug fixes
   since version 2.2.6:
 - It fixes bugs: 1009, 1022, 1024, 1019, 1012, 1021, 1020
   1007, 1008.  For more details, please see the technotes-2.1 file.

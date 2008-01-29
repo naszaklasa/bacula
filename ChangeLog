@@ -1,6 +1,42 @@
               Technical notes on version 2.2.x
 
 General:
+Release Version 2.2.8
+25Jan08
+kes  Apply patch from Martin to correct bug #1040, bscan sets existing
+     ClientId to zero.
+kes  Fixed important spelling error in doc -- bug #1045.
+23Jan08
+kes  Move initialization of read/write res lock earlier in the code.
+     This fixes the crash with a null conf file. This fixes bug
+     #1030.
+kes  Redefine CURES in lib/parse_conf to be URES and move it all
+     into lib/parse_conf.c -- this responds to bug #1042, but does
+     not fix it. The fix is not to compile with FORTIFY_SOURCE.
+kes  Backport fix de-referencing a NULL pointer in the scanner from
+     the trunk SVN. I don't think this was reported as a bug.
+
+Beta release Version 2.2.8
+09Jan08
+kes  Re-enable the new job code editing (%f).
+08Jan08
+kes  Fix bsnprintf for float point numbers. I broke recently when
+     parameterizing some variables.
+03Jan08
+kes  Move Heartbeat documentation from Job to Director resource.
+     This fixes bug #1033.
+02Jan08
+kes  Fix existing switch drive SD code to call autochanger to release
+     any old volume. This must be done to keep the autochanger from
+     releasing subsequently newly reserved volumes in doing a close().
+     This should possibly fix bugs #1032 and #1018.
+kes  Apply big backport of current SVN SD code that corrects a number
+     of race conditions. This is a first step in fixing bug #1018.
+29Dec07
+ebl  Fixes bug #1028 where "Selection Type" option was not usable 
+     with JobDefs.
+
+
 Release Version 2.2.7
 24Dec07
 kes  Partial back out (disabled) %f job code editing because it

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, MM
  *
- *   Version $Id: dev.h 5503 2007-09-09 10:03:23Z kerns $
+ *   Version $Id: dev.h 6185 2008-01-03 14:08:43Z kerns $
  *
  */
 
@@ -158,6 +158,7 @@ struct VOLUME_CAT_INFO {
    btime_t  VolWriteTime;             /* time spent writing this Volume */
    int64_t  VolMediaId;               /* MediaId */
    utime_t  VolFirstWritten;          /* Time of first write */
+   utime_t  VolLastWritten;           /* Time of last write */
    bool     InChanger;                /* Set if vol in current magazine */
    char VolCatStatus[20];             /* Volume status */
    char VolCatName[MAX_NAME_LENGTH];  /* Desired volume to mount */
@@ -473,8 +474,9 @@ public:
 class VOLRES { 
 public:
    dlink link;
-   char *vol_name;
-   DEVICE *dev;
+   char *vol_name;                    /* Volume name */
+   DEVICE *dev;                       /* Pointer to device to which we are attached */
+   bool released;                     /* set when the Volume can be released */
 };
 
 

@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *     Version $Id: dird_conf.c 6130 2007-12-24 10:41:44Z kerns $
+ *     Version $Id: dird_conf.c 6262 2008-01-09 10:58:13Z kerns $
  */
 
 
@@ -74,8 +74,8 @@ void store_jobtype(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_level(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_replace(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_acl(LEX *lc, RES_ITEM *item, int index, int pass);
+void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_device(LEX *lc, RES_ITEM *item, int index, int pass);
-static void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_runscript_when(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_runscript_cmd(LEX *lc, RES_ITEM *item, int index, int pass);
@@ -1548,7 +1548,7 @@ static void store_device(LEX *lc, RES_ITEM *item, int index, int pass)
  * Store JobType (backup, verify, restore)
  *
  */
-static void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass)
+void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass)
 {
    int token, i;
 
@@ -1732,7 +1732,7 @@ static void store_short_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
 
    if (pass == 2) {
       RUNSCRIPT *script = new_runscript();
-//    script->set_job_code_callback(job_code_callback_filesetname);
+      script->set_job_code_callback(job_code_callback_filesetname);
 
       script->set_command(lc->str);
 
@@ -1873,7 +1873,7 @@ static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
 
       RUNSCRIPT *script = new_runscript();
       memcpy(script, &res_runscript, sizeof(RUNSCRIPT));
-//    script->set_job_code_callback(job_code_callback_filesetname);
+      script->set_job_code_callback(job_code_callback_filesetname);
       
       if (*runscripts == NULL) {
         *runscripts = New(alist(10, not_owned_by_alist));
@@ -1888,7 +1888,7 @@ static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
 }
 
 /* callback function for edit_job_codes */
-char *job_code_callback_filesetname(JCR *jcr, const char* param)
+extern "C" char *job_code_callback_filesetname(JCR *jcr, const char* param)
 {
    if (param[0] == 'f') {
       return jcr->fileset->name();

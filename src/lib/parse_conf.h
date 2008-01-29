@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -29,7 +29,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.h 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: parse_conf.h 6301 2008-01-23 19:46:04Z kerns $
  *
  */
 
@@ -115,16 +115,6 @@ public:
 };
 
 inline char *MSGS::name() const { return hdr.name; }
-
-
-/* Define the Union of all the above common
- * resource structure definitions.
- */
-union CURES {
-   MSGS  res_msgs;
-   RES hdr;
-};
-
 
 /* Configuration routines */
 int   parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error = NULL, int err_type=M_ERROR_TERM);

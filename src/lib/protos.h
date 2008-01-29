@@ -1,7 +1,7 @@
 /*
  * Prototypes for lib directory of Bacula
  *
- *   Version $Id: protos.h 6130 2007-12-24 10:41:44Z kerns $
+ *   Version $Id: protos.h 6262 2008-01-09 10:58:13Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -302,7 +302,9 @@ bool             get_tls_enable          (TLS_CONTEXT *ctx);
 
 /* util.c */
 
+extern "C"{
 typedef char *(*job_code_callback_t)(JCR *, const char *);
+}
 
 bool             is_buf_zero             (char *buf, int len);
 void             lcase                   (char *str);
@@ -320,8 +322,7 @@ const char *     job_type_to_str         (int type);
 const char *     job_status_to_str       (int stat);
 const char *     job_level_to_str        (int level);
 void             make_session_key        (char *key, char *seed, int mode);
-//POOLMEM *        edit_job_codes          (JCR *jcr, char *omsg, char *imsg, const char *to, job_code_callback_t job_code_callback = NULL);
-POOLMEM *        edit_job_codes          (JCR *jcr, char *omsg, char *imsg, const char *to);
+POOLMEM *        edit_job_codes          (JCR *jcr, char *omsg, char *imsg, const char *to, job_code_callback_t job_code_callback = NULL);
 void             set_working_directory   (char *wd);
 const char *     last_path_separator     (const char *str);
 

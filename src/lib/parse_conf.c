@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -57,7 +57,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: parse_conf.c 6301 2008-01-23 19:46:04Z kerns $
  */
 
 
@@ -78,12 +78,20 @@ extern int r_last;
 extern RES_TABLE resources[];
 extern RES **res_head;
 
+/*
+ * Define the Union of all the common resource structure definitions.
+ */
+union URES {
+   MSGS  res_msgs;
+   RES hdr;
+};
+
 #if defined(_MSC_VER)
 // work around visual studio name mangling preventing external linkage since res_all
 // is declared as a different type when instantiated.
-extern "C" CURES res_all;
+extern "C" URES res_all;
 #else
-extern  CURES res_all;
+extern  URES res_all;
 #endif
 extern int res_all_size;
 
@@ -188,19 +196,10 @@ const char *res_to_str(int rcode)
  * Initialize the static structure to zeros, then
  *  apply all the default values.
  */
-void init_resource(int type, RES_ITEM *items, int pass)
+static void init_resource(int type, RES_ITEM *items, int pass)
 {
    int i;
    int rindex = type - r_first;
-   static bool first = true;
-   int errstat;
-
-   if (first && (errstat=rwl_init(&res_lock)) != 0) {
-      berrno be;
-      Emsg1(M_ABORT, 0, _("Unable to initialize resource lock. ERR=%s\n"),
-            be.bstrerror(errstat));
-   }
-   first = false;
 
    memset(&res_all, 0, res_all_size);
    res_all.hdr.rcode = type;
@@ -293,6 +292,7 @@ void store_msgs(LEX *lc, RES_ITEM *item, int index, int pass)
          free_pool_memory(dest);
          Dmsg0(900, "done with dest codes\n");
          break;
+
       case MD_FILE:                /* file */
       case MD_APPEND:              /* append */
          dest = get_pool_memory(PM_MESSAGE);
@@ -790,6 +790,15 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
    enum parse_state state = p_none;
    RES_ITEM *items = NULL;
    int level = 0;
+   static bool first = true;
+   int errstat;
+
+   if (first && (errstat=rwl_init(&res_lock)) != 0) {
+      berrno be;
+      Emsg1(M_ABORT, 0, _("Unable to initialize resource lock. ERR=%s\n"),
+            be.bstrerror(errstat));
+   }
+   first = false;
 
    char *full_path = (char *)alloca(MAX_PATH + 1);
 
@@ -823,7 +832,8 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
       }
       lex_set_error_handler_error_type(lc, err_type) ;
       while ((token=lex_get_token(lc, T_ALL)) != T_EOF) {
-         Dmsg1(900, "parse got token=%s\n", lex_tok_to_str(token));
+         Dmsg3(900, "parse state=%d pass=%d got token=%s\n", state, pass,
+              lex_tok_to_str(token));
          switch (state) {
          case p_none:
             if (token == T_EOL) {
@@ -841,8 +851,11 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
             }
             for (i=0; resources[i].name; i++) {
                if (strcasecmp(resources[i].name, lc->str) == 0) {
-                  state = p_resource;
                   items = resources[i].items;
+                  if (!items) {
+                     break;
+                  }
+                  state = p_resource;
                   res_type = resources[i].rcode;
                   init_resource(res_type, items, pass);
                   break;

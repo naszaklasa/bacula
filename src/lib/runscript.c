@@ -30,7 +30,7 @@
  *
  *  Eric Bollengier, May 2006
  *
- *  Version $Id: runscript.c 6130 2007-12-24 10:41:44Z kerns $
+ *  Version $Id: runscript.c 6262 2008-01-09 10:58:13Z kerns $
  *
  */
 
@@ -208,7 +208,7 @@ bool RUNSCRIPT::run(JCR *jcr, const char *name)
    BPIPE *bpipe;
    char line[MAXSTRING];
 
-// ecmd = edit_job_codes(jcr, ecmd, this->command, "", this->job_code_callback);
+   ecmd = edit_job_codes(jcr, ecmd, this->command, "", this->job_code_callback);
    ecmd = edit_job_codes(jcr, ecmd, this->command, "");
    Dmsg1(100, "runscript: running '%s'...\n", ecmd);
    Jmsg(jcr, M_INFO, 0, _("%s: run command \"%s\"\n"), name, ecmd);

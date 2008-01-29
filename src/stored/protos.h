@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,7 +28,7 @@
 /*
  * Protypes for stored -- Kern Sibbald MM  
  *
- *   Version $Id: protos.h 5112 2007-06-28 11:57:03Z kerns $
+ *   Version $Id: protos.h 6185 2008-01-03 14:08:43Z kerns $
  */
 
 /* From stored.c */
@@ -49,7 +49,7 @@ enum get_vol_info_rw {
 };
 bool    dir_get_volume_info(DCR *dcr, enum get_vol_info_rw);
 bool    dir_find_next_appendable_volume(DCR *dcr);
-bool    dir_update_volume_info(DCR *dcr, bool label);
+bool    dir_update_volume_info(DCR *dcr, bool label, bool update_LastWritten);
 bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr);
 bool    dir_ask_sysop_to_mount_volume(DCR *dcr);
 bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec);
@@ -182,7 +182,7 @@ BSR     *find_next_bsr(BSR *root_bsr, DEVICE *dev);
 bool     is_this_bsr_done(BSR *bsr, DEV_RECORD *rec);
 
 /* From mount.c */
-bool     mount_next_write_volume(DCR *dcr, bool release);
+bool     mount_next_write_volume(DCR *dcr, bool have_vol, bool release);
 bool     mount_next_read_volume(DCR *dcr);
 void     mark_volume_in_error(DCR *dcr);
 

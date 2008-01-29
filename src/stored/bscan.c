@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,7 +34,7 @@
  *   Kern E. Sibbald, December 2001
  *
  *
- *   Version $Id: bscan.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: bscan.c 6309 2008-01-25 18:40:14Z kerns $
  */
 
 #include "bacula.h"
@@ -116,7 +116,7 @@ PROG_COPYRIGHT
 "Usage: bscan [ options ] <bacula-archive>\n"
 "       -b bootstrap      specify a bootstrap file\n"
 "       -c <file>         specify configuration file\n"
-"       -d <nn>           set debug level to nn\n"
+"       -d <nn>           set debug level to <nn>\n"
 "       -m                update media info in database\n"
 "       -n <name>         specify the database name (default bacula)\n"
 "       -u <user>         specify database user name (default bacula)\n"
@@ -166,9 +166,14 @@ int main (int argc, char *argv[])
          break;
 
       case 'd':                    /* debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0)
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
+         }
          break;
 
       case 'h':
@@ -967,7 +972,16 @@ static int create_pool_record(B_DB *db, POOL_DBR *pr)
  */
 static int create_client_record(B_DB *db, CLIENT_DBR *cr)
 {
+   /*
+    * Note, update_db can temporarily be set false while 
+    * updating the database, so we must ensure that ClientId is non-zero.
+    */
    if (!update_db) {
+      cr->ClientId = 0;
+      if (!db_get_client_record(bjcr, db, cr)) {
+        Pmsg1(0, _("Could not get Client record. ERR=%s\n"), db_strerror(db));
+        return 0;
+      }
       return 1;
    }
    if (!db_create_client_record(bjcr, db, cr)) {
@@ -1271,7 +1285,7 @@ static JCR *create_jcr(JOB_DBR *jr, DEV_RECORD *rec, uint32_t JobId)
 
 /* Dummies to replace askdir.c */
 bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
-bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
+bool    dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten) { return 1; }
 bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
 bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr) { return 1; }
 bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}

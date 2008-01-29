@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,7 @@
  *
  *   Split from job.c and acquire.c June 2005
  *
- *   Version $Id: reserve.c 5282 2007-08-04 16:46:32Z kerns $
+ *   Version $Id: reserve.c 6185 2008-01-03 14:08:43Z kerns $
  *
  */
 
@@ -212,11 +212,11 @@ void list_volumes(void sendit(const char *msg, int len, void *sarg), void *arg)
       if (dev) {
          len = Mmsg(msg, "%s on device %s\n", vol->vol_name, dev->print_name());
          sendit(msg.c_str(), len, arg);
-         len = Mmsg(msg, "    Reader=%d writers=%d reserved=%d\n", dev->can_read()?1:0,
-            dev->num_writers, dev->reserved_device);
+         len = Mmsg(msg, "    Reader=%d writers=%d reserved=%d released=%d\n", 
+            dev->can_read()?1:0, dev->num_writers, dev->reserved_device, vol->released);
          sendit(msg.c_str(), len, arg);
       } else {
-         len = Mmsg(msg, "%s no dev\n", vol->vol_name);
+         len = Mmsg(msg, "%s no device. released=%d\n", vol->vol_name, vol->released);
          sendit(msg.c_str(), len, arg);
       }
    }
@@ -292,11 +292,11 @@ static void free_vol_item(VOLRES *vol)
  *  already exist and are correctly programmed and will need no changes -- use 
  *  counts are always very tricky.
  *
- *  The old code had a concept of "reserving" a Volume, but it needs to be changed 
+ *  The old code had a concept of "reserving" a Volume, but was changed 
  *  to reserving and using a drive.  A volume is must be attached to (owned by) a 
  *  drive and can move from drive to drive or be unused given certain specific 
  *  conditions of the drive.  The key is that the drive must "own" the Volume.  
- *  The old code has the job (dcr) owning the volume (more or less).  The job is 
+ *  The old code had the job (dcr) owning the volume (more or less).  The job was
  *  to change the insertion and removal of the volumes from the list to be based 
  *  on the drive rather than the job.  
  *
@@ -329,13 +329,14 @@ VOLRES *reserve_volume(DCR *dcr, const char *VolumeName)
        *  because it was probably inserted by another job.
        */
       if (strcmp(vol->vol_name, VolumeName) == 0) {
+         Dmsg1(dbglvl, "OK, vol=%s on device.\n", VolumeName);
          goto get_out;                  /* Volume already on this device */
       } else {
-         Dmsg3(dbglvl, "jid=%u reserve_vol free vol=%s at %p\n", 
+         Dmsg3(dbglvl, "jid=%u reserve_vol free vol=%s at %p\n",
                (int)dcr->jcr->JobId, vol->vol_name, vol->vol_name);
+         unload_autochanger(dcr, -1);    /* unload the volume */       
+         free_volume(dev);
          debug_list_volumes("reserve_vol free");
-         vol_list->remove(vol);
-         free_vol_item(vol);
       }
    }
 
@@ -378,12 +379,16 @@ VOLRES *reserve_volume(DCR *dcr, const char *VolumeName)
             Dmsg4(dbglvl, "jid=%u Volume busy could not swap vol=%s from dev=%s to %s\n", 
                jid(), VolumeName, vol->dev->print_name(), dev->print_name());
             vol = NULL;                /* device busy */
+            goto get_out;
          }
       }
    }
    dev->vol = vol;
 
 get_out:
+   if (vol) {
+      vol->released = false;
+   }
    debug_list_volumes("end new volume");
    unlock_volumes();
    return vol;
@@ -462,6 +467,7 @@ bool volume_unused(DCR *dcr)
     *  explicitly read in this drive. This allows the SD to remember
     *  where the tapes are or last were.
     */
+   dev->vol->released = true;
    if (dev->is_tape() || dev->is_autochanger()) {
       return true;
    } else {
@@ -837,6 +843,7 @@ bool find_suitable_device_for_job(JCR *jcr, RCTX &rctx)
       dlist *temp_vol_list, *save_vol_list;
       VOLRES *vol = NULL;
       lock_volumes();
+      Dmsg0(dbglvl, "lock volumes\n");                           
 
       /*  
        * Create a temporary copy of the volume list.  We do this,
@@ -1122,6 +1129,26 @@ static int reserve_device(RCTX &rctx)
              */
             if (dcr->volume_in_use && !rctx.PreferMountedVols) {
                rctx.PreferMountedVols = true;
+               if (dcr->VolumeName[0]) {
+                  volume_unused(dcr);
+               }
+               goto bail_out;
+            }
+            /*
+             * Note. Under some circumstances, the Director can hand us
+             *  a Volume name that is no the same as the one on the current
+             *  drive, and in that case, the call above to find the next
+             *  volume will fail because in attempting to reserve the Volume
+             *  the code will realize that we already have a tape mounted,
+             *  and it will fail.  This *should* only happen if there are 
+             *  writers, thus the following test.  In that case, we simply
+             *  bail out, and continue waiting, rather than plunging on
+             *  and hoping that the operator can resolve the problem. 
+             */
+            if (dcr->dev->num_writers != 0) {
+               if (dcr->VolumeName[0]) {
+                  volume_unused(dcr);
+               }
                goto bail_out;
             }
          }
@@ -1270,6 +1297,51 @@ bail_out:
    return ok;
 }
 
+static int is_pool_ok(DCR *dcr)
+{
+   DEVICE *dev = dcr->dev;
+   JCR *jcr = dcr->jcr;
+
+   /* Now check if we want the same Pool and pool type */
+   if (strcmp(dev->pool_name, dcr->pool_name) == 0 &&
+       strcmp(dev->pool_type, dcr->pool_type) == 0) {
+      /* OK, compatible device */
+      Dmsg1(dbglvl, "OK dev: %s num_writers=0, reserved, pool matches\n", dev->print_name());
+      return 1;
+   } else {
+      /* Drive Pool not suitable for us */
+      Mmsg(jcr->errmsg, _(
+"3608 JobId=%u wants Pool=\"%s\" but have Pool=\"%s\" nreserve=%d on drive %s.\n"), 
+            (uint32_t)jcr->JobId, dcr->pool_name, dev->pool_name,
+            dev->reserved_device, dev->print_name());
+      queue_reserve_message(jcr);
+      Dmsg2(dbglvl, "failed: busy num_writers=0, reserved, pool=%s wanted=%s\n",
+         dev->pool_name, dcr->pool_name);
+   }
+   return 0;
+}
+
+static bool is_max_jobs_ok(DCR *dcr) 
+{
+   DEVICE *dev = dcr->dev;
+   JCR *jcr = dcr->jcr;
+
+   Dmsg4(dbglvl, "MaxJobs=%d Jobs=%d reserves=%d Vol=%s\n",
+         dcr->VolCatInfo.VolCatMaxJobs,
+         dcr->VolCatInfo.VolCatJobs, dev->reserved_device,
+         dcr->VolumeName);
+   if (dcr->VolCatInfo.VolCatMaxJobs > 0 && dcr->VolCatInfo.VolCatMaxJobs <=
+        (dcr->VolCatInfo.VolCatJobs + dev->reserved_device)) {
+      /* Max Job Vols depassed or already reserved */
+      Mmsg(jcr->errmsg, _("3610 JobId=%u Volume max jobs exceeded on drive %s.\n"), 
+            (uint32_t)jcr->JobId, dev->print_name());
+      queue_reserve_message(jcr);
+      Dmsg1(dbglvl, "reserve dev failed: %s", jcr->errmsg);
+      return false;                /* wait */
+   }
+   return true;
+}
+
 /*
  * Returns: 1 if drive can be reserved
  *          0 if we should wait
@@ -1284,6 +1356,11 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
          (int)jcr->JobId,
          rctx.PreferMountedVols, rctx.exact_match, rctx.suitable_device,
          rctx.autochanger_only, rctx.any_drive);
+
+   /* Check for max jobs on this Volume */
+   if (!is_max_jobs_ok(dcr)) {
+      return 0;
+   }
 
    /* setting any_drive overrides PreferMountedVols flag */
    if (!rctx.any_drive) {
@@ -1374,32 +1451,10 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
    if (dev->num_writers == 0) {
       /* Now check if there are any reservations on the drive */
       if (dev->reserved_device) {           
-         /* Now check if we want the same Pool and pool type */
-         if (strcmp(dev->pool_name, dcr->pool_name) == 0 &&
-             strcmp(dev->pool_type, dcr->pool_type) == 0) {
-            /* OK, compatible device */
-            Dmsg2(dbglvl, "jid=%u OK dev: %s num_writers=0, reserved, pool matches\n",
-               jcr->JobId, dev->print_name());
-            return 1;
-         } else {
-            /* Drive Pool not suitable for us */
-            Mmsg(jcr->errmsg, _(
-"3608 JobId=%u wants Pool=\"%s\" but have Pool=\"%s\" nreserve=%d on drive %s.\n"), 
-                  jcr->JobId, dcr->pool_name, dev->pool_name,
-                  dev->reserved_device, dev->print_name());
-            queue_reserve_message(jcr);
-            Dmsg3(dbglvl, "jid=%u failed: busy num_writers=0, reserved, pool=%s wanted=%s\n",
-               (int)jcr->JobId, dev->pool_name, dcr->pool_name);
-            return 0;                 /* wait */
-         }
+         return is_pool_ok(dcr);
       } else if (dev->can_append()) {
-         /* Device in append mode, check if changing pool */
-         if (strcmp(dev->pool_name, dcr->pool_name) == 0 &&
-             strcmp(dev->pool_type, dcr->pool_type) == 0) {
-            Dmsg2(dbglvl, "jid=%u OK dev: %s num_writers=0, can_append, pool matches.\n",
-               jcr->JobId, dev->print_name());
-            /* OK, compatible device */
-            return 1;
+         if (is_pool_ok(dcr)) {
+            return 1; 
          } else {
             /* Changing pool, unload old tape if any in drive */
             Dmsg1(dbglvl, "jid=%u OK dev: num_writers=0, not reserved, pool change, unload changer\n",
@@ -1419,22 +1474,7 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
     *  available if pool is the same).
     */
    if (dev->can_append() || dev->num_writers > 0) {
-      /* Yes, now check if we want the same Pool and pool type */
-      if (strcmp(dev->pool_name, dcr->pool_name) == 0 &&
-          strcmp(dev->pool_type, dcr->pool_type) == 0) {
-         Dmsg2(dbglvl, "jid=%u OK dev: %s num_writers>=0, can_append, pool matches.\n",
-            jcr->JobId, dev->print_name());
-         /* OK, compatible device */
-         return 1;
-      } else {
-         /* Drive Pool not suitable for us */
-         Mmsg(jcr->errmsg, _("3609 JobId=%u wants Pool=\"%s\" but has Pool=\"%s\" on drive %s.\n"), 
-               jcr->JobId, dcr->pool_name, dev->pool_name, dev->print_name());
-         queue_reserve_message(jcr);
-         Dmsg3(dbglvl, "jid=%u failed: busy num_writers>0, can_append, pool=%s wanted=%s\n",
-            (int)jcr->JobId, dev->pool_name, dcr->pool_name);
-         return 0;                    /* wait */
-      }
+      return is_pool_ok(dcr);
    } else {
       Pmsg1(000, _("Logic error!!!! JobId=%u Should not get here.\n"), (int)jcr->JobId);
       Mmsg(jcr->errmsg, _("3910 JobId=%u Logic error!!!! drive %s Should not get here.\n"),
