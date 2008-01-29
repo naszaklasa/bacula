@@ -267,6 +267,8 @@ install-indep: build install-stamp
 	#install doc/html-manual/* \
 	#	$(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual
 	#$(RM) $(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual/*.wml
+
+install-arch: build install-stamp
 	for f in bconsole.conf bwx-console.conf bat.conf \
 		bacula-sd.conf bacula-fd.conf tray-monitor.conf; do \
 		debian/patches/fix_config \
@@ -313,7 +315,7 @@ binary-indep: build install-indep patch
 
 
 # Build architecture-dependent files here.
-binary-arch: build install binary-arch-common
+binary-arch: build install install-arch binary-arch-common
 
 binary-arch-common: DH_OPTIONS=
 binary-arch-common: build install
