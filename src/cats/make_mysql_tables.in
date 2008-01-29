@@ -38,6 +38,8 @@ CREATE TABLE File (
    LStat TINYBLOB NOT NULL,
    MD5 TINYBLOB,
    PRIMARY KEY(FileId),
+   INDEX (PathId),
+   INDEX (FileNameId, PathId),
    INDEX (JobId, PathId, FilenameId)
    );
 
@@ -46,9 +48,7 @@ CREATE TABLE File (
 #  to the above File table if your Verifies are
 #  too slow.
 #
-#  INDEX (PathId),
 #  INDEX (FilenameId),
-#  INDEX (FilenameId, PathId)
 #
 
 CREATE TABLE MediaType (
