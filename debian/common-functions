@@ -1,0 +1,7 @@
+create_var_run_dir()
+{
+	if [ ! -d /var/run/bacula/ ]; then
+		mkdir -p -m 0755 /var/run/bacula/
+		chown bacula:daemon /var/run/bacula/
+	fi
+}

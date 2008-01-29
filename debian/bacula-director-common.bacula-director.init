@@ -23,14 +23,8 @@ fi
 
 PIDFILE=/var/run/bacula/$NAME.$PORT.pid
 
-create_var_run_dir()
-{
-	if [ ! -d /var/run/bacula/ ]; then
-		mkdir -p 0755 /var/run/bacula/
-		chown bacula:daemon /var/run/bacula/
-	fi
-}
-
+. /usr/share/bacula-common/common-functions
+create_var_run_dir
 
 get_pid()
 {

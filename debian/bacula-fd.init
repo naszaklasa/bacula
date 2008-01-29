@@ -21,6 +21,9 @@ if [ -n "`getent services bacula-fd`" ]; then
 	PORT=`getent services bacula-fd | awk '{ gsub("/tcp","",$2); print $2; }'`
 fi
 
+. /usr/share/bacula-common/common-functions
+create_var_run_dir
+
 PIDFILE=/var/run/bacula/$NAME.$PORT.pid
 
 case "$1" in

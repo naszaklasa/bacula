@@ -277,6 +277,8 @@ install-indep: build install-stamp
 		debian/tmp-install-sqlite/etc/bacula/bacula-dir.conf \
 		debian/bacula-common/usr/share/bacula-common/defconfig/bacula-dir.conf
 
+	cp $(CURDIR)/debian/common-functions $(CURDIR)/debian/bacula-common/usr/share/bacula-common
+
 
 patch: patch-stamp
 patch-stamp:
