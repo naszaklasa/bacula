@@ -1,0 +1,2 @@
+version=3
+http://sf.net/bacula/bacula-?_?([\w+\d+\.]+|\d+)\.tar\.gz debian uupdate
