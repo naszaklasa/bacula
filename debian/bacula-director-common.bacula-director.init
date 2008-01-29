@@ -1,4 +1,11 @@
 #! /bin/sh
+### BEGIN INIT INFO
+# Provides:          bacula-director
+# Required-Start:    $remote_fs $syslog bacula-fd
+# Required-Stop:     $remote_fs $syslog bacula-fd
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+### END INIT INFO
 # bacula-director     SysV init script for Bacula-Director.
 #
 #       Written by Miquel van Smoorenburg <miquels@cistron.nl>.
