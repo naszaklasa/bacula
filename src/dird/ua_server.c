@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *    Version $Id: ua_server.c 4992 2007-06-07 14:46:43Z kerns $
+ *    Version $Id: ua_server.c 5981 2007-11-25 14:18:33Z kerns $
  */
 
 #include "bacula.h"
@@ -146,6 +146,7 @@ static void *handle_UA_client_request(void *arg)
          } else {
             do_a_command(ua, ua->cmd);
          }
+         dequeue_messages(ua->jcr);
          if (!ua->quit) {
             if (console_msg_pending && acl_access_ok(ua, Command_ACL, "messages", 8)) {
                if (ua->auto_display_messages) {

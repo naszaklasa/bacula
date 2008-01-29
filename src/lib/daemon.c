@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,11 +26,11 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *  daemon.c by Kern Sibbald
+ *  daemon.c by Kern Sibbald 2000
  *
- *   Version $Id: daemon.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: daemon.c 6195 2008-01-04 09:01:55Z kerns $
  *
- *   this code is inspired by the Prentice Hall book
+ *   This code is inspired by the Prentice Hall book
  *   "Unix Network Programming" by W. Richard Stevens
  *   and later updated from his book "Advanced Programming
  *   in the UNIX Environment"
@@ -63,7 +63,7 @@ daemon_start()
    Dmsg0(900, "Enter daemon_start\n");
    if ( (cpid = fork() ) < 0) {
       berrno be;
-      Emsg1(M_ABORT, 0, _("Cannot fork to become daemon: %s\n"), be.bstrerror());
+      Emsg1(M_ABORT, 0, _("Cannot fork to become daemon: ERR=%s\n"), be.bstrerror());
    } else if (cpid > 0) {
       exit(0);              /* parent exits */
    }

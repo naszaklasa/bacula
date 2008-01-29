@@ -32,7 +32,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: lex.h 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: lex.h 6067 2007-12-14 16:25:59Z kerns $
  *
  */
 
@@ -85,6 +85,7 @@ enum lex_state {
    lex_identifier,
    lex_string,
    lex_quoted_string,
+   lex_include_quoted_string,
    lex_include,
    lex_utf8_bom,      /* we are parsing out a utf8 byte order mark */ 
    lex_utf16_le_bom   /* we are parsing out a utf-16 (little endian) byte order mark */

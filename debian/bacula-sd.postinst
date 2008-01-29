@@ -33,14 +33,17 @@ CONFIG="bacula-sd.conf"
 case "$1" in
     configure)
  
-	if [ ! -f $DSTDIR/$CONFIG ]; then TARGET=$DSTDIR/$CONFIG
-	else TARGET=$DSTDIR/$CONFIG.dist; fi
+	if [ ! -f $DSTDIR/$CONFIG ]; then
+		TARGET=$DSTDIR/$CONFIG
+	else
+		TARGET=$DSTDIR/$CONFIG.dist
+	fi
 
 	sed -e s~@hostname@~`hostname`~ < $SRCDIR/$CONFIG > $TARGET
 	
-        # Harden permissions, so that passwords can not be looked at
-        chown bacula:bacula $DSTDIR/$CONFIG
-        chmod 640 $DSTDIR/$CONFIG
+	# Harden permissions, so that passwords can not be looked at
+	chown bacula:bacula $TARGET
+	chmod 640 $TARGET
    ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

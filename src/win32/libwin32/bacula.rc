@@ -67,7 +67,7 @@ BEGIN
             VALUE "FileDescription", "Bacula File daemon for Win32\0"
             VALUE "FileVersion", VERSION "\0"
             VALUE "InternalName", "Bacula\0"
-            VALUE "LegalCopyright", "Copyright Free Software Foundation Europe e.V., 1999-2007\0"
+            VALUE "LegalCopyright", "Copyright Free Software Foundation Europe e.V., 1999-2008\0"
             VALUE "LegalTrademarks", "Licensed under GNU GPL 2.0\0"
             VALUE "OriginalFilename", "bacula-fd.exe\0"
             VALUE "PrivateBuild", "\0"

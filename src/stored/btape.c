@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -37,7 +37,7 @@
  *   Note, this program reads stored.conf, and will only
  *     talk to devices that are configured.
  *
- *   Version $Id: btape.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: btape.c 6185 2008-01-03 14:08:43Z kerns $
  *
  */
 
@@ -220,9 +220,13 @@ int main(int margc, char *margv[])
          break;
 
       case 'd':                    /* set debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0) {
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
          }
          break;
 
@@ -2598,7 +2602,7 @@ PROG_COPYRIGHT
 "Usage: btape <options> <device_name>\n"
 "       -b <file>   specify bootstrap file\n"
 "       -c <file>   set configuration file to file\n"
-"       -d <nn>     set debug level to nn\n"
+"       -d <nn>     set debug level to <nn>\n"
 "       -p          proceed inspite of I/O errors\n"
 "       -s          turn off signals\n"
 "       -v          be verbose\n"
@@ -2644,7 +2648,7 @@ get_cmd(const char *prompt)
 bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}
 bool    dir_send_job_status(JCR *jcr) {return 1;}
 
-bool dir_update_volume_info(DCR *dcr, bool relabel)
+bool dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten)
 {
    return 1;
 }

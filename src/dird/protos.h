@@ -28,7 +28,7 @@
 /*
  * Director external function prototypes
  *
- *   Version $Id: protos.h 5714 2007-10-03 16:22:07Z kerns $
+ *   Version $Id: protos.h 6262 2008-01-09 10:58:13Z kerns $
  */
 
 /* admin.c */
@@ -75,6 +75,7 @@ extern void catalog_update(JCR *jcr, BSOCK *bs);
 
 /* dird_conf.c */
 extern const char *level_to_str(int level);
+extern "C" char *job_code_callback_filesetname(JCR *jcr, const char*);
 
 /* expand.c */
 int variable_expansion(JCR *jcr, char *inp, POOLMEM **exp);

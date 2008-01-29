@@ -1,0 +1,33 @@
+
+ This patch fixes bug #1003 where putting the message output from 
+ a Verify job into the catalog results in a recursive loop.  The problem
+ seems to show up only with postgresql (to be verified).
+
+ Apply it to version 2.2.5 (or probably any previous 2.2.x version) with
+
+ cd <bacula-source>
+ ./configure <your-options>  not necessary if already configured
+ patch -p0 <2.2.5-verify-loop.patch
+ make
+ ...
+ make install
+
+
+Index: src/dird/verify.c
+===================================================================
+--- src/dird/verify.c	(revision 5814)
++++ src/dird/verify.c	(working copy)
+@@ -767,11 +767,11 @@
+       return 1;
+    }
+    if (!jcr->fn_printed) {
+-      Jmsg(jcr, M_INFO, 0, _("\nThe following files are in the Catalog but not on %s:\n"),
++      Qmsg(jcr, M_INFO, 0, _("\nThe following files are in the Catalog but not on %s:\n"),
+        jcr->JobLevel == L_VERIFY_VOLUME_TO_CATALOG ? "the Volume(s)" : "disk");
+       jcr->fn_printed = true;
+    }
+-   Jmsg(jcr, M_INFO, 0, "      %s%s\n", row[0]?row[0]:"", row[1]?row[1]:"");
++   Qmsg(jcr, M_INFO, 0, "      %s%s\n", row[0]?row[0]:"", row[1]?row[1]:"");
+    return 0;
+ }
+ 

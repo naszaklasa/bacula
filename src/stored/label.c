@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,7 @@
  *   Kern Sibbald, MM
  *
  *
- *   Version $Id: label.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: label.c 6185 2008-01-03 14:08:43Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -505,7 +505,7 @@ bool rewrite_volume_label(DCR *dcr, bool recycle)
    }
    Dmsg0(150, "dir_update_vol_info. Set Append\n");
    bstrncpy(dev->VolCatInfo.VolCatStatus, "Append", sizeof(dev->VolCatInfo.VolCatStatus));
-   if (!dir_update_volume_info(dcr, true)) {  /* indicate doing relabel */
+   if (!dir_update_volume_info(dcr, true, true)) {  /* indicate doing relabel */
       return false;
    }
    if (recycle) {
@@ -716,7 +716,7 @@ bool write_session_label(DCR *dcr, int label)
       }
       break;
    default:
-      Jmsg1(jcr, M_ABORT, 0, _("Bad session label = %d\n"), label);
+      Jmsg1(jcr, M_ABORT, 0, _("Bad Volume session label = %d\n"), label);
       break;
    }
    create_session_label(dcr, rec, label);

@@ -1,0 +1,30 @@
+
+ This patch fixes bug #1015 where bacula failed to restore acl to a socket
+ because Bacula no longer restores sockets.
+
+ This fix will tell to bacula-fd to skip all socket file.
+
+ Apply it to version 2.2.6 (or probably any previous 2.2.x version) with
+
+ cd <bacula-source>
+ ./configure <your-options>  not necessary if already configured
+ patch -p0 < 2.2.6-backup-restore-socket.patch
+ make
+ ...
+ make install
+
+Index: src/filed/backup.c
+===================================================================
+--- src/filed/backup.c  (révision 5882)
++++ src/filed/backup.c  (copie de travail)
+@@ -279,6 +279,10 @@
+       break;
+    case FT_SPEC:
+       Dmsg1(130, "FT_SPEC saving: %s\n", ff_pkt->fname);
++      if (S_ISSOCK(ff_pkt->statp.st_mode)) {
++        Jmsg(jcr, M_SKIPPED, 1, _("     Socket file skipped: %s\n"), ff_pkt->fname);
++        return 1;
++      }
+       break;
+    case FT_RAW:
+       Dmsg1(130, "FT_RAW saving: %s\n", ff_pkt->fname);

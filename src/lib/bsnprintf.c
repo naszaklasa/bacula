@@ -11,12 +11,12 @@
  *
  *   Kern Sibbald, November MMV
  *
- *   Version $Id: bsnprintf.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: bsnprintf.c 6258 2008-01-08 16:11:06Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -77,8 +77,14 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
 #define fmtfp(b, c, m, f, min, max, fl) currlen
 #endif
 
-#define outch(c) {int len=currlen; if (currlen++ < maxlen) { buffer[len] = (c);}}
-
+/*
+ *  NOTE!!!! do not use this #define with a construct such
+ *    as outch(--place);.  It just will NOT work, because the
+ *    decrement of place is done ONLY if there is room in the 
+ *    output buffer.
+ */
+#define outch(c) {int len=currlen; if (currlen < maxlen) \
+        { buffer[len] = (c); currlen++; }}
 
 /* format read states */
 #define DP_S_DEFAULT 0
@@ -102,7 +108,7 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
 
 /* Conversion Flags */
 #define DP_C_INT16   1
-#define DP_C_INT32    2
+#define DP_C_INT32   2
 #define DP_C_LDOUBLE 3
 #define DP_C_INT64   4
 
@@ -152,9 +158,9 @@ int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args)
    *buffer = 0;
 
    while (state != DP_S_DONE) {
-      if ((ch == '\0') || (currlen >= maxlen))
+      if ((ch == '\0') || (currlen >= maxlen)) {
          state = DP_S_DONE;
-
+      }
       switch (state) {
       case DP_S_DEFAULT:
          if (ch == '%') {
@@ -320,7 +326,8 @@ int bvsnprintf(char *buffer, int32_t maxlen, const char *format, va_list args)
             currlen = fmtfp(buffer, currlen, maxlen, fvalue, min, max, flags);
             break;
          case 'c':
-            outch(va_arg(args, int));
+            ch = va_arg(args, int); 
+            outch(ch);
             break;
          case 's':
             strvalue = va_arg(args, char *);
@@ -400,6 +407,7 @@ static int32_t fmtstr(char *buffer, int32_t currlen, int32_t maxlen,
 {
    int padlen, strln;              /* amount to pad */
    int cnt = 0;
+   char ch;
 
 
    if (flags & DP_F_DOT && max < 0) {   /* Max not specified */
@@ -427,7 +435,8 @@ static int32_t fmtstr(char *buffer, int32_t currlen, int32_t maxlen,
       --padlen;
    }
    while (*value && (cnt < max)) {
-      outch(*value++);
+      ch = *value++;
+      outch(ch);
       ++cnt;
    }
    while (padlen < 0) {
@@ -444,11 +453,12 @@ static int32_t fmtint(char *buffer, int32_t currlen, int32_t maxlen,
 {
    int signvalue = 0;
    uint64_t uvalue;
-   char convert[20];
+   char convert[25];
    int place = 0;
    int spadlen = 0;                /* amount to space pad */
    int zpadlen = 0;                /* amount to zero pad */
    int caps = 0;
+   const char *cvt_string;
 
    if (max < 0) {
       max = 0;
@@ -471,12 +481,12 @@ static int32_t fmtint(char *buffer, int32_t currlen, int32_t maxlen,
       caps = 1;                    /* Should characters be upper case? */
    }
 
+   cvt_string = caps ? "0123456789ABCDEF" : "0123456789abcdef";
    do {
-      convert[place++] = (caps ? "0123456789ABCDEF" : "0123456789abcdef")
-         [uvalue % (unsigned)base];
+      convert[place++] = cvt_string[uvalue % (unsigned)base];
       uvalue = (uvalue / (unsigned)base);
-   } while (uvalue && (place < 20));
-   if (place == 20) {
+   } while (uvalue && (place < (int)sizeof(convert)));
+   if (place == (int)sizeof(convert)) {
       place--;
    }
    convert[place] = 0;
@@ -518,9 +528,10 @@ static int32_t fmtint(char *buffer, int32_t currlen, int32_t maxlen,
       }
    }
 
-   /* Digits */
+   /* Output digits backward giving correct order */
    while (place > 0) {
-      outch(convert[--place]);
+      place--;
+      outch(convert[place]);
    }
 
    /* Left Justified spaces */
@@ -555,11 +566,11 @@ static LDOUBLE pow10(int exp)
    return result;
 }
 
-static long round(LDOUBLE value)
+static int64_t round(LDOUBLE value)
 {
-   long intpart;
+   int64_t intpart;
 
-   intpart = (long)value;
+   intpart = (int64_t)value;
    value = value - intpart;
    if (value >= 0.5)
       intpart++;
@@ -573,8 +584,8 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
    int signvalue = 0;
    LDOUBLE ufvalue;
 #ifndef HAVE_FCVT
-   char iconvert[20];
-   char fconvert[20];
+   char iconvert[311];
+   char fconvert[311];
 #else
    char iconvert[311];
    char fconvert[311];
@@ -591,6 +602,7 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
    int caps = 0;
    int64_t intpart;
    int64_t fracpart;
+   const char *cvt_str;
 
    /* 
     * AIX manpage says the default is 0, but Solaris says the default
@@ -614,7 +626,7 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
 #endif
 
 #ifndef HAVE_FCVT
-   intpart = (long)ufvalue;
+   intpart = (int64_t)ufvalue;
 
    /* 
     * Sorry, we only support 9 digits past the decimal because of our 
@@ -634,32 +646,37 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
    }
 
 #ifdef DEBUG_SNPRINTF
-   printf("fmtfp: %g %d.%d min=%d max=%d\n",
+   printf("fmtfp: %g %lld.%lld min=%d max=%d\n",
           (double)fvalue, intpart, fracpart, min, max);
 #endif
 
    /* Convert integer part */
+   cvt_str = caps ? "0123456789ABCDEF" : "0123456789abcdef";
    do {
-      iconvert[iplace++] =
-         (caps ? "0123456789ABCDEF" : "0123456789abcdef")[intpart % 10];
+      iconvert[iplace++] = cvt_str[(int)(intpart % 10)];
       intpart = (intpart / 10);
-   } while (intpart && (iplace < 20));
-   if (iplace == 20)
+   } while (intpart && (iplace < (int)sizeof(iconvert)));
+
+   if (iplace == (int)sizeof(fconvert)) {
       iplace--;
+   }
    iconvert[iplace] = 0;
 
    /* Convert fractional part */
+   cvt_str = caps ? "0123456789ABCDEF" : "0123456789abcdef";
    do {
-      fconvert[fplace++] =
-         (caps ? "0123456789ABCDEF" : "0123456789abcdef")[fracpart % 10];
+      fconvert[fplace++] = cvt_str[fracpart % 10];
       fracpart = (fracpart / 10);
-   } while (fracpart && (fplace < 20));
-   if (fplace == 20)
+   } while (fracpart && (fplace < (int)sizeof(fconvert)));
+
+   if (fplace == (int)sizeof(fconvert)) {
       fplace--;
+   }
    fconvert[fplace] = 0;
 #else                              /* use fcvt() */
-   if (max > 310)
+   if (max > 310) {
       max = 310;
+   }
 # ifdef HAVE_FCVTL
    result = fcvtl(ufvalue, max, &dec_pt, &sig);
 # else
@@ -748,7 +765,8 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
    }
 
    while (iplace > 0) {
-      outch(iconvert[--iplace]);
+      iplace--;
+      outch(iconvert[iplace]);
    }
 
 
@@ -763,7 +781,8 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
    if (max > 0) {
       outch('.');
       while (fplace > 0) {
-         outch(fconvert[--fplace]);
+         fplace--;
+         outch(fconvert[fplace]);
       }
    }
 
@@ -809,7 +828,7 @@ int main(void)
       NULL
    };
    double fp_nums[] = { -1.5, 134.21, 91340.2, 341.1234, 0203.9, 0.96, 0.996,
-      0.9996, 1.996, 4.136, 6442452944.1234, 0
+      0.9996, 1.996, 4.136, 6442452944.1234, 0, 23365.5
    };
 #endif
    char *int_fmt[] = {

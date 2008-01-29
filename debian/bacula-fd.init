@@ -1,4 +1,11 @@
 #!/bin/sh
+### BEGIN INIT INFO
+# Provides:          bacula-fd
+# Required-Start:    $remote_fs $syslog bacula-sd
+# Required-Stop:     $remote_fs $syslog bacula-sd
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+### END INIT INFO
 #
 # bacula-fd	SysV init script for Bacula-FD.
 #
@@ -20,6 +27,9 @@ set -e
 if [ -n "`getent services bacula-fd`" ]; then
 	PORT=`getent services bacula-fd | awk '{ gsub("/tcp","",$2); print $2; }'`
 fi
+
+. /usr/share/bacula-common/common-functions
+create_var_run_dir
 
 PIDFILE=/var/run/bacula/$NAME.$PORT.pid
 

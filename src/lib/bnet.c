@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,7 +33,7 @@
  * Adapted and enhanced for Bacula, originally written
  * for inclusion in the Apcupsd package
  *
- *   Version $Id: bnet.c 5066 2007-06-23 09:58:34Z kerns $
+ *   Version $Id: bnet.c 6309 2008-01-25 18:40:14Z kerns $
  */
 
 
@@ -261,6 +261,7 @@ bool bnet_tls_server(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
          goto err;
       }
    }
+   Dmsg0(50, "TLS server negotiation established.\n");
    return true;
 
 err:
@@ -307,7 +308,7 @@ bool bnet_tls_client(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
          goto err;
       }
    }
-
+   Dmsg0(50, "TLS client negotiation established.\n");
    return true;
 
 err:

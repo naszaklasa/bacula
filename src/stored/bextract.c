@@ -1,16 +1,7 @@
 /*
- *
- *  Dumb program to extract files from a Bacula backup.
- *
- *   Kern E. Sibbald, MM
- *
- *   Version $Id: bextract.c 5713 2007-10-03 11:36:47Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *  Dumb program to extract files from a Bacula backup.
+ *
+ *   Kern E. Sibbald, MM
+ *
+ *   Version $Id: bextract.c 6185 2008-01-03 14:08:43Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -79,7 +79,7 @@ PROG_COPYRIGHT
 "Usage: bextract <options> <bacula-archive-device-name> <directory-to-store-files>\n"
 "       -b <file>       specify a bootstrap file\n"
 "       -c <file>       specify a configuration file\n"
-"       -d <nn>         set debug level to nn\n"
+"       -d <nn>         set debug level to <nn>\n"
 "       -e <file>       exclude list\n"
 "       -i <file>       include list\n"
 "       -p              proceed inspite of I/O errors\n"
@@ -126,9 +126,14 @@ int main (int argc, char *argv[])
          break;
 
       case 'd':                    /* debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0)
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
+         }
          break;
 
       case 'e':                    /* exclude list */
@@ -476,7 +481,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
 
 /* Dummies to replace askdir.c */
 bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
-bool    dir_update_volume_info(DCR *dcr, bool relabel) { return 1; }
+bool    dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten) { return 1; }
 bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
 bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr) { return 1; }
 bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}

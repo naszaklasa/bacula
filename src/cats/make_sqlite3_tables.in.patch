@@ -1,0 +1,11 @@
+--- make_sqlite3_tables.in	2007-11-17 08:33:03.000000000 -0500
++++ make_sqlite3_tables.in.fixed	2007-11-17 08:35:28.000000000 -0500
+@@ -2,7 +2,7 @@
+ #
+ # shell script to create Bacula SQLite tables
+ 
+-bindir=@SQL_BINDIR@
++bindir=/usr/lib/bacula/sqlite
+ cd @working_dir@
+ sqlite=@DB_TYPE@
+ db_name=@db_name@

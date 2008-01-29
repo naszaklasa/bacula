@@ -64,7 +64,7 @@
         http://archives.neohapsis.com/archives/postfix/2000-05/1520.html
  
 
-   Version $Id: bsmtp.c 5725 2007-10-05 14:59:31Z kerns $
+   Version $Id: bsmtp.c 6060 2007-12-14 10:43:12Z kerns $
 
  */
 
@@ -216,7 +216,9 @@ __MINGW_IMPORT long     _dstbias;
    long offset;
    _tzset();
    offset = _timezone;
-   offset += _dstbias;
+   if (tm.tm_isdst) {
+      offset += _dstbias;
+   }
    return offset /= 60;
 #else
 

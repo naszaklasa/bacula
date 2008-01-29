@@ -1,0 +1,312 @@
+  This patch should fix the Mac OS X build problem on the latest
+  Darwin, where sys/types.h was not included correctly (apparently
+  due to a change in the Mac headers).  The solution was to explicitly
+  ensure that it is defined for the ./configure.
+  This patch fixes bug #1020.
+
+  This patch also has a rebuild of configure that includes the Debian
+  qt4 kludge (look for alternate qt4 names).
+
+  Apply it to 2.2.6 (and possibly previous 2.2.x versions) with:
+
+  cd <bacula-source>
+  patch -p0 <2.2.6-mac-build.patch
+  ./configure <your-options>
+  make
+  ...
+  make install
+
+
+Index: configure
+===================================================================
+--- configure	(revision 5979)
++++ configure	(working copy)
+@@ -309,7 +309,7 @@
+ # include <unistd.h>
+ #endif"
+ 
+-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir archivedir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS BUILD_DIR TOP_DIR TRUEPRG FALSEPRG VERSION DATE LSMDATE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX CPP EGREP INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA RANLIB ac_ct_RANLIB MV RM CP SED ECHO CMP TBL AR OPENSSL MTX DD MKISOFS PYTHON GROWISOFS DVDRWMEDIAINFO DVDRWFORMAT PKGCONFIG WXCONFIG WXFLAGS CDRECORD PIDOF AWK ARFLAGS MAKE_SHELL LOCAL_LIBS LOCAL_CFLAGS LOCAL_LDFLAGS LOCAL_DEFS build build_cpu build_vendor build_os host host_cpu host_vendor host_os HAVE_SUN_OS_TRUE HAVE_SUN_OS_FALSE HAVE_OSF1_OS_TRUE HAVE_OSF1_OS_FALSE HAVE_AIX_OS_TRUE HAVE_AIX_OS_FALSE HAVE_HPUX_OS_TRUE HAVE_HPUX_OS_FALSE HAVE_LINUX_OS_TRUE HAVE_LINUX_OS_FALSE HAVE_FREEBSD_OS_TRUE HAVE_FREEBSD_OS_FALSE HAVE_NETBSD_OS_TRUE HAVE_NETBSD_OS_FALSE HAVE_OPENBSD_OS_TRUE HAVE_OPENBSD_OS_FALSE HAVE_BSDI_OS_TRUE HAVE_BSDI_OS_FALSE HAVE_SGI_OS_TRUE HAVE_SGI_OS_FALSE HAVE_IRIX_OS_TRUE HAVE_IRIX_OS_FALSE HAVE_DARWIN_OS_TRUE HAVE_DARWIN_OS_FALSE SET_MAKE MKINSTALLDIRS USE_NLS MSGFMT GMSGFMT XGETTEXT MSGMERGE INTL_MACOSX_LIBS LIBICONV LTLIBICONV INTLLIBS LIBINTL LTLIBINTL POSUB GLIBC2 ALLOCA GLIBC21 HAVE_POSIX_PRINTF HAVE_ASPRINTF HAVE_SNPRINTF HAVE_WPRINTF INTLBISON BUILD_INCLUDED_LIBINTL USE_INCLUDED_LIBINTL CATOBJEXT DATADIRNAME INSTOBJEXT GENCAT INTLOBJS INTL_LIBTOOL_SUFFIX_PREFIX GNOME_INCLUDEDIR GNOMEUI_LIBS GNOME_LIBDIR GNOME_LIBS GNOME_DIR BAT_DIR QWT_INC QWT_LDFLAGS WXCONS_CPPFLAGS WXCONS_LDFLAGS WX_DIR TRAY_MONITOR_CPPFLAGS TRAY_MONITOR_LDFLAGS TRAY_MONITOR_DIR TTOOL_LDFLAGS STATIC_FD STATIC_SD STATIC_DIR STATIC_CONS STATIC_GNOME_CONS STATIC_WX_CONS ALL_DIRS DIRD_DIR DIR_TOOLS STORED_DIR CONS_INC CONS_OBJ CONS_SRC CONS_LIBS CONS_LDFLAGS READLINE_SRC PYTHON_LIBS PYTHON_INCDIR OPENSSL_LIBS OPENSSL_INC working_dir scriptdir dump_email job_email smtp_host piddir subsysdir baseport dir_port fd_port sd_port dir_password fd_password sd_password mon_dir_password mon_fd_password mon_sd_password db_name db_user dir_user dir_group sd_user sd_group fd_user fd_group SBINPERM SQL_LFLAGS SQL_INCLUDE SQL_BINDIR cats DB_TYPE GETCONF ac_ct_GETCONF X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS LIBOBJS FDLIBS DEBUG DINCLUDE DLIB DB_LIBS WCFLAGS WLDFLAGS WRAPLIBS OBJLIST hostname TAPEDRIVE PSCMD WIN32 MACOSX DISTNAME DISTVER LTLIBOBJS'
++ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS BUILD_DIR TOP_DIR TRUEPRG FALSEPRG VERSION DATE LSMDATE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX CPP EGREP INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA RANLIB ac_ct_RANLIB MV RM CP SED ECHO CMP TBL AR OPENSSL MTX DD MKISOFS PYTHON GROWISOFS DVDRWMEDIAINFO DVDRWFORMAT PKGCONFIG QMAKE QMAKEQT4 WXCONFIG WXFLAGS CDRECORD PIDOF AWK ARFLAGS MAKE_SHELL LOCAL_LIBS LOCAL_CFLAGS LOCAL_LDFLAGS LOCAL_DEFS build build_cpu build_vendor build_os host host_cpu host_vendor host_os HAVE_SUN_OS_TRUE HAVE_SUN_OS_FALSE HAVE_OSF1_OS_TRUE HAVE_OSF1_OS_FALSE HAVE_AIX_OS_TRUE HAVE_AIX_OS_FALSE HAVE_HPUX_OS_TRUE HAVE_HPUX_OS_FALSE HAVE_LINUX_OS_TRUE HAVE_LINUX_OS_FALSE HAVE_FREEBSD_OS_TRUE HAVE_FREEBSD_OS_FALSE HAVE_NETBSD_OS_TRUE HAVE_NETBSD_OS_FALSE HAVE_OPENBSD_OS_TRUE HAVE_OPENBSD_OS_FALSE HAVE_BSDI_OS_TRUE HAVE_BSDI_OS_FALSE HAVE_SGI_OS_TRUE HAVE_SGI_OS_FALSE HAVE_IRIX_OS_TRUE HAVE_IRIX_OS_FALSE HAVE_DARWIN_OS_TRUE HAVE_DARWIN_OS_FALSE SET_MAKE MKINSTALLDIRS USE_NLS MSGFMT GMSGFMT XGETTEXT MSGMERGE INTL_MACOSX_LIBS LIBICONV LTLIBICONV INTLLIBS LIBINTL LTLIBINTL POSUB GLIBC2 ALLOCA GLIBC21 HAVE_POSIX_PRINTF HAVE_ASPRINTF HAVE_SNPRINTF HAVE_WPRINTF INTLBISON BUILD_INCLUDED_LIBINTL USE_INCLUDED_LIBINTL CATOBJEXT DATADIRNAME INSTOBJEXT GENCAT INTLOBJS INTL_LIBTOOL_SUFFIX_PREFIX GNOME_INCLUDEDIR GNOMEUI_LIBS GNOME_LIBDIR GNOME_LIBS GNOME_DIR BAT_DIR QWT_INC QWT_LDFLAGS WXCONS_CPPFLAGS WXCONS_LDFLAGS WX_DIR TRAY_MONITOR_CPPFLAGS TRAY_MONITOR_LDFLAGS TRAY_MONITOR_DIR TTOOL_LDFLAGS STATIC_FD STATIC_SD STATIC_DIR STATIC_CONS STATIC_GNOME_CONS STATIC_WX_CONS ALL_DIRS DIRD_DIR DIR_TOOLS STORED_DIR CONS_INC CONS_OBJ CONS_SRC CONS_LIBS CONS_LDFLAGS READLINE_SRC PYTHON_LIBS PYTHON_INCDIR OPENSSL_LIBS OPENSSL_INC working_dir scriptdir dump_email job_email smtp_host piddir subsysdir baseport dir_port fd_port sd_port dir_password fd_password sd_password mon_dir_password mon_fd_password mon_sd_password db_name db_user dir_user dir_group sd_user sd_group fd_user fd_group SBINPERM SQL_LFLAGS SQL_INCLUDE SQL_BINDIR cats DB_TYPE GETCONF ac_ct_GETCONF X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS LIBOBJS FDLIBS DEBUG DINCLUDE DLIB DB_LIBS WCFLAGS WLDFLAGS WRAPLIBS OBJLIST hostname TAPEDRIVE PSCMD WIN32 MACOSX DISTNAME DISTVER LTLIBOBJS'
+ ac_subst_files='MCOMMON'
+ 
+ # Initialize some variables set by options.
+@@ -350,8 +350,6 @@
+ infodir='${prefix}/info'
+ mandir='${prefix}/man'
+ 
+-archivedir='/tmp'
+-
+ ac_prev=
+ for ac_option
+ do
+@@ -546,13 +544,6 @@
+   | --sbi=* | --sb=*)
+     sbindir=$ac_optarg ;;
+ 
+-  -archivedir | --archivedir | --archivedi | --archived | --archive | --archiv \
+-  | --archi | --arch | --arc | --ar | --a)
+-    ac_prev=archivedir ;;
+-  -archivedir=* | --archivedir=* | --archivedi=* | --archived=* | --archive=* \
+-  | --archiv=* | --archi=* | --arch=* | --arc=* | --ar=* | --a=*)
+-    archivedir=$ac_optarg ;;
+-
+   -sharedstatedir | --sharedstatedir | --sharedstatedi \
+   | --sharedstated | --sharedstate | --sharedstat | --sharedsta \
+   | --sharedst | --shareds | --shared | --share | --shar \
+@@ -676,7 +667,7 @@
+ done
+ 
+ # Be sure to have absolute paths.
+-for ac_var in bindir sbindir libexecdir datadir sysconfdir sharedstatedir archivedir \
++for ac_var in bindir sbindir libexecdir datadir sysconfdir sharedstatedir \
+ 	      localstatedir libdir includedir oldincludedir infodir mandir
+ do
+   eval ac_val=$`echo $ac_var`
+@@ -852,7 +843,6 @@
+   --oldincludedir=DIR    C header files for non-gcc [/usr/include]
+   --infodir=DIR          info documentation [PREFIX/info]
+   --mandir=DIR           man documentation [PREFIX/man]
+-  --archivedir=DIR       archive destination for disk-based backups [/tmp]
+ _ACEOF
+ 
+   cat <<\_ACEOF
+@@ -4116,7 +4106,87 @@
+ echo "${ECHO_T}no" >&6
+ fi
+ 
++# Extract the first word of "qmake", so it can be a program name with args.
++set dummy qmake; ac_word=$2
++echo "$as_me:$LINENO: checking for $ac_word" >&5
++echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
++if test "${ac_cv_path_QMAKE+set}" = set; then
++  echo $ECHO_N "(cached) $ECHO_C" >&6
++else
++  case $QMAKE in
++  [\\/]* | ?:[\\/]*)
++  ac_cv_path_QMAKE="$QMAKE" # Let the user override the test with a path.
++  ;;
++  *)
++  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
++for as_dir in $PATH
++do
++  IFS=$as_save_IFS
++  test -z "$as_dir" && as_dir=.
++  for ac_exec_ext in '' $ac_executable_extensions; do
++  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
++    ac_cv_path_QMAKE="$as_dir/$ac_word$ac_exec_ext"
++    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
++    break 2
++  fi
++done
++done
+ 
++  test -z "$ac_cv_path_QMAKE" && ac_cv_path_QMAKE="none"
++  ;;
++esac
++fi
++QMAKE=$ac_cv_path_QMAKE
++
++if test -n "$QMAKE"; then
++  echo "$as_me:$LINENO: result: $QMAKE" >&5
++echo "${ECHO_T}$QMAKE" >&6
++else
++  echo "$as_me:$LINENO: result: no" >&5
++echo "${ECHO_T}no" >&6
++fi
++
++# Extract the first word of "qmake-qt4", so it can be a program name with args.
++set dummy qmake-qt4; ac_word=$2
++echo "$as_me:$LINENO: checking for $ac_word" >&5
++echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
++if test "${ac_cv_path_QMAKEQT4+set}" = set; then
++  echo $ECHO_N "(cached) $ECHO_C" >&6
++else
++  case $QMAKEQT4 in
++  [\\/]* | ?:[\\/]*)
++  ac_cv_path_QMAKEQT4="$QMAKEQT4" # Let the user override the test with a path.
++  ;;
++  *)
++  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
++for as_dir in $PATH
++do
++  IFS=$as_save_IFS
++  test -z "$as_dir" && as_dir=.
++  for ac_exec_ext in '' $ac_executable_extensions; do
++  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
++    ac_cv_path_QMAKEQT4="$as_dir/$ac_word$ac_exec_ext"
++    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
++    break 2
++  fi
++done
++done
++
++  test -z "$ac_cv_path_QMAKEQT4" && ac_cv_path_QMAKEQT4="none"
++  ;;
++esac
++fi
++QMAKEQT4=$ac_cv_path_QMAKEQT4
++
++if test -n "$QMAKEQT4"; then
++  echo "$as_me:$LINENO: result: $QMAKEQT4" >&5
++echo "${ECHO_T}$QMAKEQT4" >&6
++else
++  echo "$as_me:$LINENO: result: no" >&5
++echo "${ECHO_T}no" >&6
++fi
++
++
+ if test "x$WXCONFIG" = x; then
+   WXCONFIG=wx-config
+ fi
+@@ -6776,8 +6846,8 @@
+ # ------------------------------------------------------------------
+ # If the user has not set --archivedir, we set our default as /tmp
+ # ------------------------------------------------------------------
+-if test x$archivedir = x'/tmp' ; then
+-    archivedir=/tmp
++if test x$archivedir = x'${archivedir}' ; then
++    archivedir=${archivedir}
+ fi
+ archivedir=`eval echo ${archivedir}`
+ 
+@@ -19273,6 +19343,9 @@
+ 
+ 
+ 
++
++
++
+ for ac_header in \
+ 	assert.h \
+ 	fcntl.h \
+@@ -19284,6 +19357,7 @@
+ 	stdlib.h \
+ 	stdint.h \
+ 	string.h \
++	strings.h \
+ 	termios.h \
+ 	termcap.h \
+ 	term.h \
+@@ -19292,9 +19366,11 @@
+ 	sys/byteorder.h \
+ 	sys/ioctl.h \
+ 	sys/select.h \
++	sys/socket.h \
+ 	sys/sockio.h \
++	sys/stat.h \
+ 	sys/time.h \
+-	sys/socket.h \
++	sys/types.h \
+ 	arpa/nameser.h \
+ 	resolv.h \
+ 	mtio.h \
+@@ -31173,7 +31249,6 @@
+ s,@program_transform_name@,$program_transform_name,;t t
+ s,@bindir@,$bindir,;t t
+ s,@sbindir@,$sbindir,;t t
+-s,@archivedir@,$archivedir,;t t
+ s,@libexecdir@,$libexecdir,;t t
+ s,@datadir@,$datadir,;t t
+ s,@sysconfdir@,$sysconfdir,;t t
+@@ -31233,6 +31308,8 @@
+ s,@DVDRWMEDIAINFO@,$DVDRWMEDIAINFO,;t t
+ s,@DVDRWFORMAT@,$DVDRWFORMAT,;t t
+ s,@PKGCONFIG@,$PKGCONFIG,;t t
++s,@QMAKE@,$QMAKE,;t t
++s,@QMAKEQT4@,$QMAKEQT4,;t t
+ s,@WXCONFIG@,$WXCONFIG,;t t
+ s,@WXFLAGS@,$WXFLAGS,;t t
+ s,@CDRECORD@,$CDRECORD,;t t
+@@ -32122,10 +32199,23 @@
+ 
+ 
+ if test "${support_bat}" = "yes" ; then
++  if test "x$QMAKE" = "xnone" && test "x$QMAKEQT4" = "xnone"; then
++  echo "Could not find qmake or qmake-qt4 in $PATH. Check your Qt installation"
++  exit 1
++  fi
++
++  QMAKEBIN="qmake"
++
++  if test "x$QMAKEQT4" != "xnone"; then
++    QMAKEBIN=qmake-qt4
++  fi
++
++
++
+   cd src/qt-console
+   chmod 755 install_conf_file build-depkgs-qt-console
+   echo "Creating bat Makefile"
+-  qmake
++  $QMAKEBIN
+   cd ${BUILD_DIR}
+ fi
+ 
+Index: src/bc_types.h
+===================================================================
+--- src/bc_types.h	(revision 5979)
++++ src/bc_types.h	(working copy)
+@@ -62,7 +62,7 @@
+ 
+ #ifndef HAVE_INTXX_T
+ # if (SIZEOF_CHAR == 1)
+-typedef char int8_t;
++typedef signed char int8_t;
+ # else
+ #  error "8 bit int type not found."
+ # endif
+Index: patches/2.2.6-queued-msg.patch
+===================================================================
+--- patches/2.2.6-queued-msg.patch	(revision 0)
++++ patches/2.2.6-queued-msg.patch	(revision 0)
+@@ -0,0 +1,25 @@
++ This patch should ensure that queued messages to the console are
++ displayed as soon as possible.  It should fix bug 1007, but has been
++ reported not to work.
++
++ Apply it to version 2.2.6 (or any prior 2.2.x) with:
++
++ cd <bacula-source>
++ ./configure <your-options>
++ patch -p0 <2.2.6-queued-msg.patch
++ make
++ ...
++ make install
++
++Index: src/dird/ua_server.c
++===================================================================
++--- src/dird/ua_server.c	(revision 5979)
+++++ src/dird/ua_server.c	(working copy)
++@@ -146,6 +146,7 @@
++          } else {
++             do_a_command(ua, ua->cmd);
++          }
+++         dequeue_messages(ua->jcr);
++          if (!ua->quit) {
++             if (console_msg_pending && acl_access_ok(ua, Command_ACL, "messages", 8)) {
++                if (ua->auto_display_messages) {
+Index: autoconf/configure.in
+===================================================================
+--- autoconf/configure.in	(revision 5979)
++++ autoconf/configure.in	(working copy)
+@@ -1394,6 +1394,7 @@
+ 	stdlib.h \
+ 	stdint.h \
+ 	string.h \
++	strings.h \
+ 	termios.h \
+ 	termcap.h \
+ 	term.h \
+@@ -1402,9 +1403,11 @@
+ 	sys/byteorder.h \
+ 	sys/ioctl.h \
+ 	sys/select.h \
++	sys/socket.h \
+ 	sys/sockio.h \
++	sys/stat.h \
+ 	sys/time.h \
+-	sys/socket.h \
++	sys/types.h \
+ 	arpa/nameser.h \
+ 	resolv.h \
+ 	mtio.h \

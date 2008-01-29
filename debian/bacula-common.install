@@ -1,0 +1,2 @@
+debian/tmp-install-sqlite/usr/sbin/btraceback usr/lib/bacula
+debian/tmp-install-sqlite/etc/bacula/scripts/btraceback.gdb etc/bacula/scripts

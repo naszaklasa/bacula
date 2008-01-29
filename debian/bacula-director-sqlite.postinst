@@ -58,24 +58,6 @@ case "$1" in
 		if [ -n "$2" ]; then
 			touch $LOGDIR/upgrade.log
 			
-			if dpkg --compare-versions "$2" le '1.32f-5-*' ; then
-			# On upgrade, unconditionally change Catalog 
-			echo -n "Upgrading SQLite tables to v7 format..."
-			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 >> $LOGDIR/upgrade.log  2>&1
-			then echo "Ok."
-			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
-			fi
-			fi
-			
-			if dpkg --compare-versions "$2" lt '1.36.0' ; then
-			# On upgrade, unconditionally change Catalog 
-			echo -n "Upgrading SQLite tables to v8 format..."
-			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES2 >> $LOGDIR/upgrade.log  2>&1
-			then echo "Ok."
-			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
-			fi
-			fi
-
 			if dpkg --compare-versions "$2" lt '1.38.0' ; then
 			# On upgrade, unconditionally change Catalog 
 			echo -n "Upgrading SQLite tables to v9 format..."

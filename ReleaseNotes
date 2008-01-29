@@ -1,5 +1,5 @@
 
-          Release Notes for Bacula 2.2.6 
+          Release Notes for Bacula 2.2.8 
 
   Bacula code: Total files = 520 Total lines = 195,550 (*.h *.c *.in)
   82 new files, 41,221 new lines of code, 208,380 lines of change from 2.0.3
@@ -10,7 +10,30 @@ use some of the new features that affect the FD.  In other words, you should
 not have to upgrade all your File daemons when you upgrade. There is
 no database upgrade needed from version 2.0.x to 2.2.0.
 
-Version 2.2.6 is a minor bug fix realease to version 2.2.5
+Version 2.2.8 is a bug fix to version 2.2.7:
+- It fixes bugs: 1036, 1033(doc), 1028, 1040, 1045(doc), 1030,
+  1042(partially), and possibly bugs 1018 and 1032.
+  Bugs 1018 and 1032 involve problems with multiple-drive autochangers,
+  and are difficult to reproduce.         
+  See the ChangeLog for more details.
+
+Version 2.2.7 has several new features and several important bug fixes
+  since version 2.2.6:
+- It fixes bugs: 1009, 1022, 1024, 1019, 1012, 1021, 1020
+  1007, 1008.  For more details, please see the technotes-2.1 file.
+- Fixed a seg fault reported by Frank Sweetser that depended on
+  exact path lengths, but the problem was in bsnprintf.c
+- Double quoting include filenames (@xxx) in Bacula conf files is now
+  possible, thanks to a patch by Michael Stapelberg.
+- You can pipe input to include filenames (@|prog) by using a vertical
+  bar, thanks to the above patch.
+- A daylight savings time bug in the Win32 bsmpt was fixed by a patch from 
+  Nerijus Baliunas.
+- Marc Cousins submitted a patch that permits building the PostgreSQL
+  driver with version 8.3.
+- The configure option --archivedir has been changed to --with-archivedir
+
+Version 2.2.6 is a minor bug fix release to version 2.2.5
 - It fixes bugs: #1003, 942, 982, 990(response only), 991,   
   993, 986, 976.
 - Fix bat crash wen it cannot connect to Director.

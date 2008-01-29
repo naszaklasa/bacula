@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -53,7 +53,7 @@
  *
  *   Kern Sibbald, MM, MMI
  *
- *   Version $Id: device.c 5114 2007-06-29 12:12:26Z kerns $
+ *   Version $Id: device.c 6185 2008-01-03 14:08:43Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -122,7 +122,8 @@ bool fixup_device_block_write_error(DCR *dcr)
         edit_uint64_with_commas(dev->VolCatInfo.VolCatBlocks, b2),
         bstrftime(dt, sizeof(dt), time(NULL)));
 
-   if (!mount_next_write_volume(dcr, 1)) {
+   /* Called with have_vol=false, release=true */
+   if (!mount_next_write_volume(dcr, false, true)) {
       free_block(label_blk);
       dcr->block = block;
       dev->dlock();  
@@ -131,7 +132,7 @@ bool fixup_device_block_write_error(DCR *dcr)
    dev->dlock();                    /* lock again */
 
    dev->VolCatInfo.VolCatJobs++;              /* increment number of jobs on vol */
-   dir_update_volume_info(dcr, false);        /* send Volume info to Director */
+   dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
 
    Jmsg(jcr, M_INFO, 0, _("New volume \"%s\" mounted on device %s at %s.\n"),
       dcr->VolumeName, dev->print_name(), bstrftime(dt, sizeof(dt), time(NULL)));

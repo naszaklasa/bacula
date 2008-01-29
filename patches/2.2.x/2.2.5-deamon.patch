@@ -1,0 +1,40 @@
+
+ This patch fixes the default behavior of a non-DEVELOPER version of Bacula
+ to close STDIN, STDOUT, and STDERR so that an ssh that starts bacula
+ will not hang.  It also fixes a crash in bat when bat is executed and
+ cannot connect to the Director (e.g. it is not running).
+ This patch fixes bugs #991 and #993.
+
+ Apply this fix to Bacula version 2.2.5 with:
+
+ cd <bacula-source>
+ patch -p0 <2.2.5-daemon.patch
+ ./configure (your options)
+ make
+ ...
+ make install
+
+
+Index: src/lib/message.c
+===================================================================
+--- src/lib/message.c	(revision 5744)
++++ src/lib/message.c	(working copy)
+@@ -52,7 +52,8 @@
+  */
+ const char *working_directory = NULL;       /* working directory path stored here */
+ int verbose = 0;                      /* increase User messages */
+-int debug_level = 1;                  /* debug level */
++/* Keep debug level set to zero by default */
++int debug_level = 0;                  /* debug level */
+ time_t daemon_start_time = 0;         /* Daemon start time */
+ const char *version = VERSION " (" BDATE ")";
+ char my_name[30];                     /* daemon name is stored here */
+@@ -1338,7 +1339,7 @@
+       jcr = get_jcr_from_tsd();
+    }
+    /* If no jcr or dequeuing send to daemon to avoid recursion */
+-   if (!jcr || jcr->dequeuing) {
++   if ((jcr && !jcr->msg_queue) || !jcr || jcr->dequeuing) {
+       /* jcr==NULL => daemon message, safe to send now */
+       Jmsg(jcr, item->type, item->mtime, "%s", item->msg);
+       free(item);

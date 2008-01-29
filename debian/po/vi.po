@@ -3,10 +3,10 @@
 # Clytie Siddall <clytie@riverland.net.au>, 2005-2007.
 # 
 msgid ""
-""
-msgstr "Project-Id-Version: bacula_2.0.3-4\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-04-24 04:30+0200\n"
+msgstr ""
+"Project-Id-Version: bacula_2.0.3-4\n"
+"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
+"POT-Creation-Date: 2007-08-30 22:42+0100\n"
 "PO-Revision-Date: 2007-06-01 22:28+0930\n"
 "Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
 "Language-Team: Vietnamese <vi-VN@googlegroups.com>\n"
@@ -16,51 +16,66 @@ msgstr "Project-Id-Version: bacula_2.0.3-4\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: LocFactoryEditor 1.6.3b1\n"
 
-#.Type: boolean
-#.Description
+#. Type: boolean
+#. Description
 #: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
 msgid "Create tables for Bacula's Catalog?"
 msgstr "Tạo bảng cho phân loại của Bacula không?"
 
-#.Type: boolean
-#.Description
+#. Type: boolean
+#. Description
 #: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+#, fuzzy
 msgid ""
 "The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula."
-msgstr "Thiếu bảng cần đến cho phân loại Bacula: trường hợp chuẩn cho bản cài đặt Bacula mới."
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
+msgstr ""
+"Thiếu bảng cần đến cho phân loại Bacula: trường hợp chuẩn cho bản cài đặt "
+"Bacula mới."
 
-#.Type: boolean
-#.Description
-#: ../bacula-director-sqlite.templates:1001
-msgid ""
-"These tables are needed for the Bacula director to function. Should these "
-"tables be automatically set up for you?"
-msgstr "Những bảng này cần thiết để trình điều khiển Bacula hoạt động được. Có nên tự động thiết lập những bảng cho bạn không?"
-
-#.Type: boolean
-#.Description
+#. Type: boolean
+#. Description
 #: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid "Remove Catalog on purge?"
 msgstr "Gỡ bỏ phân loại khi tẩy không?"
 
-#.Type: boolean
-#.Description
+#. Type: boolean
+#. Description
 #: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"Do you want the Bacula Catalog to be removed if you purge the Bacula "
-"director?"
-msgstr "Bạn có muốn Phân loại Bacula bị gỡ bỏ nếu bạn tẩy thư mục Bacula không?"
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
+msgstr ""
+
+#~ msgid ""
+#~ "These tables are needed for the Bacula director to function. Should these "
+#~ "tables be automatically set up for you?"
+#~ msgstr ""
+#~ "Những bảng này cần thiết để trình điều khiển Bacula hoạt động được. Có "
+#~ "nên tự động thiết lập những bảng cho bạn không?"
+
+#~ msgid ""
+#~ "Do you want the Bacula Catalog to be removed if you purge the Bacula "
+#~ "director?"
+#~ msgstr ""
+#~ "Bạn có muốn Phân loại Bacula bị gỡ bỏ nếu bạn tẩy thư mục Bacula không?"
 
 #~ msgid ""
 #~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
 #~ "able to restore your backups unless you have another copy of the catalog "
 #~ "at hand."
-#~ msgstr "Cảnh báo: không thể hủy bước này. Một khi đã loại bỏ phân loại, không thể "
+#~ msgstr ""
+#~ "Cảnh báo: không thể hủy bước này. Một khi đã loại bỏ phân loại, không thể "
 #~ "phục hồi bản lưu trữ, trừ bạn có một bản sao phân loại nữa."
 
 #~ msgid ""
 #~ "Shall I remove the Catalog / SQLite database at package purge time? This "
 #~ "will free all the used space."
-#~ msgstr "Bạn có muốn loại phân loại /bỏ cơ sở dữ liệu SQLite khi tẩy gói tin này? "
+#~ msgstr ""
+#~ "Bạn có muốn loại phân loại /bỏ cơ sở dữ liệu SQLite khi tẩy gói tin này? "
 #~ "Làm như thế sẽ giải phóng các sức chứa đã dùng."

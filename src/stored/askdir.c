@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, December 2000
  *
- *   Version $Id: askdir.c 5503 2007-09-09 10:03:23Z kerns $
+ *   Version $Id: askdir.c 6185 2008-01-03 14:08:43Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -42,7 +42,7 @@ static char Find_media[]   = "CatReq Job=%s FindMedia=%d pool_name=%s media_type
 static char Get_Vol_Info[] = "CatReq Job=%s GetVolInfo VolName=%s write=%d\n";
 static char Update_media[] = "CatReq Job=%s UpdateMedia VolName=%s"
    " VolJobs=%u VolFiles=%u VolBlocks=%u VolBytes=%s VolMounts=%u"
-   " VolErrors=%u VolWrites=%u MaxVolBytes=%s EndTime=%d VolStatus=%s"
+   " VolErrors=%u VolWrites=%u MaxVolBytes=%s EndTime=%s VolStatus=%s"
    " Slot=%d relabel=%d InChanger=%d VolReadTime=%s VolWriteTime=%s"
    " VolFirstWritten=%s VolParts=%u\n";
 static char Create_job_media[] = "CatReq Job=%s CreateJobMedia"
@@ -98,7 +98,7 @@ bool dir_update_device(JCR *jcr, DEVICE *dev)
    } else {
       pm_strcpy(ChangerName, "*");
    }
-   ok =bnet_fsend(dir, Device_update, 
+   ok = dir->fsend(Device_update, 
       jcr->Job,
       dev_name.c_str(),
       dev->can_append()!=0,
@@ -125,7 +125,7 @@ bool dir_update_changer(JCR *jcr, AUTOCHANGER *changer)
    pm_strcpy(MediaType, device->media_type);
    bash_spaces(MediaType);
    /* This is mostly to indicate that we are here */
-   ok = bnet_fsend(dir, Device_update,
+   ok = dir->fsend(Device_update,
       jcr->Job,
       dev_name.c_str(),         /* Changer name */
       0, 0, 0,                  /* append, read, num_writers */
@@ -148,7 +148,7 @@ bool dir_update_changer(JCR *jcr, AUTOCHANGER *changer)
  */
 bool dir_send_job_status(JCR *jcr)
 {
-   return bnet_fsend(jcr->dir_bsock, Job_status, jcr->Job, jcr->JobStatus);
+   return jcr->dir_bsock->fsend(Job_status, jcr->Job, jcr->JobStatus);
 }
 
 /*
@@ -179,7 +179,7 @@ static bool do_get_volume_info(DCR *dcr)
        return false;
     }
     memset(&vol, 0, sizeof(vol));
-    Dmsg1(100, "<dird %s\n", dir->msg);
+    Dmsg1(100, "<dird %s", dir->msg);
     n = sscanf(dir->msg, OK_media, vol.VolCatName,
                &vol.VolCatJobs, &vol.VolCatFiles,
                &vol.VolCatBlocks, &vol.VolCatBytes,
@@ -191,7 +191,8 @@ static bool do_get_volume_info(DCR *dcr)
                &vol.EndFile, &vol.EndBlock, &vol.VolCatParts,
                &vol.LabelType, &vol.VolMediaId);
     if (n != 22) {
-       Dmsg3(100, "Bad response from Dir fields=%d, len=%d: %s", n, dir->msglen, dir->msg);
+       Dmsg3(100, "Bad response from Dir fields=%d, len=%d: %s", 
+             n, dir->msglen, dir->msg);
        Mmsg(jcr->errmsg, _("Error getting Volume info: %s"), dir->msg);
        return false;
     }
@@ -226,7 +227,7 @@ bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw writing)
     bash_spaces(dcr->VolCatInfo.VolCatName);
     dir->fsend(Get_Vol_Info, jcr->Job, dcr->VolCatInfo.VolCatName,
        writing==GET_VOL_INFO_FOR_WRITE?1:0);
-    Dmsg1(100, ">dird: %s\n", dir->msg);
+    Dmsg1(100, ">dird %s", dir->msg);
     unbash_spaces(dcr->VolCatInfo.VolCatName);
     bool ok = do_get_volume_info(dcr);
     V(vol_info_mutex);
@@ -253,7 +254,9 @@ bool dir_find_next_appendable_volume(DCR *dcr)
     BSOCK *dir = jcr->dir_bsock;
     bool found = false;
 
-    Dmsg0(200, "dir_find_next_appendable_volume\n");
+    Dmsg2(200, "dir_find_next_appendable_volume: reserved=%d Vol=%s\n", 
+       dcr->reserved_device, dcr->VolumeName);
+
     /*
      * Try the twenty oldest or most available volumes.  Note,
      *   the most available could already be mounted on another
@@ -268,7 +271,7 @@ bool dir_find_next_appendable_volume(DCR *dcr)
        dir->fsend(Find_media, jcr->Job, vol_index, dcr->pool_name, dcr->media_type);
        unbash_spaces(dcr->media_type);
        unbash_spaces(dcr->pool_name);
-       Dmsg1(100, ">dird: %s", dir->msg);
+       Dmsg1(100, ">dird %s", dir->msg);
        bool ok = do_get_volume_info(dcr);
        if (ok) {
           if (!is_volume_in_use(dcr)) {
@@ -311,14 +314,13 @@ bail_out:
  * back to the director. The information comes from the
  * dev record.
  */
-bool dir_update_volume_info(DCR *dcr, bool label)
+bool dir_update_volume_info(DCR *dcr, bool label, bool update_LastWritten)
 {
    JCR *jcr = dcr->jcr;
    BSOCK *dir = jcr->dir_bsock;
    DEVICE *dev = dcr->dev;
-   time_t LastWritten = time(NULL);
    VOLUME_CAT_INFO *vol = &dev->VolCatInfo;
-   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50];
+   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50], ed6[50];
    int InChanger;
    bool ok = false;
    POOL_MEM VolumeName;
@@ -341,21 +343,25 @@ bool dir_update_volume_info(DCR *dcr, bool label)
    if (label) {
       bstrncpy(vol->VolCatStatus, "Append", sizeof(vol->VolCatStatus));
    }
+// if (update_LastWritten) {
+      vol->VolLastWritten = time(NULL);
+// }
    pm_strcpy(VolumeName, vol->VolCatName);
    bash_spaces(VolumeName);
    InChanger = vol->InChanger;
-   bnet_fsend(dir, Update_media, jcr->Job,
+   dir->fsend(Update_media, jcr->Job,
       VolumeName.c_str(), vol->VolCatJobs, vol->VolCatFiles,
       vol->VolCatBlocks, edit_uint64(vol->VolCatBytes, ed1),
       vol->VolCatMounts, vol->VolCatErrors,
       vol->VolCatWrites, edit_uint64(vol->VolCatMaxBytes, ed2),
-      LastWritten, vol->VolCatStatus, vol->Slot, label,
+      edit_uint64(vol->VolLastWritten, ed6), 
+      vol->VolCatStatus, vol->Slot, label,
       InChanger,                      /* bool in structure */
       edit_int64(vol->VolReadTime, ed3),
       edit_int64(vol->VolWriteTime, ed4),
       edit_uint64(vol->VolFirstWritten, ed5),
       vol->VolCatParts);
-    Dmsg1(100, ">dird: %s", dir->msg);
+    Dmsg1(100, ">dird %s", dir->msg);
 
    /* Do not lock device here because it may be locked from label */
    if (!do_get_volume_info(dcr)) {
@@ -364,7 +370,7 @@ bool dir_update_volume_info(DCR *dcr, bool label)
          vol->VolCatName, jcr->errmsg);
       goto bail_out;
    }
-   Dmsg1(420, "get_volume_info(): %s", dir->msg);
+   Dmsg1(420, "get_volume_info() %s", dir->msg);
    /* Update dev Volume info in case something changed (e.g. expired) */
    dev->VolCatInfo = dcr->VolCatInfo;
    ok = true;
@@ -393,20 +399,20 @@ bool dir_create_jobmedia_record(DCR *dcr)
    }
 
    dcr->WroteVol = false;
-   bnet_fsend(dir, Create_job_media, jcr->Job,
+   dir->fsend(Create_job_media, jcr->Job,
       dcr->VolFirstIndex, dcr->VolLastIndex,
       dcr->StartFile, dcr->EndFile,
       dcr->StartBlock, dcr->EndBlock, 
       dcr->Copy, dcr->Stripe, 
       edit_uint64(dcr->VolMediaId, ed1));
-    Dmsg1(100, ">dird: %s", dir->msg);
+    Dmsg1(100, ">dird %s", dir->msg);
    if (bnet_recv(dir) <= 0) {
       Dmsg0(190, "create_jobmedia error bnet_recv\n");
       Jmsg(jcr, M_FATAL, 0, _("Error creating JobMedia record: ERR=%s\n"),
-           bnet_strerror(dir));
+           dir->bstrerror());
       return false;
    }
-   Dmsg1(100, "<dir: %s", dir->msg);
+   Dmsg1(100, "<dird %s", dir->msg);
    if (strcmp(dir->msg, OK_create) != 0) {
       Dmsg1(130, "Bad response from Dir: %s\n", dir->msg);
       Jmsg(jcr, M_FATAL, 0, _("Error creating JobMedia record: %s\n"), dir->msg);
@@ -429,9 +435,10 @@ bool dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec)
    return true;
 #endif
 
-   dir->msglen = sprintf(dir->msg, FileAttributes, jcr->Job);
-   dir->msg = check_pool_memory_size(dir->msg, dir->msglen +
-                sizeof(DEV_RECORD) + rec->data_len);
+   dir->msg = check_pool_memory_size(dir->msg, sizeof(FileAttributes) +
+                MAX_NAME_LENGTH + sizeof(DEV_RECORD) + rec->data_len + 1);
+   dir->msglen = bsnprintf(dir->msg, sizeof(FileAttributes) +
+                MAX_NAME_LENGTH + 1, FileAttributes, jcr->Job);
    ser_begin(dir->msg + dir->msglen, 0);
    ser_uint32(rec->VolSessionId);
    ser_uint32(rec->VolSessionTime);
@@ -440,8 +447,8 @@ bool dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec)
    ser_uint32(rec->data_len);
    ser_bytes(rec->data, rec->data_len);
    dir->msglen = ser_length(dir->msg);
-   Dmsg1(1800, ">dird: %s\n", dir->msg);    /* Attributes */
-   return bnet_send(dir);
+   Dmsg1(1800, ">dird %s\n", dir->msg);    /* Attributes */
+   return dir->send();
 }
 
 

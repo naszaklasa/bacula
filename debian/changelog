@@ -1,4 +1,37 @@
-bacula (2.2.6-0.1) unstable; urgency=low
+bacula (2.2.8-1) unstable; urgency=low
+
+  * New upstream release.  (2.2.8 prepared by John Goerzen)
+  * Added build-dep on postgresql-server-dev-8.2.  Closes: #462502.
+  * Moved btraceback and btraceback.gdb from bacula-director-common
+    to bacula-common.  Closes: #452183.  This change meant that
+    bacula-common changes from arch all to arch any.
+  * Fixed debian/watch file.  Thanks to Raphael Geissert for the
+    patch.  Closes: #449666.
+  * New German debconf translation from Helge Kreutzmann.
+    Closes: #462981.
+  * New Galician debconf translation from Jacobo Tarrio.
+    Closes: #462991.
+  * New Japenese debconf translation from Hideki Yamane.
+    Closes: #463092.
+  * Init script updates to help improve /var/run on tmpfs support.
+    Applied patch ac7bb3384082 from James Westby.  Closes: #452683.
+  * Init script updates to have dependency information.
+    Applied patch from Petter Reinholdtsen.  CLoses: #460252.
+  * Merged the following changes from Mark Hymer's Mercurial tree:
+    + Upstream 2.2.6 and 2.2.7.  Closes: #458780.
+    + Bump Build-Dep for libgtk2.0-dev to be >= 2.10 as the traymonitor
+      code needs it.  Closes: #451499.
+    + Update libmysqlclient-dev Build-Dep.  Closes: #439969.
+    + Use correct path to mtx-changer.  Closes: #435627.
+    + Install tray-monitor.conf file.  Closes: #413754.
+    + Only alter permissions and ownership on files in /etc/bacula when we
+      install them; don't clobber local changes.
+    + Simplify scripts by removing support for upgrading from versions which
+      are pre-sarge.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 14 Nov 2007 08:21:45 +0000
+
+ bacula (2.2.6-0.1) unstable; urgency=low
 
   * Non-maintainer upload.
   * New upstream release.

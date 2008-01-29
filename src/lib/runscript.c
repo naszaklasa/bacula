@@ -30,7 +30,7 @@
  *
  *  Eric Bollengier, May 2006
  *
- *  Version $Id: runscript.c 5222 2007-07-22 12:21:06Z kerns $
+ *  Version $Id: runscript.c 6262 2008-01-09 10:58:13Z kerns $
  *
  */
 
@@ -66,6 +66,7 @@ void RUNSCRIPT::reset_default(bool free_strings)
    fail_on_error = true;
    when = SCRIPT_Never;
    old_proto = false;        /* TODO: drop this with bacula 1.42 */
+   job_code_callback = NULL;
 }
 
 RUNSCRIPT *copy_runscript(RUNSCRIPT *src)
@@ -207,6 +208,7 @@ bool RUNSCRIPT::run(JCR *jcr, const char *name)
    BPIPE *bpipe;
    char line[MAXSTRING];
 
+   ecmd = edit_job_codes(jcr, ecmd, this->command, "", this->job_code_callback);
    ecmd = edit_job_codes(jcr, ecmd, this->command, "");
    Dmsg1(100, "runscript: running '%s'...\n", ecmd);
    Jmsg(jcr, M_INFO, 0, _("%s: run command \"%s\"\n"), name, ecmd);
@@ -265,4 +267,10 @@ void RUNSCRIPT::debug()
    Dmsg1(200,  _("  --> RunOnFailure=%u\n"),  on_failure);
    Dmsg1(200,  _("  --> FailJobOnError=%u\n"),  fail_on_error);
    Dmsg1(200,  _("  --> RunWhen=%u\n"),  when);
+}
+
+void RUNSCRIPT::set_job_code_callback(job_code_callback_t arg_job_code_callback) 
+
+{
+   this->job_code_callback = arg_job_code_callback;
 }

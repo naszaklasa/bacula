@@ -5,7 +5,7 @@
 
 # basic defines for every build
 %define _version @VERSION@
-%define _release 2
+%define _release 1
 %define depkgs_version 09Sep07
 %define _rescuever @VERSION@
 %define docs_version @VERSION@
@@ -33,6 +33,7 @@ Source1: http://www.prdownloads.sourceforge.net/bacula/depkgs-%{depkgs_version}.
 Source2: Release_Notes-%{version}-%{release}.tar.gz
 Source3: http://www.prdownloads.sourceforge.net/bacula/%{name}-docs-%{docs_version}.tar.gz
 Source4: http://www.prdownloads.sourceforge.net/bacula/%{name}-rescue-%{_rescuever}.tar.gz
+Source5: bacula-2.2.7-postgresql.patch
 BuildRoot: %{_tmppath}/%{name}-root
 URL: http://www.bacula.org/
 Vendor: The Bacula Team
@@ -98,6 +99,8 @@ Packager: %{_packager}
 %{?build_fc6:%define fc6 1}
 %define fc7 0
 %{?build_fc7:%define fc7 1}
+%define fc8 0
+%{?build_fc8:%define fc8 1}
 # Whitebox Enterprise build
 %define wb3 0
 %{?build_wb3:%define wb3 1}
@@ -152,7 +155,7 @@ Packager: %{_packager}
 %{?build_client_only:%define client_only 1}
 
 # test for a platform definition
-%if ! %{rh7} && ! %{rh8} && ! %{rh9} && ! %{fc1} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7} && ! %{wb3} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk}
+%if !%{rh7} && !%{rh8} && !%{rh9} && !%{fc1} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8} && !%{wb3} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{mdk}
 %{error: You must specify a platform. Please examine the spec file.}
 exit 1
 %endif
@@ -186,7 +189,7 @@ exit 1
 %define db_backend mysql
 %endif
 %if %{sqlite}
-%define db_backend sqlite
+%define db_backend sqlite3
 %endif
 %if %{postgresql}
 %define db_backend postgresql
@@ -200,7 +203,7 @@ exit 1
 %if %{rh7} || %{rh8} || %{rh9} || %{rhel3} || %{rhel4} || %{rhel5}
 %define _dist %(grep Red /etc/redhat-release)
 %endif
-%if %{fc1} || %{fc4} || %{fc5} || %{fc7}
+%if %{fc1} || %{fc4} || %{fc5} || %{fc7} || %{fc8}
 %define _dist %(grep Fedora /etc/redhat-release)
 %endif
 %if %{centos5} || %{centos4} || %{centos3}
@@ -243,7 +246,7 @@ Distribution: %{_dist}
 %{?nobuild_gconsole:%define gconsole 0}
 
 # Should we build wxconsole, only wxWidgets >=2.6 is supported
-# currently only SuSE 10 and FC4/FC5
+# SuSE 10 and FC4 and newer
 %define wxconsole 0
 %{?build_wxconsole:%define wxconsole 1}
 
@@ -255,6 +258,14 @@ Distribution: %{_dist}
 # should we turn on python support
 %define python 0
 %{?build_python:%define python 1}
+
+# specifically disallow build of mtx package if desired
+%define mtx 1
+%{?nobuild_mtx:%define mtx 0}
+
+# do we need to patch for old postgresql version?
+%define old_pgsql 0
+%{?build_old_pgsql:%define old_pgsql 1}
 
 # Mandriva somehow forces the manpage file extension to bz2 rather than gz
 %if %{mdk}
@@ -289,11 +300,12 @@ BuildRequires: python, python-devel
 BuildRequires: pkgconfig, pango-devel, atk-devel
 %endif
 
-# Rh qt4 packages don't provide, guess what, qt!
+# Rh qt4 packages don't have a provide for, guess what, qt!
+# still broken in fc8
 # so fix for broken rh
 %define broken_rh 0
-%if %{rhel5} || %{centos5} || %{sl5} || %{fc5} || %{fc6} || %{fc7}
-%define broken_rh 1"
+%if %{rhel5} || %{centos5} || %{sl5} || %{fc5} || %{fc6} || %{fc7} || %{fc8}
+%define broken_rh 1
 %endif
 %if %{bat} && ! %{broken_rh}
 BuildRequires: qt-devel >= 4.2
@@ -483,11 +495,25 @@ BuildRequires: libbonoboui-devel >= 2.18
 BuildRequires: GConf2-devel
 BuildRequires: freetype-devel
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7}
+%if %{fc8}
+BuildRequires: libtermcap-devel
+BuildRequires: glibc-devel >= 2.7
+%endif
+%if %{fc8} && %{gconsole}
+BuildRequires: gtk2-devel >= 2.12
+BuildRequires: libgnomeui-devel >= 2.20
+BuildRequires: ORBit2-devel
+BuildRequires: libart_lgpl-devel >= 2.3
+BuildRequires: libbonobo-devel >= 2.20
+BuildRequires: libbonoboui-devel >= 2.20
+BuildRequires: GConf2-devel
+BuildRequires: freetype-devel
+%endif
+%if !%{rh7} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{mdk} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8}
 BuildRequires: libtermcap-devel
 BuildRequires: glibc-devel >= 2.3
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7} && %{gconsole}
+%if !%{rh7} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{mdk} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8} && %{gconsole}
 BuildRequires: gtk2-devel >= 2.0
 BuildRequires: libgnomeui-devel >= 2.0
 BuildRequires: ORBit2-devel
@@ -573,7 +599,7 @@ Requires: termcap
 Requires: glibc >= 2.6
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{fc5} && ! %{fc6} && ! %{fc7}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{fc5} && ! %{fc6} && ! %{fc7} && ! %{fc8}
 Requires: glibc >= 2.3
 Requires: libtermcap
 %endif
@@ -583,6 +609,10 @@ Requires: libtermcap
 %endif
 %if %{fc6} || %{fc7}
 Requires: glibc >= 2.5
+Requires: libtermcap
+%endif
+%if %{fc8}
+Requires: glibc >= 2.7
 Requires: libtermcap
 %endif
 
@@ -673,13 +703,13 @@ This build requires MySQL to be installed separately as the catalog database.
 This build requires PostgreSQL to be installed separately as the catalog database.
 %endif
 %if %{sqlite}
-This build incorporates sqlite as the catalog database, statically compiled.
+This build incorporates sqlite3 as the catalog database, statically compiled.
 %endif
 %if %{python}
 This build includes python scripting support.
 %endif
 
-%if ! %{client_only}
+%if ! %{client_only} && %{mtx}
 %package mtx
 Summary: Bacula - The Network Backup Solution
 Group: System Environment/Daemons
@@ -717,11 +747,11 @@ Requires: termcap
 Requires: glibc >= 2.5
 Requires: termcap
 %endif
-%if %{su102}
+%if %{su103}
 Requires: glibc >= 2.6
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{fc5} && ! %{fc6}
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{fc5} && ! %{fc6} && ! %{fc7} && ! %{fc8}
 Requires: glibc >= 2.3
 Requires: libtermcap
 %endif
@@ -731,6 +761,10 @@ Requires: libtermcap
 %endif
 %if %{fc6} || %{fc7}
 Requires: glibc >= 2.5
+Requires: libtermcap
+%endif
+%if %{fc8}
+Requires: glibc >= 2.7
 Requires: libtermcap
 %endif
 
@@ -927,7 +961,18 @@ Requires: libbonoboui >= 2.18
 Requires: GConf2
 Requires: freetype
 %endif
-%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk} && ! %{fc3} && ! %{fc4} && ! %{fc5} && ! %{fc6} && ! %{fc7}
+%if %{gconsole} && %{fc8}  
+Requires: gtk2 >= 2.12
+Requires: libgnomeui >= 2.20
+Requires: glibc >= 2.7
+Requires: ORBit2
+Requires: libart_lgpl >= 2.3
+Requires: libbonobo >= 2.20
+Requires: libbonoboui >= 2.20
+Requires: GConf2
+Requires: freetype
+%endif
+%if %{gconsole} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{mdk} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8}
 Requires: gtk2 >= 2.0
 Requires: libgnomeui >= 2.0
 Requires: glibc >= 2.3
@@ -1009,6 +1054,10 @@ Requires: gtk2 >= 2.10
 
 %if %{wxconsole} && %{fc7}  
 Requires: gtk2 >= 2.10
+%endif
+
+%if %{wxconsole} && %{fc7}  
+Requires: gtk2 >= 2.12
 %endif
 
 %if %{wxconsole}
@@ -1105,6 +1154,18 @@ Requires: libstdc++
 Requires: zlib
 %endif
 
+%if %{bat} && %{fc8}
+Requires: openssl
+Requires: glibc >= 2.7
+Requires: fontconfig
+Requires: freetype
+Requires: libgcc
+Requires: libpng
+Requires: qt4 >= 4.2
+Requires: libstdc++
+Requires: zlib
+%endif
+
 %if %{bat}
 %description bat
 %{blurb}
@@ -1138,9 +1199,9 @@ export LDFLAGS="${LDFLAGS} -L/usr/lib/termcap"
 cwd=${PWD}
 cd %{depkgs}
 %if %{sqlite}
-make sqlite
+make sqlite3
 %endif
-%if ! %{client_only}
+%if ! %{client_only} && %{mtx}
 make mtx
 %endif
 %if %{bat}
@@ -1148,20 +1209,26 @@ make qwt
 %endif
 cd ${cwd}
 
+%if %{wb3} || %{old_pgsql}
+patch -p3 src/cats/postgresql.c < %SOURCE5
+%endif
+
 # patches for the bundled sqlite scripts
 
 # patch the make_sqlite_tables script for installation bindir
-patch src/cats/make_sqlite_tables.in src/cats/make_sqlite_tables.in.patch
+#patch src/cats/make_sqlite_tables.in src/cats/make_sqlite_tables.in.patch
+patch src/cats/make_sqlite3_tables.in src/cats/make_sqlite3_tables.in.patch
 
 # patch the create_sqlite_database script for installation bindir
-# not necessary after 1.39.26 no longer references sqlite binary
 #patch src/cats/create_sqlite_database.in src/cats/create_sqlite_database.in.patch
+patch src/cats/create_sqlite3_database.in src/cats/create_sqlite3_database.in.patch
 
 # patch the make_catalog_backup script for installation bindir
 patch src/cats/make_catalog_backup.in src/cats/make_catalog_backup.in.patch
 
 # patch the update_sqlite_tables script for installation bindir
-patch src/cats/update_sqlite_tables.in src/cats/update_sqlite_tables.in.patch
+#patch src/cats/update_sqlite_tables.in src/cats/update_sqlite_tables.in.patch
+patch src/cats/update_sqlite3_tables.in src/cats/update_sqlite3_tables.in.patch
 
 # patch the bacula-dir init script to remove sqlite service
 %if %{sqlite} && %{su9}
@@ -1236,7 +1303,7 @@ make
         --with-mysql \
 %endif
 %if %{sqlite}
-        --with-sqlite=${cwd}/%{depkgs}/sqlite \
+        --with-sqlite3=${cwd}/%{depkgs}/sqlite3 \
 %endif
 %if %{postgresql}
         --with-postgresql \
@@ -1317,7 +1384,7 @@ make \
 	mandir=$RPM_BUILD_ROOT%{_mandir} \
         install
 
-%if ! %{client_only}
+%if ! %{client_only} && %{mtx}
 cd %{depkgs}
 make \
         prefix=$RPM_BUILD_ROOT/usr \
@@ -1442,7 +1509,7 @@ cp -p scripts/bat.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
 cp -p src/qt-console/images/bat_icon.png $RPM_BUILD_ROOT/usr/share/pixmaps/bat_icon.png
 cp -p scripts/bat.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
 %endif
-%if %{rh8} || %{rh9} || %{wb3} || %{fc1} || %{fc3} || %{fc4} || %{fc5} || %{fc6} || %{fc7} || %{mdk}
+%if %{rh8} || %{rh9} || %{wb3} || %{fc1} || %{fc3} || %{fc4} || %{fc5} || %{fc6} || %{fc7} || %{fc8} || %{mdk}
 %define iftrick 1
 %else
 %define iftrick 0
@@ -1475,9 +1542,9 @@ ln -sf consolehelper $RPM_BUILD_ROOT/usr/bin/bat
 
 # install sqlite
 %if %{sqlite}
-cp -p %{depkgs}/sqlite/sqlite $RPM_BUILD_ROOT%{sqlite_bindir}/sqlite
-cp -p %{depkgs}/sqlite/sqlite.h $RPM_BUILD_ROOT%{sqlite_bindir}/sqlite.h
-cp -p %{depkgs}/sqlite/libsqlite.a $RPM_BUILD_ROOT%{sqlite_bindir}/libsqlite.a
+cp -p %{depkgs}/sqlite3/sqlite3 $RPM_BUILD_ROOT%{sqlite_bindir}/sqlite3
+cp -p %{depkgs}/sqlite3/sqlite3.h $RPM_BUILD_ROOT%{sqlite_bindir}/sqlite3.h
+cp -p %{depkgs}/sqlite3/libsqlite3.a $RPM_BUILD_ROOT%{sqlite_bindir}/libsqlite3.a
 %endif
 
 # install the logrotate file
@@ -1498,12 +1565,17 @@ chmod 644 $RPM_BUILD_ROOT/etc/log.d/conf/services/bacula.conf
 
 # install the rescue files
 mkdir $RPM_BUILD_ROOT%{sysconf_dir}/rescue
+mkdir $RPM_BUILD_ROOT%{sysconf_dir}/rescue/freebsd
+mkdir $RPM_BUILD_ROOT%{sysconf_dir}/rescue/solaris
 cp -p %{_rescuesrc}/Makefile* $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
+cp -p %{_rescuesrc}/freebsd/Makefile* $RPM_BUILD_ROOT%{sysconf_dir}/rescue/freebsd/
+cp -p %{_rescuesrc}/solaris/Makefile* $RPM_BUILD_ROOT%{sysconf_dir}/rescue/solaris/
 cp -p %{_rescuesrc}/README $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
 cp -p %{_rescuesrc}/configure $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
 cp -p %{_rescuesrc}/version.h $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
 cp -pr %{_rescuesrc}/linux $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
 cp -pr %{_rescuesrc}/autoconf $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
+cp -pr %{_rescuesrc}/knoppix $RPM_BUILD_ROOT%{sysconf_dir}/rescue/
 touch $RPM_BUILD_ROOT%{sysconf_dir}/rescue/linux/cdrom/rpm_release
 cp -p src/filed/static-bacula-fd $RPM_BUILD_ROOT%{sysconf_dir}/rescue/linux/cdrom/bacula/bin/bacula-fd
 rm -f src/filed/static-bacula-fd
@@ -1515,9 +1587,6 @@ cp -p src/qt-console/bat.conf $RPM_BUILD_ROOT%{sysconf_dir}/bat.conf
 %endif
 
 # now clean up permissions that are left broken by the install
-%if ! %{client_only}
-chmod o-r $RPM_BUILD_ROOT%{script_dir}/query.sql
-%endif
 chmod o-rwx $RPM_BUILD_ROOT%{working_dir}
 %if %{gconsole} && ! %{rh8}
 chmod 755 $RPM_BUILD_ROOT/usr/sbin/bacula-tray-monitor
@@ -1561,15 +1630,15 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %if %{sqlite}
 %files sqlite
 %defattr(-,root,root)
-%attr(-, root, %{daemon_group}) %{script_dir}/create_sqlite_database
-%attr(-, root, %{daemon_group}) %{script_dir}/drop_sqlite_database
-%attr(-, root, %{daemon_group}) %{script_dir}/grant_sqlite_privileges
-%attr(-, root, %{daemon_group}) %{script_dir}/make_sqlite_tables
-%attr(-, root, %{daemon_group}) %{script_dir}/drop_sqlite_tables
-%attr(-, root, %{daemon_group}) %{script_dir}/update_sqlite_tables
-%{sqlite_bindir}/libsqlite.a
-%{sqlite_bindir}/sqlite.h
-%{sqlite_bindir}/sqlite
+%attr(-, root, %{daemon_group}) %{script_dir}/create_sqlite3_database
+%attr(-, root, %{daemon_group}) %{script_dir}/drop_sqlite3_database
+%attr(-, root, %{daemon_group}) %{script_dir}/grant_sqlite3_privileges
+%attr(-, root, %{daemon_group}) %{script_dir}/make_sqlite3_tables
+%attr(-, root, %{daemon_group}) %{script_dir}/drop_sqlite3_tables
+%attr(-, root, %{daemon_group}) %{script_dir}/update_sqlite3_tables
+%{sqlite_bindir}/libsqlite3.a
+%{sqlite_bindir}/sqlite3.h
+%{sqlite_bindir}/sqlite3
 %endif
 
 %if %{postgresql}
@@ -1662,9 +1731,31 @@ DB_VER=`mysql 2>/dev/null bacula -e 'select * from Version;'|tail -n 1`
 
 %if %{sqlite}
 %pre sqlite
-# test for bacula database older than version 9
+# are we upgrading from sqlite to sqlite3?
 if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite ];then
-        DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
+        echo "This version of bacula-sqlite involves an upgrade to sqlite3."
+	echo "Your catalog database file is not compatible with sqlite3, thus"
+	echo "you will need to dump the data, delete the old file, and re-run"
+	echo "this rpm upgrade."
+	echo ""
+	echo "Backing up your current database..."
+        echo ".dump" | %{sqlite_bindir}/sqlite %{working_dir}/bacula.db > %{working_dir}/bacula_backup.sql
+	mv %{working_dir}/bacula.db %{working_dir}/bacula.db.old
+	echo "Your catalog data has been saved in %{working_dir}/bacula_backup.sql and your"
+	echo "catalog file has been renamed %{working_dir}/bacula.db.old."
+	echo ""
+	echo "Please re-run this rpm package upgrade."
+	echo "After the upgrade is complete, restore your catalog"
+	echo "with the following commands:"
+	echo "%{script_dir}/drop_sqlite3_tables"
+	echo "cd %{working_dir}"
+	echo "%{sqlite_bindir}/sqlite3 $* bacula.db < bacula_backup.sql"
+	echo "chown bacula.bacula bacula.db"
+	exit 1
+fi
+# test for bacula database older than version 9 and sqlite3
+if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite3 ];then
+        DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite3 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
 %endif
 
 %if %{postgresql}
@@ -1794,24 +1885,24 @@ fi
 %if %{sqlite}
 # test for an existing database
 if [ -s %{working_dir}/bacula.db ]; then
-        DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
+        DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite3 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
         # check to see if we need to upgrade a 1.38 or lower database
         if [ "$DB_VER" -lt "10" ] && [ "$DB_VER" -ge "9" ]; then
                 echo "This release requires an upgrade to your bacula database."
                 echo "Backing up your current database..."
-                echo ".dump" | %{sqlite_bindir}/sqlite %{working_dir}/bacula.db | bzip2 > %{working_dir}/bacula_backup.sql.bz2
+                echo ".dump" | %{sqlite_bindir}/sqlite3 %{working_dir}/bacula.db | bzip2 > %{working_dir}/bacula_backup.sql.bz2
                 echo "Upgrading bacula database ..."
-		%{script_dir}/update_sqlite_tables
+		%{script_dir}/update_sqlite3_tables
                 echo "If bacula works correctly you can remove the backup file %{working_dir}/bacula_backup.sql.bz2"
         fi
 else
         # create the database and tables
         echo "Hmm, doesn't look like you have an existing database."
         echo "Creating SQLite database..."
-	%{script_dir}/create_sqlite_database
+	%{script_dir}/create_sqlite3_database
 	chown %{director_daemon_user}.%{daemon_group} %{working_dir}/bacula.db
         echo "Creating the SQLite tables..."
-	%{script_dir}/make_sqlite_tables
+	%{script_dir}/make_sqlite3_tables
 fi
 %endif
 
@@ -1879,7 +1970,7 @@ fi
 %endif
 
 
-%if ! %{client_only}
+%if ! %{client_only} && %{mtx}
 %files mtx
 %defattr(-,root,root)
 %attr(-, root, %{storage_daemon_group}) /usr/sbin/loaderinfo
@@ -2137,6 +2228,19 @@ fi
 %endif
 
 %changelog
+* Sat Jan 12 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 2.2.8 release  
+- fix bug 1037
+- add fc8 target
+* Sun Dec 30 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- fix typo on su103 client package requirements
+* Fri Dec 28 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add nobuild_mtx switch
+- add patch for postgresql.c for old postgresql versions
+* Sat Nov 17 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- switch to sqlite3
+* Sun Nov 11 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add new files required by rescue makefile
 * Sat Nov 10 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - add su103 build target
 * Sun Nov 04 2007 D. Scott Barninger <barninger@fairfieldcomputers.com>

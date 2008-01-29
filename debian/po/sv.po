@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bacula 1.36.3-2\n"
 "Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
-"POT-Creation-Date: 2006-05-13 10:03-0500\n"
+"POT-Creation-Date: 2007-08-30 22:42+0100\n"
 "PO-Revision-Date: 2005-11-14 22:11+0100\n"
 "Last-Translator: Daniel Nylander <po@danielnylander.se>\n"
 "Language-Team: Swedish <sv@li.org>\n"
@@ -27,41 +27,38 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
 msgid "Create tables for Bacula's Catalog?"
 msgstr "Skapa tabeller för Bacula:s katalog?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
 #, fuzzy
 msgid ""
 "The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula."
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
 msgstr ""
 "Jag har detekterat att tabellerna som behövs för Bacula-katalogen saknas "
 "(detta är antagligen en färsk installation). Ska jag skapa dom nu?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
-msgid ""
-"These tables are needed for the Bacula director to function. Should these "
-"tables be automatically set up for you?"
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:14
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid "Remove Catalog on purge?"
 msgstr "Ta bort katalog vid avinstallation?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:14
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"Do you want the Bacula Catalog to be removed if you purge the Bacula "
-"director?"
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
 msgstr ""
 
 #~ msgid ""

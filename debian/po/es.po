@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
-"POT-Creation-Date: 2006-05-13 10:03-0500\n"
+"POT-Creation-Date: 2007-08-30 22:42+0100\n"
 "PO-Revision-Date: 2004-09-08 03:35+CET\n"
 "Last-Translator: Jose Luis Tallon <jltallon@adv-solutions.net>\n"
 "Language-Team: Spanish <debian-l10n-spanish@lists.debian.org>\n"
@@ -25,17 +25,20 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
 msgid "Create tables for Bacula's Catalog?"
 msgstr "¿Crear las tablas para el catálogo?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
 #, fuzzy
 msgid ""
 "The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula."
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
 msgstr ""
 "Hemos detectado que las tablas necesarias para contener el catálogo de "
 "Bacula no están accesibles (tiene pinta de tratarse de una instalación "
@@ -43,24 +46,18 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
-msgid ""
-"These tables are needed for the Bacula director to function. Should these "
-"tables be automatically set up for you?"
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:14
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid "Remove Catalog on purge?"
 msgstr "¿Borrar el catálogo al eliminar el paquete?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:14
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"Do you want the Bacula Catalog to be removed if you purge the Bacula "
-"director?"
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
 msgstr ""
 
 #~ msgid ""

@@ -38,7 +38,7 @@
  *       to do the backup.
  *     When the File daemon finishes the job, update the DB.
  *
- *   Version $Id: backup.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: backup.c 6260 2008-01-09 07:29:57Z junkmale $
  */
 
 #include "bacula.h"
@@ -466,7 +466,7 @@ void backup_cleanup(JCR *jcr, int TermCode)
 "  Rate:                   %.1f KB/s\n"
 "  Software Compression:   %s\n"
 "  VSS:                    %s\n"
-"  Encryption:             %s\n"
+"  Storage Encryption:     %s\n"
 "  Volume name(s):         %s\n"
 "  Volume Session Id:      %d\n"
 "  Volume Session Time:    %d\n"

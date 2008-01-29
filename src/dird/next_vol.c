@@ -33,7 +33,7 @@
 
  *     Kern Sibbald, March MMI
  *
- *   Version $Id: next_vol.c 5714 2007-10-03 16:22:07Z kerns $
+ *   Version $Id: next_vol.c 6012 2007-12-02 18:04:07Z kerns $
  */
 
 #include "bacula.h"
@@ -97,7 +97,7 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
                   prune_volumes(jcr, InChanger, mr);
                }
                ok = recycle_oldest_purged_volume(jcr, InChanger, mr);
-               if (!ok) {
+               if (!ok && create) {
                   Dmsg4(050, "after prune volumes_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
                         ok, index, InChanger, mr->VolStatus);
                   /*

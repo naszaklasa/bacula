@@ -590,6 +590,7 @@ _ZN9RUNSCRIPT13reset_defaultEb
 _ZN9RUNSCRIPT3runEP3JCRPKc
 _ZN9RUNSCRIPT5debugEv
 _ZN9RUNSCRIPT8is_localEv
+_ZN9RUNSCRIPT21set_job_code_callbackEPFPcP3JCRPKcE
  
 ; rwlock.o
 _Z11rwl_destroyP12s_rwlock_tag
@@ -681,7 +682,7 @@ _Z11encode_timelPc
 _Z11is_buf_zeroPci
 _Z13unbash_spacesPc
 _Z13unbash_spacesR8POOL_MEM
-_Z14edit_job_codesP3JCRPcS1_PKc
+_Z14edit_job_codesP3JCRPcS1_PKcPFS1_S0_S3_E
 _Z15job_type_to_stri
 _Z16job_level_to_stri
 _Z16make_session_keyPcS_i

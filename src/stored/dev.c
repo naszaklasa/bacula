@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -47,7 +47,7 @@
  *     daemon. More complicated coding (double buffering, writer
  *     thread, ...) is left for a later version.
  *
- *   Version $Id: dev.c 5609 2007-09-20 13:22:04Z kerns $
+ *   Version $Id: dev.c 6185 2008-01-03 14:08:43Z kerns $
  */
 
 /*
@@ -89,7 +89,7 @@
 /* Forward referenced functions */
 void set_os_device_parameters(DCR *dcr);   
 static bool dev_get_os_pos(DEVICE *dev, struct mtget *mt_stat);
-static char *mode_to_str(int mode);
+static const char *mode_to_str(int mode);
 
 /*
  * Allocate and initialize the DEVICE structure
@@ -490,7 +490,7 @@ void DEVICE::open_file_device(DCR *dcr, int omode)
       Mmsg2(errmsg, _("Could not open: %s, ERR=%s\n"), archive_name.c_str(), 
             be.bstrerror());
       Dmsg1(100, "open failed: %s", errmsg);
-      Emsg0(M_FATAL, 0, errmsg);
+      Jmsg1(NULL, M_WARNING, 0, "%s", errmsg);
    } else {
       dev_errno = 0;
       file = 0;
@@ -1856,7 +1856,7 @@ void DEVICE::close()
    /* Clean up device packet so it can be reused */
    clear_opened();
    state &= ~(ST_LABEL|ST_READ|ST_APPEND|ST_EOT|ST_WEOT|ST_EOF|
-              ST_MOUNTED|ST_MEDIA|ST_SHORT|ST_FREESPACE_OK|ST_PART_SPOOLED);
+              ST_MOUNTED|ST_MEDIA|ST_SHORT);
    label_type = B_BACULA_LABEL;
    file = block_num = 0;
    file_size = 0;
@@ -2468,7 +2468,7 @@ static bool dev_get_os_pos(DEVICE *dev, struct mtget *mt_stat)
           mt_stat->mt_fileno >= 0;
 }
 
-static char *modes[] = {
+static const char *modes[] = {
    "CREATE_READ_WRITE",
    "OPEN_READ_WRITE",
    "OPEN_READ_ONLY",
@@ -2476,7 +2476,7 @@ static char *modes[] = {
 };
 
 
-static char *mode_to_str(int mode)  
+static const char *mode_to_str(int mode)  
 {
    static char buf[100];
    if (mode < 1 || mode > 4) {

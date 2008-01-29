@@ -14,10 +14,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: bacula 1.38.11-6\n"
-"Report-Msgid-Bugs-To:  John Goerzen <jgoerzen@complete.org>\n"
-"POT-Creation-Date: 2006-05-13 10:03-0500\n"
-"PO-Revision-Date: 2006-10-09 00:52+0900\n"
+"Project-Id-Version: bacula 2.2.6-0.2\n"
+"Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
+"POT-Creation-Date: 2008-01-27 22:28+0100\n"
+"PO-Revision-Date: 2008-01-29 21:26+0900\n"
 "Last-Translator: Hideki Yamane (Debian-JP) <henrich@debian.or.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
@@ -26,57 +26,43 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
-msgid "Create tables for Bacula's Catalog?"
+#: ../bacula-director-sqlite.templates:2001
+msgid "Create tables for Bacula's catalog?"
 msgstr "Bacula のカタログ用テーブルを作成しますか?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
+#: ../bacula-director-sqlite.templates:2001
 msgid ""
-"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"The tables needed for Bacula's catalog are missing. This is normal for a "
 "fresh install of Bacula."
 msgstr ""
-"Bacula のカタログに必要なテーブルが存在していません。Bacula を初めてインストール"
-"する場合は問題ありません。"
+"Bacula のカタログに必要なテーブルが存在していません。Bacula を初めてインス"
+"トールする場合は問題ありません。"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
+#: ../bacula-director-sqlite.templates:2001
 msgid ""
-"These tables are needed for the Bacula director to function. Should these "
-"tables be automatically set up for you?"
+"These tables are needed for the Bacula director to function. Please choose "
+"whether these tables should be automatically created."
 msgstr ""
 "これらのテーブルは Bacula director が動作するために必要です。自動的にテーブル"
-"を作成しますか?"
+"を作成するかどうか決めてください。"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:14
-msgid "Remove Catalog on purge?"
+#: ../bacula-director-sqlite.templates:3001
+msgid "Remove catalog on purge?"
 msgstr "purge の際にカタログを削除しますか?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:14
+#: ../bacula-director-sqlite.templates:3001
 msgid ""
-"Do you want the Bacula Catalog to be removed if you purge the Bacula "
-"director?"
+"Please choose whether the Bacula catalog should be removed when the director "
+"package is purged."
 msgstr ""
-"Bacula director を完全に削除する際に Bacula のカタログを削除しますか?"
+"director パッケージを purge する際に Bacula のカタログを削除するかどうかを決めて"
+"ください。"
 
-
-#~ msgid ""
-#~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
-#~ "able to restore your backups unless you have another copy of the catalog "
-#~ "at hand."
-#~ msgstr ""
-#~ "警告: これはやり直しがききません。一旦カタログを削除すると、手動でカタログ"
-#~ "のコピーを行っていない限り、バックアップをリストアできません。"
-
-#~ msgid ""
-#~ "Shall I remove the Catalog / SQLite database at package purge time? This "
-#~ "will free all the used space."
-#~ msgstr ""
-#~ "パッケージを purge する際にカタログ・SQLite データベースを削除しますか? こ"
-#~ "れを行うと、利用していた領域を全て開放します。"

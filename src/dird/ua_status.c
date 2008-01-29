@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, August MMI
  *
- *   Version $Id: ua_status.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: ua_status.c 5986 2007-11-25 21:29:11Z kerns $
  */
 
 
@@ -636,6 +636,12 @@ static void list_running_jobs(UAContext *ua)
       case JS_WaitPriority:
          msg = _("is waiting for higher priority jobs to finish");
          break;
+      case JS_AttrDespooling:
+         msg = _("SD despooling Attributes");
+         break;
+      case JS_AttrInserting:
+         msg = _("Dir inserting Attributes");
+         break;
 
       default:
          emsg = (char *)get_pool_memory(PM_FNAME);
@@ -673,7 +679,13 @@ static void list_running_jobs(UAContext *ua)
             Mmsg(emsg, _("is waiting for Client %s to connect to Storage %s"),
                  jcr->client->name(), jcr->wstore->name());
         }
-         msg = emsg;
+        msg = emsg;
+        break;
+      case JS_AttrDespooling:
+         msg = _("SD despooling Attributes");
+         break;
+      case JS_AttrInserting:
+         msg = _("Dir inserting Attributes");
          break;
       }
       switch (jcr->JobType) {

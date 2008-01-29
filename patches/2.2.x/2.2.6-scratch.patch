@@ -1,0 +1,29 @@
+
+ This patch prevents the "status dir" command from trying to use a scratch
+ volume and possibly moving it from one pool to another.  This patch fixes
+ bug #1019.
+
+ Apply the patch to 2.2.6 (and possibly any 2.2.x version with):
+
+ cd <bacula-source>
+ patch -p0 <2.2.6-scratch.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+
+Index: src/dird/next_vol.c
+===================================================================
+--- src/dird/next_vol.c	(revision 5999)
++++ src/dird/next_vol.c	(working copy)
+@@ -97,7 +97,7 @@
+                   prune_volumes(jcr, InChanger, mr);
+                }
+                ok = recycle_oldest_purged_volume(jcr, InChanger, mr);
+-               if (!ok) {
++               if (!ok && create) {
+                   Dmsg4(050, "after prune volumes_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
+                         ok, index, InChanger, mr->VolStatus);
+                   /*
