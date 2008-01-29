@@ -105,7 +105,7 @@ Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.1
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
-Recommends: postgresql-8.1 | postgresql-8.0 | postgresql (>= 7.4)
+Recommends: postgresql-8.2 | postgresql-8.1 | postgresql-8.0 | postgresql (>= 7.4)
 Suggests: postgresql-contrib, postgresql-doc
 Description: Network backup, recovery and verification (Director daemon)
  The Bacula Director service supervises all the backup, restore, verify and
