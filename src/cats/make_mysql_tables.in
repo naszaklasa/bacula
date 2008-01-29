@@ -38,7 +38,6 @@ CREATE TABLE File (
    LStat TINYBLOB NOT NULL,
    MD5 TINYBLOB,
    PRIMARY KEY(FileId),
-   INDEX (JobId),
    INDEX (PathId),
    INDEX (FileNameId, PathId),
    INDEX (JobId, PathId, FilenameId)
