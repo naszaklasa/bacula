@@ -13,7 +13,7 @@ bacula (2.2.7-1) unstable; urgency=low
   * Merged the following changes from Mark Hymer's Mercurial tree:
     + Upstream 2.2.6 and 2.2.7.  Closes: #458780.
     + Bump Build-Dep for libgtk2.0-dev to be >= 2.10 as the traymonitor
-      code needs it.
+      code needs it.  Closes: #451499.
     + Update libmysqlclient-dev Build-Dep.  Closes: #439969.
     + Use correct path to mtx-changer.  Closes: #435627.
     + Install tray-monitor.conf file.  Closes: #413754.
