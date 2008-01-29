@@ -37,7 +37,7 @@ bacula (2.2.8-1) unstable; urgency=low
 
  -- John Goerzen <jgoerzen@complete.org>  Tue, 29 Jan 2008 04:12:36 -0600
 
- bacula (2.2.6-0.1) unstable; urgency=low
+bacula (2.2.6-0.1) unstable; urgency=low
 
   * Non-maintainer upload.
   * New upstream release.
