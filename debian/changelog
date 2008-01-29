@@ -21,6 +21,8 @@ bacula (2.2.8-1) unstable; urgency=low
     Closes: #452684.
   * Added postgresql-8.2 to Recommends: for
     bacula-director-pgsql.  Closes: #459859.
+  * Change recommends on kde|desktop-environment to suggests
+    on kde|gnome-desktop-environment.  Closes: #459891.
   * Merged the following changes from Mark Hymer's Mercurial tree:
     + Upstream 2.2.6 and 2.2.7.  Closes: #458780.
     + Bump Build-Dep for libgtk2.0-dev to be >= 2.10 as the traymonitor
