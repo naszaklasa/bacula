@@ -1,6 +1,6 @@
 bacula (2.2.7-1) unstable; urgency=low
 
-  * New upstream release. 
+  * New upstream release.
   * Merged the following changes from Mark Hymer's Mercurial tree:
     + Upstream 2.2.6 and 2.2.7.  Closes: #458780.
     + Bump Build-Dep for libgtk2.0-dev to be >= 2.10 as the traymonitor
@@ -12,6 +12,7 @@ bacula (2.2.7-1) unstable; urgency=low
       install them; don't clobber local changes.
     + Simplify scripts by removing support for upgrading from versions which
       are pre-sarge.
+  * Added build-dep on postgresql-server-dev-8.2.  Closes: #462502.
 
  -- John Goerzen <jgoerzen@complete.org>  Wed, 14 Nov 2007 08:21:45 +0000
 
