@@ -267,6 +267,7 @@ install-indep: build install-stamp
 	#$(RM) $(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual/*.wml
 
 install-arch: build install-stamp
+	dh_install -a
 	dh_link -pbacula-common
 	for f in bconsole.conf bwx-console.conf bat.conf \
 		bacula-sd.conf bacula-fd.conf tray-monitor.conf; do \
@@ -320,7 +321,6 @@ binary-arch-common: DH_OPTIONS=
 binary-arch-common: build install
 	dh_testdir -a
 	dh_testroot -a
-	dh_install -a
 	dh_installdebconf -a
 	dh_installdocs -a
 	dh_installexamples -a
