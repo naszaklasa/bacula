@@ -4,3 +4,4 @@ var/lib/bacula
 var/log/bacula
 usr/share/bacula-common
 usr/share/bacula-common/defconfig
+usr/lib/bacula
