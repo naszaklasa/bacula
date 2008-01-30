@@ -262,7 +262,6 @@ install-indep: build install-stamp
 	dh_installdirs -i
 	dh_link -pbacula-director-common
 	dh_link -pbacula-common var/log/bacula/log var/lib/bacula/log
-	chmod 755 $(CURDIR)/debian/bacula-director-common/usr/sbin/btraceback
 	dh_install -pbacula -pbacula-client -pbacula-server 
 	#install doc/html-manual/* \
 	#	$(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual
@@ -280,7 +279,7 @@ install-arch: build install-stamp
 		debian/bacula-common/usr/share/bacula-common/defconfig/bacula-dir.conf
 
 	cp $(CURDIR)/debian/common-functions $(CURDIR)/debian/bacula-common/usr/share/bacula-common
-
+	chmod 755 $(CURDIR)/debian/bacula-common/usr/lib/bacula/btraceback
 
 patch: patch-stamp
 patch-stamp:
