@@ -1,9 +1,9 @@
 bacula (2.2.8-2) unstable; urgency=low
 
   * Fix binary-arch target so that bacula-common contains all
-    of the necessary files.
+    of the necessary files.  Thanks to Mark Hymers for the patch.
 
- -- Mark Hymers <mhy@debian.org>  Tue, 29 Jan 2008 23:25:08 +0000
+ -- John Goerzen <jgoerzen@complete.org>  Tue, 29 Jan 2008 21:14:55 -0600
 
 bacula (2.2.8-1) unstable; urgency=low
 
