@@ -84,7 +84,8 @@ SSL/TLS
 =======
 
 Due to licensing concerns (see NEWS.Debian), SSL/TLS is disabled in current
-Debian builds.
+Debian builds.  This disables both encryption for the on-the-wire
+protocol as well as encryption of the backed-up data.
 
 To build your own package with SSL/TLS support, edit debian/rules and add
 --with-openssl to the configure parameters.
