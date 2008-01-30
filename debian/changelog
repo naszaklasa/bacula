@@ -1,6 +1,8 @@
 bacula (2.2.8-3) unstable; urgency=low
 
   * Simplified cleanup.  Closes: #453112.
+  * Corrected debian/rules pattern for removing USE statements in
+    MySQL scripts.  Closes: #441995.
 
  -- John Goerzen <jgoerzen@complete.org>  Wed, 30 Jan 2008 06:40:44 -0600
 
