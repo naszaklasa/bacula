@@ -120,47 +120,14 @@ build: patch build-arch build-indep debian/po/templates.pot
 # Cleaning macro
 ###############################################
 
-define clean-upstream
-dh_testdir
-dh_testroot
-$(RM) config.cache
-#Grrr... clean up after building "servers"
--for subdir in src/cats src/dird src/stored src/tools \
-	scripts/logwatch scripts po; do \
-	$(MAKE) -C $$subdir distclean; \
-done
-
-# Add here commands to clean up after the build process.
--$(MAKE) distclean
-endef
-
 clean:
-	$(clean-upstream)
 
-	$(RM) autoconf/config.cache autoconf/config.sub	autoconf/config.guess autoconf/config.log config.log
 	$(RM) *stamp*
 
 	dh_clean
 
-	$(RM) -r debian/tmp* debian/bacula-doc po/Makefile po/Makefile.in \
-		bacula-dir logwatch/Makefile  scripts/devel_bacula \
-		scripts/disk-changer scripts/bacula-tray-monitor.desktop \
-		src/cats/create_sqlite3_database \
-		src/cats/drop_sqlite3_database src/cats/drop_sqlite3_tables \
-		src/cats/grant_sqlite3_privileges src/cats/make_sqlite3_tables \
-		src/cats/update_sqlite3_tables autoconf/config.log
-
-	-for dir in src/tconsole src/gnome-console src/gnome2-console src/wx-console \
-		scripts platforms src/win32 src/win32/pebuilder \
-		src/tray-monitor src/stored scripts/logwatch \
-		rescue rescue/solaris rescue/freebsd \
-		rescue/linux rescue/linux/cdrom rescue/linux/floppy; do \
-			$(RM) $$dir/Makefile ;\
-	done
-	$(RM) src/win32/*.nsi
-
-	## delete all remaining config files
-	$(RM) `find src -name '*.conf'`
+	$(RM) -r debian/tmp* debian/bacula-doc \
+		scripts/disk-changer  
 
 	## delete ${FLAVORED_BINARIES} 
 	$(RM) $(foreach pkg,$(VARIANTS), src/dird/bacula-dir.$(pkg) src/tools/dbcheck.$(pkg) src/stored/bscan.$(pkg) src/stored/bcopy.$(pkg))
@@ -168,10 +135,6 @@ clean:
 	#-$(MAKE) -C doc/latex clean
 
 	$(RM) build-arch-flavor-stamp
-
-	$(RM) config.status config.cache config.log config.out
-	$(RM) autoconf/Make.common Makefile
-	$(RM) dbcheck bscan bcopy
 
 	$(RM) patch-stamp
 
