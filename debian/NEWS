@@ -1,7 +1,7 @@
 bacula (2.2.0-1) unstable; urgency=low
 
  * SSL/TLS has been disabled in this version of Bacula due to licensing
-   concerns.  See thread at
+   concerns.  See README.Debian and the thread at
    http://lists.debian.org/debian-legal/2007/07/msg00144.html for more
    details.
 
