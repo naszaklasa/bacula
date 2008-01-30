@@ -261,13 +261,13 @@ install-indep: build install-stamp
 	dh_install -i
 	dh_installdirs -i
 	dh_link -pbacula-director-common
-	dh_link -pbacula-common var/log/bacula/log var/lib/bacula/log
 	dh_install -pbacula -pbacula-client -pbacula-server 
 	#install doc/html-manual/* \
 	#	$(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual
 	#$(RM) $(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual/*.wml
 
 install-arch: build install-stamp
+	dh_link -pbacula-common
 	for f in bconsole.conf bwx-console.conf bat.conf \
 		bacula-sd.conf bacula-fd.conf tray-monitor.conf; do \
 		debian/patches/fix_config \
