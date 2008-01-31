@@ -31,6 +31,7 @@ Description: Network backup, recovery and verification (Meta-package)
  job scheduling, storage control, node connector, and administrative console.
 
 Package: bacula-common
+Replaces: bacula-director-common
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, adduser (>= 3.0)
 Depends: ${shlibs:Depends}
