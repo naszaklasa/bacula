@@ -2,8 +2,10 @@ bacula (2.2.8-4) unstable; urgency=low
 
   * Added Replaces: on bacula-common, so it overwrites btraceback
     in bacula-director-common for upgraders.  Closes: #463317.
+  * Applied updated Portugese debconf translation from
+    Miguel Figueiredo.  Closes: #463314.
 
- -- John Goerzen <jgoerzen@complete.org>  Thu, 31 Jan 2008 08:42:09 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 31 Jan 2008 08:44:26 -0600
 
 bacula (2.2.8-3) unstable; urgency=low
 
