@@ -126,6 +126,7 @@ void    dvd_remove_empty_part(DCR *dcr);
 bool     open_device(DCR *dcr);
 bool     first_open_device(DCR *dcr);
 bool     fixup_device_block_write_error(DCR *dcr);
+void     set_start_vol_position(DCR *dcr);
 void     set_new_volume_parameters(DCR *dcr);
 void     set_new_file_parameters(DCR *dcr);
 bool     is_device_unmounted(DEVICE *dev);

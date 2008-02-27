@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -200,6 +200,19 @@ bail_out:
    return ok;                               /* device locked */
 }
 
+void set_start_vol_position(DCR *dcr)
+{
+   DEVICE *dev = dcr->dev;
+   /* Set new start position */
+   if (dev->is_tape()) {
+      dcr->StartBlock = dev->block_num;
+      dcr->StartFile = dev->file;
+   } else {
+      dcr->StartBlock = (uint32_t)dev->file_addr;
+      dcr->StartFile  = (uint32_t)(dev->file_addr >> 32);
+   }
+}
+
 /*
  * We have a new Volume mounted, so reset the Volume parameters
  *  concerning this job.  The global changes were made earlier
@@ -208,24 +221,11 @@ bail_out:
 void set_new_volume_parameters(DCR *dcr)
 {
    JCR *jcr = dcr->jcr;
-   DEVICE *dev = dcr->dev;
    if (dcr->NewVol && !dir_get_volume_info(dcr, GET_VOL_INFO_FOR_WRITE)) {
       Jmsg1(jcr, M_ERROR, 0, "%s", jcr->errmsg);
    }
-   /* Set new start/end positions */
-   if (dev->is_tape()) {
-      dcr->StartBlock = dev->block_num;
-      dcr->StartFile = dev->file;
-   } else {
-      dcr->StartBlock = (uint32_t)dev->file_addr;
-      dcr->StartFile  = (uint32_t)(dev->file_addr >> 32);
-   }
-   /* Reset indicies */
-   dcr->VolFirstIndex = 0;
-   dcr->VolLastIndex = 0;
+   set_new_file_parameters(dcr);
    jcr->NumWriteVolumes++;
-   dcr->NewVol = false;
-   dcr->WroteVol = false;
 }
 
 /*
@@ -235,16 +235,8 @@ void set_new_volume_parameters(DCR *dcr)
  */
 void set_new_file_parameters(DCR *dcr)
 {
-   DEVICE *dev = dcr->dev;
+   set_start_vol_position(dcr);
 
-   /* Set new start/end positions */
-   if (dev->is_tape()) {
-      dcr->StartBlock = dev->block_num;
-      dcr->StartFile = dev->file;
-   } else {
-      dcr->StartBlock = (uint32_t)dev->file_addr;
-      dcr->StartFile  = (uint32_t)(dev->file_addr >> 32);
-   }
    /* Reset indicies */
    dcr->VolFirstIndex = 0;
    dcr->VolLastIndex = 0;
