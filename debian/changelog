@@ -1,3 +1,15 @@
+bacula (2.2.8-5) unstable; urgency=low
+
+  * Added Debian VCS fields to debian/control.
+  * Applied 2.2.8-bacula-conf.patch from upstream
+  * Applied upstream 2.2.8-jobmedia.patch
+  * Applied upstream 2.2.8-pool-source.patch.  Closes: #464687.
+  * Revert the patch to src/filed/backup.c introduced by Bastian in
+    2.2.6-0.1 in preparation for applying upstream's new patch.
+  * Apply upstream 2.2.8-strip-path.patch.  Closes: #452195.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 27 Feb 2008 05:44:58 -0600
+
 bacula (2.2.8-4) unstable; urgency=low
 
   * Added Replaces: on bacula-common, so it overwrites btraceback
