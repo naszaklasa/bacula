@@ -122,6 +122,9 @@ try_again:
    jcr->verify_job = rc.verify_job;
    jcr->previous_job = rc.previous_job;
    jcr->pool = rc.pool;
+   if (jcr->pool != jcr->job->pool) {
+      pm_strcpy(jcr->pool_source, _("User input"));
+   }
    set_rwstorage(jcr, rc.store);
    jcr->client = rc.client;
    pm_strcpy(jcr->client_name, rc.client->name());
