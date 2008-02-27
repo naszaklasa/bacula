@@ -1151,7 +1151,7 @@ static void strip_path(FF_PKT *ff_pkt)
     * I.e. if either stripping fails don't strip anything.
     */
    if (do_strip(ff_pkt->strip_path, ff_pkt->fname)) {
-      if (ff_pkt->type != FT_LNK && ff_pkt->fname != ff_pkt->link) {
+      if (ff_pkt->fname != ff_pkt->link) {
          pm_strcpy(ff_pkt->link_save, ff_pkt->link);
          if (!do_strip(ff_pkt->strip_path, ff_pkt->link)) {
             strcpy(ff_pkt->link, ff_pkt->link_save);
@@ -1170,7 +1170,7 @@ static void unstrip_path(FF_PKT *ff_pkt)
       return;
    }
    strcpy(ff_pkt->fname, ff_pkt->fname_save);
-   if (ff_pkt->type != FT_LNK && ff_pkt->fname != ff_pkt->link) {
+   if (ff_pkt->fname != ff_pkt->link) {
       strcpy(ff_pkt->link, ff_pkt->link_save);
    }
 }
