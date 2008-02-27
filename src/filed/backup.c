@@ -1146,20 +1146,21 @@ static void strip_path(FF_PKT *ff_pkt)
    /* 
     * Strip path.  If it doesn't succeed put it back.  If
     *  it does, and there is a different link string,
-    *  attempt to strip the link. If it fails, but them
+    *  attempt to strip the link. If it fails, back them
     *  both back.
+    * Don't strip symlinks.
     * I.e. if either stripping fails don't strip anything.
     */
    if (do_strip(ff_pkt->strip_path, ff_pkt->fname)) {
-      if (ff_pkt->fname != ff_pkt->link) {
+      if (ff_pkt->type != FT_LNK && ff_pkt->fname != ff_pkt->link) {
          pm_strcpy(ff_pkt->link_save, ff_pkt->link);
          if (!do_strip(ff_pkt->strip_path, ff_pkt->link)) {
-            strcpy(ff_pkt->link, ff_pkt->link_save);
-            strcpy(ff_pkt->fname, ff_pkt->fname_save);
+            pm_strcpy(ff_pkt->link, ff_pkt->link_save);
+            pm_strcpy(ff_pkt->fname, ff_pkt->fname_save);
          }
       }
    } else {
-      strcpy(ff_pkt->fname, ff_pkt->fname_save);
+      pm_strcpy(ff_pkt->fname, ff_pkt->fname_save);
    } 
    Dmsg2(200, "fname=%s stripped=%s\n", ff_pkt->fname_save, ff_pkt->fname);
 }
@@ -1169,8 +1170,8 @@ static void unstrip_path(FF_PKT *ff_pkt)
    if (!(ff_pkt->flags & FO_STRIPPATH) || ff_pkt->strip_path <= 0) {
       return;
    }
-   strcpy(ff_pkt->fname, ff_pkt->fname_save);
-   if (ff_pkt->fname != ff_pkt->link) {
-      strcpy(ff_pkt->link, ff_pkt->link_save);
+   pm_strcpy(ff_pkt->fname, ff_pkt->fname_save);
+   if (ff_pkt->type != FT_LNK && ff_pkt->fname != ff_pkt->link) {
+      pm_strcpy(ff_pkt->link, ff_pkt->link_save);
    }
 }
