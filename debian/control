@@ -1,5 +1,5 @@
 Source: bacula
-Section: utils
+Section: admin
 Priority: optional
 Maintainer: John Goerzen <jgoerzen@complete.org>
 Build-Depends: autotools-dev, debhelper (>= 4.2), po-debconf (>= 0.8.2), 
