@@ -31,6 +31,8 @@ Description: Network backup, recovery and verification (Meta-package)
  .
  This meta-package provides the entire suite of bacula applications:
  job scheduling, storage control, node connector, and administrative console.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-common
 Replaces: bacula-director-common
@@ -42,6 +44,8 @@ Description: Network backup, recovery and verification (Common Support files)
  Bacula is a set of computer programs that permit you to manage backup,
  recovery, and verification of computer data across a network of computers
  of different kinds. 
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-director-common
 Architecture: any
@@ -51,6 +55,8 @@ Description: Network backup, recovery and verification (Director common files)
  Bacula is a set of computer programs that permit you to manage backup,
  recovery, and verification of computer data across a network of computers
  of different kinds.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-director-sqlite
 Architecture: any
@@ -67,6 +73,8 @@ Description: Network backup, recovery and verification (Director daemon)
  .
  This version stores Bacula's Catalog in an SQLite database, and thus is
  suited for smaller installations.
+ .
+ Homepage: http://www.bacula.org/
  
 Package: bacula-director-sqlite3
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
@@ -83,6 +91,8 @@ Description: Network backup, recovery and verification (Director daemon)
  .
  This version stores Bacula's Catalog in an SQLite3 database, and thus is
  suited for smaller installations.
+ .
+ Homepage: http://www.bacula.org/
  
 Package: bacula-director-mysql
 Architecture: any
@@ -100,6 +110,8 @@ Description: Network backup, recovery and verification (Director daemon)
  .
  This version stores Bacula's Catalog in a MySQL server, and thus is suited
  for largish installations.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-director-pgsql
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
@@ -118,6 +130,8 @@ Description: Network backup, recovery and verification (Director daemon)
  .
  This version stores Bacula's Catalog in a PostgreSQL server, and thus is 
  suited for largish installations.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-client
 Architecture: all
@@ -125,6 +139,8 @@ Depends: bacula-console (>= ${source:Version}), bacula-fd (>= ${source:Version})
 Recommends: bacula-traymonitor
 Description: Network backup, recovery and verification (Client meta-package)
  Minimal Bacula system client (File Daemon and Console only)
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-fd
 Architecture: any
@@ -137,6 +153,8 @@ Description: Network backup, recovery and verification (Filer daemon)
  .
  There is a Win32 version of this program available for download from
  Bacula's website: www.bacula.org
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-server
 Architecture: all
@@ -148,6 +166,8 @@ Description: Network backup, recovery and verification (Server meta-package)
  .
  This meta-package provides an standard server install, comprising Director
  and Storage daemons.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-sd
 Architecture: any
@@ -163,6 +183,8 @@ Description: Network backup, recovery and verification (Storage daemon)
  .
  The Storage Daemon runs as a daemon on the machine which has the backup
  device(s) (usually a tape drive).
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-sd-sqlite3
 Architecture: any
@@ -173,6 +195,8 @@ Provides: bacula-sd-tools
 Description: Network backup, recovery and verification (SD tools-SQLite3)
  This package contains the bscan and bcopy utilities, which are used for
  recovery when Bacula's catalog is unavailable.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-sd-sqlite
 Architecture: any
@@ -183,6 +207,8 @@ Provides: bacula-sd-tools
 Description: Network backup, recovery and verification (SD tools-SQLite)
  This package contains the bscan and bcopy utilities, which are used for
  recovery when Bacula's catalog is unavailable.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-sd-mysql
 Architecture: any
@@ -193,6 +219,8 @@ Provides: bacula-sd-tools
 Description: Network backup, recovery and verification (SD tools-MySQL)
  This package contains the bscan and bcopy utilities, which are used for
  recovery when Bacula's catalog is unavailable.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-sd-pgsql
 Architecture: any
@@ -203,6 +231,8 @@ Provides: bacula-sd-tools
 Description: Network backup, recovery and verification (SD tools-PostgreSQL)
  This package contains the bscan and bcopy utilities, which are used for
  recovery when Bacula's catalog is unavailable.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-console
 Architecture: any
@@ -211,6 +241,8 @@ Depends: bacula-common (= ${source:Version}), ${shlibs:Depends}
 Description: Network backup, recovery and verification (Mgmt. Console)
  The Console allows the administrator or user to communicate with the
  Bacula Director. This is the TTY version.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-console-wx
 Provides: bacula-wxconsole
@@ -229,6 +261,8 @@ Description: Network backup, recovery and verification (Console, Gnome version)
  .
  There is a Win32 version of this program available for download from
  Bacula's website: www.bacula.org
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-console-qt
 Architecture: any
@@ -241,6 +275,8 @@ Description: Network backup, recovery and verification (Console, Qt version)
  .
  This GUI interface has been designed to ease restore operations as much as
  possible as compared to the "conventional" console.
+ .
+ Homepage: http://www.bacula.org/
 
 Package: bacula-traymonitor
 Architecture: any
@@ -252,3 +288,5 @@ Description: Network backup, recovery and verification (Tray monitor)
  GNOME.
  .
  This lets you easily keep an eye on the status of Bacula.
+ .
+ Homepage: http://www.bacula.org/
