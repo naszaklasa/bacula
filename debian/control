@@ -46,7 +46,7 @@ Description: Network backup, recovery and verification (Common Support files)
 
 Package: bacula-director-common
 Architecture: any
-Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, bacula-common (= ${source:Version})
+Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, bacula-common (= ${binary:Version})
 Depends: ${shlibs:Depends}, adduser, mailx
 Description: Network backup, recovery and verification (Director common files)
  Bacula is a set of computer programs that permit you to manage backup,
@@ -129,7 +129,7 @@ Description: Network backup, recovery and verification (Client meta-package)
 
 Package: bacula-fd
 Architecture: any
-Depends: bacula-common (= ${source:Version}), ${shlibs:Depends}
+Depends: bacula-common (= ${binary:Version}), ${shlibs:Depends}
 Suggests: bacula-traymonitor
 Description: Network backup, recovery and verification (Filer daemon)
  This program has to be installed in the machine to be backed up. It is
@@ -152,7 +152,7 @@ Description: Network backup, recovery and verification (Server meta-package)
 
 Package: bacula-sd
 Architecture: any
-Pre-Depends: bacula-common (= ${source:Version})
+Pre-Depends: bacula-common (= ${binary:Version})
 Depends: ${shlibs:Depends}, mtx, python
 Recommends: mt-st, bacula-sd-tools
 Suggests: dds2tar, scsitools, sg3-utils
@@ -208,7 +208,7 @@ Description: Network backup, recovery and verification (SD tools-PostgreSQL)
 Package: bacula-console
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30)
-Depends: bacula-common (= ${source:Version}), ${shlibs:Depends}
+Depends: bacula-common (= ${binary:Version}), ${shlibs:Depends}
 Description: Network backup, recovery and verification (Mgmt. Console)
  The Console allows the administrator or user to communicate with the
  Bacula Director. This is the TTY version.
@@ -219,7 +219,7 @@ Replaces: bacula-wxconsole
 Conflicts: bacula-wxconsole
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30)
-Depends: bacula-common (= ${source:Version}), ${shlibs:Depends}
+Depends: bacula-common (= ${binary:Version}), ${shlibs:Depends}
 Description: Network backup, recovery and verification (Console, Gnome version)
  The WX-Console allows the administrator or user to communicate with the
  Bacula Director. It provides a graphical interface to the backup/restore
@@ -234,7 +234,7 @@ Description: Network backup, recovery and verification (Console, Gnome version)
 Package: bacula-console-qt
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30)
-Depends: bacula-common (= ${source:Version}), ${shlibs:Depends}
+Depends: bacula-common (= ${binary:Version}), ${shlibs:Depends}
 Description: Network backup, recovery and verification (Console, Qt version)
  The Bacula QT-Console (known as bat) allows the administrator or user to
  communicate with the  Bacula Director. It provides a graphical interface
@@ -245,7 +245,7 @@ Description: Network backup, recovery and verification (Console, Qt version)
 
 Package: bacula-traymonitor
 Architecture: any
-Depends: ${shlibs:Depends}, bacula-common (= ${source:Version})
+Depends: ${shlibs:Depends}, bacula-common (= ${binary:Version})
 Suggests: kde|gnome-desktop-environment
 Description: Network backup, recovery and verification (Tray monitor)
  This is the tray monitor for the Bacula backup system.  It is
