@@ -1,67 +1,60 @@
-# 
-#    Translators, if you are not familiar with the PO format, gettext
-#    documentation is worth reading, especially sections dedicated to
-#    this format, e.g. by running:
-#         info -n '(gettext)PO Files'
-#         info -n '(gettext)Header Entry'
-# 
-#    Some information specific to po-debconf are available at
-#            /usr/share/doc/po-debconf/README-trans
-#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
-# 
-#    Developers do not need to manually edit POT or PO files.
+# Translation of bacula debconf templates to French
+# Copyright (C) 2008 Thomas Huriaux <thomas.huriaux@gmail.com>
+# This file is distributed under the same license as the bacula package.
 #
-# Initial translator: Eric Madesclair <eric-m@wanadoo.fr>
+# Thomas Huriaux <thomas.huriaux@gmail.com>, 2007, 2008.
+# Eric Madesclair <eric-m@wanadoo.fr>
 msgid ""
 msgstr ""
 "Project-Id-Version: bacula\n"
-"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
-"POT-Creation-Date: 2006-05-13 10:03-0500\n"
-"PO-Revision-Date: 2006-05-25 15:04+0200\n"
+"Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
+"POT-Creation-Date: 2008-01-27 22:28+0100\n"
+"PO-Revision-Date: 2008-01-27 22:51+0100\n"
 "Last-Translator: Thomas Huriaux <thomas.huriaux@gmail.com>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
-msgid "Create tables for Bacula's Catalog?"
-msgstr "Faut-il créer les tables du catalogue de Bacula ?"
+#: ../bacula-director-sqlite.templates:2001
+msgid "Create tables for Bacula's catalog?"
+msgstr "Faut-il crÃ©er les tables du catalogue de BaculaÂ ?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
+#: ../bacula-director-sqlite.templates:2001
 msgid ""
-"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"The tables needed for Bacula's catalog are missing. This is normal for a "
 "fresh install of Bacula."
 msgstr ""
-"Les tables nécessaires au catalogue de Bacula sont absentes. Cette situation "
+"Les tables nÃ©cessaires au catalogue de Bacula sont absentes. Cette situation "
 "est normale pour une nouvelle installation."
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
+#: ../bacula-director-sqlite.templates:2001
 msgid ""
-"These tables are needed for the Bacula director to function. Should these "
-"tables be automatically set up for you?"
+"These tables are needed for the Bacula director to function. Please choose "
+"whether these tables should be automatically created."
 msgstr ""
-"Ces tables sont nécessaires pour le bon fonctionnement de Bacula. Choisissez "
+"Ces tables sont nÃ©cessaires pour le bon fonctionnement de Bacula. Choisissez "
 "cette option pour configurer automatiquement ces tables."
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:14
-msgid "Remove Catalog on purge?"
-msgstr "Faut-il supprimer le catalogue lors de la purge du paquet ?"
+#: ../bacula-director-sqlite.templates:3001
+msgid "Remove catalog on purge?"
+msgstr "Faut-il supprimer le catalogue lors de la purge du paquetÂ ?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:14
+#: ../bacula-director-sqlite.templates:3001
 msgid ""
-"Do you want the Bacula Catalog to be removed if you purge the Bacula "
-"director?"
+"Please choose whether the Bacula catalog should be removed when the director "
+"package is purged."
 msgstr ""
 "Choisissez cette option pour supprimer le catalogue de Bacula lors de la "
-"purge du « Director » de Bacula."
+"purge du paquet fournissant le service de supervision (Â«Â directorÂ Â») de "
+"Bacula."

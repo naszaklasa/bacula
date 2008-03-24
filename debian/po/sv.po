@@ -14,8 +14,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: bacula 1.36.3-2\n"
-"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
-"POT-Creation-Date: 2006-05-13 10:03-0500\n"
+"Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
+"POT-Creation-Date: 2008-01-27 22:28+0100\n"
 "PO-Revision-Date: 2005-11-14 22:11+0100\n"
 "Last-Translator: Daniel Nylander <po@danielnylander.se>\n"
 "Language-Team: Swedish <sv@li.org>\n"
@@ -27,16 +27,18 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
-msgid "Create tables for Bacula's Catalog?"
+#: ../bacula-director-sqlite.templates:2001
+#, fuzzy
+#| msgid "Create tables for Bacula's Catalog?"
+msgid "Create tables for Bacula's catalog?"
 msgstr "Skapa tabeller för Bacula:s katalog?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
+#: ../bacula-director-sqlite.templates:2001
 #, fuzzy
 msgid ""
-"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"The tables needed for Bacula's catalog are missing. This is normal for a "
 "fresh install of Bacula."
 msgstr ""
 "Jag har detekterat att tabellerna som behövs för Bacula-katalogen saknas "
@@ -44,24 +46,26 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:4
+#: ../bacula-director-sqlite.templates:2001
 msgid ""
-"These tables are needed for the Bacula director to function. Should these "
-"tables be automatically set up for you?"
+"These tables are needed for the Bacula director to function. Please choose "
+"whether these tables should be automatically created."
 msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:14
-msgid "Remove Catalog on purge?"
+#: ../bacula-director-sqlite.templates:3001
+#, fuzzy
+#| msgid "Remove Catalog on purge?"
+msgid "Remove catalog on purge?"
 msgstr "Ta bort katalog vid avinstallation?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:14
+#: ../bacula-director-sqlite.templates:3001
 msgid ""
-"Do you want the Bacula Catalog to be removed if you purge the Bacula "
-"director?"
+"Please choose whether the Bacula catalog should be removed when the director "
+"package is purged."
 msgstr ""
 
 #~ msgid ""

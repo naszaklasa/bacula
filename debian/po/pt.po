@@ -5,56 +5,61 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: bacula 1.38.11-1\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2006-07-01 05:02-0600\n"
-"PO-Revision-Date: 2006-07-31 20:03+0100\n"
+"Project-Id-Version: bacula 2.2.6-0.2\n"
+"Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
+"POT-Creation-Date: 2008-01-27 22:28+0100\n"
+"PO-Revision-Date: 2008-01-29 17:21+0000\n"
 "Last-Translator: Ricardo Silva <ardoric@gmail.com>\n"
 "Language-Team: Native Portuguese <traduz@debianpt.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1001
-msgid "Create tables for Bacula's Catalog?"
-msgstr "Criar tabelas para o Catálogo do Bacula?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1002
-msgid ""
-"The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula."
-msgstr ""
-"As tabelas necessárias para o catálogo do Bacula não existem. Isto é normal "
-"para uma instalação fresca do Bacula."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1003
-msgid ""
-"These tables are needed for the Bacula director to function. Should these "
-"tables be automatically set up for you?"
-msgstr ""
-"Estas tabelas são necessárias para o director do Bacula funcionar. Devem estas "
-"tabelas ser automaticamente criadas?"
+"Content-Transfer-Encoding: 8bit\n"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
-msgid "Remove Catalog on purge?"
-msgstr "Remover o Catálogo aquando da eliminação?"
+msgid "Create tables for Bacula's catalog?"
+msgstr "Criar tabelas para o catálogo do Bacula?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:2002
+#: ../bacula-director-sqlite.templates:2001
 msgid ""
-"Do you want the Bacula Catalog to be removed if you purge the Bacula "
-"director?"
+"The tables needed for Bacula's catalog are missing. This is normal for a "
+"fresh install of Bacula."
 msgstr ""
-"Deseja que o Catálogo do Bacula seja removido se eliminar o director do "
-"Bacula?"
+"As tabelas necessárias para o catálogo do Bacula não existem. Isto é normal "
+"numa instalação fresca do Bacula."
 
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:2001
+msgid ""
+"These tables are needed for the Bacula director to function. Please choose "
+"whether these tables should be automatically created."
+msgstr ""
+"Estas tabelas são necessárias para o director do Bacula funcionar. Por favor "
+"indique se estas tabelas devem ser criadas automaticamente."
 
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:3001
+msgid "Remove catalog on purge?"
+msgstr "Remover o catálogo aquando da eliminação?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:3001
+msgid ""
+"Please choose whether the Bacula catalog should be removed when the director "
+"package is purged."
+msgstr ""
+"Por favor indique se quer que o catálogo do Bacula seja removido quando o "
+"pacote do director for eliminado."
+
+#~ msgid ""
+#~ "Do you want the Bacula Catalog to be removed if you purge the Bacula "
+#~ "director?"
+#~ msgstr ""
+#~ "Deseja que o Catálogo do Bacula seja removido se eliminar o director do "
+#~ "Bacula?"
