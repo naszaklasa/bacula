@@ -1,3 +1,20 @@
+bacula (2.2.8-6) unstable; urgency=low
+
+  * Debconf templates and debian/control reviewed by the debian-l10n-
+    english team as part of the Smith review project. Closes: #462210
+  * [Debconf translation updates]
+  * German. Closes: #462981
+  * Galician. Closes: #462991
+  * Portuguese. Closes: #463314
+  * Finnish. Closes: #463954
+  * Czech. Closes: #464427
+  * French. Closes: #464838
+  * Italian. Closes: #465068
+  * Russian. Closes: #465079
+  * Vietnamese. Closes: #465536
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 13 Feb 2008 07:04:43 +0100
+
 bacula (2.2.8-5) unstable; urgency=low
 
   * Added Debian VCS fields to debian/control.
