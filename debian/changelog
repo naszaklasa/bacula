@@ -1,19 +1,23 @@
 bacula (2.2.8-6) unstable; urgency=low
 
+  * Change section to admin to match override file
+  * Add Homepage: line to control per devref 6.2.4
+  * More fixes to make Bacula binNMU safe.  Patch from Lior Kaplan.
+    Closes: #472249.
   * Debconf templates and debian/control reviewed by the debian-l10n-
     english team as part of the Smith review project. Closes: #462210
   * [Debconf translation updates]
-  * German. Closes: #462981
-  * Galician. Closes: #462991
-  * Portuguese. Closes: #463314
-  * Finnish. Closes: #463954
-  * Czech. Closes: #464427
-  * French. Closes: #464838
-  * Italian. Closes: #465068
-  * Russian. Closes: #465079
-  * Vietnamese. Closes: #465536
+    + German. Closes: #462981
+    + Galician. Closes: #462991
+    + Portuguese. Closes: #463314
+    + Finnish. Closes: #463954
+    + Czech. Closes: #464427
+    + French. Closes: #464838
+    + Italian. Closes: #465068
+    + Russian. Closes: #465079
+    + Vietnamese. Closes: #465536
 
- -- John Goerzen <jgoerzen@complete.org>  Wed, 13 Feb 2008 07:04:43 +0100
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 24 Mar 2008 10:42:44 -0500
 
 bacula (2.2.8-5) unstable; urgency=low
 
