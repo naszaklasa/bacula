@@ -1,3 +1,12 @@
+bacula (2.2.8-7) UNRELEASED; urgency=low
+
+  * Updated for compatibility with PostgreSQL 8.3.  Closes: #468880
+  * Run debconf-updatepo
+  * Update Brazilian Portuguese translation.  Patch from Eder L. Marques.
+    Closes: #466703.
+
+ -- John Goerzen <jgoerzen@complete.org>  Tue, 25 Mar 2008 12:48:53 -0500
+
 bacula (2.2.8-6) unstable; urgency=low
 
   * Change section to admin to match override file
