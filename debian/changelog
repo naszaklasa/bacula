@@ -1,4 +1,4 @@
-bacula (2.2.8-7) UNRELEASED; urgency=low
+bacula (2.2.8-7) unstable; urgency=low
 
   * Updated for compatibility with PostgreSQL 8.3.  Closes: #468880
   * Run debconf-updatepo
