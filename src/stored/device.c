@@ -226,6 +226,7 @@ void set_new_volume_parameters(DCR *dcr)
    }
    set_new_file_parameters(dcr);
    jcr->NumWriteVolumes++;
+   dcr->NewVol = false;
 }
 
 /*

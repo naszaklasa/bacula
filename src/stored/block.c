@@ -374,7 +374,6 @@ bool write_block_to_device(DCR *dcr)
       if (dcr->NewVol) {
          /* Note, setting a new volume also handles any pending new file */
          set_new_volume_parameters(dcr);
-         dcr->NewFile = false;        /* this handled for new file too */
       } else {
          set_new_file_parameters(dcr);
       }
