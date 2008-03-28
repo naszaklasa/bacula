@@ -1,3 +1,12 @@
+bacula (2.2.8-8) unstable; urgency=high
+
+  * Apply upstream 2.2.8-jobmedia-fix.patch, high urgency.
+  * Hard code an archive directory in call to configure. This prevents
+    the default bacula sd file from having a syntax error.
+    Closes: #472126
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 28 Mar 2008 10:01:41 -0500
+
 bacula (2.2.8-7) unstable; urgency=low
 
   * Updated for compatibility with PostgreSQL 8.3.  Closes: #468880
