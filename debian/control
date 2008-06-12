@@ -12,7 +12,7 @@ Build-Depends: autotools-dev, debhelper (>= 4.2), po-debconf (>= 0.8.2),
 Build-Conflicts: python2.2-dev, python2.3, qt3-dev-tools
 Standards-Version: 3.7.2
 Vcs-Browser: http://git.debian.org/?p=users/jgoerzen/bacula
-Vcs-Git: git://git.debian.org/users/jgoerzen/bacula
+Vcs-Git: git://git.debian.org/git/users/jgoerzen/bacula
 Homepage: http://www.bacula.org/
 
 Package: bacula
