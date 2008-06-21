@@ -26,7 +26,7 @@
  * Peters, Guido van Rossum, Ka-Ping Yee, Sjoerd Mullender, and
  * probably one or two others that I'm forgetting.
  *
- * $Id: bregex.c 4992 2007-06-07 14:46:43Z kerns $   
+ * $Id: bregex.c 6747 2008-04-06 10:00:46Z kerns $   
  *
  * This file modified to work with Bacula and C++ by
  *    Kern Sibbald, April 2006
@@ -37,7 +37,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -1466,7 +1466,7 @@ int regcomp(regex_t * bufp, const char *regex, int cflags)
    if (bufp->cflags & REG_ICASE) {
       char *p, *lcase = bstrdup(regex);
       for( p = lcase; *p ; p++) {
-	 *p = tolower(*p);
+         *p = tolower(*p);
       } 
       re_compile_pattern(bufp, (unsigned char *)lcase);
       bfree(lcase);
@@ -1480,8 +1480,8 @@ int regcomp(regex_t * bufp, const char *regex, int cflags)
 }
 
 void re_registers_to_regmatch(regexp_registers_t old_regs, 
-			      regmatch_t pmatch[], 
-			      size_t nmatch)
+                              regmatch_t pmatch[], 
+                              size_t nmatch)
 {
    size_t i=0;
    
@@ -1502,7 +1502,9 @@ int regexec(regex_t * preg, const char *string, size_t nmatch,
    int len = strlen(string);
    struct re_registers regs;
    stat = re_search(preg, (unsigned char *)string, len, 0, len, &regs);
-   re_registers_to_regmatch(&regs, pmatch, nmatch);
+   if (stat >= 0) {
+      re_registers_to_regmatch(&regs, pmatch, nmatch);
+   }
    /* stat is the start position in the string base 0 where       
     *  the pattern was found or negative if not found.
     */
@@ -1939,12 +1941,12 @@ int re_search(regex_t * bufp, unsigned char *str, int size, int pos,
    if (bufp->cflags & REG_ICASE) { /* we must use string in lowercase */
       int len = strlen((const char *)str);
       if (!bufp->lcase) {
-	 bufp->lcase = get_pool_memory(PM_FNAME);
+         bufp->lcase = get_pool_memory(PM_FNAME);
       }
       check_pool_memory_size(bufp->lcase, len+1);
       unsigned char *dst = (unsigned char *)bufp->lcase;
       while (*string) {
-	 *dst++ = tolower(*string++);
+         *dst++ = tolower(*string++);
       }
       *dst = '\0';
       string = (unsigned char *)bufp->lcase;

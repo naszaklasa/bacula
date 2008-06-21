@@ -1,0 +1,86 @@
+
+ This patch avoid to store negative values in catalog for VolWriteTime and
+ VolReadTime Media attributes.
+
+ To fix errors in your catalog, you can use 
+bconsole
+sql
+UPDATE Media SET VolWriteTime=0 WHERE VolWriteTime<0
+UPDATE Media SET VolReadTime=0 WHERE VolReadTime<0
+
+
+ Apply this patch to Bacula 2.2.8 (and possibly any prior 2.2.x version) with:
+
+ cd <bacula-source>
+ patch -p0 <2.2.8-volstat2.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+
+
+Index: src/dird/catreq.c
+===================================================================
+--- src/dird/catreq.c	(revision 6765)
++++ src/dird/catreq.c	(working copy)
+@@ -281,10 +281,14 @@
+       mr.VolWrites    = sdmr.VolWrites;
+       mr.Slot         = sdmr.Slot;
+       mr.InChanger    = sdmr.InChanger;
+-      mr.VolReadTime  = sdmr.VolReadTime;
+-      mr.VolWriteTime = sdmr.VolWriteTime;
+       mr.VolParts     = sdmr.VolParts;
+       bstrncpy(mr.VolStatus, sdmr.VolStatus, sizeof(mr.VolStatus));
++      if (sdmr.VolReadTime >= 0) { 
++         mr.VolReadTime  = sdmr.VolReadTime;
++      }
++      if (sdmr.VolWriteTime >= 0) {
++         mr.VolWriteTime = sdmr.VolWriteTime;
++      }
+       /*
+        * Update to point to the last device used to write the Volume.
+        *   However, do so only if we are writing the tape, i.e.
+Index: src/cats/sql_update.c
+===================================================================
+--- src/cats/sql_update.c	(revision 6765)
++++ src/cats/sql_update.c	(working copy)
+@@ -350,6 +350,14 @@
+       UPDATE_DB(jcr, mdb, mdb->cmd);
+    }
+ 
++   /* sanity checks for #1066 */
++   if (mr->VolReadTime < 0) {
++      mr->VolReadTime = 0;
++   }
++   if (mr->VolWriteTime < 0) {
++      mr->VolWriteTime = 0;
++   }
++
+    Mmsg(mdb->cmd, "UPDATE Media SET VolJobs=%u,"
+         "VolFiles=%u,VolBlocks=%u,VolBytes=%s,VolMounts=%u,VolErrors=%u,"
+         "VolWrites=%u,MaxVolBytes=%s,VolStatus='%s',"
+Index: src/stored/dev.c
+===================================================================
+--- src/stored/dev.c	(revision 6765)
++++ src/stored/dev.c	(working copy)
+@@ -2184,12 +2184,15 @@
+    }
+ }
+ 
+-/* return the last timer interval (ms) */
++/* return the last timer interval (ms) 
++ * or 0 if something goes wrong
++ */
+ btime_t DEVICE::get_timer_count()
+ {
+-   btime_t old = last_timer;
++   btime_t temp = last_timer;
+    last_timer = get_current_btime();
+-   return last_timer - old;
++   temp = last_timer - temp;   /* get elapsed time */
++   return (temp>0)?temp:0;     /* take care of skewed clock */
+ }
+ 
+ /* read from fd */

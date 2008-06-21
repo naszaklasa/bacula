@@ -61,7 +61,11 @@ Job {
   FileSet="Catalog"
   Schedule = "WeeklyCycleAfterBackup"
   # This creates an ASCII copy of the catalog
-  RunBeforeJob = "@scriptdir@/make_catalog_backup bacula bacula"
+  # WARNING!!! Passing the password via the command line is insecure.
+  # see comments in make_catalog_backup for details.
+  # Arguments to make_catalog_backup are:
+  #  make_catalog_backup <database-name> <user-name> <password> <host>
+  RunBeforeJob = "@scriptdir@/make_catalog_backup @db_name@ @db_user@"
   # This deletes the copy of the catalog
   RunAfterJob  = "@scriptdir@/delete_catalog_backup"
   Write Bootstrap = "@working_dir@/BackupCatalog.bsr"

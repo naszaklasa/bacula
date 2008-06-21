@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: message.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: message.c 7031 2008-05-25 13:16:26Z kerns $
  *
  */
 
@@ -388,17 +388,16 @@ static BPIPE *open_mail_pipe(JCR *jcr, POOLMEM *&cmd, DEST *d)
    }
    fflush(stdout);
 
-   if (!(bpipe = open_bpipe(cmd, 120, "rw"))) {
+   if ((bpipe = open_bpipe(cmd, 120, "rw"))) {
+      /* If we had to use sendmail, add subject */
+      if (!d->mail_cmd) {
+         fprintf(bpipe->wfd, "Subject: %s\r\n\r\n", _("Bacula Message"));
+      }
+   } else {
       berrno be;
       Jmsg(jcr, M_ERROR, 0, _("open mail pipe %s failed: ERR=%s\n"),
          cmd, be.bstrerror());
    }
-
-   /* If we had to use sendmail, add subject */
-   if (!d->mail_cmd) {
-       fprintf(bpipe->wfd, "Subject: %s\r\n\r\n", _("Bacula Message"));
-   }
-
    return bpipe;
 }
 

@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_cmds.c 5926 2007-11-14 07:31:07Z kerns $
+ *   Version $Id: ua_cmds.c 7011 2008-05-23 20:57:23Z ricozz $
  */
  
 #include "bacula.h"
@@ -1158,7 +1158,7 @@ static int estimate_cmd(UAContext *ua, const char *cmd)
    get_level_since_time(ua->jcr, since, sizeof(since));
 
    ua->send_msg(_("Connecting to Client %s at %s:%d\n"),
-      job->client->name(), job->client->address, job->client->FDport);
+      jcr->client->name(), jcr->client->address, jcr->client->FDport);
    if (!connect_to_file_daemon(jcr, 1, 15, 0)) {
       ua->error_msg(_("Failed to connect to Client.\n"));
       return 1;

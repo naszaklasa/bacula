@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,7 +34,7 @@
 
    Thanks to the TAR programmers.
 
-     Version $Id: find_one.c 5077 2007-06-24 17:27:12Z kerns $
+     Version $Id: find_one.c 7001 2008-05-21 11:59:00Z kerns $
 
  */
 
@@ -511,10 +511,15 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       } else {
          ff_pkt->type = FT_DIRBEGIN;
       }
-      /* We have set st_rdev to 1 if it is a reparse point, otherwise 0 */
-      if (have_win32_api() && ff_pkt->statp.st_rdev) {
-         ff_pkt->type = FT_REPARSE;
+      /*
+       * We have set st_rdev to 1 if it is a reparse point, otherwise 0,
+       *  if st_rdev is 2, it is a mount point 
+       */
+#if defined(HAVE_WIN32)
+      if (ff_pkt->statp.st_rdev == WIN32_REPARSE_POINT) {
+          ff_pkt->type = FT_REPARSE;
       }
+#endif
       /*
        * Note, we return the directory to the calling program (handle_file)
        * when we first see the directory (FT_DIRBEGIN.
@@ -552,11 +557,16 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
        * to cross, or we may be restricted by a list of permitted
        * file systems.
        */
+      bool is_win32_mount_point = false;
+#if defined(HAVE_WIN32)
+      is_win32_mount_point = ff_pkt->statp.st_rdev == WIN32_MOUNT_POINT;
+#endif
       if (!top_level && ff_pkt->flags & FO_NO_RECURSION) {
          ff_pkt->type = FT_NORECURSE;
          recurse = false;
-      } else if (!top_level && parent_device != ff_pkt->statp.st_dev) {
-         if(!(ff_pkt->flags & FO_MULTIFS)) {
+      } else if (!top_level && (parent_device != ff_pkt->statp.st_dev ||
+                 is_win32_mount_point)) {
+         if (!(ff_pkt->flags & FO_MULTIFS)) {
             ff_pkt->type = FT_NOFSCHG;
             recurse = false;
          } else if (!accept_fstype(ff_pkt, NULL)) {

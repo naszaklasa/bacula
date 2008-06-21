@@ -1,5 +1,5 @@
 ######################################################################
-# Version $Id: bat.pro.in 5366 2007-08-17 10:18:43Z kerns $
+# Version $Id: bat.pro.in 6956 2008-05-12 09:32:54Z kerns $
 #
 #   !!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
@@ -7,7 +7,7 @@
 #
 #   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #    
-CONFIG += qt debug
+CONFIG += qt debug @QWT@
 
 bins.path = /$(DESTDIR)@sbindir@
 bins.files = ./bat
@@ -20,7 +20,7 @@ DEPENDPATH  += .
 INCLUDEPATH += .. . ./console ./restore ./select
 INCLUDEPATH += @QWT_INC@ 
 LIBS        += -L../lib -lbac @OPENSSL_LIBS@
-LIBS        += @QWT_LDFLAGS@ -lqwt
+LIBS        += @QWT_LDFLAGS@ @QWT_LIB@
 
 RESOURCES    = main.qrc
 MOC_DIR      = moc
@@ -42,7 +42,9 @@ FORMS += medialist/medialist.ui mediaedit/mediaedit.ui joblist/joblist.ui
 FORMS += clients/clients.ui storage/storage.ui fileset/fileset.ui
 FORMS += joblog/joblog.ui jobs/jobs.ui
 FORMS += help/help.ui
-FORMS += jobgraphs/jobplotcontrols.ui
+qwt {
+   FORMS += jobgraphs/jobplotcontrols.ui
+}
 
 # Main directory
 HEADERS += mainwin.h bat.h bat_conf.h qstd.h pages.h
@@ -117,8 +119,10 @@ HEADERS += restore/restoretree.h
 SOURCES += restore/restoretree.cpp
 
 ## Job Step Graphs
-HEADERS += jobgraphs/jobplot.h
-SOURCES += jobgraphs/jobplot.cpp
+qwt {
+  HEADERS += jobgraphs/jobplot.h
+  SOURCES += jobgraphs/jobplot.cpp
+}
 
 # Help dialog
 HEADERS += help/help.h

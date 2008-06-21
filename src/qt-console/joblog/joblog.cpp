@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: joblog.cpp 5257 2007-07-28 10:36:28Z kerns $
+ *   Version $Id: joblog.cpp 6965 2008-05-13 07:58:02Z kerns $
  *
  *  JobLog Class
  *
@@ -77,14 +77,14 @@ void JobLog::getFont()
 void JobLog::populateText()
 {
    QString heading("<A href=\"#top\">Log records for job ");
-   heading += m_jobId + "</A>\n";
+   heading += m_jobId + "</A><br>\n";
    textEdit->insertHtml(heading);
 
    if (!m_console->preventInUseConnect())
        return;
    
    QString query("");
-   query = "SELECT Time, LogText FROM Log WHERE JobId='" + m_jobId + "'";
+   query = "SELECT Time,LogText FROM Log WHERE JobId='" + m_jobId + "' ORDER by Time";
 
    QStringList results;
    if (m_console->sql_cmd(query, results)) {
@@ -94,22 +94,21 @@ void JobLog::populateText()
 
       /* Iterate through the lines of results. */
       foreach (QString resultline, results) {
-         fieldlist = resultline.split("\t");
-
          int column = 0;
+         fieldlist = resultline.split("\t");
          /* Iterate through fields in the record */
          foreach (field, fieldlist) {
             display_text(field);
-            if (column <= 1) display_text("\n");
-            column += 1;
+            if (column == 0) display_text(" ");
+            column++;
          } /* foreach field */
-         resultcount += 1;
+         resultcount++; 
       } /* foreach resultline */
       if (resultcount == 0) {
          /* show a message about configuration item */
-         QMessageBox::warning(this, tr("Bat"),
-            tr("There were no results ??  !!!.\n"
-"It is possible you may need to add \"catalog = all\" to the Messages stanza"
+         QMessageBox::warning(this, "Bat",
+            tr("There were no results!\n"
+"It is possible you may need to add \"catalog = all\" to the Messages resource"
 " for this job.\n"), QMessageBox::Ok);
       }
    } /* if results from query */

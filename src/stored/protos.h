@@ -28,7 +28,7 @@
 /*
  * Protypes for stored -- Kern Sibbald MM  
  *
- *   Version $Id: protos.h 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: protos.h 6923 2008-05-09 05:39:49Z kerns $
  */
 
 /* From stored.c */
@@ -38,6 +38,7 @@ uint32_t new_VolSessionId();
 DCR     *acquire_device_for_append(DCR *dcr);
 bool     acquire_device_for_read(DCR *dcr);
 bool     release_device(DCR *dcr);
+bool     clean_device(DCR *dcr);
 DCR     *new_dcr(JCR *jcr, DCR *dcr, DEVICE *dev);
 void     free_dcr(DCR *dcr);
 void     detach_dcr_from_dev(DCR *dcr);
@@ -51,7 +52,7 @@ bool    dir_get_volume_info(DCR *dcr, enum get_vol_info_rw);
 bool    dir_find_next_appendable_volume(DCR *dcr);
 bool    dir_update_volume_info(DCR *dcr, bool label, bool update_LastWritten);
 bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr);
-bool    dir_ask_sysop_to_mount_volume(DCR *dcr);
+bool    dir_ask_sysop_to_mount_volume(DCR *dcr, int mode);
 bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec);
 bool    dir_send_job_status(JCR *jcr);
 bool    dir_create_jobmedia_record(DCR *dcr);
@@ -67,6 +68,7 @@ bool     init_autochangers();
 int      autoload_device(DCR *dcr, int writing, BSOCK *dir);
 bool     autochanger_cmd(DCR *dcr, BSOCK *dir, const char *cmd);
 bool     unload_autochanger(DCR *dcr, int loaded);
+bool     unload_dev(DCR *dcr, DEVICE *dev);
 char    *edit_device_codes(DCR *dcr, char *omsg, const char *imsg, const char *cmd);
 int      get_autochanger_loaded_slot(DCR *dcr);
 
@@ -126,6 +128,7 @@ void    dvd_remove_empty_part(DCR *dcr);
 bool     open_device(DCR *dcr);
 bool     first_open_device(DCR *dcr);
 bool     fixup_device_block_write_error(DCR *dcr);
+void     set_start_vol_position(DCR *dcr);
 void     set_new_volume_parameters(DCR *dcr);
 void     set_new_file_parameters(DCR *dcr);
 bool     is_device_unmounted(DEVICE *dev);
@@ -182,9 +185,7 @@ BSR     *find_next_bsr(BSR *root_bsr, DEVICE *dev);
 bool     is_this_bsr_done(BSR *bsr, DEV_RECORD *rec);
 
 /* From mount.c */
-bool     mount_next_write_volume(DCR *dcr, bool have_vol, bool release);
 bool     mount_next_read_volume(DCR *dcr);
-void     mark_volume_in_error(DCR *dcr);
 
 /* From parse_bsr.c */
 BSR     *parse_bsr(JCR *jcr, char *lf);
@@ -217,7 +218,6 @@ void    _lock_reservations();
 void    _unlock_reservations();
 void    _lock_volumes();
 void    _unlock_volumes();
-void    release_volume(DCR *dcr);
 VOLRES *reserve_volume(DCR *dcr, const char *VolumeName);
 VOLRES *find_volume(const char *VolumeName);
 bool    free_volume(DEVICE *dev);
@@ -231,6 +231,7 @@ void    send_drive_reserve_messages(JCR *jcr, void sendit(const char *msg, int l
 bool    find_suitable_device_for_job(JCR *jcr, RCTX &rctx);
 int     search_res_for_device(RCTX &rctx);
 void    release_reserve_messages(JCR *jcr);
+void debug_list_volumes(const char *imsg);
 
 extern int reservations_lock_count;
 extern int vol_list_lock_count;

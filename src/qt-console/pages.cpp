@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: pages.cpp 5725 2007-10-05 14:59:31Z kerns $
+ *   Version $Id: pages.cpp 7085 2008-06-01 14:31:37Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -39,7 +39,15 @@ bool isWin32Path(QString &fullPath)
 {
    char *buf = fullPath.left(2).toUtf8().data();
 
-   return buf[1] == ':' && B_ISALPHA(buf[0]);
+   //bool toret = B_ISALPHA(buf[1]);
+   bool toret = buf[1] == ':' && B_ISALPHA(buf[0]);
+   if (mainWin->m_miscDebug) {
+      if (toret)
+         Pmsg1(000, "returning from isWin32Path true %s\n", fullPath.toUtf8().data());
+      else
+         Pmsg1(000, "returning from isWin32Path false %s\n", fullPath.toUtf8().data());
+   }
+   return toret;
 }
 
 

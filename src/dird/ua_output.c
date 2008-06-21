@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_output.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: ua_output.c 6747 2008-04-06 10:00:46Z kerns $
  */
 
 #include "bacula.h"
@@ -446,7 +446,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
 static bool list_nextvol(UAContext *ua, int ndays)
 {
    JOB *job;
-   JCR *jcr = ua->jcr;
+   JCR *jcr;          
    USTORE store;
    RUN *run;
    time_t runtime;
@@ -463,23 +463,26 @@ static bool list_nextvol(UAContext *ua, int ndays)
    } else {
       job = (JOB *)GetResWithName(R_JOB, ua->argv[i]);
       if (!job) {
-         Jmsg(jcr, M_ERROR, 0, _("%s is not a job name.\n"), ua->argv[i]);
+         Jmsg(ua->jcr, M_ERROR, 0, _("%s is not a job name.\n"), ua->argv[i]);
          if ((job = select_job_resource(ua)) == NULL) {
             return false;
          }
       }
    }
+
+   jcr = new_jcr(sizeof(JCR), dird_free_jcr);
    for (run=NULL; (run = find_next_run(run, job, runtime, ndays)); ) {
       if (!complete_jcr_for_job(jcr, job, run->pool)) {
-         return false;
+         found = false;
+         goto get_out;
       }
       if (!jcr->jr.PoolId) {
-         ua->error_msg(_("Could not Pool Job %s\n"), job->name());
+         ua->error_msg(_("Could not find Pool for Job %s\n"), job->name());
          continue;
       }
       memset(&pr, 0, sizeof(pr));
       pr.PoolId = jcr->jr.PoolId;
-      if (!db_get_pool_record(ua->jcr, ua->db, &pr)) {
+      if (!db_get_pool_record(jcr, jcr->db, &pr)) {
          bstrncpy(pr.Name, "*UnknownPool*", sizeof(pr.Name));
       }
       mr.PoolId = jcr->jr.PoolId;
@@ -494,11 +497,12 @@ static bool list_nextvol(UAContext *ua, int ndays)
             job->name(), pr.Name, level_to_str(run->level), mr.VolumeName);
          found = true;
       }
-      if (jcr->db && jcr->db != ua->db) {
-         db_close_database(jcr, jcr->db);
-         jcr->db = NULL;
-      }
    }
+
+get_out:
+   db_close_database(jcr, jcr->db);
+   jcr->db = NULL;
+   free_jcr(jcr);
    if (!found) {
       ua->error_msg(_("Could not find next Volume for Job %s.\n"),
          job->hdr.name);

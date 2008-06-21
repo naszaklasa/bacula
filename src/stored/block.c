@@ -32,7 +32,7 @@
  *              Kern Sibbald, March MMI
  *                 added BB02 format October MMII
  *
- *   Version $Id: block.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: block.c 6636 2008-03-19 18:01:45Z kerns $
  *
  */
 
@@ -374,7 +374,6 @@ bool write_block_to_device(DCR *dcr)
       if (dcr->NewVol) {
          /* Note, setting a new volume also handles any pending new file */
          set_new_volume_parameters(dcr);
-         dcr->NewFile = false;        /* this handled for new file too */
       } else {
          set_new_file_parameters(dcr);
       }
@@ -705,6 +704,11 @@ static void reread_last_block(DCR *dcr)
 #endif
 }
 
+/*
+ * If this routine is called, we do our bookkeeping and
+ *   then assure that the volume will not be written any
+ *   more.
+ */
 static bool terminate_writing_volume(DCR *dcr)
 {
    DEVICE *dev = dcr->dev;

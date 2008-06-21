@@ -53,7 +53,7 @@
  *
  *   Kern Sibbald, MM, MMI
  *
- *   Version $Id: device.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: device.c 6831 2008-04-16 09:49:47Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -122,8 +122,8 @@ bool fixup_device_block_write_error(DCR *dcr)
         edit_uint64_with_commas(dev->VolCatInfo.VolCatBlocks, b2),
         bstrftime(dt, sizeof(dt), time(NULL)));
 
-   /* Called with have_vol=false, release=true */
-   if (!mount_next_write_volume(dcr, false, true)) {
+   dev->set_unload();
+   if (!dcr->mount_next_write_volume()) {
       free_block(label_blk);
       dcr->block = block;
       dev->dlock();  
@@ -158,7 +158,7 @@ bool fixup_device_block_write_error(DCR *dcr)
    /*
     * Walk through all attached jcrs indicating the volume has changed
     */
-   Dmsg1(100, "Walk attached dcrs. Volume=%s\n", dev->VolCatInfo.VolCatName);
+   Dmsg1(100, "Notify vol change. Volume=%s\n", dev->VolCatInfo.VolCatName);
    DCR *mdcr;
    foreach_dlist(mdcr, dev->attached_dcrs) {
       JCR *mjcr = mdcr->jcr;
@@ -200,6 +200,19 @@ bail_out:
    return ok;                               /* device locked */
 }
 
+void set_start_vol_position(DCR *dcr)
+{
+   DEVICE *dev = dcr->dev;
+   /* Set new start position */
+   if (dev->is_tape()) {
+      dcr->StartBlock = dev->block_num;
+      dcr->StartFile = dev->file;
+   } else {
+      dcr->StartBlock = (uint32_t)dev->file_addr;
+      dcr->StartFile  = (uint32_t)(dev->file_addr >> 32);
+   }
+}
+
 /*
  * We have a new Volume mounted, so reset the Volume parameters
  *  concerning this job.  The global changes were made earlier
@@ -208,24 +221,12 @@ bail_out:
 void set_new_volume_parameters(DCR *dcr)
 {
    JCR *jcr = dcr->jcr;
-   DEVICE *dev = dcr->dev;
    if (dcr->NewVol && !dir_get_volume_info(dcr, GET_VOL_INFO_FOR_WRITE)) {
       Jmsg1(jcr, M_ERROR, 0, "%s", jcr->errmsg);
    }
-   /* Set new start/end positions */
-   if (dev->is_tape()) {
-      dcr->StartBlock = dev->block_num;
-      dcr->StartFile = dev->file;
-   } else {
-      dcr->StartBlock = (uint32_t)dev->file_addr;
-      dcr->StartFile  = (uint32_t)(dev->file_addr >> 32);
-   }
-   /* Reset indicies */
-   dcr->VolFirstIndex = 0;
-   dcr->VolLastIndex = 0;
+   set_new_file_parameters(dcr);
    jcr->NumWriteVolumes++;
    dcr->NewVol = false;
-   dcr->WroteVol = false;
 }
 
 /*
@@ -235,16 +236,8 @@ void set_new_volume_parameters(DCR *dcr)
  */
 void set_new_file_parameters(DCR *dcr)
 {
-   DEVICE *dev = dcr->dev;
+   set_start_vol_position(dcr);
 
-   /* Set new start/end positions */
-   if (dev->is_tape()) {
-      dcr->StartBlock = dev->block_num;
-      dcr->StartFile = dev->file;
-   } else {
-      dcr->StartBlock = (uint32_t)dev->file_addr;
-      dcr->StartFile  = (uint32_t)(dev->file_addr >> 32);
-   }
    /* Reset indicies */
    dcr->VolFirstIndex = 0;
    dcr->VolLastIndex = 0;

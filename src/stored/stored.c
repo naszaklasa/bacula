@@ -35,7 +35,7 @@
  * it opens a data channel and accepts data from the
  * File daemon.
  *
- *   Version $Id: stored.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: stored.c 6747 2008-04-06 10:00:46Z kerns $
  *
  */
 
@@ -505,6 +505,7 @@ void *device_initialization(void *arg)
          switch (read_dev_volume_label(dcr)) {
          case VOL_OK:
             memcpy(&dev->VolCatInfo, &dcr->VolCatInfo, sizeof(dev->VolCatInfo));
+            volume_unused(dcr);             /* mark volume "released" */
             break;
          default:
             Jmsg1(NULL, M_WARNING, 0, _("Could not mount device %s\n"), dev->print_name());
@@ -540,6 +541,7 @@ void terminate_stored(int sig)
       exit(1);
    }
    in_here = true;
+   debug_level = 0;                   /* turn off any debug */
    stop_watchdog();
 
    if (sig == SIGTERM) {              /* normal shutdown request? */
@@ -583,6 +585,8 @@ void terminate_stored(int sig)
 
    Dmsg1(200, "In terminate_stored() sig=%d\n", sig);
 
+   free_volume_list();
+
    foreach_res(device, R_DEVICE) {
       Dmsg1(10, "Term device %s\n", device->device_name);
       if (device->dev) {
@@ -605,7 +609,6 @@ void terminate_stored(int sig)
    }
    term_msg();
    cleanup_crypto();
-   free_volume_list();
    term_reservations_lock();
    close_memory_pool();
 

@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: joblist.h 5372 2007-08-17 12:17:04Z kerns $
+ *   Version $Id: joblist.h 6956 2008-05-12 09:32:54Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
@@ -67,7 +67,9 @@ private slots:
    void preRestoreFromTime();
    void showLogForJob();
    void consoleCancelJob();
+#ifdef HAVE_QWT
    void graphTable();
+#endif
 
 private:
    void createConnections();

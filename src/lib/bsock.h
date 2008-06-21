@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -38,7 +38,7 @@
  * Negative msglen, is special "signal" (no data follows).
  *   See below for SIGNAL codes.
  *
- *   Version $Id: bsock.h 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: bsock.h 6819 2008-04-15 14:55:03Z kerns $
  */
 
 #ifndef __BSOCK_H_

@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: jobplot.cpp 5386 2007-08-21 02:09:38Z bartleyd2 $
+ *   Version $Id: jobplot.cpp 6962 2008-05-13 06:49:45Z kerns $
  *
  *  JobPlots Class
  *
@@ -37,6 +37,7 @@
 
 #include <QtGui>
 #include "bat.h"
+#ifdef HAVE_QWT
 #include "jobgraphs/jobplot.h"
 
 
@@ -234,7 +235,7 @@ void JobPlot::runQuery()
    int volumeIndex = controls->volumeComboBox->currentIndex();
    if ((volumeIndex != -1) && (controls->volumeComboBox->itemText(volumeIndex) != "Any")) {
       query += " LEFT OUTER JOIN JobMedia ON (JobMedia.JobId=Job.JobId)"
-	       " LEFT OUTER JOIN Media ON (JobMedia.MediaId=Media.MediaId)";
+               " LEFT OUTER JOIN Media ON (JobMedia.MediaId=Media.MediaId)";
       conditions.append("Media.VolumeName='" + controls->volumeComboBox->itemText(volumeIndex) + "'");
    }
    int fileSetIndex = controls->fileSetComboBox->currentIndex();
@@ -582,3 +583,4 @@ void JobPlot::readSplitterSettings()
    m_splitter->restoreState(settings.value("m_splitterSizes").toByteArray());
    settings.endGroup();
 }
+#endif /* HAVE_QWT */

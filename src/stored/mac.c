@@ -1,15 +1,7 @@
 /*
- * SD -- mac.c --  responsible for doing
- *     migration, archive, and copy jobs.
- *
- *     Kern Sibbald, January MMVI
- *
- *   Version $Id: mac.c 5713 2007-10-03 11:36:47Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * SD -- mac.c --  responsible for doing
+ *     migration, archive, and copy jobs.
+ *
+ *     Kern Sibbald, January MMVI
+ *
+ *   Version $Id: mac.c 6421 2008-02-15 08:33:57Z kerns $
+ */
 
 #include "bacula.h"
 #include "stored.h"
@@ -108,6 +108,7 @@ bool do_mac(JCR *jcr)
 
    jcr->dcr->VolFirstIndex = jcr->dcr->VolLastIndex = 0;
    jcr->run_time = time(NULL);
+   set_start_vol_position(jcr->dcr);
 
    ok = read_records(jcr->read_dcr, record_cb, mount_next_read_volume);
    goto ok_out;

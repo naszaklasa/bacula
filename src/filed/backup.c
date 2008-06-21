@@ -31,7 +31,7 @@
  *
  *    Kern Sibbald, March MM
  *
- *   Version $Id: backup.c 5077 2007-06-24 17:27:12Z kerns $
+ *   Version $Id: backup.c 6867 2008-05-01 16:33:28Z kerns $
  *
  */
 
@@ -1102,9 +1102,9 @@ static bool do_strip(int count, char *in)
 
    /* Copy to first path separator -- Win32 might have c: ... */
    while (*in && !IsPathSeparator(*in)) {    
-      *out++ = *in++;
+      out++; in++;
    }
-   *out++ = *in++;
+   out++; in++;
    numsep++;                     /* one separator seen */
    for (stripped=0; stripped<count && *in; stripped++) {
       while (*in && !IsPathSeparator(*in)) {
@@ -1129,7 +1129,11 @@ static bool do_strip(int count, char *in)
 }
 
 /*
- * If requested strip leading components of the path
+ * If requested strip leading components of the path so that we can
+ *   save file as if it came from a subdirectory.  This is most useful
+ *   for dealing with snapshots, by removing the snapshot directory, or
+ *   in handling vendor migrations where files have been restored with
+ *   a vendor product into a subdirectory.
  */
 static void strip_path(FF_PKT *ff_pkt)
 {
@@ -1142,26 +1146,35 @@ static void strip_path(FF_PKT *ff_pkt)
      ff_pkt->link_save = get_pool_memory(PM_FNAME);
    }
    pm_strcpy(ff_pkt->fname_save, ff_pkt->fname);
+   if (ff_pkt->type != FT_LNK && ff_pkt->fname != ff_pkt->link) {
+      pm_strcpy(ff_pkt->link_save, ff_pkt->link);
+      Dmsg2(500, "strcpy link_save=%d link=%d\n", strlen(ff_pkt->link_save),
+         strlen(ff_pkt->link));
+      sm_check(__FILE__, __LINE__, true);
+   }
 
    /* 
     * Strip path.  If it doesn't succeed put it back.  If
     *  it does, and there is a different link string,
-    *  attempt to strip the link. If it fails, but them
+    *  attempt to strip the link. If it fails, back them
     *  both back.
+    * Do not strip symlinks.
     * I.e. if either stripping fails don't strip anything.
     */
-   if (do_strip(ff_pkt->strip_path, ff_pkt->fname)) {
-      if (ff_pkt->fname != ff_pkt->link) {
-         pm_strcpy(ff_pkt->link_save, ff_pkt->link);
-         if (!do_strip(ff_pkt->strip_path, ff_pkt->link)) {
-            strcpy(ff_pkt->link, ff_pkt->link_save);
-            strcpy(ff_pkt->fname, ff_pkt->fname_save);
-         }
-      }
-   } else {
-      strcpy(ff_pkt->fname, ff_pkt->fname_save);
+   if (!do_strip(ff_pkt->strip_path, ff_pkt->fname)) {
+      unstrip_path(ff_pkt);
+      goto rtn;
    } 
-   Dmsg2(200, "fname=%s stripped=%s\n", ff_pkt->fname_save, ff_pkt->fname);
+   /* Strip links but not symlinks */
+   if (ff_pkt->type != FT_LNK && ff_pkt->fname != ff_pkt->link) {
+      if (!do_strip(ff_pkt->strip_path, ff_pkt->link)) {
+         unstrip_path(ff_pkt);
+      }
+   }
+
+rtn:
+   Dmsg3(100, "fname=%s stripped=%s link=%s\n", ff_pkt->fname_save, ff_pkt->fname, 
+       ff_pkt->link);
 }
 
 static void unstrip_path(FF_PKT *ff_pkt)
@@ -1170,7 +1183,12 @@ static void unstrip_path(FF_PKT *ff_pkt)
       return;
    }
    strcpy(ff_pkt->fname, ff_pkt->fname_save);
-   if (ff_pkt->fname != ff_pkt->link) {
+   if (ff_pkt->type != FT_LNK && ff_pkt->fname != ff_pkt->link) {
+      Dmsg2(500, "strcpy link=%s link_save=%s\n", ff_pkt->link,
+          ff_pkt->link_save);
       strcpy(ff_pkt->link, ff_pkt->link_save);
+      Dmsg2(500, "strcpy link=%d link_save=%d\n", strlen(ff_pkt->link),
+          strlen(ff_pkt->link_save));
+      sm_check(__FILE__, __LINE__, true);
    }
 }

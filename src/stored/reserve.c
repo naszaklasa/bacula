@@ -32,7 +32,7 @@
  *
  *   Split from job.c and acquire.c June 2005
  *
- *   Version $Id: reserve.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: reserve.c 7036 2008-05-26 21:03:27Z kerns $
  *
  */
 
@@ -55,6 +55,7 @@ static bool reserve_device_for_append(DCR *dcr, RCTX &rctx);
 static bool use_storage_cmd(JCR *jcr);
 static void queue_reserve_message(JCR *jcr);
 static void pop_reserve_messages(JCR *jcr);
+//void switch_device(DCR *dcr, DEVICE *dev);
 
 /* Requests from the Director daemon */
 static char use_storage[]  = "use storage=%127s media_type=%127s "
@@ -84,7 +85,10 @@ static int my_compare(void *item1, void *item2)
    return strcmp(((VOLRES *)item1)->vol_name, ((VOLRES *)item2)->vol_name);
 }
 
-
+/*
+ * This allows a given thread to recursively call lock_reservations.
+ *   It must, of course, call unlock_... the same number of times.
+ */
 void init_reservations_lock()
 {
    int errstat;
@@ -134,6 +138,9 @@ void _unlock_reservations()
 
 int vol_list_lock_count = 0;
 
+/* 
+ * This allows a given thread to recursively call to lock_volumes()
+ */
 void _lock_volumes()
 {
    int errstat;
@@ -165,7 +172,7 @@ enum {
    debug_nolock = false
 };
 
-static void debug_list_volumes(const char *imsg)
+void debug_list_volumes(const char *imsg)
 {
    VOLRES *vol;
    POOL_MEM msg(PM_MESSAGE);
@@ -173,26 +180,15 @@ static void debug_list_volumes(const char *imsg)
    lock_volumes();
    foreach_dlist(vol, vol_list) {
       if (vol->dev) {
-         Mmsg(msg, "List from %s: %s at %p on device %s\n", imsg, 
-              vol->vol_name, vol->vol_name, vol->dev->print_name());
+         Mmsg(msg, "List %s: %s in_use=%d on device %s\n", imsg, 
+              vol->vol_name, vol->is_in_use(), vol->dev->print_name());
       } else {
-         Mmsg(msg, "List from %s: %s at %p no dev\n", imsg, vol->vol_name, vol->vol_name);
+         Mmsg(msg, "List %s: %s in_use=%d no dev\n", imsg, vol->vol_name, 
+              vol->is_in_use());
       }
       Dmsg2(dbglvl, "jid=%u %s", jid(), msg.c_str());
    }
 
-#ifdef xxx
-   DEVICE *dev = NULL;
-   foreach_dlist(vol, vol_list) {
-      if (vol->dev == dev) {
-         Dmsg0(000, "Two Volumes on same device.\n");
-         ASSERT(0);
-         dev = vol->dev;
-      }
-   }
-#endif
-
-// Dmsg2(dbglvl, "List from %s: %d volumes\n", imsg, count);
    unlock_volumes();
 }
 
@@ -212,11 +208,13 @@ void list_volumes(void sendit(const char *msg, int len, void *sarg), void *arg)
       if (dev) {
          len = Mmsg(msg, "%s on device %s\n", vol->vol_name, dev->print_name());
          sendit(msg.c_str(), len, arg);
-         len = Mmsg(msg, "    Reader=%d writers=%d reserved=%d released=%d\n", 
-            dev->can_read()?1:0, dev->num_writers, dev->reserved_device, vol->released);
+         len = Mmsg(msg, "    Reader=%d writers=%d devres=%d volinuse=%d\n", 
+            dev->can_read()?1:0, dev->num_writers, dev->num_reserved(),   
+            vol->is_in_use());
          sendit(msg.c_str(), len, arg);
       } else {
-         len = Mmsg(msg, "%s no device. released=%d\n", vol->vol_name, vol->released);
+         len = Mmsg(msg, "%s no device. volinuse= %d\n", vol->vol_name, 
+            vol->is_in_use());
          sendit(msg.c_str(), len, arg);
       }
    }
@@ -241,13 +239,17 @@ static VOLRES *new_vol_item(DCR *dcr, const char *VolumeName)
 
 static void free_vol_item(VOLRES *vol)
 {
+   DEVICE *dev = NULL;
+
    free(vol->vol_name);
    if (vol->dev) {
-      vol->dev->vol = NULL;
+      dev = vol->dev;
    }
    free(vol);
+   if (dev) {
+      dev->vol = NULL;
+   }
 }
-
 
 /*
  * Put a new Volume entry in the Volume list. This
@@ -265,7 +267,7 @@ static void free_vol_item(VOLRES *vol)
  *
  *  1. The Volume list entry must be attached to the drive (rather than 
  *       attached to a job as it currently is. I.e. the drive that "owns" 
- *       the volume (reserved, in use, mounted)
+ *       the volume (in use, mounted)
  *       must point to the volume (still to be maintained in a list).
  *
  *  2. The Volume is entered in the list when a drive is reserved.  
@@ -306,11 +308,12 @@ static void free_vol_item(VOLRES *vol)
 VOLRES *reserve_volume(DCR *dcr, const char *VolumeName)
 {
    VOLRES *vol, *nvol;
-   DEVICE *dev = dcr->dev;
+   DEVICE * volatile dev = dcr->dev;
 
    ASSERT(dev != NULL);
 
-   Dmsg2(dbglvl, "jid=%u reserve_volume %s\n", jid(), VolumeName);
+   Dmsg3(dbglvl, "jid=%u enter reserve_volume=%s drive=%s\n", jid(), VolumeName, 
+      dcr->dev->print_name());
    /* 
     * We lock the reservations system here to ensure
     *  when adding a new volume that no newly scheduled
@@ -324,18 +327,30 @@ VOLRES *reserve_volume(DCR *dcr, const char *VolumeName)
     */
    if (dev->vol) {
       vol = dev->vol;
+      Dmsg5(dbglvl, "jid=%u Vol attached=%s, newvol=%s volinuse=%d on %s\n",
+         jid(), vol->vol_name, VolumeName, vol->is_in_use(), dev->print_name());
       /*
        * Make sure we don't remove the current volume we are inserting
-       *  because it was probably inserted by another job.
+       *  because it was probably inserted by another job, or it
+       *  is not being used and is marked as not reserved.
        */
       if (strcmp(vol->vol_name, VolumeName) == 0) {
-         Dmsg1(dbglvl, "OK, vol=%s on device.\n", VolumeName);
+         Dmsg3(dbglvl, "jid=%u === set reserved vol=%s dev=%s\n", jid(), VolumeName,
+               vol->dev->print_name());
+         vol->set_in_use();             /* retake vol if released previously */
+         dcr->reserved_volume = true;   /* reserved volume */
          goto get_out;                  /* Volume already on this device */
       } else {
-         Dmsg3(dbglvl, "jid=%u reserve_vol free vol=%s at %p\n",
-               (int)dcr->jcr->JobId, vol->vol_name, vol->vol_name);
-         unload_autochanger(dcr, -1);    /* unload the volume */       
+         /* Don't release a volume if it was reserved by someone other than us */
+         if (vol->is_in_use() && !dcr->reserved_volume) { 
+            Dmsg2(dbglvl, "jid=%u Cannot free vol=%s. It is reserved.\n", jid(), vol->vol_name);
+            vol = NULL;                  /* vol in use */
+            goto get_out;
+         }
+         Dmsg3(dbglvl, "jid=%u reserve_vol free vol=%s at %p\n", jid(), vol->vol_name, vol->vol_name);
          free_volume(dev);
+//       volume_unused(dcr);
+         dev->set_unload();             /* have to unload current volume */
          debug_list_volumes("reserve_vol free");
       }
    }
@@ -360,39 +375,89 @@ VOLRES *reserve_volume(DCR *dcr, const char *VolumeName)
        * Clear dev pointer so that free_vol_item() doesn't 
        *  take away our volume. 
        */
-      nvol->dev = NULL;                   /* don't zap dev entry */
+      nvol->dev = NULL;                  /* don't zap dev entry */
       free_vol_item(nvol);
 
-      /* Check if we are trying to use the Volume on a different drive */
+      /*
+       * Check if we are trying to use the Volume on a different drive
+       *  dev      is our device
+       *  vol->dev is where the Volume we want is
+       */
       if (dev != vol->dev) {
          /* Caller wants to switch Volume to another device */
-         if (!vol->dev->is_busy()) {
-            /* OK to move it -- I'm not sure this will work */
-            Dmsg4(dbglvl, "==== jid=%u Swap vol=%s from dev=%s to %s\n", jid(), VolumeName,
-               vol->dev->print_name(), dev->print_name());
-            vol->dev->vol = NULL;         /* take vol from old drive */
-            vol->dev->VolHdr.VolumeName[0] = 0;
-            vol->dev = dev;               /* point vol at new drive */
-            dev->vol = vol;               /* point dev at vol */
-            dev->VolHdr.VolumeName[0] = 0;
+         if (!vol->dev->is_busy() && !vol->is_swapping()) {
+            int32_t slot;
+            Dmsg4(dbglvl, "==== jid=%u Swap vol=%s from dev=%s to %s\n", jid(),
+               VolumeName, vol->dev->print_name(), dev->print_name());
+            free_volume(dev);            /* free any volume attached to our drive */
+//          volume_unused(dcr);
+            dev->set_unload();           /* Unload any volume that is on our drive */
+            dcr->dev = vol->dev;         /* temp point to other dev */
+            slot = get_autochanger_loaded_slot(dcr);  /* get slot on other drive */
+            dcr->dev = dev;              /* restore dev */
+            vol->set_slot(slot);         /* save slot */
+            vol->dev->set_unload();      /* unload the other drive */
+            vol->set_swapping();         /* swap from other drive */
+            dev->swap_dev = vol->dev;    /* remember to get this vol */
+            dev->set_load();             /* then reload on our drive */
+            vol->dev->vol = NULL;        /* remove volume from other drive */
+            vol->dev = dev;              /* point the Volume at our drive */
+            dev->vol = vol;              /* point our drive at the Volume */
          } else {
-            Dmsg4(dbglvl, "jid=%u Volume busy could not swap vol=%s from dev=%s to %s\n", 
-               jid(), VolumeName, vol->dev->print_name(), dev->print_name());
-            vol = NULL;                /* device busy */
+            Dmsg4(dbglvl, "jid=%u ==== Swap not possible Vol busy vol=%s from dev=%s to %s\n", jid(),
+               VolumeName, vol->dev->print_name(), dev->print_name());
+            vol = NULL;                  /* device busy */
             goto get_out;
          }
+      } else {
+         dev->vol = vol;
       }
+   } else {
+      dev->vol = vol;                    /* point to newly inserted volume */
    }
-   dev->vol = vol;
 
 get_out:
    if (vol) {
-      vol->released = false;
+      Dmsg3(dbglvl, "jid=%u === set in_use. vol=%s dev=%s\n", jid(), vol->vol_name,
+            vol->dev->print_name());
+      vol->set_in_use();
+      dcr->reserved_volume = true;
+      bstrncpy(dcr->VolumeName, vol->vol_name, sizeof(dcr->VolumeName));
    }
    debug_list_volumes("end new volume");
    unlock_volumes();
    return vol;
 }
+
+/* 
+ * Switch from current device to given device  
+ *   (not yet used) 
+ */
+#ifdef xxx
+void switch_device(DCR *dcr, DEVICE *dev)
+{
+   DCR save_dcr;
+
+   dev->dlock();
+   memcpy(&save_dcr, dcr, sizeof(save_dcr));
+   clean_device(dcr);                  /* clean up the dcr */
+
+   dcr->dev = dev;                     /* get new device pointer */
+   Jmsg(dcr->jcr, M_INFO, 0, _("Device switch. New device %s chosen.\n"),
+      dcr->dev->print_name());
+
+   bstrncpy(dcr->VolumeName, save_dcr.VolumeName, sizeof(dcr->VolumeName));
+   bstrncpy(dcr->media_type, save_dcr.media_type, sizeof(dcr->media_type));
+   dcr->VolCatInfo.Slot = save_dcr.VolCatInfo.Slot;
+   bstrncpy(dcr->pool_name, save_dcr.pool_name, sizeof(dcr->pool_name));
+   bstrncpy(dcr->pool_type, save_dcr.pool_type, sizeof(dcr->pool_type));
+   bstrncpy(dcr->dev_name, dev->dev_name, sizeof(dcr->dev_name));
+
+// dcr->set_reserved();
+
+   dev->dunlock();
+}
+#endif
 
 /*
  * Search for a Volume name in the Volume list.
@@ -400,66 +465,98 @@ get_out:
  *  Returns: VOLRES entry on success
  *           NULL if the Volume is not in the list
  */
-VOLRES *find_volume(DCR *dcr)
+VOLRES *find_volume(const char *VolumeName) 
 {
    VOLRES vol, *fvol;
    /* Do not lock reservations here */
    lock_volumes();
-   vol.vol_name = bstrdup(dcr->VolumeName);
+   vol.vol_name = bstrdup(VolumeName);
    fvol = (VOLRES *)vol_list->binary_search(&vol, my_compare);
    free(vol.vol_name);
-   Dmsg3(dbglvl, "jid=%u find_vol=%s found=%d\n", jid(), dcr->VolumeName, fvol!=NULL);
+   Dmsg3(dbglvl, "jid=%u find_vol=%s found=%d\n", jid(), VolumeName, fvol!=NULL);
    debug_list_volumes("find_volume");
    unlock_volumes();
    return fvol;
+}
+
+void DCR::set_reserved()
+{
+   m_reserved = true;
+   Dmsg2(dbglvl, "Inc reserve=%d dev=%s\n", dev->num_reserved(), dev->print_name());
+   dev->inc_reserved();
+}
+
+void DCR::clear_reserved()
+{
+   if (m_reserved) {
+      m_reserved = false;
+      dev->dec_reserved();
+      Dmsg2(dbglvl, "Dec reserve=%d dev=%s\n", dev->num_reserved(), dev->print_name());
+   }
 }
 
 /* 
  * Remove any reservation from a drive and tell the system
  *  that the volume is unused at least by us.
  */
-void unreserve_device(DCR *dcr)
+void DCR::unreserve_device()
 {
-   DEVICE *dev = dcr->dev;
-   if (dcr->reserved_device) {
-      dcr->reserved_device = false;
-      dev->reserved_device--;
-      Dmsg3(dbglvl, "jid=%u Dec reserve=%d dev=%s\n", jid(), dev->reserved_device, dev->print_name());
-      dcr->reserved_device = false;
+   lock_volumes();
+   if (is_reserved()) {
+      clear_reserved();
+      reserved_volume = false;
       /* If we set read mode in reserving, remove it */
       if (dev->can_read()) {
          dev->clear_read();
       }
       if (dev->num_writers < 0) {
-         Jmsg1(dcr->jcr, M_ERROR, 0, _("Hey! num_writers=%d!!!!\n"), dev->num_writers);
+         Jmsg1(jcr, M_ERROR, 0, _("Hey! num_writers=%d!!!!\n"), dev->num_writers);
          dev->num_writers = 0;
       }
+      if (dev->num_reserved() == 0 && dev->num_writers == 0) {
+         volume_unused(this);
+      }
    }
-
-   volume_unused(dcr);
+   unlock_volumes();
 }
 
 /*  
  * Free a Volume from the Volume list if it is no longer used
+ *   Note, for tape drives we want to remember where the Volume
+ *   was when last used, so rather than free the volume entry,
+ *   we simply mark it "not reserved" so when the drive is really
+ *   needed for another volume, we can reuse it.
  *
- *  Returns: true if the Volume found and removed from the list
+ *  Returns: true if the Volume found and "removed" from the list
  *           false if the Volume is not in the list or is in use
  */
 bool volume_unused(DCR *dcr)
 {
    DEVICE *dev = dcr->dev;
 
-   if (dev->vol == NULL) {
+   if (!dev->vol) {
       Dmsg2(dbglvl, "jid=%u vol_unused: no vol on %s\n", (int)dcr->jcr->JobId, dev->print_name());
       debug_list_volumes("null vol cannot unreserve_volume");
       return false;
    }
+   if (dev->vol->is_swapping()) {
+      Dmsg1(dbglvl, "vol_unused: vol being swapped on %s\n", dev->print_name());
+      debug_list_volumes("swapping vol cannot unreserve_volume");
+      return false;
+   }
 
+#ifdef xxx
    if (dev->is_busy()) {
-      Dmsg2(dbglvl, "jid=%u vol_unused: no vol on %s\n", (int)dcr->jcr->JobId, dev->print_name());
+      Dmsg2(dbglvl, "jid=%u vol_unused: busy on %s\n", (int)dcr->jcr->JobId, dev->print_name());
       debug_list_volumes("dev busy cannot unreserve_volume");
       return false;
    }
+#endif
+#ifdef xxx
+   if (dev->num_writers > 0 || dev->num_reserved() > 0) {
+      ASSERT(0);
+   }
+#endif
 
    /*  
     * If this is a tape, we do not free the volume, rather we wait
@@ -467,16 +564,22 @@ bool volume_unused(DCR *dcr)
     *  explicitly read in this drive. This allows the SD to remember
     *  where the tapes are or last were.
     */
-   dev->vol->released = true;
+   Dmsg5(dbglvl, "jid=%u === set not reserved vol=%s num_writers=%d dev_reserved=%d dev=%s\n",
+      jid(), dev->vol->vol_name, dev->num_writers, dev->num_reserved(), dev->print_name());
+   dev->vol->clear_in_use();
    if (dev->is_tape() || dev->is_autochanger()) {
       return true;
    } else {
+      /*
+       * Note, this frees the volume reservation entry, but the 
+       *   file descriptor remains open with the OS.
+       */
       return free_volume(dev);
    }
 }
 
 /*
- * Unconditionally release the volume
+ * Unconditionally release the volume entry
  */
 bool free_volume(DEVICE *dev)
 {
@@ -488,13 +591,16 @@ bool free_volume(DEVICE *dev)
    }
    lock_volumes();
    vol = dev->vol;
-   dev->vol = NULL;
-   vol_list->remove(vol);
-   Dmsg3(dbglvl, "jid=%u free_volume %s dev=%s\n", jid(), vol->vol_name, dev->print_name());
-   free_vol_item(vol);
-   debug_list_volumes("free_volume");
+   /* Don't free a volume while it is being swapped */
+   if (!vol->is_swapping()) {
+      dev->vol = NULL;
+      vol_list->remove(vol);
+      Dmsg3(dbglvl, "jid=%u === remove volume %s dev=%s\n", jid(), vol->vol_name, dev->print_name());
+      free_vol_item(vol);
+      debug_list_volumes("free_volume");
+   }
    unlock_volumes();
-   return vol != NULL;
+   return true;
 }
 
       
@@ -531,30 +637,40 @@ void free_volume_list()
    unlock_volumes();
 }
 
-bool is_volume_in_use(DCR *dcr)
+bool DCR::can_i_use_volume()
 {
-   VOLRES *vol = find_volume(dcr);
+   bool rtn = true;
+   VOLRES *vol;
+
+   lock_volumes();
+   vol = find_volume(VolumeName);
    if (!vol) {
-      Dmsg2(dbglvl, "jid=%u Vol=%s not in use.\n", jid(), dcr->VolumeName);
-      return false;                   /* vol not in list */
+      Dmsg2(dbglvl, "jid=%u Vol=%s not in use.\n", jid(), VolumeName);
+      goto get_out;                   /* vol not in list */
    }
    ASSERT(vol->dev != NULL);
 
-   if (dcr->dev == vol->dev) {        /* same device OK */
-      Dmsg2(dbglvl, "jid=%u Vol=%s on same dev.\n", jid(), dcr->VolumeName);
-      return false;
+   if (dev == vol->dev) {        /* same device OK */
+      Dmsg2(dbglvl, "jid=%u Vol=%s on same dev.\n", jid(), VolumeName);
+      goto get_out;
    } else {
-      Dmsg4(dbglvl, "jid=%u Vol=%s on %s we have %s\n", jid(), dcr->VolumeName,
-            vol->dev->print_name(), dcr->dev->print_name());
+      Dmsg4(dbglvl, "jid=%u Vol=%s on %s we have %s\n", jid(), VolumeName,
+            vol->dev->print_name(), dev->print_name());
    }
+   /* ***FIXME*** check this ... */
    if (!vol->dev->is_busy()) {
-      Dmsg3(dbglvl, "jid=%u Vol=%s dev=%s not busy.\n", jid(), dcr->VolumeName, vol->dev->print_name());
-      return false;
+      Dmsg3(dbglvl, "jid=%u Vol=%s dev=%s not busy.\n", jid(), VolumeName, vol->dev->print_name());
+      goto get_out;
    } else {
-      Dmsg3(dbglvl, "jid=%u Vol=%s dev=%s busy.\n", jid(), dcr->VolumeName, vol->dev->print_name());
+      Dmsg3(dbglvl, "jid=%u Vol=%s dev=%s busy.\n", jid(), VolumeName, vol->dev->print_name());
    }
-   Dmsg3(dbglvl, "jid=%u Vol=%s in use by %s.\n", jid(), dcr->VolumeName, vol->dev->print_name());
-   return true;
+   Dmsg3(dbglvl, "jid=%u Vol=%s in use by %s.\n", jid(), VolumeName, vol->dev->print_name());
+   rtn = false;
+
+get_out:
+   unlock_volumes();
+   return rtn;
+
 }
 
 
@@ -683,10 +799,6 @@ static bool use_storage_cmd(JCR *jcr)
             rctx.PreferMountedVols = false;                
             rctx.exact_match = false;
             rctx.autochanger_only = true;
-            Dmsg6(dbglvl, "jid=%u PrefMnt=%d exact=%d suitable=%d chgronly=%d any=%d\n",
-               (int)rctx.jcr->JobId,
-               rctx.PreferMountedVols, rctx.exact_match, rctx.suitable_device,
-               rctx.autochanger_only, rctx.any_drive);
             if ((ok = find_suitable_device_for_job(jcr, rctx))) {
                break;
             }
@@ -699,10 +811,6 @@ static bool use_storage_cmd(JCR *jcr)
                rctx.try_low_use_drive = false;
             }
             rctx.autochanger_only = false;
-            Dmsg6(dbglvl, "jid=%u PrefMnt=%d exact=%d suitable=%d chgronly=%d any=%d\n",
-               (int)rctx.jcr->JobId,
-               rctx.PreferMountedVols, rctx.exact_match, rctx.suitable_device,
-               rctx.autochanger_only, rctx.any_drive);
             if ((ok = find_suitable_device_for_job(jcr, rctx))) {
                break;
             }
@@ -715,28 +823,16 @@ static bool use_storage_cmd(JCR *jcr)
          rctx.PreferMountedVols = true;
          rctx.exact_match = true;
          rctx.autochanger_only = false;
-         Dmsg6(dbglvl, "jid=%u PrefMnt=%d exact=%d suitable=%d chgronly=%d any=%d\n",
-            (int)rctx.jcr->JobId,
-            rctx.PreferMountedVols, rctx.exact_match, rctx.suitable_device,
-            rctx.autochanger_only, rctx.any_drive);
          if ((ok = find_suitable_device_for_job(jcr, rctx))) {
             break;
          }
          /* Look for any mounted drive */
          rctx.exact_match = false;
-         Dmsg6(dbglvl, "jid=%u PrefMnt=%d exact=%d suitable=%d chgronly=%d any=%d\n",
-            (int)rctx.jcr->JobId,
-            rctx.PreferMountedVols, rctx.exact_match, rctx.suitable_device,
-            rctx.autochanger_only, rctx.any_drive);
          if ((ok = find_suitable_device_for_job(jcr, rctx))) {
             break;
          }
          /* Try any drive */
          rctx.any_drive = true;
-         Dmsg6(dbglvl, "jid=%u PrefMnt=%d exact=%d suitable=%d chgronly=%d any=%d\n",
-            (int)rctx.jcr->JobId,
-            rctx.PreferMountedVols, rctx.exact_match, rctx.suitable_device,
-            rctx.autochanger_only, rctx.any_drive);
          if ((ok = find_suitable_device_for_job(jcr, rctx))) {
             break;
          }
@@ -803,17 +899,19 @@ static bool is_vol_in_autochanger(RCTX &rctx, VOLRES *vol)
 
    /* Find resource, and make sure we were able to open it */
    if (strcmp(rctx.device_name, changer->hdr.name) == 0) {
-      Dmsg2(dbglvl, "jid=%u Found changer device %s\n",
-                     (int)rctx.jcr->JobId, vol->dev->device->hdr.name);
+      Dmsg2(dbglvl, "jid=%u Found changer device %s\n", (int)rctx.jcr->JobId, vol->dev->device->hdr.name);
       return true;
    }  
-   Dmsg2(dbglvl, "jid=%u Incorrect changer device %s\n", 
-                  (int)rctx.jcr->JobId, changer->hdr.name);
+   Dmsg2(dbglvl, "jid=%u Incorrect changer device %s\n", (int)rctx.jcr->JobId, changer->hdr.name);
    return false;
 }
 
 /*
  * Search for a device suitable for this job.
+ * Note, this routine sets sets rctx.suitable_device if any 
+ *   device exists within the SD.  The device may not be actually
+ *   useable.
+ * It also returns if it finds a useable device.  
  */
 bool find_suitable_device_for_job(JCR *jcr, RCTX &rctx)
 {
@@ -925,6 +1023,7 @@ bool find_suitable_device_for_job(JCR *jcr, RCTX &rctx)
                   Dmsg1(dbglvl, "jid=%u No suitable device found.\n", (int)rctx.jcr->JobId);
                }
                rctx.have_volume = false;
+               rctx.VolumeName[0] = 0;
             }
             if (ok) {
                break;
@@ -935,12 +1034,14 @@ bool find_suitable_device_for_job(JCR *jcr, RCTX &rctx)
          }
       } /* end for loop over reserved volumes */
 
+      Dmsg1(dbglvl, "%u lock volumes\n", jid());
       lock_volumes();
       save_vol_list = vol_list;
       vol_list = temp_vol_list;
       free_volume_list();                  /* release temp_vol_list */
       vol_list = save_vol_list;
       Dmsg1(dbglvl, "jid=%u deleted temp vol list\n", (int)rctx.jcr->JobId);
+      Dmsg1(dbglvl, "jid=%u unlock volumes\n", (int)rctx.jcr->JobId);
       unlock_volumes();
    }
    if (ok) {
@@ -962,21 +1063,24 @@ bool find_suitable_device_for_job(JCR *jcr, RCTX &rctx)
          rctx.device_name = device_name;
          stat = search_res_for_device(rctx); 
          if (stat == 1) {             /* found available device */
-            Dmsg2(dbglvl, "jid=%u available device found=%s\n", (int)rctx.jcr->JobId, 
-                  device_name);
+            Dmsg2(dbglvl, "jid=%u available device found=%s\n", (int)rctx.jcr->JobId,device_name);
             ok = true;
             break;
          } else if (stat == 0) {      /* device busy */
-            Dmsg2(dbglvl, "jid=%u Suitable device=%s, busy: not use\n", 
-                  (int)rctx.jcr->JobId, device_name);
+            Dmsg2(dbglvl, "jid=%u No usable device=%s, busy: not use\n", (int)rctx.jcr->JobId,device_name);
          } else {
             /* otherwise error */
-            Dmsg1(dbglvl, "jid=%u No suitable device found.\n", (int)rctx.jcr->JobId);
+            Dmsg1(dbglvl, "jid=%u No usable device found.\n", (int)rctx.jcr->JobId);
          }
       }
       if (ok) {
          break;
       }
+   }
+   if (ok) {
+      Dmsg1(dbglvl, "OK dev found. Vol=%s\n", rctx.VolumeName);
+   } else {
+      Dmsg0(dbglvl, "Leave find_suit_dev: no dev found.\n");
    }
    return ok;
 }
@@ -1008,11 +1112,11 @@ int search_res_for_device(RCTX &rctx)
             if (rctx.store->append == SD_APPEND) {
                Dmsg3(dbglvl, "jid=%u Device %s reserved=%d for append.\n", 
                   (int)rctx.jcr->JobId, rctx.device->hdr.name,
-                  rctx.jcr->dcr->dev->reserved_device);
+                  rctx.jcr->dcr->dev->num_reserved());
             } else {
                Dmsg3(dbglvl, "jid=%u Device %s reserved=%d for read.\n", 
                   (int)rctx.jcr->JobId, rctx.device->hdr.name,
-                  rctx.jcr->read_dcr->dev->reserved_device);
+                  rctx.jcr->read_dcr->dev->num_reserved());
             }
             return stat;
          }
@@ -1033,11 +1137,11 @@ int search_res_for_device(RCTX &rctx)
             if (rctx.store->append == SD_APPEND) {
                Dmsg3(dbglvl, "jid=%u Device %s reserved=%d for append.\n", 
                   (int)rctx.jcr->JobId, rctx.device->hdr.name,
-                  rctx.jcr->dcr->dev->reserved_device);
+                  rctx.jcr->dcr->dev->num_reserved());
             } else {
                Dmsg3(dbglvl, "jid=%u Device %s reserved=%d for read.\n", 
                   (int)rctx.jcr->JobId, rctx.device->hdr.name,
-                  rctx.jcr->read_dcr->dev->reserved_device);
+                  rctx.jcr->read_dcr->dev->num_reserved());
             }
             return stat;
          }
@@ -1085,7 +1189,7 @@ static int reserve_device(RCTX &rctx)
    }  
 
    rctx.suitable_device = true;
-   Dmsg2(dbglvl, "jid=%u try reserve %s\n", rctx.jcr->JobId, rctx.device->hdr.name);
+   Dmsg1(dbglvl, "try reserve %s\n", rctx.device->hdr.name);
    rctx.jcr->dcr = dcr = new_dcr(rctx.jcr, rctx.jcr->dcr, rctx.device->dev);
    if (!dcr) {
       BSOCK *dir = rctx.jcr->dir_bsock;
@@ -1108,9 +1212,16 @@ static int reserve_device(RCTX &rctx)
       rctx.jcr->dcr = dcr;
       Dmsg6(dbglvl, "jid=%u Reserved=%d dev_name=%s mediatype=%s pool=%s ok=%d\n",
                (int)rctx.jcr->JobId,
-               dcr->dev->reserved_device,
+               dcr->dev->num_reserved(),
                dcr->dev_name, dcr->media_type, dcr->pool_name, ok);
-      if (!rctx.have_volume) {
+      if (rctx.have_volume) {
+         if (reserve_volume(dcr, rctx.VolumeName)) {
+            Dmsg2(dbglvl, "jid=%u Reserved vol=%s\n", jid(), rctx.VolumeName);
+         } else {
+            Dmsg2(dbglvl, "jid=%u Could not reserve vol=%s\n", jid(), rctx.VolumeName);
+            goto bail_out;
+         }
+      } else {
          dcr->any_volume = true;
          if (dir_find_next_appendable_volume(dcr)) {
             bstrncpy(rctx.VolumeName, dcr->VolumeName, sizeof(rctx.VolumeName));
@@ -1127,16 +1238,16 @@ static int reserve_device(RCTX &rctx)
              *   non-used drive and our one and only volume is mounted
              *   elsewhere, so we bail out and retry using that drive.
              */
-            if (dcr->volume_in_use && !rctx.PreferMountedVols) {
+            if (dcr->found_in_use() && !rctx.PreferMountedVols) {
                rctx.PreferMountedVols = true;
                if (dcr->VolumeName[0]) {
-                  volume_unused(dcr);
+                  dcr->unreserve_device();
                }
                goto bail_out;
             }
             /*
              * Note. Under some circumstances, the Director can hand us
-             *  a Volume name that is no the same as the one on the current
+             *  a Volume name that is not the same as the one on the current
              *  drive, and in that case, the call above to find the next
              *  volume will fail because in attempting to reserve the Volume
              *  the code will realize that we already have a tape mounted,
@@ -1147,7 +1258,7 @@ static int reserve_device(RCTX &rctx)
              */
             if (dcr->dev->num_writers != 0) {
                if (dcr->VolumeName[0]) {
-                  volume_unused(dcr);
+                  dcr->unreserve_device();
                }
                goto bail_out;
             }
@@ -1159,13 +1270,14 @@ static int reserve_device(RCTX &rctx)
          rctx.jcr->read_dcr = dcr;
          Dmsg6(dbglvl, "jid=%u Read reserved=%d dev_name=%s mediatype=%s pool=%s ok=%d\n",
                (int)rctx.jcr->JobId,
-               dcr->dev->reserved_device,
+               dcr->dev->num_reserved(),
                dcr->dev_name, dcr->media_type, dcr->pool_name, ok);
       }
    }
    if (!ok) {
       goto bail_out;
    }
+
    if (rctx.notify_dir) {
       POOL_MEM dev_name;
       BSOCK *dir = rctx.jcr->dir_bsock;
@@ -1180,8 +1292,8 @@ static int reserve_device(RCTX &rctx)
 
 bail_out:
    rctx.have_volume = false;
-// free_dcr(dcr);
    Dmsg1(dbglvl, "jid=%u Not OK.\n", (int)rctx.jcr->JobId);
+   rctx.VolumeName[0] = 0;
    return 0;
 }
 
@@ -1213,7 +1325,7 @@ static bool reserve_device_for_read(DCR *dcr)
    if (dev->is_busy()) {
       Dmsg5(dbglvl, "jid=%u Device %s is busy ST_READ=%d num_writers=%d reserved=%d.\n", 
          (int)jcr->JobId, dev->print_name(),
-         dev->state & ST_READ?1:0, dev->num_writers, dev->reserved_device);
+         dev->state & ST_READ?1:0, dev->num_writers, dev->num_reserved());
       Mmsg(jcr->errmsg, _("3602 JobId=%u device %s is busy (already reading/writing).\n"),
             jcr->JobId, dev->print_name());
       queue_reserve_message(jcr);
@@ -1223,10 +1335,7 @@ static bool reserve_device_for_read(DCR *dcr)
    dev->clear_append();
    dev->set_read();
    ok = true;
-   dev->reserved_device++;
-   Dmsg4(dbglvl, "jid=%u Inc reserve=%d dev=%s %p\n", (int)jcr->JobId,
-      dev->reserved_device, dev->print_name(), dev);
-   dcr->reserved_device = true;
+   dcr->set_reserved();
 
 bail_out:
    dev->dunlock();
@@ -1235,8 +1344,8 @@ bail_out:
 
 
 /*
- * We reserve the device for appending by incrementing the 
- *  reserved_device. We do virtually all the same work that
+ * We reserve the device for appending by incrementing
+ *  num_reserved(). We do virtually all the same work that
  *  is done in acquire_device_for_append(), but we do
  *  not attempt to mount the device. This routine allows
  *  the DIR to reserve multiple devices before *really* 
@@ -1277,8 +1386,7 @@ static bool reserve_device_for_append(DCR *dcr, RCTX &rctx)
       goto bail_out;
    }
 
-   Dmsg2(dbglvl, "jid=%u reserve_append device is %s\n", 
-       (int)jcr->JobId, dev->print_name());
+   Dmsg2(dbglvl, "jid=%u reserve_append device is %s\n", jid(), dev->print_name());
 
    /* Now do detailed tests ... */
    if (can_reserve_drive(dcr, rctx) != 1) {
@@ -1286,10 +1394,7 @@ static bool reserve_device_for_append(DCR *dcr, RCTX &rctx)
       goto bail_out;
    }
 
-   dev->reserved_device++;
-   Dmsg4(dbglvl, "jid=%u Inc reserve=%d dev=%s %p\n", (int)jcr->JobId, dev->reserved_device, 
-      dev->print_name(), dev);
-   dcr->reserved_device = true;
+   dcr->set_reserved();
    ok = true;
 
 bail_out:
@@ -1313,7 +1418,7 @@ static int is_pool_ok(DCR *dcr)
       Mmsg(jcr->errmsg, _(
 "3608 JobId=%u wants Pool=\"%s\" but have Pool=\"%s\" nreserve=%d on drive %s.\n"), 
             (uint32_t)jcr->JobId, dcr->pool_name, dev->pool_name,
-            dev->reserved_device, dev->print_name());
+            dev->num_reserved(), dev->print_name());
       queue_reserve_message(jcr);
       Dmsg2(dbglvl, "failed: busy num_writers=0, reserved, pool=%s wanted=%s\n",
          dev->pool_name, dcr->pool_name);
@@ -1326,12 +1431,16 @@ static bool is_max_jobs_ok(DCR *dcr)
    DEVICE *dev = dcr->dev;
    JCR *jcr = dcr->jcr;
 
-   Dmsg4(dbglvl, "MaxJobs=%d Jobs=%d reserves=%d Vol=%s\n",
+   Dmsg5(dbglvl, "MaxJobs=%d Jobs=%d reserves=%d Status=%s Vol=%s\n",
          dcr->VolCatInfo.VolCatMaxJobs,
-         dcr->VolCatInfo.VolCatJobs, dev->reserved_device,
+         dcr->VolCatInfo.VolCatJobs, dev->num_reserved(),
+         dcr->VolCatInfo.VolCatStatus,
          dcr->VolumeName);
+   if (strcmp(dcr->VolCatInfo.VolCatStatus, "Recycle") == 0) {
+      return true;
+   }
    if (dcr->VolCatInfo.VolCatMaxJobs > 0 && dcr->VolCatInfo.VolCatMaxJobs <=
-        (dcr->VolCatInfo.VolCatJobs + dev->reserved_device)) {
+        (dcr->VolCatInfo.VolCatJobs + dev->num_reserved())) {
       /* Max Job Vols depassed or already reserved */
       Mmsg(jcr->errmsg, _("3610 JobId=%u Volume max jobs exceeded on drive %s.\n"), 
             (uint32_t)jcr->JobId, dev->print_name());
@@ -1378,14 +1487,14 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
       /* If he wants a free drive, but this one is busy, no go */
       if (!rctx.PreferMountedVols && dev->is_busy()) {
          /* Save least used drive */
-         if ((dev->num_writers + dev->reserved_device) < rctx.num_writers) {
-            rctx.num_writers = dev->num_writers + dev->reserved_device;
+         if ((dev->num_writers + dev->num_reserved()) < rctx.num_writers) {
+            rctx.num_writers = dev->num_writers + dev->num_reserved();
             rctx.low_use_drive = dev;
             Dmsg3(dbglvl, "jid=%u set low use drive=%s num_writers=%d\n", 
                (int)jcr->JobId, dev->print_name(), rctx.num_writers);
          } else {
             Dmsg2(dbglvl, "jid=%u not low use num_writers=%d\n", 
-               (int)jcr->JobId, dev->num_writers+dev->reserved_device);
+               (int)jcr->JobId, dev->num_writers+dev->num_reserved());
          }
          Dmsg1(dbglvl, "jid=%u failed: !prefMnt && busy.\n", jcr->JobId);
          Mmsg(jcr->errmsg, _("3605 JobId=%u wants free drive but device %s is busy.\n"), 
@@ -1423,12 +1532,11 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
                jcr->JobId, rctx.VolumeName, dev->VolHdr.VolumeName, 
                dev->print_name());
             queue_reserve_message(jcr);
-            Dmsg4(dbglvl, "jid=%u not OK: dev have=%s resvol=%s want=%s\n",
-                  (int)jcr->JobId, dev->VolHdr.VolumeName, 
-                  dev->vol?dev->vol->vol_name:"*none*", rctx.VolumeName);
+            Dmsg4(dbglvl, "jid=%u not OK: dev have=%s resvol=%s want=%s\n", (int)jcr->JobId,
+                  dev->VolHdr.VolumeName, dev->vol?dev->vol->vol_name:"*none*", rctx.VolumeName);
             return 0;
          }
-         if (is_volume_in_use(dcr)) {
+         if (!dcr->can_i_use_volume()) {
             return 0;              /* fail if volume on another drive */
          }
       }
@@ -1450,20 +1558,20 @@ static int can_reserve_drive(DCR *dcr, RCTX &rctx)
     */
    if (dev->num_writers == 0) {
       /* Now check if there are any reservations on the drive */
-      if (dev->reserved_device) {           
+      if (dev->num_reserved()) {           
          return is_pool_ok(dcr);
       } else if (dev->can_append()) {
          if (is_pool_ok(dcr)) {
             return 1; 
          } else {
             /* Changing pool, unload old tape if any in drive */
-            Dmsg1(dbglvl, "jid=%u OK dev: num_writers=0, not reserved, pool change, unload changer\n",
-                (int)jcr->JobId);
-            unload_autochanger(dcr, 0);
+            Dmsg1(dbglvl, "jid=%u OK dev: num_writers=0, not reserved, pool change, unload changer\n", (int)jcr->JobId);
+            /* ***FIXME*** use set_unload() */
+            unload_autochanger(dcr, -1);
          }
       }
       /* Device is available but not yet reserved, reserve it for us */
-      Dmsg2(dbglvl, "jid=%u OK Dev avail reserved %s\n", jcr->JobId, dev->print_name());
+      Dmsg2(dbglvl, "jid=%u OK Dev avail reserved %s\n", (int)jcr->JobId, dev->print_name());
       bstrncpy(dev->pool_name, dcr->pool_name, sizeof(dev->pool_name));
       bstrncpy(dev->pool_type, dcr->pool_type, sizeof(dev->pool_type));
       return 1;                       /* reserve drive */

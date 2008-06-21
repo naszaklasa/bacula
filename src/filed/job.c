@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: job.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: job.c 6747 2008-04-06 10:00:46Z kerns $
  *
  */
 
@@ -288,6 +288,12 @@ void *handle_client_request(void *dirp)
             findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
             for (k=0; k<fo->regex.size(); k++) {
                regfree((regex_t *)fo->regex.get(k));
+            }
+            for (k=0; k<fo->regexdir.size(); k++) {
+               regfree((regex_t *)fo->regexdir.get(k));
+            }
+            for (k=0; k<fo->regexfile.size(); k++) {
+               regfree((regex_t *)fo->regexfile.get(k));
             }
             fo->regex.destroy();
             fo->regexdir.destroy();

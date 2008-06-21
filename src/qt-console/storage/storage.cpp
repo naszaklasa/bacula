@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: storage.cpp 5372 2007-08-17 12:17:04Z kerns $
+ *   Version $Id: storage.cpp 6948 2008-05-11 14:38:19Z kerns $
  *
  *  Storage Class
  *
@@ -132,7 +132,7 @@ void Storage::populateTree()
       }
    }
    /* Resize the columns */
-   for(int cnter=1; cnter<headerlist.size(); cnter++) {
+   for(int cnter=0; cnter<headerlist.size(); cnter++) {
       mp_treeWidget->resizeColumnToContents(cnter);
    }
 }

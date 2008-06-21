@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: medialist.cpp 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: medialist.cpp 6948 2008-05-11 14:38:19Z kerns $
  *
  *  MediaList Class
  *
@@ -79,8 +79,8 @@ void MediaList::populateTree()
 
    QStringList headerlist = (QStringList()
       << "Volume Name" << "Id" << "Status" << "Enabled" << "Bytes" << "Files"
-      << "Jobs" << "Retention" << "Media Type" << "Slot" << "Use Duration"
-      << "Max Jobs" << "Max Files" << "Max Bytes" << "Recycle" << "Enabled"
+      << "Jobs" << "Retention" << "Media Type" << "Slot" << "In Changer" << "Use Duration"
+      << "Max Jobs" << "Max Files" << "Max Bytes" << "Recycle"
       << "RecyclePool" << "Last Written");
    int statusIndex = headerlist.indexOf("Status");
 
@@ -108,10 +108,11 @@ void MediaList::populateTree()
          " Media.Enabled AS Enabled, Media.VolBytes AS Bytes,"
          " Media.VolFiles AS FileCount, Media.VolJobs AS JobCount,"
          " Media.VolRetention AS VolumeRetention, Media.MediaType AS MediaType,"
-         " Media.Slot AS Slot, Media.VolUseDuration AS UseDuration,"
+         " Media.Slot AS Slot, Media.InChanger AS InChanger,"
+	 " Media.VolUseDuration AS UseDuration,"
          " Media.MaxVolJobs AS MaxJobs, Media.MaxVolFiles AS MaxFiles,"
          " Media.MaxVolBytes AS MaxBytes, Media.Recycle AS Recycle,"
-         " Media.Enabled AS enabled, Pol.Name AS RecyclePool,"
+         " Pol.Name AS RecyclePool,"
          " Media.LastWritten AS LastWritten"
          " FROM Media"
          " JOIN Pool ON (Media.PoolId=Pool.PoolId)"
