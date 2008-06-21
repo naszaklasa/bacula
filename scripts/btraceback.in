@@ -9,6 +9,7 @@
 #  $2 = main pid of running program to be traced back.
 #
 PNAME=`basename $1`
+PNAME="${PNAME} on `hostname`"
 if test `uname -s` = SunOS ; then
   gcore -o @working_dir@/${PNAME} $2
   dbx $1 $2 <@scriptdir@/btraceback.dbx 2>&1 \

@@ -30,7 +30,7 @@
  *
  *      Kern Sibbald, March 2004
  *
- *  Version $Id: spool.c 5735 2007-10-06 12:49:33Z kerns $
+ *  Version $Id: spool.c 6710 2008-04-01 09:31:06Z kerns $
  */
 
 #include "bacula.h"
@@ -276,6 +276,8 @@ static bool despool_data(DCR *dcr, bool commit)
    /* Add run time, to get current wait time */
    time_t despool_start = time(NULL) - jcr->run_time;
 
+   set_new_file_parameters(dcr);
+
    for ( ; ok; ) {
       if (job_canceled(jcr)) {
          ok = false;
@@ -295,6 +297,13 @@ static bool despool_data(DCR *dcr, bool commit)
       }
       Dmsg3(800, "Write block ok=%d FI=%d LI=%d\n", ok, block->FirstIndex, block->LastIndex);
    }
+
+   if (!dir_create_jobmedia_record(dcr)) {
+      Jmsg(jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
+         dcr->VolCatInfo.VolCatName, jcr->Job);
+   }
+   /* Set new file/block parameters for current dcr */
+   set_new_file_parameters(dcr);
 
    /* Subtracting run_time give us elapsed time - wait_time since we started despooling */
    time_t despool_elapsed = time(NULL) - despool_start - jcr->run_time;

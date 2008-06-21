@@ -1,3 +1,9 @@
+bacula (2.4.0-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Mark Hymers <mhy@debian.org>  Sat, 21 Jun 2008 17:59:38 +0100
+
 bacula (2.2.8-8) unstable; urgency=high
 
   * Apply upstream 2.2.8-jobmedia-fix.patch, high urgency.

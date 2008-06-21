@@ -37,7 +37,7 @@
  *   Note, this program reads stored.conf, and will only
  *     talk to devices that are configured.
  *
- *   Version $Id: btape.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: btape.c 6710 2008-04-01 09:31:06Z kerns $
  *
  */
 
@@ -2674,7 +2674,7 @@ bool dir_find_next_appendable_volume(DCR *dcr)
    return dcr->VolumeName[0] != 0;
 }
 
-bool dir_ask_sysop_to_mount_volume(DCR *dcr)
+bool dir_ask_sysop_to_mount_volume(DCR *dcr, int /* mode */)
 {
    DEVICE *dev = dcr->dev;
    Dmsg0(20, "Enter dir_ask_sysop_to_mount_volume\n");
@@ -2731,6 +2731,7 @@ static bool my_mount_next_read_volume(DCR *dcr)
    Pmsg2(000, _("End of Volume \"%s\" %d records.\n"), dcr->VolumeName,
       quickie_count);
 
+   volume_unused(dcr);             /* release current volume */
    if (LastBlock != block->BlockNumber) {
       VolBytes += block->block_len;
    }

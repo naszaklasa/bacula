@@ -34,7 +34,7 @@
  *
  *
  *
- *   Version $Id: ansi_label.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: ansi_label.c 6831 2008-04-16 09:49:47Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -65,7 +65,7 @@ static bool same_label_names(char *bacula_name, char *ansi_name);
  */ 
 int read_ansi_ibm_label(DCR *dcr) 
 {
-   DEVICE *dev = dcr->dev;
+   DEVICE * volatile dev = dcr->dev;
    JCR *jcr = dcr->jcr;
    char label[80];                    /* tape label */
    int stat, i;
@@ -147,7 +147,9 @@ int read_ansi_ibm_label(DCR *dcr)
                   *q++ = *p++;
                }
                *q = 0;
+               Dmsg0(100, "Call reserve_volume\n");
                reserve_volume(dcr, dev->VolHdr.VolumeName);
+               dev = dcr->dev;            /* may have changed in reserve_volume */
                Dmsg2(100, "Wanted ANSI Vol %s got %6s\n", VolName, dev->VolHdr.VolumeName);
                Mmsg2(jcr->errmsg, _("Wanted ANSI Volume \"%s\" got \"%s\"\n"), VolName, dev->VolHdr.VolumeName);
                return VOL_NAME_ERROR;

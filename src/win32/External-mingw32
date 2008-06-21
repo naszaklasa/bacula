@@ -32,12 +32,12 @@ OPENSSL|http://www.bacula.org/depkgs-mingw32/openssl-0.9.8b.tar.gz
 PCRE|http://www.bacula.org/depkgs-mingw32/pcre-6.3.tar.bz2
 POSTGRESQL|http://www.bacula.org/depkgs-mingw32/postgresql-base-8.1.4.tar.bz2|postgresql-8.1.4
 PTHREADS|http://www.bacula.org/depkgs-mingw32/pthreads-snap-2004-06-22.tar.gz
-Qt4|ftp://ftp.trolltech.com/qt/source/qt-win-opensource-src-4.3.0.zip
+Qt4|ftp://www.bacula.org/depkgs-mingw32/qt-win-opensource-src-4.3.4.zip
 SCONS|http://www.bacula.org/depkgs-mingw32/scons-0.96.92.tar.gz
 SED|http://www.bacula.org/depkgs-mingw32/sed-4.1.5.tar.gz
 SQLITE|http://www.bacula.org/depkgs-mingw32/sqlite-3.3.17.tar.gz
 STAB2CV|http://www.bacula.org/depkgs-mingw32/stab2cv-0.1.tar.bz2
-WX|http://www.bacula.org/depkgs-mingw32/wxWidgets-2.7.0.tar.gz
+WX|http://www.bacula.org/depkgs-mingw32/wxWidgets-2.8.7.tar.gz
 ZLIB|http://www.bacula.org/depkgs-mingw32/zlib-1.2.3.tar.gz
 # 
 # 

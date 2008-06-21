@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: restore.cpp 5725 2007-10-05 14:59:31Z kerns $
+ *   Version $Id: restore.cpp 7085 2008-06-01 14:31:37Z bartleyd2 $
  *
  *  Restore Class 
  *
@@ -185,34 +185,36 @@ void restorePage::addDirectory(QString &newdirr)
    bool windrive = false;
 
    if (mainWin->m_miscDebug) {
-      QString msg = QString("In addDirectory cwd \"%1\" newdir \"%2\"\n")
+      QString msg = QString(tr("In addDirectory cwd \"%1\" newdir \"%2\" fullpath \"%3\"\n"))
                     .arg(m_cwd)
-                    .arg(newdir);
+                    .arg(newdir)
+                    .arg(fullpath);
       Pmsg0(000, msg.toUtf8().data());
    }
 
    /* add unix '/' directory first */
-   if (m_dirPaths.empty() && !isWin32Path(fullpath)) {
-      QTreeWidgetItem *item = new QTreeWidgetItem(directoryWidget);
-      item->setIcon(0,QIcon(QString::fromUtf8(":images/folder.png")));
-      
-      QString text("/");
-      item->setText(0, text.toUtf8().data());
-      if (mainWin->m_miscDebug) {
-         Pmsg1(000, "Pre Inserting %s\n",text.toUtf8().data());
+   if (m_dirPaths.empty()) {
+      if (isWin32Path(newdir)) {
+         /* this is a windows drive */
+         if (mainWin->m_miscDebug) {
+            Pmsg0(000, "Need to do windows \"letter\":/\n");
+         }
+         fullpath.replace(0,1,"");
+         windrive = true;
+      } else {
+         QTreeWidgetItem *item = new QTreeWidgetItem(directoryWidget);
+         item->setIcon(0,QIcon(QString::fromUtf8(":images/folder.png")));
+
+         QString text("/");
+         item->setText(0, text.toUtf8().data());
+         if (mainWin->m_miscDebug) {
+            Pmsg1(000, "Pre Inserting %s\n",text.toUtf8().data());
+         }
+         m_dirPaths.insert(text, item);
+         m_dirTreeItems.insert(item, text);
       }
-      m_dirPaths.insert(text, item);
-      m_dirTreeItems.insert(item, text);
    }
 
-   if (isWin32Path(fullpath)) {
-      /* this is a windows drive */
-      if (mainWin->m_miscDebug) {
-         Pmsg0(000, "Need to do windows \"letter\":/\n");
-      }
-      windrive = true;
-   }
- 
    /* is it already existent ?? */
    if (!m_dirPaths.contains(fullpath)) {
       QTreeWidgetItem *item = NULL;

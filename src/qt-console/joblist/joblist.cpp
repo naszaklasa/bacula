@@ -26,18 +26,20 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: joblist.cpp 5881 2007-11-09 04:31:14Z kerns $
+ *   Version $Id: joblist.cpp 6962 2008-05-13 06:49:45Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
  
+#include "bat.h"
 #include <QAbstractEventDispatcher>
 #include <QTableWidgetItem>
-#include "bat.h"
 #include "joblist.h"
 #include "restore.h"
 #include "joblog/joblog.h"
+#ifdef HAVE_QWT
 #include "jobgraphs/jobplot.h"
+#endif
 
 /*
  * Constructor for the class
@@ -154,7 +156,7 @@ void JobList::populateTable()
    int volumeIndex = volumeComboBox->currentIndex();
    if (volumeIndex != -1)
       m_mediaName = volumeComboBox->itemText(volumeIndex);
-   query += "SELECT Job.Jobid AS Id, Job.Name AS JobName, " 
+   query += "SELECT DISTINCT Job.Jobid AS Id, Job.Name AS JobName, " 
             " Client.Name AS Client,"
             " Job.Starttime AS JobStart, Job.Type AS JobType,"
             " Job.Level AS BackupLevel, Job.Jobfiles AS FileCount,"
@@ -403,7 +405,11 @@ void JobList::createConnections()
    connect(actionRefreshJobList, SIGNAL(triggered()), this,
                 SLOT(populateTable()));
    connect(refreshButton, SIGNAL(pressed()), this, SLOT(populateTable()));
+#ifdef HAVE_QWT
    connect(graphButton, SIGNAL(pressed()), this, SLOT(graphTable()));
+#else
+   graphButton->setEnabled(false);
+#endif
    /* for the tableItemChanged to maintain m_currentJob */
    connect(mp_tableWidget, SIGNAL(
            currentItemChanged(QTableWidgetItem *, QTableWidgetItem *)),
@@ -568,6 +574,7 @@ void JobList::consoleCancelJob()
 /*
  * Graph this table
  */
+#ifdef HAVE_QWT
 void JobList::graphTable()
 {
    JobPlotPass pass;
@@ -586,6 +593,8 @@ void JobList::graphTable()
    QTreeWidgetItem* pageSelectorTreeWidgetItem = mainWin->getFromHash(this);
    new JobPlot(pageSelectorTreeWidgetItem, pass);
 }
+#endif
+
 /*
  * Save user settings associated with this page
  */

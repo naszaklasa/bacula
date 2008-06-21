@@ -4,7 +4,7 @@
 #
 #  Written by Kern Sibbald
 #
-#  Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+#  Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 #
 #  The main author of Bacula is Kern Sibbald, with contributions from
 #  many others, a complete list can be found in the file AUTHORS.
@@ -29,7 +29,7 @@
 #  Switzerland, email:ftf@fsfeurope.org.
 #
 #
-#  $Id: disk-changer.in 5993 2007-11-27 09:32:30Z kerns $
+#  $Id: disk-changer.in 6882 2008-05-03 09:03:33Z kerns $
 #
 #  If you set in your Device resource
 #
@@ -191,7 +191,12 @@ case $cmd in
    unload)
       debug "Doing disk -f $ctl unload $slot $device $drive"
       get_dir
-      ld=`cat $dir/loaded${drive}`
+      if [ -f $dir/loaded${drive} ]; then
+	 ld=`cat $dir/loaded${drive}`
+      else 
+	 echo "Storage Element $slot is Already Full"
+	 exit 1
+      fi
       if [ $slot -eq $ld ]; then
 	 echo "0" >$dir/loaded${drive}
 	 unlink $device 2>/dev/null >/dev/null
@@ -205,25 +210,37 @@ case $cmd in
    load)
       debug "Doing disk $ctl load $slot $device $drive"
       get_dir
+      i=0
+      while [ $i -le $maxdrive ]; do
+	 if [ -f $dir/loaded${i} ]; then
+	    ld=`cat $dir/loaded${i}`
+	 else	 
+	    ld=0
+	 fi
+	 if [ $ld -eq $slot ]; then
+	    echo "Drive ${i} Full (Storage element ${ld} loaded)"
+	    exit 1
+	 fi
+	 i=`expr $i + 1`
+      done
       if [ -f $dir/loaded${drive} ]; then
 	 ld=`cat $dir/loaded${drive}`
       else
 	 ld=0
       fi
-      if [ $ld -eq 0 ]; then
-	 echo "0" >$dir/loaded${drive}
-	 unlink $device 2>/dev/null >/dev/null
-	 rm -f $device
-	 ln -s $dir/slot${slot} $device
-	 rtn=$?
-	 if [ $rtn -eq 0 ]; then
-	    echo $slot >$dir/loaded${drive}
-	 fi
-	 exit $rtn
-      else
+      if [ $ld -ne 0 ]; then
 	 echo "Drive ${drive} Full (Storage element ${ld} loaded)"
 	 exit 1
       fi
+      echo "0" >$dir/loaded${drive}
+      unlink $device 2>/dev/null >/dev/null
+      rm -f $device
+      ln -s $dir/slot${slot} $device
+      rtn=$?
+      if [ $rtn -eq 0 ]; then
+	 echo $slot >$dir/loaded${drive}
+      fi
+      exit $rtn
       ;;
 
    list) 

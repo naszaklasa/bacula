@@ -1,15 +1,7 @@
 /*
- *
- *   Config panel, used to specify parameters (for example clients, filesets... in restore)
- *
- *    Nicolas Boichat, April 2004
- *
- *    Version $Id: wxbconfigpanel.cpp 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Config panel, used to specify parameters (for example clients, filesets... in restore)
+ *
+ *    Nicolas Boichat, April 2004
+ *
+ *    Version $Id: wxbconfigpanel.cpp 6636 2008-03-19 18:01:45Z kerns $
+ */
 
 /*  Windows debug builds set _DEBUG which is used by wxWidgets to select their
  *  debug memory allocator.  Unfortunately it conflicts with Bacula's SmartAlloc.
@@ -158,6 +158,14 @@ int wxbConfigParam::GetIndex() {
    }
    return -1;
 }
+
+int wxbConfigParam::GetCount() {
+   if (choicectrl) {
+      return choicectrl->GetCount();
+   }
+   return -1;
+}
+   
 
 void wxbConfigParam::SetIndex(int ind) {
    if (choicectrl) {
@@ -286,6 +294,16 @@ int wxbConfigPanel::FindRow(const wxChar* title) {
    }
    
    last = 0;
+   return -1;
+}
+
+int wxbConfigPanel::GetRowCount(const wxChar* title)
+{
+   int i;
+   if ((i = FindRow(title)) > -1) {
+      return (*config)[i].GetCount();
+   }  
+
    return -1;
 }
 

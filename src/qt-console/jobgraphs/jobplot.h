@@ -28,11 +28,13 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: jobplot.h 5371 2007-08-17 11:55:05Z kerns $
+ *   Version $Id: jobplot.h 6962 2008-05-13 06:49:45Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
 
+#include "bat.h"
+#ifdef HAVE_QWT
 #include <QtGui>
 #include "pages.h"
 #include "ui_jobplotcontrols.h"
@@ -147,5 +149,7 @@ private:
    QSplitter *m_splitter;
    QwtPlot *m_jobPlot;
 };
+
+#endif /* HAVE_QWT */
 
 #endif /* _JOBPLOT_H_ */

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -37,7 +37,7 @@
  *  Basic tasks done here:
  *      Handle Catalog services.
  *
- *   Version $Id: catreq.c 5814 2007-10-26 17:19:39Z ricozz $
+ *   Version $Id: catreq.c 6812 2008-04-14 07:08:34Z kerns $
  */
 
 #include "bacula.h"
@@ -285,7 +285,12 @@ void catalog_request(JCR *jcr, BSOCK *bs)
       mr.VolWriteTime = sdmr.VolWriteTime;
       mr.VolParts     = sdmr.VolParts;
       bstrncpy(mr.VolStatus, sdmr.VolStatus, sizeof(mr.VolStatus));
-      if (jcr->wstore && jcr->wstore->StorageId) {
+      /*
+       * Update to point to the last device used to write the Volume.
+       *   However, do so only if we are writing the tape, i.e.
+       *   the number of VolBlocks has increased.
+       */
+      if (jcr->wstore && jcr->wstore->StorageId && mr.VolBlocks != sdmr.VolBlocks) {
          mr.StorageId = jcr->wstore->StorageId;
       }
 
@@ -323,7 +328,7 @@ void catalog_request(JCR *jcr, BSOCK *bs)
       if (!db_create_jobmedia_record(jcr, jcr->db, &jm)) {
          Jmsg(jcr, M_FATAL, 0, _("Catalog error creating JobMedia record. %s"),
             db_strerror(jcr->db));
-         bs->fsend(_("1991 Update JobMedia error\n"));
+         bs->fsend(_("1992 Create JobMedia error\n"));
       } else {
          Dmsg0(400, "JobMedia record created\n");
          bs->fsend(OK_create);
@@ -368,7 +373,7 @@ void catalog_update(JCR *jcr, BSOCK *bs)
    if (!jcr->db) {
       omsg = get_memory(bs->msglen+1);
       pm_strcpy(omsg, bs->msg);
-      bs->fsend(_("1991 Invalid Catalog Update: %s"), omsg);    
+      bs->fsend(_("1994 Invalid Catalog Update: %s"), omsg);    
       Jmsg1(jcr, M_FATAL, 0, _("Invalid Catalog Update; DB not open: %s"), omsg);
       free_memory(omsg);
       goto bail_out;

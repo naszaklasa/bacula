@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, June MMII
  *
- *   Version $Id: match_bsr.c 5282 2007-08-04 16:46:32Z kerns $
+ *   Version $Id: match_bsr.c 7031 2008-05-25 13:16:26Z kerns $
  */
 
 /*
@@ -193,7 +193,11 @@ BSR *find_next_bsr(BSR *root_bsr, DEVICE *dev)
    BSR *found_bsr = NULL;
 
    /* Do tape/disk seeking only if CAP_POSITIONBLOCKS is on */
-   if (!root_bsr || !root_bsr->use_positioning ||
+   if (!root_bsr) {
+      Dmsg0(dbglevel, "NULL root bsr pointer passed to find_next_bsr.\n");
+      return NULL;
+   }
+   if (!root_bsr->use_positioning ||
        !root_bsr->reposition || !dev->has_cap(CAP_POSITIONBLOCKS)) {
       Dmsg2(dbglevel, "No nxt_bsr use_pos=%d repos=%d\n", root_bsr->use_positioning, root_bsr->reposition);
       return NULL;

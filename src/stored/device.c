@@ -53,7 +53,7 @@
  *
  *   Kern Sibbald, MM, MMI
  *
- *   Version $Id: device.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: device.c 6831 2008-04-16 09:49:47Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -122,8 +122,8 @@ bool fixup_device_block_write_error(DCR *dcr)
         edit_uint64_with_commas(dev->VolCatInfo.VolCatBlocks, b2),
         bstrftime(dt, sizeof(dt), time(NULL)));
 
-   /* Called with have_vol=false, release=true */
-   if (!mount_next_write_volume(dcr, false, true)) {
+   dev->set_unload();
+   if (!dcr->mount_next_write_volume()) {
       free_block(label_blk);
       dcr->block = block;
       dev->dlock();  
@@ -158,7 +158,7 @@ bool fixup_device_block_write_error(DCR *dcr)
    /*
     * Walk through all attached jcrs indicating the volume has changed
     */
-   Dmsg1(100, "Walk attached dcrs. Volume=%s\n", dev->VolCatInfo.VolCatName);
+   Dmsg1(100, "Notify vol change. Volume=%s\n", dev->VolCatInfo.VolCatName);
    DCR *mdcr;
    foreach_dlist(mdcr, dev->attached_dcrs) {
       JCR *mjcr = mdcr->jcr;

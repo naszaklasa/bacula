@@ -39,7 +39,7 @@
  *       to do the backup.
  *     When the Storage daemon finishes the job, update the DB.
  *
- *   Version $Id: migrate.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: migrate.c 6983 2008-05-17 23:28:41Z kerns $
  */
 
 #include "bacula.h"
@@ -404,13 +404,14 @@ struct idpkt {
 /* Add an item to the list if it is unique */
 static void add_unique_id(idpkt *ids, char *item) 
 {
-   char id[30];
+   const int maxlen = 30;
+   char id[maxlen+1];
    char *q = ids->list;
 
    /* Walk through current list to see if each item is the same as item */
    for ( ; *q; ) {
        id[0] = 0;
-       for (int i=0; i<(int)sizeof(id); i++) {
+       for (int i=0; i<maxlen; i++) {
           if (*q == 0) {
              break;
           } else if (*q == ',') {
@@ -535,7 +536,7 @@ const char *sql_oldest_vol =
 /* Get JobIds when we have selected MediaId */
 const char *sql_jobids_from_mediaid =
    "SELECT DISTINCT Job.JobId,Job.StartTime FROM JobMedia,Job"
-   " WHERE JobMedia.JobId=Job.JobId AND JobMedia.MediaId=%s"
+   " WHERE JobMedia.JobId=Job.JobId AND JobMedia.MediaId IN (%s)"
    " AND Job.Type='B'"
    " ORDER by Job.StartTime";
 
@@ -1242,11 +1243,12 @@ void migration_cleanup(JCR *jcr, int TermCode)
  */
 static int get_next_dbid_from_list(char **p, DBId_t *DBId)
 {
-   char id[30];
+   const int maxlen = 30;
+   char id[maxlen+1];
    char *q = *p;
 
    id[0] = 0;
-   for (int i=0; i<(int)sizeof(id); i++) {
+   for (int i=0; i<maxlen; i++) {
       if (*q == 0) {
          break;
       } else if (*q == ',') {

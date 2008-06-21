@@ -118,7 +118,7 @@ BEGIN
     LTEXT           "      by Kern Sibbald",-1,134,38,78,10
     LTEXT           "For more information, see:",-1,115,60,100,10
     LTEXT           "         www.bacula.org",-1,115,70,100,10
-    LTEXT           "Copyright (C) 1999-2007, Free Software Foundation Europe e.V.",-1,7,120,175,10
+    LTEXT           "Copyright (C) 1999-2008, Free Software Foundation Europe e.V.",-1,7,120,175,10
     LTEXT           "Licensed under GNU GPL 2.0.",-1,7,130,175,10
     RTEXT           "Build Date:",-1,108,24,42,8
     RTEXT           "Bacula Version:",-1,100,9,50,8

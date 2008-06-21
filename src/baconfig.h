@@ -29,7 +29,7 @@
  * General header file configurations that apply to
  * all daemons.  System dependent stuff goes here.
  *
- *   Version $Id: baconfig.h 5415 2007-08-30 07:58:28Z kerns $
+ *   Version $Id: baconfig.h 7001 2008-05-21 11:59:00Z kerns $
  */
 
 
@@ -79,6 +79,10 @@
 #define NPRT(x) (x)?(x):_("*None*")
  
 #if defined(HAVE_WIN32)
+
+#define WIN32_REPARSE_POINT 1
+#define WIN32_MOUNT_POINT   2
+
 void InitWinAPIWrapper();
 
 #define  OSDependentInit()    InitWinAPIWrapper()

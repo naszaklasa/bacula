@@ -1,6 +1,245 @@
               Technical notes on version 2.2
 
 General:
+Release Version 2.4.0
+04Jun08
+kes  Update version to reflect the magnitude of the SD changes.
+03Jun08
+kes  Make sure to clear JS_WaitMedia when operator mounts a Volume.
+     This fixes bug #1095.
+31May08
+kes  Add create_postgresql_database.sql to Win32 installer. Should 
+     fix problem reported by Juilio Monteiro.
+kes  Get correct slot when auto unloading a device. This fixes bug
+     #1086.
+30May08
+kes  Fix multiple media restore.
+kes  Make DEVICE Slot private and access it via a method.
+     Allows better control over when it is set and cleared.
+kes  Fix possible seg fault if SQL error.
+28May08
+kes  Add debug code to SD.
+kes  Fix renaming a Volume, which used the wrong Volume name. 
+26May08
+kes  If operator has rewind tape, print warning, release tape and
+     try once more. If tape is positioned somewhere, something went
+     wrong, so mark the tape in error and try once more. Previously
+     this error was fatal, now it produces an error message.
+kes  Ensure correct volume name displayed during restore
+kes  Ensure that Volume is mounted for restore.
+25May08
+kes  Fix a few more Coverity reported problems.
+
+Beta Release Version 2.2.10-b4
+24May08
+kes  Enhance a couple of SD debug messages.
+kes  Tweak unload flag setting and ensure it is set during swap.
+23May08
+ebl  Fix #1091 about bad output in estimate command.
+21May08
+kes  Modify autochanger locking to attempt to avoid race
+     conditions.
+kes  Make sure device not busy before doing label command.
+kes  Display open() errors except when polling. Previously too 
+     many were suppressed.  This should fix bug #1070.
+kes  Fix Win32 reparse points. Bacula will not recurse into any
+     reparse point directory, including mount points, unless the
+     directory is explicitly mentioned at the top level (same as
+     with Unix).  A file that is linked to another file will be
+     backed up -- much as Unix does for hardlinked files.
+     This fixes bug #1041.
+20May08
+kes  Remove double quotes from ChangeLog and ReleaseNotes
+kes  Remove StorageId test when pruning and recycling (Eric's changes).
+kes  Remove old form of locking when getting volumes -- causes deadlock.
+17May08
+kes  Fix buffer overruns detected by Coverity.
+
+Beta Release Version 2.2.10-b3
+13May08
+kes  Tweak joblog display.
+12May08
+kes  Implement --without-qwt
+kes  Fix layout of restore tree dialog 
+kes  Add configure bat QWT libraries, so that bat can be built
+     with or without the QWT libaries.
+11May08
+kes  Apply batfix bat cleanup patch from Riccardo.
+kes  Make sure we unload the right slot when swapping.
+08May08
+kes  Improve SD reserve debug code.
+kes  Testing an improvement to free up volumes no longer in use.
+
+Beta Release Version 2.2.10-b2
+07May08
+03May08
+kes  Rework SD acquire for read to handle autochanger Volume
+     swapping.
+kes  Implement regression that explicitly tests swapping a Volume
+     from one drive to another.
+kes  Enhance disk-changer to detect most error conditions.
+kes  Fix SD code so that it properly swaps a Volume between drives.
+     This fixes bug #1083.
+01May08
+kes  Prevent a Volume that is being swapped from being freed from
+     the volume list. This will most likely fix, at least partially,
+     bug #1083.
+kes  Fix strippath so that it does not get a buffer overrun and crash FD.
+     This fixes bug #1078.
+kes  Make inability to change owner/group when creating a dir only a
+     warning rather than an error.
+28Apr08
+ebl  Fix SQL query in migration code
+19Apr08
+kes  Force unload of volume when wrong volume mounted in SD.
+17Apr08
+kes  Fix bat seg fault at termination.
+kes  Add Bacula generated version to bat about box.
+
+Beta Release Version 2.2.10-b1
+16Apr08
+kes  Permit multiple simultaneous restores -- experiment.
+15Apr08
+kes  Backport development stream SD reservation system changes.
+     See below:
+16Apr08
+kes  Move final volume swapping code to DCR method and
+     call it from acquire_for_read().
+kes  When wrong volume is mounted during read, unload_autochanger.
+14Apr08
+kes  Stop searching for Volumes in SD askdir if DIR returns the
+     same volume name twice in a row.
+13Apr08
+kes  Tweak the swap Volume from one drive to another code so that
+     it now seems to work.
+kes  Resolve several problems with recycling that broke the new
+     code (these problems are in 2.2.9 as well).
+kes  Remove the volume lock when calling the sysop code.   
+kes  Don't mark a reserved volume with no writers as unused otherwise
+     jobs fail.
+12Apr08
+kes  Rework class structures for VOLRES, DCR, and DEVICE to make
+     the method names a bit more logical, and for more logically
+     handling the responsibilities.
+11Apr08
+kes  Remove redundant code in terminating the scheduler that just
+     causes a seg fault in many cases.
+kes  Cleanup releasing a volume and make it a DCR method.
+kes  Improve algorithm for detecting pre-reserved volume and
+     swapping volumes.
+10Apr08
+kes  Tweak volume swapping code so it works.
+kes  Correct name overloading in mount.c
+kes  Replace released flag in VOLRES with reserved and add access
+     methods for the VOLRES class.
+kes  Prevent volume from being released while being swapped.
+kes  Refactor parts of stored/mount.c
+09Apr08
+ebl  Add sanity checks for VolWriteTime and VolReadTime
+ebl  Take care of bad clock changes while computing VolWriteTime
+     and VolReadTime. This should fix or limit #1066
+kes  Correct error string numbers in dird/catreq.c
+kes  Restructure reserving, acquiring, and mounting volumes. Calls to
+     autochanger are deferred for mount.c -- simplifes the code.
+08Apr08
+kes  Do not prune any running job. It just fails the job.
+kes  Lock the volumes when changing dev->reserved_device and marking
+     the volume unused otherwise the device can get reserved by
+     another job before the volume is released, thus blocking it.
+===                                        
+
+Beta Release Version 2.2.9-b7
+14Apr08
+kes  Close bat console windows first to eliminate error message
+     from the notifier.
+kes  Remove useless code in Scheduler that causes seg fault on
+     termination.
+kes  Correct some SD catalog request error messages.
+kes  Don't allow pruning of any running job.
+kes  Turn off code in read_record that causes a seg fault in the SD
+     when reading past an EOS_LABEL.
+kes  Turn off unloading the autochanger in reserve.c as it just
+     causes problems.
+kes  Lock volumes when unreserving a device.
+kes  Do not mark volume unused when recycling.
+kes  When acquiring, don't mark volume unused if it is reserved (busy).
+
+Beta Release Version 2.2.9-b6
+06Apr08
+kes  Eliminate ./configure warning on po directory 
+kes  Fix bug #1063, reuse of freed ptr in list nextvol.
+kes  Release regex compile buffer in filed/job.c
+kes  Add proper type of const char in sql_create.c
+kes  Turn off debug in daemon termination routines
+kes  Move free_volume_list() before devices are freed in stored.c
+kes  Fix reference to uninitalized stack variables in bregex.c. 
+     This should correct bug #1067.
+04Apr08
+kes  Fix possible seg fault in SD when freeing a volume entry.
+02Apr08
+kes  Apply patch from bug #1069 that corrects spurious error messages
+     when ACLs enabled on SGI but no ACL exists.
+ebl  Fix a storage deamon segfault at debug level 500.
+
+Beta Release Version 2.2.9-b5 -- not released
+
+Beta Release Version 2.2.9-b4
+01Apr08
+kes  Re-enable code to remember last volume mounted on a non-tape
+     Autochanger.
+kes  Add patch supplied in bug #1068 that fixes a SD crash when using
+     a Virtual autochanger.
+kes  Generate correct JobMedia records during spooling/despooling when
+     running concurrent jobs.  Thanks to Tom Ivar Helbekkmo 
+     <tih@hamartun.priv.no> for excellent analysis and testing.
+
+Beta release Version 2.2.9-b3
+27Mar08
+kes  Rework certain SD locking based on gdb tracebacks of deadlocks
+     sent by Eric. This code now uses only the volume_lock() rather
+     than the reservations lock when at EOM and acquiring a new
+     volume. 
+kes  Ensure only one exit point in several subroutines.
+
+Beta release version 2.2.9-b2
+24Mar08
+kes  Fix to initial tape drive open to release the volume name
+
+Beta release Version 2.2.9-b1        
+22Mar08
+kes  Fix to JobMedia fix.
+kes  Fix bug pointed out by Peter Much that causes the StorageId to
+     be updated when reading a tape (during migration, it could have
+     been incorrectly set to the write StorageId).
+21Mar08
+kes  Implement autostart scripts for Debian 
+20Mar08
+kes  Fix mtx-changer.in for broken Debian mt program.
+19Mar08
+kes  Massive commit of all fixes and back ports to create 2.2.9
+18Mar08
+kes  Apply doc fix from bug #1062.
+kes  Resolve crash and improper restore wx-console Win32 restore
+     GUI. Fixes bug #1065.
+kes  Update Win32 wxWidgets to latest version.
+kes  Attempt to do correct handling of Win32 mount points. Should
+     fix bug #1046.
+kes  Fix Win32 FD backup/restore memory leak due to improper termination
+     of BackupRead/Write. This fixes bug# 1038.
+kes  Add const to AIX prototype for initgroups()
+27Feb08
+kes  Undo bug #1047 heap overrun fix as it is not correct.
+14Feb08
+kes  Fix creating first JobMedia record during Migration to include
+     proper index. This caused slow restores of migrated jobs.
+10Feb08
+kes  Fix bug #1047, which had a heap overrun when stripping certain paths,
+     and do not strip paths on symbolic links.
+kes  Set catalog backup database and user name from values specified on 
+     the ./configure line.
+ebl  Apply patch to correct bug #1031, about wrong pool source information
+     in job report.
+
 Release Version 2.2.8
 25Jan08
 kes  Apply patch from Martin to correct bug #1040, bscan sets existing

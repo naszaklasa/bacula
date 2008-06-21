@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: fileset.cpp 5372 2007-08-17 12:17:04Z kerns $
+ *   Version $Id: fileset.cpp 6948 2008-05-11 14:38:19Z kerns $
  *
  *  FileSet Class
  *
@@ -132,7 +132,7 @@ void FileSet::populateTree()
       }
    }
    /* Resize the columns */
-   for (int cnter=1; cnter<headerlist.size(); cnter++) {
+   for (int cnter=0; cnter<headerlist.size(); cnter++) {
       mp_treeWidget->resizeColumnToContents(cnter);
    }
 

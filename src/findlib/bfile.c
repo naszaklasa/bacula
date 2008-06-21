@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, April MMIII
  *
- *   Version $Id: bfile.c 5081 2007-06-25 08:13:53Z kerns $
+ *   Version $Id: bfile.c 6636 2008-03-19 18:01:45Z kerns $
  *
  */
 
@@ -536,9 +536,14 @@ int bclose(BFILE *bfd)
    if (bfd->mode == BF_CLOSED) {
       return 0;
    }
+   /*
+    * We need to tell the API to release the buffer it
+    *  allocated in lpContext.  We do so by calling the
+    *  API one more time, but with the Abort bit set.
+    */
    if (bfd->use_backup_api && bfd->mode == BF_READ) {
       BYTE buf[10];
-      if (!bfd->lpContext && !p_BackupRead(bfd->fh,
+      if (bfd->lpContext && !p_BackupRead(bfd->fh,
               buf,                    /* buffer */
               (DWORD)0,               /* bytes to read */
               &bfd->rw_bytes,         /* bytes read */
@@ -550,7 +555,7 @@ int bclose(BFILE *bfd)
       }
    } else if (bfd->use_backup_api && bfd->mode == BF_WRITE) {
       BYTE buf[10];
-      if (!bfd->lpContext && !p_BackupWrite(bfd->fh,
+      if (bfd->lpContext && !p_BackupWrite(bfd->fh,
               buf,                    /* buffer */
               (DWORD)0,               /* bytes to read */
               &bfd->rw_bytes,         /* bytes written */
