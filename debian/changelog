@@ -1,6 +1,7 @@
 bacula (2.4.0-1) unstable; urgency=low
 
   * New upstream release.
+  * Bump Standards-Version to 3.8.0.  No changes needed.
 
  -- Mark Hymers <mhy@debian.org>  Sat, 21 Jun 2008 17:59:38 +0100
 
