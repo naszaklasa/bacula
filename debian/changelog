@@ -1,3 +1,9 @@
+bacula (2.4.0-1~bpo40+1) etch-backports; urgency=low
+
+  * Rebuild for etch-backports.
+
+ -- Gerfried Fuchs <rhonda@debian.at>  Mon, 30 Jun 2008 18:20:47 +0200
+
 bacula (2.4.0-1) unstable; urgency=low
 
   [ John Goerzen ]
