@@ -1,7 +1,6 @@
 bacula (2.4.0-1) UNRELEASED; urgency=low
 
   [ John Goerzen ]
-  * UNRELEASED
   * Removed debian/Makefile and debian/po/Makefile
   * Apply upstream 2.4.1-restore-wrong-mediatype.patch
   * bacula-fd: fix LSB init headers to not require bacula-sd.  Closes:
@@ -9,7 +8,7 @@ bacula (2.4.0-1) UNRELEASED; urgency=low
 
   [ Mark Hymers ]
   * Bump Standards-Version to 3.8.0.  No changes needed.
-  * Imported bacula-2.4.0
+  * Imported bacula-2.4.0.  Closes: #487767.
 
   [ John Goerzen ]
   * Corrected GIT URL
