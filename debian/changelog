@@ -1,9 +1,21 @@
-bacula (2.4.0-1) unstable; urgency=low
+bacula (2.4.0-1) UNRELEASED; urgency=low
 
-  * New upstream release.
+  [ John Goerzen ]
+  * UNRELEASED
+  * Removed debian/Makefile and debian/po/Makefile
+  * Apply upstream 2.4.1-restore-wrong-mediatype.patch
+  * bacula-fd: fix LSB init headers to not require bacula-sd.  Closes:
+    #486256.
+
+  [ Mark Hymers ]
   * Bump Standards-Version to 3.8.0.  No changes needed.
+  * Imported bacula-2.4.0
 
- -- Mark Hymers <mhy@debian.org>  Sat, 21 Jun 2008 17:59:38 +0100
+  [ John Goerzen ]
+  * Corrected GIT URL
+  * Clarify the presence of BAT
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 30 Jun 2008 09:15:11 -0500
 
 bacula (2.2.8-8) unstable; urgency=high
 
