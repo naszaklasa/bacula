@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -38,7 +38,7 @@
  *
  *    Kern E. Sibbald, August MMII
  *
- *   Version $Id: read_record.c 5293 2007-08-06 18:20:26Z kerns $
+ *   Version $Id: read_record.c 6812 2008-04-14 07:08:34Z kerns $
  */
 
 #include "bacula.h"
@@ -82,6 +82,7 @@ bool read_records(DCR *dcr,
             DEV_RECORD *trec = new_record();
             Jmsg(jcr, M_INFO, 0, _("End of Volume at file %u on device %s, Volume \"%s\"\n"),
                  dev->file, dev->print_name(), dcr->VolumeName);
+            volume_unused(dcr);       /* mark volume unused */
             if (!mount_cb(dcr)) {
                Jmsg(jcr, M_INFO, 0, _("End of all volumes.\n"));
                ok = false;            /* Stop everything */
@@ -227,11 +228,14 @@ bool read_records(DCR *dcr,
              *  he wants to know if they matched the bsr, then he must
              *  check the match_stat in the record */
             ok = record_cb(dcr, rec);
+#ifdef xxx
             /*
              * If this is the end of the Session (EOS) for this record
              *  we can remove the record.  Note, there is a separate
              *  record to read each session. If a new session is seen
              *  a new record will be created at approx line 157 above.
+             *
+             * This code causes a seg fault in the enclosing for() loop.
              */
             if (rec->FileIndex == EOS_LABEL) {
                Dmsg2(dbglvl, "Remove EOS rec. SI=%d ST=%d\n", rec->VolSessionId,
@@ -239,6 +243,7 @@ bool read_records(DCR *dcr,
                recs->remove(rec);
                free_record(rec);
             }
+#endif
             continue;
          } /* end if label record */
 

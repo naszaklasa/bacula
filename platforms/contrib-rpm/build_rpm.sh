@@ -25,11 +25,11 @@ VERSION=2.2.8
 RELEASE=1
 
 # build platform for spec
-# set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,wb3,rhel3,rhel4,rhel5,centos3,centos4,centos5,sl3, sl4,sl5,su9,su10,su102,su103,mdk,mdv
+# set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,fc9,wb3,rhel3,rhel4,rhel5,centos3,centos4,centos5,sl3, sl4,sl5,su9,su10,su102,su103,mdk,mdv
 PLATFORM=su102
 
 # platform designator for file names
-# for RedHat/Fedora set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8 OR
+# for RedHat/Fedora set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,fc9 OR
 # for RHEL3/clones wb3, rhel3, sl3 & centos3 set to el3 OR
 # for RHEL4/clones rhel4, sl4 & centos4 set to el4 OR
 # for RHEL5/clones rhel5, sl5 & centos5 set to el5 OR
@@ -75,6 +75,10 @@ SAVEUPDATEDB=0
 
 # to override your language shell variable uncomment and edit this
 # export LANG=en_US.UTF-8
+
+# if you have a problem getting bat to build try these (needed on Fedora 8/9)
+# export QTDIR=/usr/lib/qt4
+# export PATH=/usr/lib/qt4/bin;$PATH
 
 # Make no changes below this point without consensus
 
@@ -183,3 +187,4 @@ ls
 # 15 Sep 2007 add rhel5 and clones
 # 10 Nov 2007 add su103
 # 12 Jan 2008 add fc8
+# 23 May 2008 add fc9

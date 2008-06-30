@@ -1,0 +1,27 @@
+
+ This patch fixes bug #1091 about wrong output in estimate
+ command.
+
+ Apply the patch to 2.2.8 (and possibly any 2.2.x version with):
+
+ cd <bacula-source>
+ patch -p0 <2.2.8-estimate-output.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+Index: src/dird/ua_cmds.c
+===================================================================
+--- src/dird/ua_cmds.c  (révision 7010)
++++ src/dird/ua_cmds.c  (copie de travail)
+@@ -1158,7 +1158,7 @@
+    get_level_since_time(ua->jcr, since, sizeof(since));
+
+    ua->send_msg(_("Connecting to Client %s at %s:%d\n"),
+-      job->client->name(), job->client->address, job->client->FDport);
++      jcr->client->name(), jcr->client->address, jcr->client->FDport);
+    if (!connect_to_file_daemon(jcr, 1, 15, 0)) {
+       ua->error_msg(_("Failed to connect to Client.\n"));
+       return 1;

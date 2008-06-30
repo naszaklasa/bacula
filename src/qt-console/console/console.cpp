@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: console.cpp 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: console.cpp 7085 2008-06-01 14:31:37Z bartleyd2 $
  *
  *  Console Class
  *
@@ -103,6 +103,11 @@ void Console::poll_messages()
 void Console::terminate()
 {
    if (m_sock) {
+      if (m_notifier) {
+         m_notifier->setEnabled(false);
+         delete m_notifier;
+         m_notifier = NULL;
+      }
       stopTimer();
       m_sock->close();
       m_sock = NULL;
@@ -612,7 +617,7 @@ int Console::read()
             break;
          } 
          app->processEvents();
-         if (m_api_set && m_messages_pending) {
+         if (m_api_set && m_messages_pending && m_notifier->isEnabled()) {
             write_dir(".messages");
             m_messages_pending = false;
          }

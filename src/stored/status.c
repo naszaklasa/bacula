@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, May MMIII
  *
- *   Version $Id: status.c 5144 2007-07-12 07:49:21Z kerns $
+ *   Version $Id: status.c 7060 2008-05-30 18:03:03Z kerns $
  *
  */
 
@@ -286,11 +286,11 @@ static void send_blocked_status(DEVICE *dev, void sendit(const char *msg, int le
    }
    /* Send autochanger slot status */
    if (dev->is_autochanger()) {
-      if (dev->Slot > 0) {
+      if (dev->get_slot() > 0) {
          len = Mmsg(msg, _("    Slot %d is loaded in drive %d.\n"), 
-            dev->Slot, dev->drive_index);
+            dev->get_slot(), dev->drive_index);
          sendit(msg, len, arg);
-      } else if (dev->Slot == 0) {
+      } else if (dev->get_slot() == 0) {
          len = Mmsg(msg, _("    Drive %d is not loaded.\n"), dev->drive_index);
          sendit(msg, len, arg);
       } else {

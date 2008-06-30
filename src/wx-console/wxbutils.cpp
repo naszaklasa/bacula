@@ -1,15 +1,7 @@
 /*
- *
- *   wxbDataParser, class that receives and analyses data
- *
- *    Nicolas Boichat, April-July 2004
- *
- *    Version $Id: wxbutils.cpp 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   wxbDataParser, class that receives and analyses data
+ *
+ *    Nicolas Boichat, April-July 2004
+ *
+ *    Version $Id: wxbutils.cpp 6636 2008-03-19 18:01:45Z kerns $
+ */
 
 /*  Windows debug builds set _DEBUG which is used by wxWidgets to select their
  *  debug memory allocator.  Unfortunately it conflicts with Bacula's SmartAlloc.
@@ -42,13 +42,9 @@
 #undef _DEBUG
 
 #include "bacula.h"
-
 #include "wxbutils.h"
-
 #include "wxbmainframe.h"
-
 #include "csprint.h"
-
 #include "wxbtableparser.h"
 
 /* A macro named Yield is defined under MinGW */
@@ -335,7 +331,6 @@ bool wxbPromptParser::Analyse(wxString str, int status) {
             choices->Add(wxT("no"));
             numerical = false;
          }
-         
          return true;
       }
       else { /* ended or (dis)connected */

@@ -58,8 +58,8 @@ DEPKGS_BINARIES := \
 	dvd+rw-booktype.exe \
 	dvd+rw-format.exe \
 	dvd+rw-mediainfo.exe \
-	wxbase270_gcc_bacula.dll \
-	wxmsw270_core_gcc_bacula.dll
+	wxbase28_gcc_bacula.dll \
+	wxmsw28_core_gcc_bacula.dll
 
 NONGCC_BINARIES := \
 	libmysql.dll

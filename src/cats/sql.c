@@ -33,7 +33,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql.c 5710 2007-10-03 05:59:42Z kerns $
+ *    Version $Id: sql.c 7057 2008-05-30 10:36:49Z kerns $
  */
 
 /* The following is necessary so that we do not include
@@ -468,6 +468,9 @@ list_dashes(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx)
    send(ctx, "+");
    for (i = 0; i < sql_num_fields(mdb); i++) {
       field = sql_fetch_field(mdb);
+      if (!field) {
+         break;
+      }
       for (j = 0; j < (int)field->max_length + 2; j++) {
          send(ctx, "-");
       }
@@ -500,6 +503,9 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
    for (i = 0; i < sql_num_fields(mdb); i++) {
       Dmsg1(800, "list_result processing field %d\n", i);
       field = sql_fetch_field(mdb);
+      if (!field) {
+         break;
+      }
       col_len = cstrlen(field->name);
       if (type == VERT_LIST) {
          if (col_len > max_len) {
@@ -531,6 +537,9 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
    for (i = 0; i < sql_num_fields(mdb); i++) {
       Dmsg1(800, "list_result looking at field %d\n", i);
       field = sql_fetch_field(mdb);
+      if (!field) {
+         break;
+      }
       bsnprintf(buf, sizeof(buf), " %-*s |", (int)field->max_length, field->name);
       send(ctx, buf);
    }
@@ -543,6 +552,9 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
       send(ctx, "|");
       for (i = 0; i < sql_num_fields(mdb); i++) {
          field = sql_fetch_field(mdb);
+         if (!field) {
+            break;
+         }
          if (row[i] == NULL) {
             bsnprintf(buf, sizeof(buf), " %-*s |", (int)field->max_length, "NULL");
          } else if (IS_NUM(field->type) && !jcr->gui && is_an_integer(row[i])) {
@@ -565,6 +577,9 @@ vertical_list:
       sql_field_seek(mdb, 0);
       for (i = 0; i < sql_num_fields(mdb); i++) {
          field = sql_fetch_field(mdb);
+         if (!field) {
+            break;
+         }
          if (row[i] == NULL) {
             bsnprintf(buf, sizeof(buf), " %*s: %s\n", max_len, field->name, "NULL");
          } else if (IS_NUM(field->type) && !jcr->gui && is_an_integer(row[i])) {

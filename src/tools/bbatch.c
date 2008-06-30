@@ -143,9 +143,9 @@ int main (int argc, char *argv[])
          break;
 
       case 'f':
-	 if (nb < 10 ) {
-	    files[nb++] = optarg;
-	 }
+         if (nb < 10 ) {
+            files[nb++] = optarg;
+         }
          break;
 
       case '?':
@@ -192,15 +192,15 @@ int main (int argc, char *argv[])
       pm_strcpy(bjcr->fileset_md5, "Dummy.fileset.md5");
       
       if ((db=db_init_database(NULL, db_name, db_user, db_password,
-			       db_host, 0, NULL, 0)) == NULL) {
-	 Emsg0(M_ERROR_TERM, 0, _("Could not init Bacula database\n"));
+                               db_host, 0, NULL, 0)) == NULL) {
+         Emsg0(M_ERROR_TERM, 0, _("Could not init Bacula database\n"));
       }
       if (!db_open_database(NULL, db)) {
-	 Emsg0(M_ERROR_TERM, 0, db_strerror(db));
+         Emsg0(M_ERROR_TERM, 0, db_strerror(db));
       }
       Dmsg0(200, "Database opened\n");
       if (verbose) {
-	 Pmsg2(000, _("Using Database: %s, User: %s\n"), db_name, db_user);
+         Pmsg2(000, _("Using Database: %s, User: %s\n"), db_name, db_user);
       }
       
       bjcr->db = db;
@@ -225,23 +225,23 @@ static void fill_attr(ATTR_DBR *ar, char *data)
 
    for(p = b = data; *p; p++) {
       if (*p == ';') {
-	 *p = '\0';
-	 switch (index) {
-	 case 0:
-	    ar->FileIndex = str_to_int64(b);
-	    break;
-	 case 1:
-	    ar->fname = b;
-	    break;
-	 case 2:
-	    ar->attr = b;
-	    break;
-	 case 3:
-	    ar->Digest = b;
-	    break;
-	 }
-	 index++;
-	 b = ++p;
+         *p = '\0';
+         switch (index) {
+         case 0:
+            ar->FileIndex = str_to_int64(b);
+            break;
+         case 1:
+            ar->fname = b;
+            break;
+         case 2:
+            ar->attr = b;
+            break;
+         case 3:
+            ar->Digest = b;
+            break;
+         }
+         index++;
+         b = ++p;
       }
    }
 }
@@ -264,11 +264,11 @@ static void *do_batch(void *jcr)
       strip_trailing_newline(data);
       lineno++;
       if (verbose && ((lineno % 5000) == 1)) {
-	 printf("\r%i", lineno);
+         printf("\r%i", lineno);
       }
       fill_attr(&ar, data);
       if (!db_create_file_attributes_record(bjcr, bjcr->db, &ar)) {
-	 Emsg0(M_ERROR_TERM, 0, _("Error while inserting file\n"));
+         Emsg0(M_ERROR_TERM, 0, _("Error while inserting file\n"));
       }
    }
    fclose(fd);
@@ -278,9 +278,9 @@ static void *do_batch(void *jcr)
    P(mutex);
    char ed1[200], ed2[200];
    printf("\rbegin = %s, end = %s\n", edit_int64(begin, ed1),edit_int64(end, ed2));
-   printf("Insert time = %llims\n", (end - begin) / 10000);
+   printf("Insert time = %sms\n", edit_int64((end - begin) / 10000, ed1));
    printf("Create %u files at %.2f/s\n", lineno, 
-	  (lineno / ((float)((end - begin) / 1000000))));
+          (lineno / ((float)((end - begin) / 1000000))));
    nb--;
    V(mutex);
    pthread_exit(NULL);

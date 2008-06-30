@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /* 
- *   Version $Id: mainwin.h 5239 2007-07-25 02:32:37Z bartleyd2 $
+ *   Version $Id: mainwin.h 6956 2008-05-12 09:32:54Z kerns $
  *
  * qt-console main window class definition.
  *
@@ -106,7 +106,9 @@ public slots:
    void runButtonClicked();
    void estimateButtonClicked();
    void browseButtonClicked();
+#ifdef HAVE_QWT
    void jobPlotButtonClicked();
+#endif
    void restoreButtonClicked();
    void undockWindowButton();
    void treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *);

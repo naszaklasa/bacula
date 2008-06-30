@@ -1,0 +1,124 @@
+
+ This patch fixes two deadlock conditions that occur in Bacula.
+ The first is caused by running simultaneous backup and restore jobs
+ with an autochanger, and leads to use counts getting out of sync causing
+ jobs in the Director to wait on resources.  
+ The second is a condition where the SD is unable to use a Volume that
+ is currently mounted because it keeps wanting a different Volume. This
+ condition seems to be relatively rare unless you are using
+ "Prefer Mounted Volumes = no" in which case it occurs much more often.
+
+ This patch can be applied to a fully patched 2.2.8 version with the
+ following:
+
+ cd <bacula-source>
+ patch -p0 <2.2.8-deadlock.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+
+Index: src/dird/jobq.c
+===================================================================
+--- src/dird/jobq.c	(revision 6531)
++++ src/dird/jobq.c	(working copy)
+@@ -478,7 +478,7 @@
+           */
+          if (jcr->acquired_resource_locks) {
+             if (jcr->rstore) {
+-               jcr->rstore->NumConcurrentJobs = 0;
++               jcr->rstore->NumConcurrentJobs--;
+                Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
+             }
+             if (jcr->wstore) {
+Index: src/stored/askdir.c
+===================================================================
+--- src/stored/askdir.c	(revision 6531)
++++ src/stored/askdir.c	(working copy)
+@@ -252,20 +252,19 @@
+ {
+     JCR *jcr = dcr->jcr;
+     BSOCK *dir = jcr->dir_bsock;
+-    bool found = false;
+ 
+     Dmsg2(200, "dir_find_next_appendable_volume: reserved=%d Vol=%s\n", 
+        dcr->reserved_device, dcr->VolumeName);
+ 
+     /*
+-     * Try the twenty oldest or most available volumes.  Note,
++     * Try the fourty oldest or most available volumes.  Note,
+      *   the most available could already be mounted on another
+      *   drive, so we continue looking for a not in use Volume.
+      */
+     lock_reservations();
+     P(vol_info_mutex);
+     dcr->volume_in_use = false;
+-    for (int vol_index=1;  vol_index < 20; vol_index++) {
++    for (int vol_index=1;  vol_index < 40; vol_index++) {
+        bash_spaces(dcr->media_type);
+        bash_spaces(dcr->pool_name);
+        dir->fsend(Find_media, jcr->Job, vol_index, dcr->pool_name, dcr->media_type);
+@@ -275,33 +274,26 @@
+        bool ok = do_get_volume_info(dcr);
+        if (ok) {
+           if (!is_volume_in_use(dcr)) {
+-             found = true;
+-             break;
++             Dmsg0(400, "dir_find_next_appendable_volume return true\n");
++             if (reserve_volume(dcr, dcr->VolumeName) == 0) {
++                Dmsg2(100, "Could not reserve volume %s on %s\n", dcr->VolumeName,
++                    dcr->dev->print_name());
++                continue;
++             }
++             V(vol_info_mutex);
++             unlock_reservations();
++             return true;
+           } else {
+              Dmsg1(100, "Volume %s is in use.\n", dcr->VolumeName);
+              dcr->volume_in_use = true;
+              continue;
+           }
+-       } else {
+-          Dmsg2(100, "No vol. index %d return false. dev=%s\n", vol_index,
+-             dcr->dev->print_name());
+-          found = false;
+-          break;
+        }
++       Dmsg2(100, "No vol. index %d return false. dev=%s\n", vol_index,
++          dcr->dev->print_name());
++       break;
+     }
+-    if (found) {
+-       Dmsg0(400, "dir_find_next_appendable_volume return true\n");
+-       if (reserve_volume(dcr, dcr->VolumeName) == 0) {
+-          Dmsg2(100, "Could not reserve volume %s on %s\n", dcr->VolumeName,
+-              dcr->dev->print_name());
+-          goto bail_out;
+-       }
+-       V(vol_info_mutex);
+-       unlock_reservations();
+-       return true;
+-    }
+ 
+-bail_out:
+     dcr->VolumeName[0] = 0;
+     V(vol_info_mutex);
+     unlock_reservations();
+Index: src/stored/acquire.c
+===================================================================
+--- src/stored/acquire.c	(revision 6531)
++++ src/stored/acquire.c	(working copy)
+@@ -362,7 +362,10 @@
+             strcmp(dev->VolHdr.VolumeName, dcr->VolumeName) == 0)) { /* wrong tape mounted */
+          /* Wrong tape mounted, release it, then fall through to get correct one */
+          Dmsg0(50, "Wrong tape mounted, release and try mount.\n");
+-         release = true;
++         /* Do not release if no Volume in drive */
++         if (dev->VolHdr.VolumeName[0]) {
++            release = true;
++         }
+          do_mount = true;
+       } else {
+          /*

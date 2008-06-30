@@ -25,6 +25,7 @@ VPATH = @srcdir@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 datadir = @datadir@
+datarootdir = @datarootdir@
 localedir = $(datadir)/locale
 gettextsrcdir = $(datadir)/gettext/po
 
@@ -185,23 +186,23 @@ install-data-yes: all
 	  for lc in '' $(EXTRA_LOCALE_CATEGORIES); do \
 	    if test -n "$$lc"; then \
 	      if (cd $(DESTDIR)$(localedir)/$$lang && LC_ALL=C ls -l -d $$lc 2>/dev/null) | grep ' -> ' >/dev/null; then \
-	        link=`cd $(DESTDIR)$(localedir)/$$lang && LC_ALL=C ls -l -d $$lc | sed -e 's/^.* -> //'`; \
-	        mv $(DESTDIR)$(localedir)/$$lang/$$lc $(DESTDIR)$(localedir)/$$lang/$$lc.old; \
-	        mkdir $(DESTDIR)$(localedir)/$$lang/$$lc; \
-	        (cd $(DESTDIR)$(localedir)/$$lang/$$lc.old && \
-	         for file in *; do \
-	           if test -f $$file; then \
-	             ln -s ../$$link/$$file $(DESTDIR)$(localedir)/$$lang/$$lc/$$file; \
-	           fi; \
-	         done); \
-	        rm -f $(DESTDIR)$(localedir)/$$lang/$$lc.old; \
+		link=`cd $(DESTDIR)$(localedir)/$$lang && LC_ALL=C ls -l -d $$lc | sed -e 's/^.* -> //'`; \
+		mv $(DESTDIR)$(localedir)/$$lang/$$lc $(DESTDIR)$(localedir)/$$lang/$$lc.old; \
+		mkdir $(DESTDIR)$(localedir)/$$lang/$$lc; \
+		(cd $(DESTDIR)$(localedir)/$$lang/$$lc.old && \
+		 for file in *; do \
+		   if test -f $$file; then \
+		     ln -s ../$$link/$$file $(DESTDIR)$(localedir)/$$lang/$$lc/$$file; \
+		   fi; \
+		 done); \
+		rm -f $(DESTDIR)$(localedir)/$$lang/$$lc.old; \
 	      else \
-	        if test -d $(DESTDIR)$(localedir)/$$lang/$$lc; then \
-	          :; \
-	        else \
-	          rm -f $(DESTDIR)$(localedir)/$$lang/$$lc; \
-	          mkdir $(DESTDIR)$(localedir)/$$lang/$$lc; \
-	        fi; \
+		if test -d $(DESTDIR)$(localedir)/$$lang/$$lc; then \
+		  :; \
+		else \
+		  rm -f $(DESTDIR)$(localedir)/$$lang/$$lc; \
+		  mkdir $(DESTDIR)$(localedir)/$$lang/$$lc; \
+		fi; \
 	      fi; \
 	      rm -f $(DESTDIR)$(localedir)/$$lang/$$lc/$(DOMAIN).mo; \
 	      ln -s ../LC_MESSAGES/$(DOMAIN).mo $(DESTDIR)$(localedir)/$$lang/$$lc/$(DOMAIN).mo 2>/dev/null || \
@@ -234,23 +235,23 @@ installdirs-data-yes:
 	  for lc in '' $(EXTRA_LOCALE_CATEGORIES); do \
 	    if test -n "$$lc"; then \
 	      if (cd $(DESTDIR)$(localedir)/$$lang && LC_ALL=C ls -l -d $$lc 2>/dev/null) | grep ' -> ' >/dev/null; then \
-	        link=`cd $(DESTDIR)$(localedir)/$$lang && LC_ALL=C ls -l -d $$lc | sed -e 's/^.* -> //'`; \
-	        mv $(DESTDIR)$(localedir)/$$lang/$$lc $(DESTDIR)$(localedir)/$$lang/$$lc.old; \
-	        mkdir $(DESTDIR)$(localedir)/$$lang/$$lc; \
-	        (cd $(DESTDIR)$(localedir)/$$lang/$$lc.old && \
-	         for file in *; do \
-	           if test -f $$file; then \
-	             ln -s ../$$link/$$file $(DESTDIR)$(localedir)/$$lang/$$lc/$$file; \
-	           fi; \
-	         done); \
-	        rm -f $(DESTDIR)$(localedir)/$$lang/$$lc.old; \
+		link=`cd $(DESTDIR)$(localedir)/$$lang && LC_ALL=C ls -l -d $$lc | sed -e 's/^.* -> //'`; \
+		mv $(DESTDIR)$(localedir)/$$lang/$$lc $(DESTDIR)$(localedir)/$$lang/$$lc.old; \
+		mkdir $(DESTDIR)$(localedir)/$$lang/$$lc; \
+		(cd $(DESTDIR)$(localedir)/$$lang/$$lc.old && \
+		 for file in *; do \
+		   if test -f $$file; then \
+		     ln -s ../$$link/$$file $(DESTDIR)$(localedir)/$$lang/$$lc/$$file; \
+		   fi; \
+		 done); \
+		rm -f $(DESTDIR)$(localedir)/$$lang/$$lc.old; \
 	      else \
-	        if test -d $(DESTDIR)$(localedir)/$$lang/$$lc; then \
-	          :; \
-	        else \
-	          rm -f $(DESTDIR)$(localedir)/$$lang/$$lc; \
-	          mkdir $(DESTDIR)$(localedir)/$$lang/$$lc; \
-	        fi; \
+		if test -d $(DESTDIR)$(localedir)/$$lang/$$lc; then \
+		  :; \
+		else \
+		  rm -f $(DESTDIR)$(localedir)/$$lang/$$lc; \
+		  mkdir $(DESTDIR)$(localedir)/$$lang/$$lc; \
+		fi; \
 	      fi; \
 	    fi; \
 	  done; \

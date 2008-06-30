@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -53,7 +53,7 @@
  *
  *   Written by Preben 'Peppe' Guldberg, December MMIV
  *
- *   Version $Id: acl.c 5234 2007-07-23 13:21:40Z ricozz $
+ *   Version $Id: acl.c 6730 2008-04-02 20:38:55Z kerns $
  */
 
 
@@ -176,6 +176,24 @@ int bacl_get(JCR *jcr, int acltype)
 
    acl = acl_get_file(jcr->last_fname, ostype);
    if (acl) {
+#if defined(HAVE_IRIX_OS)
+      /* 
+       * From observation, IRIX's acl_get_file() seems to return a
+       * non-NULL acl with a count field of -1 when a file has no ACL
+       * defined, while IRIX's acl_to_text() returns NULL when presented
+       * with such an ACL. 
+       *
+       * Checking the count in the acl structure before calling
+       * acl_to_text() lets us avoid error messages about files
+       * with no ACLs, without modifying the flow of the code used for 
+       * other operating systems, and it saves making some calls
+       * to acl_to_text() besides.
+       */
+      if (acl->acl_cnt <= 0) {
+        acl_free(acl);
+         return 0;
+      }
+#endif
       if ((acl_text = acl_to_text(acl, NULL)) != NULL) {
          len = pm_strcpy(jcr->acl_text, acl_text);
          acl_free(acl);

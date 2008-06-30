@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,7 @@
  *
  *  Bacula utility functions are in util.c
  *
- *   Version $Id: bsys.c 5254 2007-07-28 07:54:02Z kerns $
+ *   Version $Id: bsys.c 6636 2008-03-19 18:01:45Z kerns $
  */
 
 #include "bacula.h"
@@ -44,7 +44,7 @@
 #endif
 
 #ifdef HAVE_AIX_OS
-extern "C" int initgroups(char *,int);
+extern "C" int initgroups(const char *,int);
 #endif
 
 

@@ -67,8 +67,8 @@ LIBS_CRYPTO := \
         $(DEPKGS)/lib/libcrypto.dll.a
 
 LIBS_WX := \
-        $(DEPKGS)/lib/wx_dll/libwxmsw27_core.a \
-        $(DEPKGS)/lib/wx_dll/libwxbase27.a
+        $(DEPKGS)/lib/wx_dll/libwxmsw28_core.a \
+        $(DEPKGS)/lib/wx_dll/libwxbase28.a
 
 LIBS_CATS := \
         $(LIBDIR)/libcats.a

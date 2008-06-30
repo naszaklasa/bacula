@@ -47,7 +47,7 @@
  *     daemon. More complicated coding (double buffering, writer
  *     thread, ...) is left for a later version.
  *
- *   Version $Id: dev.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: dev.c 7060 2008-05-30 18:03:03Z kerns $
  */
 
 /*
@@ -139,7 +139,7 @@ init_dev(JCR *jcr, DEVRES *device)
 
    dev = (DEVICE *)malloc(sizeof(DEVICE));
    memset(dev, 0, sizeof(DEVICE));
-   dev->Slot = -1;       /* unknown */
+   dev->clear_slot();         /* unknown */
 
    /* Copy user supplied device parameters from Resource */
    dev->dev_name = get_memory(strlen(device->device_name)+1);
@@ -302,7 +302,6 @@ DEVICE::open(DCR *dcr, int omode)
    Dmsg4(100, "open dev: type=%d dev_name=%s vol=%s mode=%s\n", dev_type,
          print_name(), VolCatInfo.VolCatName, mode_to_str(omode));
    state &= ~(ST_LABEL|ST_APPEND|ST_READ|ST_EOT|ST_WEOT|ST_EOF);
-   Slot = -1;          /* unknown slot */
    label_type = B_BACULA_LABEL;
    if (is_tape() || is_fifo()) {
       open_tape_device(dcr, omode);
@@ -711,7 +710,7 @@ bool DEVICE::rewind(DCR *dcr)
    unsigned int i;
    bool first = true;
 
-   Dmsg3(400, "rewind res=%d fd=%d %s\n", reserved_device, m_fd, print_name());
+   Dmsg3(400, "rewind res=%d fd=%d %s\n", num_reserved(), m_fd, print_name());
    state &= ~(ST_EOT|ST_EOF|ST_WEOT);  /* remove EOF/EOT flags */
    block_num = file = 0;
    file_size = 0;
@@ -843,7 +842,7 @@ bool DEVICE::eod(DCR *dcr)
    block_num = file = 0;
    file_size = 0;
    file_addr = 0;
-   if (is_fifo() || is_prog()) {
+   if (is_fifo()) {
       return true;
    }
    if (!is_tape()) {
@@ -1547,6 +1546,19 @@ void DEVICE::unlock_door()
    tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
 #endif
 }
+
+void DEVICE::set_slot(int32_t slot)
+{ 
+   m_slot = slot; 
+   if (vol) vol->clear_slot();
+}
+
+void DEVICE::clear_slot()
+{ 
+   m_slot = -1; 
+   if (vol) vol->set_slot(-1);
+}
+
  
 
 /*
@@ -1855,6 +1867,10 @@ void DEVICE::close()
 
    /* Clean up device packet so it can be reused */
    clear_opened();
+   /*
+    * Be careful not to clear items needed by the DVD driver
+    *    when it is closing a single part.
+    */
    state &= ~(ST_LABEL|ST_READ|ST_APPEND|ST_EOT|ST_WEOT|ST_EOF|
               ST_MOUNTED|ST_MEDIA|ST_SHORT);
    label_type = B_BACULA_LABEL;
@@ -1863,7 +1879,6 @@ void DEVICE::close()
    file_addr = 0;
    EndFile = EndBlock = 0;
    openmode = 0;
-   Slot = -1;             /* unknown slot */
    clear_volhdr();
    memset(&VolCatInfo, 0, sizeof(VolCatInfo));
    if (tid) {
@@ -1881,7 +1896,7 @@ void DEVICE::close()
  *  the Volume parts multiple times without losing track of what the    
  *  main Volume parameters are.
  */
-void DEVICE::close_part(DCR *dcr)
+void DEVICE::close_part(DCR * /*dcr*/)
 {
    VOLUME_LABEL saveVolHdr;
    VOLUME_CAT_INFO saveVolCatInfo;     /* Volume Catalog Information */
@@ -1892,7 +1907,6 @@ void DEVICE::close_part(DCR *dcr)
    close();                           /* close current part */
    VolHdr = saveVolHdr;               /* structure assignment */
    VolCatInfo = saveVolCatInfo;       /* structure assignment */
-   dcr->VolCatInfo = saveVolCatInfo;  /* structure assignment */
 }
 
 boffset_t DEVICE::lseek(DCR *dcr, boffset_t offset, int whence)
@@ -1913,23 +1927,73 @@ boffset_t DEVICE::lseek(DCR *dcr, boffset_t offset, int whence)
 
 bool DEVICE::truncate(DCR *dcr) /* We need the DCR for DVD-writing */
 {
+   struct stat st;
+
    Dmsg1(100, "truncate %s\n", print_name());
    switch (dev_type) {
+   case B_VTL_DEV:
    case B_TAPE_DEV:
       /* maybe we should rewind and write and eof ???? */
       return true;                    /* we don't really truncate tapes */
    case B_DVD_DEV:
       return truncate_dvd(dcr);
    case B_FILE_DEV:
-      /* ***FIXME*** we really need to unlink() the file so that
-       *  its name can be changed for a relabel.
-       */
       if (ftruncate(m_fd, 0) != 0) {
          berrno be;
          Mmsg2(errmsg, _("Unable to truncate device %s. ERR=%s\n"), 
                print_name(), be.bstrerror());
          return false;
       }
+          
+      /*
+       * Check for a successful ftruncate() and issue a work-around for devices 
+       * (mostly cheap NAS) that don't support truncation. 
+       * Workaround supplied by Martin Schmid as a solution to bug #1011.
+       * 1. close file
+       * 2. delete file
+       * 3. open new file with same mode
+       * 4. change ownership to original
+       */
+
+      if (fstat(m_fd, &st) != 0) {
+         berrno be;
+         Mmsg2(errmsg, _("Unable to stat device %s. ERR=%s\n"), 
+               print_name(), be.bstrerror());
+         return false;
+      }
+          
+      if (st.st_size != 0) {             /* ftruncate() didn't work */
+         POOL_MEM archive_name(PM_FNAME);
+                
+         pm_strcpy(archive_name, dev_name);
+         if (!IsPathSeparator(archive_name.c_str()[strlen(archive_name.c_str())-1])) {
+            pm_strcat(archive_name, "/");
+         }
+         pm_strcat(archive_name, dcr->VolumeName);
+                   
+         Mmsg2(errmsg, _("Device %s doesn't support ftruncate(). Recreating file %s.\n"), 
+               print_name(), archive_name.c_str());
+
+         /* Close file and blow it away */
+         ::close(m_fd);
+         ::unlink(archive_name.c_str());
+                   
+         /* Recreate the file -- of course, empty */
+         set_mode(CREATE_READ_WRITE);
+         if ((m_fd = ::open(archive_name.c_str(), mode, st.st_mode)) < 0) {
+            berrno be;
+            dev_errno = errno;
+            Mmsg2(errmsg, _("Could not reopen: %s, ERR=%s\n"), archive_name.c_str(), 
+                  be.bstrerror());
+            Dmsg1(100, "reopen failed: %s", errmsg);
+            Emsg0(M_FATAL, 0, errmsg);
+            return false;
+         }
+                   
+         /* Reset proper owner */
+         chown(archive_name.c_str(), st.st_uid, st.st_gid);  
+      }
+          
       return true;
    }
    return false;
@@ -1998,7 +2062,6 @@ bool DEVICE::do_mount(int mount, int dotimeout)
       timeout = 0;
    }
    results = get_memory(4000);
-   results[0] = 0;
 
    /* If busy retry each second */
    Dmsg1(100, "do_mount run_prog=%s\n", ocmd.c_str());
@@ -2180,12 +2243,15 @@ void DEVICE::edit_mount_codes(POOL_MEM &omsg, const char *imsg)
    }
 }
 
-/* return the last timer interval (ms) */
+/* return the last timer interval (ms) 
+ * or 0 if something goes wrong
+ */
 btime_t DEVICE::get_timer_count()
 {
-   btime_t old = last_timer;
+   btime_t temp = last_timer;
    last_timer = get_current_btime();
-   return last_timer - old;
+   temp = last_timer - temp;   /* get elapsed time */
+   return (temp>0)?temp:0;     /* take care of skewed clock */
 }
 
 /* read from fd */
@@ -2381,7 +2447,7 @@ void set_os_device_parameters(DCR *dcr)
    }
 #endif
 #if defined(MTSETDRVBUFFER)
-   if (getpid() == 0) {          /* Only root can do this */
+   if (getuid() == 0) {          /* Only root can do this */
       mt_com.mt_op = MTSETDRVBUFFER;
       mt_com.mt_count = MT_ST_CLEARBOOLEANS;
       if (!dev->has_cap(CAP_TWOEOF)) {
