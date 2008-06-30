@@ -1,4 +1,4 @@
-bacula (2.4.0-1) UNRELEASED; urgency=low
+bacula (2.4.0-1) unstable; urgency=low
 
   [ John Goerzen ]
   * Removed debian/Makefile and debian/po/Makefile
