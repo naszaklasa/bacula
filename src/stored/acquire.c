@@ -331,6 +331,8 @@ get_out:
     */
    if (dev->is_blocked()) {
       dev->dunblock(DEV_LOCKED);
+   } else {
+      dev->dunlock();               /* dunblock() unlock the device too */
    }
    Dmsg1(950, "jcr->dcr=%p\n", jcr->dcr);
    return ok;
