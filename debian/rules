@@ -51,7 +51,7 @@ CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \
 			--disable-bat
 
 CONF_sqlite	= --with-sqlite --without-mysql --without-postgresql --without-sqlite3 \
-			--enable-bwx-console --enable-tray-monitor --enable-bat
+			--enable-bwx-console --disable-tray-monitor --enable-bat
 
 CONF_sqlite3	= --with-sqlite3 --without-mysql --without-postgresql --without-sqlite $(CONF_common)
 CONF_mysql	= --with-mysql --without-sqlite --without-postgresql --without-sqlite3 $(CONF_common)
@@ -234,7 +234,7 @@ install-arch: build install-stamp
 	dh_install -a
 	dh_link -pbacula-common
 	for f in bconsole.conf bwx-console.conf bat.conf \
-		bacula-sd.conf bacula-fd.conf tray-monitor.conf; do \
+		bacula-sd.conf bacula-fd.conf; do \
 		debian/patches/fix_config \
 			debian/tmp-install-sqlite/etc/bacula/$$f \
 			debian/bacula-common/usr/share/bacula-common/defconfig/$$f; \
