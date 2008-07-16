@@ -1,3 +1,11 @@
+bacula (2.4.1-1) unstable; urgency=high
+
+  * New Upstream Version.
+    + Fixes a bug where a tape may be incorrectly reused, destroying
+      data.  Closes: #490996.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 16 Jul 2008 13:26:06 -0500
+
 bacula (2.4.0-1) unstable; urgency=low
 
   [ John Goerzen ]
