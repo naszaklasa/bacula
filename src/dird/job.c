@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c 6000 2007-11-30 21:28:39Z kerns $
+ *    Version $Id: job.c 7303 2008-07-04 14:11:23Z kerns $
  */
 
 #include "bacula.h"
@@ -494,12 +494,12 @@ static void job_monitor_watchdog(watchdog_t *self)
       /* check MaxWaitTime */
       if (job_check_maxwaittime(control_jcr, jcr)) {
          set_jcr_job_status(jcr, JS_Canceled);
-         Jmsg(jcr, M_FATAL, 0, _("Max wait time exceeded. Job canceled.\n"));
+         Qmsg(jcr, M_FATAL, 0, _("Max wait time exceeded. Job canceled.\n"));
          cancel = true;
       /* check MaxRunTime */
       } else if (job_check_maxruntime(control_jcr, jcr)) {
          set_jcr_job_status(jcr, JS_Canceled);
-         Jmsg(jcr, M_FATAL, 0, _("Max run time exceeded. Job canceled.\n"));
+         Qmsg(jcr, M_FATAL, 0, _("Max run time exceeded. Job canceled.\n"));
          cancel = true;
       }
 

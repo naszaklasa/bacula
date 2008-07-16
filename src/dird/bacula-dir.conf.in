@@ -231,7 +231,7 @@ Storage {
 # Generic catalog service
 Catalog {
   Name = MyCatalog
-  dbname = @db_name@; user = @db_user@; password = ""
+  dbname = "@db_name@"; dbuser = "@db_user@"; dbpassword = "@db_password@"
 }
 
 # Reasonable message delivery -- send most everything to email address

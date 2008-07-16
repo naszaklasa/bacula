@@ -29,7 +29,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.h 6301 2008-01-23 19:46:04Z kerns $
+ *   Version $Id: parse_conf.h 7164 2008-06-18 19:22:03Z kerns $
  *
  */
 
@@ -57,9 +57,9 @@ struct RES_ITEM {
       RES *resvalue;
       RES **presvalue;
    };
-   int  code;                         /* item code/additional info */
-   int  flags;                        /* flags: default, required, ... */
-   int  default_value;                /* default value */
+   int32_t code;                       /* item code/additional info */
+   int32_t flags;                      /* flags: default, required, ... */
+   int32_t default_value;              /* default value */
 };
 
 /* For storing name_addr items in res_items table */
@@ -76,8 +76,8 @@ public:
    RES *next;                         /* pointer to next resource of this type */
    char *name;                        /* resource name */
    char *desc;                        /* resource description */
-   int   rcode;                       /* resource id or type */
-   int   refcnt;                      /* reference count for releasing */
+   uint32_t rcode;                    /* resource id or type */
+   int32_t refcnt;                    /* reference count for releasing */
    char  item_present[MAX_RES_ITEMS]; /* set if item is present in conf file */
 };
 
@@ -90,7 +90,7 @@ public:
 struct RES_TABLE {
    const char *name;                  /* resource name */
    RES_ITEM *items;                   /* list of resource keywords */
-   int rcode;                         /* code if needed */
+   uint32_t rcode;                    /* code if needed */
 };
 
 /* Common Resource definitions */
@@ -153,8 +153,8 @@ void store_strname(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_res(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_alist_res(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_alist_str(LEX *lc, RES_ITEM *item, int index, int pass);
-void store_int(LEX *lc, RES_ITEM *item, int index, int pass);
-void store_pint(LEX *lc, RES_ITEM *item, int index, int pass);
+void store_int32(LEX *lc, RES_ITEM *item, int index, int pass);
+void store_pint32(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_msgs(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_int64(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_bit(LEX *lc, RES_ITEM *item, int index, int pass);

@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *     Version $Id: console.c 5002 2007-06-09 09:25:27Z kerns $
+ *     Version $Id: console.c 7179 2008-06-19 17:01:12Z kerns $
  */
 
 #include "bacula.h"
@@ -732,7 +732,7 @@ get_cmd(FILE *input, const char *prompt, BSOCK *sock, int sec)
 
 #else /* no readline, do it ourselves */
 
-#if !defined(HAVE_WIN32)
+#ifdef HAVE_CONIO
 static bool bisatty(int fd)
 {
    if (no_conio) {

@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /* 
- *   Version $Id: mainwin.h 6956 2008-05-12 09:32:54Z kerns $
+ *   Version $Id: mainwin.h 7311 2008-07-05 10:52:36Z kerns $
  *
  * qt-console main window class definition.
  *
@@ -52,6 +52,7 @@ public:
    void set_statusf(const char *fmt, ...);
    void set_status_ready();
    void set_status(const char *buf);
+   void set_status(const QString &str);
    void writeSettings();
    void readSettings();
    void resetFocus() { lineEdit->setFocus(); };

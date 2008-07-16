@@ -1,0 +1,198 @@
+Index: src/dird/next_vol.c
+===================================================================
+--- src/dird/next_vol.c	(révision 7260)
++++ src/dird/next_vol.c	(copie de travail)
+@@ -94,28 +94,30 @@
+                 */
+                if (prune) {
+                   Dmsg0(150, "Call prune_volumes\n");
+-                  prune_volumes(jcr, InChanger, mr);
++                  ok = prune_volumes(jcr, InChanger, mr);
+                }
+-               ok = recycle_oldest_purged_volume(jcr, InChanger, mr);
+-               if (!ok && create) {
+-                  Dmsg4(050, "after prune volumes_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
+-                        ok, index, InChanger, mr->VolStatus);
+-                  /*
+-                   * 5. Try pulling a volume from the Scratch pool
+-                   */ 
+-                  ok = get_scratch_volume(jcr, InChanger, mr);
+-               }
+-               /*
+-                * If we are using an Autochanger and have not found
+-                * a volume, retry looking for any volume. 
+-                */
+-               if (InChanger) {
+-                  InChanger = false;
+-                  if (!ok) {
+-                     continue;           /* retry again accepting any volume */
+-                  }
+-               }
+-            }
++	       if (!ok) {
++		  ok = recycle_oldest_purged_volume(jcr, InChanger, mr);
++		  if (!ok && create) {
++		     Dmsg4(050, "after prune volumes_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
++			   ok, index, InChanger, mr->VolStatus);
++		     /*
++		      * 5. Try pulling a volume from the Scratch pool
++		      */ 
++		     ok = get_scratch_volume(jcr, InChanger, mr);
++		     Dmsg4(050, "after get scratch volume ok=%d index=%d InChanger=%d Vstat=%s\n",
++			   ok, index, InChanger, mr->VolStatus);
++		  }
++		  /*
++		   * If we are using an Autochanger and have not found
++		   * a volume, retry looking for any volume. 
++		   */
++		  if (!ok && InChanger) {
++		     InChanger = false;
++		     continue;           /* retry again accepting any volume */
++		  }
++	       }
++	    }
+          }
+ 
+ 
+Index: src/dird/autoprune.c
+===================================================================
+--- src/dird/autoprune.c	(révision 7260)
++++ src/dird/autoprune.c	(copie de travail)
+@@ -184,6 +184,17 @@
+             prune_list.num_ids = 0;             /* reset count */
+          }
+          ok = is_volume_purged(ua, &lmr);
++
++	 /* 
++	  * Check if this volume is available (InChanger + StorageId) 
++	  * If not, just skip this volume and try the next one
++	  */
++	 if (ok && InChanger) {
++	    if (!lmr.InChanger || (lmr.StorageId != mr->StorageId)) {
++	       ok = false;		/* skip this volume, ie not loadable */
++	    }
++	 }
++
+          /*
+           * If purged and not moved to another Pool, 
+           *   then we stop pruning and take this volume.
+Index: src/dird/recycle.c
+===================================================================
+--- src/dird/recycle.c	(révision 7260)
++++ src/dird/recycle.c	(copie de travail)
+@@ -40,23 +40,6 @@
+ #include "dird.h"
+ #include "ua.h"
+ 
+-struct s_oldest_ctx {
+-   uint32_t MediaId;
+-   char LastWritten[30];
+-};
+-
+-static int oldest_handler(void *ctx, int num_fields, char **row)
+-{
+-   struct s_oldest_ctx *oldest = (struct s_oldest_ctx *)ctx;
+-
+-   if (row[0]) {
+-      oldest->MediaId = str_to_int64(row[0]);
+-      bstrncpy(oldest->LastWritten, row[1]?row[1]:"", sizeof(oldest->LastWritten));
+-      Dmsg1(100, "New oldest %s\n", row[1]?row[1]:"");
+-   }
+-   return 1;
+-}
+-
+ /* Forward referenced functions */
+ 
+ bool find_recycled_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
+@@ -71,50 +54,18 @@
+    return false;
+ }
+ 
+-
+ /*
+  *   Look for oldest Purged volume
+  */
+ bool recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
+ {
+-   struct s_oldest_ctx oldest;
+-   char ed1[50];
+-   POOLMEM *query = get_pool_memory(PM_EMSG);
+-   const char *select =
+-          "SELECT MediaId,LastWritten FROM Media "
+-          "WHERE PoolId=%s AND Recycle=1 AND VolStatus='Purged' "
+-          "AND Enabled=1 AND MediaType='%s' %s"
+-          "ORDER BY LastWritten ASC,MediaId LIMIT 1";
+-
+-   Dmsg0(100, "Enter recycle_oldest_purged_volume\n");
+-   oldest.MediaId = 0;
+-   if (InChanger) {
+-      char changer[100];
+-      bsnprintf(changer, sizeof(changer), "AND InChanger=1 AND StorageId=%s ",
+-         edit_int64(mr->StorageId, ed1));
+-      Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType, changer);
+-   } else {
+-      Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType, "");
+-   }
+-
+-   if (!db_sql_query(jcr->db, query, oldest_handler, (void *)&oldest)) {
+-      Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));
+-      Dmsg0(100, "return 0  recycle_oldest_purged_volume query\n");
+-      free_pool_memory(query);
+-      return false;
+-   }
+-   free_pool_memory(query);
+-   Dmsg1(100, "Oldest mediaid=%d\n", oldest.MediaId);
+-   if (oldest.MediaId != 0) {
+-      mr->MediaId = oldest.MediaId;
+-      if (db_get_media_record(jcr, jcr->db, mr)) {
+-         if (recycle_volume(jcr, mr)) {
+-            Jmsg(jcr, M_INFO, 0, _("Recycled volume \"%s\"\n"), mr->VolumeName);
+-            Dmsg1(100, "return 1  recycle_oldest_purged_volume Vol=%s\n", mr->VolumeName);
+-            return true;
+-         }
++   bstrncpy(mr->VolStatus, "Purged", sizeof(mr->VolStatus));
++   if (db_find_next_volume(jcr, jcr->db, 1, InChanger, mr)) {
++      if (recycle_volume(jcr, mr)) {
++         Jmsg(jcr, M_INFO, 0, _("Recycled volume \"%s\"\n"), mr->VolumeName);
++         Dmsg1(100, "return 1  recycle_oldest_purged_volume Vol=%s\n", mr->VolumeName);
++         return true;
+       }
+-      Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));
+    }
+    Dmsg0(100, "return 0  recycle_oldest_purged_volume end\n");
+    return false;
+Index: src/cats/sql_find.c
+===================================================================
+--- src/cats/sql_find.c	(révision 7260)
++++ src/cats/sql_find.c	(copie de travail)
+@@ -292,17 +292,15 @@
+          edit_int64(mr->PoolId, ed1), mr->MediaType);
+      item = 1;
+    } else {
+-      char changer[100];
++      POOL_MEM changer(PM_FNAME);
+       /* Find next available volume */
+       if (InChanger) {
+-         bsnprintf(changer, sizeof(changer), "AND InChanger=1 AND StorageId=%s",
+-            edit_int64(mr->StorageId, ed1));
+-      } else {
+-         changer[0] = 0;
++         Mmsg(changer, "AND InChanger=1 AND StorageId=%s",
++	      edit_int64(mr->StorageId, ed1));
+       }
+       if (strcmp(mr->VolStatus, "Recycle") == 0 ||
+           strcmp(mr->VolStatus, "Purged") == 0) {
+-         order = "ORDER BY LastWritten ASC,MediaId";  /* take oldest */
++         order = "AND Recycle=1 ORDER BY LastWritten ASC,MediaId";  /* take oldest that can be recycled */
+       } else {
+          order = "ORDER BY LastWritten IS NULL,LastWritten DESC,MediaId";   /* take most recently written */
+       }
+@@ -318,7 +316,7 @@
+          "%s "
+          "%s LIMIT %d",
+          edit_int64(mr->PoolId, ed1), mr->MediaType,
+-         mr->VolStatus, changer, order, item);
++         mr->VolStatus, changer.c_str(), order, item);
+    }
+    Dmsg1(050, "fnextvol=%s\n", mdb->cmd);
+    if (!QUERY_DB(jcr, mdb, mdb->cmd)) {

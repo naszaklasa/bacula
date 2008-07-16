@@ -32,7 +32,7 @@
  *   Kern Sibbald, MM
  *
  *
- *   Version $Id: label.c 7044 2008-05-28 13:28:29Z kerns $
+ *   Version $Id: label.c 7309 2008-07-05 05:52:04Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -85,6 +85,7 @@ int read_dev_volume_label(DCR *dcr)
          return VOL_IO_ERROR;
       }
    }
+#ifdef xxx
    if (dev->is_labeled()) {              /* did we already read label? */
       /* Compare Volume Names allow special wild card */
       if (VolName && *VolName && *VolName != '*' && strcmp(dev->VolHdr.VolumeName, VolName) != 0) {
@@ -104,6 +105,7 @@ int read_dev_volume_label(DCR *dcr)
       Dmsg0(130, "Leave read_volume_label() VOL_OK\n");
       return VOL_OK;       /* label already read */
    }
+#endif
 
    dev->clear_labeled();
    dev->clear_append();
@@ -168,6 +170,10 @@ int read_dev_volume_label(DCR *dcr)
    }
    free_record(record);               /* finished reading Volume record */
 
+   if (!dev->is_volume_to_unload()) {
+      dev->clear_unload();
+   }
+
    if (!ok) {
       if (forge_on || jcr->ignore_label_errors) {
          dev->set_labeled();         /* set has Bacula label */
@@ -212,15 +218,6 @@ int read_dev_volume_label(DCR *dcr)
    }
 
    dev->set_labeled();               /* set has Bacula label */
-   Dmsg1(100, "Call reserve_volume=%s\n", dev->VolHdr.VolumeName);
-   Dmsg2(100, "=== dcr->dev=%p dev=%p\n", dcr->dev, dev);
-   if (reserve_volume(dcr, dev->VolHdr.VolumeName) == NULL) {
-      Mmsg2(jcr->errmsg, _("Could not reserve volume %s on %s\n"),
-           dev->VolHdr.VolumeName, dev->print_name());
-      stat = VOL_NAME_ERROR;
-      goto bail_out;
-   }
-   Dmsg2(100, "=== dcr->dev=%p dev=%p\n", dcr->dev, dev);
 
    /* Compare Volume Names */
    Dmsg2(130, "Compare Vol names: VolName=%s hdr=%s\n", VolName?VolName:"*", dev->VolHdr.VolumeName);
@@ -237,10 +234,9 @@ int read_dev_volume_label(DCR *dcr)
       }
       Dmsg0(150, "return VOL_NAME_ERROR\n");
       stat = VOL_NAME_ERROR;
-      volume_unused(dcr);             /* mark volume "released" */
       goto bail_out;
    }
-   Dmsg1(130, "Copy vol_name=%s\n", dev->VolHdr.VolumeName);
+
 
    if (debug_level >= 10) {
       dump_volume_label(dev);
@@ -253,11 +249,19 @@ int read_dev_volume_label(DCR *dcr)
          stat = read_ansi_ibm_label(dcr);            
          /* If we want a label and didn't find it, return error */
          if (stat != VOL_OK) {
-            volume_unused(dcr);       /* mark volume "released" */
             goto bail_out;
          }
       }
    }
+
+   Dmsg1(100, "Call reserve_volume=%s\n", dev->VolHdr.VolumeName);
+   if (reserve_volume(dcr, dev->VolHdr.VolumeName) == NULL) {
+      Mmsg2(jcr->errmsg, _("Could not reserve volume %s on %s\n"),
+           dev->VolHdr.VolumeName, dev->print_name());
+      stat = VOL_NAME_ERROR;
+      goto bail_out;
+   }
+
    empty_block(block);
    return VOL_OK;
 
@@ -320,6 +324,10 @@ bool write_new_volume_label_to_dev(DCR *dcr, const char *VolName,
 
    Dmsg0(150, "write_volume_label()\n");
    empty_block(dcr->block);
+   if (*VolName == 0) {
+      Pmsg0(0, "=== ERROR: write_new_volume_label_to_dev called with NULL VolName\n");
+      goto bail_out;
+   }
 
    if (relabel) {
       volume_unused(dcr);             /* mark current volume unused */

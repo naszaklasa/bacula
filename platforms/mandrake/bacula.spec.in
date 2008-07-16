@@ -1,11 +1,11 @@
 # Bacula RPM spec file
-# Copyright (C) 2000-2008 Kern Sibbald
+# Copyright (C) 2000-2006 Kern Sibbald
 
 # Platform Build Configuration
 
 # basic defines for every build
 %define _version @VERSION@
-%define _release 2
+%define _release 1
 %define depkgs_version 22Feb08
 %define _rescuever @VERSION@
 %define docs_version @VERSION@
@@ -101,6 +101,8 @@ Packager: %{_packager}
 %{?build_fc7:%define fc7 1}
 %define fc8 0
 %{?build_fc8:%define fc8 1}
+%define fc9 0
+%{?build_fc9:%define fc9 1}
 # Whitebox Enterprise build
 %define wb3 0
 %{?build_wb3:%define wb3 1}
@@ -143,6 +145,8 @@ Packager: %{_packager}
 %{?build_su102:%define su102 1}
 %define su103 0
 %{?build_su103:%define su103 1}
+%define su110 0
+%{?build_su110:%define su110 1}
 # Mandrake builds
 %define mdk 0
 %{?build_mdk:%define mdk 1}
@@ -155,7 +159,7 @@ Packager: %{_packager}
 %{?build_client_only:%define client_only 1}
 
 # test for a platform definition
-%if !%{rh7} && !%{rh8} && !%{rh9} && !%{fc1} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8} && !%{wb3} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{mdk}
+%if !%{rh7} && !%{rh8} && !%{rh9} && !%{fc1} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8} && !%{fc9} && !%{wb3} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{su110} && !%{mdk}
 %{error: You must specify a platform. Please examine the spec file.}
 exit 1
 %endif
@@ -203,7 +207,7 @@ exit 1
 %if %{rh7} || %{rh8} || %{rh9} || %{rhel3} || %{rhel4} || %{rhel5}
 %define _dist %(grep Red /etc/redhat-release)
 %endif
-%if %{fc1} || %{fc4} || %{fc5} || %{fc7} || %{fc8}
+%if %{fc1} || %{fc4} || %{fc5} || %{fc7} || %{fc8} || %{fc9}
 %define _dist %(grep Fedora /etc/redhat-release)
 %endif
 %if %{centos5} || %{centos4} || %{centos3}
@@ -221,7 +225,7 @@ exit 1
 %if %{wb3} && ! %{rhel3} && ! %{centos3} && ! %{sl3}
 %define _dist %(grep White /etc/whitebox-release)
 %endif
-%if %{su9} || %{su10} || %{su102} || %{su103}
+%if %{su9} || %{su10} || %{su102} || %{su103} || %{su110}
 %define _dist %(grep -i SuSE /etc/SuSE-release)
 %endif
 %if %{mdk}
@@ -301,7 +305,7 @@ BuildRequires: pkgconfig, pango-devel, atk-devel
 %endif
 
 # Rh qt4 packages don't have a provide for, guess what, qt!
-# still broken in fc8
+# still broken in fc8, ok in fc9
 # so fix for broken rh
 %define broken_rh 0
 %if %{rhel5} || %{centos5} || %{sl5} || %{fc5} || %{fc6} || %{fc7} || %{fc8}
@@ -393,6 +397,26 @@ BuildRequires: freetype2-devel
 BuildRequires: cairo-devel
 BuildRequires: fontconfig-devel >= 2.4
 BuildRequires: gnome-vfs2-devel >= 2.20
+BuildRequires: libpng-devel
+%endif
+%if %{su110}
+BuildRequires: termcap
+BuildRequires: glibc-devel >= 2.8
+%endif
+%if %{su110} && %{gconsole}
+BuildRequires: libgnome >= 2.22
+BuildRequires: gtk2-devel >= 2.12
+BuildRequires: libgnomeui-devel >= 2.22
+BuildRequires: ORBit2-devel
+BuildRequires: libart_lgpl-devel >= 2.3
+BuildRequires: libbonobo-devel >= 2.22
+BuildRequires: libbonoboui-devel >= 2.22
+BuildRequires: bonobo-activation-devel
+BuildRequires: gconf2-devel
+BuildRequires: freetype2-devel
+BuildRequires: cairo-devel
+BuildRequires: fontconfig-devel >= 2.4
+BuildRequires: gnome-vfs2-devel >= 2.22
 BuildRequires: libpng-devel
 %endif
 %if %{mdk}
@@ -509,11 +533,26 @@ BuildRequires: libbonoboui-devel >= 2.20
 BuildRequires: GConf2-devel
 BuildRequires: freetype-devel
 %endif
-%if !%{rh7} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{mdk} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8}
+%if %{fc9}
+BuildRequires: libtermcap-devel
+BuildRequires: glibc-devel >= 2.8
+BuildRequires: zlib-static
+%endif
+%if %{fc9} && %{gconsole}
+BuildRequires: gtk2-devel >= 2.12
+BuildRequires: libgnomeui-devel >= 2.22
+BuildRequires: ORBit2-devel
+BuildRequires: libart_lgpl-devel >= 2.3
+BuildRequires: libbonobo-devel >= 2.22
+BuildRequires: libbonoboui-devel >= 2.22
+BuildRequires: GConf2-devel
+BuildRequires: freetype-devel
+%endif
+%if !%{rh7} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{su110} && !%{mdk} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8} && !%{fc9}
 BuildRequires: libtermcap-devel
 BuildRequires: glibc-devel >= 2.3
 %endif
-%if !%{rh7} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{mdk} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8} && %{gconsole}
+%if !%{rh7} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{su110} && !%{mdk} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8} && !%{fc9} && %{gconsole}
 BuildRequires: gtk2-devel >= 2.0
 BuildRequires: libgnomeui-devel >= 2.0
 BuildRequires: ORBit2-devel
@@ -577,7 +616,7 @@ Provides: bacula-dir, bacula-sd, bacula-fd, bacula-server
 Conflicts: bacula-client
 Obsoletes: bacula-rescue
 
-%if %{su9} || %{su10} || %{su102} || %{su103}
+%if %{su9} || %{su10} || %{su102} || %{su103} || %{su110}
 Conflicts: bacula
 %endif
 
@@ -599,7 +638,11 @@ Requires: termcap
 Requires: glibc >= 2.6
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{fc5} && ! %{fc6} && ! %{fc7} && ! %{fc8}
+%if %{su110}
+Requires: glibc >= 2.8
+Requires: termcap
+%endif
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{su110} && ! %{fc5} && ! %{fc6} && ! %{fc7} && ! %{fc8} && ! %{fc9}
 Requires: glibc >= 2.3
 Requires: libtermcap
 %endif
@@ -615,6 +658,10 @@ Requires: libtermcap
 Requires: glibc >= 2.7
 Requires: libtermcap
 %endif
+%if %{fc9}
+Requires: glibc >= 2.8
+Requires: libtermcap
+%endif
 
 %if %{mysql} && ! %{su9} && ! %{mdk} && ! %{mysql4} && ! %{mysql5}
 Requires: mysql >= 3.23
@@ -624,7 +671,7 @@ Requires: mysql-server >= 3.23
 Requires: mysql >= 4.0
 Requires: mysql-server >= 4.0
 %endif
-%if %{mysql} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk} && %{mysql5}
+%if %{mysql} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{su110} && ! %{mdk} && %{mysql5}
 Requires: mysql >= 5.0
 Requires: mysql-server >= 5.0
 %endif
@@ -650,6 +697,10 @@ Requires: mysql >= 5.0
 Requires: mysql-client >= 5.0
 %endif
 %if %{mysql} && %{su103} && %{mysql5}
+Requires: mysql >= 5.0
+Requires: mysql-client >= 5.0
+%endif
+%if %{mysql} && %{su110} && %{mysql5}
 Requires: mysql >= 5.0
 Requires: mysql-client >= 5.0
 %endif
@@ -729,7 +780,7 @@ Conflicts: bacula-sqlite
 Conflicts: bacula-postgresql
 Obsoletes: bacula-rescue
 
-%if %{su9} || %{su10} || %{su102}
+%if %{su9} || %{su10} || %{su102} || %{su103} || %{su110}
 Provides: bacula
 %endif
 
@@ -751,7 +802,11 @@ Requires: termcap
 Requires: glibc >= 2.6
 Requires: termcap
 %endif
-%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{fc5} && ! %{fc6} && ! %{fc7} && ! %{fc8}
+%if %{su110}
+Requires: glibc >= 2.8
+Requires: termcap
+%endif
+%if ! %{rh7} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{su110} && ! %{fc5} && ! %{fc6} && ! %{fc7} && ! %{fc8} && ! %{fc9}
 Requires: glibc >= 2.3
 Requires: libtermcap
 %endif
@@ -765,6 +820,10 @@ Requires: libtermcap
 %endif
 %if %{fc8}
 Requires: glibc >= 2.7
+Requires: libtermcap
+%endif
+%if %{fc9}
+Requires: glibc >= 2.8
 Requires: libtermcap
 %endif
 
@@ -882,6 +941,23 @@ Requires: fontconfig >= 2.4
 Requires: gnome-vfs2 >= 2.20
 Requires: libpng
 %endif
+%if %{gconsole} && %{su110}
+Requires: gtk2 >= 2.12
+Requires: libgnome >= 2.22
+Requires: libgnomeui >= 2.22
+Requires: glibc >= 2.8
+Requires: ORBit2
+Requires: libart_lgpl >= 2.3
+Requires: libbonobo >= 2.22
+Requires: libbonoboui >= 2.22
+Requires: bonobo-activation
+Requires: gconf2
+Requires: freetype2
+Requires: cairo
+Requires: fontconfig >= 2.4
+Requires: gnome-vfs2 >= 2.22
+Requires: libpng
+%endif
 %if %{gconsole} && %{mdk} && !%{mdv}
 Requires: gtk2 >= 2.0
 Requires: libgnomeui2
@@ -972,7 +1048,18 @@ Requires: libbonoboui >= 2.20
 Requires: GConf2
 Requires: freetype
 %endif
-%if %{gconsole} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{mdk} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8}
+%if %{gconsole} && %{fc9}  
+Requires: gtk2 >= 2.12
+Requires: libgnomeui >= 2.22
+Requires: glibc >= 2.8
+Requires: ORBit2
+Requires: libart_lgpl >= 2.3
+Requires: libbonobo >= 2.22
+Requires: libbonoboui >= 2.22
+Requires: GConf2
+Requires: freetype
+%endif
+%if %{gconsole} && !%{su9} && !%{su10} && !%{su102} && !%{su103} && !%{su110} && !%{mdk} && !%{fc3} && !%{fc4} && !%{fc5} && !%{fc6} && !%{fc7} && !%{fc8} && !%{fc9}
 Requires: gtk2 >= 2.0
 Requires: libgnomeui >= 2.0
 Requires: glibc >= 2.3
@@ -997,7 +1084,10 @@ Requires: xsu
 %if %{gconsole} && %{su103}
 Requires: xsu
 %endif
-%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103}
+%if %{gconsole} && %{su110}
+Requires: xsu
+%endif
+%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{su110}
 Requires: usermode
 %endif
 
@@ -1036,6 +1126,10 @@ Requires: gtk2 >= 2.10
 Requires: gtk2 >= 2.12
 %endif
 
+%if %{wxconsole} && %{su110}
+Requires: gtk2 >= 2.12
+%endif
+
 %if %{wxconsole} && %{fc3}  
 Requires: gtk2 >= 2.4
 %endif
@@ -1056,7 +1150,11 @@ Requires: gtk2 >= 2.10
 Requires: gtk2 >= 2.10
 %endif
 
-%if %{wxconsole} && %{fc7}  
+%if %{wxconsole} && %{fc8}  
+Requires: gtk2 >= 2.12
+%endif
+
+%if %{wxconsole} && %{fc9}  
 Requires: gtk2 >= 2.12
 %endif
 
@@ -1118,6 +1216,18 @@ Requires: libstdc++
 Requires: zlib
 %endif
 
+%if %{bat} && %{su110}
+Requires: openssl
+Requires: glibc >= 2.8
+Requires: fontconfig
+Requires: freetype2
+Requires: libgcc
+Requires: libpng
+Requires: qt >= 4.2
+Requires: libstdc++
+Requires: zlib
+%endif
+
 %if %{bat} && %{fc5}
 Requires: openssl
 Requires: glibc >= 2.4
@@ -1166,6 +1276,18 @@ Requires: libstdc++
 Requires: zlib
 %endif
 
+%if %{bat} && %{fc8}
+Requires: openssl
+Requires: glibc >= 2.8
+Requires: fontconfig
+Requires: freetype
+Requires: libgcc
+Requires: libpng
+Requires: qt4 >= 4.3
+Requires: libstdc++
+Requires: zlib
+%endif
+
 %if %{bat}
 %description bat
 %{blurb}
@@ -1185,7 +1307,7 @@ the client or server packages.
 # SuSE turns off stripping of binaries by default. In order to get
 # stripped packages we must generate debug package. RedHat and Mandriva
 # turn debug packages on by default but strip binaries regardless.
-%if %{su9} || %{su10} || %{su102} || %{su103}
+%if %{su9} || %{su10} || %{su102} || %{su103} || %{su110}
 %debug_package
 %endif
 
@@ -1199,7 +1321,7 @@ the client or server packages.
 
 %build
 
-%if %{su9} || %{su10} || %{su102} || %{su103}
+%if %{su9} || %{su10} || %{su102} || %{su103} || %{su110}
 export LDFLAGS="${LDFLAGS} -L/usr/lib/termcap"
 %endif
 
@@ -1250,6 +1372,9 @@ patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
 %if %{sqlite} && %{su103}
 patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
 %endif
+%if %{sqlite} && %{su110}
+patch platforms/suse/bacula-dir.in platforms/suse/bacula-dir-suse-sqlite.patch
+%endif
 
 # 64 bit lib location hacks
 # as of 1.39.18 it should not be necessary to enable x86_64 as configure is
@@ -1279,15 +1404,15 @@ export QTLIB=/usr/lib64/qt4/
 %configure \
         --prefix=/usr \
         --sbindir=/usr/sbin \
-        --sysconfdir=%{sysconf_dir} \
-        --with-scriptdir=%{script_dir} \
-        --with-working-dir=%{working_dir} \
-        --with-pid-dir=%{pid_dir} \
+	--sysconfdir=%{sysconf_dir} \
+	--with-scriptdir=%{script_dir} \
+	--with-working-dir=%{working_dir} \
+	--with-pid-dir=%{pid_dir} \
         --enable-smartalloc \
         --enable-client-only \
-        %if %{mdk}
-        --disable-nls \
-        %endif
+	%if %{mdk}
+	--disable-nls \
+	%endif
         --enable-static-fd
 
 make
@@ -1295,10 +1420,10 @@ make
 %configure \
         --prefix=/usr \
         --sbindir=/usr/sbin \
-        --sysconfdir=%{sysconf_dir} \
-        --with-scriptdir=%{script_dir} \
-        --with-working-dir=%{working_dir} \
-        --with-pid-dir=%{pid_dir} \
+	--sysconfdir=%{sysconf_dir} \
+	--with-scriptdir=%{script_dir} \
+	--with-working-dir=%{working_dir} \
+	--with-pid-dir=%{pid_dir} \
         --enable-smartalloc \
 %if %{gconsole}
         --enable-gnome \
@@ -1316,22 +1441,22 @@ make
         --with-postgresql \
 %endif
 %if %{wxconsole}
-        --enable-bwx-console \
+	--enable-bwx-console \
 %endif
 %if %{bat}
-        --enable-bat \
-        --with-qwt=${cwd}/%{depkgs}/qwt \
+	--enable-bat \
+	--with-qwt=${cwd}/%{depkgs}/qwt \
 %endif
 %if %{python}
-        --with-python \
+	--with-python \
 %endif
 %if %{client_only}
-        --enable-client-only \
+	--enable-client-only \
 %endif
 %if %{rh7} || %{rh8} || %{rh9} || %{fc1} || %{fc3} || %{wb3} 
-        --disable-batch-insert \
+	--disable-batch-insert \
 %endif
-        --mandir=%{_mandir} \
+	--mandir=%{_mandir} \
         --with-subsys-dir=/var/lock/subsys \
         --with-dir-user=%{director_daemon_user} \
         --with-dir-group=%{daemon_group} \
@@ -1371,7 +1496,7 @@ mkdir -p $RPM_BUILD_ROOT/usr/share/pixmaps
 %define usermode_iftrick 0
 %endif
 
-%if %{usermode_iftrick} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103}
+%if %{usermode_iftrick} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{su110}
 mkdir -p $RPM_BUILD_ROOT/etc/pam.d
 mkdir -p $RPM_BUILD_ROOT/etc/security/console.apps
 mkdir -p $RPM_BUILD_ROOT/usr/bin
@@ -1384,11 +1509,11 @@ mkdir -p $RPM_BUILD_ROOT%{sqlite_bindir}
 make \
         prefix=$RPM_BUILD_ROOT/usr \
         sbindir=$RPM_BUILD_ROOT/usr/sbin \
-        sysconfdir=$RPM_BUILD_ROOT%{sysconf_dir} \
-        scriptdir=$RPM_BUILD_ROOT%{script_dir} \
+	sysconfdir=$RPM_BUILD_ROOT%{sysconf_dir} \
+	scriptdir=$RPM_BUILD_ROOT%{script_dir} \
         working_dir=$RPM_BUILD_ROOT%{working_dir} \
-        piddir=$RPM_BUILD_ROOT%{pid_dir} \
-        mandir=$RPM_BUILD_ROOT%{_mandir} \
+	piddir=$RPM_BUILD_ROOT%{pid_dir} \
+	mandir=$RPM_BUILD_ROOT%{_mandir} \
         install
 
 %if ! %{client_only} && %{mtx}
@@ -1396,10 +1521,10 @@ cd %{depkgs}
 make \
         prefix=$RPM_BUILD_ROOT/usr \
         sbindir=$RPM_BUILD_ROOT/usr/sbin \
-        sysconfdir=$RPM_BUILD_ROOT%{sysconf_dir} \
-        scriptdir=$RPM_BUILD_ROOT%{script_dir} \
+	sysconfdir=$RPM_BUILD_ROOT%{sysconf_dir} \
+	scriptdir=$RPM_BUILD_ROOT%{script_dir} \
         working_dir=$RPM_BUILD_ROOT%{working_dir} \
-        piddir=$RPM_BUILD_ROOT%{pid_dir} \
+	piddir=$RPM_BUILD_ROOT%{pid_dir} \
         mandir=$RPM_BUILD_ROOT%{_mandir} \
         mtx-install
 cd ${cwd}
@@ -1450,7 +1575,7 @@ rm -f $RPM_BUILD_ROOT%{script_dir}/gconsole
 rm -f $RPM_BUILD_ROOT/usr/sbin/static-bacula-fd
 
 # install the init scripts
-%if %{su9} || %{su10} || %{su102} || %{su103}
+%if %{su9} || %{su10} || %{su102} || %{su103} || %{su110}
 cp -p platforms/suse/bacula-dir $RPM_BUILD_ROOT/etc/init.d/bacula-dir
 cp -p platforms/suse/bacula-fd $RPM_BUILD_ROOT/etc/init.d/bacula-fd
 cp -p platforms/suse/bacula-sd $RPM_BUILD_ROOT/etc/init.d/bacula-sd
@@ -1460,7 +1585,7 @@ cp -p platforms/mandrake/bacula-dir $RPM_BUILD_ROOT/etc/init.d/bacula-dir
 cp -p platforms/mandrake/bacula-fd $RPM_BUILD_ROOT/etc/init.d/bacula-fd
 cp -p platforms/mandrake/bacula-sd $RPM_BUILD_ROOT/etc/init.d/bacula-sd
 %endif
-%if ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{mdk}
+%if ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{su110} && ! %{mdk}
 cp -p platforms/redhat/bacula-dir $RPM_BUILD_ROOT/etc/init.d/bacula-dir
 cp -p platforms/redhat/bacula-fd $RPM_BUILD_ROOT/etc/init.d/bacula-fd
 cp -p platforms/redhat/bacula-sd $RPM_BUILD_ROOT/etc/init.d/bacula-sd
@@ -1496,6 +1621,12 @@ cp -p scripts/bacula.desktop.gnome2.xsu $RPM_BUILD_ROOT/usr/share/applications/b
 cp -p src/tray-monitor/generic.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/bacula-tray-monitor.xpm
 cp -p scripts/bacula-tray-monitor.desktop $RPM_BUILD_ROOT/usr/share/applications/bacula-tray-monitor.desktop
 %endif
+%if %{gconsole} && %{su110}
+cp -p scripts/bacula.png $RPM_BUILD_ROOT/usr/share/pixmaps/bacula.png
+cp -p scripts/bacula.desktop.gnome2.xsu $RPM_BUILD_ROOT/usr/share/applications/bacula.desktop
+cp -p src/tray-monitor/generic.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/bacula-tray-monitor.xpm
+cp -p scripts/bacula-tray-monitor.desktop $RPM_BUILD_ROOT/usr/share/applications/bacula-tray-monitor.desktop
+%endif
 %if %{wxconsole} && %{su10}
 cp -p src/wx-console/wxwin16x16.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/wxwin16x16.xpm
 cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxconsole.desktop
@@ -1508,6 +1639,10 @@ cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxcon
 cp -p src/wx-console/wxwin16x16.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/wxwin16x16.xpm
 cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxconsole.desktop
 %endif
+%if %{wxconsole} && %{su110}
+cp -p src/wx-console/wxwin16x16.xpm $RPM_BUILD_ROOT/usr/share/pixmaps/wxwin16x16.xpm
+cp -p scripts/wxconsole.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/wxconsole.desktop
+%endif
 %if %{bat} && %{su102}
 cp -p src/qt-console/images/bat_icon.png $RPM_BUILD_ROOT/usr/share/pixmaps/bat_icon.png
 cp -p scripts/bat.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
@@ -1516,7 +1651,11 @@ cp -p scripts/bat.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
 cp -p src/qt-console/images/bat_icon.png $RPM_BUILD_ROOT/usr/share/pixmaps/bat_icon.png
 cp -p scripts/bat.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
 %endif
-%if %{rh8} || %{rh9} || %{wb3} || %{fc1} || %{fc3} || %{fc4} || %{fc5} || %{fc6} || %{fc7} || %{fc8} || %{mdk}
+%if %{bat} && %{su110}
+cp -p src/qt-console/images/bat_icon.png $RPM_BUILD_ROOT/usr/share/pixmaps/bat_icon.png
+cp -p scripts/bat.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
+%endif
+%if %{rh8} || %{rh9} || %{wb3} || %{fc1} || %{fc3} || %{fc4} || %{fc5} || %{fc6} || %{fc7} || %{fc8} || %{fc9} || %{mdk}
 %define iftrick 1
 %else
 %define iftrick 0
@@ -1741,24 +1880,24 @@ DB_VER=`mysql 2>/dev/null bacula -e 'select * from Version;'|tail -n 1`
 # are we upgrading from sqlite to sqlite3?
 if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite ];then
         echo "This version of bacula-sqlite involves an upgrade to sqlite3."
-        echo "Your catalog database file is not compatible with sqlite3, thus"
-        echo "you will need to dump the data, delete the old file, and re-run"
-        echo "this rpm upgrade."
-        echo ""
-        echo "Backing up your current database..."
+	echo "Your catalog database file is not compatible with sqlite3, thus"
+	echo "you will need to dump the data, delete the old file, and re-run"
+	echo "this rpm upgrade."
+	echo ""
+	echo "Backing up your current database..."
         echo ".dump" | %{sqlite_bindir}/sqlite %{working_dir}/bacula.db > %{working_dir}/bacula_backup.sql
-        mv %{working_dir}/bacula.db %{working_dir}/bacula.db.old
-        echo "Your catalog data has been saved in %{working_dir}/bacula_backup.sql and your"
-        echo "catalog file has been renamed %{working_dir}/bacula.db.old."
-        echo ""
-        echo "Please re-run this rpm package upgrade."
-        echo "After the upgrade is complete, restore your catalog"
-        echo "with the following commands:"
-        echo "%{script_dir}/drop_sqlite3_tables"
-        echo "cd %{working_dir}"
-        echo "%{sqlite_bindir}/sqlite3 $* bacula.db < bacula_backup.sql"
-        echo "chown bacula.bacula bacula.db"
-        exit 1
+	mv %{working_dir}/bacula.db %{working_dir}/bacula.db.old
+	echo "Your catalog data has been saved in %{working_dir}/bacula_backup.sql and your"
+	echo "catalog file has been renamed %{working_dir}/bacula.db.old."
+	echo ""
+	echo "Please re-run this rpm package upgrade."
+	echo "After the upgrade is complete, restore your catalog"
+	echo "with the following commands:"
+	echo "%{script_dir}/drop_sqlite3_tables"
+	echo "cd %{working_dir}"
+	echo "%{sqlite_bindir}/sqlite3 $* bacula.db < bacula_backup.sql"
+	echo "chown bacula.bacula bacula.db"
+	exit 1
 fi
 # test for bacula database older than version 9 and sqlite3
 if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite3 ];then
@@ -1775,7 +1914,7 @@ if [ -n "$DB_VER" ] && [ "$DB_VER" -lt "9" ]; then
         echo "This bacula upgrade will update a bacula database from version 9 to 10."
         echo "You appear to be running database version $DB_VER. You must first update"
         echo "your database to version 9 and then install this upgrade. The alternative"
-        echo "is to use %{script_dir}/drop_%{db_backend}_tables to delete all your your current"
+	echo "is to use %{script_dir}/drop_%{db_backend}_tables to delete all your your current"
         echo "catalog information, then do the upgrade. Information on updating a"
         echo "database older than version 9 can be found in the release notes."
         exit 1
@@ -1789,7 +1928,7 @@ fi
 %if ! %{client_only}
 # check for and copy %{sysconf_dir}/console.conf to bconsole.conf
 if [ -s %{sysconf_dir}/console.conf ];then
-        cp -p %{sysconf_dir}/console.conf %{sysconf_dir}/bconsole.conf
+	cp -p %{sysconf_dir}/console.conf %{sysconf_dir}/bconsole.conf
 fi
 
 # create the daemon users and groups
@@ -1871,11 +2010,11 @@ DB_VER=`mysql 2>/dev/null bacula -e 'select * from Version;'|tail -n 1`
 if [ -z "$DB_VER" ]; then
         echo "Hmm, doesn't look like you have an existing database."
         echo "Granting privileges for MySQL user bacula..."
-        %{script_dir}/grant_mysql_privileges
+	%{script_dir}/grant_mysql_privileges
         echo "Creating MySQL bacula database..."
-        %{script_dir}/create_mysql_database
+	%{script_dir}/create_mysql_database
         echo "Creating bacula tables..."
-        %{script_dir}/make_mysql_tables
+	%{script_dir}/make_mysql_tables
 
 # check to see if we need to upgrade a 1.38 or lower database
 elif [ "$DB_VER" -lt "10" ]; then
@@ -1883,7 +2022,7 @@ elif [ "$DB_VER" -lt "10" ]; then
         echo "Backing up your current database..."
         mysqldump -f --opt bacula | bzip2 > %{working_dir}/bacula_backup.sql.bz2
         echo "Upgrading bacula database ..."
-        %{script_dir}/update_mysql_tables
+	%{script_dir}/update_mysql_tables
         echo "If bacula works correctly you can remove the backup file %{working_dir}/bacula_backup.sql.bz2"
 
 fi
@@ -1899,17 +2038,17 @@ if [ -s %{working_dir}/bacula.db ]; then
                 echo "Backing up your current database..."
                 echo ".dump" | %{sqlite_bindir}/sqlite3 %{working_dir}/bacula.db | bzip2 > %{working_dir}/bacula_backup.sql.bz2
                 echo "Upgrading bacula database ..."
-                %{script_dir}/update_sqlite3_tables
+		%{script_dir}/update_sqlite3_tables
                 echo "If bacula works correctly you can remove the backup file %{working_dir}/bacula_backup.sql.bz2"
         fi
 else
         # create the database and tables
         echo "Hmm, doesn't look like you have an existing database."
         echo "Creating SQLite database..."
-        %{script_dir}/create_sqlite3_database
-        chown %{director_daemon_user}.%{daemon_group} %{working_dir}/bacula.db
+	%{script_dir}/create_sqlite3_database
+	chown %{director_daemon_user}.%{daemon_group} %{working_dir}/bacula.db
         echo "Creating the SQLite tables..."
-        %{script_dir}/make_sqlite3_tables
+	%{script_dir}/make_sqlite3_tables
 fi
 %endif
 
@@ -1922,11 +2061,11 @@ DB_VER=`echo 'select * from Version;' | psql bacula 2>/dev/null | tail -3 | head
 if [ -z "$DB_VER" ]; then
         echo "Hmm, doesn't look like you have an existing database."
         echo "Creating PostgreSQL bacula database..."
-        %{script_dir}/create_postgresql_database
+	%{script_dir}/create_postgresql_database
         echo "Creating bacula tables..."
-        %{script_dir}/make_postgresql_tables
+	%{script_dir}/make_postgresql_tables
         echo "Granting privileges for PostgreSQL user bacula..."
-        %{script_dir}/grant_postgresql_privileges
+	%{script_dir}/grant_postgresql_privileges
 
 # check to see if we need to upgrade a 1.38 or lower database
 elif [ "$DB_VER" -lt "10" ]; then
@@ -1934,7 +2073,7 @@ elif [ "$DB_VER" -lt "10" ]; then
         echo "Backing up your current database..."
         pg_dump bacula | bzip2 > %{working_dir}/bacula_backup.sql.bz2
         echo "Upgrading bacula database ..."
-        %{script_dir}/update_postgresql_tables
+	%{script_dir}/update_postgresql_tables
         echo "If bacula works correctly you can remove the backup file %{working_dir}/bacula_backup.sql.bz2"
         
 fi
@@ -1943,7 +2082,7 @@ fi
 %if ! %{client_only}
 # generate passwords if needed
 if [ -d %{sysconf_dir} ]; then
-        cd %{sysconf_dir}
+	cd %{sysconf_dir}
         for file in *.conf; do
                 for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
                         need_password=`grep $string $file 2>/dev/null`
@@ -2053,7 +2192,7 @@ fi
 
 # generate passwords if needed
 if [ -d %{sysconf_dir} ]; then
-        cd %{sysconf_dir}
+	cd %{sysconf_dir}
         for file in *.conf; do
                 for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
                         need_password=`grep $string $file 2>/dev/null`
@@ -2110,7 +2249,7 @@ echo "The database update scripts were installed to %{script_dir}/updatedb"
 %{_mandir}/man1/bacula-tray-monitor.1.%{manpage_ext}
 %endif
 
-%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103}
+%if %{gconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{su110}
 # add the console helper files
 %config(noreplace,missingok) /etc/pam.d/bgnome-console
 %config(noreplace,missingok) /etc/security/console.apps/bgnome-console
@@ -2130,7 +2269,7 @@ fi
 %post gconsole
 # generate passwords if needed
 if [ -d %{sysconf_dir} ]; then
-        cd %{sysconf_dir}
+	cd %{sysconf_dir}
         for file in *.conf; do
                 for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
                         need_password=`grep $string $file 2>/dev/null`
@@ -2155,7 +2294,7 @@ fi
 %{_mandir}/man1/bacula-bwxconsole.1.%{manpage_ext}
 %endif
 
-%if %{wxconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103}
+%if %{wxconsole} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{su110}
 # add the console helper files
 %config(noreplace,missingok) /etc/pam.d/bwx-console
 %config(noreplace,missingok) /etc/security/console.apps/bwx-console
@@ -2175,7 +2314,7 @@ fi
 %post wxconsole
 # generate passwords if needed
 if [ -d %{sysconf_dir} ]; then
-        cd %{sysconf_dir}
+	cd %{sysconf_dir}
         for file in *.conf; do
                 for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
                         need_password=`grep $string $file 2>/dev/null`
@@ -2200,7 +2339,7 @@ fi
 %{_mandir}/man1/bat.1.%{manpage_ext}
 %endif
 
-%if %{bat} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103}
+%if %{bat} && ! %{su9} && ! %{su10} && ! %{su102} && ! %{su103} && ! %{su110}
 # add the console helper files
 %config(noreplace,missingok) /etc/pam.d/bat
 %config(noreplace,missingok) /etc/security/console.apps/bat
@@ -2220,7 +2359,7 @@ fi
 %post bat
 # generate passwords if needed
 if [ -d %{sysconf_dir} ]; then
-        cd %{sysconf_dir}
+	cd %{sysconf_dir}
         for file in *.conf; do
                 for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
                         need_password=`grep $string $file 2>/dev/null`
@@ -2235,6 +2374,10 @@ fi
 %endif
 
 %changelog
+* Sat Jun 28 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add su110 target
+* Sat May 24 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add fc9 target
 * Sun Mar 30 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - FHS compatibility changes
 * Sat Feb 16 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>

@@ -86,6 +86,7 @@ CAT_FILES := \
 	grant_mysql_privileges.sql \
 	make_mysql_catalog_backup.cmd \
 	create_postgresql_database.cmd \
+	create_postgresql_database.sql \
 	drop_postgresql_database.cmd \
 	make_postgresql_tables.cmd \
 	make_postgresql_tables.sql \
