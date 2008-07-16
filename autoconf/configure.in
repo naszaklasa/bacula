@@ -1244,6 +1244,16 @@ AC_ARG_WITH(db_user,
 )
 AC_SUBST(db_user)
 
+db_password=
+AC_ARG_WITH(db_password,
+    [  --with-db-password=UNAME 	   specify database password (default *none*)]
+    [
+	if test "x$withval" != "x" ; then
+	     db_password=$withval
+	fi
+    ]
+)
+AC_SUBST(db_password)
 
 #
 # Handle users and groups for each daemon

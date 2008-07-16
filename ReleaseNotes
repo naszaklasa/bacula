@@ -1,14 +1,8 @@
 
-       Release Notes for Bacula 2.4.0
+       Release Notes for Bacula 2.4.1
 
   Bacula code: Total files = 500 Total lines = 188,654 (*.h *.c *.in)
 
-This Director and Storage daemon must be upgraded at the same time,
-but they should be compatible with all 2.0.x File daemons, unless you
-use some of the new features that affect the FD.  In other words, you should
-not have to upgrade all your File daemons when you upgrade. There is
-no database upgrade needed from version 2.0.x to 2.2.0 nor from version
-2.2.x to version 2.4.0
 
 ==================   Warning !!!!!! ==========================
 As of Version 2.4.0, the Win32 FD should not descend into 
@@ -19,6 +13,73 @@ be backed up, much like Unix hardlinked files.  If you want
 reparse directories backed up, you must explicitly include them
 in your FileSet.
 ==============================================================
+
+Bugs Fixed:
+ 1103, 1100, 1105, 1094, 1109, 1106, 1101, 1102, 1112               
+ 1117, 1116, 1097.
+
+Change summary:
+-  Clear in-use bit on vol when unused while swapping.
+-  Remove sleep at end of ./bacula
+-  Clear hash packet for hardlinked files correctly. This corrects
+   a long standing bug where hardlinked files selected individually
+   would occasionally not be restored.
+-  Apply Eric's patch to ensure that autoprune does not return
+   a Volume not in the autochanger unless requested to do so.
+-  Correct bat restore display of multiple drives. This fixes    
+   bug #1117.
+-  Do find_a_volume() each time an unload is done. This
+   fixes the failure of maxvol2-test.
+-  Use Qmsg() in job.c watchdog callback.
+-  Release main control rwlock if ABORTing.
+-  Make watchdog connect timeout queue messages rather than sending
+   directly to avoid lock conflicts with the real thread.
+-  Remove const char that causes problems with Python, which has
+   older 'incorrect' headers.
+-  Add const char in dbd.c to avoid compiler warnings.
+-  Fix mtx-changer to detect both versions of Ubuntu (Debian)
+   mt. This fixes bug #1116.
+-  Fix failure of 2drive-concurrent-test. Always read label;
+   clear_unload() only after drive is defined in acquire_for_read().
+-  Generally clean up the manual tape loading code. The main
+   conceptial change is that when a volume is marked to be unloaded,
+   its volume name is retained, and it is only marked as unloaded
+   when either the autoloader says it is unloaded or another tape
+   is read on that drive.
+-  Fix a recycling problem with two autochangers reported in bug
+   #1106. This may also (unlikely) fix a second recycling bug as
+   reported in #1103.
+-  Fix a SD lock volumes deadlock problem reported in bug #1100.
+-  Fix format problem in bscan output reported in bug #1105.
+-  Copy more data when restarting a job so that run
+   overrides are kept. This should fix bug #1094.
+-  Backport updates to jobq.c where possible.
+-  Fix bug where SD did not ask operator if the device could not
+   be opened. Reported by Eric.
+-  Add dbuser to DIR conf file (replaces user).
+-  Add --with-db-password to ./configure
+-  Fix regress to handle db_password.
+-  Fix a couple of pedantic compiler warnings.
+-  Fix bug when starting a restore on a storage that doesn't
+   have the requested MediaType.
+-  More work on word alignments -- eliminate all ints from
+   the configuration routines.
+-  Fix bug reported by Scott Barninger where the bacula script
+   refers to scripts in the wrong directory. Needed to meet the
+   requirements of recent FHS location changes.
+-  Fix word alignment problem on non-Intel 64 bit machines
+   such as Solaris.  This should fix bug #1097 -- bus error in SD.
+-  Add missing win32/patches/wxWidgets.patch to 2.4 repository.
+
+=====================
+
+Release 2.4.0
+This Director and Storage daemon must be upgraded at the same time,
+but they should be compatible with all 2.0.x File daemons, unless you
+use some of the new features that affect the FD.  In other words, you should
+not have to upgrade all your File daemons when you upgrade. There is
+no database upgrade needed from version 2.0.x to 2.2.0 nor from version
+2.2.x to version 2.4.0
 
 This release consists mainly of a number of bug fixes since 2.2.x
 but most importantly, a rewrite of significant portions of the 

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -88,8 +88,8 @@ static RES_ITEM cons_items[] = {
    {"rcfile",         store_dir,      ITEM(res_cons.rc_file), 0, 0, 0},
    {"historyfile",    store_dir,      ITEM(res_cons.hist_file), 0, 0, 0},
    {"password",       store_password, ITEM(res_cons.password), 0, ITEM_REQUIRED, 0},
-   {"tlsenable",      store_bit,     ITEM(res_cons.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_bit,     ITEM(res_cons.tls_require), 1, 0, 0},
+   {"tlsenable",      store_bool,     ITEM(res_cons.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_bool,     ITEM(res_cons.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(res_cons.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(res_cons.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(res_cons.tls_certfile), 0, 0, 0},
@@ -104,11 +104,11 @@ static RES_ITEM cons_items[] = {
 static RES_ITEM dir_items[] = {
    {"name",           store_name,      ITEM(res_dir.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description",    store_str,       ITEM(res_dir.hdr.desc), 0, 0, 0},
-   {"dirport",        store_int,       ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
+   {"dirport",        store_pint32,    ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",        store_str,       ITEM(res_dir.address),  0, 0, 0},
    {"password",       store_password,  ITEM(res_dir.password), 0, ITEM_REQUIRED, 0},
-   {"tlsenable",      store_bit,     ITEM(res_dir.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_bit,     ITEM(res_dir.tls_require), 1, 0, 0},
+   {"tlsenable",      store_bool,      ITEM(res_dir.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_bool,      ITEM(res_dir.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(res_dir.tls_certfile), 0, 0, 0},

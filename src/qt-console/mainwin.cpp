@@ -27,7 +27,7 @@
 */
 
 /*
- *   Version $Id: mainwin.cpp 6956 2008-05-12 09:32:54Z kerns $
+ *   Version $Id: mainwin.cpp 7311 2008-07-05 10:52:36Z kerns $
  *
  *  Main Window control for bat (qt-console)
  *
@@ -498,6 +498,11 @@ void MainWin::set_statusf(const char *fmt, ...)
 void MainWin::set_status_ready()
 {
    set_status(" Ready");
+}
+
+void MainWin::set_status(const QString &str)
+{
+   statusBar()->showMessage(str);
 }
 
 void MainWin::set_status(const char *buf)

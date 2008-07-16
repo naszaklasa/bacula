@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, January MM, September MM
  *
- *     Version $Id: bat_conf.cpp 4992 2007-06-07 14:46:43Z kerns $
+ *     Version $Id: bat_conf.cpp 7164 2008-06-18 19:22:03Z kerns $
  */
 
 #include "bacula.h"
@@ -79,7 +79,7 @@ int  res_all_size = sizeof(res_all);
 static RES_ITEM dir_items[] = {
    {"name",        store_name,     ITEM(dir_res.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(dir_res.hdr.desc), 0, 0, 0},
-   {"dirport",     store_int,      ITEM(dir_res.DIRport),  0, ITEM_DEFAULT, 9101},
+   {"dirport",     store_pint32,   ITEM(dir_res.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",     store_str,      ITEM(dir_res.address),  0, ITEM_REQUIRED, 0},
    {"password",    store_password, ITEM(dir_res.password), 0, 0, 0},
    {"tlsenable",      store_bool,    ITEM(dir_res.tls_enable), 1, 0, 0},

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,7 @@
  *
  *  Kern E. Sibbald, December 2000
  *
- *  Version $Id: jcr.c 5713 2007-10-03 11:36:47Z kerns $
+ *  Version $Id: jcr.c 7298 2008-07-03 14:46:12Z kerns $
  *
  *  These routines are thread safe.
  *
@@ -428,7 +428,7 @@ void free_jcr(JCR *jcr)
    lock_jcr_chain();
    jcr->dec_use_count();              /* decrement use count */
    if (jcr->use_count() < 0) {
-      Emsg2(M_ERROR, 0, _("JCR use_count=%d JobId=%d\n"),
+      Jmsg2(jcr, M_ERROR, 0, _("JCR use_count=%d JobId=%d\n"),
          jcr->use_count(), jcr->JobId);
    }
    Dmsg3(3400, "Dec free_jcr 0x%x use_count=%d jobid=%d\n", jcr, jcr->use_count(), jcr->JobId);
@@ -600,7 +600,7 @@ void set_jcr_job_status(JCR *jcr, int JobStatus)
     * For a set of errors, ... keep the current status
     *   so it isn't lost. For all others, set it.
     */
-   Dmsg2(100, "OnEntry JobStatus=%c set=%c\n", jcr->JobStatus, JobStatus);
+   Dmsg2(200, "OnEntry JobStatus=%c set=%c\n", jcr->JobStatus, JobStatus);
    switch (jcr->JobStatus) {
    case JS_ErrorTerminated:
    case JS_FatalError:
@@ -620,7 +620,7 @@ void set_jcr_job_status(JCR *jcr, int JobStatus)
    default:
       jcr->JobStatus = JobStatus;
    }
-   Dmsg2(100, "OnExit JobStatus=%c set=%c\n", jcr->JobStatus, JobStatus);
+   Dmsg2(200, "OnExit JobStatus=%c set=%c\n", jcr->JobStatus, JobStatus);
 }
 
 #ifdef TRACE_JCR_CHAIN
@@ -758,7 +758,7 @@ static void jcr_timeout_check(watchdog_t *self)
          if (timer_start && (watchdog_time - timer_start) > fd->timeout) {
             fd->timer_start = 0;      /* turn off timer */
             fd->set_timed_out();
-            Jmsg(jcr, M_ERROR, 0, _(
+            Qmsg(jcr, M_ERROR, 0, _(
 "Watchdog sending kill after %d secs to thread stalled reading Storage daemon.\n"),
                  watchdog_time - timer_start);
             pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
@@ -770,7 +770,7 @@ static void jcr_timeout_check(watchdog_t *self)
          if (timer_start && (watchdog_time - timer_start) > fd->timeout) {
             fd->timer_start = 0;      /* turn off timer */
             fd->set_timed_out();
-            Jmsg(jcr, M_ERROR, 0, _(
+            Qmsg(jcr, M_ERROR, 0, _(
 "Watchdog sending kill after %d secs to thread stalled reading File daemon.\n"),
                  watchdog_time - timer_start);
             pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
@@ -782,7 +782,7 @@ static void jcr_timeout_check(watchdog_t *self)
          if (timer_start && (watchdog_time - timer_start) > fd->timeout) {
             fd->timer_start = 0;      /* turn off timer */
             fd->set_timed_out();
-            Jmsg(jcr, M_ERROR, 0, _(
+            Qmsg(jcr, M_ERROR, 0, _(
 "Watchdog sending kill after %d secs to thread stalled reading Director.\n"),
                  watchdog_time - timer_start);
             pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);

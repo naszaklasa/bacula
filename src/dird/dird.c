@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: dird.c 6747 2008-04-06 10:00:46Z kerns $
+ *   Version $Id: dird.c 7164 2008-06-18 19:22:03Z kerns $
  */
 
 #include "bacula.h"
@@ -642,7 +642,7 @@ static bool check_resources()
          /* Transfer default items from JobDefs Resource */
          for (i=0; job_items[i].name; i++) {
             char **def_svalue, **svalue;  /* string value */
-            int *def_ivalue, *ivalue;     /* integer value */
+            uint32_t *def_ivalue, *ivalue;     /* integer value */
             bool *def_bvalue, *bvalue;    /* bool value */
             int64_t *def_lvalue, *lvalue; /* 64 bit values */
             uint32_t offset;
@@ -692,20 +692,20 @@ static bool check_resources()
                      set_bit(i, job->hdr.item_present);
                   }
                /*
-                * Handle integer fields
+                * Handle 32 bit integer fields
                 *    Note, our store_bit does not handle bitmaped fields
                 */
                } else if (job_items[i].handler == store_bit     ||
-                          job_items[i].handler == store_pint    ||
+                          job_items[i].handler == store_pint32  ||
                           job_items[i].handler == store_jobtype ||
                           job_items[i].handler == store_level   ||
-                          job_items[i].handler == store_pint    ||
+                          job_items[i].handler == store_int32   ||
                           job_items[i].handler == store_migtype ||
                           job_items[i].handler == store_replace) {
-                  def_ivalue = (int *)((char *)(job->jobdefs) + offset);
+                  def_ivalue = (uint32_t *)((char *)(job->jobdefs) + offset);
                   Dmsg5(400, "Job \"%s\", field \"%s\" def_ivalue=%d item %d offset=%u\n",
                        job->name(), job_items[i].name, *def_ivalue, i, offset);
-                  ivalue = (int *)((char *)job + offset);
+                  ivalue = (uint32_t *)((char *)job + offset);
                   *ivalue = *def_ivalue;
                   set_bit(i, job->hdr.item_present);
                /*

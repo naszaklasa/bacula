@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: job.c 6747 2008-04-06 10:00:46Z kerns $
+ *   Version $Id: job.c 7263 2008-06-30 12:56:49Z kerns $
  *
  */
 
@@ -1140,7 +1140,7 @@ static int bootstrap_cmd(JCR *jcr)
    }
 
    while (bnet_recv(dir) >= 0) {
-       Dmsg1(200, "filed<dird: bootstrap file %s\n", dir->msg);
+       Dmsg1(200, "filed<dird: bootstrap: %s", dir->msg);
        fputs(dir->msg, bs);
    }
    fclose(bs);

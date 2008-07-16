@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,7 +28,7 @@
 /*
  * Resource codes -- they must be sequential for indexing
  *
- *   Version $Id: stored_conf.h 6831 2008-04-16 09:49:47Z kerns $
+ *   Version $Id: stored_conf.h 7164 2008-06-18 19:22:03Z kerns $
  */
 
 enum {
@@ -124,9 +124,9 @@ public:
    char *changer_command;             /* Changer command  -- external program */
    char *alert_command;               /* Alert command -- external program */
    char *spool_directory;             /* Spool file directory */
-   int   dev_type;                    /* device type */
-   int   label_type;                  /* label type */
-   int   autoselect;                  /* Automatically select from AutoChanger */
+   uint32_t dev_type;                 /* device type */
+   uint32_t label_type;               /* label type */
+   bool autoselect;                   /* Automatically select from AutoChanger */
    uint32_t drive_index;              /* Autochanger drive index */
    uint32_t cap_bits;                 /* Capabilities of this device */
    utime_t max_changer_wait;          /* Changer timeout */
