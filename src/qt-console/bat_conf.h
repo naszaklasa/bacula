@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, March 2002
  *
- *     Version $Id: bat_conf.h 4992 2007-06-07 14:46:43Z kerns $
+ *     Version $Id: bat_conf.h 7164 2008-06-18 19:22:03Z kerns $
  */
 
 #ifndef _BAT_CONF_H_
@@ -64,7 +64,7 @@ enum {
 class DIRRES {
 public:
    RES   hdr;
-   int   DIRport;                     /* UA server port */
+   uint32_t DIRport;                  /* UA server port */
    char *address;                     /* UA server address */
    char *password;                    /* UA server password */
    bool tls_enable;                   /* Enable TLS */

@@ -46,7 +46,7 @@
 *
 *     Nicolas Boichat, August MMIV
 *
-*     Version $Id: tray_conf.c 4992 2007-06-07 14:46:43Z kerns $
+*     Version $Id: tray_conf.c 7164 2008-06-18 19:22:03Z kerns $
 */
 
 #include "bacula.h"
@@ -82,7 +82,7 @@ int  res_all_size = sizeof(res_all);
 static RES_ITEM mon_items[] = {
    {"name",        store_name,     ITEM(res_monitor.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(res_monitor.hdr.desc), 0, 0, 0},
-   {"requiressl",  store_bit,    ITEM(res_monitor.require_ssl), 1, ITEM_DEFAULT, 0},
+   {"requiressl",  store_bool,     ITEM(res_monitor.require_ssl), 1, ITEM_DEFAULT, 0},
    {"password",    store_password, ITEM(res_monitor.password), 0, ITEM_REQUIRED, 0},
    {"refreshinterval",  store_time,ITEM(res_monitor.RefreshInterval),  0, ITEM_DEFAULT, 5},
    {"fdconnecttimeout", store_time,ITEM(res_monitor.FDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
@@ -94,9 +94,9 @@ static RES_ITEM mon_items[] = {
 static RES_ITEM dir_items[] = {
    {"name",        store_name,     ITEM(res_dir.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(res_dir.hdr.desc), 0, 0, 0},
-   {"dirport",     store_int,      ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
+   {"dirport",     store_pint32,   ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",     store_str,      ITEM(res_dir.address),  0, 0, 0},
-   {"enablessl",   store_bit,    ITEM(res_dir.enable_ssl), 1, ITEM_DEFAULT, 0},
+   {"enablessl",   store_bool,     ITEM(res_dir.enable_ssl), 1, ITEM_DEFAULT, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -110,9 +110,9 @@ static RES_ITEM cli_items[] = {
    {"name",     store_name,       ITEM(res_client.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,     ITEM(res_client.hdr.desc), 0, 0, 0},
    {"address",  store_str,        ITEM(res_client.address),  0, ITEM_REQUIRED, 0},
-   {"fdport",   store_pint,       ITEM(res_client.FDport),   0, ITEM_DEFAULT, 9102},
+   {"fdport",   store_pint32,     ITEM(res_client.FDport),   0, ITEM_DEFAULT, 9102},
    {"password", store_password,   ITEM(res_client.password), 0, ITEM_REQUIRED, 0},
-   {"enablessl", store_bit,     ITEM(res_client.enable_ssl), 1, ITEM_DEFAULT, 0},
+   {"enablessl", store_bool,      ITEM(res_client.enable_ssl), 1, ITEM_DEFAULT, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -123,12 +123,12 @@ static RES_ITEM cli_items[] = {
 static RES_ITEM store_items[] = {
    {"name",        store_name,     ITEM(res_store.hdr.name),   0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(res_store.hdr.desc),   0, 0, 0},
-   {"sdport",      store_pint,     ITEM(res_store.SDport),     0, ITEM_DEFAULT, 9103},
+   {"sdport",      store_pint32,   ITEM(res_store.SDport),     0, ITEM_DEFAULT, 9103},
    {"address",     store_str,      ITEM(res_store.address),    0, ITEM_REQUIRED, 0},
    {"sdaddress",   store_str,      ITEM(res_store.address),    0, 0, 0},
    {"password",    store_password, ITEM(res_store.password),   0, ITEM_REQUIRED, 0},
    {"sdpassword",  store_password, ITEM(res_store.password),   0, 0, 0},
-   {"enablessl",   store_bit,    ITEM(res_store.enable_ssl),  1, ITEM_DEFAULT, 0},
+   {"enablessl",   store_bool,     ITEM(res_store.enable_ssl),  1, ITEM_DEFAULT, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 

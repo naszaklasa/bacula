@@ -1,16 +1,7 @@
 /*
- *
- * Bacula interface to Python for the Storage Daemon
- *
- * Kern Sibbald, January MMV
- *
- *   Version $Id: pythonsd.c 4992 2007-06-07 14:46:43Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ * Bacula interface to Python for the Storage Daemon
+ *
+ * Kern Sibbald, January MMV
+ *
+ *   Version $Id: pythonsd.c 7297 2008-07-03 10:50:08Z kerns $
+ *
+ */
 
 
 #include "bacula.h"
@@ -59,7 +59,7 @@ PyMethodDef JobMethods[] = {
 
 struct s_vars {
    const char *name;
-   char *fmt;
+   const char *fmt;
 };
 
 static struct s_vars getvars[] = {
@@ -116,31 +116,31 @@ PyObject *job_getattr(PyObject *self, char *attrname)
    }  
    switch (i) {
    case 0:                            /* Job */
-      return Py_BuildValue(getvars[i].fmt, jcr->job_name);    /* Non-unique name */
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->job_name);    /* Non-unique name */
    case 1:                            /* SD's name */
-      return Py_BuildValue(getvars[i].fmt, my_name);
+      return Py_BuildValue((char *)getvars[i].fmt, my_name);
    case 2:                            /* level */
-      return Py_BuildValue(getvars[i].fmt, job_level_to_str(jcr->JobLevel));
+      return Py_BuildValue((char *)getvars[i].fmt, job_level_to_str(jcr->JobLevel));
    case 3:                            /* type */
-      return Py_BuildValue(getvars[i].fmt, job_type_to_str(jcr->JobType));
+      return Py_BuildValue((char *)getvars[i].fmt, job_type_to_str(jcr->JobType));
    case 4:                            /* JobId */
-      return Py_BuildValue(getvars[i].fmt, jcr->JobId);
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->JobId);
    case 5:                            /* Client */
-      return Py_BuildValue(getvars[i].fmt, jcr->client_name);
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->client_name);
    case 6:                            /* Pool */
-      return Py_BuildValue(getvars[i].fmt, jcr->dcr->pool_name);
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->dcr->pool_name);
    case 7:                            /* MediaType */
-      return Py_BuildValue(getvars[i].fmt, jcr->dcr->media_type);
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->dcr->media_type);
    case 8:                            /* JobName */
-      return Py_BuildValue(getvars[i].fmt, jcr->Job);
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->Job);
    case 9:                            /* JobStatus */
       buf[1] = 0;
       buf[0] = jcr->JobStatus;
-      return Py_BuildValue(getvars[i].fmt, buf);
+      return Py_BuildValue((char *)getvars[i].fmt, buf);
    case 10:
-      return Py_BuildValue(getvars[i].fmt, jcr->dcr->VolumeName);
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->dcr->VolumeName);
    case 11:
-      return Py_BuildValue(getvars[i].fmt, jcr->dcr->dev_name);
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->dcr->dev_name);
    }
    bsnprintf(errmsg, sizeof(errmsg), _("Attribute %s not found."), attrname);
 bail_out:
@@ -181,7 +181,7 @@ int job_setattr(PyObject *self, char *attrname, PyObject *value)
    }
    /* Get argument value ***FIXME*** handle other formats */
    if (setvars[i].fmt != NULL) {
-      if (!PyArg_Parse(value, setvars[i].fmt, &strval)) {
+      if (!PyArg_Parse(value, (char *)setvars[i].fmt, &strval)) {
          PyErr_SetString(PyExc_TypeError, _("Read-only attribute"));
          return -1;
       }
@@ -255,7 +255,7 @@ int generate_job_event(JCR *jcr, const char *event)
    }
 
    bstrncpy(jcr->event, event, sizeof(jcr->event));
-   result = PyObject_CallFunction(method, "O", Job);
+   result = PyObject_CallFunction(method, (char *)"O", Job);
    jcr->event[0] = 0;             /* no event in progress */
    if (result == NULL) {
       if (PyErr_Occurred()) {

@@ -34,7 +34,7 @@
 
    Thanks to the TAR programmers.
 
-     Version $Id: find_one.c 7001 2008-05-21 11:59:00Z kerns $
+     Version $Id: find_one.c 7325 2008-07-06 13:06:15Z kerns $
 
  */
 
@@ -397,6 +397,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
              ff_pkt->link = lp->name;
              ff_pkt->type = FT_LNKSAVED;       /* Handle link, file already saved */
              ff_pkt->LinkFI = lp->FileIndex;
+             ff_pkt->linked = NULL;
              return handle_file(ff_pkt, pkt, top_level);
          }
 
@@ -405,9 +406,10 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       lp = (struct f_link *)bmalloc(sizeof(struct f_link) + len);
       lp->ino = ff_pkt->statp.st_ino;
       lp->dev = ff_pkt->statp.st_dev;
+      lp->FileIndex = 0;              /* set later */
       bstrncpy(lp->name, fname, len);
-       lp->next = ff_pkt->linkhash[linkhash];
-       ff_pkt->linkhash[linkhash] = lp;
+      lp->next = ff_pkt->linkhash[linkhash];
+      ff_pkt->linkhash[linkhash] = lp;
       ff_pkt->linked = lp;            /* mark saved link */
    } else {
       ff_pkt->linked = NULL;
@@ -685,8 +687,8 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
     * On FreeBSD, all block devices are character devices, so
     *   to be able to read a raw disk, we need the check for
     *   a character device.
-    * crw-r-----  1 root  operator  - 116, 0x00040002 Jun  9 19:32 /dev/ad0s3
-    * crw-r-----  1 root  operator  - 116, 0x00040002 Jun  9 19:32 /dev/rad0s3
+    * crw-r----- 1 root  operator - 116, 0x00040002 Jun 9 19:32 /dev/ad0s3
+    * crw-r----- 1 root  operator - 116, 0x00040002 Jun 9 19:32 /dev/rad0s3
     */
    if (top_level && (S_ISBLK(ff_pkt->statp.st_mode) || S_ISCHR(ff_pkt->statp.st_mode))) {
 #else

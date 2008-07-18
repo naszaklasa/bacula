@@ -30,7 +30,7 @@
  *
  *    Written by Kern E. Sibbald, March MM.
  *
- *   Version $Id: base64.c 5165 2007-07-13 04:44:08Z kerns $
+ *   Version $Id: base64.c 7272 2008-07-01 10:18:27Z kerns $
  */
 
 

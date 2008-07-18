@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, Feb MM
  *
- *    Version $Id: dird_conf.h 5713 2007-10-03 11:36:47Z kerns $
+ *    Version $Id: dird_conf.h 7164 2008-06-18 19:22:03Z kerns $
  */
 
 /* NOTE:  #includes at the end of this file */
@@ -72,20 +72,20 @@ enum {
 /* Used for certain KeyWord tables */
 struct s_kw {
    const char *name;
-   int token;
+   int32_t token;
 };
 
 /* Job Level keyword structure */
 struct s_jl {
-   const char *level_name;                  /* level keyword */
-   int  level;                        /* level */
-   int  job_type;                     /* JobType permitting this level */
+   const char *level_name;            /* level keyword */
+   int32_t level;                     /* level */
+   int32_t job_type;                  /* JobType permitting this level */
 };
 
 /* Job Type keyword structure */
 struct s_jt {
    const char *type_name;
-   int job_type;
+   int32_t job_type;
 };
 
 /* Definition of the contents of each Resource */
@@ -147,10 +147,10 @@ public:
    RES hdr;
 
    bool found;                        /* found with SD */
-   int num_writers;                   /* number of writers */
-   int max_writers;                   /* = 1 for files */
-   int reserved;                      /* number of reserves */
-   int num_drives;                    /* for autochanger */
+   uint32_t num_writers;              /* number of writers */
+   uint32_t max_writers;              /* = 1 for files */
+   uint32_t reserved;                 /* number of reserves */
+   int32_t num_drives;                /* for autochanger */
    bool autochanger;                  /* set if device is autochanger */
    bool open;                         /* drive open */
    bool append;                       /* in append mode */
@@ -220,13 +220,13 @@ class CAT {
 public:
    RES   hdr;
 
-   int   db_port;                     /* Port */
+   uint32_t db_port;                  /* Port */
    char *db_address;                  /* host name for remote access */
    char *db_socket;                   /* Socket for local access */
    char *db_password;
    char *db_user;
    char *db_name;
-   int   mult_db_connections;         /* set if multiple connections wanted */
+   uint32_t mult_db_connections;         /* set if multiple connections wanted */
 
    /* Methods */
    char *name() const;
@@ -243,7 +243,7 @@ class CLIENT {
 public:
    RES   hdr;
 
-   int   FDport;                      /* Where File daemon listens */
+   uint32_t FDport;                   /* Where File daemon listens */
    utime_t FileRetention;             /* file retention period in seconds */
    utime_t JobRetention;              /* job retention period in seconds */
    utime_t heartbeat_interval;        /* Interval to send heartbeats */
@@ -277,8 +277,8 @@ class STORE {
 public:
    RES   hdr;
 
-   int   SDport;                      /* port where Directors connect */
-   int   SDDport;                     /* data port for File daemon */
+   uint32_t SDport;                   /* port where Directors connect */
+   uint32_t SDDport;                  /* data port for File daemon */
    char *address;
    char *password;
    char *media_type;
@@ -296,7 +296,7 @@ public:
    bool  autochanger;                 /* set if autochanger */
    int64_t StorageId;                 /* Set from Storage DB record */
    utime_t heartbeat_interval;        /* Interval to send heartbeats */
-   int  drives;                       /* number of drives in autochanger */
+   uint32_t drives;                   /* number of drives in autochanger */
 
    /* Methods */
    char *dev_name() const;
@@ -354,10 +354,10 @@ class JOB {
 public:
    RES   hdr;
 
-   int   JobType;                     /* job type (backup, verify, restore */
-   int   JobLevel;                    /* default backup/verify level */
-   int   Priority;                    /* Job priority */
-   int   RestoreJobId;                /* What -- JobId to restore */
+   uint32_t JobType;                  /* job type (backup, verify, restore */
+   uint32_t JobLevel;                 /* default backup/verify level */
+   uint32_t Priority;                 /* Job priority */
+   uint32_t RestoreJobId;             /* What -- JobId to restore */
    char *RestoreWhere;                /* Where on disk to restore -- directory */
    char *RegexWhere;                  /* RegexWhere option */
    char *strip_prefix;                /* remove prefix from filename  */
@@ -370,7 +370,7 @@ public:
       char *WriteBootstrap;           /* Where to write bootstrap Job updates */
       char *WriteVerifyList;          /* List of changed files */
    };
-   int   replace;                     /* How (overwrite, ..) */
+   uint32_t replace;                  /* How (overwrite, ..) */
    utime_t MaxRunTime;                /* max run time in seconds */
    utime_t MaxWaitTime;               /* max blocking time in seconds */
    utime_t FullMaxWaitTime;           /* Max Full job wait time */
@@ -381,7 +381,7 @@ public:
    utime_t JobRetention;              /* job retention period in seconds */
    uint32_t MaxConcurrentJobs;        /* Maximum concurrent jobs */
    int64_t spool_size;                /* Size of spool file for this job */
-   int RescheduleTimes;               /* Number of times to reschedule job */
+   int32_t RescheduleTimes;           /* Number of times to reschedule job */
    bool RescheduleOnError;            /* Set to reschedule on error */
    bool PrefixLinks;                  /* prefix soft links with Where path */
    bool PruneJobs;                    /* Force pruning of Jobs */
@@ -405,7 +405,7 @@ public:
    POOL      *inc_pool;               /* Pool for Incremental backups */
    POOL      *diff_pool;              /* Pool for Differental backups */
    char      *selection_pattern;
-   int        selection_type;
+   uint32_t  selection_type;
    union {
       JOB       *verify_job;          /* Job name to verify */
    };
@@ -444,7 +444,7 @@ struct FOPTS {
 struct INCEXE {
    FOPTS *current_opts;               /* points to current options structure */
    FOPTS **opts_list;                 /* options list */
-   int num_opts;                      /* number of options items */
+   int32_t num_opts;                  /* number of options items */
    alist name_list;                   /* filename list -- holds char * */
 };
 
@@ -458,9 +458,9 @@ public:
 
    bool new_include;                  /* Set if new include used */
    INCEXE **include_items;            /* array of incexe structures */
-   int num_includes;                  /* number in array */
+   int32_t num_includes;              /* number in array */
    INCEXE **exclude_items;
-   int num_excludes;
+   int32_t num_excludes;
    bool have_MD5;                     /* set if MD5 initialized */
    struct MD5Context md5c;            /* MD5 of include/exclude */
    char MD5[30];                      /* base 64 representation of MD5 */
@@ -514,7 +514,7 @@ public:
    char *pool_type;                   /* Pool type */
    char *label_format;                /* Label format string */
    char *cleaning_prefix;             /* Cleaning label prefix */
-   int32_t LabelType;                 /* Bacula/ANSI/IBM label type */
+   uint32_t LabelType;                /* Bacula/ANSI/IBM label type */
    uint32_t max_volumes;              /* max number of volumes */
    utime_t VolRetention;              /* volume retention period in seconds */
    utime_t VolUseDuration;            /* duration volume can be used */
@@ -572,9 +572,9 @@ union URES {
 class RUN {
 public:
    RUN *next;                         /* points to next run record */
-   int level;                         /* level override */
-   int Priority;                      /* priority override */
-   int job_type;
+   uint32_t level;                    /* level override */
+   uint32_t Priority;                 /* priority override */
+   uint32_t job_type;
    bool spool_data;                   /* Data spooling override */
    bool spool_data_set;               /* Data spooling override given */
    bool write_part_after_job;         /* Write part after job override */
@@ -587,8 +587,8 @@ public:
    STORE *storage;                    /* Storage override */
    MSGS *msgs;                        /* Messages override */
    char *since;
-   int level_no;
-   int minute;                        /* minute to run job */
+   uint32_t level_no;
+   uint32_t minute;                   /* minute to run job */
    time_t last_run;                   /* last time run */
    time_t next_run;                   /* next time to run */
    char hour[nbytes_for_bits(24)];    /* bit set for each hour */

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,7 +33,7 @@
  *
  *  Kern Sibbald, January MMI
  *
- *   Version $Id: rwlock.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: rwlock.c 7299 2008-07-03 15:09:49Z kerns $
  *
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
@@ -294,11 +294,13 @@ int rwl_writeunlock(brwlock_t *rwl)
       return stat;
    }
    if (rwl->w_active <= 0) {
-      Emsg0(M_ABORT, 0, _("rwl_writeunlock called too many times.\n"));
+      pthread_mutex_unlock(&rwl->mutex);
+      Jmsg0(NULL, M_ABORT, 0, _("rwl_writeunlock called too many times.\n"));
    }
    rwl->w_active--;
    if (!pthread_equal(pthread_self(), rwl->writer_id)) {
-      Emsg0(M_ABORT, 0, _("rwl_writeunlock by non-owner.\n"));
+      pthread_mutex_unlock(&rwl->mutex);
+      Jmsg0(NULL, M_ABORT, 0, _("rwl_writeunlock by non-owner.\n"));
    }
    if (rwl->w_active > 0) {
       stat = 0;                       /* writers still active */

@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: acquire.c 7063 2008-05-30 18:31:57Z kerns $
+ *   Version $Id: acquire.c 7291 2008-07-02 20:49:44Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -172,6 +172,8 @@ bool acquire_device_for_read(DCR *dcr)
       }
    }
 
+   dev->clear_unload();
+
    if (reserve_volume(dcr, dcr->VolumeName) == NULL) {
       Dmsg2(100, "Could not reserve volume %s on %s\n", dcr->VolumeName,
             dcr->dev->print_name());
@@ -194,8 +196,10 @@ bool acquire_device_for_read(DCR *dcr)
 
 
    /* Volume info is always needed because of VolParts */
-   Dmsg0(200, "dir_get_volume_info\n");
+   Dmsg1(150, "dir_get_volume_info vol=%s\n", dcr->VolumeName);
    if (!dir_get_volume_info(dcr, GET_VOL_INFO_FOR_READ)) {
+      Dmsg2(150, "dir_get_vol_info failed for vol=%s: %s\n", 
+         dcr->VolumeName, jcr->errmsg);
       Jmsg1(jcr, M_WARNING, 0, "%s", jcr->errmsg);
    }
    dev->set_load();                /* set to load volume */
@@ -236,7 +240,7 @@ bool acquire_device_for_read(DCR *dcr)
       switch (vol_label_status) {
       case VOL_OK:
          ok = true;
-         memcpy(&dev->VolCatInfo, &dcr->VolCatInfo, sizeof(dev->VolCatInfo));
+         dev->VolCatInfo = dcr->VolCatInfo;     /* structure assignment */
          break;                    /* got it */
       case VOL_IO_ERROR:
          /*
@@ -249,20 +253,20 @@ bool acquire_device_for_read(DCR *dcr)
          }
          goto default_path;
       case VOL_NAME_ERROR:
-         if (tape_initially_mounted) {
+         if (dev->is_volume_to_unload()) {
+            goto default_path;
+         }
+//       if (tape_initially_mounted) {
             tape_initially_mounted = false;
-            goto default_path;
-         }
-         /* If polling and got a previous bad name, ignore it */
-         if (dev->poll && strcmp(dev->BadVolName, dev->VolHdr.VolumeName) == 0) {
-            goto default_path;
-         } else {
-             bstrncpy(dev->BadVolName, dev->VolHdr.VolumeName, sizeof(dev->BadVolName));
-         }
+//          goto default_path;
+//       }
+         dev->set_unload();              /* force unload of unwanted tape */
          if (!unload_autochanger(dcr, -1)) {
             /* at least free the device so we can re-open with correct volume */
             dev->close();                                                          
          }
+         dev->set_load();
+         ASSERT(0);
          /* Fall through */
       default:
          Jmsg1(jcr, M_WARNING, 0, "%s", jcr->errmsg);
@@ -288,7 +292,6 @@ default_path:
             }
             /* Try closing and re-opening */
             dev->close();
-            dev->clear_unload();
             if (dev->open(dcr, OPEN_READ_ONLY) >= 0) {
                continue;
             }
@@ -308,6 +311,7 @@ default_path:
       } /* end switch */
       break;
    } /* end for loop */
+
    if (!ok) {
       Jmsg1(jcr, M_FATAL, 0, _("Too many errors trying to mount device %s for reading.\n"),
             dev->print_name());
@@ -369,6 +373,8 @@ DCR *acquire_device_for_append(DCR *dcr)
       Dmsg1(200, "Want to append but device %s is busy reading.\n", dev->print_name());
       goto get_out;
    }
+
+   dev->clear_unload();
 
    /*
     * have_vol defines whether or not mount_next_write_volume should

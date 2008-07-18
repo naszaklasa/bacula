@@ -32,7 +32,7 @@
  *    Dan Langille, December 2003
  *    based upon work done by Kern Sibbald, March 2000
  *
- *    Version $Id: postgresql.c 6026 2007-12-08 09:54:55Z kerns $
+ *    Version $Id: postgresql.c 7179 2008-06-19 17:01:12Z kerns $
  */
 
 
@@ -546,7 +546,7 @@ void my_postgresql_free_result(B_DB *mdb)
    db_unlock(mdb);
 }
 
-int my_postgresql_currval(B_DB *mdb, char *table_name)
+int my_postgresql_currval(B_DB *mdb, const char *table_name)
 {
    // Obtain the current value of the sequence that
    // provides the serial value for primary key of the table.
@@ -615,7 +615,7 @@ bail_out:
 
 int my_postgresql_batch_start(JCR *jcr, B_DB *mdb)
 {
-   char *query = "COPY batch FROM STDIN";
+   const char *query = "COPY batch FROM STDIN";
 
    Dmsg0(500, "my_postgresql_batch_start started\n");
 
@@ -709,7 +709,7 @@ int my_postgresql_batch_insert(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
    int res;
    int count=30;
    size_t len;
-   char *digest;
+   const char *digest;
    char ed1[50];
 
    mdb->esc_name = check_pool_memory_size(mdb->esc_name, mdb->fnl*2+1);

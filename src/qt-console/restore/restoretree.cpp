@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: restoretree.cpp 5732 2007-10-06 10:40:13Z kerns $
+ *   Version $Id: restoretree.cpp 7310 2008-07-05 10:39:06Z kerns $
  *
  *  Restore Class 
  *
@@ -42,7 +42,7 @@
 restoreTree::restoreTree()
 {
    setupUi(this);
-   m_name = "Version Browser";
+   m_name = tr("Version Browser");
    pgInitialize();
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0, QIcon(QString::fromUtf8(":images/browse.png")));
@@ -115,12 +115,12 @@ void restoreTree::setupPage()
    connect(jobTable, SIGNAL(cellClicked(int, int)),
            this, SLOT(jobTableCellClicked(int, int)));
 
-   QStringList titles = QStringList() << "Directories";
+   QStringList titles = QStringList() << tr("Directories");
    directoryTree->setHeaderLabels(titles);
    clientCombo->addItems(m_console->client_list);
-   fileSetCombo->addItem("Any");
+   fileSetCombo->addItem(tr("Any"));
    fileSetCombo->addItems(m_console->fileset_list);
-   jobCombo->addItem("Any");
+   jobCombo->addItem(tr("Any"));
    jobCombo->addItems(m_console->job_list);
 
    directoryTree->setContextMenuPolicy(Qt::ActionsContextMenu);
@@ -139,10 +139,10 @@ void restoreTree::updateRefresh()
    );
    if (m_dropdownChanged) {
       if (mainWin->m_rtPopDirDebug) Pmsg0(000, "In restoreTree::updateRefresh Is CHANGED\n");
-      refreshLabel->setText("Refresh From Re-Select");
+      refreshLabel->setText(tr("Refresh From Re-Select"));
    } else {
       if (mainWin->m_rtPopDirDebug) Pmsg0(000, "In restoreTree::updateRefresh Is not Changed\n");
-      refreshLabel->setText("Refresh From JobChecks");
+      refreshLabel->setText(tr("Refresh From JobChecks"));
    }
 }
 
@@ -174,11 +174,11 @@ void restoreTree::populateDirectoryTree()
    prBar1->setVisible(true);
    prBar1->setRange(0,taskcount);
    prBar1->setValue(0);
-   prLabel1->setText("Task " + QString("%1").arg(ontask)+ " of " + QString("%1").arg(taskcount));
+   prLabel1->setText(tr("Task %1 of %2").arg(ontask).arg(taskcount));
    prLabel1->setVisible(true);
    prBar2->setVisible(true);
    prBar2->setRange(0,0);
-   prLabel2->setText("Querying Database");
+   prLabel2->setText(tr("Querying Database"));
    prLabel2->setVisible(true);
    repaint();
 
@@ -192,17 +192,15 @@ void restoreTree::populateDirectoryTree()
       m_prevDaysCheckState = daysCheckBox->checkState();
       updateRefresh();
       prBar1->setValue(ontask++);
-      prLabel1->setText("Task " + QString("%1").arg(ontask)+ " of " + QString("%1").arg(taskcount));
+      prLabel1->setText(tr("Task %1 of %2").arg(ontask).arg(taskcount));
       prBar2->setValue(0);
       prBar2->setRange(0,0);
-      prLabel2->setText("Querying Jobs");
+      prLabel2->setText(tr("Querying Jobs"));
       repaint();
       populateJobTable();
-      setJobsCheckedList();
-   } else {
-      if (mainWin->m_rtPopDirDebug) Pmsg0(000, "Repopulating from checks in Job Table\n");
-      setJobsCheckedList();
    }
+   setJobsCheckedList();
+   if (mainWin->m_rtPopDirDebug) Pmsg0(000, "Repopulating from checks in Job Table\n");
 
    if (m_checkedJobs != "") {
       /* First get the filenameid of where the nae is null.  These will be the directories
@@ -237,10 +235,10 @@ void restoreTree::populateDirectoryTree()
       if (mainWin->m_sqlDebug)
          Pmsg1(000, "Query cmd : %s\n", cmd.toUtf8().data());
       prBar1->setValue(ontask++);
-      prLabel1->setText("Task " + QString("%1").arg(ontask) + " of " + QString("%1").arg(taskcount));
+      prLabel1->setText(tr("Task %1 of %2").arg(ontask).arg(taskcount));
       prBar2->setValue(0);
       prBar2->setRange(0,0);
-      prLabel2->setText("Querying for Directories");
+      prLabel2->setText(tr("Querying for Directories"));
       repaint();
       QStringList results;
       m_directoryPathIdHash.clear();
@@ -248,7 +246,7 @@ void restoreTree::populateDirectoryTree()
       if (m_console->sql_cmd(cmd, results)) {
          if (!querydone) {
             querydone = true;
-            prLabel2->setText("Processing Directories");
+            prLabel2->setText(tr("Processing Directories"));
             prBar2->setRange(0,results.count());
             repaint();
          }
@@ -278,9 +276,9 @@ void restoreTree::populateDirectoryTree()
          }
       }
    } else {
-     QMessageBox::warning(this, tr("Bat"),
+     QMessageBox::warning(this, "Bat",
         tr("No jobs were selected in the job query !!!.\n"
-      "Press OK to continue?"),
+      "Press OK to continue"),
       QMessageBox::Ok );
    }
    prBar1->setVisible(false);
@@ -362,12 +360,13 @@ void restoreTree::parseDirectory(QString &dir_in)
    }
 
    for (int k=0; k<pathAfter.count(); k++) {
-      if (addDirectory(pathAfter[k], dirAfter[k]))
+      if (addDirectory(pathAfter[k], dirAfter[k])) {
          if ((mainWin->m_miscDebug) && (m_debugTrap))
             Pmsg2(000, "Adding After %s %s\n", pathAfter[k].toUtf8().data(), dirAfter[k].toUtf8().data());
-      else
+      } else {
          if ((mainWin->m_miscDebug) && (m_debugTrap))
             Pmsg2(000, "Error Adding %s %s\n", pathAfter[k].toUtf8().data(), dirAfter[k].toUtf8().data());
+      }
    }
 }
 
@@ -481,8 +480,8 @@ void restoreTree::refreshButtonPushed()
  */
 void restoreTree::jobComboChanged(int)
 {
-   if (jobCombo->currentText() == "Any") {
-      fileSetCombo->setCurrentIndex(fileSetCombo->findText("Any", Qt::MatchExactly));
+   if (jobCombo->currentText() == tr("Any")) {
+      fileSetCombo->setCurrentIndex(fileSetCombo->findText(tr("Any"), Qt::MatchExactly));
       return;
    }
    job_defaults job_defs;
@@ -510,7 +509,7 @@ void restoreTree::directoryCurrentItemChanged(QTreeWidgetItem *item, QTreeWidget
    versionTable->setRowCount(0);
    versionTable->setColumnCount(0);
 
-   QStringList headerlist = (QStringList() << "File Name" << "Filename Id");
+   QStringList headerlist = (QStringList() << tr("File Name") << tr("Filename Id"));
    fileTable->setColumnCount(headerlist.size());
    fileTable->setHorizontalHeaderLabels(headerlist);
    fileTable->setRowCount(0);
@@ -520,7 +519,7 @@ void restoreTree::directoryCurrentItemChanged(QTreeWidgetItem *item, QTreeWidget
            this, SLOT(fileTableItemChanged(QTableWidgetItem *)));
    QBrush blackBrush(Qt::black);
    QString directory = item->data(0, Qt::UserRole).toString();
-   directoryLabel->setText("Present Working Directory : " + directory);
+   directoryLabel->setText(tr("Present Working Directory: %1").arg(directory));
    int pathid = m_directoryPathIdHash.value(directory, -1);
    if (pathid != -1) {
       QString cmd =
@@ -614,7 +613,8 @@ void restoreTree::fileCurrentItemChanged(QTableWidgetItem *currentFileTableItem,
 
    QBrush blackBrush(Qt::black);
 
-   QStringList headerlist = (QStringList() << "Job Id" << "Type" << "End Time" << "Md5" << "FileId");
+   QStringList headerlist = (QStringList() 
+      << tr("Job Id") << tr("Type") << tr("End Time") << tr("Hash") << tr("FileId"));
    versionTable->clear();
    versionTable->setColumnCount(headerlist.size());
    versionTable->setHorizontalHeaderLabels(headerlist);
@@ -623,7 +623,7 @@ void restoreTree::fileCurrentItemChanged(QTableWidgetItem *currentFileTableItem,
    int pathid = m_directoryPathIdHash.value(directory, -1);
    if ((pathid != -1) && (fileNameId != -1)) {
       QString cmd = 
-         "SELECT Job.JobId AS JobId, Job.Level AS Type, Job.EndTime AS EndTime, File.Md5 AS MD5, File.FileId AS FileId"
+         "SELECT Job.JobId AS JobId,Job.Level AS Type,Job.EndTime AS EndTime,File.MD5 AS MD5,File.FileId AS FileId"
          " FROM File"
          " INNER JOIN Filename on (Filename.FilenameId=File.FilenameId)"
          " INNER JOIN Path ON (Path.PathId=File.PathId)"
@@ -700,7 +700,7 @@ void restoreTree::writeSettings()
  */
 void restoreTree::readSettings()
 {
-   m_groupText = "RestoreTreePage";
+   m_groupText = tr("RestoreTreePage");
    m_splitText = "splitterSizes_1";
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
@@ -724,7 +724,7 @@ void restoreTree::directoryItemExpanded(QTreeWidgetItem *item)
 }
 
 /*
- * I wanted a table to show what jobs meet the criterion and are being used to
+ * Show what jobs meet the criteria and are being used to
  * populate the directory tree and file and version tables.
  */
 void restoreTree::populateJobTable()
@@ -732,25 +732,28 @@ void restoreTree::populateJobTable()
    QBrush blackBrush(Qt::black);
 
    if (mainWin->m_rtPopDirDebug) Pmsg0(000, "Repopulating the Job Table\n");
-   QStringList headerlist = (QStringList() << "Job Id" << "End Time" << "Level" << "Name" << "Purged" << "TU" << "TD");
-   m_toggleUpIndex = headerlist.indexOf("TU");
-   m_toggleDownIndex = headerlist.indexOf("TD");
-   int purgedIndex = headerlist.indexOf("Purged");
+   QStringList headerlist = (QStringList() 
+      << tr("Job Id") << tr("End Time") << tr("Level") 
+      << tr("Name") << tr("Purged") << tr("TU") << tr("TD"));
+   m_toggleUpIndex = headerlist.indexOf(tr("TU"));
+   m_toggleDownIndex = headerlist.indexOf(tr("TD"));
+   int purgedIndex = headerlist.indexOf(tr("Purged"));
    jobTable->clear();
    jobTable->setColumnCount(headerlist.size());
    jobTable->setHorizontalHeaderLabels(headerlist);
    QString jobQuery =
-      "SELECT Job.Jobid AS Id, Job.EndTime AS EndTime, Job.Level AS Level, Job.Name AS JobName, Job.purgedfiles AS Purged"
+      "SELECT Job.Jobid AS Id,Job.EndTime AS EndTime,Job.Level AS Level,"
+      "Job.Name AS JobName,Job.purgedfiles AS Purged"
       " FROM Job"
       /* INNER JOIN FileSet eliminates all restore jobs */
       " INNER JOIN Client ON (Job.ClientId=Client.ClientId)"
       " INNER JOIN FileSet ON (Job.FileSetId=FileSet.FileSetId)"
       " WHERE"
       " Client.Name='" + clientCombo->currentText() + "'";
-   if ((jobCombo->currentIndex() >= 0) && (jobCombo->currentText() != "Any")) {
+   if ((jobCombo->currentIndex() >= 0) && (jobCombo->currentText() != tr("Any"))) {
       jobQuery += " AND Job.name = '" + jobCombo->currentText() + "'";
    }
-   if ((fileSetCombo->currentIndex() >= 0) && (fileSetCombo->currentText() != "Any")) {
+   if ((fileSetCombo->currentIndex() >= 0) && (fileSetCombo->currentText() != tr("Any"))) {
       jobQuery += " AND FileSet.FileSet='" + fileSetCombo->currentText() + "'";
    }
    /* If Limit check box For limit by days is checked  */
@@ -1120,7 +1123,7 @@ void restoreTree::versionTableItemChanged(QTableWidgetItem *item)
       m_versionExceptionHash.remove(fullPath);
    } else if (prevState != curState) {
       if (mainWin->m_rtVerTabICDebug) Pmsg2(000, "  THE STATE OF THE version Check has changed, Setting StateList[%i] to %i\n", row, curState);
-      if ((curState == Qt::Checked) || (curState == Qt::PartiallyChecked) && (row != 0)) {
+      if ((curState == Qt::Checked) || (curState == Qt::PartiallyChecked && row != 0)) {
          if (mainWin->m_rtVerTabICDebug) Pmsg2(000, "Inserting into m_versionExceptionHash %s, %i\n", fullPath.toUtf8().data(), thisJobNum);
          m_versionExceptionHash.insert(fullPath, thisJobNum);
          if (fileState != Qt::Checked) {
@@ -1504,9 +1507,9 @@ void restoreTree::restoreButtonPushed()
 {
    /* Set progress bars and repaint */
    prLabel1->setVisible(true);
-   prLabel1->setText("Task 1 of 3");
+   prLabel1->setText(tr("Task 1 of 3"));
    prLabel2->setVisible(true);
-   prLabel2->setText("Processing Checked directories");
+   prLabel2->setText(tr("Processing Checked directories"));
    prBar1->setVisible(true);
    prBar1->setRange(0, 3);
    prBar1->setValue(0);
@@ -1611,8 +1614,8 @@ void restoreTree::restoreButtonPushed()
       ++diter;
    } /* while (*diter) */
    prBar1->setValue(1);
-   prLabel1->setText("Task 2 of 3");
-   prLabel2->setText("Processing Exceptions");
+   prLabel1->setText( tr("Task 2 of 3"));
+   prLabel2->setText(tr("Processing Exceptions"));
    prBar2->setRange(0, 0);
    repaint();
 
@@ -1649,8 +1652,8 @@ void restoreTree::restoreButtonPushed()
    } /* while ftera.hasNext */
    /* The progress bars for the next step */
    prBar1->setValue(2);
-   prLabel1->setText("Task 3 of 3");
-   prLabel2->setText("Filling Database Table");
+   prLabel1->setText(tr("Task 3 of 3"));
+   prLabel2->setText(tr("Filling Database Table"));
    prBar2->setRange(0, vFMCounter);
    vFMCounter = 0;
    prBar2->setValue(vFMCounter);

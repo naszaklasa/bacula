@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, August MMII
  *                            
- *   Version $Id: autochanger.c 7071 2008-05-31 10:16:35Z kerns $
+ *   Version $Id: autochanger.c 7291 2008-07-02 20:49:44Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -118,7 +118,7 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
    POOLMEM *changer;
 
    if (!dev->is_autochanger()) {
-      Dmsg0(100, "ChangerCommand=0, virtual disk changer\n");
+      Dmsg1(100, "Device %s is not an autochanger\n", dev->print_name());
       return 0;
    }
 
@@ -377,7 +377,9 @@ bool unload_autochanger(DCR *dcr, int loaded)
       free_volume(dev);            /* Free any volume associated with this drive */
       free_pool_memory(changer);
    }
-   dev->clear_unload();
+   if (ok) {
+      dev->clear_unload();
+   }
    return ok;
 }
 
@@ -495,7 +497,9 @@ bool unload_dev(DCR *dcr, DEVICE *dev)
       Dmsg2(100, "Slot %d unloaded %s\n", dev->get_slot(), dev->print_name());
       dev->set_slot(0);           /* nothing loaded */
    }
-   dev->clear_unload();
+   if (ok) {
+      dev->clear_unload();
+   }
    unlock_changer(dcr);
 
    dev->dunlock();
