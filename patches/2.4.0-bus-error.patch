@@ -1,0 +1,392 @@
+Index: src/gnome2-console/console_conf.c
+===================================================================
+--- src/gnome2-console/console_conf.c	(revision 7106)
++++ src/gnome2-console/console_conf.c	(working copy)
+@@ -24,7 +24,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
++   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -82,8 +82,8 @@
+    {"dirport",     store_int,      ITEM(dir_res.DIRport),  0, ITEM_DEFAULT, 9101},
+    {"address",     store_str,      ITEM(dir_res.address),  0, ITEM_REQUIRED, 0},
+    {"password",    store_password, ITEM(dir_res.password), 0, 0, 0},
+-   {"tlsenable",      store_bit,     ITEM(dir_res.tls_enable), 1, 0, 0},
+-   {"tlsrequire",     store_bit,     ITEM(dir_res.tls_require), 1, 0, 0},
++   {"tlsenable",      store_bool,    ITEM(dir_res.tls_enable), 1, 0, 0},
++   {"tlsrequire",     store_bool,    ITEM(dir_res.tls_require), 1, 0, 0},
+    {"tlscacertificatefile", store_dir, ITEM(dir_res.tls_ca_certfile), 0, 0, 0},
+    {"tlscacertificatedir", store_dir,  ITEM(dir_res.tls_ca_certdir), 0, 0, 0},
+    {"tlscertificate", store_dir,       ITEM(dir_res.tls_certfile), 0, 0, 0},
+@@ -95,8 +95,8 @@
+    {"name",        store_name,     ITEM(con_res.hdr.name), 0, ITEM_REQUIRED, 0},
+    {"description", store_str,      ITEM(con_res.hdr.desc), 0, 0, 0},
+    {"password",    store_password, ITEM(con_res.password), 0, ITEM_REQUIRED, 0},
+-   {"tlsenable",      store_bit,     ITEM(con_res.tls_enable), 1, 0, 0},
+-   {"tlsrequire",     store_bit,     ITEM(con_res.tls_require), 1, 0, 0},
++   {"tlsenable",      store_bool,    ITEM(con_res.tls_enable), 1, 0, 0},
++   {"tlsrequire",     store_bool,    ITEM(con_res.tls_require), 1, 0, 0},
+    {"tlscacertificatefile", store_dir, ITEM(con_res.tls_ca_certfile), 0, 0, 0},
+    {"tlscacertificatedir", store_dir,  ITEM(con_res.tls_ca_certdir), 0, 0, 0},
+    {"tlscertificate", store_dir,       ITEM(con_res.tls_certfile), 0, 0, 0},
+Index: src/gnome2-console/console_conf.h
+===================================================================
+--- src/gnome2-console/console_conf.h	(revision 7106)
++++ src/gnome2-console/console_conf.h	(working copy)
+@@ -8,7 +8,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
++   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -66,8 +66,8 @@
+    int   DIRport;                     /* UA server port */
+    char *address;                     /* UA server address */
+    char *password;                    /* UA server password */
+-   int tls_enable;                    /* Enable TLS */
+-   int tls_require;                   /* Require TLS */
++   bool tls_enable;                   /* Enable TLS */
++   bool tls_require;                  /* Require TLS */
+    char *tls_ca_certfile;             /* TLS CA Certificate File */
+    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
+    char *tls_certfile;                /* TLS Client Certificate File */
+@@ -84,8 +84,8 @@
+ struct CONRES {
+    RES   hdr;
+    char *password;                    /* UA server password */
+-   int tls_enable;                    /* Enable TLS on all connections */
+-   int tls_require;                   /* Require TLS on all connections */
++   bool tls_enable;                   /* Enable TLS on all connections */
++   bool tls_require;                  /* Require TLS on all connections */
+    char *tls_ca_certfile;             /* TLS CA Certificate File */
+    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
+    char *tls_certfile;                /* TLS Client Certificate File */
+Index: src/wx-console/console_conf.c
+===================================================================
+--- src/wx-console/console_conf.c	(revision 7106)
++++ src/wx-console/console_conf.c	(working copy)
+@@ -100,12 +100,12 @@
+    {"rcfile",      store_dir,      ITEM(res_cons.rc_file), 0, 0, 0},
+    {"historyfile", store_dir,      ITEM(res_cons.hist_file), 0, 0, 0},
+    {"password",    store_password, ITEM(res_cons.password), 0, ITEM_REQUIRED, 0},
+-   {"tlsenable",      store_bit,     ITEM(res_cons.tls_enable), 1, 0, 0},
+-   {"tlsrequire",     store_bit,     ITEM(res_cons.tls_require), 1, 0, 0},
+    {"tlscacertificatefile", store_dir, ITEM(res_cons.tls_ca_certfile), 0, 0, 0},
+    {"tlscacertificatedir", store_dir,  ITEM(res_cons.tls_ca_certdir), 0, 0, 0},
+    {"tlscertificate", store_dir,       ITEM(res_cons.tls_certfile), 0, 0, 0},
+    {"tlskey",         store_dir,       ITEM(res_cons.tls_keyfile), 0, 0, 0},
++   {"tlsenable",      store_bool,    ITEM(res_cons.tls_enable), 1, 0, 0},
++   {"tlsrequire",     store_bool,    ITEM(res_cons.tls_require), 1, 0, 0},
+    {NULL, NULL, {0}, 0, 0, 0}
+ };
+ 
+@@ -117,12 +117,12 @@
+    {"dirport",     store_int,      ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
+    {"address",     store_str,      ITEM(res_dir.address),  0, 0, 0},
+    {"password",    store_password, ITEM(res_dir.password), 0, ITEM_REQUIRED, 0},
+-   {"tlsenable",      store_bit,     ITEM(res_dir.tls_enable), 1, 0, 0},
+-   {"tlsrequire",     store_bit,     ITEM(res_dir.tls_require), 1, 0, 0},
+    {"tlscacertificatefile", store_dir, ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
+    {"tlscacertificatedir", store_dir,  ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
+    {"tlscertificate", store_dir,       ITEM(res_dir.tls_certfile), 0, 0, 0},
+    {"tlskey",         store_dir,       ITEM(res_dir.tls_keyfile), 0, 0, 0},
++   {"tlsenable",      store_bool,    ITEM(res_dir.tls_enable), 1, 0, 0},
++   {"tlsrequire",     store_bool,    ITEM(res_dir.tls_require), 1, 0, 0},
+    {NULL, NULL, {0}, 0, 0, 0}
+ };
+ 
+Index: src/wx-console/console_conf.h
+===================================================================
+--- src/wx-console/console_conf.h	(revision 7106)
++++ src/wx-console/console_conf.h	(working copy)
+@@ -4,7 +4,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
++   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -63,14 +63,13 @@
+    char *rc_file;                     /* startup file */
+    char *hist_file;                   /* command history file */
+    char *password;                    /* UA server password */
+-   int tls_enable;                    /* Enable TLS on all connections */
+-   int tls_require;                   /* Require TLS on all connections */
+    char *tls_ca_certfile;             /* TLS CA Certificate File */
+    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
+    char *tls_certfile;                /* TLS Client Certificate File */
+    char *tls_keyfile;                 /* TLS Client Key File */
+-
+    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
++   bool tls_enable;                   /* Enable TLS on all connections */
++   bool tls_require;                  /* Require TLS on all connections */
+ };
+ 
+ /* Director */
+@@ -79,14 +78,13 @@
+    int   DIRport;                     /* UA server port */
+    char *address;                     /* UA server address */
+    char *password;                    /* UA server password */
+-   int tls_enable;                    /* Enable TLS on all connections */
+-   int tls_require;                   /* Require TLS on all connections */
+    char *tls_ca_certfile;             /* TLS CA Certificate File */
+    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
+    char *tls_certfile;                /* TLS Client Certificate File */
+    char *tls_keyfile;                 /* TLS Client Key File */
+-
+    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
++   bool tls_enable;                   /* Enable TLS on all connections */
++   bool tls_require;                  /* Require TLS on all connections */
+ };
+ 
+ 
+Index: src/stored/stored_conf.c
+===================================================================
+--- src/stored/stored_conf.c	(revision 7106)
++++ src/stored/stored_conf.c	(working copy)
+@@ -1,7 +1,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
++   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -77,9 +77,9 @@
+    {"scriptsdirectory",      store_dir,  ITEM(res_store.scripts_directory), 0, 0, 0},
+    {"maximumconcurrentjobs", store_pint, ITEM(res_store.max_concurrent_jobs), 0, ITEM_DEFAULT, 20},
+    {"heartbeatinterval",     store_time, ITEM(res_store.heartbeat_interval), 0, ITEM_DEFAULT, 0},
+-   {"tlsenable",             store_bit,     ITEM(res_store.tls_enable), 1, 0, 0},
+-   {"tlsrequire",            store_bit,     ITEM(res_store.tls_require), 1, 0, 0},
+-   {"tlsverifypeer",         store_bit,     ITEM(res_store.tls_verify_peer), 1, ITEM_DEFAULT, 1},
++   {"tlsenable",             store_bool,    ITEM(res_store.tls_enable), 1, 0, 0},
++   {"tlsrequire",            store_bool,    ITEM(res_store.tls_require), 1, 0, 0},
++   {"tlsverifypeer",         store_bool,    ITEM(res_store.tls_verify_peer), 1, ITEM_DEFAULT, 1},
+    {"tlscacertificatefile",  store_dir,       ITEM(res_store.tls_ca_certfile), 0, 0, 0},
+    {"tlscacertificatedir",   store_dir,       ITEM(res_store.tls_ca_certdir), 0, 0, 0},
+    {"tlscertificate",        store_dir,       ITEM(res_store.tls_certfile), 0, 0, 0},
+@@ -96,10 +96,10 @@
+    {"name",        store_name,     ITEM(res_dir.hdr.name),   0, ITEM_REQUIRED, 0},
+    {"description", store_str,      ITEM(res_dir.hdr.desc),   0, 0, 0},
+    {"password",    store_password, ITEM(res_dir.password),   0, ITEM_REQUIRED, 0},
+-   {"monitor",     store_bit,    ITEM(res_dir.monitor),   1, ITEM_DEFAULT, 0},
+-   {"tlsenable",            store_bit,     ITEM(res_dir.tls_enable), 1, 0, 0},
+-   {"tlsrequire",           store_bit,     ITEM(res_dir.tls_require), 1, 0, 0},
+-   {"tlsverifypeer",        store_bit,     ITEM(res_dir.tls_verify_peer), 1, ITEM_DEFAULT, 1},
++   {"monitor",     store_bool,     ITEM(res_dir.monitor),   1, ITEM_DEFAULT, 0},
++   {"tlsenable",            store_bool,    ITEM(res_dir.tls_enable), 1, 0, 0},
++   {"tlsrequire",           store_bool,    ITEM(res_dir.tls_require), 1, 0, 0},
++   {"tlsverifypeer",        store_bool,    ITEM(res_dir.tls_verify_peer), 1, ITEM_DEFAULT, 1},
+    {"tlscacertificatefile", store_dir,       ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
+    {"tlscacertificatedir",  store_dir,       ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
+    {"tlscertificate",       store_dir,       ITEM(res_dir.tls_certfile), 0, 0, 0},
+@@ -137,7 +137,7 @@
+    {"checklabels",           store_bit,  ITEM(res_dev.cap_bits), CAP_CHECKLABELS, ITEM_DEFAULT, 0},
+    {"requiresmount",         store_bit,  ITEM(res_dev.cap_bits), CAP_REQMOUNT, ITEM_DEFAULT, 0},
+    {"offlineonunmount",      store_bit,  ITEM(res_dev.cap_bits), CAP_OFFLINEUNMOUNT, ITEM_DEFAULT, 0},
+-   {"autoselect",            store_bit,  ITEM(res_dev.autoselect), 1, ITEM_DEFAULT, 1},
++   {"autoselect",            store_bool, ITEM(res_dev.autoselect), 1, ITEM_DEFAULT, 1},
+    {"changerdevice",         store_strname,ITEM(res_dev.changer_name), 0, 0, 0},
+    {"changercommand",        store_strname,ITEM(res_dev.changer_command), 0, 0, 0},
+    {"alertcommand",          store_strname,ITEM(res_dev.alert_command), 0, 0, 0},
+@@ -177,9 +177,6 @@
+ };
+ 
+ 
+-// {"mountanonymousvolumes", store_bit,  ITEM(res_dev.cap_bits), CAP_ANONVOLS,   ITEM_DEFAULT, 0},
+-
+-
+ /* Message resource */
+ extern RES_ITEM msgs_items[];
+ 
+Index: src/stored/stored_conf.h
+===================================================================
+--- src/stored/stored_conf.h	(revision 7106)
++++ src/stored/stored_conf.h	(working copy)
+@@ -1,7 +1,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
++   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -126,9 +126,9 @@
+    char *spool_directory;             /* Spool file directory */
+    int   dev_type;                    /* device type */
+    int   label_type;                  /* label type */
+-   int   autoselect;                  /* Automatically select from AutoChanger */
++   bool autoselect;                   /* Automatically select from AutoChanger */
+    uint32_t drive_index;              /* Autochanger drive index */
+-   uint32_t cap_bits;                 /* Capabilities of this device */
++   int cap_bits;                      /* Capabilities of this device */
+    utime_t max_changer_wait;          /* Changer timeout */
+    utime_t max_rewind_wait;           /* maximum secs to wait for rewind */
+    utime_t max_open_wait;             /* maximum secs to wait for open */
+Index: src/console/console_conf.c
+===================================================================
+--- src/console/console_conf.c	(revision 7106)
++++ src/console/console_conf.c	(working copy)
+@@ -1,7 +1,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
++   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -88,8 +88,8 @@
+    {"rcfile",         store_dir,      ITEM(res_cons.rc_file), 0, 0, 0},
+    {"historyfile",    store_dir,      ITEM(res_cons.hist_file), 0, 0, 0},
+    {"password",       store_password, ITEM(res_cons.password), 0, ITEM_REQUIRED, 0},
+-   {"tlsenable",      store_bit,     ITEM(res_cons.tls_enable), 1, 0, 0},
+-   {"tlsrequire",     store_bit,     ITEM(res_cons.tls_require), 1, 0, 0},
++   {"tlsenable",      store_bool,     ITEM(res_cons.tls_enable), 1, 0, 0},
++   {"tlsrequire",     store_bool,     ITEM(res_cons.tls_require), 1, 0, 0},
+    {"tlscacertificatefile", store_dir, ITEM(res_cons.tls_ca_certfile), 0, 0, 0},
+    {"tlscacertificatedir", store_dir,  ITEM(res_cons.tls_ca_certdir), 0, 0, 0},
+    {"tlscertificate", store_dir,       ITEM(res_cons.tls_certfile), 0, 0, 0},
+@@ -107,8 +107,8 @@
+    {"dirport",        store_int,       ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
+    {"address",        store_str,       ITEM(res_dir.address),  0, 0, 0},
+    {"password",       store_password,  ITEM(res_dir.password), 0, ITEM_REQUIRED, 0},
+-   {"tlsenable",      store_bit,     ITEM(res_dir.tls_enable), 1, 0, 0},
+-   {"tlsrequire",     store_bit,     ITEM(res_dir.tls_require), 1, 0, 0},
++   {"tlsenable",      store_bool,      ITEM(res_dir.tls_enable), 1, 0, 0},
++   {"tlsrequire",     store_bool,      ITEM(res_dir.tls_require), 1, 0, 0},
+    {"tlscacertificatefile", store_dir, ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
+    {"tlscacertificatedir", store_dir,  ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
+    {"tlscertificate", store_dir,       ITEM(res_dir.tls_certfile), 0, 0, 0},
+Index: src/console/console_conf.h
+===================================================================
+--- src/console/console_conf.h	(revision 7106)
++++ src/console/console_conf.h	(working copy)
+@@ -64,16 +64,15 @@
+    char *rc_file;                     /* startup file */
+    char *hist_file;                   /* command history file */
+    char *password;                    /* UA server password */
+-   int tls_enable;                    /* Enable TLS on all connections */
+-   int tls_require;                   /* Require TLS on all connections */
+    char *tls_ca_certfile;             /* TLS CA Certificate File */
+    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
+    char *tls_certfile;                /* TLS Client Certificate File */
+    char *tls_keyfile;                 /* TLS Client Key File */
+    char *director;                    /* bind to director */
+    utime_t heartbeat_interval;        /* Interval to send heartbeats to Dir */
+-
+    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
++   bool tls_enable;                   /* Enable TLS on all connections */
++   bool tls_require;                  /* Require TLS on all connections */
+ };
+ 
+ /* Director */
+@@ -82,15 +81,14 @@
+    int   DIRport;                     /* UA server port */
+    char *address;                     /* UA server address */
+    char *password;                    /* UA server password */
+-   int tls_enable;                    /* Enable TLS */
+-   int tls_require;                   /* Require TLS */
+    char *tls_ca_certfile;             /* TLS CA Certificate File */
+    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
+    char *tls_certfile;                /* TLS Client Certificate File */
+    char *tls_keyfile;                 /* TLS Client Key File */
+    utime_t heartbeat_interval;        /* Interval to send heartbeats to Dir */
+-
+    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
++   bool tls_enable;                   /* Enable TLS */
++   bool tls_require;                  /* Require TLS */
+ };
+ 
+ 
+Index: src/tray-monitor/tray_conf.c
+===================================================================
+--- src/tray-monitor/tray_conf.c	(revision 7106)
++++ src/tray-monitor/tray_conf.c	(working copy)
+@@ -82,7 +82,7 @@
+ static RES_ITEM mon_items[] = {
+    {"name",        store_name,     ITEM(res_monitor.hdr.name), 0, ITEM_REQUIRED, 0},
+    {"description", store_str,      ITEM(res_monitor.hdr.desc), 0, 0, 0},
+-   {"requiressl",  store_bit,    ITEM(res_monitor.require_ssl), 1, ITEM_DEFAULT, 0},
++   {"requiressl",  store_bool,     ITEM(res_monitor.require_ssl), 1, ITEM_DEFAULT, 0},
+    {"password",    store_password, ITEM(res_monitor.password), 0, ITEM_REQUIRED, 0},
+    {"refreshinterval",  store_time,ITEM(res_monitor.RefreshInterval),  0, ITEM_DEFAULT, 5},
+    {"fdconnecttimeout", store_time,ITEM(res_monitor.FDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
+@@ -96,7 +96,7 @@
+    {"description", store_str,      ITEM(res_dir.hdr.desc), 0, 0, 0},
+    {"dirport",     store_int,      ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
+    {"address",     store_str,      ITEM(res_dir.address),  0, 0, 0},
+-   {"enablessl",   store_bit,    ITEM(res_dir.enable_ssl), 1, ITEM_DEFAULT, 0},
++   {"enablessl",   store_bool,     ITEM(res_dir.enable_ssl), 1, ITEM_DEFAULT, 0},
+    {NULL, NULL, {0}, 0, 0, 0}
+ };
+ 
+@@ -112,7 +112,7 @@
+    {"address",  store_str,        ITEM(res_client.address),  0, ITEM_REQUIRED, 0},
+    {"fdport",   store_pint,       ITEM(res_client.FDport),   0, ITEM_DEFAULT, 9102},
+    {"password", store_password,   ITEM(res_client.password), 0, ITEM_REQUIRED, 0},
+-   {"enablessl", store_bit,     ITEM(res_client.enable_ssl), 1, ITEM_DEFAULT, 0},
++   {"enablessl", store_bool,      ITEM(res_client.enable_ssl), 1, ITEM_DEFAULT, 0},
+    {NULL, NULL, {0}, 0, 0, 0}
+ };
+ 
+@@ -128,7 +128,7 @@
+    {"sdaddress",   store_str,      ITEM(res_store.address),    0, 0, 0},
+    {"password",    store_password, ITEM(res_store.password),   0, ITEM_REQUIRED, 0},
+    {"sdpassword",  store_password, ITEM(res_store.password),   0, 0, 0},
+-   {"enablessl",   store_bit,    ITEM(res_store.enable_ssl),  1, ITEM_DEFAULT, 0},
++   {"enablessl",   store_bool,     ITEM(res_store.enable_ssl),  1, ITEM_DEFAULT, 0},
+    {NULL, NULL, {0}, 0, 0, 0}
+ };
+ 
+Index: src/tray-monitor/tray_conf.h
+===================================================================
+--- src/tray-monitor/tray_conf.h	(revision 7106)
++++ src/tray-monitor/tray_conf.h	(working copy)
+@@ -1,7 +1,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
++   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -67,7 +67,7 @@
+    RES   hdr;
+    int   DIRport;                     /* UA server port */
+    char *address;                     /* UA server address */
+-   int enable_ssl;                    /* Use SSL */
++   bool enable_ssl;                   /* Use SSL */
+ };
+ 
+ /*
+@@ -95,7 +95,7 @@
+    int   FDport;                      /* Where File daemon listens */
+    char *address;
+    char *password;
+-   int enable_ssl;                    /* Use SSL */
++   bool enable_ssl;                   /* Use SSL */
+ };
+ 
+ /*
+@@ -108,7 +108,7 @@
+    int   SDport;                      /* port where Directors connect */
+    char *address;
+    char *password;
+-   int enable_ssl;                    /* Use SSL */
++   bool enable_ssl;                   /* Use SSL */
+ };
+ 
+ struct CONFONTRES {

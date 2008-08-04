@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: main.cpp 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: main.cpp 7416 2008-07-22 14:48:21Z kerns $
  *
  *  Main program for bat (qt-console)
  *
@@ -122,6 +122,11 @@ int main(int argc, char *argv[])
       usage();
    }
 
+   OSDependentInit();
+#ifdef HAVE_WIN32
+   WSA_Init();                        /* Initialize Windows sockets */
+#endif
+
    if (configfile == NULL) {
       configfile = bstrdup(CONFIG_FILE);
    }
@@ -145,6 +150,7 @@ int main(int argc, char *argv[])
 void terminate_console(int sig)
 {
    (void)sig;                         /* avoid compiler complaints */
+   // WSA_Cleanup();                  /* TODO: check when we have to call it */
    exit(0);
 }
 

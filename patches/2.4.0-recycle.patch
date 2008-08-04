@@ -1,0 +1,76 @@
+
+ This patch should fix (not tested) the recycling bug #1106 when using
+ two autochangers.  There is a much smaller chance that it also fixes
+ bug #1103 where a volume is recycled when it is full.    
+
+ Apply the patch to version 2.4.0 with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.0-recycle.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+  
+
+Index: src/dird/autoprune.c
+===================================================================
+--- src/dird/autoprune.c	(revision 7178)
++++ src/dird/autoprune.c	(working copy)
+@@ -96,7 +96,7 @@
+    POOL_MEM query(PM_MESSAGE);
+    UAContext *ua;
+    bool ok = false;
+-   char ed1[50], ed2[100];
++   char ed1[50], ed2[100], ed3[50];
+    POOL_DBR spr;
+ 
+    Dmsg1(050, "Prune volumes PoolId=%d\n", jcr->jr.PoolId);
+@@ -138,10 +138,18 @@
+     *  RecyclePoolId is the current pool or the scratch pool
+     */
+    const char *select = "SELECT DISTINCT MediaId,LastWritten FROM Media WHERE "
+-        "(PoolId=%s OR RecyclePoolId IN (%s)) AND MediaType='%s' "
++        "(PoolId=%s OR RecyclePoolId IN (%s)) AND MediaType='%s' %s"
+         "ORDER BY LastWritten ASC,MediaId";
+ 
+-   Mmsg(query, select, ed1, ed2, mr->MediaType);
++   if (InChanger) {
++      char changer[100];
++      /* Ensure it is in this autochanger */
++      bsnprintf(changer, sizeof(changer), "AND InChanger=1 AND StorageId=%s ",
++         edit_int64(mr->StorageId, ed3));
++      Mmsg(query, select, ed1, ed2, mr->MediaType, changer);
++   } else {
++      Mmsg(query, select, ed1, ed2, mr->MediaType, "");
++   }
+ 
+    Dmsg1(050, "query=%s\n", query.c_str());
+    if (!db_get_query_dbids(ua->jcr, ua->db, query, ids)) {
+Index: src/dird/recycle.c
+===================================================================
+--- src/dird/recycle.c	(revision 7178)
++++ src/dird/recycle.c	(working copy)
+@@ -83,12 +83,19 @@
+    const char *select =
+           "SELECT MediaId,LastWritten FROM Media "
+           "WHERE PoolId=%s AND Recycle=1 AND VolStatus='Purged' "
+-          "AND Enabled=1 AND MediaType='%s' "
++          "AND Enabled=1 AND MediaType='%s' %s"
+           "ORDER BY LastWritten ASC,MediaId LIMIT 1";
+ 
+    Dmsg0(100, "Enter recycle_oldest_purged_volume\n");
+    oldest.MediaId = 0;
+-   Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType);
++   if (InChanger) {
++      char changer[100];
++      bsnprintf(changer, sizeof(changer), "AND InChanger=1 AND StorageId=%s ",
++         edit_int64(mr->StorageId, ed1));
++      Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType, changer);
++   } else {
++      Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType, "");
++   }
+ 
+    if (!db_sql_query(jcr->db, query, oldest_handler, (void *)&oldest)) {
+       Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));

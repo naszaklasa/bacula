@@ -10,7 +10,11 @@ echo "LIBRARY bacula_cats.dll"
 echo "EXPORTS"
 echo " "
 
-NM=../../../../../cross-tools/mingw32/mingw32/bin/nm
+if test -f ../../../../../cross-tools/mingw32/mingw32/bin/nm; then
+ NM=../../../../../cross-tools/mingw32/mingw32/bin/nm
+else
+ NM=../../../../cross-tools/mingw32/mingw32/bin/nm
+fi
 
 OBJS="sql.o sql_create.o sql_delete.o sql_find.o sql_get.o \
       sql_list.o sql_update.o"

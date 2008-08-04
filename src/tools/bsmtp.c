@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -64,7 +64,7 @@
         http://archives.neohapsis.com/archives/postfix/2000-05/1520.html
  
 
-   Version $Id: bsmtp.c 6060 2007-12-14 10:43:12Z kerns $
+   Version $Id: bsmtp.c 7423 2008-07-23 14:57:01Z kerns $
 
  */
 
@@ -187,7 +187,7 @@ _("\n"
 "Usage: %s [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]\n"
 "       -8          set charset utf-8\n"
 "       -c          set the Cc: field\n"
-"       -dnn        set debug level to nn\n"
+"       -d <nn>     set debug level to <nn>\n"
 "       -f          set the From: field\n"
 "       -h          use mailhost:port as the SMTP server\n"
 "       -s          set the Subject: field\n"
@@ -475,19 +475,19 @@ hp:
     *   we do.
     */
    get_response(); /* banner */
-   chat("helo %s\r\n", my_hostname);
-   chat("mail from:%s\r\n", cleanup_addr(from_addr, buf, sizeof(buf)));
+   chat("HELO %s\r\n", my_hostname);
+   chat("MAIL FROM:%s\r\n", cleanup_addr(from_addr, buf, sizeof(buf)));
    
    for (i = 0; i < argc; i++) {
       Dmsg1(20, "rcpt to: %s\n", argv[i]);
-      chat("rcpt to:%s\r\n", cleanup_addr(argv[i], buf, sizeof(buf)));
+      chat("RCPT TO:%s\r\n", cleanup_addr(argv[i], buf, sizeof(buf)));
    }
 
    if (cc_addr) {
-      chat("rcpt to:%s\r\n", cleanup_addr(cc_addr, buf, sizeof(buf)));
+      chat("RCPT TO:%s\r\n", cleanup_addr(cc_addr, buf, sizeof(buf)));
    }
    Dmsg0(20, "Data\n");
-   chat("data\r\n");
+   chat("DATA\r\n");
 
    /*
     *  Send message header
@@ -560,28 +560,30 @@ hp:
    while (fgets(buf, sizeof(buf), stdin)) {
       if (maxlines > 0 && ++lines > maxlines) {
          Dmsg1(20, "skip line because of maxlines limit: %lu\n", maxlines);
+         while (fgets(buf, sizeof(buf), stdin)) {
+            ++lines;
+         }
          break;
       }
       buf[sizeof(buf)-1] = '\0';
       buf[strlen(buf)-1] = '\0';
-      if (buf[0] == '.' && buf[1] == '\0') { /* quote lone dots */
-         fputs("..\r\n", sfp);
-      } else {                     /* pass body through unchanged */
-         fputs(buf, sfp);
-         fputs("\r\n", sfp);
+      if (buf[0] == '.') {         /* add extra . see RFC 2821 4.5.2 */
+         fputs(".", sfp);
       }
+      fputs(buf, sfp);
+      fputs("\r\n", sfp);
    }
 
    if (lines > maxlines) {
       Dmsg1(10, "hit maxlines limit: %lu\n", maxlines);
-      fprintf(sfp, "\r\n[maximum of %lu lines exceeded, skipped %lu lines of output]\r\n", maxlines, lines-maxlines);
+      fprintf(sfp, "\r\n\r\n[maximum of %lu lines exceeded, skipped %lu lines of output]\r\n", maxlines, lines-maxlines);
    }
 
    /*
     *  Send SMTP quit command
     */
    chat(".\r\n");
-   chat("quit\r\n");
+   chat("QUIT\r\n");
 
    /*
     *  Go away gracefully ...

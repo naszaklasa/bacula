@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: restoretree.cpp 7310 2008-07-05 10:39:06Z kerns $
+ *   Version $Id: restoretree.cpp 7357 2008-07-12 12:36:26Z ricozz $
  *
  *  Restore Class 
  *
@@ -478,7 +478,7 @@ void restoreTree::refreshButtonPushed()
 /*
  * Set the values of non-job combo boxes to the job defaults
  */
-void restoreTree::jobComboChanged(int)
+void restoreTree::jobComboChanged(int index)
 {
    if (jobCombo->currentText() == tr("Any")) {
       fileSetCombo->setCurrentIndex(fileSetCombo->findText(tr("Any"), Qt::MatchExactly));

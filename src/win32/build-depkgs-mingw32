@@ -393,70 +393,70 @@ process_nsis()
 
 process_mtx()
 {
-        if get_source "${URL_MTX}" "${DIR_MTX}" "${MKD_MTX}"
-        then
-                echo Patching mtx
-                # We can't run configure in a cross-compile environment so we
-                # patch the files to the correct values
-                cp -f config.h.in config.h
-                cp -f Makefile.in Makefile
-                rm -f configure
-                >patch.log
-                do_patch mtx.patch
-        fi
-        echo Building mtx
-        do_make Makefile prefix=${DEPPKG_DIR} all
-        echo Installing mtx
-        do_make Makefile prefix=${DEPPKG_DIR} install
+   if get_source "${URL_MTX}" "${DIR_MTX}" "${MKD_MTX}"
+   then
+           echo Patching mtx
+           # We can't run configure in a cross-compile environment so we
+           # patch the files to the correct values
+           cp -f config.h.in config.h
+           cp -f Makefile.in Makefile
+           rm -f configure
+           >patch.log
+           do_patch mtx.patch
+   fi
+   echo Building mtx
+   do_make Makefile prefix=${DEPPKG_DIR} all
+   echo Installing mtx
+   do_make Makefile prefix=${DEPPKG_DIR} install
 }
 
 process_mt()
 {
-        if get_source "${URL_MT}" "${DIR_MT}" "${MKD_MT}"
-        then
-                echo "Patching mt"
-                >patch.log
-                do_patch mt.patch
-        fi
-        echo "Building mt"
-        do_make Makefile PREFIX=${DEPPKG_DIR} all
-        echo Installing mt
-        do_make Makefile PREFIX=${DEPPKG_DIR} install
+   if get_source "${URL_MT}" "${DIR_MT}" "${MKD_MT}"
+   then
+           echo "Patching mt"
+           >patch.log
+           do_patch mt.patch
+   fi
+   echo "Building mt"
+   do_make Makefile PREFIX=${DEPPKG_DIR} all
+   echo Installing mt
+   do_make Makefile PREFIX=${DEPPKG_DIR} install
 }
 
 process_sed()
 {
-        if get_source "${URL_SED}" "${DIR_SED}" "${MKD_SED}"
-        then
-                echo Patching sed
-                >patch.log
-                do_patch sed.patch
-                echo Configuring sed
-                ./configure --host=mingw32 \
-                            --prefix=${DEPPKG_DIR} \
-                            --disable-nls >make.log 2>&1
-        fi
-        echo Building sed
-        do_make Makefile all
-        echo Installing sed
-        do_make Makefile install
+   if get_source "${URL_SED}" "${DIR_SED}" "${MKD_SED}"
+   then
+           echo Patching sed
+           >patch.log
+           do_patch sed.patch
+           echo Configuring sed
+           ./configure --host=mingw32 \
+                       --prefix=${DEPPKG_DIR} \
+                       --disable-nls >make.log 2>&1
+   fi
+   echo Building sed
+   do_make Makefile all
+   echo Installing sed
+   do_make Makefile install
 }
 
 process_stab2cv()
 {
-        if get_source "${URL_STAB2CV}" "${DIR_STAB2CV}" "${MKD_STAB2CV}"
-        then
-                # echo Patching stab2cv
-                # >patch.log
-                # do_patch stab2cv.patch
-                echo Configuring stab2cv
-                ./configure --prefix=${DEPPKG_DIR}/tools \
-                            >make.log 2>&1
-        fi
-        echo Building stab2cv
-        do_make Makefile 
-        echo Installing stab2cv
-        do_make Makefile install
+   if get_source "${URL_STAB2CV}" "${DIR_STAB2CV}" "${MKD_STAB2CV}"
+   then
+           # echo Patching stab2cv
+           # >patch.log
+           # do_patch stab2cv.patch
+           echo Configuring stab2cv
+           ./configure --prefix=${DEPPKG_DIR}/tools \
+                       >make.log 2>&1
+   fi
+   echo Building stab2cv
+   do_make Makefile 
+   echo Installing stab2cv
+   do_make Makefile install
 }
 
 process_cmd_utils()

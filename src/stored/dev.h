@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, MM
  *
- *   Version $Id: dev.h 7263 2008-06-30 12:56:49Z kerns $
+ *   Version $Id: dev.h 7432 2008-07-24 15:26:41Z kerns $
  *
  */
 
@@ -542,6 +542,8 @@ public:
    int check_volume_label(bool &ask, bool &autochanger);
    void release_volume();
    void do_swapping(bool is_writing);
+   bool do_unload();
+   bool do_load(bool is_writing);
    bool is_tape_position_ok();
 };
 
