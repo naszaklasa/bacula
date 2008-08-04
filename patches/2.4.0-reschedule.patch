@@ -1,0 +1,344 @@
+
+ This patch should fix bug #1094 where jobs that wrote bytes and are rescheduled
+ do not keep any Pool overrides that were specified in the Schedule Run
+ directives. The patch also simplifies the resource lock inc/dec.   
+
+ Apply it to 2.4.0 with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.0-reschedule.patch
+ ./configure <your options>
+ make
+ ...
+ make install
+
+
+Index: src/dird/jobq.c
+===================================================================
+--- src/dird/jobq.c	(revision 7178)
++++ src/dird/jobq.c	(working copy)
+@@ -1,7 +1,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
++   Copyright (C) 2003-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -56,9 +56,10 @@
+ 
+ static int  start_server(jobq_t *jq);
+ static bool acquire_resources(JCR *jcr);
++static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je);
++static void dec_read_store(JCR *jcr);
++static void dec_write_store(JCR *jcr);
+ 
+-
+-
+ /*
+  * Initialize a job queue
+  *
+@@ -357,8 +358,8 @@
+    pthread_t id;
+ 
+    /*
+-    * if any threads are idle, wake one --                
+-    *   actually we do a broadcast because on /lib/tls 
++    * if any threads are idle, wake one.
++    *   Actually we do a broadcast because on /lib/tls 
+     *   these signals seem to get lost from time to time.
+     */
+    if (jq->idle_workers > 0) {
+@@ -477,87 +478,17 @@
+           *  put into the ready queue.
+           */
+          if (jcr->acquired_resource_locks) {
+-            if (jcr->rstore) {
+-               jcr->rstore->NumConcurrentJobs--;
+-               Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
+-            }
+-            if (jcr->wstore) {
+-               jcr->wstore->NumConcurrentJobs--;
+-               Dmsg1(200, "Dec wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+-            }
++            dec_read_store(jcr);
++            dec_write_store(jcr);
+             jcr->client->NumConcurrentJobs--;
+             jcr->job->NumConcurrentJobs--;
+             jcr->acquired_resource_locks = false;
+          }
+ 
+-         /*
+-          * Reschedule the job if necessary and requested
+-          */
+-         if (jcr->job->RescheduleOnError &&
+-             jcr->JobStatus != JS_Terminated &&
+-             jcr->JobStatus != JS_Canceled &&
+-             jcr->JobType == JT_BACKUP &&
+-             (jcr->job->RescheduleTimes == 0 ||
+-              jcr->reschedule_count < jcr->job->RescheduleTimes)) {
+-             char dt[50], dt2[50];
++         if (reschedule_job(jcr, jq, je)) {
++            continue;              /* go look for more work */
++         }
+ 
+-             /*
+-              * Reschedule this job by cleaning it up, but
+-              *  reuse the same JobId if possible.
+-              */
+-            time_t now = time(NULL);
+-            jcr->reschedule_count++;
+-            jcr->sched_time = now + jcr->job->RescheduleInterval;
+-            bstrftime(dt, sizeof(dt), now);
+-            bstrftime(dt2, sizeof(dt2), jcr->sched_time);
+-            Dmsg4(2300, "Rescheduled Job %s to re-run in %d seconds.(now=%u,then=%u)\n", jcr->Job,
+-                  (int)jcr->job->RescheduleInterval, now, jcr->sched_time);
+-            Jmsg(jcr, M_INFO, 0, _("Rescheduled Job %s at %s to re-run in %d seconds (%s).\n"),
+-                 jcr->Job, dt, (int)jcr->job->RescheduleInterval, dt2);
+-            dird_free_jcr_pointers(jcr);     /* partial cleanup old stuff */
+-            jcr->JobStatus = -1;
+-            set_jcr_job_status(jcr, JS_WaitStartTime);
+-            jcr->SDJobStatus = 0;
+-            if (jcr->JobBytes == 0) {
+-               Dmsg2(2300, "Requeue job=%d use=%d\n", jcr->JobId, jcr->use_count());
+-               V(jq->mutex);
+-               jobq_add(jq, jcr);     /* queue the job to run again */
+-               P(jq->mutex);
+-               free_jcr(jcr);         /* release jcr */
+-               free(je);              /* free the job entry */
+-               continue;              /* look for another job to run */
+-            }
+-            /*
+-             * Something was actually backed up, so we cannot reuse
+-             *   the old JobId or there will be database record
+-             *   conflicts.  We now create a new job, copying the
+-             *   appropriate fields.
+-             */           
+-            JCR *njcr = new_jcr(sizeof(JCR), dird_free_jcr);
+-            set_jcr_defaults(njcr, jcr->job);
+-            njcr->reschedule_count = jcr->reschedule_count;
+-            njcr->sched_time = jcr->sched_time;
+-            njcr->JobLevel = jcr->JobLevel;
+-            njcr->JobStatus = -1;
+-            set_jcr_job_status(njcr, jcr->JobStatus);
+-            if (jcr->rstore) {
+-               copy_rstorage(njcr, jcr->rstorage, _("previous Job"));
+-            } else {
+-               free_rstorage(njcr);
+-            }
+-            if (jcr->wstore) {
+-               copy_wstorage(njcr, jcr->wstorage, _("previous Job"));
+-            } else {
+-               free_wstorage(njcr);
+-            }
+-            njcr->messages = jcr->messages;
+-            Dmsg0(2300, "Call to run new job\n");
+-            V(jq->mutex);
+-            run_job(njcr);            /* This creates a "new" job */
+-            free_jcr(njcr);           /* release "new" jcr */
+-            P(jq->mutex);
+-            Dmsg0(2300, "Back from running new job.\n");
+-         }
+          /* Clean up and release old jcr */
+          Dmsg2(2300, "====== Termination job=%d use_cnt=%d\n", jcr->JobId, jcr->use_count());
+          jcr->SDJobStatus = 0;
+@@ -671,6 +602,91 @@
+ }
+ 
+ /*
++ * Returns true if cleanup done and we should look for more work
++ */
++static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je)
++{
++   /*
++    * Reschedule the job if necessary and requested
++    */
++   if (jcr->job->RescheduleOnError &&
++       jcr->JobStatus != JS_Terminated &&
++       jcr->JobStatus != JS_Canceled &&
++       jcr->JobType == JT_BACKUP &&
++       (jcr->job->RescheduleTimes == 0 ||
++        jcr->reschedule_count < jcr->job->RescheduleTimes)) {
++       char dt[50], dt2[50];
++
++       /*
++        * Reschedule this job by cleaning it up, but
++        *  reuse the same JobId if possible.
++        */
++      time_t now = time(NULL);
++      jcr->reschedule_count++;
++      jcr->sched_time = now + jcr->job->RescheduleInterval;
++      bstrftime(dt, sizeof(dt), now);
++      bstrftime(dt2, sizeof(dt2), jcr->sched_time);
++      Dmsg4(2300, "Rescheduled Job %s to re-run in %d seconds.(now=%u,then=%u)\n", jcr->Job,
++            (int)jcr->job->RescheduleInterval, now, jcr->sched_time);
++      Jmsg(jcr, M_INFO, 0, _("Rescheduled Job %s at %s to re-run in %d seconds (%s).\n"),
++           jcr->Job, dt, (int)jcr->job->RescheduleInterval, dt2);
++      dird_free_jcr_pointers(jcr);     /* partial cleanup old stuff */
++      jcr->JobStatus = -1;
++      set_jcr_job_status(jcr, JS_WaitStartTime);
++      jcr->SDJobStatus = 0;
++      if (jcr->JobBytes == 0) {
++         Dmsg2(2300, "Requeue job=%d use=%d\n", jcr->JobId, jcr->use_count());
++         V(jq->mutex);
++         jobq_add(jq, jcr);     /* queue the job to run again */
++         P(jq->mutex);
++         free_jcr(jcr);         /* release jcr */
++         free(je);              /* free the job entry */
++         return true;           /* we already cleaned up */
++      }
++      /*
++       * Something was actually backed up, so we cannot reuse
++       *   the old JobId or there will be database record
++       *   conflicts.  We now create a new job, copying the
++       *   appropriate fields.
++       */           
++      JCR *njcr = new_jcr(sizeof(JCR), dird_free_jcr);
++      set_jcr_defaults(njcr, jcr->job);
++      njcr->reschedule_count = jcr->reschedule_count;
++      njcr->sched_time = jcr->sched_time;
++      njcr->JobLevel = jcr->JobLevel;
++      njcr->pool = jcr->pool;
++      njcr->run_pool_override = jcr->run_pool_override;
++      njcr->full_pool = jcr->full_pool;
++      njcr->run_full_pool_override = jcr->run_full_pool_override;
++      njcr->inc_pool = jcr->inc_pool;
++      njcr->run_inc_pool_override = jcr->run_inc_pool_override;
++      njcr->diff_pool = jcr->diff_pool;
++      njcr->JobStatus = -1;
++      set_jcr_job_status(njcr, jcr->JobStatus);
++      if (jcr->rstore) {
++         copy_rstorage(njcr, jcr->rstorage, _("previous Job"));
++      } else {
++         free_rstorage(njcr);
++      }
++      if (jcr->wstore) {
++         copy_wstorage(njcr, jcr->wstorage, _("previous Job"));
++      } else {
++         free_wstorage(njcr);
++      }
++      njcr->messages = jcr->messages;
++      njcr->spool_data = jcr->spool_data;
++      njcr->write_part_after_job = jcr->write_part_after_job;
++      Dmsg0(2300, "Call to run new job\n");
++      V(jq->mutex);
++      run_job(njcr);            /* This creates a "new" job */
++      free_jcr(njcr);           /* release "new" jcr */
++      P(jq->mutex);
++      Dmsg0(2300, "Back from running new job.\n");
++   }
++   return false;
++}
++
++/*
+  * See if we can acquire all the necessary resources for the job (JCR)
+  *
+  *  Returns: true  if successful
+@@ -681,11 +697,19 @@
+    bool skip_this_jcr = false;
+ 
+    jcr->acquired_resource_locks = false;
++   if (jcr->rstore == jcr->wstore) {           /* deadlock */
++      Jmsg(jcr, M_FATAL, 0, _("Job canceled. Attempt to read and write same device.\n"
++         "    Read storage \"%s\" (From %s) -- Write storage \"%s\" (From %s)\n"), 
++         jcr->rstore->name(), jcr->rstore_source, jcr->wstore->name(), jcr->wstore_source);
++      set_jcr_job_status(jcr, JS_Canceled);
++      return false;
++   }
+    if (jcr->rstore) {
+       Dmsg1(200, "Rstore=%s\n", jcr->rstore->name());
+       if (jcr->rstore->NumConcurrentJobs < jcr->rstore->MaxConcurrentJobs) {
++//       jcr->rstore->NumConcurrentReadJobs++;
+          jcr->rstore->NumConcurrentJobs++;
+-         Dmsg0(200, "Set rncj=1\n");
++         Dmsg1(200, "Inc rncj=%d\n", jcr->rstore->NumConcurrentJobs);
+       } else {
+          Dmsg1(200, "Fail rncj=%d\n", jcr->rstore->NumConcurrentJobs);
+          set_jcr_job_status(jcr, JS_WaitStoreRes);
+@@ -695,25 +719,11 @@
+    
+    if (jcr->wstore) {
+       Dmsg1(200, "Wstore=%s\n", jcr->wstore->name());
+-      if (jcr->rstore == jcr->wstore) {           /* deadlock */
+-         jcr->rstore->NumConcurrentJobs--;        /* back out rstore */
+-         Jmsg(jcr, M_FATAL, 0, _("Job canceled. Attempt to read and write same device.\n"
+-            "    Read storage \"%s\" (From %s) -- Write storage \"%s\" (From %s)\n"), 
+-            jcr->rstore->name(), jcr->rstore_source, jcr->wstore->name(), jcr->wstore_source);
+-         set_jcr_job_status(jcr, JS_Canceled);
+-         return false;
+-      }
+-      if (jcr->wstore->NumConcurrentJobs == 0 &&
+-          jcr->wstore->NumConcurrentJobs < jcr->wstore->MaxConcurrentJobs) {
+-         /* Simple case, first job */
+-         jcr->wstore->NumConcurrentJobs = 1;
+-         Dmsg0(200, "Set wncj=1\n");
+-      } else if (jcr->wstore->NumConcurrentJobs < jcr->wstore->MaxConcurrentJobs) {
++      if (jcr->wstore->NumConcurrentJobs < jcr->wstore->MaxConcurrentJobs) {
+          jcr->wstore->NumConcurrentJobs++;
+          Dmsg1(200, "Inc wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+       } else if (jcr->rstore) {
+-         jcr->rstore->NumConcurrentJobs--;        /* back out rstore */
+-         Dmsg1(200, "Fail wncj=%d\n", jcr->wstore->NumConcurrentJobs);
++         dec_read_store(jcr);
+          skip_this_jcr = true;
+       } else {
+          Dmsg1(200, "Fail wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+@@ -729,14 +739,8 @@
+       jcr->client->NumConcurrentJobs++;
+    } else {
+       /* Back out previous locks */
+-      if (jcr->wstore) {
+-         jcr->wstore->NumConcurrentJobs--;
+-         Dmsg1(200, "Dec wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+-      }
+-      if (jcr->rstore) {
+-         jcr->rstore->NumConcurrentJobs--;
+-         Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
+-      }
++      dec_write_store(jcr);
++      dec_read_store(jcr);
+       set_jcr_job_status(jcr, JS_WaitClientRes);
+       return false;
+    }
+@@ -744,14 +748,8 @@
+       jcr->job->NumConcurrentJobs++;
+    } else {
+       /* Back out previous locks */
+-      if (jcr->wstore) {
+-         jcr->wstore->NumConcurrentJobs--;
+-         Dmsg1(200, "Dec wncj=%d\n", jcr->wstore->NumConcurrentJobs);
+-      }
+-      if (jcr->rstore) {
+-         jcr->rstore->NumConcurrentJobs--;
+-         Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
+-      }
++      dec_write_store(jcr);
++      dec_read_store(jcr);
+       jcr->client->NumConcurrentJobs--;
+       set_jcr_job_status(jcr, JS_WaitJobRes);
+       return false;
+@@ -760,3 +758,23 @@
+    jcr->acquired_resource_locks = true;
+    return true;
+ }
++
++static void dec_read_store(JCR *jcr)
++{
++   if (jcr->rstore) {
++//    jcr->rstore->NumConcurrentReadJobs--;    /* back out rstore */
++      jcr->rstore->NumConcurrentJobs--;        /* back out rstore */
++      Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
++//    ASSERT(jcr->rstore->NumConcurrentReadJobs >= 0);
++      ASSERT(jcr->rstore->NumConcurrentJobs >= 0);
++   }
++}
++
++static void dec_write_store(JCR *jcr)
++{
++   if (jcr->wstore) {
++      jcr->wstore->NumConcurrentJobs--;
++      Dmsg1(200, "Dec wncj=%d\n", jcr->wstore->NumConcurrentJobs);
++      ASSERT(jcr->wstore->NumConcurrentJobs >= 0);
++   }
++}

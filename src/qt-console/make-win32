@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+#  Used to build the Win32 version of bat
+#
+rm -f debug/bat.exe
+if test -e ../config.h ; then
+   mv -f ../config.h ../config.h.orig
+fi
+qmake -spec win32 -unix -o Makefile.mingw32 bat.pro.mingw32
+make -j3 -f Makefile.mingw32 $1
+if test -e ../config.h.orig ; then
+   mv -f ../config.h.orig ../config.h
+fi
+if test -d ../win32/release; then
+   cp -f debug/bat.exe ../win32/release
+fi

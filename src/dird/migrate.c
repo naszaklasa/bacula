@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -39,7 +39,7 @@
  *       to do the backup.
  *     When the Storage daemon finishes the job, update the DB.
  *
- *   Version $Id: migrate.c 6983 2008-05-17 23:28:41Z kerns $
+ *   Version $Id: migrate.c 7441 2008-07-26 20:54:28Z kerns $
  */
 
 #include "bacula.h"
@@ -269,6 +269,21 @@ bool do_migration(JCR *jcr)
     *  so set a normal status, cleanup and return OK.
     */
    if (!mig_jcr) {
+      set_jcr_job_status(jcr, JS_Terminated);
+      migration_cleanup(jcr, jcr->JobStatus);
+      return true;
+   }
+
+   if (!db_get_job_record(jcr, jcr->db, &jcr->previous_jr)) {
+      Jmsg(jcr, M_FATAL, 0, _("Could not get job record for JobId %s to migrate. ERR=%s"),
+           edit_int64(jcr->previous_jr.JobId, ed1),
+           db_strerror(jcr->db));
+      set_jcr_job_status(jcr, JS_Terminated);
+      migration_cleanup(jcr, jcr->JobStatus);
+      return true;
+   }
+   /* Make sure this job was not already migrated */
+   if (jcr->previous_jr.JobType != JT_BACKUP) {
       set_jcr_job_status(jcr, JS_Terminated);
       migration_cleanup(jcr, jcr->JobStatus);
       return true;

@@ -1,0 +1,253 @@
+
+ This patch corrects a problem of manual mounting of volumes,
+ where Bacula will accept an incorrect volume for restore.
+ Apply it to version 2.4.1 with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.1-wrong-volume.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+  
+ 
+Index: src/stored/mount.c
+===================================================================
+--- src/stored/mount.c	(revision 7422)
++++ src/stored/mount.c	(working copy)
+@@ -20,7 +20,7 @@
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+    02110-1301, USA.
+ 
+-   Bacula® is a registered trademark of John Walker.
++   Bacula® is a registered trademark of Kern Sibbald.
+    The licensor of Bacula is the Free Software Foundation Europe
+    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+    Switzerland, email:ftf@fsfeurope.org.
+@@ -113,7 +113,9 @@
+       ask = true;                     /* ask operator to mount tape */
+       do_find = true;                 /* re-find a volume after unload */
+    }
+-   do_swapping(true /*writing*/);
++   do_unload();
++   do_swapping(true /*is_writing*/);
++   do_load(true /*is_writing*/);
+ 
+    if (do_find && !find_a_volume()) {
+       goto no_lock_bail_out;
+@@ -500,12 +502,30 @@
+    return dir_get_volume_info(this, GET_VOL_INFO_FOR_WRITE);
+ }
+ 
+-void DCR::do_swapping(bool is_writing)
++bool DCR::do_unload()
+ {
+    if (dev->must_unload()) {
+       Dmsg1(100, "must_unload release %s\n", dev->print_name());
+       release_volume();
+    }
++   return false;
++}
++
++bool DCR::do_load(bool is_writing)
++{
++   if (dev->must_load()) {
++      Dmsg1(100, "Must load %s\n", dev->print_name());
++      if (autoload_device(this, is_writing, NULL) > 0) {
++         dev->clear_load();
++         return true;
++      }
++      return false;
++   }
++   return true;
++}
++
++void DCR::do_swapping(bool is_writing)
++{
+    /*
+     * See if we are asked to swap the Volume from another device
+     *  if so, unload the other device here, and attach the
+@@ -522,17 +542,12 @@
+       }
+       if (dev->vol) {
+          dev->vol->clear_swapping();
++         Dmsg1(100, "=== set in_use vol=%s\n", dev->vol->vol_name);
+          dev->vol->set_in_use();
+          dev->VolHdr.VolumeName[0] = 0;  /* don't yet have right Volume */
+       }
+       dev->swap_dev = NULL;
+    }
+-   if (dev->must_load()) {
+-      Dmsg1(100, "Must load %s\n", dev->print_name());
+-      if (autoload_device(this, is_writing, NULL) > 0) {
+-         dev->clear_load();
+-      }
+-   }
+ }
+ 
+ 
+Index: src/stored/dev.h
+===================================================================
+--- src/stored/dev.h	(revision 7422)
++++ src/stored/dev.h	(working copy)
+@@ -542,6 +542,8 @@
+    int check_volume_label(bool &ask, bool &autochanger);
+    void release_volume();
+    void do_swapping(bool is_writing);
++   bool do_unload();
++   bool do_load(bool is_writing);
+    bool is_tape_position_ok();
+ };
+ 
+Index: src/stored/acquire.c
+===================================================================
+--- src/stored/acquire.c	(revision 7422)
++++ src/stored/acquire.c	(working copy)
+@@ -20,7 +20,7 @@
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+    02110-1301, USA.
+ 
+-   Bacula® is a registered trademark of John Walker.
++   Bacula® is a registered trademark of Kern Sibbald.
+    The licensor of Bacula is the Free Software Foundation Europe
+    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+    Switzerland, email:ftf@fsfeurope.org.
+@@ -38,6 +38,7 @@
+ 
+ /* Forward referenced functions */
+ static void attach_dcr_to_dev(DCR *dcr);
++static void set_dcr_from_vol(DCR *dcr, VOL_LIST *vol);
+ 
+ 
+ /*********************************************************************
+@@ -88,15 +89,9 @@
+          jcr->NumReadVolumes, jcr->CurReadVolume);
+       goto get_out;                   /* should not happen */   
+    }
+-   /*    
+-    * Note, if we want to be able to work from a .bsr file only          
+-    *  for disaster recovery, we must "simulate" reading the catalog
+-    */
+-   bstrncpy(dcr->VolumeName, vol->VolumeName, sizeof(dcr->VolumeName));
+-   bstrncpy(dcr->VolCatInfo.VolCatName, vol->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
+-   bstrncpy(dcr->media_type, vol->MediaType, sizeof(dcr->media_type));
+-   dcr->VolCatInfo.Slot = vol->Slot;
+-   dcr->VolCatInfo.InChanger = vol->Slot > 0; 
++   set_dcr_from_vol(dcr, vol);
++
++   Dmsg2(100, "Want Vol=%s Slot=%d\n", vol->VolumeName, vol->Slot);
+     
+    /*
+     * If the MediaType requested for this volume is not the
+@@ -174,20 +169,12 @@
+ 
+    dev->clear_unload();
+ 
+-   if (reserve_volume(dcr, dcr->VolumeName) == NULL) {
+-      Dmsg2(100, "Could not reserve volume %s on %s\n", dcr->VolumeName,
+-            dcr->dev->print_name());
+-      Jmsg2(jcr, M_FATAL, 0, _("Could not reserve volume %s on %s\n"), dcr->VolumeName,
+-            dcr->dev->print_name());
+-      goto get_out;
+-   }
+    if (dev->vol && dev->vol->is_swapping()) {
+       dev->vol->set_slot(vol->Slot);
+       Dmsg3(100, "swapping: slot=%d Vol=%s dev=%s\n", dev->vol->get_slot(),
+          dev->vol->vol_name, dev->print_name());
+    }
+ 
+-
+    init_device_wait_timers(dcr);
+ 
+    tape_previously_mounted = dev->can_read() || dev->can_append() ||
+@@ -217,7 +204,10 @@
+          goto get_out;                /* error return */
+       }
+ 
+-      dcr->do_swapping(false/*is_writing*/);
++      dcr->do_unload();
++      dcr->do_swapping(false/*!is_writing*/);
++      dcr->do_load(false /*!is_writing*/);
++      set_dcr_from_vol(dcr, vol);          /* refresh dcr with desired volume info */
+ 
+       /*
+        * This code ensures that the device is ready for
+@@ -239,10 +229,12 @@
+       vol_label_status = read_dev_volume_label(dcr);
+       switch (vol_label_status) {
+       case VOL_OK:
++         Dmsg0(50, "Got correct volume.\n");
+          ok = true;
+          dev->VolCatInfo = dcr->VolCatInfo;     /* structure assignment */
+          break;                    /* got it */
+       case VOL_IO_ERROR:
++         Dmsg0(50, "IO Error\n");
+          /*
+           * Send error message generated by read_dev_volume_label()
+           *  only we really had a tape mounted. This supresses superfluous
+@@ -253,13 +245,10 @@
+          }
+          goto default_path;
+       case VOL_NAME_ERROR:
++         Dmsg0(50, "Vol name error.\n");
+          if (dev->is_volume_to_unload()) {
+             goto default_path;
+          }
+-//       if (tape_initially_mounted) {
+-            tape_initially_mounted = false;
+-//          goto default_path;
+-//       }
+          dev->set_unload();              /* force unload of unwanted tape */
+          if (!unload_autochanger(dcr, -1)) {
+             /* at least free the device so we can re-open with correct volume */
+@@ -270,6 +259,7 @@
+       default:
+          Jmsg1(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+ default_path:
++         Dmsg0(50, "default path\n");
+          tape_previously_mounted = true;
+          
+          /*
+@@ -289,15 +279,6 @@
+                try_autochanger = false;
+                continue;              /* try reading volume mounted */
+             }
+-            /* Try closing and re-opening */
+-            dev->close();
+-            if (dev->open(dcr, OPEN_READ_ONLY) >= 0) {
+-               continue;
+-            }
+-            if (!dev->poll) {
+-               Jmsg3(jcr, M_WARNING, 0, _("Read open device %s Volume \"%s\" failed: ERR=%s\n"),
+-                     dev->print_name(), dcr->VolumeName, dev->bstrerror());
+-            }
+          }
+          
+          /* Mount a specific volume and no other */
+@@ -305,7 +286,7 @@
+          if (!dir_ask_sysop_to_mount_volume(dcr, ST_READ)) {
+             goto get_out;             /* error return */
+          }
+-         try_autochanger = true;      /* permit using autochanger again */
++         try_autochanger = true;      /* permit trying the autochanger again */
+          continue;                    /* try reading again */
+       } /* end switch */
+       break;
+@@ -693,3 +674,16 @@
+    }
+    free(dcr);
+ }
++
++static void set_dcr_from_vol(DCR *dcr, VOL_LIST *vol)
++{
++   /*    
++    * Note, if we want to be able to work from a .bsr file only          
++    *  for disaster recovery, we must "simulate" reading the catalog
++    */
++   bstrncpy(dcr->VolumeName, vol->VolumeName, sizeof(dcr->VolumeName));
++   bstrncpy(dcr->VolCatInfo.VolCatName, vol->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
++   bstrncpy(dcr->media_type, vol->MediaType, sizeof(dcr->media_type));
++   dcr->VolCatInfo.Slot = vol->Slot;
++   dcr->VolCatInfo.InChanger = vol->Slot > 0; 
++}

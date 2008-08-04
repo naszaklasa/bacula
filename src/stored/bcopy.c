@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *   Kern E. Sibbald, October 2002
  *
  *
- *   Version $Id: bcopy.c 6636 2008-03-19 18:01:45Z kerns $
+ *   Version $Id: bcopy.c 7424 2008-07-23 15:21:42Z kerns $
  */
 
 #include "bacula.h"
@@ -254,9 +254,20 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
          Pmsg0(000, _("Volume label not copied.\n"));
          return true;
       case SOS_LABEL:
-         jobs++;
+         if (bsr && rec->match_stat < 1) {
+            /* Skipping record, because does not match BSR filter */
+            if (verbose) {
+             Pmsg0(-1, _("Copy skipped. Record does not match BSR filter.\n"));
+            }
+         } else {
+            jobs++;
+         }
          break;
       case EOS_LABEL:
+         if (bsr && rec->match_stat < 1) {
+            /* Skipping record, because does not match BSR filter */
+           return true;
+        }
          while (!write_record_to_block(out_block, rec)) {
             Dmsg2(150, "!write_record_to_block data_len=%d rem=%d\n", rec->data_len,
                        rec->remainder);
@@ -288,6 +299,10 @@ static bool record_cb(DCR *in_dcr, DEV_RECORD *rec)
    }
 
    /*  Write record */
+   if (bsr && rec->match_stat < 1) {
+      /* Skipping record, because does not match BSR filter */
+      return true;
+   }
    records++;
    while (!write_record_to_block(out_block, rec)) {
       Dmsg2(150, "!write_record_to_block data_len=%d rem=%d\n", rec->data_len,

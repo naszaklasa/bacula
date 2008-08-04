@@ -1,0 +1,47 @@
+Index: scripts/bacula.in
+===================================================================
+--- scripts/bacula.in	(revision 7106)
++++ scripts/bacula.in	(working copy)
+@@ -13,22 +13,20 @@
+ #  easier to "steal" this code for the development 
+ #  environment where they are different.
+ #  
+-BACFDCFG=@sysconfdir@
+-BACSDCFG=@sysconfdir@
+-BACDIRCFG=@sysconfdir@
++SCRIPTDIR=@scriptdir@
+ 
+ case "$1" in
+    start)
+-      [ -x ${BACSDCFG}/bacula-ctl-sd ] && ${BACSDCFG}/bacula-ctl-sd $1 $2
+-      [ -x ${BACFDCFG}/bacula-ctl-fd ] && ${BACFDCFG}/bacula-ctl-fd $1 $2
+-      [ -x ${BACDIRCFG}/bacula-ctl-dir ] && ${BACDIRCFG}/bacula-ctl-dir $1 $2
++      [ -x ${SCRIPTDIR}/bacula-ctl-sd ] && ${SCRIPTDIR}/bacula-ctl-sd $1 $2
++      [ -x ${SCRIPTDIR}/bacula-ctl-fd ] && ${SCRIPTDIR}/bacula-ctl-fd $1 $2
++      [ -x ${SCRIPTDIR}/bacula-ctl-dir ] && ${SCRIPTDIR}/bacula-ctl-dir $1 $2
+       ;;
+ 
+    stop)
+       # Stop the FD first so that SD will fail jobs and update catalog
+-      [ -x ${BACFDCFG}/bacula-ctl-fd ] && ${BACFDCFG}/bacula-ctl-fd $1 $2
+-      [ -x ${BACSDCFG}/bacula-ctl-sd ] && ${BACSDCFG}/bacula-ctl-sd $1 $2
+-      [ -x ${BACDIRCFG}/bacula-ctl-dir ] && ${BACDIRCFG}/bacula-ctl-dir $1 $2
++      [ -x ${SCRIPTDIR}/bacula-ctl-fd ] && ${SCRIPTDIR}/bacula-ctl-fd $1 $2
++      [ -x ${SCRIPTDIR}/bacula-ctl-sd ] && ${SCRIPTDIR}/bacula-ctl-sd $1 $2
++      [ -x ${SCRIPTDIR}/bacula-ctl-dir ] && ${SCRIPTDIR}/bacula-ctl-dir $1 $2
+       echo
+       sleep 6
+       ;;
+@@ -39,9 +37,9 @@
+       ;;
+ 
+    status)
+-      [ -x ${BACSDCFG}/bacula-ctl-sd ] && ${BACSDCFG}/bacula-ctl-sd status
+-      [ -x ${BACFDCFG}/bacula-ctl-fd ] && ${BACFDCFG}/bacula-ctl-fd status
+-      [ -x ${BACDIRCFG}/bacula-ctl-dir ] && ${BACDIRCFG}/bacula-ctl-dir status
++      [ -x ${SCRIPTDIR}/bacula-ctl-sd ] && ${SCRIPTDIR}/bacula-ctl-sd status
++      [ -x ${SCRIPTDIR}/bacula-ctl-fd ] && ${SCRIPTDIR}/bacula-ctl-fd status
++      [ -x ${SCRIPTDIR}/bacula-ctl-dir ] && ${SCRIPTDIR}/bacula-ctl-dir status
+       ;;
+ 
+    *)

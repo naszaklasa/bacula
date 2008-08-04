@@ -1,0 +1,27 @@
+ This patch fixes #1034 by setting big timeout on mysql connections
+
+ Apply this patch to version 2.4.1 with:
+
+ cd <bacula-source>
+ patch -p0 < patches/2.4.1-mysql-timeout.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+Index: src/cats/mysql.c
+===================================================================
+--- src/cats/mysql.c    (révision 7401)
++++ src/cats/mysql.c    (copie de travail)
+@@ -205,6 +205,10 @@
+    Dmsg3(100, "opendb ref=%d connected=%d db=%p\n", mdb->ref_count,
+          mdb->connected, mdb->db);
+
++   /* Set connection timeout to 8 days specialy for batch mode */
++   sql_query(mdb, "SET wait_timeout=691200");
++   sql_query(mdb, "SET interactive_timeout=691200");
++
+    V(mutex);
+    return 1;
+ }

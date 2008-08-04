@@ -1,0 +1,50 @@
+
+ This patch should help prevent jobs from being migrated twice if 
+ you happen to run two migration jobs at the same time. This should
+ fix or improve the problem reported in bug #1129.
+ Apply it to version 2.4.1 with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.1-migration.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+ 
+Index: src/dird/migrate.c
+===================================================================
+--- src/dird/migrate.c	(revision 7433)
++++ src/dird/migrate.c	(working copy)
+@@ -1,7 +1,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
++   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -274,6 +274,21 @@
+       return true;
+    }
+ 
++   if (!db_get_job_record(jcr, jcr->db, &jcr->previous_jr)) {
++      Jmsg(jcr, M_FATAL, 0, _("Could not get job record for JobId %s to migrate. ERR=%s"),
++           edit_int64(jcr->previous_jr.JobId, ed1),
++           db_strerror(jcr->db));
++      set_jcr_job_status(jcr, JS_Terminated);
++      migration_cleanup(jcr, jcr->JobStatus);
++      return true;
++   }
++   /* Make sure this job was not already migrated */
++   if (jcr->previous_jr.JobType != JT_BACKUP) {
++      set_jcr_job_status(jcr, JS_Terminated);
++      migration_cleanup(jcr, jcr->JobStatus);
++      return true;
++   }
++
+    /* Print Job Start message */
+    Jmsg(jcr, M_INFO, 0, _("Start Migration JobId %s, Job=%s\n"),
+         edit_uint64(jcr->JobId, ed1), jcr->Job);

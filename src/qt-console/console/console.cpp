@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: console.cpp 7085 2008-06-01 14:31:37Z bartleyd2 $
+ *   Version $Id: console.cpp 7416 2008-07-22 14:48:21Z kerns $
  *
  *  Console Class
  *
@@ -105,8 +105,8 @@ void Console::terminate()
    if (m_sock) {
       if (m_notifier) {
          m_notifier->setEnabled(false);
-         delete m_notifier;
-         m_notifier = NULL;
+//       delete m_notifier;
+//       m_notifier = NULL;
       }
       stopTimer();
       m_sock->close();
@@ -612,7 +612,7 @@ int Console::read()
    int stat = 0;
    while (m_sock) {
       for (;;) {
-         stat = bnet_wait_data_intr(m_sock, 1);
+         stat = m_sock->wait_data_intr(0, 50000);
          if (stat > 0) {
             break;
          } 
@@ -748,6 +748,7 @@ void Console::read_dir(int /* fd */)
    while (read() >= 0) {
       display_text(msg());
    }
+   if (mainWin->m_commDebug) Pmsg0(000, "exit read_dir\n");
 }
 
 /*
@@ -840,9 +841,8 @@ static int tls_pem_callback(char *buf, int size, const void *userdata)
    (void)size;
    (void)userdata;
 #ifdef HAVE_TLS
-   const char *prompt = (const char *)userdata;
 # if defined(HAVE_WIN32)
-   sendit(prompt);
+// sendit(prompt);
    if (win32_cgets(buf, size) == NULL) {
       buf[0] = 0;
       return 0;
@@ -850,6 +850,7 @@ static int tls_pem_callback(char *buf, int size, const void *userdata)
       return strlen(buf);
    }
 # else
+   const char *prompt = (const char *)userdata;
    char *passwd;
 
    passwd = getpass(prompt);
