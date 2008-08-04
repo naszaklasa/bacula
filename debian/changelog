@@ -1,3 +1,36 @@
+bacula (2.4.2-1) unstable; urgency=high
+
+  * Fix sed pattern in debian/rules to correctly remove
+    'USE ${db_name};' from the MySQL command tables.  This prevented
+    bacula-director-mysql from being installed properly and was thus RC.
+    Closes: #441995, #489578.
+  * While investigating the above problem, also discovered 'USE bacula;'
+    statements in some upgrade tables.  This would cause the upgrade of
+    bacula-director-mysql to fail for anyone that had their MySQL
+    database named something other than "bacula".  Added pattern to fix this.
+  * New upstream release is a bugfix release, and fixes these issues:
+    + 2.4.1 included an unintentional debug statement whose purpose
+      was to crash the storage daemon.  This was triggered during a restore
+      at the end of a tape.  Fixed in 2.4.2 (upstream bug 1125).  When the
+      SD is crashed, no backups or restores can be performed until it is
+      restarted.
+    + During a multi-tape restore, Bacula could incorrectly attempt
+      to reread the same tape.  (Upstream bug 1126)
+    + bcopy no longer reads too many records (upstream bug 1107)
+    + Now sets a large timeout on MySQL databases to prevent trouble
+      with the connection timining out before data gets inserted.  
+      Upstream bug 1034.
+    + There are also some other minor bugfixes and win32 changes upstream
+      in this release, which of course don't impact Debian.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 04 Aug 2008 09:22:36 -0500
+
+bacula (2.4.2-1) unstable; urgency=low
+
+  * New Upstream Version
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 04 Aug 2008 09:20:21 -0500
+
 bacula (2.4.1-1) unstable; urgency=high
 
   * New Upstream Version.
