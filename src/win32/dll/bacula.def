@@ -220,12 +220,12 @@ _Z12write_nbytesP5BSOCKPci
 _Z13bnet_get_peerP5BSOCKPci
 _Z13bnet_strerrorP5BSOCK
 _Z13is_bnet_errorP5BSOCK
-_Z14bnet_wait_dataP5BSOCKi
 _Z15bnet_tls_clientP11TLS_ContextP5BSOCKP5alist
 _Z15bnet_tls_serverP11TLS_ContextP5BSOCKP5alist
 _Z17bnet_host2ipaddrsPKciPS0_
 _Z17bnet_set_blockingP5BSOCK
 _Z17bnet_sig_to_asciiP5BSOCK
+_Z14bnet_wait_dataP5BSOCKi
 _Z19bnet_wait_data_intrP5BSOCKi
 _Z20bnet_set_buffer_sizeP5BSOCKji
 _Z20bnet_set_nonblockingP5BSOCK
@@ -281,7 +281,6 @@ _Z9bsnprintfPciPKcz
 _Z9new_bsockv
 _ZN5BSOCK10free_bsockEv
 _ZN5BSOCK12set_blockingEv
-_ZN5BSOCK14wait_data_intrEi
 _ZN5BSOCK15set_buffer_sizeEji
 _ZN5BSOCK15set_nonblockingEv
 _ZN5BSOCK16restore_blockingEi
@@ -299,7 +298,8 @@ _ZN5BSOCK7destroyEv
 _ZN5BSOCK8fin_initEP3JCRiPKcS3_iP8sockaddr
 _ZN5BSOCK8get_peerEPci
 _ZN5BSOCK9bstrerrorEv
-_ZN5BSOCK9wait_dataEi
+_ZN5BSOCK9wait_dataEii
+_ZN5BSOCK14wait_data_intrEii
  
 ; bsys.o
 _Z10b_strerroriPcj

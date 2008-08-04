@@ -67,3 +67,29 @@ Index: ptw32_semwait.c
  ptw32_semwait (sem_t * sem)
       /*
        * ------------------------------------------------------
+--- /tmp/pthread_getspecific.c.bak	2008-07-12 17:26:03.000000000 +0200
++++ pthread_getspecific.c	2008-07-12 17:26:03.000000000 +0200
+@@ -63,13 +63,18 @@
+       * ------------------------------------------------------
+       */
+ {
+-  int lasterror = GetLastError ();
+-  int lastWSAerror = WSAGetLastError ();
++  void *ptr;
+ 
+-  void *ptr = TlsGetValue (key->key);
++  if (key == NULL) {
++     ptr = NULL;
++  } else {
++     int lasterror = GetLastError ();
++     int lastWSAerror = WSAGetLastError ();
+ 
+-  SetLastError (lasterror);
+-  WSASetLastError (lastWSAerror);
++     ptr = TlsGetValue(key->key);
+ 
++     SetLastError(lasterror);
++     WSASetLastError(lastWSAerror);
++  }
+   return ptr;
+ }

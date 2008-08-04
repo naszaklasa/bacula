@@ -186,7 +186,7 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	$(call ext-upgrade,mysql,debian/tmp-build-mysql/src/cats/update_mysql_tables,2.0.0)
 	$(call ext-install,mysql,debian/tmp-build-mysql/src/cats/make_mysql_tables)
 # Remove USE bacula -- dbconfig-common selects the database for us
-	sed -i 's/USE \${db_name};//' debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/install/mysql debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/upgrade/mysql/*
+	sed -i -e 's/USE \$${db_name};//' -e 's/USE bacula;//' debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/install/mysql debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/upgrade/mysql/*
 
 # SQLite
 	cp updatedb/update_sqlite_tables_[678]* \

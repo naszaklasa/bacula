@@ -3,17 +3,51 @@ Instructions to build Bacula using the MinGW32 on Linux
 
 This file documents the tools (scripts) we use for building Bacula for
 Microsoft Windows using the cross-compiler tools on a Linux system.  We
-use Fedora Core 5 and SuSE so those should definitely work.  But there
+use Ubuntu 8.04 so building on that system should definitely work.  But there
 shouldn't be any issues on other Linux distributions.
 
 We don't officially support this script, but it is what we use, and it should
 build on any Linux machine if you carefully follow the instructions and have
 all the prerequisite programs loaded on your machine.
 
-It has also been tested on other systems such as FreeBSD and CentOS.  We
-expect that there may be problems on systems other than Linux where you
+It has also been tested on other systems such as FreeBSD, CentOS, Fedora, and SUSE.
+We expect that there may be problems on systems other than Linux where you
 are pretty much on your own.  However, we will try to provide responses to
 your questions on the bacula-devel list, but we can't guarantee anything.
+
+Directory Structure
+=====================
+The new directory structure is:
+
+  bacula-top                 Top level directory -- any name
+    bacula                   Top level Bacula source directory -- any name
+      src
+        win32                Main directory where Windows version is built.
+
+    docs                     Top level Bacula documentation directory
+
+    depkgs-mingw32 (MinGW32) 3rd Party Dependencies for MinGW32 build
+or
+    depkgs-msvc (MS VC++)    3rd Party Dependencies for Microsoft VC++ build.
+      bin              --    NOTE!  depkgs-msvc is no longer suppored
+      include            |
+      lib                |
+      man                |   Created by script
+      nsis               |-- .../bacula/src/win32/build-depkgs-mingw32
+      scons              |
+      share              |
+      src                |
+      ssl              --
+      vss
+        inc                  A copy of the Windows VSS/inc directory
+
+    cross-tools (MinGW32)    Cross compilation tools (gcc, g++, mingw32, ...)
+      binutils-mingw32 --
+      gcc-mingw32        |   Created by script
+      mingw32            |-- .../bacula/src/win32/build-win32-cross-tools
+      mingw-utils        |
+      source           --
+
 
 One-time Setup
 ==============
@@ -22,8 +56,7 @@ If you're reading this file you've probably already enlisted in the SVN tree or
 extracted the contents of the source tar.  If not you need to do that first.
 
 You also need to download one of the doc tar balls and extract to your
-top level Bacula directory.  It is referred to as bacula-top in the
-diagram located in README.win32.  It will be signified in this file as ...
+top level Bacula directory. 
 
 The extracted doc directory name will be bacula-docs-version where version
 is the version number.  The directory must be renamed to docs (ie remove
@@ -36,8 +69,16 @@ make, ...  However a few that you may not have are:
   texinfo
   flex
   bison
+  patch (Debian)
   m4
+  postgresql (at least client)
+  mysql (at least client)
+  SQLite3 (from depkgs or as package)
+  readline (readlineN-dev on Debian)
   ...
+
+NB: On Debian, I had to remove /usr/bin/lorder for
+postresql to build correctly.
 
 Once the source is on your system, change to the win32 directory
         cd .../bacula/src/win32
@@ -69,8 +110,9 @@ depkgs-mingw32/scons/lib64 to depkgs-mingw32/scons/lib will fix the
 problem.
 
 You need the header files from the Microsoft VSS SDK.  Unfortunately the SDK
-can only be downloaded and installed on a Windows system.  You can find it on
-Microsoft's web-site at:
+can only be downloaded and installed on a Windows system.  We do not have
+the right to distribute it, so you must download it yourself.
+You can find it on Microsoft's web-site at:
 
 http://www.microsoft.com/downloads/details.aspx?FamilyID=0b4f56e4-0ccc-4626-826a-ed2c4c95c871&DisplayLang=en
 
@@ -99,6 +141,7 @@ following:
         wget
         texinfo
         bison
+        flex
 
 and possibly other packages.
 
@@ -112,19 +155,18 @@ Finally, to build the Microsoft Windows version of Bacula, do the following:
    make
 
 If all goes well, you will end with all the executables in the
-.../bacula/src/win32/release directory.
+.../bacula/src/win32/release directory, and the installer binary
+containing everything will be named winbacula-xx.yy.zz.exe where
+xx.yy.zz is the Bacula version you are building.
 
 If you have an older build environment, you might do the following
 to ensure that you pick up all the new Win32 changes:
 
    cd .../bacula
    make clean
-   cvs -q update -d -P
+   svn update
    cd src/win32
    make
-
-The installer is now built as part of the default rule when you
-say "make" in the src/win32 directory.
 
 
 Updating the 3rd party package patches
@@ -162,7 +204,16 @@ exported.
 New data variables are exported by adding the macro DLL_IMP_EXP to
 the variable declaration in the header file.  All exported variables
 must be declared in a header file and MUST NOT be declared in a
-source file referencing the variable.
+source file referencing the variable. Example, src/lib/runscript.h:
+
+extern DLL_IMP_EXP bool (*console_command)(JCR *jcr, const char *cmd);
+
+or src/jcr.h
+
+extern int DLL_IMP_EXP num_jobs_run;
+extern DLL_IMP_EXP dlist * last_jobs;
+...
+
 
 Exporting functions is now more or less automated.  If you find that
 a function name has been added, changed, or an argument modified,    
@@ -172,7 +223,11 @@ simply do the following:
    make                  (to build the .o files, note the link will fail)
    ./make_def >bacula.def
 
-This should rebuild the bacula.def file.
+This should rebuild the bacula.def file, but it uses relative paths
+and assumes you have the directory structure noted above. If you 
+are using something different, you can set the NM variable at the
+top of the make_def file to use an absolute path to the correct
+directory.
 
 ===== manual changing of bacula.def no longer necessary =====
 If you want to do it manually, please see below:
@@ -250,6 +305,21 @@ in the .../bacula/src/win32/cats/bacula_cats.def file.
 === end manual changing of bacula_cats.def ==========
 
 
+Running gdb on the Win32 files
+==================================================
+You can use the mingw32 gdb to debug Bacula on Win32 by downloading
+it from Source Forge:
+
+http://sourceforge.net/project/showfiles.php?group_id=2435&package_id=20507
+
+Download one of their .exe versions, which is an installer that you
+can run on Win32 to install gdb.  This gdb is built with mingw32 so will
+run independently of any cygwin installation.  Note, not all the releases
+come with an installer. I had to go back 3 or 4 versions to find it.  Otherwise
+you can download the source and build it.  Thanks to Eric Bollengier for
+this tip.
+
+
 Structure of the MinGW32 build environment
 ==========================================
 
@@ -269,3 +339,4 @@ executables, etc.
 Makefile.template is a template for creating new Makefiles, if you are
 creating a new directory, copy Makefile.template to Makefile in that
 directory and edit to suit.
+

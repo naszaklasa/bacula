@@ -27,7 +27,7 @@
 */
 
 /*
- *   Version $Id: mainwin.cpp 7311 2008-07-05 10:52:36Z kerns $
+ *   Version $Id: mainwin.cpp 7416 2008-07-22 14:48:21Z kerns $
  *
  *  Main Window control for bat (qt-console)
  *

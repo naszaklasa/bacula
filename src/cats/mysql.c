@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: mysql.c 5713 2007-10-03 11:36:47Z kerns $
+ *    Version $Id: mysql.c 7402 2008-07-20 10:32:02Z ricozz $
  */
 
 
@@ -204,6 +204,10 @@ db_open_database(JCR *jcr, B_DB *mdb)
 
    Dmsg3(100, "opendb ref=%d connected=%d db=%p\n", mdb->ref_count,
          mdb->connected, mdb->db);
+
+   /* Set connection timeout to 8 days specialy for batch mode */
+   sql_query(mdb, "SET wait_timeout=691200");
+   sql_query(mdb, "SET interactive_timeout=691200");
 
    V(mutex);
    return 1;

@@ -1,0 +1,35 @@
+
+ This patch should fix a volume locking deadlock condition in the 
+ Storage daemon as  reported in bug #1100.
+
+ Apply it to version 2.4.0 with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.0-sd-deadlock.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+Index: src/stored/mount.c
+===================================================================
+--- src/stored/mount.c	(revision 7204)
++++ src/stored/mount.c	(working copy)
+@@ -179,9 +179,13 @@
+    }
+    Dmsg2(150, "Ask=%d autochanger=%d\n", ask, autochanger);
+ 
+-   if (ask && !dir_ask_sysop_to_mount_volume(dcr, ST_APPEND)) {
+-      Dmsg0(150, "Error return ask_sysop ...\n");
+-      goto bail_out;          /* error return */
++   if (ask) {
++      unlock_volumes();
++      if (!dir_ask_sysop_to_mount_volume(dcr, ST_APPEND)) {
++         Dmsg0(150, "Error return ask_sysop ...\n");
++         goto no_lock_bail_out;  /* error return */
++      }
++      lock_volumes();
+    }
+    if (job_canceled(jcr)) {
+       goto bail_out;

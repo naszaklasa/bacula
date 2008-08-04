@@ -1,0 +1,68 @@
+
+ This patch should fix bug #1118 where bat does not restore correctly
+ if multiple pools were used. Bat actually works correctly, but the default
+ Pool is taken from the Job resource, and for multiple pools the default
+ should be Any. This patch makes Any the default restore pool.
+ Apply it to version 2.4.1 with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.1-bat-restore.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+ 
+Index: src/qt-console/restore/prerestore.cpp
+===================================================================
+--- src/qt-console/restore/prerestore.cpp	(revision 7414)
++++ src/qt-console/restore/prerestore.cpp	(working copy)
+@@ -1,7 +1,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2007-20087 Free Software Foundation Europe e.V.
++   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -20,7 +20,7 @@
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+    02110-1301, USA.
+ 
+-   Bacula® is a registered trademark of John Walker.
++   Bacula® is a registered trademark of Kern Sibbald.
+    The licensor of Bacula is the Free Software Foundation Europe
+    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+    Switzerland, email:ftf@fsfeurope.org.
+@@ -146,7 +146,7 @@
+    cmd += " fileset=\"" + filesetCombo->currentText() + "\"";
+    cmd += " client=\"" + clientCombo->currentText() + "\"";
+    if (selectJobRadio->isChecked()) {
+-      if (poolCombo->currentText() != "Any" ){
++      if (poolCombo->currentText() != tr("Any") ){
+          cmd += " pool=\"" + poolCombo->currentText() + "\"";
+       }
+       cmd += " storage=\"" + storageCombo->currentText() + "\"";
+@@ -171,12 +171,10 @@
+       Pmsg1(000, "preRestore command \'%s\'\n", cmd.toUtf8().data());
+    }
+    m_console->write_dir(cmd.toUtf8().data());
+-// consoleCommand(cmd);
+ 
+    /* Note, do not turn notifier back on here ... */
+    if (selectFilesRadio->isChecked()) {
+       setConsoleCurrent();
+-//    new restorePage();
+       closeStackPage();
+    } else {
+       closeStackPage();
+@@ -210,7 +208,7 @@
+    if (m_console->get_job_defaults(job_defs)) {
+       filesetCombo->setCurrentIndex(filesetCombo->findText(job_defs.fileset_name, Qt::MatchExactly));
+       clientCombo->setCurrentIndex(clientCombo->findText(job_defs.client_name, Qt::MatchExactly));
+-      poolCombo->setCurrentIndex(poolCombo->findText(job_defs.pool_name, Qt::MatchExactly));
++      poolCombo->setCurrentIndex(poolCombo->findText(tr("Any"), Qt::MatchExactly));
+       storageCombo->setCurrentIndex(storageCombo->findText(job_defs.store_name, Qt::MatchExactly));
+    }
+ }

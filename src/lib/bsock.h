@@ -38,7 +38,7 @@
  * Negative msglen, is special "signal" (no data follows).
  *   See below for SIGNAL codes.
  *
- *   Version $Id: bsock.h 6819 2008-04-15 14:55:03Z kerns $
+ *   Version $Id: bsock.h 7416 2008-07-22 14:48:21Z kerns $
  */
 
 #ifndef __BSOCK_H_
@@ -107,8 +107,8 @@ public:
    int set_nonblocking();
    int set_blocking();
    void restore_blocking(int flags);
-   int wait_data(int sec);
-   int wait_data_intr(int sec);
+   int wait_data(int sec, int usec=0);
+   int wait_data_intr(int sec, int usec=0);
    bool authenticate_director(const char *name, const char *password,
                   TLS_CONTEXT *tls_ctx, char *msg, int msglen);
 

@@ -32,7 +32,7 @@
  *
  * Written for Bacula by Kern E. Sibbald, May MMI.
  *
- *   Version $Id: cram-md5.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: cram-md5.c 7401 2008-07-19 15:50:38Z kerns $
  */
 
 #include "bacula.h"
@@ -85,7 +85,7 @@ bool cram_md5_challenge(BSOCK *bs, const char *password, int tls_local_need, int
    }
 
    /* Read hashed response to challenge */
-   if (bs->wait_data(180) <= 0 || bs->recv() <= 0) {
+   if (bs->wait_data(180, 0) <= 0 || bs->recv() <= 0) {
       Dmsg1(dbglvl, "Bnet receive challenge response error.\n", bs->bstrerror());
       bmicrosleep(5, 0);
       return false;
@@ -150,7 +150,7 @@ bool cram_md5_respond(BSOCK *bs, const char *password, int *tls_remote_need, int
       return false;
    }
    Dmsg1(99, "sending resp to challenge: %s\n", bs->msg);
-   if (bs->wait_data(180) <= 0 || bs->recv() <= 0) {
+   if (bs->wait_data(180, 0) <= 0 || bs->recv() <= 0) {
       Dmsg1(dbglvl, "Receive chanllenge response failed. ERR=%s\n", bs->bstrerror());
       bmicrosleep(5, 0);
       return false;

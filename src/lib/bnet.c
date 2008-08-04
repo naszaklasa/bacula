@@ -33,7 +33,7 @@
  * Adapted and enhanced for Bacula, originally written
  * for inclusion in the Apcupsd package
  *
- *   Version $Id: bnet.c 6309 2008-01-25 18:40:14Z kerns $
+ *   Version $Id: bnet.c 7401 2008-07-19 15:50:38Z kerns $
  */
 
 
@@ -342,7 +342,7 @@ bool bnet_tls_client(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
  */
 int bnet_wait_data(BSOCK * bsock, int sec)
 {
-   return bsock->wait_data(sec);
+   return bsock->wait_data(sec, 0);
 }
 
 /*
@@ -350,7 +350,7 @@ int bnet_wait_data(BSOCK * bsock, int sec)
  */
 int bnet_wait_data_intr(BSOCK * bsock, int sec)
 {
-   return bsock->wait_data_intr(sec);
+   return bsock->wait_data_intr(sec, 0);
 }
 
 #ifndef NETDB_INTERNAL
