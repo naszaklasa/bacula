@@ -1,3 +1,12 @@
+bacula (2.4.2-2) unstable; urgency=low
+
+  * Updated Swedish strings for debconf.  Closes: #491758.
+  * Updated Japanese debconf translation from Hideki Yamane.
+    Closes: #489942.
+  * Added bacula-tray-monitor.1 manpage.  Closes: #461942.
+
+ -- John Goerzen <jgoerzen@complete.org>  Sat, 30 Aug 2008 08:57:07 -0500
+
 bacula (2.4.2-1) unstable; urgency=high
 
   * Fix sed pattern in debian/rules to correctly remove
