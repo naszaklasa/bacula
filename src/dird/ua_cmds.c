@@ -1079,17 +1079,31 @@ static int estimate_cmd(UAContext *ua, const char *cmd)
           strcasecmp(ua->argk[i], NT_("fd")) == 0) {
          if (ua->argv[i]) {
             client = GetClientResWithName(ua->argv[i]);
+            if (!client) {
+               ua->error_msg(_("Client \"%s\" not found.\n"), ua->argv[i]);
+               return 1;
+            }
             continue;
+         } else {
+            ua->error_msg(_("Client name missing.\n"));
+            return 1;
          }
       }
       if (strcasecmp(ua->argk[i], NT_("job")) == 0) {
          if (ua->argv[i]) {
             job = GetJobResWithName(ua->argv[i]);
-            if (job && !acl_access_ok(ua, Job_ACL, job->name())) {
+            if (!job) {
+               ua->error_msg(_("Job \"%s\" not found.\n"), ua->argv[i]);
+               return 1;
+            }
+            if (!acl_access_ok(ua, Job_ACL, job->name())) {
                ua->error_msg(_("No authorization for Job \"%s\"\n"), job->name());
                return 1;
             }
             continue;
+         } else {
+            ua->error_msg(_("Job name missing.\n"));
+            return 1;
          }
       }
       if (strcasecmp(ua->argk[i], NT_("fileset")) == 0) {
@@ -1100,15 +1114,25 @@ static int estimate_cmd(UAContext *ua, const char *cmd)
                return 1;
             }
             continue;
+         } else {
+            ua->error_msg(_("Fileset name missing.\n"));
+            return 1;
          }
+
       }
       if (strcasecmp(ua->argk[i], NT_("listing")) == 0) {
          listing = 1;
          continue;
       }
       if (strcasecmp(ua->argk[i], NT_("level")) == 0) {
-         if (!get_level_from_name(ua->jcr, ua->argv[i])) {
-            ua->error_msg(_("Level %s not valid.\n"), ua->argv[i]);
+         if (ua->argv[i]) {
+            if (!get_level_from_name(ua->jcr, ua->argv[i])) {
+               ua->error_msg(_("Level \"%s\" not valid.\n"), ua->argv[i]);
+            }
+            continue;
+         } else {
+           ua->error_msg(_("Level value missing.\n"));
+           return 1;
          }
          continue;
       }
