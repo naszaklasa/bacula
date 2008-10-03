@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -445,7 +445,8 @@ void
 db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 {
    char ed1[50], ed2[50];
-   if (mr->InChanger != 0 && mr->Slot != 0) {
+   if (mr->InChanger != 0 && mr->Slot != 0 && mr->StorageId != 0 &&
+       mr->MediaId != 0) {
       Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0 WHERE "
            "Slot=%d AND StorageId=%s AND MediaId!=%s",
             mr->Slot, 

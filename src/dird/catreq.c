@@ -83,7 +83,7 @@ static int send_volume_info_to_storage_daemon(JCR *jcr, BSOCK *sd, MEDIA_DBR *mr
    jcr->MediaId = mr->MediaId;
    pm_strcpy(jcr->VolumeName, mr->VolumeName);
    bash_spaces(mr->VolumeName);
-   stat = bnet_fsend(sd, OK_media, mr->VolumeName, mr->VolJobs,
+   stat = sd->fsend(OK_media, mr->VolumeName, mr->VolJobs,
       mr->VolFiles, mr->VolBlocks, edit_uint64(mr->VolBytes, ed1),
       mr->VolMounts, mr->VolErrors, mr->VolWrites,
       edit_uint64(mr->MaxVolBytes, ed2),
@@ -266,11 +266,22 @@ void catalog_request(JCR *jcr, BSOCK *bs)
          }
       }
       Dmsg2(400, "Update media: BefVolJobs=%u After=%u\n", mr.VolJobs, sdmr.VolJobs);
+
       /* Check if the volume has been written by the job, 
        * and update the LastWritten field if needed */
       if (mr.VolBlocks != sdmr.VolBlocks) {
          mr.LastWritten = sdmr.LastWritten;
       }
+
+      /*
+       * Update to point to the last device used to write the Volume.
+       *   However, do so only if we are writing the tape, i.e.
+       *   the number of VolWrites has increased.
+       */
+      if (jcr->wstore && jcr->wstore->StorageId && sdmr.VolWrites > mr.VolWrites) {
+         mr.StorageId = jcr->wstore->StorageId;
+      }
+
       /* Copy updated values to original media record */
       mr.VolJobs      = sdmr.VolJobs;
       mr.VolFiles     = sdmr.VolFiles;
@@ -285,14 +296,6 @@ void catalog_request(JCR *jcr, BSOCK *bs)
       mr.VolWriteTime = sdmr.VolWriteTime;
       mr.VolParts     = sdmr.VolParts;
       bstrncpy(mr.VolStatus, sdmr.VolStatus, sizeof(mr.VolStatus));
-      /*
-       * Update to point to the last device used to write the Volume.
-       *   However, do so only if we are writing the tape, i.e.
-       *   the number of VolBlocks has increased.
-       */
-      if (jcr->wstore && jcr->wstore->StorageId && mr.VolBlocks != sdmr.VolBlocks) {
-         mr.StorageId = jcr->wstore->StorageId;
-      }
 
       Dmsg2(400, "db_update_media_record. Stat=%s Vol=%s\n", mr.VolStatus, mr.VolumeName);
       /*
