@@ -1,3 +1,16 @@
+bacula (2.4.2-3) unstable; urgency=low
+
+  * Apply upstream 2.4.2-verifydisk.patch
+  * Apply upstream 2.4.2-verify.patch
+  * Apply upstream 2.4.2-storename.patch
+  * Apply upstream 2.4.2-null-vol.patch
+  * Apply upstream 2.4.2-mig-message.patch
+  * Apply upstream 2.4.2-inchanger.patch
+  * Apply upstream 2.4.2-estimate-cmd.patch
+  * Apply upstream 2.4.2-bat.patch
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 03 Oct 2008 10:17:01 -0500
+
 bacula (2.4.2-2) unstable; urgency=low
 
   * Updated Swedish strings for debconf.  Closes: #491758.
