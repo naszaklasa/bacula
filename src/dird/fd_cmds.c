@@ -616,7 +616,6 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
       char *p, *fn;
       char Digest[MAXSTRING];      /* either Verify opts or MD5/SHA1 digest */
 
-      jcr->fname = check_pool_memory_size(jcr->fname, fd->msglen);
       if ((len = sscanf(fd->msg, "%ld %d %s", &file_index, &stream, Digest)) != 3) {
          Jmsg(jcr, M_FATAL, 0, _("<filed: bad attributes, expected 3 fields got %d\n"
 "msglen=%d msg=%s\n"), len, fd->msglen, fd->msg);
@@ -641,7 +640,7 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
             }
          }
          /* Any cached attr is flushed so we can reuse jcr->attr and jcr->ar */
-         fn = jcr->fname;
+         fn = jcr->fname = check_pool_memory_size(jcr->fname, fd->msglen);
          while (*p != 0) {
             *fn++ = *p++;                /* copy filename */
          }
