@@ -111,10 +111,10 @@ bool acquire_device_for_read(DCR *dcr)
       DIRSTORE *store;
       int stat;
 
-      Jmsg3(jcr, M_INFO, 0, _("Changing device. Want Media Type=\"%s\" have=\"%s\"\n"
+      Jmsg3(jcr, M_INFO, 0, _("Changing read device. Want Media Type=\"%s\" have=\"%s\"\n"
                               "  device=%s\n"), 
             dcr->media_type, dev->device->media_type, dev->print_name());
-      Dmsg3(50, "Changing device. Want Media Type=\"%s\" have=\"%s\"\n"
+      Dmsg3(50, "Changing read device. Want Media Type=\"%s\" have=\"%s\"\n"
                               "  device=%s\n", 
             dcr->media_type, dev->device->media_type, dev->print_name());
 
@@ -147,9 +147,9 @@ bool acquire_device_for_read(DCR *dcr)
          dev = dcr->dev;                     /* get new device pointer */
          dev->dblock(BST_DOING_ACQUIRE); 
          dcr->VolumeName[0] = 0;
-         Jmsg(jcr, M_INFO, 0, _("Media Type change.  New device %s chosen.\n"),
+         Jmsg(jcr, M_INFO, 0, _("Media Type change.  New read device %s chosen.\n"),
             dev->print_name());
-         Dmsg1(50, "Media Type change.  New device %s chosen.\n", dev->print_name());
+         Dmsg1(50, "Media Type change.  New read device %s chosen.\n", dev->print_name());
 
          bstrncpy(dcr->VolumeName, vol->VolumeName, sizeof(dcr->VolumeName));
          bstrncpy(dcr->VolCatInfo.VolCatName, vol->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
@@ -430,11 +430,14 @@ bool release_device(DCR *dcr)
    dcr->clear_reserved();
 
    if (dev->can_read()) {
+      VOLUME_CAT_INFO *vol = &dev->VolCatInfo;
       dev->clear_read();              /* clear read bit */
-      Dmsg0(100, "dir_update_vol_info. Release0\n");
-      dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
-      volume_unused(dcr);
-
+      Dmsg2(000, "dir_update_vol_info. label=%d Vol=%s\n",
+         dev->is_labeled(), vol->VolCatName);
+      if (dev->is_labeled() && vol->VolCatName[0] != 0) {
+         dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
+         volume_unused(dcr);
+      }
    } else if (dev->num_writers > 0) {
       /* 
        * Note if WEOT is set, we are at the end of the tape
