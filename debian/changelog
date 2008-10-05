@@ -1,3 +1,12 @@
+bacula (2.4.2-3.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Built against Python 2.5.  Closes: #496512.
+  * Fix removal of original configuration file during upgrade of
+    bacula-director-pgsql.  Closes: #496174.
+
+ -- Ben Hutchings <ben@decadent.org.uk>  Sun, 05 Oct 2008 22:00:10 +0100
+
 bacula (2.4.2-3) unstable; urgency=low
 
   * Apply upstream 2.4.2-verifydisk.patch
