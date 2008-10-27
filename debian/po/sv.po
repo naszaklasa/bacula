@@ -28,21 +28,18 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
-#, fuzzy
-#| msgid "Create tables for Bacula's Catalog?"
 msgid "Create tables for Bacula's catalog?"
-msgstr "Skapa tabeller för Bacula:s katalog?"
+msgstr "Skapa tabeller för Baculas katalog?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
-#, fuzzy
 msgid ""
 "The tables needed for Bacula's catalog are missing. This is normal for a "
 "fresh install of Bacula."
 msgstr ""
-"Jag har detekterat att tabellerna som behövs för Bacula-katalogen saknas "
-"(detta är antagligen en färsk installation). Ska jag skapa dom nu?"
+"Tabeller som behövs för Bacula-kataloger saknas, detta är normalt för nya"
+"installationer."
 
 #. Type: boolean
 #. Description
@@ -51,12 +48,12 @@ msgid ""
 "These tables are needed for the Bacula director to function. Please choose "
 "whether these tables should be automatically created."
 msgstr ""
+"Dessa tabeller behövs för att Baculas kataloger ska fungera. Välj om dessa"
+"tabeller ska skapas automatiskt eller ej."
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:3001
-#, fuzzy
-#| msgid "Remove Catalog on purge?"
 msgid "Remove catalog on purge?"
 msgstr "Ta bort katalog vid avinstallation?"
 
@@ -67,19 +64,4 @@ msgid ""
 "Please choose whether the Bacula catalog should be removed when the director "
 "package is purged."
 msgstr ""
-
-#~ msgid ""
-#~ "Warning: This is not undoable. Once you remove the catalog, you won't be "
-#~ "able to restore your backups unless you have another copy of the catalog "
-#~ "at hand."
-#~ msgstr ""
-#~ "Varning: Detta är permanent. När du en gång tagit bort katalogen kommer "
-#~ "du inte kunna återställa dina säkerhetskopior om du inte har en annan "
-#~ "kopia av katalogen till hands."
-
-#~ msgid ""
-#~ "Shall I remove the Catalog / SQLite database at package purge time? This "
-#~ "will free all the used space."
-#~ msgstr ""
-#~ "Ska jag ta bort katalogen/SQLite-databasen när paketet rensas ut? Detta "
-#~ "kommer att lämna tillbaka all använd diskplats."
+"Ange om Bacula-katalogen ska tas bort när det styrande paketet tas bort."

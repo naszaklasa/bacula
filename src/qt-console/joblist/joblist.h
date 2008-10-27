@@ -67,9 +67,7 @@ private slots:
    void preRestoreFromTime();
    void showLogForJob();
    void consoleCancelJob();
-#ifdef HAVE_QWT
    void graphTable();
-#endif
 
 private:
    void createConnections();
@@ -85,6 +83,7 @@ private:
    QString m_filesetName;
    QString m_currentJob;
    bool m_populated;
+   bool m_populating;
    bool m_checkCurrentWidget;
    int m_purgedIndex;
    int m_typeIndex;

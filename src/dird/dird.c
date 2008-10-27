@@ -914,6 +914,7 @@ static bool check_catalog()
          db_create_storage_record(NULL, db, &sr);
          store->StorageId = sr.StorageId;   /* set storage Id */
          if (!sr.created) {                 /* if not created, update it */
+            sr.AutoChanger = store->autochanger;
             db_update_storage_record(NULL, db, &sr);
          }
 

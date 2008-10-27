@@ -54,6 +54,7 @@ MediaList::MediaList()
 
    /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_medialist.h */
    m_populated = false;
+   m_populating = false;
    m_checkcurwidget = true;
    m_closeable = false;
    /* add context sensitive menu items specific to this classto the page
@@ -64,6 +65,8 @@ MediaList::MediaList()
 
 MediaList::~MediaList()
 {
+   if (m_populated)
+      writeExpandedSettings();
 }
 
 /*
@@ -72,7 +75,10 @@ MediaList::~MediaList()
  */
 void MediaList::populateTree()
 {
-   QTreeWidgetItem *mediatreeitem, *pooltreeitem, *topItem;
+   QTreeWidgetItem *mediatreeitem, *pooltreeitem;
+   if (m_populating)
+      return;
+   m_populating = true;
 
    if (!m_console->preventInUseConnect())
        return;
@@ -85,23 +91,31 @@ void MediaList::populateTree()
    int statusIndex = headerlist.indexOf("Status");
 
    m_checkcurwidget = false;
+   if (m_populated)
+      writeExpandedSettings();
    mp_treeWidget->clear();
    m_checkcurwidget = true;
    mp_treeWidget->setColumnCount(headerlist.count());
-   topItem = new QTreeWidgetItem(mp_treeWidget);
-   topItem->setText(0, "Pools");
-   topItem->setData(0, Qt::UserRole, 0);
-   topItem->setExpanded(true);
+   m_topItem = new QTreeWidgetItem(mp_treeWidget);
+   m_topItem->setText(0, "Pools");
+   m_topItem->setData(0, Qt::UserRole, 0);
+   m_topItem->setExpanded(true);
    
    mp_treeWidget->setHeaderLabels(headerlist);
 
+   QSettings settings(m_console->m_dir->name(), "bat");
+   settings.beginGroup("MediaListTreeExpanded");
    QString query;
 
    foreach (QString pool_listItem, m_console->pool_list) {
-      pooltreeitem = new QTreeWidgetItem(topItem);
+      pooltreeitem = new QTreeWidgetItem(m_topItem);
       pooltreeitem->setText(0, pool_listItem);
       pooltreeitem->setData(0, Qt::UserRole, 1);
-      pooltreeitem->setExpanded(true);
+      if(settings.contains(pool_listItem)) {
+         pooltreeitem->setExpanded(settings.value(pool_listItem).toBool());
+      } else {
+         pooltreeitem->setExpanded(true);
+      }
 
       query =  "SELECT Media.VolumeName AS Media, "
          " Media.MediaId AS Id, Media.VolStatus AS VolStatus,"
@@ -151,10 +165,12 @@ void MediaList::populateTree()
          } /* foreach resultline */
       } /* if results from query */
    } /* foreach pool_listItem */
+   settings.endGroup();
    /* Resize the columns */
    for(int cnter=0; cnter<headerlist.count(); cnter++) {
       mp_treeWidget->resizeColumnToContents(cnter);
    }
+   m_populating = false;
 }
 
 void MediaList::setStatusColor(QTreeWidgetItem *item, QString &field, int &index)
@@ -361,4 +377,19 @@ void MediaList::volumeFromPool()
    cmd = "update volume=" + m_currentVolumeName + " frompool=" + pool;
    consoleCommand(cmd);
    populateTree();
+}
+
+/*
+ * Write settings to save expanded states of the pools
+ */
+void MediaList::writeExpandedSettings()
+{
+   QSettings settings(m_console->m_dir->name(), "bat");
+   settings.beginGroup("MediaListTreeExpanded");
+   int childcount = m_topItem->childCount();
+   for (int cnt=0; cnt<childcount; cnt++) {
+      QTreeWidgetItem *poolitem = m_topItem->child(cnt);
+      settings.setValue(poolitem->text(0), poolitem->isExpanded());
+   }
+   settings.endGroup();
 }

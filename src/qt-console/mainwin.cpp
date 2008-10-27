@@ -441,14 +441,14 @@ void MainWin::restoreButtonClicked()
    new prerestorePage();
 }
 
-#ifdef HAVE_QWT
 void MainWin::jobPlotButtonClicked()
 {
+#ifdef HAVE_QWT
    JobPlotPass pass;
    pass.use = false;
    new JobPlot(NULL, pass);
-}
 #endif
+}
 
 /*
  * The user just finished typing a line in the command line edit box

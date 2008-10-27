@@ -66,6 +66,7 @@ private:
    QString m_currentStorage;
    int m_currentAutoChanger;
    bool m_populated;
+   bool m_populating;
    bool m_checkcurwidget;
 };
 

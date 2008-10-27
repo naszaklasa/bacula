@@ -229,6 +229,7 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
       bash_spaces(pool_name);
       foreach_alist(storage, rstore) {
          Dmsg1(100, "Rstore=%s\n", storage->name());
+         pm_strcpy(store_name, storage->name());
          bash_spaces(store_name);
          pm_strcpy(media_type, storage->media_type);
          bash_spaces(media_type);

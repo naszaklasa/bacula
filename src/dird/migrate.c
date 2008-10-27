@@ -284,6 +284,8 @@ bool do_migration(JCR *jcr)
    }
    /* Make sure this job was not already migrated */
    if (jcr->previous_jr.JobType != JT_BACKUP) {
+      Jmsg(jcr, M_INFO, 0, _("JobId %s already migrated probably by another Job. Migration stopped.\n"),
+         edit_int64(jcr->previous_jr.JobId, ed1));
       set_jcr_job_status(jcr, JS_Terminated);
       migration_cleanup(jcr, jcr->JobStatus);
       return true;

@@ -1,3 +1,25 @@
+bacula (2.4.2-3) unstable; urgency=low
+
+  * Apply upstream 2.4.2-verifydisk.patch
+  * Apply upstream 2.4.2-verify.patch
+  * Apply upstream 2.4.2-storename.patch
+  * Apply upstream 2.4.2-null-vol.patch
+  * Apply upstream 2.4.2-mig-message.patch
+  * Apply upstream 2.4.2-inchanger.patch
+  * Apply upstream 2.4.2-estimate-cmd.patch
+  * Apply upstream 2.4.2-bat.patch
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 03 Oct 2008 10:17:01 -0500
+
+bacula (2.4.2-2) unstable; urgency=low
+
+  * Updated Swedish strings for debconf.  Closes: #491758.
+  * Updated Japanese debconf translation from Hideki Yamane.
+    Closes: #489942.
+  * Added bacula-tray-monitor.1 manpage.  Closes: #461942.
+
+ -- John Goerzen <jgoerzen@complete.org>  Sat, 30 Aug 2008 08:57:07 -0500
+
 bacula (2.4.2-1~bpo40+1) etch-backports; urgency=low
 
   * Rebuild for etch-backports.

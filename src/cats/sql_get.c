@@ -109,7 +109,7 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
    Mmsg(mdb->cmd,
 "SELECT FileId, LStat, MD5 FROM File,Job WHERE "
 "File.JobId=Job.JobId AND File.PathId=%s AND "
-"File.FilenameId=%s AND Job.Type='B' AND Job.JobSTATUS='T' AND "
+"File.FilenameId=%s AND Job.Type='B' AND Job.JobStatus='T' AND "
 "ClientId=%s ORDER BY StartTime DESC LIMIT 1",
       edit_int64(fdbr->PathId, ed1), 
       edit_int64(fdbr->FilenameId, ed2), 
