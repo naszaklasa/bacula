@@ -10,7 +10,7 @@ db_name=@db_name@
 ${bindir}/${sqlite} $* ${db_name}.db <<END-OF-DATA
 CREATE TABLE Filename (
   FilenameId INTEGER,
-  Name TEXT DEFAULT "",
+  Name TEXT DEFAULT '',
   PRIMARY KEY(FilenameId) 
   );
 
@@ -18,7 +18,7 @@ CREATE INDEX inx1 ON Filename (Name);
 
 CREATE TABLE Path (
    PathId INTEGER,
-   Path TEXT DEFAULT "",
+   Path TEXT DEFAULT '',
    PRIMARY KEY(PathId) 
    );
 
@@ -280,7 +280,7 @@ CREATE TABLE NextId (
 
 
 -- Initialize JobId to start at 1
-INSERT INTO NextId (id, TableName) VALUES (1, "Job");
+INSERT INTO NextId (id, TableName) VALUES (1, 'Job');
 
 CREATE TABLE Version (
    VersionId INTEGER UNSIGNED NOT NULL 

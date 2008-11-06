@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: fileset.cpp 6948 2008-05-11 14:38:19Z kerns $
+ *   Version $Id: fileset.cpp 7460 2008-08-03 16:52:47Z bartleyd2 $
  *
  *  FileSet Class
  *
@@ -50,6 +50,7 @@ FileSet::FileSet()
 
    /* mp_treeWidget, FileSet Tree Tree Widget inherited from ui_fileset.h */
    m_populated = false;
+   m_populating = false;
    m_checkcurwidget = true;
    m_closeable = false;
    readSettings();
@@ -70,6 +71,10 @@ FileSet::~FileSet()
  */
 void FileSet::populateTree()
 {
+   if (m_populating)
+      return;
+   m_populating = true;
+
    QTreeWidgetItem *filesetItem, *topItem;
 
    if (!m_console->preventInUseConnect())
@@ -102,7 +107,7 @@ void FileSet::populateTree()
            " FROM FileSet"
            " WHERE ";
       query += " FileSet='" + filesetName + "'";
-      query += " ORDER BY FileSet";
+      query += " ORDER BY CreateTime DESC LIMIT 1";
 
       QStringList results;
       if (mainWin->m_sqlDebug) {
@@ -135,7 +140,7 @@ void FileSet::populateTree()
    for (int cnter=0; cnter<headerlist.size(); cnter++) {
       mp_treeWidget->resizeColumnToContents(cnter);
    }
-
+   m_populating = false;
 }
 
 /*

@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: clients.cpp 5372 2007-08-17 12:17:04Z kerns $
+ *   Version $Id: clients.cpp 7459 2008-08-03 16:27:06Z bartleyd2 $
  *
  *  Clients Class
  *
@@ -51,6 +51,7 @@ Clients::Clients()
 
    /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_client.h */
    m_populated = false;
+   m_populating = false;
    m_checkcurwidget = true;
    m_closeable = false;
    /* add context sensitive menu items specific to this classto the page
@@ -70,6 +71,9 @@ Clients::~Clients()
  */
 void Clients::populateTree()
 {
+   if (m_populating)
+      return;
+   m_populating = true;
    QTreeWidgetItem *clientItem, *topItem;
 
    if (!m_console->preventInUseConnect())
@@ -135,6 +139,7 @@ void Clients::populateTree()
    for(int cnter=0; cnter<headerlist.size(); cnter++) {
       mp_treeWidget->resizeColumnToContents(cnter);
    }
+   m_populating = false;
 }
 
 /*

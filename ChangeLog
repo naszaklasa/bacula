@@ -1,6 +1,51 @@
               Technical notes on version 2.4.x
 
 General:
+Release Version 2.4.3
+10Oct08
+ebl  Apply 2.4.2-cancel-non-running-jobs.patch to be able to cancel
+     a non created job faster.
+08Oct08
+kes  This should correct bug #1159 where Migration does not properly
+     respect the Migration Low Bytes directive.
+02Oct08
+ebl  Fix typo in configure.in that breaks --with-db-password option
+24Sep08
+kes  This code should fix the race condition that leads to a Director
+     crash at job end time when the job list is updated. This was reported
+     in bug #1162.
+20Sep08
+kes  Remove all double quotes from SQLite creating script and
+     replace by single quotes as suggested by John Huttley.
+08Sep08
+kes  Fix SQL case problem that may cause the failure of DiskToCatalog
+     in bug #1149.
+kes  Copy missing storage name into edit buffer. As far as I can tell
+     this never caused a bug.
+28Aug08
+ebl  Remove catalog dependency for bcopy
+ebl  Modify catalog scripts to have an easier packaging integration,
+     using default variables.
+     Make difference between SQLite3 and SQLite in db_get_type()
+26Aug08
+kes  Attempt to fix bug #1128 InChanger flag cleared during Migration
+     job when reading from one autochanger and writing to another.
+24Aug08
+kes  Add more information to SD acquire.c INFO messages.
+kes  Fix NULL Volume name error when reading and the drive must
+     be switched.
+14Aug08
+kes  Fix a Verify InitCatalog problem where in certain cases
+     a garbage filename may be entered in the verification database.  This 
+     fixes bug #1143.
+kes  Add space after version before date in bat about dialog.
+12Aug08
+kes  Fix seg fault in Dir during estimate command with no level value
+     given. This fixes bug #1140.
+08Aug08
+kes  Add message to migration job when the target job is already migrated.
+     This closes bug #1129.
+
 Release Version 2.4.2
 26Jul08
 kes  When a migration job actually runs, re-check the Job record

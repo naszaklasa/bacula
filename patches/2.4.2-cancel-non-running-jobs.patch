@@ -1,0 +1,31 @@
+
+ This patch causes that jobs not yet created are now removed from
+ the work queue just after the cancel command.
+
+ It can be applied to 2.4.2 (not to previous versions) with:
+
+  cd <bacula-source>
+  patch -p0 <2.4.2-cancel-non-running-jobs.patch
+  ./configure <your-options>
+  make
+  ...
+  make install
+
+Index: src/dird/job.c
+===================================================================
+--- src/dird/job.c      (révision 7681)
++++ src/dird/job.c      (copie de travail)
+@@ -354,10 +354,11 @@
+ {
+    BSOCK *sd, *fd;
+    char ed1[50];
++   int32_t old_status = jcr->JobStatus;
+
+    set_jcr_job_status(jcr, JS_Canceled);
+
+-   switch (jcr->JobStatus) {
++   switch (old_status) {
+    case JS_Created:
+    case JS_WaitJobRes:
+    case JS_WaitClientRes:
+

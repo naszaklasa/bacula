@@ -1,0 +1,416 @@
+
+ This patch should clean up two problems with bat:
+   1. Eliminate print error output concerning job plotting
+   2. Eliminate the error messages where bat complains about being busy.
+ It also backports some new trunk code.
+ Apply it to Bacula version 2.4.2 with:
+
+  cd <bacula-source>
+  patch -p0 <2.4.2-bat.patch
+  ./configure <your-options>
+  make
+  ...
+  make install
+
+  
+Index: src/qt-console/mainwin.h
+===================================================================
+--- src/qt-console/mainwin.h	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/mainwin.h	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -107,9 +107,7 @@
+    void runButtonClicked();
+    void estimateButtonClicked();
+    void browseButtonClicked();
+-#ifdef HAVE_QWT
+    void jobPlotButtonClicked();
+-#endif
+    void restoreButtonClicked();
+    void undockWindowButton();
+    void treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *);
+Index: src/qt-console/fileset/fileset.h
+===================================================================
+--- src/qt-console/fileset/fileset.h	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/fileset/fileset.h	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -62,6 +62,7 @@
+    void createContextMenu();
+    QString m_currentlyselected;
+    bool m_populated;
++   bool m_populating;
+    bool m_checkcurwidget;
+ };
+ 
+Index: src/qt-console/fileset/fileset.cpp
+===================================================================
+--- src/qt-console/fileset/fileset.cpp	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/fileset/fileset.cpp	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -50,6 +50,7 @@
+ 
+    /* mp_treeWidget, FileSet Tree Tree Widget inherited from ui_fileset.h */
+    m_populated = false;
++   m_populating = false;
+    m_checkcurwidget = true;
+    m_closeable = false;
+    readSettings();
+@@ -70,6 +71,10 @@
+  */
+ void FileSet::populateTree()
+ {
++   if (m_populating)
++      return;
++   m_populating = true;
++
+    QTreeWidgetItem *filesetItem, *topItem;
+ 
+    if (!m_console->preventInUseConnect())
+@@ -102,7 +107,7 @@
+            " FROM FileSet"
+            " WHERE ";
+       query += " FileSet='" + filesetName + "'";
+-      query += " ORDER BY FileSet";
++      query += " ORDER BY CreateTime DESC LIMIT 1";
+ 
+       QStringList results;
+       if (mainWin->m_sqlDebug) {
+@@ -135,7 +140,7 @@
+    for (int cnter=0; cnter<headerlist.size(); cnter++) {
+       mp_treeWidget->resizeColumnToContents(cnter);
+    }
+-
++   m_populating = false;
+ }
+ 
+ /*
+Index: src/qt-console/clients/clients.cpp
+===================================================================
+--- src/qt-console/clients/clients.cpp	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/clients/clients.cpp	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -51,6 +51,7 @@
+ 
+    /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_client.h */
+    m_populated = false;
++   m_populating = false;
+    m_checkcurwidget = true;
+    m_closeable = false;
+    /* add context sensitive menu items specific to this classto the page
+@@ -70,6 +71,9 @@
+  */
+ void Clients::populateTree()
+ {
++   if (m_populating)
++      return;
++   m_populating = true;
+    QTreeWidgetItem *clientItem, *topItem;
+ 
+    if (!m_console->preventInUseConnect())
+@@ -135,6 +139,7 @@
+    for(int cnter=0; cnter<headerlist.size(); cnter++) {
+       mp_treeWidget->resizeColumnToContents(cnter);
+    }
++   m_populating = false;
+ }
+ 
+ /*
+Index: src/qt-console/clients/clients.h
+===================================================================
+--- src/qt-console/clients/clients.h	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/clients/clients.h	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -62,6 +62,7 @@
+    void createContextMenu();
+    QString m_currentlyselected;
+    bool m_populated;
++   bool m_populating;
+    bool m_checkcurwidget;
+ };
+ 
+Index: src/qt-console/storage/storage.cpp
+===================================================================
+--- src/qt-console/storage/storage.cpp	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/storage/storage.cpp	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -52,6 +52,7 @@
+ 
+    /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_storage.h */
+    m_populated = false;
++   m_populating = false;
+    m_checkcurwidget = true;
+    m_closeable = false;
+    m_currentStorage = "";
+@@ -71,6 +72,9 @@
+  */
+ void Storage::populateTree()
+ {
++   if (m_populating)
++      return;
++   m_populating = true;
+    QTreeWidgetItem *storageItem, *topItem;
+ 
+    if (!m_console->preventInUseConnect())
+@@ -135,6 +139,7 @@
+    for(int cnter=0; cnter<headerlist.size(); cnter++) {
+       mp_treeWidget->resizeColumnToContents(cnter);
+    }
++   m_populating = false;
+ }
+ 
+ /*
+Index: src/qt-console/storage/storage.h
+===================================================================
+--- src/qt-console/storage/storage.h	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/storage/storage.h	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -66,6 +66,7 @@
+    QString m_currentStorage;
+    int m_currentAutoChanger;
+    bool m_populated;
++   bool m_populating;
+    bool m_checkcurwidget;
+ };
+ 
+Index: src/qt-console/medialist/medialist.h
+===================================================================
+--- src/qt-console/medialist/medialist.h	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/medialist/medialist.h	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -66,10 +66,13 @@
+ private:
+    void createContextMenu();
+    void setStatusColor(QTreeWidgetItem *, QString &, int &);
++   void writeExpandedSettings();
+    QString m_currentVolumeName;
+    QString m_currentVolumeId;
+    bool m_populated;
++   bool m_populating;
+    bool m_checkcurwidget;
++   QTreeWidgetItem *m_topItem;
+ };
+ 
+ #endif /* _MEDIALIST_H_ */
+Index: src/qt-console/medialist/medialist.cpp
+===================================================================
+--- src/qt-console/medialist/medialist.cpp	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/medialist/medialist.cpp	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -54,6 +54,7 @@
+ 
+    /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_medialist.h */
+    m_populated = false;
++   m_populating = false;
+    m_checkcurwidget = true;
+    m_closeable = false;
+    /* add context sensitive menu items specific to this classto the page
+@@ -64,6 +65,8 @@
+ 
+ MediaList::~MediaList()
+ {
++   if (m_populated)
++      writeExpandedSettings();
+ }
+ 
+ /*
+@@ -72,7 +75,10 @@
+  */
+ void MediaList::populateTree()
+ {
+-   QTreeWidgetItem *mediatreeitem, *pooltreeitem, *topItem;
++   QTreeWidgetItem *mediatreeitem, *pooltreeitem;
++   if (m_populating)
++      return;
++   m_populating = true;
+ 
+    if (!m_console->preventInUseConnect())
+        return;
+@@ -85,23 +91,31 @@
+    int statusIndex = headerlist.indexOf("Status");
+ 
+    m_checkcurwidget = false;
++   if (m_populated)
++      writeExpandedSettings();
+    mp_treeWidget->clear();
+    m_checkcurwidget = true;
+    mp_treeWidget->setColumnCount(headerlist.count());
+-   topItem = new QTreeWidgetItem(mp_treeWidget);
+-   topItem->setText(0, "Pools");
+-   topItem->setData(0, Qt::UserRole, 0);
+-   topItem->setExpanded(true);
++   m_topItem = new QTreeWidgetItem(mp_treeWidget);
++   m_topItem->setText(0, "Pools");
++   m_topItem->setData(0, Qt::UserRole, 0);
++   m_topItem->setExpanded(true);
+    
+    mp_treeWidget->setHeaderLabels(headerlist);
+ 
++   QSettings settings(m_console->m_dir->name(), "bat");
++   settings.beginGroup("MediaListTreeExpanded");
+    QString query;
+ 
+    foreach (QString pool_listItem, m_console->pool_list) {
+-      pooltreeitem = new QTreeWidgetItem(topItem);
++      pooltreeitem = new QTreeWidgetItem(m_topItem);
+       pooltreeitem->setText(0, pool_listItem);
+       pooltreeitem->setData(0, Qt::UserRole, 1);
+-      pooltreeitem->setExpanded(true);
++      if(settings.contains(pool_listItem)) {
++         pooltreeitem->setExpanded(settings.value(pool_listItem).toBool());
++      } else {
++         pooltreeitem->setExpanded(true);
++      }
+ 
+       query =  "SELECT Media.VolumeName AS Media, "
+          " Media.MediaId AS Id, Media.VolStatus AS VolStatus,"
+@@ -151,10 +165,12 @@
+          } /* foreach resultline */
+       } /* if results from query */
+    } /* foreach pool_listItem */
++   settings.endGroup();
+    /* Resize the columns */
+    for(int cnter=0; cnter<headerlist.count(); cnter++) {
+       mp_treeWidget->resizeColumnToContents(cnter);
+    }
++   m_populating = false;
+ }
+ 
+ void MediaList::setStatusColor(QTreeWidgetItem *item, QString &field, int &index)
+@@ -362,3 +378,18 @@
+    consoleCommand(cmd);
+    populateTree();
+ }
++
++/*
++ * Write settings to save expanded states of the pools
++ */
++void MediaList::writeExpandedSettings()
++{
++   QSettings settings(m_console->m_dir->name(), "bat");
++   settings.beginGroup("MediaListTreeExpanded");
++   int childcount = m_topItem->childCount();
++   for (int cnt=0; cnt<childcount; cnt++) {
++      QTreeWidgetItem *poolitem = m_topItem->child(cnt);
++      settings.setValue(poolitem->text(0), poolitem->isExpanded());
++   }
++   settings.endGroup();
++}
+Index: src/qt-console/mainwin.cpp
+===================================================================
+--- src/qt-console/mainwin.cpp	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/mainwin.cpp	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -441,14 +441,14 @@
+    new prerestorePage();
+ }
+ 
+-#ifdef HAVE_QWT
+ void MainWin::jobPlotButtonClicked()
+ {
++#ifdef HAVE_QWT
+    JobPlotPass pass;
+    pass.use = false;
+    new JobPlot(NULL, pass);
++#endif
+ }
+-#endif
+ 
+ /*
+  * The user just finished typing a line in the command line edit box
+Index: src/qt-console/jobs/jobs.h
+===================================================================
+--- src/qt-console/jobs/jobs.h	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/jobs/jobs.h	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -66,6 +66,7 @@
+    void createContextMenu();
+    QString m_currentlyselected;
+    bool m_populated;
++   bool m_populating;
+    bool m_checkcurwidget;
+    int m_typeIndex;
+ };
+Index: src/qt-console/jobs/jobs.cpp
+===================================================================
+--- src/qt-console/jobs/jobs.cpp	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/jobs/jobs.cpp	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -49,6 +49,7 @@
+ 
+    /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_client.h */
+    m_populated = false;
++   m_populating = false;
+    m_checkcurwidget = true;
+    m_closeable = false;
+    /* add context sensitive menu items specific to this classto the page
+@@ -68,6 +69,9 @@
+  */
+ void Jobs::populateTree()
+ {
++   if (m_populating)
++      return;
++   m_populating = true;
+    QTreeWidgetItem *jobsItem, *topItem;
+ 
+    if (!m_console->preventInUseConnect())
+Index: src/qt-console/joblist/joblist.cpp
+===================================================================
+--- src/qt-console/joblist/joblist.cpp	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/joblist/joblist.cpp	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -60,6 +60,7 @@
+ 
+    m_resultCount = 0;
+    m_populated = false;
++   m_populating = false;
+    m_closeable = false;
+    if ((m_mediaName != "") || (m_clientName != "") || (m_jobName != "") || (m_filesetName != ""))
+       m_closeable=true;
+@@ -106,6 +107,10 @@
+  */
+ void JobList::populateTable()
+ {
++   if (m_populating)
++      return;
++   m_populating = true;
++
+    QStringList results;
+    QString resultline;
+    QBrush blackBrush(Qt::black);
+@@ -293,6 +298,7 @@
+           tr("The Jobs query returned no results.\n"
+          "Press OK to continue?"), QMessageBox::Ok );
+    }
++   m_populating = false;
+ }
+ 
+ void JobList::setStatusColor(QTableWidgetItem *item, QString &field)
+@@ -574,9 +580,9 @@
+ /*
+  * Graph this table
+  */
+-#ifdef HAVE_QWT
+ void JobList::graphTable()
+ {
++#ifdef HAVE_QWT
+    JobPlotPass pass;
+    pass.recordLimitCheck = limitCheckBox->checkState();
+    pass.daysLimitCheck = daysCheckBox->checkState();
+@@ -592,8 +598,8 @@
+    pass.use = true;
+    QTreeWidgetItem* pageSelectorTreeWidgetItem = mainWin->getFromHash(this);
+    new JobPlot(pageSelectorTreeWidgetItem, pass);
++#endif
+ }
+-#endif
+ 
+ /*
+  * Save user settings associated with this page
+Index: src/qt-console/joblist/joblist.h
+===================================================================
+--- src/qt-console/joblist/joblist.h	(.../tags/Release-2.4.2/bacula)	(revision 7468)
++++ src/qt-console/joblist/joblist.h	(.../branches/Branch-2.4/bacula)	(revision 7468)
+@@ -67,9 +67,7 @@
+    void preRestoreFromTime();
+    void showLogForJob();
+    void consoleCancelJob();
+-#ifdef HAVE_QWT
+    void graphTable();
+-#endif
+ 
+ private:
+    void createConnections();
+@@ -85,6 +83,7 @@
+    QString m_filesetName;
+    QString m_currentJob;
+    bool m_populated;
++   bool m_populating;
+    bool m_checkCurrentWidget;
+    int m_purgedIndex;
+    int m_typeIndex;

@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: joblist.cpp 6962 2008-05-13 06:49:45Z kerns $
+ *   Version $Id: joblist.cpp 7461 2008-08-03 17:11:20Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -60,6 +60,7 @@ JobList::JobList(const QString &mediaName, const QString &clientName,
 
    m_resultCount = 0;
    m_populated = false;
+   m_populating = false;
    m_closeable = false;
    if ((m_mediaName != "") || (m_clientName != "") || (m_jobName != "") || (m_filesetName != ""))
       m_closeable=true;
@@ -106,6 +107,10 @@ JobList::~JobList()
  */
 void JobList::populateTable()
 {
+   if (m_populating)
+      return;
+   m_populating = true;
+
    QStringList results;
    QString resultline;
    QBrush blackBrush(Qt::black);
@@ -293,6 +298,7 @@ void JobList::populateTable()
           tr("The Jobs query returned no results.\n"
          "Press OK to continue?"), QMessageBox::Ok );
    }
+   m_populating = false;
 }
 
 void JobList::setStatusColor(QTableWidgetItem *item, QString &field)
@@ -574,9 +580,9 @@ void JobList::consoleCancelJob()
 /*
  * Graph this table
  */
-#ifdef HAVE_QWT
 void JobList::graphTable()
 {
+#ifdef HAVE_QWT
    JobPlotPass pass;
    pass.recordLimitCheck = limitCheckBox->checkState();
    pass.daysLimitCheck = daysCheckBox->checkState();
@@ -592,8 +598,8 @@ void JobList::graphTable()
    pass.use = true;
    QTreeWidgetItem* pageSelectorTreeWidgetItem = mainWin->getFromHash(this);
    new JobPlot(pageSelectorTreeWidgetItem, pass);
-}
 #endif
+}
 
 /*
  * Save user settings associated with this page
