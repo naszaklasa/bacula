@@ -2,19 +2,19 @@
 #
 # shell script to grant privileges to the bacula database
 #
-USER=@db_user@
+db_user=${db_user-@db_user@}
 bindir=@SQL_BINDIR@
-db_name=@db_name@
+db_name=${db_name-@db_name@}
 
 if $bindir/mysql $* -u root -f <<END-OF-DATA
 use mysql
-grant all privileges on ${db_name}.* to ${USER}@localhost;
-grant all privileges on ${db_name}.* to ${USER}@"%";
+grant all privileges on ${db_name}.* to ${db_user}@localhost;
+grant all privileges on ${db_name}.* to ${db_user}@"%";
 select * from user;
 flush privileges;
 END-OF-DATA
 then
-   echo "Privileges for ${USER} granted on ${db_name}."
+   echo "Privileges for ${db_user} granted on ${db_name}."
    exit 0
 else
    echo "Error creating privileges."

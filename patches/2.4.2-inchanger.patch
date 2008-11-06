@@ -1,0 +1,100 @@
+
+  Attempt to fix bug #1128 InChanger flag cleared during Migration
+  job when reading from one autochanger and writing to another.
+  Testing is needed.
+  Apply this patch to Bacula version 2.4.2 with:
+
+  cd <bacula-source>
+  patch -p0 <2.4.2-inchanger.patch
+  ./configure <your options>
+  make
+  ...
+  make install
+
+
+Index: src/dird/catreq.c
+===================================================================
+--- src/dird/catreq.c	(revision 7507)
++++ src/dird/catreq.c	(working copy)
+@@ -83,7 +83,7 @@
+    jcr->MediaId = mr->MediaId;
+    pm_strcpy(jcr->VolumeName, mr->VolumeName);
+    bash_spaces(mr->VolumeName);
+-   stat = bnet_fsend(sd, OK_media, mr->VolumeName, mr->VolJobs,
++   stat = sd->fsend(OK_media, mr->VolumeName, mr->VolJobs,
+       mr->VolFiles, mr->VolBlocks, edit_uint64(mr->VolBytes, ed1),
+       mr->VolMounts, mr->VolErrors, mr->VolWrites,
+       edit_uint64(mr->MaxVolBytes, ed2),
+@@ -266,11 +266,22 @@
+          }
+       }
+       Dmsg2(400, "Update media: BefVolJobs=%u After=%u\n", mr.VolJobs, sdmr.VolJobs);
++
+       /* Check if the volume has been written by the job, 
+        * and update the LastWritten field if needed */
+       if (mr.VolBlocks != sdmr.VolBlocks) {
+          mr.LastWritten = sdmr.LastWritten;
+       }
++
++      /*
++       * Update to point to the last device used to write the Volume.
++       *   However, do so only if we are writing the tape, i.e.
++       *   the number of VolWrites has increased.
++       */
++      if (jcr->wstore && jcr->wstore->StorageId && sdmr.VolWrites > mr.VolWrites) {
++         mr.StorageId = jcr->wstore->StorageId;
++      }
++
+       /* Copy updated values to original media record */
+       mr.VolJobs      = sdmr.VolJobs;
+       mr.VolFiles     = sdmr.VolFiles;
+@@ -285,14 +296,6 @@
+       mr.VolWriteTime = sdmr.VolWriteTime;
+       mr.VolParts     = sdmr.VolParts;
+       bstrncpy(mr.VolStatus, sdmr.VolStatus, sizeof(mr.VolStatus));
+-      /*
+-       * Update to point to the last device used to write the Volume.
+-       *   However, do so only if we are writing the tape, i.e.
+-       *   the number of VolBlocks has increased.
+-       */
+-      if (jcr->wstore && jcr->wstore->StorageId && mr.VolBlocks != sdmr.VolBlocks) {
+-         mr.StorageId = jcr->wstore->StorageId;
+-      }
+ 
+       Dmsg2(400, "db_update_media_record. Stat=%s Vol=%s\n", mr.VolStatus, mr.VolumeName);
+       /*
+Index: src/dird/dird.c
+===================================================================
+--- src/dird/dird.c	(revision 7507)
++++ src/dird/dird.c	(working copy)
+@@ -914,6 +914,7 @@
+          db_create_storage_record(NULL, db, &sr);
+          store->StorageId = sr.StorageId;   /* set storage Id */
+          if (!sr.created) {                 /* if not created, update it */
++            sr.AutoChanger = store->autochanger;
+             db_update_storage_record(NULL, db, &sr);
+          }
+ 
+Index: src/cats/sql_update.c
+===================================================================
+--- src/cats/sql_update.c	(revision 7507)
++++ src/cats/sql_update.c	(working copy)
+@@ -1,7 +1,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
++   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -445,7 +445,8 @@
+ db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+ {
+    char ed1[50], ed2[50];
+-   if (mr->InChanger != 0 && mr->Slot != 0) {
++   if (mr->InChanger != 0 && mr->Slot != 0 && mr->StorageId != 0 &&
++       mr->MediaId != 0) {
+       Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0 WHERE "
+            "Slot=%d AND StorageId=%s AND MediaId!=%s",
+             mr->Slot, 

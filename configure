@@ -1511,12 +1511,6 @@ Optional Packages:
   --with-db-name=DBNAME	       specify database name (default bacula)
   --with-db-user=UNAME	       specify database user (default bacula)
   --with-db-password=UNAME 	   specify database password (default *none*)
-
-	if test "x$withval" != "x" ; then
-	     db_password=$withval
-	fi
-
-
   --with-dir-user=USER		 specify user for Director daemon
   --with-dir-group=GROUP		 specify group for Director daemon
   --with-sd-user=USER		 specify user for Storage daemon
@@ -17067,6 +17061,11 @@ db_password=
 # Check whether --with-db_password was given.
 if test "${with_db_password+set}" = set; then
   withval=$with_db_password;
+	if test "x$withval" != "x" ; then
+	     db_password=$withval
+	fi
+
+
 fi
 
 

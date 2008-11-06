@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: joblist.h 6956 2008-05-12 09:32:54Z kerns $
+ *   Version $Id: joblist.h 7461 2008-08-03 17:11:20Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */

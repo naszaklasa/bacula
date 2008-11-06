@@ -2,59 +2,59 @@
 #
 # shell script to grant privileges to the bacula database
 #
-USER=@db_user@
+db_user=${db_user-@db_user@}
 bindir=@SQL_BINDIR@
-db_name=@db_name@
+db_name=${db_name-@db_name@}
 
 if $bindir/psql -f - -d ${db_name} $* <<END-OF-DATA
 
-create user ${USER};
+create user ${db_user};
 
 -- for tables
-grant all on unsavedfiles to ${USER};
-grant all on basefiles	  to ${USER};
-grant all on jobmedia	  to ${USER};
-grant all on file	  to ${USER};
-grant all on job	  to ${USER};
-grant all on media	  to ${USER};
-grant all on client	  to ${USER};
-grant all on pool	  to ${USER};
-grant all on fileset	  to ${USER};
-grant all on path	  to ${USER};
-grant all on filename	  to ${USER};
-grant all on counters	  to ${USER};
-grant all on version	  to ${USER};
-grant all on cdimages	  to ${USER};
-grant all on mediatype	  to ${USER};
-grant all on storage	  to ${USER};
-grant all on device	  to ${USER};
-grant all on status	  to ${USER};
-grant all on location	  to ${USER};
-grant all on locationlog  to ${USER};
-grant all on log	  to ${USER};
+grant all on unsavedfiles to ${db_user};
+grant all on basefiles	  to ${db_user};
+grant all on jobmedia	  to ${db_user};
+grant all on file	  to ${db_user};
+grant all on job	  to ${db_user};
+grant all on media	  to ${db_user};
+grant all on client	  to ${db_user};
+grant all on pool	  to ${db_user};
+grant all on fileset	  to ${db_user};
+grant all on path	  to ${db_user};
+grant all on filename	  to ${db_user};
+grant all on counters	  to ${db_user};
+grant all on version	  to ${db_user};
+grant all on cdimages	  to ${db_user};
+grant all on mediatype	  to ${db_user};
+grant all on storage	  to ${db_user};
+grant all on device	  to ${db_user};
+grant all on status	  to ${db_user};
+grant all on location	  to ${db_user};
+grant all on locationlog  to ${db_user};
+grant all on log	  to ${db_user};
 
 -- for sequences on those tables
 
-grant select, update on filename_filenameid_seq    to ${USER};
-grant select, update on path_pathid_seq 	   to ${USER};
-grant select, update on fileset_filesetid_seq	   to ${USER};
-grant select, update on pool_poolid_seq 	   to ${USER};
-grant select, update on client_clientid_seq	   to ${USER};
-grant select, update on media_mediaid_seq	   to ${USER};
-grant select, update on job_jobid_seq		   to ${USER};
-grant select, update on file_fileid_seq 	   to ${USER};
-grant select, update on jobmedia_jobmediaid_seq    to ${USER};
-grant select, update on basefiles_baseid_seq	   to ${USER};
-grant select, update on storage_storageid_seq	   to ${USER};
-grant select, update on mediatype_mediatypeid_seq  to ${USER};
-grant select, update on device_deviceid_seq	   to ${USER};
-grant select, update on location_locationid_seq    to ${USER};
-grant select, update on locationlog_loclogid_seq   to ${USER};
-grant select, update on log_logid_seq		   to ${USER};
+grant select, update on filename_filenameid_seq    to ${db_user};
+grant select, update on path_pathid_seq 	   to ${db_user};
+grant select, update on fileset_filesetid_seq	   to ${db_user};
+grant select, update on pool_poolid_seq 	   to ${db_user};
+grant select, update on client_clientid_seq	   to ${db_user};
+grant select, update on media_mediaid_seq	   to ${db_user};
+grant select, update on job_jobid_seq		   to ${db_user};
+grant select, update on file_fileid_seq 	   to ${db_user};
+grant select, update on jobmedia_jobmediaid_seq    to ${db_user};
+grant select, update on basefiles_baseid_seq	   to ${db_user};
+grant select, update on storage_storageid_seq	   to ${db_user};
+grant select, update on mediatype_mediatypeid_seq  to ${db_user};
+grant select, update on device_deviceid_seq	   to ${db_user};
+grant select, update on location_locationid_seq    to ${db_user};
+grant select, update on locationlog_loclogid_seq   to ${db_user};
+grant select, update on log_logid_seq		   to ${db_user};
 
 END-OF-DATA
 then
-   echo "Privileges for ${USER} granted on ${db_name}."
+   echo "Privileges for ${db_user} granted on ${db_name}."
    exit 0
 else
    echo "Error creating privileges."

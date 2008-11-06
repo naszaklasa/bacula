@@ -1,5 +1,5 @@
 # Bacula RPM spec file
-# Copyright (C) 2000-2006 Kern Sibbald
+# Copyright (C) 2000-2008 Kern Sibbald
 
 # Platform Build Configuration
 
@@ -17,6 +17,14 @@
 # it should not be necessary to change anything below here for a release
 # except for patch macros in the setup section
 #--------------------------------------------------------------------------
+
+%define single_dir 0
+%{?single_dir_install:%define single_dir 1}
+%if %{single_dir}
+%define _prefix /opt/bacula
+%else
+%define _prefix /usr
+%endif
 
 # third party packagers
 %define _packager D. Scott Barninger <barninger@fairfieldcomputers.com>
@@ -38,6 +46,7 @@ BuildRoot: %{_tmppath}/%{name}-root
 URL: http://www.bacula.org/
 Vendor: The Bacula Team
 Packager: %{_packager}
+Prefix: %{_prefix}
 
 # define the basic package description
 %define blurb Bacula - It comes by night and sucks the vital essence from your computers.
@@ -49,18 +58,31 @@ Packager: %{_packager}
 %define blurb7 features that make it easy to find and recover lost or damaged files.
 %define blurb8 Bacula source code has been released under the GPL version 2 license.
 
-# directory locations
-%define sqlite_bindir %_libdir/bacula/sqlite
+# source directory locations
 %define _docsrc ../%{name}-docs-%{docs_version}
 %define _rescuesrc ../%{name}-rescue-%{_rescuever}
 %define depkgs ../depkgs
-%define _mandir /usr/share/man
 
-# directory locations for FHS-compatibility
+# directory locations
+%if %{single_dir}
+%define _sbindir /opt/bacula
+%define _subsysdir /opt/bacula/working
+%define sqlite_bindir /opt/bacula/sqlite
+%define _mandir /usr/share/man
+%define sysconf_dir /opt/bacula
+%define script_dir /opt/bacula/scripts
+%define working_dir /opt/bacula/working
+%define pid_dir /opt/bacula/working
+%else
+%define _sbindir %_prefix/sbin
+%define _subsysdir /var/lock/subsys
+%define sqlite_bindir %_libdir/bacula/sqlite
+%define _mandir %_prefix/share/man
 %define sysconf_dir /etc/bacula
 %define script_dir %_libdir/bacula
 %define working_dir /var/lib/bacula
 %define pid_dir /var/run
+%endif
 
 # NOTE these defines are used in some rather complex useradd and groupadd
 # commands. If you change them examine the post scripts for consequences.
@@ -248,6 +270,10 @@ Distribution: %{_dist}
 
 # specifically disallow gconsole if desired
 %{?nobuild_gconsole:%define gconsole 0}
+
+# specifically disallow rescue files if desired
+%define rescue 1
+%{?nobuild_rescue:%define rescue 0}
 
 # Should we build wxconsole, only wxWidgets >=2.6 is supported
 # SuSE 10 and FC4 and newer
@@ -534,7 +560,6 @@ BuildRequires: GConf2-devel
 BuildRequires: freetype-devel
 %endif
 %if %{fc9}
-BuildRequires: libtermcap-devel
 BuildRequires: glibc-devel >= 2.8
 BuildRequires: zlib-static
 %endif
@@ -660,7 +685,6 @@ Requires: libtermcap
 %endif
 %if %{fc9}
 Requires: glibc >= 2.8
-Requires: libtermcap
 %endif
 
 %if %{mysql} && ! %{su9} && ! %{mdk} && ! %{mysql4} && ! %{mysql5}
@@ -824,7 +848,6 @@ Requires: libtermcap
 %endif
 %if %{fc9}
 Requires: glibc >= 2.8
-Requires: libtermcap
 %endif
 
 %if %{python}
@@ -1276,7 +1299,7 @@ Requires: libstdc++
 Requires: zlib
 %endif
 
-%if %{bat} && %{fc8}
+%if %{bat} && %{fc9}
 Requires: openssl
 Requires: glibc >= 2.8
 Requires: fontconfig
@@ -1401,9 +1424,10 @@ export QTINC=/usr/lib64/qt4/include/
 export QTLIB=/usr/lib64/qt4/
 %endif
 
+%if %{rescue}
 %configure \
-        --prefix=/usr \
-        --sbindir=/usr/sbin \
+        --prefix=%{_prefix} \
+        --sbindir=%{_sbindir} \
 	--sysconfdir=%{sysconf_dir} \
 	--with-scriptdir=%{script_dir} \
 	--with-working-dir=%{working_dir} \
@@ -1416,10 +1440,11 @@ export QTLIB=/usr/lib64/qt4/
         --enable-static-fd
 
 make
+%endif
 
 %configure \
-        --prefix=/usr \
-        --sbindir=/usr/sbin \
+        --prefix=%{_prefix} \
+        --sbindir=%{_sbindir} \
 	--sysconfdir=%{sysconf_dir} \
 	--with-scriptdir=%{script_dir} \
 	--with-working-dir=%{working_dir} \
@@ -1457,7 +1482,7 @@ make
 	--disable-batch-insert \
 %endif
 	--mandir=%{_mandir} \
-        --with-subsys-dir=/var/lock/subsys \
+        --with-subsys-dir=%{_subsysdir} \
         --with-dir-user=%{director_daemon_user} \
         --with-dir-group=%{daemon_group} \
         --with-sd-user=%{storage_daemon_user} \
@@ -1507,8 +1532,8 @@ mkdir -p $RPM_BUILD_ROOT%{sqlite_bindir}
 %endif
 
 make \
-        prefix=$RPM_BUILD_ROOT/usr \
-        sbindir=$RPM_BUILD_ROOT/usr/sbin \
+        prefix=$RPM_BUILD_ROOT%{_prefix} \
+        sbindir=$RPM_BUILD_ROOT%{_sbindir} \
 	sysconfdir=$RPM_BUILD_ROOT%{sysconf_dir} \
 	scriptdir=$RPM_BUILD_ROOT%{script_dir} \
         working_dir=$RPM_BUILD_ROOT%{working_dir} \
@@ -1519,8 +1544,8 @@ make \
 %if ! %{client_only} && %{mtx}
 cd %{depkgs}
 make \
-        prefix=$RPM_BUILD_ROOT/usr \
-        sbindir=$RPM_BUILD_ROOT/usr/sbin \
+        prefix=$RPM_BUILD_ROOT%{_prefix} \
+        sbindir=$RPM_BUILD_ROOT%{_sbindir} \
 	sysconfdir=$RPM_BUILD_ROOT%{sysconf_dir} \
 	scriptdir=$RPM_BUILD_ROOT%{script_dir} \
         working_dir=$RPM_BUILD_ROOT%{working_dir} \
@@ -1572,7 +1597,7 @@ rm -f $RPM_BUILD_ROOT%{script_dir}/stopmysql
 rm -f $RPM_BUILD_ROOT%{script_dir}/gconsole
 %endif
 
-rm -f $RPM_BUILD_ROOT/usr/sbin/static-bacula-fd
+rm -f $RPM_BUILD_ROOT%{_sbindir}/static-bacula-fd
 
 # install the init scripts
 %if %{su9} || %{su10} || %{su102} || %{su103} || %{su110}
@@ -1710,6 +1735,7 @@ chmod 644 $RPM_BUILD_ROOT/etc/log.d/conf/services/bacula.conf
 %endif
 
 # install the rescue files
+%if %{rescue}
 mkdir $RPM_BUILD_ROOT%{script_dir}/rescue
 mkdir $RPM_BUILD_ROOT%{script_dir}/rescue/freebsd
 mkdir $RPM_BUILD_ROOT%{script_dir}/rescue/solaris
@@ -1725,17 +1751,32 @@ cp -pr %{_rescuesrc}/knoppix $RPM_BUILD_ROOT%{script_dir}/rescue/
 touch $RPM_BUILD_ROOT%{script_dir}/rescue/linux/cdrom/rpm_release
 cp -p src/filed/static-bacula-fd $RPM_BUILD_ROOT%{script_dir}/rescue/linux/cdrom/bacula/bin/bacula-fd
 rm -f src/filed/static-bacula-fd
+%endif
 
 # install bat since make doesn't at the moment
 %if %{bat}
-cp -p src/qt-console/bat $RPM_BUILD_ROOT/usr/sbin/bat
+cp -p src/qt-console/bat $RPM_BUILD_ROOT%{_sbindir}/bat
 cp -p src/qt-console/bat.conf $RPM_BUILD_ROOT%{sysconf_dir}/bat.conf
+%endif
+
+# install docs for single dir installation
+%if %{single_dir}
+mkdir $RPM_BUILD_ROOT%{_prefix}/doc
+cp COPYING $RPM_BUILD_ROOT%{_prefix}/doc/
+cp ChangeLog $RPM_BUILD_ROOT%{_prefix}/doc/
+cp ReleaseNotes $RPM_BUILD_ROOT%{_prefix}/doc/
+cp VERIFYING $RPM_BUILD_ROOT%{_prefix}/doc/
+cp kernstodo $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manual/bacula.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/developers/developers.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manual/bacula $RPM_BUILD_ROOT%{_prefix}/doc/
+cp ../Release_Notes-%{version}-%{release}.txt $RPM_BUILD_ROOT%{_prefix}/doc/
 %endif
 
 # now clean up permissions that are left broken by the install
 chmod o-rwx $RPM_BUILD_ROOT%{working_dir}
 %if %{gconsole} && ! %{rh8}
-chmod 755 $RPM_BUILD_ROOT/usr/sbin/bacula-tray-monitor
+chmod 755 $RPM_BUILD_ROOT%{_sbindir}/bacula-tray-monitor
 chmod 644 $RPM_BUILD_ROOT%{sysconf_dir}/tray-monitor.conf
 %endif
 
@@ -1813,7 +1854,6 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %attr(-, root, %{daemon_group}) %{script_dir}/delete_catalog_backup
 %attr(-, root, %{daemon_group}) %{script_dir}/btraceback.dbx
 %attr(-, root, %{daemon_group}) %{script_dir}/btraceback.gdb
-%attr(-, root, %{daemon_group}) %{script_dir}/rescue
 %attr(-, root, %{daemon_group}) %{script_dir}/disk-changer
 %attr(-, root, %{daemon_group}) %{script_dir}/bacula-ctl-dir
 %attr(-, root, %{daemon_group}) %{script_dir}/bacula-ctl-fd
@@ -1823,9 +1863,6 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %attr(-, root, %{storage_daemon_group}) %{script_dir}/dvd-handler
 %attr(-, root, %{storage_daemon_group}) /etc/init.d/bacula-sd
 %attr(-, root, %{storage_daemon_group}) %{script_dir}/mtx-changer
-
-%doc COPYING ChangeLog ReleaseNotes VERIFYING kernstodo 
-%doc %{_docsrc}/manual/bacula.pdf %{_docsrc}/developers/developers.pdf %{_docsrc}/manual/bacula ../Release_Notes-%{version}-%{release}.txt
 
 /etc/logrotate.d/bacula
 /etc/log.d/scripts/services/bacula
@@ -1839,20 +1876,20 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 
 %attr(-, %{storage_daemon_user}, %{daemon_group}) %dir %{working_dir}
 
-/usr/sbin/bacula-dir
-/usr/sbin/bacula-fd
-/usr/sbin/bacula-sd
-/usr/sbin/bcopy
-/usr/sbin/bextract
-/usr/sbin/bls
-/usr/sbin/bscan
-/usr/sbin/btape
-/usr/sbin/btraceback
-/usr/sbin/bconsole
-/usr/sbin/dbcheck
-/usr/sbin/bsmtp
-/usr/sbin/bregex
-/usr/sbin/bwild
+%{_sbindir}/bacula-dir
+%{_sbindir}/bacula-fd
+%{_sbindir}/bacula-sd
+%{_sbindir}/bcopy
+%{_sbindir}/bextract
+%{_sbindir}/bls
+%{_sbindir}/bscan
+%{_sbindir}/btape
+%{_sbindir}/btraceback
+%{_sbindir}/bconsole
+%{_sbindir}/dbcheck
+%{_sbindir}/bsmtp
+%{_sbindir}/bregex
+%{_sbindir}/bwild
 %{_mandir}/man8/bacula-fd.8.%{manpage_ext}
 %{_mandir}/man8/bacula-dir.8.%{manpage_ext}
 %{_mandir}/man8/bacula-sd.8.%{manpage_ext}
@@ -1866,6 +1903,19 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %{_mandir}/man8/btraceback.8.%{manpage_ext}
 %{_mandir}/man8/dbcheck.8.%{manpage_ext}
 %{_mandir}/man1/bsmtp.1.%{manpage_ext}
+%endif
+
+%if ! %{client_only} && %{rescue}
+%attr(-, root, %{daemon_group}) %{script_dir}/rescue
+%endif
+
+%if ! %{client_only} && ! %{single_dir}
+%doc COPYING ChangeLog ReleaseNotes VERIFYING kernstodo 
+%doc %{_docsrc}/manual/bacula.pdf %{_docsrc}/developers/developers.pdf %{_docsrc}/manual/bacula ../Release_Notes-%{version}-%{release}.txt
+%endif
+
+%if ! %{client_only} && %{single_dir}
+%{_prefix}/doc
 %endif
 
 %if %{mysql}
@@ -2119,12 +2169,12 @@ fi
 %if ! %{client_only} && %{mtx}
 %files mtx
 %defattr(-,root,root)
-%attr(-, root, %{storage_daemon_group}) /usr/sbin/loaderinfo
-%attr(-, root, %{storage_daemon_group}) /usr/sbin/mtx
-%attr(-, root, %{storage_daemon_group}) /usr/sbin/scsitape
-%attr(-, root, %{storage_daemon_group}) /usr/sbin/tapeinfo
-%attr(-, root, %{storage_daemon_group}) /usr/sbin/nsmhack
-%attr(-, root, %{storage_daemon_group}) /usr/sbin/scsieject
+%attr(-, root, %{storage_daemon_group}) %{_sbindir}/loaderinfo
+%attr(-, root, %{storage_daemon_group}) %{_sbindir}/mtx
+%attr(-, root, %{storage_daemon_group}) %{_sbindir}/scsitape
+%attr(-, root, %{storage_daemon_group}) %{_sbindir}/tapeinfo
+%attr(-, root, %{storage_daemon_group}) %{_sbindir}/nsmhack
+%attr(-, root, %{storage_daemon_group}) %{_sbindir}/scsieject
 %{_mandir}/man1/loaderinfo.1.%{manpage_ext}
 %{_mandir}/man1/mtx.1.%{manpage_ext}
 %{_mandir}/man1/scsitape.1.%{manpage_ext}
@@ -2135,13 +2185,18 @@ fi
 %files client
 %defattr(-,root,root)
 %attr(-, root, %{daemon_group}) %dir %{script_dir}
-%attr(-, root, %{daemon_group}) %{script_dir}/bconsole
 %{script_dir}/bacula-ctl-fd
 /etc/init.d/bacula-fd
+%if %{rescue}
 %attr(-, root, %{daemon_group}) %{script_dir}/rescue
+%endif
 
+%if ! %{single_dir}
 %doc COPYING ChangeLog ReleaseNotes VERIFYING kernstodo 
 %doc %{_docsrc}/manual/bacula.pdf %{_docsrc}/developers/developers.pdf %{_docsrc}/manual/bacula ../Release_Notes-%{version}-%{release}.txt
+%else
+%{_prefix}/doc
+%endif
 
 /etc/logrotate.d/bacula
 
@@ -2150,11 +2205,11 @@ fi
 
 %attr(-, root, %{daemon_group}) %dir %{working_dir}
 
-/usr/sbin/bacula-fd
-/usr/sbin/btraceback
+%{_sbindir}/bacula-fd
+%{_sbindir}/btraceback
 %attr(-, root, %{daemon_group}) %{script_dir}/btraceback.gdb
 %attr(-, root, %{daemon_group}) %{script_dir}/btraceback.dbx
-/usr/sbin/bconsole
+%{_sbindir}/bconsole
 %{_mandir}/man8/bacula-fd.8.%{manpage_ext}
 %{_mandir}/man8/bacula.8.%{manpage_ext}
 %{_mandir}/man8/bconsole.8.%{manpage_ext}
@@ -2232,7 +2287,7 @@ echo "The database update scripts were installed to %{script_dir}/updatedb"
 %if %{gconsole}
 %files gconsole
 %defattr(-,root,root)
-/usr/sbin/bgnome-console
+%{_sbindir}/bgnome-console
 %attr(-, root, %{daemon_group}) %dir %{script_dir}
 %attr(-, root, %{daemon_group}) %{script_dir}/gconsole
 %attr(-, root, %{daemon_group}) %config(noreplace) %{sysconf_dir}/bgnome-console.conf
@@ -2242,7 +2297,7 @@ echo "The database update scripts were installed to %{script_dir}/updatedb"
 %endif
 
 %if %{gconsole} && ! %{rh8}
-/usr/sbin/bacula-tray-monitor
+%{_sbindir}/bacula-tray-monitor
 %config(noreplace) %{sysconf_dir}/tray-monitor.conf
 /usr/share/pixmaps/bacula-tray-monitor.xpm
 /usr/share/applications/bacula-tray-monitor.desktop
@@ -2286,7 +2341,7 @@ fi
 %if %{wxconsole}
 %files wxconsole
 %defattr(-,root,root)
-/usr/sbin/bwx-console
+%{_sbindir}/bwx-console
 %attr(-, root, %{daemon_group}) %dir %{sysconf_dir}
 %attr(-, root, %{daemon_group}) %config(noreplace) %{sysconf_dir}/bwx-console.conf
 /usr/share/pixmaps/wxwin16x16.xpm
@@ -2331,7 +2386,7 @@ fi
 %if %{bat}
 %files bat
 %defattr(-,root,root)
-/usr/sbin/bat
+%{_sbindir}/bat
 %attr(-, root, %{daemon_group}) %dir %{sysconf_dir}
 %attr(-, root, %{daemon_group}) %config(noreplace) %{sysconf_dir}/bat.conf
 /usr/share/pixmaps/bat_icon.png
@@ -2374,6 +2429,15 @@ fi
 %endif
 
 %changelog
+* Sun Sep 07 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- adjust /opt/bacula install
+- add build switch to supress rescue package
+* Sun Aug 24 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add support for install to /opt/bacula
+* Sun Aug 17 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- remove libtermcap dependancy for FC9
+* Mon Aug 04 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- fix bat dependencies
 * Sat Jun 28 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - add su110 target
 * Sat May 24 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>

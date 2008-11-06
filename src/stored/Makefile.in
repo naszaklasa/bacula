@@ -1,4 +1,4 @@
-# $Id: Makefile.in 5100 2007-06-26 14:43:32Z kerns $
+# $Id: Makefile.in 7517 2008-08-28 12:54:56Z ricozz $
 @MCOMMON@
 
 srcdir =	.
@@ -142,7 +142,7 @@ bcopy.o: bcopy.c
 
 bcopy:	$(COPYOBJS) ../findlib/libfind.a ../lib/libbac.a
 	$(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(COPYOBJS) \
- $(DB_LIBS) $(FDLIBS) -lfind -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status

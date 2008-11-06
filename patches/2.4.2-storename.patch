@@ -1,0 +1,25 @@
+
+  This patch fixes a missing storage name problem, which as far
+  as we can tell never created any problem.
+  Apply the patch to version 2.4.2 (and previous versions) with:
+
+  cd <bacula-source>
+  patch -p0 <2.4.2-storename.patch
+  ./configure <your-options>
+  make
+  ...
+  make install
+
+   
+Index: src/dird/msgchan.c
+===================================================================
+--- src/dird/msgchan.c	(revision 7507)
++++ src/dird/msgchan.c	(working copy)
+@@ -229,6 +229,7 @@
+       bash_spaces(pool_name);
+       foreach_alist(storage, rstore) {
+          Dmsg1(100, "Rstore=%s\n", storage->name());
++         pm_strcpy(store_name, storage->name());
+          bash_spaces(store_name);
+          pm_strcpy(media_type, storage->media_type);
+          bash_spaces(media_type);

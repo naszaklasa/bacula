@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: acquire.c 7432 2008-07-24 15:26:41Z kerns $
+ *   Version $Id: acquire.c 7501 2008-08-24 09:39:52Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
