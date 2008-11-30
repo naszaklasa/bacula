@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, January 2002
  *
- *    Version $Id: sqlite.c 5713 2007-10-03 11:36:47Z kerns $
+ *    Version $Id: sqlite.c 7515 2008-08-28 11:26:11Z ricozz $
  */
 
 
@@ -59,14 +59,17 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int QueryDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
 
-
 /*
  * Retrieve database type
  */
 const char *
 db_get_type(void)
 {
+#ifdef HAVE_SQLITE3
+   return "SQLite3";
+#else
    return "SQLite";
+#endif
 }
 
 /*

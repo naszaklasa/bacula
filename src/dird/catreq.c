@@ -37,7 +37,7 @@
  *  Basic tasks done here:
  *      Handle Catalog services.
  *
- *   Version $Id: catreq.c 6812 2008-04-14 07:08:34Z kerns $
+ *   Version $Id: catreq.c 7508 2008-08-26 13:14:38Z kerns $
  */
 
 #include "bacula.h"

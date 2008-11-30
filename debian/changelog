@@ -1,3 +1,10 @@
+bacula (2.4.3-1) unstable; urgency=low
+
+  * New Upstream Version.  Closes: #503457.
+  * Apply upstream 2.4.3-orphaned-jobs.patch.  Closes: #504688.
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 06 Nov 2008 10:42:21 -0600
+
 bacula (2.4.2-3.1~bpo40+1) etch-backports; urgency=low
 
   * Rebuild for etch-backports.

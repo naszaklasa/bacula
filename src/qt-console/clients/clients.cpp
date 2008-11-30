@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: clients.cpp 5372 2007-08-17 12:17:04Z kerns $
+ *   Version $Id: clients.cpp 7459 2008-08-03 16:27:06Z bartleyd2 $
  *
  *  Clients Class
  *

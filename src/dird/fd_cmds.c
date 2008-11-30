@@ -37,7 +37,7 @@
  *  Utility functions for sending info to File Daemon.
  *   These functions are used by both backup and verify.
  *
- *   Version $Id: fd_cmds.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: fd_cmds.c 7479 2008-08-15 16:58:28Z kerns $
  */
 
 #include "bacula.h"

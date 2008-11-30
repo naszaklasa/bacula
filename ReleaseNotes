@@ -1,7 +1,7 @@
 
-       Release Notes for Bacula 2.4.2
+       Release Notes for Bacula 2.4.3
 
-  Bacula code: Total files = 500 Total lines = 188,832 (*.h *.c *.in)
+  Bacula code: Total files = 500 Total lines = 188,945 (*.h *.c *.in)
 
 
 ==================   Warning !!!!!! ==========================
@@ -12,6 +12,49 @@ FileSet (as with Unix). A file that is linked to another file will
 be backed up, much like Unix hardlinked files.  If you want 
 reparse directories backed up, you must explicitly include them
 in your FileSet.
+==============================================================
+
+Release 2.4.3
+ This is a bug fix to version 2.4.2.  All daemons are compatible 
+ with other 2.4.x versions.
+
+Bugs Fixed:
+  1159, 1162. 1149, 1128, 1143, 1140, 1129
+
+Change Summary:
+- Apply 2.4.2-cancel-non-running-jobs.patch to be able to cancel
+  a non created job faster.
+- This should correct bug #1159 where Migration does not properly
+  respect the Migration Low Bytes directive.
+- Fix typo in configure.in that breaks --with-db-password option
+- This code should fix the race condition that leads to a Director
+  crash at job end time when the job list is updated. This was reported
+  in bug #1162.
+- Remove all double quotes from SQLite creating script and
+  replace by single quotes as suggested by John Huttley.
+- Fix SQL case problem that may cause the failure of DiskToCatalog
+  in bug #1149.
+- Copy missing storage name into edit buffer. As far as I can tell
+  this never caused a bug.
+- Remove catalog dependency for bcopy
+- Modify catalog scripts to have an easier packaging integration,
+  using default variables.
+  Make difference between SQLite3 and SQLite in db_get_type()
+- Attempt to fix bug #1128 InChanger flag cleared during Migration
+  job when reading from one autochanger and writing to another.
+- Add more information to SD acquire.c INFO messages.
+- Fix NULL Volume name error when reading and the drive must
+  be switched.
+- Fix a Verify InitCatalog problem where in certain cases
+  a garbage filename may be entered in the verification database.  This 
+  fixes bug #1143.
+- Add space after version before date in bat about dialog.
+- Fix seg fault in Dir during estimate command with no level value
+  given. This fixes bug #1140.
+- Add message to migration job when the target job is already migrated.
+  This closes bug #1129.
+
+
 ==============================================================
 
 Release 2.4.2
