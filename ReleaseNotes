@@ -1,5 +1,5 @@
 
-       Release Notes for Bacula 2.4.3
+       Release Notes for Bacula 2.4.4
 
   Bacula code: Total files = 500 Total lines = 188,945 (*.h *.c *.in)
 
@@ -14,6 +14,51 @@ reparse directories backed up, you must explicitly include them
 in your FileSet.
 ==============================================================
 
+Release 2.4.4
+This is an important bug fix to version 2.4.3.  All daemones are
+compatible with prior 2.4.x version.
+
+Bugs Fixed:
+1192, 1110, 1175, 1188, 1171, 1206, and 1208.
+
+Change Summary:
+- Apply fix suggested by Bruno Friedmann to configure.in to
+  find python2.5
+Beta Release Version 2.4.4-b2
+- Fix bug #1208. Inappropriate Volume purging.
+- Modify sql_update.c to edit zeros rather than NULL in unset
+  fields. This should fix bug #1206, where apparently the user
+  has modified the Bacula schema.
+- Backport most recent changes to compat.h and compat.cpp 
+  attempt to fix restore problem with accents in path. This
+  works in version 2.5.x but is not tested in 2.4.4.
+- Create and apply 2.4.3-migrate2.patch, which fixes two bugs
+  - Bug #1206 -- sql error when there are no files to migrate.
+  - Bug #1171 -- Job catalog log is not migrated during migration.
+Beta Release 2.4.4-b1
+- Apply 2.4.3-sd-deadlock.patch that should fix bug #1192.
+- Remove extra db_lock() in get_prune_list_for_volume()
+- Apply 2.4.3-prune-deadlock.patch that fixes a problem when
+  using Catalog as message backend.
+- Apply 2.4.3-win32-runscript-unicode-path.patch for #1110 
+  about a problem when executing a program with Unicode path.
+- Apply 2.4.3-unique-inchanger.patch fix for #1175 about bad slot
+  number if the volume is not in autochanger.
+- Fix for bug #1188 where Volume is purged while writing
+  on it.
+- Get message enhancement to avoid job name lookup.
+- Fix bug with job name duplication if more than 60 jobs created
+  during a minute.
+- Correct some bugs of cleanup in SD if the FD connection fails.
+- Fix orphaned jobs (possible deadlock) while pruning.
+- Backport of the btraceback script that keeps trace file on working dir
+- Migrate DB Log records too. This fixes last part of bug #1171.
+- Modify SQL so that jobs that failed will not be migrated.
+- Correct bug where long retention periods caused immediate
+  pruning.
+
+
+=================================================================
 Release 2.4.3
  This is a bug fix to version 2.4.2.  All daemons are compatible 
  with other 2.4.x versions.

@@ -1,0 +1,29 @@
+
+ This patch corrects appears to fix bug #1188, where a Volume can
+ be purged while it is being written.
+
+ Apply it to Bacula 2.4.3 (possibly earlier versions)
+ with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.3-purge-bug.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+Index: src/dird/ua_purge.c
+===================================================================
+--- src/dird/ua_purge.c	(revision 8054)
++++ src/dird/ua_purge.c	(working copy)
+@@ -463,6 +463,9 @@
+    bool purged = false;
+    char ed1[50];
+ 
++   if (mr->FirstWritten == 0 || mr->LastWritten == 0) {
++      goto bail_out;               /* not written cannot purge */
++   }
+    if (strcmp(mr->VolStatus, "Purged") == 0) {
+       purged = true;
+       goto bail_out;

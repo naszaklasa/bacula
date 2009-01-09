@@ -88,6 +88,9 @@ t_GetVolumeNameForVolumeMountPointW p_GetVolumeNameForVolumeMountPointW = NULL;
 
 t_SHGetFolderPath       p_SHGetFolderPath = NULL;
 
+t_CreateProcessA        p_CreateProcessA = NULL;
+t_CreateProcessW        p_CreateProcessW = NULL;
+
 void 
 InitWinAPIWrapper() 
 {
@@ -104,6 +107,12 @@ InitWinAPIWrapper()
 
    HMODULE hLib = LoadLibraryA("KERNEL32.DLL");
    if (hLib) {
+      /* create process calls */
+      p_CreateProcessA = (t_CreateProcessA)
+         GetProcAddress(hLib, "CreateProcessA");
+      p_CreateProcessW = (t_CreateProcessW)
+         GetProcAddress(hLib, "CreateProcessW");
+
       /* create file calls */
       p_CreateFileA = (t_CreateFileA)
           GetProcAddress(hLib, "CreateFileA");

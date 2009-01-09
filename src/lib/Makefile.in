@@ -1,4 +1,4 @@
-# $Id: Makefile.in 5721 2007-10-04 15:01:59Z kerns $
+# $Id: Makefile.in 7977 2008-11-05 11:15:23Z kerns $
 @MCOMMON@
 
 python = @PYTHON_INCDIR@
@@ -82,10 +82,10 @@ pythonlib.o: pythonlib.c
 	@echo "Compiling $<"
 	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(python) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
-rwlock_test:
+rwlock_test: rwlock.c
 	rm -f rwlock.o
 	$(CXX) -DTEST_RWLOCK $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) rwlock.c
-	$(CXX) $(LDFLAGS) -L. -o $@ rwlock.o $(LIBS) $(DLIB) -lbac -lm
+	$(CXX) $(LDFLAGS) -L. -o $@ rwlock.o $(LIBS) $(DLIB) -lbac $(OPENSSL_LIBS) -lm
 	rm -f rwlock.o
 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) rwlock.c
 

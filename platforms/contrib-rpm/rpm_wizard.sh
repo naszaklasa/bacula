@@ -38,7 +38,7 @@ then
 fi
 
 # select build platform
-PLATFORM=`zenity --title "Select Platform" --text "Please choose a build platform." --list --radiolist --column "Select" --column "Platform" False rh7 False rh8 False rh9 False fc1 False fc3 False fc4 False fc5 False fc6 False fc7 False fc8 False fc9 False wb3 False rhel3 False rhel4 False rhel5 False centos3 False centos4 False centos5 False sl3 False sl4 False sl5 False su9 False su10 False su102 False su103 False su110 False mdk False mdv`
+PLATFORM=`zenity --title "Select Platform" --text "Please choose a build platform." --list --radiolist --column "Select" --column "Platform" False rh7 False rh8 False rh9 False fc1 False fc3 False fc4 False fc5 False fc6 False fc7 False fc8 False fc9 False wb3 False rhel3 False rhel4 False rhel5 False centos3 False centos4 False centos5 False sl3 False sl4 False sl5 False su9 False su10 False su102 False su103 False su110 False su111 False mdk False mdv`
 
 RESULT="$?"
 if [ "$RESULT" = "1" ];
@@ -117,3 +117,4 @@ echo $COMMAND | sh
 # 12 Jan 2008 add fc8 target
 # 23 May 2008 add fc9 target
 # 28 Jun 2008 add su110 target
+# 31 Dec 2008 add su111 target

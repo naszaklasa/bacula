@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_update.c 7508 2008-08-26 13:14:38Z kerns $
+ *    Version $Id: sql_update.c 8228 2008-12-22 15:12:10Z kerns $
  */
 
 /* The following is necessary so that we do not include
@@ -126,16 +126,6 @@ db_update_job_start_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 }
 
 /*
- * Given an incoming integer, set the string buffer to either NULL or the value
- *
- */
-static void edit_num_or_null(char *s, size_t n, uint64_t id) {
-   char ed1[50];
-   bsnprintf(s, n, id ? "%s" : "NULL", edit_int64(id, ed1));
-}
-
-
-/*
  * Update the Job record at end of Job
  *
  *  Returns: 0 on failure
@@ -151,13 +141,7 @@ db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    int stat;
    char ed1[30], ed2[30], ed3[50];
    btime_t JobTDate;
-   char PoolId[50], FileSetId[50], ClientId[50], PriorJobId[50];
-
-
-   /* some values are set to zero, which translates to NULL in SQL */
-   edit_num_or_null(PoolId,    sizeof(PoolId),    jr->PoolId);
-   edit_num_or_null(FileSetId, sizeof(FileSetId), jr->FileSetId);
-   edit_num_or_null(ClientId,  sizeof(ClientId),  jr->ClientId);
+   char PriorJobId[50];
 
    if (jr->PriorJobId) {
       bstrncpy(PriorJobId, edit_int64(jr->PriorJobId, ed1), sizeof(PriorJobId));
@@ -181,12 +165,12 @@ db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    db_lock(mdb);
    Mmsg(mdb->cmd,
       "UPDATE Job SET JobStatus='%c',EndTime='%s',"
-"ClientId=%s,JobBytes=%s,JobFiles=%u,JobErrors=%u,VolSessionId=%u,"
-"VolSessionTime=%u,PoolId=%s,FileSetId=%s,JobTDate=%s,"
+"ClientId=%u,JobBytes=%s,JobFiles=%u,JobErrors=%u,VolSessionId=%u,"
+"VolSessionTime=%u,PoolId=%u,FileSetId=%u,JobTDate=%s,"
 "RealEndTime='%s',PriorJobId=%s WHERE JobId=%s",
-      (char)(jr->JobStatus), dt, ClientId, edit_uint64(jr->JobBytes, ed1),
+      (char)(jr->JobStatus), dt, jr->ClientId, edit_uint64(jr->JobBytes, ed1),
       jr->JobFiles, jr->JobErrors, jr->VolSessionId, jr->VolSessionTime,
-      PoolId, FileSetId, edit_uint64(JobTDate, ed2), 
+      jr->PoolId, jr->FileSetId, edit_uint64(JobTDate, ed2), 
       rdt,
       PriorJobId,
       edit_int64(jr->JobId, ed3));
@@ -445,14 +429,28 @@ void
 db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 {
    char ed1[50], ed2[50];
-   if (mr->InChanger != 0 && mr->Slot != 0 && mr->StorageId != 0 &&
-       mr->MediaId != 0) {
-      Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0 WHERE "
-           "Slot=%d AND StorageId=%s AND MediaId!=%s",
-            mr->Slot, 
-            edit_int64(mr->StorageId, ed1), edit_int64(mr->MediaId, ed2));
-      Dmsg1(400, "%s\n", mdb->cmd);
-      UPDATE_DB(jcr, mdb, mdb->cmd);
+   if (mr->InChanger != 0 && mr->Slot != 0 && mr->StorageId != 0) {
+
+       if (mr->MediaId != 0) {
+          Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0, Slot=0 WHERE "
+               "Slot=%d AND StorageId=%s AND MediaId!=%s",
+               mr->Slot, 
+               edit_int64(mr->StorageId, ed1), edit_int64(mr->MediaId, ed2));
+
+       } else if (mr->VolumeName[0]) { /* We have a volume name */
+          Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0, Slot=0 WHERE "
+               "Slot=%d AND StorageId=%s AND VolumeName!='%s'",
+               mr->Slot, 
+               edit_int64(mr->StorageId, ed1), mr->VolumeName);
+
+       } else {  /* used by ua_label to reset all volume with this slot */
+          Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0, Slot=0 WHERE "
+               "Slot=%d AND StorageId=%s",
+               mr->Slot, 
+               edit_int64(mr->StorageId, ed1), mr->VolumeName);          
+       }
+       Dmsg1(100, "%s\n", mdb->cmd);
+       UPDATE_DB(jcr, mdb, mdb->cmd);
    }
 }
 

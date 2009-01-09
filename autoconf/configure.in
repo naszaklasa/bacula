@@ -723,7 +723,7 @@ AC_ARG_WITH(python,
   if test "$withval" != "no"; then
      if test "$withval" = "yes"; then
 	for python_root in /usr /usr/local /usr/sfw; do
-	  for ver in python2.2 python2.3 python2.4 python2.5; do
+	  for ver in python2.2 python2.3 python2.4 python2.5 python2.6 python3; do
 	     if test -f $python_root/include/${ver}/Python.h; then
 		PYTHON_INCDIR=-I$python_root/include/${ver}
 		if test -d $python_root/lib64/${ver}/config; then

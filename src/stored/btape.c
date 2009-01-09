@@ -37,7 +37,7 @@
  *   Note, this program reads stored.conf, and will only
  *     talk to devices that are configured.
  *
- *   Version $Id: btape.c 6710 2008-04-01 09:31:06Z kerns $
+ *   Version $Id: btape.c 8240 2008-12-23 15:50:58Z kerns $
  *
  */
 
@@ -2661,7 +2661,7 @@ bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing)
    return 1;
 }
 
-bool dir_create_jobmedia_record(DCR *dcr)
+bool dir_create_jobmedia_record(DCR *dcr, bool zero)
 {
    dcr->WroteVol = false;
    return 1;

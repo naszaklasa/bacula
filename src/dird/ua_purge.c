@@ -35,7 +35,7 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id: ua_purge.c 5124 2007-07-06 20:03:36Z kerns $
+ *   Version $Id: ua_purge.c 8055 2008-11-18 19:48:37Z kerns $
  */
 
 #include "bacula.h"
@@ -463,6 +463,9 @@ bool is_volume_purged(UAContext *ua, MEDIA_DBR *mr)
    bool purged = false;
    char ed1[50];
 
+   if (mr->FirstWritten == 0 || mr->LastWritten == 0) {
+      goto bail_out;               /* not written cannot purge */
+   }
    if (strcmp(mr->VolStatus, "Purged") == 0) {
       purged = true;
       goto bail_out;

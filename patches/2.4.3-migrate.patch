@@ -1,0 +1,53 @@
+
+ This patch should prevent migration jobs from attempting to migrate
+ jobs that failed.  Apply it to Bacula 2.4.3 (possibly earlier versions)
+ with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.3-migrate.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+Index: src/dird/migrate.c
+===================================================================
+--- src/dird/migrate.c	(revision 7757)
++++ src/dird/migrate.c	(working copy)
+@@ -377,7 +377,7 @@
+     * to avoid two threads from using the BSOCK structure at
+     * the same time.
+     */
+-   if (!bnet_fsend(sd, "run")) {
++   if (!sd->fsend("run")) {
+       return false;
+    }
+ 
+@@ -520,6 +520,7 @@
+    "SELECT DISTINCT Job.JobId,Job.StartTime FROM Job,Pool,Client"
+    " WHERE Client.Name='%s' AND Pool.Name='%s' AND Job.PoolId=Pool.PoolId"
+    " AND Job.ClientId=Client.ClientId AND Job.Type='B'"
++   " AND Job.JobStatus = 'T'"
+    " ORDER by Job.StartTime";
+ 
+ /* Get Volume names in Pool */
+@@ -533,9 +534,9 @@
+    "SELECT DISTINCT Job.JobId,Job.StartTime FROM Media,JobMedia,Job"
+    " WHERE Media.VolumeName='%s' AND Media.MediaId=JobMedia.MediaId"
+    " AND JobMedia.JobId=Job.JobId AND Job.Type='B'"
++   " AND Job.JobStatus = 'T' AND Media.Enabled=1"
+    " ORDER by Job.StartTime";
+ 
+-
+ const char *sql_smallest_vol = 
+    "SELECT Media.MediaId FROM Media,Pool,JobMedia WHERE"
+    " Media.MediaId in (SELECT DISTINCT MediaId from JobMedia) AND"
+@@ -570,7 +571,6 @@
+ const char *sql_job_bytes =
+    "SELECT SUM(JobBytes) FROM Job WHERE JobId IN (%s)";
+ 
+-
+ /* Get Media Ids in Pool */
+ const char *sql_mediaids =
+    "SELECT MediaId FROM Media,Pool WHERE"

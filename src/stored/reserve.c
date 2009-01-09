@@ -32,7 +32,7 @@
  *
  *   Split from job.c and acquire.c June 2005
  *
- *   Version $Id: reserve.c 7329 2008-07-07 09:31:09Z kerns $
+ *   Version $Id: reserve.c 8107 2008-12-03 08:48:58Z kerns $
  *
  */
 
@@ -498,6 +498,7 @@ void DCR::clear_reserved()
 void DCR::unreserve_device()
 {
    lock_volumes();
+   dev->dlock();
    if (is_reserved()) {
       clear_reserved();
       reserved_volume = false;
@@ -513,6 +514,7 @@ void DCR::unreserve_device()
          volume_unused(this);
       }
    }
+   dev->dunlock();
    unlock_volumes();
 }
 

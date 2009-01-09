@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: acquire.c 7501 2008-08-24 09:39:52Z kerns $
+ *   Version $Id: acquire.c 8240 2008-12-23 15:50:58Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -451,7 +451,7 @@ bool release_device(DCR *dcr)
          Dmsg2(200, "dir_create_jobmedia. Release vol=%s dev=%s\n", 
                dev->VolCatInfo.VolCatName, dev->print_name());
          if (!dev->at_weot() && !dir_create_jobmedia_record(dcr)) {
-            Jmsg(jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
+            Jmsg2(jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
                dcr->VolCatInfo.VolCatName, jcr->Job);
          }
          /* If no more writers, and no errors, and wrote something, write an EOF */
@@ -647,8 +647,8 @@ void detach_dcr_from_dev(DCR *dcr)
 
    /* Detach this dcr only if attached */
    if (dcr->attached_to_dev && dev) {
-      dev->dlock();
       dcr->unreserve_device();
+      dev->dlock();
       dcr->dev->attached_dcrs->remove(dcr);  /* detach dcr from device */
       dcr->attached_to_dev = false;
 //    remove_dcr_from_dcrs(dcr);      /* remove dcr from jcr list */

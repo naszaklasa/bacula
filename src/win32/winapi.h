@@ -138,6 +138,32 @@ typedef BOOL (WINAPI * t_GetVolumeNameForVolumeMountPointW) (LPCWSTR, LPWSTR, DW
 
 typedef BOOL (WINAPI * t_AttachConsole) (DWORD);
 
+typedef BOOL (WINAPI *t_CreateProcessA) (
+   LPCSTR,
+   LPSTR,
+   LPSECURITY_ATTRIBUTES,
+   LPSECURITY_ATTRIBUTES,
+   BOOL,
+   DWORD,
+   PVOID,
+   LPCSTR,
+   LPSTARTUPINFOA,
+   LPPROCESS_INFORMATION);
+typedef BOOL (WINAPI *t_CreateProcessW) (
+   LPCWSTR,
+   LPWSTR,
+   LPSECURITY_ATTRIBUTES,
+   LPSECURITY_ATTRIBUTES,
+   BOOL,
+   DWORD,
+   PVOID,
+   LPCWSTR,
+   LPSTARTUPINFOW,
+   LPPROCESS_INFORMATION);
+
+extern t_CreateProcessA DLL_IMP_EXP p_CreateProcessA;
+extern t_CreateProcessW DLL_IMP_EXP p_CreateProcessW;
+
 extern t_GetFileAttributesA   DLL_IMP_EXP p_GetFileAttributesA;
 extern t_GetFileAttributesW   DLL_IMP_EXP p_GetFileAttributesW;
 
