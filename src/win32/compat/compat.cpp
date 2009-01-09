@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -34,12 +34,13 @@
 //
 // Author          : Christopher S. Hull
 // Created On      : Sat Jan 31 15:55:00 2004
-// $Id: compat.cpp 7001 2008-05-21 11:59:00Z kerns $
+// $Id: compat.cpp 8202 2008-12-20 13:22:14Z kerns $
 
 
 #include "bacula.h"
 #include "compat.h"
 #include "jcr.h"
+#include "findlib/find.h"
 
 #define b_errno_win32 (1<<29)
 
@@ -57,6 +58,10 @@ static pthread_mutex_t Win32Convmutex = PTHREAD_MUTEX_INITIALIZER;
 
 static t_pVSSPathConvert   g_pVSSPathConvert;
 static t_pVSSPathConvertW  g_pVSSPathConvertW;
+
+/* Forward referenced functions */
+static const char *errorString(void);
+
 
 void SetVSSPathConvert(t_pVSSPathConvert pPathConvert, t_pVSSPathConvertW pPathConvertW)
 {
@@ -486,12 +491,44 @@ int umask(int)
 }
 #endif
 
-int fcntl(int fd, int cmd)
+#ifndef LOAD_WITH_ALTERED_SEARCH_PATH
+#define LOAD_WITH_ALTERED_SEARCH_PATH 0x00000008
+#endif
+
+void *dlopen(const char *file, int mode)
 {
-   return 0;
+   void *handle;
+
+   handle = LoadLibraryEx(file, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+   return handle;
 }
 
-int chmod(const char *, mode_t)
+void *dlsym(void *handle, const char *name)
+{
+   void *symaddr;
+   symaddr = (void *)GetProcAddress((HMODULE)handle, name);
+   return symaddr;
+}
+
+int dlclose(void *handle) 
+{
+   if (handle && !FreeLibrary((HMODULE)handle)) {
+      errno = b_errno_win32;
+      return 1;        /* failed */
+   }
+   return 0;           /* OK */
+}
+
+char *dlerror(void) 
+{
+   static char buf[200];
+   const char *err = errorString();
+   bstrncpy(buf, (char *)err, sizeof(buf));
+   LocalFree((void *)err);
+   return buf;
+}
+
+int fcntl(int fd, int cmd)
 {
    return 0;
 }
@@ -548,8 +585,7 @@ cvt_ftime_to_utime(const FILETIME &time)
     return (time_t) (mstime & 0xffffffff);
 }
 
-static const char *
-errorString(void)
+static const char *errorString(void)
 {
    LPVOID lpMsgBuf;
 
@@ -604,6 +640,7 @@ statDir(const char *file, struct stat *sb)
       sb->st_ctime = now;
       sb->st_mtime = now;
       sb->st_atime = now;
+      sb->st_rdev = 0;
       return 0;
     }
 
@@ -614,6 +651,7 @@ statDir(const char *file, struct stat *sb)
       POOLMEM* pwszBuf = get_pool_memory (PM_FNAME);
       make_win32_path_UTF8_2_wchar(&pwszBuf, file);
 
+      Dmsg1(100, "FindFirstFileW=%s\n", file);
       h = p_FindFirstFileW((LPCWSTR)pwszBuf, &info_w);
       free_pool_memory(pwszBuf);
 
@@ -627,6 +665,7 @@ statDir(const char *file, struct stat *sb)
 
    // use ASCII
    } else if (p_FindFirstFileA) {
+      Dmsg1(100, "FindFirstFileA=%s\n", file);
       h = p_FindFirstFileA(file, &info_a);
 
       pdwFileAttributes = &info_a.dwFileAttributes;
@@ -636,11 +675,17 @@ statDir(const char *file, struct stat *sb)
       pftLastAccessTime = &info_a.ftLastAccessTime;
       pftLastWriteTime  = &info_a.ftLastWriteTime;
       pftCreationTime   = &info_a.ftCreationTime;
+   } else {
+      Dmsg0(100, "No findFirstFile A or W found\n");
    }
 
    if (h == INVALID_HANDLE_VALUE) {
       const char *err = errorString();
-      Dmsg2(99, "FindFirstFile(%s):%s\n", file, err);
+      /*
+       * Note, in creating leading paths, it is normal that
+       * the file does not exist.
+       */
+      Dmsg2(2099, "FindFirstFile(%s):%s\n", file, err);
       LocalFree((void *)err);
       errno = b_errno_win32;
       return -1;
@@ -694,7 +739,7 @@ fstat(int fd, struct stat *sb)
 
    if (!GetFileInformationByHandle((HANDLE)fd, &info)) {
        const char *err = errorString();
-       Dmsg1(99, "GetfileInformationByHandle: %s\n", err);
+       Dmsg1(2099, "GetfileInformationByHandle: %s\n", err);
        LocalFree((void *)err);
        errno = b_errno_win32;
        return -1;
@@ -740,7 +785,7 @@ fstat(int fd, struct stat *sb)
 static int
 stat2(const char *file, struct stat *sb)
 {
-   HANDLE h;
+   HANDLE h = INVALID_HANDLE_VALUE;
    int rval = 0;
    char tmpbuf[5000];
    conv_unix_to_win32_path(file, tmpbuf, 5000);
@@ -752,26 +797,31 @@ stat2(const char *file, struct stat *sb)
       make_win32_path_UTF8_2_wchar(&pwszBuf, tmpbuf);
 
       attr = p_GetFileAttributesW((LPCWSTR) pwszBuf);
+      if (p_CreateFileW) {
+         h = CreateFileW((LPCWSTR)pwszBuf, GENERIC_READ,
+                FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+      }
       free_pool_memory(pwszBuf);
    } else if (p_GetFileAttributesA) {
       attr = p_GetFileAttributesA(tmpbuf);
+      h = CreateFileA(tmpbuf, GENERIC_READ,
+               FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
    }
 
    if (attr == (DWORD)-1) {
       const char *err = errorString();
-      Dmsg2(99, "GetFileAttributes(%s): %s\n", tmpbuf, err);
+      Dmsg2(2099, "GetFileAttributes(%s): %s\n", tmpbuf, err);
       LocalFree((void *)err);
+      if (h != INVALID_HANDLE_VALUE) {
+         CloseHandle(h);
+      }
       errno = b_errno_win32;
       return -1;
    }
 
-
-   h = CreateFileA(tmpbuf, GENERIC_READ,
-                  FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-
    if (h == INVALID_HANDLE_VALUE) {
       const char *err = errorString();
-      Dmsg2(99, "Cannot open file for stat (%s):%s\n", tmpbuf, err);
+      Dmsg2(2099, "Cannot open file for stat (%s):%s\n", tmpbuf, err);
       LocalFree((void *)err);
       errno = b_errno_win32;
       return -1;
@@ -782,9 +832,8 @@ stat2(const char *file, struct stat *sb)
 
    if (attr & FILE_ATTRIBUTE_DIRECTORY &&
         file[1] == ':' && file[2] != 0) {
-      statDir(file, sb);
+      rval = statDir(file, sb);
    }
-
    return rval;
 }
 
@@ -801,7 +850,7 @@ stat(const char *file, struct stat *sb)
       POOLMEM *pwszBuf = get_pool_memory(PM_FNAME);
       make_win32_path_UTF8_2_wchar(&pwszBuf, file);
 
-      BOOL b = p_GetFileAttributesExW((LPCWSTR) pwszBuf, GetFileExInfoStandard, &data);
+      BOOL b = p_GetFileAttributesExW((LPCWSTR)pwszBuf, GetFileExInfoStandard, &data);
       free_pool_memory(pwszBuf);
 
       if (!b) {
@@ -1315,6 +1364,73 @@ WSA_Init(void)
     return 0;
 }
 
+int win32_chmod(const char *path, mode_t mode)
+{
+   DWORD attr = (DWORD)-1;
+
+    Dmsg1(100, "Enter win32_chmod. path=%s\n", path);
+   if (p_GetFileAttributesW) {
+      POOLMEM* pwszBuf = get_pool_memory(PM_FNAME);
+      make_win32_path_UTF8_2_wchar(&pwszBuf, path);
+
+      attr = p_GetFileAttributesW((LPCWSTR) pwszBuf);
+      if (attr != INVALID_FILE_ATTRIBUTES) {
+         /* Use Bacula mappings define in stat() above */
+         if (mode & (S_IRUSR|S_IRGRP|S_IROTH)) {
+            attr |= FILE_ATTRIBUTE_READONLY;
+         } else {
+            attr &= ~FILE_ATTRIBUTE_READONLY;
+         }
+         if (mode & S_ISVTX) {
+            attr |= FILE_ATTRIBUTE_HIDDEN;
+         } else {
+            attr &= ~FILE_ATTRIBUTE_HIDDEN;
+         }
+         if (mode & S_IRWXO) { 
+            attr |= FILE_ATTRIBUTE_SYSTEM;
+         } else {
+            attr &= ~FILE_ATTRIBUTE_SYSTEM;
+         }
+         attr = p_SetFileAttributesW((LPCWSTR)pwszBuf, attr);
+      }
+      free_pool_memory(pwszBuf);
+      Dmsg0(100, "Leave win32_chmod. AttributesW\n");
+   } else if (p_GetFileAttributesA) {
+         if (mode & (S_IRUSR|S_IRGRP|S_IROTH)) {
+            attr |= FILE_ATTRIBUTE_READONLY;
+         } else {
+            attr &= ~FILE_ATTRIBUTE_READONLY;
+         }
+         if (mode & S_ISVTX) {
+            attr |= FILE_ATTRIBUTE_HIDDEN;
+         } else {
+            attr &= ~FILE_ATTRIBUTE_HIDDEN;
+         }
+         if (mode & S_IRWXO) { 
+            attr |= FILE_ATTRIBUTE_SYSTEM;
+         } else {
+            attr &= ~FILE_ATTRIBUTE_SYSTEM;
+         }
+      attr = p_GetFileAttributesA(path);
+      if (attr != INVALID_FILE_ATTRIBUTES) {
+         attr = p_SetFileAttributesA(path, attr);
+      }
+      Dmsg0(100, "Leave win32_chmod did AttributesA\n");
+   } else {
+      Dmsg0(100, "Leave win32_chmod did nothing\n");
+   }
+    
+
+   if (attr == (DWORD)-1) {
+      const char *err = errorString();
+      Dmsg2(99, "Get/SetFileAttributes(%s): %s\n", path, err);
+      LocalFree((void *)err);
+      errno = b_errno_win32;
+      return -1;
+   }
+   return 0;
+}
+
 
 int
 win32_chdir(const char *dir)
@@ -1331,14 +1447,14 @@ win32_chdir(const char *dir)
          errno = b_errno_win32;
          return -1;
       }
-   }
-   else if (p_SetCurrentDirectoryA) {
+   } else if (p_SetCurrentDirectoryA) {
       if (0 == p_SetCurrentDirectoryA(dir)) {
          errno = b_errno_win32;
          return -1;
       }
+   } else {
+      return -1;
    }
-   else return -1;
 
    return 0;
 }
@@ -1346,15 +1462,18 @@ win32_chdir(const char *dir)
 int
 win32_mkdir(const char *dir)
 {
+   Dmsg1(100, "enter win32_mkdir. dir=%s\n", dir);
    if (p_wmkdir){
       POOLMEM* pwszBuf = get_pool_memory(PM_FNAME);
       make_win32_path_UTF8_2_wchar(&pwszBuf, dir);
 
       int n = p_wmkdir((LPCWSTR)pwszBuf);
       free_pool_memory(pwszBuf);
+      Dmsg0(100, "Leave win32_mkdir did wmkdir\n");
       return n;
    }
 
+   Dmsg0(100, "Leave win32_mkdir did _mkdir\n");
    return _mkdir(dir);
 }
 
@@ -1497,8 +1616,10 @@ win32_unlink(const char *filename)
 
       nRetCode = _wunlink((LPCWSTR) pwszBuf);
 
-      /* special case if file is readonly,
-      we retry but unset attribute before */
+      /*
+       * special case if file is readonly,
+       * we retry but unset attribute before
+       */
       if (nRetCode == -1 && errno == EACCES && p_SetFileAttributesW && p_GetFileAttributesW) {
          DWORD dwAttr =  p_GetFileAttributesW((LPCWSTR)pwszBuf);
          if (dwAttr != INVALID_FILE_ATTRIBUTES) {
@@ -1807,6 +1928,96 @@ GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 }
 
 /**
+ * Create the process with WCHAR API
+ */
+static BOOL
+CreateChildProcessW(const char *comspec, const char *cmdLine,
+                    PROCESS_INFORMATION *hProcInfo,
+                    HANDLE in, HANDLE out, HANDLE err)
+{
+   STARTUPINFOW siStartInfo;
+   BOOL bFuncRetn = FALSE;
+
+   // Set up members of the STARTUPINFO structure.
+   ZeroMemory( &siStartInfo, sizeof(siStartInfo) );
+   siStartInfo.cb = sizeof(siStartInfo);
+   // setup new process to use supplied handles for stdin,stdout,stderr
+
+   siStartInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+   siStartInfo.wShowWindow = SW_SHOWMINNOACTIVE;
+
+   siStartInfo.hStdInput = in;
+   siStartInfo.hStdOutput = out;
+   siStartInfo.hStdError = err;
+   
+   // Convert argument to WCHAR
+   POOLMEM *cmdLine_wchar = get_pool_memory(PM_FNAME);
+   POOLMEM *comspec_wchar = get_pool_memory(PM_FNAME);
+
+   UTF8_2_wchar(&cmdLine_wchar, cmdLine);
+   UTF8_2_wchar(&comspec_wchar, comspec);
+
+   // Create the child process.
+   Dmsg2(150, "Calling CreateProcess(%s, %s, ...)\n", comspec_wchar, cmdLine_wchar);
+
+   // try to execute program
+   bFuncRetn = p_CreateProcessW((WCHAR*)comspec_wchar,
+                                (WCHAR*)cmdLine_wchar,// command line
+                                NULL,      // process security attributes
+                                NULL,      // primary thread security attributes
+                                TRUE,      // handles are inherited
+                                0,         // creation flags
+                                NULL,      // use parent's environment
+                                NULL,      // use parent's current directory
+                                &siStartInfo,  // STARTUPINFO pointer
+                                hProcInfo);   // receives PROCESS_INFORMATION
+   free_pool_memory(cmdLine_wchar);
+   free_pool_memory(comspec_wchar);
+
+   return bFuncRetn;
+}
+
+
+/**
+ * Create the process with ANSI API
+ */
+static BOOL
+CreateChildProcessA(const char *comspec, char *cmdLine,
+                    PROCESS_INFORMATION *hProcInfo,
+                    HANDLE in, HANDLE out, HANDLE err)
+{
+   STARTUPINFOA siStartInfo;
+   BOOL bFuncRetn = FALSE;
+
+   // Set up members of the STARTUPINFO structure.
+   ZeroMemory( &siStartInfo, sizeof(siStartInfo) );
+   siStartInfo.cb = sizeof(siStartInfo);
+   // setup new process to use supplied handles for stdin,stdout,stderr
+   siStartInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+   siStartInfo.wShowWindow = SW_SHOWMINNOACTIVE;
+
+   siStartInfo.hStdInput = in;
+   siStartInfo.hStdOutput = out;
+   siStartInfo.hStdError = err;
+
+   // Create the child process.
+   Dmsg2(150, "Calling CreateProcess(%s, %s, ...)\n", comspec, cmdLine);
+
+   // try to execute program
+   bFuncRetn = p_CreateProcessA(comspec,
+                                cmdLine,  // command line
+                                NULL,     // process security attributes
+                                NULL,     // primary thread security attributes
+                                TRUE,     // handles are inherited
+                                0,        // creation flags
+                                NULL,     // use parent's environment
+                                NULL,     // use parent's current directory
+                                &siStartInfo,// STARTUPINFO pointer
+                                hProcInfo);// receives PROCESS_INFORMATION
+   return bFuncRetn;
+}
+
+/**
  * OK, so it would seem CreateProcess only handles true executables:
  * .com or .exe files.  So grab $COMSPEC value and pass command line to it.
  */
@@ -1815,43 +2026,29 @@ CreateChildProcess(const char *cmdline, HANDLE in, HANDLE out, HANDLE err)
 {
    static const char *comspec = NULL;
    PROCESS_INFORMATION piProcInfo;
-   STARTUPINFOA siStartInfo;
    BOOL bFuncRetn = FALSE;
 
-   if (comspec == NULL) {
+   if (!p_CreateProcessA || !p_CreateProcessW)
+      return INVALID_HANDLE_VALUE;
+
+   if (comspec == NULL) 
       comspec = getenv("COMSPEC");
-   }
    if (comspec == NULL) // should never happen
       return INVALID_HANDLE_VALUE;
 
    // Set up members of the PROCESS_INFORMATION structure.
    ZeroMemory( &piProcInfo, sizeof(PROCESS_INFORMATION) );
 
-   // Set up members of the STARTUPINFO structure.
-
-   ZeroMemory( &siStartInfo, sizeof(STARTUPINFO) );
-   siStartInfo.cb = sizeof(STARTUPINFO);
-   // setup new process to use supplied handles for stdin,stdout,stderr
    // if supplied handles are not used the send a copy of our STD_HANDLE
    // as appropriate
-   siStartInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-   siStartInfo.wShowWindow = SW_SHOWMINNOACTIVE;
+   if (in == INVALID_HANDLE_VALUE)
+      in = GetStdHandle(STD_INPUT_HANDLE);
 
-   if (in != INVALID_HANDLE_VALUE)
-      siStartInfo.hStdInput = in;
-   else
-      siStartInfo.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+   if (out == INVALID_HANDLE_VALUE)
+      out = GetStdHandle(STD_OUTPUT_HANDLE);
 
-   if (out != INVALID_HANDLE_VALUE)
-      siStartInfo.hStdOutput = out;
-   else
-      siStartInfo.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-   if (err != INVALID_HANDLE_VALUE)
-      siStartInfo.hStdError = err;
-   else
-      siStartInfo.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-
-   // Create the child process.
+   if (err == INVALID_HANDLE_VALUE)
+      err = GetStdHandle(STD_ERROR_HANDLE);
 
    char *exeFile;
    const char *argStart;
@@ -1860,42 +2057,32 @@ CreateChildProcess(const char *cmdline, HANDLE in, HANDLE out, HANDLE err)
       return INVALID_HANDLE_VALUE;
    }
 
-   int cmdLen = strlen(comspec) + 4 + strlen(exeFile) + strlen(argStart) + 1;
-
-   char *cmdLine = (char *)alloca(cmdLen);
-
-   snprintf(cmdLine, cmdLen, "%s /c %s%s", comspec, exeFile, argStart);
+   POOL_MEM cmdLine(PM_FNAME);
+   Mmsg(cmdLine, "%s /c %s%s", comspec, exeFile, argStart);
 
    free(exeFile);
 
-   Dmsg2(150, "Calling CreateProcess(%s, %s, ...)\n", comspec, cmdLine);
-
-   // try to execute program
-   bFuncRetn = CreateProcessA(comspec,
-                              cmdLine,       // command line
-                              NULL,          // process security attributes
-                              NULL,          // primary thread security attributes
-                              TRUE,          // handles are inherited
-                              0,             // creation flags
-                              NULL,          // use parent's environment
-                              NULL,          // use parent's current directory
-                              &siStartInfo,  // STARTUPINFO pointer
-                              &piProcInfo);  // receives PROCESS_INFORMATION
+   // New function disabled
+   if (p_CreateProcessW && p_MultiByteToWideChar) {
+      bFuncRetn = CreateChildProcessW(comspec, cmdLine.c_str(), &piProcInfo,
+                                      in, out, err);
+   } else {
+      bFuncRetn = CreateChildProcessA(comspec, cmdLine.c_str(), &piProcInfo,
+                                      in, out, err);
+   }
 
    if (bFuncRetn == 0) {
       ErrorExit("CreateProcess failed\n");
       const char *err = errorString();
-      Dmsg3(99, "CreateProcess(%s, %s, ...)=%s\n", comspec, cmdLine, err);
+      Dmsg3(99, "CreateProcess(%s, %s, ...)=%s\n",comspec,cmdLine.c_str(),err);
       LocalFree((void *)err);
       return INVALID_HANDLE_VALUE;
    }
    // we don't need a handle on the process primary thread so we close
    // this now.
    CloseHandle(piProcInfo.hThread);
-
    return piProcInfo.hProcess;
 }
-
 
 void
 ErrorExit (LPCSTR lpszMessage)
@@ -2129,8 +2316,6 @@ close_wpipe(BPIPE *bpipe)
     return result;
 }
 
-#include "findlib/find.h"
-
 int
 utime(const char *fname, struct utimbuf *times)
 {
@@ -2306,6 +2491,72 @@ file_dup2(int, int)
 {
     errno = ENOSYS;
     return -1;
+}
+#endif
+
+#ifdef xxx
+/* 
+ * Emulation of mmap and unmmap for tokyo dbm
+ */
+void *mmap(void *start, size_t length, int prot, int flags,
+           int fd, off_t offset)
+{
+   DWORD fm_access = 0;
+   DWORD mv_access = 0;
+   HANDLE h;
+   HANDLE mv;
+
+   if (length == 0) {
+      return MAP_FAILED;
+   }
+   if (!fd) {
+      return MAP_FAILED;
+   }
+
+   if (flags & PROT_WRITE) {
+      fm_access |= PAGE_READWRITE;
+   } else if (flags & PROT_READ) {
+      fm_access |= PAGE_READONLY;
+   }
+   
+   if (flags & PROT_READ) {
+      mv_access |= FILE_MAP_READ;
+   }
+   if (flags & PROT_WRITE) {
+      mv_access |= FILE_MAP_WRITE;
+   }
+
+   h = CreateFileMapping((HANDLE)_get_osfhandle (fd), 
+                         NULL /* security */, 
+                         fm_access, 
+                         0 /* MaximumSizeHigh */, 
+                         0 /* MaximumSizeLow */, 
+                         NULL /* name of the file mapping object */);
+
+   if (!h || h == INVALID_HANDLE_VALUE) {
+      return MAP_FAILED;
+   }
+
+   mv = MapViewOfFile(h, mv_access, 
+                      0 /* offset hi */, 
+                      0 /* offset lo */,
+                      length);
+   CloseHandle(h);
+
+   if (!mv || mv == INVALID_HANDLE_VALUE) {
+      return MAP_FAILED;
+   }
+
+   return (void *) mv;
+}
+
+int munmap(void *start, size_t length)
+{
+   if (!start) {
+      return -1;
+   }
+   UnmapViewOfFile(start);
+   return 0;
 }
 #endif
 

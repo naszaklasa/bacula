@@ -1,0 +1,57 @@
+
+ This patch should fix the bug reported on the bacula-users list where
+ a retention period of 100 years does immediate prunning.
+ Apply it to 2.4.3 (or earlier versions) with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.3-prune.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+Index: src/dird/ua_prune.c
+===================================================================
+--- src/dird/ua_prune.c	(revision 7757)
++++ src/dird/ua_prune.c	(working copy)
+@@ -202,7 +202,7 @@
+    now = (utime_t)time(NULL);
+ 
+    /* Select Jobs -- for counting */
+-   Mmsg(query, count_select_job, edit_uint64(now - period, ed1), 
++   Mmsg(query, count_select_job, edit_int64(now - period, ed1), 
+         edit_int64(cr.ClientId, ed2));
+    Dmsg3(050, "select now=%u period=%u sql=%s\n", (uint32_t)now, 
+                (uint32_t)period, query.c_str());
+@@ -230,7 +230,7 @@
+    del.JobId = (JobId_t *)malloc(sizeof(JobId_t) * del.max_ids);
+ 
+    /* Now process same set but making a delete list */
+-   Mmsg(query, select_job, edit_uint64(now - period, ed1), 
++   Mmsg(query, select_job, edit_int64(now - period, ed1), 
+         edit_int64(cr.ClientId, ed2));
+    db_sql_query(ua->db, query.c_str(), file_delete_handler, (void *)&del);
+ 
+@@ -318,7 +318,7 @@
+     * Select all files that are older than the JobRetention period
+     *  and stuff them into the "DeletionCandidates" table.
+     */
+-   edit_uint64(now - period, ed1);
++   edit_int64(now - period, ed1);
+    Mmsg(query, insert_delcand, (char)JobType, ed1, 
+         edit_int64(cr.ClientId, ed2));
+    if (!db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL)) {
+@@ -443,10 +443,10 @@
+    edit_int64(mr->MediaId, ed1); 
+    period = mr->VolRetention;
+    now = (utime_t)time(NULL);
+-   edit_uint64(now-period, ed2);
++   edit_int64(now-period, ed2);
+    Mmsg(query, sel_JobMedia, ed1, ed2);
+-   Dmsg3(250, "Now=%d period=%d now-period=%d\n", (int)now, (int)period,
+-      (int)(now-period));
++   Dmsg3(250, "Now=%d period=%d now-period=%s\n", (int)now, (int)period,
++      ed2);
+ 
+    Dmsg1(050, "Query=%s\n", query.c_str());
+    if (!db_sql_query(ua->db, query.c_str(), file_delete_handler, (void *)del)) {

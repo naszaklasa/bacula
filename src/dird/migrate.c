@@ -39,7 +39,7 @@
  *       to do the backup.
  *     When the Storage daemon finishes the job, update the DB.
  *
- *   Version $Id: migrate.c 7736 2008-10-08 16:50:49Z kerns $
+ *   Version $Id: migrate.c 8153 2008-12-13 20:20:22Z kerns $
  */
 
 #include "bacula.h"
@@ -122,6 +122,12 @@ bool do_migration_init(JCR *jcr)
 
    Dmsg2(dbglevel, "Read pool=%s (From %s)\n", jcr->rpool->name(), jcr->rpool_source);
 
+   if (!get_or_create_fileset_record(jcr)) {
+      Dmsg1(dbglevel, "JobId=%d no FileSet\n", (int)jcr->JobId);
+      Jmsg(jcr, M_FATAL, 0, _("Could not get or create the FileSet record.\n"));
+      return false;
+   }
+
    /* If we find a job or jobs to migrate it is previous_jr.JobId */
    count = get_job_to_migrate(jcr);
    if (count < 0) {
@@ -137,12 +143,6 @@ bool do_migration_init(JCR *jcr)
       Dmsg1(dbglevel, "JobId=%d no previous JobId\n", (int)jcr->JobId);
       Jmsg(jcr, M_INFO, 0, _("No previous Job found to migrate.\n"));
       return true;                    /* no work */
-   }
-
-   if (!get_or_create_fileset_record(jcr)) {
-      Dmsg1(dbglevel, "JobId=%d no FileSet\n", (int)jcr->JobId);
-      Jmsg(jcr, M_FATAL, 0, _("Could not get or create the FileSet record.\n"));
-      return false;
    }
 
    create_restore_bootstrap_file(jcr);
@@ -377,7 +377,7 @@ bool do_migration(JCR *jcr)
     * to avoid two threads from using the BSOCK structure at
     * the same time.
     */
-   if (!bnet_fsend(sd, "run")) {
+   if (!sd->fsend("run")) {
       return false;
    }
 
@@ -402,14 +402,6 @@ bool do_migration(JCR *jcr)
    }
 
    migration_cleanup(jcr, jcr->JobStatus);
-   if (mig_jcr) {
-      char jobid[50];
-      UAContext *ua = new_ua_context(jcr);
-      edit_uint64(jcr->previous_jr.JobId, jobid);
-      /* Purge all old file records, but leave Job record */
-      purge_files_from_jobs(ua, jobid);
-      free_ua_context(ua);
-   }
    return true;
 }
 
@@ -520,6 +512,7 @@ const char *sql_jobids_from_client =
    "SELECT DISTINCT Job.JobId,Job.StartTime FROM Job,Pool,Client"
    " WHERE Client.Name='%s' AND Pool.Name='%s' AND Job.PoolId=Pool.PoolId"
    " AND Job.ClientId=Client.ClientId AND Job.Type='B'"
+   " AND Job.JobStatus = 'T'"
    " ORDER by Job.StartTime";
 
 /* Get Volume names in Pool */
@@ -533,8 +526,8 @@ const char *sql_jobids_from_vol =
    "SELECT DISTINCT Job.JobId,Job.StartTime FROM Media,JobMedia,Job"
    " WHERE Media.VolumeName='%s' AND Media.MediaId=JobMedia.MediaId"
    " AND JobMedia.JobId=Job.JobId AND Job.Type='B'"
+   " AND Job.JobStatus = 'T' AND Media.Enabled=1"
    " ORDER by Job.StartTime";
-
 
 const char *sql_smallest_vol = 
    "SELECT Media.MediaId FROM Media,Pool,JobMedia WHERE"
@@ -569,7 +562,6 @@ const char *sql_pool_bytes =
 /* Get the number of bytes in the Jobs */
 const char *sql_job_bytes =
    "SELECT SUM(JobBytes) FROM Job WHERE JobId IN (%s)";
-
 
 /* Get Media Ids in Pool */
 const char *sql_mediaids =
@@ -1070,6 +1062,11 @@ void migration_cleanup(JCR *jcr, int TermCode)
     *  mig_jcr is jcr of the newly migrated job.
     */
    if (mig_jcr) {
+      char old_jobid[50], new_jobid[50];
+
+      edit_uint64(jcr->previous_jr.JobId, old_jobid);
+      edit_uint64(mig_jcr->jr.JobId, new_jobid);
+
       mig_jcr->JobFiles = jcr->JobFiles = jcr->SDJobFiles;
       mig_jcr->JobBytes = jcr->JobBytes = jcr->SDJobBytes;
       mig_jcr->VolSessionId = jcr->VolSessionId;
@@ -1084,14 +1081,27 @@ void migration_cleanup(JCR *jcr, int TermCode)
                   "JobTDate=%s WHERE JobId=%s", 
          jcr->previous_jr.cStartTime, jcr->previous_jr.cEndTime, 
          edit_uint64(jcr->previous_jr.JobTDate, ec1),
-         edit_uint64(mig_jcr->jr.JobId, ec2));
+         new_jobid);
       db_sql_query(mig_jcr->db, query.c_str(), NULL, NULL);
 
-      /* Now mark the previous job as migrated if it terminated normally */
-      if (jcr->JobStatus == JS_Terminated) {
+      /*
+       * If we terminated a migration normally:
+       *   - mark the previous job as migrated
+       *   - move any Log records to the new JobId
+       *   - Purge the File records from the previous job
+       */
+      if (jcr->JobType == JT_MIGRATE && jcr->JobStatus == JS_Terminated) {
          Mmsg(query, "UPDATE Job SET Type='%c' WHERE JobId=%s",
-              (char)JT_MIGRATED_JOB, edit_uint64(jcr->previous_jr.JobId, ec1));
+              (char)JT_MIGRATED_JOB, old_jobid);
          db_sql_query(mig_jcr->db, query.c_str(), NULL, NULL);
+         UAContext *ua = new_ua_context(jcr);
+         /* Move JobLog to new JobId */
+         Mmsg(query, "UPDATE Log SET JobId=%s WHERE JobId=%s",
+           new_jobid, old_jobid);
+         db_sql_query(mig_jcr->db, query.c_str(), NULL, NULL);
+         /* Purge all old file records, but leave Job record */
+         purge_files_from_jobs(ua, old_jobid);
+         free_ua_context(ua);
       } 
 
       if (!db_get_job_record(jcr, jcr->db, &jcr->jr)) {
@@ -1099,7 +1109,6 @@ void migration_cleanup(JCR *jcr, int TermCode)
             db_strerror(jcr->db));
          set_jcr_job_status(jcr, JS_ErrorTerminated);
       }
-
 
       update_bootstrap_file(mig_jcr);
 

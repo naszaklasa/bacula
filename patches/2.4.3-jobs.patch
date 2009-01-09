@@ -1,0 +1,127 @@
+
+ This patch corrects two problems:
+ 1. If you start more than 60 jobs within a 1 minute period, the unique
+    jobname (critical for the daemons) can be duplicated leading to 
+    authentication failures and orphaned jobs.
+ 2. FD jobs that fail SD authentication were not properly cleaned up.
+
+ Apply it to Bacula 2.4.3 (possibly earlier versions)
+ with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.3-jobs.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+Index: src/dird/job.c
+===================================================================
+--- src/dird/job.c	(revision 8011)
++++ src/dird/job.c	(working copy)
+@@ -758,17 +758,17 @@
+    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+    static time_t last_start_time = 0;
+    static int seq = 0;
+-   time_t now;
++   time_t now = time(NULL);
+    struct tm tm;
+    char dt[MAX_TIME_LENGTH];
+    char name[MAX_NAME_LENGTH];
+    char *p;
++   int len;
+ 
+    /* Guarantee unique start time -- maximum one per second, and
+     * thus unique Job Name
+     */
+    P(mutex);                          /* lock creation of jobs */
+-   now = time(NULL);
+    seq++;
+    if (seq > 59) {                    /* wrap as if it is seconds */
+       seq = 0;
+@@ -783,9 +783,10 @@
+    /* Form Unique JobName */
+    (void)localtime_r(&now, &tm);
+    /* Use only characters that are permitted in Windows filenames */
+-   strftime(dt, sizeof(dt), "%Y-%m-%d_%H.%M", &tm);
++   strftime(dt, sizeof(dt), "%Y-%m-%d_%H.%M.%S", &tm);
++   len = strlen(dt) + 5;   /* dt + .%02d EOS */
+    bstrncpy(name, base_name, sizeof(name));
+-   name[sizeof(name)-22] = 0;          /* truncate if too long */
++   name[sizeof(name)-len] = 0;          /* truncate if too long */
+    bsnprintf(jcr->Job, sizeof(jcr->Job), "%s.%s.%02d", name, dt, seq); /* add date & time */
+    /* Convert spaces into underscores */
+    for (p=jcr->Job; *p; p++) {
+@@ -793,6 +794,7 @@
+          *p = '_';
+       }
+    }
++   Dmsg2(100, "JobId=%u created Job=%s\n", jcr->JobId, jcr->Job);
+ }
+ 
+ /* Called directly from job rescheduling */
+Index: src/stored/job.c
+===================================================================
+--- src/stored/job.c	(revision 8011)
++++ src/stored/job.c	(working copy)
+@@ -228,21 +228,25 @@
+    if (!(jcr=get_jcr_by_full_name(job_name))) {
+       Jmsg1(NULL, M_FATAL, 0, _("FD connect failed: Job name not found: %s\n"), job_name);
+       Dmsg1(3, "**** Job \"%s\" not found\n", job_name);
++      fd->close();
+       return;
+    }
+ 
+-   jcr->file_bsock = fd;
+-   jcr->file_bsock->set_jcr(jcr);
+-
+    Dmsg1(110, "Found Job %s\n", job_name);
+ 
+    if (jcr->authenticated) {
+       Jmsg2(jcr, M_FATAL, 0, _("Hey!!!! JobId %u Job %s already authenticated.\n"),
+          (uint32_t)jcr->JobId, jcr->Job);
++      Dmsg2(50, "Hey!!!! JobId %u Job %s already authenticated.\n",
++         (uint32_t)jcr->JobId, jcr->Job);
++      fd->close();
+       free_jcr(jcr);
+       return;
+    }
+ 
++   jcr->file_bsock = fd;
++   jcr->file_bsock->set_jcr(jcr);
++
+    /*
+     * Authenticate the File daemon
+     */
+Index: src/lib/bnet_server.c
+===================================================================
+--- src/lib/bnet_server.c	(revision 8011)
++++ src/lib/bnet_server.c	(working copy)
+@@ -1,7 +1,7 @@
+ /*
+    Bacula® - The Network Backup Solution
+ 
+-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
++   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+ 
+    The main author of Bacula is Kern Sibbald, with contributions from
+    many others, a complete list can be found in the file AUTHORS.
+@@ -20,7 +20,7 @@
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+    02110-1301, USA.
+ 
+-   Bacula® is a registered trademark of John Walker.
++   Bacula® is a registered trademark of Kern Sibbald.
+    The licensor of Bacula is the Free Software Foundation Europe
+    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+    Switzerland, email:ftf@fsfeurope.org.
+@@ -137,7 +137,7 @@
+                   be.bstrerror());
+          }
+       }
+-      listen(fd_ptr->fd, 5);       /* tell system we are ready */
++      listen(fd_ptr->fd, 20);      /* tell system we are ready */
+       sockfds.append(fd_ptr);
+    }
+    /* Start work queue thread */

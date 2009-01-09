@@ -1,0 +1,167 @@
+ This is a first cut at resolving the SD deadlock patch. It does not
+ yet work. It does not properly implmenet the conditional variables
+ for waiting on the lock.
+
+Index: src/stored/wait.c
+===================================================================
+--- src/stored/wait.c	(revision 8054)
++++ src/stored/wait.c	(working copy)
+@@ -99,7 +99,7 @@
+          dev->print_name(), (int)me->heartbeat_interval, dev->rem_wait_sec, add_wait);
+       start = time(NULL);
+       /* Wait required time */
+-      stat = pthread_cond_timedwait(&dev->wait_next_vol, &dev->m_mutex, &timeout);
++      stat = pthread_cond_timedwait(&dev->wait_next_vol, &dev->m_block_mutex, &timeout);
+       Dmsg2(dbglvl, "Wokeup from sleep on device stat=%d blocked=%s\n", stat,
+          dev->print_blocked());
+ 
+Index: src/stored/lock.c
+===================================================================
+--- src/stored/lock.c	(revision 8054)
++++ src/stored/lock.c	(working copy)
+@@ -187,7 +187,29 @@
+ 
+ #endif
+ 
++#ifndef SD_DEBUG_LOCK
++void DEVICE::dlock()
++{
++   int errstat;
++   if ((errstat=rwl_writelock(&m_lock)) != 0) {
++      berrno be;
++      Emsg2(M_ABORT, 0, "rwl_writelock failure. stat=%d: ERR=%s\n",
++           errstat, be.bstrerror(errstat));
++   }
++}
+ 
++void DEVICE::dunlock()
++{
++   int errstat;
++   if ((errstat=rwl_writeunlock(&m_lock)) != 0) {
++      berrno be;
++      Emsg2(M_ABORT, 0, "rwl_writelock failure. stat=%d: ERR=%s\n",
++           errstat, be.bstrerror(errstat));
++   }
++}
++#endif 
++
++
+ /*
+  * This is a recursive lock that checks if the device is blocked.
+  *
+@@ -204,24 +226,28 @@
+ void DEVICE::r_dlock()
+ {
+ #endif
+-   int stat;
+    this->dlock();   
+    if (this->blocked() && !pthread_equal(this->no_wait_id, pthread_self())) {
+       this->num_waiting++;             /* indicate that I am waiting */
+-      while (this->blocked()) {
+-         Dmsg3(sd_dbglvl, "r_dlock blked=%s no_wait=%p me=%p\n", this->print_blocked(),
+-               this->no_wait_id, pthread_self());
+-         if ((stat = pthread_cond_wait(&this->wait, &m_mutex)) != 0) {
+-            berrno be;
+-            this->dunlock();
+-            Emsg1(M_ABORT, 0, _("pthread_cond_wait failure. ERR=%s\n"),
+-               be.bstrerror(stat));
+-         }
+-      }
++      P(m_block_mutex);                /* wait until we get it */
++      V(m_block_mutex);
+       this->num_waiting--;             /* no longer waiting */
+    }
+ }
+ 
++void DEVICE::set_blocked(int state)
++{
++   if (state == BST_NOT_BLOCKED) {
++      if (is_blocked()) {
++         V(m_block_mutex);
++      }
++   } else {
++      P(m_block_mutex);
++      no_wait_id = pthread_self();
++   }
++   m_blocked = state;
++}
++
+ /*
+  * Block all other threads from using the device
+  *  Device must already be locked.  After this call,
+Index: src/stored/dev.c
+===================================================================
+--- src/stored/dev.c	(revision 8054)
++++ src/stored/dev.c	(working copy)
+@@ -223,9 +223,15 @@
+    dev->errmsg = get_pool_memory(PM_EMSG);
+    *dev->errmsg = 0;
+ 
+-   if ((errstat = pthread_mutex_init(&dev->m_mutex, NULL)) != 0) {
++   if ((errstat=rwl_init(&dev->m_lock)) != 0) {
+       berrno be;
+       dev->dev_errno = errstat;
++      Mmsg1(dev->errmsg, _("Unable to init device lock: ERR=%s\n"), be.bstrerror(errstat));
++      Jmsg0(jcr, M_ERROR_TERM, 0, dev->errmsg);
++   }
++   if ((errstat = pthread_mutex_init(&dev->m_block_mutex, NULL)) != 0) {
++      berrno be;
++      dev->dev_errno = errstat;
+       Mmsg1(dev->errmsg, _("Unable to init mutex: ERR=%s\n"), be.bstrerror(errstat));
+       Jmsg0(jcr, M_ERROR_TERM, 0, dev->errmsg);
+    }
+@@ -247,14 +253,6 @@
+       Mmsg1(dev->errmsg, _("Unable to init mutex: ERR=%s\n"), be.bstrerror(errstat));
+       Jmsg0(jcr, M_ERROR_TERM, 0, dev->errmsg);
+    }
+-#ifdef xxx
+-   if ((errstat = rwl_init(&dev->lock)) != 0) {
+-      berrno be;
+-      dev->dev_errno = errstat;
+-      Mmsg1(dev->errmsg, _("Unable to init mutex: ERR=%s\n"), be.bstrerror(errstat));
+-      Jmsg0(jcr, M_ERROR_TERM, 0, dev->errmsg);
+-   }
+-#endif
+ 
+    dev->clear_opened();
+    dev->attached_dcrs = New(dlist(dcr, &dcr->dev_link));
+@@ -2358,7 +2356,8 @@
+       free_pool_memory(errmsg);
+       errmsg = NULL;
+    }
+-   pthread_mutex_destroy(&m_mutex);
++   rwl_destroy(&m_lock);
++   pthread_mutex_destroy(&m_block_mutex);
+    pthread_cond_destroy(&wait);
+    pthread_cond_destroy(&wait_next_vol);
+    pthread_mutex_destroy(&spool_mutex);
+Index: src/stored/dev.h
+===================================================================
+--- src/stored/dev.h	(revision 8054)
++++ src/stored/dev.h	(working copy)
+@@ -219,7 +219,8 @@
+ public:
+    DEVICE * volatile swap_dev;        /* Swap vol from this device */
+    dlist *attached_dcrs;              /* attached DCR list */
+-   pthread_mutex_t m_mutex;           /* access control */
++   brwlock_t m_lock;                  /* device lock */
++   pthread_mutex_t m_block_mutex;     /* block mutex */
+    pthread_mutex_t spool_mutex;       /* mutex for updating spool_size */
+    pthread_cond_t wait;               /* thread wait variable */
+    pthread_cond_t wait_next_vol;      /* wait for tape to be mounted */
+@@ -439,12 +440,12 @@
+ #else
+    void r_dlock();                        /* in lock.c */
+    void r_dunlock() { dunlock(); }
+-   void dlock() { P(m_mutex); } 
+-   void dunlock() { V(m_mutex); } 
++   void dlock();                          /* in lock.c */
++   void dunlock();                        /* in lock.c */
+ #endif
+    void dblock(int why);                  /* in lock.c */
+    void dunblock(bool locked=false);      /* in lock.c */
+-   void set_blocked(int block) { m_blocked = block; };
++   void set_blocked(int block);           /* in lock.c */
+    int blocked() const { return m_blocked; };
+    bool is_blocked() const { return m_blocked != BST_NOT_BLOCKED; };
+    const char *print_blocked() const;     /* in dev.c */

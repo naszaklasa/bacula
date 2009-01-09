@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id: ua_prune.c 6813 2008-04-14 08:24:39Z kerns $
+ *   Version $Id: ua_prune.c 8105 2008-12-02 18:49:00Z ricozz $
  */
 
 #include "bacula.h"
@@ -202,7 +202,7 @@ int prune_files(UAContext *ua, CLIENT *client)
    now = (utime_t)time(NULL);
 
    /* Select Jobs -- for counting */
-   Mmsg(query, count_select_job, edit_uint64(now - period, ed1), 
+   Mmsg(query, count_select_job, edit_int64(now - period, ed1), 
         edit_int64(cr.ClientId, ed2));
    Dmsg3(050, "select now=%u period=%u sql=%s\n", (uint32_t)now, 
                (uint32_t)period, query.c_str());
@@ -230,7 +230,7 @@ int prune_files(UAContext *ua, CLIENT *client)
    del.JobId = (JobId_t *)malloc(sizeof(JobId_t) * del.max_ids);
 
    /* Now process same set but making a delete list */
-   Mmsg(query, select_job, edit_uint64(now - period, ed1), 
+   Mmsg(query, select_job, edit_int64(now - period, ed1), 
         edit_int64(cr.ClientId, ed2));
    db_sql_query(ua->db, query.c_str(), file_delete_handler, (void *)&del);
 
@@ -318,7 +318,7 @@ int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
     * Select all files that are older than the JobRetention period
     *  and stuff them into the "DeletionCandidates" table.
     */
-   edit_uint64(now - period, ed1);
+   edit_int64(now - period, ed1);
    Mmsg(query, insert_delcand, (char)JobType, ed1, 
         edit_int64(cr.ClientId, ed2));
    if (!db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL)) {
@@ -435,18 +435,16 @@ int get_prune_list_for_volume(UAContext *ua, MEDIA_DBR *mr, del_ctx *del)
       return 0;                    /* cannot prune Archived volumes */
    }
 
-   db_lock(ua->db);
-
    /*
     * Now add to the  list of JobIds for Jobs written to this Volume
     */
    edit_int64(mr->MediaId, ed1); 
    period = mr->VolRetention;
    now = (utime_t)time(NULL);
-   edit_uint64(now-period, ed2);
+   edit_int64(now-period, ed2);
    Mmsg(query, sel_JobMedia, ed1, ed2);
-   Dmsg3(250, "Now=%d period=%d now-period=%d\n", (int)now, (int)period,
-      (int)(now-period));
+   Dmsg3(250, "Now=%d period=%d now-period=%s\n", (int)now, (int)period,
+      ed2);
 
    Dmsg1(050, "Query=%s\n", query.c_str());
    if (!db_sql_query(ua->db, query.c_str(), file_delete_handler, (void *)del)) {
@@ -468,6 +466,7 @@ int get_prune_list_for_volume(UAContext *ua, MEDIA_DBR *mr, del_ctx *del)
             break;
          }
       }
+      endeach_jcr(jcr);
       if (skip) {
          continue;
       }
@@ -476,6 +475,5 @@ int get_prune_list_for_volume(UAContext *ua, MEDIA_DBR *mr, del_ctx *del)
    }
 
 bail_out:
-   db_unlock(ua->db);
    return count;
 }

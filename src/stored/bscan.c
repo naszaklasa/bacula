@@ -34,7 +34,7 @@
  *   Kern E. Sibbald, December 2001
  *
  *
- *   Version $Id: bscan.c 7237 2008-06-25 22:14:10Z kerns $
+ *   Version $Id: bscan.c 8240 2008-12-23 15:50:58Z kerns $
  */
 
 #include "bacula.h"
@@ -1286,7 +1286,7 @@ static JCR *create_jcr(JOB_DBR *jr, DEV_RECORD *rec, uint32_t JobId)
 /* Dummies to replace askdir.c */
 bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
 bool    dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten) { return 1; }
-bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
+bool    dir_create_jobmedia_record(DCR *dcr, bool zero) { return 1; }
 bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr) { return 1; }
 bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}
 bool    dir_send_job_status(JCR *jcr) {return 1;}

@@ -1,0 +1,56 @@
+
+ This patch corrects a deadlock that can occure when using the catalog
+ as message backend and the director decides to prune volumes.
+
+ Apply it to Bacula 2.4.3 (possibly earlier versions)
+ with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.3-prune-deadlock.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+Index: src/lib/jcr.c
+===================================================================
+--- src/lib/jcr.c	(révision 8063)
++++ src/lib/jcr.c	(copie de travail)
+@@ -438,7 +438,6 @@
+ 
+ #endif
+ 
+-   dequeue_messages(jcr);
+    lock_jcr_chain();
+    jcr->dec_use_count();              /* decrement use count */
+    if (jcr->use_count() < 0) {
+@@ -455,6 +454,7 @@
+    remove_jcr(jcr);                   /* remove Jcr from chain */
+    unlock_jcr_chain();
+ 
++   dequeue_messages(jcr);
+    job_end_pop(jcr);                  /* pop and call hooked routines */
+ 
+    Dmsg1(3400, "End job=%d\n", jcr->JobId);
+Index: src/dird/ua_prune.c
+===================================================================
+--- src/dird/ua_prune.c (révision 8100)
++++ src/dird/ua_prune.c (copie de travail)
+@@ -435,8 +435,6 @@
+       return 0;                    /* cannot prune Archived volumes */
+    }
+
+-   db_lock(ua->db);
+-
+    /*
+     * Now add to the  list of JobIds for Jobs written to this Volume
+     */
+@@ -477,6 +475,5 @@
+    }
+
+ bail_out:
+-   db_unlock(ua->db);
+    return count;
+ }
+

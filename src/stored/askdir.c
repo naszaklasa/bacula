@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, December 2000
  *
- *   Version $Id: askdir.c 7098 2008-06-03 13:01:08Z kerns $
+ *   Version $Id: askdir.c 8240 2008-12-23 15:50:58Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -387,7 +387,7 @@ bail_out:
 /*
  * After writing a Volume, create the JobMedia record.
  */
-bool dir_create_jobmedia_record(DCR *dcr)
+bool dir_create_jobmedia_record(DCR *dcr, bool zero)
 {
    JCR *jcr = dcr->jcr;
    BSOCK *dir = jcr->dir_bsock;
@@ -398,18 +398,31 @@ bool dir_create_jobmedia_record(DCR *dcr)
       return true;
    }
 
+   /* Throw out records where FI is zero -- i.e. nothing done */
+   if (!zero && dcr->VolFirstIndex == 0 &&
+        (dcr->StartBlock != 0 || dcr->EndBlock != 0)) {
+      Dmsg0(1000, "JobMedia problem FI=0 StartBlock!=0\n");
+      return true;
+   }
+
    if (!dcr->WroteVol) {
       return true;                    /* nothing written to tape */
    }
 
    dcr->WroteVol = false;
-   dir->fsend(Create_job_media, jcr->Job,
-      dcr->VolFirstIndex, dcr->VolLastIndex,
-      dcr->StartFile, dcr->EndFile,
-      dcr->StartBlock, dcr->EndBlock, 
-      dcr->Copy, dcr->Stripe, 
-      edit_uint64(dcr->VolMediaId, ed1));
-    Dmsg1(100, ">dird %s", dir->msg);
+   if (zero) {
+      /* Send dummy place holder to avoid purging */
+      dir->fsend(Create_job_media, jcr->Job,
+         0 , 0, 0, 0, 0, 0, 0, 0, edit_uint64(dcr->VolMediaId, ed1));
+   } else {
+      dir->fsend(Create_job_media, jcr->Job,
+         dcr->VolFirstIndex, dcr->VolLastIndex,
+         dcr->StartFile, dcr->EndFile,
+         dcr->StartBlock, dcr->EndBlock,
+         dcr->Copy, dcr->Stripe,
+         edit_uint64(dcr->VolMediaId, ed1));
+   }
+   Dmsg1(100, ">dird %s", dir->msg);
    if (dir->recv() <= 0) {
       Dmsg0(190, "create_jobmedia error bnet_recv\n");
       Jmsg(jcr, M_FATAL, 0, _("Error creating JobMedia record: ERR=%s\n"),

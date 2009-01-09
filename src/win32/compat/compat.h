@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -37,7 +37,7 @@
  * Last Modified By: Thorsten Engel
  * Last Modified On: Fri Apr 22 19:30:00 2004
  * Update Count    : 218
- * $Id: compat.h 4992 2007-06-07 14:46:43Z kerns $
+ * $Id: compat.h 8202 2008-12-20 13:22:14Z kerns $
  */
 
 
@@ -106,6 +106,7 @@ typedef UINT32 uid_t;
 typedef UINT32 gid_t;
 typedef UINT32 mode_t;
 typedef INT32  ssize_t;
+typedef UINT32 size_t;
 #define HAVE_SSIZE_T 1
 
 #endif /* HAVE_MINGW */
@@ -307,6 +308,7 @@ struct sigaction {
 #define mkdir(p, m) win32_mkdir(p)
 #define unlink win32_unlink
 #define chdir win32_chdir
+#define chmod win32_chmod
 extern "C" void syslog(int type, const char *fmt, ...);
 #if !defined(LOG_DAEMON)
 #define LOG_DAEMON 0
@@ -333,12 +335,15 @@ extern "C" void *  __cdecl _alloca(size_t);
 
 #define getcwd win32_getcwd
 #define chdir win32_chdir
+#define chmod win32_chmod
 #define fputs win32_fputs
 char *win32_getcwd(char *buf, int maxlen);
 int win32_chdir(const char *buf);
 int win32_mkdir(const char *buf);
 int win32_fputs(const char *string, FILE *stream);
 int win32_unlink(const char *filename);
+int win32_chmod(const char *, mode_t);
+
 
 char* win32_cgets (char* buffer, int len);
 

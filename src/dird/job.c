@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c 7744 2008-10-10 10:58:59Z ricozz $
+ *    Version $Id: job.c 8012 2008-11-07 16:26:48Z kerns $
  */
 
 #include "bacula.h"
@@ -758,17 +758,17 @@ void create_unique_job_name(JCR *jcr, const char *base_name)
    static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
    static time_t last_start_time = 0;
    static int seq = 0;
-   time_t now;
+   time_t now = time(NULL);
    struct tm tm;
    char dt[MAX_TIME_LENGTH];
    char name[MAX_NAME_LENGTH];
    char *p;
+   int len;
 
    /* Guarantee unique start time -- maximum one per second, and
     * thus unique Job Name
     */
    P(mutex);                          /* lock creation of jobs */
-   now = time(NULL);
    seq++;
    if (seq > 59) {                    /* wrap as if it is seconds */
       seq = 0;
@@ -783,9 +783,10 @@ void create_unique_job_name(JCR *jcr, const char *base_name)
    /* Form Unique JobName */
    (void)localtime_r(&now, &tm);
    /* Use only characters that are permitted in Windows filenames */
-   strftime(dt, sizeof(dt), "%Y-%m-%d_%H.%M", &tm);
+   strftime(dt, sizeof(dt), "%Y-%m-%d_%H.%M.%S", &tm);
+   len = strlen(dt) + 5;   /* dt + .%02d EOS */
    bstrncpy(name, base_name, sizeof(name));
-   name[sizeof(name)-22] = 0;          /* truncate if too long */
+   name[sizeof(name)-len] = 0;          /* truncate if too long */
    bsnprintf(jcr->Job, sizeof(jcr->Job), "%s.%s.%02d", name, dt, seq); /* add date & time */
    /* Convert spaces into underscores */
    for (p=jcr->Job; *p; p++) {
@@ -793,6 +794,7 @@ void create_unique_job_name(JCR *jcr, const char *base_name)
          *p = '_';
       }
    }
+   Dmsg2(100, "JobId=%u created Job=%s\n", jcr->JobId, jcr->Job);
 }
 
 /* Called directly from job rescheduling */

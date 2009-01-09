@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *    Written by Kern E. Sibbald, March MM.
  *
- *   Version $Id: base64.c 7272 2008-07-01 10:18:27Z kerns $
+ *   Version $Id: base64.c 7949 2008-10-30 12:06:26Z kerns $
  */
 
 
@@ -177,7 +177,7 @@ bin_to_base64(char *buf, int buflen, char *bin, int binlen, int compatible)
    if (rem && j < buflen) {
       mask = (1 << rem) - 1;
       if (compatible) {
-         buf[j++] = base64_digits[(reg & mask) << 6 - rem];
+         buf[j++] = base64_digits[(reg & mask) << (6 - rem)];
       } else {
          buf[j++] = base64_digits[reg & mask];
       }

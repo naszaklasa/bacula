@@ -28,7 +28,7 @@
 /*
  * Protypes for stored -- Kern Sibbald MM  
  *
- *   Version $Id: protos.h 6923 2008-05-09 05:39:49Z kerns $
+ *   Version $Id: protos.h 8240 2008-12-23 15:50:58Z kerns $
  */
 
 /* From stored.c */
@@ -55,7 +55,7 @@ bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr);
 bool    dir_ask_sysop_to_mount_volume(DCR *dcr, int mode);
 bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec);
 bool    dir_send_job_status(JCR *jcr);
-bool    dir_create_jobmedia_record(DCR *dcr);
+bool    dir_create_jobmedia_record(DCR *dcr, bool zero=false);
 bool    dir_update_device(JCR *jcr, DEVICE *dev);
 bool    dir_update_changer(JCR *jcr, AUTOCHANGER *changer);
 
