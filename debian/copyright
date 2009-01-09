@@ -13,51 +13,53 @@ the copyright was transferred to the Free Software Foundation Europe
 on 15 November 2006.
 
 Trademark:
-The name Bacula is a registered trademark.
+The name Bacula is a registered trademark of Kern Sibbald.
 
 ===================================
 
 License:
 For the most part, Bacula is licensed under the GPL version 2
 this code is listed under Copyright Free Software Foundation
-Europe e.V. A small part of the code (less than 20 files) is
-copyrighted under the GPL by other people (FSF, Sun, ...). 
+Europe e.V. A small part of the code (less than 10 files) is
+copyrighted under the GPL by FSF, or under BSD licenses by various
+authors (see below).
 
 What follows is information from the authors of the code:
 
 Linking: 
 Bacula may be linked with any libraries permitted under the GPL.
-However, if configured with encryption Bacula does use the
-OpenSSL libraries which are, unfortunately, not compatible with
-GPL v2.  To the best of our knowledge these libaries are not
+However, if configured with encryption, Bacula does use the
+OpenSSL libraries, and the OpenSSL license is not compatible with
+GPL v2.  To the best of our knowledge these libraries are not
 distributed with Bacula code because they are shared objects, and
 as such there is no conflict with the GPL according what I (Kern)
-understand in talking to FSFE, and in any case, for the code that
+understand in talking to FSFE.  In any case, for the code that
 I have written, I have no problems linking in OpenSSL (of course
 this does not speak for the few files in Bacula that are
-copyrighted by others).  If you take a more severe stance on this
-issue, and you are going to distribute Bacula, then simply do not
-use the --with-openssl when building your package, and no use of
-OpenSSL even through dynamic linking will be included.
+copyrighted by others).  If you take a more severe stance on the
+issue of dynamic linking to OpenSSL, and you are going to
+distribute Bacula, then simply do not use the --with-openssl when
+building your package, and Bacula will not use OpenSSL.
              
 
 IP rights:
-Recipient understands that although each Contributor grants the
-licenses to its Contributions set forth herein, no assurances are
-provided by any Contributor that the Program does not infringe
-the patent or other intellectual property rights of any other
-entity.  Each Contributor disclaims any liability to Recipient
-for claims brought by any other entity based on infringement of
-intellectual property rights or otherwise.  As a condition to
-exercising the rights and licenses granted hereunder, each
-Recipient hereby assumes sole responsibility to secure any other
-intellectual property rights needed, if any.  For example, if a
-third party patent license is required to allow Recipient to
-distribute the Program, it is Recipient's responsibility to
-acquire that license before distributing the Program.
+Recipient understands that although each Contributor to Bacula
+grants the licenses to its Contributions set forth herein, no
+assurances are provided by any Contributor that the Program does
+not infringe the patent or other intellectual property rights of
+any other entity.  Each Contributor disclaims any liability to
+Recipient for claims brought by any other entity based on
+infringement of intellectual property rights or otherwise.  As a
+condition to exercising the rights and licenses granted
+hereunder, each Recipient hereby assumes sole responsibility to
+secure any other intellectual property rights needed, if any.
+For example, if a third party patent license is required to allow
+Recipient to distribute the Program, it is Recipient's
+responsibility to acquire that license before distributing the
+Program.
 
 Copyrights:
-Each Contributor represents that to its knowledge it has
+Each Contributor to Bacula represents that to its knowledge it has
 sufficient copyright rights in its Contribution, if any, to grant
 the copyright license set forth in this Agreement.
 
@@ -65,7 +67,7 @@ Code falling under the above conditions will be marked as follows:
 
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -84,7 +86,7 @@ Code falling under the above conditions will be marked as follows:
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -96,20 +98,63 @@ Bacula File daemon is copyrighted and or trademarked by Microsoft
 and may contain Microsoft intellectual property (examples:
 Microsoft VC++, the source to the VSS libraries, the Microsoft C
 runtime libraries).  As such we cannot and do not distribute that
-software.  We are permitted however to distribut Bacula with the
-necessary Microsoft libraries in binary form.
+software in source form.  We are permitted however to distribute
+Bacula with the necessary Microsoft libraries in binary form.
 
-You may obtain the parts that we cannot distribute as follows.  The
+You may obtain the parts that we cannot distribute as follows: The
 Microsoft compiler available for purchase, and Microsoft provides a free
-version of the compiler.  The source code and libraries are available for
-download from Microsoft public Web servers.  We have documented in the
-src/win32 directory the URLs from which we obtained the library source, and
-how we build the Windows File daemon and many users have succeeded in doing
-so themselves.  Our intention is to respect as closely as possible Open
-Source practices while maintaining full respect for proprietary and
-copyrighted code.
+version of the compiler (note, we do not use the Microsoft compiler, but
+rather build the Bacula Win32 client using g++ cross compiling on Linux).
+The Microsoft source code that we use in the Win32 Bacula Client (Volume
+Shadow Copy interface) is available for download from Microsoft public
+Web servers.  We have documented in the src/win32 directory the URLs from
+which we obtained the library source, and how we build the Windows File
+daemon and many users have succeeded in doing so themselves.  Our
+intention is to respect as closely as possible Open Source practices
+while maintaining full respect for proprietary and copyrighted code.
+
+BSD code used in the Windows version only:
+Code falling under the BSD license has the following license:
+
+   Copyright (c)2002-2003 Mark K. Kim
+   All rights reserved.
+   
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions
+   are met:
+
+     * Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+     * Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in
+       the documentation and/or other materials provided with the
+       distribution.
+
+     * Neither the original author of this software nor the names of its
+       contributors may be used to endorse or promote products derived
+       from this software without specific prior written permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+   OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+   AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
+   THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+   DAMAGE.
+
 
 =====================================
+
+Other Licenses:
+Certain parts of the Bacula software are licensed by their
+copyright holder(s) under the GPL or under the BSD license. 
+These software files are clearly marked as such.
 
 Bacula can be enabled with data encryption and/or communications
 encryption. If this is the case, you will be including OpenSSL code that
@@ -134,6 +179,8 @@ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+=====================================
 
 On Debian systems, the complete text of the GNU General Public
 License and the GNU Lesser General Public License can be found
