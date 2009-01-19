@@ -31,7 +31,7 @@
  *
  *  Kern E. Sibbald, December 2000
  *
- *  Version $Id: jcr.c 7631 2008-09-24 18:18:30Z kerns $
+ *  Version $Id: jcr.c 8101 2008-12-02 17:39:23Z ricozz $
  *
  *  These routines are thread safe.
  *
@@ -438,7 +438,6 @@ void free_jcr(JCR *jcr)
 
 #endif
 
-   dequeue_messages(jcr);
    lock_jcr_chain();
    jcr->dec_use_count();              /* decrement use count */
    if (jcr->use_count() < 0) {
@@ -455,6 +454,7 @@ void free_jcr(JCR *jcr)
    remove_jcr(jcr);                   /* remove Jcr from chain */
    unlock_jcr_chain();
 
+   dequeue_messages(jcr);
    job_end_pop(jcr);                  /* pop and call hooked routines */
 
    Dmsg1(3400, "End job=%d\n", jcr->JobId);

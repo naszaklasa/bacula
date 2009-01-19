@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_create.c 6748 2008-04-06 12:34:20Z kerns $
+ *    Version $Id: sql_create.c 7920 2008-10-27 19:13:49Z ricozz $
  */
 
 /* The following is necessary so that we do not include
@@ -459,13 +459,12 @@ db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
               "WHERE MediaId=%d", dt, mr->MediaId);
          stat = UPDATE_DB(jcr, mdb, mdb->cmd);
       }
+      /*
+       * Make sure that if InChanger is non-zero any other identical slot
+       *   has InChanger zero.
+       */
+      db_make_inchanger_unique(jcr, mdb, mr);
    }
-
-   /*
-    * Make sure that if InChanger is non-zero any other identical slot
-    *   has InChanger zero.
-    */
-   db_make_inchanger_unique(jcr, mdb, mr);
 
    db_unlock(mdb);
    return stat;

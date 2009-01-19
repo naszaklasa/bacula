@@ -31,7 +31,7 @@
  *
  *    Kern Sibbald, March MM
  *
- *   Version $Id: backup.c 6867 2008-05-01 16:33:28Z kerns $
+ *   Version $Id: backup.c 7949 2008-10-30 12:06:26Z kerns $
  *
  */
 
@@ -769,8 +769,8 @@ int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
       if (ff_pkt->flags & FO_SPARSE) {
          ser_declare;
          bool haveBlock = true;
-         if (sd->msglen == rsize &&
-             fileAddr+sd->msglen < (uint64_t)ff_pkt->statp.st_size ||
+         if ((sd->msglen == rsize &&
+              fileAddr+sd->msglen < (uint64_t)ff_pkt->statp.st_size) ||
              ((ff_pkt->type == FT_RAW || ff_pkt->type == FT_FIFO) &&
                (uint64_t)ff_pkt->statp.st_size == 0)) {
             haveBlock = !is_buf_zero(rbuf, rsize);

@@ -1,3 +1,10 @@
+bacula (2.4.4-1) unstable; urgency=low
+
+  * New Upstream Version - a bugfix release.  Closes: #508816.
+  * Build-conflicts on Python 2.4.  Closes: #496512.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 09 Jan 2009 14:07:27 -0600
+
 bacula (2.4.3-1~bpo40+1) etch-backports; urgency=low
 
   * Rebuild for etch-backports.

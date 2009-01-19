@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: job.c 7291 2008-07-02 20:49:44Z kerns $
+ *   Version $Id: job.c 8012 2008-11-07 16:26:48Z kerns $
  *
  */
 
@@ -228,20 +228,24 @@ void handle_filed_connection(BSOCK *fd, char *job_name)
    if (!(jcr=get_jcr_by_full_name(job_name))) {
       Jmsg1(NULL, M_FATAL, 0, _("FD connect failed: Job name not found: %s\n"), job_name);
       Dmsg1(3, "**** Job \"%s\" not found\n", job_name);
+      fd->close();
       return;
    }
-
-   jcr->file_bsock = fd;
-   jcr->file_bsock->set_jcr(jcr);
 
    Dmsg1(110, "Found Job %s\n", job_name);
 
    if (jcr->authenticated) {
       Jmsg2(jcr, M_FATAL, 0, _("Hey!!!! JobId %u Job %s already authenticated.\n"),
          (uint32_t)jcr->JobId, jcr->Job);
+      Dmsg2(50, "Hey!!!! JobId %u Job %s already authenticated.\n",
+         (uint32_t)jcr->JobId, jcr->Job);
+      fd->close();
       free_jcr(jcr);
       return;
    }
+
+   jcr->file_bsock = fd;
+   jcr->file_bsock->set_jcr(jcr);
 
    /*
     * Authenticate the File daemon

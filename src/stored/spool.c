@@ -30,7 +30,7 @@
  *
  *      Kern Sibbald, March 2004
  *
- *  Version $Id: spool.c 6710 2008-04-01 09:31:06Z kerns $
+ *  Version $Id: spool.c 8240 2008-12-23 15:50:58Z kerns $
  */
 
 #include "bacula.h"
@@ -299,7 +299,7 @@ static bool despool_data(DCR *dcr, bool commit)
    }
 
    if (!dir_create_jobmedia_record(dcr)) {
-      Jmsg(jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
+      Jmsg2(jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
          dcr->VolCatInfo.VolCatName, jcr->Job);
    }
    /* Set new file/block parameters for current dcr */

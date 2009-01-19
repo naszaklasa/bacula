@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: de\n"
 "Report-Msgid-Bugs-To: bacula-devel@lists.sourceforge.net\n"
-"POT-Creation-Date: 2008-10-10 20:22+0200\n"
+"POT-Creation-Date: 2008-12-24 10:08+0100\n"
 "PO-Revision-Date: 2007-06-25 20:38+0200\n"
 "Last-Translator: Philipp Storz <philipp.storz@dass-it.de>\n"
 "Language-Team: \n"
@@ -429,7 +429,7 @@ msgid "Pool \"%s\" resource not found for volume \"%s\"!\n"
 msgstr ""
 
 #: src/dird/backup.c:87 src/dird/migrate.c:230 src/dird/migrate.c:231
-#: src/dird/job.c:917 src/dird/job.c:964
+#: src/dird/job.c:919 src/dird/job.c:966
 msgid "Pool resource"
 msgstr "Pool Ressource"
 
@@ -456,7 +456,7 @@ msgstr "Netzwerkfehler mit FD bei %s: ERR=%s\n"
 msgid "No Job status returned from FD.\n"
 msgstr "FD hat keinen Jobstatus zurückgegeben.\n"
 
-#: src/dird/backup.c:358 src/dird/migrate.c:1098 src/dird/admin.c:89
+#: src/dird/backup.c:358 src/dird/migrate.c:1108 src/dird/admin.c:89
 #, fuzzy, c-format
 msgid "Error getting Job record for Job report: ERR=%s"
 msgstr "Fehler beim Holen des job Eintrags für den job Bericht: %s"
@@ -466,7 +466,7 @@ msgstr "Fehler beim Holen des job Eintrags für den job Bericht: %s"
 msgid "Error getting Client record for Job report: ERR=%s"
 msgstr "Fehler beim holen des Datensatzes für Volume \"%s\": ERR=%s"
 
-#: src/dird/backup.c:371 src/dird/migrate.c:1129
+#: src/dird/backup.c:371 src/dird/migrate.c:1138
 #, c-format
 msgid "Error getting Media record for Volume \"%s\": ERR=%s"
 msgstr "Fehler beim holen des Datensatzes für Volume \"%s\": ERR=%s"
@@ -1413,13 +1413,13 @@ msgstr "Socket Fehler auf %s Kommando: ERR=%s\n"
 msgid "Could not get or create a Pool record.\n"
 msgstr "Konnte keinen Pool Eintrag holen oder erzeugen.\n"
 
-#: src/dird/migrate.c:138 src/dird/migrate.c:154
-msgid "No previous Job found to migrate.\n"
-msgstr "Keinen vorherigen Job zum migrieren gefunden.\n"
-
-#: src/dird/migrate.c:144
+#: src/dird/migrate.c:127
 msgid "Could not get or create the FileSet record.\n"
 msgstr "Konnte FileSet Eintrag weder holen noch erzeugen.\n"
+
+#: src/dird/migrate.c:144 src/dird/migrate.c:154
+msgid "No previous Job found to migrate.\n"
+msgstr "Keinen vorherigen Job zum migrieren gefunden.\n"
 
 #: src/dird/migrate.c:156
 msgid "Previous Job has no data to migrate.\n"
@@ -1453,7 +1453,7 @@ msgstr "Pool Ressource \"%s\" nicht gefunden.\n"
 msgid "Job Pool's NextPool resource"
 msgstr "\"NextPool\"  Ressource des Job Pools"
 
-#: src/dird/migrate.c:278 src/dird/migrate.c:845
+#: src/dird/migrate.c:278 src/dird/migrate.c:837
 #, c-format
 msgid "Could not get job record for JobId %s to migrate. ERR=%s"
 msgstr "Konnte job record für JobId %s zum migrieren nicht holen. ERR=%s"
@@ -1473,123 +1473,123 @@ msgstr "Starte Migration JobId %s, Job=%s\n"
 msgid "Read storage \"%s\" same as write storage.\n"
 msgstr "Lese storage \"%s\" ist gleich mit Schreib storage.\n"
 
-#: src/dird/migrate.c:670
+#: src/dird/migrate.c:662
 msgid "No Migration SQL selection pattern specified.\n"
 msgstr "Kein \"Migration SQL selection pattern\" spezifiziert.\n"
 
-#: src/dird/migrate.c:677 src/dird/migrate.c:697 src/dird/migrate.c:718
-#: src/dird/migrate.c:754 src/dird/migrate.c:782 src/dird/migrate.c:898
-#: src/dird/migrate.c:931 src/dird/migrate.c:1028
+#: src/dird/migrate.c:669 src/dird/migrate.c:689 src/dird/migrate.c:710
+#: src/dird/migrate.c:746 src/dird/migrate.c:774 src/dird/migrate.c:890
+#: src/dird/migrate.c:923 src/dird/migrate.c:1020
 #, c-format
 msgid "SQL failed. ERR=%s\n"
 msgstr "SQL fehlgeschlagen ERR=%s\n"
 
-#: src/dird/migrate.c:701 src/dird/migrate.c:708 src/dird/migrate.c:722
-#: src/dird/migrate.c:786
+#: src/dird/migrate.c:693 src/dird/migrate.c:700 src/dird/migrate.c:714
+#: src/dird/migrate.c:778
 msgid "No Volumes found to migrate.\n"
 msgstr "Keine Volumes zum Migrieren gefunden.\n"
 
-#: src/dird/migrate.c:736 src/dird/migrate.c:821 src/dird/migrate.c:834
+#: src/dird/migrate.c:728 src/dird/migrate.c:813 src/dird/migrate.c:826
 msgid "Invalid JobId found.\n"
 msgstr "Ungültige JobId gefunden.\n"
 
-#: src/dird/migrate.c:793
+#: src/dird/migrate.c:785
 msgid "Unknown Migration Selection Type.\n"
 msgstr "Unbekannter \"Migration Selection Type\".\n"
 
-#: src/dird/migrate.c:805 src/dird/migrate.c:824 src/dird/migrate.c:837
+#: src/dird/migrate.c:797 src/dird/migrate.c:816 src/dird/migrate.c:829
 msgid "No JobIds found to migrate.\n"
 msgstr "Keine JobIds zum migrieren gefunden.\n"
 
-#: src/dird/migrate.c:809
+#: src/dird/migrate.c:801
 #, fuzzy, c-format
 msgid "The following %u JobId%s were chosen to be migrated: %s\n"
 msgstr "Die folgende %u JobId%s wird migriert werden: %s\n"
 
-#: src/dird/migrate.c:850
+#: src/dird/migrate.c:842
 #, c-format
 msgid "Migration using JobId=%s Job=%s\n"
 msgstr "Migration benutzt JobId=%s Job=%s\n"
 
-#: src/dird/migrate.c:881
+#: src/dird/migrate.c:873
 msgid "Could not start migration job.\n"
 msgstr "Konnte Migrationsjob nicht starten.\n"
 
-#: src/dird/migrate.c:883
+#: src/dird/migrate.c:875
 #, c-format
 msgid "Migration JobId %d started.\n"
 msgstr "Migration JobId %d gestartet.\n"
 
-#: src/dird/migrate.c:902
+#: src/dird/migrate.c:894
 #, fuzzy, c-format
 msgid "No %s found to migrate.\n"
 msgstr "Keine %ss zum Migrieren gefunden.\n"
 
-#: src/dird/migrate.c:906
+#: src/dird/migrate.c:898
 #, c-format
 msgid "SQL error. Expected 1 MediaId got %d\n"
 msgstr "SQL Fehler. Erwartet 1 MediaId erhalten: %d\n"
 
-#: src/dird/migrate.c:935 src/dird/migrate.c:1033
+#: src/dird/migrate.c:927 src/dird/migrate.c:1025
 #, c-format
 msgid "No %ss found to migrate.\n"
 msgstr "Keine %ss zum Migrieren gefunden.\n"
 
-#: src/dird/migrate.c:957
+#: src/dird/migrate.c:949
 #, c-format
 msgid "No Migration %s selection pattern specified.\n"
 msgstr "Kein Migration %s selection pattern spezifiziert.\n"
 
-#: src/dird/migrate.c:968
+#: src/dird/migrate.c:960
 #, c-format
 msgid "SQL to get %s failed. ERR=%s\n"
 msgstr "SQL um %s zu holen fehlgeschlagen. ERR=%s\n"
 
-#: src/dird/migrate.c:973
+#: src/dird/migrate.c:965
 #, c-format
 msgid "Query of Pool \"%s\" returned no Jobs to migrate.\n"
 msgstr "Abfrage nach Pool \"%s\" ergab keine Jobs für die Migration.\n"
 
-#: src/dird/migrate.c:982
+#: src/dird/migrate.c:974
 #, c-format
 msgid "Could not compile regex pattern \"%s\" ERR=%s\n"
 msgstr "Konnte regex pattern \"%s\" nicht kompilieren ERR=%s\n"
 
-#: src/dird/migrate.c:1011
+#: src/dird/migrate.c:1003
 msgid "Regex pattern matched no Jobs to migrate.\n"
 msgstr "Regex pattern hat auf keine Jobs für die Migration zugetroffen.\n"
 
-#: src/dird/migrate.c:1137
+#: src/dird/migrate.c:1146
 #, c-format
 msgid "%s OK -- with warnings"
 msgstr "%s OK -- mit Warnungen"
 
-#: src/dird/migrate.c:1139
+#: src/dird/migrate.c:1148
 #, c-format
 msgid "%s OK"
 msgstr "%s OK"
 
-#: src/dird/migrate.c:1144
+#: src/dird/migrate.c:1153
 #, c-format
 msgid "*** %s Error ***"
 msgstr "*** %s Fehler ***"
 
-#: src/dird/migrate.c:1154
+#: src/dird/migrate.c:1163
 #, c-format
 msgid "%s Canceled"
 msgstr "%s Abgebrochen"
 
-#: src/dird/migrate.c:1163
+#: src/dird/migrate.c:1172
 #, c-format
 msgid "Inappropriate %s term code"
 msgstr "Unzutreffender %s Beendigungskode"
 
-#: src/dird/migrate.c:1173
+#: src/dird/migrate.c:1182
 #, c-format
 msgid "%s -- no files to migrate"
 msgstr "%s -- keine Dateien zur Migration."
 
-#: src/dird/migrate.c:1189
+#: src/dird/migrate.c:1198
 #, fuzzy, c-format
 msgid ""
 "Bacula %s %s (%s): %s\n"
@@ -1649,17 +1649,17 @@ msgstr ""
 "  Beendigungsstatus:      %s\n"
 "\n"
 
-#: src/dird/migrate.c:1296
+#: src/dird/migrate.c:1305
 #, c-format
 msgid "No Next Pool specification found in Pool \"%s\".\n"
 msgstr "Keine \"Next Pool\" Spezifikation in Pool \"%s\" gefunden.\n"
 
-#: src/dird/migrate.c:1302
+#: src/dird/migrate.c:1311
 #, c-format
 msgid "No Storage specification found in Next Pool \"%s\".\n"
 msgstr "Keine \"Storage\" Spezifikation in \"Next Pool\" \"%s\" gefunden.\n"
 
-#: src/dird/migrate.c:1308
+#: src/dird/migrate.c:1317
 msgid "Storage from Pool's NextPool resource"
 msgstr "Storage aus der \"NextPool\" Ressource des Pools."
 
@@ -2293,23 +2293,23 @@ msgstr ""
 msgid "%d File%s on Volume \"%s\" purged from catalog.\n"
 msgstr ""
 
-#: src/dird/ua_purge.c:481
+#: src/dird/ua_purge.c:484
 #, c-format
 msgid ""
 "There are no more Jobs associated with Volume \"%s\". Marking it purged.\n"
 msgstr ""
 
-#: src/dird/ua_purge.c:522
+#: src/dird/ua_purge.c:525
 #, c-format
 msgid "Unable move recycled Volume in full Pool \"%s\" MaxVols=%d\n"
 msgstr ""
 
-#: src/dird/ua_purge.c:535
+#: src/dird/ua_purge.c:538
 #, c-format
 msgid "All records pruned from Volume \"%s\"; marking it \"Purged\"\n"
 msgstr ""
 
-#: src/dird/ua_purge.c:540
+#: src/dird/ua_purge.c:543
 #, c-format
 msgid "Cannot purge Volume with VolStatus=%s\n"
 msgstr ""
@@ -2699,7 +2699,7 @@ msgid "====\n"
 msgstr ""
 
 #: src/dird/ua_status.c:308 src/dird/job.c:146 src/dird/job.c:152
-#: src/dird/job.c:944 src/dird/job.c:956 src/dird/ua_cmds.c:780
+#: src/dird/job.c:946 src/dird/job.c:958 src/dird/ua_cmds.c:780
 #: src/dird/ua_cmds.c:1467 src/dird/ua_dotcmds.c:174
 msgid "unknown source"
 msgstr "unbekannte Quelle"
@@ -3012,7 +3012,7 @@ msgid "Failed to connect to File daemon.\n"
 msgstr "Verbindung zu File daemon fehlgeschlagen.\n"
 
 #: src/dird/job.c:397 src/dird/job.c:399 src/dird/job.c:440 src/dird/job.c:442
-#: src/dird/job.c:920 src/dird/job.c:962 src/dird/job.c:971
+#: src/dird/job.c:922 src/dird/job.c:964 src/dird/job.c:973
 msgid "Job resource"
 msgstr "Job Ressource"
 
@@ -3024,7 +3024,7 @@ msgstr "\"Max wait time\" überschritten. Job abgebrochen.\n"
 msgid "Max run time exceeded. Job canceled.\n"
 msgstr "\"Max run time\" überschritten, Job abgebrochen.\n"
 
-#: src/dird/job.c:601 src/dird/job.c:907
+#: src/dird/job.c:601 src/dird/job.c:909
 #, fuzzy
 msgid "Run pool override"
 msgstr "von \"Run pool\" überschrieben"
@@ -3073,20 +3073,20 @@ msgstr "Konnte FileSet \"%s\" Eintrag nicht erzeugen. ERR=%s\n"
 msgid "Error updating job record. %s"
 msgstr "Fehler beim Aktualisieren des job Eintrags. %s"
 
-#: src/dird/job.c:912
+#: src/dird/job.c:914
 #, fuzzy
 msgid "Run storage override"
 msgstr "Run storage override"
 
-#: src/dird/job.c:1033 src/dird/ua_run.c:1215
+#: src/dird/job.c:1035 src/dird/ua_run.c:1215
 msgid "No storage specified.\n"
 msgstr "Kein storage angegeben.\n"
 
-#: src/dird/job.c:1200
+#: src/dird/job.c:1202
 msgid "Could not start clone job.\n"
 msgstr "Konnte clone job nicht starten.\n"
 
-#: src/dird/job.c:1202
+#: src/dird/job.c:1204
 #, c-format
 msgid "Clone JobId %d started.\n"
 msgstr "Clone JobId %d gestartet.\n"
@@ -6996,7 +6996,7 @@ msgstr ""
 "löschen von %s fehlgeschlagen:\n"
 "%s\n"
 
-#: src/cats/sql.c:251 src/cats/sql.c:258 src/cats/sql_create.c:1031
+#: src/cats/sql.c:251 src/cats/sql.c:258 src/cats/sql_create.c:1030
 #: src/cats/sql_get.c:185 src/cats/sql_get.c:236 src/cats/sql_get.c:604
 #: src/cats/sql_get.c:680 src/cats/sql_get.c:951
 #, c-format
@@ -7192,82 +7192,82 @@ msgstr "Volume \"%s\" bereits vorhanden.\n"
 msgid "Create DB Media record %s failed. ERR=%s\n"
 msgstr "Erzeugung DB Media Eintrag %s fehlgeschlagen. ERR=%s\n"
 
-#: src/cats/sql_create.c:493
+#: src/cats/sql_create.c:492
 #, c-format
 msgid "More than one Client!: %d\n"
 msgstr "Mehr als ein Client!: %d\n"
 
-#: src/cats/sql_create.c:498
+#: src/cats/sql_create.c:497
 #, c-format
 msgid "error fetching Client row: %s\n"
 msgstr "Fehler beim holen der Client Zeile: %s\n"
 
-#: src/cats/sql_create.c:525
+#: src/cats/sql_create.c:524
 #, c-format
 msgid "Create DB Client record %s failed. ERR=%s\n"
 msgstr "Erzeugung des DB Client Eintrags %s fehlgeschlagen. ERR=%s\n"
 
-#: src/cats/sql_create.c:568
+#: src/cats/sql_create.c:567
 #, c-format
 msgid "Create DB Counters record %s failed. ERR=%s\n"
 msgstr "Erzeugung des DB Counters Eintrag %s fehlgeschlagen. ERR=%s\n"
 
-#: src/cats/sql_create.c:601
+#: src/cats/sql_create.c:600
 #, c-format
 msgid "More than one FileSet!: %d\n"
 msgstr "Mehr als ein FileSet!: %d\n"
 
-#: src/cats/sql_create.c:606
+#: src/cats/sql_create.c:605
 #, c-format
 msgid "error fetching FileSet row: ERR=%s\n"
 msgstr "Fehler beim holen der FileSet Zeile: ERR=%s\n"
 
-#: src/cats/sql_create.c:636
+#: src/cats/sql_create.c:635
 #, c-format
 msgid "Create DB FileSet record %s failed. ERR=%s\n"
 msgstr "Erzeugung des DB FileSet Eintrags %s fehlgeschlagen. ERR=%s\n"
 
-#: src/cats/sql_create.c:857
+#: src/cats/sql_create.c:856
 #, fuzzy, c-format
 msgid "Could not init batch database: \"%s\".\n"
 msgstr "Konnte Datenbank \"%s\" nicht öffen.\n"
 
-#: src/cats/sql_create.c:864
+#: src/cats/sql_create.c:863
 #, fuzzy, c-format
 msgid "Could not open database \"%s\": ERR=%s\n"
 msgstr "Konnte Datenbank \"%s\" nicht öffen.\n"
 
-#: src/cats/sql_create.c:886 src/cats/sql_create.c:927
+#: src/cats/sql_create.c:885 src/cats/sql_create.c:926
 #, c-format
 msgid "Attempt to put non-attributes into catalog. Stream=%d\n"
 msgstr "Versuche \"non-attributes\" in catalog einzufügen. Stream=%d\n"
 
-#: src/cats/sql_create.c:991
+#: src/cats/sql_create.c:990
 #, c-format
 msgid "Create db File record %s failed. ERR=%s"
 msgstr "Erzeugung des db File Eintrags %s fehlgeschlagen. ERR=%s"
 
-#: src/cats/sql_create.c:1024 src/cats/sql_get.c:229
+#: src/cats/sql_create.c:1023 src/cats/sql_get.c:229
 #, c-format
 msgid "More than one Path!: %s for path: %s\n"
 msgstr "Mehr als ein Pfad!: %s für Pfad: %s\n"
 
-#: src/cats/sql_create.c:1055
+#: src/cats/sql_create.c:1054
 #, c-format
 msgid "Create db Path record %s failed. ERR=%s\n"
 msgstr "Erzeugung des db Path Eintrags %s fehlgeschlagen. ERR=%s\n"
 
-#: src/cats/sql_create.c:1088
+#: src/cats/sql_create.c:1087
 #, c-format
 msgid "More than one Filename! %s for file: %s\n"
 msgstr "Mehr als ein Dateiname! %s für Datei: %s\n"
 
-#: src/cats/sql_create.c:1094
+#: src/cats/sql_create.c:1093
 #, c-format
 msgid "Error fetching row for file=%s: ERR=%s\n"
 msgstr "Fehler beim Holen der Zeile für Datei=%s: ERR=%s\n"
 
-#: src/cats/sql_create.c:1110
+#: src/cats/sql_create.c:1109
 #, c-format
 msgid "Create db Filename record %s failed. ERR=%s\n"
 msgstr "Erzeugung des db Filename Eintrags %s fehlgeschlagen. ERR=%s\n"
@@ -7885,7 +7885,7 @@ msgstr ""
 msgid "End Session"
 msgstr ""
 
-#: src/stored/read_record.c:407 src/stored/label.c:1053
+#: src/stored/read_record.c:407 src/stored/label.c:1055
 msgid "End of Media"
 msgstr ""
 
@@ -7933,21 +7933,21 @@ msgstr "Kann DB lock nicht initialisieren. ERR=%s\n"
 msgid "Device switch. New device %s chosen.\n"
 msgstr ""
 
-#: src/stored/reserve.c:509
+#: src/stored/reserve.c:510
 #, c-format
 msgid "Hey! num_writers=%d!!!!\n"
 msgstr ""
 
-#: src/stored/reserve.c:752
+#: src/stored/reserve.c:754
 msgid "3939 Could not get dcr\n"
 msgstr ""
 
-#: src/stored/reserve.c:855 src/stored/reserve.c:866
+#: src/stored/reserve.c:857 src/stored/reserve.c:868
 #, c-format
 msgid "Failed command: %s\n"
 msgstr ""
 
-#: src/stored/reserve.c:856
+#: src/stored/reserve.c:858
 #, c-format
 msgid ""
 "\n"
@@ -7955,7 +7955,7 @@ msgid ""
 "Device resources.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1172 src/stored/dircmd.c:601
+#: src/stored/reserve.c:1174 src/stored/dircmd.c:601
 #, c-format
 msgid ""
 "\n"
@@ -7963,80 +7963,80 @@ msgid ""
 "does not exist.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1176 src/stored/dircmd.c:579
+#: src/stored/reserve.c:1178 src/stored/dircmd.c:579
 #, c-format
 msgid ""
 "\n"
 "     Device \"%s\" requested by DIR could not be opened or does not exist.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1188
+#: src/stored/reserve.c:1190
 #, c-format
 msgid "3926 Could not get dcr for device: %s\n"
 msgstr ""
 
-#: src/stored/reserve.c:1311
+#: src/stored/reserve.c:1313
 #, c-format
 msgid "3601 JobId=%u device %s is BLOCKED due to user unmount.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1321
+#: src/stored/reserve.c:1323
 #, c-format
 msgid "3602 JobId=%u device %s is busy (already reading/writing).\n"
 msgstr ""
 
-#: src/stored/reserve.c:1365
+#: src/stored/reserve.c:1367
 #, c-format
 msgid "3603 JobId=%u device %s is busy reading.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1374
+#: src/stored/reserve.c:1376
 #, c-format
 msgid "3604 JobId=%u device %s is BLOCKED due to user unmount.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1411
+#: src/stored/reserve.c:1413
 #, c-format
 msgid ""
 "3608 JobId=%u wants Pool=\"%s\" but have Pool=\"%s\" nreserve=%d on drive %"
 "s.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1437
+#: src/stored/reserve.c:1439
 #, c-format
 msgid "3610 JobId=%u Volume max jobs exceeded on drive %s.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1492
+#: src/stored/reserve.c:1494
 #, c-format
 msgid "3605 JobId=%u wants free drive but device %s is busy.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1500
+#: src/stored/reserve.c:1502
 #, c-format
 msgid "3606 JobId=%u prefers mounted drives, but drive %s has no Volume.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1523
+#: src/stored/reserve.c:1525
 #, c-format
 msgid "3607 JobId=%u wants Vol=\"%s\" drive has Vol=\"%s\" on drive %s.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1579
+#: src/stored/reserve.c:1581
 #, c-format
 msgid "Logic error!!!! JobId=%u Should not get here.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1580
+#: src/stored/reserve.c:1582
 #, c-format
 msgid "3910 JobId=%u Logic error!!!! drive %s Should not get here.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1583
+#: src/stored/reserve.c:1585
 msgid "Logic error!!!! Should not get here.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1586
+#: src/stored/reserve.c:1588
 #, c-format
 msgid "3911 JobId=%u failed reserve drive %s.\n"
 msgstr ""
@@ -8124,11 +8124,11 @@ msgstr ""
 msgid "EOT label not copied.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:334 src/stored/label.c:1047 src/stored/bls.c:423
+#: src/stored/bcopy.c:334 src/stored/label.c:1049 src/stored/bls.c:423
 msgid "Begin Job Session"
 msgstr ""
 
-#: src/stored/bcopy.c:338 src/stored/label.c:1050 src/stored/bls.c:427
+#: src/stored/bcopy.c:338 src/stored/label.c:1052 src/stored/bls.c:427
 msgid "End Job Session"
 msgstr ""
 
@@ -8136,7 +8136,7 @@ msgstr ""
 msgid "End of Medium"
 msgstr ""
 
-#: src/stored/bcopy.c:346 src/stored/label.c:1059 src/stored/bls.c:434
+#: src/stored/bcopy.c:346 src/stored/label.c:1061 src/stored/bls.c:434
 msgid "Unknown"
 msgstr ""
 
@@ -8347,57 +8347,57 @@ msgstr "Konnte FileSet \"%s\" Eintrag nicht erzeugen. ERR=%s\n"
 msgid "Cannot write Volume label to block for device %s\n"
 msgstr ""
 
-#: src/stored/label.c:350 src/stored/label.c:448
+#: src/stored/label.c:350 src/stored/label.c:449
 #, fuzzy, c-format
 msgid "Open device %s Volume \"%s\" failed: ERR=%s\n"
 msgstr "Erzeugung von db Device Eintrag %s fehlgeschlagen: ERR=%s\n"
 
-#: src/stored/label.c:472
+#: src/stored/label.c:473
 #, c-format
 msgid "Rewind error on device %s: ERR=%s\n"
 msgstr ""
 
-#: src/stored/label.c:480
+#: src/stored/label.c:481
 #, c-format
 msgid "Truncate error on device %s: ERR=%s\n"
 msgstr ""
 
-#: src/stored/label.c:486
+#: src/stored/label.c:487
 #, c-format
 msgid "Failed to re-open DVD after truncate on device %s: ERR=%s\n"
 msgstr ""
 
-#: src/stored/label.c:509
+#: src/stored/label.c:510
 #, c-format
 msgid "Unable to write device %s: ERR=%s\n"
 msgstr ""
 
-#: src/stored/label.c:538
+#: src/stored/label.c:540
 #, c-format
 msgid "Recycled volume \"%s\" on device %s, all previous data lost.\n"
 msgstr ""
 
-#: src/stored/label.c:541
+#: src/stored/label.c:543
 #, c-format
 msgid "Wrote label to prelabeled Volume \"%s\" on device %s\n"
 msgstr ""
 
-#: src/stored/label.c:740
+#: src/stored/label.c:742
 #, c-format
 msgid "Bad Volume session label = %d\n"
 msgstr ""
 
-#: src/stored/label.c:795
+#: src/stored/label.c:797
 #, c-format
 msgid "Expecting Volume Label, got FI=%s Stream=%s len=%d\n"
 msgstr ""
 
-#: src/stored/label.c:922
+#: src/stored/label.c:924
 #, c-format
 msgid "Unknown %d"
 msgstr ""
 
-#: src/stored/label.c:926
+#: src/stored/label.c:928
 #, c-format
 msgid ""
 "\n"
@@ -8414,17 +8414,17 @@ msgid ""
 "HostName          : %s\n"
 msgstr ""
 
-#: src/stored/label.c:948
+#: src/stored/label.c:950
 #, c-format
 msgid "Date label written: %s\n"
 msgstr ""
 
-#: src/stored/label.c:954
+#: src/stored/label.c:956
 #, c-format
 msgid "Date label written: %04d-%02d-%02d at %02d:%02d\n"
 msgstr ""
 
-#: src/stored/label.c:974
+#: src/stored/label.c:976
 #, c-format
 msgid ""
 "\n"
@@ -8437,7 +8437,7 @@ msgid ""
 "ClientName        : %s\n"
 msgstr ""
 
-#: src/stored/label.c:987
+#: src/stored/label.c:989
 #, c-format
 msgid ""
 "Job (unique name) : %s\n"
@@ -8446,7 +8446,7 @@ msgid ""
 "JobLevel          : %c\n"
 msgstr ""
 
-#: src/stored/label.c:996
+#: src/stored/label.c:998
 #, c-format
 msgid ""
 "JobFiles          : %s\n"
@@ -8459,48 +8459,48 @@ msgid ""
 "JobStatus         : %c\n"
 msgstr ""
 
-#: src/stored/label.c:1017
+#: src/stored/label.c:1019
 #, c-format
 msgid "Date written      : %s\n"
 msgstr ""
 
-#: src/stored/label.c:1022
+#: src/stored/label.c:1024
 #, c-format
 msgid "Date written      : %04d-%02d-%02d at %02d:%02d\n"
 msgstr ""
 
-#: src/stored/label.c:1041
+#: src/stored/label.c:1043
 msgid "Fresh Volume"
 msgstr ""
 
-#: src/stored/label.c:1044
+#: src/stored/label.c:1046
 msgid "Volume"
 msgstr ""
 
-#: src/stored/label.c:1056
+#: src/stored/label.c:1058
 msgid "End of Tape"
 msgstr ""
 
-#: src/stored/label.c:1076 src/stored/label.c:1084 src/stored/label.c:1117
+#: src/stored/label.c:1078 src/stored/label.c:1086 src/stored/label.c:1119
 #, c-format
 msgid "%s Record: File:blk=%u:%u SessId=%d SessTime=%d JobId=%d DataLen=%d\n"
 msgstr ""
 
-#: src/stored/label.c:1081
+#: src/stored/label.c:1083
 msgid "End of physical tape.\n"
 msgstr ""
 
-#: src/stored/label.c:1096 src/stored/label.c:1105
+#: src/stored/label.c:1098 src/stored/label.c:1107
 #, c-format
 msgid "%s Record: File:blk=%u:%u SessId=%d SessTime=%d JobId=%d\n"
 msgstr ""
 
-#: src/stored/label.c:1098
+#: src/stored/label.c:1100
 #, c-format
 msgid "   Job=%s Date=%s Level=%c Type=%c\n"
 msgstr ""
 
-#: src/stored/label.c:1107
+#: src/stored/label.c:1109
 #, c-format
 msgid "   Date=%s Level=%c Type=%c Files=%s Bytes=%s Errors=%d Status=%c\n"
 msgstr ""
@@ -11243,16 +11243,16 @@ msgstr ""
 msgid "FD connect failed: Job name not found: %s\n"
 msgstr "Job nicht gefunden: %s\n"
 
-#: src/stored/job.c:240
+#: src/stored/job.c:238
 #, c-format
 msgid "Hey!!!! JobId %u Job %s already authenticated.\n"
 msgstr ""
 
-#: src/stored/job.c:251
+#: src/stored/job.c:255
 msgid "Unable to authenticate File daemon\n"
 msgstr ""
 
-#: src/stored/job.c:373
+#: src/stored/job.c:377
 msgid "In free_jcr(), but still attached to device!!!!\n"
 msgstr ""
 
@@ -11270,22 +11270,22 @@ msgstr ""
 msgid "Didn't get vol info vol=%s: ERR=%s"
 msgstr ""
 
-#: src/stored/askdir.c:415
+#: src/stored/askdir.c:428
 #, c-format
 msgid "Error creating JobMedia record: ERR=%s\n"
 msgstr ""
 
-#: src/stored/askdir.c:422
+#: src/stored/askdir.c:435
 #, c-format
 msgid "Error creating JobMedia record: %s\n"
 msgstr ""
 
-#: src/stored/askdir.c:489
+#: src/stored/askdir.c:502
 #, c-format
 msgid "Job %s canceled while waiting for mount on Storage Device \"%s\".\n"
 msgstr ""
 
-#: src/stored/askdir.c:500
+#: src/stored/askdir.c:513
 #, c-format
 msgid ""
 "Job %s waiting. Cannot find any appendable volumes.\n"
@@ -11295,25 +11295,25 @@ msgid ""
 "    Media type:   %s\n"
 msgstr ""
 
-#: src/stored/askdir.c:526 src/stored/askdir.c:628
+#: src/stored/askdir.c:539 src/stored/askdir.c:641
 #, c-format
 msgid "Max time exceeded waiting to mount Storage Device %s for Job %s\n"
 msgstr ""
 
-#: src/stored/askdir.c:536
+#: src/stored/askdir.c:549
 msgid "pthread error in mount_next_volume.\n"
 msgstr ""
 
-#: src/stored/askdir.c:570
+#: src/stored/askdir.c:583
 msgid "Cannot request another volume: no volume name given.\n"
 msgstr ""
 
-#: src/stored/askdir.c:576
+#: src/stored/askdir.c:589
 #, c-format
 msgid "Job %s canceled while waiting for mount on Storage Device %s.\n"
 msgstr ""
 
-#: src/stored/askdir.c:593
+#: src/stored/askdir.c:606
 #, c-format
 msgid ""
 "Please mount Volume \"%s\" or label a new one for:\n"
@@ -11323,7 +11323,7 @@ msgid ""
 "    Media type:   %s\n"
 msgstr ""
 
-#: src/stored/askdir.c:599
+#: src/stored/askdir.c:612
 #, c-format
 msgid ""
 "Please mount Volume \"%s\" for:\n"
@@ -11333,7 +11333,7 @@ msgid ""
 "    Media type:   %s\n"
 msgstr ""
 
-#: src/stored/askdir.c:638
+#: src/stored/askdir.c:651
 msgid "pthread error in mount_volume\n"
 msgstr ""
 
@@ -13791,7 +13791,7 @@ msgstr ""
 msgid "NULL jcr.\n"
 msgstr ""
 
-#: src/lib/jcr.c:445
+#: src/lib/jcr.c:444
 #, c-format
 msgid "JCR use_count=%d JobId=%d\n"
 msgstr ""
@@ -13953,83 +13953,48 @@ msgstr ""
 msgid "rwl_writeunlock by non-owner.\n"
 msgstr ""
 
-#: src/lib/rwlock.c:369
-#, c-format
-msgid "Write lock failed. ERR=%s\n"
-msgstr ""
-
-#: src/lib/rwlock.c:377
-#, c-format
-msgid "Write unlock failed. ERR=%s\n"
-msgstr ""
-
-#: src/lib/rwlock.c:388
-#, c-format
-msgid "Read lock failed. ERR=%s\n"
-msgstr ""
-
-#: src/lib/rwlock.c:396
-#, c-format
-msgid "Read unlock failed. ERR=%s\n"
-msgstr ""
-
-#: src/lib/rwlock.c:405
+#: src/lib/rwlock.c:427
 #, c-format
 msgid "Thread %d found unchanged elements %d times\n"
 msgstr ""
 
-#: src/lib/rwlock.c:438
-#, c-format
-msgid "Init rwlock failed. ERR=%s\n"
-msgstr ""
-
-#: src/lib/rwlock.c:454
-#, c-format
-msgid "Create thread failed. ERR=%s\n"
-msgstr ""
-
-#: src/lib/rwlock.c:466
-#, c-format
-msgid "Join thread failed. ERR=%s\n"
-msgstr ""
-
-#: src/lib/rwlock.c:469
+#: src/lib/rwlock.c:497
 #, c-format
 msgid "%02d: interval %d, writes %d, reads %d\n"
 msgstr ""
 
-#: src/lib/rwlock.c:479
+#: src/lib/rwlock.c:507
 #, c-format
 msgid "data %02d: value %d, %d writes\n"
 msgstr ""
 
-#: src/lib/rwlock.c:484
+#: src/lib/rwlock.c:512
 #, c-format
 msgid "Total: %d thread writes, %d data writes\n"
 msgstr ""
 
-#: src/lib/rwlock.c:556
+#: src/lib/rwlock.c:584
 msgid "Try write lock"
 msgstr ""
 
-#: src/lib/rwlock.c:562
+#: src/lib/rwlock.c:590
 msgid "Try read lock"
 msgstr ""
 
-#: src/lib/rwlock.c:617
+#: src/lib/rwlock.c:645
 msgid "Create thread"
 msgstr ""
 
-#: src/lib/rwlock.c:627
+#: src/lib/rwlock.c:655
 msgid "Join thread"
 msgstr ""
 
-#: src/lib/rwlock.c:629
+#: src/lib/rwlock.c:657
 #, c-format
 msgid "%02d: interval %d, updates %d, r_collisions %d, w_collisions %d\n"
 msgstr ""
 
-#: src/lib/rwlock.c:641
+#: src/lib/rwlock.c:669
 #, c-format
 msgid "data %02d: value %d, %d updates\n"
 msgstr ""
