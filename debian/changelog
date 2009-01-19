@@ -7,8 +7,9 @@ bacula (2.4.4-1~bpo40+1) etch-backports; urgency=low
     - Remove versioning from Build-Depends on libtk2.0-dev, see above.
     - Build-Depend on postgresql-server-dev-8.1 from etch instead of
       postgresql-server-dev-8.3 | -8.2.
+  * Remove Build-Conflicts with python2.4 for the backport.
 
- -- Gerfried Fuchs <rhonda@debian.at>  Mon, 19 Jan 2009 10:25:09 +0100
+ -- Gerfried Fuchs <rhonda@debian.at>  Mon, 19 Jan 2009 10:45:50 +0100
 
 bacula (2.4.4-1) unstable; urgency=low
 
