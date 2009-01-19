@@ -1,3 +1,15 @@
+bacula (2.4.4-1~bpo40+1) etch-backports; urgency=low
+
+  * Rebuild for etch-backports.
+  * Changes kept:
+    - Don't build traymon because it would require gtk 2.10, thanks to waldi for
+      noticing it.
+    - Remove versioning from Build-Depends on libtk2.0-dev, see above.
+    - Build-Depend on postgresql-server-dev-8.1 from etch instead of
+      postgresql-server-dev-8.3 | -8.2.
+
+ -- Gerfried Fuchs <rhonda@debian.at>  Mon, 19 Jan 2009 10:25:09 +0100
+
 bacula (2.4.4-1) unstable; urgency=low
 
   * New Upstream Version - a bugfix release.  Closes: #508816.
