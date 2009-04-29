@@ -7,7 +7,7 @@ Build-Depends: autotools-dev, debhelper (>= 4.2), po-debconf (>= 0.8.2),
  libsqlite0-dev, libsqlite3-dev, libmysqlclient15-dev, libpq-dev, 
  postgresql-server-dev-8.3 | postgresql-server-dev-8.2,
  libwrap0-dev, python-dev, libgtk2.0-dev (>= 2.10),
- libgnome2-dev, libwxgtk2.6-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
+ libgnome2-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
  libx11-dev, mtx, bc, libxt-dev, dpkg-dev (>= 1.13.19), libqt4-dev, libqwt5-qt4-dev,
  libssl-dev
 Build-Conflicts: python2.2-dev, python2.3, python2.4, qt3-dev-tools
@@ -268,25 +268,6 @@ Description: network backup, recovery and verification - text console
  communicate with the Bacula Director.
  .
  This package provides the text-interface version of the console.
-
-Package: bacula-console-wx
-Provides: bacula-wxconsole
-Replaces: bacula-wxconsole
-Conflicts: bacula-wxconsole
-Architecture: any
-Pre-Depends: debconf (>= 1.4.30)
-Depends: bacula-common (= ${binary:Version}), ${shlibs:Depends}
-Description: network backup, recovery and verification - WxWindows console
- Bacula is a set of programs to manage backup, recovery and verification of
- data across a network of computers of different kinds.
- .
- The management console allows the administrator or user to
- communicate with the Bacula Director.
- .
- This package provides a WxWindows GUI version of the console.
- .
- This GUI interface has been designed to ease restore operations as much as
- possible as compared to the basic text console.
 
 Package: bacula-console-qt
 Architecture: any
