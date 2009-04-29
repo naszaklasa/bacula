@@ -10,7 +10,7 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb_create.c 5149 2007-07-12 10:32:35Z kerns $
+ *    Version $Id: bdb_create.c 7380 2008-07-14 10:42:59Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -34,7 +34,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -64,13 +64,11 @@ bool db_create_pool_record(B_DB *mdb, POOL_DBR *pr);
 
 bool db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
 {
-   /* *****FIXME***** implement this */
    return true;
 }
 
 int db_create_file_item(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
 {
-   /****FIXME***** not implemented */
    return 1;
 }
 
@@ -85,27 +83,7 @@ int db_create_file_item(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
  */
 bool db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 {
-   int len;
-
-   db_lock(mdb);
-   if (!bdb_open_jobs_file(mdb)) {
-      db_unlock(mdb);
-      return 0;
-   }
-   mdb->control.JobId++;
-   bdb_write_control_file(mdb);
-
-   len = sizeof(JOB_DBR);
-   jr->JobId = mdb->control.JobId;
-   fseek(mdb->jobfd, 0L, SEEK_END);
-   if (fwrite(jr, len, 1, mdb->jobfd) != 1) {
-      Mmsg1(&mdb->errmsg, "Error writing DB Jobs file. ERR=%s\n", strerror(errno));
-      db_unlock(mdb);
-      return 0;
-   }
-   fflush(mdb->jobfd);
-   db_unlock(mdb);
-   return 1;
+   return 0;
 }
 
 /* Create a JobMedia record for Volume used this job
@@ -114,28 +92,7 @@ bool db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
  */
 bool db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
 {
-   int len;
-
-   db_lock(mdb);
-   if (!bdb_open_jobmedia_file(mdb)) {
-      db_unlock(mdb);
-      return 0;
-   }
-   mdb->control.JobMediaId++;
-   jm->JobMediaId = mdb->control.JobMediaId;
-   bdb_write_control_file(mdb);
-
-   len = sizeof(JOBMEDIA_DBR);
-
-   fseek(mdb->jobmediafd, 0L, SEEK_END);
-   if (fwrite(jm, len, 1, mdb->jobmediafd) != 1) {
-      Mmsg1(&mdb->errmsg, "Error writing DB JobMedia file. ERR=%s\n", strerror(errno));
-      db_unlock(mdb);
-      return 0;
-   }
-   fflush(mdb->jobmediafd);
-   db_unlock(mdb);
-   return jm->JobMediaId;
+   return 0;
 }
 
 
@@ -146,36 +103,7 @@ bool db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
  */
 bool db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 {
-   int len;
-   POOL_DBR mpr;
-
-   memset(&mpr, 0, sizeof(mpr));
-   strcpy(mpr.Name, pr->Name);
-   if (db_get_pool_record(jcr, mdb, &mpr)) {
-      Mmsg1(&mdb->errmsg, "Pool record %s already exists\n", mpr.Name);
-      return 0;
-   }
-
-   db_lock(mdb);
-   if (!bdb_open_pools_file(mdb)) {
-      db_unlock(mdb);
-      return 0;
-   }
-
-   mdb->control.PoolId++;
-   pr->PoolId = mdb->control.PoolId;
-   bdb_write_control_file(mdb);
-
-   len = sizeof(mpr);
-   fseek(mdb->poolfd, 0L, SEEK_END);
-   if (fwrite(pr, len, 1, mdb->poolfd) != 1) {
-      Mmsg1(&mdb->errmsg, "Error writing DB Pools file. ERR=%s\n", strerror(errno));
-      db_unlock(mdb);
-      return 0;
-   }
-   fflush(mdb->poolfd);
-   db_unlock(mdb);
-   return 1;
+   return 0;
 }
 
 bool db_create_device_record(JCR *jcr, B_DB *mdb, DEVICE_DBR *dr)
@@ -198,33 +126,7 @@ bool db_create_mediatype_record(JCR *jcr, B_DB *mdb, MEDIATYPE_DBR *dr)
  */
 int db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 {
-   int len;
-   MEDIA_DBR mmr;
-
-   db_lock(mdb);
-   memset(&mmr, 0, sizeof(mmr));
-   strcpy(mmr.VolumeName, mr->VolumeName);
-   if (db_get_media_record(jcr, mdb, &mmr)) {
-      Mmsg1(&mdb->errmsg, "Media record %s already exists\n", mmr.VolumeName);
-      db_unlock(mdb);
-      return 0;
-   }
-
-
-   mdb->control.MediaId++;
-   mr->MediaId = mdb->control.MediaId;
-   bdb_write_control_file(mdb);
-
-   len = sizeof(mmr);
-   fseek(mdb->mediafd, 0L, SEEK_END);
-   if (fwrite(mr, len, 1, mdb->mediafd) != 1) {
-      Mmsg1(&mdb->errmsg, "Error writing DB Media file. ERR=%s\n", strerror(errno));
-      db_unlock(mdb);
-      return 0;
-   }
-   fflush(mdb->mediafd);
-   db_unlock(mdb);
-   return 1;
+   return 0;
 }
 
 
@@ -235,36 +137,7 @@ int db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
  */
 int db_create_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr)
 {
-   int len;
-   CLIENT_DBR lcr;
-
-   db_lock(mdb);
-   cr->ClientId = 0;
-   if (db_get_client_record(jcr, mdb, cr)) {
-      Mmsg1(&mdb->errmsg, "Client record %s already exists\n", cr->Name);
-      db_unlock(mdb);
-      return 1;
-   }
-
-   if (!bdb_open_client_file(mdb)) {
-      db_unlock(mdb);
-      return 0;
-   }
-
-   mdb->control.ClientId++;
-   cr->ClientId = mdb->control.ClientId;
-   bdb_write_control_file(mdb);
-
-   fseek(mdb->clientfd, 0L, SEEK_END);
-   len = sizeof(lcr);
-   if (fwrite(cr, len, 1, mdb->clientfd) != 1) {
-      Mmsg1(&mdb->errmsg, "Error writing DB Client file. ERR=%s\n", strerror(errno));
-      db_unlock(mdb);
-      return 0;
-   }
-   fflush(mdb->clientfd);
-   db_unlock(mdb);
-   return 1;
+   return 0;
 }
 
 /*
@@ -277,36 +150,7 @@ int db_create_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr)
  */
 bool db_create_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
 {
-   int len;
-   FILESET_DBR lfsr;
-
-   db_lock(mdb);
-   fsr->FileSetId = 0;
-   if (db_get_fileset_record(jcr, mdb, fsr)) {
-      Mmsg1(&mdb->errmsg, "FileSet record %s already exists\n", fsr->FileSet);
-      db_unlock(mdb);
-      return 1;
-   }
-
-   if (!bdb_open_fileset_file(mdb)) {
-      db_unlock(mdb);
-      return 0;
-   }
-
-   mdb->control.FileSetId++;
-   fsr->FileSetId = mdb->control.FileSetId;
-   bdb_write_control_file(mdb);
-
-   fseek(mdb->clientfd, 0L, SEEK_END);
-   len = sizeof(lfsr);
-   if (fwrite(fsr,  len, 1, mdb->filesetfd) != 1) {
-      Mmsg1(&mdb->errmsg, "Error writing DB FileSet file. ERR=%s\n", strerror(errno));
-      db_unlock(mdb);
-      return 0;
-   }
-   fflush(mdb->filesetfd);
-   db_unlock(mdb);
-   return 1;
+   return false;
 }
 
 int db_create_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)

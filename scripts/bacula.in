@@ -14,6 +14,11 @@
 #  environment where they are different.
 #  
 SCRIPTDIR=@scriptdir@
+#
+# Disable Glibc malloc checks, it doesn't help and it keeps from getting
+#   good dumps
+MALLOC_CHECK_=0
+export MALLOC_CHECK_
 
 case "$1" in
    start)

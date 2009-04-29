@@ -5,14 +5,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>361</width>
-    <height>452</height>
+    <width>470</width>
+    <height>533</height>
    </rect>
   </property>
   <property name="sizePolicy" >
-   <sizepolicy>
-    <hsizetype>0</hsizetype>
-    <vsizetype>0</vsizetype>
+   <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -24,91 +22,180 @@
    <iconset>images/bat.png</iconset>
   </property>
   <layout class="QGridLayout" >
-   <property name="margin" >
+   <property name="leftMargin" >
     <number>9</number>
    </property>
-   <property name="spacing" >
+   <property name="topMargin" >
+    <number>9</number>
+   </property>
+   <property name="rightMargin" >
+    <number>9</number>
+   </property>
+   <property name="bottomMargin" >
+    <number>9</number>
+   </property>
+   <property name="horizontalSpacing" >
+    <number>6</number>
+   </property>
+   <property name="verticalSpacing" >
     <number>6</number>
    </property>
    <item row="1" column="0" >
     <widget class="QTabWidget" name="tabWidget" >
      <property name="currentIndex" >
-      <number>0</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="tab" >
       <attribute name="title" >
-       <string>Messages</string>
+       <string>Timers</string>
       </attribute>
-      <layout class="QGridLayout" >
-       <property name="margin" >
-        <number>9</number>
+      <widget class="QGroupBox" name="groupBox" >
+       <property name="geometry" >
+        <rect>
+         <x>60</x>
+         <y>60</y>
+         <width>180</width>
+         <height>106</height>
+        </rect>
        </property>
-       <property name="spacing" >
-        <number>6</number>
+       <property name="sizePolicy" >
+        <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-       <item row="0" column="0" >
-        <widget class="QGroupBox" name="groupBox" >
-         <property name="sizePolicy" >
-          <sizepolicy>
-           <hsizetype>5</hsizetype>
-           <vsizetype>0</vsizetype>
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="title" >
-          <string>Messages Options</string>
-         </property>
-         <layout class="QGridLayout" >
-          <property name="margin" >
-           <number>9</number>
-          </property>
-          <property name="spacing" >
-           <number>6</number>
-          </property>
-          <item row="2" column="0" >
-           <widget class="QLabel" name="checkLabel" >
-            <property name="text" >
-             <string>Message check interval in seconds</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0" >
-           <widget class="QCheckBox" name="checkMessages" >
-            <property name="text" >
-             <string>Check Messages</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" >
-           <widget class="QSpinBox" name="checkMessagesSpin" >
-            <property name="maximum" >
-             <number>3600</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-      </layout>
+       <property name="title" >
+        <string>Messages Options</string>
+       </property>
+       <widget class="QLabel" name="checkLabel" >
+        <property name="geometry" >
+         <rect>
+          <x>11</x>
+          <y>81</y>
+          <width>158</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Message check interval in seconds</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkMessages" >
+        <property name="geometry" >
+         <rect>
+          <x>11</x>
+          <y>25</y>
+          <width>158</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Check Messages</string>
+        </property>
+       </widget>
+       <widget class="QSpinBox" name="checkMessagesSpin" >
+        <property name="geometry" >
+         <rect>
+          <x>11</x>
+          <y>51</y>
+          <width>158</width>
+          <height>24</height>
+         </rect>
+        </property>
+        <property name="maximum" >
+         <number>3600</number>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_8" >
+       <property name="geometry" >
+        <rect>
+         <x>60</x>
+         <y>200</y>
+         <width>180</width>
+         <height>106</height>
+        </rect>
+       </property>
+       <property name="sizePolicy" >
+        <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="title" >
+        <string>Status Dir</string>
+       </property>
+       <widget class="QLabel" name="checkLabel_2" >
+        <property name="geometry" >
+         <rect>
+          <x>11</x>
+          <y>81</y>
+          <width>158</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Refresh Status Dir Interval</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="refreshStatusDir" >
+        <property name="geometry" >
+         <rect>
+          <x>11</x>
+          <y>25</y>
+          <width>158</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Refresh Status Dir</string>
+        </property>
+       </widget>
+       <widget class="QSpinBox" name="refreshStatusDirSpin" >
+        <property name="geometry" >
+         <rect>
+          <x>11</x>
+          <y>51</y>
+          <width>158</width>
+          <height>24</height>
+         </rect>
+        </property>
+        <property name="minimum" >
+         <number>15</number>
+        </property>
+        <property name="maximum" >
+         <number>3600</number>
+        </property>
+       </widget>
+      </widget>
      </widget>
      <widget class="QWidget" name="tab_2" >
       <attribute name="title" >
        <string>Joblist</string>
       </attribute>
       <layout class="QGridLayout" >
-       <property name="margin" >
+       <property name="leftMargin" >
         <number>9</number>
        </property>
-       <property name="spacing" >
+       <property name="topMargin" >
+        <number>9</number>
+       </property>
+       <property name="rightMargin" >
+        <number>9</number>
+       </property>
+       <property name="bottomMargin" >
+        <number>9</number>
+       </property>
+       <property name="horizontalSpacing" >
+        <number>6</number>
+       </property>
+       <property name="verticalSpacing" >
         <number>6</number>
        </property>
        <item row="0" column="0" >
         <widget class="QGroupBox" name="groupBox_2" >
          <property name="sizePolicy" >
-          <sizepolicy>
-           <hsizetype>5</hsizetype>
-           <vsizetype>0</vsizetype>
+          <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -117,18 +204,42 @@
           <string>Jolist Limit Options</string>
          </property>
          <layout class="QGridLayout" >
-          <property name="margin" >
+          <property name="leftMargin" >
            <number>9</number>
           </property>
-          <property name="spacing" >
+          <property name="topMargin" >
+           <number>9</number>
+          </property>
+          <property name="rightMargin" >
+           <number>9</number>
+          </property>
+          <property name="bottomMargin" >
+           <number>9</number>
+          </property>
+          <property name="horizontalSpacing" >
+           <number>6</number>
+          </property>
+          <property name="verticalSpacing" >
            <number>6</number>
           </property>
           <item row="0" column="0" >
            <layout class="QGridLayout" >
-            <property name="margin" >
+            <property name="leftMargin" >
              <number>0</number>
             </property>
-            <property name="spacing" >
+            <property name="topMargin" >
+             <number>0</number>
+            </property>
+            <property name="rightMargin" >
+             <number>0</number>
+            </property>
+            <property name="bottomMargin" >
+             <number>0</number>
+            </property>
+            <property name="horizontalSpacing" >
+             <number>6</number>
+            </property>
+            <property name="verticalSpacing" >
              <number>6</number>
             </property>
             <item row="2" column="0" >
@@ -140,11 +251,11 @@
             </item>
             <item row="3" column="0" >
              <widget class="QSpinBox" name="daysSpinBox" >
-              <property name="maximum" >
-               <number>10000</number>
-              </property>
               <property name="minimum" >
                <number>1</number>
+              </property>
+              <property name="maximum" >
+               <number>10000</number>
               </property>
               <property name="singleStep" >
                <number>7</number>
@@ -153,11 +264,11 @@
             </item>
             <item row="1" column="0" >
              <widget class="QSpinBox" name="recordSpinBox" >
-              <property name="maximum" >
-               <number>10000</number>
-              </property>
               <property name="minimum" >
                <number>1</number>
+              </property>
+              <property name="maximum" >
+               <number>10000</number>
               </property>
               <property name="singleStep" >
                <number>25</number>
@@ -182,23 +293,87 @@
       <attribute name="title" >
        <string>Misc</string>
       </attribute>
+      <widget class="QGroupBox" name="groupBox_6" >
+       <property name="geometry" >
+        <rect>
+         <x>30</x>
+         <y>220</y>
+         <width>311</width>
+         <height>111</height>
+        </rect>
+       </property>
+       <property name="title" >
+        <string>Convert</string>
+       </property>
+       <widget class="QRadioButton" name="radioConvertOff" >
+        <property name="geometry" >
+         <rect>
+          <x>20</x>
+          <y>20</y>
+          <width>231</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Convert Off</string>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="radioConvertIEC" >
+        <property name="geometry" >
+         <rect>
+          <x>20</x>
+          <y>50</y>
+          <width>231</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Display Bytes using IEC units (1024B = 1 KiB)</string>
+        </property>
+       </widget>
+       <widget class="QRadioButton" name="radioConvertStandard" >
+        <property name="geometry" >
+         <rect>
+          <x>20</x>
+          <y>80</y>
+          <width>231</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Display Bytes using SI units (1000B = 1KB)</string>
+        </property>
+       </widget>
+      </widget>
       <widget class="QGroupBox" name="groupBox_4" >
        <property name="geometry" >
         <rect>
-         <x>70</x>
-         <y>120</y>
-         <width>190</width>
-         <height>55</height>
+         <x>30</x>
+         <y>10</y>
+         <width>311</width>
+         <height>61</height>
         </rect>
        </property>
        <property name="title" >
         <string>Context Sensitive List Commands</string>
        </property>
        <layout class="QGridLayout" >
-        <property name="margin" >
+        <property name="leftMargin" >
          <number>9</number>
         </property>
-        <property name="spacing" >
+        <property name="topMargin" >
+         <number>9</number>
+        </property>
+        <property name="rightMargin" >
+         <number>9</number>
+        </property>
+        <property name="bottomMargin" >
+         <number>9</number>
+        </property>
+        <property name="horizontalSpacing" >
+         <number>6</number>
+        </property>
+        <property name="verticalSpacing" >
          <number>6</number>
         </property>
         <item row="0" column="0" >
@@ -210,24 +385,86 @@
         </item>
        </layout>
       </widget>
+      <widget class="QGroupBox" name="groupBox_7" >
+       <property name="geometry" >
+        <rect>
+         <x>30</x>
+         <y>80</y>
+         <width>311</width>
+         <height>121</height>
+        </rect>
+       </property>
+       <property name="title" >
+        <string>Open Pages</string>
+       </property>
+       <widget class="QCheckBox" name="openPlotCheckBox" >
+        <property name="geometry" >
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>241</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Open Plot page on startup</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="openBrowserCheckBox" >
+        <property name="geometry" >
+         <rect>
+          <x>10</x>
+          <y>60</y>
+          <width>241</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Open Browser page on startup</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="openDirStatCheckBox" >
+        <property name="geometry" >
+         <rect>
+          <x>10</x>
+          <y>90</y>
+          <width>241</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Open Director Status page on startup</string>
+        </property>
+       </widget>
+      </widget>
      </widget>
      <widget class="QWidget" name="tab_3" >
       <attribute name="title" >
        <string>Debug</string>
       </attribute>
       <layout class="QGridLayout" >
-       <property name="margin" >
+       <property name="leftMargin" >
         <number>9</number>
        </property>
-       <property name="spacing" >
+       <property name="topMargin" >
+        <number>9</number>
+       </property>
+       <property name="rightMargin" >
+        <number>9</number>
+       </property>
+       <property name="bottomMargin" >
+        <number>9</number>
+       </property>
+       <property name="horizontalSpacing" >
+        <number>6</number>
+       </property>
+       <property name="verticalSpacing" >
         <number>6</number>
        </property>
        <item row="0" column="0" >
         <widget class="QGroupBox" name="groupBox_3" >
          <property name="sizePolicy" >
-          <sizepolicy>
-           <hsizetype>5</hsizetype>
-           <vsizetype>0</vsizetype>
+          <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -236,56 +473,47 @@
           <string>Debugging Options</string>
          </property>
          <layout class="QGridLayout" >
-          <property name="margin" >
-           <number>9</number>
-          </property>
-          <property name="spacing" >
-           <number>6</number>
-          </property>
           <item row="0" column="0" >
-           <layout class="QGridLayout" >
-            <property name="margin" >
-             <number>0</number>
+           <widget class="QCheckBox" name="commDebug" >
+            <property name="text" >
+             <string>Debug comm</string>
             </property>
-            <property name="spacing" >
-             <number>6</number>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2" >
+           <widget class="QCheckBox" name="connDebug" >
+            <property name="text" >
+             <string>Debug multiple connection</string>
             </property>
-            <item row="0" column="0" >
-             <widget class="QCheckBox" name="commDebug" >
-              <property name="text" >
-               <string>Debug comm</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0" >
-             <widget class="QCheckBox" name="displayAll" >
-              <property name="text" >
-               <string>Display all messages in console</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0" >
-             <widget class="QCheckBox" name="commandDebug" >
-              <property name="text" >
-               <string>Debug Commands</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0" >
-             <widget class="QCheckBox" name="sqlDebug" >
-              <property name="text" >
-               <string>Debug Sql queries</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0" >
-             <widget class="QCheckBox" name="miscDebug" >
-              <property name="text" >
-               <string>Debug Miscelaneous Items</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
+           </widget>
+          </item>
+          <item row="2" column="0" >
+           <widget class="QCheckBox" name="displayAll" >
+            <property name="text" >
+             <string>Display all messages in console</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" >
+           <widget class="QCheckBox" name="sqlDebug" >
+            <property name="text" >
+             <string>Debug Sql queries</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" >
+           <widget class="QCheckBox" name="commandDebug" >
+            <property name="text" >
+             <string>Debug Commands</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0" >
+           <widget class="QCheckBox" name="miscDebug" >
+            <property name="text" >
+             <string>Debug Miscelaneous Items</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -297,18 +525,28 @@
        <string>RestoreTree</string>
       </attribute>
       <layout class="QGridLayout" >
-       <property name="margin" >
+       <property name="leftMargin" >
         <number>9</number>
        </property>
-       <property name="spacing" >
+       <property name="topMargin" >
+        <number>9</number>
+       </property>
+       <property name="rightMargin" >
+        <number>9</number>
+       </property>
+       <property name="bottomMargin" >
+        <number>9</number>
+       </property>
+       <property name="horizontalSpacing" >
+        <number>6</number>
+       </property>
+       <property name="verticalSpacing" >
         <number>6</number>
        </property>
        <item row="0" column="0" >
         <widget class="QGroupBox" name="groupBox_5" >
          <property name="sizePolicy" >
-          <sizepolicy>
-           <hsizetype>5</hsizetype>
-           <vsizetype>0</vsizetype>
+          <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -317,18 +555,42 @@
           <string>Debugging Options</string>
          </property>
          <layout class="QGridLayout" >
-          <property name="margin" >
+          <property name="leftMargin" >
            <number>9</number>
           </property>
-          <property name="spacing" >
+          <property name="topMargin" >
+           <number>9</number>
+          </property>
+          <property name="rightMargin" >
+           <number>9</number>
+          </property>
+          <property name="bottomMargin" >
+           <number>9</number>
+          </property>
+          <property name="horizontalSpacing" >
+           <number>6</number>
+          </property>
+          <property name="verticalSpacing" >
            <number>6</number>
           </property>
           <item row="0" column="0" >
            <layout class="QGridLayout" >
-            <property name="margin" >
+            <property name="leftMargin" >
              <number>0</number>
             </property>
-            <property name="spacing" >
+            <property name="topMargin" >
+             <number>0</number>
+            </property>
+            <property name="rightMargin" >
+             <number>0</number>
+            </property>
+            <property name="bottomMargin" >
+             <number>0</number>
+            </property>
+            <property name="horizontalSpacing" >
+             <number>6</number>
+            </property>
+            <property name="verticalSpacing" >
              <number>6</number>
             </property>
             <item row="10" column="0" >
@@ -436,11 +698,20 @@
    </item>
    <item row="0" column="0" >
     <layout class="QHBoxLayout" >
-     <property name="margin" >
-      <number>0</number>
-     </property>
      <property name="spacing" >
       <number>6</number>
+     </property>
+     <property name="leftMargin" >
+      <number>0</number>
+     </property>
+     <property name="topMargin" >
+      <number>0</number>
+     </property>
+     <property name="rightMargin" >
+      <number>0</number>
+     </property>
+     <property name="bottomMargin" >
+      <number>0</number>
      </property>
      <item>
       <spacer>
@@ -458,9 +729,7 @@
      <item>
       <widget class="QLabel" name="headingLabel" >
        <property name="sizePolicy" >
-        <sizepolicy>
-         <hsizetype>5</hsizetype>
-         <vsizetype>0</vsizetype>
+        <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>

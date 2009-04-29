@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -28,7 +28,7 @@
 /*
  *  daemon.c by Kern Sibbald 2000
  *
- *   Version $Id: daemon.c 6195 2008-01-04 09:01:55Z kerns $
+ *   Version $Id: daemon.c 7380 2008-07-14 10:42:59Z kerns $
  *
  *   This code is inspired by the Prentice Hall book
  *   "Unix Network Programming" by W. Richard Stevens

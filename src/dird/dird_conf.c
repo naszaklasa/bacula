@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *     Version $Id: dird_conf.c 7187 2008-06-19 19:44:34Z kerns $
+ *     Version $Id: dird_conf.c 8499 2009-03-05 09:43:19Z ricozz $
  */
 
 
@@ -57,8 +57,8 @@
  * types. Note, these should be unique for each
  * daemon though not a requirement.
  */
-int r_first = R_FIRST;
-int r_last  = R_LAST;
+int32_t r_first = R_FIRST;
+int32_t r_last  = R_LAST;
 static RES *sres_head[R_LAST - R_FIRST + 1];
 RES **res_head = sres_head;
 
@@ -88,12 +88,12 @@ static void store_short_runscript(LEX *lc, RES_ITEM *item, int index, int pass);
  */
 #if defined(_MSC_VER)
 extern "C" { // work around visual compiler mangling variables
-    URES res_all;
+   URES res_all;
 }
 #else
 URES res_all;
 #endif
-int  res_all_size = sizeof(res_all);
+int32_t res_all_size = sizeof(res_all);
 
 
 /* Definition of records permitted within each
@@ -114,14 +114,17 @@ static RES_ITEM dir_items[] = {
    {"diraddresses",store_addresses,         ITEM(res_dir.DIRaddrs),  0, ITEM_DEFAULT, 9101},
    {"queryfile",   store_dir,      ITEM(res_dir.query_file), 0, ITEM_REQUIRED, 0},
    {"workingdirectory", store_dir, ITEM(res_dir.working_directory), 0, ITEM_REQUIRED, 0},
+   {"plugindirectory",  store_dir, ITEM(res_dir.plugin_directory),  0, 0, 0},
    {"scriptsdirectory", store_dir, ITEM(res_dir.scripts_directory), 0, 0, 0},
-   {"piddirectory",store_dir,     ITEM(res_dir.pid_directory), 0, ITEM_REQUIRED, 0},
-   {"subsysdirectory", store_dir,  ITEM(res_dir.subsys_directory), 0, 0, 0},
+   {"piddirectory",     store_dir, ITEM(res_dir.pid_directory),     0, ITEM_REQUIRED, 0},
+   {"subsysdirectory",  store_dir, ITEM(res_dir.subsys_directory),  0, 0, 0},
    {"maximumconcurrentjobs", store_pint32, ITEM(res_dir.MaxConcurrentJobs), 0, ITEM_DEFAULT, 1},
+   {"maximumconsoleconnections", store_pint32, ITEM(res_dir.MaxConsoleConnect), 0, ITEM_DEFAULT, 20},
    {"password",    store_password, ITEM(res_dir.password), 0, ITEM_REQUIRED, 0},
-   {"fdconnecttimeout", store_time,ITEM(res_dir.FDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
-   {"sdconnecttimeout", store_time,ITEM(res_dir.SDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
+   {"fdconnecttimeout", store_time,ITEM(res_dir.FDConnectTimeout), 0, ITEM_DEFAULT, 3 * 60},
+   {"sdconnecttimeout", store_time,ITEM(res_dir.SDConnectTimeout), 0, ITEM_DEFAULT, 30 * 60},
    {"heartbeatinterval", store_time, ITEM(res_dir.heartbeat_interval), 0, ITEM_DEFAULT, 0},
+   {"tlsauthenticate",      store_bool,      ITEM(res_dir.tls_authenticate), 0, 0, 0},
    {"tlsenable",            store_bool,      ITEM(res_dir.tls_enable), 0, 0, 0},
    {"tlsrequire",           store_bool,      ITEM(res_dir.tls_require), 0, 0, 0},
    {"tlsverifypeer",        store_bool,      ITEM(res_dir.tls_verify_peer), 0, ITEM_DEFAULT, true},
@@ -131,6 +134,8 @@ static RES_ITEM dir_items[] = {
    {"tlskey",               store_dir,       ITEM(res_dir.tls_keyfile), 0, 0, 0},
    {"tlsdhfile",            store_dir,       ITEM(res_dir.tls_dhfile), 0, 0, 0},
    {"tlsallowedcn",         store_alist_str, ITEM(res_dir.tls_allowed_cns), 0, 0, 0},
+   {"statisticsretention",  store_time,      ITEM(res_dir.stats_retention),  0, ITEM_DEFAULT, 60*60*24*31*12*5},
+   {"verid",                store_str,       ITEM(res_dir.verid), 0, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -153,6 +158,8 @@ static RES_ITEM con_items[] = {
    {"filesetacl",  store_acl,      ITEM(res_con.ACL_lists), FileSet_ACL, 0, 0},
    {"catalogacl",  store_acl,      ITEM(res_con.ACL_lists), Catalog_ACL, 0, 0},
    {"whereacl",    store_acl,      ITEM(res_con.ACL_lists), Where_ACL, 0, 0},
+   {"pluginoptionsacl",     store_acl,       ITEM(res_con.ACL_lists), PluginOptions_ACL, 0, 0},
+   {"tlsauthenticate",      store_bool,      ITEM(res_con.tls_authenticate), 0, 0, 0},
    {"tlsenable",            store_bool,      ITEM(res_con.tls_enable), 0, 0, 0},
    {"tlsrequire",           store_bool,      ITEM(res_con.tls_require), 0, 0, 0},
    {"tlsverifypeer",        store_bool,      ITEM(res_con.tls_verify_peer), 0, ITEM_DEFAULT, true},
@@ -179,13 +186,14 @@ static RES_ITEM cli_items[] = {
    {"fdaddress",  store_str,      ITEM(res_client.address),  0, 0, 0},
    {"fdport",   store_pint32,     ITEM(res_client.FDport),   0, ITEM_DEFAULT, 9102},
    {"password", store_password,   ITEM(res_client.password), 0, ITEM_REQUIRED, 0},
-   {"fdpassword", store_password,   ITEM(res_client.password), 0, 0, 0},
+   {"fdpassword", store_password, ITEM(res_client.password), 0, 0, 0},
    {"catalog",  store_res,        ITEM(res_client.catalog),  R_CATALOG, ITEM_REQUIRED, 0},
    {"fileretention", store_time,  ITEM(res_client.FileRetention), 0, ITEM_DEFAULT, 60*60*24*60},
    {"jobretention",  store_time,  ITEM(res_client.JobRetention),  0, ITEM_DEFAULT, 60*60*24*180},
    {"heartbeatinterval", store_time, ITEM(res_client.heartbeat_interval), 0, ITEM_DEFAULT, 0},
    {"autoprune", store_bool,      ITEM(res_client.AutoPrune), 0, ITEM_DEFAULT, true},
-   {"maximumconcurrentjobs", store_pint32, ITEM(res_client.MaxConcurrentJobs), 0, ITEM_DEFAULT, 1},
+   {"maximumconcurrentjobs", store_pint32,   ITEM(res_client.MaxConcurrentJobs), 0, ITEM_DEFAULT, 1},
+   {"tlsauthenticate",      store_bool,      ITEM(res_client.tls_authenticate), 0, 0, 0},
    {"tlsenable",            store_bool,      ITEM(res_client.tls_enable), 0, 0, 0},
    {"tlsrequire",           store_bool,      ITEM(res_client.tls_require), 0, 0, 0},
    {"tlscacertificatefile", store_dir,       ITEM(res_client.tls_ca_certfile), 0, 0, 0},
@@ -215,6 +223,7 @@ static RES_ITEM store_items[] = {
    {"heartbeatinterval", store_time, ITEM(res_store.heartbeat_interval), 0, ITEM_DEFAULT, 0},
    {"maximumconcurrentjobs", store_pint32, ITEM(res_store.MaxConcurrentJobs), 0, ITEM_DEFAULT, 1},
    {"sddport", store_pint32, ITEM(res_store.SDDport), 0, 0, 0}, /* deprecated */
+   {"tlsauthenticate",      store_bool,      ITEM(res_store.tls_authenticate), 0, 0, 0},
    {"tlsenable",            store_bool,      ITEM(res_store.tls_enable), 0, 0, 0},
    {"tlsrequire",           store_bool,      ITEM(res_store.tls_require), 0, 0, 0},
    {"tlscacertificatefile", store_dir,       ITEM(res_store.tls_ca_certfile), 0, 0, 0},
@@ -234,13 +243,14 @@ static RES_ITEM cat_items[] = {
    {"description", store_str,   ITEM(res_cat.hdr.desc),    0, 0, 0},
    {"address",  store_str,      ITEM(res_cat.db_address),  0, 0, 0},
    {"dbaddress", store_str,     ITEM(res_cat.db_address),  0, 0, 0},
-   {"dbport",   store_pint32,     ITEM(res_cat.db_port),      0, 0, 0},
+   {"dbport",   store_pint32,   ITEM(res_cat.db_port),      0, 0, 0},
    /* keep this password as store_str for the moment */
    {"password", store_str,      ITEM(res_cat.db_password), 0, 0, 0},
    {"dbpassword", store_str,    ITEM(res_cat.db_password), 0, 0, 0},
    {"dbuser",   store_str,      ITEM(res_cat.db_user),     0, 0, 0},
    {"user",     store_str,      ITEM(res_cat.db_user),     0, 0, 0},
    {"dbname",   store_str,      ITEM(res_cat.db_name),     0, ITEM_REQUIRED, 0},
+   {"dbdriver", store_str,      ITEM(res_cat.db_driver),   0, 0, 0},
    {"dbsocket", store_str,      ITEM(res_cat.db_socket),   0, 0, 0},
    /* Turned off for the moment */
    {"multipleconnections", store_bit, ITEM(res_cat.mult_db_connections), 0, 0, 0},
@@ -272,22 +282,29 @@ RES_ITEM job_items[] = {
    {"run",       store_alist_str, ITEM(res_job.run_cmds), 0, 0, 0},
    /* Root of where to restore files */
    {"where",    store_dir,      ITEM(res_job.RestoreWhere), 0, 0, 0},
-   {"regexwhere",    store_str,   ITEM(res_job.RegexWhere), 0, 0, 0},
-   {"stripprefix",    store_str,  ITEM(res_job.strip_prefix), 0, 0, 0},
+   {"regexwhere",    store_str, ITEM(res_job.RegexWhere), 0, 0, 0},
+   {"stripprefix",   store_str, ITEM(res_job.strip_prefix), 0, 0, 0},
    {"addprefix",    store_str,  ITEM(res_job.add_prefix), 0, 0, 0},
    {"addsuffix",    store_str,  ITEM(res_job.add_suffix), 0, 0, 0},
    /* Where to find bootstrap during restore */
    {"bootstrap",store_dir,      ITEM(res_job.RestoreBootstrap), 0, 0, 0},
    /* Where to write bootstrap file during backup */
    {"writebootstrap",store_dir, ITEM(res_job.WriteBootstrap), 0, 0, 0},
-   {"writeverifylist",store_dir, ITEM(res_job.WriteVerifyList), 0, 0, 0},
+   {"writeverifylist",store_dir,ITEM(res_job.WriteVerifyList), 0, 0, 0},
    {"replace",  store_replace,  ITEM(res_job.replace), 0, ITEM_DEFAULT, REPLACE_ALWAYS},
+   {"maxrunschedtime", store_time, ITEM(res_job.MaxRunSchedTime), 0, 0, 0},
    {"maxruntime",   store_time, ITEM(res_job.MaxRunTime), 0, 0, 0},
-   {"fullmaxwaittime",  store_time, ITEM(res_job.FullMaxWaitTime), 0, 0, 0},
-   {"incrementalmaxwaittime",  store_time, ITEM(res_job.IncMaxWaitTime), 0, 0, 0},
-   {"differentialmaxwaittime",  store_time, ITEM(res_job.DiffMaxWaitTime), 0, 0, 0},
+   /* xxxMaxWaitTime are deprecated */
+   {"fullmaxwaittime",  store_time, ITEM(res_job.FullMaxRunTime), 0, 0, 0},
+   {"incrementalmaxwaittime",  store_time, ITEM(res_job.IncMaxRunTime), 0, 0, 0},
+   {"differentialmaxwaittime", store_time, ITEM(res_job.DiffMaxRunTime), 0, 0, 0},
+   {"fullmaxruntime",  store_time, ITEM(res_job.FullMaxRunTime), 0, 0, 0},
+   {"incrementalmaxruntime",  store_time, ITEM(res_job.IncMaxRunTime), 0, 0, 0},
+   {"differentialmaxruntime", store_time, ITEM(res_job.DiffMaxRunTime), 0, 0, 0},
    {"maxwaittime",  store_time, ITEM(res_job.MaxWaitTime), 0, 0, 0},
    {"maxstartdelay",store_time, ITEM(res_job.MaxStartDelay), 0, 0, 0},
+   {"maxfullinterval",  store_time, ITEM(res_job.MaxFullInterval), 0, 0, 0},
+   {"maxdiffinterval",  store_time, ITEM(res_job.MaxDiffInterval), 0, 0, 0},
    {"jobretention", store_time, ITEM(res_job.JobRetention),  0, 0, 0},
    {"prefixlinks", store_bool, ITEM(res_job.PrefixLinks), 0, ITEM_DEFAULT, false},
    {"prunejobs",   store_bool, ITEM(res_job.PruneJobs), 0, ITEM_DEFAULT, false},
@@ -296,6 +313,7 @@ RES_ITEM job_items[] = {
    {"enabled",     store_bool, ITEM(res_job.enabled), 0, ITEM_DEFAULT, true},
    {"spoolattributes",store_bool, ITEM(res_job.SpoolAttributes), 0, ITEM_DEFAULT, false},
    {"spooldata",   store_bool, ITEM(res_job.spool_data), 0, ITEM_DEFAULT, false},
+   {"spoolsize",   store_size, ITEM(res_job.spool_size), 0, 0, 0},
    {"rerunfailedlevels",   store_bool, ITEM(res_job.rerun_failed_levels), 0, ITEM_DEFAULT, false},
    {"prefermountedvolumes", store_bool, ITEM(res_job.PreferMountedVolumes), 0, ITEM_DEFAULT, true},
    {"runbeforejob", store_short_runscript,  ITEM(res_job.RunScripts),  0, 0, 0},
@@ -306,12 +324,19 @@ RES_ITEM job_items[] = {
    {"maximumconcurrentjobs", store_pint32, ITEM(res_job.MaxConcurrentJobs), 0, ITEM_DEFAULT, 1},
    {"rescheduleonerror", store_bool, ITEM(res_job.RescheduleOnError), 0, ITEM_DEFAULT, false},
    {"rescheduleinterval", store_time, ITEM(res_job.RescheduleInterval), 0, ITEM_DEFAULT, 60 * 30},
-   {"rescheduletimes", store_pint32, ITEM(res_job.RescheduleTimes), 0, 0, 0},
-   {"priority",   store_pint32, ITEM(res_job.Priority), 0, ITEM_DEFAULT, 10},
-   {"writepartafterjob",   store_bool, ITEM(res_job.write_part_after_job), 0, ITEM_DEFAULT, true},
-   {"selectionpattern", store_str, ITEM(res_job.selection_pattern), 0, 0, 0},
-   {"runscript", store_runscript, ITEM(res_job.RunScripts), 0, ITEM_NO_EQUALS, 0},
-   {"selectiontype", store_migtype, ITEM(res_job.selection_type), 0, 0, 0},
+   {"rescheduletimes",    store_pint32, ITEM(res_job.RescheduleTimes), 0, 0, 0},
+   {"priority",           store_pint32, ITEM(res_job.Priority), 0, ITEM_DEFAULT, 10},
+   {"allowmixedpriority", store_bool, ITEM(res_job.allow_mixed_priority), 0, ITEM_DEFAULT, false},
+   {"writepartafterjob",  store_bool, ITEM(res_job.write_part_after_job), 0, ITEM_DEFAULT, true},
+   {"selectionpattern",   store_str, ITEM(res_job.selection_pattern), 0, 0, 0},
+   {"runscript",          store_runscript, ITEM(res_job.RunScripts), 0, ITEM_NO_EQUALS, 0},
+   {"selectiontype",      store_migtype, ITEM(res_job.selection_type), 0, 0, 0},
+   {"accurate",           store_bool, ITEM(res_job.accurate), 0,0,0},
+   {"allowduplicatejobs", store_bool, ITEM(res_job.AllowDuplicateJobs), 0, ITEM_DEFAULT, false},
+   {"allowhigherduplicates",   store_bool, ITEM(res_job.AllowHigherDuplicates), 0, ITEM_DEFAULT, true},
+   {"cancelqueuedduplicates",  store_bool, ITEM(res_job.CancelQueuedDuplicates), 0, ITEM_DEFAULT, true},
+   {"cancelrunningduplicates", store_bool, ITEM(res_job.CancelRunningDuplicates), 0, ITEM_DEFAULT, false},
+   {"pluginoptions", store_str, ITEM(res_job.PluginOptions), 0, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -372,8 +397,9 @@ static RES_ITEM pool_items[] = {
    {"autoprune",     store_bool,      ITEM(res_pool.AutoPrune), 0, ITEM_DEFAULT, true},
    {"recycle",       store_bool,      ITEM(res_pool.Recycle),   0, ITEM_DEFAULT, true},
    {"recyclepool",   store_res,       ITEM(res_pool.RecyclePool), R_POOL, 0, 0},
+   {"scratchpool",   store_res,       ITEM(res_pool.ScratchPool), R_POOL, 0, 0},
    {"copypool",      store_alist_res, ITEM(res_pool.CopyPool), R_POOL, 0, 0},
-   {"catalog",       store_res,       ITEM(res_pool.Catalog), R_CATALOG, 0, 0},
+   {"catalog",       store_res,       ITEM(res_pool.catalog), R_CATALOG, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -432,6 +458,7 @@ struct s_jl joblevels[] = {
    {"Incremental",   L_INCREMENTAL,     JT_BACKUP},
    {"Differential",  L_DIFFERENTIAL,    JT_BACKUP},
    {"Since",         L_SINCE,           JT_BACKUP},
+   {"VirtualFull",   L_VIRTUAL_FULL,    JT_BACKUP},
    {"Catalog",       L_VERIFY_CATALOG,  JT_VERIFY},
    {"InitCatalog",   L_VERIFY_INIT,     JT_VERIFY},
    {"VolumeToCatalog", L_VERIFY_VOLUME_TO_CATALOG,   JT_VERIFY},
@@ -452,6 +479,7 @@ struct s_jt jobtypes[] = {
    {"verify",        JT_VERIFY},
    {"restore",       JT_RESTORE},
    {"migrate",       JT_MIGRATE},
+   {"copy",          JT_COPY},
    {NULL,            0}
 };
 
@@ -465,6 +493,7 @@ struct s_jt migtypes[] = {
    {"oldestvolume",     MT_OLDEST_VOL},
    {"pooloccupancy",    MT_POOL_OCCUPANCY},
    {"pooltime",         MT_POOL_TIME},
+   {"pooluncopiedjobs", MT_POOL_UNCOPIED_JOBS},
    {"client",           MT_CLIENT},
    {"volume",           MT_VOLUME},
    {"job",              MT_JOB},
@@ -483,6 +512,16 @@ struct s_kw ReplaceOptions[] = {
    {NULL,               0}
 };
 
+char *CAT::display(POOLMEM *dst) {
+   Mmsg(dst,"catalog=%s\ndb_name=%s\ndb_driver=%s\ndb_user=%s\n"
+        "db_password=%s\ndb_address=%s\ndb_port=%i\n"
+        "db_socket=%s\n",
+        name(), NPRTB(db_name),
+        NPRTB(db_driver), NPRTB(db_user), NPRTB(db_password),
+        NPRTB(db_address), db_port, NPRTB(db_socket));
+   return dst;
+}
+
 const char *level_to_str(int level)
 {
    int i;
@@ -491,7 +530,7 @@ const char *level_to_str(int level)
 
    bsnprintf(level_no, sizeof(level_no), "%c (%d)", level, level);    /* default if not found */
    for (i=0; joblevels[i].level_name; i++) {
-      if (level == joblevels[i].level) {
+      if (level == (int)joblevels[i].level) {
          str = joblevels[i].level_name;
          break;
       }
@@ -589,9 +628,10 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
 
    case R_CATALOG:
       sendit(sock, _("Catalog: name=%s address=%s DBport=%d db_name=%s\n"
-"      db_user=%s MutliDBConn=%d\n"),
+"      db_driver=%s db_user=%s MutliDBConn=%d\n"),
          res->res_cat.hdr.name, NPRT(res->res_cat.db_address),
-         res->res_cat.db_port, res->res_cat.db_name, NPRT(res->res_cat.db_user),
+         res->res_cat.db_port, res->res_cat.db_name, 
+         NPRT(res->res_cat.db_driver), NPRT(res->res_cat.db_user),
          res->res_cat.mult_db_connections);
       break;
 
@@ -607,7 +647,13 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
          res->res_job.RescheduleOnError, res->res_job.RescheduleTimes,
          edit_uint64_with_commas(res->res_job.RescheduleInterval, ed1),
          res->res_job.spool_data, res->res_job.write_part_after_job);
-      if (res->res_job.JobType == JT_MIGRATE) {
+      if (res->res_job.spool_size) {
+         sendit(sock, _("     SpoolSize=%s\n"),        edit_uint64(res->res_job.spool_size, ed1));
+      }
+      if (res->res_job.JobType == JT_BACKUP) {
+         sendit(sock, _("     Accurate=%d\n"), res->res_job.accurate);
+      }
+      if (res->res_job.JobType == JT_MIGRATE || res->res_job.JobType == JT_COPY) {
          sendit(sock, _("     SelectionType=%d\n"), res->res_job.selection_type);
       }
       if (res->res_job.client) {
@@ -633,6 +679,18 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
       }
       if (res->res_job.WriteBootstrap) {
          sendit(sock, _("  --> WriteBootstrap=%s\n"), NPRT(res->res_job.WriteBootstrap));
+      }
+      if (res->res_job.PluginOptions) {
+         sendit(sock, _("  --> PluginOptions=%s\n"), NPRT(res->res_job.PluginOptions));
+      }
+      if (res->res_job.MaxRunTime) {
+         sendit(sock, _("  --> MaxRunTime=%u\n"), res->res_job.MaxRunTime);
+      }
+      if (res->res_job.MaxWaitTime) {
+         sendit(sock, _("  --> MaxWaitTime=%u\n"), res->res_job.MaxWaitTime);
+      }
+      if (res->res_job.MaxStartDelay) {
+         sendit(sock, _("  --> MaxStartDelay=%u\n"), res->res_job.MaxStartDelay);
       }
       if (res->res_job.storage) {
          STORE *store;
@@ -736,6 +794,9 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
             for (k=0; k<fo->drivetype.size(); k++) {
                sendit(sock, "      XD %s\n", fo->drivetype.get(k));
             }
+            if (fo->plugin) {
+               sendit(sock, "      G %s\n", fo->plugin);
+            }
             if (fo->reader) {
                sendit(sock, "      D %s\n", fo->reader);
             }
@@ -750,6 +811,13 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
          if (incexe->name_list.size()) {
             sendit(sock, "      N\n");
          }
+         for (j=0; j<incexe->plugin_list.size(); j++) {
+            sendit(sock, "      P %s\n", incexe->plugin_list.get(j));
+         }
+         if (incexe->plugin_list.size()) {
+            sendit(sock, "      N\n");
+         }
+
       }
 
       for (i=0; i<res->res_fs.num_excludes; i++) {
@@ -884,8 +952,11 @@ next_run:
       if (res->res_pool.RecyclePool) {
          sendit(sock, _("      RecyclePool=%s\n"), res->res_pool.RecyclePool->name());
       }
-      if (res->res_pool.Catalog) {
-         sendit(sock, _("      Catalog=%s\n"), res->res_pool.Catalog->name());
+      if (res->res_pool.ScratchPool) {
+         sendit(sock, _("      ScratchPool=%s\n"), res->res_pool.ScratchPool->name());
+      }
+      if (res->res_pool.catalog) {
+         sendit(sock, _("      Catalog=%s\n"), res->res_pool.catalog->name());
       }
       if (res->res_pool.storage) {
          STORE *store;
@@ -927,6 +998,7 @@ next_run:
 static void free_incexe(INCEXE *incexe)
 {
    incexe->name_list.destroy();
+   incexe->plugin_list.destroy();
    for (int i=0; i<incexe->num_opts; i++) {
       FOPTS *fopt = incexe->opts_list[i];
       fopt->regex.destroy();
@@ -939,6 +1011,9 @@ static void free_incexe(INCEXE *incexe)
       fopt->base.destroy();
       fopt->fstype.destroy();
       fopt->drivetype.destroy();
+      if (fopt->plugin) {
+         free(fopt->plugin);
+      }
       if (fopt->reader) {
          free(fopt->reader);
       }
@@ -986,6 +1061,9 @@ void free_resource(RES *sres, int type)
       if (res->res_dir.scripts_directory) {
          free((char *)res->res_dir.scripts_directory);
       }
+      if (res->res_dir.plugin_directory) {
+         free((char *)res->res_dir.plugin_directory);
+      }
       if (res->res_dir.pid_directory) {
          free(res->res_dir.pid_directory);
       }
@@ -1021,6 +1099,9 @@ void free_resource(RES *sres, int type)
       }
       if (res->res_dir.tls_allowed_cns) {
          delete res->res_dir.tls_allowed_cns;
+      }
+      if (res->res_dir.verid) {
+         free(res->res_dir.verid);
       }
       break;
    case R_DEVICE:
@@ -1126,6 +1207,9 @@ void free_resource(RES *sres, int type)
       if (res->res_cat.db_name) {
          free(res->res_cat.db_name);
       }
+      if (res->res_cat.db_driver) {
+         free(res->res_cat.db_driver);
+      }
       if (res->res_cat.db_password) {
          free(res->res_cat.db_password);
       }
@@ -1193,6 +1277,9 @@ void free_resource(RES *sres, int type)
       }
       if (res->res_job.WriteBootstrap) {
          free(res->res_job.WriteBootstrap);
+      }
+      if (res->res_job.PluginOptions) {
+         free(res->res_job.PluginOptions);
       }
       if (res->res_job.selection_pattern) {
          free(res->res_job.selection_pattern);
@@ -1302,7 +1389,9 @@ void save_resource(int type, RES_ITEM *items, int pass)
          /* Explicitly copy resource pointers from this pass (res_all) */
          res->res_pool.NextPool = res_all.res_pool.NextPool;
          res->res_pool.RecyclePool = res_all.res_pool.RecyclePool;
+         res->res_pool.ScratchPool = res_all.res_pool.ScratchPool;
          res->res_pool.storage    = res_all.res_pool.storage;
+         res->res_pool.catalog    = res_all.res_pool.catalog;
          break;
       case R_CONSOLE:
          if ((res = (URES *)GetResWithName(R_CONSOLE, res_all.res_con.hdr.name)) == NULL) {
@@ -1546,7 +1635,7 @@ static void store_device(LEX *lc, RES_ITEM *item, int index, int pass)
 }
 
 /*
- * Store JobType (backup, verify, restore)
+ * Store Migration/Copy type
  *
  */
 void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass)
@@ -1678,10 +1767,12 @@ static void store_runscript_when(LEX *lc, RES_ITEM *item, int index, int pass)
       *(uint32_t *)(item->value) = SCRIPT_Before ;
    } else if (strcasecmp(lc->str, "after") == 0) {
       *(uint32_t *)(item->value) = SCRIPT_After;
+   } else if (strcasecmp(lc->str, "aftervss") == 0) {
+      *(uint32_t *)(item->value) = SCRIPT_AfterVSS;
    } else if (strcasecmp(lc->str, "always") == 0) {
       *(uint32_t *)(item->value) = SCRIPT_Any;
    } else {
-      scan_err2(lc, _("Expect %s, got: %s"), "Before, After or Always", lc->str);
+      scan_err2(lc, _("Expect %s, got: %s"), "Before, After, AfterVSS or Always", lc->str);
    }
    scan_to_eol(lc);
 }
@@ -1713,15 +1804,20 @@ static void store_runscript_target(LEX *lc, RES_ITEM *item, int index, int pass)
    scan_to_eol(lc);
 }
 
-/* Store a runscript->command in a bit field
- * 
+/*
+ * Store a runscript->command as a string and runscript->cmd_type as a pointer
  */
 static void store_runscript_cmd(LEX *lc, RES_ITEM *item, int index, int pass)
 {
    lex_get_token(lc, T_STRING);
 
    if (pass == 2) {
-      ((RUNSCRIPT*) item->value)->set_command(lc->str);
+      Dmsg2(1, "runscript cmd=%s type=%c\n", lc->str, item->code);
+      POOLMEM *c = get_pool_memory(PM_FNAME);
+      /* Each runscript command takes 2 entries in commands list */
+      pm_strcpy(c, lc->str);
+      ((RUNSCRIPT*) item->value)->commands->prepend(c); /* command line */
+      ((RUNSCRIPT*) item->value)->commands->prepend((void *)item->code); /* command type */
    }
    scan_to_eol(lc);
 }
@@ -1799,10 +1895,11 @@ void store_runscript_bool(LEX *lc, RES_ITEM *item, int index, int pass)
 
 /*
  * new RunScript items
- *   name             handler              value                             code flags default_value
+ *   name     handler     value               code flags default_value
  */
 static RES_ITEM runscript_items[] = {
- {"command",        store_runscript_cmd,  {(char **)&res_runscript},           0,  ITEM_REQUIRED, 0}, 
+ {"command",        store_runscript_cmd,  {(char **)&res_runscript},     SHELL_CMD, 0, 0}, 
+ {"console",        store_runscript_cmd,  {(char **)&res_runscript},     CONSOLE_CMD, 0, 0}, 
  {"target",         store_runscript_target,{(char **)&res_runscript},          0,  0, 0}, 
  {"runsonsuccess",  store_runscript_bool, {(char **)&res_runscript.on_success},0,  0, 0},
  {"runsonfailure",  store_runscript_bool, {(char **)&res_runscript.on_failure},0,  0, 0},
@@ -1822,19 +1919,24 @@ static RES_ITEM runscript_items[] = {
  */
 static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
 {
-   int token, i;
+   char *c;
+   int token, i, t;
    alist **runscripts = (alist **)(item->value) ;
 
    Dmsg1(200, "store_runscript: begin store_runscript pass=%i\n", pass);
 
-   res_runscript.reset_default();      /* setting on_success, on_failure, fail_on_error */
-   
    token = lex_get_token(lc, T_SKIP_EOL);
    
    if (token != T_BOB) {
       scan_err1(lc, _("Expecting open brace. Got %s"), lc->str);
    }
-   
+   /* setting on_success, on_failure, fail_on_error */
+   res_runscript.reset_default();   
+
+   if (pass == 2) {
+      res_runscript.commands = New(alist(10, not_owned_by_alist));
+   }
+
    while ((token = lex_get_token(lc, T_SKIP_EOL)) != T_EOF) {
       if (token == T_EOB) {
         break;
@@ -1862,26 +1964,37 @@ static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
    }
 
    if (pass == 2) {
-      if (res_runscript.command == NULL) {
-         scan_err2(lc, _("%s item is required in %s resource, but not found.\n"),
-                   "command", "runscript");
-      }
-
       /* run on client by default */
       if (res_runscript.target == NULL) {
          res_runscript.set_target("%c");
       }
-
-      RUNSCRIPT *script = new_runscript();
-      memcpy(script, &res_runscript, sizeof(RUNSCRIPT));
-      script->set_job_code_callback(job_code_callback_filesetname);
-      
       if (*runscripts == NULL) {
-        *runscripts = New(alist(10, not_owned_by_alist));
+         *runscripts = New(alist(10, not_owned_by_alist));
       }
-      
-      (*runscripts)->append(script);
-      script->debug();
+      /*
+       * commands list contains 2 values per command
+       *  - POOLMEM command string (ex: /bin/true) 
+       *  - int command type (ex: SHELL_CMD)
+       */
+      res_runscript.set_job_code_callback(job_code_callback_filesetname);
+      while ((c=(char*)res_runscript.commands->pop()) != NULL) {
+         t = (intptr_t)res_runscript.commands->pop();
+         RUNSCRIPT *script = new_runscript();
+         memcpy(script, &res_runscript, sizeof(RUNSCRIPT));
+         script->command = c;
+         script->cmd_type = t;
+         /* target is taken from res_runscript, each runscript object have
+          * a copy 
+          */
+         script->target = NULL;
+         script->set_target(res_runscript.target);
+
+         (*runscripts)->append(script);
+         script->debug();
+      }
+      delete res_runscript.commands;
+      /* setting on_success, on_failure... cleanup target field */
+      res_runscript.reset_default(true); 
    }
 
    scan_to_eol(lc);
@@ -1896,4 +2009,11 @@ extern "C" char *job_code_callback_filesetname(JCR *jcr, const char* param)
    } else {
       return NULL;
    }
+}
+
+bool parse_dir_config(CONFIG *config, const char *configfile, int exit_code)
+{
+   config->init(configfile, NULL, exit_code, (void *)&res_all, res_all_size,
+      r_first, r_last, resources, res_head);
+   return config->parse_config();
 }

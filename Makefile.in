@@ -1,6 +1,7 @@
 # 
-# Version $Id: Makefile.in 4463 2007-03-30 21:46:04Z kerns $
-# 
+# Version $Id: Makefile.in 8618 2009-03-28 13:05:36Z kerns $
+# Master Makefile
+#
 @MCOMMON@
 
 working_dir=@working_dir@
@@ -20,7 +21,7 @@ dummy:
 # --client-only directories
 fd_subdirs = src scripts src/lib src/findlib src/filed \
        @READLINE_SRC@ @BAT_DIR@ @GNOME_DIR@ @TRAY_MONITOR_DIR@ @WX_DIR@ \
-       src/console
+       src/console src/plugins/fd
 
 # Non-client-only directores
 subdirs =    src/cats @DIRD_DIR@ @STORED_DIR@ src/tools
@@ -33,7 +34,11 @@ DIST_CFG = autoconf/aclocal.m4 autoconf/configure.in \
 	autoconf/config.h.in  autoconf/acconfig.h  autoconf/Make.common.in \
 	autoconf/install-sh autoconf/mkinstalldirs
 
+doc_files = VERIFYING technotes ChangeLog README ReleaseNotes LICENSE \
+	    INSTALL
+
 MKDIR = $(srcdir)/autoconf/mkinstalldirs
+LIBTOOL_DEPS = @LIBTOOL_DEPS@
 
 #-------------------------------------------------------------------------
 
@@ -56,24 +61,22 @@ bacula-fd: Makefile
 	done
 
 #-------------------------------------------------------------------------
-autoconf/aclocal.m4: autoconf/configure.in autoconf/bacula-macros/* autoconf/gettext-macros/*
-	cd autoconf && aclocal -I bacula-macros -I gettext-macros
+
+autoconf/aclocal.m4: autoconf/configure.in autoconf/bacula-macros/* autoconf/gettext-macros/* autoconf/libtool/*
+
+#  Note, the following is needed in the above if ever any new macro is added.
+#   However, at the current time, the -I libtool causes the autoconf/aclocal.m4
+#   get messed up, so this is commented out
+#	cd autoconf && aclocal -I bacula-macros -I gettext-macros -I libtool
 
 configure: autoconf/configure.in autoconf/aclocal.m4 autoconf/acconfig.h autoconf/config.h.in
 	cd $(srcdir);
-	${RMF} -f config.cache config.log config.out config.status src/config.h
-	${RMF} -rf autoconf/autom4te.cache autom4te.cache
+	${RMF} config.cache config.log config.out config.status src/config.h
+	${RMF} -r autoconf/autom4te.cache autom4te.cache
 	autoconf --prepend-include=$(srcdir)/autoconf \
 	autoconf/configure.in > configure
 	chmod 755 configure
-
-old-configure: autoconf/configure.in autoconf/aclocal.m4 autoconf/acconfig.h
-	cd $(srcdir);
-	${RMF} -f config.cache config.log config.out config.status src/config.h
-	autoconf --include=$(srcdir)/autoconf \
-	autoconf/configure.in > configure
-	chmod 755 configure
-	@rm -f config.cache
+	${RMF} -r autoconf/autom4te.cache autom4te.cache
 
 config.status:
 	if test -x config.status; then config.status --recheck; \
@@ -81,15 +84,19 @@ config.status:
 
 autoconf/config.h.in: autoconf/configure.in autoconf/acconfig.h
 	cd $(srcdir);
-	${RMF} -f config.cache config.log config.out config.status src/config.h
+	${RMF} config.cache config.log config.out config.status src/config.h
 	autoheader --prepend-include=$(srcdir)/autoconf \
 	autoconf/configure.in > autoconf/config.h.in
 	chmod 644 autoconf/config.h.in
+
+libtool: Makefile $(LIBTOOL_DEPS)
+	$(SHELL) ./config.status --recheck
 
 installdirs:
 	$(MKDIR) $(DESTDIR)$(sbindir)
 	$(MKDIR) $(DESTDIR)$(sysconfdir)
 	$(MKDIR) $(DESTDIR)$(scriptdir)
+	$(MKDIR) $(DESTDIR)$(docdir)
 	-if test ! -d $(DESTDIR)$(working_dir) ; then \
 	   $(MKDIR) $(DESTDIR)$(working_dir); \
 	   chmod 770 $(DESTDIR)$(working_dir); \
@@ -127,6 +134,7 @@ install-menu-consolehelper: gnomedirs
 	ln -s $(DESTDIR)/usr/bin/consolehelper $(DESTDIR)/usr/bin/gnome-console
 
 install: installdirs
+	@for I in $(doc_files) ; do $(INSTALL_DATA) $$I $(DESTDIR)${docdir}; done
 	@for I in $(all_subdirs); do (cd $$I && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1); done
 
 uninstall:
@@ -157,18 +165,17 @@ uninstall-autostart-sd:
 	(cd platforms && $(MAKE) DESTDIR=$(DESTDIR) $@ || exit 1)
 
 uninstall-menu:
-	rm -f $(DESTDIR)/usr/share/pixmaps/bacula.png
-	rm -f $(DESTDIR)/usr/share/gnome/apps/System/bacula.desktop
-	rm -f $(DESTDIR)/usr/share/applications/bacula.desktop
+	$(RMF) $(DESTDIR)/usr/share/pixmaps/bacula.png
+	$(RMF) $(DESTDIR)/usr/share/gnome/apps/System/bacula.desktop
+	$(RMF) $(DESTDIR)/usr/share/applications/bacula.desktop
 
 uninstall-menu-consolehelper:
-	rm -f $(DESTDIR)/usr/share/pixmaps/bacula.png
-	rm -f $(DESTDIR)/usr/share/gnome/apps/System/bacula.desktop
-	rm -f $(DESTDIR)/usr/share/applications/bacula.desktop
-	rm -f $(DESTDIR)/etc/security/console.apps/gnome-console
-	rm -f $(DESTDIR)/etc/pam.d/gnome-console
-	rm -f $(DESTDIR)/usr/bin/gnome-console
-
+	$(RMF) $(DESTDIR)/usr/share/pixmaps/bacula.png
+	$(RMF) $(DESTDIR)/usr/share/gnome/apps/System/bacula.desktop
+	$(RMF) $(DESTDIR)/usr/share/applications/bacula.desktop
+	$(RMF) $(DESTDIR)/etc/security/console.apps/gnome-console
+	$(RMF) $(DESTDIR)/etc/pam.d/gnome-console
+	$(RMF) $(DESTDIR)/usr/bin/gnome-console
 
 Makefile: Makefile.in
 	cd $(topdir) \
@@ -187,9 +194,11 @@ Makefiles:
 	 chmod 755 create_@DB_TYPE@_database   update_@DB_TYPE@_tables	make_@DB_TYPE@_tables; \
 	 chmod 755 grant_@DB_TYPE@_privileges  drop_@DB_TYPE@_tables	drop_@DB_TYPE@_database; \
 	 chmod 755 make_catalog_backup delete_catalog_backup)
+	(cd src/qt-console; \
+	 chmod 755 install_conf_file build-depkgs-qt-console)
 
 clean:
-	@for I in ${all_subdirs} src/win32; \
+	@for I in ${all_subdirs} ; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1); done
 	@(cd platforms; echo "==>Entering directory `pwd`"; ${MAKE} $@ || exit 1)
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
@@ -210,6 +219,7 @@ distclean:
 	@$(RMF) *~ 1 2 3 core core.* config.guess console.log console.sum
 	@$(RMF) working/* kerns-* 
 	@$(RMF) -rf txt diff src/python src/testprogs
+	@$(RMF) libtool
 
 devclean:
 	@for I in $(all_subdirs); do (cd $$I && $(MAKE) $@ || exit 1); done

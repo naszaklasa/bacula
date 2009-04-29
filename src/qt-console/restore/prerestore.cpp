@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: prerestore.cpp 7419 2008-07-23 08:23:02Z kerns $
+ *   Version $Id: prerestore.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
  *
  *  preRestore -> dialog put up to determine the restore type
  *
@@ -62,13 +62,10 @@ void prerestorePage::buildPage()
    m_name = tr("Restore");
    setupUi(this);
    pgInitialize();
-   m_console->notify(false);
+   m_conn = m_console->notifyOff();
    m_closeable = true;
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/restore.png")));
-
-   if (!m_console->preventInUseConnect())
-       return;
 
    jobCombo->addItems(m_console->job_list);
    filesetCombo->addItems(m_console->fileset_list);
@@ -170,17 +167,19 @@ void prerestorePage::okButtonPushed()
    if (mainWin->m_commandDebug) {
       Pmsg1(000, "preRestore command \'%s\'\n", cmd.toUtf8().data());
    }
-   m_console->write_dir(cmd.toUtf8().data());
+   m_console->write_dir(m_conn, cmd.toUtf8().data());
 
    /* Note, do not turn notifier back on here ... */
    if (selectFilesRadio->isChecked()) {
       setConsoleCurrent();
       closeStackPage();
+      /* wait will be exited in the restore page constructor */
+      mainWin->waitEnter();
    } else {
       closeStackPage();
       mainWin->resetFocus();
    }
-   m_console->notify(true);
+   m_console->notify(m_conn, true);
 }
 
 
@@ -191,7 +190,7 @@ void prerestorePage::cancelButtonPushed()
 {
    mainWin->set_status(tr("Canceled"));
    this->hide();
-   m_console->notify(true);
+   m_console->notify(m_conn, true);
    closeStackPage();
 }
 
@@ -205,7 +204,7 @@ void prerestorePage::job_name_change(int index)
 
    (void)index;
    job_defs.job_name = jobCombo->currentText();
-   if (m_console->get_job_defaults(job_defs)) {
+   if (m_console->get_job_defaults(m_conn, job_defs)) {
       filesetCombo->setCurrentIndex(filesetCombo->findText(job_defs.fileset_name, Qt::MatchExactly));
       clientCombo->setCurrentIndex(clientCombo->findText(job_defs.client_name, Qt::MatchExactly));
       poolCombo->setCurrentIndex(poolCombo->findText(tr("Any"), Qt::MatchExactly));
@@ -243,7 +242,7 @@ int prerestorePage::jobdefsFromJob(QStringList &fieldlist, QString &jobId)
    " AND JobId=\'" + jobId + "\'";
    if (mainWin->m_sqlDebug) { Pmsg1(000, "query = %s\n", query.toUtf8().data()); }
    QStringList results;
-   if (m_console->sql_cmd(query, results)) {
+   if (m_console->sql_cmd(m_conn, query, results)) {
       QString field;
 
       /* Iterate through the lines of results, there should only be one. */
@@ -251,7 +250,10 @@ int prerestorePage::jobdefsFromJob(QStringList &fieldlist, QString &jobId)
          fieldlist = resultline.split("\t");
       } /* foreach resultline */
    } /* if results from query */
-   return results.count();
+
+   /* FIXME This should not be getting more than one ever */
+   if(results.count() >= 1) return 1;
+   else return 0;
 }
 
 /*

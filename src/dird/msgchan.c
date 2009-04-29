@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -40,7 +40,7 @@
  *    Create a thread to interact with the Storage daemon
  *      who returns a job status and requests Catalog services, etc.
  *
- *   Version $Id: msgchan.c 7566 2008-09-08 19:21:08Z kerns $
+ *   Version $Id: msgchan.c 8504 2009-03-06 20:43:53Z kerns $
  */
 
 #include "bacula.h"
@@ -51,7 +51,7 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 /* Commands sent to Storage daemon */
 static char jobcmd[]     = "JobId=%s job=%s job_name=%s client_name=%s "
    "type=%d level=%d FileSet=%s NoAttr=%d SpoolAttr=%d FileSetMD5=%s "
-   "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d\n";
+   "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d SpoolSize=%s\n";
 static char use_storage[] = "use storage=%s media_type=%s pool_name=%s "
    "pool_type=%s append=%d copy=%d stripe=%d\n";
 static char use_device[] = "use device=%s\n";
@@ -64,7 +64,7 @@ static char OK_device[]  = "3000 OK use device device=%s\n";
 /* Storage Daemon requests */
 static char Job_start[]  = "3010 Job %127s start\n";
 static char Job_end[]    =
-   "3099 Job %127s end JobStatus=%d JobFiles=%d JobBytes=%" lld "\n";
+   "3099 Job %127s end JobStatus=%d JobFiles=%d JobBytes=%lld JobErrors=%u\n";
 
 /* Forward referenced functions */
 extern "C" void *msg_thread(void *arg);
@@ -123,7 +123,7 @@ bool connect_to_storage_daemon(JCR *jcr, int retry_interval,
  * Here we ask the SD to send us the info for a 
  *  particular device resource.
  */
-#ifdef needed
+#ifdef xxx
 bool update_device_res(JCR *jcr, DEVICE *dev)
 {
    POOL_MEM device_name; 
@@ -157,7 +157,7 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
    POOL_MEM job_name, client_name, fileset_name;
    int copy = 0;
    int stripe = 0;
-   char ed1[30];
+   char ed1[30], ed2[30];
 
    sd = jcr->store_bsock;
    /*
@@ -184,11 +184,12 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
    } 
    sd->fsend(jobcmd, edit_int64(jcr->JobId, ed1), jcr->Job, 
              job_name.c_str(), client_name.c_str(), 
-             jcr->JobType, jcr->JobLevel,
+             jcr->get_JobType(), jcr->get_JobLevel(),
              fileset_name.c_str(), !jcr->pool->catalog_files,
              jcr->job->SpoolAttributes, jcr->fileset->MD5, jcr->spool_data, 
-             jcr->write_part_after_job, jcr->job->PreferMountedVolumes);
-   Dmsg1(100, ">stored: %s\n", sd->msg);
+             jcr->write_part_after_job, jcr->job->PreferMountedVolumes,
+             edit_int64(jcr->spool_size, ed2));
+   Dmsg1(100, ">stored: %s", sd->msg);
    if (bget_dirmsg(sd) > 0) {
        Dmsg1(100, "<stored: %s", sd->msg);
        if (sscanf(sd->msg, OKjob, &jcr->VolSessionId,
@@ -217,8 +218,9 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore)
     */
    /* Do read side of storage daemon */
    if (ok && rstore) {
-      /* For the moment, only migrate has rpool */
-      if (jcr->JobType == JT_MIGRATE) {
+      /* For the moment, only migrate, copy and vbackup have rpool */
+      if (jcr->get_JobType() == JT_MIGRATE || jcr->get_JobType() == JT_COPY ||
+           (jcr->get_JobType() == JT_BACKUP && jcr->get_JobLevel() == L_VIRTUAL_FULL)) {
          pm_strcpy(pool_type, jcr->rpool->pool_type);
          pm_strcpy(pool_name, jcr->rpool->name());
       } else {
@@ -343,7 +345,7 @@ extern "C" void msg_thread_cleanup(void *arg)
    jcr->sd_msg_thread_done = true;
    jcr->SD_msg_chan = 0;
    pthread_cond_broadcast(&jcr->term_wait); /* wakeup any waiting threads */
-   Dmsg1(100, "=== End msg_thread. use=%d\n", jcr->use_count());
+   Dmsg2(100, "=== End msg_thread. JobId=%d usecnt=%d\n", jcr->JobId, jcr->use_count());
    free_jcr(jcr);                     /* release jcr */
    db_thread_cleanup();               /* remove thread specific data */
 }
@@ -359,11 +361,11 @@ extern "C" void *msg_thread(void *arg)
    BSOCK *sd;
    int JobStatus;
    char Job[MAX_NAME_LENGTH];
-   uint32_t JobFiles;
+   uint32_t JobFiles, JobErrors;
    uint64_t JobBytes;
-   int stat;
 
    pthread_detach(pthread_self());
+   set_jcr_in_tsd(jcr);
    jcr->SD_msg_chan = pthread_self();
    pthread_cleanup_push(msg_thread_cleanup, arg);
    sd = jcr->store_bsock;
@@ -376,14 +378,15 @@ extern "C" void *msg_thread(void *arg)
       if (sscanf(sd->msg, Job_start, Job) == 1) {
          continue;
       }
-      if ((stat=sscanf(sd->msg, Job_end, Job, &JobStatus, &JobFiles,
-                 &JobBytes)) == 4) {
+      if (sscanf(sd->msg, Job_end, Job, &JobStatus, &JobFiles,
+                 &JobBytes, &JobErrors) == 5) {
          jcr->SDJobStatus = JobStatus; /* termination status */
          jcr->SDJobFiles = JobFiles;
          jcr->SDJobBytes = JobBytes;
+         jcr->SDErrors = JobErrors;
          break;
       }
-      Dmsg2(400, "end loop stat=%d use=%d\n", stat, jcr->use_count());
+      Dmsg1(400, "end loop use=%d\n", jcr->use_count());
    }
    if (is_bnet_error(sd)) {
       jcr->SDJobStatus = JS_ErrorTerminated;

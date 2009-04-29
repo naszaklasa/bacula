@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -62,7 +62,7 @@ void labelPage::showPage(QString &defString)
    m_name = "Label";
    pgInitialize();
    setupUi(this);
-   m_console->notify(false);
+   m_conn = m_console->notifyOff();
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/label.png")));
 
@@ -100,8 +100,8 @@ void labelPage::okButtonPushed()
       Pmsg1(000, "sending command : %s\n",scmd.toUtf8().data());
    }
    m_console->write_dir(scmd.toUtf8().data());
-   m_console->displayToPrompt();
-   m_console->notify(true);
+   m_console->displayToPrompt(m_conn);
+   m_console->notify(m_conn, true);
    closeStackPage();
    mainWin->resetFocus();
 }
@@ -109,7 +109,7 @@ void labelPage::okButtonPushed()
 void labelPage::cancelButtonPushed()
 {
    this->hide();
-   m_console->notify(true);
+   m_console->notify(m_conn, true);
    closeStackPage();
    mainWin->resetFocus();
 }

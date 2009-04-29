@@ -12,7 +12,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL = @INSTALL@
 
 SUBDIRS = freebsd redhat solaris unknown openbsd irix gentoo \
-	  debian darwin aix bsdi mandrake slackware alpha
+	  debian darwin aix bsdi mandrake slackware alpha ubuntu
 
 MAKE = make
 
@@ -87,7 +87,7 @@ clean:
 		    (cd $${subdir}; $(MAKE) clean) \
 	    fi; \
 	done
-	rm -f 1 2 3
+	@rm -f 1 2 3
 
 distclean:
 	@rm -f Makefile

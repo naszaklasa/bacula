@@ -1,7 +1,0 @@
-From: Eric Bollengier <eric at homelinux dot org>
-
-Add Job { SpoolSize = 10G } option
-This is very useful for big backup
- 
-You must upgrade SD and DIR at the same time.
-

@@ -26,7 +26,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -65,6 +65,8 @@ static void usage()
 "       -f          specify file of data to be matched\n"
 "       -l          suppress line numbers\n"
 "       -n          print lines that do not match\n"
+"       -d <nn>     set debug level to <nn>\n"
+"       -dt         print timestamp in debug output\n"
 "       -?          print this message.\n"
 "\n\n");
 
@@ -93,9 +95,13 @@ int main(int argc, char *const *argv)
    while ((ch = getopt(argc, argv, "d:f:n?")) != -1) {
       switch (ch) {
       case 'd':                       /* set debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0) {
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
          }
          break;
 

@@ -1,13 +1,7 @@
 /*
- * Test program for listing files during regression testing
- *
- *  Kern Sibbald, MM
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,11 +20,17 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Test program for listing files during regression testing
+ *
+ *  Kern Sibbald, MM
+ *
+ */
 
 #include "bacula.h"
 #include "findlib/find.h"
@@ -38,6 +38,7 @@
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
 int generate_job_event(JCR *jcr, const char *event) { return 1; }
+void generate_plugin_event(JCR *jcr, bEventType eventType, void *value) { }
 
 
 /* Global variables */
@@ -46,7 +47,7 @@ int attrs = 0;
 static JCR *jcr;
 
 
-static int print_file(FF_PKT *ff, void *pkt, bool);
+static int print_file(JCR *jcr, FF_PKT *ff, bool);
 static void print_ls_output(char *fname, char *link, int type, struct stat *statp);
 
 static void usage()
@@ -55,7 +56,8 @@ static void usage()
 "\n"
 "Usage: testls [-d debug_level] [-] [pattern1 ...]\n"
 "       -a          print extended attributes (Win32 debug)\n"
-"       -dnn        set debug level to nn\n"
+"       -d <nn>     set debug level to <nn>\n"
+"       -dt         print timestamp in debug output\n"
 "       -e          specify file of exclude patterns\n"
 "       -i          specify file of include patterns\n"
 "       -           read pattern(s) from stdin\n"
@@ -94,9 +96,13 @@ main (int argc, char *const *argv)
          break;
 
       case 'd':                       /* set debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0) {
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
          }
          break;
 
@@ -159,7 +165,7 @@ main (int argc, char *const *argv)
       }
       fclose(fd);
    }
-   match_files(jcr, ff, print_file, NULL);
+   match_files(jcr, ff, print_file);
    term_include_exclude_files(ff);
    hard_links = term_find_files(ff);
 
@@ -170,7 +176,7 @@ main (int argc, char *const *argv)
    exit(0);
 }
 
-static int print_file(FF_PKT *ff, void *pkt, bool top_level) 
+static int print_file(JCR *jcr, FF_PKT *ff, bool top_level) 
 {
 
    switch (ff->type) {

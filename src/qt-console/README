@@ -27,6 +27,28 @@ Development status as of 05/06/07
 
 Items not implemented:
 - Nothing on the brestore page
+
+Translations:
+- All translatable strings should be written as tr("string") ...
+- To extract the strings for translation run:
+ 
+   lupdate bat.pro
+
+- To translate the strings, do:
+
+   linguist ts/bat_xx.ts
+
+  where xx is the country code (e.g. fr or de)
+
+- To "compile" the translated strings do:
+
+  lrelease bat.pro
+
+  The necessary binary files will be in ts/bat_xx.qm
+  As far as I can tell, these files must be on your path or
+  in the same directory as bat for them to be used, otherwise
+  it reverts to English. Selecting the translation is based on
+  how your system is setup or the LANG environment variable.
          
 Design decisions:
 - If possible all code for a particular component will be kept in

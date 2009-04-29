@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *      Kern Sibbald, March 2004
  *
- *  Version $Id: spool.c 8240 2008-12-23 15:50:58Z kerns $
+ *  Version $Id: spool.c 8528 2009-03-14 16:51:26Z kerns $
  */
 
 #include "bacula.h"
@@ -99,8 +99,6 @@ void list_spool_stats(void sendit(const char *msg, int len, void *sarg), void *a
    
       sendit(msg.c_str(), len, arg);
    }
-   len = Mmsg(msg, "====\n");
-   sendit(msg.c_str(), len, arg);
 }
 
 bool begin_data_spool(DCR *dcr)
@@ -232,10 +230,14 @@ static bool despool_data(DCR *dcr, bool commit)
       Jmsg(jcr, M_INFO, 0, _("Committing spooled data to Volume \"%s\". Despooling %s bytes ...\n"),
          jcr->dcr->VolumeName,
          edit_uint64_with_commas(jcr->dcr->job_spool_size, ec1));
+      set_jcr_job_status(jcr, JS_DataCommitting);
    } else {
       Jmsg(jcr, M_INFO, 0, _("Writing spooled data to Volume. Despooling %s bytes ...\n"),
          edit_uint64_with_commas(jcr->dcr->job_spool_size, ec1));
+      set_jcr_job_status(jcr, JS_DataDespooling);
    }
+   set_jcr_job_status(jcr, JS_DataDespooling);
+   dir_send_job_status(jcr);
    dcr->despool_wait = true;
    dcr->spooling = false;
    /*
@@ -274,7 +276,7 @@ static bool despool_data(DCR *dcr, bool commit)
 #endif
 
    /* Add run time, to get current wait time */
-   time_t despool_start = time(NULL) - jcr->run_time;
+   int32_t despool_start = time(NULL) - jcr->run_time;
 
    set_new_file_parameters(dcr);
 
@@ -294,6 +296,8 @@ static bool despool_data(DCR *dcr, bool commit)
       if (!ok) {
          Jmsg2(jcr, M_FATAL, 0, _("Fatal append error on device %s: ERR=%s\n"),
                dcr->dev->print_name(), dcr->dev->bstrerror());
+         Dmsg2(000, "Fatal append error on device %s: ERR=%s\n",
+               dcr->dev->print_name(), dcr->dev->bstrerror());
       }
       Dmsg3(800, "Write block ok=%d FI=%d LI=%d\n", ok, block->FirstIndex, block->LastIndex);
    }
@@ -305,8 +309,12 @@ static bool despool_data(DCR *dcr, bool commit)
    /* Set new file/block parameters for current dcr */
    set_new_file_parameters(dcr);
 
-   /* Subtracting run_time give us elapsed time - wait_time since we started despooling */
-   time_t despool_elapsed = time(NULL) - despool_start - jcr->run_time;
+   /*
+    * Subtracting run_time give us elapsed time - wait_time since 
+    * we started despooling. Note, don't use time_t as it is 32 or 64
+    * bits depending on the OS and doesn't edit with %d
+    */
+   int32_t despool_elapsed = time(NULL) - despool_start - jcr->run_time;
 
    if (despool_elapsed <= 0) {
       despool_elapsed = 1;
@@ -346,6 +354,7 @@ static bool despool_data(DCR *dcr, bool commit)
    free(rdev);
    dcr->spooling = true;           /* turn on spooling again */
    dcr->despooling = false;
+
    /* 
     * We are done, so unblock the device, but if we have done a 
     *  commit, leave it locked so that the job cleanup does not
@@ -357,6 +366,8 @@ static bool despool_data(DCR *dcr, bool commit)
    if (!commit) {
       dcr->dunlock();
    }
+   set_jcr_job_status(jcr, JS_Running);
+   dir_send_job_status(jcr);
    return ok;
 }
 
@@ -506,7 +517,7 @@ static bool write_spool_header(DCR *dcr)
 #if defined(HAVE_WIN32)
             boffset_t   pos = _lseeki64(dcr->spool_fd, (__int64)0, SEEK_CUR);
 #else
-            boffset_t   pos = lseek(dcr->spool_fd, (off_t)0, SEEK_CUR);
+            boffset_t   pos = lseek(dcr->spool_fd, 0, SEEK_CUR);
 #endif
             if (ftruncate(dcr->spool_fd, pos - stat) != 0) {
                berrno be;
@@ -548,7 +559,7 @@ static bool write_spool_data(DCR *dcr)
 #if defined(HAVE_WIN32)
             boffset_t   pos = _lseeki64(dcr->spool_fd, (__int64)0, SEEK_CUR);
 #else
-            boffset_t   pos = lseek(dcr->spool_fd, (off_t)0, SEEK_CUR);
+            boffset_t   pos = lseek(dcr->spool_fd, 0, SEEK_CUR);
 #endif
             if (ftruncate(dcr->spool_fd, pos - stat - sizeof(spool_hdr)) != 0) {
                berrno be;
@@ -615,11 +626,41 @@ static void update_attr_spool_size(ssize_t size)
    V(mutex);
 }
 
+static void make_unique_spool_filename(JCR *jcr, POOLMEM **name, int fd)
+{
+   Mmsg(name, "%s/%s.attr.%s.%d.spool", working_directory, my_name,
+      jcr->Job, fd);
+}
+
+static bool blast_attr_spool_file(JCR *jcr, boffset_t size)
+{
+   /* send full spool file name */
+   POOLMEM *name  = get_pool_memory(PM_MESSAGE);
+   make_unique_spool_filename(jcr, &name, jcr->dir_bsock->m_fd);
+   bash_spaces(name);
+   jcr->dir_bsock->fsend("BlastAttr Job=%s File=%s\n",
+                         jcr->Job, name);
+   free_pool_memory(name);
+   
+   if (jcr->dir_bsock->recv() <= 0) {
+      Jmsg(jcr, M_FATAL, 0, _("Network error on BlastAttributes.\n"));
+      return false;
+   }
+   
+   if (!bstrcmp(jcr->dir_bsock->msg, "1000 OK BlastAttr\n")) {
+      return false;
+   }
+   return true;
+}
+
 bool commit_attribute_spool(JCR *jcr)
 {
-   off_t size;
+   boffset_t size;
    char ec1[30];
+   char tbuf[100];
 
+   Dmsg1(100, "Commit attributes at %s\n", bstrftimes(tbuf, sizeof(tbuf),
+         (utime_t)time(NULL)));
    if (are_attributes_spooled(jcr)) {
       if (fseeko(jcr->dir_bsock->m_spool_fd, 0, SEEK_END) != 0) {
          berrno be;
@@ -644,7 +685,13 @@ bool commit_attribute_spool(JCR *jcr)
       dir_send_job_status(jcr);
       Jmsg(jcr, M_INFO, 0, _("Sending spooled attrs to the Director. Despooling %s bytes ...\n"),
             edit_uint64_with_commas(size, ec1));
-      jcr->dir_bsock->despool(update_attr_spool_size, size);
+
+      if (!blast_attr_spool_file(jcr, size)) {
+         /* Can't read spool file from director side,
+          * send content over network.
+          */
+         jcr->dir_bsock->despool(update_attr_spool_size, size);
+      }
       return close_attr_spool_file(jcr, jcr->dir_bsock);
    }
    return true;
@@ -653,13 +700,6 @@ bail_out:
    close_attr_spool_file(jcr, jcr->dir_bsock);
    return false;
 }
-
-static void make_unique_spool_filename(JCR *jcr, POOLMEM **name, int fd)
-{
-   Mmsg(name, "%s/%s.attr.%s.%d.spool", working_directory, my_name,
-      jcr->Job, fd);
-}
-
 
 bool open_attr_spool_file(JCR *jcr, BSOCK *bs)
 {
@@ -685,6 +725,10 @@ bool close_attr_spool_file(JCR *jcr, BSOCK *bs)
 {
    POOLMEM *name;
 
+   char tbuf[100];
+
+   Dmsg1(100, "Close attr spool file at %s\n", bstrftimes(tbuf, sizeof(tbuf),
+         (utime_t)time(NULL)));
    if (!bs->m_spool_fd) {
       return true;
    }

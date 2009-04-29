@@ -1,5 +1,5 @@
 #
-# Version $Id: Makefile.in 2570 2005-11-10 20:11:21Z kerns $
+# Version $Id: Makefile.in 7789 2008-10-14 18:42:47Z kerns $
 #
 @MCOMMON@
 
@@ -36,7 +36,6 @@ all: Makefile
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
-
 
 clean:
 	@$(RMF) core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3

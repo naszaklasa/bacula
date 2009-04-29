@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MMI
  *
- *   Version $Id: ua_input.c 5237 2007-07-24 18:36:08Z kerns $
+ *   Version $Id: ua_input.c 7380 2008-07-14 10:42:59Z kerns $
  */
 
 #include "bacula.h"
@@ -49,11 +49,11 @@ int get_cmd(UAContext *ua, const char *prompt)
    int stat;
 
    ua->cmd[0] = 0;
-   if (!sock) {                       /* No UA */
+   if (!sock || ua->batch) {          /* No UA or batch mode */
       return 0;
    }
    sock->fsend("%s", prompt);
-   sock->signal(BNET_PROMPT);       /* request more input */
+   sock->signal(BNET_PROMPT);         /* request more input */
    for ( ;; ) {
       stat = sock->recv();
       if (stat == BNET_SIGNAL) {

@@ -1,19 +1,7 @@
 /*
- *
- *   Bootstrap Record header file
- *
- *      BSR (bootstrap record) handling routines split from
- *        ua_restore.c July MMIII
- *
- *     Kern Sibbald, July MMII
- *
- *   Version $Id: bsr.h 4992 2007-06-07 14:46:43Z kerns $
- */
-
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,11 +20,23 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bootstrap Record header file
+ *
+ *      BSR (bootstrap record) handling routines split from
+ *        ua_restore.c July MMIII
+ *
+ *     Kern Sibbald, July MMII
+ *
+ *   Version $Id: bsr.h 7713 2008-10-05 19:01:24Z kerns $
+ */
+
 
 
 /* FileIndex entry in restore bootstrap record */
@@ -62,4 +62,6 @@ struct RBSR {
    int      VolCount;                 /* Volume parameter count */
    VOL_PARAMS *VolParams;             /* Volume, start/end file/blocks */
    RBSR_FINDEX *fi;                   /* File indexes this JobId */
+   char *fileregex;                   /* Only restore files matching regex */
 };
+

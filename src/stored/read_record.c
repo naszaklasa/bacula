@@ -38,7 +38,7 @@
  *
  *    Kern E. Sibbald, August MMII
  *
- *   Version $Id: read_record.c 7432 2008-07-24 15:26:41Z kerns $
+ *   Version $Id: read_record.c 8637 2009-03-29 09:56:52Z kerns $
  */
 
 #include "bacula.h"
@@ -54,6 +54,11 @@ static char *rec_state_to_str(DEV_RECORD *rec);
 
 static const int dbglvl = 500;
 
+/*
+ * This subroutine reads all the records and passes them back to your
+ *  callback routine (also mount routine at EOM).
+ * You must not change any values in the DEV_RECORD packet
+ */
 bool read_records(DCR *dcr,
        bool record_cb(DCR *dcr, DEV_RECORD *rec),
        bool mount_cb(DCR *dcr))
@@ -234,8 +239,7 @@ bool read_records(DCR *dcr,
              *  we can remove the record.  Note, there is a separate
              *  record to read each session. If a new session is seen
              *  a new record will be created at approx line 157 above.
-             *
-             * This code causes a seg fault in the enclosing for() loop.
+             * However, it seg faults in the for line at lineno 196.
              */
             if (rec->FileIndex == EOS_LABEL) {
                Dmsg2(dbglvl, "Remove EOS rec. SI=%d ST=%d\n", rec->VolSessionId,
@@ -251,7 +255,7 @@ bool read_records(DCR *dcr,
           * Apply BSR filter
           */
          if (jcr->bsr) {
-            rec->match_stat = match_bsr(jcr->bsr, rec, &dev->VolHdr, &sessrec);
+            rec->match_stat = match_bsr(jcr->bsr, rec, &dev->VolHdr, &sessrec, jcr);
             if (rec->match_stat == -1) { /* no more possible matches */
                done = true;   /* all items found, stop */
                Dmsg2(dbglvl, "All done=(file:block) %u:%u\n", dev->file, dev->block_num);
@@ -274,6 +278,7 @@ bool read_records(DCR *dcr,
                rec->VolSessionId, rec->VolSessionTime, rec->FileIndex);
             break;                    /* read second part of record */
          }
+
          Dmsg6(dbglvl, "OK callback. recno=%d state=%s blk=%d SI=%d ST=%d FI=%d\n", record,
                rec_state_to_str(rec), block->BlockNumber,
                rec->VolSessionId, rec->VolSessionTime, rec->FileIndex);
@@ -339,19 +344,21 @@ static bool try_repositioning(JCR *jcr, DEV_RECORD *rec, DCR *dcr)
        *   when find_next_bsr() is fixed not to return a bsr already
        *   completed.
        */
-      if (dev->file > bsr->volfile->sfile ||             
-         (dev->file == bsr->volfile->sfile && dev->block_num > bsr->volblock->sblock)) {
+      uint32_t block, file;
+      /* TODO: use dev->file_addr ? */
+      uint64_t dev_addr = (((uint64_t) dev->file)<<32) | dev->block_num;
+      uint64_t bsr_addr = get_bsr_start_addr(bsr, &file, &block);
+
+      if (dev_addr > bsr_addr) {
          return false;
       }
       if (verbose) {
-         Jmsg(jcr, M_INFO, 0, _("Reposition from (file:block) %u:%u to %u:%u\n"),
-            dev->file, dev->block_num, bsr->volfile->sfile,
-            bsr->volblock->sblock);
+         Jmsg(jcr, M_INFO,0, _("Reposition from (file:block) %u:%u to %u:%u\n"),
+              dev->file, dev->block_num, file, block);
       }
       Dmsg4(10, "Try_Reposition from (file:block) %u:%u to %u:%u\n",
-            dev->file, dev->block_num, bsr->volfile->sfile,
-            bsr->volblock->sblock);
-      dev->reposition(dcr, bsr->volfile->sfile, bsr->volblock->sblock);
+            dev->file, dev->block_num, file, block);
+      dev->reposition(dcr, file, block);
       rec->Block = 0;
    }
    return false;
@@ -364,6 +371,7 @@ static BSR *position_to_first_file(JCR *jcr, DCR *dcr)
 {
    BSR *bsr = NULL;
    DEVICE *dev = dcr->dev;
+   uint32_t file, block;
    /*
     * Now find and position to first file and block
     *   on this tape.
@@ -371,11 +379,11 @@ static BSR *position_to_first_file(JCR *jcr, DCR *dcr)
    if (jcr->bsr) {
       jcr->bsr->reposition = true;    /* force repositioning */
       bsr = find_next_bsr(jcr->bsr, dev);
-      if (bsr && (bsr->volfile->sfile != 0 || bsr->volblock->sblock != 0)) {
+      
+      if (get_bsr_start_addr(bsr, &file, &block) > 0) {
          Jmsg(jcr, M_INFO, 0, _("Forward spacing Volume \"%s\" to file:block %u:%u.\n"),
-            dev->VolHdr.VolumeName,
-            bsr->volfile->sfile, bsr->volblock->sblock);
-         dev->reposition(dcr, bsr->volfile->sfile, bsr->volblock->sblock);
+              dev->VolHdr.VolumeName, file, block);
+         dev->reposition(dcr, file, block);
       }
    }
    return bsr;

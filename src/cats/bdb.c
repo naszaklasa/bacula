@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -35,7 +35,7 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb.c 7295 2008-07-03 10:06:43Z kerns $
+ *    Version $Id: bdb.c 7380 2008-07-14 10:42:59Z kerns $
  *
  */
 
@@ -51,6 +51,8 @@
 #ifdef HAVE_BACULA_DB
 
 uint32_t bacula_db_version = 0;
+
+int db_type = 0;
 
 /* List of open databases */
 static BQUEUE db_list = {&db_list, &db_list};
@@ -71,6 +73,16 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 #define DB_JOBMEDIA_FILENAME "jobmedia.db"
 #define DB_CLIENT_FILENAME   "client.db"
 #define DB_FILESET_FILENAME  "fileset.db"
+
+
+B_DB *db_init(JCR *jcr, const char *db_driver, const char *db_name, const char *db_user, 
+              const char *db_password, const char *db_address, int db_port, 
+              const char *db_socket, int mult_db_connections)
+{              
+   return db_init_database(jcr, db_name, db_user, db_password, db_address,
+             db_port, db_socket, mult_db_connections);
+}
+
 
 dbid_list::dbid_list() 
 {
@@ -318,9 +330,9 @@ char *db_strerror(B_DB *mdb)
    return mdb->errmsg;
 }
 
-int db_sql_query(B_DB *mdb, char const *query, DB_RESULT_HANDLER *result_handler, void *ctx)
+bool db_sql_query(B_DB *mdb, char const *query, DB_RESULT_HANDLER *result_handler, void *ctx)
 {
-   return 1;
+   return true;
 }
 
 /*
@@ -500,6 +512,281 @@ db_list_pool_records(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr,
 
 int db_int64_handler(void *ctx, int num_fields, char **row)
 { return 0; }
+
+bool db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
+{
+   return true;
+}
+
+int db_create_file_item(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
+{
+   return 1;
+}
+
+
+/*
+ * Create a new record for the Job
+ *   This record is created at the start of the Job,
+ *   it is updated in bdb_update.c when the Job terminates.
+ *
+ * Returns: 0 on failure
+ *          1 on success
+ */
+bool db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
+{
+   return 0;
+}
+
+/* Create a JobMedia record for Volume used this job
+ * Returns: 0 on failure
+ *          record-id on success
+ */
+bool db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
+{
+   return 0;
+}
+
+
+/*
+ *  Create a unique Pool record
+ * Returns: 0 on failure
+ *          1 on success
+ */
+bool db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
+{
+   return 0;
+}
+
+bool db_create_device_record(JCR *jcr, B_DB *mdb, DEVICE_DBR *dr)
+{ return false; }
+
+bool db_create_storage_record(JCR *jcr, B_DB *mdb, STORAGE_DBR *dr)
+{ return false; }
+
+bool db_create_mediatype_record(JCR *jcr, B_DB *mdb, MEDIATYPE_DBR *dr)
+{ return false; }
+
+
+/*
+ * Create Unique Media record.  This record
+ *   contains all the data pertaining to a specific
+ *   Volume.
+ *
+ * Returns: 0 on failure
+ *          1 on success
+ */
+int db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+{
+   return 0;
+}
+
+int db_create_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr)
+{
+   return 0;
+}
+
+bool db_create_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
+{
+   return false;
+}
+
+int db_create_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
+{ return 0; }
+
+bool db_write_batch_file_records(JCR *jcr) { return false; }
+bool my_batch_start(JCR *jcr, B_DB *mdb) { return false; }
+bool my_batch_end(JCR *jcr, B_DB *mdb, const char *error) { return false; }
+bool my_batch_insert(JCR *jcr, B_DB *mdb, ATTR_DBR *ar) { return false; }
+    
+int db_delete_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
+{
+   return 0;
+}
+
+int db_delete_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+{
+   return 0;
+}
+
+bool db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime)
+{
+   return 0;
+}
+
+int
+db_find_next_volume(JCR *jcr, B_DB *mdb, int item, bool InChanger, MEDIA_DBR *mr)
+{
+   return 0;
+}
+
+bool
+db_find_last_jobid(JCR *jcr, B_DB *mdb, const char *Name, JOB_DBR *jr)
+{ return false; }
+
+bool
+db_find_failed_job_since(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM *stime, int &JobLevel)
+{ return false; }
+
+bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
+{
+   return 0;
+}
+
+int db_get_num_pool_records(JCR *jcr, B_DB *mdb)
+{
+   return -1;
+}
+
+int db_get_pool_ids(JCR *jcr, B_DB *mdb, int *num_ids, uint32_t *ids[])
+{ return 0; }
+
+bool db_get_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
+{ return 0; }
+
+int db_get_num_media_records(JCR *jcr, B_DB *mdb)
+{ return -1; }
+
+bool db_get_media_ids(JCR *jcr, B_DB *mdb, uint32_t PoolId, int *num_ids, uint32_t *ids[])
+{ return false; }
+
+bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+{ return false; }
+
+int db_get_job_volume_names(JCR *jcr, B_DB *mdb, uint32_t JobId, POOLMEM **VolumeNames)
+{ return 0; }
+
+int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr)
+{ return 0; }
+
+int db_get_fileset_record(JCR *jcr, B_DB *mdb, FILESET_DBR *fsr)
+{ return 0; }
+
+bool db_get_query_dbids(JCR *jcr, B_DB *mdb, POOL_MEM &query, dbid_list &ids)
+{ return false; }
+
+int db_get_file_attributes_record(JCR *jcr, B_DB *mdb, char *fname, JOB_DBR *jr, FILE_DBR *fdbr)
+{ return 0; }
+
+int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, uint32_t JobId, VOL_PARAMS **VolParams)
+{ return 0; }
+
+int db_get_client_ids(JCR *jcr, B_DB *mdb, int *num_ids, uint32_t *ids[])
+{ return 0; }
+
+int db_get_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
+{ return 0; }
+
+int db_list_sql_query(JCR *jcr, B_DB *mdb, const char *query, DB_LIST_HANDLER *sendit,
+                      void *ctx, int verbose)
+{ return 0; }
+
+void db_list_pool_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ctx)
+{ }
+
+void db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
+                           DB_LIST_HANDLER *sendit, void *ctx)
+{ }
+
+void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
+                              DB_LIST_HANDLER *sendit, void *ctx)
+{  }
+   
+void db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr,
+                         DB_LIST_HANDLER *sendit, void *ctx)
+{ }
+
+void db_list_job_totals(JCR *jcr, B_DB *mdb, JOB_DBR *jr,
+                        DB_LIST_HANDLER *sendit, void *ctx)
+{ }
+
+void db_list_files_for_job(JCR *jcr, B_DB *mdb, uint32_t jobid, DB_LIST_HANDLER *sendit, void *ctx)
+{ }
+
+void db_list_client_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ctx)
+{ }
+
+int db_list_sql_query(JCR *jcr, B_DB *mdb, const char *query, DB_LIST_HANDLER *sendit,
+                      void *ctx, int verbose, e_list_type type)
+{
+   return 0;
+}
+
+void
+db_list_pool_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
+{ }
+
+void
+db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
+                      DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
+{ }
+
+void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
+                              DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
+{ }
+
+void
+db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr, DB_LIST_HANDLER *sendit,
+                    void *ctx, e_list_type type)
+{ }
+
+void
+db_list_client_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
+{ }
+
+bool db_update_job_start_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
+{
+   return false;
+}
+
+/*
+ * This is called at Job termination time to add all the
+ * other fields to the job record.
+ */
+int db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, bool stats_enabled)
+{
+   return 0;
+}
+
+
+int db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+{
+   return 0;
+}
+
+int db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
+{
+   return 0;
+}
+
+int db_add_digest_to_file_record(JCR *jcr, B_DB *mdb, FileId_t FileId, char *digest, int type)
+{
+   return 1;
+}
+
+int db_mark_file_record(JCR *jcr, B_DB *mdb, FileId_t FileId, JobId_t JobId)
+{
+   return 1;
+}
+
+int db_update_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr)
+{
+   return 1;
+}
+
+int db_update_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
+{
+   return 0;
+}
+
+int db_update_media_defaults(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+{
+   return 1;
+}
+
+void db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+{
+  return;
+}
 
 
 #endif /* HAVE_BACULA_DB */

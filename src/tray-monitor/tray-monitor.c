@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *     Nicolas Boichat, August MMIV
  *
- *     Version $Id: tray-monitor.c 5752 2007-10-16 19:00:51Z kerns $
+ *     Version $Id: tray-monitor.c 8414 2009-01-30 09:20:41Z kerns $
  */
 
 
@@ -46,6 +46,7 @@
 int authenticate_director(JCR *jcr, MONITOR *monitor, DIRRES *director);
 int authenticate_file_daemon(JCR *jcr, MONITOR *monitor, CLIENT* client);
 int authenticate_storage_daemon(JCR *jcr, MONITOR *monitor, STORE* store);
+extern bool parse_tmon_config(CONFIG *config, const char *configfile, int exit_code);
 
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
@@ -63,6 +64,7 @@ static int nitems = 0;
 static int fullitem = 0; //Item to be display in detailled status window
 static int lastupdated = -1; //Last item updated
 static monitoritem items[32];
+static CONFIG *config;
 
 /* Data received from DIR/FD/SD */
 static char OKqstatus[]   = "%c000 OK .status\n";
@@ -97,6 +99,7 @@ static GtkWidget *window;
 static GtkWidget *textview;
 static GtkTextBuffer *buffer;
 static GtkWidget *timeoutspinner;
+static GtkWidget *scrolledWindow;
 char** xpm_generic_var;
 static gboolean blinkstate = TRUE;
 
@@ -112,7 +115,8 @@ PROG_COPYRIGHT
 "\nVersion: %s (%s) %s %s %s\n\n"
 "Usage: tray-monitor [-c config_file] [-d debug_level]\n"
 "       -c <file>     set configuration file to file\n"
-"       -dnn          set debug level to nn\n"
+"       -d <nn>       set debug level to <nn>\n"
+"       -dt           print timestamp in debug output\n"
 "       -t            test - read configuration and exit\n"
 "       -?            print this message.\n"
 "\n"), 2004, VERSION, BDATE, HOST_OS, DISTNAME, DISTVER);
@@ -219,9 +223,13 @@ int main(int argc, char *argv[])
          break;
 
       case 'd':
-         debug_level = atoi(optarg);
-         if (debug_level <= 0) {
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
          }
          break;
 
@@ -248,7 +256,8 @@ int main(int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_tmon_config(config, configfile, M_ERROR_TERM);
 
    LockRes();
    nitems = 0;
@@ -409,9 +418,13 @@ int main(int argc, char *argv[])
    }
 
    gtk_box_pack_start(GTK_BOX(vbox), daemon_table, FALSE, FALSE, 0);
-
+  
    textview = gtk_text_view_new();
 
+   scrolledWindow = gtk_scrolled_window_new(NULL, NULL);
+   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolledWindow), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+   gtk_container_add(GTK_CONTAINER (scrolledWindow), textview);
+   
    buffer = gtk_text_buffer_new(NULL);
 
    gtk_text_buffer_set_text(buffer, "", -1);
@@ -456,7 +469,7 @@ int main(int argc, char *argv[])
 
    gtk_text_view_set_buffer(GTK_TEXT_VIEW(textview), buffer);
 
-   gtk_box_pack_start(GTK_BOX(vbox), textview, TRUE, TRUE, 0);
+   gtk_box_pack_start(GTK_BOX(vbox), scrolledWindow, TRUE, TRUE, 0);
 
    GtkWidget* hbox = gtk_hbox_new(FALSE, 10);
 
@@ -524,6 +537,9 @@ int main(int argc, char *argv[])
    
    gtk_object_destroy(GTK_OBJECT(window));
    gtk_object_destroy(GTK_OBJECT(mTrayMenu));
+   config->free_resources();
+   free(config);
+   config = NULL;
    term_msg();
 
 #if TRAY_DEBUG_MEMORY

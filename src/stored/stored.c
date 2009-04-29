@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -35,15 +35,34 @@
  * it opens a data channel and accepts data from the
  * File daemon.
  *
- *   Version $Id: stored.c 6747 2008-04-06 10:00:46Z kerns $
+ *   Version $Id: stored.c 8132 2008-12-09 19:21:38Z ricozz $
  *
  */
 
 #include "bacula.h"
 #include "stored.h"
 
-/* Imported functions */
+/* TODO: fix problem with bls, bextract
+ * that use findlib and already declare
+ * filed plugins 
+ */
+#include "sd_plugins.h"         
 
+#ifdef HAVE_PYTHON
+
+#undef _POSIX_C_SOURCE
+#include <Python.h>
+
+#include "lib/pythonlib.h"
+
+/* Imported Functions */
+extern PyObject *job_getattr(PyObject *self, char *attrname);
+extern int job_setattr(PyObject *self, char *attrname, PyObject *value);
+
+#endif /* HAVE_PYTHON */
+
+/* Imported functions */
+extern bool parse_sd_config(CONFIG *config, const char *configfile, int exit_code);
 
 /* Forward referenced functions */
 void terminate_stored(int sig);
@@ -73,6 +92,7 @@ bool init_done = false;
 static bool foreground = 0;
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static workq_t dird_workq;            /* queue for processing connections */
+static CONFIG *config;
 
 
 static void usage()
@@ -82,7 +102,8 @@ PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: stored [options] [-c config_file] [config_file]\n"
 "        -c <file>   use <file> as configuration file\n"
-"        -dnn        set debug level to nn\n"
+"        -d <nn>     set debug level to <nn>\n"
+"        -dt         print timestamp in debug output\n"
 "        -f          run in foreground (for debugging)\n"
 "        -g <group>  set groupid to group\n"
 "        -p          proceed despite I/O errors\n"
@@ -112,6 +133,9 @@ int main (int argc, char *argv[])
    pthread_t thid;
    char *uid = NULL;
    char *gid = NULL;
+#ifdef HAVE_PYTHON
+   init_python_interpreter_args python_args;
+#endif /* HAVE_PYTHON */
 
    start_heap = sbrk(0);
    setlocale(LC_ALL, "");
@@ -142,9 +166,13 @@ int main (int argc, char *argv[])
          break;
 
       case 'd':                    /* debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0) {
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
          }
          break;
 
@@ -204,7 +232,8 @@ int main (int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_sd_config(config, configfile, M_ERROR_TERM);
 
    if (init_crypto() != 0) {
       Jmsg((JCR *)NULL, M_ERROR_TERM, 0, _("Cryptography library initialization failed.\n"));
@@ -230,6 +259,8 @@ int main (int argc, char *argv[])
    create_pid_file(me->pid_directory, "bacula-sd", get_first_port_host_order(me->sdaddrs));
    read_state_file(me->working_directory, "bacula-sd", get_first_port_host_order(me->sdaddrs));
 
+   load_sd_plugins(me->plugin_directory);
+
    drop(uid, gid);
 
    cleanup_old_files();
@@ -243,7 +274,17 @@ int main (int argc, char *argv[])
       Jmsg0(NULL, M_ABORT, 0, _("Volume Session Time is ZERO!\n"));
    }
 
-   init_python_interpreter(me->hdr.name, me->scripts_directory, "SDStartUp");
+#ifdef HAVE_PYTHON
+   python_args.progname = me->hdr.name;
+   python_args.scriptdir = me->scripts_directory;
+   python_args.modulename = "SDStartUp";
+   python_args.configfile = configfile;
+   python_args.workingdir = me->working_directory;
+   python_args.job_getattr = job_getattr;
+   python_args.job_setattr = job_setattr;
+
+   init_python_interpreter(&python_args);
+#endif /* HAVE_PYTHON */
 
    /* Make sure on Solaris we can run concurrent, watch dog + servers + misc */
    set_thread_concurrency(me->max_concurrent_jobs * 2 + 4);
@@ -251,7 +292,7 @@ int main (int argc, char *argv[])
     /*
      * Start the device allocation thread
      */
-   create_volume_list();              /* do before device_init */
+   create_volume_lists();             /* do before device_init */
    if (pthread_create(&thid, NULL, device_initialization, NULL) != 0) {
       berrno be;
       Emsg1(M_ABORT, 0, _("Unable to create thread. ERR=%s\n"), be.bstrerror());
@@ -282,6 +323,7 @@ uint32_t newVolSessionId()
 static int check_resources()
 {
    bool OK = true;
+   bool tls_needed;
 
 
    me = (STORES *)GetNextRes(R_STORAGE, NULL);
@@ -336,19 +378,21 @@ static int check_resources()
          }
       }
 
-      if (!store->tls_certfile && store->tls_enable) {
+      tls_needed = store->tls_enable || store->tls_authenticate;
+
+      if (!store->tls_certfile && tls_needed) {
          Jmsg(NULL, M_FATAL, 0, _("\"TLS Certificate\" file not defined for Storage \"%s\" in %s.\n"),
               store->hdr.name, configfile);
          OK = false;
       }
 
-      if (!store->tls_keyfile && store->tls_enable) {
+      if (!store->tls_keyfile && tls_needed) {
          Jmsg(NULL, M_FATAL, 0, _("\"TLS Key\" file not defined for Storage \"%s\" in %s.\n"),
               store->hdr.name, configfile);
          OK = false;
       }
 
-      if ((!store->tls_ca_certfile && !store->tls_ca_certdir) && store->tls_enable && store->tls_verify_peer) {
+      if ((!store->tls_ca_certfile && !store->tls_ca_certdir) && tls_needed && store->tls_verify_peer) {
          Jmsg(NULL, M_FATAL, 0, _("Neither \"TLS CA Certificate\""
               " or \"TLS CA Certificate Dir\" are defined for Storage \"%s\" in %s."
               " At least one CA certificate store is required"
@@ -358,7 +402,7 @@ static int check_resources()
       }
 
       /* If everything is well, attempt to initialize our per-resource TLS context */
-      if (OK && (store->tls_enable || store->tls_require)) {
+      if (OK && (tls_needed || store->tls_require)) {
          /* Initialize TLS context:
           * Args: CA certfile, CA certdir, Certfile, Keyfile,
           * Keyfile PEM Callback, Keyfile CB Userdata, DHfile, Verify Peer */
@@ -381,19 +425,21 @@ static int check_resources()
          director->tls_enable = true;
       }
 
-      if (!director->tls_certfile && director->tls_enable) {
+      tls_needed = director->tls_enable || director->tls_authenticate;
+
+      if (!director->tls_certfile && tls_needed) {
          Jmsg(NULL, M_FATAL, 0, _("\"TLS Certificate\" file not defined for Director \"%s\" in %s.\n"),
               director->hdr.name, configfile);
          OK = false;
       }
 
-      if (!director->tls_keyfile && director->tls_enable) {
+      if (!director->tls_keyfile && tls_needed) {
          Jmsg(NULL, M_FATAL, 0, _("\"TLS Key\" file not defined for Director \"%s\" in %s.\n"),
               director->hdr.name, configfile);
          OK = false;
       }
 
-      if ((!director->tls_ca_certfile && !director->tls_ca_certdir) && director->tls_enable && director->tls_verify_peer) {
+      if ((!director->tls_ca_certfile && !director->tls_ca_certdir) && tls_needed && director->tls_verify_peer) {
          Jmsg(NULL, M_FATAL, 0, _("Neither \"TLS CA Certificate\""
               " or \"TLS CA Certificate Dir\" are defined for Director \"%s\" in %s."
               " At least one CA certificate store is required"
@@ -403,7 +449,7 @@ static int check_resources()
       }
 
       /* If everything is well, attempt to initialize our per-resource TLS context */
-      if (OK && (director->tls_enable || director->tls_require)) {
+      if (OK && (tls_needed || director->tls_require)) {
          /* Initialize TLS context:
           * Args: CA certfile, CA certdir, Certfile, Keyfile,
           * Keyfile PEM Callback, Keyfile CB Userdata, DHfile, Verify Peer */
@@ -435,6 +481,7 @@ static int check_resources()
 static void cleanup_old_files()
 {
    POOLMEM *cleanup = get_pool_memory(PM_MESSAGE);
+   POOLMEM *results = get_pool_memory(PM_MESSAGE);
    int len = strlen(me->working_directory);
 #if defined(HAVE_WIN32)
    pm_strcpy(cleanup, "del /q ");
@@ -447,8 +494,9 @@ static void cleanup_old_files()
    }
    pm_strcat(cleanup, my_name);
    pm_strcat(cleanup, "*.spool");
-   run_program(cleanup, 0, NULL);
+   run_program(cleanup, 0, results);
    free_pool_memory(cleanup);
+   free_pool_memory(results);
 }
 
 
@@ -468,7 +516,7 @@ void *device_initialization(void *arg)
 
    pthread_detach(pthread_self());
    jcr = new_jcr(sizeof(JCR), stored_free_jcr);
-   jcr->JobType = JT_SYSTEM;
+   jcr->set_JobType(JT_SYSTEM);
    /* Initialize FD start condition variable */
    int errstat = pthread_cond_init(&jcr->job_start_wait, NULL);
    if (errstat != 0) {
@@ -585,7 +633,8 @@ void terminate_stored(int sig)
 
    Dmsg1(200, "In terminate_stored() sig=%d\n", sig);
 
-   free_volume_list();
+   unload_plugins();
+   free_volume_lists();
 
    foreach_res(device, R_DEVICE) {
       Dmsg1(10, "Term device %s\n", device->device_name);
@@ -602,7 +651,11 @@ void terminate_stored(int sig)
       free(configfile);
       configfile = NULL;
    }
-   free_config_resources();
+   if (config) {
+      config->free_resources();
+      free(config);
+      config = NULL;
+  }
 
    if (debug_level > 10) {
       print_memory_pool_stats();
@@ -611,6 +664,7 @@ void terminate_stored(int sig)
    cleanup_crypto();
    term_reservations_lock();
    close_memory_pool();
+   lmgr_cleanup_main();
 
    sm_dump(false);                    /* dump orphaned buffers */
    exit(sig);

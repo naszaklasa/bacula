@@ -1,25 +1,7 @@
 /*
-    Define integer types for Bacula -- Kern Sibbald
-
-    Integer types.  These types should be be used in all
-    contexts in which the length of an integer stored on
-    removable media must be known regardless of the
-    architecture of the platform.
-
-    Bacula types are:
-
-    int8_t,  int16_t,  int32_t,  int64_t
-    uint8_t, uint16_t, uint32_t, uint64_t
-
-    Also, we define types such as file address lengths.
-
-    Version $Id: bc_types.h 5984 2007-11-25 16:12:14Z kerns $
-
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -38,15 +20,47 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+    Define integer types for Bacula -- Kern Sibbald
+
+    Integer types.  These types should be be used in all
+    contexts in which the length of an integer stored on
+    removable media must be known regardless of the
+    architecture of the platform.
+
+    Bacula types are:
+
+    int8_t,  int16_t,  int32_t,  int64_t
+    uint8_t, uint16_t, uint32_t, uint64_t
+
+    Also, we define types such as file address lengths.
+
+    Version $Id: bc_types.h 8584 2009-03-23 08:56:20Z ricozz $
+
+ */
 
 
 #ifndef __bc_types_INCLUDED
 #define __bc_types_INCLUDED
+
+/*
+ * These are the sizes of the current definitions of database
+ *  Ids.  In general, FileId_t can be set to uint64_t and it
+ *  *should* work.  Users have reported back that it does work
+ *  for PostgreSQL.  For the other types, all places in Bacula
+ *  have been converted, but no one has actually tested it.
+ * In principle, the only field that really should need to be
+ *  64 bits is the FileId_t
+ */
+typedef uint64_t FileId_t;
+typedef uint32_t DBId_t;              /* general DB id type */
+typedef uint32_t JobId_t;
+
 
 typedef char POOLMEM;
 
@@ -147,6 +161,31 @@ typedef u_int64_t u_intmax_t;
 # endif
 #endif
 
+#ifndef HAVE_INTPTR_T
+#define HAVE_INTPTR_T 1
+# if (SIZEOF_INT_P == 4)
+typedef int32_t intptr_t;
+# else
+#  if (SIZEOF_INT_P == 8)
+typedef int64_t intptr_t;
+#  else
+#   error "Can't find sizeof pointer. Required!"
+#  endif
+# endif
+#endif
+
+#ifndef HAVE_UINTPTR_T
+#define HAVE_UINTPTR_T 1
+# if (SIZEOF_INT_P == 4)
+typedef uint32_t uintptr_t;
+# else
+#  if (SIZEOF_INT_P == 8)
+typedef uint64_t uintptr_t;
+#  else
+#   error "Can't find sizeof pointer. Required!"
+#  endif
+# endif
+#endif
 
 /* Limits for the above types. */
 #undef INT8_MIN
@@ -172,7 +211,6 @@ typedef u_int64_t u_intmax_t;
 typedef double            float64_t;
 typedef float             float32_t;
 
-#endif /* __bc_types_INCLUDED */
 
 /* Define the uint versions actually used in Bacula */
 #ifndef uint8_t
@@ -197,3 +235,23 @@ typedef float             float32_t;
 #else
 #define sockopt_val_t void *
 #endif
+
+/*
+ * Status codes returned by create_file()
+ *   Used in findlib, filed, and plugins
+ */
+enum {
+   CF_SKIP = 1,                       /* skip file (not newer or something) */
+   CF_ERROR,                          /* error creating file */
+   CF_EXTRACT,                        /* file created, data to extract */
+   CF_CREATED                         /* file created, no data to extract */
+};
+
+#ifndef MAX
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
+#endif /* __bc_types_INCLUDED */

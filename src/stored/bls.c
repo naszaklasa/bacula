@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  * 
  *  Kern Sibbald, MM
  *
- *   Version $Id: bls.c 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: bls.c 8510 2009-03-07 21:19:49Z kerns $
  */
 
 #include "bacula.h"
@@ -40,6 +40,7 @@
 
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
+extern bool parse_sd_config(CONFIG *config, const char *configfile, int exit_code);
 
 static void do_blocks(char *infname);
 static void do_jobs(char *infname);
@@ -58,6 +59,7 @@ static JCR *jcr;
 static SESSION_LABEL sessrec;
 static uint32_t num_files = 0;
 static ATTR *attr;
+static CONFIG *config;
 
 #define CONFIG_FILE "bacula-sd.conf"
 char *configfile = NULL;
@@ -78,8 +80,9 @@ PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bls [options] <device-name>\n"
 "       -b <file>       specify a bootstrap file\n"
-"       -c <file>       specify a config file\n"
+"       -c <file>       specify a Storage configuration file\n"
 "       -d <nn>         set debug level to <nn>\n"
+"       -dt             print timestamp in debug output\n"
 "       -e <file>       exclude list\n"
 "       -i <file>       include list\n"
 "       -j              list jobs\n"
@@ -213,7 +216,8 @@ int main (int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_sd_config(config, configfile, M_ERROR_TERM);
 
    if (ff->included_files_list == NULL) {
       add_fname_to_include_list(ff, 0, "/");
@@ -402,7 +406,12 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          print_ls_output(jcr, attr);
          num_files++;
       }
+   } else if (rec->Stream == STREAM_PLUGIN_NAME) {
+      if (strncmp("0 0", rec->data, 3) != 0) {
+         Pmsg1(000, "Plugin data: %s\n", rec->data);
+      }
    }
+      
    return true;
 }
 

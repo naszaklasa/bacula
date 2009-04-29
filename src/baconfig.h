@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -29,7 +29,7 @@
  * General header file configurations that apply to
  * all daemons.  System dependent stuff goes here.
  *
- *   Version $Id: baconfig.h 7001 2008-05-21 11:59:00Z kerns $
+ *   Version $Id: baconfig.h 8584 2009-03-23 08:56:20Z ricozz $
  */
 
 
@@ -43,13 +43,6 @@
 #define TRUE  1
 #define FALSE 0
 
-#ifndef MAX
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-
 #ifdef HAVE_TLS
 #define have_tls 1
 #else
@@ -59,6 +52,8 @@
 #ifndef ETIME
 #define ETIME ETIMEDOUT
 #endif
+
+#define ioctl_req_t long unsigned int
 
 #ifdef PROTOTYPES
 # define __PROTO(p)     p
@@ -77,7 +72,8 @@
 
 /* Allow printing of NULL pointers */
 #define NPRT(x) (x)?(x):_("*None*")
- 
+#define NPRTB(x) (x)?(x):""
+
 #if defined(HAVE_WIN32)
 
 #define WIN32_REPARSE_POINT 1
@@ -89,6 +85,7 @@ void InitWinAPIWrapper();
 
 #define sbrk(x)  0
 
+#define clear_thread_id(x) memset(&(x), 0, sizeof(x))
 
 #if defined(BUILDING_DLL)
 #  define DLL_IMP_EXP   _declspec(dllexport)
@@ -104,19 +101,16 @@ void InitWinAPIWrapper();
 #  define CATS_IMP_EXP
 #endif
 
-#else
+#else  /* HAVE_WIN32 */
+
+#define clear_thread_id(x) x = 0
 
 #define DLL_IMP_EXP
 #define CATS_IMP_EXP
 
 #define  OSDependentInit()
-#define  tape_open            open
-#define  tape_ioctl           ioctl
-#define  tape_read            ::read
-#define  tape_write           ::write
-#define  tape_close           ::close
 
-#endif
+#endif /* HAVE_WIN32 */
 
 
 #ifdef ENABLE_NLS
@@ -198,7 +192,7 @@ void InitWinAPIWrapper();
 #define DEFAULT_NETWORK_BUFFER_SIZE (64 * 1024)
 
 /*
- * Stream definitions.  Once defined these must NEVER
+ * Stream definitions. Once defined these must NEVER
  *   change as they go on the storage media.
  * Note, the following streams are passed from the SD to the DIR
  *   so that they may be put into the catalog (actually only the
@@ -211,45 +205,103 @@ void InitWinAPIWrapper();
  *   STREAM_SHA256_DIGEST
  *   STREAM_SHA512_DIGEST
  */
-#define STREAM_NONE               0    /* Reserved Non-Stream */
-#define STREAM_UNIX_ATTRIBUTES    1    /* Generic Unix attributes */
-#define STREAM_FILE_DATA          2    /* Standard uncompressed data */
-#define STREAM_MD5_SIGNATURE      3    /* deprecated */
-#define STREAM_MD5_DIGEST         3    /* MD5 digest for the file */
-#define STREAM_GZIP_DATA          4    /* GZip compressed file data */
-/* Extended Unix attributes with Win32 Extended data.  Deprecated. */
-#define STREAM_UNIX_ATTRIBUTES_EX 5    /* Extended Unix attr for Win32 EX */
-#define STREAM_SPARSE_DATA        6    /* Sparse data stream */
-#define STREAM_SPARSE_GZIP_DATA   7
-#define STREAM_PROGRAM_NAMES      8    /* program names for program data */
-#define STREAM_PROGRAM_DATA       9    /* Data needing program */
-#define STREAM_SHA1_SIGNATURE    10    /* deprecated */
-#define STREAM_SHA1_DIGEST       10    /* SHA1 digest for the file */
-#define STREAM_WIN32_DATA        11    /* Win32 BackupRead data */
-#define STREAM_WIN32_GZIP_DATA   12    /* Gzipped Win32 BackupRead data */
-#define STREAM_MACOS_FORK_DATA   13    /* Mac resource fork */
-#define STREAM_HFSPLUS_ATTRIBUTES 14   /* Mac OS extra attributes */
-/*** FIXME ***/
-#define STREAM_UNIX_ATTRIBUTES_ACCESS_ACL 15 /* Standard ACL attributes on UNIX */
-#define STREAM_UNIX_ATTRIBUTES_DEFAULT_ACL 16 /* Default ACL attributes on UNIX */
-/*** FIXME ***/
-#define STREAM_SHA256_DIGEST              17   /* SHA-256 digest for the file */
-#define STREAM_SHA512_DIGEST              18   /* SHA-512 digest for the file */
-#define STREAM_SIGNED_DIGEST              19   /* Signed File Digest, ASN.1, DER Encoded */
-#define STREAM_ENCRYPTED_FILE_DATA        20   /* Encrypted, uncompressed data */
-#define STREAM_ENCRYPTED_WIN32_DATA       21   /* Encrypted, uncompressed Win32 BackupRead data */
-#define STREAM_ENCRYPTED_SESSION_DATA     22   /* Encrypted Session Data, ASN.1, DER Encoded */
-#define STREAM_ENCRYPTED_FILE_GZIP_DATA   23   /* Encrypted, compressed data */
-#define STREAM_ENCRYPTED_WIN32_GZIP_DATA  24   /* Encrypted, compressed Win32 BackupRead data */
-#define STREAM_ENCRYPTED_MACOS_FORK_DATA  25   /* Encrypted, uncompressed Mac resource fork */
+#define STREAM_NONE                         0    /* Reserved Non-Stream */
+#define STREAM_UNIX_ATTRIBUTES              1    /* Generic Unix attributes */
+#define STREAM_FILE_DATA                    2    /* Standard uncompressed data */
+#define STREAM_MD5_SIGNATURE                3    /* deprecated */
+#define STREAM_MD5_DIGEST                   3    /* MD5 digest for the file */
+#define STREAM_GZIP_DATA                    4    /* GZip compressed file data */
+#define STREAM_UNIX_ATTRIBUTES_EX           5    /* Extended Unix attr for Win32 EX - Deprecated */
+#define STREAM_SPARSE_DATA                  6    /* Sparse data stream */
+#define STREAM_SPARSE_GZIP_DATA             7    /* Sparse gzipped data stream */
+#define STREAM_PROGRAM_NAMES                8    /* program names for program data */
+#define STREAM_PROGRAM_DATA                 9    /* Data needing program */
+#define STREAM_SHA1_SIGNATURE              10    /* deprecated */
+#define STREAM_SHA1_DIGEST                 10    /* SHA1 digest for the file */
+#define STREAM_WIN32_DATA                  11    /* Win32 BackupRead data */
+#define STREAM_WIN32_GZIP_DATA             12    /* Gzipped Win32 BackupRead data */
+#define STREAM_MACOS_FORK_DATA             13    /* Mac resource fork */
+#define STREAM_HFSPLUS_ATTRIBUTES          14    /* Mac OS extra attributes */
+#define STREAM_UNIX_ACCESS_ACL             15    /* Standard ACL attributes on UNIX - Deprecated */
+#define STREAM_UNIX_DEFAULT_ACL            16    /* Default ACL attributes on UNIX - Deprecated */
+#define STREAM_SHA256_DIGEST               17    /* SHA-256 digest for the file */
+#define STREAM_SHA512_DIGEST               18    /* SHA-512 digest for the file */
+#define STREAM_SIGNED_DIGEST               19    /* Signed File Digest, ASN.1, DER Encoded */
+#define STREAM_ENCRYPTED_FILE_DATA         20    /* Encrypted, uncompressed data */
+#define STREAM_ENCRYPTED_WIN32_DATA        21    /* Encrypted, uncompressed Win32 BackupRead data */
+#define STREAM_ENCRYPTED_SESSION_DATA      22    /* Encrypted Session Data, ASN.1, DER Encoded */
+#define STREAM_ENCRYPTED_FILE_GZIP_DATA    23    /* Encrypted, compressed data */
+#define STREAM_ENCRYPTED_WIN32_GZIP_DATA   24    /* Encrypted, compressed Win32 BackupRead data */
+#define STREAM_ENCRYPTED_MACOS_FORK_DATA   25    /* Encrypted, uncompressed Mac resource fork */
+#define STREAM_PLUGIN_NAME                 26    /* Plugin "file" string */
+#define STREAM_PLUGIN_DATA                 27    /* Plugin specific data */
 
+/*
+ * Additional Stream definitions. Once defined these must NEVER
+ *   change as they go on the storage media.
+ *
+ * The Stream numbers from 1000-1999 are reserved for ACL and extended attribute streams.
+ * Each different platform has its own stream id(s), if a platform supports multiple stream types
+ * it should supply different handlers for each type it supports and this should be called
+ * from the stream dispatch function. Currently in this reserved space we allocate the
+ * different acl streams from 1000 on and the different extended attributes streams from
+ * 1999 down. So the two naming spaces grows towards each other.
+ */
+#define STREAM_ACL_AIX_TEXT              1000    /* AIX specific string representation from acl_get */
+#define STREAM_ACL_DARWIN_ACCESS_ACL     1001    /* Darwin (OSX) specific acl_t string representation
+                                                  * from acl_to_text (POSIX acl)
+                                                  */
+#define STREAM_ACL_FREEBSD_DEFAULT_ACL   1002    /* FreeBSD specific acl_t string representation
+                                                  * from acl_to_text (POSIX acl) for default acls.
+                                                  */
+#define STREAM_ACL_FREEBSD_ACCESS_ACL    1003    /* FreeBSD specific acl_t string representation
+                                                  * from acl_to_text (POSIX acl) for access acls.
+                                                  */
+#define STREAM_ACL_HPUX_ACL_ENTRY        1004    /* HPUX specific acl_entry string representation
+                                                  * from acltostr (POSIX acl)
+                                                  */
+#define STREAM_ACL_IRIX_DEFAULT_ACL      1005    /* IRIX specific acl_t string representation
+                                                  * from acl_to_text (POSIX acl) for default acls.
+                                                  */
+#define STREAM_ACL_IRIX_ACCESS_ACL       1006    /* IRIX specific acl_t string representation
+                                                  * from acl_to_text (POSIX acl) for access acls.
+                                                  */
+#define STREAM_ACL_LINUX_DEFAULT_ACL     1007    /* Linux specific acl_t string representation
+                                                  * from acl_to_text (POSIX acl) for default acls.
+                                                  */
+#define STREAM_ACL_LINUX_ACCESS_ACL      1008    /* Linux specific acl_t string representation
+                                                  * from acl_to_text (POSIX acl) for access acls.
+                                                  */
+#define STREAM_ACL_TRU64_DEFAULT_ACL     1009    /* Tru64 specific acl_t string representation
+                                                  * from acl_to_text (POSIX acl) for default acls.
+                                                  */
+#define STREAM_ACL_TRU64_DEFAULT_DIR_ACL 1010    /* Tru64 specific acl_t string representation
+                                                  * from acl_to_text (POSIX acl) for default acls.
+                                                  */
+#define STREAM_ACL_TRU64_ACCESS_ACL      1011    /* Tru64 specific acl_t string representation
+                                                  * from acl_to_text (POSIX acl) for access acls.
+                                                  */
+#define STREAM_ACL_SOLARIS_ACLENT        1012    /* Solaris specific aclent_t string representation
+                                                  * from acltotext or acl_totext (POSIX acl)
+                                                  */
+#define STREAM_ACL_SOLARIS_ACE           1013    /* Solaris specific ace_t string representation from
+                                                  * from acl_totext (NFSv4 or ZFS acl)
+                                                  */
+#define STREAM_XATTR_SOLARIS_SYS         1994    /* Solaris specific extensible attributes or
+                                                  * otherwise named extended system attributes.
+                                                  */
+#define STREAM_XATTR_SOLARIS             1995    /* Solaris specific extented attributes */
+#define STREAM_XATTR_DARWIN              1996    /* Darwin (OSX) specific extended attributes */
+#define STREAM_XATTR_FREEBSD             1997    /* FreeBSD specific extended attributes */
+#define STREAM_XATTR_LINUX               1998    /* Linux specific extended attributes */
+#define STREAM_XATTR_NETBSD              1999    /* NetBSD specific extended attributes */
 
 /*
  *  File type (Bacula defined).
  *  NOTE!!! These are saved in the Attributes record on the tape, so
  *          do not change them. If need be, add to them.
  *
- *  This is stored as 32 bits on tape, but only FT_MASK bits are
+ *  This is stored as 32 bits on the Volume, but only FT_MASK (16) bits are
  *    used for the file type. The upper bits are used to indicate
  *    additional optional fields in the attribute record.
  */
@@ -278,6 +330,8 @@ void InitWinAPIWrapper();
 #define FT_INVALIDFS 19               /* File system not allowed for */
 #define FT_INVALIDDT 20               /* Drive type not allowed for */
 #define FT_REPARSE   21               /* Win NTFS reparse point */
+#define FT_PLUGIN    22               /* Plugin generated filename */
+#define FT_DELETED   23               /* Deleted file entry */
 
 /* Definitions for upper part of type word (see above). */
 #define AR_DATA_STREAM (1<<16)        /* Data stream id present */
@@ -360,22 +414,6 @@ typedef int64_t   boffset_t;
 #else
 typedef off_t     boffset_t;
 #endif
-
-#if defined(DEBUG_MUTEX)
-extern void _p(char *file, int line, pthread_mutex_t *m);
-extern void _v(char *file, int line, pthread_mutex_t *m);
-
-#define P(x) _p(__FILE__, __LINE__, &(x))
-#define V(x) _v(__FILE__, __LINE__, &(x))
-
-#else
-extern void _p(pthread_mutex_t *m);
-extern void _v(pthread_mutex_t *m);
-
-#define P(x) _p(&(x))
-#define V(x) _v(&(x))
-
-#endif /* DEBUG_MUTEX */
 
 /* These probably should be subroutines */
 #define Pw(x) \
@@ -537,8 +575,8 @@ class JCR;
 void d_msg(const char *file, int line, int level, const char *fmt,...);
 void p_msg(const char *file, int line, int level, const char *fmt,...);
 void e_msg(const char *file, int line, int type, int level, const char *fmt,...);
-void j_msg(const char *file, int line, JCR *jcr, int type, time_t mtime, const char *fmt,...);
-void q_msg(const char *file, int line, JCR *jcr, int type, time_t mtime, const char *fmt,...);
+void j_msg(const char *file, int line, JCR *jcr, int type, utime_t mtime, const char *fmt,...);
+void q_msg(const char *file, int line, JCR *jcr, int type, utime_t mtime, const char *fmt,...);
 int  m_msg(const char *file, int line, POOLMEM **msgbuf, const char *fmt,...);
 int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...);
 
@@ -605,11 +643,15 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 /* take this 'shortcut' */
 #define fseeko fseek
 #define ftello ftell
+#undef  ioctl_req_t
+#define ioctl_req_t int
 #endif
 
 
 #ifdef __alpha__
 #define OSF 1
+#undef  ioctl_req_t
+#define ioctl_req_t int
 #endif
 
 #ifdef HAVE_SUN_OS
@@ -621,6 +663,8 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 #define set_thread_concurrency(x)  thr_setconcurrency(x)
 extern int thr_setconcurrency(int);
 #define SunOS 1
+#undef  ioctl_req_t
+#define ioctl_req_t int
 
 #else
 
@@ -645,6 +689,9 @@ inline bool IsPathSeparator(int ch) { return ch == '/' || ch == '\\'; }
 inline char *first_path_separator(char *path) { return strpbrk(path, "/\\"); }
 inline const char *first_path_separator(const char *path) { return strpbrk(path, "/\\"); }
 
+extern void pause_msg(const char *file, const char *func, int line, const char *msg);
+#define pause(msg) if (debug_level) pause_msg(__FILE__, __func__, __LINE__, (msg))
+
 #else
 #define PathSeparator '/'
 /* Define Winsock functions if we aren't on Windows */
@@ -655,6 +702,7 @@ inline const char *first_path_separator(const char *path) { return strpbrk(path,
 inline bool IsPathSeparator(int ch) { return ch == '/'; }
 inline char *first_path_separator(char *path) { return strchr(path, '/'); }
 inline const char *first_path_separator(const char *path) { return strchr(path, '/'); }
+#define pause(msg)
 #endif
 
 
@@ -670,6 +718,8 @@ extern int h_errno;
  */
 extern "C" int getdomainname(char *name, int namelen);
 extern "C" int setdomainname(char *name, int namelen);
+#undef  ioctl_req_t
+#define ioctl_req_t int
 #endif /* HAVE_HPUX_OS */
 
 
@@ -677,6 +727,8 @@ extern "C" int setdomainname(char *name, int namelen);
 extern "C" int fchdir(int filedes);
 extern "C" long gethostid(void);
 extern "C" int mknod ( const char *path, int mode, dev_t device );
+#undef  ioctl_req_t
+#define ioctl_req_t int
 #endif
 
 

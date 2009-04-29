@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id: ua_prune.c 8105 2008-12-02 18:49:00Z ricozz $
+ *   Version $Id: ua_prune.c 8478 2009-02-18 20:11:55Z kerns $
  */
 
 #include "bacula.h"
@@ -107,18 +107,22 @@ int file_delete_handler(void *ctx, int num_fields, char **row)
  *    prune files (from) client=xxx
  *    prune jobs (from) client=xxx
  *    prune volume=xxx
+ *    prune stats
  */
 int prunecmd(UAContext *ua, const char *cmd)
 {
+   DIRRES *dir;
    CLIENT *client;
    POOL_DBR pr;
    MEDIA_DBR mr;
+   utime_t retention;
    int kw;
 
    static const char *keywords[] = {
       NT_("Files"),
       NT_("Jobs"),
       NT_("Volume"),
+      NT_("Stats"),
       NULL};
 
    if (!open_client_db(ua)) {
@@ -127,7 +131,7 @@ int prunecmd(UAContext *ua, const char *cmd)
 
    /* First search args */
    kw = find_arg_keyword(ua, keywords);
-   if (kw < 0 || kw > 2) {
+   if (kw < 0 || kw > 3) {
       /* no args, so ask user */
       kw = do_keyword_prompt(ua, _("Choose item to prune"), keywords);
    }
@@ -162,9 +166,40 @@ int prunecmd(UAContext *ua, const char *cmd)
       }
       prune_volume(ua, &mr);
       return true;
+   case 3:  /* prune stats */
+      dir = (DIRRES *)GetNextRes(R_DIRECTOR, NULL);
+      if (!dir->stats_retention) {
+         return false;
+      }
+      retention = dir->stats_retention;
+      if (!confirm_retention(ua, &retention, "Statistics")) {
+         return false;
+      }
+      prune_stats(ua, retention);
+      return true;
    default:
       break;
    }
+
+   return true;
+}
+
+/* Prune Job stat records from the database. 
+ *
+ */
+int prune_stats(UAContext *ua, utime_t retention)
+{
+   char ed1[50];
+   POOL_MEM query(PM_MESSAGE);
+   utime_t now = (utime_t)time(NULL);
+
+   db_lock(ua->db);
+   Mmsg(query, "DELETE FROM JobHisto WHERE JobTDate < %s", 
+        edit_int64(now - retention, ed1));
+   db_sql_query(ua->db, query.c_str(), NULL, NULL);
+   db_unlock(ua->db);
+
+   ua->info_msg(_("Pruned Jobs from JobHisto catalog.\n"));
 
    return true;
 }
@@ -259,14 +294,16 @@ static void drop_temp_tables(UAContext *ua)
 
 static bool create_temp_tables(UAContext *ua)
 {
-   int i;
    /* Create temp tables and indicies */
-   for (i=0; create_deltabs[i]; i++) {
-      if (!db_sql_query(ua->db, create_deltabs[i], NULL, (void *)NULL)) {
-         ua->error_msg("%s", db_strerror(ua->db));
-         Dmsg0(050, "create DelTables table failed\n");
-         return false;
-      }
+   if (!db_sql_query(ua->db, create_deltabs[db_type], NULL, (void *)NULL)) {
+      ua->error_msg("%s", db_strerror(ua->db));
+      Dmsg0(050, "create DelTables table failed\n");
+      return false;
+   }
+   if (!db_sql_query(ua->db, create_delindex, NULL, (void *)NULL)) {
+       ua->error_msg("%s", db_strerror(ua->db));
+       Dmsg0(050, "create DelInx1 index failed\n");
+       return false;
    }
    return true;
 }
@@ -348,6 +385,9 @@ int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
    case JT_ADMIN:
       Mmsg(query, select_admin_del, ed1, ed2);
       break;
+   case JT_COPY:
+      Mmsg(query, select_copy_del, ed1, ed2);
+      break;
    case JT_MIGRATE:
       Mmsg(query, select_migrate_del, ed1, ed2);
       break;
@@ -425,11 +465,8 @@ int get_prune_list_for_volume(UAContext *ua, MEDIA_DBR *mr, del_ctx *del)
 {
    POOL_MEM query(PM_MESSAGE);
    int count = 0;
-   int i;          
    utime_t now, period;
    char ed1[50], ed2[50];
-   JCR *jcr;
-   bool skip;
 
    if (mr->Enabled == 2) {
       return 0;                    /* cannot prune Archived volumes */
@@ -454,26 +491,44 @@ int get_prune_list_for_volume(UAContext *ua, MEDIA_DBR *mr, del_ctx *del)
       Dmsg0(050, "Count failed\n");
       goto bail_out;
    }
+   count = exclude_running_jobs_from_list(del);
+   
+bail_out:
+   return count;
+}
+
+/*
+ * We have a list of jobs to prune or purge. If any of them is
+ *   currently running, we set its JobId to zero which effectively
+ *   excludes it.
+ *
+ * Returns the number of jobs that can be prunned or purged.
+ *
+ */
+int exclude_running_jobs_from_list(del_ctx *prune_list)
+{
+   int count = 0;
+   JCR *jcr;
+   bool skip;
+   int i;          
 
    /* Do not prune any job currently running */
-   for (i=0; i < del->num_ids; i++) {
+   for (i=0; i < prune_list->num_ids; i++) {
       skip = false;
       foreach_jcr(jcr) {
-         if (jcr->JobId == del->JobId[i]) {
-            Dmsg2(150, "skip same job JobId[%d]=%d\n", i, (int)del->JobId[i]);
-            del->JobId[i] = 0;
+         if (jcr->JobId == prune_list->JobId[i]) {
+            Dmsg2(050, "skip running job JobId[%d]=%d\n", i, (int)prune_list->JobId[i]);
+            prune_list->JobId[i] = 0;
             skip = true;
             break;
          }
       }
       endeach_jcr(jcr);
       if (skip) {
-         continue;
+         continue;  /* don't increment count */
       }
-      Dmsg2(150, "accept JobId[%d]=%d\n", i, (int)del->JobId[i]);
+      Dmsg2(050, "accept JobId[%d]=%d\n", i, (int)prune_list->JobId[i]);
       count++;
    }
-
-bail_out:
    return count;
 }

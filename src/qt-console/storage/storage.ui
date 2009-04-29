@@ -5,22 +5,40 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>431</width>
-    <height>296</height>
+    <width>467</width>
+    <height>383</height>
    </rect>
   </property>
   <property name="windowTitle" >
    <string>Storage Tree</string>
   </property>
   <layout class="QGridLayout" >
-   <property name="margin" >
+   <property name="leftMargin" >
     <number>9</number>
    </property>
-   <property name="spacing" >
+   <property name="topMargin" >
+    <number>9</number>
+   </property>
+   <property name="rightMargin" >
+    <number>9</number>
+   </property>
+   <property name="bottomMargin" >
+    <number>9</number>
+   </property>
+   <property name="horizontalSpacing" >
+    <number>6</number>
+   </property>
+   <property name="verticalSpacing" >
     <number>6</number>
    </property>
    <item row="0" column="0" >
-    <widget class="QTreeWidget" name="mp_treeWidget" />
+    <widget class="QTreeWidget" name="mp_treeWidget" >
+     <column>
+      <property name="text" >
+       <string>1</string>
+      </property>
+     </column>
+    </widget>
    </item>
   </layout>
   <action name="actionRefreshStorage" >
@@ -36,7 +54,7 @@
   </action>
   <action name="actionStatusStorageInConsole" >
    <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/status.png</iconset>
+    <iconset resource="../main.qrc" >:/images/status-console.png</iconset>
    </property>
    <property name="text" >
     <string>Status Storage In Console</string>
@@ -106,6 +124,14 @@
    </property>
    <property name="text" >
     <string>Release</string>
+   </property>
+  </action>
+  <action name="actionStatusStorageWindow" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/status.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Status Storage Window</string>
    </property>
   </action>
  </widget>

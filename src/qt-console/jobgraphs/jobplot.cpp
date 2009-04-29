@@ -20,14 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
  
 /*
- *   Version $Id: jobplot.cpp 6962 2008-05-13 06:49:45Z kerns $
+ *   Version $Id: jobplot.cpp 8625 2009-03-28 15:30:41Z bartleyd2 $
  *
  *  JobPlots Class
  *
@@ -35,9 +35,9 @@
  *
  */ 
 
-#include <QtGui>
 #include "bat.h"
-#ifdef HAVE_QWT
+#include <QtGui>
+#include "util/comboutil.h"
 #include "jobgraphs/jobplot.h"
 
 
@@ -77,11 +77,10 @@ JobPlotControls::JobPlotControls()
 JobPlot::JobPlot(QTreeWidgetItem *parentTreeWidgetItem, JobPlotPass &passVals)
 {
    setupUserInterface();
-   m_name = "JobPlot";
-   pgInitialize(parentTreeWidgetItem);
+   pgInitialize(tr("JobPlot"), parentTreeWidgetItem);
    readSplitterSettings();
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
-   thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/graph1.png")));
+   thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/applications-graphics.png")));
    m_drawn = false;
 
    /* this invokes the pass values = operator function */
@@ -135,13 +134,13 @@ void JobPlot::reGraph()
  */
 void JobPlot::setupControls()
 {
-   QStringList graphType = QStringList() << /* "Fitted" <<*/ "Sticks" << "Lines" << "Steps" << "None";
+   QStringList graphType = QStringList() << /* tr("Fitted") <<*/ tr("Sticks")
+					 << tr("Lines") << tr("Steps") << tr("None");
    controls->plotTypeCombo->addItems(graphType);
-   QStringList symbolType = QStringList() << "Ellipse" << "Rect" << "Diamond" << "Triangle"
-            << "DTrianle" << "UTriangle" << "LTriangle" << "RTriangle" << "Cross" << "XCross"
-            << "HLine" << "Vline" << "Star1" << "Star2" << "Hexagon" << "None";
-   controls->fileSymbolTypeCombo->addItems(symbolType);
-   controls->byteSymbolTypeCombo->addItems(symbolType);
+
+   fillSymbolCombo(controls->fileSymbolTypeCombo);
+   fillSymbolCombo(controls->byteSymbolTypeCombo);
+
    readControlSettings();
 
    controls->fileCheck->setCheckState(Qt::Checked);
@@ -153,24 +152,25 @@ void JobPlot::setupControls()
    connect(controls->byteCheck, SIGNAL(stateChanged(int)), this, SLOT(byteCheckChanged(int)));
    connect(controls->refreshButton, SIGNAL(pressed()), this, SLOT(reGraph()));
 
-   controls->clientComboBox->addItem("Any");
+   controls->clientComboBox->addItem(tr("Any"));
    controls->clientComboBox->addItems(m_console->client_list);
 
    QStringList volumeList;
-   m_console->getVolumeList(volumeList);
-   controls->volumeComboBox->addItem("Any");
+   getVolumeList(volumeList);
+   controls->volumeComboBox->addItem(tr("Any"));
    controls->volumeComboBox->addItems(volumeList);
-   controls->jobComboBox->addItem("Any");
+   controls->jobComboBox->addItem(tr("Any"));
    controls->jobComboBox->addItems(m_console->job_list);
-   controls->levelComboBox->addItem("Any");
-   controls->levelComboBox->addItems( QStringList() << "F" << "D" << "I");
-   controls->purgedComboBox->addItem("Any");
-   controls->purgedComboBox->addItems( QStringList() << "0" << "1");
-   controls->fileSetComboBox->addItem("Any");
+
+   levelComboFill(controls->levelComboBox);
+
+   boolComboFill(controls->purgedComboBox);
+
+   controls->fileSetComboBox->addItem(tr("Any"));
    controls->fileSetComboBox->addItems(m_console->fileset_list);
    QStringList statusLongList;
-   m_console->getStatusList(statusLongList);
-   controls->statusComboBox->addItem("Any");
+   getStatusList(statusLongList);
+   controls->statusComboBox->addItem(tr("Any"));
    controls->statusComboBox->addItems(statusLongList);
 
    if (m_pass.use) {
@@ -178,27 +178,15 @@ void JobPlot::setupControls()
       controls->limitSpinBox->setValue(m_pass.recordLimitSpin);
       controls->daysCheckBox->setCheckState(m_pass.daysLimitCheck);
       controls->daysSpinBox->setValue(m_pass.daysLimitSpin);
-      int jobIndex = controls->jobComboBox->findText(m_pass.jobCombo, Qt::MatchExactly); 
-      if (jobIndex != -1)
-         controls->jobComboBox->setCurrentIndex(jobIndex);
-      int clientIndex = controls->clientComboBox->findText(m_pass.clientCombo, Qt::MatchExactly);
-      if (clientIndex != -1)
-         controls->clientComboBox->setCurrentIndex(clientIndex);
-      int volumeIndex = controls->volumeComboBox->findText(m_pass.volumeCombo, Qt::MatchExactly);
-      if (volumeIndex != -1)
-         controls->volumeComboBox->setCurrentIndex(volumeIndex);
-      int filesetIndex = controls->fileSetComboBox->findText(m_pass.fileSetCombo, Qt::MatchExactly);
-      if (filesetIndex != -1)
-         controls->fileSetComboBox->setCurrentIndex(filesetIndex);
-      int purgedIndex = controls->purgedComboBox->findText(m_pass.purgedCombo, Qt::MatchExactly); 
-      if (purgedIndex != -1)
-         controls->purgedComboBox->setCurrentIndex(purgedIndex);
-      int levelIndex = controls->levelComboBox->findText(m_pass.levelCombo, Qt::MatchExactly); 
-      if (levelIndex != -1)
-         controls->levelComboBox->setCurrentIndex(levelIndex);
-      int statusIndex = controls->statusComboBox->findText(m_pass.statusCombo, Qt::MatchExactly); 
-      if (statusIndex != -1)
-         controls->statusComboBox->setCurrentIndex(statusIndex);
+
+      comboSel(controls->jobComboBox, m_pass.jobCombo);
+      comboSel(controls->clientComboBox, m_pass.clientCombo);
+      comboSel(controls->volumeComboBox, m_pass.volumeCombo);
+      comboSel(controls->fileSetComboBox, m_pass.fileSetCombo);
+      comboSel(controls->purgedComboBox, m_pass.purgedCombo);
+      comboSel(controls->levelComboBox, m_pass.levelCombo);
+      comboSel(controls->statusComboBox, m_pass.statusCombo);
+
    } else {
       /* Set Defaults for check and spin for limits */
       controls->limitCheckBox->setCheckState(mainWin->m_recordLimitCheck ? Qt::Checked : Qt::Unchecked);
@@ -226,30 +214,19 @@ void JobPlot::runQuery()
             " LEFT OUTER JOIN FileSet ON (FileSet.FileSetId=Job.FileSetId)";
 
    QStringList conditions;
-   int jobIndex = controls->jobComboBox->currentIndex();
-   if ((jobIndex != -1) && (controls->jobComboBox->itemText(jobIndex) != "Any"))
-      conditions.append("Job.Name='" + controls->jobComboBox->itemText(jobIndex) + "'");
-   int clientIndex = controls->clientComboBox->currentIndex();
-   if ((clientIndex != -1) && (controls->clientComboBox->itemText(clientIndex) != "Any"))
-      conditions.append("Client.Name='" + controls->clientComboBox->itemText(clientIndex) + "'");
+   comboCond(conditions, controls->jobComboBox, "Job.Name");
+   comboCond(conditions, controls->clientComboBox, "Client.Name");
    int volumeIndex = controls->volumeComboBox->currentIndex();
-   if ((volumeIndex != -1) && (controls->volumeComboBox->itemText(volumeIndex) != "Any")) {
+   if ((volumeIndex != -1) && (controls->volumeComboBox->itemText(volumeIndex) != tr("Any"))) {
       query += " LEFT OUTER JOIN JobMedia ON (JobMedia.JobId=Job.JobId)"
-               " LEFT OUTER JOIN Media ON (JobMedia.MediaId=Media.MediaId)";
+	       " LEFT OUTER JOIN Media ON (JobMedia.MediaId=Media.MediaId)";
       conditions.append("Media.VolumeName='" + controls->volumeComboBox->itemText(volumeIndex) + "'");
    }
-   int fileSetIndex = controls->fileSetComboBox->currentIndex();
-   if ((fileSetIndex != -1) && (controls->fileSetComboBox->itemText(fileSetIndex) != "Any"))
-      conditions.append("FileSet.FileSet='" + controls->fileSetComboBox->itemText(fileSetIndex) + "'");
-   int purgedIndex = controls->purgedComboBox->currentIndex();
-   if ((purgedIndex != -1) && (controls->purgedComboBox->itemText(purgedIndex) != "Any"))
-      conditions.append("Job.PurgedFiles='" + controls->purgedComboBox->itemText(purgedIndex) + "'");
-   int levelIndex = controls->levelComboBox->currentIndex();
-   if ((levelIndex != -1) && (controls->levelComboBox->itemText(levelIndex) != "Any"))
-      conditions.append("Job.Level='" + controls->levelComboBox->itemText(levelIndex) + "'");
-   int statusIndex = controls->statusComboBox->currentIndex();
-   if ((statusIndex != -1) && (controls->statusComboBox->itemText(statusIndex) != "Any"))
-      conditions.append("Status.JobStatusLong='" + controls->statusComboBox->itemText(statusIndex) + "'");
+   comboCond(conditions, controls->fileSetComboBox, "FileSet.FileSet");
+   boolComboCond(conditions, controls->purgedComboBox, "Job.PurgedFiles");
+   levelComboCond(conditions, controls->levelComboBox, "Job.Level");
+   comboCond(conditions, controls->statusComboBox, "Status.JobStatusLong");
+
    /* If Limit check box For limit by days is checked  */
    if (controls->daysCheckBox->checkState() == Qt::Checked) {
       QDateTime stamp = QDateTime::currentDateTime().addDays(-controls->daysSpinBox->value());
@@ -307,10 +284,10 @@ void JobPlot::runQuery()
          row++;
       }
    } 
-   if ((controls->volumeComboBox->itemText(volumeIndex) != "Any") && (results.count() == 0)){
+   if ((controls->volumeComboBox->itemText(volumeIndex) != tr("Any")) && (results.count() == 0)){
       /* for context sensitive searches, let the user know if there were no
        *        * results */
-      QMessageBox::warning(this, tr("Bat"),
+      QMessageBox::warning(this, "Bat",
           tr("The Jobs query returned no results.\n"
          "Press OK to continue?"), QMessageBox::Ok );
    }
@@ -355,23 +332,23 @@ void JobPlot::setupUserInterface()
  */
 void JobPlot::addCurve()
 {
-   m_jobPlot->setTitle("Files and Bytes backed up");
+   m_jobPlot->setTitle(tr("Files and Bytes backed up"));
    m_jobPlot->insertLegend(new QwtLegend(), QwtPlot::RightLegend);
 
    // Set axis titles
    m_jobPlot->enableAxis(QwtPlot::yRight);
-   m_jobPlot->setAxisTitle(QwtPlot::yRight, "<-- Bytes Kb");
-   m_jobPlot->setAxisTitle(m_jobPlot->xBottom, "date of backup -->");
-   m_jobPlot->setAxisTitle(m_jobPlot->yLeft, "Number of Files -->");
+   m_jobPlot->setAxisTitle(QwtPlot::yRight, tr("<-- Bytes Kb"));
+   m_jobPlot->setAxisTitle(m_jobPlot->xBottom, tr("date of backup -->"));
+   m_jobPlot->setAxisTitle(m_jobPlot->yLeft, tr("Number of Files -->"));
    m_jobPlot->setAxisScaleDraw(QwtPlot::xBottom, new DateTimeScaleDraw());
 
    // Insert new curves
-   m_fileCurve = new QwtPlotCurve("Files");
+   m_fileCurve = new QwtPlotCurve( tr("Files") );
    m_fileCurve->setPen(QPen(Qt::red));
    m_fileCurve->setCurveType(m_fileCurve->Yfx);
    m_fileCurve->setYAxis(QwtPlot::yLeft);
 
-   m_byteCurve = new QwtPlotCurve("Bytes");
+   m_byteCurve = new QwtPlotCurve(tr("Bytes"));
    m_byteCurve->setPen(QPen(Qt::blue));
    m_byteCurve->setCurveType(m_byteCurve->Yfx);
    m_byteCurve->setYAxis(QwtPlot::yRight);
@@ -384,10 +361,21 @@ void JobPlot::addCurve()
 
    // attach data
    int size = m_pjd.count();
+   int j = 0;
+#if defined(__GNU_C)
    double tval[size];
    double fval[size];
    double bval[size];
-   int j = 0;
+#else
+   double *tval;
+   double *fval;
+   double *bval;
+
+   tval = (double *)malloc(size * sizeof(double));
+   fval = (double *)malloc(size * sizeof(double));
+   bval = (double *)malloc(size * sizeof(double));
+#endif
+
    foreach (PlotJobData* plotJobData, m_pjd) {
 //      printf("%.0f %.0f %s\n", plotJobData->bytes, plotJobData->files,
 //              plotJobData->dt.toString(mainWin->m_dtformat).toUtf8().data());
@@ -423,6 +411,12 @@ void JobPlot::addCurve()
          mX->attach(m_jobPlot);
       }
    }
+
+#if !defined(__GNU_C)
+   free(tval);
+   free(fval);
+   free(bval);
+#endif
 }
 
 /*
@@ -431,25 +425,46 @@ void JobPlot::addCurve()
 void JobPlot::setPlotType(QString currentText)
 {
    QwtPlotCurve::CurveStyle style = QwtPlotCurve::NoCurve;
-   if (currentText == "Fitted") {
+   if (currentText == tr("Fitted")) {
       style = QwtPlotCurve::Lines;
       m_fileCurve->setCurveAttribute(QwtPlotCurve::Fitted);
       m_byteCurve->setCurveAttribute(QwtPlotCurve::Fitted);
-   } else if (currentText == "Sticks") {
+   } else if (currentText == tr("Sticks")) {
       style = QwtPlotCurve::Sticks;
-   } else if (currentText == "Lines") {
+   } else if (currentText == tr("Lines")) {
       style = QwtPlotCurve::Lines;
       m_fileCurve->setCurveAttribute(QwtPlotCurve::Fitted);
       m_byteCurve->setCurveAttribute(QwtPlotCurve::Fitted);
-   } else if (currentText == "Steps") {
+   } else if (currentText == tr("Steps")) {
       style = QwtPlotCurve::Steps;
-   } else if (currentText == "None") {
+   } else if (currentText == tr("None")) {
       style = QwtPlotCurve::NoCurve;
    }
    m_fileCurve->setStyle(style);
    m_byteCurve->setStyle(style);
    m_jobPlot->replot();
 }
+
+void JobPlot::fillSymbolCombo(QComboBox *q)
+{
+  q->addItem( tr("Ellipse"), (int)QwtSymbol::Ellipse);
+  q->addItem( tr("Rect"), (int)QwtSymbol::Rect); 
+  q->addItem( tr("Diamond"), (int)QwtSymbol::Diamond);
+  q->addItem( tr("Triangle"), (int)QwtSymbol::Triangle);
+  q->addItem( tr("DTrianle"), (int)QwtSymbol::DTriangle);
+  q->addItem( tr("UTriangle"), (int)QwtSymbol::UTriangle);
+  q->addItem( tr("LTriangle"), (int)QwtSymbol::LTriangle);
+  q->addItem( tr("RTriangle"), (int)QwtSymbol::RTriangle);
+  q->addItem( tr("Cross"), (int)QwtSymbol::Cross);
+  q->addItem( tr("XCross"), (int)QwtSymbol::XCross);
+  q->addItem( tr("HLine"), (int)QwtSymbol::HLine);
+  q->addItem( tr("Vline"), (int)QwtSymbol::VLine);
+  q->addItem( tr("Star1"), (int)QwtSymbol::Star1);
+  q->addItem( tr("Star2"), (int)QwtSymbol::Star2);
+  q->addItem( tr("Hexagon"), (int)QwtSymbol::Hexagon); 
+  q->addItem( tr("None"), (int)QwtSymbol::NoSymbol);
+}
+
 
 /*
  * slot to respond to the symbol type combo changing
@@ -468,44 +483,20 @@ void JobPlot::setSymbolType(int index, int type)
    QwtSymbol sym;
    sym.setPen(QColor(Qt::black));
    sym.setSize(7);
-   if (index == 0) {
-      sym.setStyle(QwtSymbol::Ellipse);
-   } else if (index == 1) {
-      sym.setStyle(QwtSymbol::Rect);
-   } else if (index == 2) {
-      sym.setStyle(QwtSymbol::Diamond);
-   } else if (index == 3) {
-      sym.setStyle(QwtSymbol::Triangle);
-   } else if (index == 4) {
-      sym.setStyle(QwtSymbol::DTriangle);
-   } else if (index == 5) {
-      sym.setStyle(QwtSymbol::UTriangle);
-   } else if (index == 6) {
-      sym.setStyle(QwtSymbol::LTriangle);
-   } else if (index == 7) {
-      sym.setStyle(QwtSymbol::RTriangle);
-   } else if (index == 8) {
-      sym.setStyle(QwtSymbol::Cross);
-   } else if (index == 9) {
-      sym.setStyle(QwtSymbol::XCross);
-   } else if (index == 10) {
-      sym.setStyle(QwtSymbol::HLine);
-   } else if (index == 11) {
-      sym.setStyle(QwtSymbol::VLine);
-   } else if (index == 12) {
-      sym.setStyle(QwtSymbol::Star1);
-   } else if (index == 13) {
-      sym.setStyle(QwtSymbol::Star2);
-   } else if (index == 14) {
-      sym.setStyle(QwtSymbol::Hexagon);
-   }
-   if (type == 0) {
+
+   QVariant style;
+   if (0 == type) {
+      style = controls->fileSymbolTypeCombo->itemData(index);
+      sym.setStyle( (QwtSymbol::Style)style.toInt() );
       sym.setBrush(QColor(Qt::yellow));
       m_fileCurve->setSymbol(sym);
-   }
-   if (type == 1) {
+   
+   } else {
+      style = controls->byteSymbolTypeCombo->itemData(index);
+      sym.setStyle( (QwtSymbol::Style)style.toInt() );
       sym.setBrush(QColor(Qt::blue));
       m_byteCurve->setSymbol(sym);
+
    }
    m_jobPlot->replot();
 }
@@ -583,4 +574,3 @@ void JobPlot::readSplitterSettings()
    m_splitter->restoreState(settings.value("m_splitterSizes").toByteArray());
    settings.endGroup();
 }
-#endif /* HAVE_QWT */

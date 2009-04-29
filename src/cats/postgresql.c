@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *    Dan Langille, December 2003
  *    based upon work done by Kern Sibbald, March 2000
  *
- *    Version $Id: postgresql.c 7179 2008-06-19 17:01:12Z kerns $
+ *    Version $Id: postgresql.c 8458 2009-02-17 09:50:39Z ricozz $
  */
 
 
@@ -132,6 +132,32 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
    return mdb;
 }
 
+/* Check that the database correspond to the encoding we want */
+static bool check_database_encoding(JCR *jcr, B_DB *mdb)
+{
+   SQL_ROW row;
+   int ret=false;
+
+   if (!db_sql_query(mdb, "SELECT getdatabaseencoding()", NULL, NULL)) {
+      Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
+      return false;
+   }
+
+   if ((row = sql_fetch_row(mdb)) == NULL) {
+      Mmsg1(mdb->errmsg, _("error fetching row: %s\n"), sql_strerror(mdb));
+      Jmsg(jcr, M_ERROR, 0, "Can't check database encoding %s", mdb->errmsg);
+   } else {
+      ret = bstrcmp(row[0], "SQL_ASCII");
+      if (!ret) {
+         Mmsg(mdb->errmsg, 
+              _("Encoding error for database \"%s\". Wanted SQL_ASCII, got %s\n"),
+              mdb->db_name, row[0]);
+         Jmsg(jcr, M_WARNING, 0, "%s", mdb->errmsg);
+      } 
+   }
+   return ret;
+}
+
 /*
  * Now actually open the database.  This can generate errors,
  *   which are returned in the errmsg
@@ -144,10 +170,10 @@ db_open_database(JCR *jcr, B_DB *mdb)
    int errstat;
    char buf[10], *port;
 
-#ifdef xxx
+#ifdef xxx                      /* require libpq >= 8.2 */
    if (!PQisthreadsafe()) {
       Jmsg(jcr, M_ABORT, 0, _("PostgreSQL configuration problem. "          
-           "PostgreSQL library is not thread safe. Connot continue.\n"));
+           "PostgreSQL library is not thread safe. Cannot continue.\n"));
    }
 #endif
    P(mutex);
@@ -218,6 +244,9 @@ db_open_database(JCR *jcr, B_DB *mdb)
        WARNING:  nonstandard use of \\ in a string literal
    */
    sql_query(mdb, "set standard_conforming_strings=on");
+
+   /* check that encoding is SQL_ASCII */
+   check_database_encoding(jcr, mdb);
 
    V(mutex);
    return 1;
@@ -308,7 +337,7 @@ db_escape_string(JCR *jcr, B_DB *mdb, char *snew, char *old, int len)
  * Submit a general SQL command (cmd), and for each row returned,
  *  the sqlite_handler is called with the ctx.
  */
-int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler, void *ctx)
+bool db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler, void *ctx)
 {
    SQL_ROW row;
 
@@ -319,7 +348,7 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
       Mmsg(mdb->errmsg, _("Query failed: %s: ERR=%s\n"), query, sql_strerror(mdb));
       db_unlock(mdb);
       Dmsg0(500, "db_sql_query failed\n");
-      return 0;
+      return false;
    }
    Dmsg0(500, "db_sql_query succeeded. checking handler\n");
 
@@ -343,7 +372,7 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
 
    Dmsg0(500, "db_sql_query finished\n");
 
-   return 1;
+   return true;
 }
 
 
@@ -667,6 +696,7 @@ int my_postgresql_batch_start(JCR *jcr, B_DB *mdb)
    return mdb->status;
 
 bail_out:
+   Mmsg1(&mdb->errmsg, _("error starting batch mode: %s"), PQerrorMessage(mdb->db));
    mdb->status = 0;
    PQclear(mdb->result);
    mdb->result = NULL;
@@ -696,7 +726,7 @@ int my_postgresql_batch_end(JCR *jcr, B_DB *mdb, const char *error)
    if (res <= 0) {
       Dmsg0(500, "we failed\n");
       mdb->status = 0;
-      Mmsg1(&mdb->errmsg, _("error ending batch mode: %s\n"), PQerrorMessage(mdb->db));
+      Mmsg1(&mdb->errmsg, _("error ending batch mode: %s"), PQerrorMessage(mdb->db));
    }
    
    Dmsg0(500, "my_postgresql_batch_end finishing\n");
@@ -743,7 +773,7 @@ int my_postgresql_batch_insert(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
    if (res <= 0) {
       Dmsg0(500, "we failed\n");
       mdb->status = 0;
-      Mmsg1(&mdb->errmsg, _("error ending batch mode: %s\n"), PQerrorMessage(mdb->db));
+      Mmsg1(&mdb->errmsg, _("error ending batch mode: %s"), PQerrorMessage(mdb->db));
    }
 
    Dmsg0(500, "my_postgresql_batch_insert finishing\n");

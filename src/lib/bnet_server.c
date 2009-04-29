@@ -29,7 +29,7 @@
   * Originally written by Kern Sibbald for inclusion in apcupsd,
   *  but heavily modified for Bacula
   *
-  *   Version $Id: bnet_server.c 8012 2008-11-07 16:26:48Z kerns $
+  *   Version $Id: bnet_server.c 8375 2009-01-18 20:44:50Z kerns $
   */
 
 #include "bacula.h"
@@ -42,7 +42,7 @@
 #include <arpa/nameser.h>
 #endif
 #ifdef HAVE_RESOLV_H
-#include <resolv.h>
+//#include <resolv.h>
 #endif
 
 
@@ -137,7 +137,7 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
                   be.bstrerror());
          }
       }
-      listen(fd_ptr->fd, 20);      /* tell system we are ready */
+      listen(fd_ptr->fd, 50);      /* tell system we are ready */
       sockfds.append(fd_ptr);
    }
    /* Start work queue thread */
@@ -238,167 +238,3 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
             be.bstrerror());
    }
 }
-
-
-#ifdef REALLY_USED
-/*
- * Bind an address so that we may accept connections
- * one at a time.
- */
-BSOCK *bnet_bind(int port)
-{
-   int sockfd;
-   struct sockaddr_in serv_addr;   /* our address */
-   int tlog;
-   int turnon = 1;
-
-   /*
-    * Open a TCP socket
-    */
-   for (tlog = 0; (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0; tlog -= 10) {
-      berrno be;
-      if (errno == EINTR || errno == EAGAIN) {
-         continue;
-      }
-      if (tlog <= 0) {
-         tlog = 2 * 60;
-         Emsg1(M_ERROR, 0, _("Cannot open stream socket: %s\n"), be.bstrerror());
-      }
-      bmicrosleep(60, 0);
-   }
-
-   /*
-    * Reuse old sockets
-    */
-   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (sockopt_val_t)&turnon, sizeof(turnon)) < 0) {
-      berrno be;
-      Emsg1(M_WARNING, 0, _("Cannot set SO_REUSEADDR on socket: %s\n"),
-            be.bstrerror());
-   }
-
-   /*
-    * Bind our local address so that the client can send to us.
-    */
-   bzero((char *)&serv_addr, sizeof(serv_addr));
-   serv_addr.sin_family = AF_INET;
-   serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-   serv_addr.sin_port = htons(port);
-
-   for (tlog = 0; bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0;
-        tlog -= 5) {
-      berrno be;
-      if (errno == EINTR || errno == EAGAIN) {
-         continue;
-      }
-      if (tlog <= 0) {
-         tlog = 2 * 60;
-         Emsg2(M_WARNING, 0, _("Cannot bind port %d: ERR=%s: retrying ...\n"), port,
-               be.bstrerror());
-      }
-      bmicrosleep(5, 0);
-   }
-   listen(sockfd, 1);              /* tell system we are ready */
-   return init_bsock(NULL, sockfd, _("Server socket"), _("client"), port,
-                     &serv_addr);
-}
-
-/*
- * Accept a single connection
- */
-BSOCK *bnet_accept(BSOCK * bsock, char *who)
-{
-   fd_set ready, sockset;
-   int newsockfd, stat, len;
-   socklen_t clilen;
-   struct sockaddr_in cli_addr;    /* client's address */
-   char *caller, *buf;
-   BSOCK *bs;
-   int turnon = 1;
-#ifdef HAVE_LIBWRAP
-   struct request_info request;
-#endif
-
-   /*
-    * Wait for a connection from the client process.
-    */
-   FD_ZERO(&sockset);
-   FD_SET((unsigned)bsock->fd, &sockset);
-
-   for (;;) {
-      /*
-       * Wait for a connection from a client process.
-       */
-      ready = sockset;
-      if ((stat = select(bsock->fd + 1, &ready, NULL, NULL, NULL)) < 0) {
-         berrno be;
-         if (errno == EINTR || errno = EAGAIN) {
-            errno = 0;
-            continue;
-         }
-         Emsg1(M_FATAL, 0, _("Error in select: %s\n"), be.bstrerror());
-         newsockfd = -1;
-         break;
-      }
-      do {
-         clilen = sizeof(cli_addr);
-         newsockfd = accept(bsock->fd, (struct sockaddr *)&cli_addr, &clilen);
-      } while (newsockfd < 0 && (errno == EINTR || errno = EAGAIN));
-      if (newsockfd >= 0) {
-         break;
-      }
-   }
-
-#ifdef HAVE_LIBWRAP
-   P(mutex);
-   request_init(&request, RQ_DAEMON, my_name, RQ_FILE, newsockfd, 0);
-   fromhost(&request);
-   if (!hosts_access(&request)) {
-      V(mutex);
-      Emsg2(M_SECURITY, 0, _("Connection from %s:%d refused by hosts.access\n"),
-            inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
-      close(newsockfd);
-      return NULL;
-   }
-   V(mutex);
-#endif
-
-   /*
-    * Receive notification when connection dies.
-    */
-   if (setsockopt(newsockfd, SOL_SOCKET, SO_KEEPALIVE, (sockopt_val_t)&turnon, sizeof(turnon)) < 0) {
-      berrno be;
-      Emsg1(M_WARNING, 0, _("Cannot set SO_KEEPALIVE on socket: %s\n"),
-            be.bstrerror());
-   }
-
-   /* see who client is. I.e. who connected to us.
-    * return it in the input message buffer.
-    */
-   if ((caller = inet_ntoa(cli_addr.sin_addr)) != NULL) {
-      pm_strcpy(&bsock->msg, caller);
-   } else {
-      bsock->msg[0] = 0;
-   }
-   bsock->msglen = strlen(bsock->msg);
-
-   if (newsockfd < 0) {
-      berrno be;
-      Emsg2(M_FATAL, 0, _("Socket accept error for %s. ERR=%s\n"), who,
-            be.bstrerror());
-      return NULL;
-   } else {
-      if (caller == NULL) {
-         caller = _("unknown");
-      }
-      len = strlen(caller) + strlen(who) + 3;
-      buf = (char *)malloc(len);
-      bstrncpy(buf, len, who);
-      bstrncat(buf, len, ": ");
-      bstrncat(buf, len, caller);
-      bs = init_bsock(NULL, newsockfd, _("client"), buf, bsock->port, &cli_addr);
-      free(buf);
-      return bs;                   /* return new BSOCK */
-   }
-}
-
-#endif

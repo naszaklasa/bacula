@@ -21,7 +21,7 @@ public slots:
 private:
    Console *m_console;
    int m_index;
-
+   int m_conn;
 };
 
 class yesnoPopUp : public QDialog
@@ -29,7 +29,7 @@ class yesnoPopUp : public QDialog
    Q_OBJECT 
 
 public:
-   yesnoPopUp(Console *console);
+   yesnoPopUp(Console *console, int conn);
 
 };
 

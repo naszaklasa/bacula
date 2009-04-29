@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -64,9 +64,9 @@ static const int fnmode = 0;
 
 
 int
-match_files(JCR *jcr, FF_PKT *ff, int callback(FF_PKT *ff_pkt, void *hpkt, bool), void *his_pkt)
+match_files(JCR *jcr, FF_PKT *ff, int file_save(JCR *, FF_PKT *ff_pkt, bool))
 {
-   ff->callback = callback;
+   ff->file_save = file_save;
 
    struct s_included_file *inc = NULL;
 
@@ -76,7 +76,7 @@ match_files(JCR *jcr, FF_PKT *ff, int callback(FF_PKT *ff_pkt, void *hpkt, bool)
       bstrncat(ff->VerifyOpts, inc->VerifyOpts, sizeof(ff->VerifyOpts));
       Dmsg1(100, "find_files: file=%s\n", inc->fname);
       if (!file_is_excluded(ff, inc->fname)) {
-         if (find_one_file(jcr, ff, callback, his_pkt, inc->fname, (dev_t)-1, 1) ==0) {
+         if (find_one_file(jcr, ff, file_save, inc->fname, (dev_t)-1, 1) ==0) {
             return 0;                  /* error return */
          }
       }
@@ -195,6 +195,9 @@ void add_fname_to_include_list(FF_PKT *ff, int prefixed, const char *fname)
          case 'K':
             inc->options |= FO_NOATIME;
             break;
+         case 'X':
+            inc->options |= FO_XATTR;
+            break;
          default:
             Emsg1(M_ERROR, 0, _("Unknown include/exclude option: %c\n"), *rp);
             break;
@@ -245,7 +248,7 @@ void add_fname_to_include_list(FF_PKT *ff, int prefixed, const char *fname)
          { }
       next->next = inc;
    }
-   Dmsg3(00, "add_fname_to_include prefix=%d gzip=%d fname=%s\n", 
+   Dmsg3(100, "add_fname_to_include prefix=%d gzip=%d fname=%s\n", 
          prefixed, !!(inc->options & FO_GZIP), inc->fname);
 }
 

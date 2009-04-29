@@ -22,13 +22,13 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: joblog.h 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: joblog.h 7380 2008-07-14 10:42:59Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
@@ -49,8 +49,6 @@ public slots:
 private slots:
 
 private:
-   void display_text(const char *buf);
-   void display_text(const QString buf);
    void populateText();
    void getFont();
    QTextCursor *m_cursor;

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -37,7 +37,7 @@
  * Last Modified By: Thorsten Engel
  * Last Modified On: Fri Apr 22 19:30:00 2004
  * Update Count    : 218
- * $Id: compat.h 8202 2008-12-20 13:22:14Z kerns $
+ * $Id: compat.h 8584 2009-03-23 08:56:20Z ricozz $
  */
 
 
@@ -57,6 +57,19 @@
 
 #include <malloc.h>
 
+#ifdef MINGW64
+#include <direct.h>
+#define _declspec __declspec
+#endif
+
+#ifdef _WIN64
+# define GWL_USERDATA  GWLP_USERDATA
+#endif
+
+#ifndef INT64
+#define INT64 long long int
+#endif
+
 typedef UINT64 u_int64_t;
 typedef UINT64 uint64_t;
 typedef INT64 int64_t;
@@ -67,6 +80,7 @@ typedef unsigned short uint16_t;
 typedef signed short int16_t;
 typedef signed char int8_t;
 typedef int __daddr_t;
+
 #if !defined(HAVE_MINGW)
 typedef long int32_t;
 typedef float float32_t;
@@ -74,7 +88,10 @@ typedef double float64_t;
 #endif
 
 #if !defined(_MSC_VER) || (_MSC_VER < 1400) // VC8+
+#ifndef _TIME_T_DEFINED
+#define _TIME_T_DEFINED
 typedef long time_t;
+#endif
 #endif
 
 #if __STDC__ && !defined(HAVE_MINGW)
@@ -129,9 +146,12 @@ typedef void DIR;
 #endif
 #endif
 
+#ifndef _TIMEZONE_DEFINED /* also in sys/time.h */
+#define _TIMEZONE_DEFINED
 struct timezone {
     int foo;
 };
+#endif
 
 int strcasecmp(const char*, const char *);
 int gettimeofday(struct timeval *, struct timezone *);
@@ -234,16 +254,22 @@ int chmod(const char *, mode_t mode);
 #define F_GETFL      3
 #define F_SETFL      4
 
-int tape_open(const char *file, int flags, int mode = 0);
-int tape_read(int fd, void *buffer, unsigned int count);
-int tape_write(int fd, const void *buffer, unsigned int count);
-int tape_ioctl(int fd, unsigned long int request, ...);
-int tape_close(int fd);
+int win32_tape_open(const char *file, int flags, ...);
+int win32_tape_ioctl(int fd, unsigned long int request, ...);
+int win32_tape_close(int fd);
+ssize_t win32_tape_read(int fd, void *buffer, size_t count);
+ssize_t win32_tape_write(int fd, const void *buffer, size_t count);
 
+ssize_t win32_read(int fd, void *buffer, size_t count);
+ssize_t win32_write(int fd, const void *buffer, size_t count);
+int win32_ioctl(int fd, unsigned long int req, ...);
+
+#ifndef MINGW64
 #define open   _open
+#endif
 
 int fcntl(int fd, int cmd, long arg);
-int fstat(int fd, struct stat *sb);
+int fstat(intptr_t fd, struct stat *sb);
 
 int inet_aton(const char *cp, struct in_addr *inp);
 int kill(int pid, int signo);

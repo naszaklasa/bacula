@@ -1,18 +1,7 @@
 /*
- * Bacula Catalog Database Find record interface routines
- *
- *  Note, generally, these routines are more complicated
- *        that a simple search by name or id. Such simple
- *        request are in get.c
- *
- *    Kern Sibbald, December 2000
- *
- *    Version $Id: sql_find.c 5305 2007-08-08 14:22:00Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,11 +20,22 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula Catalog Database Find record interface routines
+ *
+ *  Note, generally, these routines are more complicated
+ *        that a simple search by name or id. Such simple
+ *        request are in get.c
+ *
+ *    Kern Sibbald, December 2000
+ *
+ *    Version $Id: sql_find.c 8508 2009-03-07 20:59:46Z kerns $
+ */
 
 
 /* The following is necessary so that we do not include
@@ -46,7 +46,7 @@
 #include "bacula.h"
 #include "cats.h"
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
 
 /* -----------------------------------------------------------------------
  *
@@ -75,9 +75,9 @@ db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime)
    pm_strcpy(stime, "0000-00-00 00:00:00");   /* default */
    /* If no Id given, we must find corresponding job */
    if (jr->JobId == 0) {
-      /* Differential is since last Full backup */
+         /* Differential is since last Full backup */
          Mmsg(mdb->cmd,
-"SELECT StartTime FROM Job WHERE JobStatus='T' AND Type='%c' AND "
+"SELECT StartTime FROM Job WHERE JobStatus IN ('T','W') AND Type='%c' AND "
 "Level='%c' AND Name='%s' AND ClientId=%s AND FileSetId=%s "
 "ORDER BY StartTime DESC LIMIT 1",
            jr->JobType, L_FULL, jr->Name, 
@@ -107,7 +107,7 @@ db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime)
          sql_free_result(mdb);
          /* Now edit SQL command for Incremental Job */
          Mmsg(mdb->cmd,
-"SELECT StartTime FROM Job WHERE JobStatus='T' AND Type='%c' AND "
+"SELECT StartTime FROM Job WHERE JobStatus IN ('T','W') AND Type='%c' AND "
 "Level IN ('%c','%c','%c') AND Name='%s' AND ClientId=%s "
 "AND FileSetId=%s ORDER BY StartTime DESC LIMIT 1",
             jr->JobType, L_INCREMENTAL, L_DIFFERENTIAL, L_FULL, jr->Name,
@@ -140,6 +140,52 @@ db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime)
 
    sql_free_result(mdb);
 
+   db_unlock(mdb);
+   return true;
+
+bail_out:
+   db_unlock(mdb);
+   return false;
+}
+
+
+/*
+ * Find the last job start time for the specified JobLevel
+ *
+ *  StartTime is returned in stime
+ *
+ * Returns: false on failure
+ *          true  on success, jr is unchanged, but stime is set
+ */
+bool
+db_find_last_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime, int JobLevel)
+{
+   SQL_ROW row;
+   char ed1[50], ed2[50];
+
+   db_lock(mdb);
+
+   pm_strcpy(stime, "0000-00-00 00:00:00");   /* default */
+
+   Mmsg(mdb->cmd,
+"SELECT StartTime FROM Job WHERE JobStatus IN ('T','W') AND Type='%c' AND "
+"Level='%c' AND Name='%s' AND ClientId=%s AND FileSetId=%s "
+"ORDER BY StartTime DESC LIMIT 1",
+      jr->JobType, JobLevel, jr->Name, 
+      edit_int64(jr->ClientId, ed1), edit_int64(jr->FileSetId, ed2));
+   if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
+      Mmsg2(&mdb->errmsg, _("Query error for start time request: ERR=%s\nCMD=%s\n"),
+         sql_strerror(mdb), mdb->cmd);
+      goto bail_out;
+   }
+   if ((row = sql_fetch_row(mdb)) == NULL) {
+      sql_free_result(mdb);
+      Mmsg(mdb->errmsg, _("No prior Full backup Job record found.\n"));
+      goto bail_out;
+   }
+   Dmsg1(100, "Got start time: %s\n", row[0]);
+   pm_strcpy(stime, row[0]);
+   sql_free_result(mdb);
    db_unlock(mdb);
    return true;
 
@@ -211,7 +257,7 @@ db_find_last_jobid(JCR *jcr, B_DB *mdb, const char *Name, JOB_DBR *jr)
    if (jr->JobLevel == L_VERIFY_CATALOG) {
       Mmsg(mdb->cmd,
 "SELECT JobId FROM Job WHERE Type='V' AND Level='%c' AND "
-" JobStatus='T' AND Name='%s' AND "
+" JobStatus IN ('T','W') AND Name='%s' AND "
 "ClientId=%s ORDER BY StartTime DESC LIMIT 1",
            L_VERIFY_INIT, jr->Name, 
            edit_int64(jr->ClientId, ed1));
@@ -220,11 +266,11 @@ db_find_last_jobid(JCR *jcr, B_DB *mdb, const char *Name, JOB_DBR *jr)
               jr->JobType == JT_BACKUP) {
       if (Name) {
          Mmsg(mdb->cmd,
-"SELECT JobId FROM Job WHERE Type='B' AND JobStatus='T' AND "
+"SELECT JobId FROM Job WHERE Type='B' AND JobStatus IN ('T','W') AND "
 "Name='%s' ORDER BY StartTime DESC LIMIT 1", Name);
       } else {
          Mmsg(mdb->cmd,
-"SELECT JobId FROM Job WHERE Type='B' AND JobStatus='T' AND "
+"SELECT JobId FROM Job WHERE Type='B' AND JobStatus IN ('T','W') AND "
 "ClientId=%s ORDER BY StartTime DESC LIMIT 1", 
            edit_int64(jr->ClientId, ed1));
       }
@@ -292,17 +338,15 @@ db_find_next_volume(JCR *jcr, B_DB *mdb, int item, bool InChanger, MEDIA_DBR *mr
          edit_int64(mr->PoolId, ed1), mr->MediaType);
      item = 1;
    } else {
-      char changer[100];
+      POOL_MEM changer(PM_FNAME);
       /* Find next available volume */
       if (InChanger) {
-         bsnprintf(changer, sizeof(changer), "AND InChanger=1 AND StorageId=%s",
-            edit_int64(mr->StorageId, ed1));
-      } else {
-         changer[0] = 0;
+         Mmsg(changer, "AND InChanger=1 AND StorageId=%s",
+              edit_int64(mr->StorageId, ed1));
       }
       if (strcmp(mr->VolStatus, "Recycle") == 0 ||
           strcmp(mr->VolStatus, "Purged") == 0) {
-         order = "ORDER BY LastWritten ASC,MediaId";  /* take oldest */
+         order = "AND Recycle=1 ORDER BY LastWritten ASC,MediaId";  /* take oldest that can be recycled */
       } else {
          order = "ORDER BY LastWritten IS NULL,LastWritten DESC,MediaId";   /* take most recently written */
       }
@@ -318,7 +362,7 @@ db_find_next_volume(JCR *jcr, B_DB *mdb, int item, bool InChanger, MEDIA_DBR *mr
          "%s "
          "%s LIMIT %d",
          edit_int64(mr->PoolId, ed1), mr->MediaType,
-         mr->VolStatus, changer, order, item);
+         mr->VolStatus, changer.c_str(), order, item);
    }
    Dmsg1(050, "fnextvol=%s\n", mdb->cmd);
    if (!QUERY_DB(jcr, mdb, mdb->cmd)) {

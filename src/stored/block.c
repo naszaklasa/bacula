@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *              Kern Sibbald, March MMI
  *                 added BB02 format October MMII
  *
- *   Version $Id: block.c 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: block.c 8424 2009-02-05 11:30:35Z kerns $
  *
  */
 
@@ -380,7 +380,7 @@ bool write_block_to_device(DCR *dcr)
    }
 
    if (!write_block_to_dev(dcr)) {
-       if (job_canceled(jcr) || jcr->JobType == JT_SYSTEM) {
+       if (job_canceled(jcr) || jcr->get_JobType() == JT_SYSTEM) {
           stat = false;
        } else {
           stat = fixup_device_block_write_error(dcr);
@@ -422,7 +422,7 @@ bool write_block_to_dev(DCR *dcr)
    if (dev->at_weot()) {
       Dmsg0(100, "return write_block_to_dev with ST_WEOT\n");
       dev->dev_errno = ENOSPC;
-      Jmsg(jcr, M_FATAL, 0,  _("Cannot write block. Device at EOM.\n"));
+      Jmsg0(jcr, M_FATAL, 0,  _("Cannot write block. Device at EOM.\n"));
       return false;
    }
    if (!dev->can_append()) {
@@ -599,6 +599,7 @@ bool write_block_to_dev(DCR *dcr)
    dev->VolCatInfo.VolCatBlocks++;
    dev->EndBlock = dev->block_num;
    dev->EndFile  = dev->file;
+   dev->LastBlock = block->BlockNumber;
    block->BlockNumber++;
 
    /* Update dcr values */
@@ -688,11 +689,17 @@ static void reread_last_block(DCR *dcr)
              * If we wrote block and the block numbers don't agree
              *  we have a possible problem.
              */
-            if (lblock->VolSessionId == block->VolSessionId &&
-                lblock->BlockNumber+1 != block->BlockNumber) {
-               Jmsg(jcr, M_ERROR, 0, _(
-"Re-read of last block OK, but block numbers differ. Last block=%u Current block=%u.\n"),
-                    lblock->BlockNumber, block->BlockNumber);
+            if (lblock->BlockNumber != dev->LastBlock) {
+                if (dev->LastBlock > (lblock->BlockNumber + 1)) {
+                   Jmsg(jcr, M_FATAL, 0, _(
+"Re-read of last block: block numbers differ by more than one.\n"
+"Probable tape misconfiguration and data loss. Read block=%u Want block=%u.\n"),
+                       lblock->BlockNumber, dev->LastBlock);
+                 } else {
+                   Jmsg(jcr, M_ERROR, 0, _(
+"Re-read of last block OK, but block numbers differ. Read block=%u Want block=%u.\n"),
+                       lblock->BlockNumber, dev->LastBlock);
+                 }
             } else {
                Jmsg(jcr, M_INFO, 0, _("Re-read of last block succeeded.\n"));
             }
@@ -722,7 +729,6 @@ static bool terminate_writing_volume(DCR *dcr)
        Jmsg2(dcr->jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
             dcr->VolCatInfo.VolCatName, dcr->jcr->Job);
        ok = false;
-       goto bail_out;
    }
    dcr->block->write_failed = true;
    if (!dev->weof(1)) {         /* end the tape */
@@ -775,7 +781,6 @@ static bool terminate_writing_volume(DCR *dcr)
       Jmsg(dcr->jcr, M_ERROR, 0, "%s", dev->errmsg);
    }
 
-bail_out:
    dev->set_ateot();                  /* no more writing this tape */
    Dmsg1(50, "*** Leave terminate_writing_volume -- %s\n", ok?"OK":"ERROR");
    return ok;
@@ -1113,11 +1118,15 @@ reread:
       dcr->EndBlock = dev->EndBlock;
       dcr->EndFile  = dev->EndFile;
    } else {
-      uint64_t addr = dev->file_addr + block->read_len - 1;
+      /* We need to take care about a short block in EndBlock/File
+       * computation 
+       */
+      uint32_t len = MIN(block->read_len, block->block_len);
+      uint64_t addr = dev->file_addr + len - 1;
       dcr->EndBlock = (uint32_t)addr;
       dcr->EndFile = (uint32_t)(addr >> 32);
-      dev->block_num = dcr->EndBlock;
-      dev->file = dcr->EndFile;
+      dev->block_num = dev->EndBlock = dcr->EndBlock;
+      dev->file = dev->EndFile = dcr->EndFile;
    }
    dcr->VolMediaId = dev->VolCatInfo.VolMediaId;
    dev->file_addr += block->read_len;

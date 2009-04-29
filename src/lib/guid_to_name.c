@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *  Program to convert uid and gid into names, and cache the results
  *   for preformance reasons.
  *
- *  Version $Id: guid_to_name.c 5502 2007-09-09 08:00:09Z kerns $
+ *  Version $Id: guid_to_name.c 8433 2009-02-09 19:00:56Z kerns $
  */
 
 #include "bacula.h"
@@ -147,6 +147,7 @@ char *guid_list::uid_to_name(uid_t uid, char *name, int maxlen)
       }
       fitem = (guitem *)uid_list->binary_insert(item, uid_compare);
       if (fitem != item) {               /* item already there this shouldn't happen */
+         free(item->name);
          free(item);
          item = fitem;   
       }
@@ -172,6 +173,7 @@ char *guid_list::gid_to_name(gid_t gid, char *name, int maxlen)
       }
       fitem = (guitem *)gid_list->binary_insert(item, gid_compare);
       if (fitem != item) {               /* item already there this shouldn't happen */
+         free(item->name);
          free(item);
          item = fitem;   
       }

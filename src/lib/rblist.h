@@ -20,14 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 
 /*
- *   Version $Id: rblist.h 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: rblist.h 7513 2008-08-27 21:11:04Z kerns $
  */
 
 /* ========================================================================
@@ -93,15 +93,6 @@ public:
    void destroy(void);
 };
 
-inline rblist::rblist(void *item, rblink *link)
-{
-   init(item, link);
-}
-
-/* Constructor with link at head of item */
-inline rblist::rblist(void): head(0), loffset(0), num_items(0)
-{
-}
 
 /*
  * This allows us to do explicit initialization,
@@ -116,6 +107,16 @@ inline void rblist::init(void *item, rblink *link)
       Emsg0(M_ABORT, 0, "Improper rblist initialization.\n");
    }
    num_items = 0;
+}
+
+inline rblist::rblist(void *item, rblink *link)
+{
+   init(item, link);
+}
+
+/* Constructor with link at head of item */
+inline rblist::rblist(void): head(0), loffset(0), num_items(0)
+{
 }
 
 inline void rblist::set_parent(void *item, void *parent)

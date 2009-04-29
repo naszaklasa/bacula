@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,10 +32,11 @@
  *   that we use within Bacula. bacula.h includes this
  *   file and thus picks up everything we need in lib.
  *
- *   Version $Id: lib.h 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: lib.h 8132 2008-12-09 19:21:38Z ricozz $
  */
 
 #include "smartall.h"
+#include "lockmgr.h"
 #include "alist.h"
 #include "dlist.h"
 #include "rblist.h"

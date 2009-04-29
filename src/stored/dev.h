@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, MM
  *
- *   Version $Id: dev.h 7432 2008-07-24 15:26:41Z kerns $
+ *   Version $Id: dev.h 7892 2008-10-24 13:04:16Z kerns $
  *
  */
 
@@ -95,7 +95,8 @@ enum {
    B_TAPE_DEV,
    B_DVD_DEV,
    B_FIFO_DEV,
-   B_VTL_DEV 
+   B_VTAPE_DEV,                       /* change to B_TAPE_DEV after init */
+   B_VTL_DEV
 };
 
 /* Generic status bits returned from status_dev() */
@@ -241,6 +242,7 @@ public:
    POOLMEM *prt_name;                 /* Name used for display purposes */
    char *errmsg;                      /* nicely edited error message */
    uint32_t block_num;                /* current block number base 0 */
+   uint32_t LastBlock;                /* last DEV_BLOCK number written to Volume */
    uint32_t file;                     /* current file number base 0 */
    uint64_t file_addr;                /* Current file read/write address */
    uint64_t file_size;                /* Current file size */
@@ -281,7 +283,6 @@ public:
 
    char UnloadVolName[MAX_NAME_LENGTH];  /* Last wrong Volume mounted */
    bool poll;                         /* set to poll Volume */
-
    /* Device wait times ***FIXME*** look at durations */
    int min_wait;
    int max_wait;
@@ -307,11 +308,13 @@ public:
    int is_autochanger() const { return capabilities & CAP_AUTOCHANGER; }
    int requires_mount() const { return capabilities & CAP_REQMOUNT; }
    int is_removable() const { return capabilities & CAP_REM; }
-   int is_tape() const { return dev_type == B_TAPE_DEV; }
+   int is_tape() const { return (dev_type == B_TAPE_DEV || 
+                                 dev_type == B_VTAPE_DEV); }
    int is_file() const { return dev_type == B_FILE_DEV; }
    int is_fifo() const { return dev_type == B_FIFO_DEV; }
    int is_dvd() const  { return dev_type == B_DVD_DEV; }
    int is_vtl() const  { return dev_type == B_VTL_DEV; }
+   int is_vtape() const  { return dev_type == B_VTAPE_DEV; }
    int is_open() const { return m_fd >= 0; }
    int is_offline() const { return state & ST_OFFLINE; }
    int is_labeled() const { return state & ST_LABEL; }
@@ -388,7 +391,6 @@ public:
    char *print_errmsg() { return errmsg; };
    int32_t get_slot() const { return m_slot; };
 
-
    void set_unload();            /* in dev.c */
    void clear_volhdr();          /* in dev.c */
    void close();                 /* in dev.c */
@@ -427,6 +429,14 @@ public:
    uint32_t get_file() const { return file; };
    uint32_t get_block_num() const { return block_num; };
    int fd() const { return m_fd; };
+
+   /* low level operations */
+   void init_backend();
+   int (*d_open)(const char *pathname, int flags, ...);
+   int (*d_close)(int fd);
+   int (*d_ioctl)(int fd, ioctl_req_t request, ...);
+   ssize_t (*d_read)(int fd, void *buffer, size_t count);
+   ssize_t (*d_write)(int fd, const void *buffer, size_t count);
 
    /* 
     * Locking and blocking calls
@@ -528,7 +538,10 @@ public:
    void clear_reserved();
    void set_reserved();
    void unreserve_device();
+
+   /* Methods in vol_mgr.c */
    bool can_i_use_volume();
+   bool can_i_write_volume();
 
    /* Methods in mount.c */
    bool mount_next_write_volume();
@@ -554,6 +567,7 @@ class VOLRES {
    bool m_swapping;                   /* set when swapping to another drive */
    bool m_in_use;                     /* set when volume reserved or in use */
    int32_t m_slot;                    /* slot of swapping volume */
+   uint32_t m_JobId;                  /* JobId for read volumes */
 public:
    dlink link;
    char *vol_name;                    /* Volume name */
@@ -568,6 +582,8 @@ public:
    void set_slot(int32_t slot) { m_slot = slot; };
    void clear_slot() { m_slot = -1; };
    int32_t get_slot() const { return m_slot; };
+   uint32_t get_jobid() const { return m_JobId; };
+   void set_jobid(uint32_t JobId) { m_JobId = JobId; };
 };
 
 

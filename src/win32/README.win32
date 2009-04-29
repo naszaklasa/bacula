@@ -41,5 +41,5 @@ or
       source           --
 
 Information on building the Windows version of Bacula is contained in the
-two files README.mingw32 for building in a cross-compile environment on Unix
+files README.mingw32/README.mingw64 for building in a cross-compile environment on Unix
 and README.vc8 for building using Microsoft Visual C++ 2005.

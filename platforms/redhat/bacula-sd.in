@@ -25,6 +25,12 @@ fi
 # pull in any user defined SD_OPTIONS, SD_USER, or SD_GROUP
 [ -f /etc/sysconfig/bacula ] && . /etc/sysconfig/bacula
 
+#
+# Disable Glibc malloc checks, it doesn't help and it keeps from getting
+#   good dumps
+MALLOC_CHECK_=0
+export MALLOC_CHECK_
+
 RETVAL=0
 case "$1" in
     start)

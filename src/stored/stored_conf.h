@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -28,7 +28,7 @@
 /*
  * Resource codes -- they must be sequential for indexing
  *
- *   Version $Id: stored_conf.h 7164 2008-06-18 19:22:03Z kerns $
+ *   Version $Id: stored_conf.h 7737 2008-10-08 19:41:24Z ricozz $
  */
 
 enum {
@@ -99,7 +99,7 @@ public:
    char *tls_keyfile;                 /* TLS Server Key File */
    char *tls_dhfile;                  /* TLS Diffie-Hellman Parameters */
    alist *tls_allowed_cns;            /* TLS Allowed Clients */
-
+   char *verid;                       /* Custom Id to print in version command */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
 };
 typedef class s_res_store STORES;

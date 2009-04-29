@@ -3,7 +3,7 @@
  *
  * Author: Robert Nelson, August, 2006 <robertn@the-nelsons.org>
  *
- * Version $Id: ScsiDeviceList.h 4992 2007-06-07 14:46:43Z kerns $
+ * Version $Id: ScsiDeviceList.h 7380 2008-07-14 10:42:59Z kerns $
  *
  * This file was contributed to the Bacula project by Robert Nelson.
  *
@@ -40,7 +40,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.

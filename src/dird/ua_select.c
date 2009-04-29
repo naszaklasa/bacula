@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MMI
  *
- *   Version  $Id: ua_select.c 5714 2007-10-03 16:22:07Z kerns $
+ *   Version  $Id: ua_select.c 8535 2009-03-15 11:29:57Z kerns $
  */
 
 #include "bacula.h"
@@ -494,6 +494,9 @@ bool select_pool_dbr(UAContext *ua, POOL_DBR *pr, const char *argk)
    }
 
    start_prompt(ua, _("Defined Pools:\n"));
+   if (bstrcmp(argk, NT_("recyclepool"))) {
+      add_prompt(ua, _("*None*"));
+   }
    for (i=0; i < num_pools; i++) {
       opr.PoolId = ids[i];
       if (!db_get_pool_record(ua->jcr, ua->db, &opr) ||
@@ -506,13 +509,21 @@ bool select_pool_dbr(UAContext *ua, POOL_DBR *pr, const char *argk)
    if (do_prompt(ua, _("Pool"),  _("Select the Pool"), name, sizeof(name)) < 0) {
       return false;
    }
-   memset(&opr, 0, sizeof(opr));
-   bstrncpy(opr.Name, name, sizeof(opr.Name));
 
-   if (!db_get_pool_record(ua->jcr, ua->db, &opr)) {
-      ua->error_msg(_("Could not find Pool \"%s\": ERR=%s"), name, db_strerror(ua->db));
-      return false;
+   memset(&opr, 0, sizeof(opr));
+   /* *None* is only returned when selecting a recyclepool, and in that case
+    * the calling code is only interested in opr.Name, so then we can leave
+    * pr as all zero.
+    */
+   if (!bstrcmp(name, _("*None*"))) {
+     bstrncpy(opr.Name, name, sizeof(opr.Name));
+
+     if (!db_get_pool_record(ua->jcr, ua->db, &opr)) {
+        ua->error_msg(_("Could not find Pool \"%s\": ERR=%s"), name, db_strerror(ua->db));
+        return false;
+     }
    }
+
    memcpy(pr, &opr, sizeof(opr));
    return true;
 }
@@ -559,11 +570,11 @@ int select_media_dbr(UAContext *ua, MEDIA_DBR *mr)
       }
       mr->PoolId = pr.PoolId;
       db_list_media_records(ua->jcr, ua->db, mr, prtit, ua, HORZ_LIST);
-      if (!get_cmd(ua, _("Enter MediaId or Volume name: "))) {
+      if (!get_cmd(ua, _("Enter *MediaId or Volume name: "))) {
          return 0;
       }
-      if (is_a_number(ua->cmd)) {
-         mr->MediaId = str_to_int64(ua->cmd);
+      if (ua->cmd[0] == '*' && is_a_number(ua->cmd+1)) {
+         mr->MediaId = str_to_int64(ua->cmd+1);
       } else {
          bstrncpy(mr->VolumeName, ua->cmd, sizeof(mr->VolumeName));
       }
@@ -751,7 +762,13 @@ int do_prompt(UAContext *ua, const char *automsg, const char *msg,
    }
    /* If running non-interactive, bail out */
    if (ua->batch) {
-      ua->send_msg(_("Cannot select %s in batch mode.\n"), automsg);
+      /* First print the choices he wanted to make */
+      ua->send_msg(ua->prompt[0]);
+      for (i=1; i < ua->num_prompts; i++) {
+         ua->send_msg("%6d: %s\n", i, ua->prompt[i]);
+      }
+      /* Now print error message */
+      ua->send_msg(_("Your request has multiple choices for \"%s\". Selection is not possible in batch mode.\n"), automsg);
       item = -1;
       goto done;
    }
@@ -1002,7 +1019,7 @@ bool get_level_from_name(JCR *jcr, const char *level_name)
    bool found = false;
    for (int i=0; joblevels[i].level_name; i++) {
       if (strcasecmp(level_name, joblevels[i].level_name) == 0) {
-         jcr->JobLevel = joblevels[i].level;
+         jcr->set_JobLevel(joblevels[i].level);
          found = true;
          break;
       }

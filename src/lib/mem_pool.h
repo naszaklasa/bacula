@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *  Kern Sibbald, MM
  *
- *   Version $Id: mem_pool.h 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: mem_pool.h 8090 2008-11-26 21:45:55Z kerns $
  */
 
 #ifndef __MEM_POOL_H_
@@ -91,6 +91,7 @@ public:
    POOL_MEM(int pool) { mem = get_pool_memory(pool); *mem = 0; }
    ~POOL_MEM() { free_pool_memory(mem); mem = NULL; }
    char *c_str() const { return mem; }
+   POOLMEM *&addr() { return mem; }
    int size() const { return sizeof_pool_memory(mem); }
    char *check_size(int32_t size) {
       mem = check_pool_memory_size(mem, size);
@@ -106,10 +107,15 @@ int pm_strcat(POOLMEM **pm, const char *str);
 int pm_strcat(POOLMEM *&pm, const char *str);
 int pm_strcat(POOL_MEM &pm, const char *str);
 int pm_strcat(POOLMEM *&pm, POOL_MEM &str);
+
 int pm_strcpy(POOLMEM **pm, const char *str);
 int pm_strcpy(POOLMEM *&pm, const char *str);
 int pm_strcpy(POOL_MEM &pm, const char *str);
 int pm_strcpy(POOLMEM *&pm, POOL_MEM &str);
 
+int pm_memcpy(POOLMEM **pm, const char *data, int32_t n);
+int pm_memcpy(POOLMEM *&pm, const char *data, int32_t n);
+int pm_memcpy(POOL_MEM &pm, const char *data, int32_t n);
+int pm_memcpy(POOLMEM *&pm, POOL_MEM &data, int32_t n);
 
 #endif

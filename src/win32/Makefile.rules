@@ -15,7 +15,7 @@ define clean_exe
 endef
 
 define checkdir
-	@if [ ! -e $(dir $(1)) ]; then mkdir $(dir $(1)); fi
+	@if [ ! -e $(dir $(1)) ]; then mkdir -p $(dir $(1)); fi
 endef
 
 define makedep
@@ -62,9 +62,11 @@ $(OBJDIR)/%.res: %.rc
 	$(ECHO_CMD)$(WINDRES) -O coff $< -o $@
 
 $(OBJDIR)/%.d: %.c
+	$(call checkdir, $@)
 	$(makedep)
 
 $(OBJDIR)/%.d: %.cpp
+	$(call checkdir, $@)
 	$(makedep)
 
 ifneq ($(ALL_OBJS),)

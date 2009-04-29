@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -29,7 +29,7 @@
  * 
  *  Kern Sibbald, August 2007
  *
- *  Version $Id: trayMonitor.cpp 5622 2007-09-22 09:08:29Z kerns $
+ *  Version $Id: trayMonitor.cpp 8384 2009-01-20 15:29:41Z ricozz $
  *
  * This is a generic tray monitor routine, which is used by all three
  *  of the daemons. Each one compiles it with slightly different
@@ -73,7 +73,7 @@ trayMonitor::trayMonitor()
    }
 
    /* Save our class pointer */
-   SetWindowLong(m_hwnd, GWL_USERDATA, (LONG)this);
+   SetWindowLong(m_hwnd, GWL_USERDATA, (LPARAM)this);
 
 
    // Load the icons for the tray

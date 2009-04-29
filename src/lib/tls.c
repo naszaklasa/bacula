@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  * Author: Landon Fuller <landonf@threerings.net>
  *
- * Version $Id: tls.c 5552 2007-09-14 09:49:06Z kerns $
+ * Version $Id: tls.c 8076 2008-11-22 18:36:12Z kerns $
  *
  * This file was contributed to the Bacula project by Landon Fuller
  * and Three Rings Design, Inc.
@@ -51,7 +51,6 @@
 #include "bacula.h"
 #include <assert.h>
 
-extern time_t watchdog_time;
 
 #ifdef HAVE_TLS /* Is TLS enabled? */
 
@@ -90,9 +89,9 @@ static int openssl_verify_peer(int ok, X509_STORE_CTX *store)
       X509_NAME_oneline(X509_get_issuer_name(cert), issuer, 256);
       X509_NAME_oneline(X509_get_subject_name(cert), subject, 256);
 
-      Jmsg5(get_jcr_from_tid(), M_ERROR, 0, _("Error with certificate at depth: %d, issuer = %s,"
-                          " subject = %s, ERR=%d:%s\n"), depth, issuer,
-                          subject, err, X509_verify_cert_error_string(err));
+      Jmsg5(NULL, M_ERROR, 0, _("Error with certificate at depth: %d, issuer = %s,"
+            " subject = %s, ERR=%d:%s\n"), depth, issuer,
+              subject, err, X509_verify_cert_error_string(err));
 
    }
 
@@ -153,7 +152,7 @@ TLS_CONTEXT *new_tls_context(const char *ca_certfile, const char *ca_certdir,
       }
    } else if (verify_peer) {
       /* At least one CA is required for peer verification */
-      Jmsg0(get_jcr_from_tid(), M_ERROR, 0, _("Either a certificate file or a directory must be"
+      Jmsg0(NULL, M_ERROR, 0, _("Either a certificate file or a directory must be"
                          " specified as a verification store\n"));
       goto err;
    }
@@ -199,7 +198,7 @@ TLS_CONTEXT *new_tls_context(const char *ca_certfile, const char *ca_certdir,
    }
 
    if (SSL_CTX_set_cipher_list(ctx->openssl, TLS_DEFAULT_CIPHERS) != 1) {
-      Jmsg0(get_jcr_from_tid(), M_ERROR, 0,
+      Jmsg0(NULL, M_ERROR, 0,
              _("Error setting cipher list, no valid ciphers available\n"));
       goto err;
    }
@@ -249,7 +248,7 @@ bool get_tls_enable(TLS_CONTEXT *ctx)
  *  Returns: true on success
  *           false on failure
  */
-bool tls_postconnect_verify_cn(TLS_CONNECTION *tls, alist *verify_list)
+bool tls_postconnect_verify_cn(JCR *jcr, TLS_CONNECTION *tls, alist *verify_list)
 {
    SSL *ssl = tls->openssl;
    X509 *cert;
@@ -259,7 +258,7 @@ bool tls_postconnect_verify_cn(TLS_CONNECTION *tls, alist *verify_list)
 
    /* Check if peer provided a certificate */
    if (!(cert = SSL_get_peer_certificate(ssl))) {
-      Jmsg0(get_jcr_from_tid(), M_ERROR, 0, _("Peer failed to present a TLS certificate\n"));
+      Qmsg0(jcr, M_ERROR, 0, _("Peer failed to present a TLS certificate\n"));
       return false;
    }
 
@@ -288,7 +287,7 @@ bool tls_postconnect_verify_cn(TLS_CONNECTION *tls, alist *verify_list)
  *  Returns: true on success
  *           false on failure
  */
-bool tls_postconnect_verify_host(TLS_CONNECTION *tls, const char *host)
+bool tls_postconnect_verify_host(JCR *jcr, TLS_CONNECTION *tls, const char *host)
 {
    SSL *ssl = tls->openssl;
    X509 *cert;
@@ -301,7 +300,7 @@ bool tls_postconnect_verify_host(TLS_CONNECTION *tls, const char *host)
 
    /* Check if peer provided a certificate */
    if (!(cert = SSL_get_peer_certificate(ssl))) {
-      Jmsg1(get_jcr_from_tid(), M_ERROR, 0, 
+      Qmsg1(jcr, M_ERROR, 0, 
             _("Peer %s failed to present a TLS certificate\n"), host);
       return false;
    }
@@ -500,7 +499,7 @@ static inline bool openssl_bsock_session_start(BSOCK *bsock, bool server)
          select(fdmax, NULL, &fdset, NULL, &tv);
          break;
       default:
-         /* Socket Error Occured */
+         /* Socket Error Occurred */
          openssl_post_errors(M_ERROR, _("Connect failure"));
          stat = false;
          goto cleanup;

@@ -26,7 +26,7 @@
  * Peters, Guido van Rossum, Ka-Ping Yee, Sjoerd Mullender, and
  * probably one or two others that I'm forgetting.
  *
- * $Id: bregex.c 6747 2008-04-06 10:00:46Z kerns $   
+ * $Id: bregex.c 7380 2008-07-14 10:42:59Z kerns $   
  *
  * This file modified to work with Bacula and C++ by
  *    Kern Sibbald, April 2006
@@ -56,7 +56,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.

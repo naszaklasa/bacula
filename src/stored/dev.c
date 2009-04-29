@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -47,7 +47,7 @@
  *     daemon. More complicated coding (double buffering, writer
  *     thread, ...) is left for a later version.
  *
- *   Version $Id: dev.c 7263 2008-06-30 12:56:49Z kerns $
+ *   Version $Id: dev.c 8538 2009-03-16 20:52:09Z kerns $
  */
 
 /*
@@ -127,6 +127,13 @@ init_dev(JCR *jcr, DEVRES *device)
          device->dev_type = B_TAPE_DEV;
       } else if (S_ISFIFO(statp.st_mode)) {
          device->dev_type = B_FIFO_DEV;
+#ifdef USE_VTAPE
+      /* must set DeviceType = Vtape 
+       * in normal mode, autodetection is disabled
+       */
+      } else if (S_ISREG(statp.st_mode)) { 
+         device->dev_type = B_VTAPE_DEV;
+#endif
       } else if (!(device->cap_bits & CAP_REQMOUNT)) {
          Jmsg2(jcr, M_ERROR, 0, _("%s is an unknown device type. Must be tape or directory\n"
                " or have RequiresMount=yes for DVD. st_mode=%x\n"),
@@ -162,6 +169,7 @@ init_dev(JCR *jcr, DEVRES *device)
    dev->drive_index = device->drive_index;
    dev->autoselect = device->autoselect;
    dev->dev_type = device->dev_type;
+   dev->init_backend();
    if (dev->is_tape()) { /* No parts on tapes */
       dev->max_part_size = 0;
    } else {
@@ -264,6 +272,44 @@ init_dev(JCR *jcr, DEVRES *device)
    return dev;
 }
 
+/* Choose the right backend */
+void DEVICE::init_backend()
+{
+
+#ifdef HAVE_WIN32
+   if (is_tape()) {
+      d_open  = win32_tape_open;
+      d_write = win32_tape_write;
+      d_close = win32_tape_close;
+      d_ioctl = win32_tape_ioctl;
+      d_read  = win32_tape_read;
+
+   } else {
+      d_open  = ::open;
+      d_close = ::close;
+      d_ioctl = win32_ioctl;    /* dummy function */
+      d_write = win32_write;    /* win32 read/write are not POSIX */
+      d_read  = win32_read;
+   }
+
+#else  /* POSIX / UNIX Interface */
+   if (is_vtape()) {            /* test backend */
+      d_open  = vtape_open;     /* vtape isn't available for WIN32 or FreeBSD */
+      d_write = vtape_write;
+      d_close = vtape_close;
+      d_ioctl = vtape_ioctl;
+      d_read  = vtape_read;
+
+   } else {                     /* tape and file are using normal io */
+      d_open  = ::open;
+      d_write = ::write;
+      d_close = ::close;
+      d_ioctl = ::ioctl;
+      d_read  = ::read;
+   }
+#endif
+}
+
 /*
  * Open the device with the operating system and
  * initialize buffer pointers.
@@ -285,11 +331,7 @@ DEVICE::open(DCR *dcr, int omode)
       if (openmode == omode) {
          return m_fd;
       } else {
-         if (is_tape()) {
-            tape_close(m_fd);
-         } else {
-            ::close(m_fd);
-         }
+         d_close(m_fd);
          clear_opened();
          Dmsg0(100, "Close fd for mode change.\n");
          preserve = state & (ST_LABEL|ST_APPEND|ST_READ);
@@ -362,13 +404,13 @@ void DEVICE::open_tape_device(DCR *dcr, int omode)
    errno = 0;
    if (is_fifo() && timeout) {
       /* Set open timer */
-      tid = start_thread_timer(pthread_self(), timeout);
+      tid = start_thread_timer(dcr->jcr, pthread_self(), timeout);
    }
    Dmsg2(100, "Try open %s mode=%s\n", print_name(), mode_to_str(omode));
 #if defined(HAVE_WIN32)
 
    /*   Windows Code */
-   if ((m_fd = tape_open(dev_name, mode)) < 0) {
+   if ((m_fd = d_open(dev_name, mode)) < 0) {
       dev_errno = errno;
    }
 
@@ -378,7 +420,7 @@ void DEVICE::open_tape_device(DCR *dcr, int omode)
    /* If busy retry each second for max_open_wait seconds */
    for ( ;; ) {
       /* Try non-blocking open */
-      m_fd = ::open(dev_name, mode+O_NONBLOCK);
+      m_fd = d_open(dev_name, mode+O_NONBLOCK);
       if (m_fd < 0) {
          berrno be;
          dev_errno = errno;
@@ -390,10 +432,10 @@ void DEVICE::open_tape_device(DCR *dcr, int omode)
          mt_com.mt_op = MTREW;
          mt_com.mt_count = 1;
          /* rewind only if dev is a tape */
-         if (is_tape() && (ioctl(m_fd, MTIOCTOP, (char *)&mt_com) < 0)) {
+         if (is_tape() && (d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com) < 0)) {
             berrno be;
             dev_errno = errno;           /* set error status from rewind */
-            ::close(m_fd);
+            d_close(m_fd);
             clear_opened();
             Dmsg2(100, "Rewind error on %s close: ERR=%s\n", print_name(),
                   be.bstrerror(dev_errno));
@@ -403,8 +445,8 @@ void DEVICE::open_tape_device(DCR *dcr, int omode)
             }
          } else {
             /* Got fd and rewind worked, so we must have medium in drive */
-            ::close(m_fd);
-            m_fd = ::open(dev_name, mode);  /* open normally */
+            d_close(m_fd);
+            m_fd = d_open(dev_name, mode);  /* open normally */
             if (m_fd < 0) {
                berrno be;
                dev_errno = errno;
@@ -688,7 +730,7 @@ void DEVICE::open_dvd_device(DCR *dcr, int omode)
                be.bstrerror());
          Dmsg1(100, "open failed: %s", errmsg);
          /* Use system close() */
-         ::close(m_fd);
+         d_close(m_fd);
          clear_opened();
       } else {
          part_size = filestat.st_size;
@@ -732,7 +774,7 @@ bool DEVICE::rewind(DCR *dcr)
        * retrying every 5 seconds.
        */
       for (i=max_rewind_wait; ; i -= 5) {
-         if (tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com) < 0) {
+         if (d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com) < 0) {
             berrno be;
             clrerror(MTREW);
             if (i == max_rewind_wait) {
@@ -746,7 +788,7 @@ bool DEVICE::rewind(DCR *dcr)
              */
             if (first && dcr) {
                int open_mode = openmode;
-               tape_close(m_fd);
+               d_close(m_fd);
                clear_opened();
                open(dcr, open_mode);
                if (m_fd < 0) {
@@ -886,7 +928,7 @@ bool DEVICE::eod(DCR *dcr)
          mt_com.mt_count = 1;
       }
 
-      if (tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com) < 0) {
+      if (d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com) < 0) {
          berrno be;
          clrerror(mt_com.mt_op);
          Dmsg1(50, "ioctl error: %s\n", be.bstrerror());
@@ -1030,7 +1072,7 @@ uint32_t status_dev(DEVICE *dev)
       stat |= BMT_TAPE;
       Pmsg0(-20,_(" Bacula status:"));
       Pmsg2(-20,_(" file=%d block=%d\n"), dev->file, dev->block_num);
-      if (tape_ioctl(dev->fd(), MTIOCGET, (char *)&mt_stat) < 0) {
+      if (dev->d_ioctl(dev->fd(), MTIOCGET, (char *)&mt_stat) < 0) {
          berrno be;
          dev->dev_errno = errno;
          Mmsg2(dev->errmsg, _("ioctl MTIOCGET error on %s. ERR=%s.\n"),
@@ -1157,7 +1199,7 @@ bool load_dev(DEVICE *dev)
    dev->file_addr = 0;
    mt_com.mt_op = MTLOAD;
    mt_com.mt_count = 1;
-   if (tape_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
+   if (dev->d_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
       berrno be;
       dev->dev_errno = errno;
       Mmsg2(dev->errmsg, _("ioctl MTLOAD error on %s. ERR=%s.\n"),
@@ -1188,7 +1230,7 @@ bool DEVICE::offline()
    unlock_door();
    mt_com.mt_op = MTOFFL;
    mt_com.mt_count = 1;
-   if (tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com) < 0) {
+   if (d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com) < 0) {
       berrno be;
       dev_errno = errno;
       Mmsg2(errmsg, _("ioctl MTOFFL error on %s. ERR=%s.\n"),
@@ -1263,7 +1305,7 @@ bool DEVICE::fsf(int num)
       int my_errno = 0;
       mt_com.mt_op = MTFSF;
       mt_com.mt_count = num;
-      stat = tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
+      stat = d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
       if (stat < 0) {
          my_errno = errno;            /* save errno */
       } else if ((os_file=get_os_tape_file()) < 0) {
@@ -1344,7 +1386,7 @@ bool DEVICE::fsf(int num)
          }
 
          Dmsg0(100, "Doing MTFSF\n");
-         stat = tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
+         stat = d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
          if (stat < 0) {                 /* error => EOT */
             berrno be;
             set_eot();
@@ -1418,7 +1460,7 @@ bool DEVICE::bsf(int num)
    file_size = 0;
    mt_com.mt_op = MTBSF;
    mt_com.mt_count = num;
-   stat = tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
+   stat = d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
    if (stat < 0) {
       berrno be;
       clrerror(MTBSF);
@@ -1458,7 +1500,7 @@ bool DEVICE::fsr(int num)
    Dmsg1(100, "fsr %d\n", num);
    mt_com.mt_op = MTFSR;
    mt_com.mt_count = num;
-   stat = tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
+   stat = d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
    if (stat == 0) {
       clear_eof();
       block_num += num;
@@ -1517,7 +1559,7 @@ bool DEVICE::bsr(int num)
    clear_eot();
    mt_com.mt_op = MTBSR;
    mt_com.mt_count = num;
-   stat = tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
+   stat = d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
    if (stat < 0) {
       berrno be;
       clrerror(MTBSR);
@@ -1533,7 +1575,7 @@ void DEVICE::lock_door()
    struct mtop mt_com;
    mt_com.mt_op = MTLOCK;
    mt_com.mt_count = 1;
-   tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
+   d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
 #endif
 }
 
@@ -1543,7 +1585,7 @@ void DEVICE::unlock_door()
    struct mtop mt_com;
    mt_com.mt_op = MTUNLOCK;
    mt_com.mt_count = 1;
-   tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
+   d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
 #endif
 }
 
@@ -1645,7 +1687,7 @@ bool DEVICE::weof(int num)
 {
    struct mtop mt_com;
    int stat;
-   Dmsg0(129, "weof_dev\n");
+   Dmsg1(129, "=== weof_dev=%s\n", print_name());
    
    if (!is_open()) {
       dev_errno = EBADF;
@@ -1668,7 +1710,7 @@ bool DEVICE::weof(int num)
    clear_eot();
    mt_com.mt_op = MTWEOF;
    mt_com.mt_count = num;
-   stat = tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
+   stat = d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
    if (stat == 0) {
       block_num = 0;
       file += num;
@@ -1799,7 +1841,7 @@ void DEVICE::clrerror(int func)
 /* Found on Solaris */
 #ifdef MTIOCLRERR
 {
-   tape_ioctl(m_fd, MTIOCLRERR);
+   d_ioctl(m_fd, MTIOCLRERR);
    Dmsg0(200, "Did MTIOCLRERR\n");
 }
 #endif
@@ -1812,7 +1854,7 @@ void DEVICE::clrerror(int func)
    union mterrstat mt_errstat;
    Dmsg2(200, "Doing MTIOCERRSTAT errno=%d ERR=%s\n", dev_errno,
       be.bstrerror(dev_errno));
-   tape_ioctl(m_fd, MTIOCERRSTAT, (char *)&mt_errstat);
+   d_ioctl(m_fd, MTIOCERRSTAT, (char *)&mt_errstat);
 }
 #endif
 
@@ -1823,11 +1865,12 @@ void DEVICE::clrerror(int func)
    mt_com.mt_op = MTCSE;
    mt_com.mt_count = 1;
    /* Clear any error condition on the tape */
-   tape_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
+   d_ioctl(m_fd, MTIOCTOP, (char *)&mt_com);
    Dmsg0(200, "Did MTCSE\n");
 }
 #endif
 }
+
 
 /*
  * Set to unload the current volume in the drive
@@ -1839,6 +1882,7 @@ void DEVICE::set_unload()
        memcpy(UnloadVolName, VolHdr.VolumeName, sizeof(UnloadVolName));
    }
 }
+
 
 /*
  * Clear volume header
@@ -1867,12 +1911,12 @@ void DEVICE::close()
    }
 
    switch (dev_type) {
+   case B_VTL_DEV:
+   case B_VTAPE_DEV:
    case B_TAPE_DEV:
       unlock_door(); 
-      tape_close(m_fd);
-      break;
    default:
-      ::close(m_fd);
+      d_close(m_fd);
    }
 
    /* Clean up device packet so it can be reused */
@@ -1928,7 +1972,7 @@ boffset_t DEVICE::lseek(DCR *dcr, boffset_t offset, int whence)
 #if defined(HAVE_WIN32)
       return ::_lseeki64(m_fd, (__int64)offset, whence);
 #else
-      return ::lseek(m_fd, (off_t)offset, whence);
+      return ::lseek(m_fd, offset, whence);
 #endif
    }
    return -1;
@@ -1942,6 +1986,7 @@ bool DEVICE::truncate(DCR *dcr) /* We need the DCR for DVD-writing */
    Dmsg1(100, "truncate %s\n", print_name());
    switch (dev_type) {
    case B_VTL_DEV:
+   case B_VTAPE_DEV:
    case B_TAPE_DEV:
       /* maybe we should rewind and write and eof ???? */
       return true;                    /* we don't really truncate tapes */
@@ -2066,8 +2111,8 @@ bool DEVICE::do_mount(int mount, int dotimeout)
    Dmsg2(100, "do_mount: cmd=%s mounted=%d\n", ocmd.c_str(), !!is_mounted());
 
    if (dotimeout) {
-      /* Try at most 1 time to (un)mount the device. This should perhaps be configurable. */
-      timeout = 1;
+      /* Try at most 10 times to (un)mount the device. This should perhaps be configurable. */
+      timeout = 10;
    } else {
       timeout = 0;
    }
@@ -2271,11 +2316,7 @@ ssize_t DEVICE::read(void *buf, size_t len)
 
    get_timer_count();
 
-   if (this->is_tape()) {
-      read_len = tape_read(m_fd, buf, len);
-   } else {
-      read_len = ::read(m_fd, buf, len);
-   }
+   read_len = d_read(m_fd, buf, len);
 
    last_tick = get_timer_count();
 
@@ -2296,11 +2337,7 @@ ssize_t DEVICE::write(const void *buf, size_t len)
 
    get_timer_count();
 
-   if (this->is_tape()) {
-      write_len = tape_write(m_fd, buf, len);
-   } else {
-      write_len = ::write(m_fd, buf, len);
-   }
+   write_len = d_write(m_fd, buf, len);
 
    last_tick = get_timer_count();
 
@@ -2326,7 +2363,7 @@ int32_t DEVICE::get_os_tape_file()
    struct mtget mt_stat;
 
    if (has_cap(CAP_MTIOCGET) &&
-       tape_ioctl(m_fd, MTIOCGET, (char *)&mt_stat) == 0) {
+       d_ioctl(m_fd, MTIOCGET, (char *)&mt_stat) == 0) {
       return mt_stat.mt_fileno;
    }
    return -1;
@@ -2450,7 +2487,7 @@ void set_os_device_parameters(DCR *dcr)
       mt_com.mt_op = MTSETBLK;
       mt_com.mt_count = 0;
       Dmsg0(100, "Set block size to zero\n");
-      if (tape_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
+      if (dev->d_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
          dev->clrerror(MTSETBLK);
       }
    }
@@ -2466,7 +2503,7 @@ void set_os_device_parameters(DCR *dcr)
          mt_com.mt_count |= MT_ST_FAST_MTEOM;
       }
       Dmsg0(100, "MTSETDRVBUFFER\n");
-      if (tape_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
+      if (dev->d_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
          dev->clrerror(MTSETDRVBUFFER);
       }
    }
@@ -2480,13 +2517,13 @@ void set_os_device_parameters(DCR *dcr)
        dev->min_block_size == 0) {    /* variable block mode */
       mt_com.mt_op = MTSETBSIZ;
       mt_com.mt_count = 0;
-      if (tape_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
+      if (dev->d_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
          dev->clrerror(MTSETBSIZ);
       }
       /* Get notified at logical end of tape */
       mt_com.mt_op = MTEWARN;
       mt_com.mt_count = 1;
-      if (tape_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
+      if (dev->d_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
          dev->clrerror(MTEWARN);
       }
    }
@@ -2499,7 +2536,7 @@ void set_os_device_parameters(DCR *dcr)
        dev->min_block_size == 0) {    /* variable block mode */
       mt_com.mt_op = MTSETBSIZ;
       mt_com.mt_count = 0;
-      if (tape_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
+      if (dev->d_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
          dev->clrerror(MTSETBSIZ);
       }
    }
@@ -2510,7 +2547,7 @@ void set_os_device_parameters(DCR *dcr)
    } else {
       neof = 1;
    }
-   if (ioctl(dev->fd(), MTIOCSETEOTMODEL, (caddr_t)&neof) < 0) {
+   if (dev->d_ioctl(dev->fd(), MTIOCSETEOTMODEL, (caddr_t)&neof) < 0) {
       berrno be;
       dev->dev_errno = errno;         /* save errno */
       Mmsg2(dev->errmsg, _("Unable to set eotmodel on device %s: ERR=%s\n"),
@@ -2527,7 +2564,7 @@ void set_os_device_parameters(DCR *dcr)
        dev->min_block_size == 0) {    /* variable block mode */
       mt_com.mt_op = MTSRSZ;
       mt_com.mt_count = 0;
-      if (tape_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
+      if (dev->d_ioctl(dev->fd(), MTIOCTOP, (char *)&mt_com) < 0) {
          dev->clrerror(MTSRSZ);
       }
    }
@@ -2539,7 +2576,7 @@ static bool dev_get_os_pos(DEVICE *dev, struct mtget *mt_stat)
 {
    Dmsg0(100, "dev_get_os_pos\n");
    return dev->has_cap(CAP_MTIOCGET) && 
-          tape_ioctl(dev->fd(), MTIOCGET, (char *)mt_stat) == 0 &&
+          dev->d_ioctl(dev->fd(), MTIOCGET, (char *)mt_stat) == 0 &&
           mt_stat->mt_fileno >= 0;
 }
 

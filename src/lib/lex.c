@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, 2000
  *
- *   Version $Id: lex.c 6067 2007-12-14 16:25:59Z kerns $
+ *   Version $Id: lex.c 8176 2008-12-17 14:03:44Z ricozz $
  *
  */
 
@@ -349,6 +349,23 @@ static uint32_t scan_pint(LEX *lf, char *str)
       }
    }
    return (uint32_t)val;
+}
+
+static uint64_t scan_pint64(LEX *lf, char *str)
+{
+   uint64_t val = 0;
+   if (!is_a_number(str)) {
+      scan_err1(lf, _("expected a positive integer number, got: %s"), str);
+      /* NOT REACHED */
+   } else {
+      errno = 0;
+      val = str_to_uint64(str);
+      if (errno != 0) {
+         scan_err1(lf, _("expected a positive integer number, got: %s"), str);
+         /* NOT REACHED */
+      }
+   }
+   return val;
 }
 
 /*
@@ -726,6 +743,26 @@ lex_get_token(LEX *lf, int expect)
          token = T_ERROR;
       } else {
          token = T_INT64;
+      }
+      break;
+
+   case T_PINT64_RANGE:
+      if (token == T_NUMBER) {
+         lf->pint64_val = scan_pint64(lf, lf->str);
+         lf->pint64_val2 = lf->pint64_val;
+         token = T_PINT64;
+      } else {
+         char *p = strchr(lf->str, '-');
+         if (!p) {
+            scan_err2(lf, _("expected an integer or a range, got %s: %s"),
+               lex_tok_to_str(token), lf->str);
+            token = T_ERROR;
+            break;
+         }
+         *p++ = 0;                       /* terminate first half of range */
+         lf->pint64_val  = scan_pint64(lf, lf->str);
+         lf->pint64_val2 = scan_pint64(lf, p);
+         token = T_PINT64_RANGE;
       }
       break;
 

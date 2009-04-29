@@ -27,18 +27,28 @@
   </property>
   <widget class="QWidget" name="centralwidget" >
    <layout class="QGridLayout" >
-    <property name="margin" >
+    <property name="leftMargin" >
      <number>9</number>
     </property>
-    <property name="spacing" >
+    <property name="topMargin" >
+     <number>9</number>
+    </property>
+    <property name="rightMargin" >
+     <number>9</number>
+    </property>
+    <property name="bottomMargin" >
+     <number>9</number>
+    </property>
+    <property name="horizontalSpacing" >
+     <number>6</number>
+    </property>
+    <property name="verticalSpacing" >
      <number>6</number>
     </property>
     <item row="0" column="0" >
      <widget class="QStackedWidget" name="stackedWidget" >
       <property name="sizePolicy" >
-       <sizepolicy>
-        <hsizetype>7</hsizetype>
-        <vsizetype>7</vsizetype>
+       <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
         <horstretch>1</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -71,7 +81,7 @@
      <x>0</x>
      <y>0</y>
      <width>882</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit" >
@@ -103,6 +113,7 @@
     <addaction name="actionPrint" />
     <addaction name="actionSave" />
     <addaction name="actionQuit" />
+    <addaction name="actionRepopLists" />
    </widget>
    <addaction name="menuFile" />
    <addaction name="menuEdit" />
@@ -131,10 +142,14 @@
     <enum>Qt::Horizontal</enum>
    </property>
    <attribute name="toolBarArea" >
-    <number>4</number>
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
    </attribute>
    <addaction name="actionConnect" />
    <addaction name="actionStatusDir" />
+   <addaction name="actionStatusDirPage" />
    <addaction name="actionMessages" />
    <addaction name="actionLabel" />
    <addaction name="actionRestore" />
@@ -146,9 +161,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget" >
    <property name="sizePolicy" >
-    <sizepolicy>
-     <hsizetype>5</hsizetype>
-     <vsizetype>7</vsizetype>
+    <sizepolicy vsizetype="Expanding" hsizetype="Preferred" >
      <horstretch>0</horstretch>
      <verstretch>1</verstretch>
     </sizepolicy>
@@ -191,18 +204,28 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents" >
     <layout class="QGridLayout" >
-     <property name="margin" >
+     <property name="leftMargin" >
       <number>9</number>
      </property>
-     <property name="spacing" >
+     <property name="topMargin" >
+      <number>9</number>
+     </property>
+     <property name="rightMargin" >
+      <number>9</number>
+     </property>
+     <property name="bottomMargin" >
+      <number>9</number>
+     </property>
+     <property name="horizontalSpacing" >
+      <number>6</number>
+     </property>
+     <property name="verticalSpacing" >
       <number>6</number>
      </property>
      <item row="0" column="0" >
       <widget class="QTreeWidget" name="treeWidget" >
        <property name="sizePolicy" >
-        <sizepolicy>
-         <hsizetype>5</hsizetype>
-         <vsizetype>7</vsizetype>
+        <sizepolicy vsizetype="Expanding" hsizetype="Preferred" >
          <horstretch>1</horstretch>
          <verstretch>1</verstretch>
         </sizepolicy>
@@ -237,6 +260,11 @@
        <property name="autoFillBackground" >
         <bool>true</bool>
        </property>
+       <column>
+        <property name="text" >
+         <string>1</string>
+        </property>
+       </column>
       </widget>
      </item>
     </layout>
@@ -266,19 +294,40 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_2" >
     <layout class="QGridLayout" >
-     <property name="margin" >
+     <property name="leftMargin" >
       <number>9</number>
      </property>
-     <property name="spacing" >
+     <property name="topMargin" >
+      <number>9</number>
+     </property>
+     <property name="rightMargin" >
+      <number>9</number>
+     </property>
+     <property name="bottomMargin" >
+      <number>9</number>
+     </property>
+     <property name="horizontalSpacing" >
+      <number>6</number>
+     </property>
+     <property name="verticalSpacing" >
       <number>6</number>
      </property>
      <item row="0" column="0" >
       <layout class="QHBoxLayout" >
-       <property name="margin" >
-        <number>0</number>
-       </property>
        <property name="spacing" >
         <number>6</number>
+       </property>
+       <property name="leftMargin" >
+        <number>0</number>
+       </property>
+       <property name="topMargin" >
+        <number>0</number>
+       </property>
+       <property name="rightMargin" >
+        <number>0</number>
+       </property>
+       <property name="bottomMargin" >
+        <number>0</number>
        </property>
        <item>
         <widget class="QLabel" name="label" >
@@ -455,7 +504,7 @@
   </action>
   <action name="actionStatusDir" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/status.png</iconset>
+    <iconset resource="main.qrc" >:/images/status-console.png</iconset>
    </property>
    <property name="text" >
     <string comment="Query status of director" >Status Dir</string>
@@ -464,10 +513,10 @@
     <string>Status Dir</string>
    </property>
    <property name="toolTip" >
-    <string>Query status of director</string>
+    <string>Query status of director in console</string>
    </property>
    <property name="statusTip" >
-    <string>Query status of director</string>
+    <string>Query status of director in console</string>
    </property>
    <property name="autoRepeat" >
     <bool>true</bool>
@@ -563,7 +612,7 @@
   </action>
   <action name="actionJobPlot" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/graph1.png</iconset>
+    <iconset resource="main.qrc" >:/images/applications-graphics.png</iconset>
    </property>
    <property name="text" >
     <string>JobPlot</string>
@@ -573,6 +622,25 @@
    </property>
    <property name="statusTip" >
     <string>Plot Job Files and Bytes</string>
+   </property>
+  </action>
+  <action name="actionStatusDirPage" >
+   <property name="icon" >
+    <iconset resource="main.qrc" >:/images/status.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Status Dir Page</string>
+   </property>
+   <property name="toolTip" >
+    <string>Director Status Page</string>
+   </property>
+  </action>
+  <action name="actionRepopLists" >
+   <property name="icon" >
+    <iconset resource="main.qrc" >:/images/mark.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Repop Lists</string>
    </property>
   </action>
  </widget>

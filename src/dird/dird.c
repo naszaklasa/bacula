@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,11 +31,24 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: dird.c 7508 2008-08-26 13:14:38Z kerns $
+ *   Version $Id: dird.c 8407 2009-01-28 10:47:21Z ricozz $
  */
 
 #include "bacula.h"
 #include "dird.h"
+
+#ifdef HAVE_PYTHON
+
+#undef _POSIX_C_SOURCE
+#include <Python.h>
+
+#include "lib/pythonlib.h"
+
+/* Imported Functions */
+extern PyObject *job_getattr(PyObject *self, char *attrname);
+extern int job_setattr(PyObject *self, char *attrname, PyObject *value);
+
+#endif /* HAVE_PYTHON */
 
 /* Forward referenced subroutines */
 void terminate_dird(int sig);
@@ -46,7 +59,7 @@ static void dir_sql_query(JCR *jcr, const char *cmd);
 /* Exported subroutines */
 extern "C" void reload_config(int sig);
 extern void invalidate_schedules();
-
+extern bool parse_dir_config(CONFIG *config, const char *configfile, int exit_code);
 
 /* Imported subroutines */
 JCR *wait_for_next_job(char *runjob);
@@ -64,7 +77,8 @@ void init_device_resources();
 static char *runjob = NULL;
 static int background = 1;
 static void init_reload(void);
-
+static CONFIG *config;
+ 
 /* Globals Exported */
 DIRRES *director;                     /* Director resource */
 int FDConnectTimeout;
@@ -73,14 +87,10 @@ char *configfile = NULL;
 void *start_heap;
 
 /* Globals Imported */
-extern int r_first, r_last;           /* first and last resources */
-extern RES_TABLE resources[];
-extern RES **res_head;
 extern RES_ITEM job_items[];
-
 #if defined(_MSC_VER)
 extern "C" { // work around visual compiler mangling variables
-    extern URES res_all;
+   extern URES res_all;
 }
 #else
 extern URES res_all;
@@ -95,7 +105,8 @@ PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: dird [-f -s] [-c config_file] [-d debug_level] [config_file]\n"
 "       -c <file>   set configuration file to file\n"
-"       -dnn        set debug level to nn\n"
+"       -d <nn>     set debug level to <nn>\n"
+"       -dt         print timestamp in debug output\n"
 "       -f          run in foreground (for debugging)\n"
 "       -g          groupid\n"
 "       -r <job>    run <job> now\n"
@@ -128,6 +139,9 @@ int main (int argc, char *argv[])
    bool test_config = false;
    char *uid = NULL;
    char *gid = NULL;
+#ifdef HAVE_PYTHON
+   init_python_interpreter_args python_args;
+#endif /* HAVE_PYTHON */
 
    start_heap = sbrk(0);
    setlocale(LC_ALL, "");
@@ -140,6 +154,8 @@ int main (int argc, char *argv[])
    init_reload();
    daemon_start_time = time(NULL);
 
+   console_command = run_console_command;
+
    while ((ch = getopt(argc, argv, "c:d:fg:r:stu:v?")) != -1) {
       switch (ch) {
       case 'c':                    /* specify config file */
@@ -150,9 +166,13 @@ int main (int argc, char *argv[])
          break;
 
       case 'd':                    /* set debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0) {
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
          }
          Dmsg1(10, "Debug level = %d\n", debug_level);
          break;
@@ -219,7 +239,8 @@ int main (int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_dir_config(config, configfile, M_ERROR_TERM);
 
    if (init_crypto() != 0) {
       Jmsg((JCR *)NULL, M_ERROR_TERM, 0, _("Cryptography library initialization failed.\n"));
@@ -240,6 +261,8 @@ int main (int argc, char *argv[])
       read_state_file(director->working_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
    }
 
+   load_dir_plugins(director->plugin_directory);
+
    drop(uid, gid);                    /* reduce privileges if requested */
 
    if (!check_catalog()) {
@@ -259,16 +282,25 @@ int main (int argc, char *argv[])
    FDConnectTimeout = (int)director->FDConnectTimeout;
    SDConnectTimeout = (int)director->SDConnectTimeout;
 
-
 #if !defined(HAVE_WIN32)
    signal(SIGHUP, reload_config);
 #endif
 
    init_console_msg(working_directory);
 
-   init_python_interpreter(director->name(), director->scripts_directory, 
-       "DirStartUp");
+#ifdef HAVE_PYTHON
+   python_args.progname = director->name();
+   python_args.scriptdir = director->scripts_directory;
+   python_args.modulename = "DirStartUp";
+   python_args.configfile = configfile;
+   python_args.workingdir = director->working_directory;
+   python_args.job_getattr = job_getattr;
+   python_args.job_setattr = job_setattr;
 
+   init_python_interpreter(&python_args);
+#endif /* HAVE_PYTHON */
+
+   set_jcr_in_tsd(INVALID_JCR);
    set_thread_concurrency(director->MaxConcurrentJobs * 2 +
       4 /* UA */ + 4 /* sched+watchdog+jobsvr+misc */);
 
@@ -281,6 +313,8 @@ int main (int argc, char *argv[])
 
    init_job_server(director->MaxConcurrentJobs);
 
+   dbg_jcr_add_hook(_dbg_print_db); /* used to debug B_DB connexion after fatal signal */
+
 //   init_device_resources();
 
    Dmsg0(200, "wait for next job\n");
@@ -288,6 +322,7 @@ int main (int argc, char *argv[])
    while ( (jcr = wait_for_next_job(runjob)) ) {
       run_job(jcr);                   /* run job */
       free_jcr(jcr);                  /* release jcr */
+      set_jcr_in_tsd(INVALID_JCR);
       if (runjob) {                   /* command line, run a single job? */
          break;                       /* yes, terminate */
       }
@@ -327,6 +362,7 @@ void terminate_dird(int sig)
    debug_level = 0;                   /* turn off debug */
    stop_watchdog();
    generate_daemon_event(NULL, "Exit");
+   unload_plugins();
    write_state_file(director->working_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
    delete_pid_file(director->pid_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
    term_scheduler();
@@ -340,11 +376,16 @@ void terminate_dird(int sig)
    if (debug_level > 5) {
       print_memory_pool_stats();
    }
-   free_config_resources();
+   if (config) {
+      config->free_resources();
+      free(config);
+      config = NULL;
+   }
    term_ua_server();
    term_msg();                        /* terminate message handler */
    cleanup_crypto();
    close_memory_pool();               /* release free memory in pool */
+   lmgr_cleanup_main();
    sm_dump(false);
    exit(sig);
 }
@@ -466,10 +507,10 @@ void reload_config(int sig)
    }
 
    Dmsg1(100, "Reload_config njobs=%d\n", njobs);
-   reload_table[table].res_table = save_config_resources();
+   reload_table[table].res_table = config->save_resources();
    Dmsg1(100, "Saved old config in table %d\n", table);
 
-   ok = parse_config(configfile, 0, M_ERROR);  /* no exit on error */
+   ok = parse_dir_config(config, configfile, M_ERROR);
 
    Dmsg0(100, "Reloaded config file\n");
    if (!ok || !check_resources() || !check_catalog()) {
@@ -481,7 +522,7 @@ void reload_config(int sig)
          Jmsg(NULL, M_ERROR, 0, _("Please correct configuration file: %s\n"), configfile);
          Jmsg(NULL, M_ERROR, 0, _("Resetting previous configuration.\n"));
       }
-      reload_table[rtable].res_table = save_config_resources();
+      reload_table[rtable].res_table = config->save_resources();
       /* Now restore old resoure values */
       int num = r_last - r_first + 1;
       RES **res_tab = reload_table[table].res_table;
@@ -495,7 +536,7 @@ void reload_config(int sig)
        * Hook all active jobs so that they release this table
        */
       foreach_jcr(jcr) {
-         if (jcr->JobType != JT_SYSTEM) {
+         if (jcr->get_JobType() != JT_SYSTEM) {
             reload_table[table].job_count++;
             job_end_push(jcr, reload_job_end_cb, (void *)((long int)table));
             njobs++;
@@ -536,6 +577,7 @@ static bool check_resources()
 {
    bool OK = true;
    JOB *job;
+   bool need_tls;
 
    LockRes();
 
@@ -569,19 +611,22 @@ static bool check_resources()
          }
       }
 
-      if (!director->tls_certfile && director->tls_enable) {
+      need_tls = director->tls_enable || director->tls_authenticate;
+
+      if (!director->tls_certfile && need_tls) {
          Jmsg(NULL, M_FATAL, 0, _("\"TLS Certificate\" file not defined for Director \"%s\" in %s.\n"),
             director->name(), configfile);
          OK = false;
       }
 
-      if (!director->tls_keyfile && director->tls_enable) {
+      if (!director->tls_keyfile && need_tls) {
          Jmsg(NULL, M_FATAL, 0, _("\"TLS Key\" file not defined for Director \"%s\" in %s.\n"),
             director->name(), configfile);
          OK = false;
       }
 
-      if ((!director->tls_ca_certfile && !director->tls_ca_certdir) && director->tls_enable && director->tls_verify_peer) {
+      if ((!director->tls_ca_certfile && !director->tls_ca_certdir) && 
+           need_tls && director->tls_verify_peer) {
          Jmsg(NULL, M_FATAL, 0, _("Neither \"TLS CA Certificate\" or \"TLS CA"
               " Certificate Dir\" are defined for Director \"%s\" in %s."
               " At least one CA certificate store is required"
@@ -591,7 +636,7 @@ static bool check_resources()
       }
 
       /* If everything is well, attempt to initialize our per-resource TLS context */
-      if (OK && (director->tls_enable || director->tls_require)) {
+      if (OK && (need_tls || director->tls_require)) {
          /* Initialize TLS context:
           * Args: CA certfile, CA certdir, Certfile, Keyfile,
           * Keyfile PEM Callback, Keyfile CB Userdata, DHfile, Verify Peer */
@@ -692,7 +737,7 @@ static bool check_resources()
                      set_bit(i, job->hdr.item_present);
                   }
                /*
-                * Handle 32 bit integer fields
+                * Handle integer fields
                 *    Note, our store_bit does not handle bitmaped fields
                 */
                } else if (job_items[i].handler == store_bit     ||
@@ -772,19 +817,22 @@ static bool check_resources()
          }
       }
 
-      if (!cons->tls_certfile && cons->tls_enable) {
+      need_tls = cons->tls_enable || cons->tls_authenticate;
+      
+      if (!cons->tls_certfile && need_tls) {
          Jmsg(NULL, M_FATAL, 0, _("\"TLS Certificate\" file not defined for Console \"%s\" in %s.\n"),
             cons->name(), configfile);
          OK = false;
       }
 
-      if (!cons->tls_keyfile && cons->tls_enable) {
+      if (!cons->tls_keyfile && need_tls) {
          Jmsg(NULL, M_FATAL, 0, _("\"TLS Key\" file not defined for Console \"%s\" in %s.\n"),
             cons->name(), configfile);
          OK = false;
       }
 
-      if ((!cons->tls_ca_certfile && !cons->tls_ca_certdir) && cons->tls_enable && cons->tls_verify_peer) {
+      if ((!cons->tls_ca_certfile && !cons->tls_ca_certdir) 
+            && need_tls && cons->tls_verify_peer) {
          Jmsg(NULL, M_FATAL, 0, _("Neither \"TLS CA Certificate\" or \"TLS CA"
             " Certificate Dir\" are defined for Console \"%s\" in %s."
             " At least one CA certificate store is required"
@@ -793,7 +841,7 @@ static bool check_resources()
          OK = false;
       }
       /* If everything is well, attempt to initialize our per-resource TLS context */
-      if (OK && (cons->tls_enable || cons->tls_require)) {
+      if (OK && (need_tls || cons->tls_require)) {
          /* Initialize TLS context:
           * Args: CA certfile, CA certdir, Certfile, Keyfile,
           * Keyfile PEM Callback, Keyfile CB Userdata, DHfile, Verify Peer */
@@ -823,8 +871,8 @@ static bool check_resources()
             continue;
          }
       }
-
-      if ((!client->tls_ca_certfile && !client->tls_ca_certdir) && client->tls_enable) {
+      need_tls = client->tls_enable || client->tls_authenticate;
+      if ((!client->tls_ca_certfile && !client->tls_ca_certdir) && need_tls) {
          Jmsg(NULL, M_FATAL, 0, _("Neither \"TLS CA Certificate\""
             " or \"TLS CA Certificate Dir\" are defined for File daemon \"%s\" in %s.\n"),
             client->name(), configfile);
@@ -832,7 +880,7 @@ static bool check_resources()
       }
 
       /* If everything is well, attempt to initialize our per-resource TLS context */
-      if (OK && (client->tls_enable || client->tls_require)) {
+      if (OK && (need_tls || client->tls_require)) {
          /* Initialize TLS context:
           * Args: CA certfile, CA certdir, Certfile, Keyfile,
           * Keyfile PEM Callback, Keyfile CB Userdata, DHfile, Verify Peer */
@@ -860,6 +908,7 @@ static bool check_resources()
 static bool check_catalog()
 {
    bool OK = true;
+   bool need_tls;
 
    /* Loop over databases */
    CAT *catalog;
@@ -869,7 +918,7 @@ static bool check_catalog()
        * Make sure we can open catalog, otherwise print a warning
        * message because the server is probably not running.
        */
-      db = db_init_database(NULL, catalog->db_name, catalog->db_user,
+      db = db_init(NULL, catalog->db_driver, catalog->db_name, catalog->db_user,
                          catalog->db_password, catalog->db_address,
                          catalog->db_port, catalog->db_socket,
                          catalog->mult_db_connections);
@@ -890,12 +939,26 @@ static bool check_catalog()
       /* Loop over all pools, defining/updating them in each database */
       POOL *pool;
       foreach_res(pool, R_POOL) {
-         create_pool(NULL, db, pool, POOL_OP_UPDATE);  /* update request */
+         /*
+          * If the Pool has a catalog resource create the pool only
+          *   in that catalog.
+          */
+         if (!pool->catalog || pool->catalog == catalog) {
+            create_pool(NULL, db, pool, POOL_OP_UPDATE);  /* update request */
+         }
       }
 
-      /* Loop over all pools for updating RecyclePool */
+      /* Once they are created, we can loop over them again, updating
+       * references (RecyclePool)
+       */
       foreach_res(pool, R_POOL) {
-         update_pool_recyclepool(NULL, db, pool);
+         /*
+          * If the Pool has a catalog resource update the pool only
+          *   in that catalog.
+          */
+         if (!pool->catalog || pool->catalog == catalog) {
+            update_pool_references(NULL, db, pool);
+         }
       }
 
       STORE *store;
@@ -928,7 +991,9 @@ static bool check_catalog()
             }
          } 
 
-         if ((!store->tls_ca_certfile && !store->tls_ca_certdir) && store->tls_enable) {
+         need_tls = store->tls_enable || store->tls_authenticate;
+
+         if ((!store->tls_ca_certfile && !store->tls_ca_certdir) && need_tls) {
             Jmsg(NULL, M_FATAL, 0, _("Neither \"TLS CA Certificate\""
                  " or \"TLS CA Certificate Dir\" are defined for Storage \"%s\" in %s.\n"),
                  store->name(), configfile);
@@ -936,7 +1001,7 @@ static bool check_catalog()
          }
 
          /* If everything is well, attempt to initialize our per-resource TLS context */
-         if (OK && (store->tls_enable || store->tls_require)) {
+         if (OK && (need_tls || store->tls_require)) {
            /* Initialize TLS context:
             * Args: CA certfile, CA certdir, Certfile, Keyfile,
             * Keyfile PEM Callback, Keyfile CB Userdata, DHfile, Verify Peer */

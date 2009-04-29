@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: util.c 6262 2008-01-09 10:58:13Z kerns $
+ *   Version $Id: util.c 8508 2009-03-07 20:59:46Z kerns $
  */
 
 #include "bacula.h"
@@ -134,10 +134,11 @@ unbash_spaces(POOL_MEM &pm)
    }
 }
 
-char *encode_time(time_t time, char *buf)
+char *encode_time(utime_t utime, char *buf)
 {
    struct tm tm;
    int n = 0;
+   time_t time = utime;
 
 #if defined(HAVE_WIN32)
    /*
@@ -194,6 +195,9 @@ void jobstatus_to_ascii(int JobStatus, char *msg, int maxlen)
    case JS_Error:
       jobstat = _("Non-fatal error");
       break;
+   case JS_Warnings:
+      jobstat = _("OK -- with warnings");
+      break;
    case JS_Canceled:
       jobstat = _("Canceled");
       break;
@@ -230,6 +234,12 @@ void jobstatus_to_ascii(int JobStatus, char *msg, int maxlen)
    case JS_WaitPriority:
       jobstat = _("Waiting on Priority");
       break;
+   case JS_DataCommitting:
+      jobstat = _("SD committing Data");
+      break;
+   case JS_DataDespooling:
+      jobstat = _("SD despooling Data");
+      break;
    case JS_AttrDespooling:
       jobstat = _("SD despooling Attributes");
       break;
@@ -250,6 +260,56 @@ void jobstatus_to_ascii(int JobStatus, char *msg, int maxlen)
 }
 
 /*
+ * Convert a JobStatus code into a human readable form - gui version
+ */
+void jobstatus_to_ascii_gui(int JobStatus, char *msg, int maxlen)
+{
+   const char *cnv = NULL;
+   switch (JobStatus) {
+   case JS_Terminated:
+      cnv = _("Completed successfully");
+      break;
+   case JS_Warnings:
+      cnv = _("Completed with warnings");
+      break;
+   case JS_ErrorTerminated:
+      cnv = _("Terminated with errors");
+      break;
+   case JS_FatalError:
+      cnv = _("Fatal error");
+      break;
+   case JS_Created:
+      cnv = _("Created, not yet running");
+      break;
+   case JS_Canceled:
+      cnv = _("Canceled by user");
+      break;
+   case JS_Differences:
+      cnv = _("Verify found differences");
+      break;
+   case JS_WaitFD:
+      cnv = _("Waiting for File daemon");
+      break;
+   case JS_WaitSD:
+      cnv = _("Waiting for Storage daemon");
+      break;
+   case JS_WaitPriority:
+      cnv = _("Waiting for higher priority jobs");
+      break;
+   case JS_AttrInserting:
+      cnv = _("Batch inserting file records");
+      break;
+   };
+
+   if (cnv) {
+      bstrncpy(msg, cnv, maxlen);
+   } else {
+     jobstatus_to_ascii(JobStatus, msg, maxlen);
+   }
+}
+
+
+/*
  * Convert Job Termination Status into a string
  */
 const char *job_status_to_str(int stat)
@@ -259,6 +319,9 @@ const char *job_status_to_str(int stat)
    switch (stat) {
    case JS_Terminated:
       str = _("OK");
+      break;
+   case JS_Warnings:
+      str = _("OK -- with warnings");
       break;
    case JS_ErrorTerminated:
    case JS_Error:
@@ -306,6 +369,9 @@ const char *job_type_to_str(int type)
       break;
    case JT_COPY:
       str = _("Copy");
+      break;
+   case JT_JOB_COPY:
+      str = _("Job Copy");
       break;
    case JT_CONSOLE:
       str = _("Console");
@@ -360,6 +426,9 @@ const char *job_level_to_str(int level)
    case L_VERIFY_DATA:
       str = _("Verify Data");
       break;
+   case L_VIRTUAL_FULL:
+      str = _("Virtual Full");
+      break;
    case L_NONE:
       str = " ";
       break;
@@ -368,6 +437,33 @@ const char *job_level_to_str(int level)
       break;
    }
    return str;
+}
+
+const char *volume_status_to_str(const char *status)
+{
+   int pos;
+   const char *vs[] = {
+      NT_("Append"),    _("Append"),
+      NT_("Archive"),   _("Archive"),
+      NT_("Disabled"),  _("Disabled"),
+      NT_("Full"),      _("Full"),
+      NT_("Used"),      _("Used"),
+      NT_("Cleaning"),  _("Cleaning"),
+      NT_("Purged"),    _("Purged"),
+      NT_("Recycle"),   _("Recycle"),
+      NT_("Read-Only"), _("Read-Only"),
+      NT_("Error"),     _("Error"),
+      NULL,             NULL};
+
+   if (status) {
+     for (pos = 0 ; vs[pos] ; pos += 2) {
+       if ( !strcmp(vs[pos],status) ) {
+         return vs[pos+1];
+       }
+     }
+   }
+
+   return _("Invalid volume status");
 }
 
 
@@ -474,6 +570,8 @@ void make_session_key(char *key, char *seed, int mode)
    unsigned char md5key[16], md5key1[16];
    char s[1024];
 
+#define ss sizeof(s)
+
    s[0] = 0;
    if (seed != NULL) {
      bstrncat(s, seed, sizeof(s));
@@ -494,41 +592,41 @@ void make_session_key(char *key, char *seed, int mode)
       char             *p;
 
       p = s;
-      sprintf(s + strlen(s), "%lu", (unsigned long)GetCurrentProcessId());
+      bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)GetCurrentProcessId());
       (void)getcwd(s + strlen(s), 256);
-      sprintf(s + strlen(s), "%lu", (unsigned long)GetTickCount());
+      bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)GetTickCount());
       QueryPerformanceCounter(&li);
-      sprintf(s + strlen(s), "%lu", (unsigned long)li.LowPart);
+      bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)li.LowPart);
       GetSystemTimeAsFileTime(&ft);
-      sprintf(s + strlen(s), "%lu", (unsigned long)ft.dwLowDateTime);
-      sprintf(s + strlen(s), "%lu", (unsigned long)ft.dwHighDateTime);
+      bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)ft.dwLowDateTime);
+      bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)ft.dwHighDateTime);
       length = 256;
       GetComputerName(s + strlen(s), &length);
       length = 256;
       GetUserName(s + strlen(s), &length);
    }
 #else
-   sprintf(s + strlen(s), "%lu", (unsigned long)getpid());
-   sprintf(s + strlen(s), "%lu", (unsigned long)getppid());
+   bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)getpid());
+   bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)getppid());
    (void)getcwd(s + strlen(s), 256);
-   sprintf(s + strlen(s), "%lu", (unsigned long)clock());
-   sprintf(s + strlen(s), "%lu", (unsigned long)time(NULL));
+   bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)clock());
+   bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)time(NULL));
 #if defined(Solaris)
    sysinfo(SI_HW_SERIAL,s + strlen(s), 12);
 #endif
 #if defined(HAVE_GETHOSTID)
-   sprintf(s + strlen(s), "%lu", (unsigned long) gethostid());
+   bsnprintf(s + strlen(s), ss, "%lu", (uint32_t) gethostid());
 #endif
    gethostname(s + strlen(s), 256);
-   sprintf(s + strlen(s), "%u", (unsigned)getuid());
-   sprintf(s + strlen(s), "%u", (unsigned)getgid());
+   bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)getuid());
+   bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)getgid());
 #endif
    MD5Init(&md5c);
-   MD5Update(&md5c, (unsigned char *)s, strlen(s));
+   MD5Update(&md5c, (uint8_t *)s, strlen(s));
    MD5Final(md5key, &md5c);
-   sprintf(s + strlen(s), "%lu", (unsigned long)((time(NULL) + 65121) ^ 0x375F));
+   bsnprintf(s + strlen(s), ss, "%lu", (uint32_t)((time(NULL) + 65121) ^ 0x375F));
    MD5Init(&md5c);
-   MD5Update(&md5c, (unsigned char *)s, strlen(s));
+   MD5Update(&md5c, (uint8_t *)s, strlen(s));
    MD5Final(md5key1, &md5c);
 #define nextrand    (md5key[j] ^ md5key1[j])
    if (mode) {
@@ -551,6 +649,39 @@ void make_session_key(char *key, char *seed, int mode)
    }
 }
 #undef nextrand
+
+void encode_session_key(char *encode, char *session, char *key, int maxlen)
+{
+   int i;
+   for (i=0; (i < maxlen-1) && session[i]; i++) {
+      if (session[i] == '-') {
+         encode[i] = '-';
+      } else {
+         encode[i] = ((session[i] - 'A' + key[i]) & 0xF) + 'A';
+      }
+   }
+   encode[i] = 0;
+   Dmsg3(000, "Session=%s key=%s encode=%s\n", session, key, encode);
+}
+
+void decode_session_key(char *decode, char *session, char *key, int maxlen)
+{
+   int i, x;
+
+   for (i=0; (i < maxlen-1) && session[i]; i++) {
+      if (session[i] == '-') {
+         decode[i] = '-';
+      } else {
+         x = (session[i] - 'A' - key[i]) & 0xF;
+         if (x < 0) {
+            x += 16;
+         }
+         decode[i] = x + 'A';
+      }
+   }
+   decode[i] = 0;
+   Dmsg3(000, "Session=%s key=%s decode=%s\n", session, key, decode);
+}
 
 
 
@@ -624,7 +755,7 @@ POOLMEM *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to, job_co
             break;
          case 'l':
             if (jcr) {
-               str = job_level_to_str(jcr->JobLevel);
+               str = job_level_to_str(jcr->get_JobLevel());
             } else {
                str = _("*none*");
             }
@@ -655,7 +786,7 @@ POOLMEM *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to, job_co
             break;
          case 't':
             if (jcr) {
-               str = job_type_to_str(jcr->JobType);
+               str = job_type_to_str(jcr->get_JobType());
             } else {
                str = _("*none*");
             }

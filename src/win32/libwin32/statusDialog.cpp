@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,12 +30,13 @@
  *
  * Kern Sibbald, August 2007
  *
- * Version $Id: statusDialog.cpp 5358 2007-08-15 16:54:21Z kerns $
+ * Version $Id: statusDialog.cpp 8384 2009-01-20 15:29:41Z ricozz $
  */
 
 #include "bacula.h"
 #include "win32.h"
 #include "statusDialog.h"
+#include "lib/status.h"
 
 static BOOL CALLBACK dialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -109,7 +110,7 @@ static void displayString(const char *msg, int len, void *context)
          
          if (*p == '\n') {
             SendMessage(statDlg->m_textWin, EM_SETSEL, (WPARAM)-1, (LPARAM)-1);
-            SendMessage(statDlg->m_textWin, EM_REPLACESEL, 0, (LONG)"\r\n");
+            SendMessage(statDlg->m_textWin, EM_REPLACESEL, 0, (LPARAM)"\r\n");
          }
 
          if (*p == '\0'){
@@ -123,6 +124,7 @@ static void displayString(const char *msg, int len, void *context)
 void statusDialog::display()
 {
    if (m_textWin != NULL) {
+      STATUS_PKT sp;
       long hPos = GetScrollPos(m_textWin, SB_HORZ);
       long vPos = GetScrollPos(m_textWin, SB_VERT);
       long selStart;
@@ -131,7 +133,10 @@ void statusDialog::display()
       SendMessage(m_textWin, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
 
       SetWindowText(m_textWin, "");
-      output_status(displayString, this);
+      sp.bs = NULL;
+      sp.context = this;
+      sp.callback = displayString;
+      output_status(&sp);
 
       SendMessage(m_textWin, EM_SETSEL, selStart, selEnd);
       SendMessage(m_textWin, WM_HSCROLL, MAKEWPARAM(SB_THUMBPOSITION, hPos), 0);
@@ -144,7 +149,7 @@ void statusDialog::show(bool show)
 {
    if (show && !m_visible) {
       DialogBoxParam(appInstance, MAKEINTRESOURCE(IDD_STATUS), NULL,
-          (DLGPROC)dialogProc, (LONG)this);
+          (DLGPROC)dialogProc, (LPARAM)this);
    }
 }
 

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  * Author: Landon Fuller <landonf@opendarwin.org>
  *
- * Version $Id: crypto.c 5026 2007-06-16 14:46:37Z kerns $
+ * Version $Id: crypto.c 7996 2008-11-06 19:10:08Z kerns $
  *
  * This file was contributed to the Bacula project by Landon Fuller.
  *
@@ -451,14 +451,14 @@ int crypto_keypair_load_cert(X509_KEYPAIR *keypair, const char *file)
 
    /* Extract the subjectKeyIdentifier extension field */
    if ((keypair->keyid = openssl_cert_keyid(cert)) == NULL) {
-      Jmsg0(get_jcr_from_tid(), M_ERROR, 0,
+      Jmsg0(NULL, M_ERROR, 0,
          _("Provided certificate does not include the required subjectKeyIdentifier extension."));
       goto err;
    }
 
    /* Validate the public key type (only RSA is supported) */
    if (EVP_PKEY_type(keypair->pubkey->type) != EVP_PKEY_RSA) {
-       Jmsg1(get_jcr_from_tid(), M_ERROR, 0, 
+       Jmsg1(NULL, M_ERROR, 0, 
              _("Unsupported key type provided: %d\n"), EVP_PKEY_type(keypair->pubkey->type));
        goto err;
    }
@@ -597,7 +597,7 @@ DIGEST *crypto_digest_new(JCR *jcr, crypto_digest_t type)
    digest = (DIGEST *)malloc(sizeof(DIGEST));
    digest->type = type;
    digest->jcr = jcr;
-   Dmsg1(50, "crypto_digest_new jcr=%p\n", jcr);
+   Dmsg1(150, "crypto_digest_new jcr=%p\n", jcr);
 
    /* Initialize the OpenSSL message digest context */
    EVP_MD_CTX_init(&digest->ctx);
@@ -632,7 +632,7 @@ DIGEST *crypto_digest_new(JCR *jcr, crypto_digest_t type)
 
 err:
    /* This should not happen, but never say never ... */
-   Dmsg0(50, "Digest init failed.\n");
+   Dmsg0(150, "Digest init failed.\n");
    openssl_post_errors(jcr, M_ERROR, _("OpenSSL digest initialization failed"));
    crypto_digest_free(digest);
    return NULL;
@@ -646,7 +646,7 @@ err:
 bool crypto_digest_update(DIGEST *digest, const uint8_t *data, uint32_t length)
 {
    if (EVP_DigestUpdate(&digest->ctx, data, length) == 0) {
-      Dmsg0(50, "digest update failed\n");
+      Dmsg0(150, "digest update failed\n");
       openssl_post_errors(digest->jcr, M_ERROR, _("OpenSSL digest update failed"));
       return false;
    } else { 
@@ -664,7 +664,7 @@ bool crypto_digest_update(DIGEST *digest, const uint8_t *data, uint32_t length)
 bool crypto_digest_finalize(DIGEST *digest, uint8_t *dest, uint32_t *length)
 {
    if (!EVP_DigestFinal(&digest->ctx, dest, (unsigned int *)length)) {
-      Dmsg0(50, "digest finalize failed\n");
+      Dmsg0(150, "digest finalize failed\n");
       openssl_post_errors(digest->jcr, M_ERROR, _("OpenSSL digest finalize failed"));
       return false;
    } else {
@@ -697,7 +697,7 @@ SIGNATURE *crypto_sign_new(JCR *jcr)
 
    sig->sigData = SignatureData_new();
    sig->jcr = jcr;
-   Dmsg1(50, "crypto_sign_new jcr=%p\n", jcr);
+   Dmsg1(150, "crypto_sign_new jcr=%p\n", jcr);
 
    if (!sig->sigData) {
       /* Allocation failed in OpenSSL */
@@ -731,7 +731,7 @@ crypto_error_t crypto_sign_get_digest(SIGNATURE *sig, X509_KEYPAIR *keypair,
       si = sk_SignerInfo_value(signers, i);
       if (M_ASN1_OCTET_STRING_cmp(keypair->keyid, si->subjectKeyIdentifier) == 0) {
          /* Get the digest algorithm and allocate a digest context */
-         Dmsg1(50, "crypto_sign_get_digest jcr=%p\n", sig->jcr);
+         Dmsg1(150, "crypto_sign_get_digest jcr=%p\n", sig->jcr);
          switch (OBJ_obj2nid(si->digestAlgorithm)) {
          case NID_md5:
             Dmsg0(100, "sign digest algorithm is MD5\n");
@@ -1033,7 +1033,7 @@ CRYPTO_SESSION *crypto_session_new (crypto_cipher_t cipher, alist *pubkeys)
       ec = EVP_bf_cbc();
       break;
    default:
-      Jmsg0(get_jcr_from_tid(), M_ERROR, 0, _("Unsupported cipher type specified\n"));
+      Jmsg0(NULL, M_ERROR, 0, _("Unsupported cipher type specified\n"));
       crypto_session_free(cs);
       return NULL;
    }
@@ -1276,7 +1276,7 @@ CIPHER_CONTEXT *crypto_cipher_new(CRYPTO_SESSION *cs, bool encrypt, uint32_t *bl
     * Acquire a cipher instance for the given ASN.1 cipher NID
     */
    if ((ec = EVP_get_cipherbyobj(cs->cryptoData->contentEncryptionAlgorithm)) == NULL) {
-      Jmsg1(get_jcr_from_tid(), M_ERROR, 0, 
+      Jmsg1(NULL, M_ERROR, 0, 
          _("Unsupported contentEncryptionAlgorithm: %d\n"), OBJ_obj2nid(cs->cryptoData->contentEncryptionAlgorithm));
       free(cipher_ctx);
       return NULL;
@@ -1381,7 +1381,7 @@ int init_crypto (void)
 
    if ((stat = openssl_init_threads()) != 0) {
       berrno be;
-      Jmsg1(get_jcr_from_tid(), M_ABORT, 0, 
+      Jmsg1(NULL, M_ABORT, 0, 
         _("Unable to init OpenSSL threading: ERR=%s\n"), be.bstrerror(stat));
    }
 
@@ -1395,7 +1395,7 @@ int init_crypto (void)
    OpenSSL_add_all_algorithms();
 
    if (!openssl_seed_prng()) {
-      Jmsg0(get_jcr_from_tid(), M_ERROR_TERM, 0, _("Failed to seed OpenSSL PRNG\n"));
+      Jmsg0(NULL, M_ERROR_TERM, 0, _("Failed to seed OpenSSL PRNG\n"));
    }
 
    crypto_initialized = true;
@@ -1421,7 +1421,7 @@ int cleanup_crypto (void)
    }
 
    if (!openssl_save_prng()) {
-      Jmsg0(get_jcr_from_tid(), M_ERROR, 0, _("Failed to save OpenSSL PRNG\n"));
+      Jmsg0(NULL, M_ERROR, 0, _("Failed to save OpenSSL PRNG\n"));
    }
 
    openssl_cleanup_threads();
@@ -1502,7 +1502,7 @@ bool crypto_digest_update(DIGEST *digest, const uint8_t *data, uint32_t length)
       if ((ret = SHA1Update(&digest->sha1, (const u_int8_t *) data, length)) == shaSuccess) {
          return true;
       } else {
-         Jmsg1(get_jcr_from_tid(), M_ERROR, 0, _("SHA1Update() returned an error: %d\n"), ret);
+         Jmsg1(NULL, M_ERROR, 0, _("SHA1Update() returned an error: %d\n"), ret);
          return false;
       }
       break;

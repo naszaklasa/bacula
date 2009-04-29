@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,21 +30,22 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: stored_conf.c 7164 2008-06-18 19:22:03Z kerns $
+ *   Version $Id: stored_conf.c 8062 2008-11-19 19:34:48Z kerns $
  */
 
 #include "bacula.h"
 #include "stored.h"
 
 /* First and last resource ids */
-int r_first = R_FIRST;
-int r_last  = R_LAST;
+int32_t r_first = R_FIRST;
+int32_t r_last  = R_LAST;
 static RES *sres_head[R_LAST - R_FIRST + 1];
 RES **res_head = sres_head;
 
 
 /* Forward referenced subroutines */
 static void store_devtype(LEX *lc, RES_ITEM *item, int index, int pass);
+static void store_maxblocksize(LEX *lc, RES_ITEM *item, int index, int pass);
 
 
 /* We build the current resource here statically,
@@ -56,7 +57,7 @@ extern "C" { // work around visual compiler mangling variables
 #else
 URES res_all;
 #endif
-int res_all_size = sizeof(res_all);
+int32_t res_all_size = sizeof(res_all);
 
 /* Definition of records permitted within each
  * resource with the routine to process the record
@@ -74,11 +75,13 @@ static RES_ITEM store_items[] = {
    {"workingdirectory",      store_dir,  ITEM(res_store.working_directory), 0, ITEM_REQUIRED, 0},
    {"piddirectory",          store_dir,  ITEM(res_store.pid_directory), 0, ITEM_REQUIRED, 0},
    {"subsysdirectory",       store_dir,  ITEM(res_store.subsys_directory), 0, 0, 0},
+   {"plugindirectory",       store_dir,  ITEM(res_store.plugin_directory), 0, 0, 0},
    {"scriptsdirectory",      store_dir,  ITEM(res_store.scripts_directory), 0, 0, 0},
-   {"maximumconcurrentjobs", store_pint32,  ITEM(res_store.max_concurrent_jobs), 0, ITEM_DEFAULT, 20},
-   {"heartbeatinterval",     store_time,    ITEM(res_store.heartbeat_interval), 0, ITEM_DEFAULT, 0},
-   {"tlsenable",             store_bool,    ITEM(res_store.tls_enable), 1, 0, 0},
-   {"tlsrequire",            store_bool,    ITEM(res_store.tls_require), 1, 0, 0},
+   {"maximumconcurrentjobs", store_pint32, ITEM(res_store.max_concurrent_jobs), 0, ITEM_DEFAULT, 20},
+   {"heartbeatinterval",     store_time, ITEM(res_store.heartbeat_interval), 0, ITEM_DEFAULT, 0},
+   {"tlsauthenticate",       store_bool,    ITEM(res_store.tls_authenticate), 0, 0, 0},
+   {"tlsenable",             store_bool,    ITEM(res_store.tls_enable), 0, 0, 0},
+   {"tlsrequire",            store_bool,    ITEM(res_store.tls_require), 0, 0, 0},
    {"tlsverifypeer",         store_bool,    ITEM(res_store.tls_verify_peer), 1, ITEM_DEFAULT, 1},
    {"tlscacertificatefile",  store_dir,       ITEM(res_store.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir",   store_dir,       ITEM(res_store.tls_ca_certdir), 0, 0, 0},
@@ -87,6 +90,7 @@ static RES_ITEM store_items[] = {
    {"tlsdhfile",             store_dir,       ITEM(res_store.tls_dhfile), 0, 0, 0},
    {"tlsallowedcn",          store_alist_str, ITEM(res_store.tls_allowed_cns), 0, 0, 0},
    {"clientconnectwait",     store_time,  ITEM(res_store.client_wait), 0, ITEM_DEFAULT, 30 * 60},
+   {"verid",                 store_str,       ITEM(res_store.verid), 0, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -96,9 +100,10 @@ static RES_ITEM dir_items[] = {
    {"name",        store_name,     ITEM(res_dir.hdr.name),   0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(res_dir.hdr.desc),   0, 0, 0},
    {"password",    store_password, ITEM(res_dir.password),   0, ITEM_REQUIRED, 0},
-   {"monitor",     store_bool,     ITEM(res_dir.monitor),   1, ITEM_DEFAULT, 0},
-   {"tlsenable",            store_bool,    ITEM(res_dir.tls_enable), 1, 0, 0},
-   {"tlsrequire",           store_bool,    ITEM(res_dir.tls_require), 1, 0, 0},
+   {"monitor",     store_bool,     ITEM(res_dir.monitor),    0, 0, 0},
+   {"tlsauthenticate",      store_bool,    ITEM(res_dir.tls_authenticate), 0, 0, 0},
+   {"tlsenable",            store_bool,    ITEM(res_dir.tls_enable), 0, 0, 0},
+   {"tlsrequire",           store_bool,    ITEM(res_dir.tls_require), 0, 0, 0},
    {"tlsverifypeer",        store_bool,    ITEM(res_dir.tls_verify_peer), 1, ITEM_DEFAULT, 1},
    {"tlscacertificatefile", store_dir,       ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir",  store_dir,       ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
@@ -111,11 +116,11 @@ static RES_ITEM dir_items[] = {
 
 /* Device definition */
 static RES_ITEM dev_items[] = {
-   {"name",                  store_name,   ITEM(res_dev.hdr.name),        0, ITEM_REQUIRED, 0},
-   {"description",           store_str,    ITEM(res_dir.hdr.desc),        0, 0, 0},
-   {"mediatype",             store_strname,ITEM(res_dev.media_type),      0, ITEM_REQUIRED, 0},
-   {"devicetype",            store_devtype,ITEM(res_dev.dev_type), 0, 0, 0},
-   {"archivedevice",         store_strname,ITEM(res_dev.device_name),     0, ITEM_REQUIRED, 0},
+   {"name",                  store_name,   ITEM(res_dev.hdr.name),    0, ITEM_REQUIRED, 0},
+   {"description",           store_str,    ITEM(res_dir.hdr.desc),    0, 0, 0},
+   {"mediatype",             store_strname,ITEM(res_dev.media_type),  0, ITEM_REQUIRED, 0},
+   {"devicetype",            store_devtype,ITEM(res_dev.dev_type),    0, 0, 0},
+   {"archivedevice",         store_strname,ITEM(res_dev.device_name), 0, ITEM_REQUIRED, 0},
    {"hardwareendoffile",     store_bit,  ITEM(res_dev.cap_bits), CAP_EOF,  ITEM_DEFAULT, 1},
    {"hardwareendofmedium",   store_bit,  ITEM(res_dev.cap_bits), CAP_EOM,  ITEM_DEFAULT, 1},
    {"backwardspacerecord",   store_bit,  ITEM(res_dev.cap_bits), CAP_BSR,  ITEM_DEFAULT, 1},
@@ -143,19 +148,19 @@ static RES_ITEM dev_items[] = {
    {"alertcommand",          store_strname,ITEM(res_dev.alert_command), 0, 0, 0},
    {"maximumchangerwait",    store_time,   ITEM(res_dev.max_changer_wait), 0, ITEM_DEFAULT, 5 * 60},
    {"maximumopenwait",       store_time,   ITEM(res_dev.max_open_wait), 0, ITEM_DEFAULT, 5 * 60},
-   {"maximumopenvolumes",    store_pint32, ITEM(res_dev.max_open_vols), 0, ITEM_DEFAULT, 1},
+   {"maximumopenvolumes",    store_pint32,   ITEM(res_dev.max_open_vols), 0, ITEM_DEFAULT, 1},
    {"maximumnetworkbuffersize", store_pint32, ITEM(res_dev.max_network_buffer_size), 0, 0, 0},
    {"volumepollinterval",    store_time,   ITEM(res_dev.vol_poll_interval), 0, 0, 0},
    {"maximumrewindwait",     store_time,   ITEM(res_dev.max_rewind_wait), 0, ITEM_DEFAULT, 5 * 60},
-   {"minimumblocksize",      store_pint32, ITEM(res_dev.min_block_size), 0, 0, 0},
-   {"maximumblocksize",      store_pint32, ITEM(res_dev.max_block_size), 0, 0, 0},
+   {"minimumblocksize",      store_pint32,   ITEM(res_dev.min_block_size), 0, 0, 0},
+   {"maximumblocksize",      store_maxblocksize, ITEM(res_dev.max_block_size), 0, 0, 0},
    {"maximumvolumesize",     store_size,   ITEM(res_dev.max_volume_size), 0, 0, 0},
    {"maximumfilesize",       store_size,   ITEM(res_dev.max_file_size), 0, ITEM_DEFAULT, 1000000000},
    {"volumecapacity",        store_size,   ITEM(res_dev.volume_capacity), 0, 0, 0},
    {"spooldirectory",        store_dir,    ITEM(res_dev.spool_directory), 0, 0, 0},
    {"maximumspoolsize",      store_size,   ITEM(res_dev.max_spool_size), 0, 0, 0},
    {"maximumjobspoolsize",   store_size,   ITEM(res_dev.max_job_spool_size), 0, 0, 0},
-   {"driveindex",            store_pint32, ITEM(res_dev.drive_index), 0, 0, 0},
+   {"driveindex",            store_pint32,   ITEM(res_dev.drive_index), 0, 0, 0},
    {"maximumpartsize",       store_size,   ITEM(res_dev.max_part_size), 0, ITEM_DEFAULT, 0},
    {"mountpoint",            store_strname,ITEM(res_dev.mount_point), 0, 0, 0},
    {"mountcommand",          store_strname,ITEM(res_dev.mount_command), 0, 0, 0},
@@ -175,6 +180,9 @@ static RES_ITEM changer_items[] = {
    {"changercommand",    store_strname,   ITEM(res_changer.changer_command), 0, ITEM_REQUIRED, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
+
+
+// {"mountanonymousvolumes", store_bit,  ITEM(res_dev.cap_bits), CAP_ANONVOLS,   ITEM_DEFAULT, 0},
 
 
 /* Message resource */
@@ -198,7 +206,7 @@ RES_TABLE resources[] = {
  */
 struct s_kw {
    const char *name;
-   int token;
+   int32_t token;
 };
 
 static s_kw dev_types[] = {
@@ -206,6 +214,8 @@ static s_kw dev_types[] = {
    {"tape",          B_TAPE_DEV},
    {"dvd",           B_DVD_DEV},
    {"fifo",          B_FIFO_DEV},
+   {"vtl",           B_VTL_DEV},
+   {"vtape",         B_VTAPE_DEV},
    {NULL,            0}
 };
 
@@ -232,6 +242,22 @@ static void store_devtype(LEX *lc, RES_ITEM *item, int index, int pass)
    }
    scan_to_eol(lc);
    set_bit(index, res_all.hdr.item_present);
+}
+
+/*
+ * Store Maximum Block Size, and check it is not greater than MAX_BLOCK_LENGTH
+ *
+ */
+static void store_maxblocksize(LEX *lc, RES_ITEM *item, int index, int pass)
+{
+   lex_get_token(lc, T_PINT32);
+   if (lc->pint32_val <= MAX_BLOCK_LENGTH) {
+      *(uint32_t *)(item->value) = lc->pint32_val;
+      scan_to_eol(lc);
+      set_bit(index, res_all.hdr.item_present);
+   } else {
+      scan_err2(lc, _("Maximum Block Size configured value %u is greater than allowed maximum: %u"), lc->pint32_val, MAX_BLOCK_LENGTH );
+   }
 }
 
 
@@ -475,6 +501,9 @@ void free_resource(RES *sres, int type)
       if (res->res_store.tls_allowed_cns) {
          delete res->res_store.tls_allowed_cns;
       }
+      if (res->res_store.verid) {
+         free(res->res_store.verid);
+      }
       break;
    case R_DEVICE:
       if (res->res_dev.media_type) {
@@ -672,4 +701,11 @@ void save_resource(int type, RES_ITEM *items, int pass)
                res->res_dir.hdr.name);
       }
    }
+}
+
+bool parse_sd_config(CONFIG *config, const char *configfile, int exit_code)
+{
+   config->init(configfile, NULL, exit_code, (void *)&res_all, res_all_size,
+      r_first, r_last, resources, res_head);
+   return config->parse_config();
 }

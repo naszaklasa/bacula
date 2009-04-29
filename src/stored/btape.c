@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -37,15 +37,20 @@
  *   Note, this program reads stored.conf, and will only
  *     talk to devices that are configured.
  *
- *   Version $Id: btape.c 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: btape.c 8518 2009-03-11 19:32:17Z ricozz $
  *
  */
 
 #include "bacula.h"
 #include "stored.h"
 
+#ifdef USE_VTAPE
+#include "vtape.h"
+#endif
+
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
+extern bool parse_sd_config(CONFIG *config, const char *configfile, int exit_code);
 
 /* External subroutines */
 extern void free_config_resources();
@@ -98,6 +103,7 @@ static void do_unfill();
 
 
 /* Static variables */
+static CONFIG *config;
 #define CONFIG_FILE "bacula-sd.conf"
 char *configfile = NULL;
 
@@ -265,8 +271,8 @@ int main(int margc, char *margv[])
 
    daemon_start_time = time(NULL);
 
-   parse_config(configfile);
-
+   config = new_config_parser();
+   parse_sd_config(config, configfile, M_ERROR_TERM);
 
    /* See if we can open a device */
    if (margc == 0) {
@@ -317,7 +323,11 @@ static void terminate_btape(int stat)
    if (configfile) {
       free(configfile);
    }
-   free_config_resources();
+   if (config) {
+      config->free_resources();
+      free(config);
+      config = NULL;
+   }
    if (args) {
       free_pool_memory(args);
       args = NULL;
@@ -334,11 +344,11 @@ static void terminate_btape(int stat)
    free_jcr(jcr);
    jcr = NULL;
 
+   free_volume_lists();
+
    if (dev) {
       dev->term();
    }
-
-   free_volume_list();
 
    if (debug_level > 10)
       print_memory_pool_stats();
@@ -349,8 +359,9 @@ static void terminate_btape(int stat)
 
    stop_watchdog();
    term_msg();
-   close_memory_pool();               /* free memory in pool */
    term_last_jobs_list();
+   close_memory_pool();               /* free memory in pool */
+   lmgr_cleanup_main();
 
    sm_dump(false);
    exit(stat);
@@ -2500,11 +2511,7 @@ static void rawfill_cmd()
    Pmsg1(0, _("Begin writing raw blocks of %u bytes.\n"), block->buf_len);
    for ( ;; ) {
       *p = block_num;
-      if (dev->is_tape()) {
-         stat = tape_write(dev->fd(), block->buf, block->buf_len);
-      } else {
-         stat = write(dev->fd(), block->buf, block->buf_len);
-      }
+      stat = dev->d_write(dev->fd(), block->buf, block->buf_len);
       if (stat == (int)block->buf_len) {
          if ((block_num++ % 100) == 0) {
             printf("+");
@@ -2577,7 +2584,7 @@ do_tape_cmds()
             found = true;
             break;
          }
-      if (!found) {
+      if (*cmd && !found) {
          Pmsg1(0, _("\"%s\" is an invalid command\n"), cmd);
       }
    }
@@ -2603,6 +2610,7 @@ PROG_COPYRIGHT
 "       -b <file>   specify bootstrap file\n"
 "       -c <file>   set configuration file to file\n"
 "       -d <nn>     set debug level to <nn>\n"
+"       -dt         print timestamp in debug output\n"
 "       -p          proceed inspite of I/O errors\n"
 "       -s          turn off signals\n"
 "       -v          be verbose\n"

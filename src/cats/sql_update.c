@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_update.c 8228 2008-12-22 15:12:10Z kerns $
+ *    Version $Id: sql_update.c 8478 2009-02-18 20:11:55Z kerns $
  */
 
 /* The following is necessary so that we do not include
@@ -41,7 +41,7 @@
 #include "bacula.h"
 #include "cats.h"
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
 
 /* -----------------------------------------------------------------------
  *
@@ -126,6 +126,22 @@ db_update_job_start_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 }
 
 /*
+ * Update Long term statistics with all jobs that were run before
+ * age seconds
+ */
+int
+db_update_stats(JCR *jcr, B_DB *mdb, utime_t age)
+{
+   char ed1[30];
+   utime_t now = (utime_t)time(NULL);
+   edit_uint64(now - age, ed1);
+
+   Mmsg(mdb->cmd, fill_jobhisto, ed1);
+   QUERY_DB(jcr, mdb, mdb->cmd); /* TODO: get a message ? */
+   return sql_affected_rows(mdb);
+}
+
+/*
  * Update the Job record at end of Job
  *
  *  Returns: 0 on failure
@@ -139,7 +155,7 @@ db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    time_t ttime;
    struct tm tm;
    int stat;
-   char ed1[30], ed2[30], ed3[50];
+   char ed1[30], ed2[30], ed3[50], ed4[50];
    btime_t JobTDate;
    char PriorJobId[50];
 
@@ -165,10 +181,11 @@ db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    db_lock(mdb);
    Mmsg(mdb->cmd,
       "UPDATE Job SET JobStatus='%c',EndTime='%s',"
-"ClientId=%u,JobBytes=%s,JobFiles=%u,JobErrors=%u,VolSessionId=%u,"
+"ClientId=%u,JobBytes=%s,ReadBytes=%s,JobFiles=%u,JobErrors=%u,VolSessionId=%u,"
 "VolSessionTime=%u,PoolId=%u,FileSetId=%u,JobTDate=%s,"
 "RealEndTime='%s',PriorJobId=%s WHERE JobId=%s",
       (char)(jr->JobStatus), dt, jr->ClientId, edit_uint64(jr->JobBytes, ed1),
+      edit_uint64(jr->ReadBytes, ed4),
       jr->JobFiles, jr->JobErrors, jr->VolSessionId, jr->VolSessionTime,
       jr->PoolId, jr->FileSetId, edit_uint64(JobTDate, ed2), 
       rdt,
@@ -176,10 +193,10 @@ db_update_job_end_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
       edit_int64(jr->JobId, ed3));
 
    stat = UPDATE_DB(jcr, mdb, mdb->cmd);
+
    db_unlock(mdb);
    return stat;
 }
-
 
 /*
  * Update Client record
@@ -238,7 +255,7 @@ int db_update_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr)
 int db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 {
    int stat;
-   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50];
+   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50], ed6[50];
 
    db_lock(mdb);
    Mmsg(mdb->cmd, "SELECT count(*) from Media WHERE PoolId=%s",
@@ -250,7 +267,8 @@ int db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 "UPDATE Pool SET NumVols=%u,MaxVols=%u,UseOnce=%d,UseCatalog=%d,"
 "AcceptAnyVolume=%d,VolRetention='%s',VolUseDuration='%s',"
 "MaxVolJobs=%u,MaxVolFiles=%u,MaxVolBytes=%s,Recycle=%d,"
-"AutoPrune=%d,LabelType=%d,LabelFormat='%s',RecyclePoolId=%s WHERE PoolId=%s",
+"AutoPrune=%d,LabelType=%d,LabelFormat='%s',RecyclePoolId=%s,"
+"ScratchPoolId=%s WHERE PoolId=%s",
       pr->NumVols, pr->MaxVols, pr->UseOnce, pr->UseCatalog,
       pr->AcceptAnyVolume, edit_uint64(pr->VolRetention, ed1),
       edit_uint64(pr->VolUseDuration, ed2),
@@ -258,8 +276,7 @@ int db_update_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
       edit_uint64(pr->MaxVolBytes, ed3),
       pr->Recycle, pr->AutoPrune, pr->LabelType,
       pr->LabelFormat, edit_int64(pr->RecyclePoolId,ed5),
-      ed4);
-
+      edit_int64(pr->ScratchPoolId,ed6),ed4);
    stat = UPDATE_DB(jcr, mdb, mdb->cmd);
    db_unlock(mdb);
    return stat;
@@ -270,7 +287,6 @@ db_update_storage_record(JCR *jcr, B_DB *mdb, STORAGE_DBR *sr)
 {
    int stat;
    char ed1[50];
-
    db_lock(mdb);
    Mmsg(mdb->cmd, "UPDATE Storage SET AutoChanger=%d WHERE StorageId=%s", 
       sr->AutoChanger, edit_int64(sr->StorageId, ed1));
@@ -334,13 +350,21 @@ db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
       UPDATE_DB(jcr, mdb, mdb->cmd);
    }
 
+   /* sanity checks for #1066 */
+   if (mr->VolReadTime < 0) {
+      mr->VolReadTime = 0;
+   }
+   if (mr->VolWriteTime < 0) {
+      mr->VolWriteTime = 0;
+   }
+
    Mmsg(mdb->cmd, "UPDATE Media SET VolJobs=%u,"
         "VolFiles=%u,VolBlocks=%u,VolBytes=%s,VolMounts=%u,VolErrors=%u,"
         "VolWrites=%u,MaxVolBytes=%s,VolStatus='%s',"
         "Slot=%d,InChanger=%d,VolReadTime=%s,VolWriteTime=%s,VolParts=%d,"
         "LabelType=%d,StorageId=%s,PoolId=%s,VolRetention=%s,VolUseDuration=%s,"
         "MaxVolJobs=%d,MaxVolFiles=%d,Enabled=%d,LocationId=%s,"
-        "ScratchPoolId=%s,RecyclePoolId=%s,RecycleCount=%d"
+        "ScratchPoolId=%s,RecyclePoolId=%s,RecycleCount=%d,Recycle=%d"
         " WHERE VolumeName='%s'",
         mr->VolJobs, mr->VolFiles, mr->VolBlocks, edit_uint64(mr->VolBytes, ed1),
         mr->VolMounts, mr->VolErrors, mr->VolWrites,
@@ -358,7 +382,7 @@ db_update_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
         mr->Enabled, edit_uint64(mr->LocationId, ed9),
         edit_uint64(mr->ScratchPoolId, ed10),
         edit_uint64(mr->RecyclePoolId, ed11),
-        mr->RecycleCount,
+        mr->RecycleCount,mr->Recycle,
         mr->VolumeName);
 
    Dmsg1(400, "%s\n", mdb->cmd);
@@ -437,7 +461,7 @@ db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
                mr->Slot, 
                edit_int64(mr->StorageId, ed1), edit_int64(mr->MediaId, ed2));
 
-       } else if (mr->VolumeName[0]) { /* We have a volume name */
+       } else if (*mr->VolumeName) {
           Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0, Slot=0 WHERE "
                "Slot=%d AND StorageId=%s AND VolumeName!='%s'",
                mr->Slot, 

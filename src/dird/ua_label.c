@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, April MMIII
  *
- *   Version $Id: ua_label.c 5237 2007-07-24 18:36:08Z kerns $
+ *   Version $Id: ua_label.c 7701 2008-10-04 14:09:48Z ricozz $
  */
 
 #include "bacula.h"
@@ -678,14 +678,14 @@ static bool send_label_request(UAContext *ua, MEDIA_DBR *mr, MEDIA_DBR *omr,
    bash_spaces(pr->Name);
    if (relabel) {
       bash_spaces(omr->VolumeName);
-      bnet_fsend(sd, "relabel %s OldName=%s NewName=%s PoolName=%s "
+      sd->fsend("relabel %s OldName=%s NewName=%s PoolName=%s "
                      "MediaType=%s Slot=%d drive=%d",
                  dev_name, omr->VolumeName, mr->VolumeName, pr->Name, 
                  mr->MediaType, mr->Slot, drive);
       ua->send_msg(_("Sending relabel command from \"%s\" to \"%s\" ...\n"),
          omr->VolumeName, mr->VolumeName);
    } else {
-      bnet_fsend(sd, "label %s VolumeName=%s PoolName=%s MediaType=%s "
+      sd->fsend("label %s VolumeName=%s PoolName=%s MediaType=%s "
                      "Slot=%d drive=%d",
                  dev_name, mr->VolumeName, pr->Name, mr->MediaType, 
                  mr->Slot, drive);
@@ -695,7 +695,7 @@ static bool send_label_request(UAContext *ua, MEDIA_DBR *mr, MEDIA_DBR *omr,
          dev_name, mr->VolumeName, pr->Name, mr->MediaType, mr->Slot, drive);
    }
 
-   while (bnet_recv(sd) >= 0) {
+   while (sd->recv() >= 0) {
       int dvd;
       ua->send_msg("%s", sd->msg);
       if (sscanf(sd->msg, "3000 OK label. VolBytes=%llu DVD=%d ", &VolBytes,
@@ -787,11 +787,11 @@ static char *get_volume_name_from_SD(UAContext *ua, int Slot, int drive)
    bstrncpy(dev_name, store->dev_name(), sizeof(dev_name));
    bash_spaces(dev_name);
    /* Ask for autochanger list of volumes */
-   bnet_fsend(sd, NT_("readlabel %s Slot=%d drive=%d\n"), dev_name, Slot, drive);
+   sd->fsend(NT_("readlabel %s Slot=%d drive=%d\n"), dev_name, Slot, drive);
    Dmsg1(100, "Sent: %s", sd->msg);
 
    /* Get Volume name in this Slot */
-   while (bnet_recv(sd) >= 0) {
+   while (sd->recv() >= 0) {
       ua->send_msg("%s", sd->msg);
       Dmsg1(100, "Got: %s", sd->msg);
       if (strncmp(sd->msg, NT_("3001 Volume="), 12) == 0) {
@@ -941,9 +941,9 @@ static int get_num_slots_from_SD(UAContext *ua)
    bstrncpy(dev_name, store->dev_name(), sizeof(dev_name));
    bash_spaces(dev_name);
    /* Ask for autochanger number of slots */
-   bnet_fsend(sd, NT_("autochanger slots %s\n"), dev_name);
+   sd->fsend(NT_("autochanger slots %s\n"), dev_name);
 
-   while (bnet_recv(sd) >= 0) {
+   while (sd->recv() >= 0) {
       if (sscanf(sd->msg, "slots=%d\n", &slots) == 1) {
          break;
       } else {
@@ -973,9 +973,9 @@ int get_num_drives_from_SD(UAContext *ua)
    bstrncpy(dev_name, store->dev_name(), sizeof(dev_name));
    bash_spaces(dev_name);
    /* Ask for autochanger number of slots */
-   bnet_fsend(sd, NT_("autochanger drives %s\n"), dev_name);
+   sd->fsend(NT_("autochanger drives %s\n"), dev_name);
 
-   while (bnet_recv(sd) >= 0) {
+   while (sd->recv() >= 0) {
       if (sscanf(sd->msg, NT_("drives=%d\n"), &drives) == 1) {
          break;
       } else {
@@ -1014,4 +1014,149 @@ static bool is_cleaning_tape(UAContext *ua, MEDIA_DBR *mr, POOL_DBR *pr)
                   strlen(ua->jcr->pool->cleaning_prefix)));
    return strncmp(mr->VolumeName, ua->jcr->pool->cleaning_prefix,
                   strlen(ua->jcr->pool->cleaning_prefix)) == 0;
+}
+
+
+/*
+ * Print slots from AutoChanger
+ */
+void status_slots(UAContext *ua, STORE *store_r)
+{
+   USTORE store;
+   POOL_DBR pr;
+   vol_list_t *vl, *vol_list = NULL;
+   MEDIA_DBR mr;
+   char *slot_list;
+   int max_slots;
+   int drive;
+   int i=1;
+   /* output format */
+   const char *slot_api_empty_format="%i|||||\n";
+   const char *slot_api_full_format="%i|%i|%s|%s|%s|%s|\n";
+   const char *slot_hformat=" %4i%c| %16s | %9s | %20s | %18s |\n";
+
+   if (!open_client_db(ua)) {
+      return;
+   }
+   store.store = store_r;
+
+   pm_strcpy(store.store_source, _("command line"));
+   set_wstorage(ua->jcr, &store);
+   drive = get_storage_drive(ua, store.store);
+
+   max_slots = get_num_slots_from_SD(ua);
+
+   if (max_slots <= 0) {
+      ua->warning_msg(_("No slots in changer to scan.\n"));
+      return;
+   }
+   slot_list = (char *)malloc(max_slots+1);
+   if (!get_user_slot_list(ua, slot_list, max_slots)) {
+      free(slot_list);
+      return;
+   }
+
+   vol_list = get_vol_list_from_SD(ua, true /* want to see all slots */);
+
+   if (!vol_list) {
+      ua->warning_msg(_("No Volumes found, or no barcodes.\n"));
+      goto bail_out;
+   }
+   if (!ua->api) {
+      ua->info_msg(_(" Slot |   Volume Name    |   Status  |     Media Type       |      Pool          |\n"));
+      ua->info_msg(_("------+------------------+-----------+----------------------+--------------------|\n"));
+   }
+
+   /* Walk through the list getting the media records */
+   for (vl=vol_list; vl; vl=vl->next) {
+      if (vl->Slot > max_slots) {
+         ua->warning_msg(_("Slot %d greater than max %d ignored.\n"),
+            vl->Slot, max_slots);
+         continue;
+      }
+      /* Check if user wants us to look at this slot */
+      if (!slot_list[vl->Slot]) {
+         Dmsg1(100, "Skipping slot=%d\n", vl->Slot);
+         continue;
+      }
+
+      slot_list[vl->Slot] = 0;        /* clear Slot */
+
+      if (!vl->VolName) {
+         Dmsg1(100, "No VolName for Slot=%d.\n", vl->Slot);
+         if (!ua->api) {
+            ua->info_msg(slot_hformat,
+                         vl->Slot, '*',
+                         "?", "?", "?", "?");
+         } else {
+            ua->info_msg(slot_api_empty_format, vl->Slot);
+         }
+         continue;
+      }
+
+      /* Hope that slots are ordered */
+      for (; i < vl->Slot; i++) {
+         if (slot_list[i]) {
+            if (!ua->api) {
+               ua->info_msg(slot_hformat,
+                            i, ' ', "", "", "", "");
+            } else {
+               ua->info_msg(slot_api_empty_format, i);
+            }       
+            slot_list[i]=0;
+         }
+      }
+
+      memset(&mr, 0, sizeof(mr));
+      bstrncpy(mr.VolumeName, vl->VolName, sizeof(mr.VolumeName));
+      db_lock(ua->db);
+      if (mr.VolumeName[0] && db_get_media_record(ua->jcr, ua->db, &mr)) {
+         memset(&pr, 0, sizeof(POOL_DBR));
+         pr.PoolId = mr.PoolId;
+         if (!db_get_pool_record(ua->jcr, ua->db, &pr)) {
+            strcpy(pr.Name, "?");
+         }
+
+         if (!ua->api) {
+            /* Print information */
+            ua->info_msg(slot_hformat,
+                         vl->Slot, ((vl->Slot==mr.Slot)?' ':'*'),
+                         mr.VolumeName, mr.VolStatus, mr.MediaType, pr.Name);
+         } else {
+            ua->info_msg(slot_api_full_format,
+                         vl->Slot, mr.Slot, mr.VolumeName, mr.VolStatus, 
+                         mr.MediaType, pr.Name);
+         }
+
+         db_unlock(ua->db);
+         continue;
+      } else {                  /* TODO: get information from catalog  */
+         ua->info_msg(slot_hformat,
+                      vl->Slot, '*',
+                      mr.VolumeName, "?", "?", "?");
+      }
+      db_unlock(ua->db);
+   }
+
+   /* Display the rest of the autochanger
+    */
+   for (; i <= max_slots; i++) {
+      if (slot_list[i]) {
+         if (!ua->api) {
+            ua->info_msg(slot_hformat,
+                         i, ' ', "", "", "", "");
+         } else {
+            ua->info_msg(slot_api_empty_format, i);
+         } 
+         slot_list[i]=0;
+      }
+   }
+
+bail_out:
+
+   free_vol_list(vol_list);
+   free(slot_list);
+   close_sd_bsock(ua);
+
+   return;
 }

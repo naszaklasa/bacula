@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, January MM, September MM
  *
- *     Version $Id: console_conf.c 7164 2008-06-18 19:22:03Z kerns $
+ *     Version $Id: console_conf.c 7380 2008-07-14 10:42:59Z kerns $
  */
 
 #include "bacula.h"
@@ -56,8 +56,8 @@
  * types. Note, these should be unique for each
  * daemon though not a requirement.
  */
-int r_first = R_FIRST;
-int r_last  = R_LAST;
+int32_t r_first = R_FIRST;
+int32_t r_last  = R_LAST;
 static RES *sres_head[R_LAST - R_FIRST + 1];
 RES **res_head = sres_head;
 
@@ -70,7 +70,7 @@ RES **res_head = sres_head;
  * scan is complete.
  */
 URES res_all;
-int  res_all_size = sizeof(res_all);
+int32_t res_all_size = sizeof(res_all);
 
 /* Definition of records permitted within each
  * resource with the routine to process the record
@@ -82,8 +82,8 @@ static RES_ITEM dir_items[] = {
    {"dirport",     store_pint32,   ITEM(dir_res.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",     store_str,      ITEM(dir_res.address),  0, ITEM_REQUIRED, 0},
    {"password",    store_password, ITEM(dir_res.password), 0, 0, 0},
-   {"tlsenable",      store_bool,    ITEM(dir_res.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_bool,    ITEM(dir_res.tls_require), 1, 0, 0},
+   {"tlsenable",   store_bool,     ITEM(dir_res.tls_enable), 1, 0, 0},
+   {"tlsrequire",  store_bool,     ITEM(dir_res.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(dir_res.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(dir_res.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(dir_res.tls_certfile), 0, 0, 0},
@@ -333,4 +333,11 @@ void save_resource(int type, RES_ITEM *items, int pass)
                res->dir_res.hdr.name);
       }
    }
+}
+
+bool parse_gcons_config(CONFIG *config, const char *configfile, int exit_code)
+{
+   config->init(configfile, NULL, exit_code, (void *)&res_all, res_all_size,
+      r_first, r_last, resources, res_head);
+   return config->parse_config();
 }

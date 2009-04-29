@@ -4,13 +4,10 @@
  for the first record during a restore rather than seek directly to
  it.
 
- You have to apply 2.2.8-jobmedia-fix.patch too.
-
  Apply this patch to Bacula 2.2.8 (and possibly any prior 2.2.x version) with:
 
  cd <bacula-source>
  patch -p0 <2.2.8-jobmedia.patch
- patch -p0 <2.2.8-jobmedia-fix.patch
  ./configure <your-options>
  make
  ...

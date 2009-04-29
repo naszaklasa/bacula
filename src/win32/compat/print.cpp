@@ -333,14 +333,21 @@ dopr(char *buffer, size_t maxlen, const char *format, va_list args, prfun outch)
                 break;
             case 's':
                 strvalue = va_arg(args, char *);
-                if (max < 0) 
+                if (max < 0) {
                     max = maxlen; /* ie, no max */
+                }
                 fmtstr(buffer, &currlen, maxlen, strvalue, flags, min, max, outch);
                 break;
             case 'p':
-                strvalue = (char *) va_arg(args, void *);
                 flags |= DP_F_UNSIGNED;
-                fmtint(buffer, &currlen, maxlen, (long) strvalue, 16, min, max,
+                if (sizeof(char *) == 4) {
+                   value = va_arg(args, uint32_t);
+                } else if (sizeof(char *) == 8) {
+                   value = va_arg(args, uint64_t);
+                } else {
+                   value = 0;             /* we have a problem */
+                }
+                fmtint(buffer, &currlen, maxlen, value, 16, min, max,
                        flags, outch);
                 break;
             case 'n':
@@ -401,7 +408,7 @@ fmtstr(char *buffer, size_t *currlen, size_t maxlen,
     int cnt = 0;
   
     if (value == NULL) 
-        value = "<NULL>";
+        value = (char *)"<NULL>";
 
     for (strln = 0; value[strln]; ++strln); /* strlen */
     padlen = min - strln;

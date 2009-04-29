@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -33,15 +33,13 @@
  * Adapted and enhanced for Bacula, originally written
  * for inclusion in the Apcupsd package
  *
- *   Version $Id: bnet.c 7401 2008-07-19 15:50:38Z kerns $
+ *   Version $Id: bnet.c 8076 2008-11-22 18:36:12Z kerns $
  */
 
 
 #include "bacula.h"
 #include "jcr.h"
 #include <netdb.h>
-
-extern time_t watchdog_time;
 
 #ifndef   INADDR_NONE
 #define   INADDR_NONE    -1
@@ -238,6 +236,7 @@ bool bnet_send(BSOCK *bsock)
 bool bnet_tls_server(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
 {
    TLS_CONNECTION *tls;
+   JCR *jcr = bsock->jcr();
    
    tls = new_tls_connection(ctx, bsock->m_fd);
    if (!tls) {
@@ -254,7 +253,7 @@ bool bnet_tls_server(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
    }
 
    if (verify_list) {
-      if (!tls_postconnect_verify_cn(tls, verify_list)) {
+      if (!tls_postconnect_verify_cn(jcr, tls, verify_list)) {
          Qmsg1(bsock->jcr(), M_FATAL, 0, _("TLS certificate verification failed."
                                          " Peer certificate did not match a required commonName\n"),
                                          bsock->host());
@@ -278,6 +277,7 @@ err:
 bool bnet_tls_client(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
 {
    TLS_CONNECTION *tls;
+   JCR *jcr = bsock->jcr();
 
    tls  = new_tls_connection(ctx, bsock->m_fd);
    if (!tls) {
@@ -295,15 +295,15 @@ bool bnet_tls_client(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
    /* If there's an Allowed CN verify list, use that to validate the remote
     * certificate's CN. Otherwise, we use standard host/CN matching. */
    if (verify_list) {
-      if (!tls_postconnect_verify_cn(tls, verify_list)) {
+      if (!tls_postconnect_verify_cn(jcr, tls, verify_list)) {
          Qmsg1(bsock->jcr(), M_FATAL, 0, _("TLS certificate verification failed."
                                          " Peer certificate did not match a required commonName\n"),
                                          bsock->host());
          goto err;
       }
    } else {
-      if (!tls_postconnect_verify_host(tls, bsock->host())) {
-         Qmsg1(bsock->jcr(), M_FATAL, 0, _("TLS host certificate verification failed. Host %s did not match presented certificate\n"), 
+      if (!tls_postconnect_verify_host(jcr, tls, bsock->host())) {
+         Qmsg1(bsock->jcr(), M_FATAL, 0, _("TLS host certificate verification failed. Host name \"%s\" did not match presented certificate\n"), 
                bsock->host());
          goto err;
       }
@@ -342,7 +342,7 @@ bool bnet_tls_client(TLS_CONTEXT *ctx, BSOCK * bsock, alist *verify_list)
  */
 int bnet_wait_data(BSOCK * bsock, int sec)
 {
-   return bsock->wait_data(sec, 0);
+   return bsock->wait_data(sec);
 }
 
 /*
@@ -350,7 +350,7 @@ int bnet_wait_data(BSOCK * bsock, int sec)
  */
 int bnet_wait_data_intr(BSOCK * bsock, int sec)
 {
-   return bsock->wait_data_intr(sec, 0);
+   return bsock->wait_data_intr(sec);
 }
 
 #ifndef NETDB_INTERNAL
@@ -687,7 +687,7 @@ BSOCK *init_bsock(JCR * jcr, int sockfd, const char *who, const char *host, int 
    return bsock;
 }
 
-BSOCK *dup_bsock(BSOCK * osock)
+BSOCK *dup_bsock(BSOCK *osock)
 {
    BSOCK *bsock = (BSOCK *)malloc(sizeof(BSOCK));
    memcpy(bsock, osock, sizeof(BSOCK));

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -33,7 +33,7 @@
  *
  *   Kern Sibbald, March 2005
  *
- *   Version $Id: wait.c 7263 2008-06-30 12:56:49Z kerns $
+ *   Version $Id: wait.c 8557 2009-03-20 09:49:16Z kerns $
  */
 
 
@@ -62,8 +62,14 @@ int wait_for_sysop(DCR *dcr)
 
    dev->dlock();  
    Dmsg1(dbglvl, "Enter blocked=%s\n", dev->print_blocked());
-   unmounted = is_device_unmounted(dev);
 
+   /*
+    * Since we want to mount a tape, make sure current one is
+    *  not marked as using this drive.
+    */
+   volume_unused(dcr);
+
+   unmounted = is_device_unmounted(dev);
    dev->poll = false;
    /*
     * Wait requested time (dev->rem_wait_sec).  However, we also wake up every

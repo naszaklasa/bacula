@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,14 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
  
 /*
- *   Version $Id: restoretree.cpp 7357 2008-07-12 12:36:26Z ricozz $
+ *   Version $Id: restoretree.cpp 8669 2009-03-31 17:04:28Z bartleyd2 $
  *
  *  Restore Class 
  *
@@ -66,6 +66,7 @@ restoreTree::restoreTree()
    area->setWidgetResizable(true);
    m_splitter->addWidget(splitter);
    m_splitter->addWidget(area);
+   splitter->setCollapsible(0, false);
 
    gridLayout->addWidget(m_splitter, 0, 0, 1, 1);
 
@@ -460,8 +461,6 @@ bool restoreTree::addDirectory(QString &m_cwd, QString &newdirr)
 void restoreTree::currentStackItem()
 {
    if(!m_populated) {
-      if (!m_console->preventInUseConnect())
-         return;
       setupPage();
       m_populated = true;
    }
@@ -478,7 +477,7 @@ void restoreTree::refreshButtonPushed()
 /*
  * Set the values of non-job combo boxes to the job defaults
  */
-void restoreTree::jobComboChanged(int index)
+void restoreTree::jobComboChanged(int)
 {
    if (jobCombo->currentText() == tr("Any")) {
       fileSetCombo->setCurrentIndex(fileSetCombo->findText(tr("Any"), Qt::MatchExactly));
@@ -486,7 +485,7 @@ void restoreTree::jobComboChanged(int index)
    }
    job_defaults job_defs;
 
-   (void)index;
+   //(void)index;
    job_defs.job_name = jobCombo->currentText();
    if (m_console->get_job_defaults(job_defs)) {
       fileSetCombo->setCurrentIndex(fileSetCombo->findText(job_defs.fileset_name, Qt::MatchExactly));
@@ -691,7 +690,8 @@ void restoreTree::writeSettings()
 {
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
-   settings.setValue(m_splitText, m_splitter->saveState());
+   settings.setValue(m_splitText1, m_splitter->saveState());
+   settings.setValue(m_splitText2, splitter->saveState());
    settings.endGroup();
 }
 
@@ -701,10 +701,12 @@ void restoreTree::writeSettings()
 void restoreTree::readSettings()
 {
    m_groupText = tr("RestoreTreePage");
-   m_splitText = "splitterSizes_1";
+   m_splitText1 = "splitterSizes1_2";
+   m_splitText2 = "splitterSizes2_2";
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
-   m_splitter->restoreState(settings.value(m_splitText).toByteArray());
+   m_splitter->restoreState(settings.value(m_splitText1).toByteArray());
+   splitter->restoreState(settings.value(m_splitText2).toByteArray());
    settings.endGroup();
 }
 
@@ -1200,6 +1202,7 @@ void restoreTree::updateFileTableChecks()
    int rcnt = fileTable->rowCount();
    for (int row=0; row<rcnt; row++) {
       QTableWidgetItem* item = fileTable->item(row, 0);
+      if (!item) { return; }
 
       Qt::CheckState curState = item->checkState();
       Qt::CheckState newState = Qt::PartiallyChecked;
@@ -1241,6 +1244,7 @@ void restoreTree::updateVersionTableChecks()
 
    /* deterimine the default state from the state of the file */
    QTableWidgetItem *fileTableItem = fileTable->item(fileTable->currentRow(), 0);
+   if (!fileTableItem) { return; }
    Qt::CheckState fileState = fileTableItem->checkState();
    QString file = fileTableItem->text();
    QString fullPath = dirName + file;
@@ -1250,6 +1254,7 @@ void restoreTree::updateVersionTableChecks()
    int cnt = versionTable->rowCount();
    for (int row=0; row<cnt; row++) {
       QTableWidgetItem* item = versionTable->item(row, 0);
+      if (!item) { break; }
 
       Qt::CheckState curState = item->checkState();
       Qt::CheckState newState = Qt::Unchecked;

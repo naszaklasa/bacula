@@ -1,19 +1,19 @@
 /*
- *  Version $Id: version.h 8276 2009-01-03 08:38:38Z kerns $
+ *  Version $Id: version.h 8701 2009-04-07 15:50:39Z kerns $
  */
 
 #undef  VERSION
-#define VERSION "2.4.4"
-#define BDATE   "28 December 2008"
-#define LSMDATE "28Dec08"
+#define VERSION "3.0.0"
+#define BDATE   "06 April 2009"
+#define LSMDATE "06Apr09"
 
-#define PROG_COPYRIGHT "Copyright (C) %d-2008 Free Software Foundation Europe e.V.\n"
-#define BYEAR "2008"       /* year for copyright messages in progs */
+#define PROG_COPYRIGHT "Copyright (C) %d-2009 Free Software Foundation Europe e.V.\n"
+#define BYEAR "2009"       /* year for copyright messages in progs */
 
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -55,6 +55,14 @@
  */
 #ifdef DEVELOPER
 #define SMCHECK
+#endif
+
+/*
+ * USE_VTAPE is a dummy tape driver. This is useful to
+ *  run regress test.
+ */
+#ifdef HAVE_LINUX_OS
+#define USE_VTAPE
 #endif
 
 /* 

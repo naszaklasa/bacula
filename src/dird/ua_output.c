@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_output.c 6747 2008-04-06 10:00:46Z kerns $
+ *   Version $Id: ua_output.c 8508 2009-03-07 20:59:46Z kerns $
  */
 
 #include "bacula.h"
@@ -41,10 +41,6 @@
 /* Imported subroutines */
 
 /* Imported variables */
-extern int r_first;
-extern int r_last;
-extern RES_TABLE resources[];
-extern RES **res_head;
 
 /* Imported functions */
 
@@ -216,6 +212,8 @@ bail_out:
  *  list jobname=name   - same as above 
  *  list jobmedia jobid=<nn>
  *  list jobmedia job=name
+ *  list joblog jobid=<nn>
+ *  list joblog job=name
  *  list files jobid=<nn> - list files saved for job nn
  *  list files job=name
  *  list pools          - list pool records
@@ -225,6 +223,7 @@ bail_out:
  *  list clients        - list clients
  *  list nextvol job=xx  - list the next vol to be used by job
  *  list nextvolume job=xx - same as above.
+ *  list copies jobid=x,y,z
  *
  */
 
@@ -321,7 +320,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
 
       /* List JOBMEDIA */
       } else if (strcasecmp(ua->argk[i], NT_("jobmedia")) == 0) {
-         int done = FALSE;
+         bool done = false;
          for (j=i+1; j<ua->argc; j++) {
             if (strcasecmp(ua->argk[j], NT_("ujobid")) == 0 && ua->argv[j]) {
                bstrncpy(jr.Job, ua->argv[j], MAX_NAME_LENGTH);
@@ -334,12 +333,35 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
                continue;
             }
             db_list_jobmedia_records(ua->jcr, ua->db, jobid, prtit, ua, llist);
-            done = TRUE;
+            done = true;
          }
          if (!done) {
             /* List for all jobs (jobid=0) */
             db_list_jobmedia_records(ua->jcr, ua->db, 0, prtit, ua, llist);
          }
+
+      /* List JOBLOG */
+      } else if (strcasecmp(ua->argk[i], NT_("joblog")) == 0) {
+         bool done = false;
+         for (j=i+1; j<ua->argc; j++) {
+            if (strcasecmp(ua->argk[j], NT_("ujobid")) == 0 && ua->argv[j]) {
+               bstrncpy(jr.Job, ua->argv[j], MAX_NAME_LENGTH);
+               jr.JobId = 0;
+               db_get_job_record(ua->jcr, ua->db, &jr);
+               jobid = jr.JobId;
+            } else if (strcasecmp(ua->argk[j], NT_("jobid")) == 0 && ua->argv[j]) {
+               jobid = str_to_int64(ua->argv[j]);
+            } else {
+               continue;
+            }
+            db_list_joblog_records(ua->jcr, ua->db, jobid, prtit, ua, llist);
+            done = true;
+         }
+         if (!done) {
+            /* List for all jobs (jobid=0) */
+            db_list_joblog_records(ua->jcr, ua->db, 0, prtit, ua, llist);
+         }
+
 
       /* List POOLS */
       } else if (strcasecmp(ua->argk[i], NT_("pool")) == 0 ||
@@ -433,6 +455,19 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
             }
          }
          list_nextvol(ua, n);
+      } else if (strcasecmp(ua->argk[i], NT_("copies")) == 0) {
+         char *jobids=NULL;
+         uint32_t limit=0;
+         for (j=i+1; j<ua->argc; j++) {
+            if (strcasecmp(ua->argk[j], NT_("jobid")) == 0 && ua->argv[j]) {
+               if (is_a_number_list(ua->argv[j])) {
+                  jobids = ua->argv[j];
+               }
+            } else if (strcasecmp(ua->argk[j], NT_("limit")) == 0 && ua->argv[j]) {
+               limit = atoi(ua->argv[j]);
+            } 
+         }
+         db_list_copies_records(ua->jcr,ua->db,limit,jobids,prtit,ua,llist);
       } else if (strcasecmp(ua->argk[i], NT_("limit")) == 0
                  || strcasecmp(ua->argk[i], NT_("days")) == 0) {
          /* Ignore it */
@@ -449,7 +484,7 @@ static bool list_nextvol(UAContext *ua, int ndays)
    JCR *jcr;          
    USTORE store;
    RUN *run;
-   time_t runtime;
+   utime_t runtime;
    bool found = false;
    MEDIA_DBR mr;
    POOL_DBR pr;
@@ -488,6 +523,7 @@ static bool list_nextvol(UAContext *ua, int ndays)
       mr.PoolId = jcr->jr.PoolId;
       get_job_storage(&store, job, run);
       mr.StorageId = store.store->StorageId;
+      /* no need to set ScratchPoolId, since we use fnv_no_create_vol */
       if (!find_next_volume_for_append(jcr, &mr, 1, fnv_no_create_vol, fnv_prune)) {
          ua->error_msg(_("Could not find next Volume for Job %s (Pool=%s, Level=%s).\n"),
             job->name(), pr.Name, level_to_str(run->level));
@@ -516,7 +552,7 @@ get_out:
  * For a given job, we examine all his run records
  *  to see if it is scheduled today or tomorrow.
  */
-RUN *find_next_run(RUN *run, JOB *job, time_t &runtime, int ndays)
+RUN *find_next_run(RUN *run, JOB *job, utime_t &runtime, int ndays)
 {
    time_t now, future, endtime;
    SCHED *sched;
@@ -590,7 +626,7 @@ RUN *find_next_run(RUN *run, JOB *job, time_t &runtime, int ndays)
                   runtm.tm_min = run->minute;
                   runtm.tm_sec = 0;
                   runtime = mktime(&runtm);
-                  Dmsg2(200, "now=%d runtime=%d\n", now, runtime);
+                  Dmsg2(200, "now=%d runtime=%lld\n", now, runtime);
                   if ((runtime > now) && (runtime < endtime)) {
                      Dmsg2(200, "Found it level=%d %c\n", run->level, run->level);
                      return run;         /* found it, return run resource */
@@ -624,7 +660,8 @@ bool complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool)
    }
 
    Dmsg0(100, "complete_jcr open db\n");
-   jcr->db = jcr->db=db_init_database(jcr, jcr->catalog->db_name, jcr->catalog->db_user,
+   jcr->db = jcr->db=db_init(jcr, jcr->catalog->db_driver, jcr->catalog->db_name, 
+                      jcr->catalog->db_user,
                       jcr->catalog->db_password, jcr->catalog->db_address,
                       jcr->catalog->db_port, jcr->catalog->db_socket,
                       jcr->catalog->mult_db_connections);

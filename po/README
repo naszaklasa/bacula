@@ -25,7 +25,7 @@ directory, so it is much better to do something like:
 
 cd bacula
 rm -rf x
-svn checkout https://bacula.svn.sourceforge.net/svnroot/bacula x
+svn checkout https://bacula.svn.sourceforge.net/svnroot/bacula/trunk/bacula x
 cd x
 ./configure <options>
 cd po

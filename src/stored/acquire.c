@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: acquire.c 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: acquire.c 8235 2008-12-23 13:28:03Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -432,10 +432,11 @@ bool release_device(DCR *dcr)
    if (dev->can_read()) {
       VOLUME_CAT_INFO *vol = &dev->VolCatInfo;
       dev->clear_read();              /* clear read bit */
-      Dmsg2(000, "dir_update_vol_info. label=%d Vol=%s\n",
+      Dmsg2(150, "dir_update_vol_info. label=%d Vol=%s\n",
          dev->is_labeled(), vol->VolCatName);
       if (dev->is_labeled() && vol->VolCatName[0] != 0) {
          dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
+         remove_read_volume(jcr, dcr->VolumeName);
          volume_unused(dcr);
       }
    } else if (dev->num_writers > 0) {
@@ -633,7 +634,7 @@ static void attach_dcr_to_dev(DCR *dcr)
    JCR *jcr = dcr->jcr;
 
    if (jcr) Dmsg1(500, "JobId=%u enter attach_dcr_to_dev\n", (uint32_t)jcr->JobId);
-   if (!dcr->attached_to_dev && dev->initiated && jcr && jcr->JobType != JT_SYSTEM) {
+   if (!dcr->attached_to_dev && dev->initiated && jcr && jcr->get_JobType() != JT_SYSTEM) {
       dev->attached_dcrs->append(dcr);  /* attach dcr to device */
       dcr->attached_to_dev = true;
       Dmsg1(500, "JobId=%u attach_dcr_to_dev\n", (uint32_t)jcr->JobId);
@@ -647,8 +648,8 @@ void detach_dcr_from_dev(DCR *dcr)
 
    /* Detach this dcr only if attached */
    if (dcr->attached_to_dev && dev) {
-      dcr->unreserve_device();
       dev->dlock();
+      dcr->unreserve_device();
       dcr->dev->attached_dcrs->remove(dcr);  /* detach dcr from device */
       dcr->attached_to_dev = false;
 //    remove_dcr_from_dcrs(dcr);      /* remove dcr from jcr list */

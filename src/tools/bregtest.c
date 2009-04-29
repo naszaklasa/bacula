@@ -5,16 +5,16 @@
  *
  */
 /*
-   BaculaÅ¬ÅÆ - The Network Backup Solution
+   Bacula¬Æ - The Network Backup Solution
 
-   Copyright (C) 2006-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation and included
-   in the file LICENSE.
+   License as published by the Free Software Foundation, which is 
+   listed in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -26,9 +26,9 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   BaculaÅ¬ÅÆ is a registered trademark of John Walker.
+   Bacula¬Æ is a registered trademark o fKern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 ZÅ√Åºrich,
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Z√ºrich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 
@@ -54,6 +54,8 @@ static void usage()
 "       -f          specify file of data to be matched\n"
 "       -e          specify expression\n"
 "       -s          sed output\n"
+"       -d <nn>     set debug level to <nn>\n"
+"       -dt         print timestamp in debug output\n"
 "       -?          print this message.\n"
 "\n");
 
@@ -77,9 +79,13 @@ int main(int argc, char *const *argv)
    while ((ch = getopt(argc, argv, "sd:f:e:")) != -1) {
       switch (ch) {
       case 'd':                       /* set debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0) {
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
          }
          break;
 
@@ -92,8 +98,8 @@ int main(int argc, char *const *argv)
          break;
 
       case 's':
-	 sed=true;
-	 break;
+         sed=true;
+         break;
 
       case '?':
       default:
@@ -136,9 +142,9 @@ int main(int argc, char *const *argv)
       strip_trailing_newline(data);
       apply_bregexps(data, list, &p);
       if (sed) {
-	 printf("%s\n", p);
+         printf("%s\n", p);
       } else {
-	 printf("%s => %s\n", data, p);
+         printf("%s => %s\n", data, p);
       }
    }
    fclose(fd);

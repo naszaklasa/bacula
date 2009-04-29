@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -36,7 +36,7 @@
  *    daemon because we interact more directly with the user
  *    i.e. printf, ...
  *
- *   Version $Id: butil.c 5038 2007-06-18 19:29:26Z kerns $
+ *   Version $Id: butil.c 7873 2008-10-21 21:06:13Z kerns $
  */
 
 #include "bacula.h"
@@ -92,8 +92,8 @@ JCR *setup_jcr(const char *name, char *dev_name, BSR *bsr,
    jcr->NumReadVolumes = 0;
    jcr->NumWriteVolumes = 0;
    jcr->JobId = 0;
-   jcr->JobType = JT_CONSOLE;
-   jcr->JobLevel = L_FULL;
+   jcr->set_JobType(JT_CONSOLE);
+   jcr->set_JobLevel(L_FULL);
    jcr->JobStatus = JS_Terminated;
    jcr->where = bstrdup("");
    jcr->job_name = get_pool_memory(PM_FNAME);
@@ -107,7 +107,7 @@ JCR *setup_jcr(const char *name, char *dev_name, BSR *bsr,
    pm_strcpy(jcr->fileset_md5, "Dummy.fileset.md5");
 
    init_autochangers();
-   create_volume_list();
+   create_volume_lists();
 
    dcr = setup_to_access_device(jcr, dev_name, VolumeName, mode);
    if (!dcr) {

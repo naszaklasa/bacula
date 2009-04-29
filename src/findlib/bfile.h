@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -35,19 +35,6 @@
 
 #ifndef __BFILE_H
 #define __BFILE_H
-
-#ifdef HAVE_PYTHON
-#undef _POSIX_C_SOURCE
-#include <Python.h>
-struct Python_IO {
-   PyObject *fo;
-   PyObject *fr;
-   PyObject *fc;
-};
-#else
-struct Python_IO {
-};
-#endif
 
 
 /* this should physically correspond to WIN32_STREAM_ID
@@ -98,12 +85,11 @@ struct BFILE {
    DWORD rw_bytes;                    /* Bytes read or written */
    DWORD lerror;                      /* Last error code */
    int berrno;                        /* errno */
-   char *prog;                        /* reader/writer program if any */
    JCR *jcr;                          /* jcr for editing job codes */
-   Python_IO pio;                     /* Python I/O routines */
    PROCESS_WIN32_BACKUPAPIBLOCK_CONTEXT win32DecompContext; /* context for decomposition of win32 backup streams */
    int use_backup_decomp;             /* set if using BackupRead Stream Decomposition */
    bool reparse_point;                /* set if reparse point */ 
+   bool cmd_plugin;                   /* set if we have a command plugin */
 };
 
 HANDLE bget_handle(BFILE *bfd);
@@ -121,13 +107,13 @@ HANDLE bget_handle(BFILE *bfd);
 struct BFILE {
    int fid;                           /* file id on Unix */
    int m_flags;                       /* open flags */
-   int berrno;
-   char *prog;                        /* reader/writer program if any */
+   int berrno;                        /* errno */
+   int32_t lerror;                    /* not used - simplies Win32 builds */
    JCR *jcr;                          /* jcr for editing job codes */
-   Python_IO pio;                     /* Python I/O routines */
    PROCESS_WIN32_BACKUPAPIBLOCK_CONTEXT win32DecompContext; /* context for decomposition of win32 backup streams */
    int use_backup_decomp;             /* set if using BackupRead Stream Decomposition */
    bool reparse_point;                /* not used in Unix */
+   bool cmd_plugin;                   /* set if we have a command plugin */
 };
 
 #endif
@@ -136,7 +122,7 @@ void    binit(BFILE *bfd);
 bool    is_bopen(BFILE *bfd);
 bool    set_win32_backup(BFILE *bfd);
 bool    set_portable_backup(BFILE *bfd);
-bool    set_prog(BFILE *bfd, char *prog, JCR *jcr);
+bool    set_cmd_plugin(BFILE *bfd, JCR *jcr);
 bool    have_win32_api();
 bool    is_portable_backup(BFILE *bfd);
 bool    is_restore_stream_supported(int stream);

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -28,7 +28,7 @@
 /*
  * Protypes for stored -- Kern Sibbald MM  
  *
- *   Version $Id: protos.h 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: protos.h 8235 2008-12-23 13:28:03Z kerns $
  */
 
 /* From stored.c */
@@ -178,11 +178,15 @@ void     _give_back_device_lock(const char *file, int line, DEVICE *dev, bsteal_
 
 /* From match_bsr.c */
 int      match_bsr(BSR *bsr, DEV_RECORD *rec, VOLUME_LABEL *volrec,
-              SESSION_LABEL *sesrec);
+              SESSION_LABEL *sesrec, JCR *jcr);
 int      match_bsr_block(BSR *bsr, DEV_BLOCK *block);
 void     position_bsr_block(BSR *bsr, DEV_BLOCK *block);
 BSR     *find_next_bsr(BSR *root_bsr, DEVICE *dev);
 bool     is_this_bsr_done(BSR *bsr, DEV_RECORD *rec);
+uint64_t get_bsr_start_addr(BSR *bsr, 
+                            uint32_t *file=NULL,
+                            uint32_t *block=NULL);
+
 
 /* From mount.c */
 bool     mount_next_read_volume(DCR *dcr);
@@ -191,8 +195,6 @@ bool     mount_next_read_volume(DCR *dcr);
 BSR     *parse_bsr(JCR *jcr, char *lf);
 void     dump_bsr(BSR *bsr, bool recurse);
 void     free_bsr(BSR *bsr);
-VOL_LIST *new_restore_volume();
-int      add_restore_volume(JCR *jcr, VOL_LIST *vol);
 void     free_restore_volume_list(JCR *jcr);
 void     create_restore_volume_list(JCR *jcr);
 
@@ -205,6 +207,7 @@ bool        read_record_from_block(DCR *dcr, DEV_BLOCK *block, DEV_RECORD *rec);
 DEV_RECORD *new_record();
 void        free_record(DEV_RECORD *rec);
 void        empty_record(DEV_RECORD *rec);
+uint64_t get_record_address(DEV_RECORD *rec);
 
 /* From read_record.c */
 bool read_records(DCR *dcr,
@@ -218,23 +221,13 @@ void    _lock_reservations();
 void    _unlock_reservations();
 void    _lock_volumes();
 void    _unlock_volumes();
-VOLRES *reserve_volume(DCR *dcr, const char *VolumeName);
-VOLRES *find_volume(const char *VolumeName);
-bool    free_volume(DEVICE *dev);
 void    unreserve_device(DCR *dcr);
-bool    volume_unused(DCR *dcr);
-void    create_volume_list();
-void    free_volume_list();
-void    list_volumes(void sendit(const char *msg, int len, void *sarg), void *arg);
-bool    is_volume_in_use(DCR *dcr);
 void    send_drive_reserve_messages(JCR *jcr, void sendit(const char *msg, int len, void *sarg), void *arg);
 bool    find_suitable_device_for_job(JCR *jcr, RCTX &rctx);
 int     search_res_for_device(RCTX &rctx);
 void    release_reserve_messages(JCR *jcr);
-void debug_list_volumes(const char *imsg);
 
 extern int reservations_lock_count;
-extern int vol_list_lock_count;
 
 #ifdef  SD_DEBUG_LOCK
 
@@ -276,6 +269,24 @@ extern int vol_list_lock_count;
 
 #endif
 
+/* From vol_mgr.c */
+void    init_vol_list_lock();
+void    term_vol_list_lock();
+VOLRES *reserve_volume(DCR *dcr, const char *VolumeName);
+VOLRES *find_volume(const char *VolumeName);
+bool    free_volume(DEVICE *dev);
+bool    is_vol_list_empty();
+dlist  *dup_vol_list(JCR *jcr);
+void    free_temp_vol_list(dlist *temp_vol_list);
+bool    volume_unused(DCR *dcr);
+void    create_volume_lists();
+void    free_volume_lists();
+void    list_volumes(void sendit(const char *msg, int len, void *sarg), void *arg);
+bool    is_volume_in_use(DCR *dcr);
+void    debug_list_volumes(const char *imsg);
+extern  int vol_list_lock_count;
+void    add_read_volume(JCR *jcr, const char *VolumeName);
+void    remove_read_volume(JCR *jcr, const char *VolumeName);
 
 
 /* From spool.c */

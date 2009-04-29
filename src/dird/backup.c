@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -38,7 +38,7 @@
  *       to do the backup.
  *     When the File daemon finishes the job, update the DB.
  *
- *   Version $Id: backup.c 6260 2008-01-09 07:29:57Z junkmale $
+ *   Version $Id: backup.c 8508 2009-03-07 20:59:46Z kerns $
  */
 
 #include "bacula.h"
@@ -65,6 +65,9 @@ static char OldEndJob[]  = "2800 End Job TermCode=%d JobFiles=%u "
 bool do_backup_init(JCR *jcr)
 {
 
+   if (jcr->get_JobLevel() == L_VIRTUAL_FULL) {
+      return do_vbackup_init(jcr);
+   }
    free_rstorage(jcr);                   /* we don't read so release */
 
    if (!get_or_create_fileset_record(jcr)) {
@@ -77,6 +80,10 @@ bool do_backup_init(JCR *jcr)
    get_level_since_time(jcr, jcr->since, sizeof(jcr->since));
 
    apply_pool_overrides(jcr);
+
+   if (!allow_duplicate_job(jcr)) {
+      return false;
+   }
 
    jcr->jr.PoolId = get_or_create_pool_record(jcr, jcr->pool->name());
    if (jcr->jr.PoolId == 0) {
@@ -97,6 +104,74 @@ bool do_backup_init(JCR *jcr)
 }
 
 /*
+ * Foreach files in currrent list, send "/path/fname\0LStat" to FD
+ */
+static int accurate_list_handler(void *ctx, int num_fields, char **row)
+{
+   JCR *jcr = (JCR *)ctx;
+
+   if (job_canceled(jcr)) {
+      return 1;
+   }
+   
+   if (row[2] > 0) {            /* discard when file_index == 0 */
+      jcr->file_bsock->fsend("%s%s%c%s", row[0], row[1], 0, row[4]); 
+   }
+   return 0;
+}
+
+/*
+ * Send current file list to FD
+ *    DIR -> FD : accurate files=xxxx
+ *    DIR -> FD : /path/to/file\0Lstat
+ *    DIR -> FD : /path/to/dir/\0Lstat
+ *    ...
+ *    DIR -> FD : EOD
+ */
+bool send_accurate_current_files(JCR *jcr)
+{
+   POOL_MEM buf;
+
+   if (!jcr->accurate || job_canceled(jcr) || jcr->get_JobLevel()==L_FULL) {
+      return true;
+   }
+   POOLMEM *jobids = get_pool_memory(PM_FNAME);
+
+   db_accurate_get_jobids(jcr, jcr->db, &jcr->jr, jobids);
+
+   if (*jobids == 0) {
+      free_pool_memory(jobids);
+      Jmsg(jcr, M_FATAL, 0, _("Cannot find previous jobids.\n"));
+      return false;
+   }
+   Jmsg(jcr, M_INFO, 0, _("Sending Accurate information.\n"));
+
+   /* to be able to allocate the right size for htable */
+   POOLMEM *nb = get_pool_memory(PM_FNAME);
+   *nb = 0;                           /* clear buffer */
+   Mmsg(buf, "SELECT sum(JobFiles) FROM Job WHERE JobId IN (%s)",jobids);
+   db_sql_query(jcr->db, buf.c_str(), db_get_int_handler, nb);
+   Dmsg2(200, "jobids=%s nb=%s\n", jobids, nb);
+   jcr->file_bsock->fsend("accurate files=%s\n", nb); 
+
+   if (!db_open_batch_connexion(jcr, jcr->db)) {
+      Jmsg0(jcr, M_FATAL, 0, "Can't get dedicate sql connexion");
+      return false;
+   }
+
+   db_get_file_list(jcr, jcr->db_batch, jobids, accurate_list_handler, (void *)jcr);
+
+   /* TODO: close the batch connexion ? (can be used very soon) */
+
+   free_pool_memory(jobids);
+   free_pool_memory(nb);
+
+   jcr->file_bsock->signal(BNET_EOD);
+
+   return true;
+}
+
+/*
  * Do a backup of the specified FileSet
  *
  *  Returns:  false on failure
@@ -110,6 +185,9 @@ bool do_backup(JCR *jcr)
    STORE *store;
    char ed1[100];
 
+   if (jcr->get_JobLevel() == L_VIRTUAL_FULL) {
+      return do_vbackup(jcr);
+   }
 
    /* Print Job Start message */
    Jmsg(jcr, M_INFO, 0, _("Start Backup JobId %s, Job=%s\n"),
@@ -225,6 +303,14 @@ bool do_backup(JCR *jcr)
       Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
    }
 
+   /*
+    * If backup is in accurate mode, we send the list of
+    * all files to FD.
+    */
+   if (!send_accurate_current_files(jcr)) {
+      goto bail_out;
+   }
+
    /* Send backup command */
    fd->fsend(backupcmd);
    if (!response(jcr, fd, OKbackup, "backup", DISPLAY_ERROR)) {
@@ -245,8 +331,7 @@ bail_out:
    set_jcr_job_status(jcr, JS_ErrorTerminated);
    Dmsg1(400, "wait for sd. use=%d\n", jcr->use_count());
    /* Cancel SD */
-   cancel_storage_daemon_job(jcr);
-   wait_for_storage_daemon_termination(jcr);
+   wait_for_job_termination(jcr, FDConnectTimeout);
    Dmsg1(400, "after wait for sd. use=%d\n", jcr->use_count());
    return false;
 }
@@ -258,58 +343,69 @@ bail_out:
  *   are done, we return the job status.
  * Also used by restore.c
  */
-int wait_for_job_termination(JCR *jcr)
+int wait_for_job_termination(JCR *jcr, int timeout)
 {
    int32_t n = 0;
    BSOCK *fd = jcr->file_bsock;
    bool fd_ok = false;
-   uint32_t JobFiles, Errors;
+   uint32_t JobFiles, JobErrors;
+   uint32_t JobWarnings = 0;
    uint64_t ReadBytes = 0;
    uint64_t JobBytes = 0;
    int VSS = 0;
    int Encrypt = 0;
+   btimer_t *tid=NULL;
 
    set_jcr_job_status(jcr, JS_Running);
-   /* Wait for Client to terminate */
-   while ((n = bget_dirmsg(fd)) >= 0) {
-      if (!fd_ok && 
-          (sscanf(fd->msg, EndJob, &jcr->FDJobStatus, &JobFiles,
-              &ReadBytes, &JobBytes, &Errors, &VSS, &Encrypt) == 7 ||
-           sscanf(fd->msg, OldEndJob, &jcr->FDJobStatus, &JobFiles,
-                 &ReadBytes, &JobBytes, &Errors) == 5)) {
-         fd_ok = true;
-         set_jcr_job_status(jcr, jcr->FDJobStatus);
-         Dmsg1(100, "FDStatus=%c\n", (char)jcr->JobStatus);
-      } else {
-         Jmsg(jcr, M_WARNING, 0, _("Unexpected Client Job message: %s\n"),
-            fd->msg);
-      }
-      if (job_canceled(jcr)) {
-         break;
-      }
-   }
 
-   if (is_bnet_error(fd)) {
-      Jmsg(jcr, M_FATAL, 0, _("Network error with FD during %s: ERR=%s\n"),
-          job_type_to_str(jcr->JobType), fd->bstrerror());
+   if (fd) {
+      if (timeout) {
+         tid = start_bsock_timer(fd, timeout); /* TODO: New timeout directive??? */
+      }
+      /* Wait for Client to terminate */
+      while ((n = bget_dirmsg(fd)) >= 0) {
+         if (!fd_ok && 
+             (sscanf(fd->msg, EndJob, &jcr->FDJobStatus, &JobFiles,
+                     &ReadBytes, &JobBytes, &JobErrors, &VSS, &Encrypt) == 7 ||
+              sscanf(fd->msg, OldEndJob, &jcr->FDJobStatus, &JobFiles,
+                     &ReadBytes, &JobBytes, &JobErrors) == 5)) {
+            fd_ok = true;
+            set_jcr_job_status(jcr, jcr->FDJobStatus);
+            Dmsg1(100, "FDStatus=%c\n", (char)jcr->JobStatus);
+         } else {
+            Jmsg(jcr, M_WARNING, 0, _("Unexpected Client Job message: %s\n"),
+                 fd->msg);
+         }
+         if (job_canceled(jcr)) {
+            break;
+         }
+      }
+      if (tid) {
+         stop_bsock_timer(tid);
+      }
+
+      if (is_bnet_error(fd)) {
+         Jmsg(jcr, M_FATAL, 0, _("Network error with FD during %s: ERR=%s\n"),
+              job_type_to_str(jcr->get_JobType()), fd->bstrerror());
+      }
+      fd->signal(BNET_TERMINATE);   /* tell Client we are terminating */
    }
-   fd->signal(BNET_TERMINATE);   /* tell Client we are terminating */
 
    /* Force cancel in SD if failing */
    if (job_canceled(jcr) || !fd_ok) {
       cancel_storage_daemon_job(jcr);
    }
 
-   /* Note, the SD stores in jcr->JobFiles/ReadBytes/JobBytes/Errors */
+   /* Note, the SD stores in jcr->JobFiles/ReadBytes/JobBytes/JobErrors */
    wait_for_storage_daemon_termination(jcr);
-
 
    /* Return values from FD */
    if (fd_ok) {
       jcr->JobFiles = JobFiles;
-      jcr->Errors = Errors;
+      jcr->JobErrors += JobErrors;       /* Keep total errors */
       jcr->ReadBytes = ReadBytes;
       jcr->JobBytes = JobBytes;
+      jcr->JobWarnings = JobWarnings;
       jcr->VSS = VSS;
       jcr->Encrypt = Encrypt;
    } else {
@@ -320,7 +416,7 @@ int wait_for_job_termination(JCR *jcr)
 //   jcr->JobStatus, jcr->SDJobStatus);
 
    /* Return the first error status we find Dir, FD, or SD */
-   if (!fd_ok || is_bnet_error(fd)) {
+   if (!fd_ok || is_bnet_error(fd)) { /* if fd not set, that use !fd_ok */
       jcr->FDJobStatus = JS_ErrorTerminated;
    }
    if (jcr->JobStatus != JS_Terminated) {
@@ -347,6 +443,11 @@ void backup_cleanup(JCR *jcr, int TermCode)
    CLIENT_DBR cr;
    double kbps, compression;
    utime_t RunTime;
+
+   if (jcr->get_JobLevel() == L_VIRTUAL_FULL) {
+      vbackup_cleanup(jcr, TermCode);
+      return;
+   }
 
    Dmsg2(100, "Enter backup_cleanup %d %c\n", TermCode, TermCode);
    memset(&mr, 0, sizeof(mr));
@@ -377,11 +478,14 @@ void backup_cleanup(JCR *jcr, int TermCode)
 
    switch (jcr->JobStatus) {
       case JS_Terminated:
-         if (jcr->Errors || jcr->SDErrors) {
+         if (jcr->JobErrors || jcr->SDErrors) {
             term_msg = _("Backup OK -- with warnings");
          } else {
             term_msg = _("Backup OK");
          }
+         break;
+      case JS_Warnings:
+         term_msg = _("Backup OK -- with warnings");
          break;
       case JS_FatalError:
       case JS_ErrorTerminated:
@@ -415,7 +519,7 @@ void backup_cleanup(JCR *jcr, int TermCode)
    if (RunTime <= 0) {
       kbps = 0;
    } else {
-      kbps = (double)jcr->jr.JobBytes / (1000 * RunTime);
+      kbps = ((double)jcr->jr.JobBytes) / (1000.0 * (double)RunTime);
    }
    if (!db_get_job_volume_names(jcr, jcr->db, jcr->jr.JobId, &jcr->VolumeName)) {
       /*
@@ -437,7 +541,7 @@ void backup_cleanup(JCR *jcr, int TermCode)
       if (compression < 0.5) {
          bstrncpy(compress, "None", sizeof(compress));
       } else {
-         bsnprintf(compress, sizeof(compress), "%.1f %%", (float)compression);
+         bsnprintf(compress, sizeof(compress), "%.1f %%", compression);
       }
    }
    jobstatus_to_ascii(jcr->FDJobStatus, fd_term_msg, sizeof(fd_term_msg));
@@ -445,7 +549,7 @@ void backup_cleanup(JCR *jcr, int TermCode)
 
 // bmicrosleep(15, 0);                /* for debugging SIGHUP */
 
-   Jmsg(jcr, msg_type, 0, _("Bacula %s %s (%s): %s\n"
+   Jmsg(jcr, msg_type, 0, _("%s %s %s (%s): %s\n"
 "  Build OS:               %s %s %s\n"
 "  JobId:                  %d\n"
 "  Job:                    %s\n"
@@ -453,6 +557,7 @@ void backup_cleanup(JCR *jcr, int TermCode)
 "  Client:                 \"%s\" %s\n"
 "  FileSet:                \"%s\" %s\n"
 "  Pool:                   \"%s\" (From %s)\n"
+"  Catalog:                \"%s\" (From %s)\n"
 "  Storage:                \"%s\" (From %s)\n"
 "  Scheduled time:         %s\n"
 "  Start time:             %s\n"
@@ -466,7 +571,8 @@ void backup_cleanup(JCR *jcr, int TermCode)
 "  Rate:                   %.1f KB/s\n"
 "  Software Compression:   %s\n"
 "  VSS:                    %s\n"
-"  Storage Encryption:     %s\n"
+"  Encryption:             %s\n"
+"  Accurate:               %s\n"
 "  Volume name(s):         %s\n"
 "  Volume Session Id:      %d\n"
 "  Volume Session Time:    %d\n"
@@ -476,14 +582,15 @@ void backup_cleanup(JCR *jcr, int TermCode)
 "  FD termination status:  %s\n"
 "  SD termination status:  %s\n"
 "  Termination:            %s\n\n"),
-        my_name, VERSION, LSMDATE, edt,
+        BACULA, my_name, VERSION, LSMDATE, edt,
         HOST_OS, DISTNAME, DISTVER,
         jcr->jr.JobId,
         jcr->jr.Job,
-        level_to_str(jcr->JobLevel), jcr->since,
+        level_to_str(jcr->get_JobLevel()), jcr->since,
         jcr->client->name(), cr.Uname,
         jcr->fileset->name(), jcr->FSCreateTime,
         jcr->pool->name(), jcr->pool_source,
+        jcr->catalog->name(), jcr->catalog_source,
         jcr->wstore->name(), jcr->wstore_source,
         schedt,
         sdt,
@@ -496,16 +603,17 @@ void backup_cleanup(JCR *jcr, int TermCode)
         edit_uint64_with_suffix(jcr->jr.JobBytes, ec4),
         edit_uint64_with_commas(jcr->SDJobBytes, ec5),
         edit_uint64_with_suffix(jcr->SDJobBytes, ec6),
-        (float)kbps,
+        kbps,
         compress,
-        jcr->VSS?"yes":"no",
-        jcr->Encrypt?"yes":"no",
+        jcr->VSS?_("yes"):_("no"),
+        jcr->Encrypt?_("yes"):_("no"),
+        jcr->accurate?_("yes"):_("no"),
         jcr->VolumeName,
         jcr->VolSessionId,
         jcr->VolSessionTime,
         edit_uint64_with_commas(mr.VolBytes, ec7),
         edit_uint64_with_suffix(mr.VolBytes, ec8),
-        jcr->Errors,
+        jcr->JobErrors,
         jcr->SDErrors,
         fd_term_msg,
         sd_term_msg,
@@ -527,7 +635,7 @@ void update_bootstrap_file(JCR *jcr)
 
       VOL_PARAMS *VolParams = NULL;
       int VolCount;
-      char edt[50];
+      char edt[50], ed1[50], ed2[50];
 
       if (*fname == '|') {
          got_pipe = 1;
@@ -535,7 +643,7 @@ void update_bootstrap_file(JCR *jcr)
          fd = bpipe ? bpipe->wfd : NULL;
       } else {
          /* ***FIXME*** handle BASE */
-         fd = fopen(fname, jcr->JobLevel==L_FULL?"w+b":"a+b");
+         fd = fopen(fname, jcr->get_JobLevel()==L_FULL?"w+b":"a+b");
       }
       if (fd) {
          VolCount = db_get_job_volume_parameters(jcr, jcr->db, jcr->JobId,
@@ -551,17 +659,19 @@ void update_bootstrap_file(JCR *jcr)
          /* Start output with when and who wrote it */
          bstrftimes(edt, sizeof(edt), time(NULL));
          fprintf(fd, "# %s - %s - %s%s\n", edt, jcr->jr.Job,
-                 level_to_str(jcr->JobLevel), jcr->since);
+                 level_to_str(jcr->get_JobLevel()), jcr->since);
          for (int i=0; i < VolCount; i++) {
             /* Write the record */
             fprintf(fd, "Volume=\"%s\"\n", VolParams[i].VolumeName);
             fprintf(fd, "MediaType=\"%s\"\n", VolParams[i].MediaType);
+            if (VolParams[i].Slot > 0) {
+               fprintf(fd, "Slot=%d\n", VolParams[i].Slot);
+            }
             fprintf(fd, "VolSessionId=%u\n", jcr->VolSessionId);
             fprintf(fd, "VolSessionTime=%u\n", jcr->VolSessionTime);
-            fprintf(fd, "VolFile=%u-%u\n", VolParams[i].StartFile,
-                         VolParams[i].EndFile);
-            fprintf(fd, "VolBlock=%u-%u\n", VolParams[i].StartBlock,
-                         VolParams[i].EndBlock);
+            fprintf(fd, "VolAddr=%s-%s\n", 
+                    edit_uint64(VolParams[i].StartAddr, ed1),
+                    edit_uint64(VolParams[i].EndAddr, ed2));
             fprintf(fd, "FileIndex=%d-%d\n", VolParams[i].FirstIndex,
                          VolParams[i].LastIndex);
          }

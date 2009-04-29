@@ -10,7 +10,7 @@
  *
  *    Kern Sibbald, January MMI
  *
- *    Version $Id: bdb_delete.c 4992 2007-06-07 14:46:43Z kerns $
+ *    Version $Id: bdb_delete.c 7380 2008-07-14 10:42:59Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -34,7 +34,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -70,39 +70,12 @@
  */
 int db_delete_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 {
-   int stat;
-   POOL_DBR opr;
-
-   db_lock(mdb);
-   pr->PoolId = 0;                    /* Search on Pool Name */
-   if (!db_get_pool_record(jcr, mdb, pr)) {
-      Mmsg1(&mdb->errmsg, "No pool record %s exists\n", pr->Name);
-      db_unlock(mdb);
-      return 0;
-   }
-   fseek(mdb->poolfd, pr->rec_addr, SEEK_SET);
-   memset(&opr, 0, sizeof(opr));
-   stat = fwrite(&opr, sizeof(opr), 1, mdb->poolfd);
-   db_unlock(mdb);
-   return stat;
+   return 0;
 }
 
 int db_delete_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 {
-   int stat;
-   MEDIA_DBR omr;
-
-   db_lock(mdb);
-   if (!db_get_media_record(jcr, mdb, mr)) {
-      Mmsg0(&mdb->errmsg, "Media record not found.\n");
-      db_unlock(mdb);
-      return 0;
-   }
-   fseek(mdb->mediafd, mr->rec_addr, SEEK_SET);
-   memset(&omr, 0, sizeof(omr));
-   stat = fwrite(&omr, sizeof(omr), 1, mdb->mediafd);
-   db_unlock(mdb);
-   return stat;
+   return 0;
 }
 
 #endif /* HAVE_BACULA_DB */

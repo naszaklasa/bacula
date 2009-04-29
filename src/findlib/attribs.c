@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, October MMII
  *
- *   Version $Id: attribs.c 5714 2007-10-03 16:22:07Z kerns $
+ *   Version $Id: attribs.c 8681 2009-04-03 09:16:48Z kerns $
  *
  */
 
@@ -48,7 +48,7 @@ static bool uid_set = false;
 /* Forward referenced subroutines */
 static bool set_win32_attributes(JCR *jcr, ATTR *attr, BFILE *ofd);
 void unix_name_to_win32(POOLMEM **win32_name, char *name);
-void win_error(JCR *jcr, char *prefix, POOLMEM *ofile);
+void win_error(JCR *jcr, const char *prefix, POOLMEM *ofile);
 HANDLE bget_handle(BFILE *bfd);
 #endif /* HAVE_WIN32 */
 
@@ -162,10 +162,10 @@ int select_data_stream(FF_PKT *ff_pkt)
  *   them in the encode_attribsEx() subroutine, but this is
  *   not recommended.
  */
-void encode_stat(char *buf, FF_PKT *ff_pkt, int data_stream)
+void encode_stat(char *buf, struct stat *statp, int32_t LinkFI, int data_stream)
 {
    char *p = buf;
-   struct stat *statp = &ff_pkt->statp;
+
    /*
     *  Encode a stat packet.  I should have done this more intelligently
     *   with a length so that it could be easily expanded.
@@ -203,7 +203,7 @@ void encode_stat(char *buf, FF_PKT *ff_pkt, int data_stream)
    *p++ = ' ';
    p += to_base64((int64_t)statp->st_ctime, p);
    *p++ = ' ';
-   p += to_base64((int64_t)ff_pkt->LinkFI, p);
+   p += to_base64((int64_t)LinkFI, p);
    *p++ = ' ';
 
 #ifdef HAVE_CHFLAGS
@@ -225,6 +225,8 @@ void encode_stat(char *buf, FF_PKT *ff_pkt, int data_stream)
 #else
   #if !HAVE_GCC & HAVE_SUN_OS
     /* Sun compiler does not handle templates correctly */
+    #define plug(st, val) st = val
+  #elif __sgi
     #define plug(st, val) st = val
   #else
     /* Use templates to do the casting */
@@ -376,7 +378,7 @@ bool set_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
    mode_t old_mask;
    bool ok = true;
    boffset_t fsize;
-
+ 
    if (uid_set) {
       my_uid = getuid();
       my_gid = getgid();
@@ -518,6 +520,11 @@ int encode_attribsEx(JCR *jcr, char *attribsEx, FF_PKT *ff_pkt)
     * restore, we can be sure we put back the whole resource.
     */
    char *p;
+
+   *attribsEx = 0;                 /* no extended attributes (yet) */
+   if (jcr->cmd_plugin || ff_pkt->type == FT_DELETED) {
+      return STREAM_UNIX_ATTRIBUTES;
+   }
    p = attribsEx;
    if (ff_pkt->flags & FO_HFSPLUS) {
       p += to_base64((uint64_t)(ff_pkt->hfsinfo.rsrclength), p);
@@ -549,14 +556,19 @@ int encode_attribsEx(JCR *jcr, char *attribsEx, FF_PKT *ff_pkt)
 
    attribsEx[0] = 0;                  /* no extended attributes */
 
+   if (jcr->cmd_plugin || ff_pkt->type == FT_DELETED) {
+      return STREAM_UNIX_ATTRIBUTES;
+   }
+
    unix_name_to_win32(&ff_pkt->sys_fname, ff_pkt->fname);
 
    // try unicode version
    if (p_GetFileAttributesExW)  {
-      POOLMEM* pwszBuf = get_pool_memory (PM_FNAME);   
+      POOLMEM* pwszBuf = get_pool_memory(PM_FNAME);   
       make_win32_path_UTF8_2_wchar(&pwszBuf, ff_pkt->fname);
 
-      BOOL b=p_GetFileAttributesExW((LPCWSTR) pwszBuf, GetFileExInfoStandard, (LPVOID)&atts);
+      BOOL b=p_GetFileAttributesExW((LPCWSTR)pwszBuf, GetFileExInfoStandard, 
+                                    (LPVOID)&atts);
       free_pool_memory(pwszBuf);
 
       if (!b) {
@@ -626,8 +638,9 @@ static bool set_win32_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
    POOLMEM *win32_ofile;
 
    // if we have neither ansi nor wchar version, we leave
-   if (!(p_SetFileAttributesW || p_SetFileAttributesA))
+   if (!(p_SetFileAttributesW || p_SetFileAttributesA)) {
       return false;
+   }
 
    if (!p || !*p) {                   /* we should have attributes */
       Dmsg2(100, "Attributes missing. of=%s ofd=%d\n", attr->ofname, ofd->fid);
@@ -686,10 +699,9 @@ static bool set_win32_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
    }
 
    Dmsg1(100, "SetFileAtts %s\n", attr->ofname);
-   if (!(atts.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) 
-   {
+   if (!(atts.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
       if (p_SetFileAttributesW) {
-         POOLMEM* pwszBuf = get_pool_memory (PM_FNAME);   
+         POOLMEM* pwszBuf = get_pool_memory(PM_FNAME);   
          make_win32_path_UTF8_2_wchar(&pwszBuf, attr->ofname);
 
          BOOL b=p_SetFileAttributesW((LPCWSTR)pwszBuf, atts.dwFileAttributes & SET_ATTRS);
@@ -708,7 +720,7 @@ static bool set_win32_attributes(JCR *jcr, ATTR *attr, BFILE *ofd)
    return true;
 }
 
-void win_error(JCR *jcr, char *prefix, POOLMEM *win32_ofile)
+void win_error(JCR *jcr, const char *prefix, POOLMEM *win32_ofile)
 {
    DWORD lerror = GetLastError();
    LPTSTR msg;
@@ -722,11 +734,11 @@ void win_error(JCR *jcr, char *prefix, POOLMEM *win32_ofile)
                  NULL);
    Dmsg3(100, "Error in %s on file %s: ERR=%s\n", prefix, win32_ofile, msg);
    strip_trailing_junk(msg);
-   Jmsg(jcr, M_ERROR, 0, _("Error in %s file %s: ERR=%s\n"), prefix, win32_ofile, msg);
+   Jmsg3(jcr, M_ERROR, 0, _("Error in %s file %s: ERR=%s\n"), prefix, win32_ofile, msg);
    LocalFree(msg);
 }
 
-void win_error(JCR *jcr, char *prefix, DWORD lerror)
+void win_error(JCR *jcr, const char *prefix, DWORD lerror)
 {
    LPTSTR msg;
    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|

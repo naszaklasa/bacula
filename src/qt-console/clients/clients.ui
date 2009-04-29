@@ -5,22 +5,16 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>413</width>
-    <height>258</height>
+    <width>492</width>
+    <height>428</height>
    </rect>
   </property>
   <property name="windowTitle" >
    <string>Client Tree</string>
   </property>
   <layout class="QGridLayout" >
-   <property name="margin" >
-    <number>9</number>
-   </property>
-   <property name="spacing" >
-    <number>6</number>
-   </property>
    <item row="0" column="0" >
-    <widget class="QTreeWidget" name="mp_treeWidget" />
+    <widget class="QTableWidget" name="tableWidget" />
    </item>
   </layout>
   <action name="actionRefreshClients" >
@@ -47,7 +41,7 @@
   </action>
   <action name="actionStatusClientInConsole" >
    <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/status.png</iconset>
+    <iconset resource="../main.qrc" >:/images/status-console.png</iconset>
    </property>
    <property name="text" >
     <string>Status Client In Console</string>
@@ -76,6 +70,14 @@
    </property>
    <property name="statusTip" >
     <string>Open the diaolog to prune for this client.</string>
+   </property>
+  </action>
+  <action name="actionStatusClientWindow" >
+   <property name="icon" >
+    <iconset resource="../main.qrc" >:/images/status.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Status Client Window</string>
    </property>
   </action>
  </widget>

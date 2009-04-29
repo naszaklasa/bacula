@@ -104,6 +104,7 @@ GCC_PATCH=""
 # GCC_JAVA_ARCHIVE="gcc-java-3.4.2-20040916-1-src.tar.gz"
 
 BINUTILS_ARCHIVE="binutils-2.16.91-20060119-1-src.tar.gz"
+BINUTILS_PATCH="binutils_texinfo_version.patch"
 
 MINGW_ARCHIVE="mingw-runtime-3.9.tar.gz"
 
@@ -262,6 +263,16 @@ extract_binutils()
         echo "Extracting binutils"
         tar -xzf "$SRCDIR/$BINUTILS_ARCHIVE"
         cd "$BUILDDIR"
+}
+
+patch_binutils()
+{
+        if [ "$BINUTILS_PATCH" != "" ]; then
+                echo "Patching binutils"
+                cd "$SRCDIR/$BINUTILS"
+                patch -p1 < "${cwd}/patches/$BINUTILS_PATCH"
+                cd "$BUILDDIR"
+        fi
 }
 
 
@@ -512,6 +523,7 @@ fi
 install_libs
 
 extract_binutils
+patch_binutils
 configure_binutils
 build_binutils
 install_binutils

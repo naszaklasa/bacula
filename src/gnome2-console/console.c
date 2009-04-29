@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, March MMII
  *
- *     Version $Id: console.c 4992 2007-06-07 14:46:43Z kerns $
+ *     Version $Id: console.c 7380 2008-07-14 10:42:59Z kerns $
  */
 
 #include "bacula.h"
@@ -43,6 +43,8 @@
 /* Imported functions */
 int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons);
 void select_restore_setup();
+extern bool parse_gcons_config(CONFIG *config, const char *configfile, int exit_code);
+
 
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
@@ -92,6 +94,7 @@ static bool ready = false;
 static bool quit = false;
 static guint initial;
 static int numdir = 0;
+static CONFIG *config;
 
 #define CONFIG_FILE "./bgnome-console.conf"   /* default configuration file */
 
@@ -280,7 +283,8 @@ int main(int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_gcons_config(config, configfile, M_ERROR_TERM);
 
    if (init_crypto() != 0) {
       Emsg0(M_ERROR_TERM, 0, _("Cryptography library initialization failed.\n"));
@@ -694,6 +698,9 @@ void terminate_console(int sig)
    if (already_here)                  /* avoid recursive temination problems */
       exit(1);
    already_here = true;
+   config->free_resources();
+   free(config);
+   config = NULL;
    cleanup_crypto();
    disconnect_from_director((gpointer)NULL);
    gtk_main_quit();

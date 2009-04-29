@@ -1,0 +1,99 @@
+Index: src/cats/sql.c
+===================================================================
+--- src/cats/sql.c	(révision 8008)
++++ src/cats/sql.c	(copie de travail)
+@@ -311,33 +311,6 @@
+    return mdb->errmsg;
+ }
+ 
+-static void update_lock_dbg(B_DB *mdb) 
+-{
+-   if (mdb->allow_transactions) { /* batch connection */
+-      return;
+-   }
+-   if (_db_lock_recurse_count && !pthread_equal(_db_lock_threadid, pthread_self())) {
+-      Dmsg2(1, "ERROR: not the same threadif %p != %p\n", _db_lock_threadid, pthread_self());
+-   }
+-   _db_lock_recurse_count++;
+-   _db_lock_time = (utime_t) time(NULL);
+-   _db_lock_threadid = pthread_self();
+-}
+-
+-static void update_unlock_dbg(B_DB *mdb) 
+-{
+-   if (mdb->allow_transactions) { /* batch connection */
+-      return;
+-   }
+-   if (!pthread_equal(_db_lock_threadid, pthread_self())) {
+-      Dmsg2(1, "ERROR: not the same threadid %p != %p", _db_lock_threadid, pthread_self());
+-   }
+-   _db_lock_recurse_count--;
+-   if (!_db_lock_recurse_count) {
+-      memset(&_db_lock_threadid, 0, sizeof(_db_lock_threadid));
+-   }
+-}
+-
+ /*
+  * Lock database, this can be called multiple times by the same
+  *   thread without blocking, but must be unlocked the number of
+@@ -351,7 +324,6 @@
+       e_msg(file, line, M_FATAL, 0, "rwl_writelock failure. stat=%d: ERR=%s\n",
+            errstat, be.bstrerror(errstat));
+    }
+-   update_lock_dbg(mdb);
+ }
+ 
+ /*
+@@ -362,7 +334,6 @@
+ void _db_unlock(const char *file, int line, B_DB *mdb)
+ {
+    int errstat;
+-   update_unlock_dbg(mdb);
+    if ((errstat=rwl_writeunlock(&mdb->lock)) != 0) {
+       berrno be;
+       e_msg(file, line, M_FATAL, 0, "rwl_writeunlock failure. stat=%d: ERR=%s\n",
+Index: src/lib/protos.h
+===================================================================
+--- src/lib/protos.h	(révision 8005)
++++ src/lib/protos.h	(copie de travail)
+@@ -252,13 +252,6 @@
+ void             init_signals             (void terminate(int sig));
+ void             init_stack_dump          (void);
+ 
+-/* Used to debug database lock 
+- * which job takes the main DB access 
+- */
+-extern DLL_IMP_EXP utime_t      _db_lock_time;
+-extern DLL_IMP_EXP int          _db_lock_recurse_count;
+-extern DLL_IMP_EXP pthread_t    _db_lock_threadid;
+-
+ /* scan.c */
+ void             strip_leading_space     (char *str);
+ void             strip_trailing_junk     (char *str);
+Index: src/lib/signal.c
+===================================================================
+--- src/lib/signal.c	(révision 8005)
++++ src/lib/signal.c	(copie de travail)
+@@ -72,22 +72,6 @@
+    }
+ }
+ 
+-/*
+- * Global variables to get information about lock/unlock db access
+- */
+-utime_t _db_lock_time = 0;
+-int _db_lock_recurse_count = 0;
+-pthread_t _db_lock_threadid;
+-
+-static void print_lock_dbg(FILE *fp)
+-{
+-   char buf[128];
+-   bstrutime(buf, sizeof(buf), _db_lock_time);
+-
+-   fprintf(fp, "lock info: recurse_count=%i threadid=0x%x time=%s\n",
+-           _db_lock_recurse_count, (int)_db_lock_threadid, buf);
+-}
+-
+ /* defined in jcr.c */
+ extern void _print_jcr_dbg(FILE *fp);
+ 

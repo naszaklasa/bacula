@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, December MMII
  *
- *   Version $Id: edit.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: edit.c 8209 2008-12-20 22:02:31Z ricozz $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -27,7 +27,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -91,21 +91,7 @@ int64_t str_to_int64(char *str)
  */
 char *edit_uint64_with_commas(uint64_t val, char *buf)
 {
-   /*
-    * Replacement for sprintf(buf, "%" llu, val)
-    */
-   char mbuf[50];
-   mbuf[sizeof(mbuf)-1] = 0;
-   int i = sizeof(mbuf)-2;                 /* edit backward */
-   if (val == 0) {
-      mbuf[i--] = '0';
-   } else {
-      while (val != 0) {
-         mbuf[i--] = "0123456789"[val%10];
-         val /= 10;
-      }
-   }
-   bstrncpy(buf, &mbuf[i+1], 27);
+   edit_uint64(val, buf);
    return add_commas(buf, buf);
 }
 
@@ -195,6 +181,16 @@ char *edit_int64(int64_t val, char *buf)
    return buf;
 }
 
+/*
+ * Edit an integer number with commas, the supplied buffer
+ * must be at least 27 bytes long.  The incoming number
+ * is always widened to 64 bits.
+ */
+char *edit_int64_with_commas(int64_t val, char *buf)
+{
+   edit_int64(val, buf);
+   return add_commas(buf, buf);
+}
 
 /*
  * Given a string "str", separate the numeric part into
@@ -408,6 +404,27 @@ bool is_a_number(const char *n)
       while (B_ISDIGIT(*n)) { n++; }
    }
    return digit_seen && *n==0;
+}
+
+/*
+ * Check if specified string is a list of number or not
+ */
+bool is_a_number_list(const char *n)
+{
+   bool previous_digit = false; 
+   bool digit_seen = false;
+   while (*n) {
+      if (B_ISDIGIT(*n)) {
+         previous_digit=true;
+         digit_seen = true;
+      } else if (*n == ',' && previous_digit) {
+         previous_digit = false;
+      } else {
+         return false;
+      }
+      n++;
+   }
+   return digit_seen && *n==0; 
 }
 
 /*

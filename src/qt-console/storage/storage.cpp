@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,14 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
  
 /*
- *   Version $Id: storage.cpp 7459 2008-08-03 16:27:06Z bartleyd2 $
+ *   Version $Id: storage.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
  *
  *  Storage Class
  *
@@ -35,24 +35,24 @@
  *
  */ 
 
+#include "bat.h"
 #include <QAbstractEventDispatcher>
 #include <QMenu>
-#include "bat.h"
 #include "storage.h"
 #include "label/label.h"
-#include "../mount/mount.h"
+#include "mount/mount.h"
+#include "status/storstat.h"
+#include "util/fmtwidgetitem.h"
 
 Storage::Storage()
 {
    setupUi(this);
-   m_name = "Storage";
-   pgInitialize();
+   pgInitialize(tr("Storage"));
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/package-x-generic.png")));
 
    /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_storage.h */
    m_populated = false;
-   m_populating = false;
    m_checkcurwidget = true;
    m_closeable = false;
    m_currentStorage = "";
@@ -64,6 +64,8 @@ Storage::Storage()
 
 Storage::~Storage()
 {
+   if (m_populated)
+      writeExpandedSettings();
 }
 
 /*
@@ -72,40 +74,52 @@ Storage::~Storage()
  */
 void Storage::populateTree()
 {
-   if (m_populating)
-      return;
-   m_populating = true;
-   QTreeWidgetItem *storageItem, *topItem;
+   if (m_populated)
+      writeExpandedSettings();
+   m_populated = true;
 
-   if (!m_console->preventInUseConnect())
-       return;
+   Freeze frz(*mp_treeWidget); /* disable updating */
 
    m_checkcurwidget = false;
    mp_treeWidget->clear();
    m_checkcurwidget = true;
 
-   QStringList headerlist = (QStringList() << "Storage Name" << "Storage Id"
-       << "Auto Changer");
+   QStringList headerlist = (QStringList() << tr("Name") << tr("Id")
+        << tr("Changer") << tr("Slot") << tr("Status") << tr("Enabled") << tr("Pool") 
+        << tr("Media Type") );
 
-   topItem = new QTreeWidgetItem(mp_treeWidget);
-   topItem->setText(0, "Storage");
-   topItem->setData(0, Qt::UserRole, 0);
-   topItem->setExpanded(true);
+   m_topItem = new QTreeWidgetItem(mp_treeWidget);
+   m_topItem->setText(0, tr("Storage"));
+   m_topItem->setData(0, Qt::UserRole, 0);
+   m_topItem->setExpanded(true);
 
    mp_treeWidget->setColumnCount(headerlist.count());
    mp_treeWidget->setHeaderLabels(headerlist);
 
-   foreach(QString storageName, m_console->storage_list){
-      storageItem = new QTreeWidgetItem(topItem);
-      storageItem->setText(0, storageName);
-      storageItem->setData(0, Qt::UserRole, 1);
-      storageItem->setExpanded(true);
+   QSettings settings(m_console->m_dir->name(), "bat");
+   settings.beginGroup("StorageTreeExpanded");
+
+   bool first = true;
+   QString storage_comsep("");
+   QString storageName;
+   foreach(storageName, m_console->storage_list){
+      if (first) {
+         storage_comsep += "'" + storageName + "'";
+         first = false;
+      }
+      else
+         storage_comsep += ",'" + storageName + "'";
+   }
+   if (storage_comsep != "") {
 
       /* Set up query QString and header QStringList */
-      QString query("SELECT StorageId AS ID, AutoChanger AS Changer"
-               " FROM Storage WHERE");
-      query += " Name='" + storageName + "'"
-               " ORDER BY Name";
+      QString query("SELECT"
+               " Name AS StorageName,"
+               " StorageId AS ID, AutoChanger AS Changer"
+               " FROM Storage "
+               " WHERE StorageId IN (SELECT MAX(StorageId) FROM Storage WHERE");
+      query += " Name IN (" + storage_comsep + ")";
+      query += " GROUP BY Name) ORDER BY Name";
 
       QStringList results;
       /* This could be a log item */
@@ -113,25 +127,30 @@ void Storage::populateTree()
          Pmsg1(000, "Storage query cmd : %s\n",query.toUtf8().data());
       }
       if (m_console->sql_cmd(query, results)) {
-         int resultCount = results.count();
-         if (resultCount == 1){
-            QString resultline;
-            QString field;
-            QStringList fieldlist;
-            /* there will only be one of these */
-            foreach (resultline, results) {
-               fieldlist = resultline.split("\t");
-               int index = 0;
-               /* Iterate through fields in the record */
-               foreach (field, fieldlist) {
-                  field = field.trimmed();  /* strip leading & trailing spaces */
-                  storageItem->setData(index+1, Qt::UserRole, 1);
-                  /* Put media fields under the pool tree item */
-                  storageItem->setData(index+1, Qt::UserRole, 1);
-                  storageItem->setText(index+1, field);
-                  index++;
-               }
-            }
+
+         QStringList fieldlist;
+         foreach (QString resultline, results) {
+            fieldlist = resultline.split("\t");
+            storageName = fieldlist.takeFirst();
+            TreeItemFormatter storageItem(*m_topItem, 1);
+            storageItem.setTextFld(0, storageName);
+            if(settings.contains(storageName))
+               storageItem.widget()->setExpanded(settings.value(storageName).toBool());
+            else
+               storageItem.widget()->setExpanded(true);
+
+            int index = 1;
+            QStringListIterator fld(fieldlist);
+ 
+            /* storage id */
+            storageItem.setNumericFld(index++, fld.next() );
+
+            /* changer */
+            QString changer = fld.next();
+            storageItem.setBoolFld(index++, changer);
+
+            if (changer == "1")
+               mediaList(storageItem.widget(), fieldlist.first());
          }
       }
    }
@@ -139,7 +158,65 @@ void Storage::populateTree()
    for(int cnter=0; cnter<headerlist.size(); cnter++) {
       mp_treeWidget->resizeColumnToContents(cnter);
    }
-   m_populating = false;
+}
+
+/*
+ * For autochangers    A query to show the tapes in the changer.
+ */
+void Storage::mediaList(QTreeWidgetItem *parent, const QString &storageID)
+{
+   QString query("SELECT Media.VolumeName AS Media, Media.Slot AS Slot,"
+                 " Media.VolStatus AS VolStatus, Media.Enabled AS Enabled,"
+                 " Pool.Name AS MediaPool, Media.MediaType AS MediaType" 
+                 " From Media"
+                 " JOIN Pool ON (Media.PoolId=Pool.PoolId)"
+                 " WHERE Media.StorageId='" + storageID + "'"
+                 " AND Media.InChanger<>0"
+                 " ORDER BY Media.Slot");
+
+   QStringList results;
+   /* This could be a log item */
+   if (mainWin->m_sqlDebug) {
+      Pmsg1(000, "Storage query cmd : %s\n",query.toUtf8().data());
+   }
+   if (m_console->sql_cmd(query, results)) {
+      QString resultline;
+      QString field;
+      QStringList fieldlist;
+ 
+      foreach (resultline, results) {
+         fieldlist = resultline.split("\t");
+         if (fieldlist.size() < 6)
+             continue; 
+
+         /* Iterate through fields in the record */
+         QStringListIterator fld(fieldlist);
+         int index = 0;
+         TreeItemFormatter fmt(*parent, 2);
+
+         /* volname */
+         fmt.setTextFld(index++, fld.next()); 
+ 
+         /* skip the next two columns, unused by media */
+         index += 2;
+
+         /* slot */
+         fmt.setNumericFld(index++, fld.next());
+
+         /* status */
+         fmt.setVolStatusFld(index++, fld.next());
+
+         /* enabled */
+         fmt.setBoolFld(index++, fld.next()); 
+
+         /* pool */
+         fmt.setTextFld(index++, fld.next()); 
+
+         /* media type */
+         fmt.setTextFld(index++, fld.next()); 
+
+      }
+   }
 }
 
 /*
@@ -151,7 +228,6 @@ void Storage::PgSeltreeWidgetClicked()
    if(!m_populated) {
       populateTree();
       createContextMenu();
-      m_populated=true;
    }
 }
 
@@ -168,6 +244,7 @@ void Storage::treeItemChanged(QTreeWidgetItem *currentwidgetitem, QTreeWidgetIte
          int treedepth = previouswidgetitem->data(0, Qt::UserRole).toInt();
          if (treedepth == 1){
             mp_treeWidget->removeAction(actionStatusStorageInConsole);
+            mp_treeWidget->removeAction(actionStatusStorageWindow);
             mp_treeWidget->removeAction(actionLabelStorage);
             mp_treeWidget->removeAction(actionMountStorage);
             mp_treeWidget->removeAction(actionUnMountStorage);
@@ -182,29 +259,31 @@ void Storage::treeItemChanged(QTreeWidgetItem *currentwidgetitem, QTreeWidgetIte
          /* set a hold variable to the storage name in case the context sensitive
           * menu is used */
          m_currentStorage = currentwidgetitem->text(0);
-         m_currentAutoChanger = currentwidgetitem->text(2).toInt();
+         m_currentAutoChanger = currentwidgetitem->text(2) == tr("Yes");
          mp_treeWidget->addAction(actionStatusStorageInConsole);
+         mp_treeWidget->addAction(actionStatusStorageWindow);
          mp_treeWidget->addAction(actionLabelStorage);
          mp_treeWidget->addAction(actionMountStorage);
          mp_treeWidget->addAction(actionUnMountStorage);
          mp_treeWidget->addAction(actionRelease);
          QString text;
-         text = "Status Storage \"" + m_currentStorage + "\"";
+         text = tr("Status Storage \"%1\"").arg(m_currentStorage);;
          actionStatusStorageInConsole->setText(text);
-         text = "Label media in Storage \"" + m_currentStorage + "\"";
+         text = tr("Status Storage \"%1\" in Window").arg(m_currentStorage);;
+         actionStatusStorageWindow->setText(text);
+         text = tr("Label media in Storage \"%1\"").arg(m_currentStorage);
          actionLabelStorage->setText(text);
-         text = "Mount media in Storage \"" + m_currentStorage + "\"";
+         text = tr("Mount media in Storage \"%1\"").arg(m_currentStorage);
          actionMountStorage->setText(text);
-         text = "\"UN\" Mount media in Storage \"" + m_currentStorage + "\"";
-         actionUnMountStorage->setText(text);
-         text = "Release media in Storage \"" + m_currentStorage + "\"";
+         text = tr("\"UN\" Mount media in Storage \"%1\"").arg(m_currentStorage);
+         text = tr("Release media in Storage \"%1\"").arg(m_currentStorage);
          actionRelease->setText(text);
-         if (m_currentAutoChanger != 0) {
+         if (m_currentAutoChanger) {
             mp_treeWidget->addAction(actionUpdateSlots);
             mp_treeWidget->addAction(actionUpdateSlotsScan);
-            text = "Barcode Scan media in Storage \"" + m_currentStorage + "\"";
+            text = tr("Barcode Scan media in Storage \"%1\"").arg(m_currentStorage);
             actionUpdateSlots->setText(text);
-            text = "Mount and read scan media in Storage \"" + m_currentStorage + "\"";
+            text = tr("Read scan media in Storage \"%1\"").arg( m_currentStorage);
             actionUpdateSlotsScan->setText(text);
          }
       }
@@ -240,6 +319,8 @@ void Storage::createContextMenu()
                 SLOT(consoleUpdateSlotsScan()));
    connect(actionRelease, SIGNAL(triggered()), this,
                 SLOT(consoleRelease()));
+   connect(actionStatusStorageWindow, SIGNAL(triggered()), this,
+                SLOT(statusStorageWindow()));
 }
 
 /*
@@ -251,7 +332,6 @@ void Storage::currentStackItem()
       populateTree();
       /* Create the context menu for the storage tree */
       createContextMenu();
-      m_populated=true;
    }
 }
 
@@ -317,4 +397,28 @@ void Storage::consoleRelease()
    QString cmd("release storage=");
    cmd += m_currentStorage;
    consoleCommand(cmd);
+}
+
+/*
+ *  Open a status storage window
+ */
+void Storage::statusStorageWindow()
+{
+   QTreeWidgetItem *parentItem = mainWin->getFromHash(this);
+   new StorStat(m_currentStorage, parentItem);
+}
+
+/*
+ * Write settings to save expanded states of the pools
+ */
+void Storage::writeExpandedSettings()
+{
+   QSettings settings(m_console->m_dir->name(), "bat");
+   settings.beginGroup("StorageTreeExpanded");
+   int childcount = m_topItem->childCount();
+   for (int cnt=0; cnt<childcount; cnt++) {
+      QTreeWidgetItem *item = m_topItem->child(cnt);
+      settings.setValue(item->text(0), item->isExpanded());
+   }
+   settings.endGroup();
 }

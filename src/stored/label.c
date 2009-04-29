@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *   Kern Sibbald, MM
  *
  *
- *   Version $Id: label.c 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: label.c 8557 2009-03-20 09:49:16Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -85,27 +85,6 @@ int read_dev_volume_label(DCR *dcr)
          return VOL_IO_ERROR;
       }
    }
-#ifdef xxx
-   if (dev->is_labeled()) {              /* did we already read label? */
-      /* Compare Volume Names allow special wild card */
-      if (VolName && *VolName && *VolName != '*' && strcmp(dev->VolHdr.VolumeName, VolName) != 0) {
-         Mmsg(jcr->errmsg, _("Wrong Volume mounted on device %s: Wanted %s have %s\n"),
-            dev->print_name(), VolName, dev->VolHdr.VolumeName);
-         /*
-          * Cancel Job if too many label errors
-          *  => we are in a loop
-          */
-         if (!dev->poll && jcr->label_errors++ > 100) {
-            Jmsg(jcr, M_FATAL, 0, _("Too many tries: %s"), jcr->errmsg);
-         }
-         Dmsg0(150, "return VOL_NAME_ERROR\n");
-         stat = VOL_NAME_ERROR;
-         goto bail_out;
-      }
-      Dmsg0(130, "Leave read_volume_label() VOL_OK\n");
-      return VOL_OK;       /* label already read */
-   }
-#endif
 
    dev->clear_labeled();
    dev->clear_append();
@@ -419,6 +398,7 @@ bool write_new_volume_label_to_dev(DCR *dcr, const char *VolName,
    if (reserve_volume(dcr, VolName) == NULL) {
       Mmsg2(dcr->jcr->errmsg, _("Could not reserve volume %s on %s\n"),
            dev->VolHdr.VolumeName, dev->print_name());
+      Dmsg1(100, "%s", dcr->jcr->errmsg);
       goto bail_out;
    }
    dev = dcr->dev;                    /* may have changed in reserve_volume */
@@ -690,8 +670,8 @@ void create_session_label(DCR *dcr, DEV_RECORD *rec, int label)
    /* Added in VerNum 10 */
    ser_string(jcr->Job);              /* Unique name of this Job */
    ser_string(jcr->fileset_name);
-   ser_uint32(jcr->JobType);
-   ser_uint32(jcr->JobLevel);
+   ser_uint32(jcr->get_JobType());
+   ser_uint32(jcr->get_JobLevel());
    /* Added in VerNum 11 */
    ser_string(jcr->fileset_md5);
 
@@ -946,15 +926,15 @@ void dump_volume_label(DEVICE *dev)
 
    if (dev->VolHdr.VerNum >= 11) {
       char dt[50];
-      bstrftime(dt, sizeof(dt), btime_to_unix(dev->VolHdr.label_btime));
+      bstrftime(dt, sizeof(dt), btime_to_utime(dev->VolHdr.label_btime));
       Pmsg1(-1, _("Date label written: %s\n"), dt);
    } else {
-   dt.julian_day_number   = dev->VolHdr.label_date;
-   dt.julian_day_fraction = dev->VolHdr.label_time;
-   tm_decode(&dt, &tm);
-   Pmsg5(-1,
-_("Date label written: %04d-%02d-%02d at %02d:%02d\n"),
-      tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min);
+      dt.julian_day_number   = dev->VolHdr.label_date;
+      dt.julian_day_fraction = dev->VolHdr.label_time;
+      tm_decode(&dt, &tm);
+      Pmsg5(-1,
+            _("Date label written: %04d-%02d-%02d at %02d:%02d\n"),
+              tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min);
    }
 
 bail_out:
@@ -1015,7 +995,7 @@ static void dump_session_label(DEV_RECORD *rec, const char *type)
    }
    if (label.VerNum >= 11) {
       char dt[50];
-      bstrftime(dt, sizeof(dt), btime_to_unix(label.write_btime));
+      bstrftime(dt, sizeof(dt), btime_to_utime(label.write_btime));
       Pmsg1(-1, _("Date written      : %s\n"), dt);
    } else {
       dt.julian_day_number   = label.write_date;
@@ -1094,7 +1074,7 @@ void dump_label_record(DEVICE *dev, DEV_RECORD *rec, int verbose)
       switch (rec->FileIndex) {
       case SOS_LABEL:
          unser_session_label(&label, rec);
-         bstrftimes(dt, sizeof(dt), btime_to_unix(label.write_btime));
+         bstrftimes(dt, sizeof(dt), btime_to_utime(label.write_btime));
          Pmsg6(-1, _("%s Record: File:blk=%u:%u SessId=%d SessTime=%d JobId=%d\n"),
             type, dev->file, dev->block_num, rec->VolSessionId, rec->VolSessionTime, label.JobId);
          Pmsg4(-1, _("   Job=%s Date=%s Level=%c Type=%c\n"),
@@ -1103,7 +1083,7 @@ void dump_label_record(DEVICE *dev, DEV_RECORD *rec, int verbose)
       case EOS_LABEL:
          char ed1[30], ed2[30];
          unser_session_label(&label, rec);
-         bstrftimes(dt, sizeof(dt), btime_to_unix(label.write_btime));
+         bstrftimes(dt, sizeof(dt), btime_to_utime(label.write_btime));
          Pmsg6(-1, _("%s Record: File:blk=%u:%u SessId=%d SessTime=%d JobId=%d\n"),
             type, dev->file, dev->block_num, rec->VolSessionId, rec->VolSessionTime, label.JobId);
          Pmsg7(-1, _("   Date=%s Level=%c Type=%c Files=%s Bytes=%s Errors=%d Status=%c\n"),
