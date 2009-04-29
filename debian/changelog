@@ -1,8 +1,8 @@
 bacula (3.0.0-1) unstable; urgency=low
 
-  * New upstream version.
+  * New upstream version.  Now license-compatible with OpenSSL.
 
- -- John Goerzen <jgoerzen@complete.org>  Wed, 29 Apr 2009 15:49:55 -0500
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 29 Apr 2009 16:00:25 -0500
 
 bacula (2.4.4-1) unstable; urgency=low
 
