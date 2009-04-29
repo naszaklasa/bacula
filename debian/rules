@@ -45,7 +45,11 @@ DBC := usr/share/dbconfig-common/data/
 CONF_ALL	= --enable-smartalloc \
 	--with-python --with-tcp-wrappers \
 	--with-libiconv-prefix=/usr/include --with-readline=yes \
-	--with-libintl-prefix=/usr/include --with-x --with-readline=yes
+	--with-libintl-prefix=/usr/include --with-x --with-readline=yes \
+		--docdir=\$${prefix}/share/doc/bacula-common \
+		--htmldir=\$${prefix}/share/doc/bacula-common/html \
+		--libdir=\$${prefix}/lib/bacula
+
 
 CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \
 			--disable-bat
