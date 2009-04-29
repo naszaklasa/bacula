@@ -47,6 +47,7 @@ CREATE TABLE File (
 #  to the above File table if your Verifies are
 #  too slow.
 #
+#  INDEX (PathId),
 #  INDEX (FilenameId),
 #  INDEX (FilenameId, PathId)
 #  INDEX (JobId),
