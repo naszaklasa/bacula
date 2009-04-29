@@ -49,7 +49,8 @@ CONF_ALL	= --enable-smartalloc \
 	--with-libintl-prefix=/usr/include --with-x --with-readline=yes \
 		--docdir=\$${prefix}/share/doc/bacula-common \
 		--htmldir=\$${prefix}/share/doc/bacula-common/html \
-		--libdir=\$${prefix}/lib/bacula
+		--libdir=\$${prefix}/lib/bacula \
+	--enable-batch-insert
 
 
 CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \
