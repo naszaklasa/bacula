@@ -58,24 +58,6 @@ Description: network backup, recovery and verification - Director common files
  .
  This package provides common files for the Bacula Director daemon.
 
-Package: bacula-director-sqlite
-Architecture: any
-Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
-Depends: bacula-director-common (= ${binary:Version}), sqlite, ${shlibs:Depends}
-Conflicts: bacula-director
-Provides: bacula-director
-Replaces: bacula-director
-Description: network backup, recovery and verification - SQLite storage for Director
- Bacula is a set of programs to manage backup, recovery and verification of
- data across a network of computers of different kinds.
- .
- The Bacula Director service supervises all the backup, restore, verify and
- archive operations. It can run as a daemon or as a foreground service which
- administrators can use to schedule backups and recover files.
- .
- This version stores Bacula's catalog in an SQLite database, and thus is
- suited for smaller installations.
- 
 Package: bacula-director-sqlite3
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
