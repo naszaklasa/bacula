@@ -16,8 +16,8 @@ DEFINES = \
 	-DUSING_DLL \
 	$(HAVES)
 
-vpath %.c ../../console
-vpath %.cpp ../../console
+vpath %.c $(MAINDIR)/src/console
+vpath %.cpp $(MAINDIR)/src/console
 
 ##########################################################################
 
@@ -28,8 +28,7 @@ CONSOLE_OBJS = \
 
 ALL_OBJS = $(CONSOLE_OBJS)
 
-CONSOLE_LIBS = \
-	-lwsock32
+CONSOLE_LIBS = $(LIBS_NETWORK) 
 
 ######################################################################
 
@@ -43,6 +42,7 @@ clean:
 	@echo "Cleaning `pwd`"
 	$(call clean_obj,$(ALL_OBJS))
 	$(call clean_exe,$(BINDIR)/bconsole.exe)
+	$(ECHO_CMD)rm -rf $(OBJDIRS)
 
 #
 # Rules

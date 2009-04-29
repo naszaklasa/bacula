@@ -5,22 +5,16 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>413</width>
-    <height>258</height>
+    <width>449</width>
+    <height>307</height>
    </rect>
   </property>
   <property name="windowTitle" >
    <string>Client Tree</string>
   </property>
   <layout class="QGridLayout" >
-   <property name="margin" >
-    <number>9</number>
-   </property>
-   <property name="spacing" >
-    <number>6</number>
-   </property>
    <item row="0" column="0" >
-    <widget class="QTreeWidget" name="mp_treeWidget" />
+    <widget class="QTableWidget" name="tableWidget" />
    </item>
   </layout>
   <action name="actionRefreshJobs" >

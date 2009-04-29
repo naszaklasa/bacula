@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, March MMIII
  *
- *     Version $Id: inc_conf.c 4992 2007-06-07 14:46:43Z kerns $
+ *     Version $Id: inc_conf.c 8626 2009-03-28 17:09:55Z kerns $
  */
 
 #include "bacula.h"
@@ -52,12 +52,15 @@ static void store_wild(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_fstype(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_drivetype(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_opts(LEX *lc, RES_ITEM *item, int index, int pass);
-static void store_fname(LEX *lc, RES_ITEM *item, int index, int pass);
-static void options_res(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_base(LEX *lc, RES_ITEM *item, int index, int pass);
-static void store_reader(LEX *lc, RES_ITEM *item, int index, int pass);
-static void store_writer(LEX *lc, RES_ITEM *item, int index, int pass);
+static void store_plugin(LEX *lc, RES_ITEM *item, int index, int pass);
 static void setup_current_opts(void);
+
+/* Include and Exclude items */
+static void store_fname(LEX *lc, RES_ITEM2 *item, int index, int pass, bool exclude);
+static void store_plugin_name(LEX *lc, RES_ITEM2 *item, int index, int pass, bool exclude);
+static void options_res(LEX *lc, RES_ITEM2 *item, int index, int pass, bool exclude);
+static void store_excludedir(LEX *lc, RES_ITEM2 *item, int index, int pass, bool exclude);
 
 
 /* We build the current resource here as we are
@@ -67,12 +70,12 @@ static void setup_current_opts(void);
  */
 #if defined(_MSC_VER)
 extern "C" { // work around visual compiler mangling variables
-    extern URES res_all;
+   extern URES res_all;
 }
 #else
 extern URES res_all;
 #endif
-extern int  res_all_size;
+extern int32_t  res_all_size;
 
 /* We build the current new Include and Exclude items here */
 static INCEXE res_incexe;
@@ -81,9 +84,11 @@ static INCEXE res_incexe;
  * new Include/Exclude items
  *   name             handler     value    code flags default_value
  */
-static RES_ITEM newinc_items[] = {
-   {"file",            store_fname,   {0},      0, 0, 0},
-   {"options",         options_res,   {0},      0, 0, 0},
+static RES_ITEM2 newinc_items[] = {
+   {"file",            store_fname,       {0},      0, 0, 0},
+   {"plugin",          store_plugin_name, {0},      0, 0, 0},
+   {"excludedircontaining", store_excludedir,  {0}, 0, 0, 0},
+   {"options",         options_res,       {0},      0, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -93,6 +98,7 @@ static RES_ITEM newinc_items[] = {
 static RES_ITEM options_items[] = {
    {"compression",     store_opts,    {0},     0, 0, 0},
    {"signature",       store_opts,    {0},     0, 0, 0},
+   {"accurate",        store_opts,    {0},     0, 0, 0},
    {"verify",          store_opts,    {0},     0, 0, 0},
    {"onefs",           store_opts,    {0},     0, 0, 0},
    {"recurse",         store_opts,    {0},     0, 0, 0},
@@ -112,16 +118,17 @@ static RES_ITEM options_items[] = {
    {"wildfile",        store_wild,    {0},     2, 0, 0},
    {"exclude",         store_opts,    {0},     0, 0, 0},
    {"aclsupport",      store_opts,    {0},     0, 0, 0},
-   {"reader",          store_reader,  {0},     0, 0, 0},
-   {"writer",          store_writer,  {0},     0, 0, 0},
+   {"plugin",          store_plugin,  {0},     0, 0, 0},
    {"ignorecase",      store_opts,    {0},     0, 0, 0},
    {"fstype",          store_fstype,  {0},     0, 0, 0},
    {"hfsplussupport",  store_opts,    {0},     0, 0, 0},
    {"noatime",         store_opts,    {0},     0, 0, 0},
    {"enhancedwild",    store_opts,    {0},     0, 0, 0},
-   {"drivetype",       store_drivetype, {0},     0, 0, 0},
-   {"checkfilechanges",store_opts,    {0},     0, 0, 0},
+   {"drivetype",       store_drivetype, {0},   0, 0, 0},
+   {"checkfilechanges",store_opts,    {0},     0, 0, 1},
    {"strippath",       store_opts,    {0},     0, 0, 0},
+   {"honornodumpflag", store_opts,    {0},     0, 0, 0},
+   {"xattrsupport",    store_opts,    {0},     0, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -133,6 +140,7 @@ enum {
    INC_KW_DIGEST,
    INC_KW_ENCRYPTION,
    INC_KW_VERIFY,
+   INC_KW_ACCURATE,
    INC_KW_ONEFS,
    INC_KW_RECURSE,
    INC_KW_SPARSE,
@@ -149,7 +157,9 @@ enum {
    INC_KW_NOATIME,
    INC_KW_ENHANCEDWILD,
    INC_KW_CHKCHANGES,
-   INC_KW_STRIPPATH
+   INC_KW_STRIPPATH,
+   INC_KW_HONOR_NODUMP,
+   INC_KW_XATTR
 };
 
 /*
@@ -163,6 +173,7 @@ static struct s_kw FS_option_kw[] = {
    {"signature",   INC_KW_DIGEST},
    {"encryption",  INC_KW_ENCRYPTION},
    {"verify",      INC_KW_VERIFY},
+   {"accurate",    INC_KW_ACCURATE},
    {"onefs",       INC_KW_ONEFS},
    {"recurse",     INC_KW_RECURSE},
    {"sparse",      INC_KW_SPARSE},
@@ -179,7 +190,9 @@ static struct s_kw FS_option_kw[] = {
    {"noatime",     INC_KW_NOATIME},
    {"enhancedwild", INC_KW_ENHANCEDWILD},
    {"checkfilechanges", INC_KW_CHKCHANGES},
-   {"strippath",    INC_KW_STRIPPATH},
+   {"strippath",   INC_KW_STRIPPATH},
+   {"honornodumpflag", INC_KW_HONOR_NODUMP},
+   {"xattrsupport", INC_KW_XATTR},
    {NULL,          0}
 };
 
@@ -247,6 +260,10 @@ static struct s_fs_opt FS_options[] = {
    {"no",       INC_KW_ENHANCEDWILD,  "0"},
    {"yes",      INC_KW_CHKCHANGES,    "c"},
    {"no",       INC_KW_CHKCHANGES,    "0"},
+   {"yes",      INC_KW_HONOR_NODUMP,  "N"},
+   {"no",       INC_KW_HONOR_NODUMP,  "0"},
+   {"yes",      INC_KW_XATTR,         "X"},
+   {"no",       INC_KW_XATTR,         "0"},
    {NULL,       0,                      0}
 };
 
@@ -271,6 +288,12 @@ static void scan_include_options(LEX *lc, int keyword, char *opts, int optlen)
    if (keyword == INC_KW_VERIFY) { /* special case */
       /* ***FIXME**** ensure these are in permitted set */
       bstrncat(opts, "V", optlen);         /* indicate Verify */
+      bstrncat(opts, lc->str, optlen);
+      bstrncat(opts, ":", optlen);         /* terminate it */
+      Dmsg3(900, "Catopts=%s option=%s optlen=%d\n", opts, option,optlen);
+   } else if (keyword == INC_KW_ACCURATE) { /* special case */
+      /* ***FIXME**** ensure these are in permitted set */
+      bstrncat(opts, "C", optlen);         /* indicate Accurate */
       bstrncat(opts, lc->str, optlen);
       bstrncat(opts, ":", optlen);         /* terminate it */
       Dmsg3(900, "Catopts=%s option=%s optlen=%d\n", opts, option,optlen);
@@ -313,7 +336,7 @@ static void scan_include_options(LEX *lc, int keyword, char *opts, int optlen)
 /*
  *
  * Store FileSet Include/Exclude info
- *  NEW style includes are handled in store_newinc()
+ *  new style includes are handled in store_newinc()
  */
 void store_inc(LEX *lc, RES_ITEM *item, int index, int pass)
 {
@@ -334,7 +357,7 @@ void store_inc(LEX *lc, RES_ITEM *item, int index, int pass)
 
 
 /*
- * Store NEW style FileSet FInclude/FExclude info
+ * Store new style FileSet Include/Exclude info
  *
  *  Note, when this routine is called, we are inside a FileSet
  *  resource.  We treat the Include/Execlude like a sort of
@@ -369,7 +392,7 @@ static void store_newinc(LEX *lc, RES_ITEM *item, int index, int pass)
                }
             }
             /* Call item handler */
-            newinc_items[i].handler(lc, &newinc_items[i], i, pass);
+            newinc_items[i].handler(lc, &newinc_items[i], i, pass, item->code);
             i = -1;
             break;
          }
@@ -471,35 +494,19 @@ static void store_base(LEX *lc, RES_ITEM *item, int index, int pass)
 }
 
 /* Store reader info */
-static void store_reader(LEX *lc, RES_ITEM *item, int index, int pass)
+static void store_plugin(LEX *lc, RES_ITEM *item, int index, int pass)
 {
    int token;
 
    token = lex_get_token(lc, T_NAME);
    if (pass == 1) {
       /*
-       * Pickup reader command
+       * Pickup plugin command
        */
-      res_incexe.current_opts->reader = bstrdup(lc->str);
+      res_incexe.current_opts->plugin = bstrdup(lc->str);
    }
    scan_to_eol(lc);
 }
-
-/* Store writer innfo */
-static void store_writer(LEX *lc, RES_ITEM *item, int index, int pass)
-{
-   int token;
-
-   token = lex_get_token(lc, T_NAME);
-   if (pass == 1) {
-      /*
-       * Pickup writer command
-       */
-      res_incexe.current_opts->writer = bstrdup(lc->str);
-   }
-   scan_to_eol(lc);
-}
-
 
 
 /* Store Wild-card info */
@@ -570,6 +577,22 @@ static void store_fstype(LEX *lc, RES_ITEM *item, int index, int pass)
    scan_to_eol(lc);
 }
 
+/* Store exclude directory containing  info */
+static void store_excludedir(LEX *lc, RES_ITEM2 *item, int index, int pass, bool exclude)
+{
+   int token;
+
+   if (exclude) {
+      scan_err0(lc, _("ExcludeDirContaining directive not permitted in Exclude.\n"));
+      /* NOT REACHED */
+   }
+   token = lex_get_token(lc, T_NAME);
+   if (pass == 1) {
+      res_incexe.current_opts->ignoredir = bstrdup(lc->str);
+   }
+   scan_to_eol(lc);
+}
+
 /* Store drivetype info */
 static void store_drivetype(LEX *lc, RES_ITEM *item, int index, int pass)
 {
@@ -598,7 +621,7 @@ static void store_drivetype(LEX *lc, RES_ITEM *item, int index, int pass)
  * always increase the name buffer by 10 items because we expect
  * to add more entries.
  */
-static void store_fname(LEX *lc, RES_ITEM *item, int index, int pass)
+static void store_fname(LEX *lc, RES_ITEM2 *item, int index, int pass, bool exclude)
 {
    int token;
    INCEXE *incexe;
@@ -632,14 +655,63 @@ static void store_fname(LEX *lc, RES_ITEM *item, int index, int pass)
    scan_to_eol(lc);
 }
 
+/*
+ * Store Filename info. Note, for minor efficiency reasons, we
+ * always increase the name buffer by 10 items because we expect
+ * to add more entries.
+ */
+static void store_plugin_name(LEX *lc, RES_ITEM2 *item, int index, int pass, bool exclude)
+{
+   int token;
+   INCEXE *incexe;
+
+   if (exclude) {
+      scan_err0(lc, _("Plugin directive not permitted in Exclude\n"));
+      /* NOT REACHED */
+   }
+   token = lex_get_token(lc, T_SKIP_EOL);
+   if (pass == 1) {
+      /* Pickup Filename string
+       */
+      switch (token) {
+      case T_IDENTIFIER:
+      case T_UNQUOTED_STRING:
+         if (strchr(lc->str, '\\')) {
+            scan_err1(lc, _("Backslash found. Use forward slashes or quote the string.: %s\n"), lc->str);
+            /* NOT REACHED */
+         }
+      case T_QUOTED_STRING:
+         if (res_all.res_fs.have_MD5) {
+            MD5Update(&res_all.res_fs.md5c, (unsigned char *)lc->str, lc->str_len);
+         }
+         incexe = &res_incexe;
+         if (incexe->plugin_list.size() == 0) {
+            incexe->plugin_list.init(10, true);
+         }
+         incexe->plugin_list.append(bstrdup(lc->str));
+         Dmsg1(900, "Add to plugin_list %s\n", lc->str);
+         break;
+      default:
+         scan_err1(lc, _("Expected a filename, got: %s"), lc->str);
+         /* NOT REACHED */
+      }
+   }
+   scan_to_eol(lc);
+}
+
+
 
 /*
  * Come here when Options seen in Include/Exclude
  */
-static void options_res(LEX *lc, RES_ITEM *item, int index, int pass)
+static void options_res(LEX *lc, RES_ITEM2 *item, int index, int pass, bool exclude)
 {
    int token, i;
 
+   if (exclude) {
+      scan_err0(lc, _("Options section not permitted in Exclude\n"));
+      /* NOT REACHED */
+   }
    token = lex_get_token(lc, T_SKIP_EOL);
    if (token != T_BOB) {
       scan_err1(lc, _("Expecting open brace. Got %s"), lc->str);

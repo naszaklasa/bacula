@@ -1,16 +1,7 @@
 /*
- * Record, and label definitions for Bacula
- *  media data format.
- *
- *   Kern Sibbald, MM
- *
- *   Version $Id: record.h 4992 2007-06-07 14:46:43Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -29,11 +20,20 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Record, and label definitions for Bacula
+ *  media data format.
+ *
+ *   Kern Sibbald, MM
+ *
+ *   Version $Id: record.h 8142 2008-12-11 19:57:04Z kerns $
+ *
+ */
 
 
 #ifndef __RECORD_H
@@ -108,6 +108,9 @@ struct DEV_RECORD {
    uint8_t  ser_buf[WRITE_RECHDR_LENGTH];   /* serialized record header goes here */
    POOLMEM *data;                     /* Record data. This MUST be a memory pool item */
    int32_t match_stat;                /* bsr match status */
+   uint32_t last_VolSessionId;        /* used in sequencing FI for Vbackup */
+   uint32_t last_VolSessionTime;
+   int32_t  last_FileIndex;
 };
 
 
@@ -122,6 +125,8 @@ struct DEV_RECORD {
 #define SOS_LABEL   -4                /* Start of Session */
 #define EOS_LABEL   -5                /* End of Session */
 #define EOT_LABEL   -6                /* End of physical tape (2 eofs) */
+#define SOB_LABEL   -7                /* Start of object -- file/directory */
+#define EOB_LABEL   -8                /* End of object (after all streams) */
 
 /*
  *   Volume Label Record.  This is the in-memory definition. The

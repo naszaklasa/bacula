@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, November MM
  *
- *   Version $Id: read.c 5293 2007-08-06 18:20:26Z kerns $
+ *   Version $Id: read.c 7589 2008-09-13 16:43:03Z kerns $
  */
 
 #include "bacula.h"
@@ -108,12 +108,15 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    BSOCK *fd = jcr->file_bsock;
    bool ok = true;
    POOLMEM *save_msg;
+   char ec1[50], ec2[50];
 
    if (rec->FileIndex < 0) {
       return true;
    }
-   Dmsg5(400, "Send to FD: SessId=%u SessTim=%u FI=%d Strm=%d, len=%d\n",
-      rec->VolSessionId, rec->VolSessionTime, rec->FileIndex, rec->Stream,
+   Dmsg5(400, "Send to FD: SessId=%u SessTim=%u FI=%s Strm=%s, len=%d\n",
+      rec->VolSessionId, rec->VolSessionTime, 
+      FI_to_ascii(ec1, rec->FileIndex),
+      stream_to_ascii(ec2, rec->Stream, rec->FileIndex),
       rec->data_len);
 
    /* Send record header to File daemon */

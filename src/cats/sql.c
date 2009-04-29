@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,10 +30,12 @@
  *
  *     Almost generic set of SQL database interface routines
  *      (with a little more work)
+ *     SQL engine specific routines are in mysql.c, postgresql.c,
+ *       sqlite.c, ...
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql.c 7057 2008-05-30 10:36:49Z kerns $
+ *    Version $Id: sql.c 8034 2008-11-11 14:33:46Z ricozz $
  */
 
 /* The following is necessary so that we do not include
@@ -44,15 +46,55 @@
 #include "bacula.h"
 #include "cats.h"
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
 
 uint32_t bacula_db_version = 0;
+
+int db_type = -1;        /* SQL engine type index */
 
 /* Forward referenced subroutines */
 void print_dashes(B_DB *mdb);
 void print_result(B_DB *mdb);
 
-dbid_list::dbid_list() 
+B_DB *db_init(JCR *jcr, const char *db_driver, const char *db_name, const char *db_user,
+              const char *db_password, const char *db_address, int db_port,
+              const char *db_socket, int mult_db_connections)
+{
+#ifdef HAVE_DBI
+   char *p;
+   if (!db_driver) {
+      Jmsg0(jcr, M_ABORT, 0, _("Driver type not specified in Catalog resource.\n"));
+   }
+   if (strlen(db_driver) < 5 || db_driver[3] != ':' || strncasecmp(db_driver, "dbi", 3) != 0) {
+      Jmsg0(jcr, M_ABORT, 0, _("Invalid driver type, must be \"dbi:<type>\"\n"));
+   }
+   p = (char *)(db_driver + 4);
+   if (strcasecmp(p, "mysql") == 0) {
+      db_type = SQL_TYPE_MYSQL;
+   } else if (strcasecmp(p, "postgresql") == 0) {
+      db_type = SQL_TYPE_POSTGRESQL;
+   } else if (strcasecmp(p, "sqlite") == 0) {
+      db_type = SQL_TYPE_SQLITE;
+   } else if (strcasecmp(p, "sqlite3") == 0) {
+      db_type = SQL_TYPE_SQLITE3;
+   } else {
+      Jmsg1(jcr, M_ABORT, 0, _("Unknown database type: %s\n"), p);
+   }
+#elif HAVE_MYSQL
+   db_type = SQL_TYPE_MYSQL;
+#elif HAVE_POSTGRESQL
+   db_type = SQL_TYPE_POSTGRESQL;
+#elif HAVE_SQLITE
+   db_type = SQL_TYPE_SQLITE;
+#elif HAVE_SQLITE3
+   db_type = SQL_TYPE_SQLITE3;
+#endif
+
+   return db_init_database(jcr, db_name, db_user, db_password, db_address,
+             db_port, db_socket, mult_db_connections);
+}
+
+dbid_list::dbid_list()
 {
    memset(this, 0, sizeof(dbid_list));
    max_ids = 1000;
@@ -61,8 +103,8 @@ dbid_list::dbid_list()
    PurgedFiles = NULL;
 }
 
-dbid_list::~dbid_list() 
-{ 
+dbid_list::~dbid_list()
+{
    free(DBId);
 }
 
@@ -350,6 +392,41 @@ void db_start_transaction(JCR *jcr, B_DB *mdb)
    }
    db_unlock(mdb);
 #endif
+
+#ifdef HAVE_DBI
+   if (db_type == SQL_TYPE_SQLITE) {
+      if (!mdb->allow_transactions) {
+         return;
+      }
+      db_lock(mdb);
+      /* Allow only 10,000 changes per transaction */
+      if (mdb->transaction && mdb->changes > 10000) {
+         db_end_transaction(jcr, mdb);
+      }
+      if (!mdb->transaction) {
+         //my_sqlite_query(mdb, "BEGIN");  /* begin transaction */
+         db_sql_query(mdb, "BEGIN", NULL, NULL);  /* begin transaction */
+         Dmsg0(400, "Start SQLite transaction\n");
+         mdb->transaction = 1;
+      }
+      db_unlock(mdb);
+   } else if (db_type == SQL_TYPE_POSTGRESQL) {
+      if (!mdb->allow_transactions) {
+         return;
+      }
+      db_lock(mdb);
+      /* Allow only 25,000 changes per transaction */
+      if (mdb->transaction && mdb->changes > 25000) {
+         db_end_transaction(jcr, mdb);
+      }
+      if (!mdb->transaction) {
+         db_sql_query(mdb, "BEGIN", NULL, NULL);  /* begin transaction */
+         Dmsg0(400, "Start PosgreSQL transaction\n");
+         mdb->transaction = 1;
+      }
+      db_unlock(mdb);
+   }
+#endif
 }
 
 void db_end_transaction(JCR *jcr, B_DB *mdb)
@@ -396,6 +473,35 @@ void db_end_transaction(JCR *jcr, B_DB *mdb)
    }
    mdb->changes = 0;
    db_unlock(mdb);
+#endif
+
+#ifdef HAVE_DBI
+   if (db_type == SQL_TYPE_SQLITE) {
+      if (!mdb->allow_transactions) {
+         return;
+      }
+      db_lock(mdb);
+      if (mdb->transaction) {
+         //my_sqlite_query(mdb, "COMMIT"); /* end transaction */
+         db_sql_query(mdb, "COMMIT", NULL, NULL); /* end transaction */
+         mdb->transaction = 0;
+         Dmsg1(400, "End SQLite transaction changes=%d\n", mdb->changes);
+      }
+      mdb->changes = 0;
+      db_unlock(mdb);
+   } else if (db_type == SQL_TYPE_POSTGRESQL) {
+      if (!mdb->allow_transactions) {
+         return;
+      }
+      db_lock(mdb);
+      if (mdb->transaction) {
+         db_sql_query(mdb, "COMMIT", NULL, NULL); /* end transaction */
+         mdb->transaction = 0;
+         Dmsg1(400, "End PostgreSQL transaction changes=%d\n", mdb->changes);
+      }
+      mdb->changes = 0;
+      db_unlock(mdb);
+   }
 #endif
 }
 
@@ -595,5 +701,67 @@ vertical_list:
    return;
 }
 
+/* 
+ * Open a new connexion to mdb catalog. This function is used
+ * by batch and accurate mode.
+ */
+bool db_open_batch_connexion(JCR *jcr, B_DB *mdb)
+{
+   int multi_db=false;
+
+#ifdef HAVE_BATCH_FILE_INSERT
+   multi_db=true;               /* we force a new connexion only if batch insert is enabled */
+#endif
+
+   if (!jcr->db_batch) {
+      jcr->db_batch = db_init_database(jcr, 
+                                      mdb->db_name, 
+                                      mdb->db_user,
+                                      mdb->db_password, 
+                                      mdb->db_address,
+                                      mdb->db_port,
+                                      mdb->db_socket,
+                                      multi_db /* multi_db = true when using batch mode */);
+      if (!jcr->db_batch) {
+         Jmsg0(jcr, M_FATAL, 0, "Could not init batch connexion");
+         return false;
+      }
+
+      if (!db_open_database(jcr, jcr->db_batch)) {
+         Mmsg2(&jcr->db_batch->errmsg,  _("Could not open database \"%s\": ERR=%s\n"),
+              jcr->db_batch->db_name, db_strerror(jcr->db_batch));
+         Jmsg1(jcr, M_FATAL, 0, "%s", jcr->db_batch->errmsg);
+         return false;
+      }      
+      Dmsg3(100, "initdb ref=%d connected=%d db=%p\n", jcr->db_batch->ref_count,
+            jcr->db_batch->connected, jcr->db_batch->db);
+
+   }
+   return true;
+}
+
+/*
+ * !!! WARNING !!! Use this function only when bacula is stopped.
+ * ie, after a fatal signal and before exiting the program
+ * Print information about a B_DB object.
+ */
+void _dbg_print_db(JCR *jcr, FILE *fp)
+{
+   B_DB *mdb = jcr->db;
+
+   if (!mdb) {
+      return;
+   }
+
+   fprintf(fp, "B_DB=%p db_name=%s db_user=%s connected=%i\n",
+           mdb, NPRTB(mdb->db_name), NPRTB(mdb->db_user), mdb->connected);
+   fprintf(fp, "\tcmd=\"%s\" changes=%i\n", NPRTB(mdb->cmd), mdb->changes);
+   if (mdb->lock.valid == RWLOCK_VALID) { 
+      fprintf(fp, "\tRWLOCK=%p w_active=%i w_wait=%i\n", &mdb->lock, mdb->lock.w_active, mdb->lock.w_wait);
+#ifndef HAVE_WIN32
+      fprintf(fp, "\t\tthreadid=0x%x mutex=%p\n", (int)mdb->lock.writer_id, &mdb->lock.mutex);
+#endif
+   }
+}
 
 #endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL*/

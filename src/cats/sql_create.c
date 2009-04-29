@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_create.c 7920 2008-10-27 19:13:49Z ricozz $
+ *    Version $Id: sql_create.c 8407 2009-01-28 10:47:21Z ricozz $
  */
 
 /* The following is necessary so that we do not include
@@ -43,7 +43,7 @@
 
 static const int dbglevel = 500;
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
 
 /* -----------------------------------------------------------------------
  *
@@ -112,7 +112,7 @@ db_create_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 bool
 db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
 {
-   bool ok = true;;
+   bool ok = true;
    int count;
    char ed1[50], ed2[50];
 
@@ -162,8 +162,6 @@ db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
    return ok;
 }
 
-
-
 /* Create Unique Pool record
  * Returns: false on failure
  *          true  on success
@@ -172,7 +170,7 @@ bool
 db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 {
    bool stat;        
-   char ed1[30], ed2[30], ed3[50], ed4[50];
+   char ed1[30], ed2[30], ed3[50], ed4[50], ed5[50];
 
    Dmsg0(200, "In create pool\n");
    db_lock(mdb);
@@ -194,8 +192,9 @@ db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
    Mmsg(mdb->cmd,
 "INSERT INTO Pool (Name,NumVols,MaxVols,UseOnce,UseCatalog,"
 "AcceptAnyVolume,AutoPrune,Recycle,VolRetention,VolUseDuration,"
-"MaxVolJobs,MaxVolFiles,MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId) "
-"VALUES ('%s',%u,%u,%d,%d,%d,%d,%d,%s,%s,%u,%u,%s,'%s',%d,'%s',%s)",
+"MaxVolJobs,MaxVolFiles,MaxVolBytes,PoolType,LabelType,LabelFormat,"
+"RecyclePoolId,ScratchPoolId) "
+"VALUES ('%s',%u,%u,%d,%d,%d,%d,%d,%s,%s,%u,%u,%s,'%s',%d,'%s',%s,%s)",
                   pr->Name,
                   pr->NumVols, pr->MaxVols,
                   pr->UseOnce, pr->UseCatalog,
@@ -206,7 +205,8 @@ db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
                   pr->MaxVolJobs, pr->MaxVolFiles,
                   edit_uint64(pr->MaxVolBytes, ed3),
                   pr->PoolType, pr->LabelType, pr->LabelFormat,
-                  edit_int64(pr->RecyclePoolId,ed4));
+                  edit_int64(pr->RecyclePoolId,ed4),
+                  edit_int64(pr->ScratchPoolId,ed5));
    Dmsg1(200, "Create Pool: %s\n", mdb->cmd);
    if (!INSERT_DB(jcr, mdb, mdb->cmd)) {
       Mmsg2(&mdb->errmsg, _("Create db Pool record %s failed: ERR=%s\n"),
@@ -742,7 +742,11 @@ bool my_batch_end(JCR *jcr, B_DB *mdb, const char *error)
    Dmsg0(50, "sql_batch_end started\n");
 
    if (mdb) {
+#ifdef HAVE_DBI 
+      mdb->status = (dbi_error_flag)0;
+#else
       mdb->status = 0;
+#endif
    }
    return true;
 }
@@ -755,7 +759,7 @@ bool db_write_batch_file_records(JCR *jcr)
 {
    int JobStatus = jcr->JobStatus;
 
-   if (!jcr->db_batch) {         /* no files to backup ? */
+   if (!jcr->batch_started) {         /* no files to backup ? */
       Dmsg0(50,"db_create_file_record : no files\n");
       return true;
    }
@@ -767,7 +771,7 @@ bool db_write_batch_file_records(JCR *jcr)
 
    jcr->JobStatus = JS_AttrInserting;
    if (!sql_batch_end(jcr, jcr->db_batch, NULL)) {
-      Jmsg(jcr, M_FATAL, 0, "Bad batch end %s\n", jcr->db_batch->errmsg);
+      Jmsg1(jcr, M_FATAL, 0, "Batch end %s\n", jcr->db_batch->errmsg);
       return false;
    }
    if (job_canceled(jcr)) {
@@ -777,35 +781,35 @@ bool db_write_batch_file_records(JCR *jcr)
 
    /* we have to lock tables */
    if (!db_sql_query(jcr->db_batch, sql_batch_lock_path_query, NULL, NULL)) {
-      Jmsg(jcr, M_FATAL, 0, "Can't lock Path table %s\n", jcr->db_batch->errmsg);
+      Jmsg1(jcr, M_FATAL, 0, "Lock Path table %s\n", jcr->db_batch->errmsg);
       return false;
    }
 
    if (!db_sql_query(jcr->db_batch, sql_batch_fill_path_query, NULL, NULL)) {
-      Jmsg(jcr, M_FATAL, 0, "Can't fill Path table %s\n",jcr->db_batch->errmsg);
+      Jmsg1(jcr, M_FATAL, 0, "Fill Path table %s\n",jcr->db_batch->errmsg);
       db_sql_query(jcr->db_batch, sql_batch_unlock_tables_query, NULL, NULL);
       return false;
    }
    
    if (!db_sql_query(jcr->db_batch, sql_batch_unlock_tables_query,NULL,NULL)) {
-      Jmsg(jcr, M_FATAL, 0, "Can't unlock Path table %s\n", jcr->db_batch->errmsg);
+      Jmsg1(jcr, M_FATAL, 0, "Unlock Path table %s\n", jcr->db_batch->errmsg);
       return false;      
    }
 
    /* we have to lock tables */
    if (!db_sql_query(jcr->db_batch,sql_batch_lock_filename_query,NULL, NULL)) {
-      Jmsg(jcr, M_FATAL, 0, "Can't lock Filename table %s\n", jcr->db_batch->errmsg);
+      Jmsg1(jcr, M_FATAL, 0, "Lock Filename table %s\n", jcr->db_batch->errmsg);
       return false;
    }
    
    if (!db_sql_query(jcr->db_batch,sql_batch_fill_filename_query, NULL,NULL)) {
-      Jmsg(jcr,M_FATAL,0,"Can't fill Filename table %s\n",jcr->db_batch->errmsg);
+      Jmsg1(jcr,M_FATAL,0,"Fill Filename table %s\n",jcr->db_batch->errmsg);
       db_sql_query(jcr->db_batch, sql_batch_unlock_tables_query, NULL, NULL);
       return false;            
    }
 
    if (!db_sql_query(jcr->db_batch, sql_batch_unlock_tables_query,NULL,NULL)) {
-      Jmsg(jcr, M_FATAL, 0, "Can't unlock Filename table %s\n", jcr->db_batch->errmsg);
+      Jmsg1(jcr, M_FATAL, 0, "Unlock Filename table %s\n", jcr->db_batch->errmsg);
       return false;
    }
    
@@ -818,7 +822,7 @@ bool db_write_batch_file_records(JCR *jcr)
            "JOIN Filename ON (batch.Name = Filename.Name)",
                      NULL,NULL))
    {
-      Jmsg(jcr, M_FATAL, 0, "Can't fill File table %s\n", jcr->db_batch->errmsg);
+      Jmsg1(jcr, M_FATAL, 0, "Fill File table %s\n", jcr->db_batch->errmsg);
       return false;
    }
 
@@ -842,38 +846,19 @@ bool db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
    Dmsg1(dbglevel, "Fname=%s\n", ar->fname);
    Dmsg0(dbglevel, "put_file_into_catalog\n");
 
-   if (!jcr->db_batch) {
-      Dmsg2(100, "Opendb attr. Stream=%d fname=%s\n", ar->Stream, ar->fname);
-      jcr->db_batch = db_init_database(jcr, 
-                                      mdb->db_name, 
-                                      mdb->db_user,
-                                      mdb->db_password, 
-                                      mdb->db_address,
-                                      mdb->db_port,
-                                      mdb->db_socket,
-                                      1 /* multi_db = true */);
-      if (!jcr->db_batch) {
-         Mmsg1(&mdb->errmsg, _("Could not init batch database: \"%s\".\n"),
-                        jcr->db->db_name);
-         Jmsg1(jcr, M_FATAL, 0, "%s", mdb->errmsg);
+   /* Open the dedicated connexion */
+   if (!jcr->batch_started) {
+
+      if (!db_open_batch_connexion(jcr, mdb)) {
          return false;
       }
-
-      if (!db_open_database(jcr, jcr->db_batch)) {
-         Mmsg2(&mdb->errmsg,  _("Could not open database \"%s\": ERR=%s\n"),
-              jcr->db->db_name, db_strerror(jcr->db_batch));
-         Jmsg1(jcr, M_FATAL, 0, "%s", mdb->errmsg);
-         return false;
-      }      
-      
       if (!sql_batch_start(jcr, jcr->db_batch)) {
          Mmsg1(&mdb->errmsg, 
               "Can't start batch mode: ERR=%s", db_strerror(jcr->db_batch));
          Jmsg1(jcr, M_FATAL, 0, "%s", mdb->errmsg);
          return false;
       }
-      Dmsg3(100, "initdb ref=%d connected=%d db=%p\n", jcr->db_batch->ref_count,
-            jcr->db_batch->connected, jcr->db_batch->db);
+      jcr->batch_started = true;
    }
    B_DB *bdb = jcr->db_batch;
 
@@ -892,12 +877,12 @@ bool db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
 
 
 /*
-   if (bdb->changes > 100000) {
-      db_write_batch_file_records(jcr);
-      bdb->changes = 0;
-      sql_batch_start(jcr, bdb);
-   }
-*/
+ * if (bdb->changes > 100000) {
+ *    db_write_batch_file_records(jcr);
+ *    bdb->changes = 0;
+ *     sql_batch_start(jcr, bdb);
+ * }
+ */
 
    return sql_batch_insert(jcr, bdb, ar);
 }
@@ -1123,4 +1108,4 @@ bool db_write_batch_file_records(JCR *jcr)
 
 #endif /* ! HAVE_BATCH_FILE_INSERT */
 
-#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL */
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI */

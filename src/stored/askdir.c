@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, December 2000
  *
- *   Version $Id: askdir.c 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: askdir.c 8561 2009-03-20 14:52:17Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -281,7 +281,7 @@ bool dir_find_next_appendable_volume(DCR *dcr)
              break;
           }
           bstrncpy(lastVolume, dcr->VolumeName, sizeof(lastVolume));
-          if (dcr->can_i_use_volume()) {
+          if (dcr->can_i_write_volume()) {
              Dmsg1(100, "Call reserve_volume. Vol=%s\n", dcr->VolumeName);
              if (reserve_volume(dcr, dcr->VolumeName) == NULL) {
                 Dmsg2(100, "Could not reserve volume %s on %s\n", dcr->VolumeName,
@@ -330,7 +330,7 @@ bool dir_update_volume_info(DCR *dcr, bool label, bool update_LastWritten)
    POOL_MEM VolumeName;
 
    /* If system job, do not update catalog */
-   if (jcr->JobType == JT_SYSTEM) {
+   if (jcr->get_JobType() == JT_SYSTEM) {
       return true;
    }
 
@@ -394,14 +394,14 @@ bool dir_create_jobmedia_record(DCR *dcr, bool zero)
    char ed1[50];
 
    /* If system job, do not update catalog */
-   if (jcr->JobType == JT_SYSTEM) {
+   if (jcr->get_JobType() == JT_SYSTEM) {
       return true;
    }
 
    /* Throw out records where FI is zero -- i.e. nothing done */
-   if (!zero && dcr->VolFirstIndex == 0 &&
+   if (!zero && dcr->VolFirstIndex == 0 && 
         (dcr->StartBlock != 0 || dcr->EndBlock != 0)) {
-      Dmsg0(1000, "JobMedia problem FI=0 StartBlock!=0\n");
+      Dmsg0(100, "JobMedia FI=0 StartBlock!=0 record suppressed\n");
       return true;
    }
 
@@ -418,8 +418,8 @@ bool dir_create_jobmedia_record(DCR *dcr, bool zero)
       dir->fsend(Create_job_media, jcr->Job,
          dcr->VolFirstIndex, dcr->VolLastIndex,
          dcr->StartFile, dcr->EndFile,
-         dcr->StartBlock, dcr->EndBlock,
-         dcr->Copy, dcr->Stripe,
+         dcr->StartBlock, dcr->EndBlock, 
+         dcr->Copy, dcr->Stripe, 
          edit_uint64(dcr->VolMediaId, ed1));
    }
    Dmsg1(100, ">dird %s", dir->msg);

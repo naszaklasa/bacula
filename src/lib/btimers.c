@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -34,6 +34,8 @@
 
 #include "bacula.h"
 #include "jcr.h"
+
+const int dbglvl = 900;
 
 /* Forward referenced functions */
 static void stop_btimer(btimer_t *wid);
@@ -53,7 +55,7 @@ static void destructor_child_timer(watchdog_t *self);
  *  Returns: btimer_t *(pointer to btimer_t struct) on success
  *           NULL on failure
  */
-btimer_t *start_child_timer(pid_t pid, uint32_t wait)
+btimer_t *start_child_timer(JCR *jcr, pid_t pid, uint32_t wait)
 {
    btimer_t *wid;
 
@@ -64,13 +66,14 @@ btimer_t *start_child_timer(pid_t pid, uint32_t wait)
    wid->type = TYPE_CHILD;
    wid->pid = pid;
    wid->killed = false;
+   wid->jcr = jcr;
 
    wid->wd->callback = callback_child_timer;
    wid->wd->one_shot = false;
    wid->wd->interval = wait;
    register_watchdog(wid->wd);
 
-   Dmsg3(900, "Start child timer %p, pid %d for %d secs.\n", wid, pid, wait);
+   Dmsg3(dbglvl, "Start child timer %p, pid %d for %d secs.\n", wid, pid, wait);
    return wid;
 }
 
@@ -80,10 +83,10 @@ btimer_t *start_child_timer(pid_t pid, uint32_t wait)
 void stop_child_timer(btimer_t *wid)
 {
    if (wid == NULL) {
-      Dmsg0(900, "stop_child_timer called with NULL btimer_id\n");
+      Dmsg0(dbglvl, "stop_child_timer called with NULL btimer_id\n");
       return;
    }
-   Dmsg2(900, "Stop child timer %p pid %d\n", wid, wid->pid);
+   Dmsg2(dbglvl, "Stop child timer %p pid %d\n", wid, wid->pid);
    stop_btimer(wid);
 }
 
@@ -104,7 +107,7 @@ static void callback_child_timer(watchdog_t *self)
       /* First kill attempt; try killing it softly (kill -SONG) first */
       wid->killed = true;
 
-      Dmsg2(050, "watchdog %p term PID %d\n", self, wid->pid);
+      Dmsg2(dbglvl, "watchdog %p term PID %d\n", self, wid->pid);
 
       /* Kill -TERM the specified PID, and reschedule a -KILL for 5 seconds
        * later. (Warning: this should let dvd-writepart enough time to term
@@ -115,7 +118,7 @@ static void callback_child_timer(watchdog_t *self)
       self->interval = 5;
    } else {
       /* This is the second call - terminate with prejudice. */
-      Dmsg2(050, "watchdog %p kill PID %d\n", self, wid->pid);
+      Dmsg2(dbglvl, "watchdog %p kill PID %d\n", self, wid->pid);
 
       kill(wid->pid, SIGKILL);
 
@@ -132,23 +135,24 @@ static void callback_child_timer(watchdog_t *self)
  *  Returns: btimer_t *(pointer to btimer_t struct) on success
  *           NULL on failure
  */
-btimer_t *start_thread_timer(pthread_t tid, uint32_t wait)
+btimer_t *start_thread_timer(JCR *jcr, pthread_t tid, uint32_t wait)
 {
    btimer_t *wid;
    wid = btimer_start_common(wait);
    if (wid == NULL) {
-      Dmsg1(900, "start_thread_timer return NULL from common. wait=%d.\n", wait);
+      Dmsg1(dbglvl, "start_thread_timer return NULL from common. wait=%d.\n", wait);
       return NULL;
    }
    wid->type = TYPE_PTHREAD;
    wid->tid = tid;
+   wid->jcr = jcr;
 
    wid->wd->callback = callback_thread_timer;
    wid->wd->one_shot = true;
    wid->wd->interval = wait;
    register_watchdog(wid->wd);
 
-   Dmsg3(900, "Start thread timer %p tid %p for %d secs.\n", wid, tid, wait);
+   Dmsg3(dbglvl, "Start thread timer %p tid %p for %d secs.\n", wid, tid, wait);
 
    return wid;
 }
@@ -169,13 +173,14 @@ btimer_t *start_bsock_timer(BSOCK *bsock, uint32_t wait)
    wid->type = TYPE_BSOCK;
    wid->tid = pthread_self();
    wid->bsock = bsock;
+   wid->jcr = bsock->jcr(); 
 
    wid->wd->callback = callback_thread_timer;
    wid->wd->one_shot = true;
    wid->wd->interval = wait;
    register_watchdog(wid->wd);
 
-   Dmsg4(950, "Start bsock timer %p tid=%p for %d secs at %d\n", wid,
+   Dmsg4(dbglvl, "Start bsock timer %p tid=%p for %d secs at %d\n", wid,
          wid->tid, wait, time(NULL));
 
    return wid;
@@ -190,7 +195,7 @@ void stop_bsock_timer(btimer_t *wid)
       Dmsg0(900, "stop_bsock_timer called with NULL btimer_id\n");
       return;
    }
-   Dmsg3(950, "Stop bsock timer %p tid=%p at %d.\n", wid, wid->tid, time(NULL));
+   Dmsg3(dbglvl, "Stop bsock timer %p tid=%p at %d.\n", wid, wid->tid, time(NULL));
    stop_btimer(wid);
 }
 
@@ -201,10 +206,10 @@ void stop_bsock_timer(btimer_t *wid)
 void stop_thread_timer(btimer_t *wid)
 {
    if (wid == NULL) {
-      Dmsg0(900, "stop_thread_timer called with NULL btimer_id\n");
+      Dmsg0(dbglvl, "stop_thread_timer called with NULL btimer_id\n");
       return;
    }
-   Dmsg2(900, "Stop thread timer %p tid=%p.\n", wid, wid->tid);
+   Dmsg2(dbglvl, "Stop thread timer %p tid=%p.\n", wid, wid->tid);
    stop_btimer(wid);
 }
 
@@ -221,8 +226,11 @@ static void callback_thread_timer(watchdog_t *self)
 {
    btimer_t *wid = (btimer_t *)self->data;
 
-   Dmsg4(50, "thread timer %p kill %s tid=%p at %d.\n", self,
+   Dmsg4(dbglvl, "thread timer %p kill %s tid=%p at %d.\n", self,
       wid->type == TYPE_BSOCK ? "bsock" : "thread", wid->tid, time(NULL));
+   if (wid->jcr) {
+      Dmsg2(dbglvl, "killed jid=%u Job=%s\n", wid->jcr->JobId, wid->jcr->Job);
+   }
 
    if (wid->type == TYPE_BSOCK && wid->bsock) {
       wid->bsock->set_timed_out();

@@ -1,19 +1,4 @@
 /*
- * Copyright Patrick Powell 1995
- *
- * This code is based on code written by Patrick Powell
- * (papowell@astart.com) It may be used for any purpose as long
- * as this notice remains intact on all source code distributions.
- *
- * Adapted for Bacula -- note there were lots of bugs in
- *     the original code: %lld and %s were seriously broken, and
- *     with FP turned off %f seg faulted.
- *
- *   Kern Sibbald, November MMV
- *
- *   Version $Id: bsnprintf.c 6258 2008-01-08 16:11:06Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
    Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
@@ -35,11 +20,26 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Copyright Patrick Powell 1995
+ *
+ * This code is based on code written by Patrick Powell
+ * (papowell@astart.com) It may be used for any purpose as long
+ * as this notice remains intact on all source code distributions.
+ *
+ * Adapted for Bacula -- note there were lots of bugs in
+ *     the original code: %lld and %s were seriously broken, and
+ *     with FP turned off %f seg faulted.
+ *
+ *   Kern Sibbald, November MMV
+ *
+ *   Version $Id: bsnprintf.c 8076 2008-11-22 18:36:12Z kerns $
+ */
 
 
 

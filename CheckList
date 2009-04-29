@@ -3,7 +3,7 @@
 
 Assume release is in bacula/base bacula/gui bacula/docs bacula/rescue
 
-- Build it on Win32
+- Build it for Win32 and on Win64
 #  No longer done
 #  - Build it on Solaris and run regression tests
 # - Build it on FreeBSD and run regression tests

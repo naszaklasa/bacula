@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in 7829 2008-10-17 12:07:32Z kerns $
+#  Version $Id: Makefile.in 8464 2009-02-18 11:40:09Z kerns $
 #
 @MCOMMON@
 
@@ -46,14 +46,14 @@ all: Makefile bconsole @STATIC_CONS@
 	@echo " "
 
 
-bconsole: $(CONSOBJS) ../lib/libbac.a
-	$(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -L../cats -o $@ $(CONSOBJS) \
-	      $(DLIB) $(CONS_LIBS)  -lbac -lm $(LIBS) $(GETTEXT_LIBS) \
+bconsole: Makefile $(CONSOBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -L../cats -o $@ $(CONSOBJS) \
+	      $(DLIB) $(CONS_LIBS) -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) \
 	      $(OPENSSL_LIBS)
 
-static-bconsole: $(CONSOBJS) ../lib/libbac.a
-	$(CXX) -static $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -L../cats -o $@ $(CONSOBJS) \
-	      $(DLIB) $(CONS_LIBS)  -lbac -lm $(LIBS) $(GETTEXT_LIBS) \
+static-bconsole: Makefile $(CONSOBJS) ../lib/libbac.a../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE)
+	$(LIBTOOL_LINK) $(CXX) -static $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -L../cats -o $@ $(CONSOBJS) \
+	      $(DLIB) $(CONS_LIBS) -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) \
 	      $(OPENSSL_LIBS)
 	strip $@
 
@@ -62,7 +62,10 @@ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
-clean:
+libtool-clean:
+	@$(RMF) -r .libs _libs
+
+clean:	libtool-clean
 	@$(RMF) console bconsole core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
 	@$(RMF) static-console static-bconsole gmon.out
 
@@ -85,7 +88,7 @@ install: all
 	   echo " is no longer used, and you might want to delete it."; \
 	   echo " "; \
 	fi
-	$(INSTALL_PROGRAM) bconsole $(DESTDIR)$(sbindir)/bconsole
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bconsole $(DESTDIR)$(sbindir)/bconsole
 	@srcconf=bconsole.conf; \
 	if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
 	   destconf=$$srcconf.new; \
@@ -101,7 +104,7 @@ install: all
 	echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
 	${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
 	if test -f static-bconsole; then \
-	   $(INSTALL_PROGRAM) static-bconsole $(DESTDIR)$(sbindir)/static-bconsole; \
+	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-bconsole $(DESTDIR)$(sbindir)/static-bconsole; \
 	fi
 
 uninstall:

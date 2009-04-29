@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  * Kern Sibbald, pulled out of dev.h June 2007
  *
- *   Version $Id: lock.h 5114 2007-06-29 12:12:26Z kerns $
+ *   Version $Id: lock.h 7380 2008-07-14 10:42:59Z kerns $
  *
  */
 

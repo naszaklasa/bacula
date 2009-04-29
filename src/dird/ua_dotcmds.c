@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -35,16 +35,13 @@
  *
  *     Kern Sibbald, April MMII
  *
- *   Version $Id: ua_dotcmds.c 5398 2007-08-23 07:05:47Z kerns $
+ *   Version $Id: ua_dotcmds.c 8571 2009-03-21 14:24:27Z kerns $
  */
 
 #include "bacula.h"
 #include "dird.h"
 
 /* Imported variables */
-extern int r_first;
-extern int r_last;
-extern struct s_res resources[];
 
 /* Imported functions */
 extern void do_messages(UAContext *ua, const char *cmd);
@@ -72,33 +69,33 @@ static bool sql_cmd(UAContext *ua, const char *cmd);
 static bool dot_quit_cmd(UAContext *ua, const char *cmd);
 static bool dot_help_cmd(UAContext *ua, const char *cmd);
 
-struct cmdstruct { const char *key; bool (*func)(UAContext *ua, const char *cmd); const char *help; };
-static struct cmdstruct commands[] = {
- { NT_(".api"),        api_cmd,        NULL},
- { NT_(".backups"),    backupscmd,     NULL},
- { NT_(".clients"),    clientscmd,     NULL},
- { NT_(".defaults"),   defaultscmd,    NULL},
- { NT_(".die"),        diecmd,         NULL},
- { NT_(".exit"),       dot_quit_cmd,   NULL},
- { NT_(".filesets"),   filesetscmd,    NULL},
- { NT_(".help"),       dot_help_cmd,   NULL},
- { NT_(".jobs"),       jobscmd,        NULL},
- { NT_(".levels"),     levelscmd,      NULL},
- { NT_(".messages"),   getmsgscmd,     NULL},
- { NT_(".msgs"),       msgscmd,        NULL},
- { NT_(".pools"),      poolscmd,       NULL},
- { NT_(".quit"),       dot_quit_cmd,   NULL},
- { NT_(".sql"),        sql_cmd,        NULL},
- { NT_(".status"),     dot_status_cmd, NULL},
- { NT_(".storage"),    storagecmd,     NULL},
- { NT_(".types"),      typescmd,       NULL} 
+struct cmdstruct { const char *key; bool (*func)(UAContext *ua, const char *cmd); const char *help;const bool use_in_rs;};
+static struct cmdstruct commands[] = { /* help */  /* can be used in runscript */
+ { NT_(".api"),        api_cmd,          NULL,       false},
+ { NT_(".backups"),    backupscmd,       NULL,       false},
+ { NT_(".clients"),    clientscmd,       NULL,       true},
+ { NT_(".defaults"),   defaultscmd,      NULL,       false},
+ { NT_(".die"),        diecmd,           NULL,       false},
+ { NT_(".exit"),       dot_quit_cmd,     NULL,       false},
+ { NT_(".filesets"),   filesetscmd,      NULL,       false},
+ { NT_(".help"),       dot_help_cmd,     NULL,       false},
+ { NT_(".jobs"),       jobscmd,          NULL,       true},
+ { NT_(".levels"),     levelscmd,        NULL,       false},
+ { NT_(".messages"),   getmsgscmd,       NULL,       false},
+ { NT_(".msgs"),       msgscmd,          NULL,       false},
+ { NT_(".pools"),      poolscmd,         NULL,       true},
+ { NT_(".quit"),       dot_quit_cmd,     NULL,       false},
+ { NT_(".sql"),        sql_cmd,          NULL,       false},
+ { NT_(".status"),     dot_status_cmd,   NULL,       false},
+ { NT_(".storage"),    storagecmd,       NULL,       true},
+ { NT_(".types"),      typescmd,         NULL,       false} 
              };
 #define comsize ((int)(sizeof(commands)/sizeof(struct cmdstruct)))
 
 /*
  * Execute a command from the UA
  */
-int do_a_dot_command(UAContext *ua, const char *cmd)
+bool do_a_dot_command(UAContext *ua) 
 {
    int i;
    int len;
@@ -108,27 +105,33 @@ int do_a_dot_command(UAContext *ua, const char *cmd)
 
    Dmsg1(1400, "Dot command: %s\n", user->msg);
    if (ua->argc == 0) {
-      return 1;
+      return false;
    }
 
    len = strlen(ua->argk[0]);
    if (len == 1) {
       if (ua->api) user->signal(BNET_CMD_BEGIN);
       if (ua->api) user->signal(BNET_CMD_OK);
-      return 1;                       /* no op */
+      return true;                    /* no op */
    }
    for (i=0; i<comsize; i++) {     /* search for command */
       if (strncasecmp(ua->argk[0],  _(commands[i].key), len) == 0) {
+         /* Check if this command is authorized in RunScript */
+         if (ua->runscript && !commands[i].use_in_rs) {
+            ua->error_msg(_("Can't use %s command in a runscript"), ua->argk[0]);
+            break;
+         }
          bool gui = ua->gui;
          /* Check if command permitted, but "quit" is always OK */
          if (strcmp(ua->argk[0], NT_(".quit")) != 0 &&
              !acl_access_ok(ua, Command_ACL, ua->argk[0], len)) {
             break;
          }
-         Dmsg1(100, "Cmd: %s\n", cmd);
+         Dmsg1(100, "Cmd: %s\n", ua->cmd);
          ua->gui = true;
          if (ua->api) user->signal(BNET_CMD_BEGIN);
-         ok = (*commands[i].func)(ua, cmd);   /* go execute command */
+         ok = (*commands[i].func)(ua, ua->cmd);   /* go execute command */
+         if (ua->api) user->signal(ok?BNET_CMD_OK:BNET_CMD_FAILED);
          ua->gui = gui;
          found = true;
          break;
@@ -136,11 +139,10 @@ int do_a_dot_command(UAContext *ua, const char *cmd)
    }
    if (!found) {
       pm_strcat(user->msg, _(": is an invalid command.\n"));
-      user->msglen = strlen(user->msg);
-      user->send();
+      ua->error_msg("%s", user->msg);
+      ok = false;
    }
-   if (ua->api) user->signal(ok?BNET_CMD_OK:BNET_CMD_FAILED);
-   return 1;
+   return ok;
 }
 
 static bool dot_quit_cmd(UAContext *ua, const char *cmd)
@@ -466,6 +468,10 @@ static int sql_handler(void *ctx, int num_field, char **row)
    UAContext *ua = (UAContext *)ctx;
    POOL_MEM rows(PM_MESSAGE);
 
+   /* Check for nonsense */
+   if (num_field == 0 || row == NULL || row[0] == NULL) {
+      return 0;                       /* nothing returned */
+   }
    for (int i=0; num_field--; i++) {
       if (i == 0) {
          pm_strcpy(rows, NPRT(row[0]));
@@ -508,6 +514,7 @@ static bool levelscmd(UAContext *ua, const char *cmd)
    ua->send_msg("Incremental\n");
    ua->send_msg("Full\n");
    ua->send_msg("Differential\n");
+   ua->send_msg("VirtualFull\n");
    ua->send_msg("Catalog\n");
    ua->send_msg("InitCatalog\n");
    ua->send_msg("VolumeToCatalog\n");

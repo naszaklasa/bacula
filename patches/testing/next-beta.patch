@@ -1,0 +1,1140 @@
+Index: ReleaseNotes
+===================================================================
+--- ReleaseNotes	(revision 8456)
++++ ReleaseNotes	(working copy)
+@@ -6,8 +6,7 @@
+ This Director and Storage daemon must be upgraded at the same time,
+ but they should be compatible with all 2.4.x File daemons, unless you
+ use some of the new features that affect the FD.  In other words, you should
+-not have to upgrade all your File daemons when you upgrade. There is
+-no database upgrade needed from version 2.4.x.  However, the next
++not have to upgrade all your File daemons when you upgrade. However, the next
+ BETA release will require a database upgrade.
+ 
+ ================== Warning !!!!!! ==========================
+@@ -15,19 +14,18 @@
+ New Catalog format :
+ --------------------
+ 
+-This BETA release of Bacula uses a new catalog format. We provide a set of
+-script that permit to convert a 2.4.x (version 10) catalog to 2.5.x (version
+-11). If you are using already a 2.5 version, you need to drop the JobHistory
+-table before upgrading your catalog (if you are using the new "long term
+-statistics" module, you can upgrade this table like with the Job table, see
+-upgrade_<database>_table script).
++This BETA release of Bacula uses a new catalog version. We provide a set of
++scripts that permit to convert a 2.4.x (version 10) catalog to 2.5.x (version
++11). If you are already using a 2.5 version with the new "long term statistics"
++module, you can copy data from the JobHistory to the new JobHisto table, see
++upgrade_<database>_table script.
+ 
+-The upgrade operation will convert an essential field of the File table, and
+-this operation will take TIME and will DOUBLE THE SIZE of your
+-catalog temporarily. Depending on your catalog backend, you won't be able to run jobs
+-during this period. For example, a 3 million files catalog will take 2mins to
+-upgrade on a normal machine. Don't forget to backup it before executing the
+-script.
++The upgrade operation will convert the FileId index field of the File table
++from 32 bits to 64 bits.. This operation will take TIME and will *temporarily*
++DOUBLE THE SIZE of your catalog. Bacula must be shutdown during this update,
++so, you won't be able to run jobs during this period. For example, a 3 million
++files catalog will take 2mins to upgrade on a normal machine. Don't forget to
++BACKUP IT before executing the script.
+ 
+ 
+ New configure option :
+Index: src/dird/job.c
+===================================================================
+--- src/dird/job.c	(revision 8456)
++++ src/dird/job.c	(working copy)
+@@ -860,6 +860,7 @@
+    jcr->jr.JobStatus = jcr->JobStatus;
+    jcr->jr.JobFiles = jcr->JobFiles;
+    jcr->jr.JobBytes = jcr->JobBytes;
++   jcr->jr.ReadBytes = jcr->ReadBytes;
+    jcr->jr.VolSessionId = jcr->VolSessionId;
+    jcr->jr.VolSessionTime = jcr->VolSessionTime;
+    jcr->jr.JobErrors = jcr->Errors;
+Index: src/dird/ua_prune.c
+===================================================================
+--- src/dird/ua_prune.c	(revision 8456)
++++ src/dird/ua_prune.c	(working copy)
+@@ -194,12 +194,12 @@
+    utime_t now = (utime_t)time(NULL);
+ 
+    db_lock(ua->db);
+-   Mmsg(query, "DELETE FROM JobHistory WHERE JobTDate < %s", 
++   Mmsg(query, "DELETE FROM JobHisto WHERE JobTDate < %s", 
+         edit_int64(now - retention, ed1));
+    db_sql_query(ua->db, query.c_str(), NULL, NULL);
+    db_unlock(ua->db);
+ 
+-   ua->info_msg(_("Pruned Jobs from JobHistory catalog.\n"));
++   ua->info_msg(_("Pruned Jobs from JobHisto catalog.\n"));
+ 
+    return true;
+ }
+Index: src/cats/sql_update.c
+===================================================================
+--- src/cats/sql_update.c	(revision 8456)
++++ src/cats/sql_update.c	(working copy)
+@@ -136,13 +136,7 @@
+    utime_t now = (utime_t)time(NULL);
+    edit_uint64(now - age, ed1);
+ 
+-   Mmsg(mdb->cmd,
+-        "INSERT INTO JobHistory " 
+-         "SELECT * " 
+-          "FROM Job "
+-         "WHERE JobStatus IN ('T', 'f', 'A', 'E') "
+-           "AND JobId NOT IN (SELECT JobId FROM JobHistory) "
+-           "AND JobTDate < %s ", ed1);
++   Mmsg(mdb->cmd, fill_jobhisto, ed1);
+    QUERY_DB(jcr, mdb, mdb->cmd); /* TODO: get a message ? */
+    return sql_affected_rows(mdb);
+ }
+@@ -161,7 +155,7 @@
+    time_t ttime;
+    struct tm tm;
+    int stat;
+-   char ed1[30], ed2[30], ed3[50];
++   char ed1[30], ed2[30], ed3[50], ed4[50];
+    btime_t JobTDate;
+    char PriorJobId[50];
+ 
+@@ -187,10 +181,11 @@
+    db_lock(mdb);
+    Mmsg(mdb->cmd,
+       "UPDATE Job SET JobStatus='%c',EndTime='%s',"
+-"ClientId=%u,JobBytes=%s,JobFiles=%u,JobErrors=%u,VolSessionId=%u,"
++"ClientId=%u,JobBytes=%s,ReadBytes=%s,JobFiles=%u,JobErrors=%u,VolSessionId=%u,"
+ "VolSessionTime=%u,PoolId=%u,FileSetId=%u,JobTDate=%s,"
+ "RealEndTime='%s',PriorJobId=%s WHERE JobId=%s",
+       (char)(jr->JobStatus), dt, jr->ClientId, edit_uint64(jr->JobBytes, ed1),
++      edit_uint64(jr->ReadBytes, ed4),
+       jr->JobFiles, jr->JobErrors, jr->VolSessionId, jr->VolSessionTime,
+       jr->PoolId, jr->FileSetId, edit_uint64(JobTDate, ed2), 
+       rdt,
+Index: src/cats/drop_postgresql_tables.in
+===================================================================
+--- src/cats/drop_postgresql_tables.in	(revision 8456)
++++ src/cats/drop_postgresql_tables.in	(working copy)
+@@ -11,7 +11,7 @@
+ drop table jobmedia;
+ drop table file;
+ drop table job;
+-drop table jobhistory;
++drop table jobhisto;
+ drop table media;
+ drop table client;
+ drop table pool;
+Index: src/cats/update_postgresql_tables.in
+===================================================================
+--- src/cats/update_postgresql_tables.in	(revision 8456)
++++ src/cats/update_postgresql_tables.in	(working copy)
+@@ -11,13 +11,28 @@
+ 
+ if $bindir/psql -f - -d ${db_name} $* <<END-OF-DATA
+ 
++-- The alter table operation can be faster with a big maintenance_work_mem
++-- Uncomment and adapt this value to your environment
++-- SET maintenance_work_mem = '1GB';
++
++BEGIN;
++ALTER TABLE file ALTER fileid TYPE bigint ;
++ALTER TABLE basefiles ALTER fileid TYPE bigint;
++ALTER TABLE job ADD COLUMN readbytes bigint default 0;
++ALTER TABLE media ADD COLUMN ActionOnPurge smallint default 0;
++ALTER TABLE pool ADD COLUMN ActionOnPurge smallint default 0;
++
+ -- Create a table like Job for long term statistics
+-CREATE TABLE JobHistory (LIKE Job);
++CREATE TABLE JobHisto (LIKE Job);
++CREATE INDEX jobhisto_idx ON JobHisto ( starttime );
+ 
+ UPDATE Version SET VersionId=11;
++COMMIT;
+ 
++-- If you have already this table, you can remove it with:
++-- DROP TABLE JobHistory;
++
+ -- vacuum analyse;
+-
+ END-OF-DATA
+ then
+    echo "Update of Bacula PostgreSQL tables succeeded."
+Index: src/cats/make_sqlite3_tables.in
+===================================================================
+--- src/cats/make_sqlite3_tables.in	(revision 8456)
++++ src/cats/make_sqlite3_tables.in	(working copy)
+@@ -64,6 +64,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+@@ -76,13 +77,13 @@
+ CREATE INDEX inx6 ON Job (Name);
+ 
+ -- Create a table like Job for long term statistics 
+-CREATE TABLE JobHistory (
++CREATE TABLE JobHisto (
+    JobId INTEGER,
+    Job VARCHAR(128) NOT NULL,
+    Name VARCHAR(128) NOT NULL,
+    Type CHAR(1) NOT NULL,
+    Level CHAR(1) NOT NULL,
+-   ClientId INTEGER REFERENCES Client DEFAULT 0,
++   ClientId INTEGER DEFAULT 0,
+    JobStatus CHAR(1) NOT NULL,
+    SchedTime DATETIME NOT NULL,
+    StartTime DATETIME DEFAULT 0,
+@@ -93,16 +94,16 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+-   PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+-   FileSetId INTEGER UNSIGNED REFERENCES FileSet DEFAULT 0,
+-   PriorJobId INTEGER UNSIGNED REFERENCES Job DEFAULT 0,
++   PoolId INTEGER UNSIGNED DEFAULT 0,
++   FileSetId INTEGER UNSIGNED DEFAULT 0,
++   PriorJobId INTEGER UNSIGNED DEFAULT 0,
+    PurgedFiles TINYINT DEFAULT 0,
+-   HasBase TINYINT DEFAULT 0,
+-   PRIMARY KEY(JobId) 
++   HasBase TINYINT DEFAULT 0
+    );
+-CREATE INDEX inx61 ON JobHistory (Name);
++CREATE INDEX inx61 ON JobHisto (StartTime);
+ 
+ CREATE TABLE Location (
+    LocationId INTEGER,
+@@ -183,6 +184,7 @@
+    VolStatus VARCHAR(20) NOT NULL,
+    Enabled TINYINT DEFAULT 1,
+    Recycle TINYINT DEFAULT 0,
++   ActionOnPurge     TINYINT    DEFAULT 0,
+    VolRetention BIGINT UNSIGNED DEFAULT 0,
+    VolUseDuration BIGINT UNSIGNED DEFAULT 0,
+    MaxVolJobs INTEGER UNSIGNED DEFAULT 0,
+@@ -256,6 +258,7 @@
+    MaxVolBytes BIGINT UNSIGNED DEFAULT 0,
+    AutoPrune TINYINT DEFAULT 0,
+    Recycle TINYINT DEFAULT 0,
++   ActionOnPurge     TINYINT    DEFAULT 0,
+    PoolType VARCHAR(20) NOT NULL,
+    LabelType TINYINT DEFAULT 0,
+    LabelFormat VARCHAR(128) NOT NULL,
+@@ -383,7 +386,7 @@
+ 
+ 
+ -- Initialize Version		 
+-INSERT INTO Version (VersionId) VALUES (10);
++INSERT INTO Version (VersionId) VALUES (11);
+ 
+ 
+ PRAGMA default_cache_size = 100000;
+Index: src/cats/cats.h
+===================================================================
+--- src/cats/cats.h	(revision 8456)
++++ src/cats/cats.h	(working copy)
+@@ -88,7 +88,7 @@
+ #if defined(BUILDING_CATS)
+ #ifdef HAVE_SQLITE
+ 
+-#define BDB_VERSION 10
++#define BDB_VERSION 11
+ 
+ #include <sqlite.h>
+ 
+@@ -208,7 +208,7 @@
+ #ifdef HAVE_SQLITE3
+ 
+ 
+-#define BDB_VERSION 10
++#define BDB_VERSION 11
+ 
+ #include <sqlite3.h>
+ 
+@@ -334,7 +334,7 @@
+ 
+ #ifdef HAVE_MYSQL
+ 
+-#define BDB_VERSION 10
++#define BDB_VERSION 11
+ 
+ #include <mysql.h>
+ 
+@@ -417,7 +417,7 @@
+ 
+ #ifdef HAVE_POSTGRESQL
+ 
+-#define BDB_VERSION 10
++#define BDB_VERSION 11
+ 
+ #include <libpq-fe.h>
+ 
+@@ -531,7 +531,7 @@
+ 
+ #ifdef HAVE_DBI
+ 
+-#define BDB_VERSION 10
++#define BDB_VERSION 11
+ 
+ #include <dbi/dbi.h>
+ 
+@@ -790,6 +790,7 @@
+    uint32_t JobErrors;
+    uint32_t JobMissingFiles;
+    uint64_t JobBytes;
++   uint64_t ReadBytes;
+    int PurgedFiles;
+    int HasBase;
+ 
+Index: src/cats/update_sqlite3_tables.in
+===================================================================
+--- src/cats/update_sqlite3_tables.in	(revision 8456)
++++ src/cats/update_sqlite3_tables.in	(working copy)
+@@ -15,10 +15,15 @@
+ db_name=@db_name@
+ 
+ ${bindir}/${sqlite} $* ${db_name}.db <<END-OF-DATA
++-- Can be replaced by 
++-- ALTER TABLE Job ADD COLUMN (ReadBytes BIGINT UNSIGNED DEFAULT 0);
++
+ BEGIN TRANSACTION;
++CREATE TEMPORARY TABLE job_backup AS SELECT * FROM Job;
++DROP TABLE Job;
+ 
+--- Create a table like Job for long term statistics
+-CREATE TABLE JobHistory (
++CREATE TABLE Job
++(
+    JobId INTEGER,
+    Job VARCHAR(128) NOT NULL,
+    Name VARCHAR(128) NOT NULL,
+@@ -35,6 +40,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+@@ -42,12 +48,180 @@
+    PriorJobId INTEGER UNSIGNED REFERENCES Job DEFAULT 0,
+    PurgedFiles TINYINT DEFAULT 0,
+    HasBase TINYINT DEFAULT 0,
+-   PRIMARY KEY(JobId) 
++   PRIMARY KEY(JobId)
+    );
+-CREATE INDEX inx61 ON JobHistory (Name);
++CREATE INDEX inx6 ON Job (Name);
+ 
++INSERT INTO Job (JobId, Job, Name, Type, Level, ClientId, JobStatus,
++SchedTime, StartTime, EndTime, RealEndTime, JobTDate, VolSessionId,
++VolSessionTime, JobFiles, JobBytes, JobErrors, JobMissingFiles,
++PoolId, FileSetId, PriorJobId, PurgedFiles, HasBase) SELECT
++JobId, Job, Name, Type, Level, ClientId, JobStatus, SchedTime, StartTime,
++EndTime, RealEndTime, JobTDate, VolSessionId, VolSessionTime, JobFiles,
++JobBytes, JobErrors, JobMissingFiles, PoolId, FileSetId, PriorJobId,
++PurgedFiles, HasBase FROM Job_backup;
++
++DROP TABLE Job_backup;
++
++
++-- ----------------------------------------------------------------
++-- New ActionOnPurge field
++
++CREATE TEMPORARY TABLE pool_backup AS SELECT * FROM Pool;
++DROP TABLE Pool;
++
++CREATE TABLE Pool (
++   PoolId INTEGER,
++   Name VARCHAR(128) NOT NULL,
++   NumVols INTEGER UNSIGNED DEFAULT 0,
++   MaxVols INTEGER UNSIGNED DEFAULT 0,
++   UseOnce TINYINT DEFAULT 0,
++   UseCatalog TINYINT DEFAULT 1,
++   AcceptAnyVolume TINYINT DEFAULT 0,
++   VolRetention BIGINT UNSIGNED DEFAULT 0,
++   VolUseDuration BIGINT UNSIGNED DEFAULT 0,
++   MaxVolJobs INTEGER UNSIGNED DEFAULT 0,
++   MaxVolFiles INTEGER UNSIGNED DEFAULT 0,
++   MaxVolBytes BIGINT UNSIGNED DEFAULT 0,
++   AutoPrune TINYINT DEFAULT 0,
++   Recycle TINYINT DEFAULT 0,
++   ActionOnPurge     TINYINT    DEFAULT 0,
++   PoolType VARCHAR(20) NOT NULL,
++   LabelType TINYINT DEFAULT 0,
++   LabelFormat VARCHAR(128) NOT NULL,
++   Enabled TINYINT DEFAULT 1,
++   ScratchPoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   RecyclePoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   NextPoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   MigrationHighBytes BIGINT UNSIGNED DEFAULT 0,
++   MigrationLowBytes BIGINT UNSIGNED DEFAULT 0,
++   MigrationTime BIGINT UNSIGNED DEFAULT 0,
++   UNIQUE (Name),
++   PRIMARY KEY (PoolId)
++   );
++
++INSERT INTO Pool (PoolId, Name, NumVols, MaxVols, UseOnce, UseCatalog,
++AcceptAnyVolume, VolRetention, VolUseDuration, MaxVolJobs, MaxVolFiles,
++MaxVolBytes, AutoPrune, Recycle, PoolType, LabelType,
++LabelFormat, Enabled, ScratchPoolId, RecyclePoolId, NextPoolId,
++MigrationHighBytes, MigrationLowBytes, MigrationTime) 
++SELECT PoolId, Name, NumVols, MaxVols, UseOnce, UseCatalog, AcceptAnyVolume,
++VolRetention, VolUseDuration, MaxVolJobs, MaxVolFiles, MaxVolBytes, AutoPrune,
++Recycle, PoolType, LabelType, LabelFormat, Enabled,
++ScratchPoolId, RecyclePoolId, NextPoolId, MigrationHighBytes,
++MigrationLowBytes, MigrationTime FROM pool_backup;
++
++DROP TABLE pool_backup;
++
++-- ----------------------------------------------------------------
++-- New ActionOnPurge field
++
++CREATE TEMPORARY TABLE media_backup AS SELECT * FROM Media;
++DROP TABLE Media;
++
++CREATE TABLE Media (
++   MediaId INTEGER,
++   VolumeName VARCHAR(128) NOT NULL,
++   Slot INTEGER DEFAULT 0,
++   PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   MediaType VARCHAR(128) NOT NULL,
++   MediaTypeId INTEGER UNSIGNED REFERENCES MediaType DEFAULT 0,
++   LabelType TINYINT DEFAULT 0,
++   FirstWritten DATETIME DEFAULT 0,
++   LastWritten DATETIME DEFAULT 0,
++   LabelDate DATETIME DEFAULT 0,
++   VolJobs INTEGER UNSIGNED DEFAULT 0,
++   VolFiles INTEGER UNSIGNED DEFAULT 0,
++   VolBlocks INTEGER UNSIGNED DEFAULT 0,
++   VolMounts INTEGER UNSIGNED DEFAULT 0,
++   VolBytes BIGINT UNSIGNED DEFAULT 0,
++   VolParts INTEGER UNSIGNED DEFAULT 0,
++   VolErrors INTEGER UNSIGNED DEFAULT 0,
++   VolWrites INTEGER UNSIGNED DEFAULT 0,
++   VolCapacityBytes BIGINT UNSIGNED DEFAULT 0,
++   VolStatus VARCHAR(20) NOT NULL,
++   Enabled TINYINT DEFAULT 1,
++   Recycle TINYINT DEFAULT 0,
++   ActionOnPurge     TINYINT    DEFAULT 0,
++   VolRetention BIGINT UNSIGNED DEFAULT 0,
++   VolUseDuration BIGINT UNSIGNED DEFAULT 0,
++   MaxVolJobs INTEGER UNSIGNED DEFAULT 0,
++   MaxVolFiles INTEGER UNSIGNED DEFAULT 0,
++   MaxVolBytes BIGINT UNSIGNED DEFAULT 0,
++   InChanger TINYINT DEFAULT 0,
++   StorageId INTEGER UNSIGNED REFERENCES Storage DEFAULT 0,
++   DeviceId INTEGER UNSIGNED REFERENCES Device DEFAULT 0,
++   MediaAddressing TINYINT DEFAULT 0,
++   VolReadTime BIGINT UNSIGNED DEFAULT 0,
++   VolWriteTime BIGINT UNSIGNED DEFAULT 0,
++   EndFile INTEGER UNSIGNED DEFAULT 0,
++   EndBlock INTEGER UNSIGNED DEFAULT 0,
++   LocationId INTEGER UNSIGNED REFERENCES Location DEFAULT 0,
++   RecycleCount INTEGER UNSIGNED DEFAULT 0,
++   InitialWrite DATETIME DEFAULT 0,
++   ScratchPoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   RecyclePoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   Comment TEXT,
++   PRIMARY KEY(MediaId)
++   );
++
++CREATE INDEX inx8 ON Media (PoolId);
++
++INSERT INTO Media (
++   MediaId, VolumeName, Slot, PoolId, MediaType, MediaTypeId,
++   LabelType, FirstWritten, LastWritten, LabelDate, VolJobs,
++   VolFiles, VolBlocks, VolMounts, VolBytes, VolParts, VolErrors,
++   VolWrites, VolCapacityBytes, VolStatus, Enabled, Recycle,
++   VolRetention, VolUseDuration, MaxVolJobs,
++   MaxVolFiles, MaxVolBytes, InChanger, StorageId, DeviceId,
++   MediaAddressing, VolReadTime, VolWriteTime, EndFile, EndBlock,
++   LocationId, RecycleCount, InitialWrite, ScratchPoolId,
++   RecyclePoolId, Comment)
++SELECT MediaId, VolumeName, Slot, PoolId, MediaType, MediaTypeId,
++   LabelType, FirstWritten, LastWritten, LabelDate, VolJobs,
++   VolFiles, VolBlocks, VolMounts, VolBytes, VolParts, VolErrors,
++   VolWrites, VolCapacityBytes, VolStatus, Enabled, Recycle,
++   VolRetention, VolUseDuration, MaxVolJobs,
++   MaxVolFiles, MaxVolBytes, InChanger, StorageId, DeviceId,
++   MediaAddressing, VolReadTime, VolWriteTime, EndFile, EndBlock,
++   LocationId, RecycleCount, InitialWrite, ScratchPoolId,
++   RecyclePoolId, Comment FROM media_backup;
++
++DROP TABLE media_backup;
++
+ UPDATE Version SET VersionId=11;
+-
+ COMMIT;
+ 
++-- If you have already this table, you can remove it with:
++-- DROP TABLE JobHistory;
++
++-- Create a table like Job for long term statistics
++CREATE TABLE JobHisto (
++   JobId INTEGER,
++   Job VARCHAR(128) NOT NULL,
++   Name VARCHAR(128) NOT NULL,
++   Type CHAR NOT NULL,
++   Level CHAR NOT NULL,
++   ClientId INTEGER REFERENCES Client DEFAULT 0,
++   JobStatus CHAR NOT NULL,
++   SchedTime DATETIME NOT NULL,
++   StartTime DATETIME DEFAULT 0,
++   EndTime DATETIME DEFAULT 0,
++   RealEndTime DATETIME DEFAULT 0,
++   JobTDate BIGINT UNSIGNED DEFAULT 0,
++   VolSessionId INTEGER UNSIGNED DEFAULT 0,
++   VolSessionTime INTEGER UNSIGNED DEFAULT 0,
++   JobFiles INTEGER UNSIGNED DEFAULT 0,
++   JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
++   JobErrors INTEGER UNSIGNED DEFAULT 0,
++   JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
++   PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   FileSetId INTEGER UNSIGNED REFERENCES FileSet DEFAULT 0,
++   PriorJobId INTEGER UNSIGNED REFERENCES Job DEFAULT 0,
++   PurgedFiles TINYINT DEFAULT 0,
++   HasBase TINYINT DEFAULT 0
++   );
++CREATE INDEX inx61 ON JobHisto (StartTime);
++
+ END-OF-DATA
+Index: src/cats/make_postgresql_tables.in
+===================================================================
+--- src/cats/make_postgresql_tables.in	(revision 8456)
++++ src/cats/make_postgresql_tables.in	(working copy)
+@@ -15,7 +15,7 @@
+ );
+ 
+ ALTER TABLE filename ALTER COLUMN name SET STATISTICS 1000;
+-CREATE INDEX filename_name_idx on filename (name);
++CREATE UNIQUE INDEX filename_name_idx on filename (name);
+ 
+ CREATE TABLE path
+ (
+@@ -25,11 +25,11 @@
+ );
+ 
+ ALTER TABLE path ALTER COLUMN path SET STATISTICS 1000;
+-CREATE INDEX path_name_idx on path (path);
++CREATE UNIQUE INDEX path_name_idx on path (path);
+ 
+ CREATE TABLE file
+ (
+-    fileid	      serial	  not null,
++    fileid	      bigserial	  not null,
+     fileindex	      integer	  not null  default 0,
+     jobid	      integer	  not null,
+     pathid	      integer	  not null,
+@@ -74,6 +74,7 @@
+     volsessiontime    integer	  default 0,
+     jobfiles	      integer	  default 0,
+     jobbytes	      bigint	  default 0,
++    readbytes        bigint      default 0,
+     joberrors	      integer	  default 0,
+     jobmissingfiles   integer	  default 0,
+     poolid	      integer	  default 0,
+@@ -87,8 +88,10 @@
+ CREATE INDEX job_name_idx on job (name);
+ 
+ -- Create a table like Job for long term statistics 
+-CREATE TABLE JobHistory (LIKE Job);
++CREATE TABLE JobHisto (LIKE Job);
++CREATE INDEX jobhisto_idx ON jobhisto ( starttime );
+ 
++
+ CREATE TABLE Location (
+    LocationId	      serial	  not null,
+    Location	      text	  not null,
+@@ -154,6 +157,7 @@
+ 	      'Error','Busy','Used','Cleaning','Scratch')),
+     enabled	      smallint	  default 1,
+     recycle	      smallint	  default 0,
++    ActionOnPurge     smallint    default 0,
+     volretention      bigint	  default 0,
+     voluseduration    bigint	  default 0,
+     maxvoljobs	      integer	  default 0,
+@@ -229,6 +233,7 @@
+     maxvolbytes       bigint	  default 0,
+     autoprune	      smallint	  default 0,
+     recycle	      smallint	  default 0,
++    ActionOnPurge     smallint    default 0,
+     pooltype	      text			    
+       check (pooltype in ('Backup','Copy','Cloned','Archive','Migration','Scratch')),
+     labeltype	      integer	  default 0,
+@@ -300,7 +305,7 @@
+ (
+     baseid	      serial		    not null,
+     jobid	      integer		    not null,
+-    fileid	      integer		    not null,
++    fileid	      bigint		    not null,
+     fileindex	      integer			    ,
+     basejobid	      integer			    ,
+     primary key (baseid)
+@@ -377,7 +382,7 @@
+ INSERT INTO Status (JobStatus,JobStatusLong) VALUES
+    ('i', 'Doing batch insert file records');
+ 
+-INSERT INTO Version (VersionId) VALUES (10);
++INSERT INTO Version (VersionId) VALUES (11);
+ 
+ -- Make sure we have appropriate permissions
+ 
+Index: src/cats/update_sqlite_tables.in
+===================================================================
+--- src/cats/update_sqlite_tables.in	(revision 8456)
++++ src/cats/update_sqlite_tables.in	(working copy)
+@@ -17,9 +17,11 @@
+ ${bindir}/${sqlite} $* ${db_name}.db <<END-OF-DATA
+ BEGIN TRANSACTION;
+ 
+--- Create a table like Job for long term statistics
++CREATE TEMPORARY TABLE job_backup AS SELECT * FROM Job;
++DROP TABLE Job;
+ 
+-CREATE TABLE JobHistory (
++CREATE TABLE Job
++(
+    JobId INTEGER,
+    Job VARCHAR(128) NOT NULL,
+    Name VARCHAR(128) NOT NULL,
+@@ -36,6 +38,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+@@ -43,12 +46,182 @@
+    PriorJobId INTEGER UNSIGNED REFERENCES Job DEFAULT 0,
+    PurgedFiles TINYINT DEFAULT 0,
+    HasBase TINYINT DEFAULT 0,
+-   PRIMARY KEY(JobId) 
++   PRIMARY KEY(JobId)
+    );
+-CREATE INDEX inx61 ON JobHistory (Name);
++CREATE INDEX inx6 ON Job (Name);
+ 
++INSERT INTO Job (JobId, Job, Name, Type, Level, ClientId, JobStatus,
++SchedTime, StartTime, EndTime, RealEndTime, JobTDate, VolSessionId,
++VolSessionTime, JobFiles, JobBytes, JobErrors, JobMissingFiles,
++PoolId, FileSetId, PriorJobId, PurgedFiles, HasBase) SELECT
++JobId, Job, Name, Type, Level, ClientId, JobStatus, SchedTime, StartTime,
++EndTime, RealEndTime, JobTDate, VolSessionId, VolSessionTime, JobFiles,
++JobBytes, JobErrors, JobMissingFiles, PoolId, FileSetId, PriorJobId,
++PurgedFiles, HasBase FROM Job_backup;
++
++DROP TABLE Job_backup;
++
++-- ----------------------------------------------------------------
++-- New ActionOnPurge field
++
++CREATE TEMPORARY TABLE pool_backup AS SELECT * FROM Pool;
++DROP TABLE Pool;
++
++CREATE TABLE Pool (
++   PoolId INTEGER,
++   Name VARCHAR(128) NOT NULL,
++   NumVols INTEGER UNSIGNED DEFAULT 0,
++   MaxVols INTEGER UNSIGNED DEFAULT 0,
++   UseOnce TINYINT DEFAULT 0,
++   UseCatalog TINYINT DEFAULT 1,
++   AcceptAnyVolume TINYINT DEFAULT 0,
++   VolRetention BIGINT UNSIGNED DEFAULT 0,
++   VolUseDuration BIGINT UNSIGNED DEFAULT 0,
++   MaxVolJobs INTEGER UNSIGNED DEFAULT 0,
++   MaxVolFiles INTEGER UNSIGNED DEFAULT 0,
++   MaxVolBytes BIGINT UNSIGNED DEFAULT 0,
++   AutoPrune TINYINT DEFAULT 0,
++   Recycle TINYINT DEFAULT 0,
++   ActionOnPurge     TINYINT    DEFAULT 0,
++   PoolType VARCHAR(20) NOT NULL,
++   LabelType TINYINT DEFAULT 0,
++   LabelFormat VARCHAR(128) NOT NULL,
++   Enabled TINYINT DEFAULT 1,
++   ScratchPoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   RecyclePoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   NextPoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   MigrationHighBytes BIGINT UNSIGNED DEFAULT 0,
++   MigrationLowBytes BIGINT UNSIGNED DEFAULT 0,
++   MigrationTime BIGINT UNSIGNED DEFAULT 0,
++   UNIQUE (Name),
++   PRIMARY KEY (PoolId)
++   );
++
++INSERT INTO Pool (PoolId, Name, NumVols, MaxVols, UseOnce, UseCatalog,
++AcceptAnyVolume, VolRetention, VolUseDuration, MaxVolJobs, MaxVolFiles,
++MaxVolBytes, AutoPrune, Recycle, PoolType, LabelType,
++LabelFormat, Enabled, ScratchPoolId, RecyclePoolId, NextPoolId,
++MigrationHighBytes, MigrationLowBytes, MigrationTime) 
++SELECT PoolId, Name, NumVols, MaxVols, UseOnce, UseCatalog, AcceptAnyVolume,
++VolRetention, VolUseDuration, MaxVolJobs, MaxVolFiles, MaxVolBytes, AutoPrune,
++Recycle, PoolType, LabelType, LabelFormat, Enabled,
++ScratchPoolId, RecyclePoolId, NextPoolId, MigrationHighBytes,
++MigrationLowBytes, MigrationTime FROM pool_backup;
++
++DROP TABLE pool_backup;
++
++-- ----------------------------------------------------------------
++-- New ActionOnPurge field
++
++CREATE TEMPORARY TABLE media_backup AS SELECT * FROM Media;
++DROP TABLE Media;
++
++CREATE TABLE Media (
++   MediaId INTEGER,
++   VolumeName VARCHAR(128) NOT NULL,
++   Slot INTEGER DEFAULT 0,
++   PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   MediaType VARCHAR(128) NOT NULL,
++   MediaTypeId INTEGER UNSIGNED REFERENCES MediaType DEFAULT 0,
++   LabelType TINYINT DEFAULT 0,
++   FirstWritten DATETIME DEFAULT 0,
++   LastWritten DATETIME DEFAULT 0,
++   LabelDate DATETIME DEFAULT 0,
++   VolJobs INTEGER UNSIGNED DEFAULT 0,
++   VolFiles INTEGER UNSIGNED DEFAULT 0,
++   VolBlocks INTEGER UNSIGNED DEFAULT 0,
++   VolMounts INTEGER UNSIGNED DEFAULT 0,
++   VolBytes BIGINT UNSIGNED DEFAULT 0,
++   VolParts INTEGER UNSIGNED DEFAULT 0,
++   VolErrors INTEGER UNSIGNED DEFAULT 0,
++   VolWrites INTEGER UNSIGNED DEFAULT 0,
++   VolCapacityBytes BIGINT UNSIGNED DEFAULT 0,
++   VolStatus VARCHAR(20) NOT NULL,
++   Enabled TINYINT DEFAULT 1,
++   Recycle TINYINT DEFAULT 0,
++   ActionOnPurge     TINYINT    DEFAULT 0,
++   VolRetention BIGINT UNSIGNED DEFAULT 0,
++   VolUseDuration BIGINT UNSIGNED DEFAULT 0,
++   MaxVolJobs INTEGER UNSIGNED DEFAULT 0,
++   MaxVolFiles INTEGER UNSIGNED DEFAULT 0,
++   MaxVolBytes BIGINT UNSIGNED DEFAULT 0,
++   InChanger TINYINT DEFAULT 0,
++   StorageId INTEGER UNSIGNED REFERENCES Storage DEFAULT 0,
++   DeviceId INTEGER UNSIGNED REFERENCES Device DEFAULT 0,
++   MediaAddressing TINYINT DEFAULT 0,
++   VolReadTime BIGINT UNSIGNED DEFAULT 0,
++   VolWriteTime BIGINT UNSIGNED DEFAULT 0,
++   EndFile INTEGER UNSIGNED DEFAULT 0,
++   EndBlock INTEGER UNSIGNED DEFAULT 0,
++   LocationId INTEGER UNSIGNED REFERENCES Location DEFAULT 0,
++   RecycleCount INTEGER UNSIGNED DEFAULT 0,
++   InitialWrite DATETIME DEFAULT 0,
++   ScratchPoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   RecyclePoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   Comment TEXT,
++   PRIMARY KEY(MediaId)
++   );
++
++CREATE INDEX inx8 ON Media (PoolId);
++
++INSERT INTO Media (
++   MediaId, VolumeName, Slot, PoolId, MediaType, MediaTypeId,
++   LabelType, FirstWritten, LastWritten, LabelDate, VolJobs,
++   VolFiles, VolBlocks, VolMounts, VolBytes, VolParts, VolErrors,
++   VolWrites, VolCapacityBytes, VolStatus, Enabled, Recycle,
++   VolRetention, VolUseDuration, MaxVolJobs,
++   MaxVolFiles, MaxVolBytes, InChanger, StorageId, DeviceId,
++   MediaAddressing, VolReadTime, VolWriteTime, EndFile, EndBlock,
++   LocationId, RecycleCount, InitialWrite, ScratchPoolId,
++   RecyclePoolId, Comment)
++SELECT MediaId, VolumeName, Slot, PoolId, MediaType, MediaTypeId,
++   LabelType, FirstWritten, LastWritten, LabelDate, VolJobs,
++   VolFiles, VolBlocks, VolMounts, VolBytes, VolParts, VolErrors,
++   VolWrites, VolCapacityBytes, VolStatus, Enabled, Recycle,
++   VolRetention, VolUseDuration, MaxVolJobs,
++   MaxVolFiles, MaxVolBytes, InChanger, StorageId, DeviceId,
++   MediaAddressing, VolReadTime, VolWriteTime, EndFile, EndBlock,
++   LocationId, RecycleCount, InitialWrite, ScratchPoolId,
++   RecyclePoolId, Comment FROM media_backup;
++
++DROP TABLE media_backup;
++
++-- ----------------------------------------------------------------
++
+ UPDATE Version SET VersionId=11;
+ 
+ COMMIT;
+ 
++-- If you have already this table, you can remove it with:
++-- DROP TABLE JobHistory;
++
++-- Create a table like Job for long term statistics
++CREATE TABLE JobHisto (
++   JobId INTEGER,
++   Job VARCHAR(128) NOT NULL,
++   Name VARCHAR(128) NOT NULL,
++   Type CHAR NOT NULL,
++   Level CHAR NOT NULL,
++   ClientId INTEGER REFERENCES Client DEFAULT 0,
++   JobStatus CHAR NOT NULL,
++   SchedTime DATETIME NOT NULL,
++   StartTime DATETIME DEFAULT 0,
++   EndTime DATETIME DEFAULT 0,
++   RealEndTime DATETIME DEFAULT 0,
++   JobTDate BIGINT UNSIGNED DEFAULT 0,
++   VolSessionId INTEGER UNSIGNED DEFAULT 0,
++   VolSessionTime INTEGER UNSIGNED DEFAULT 0,
++   JobFiles INTEGER UNSIGNED DEFAULT 0,
++   JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
++   JobErrors INTEGER UNSIGNED DEFAULT 0,
++   JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
++   PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
++   FileSetId INTEGER UNSIGNED REFERENCES FileSet DEFAULT 0,
++   PriorJobId INTEGER UNSIGNED REFERENCES Job DEFAULT 0,
++   PurgedFiles TINYINT DEFAULT 0,
++   HasBase TINYINT DEFAULT 0
++   );
++CREATE INDEX inx61 ON JobHisto (StartTime);
++
+ END-OF-DATA
+Index: src/cats/update_mysql_tables.in
+===================================================================
+--- src/cats/update_mysql_tables.in	(revision 8456)
++++ src/cats/update_mysql_tables.in	(working copy)
+@@ -12,16 +12,50 @@
+ if $bindir/mysql $* -f <<END-OF-DATA
+ USE ${db_name};
+ 
+--- Create a table like Job for long term statistics
+-CREATE TABLE JobHistory (LIKE Job);
+-
+ -- Fix bad index on Media table
+-DROP INDEX inx8;
++DROP INDEX inx8 ON Media;
+ CREATE UNIQUE INDEX inx8 ON Media (VolumeName(128));
++ALTER TABLE File CHANGE FileId FileId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT;
++ALTER TABLE BaseFiles CHANGE FileId FileId BIGINT UNSIGNED NOT NULL;
++ALTER TABLE Job ADD ReadBytes BIGINT UNSIGNED DEFAULT 0 AFTER JobBytes; 
++ALTER TABLE Media ADD ActionOnPurge TINYINT DEFAULT 0 AFTER Recycle;
++ALTER TABLE Pool ADD ActionOnPurge TINYINT DEFAULT 0 AFTER Recycle;
+ 
+ DELETE FROM Version;
+ INSERT INTO Version (VersionId) VALUES (11);
+ 
++-- If you have already this table, you can remove it with:
++-- DROP TABLE JobHistory;
++
++-- Create a table like Job for long term statistics
++CREATE TABLE JobHisto (
++   JobId INTEGER UNSIGNED NOT NULL,
++   Job TINYBLOB NOT NULL,
++   Name TINYBLOB NOT NULL,
++   Type BINARY(1) NOT NULL,
++   Level BINARY(1) NOT NULL,
++   ClientId INTEGER DEFAULT 0,
++   JobStatus BINARY(1) NOT NULL,
++   SchedTime DATETIME DEFAULT 0,
++   StartTime DATETIME DEFAULT 0,
++   EndTime DATETIME DEFAULT 0,
++   RealEndTime DATETIME DEFAULT 0,
++   JobTDate BIGINT UNSIGNED DEFAULT 0,
++   VolSessionId INTEGER UNSIGNED DEFAULT 0,
++   VolSessionTime INTEGER UNSIGNED DEFAULT 0,
++   JobFiles INTEGER UNSIGNED DEFAULT 0,
++   JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
++   JobErrors INTEGER UNSIGNED DEFAULT 0,
++   JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
++   PoolId INTEGER UNSIGNED DEFAULT 0,
++   FileSetId INTEGER UNSIGNED DEFAULT 0,
++   PriorJobId INTEGER UNSIGNED DEFAULT 0,
++   PurgedFiles TINYINT DEFAULT 0,
++   HasBase TINYINT DEFAULT 0,
++   INDEX (StartTime)
++   );
++
+ END-OF-DATA
+ then
+    echo "Update of Bacula MySQL tables succeeded."
+Index: src/cats/make_sqlite_tables.in
+===================================================================
+--- src/cats/make_sqlite_tables.in	(revision 8456)
++++ src/cats/make_sqlite_tables.in	(working copy)
+@@ -64,6 +64,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+@@ -76,13 +77,13 @@
+ CREATE INDEX inx6 ON Job (Name);
+ 
+ -- Create a table like Job for long term statistics 
+-CREATE TABLE JobHistory (
++CREATE TABLE JobHisto (
+    JobId INTEGER,
+    Job VARCHAR(128) NOT NULL,
+    Name VARCHAR(128) NOT NULL,
+    Type CHAR(1) NOT NULL,
+    Level CHAR(1) NOT NULL,
+-   ClientId INTEGER REFERENCES Client DEFAULT 0,
++   ClientId INTEGER DEFAULT 0,
+    JobStatus CHAR(1) NOT NULL,
+    SchedTime DATETIME NOT NULL,
+    StartTime DATETIME DEFAULT 0,
+@@ -93,16 +94,16 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+-   PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+-   FileSetId INTEGER UNSIGNED REFERENCES FileSet DEFAULT 0,
+-   PriorJobId INTEGER UNSIGNED REFERENCES Job DEFAULT 0,
++   PoolId INTEGER UNSIGNED DEFAULT 0,
++   FileSetId INTEGER UNSIGNED DEFAULT 0,
++   PriorJobId INTEGER UNSIGNED DEFAULT 0,
+    PurgedFiles TINYINT DEFAULT 0,
+-   HasBase TINYINT DEFAULT 0,
+-   PRIMARY KEY(JobId) 
++   HasBase TINYINT DEFAULT 0
+    );
+-CREATE INDEX inx61 ON JobHistory (Name);
++CREATE INDEX inx61 ON JobHisto (StartTime);
+ 
+ CREATE TABLE Location (
+    LocationId INTEGER,
+@@ -183,6 +184,7 @@
+    VolStatus VARCHAR(20) NOT NULL,
+    Enabled TINYINT DEFAULT 1,
+    Recycle TINYINT DEFAULT 0,
++   ActionOnPurge     TINYINT    DEFAULT 0,
+    VolRetention BIGINT UNSIGNED DEFAULT 0,
+    VolUseDuration BIGINT UNSIGNED DEFAULT 0,
+    MaxVolJobs INTEGER UNSIGNED DEFAULT 0,
+@@ -256,6 +258,7 @@
+    MaxVolBytes BIGINT UNSIGNED DEFAULT 0,
+    AutoPrune TINYINT DEFAULT 0,
+    Recycle TINYINT DEFAULT 0,
++   ActionOnPurge     TINYINT    DEFAULT 0,
+    PoolType VARCHAR(20) NOT NULL,
+    LabelType TINYINT DEFAULT 0,
+    LabelFormat VARCHAR(128) NOT NULL,
+@@ -383,7 +386,7 @@
+ 
+ 
+ -- Initialize Version		 
+-INSERT INTO Version (VersionId) VALUES (10);
++INSERT INTO Version (VersionId) VALUES (11);
+ 
+ 
+ PRAGMA default_synchronous = OFF;
+Index: src/cats/sql_get.c
+===================================================================
+--- src/cats/sql_get.c	(revision 8456)
++++ src/cats/sql_get.c	(working copy)
+@@ -297,13 +297,13 @@
+       Mmsg(mdb->cmd, "SELECT VolSessionId,VolSessionTime,"
+ "PoolId,StartTime,EndTime,JobFiles,JobBytes,JobTDate,Job,JobStatus,"
+ "Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId,FileSetId,"
+-"SchedTime,RealEndTime "
++"SchedTime,RealEndTime,ReadBytes "
+ "FROM Job WHERE Job='%s'", jr->Job);
+     } else {
+       Mmsg(mdb->cmd, "SELECT VolSessionId,VolSessionTime,"
+ "PoolId,StartTime,EndTime,JobFiles,JobBytes,JobTDate,Job,JobStatus,"
+ "Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId,FileSetId,"
+-"SchedTime,RealEndTime "
++"SchedTime,RealEndTime,ReadBytes "
+ "FROM Job WHERE JobId=%s", 
+           edit_int64(jr->JobId, ed1));
+     }
+@@ -341,6 +341,7 @@
+    jr->FileSetId = str_to_int64(row[17]);
+    bstrncpy(jr->cSchedTime, row[3]!=NULL?row[18]:"", sizeof(jr->cSchedTime));
+    bstrncpy(jr->cRealEndTime, row[3]!=NULL?row[19]:"", sizeof(jr->cRealEndTime));
++   jr->ReadBytes = str_to_int64(row[20]);
+    jr->StartTime = str_to_utime(jr->cStartTime);
+    jr->SchedTime = str_to_utime(jr->cSchedTime);
+    jr->EndTime = str_to_utime(jr->cEndTime);
+Index: src/cats/sql_cmds.c
+===================================================================
+--- src/cats/sql_cmds.c	(revision 8456)
++++ src/cats/sql_cmds.c	(working copy)
+@@ -44,6 +44,26 @@
+ #include "bacula.h"
+ #include "cats.h"
+ 
++
++/* For sql_update.c db_update_stats */
++const char *fill_jobhisto =
++        "INSERT INTO JobHisto (" 
++           "JobId, Job, Name, Type, Level, ClientId, JobStatus, "
++           "SchedTime, StartTime, EndTime, RealEndTime, JobTDate, "
++           "VolSessionId, VolSessionTime, JobFiles, JobBytes, ReadBytes, "
++           "JobErrors, JobMissingFiles, PoolId, FileSetId, PriorJobId, "
++           "PurgedFiles, HasBase ) "
++        "SELECT " 
++           "JobId, Job, Name, Type, Level, ClientId, JobStatus, "
++           "SchedTime, StartTime, EndTime, RealEndTime, JobTDate, "
++           "VolSessionId, VolSessionTime, JobFiles, JobBytes, ReadBytes, "
++           "JobErrors, JobMissingFiles, PoolId, FileSetId, PriorJobId, "
++           "PurgedFiles, HasBase "
++          "FROM Job "
++         "WHERE JobStatus IN ('T', 'f', 'A', 'E') "
++           "AND JobId NOT IN (SELECT JobId FROM JobHisto) "
++           "AND JobTDate < %s ";
++
+ /* For ua_update.c */
+ const char *list_pool = "SELECT * FROM Pool WHERE PoolId=%s";
+ 
+Index: src/cats/drop_mysql_tables.in
+===================================================================
+--- src/cats/drop_mysql_tables.in	(revision 8456)
++++ src/cats/drop_mysql_tables.in	(working copy)
+@@ -16,7 +16,7 @@
+ DROP TABLE IF EXISTS File;
+ DROP TABLE IF EXISTS Client;
+ DROP TABLE IF EXISTS Job;
+-DROP TABLE IF EXISTS JobHistory;
++DROP TABLE IF EXISTS JobHisto;
+ DROP TABLE IF EXISTS Media;
+ DROP TABLE IF EXISTS JobMedia;
+ DROP TABLE IF EXISTS Pool;
+Index: src/cats/sql_cmds.h
+===================================================================
+--- src/cats/sql_cmds.h	(revision 8456)
++++ src/cats/sql_cmds.h	(working copy)
+@@ -26,7 +26,7 @@
+    Switzerland, email:ftf@fsfeurope.org.
+ */
+ 
+-
++extern const char CATS_IMP_EXP *fill_jobhisto;
+ extern const char CATS_IMP_EXP *client_backups;
+ extern const char CATS_IMP_EXP *list_pool;
+ extern const char CATS_IMP_EXP *drop_deltabs[];
+Index: src/cats/grant_postgresql_privileges.in
+===================================================================
+--- src/cats/grant_postgresql_privileges.in	(revision 8456)
++++ src/cats/grant_postgresql_privileges.in	(working copy)
+@@ -32,7 +32,7 @@
+ grant all on location	  to ${db_user};
+ grant all on locationlog  to ${db_user};
+ grant all on log	  to ${db_user};
+-grant all on jobhistory	  to ${db_user};
++grant all on jobhisto	  to ${db_user};
+ 
+ -- for sequences on those tables
+ 
+Index: src/cats/make_mysql_tables.in
+===================================================================
+--- src/cats/make_mysql_tables.in	(revision 8456)
++++ src/cats/make_mysql_tables.in	(working copy)
+@@ -29,7 +29,7 @@
+ 
+ 
+ CREATE TABLE File (
+-   FileId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
++   FileId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    FileIndex INTEGER UNSIGNED DEFAULT 0,
+    JobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
+    PathId INTEGER UNSIGNED NOT NULL REFERENCES Path,
+@@ -104,6 +104,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED DEFAULT 0 REFERENCES Pool,
+@@ -116,7 +117,33 @@
+    );
+ 
+ -- Create a table like Job for long term statistics 
+-CREATE TABLE JobHistory (LIKE Job);
++CREATE TABLE JobHisto (
++   JobId INTEGER UNSIGNED NOT NULL,
++   Job TINYBLOB NOT NULL,
++   Name TINYBLOB NOT NULL,
++   Type BINARY(1) NOT NULL,
++   Level BINARY(1) NOT NULL,
++   ClientId INTEGER DEFAULT 0,
++   JobStatus BINARY(1) NOT NULL,
++   SchedTime DATETIME DEFAULT 0,
++   StartTime DATETIME DEFAULT 0,
++   EndTime DATETIME DEFAULT 0,
++   RealEndTime DATETIME DEFAULT 0,
++   JobTDate BIGINT UNSIGNED DEFAULT 0,
++   VolSessionId INTEGER UNSIGNED DEFAULT 0,
++   VolSessionTime INTEGER UNSIGNED DEFAULT 0,
++   JobFiles INTEGER UNSIGNED DEFAULT 0,
++   JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
++   JobErrors INTEGER UNSIGNED DEFAULT 0,
++   JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
++   PoolId INTEGER UNSIGNED DEFAULT 0,
++   FileSetId INTEGER UNSIGNED DEFAULT 0,
++   PriorJobId INTEGER UNSIGNED DEFAULT 0,
++   PurgedFiles TINYINT DEFAULT 0,
++   HasBase TINYINT DEFAULT 0,
++   INDEX (StartTime)
++   );
+ 
+ CREATE TABLE Location (
+    LocationId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+@@ -190,6 +217,7 @@
+     'Read-Only', 'Disabled', 'Error', 'Busy', 'Used', 'Cleaning') NOT NULL,
+    Enabled TINYINT DEFAULT 1,
+    Recycle TINYINT DEFAULT 0,
++   ActionOnPurge     TINYINT    DEFAULT 0,
+    VolRetention BIGINT UNSIGNED DEFAULT 0,
+    VolUseDuration BIGINT UNSIGNED DEFAULT 0,
+    MaxVolJobs INTEGER UNSIGNED DEFAULT 0,
+@@ -229,6 +257,7 @@
+    MaxVolBytes BIGINT UNSIGNED DEFAULT 0,
+    AutoPrune TINYINT DEFAULT 0,
+    Recycle TINYINT DEFAULT 0,
++   ActionOnPurge     TINYINT    DEFAULT 0,
+    PoolType ENUM('Backup', 'Copy', 'Cloned', 'Archive', 'Migration', 'Scratch') NOT NULL,
+    LabelType TINYINT DEFAULT 0,
+    LabelFormat TINYBLOB,
+@@ -269,7 +298,7 @@
+    BaseId INTEGER UNSIGNED AUTO_INCREMENT,
+    BaseJobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
+    JobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
+-   FileId INTEGER UNSIGNED NOT NULL REFERENCES File,
++   FileId BIGINT UNSIGNED NOT NULL REFERENCES File,
+    FileIndex INTEGER UNSIGNED,
+    PRIMARY KEY(BaseId)
+    );
+@@ -333,7 +362,7 @@
+    );
+ 
+ -- Initialize Version		 
+-INSERT INTO Version (VersionId) VALUES (10);
++INSERT INTO Version (VersionId) VALUES (11);
+ 
+ END-OF-DATA
+ then
+Index: src/bc_types.h
+===================================================================
+--- src/bc_types.h	(revision 8456)
++++ src/bc_types.h	(working copy)
+@@ -57,7 +57,7 @@
+  * In principle, the only field that really should need to be
+  *  64 bits is the FileId_t
+  */
+-typedef uint32_t FileId_t;
++typedef uint64_t FileId_t;
+ typedef uint32_t DBId_t;              /* general DB id type */
+ typedef uint32_t JobId_t;
+ 

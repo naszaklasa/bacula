@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,27 +20,28 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: pages.cpp 7085 2008-06-01 14:31:37Z bartleyd2 $
+ *   Version $Id: pages.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
 
-#include "pages.h"
 #include "bat.h"
+#include "pages.h"
 
 /* A global function */
 bool isWin32Path(QString &fullPath) 
 {
-   char *buf = fullPath.left(2).toUtf8().data();
+   if (fullPath.size()<2) {
+      return false;
+   }
 
-   //bool toret = B_ISALPHA(buf[1]);
-   bool toret = buf[1] == ':' && B_ISALPHA(buf[0]);
+   bool toret = fullPath[1].toAscii() == ':' && fullPath[0].isLetter();
    if (mainWin->m_miscDebug) {
       if (toret)
          Pmsg1(000, "returning from isWin32Path true %s\n", fullPath.toUtf8().data());
@@ -49,7 +50,6 @@ bool isWin32Path(QString &fullPath)
    }
    return toret;
 }
-
 
 /*
  * dockPage
@@ -187,11 +187,19 @@ void Pages::closeStackPage()
  */
 void Pages::pgInitialize()
 {
-   pgInitialize(NULL);
+   pgInitialize(QString(), NULL);
 }
 
-void Pages::pgInitialize(QTreeWidgetItem *parentTreeWidgetItem)
+void Pages::pgInitialize(const QString &name)
 {
+   pgInitialize(name, NULL);
+}
+
+void Pages::pgInitialize(const QString &tname, QTreeWidgetItem *parentTreeWidgetItem)
+{
+   if (tname.size()) {
+      m_name = tname;
+   }
    m_parent = mainWin->stackedWidget;
    m_console = mainWin->currentConsole();
 
@@ -222,20 +230,12 @@ void Pages::treeWidgetName(QString &name)
  */
 void Pages::consoleCommand(QString &command)
 {
-   /*if (!m_console->is_connectedGui())
-       return;*/
-   if (!m_console->preventInUseConnect()) {
-       return;
+   int conn;
+   if (m_console->availableDirComm(conn))  {
+      consoleCommand(command, conn);
    }
-   consoleInput(command);
 }
-
-/*
- * Function to simplify executing a console command, but does not
- *  check for the connection in use.  We need this so that we can
- *  *always* enter command from the command line.
- */
-void Pages::consoleInput(QString &command)
+void Pages::consoleCommand(QString &command, int conn)
 {
    /* Bring this director's console to the front of the stack */
    setConsoleCurrent();
@@ -243,8 +243,10 @@ void Pages::consoleInput(QString &command)
    displayhtml += command + "</font>\n";
    m_console->display_html(displayhtml);
    m_console->display_text("\n");
-   m_console->write_dir(command.toUtf8().data());
-   m_console->displayToPrompt();
+   mainWin->waitEnter();
+   m_console->write_dir(conn, command.toUtf8().data(), false);
+   m_console->displayToPrompt(conn);
+   mainWin->waitExit();
 }
 
 /*
@@ -266,11 +268,10 @@ void Pages::changeEvent(QEvent *event)
  */
 void Pages::setTitle()
 {
-   QString title, director;
-   treeWidgetName(title);
+   QString wdgname, director;
+   treeWidgetName(wdgname);
    m_console->getDirResName(director);
-   title += " of Director ";
-   title += director;
+   QString title = tr("%1 of Director %2").arg(wdgname).arg(director);
    setWindowTitle(title);
 }
 
@@ -297,13 +298,12 @@ void Pages::setCurrent()
 void Pages::setContextMenuDockText()
 {
    QTreeWidgetItem *item = mainWin->getFromHash(this);
-   QString docktext("");
+   QString docktext;
    if (isDocked()) {
-       docktext += "UnDock ";
+      docktext = tr("UnDock %1 Window").arg(item->text(0));
    } else {
-       docktext += "ReDock ";
+      docktext = tr("ReDock %1 Window").arg(item->text(0));
    }
-   docktext += item->text(0) += " Window";
       
    mainWin->actionToggleDock->setText(docktext);
    setTreeWidgetItemDockColor();
@@ -317,7 +317,7 @@ void Pages::setTreeWidgetItemDockColor()
 {
    QTreeWidgetItem* item = mainWin->getFromHash(this);
    if (item) {
-      if (item->text(0) != "Console") {
+      if (item->text(0) != tr("Console")) {
          if (isDocked()) {
          /* Set the brush to blue if undocked */
             QBrush blackBrush(Qt::black);
@@ -329,4 +329,42 @@ void Pages::setTreeWidgetItemDockColor()
          }
       }
    }
+}
+
+/* Function to get a list of volumes */
+void Pages::getVolumeList(QStringList &volumeList)
+{
+   QString query("SELECT VolumeName AS Media FROM Media ORDER BY Media");
+   if (mainWin->m_sqlDebug) {
+      Pmsg1(000, "Query cmd : %s\n",query.toUtf8().data());
+   }
+   QStringList results;
+   if (m_console->sql_cmd(query, results)) {
+      QString field;
+      QStringList fieldlist;
+      /* Iterate through the lines of results. */
+      foreach (QString resultline, results) {
+         fieldlist = resultline.split("\t");
+         volumeList.append(fieldlist[0]);
+      } /* foreach resultline */
+   } /* if results from query */
+}
+
+/* Function to get a list of volumes */
+void Pages::getStatusList(QStringList &statusLongList)
+{
+   QString statusQuery("SELECT JobStatusLong FROM Status");
+   if (mainWin->m_sqlDebug) {
+      Pmsg1(000, "Query cmd : %s\n",statusQuery.toUtf8().data());
+   }
+   QStringList statusResults;
+   if (m_console->sql_cmd(statusQuery, statusResults)) {
+      QString field;
+      QStringList fieldlist;
+      /* Iterate through the lines of results. */
+      foreach (QString resultline, statusResults) {
+         fieldlist = resultline.split("\t");
+         statusLongList.append(fieldlist[0]);
+      } /* foreach resultline */
+   } /* if results from statusquery */
 }

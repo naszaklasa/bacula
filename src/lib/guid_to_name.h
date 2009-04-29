@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *  Program to convert uid and gid into names, and cache the results
  *   for preformance reasons.
  *
- *  Version $Id: guid_to_name.h 5460 2007-09-05 11:13:57Z kerns $
+ *  Version $Id: guid_to_name.h 7380 2008-07-14 10:42:59Z kerns $
  */
 
 class guid_list {

@@ -1,7 +1,7 @@
 #
 # Bacula Makefile for the File daemon
 #
-#  Version $Id: Makefile.in 4914 2007-05-27 09:34:40Z kerns $
+#  Version $Id: Makefile.in 8464 2009-02-18 11:40:09Z kerns $
 #
 
 @MCOMMON@
@@ -29,11 +29,10 @@ dummy:
 
 #
 SVRSRCS = filed.c authenticate.c acl.c backup.c estimate.c \
+	  fd_plugins.c accurate.c \
 	  filed_conf.c heartbeat.c job.c pythonfd.c \
-	  restore.c status.c verify.c verify_vol.c
-SVROBJS = filed.o authenticate.o acl.o backup.o estimate.o \
-	  filed_conf.o heartbeat.o job.o pythonfd.o \
-	  restore.o status.o verify.o verify_vol.o
+	  restore.c status.c verify.c verify_vol.c xattr.c
+SVROBJS = $(SVRSRCS:.c=.o)
 
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@
@@ -60,44 +59,54 @@ all: Makefile @WIN32@ bacula-fd @STATIC_FD@
 	@echo " "
 
 win32/winlib.a:
-	(cd win32; $(MAKE) DESTDIR=$(DESTDIR))
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
+	fi
 	@rm -f bacula-fd.exe
 
 win32/winmain.o:
-	(cd win32; $(MAKE) DESTDIR=$(DESTDIR))
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
+	fi
 	@rm -f bacula-fd.exe
 
 win32/winres.res:
-	(cd win32; $(MAKE) DESTDIR=$(DESTDIR))
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
+	fi
 	@rm -f bacula-fd.exe
 
 # win32 libraries if needed
 win32:	$(WIN32OBJS)
-	(cd win32; $(MAKE) DESTDIR=$(DESTDIR))
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) DESTDIR=$(DESTDIR)); \
+	fi
 	@rm -f bacula-fd.exe
 
-bacula-fd:  $(SVROBJS) ../findlib/libfind.a ../lib/libbac.a @WIN32@
+bacula-fd:  Makefile $(SVROBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) @WIN32@
 	@echo "Linking $@ ..."
-	$(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(SVROBJS) \
-	  $(WIN32LIBS) $(FDLIBS) -lfind -lbac -lm $(PYTHON_LIBS) $(LIBS) \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(SVROBJS) \
+	  $(WIN32LIBS) $(FDLIBS) -lbacfind -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(LIBS) \
 	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-static-bacula-fd:  $(SVROBJS) ../findlib/libfind.a ../lib/libbac.a @WIN32@
-	$(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../findlib -o $@ $(SVROBJS) \
-	   $(WIN32LIBS) $(FDLIBS) -lfind -lbac -lm $(PYTHON_LIBS) $(LIBS) \
+static-bacula-fd: Makefile $(SVROBJS) ../findlib/libbacfind.a ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) @WIN32@
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../findlib -o $@ $(SVROBJS) \
+	   $(WIN32LIBS) $(FDLIBS) -lbacfind -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(LIBS) \
 	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 	strip $@
-
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
-clean:
+libtool-clean:
+	@$(RMF) -r .libs _libs
+
+clean:	libtool-clean
 	@$(RMF) bacula-fd filed core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
 	@$(RMF) static-bacula-fd
-	if test -f win32/Makefile; then \
-	   (cd win32; $(MAKE) clean); \
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) clean); \
 	fi
 
 realclean: clean
@@ -106,19 +115,19 @@ realclean: clean
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
 	(cd $(srcdir); $(RMF) Makefile)
-	if test -f win32/Makefile; then \
-	   (cd win32; $(MAKE) distclean); \
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) distclean); \
 	fi
 
 devclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
 	(cd $(srcdir); $(RMF) Makefile)
-	if test -f win32/Makefile; then \
-	   (cd win32; $(MAKE) devclean); \
+	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
+	   (cd win32; $(GMAKE) devclean); \
 	fi
 
 install: all
-	$(INSTALL_PROGRAM) bacula-fd $(DESTDIR)$(sbindir)/bacula-fd 
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bacula-fd $(DESTDIR)$(sbindir)/bacula-fd 
 	@srcconf=bacula-fd.conf; \
 	if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
 	   destconf=$$srcconf.new; \
@@ -129,7 +138,7 @@ install: all
 	echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
 	${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
 	@if test -f static-bacula-fd; then \
-	   $(INSTALL_PROGRAM) static-bacula-fd $(DESTDIR)$(sbindir)/static-bacula-fd; \
+	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-bacula-fd $(DESTDIR)$(sbindir)/static-bacula-fd; \
 	fi
 
 

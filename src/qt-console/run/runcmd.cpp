@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -37,7 +37,7 @@
  *
  *   Kern Sibbald, March MMVII
  *
- *  $Id: runcmd.cpp 5257 2007-07-28 10:36:28Z kerns $
+ *  $Id: runcmd.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
  */ 
 
 #include "bat.h"
@@ -46,17 +46,18 @@
 /*
  * Setup all the combo boxes and display the dialog
  */
-runCmdPage::runCmdPage()
+runCmdPage::runCmdPage(int conn)
 {
-   m_name = "Restore Run";
+   m_name = tr("Restore Run");
    pgInitialize();
    setupUi(this);
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/restore.png")));
-   m_console->notify(false);
+   m_conn = conn;
+   m_console->notify(conn, false);
 
    fill();
-   m_console->discardToPrompt();
+   m_console->discardToPrompt(m_conn);
 
    connect(okButton, SIGNAL(pressed()), this, SLOT(okButtonPushed()));
    connect(cancelButton, SIGNAL(pressed()), this, SLOT(cancelButtonPushed()));
@@ -74,13 +75,14 @@ void runCmdPage::fill()
 
    clientCombo->addItems(m_console->client_list);
    filesetCombo->addItems(m_console->fileset_list);
-   replaceCombo->addItems(QStringList() << "never" << "always" << "ifnewer" << "ifolder");
-   replaceCombo->setCurrentIndex(replaceCombo->findText("never", Qt::MatchExactly));
+   replaceCombo->addItems(QStringList() << tr("never") << tr("always") << tr("ifnewer") 
+        << tr("ifolder"));
+   replaceCombo->setCurrentIndex(replaceCombo->findText(tr("never"), Qt::MatchExactly));
    storageCombo->addItems(m_console->storage_list);
    dateTimeEdit->setDisplayFormat(mainWin->m_dtformat);
 
-   m_console->read();
-   item = m_console->msg();
+   m_console->read(m_conn);
+   item = m_console->msg(m_conn);
    items = item.split("\n");
    label->setText(items[0]);
    Dmsg1(200, "Title=%s\n", items[0].toUtf8().data());
@@ -159,23 +161,23 @@ void runCmdPage::okButtonPushed()
    displayhtml += cmd + "</font>\n";
    m_console->display_html(displayhtml);
    m_console->display_text("\n");
-   m_console->write_dir(cmd.toUtf8().data());
-   m_console->displayToPrompt();
+   m_console->write_dir(m_conn, cmd.toUtf8().data());
+   m_console->displayToPrompt(m_conn);
 //   consoleCommand(cmd); ***FIXME set back to consoleCommand when connection issue is resolved
 
-   m_console->notify(true);
+   m_console->notify(m_conn, true);
    closeStackPage();
 }
 
 
 void runCmdPage::cancelButtonPushed()
 {
-   m_console->displayToPrompt();
+   m_console->displayToPrompt(m_conn);
    m_console->write_dir(".");
-   m_console->displayToPrompt();
-   mainWin->set_status(" Canceled");
+   m_console->displayToPrompt(m_conn);
+   mainWin->set_status(tr(" Canceled"));
    this->hide();
-   m_console->notify(true);
+   m_console->notify(m_conn, true);
    closeStackPage();
    mainWin->resetFocus();
 }

@@ -1,204 +1,320 @@
-/* Copyright (C) 1991, 1992, 1993, 1996, 1997 Free Software Foundation, Inc.
+/*
+ * Copyright (c) 1989, 1993, 1994
+ *      The Regents of the University of California.  All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * Guido van Rossum.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
-   any later version.
+/* OpenBSD: fnmatch.c,v 1.6 1998/03/19 00:29:59 millert */
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+/*
+ * Function fnmatch() as specified in POSIX 1003.2-1992, section B.6.
+ * Compares a filename or pathname to a pattern.
+ */
 
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software Foundation,
-  Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
+/* Version: $Id: fnmatch.c 5444 2007-09-03 19:16:40Z kerns $ */
+
+/* Define SYS to use the system fnmatch() rather than ours */
+/* #define SYS 1 */
 
 #include "bacula.h"
+#ifdef SYS
+#include <fnmatch.h>
+#else
 #include "fnmatch.h"
+#endif
 
-# ifndef errno
-extern int errno;
-# endif
+#undef  EOS
+#define EOS     '\0'
 
-/* Match STRING against the filename pattern PATTERN, returning zero if
-   it matches, nonzero if not.  */
-int
-fnmatch (const char *pattern, const char *string, int flags)
+#define RANGE_MATCH     1
+#define RANGE_NOMATCH   0
+#define RANGE_ERROR     (-1)
+
+#define ISSET(x, y) ((x) & (y))
+#define FOLD(c) ((flags & FNM_CASEFOLD) && B_ISUPPER(c) ? tolower(c) : (c))
+
+static int rangematch(const char *, char, int, char **);
+
+#ifdef SYS 
+int xfnmatch(const char *pattern, const char *string, int flags)
+#else
+int fnmatch(const char *pattern, const char *string, int flags)
+#endif
 {
-  register const char *p = pattern, *n = string;
-  register char c;
+   const char *stringstart;
+   char *newp;
+   char c, test;
 
-/* Note that this evaluates C many times.  */
-# define FOLD(c) ((flags & FNM_CASEFOLD) && B_ISUPPER (c) ? tolower (c) : (c))
+   stringstart = string;
+   for ( ;; ) {
+      switch (c = *pattern++) {
+      case EOS:
+         if (ISSET(flags, FNM_LEADING_DIR) && IsPathSeparator(*string))
+            return (0);
+         return (*string == EOS ? 0 : FNM_NOMATCH);
+      case '?':
+         if (*string == EOS)
+            return (FNM_NOMATCH);
+         if (IsPathSeparator(*string) && ISSET(flags, FNM_PATHNAME))
+            return (FNM_NOMATCH);
+         if (*string == '.' && ISSET(flags, FNM_PERIOD) &&
+             (string == stringstart ||
+              (ISSET(flags, FNM_PATHNAME) && IsPathSeparator(*(string - 1)))))
+            return (FNM_NOMATCH);
+         ++string;
+         break;
+      case '*':
+         c = *pattern;
+         /* Collapse multiple stars. */
+         while (c == '*') {
+            c = *++pattern;
+         }
 
-  while ((c = *p++) != '\0')
-    {
-      c = FOLD (c);
+         if (*string == '.' && ISSET(flags, FNM_PERIOD) &&
+             (string == stringstart ||
+              (ISSET(flags, FNM_PATHNAME) && IsPathSeparator(*(string - 1))))) {
+            return (FNM_NOMATCH);
+         }
 
-      switch (c)
-        {
-        case '?':
-          if (*n == '\0')
-            return FNM_NOMATCH;
-          else if ((flags & FNM_FILE_NAME) && IsPathSeparator(*n))
-            return FNM_NOMATCH;
-          else if ((flags & FNM_PERIOD) && *n == '.' &&
-                   (n == string || ((flags & FNM_FILE_NAME) && IsPathSeparator(n[-1]))))
-            return FNM_NOMATCH;
-          break;
-
-        case '\\':
-          if (!(flags & FNM_NOESCAPE))
-            {
-              c = *p++;
-              if (c == '\0')
-                /* Trailing \ loses.  */
-                return FNM_NOMATCH;
-              c = FOLD (c);
+         /* Optimize for pattern with * at end or before /. */
+         if (c == EOS) {
+            if (ISSET(flags, FNM_PATHNAME)) {
+               return (ISSET(flags, FNM_LEADING_DIR) ||
+                       strchr(string, '/') == NULL ? 0 : FNM_NOMATCH);
+            } else {
+               return (0);
             }
-          if (FOLD (*n) != c)
-            return FNM_NOMATCH;
-          break;
-
-        case '*':
-          if ((flags & FNM_PERIOD) && *n == '.' &&
-              (n == string || ((flags & FNM_FILE_NAME) && IsPathSeparator(n[-1]))))
-            return FNM_NOMATCH;
-
-          for (c = *p++; c == '?' || c == '*'; c = *p++)
-            {
-              if ((flags & FNM_FILE_NAME) && IsPathSeparator(*n))
-                /* A slash does not match a wildcard under FNM_FILE_NAME.  */
-                return FNM_NOMATCH;
-              else if (c == '?')
-                {
-                  /* A ? needs to match one character.  */
-                  if (*n == '\0')
-                    /* There isn't another character; no match.  */
-                    return FNM_NOMATCH;
-                  else
-                    /* One character of the string is consumed in matching
-                       this ? wildcard, so *??? won't match if there are
-                       less than three characters.  */
-                    ++n;
-                }
-            }
-
-          if (c == '\0')
-            return 0;
-
-          {
-            char c1 = (!(flags & FNM_NOESCAPE) && c == '\\') ? *p : c;
-            c1 = FOLD (c1);
-            for (--p; *n != '\0'; ++n)
-              if ((c == '[' || FOLD ((unsigned char)*n) == c1) &&
-                  fnmatch (p, n, flags & ~FNM_PERIOD) == 0)
-                return 0;
-            return FNM_NOMATCH;
-          }
-
-        case '[':
-          {
-            /* Nonzero if the sense of the character class is inverted.  */
-            register int nnot;
-
-            if (*n == '\0')
-              return FNM_NOMATCH;
-
-            if ((flags & FNM_PERIOD) && *n == '.' &&
-                (n == string || ((flags & FNM_FILE_NAME) && IsPathSeparator(n[-1]))))
-              return FNM_NOMATCH;
-
-            nnot = (*p == '!' || *p == '^');
-            if (nnot)
-              ++p;
-
-            c = *p++;
-            for (;;)
-              {
-                register char cstart = c, cend = c;
-
-                if (!(flags & FNM_NOESCAPE) && c == '\\')
-                  {
-                    if (*p == '\0')
-                      return FNM_NOMATCH;
-                    cstart = cend = *p++;
-                  }
-
-                cstart = cend = FOLD (cstart);
-
-                if (c == '\0')
-                  /* [ (unterminated) loses.  */
-                  return FNM_NOMATCH;
-
-                c = *p++;
-                c = FOLD (c);
-
-                if ((flags & FNM_FILE_NAME) && IsPathSeparator(c))
-                  /* [/] can never match.  */
-                  return FNM_NOMATCH;
-
-                if (c == '-' && *p != ']')
-                  {
-                    cend = *p++;
-                    if (!(flags & FNM_NOESCAPE) && cend == '\\')
-                      cend = *p++;
-                    if (cend == '\0')
-                      return FNM_NOMATCH;
-                    cend = FOLD (cend);
-
-                    c = *p++;
-                  }
-
-                if (FOLD (*n) >= cstart && FOLD (*n) <= cend)
-                  goto matched;
-
-                if (c == ']')
-                  break;
-              }
-            if (!nnot)
-              return FNM_NOMATCH;
+         } else if (IsPathSeparator(c) && ISSET(flags, FNM_PATHNAME)) {
+            if ((string = strchr(string, '/')) == NULL)
+               return (FNM_NOMATCH);
             break;
+         }
 
-          matched:;
-            /* Skip the rest of the [...] that already matched.  */
-            while (c != ']')
-              {
-                if (c == '\0')
-                  /* [... (unterminated) loses.  */
-                  return FNM_NOMATCH;
+         /* General case, use recursion. */
+         while ((test = *string) != EOS) {
+            if (!fnmatch(pattern, string, flags & ~FNM_PERIOD)) {
+               return (0);
+            }
+            if (test == '/' && ISSET(flags, FNM_PATHNAME)) {
+               break;
+            }
+            ++string;
+         }
+         return (FNM_NOMATCH);
+      case '[':
+         if (*string == EOS)
+            return (FNM_NOMATCH);
+         if (IsPathSeparator(*string) && ISSET(flags, FNM_PATHNAME))
+            return (FNM_NOMATCH);
+         if (*string == '.' && ISSET(flags, FNM_PERIOD) &&
+             (string == stringstart ||
+              (ISSET(flags, FNM_PATHNAME) && IsPathSeparator(*(string - 1)))))
+            return (FNM_NOMATCH);
 
-                c = *p++;
-                if (!(flags & FNM_NOESCAPE) && c == '\\')
-                  {
-                    if (*p == '\0')
-                      return FNM_NOMATCH;
-                    /* XXX 1003.2d11 is unclear if this is right.  */
-                    ++p;
-                  }
-              }
-            if (nnot)
-              return FNM_NOMATCH;
-          }
-          break;
+         switch (rangematch(pattern, *string, flags, &newp)) {
+         case RANGE_ERROR:
+            /* not a good range, treat as normal text */
+            goto normal;
+         case RANGE_MATCH:
+            pattern = newp;
+            break;
+         case RANGE_NOMATCH:
+            return (FNM_NOMATCH);
+         }
+         ++string;
+         break;
 
-        default:
-          if (c != FOLD (*n))
-            return FNM_NOMATCH;
-        }
-
-      ++n;
-    }
-
-  if (*n == '\0')
-    return 0;
-
-  if ((flags & FNM_LEADING_DIR) && IsPathSeparator(*n))
-    /* The FNM_LEADING_DIR flag says that "foo*" matches "foobar/frobozz".  */
-    return 0;
-
-  return FNM_NOMATCH;
-
-# undef FOLD
+      case '\\':
+         if (!ISSET(flags, FNM_NOESCAPE)) {
+            if ((c = *pattern++) == EOS) {
+               c = '\\';
+               --pattern;
+            }
+         }
+         /* FALLTHROUGH */
+      default:
+normal:
+         if (FOLD(c) != FOLD(*string)) {
+            return (FNM_NOMATCH);
+         }
+         ++string;
+         break;
+      }
+   }
+   /* NOTREACHED */
 }
+
+static int rangematch(const char *pattern, char test, int flags,
+                      char **newp)
+{
+   int negate, ok;
+   char c, c2;
+
+   /*
+    * A bracket expression starting with an unquoted circumflex
+    * character produces unspecified results (IEEE 1003.2-1992,
+    * 3.13.2).  This implementation treats it like '!', for
+    * consistency with the regular expression syntax.
+    * J.T. Conklin (conklin@ngai.kaleida.com)
+    */
+   if ((negate = (*pattern == '!' || *pattern == '^')))
+      ++pattern;
+
+   test = FOLD(test);
+
+   /*
+    * A right bracket shall lose its special meaning and represent
+    * itself in a bracket expression if it occurs first in the list.
+    * -- POSIX.2 2.8.3.2
+    */
+   ok = 0;
+   c = *pattern++;
+   do {
+      if (c == '\\' && !ISSET(flags, FNM_NOESCAPE))
+         c = *pattern++;
+      if (c == EOS)
+         return (RANGE_ERROR);
+      if (c == '/' && ISSET(flags, FNM_PATHNAME))
+         return (RANGE_NOMATCH);
+      c = FOLD(c);
+      if (*pattern == '-' && (c2 = *(pattern + 1)) != EOS && c2 != ']') {
+         pattern += 2;
+         if (c2 == '\\' && !ISSET(flags, FNM_NOESCAPE))
+            c2 = *pattern++;
+         if (c2 == EOS)
+            return (RANGE_ERROR);
+         c2 = FOLD(c2);
+         if (c <= test && test <= c2)
+            ok = 1;
+      } else if (c == test)
+         ok = 1;
+   } while ((c = *pattern++) != ']');
+
+   *newp = (char *) pattern;
+   return (ok == negate ? RANGE_NOMATCH : RANGE_MATCH);
+}
+
+#ifdef TEST_PROGRAM
+struct test {
+   const char *pattern;
+   const char *string;
+   const int options;
+   const int result; 
+};
+
+/*
+ * Note, some of these tests were duplicated from a patch file I found
+ *  in an email, so I am unsure what the license is.  Since this code is
+ *  never turned on in any release, it probably doesn't matter at all.
+ * If by some chance someone finds this to be a problem please let
+ *  me know.
+ */
+static struct test tests[] = {
+/*1*/  {"x", "x", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+       {"x", "x/y", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+       {"x", "x/y/z", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+       {"*", "x", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+/*5*/  {"*", "x/y", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+       {"*", "x/y/z", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+       {"*x", "x", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+       {"*x", "x/y", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+       {"*x", "x/y/z", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+/*10*/ {"x*", "x", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+       {"x*", "x/y", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+       {"x*", "x/y/z", FNM_PATHNAME | FNM_LEADING_DIR, 0},
+       {"a*b/*", "abbb/.x", FNM_PATHNAME|FNM_PERIOD, FNM_NOMATCH},
+       {"a*b/*", "abbb/xy", FNM_PATHNAME|FNM_PERIOD, 0},
+/*15*/ {"[A-[]", "A", 0, 0},
+       {"[A-[]", "a", 0, FNM_NOMATCH},
+       {"[a-{]", "A", 0, FNM_NOMATCH},
+       {"[a-{]", "a", 0, 0},
+       {"[A-[]", "A", FNM_CASEFOLD, FNM_NOMATCH},
+/*20*/ {"[A-[]", "a", FNM_CASEFOLD, FNM_NOMATCH},
+       {"[a-{]", "A", FNM_CASEFOLD, 0},
+       {"[a-{]", "a", FNM_CASEFOLD, 0},
+       { "*LIB*", "lib", FNM_PERIOD, FNM_NOMATCH },
+       { "*LIB*", "lib", FNM_CASEFOLD, 0},
+/*25*/ { "a[/]b", "a/b", 0, 0},
+       { "a[/]b", "a/b", FNM_PATHNAME, FNM_NOMATCH },
+       { "[a-z]/[a-z]", "a/b", 0, 0 },
+       { "a/b", "*", FNM_PATHNAME, FNM_NOMATCH },
+       { "*", "a/b", FNM_PATHNAME, FNM_NOMATCH },
+       { "*[/]b", "a/b", FNM_PATHNAME, FNM_NOMATCH },
+/*30*/ { "\\[/b", "[/b", 0, 0 },
+       { "?\?/b", "aa/b", 0, 0 },
+       { "???b", "aa/b", 0, 0 },
+       { "???b", "aa/b", FNM_PATHNAME, FNM_NOMATCH },
+       { "?a/b", ".a/b", FNM_PATHNAME|FNM_PERIOD, FNM_NOMATCH },
+/*35*/ { "a/?b", "a/.b", FNM_PATHNAME|FNM_PERIOD, FNM_NOMATCH },
+       { "*a/b", ".a/b", FNM_PATHNAME|FNM_PERIOD, FNM_NOMATCH },
+       { "a/*b", "a/.b", FNM_PATHNAME|FNM_PERIOD, FNM_NOMATCH },
+       { "[.]a/b", ".a/b", FNM_PATHNAME|FNM_PERIOD, FNM_NOMATCH },
+       { "a/[.]b", "a/.b", FNM_PATHNAME|FNM_PERIOD, FNM_NOMATCH },
+/*40*/ { "*/?", "a/b", FNM_PATHNAME|FNM_PERIOD, 0 },
+       { "?/*", "a/b", FNM_PATHNAME|FNM_PERIOD, 0 },
+       { ".*/?", ".a/b", FNM_PATHNAME|FNM_PERIOD, 0 },
+       { "*/.?", "a/.b", FNM_PATHNAME|FNM_PERIOD, 0 },
+       { "*/*", "a/.b", FNM_PATHNAME|FNM_PERIOD, FNM_NOMATCH },
+/*45*/ { "*[.]/b", "a./b", FNM_PATHNAME|FNM_PERIOD, 0 },
+       { "a?b", "a.b", FNM_PATHNAME|FNM_PERIOD, 0 },
+       { "a*b", "a.b", FNM_PATHNAME|FNM_PERIOD, 0 },
+       { "a[.]b", "a.b", FNM_PATHNAME|FNM_PERIOD, 0 },
+/*49*/ { "*a*", "a/b", FNM_PATHNAME|FNM_LEADING_DIR, 0 },
+       { "[/b", "[/b", 0, 0},
+#ifdef FULL_TEST
+       /* This test takes a *long* time */
+       {"a*b*c*d*e*f*g*h*i*j*k*l*m*n*o*p*q*r*s*t*u*v*w*x*y*z*",
+          "aaaabbbbccccddddeeeeffffgggghhhhiiiijjjjkkkkllllmmmm"
+          "nnnnooooppppqqqqrrrrssssttttuuuuvvvvwwwwxxxxyyyy", 0, FNM_NOMATCH},
+#endif
+
+       /* Keep dummy last to avoid compiler warnings */
+       {"dummy", "dummy", 0, 0}
+
+};
+
+#define ntests ((int)(sizeof(tests)/sizeof(struct test)))
+
+int main()
+{
+   bool fail = false;
+   for (int i=0; i<ntests; i++) {
+      if (fnmatch(tests[i].pattern, tests[i].string, tests[i].options) != tests[i].result) {
+         printf("Test %d failed: pat=%s str=%s expect=%s got=%s\n",
+            i+1, tests[i].pattern, tests[i].string, 
+            tests[i].result==0?"matches":"no match",
+            tests[i].result==0?"no match":"matches");
+         fail = true;
+      } else {
+         printf("Test %d succeeded\n", i+1);
+      }
+   }
+   return fail;
+}
+#endif /* TEST_PROGRAM */

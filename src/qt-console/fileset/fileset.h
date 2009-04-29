@@ -22,13 +22,13 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: fileset.h 7459 2008-08-03 16:27:06Z bartleyd2 $
+ *   Version $Id: fileset.h 7660 2008-09-28 18:12:29Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -49,10 +49,10 @@ public:
    virtual void currentStackItem();
 
 public slots:
-   void treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *);
+   void tableItemChanged(QTableWidgetItem *, QTableWidgetItem *);
 
 private slots:
-   void populateTree();
+   void populateTable();
    void consoleStatusFileSet();
    void showJobs();
 
@@ -62,7 +62,6 @@ private:
    void createContextMenu();
    QString m_currentlyselected;
    bool m_populated;
-   bool m_populating;
    bool m_checkcurwidget;
 };
 

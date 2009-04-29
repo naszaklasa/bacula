@@ -1,14 +1,7 @@
 /*
- *   Parse a Bootstrap Records (used for restores)
- *
- *     Kern Sibbald, June MMII
- *
- *   Version $Id: parse_bsr.c 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,11 +20,18 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   Parse a Bootstrap Records (used for restores)
+ *
+ *     Kern Sibbald, June MMII
+ *
+ *   Version $Id: parse_bsr.c 8196 2008-12-20 10:03:36Z kerns $
+ */
 
 
 #include "bacula.h"
@@ -52,11 +52,13 @@ static BSR *store_findex(LEX *lc, BSR *bsr);
 static BSR *store_sessid(LEX *lc, BSR *bsr);
 static BSR *store_volfile(LEX *lc, BSR *bsr);
 static BSR *store_volblock(LEX *lc, BSR *bsr);
+static BSR *store_voladdr(LEX *lc, BSR *bsr);
 static BSR *store_sesstime(LEX *lc, BSR *bsr);
 static BSR *store_include(LEX *lc, BSR *bsr);
 static BSR *store_exclude(LEX *lc, BSR *bsr);
 static BSR *store_stream(LEX *lc, BSR *bsr);
 static BSR *store_slot(LEX *lc, BSR *bsr);
+static BSR *store_fileregex(LEX *lc, BSR *bsr);
 static bool is_fast_rejection_ok(BSR *bsr);
 static bool is_positioning_ok(BSR *bsr);
 
@@ -84,11 +86,12 @@ struct kw_items items[] = {
    {"exclude", store_exclude},
    {"volfile", store_volfile},
    {"volblock", store_volblock},
+   {"voladdr",  store_voladdr},
    {"stream",   store_stream},
    {"slot",     store_slot},
    {"device",   store_device},
+   {"fileregex", store_fileregex},
    {NULL, NULL}
-
 };
 
 /*
@@ -211,16 +214,16 @@ static bool is_positioning_ok(BSR *bsr)
 {
    /*
     * Every bsr should have a volfile entry and a volblock entry
+    * or a VolAddr
     *   if we are going to use positioning
     */
    for ( ; bsr; bsr=bsr->next) {
-      if (!bsr->volfile || !bsr->volblock) {
+      if (!((bsr->volfile && bsr->volblock) || bsr->voladdr)) {
          return false;
       }
    }
    return true;
 }
-
 
 static BSR *store_vol(LEX *lc, BSR *bsr)
 {
@@ -234,6 +237,7 @@ static BSR *store_vol(LEX *lc, BSR *bsr)
    }
    if (bsr->volume) {
       bsr->next = new_bsr();
+      bsr->next->prev = bsr;
       bsr = bsr->next;
    }
    /* This may actually be more than one volume separated by a |
@@ -445,6 +449,32 @@ static BSR *store_count(LEX *lc, BSR *bsr)
    return bsr;
 }
 
+static BSR *store_fileregex(LEX *lc, BSR *bsr)
+{
+   int token;
+   int rc;
+ 
+   token = lex_get_token(lc, T_STRING);
+   if (token == T_ERROR) {
+      return NULL;
+   }
+
+   if (bsr->fileregex) free(bsr->fileregex);
+   bsr->fileregex = bstrdup(lc->str);
+
+   if (bsr->fileregex_re == NULL)
+      bsr->fileregex_re = (regex_t *)bmalloc(sizeof(regex_t));
+
+   rc = regcomp(bsr->fileregex_re, bsr->fileregex, REG_EXTENDED|REG_NOSUB);
+   if (rc != 0) {
+      char prbuf[500];
+      regerror(rc, bsr->fileregex_re, prbuf, sizeof(prbuf));
+      Emsg2(M_ERROR, 0, _("REGEX '%s' compile error. ERR=%s\n"),
+            bsr->fileregex, prbuf);
+      return NULL;
+   }
+   return bsr;
+}
 
 static BSR *store_jobtype(LEX *lc, BSR *bsr)
 {
@@ -535,6 +565,40 @@ static BSR *store_volblock(LEX *lc, BSR *bsr)
    return bsr;
 }
 
+/*
+ * Routine to handle Volume start/end address
+ */
+static BSR *store_voladdr(LEX *lc, BSR *bsr)
+{
+   int token;
+   BSR_VOLADDR *voladdr;
+
+   for (;;) {
+      token = lex_get_token(lc, T_PINT64_RANGE);
+      if (token == T_ERROR) {
+         return NULL;
+      }
+      voladdr = (BSR_VOLADDR *)malloc(sizeof(BSR_VOLADDR));
+      memset(voladdr, 0, sizeof(BSR_VOLADDR));
+      voladdr->saddr = lc->pint64_val;
+      voladdr->eaddr = lc->pint64_val2;
+      /* Add it to the end of the chain */
+      if (!bsr->voladdr) {
+         bsr->voladdr = voladdr;
+      } else {
+         /* Add to end of chain */
+         BSR_VOLADDR *bs = bsr->voladdr;
+         for ( ;bs->next; bs=bs->next)
+            {  }
+         bs->next = voladdr;
+      }
+      token = lex_get_token(lc, T_ALL);
+      if (token != T_COMMA) {
+         break;
+      }
+   }
+   return bsr;
+}
 
 static BSR *store_sessid(LEX *lc, BSR *bsr)
 {
@@ -677,6 +741,13 @@ void dump_volblock(BSR_VOLBLOCK *volblock)
    }
 }
 
+void dump_voladdr(BSR_VOLADDR *voladdr)
+{
+   if (voladdr) {
+      Pmsg2(-1, _("VolAddr    : %llu-%llu\n"), voladdr->saddr, voladdr->eaddr);
+      dump_voladdr(voladdr->next);
+   }
+}
 
 void dump_findex(BSR_FINDEX *FileIndex)
 {
@@ -767,6 +838,7 @@ void dump_bsr(BSR *bsr, bool recurse)
    dump_sesstime(bsr->sesstime);
    dump_volfile(bsr->volfile);
    dump_volblock(bsr->volblock);
+   dump_voladdr(bsr->voladdr);
    dump_client(bsr->client);
    dump_jobid(bsr->JobId);
    dump_job(bsr->job);
@@ -801,30 +873,63 @@ static void free_bsr_item(BSR *bsr)
    }
 }
 
-void free_bsr(BSR *bsr)
+/*
+ * Remove a single item from the bsr tree
+ */
+void remove_bsr(BSR *bsr)
 {
-   if (!bsr) {
-      return;
-   }
    free_bsr_item((BSR *)bsr->volume);
    free_bsr_item((BSR *)bsr->client);
    free_bsr_item((BSR *)bsr->sessid);
    free_bsr_item((BSR *)bsr->sesstime);
    free_bsr_item((BSR *)bsr->volfile);
    free_bsr_item((BSR *)bsr->volblock);
+   free_bsr_item((BSR *)bsr->voladdr);
    free_bsr_item((BSR *)bsr->JobId);
    free_bsr_item((BSR *)bsr->job);
    free_bsr_item((BSR *)bsr->FileIndex);
    free_bsr_item((BSR *)bsr->JobType);
    free_bsr_item((BSR *)bsr->JobLevel);
-   free_bsr(bsr->next);
+   if (bsr->fileregex) {
+      bfree(bsr->fileregex);
+   }
+   if (bsr->fileregex_re) {
+      regfree(bsr->fileregex_re);
+      free(bsr->fileregex_re);
+   }
+   if (bsr->attr) {
+      free_attr(bsr->attr);
+   }
+   if (bsr->next) {
+      bsr->next->prev = bsr->prev;
+   }
+   if (bsr->prev) {
+      bsr->prev->next = bsr->next;
+   }
    free(bsr);
+}
+
+/*
+ * Free all bsrs in chain
+ */
+void free_bsr(BSR *bsr)
+{
+   BSR *next_bsr;
+
+   if (!bsr) {
+      return;
+   }
+   next_bsr = bsr->next;
+   /* Remove (free) current bsr */
+   remove_bsr(bsr);
+   /* Now get the next one */
+   free_bsr(next_bsr);
 }
 
 /*****************************************************************
  * Routines for handling volumes
  */
-VOL_LIST *new_restore_volume()
+static VOL_LIST *new_restore_volume()
 {
    VOL_LIST *vol;
    vol = (VOL_LIST *)malloc(sizeof(VOL_LIST));
@@ -839,41 +944,48 @@ VOL_LIST *new_restore_volume()
  *   returns: 1 if volume added
  *            0 if volume already in list
  */
-int add_restore_volume(JCR *jcr, VOL_LIST *vol)
+static bool add_restore_volume(JCR *jcr, VOL_LIST *vol)
 {
    VOL_LIST *next = jcr->VolList;
+
+   /* Add volume to volume manager's read list */
+   add_read_volume(jcr, vol->VolumeName);
 
    if (!next) {                       /* list empty ? */
       jcr->VolList = vol;             /* yes, add volume */
    } else {
+      /* Loop through all but last */
       for ( ; next->next; next=next->next) {
          if (strcmp(vol->VolumeName, next->VolumeName) == 0) {
+            /* Save smallest start file */
             if (vol->start_file < next->start_file) {
                next->start_file = vol->start_file;
             }
-            return 0;                 /* already in list */
+            return false;              /* already in list */
          }
       }
+      /* Check last volume in list */
       if (strcmp(vol->VolumeName, next->VolumeName) == 0) {
          if (vol->start_file < next->start_file) {
             next->start_file = vol->start_file;
          }
-         return 0;                    /* already in list */
+         return false;                /* already in list */
       }
       next->next = vol;               /* add volume */
    }
-   return 1;
+   return true;
 }
 
 void free_restore_volume_list(JCR *jcr)
 {
-   VOL_LIST *next = jcr->VolList;
+   VOL_LIST *vol = jcr->VolList;
    VOL_LIST *tmp;
 
-   for ( ; next; ) {
-      tmp = next->next;
-      free(next);
-      next = tmp;
+   for ( ; vol; ) {
+      tmp = vol->next;
+      remove_read_volume(jcr, vol->VolumeName);
+      free(vol);
+      vol = tmp;
    }
    jcr->VolList = NULL;
 }

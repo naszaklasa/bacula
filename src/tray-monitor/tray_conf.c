@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -46,7 +46,7 @@
 *
 *     Nicolas Boichat, August MMIV
 *
-*     Version $Id: tray_conf.c 7164 2008-06-18 19:22:03Z kerns $
+*     Version $Id: tray_conf.c 7380 2008-07-14 10:42:59Z kerns $
 */
 
 #include "bacula.h"
@@ -56,8 +56,8 @@
 * types. Note, these should be unique for each
 * daemon though not a requirement.
 */
-int r_first = R_FIRST;
-int r_last  = R_LAST;
+int32_t r_first = R_FIRST;
+int32_t r_last  = R_LAST;
 static RES *sres_head[R_LAST - R_FIRST + 1];
 RES **res_head = sres_head;
 
@@ -67,7 +67,7 @@ RES **res_head = sres_head;
 * scan is complete.
 */
 URES res_all;
-int  res_all_size = sizeof(res_all);
+int32_t res_all_size = sizeof(res_all);
 
 
 /* Definition of records permitted within each
@@ -378,4 +378,11 @@ void save_resource(int type, RES_ITEM *items, int pass)
          res->res_monitor.hdr.name, rindex, pass);
       }
    }
+}
+
+bool parse_tmon_config(CONFIG *config, const char *configfile, int exit_code)
+{
+   config->init(configfile, NULL, exit_code, (void *)&res_all, res_all_size,
+      r_first, r_last, resources, res_head);
+   return config->parse_config();
 }

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -28,7 +28,7 @@
 /*
  * Storage daemon specific defines and includes
  *
- *  Version $Id: stored.h 6831 2008-04-16 09:49:47Z kerns $
+ *  Version $Id: stored.h 8052 2008-11-18 10:59:12Z ricozz $
  */
 
 #ifndef __STORED_H_
@@ -77,6 +77,8 @@ const int sd_dbglvl = 300;
 #ifndef HAVE_READDIR_R
 int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 #endif
+
+#include "vtape.h"
 
 /* Daemon globals from stored.c */
 extern STORES *me;                    /* "Global" daemon resource */

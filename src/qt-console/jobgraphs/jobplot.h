@@ -22,19 +22,17 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: jobplot.h 6962 2008-05-13 06:49:45Z kerns $
+ *   Version $Id: jobplot.h 7380 2008-07-14 10:42:59Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
 
-#include "bat.h"
-#ifdef HAVE_QWT
 #include <QtGui>
 #include "pages.h"
 #include "ui_jobplotcontrols.h"
@@ -130,6 +128,7 @@ private slots:
    void reGraph();
 
 private:
+   void fillSymbolCombo(QComboBox *q);
    void setSymbolType(int, int type);
    void addCurve();
    void writeSettings();
@@ -149,7 +148,5 @@ private:
    QSplitter *m_splitter;
    QwtPlot *m_jobPlot;
 };
-
-#endif /* HAVE_QWT */
 
 #endif /* _JOBPLOT_H_ */

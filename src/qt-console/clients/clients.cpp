@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,14 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
  
 /*
- *   Version $Id: clients.cpp 7459 2008-08-03 16:27:06Z bartleyd2 $
+ *   Version $Id: clients.cpp 8640 2009-03-29 10:55:53Z kerns $
  *
  *  Clients Class
  *
@@ -35,23 +35,24 @@
  *
  */ 
 
+#include "bat.h"
 #include <QAbstractEventDispatcher>
 #include <QMenu>
-#include "bat.h"
 #include "clients/clients.h"
 #include "run/run.h"
+#include "status/clientstat.h"
+#include "util/fmtwidgetitem.h"
 
 Clients::Clients()
 {
    setupUi(this);
-   m_name = "Clients";
+   m_name = tr("Clients");
    pgInitialize();
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/network-server.png")));
 
-   /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_client.h */
+   /* tableWidget, Storage Tree Tree Widget inherited from ui_client.h */
    m_populated = false;
-   m_populating = false;
    m_checkcurwidget = true;
    m_closeable = false;
    /* add context sensitive menu items specific to this classto the page
@@ -69,77 +70,110 @@ Clients::~Clients()
  * The main meat of the class!!  The function that querries the director and 
  * creates the widgets with appropriate values.
  */
-void Clients::populateTree()
+void Clients::populateTable()
 {
-   if (m_populating)
-      return;
-   m_populating = true;
-   QTreeWidgetItem *clientItem, *topItem;
+   m_populated = true;
 
-   if (!m_console->preventInUseConnect())
-      return;
+   Freeze frz(*tableWidget); /* disable updating*/
+
+   QStringList headerlist = (QStringList() << tr("Client Name") << tr("File Retention")
+       << tr("Job Retention") << tr("AutoPrune") << tr("ClientId") << tr("Uname") );
+
+   int sortcol = headerlist.indexOf(tr("Client Name"));
+   Qt::SortOrder sortord = Qt::AscendingOrder;
+   if (tableWidget->rowCount()) {
+      sortcol = tableWidget->horizontalHeader()->sortIndicatorSection();
+      sortord = tableWidget->horizontalHeader()->sortIndicatorOrder();
+   }
+
    m_checkcurwidget = false;
-   mp_treeWidget->clear();
+   tableWidget->clear();
    m_checkcurwidget = true;
 
-   QStringList headerlist = (QStringList() << "Client Name" << "File Retention"
-       << "Job Retention" << "AutoPrune" << "ClientId" << "Uname" );
-
-   topItem = new QTreeWidgetItem(mp_treeWidget);
-   topItem->setText(0, "Clients");
-   topItem->setData(0, Qt::UserRole, 0);
-   topItem->setExpanded(true);
-
-   mp_treeWidget->setColumnCount(headerlist.count());
-   mp_treeWidget->setHeaderLabels(headerlist);
-
+   tableWidget->setColumnCount(headerlist.count());
+   tableWidget->setHorizontalHeaderLabels(headerlist);
+   tableWidget->horizontalHeader()->setHighlightSections(false);
+   tableWidget->setRowCount(m_console->client_list.count());
+   tableWidget->verticalHeader()->hide();
+   tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
+   tableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+   tableWidget->setSortingEnabled(false); /* rows move on insert if sorting enabled */
+   bool first = true;
+   QString client_comsep("");
    foreach (QString clientName, m_console->client_list){
-      clientItem = new QTreeWidgetItem(topItem);
-      clientItem->setText(0, clientName);
-      clientItem->setData(0, Qt::UserRole, 1);
-      clientItem->setExpanded(true);
+      if (first) {
+         client_comsep += "'" + clientName + "'";
+         first = false;
+      }
+      else
+         client_comsep += ",'" + clientName + "'";
+   }
 
-      /* Set up query QString and header QStringList */
+   if (client_comsep != "") {
       QString query("");
-      query += "SELECT FileRetention, JobRetention, AutoPrune, ClientId, Uname"
+      query += "SELECT Name, FileRetention, JobRetention, AutoPrune, ClientId, Uname"
            " FROM Client"
-           " WHERE ";
-      query += " Name='" + clientName + "'";
-      query += " ORDER BY Name";
+           " WHERE ClientId IN (SELECT MAX(ClientId) FROM Client WHERE";
+      query += " Name IN (" + client_comsep + ")";
+      query += " GROUP BY Name) ORDER BY Name";
 
       QStringList results;
-      /* This could be a log item */
-      if (mainWin->m_sqlDebug) {
+      if (mainWin->m_sqlDebug)
          Pmsg1(000, "Clients query cmd : %s\n",query.toUtf8().data());
-      }
       if (m_console->sql_cmd(query, results)) {
-         int resultCount = results.count();
-         if (resultCount == 1){
-            QString resultline;
-            QString field;
-            QStringList fieldlist;
-            /* there will only be one of these */
-            foreach (resultline, results) {
-               fieldlist = resultline.split("\t");
-               int index = 0;
-               /* Iterate through fields in the record */
-               foreach (field, fieldlist) {
-                  field = field.trimmed();  /* strip leading & trailing spaces */
-                  clientItem->setData(index+1, Qt::UserRole, 1);
-                  /* Put media fields under the pool tree item */
-                  clientItem->setData(index+1, Qt::UserRole, 1);
-                  clientItem->setText(index+1, field);
-                  index++;
-               }
-            }
+         int row = 0;
+
+         /* Iterate through the record returned from the query */
+         foreach (QString resultline, results) {
+            QStringList fieldlist = resultline.split("\t");
+
+            TableItemFormatter item(*tableWidget, row);
+
+            /* Iterate through fields in the record */
+            QStringListIterator fld(fieldlist);
+            int col = 0;
+
+            /* name */
+            item.setTextFld(col++, fld.next());
+
+            /* file retention */
+            item.setDurationFld(col++, fld.next());
+
+            /* job retention */
+            item.setDurationFld(col++, fld.next());
+
+            /* autoprune */
+            item.setBoolFld(col++, fld.next());
+
+            /* client id */
+            item.setNumericFld(col++, fld.next());
+
+            /* uname */
+            item.setTextFld(col++, fld.next());
+
+            row++;
          }
       }
    }
-   /* Resize the columns */
-   for(int cnter=0; cnter<headerlist.size(); cnter++) {
-      mp_treeWidget->resizeColumnToContents(cnter);
+   /* set default sorting */
+   tableWidget->sortByColumn(sortcol, sortord);
+   tableWidget->setSortingEnabled(true);
+   
+   /* Resize rows and columns */
+   tableWidget->resizeColumnsToContents();
+   tableWidget->resizeRowsToContents();
+
+   /* make read only */
+   int rcnt = tableWidget->rowCount();
+   int ccnt = tableWidget->columnCount();
+   for(int r=0; r < rcnt; r++) {
+      for(int c=0; c < ccnt; c++) {
+         QTableWidgetItem* item = tableWidget->item(r, c);
+         if (item) {
+            item->setFlags(Qt::ItemFlags(item->flags() & (~Qt::ItemIsEditable)));
+         }
+      }
    }
-   m_populating = false;
 }
 
 /*
@@ -149,8 +183,7 @@ void Clients::populateTree()
 void Clients::PgSeltreeWidgetClicked()
 {
    if(!m_populated) {
-      populateTree();
-      m_populated=true;
+      populateTable();
    }
 }
 
@@ -158,30 +191,31 @@ void Clients::PgSeltreeWidgetClicked()
  * Added to set the context menu policy based on currently active treeWidgetItem
  * signaled by currentItemChanged
  */
-void Clients::treeItemChanged(QTreeWidgetItem *currentwidgetitem, QTreeWidgetItem *previouswidgetitem )
+void Clients::tableItemChanged(QTableWidgetItem *currentwidgetitem, QTableWidgetItem *previouswidgetitem )
 {
    /* m_checkcurwidget checks to see if this is during a refresh, which will segfault */
    if (m_checkcurwidget) {
+      int currentRow = currentwidgetitem->row();
+      QTableWidgetItem *currentrowzeroitem = tableWidget->item(currentRow, 0);
+      m_currentlyselected = currentrowzeroitem->text();
+
       /* The Previous item */
       if (previouswidgetitem) { /* avoid a segfault if first time */
-         int treedepth = previouswidgetitem->data(0, Qt::UserRole).toInt();
-         if (treedepth == 1){
-            mp_treeWidget->removeAction(actionListJobsofClient);
-            mp_treeWidget->removeAction(actionStatusClientInConsole);
-            mp_treeWidget->removeAction(actionPurgeJobs);
-            mp_treeWidget->removeAction(actionPrune);
-         }
+         tableWidget->removeAction(actionListJobsofClient);
+         tableWidget->removeAction(actionStatusClientInConsole);
+         tableWidget->removeAction(actionStatusClientWindow);
+         tableWidget->removeAction(actionPurgeJobs);
+         tableWidget->removeAction(actionPrune);
       }
 
-      int treedepth = currentwidgetitem->data(0, Qt::UserRole).toInt();
-      if (treedepth == 1){
+      if (m_currentlyselected.length() != 0) {
          /* set a hold variable to the client name in case the context sensitive
           * menu is used */
-         m_currentlyselected=currentwidgetitem->text(0);
-         mp_treeWidget->addAction(actionListJobsofClient);
-         mp_treeWidget->addAction(actionStatusClientInConsole);
-         mp_treeWidget->addAction(actionPurgeJobs);
-         mp_treeWidget->addAction(actionPrune);
+         tableWidget->addAction(actionListJobsofClient);
+         tableWidget->addAction(actionStatusClientInConsole);
+         tableWidget->addAction(actionStatusClientWindow);
+         tableWidget->addAction(actionPurgeJobs);
+         tableWidget->addAction(actionPrune);
       }
    }
 }
@@ -193,18 +227,22 @@ void Clients::treeItemChanged(QTreeWidgetItem *currentwidgetitem, QTreeWidgetIte
  */
 void Clients::createContextMenu()
 {
-   mp_treeWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
-   mp_treeWidget->addAction(actionRefreshClients);
-   connect(mp_treeWidget, SIGNAL(
-           currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)),
-           this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
+   tableWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
+   tableWidget->addAction(actionRefreshClients);
+   /* for the tableItemChanged to maintain m_currentJob */
+   connect(tableWidget, SIGNAL(
+           currentItemChanged(QTableWidgetItem *, QTableWidgetItem *)),
+           this, SLOT(tableItemChanged(QTableWidgetItem *, QTableWidgetItem *)));
+
    /* connect to the action specific to this pages class */
    connect(actionRefreshClients, SIGNAL(triggered()), this,
-                SLOT(populateTree()));
+                SLOT(populateTable()));
    connect(actionListJobsofClient, SIGNAL(triggered()), this,
                 SLOT(showJobs()));
    connect(actionStatusClientInConsole, SIGNAL(triggered()), this,
                 SLOT(consoleStatusClient()));
+   connect(actionStatusClientWindow, SIGNAL(triggered()), this,
+                SLOT(statusClientWindow()));
    connect(actionPurgeJobs, SIGNAL(triggered()), this,
                 SLOT(consolePurgeJobs()));
    connect(actionPrune, SIGNAL(triggered()), this,
@@ -238,9 +276,8 @@ void Clients::consoleStatusClient()
 void Clients::currentStackItem()
 {
    if(!m_populated) {
-      populateTree();
-      /* Create the context menu for the client tree */
-      m_populated=true;
+      populateTable();
+      /* Create the context menu for the client table */
    }
 }
 
@@ -249,18 +286,19 @@ void Clients::currentStackItem()
  */
 void Clients::consolePurgeJobs()
 {
-   if (QMessageBox::warning(this, tr("Bat"),
-      tr("Are you sure you want to purge ??  !!!.\n"
+   if (QMessageBox::warning(this, "Bat",
+      tr("Are you sure you want to purge all jobs of client \"%1\" ?\n"
 "The Purge command will delete associated Catalog database records from Jobs and"
 " Volumes without considering the retention period. Purge  works only on the"
 " Catalog database and does not affect data written to Volumes. This command can"
 " be dangerous because you can delete catalog records associated with current"
 " backups of files, and we recommend that you do not use it unless you know what"
 " you are doing.\n\n"
-" Is there any way I can get you to Click cancel here.  You really don't want to do"
+" Is there any way I can get you to click Cancel here?  You really don't want to do"
 " this\n\n"
-      "Press OK to proceed with the purge operation?"),
-      QMessageBox::Ok | QMessageBox::Cancel)
+         "Press OK to proceed with the purge operation?").arg(m_currentlyselected),
+         QMessageBox::Ok | QMessageBox::Cancel,
+         QMessageBox::Cancel)
       == QMessageBox::Cancel) { return; }
 
    QString cmd("purge jobs client=");
@@ -274,4 +312,13 @@ void Clients::consolePurgeJobs()
 void Clients::prune()
 {
    new prunePage("", m_currentlyselected);
+}
+
+/*
+ * Function responding to action to create new client status window
+ */
+void Clients::statusClientWindow()
+{
+   QTreeWidgetItem *parentItem = mainWin->getFromHash(this);
+   new ClientStat(m_currentlyselected, parentItem);
 }

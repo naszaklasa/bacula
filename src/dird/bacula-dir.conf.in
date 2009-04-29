@@ -231,6 +231,8 @@ Storage {
 # Generic catalog service
 Catalog {
   Name = MyCatalog
+# Uncomment the following line if you want the dbi driver
+@uncomment_dbi@ dbdriver = "dbi:@DB_TYPE@"; dbaddress = 127.0.0.1; dbport = @db_port@
   dbname = "@db_name@"; dbuser = "@db_user@"; dbpassword = "@db_password@"
 }
 

@@ -14,6 +14,9 @@
 /* Define if you want SmartAlloc debug code enabled */
 #define SMARTALLOC 1
 
+/* Define if you want to use Batch Mode */
+/* #define HAVE_BATCH_FILE_INSERT 1 */
+
 /* Define if you need function prototypes */
 #define PROTOTYPES 1
 
@@ -33,6 +36,8 @@
 #define HAVE_UINT64_T 1
 #define HAVE_INTMAX_T 1
 /* #undef HAVE_U_INTMAX_T */
+#define HAVE_UINTPTR_T 1
+#define HAVE_INTPTR_T 1
 
 /* Define if you want TCP Wrappers support */
 /* #undef HAVE_LIBWRAP */

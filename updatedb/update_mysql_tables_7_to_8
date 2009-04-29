@@ -9,7 +9,7 @@ echo "this script may take several minutes to run."
 echo " "
 bindir=/usr/bin
 
-DB_VER="$bindir/mysql $* bacula -e 'select * from Version;'|tail -n 1 2>/dev/null"
+DB_VER=`$bindir/mysql $* bacula -e 'select * from Version;'|tail -n 1 2>/dev/null`
 if [ -z "$DB_VER" ]; then
        echo "Sorry, I can't seem to locate a bacula database."
        exit 1

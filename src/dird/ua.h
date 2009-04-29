@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, August MMI
  *
- *     Version $Id: ua.h 4992 2007-06-07 14:46:43Z kerns $
+ *     Version $Id: ua.h 7774 2008-10-13 13:03:44Z ricozz $
  */
 
 #ifndef __UA_H_
@@ -60,6 +60,7 @@ public:
    bool verbose;                      /* set for normal UA verbosity */
    bool batch;                        /* set for non-interactive mode */
    bool gui;                          /* set if talking to GUI program */
+   bool runscript;                    /* set if we are in runscript */
    uint32_t pint32_val;               /* positive integer */
    int32_t  int32_val;                /* positive/negative */
    int64_t  int64_val;                /* big int */

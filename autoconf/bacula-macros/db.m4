@@ -1,12 +1,322 @@
+AC_DEFUN([BA_CHECK_DBI_DB],
+[
+db_found=no
+AC_MSG_CHECKING(for DBI support)
+AC_ARG_WITH(dbi,
+AC_HELP_STRING([--with-dbi@<:@=DIR@:>@], [Include DBI support. DIR is the DBD base install directory, default is to search through a number of common places for the DBI files.]),
+[
+  if test "$withval" != "no"; then
+     if test "$withval" = "yes"; then
+        if test -f /usr/local/include/dbi/dbi.h; then
+           DBI_INCDIR=/usr/local/dbi/include
+           if test -d /usr/local/lib64; then
+              DBI_LIBDIR=/usr/local/lib64
+           else
+              DBI_LIBDIR=/usr/local/lib
+           fi
+           DBI_BINDIR=/usr/local/bin
+        elif test -f /usr/include/dbi/dbi.h; then
+           DBI_INCDIR=/usr/include
+           if test -d /usr/lib64; then
+              DBI_LIBDIR=/usr/lib64
+           else
+              DBI_LIBDIR=/usr/lib
+           fi
+           DBI_BINDIR=/usr/bin      
+        elif test -f $prefix/include/dbi/dbi.h; then
+           DBI_INCDIR=$prefix/include
+           if test -d $prefix/lib64; then
+              DBI_LIBDIR=$prefix/lib64
+           else
+              DBI_LIBDIR=$prefix/lib
+           fi
+           DBI_BINDIR=$prefix/bin      
+        else
+           AC_MSG_RESULT(no)
+           AC_MSG_ERROR(Unable to find dbi.h in standard locations)
+        fi
+        if test -d /usr/local/lib/dbd; then
+           DRIVERDIR=/usr/local/lib/dbd
+           if test -d /usr/local/lib64/dbd; then
+              DRIVERDIR=/usr/local/lib64/dbd
+           else
+              DRIVERDIR=/usr/local/lib/dbd
+           fi
+        elif test -d /usr/lib/dbd; then
+           DRIVERDIR=/usr/lib/dbd
+           if test -d /usr/lib64/dbd; then
+              DRIVERDIR=/usr/lib64/dbd
+           else
+              DRIVERDIR=/usr/lib/dbd
+           fi
+        elif test -d $prefix/lib/dbd; then
+           if test -d $prefix/lib64/dbd; then
+              DRIVERDIR=$prefix/lib64/dbd
+           else
+              DRIVERDIR=$prefix/lib/dbd
+           fi
+        else
+           AC_MSG_RESULT(no)
+           AC_MSG_ERROR(Unable to find DBD drivers in standard locations)
+        fi
+     else
+        if test -f $withval/dbi.h; then
+           DBI_INCDIR=$withval
+           DBI_LIBDIR=$withval
+           DBI_BINDIR=$withval
+        elif test -f $withval/include/dbi/dbi.h; then
+           DBI_INCDIR=$withval/include
+           if test -d $withval/lib64; then
+              DBI_LIBDIR=$withval/lib64
+           else
+              DBI_LIBDIR=$withval/lib
+           fi
+           DBI_BINDIR=$withval/bin
+        else
+           AC_MSG_RESULT(no)
+           AC_MSG_ERROR(Invalid DBI directory $withval - unable to find dbi.h under $withval)
+        fi
+        if test -d $withval/dbd; then
+           DRIVERDIR=$withval/dbd
+        elif test -d $withval/lib/; then
+           if test -d $withval/lib64/dbd; then
+              DRIVERDIR=$withval/lib64/dbd
+           else
+              DRIVERDIR=$withval/lib/dbd
+           fi
+        else
+           AC_MSG_RESULT(no)
+           AC_MSG_ERROR(Invalid DBD driver directory $withval - unable to find DBD drivers under $withval)
+        fi
+     fi
+     SQL_INCLUDE=-I$DBI_INCDIR
+     SQL_LFLAGS="-L$DBI_LIBDIR -ldbi"
+     SQL_BINDIR=$DBI_BINDIR
+     SQL_LIB=$DBI_LIBDIR/libdbi.a
+     DBI_DBD_DRIVERDIR="-D DBI_DRIVER_DIR=\\\"$DRIVERDIR\\\""
+
+     AC_DEFINE(HAVE_DBI, 1, [Set if you have the DBI driver])
+     AC_MSG_RESULT(yes)
+     db_found=yes
+     support_dbi=yes
+     db_type=DBI
+     DB_TYPE=dbi
+     uncomment_dbi=" "
+
+  else
+     AC_MSG_RESULT(no)
+  fi
+],[
+  AC_MSG_RESULT(no)
+])
+AC_SUBST(SQL_LFLAGS)
+AC_SUBST(SQL_INCLUDE)
+AC_SUBST(SQL_BINDIR)
+AC_SUBST(DBI_DBD_DRIVERDIR)  
+AC_SUBST(uncomment_dbi)
+
+])
+
+AC_DEFUN([BA_CHECK_DBI_DRIVER],
+[
+db_found=no
+db_prog=no
+AC_MSG_CHECKING(for DBI drivers support)
+AC_ARG_WITH(dbi-driver,
+AC_HELP_STRING([--with-dbi-driver@<:@=DRIVER@:>@], [Suport for DBI driver. DRIVER is the one DBI driver like Mysql, Postgresql, others. Default is to not configure any driver.]),
+[
+  if test "$withval" != "no"; then
+     case $withval in
+        "mysql")
+           db_prog="mysql"
+           if test -f /usr/local/mysql/bin/mysql; then
+              SQL_BINDIR=/usr/local/mysql/bin
+              if test -f /usr/local/mysql/lib64/mysql/libmysqlclient_r.a \
+                 -o -f /usr/local/mysql/lib64/mysql/libmysqlclient_r.so; then
+                 SQL_LIBDIR=/usr/local/mysql/lib64/mysql
+              else
+                 SQL_LIBDIR=/usr/local/mysql/lib/mysql
+              fi
+           elif test -f /usr/bin/mysql; then
+              SQL_BINDIR=/usr/bin
+              if test -f /usr/lib64/mysql/libmysqlclient_r.a \
+                  -o -f /usr/lib64/mysql/libmysqlclient_r.so; then  
+                  SQL_LIBDIR=/usr/lib64/mysql
+              elif test -f /usr/lib/mysql/libmysqlclient_r.a \
+                  -o -f /usr/lib/mysql/libmysqlclient_r.so; then
+                  SQL_LIBDIR=/usr/lib/mysql
+              else
+                  SQL_LIBDIR=/usr/lib
+              fi
+           elif test -f /usr/local/bin/mysql; then
+              SQL_BINDIR=/usr/local/bin
+              if test -f /usr/local/lib64/mysql/libmysqlclient_r.a \
+                  -o -f /usr/local/lib64/mysql/libmysqlclient_r.so; then  
+                  SQL_LIBDIR=/usr/local/lib64/mysql
+              elif test -f /usr/local/lib/mysql/libmysqlclient_r.a \
+                  -o -f /usr/local/lib/mysql/libmysqlclient_r.so; then
+                  SQL_LIBDIR=/usr/local/lib/mysql
+              else
+                  SQL_LIBDIR=/usr/local/lib
+              fi
+           elif test -f $withval/bin/mysql; then
+              SQL_BINDIR=$withval/bin
+              if test -f $withval/lib64/mysql/libmysqlclient_r.a \
+                  -o -f $withval/lib64/mysql/libmysqlclient_r.so; then
+                  SQL_LIBDIR=$withval/lib64/mysql
+              elif test -f $withval/lib64/libmysqlclient_r.a \
+                  -o -f $withval/lib64/libmysqlclient_r.so; then
+                  SQL_LIBDIR=$withval/lib64
+              elif test -f $withval/lib/libmysqlclient_r.a \
+                  -o -f $withval/lib/libmysqlclient_r.so; then
+                  SQL_LIBDIR=$withval/lib/
+              else
+                  SQL_LIBDIR=$withval/lib/mysql
+              fi
+           else
+              AC_MSG_RESULT(no)
+              AC_MSG_ERROR(Unable to find mysql in standard locations)
+           fi
+           if test -f $SQL_LIBDIR/libmysqlclient_r.so; then
+              DB_PROG_LIB=$SQL_LIBDIR/libmysqlclient_r.so
+           else
+              DB_PROG_LIB=$SQL_LIBDIR/libmysqlclient_r.a
+           fi
+        ;;
+        "postgresql")
+           db_prog="postgresql"
+           PG_CONFIG=`which pg_config`
+           if test -n "$PG_CONFIG"; then
+              SQL_BINDIR=`"$PG_CONFIG" --bindir`
+              SQL_LIBDIR=`"$PG_CONFIG" --libdir`
+           elif test -f /usr/local/bin/psql; then
+              SQL_BINDIR=/usr/local/bin
+              if test -d /usr/local/lib64; then
+                 SQL_LIBDIR=/usr/local/lib64
+              else
+                 SQL_LIBDIR=/usr/local/lib
+              fi
+           elif test -f /usr/bin/psql; then
+              SQL_BINDIR=/usr/local/bin
+              if test -d /usr/lib64/postgresql; then
+                 SQL_LIBDIR=/usr/lib64/postgresql
+              elif test -d /usr/lib/postgresql; then
+                 SQL_LIBDIR=/usr/lib/postgresql
+              elif test -d /usr/lib64; then
+                 SQL_LIBDIR=/usr/lib64
+              else
+                 SQL_LIBDIR=/usr/lib
+              fi
+           elif test -f $withval/bin/psql; then
+              SQL_BINDIR=$withval/bin
+              if test -d $withval/lib64; then
+                 SQL_LIBDIR=$withval/lib64
+              else
+                 SQL_LIBDIR=$withval/lib
+              fi
+           else
+              AC_MSG_RESULT(no)
+              AC_MSG_ERROR(Unable to find psql in standard locations)
+           fi
+           if test -f $SQL_LIBDIR/libpq.so; then
+              DB_PROG_LIB=$SQL_LIBDIR/libpq.so
+           else
+              DB_PROG_LIB=$SQL_LIBDIR/libpq.a
+           fi
+        ;;
+        "sqlite")
+           db_prog="sqlite"
+           if test -f /usr/local/bin/sqlite; then
+              SQL_BINDIR=/usr/local/bin
+              if test -d /usr/local/lib64; then
+                 SQL_LIBDIR=/usr/local/lib64
+              else
+                 SQL_LIBDIR=/usr/local/lib
+              fi
+           elif test -f /usr/bin/sqlite; then
+              SQL_BINDIR=/usr/bin
+              if test -d /usr/lib64; then
+                 SQL_LIBDIR=/usr/lib64
+              else
+                 SQL_LIBDIR=/usr/lib
+              fi                 
+           elif test -f $withval/bin/sqlite; then
+              SQL_BINDIR=$withval/bin
+              if test -d $withval/lib64; then
+                 SQL_LIBDIR=$withval/lib64
+              else
+                 SQL_LIBDIR=$withval/lib
+              fi                 
+           else
+              AC_MSG_RESULT(no)
+              AC_MSG_ERROR(Unable to find sqlite in standard locations)
+           fi
+           if test -f $SQL_LIBDIR/libsqlite.so; then
+              DB_PROG_LIB=$SQL_LIBDIR/libsqlite.so
+           else
+              DB_PROG_LIB=$SQL_LIBDIR/libsqlite.a
+           fi
+        ;;
+        "sqlite3")
+           db_prog="sqlite3"
+           if test -f /usr/local/bin/sqlite3; then
+              SQL_BINDIR=/usr/local/bin
+              if test -d /usr/local/lib64; then
+                 SQL_LIBDIR=/usr/local/lib64
+              else
+                 SQL_LIBDIR=/usr/local/lib
+              fi
+           elif test -f /usr/bin/sqlite3; then
+              SQL_BINDIR=/usr/bin
+              if test -d /usr/lib64; then
+                 SQL_LIBDIR=/usr/lib64
+              else
+                 SQL_LIBDIR=/usr/lib
+              fi                 
+           elif test -f $withval/bin/sqlite3; then
+              SQL_BINDIR=$withval/bin
+              if test -d $withval/lib64; then
+                 SQL_LIBDIR=$withval/lib64
+              else
+                 SQL_LIBDIR=$withval/lib
+              fi                 
+           else
+              AC_MSG_RESULT(no)
+              AC_MSG_ERROR(Unable to find sqlite in standard locations)
+           fi
+           if test -f $SQL_LIBDIR/libsqlite3.so; then
+              DB_PROG_LIB=$SQL_LIBDIR/libsqlite3.so
+           else
+              DB_PROG_LIB=$SQL_LIBDIR/libsqlite3.a
+           fi
+        ;;                
+        *)
+           AC_MSG_RESULT(no)
+           AC_MSG_ERROR(Unable to set DBI driver. $withval is not supported)
+        ;;
+     esac
+
+     AC_MSG_RESULT(yes)
+     DB_PROG=$db_prog
+  else
+     AC_MSG_RESULT(no)
+  fi
+],[
+  AC_MSG_RESULT(no)
+])
+AC_SUBST(SQL_BINDIR)
+AC_SUBST(DB_PROG)
+AC_SUBST(DB_PROG_LIB)
+
+])
+
+
 AC_DEFUN([BA_CHECK_MYSQL_DB],
 [
 db_found=no
 AC_MSG_CHECKING(for MySQL support)
 AC_ARG_WITH(mysql,
-[
-  --with-mysql@<:@=DIR@:>@      Include MySQL support.  DIR is the MySQL base
-                          install directory, default is to search through
-                          a number of common places for the MySQL files.],
+AC_HELP_STRING([--with-mysql@<:@=DIR@:>@], [Include MySQL support. DIR is the MySQL base install directory, default is to search through a number of common places for the MySQL files.]),
 [
   if test "$withval" != "no"; then
         if test "$withval" = "yes"; then
@@ -24,6 +334,9 @@ AC_ARG_WITH(mysql,
                    if test -f /usr/lib64/mysql/libmysqlclient_r.a \
                         -o -f /usr/lib64/mysql/libmysqlclient_r.so; then  
                            MYSQL_LIBDIR=/usr/lib64/mysql
+                   elif test -f /usr/lib64/libmysqlclient_r.a \
+                        -o -f /usr/lib64/libmysqlclient_r.so; then
+                           MYSQL_LIBDIR=/usr/lib64
                    elif test -f /usr/lib/mysql/libmysqlclient_r.a \
                           -o -f /usr/lib/mysql/libmysqlclient_r.so; then
                            MYSQL_LIBDIR=/usr/lib/mysql
@@ -68,12 +381,14 @@ AC_ARG_WITH(mysql,
               if test -f $withval/lib64/mysql/libmysqlclient_r.a \
                    -o -f $withval/lib64/mysql/libmysqlclient_r.so; then
                  MYSQL_LIBDIR=$withval/lib64/mysql
+              elif test -f $withval/lib64/libmysqlclient_r.a \
+                   -o -f $withval/lib64/libmysqlclient_r.so; then
+                 MYSQL_LIBDIR=$withval/lib64
+              elif test -f $withval/lib/libmysqlclient_r.a \
+                   -o -f $withval/lib/libmysqlclient_r.so; then
+                 MYSQL_LIBDIR=$withval/lib
               else
                  MYSQL_LIBDIR=$withval/lib/mysql
-                 # Solaris ...
-                 if test -f $withval/lib/libmysqlclient_r.so; then
-                    MYSQL_LIBDIR=$withval/lib
-                 fi
               fi
               MYSQL_BINDIR=$withval/bin
            elif test -f $withval/include/mysql.h; then
@@ -113,10 +428,7 @@ AC_ARG_WITH(mysql,
 )
 
 AC_ARG_WITH(embedded-mysql,
-[
-  --with-embedded-mysql@<:@=DIR@:>@ Include MySQL support.  DIR is the MySQL base
-                          install directory, default is to search through
-                          a number of common places for the MySQL files.],
+AC_HELP_STRING([--with-embedded-mysql@<:@=DIR@:>@], [Include MySQL support. DIR is the MySQL base install directory, default is to search through a number of common places for the MySQL files.]),
 [
   if test "$withval" != "no"; then
         if test "$withval" = "yes"; then
@@ -218,10 +530,7 @@ AC_DEFUN([BA_CHECK_SQLITE_DB],
 db_found=no
 AC_MSG_CHECKING(for SQLite support)
 AC_ARG_WITH(sqlite,
-[
-  --with-sqlite@<:@=DIR@:>@     Include SQLite support.  DIR is the SQLite base
-                          install directory, default is to search through
-                          a number of common places for the SQLite files.],
+AC_HELP_STRING([--with-sqlite@<:@=DIR@:>@], [Include SQLite support.  DIR is the SQLite base install directory, default is to search through a number of common places for the SQLite files.]),
 [
   if test "$withval" != "no"; then
      if test "$withval" = "yes"; then
@@ -300,10 +609,7 @@ AC_DEFUN([BA_CHECK_SQLITE3_DB],
 db_found=no
 AC_MSG_CHECKING(for SQLite3 support)
 AC_ARG_WITH(sqlite3,
-[
-  --with-sqlite3@<:@=DIR@:>@    Include SQLite3 support.  DIR is the SQLite3 base
-                          install directory, default is to search through
-                          a number of common places for the SQLite3 files.],
+AC_HELP_STRING([--with-sqlite3@<:@=DIR@:>@], [Include SQLite3 support. DIR is the SQLite3 base install directory, default is to search through a number of common places for the SQLite3 files.]),
 [
   if test "$withval" != "no"; then
      if test "$withval" = "yes"; then
@@ -384,8 +690,7 @@ AC_DEFUN([BA_CHECK_POSTGRESQL_DB],
 db_found=no
 AC_MSG_CHECKING(for PostgreSQL support)
 AC_ARG_WITH(postgresql,
-[  --with-postgresql@<:@=DIR@:>@      Include PostgreSQL support.  DIR is the PostgreSQL
-                          base install directory, defaults to /usr/local/pgsql],
+AC_HELP_STRING([--with-postgresql@<:@=DIR@:>@], [Include PostgreSQL support. DIR is the PostgreSQL base install directory, @<:@default=/usr/local/pgsql@:>@]),
 [
   if test "$withval" != "no"; then
       if test "$db_found" = "yes"; then
@@ -493,10 +798,7 @@ fi
 
 AC_MSG_CHECKING(for Berkeley DB support)
 AC_ARG_WITH(berkeleydb,
-[
-  --with-berkeleydb@<:@=DIR@:>@ Include Berkeley DB support.  DIR is the Berkeley DB base
-                          install directory, default is to search through
-                          a number of common places for the DB files.],
+AC_HELP_STRING([--with-berkeleydb@<:@=DIR@:>@], [Include Berkeley DB support. DIR is the Berkeley DB base install directory, default is to search through a number of common places for the DB files.]),
 [
   if test "$withval" != "no"; then
         if test "$withval" = "yes"; then
@@ -551,8 +853,7 @@ fi
 
 AC_MSG_CHECKING(for mSQL support)
 AC_ARG_WITH(msql,
-[  --with-msql@<:@=DIR@:>       Include mSQL support.  DIR is the mSQL base
-                          install directory, defaults to /usr/local/Hughes.],
+AC_HELP_STRING([--with-msql@<:@=DIR@:>@], [Include mSQL support. DIR is the mSQL base install directory @<:@default=/usr/local/Hughes@:>@]),
 [
   if test "$withval" != "no"; then
     if test "$have_db" = "yes"; then
@@ -593,8 +894,7 @@ AC_SUBST(MSQL_INCLUDE)
 
 AC_MSG_CHECKING(for iODBC support)
 AC_ARG_WITH(iodbc,
-[  --with-iodbc@<:@=DIR@:>      Include iODBC support.  DIR is the iODBC base
-                          install directory, defaults to /usr/local.],
+AC_HELP_STRING([--with-iodbc@<:@=DIR@:>], [Include iODBC support. DIR is the iODBC base install directory @<:@default=/usr/local@:>@]),
 [
         if test "$withval" != "no"; then
             if test "$have_db" = "yes"; then
@@ -634,8 +934,7 @@ AC_SUBST(IODBC_INCLUDE)
 
 AC_MSG_CHECKING(for unixODBC support)
 AC_ARG_WITH(unixODBC,
-[  --with-unixODBC@<:@=DIR@:>   Include unixODBC support.  DIR is the unixODBC base
-                          install directory, defaults to /usr/local.],
+AC_HELP_STRING([--with-unixODBC@<:@=DIR@:>], [Include unixODBC support. DIR is the unixODBC base install directory @<:@default=/usr/local@:>@]),
 [
         if test "$withval" != "no"; then
             if test "$have_db" = "yes"; then
@@ -675,8 +974,7 @@ AC_SUBST(UNIXODBC_INCLUDE)
 
 AC_MSG_CHECKING(for Solid support)
 AC_ARG_WITH(solid,
-[  --with-solid@<:@=DIR@:>      Include Solid support.  DIR is the Solid base
-                          install directory, defaults to /usr/local.],
+AC_HELP_STRING([--with-solid@<:@=DIR@:>], [Include Solid support. DIR is the Solid base install directory @<:@default=/usr/local@:>@]),
 [
         if test "$withval" != "no"; then
             if test "$have_db" = "yes"; then
@@ -715,8 +1013,7 @@ AC_SUBST(SOLID_INCLUDE)
 
 AC_MSG_CHECKING(for OpenLink ODBC support)
 AC_ARG_WITH(openlink,
-[  --with-openlink@<:@=DIR@:>   Include OpenLink ODBC support. 
-                          DIR is the base OpenLink ODBC install directory],
+AC_HELP_STRING([--with-openlink@<:@=DIR@:>], [Include OpenLink ODBC support. DIR is the base OpenLink ODBC install directory]),
 [
   if test "$withval" != "no"; then
         if test "$withval" = "yes"; then
@@ -790,8 +1087,7 @@ AC_SUBST(VIRT_INCLUDE)
 
 AC_MSG_CHECKING(for EasySoft ODBC support)
 AC_ARG_WITH(easysoft,
-[  --with-easysoft@<:@=DIR@:>   Include EasySoft ODBC support. 
-                          DIR is the base EasySoft ODBC install directory],
+AC_HELP_STRING([--with-easysoft@<:@=DIR@:>], [Include EasySoft ODBC support. DIR is the base EasySoft ODBC install directory]),
 [
   if test "$withval" != "no"; then
         if test "$withval" = "yes"; then
@@ -845,8 +1141,7 @@ AC_SUBST(EASYSOFT_INCLUDE)
 
 AC_MSG_CHECKING(for InterBase support)
 AC_ARG_WITH(ibase,
-[  --with-ibase@<:@=DIR@:>      Include InterBase support.  DIR is the InterBase
-                          install directory, defaults to /usr/interbase.],
+AC_HELP_STRING([--with-ibase@<:@=DIR@:>@], [Include InterBase support. DIR is the InterBase install directory @<:@default=/usr/interbase@:>@]),
 [
         if test "$withval" != "no"; then
             if test "$have_db" = "yes"; then
@@ -885,9 +1180,7 @@ AC_SUBST(IBASE_INCLUDE)
 
 AC_MSG_CHECKING(for Oracle8 support)
 AC_ARG_WITH(oracle8,
-[  --with-oracle8@<:@=DIR@:>    Include Oracle8 support.  DIR is the Oracle
-                          home directory, defaults to $ORACLE_HOME or
-                          /oracle8/app/oracle/product/8.0.5.],
+AC_HELP_STRING([--with-oracle8@<:@=DIR@:>@], [Include Oracle8 support. DIR is the Oracle home directory @<:@default=$ORACLE_HOME or /oracle8/app/oracle/product/8.0.5@:>@]),
 [
         if test "$withval" != "no"; then
             if test "$have_db" = "yes"; then
@@ -942,9 +1235,7 @@ AC_SUBST(ORACLE8_INCLUDE)
 
 AC_MSG_CHECKING(for Oracle7 support)
 AC_ARG_WITH(oracle7,
-[  --with-oracle7@<:@=DIR@:>    Include Oracle 7.3 support.  DIR is the Oracle
-                          home directory, defaults to 
-                          ORACLE_HOME [$ORACLE_HOME]],
+AC_HELP_STRING([--with-oracle7@<:@=DIR@:>@], [Include Oracle 7.3 support. DIR is the Oracle home directory @<:@default=$ORACLE_HOME@:>@]),
 [
         if test "$withval" != "no"; then
             if test "$have_db" = "yes"; then

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, June MMIII  (code pulled from filed/restore.c and updated)
  *
- *   Version $Id: attr.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: attr.c 7380 2008-07-14 10:42:59Z kerns $
  */
 
 
@@ -75,7 +75,7 @@ int unpack_attributes_record(JCR *jcr, int32_t stream, char *rec, ATTR *attr)
     */
    attr->stream = stream;
    Dmsg1(400, "Attr: %s\n", rec);
-   if (sscanf(rec, "%ld %ld", &attr->file_index, &attr->type) != 2) {
+   if (sscanf(rec, "%d %d", &attr->file_index, &attr->type) != 2) {
       Jmsg(jcr, M_FATAL, 0, _("Error scanning attributes: %s\n"), rec);
       Dmsg1(100, "\nError scanning attributes. %s\n", rec);
       return 0;
@@ -242,6 +242,14 @@ void print_ls_output(JCR *jcr, ATTR *attr)
    char *p, *f;
    guid_list *guid;
 
+   if (attr->type == FT_DELETED) { /* TODO: change this to get last seen values */
+      bsnprintf(buf, sizeof(buf),
+                "----------   - -        -                - ---------- --------  %s\n", attr->ofname);
+      Dmsg1(20, "%s", buf);
+      Jmsg(jcr, M_RESTORED, 1, "%s", buf);
+      return;
+   }
+
    if (!jcr->id_list) {
       jcr->id_list = new_guid_list();
    }
@@ -251,7 +259,7 @@ void print_ls_output(JCR *jcr, ATTR *attr)
    p += sprintf(p, "%-8.8s %-8.8s", 
                 guid->uid_to_name(attr->statp.st_uid, en1, sizeof(en1)),
                 guid->gid_to_name(attr->statp.st_gid, en2, sizeof(en2)));
-   p += sprintf(p, "%10.10s ", edit_uint64(attr->statp.st_size, ec1));
+   p += sprintf(p, "%10.10s ", edit_int64(attr->statp.st_size, ec1));
    p = encode_time(attr->statp.st_ctime, p);
    *p++ = ' ';
    *p++ = ' ';

@@ -31,7 +31,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -72,6 +72,11 @@ extern "C" char *tgoto (const char *, int, int);
 #elif HAVE_AIX_OS 
 #include <curses.h>
 #include <term.h>
+#elif defined(__sgi)
+extern "C" int tgetent(char *, char *);
+extern "C" int tgetnum(char id[2]);
+extern "C" char *tgetstr(char id[2], char **);
+extern "C" char *tgoto(char *, int, int);
 #elif defined (__digital__) && defined (__unix__)
 extern "C" int tgetent(void *, const char *);
 extern "C" int tgetnum(const char *);
@@ -991,39 +996,40 @@ static void rawmode(FILE *input)
       exit(1);
    }
    t_width = t_height = -1;
-   t_width = tgetnum("co") - 1;
-   t_height = tgetnum("li");
+   /* Note (char *)casting is due to really stupid compiler warnings */
+   t_width = tgetnum((char *)"co") - 1;
+   t_height = tgetnum((char *)"li");
    BC = NULL;
    UP = NULL;
-   t_cm = (char *)tgetstr("cm", &term_buffer);
-   t_cs = (char *)tgetstr("cl", &term_buffer); /* clear screen */
-   t_cl = (char *)tgetstr("ce", &term_buffer); /* clear line */
-   t_dl = (char *)tgetstr("dl", &term_buffer); /* delete line */
-   t_il = (char *)tgetstr("al", &term_buffer); /* insert line */
-   t_honk = (char *)tgetstr("bl", &term_buffer); /* beep */
-   t_ti = (char *)tgetstr("ti", &term_buffer);
-   t_te = (char *)tgetstr("te", &term_buffer);
-   t_up = (char *)tgetstr("up", &term_buffer);
-   t_do = (char *)tgetstr("do", &term_buffer);
-   t_sf = (char *)tgetstr("sf", &term_buffer);
+   t_cm = (char *)tgetstr((char *)"cm", &term_buffer);
+   t_cs = (char *)tgetstr((char *)"cl", &term_buffer); /* clear screen */
+   t_cl = (char *)tgetstr((char *)"ce", &term_buffer); /* clear line */
+   t_dl = (char *)tgetstr((char *)"dl", &term_buffer); /* delete line */
+   t_il = (char *)tgetstr((char *)"al", &term_buffer); /* insert line */
+   t_honk = (char *)tgetstr((char *)"bl", &term_buffer); /* beep */
+   t_ti = (char *)tgetstr((char *)"ti", &term_buffer);
+   t_te = (char *)tgetstr((char *)"te", &term_buffer);
+   t_up = (char *)tgetstr((char *)"up", &term_buffer);
+   t_do = (char *)tgetstr((char *)"do", &term_buffer);
+   t_sf = (char *)tgetstr((char *)"sf", &term_buffer);
 
    num_stab = MAX_STAB;                  /* get default stab size */
    stab = (stab_t **)malloc(sizeof(stab_t *) * num_stab);
    memset(stab, 0, sizeof(stab_t *) * num_stab);
 
    /* Key bindings */
-   kl = (char *)tgetstr("kl", &term_buffer);
-   kr = (char *)tgetstr("kr", &term_buffer);
-   ku = (char *)tgetstr("ku", &term_buffer);
-   kd = (char *)tgetstr("kd", &term_buffer);
-   kh = (char *)tgetstr("kh", &term_buffer);
-   kb = (char *)tgetstr("kb", &term_buffer);
-   kD = (char *)tgetstr("kD", &term_buffer);
-   kI = (char *)tgetstr("kI", &term_buffer);
-   kN = (char *)tgetstr("kN", &term_buffer);
-   kP = (char *)tgetstr("kP", &term_buffer);
-   kH = (char *)tgetstr("kH", &term_buffer);
-   kE = (char *)tgetstr("kE", &term_buffer);
+   kl = (char *)tgetstr((char *)"kl", &term_buffer);
+   kr = (char *)tgetstr((char *)"kr", &term_buffer);
+   ku = (char *)tgetstr((char *)"ku", &term_buffer);
+   kd = (char *)tgetstr((char *)"kd", &term_buffer);
+   kh = (char *)tgetstr((char *)"kh", &term_buffer);
+   kb = (char *)tgetstr((char *)"kb", &term_buffer);
+   kD = (char *)tgetstr((char *)"kD", &term_buffer);
+   kI = (char *)tgetstr((char *)"kI", &term_buffer);
+   kN = (char *)tgetstr((char *)"kN", &term_buffer);
+   kP = (char *)tgetstr((char *)"kP", &term_buffer);
+   kH = (char *)tgetstr((char *)"kH", &term_buffer);
+   kE = (char *)tgetstr((char *)"kE", &term_buffer);
 
    add_smap(kl, F_CSRLFT);
    add_smap(kr, F_CSRRGT);

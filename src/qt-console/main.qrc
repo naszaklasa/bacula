@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/" >
+        <file>images/applications-graphics.png</file>
         <file>images/bat.png</file>
         <file>images/bat_icon.png</file>
         <file>images/browse.png</file>
@@ -25,6 +26,7 @@
         <file>images/joblog.png</file>
         <file>images/label.png</file>
         <file>images/mail-message-new.png</file>
+        <file>images/mail-message-pending.png</file>
         <file>images/mark.png</file>
         <file>images/network-server.png</file>
         <file>images/new.png</file>
@@ -35,6 +37,7 @@
         <file>images/restore.png</file>
         <file>images/run.png</file>
         <file>images/save.png</file>
+        <file>images/status-console.png</file>
         <file>images/status.png</file>
         <file>images/system-file-manager.png</file>
         <file>images/unchecked.png</file>

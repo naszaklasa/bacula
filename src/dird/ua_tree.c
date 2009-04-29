@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -33,7 +33,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_tree.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: ua_tree.c 8435 2009-02-10 13:57:40Z marcovw $
  */
 
 #include "bacula.h"
@@ -69,8 +69,10 @@ static int donecmd(UAContext *ua, TREE_CTX *tree);
 
 struct cmdstruct { const char *key; int (*func)(UAContext *ua, TREE_CTX *tree); const char *help; };
 static struct cmdstruct commands[] = {
+ { NT_("add"),        markcmd,      _("add dir/file to be restored recursively, wildcards allowed")},
  { NT_("cd"),         cdcmd,        _("change current directory")},
  { NT_("count"),      countcmd,     _("count marked files in and below the cd")},
+ { NT_("delete"),     unmarkcmd,    _("delete dir/file to be restored recursively in dir")},
  { NT_("dir"),        dircmd,       _("long list current directory, wildcards allowed")},
  { NT_(".dir"),       dot_dircmd,   _("long list current directory, wildcards allowed")},
  { NT_("done"),       donecmd,      _("leave file selection mode")},
@@ -127,7 +129,7 @@ bool user_select_files_from_tree(TREE_CTX *tree)
       if (ua->api) user->signal(BNET_CMD_BEGIN);
       parse_args_only(ua->cmd, &ua->args, &ua->argc, ua->argk, ua->argv, MAX_CMD_ARGS);
       if (ua->argc == 0) {
-         ua->warning_msg(_("Invalid command. Enter \"done\" to exit.\n"));
+         ua->warning_msg(_("Invalid command \"%s\". Enter \"done\" to exit.\n"), ua->cmd);
          if (ua->api) user->signal(BNET_CMD_FAILED);
          continue;
       }
@@ -142,7 +144,7 @@ bool user_select_files_from_tree(TREE_CTX *tree)
             break;
          }
       if (!found) {
-         ua->warning_msg(_("Invalid command. Enter \"done\" to exit.\n"));
+         ua->warning_msg(_("Invalid command \"%s\". Enter \"done\" to exit.\n"), ua->cmd);
          if (ua->api) user->signal(BNET_CMD_FAILED);
          continue;
       }
@@ -181,8 +183,8 @@ int insert_tree_handler(void *ctx, int num_fields, char **row)
    int FileIndex;
    JobId_t JobId;
 
-// Dmsg4(000, "Path=%s%s FI=%s JobId=%s\n", row[0], row[1],
-//    row[2], row[3]);
+   Dmsg4(400, "Path=%s%s FI=%s JobId=%s\n", row[0], row[1],
+      row[2], row[3]);
    if (*row[1] == 0) {                 /* no filename => directory */
       if (!IsPathSeparator(*row[0])) { /* Must be Win32 directory */
          type = TN_DIR_NLS;
@@ -514,7 +516,7 @@ static void ls_output(guid_list *guid, char *buf, const char *fname, const char 
                   guid->uid_to_name(statp->st_uid, en1, sizeof(en1)),
                   guid->gid_to_name(statp->st_gid, en2, sizeof(en2)));
       p += n;
-      n = sprintf(p, "%s,", edit_uint64(statp->st_size, ec1));
+      n = sprintf(p, "%s,", edit_int64(statp->st_size, ec1));
       p += n;
       p = encode_time(statp->st_mtime, p);
       *p++ = ',';
@@ -527,7 +529,7 @@ static void ls_output(guid_list *guid, char *buf, const char *fname, const char 
                   guid->uid_to_name(statp->st_uid, en1, sizeof(en1)),
                   guid->gid_to_name(statp->st_gid, en2, sizeof(en2)));
       p += n;
-      n = sprintf(p, "%10.10s  ", edit_uint64(statp->st_size, ec1));
+      n = sprintf(p, "%10.10s  ", edit_int64(statp->st_size, ec1));
       p += n;
       if (statp->st_ctime > statp->st_mtime) {
          time = statp->st_ctime;

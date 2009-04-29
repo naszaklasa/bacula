@@ -14,16 +14,10 @@ case "$1" in
     start)
        echo "Starting the Bacula Director: "
        @sbindir@/bacula-dir $2 -c @sysconfdir@/bacula-dir.conf
-       RETVAL=$?
-       echo
-       [ $RETVAL -eq 0 ] && touch @subsysdir@/bacula-dir
        ;;
     stop)
        echo "Stopping the Director daemon: "
        pkill -x bacula-dir
-       RETVAL=$?
-       echo
-       [ $RETVAL -eq 0 ] && rm -f @subsysdir@/bacula-dir
        ;;
     restart)
        $0 stop

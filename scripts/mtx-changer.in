@@ -2,7 +2,7 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id: mtx-changer.in 7291 2008-07-02 20:49:44Z kerns $
+#  $Id: mtx-changer.in 7395 2008-07-18 08:44:03Z kerns $
 #
 #  If you set in your Device resource
 #
@@ -46,44 +46,14 @@
 #   exit code, Bacula will assume the request failed.
 #
 
+# source our conf file
+. @scriptdir@/mtx-changer.conf
+
 MTX=@MTX@
 
-# mt status output
-# SunOS     No Additional Sense
-# FreeBSD   Current Driver State: at rest.
-# Linux     ONLINE
-#  Note Debian has a different mt than the standard Linux version. 
-#    When no tape is in the drive it waits 2 minutes.  
-#    When a tape is in the drive, it prints user unfriendly output.
-#  Note, with Ubuntu Gusty (8.04), there are two versions of mt,
-#    so we attempt to figure out which one.
-#
-
-OS=`uname`
-case ${OS} in
-  SunOS)
-    ready="No Additional Sense"
-    ;;
-  FreeBSD)
-    ready="Current Driver State: at rest."
-    ;;
-  Linux)
-    ready="ONLINE"
-    if test -f /etc/debian_version ; then
-       mt --version|grep "mt-st" >/dev/null 2>&1
-       if test $? -eq 1 ; then
-	  ready="drive status"
-       fi
-    fi
-  ;;
-esac
-
-#
-# log whats done
-#
-# to turn on logging, uncomment the following line
-#touch @working_dir@/mtx.log
-#
+if test ${debug_log} -ne 0 ; then
+  touch @working_dir@/mtx.log
+fi
 dbgfile="@working_dir@/mtx.log"
 debug() {
     if test -f $dbgfile; then
@@ -174,10 +144,13 @@ debug "Parms: $ctl $cmd $slot $device $drive"
 case $cmd in 
    unload)
       debug "Doing mtx -f $ctl unload $slot $drive"
-#
-# enable the following line if you need to eject the cartridge
-#     mt -f $device offline
-#     sleep 10
+
+      if test ${offline} -eq 1 ; then
+	mt -f $device offline
+      fi
+      if test ${offline_sleep} -ne 0 ; then
+	sleep ${offline_sleep}
+      fi
       ${MTX} -f $ctl unload $slot $drive
       ;;
 
@@ -185,10 +158,9 @@ case $cmd in
       debug "Doing mtx -f $ctl load $slot $drive"
       ${MTX} -f $ctl load $slot $drive
       rtn=$?
-#
-# Increase the sleep time if you have a slow device
-# or remove the sleep and add the following:
-#     sleep 15
+      if test ${load_sleep} -ne 0 ; then
+	sleep ${load_sleep}
+      fi
       wait_for_drive $device
       exit $rtn
       ;;
@@ -196,16 +168,16 @@ case $cmd in
    list) 
       debug "Doing mtx -f $ctl -- to list volumes"
       make_temp_file
-# Enable the following if you are using barcodes and need an inventory
-#     ${MTX} -f $ctl inventory
+      if test ${inventory} -ne 0 ; then
+	${MTX} -f $ctl inventory
+      fi
       ${MTX} -f $ctl status >${TMPFILE}
       rtn=$?
-      cat ${TMPFILE} | grep " Storage Element [0-9]*:.*Full" | awk "{print \$3 \$4}" | sed "s/Full *\(:VolumeTag=\)*//"
-#
-# If you have a VXA PacketLoader and the above does not work, try
-#  turning it off and enabling the following line.
-#     cat ${TMPFILE} | grep " *Storage Element [0-9]*:.*Full" | sed "s/ Storage Element //" | sed "s/Full :VolumeTag=//"
-#
+      if test ${vxa_packetloader} -ne 0 ; then
+	cat ${TMPFILE} | grep " *Storage Element [0-9]*:.*Full" | sed "s/ Storage Element //" | sed "s/Full :VolumeTag=//"
+      else
+	cat ${TMPFILE} | grep " Storage Element [0-9]*:.*Full" | awk "{print \$3 \$4}" | sed "s/Full *\(:VolumeTag=\)*//"
+      fi
       cat ${TMPFILE} | grep "^Data Transfer Element [0-9]*:Full (Storage Element [0-9]" | awk '{printf "%s:%s\n",$7,$10}'
       rm -f ${TMPFILE} >/dev/null 2>&1
       exit $rtn

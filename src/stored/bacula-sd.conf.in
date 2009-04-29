@@ -60,7 +60,7 @@ Device {
 #  Name = Autochanger
 #  Device = Drive-1
 #  Device = Drive-2
-#  Changer Command = "/home/kern/bacula/bin/mtx-changer %c %o %S %a %d"
+#  Changer Command = "@scriptdir@/mtx-changer %c %o %S %a %d"
 #  Changer Device = /dev/sg0
 #}
 
@@ -181,8 +181,8 @@ Device {
 #  MountCommand = "/bin/mount -t iso9660 -o ro %a %m";
 #  UnmountCommand = "/bin/umount %m";
 #  SpoolDirectory = /tmp/backup;
-#  WritePartCommand = "/etc/bacula/dvd-handler %a write %e %v"
-#  FreeSpaceCommand = "/etc/bacula/dvd-handler %a free"
+#  WritePartCommand = "@scriptdir@/dvd-handler %a write %e %v"
+#  FreeSpaceCommand = "@scriptdir@/dvd-handler %a free"
 #}
 
 #

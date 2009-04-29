@@ -1,13 +1,7 @@
 /*
- * Test program for find files
- *
- *  Kern Sibbald, MM
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,16 +20,21 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Test program for find files
+ *
+ *  Kern Sibbald, MM
+ *
+ */
 
 #include "bacula.h"
 #include "dird/dird.h"
 #include "findlib/find.h"
-
 
 #if defined(HAVE_WIN32)
 #define isatty(fd) (fd==0)
@@ -44,6 +43,8 @@
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
 int generate_job_event(JCR *jcr, const char *event) { return 1; }
+void generate_plugin_event(JCR *jcr, bEventType eventType, void *value) { }
+extern bool parse_dir_config(CONFIG *config, const char *configfile, int exit_code);
 
 /* Global variables */
 static int num_files = 0;
@@ -52,10 +53,11 @@ static int max_path_len = 0;
 static int trunc_fname = 0;
 static int trunc_path = 0;
 static int attrs = 0;
+static CONFIG *config;
 
 static JCR *jcr;
 
-static int print_file(FF_PKT *ff, void *pkt, bool);
+static int print_file(JCR *jcr, FF_PKT *ff, bool);
 static void count_files(FF_PKT *ff);
 static bool copy_fileset(FF_PKT *ff, JCR *jcr);
 static void set_options(findFOPTS *fo, const char *opts);
@@ -66,7 +68,8 @@ static void usage()
 "\n"
 "Usage: testfind [-d debug_level] [-] [pattern1 ...]\n"
 "       -a          print extended attributes (Win32 debug)\n"
-"       -dnn        set debug level to nn\n"
+"       -d <nn>     set debug level to <nn>\n"
+"       -dt         print timestamp in debug output\n"
 "       -c          specify config file containing FileSet resources\n"
 "       -f          specify which FileSet to use\n"
 "       -?          print this message.\n"
@@ -108,10 +111,14 @@ main (int argc, char *const *argv)
             break;
 
          case 'd':                    /* set debug level */
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
             debug_level = atoi(optarg);
             if (debug_level <= 0) {
                debug_level = 1;
             }
+         }
             break;
 
          case 'f':                    /* exclude patterns */
@@ -128,7 +135,8 @@ main (int argc, char *const *argv)
    argc -= optind;
    argv += optind;
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_dir_config(config, configfile, M_ERROR_TERM);
 
    MSGS *msg;
 
@@ -161,7 +169,12 @@ main (int argc, char *const *argv)
    find_files(jcr, ff, print_file, NULL);
 
    free_jcr(jcr);
-   free_config_resources();
+   if (config) {
+      config->free_resources();
+      free(config);
+      config = NULL;
+   }
+   
    term_last_jobs_list();
 
    /* Clean up fileset */
@@ -186,12 +199,6 @@ main (int argc, char *const *argv)
             fo->wildbase.destroy();
             fo->fstype.destroy();
             fo->drivetype.destroy();
-            if (fo->reader) {
-               free(fo->reader);
-            }
-            if (fo->writer) {
-               free(fo->writer);
-            }
          }
          incexe->opts_list.destroy();
          incexe->name_list.destroy();
@@ -239,7 +246,7 @@ main (int argc, char *const *argv)
    exit(0);
 }
 
-static int print_file(FF_PKT *ff, void *pkt, bool top_level) 
+static int print_file(JCR *jcr, FF_PKT *ff, bool top_level) 
 {
 
    switch (ff->type) {
@@ -508,12 +515,6 @@ static bool copy_fileset(FF_PKT *ff, JCR *jcr)
             for (k=0; k<fo->drivetype.size(); k++) {
                current_opts->drivetype.append(bstrdup((const char *)fo->drivetype.get(k)));
             }
-            if (fo->reader) {
-               current_opts->reader = bstrdup(fo->reader);
-            }
-            if (fo->writer) {
-               current_opts->writer = bstrdup(fo->writer);
-            }
          }
 
          for (j=0; j<ie->name_list.size(); j++) {
@@ -630,6 +631,9 @@ static void set_options(findFOPTS *fo, const char *opts)
          fo->flags |= FO_GZIP;
          fo->GZIP_level = *++p - '0';
          Dmsg1(200, "Compression level=%d\n", fo->GZIP_level);
+         break;
+      case 'X':
+         fo->flags |= FO_XATTR;
          break;
       default:
          Emsg1(M_ERROR, 0, _("Unknown include/exclude option: %c\n"), *p);

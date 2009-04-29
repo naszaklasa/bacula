@@ -3,7 +3,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -22,13 +22,13 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: console.h 5090 2007-06-25 19:15:34Z bartleyd2 $
+ *   Version $Id: console.h 8672 2009-03-31 19:25:51Z bartleyd2 $
  *
  *   Kern Sibbald, January 2007
  */
@@ -36,6 +36,7 @@
 #include <QtGui>
 #include "pages.h"
 #include "ui_console.h"
+#include "bcomm/dircomm.h"
 
 #ifndef MAX_NAME_LENGTH
 #define MAX_NAME_LENGTH 128
@@ -58,53 +59,71 @@ struct job_defaults {
    bool enabled;
 };
 
-class DIRRES;
-class BSOCK;
-class JCR;
-class CONRES;
+//class DIRRES;
+//class BSOCK;
+//class JCR;
+//class CONRES;
 
 class Console : public Pages, public Ui::ConsoleForm
 {
    Q_OBJECT 
+   friend class DirComm;
 
 public:
    Console(QStackedWidget *parent);
    ~Console();
-   void display_text(const char *buf);
-   void display_text(const QString buf);
-   void display_textf(const char *fmt, ...);
-   void display_html(const QString buf);
-   void update_cursor(void);
-   void write_dir(const char *buf);
+   int read(int conn);
+   char *msg(int conn);
+   void discardToPrompt(int conn);
+   int write(int conn, const char *msg);
+   int write(int conn, QString msg);
+   int notifyOff(); // enables/disables socket notification - returns the previous state
+   bool notify(int conn, bool enable); // enables/disables socket notification - returns the previous state
+   bool is_notify_enabled(int conn) const;
+   bool availableDirComm(int &conn);
+   void displayToPrompt(int conn);
+
+   bool dir_cmd(int conn, const char *cmd, QStringList &results);
    bool dir_cmd(const char *cmd, QStringList &results);
    bool dir_cmd(QString &cmd, QStringList &results);
    bool sql_cmd(const char *cmd, QStringList &results);
    bool sql_cmd(QString &cmd, QStringList &results);
-   bool authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons, 
-          char *buf, int buflen);
-   bool is_connected() { return m_sock != NULL; };
-   bool is_connectedGui();
-   bool preventInUseConnect();
-   const QFont get_font();
+   bool sql_cmd(int &conn, QString &cmd, QStringList &results);
+   bool sql_cmd(int &conn, const char *cmd, QStringList &results, bool donotify);
+   int write_dir(const char *buf);
+   int write_dir(const char *buf, bool dowait);
+   void write_dir(int conn, const char *buf);
+   void write_dir(int conn, const char *buf, bool dowait);
+   void getDirResName(QString &);
+   void setDirRes(DIRRES *dir);
    void writeSettings();
    void readSettings();
-   char *msg();
-   void notify(bool enable);
-   QStringList get_list(char *cmd);
-   bool get_job_defaults(struct job_defaults &);
-   void terminate();
-   void beginNewCommand();
-   void displayToPrompt();
-   void discardToPrompt();
    void setDirectorTreeItem(QTreeWidgetItem *);
-   void setDirRes(DIRRES *dir);
+   void terminate();
+   bool is_messagesPending() { return m_messages_pending; };
+   bool is_connected();
+   bool is_connected(int conn);
    QTreeWidgetItem *directorTreeItem() { return m_directorTreeItem; };
-   void getDirResName(QString &);
    void startTimer();
-   void stopTimer();
-   void getVolumeList(QStringList &);
-   void getStatusList(QStringList &);
+   void display_text(const char *buf);
+   void display_text(const QString buf);
+   void display_textf(const char *fmt, ...);
+   void display_html(const QString buf);
+   bool get_job_defaults(struct job_defaults &);
+   bool get_job_defaults(int &conn, struct job_defaults &);
+   const QFont get_font();
+   void beginNewCommand(int conn);
+   void populateLists(bool forcenew);
 
+private:
+   bool get_job_defaults(int &conn, struct job_defaults &, bool donotify);
+   void update_cursor(void);
+   void stopTimer();
+   bool is_connectedGui();
+   bool newDirComm(int &conn);
+   void populateLists(int conn);
+
+public:
    QStringList job_list;
    QStringList client_list;
    QStringList fileset_list;
@@ -114,13 +133,8 @@ public:
    QStringList type_list;
    QStringList level_list;
 
-
 public slots:
    void connect_dir();                     
-   void read_dir(int fd);
-   int read(void);
-   int write(const char *msg);
-   int write(QString msg);
    void status_dir(void);
    void messages(void);
    void set_font(void);
@@ -133,15 +147,14 @@ public:
 
 private:
    QTextEdit *m_textEdit;
-   BSOCK *m_sock;   
-   bool m_at_prompt;
-   bool m_at_main_prompt;
-   QSocketNotifier *m_notifier;
    QTextCursor *m_cursor;
    QTreeWidgetItem *m_directorTreeItem;
-   bool m_api_set;
    bool m_messages_pending;
    QTimer *m_timer;
+   bool messagesPending(bool pend);
+   bool hasFocus();
+   QHash<int, DirComm*> m_dircommHash;
+   int m_dircommCounter;
 };
 
 #endif /* _CONSOLE_H_ */

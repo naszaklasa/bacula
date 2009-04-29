@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, January 2002
  *
- *    Version $Id: sqlite.c 7515 2008-08-28 11:26:11Z ricozz $
+ *    Version $Id: sqlite.c 7514 2008-08-28 11:23:21Z ricozz $
  */
 
 
@@ -341,7 +341,7 @@ static int sqlite_result(void *arh_data, int num_fields, char **rows, char **col
  * Submit a general SQL command (cmd), and for each row returned,
  *  the sqlite_handler is called with the ctx.
  */
-int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler, void *ctx)
+bool db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler, void *ctx)
 {
    struct rh_data rh_data;
    int stat;
@@ -361,10 +361,10 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
    if (stat != 0) {
       Mmsg(mdb->errmsg, _("Query failed: %s: ERR=%s\n"), query, sql_strerror(mdb));
       db_unlock(mdb);
-      return 0;
+      return false;
    }
    db_unlock(mdb);
-   return 1;
+   return true;
 }
 
 /*

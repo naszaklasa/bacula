@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -34,7 +34,7 @@
  *   Kern E. Sibbald, December 2001
  *
  *
- *   Version $Id: bscan.c 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: bscan.c 8508 2009-03-07 20:59:46Z kerns $
  */
 
 #include "bacula.h"
@@ -44,6 +44,7 @@
  
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
+extern bool parse_sd_config(CONFIG *config, const char *configfile, int exit_code);
 
 /* Forward referenced functions */
 static void do_scan(void);
@@ -82,10 +83,12 @@ static ATTR *attr;
 
 static time_t lasttime = 0;
 
+static const char *db_driver = "NULL";
 static const char *db_name = "bacula";
 static const char *db_user = "bacula";
 static const char *db_password = "";
 static const char *db_host = NULL;
+static int db_port = 0;
 static const char *wd = NULL;
 static bool update_db = false;
 static bool update_vol_info = false;
@@ -100,6 +103,7 @@ static int num_pools = 0;
 static int num_media = 0;
 static int num_files = 0;
 
+static CONFIG *config;
 #define CONFIG_FILE "bacula-sd.conf"
 char *configfile = NULL;
 STORES *me = NULL;                    /* our Global resource */
@@ -117,11 +121,14 @@ PROG_COPYRIGHT
 "       -b bootstrap      specify a bootstrap file\n"
 "       -c <file>         specify configuration file\n"
 "       -d <nn>           set debug level to <nn>\n"
+"       -dt               print timestamp in debug output\n"
 "       -m                update media info in database\n"
+"       -D <driver name>  specify the driver database name (default NULL)\n"
 "       -n <name>         specify the database name (default bacula)\n"
 "       -u <user>         specify database user name (default bacula)\n"
 "       -P <password>     specify database password (default none)\n"
 "       -h <host>         specify database host (default NULL)\n"
+"       -t <port>         specify database port (default 0)\n"
 "       -p                proceed inspite of I/O errors\n"
 "       -r                list records\n"
 "       -s                synchronize or store in database\n"
@@ -149,7 +156,7 @@ int main (int argc, char *argv[])
 
    OSDependentInit();
 
-   while ((ch = getopt(argc, argv, "b:c:dD:h:p:mn:pP:rsSt:u:vV:w:?")) != -1) {
+   while ((ch = getopt(argc, argv, "b:c:d:D:h:p:mn:pP:rsSt:u:vV:w:?")) != -1) {
       switch (ch) {
       case 'S' :
          showProgress = true;
@@ -165,6 +172,10 @@ int main (int argc, char *argv[])
          configfile = bstrdup(optarg);
          break;
 
+      case 'D':
+         db_driver = optarg;
+         break;
+
       case 'd':                    /* debug level */
          if (*optarg == 't') {
             dbg_timestamp = true;
@@ -178,6 +189,10 @@ int main (int argc, char *argv[])
 
       case 'h':
          db_host = optarg;
+         break;
+         
+      case 't':
+         db_port = atoi(optarg);
          break;
 
       case 'm':
@@ -238,7 +253,8 @@ int main (int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_sd_config(config, configfile, M_ERROR_TERM);
    LockRes();
    me = (STORES *)GetNextRes(R_STORAGE, NULL);
    if (!me) {
@@ -281,8 +297,8 @@ int main (int argc, char *argv[])
          edit_uint64(currentVolumeSize, ed1));
    }
 
-   if ((db=db_init_database(NULL, db_name, db_user, db_password,
-        db_host, 0, NULL, 0)) == NULL) {
+   if ((db=db_init(NULL, db_driver, db_name, db_user, db_password,
+        db_host, db_port, NULL, 0)) == NULL) {
       Emsg0(M_ERROR_TERM, 0, _("Could not init Bacula database\n"));
    }
    if (!db_open_database(NULL, db)) {
@@ -297,8 +313,7 @@ int main (int argc, char *argv[])
    if (update_db) {
       printf("Records added or updated in the catalog:\n%7d Media\n%7d Pool\n%7d Job\n%7d File\n",
          num_media, num_pools, num_jobs, num_files);
-   }
-   else {
+   } else {
       printf("Records would have been added or updated in the catalog:\n%7d Media\n%7d Pool\n%7d Job\n%7d File\n",
          num_media, num_pools, num_jobs, num_files);
    }
@@ -523,22 +538,8 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          update_db = save_update_db;
 
          jr.PoolId = pr.PoolId;
-#ifdef xxx
-         /* Set start positions into JCR */
-         if (dev->is_tape()) {
-            /*
-             * Note, we have already advanced past current block,
-             *  so the correct number is block_num - 1
-             */
-            dcr->StartBlock = dev->block_num - 1;
-            dcr->StartFile = dev->file;
-         } else {
-            dcr->StartBlock = (uint32_t)dev->file_addr;
-            dcr->StartFile = (uint32_t)(dev->file_addr >> 32);
-         }
-#endif
          mjcr->start_time = jr.StartTime;
-         mjcr->JobLevel = jr.JobLevel;
+         mjcr->set_JobLevel(jr.JobLevel);
 
          mjcr->client_name = get_pool_memory(PM_FNAME);
          pm_strcpy(mjcr->client_name, label.ClientName);
@@ -790,9 +791,32 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       }
       break;
 
-   case STREAM_UNIX_ATTRIBUTES_ACCESS_ACL:   /* Standard ACL attributes on UNIX */
-   case STREAM_UNIX_ATTRIBUTES_DEFAULT_ACL:  /* Default ACL attributes on UNIX */
-      /* Ignore Unix attributes */
+   case STREAM_UNIX_ACCESS_ACL:          /* Deprecated Standard ACL attributes on UNIX */
+   case STREAM_UNIX_DEFAULT_ACL:         /* Deprecated Default ACL attributes on UNIX */
+   case STREAM_ACL_AIX_TEXT:
+   case STREAM_ACL_DARWIN_ACCESS_ACL:
+   case STREAM_ACL_FREEBSD_DEFAULT_ACL:
+   case STREAM_ACL_FREEBSD_ACCESS_ACL:
+   case STREAM_ACL_HPUX_ACL_ENTRY:
+   case STREAM_ACL_IRIX_DEFAULT_ACL:
+   case STREAM_ACL_IRIX_ACCESS_ACL:
+   case STREAM_ACL_LINUX_DEFAULT_ACL:
+   case STREAM_ACL_LINUX_ACCESS_ACL:
+   case STREAM_ACL_TRU64_DEFAULT_ACL:
+   case STREAM_ACL_TRU64_DEFAULT_DIR_ACL:
+   case STREAM_ACL_TRU64_ACCESS_ACL:
+   case STREAM_ACL_SOLARIS_ACLENT:
+   case STREAM_ACL_SOLARIS_ACE:
+      /* Ignore Unix ACL attributes */
+      break;
+
+   case STREAM_XATTR_SOLARIS_SYS:
+   case STREAM_XATTR_SOLARIS:
+   case STREAM_XATTR_DARWIN:
+   case STREAM_XATTR_FREEBSD:
+   case STREAM_XATTR_LINUX:
+   case STREAM_XATTR_NETBSD:
+      /* Ignore Unix Extended attributes */
       break;
 
    default:
@@ -847,7 +871,11 @@ static int create_file_attributes_record(B_DB *db, JCR *mjcr,
    ar.ClientId = mjcr->ClientId;
    ar.JobId = mjcr->JobId;
    ar.Stream = rec->Stream;
-   ar.FileIndex = rec->FileIndex;
+   if (type == FT_DELETED) {
+      ar.FileIndex = 0;
+   } else {
+      ar.FileIndex = rec->FileIndex;
+   }
    ar.attr = ap;
    if (dcr->VolFirstIndex == 0) {
       dcr->VolFirstIndex = rec->FileIndex;
@@ -1127,7 +1155,7 @@ static int update_job_record(B_DB *db, JOB_DBR *jr, SESSION_LABEL *elabel,
    }
    if (verbose) {
       Pmsg3(000, _("Updated Job termination record for JobId=%u Level=%s TermStat=%c\n"), 
-         jr->JobId, job_level_to_str(mjcr->JobLevel), jr->JobStatus);
+         jr->JobId, job_level_to_str(mjcr->get_JobLevel()), jr->JobStatus);
    }
    if (verbose > 1) {
       const char *term_msg;
@@ -1138,6 +1166,9 @@ static int update_job_record(B_DB *db, JOB_DBR *jr, SESSION_LABEL *elabel,
       switch (mjcr->JobStatus) {
       case JS_Terminated:
          term_msg = _("Backup OK");
+         break;
+      case JS_Warnings:
+         term_msg = _("Backup OK -- with warnings");
          break;
       case JS_FatalError:
       case JS_ErrorTerminated:
@@ -1171,7 +1202,7 @@ static int update_job_record(B_DB *db, JOB_DBR *jr, SESSION_LABEL *elabel,
         mjcr->JobId,
         mjcr->Job,
         mjcr->fileset_name,
-        job_level_to_str(mjcr->JobLevel),
+        job_level_to_str(mjcr->get_JobLevel()),
         mjcr->client_name,
         sdt,
         edt,
@@ -1268,8 +1299,8 @@ static JCR *create_jcr(JOB_DBR *jr, DEV_RECORD *rec, uint32_t JobId)
     *   the JobId and the ClientId.
     */
    jobjcr = new_jcr(sizeof(JCR), bscan_free_jcr);
-   jobjcr->JobType = jr->JobType;
-   jobjcr->JobLevel = jr->JobLevel;
+   jobjcr->set_JobType(jr->JobType);
+   jobjcr->set_JobLevel(jr->JobLevel);
    jobjcr->JobStatus = jr->JobStatus;
    bstrncpy(jobjcr->Job, jr->Job, sizeof(jobjcr->Job));
    jobjcr->JobId = JobId;      /* this is JobId on tape */

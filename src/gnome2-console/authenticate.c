@@ -5,7 +5,7 @@
  *
  *     Kern Sibbald, June MMI
  *
- *     Version $Id: authenticate.c 4992 2007-06-07 14:46:43Z kerns $
+ *     Version $Id: authenticate.c 7435 2008-07-25 18:27:23Z junkmale $
  *
  *    This routine runs as a thread and must be thread reentrant.
  *
@@ -34,7 +34,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -87,7 +87,7 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
       printf(_("%s: Director authorization problem.\n"), my_name);
       set_text(_("Director authorization problem.\n"), -1);
       set_text(_(
-       "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"),
+       "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"),
         -1);
       return 0;
    }

@@ -5,7 +5,7 @@
  *
  *     Kern Sibbald, June MMIII
  *
- *   Version $Id: expand.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: expand.c 7394 2008-07-17 20:53:01Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -29,7 +29,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -93,10 +93,10 @@ static int job_item(JCR *jcr, int code,
       str = my_name;
       break;
    case 3:                            /* level */
-      str = job_level_to_str(jcr->JobLevel);
+      str = job_level_to_str(jcr->get_JobLevel());
       break;
    case 4:                            /* type */
-      str = job_type_to_str(jcr->JobType);
+      str = job_type_to_str(jcr->get_JobType());
       break;
    case 5:                            /* JobId */
       bsnprintf(buf, sizeof(buf), "%d", jcr->JobId);

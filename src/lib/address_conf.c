@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,7 @@
  *
  *     Written by Meno Abels, June MMIV
  *
- *     Version $Id: address_conf.c 4992 2007-06-07 14:46:43Z kerns $
+ *     Version $Id: address_conf.c 8375 2009-01-18 20:44:50Z kerns $
  */
 
 
@@ -39,7 +39,7 @@
 #include <arpa/nameser.h>
 #endif
 #ifdef HAVE_RESOLV_H
-#include <resolv.h>
+//#include <resolv.h>
 #endif
 
 static int add_address(dlist **out, IPADDR::i_type type, unsigned short defaultport, int family,
@@ -59,7 +59,7 @@ IPADDR::IPADDR(const IPADDR &src) : type(src.type)
 IPADDR::IPADDR(int af) : type(R_EMPTY)
 {
 #ifdef HAVE_IPV6
-  if (!(af  == AF_INET6 || af  == AF_INET)) {
+  if (!(af == AF_INET6 || af == AF_INET)) {
      Emsg1(M_ERROR_TERM, 0, _("Only ipv4 and ipv6 are supported (%d)\n"), af);
   }
 #else

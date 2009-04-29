@@ -257,6 +257,9 @@
    language is requested. */
 #undef ENABLE_NLS
 
+/* Normal attribute support */
+#undef HAVE_ACL
+
 /* Define to 1 if you have `alloca', as a function or macro. */
 #undef HAVE_ALLOCA
 
@@ -275,6 +278,9 @@
 
 /* Define to 1 if you have the <assert.h> header file. */
 #undef HAVE_ASSERT_H
+
+/* Defines if your system have the attr.h header file */
+#undef HAVE_ATTR_H
 
 /* Set if Bacula bat Qt4 GUI support enabled */
 #undef HAVE_BAT
@@ -301,6 +307,9 @@
 
 /* Define to 1 if you have the <curses.h> header file. */
 #undef HAVE_CURSES_H
+
+/* Set if you have the DBI driver */
+#undef HAVE_DBI
 
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
@@ -334,11 +343,20 @@
    */
 #undef HAVE_DIRENT_H
 
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
 /* Define to 1 if you don't have `vprintf' but do have `_doprnt.' */
 #undef HAVE_DOPRNT
 
+/* Extended attribute support */
+#undef HAVE_EXTENDED_ACL
+
 /* Define to 1 if you have the `fchdir' function. */
 #undef HAVE_FCHDIR
+
+/* FCHOWNAT support */
+#undef HAVE_FCHOWNAT
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
@@ -351,6 +369,12 @@
 
 /* Define to 1 if you have the `fseeko' function. */
 #undef HAVE_FSEEKO
+
+/* FSTATAT support */
+#undef HAVE_FSTATAT
+
+/* FUTIMESAT support */
+#undef HAVE_FUTIMESAT
 
 /* Define to 1 if you have the `fwprintf' function. */
 #undef HAVE_FWPRINTF
@@ -397,6 +421,9 @@
 /* Define to 1 if you have the `getuid' function. */
 #undef HAVE_GETUID
 
+/* Define to 1 if you have the `getxattr' function. */
+#undef HAVE_GETXATTR
+
 /* Define to 1 if you have the <grp.h> header file. */
 #undef HAVE_GRP_H
 
@@ -414,6 +441,9 @@
 
 /* Define if you have the 'intmax_t' type in <stdint.h> or <inttypes.h>. */
 #undef HAVE_INTMAX_T
+
+/* Define to 1 if the system has the type `intptr_t'. */
+#undef HAVE_INTPTR_T
 
 /* Define if <inttypes.h> exists and doesn't clash with <sys/types.h>. */
 #undef HAVE_INTTYPES_H
@@ -433,6 +463,9 @@
 
 /* Define if your <locale.h> file defines LC_MESSAGES. */
 #undef HAVE_LC_MESSAGES
+
+/* LGETXATTR support */
+#undef HAVE_LGETXATTR
 
 /* Define to 1 if you have the <libc.h> header file. */
 #undef HAVE_LIBC_H
@@ -464,6 +497,12 @@
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
+/* Define to 1 if you have the `listxattr' function. */
+#undef HAVE_LISTXATTR
+
+/* LLISTXATTR support */
+#undef HAVE_LLISTXATTR
+
 /* Define to 1 if you have the <locale.h> header file. */
 #undef HAVE_LOCALE_H
 
@@ -475,6 +514,9 @@
 
 /* Define if you have the 'long long' type. */
 #undef HAVE_LONG_LONG
+
+/* LSETXATTR support */
+#undef HAVE_LSETXATTR
 
 /* Define to 1 if you have the `lstat' function. */
 #undef HAVE_LSTAT
@@ -509,6 +551,9 @@
 /* Define to 1 if you have the <nl_types.h> header file. */
 #undef HAVE_NL_TYPES_H
 
+/* OPENAT support */
+#undef HAVE_OPENAT
+
 /* Define if OpenSSL library is available */
 #undef HAVE_OPENSSL
 
@@ -539,9 +584,6 @@
 /* Define to 1 if you have the <regex.h> header file. */
 #undef HAVE_REGEX_H
 
-/* Define to 1 if you have the <resolv.h> header file. */
-#undef HAVE_RESOLV_H
-
 /* Define if sa_len field exists in struct sockaddr */
 #undef HAVE_SA_LEN
 
@@ -562,6 +604,9 @@
 
 /* Define to 1 if you have the `setsid' function. */
 #undef HAVE_SETSID
+
+/* Define to 1 if you have the `setxattr' function. */
+#undef HAVE_SETXATTR
 
 /* Define if the SHA-2 family of digest algorithms is available */
 #undef HAVE_SHA2
@@ -648,6 +693,12 @@
    `HAVE_STRUCT_STAT_ST_RDEV' instead. */
 #undef HAVE_ST_RDEV
 
+/* Defines if your system have the sys/acl.h header file */
+#undef HAVE_SYS_ACL_H
+
+/* Defines if your system have the sys/attr.h header file */
+#undef HAVE_SYS_ATTR_H
+
 /* Define to 1 if you have the <sys/bitypes.h> header file. */
 #undef HAVE_SYS_BITYPES_H
 
@@ -667,6 +718,9 @@
 /* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
    */
 #undef HAVE_SYS_NDIR_H
+
+/* Defines if your system have the sys/nvpair.h header file */
+#undef HAVE_SYS_NVPAIR_H
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #undef HAVE_SYS_PARAM_H
@@ -697,6 +751,9 @@
 
 /* Define to 1 if you have <sys/wait.h> that is POSIX.1 compatible. */
 #undef HAVE_SYS_WAIT_H
+
+/* Defines if your system have the sys/xattr.h header file */
+#undef HAVE_SYS_XATTR_H
 
 /* Define to 1 if you have the `tcgetattr' function. */
 #undef HAVE_TCGETATTR
@@ -730,8 +787,14 @@
 /* Define if you have the 'uintmax_t' type in <stdint.h> or <inttypes.h>. */
 #undef HAVE_UINTMAX_T
 
+/* Define to 1 if the system has the type `uintptr_t'. */
+#undef HAVE_UINTPTR_T
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* UNLINKAT support */
+#undef HAVE_UNLINKAT
 
 /* Define if you have the 'unsigned long long' type. */
 #undef HAVE_UNSIGNED_LONG_LONG
@@ -763,6 +826,9 @@
 /* Define if you have the 'wint_t' type. */
 #undef HAVE_WINT_T
 
+/* XATTR support */
+#undef HAVE_XATTR
+
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
 
@@ -783,6 +849,10 @@
 
 /* Define if integer division by zero raises signal SIGFPE. */
 #undef INTDIV0_RAISES_SIGFPE
+
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
 
 /* Define to 1 if `major', `minor', and `makedev' are declared in <mkdev.h>.
    */
@@ -876,6 +946,9 @@
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
 
+/* Set if you want Lock Manager enabled */
+#undef _USE_LOCKMGR
+
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
 
@@ -896,6 +969,10 @@
 
 /* Define to `unsigned long' if <sys/types.h> does not define. */
 #undef ino_t
+
+/* Define to the type of a signed integer type wide enough to hold a pointer,
+   if such a type exists, and if the system does not define it. */
+#undef intptr_t
 
 /* Define to `int' if <sys/types.h> does not define. */
 #undef major_t
@@ -931,3 +1008,7 @@
 /* Define to unsigned long or unsigned long long if <stdint.h> and
    <inttypes.h> don't define. */
 #undef uintmax_t
+
+/* Define to the type of an unsigned integer type wide enough to hold a
+   pointer, if such a type exists, and if the system does not define it. */
+#undef uintptr_t

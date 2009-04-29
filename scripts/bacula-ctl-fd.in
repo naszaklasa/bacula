@@ -31,7 +31,7 @@ FD_PORT=@fd_port@
 
 FD_USER=@fd_user@
 FD_GROUP=@fd_group@
-
+Bacula="@BACULA@"
 PIDOF=@PIDOF@	
 
 # A function to stop a program.
@@ -197,7 +197,7 @@ fi
 case "$1" in
    start)
       [ -x ${BACFDBIN}/bacula-fd ] && {
-	 echo "Starting the Bacula File daemon"
+	 echo "Starting the $Bacula File daemon"
 	 OPTIONS=''
 	 if [ "${FD_USER}" != '' ]; then
 	    OPTIONS="${OPTIONS} -u ${FD_USER}"
@@ -214,7 +214,7 @@ case "$1" in
    stop)
       # Stop the FD first so that SD will fail jobs and update catalog
       [ -x ${BACFDBIN}/bacula-fd ] && {
-	 echo "Stopping the Bacula File daemon"
+	 echo "Stopping the $Bacula File daemon"
 	 killproc ${BACFDBIN}/bacula-fd ${FD_PORT}
       }
       ;;

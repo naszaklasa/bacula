@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: job.c 8012 2008-11-07 16:26:48Z kerns $
+ *   Version $Id: job.c 8504 2009-03-06 20:43:53Z kerns $
  *
  */
 
@@ -134,8 +134,8 @@ bool job_cmd(JCR *jcr)
    unbash_spaces(fileset_name);
    jcr->fileset_name = get_pool_memory(PM_NAME);
    pm_strcpy(jcr->fileset_name, fileset_name);
-   jcr->JobType = JobType;
-   jcr->JobLevel = level;
+   jcr->set_JobType(JobType);
+   jcr->set_JobLevel(level);
    jcr->no_attributes = no_attributes;
    jcr->spool_attributes = spool_attributes;
    jcr->spool_data = spool_data;
@@ -146,6 +146,7 @@ bool job_cmd(JCR *jcr)
    jcr->PreferMountedVols = PreferMountedVols;
 
    jcr->authenticated = false;
+   jcr->need_fd = true;
 
    /*
     * Pass back an authorization key for the File daemon
@@ -153,7 +154,7 @@ bool job_cmd(JCR *jcr)
    bsnprintf(seed, sizeof(seed), "%p%d", jcr, JobId);
    make_session_key(auth_key, seed, 1);
    dir->fsend(OKjob, jcr->VolSessionId, jcr->VolSessionTime, auth_key);
-   Dmsg2(100, ">dird jid=%u: %s", (uint32_t)jcr->JobId, dir->msg);
+   Dmsg2(50, ">dird jid=%u: %s", (uint32_t)jcr->JobId, dir->msg);
    jcr->sd_auth_key = bstrdup(auth_key);
    memset(auth_key, 0, sizeof(auth_key));
    generate_daemon_event(jcr, "JobStart");
@@ -165,16 +166,15 @@ bool run_cmd(JCR *jcr)
    struct timeval tv;
    struct timezone tz;
    struct timespec timeout;
-   int errstat;
+   int errstat = 0;
 
    Dsm_check(1);
    Dmsg1(200, "Run_cmd: %s\n", jcr->dir_bsock->msg);
-   /* The following jobs don't need the FD */
-   switch (jcr->JobType) {
-   case JT_MIGRATE:
-   case JT_COPY:
-   case JT_ARCHIVE:
-      jcr->authenticated = true;
+
+   /* If we do not need the FD, we are doing a migrate, copy, or virtual
+    *   backup.
+    */
+   if (!jcr->need_fd) {
       do_mac(jcr);
       return false;
    }
@@ -186,8 +186,8 @@ bool run_cmd(JCR *jcr)
    timeout.tv_nsec = tv.tv_usec * 1000;
    timeout.tv_sec = tv.tv_sec + me->client_wait;
 
-   Dmsg3(050, "%s waiting %d sec for FD to contact SD key=%s\n",
-         jcr->Job, (int)me->client_wait, jcr->sd_auth_key);
+   Dmsg3(50, "%s waiting %d sec for FD to contact SD key=%s\n",
+         jcr->Job, (int)(timeout.tv_sec-time(NULL)), jcr->sd_auth_key);
 
    /*
     * Wait for the File daemon to contact us to start the Job,
@@ -201,12 +201,14 @@ bool run_cmd(JCR *jcr)
          break;
       }
    }
+   Dmsg3(50, "Auth=%d canceled=%d errstat=%d\n", jcr->authenticated,
+      job_canceled(jcr), errstat);
    V(mutex);
 
    memset(jcr->sd_auth_key, 0, strlen(jcr->sd_auth_key));
 
    if (jcr->authenticated && !job_canceled(jcr)) {
-      Dmsg1(100, "Running job %s\n", jcr->Job);
+      Dmsg1(50, "Running job %s\n", jcr->Job);
       run_job(jcr);                   /* Run the job */
    }
    return false;
@@ -221,18 +223,19 @@ void handle_filed_connection(BSOCK *fd, char *job_name)
    JCR *jcr;
 
 /*
- * With the following bmicrosleep on, running the
- * SD under the debugger fails.
- */
+ * With the following bmicrosleep on, running the 
+ * SD under the debugger fails.   
+ */ 
 // bmicrosleep(0, 50000);             /* wait 50 millisecs */
    if (!(jcr=get_jcr_by_full_name(job_name))) {
       Jmsg1(NULL, M_FATAL, 0, _("FD connect failed: Job name not found: %s\n"), job_name);
-      Dmsg1(3, "**** Job \"%s\" not found\n", job_name);
+      Dmsg1(3, "**** Job \"%s\" not found.\n", job_name);
       fd->close();
       return;
    }
 
-   Dmsg1(110, "Found Job %s\n", job_name);
+
+   Dmsg1(50, "Found Job %s\n", job_name);
 
    if (jcr->authenticated) {
       Jmsg2(jcr, M_FATAL, 0, _("Hey!!!! JobId %u Job %s already authenticated.\n"),
@@ -251,11 +254,11 @@ void handle_filed_connection(BSOCK *fd, char *job_name)
     * Authenticate the File daemon
     */
    if (jcr->authenticated || !authenticate_filed(jcr)) {
-      Dmsg1(100, "Authentication failed Job %s\n", jcr->Job);
+      Dmsg1(50, "Authentication failed Job %s\n", jcr->Job);
       Jmsg(jcr, M_FATAL, 0, _("Unable to authenticate File daemon\n"));
    } else {
       jcr->authenticated = true;
-      Dmsg2(110, "OK Authentication jid=%u Job %s\n", (uint32_t)jcr->JobId, jcr->Job);
+      Dmsg2(50, "OK Authentication jid=%u Job %s\n", (uint32_t)jcr->JobId, jcr->Job);
    }
 
    if (!jcr->authenticated) {
@@ -414,5 +417,9 @@ void stored_free_jcr(JCR *jcr)
       jcr->write_store = NULL;
    }
    Dsm_check(1);
+
+   if (jcr->JobId != 0)
+      write_state_file(me->working_directory, "bacula-sd", get_first_port_host_order(me->sdaddrs));
+
    return;
 }

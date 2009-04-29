@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in 4914 2007-05-27 09:34:40Z kerns $
+#  Version $Id: Makefile.in 8513 2009-03-09 15:34:05Z kerns $
 #
 @MCOMMON@
 
@@ -81,9 +81,9 @@ bwx-console.app: bwx-console
 	mv bwx-console bwx-console.app/Contents/MacOS/bwx-console
 	cp bwx-console.conf /Library/Preferences/org.bacula.wxconsole.conf
 
-bwx-console: $(CONSOBJS) @WIN32@ ../lib/libbac.a
-	$(CXX) $(CONSOBJS) $(WIN32RES) -o $@ $(LIBS) -L../lib $(CONS_LDFLAGS) \
- -lbac $(OPENSSL_LIBS)
+bwx-console: Makefile $(CONSOBJS) @WIN32@ ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(CONSOBJS) $(WIN32RES) -o $@ $(LIBS) -L../lib $(CONS_LDFLAGS) \
+	  -lbaccfg -lbac $(OPENSSL_LIBS)
 
 win32: bwx-console_private.res
 	
@@ -91,7 +91,10 @@ win32: bwx-console_private.res
 bwx-console_private.res: bwx-console_private.rc 
 	windres.exe -i bwx-console_private.rc -I rc -o bwx-console_private.res -O coff 
 
-clean:
+libtool-clean:
+	@$(RMF) -r .libs _libs
+
+clean:	libtool-clean
 	@$(RMF) $(CONSOBJS) bwx-console $(WIN32RES)
 
 distclean: clean
@@ -104,12 +107,12 @@ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 install: all
 	@if test -f ${DESTDIR}${sbindir}/wx-console; then \
 	   echo " "; \
-	   echo "Warning!!!  ${DESTDIR}${sbindir}wx-console found."; \
+	   echo "Warning!!!  ${DESTDIR}${sbindir}/wx-console found."; \
 	   echo " wx-console has been renamed bwx-console, so wx-console"; \
 	   echo " is no longer used, and you might want to delete it."; \
 	   echo " "; \
 	fi
-	$(INSTALL_PROGRAM) bwx-console $(DESTDIR)$(sbindir)/bwx-console
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bwx-console $(DESTDIR)$(sbindir)/bwx-console
 	@srcconf=bwx-console.conf; \
 	if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
 	   destconf=$$srcconf.new; \

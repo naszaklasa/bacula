@@ -1,7 +1,7 @@
 #
 #  Bacula Director Makefile
 #
-#  Version $Id: Makefile.in 4914 2007-05-27 09:34:40Z kerns $
+#  Version $Id: Makefile.in 8464 2009-02-18 11:40:09Z kerns $
 #  
 @MCOMMON@
 
@@ -29,7 +29,7 @@ dummy:
 #
 SVRSRCS = dird.c admin.c authenticate.c \
 	  autoprune.c backup.c bsr.c \
-	  catreq.c dird_conf.c expand.c \
+	  catreq.c dir_plugins.c dird_conf.c expand.c \
 	  fd_cmds.c getmsg.c inc_conf.c job.c \
 	  jobq.c migrate.c \
 	  mountreq.c msgchan.c next_vol.c newvol.c \
@@ -41,22 +41,8 @@ SVRSRCS = dird.c admin.c authenticate.c \
 	  ua_input.c ua_label.c ua_output.c ua_prune.c \
 	  ua_purge.c ua_restore.c ua_run.c \
 	  ua_select.c ua_server.c \
-	  ua_status.c ua_tree.c ua_update.c verify.c
-SVROBJS = dird.o admin.o authenticate.o \
-	  autoprune.o backup.o bsr.o \
-	  catreq.o dird_conf.o expand.o \
-	  fd_cmds.o getmsg.o inc_conf.o job.o \
-	  jobq.o migrate.o \
-	  mountreq.o msgchan.o next_vol.o newvol.o \
-	  pythondir.o \
-	  recycle.o restore.o run_conf.o \
-	  scheduler.o \
-	  ua_acl.o ua_cmds.o ua_dotcmds.o \
-	  ua_query.o \
-	  ua_input.o ua_label.o ua_output.o ua_prune.o \
-	  ua_purge.o ua_restore.o ua_run.o \
-	  ua_select.o ua_server.o \
-	  ua_status.o ua_tree.o ua_update.o verify.o
+	  ua_status.c ua_tree.c ua_update.c vbackup.c verify.c
+SVROBJS = $(SVRSRCS:.c=.o)
 
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@
@@ -74,25 +60,26 @@ all: Makefile bacula-dir @STATIC_DIR@
 	@echo "==== Make of dird is good ===="
 	@echo " "
 
-bacula-dir:  $(SVROBJS) ../lib/libbac.a ../cats/libsql.a ../findlib/libfind.a
+bacula-dir: Makefile $(SVROBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
 	@echo "Linking $@ ..."
-	$(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
-	      -lsql -lfind -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
+	      -lbacfind -lbacsql -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
 	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-
-static-bacula-dir:  $(SVROBJS) ../lib/libbac.a ../cats/libsql.a ../findlib/libfind.a
-	$(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
-	      -lsql -lbac -lfind -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
+static-bacula-dir:  Makefile $(SVROBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
+	      -lbacfind -lbacsql -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
 	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 	strip $@
-
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
-clean:
+libtool-clean:
+	@$(RMF) -r .libs _libs
+
+clean:	libtool-clean
 	@$(RMF) dird bacula-dir core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
 	@$(RMF) static-bacula-dir
 
@@ -108,7 +95,7 @@ devclean: realclean
 	(cd $(srcdir); $(RMF) Makefile)
 
 install: all
-	$(INSTALL_PROGRAM) bacula-dir $(DESTDIR)$(sbindir)/bacula-dir
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bacula-dir $(DESTDIR)$(sbindir)/bacula-dir
 	@srcconf=bacula-dir.conf; \
 	   if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
 	      destconf=$$srcconf.new; \
@@ -124,7 +111,7 @@ install: all
 	fi 
 	${INSTALL_DATA} query.sql ${DESTDIR}${scriptdir}/query.sql
 	@if test -f static-bacula-dir; then \
-	   $(INSTALL_PROGRAM) static-bacula-dir $(DESTDIR)$(sbindir)/static-bacula-dir; \
+	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-bacula-dir $(DESTDIR)$(sbindir)/static-bacula-dir; \
 	fi
 
 

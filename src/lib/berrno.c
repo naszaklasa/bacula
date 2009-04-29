@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -35,7 +35,7 @@
  *
  *   Kern Sibbald, July MMIV
  *
- *   Version $Id: berrno.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: berrno.c 8348 2009-01-09 18:18:53Z kerns $
  *
  */
 
@@ -49,8 +49,10 @@ extern int execvp_errors[];
 
 const char *berrno::bstrerror()
 {
+   *m_buf = 0;
 #ifdef HAVE_WIN32
    if (m_berrno & b_errno_win32) {
+      format_win32_message();
       return (const char *)m_buf;
    }
 #else
@@ -92,19 +94,16 @@ void berrno::format_win32_message()
 {
 #ifdef HAVE_WIN32
    LPVOID msg;
-   if (m_berrno & b_errno_win32) {
-      FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-          FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-          NULL,
-          GetLastError(),
-          MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-          (LPTSTR)&msg,
-          0,
-          NULL);
-
-      pm_strcpy(&m_buf, (const char *)msg);
-      LocalFree(msg);
-   }
+   FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+       FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+       NULL,
+       GetLastError(),
+       MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+       (LPTSTR)&msg,
+       0,
+       NULL);
+   pm_strcpy(&m_buf, (const char *)msg);
+   LocalFree(msg);
 #endif
 }
 

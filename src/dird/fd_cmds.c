@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -37,7 +37,7 @@
  *  Utility functions for sending info to File Daemon.
  *   These functions are used by both backup and verify.
  *
- *   Version $Id: fd_cmds.c 7479 2008-08-15 16:58:28Z kerns $
+ *   Version $Id: fd_cmds.c 7892 2008-10-24 13:04:16Z kerns $
  */
 
 #include "bacula.h"
@@ -50,7 +50,7 @@ const int dbglvl = 400;
 static char filesetcmd[]  = "fileset%s\n"; /* set full fileset */
 static char jobcmd[]      = "JobId=%s Job=%s SDid=%u SDtime=%u Authorization=%s\n";
 /* Note, mtime_only is not used here -- implemented as file option */
-static char levelcmd[]    = "level = %s%s mtime_only=%d\n";
+static char levelcmd[]    = "level = %s%s%s mtime_only=%d\n";
 static char runscript[]   = "Run OnSuccess=%u OnFailure=%u AbortOnError=%u When=%u Command=%s\n";
 static char runbeforenow[]= "RunBeforeNow\n";
 
@@ -62,6 +62,7 @@ static char OKRunScript[]    = "2000 OK RunScript\n";
 static char OKRunBeforeNow[] = "2000 OK RunBeforeNow\n";
 
 /* Forward referenced functions */
+static bool send_list_item(JCR *jcr, const char *code, char *item, BSOCK *fd);
 
 /* External functions */
 extern DIRRES *director;
@@ -160,42 +161,73 @@ int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
 void get_level_since_time(JCR *jcr, char *since, int since_len)
 {
    int JobLevel;
+   bool have_full;
+   bool do_full = false;
+   bool do_diff = false;
+   utime_t now;
+   utime_t last_full_time;
+   utime_t last_diff_time;
 
    since[0] = 0;
-   if (jcr->cloned) {
-      if (jcr->stime && jcr->stime[0]) {
-         bstrncpy(since, _(", since="), since_len);
-         bstrncat(since, jcr->stime, since_len);
-      }
+   /* If job cloned and a since time already given, use it */
+   if (jcr->cloned && jcr->stime && jcr->stime[0]) {
+      bstrncpy(since, _(", since="), since_len);
+      bstrncat(since, jcr->stime, since_len);
       return;
    }
+   /* Make sure stime buffer is allocated */
    if (!jcr->stime) {
       jcr->stime = get_pool_memory(PM_MESSAGE);
    } 
    jcr->stime[0] = 0;
-   /* Lookup the last FULL backup job to get the time/date for a
+   /*
+    * Lookup the last FULL backup job to get the time/date for a
     * differential or incremental save.
     */
-   switch (jcr->JobLevel) {
+   switch (jcr->get_JobLevel()) {
    case L_DIFFERENTIAL:
    case L_INCREMENTAL:
-      /* Look up start time of last job */
-      jcr->jr.JobId = 0;     /* flag for db_find_job_start time */
-      if (!db_find_job_start_time(jcr, jcr->db, &jcr->jr, &jcr->stime)) {
-         /* No job found, so upgrade this one to Full */
+      POOLMEM *stime = get_pool_memory(PM_MESSAGE);
+      /* Look up start time of last Full job */
+      now = (utime_t)time(NULL);
+      jcr->jr.JobId = 0;     /* flag to return since time */
+      have_full = db_find_job_start_time(jcr, jcr->db, &jcr->jr, &jcr->stime);
+      /* If there was a successful job, make sure it is recent enough */
+      if (jcr->get_JobLevel() == L_INCREMENTAL && have_full && jcr->job->MaxDiffInterval > 0) {
+         /* Lookup last diff job */
+         if (db_find_last_job_start_time(jcr, jcr->db, &jcr->jr, &stime, L_DIFFERENTIAL)) {
+            last_diff_time = str_to_utime(stime);
+            do_diff = ((now - last_diff_time) >= jcr->job->MaxDiffInterval);
+         }
+      }
+      if (have_full && jcr->job->MaxFullInterval > 0 &&
+         db_find_last_job_start_time(jcr, jcr->db, &jcr->jr, &stime, L_FULL)) {
+         last_full_time = str_to_utime(stime);
+         do_full = ((now - last_full_time) >= jcr->job->MaxFullInterval);
+      }
+      free_pool_memory(stime);
+
+      if (!have_full || do_full) {
+         /* No recent Full job found, so upgrade this one to Full */
          Jmsg(jcr, M_INFO, 0, "%s", db_strerror(jcr->db));
          Jmsg(jcr, M_INFO, 0, _("No prior or suitable Full backup found in catalog. Doing FULL backup.\n"));
          bsnprintf(since, since_len, _(" (upgraded from %s)"),
-            level_to_str(jcr->JobLevel));
-         jcr->JobLevel = jcr->jr.JobLevel = L_FULL;
+            level_to_str(jcr->get_JobLevel()));
+         jcr->set_JobLevel(jcr->jr.JobLevel = L_FULL);
+       } else if (do_diff) {
+         /* No recent diff job found, so upgrade this one to Full */
+         Jmsg(jcr, M_INFO, 0, _("No prior or suitable Differential backup found in catalog. Doing Differential backup.\n"));
+         bsnprintf(since, since_len, _(" (upgraded from %s)"),
+            level_to_str(jcr->get_JobLevel()));
+         jcr->set_JobLevel(jcr->jr.JobLevel = L_DIFFERENTIAL);
       } else {
          if (jcr->job->rerun_failed_levels) {
             if (db_find_failed_job_since(jcr, jcr->db, &jcr->jr, jcr->stime, JobLevel)) {
                Jmsg(jcr, M_INFO, 0, _("Prior failed job found in catalog. Upgrading to %s.\n"),
                   level_to_str(JobLevel));
                bsnprintf(since, since_len, _(" (upgraded from %s)"),
-                  level_to_str(jcr->JobLevel));
-               jcr->JobLevel = jcr->jr.JobLevel = JobLevel;
+                  level_to_str(jcr->get_JobLevel()));
+               jcr->set_JobLevel(jcr->jr.JobLevel = JobLevel);
                jcr->jr.JobId = jcr->JobId;
                break;
             }
@@ -206,7 +238,7 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
       jcr->jr.JobId = jcr->JobId;
       break;
    }
-   Dmsg2(100, "Level=%c last start time=%s\n", jcr->JobLevel, jcr->stime);
+   Dmsg2(100, "Level=%c last start time=%s\n", jcr->get_JobLevel(), jcr->stime);
 }
 
 static void send_since_time(JCR *jcr)
@@ -216,12 +248,11 @@ static void send_since_time(JCR *jcr)
    char ed1[50];
 
    stime = str_to_utime(jcr->stime);
-   bnet_fsend(fd, levelcmd, NT_("since_utime "), edit_uint64(stime, ed1), 0);
+   fd->fsend(levelcmd, "", NT_("since_utime "), edit_uint64(stime, ed1), 0);
    while (bget_dirmsg(fd) >= 0) {  /* allow him to poll us to sync clocks */
       Jmsg(jcr, M_INFO, 0, "%s\n", fd->msg);
    }
 }
-
 
 /*
  * Send level command to FD.
@@ -230,30 +261,32 @@ static void send_since_time(JCR *jcr)
 bool send_level_command(JCR *jcr)
 {
    BSOCK   *fd = jcr->file_bsock;
+   const char *accurate = jcr->job->accurate?"accurate_":"";
+   const char *not_accurate = "";
    /*
     * Send Level command to File daemon
     */
-   switch (jcr->JobLevel) {
+   switch (jcr->get_JobLevel()) {
    case L_BASE:
-      bnet_fsend(fd, levelcmd, "base", " ", 0);
+      fd->fsend(levelcmd, not_accurate, "base", " ", 0);
       break;
    /* L_NONE is the console, sending something off to the FD */
    case L_NONE:
    case L_FULL:
-      bnet_fsend(fd, levelcmd, "full", " ", 0);
+      fd->fsend(levelcmd, not_accurate, "full", " ", 0);
       break;
    case L_DIFFERENTIAL:
-      bnet_fsend(fd, levelcmd, "differential", " ", 0);
+      fd->fsend(levelcmd, accurate, "differential", " ", 0);
       send_since_time(jcr);
       break;
    case L_INCREMENTAL:
-      bnet_fsend(fd, levelcmd, "incremental", " ", 0);
+      fd->fsend(levelcmd, accurate, "incremental", " ", 0);
       send_since_time(jcr);
       break;
    case L_SINCE:
    default:
       Jmsg2(jcr, M_FATAL, 0, _("Unimplemented backup level %d %c\n"),
-         jcr->JobLevel, jcr->JobLevel);
+         jcr->get_JobLevel(), jcr->get_JobLevel());
       return 0;
    }
    Dmsg1(120, ">filed: %s", fd->msg);
@@ -280,24 +313,20 @@ static bool send_fileset(JCR *jcr)
          num = fileset->num_excludes;
       }
       for (int i=0; i<num; i++) {
-         BPIPE *bpipe;
-         FILE *ffd;
-         char buf[2000];
-         char *p;
-         int optlen, stat;
+         char *item;
          INCEXE *ie;
          int j, k;
 
          if (include) {
             ie = fileset->include_items[i];
-            bnet_fsend(fd, "I\n");
+            fd->fsend("I\n");
          } else {
             ie = fileset->exclude_items[i];
-            bnet_fsend(fd, "E\n");
+            fd->fsend("E\n");
          }
          for (j=0; j<ie->num_opts; j++) {
             FOPTS *fo = ie->opts_list[j];
-            bnet_fsend(fd, "O %s\n", fo->opts);
+            fd->fsend("O %s\n", fo->opts);
 
             bool enhanced_wild = false;
             for (k=0; fo->opts[k]!='\0'; k++) {
@@ -308,110 +337,64 @@ static bool send_fileset(JCR *jcr)
             }
 
             for (k=0; k<fo->regex.size(); k++) {
-               bnet_fsend(fd, "R %s\n", fo->regex.get(k));
+               fd->fsend("R %s\n", fo->regex.get(k));
             }
             for (k=0; k<fo->regexdir.size(); k++) {
-               bnet_fsend(fd, "RD %s\n", fo->regexdir.get(k));
+               fd->fsend("RD %s\n", fo->regexdir.get(k));
             }
             for (k=0; k<fo->regexfile.size(); k++) {
-               bnet_fsend(fd, "RF %s\n", fo->regexfile.get(k));
+               fd->fsend("RF %s\n", fo->regexfile.get(k));
             }
             for (k=0; k<fo->wild.size(); k++) {
-               bnet_fsend(fd, "W %s\n", fo->wild.get(k));
+               fd->fsend("W %s\n", fo->wild.get(k));
             }
             for (k=0; k<fo->wilddir.size(); k++) {
-               bnet_fsend(fd, "WD %s\n", fo->wilddir.get(k));
+               fd->fsend("WD %s\n", fo->wilddir.get(k));
             }
             for (k=0; k<fo->wildfile.size(); k++) {
-               bnet_fsend(fd, "WF %s\n", fo->wildfile.get(k));
+               fd->fsend("WF %s\n", fo->wildfile.get(k));
             }
             for (k=0; k<fo->wildbase.size(); k++) {
-               bnet_fsend(fd, "W%c %s\n", enhanced_wild ? 'B' : 'F', fo->wildbase.get(k));
+               fd->fsend("W%c %s\n", enhanced_wild ? 'B' : 'F', fo->wildbase.get(k));
             }
             for (k=0; k<fo->base.size(); k++) {
-               bnet_fsend(fd, "B %s\n", fo->base.get(k));
+               fd->fsend("B %s\n", fo->base.get(k));
             }
             for (k=0; k<fo->fstype.size(); k++) {
-               bnet_fsend(fd, "X %s\n", fo->fstype.get(k));
+               fd->fsend("X %s\n", fo->fstype.get(k));
             }
             for (k=0; k<fo->drivetype.size(); k++) {
-               bnet_fsend(fd, "XD %s\n", fo->drivetype.get(k));
+               fd->fsend("XD %s\n", fo->drivetype.get(k));
+            }
+            if (fo->plugin) {
+               fd->fsend("G %s\n", fo->plugin);
+            }
+            if (fo->ignoredir) {
+               bnet_fsend(fd, "Z %s\n", fo->ignoredir);
             }
             if (fo->reader) {
-               bnet_fsend(fd, "D %s\n", fo->reader);
+               fd->fsend("D %s\n", fo->reader);
             }
             if (fo->writer) {
-               bnet_fsend(fd, "T %s\n", fo->writer);
+               fd->fsend("T %s\n", fo->writer);
             }
-            bnet_fsend(fd, "N\n");
+            fd->fsend("N\n");
          }
 
          for (j=0; j<ie->name_list.size(); j++) {
-            p = (char *)ie->name_list.get(j);
-            switch (*p) {
-            case '|':
-               p++;                      /* skip over the | */
-               fd->msg = edit_job_codes(jcr, fd->msg, p, "");
-               bpipe = open_bpipe(fd->msg, 0, "r");
-               if (!bpipe) {
-                  berrno be;
-                  Jmsg(jcr, M_FATAL, 0, _("Cannot run program: %s. ERR=%s\n"),
-                     p, be.bstrerror());
-                  goto bail_out;
-               }
-               bstrncpy(buf, "F ", sizeof(buf));
-               Dmsg1(500, "Opts=%s\n", buf);
-               optlen = strlen(buf);
-               while (fgets(buf+optlen, sizeof(buf)-optlen, bpipe->rfd)) {
-                  fd->msglen = Mmsg(fd->msg, "%s", buf);
-                  Dmsg2(500, "Inc/exc len=%d: %s", fd->msglen, fd->msg);
-                  if (!bnet_send(fd)) {
-                     Jmsg(jcr, M_FATAL, 0, _(">filed: write error on socket\n"));
-                     goto bail_out;
-                  }
-               }
-               if ((stat=close_bpipe(bpipe)) != 0) {
-                  berrno be;
-                  Jmsg(jcr, M_FATAL, 0, _("Error running program: %s. ERR=%s\n"),
-                     p, be.bstrerror(stat));
-                  goto bail_out;
-               }
-               break;
-            case '<':
-               p++;                      /* skip over < */
-               if ((ffd = fopen(p, "rb")) == NULL) {
-                  berrno be;
-                  Jmsg(jcr, M_FATAL, 0, _("Cannot open included file: %s. ERR=%s\n"),
-                     p, be.bstrerror());
-                  goto bail_out;
-               }
-               bstrncpy(buf, "F ", sizeof(buf));
-               Dmsg1(500, "Opts=%s\n", buf);
-               optlen = strlen(buf);
-               while (fgets(buf+optlen, sizeof(buf)-optlen, ffd)) {
-                  fd->msglen = Mmsg(fd->msg, "%s", buf);
-                  if (!bnet_send(fd)) {
-                     Jmsg(jcr, M_FATAL, 0, _(">filed: write error on socket\n"));
-                     goto bail_out;
-                  }
-               }
-               fclose(ffd);
-               break;
-            case '\\':
-               p++;                      /* skip over \ */
-               /* Note, fall through wanted */
-            default:
-               pm_strcpy(fd->msg, "F ");
-               fd->msglen = pm_strcat(fd->msg, p);
-               Dmsg1(500, "Inc/Exc name=%s\n", fd->msg);
-               if (!bnet_send(fd)) {
-                  Jmsg(jcr, M_FATAL, 0, _(">filed: write error on socket\n"));
-                  goto bail_out;
-               }
-               break;
+            item = (char *)ie->name_list.get(j);
+            if (!send_list_item(jcr, "F ", item, fd)) {
+               goto bail_out;
             }
          }
-         bnet_fsend(fd, "N\n");
+         fd->fsend("N\n");
+         for (j=0; j<ie->plugin_list.size(); j++) {
+            item = (char *)ie->plugin_list.get(j);
+            if (!send_list_item(jcr, "P ", item, fd)) {
+               goto bail_out;
+            }
+         }
+         fd->fsend("N\n");
       }
       if (!include) {                 /* If we just did excludes */
          break;                       /*   all done */
@@ -419,7 +402,7 @@ static bool send_fileset(JCR *jcr)
       include = false;                /* Now do excludes */
    }
 
-   bnet_sig(fd, BNET_EOD);            /* end of data */
+   fd->signal(BNET_EOD);              /* end of data */
    if (!response(jcr, fd, OKinc, "Include", DISPLAY_ERROR)) {
       goto bail_out;
    }
@@ -430,6 +413,79 @@ bail_out:
    return false;
 
 }
+
+static bool send_list_item(JCR *jcr, const char *code, char *item, BSOCK *fd)
+{
+   BPIPE *bpipe;
+   FILE *ffd;
+   char buf[2000];
+   int optlen, stat;
+   char *p = item;
+
+   switch (*p) {
+   case '|':
+      p++;                      /* skip over the | */
+      fd->msg = edit_job_codes(jcr, fd->msg, p, "");
+      bpipe = open_bpipe(fd->msg, 0, "r");
+      if (!bpipe) {
+         berrno be;
+         Jmsg(jcr, M_FATAL, 0, _("Cannot run program: %s. ERR=%s\n"),
+            p, be.bstrerror());
+         return false;
+      }
+      bstrncpy(buf, code, sizeof(buf));
+      Dmsg1(500, "code=%s\n", buf);
+      optlen = strlen(buf);
+      while (fgets(buf+optlen, sizeof(buf)-optlen, bpipe->rfd)) {
+         fd->msglen = Mmsg(fd->msg, "%s", buf);
+         Dmsg2(500, "Inc/exc len=%d: %s", fd->msglen, fd->msg);
+         if (!bnet_send(fd)) {
+            Jmsg(jcr, M_FATAL, 0, _(">filed: write error on socket\n"));
+            return false;
+         }
+      }
+      if ((stat=close_bpipe(bpipe)) != 0) {
+         berrno be;
+         Jmsg(jcr, M_FATAL, 0, _("Error running program: %s. ERR=%s\n"),
+            p, be.bstrerror(stat));
+         return false;
+      }
+      break;
+   case '<':
+      p++;                      /* skip over < */
+      if ((ffd = fopen(p, "rb")) == NULL) {
+         berrno be;
+         Jmsg(jcr, M_FATAL, 0, _("Cannot open included file: %s. ERR=%s\n"),
+            p, be.bstrerror());
+         return false;
+      }
+      bstrncpy(buf, code, sizeof(buf));
+      Dmsg1(500, "code=%s\n", buf);
+      optlen = strlen(buf);
+      while (fgets(buf+optlen, sizeof(buf)-optlen, ffd)) {
+         fd->msglen = Mmsg(fd->msg, "%s", buf);
+         if (!bnet_send(fd)) {
+            Jmsg(jcr, M_FATAL, 0, _(">filed: write error on socket\n"));
+            return false;
+         }
+      }
+      fclose(ffd);
+      break;
+   case '\\':
+      p++;                      /* skip over \ */
+      /* Note, fall through wanted */
+   default:
+      pm_strcpy(fd->msg, code);
+      fd->msglen = pm_strcat(fd->msg, p);
+      Dmsg1(500, "Inc/Exc name=%s\n", fd->msg);
+      if (!fd->send()) {
+         Jmsg(jcr, M_FATAL, 0, _(">filed: write error on socket\n"));
+         return false;
+      }
+      break;
+   }
+   return true;
+}            
 
 
 /*
@@ -532,7 +588,7 @@ int send_runscripts_commands(JCR *jcr)
    Dmsg0(120, "bdird: sending runscripts to fd\n");
    
    foreach_alist(cmd, jcr->job->RunScripts) {
-      if (cmd->can_run_at_level(jcr->JobLevel) && cmd->target) {
+      if (cmd->can_run_at_level(jcr->get_JobLevel()) && cmd->target) {
          ehost = edit_job_codes(jcr, ehost, cmd->target, "");
          Dmsg2(200, "bdird: runscript %s -> %s\n", cmd->target, ehost);
 

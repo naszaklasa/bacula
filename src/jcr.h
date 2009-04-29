@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,7 +33,7 @@
  *
  * Kern Sibbald, Nov MM
  *
- *   Version $Id: jcr.h 7416 2008-07-22 14:48:21Z kerns $
+ *   Version $Id: jcr.h 8508 2009-03-07 20:59:46Z kerns $
  */
 
 
@@ -52,6 +52,7 @@
 #define L_VERIFY_DATA            'A'  /* verify data on volume */
 #define L_BASE                   'B'  /* Base level job */
 #define L_NONE                   ' '  /* None, for Restore and Admin */
+#define L_VIRTUAL_FULL           'f'  /* Virtual full backup */
 
 
 /* Job Types. These are stored in the DB */
@@ -59,11 +60,12 @@
 #define JT_MIGRATED_JOB          'M'  /* A previous backup job that was migrated */
 #define JT_VERIFY                'V'  /* Verify Job */
 #define JT_RESTORE               'R'  /* Restore Job */
-#define JT_CONSOLE               'c'  /* console program */
+#define JT_CONSOLE               'U'  /* console program */
 #define JT_SYSTEM                'I'  /* internal system "job" */
 #define JT_ADMIN                 'D'  /* admin job */
 #define JT_ARCHIVE               'A'  /* Archive Job */
-#define JT_COPY                  'C'  /* Copy Job */
+#define JT_JOB_COPY              'C'  /* Copy of a Job */
+#define JT_COPY                  'c'  /* Copy Job */
 #define JT_MIGRATE               'g'  /* Migration Job */
 #define JT_SCAN                  'S'  /* Scan Job */
 
@@ -72,6 +74,7 @@
 #define JS_Running               'R'  /* running */
 #define JS_Blocked               'B'  /* blocked */
 #define JS_Terminated            'T'  /* terminated normally */
+#define JS_Warnings              'W'  /* Terminated normally with warnings */
 #define JS_ErrorTerminated       'E'  /* Job terminated in error */
 #define JS_Error                 'e'  /* Non-fatal error */
 #define JS_FatalError            'f'  /* Fatal error */
@@ -89,6 +92,8 @@
 #define JS_WaitPriority          'p'  /* Waiting for higher priority jobs to finish */
 #define JS_AttrDespooling        'a'  /* SD despooling attributes */
 #define JS_AttrInserting         'i'  /* Doing batch insert file records */
+#define JS_DataDespooling        'l'  /* Doing data despooling */
+#define JS_DataCommitting        'L'  /* Committing data (last despool) */
 
 /* Migration selection types */
 enum {
@@ -96,6 +101,7 @@ enum {
    MT_OLDEST_VOL,
    MT_POOL_OCCUPANCY,
    MT_POOL_TIME,
+   MT_POOL_UNCOPIED_JOBS,
    MT_CLIENT,
    MT_VOLUME,
    MT_JOB,
@@ -106,6 +112,22 @@ enum {
   (jcr->JobStatus == JS_Canceled || \
    jcr->JobStatus == JS_ErrorTerminated || \
    jcr->JobStatus == JS_FatalError)
+
+#define job_waiting(jcr) \
+  (jcr->JobStatus == JS_WaitFD       || \
+   jcr->JobStatus == JS_WaitSD       || \
+   jcr->JobStatus == JS_WaitMedia    || \
+   jcr->JobStatus == JS_WaitMount    || \
+   jcr->JobStatus == JS_WaitStoreRes || \
+   jcr->JobStatus == JS_WaitJobRes   || \
+   jcr->JobStatus == JS_WaitClientRes|| \
+   jcr->JobStatus == JS_WaitMaxJobs  || \
+   jcr->JobStatus == JS_WaitPriority || \
+   jcr->SDJobStatus == JS_WaitMedia  || \
+   jcr->SDJobStatus == JS_WaitMount  || \
+   jcr->SDJobStatus == JS_WaitMaxJobs)
+
+
 
 #define foreach_jcr(jcr) \
    for (jcr=jcr_walk_start(); jcr; (jcr=jcr_walk_next(jcr)) )
@@ -120,6 +142,26 @@ class JCR;
 struct FF_PKT;
 struct B_DB;
 struct ATTR_DBR;
+struct Plugin;
+struct save_pkt;
+struct bpContext;
+
+#ifdef FILE_DAEMON
+class htable;
+
+struct CRYPTO_CTX {
+   bool pki_sign;                     /* Enable PKI Signatures? */
+   bool pki_encrypt;                  /* Enable PKI Encryption? */
+   DIGEST *digest;                    /* Last file's digest context */
+   X509_KEYPAIR *pki_keypair;         /* Encryption key pair */
+   alist *pki_signers;                /* Trusted Signers */
+   alist *pki_recipients;             /* Trusted Recipients */
+   CRYPTO_SESSION *pki_session;       /* PKE Public Keys + Symmetric Session Keys */
+   POOLMEM *pki_session_encoded;      /* Cached DER-encoded copy of pki_session */
+   int32_t pki_session_encoded_size;  /* Size of DER-encoded pki_session */
+   POOLMEM *crypto_buf;               /* Encryption/Decryption buffer */
+};
+#endif
 
 typedef void (JCR_free_HANDLER)(JCR *jcr);
 
@@ -128,6 +170,8 @@ class JCR {
 private:
    pthread_mutex_t mutex;             /* jcr mutex */
    volatile int32_t _use_count;       /* use count */
+   int32_t m_JobType;                 /* backup, restore, verify ... */
+   int32_t m_JobLevel;                /* Job level */
 public:
    void lock() {P(mutex); };
    void unlock() {V(mutex); };
@@ -137,6 +181,14 @@ public:
    void init_mutex(void) {pthread_mutex_init(&mutex, NULL); };
    void destroy_mutex(void) {pthread_mutex_destroy(&mutex); };
    bool is_job_canceled() {return job_canceled(this); };
+   int32_t get_JobType() { return m_JobType; };
+   int32_t get_JobLevel() { return m_JobLevel; };
+
+   const char *get_OperationName();    /* in lib/jcr.c */
+   const char *get_ActionName(bool past); /* in lib/jcr.c */
+   void set_JobLevel(int32_t JobLevel); /* in lib/jcr.c */
+   void set_JobType(int32_t JobType);  /* in lib/jcr.c */
+   bool JobReads();                    /* in lib/jcr.c */
 
    /* Global part of JCR common to all daemons */
    dlink link;                        /* JCR chain link */
@@ -151,23 +203,26 @@ public:
    POOLMEM *VolumeName;               /* Volume name desired -- pool_memory */
    POOLMEM *errmsg;                   /* edited error message */
    char Job[MAX_NAME_LENGTH];         /* Unique name of this Job */
-   char event[MAX_NAME_LENGTH];       /* Current event */
+   char event[MAX_NAME_LENGTH];       /* Current event (python) */
+   uint32_t eventType;                /* Current event type (plugin) */
+
    uint32_t JobId;                    /* Director's JobId */
    uint32_t VolSessionId;
    uint32_t VolSessionTime;
    uint32_t JobFiles;                 /* Number of files written, this job */
-   uint32_t JobErrors;                /* */
+   uint32_t JobErrors;                /* Number of non-fatal errors this job */
+   uint32_t JobWarnings;              /* Number of warning messages */
    uint64_t JobBytes;                 /* Number of bytes processed this job */
    uint64_t ReadBytes;                /* Bytes read -- before compression */
-   uint32_t Errors;                   /* Number of non-fatal errors */
+   FileId_t FileId;                   /* Last FileId used */
    volatile int32_t JobStatus;        /* ready, running, blocked, terminated */
-   int32_t JobType;                   /* backup, restore, verify ... */
-   int32_t JobLevel;                  /* Job level */
    int32_t JobPriority;               /* Job priority */
    time_t sched_time;                 /* job schedule time, i.e. when it should start */
    time_t start_time;                 /* when job actually started */
    time_t run_time;                   /* used for computing speed */
    time_t end_time;                   /* job end time */
+   time_t wait_time_sum;              /* cumulative wait time since job start */
+   time_t wait_time;                  /* timestamp when job have started to wait */
    POOLMEM *client_name;              /* client name */
    POOLMEM *RestoreBootstrap;         /* Bootstrap file to restore */
    POOLMEM *stime;                    /* start time for incremental/differential */
@@ -188,9 +243,18 @@ public:
    bool cached_attribute;             /* set if attribute is cached */
    POOLMEM *attr;                     /* Attribute string from SD */
    B_DB *db;                          /* database pointer */
-   B_DB *db_batch;                    /* database pointer for batch insert */
+   B_DB *db_batch;                    /* database pointer for batch and accurate */
+   bool batch_started;                /* is batch mode already started ? */
    ATTR_DBR *ar;                      /* DB attribute record */
    guid_list *id_list;                /* User/group id to name list */
+   bool accurate;                     /* true if job is accurate */
+
+   bpContext *plugin_ctx_list;        /* list of contexts for plugins */
+   bpContext *plugin_ctx;             /* current plugin context */
+   Plugin *plugin;                    /* plugin instance */
+   save_pkt *plugin_sp;               /* plugin save packet */
+   char *plugin_options;              /* user set options for plugin */
+   bool cmd_plugin;                   /* Set when processing a command Plugin = */
 
    /* Daemon specific part of JCR */
    /* This should be empty in the library */
@@ -200,7 +264,7 @@ public:
    pthread_t SD_msg_chan;             /* Message channel thread id */
    pthread_cond_t term_wait;          /* Wait for job termination */
    workq_ele_t *work_item;            /* Work queue item if scheduled */
-   volatile bool sd_msg_thread_done;  /* Set when Storage message thread terms */
+   volatile bool sd_msg_thread_done;  /* Set when Storage message thread done */
    BSOCK *ua;                         /* User agent */
    JOB *job;                          /* Job resource */
    JOB *verify_job;                   /* Job resource of verify previous job */
@@ -228,7 +292,6 @@ public:
    volatile int32_t FDJobStatus;      /* File daemon Job Status */
    uint32_t ExpectedFiles;            /* Expected restore files */
    uint32_t MediaId;                  /* DB record IDs associated with this job */
-   FileId_t FileId;                   /* Last file id inserted */
    uint32_t FileIndex;                /* Last FileIndex processed */
    POOLMEM *fname;                    /* name to put into catalog */
    JOB_DBR jr;                        /* Job DB record for current job */
@@ -246,9 +309,11 @@ public:
    POOLMEM *rpool_source;             /* Where migrate read pool came from */
    POOLMEM *rstore_source;            /* Where read storage came from */
    POOLMEM *wstore_source;            /* Where write storage came from */
-   int32_t replace;                   /* Replace option */
+   POOLMEM *catalog_source;           /* Where catalog came from */
+   uint32_t replace;                  /* Replace option */
    int32_t NumVols;                   /* Number of Volume used in pool */
    int32_t reschedule_count;          /* Number of times rescheduled */
+   int32_t FDVersion;                 /* File daemon version number */
    int64_t spool_size;                /* Spool size for this job */
    bool spool_data;                   /* Spool data in SD */
    bool acquired_resource_locks;      /* set if resource locks acquired */
@@ -260,6 +325,7 @@ public:
    bool unlink_bsr;                   /* Unlink bsr file created */
    bool VSS;                          /* VSS used by FD */
    bool Encrypt;                      /* Encryption used by FD */
+   bool stats_enabled;                /* Keep all job records in a table for long term statistics */
 #endif /* DIRECTOR_DAEMON */
 
 
@@ -267,11 +333,13 @@ public:
    /* File Daemon specific part of JCR */
    uint32_t num_files_examined;       /* files examined this job */
    POOLMEM *last_fname;               /* last file saved/verified */
-   POOLMEM *acl_text;                 /* text of ACL for backup */
-   int last_type;                     /* type of last file saved/verified */
-   /*********FIXME********* add missing files and files to be retried */
+   POOLMEM *acl_data;                 /* data with ACLs for backup/restore */
+   uint32_t acl_data_len;             /* length of acl data buffer */
+   POOLMEM *xattr_data;               /* data with Extended Attributes for backup/restore */
+   uint32_t xattr_data_len;           /* length of xattr_data buffer */
+   int32_t last_type;                 /* type of last file saved/verified */
    int incremental;                   /* set if incremental for SINCE */
-   time_t mtime;                      /* begin time for SINCE */
+   utime_t mtime;                     /* begin time for SINCE */
    int listing;                       /* job listing in estimate */
    long Ticket;                       /* Ticket */
    char *big_buf;                     /* I/O buffer */
@@ -287,20 +355,14 @@ public:
    uint32_t StartBlock;
    uint32_t EndBlock;
    pthread_t heartbeat_id;            /* id of heartbeat thread */
+   volatile bool hb_started;          /* heartbeat running */
    BSOCK *hb_bsock;                   /* duped SD socket */
    BSOCK *hb_dir_bsock;               /* duped DIR socket */
    alist *RunScripts;                 /* Commands to run before and after job */
-   bool pki_sign;                     /* Enable PKI Signatures? */
-   bool pki_encrypt;                  /* Enable PKI Encryption? */
-   DIGEST *digest;                    /* Last file's digest context */
-   X509_KEYPAIR *pki_keypair;         /* Encryption key pair */
-   alist *pki_signers;                /* Trusted Signers */
-   alist *pki_recipients;             /* Trusted Recipients */
-   CRYPTO_SESSION *pki_session;       /* PKE Public Keys + Symmetric Session Keys */
-   uint8_t *pki_session_encoded;      /* Cached DER-encoded copy of pki_session */
-   int32_t pki_session_encoded_size;  /* Size of DER-encoded pki_session */
-   POOLMEM *crypto_buf;               /* Encryption/Decryption buffer */
+   CRYPTO_CTX crypto;                 /* Crypto ctx */
    DIRRES* director;                  /* Director resource */
+   bool VSS;                          /* VSS used by FD */
+   htable *file_list;                 /* Previous file list (accurate mode) */
 #endif /* FILE_DAEMON */
 
 
@@ -308,8 +370,9 @@ public:
    /* Storage Daemon specific part of JCR */
    JCR *next_dev;                     /* next JCR attached to device */
    JCR *prev_dev;                     /* previous JCR attached to device */
+   char *dir_auth_key;                /* Dir auth key */
    pthread_cond_t job_start_wait;     /* Wait for FD to start Job */
-   int type;
+   int32_t type;
    DCR *read_dcr;                     /* device context for reading */
    DCR *dcr;                          /* device context record */
    alist *dcrs;                       /* list of dcrs open */
@@ -335,8 +398,7 @@ public:
    alist *reserve_msgs;               /* reserve fail messages */
    bool write_part_after_job;         /* Set to write part after job */
    bool PreferMountedVols;            /* Prefer mounted vols rather than new */
-   
-   uint32_t FileId;                   /* Last file id inserted */
+   bool need_fd;                      /* set if we need FD connection */
 
    /* Parmaters for Open Read Session */
    BSR *bsr;                          /* Bootstrap record -- has everything */
@@ -354,10 +416,18 @@ public:
    int32_t wait_sec;
    int32_t rem_wait_sec;
    int32_t num_wait;
-
 #endif /* STORAGE_DAEMON */
 
 };
+
+/*
+ * Setting a NULL in tsd doesn't clear the tsd but instead tells
+ *   pthreads not to call the tsd destructor. Consequently, we 
+ *   define this *invalid* jcr address and stuff it in the tsd
+ *   when the jcr is not valid.
+ */
+#define INVALID_JCR ((JCR *)(-1))
+
 
 /*
  * Structure for all daemons that keeps some summary
@@ -365,7 +435,7 @@ public:
  */
 struct s_last_job {
    dlink link;
-   int32_t Errors;                     /* FD/SD errors */
+   int32_t Errors;                    /* FD/SD errors */
    int32_t JobType;
    int32_t JobStatus;
    int32_t JobLevel;
@@ -374,8 +444,8 @@ struct s_last_job {
    uint32_t VolSessionTime;
    uint32_t JobFiles;
    uint64_t JobBytes;
-   time_t start_time;
-   time_t end_time;
+   utime_t start_time;
+   utime_t end_time;
    char Job[MAX_NAME_LENGTH];
 };
 
@@ -400,5 +470,9 @@ extern void b_free_jcr(const char *file, int line, JCR *jcr);
 #else
 extern void free_jcr(JCR *jcr);
 #endif
+
+/* Used to display specific job information after a fatal signal */
+typedef void (dbg_jcr_hook_t)(JCR *jcr, FILE *fp);
+extern void dbg_jcr_add_hook(dbg_jcr_hook_t *fct);
 
 #endif /* __JCR_H_ */

@@ -1,7 +1,10 @@
 /*
+ * Version $Id: console_conf.h 7380 2008-07-14 10:42:59Z kerns $
+ */
+/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,14 +23,11 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
-/*
- * Version $Id: console_conf.h 7164 2008-06-18 19:22:03Z kerns $
- */
 
 #ifndef CONSOLECONF_H
 #define CONSOLECONF_H
@@ -63,13 +63,14 @@ struct CONRES {
    char *rc_file;                     /* startup file */
    char *hist_file;                   /* command history file */
    char *password;                    /* UA server password */
+   bool tls_enable;                   /* Enable TLS on all connections */
+   bool tls_require;                  /* Require TLS on all connections */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
    char *tls_keyfile;                 /* TLS Client Key File */
+
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
-   bool tls_enable;                   /* Enable TLS on all connections */
-   bool tls_require;                  /* Require TLS on all connections */
 };
 
 /* Director */
@@ -78,13 +79,14 @@ struct DIRRES {
    uint32_t DIRport;                  /* UA server port */
    char *address;                     /* UA server address */
    char *password;                    /* UA server password */
+   bool tls_enable;                   /* Enable TLS on all connections */
+   bool tls_require;                  /* Require TLS on all connections */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
    char *tls_keyfile;                 /* TLS Client Key File */
+
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
-   bool tls_enable;                   /* Enable TLS on all connections */
-   bool tls_require;                  /* Require TLS on all connections */
 };
 
 

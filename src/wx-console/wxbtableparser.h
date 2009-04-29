@@ -11,12 +11,12 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: wxbtableparser.h 4992 2007-06-07 14:46:43Z kerns $
+ *    Version $Id: wxbtableparser.h 8508 2009-03-07 20:59:46Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -35,7 +35,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -66,7 +66,7 @@
  */
 class wxbArrayString: public wxArrayString, public wxObject {
    public:
-      wxbArrayString(int n = 1);
+      wxbArrayString(int n = 2000);
       virtual ~wxbArrayString();
 };
 

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,13 +31,15 @@
  *
  *   Kern E. Sibbald, MM
  *
- *   Version $Id: bextract.c 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: bextract.c 8235 2008-12-23 13:28:03Z kerns $
  *
  */
 
 #include "bacula.h"
 #include "stored.h"
 #include "findlib/find.h"
+
+extern bool parse_sd_config(CONFIG *config, const char *configfile, int exit_code);
 
 static void do_extract(char *fname);
 static bool record_cb(DCR *dcr, DEV_RECORD *rec);
@@ -64,6 +66,7 @@ static char *wbuf;                    /* write buffer address */
 static uint32_t wsize;                /* write size */
 static uint64_t fileAddr = 0;         /* file write address */
 
+static CONFIG *config;
 #define CONFIG_FILE "bacula-sd.conf"
 char *configfile = NULL;
 STORES *me = NULL;                    /* our Global resource */
@@ -78,8 +81,9 @@ PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bextract <options> <bacula-archive-device-name> <directory-to-store-files>\n"
 "       -b <file>       specify a bootstrap file\n"
-"       -c <file>       specify a configuration file\n"
+"       -c <file>       specify a Storage configuration file\n"
 "       -d <nn>         set debug level to <nn>\n"
+"       -dt             print timestamp in debug output\n"
 "       -e <file>       exclude list\n"
 "       -i <file>       include list\n"
 "       -p              proceed inspite of I/O errors\n"
@@ -197,7 +201,8 @@ int main (int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_sd_config(config, configfile, M_ERROR_TERM);
 
    if (!got_inc) {                            /* If no include file, */
       add_fname_to_include_list(ff, 0, "/");  /*   include everything */
@@ -270,6 +275,26 @@ static void do_extract(char *devname)
    return;
 }
 
+static bool store_data(BFILE *bfd, char *data, const int32_t length)
+{
+   if (is_win32_stream(attr->data_stream) && !have_win32_api()) {
+      set_portable_backup(bfd);
+      if (!processWin32BackupAPIBlock(bfd, data, length)) {
+         berrno be;
+         Emsg2(M_ERROR_TERM, 0, _("Write error on %s: %s\n"),
+               attr->ofname, be.bstrerror());
+         return false;
+      }
+   } else if (bwrite(bfd, data, length) != (ssize_t)length) {
+      berrno be;
+      Emsg2(M_ERROR_TERM, 0, _("Write error on %s: %s\n"),
+            attr->ofname, be.bstrerror());
+      return false;
+   }
+
+   return true;
+}
+
 /*
  * Called here for each record from read_records()
  */
@@ -320,8 +345,13 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
             return true;
          }
 
-
          build_attr_output_fnames(jcr, attr);
+
+         if (attr->type == FT_DELETED) { /* TODO: choose the right fname/ofname */
+            Jmsg(jcr, M_INFO, 0, _("%s was deleted.\n"), attr->fname);
+            extract = false;
+            return true;
+         }
 
          extract = false;
          stat = create_file(jcr, attr, &bfd, REPLACE_ALWAYS);
@@ -372,11 +402,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          }
          total += wsize;
          Dmsg2(8, "Write %u bytes, total=%u\n", wsize, total);
-         if ((uint32_t)bwrite(&bfd, wbuf, wsize) != wsize) {
-            berrno be;
-            Emsg2(M_ERROR_TERM, 0, _("Write error on %s: %s\n"),
-               attr->ofname, be.bstrerror());
-         }
+         store_data(&bfd, wbuf, wsize);
          fileAddr += wsize;
       }
       break;
@@ -421,14 +447,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          }
 
          Dmsg2(100, "Write uncompressed %d bytes, total before write=%d\n", compress_len, total);
-         if ((uLongf)bwrite(&bfd, compress_buf, (size_t)compress_len) != compress_len) {
-            berrno be;
-            Pmsg0(0, _("===Write error===\n"));
-            Emsg2(M_ERROR, 0, _("Write error on %s: %s\n"),
-               attr->ofname, be.bstrerror());
-            extract = false;
-            return true;
-         }
+         store_data(&bfd, compress_buf, compress_len);
          total += compress_len;
          fileAddr += compress_len;
          Dmsg2(100, "Compress len=%d uncompressed=%d\n", rec->data_len,
@@ -463,7 +482,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       break;
 
    default:
-      /* If extracting, wierd stream (not 1 or 2), close output file anyway */
+      /* If extracting, weird stream (not 1 or 2), close output file anyway */
       if (extract) {
          if (!is_bopen(&bfd)) {
             Emsg0(M_ERROR, 0, _("Logic error output file should be open but is not.\n"));

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,13 +20,13 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /* 
- *   Version $Id: mainwin.h 7461 2008-08-03 17:11:20Z bartleyd2 $
+ *   Version $Id: mainwin.h 8672 2009-03-31 19:25:51Z bartleyd2 $
  *
  * qt-console main window class definition.
  *
@@ -59,6 +59,8 @@ public:
    void hashInsert(QTreeWidgetItem *, Pages *);
    void hashRemove(Pages *);
    void hashRemove(QTreeWidgetItem *, Pages *);
+   void setMessageIcon();
+   bool getWaitState() {return m_waitState; };
    Console *currentConsole();
    QTreeWidgetItem *currentTopItem();
    Pages* getFromHash(QTreeWidgetItem *);
@@ -74,6 +76,7 @@ public:
    QString m_dtformat;
    /* Begin Preferences variables */
    bool m_commDebug;
+   bool m_connDebug;
    bool m_displayAll;
    bool m_sqlDebug;
    bool m_commandDebug;
@@ -84,6 +87,8 @@ public:
    int m_daysLimitVal;
    bool m_checkMessages;
    int m_checkMessagesInterval;
+   bool m_refreshStatusDir;
+   int m_refreshStatusDirInterval;
    bool m_longList;
    bool m_rtPopDirDebug;
    bool m_rtDirCurICDebug;
@@ -97,6 +102,9 @@ public:
    bool m_rtRestore1Debug;
    bool m_rtRestore2Debug;
    bool m_rtRestore3Debug;
+   bool m_openBrowser;
+   bool m_openPlot;
+   bool m_openDirStat;
 
 public slots:
    void input_line();
@@ -107,6 +115,7 @@ public slots:
    void runButtonClicked();
    void estimateButtonClicked();
    void browseButtonClicked();
+   void statusPageButtonClicked();
    void jobPlotButtonClicked();
    void restoreButtonClicked();
    void undockWindowButton();
@@ -116,15 +125,22 @@ public slots:
    void closePage();
    void setPreferences();
    void readPreferences();
+   void waitEnter();
+   void waitExit();
+   void repopLists();
+   void popLists();
 
 protected:
    void closeEvent(QCloseEvent *event);
    void keyPressEvent(QKeyEvent *event);
 
 private:
-   void createConnections(); 
    void connectConsole();
    void createPages();
+   void connectSignals(); 
+   void disconnectSignals(); 
+   void connectConsoleSignals();
+   void disconnectConsoleSignals(Console *console);
 
 private:
    Console *m_currentConsole;
@@ -132,7 +148,10 @@ private:
    QStringList m_cmd_history;
    int m_cmd_last;
    QTreeWidgetItem *m_firstItem;
+   QTreeWidgetItem *m_waitTreeItem;
    bool m_isClosing;
+   bool m_waitState;
+   bool m_doConnect;
 };
 
 #include "ui_prefs.h"

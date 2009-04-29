@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,14 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
  
 /*
- *   Version $Id: jobs.cpp 7459 2008-08-03 16:27:06Z bartleyd2 $
+ *   Version $Id: jobs.cpp 8640 2009-03-29 10:55:53Z kerns $
  *
  *  Jobs Class
  *
@@ -38,18 +38,18 @@
 #include "bat.h"
 #include "jobs/jobs.h"
 #include "run/run.h"
+#include "util/fmtwidgetitem.h"
 
 Jobs::Jobs()
 {
    setupUi(this);
-   m_name = "Jobs";
+   m_name = tr("Jobs");
    pgInitialize();
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/run.png")));
 
-   /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_client.h */
+   /* tableWidget, Storage Tree Tree Widget inherited from ui_client.h */
    m_populated = false;
-   m_populating = false;
    m_checkcurwidget = true;
    m_closeable = false;
    /* add context sensitive menu items specific to this classto the page
@@ -67,65 +67,76 @@ Jobs::~Jobs()
  * The main meat of the class!!  The function that querries the director and 
  * creates the widgets with appropriate values.
  */
-void Jobs::populateTree()
+void Jobs::populateTable()
 {
-   if (m_populating)
-      return;
-   m_populating = true;
-   QTreeWidgetItem *jobsItem, *topItem;
+   m_populated = true;
+   mainWin->waitEnter();
 
-   if (!m_console->preventInUseConnect())
-      return;
+   Freeze frz(*tableWidget); /* disable updating*/
+
+   QBrush blackBrush(Qt::black);
    m_checkcurwidget = false;
-   mp_treeWidget->clear();
+   tableWidget->clear();
    m_checkcurwidget = true;
-   QStringList headerlist = (QStringList() << tr("Job Name")
-      << tr("Pool") << tr("Messages") << tr("Client")
-      << tr("Storage") << tr("Level") << tr("Type")
+   QStringList headerlist = (QStringList() << tr("Job Name") 
+      << tr("Pool") << tr("Messages") << tr("Client") 
+      << tr("Storage") << tr("Level") << tr("Type") 
       << tr("FileSet") << tr("Catalog") << tr("Enabled")
       << tr("Where"));
 
-   m_typeIndex = headerlist.indexOf("Type");
-   topItem = new QTreeWidgetItem(mp_treeWidget);
-   topItem->setText(0, "Jobs");
-   topItem->setData(0, Qt::UserRole, 0);
-   topItem->setExpanded(true);
+   m_typeIndex = headerlist.indexOf(tr("Type"));
 
-   mp_treeWidget->setColumnCount(headerlist.count());
-   mp_treeWidget->setHeaderLabels(headerlist);
+   tableWidget->setColumnCount(headerlist.count());
+   tableWidget->setHorizontalHeaderLabels(headerlist);
+   tableWidget->horizontalHeader()->setHighlightSections(false);
+   tableWidget->setRowCount(m_console->job_list.count());
+   tableWidget->verticalHeader()->hide();
+   tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
+   tableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+   tableWidget->setSortingEnabled(false); /* rows move on insert if sorting enabled */
 
+   int row = 0;
    foreach (QString jobName, m_console->job_list){
-      jobsItem = new QTreeWidgetItem(topItem);
-      jobsItem->setText(0, jobName);
-      //jobsItem->setExpanded(true);
-
-      for (int i=0; i<headerlist.count(); i++)
-         jobsItem->setData(i, Qt::UserRole, 1);
-
       job_defaults job_defs;
       job_defs.job_name = jobName;
       if (m_console->get_job_defaults(job_defs)) {
-         int col = 1;
-         jobsItem->setText(col++, job_defs.pool_name);
-         jobsItem->setText(col++, job_defs.messages_name);
-         jobsItem->setText(col++, job_defs.client_name);
-         jobsItem->setText(col++, job_defs.store_name);
-         jobsItem->setText(col++, job_defs.level);
-         jobsItem->setText(col++, job_defs.type);
-         jobsItem->setText(col++, job_defs.fileset_name);
-         jobsItem->setText(col++, job_defs.catalog_name);
-         if (job_defs.enabled) {
-            jobsItem->setText(col++, "Yes");
-         } else {
-            jobsItem->setText(col++, "No");
+         int col = 0;
+         TableItemFormatter jobsItem(*tableWidget, row);
+         jobsItem.setTextFld(col++, jobName); 
+         jobsItem.setTextFld(col++, job_defs.pool_name);
+         jobsItem.setTextFld(col++, job_defs.messages_name);
+         jobsItem.setTextFld(col++, job_defs.client_name);
+         jobsItem.setTextFld(col++, job_defs.store_name);
+         jobsItem.setTextFld(col++, job_defs.level);
+         jobsItem.setTextFld(col++, job_defs.type);
+         jobsItem.setTextFld(col++, job_defs.fileset_name);
+         jobsItem.setTextFld(col++, job_defs.catalog_name);
+         jobsItem.setBoolFld(col++, job_defs.enabled);
+         jobsItem.setTextFld(col++, job_defs.where);
+
+      }
+      row++;
+   }
+   /* set default sorting */
+   tableWidget->sortByColumn(headerlist.indexOf(tr("Job Name")), Qt::AscendingOrder);
+   tableWidget->setSortingEnabled(true);
+   
+   /* Resize rows and columns */
+   tableWidget->resizeColumnsToContents();
+   tableWidget->resizeRowsToContents();
+
+   /* make read only */
+   int rcnt = tableWidget->rowCount();
+   int ccnt = tableWidget->columnCount();
+   for(int r=0; r < rcnt; r++) {
+      for(int c=0; c < ccnt; c++) {
+         QTableWidgetItem* item = tableWidget->item(r, c);
+         if (item) {
+            item->setFlags(Qt::ItemFlags(item->flags() & (~Qt::ItemIsEditable)));
          }
-         jobsItem->setText(col++, job_defs.where);
       }
    }
-   /* Resize the columns */
-   for(int cnter=0; cnter<headerlist.size(); cnter++) {
-      mp_treeWidget->resizeColumnToContents(cnter);
-   }
+   mainWin->waitExit();
 }
 
 /*
@@ -135,40 +146,41 @@ void Jobs::populateTree()
 void Jobs::PgSeltreeWidgetClicked()
 {
    if(!m_populated) {
-      populateTree();
-      m_populated=true;
+      populateTable();
    }
 }
 
 /*
- * Added to set the context menu policy based on currently active treeWidgetItem
+ * Added to set the context menu policy based on currently active tableWidgetItem
  * signaled by currentItemChanged
  */
-void Jobs::treeItemChanged(QTreeWidgetItem *currentwidgetitem, QTreeWidgetItem *previouswidgetitem )
+void Jobs::tableItemChanged(QTableWidgetItem *currentwidgetitem, QTableWidgetItem *previouswidgetitem )
 {
    /* m_checkcurwidget checks to see if this is during a refresh, which will segfault */
-   if (m_checkcurwidget) {
+   if (m_checkcurwidget && currentwidgetitem) {
       /* The Previous item */
       if (previouswidgetitem) { /* avoid a segfault if first time */
-         foreach(QAction* jobAction, mp_treeWidget->actions()) {
-            mp_treeWidget->removeAction(jobAction);
+         foreach(QAction* jobAction, tableWidget->actions()) {
+            tableWidget->removeAction(jobAction);
          }
       }
+      int currentRow = currentwidgetitem->row();
+      QTableWidgetItem *currentrowzeroitem = tableWidget->item(currentRow, 0);
+      m_currentlyselected = currentrowzeroitem->text();
+      QTableWidgetItem *currenttypeitem = tableWidget->item(currentRow, m_typeIndex);
+      QString type = currenttypeitem->text();
 
-      int treedepth = currentwidgetitem->data(0, Qt::UserRole).toInt();
-      if (treedepth == 1){
+      if (m_currentlyselected.length() != 0) {
          /* set a hold variable to the client name in case the context sensitive
           * menu is used */
-         m_currentlyselected=currentwidgetitem->text(0);
-         mp_treeWidget->addAction(actionConsoleListFiles);
-         mp_treeWidget->addAction(actionConsoleListVolumes);
-         mp_treeWidget->addAction(actionConsoleListNextVolume);
-         mp_treeWidget->addAction(actionConsoleEnableJob);
-         mp_treeWidget->addAction(actionConsoleDisableJob);
-         mp_treeWidget->addAction(actionConsoleCancel);
-         mp_treeWidget->addAction(actionJobListQuery);
-         if (currentwidgetitem->text(m_typeIndex) == "Backup")
-            mp_treeWidget->addAction(actionRunJob);
+         tableWidget->addAction(actionConsoleListFiles);
+         tableWidget->addAction(actionConsoleListVolumes);
+         tableWidget->addAction(actionConsoleListNextVolume);
+         tableWidget->addAction(actionConsoleEnableJob);
+         tableWidget->addAction(actionConsoleDisableJob);
+         tableWidget->addAction(actionConsoleCancel);
+         tableWidget->addAction(actionJobListQuery);
+         tableWidget->addAction(actionRunJob);
       }
    }
 }
@@ -176,18 +188,18 @@ void Jobs::treeItemChanged(QTreeWidgetItem *currentwidgetitem, QTreeWidgetItem *
 /* 
  * Setup a context menu 
  * Made separate from populate so that it would not create context menu over and
- * over as the tree is repopulated.
+ * over as the table is repopulated.
  */
 void Jobs::createContextMenu()
 {
-   mp_treeWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
-   mp_treeWidget->addAction(actionRefreshJobs);
-   connect(mp_treeWidget, SIGNAL(
-           currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)),
-           this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
+   tableWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
+   tableWidget->addAction(actionRefreshJobs);
+   connect(tableWidget, SIGNAL(
+           currentItemChanged(QTableWidgetItem *, QTableWidgetItem *)),
+           this, SLOT(tableItemChanged(QTableWidgetItem *, QTableWidgetItem *)));
    /* connect to the action specific to this pages class */
    connect(actionRefreshJobs, SIGNAL(triggered()), this,
-                SLOT(populateTree()));
+                SLOT(populateTable()));
    connect(actionConsoleListFiles, SIGNAL(triggered()), this, SLOT(consoleListFiles()));
    connect(actionConsoleListVolumes, SIGNAL(triggered()), this, SLOT(consoleListVolume()));
    connect(actionConsoleListNextVolume, SIGNAL(triggered()), this, SLOT(consoleListNextVolume()));
@@ -203,10 +215,9 @@ void Jobs::createContextMenu()
  */
 void Jobs::currentStackItem()
 {
-   populateTree();
    if(!m_populated) {
-      /* Create the context menu for the client tree */
-      m_populated=true;
+      /* Create the context menu for the client table */
+      populateTable();
    }
 }
 
@@ -261,7 +272,7 @@ void Jobs::listJobs()
 }
 
 /*
- * Open a new job run page with the currentley selected "Backup" job 
+ * Open a new job run page with the currently selected job 
  * defaulted In
  */
 void Jobs::runJob()

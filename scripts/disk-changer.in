@@ -29,7 +29,7 @@
 #  Switzerland, email:ftf@fsfeurope.org.
 #
 #
-#  $Id: disk-changer.in 6882 2008-05-03 09:03:33Z kerns $
+#  $Id: disk-changer.in 7144 2008-06-15 11:55:08Z ricozz $
 #
 #  If you set in your Device resource
 #
@@ -223,6 +223,11 @@ case $cmd in
 	 fi
 	 i=`expr $i + 1`
       done
+      # check if slot exists
+      if [ ! -f $dir/slot${slot} ] ; then
+         echo "source Element Address $slot is Empty"
+         exit 1
+      fi
       if [ -f $dir/loaded${drive} ]; then
 	 ld=`cat $dir/loaded${drive}`
       else

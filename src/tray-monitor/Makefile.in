@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in 5359 2007-08-16 08:44:39Z kerns $
+#  Version $Id: Makefile.in 7841 2008-10-19 10:34:03Z kerns $
 #
 @MCOMMON@
 
@@ -43,16 +43,18 @@ all: Makefile bacula-tray-monitor
 	@echo "==== Make of bacula-tray-monitor is good ===="
 	@echo " "
 
-bacula-tray-monitor: $(MONITOROBJS) ../lib/libbac.a
-	$(CXX) $(LDFLAGS) $(MONITOR_LDFLAGS) -L../lib -L../cats -o $@ \
- $(MONITOROBJS) $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
-
+bacula-tray-monitor: Makefile $(MONITOROBJS) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) $(MONITOR_LDFLAGS) -L../lib -o $@ \
+	  $(MONITOROBJS) $(DLIB) -lbaccfg -lbac -lm $(LIBS) $(OPENSSL_LIBS)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
-clean:
+libtool-clean:
+	$(RMF) -r .libs _libs
+
+clean: @LIBTOOL_CLEAN_TARGET@
 	@$(RMF) bacula-tray-monitor core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
 
 realclean: clean
@@ -67,7 +69,7 @@ devclean: realclean
 	(cd $(srcdir); $(RMF) Makefile)
 
 install: all
-	$(INSTALL_PROGRAM) bacula-tray-monitor $(DESTDIR)$(sbindir)/bacula-tray-monitor
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bacula-tray-monitor $(DESTDIR)$(sbindir)/bacula-tray-monitor
 	@srcconf=tray-monitor.conf; \
 	if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
 	   destconf=$$srcconf.new; \

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -44,12 +44,11 @@ mountDialog::mountDialog(Console *console, QString &storageName)
 {
    m_console = console;
    m_storageName = storageName;
-   m_console->notify(false);
+   m_conn = m_console->notifyOff();
    setupUi(this);
    this->show();
 
-   QString labelText("Storage : ");
-   labelText += storageName;
+   QString labelText( tr("Storage : %1").arg(storageName) );
    storageLabel->setText(labelText);
 }
 
@@ -57,7 +56,7 @@ void mountDialog::accept()
 {
    QString scmd;
    if (m_storageName == "") {
-      QMessageBox::warning(this, "No Storage name", "No Storage name given",
+      QMessageBox::warning(this, tr("No Storage name"), tr("No Storage name given"),
                            QMessageBox::Ok, QMessageBox::Ok);
       return;
    }
@@ -69,14 +68,14 @@ void mountDialog::accept()
       Pmsg1(000, "sending command : %s\n",scmd.toUtf8().data());
    }
 
-   m_console->display_text("Context sensitive command :\n\n");
+   m_console->display_text( tr("Context sensitive command :\n\n"));
    m_console->display_text("****    ");
    m_console->display_text(scmd + "    ****\n");
-   m_console->display_text("Director Response :\n\n");
+   m_console->display_text(tr("Director Response :\n\n"));
 
    m_console->write_dir(scmd.toUtf8().data());
-   m_console->displayToPrompt();
-   m_console->notify(true);
+   m_console->displayToPrompt(m_conn);
+   m_console->notify(m_conn, true);
    delete this;
    mainWin->resetFocus();
 }
@@ -84,7 +83,7 @@ void mountDialog::accept()
 void mountDialog::reject()
 {
    this->hide();
-   m_console->notify(true);
+   m_console->notify(m_conn, true);
    delete this;
    mainWin->resetFocus();
 }

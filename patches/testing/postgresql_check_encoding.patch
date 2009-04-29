@@ -1,0 +1,58 @@
+Index: src/cats/postgresql.c
+===================================================================
+--- src/cats/postgresql.c	(revision 8452)
++++ src/cats/postgresql.c	(working copy)
+@@ -132,6 +132,34 @@
+    return mdb;
+ }
+ 
++/* Check that the database correspond to the encoding we want */
++static bool check_database_encoding(JCR *jcr, B_DB *mdb)
++{
++   SQL_ROW row;
++   int ret=false;
++
++   if (!db_sql_query(mdb, "SELECT getdatabaseencoding()", NULL, NULL)) {
++      Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
++      return false;
++   }
++
++   if (mdb->num_rows == 1) {
++      if ((row = sql_fetch_row(mdb)) == NULL) {
++         Mmsg1(mdb->errmsg, _("error fetching row: %s\n"), sql_strerror(mdb));
++         Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
++      } else {
++         ret = bstrcmp(row[0], "SQL_ASCII") ; 
++         if (!ret) {
++            Mmsg(mdb->errmsg, 
++                 _("Encoding error for database \"%s\". Wanted SQL_ASCII, got %s\n"),
++                 mdb->db_name, row[0]);
++            Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
++         } 
++      }
++   }
++   return ret;
++}
++
+ /*
+  * Now actually open the database.  This can generate errors,
+  *   which are returned in the errmsg
+@@ -147,7 +175,7 @@
+ #ifdef xxx
+    if (!PQisthreadsafe()) {
+       Jmsg(jcr, M_ABORT, 0, _("PostgreSQL configuration problem. "          
+-           "PostgreSQL library is not thread safe. Connot continue.\n"));
++           "PostgreSQL library is not thread safe. Cannot continue.\n"));
+    }
+ #endif
+    P(mutex);
+@@ -219,6 +247,9 @@
+    */
+    sql_query(mdb, "set standard_conforming_strings=on");
+ 
++   /* check that encoding is SQL_ASCII */
++   check_database_encoding(jcr, mdb);
++
+    V(mutex);
+    return 1;
+ }

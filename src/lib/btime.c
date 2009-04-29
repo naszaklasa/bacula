@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  * Later double precision integer time/date routines -- Kern Sibbald
  *
- *   Version $Id: btime.c 5012 2007-06-14 16:54:30Z kerns $
+ *   Version $Id: btime.c 8076 2008-11-22 18:36:12Z kerns $
  */
 
 
@@ -52,52 +52,52 @@
 #include <math.h>
 
 /* Formatted time for user display: dd-Mon-yyyy hh:mm */
-char *bstrftime(char *dt, int maxlen, utime_t tim)
+char *bstrftime(char *dt, int maxlen, utime_t utime)
 {
-   time_t ttime = (time_t)tim;
+   time_t time = (time_t)utime;
    struct tm tm;
 
    /* ***FIXME**** the format and localtime_r() should be user configurable */
-   (void)localtime_r(&ttime, &tm);
+   (void)localtime_r(&time, &tm);
    strftime(dt, maxlen, "%d-%b-%Y %H:%M", &tm);
    return dt;
 }
 
 /* Formatted time for user display: dd-Mon-yyyy hh:mm:ss */
-char *bstrftimes(char *dt, int maxlen, utime_t tim)
+char *bstrftimes(char *dt, int maxlen, utime_t utime)
 {
-   time_t ttime = (time_t)tim;
+   time_t time = (time_t)utime;
    struct tm tm;
 
    /* ***FIXME**** the format and localtime_r() should be user configurable */
-   (void)localtime_r(&ttime, &tm);
+   (void)localtime_r(&time, &tm);
    strftime(dt, maxlen, "%d-%b-%Y %H:%M:%S", &tm);
    return dt;
 }
 
 
 /* Formatted time for user display: dd-Mon hh:mm */
-char *bstrftime_ny(char *dt, int maxlen, utime_t tim)
+char *bstrftime_ny(char *dt, int maxlen, utime_t utime)
 {
-   time_t ttime = (time_t)tim;
+   time_t time = (time_t)utime;
    struct tm tm;
 
    /* ***FIXME**** the format and localtime_r() should be user configurable */
-   (void)localtime_r(&ttime, &tm);
+   (void)localtime_r(&time, &tm);
    strftime(dt, maxlen, "%d-%b %H:%M", &tm);
    return dt;
 }
 
 
 /* Formatted time for user display: dd-Mon-yy hh:mm  (no century) */
-char *bstrftime_nc(char *dt, int maxlen, utime_t tim)
+char *bstrftime_nc(char *dt, int maxlen, utime_t utime)
 {
-   time_t ttime = (time_t)tim;
+   time_t time = (time_t)utime;
    struct tm tm;
    char *p, *q;
 
    /* ***FIXME**** the format and localtime_r() should be user configurable */
-   (void)localtime_r(&ttime, &tm);
+   (void)localtime_r(&time, &tm);
    /* NOTE! since the compiler complains about %y, I use %y and cut the century */
    strftime(dt, maxlen, "%d-%b-%Y %H:%M", &tm);
    /* overlay the century */
@@ -112,11 +112,11 @@ char *bstrftime_nc(char *dt, int maxlen, utime_t tim)
 
 
 /* Unix time to standard time string yyyy-mm-dd hh:mm:ss */
-char *bstrutime(char *dt, int maxlen, utime_t tim)
+char *bstrutime(char *dt, int maxlen, utime_t utime)
 {
-   time_t ttime = (time_t)tim;
+   time_t time = (time_t)utime;
    struct tm tm;
-   (void)localtime_r(&ttime, &tm);
+   (void)localtime_r(&time, &tm);
    strftime(dt, maxlen, "%Y-%m-%d %H:%M:%S", &tm);
    return dt;
 }
@@ -125,7 +125,7 @@ char *bstrutime(char *dt, int maxlen, utime_t tim)
 utime_t str_to_utime(char *str)
 {
    struct tm tm;
-   time_t ttime;
+   time_t time;
 
    /* Check for bad argument */
    if (!str || *str == 0) {
@@ -148,11 +148,11 @@ utime_t str_to_utime(char *str)
    }
    tm.tm_wday = tm.tm_yday = 0;
    tm.tm_isdst = -1;
-   ttime = mktime(&tm);
-   if (ttime == -1) {
-      ttime = 0;
+   time = mktime(&tm);
+   if (time == -1) {
+      time = 0;
    }
-   return (utime_t)ttime;
+   return (utime_t)time;
 }
 
 
@@ -218,6 +218,7 @@ int tm_woy(time_t stime)
    int woy, fty, tm_yday;
    time_t time4;
    struct tm tm;
+
    memset(&tm, 0, sizeof(struct tm));
    (void)localtime_r(&stime, &tm);
    tm_yday = tm.tm_yday;

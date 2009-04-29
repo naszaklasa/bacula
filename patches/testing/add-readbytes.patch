@@ -1,0 +1,205 @@
+ This patch was submited by Dirk Nehring and permit to track
+ real job size in the catalog.
+
+  Add ReadBytes to Job (physical bytes read)
+  Add code to fill the field
+
+
+
+diff -ur bacula-2.4.2.orig/src/cats/make_mysql_tables.in bacula-2.4.2/src/cats/make_mysql_tables.in
+--- bacula-2.4.2.orig/src/cats/make_mysql_tables.in     2007-10-22 12:31:08.000000000 +0200
++++ bacula-2.4.2/src/cats/make_mysql_tables.in  2008-07-28 09:06:17.000000000 +0200
+@@ -102,6 +102,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED DEFAULT 0 REFERENCES Pool,
+diff -ur bacula-2.4.2.orig/src/cats/make_postgresql_tables.in bacula-2.4.2/src/cats/make_postgresql_tables.in
+--- bacula-2.4.2.orig/src/cats/make_postgresql_tables.in        2007-03-30 23:46:04.000000000 +0200
++++ bacula-2.4.2/src/cats/make_postgresql_tables.in     2008-07-28 09:06:17.000000000 +0200
+@@ -67,6 +67,7 @@
+     volsessiontime    integer    default 0,
+     jobfiles         integer     default 0,
+     jobbytes         bigint      default 0,
++    readbytes        bigint      default 0,
+     joberrors        integer     default 0,
+     jobmissingfiles   integer    default 0,
+     poolid           integer     default 0,
+diff -ur bacula-2.4.2.orig/src/cats/make_sqlite3_tables.in bacula-2.4.2/src/cats/make_sqlite3_tables.in
+--- bacula-2.4.2.orig/src/cats/make_sqlite3_tables.in   2007-06-03 22:27:52.000000000 +0200
++++ bacula-2.4.2/src/cats/make_sqlite3_tables.in        2008-07-28 09:06:17.000000000 +0200
+@@ -64,6 +64,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+diff -ur bacula-2.4.2.orig/src/cats/make_sqlite_tables.in bacula-2.4.2/src/cats/make_sqlite_tables.in
+--- bacula-2.4.2.orig/src/cats/make_sqlite_tables.in    2007-03-30 23:46:04.000000000 +0200
++++ bacula-2.4.2/src/cats/make_sqlite_tables.in 2008-07-28 09:06:17.000000000 +0200
+@@ -64,6 +64,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+diff -ur bacula-2.4.2.orig/src/cats/make_test_tables bacula-2.4.2/src/cats/make_test_tables
+--- bacula-2.4.2.orig/src/cats/make_test_tables 2002-04-23 21:48:51.000000000 +0200
++++ bacula-2.4.2/src/cats/make_test_tables      2008-07-28 09:06:17.000000000 +0200
+@@ -49,6 +49,7 @@
+    VolSessionTime INTEGER UNSIGNED NOT NULL,
+    JobFiles INTEGER UNSIGNED NOT NULL,
+    JobBytes BIGINT UNSIGNED NOT NULL,
++   ReadBytes BIGINT UNSIGNED NOT NULL,
+    JobErrors INTEGER UNSIGNED NOT NULL,
+    JobMissingFiles INTEGER UNSIGNED NOT NULL,
+    PoolId INTEGER UNSIGNED NOT NULL REFERENCES Pool,
+diff -ur bacula-2.4.2.orig/src/cats/sql_update.c bacula-2.4.2/src/cats/sql_update.c
+--- bacula-2.4.2.orig/src/cats/sql_update.c     2007-06-07 16:46:43.000000000 +0200
++++ bacula-2.4.2/src/cats/sql_update.c  2008-07-28 09:06:17.000000000 +0200
+@@ -149,7 +149,7 @@
+    time_t ttime;
+    struct tm tm;
+    int stat;
+-   char ed1[30], ed2[30], ed3[50];
++   char ed1[30], ed2[30], ed3[50], ed4[50];
+    btime_t JobTDate;
+    char PoolId[50], FileSetId[50], ClientId[50], PriorJobId[50];
+ 
+@@ -181,10 +181,11 @@
+    db_lock(mdb);
+    Mmsg(mdb->cmd,
+       "UPDATE Job SET JobStatus='%c',EndTime='%s',"
+-"ClientId=%s,JobBytes=%s,JobFiles=%u,JobErrors=%u,VolSessionId=%u,"
++"ClientId=%s,JobBytes=%s,ReadBytes=%s,JobFiles=%u,JobErrors=%u,VolSessionId=%u,"
+ "VolSessionTime=%u,PoolId=%s,FileSetId=%s,JobTDate=%s,"
+ "RealEndTime='%s',PriorJobId=%s WHERE JobId=%s",
+       (char)(jr->JobStatus), dt, ClientId, edit_uint64(jr->JobBytes, ed1),
++      edit_uint64(jcr->ReadBytes, ed4),
+       jr->JobFiles, jr->JobErrors, jr->VolSessionId, jr->VolSessionTime,
+       PoolId, FileSetId, edit_uint64(JobTDate, ed2), 
+       rdt,
+diff -ur bacula-2.4.2.orig/src/cats/update_mysql_tables.in bacula-2.4.2/src/cats/update_mysql_tables.in
+--- bacula-2.4.2.orig/src/cats/update_mysql_tables.in   2007-03-30 23:46:04.000000000 +0200
++++ bacula-2.4.2/src/cats/update_mysql_tables.in        2008-07-28 09:06:17.000000000 +0200
+@@ -63,6 +63,8 @@
+ ALTER TABLE Job ADD COLUMN PriorJobId INTEGER UNSIGNED DEFAULT 0 REFERENCES Job;
+ ALTER TABLE Job ADD COLUMN RealEndTime DATETIME DEFAULT 0;
+ 
++-- 3.0 additions
++ALTER TABLE Job ADD ReadBytes BIGINT UNSIGNED DEFAULT 0 AFTER JobBytes;
+ 
+ 
+ DELETE FROM Version;
+diff -ur bacula-2.4.2.orig/src/cats/update_postgresql_tables.in bacula-2.4.2/src/cats/update_postgresql_tables.in
+--- bacula-2.4.2.orig/src/cats/update_postgresql_tables.in      2007-03-30 23:46:04.000000000 +0200
++++ bacula-2.4.2/src/cats/update_postgresql_tables.in   2008-07-28 09:06:17.000000000 +0200
+@@ -73,6 +73,9 @@
+ DELETE FROM version;
+ INSERT INTO version (versionId) VALUES (10);
+ 
++-- 3.0 additions
++ALTER TABLE job ADD COLUMN readbytes bigint default 0;
++
+ vacuum;
+ 
+ END-OF-DATA
+diff -ur bacula-2.4.2.orig/src/cats/update_sqlite3_tables.in bacula-2.4.2/src/cats/update_sqlite3_tables.in
+--- bacula-2.4.2.orig/src/cats/update_sqlite3_tables.in 2007-03-30 23:46:04.000000000 +0200
++++ bacula-2.4.2/src/cats/update_sqlite3_tables.in      2008-07-28 09:06:17.000000000 +0200
+@@ -157,6 +157,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+@@ -170,7 +171,7 @@
+    JobId, Job, Name, Type, Level, ClientId, JobStatus,
+    SchedTime, StartTime, EndTime, 0,
+    JobTDate, VolSessionId, VolSessionTime, 
+-   JobFiles, JobBytes, JobErrors, JobMissingFiles, 
++   JobFiles, JobBytes, 0, JobErrors, JobMissingFiles,
+    PoolId, FileSetId, 0, PurgedFiles, HasBase
+    FROM Job;
+ 
+@@ -194,6 +195,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+@@ -209,7 +211,7 @@
+    JobId, Job, Name, Type, Level, ClientId, JobStatus,
+    SchedTime, StartTime, EndTime, RealEndTime,
+    JobTDate, VolSessionId, VolSessionTime, 
+-   JobFiles, JobBytes, JobErrors, JobMissingFiles, 
++   JobFiles, JobBytes, ReadBytes, JobErrors, JobMissingFiles,
+    PoolId, FileSetId, PriorJobId, PurgedFiles, HasBase)
+    SELECT * FROM Job_backup;
+ 
+diff -ur bacula-2.4.2.orig/src/cats/update_sqlite_tables.in bacula-2.4.2/src/cats/update_sqlite_tables.in
+--- bacula-2.4.2.orig/src/cats/update_sqlite_tables.in  2007-03-30 23:46:04.000000000 +0200
++++ bacula-2.4.2/src/cats/update_sqlite_tables.in       2008-07-28 09:06:17.000000000 +0200
+@@ -157,6 +157,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+@@ -170,7 +171,7 @@
+    JobId, Job, Name, Type, Level, ClientId, JobStatus,
+    SchedTime, StartTime, EndTime, 0,
+    JobTDate, VolSessionId, VolSessionTime, 
+-   JobFiles, JobBytes, JobErrors, JobMissingFiles, 
++   JobFiles, JobBytes, 0, JobErrors, JobMissingFiles,
+    PoolId, FileSetId, 0, PurgedFiles, HasBase
+    FROM Job;
+ 
+@@ -194,6 +195,7 @@
+    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+    JobFiles INTEGER UNSIGNED DEFAULT 0,
+    JobBytes BIGINT UNSIGNED DEFAULT 0,
++   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+    JobErrors INTEGER UNSIGNED DEFAULT 0,
+    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
+diff -ur bacula-2.4.2.orig/src/dird/backup.c bacula-2.4.2/src/dird/backup.c
+--- bacula-2.4.2.orig/src/dird/backup.c 2008-01-09 08:29:57.000000000 +0100
++++ bacula-2.4.2/src/dird/backup.c      2008-07-28 09:16:24.000000000 +0200
+@@ -339,7 +339,7 @@
+ {
+    char sdt[50], edt[50], schedt[50];
+    char ec1[30], ec2[30], ec3[30], ec4[30], ec5[30], compress[50];
+-   char ec6[30], ec7[30], ec8[30], elapsed[50];
++   char ec6[30], ec7[30], ec8[30], ec9[30], ec10[30], elapsed[50];
+    char term_code[100], fd_term_msg[100], sd_term_msg[100];
+    const char *term_msg;
+    int msg_type = M_INFO;
+@@ -461,6 +461,7 @@
+ "  Priority:               %d\n"
+ "  FD Files Written:       %s\n"
+ "  SD Files Written:       %s\n"
++"  FD Bytes Read:          %s (%sB)\n"
+ "  FD Bytes Written:       %s (%sB)\n"
+ "  SD Bytes Written:       %s (%sB)\n"
+ "  Rate:                   %.1f KB/s\n"
+@@ -492,6 +493,8 @@
+         jcr->JobPriority,
+         edit_uint64_with_commas(jcr->jr.JobFiles, ec1),
+         edit_uint64_with_commas(jcr->SDJobFiles, ec2),
++        edit_uint64_with_commas(jcr->ReadBytes, ec9),
++        edit_uint64_with_suffix(jcr->ReadBytes, ec10),
+         edit_uint64_with_commas

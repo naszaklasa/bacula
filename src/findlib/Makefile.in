@@ -3,8 +3,6 @@
 #
 @MCOMMON@
 
-python = @PYTHON_INCDIR@
-
 srcdir =	.
 VPATH = 	.
 .PATH:		.
@@ -22,44 +20,82 @@ first_rule: all
 dummy:
 
 #
-LIBSRCS = find.c match.c find_one.c attribs.c create_file.c \
-	  bfile.c drivetype.c enable_priv.c fstype.c makepath.c save-cwd.c
-LIBOBJS = find.o match.o find_one.o attribs.o create_file.o \
-	  bfile.o drivetype.o enable_priv.o fstype.o makepath.o save-cwd.o
+# include files installed when using libtool
+#
+INCLUDE_FILES = bfile.h find.h protos.h savecwd.h
 
-.SUFFIXES:	.c .o
+#
+LIBSRCS = find.c match.c find_one.c attribs.c create_file.c \
+	  bfile.c drivetype.c enable_priv.c fstype.c mkpath.c \
+	  savecwd.c
+LIBOBJS = $(LIBSRCS:.c=$(DEFAULT_OBJECT_TYPE))
+
+LIBBACFIND_LT_CURRENT = 1
+LIBBACFIND_LT_REVISION = 0
+LIBBACFIND_LT_AGE = 0
+
+.SUFFIXES:	.c .o .lo
 .PHONY:
 .DONTCARE:
 
 # inference rules
 .c.o:
 	@echo "Compiling $<"
-	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+
+.c.lo:
+	@echo "Compiling $<"
+	$(NO_ECHO)$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 #-------------------------------------------------------------------------
-all: Makefile libfind.a ../lib/libbac.a
+all: Makefile libbacfind$(DEFAULT_ARCHIVE_TYPE) libbacfind.a ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
 	@echo "==== Make of findlib is good ===="
 	@echo " "
 
-libfind.a: $(LIBOBJS) 
+libbacfind.a: $(LIBOBJS) 
 	@echo "Making $@ ..."
-	@$(RMF) $@
-	$(AR) cr $@ $(LIBOBJS)
+	$(AR) rc  $@ $(LIBOBJS)
 	$(RANLIB) $@
+
+libbacfind.la: Makefile $(LIBOBJS) 
+	@echo "Making $@ ..."
+	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBOBJS) -export-dynamic -rpath $(libdir) -version-info $(LIBBACFIND_LT_CURRENT):$(LIBBACFIND_LT_REVISION):$(LIBBACFIND_LT_AGE)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
-install:
+install-includes:
+	$(MKDIR) $(DESTDIR)/$(includedir)/bacula/findlib
+	for I in $(INCLUDE_FILES); do \
+	   $(INSTALL_DATA) $$I $(DESTDIR)$(includedir)/bacula/findlib/`basename $$I`; \
+	done
 
-uninstall:
+uninstall-includes:
+	for I in $(INCLUDE_FILES); do \
+	   $(RMF) $(DESTDIR)$(includedir)/bacula/findlib/`basename $$I`; \
+	done
 
+libtool-install: all
+	$(MKDIR) $(DESTDIR)$(libdir)
+	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_PROGRAM) libbacfind$(DEFAULT_ARCHIVE_TYPE) $(DESTDIR)$(libdir)
 
-clean:
-	$(RMF) find core a.out *.a *.o *.bak *~ *.intpro *.extpro 1 2 3
+libtool-uninstall:
+	$(LIBTOOL_UNINSTALL) $(RMF) $(DESTDIR)$(libdir)/libbacfind.la
+
+install: @LIBTOOL_INSTALL_TARGET@ @INCLUDE_INSTALL_TARGET@
+
+uninstall: @LIBTOOL_UNINSTALL_TARGET@ @INCLUDE_UNINSTALL_TARGET@
+
+libtool-clean:
+	@find . -name '*.lo' -print | xargs $(LIBTOOL_CLEAN) $(RMF)
+	@$(RMF) *.la
+	@$(RMF) -r .libs _libs
+
+clean:	libtool-clean
+	@$(RMF) find core a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
 
 realclean: clean
-	$(RMF) tags
+	@$(RMF) tags
 
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
@@ -68,13 +104,6 @@ distclean: realclean
 devclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
 	(cd $(srcdir); $(RMF) Makefile)
-
-install:
-
-
-uninstall:
-
-
 
 # Semi-automatic generation of dependencies:
 # Use gcc -M  because X11 `makedepend' doesn't work on all systems
@@ -85,7 +114,9 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@for src in $(LIBSRCS); do \
+	    $(CXX) -S -M -MT `basename $$src .c`$(DEFAULT_OBJECT_TYPE) $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) $$src >> Makefile; \
+	done
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \

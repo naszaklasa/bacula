@@ -29,7 +29,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -80,7 +80,8 @@ PROG_COPYRIGHT
 " will start 3 thread and load dat1, dat and datx in your catalog\n"
 "See bbatch.c to generate datafile\n\n"
 "Usage: bbatch [ options ] -w working/dir -f datafile\n"
-"       -d <nn>           set debug level to nn\n"
+"       -d <nn>           set debug level to <nn>\n"
+"       -dt               print timestamp in debug output\n"
 "       -n <name>         specify the database name (default bacula)\n"
 "       -u <user>         specify database user name (default bacula)\n"
 "       -P <password      specify database password (default none)\n"
@@ -113,9 +114,14 @@ int main (int argc, char *argv[])
    while ((ch = getopt(argc, argv, "h:c:d:n:P:Su:vf:w:?")) != -1) {
       switch (ch) {
       case 'd':                    /* debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0)
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
+         }
          break;
 
       case 'h':
@@ -177,8 +183,8 @@ int main (int argc, char *argv[])
       bjcr->NumReadVolumes = 0;
       bjcr->NumWriteVolumes = 0;
       bjcr->JobId = getpid();
-      bjcr->JobType = JT_CONSOLE;
-      bjcr->JobLevel = L_FULL;
+      bjcr->set_JobType(JT_CONSOLE);
+      bjcr->set_JobLevel(L_FULL);
       bjcr->JobStatus = JS_Running;
       bjcr->where = bstrdup(files[i]);
       bjcr->job_name = get_pool_memory(PM_FNAME);

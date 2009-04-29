@@ -110,7 +110,7 @@ AC_DEFUN([AM_GNU_GETTEXT],
     ifelse(gt_included_intl, yes, [
       AC_MSG_CHECKING([whether included gettext is requested])
       AC_ARG_WITH(included-gettext,
-        [  --with-included-gettext use the GNU gettext library included here],
+        AC_HELP_STRING([--with-included-gettext], [use the GNU gettext library included here]),
         nls_cv_force_use_gnu_gettext=$withval,
         nls_cv_force_use_gnu_gettext=no)
       AC_MSG_RESULT($nls_cv_force_use_gnu_gettext)

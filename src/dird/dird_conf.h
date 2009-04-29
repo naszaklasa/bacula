@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, Feb MM
  *
- *    Version $Id: dird_conf.h 7164 2008-06-18 19:22:03Z kerns $
+ *    Version $Id: dird_conf.h 8407 2009-01-28 10:47:21Z ricozz $
  */
 
 /* NOTE:  #includes at the end of this file */
@@ -72,14 +72,14 @@ enum {
 /* Used for certain KeyWord tables */
 struct s_kw {
    const char *name;
-   int32_t token;
+   uint32_t token;
 };
 
 /* Job Level keyword structure */
 struct s_jl {
-   const char *level_name;            /* level keyword */
-   int32_t level;                     /* level */
-   int32_t job_type;                  /* JobType permitting this level */
+   const char *level_name;                 /* level keyword */
+   int32_t  level;                         /* level */
+   int32_t  job_type;                      /* JobType permitting this level */
 };
 
 /* Job Type keyword structure */
@@ -110,10 +110,12 @@ public:
    char *query_file;                  /* SQL query file */
    char *working_directory;           /* WorkingDirectory */
    const char *scripts_directory;     /* ScriptsDirectory */
+   const char *plugin_directory;      /* Plugin Directory */
    char *pid_directory;               /* PidDirectory */
    char *subsys_directory;            /* SubsysDirectory */
    MSGS *messages;                    /* Daemon message handler */
    uint32_t MaxConcurrentJobs;        /* Max concurrent jobs for whole director */
+   uint32_t MaxConsoleConnect;        /* Max concurrent console session */
    utime_t FDConnectTimeout;          /* timeout for connect in seconds */
    utime_t SDConnectTimeout;          /* timeout in seconds */
    utime_t heartbeat_interval;        /* Interval to send heartbeats */
@@ -124,10 +126,12 @@ public:
    char *tls_dhfile;                  /* TLS Diffie-Hellman Parameters */
    alist *tls_allowed_cns;            /* TLS Allowed Clients */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
+   utime_t stats_retention;           /* Stats retention period in seconds */
+   bool tls_authenticate;             /* Authenticated with TLS */
    bool tls_enable;                   /* Enable TLS */
    bool tls_require;                  /* Require TLS */
    bool tls_verify_peer;              /* TLS Verify Client Certificate */
-
+   char *verid;                       /* Custom Id to print in version command */
    /* Methods */
    char *name() const;
 };
@@ -147,9 +151,9 @@ public:
    RES hdr;
 
    bool found;                        /* found with SD */
-   uint32_t num_writers;              /* number of writers */
-   uint32_t max_writers;              /* = 1 for files */
-   uint32_t reserved;                 /* number of reserves */
+   int32_t num_writers;               /* number of writers */
+   int32_t max_writers;               /* = 1 for files */
+   int32_t reserved;                  /* number of reserves */
    int32_t num_drives;                /* for autochanger */
    bool autochanger;                  /* set if device is autochanger */
    bool open;                         /* drive open */
@@ -183,6 +187,7 @@ enum {
    FileSet_ACL,
    Catalog_ACL,
    Where_ACL,
+   PluginOptions_ACL,
    Num_ACL                            /* keep last */
 };
 
@@ -201,6 +206,7 @@ public:
    char *tls_dhfile;                  /* TLS Diffie-Hellman Parameters */
    alist *tls_allowed_cns;            /* TLS Allowed Clients */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
+   bool tls_authenticate;             /* Authenticated with TLS */
    bool tls_enable;                   /* Enable TLS */
    bool tls_require;                  /* Require TLS */
    bool tls_verify_peer;              /* TLS Verify Client Certificate */
@@ -226,10 +232,12 @@ public:
    char *db_password;
    char *db_user;
    char *db_name;
-   uint32_t mult_db_connections;         /* set if multiple connections wanted */
+   char *db_driver;                   /* Select appropriate driver */
+   uint32_t mult_db_connections;      /* set if multiple connections wanted */
 
    /* Methods */
    char *name() const;
+   char *display(POOLMEM *dst);       /* Get catalog information */
 };
 
 inline char *CAT::name() const { return hdr.name; }
@@ -258,6 +266,7 @@ public:
    char *tls_keyfile;                 /* TLS Client Key File */
    alist *tls_allowed_cns;            /* TLS Allowed Clients */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
+   bool tls_authenticate;             /* Authenticated with TLS */
    bool tls_enable;                   /* Enable TLS */
    bool tls_require;                  /* Require TLS */
    bool AutoPrune;                    /* Do automatic pruning? */
@@ -285,11 +294,13 @@ public:
    alist *device;                     /* Alternate devices for this Storage */
    uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
    uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
+   uint32_t NumConcurrentReadJobs;    /* number of jobs reading */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
    char *tls_keyfile;                 /* TLS Client Key File */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
+   bool tls_authenticate;             /* Authenticated with TLS */
    bool tls_enable;                   /* Enable TLS */
    bool tls_require;                  /* Require TLS */
    bool enabled;                      /* Set if device is enabled */
@@ -354,34 +365,60 @@ class JOB {
 public:
    RES   hdr;
 
-   uint32_t JobType;                  /* job type (backup, verify, restore */
-   uint32_t JobLevel;                 /* default backup/verify level */
-   uint32_t Priority;                 /* Job priority */
-   uint32_t RestoreJobId;             /* What -- JobId to restore */
+   uint32_t   JobType;                /* job type (backup, verify, restore */
+   uint32_t   JobLevel;               /* default backup/verify level */
+   int32_t   Priority;                /* Job priority */
+   uint32_t   RestoreJobId;           /* What -- JobId to restore */
+   int32_t   RescheduleTimes;         /* Number of times to reschedule job */
+   uint32_t   replace;                /* How (overwrite, ..) */
+   uint32_t   selection_type;
+
    char *RestoreWhere;                /* Where on disk to restore -- directory */
    char *RegexWhere;                  /* RegexWhere option */
    char *strip_prefix;                /* remove prefix from filename  */
    char *add_prefix;                  /* add prefix to filename  */
    char *add_suffix;                  /* add suffix to filename -- .old */
-   bool  where_use_regexp;            /* true if RestoreWhere is a BREGEXP */
    char *RestoreBootstrap;            /* Bootstrap file */
-   alist *RunScripts;                 /* Run {client} program {after|before} Job */
+   char *PluginOptions;               /* Options to pass to plugin */
    union {
       char *WriteBootstrap;           /* Where to write bootstrap Job updates */
       char *WriteVerifyList;          /* List of changed files */
    };
-   uint32_t replace;                  /* How (overwrite, ..) */
    utime_t MaxRunTime;                /* max run time in seconds */
    utime_t MaxWaitTime;               /* max blocking time in seconds */
-   utime_t FullMaxWaitTime;           /* Max Full job wait time */
-   utime_t DiffMaxWaitTime;           /* Max Differential job wait time */
-   utime_t IncMaxWaitTime;            /* Max Incremental job wait time */
+   utime_t FullMaxRunTime;            /* Max Full job run time */
+   utime_t DiffMaxRunTime;            /* Max Differential job run time */
+   utime_t IncMaxRunTime;             /* Max Incremental job run time */
    utime_t MaxStartDelay;             /* max start delay in seconds */
+   utime_t MaxRunSchedTime;           /* max run time in seconds from Scheduled time*/
    utime_t RescheduleInterval;        /* Reschedule interval */
    utime_t JobRetention;              /* job retention period in seconds */
-   uint32_t MaxConcurrentJobs;        /* Maximum concurrent jobs */
+   utime_t MaxFullInterval;           /* Maximum time interval between Fulls */
+   utime_t MaxDiffInterval;           /* Maximum time interval between Diffs */
+   utime_t DuplicateJobProximity;     /* Permitted time between duplicicates */
    int64_t spool_size;                /* Size of spool file for this job */
-   int32_t RescheduleTimes;           /* Number of times to reschedule job */
+   uint32_t MaxConcurrentJobs;        /* Maximum concurrent jobs */
+   uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
+   bool allow_mixed_priority;         /* Allow jobs with higher priority concurrently with this */
+
+   MSGS      *messages;               /* How and where to send messages */
+   SCHED     *schedule;               /* When -- Automatic schedule */
+   CLIENT    *client;                 /* Who to backup */
+   FILESET   *fileset;                /* What to backup -- Fileset */
+   alist     *storage;                /* Where is device -- list of Storage to be used */
+   POOL      *pool;                   /* Where is media -- Media Pool */
+   POOL      *full_pool;              /* Pool for Full backups */
+   POOL      *inc_pool;               /* Pool for Incremental backups */
+   POOL      *diff_pool;              /* Pool for Differental backups */
+   char      *selection_pattern;
+   union {
+      JOB    *verify_job;             /* Job name to verify */
+   };
+   JOB       *jobdefs;                /* Job defaults */
+   alist     *run_cmds;               /* Run commands */
+   alist *RunScripts;                 /* Run {client} program {after|before} Job */
+
+   bool where_use_regexp;             /* true if RestoreWhere is a BREGEXP */
    bool RescheduleOnError;            /* Set to reschedule on error */
    bool PrefixLinks;                  /* prefix soft links with Where path */
    bool PruneJobs;                    /* Force pruning of Jobs */
@@ -393,25 +430,12 @@ public:
    bool PreferMountedVolumes;         /* Prefer vols mounted rather than new one */
    bool write_part_after_job;         /* Set to write part after job in SD */
    bool enabled;                      /* Set if job enabled */
-   bool OptimizeJobScheduling;        /* Set if we should optimize Job scheduling */
+   bool accurate;                     /* Set if it is an accurate backup job */
+   bool AllowDuplicateJobs;           /* Allow duplicate jobs */
+   bool AllowHigherDuplicates;        /* Permit Higher Level */
+   bool CancelQueuedDuplicates;       /* Cancel queued jobs */
+   bool CancelRunningDuplicates;      /* Cancel Running jobs */
    
-   MSGS      *messages;               /* How and where to send messages */
-   SCHED     *schedule;               /* When -- Automatic schedule */
-   CLIENT    *client;                 /* Who to backup */
-   FILESET   *fileset;                /* What to backup -- Fileset */
-   alist     *storage;                /* Where is device -- list of Storage to be used */
-   POOL      *pool;                   /* Where is media -- Media Pool */
-   POOL      *full_pool;              /* Pool for Full backups */
-   POOL      *inc_pool;               /* Pool for Incremental backups */
-   POOL      *diff_pool;              /* Pool for Differental backups */
-   char      *selection_pattern;
-   uint32_t  selection_type;
-   union {
-      JOB       *verify_job;          /* Job name to verify */
-   };
-   JOB       *jobdefs;                /* Job defaults */
-   alist     *run_cmds;               /* Run commands */
-   uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
 
    /* Methods */
    char *name() const;
@@ -420,7 +444,7 @@ public:
 inline char *JOB::name() const { return hdr.name; }
 
 #undef  MAX_FOPTS
-#define MAX_FOPTS 34
+#define MAX_FOPTS 40
 
 /* File options structure */
 struct FOPTS {
@@ -437,6 +461,8 @@ struct FOPTS {
    alist drivetype;                   /* drive type limitation */
    char *reader;                      /* reader program */
    char *writer;                      /* writer program */
+   char *ignoredir;                   /* ignoredir string */
+   char *plugin;                      /* plugin program */
 };
 
 
@@ -446,6 +472,7 @@ struct INCEXE {
    FOPTS **opts_list;                 /* options list */
    int32_t num_opts;                  /* number of options items */
    alist name_list;                   /* filename list -- holds char * */
+   alist plugin_list;                 /* filename list for plugins */
 };
 
 /*
@@ -514,7 +541,7 @@ public:
    char *pool_type;                   /* Pool type */
    char *label_format;                /* Label format string */
    char *cleaning_prefix;             /* Cleaning label prefix */
-   uint32_t LabelType;                /* Bacula/ANSI/IBM label type */
+   int32_t LabelType;                 /* Bacula/ANSI/IBM label type */
    uint32_t max_volumes;              /* max number of volumes */
    utime_t VolRetention;              /* volume retention period in seconds */
    utime_t VolUseDuration;            /* duration volume can be used */
@@ -535,8 +562,9 @@ public:
    bool  AutoPrune;                   /* default for pool auto prune */
    bool  Recycle;                     /* default for media recycle yes/no */
    POOL  *RecyclePool;                /* RecyclePool destination when media is purged */
+   POOL  *ScratchPool;                /* ScratchPool source when requesting media */
    alist *CopyPool;                   /* List of copy pools */
-   CAT *Catalog;                      /* Catalog to be used */
+   CAT *catalog;                      /* Catalog to be used */
    /* Methods */
    char *name() const;
 };
@@ -573,7 +601,7 @@ class RUN {
 public:
    RUN *next;                         /* points to next run record */
    uint32_t level;                    /* level override */
-   uint32_t Priority;                 /* priority override */
+   int32_t Priority;                  /* priority override */
    uint32_t job_type;
    bool spool_data;                   /* Data spooling override */
    bool spool_data_set;               /* Data spooling override given */

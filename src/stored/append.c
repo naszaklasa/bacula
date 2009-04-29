@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -29,7 +29,7 @@
  * Append code for Storage daemon
  *  Kern Sibbald, May MM
  *
- *  Version $Id: append.c 6831 2008-04-16 09:49:47Z kerns $
+ *  Version $Id: append.c 8528 2009-03-14 16:51:26Z kerns $
  */
 
 #include "bacula.h"
@@ -161,27 +161,11 @@ bool do_append_data(JCR *jcr)
          break;
       }
 
-      /*
-       * This hand scanning is a bit more complicated than a simple
-       *   sscanf, but it allows us to handle any size integer up to
-       *   int64_t without worrying about whether %d, %ld, %lld, or %q
-       *   is the correct format for each different architecture.
-       * It is a real pity that sscanf() is not portable.
-       */
-      char *p = ds->msg;
-      while (B_ISSPACE(*p)) {
-         p++;
-      }
-      file_index = (int32_t)str_to_int64(p);
-      while (B_ISDIGIT(*p)) {
-         p++;
-      }
-      if (!B_ISSPACE(*p) || !B_ISDIGIT(*(p+1))) {
+      if (sscanf(ds->msg, "%ld %ld", &file_index, &stream) != 2) {
          Jmsg1(jcr, M_FATAL, 0, _("Malformed data header from FD: %s\n"), ds->msg);
          ok = false;
          break;
       }
-      stream = (int32_t)str_to_int64(p);
 
       Dmsg2(890, "<filed: Header FilInx=%d stream=%d\n", file_index, stream);
 
@@ -269,8 +253,11 @@ bool do_append_data(JCR *jcr)
    ds->fsend(OK_append);
    do_fd_commands(jcr);               /* finish dialog with FD */
 
-
-   time_t job_elapsed = time(NULL) - jcr->run_time;
+   /*
+    * Don't use time_t for job_elapsed as time_t can be 32 or 64 bits,
+    *   and the subsequent Jmsg() editing will break
+    */
+   int32_t job_elapsed = time(NULL) - jcr->run_time;
 
    if (job_elapsed <= 0) {
       job_elapsed = 1;

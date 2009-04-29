@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -57,7 +57,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.c 7164 2008-06-18 19:22:03Z kerns $
+ *   Version $Id: parse_conf.c 8400 2009-01-24 17:56:41Z kerns $
  */
 
 
@@ -68,15 +68,6 @@
 #else
 #define MAX_PATH  1024
 #endif
-
-/* Each daemon has a slightly different set of
- * resources, so it will define the following
- * global values.
- */
-extern int r_first;
-extern int r_last;
-extern RES_TABLE resources[];
-extern RES **res_head;
 
 /*
  * Define the Union of all the common resource structure definitions.
@@ -93,7 +84,6 @@ extern "C" URES res_all;
 #else
 extern  URES res_all;
 #endif
-extern int res_all_size;
 
 extern brwlock_t res_lock;            /* resource lock */
 
@@ -130,7 +120,7 @@ RES_ITEM msgs_items[] = {
 
 struct s_mtypes {
    const char *name;
-   uint32_t token;
+   int token;
 };
 /* Various message types */
 static struct s_mtypes msg_types[] = {
@@ -156,7 +146,7 @@ static struct s_mtypes msg_types[] = {
 /* Used for certain KeyWord tables */
 struct s_kw {
    const char *name;
-   uint32_t token;
+   int token;
 };
 
 /*
@@ -196,12 +186,12 @@ const char *res_to_str(int rcode)
  * Initialize the static structure to zeros, then
  *  apply all the default values.
  */
-static void init_resource(int type, RES_ITEM *items, int pass)
+static void init_resource(CONFIG *config, int type, RES_ITEM *items, int pass)
 {
    int i;
    int rindex = type - r_first;
 
-   memset(&res_all, 0, res_all_size);
+   memset(config->m_res_all, 0, config->m_res_all_size);
    res_all.hdr.rcode = type;
    res_all.hdr.refcnt = 1;
 
@@ -217,7 +207,7 @@ static void init_resource(int type, RES_ITEM *items, int pass)
             *(bool *)(items[i].value) = items[i].default_value != 0;
          } else if (items[i].handler == store_pint32 ||
                     items[i].handler == store_int32) {
-            *(int32_t *)(items[i].value) = items[i].default_value;
+            *(uint32_t *)(items[i].value) = items[i].default_value;
          } else if (items[i].handler == store_int64) {
             *(int64_t *)(items[i].value) = items[i].default_value;
          } else if (items[i].handler == store_size) {
@@ -284,6 +274,7 @@ void store_msgs(LEX *lc, RES_ITEM *item, int index, int pass)
             }
             if (token != T_EQUALS) {
                scan_err1(lc, _("expected an =, got: %s"), lc->str);
+               return;
             }
             break;
          }
@@ -304,6 +295,7 @@ void store_msgs(LEX *lc, RES_ITEM *item, int index, int pass)
          Dmsg1(900, "store_msgs dest=%s:\n", NPRT(dest));
          if (token != T_EQUALS) {
             scan_err1(lc, _("expected an =, got: %s"), lc->str);
+            return;
          }
          scan_types(lc, (MSGS *)(item->value), item->code, dest, NULL);
          free_pool_memory(dest);
@@ -312,7 +304,7 @@ void store_msgs(LEX *lc, RES_ITEM *item, int index, int pass)
 
       default:
          scan_err1(lc, _("Unknown item code: %d\n"), item->code);
-         break;
+         return;
       }
    }
    scan_to_eol(lc);
@@ -352,7 +344,7 @@ static void scan_types(LEX *lc, MSGS *msg, int dest_code, char *where, char *cmd
       }
       if (!found) {
          scan_err1(lc, _("message type: %s not found"), str);
-         /* NOT REACHED */
+         return;
       }
 
       if (msg_type == M_MAX+1) {         /* all? */
@@ -384,12 +376,14 @@ void store_name(LEX *lc, RES_ITEM *item, int index, int pass)
    lex_get_token(lc, T_NAME);
    if (!is_name_valid(lc->str, &msg)) {
       scan_err1(lc, "%s\n", msg);
+      return;
    }
    free_pool_memory(msg);
    /* Store the name both pass 1 and pass 2 */
    if (*(item->value)) {
       scan_err2(lc, _("Attempt to redefine name \"%s\" to \"%s\"."),
          *(item->value), lc->str);
+      return;
    }
    *(item->value) = bstrdup(lc->str);
    scan_to_eol(lc);
@@ -481,10 +475,12 @@ void store_res(LEX *lc, RES_ITEM *item, int index, int pass)
       if (res == NULL) {
          scan_err3(lc, _("Could not find config Resource %s referenced on line %d : %s\n"),
             lc->str, lc->line_no, lc->line);
+         return;
       }
       if (*(item->value)) {
          scan_err3(lc, _("Attempt to redefine resource \"%s\" referenced on line %d : %s\n"),
             item->name, lc->line_no, lc->line);
+         return;
       }
       *(item->value) = (char *)res;
    }
@@ -520,6 +516,7 @@ void store_alist_res(LEX *lc, RES_ITEM *item, int index, int pass)
          if (i >= count) {
             scan_err4(lc, _("Too many %s directives. Max. is %d. line %d: %s\n"),
                lc->str, count, lc->line_no, lc->line);
+            return;
          }
          list = New(alist(10, not_owned_by_alist));
       }
@@ -530,6 +527,7 @@ void store_alist_res(LEX *lc, RES_ITEM *item, int index, int pass)
          if (res == NULL) {
             scan_err3(lc, _("Could not find config Resource \"%s\" referenced on line %d : %s\n"),
                item->name, lc->line_no, lc->line);
+            return;
          }
          Dmsg5(900, "Append %p to alist %p size=%d i=%d %s\n", 
                res, list, list->size(), i, item->name);
@@ -592,6 +590,7 @@ void store_defs(LEX *lc, RES_ITEM *item, int index, int pass)
      if (res == NULL) {
         scan_err3(lc, _("Missing config Resource \"%s\" referenced on line %d : %s\n"),
            lc->str, lc->line_no, lc->line);
+        return;
      }
    }
    scan_to_eol(lc);
@@ -603,7 +602,7 @@ void store_defs(LEX *lc, RES_ITEM *item, int index, int pass)
 void store_int32(LEX *lc, RES_ITEM *item, int index, int pass)
 {
    lex_get_token(lc, T_INT32);
-   *(int32_t *)(item->value) = lc->int32_val;
+   *(uint32_t *)(item->value) = lc->int32_val;
    scan_to_eol(lc);
    set_bit(index, res_all.hdr.item_present);
 }
@@ -655,12 +654,13 @@ void store_size(LEX *lc, RES_ITEM *item, int index, int pass)
       }
       if (!size_to_uint64(bsize, strlen(bsize), &uvalue)) {
          scan_err1(lc, _("expected a size number, got: %s"), lc->str);
+         return;
       }
       *(uint64_t *)(item->value) = uvalue;
       break;
    default:
       scan_err1(lc, _("expected a size, got: %s"), lc->str);
-      break;
+      return;
    }
    if (token != T_EOL) {
       scan_to_eol(lc);
@@ -697,12 +697,13 @@ void store_time(LEX *lc, RES_ITEM *item, int index, int pass)
       }
       if (!duration_to_utime(period, &utime)) {
          scan_err1(lc, _("expected a time period, got: %s"), period);
+         return;
       }
       *(utime_t *)(item->value) = utime;
       break;
    default:
       scan_err1(lc, _("expected a time period, got: %s"), lc->str);
-      break;
+      return;
    }
    if (token != T_EOL) {
       scan_to_eol(lc);
@@ -721,6 +722,7 @@ void store_bit(LEX *lc, RES_ITEM *item, int index, int pass)
       *(uint32_t *)(item->value) &= ~(item->code);
    } else {
       scan_err2(lc, _("Expect %s, got: %s"), "YES, NO, TRUE, or FALSE", lc->str); /* YES and NO must not be translated */
+      return;
    }
    scan_to_eol(lc);
    set_bit(index, res_all.hdr.item_present);
@@ -736,6 +738,7 @@ void store_bool(LEX *lc, RES_ITEM *item, int index, int pass)
       *(bool *)(item->value) = false;
    } else {
       scan_err2(lc, _("Expect %s, got: %s"), "YES, NO, TRUE, or FALSE", lc->str); /* YES and NO must not be translated */
+      return;
    }
    scan_to_eol(lc);
    set_bit(index, res_all.hdr.item_present);
@@ -761,6 +764,7 @@ void store_label(LEX *lc, RES_ITEM *item, int index, int pass)
    }
    if (i != 0) {
       scan_err1(lc, _("Expected a Tape Label keyword, got: %s"), lc->str);
+      return;
    }
    scan_to_eol(lc);
    set_bit(index, res_all.hdr.item_present);
@@ -773,6 +777,36 @@ enum parse_state {
    p_resource
 };
 
+CONFIG *new_config_parser()
+{
+   CONFIG *config;
+   config = (CONFIG *)malloc(sizeof(CONFIG));
+   memset(config, 0, sizeof(CONFIG));
+   return config;
+}
+
+void CONFIG::init(
+   const char *cf,
+   LEX_ERROR_HANDLER *scan_error,
+   int err_type,
+   void *vres_all,
+   int res_all_size,
+   int r_first,
+   int r_last,
+   RES_TABLE *resources,
+   RES **res_head)
+{
+   m_cf = cf;
+   m_scan_error = scan_error;
+   m_err_type = err_type;
+   m_res_all = vres_all;
+   m_res_all_size = res_all_size;
+   m_r_first = r_first;
+   m_r_last = r_last;
+   m_resources = resources;
+   m_res_head = res_head;
+}
+
 /*********************************************************************
  *
  * Parse configuration file
@@ -781,8 +815,22 @@ enum parse_state {
  *  Note, the default behavior unless you have set an alternate
  *  scan_error handler is to die on an error.
  */
+#ifdef xxx
 int
 parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
+{
+   int ok;
+   CONFIG *config = new_config_parser();
+   config->init(cf, scan_error, err_type, (void *)&res_all, res_all_size,    
+                r_first, r_last, resources, res_head);
+   ok = config->parse_config();
+   free(config);
+   return ok;
+}
+#endif
+      
+   
+bool CONFIG::parse_config()
 {
    LEX *lc = NULL;
    int token, i, pass;
@@ -792,19 +840,23 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
    int level = 0;
    static bool first = true;
    int errstat;
+   const char *cf = m_cf;
+   LEX_ERROR_HANDLER *scan_error = m_scan_error;
+   int err_type = m_err_type;
 
    if (first && (errstat=rwl_init(&res_lock)) != 0) {
       berrno be;
-      Emsg1(M_ABORT, 0, _("Unable to initialize resource lock. ERR=%s\n"),
+      Jmsg1(NULL, M_ABORT, 0, _("Unable to initialize resource lock. ERR=%s\n"),
             be.bstrerror(errstat));
    }
    first = false;
 
    char *full_path = (char *)alloca(MAX_PATH + 1);
 
-   if (find_config_file(cf, full_path, MAX_PATH +1)) {
-      cf = full_path;
+   if (!find_config_file(cf, full_path, MAX_PATH +1)) {
+      Jmsg0(NULL, M_ABORT, 0, _("Config filename too long.\n"));
    }
+   cf = full_path;
 
    /* Make two passes. The first builds the name symbol table,
     * and the second picks up the items.
@@ -857,7 +909,7 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
                   }
                   state = p_resource;
                   res_type = resources[i].rcode;
-                  init_resource(res_type, items, pass);
+                  init_resource(this, res_type, items, pass);
                   break;
                }
             }
@@ -910,6 +962,7 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
                Dmsg0(900, "T_EOB => define new resource\n");
                if (res_all.hdr.name == NULL) {
                   scan_err0(lc, _("Name not specified for resource"));
+                  return 0;
                }
                save_resource(res_type, items, pass);  /* save resource */
                break;
@@ -934,8 +987,8 @@ parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error, int err_type)
       }
       if (debug_level >= 900 && pass == 2) {
          int i;
-         for (i=r_first; i<=r_last; i++) {
-            dump_resource(i, res_head[i-r_first], prtmsg, NULL);
+         for (i=m_r_first; i<=m_r_last; i++) {
+            dump_resource(i, m_res_head[i-m_r_first], prtmsg, NULL);
          }
       }
       lc = lex_close_file(lc);
@@ -970,24 +1023,29 @@ const char *get_default_configdir()
 #endif
 }
 
-bool
+/*
+ * Returns false on error
+ *         true  on OK, with full_path set to where config file should be 
+ */
+static bool
 find_config_file(const char *config_file, char *full_path, int max_path)
 {
+   int file_length = strlen(config_file) + 1;
+
+   /* If a full path specified, use it */
    if (first_path_separator(config_file) != NULL) {
-      return false;
+      if (file_length > max_path) {
+         return false;
+      }
+      bstrncpy(full_path, config_file, file_length);
+      return true;
    }
 
-   struct stat st;
-
-   if (stat(config_file, &st) == 0) {
-      return false;
-   }
-
+   /* config_file is default file name, now find default dir */
    const char *config_dir = get_default_configdir();
    int dir_length = strlen(config_dir);
-   int file_length = strlen(config_file);
 
-   if ((dir_length + 1 + file_length + 1) > max_path) {
+   if ((dir_length + 1 + file_length) > max_path) {
       return false;
    }
 
@@ -997,7 +1055,7 @@ find_config_file(const char *config_file, char *full_path, int max_path)
       full_path[dir_length++] = '/';
    }
 
-   memcpy(&full_path[dir_length], config_file, file_length + 1);
+   memcpy(&full_path[dir_length], config_file, file_length);
 
    return true;
 }
@@ -1007,6 +1065,35 @@ find_config_file(const char *config_file, char *full_path, int max_path)
  *      Free configuration resources
  *
  */
+void CONFIG::free_resources()
+{
+   for (int i=m_r_first; i<=m_r_last; i++) {
+      free_resource(m_res_head[i-m_r_first], i);
+      m_res_head[i-m_r_first] = NULL;
+   }
+}
+
+RES **CONFIG::save_resources()
+{
+   int num = m_r_last - m_r_first + 1;
+   RES **res = (RES **)malloc(num*sizeof(RES *));
+   for (int i=0; i<num; i++) {
+      res[i] = m_res_head[i];
+      m_res_head[i] = NULL;
+   }
+   return res;
+}
+
+RES **CONFIG::new_res_head()
+{
+   int size = (m_r_last - m_r_first + 1) * sizeof(RES *);
+   RES **res = (RES **)malloc(size);
+   memset(res, 0, size);
+   return res;
+}
+
+
+#ifdef xxx
 void free_config_resources()
 {
    for (int i=r_first; i<=r_last; i++) {
@@ -1033,3 +1120,4 @@ RES **new_res_head()
    memset(res, 0, size);
    return res;
 }
+#endif

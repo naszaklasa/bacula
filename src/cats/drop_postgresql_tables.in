@@ -11,6 +11,7 @@ drop table basefiles;
 drop table jobmedia;
 drop table file;
 drop table job;
+drop table jobhisto;
 drop table media;
 drop table client;
 drop table pool;

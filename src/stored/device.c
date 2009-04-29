@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -53,7 +53,7 @@
  *
  *   Kern Sibbald, MM, MMI
  *
- *   Version $Id: device.c 6831 2008-04-16 09:49:47Z kerns $
+ *   Version $Id: device.c 7939 2008-10-29 14:21:32Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -122,6 +122,7 @@ bool fixup_device_block_write_error(DCR *dcr)
         edit_uint64_with_commas(dev->VolCatInfo.VolCatBlocks, b2),
         bstrftime(dt, sizeof(dt), time(NULL)));
 
+   Dmsg0(050, "set_unload\n");
    dev->set_unload();
    if (!dcr->mount_next_write_volume()) {
       free_block(label_blk);
@@ -129,6 +130,7 @@ bool fixup_device_block_write_error(DCR *dcr)
       dev->dlock();  
       goto bail_out;
    }
+   Dmsg1(050, "must_unload=%d\n", dev->must_unload());
    dev->dlock();                    /* lock again */
 
    dev->VolCatInfo.VolCatJobs++;              /* increment number of jobs on vol */
@@ -181,7 +183,7 @@ bool fixup_device_block_write_error(DCR *dcr)
    Dmsg0(190, "Write overflow block to dev\n");
    if (!write_block_to_dev(dcr)) {
       berrno be;
-      Pmsg1(0, _("write_block_to_device overflow block failed. ERR=%s"),
+      Dmsg1(0, _("write_block_to_device overflow block failed. ERR=%s"),
         be.bstrerror(dev->dev_errno));
       goto bail_out;
    }

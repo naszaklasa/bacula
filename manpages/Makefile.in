@@ -39,8 +39,8 @@ uninstall:
 	  do (rm -f $(DESTDIR)$(mandir)/man1/$$I.gz); \
 	done
 
-clean:	dummy
-	$(RMF) *~ 1 2 3 *.bak
+clean:
+	@$(RMF) *~ 1 2 3 *.bak
 	@find . -name .#* -exec $(RMF) {} \;
 
 depend:      

@@ -1,6 +1,15 @@
 Instructions to build Bacula with Microsoft Visual C++ 2005
 ===========================================================
 
+NOTE: These instructions are probably quite accurate as several people
+have used them.  However, the project no longer maintains the files necessary
+to build using MSVC.  As a consequence, some of the file and scripts may
+be out of date, and you will almost surely need to manually update the 
+MSVC project files.  We do not supply any support on this.
+
+The project uses Mingw to cross-compile.  Those files are kept up to date though
+during development, they may sometimes be broken for a few days ...
+
 Using the Express Edition (free version)
 ----------------------------------------
   Download instructions:

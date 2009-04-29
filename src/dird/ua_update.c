@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_update.c 5299 2007-08-07 15:52:16Z kerns $
+ *   Version $Id: ua_update.c 8528 2009-03-14 16:51:26Z kerns $
  */
 
 #include "bacula.h"
@@ -42,6 +42,7 @@
 static int update_volume(UAContext *ua);
 static bool update_pool(UAContext *ua);
 static bool update_job(UAContext *ua);
+static bool update_stats(UAContext *ua);
 
 /*
  * Update a Pool Record in the database.
@@ -53,6 +54,8 @@ static bool update_job(UAContext *ua);
  *         changes pool info for volume
  *    update slots [scan=...]
  *         updates autochanger slots
+ *    update stats [days=...]
+ *         updates long term statistics
  */
 int update_cmd(UAContext *ua, const char *cmd)
 {
@@ -62,6 +65,7 @@ int update_cmd(UAContext *ua, const char *cmd)
       NT_("pool"),   /* 2 */
       NT_("slots"),  /* 3 */
       NT_("jobid"),  /* 4 */
+      NT_("stats"),  /* 5 */
       NULL};
 
    if (!open_client_db(ua)) {
@@ -82,6 +86,9 @@ int update_cmd(UAContext *ua, const char *cmd)
    case 4:
       update_job(ua);
       return 1;
+   case 5:
+      update_stats(ua);
+      return 1;
    default:
       break;
    }
@@ -90,6 +97,7 @@ int update_cmd(UAContext *ua, const char *cmd)
    add_prompt(ua, _("Volume parameters"));
    add_prompt(ua, _("Pool from resource"));
    add_prompt(ua, _("Slots from autochanger"));
+   add_prompt(ua, _("Long term statistics"));
    switch (do_prompt(ua, _("item"), _("Choose catalog item to update"), NULL, 0)) {
    case 0:
       update_volume(ua);
@@ -99,6 +107,9 @@ int update_cmd(UAContext *ua, const char *cmd)
       break;
    case 2:
       update_slots(ua);
+      break;
+   case 3:
+      update_stats(ua);
       break;
    default:
       break;
@@ -333,15 +344,24 @@ void update_vol_recyclepool(UAContext *ua, char *val, MEDIA_DBR *mr)
 {
    POOL_DBR pr;
    POOL_MEM query(PM_MESSAGE);
-   char ed1[50], ed2[50];
+   char ed1[50], ed2[50], *poolname;
 
-   memset(&pr, 0, sizeof(pr));
-   bstrncpy(pr.Name, val, sizeof(pr.Name));
-   if (!get_pool_dbr(ua, &pr, NT_("recyclepool"))) {
-      return;
-   }
-   /* pool = select_pool_resource(ua);  */
-   mr->RecyclePoolId = pr.PoolId;            /* get the PoolId */
+   if(val && *val) { /* update volume recyclepool="Scratch" */
+     /* If a pool name is given, look up the PoolId */
+     memset(&pr, 0, sizeof(pr));
+     bstrncpy(pr.Name, val, sizeof(pr.Name));
+     if (!get_pool_dbr(ua, &pr, NT_("recyclepool"))) {
+        return;
+     }
+     /* pool = select_pool_resource(ua);  */
+     mr->RecyclePoolId = pr.PoolId;            /* get the PoolId */
+     poolname = pr.Name;
+
+  } else { /* update volume recyclepool="" */
+    /* If no pool name is given, set the PoolId to 0 (the default) */
+     mr->RecyclePoolId = 0;
+     poolname = _("*None*");
+  }
 
    db_lock(ua->db);
    Mmsg(query, "UPDATE Media SET RecyclePoolId=%s WHERE MediaId=%s",
@@ -349,7 +369,7 @@ void update_vol_recyclepool(UAContext *ua, char *val, MEDIA_DBR *mr)
    if (!db_sql_query(ua->db, query.c_str(), NULL, NULL)) {
       ua->error_msg("%s", db_strerror(ua->db));
    } else {
-      ua->info_msg(_("New RecyclePool is: %s\n"), pr.Name);
+      ua->info_msg(_("New RecyclePool is: %s\n"), poolname);
    }
    db_unlock(ua->db);
 }
@@ -400,6 +420,42 @@ static void update_all_vols_from_pool(UAContext *ua, const char *pool_name)
       ua->info_msg(_("All Volume defaults updated from \"%s\" Pool record.\n"),
          pr.Name);
    }
+}
+
+static void update_all_vols(UAContext *ua)
+{
+   int i, num_pools;
+   uint32_t *ids;
+   POOL_DBR pr;
+   MEDIA_DBR mr;
+
+   memset(&pr, 0, sizeof(pr));
+   memset(&mr, 0, sizeof(mr));
+   
+   if (!db_get_pool_ids(ua->jcr, ua->db, &num_pools, &ids)) {
+      ua->error_msg(_("Error obtaining pool ids. ERR=%s\n"), db_strerror(ua->db));
+      return;
+   }
+
+   for (i=0; i<num_pools; i++) {
+      pr.PoolId = ids[i];
+      if (!db_get_pool_record(ua->jcr, ua->db, &pr)) { /* ***FIXME*** use acl? */
+         ua->warning_msg(_("Updating all pools, but skipped PoolId=%d. ERR=%s\n"), db_strerror(ua->db));
+         continue;
+      }
+
+      set_pool_dbr_defaults_in_media_dbr(&mr, &pr);
+      mr.PoolId = pr.PoolId;
+
+      if (!db_update_media_defaults(ua->jcr, ua->db, &mr)) {
+         ua->error_msg(_("Error updating Volume records: ERR=%s"), db_strerror(ua->db));
+      } else {
+         ua->info_msg(_("All Volume defaults updated from \"%s\" Pool record.\n"),
+            pr.Name);
+      }
+   }
+
+   free(ids);
 }
 
 static void update_volenabled(UAContext *ua, char *val, MEDIA_DBR *mr)
@@ -455,6 +511,7 @@ static int update_volume(UAContext *ua)
    for (i=0; kw[i]; i++) {
       int j;
       POOL_DBR pr;
+
       if ((j=find_arg_with_value(ua, kw[i])) > 0) {
          /* If all from pool don't select a media record */
          if (i != AllFromPool && !select_media_dbr(ua, &mr)) {
@@ -514,6 +571,12 @@ static int update_volume(UAContext *ua)
       }
    }
 
+   /* Allow user to simply update all volumes */
+   if (find_arg(ua, NT_("fromallpools")) > 0) {
+      update_all_vols(ua);
+      return 1;
+   }
+
    for ( ; !done; ) {
       start_prompt(ua, _("Parameters to modify:\n"));
       add_prompt(ua, _("Volume Status"));              /* 0 */
@@ -529,13 +592,15 @@ static int update_volume(UAContext *ua)
       add_prompt(ua, _("Pool"));                       /* 10 */
       add_prompt(ua, _("Volume from Pool"));           /* 11 */
       add_prompt(ua, _("All Volumes from Pool"));      /* 12 */
-      add_prompt(ua, _("Enabled")),                    /* 13 */
-      add_prompt(ua, _("RecyclePool")),                /* 14 */
-      add_prompt(ua, _("Done"));                       /* 15 */
+      add_prompt(ua, _("All Volumes from all Pools")); /* 13 */
+      add_prompt(ua, _("Enabled")),                    /* 14 */
+      add_prompt(ua, _("RecyclePool")),                /* 15 */
+      add_prompt(ua, _("Done"));                       /* 16 */
       i = do_prompt(ua, "", _("Select parameter to modify"), NULL, 0);  
 
-      /* For All Volumes from Pool and Done, we don't need a Volume record */
-      if (i != 12 && i != 15) {
+      /* For All Volumes, All Volumes from Pool, and Done, we don't need
+           * a Volume record */
+      if ( i != 12 && i != 13 && i != 16) {
          if (!select_media_dbr(ua, &mr)) {  /* Get Volume record */
             return 0;
          }
@@ -692,6 +757,10 @@ static int update_volume(UAContext *ua)
          return 1;
 
       case 13:
+         update_all_vols(ua);
+         return 1;
+
+      case 14:
          ua->info_msg(_("Current Enabled is: %d\n"), mr.Enabled);
          if (!get_cmd(ua, _("Enter new Enabled: "))) {
             return 0;
@@ -708,18 +777,18 @@ static int update_volume(UAContext *ua)
          update_volenabled(ua, ua->cmd, &mr);
          break;
 
-      case 14:
+      case 15:
          memset(&pr, 0, sizeof(POOL_DBR));
          pr.PoolId = mr.RecyclePoolId;
          if (db_get_pool_record(ua->jcr, ua->db, &pr)) {
             ua->info_msg(_("Current RecyclePool is: %s\n"), pr.Name);
          } else {
-            ua->warning_msg(_("No current RecyclePool\n"));
+            ua->info_msg(_("No current RecyclePool\n"));
          }
-         if (!get_cmd(ua, _("Enter new RecyclePool name: "))) {
+         if (!select_pool_dbr(ua, &pr, NT_("recyclepool"))) {
             return 0;
          }
-         update_vol_recyclepool(ua, ua->cmd, &mr);
+         update_vol_recyclepool(ua, pr.Name, &mr);
          return 1;
 
       default:                        /* Done or error */
@@ -728,6 +797,24 @@ static int update_volume(UAContext *ua)
       }
    }
    return 1;
+}
+
+/*
+ * Update long term statistics
+ */
+static bool update_stats(UAContext *ua)
+{
+   int i = find_arg_with_value(ua, NT_("days"));
+   utime_t since=0;
+
+   if (i >= 0) {
+      since = atoi(ua->argv[i]) * 24*60*60;
+   }
+
+   int nb = db_update_stats(ua->jcr, ua->db, since);
+   ua->info_msg(_("Updating %i job(s).\n"), nb);
+
+   return true;
 }
 
 /*
@@ -753,7 +840,7 @@ static bool update_pool(UAContext *ua)
    }
 
    set_pooldbr_from_poolres(&pr, pool, POOL_OP_UPDATE); /* update */
-   set_pooldbr_recyclepoolid(ua->jcr, ua->db, &pr, pool);
+   set_pooldbr_references(ua->jcr, ua->db, &pr, pool);
 
    id = db_update_pool_record(ua->jcr, ua->db, &pr);
    if (id <= 0) {
@@ -834,8 +921,8 @@ static bool update_job(UAContext *ua)
          return false;
       }
       delta_start = StartTime - jr.StartTime;
-      Dmsg3(200, "ST=%d jr.ST=%d delta=%d\n", (time_t)StartTime, 
-            (time_t)jr.StartTime, (time_t)delta_start);
+      Dmsg3(200, "ST=%lld jr.ST=%lld delta=%lld\n", StartTime, 
+            (utime_t)jr.StartTime, delta_start);
       jr.StartTime = (time_t)StartTime;
       jr.SchedTime += (time_t)delta_start;
       jr.EndTime += (time_t)delta_start;

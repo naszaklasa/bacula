@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, May MMVII
  *
- *  $Id: help.cpp 5290 2007-08-05 19:48:29Z bartleyd2 $
+ *  $Id: help.cpp 8614 2009-03-27 17:59:16Z kerns $
  */ 
 
 #include "bat.h"
@@ -45,7 +45,7 @@ Help::Help(const QString &path, const QString &file, QWidget *parent) :
 
    setupUi(this);                          /* create window */
 
-   textBrowser->setSearchPaths(QStringList() << path << ":/images");
+   textBrowser->setSearchPaths(QStringList() << HELPDIR << path << ":/images");
    textBrowser->setSource(file);
    //textBrowser->setCurrentFont(mainWin->m_consoleHash.values()[0]->get_font());
 
@@ -63,6 +63,12 @@ void Help::updateTitle()
 
 void Help::displayFile(const QString &file)
 {
-   QString path = QApplication::applicationDirPath() + "/help";
+   QRegExp rx;
+   rx.setPattern("/\\.libs");
+   QString path = QApplication::applicationDirPath();
+   int pos = rx.indexIn(path);
+   if (pos)
+      path = path.remove(pos, 6);
+   path += "/help";
    new Help(path, file);
 }

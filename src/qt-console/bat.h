@@ -4,7 +4,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -23,32 +23,35 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: bat.h 6962 2008-05-13 06:49:45Z kerns $
+ *   Version $Id: bat.h 8672 2009-03-31 19:25:51Z bartleyd2 $
  *
  *   Kern Sibbald, January 2007
  */
 
-#include "config.h"
+#if defined(HAVE_WIN32)
+#if !defined(_STAT_H)
+#define _STAT_H       /* don't pull in MinGW stat.h */
+#define _STAT_DEFINED /* don't pull in MinGW stat.h */
+#endif
+#endif
 
 #include <QtGui>
 #include <QtCore>
-#include "mainwin.h"
 #include "bacula.h"
+#include "mainwin.h"
 #include "bat_conf.h"
 #include "jcr.h"
 #include "console.h"
 
-
 extern MainWin *mainWin;
 extern QApplication *app;
 
-int bvsnprintf(char *str, int32_t size, const char *format, va_list ap);
 bool isWin32Path(QString &fullPath);
 
 #endif /* _BAT_H_ */

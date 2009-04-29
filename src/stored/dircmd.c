@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -43,7 +43,7 @@
  *
  *     Kern Sibbald, May MMI
  *
- *   Version $Id: dircmd.c 7014 2008-05-24 09:31:05Z kerns $
+ *   Version $Id: dircmd.c 7999 2008-11-06 21:40:43Z kerns $
  *
  */
 
@@ -54,8 +54,6 @@
 
 /* Imported variables */
 extern BSOCK *filed_chan;
-extern int r_first, r_last;
-extern struct s_res resources[];
 extern struct s_last_job last_job;
 extern bool init_done;
 
@@ -97,7 +95,7 @@ static void send_dir_busy_message(BSOCK *dir, DEVICE *dev);
 struct s_cmds {
    const char *cmd;
    bool (*func)(JCR *jcr);
-   int monitoraccess; /* specify if monitors have access to this function */
+   bool monitoraccess;                      /* set if monitors can access this cmd */
 };
 
 /*
@@ -177,6 +175,7 @@ void *handle_connection_request(void *arg)
    if (sscanf(bs->msg, "Hello Start Job %127s", name) == 1) {
       Dmsg1(110, "Got a FD connection at %s\n", bstrftimes(tbuf, sizeof(tbuf), 
             (utime_t)time(NULL)));
+      Dmsg1(50, "%s", bs->msg);
       handle_filed_connection(bs, name);
       return NULL;
    }
@@ -652,7 +651,8 @@ static bool mount_cmd(JCR *jcr)
       if (dcr) {
          dev = dcr->dev;
          dev->dlock();                 /* Use P to avoid indefinite block */
-         Dmsg1(100, "mount cmd blocked=%d\n", dev->blocked());
+         Dmsg2(100, "mount cmd blocked=%d must_unload=%d\n", dev->blocked(), 
+            dev->must_unload());
          switch (dev->blocked()) {         /* device blocked? */
          case BST_WAITING_FOR_SYSOP:
             /* Someone is waiting, wake him */
@@ -839,7 +839,7 @@ static bool unmount_cmd(JCR *jcr)
              */
             /*  block_device(dev, BST_UNMOUNTED); replace with 2 lines below */
             dev->set_blocked(BST_UNMOUNTED);
-            dev->no_wait_id = 0;
+            clear_thread_id(dev->no_wait_id);
             if (!unload_autochanger(dcr, -1)) {
                dev->close();
             }
@@ -938,6 +938,10 @@ static bool release_cmd(JCR *jcr)
 
 static bool bootstrap_cmd(JCR *jcr)
 {
+   /* If getting the bootstrap file succeeds, we do not need
+    *  the FD because we will be reading.
+    */
+   jcr->need_fd = false;
    return get_bootstrap_file(jcr, jcr->dir_bsock);
 }
 

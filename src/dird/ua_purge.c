@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -35,7 +35,7 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id: ua_purge.c 8055 2008-11-18 19:48:37Z kerns $
+ *   Version $Id: ua_purge.c 8236 2008-12-23 14:10:59Z kerns $
  */
 
 #include "bacula.h"
@@ -132,7 +132,7 @@ int purgecmd(UAContext *ua, const char *cmd)
          return 1;
       case 1:                         /* Volume */
          if (select_media_dbr(ua, &mr)) {
-            purge_jobs_from_volume(ua, &mr);
+            purge_jobs_from_volume(ua, &mr, /*force*/true);
          }
          return 1;
       }
@@ -140,7 +140,7 @@ int purgecmd(UAContext *ua, const char *cmd)
    case 2:
       while ((i=find_arg(ua, NT_("volume"))) >= 0) {
          if (select_media_dbr(ua, &mr)) {
-            purge_jobs_from_volume(ua, &mr);
+            purge_jobs_from_volume(ua, &mr, /*force*/true);
          }
          *ua->argk[i] = 0;            /* zap keyword already seen */
          ua->send_msg("\n");
@@ -164,7 +164,7 @@ int purgecmd(UAContext *ua, const char *cmd)
       break;
    case 2:                            /* Volume */
       if (select_media_dbr(ua, &mr)) {
-         purge_jobs_from_volume(ua, &mr);
+         purge_jobs_from_volume(ua, &mr, /*force*/true);
       }
       break;
    }
@@ -358,6 +358,57 @@ void purge_files_from_job_list(UAContext *ua, del_ctx &del)
 }
 
 /*
+ * Change the type of the next copy job to backup.
+ * We need to upgrade the next copy of a normal job,
+ * and also upgrade the next copy when the normal job
+ * already have been purged.
+ *
+ *   JobId: 1   PriorJobId: 0    (original)
+ *   JobId: 2   PriorJobId: 1    (first copy)
+ *   JobId: 3   PriorJobId: 1    (second copy)
+ *
+ *   JobId: 2   PriorJobId: 1    (first copy, now regular backup)
+ *   JobId: 3   PriorJobId: 1    (second copy)
+ *
+ *  => Search through PriorJobId in jobid and
+ *                    PriorJobId in PriorJobId (jobid)
+ */
+void upgrade_copies(UAContext *ua, char *jobs)
+{
+   POOL_MEM query(PM_MESSAGE);
+   
+   db_lock(ua->db);
+   /* Do it in two times for mysql */
+   Mmsg(query, "CREATE TEMPORARY TABLE cpy_tmp AS "
+                  "SELECT MIN(JobId) AS JobId FROM Job "     /* Choose the oldest job */
+                   "WHERE Type='%c' "
+                     "AND ( PriorJobId IN (%s) "
+                         "OR "
+                          " PriorJobId IN ( "
+                             "SELECT PriorJobId "
+                               "FROM Job "
+                              "WHERE JobId IN (%s) "
+                               " AND Type='B' "
+                            ") "
+                         ") "
+                   "GROUP BY PriorJobId ",           /* one result per copy */
+        JT_JOB_COPY, jobs, jobs);
+   db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
+   Dmsg1(050, "Upgrade copies Log sql=%s\n", query.c_str());
+
+   /* Now upgrade first copy to Backup */
+   Mmsg(query, "UPDATE Job SET Type='B' "           /* JT_JOB_COPY => JT_BACKUP  */
+                "WHERE JobId IN ( SELECT JobId FROM cpy_tmp )");
+
+   db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
+
+   Mmsg(query, "DROP TABLE cpy_tmp");
+   db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
+
+   db_unlock(ua->db);
+}
+
+/*
  * Remove all records from catalog for a list of JobIds
  */
 void purge_jobs_from_catalog(UAContext *ua, char *jobs)
@@ -375,12 +426,14 @@ void purge_jobs_from_catalog(UAContext *ua, char *jobs)
    db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
    Dmsg1(050, "Delete Log sql=%s\n", query.c_str());
 
+   upgrade_copies(ua, jobs);
+
    /* Now remove the Job record itself */
    Mmsg(query, "DELETE FROM Job WHERE JobId IN (%s)", jobs);
    db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
+
    Dmsg1(050, "Delete Job sql=%s\n", query.c_str());
 }
-
 
 void purge_files_from_volume(UAContext *ua, MEDIA_DBR *mr )
 {} /* ***FIXME*** implement */
@@ -389,7 +442,7 @@ void purge_files_from_volume(UAContext *ua, MEDIA_DBR *mr )
  * Returns: 1 if Volume purged
  *          0 if Volume not purged
  */
-bool purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr)
+bool purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr, bool force)
 {
    POOL_MEM query(PM_MESSAGE);
    struct del_ctx del;
@@ -440,7 +493,7 @@ bool purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr)
    ua->info_msg(_("%d File%s on Volume \"%s\" purged from catalog.\n"), del.num_del,
       del.num_del==1?"":"s", mr->VolumeName);
 
-   purged = is_volume_purged(ua, mr);
+   purged = is_volume_purged(ua, mr, force); 
 
 bail_out:
    if (del.JobId) {
@@ -455,21 +508,29 @@ bail_out:
  *
  * Returns: true if volume purged
  *          false if not
+ *
+ * Note, we normally will not purge a volume that has Firstor LastWritten
+ *   zero, because it means the volume is most likely being written
+ *   however, if the user manually purges using the purge command in
+ *   the console, he has been warned, and we go ahead and purge
+ *   the volume anyway, if possible).
  */
-bool is_volume_purged(UAContext *ua, MEDIA_DBR *mr)
+bool is_volume_purged(UAContext *ua, MEDIA_DBR *mr, bool force)
 {
    POOL_MEM query(PM_MESSAGE);
    struct s_count_ctx cnt;
    bool purged = false;
    char ed1[50];
 
-   if (mr->FirstWritten == 0 || mr->LastWritten == 0) {
+   if (!force && (mr->FirstWritten == 0 || mr->LastWritten == 0)) {
       goto bail_out;               /* not written cannot purge */
    }
+
    if (strcmp(mr->VolStatus, "Purged") == 0) {
       purged = true;
       goto bail_out;
    }
+
    /* If purged, mark it so */
    cnt.count = 0;
    Mmsg(query, "SELECT count(*) FROM JobMedia WHERE MediaId=%s", 
@@ -508,6 +569,7 @@ bool mark_media_purged(UAContext *ua, MEDIA_DBR *mr)
       }
       pm_strcpy(jcr->VolumeName, mr->VolumeName);
       generate_job_event(jcr, "VolumePurged");
+      generate_plugin_event(jcr, bEventVolumePurged);
       /*
        * If the RecyclePool is defined, move the volume there
        */

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *  Kern Sibbald, 2000-2007.  June 2007
  *
- *   Version $Id: lock.c 6831 2008-04-16 09:49:47Z kerns $
+ *   Version $Id: lock.c 7380 2008-07-14 10:42:59Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -209,8 +209,11 @@ void DEVICE::r_dlock()
    if (this->blocked() && !pthread_equal(this->no_wait_id, pthread_self())) {
       this->num_waiting++;             /* indicate that I am waiting */
       while (this->blocked()) {
+#ifndef HAVE_WIN32
+         /* thread id on Win32 may be a struct */
          Dmsg3(sd_dbglvl, "r_dlock blked=%s no_wait=%p me=%p\n", this->print_blocked(),
                this->no_wait_id, pthread_self());
+#endif
          if ((stat = pthread_cond_wait(&this->wait, &m_mutex)) != 0) {
             berrno be;
             this->dunlock();
@@ -248,7 +251,7 @@ void _unblock_device(const char *file, int line, DEVICE *dev)
    Dmsg3(sd_dbglvl, "unblock %s from %s:%d\n", dev->print_blocked(), file, line);
    ASSERT(dev->blocked());
    dev->set_blocked(BST_NOT_BLOCKED);
-   dev->no_wait_id = 0;
+   clear_thread_id(dev->no_wait_id);
    if (dev->num_waiting > 0) {
       pthread_cond_broadcast(&dev->wait); /* wake them up */
    }

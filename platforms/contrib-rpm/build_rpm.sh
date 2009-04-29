@@ -21,7 +21,7 @@
 ###########################################################################################
 # script configuration section
 
-VERSION=2.4.1
+VERSION=3.0.0
 RELEASE=1
 
 # build platform for spec
@@ -40,14 +40,6 @@ FILENAME=su111
 # MySQL version
 # set to empty (for MySQL 3), 4 or 5
 MYSQL=5
-
-# building wxconsole
-# set to 1 to build wxconsole package else set 0
-WXCONSOLE=0
-
-# building bat
-# set to 1 to build bat package else set 0
-BAT=0
 
 # enter your name and email address here
 PACKAGER="Your Name <your-email@site.org>"
@@ -90,37 +82,21 @@ SRPM=${SRPMDIR}bacula-$VERSION-$RELEASE.src.rpm
 
 echo Building MySQL packages for "$PLATFORM"...
 sleep 2
-if [ "$WXCONSOLE" = "1" ]; then
-rpmbuild --rebuild --define "build_${PLATFORM} 1" \
---define "build_mysql${MYSQL} 1" \
---define "contrib_packager ${PACKAGER}" \
---define "build_python 1" \
---define "build_wxconsole 1" \
-${SRPM}
-else
 rpmbuild --rebuild --define "build_${PLATFORM} 1" \
 --define "build_mysql${MYSQL} 1" \
 --define "build_python 1" \
+--define "nobuild_gconsole 1" \
 --define "contrib_packager ${PACKAGER}" ${SRPM}
-fi
 rm -rf ${RPMBUILD}/*
 
 echo Building PostgreSQL packages for "$PLATFORM"...
 sleep 2
-if [ "$BAT" = "1" ]; then
 rpmbuild --rebuild --define "build_${PLATFORM} 1" \
 --define "build_postgresql 1" \
 --define "contrib_packager ${PACKAGER}" \
 --define "build_python 1" \
 --define "build_bat 1" \
 --define "nobuild_gconsole 1" ${SRPM}
-else
-rpmbuild --rebuild --define "build_${PLATFORM} 1" \
---define "build_postgresql 1" \
---define "contrib_packager ${PACKAGER}" \
---define "build_python 1" \
---define "nobuild_gconsole 1" ${SRPM}
-fi
 rm -rf ${RPMBUILD}/*
 
 echo Building SQLite packages for "$PLATFORM"...
@@ -157,12 +133,6 @@ mv -f ${RPMDIR}/bacula-mtx-${VERSION}-${RELEASE}.${ARCH}.rpm \
 mv -f ${RPMDIR}/bacula-client-${VERSION}-${RELEASE}.${ARCH}.rpm \
 ./bacula-client-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
 
-mv -f ${RPMDIR}/bacula-gconsole-${VERSION}-${RELEASE}.${ARCH}.rpm \
-./bacula-gconsole-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
-
-mv -f ${RPMDIR}/bacula-wxconsole-${VERSION}-${RELEASE}.${ARCH}.rpm \
-./bacula-wxconsole-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
-
 mv -f ${RPMDIR}/bacula-bat-${VERSION}-${RELEASE}.${ARCH}.rpm \
 ./bacula-bat-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
 
@@ -193,3 +163,4 @@ ls
 # 28 Jun 2008 add su110
 # 08 Nov 2008 add use of pkgconfig to obtain QT4 paths
 # 31 Dec 2008 add su111
+# 05 Apr 2009 deprecate gconsole and wxconsole, bat built by default

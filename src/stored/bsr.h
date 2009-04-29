@@ -1,15 +1,7 @@
 /*
- * BootStrap record definition -- for restoring files.
- *
- *    Kern Sibbald, June 2002
- *
- *   Version $Id: bsr.h 4992 2007-06-07 14:46:43Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,15 +20,29 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * BootStrap record definition -- for restoring files.
+ *
+ *    Kern Sibbald, June 2002
+ *
+ *   Version $Id: bsr.h 8190 2008-12-18 19:56:23Z ricozz $
+ *
+ */
 
 
 #ifndef __BSR_H
 #define __BSR_H 1
+
+#ifndef HAVE_REGEX_H
+#include "lib/bregex.h"
+#else
+#include <regex.h>
+#endif
 
 /*
  * List of Volume names to be read by Storage daemon.
@@ -100,6 +106,12 @@ struct BSR_VOLBLOCK {
    bool done;                         /* local done */
 };
 
+struct BSR_VOLADDR {
+   BSR_VOLADDR *next;
+   uint64_t saddr;                   /* start address */
+   uint64_t eaddr;                   /* end address */
+   bool done;                        /* local done */
+};
 
 struct BSR_FINDEX {
    BSR_FINDEX *next;
@@ -136,18 +148,22 @@ struct BSR_STREAM {
 };
 
 struct BSR {
+   /* NOTE!!! next must be the first item */
    BSR          *next;                /* pointer to next one */
+   BSR          *prev;                /* pointer to previous one */
    BSR          *root;                /* root bsr */
    bool          reposition;          /* set when any bsr is marked done */
    bool          mount_next_volume;   /* set when next volume should be mounted */
    bool          done;                /* set when everything found for this bsr */
    bool          use_fast_rejection;  /* set if fast rejection can be used */
    bool          use_positioning;     /* set if we can position the archive */
+   bool          skip_file;           /* skip all records for current file */
    BSR_VOLUME   *volume;
    uint32_t      count;               /* count of files to restore this bsr */
    uint32_t      found;               /* count of restored files this bsr */
    BSR_VOLFILE  *volfile;
    BSR_VOLBLOCK *volblock;
+   BSR_VOLADDR  *voladdr;
    BSR_SESSTIME *sesstime;
    BSR_SESSID   *sessid;
    BSR_JOBID    *JobId;
@@ -157,6 +173,9 @@ struct BSR {
    BSR_JOBTYPE  *JobType;
    BSR_JOBLEVEL *JobLevel;
    BSR_STREAM   *stream;
+   char         *fileregex;           /* set if restore is filtered on filename */
+   regex_t      *fileregex_re;
+   ATTR         *attr;                /* scratch space for unpacking */
 };
 
 

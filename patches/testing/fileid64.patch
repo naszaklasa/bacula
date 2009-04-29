@@ -1,0 +1,104 @@
+This patch change the FileId type from 32 to 64 bits. The 2.4.x (and previous) default type
+don't permit to backup more than 2^32 files. (~ 4,000,000,000 files)
+
+You will have to upgrade the catalog. It will take x2 space, so be sure to check your available
+space before.
+
+  cd <bacula-source>
+  patch -p0 < patches/testing/fileid64.patch
+  ./configure <your options>
+  make
+  ...
+  make install
+
+  ./src/cats/update_bacula_tables
+
+Index: src/cats/update_postgresql_tables.in
+===================================================================
+--- src/cats/update_postgresql_tables.in	(révision 7513)
++++ src/cats/update_postgresql_tables.in	(copie de travail)
+@@ -12,9 +12,12 @@
+ if $bindir/psql -f - -d ${db_name} $* <<END-OF-DATA
+ 
+ -- Create a table like Job for long term statistics
++BEGIN;
+ CREATE TABLE jobstat (LIKE job);
+-
++ALTER TABLE file ALTER fileid TYPE bigint ;
++ALTER TABLE basefiles ALTER fileid TYPE bigint;
+ UPDATE version SET versionid=11;
++COMMIT;
+ 
+ vacuum analyse;
+ 
+Index: src/cats/cats.h
+===================================================================
+--- src/cats/cats.h	(révision 7513)
++++ src/cats/cats.h	(copie de travail)
+@@ -747,7 +747,7 @@
+  * In principle, the only field that really should need to be
+  *  64 bits is the FileId_t
+  */
+-typedef uint32_t FileId_t;
++typedef uint64_t FileId_t;
+ typedef uint32_t DBId_t;              /* general DB id type */
+ typedef uint32_t JobId_t;
+ 
+Index: src/cats/make_postgresql_tables.in
+===================================================================
+--- src/cats/make_postgresql_tables.in	(révision 7514)
++++ src/cats/make_postgresql_tables.in	(copie de travail)
+@@ -29,7 +29,7 @@
+ 
+ CREATE TABLE file
+ (
+-    fileid	      serial	  not null,
++    fileid	      bigserial	  not null,
+     fileindex	      integer	  not null  default 0,
+     jobid	      integer	  not null,
+     pathid	      integer	  not null,
+@@ -295,7 +295,7 @@
+ (
+     baseid	      serial		    not null,
+     jobid	      integer		    not null,
+-    fileid	      integer		    not null,
++    fileid	      bigint		    not null,
+     fileindex	      integer			    ,
+     basejobid	      integer			    ,
+     primary key (baseid)
+Index: src/cats/update_mysql_tables.in
+===================================================================
+--- src/cats/update_mysql_tables.in	(révision 7513)
++++ src/cats/update_mysql_tables.in	(copie de travail)
+@@ -14,7 +14,8 @@
+ 
+ -- Create a table like Job for long term statistics
+ CREATE TABLE JobStat (LIKE Job);
+-
++ALTER TABLE File CHANGE FileId FileId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT;
++ALTER TABLE BaseFiles CHANGE FileId FileId BIGINT UNSIGNED NOT NULL;
+ DELETE FROM Version;
+ INSERT INTO Version (VersionId) VALUES (11);
+ 
+Index: src/cats/make_mysql_tables.in
+===================================================================
+--- src/cats/make_mysql_tables.in	(révision 7514)
++++ src/cats/make_mysql_tables.in	(copie de travail)
+@@ -29,7 +29,7 @@
+ 
+ 
+ CREATE TABLE File (
+-   FileId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
++   FileId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    FileIndex INTEGER UNSIGNED DEFAULT 0,
+    JobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
+    PathId INTEGER UNSIGNED NOT NULL REFERENCES Path,
+@@ -272,7 +272,7 @@
+    BaseId INTEGER UNSIGNED AUTO_INCREMENT,
+    BaseJobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
+    JobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
+-   FileId INTEGER UNSIGNED NOT NULL REFERENCES File,
++   FileId BIGINT UNSIGNED NOT NULL REFERENCES File,
+    FileIndex INTEGER UNSIGNED,
+    PRIMARY KEY(BaseId)
+    );

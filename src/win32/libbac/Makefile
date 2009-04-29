@@ -78,7 +78,8 @@ LIB_OBJS = \
 	$(OBJDIR)/var.o \
 	$(OBJDIR)/watchdog.o \
 	$(OBJDIR)/winapi.o \
-	$(OBJDIR)/workq.o
+	$(OBJDIR)/workq.o \
+	$(OBJDIR)/lockmgr.o
 
 #	$(LIBDIR)/events.o
 

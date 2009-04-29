@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -37,7 +37,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_restore.c 6983 2008-05-17 23:28:41Z kerns $
+ *   Version $Id: ua_restore.c 8213 2008-12-21 08:44:43Z ricozz $
  */
 
 
@@ -194,6 +194,8 @@ int restore_cmd(UAContext *ua, const char *cmd)
          ua->warning_msg(_("No files selected to be restored.\n"));
          goto bail_out;
       }
+      display_bsr_info(ua, rx);          /* display vols needed, etc */
+
       /* If no count of files, use bsr generated value (often wrong) */
       if (rx.selected_files == 0) {
          rx.selected_files = selected_files;
@@ -442,6 +444,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
       "add_suffix",   /* 17 */
       "regexwhere",   /* 18 */
       "restoreclient", /* 19 */
+      "copies",        /* 20 */
       NULL
    };
 
@@ -582,7 +585,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
          len = strlen(ua->cmd);
          fname = (char *)malloc(len * 2 + 1);
          db_escape_string(ua->jcr, ua->db, fname, ua->cmd, len);
-         Mmsg(rx->query, uar_file, rx->ClientName, fname);
+         Mmsg(rx->query, uar_file[db_type], rx->ClientName, fname);
          free(fname);
          gui_save = ua->jcr->gui;
          ua->jcr->gui = true;
@@ -896,14 +899,13 @@ static bool insert_file_into_findex_list(UAContext *ua, RESTORE_CTX *rx, char *f
  */
 static bool insert_dir_into_findex_list(UAContext *ua, RESTORE_CTX *rx, char *dir,
                                         char *date)
-{
+{  
    strip_trailing_junk(dir);
    if (*rx->JobIds == 0) {
       ua->error_msg(_("No JobId specified cannot continue.\n"));
       return false;
    } else {
-      Mmsg(rx->query, uar_jobid_fileindex_from_dir, rx->JobIds, 
-           dir, rx->ClientName);
+      Mmsg(rx->query, uar_jobid_fileindex_from_dir[db_type], rx->JobIds, dir, rx->ClientName);
    }
    rx->found = false;
    /* Find and insert jobid and File Index */
@@ -986,6 +988,39 @@ static void split_path_and_filename(UAContext *ua, RESTORE_CTX *rx, char *name)
    Dmsg2(100, "split path=%s file=%s\n", rx->path, rx->fname);
 }
 
+static bool ask_for_fileregex(UAContext *ua, RESTORE_CTX *rx)
+{
+   ua->send_msg(_("\nThere were no files inserted into the tree, so file selection\n"
+                  "is not possible.Most likely your retention policy pruned the files\n"));
+   if (get_yesno(ua, _("\nDo you want to restore all the files? (yes|no): "))) {
+      if (ua->pint32_val == 1)
+         return true;
+      while (get_cmd(ua, _("\nRegexp matching files to restore? (empty to abort): "))) {
+         if (ua->cmd[0] == '\0') {
+            break;
+         } else {
+            regex_t *fileregex_re = NULL;
+            int rc;
+            char errmsg[500] = "";
+
+            fileregex_re = (regex_t *)bmalloc(sizeof(regex_t));
+            rc = regcomp(fileregex_re, ua->cmd, REG_EXTENDED|REG_NOSUB);
+            if (rc != 0)
+               regerror(rc, fileregex_re, errmsg, sizeof(errmsg));
+            regfree(fileregex_re);
+            free(fileregex_re);
+            if (*errmsg) {
+               ua->send_msg(_("Regex compile error: %s\n"), errmsg);
+            } else {
+               rx->bsr->fileregex = bstrdup(ua->cmd);
+               return true;
+            }
+         }
+      }
+   }
+   return false;
+}
+
 static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
 {
    TREE_CTX tree;
@@ -1006,7 +1041,6 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
     * For display purposes, the same JobId, with different volumes may
     * appear more than once, however, we only insert it once.
     */
-   int items = 0;
    p = rx->JobIds;
    tree.FileEstimate = 0;
    if (get_next_jobid_from_list(&p, &JobId) > 0) {
@@ -1021,6 +1055,16 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
          tree.DeltaCount = rx->JobId/50; /* print 50 ticks */
       }
    }
+
+   ua->info_msg(_("\nBuilding directory tree for JobId(s) %s ...  "),
+                rx->JobIds);
+
+#define new_get_file_list
+#ifdef new_get_file_list
+   if (!db_get_file_list(ua->jcr, ua->db, rx->JobIds, insert_tree_handler, (void *)&tree)) {
+      ua->error_msg("%s", db_strerror(ua->db));
+   }
+#else
    for (p=rx->JobIds; get_next_jobid_from_list(&p, &JobId) > 0; ) {
       char ed1[50];
 
@@ -1028,9 +1072,6 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
          continue;                    /* eliminate duplicate JobIds */
       }
       last_JobId = JobId;
-      ua->info_msg(_("\nBuilding directory tree for JobId %s ...  "), 
-         edit_int64(JobId, ed1));
-      items++;
       /*
        * Find files for this JobId and insert them in the tree
        */
@@ -1039,42 +1080,26 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
          ua->error_msg("%s", db_strerror(ua->db));
       }
    }
+#endif
    if (tree.FileCount == 0) {
-      ua->send_msg(_("\nThere were no files inserted into the tree, so file selection\n"
-         "is not possible.Most likely your retention policy pruned the files\n"));
-      if (!get_yesno(ua, _("\nDo you want to restore all the files? (yes|no): "))) {
-         OK = false;
-      } else {
+      OK = ask_for_fileregex(ua, rx);
+      if (OK) {
          last_JobId = 0;
          for (p=rx->JobIds; get_next_jobid_from_list(&p, &JobId) > 0; ) {
              if (JobId == last_JobId) {
                 continue;                    /* eliminate duplicate JobIds */
              }
              add_findex_all(rx->bsr, JobId);
-          }
-          OK = true;
+         }
       }
    } else {
       char ec1[50];
-      if (items==1) {
-         if (tree.all) {
-            ua->info_msg(_("\n1 Job, %s files inserted into the tree and marked for extraction.\n"),
-              edit_uint64_with_commas(tree.FileCount, ec1));
-         }
-         else {
-            ua->info_msg(_("\n1 Job, %s files inserted into the tree.\n"),
-              edit_uint64_with_commas(tree.FileCount, ec1));
-         }
-      }
-      else {
-         if (tree.all) {
-            ua->info_msg(_("\n%d Jobs, %s files inserted into the tree and marked for extraction.\n"),
-              items, edit_uint64_with_commas(tree.FileCount, ec1));
-         }
-         else {
-            ua->info_msg(_("\n%d Jobs, %s files inserted into the tree.\n"),
-              items, edit_uint64_with_commas(tree.FileCount, ec1));
-         }
+      if (tree.all) {
+         ua->info_msg(_("\n%s files inserted into the tree and marked for extraction.\n"),
+                      edit_uint64_with_commas(tree.FileCount, ec1));
+      } else {
+         ua->info_msg(_("\n%s files inserted into the tree.\n"),
+                      edit_uint64_with_commas(tree.FileCount, ec1));
       }
 
       if (find_arg(ua, NT_("done")) < 0) {
@@ -1122,10 +1147,10 @@ static bool select_backups_before_date(UAContext *ua, RESTORE_CTX *rx, char *dat
    /* Create temp tables */
    db_sql_query(ua->db, uar_del_temp, NULL, NULL);
    db_sql_query(ua->db, uar_del_temp1, NULL, NULL);
-   if (!db_sql_query(ua->db, uar_create_temp, NULL, NULL)) {
+   if (!db_sql_query(ua->db, uar_create_temp[db_type], NULL, NULL)) {
       ua->error_msg("%s\n", db_strerror(ua->db));
    }
-   if (!db_sql_query(ua->db, uar_create_temp1, NULL, NULL)) {
+   if (!db_sql_query(ua->db, uar_create_temp1[db_type], NULL, NULL)) {
       ua->error_msg("%s\n", db_strerror(ua->db));
    }
    /*
@@ -1243,6 +1268,11 @@ static bool select_backups_before_date(UAContext *ua, RESTORE_CTX *rx, char *dat
    }
 
    if (rx->JobIds[0] != 0) {
+      if (find_arg(ua, NT_("copies")) > 0) {
+         /* Display a list of all copies */
+         db_list_copies_records(ua->jcr, ua->db, 0, rx->JobIds, 
+                                prtit, ua, HORZ_LIST);
+      }
       /* Display a list of Jobs selected for this restore */
       db_list_sql_query(ua->jcr, ua->db, uar_list_temp, prtit, ua, 1, HORZ_LIST);
       ok = true;
@@ -1440,4 +1470,5 @@ void find_storage_resource(UAContext *ua, RESTORE_CTX &rx, char *Storage, char *
    if (rx.store) {
       Dmsg1(200, "Set store=%s\n", rx.store->name());
    }
+
 }

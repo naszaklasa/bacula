@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -33,13 +33,14 @@
  *
  *  Kern Sibbald, January MMI
  *
- *   Version $Id: rwlock.c 7980 2008-11-05 14:33:44Z kerns $
+ *   Version $Id: rwlock.c 8132 2008-12-09 19:21:38Z ricozz $
  *
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
  *
  */
 
+#define _LOCKMGR_COMPLIANT
 #include "bacula.h"
 
 /*
@@ -232,11 +233,13 @@ int rwl_writelock(brwlock_t *rwl)
       pthread_mutex_unlock(&rwl->mutex);
       return 0;
    }
+   lmgr_pre_lock(rwl);
    if (rwl->w_active || rwl->r_active > 0) {
       rwl->w_wait++;                  /* indicate that we are waiting */
       pthread_cleanup_push(rwl_write_release, (void *)rwl);
       while (rwl->w_active || rwl->r_active > 0) {
          if ((stat = pthread_cond_wait(&rwl->write, &rwl->mutex)) != 0) {
+            lmgr_do_unlock(rwl);
             break;                    /* error, bail out */
          }
       }
@@ -246,7 +249,8 @@ int rwl_writelock(brwlock_t *rwl)
    if (stat == 0) {
       rwl->w_active++;                /* we are running */
       rwl->writer_id = pthread_self(); /* save writer thread's id */
-   }
+      lmgr_post_lock();
+   } 
    pthread_mutex_unlock(&rwl->mutex);
    return stat;
 }
@@ -274,6 +278,7 @@ int rwl_writetrylock(brwlock_t *rwl)
    } else {
       rwl->w_active = 1;              /* we are running */
       rwl->writer_id = pthread_self(); /* save writer thread's id */
+      lmgr_do_lock(rwl);
    }
    stat2 = pthread_mutex_unlock(&rwl->mutex);
    return (stat == 0 ? stat2 : stat);
@@ -305,6 +310,7 @@ int rwl_writeunlock(brwlock_t *rwl)
    if (rwl->w_active > 0) {
       stat = 0;                       /* writers still active */
    } else {
+      lmgr_do_unlock(rwl);
       /* No more writers, awaken someone */
       if (rwl->r_wait > 0) {         /* if readers waiting */
          stat = pthread_cond_broadcast(&rwl->read);
@@ -567,7 +573,7 @@ void *thread_routine (void *arg)
     int iteration;
     int element;
     int status;
-
+    lmgr_init_thread();
     element = 0;                        /* Current data element */
 
     for (iteration = 0; iteration < ITERATIONS; iteration++) {
@@ -601,6 +607,7 @@ void *thread_routine (void *arg)
         if (element >= DATASIZE)
             element = 0;
     }
+    lmgr_cleanup_thread();
     return NULL;
 }
 

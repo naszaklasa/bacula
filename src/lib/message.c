@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,16 +30,13 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: message.c 7416 2008-07-22 14:48:21Z kerns $
+ *   Version $Id: message.c 8641 2009-03-29 11:34:33Z kerns $
  *
  */
 
 
 #include "bacula.h"
 #include "jcr.h"
-
-#define get_jcr_from_tsd() NULL
-#define get_jobid_from_tsd() 0
 
 sql_query p_sql_query = NULL;
 sql_escape p_sql_escape = NULL;
@@ -52,12 +49,12 @@ sql_escape p_sql_escape = NULL;
  */
 const char *working_directory = NULL;       /* working directory path stored here */
 int verbose = 0;                      /* increase User messages */
-/* Keep debug level set to zero by default */
 int debug_level = 0;                  /* debug level */
 bool dbg_timestamp = false;           /* print timestamp in debug output */
-time_t daemon_start_time = 0;         /* Daemon start time */
+utime_t daemon_start_time = 0;        /* Daemon start time */
 const char *version = VERSION " (" BDATE ")";
 char my_name[30];                     /* daemon name is stored here */
+char host_name[50];                   /* host machine name */
 char *exepath = (char *)NULL;
 char *exename = (char *)NULL;
 int console_msg_pending = false;
@@ -68,7 +65,7 @@ brwlock_t con_lock;                   /* Console lock structure */
 /* Forward referenced functions */
 
 /* Imported functions */
-
+void create_jcr_key();
 
 /* Static storage */
 
@@ -112,6 +109,9 @@ void my_name_is(int argc, char *argv[], const char *name)
    char cpath[1024];
    int len;
 
+   if (gethostname(host_name, sizeof(host_name)) != 0) {
+      bstrncpy(host_name, "Hostname unknown", sizeof(host_name));
+   }
    bstrncpy(my_name, name, sizeof(my_name));
    if (argc>0 && argv && argv[0]) {
       /* strip trailing filename and save exepath */
@@ -188,6 +188,10 @@ init_msg(JCR *jcr, MSGS *msg)
 
    if (jcr == NULL && msg == NULL) {
       init_last_jobs_list();
+      /* Create a daemon key then set invalid jcr */
+      /* Maybe we should give the daemon a jcr??? */
+      create_jcr_key();
+      set_jcr_in_tsd(INVALID_JCR);
    }
 
 #if !defined(HAVE_WIN32)
@@ -366,10 +370,10 @@ static void make_unique_mail_filename(JCR *jcr, POOLMEM *&name, DEST *d)
 {
    if (jcr) {
       Mmsg(name, "%s/%s.%s.%d.mail", working_directory, my_name,
-                 jcr->Job, (int)(long)d);
+                 jcr->Job, (int)(intptr_t)d);
    } else {
       Mmsg(name, "%s/%s.%s.%d.mail", working_directory, my_name,
-                 my_name, (int)(long)d);
+                 my_name, (int)(intptr_t)d);
    }
    Dmsg1(850, "mailname=%s\n", name);
 }
@@ -446,11 +450,11 @@ void close_msg(JCR *jcr)
             }
             if (
                 (d->dest_code == MD_MAIL_ON_ERROR && jcr &&
-                 jcr->JobStatus == JS_Terminated) 
+                  (jcr->JobStatus == JS_Terminated || jcr->JobStatus == JS_Warnings)) 
                 ||
                 (d->dest_code == MD_MAIL_ON_SUCCESS && jcr &&
                  jcr->JobStatus == JS_ErrorTerminated)
-                ){
+                ) {
                goto rem_temp_file;
             }
 
@@ -596,7 +600,7 @@ static bool open_dest_file(JCR *jcr, DEST *d, const char *mode)
 /*
  * Handle sending the message to the appropriate place
  */
-void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
+void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
 {
     DEST *d;
     char dt[MAX_TIME_LENGTH];
@@ -612,7 +616,7 @@ void dispatch_message(JCR *jcr, int type, time_t mtime, char *msg)
      * Most messages are prefixed by a date and time. If mtime is
      *  zero, then we use the current time.  If mtime is 1 (special
      *  kludge), we do not prefix the date and time. Otherwise,
-     *  we assume mtime is a time_t and use it.
+     *  we assume mtime is a utime_t and use it.
      */
     if (mtime == 0) {
        mtime = time(NULL);
@@ -780,8 +784,10 @@ send_to_file:
              case MD_DIRECTOR:
                 Dmsg1(850, "DIRECTOR for following msg: %s", msg);
                 if (jcr && jcr->dir_bsock && !jcr->dir_bsock->errors) {
-                   bnet_fsend(jcr->dir_bsock, "Jmsg Job=%s type=%d level=%d %s",
+                   bnet_fsend(jcr->dir_bsock, "Jmsg Job=%s type=%d level=%lld %s",
                       jcr->Job, type, mtime, msg);
+                } else {
+                   Dmsg1(800, "no jcr for following msg: %s", msg);
                 }
                 break;
              case MD_STDOUT:
@@ -847,6 +853,7 @@ d_msg(const char *file, int line, int level, const char *fmt,...)
     int       len;
     va_list   arg_ptr;
     bool      details = true;
+    utime_t   mtime;
 
     if (level < 0) {
        details = false;
@@ -854,6 +861,15 @@ d_msg(const char *file, int line, int level, const char *fmt,...)
     }
 
     if (level <= debug_level) {
+       if (dbg_timestamp) {
+          mtime = time(NULL);
+          bstrftimes(buf, sizeof(buf), mtime);
+          len = strlen(buf);
+          buf[len++] = ' ';
+          buf[len] = 0;
+          fputs(buf, stdout);
+       }
+    
 #ifdef FULL_LOCATION
        if (details) {
           len = bsnprintf(buf, sizeof(buf), "%s: %s:%d-%u ", 
@@ -875,11 +891,7 @@ d_msg(const char *file, int line, int level, const char *fmt,...)
        if (trace) {
           if (!trace_fd) {
              char fn[200];
-#if defined(HAVE_WIN32)
-             bsnprintf(fn, sizeof(fn), "%s.trace", my_name);
-#else
-             bsnprintf(fn, sizeof(fn), "%s/%s.trace", working_directory ? working_directory : ".", my_name);
-#endif
+             bsnprintf(fn, sizeof(fn), "%s/%s.trace", working_directory ? working_directory : "./", my_name);
              trace_fd = fopen(fn, "a+b");
           }
           if (trace_fd) {
@@ -1000,8 +1012,6 @@ t_msg(const char *file, int line, int level, const char *fmt,...)
    }
 }
 
-
-
 /* *********************************************************
  *
  * print an error message
@@ -1075,7 +1085,7 @@ e_msg(const char *file, int line, int type, int level, const char *fmt,...)
  *
  */
 void
-Jmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...)
+Jmsg(JCR *jcr, int type, utime_t mtime, const char *fmt,...)
 {
     char     rbuf[5000];
     va_list   arg_ptr;
@@ -1136,15 +1146,18 @@ Jmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...)
     case M_ERROR:
        len = bsnprintf(rbuf, sizeof(rbuf), _("%s JobId %u: Error: "), my_name, JobId);
        if (jcr) {
-          jcr->Errors++;
+          jcr->JobErrors++;
        }
        break;
     case M_WARNING:
        len = bsnprintf(rbuf, sizeof(rbuf), _("%s JobId %u: Warning: "), my_name, JobId);
+       if (jcr) {
+          jcr->JobWarnings++;
+       }
        break;
     case M_SECURITY:
-       len = bsnprintf(rbuf, sizeof(rbuf), _("%s JobId %u: Security violation: "),
-                my_name, JobId);
+       len = bsnprintf(rbuf, sizeof(rbuf), _("%s JobId %u: Security violation: "), 
+               my_name, JobId);
        break;
     default:
        len = bsnprintf(rbuf, sizeof(rbuf), "%s JobId %u: ", my_name, JobId);
@@ -1172,7 +1185,7 @@ Jmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...)
  * If we come here, prefix the message with the file:line-number,
  *  then pass it on to the normal Jmsg routine.
  */
-void j_msg(const char *file, int line, JCR *jcr, int type, time_t mtime, const char *fmt,...)
+void j_msg(const char *file, int line, JCR *jcr, int type, utime_t mtime, const char *fmt,...)
 {
    va_list   arg_ptr;
    int i, len, maxlen;
@@ -1315,7 +1328,7 @@ static pthread_mutex_t msg_queue_mutex = PTHREAD_MUTEX_INITIALIZER;
  *  sending a message, it is a bit messy to recursively call
  *  yourself when the bnet packet is not reentrant).
  */
-void Qmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...)
+void Qmsg(JCR *jcr, int type, utime_t mtime, const char *fmt,...)
 {
    va_list   arg_ptr;
    int len, maxlen;
@@ -1382,7 +1395,7 @@ bail_out:
  * If we come here, prefix the message with the file:line-number,
  *  then pass it on to the normal Qmsg routine.
  */
-void q_msg(const char *file, int line, JCR *jcr, int type, time_t mtime, const char *fmt,...)
+void q_msg(const char *file, int line, JCR *jcr, int type, utime_t mtime, const char *fmt,...)
 {
    va_list   arg_ptr;
    int i, len, maxlen;

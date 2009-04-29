@@ -23,15 +23,18 @@ DEFINES = \
 	-DWINVER=0x500 \
 	$(HAVES)
 
-vpath %.c ../../filed ../libwin32
-vpath %.cpp ../../filed ../libwin32
+vpath %.c $(MAINDIR)/src/filed $(BUILDDIR)/libwin32
+vpath %.cpp $(MAINDIR)/src/filed $(BUILDDIR)/libwin32
 
 ##########################################################################
 
 FILED_OBJS = \
+	$(OBJDIR)/accurate.o \
+	$(OBJDIR)/acl.o \
 	$(OBJDIR)/authenticate.o \
 	$(OBJDIR)/backup.o \
 	$(OBJDIR)/estimate.o \
+	$(OBJDIR)/fd_plugins.o \
 	$(OBJDIR)/filed.o \
 	$(OBJDIR)/filed_conf.o \
 	$(OBJDIR)/heartbeat.o \
@@ -48,6 +51,7 @@ FILED_OBJS = \
 	$(OBJDIR)/service.o \
 	$(OBJDIR)/statusDialog.o \
 	$(OBJDIR)/trayMonitor.o \
+	$(OBJDIR)/xattr.o \
 	$(OBJDIR)/main.o \
 	$(OBJDIR)/bacula.res
 
@@ -56,9 +60,9 @@ ALL_OBJS = $(FILED_OBJS)
 FILED_LIBS = \
 	$(LIBS_PTHREADS) \
 	$(LIBS_ZLIB) \
+	$(LIBS_NETWORK) \
 	-lole32 \
 	-loleaut32 \
-	-lwsock32 \
 	-luuid \
 	-lcomctl32
 
@@ -74,6 +78,7 @@ clean:
 	@echo "Cleaning `pwd`"
 	$(call clean_obj,$(ALL_OBJS))
 	$(call clean_exe,$(BINDIR)/bacula-fd.exe)
+	$(ECHO_CMD)rm -rf $(OBJDIRS)
 
 #
 # Rules
