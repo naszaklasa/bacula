@@ -51,7 +51,8 @@ CONF_ALL	= --enable-smartalloc \
 		--htmldir=\$${prefix}/share/doc/bacula-common/html \
 		--libdir=\$${prefix}/lib/bacula \
 	--enable-batch-insert \
-	--disable-bwx-console
+	--disable-bwx-console \
+	--without-qwt
 
 
 CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \
