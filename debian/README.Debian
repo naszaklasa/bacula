@@ -80,16 +80,6 @@ need to be able to read the console config files.  These files are, by
 default, under /etc/bacula.  You'll need to specify the config file
 with -c for any of the GUI consoles.
 
-SSL/TLS
-=======
-
-Due to licensing concerns (see NEWS.Debian), SSL/TLS is disabled in current
-Debian builds.  This disables both encryption for the on-the-wire
-protocol as well as encryption of the backed-up data.
-
-To build your own package with SSL/TLS support, edit debian/rules and add
---with-openssl to the configure parameters.
-
 POSTGRESQL NOTES
 ================
 
