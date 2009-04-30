@@ -1,4 +1,3 @@
-debian/tmp-install-sqlite3/usr/sbin/bsmtp		usr/lib/bacula
 debian/tmp-install-sqlite3/etc/bacula/scripts/query.sql etc/bacula/scripts
 debian/tmp-install-sqlite3/usr/sbin/bwild usr/sbin
 debian/tmp-install-sqlite3/usr/sbin/bregex usr/sbin
