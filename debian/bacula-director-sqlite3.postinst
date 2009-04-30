@@ -64,7 +64,21 @@ case "$1" in
 			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
 			fi
 			fi
-
+                else 
+                    if [ -f "$DB" ] && file "$DB" | grep -q "SQLite 2"; then
+                        echo -n "Converting SQLite2 database to SQLite3 format..."
+                        sqlite "$DB" .dump | sqlite3 "$DB.sqlite3"
+                        mv "$DB" "$DB.sqlite2"
+                        mv "$DB.sqlite3" "$DB"
+                        echo "Ok."
+			# On upgrade, unconditionally change Catalog 
+			echo -n "Upgrading SQLite3 tables to v11 format..."
+			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 >> $LOGDIR/upgrade.log  2>&1
+			then echo "Ok."
+			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
+		        fi
+                       
+                        
                 fi
 
 		chmod 640 $DB		
