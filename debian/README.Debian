@@ -37,7 +37,6 @@ PACKAGES
 The virtual package 'bacula-director' is provided by
 
 	- bacula-director-sqlite3
-        - bacula-director-sqlite
 	- bacula-director-mysql
 	- bacula-director-pgsql
 
@@ -53,14 +52,11 @@ Bacula, so that users can contact the director.
  There is, in fact, a wrapper
 script to ease usage by users: /usr/bin/bconsole
 
-The GNOME version of the admin console is contained in the
-bacula-console-gnome package.
+The BAT graphical admin console is contained in the
+bacula-console-qt package.
 
-The wxWidgets-based console is included in the bacula-console-wx
-package.
-
-There are no wrappers for bacula-console-gnome nor
-bacula-wxconsole since they will likely be run from the corresponding
+There are no wrappers for bacula-console-qt since it
+will likely be run from the corresponding
 launchers with appropriate '-c /etc/bacula/<flavor>.conf' arguments.
 The convenient '.menu' files are provided, too.
 
@@ -109,4 +105,4 @@ http://www.bacula.org.
 
 based on a file by Jose Luis Tallon
 
- -- John Goerzen <jgoerzen@complete.org>, Sat, 13 May 2006 10:18:42 -0500
+ -- John Goerzen <jgoerzen@complete.org>, Thu, 30 Apr 2009 16:27:47 -0500
