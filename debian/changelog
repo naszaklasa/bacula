@@ -10,6 +10,7 @@ bacula (3.0.0-1) experimental; urgency=low
   * Make /usr/share/doc/bacula point to bacula-common.
   * Update NEWS and README.Debian.
   * Correct NEWS format to shut up lintian warnings.
+  * Move bsmtp to bacula-common.  Closes: #476227.
 
  -- John Goerzen <jgoerzen@complete.org>  Thu, 30 Apr 2009 16:28:02 -0500
 
