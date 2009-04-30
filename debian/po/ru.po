@@ -20,13 +20,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid "Create tables for Bacula's catalog?"
 msgstr "Создать таблицы для каталога Bacula?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
 "The tables needed for Bacula's catalog are missing. This is normal for a "
 "fresh install of Bacula."
@@ -36,7 +36,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
 "These tables are needed for the Bacula director to function. Please choose "
 "whether these tables should be automatically created."
@@ -46,13 +46,13 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:3001
+#: ../bacula-director-sqlite3.templates:3001
 msgid "Remove catalog on purge?"
 msgstr "Удалять каталог при вычистке?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:3001
+#: ../bacula-director-sqlite3.templates:3001
 msgid ""
 "Please choose whether the Bacula catalog should be removed when the director "
 "package is purged."
