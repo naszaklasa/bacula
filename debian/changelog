@@ -8,7 +8,7 @@ bacula (3.0.0-1) experimental; urgency=low
   * This version has mt-st smarts.  Closes: #495464.
   * Fixed init script stop order.  Closes: #502341.
   * Make /usr/share/doc/bacula point to bacula-common.
-  * Update NEWS and README.Debian.
+  * Update NEWS and README.Debian.  Closes: #492664.
   * Correct NEWS format to shut up lintian warnings.
   * Move bsmtp to bacula-common.  Closes: #476227.
   * Update postgresql-client deps.  Closes: #492670.
