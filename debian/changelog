@@ -1,4 +1,4 @@
-bacula (3.0.0-1) unstable; urgency=low
+bacula (3.0.0-1) experimental; urgency=low
 
   * New upstream version.  Now license-compatible with OpenSSL.
     Closes: #523479.
