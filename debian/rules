@@ -57,11 +57,8 @@ CONF_ALL	= --enable-smartalloc \
 CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \
 			--disable-bat
 
-CONF_sqlite	= --with-sqlite --without-mysql --without-postgresql --without-sqlite3 \
-			--enable-tray-monitor --enable-bat
-
 CONF_sqlite3	= --with-sqlite3 --without-mysql --without-postgresql --without-sqlite \
-			--enable-tray-monitor --enable-bat $(CONF_common)
+			--enable-tray-monitor --enable-bat
 CONF_mysql	= --with-mysql --without-sqlite --without-postgresql --without-sqlite3 $(CONF_common)
 CONF_pgsql	= --with-postgresql --without-sqlite --without-mysql --without-sqlite3 $(CONF_common)
 
