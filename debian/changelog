@@ -12,8 +12,9 @@ bacula (3.0.0-1) experimental; urgency=low
   * Correct NEWS format to shut up lintian warnings.
   * Move bsmtp to bacula-common.  Closes: #476227.
   * Update postgresql-client deps.  Closes: #492670.
+  * Remove ancient (pre-lenny) database upgrade scripts from .debs.
 
- -- John Goerzen <jgoerzen@complete.org>  Thu, 30 Apr 2009 16:47:50 -0500
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 30 Apr 2009 16:52:53 -0500
 
 bacula (2.4.4-1) unstable; urgency=low
 
