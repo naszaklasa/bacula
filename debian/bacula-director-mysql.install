@@ -3,4 +3,3 @@ debian/tmp-install-mysql/etc/bacula/scripts/update_mysql* usr/share/bacula-direc
 debian/tmp-install-mysql/etc/bacula/scripts/*catalog_backup etc/bacula/scripts
 debian/tmp-install-mysql/usr/sbin/bacula-dir                  usr/sbin
 debian/tmp-install-mysql/usr/sbin/dbcheck                  usr/sbin
-debian/tmp-install-mysql/usr/lib/bacula/libbacsql* usr/lib/bacula

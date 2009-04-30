@@ -44,6 +44,42 @@ Description: network backup, recovery and verification - common support files
  .
  This package provides files that are useful for other Bacula packages.
 
+Package: bacula-common-sqlite3
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, adduser (>= 3.0)
+Depends: ${shlibs:Depends}
+Suggests: bacula-doc
+Description: network backup, recovery and verification - SQLite v3 common files
+ Bacula is a set of programs to manage backup, recovery and verification of
+ data across a network of computers of different kinds.
+ .
+ This package provides files that are useful for other Bacula packages
+ for the SQLite v3 database.
+
+Package: bacula-common-pgsql
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, adduser (>= 3.0)
+Depends: ${shlibs:Depends}
+Suggests: bacula-doc
+Description: network backup, recovery and verification - PostgreSQL common files
+ Bacula is a set of programs to manage backup, recovery and verification of
+ data across a network of computers of different kinds.
+ .
+ This package provides files that are useful for other Bacula packages
+ for the PostgreSQL database.
+
+Package: bacula-common-mysql
+Architecture: any
+Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, adduser (>= 3.0)
+Depends: ${shlibs:Depends}
+Suggests: bacula-doc
+Description: network backup, recovery and verification - MySQL common files
+ Bacula is a set of programs to manage backup, recovery and verification of
+ data across a network of computers of different kinds.
+ .
+ This package provides files that are useful for other Bacula packages
+ for the MySQL database.
+
 Package: bacula-director-common
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, bacula-common (= ${binary:Version})
@@ -61,7 +97,7 @@ Description: network backup, recovery and verification - Director common files
 Package: bacula-director-sqlite3
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (= ${binary:Version}), sqlite3, ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), sqlite3, ${shlibs:Depends}, bacula-common-sqlite3 (>= ${binary:Version})
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -79,7 +115,7 @@ Description: network backup, recovery and verification - SQLite 3 storage for Di
 Package: bacula-director-mysql
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
-Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), mysql-client, ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), mysql-client, ${shlibs:Depends}, bacula-common-mysql (>= ${binary:Version})
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -98,7 +134,7 @@ Description: network backup, recovery and verification - MySQL storage for Direc
 Package: bacula-director-pgsql
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), postgresql-client (>= 7.4) | postgresql-client-8.1 | postgresql-client-7.4 , ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), postgresql-client (>= 7.4) | postgresql-client-8.1 | postgresql-client-7.4 , ${shlibs:Depends}, bacula-common-pgsql (>= ${binary:Version})
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -172,7 +208,7 @@ Description: network backup, recovery and verification - storage daemon
 
 Package: bacula-sd-sqlite3
 Architecture: any
-Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}
+Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}, bacula-common-sqlite3 (>= ${binary:Version})
 Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Provides: bacula-sd-tools
@@ -189,24 +225,17 @@ Description: network backup, recovery and verification - SQLite 3 SD tools
 
 Package: bacula-sd-sqlite
 Architecture: any
-Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}
+Depends: bacula-sd (= ${binary:Version}), bacula-sd-sqlite3 (>= 3.0.0)
 Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
-Provides: bacula-sd-tools
 Description: network backup, recovery and verification - SQLite SD tools
- Bacula is a set of programs to manage backup, recovery and verification of
- data across a network of computers of different kinds.
- .
- The storage daemon performs the storage and recovery of the file
- attributes and data to the physical media; in other words, it is
- responsible for reading and writing the backups.
- .
- This package contains SQLite versions of the bscan and bcopy utilities,
- which are used for recovery when Bacula's catalog is unavailable.
+ This is a transition package.  SQLite v2 support has been deprecated
+ as of Bacula 3.0.0.  This package depends on the SQLite v3 version of the
+ storage daemon.
 
 Package: bacula-sd-mysql
 Architecture: any
-Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}
+Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}, bacula-common-mysql (>= ${binary:Version})
 Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Provides: bacula-sd-tools
@@ -223,7 +252,7 @@ Description: network backup, recovery and verification - MySQL SD tools
 
 Package: bacula-sd-pgsql
 Architecture: any
-Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}
+Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}, bacula-common-pgsql (>= ${binary:Version})
 Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
 Provides: bacula-sd-tools
