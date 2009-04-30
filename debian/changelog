@@ -13,7 +13,7 @@ bacula (3.0.0-1) experimental; urgency=low
   * Move bsmtp to bacula-common.  Closes: #476227.
   * Update postgresql-client deps.  Closes: #492670.
   * Remove ancient (pre-lenny) database upgrade scripts from .debs.
-  * Added Spanish translation.  Closes: #502950.
+  * Added Spanish translation from Francisco Javier Cuadrado.  Closes: #502950.
   
  -- John Goerzen <jgoerzen@complete.org>  Thu, 30 Apr 2009 16:52:53 -0500
 
