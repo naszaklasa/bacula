@@ -1,19 +1,29 @@
+bacula (3.0.0-1) unstable; urgency=low
+
+  * SSL/TLS is now available in Bacula in Debian.
+  * SQLite v2 support has been deprecated upstream.  Debian
+    packages will convert your catalog to SQLite v3.
+  * The WX console has been deprecated upstream.  Please instead
+    use bat, available in package bacula-console-qt.
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 30 Apr 2009 16:25:36 -0500
+
 bacula (2.2.0-1) unstable; urgency=low
 
- * SSL/TLS has been disabled in this version of Bacula due to licensing
-   concerns.  See README.Debian and the thread at
-   http://lists.debian.org/debian-legal/2007/07/msg00144.html for more
-   details.
+  * SSL/TLS has been disabled in this version of Bacula due to licensing
+    concerns.  See README.Debian and the thread at
+    http://lists.debian.org/debian-legal/2007/07/msg00144.html for more
+    details.
 
  -- John Goerzen <jgoerzen@complete.org>  Wed, 19 Sep 2007 06:46:55 -0500
   
 bacula (1.38.9-3) unstable; urgency=low
 
- * Welcome to the 1.38 series of Bacula.
+  * Welcome to the 1.38 series of Bacula.
 
-   This version of Bacula in Debian introduces some significant changes in the 
-   Debian packages.  PostgreSQL director packages and MySQL packages
-   have already switched to using dbconfig-common.  And new Sqlite3
-   packages are available.
+    This version of Bacula in Debian introduces some significant changes in the 
+    Debian packages.  PostgreSQL director packages and MySQL packages
+    have already switched to using dbconfig-common.  And new Sqlite3
+    packages are available.
 
  -- John Goerzen <jgoerzen@complete.org>  Thu, 11 May 2006 06:46:55 -0500
