@@ -83,7 +83,7 @@ with -c for any of the GUI consoles.
 POSTGRESQL NOTES
 ================
 
-The PostgreSQL Bacula packages are designed to work with PostgreSQL 8.1.
+The PostgreSQL Bacula packages are designed to work with PostgreSQL 8.3.
 If you are using an older version, you may need to edit some scripts
 in /etc/bacula/scripts so that it uses the correct version of the
 PostgreSQL binaries.  As it is possible to have multiple PostgreSQL
