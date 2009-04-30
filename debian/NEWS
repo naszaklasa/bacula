@@ -5,6 +5,8 @@ bacula (2.2.0-1) unstable; urgency=low
    http://lists.debian.org/debian-legal/2007/07/msg00144.html for more
    details.
 
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 19 Sep 2007 06:46:55 -0500
+  
 bacula (1.38.9-3) unstable; urgency=low
 
  * Welcome to the 1.38 series of Bacula.
