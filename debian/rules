@@ -304,7 +304,21 @@ binary-arch-common: build install
 	dh_fixperms -a
 	dh_makeshlibs -a
 	dh_installdeb -a
-	dh_shlibdeps -a
+
+# Handle shlibs for the database packages specially so they get
+# the deps on the correct libraries.
+	dh_shlibdeps -pbacula-sd-mysql -Lbacula-common-mysql
+	dh_shlibdeps -pbacula-director-mysql -Lbacula-common-mysql
+	dh_shlibdeps -pbacula-sd-sqlite3 -Lbacula-common-sqlite3
+	dh_shlibdeps -pbacula-director-sqlite3 -Lbacula-common-sqlite3
+	dh_shlibdeps -pbacula-sd-pgsql -Lbacula-common-pgsql
+	dh_shlibdeps -pbacula-director-pgsql -Lbacula-common-pgsql
+
+# Now build all other shlibdeps.
+	dh_shlibdeps -a -Nbacula-sd-mysql -Nbacula-director-mysql \
+		-Nbacula-sd-sqlite3 -Nbacula-director-sqlite3 \
+		-Nbacula-sd-pgsql -Nbacula-director-pgsql
+
 	dh_gencontrol -a
 	dh_md5sums -a
 	dh_builddeb -a
