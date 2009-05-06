@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, March MMVII
  *
- *  $Id: select.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *  $Id: select.cpp 8755 2009-04-27 23:43:34Z bartleyd2 $
  */ 
 
 #include "bat.h"
@@ -40,8 +40,9 @@
 /*
  * Read the items for the selection
  */
-selectDialog::selectDialog(Console *console) 
+selectDialog::selectDialog(Console *console, int conn) 
 {
+   m_conn = conn;
    QDateTime dt;
    int stat;
    QListWidgetItem *item;
@@ -51,7 +52,6 @@ selectDialog::selectDialog(Console *console)
    setupUi(this);
    connect(listBox, SIGNAL(currentRowChanged(int)), this, SLOT(index_change(int)));
    setAttribute(Qt::WA_DeleteOnClose);
-   m_conn = m_console->notifyOff();
    m_console->read(m_conn);                 /* get title */
    labelWidget->setText(m_console->msg(m_conn));
    while ((stat=m_console->read(m_conn)) > 0) {
@@ -69,12 +69,12 @@ void selectDialog::accept()
 
    this->hide();
    bsnprintf(cmd, sizeof(cmd), "%d", m_index+1);
-   m_console->write_dir(cmd);
+   m_console->write_dir(m_conn, cmd);
    m_console->displayToPrompt(m_conn);
    this->close();
    mainWin->resetFocus();
    m_console->displayToPrompt(m_conn);
-
+   m_console->notify(m_conn, true);
 }
 
 
@@ -85,6 +85,7 @@ void selectDialog::reject()
    this->close();
    mainWin->resetFocus();
    m_console->beginNewCommand(m_conn);
+   m_console->notify(m_conn, true);
 }
 
 /*

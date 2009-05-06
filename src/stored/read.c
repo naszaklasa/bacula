@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, November MM
  *
- *   Version $Id: read.c 7589 2008-09-13 16:43:03Z kerns $
+ *   Version $Id: read.c 8713 2009-04-11 12:35:04Z kerns $
  */
 
 #include "bacula.h"
@@ -62,11 +62,8 @@ bool do_read_data(JCR *jcr)
       return false;
    }
 
-
-   create_restore_volume_list(jcr);
    if (jcr->NumReadVolumes == 0) {
       Jmsg(jcr, M_FATAL, 0, _("No Volume names found for restore.\n"));
-      free_restore_volume_list(jcr);
       fd->fsend(FD_error);
       return false;
    }
@@ -76,7 +73,6 @@ bool do_read_data(JCR *jcr)
 
    /* Ready device for reading */
    if (!acquire_device_for_read(dcr)) {
-      free_restore_volume_list(jcr);
       fd->fsend(FD_error);
       return false;
    }
@@ -92,7 +88,6 @@ bool do_read_data(JCR *jcr)
       ok = false;
    }
 
-   free_restore_volume_list(jcr);
    Dmsg0(30, "Done reading.\n");
    return ok;
 }

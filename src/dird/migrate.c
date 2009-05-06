@@ -41,7 +41,7 @@
  *       to do the backup.
  *     When the Storage daemon finishes the job, update the DB.
  *
- *   Version $Id: migrate.c 8609 2009-03-27 10:00:28Z kerns $
+ *   Version $Id: migrate.c 8754 2009-04-27 15:43:34Z ricozz $
  */
 
 #include "bacula.h"
@@ -55,7 +55,6 @@
 
 static const int dbglevel = 10;
 
-static char OKbootstrap[] = "3000 OK bootstrap\n";
 static int get_job_to_migrate(JCR *jcr);
 struct idpkt;
 static bool regex_find_jobids(JCR *jcr, idpkt *ids, const char *query1,
@@ -209,6 +208,9 @@ bool do_migration_init(JCR *jcr)
    mig_jcr->jr.PoolId = jcr->jr.PoolId;
    mig_jcr->jr.JobId = mig_jcr->JobId;
 
+   /* Don't let WatchDog checks Max*Time value on this Job */
+   mig_jcr->no_maxtime = true;
+
    Dmsg4(dbglevel, "mig_jcr: Name=%s JobId=%d Type=%c Level=%c\n",
       mig_jcr->jr.Name, (int)mig_jcr->jr.JobId, 
       mig_jcr->jr.JobType, mig_jcr->jr.JobLevel);
@@ -353,15 +355,11 @@ bool do_migration(JCR *jcr)
            ((STORE *)jcr->rstorage->first())->name());
       return false;
    }
-   if (!start_storage_daemon_job(jcr, jcr->rstorage, jcr->wstorage)) {
+   if (!start_storage_daemon_job(jcr, jcr->rstorage, jcr->wstorage, /*send_bsr*/true)) {
       return false;
    }
    Dmsg0(150, "Storage daemon connection OK\n");
 
-   if (!send_bootstrap_file(jcr, sd) ||
-       !response(jcr, sd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
-      return false;
-   }
 
    /*    
     * We re-update the job start record so that the start

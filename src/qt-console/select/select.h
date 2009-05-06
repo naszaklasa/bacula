@@ -11,7 +11,7 @@ class selectDialog : public QDialog, public Ui::selectForm
    Q_OBJECT 
 
 public:
-   selectDialog(Console *console);
+   selectDialog(Console *console, int conn);
 
 public slots:
    void accept();

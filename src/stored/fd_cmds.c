@@ -36,7 +36,7 @@
  *  the File daemon, control is passed here to handle the
  *  subsequent File daemon commands.
  *
- *   Version $Id: fd_cmds.c 8680 2009-04-02 10:42:58Z kerns $
+ *   Version $Id: fd_cmds.c 8713 2009-04-11 12:35:04Z kerns $
  *
  */
 
@@ -388,6 +388,8 @@ bool get_bootstrap_file(JCR *jcr, BSOCK *sock)
    if (debug_level >= 10) {
       dump_bsr(jcr->bsr, true);
    }
+   /* If we got a bootstrap, we are reading, so create read volume list */
+   create_restore_volume_list(jcr);
    ok = true;
 
 bail_out:

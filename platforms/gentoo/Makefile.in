@@ -46,10 +46,12 @@ uninstall-autostart-dir:
 	@rm -f $(DESTDIR)/etc/init.d/bacula-dir
 
 clean:
-	@rm -f bacula-sd bacula-fd bacula-dir
+	@rm -f 1 2 3
 
 distclean: clean
+	@rm -f bacula-sd bacula-fd bacula-dir
 	@rm -f Makefile 
 
 devclean: clean
+	@rm -f bacula-sd bacula-fd bacula-dir
 	@rm -f Makefile 

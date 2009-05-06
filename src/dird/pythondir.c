@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, November MMIV
  *
- *   Version $Id: pythondir.c 7789 2008-10-14 18:42:47Z kerns $
+ *   Version $Id: pythondir.c 8762 2009-04-29 11:55:58Z kerns $
  *
  */
 
@@ -290,12 +290,14 @@ int job_setattr(PyObject *self, char *attrname, PyObject *value)
          PyErr_SetString(PyExc_RuntimeError, _("Job Level can be set only during JobInit"));
          return -1;
       }
-      for (i=0; joblevels[i].level_name; i++) {
-         if (strcmp(strval, joblevels[i].level_name) == 0) {
-            if (joblevels[i].job_type == jcr->get_JobType()) {
-               jcr->set_JobLevel(joblevels[i].level);
-               jcr->jr.JobLevel = jcr->get_JobLevel();
-               return 0;
+      if (strval != NULL) {
+         for (i=0; joblevels[i].level_name; i++) {
+            if (strcmp(strval, joblevels[i].level_name) == 0) {
+               if (joblevels[i].job_type == jcr->get_JobType()) {
+                  jcr->set_JobLevel(joblevels[i].level);
+                  jcr->jr.JobLevel = jcr->get_JobLevel();
+                  return 0;
+               }
             }
          }
       }

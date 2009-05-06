@@ -116,10 +116,6 @@ FileSet {
 #   files can be useful
 #
   Exclude {
-    Options {
-      signature = MD5
-      ignore case = yes
-    }
     File = C:/Temp
     File = C:/tmp
   }

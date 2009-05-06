@@ -1,7 +1,7 @@
 /*
  * Define Host machine
  *
- *  Version $Id: winhost.h 8385 2009-01-20 15:33:17Z ricozz $
+ *  Version $Id: winhost.h 8732 2009-04-15 13:50:26Z ricozz $
  *
  */
 /*
@@ -41,6 +41,7 @@
 
 #define HOST_OS  "Linux"
 #define DISTNAME "Cross-compile"
+#define BACULA "Bacula"
 #ifdef _WIN64
 # define DISTVER "Win64"
 #else

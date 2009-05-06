@@ -123,7 +123,7 @@ void generate_plugin_event(JCR *jcr, bEventType eventType, void *value)
    Plugin *plugin;
    int i = 0;
 
-   if (!plugin_list || !jcr || !jcr->plugin_ctx_list) {
+   if (!plugin_list || !jcr || !jcr->plugin_ctx_list || job_canceled(jcr)) {
       return;                         /* Return if no plugins loaded */
    }
 
@@ -160,7 +160,7 @@ bool plugin_check_file(JCR *jcr, char *fname)
    int rc = bRC_OK;
    int i = 0;
 
-   if (!plugin_list || !jcr || !jcr->plugin_ctx_list) {
+   if (!plugin_list || !jcr || !jcr->plugin_ctx_list || job_canceled(jcr)) {
       return false;                      /* Return if no plugins loaded */
    }
 
@@ -217,7 +217,7 @@ int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    POOL_MEM fname(PM_FNAME);
    POOL_MEM link(PM_FNAME);
 
-   if (!plugin_list || !jcr->plugin_ctx_list) {
+   if (!plugin_list || !jcr->plugin_ctx_list || job_canceled(jcr)) {
       return 1;                            /* Return if no plugins loaded */
    }
 
@@ -322,6 +322,9 @@ bool send_plugin_name(JCR *jcr, BSOCK *sd, bool start)
 
    if (!sp) {
       Jmsg0(jcr, M_FATAL, 0, _("Plugin save packet not found.\n"));
+      return false;
+   }
+   if (job_canceled(jcr)) {
       return false;
    }
   
@@ -463,7 +466,7 @@ int plugin_create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
    int flags;
    int rc;
 
-   if (!plugin || !plugin_ctx || !set_cmd_plugin(bfd, jcr)) {
+   if (!plugin || !plugin_ctx || !set_cmd_plugin(bfd, jcr) || job_canceled(jcr)) {
       return CF_ERROR;
    }
    rp.pkt_size = sizeof(rp);
@@ -647,6 +650,9 @@ void new_plugins(JCR *jcr)
 
    if (!plugin_list) {
       Dmsg0(dbglvl, "plugin list is NULL\n");
+      return;
+   }
+   if (job_canceled(jcr)) {
       return;
    }
 

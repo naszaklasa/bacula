@@ -1,6 +1,7 @@
+
 CREATE TABLE Filename (
   FilenameId INTEGER,
-  Name TEXT DEFAULT "",
+  Name TEXT DEFAULT '',
   PRIMARY KEY(FilenameId) 
   );
 
@@ -8,7 +9,7 @@ CREATE INDEX inx1 ON Filename (Name);
 
 CREATE TABLE Path (
    PathId INTEGER,
-   Path TEXT DEFAULT "",
+   Path TEXT DEFAULT '',
    PRIMARY KEY(PathId) 
    );
 
@@ -41,10 +42,10 @@ CREATE TABLE Job (
    JobId INTEGER,
    Job VARCHAR(128) NOT NULL,
    Name VARCHAR(128) NOT NULL,
-   Type CHAR NOT NULL,
-   Level CHAR NOT NULL,
+   Type CHAR(1) NOT NULL,
+   Level CHAR(1) NOT NULL,
    ClientId INTEGER REFERENCES Client DEFAULT 0,
-   JobStatus CHAR NOT NULL,
+   JobStatus CHAR(1) NOT NULL,
    SchedTime DATETIME NOT NULL,
    StartTime DATETIME DEFAULT 0,
    EndTime DATETIME DEFAULT 0,
@@ -54,6 +55,7 @@ CREATE TABLE Job (
    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
    JobFiles INTEGER UNSIGNED DEFAULT 0,
    JobBytes BIGINT UNSIGNED DEFAULT 0,
+   ReadBytes BIGINT UNSIGNED DEFAULT 0,
    JobErrors INTEGER UNSIGNED DEFAULT 0,
    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
    PoolId INTEGER UNSIGNED REFERENCES Pool DEFAULT 0,
@@ -64,6 +66,35 @@ CREATE TABLE Job (
    PRIMARY KEY(JobId) 
    );
 CREATE INDEX inx6 ON Job (Name);
+
+-- Create a table like Job for long term statistics 
+CREATE TABLE JobHisto (
+   JobId INTEGER,
+   Job VARCHAR(128) NOT NULL,
+   Name VARCHAR(128) NOT NULL,
+   Type CHAR(1) NOT NULL,
+   Level CHAR(1) NOT NULL,
+   ClientId INTEGER DEFAULT 0,
+   JobStatus CHAR(1) NOT NULL,
+   SchedTime DATETIME NOT NULL,
+   StartTime DATETIME DEFAULT 0,
+   EndTime DATETIME DEFAULT 0,
+   RealEndTime DATETIME DEFAULT 0,
+   JobTDate BIGINT UNSIGNED DEFAULT 0,
+   VolSessionId INTEGER UNSIGNED DEFAULT 0,
+   VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+   JobFiles INTEGER UNSIGNED DEFAULT 0,
+   JobBytes BIGINT UNSIGNED DEFAULT 0,
+   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+   JobErrors INTEGER UNSIGNED DEFAULT 0,
+   JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+   PoolId INTEGER UNSIGNED DEFAULT 0,
+   FileSetId INTEGER UNSIGNED DEFAULT 0,
+   PriorJobId INTEGER UNSIGNED DEFAULT 0,
+   PurgedFiles TINYINT DEFAULT 0,
+   HasBase TINYINT DEFAULT 0
+   );
+CREATE INDEX inx61 ON JobHisto (StartTime);
 
 CREATE TABLE Location (
    LocationId INTEGER,
@@ -92,7 +123,7 @@ CREATE TABLE Log (
    LogText TEXT NOT NULL,
    PRIMARY KEY(LogId) 
    );
-CREATE INDEX LogInx1 ON File (JobId);
+CREATE INDEX LogInx1 ON Log (JobId);
 
 
 CREATE TABLE FileSet (
@@ -144,6 +175,7 @@ CREATE TABLE Media (
    VolStatus VARCHAR(20) NOT NULL,
    Enabled TINYINT DEFAULT 1,
    Recycle TINYINT DEFAULT 0,
+   ActionOnPurge     TINYINT    DEFAULT 0,
    VolRetention BIGINT UNSIGNED DEFAULT 0,
    VolUseDuration BIGINT UNSIGNED DEFAULT 0,
    MaxVolJobs INTEGER UNSIGNED DEFAULT 0,
@@ -217,6 +249,7 @@ CREATE TABLE Pool (
    MaxVolBytes BIGINT UNSIGNED DEFAULT 0,
    AutoPrune TINYINT DEFAULT 0,
    Recycle TINYINT DEFAULT 0,
+   ActionOnPurge     TINYINT    DEFAULT 0,
    PoolType VARCHAR(20) NOT NULL,
    LabelType TINYINT DEFAULT 0,
    LabelFormat VARCHAR(128) NOT NULL,
@@ -270,7 +303,7 @@ CREATE TABLE NextId (
 
 
 -- Initialize JobId to start at 1
-INSERT INTO NextId (id, TableName) VALUES (1, "Job");
+INSERT INTO NextId (id, TableName) VALUES (1, 'Job');
 
 CREATE TABLE Version (
    VersionId INTEGER UNSIGNED NOT NULL 
@@ -337,11 +370,15 @@ INSERT INTO Status (JobStatus,JobStatusLong) VALUES
    ('t', 'Waiting on start time');
 INSERT INTO Status (JobStatus,JobStatusLong) VALUES
    ('p', 'Waiting on higher priority jobs');
+INSERT INTO Status (JobStatus,JobStatusLong) VALUES
+   ('a', 'SD despooling attributes');
+INSERT INTO Status (JobStatus,JobStatusLong) VALUES
+   ('i', 'Doing batch insert file records');
 
 
--- Initialize Version
-INSERT INTO Version (VersionId) VALUES (10);
+-- Initialize Version            
+INSERT INTO Version (VersionId) VALUES (11);
 
 
-PRAGMA default_synchronous = OFF;
-PRAGMA default_cache_size = 10000;
+PRAGMA default_cache_size = 100000;
+PRAGMA synchronous = NORMAL;

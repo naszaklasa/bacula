@@ -37,7 +37,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_restore.c 8213 2008-12-21 08:44:43Z ricozz $
+ *   Version $Id: ua_restore.c 8770 2009-04-30 07:08:06Z kerns $
  */
 
 
@@ -990,6 +990,9 @@ static void split_path_and_filename(UAContext *ua, RESTORE_CTX *rx, char *name)
 
 static bool ask_for_fileregex(UAContext *ua, RESTORE_CTX *rx)
 {
+   if (find_arg(ua, NT_("all")) >= 0) {  /* if user enters all on command line */
+      return true;                       /* select everything */
+   }
    ua->send_msg(_("\nThere were no files inserted into the tree, so file selection\n"
                   "is not possible.Most likely your retention policy pruned the files\n"));
    if (get_yesno(ua, _("\nDo you want to restore all the files? (yes|no): "))) {

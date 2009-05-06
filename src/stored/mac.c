@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, January MMVI
  *
- *   Version $Id: mac.c 8504 2009-03-06 20:43:53Z kerns $
+ *   Version $Id: mac.c 8713 2009-04-11 12:35:04Z kerns $
  */
 
 #include "bacula.h"
@@ -84,8 +84,6 @@ bool do_mac(JCR *jcr)
    }
    Dmsg2(100, "read_dcr=%p write_dcr=%p\n", jcr->read_dcr, jcr->dcr);
 
-
-   create_restore_volume_list(jcr);
    if (jcr->NumReadVolumes == 0) {
       Jmsg(jcr, M_FATAL, 0, _("No Volume names found for %s.\n"), Type);
       goto bail_out;
@@ -161,10 +159,7 @@ ok_out:
       }
    }
 
-   free_restore_volume_list(jcr);
-
    dir_send_job_status(jcr);          /* update director */
-
 
    Dmsg0(30, "Done reading.\n");
    jcr->end_time = time(NULL);

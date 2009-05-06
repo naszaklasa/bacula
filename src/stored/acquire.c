@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: acquire.c 8235 2008-12-23 13:28:03Z kerns $
+ *   Version $Id: acquire.c 8713 2009-04-11 12:35:04Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -187,7 +187,7 @@ bool acquire_device_for_read(DCR *dcr)
    if (!dir_get_volume_info(dcr, GET_VOL_INFO_FOR_READ)) {
       Dmsg2(150, "dir_get_vol_info failed for vol=%s: %s\n", 
          dcr->VolumeName, jcr->errmsg);
-      Jmsg1(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+      Jmsg1(jcr, M_WARNING, 0, "Read acquire: %s", jcr->errmsg);
    }
    dev->set_load();                /* set to load volume */
    
@@ -241,7 +241,7 @@ bool acquire_device_for_read(DCR *dcr)
           *  error messages when nothing is mounted.
           */
          if (tape_previously_mounted) {
-            Jmsg(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+            Jmsg(jcr, M_WARNING, 0, "Read acquire: %s", jcr->errmsg);
          }
          goto default_path;
       case VOL_NAME_ERROR:
@@ -257,7 +257,7 @@ bool acquire_device_for_read(DCR *dcr)
          dev->set_load();
          /* Fall through */
       default:
-         Jmsg1(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+         Jmsg1(jcr, M_WARNING, 0, "Read acquire: %s", jcr->errmsg);
 default_path:
          Dmsg0(50, "default path\n");
          tape_previously_mounted = true;
