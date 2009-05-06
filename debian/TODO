@@ -1,5 +1,3 @@
-* sqlite2 to sqlite3 migration
-
 * Make sure btraceback can be found in /usr/lib/bacula?
 
 * Verify upgrades work as expected
