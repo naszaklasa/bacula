@@ -255,6 +255,7 @@ exit 1
 %if %{mdk}
 %define _dist %(grep Mand /etc/mandrake-release)
 %endif
+%{?DISTNAME:%define _dist %{DISTNAME}}
 Distribution: %{_dist}
 
 # Should we build gconsole, possible only if gtk= >= 2.4 available.
@@ -2548,6 +2549,8 @@ fi
 %endif
 
 %changelog
+* Sat Apr 25 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add switch to pass Distribution tag
 * Sun Apr 5 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - 3.0.0 release
 - database update version 10 to 11

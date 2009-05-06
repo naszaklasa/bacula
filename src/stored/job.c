@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: job.c 8504 2009-03-06 20:43:53Z kerns $
+ *   Version $Id: job.c 8713 2009-04-11 12:35:04Z kerns $
  *
  */
 
@@ -371,6 +371,8 @@ void stored_free_jcr(JCR *jcr)
       free_bsr(jcr->bsr);
       jcr->bsr = NULL;
    }
+   /* Free any restore volume list created */
+   free_restore_volume_list(jcr);
    if (jcr->RestoreBootstrap) {
       unlink(jcr->RestoreBootstrap);
       free_pool_memory(jcr->RestoreBootstrap);

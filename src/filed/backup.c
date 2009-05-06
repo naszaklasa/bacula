@@ -31,7 +31,7 @@
  *
  *    Kern Sibbald, March MM
  *
- *   Version $Id: backup.c 8536 2009-03-15 14:40:05Z kerns $
+ *   Version $Id: backup.c 8753 2009-04-27 15:10:59Z marcovw $
  *
  */
 
@@ -580,19 +580,23 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
 #endif
 
    /*
-    * Save ACLs for anything not being a symlink.
+    * Save ACLs for anything not being a symlink and not being a plugin.
     */
-   if (ff_pkt->flags & FO_ACL && ff_pkt->type != FT_LNK) {
-      if (!build_acl_streams(jcr, ff_pkt))
-         goto bail_out;
+   if (!ff_pkt->cmd_plugin) {
+      if (ff_pkt->flags & FO_ACL && ff_pkt->type != FT_LNK) {
+         if (!build_acl_streams(jcr, ff_pkt))
+            goto bail_out;
+      }
    }
 
    /*
-    * Save Extended Attributes for all files.
+    * Save Extended Attributes for all files not being a plugin.
     */
-   if (ff_pkt->flags & FO_XATTR) {
-      if (!build_xattr_streams(jcr, ff_pkt))
-         goto bail_out;
+   if (!ff_pkt->cmd_plugin) {
+      if (ff_pkt->flags & FO_XATTR) {
+         if (!build_xattr_streams(jcr, ff_pkt))
+            goto bail_out;
+      }
    }
 
    /* Terminate the signing digest and send it to the Storage daemon */

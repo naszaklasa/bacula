@@ -129,10 +129,12 @@ uninstall-autostart-dir:
 	done
 
 clean:
-	@rm -f bacula-sd bacula-fd bacula-dir
+	@rm -f 1 2 3
 
 distclean: clean
+	@rm -f bacula-sd bacula-fd bacula-dir
 	@rm -f Makefile bacula-*.spec
 
 devclean: clean
+	@rm -f bacula-sd bacula-fd bacula-dir
 	@rm -f Makefile bacula-*.spec

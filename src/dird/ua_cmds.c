@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_cmds.c 8571 2009-03-21 14:24:27Z kerns $
+ *   Version $Id: ua_cmds.c 8742 2009-04-21 08:57:35Z ricozz $
  */
  
 #include "bacula.h"
@@ -1829,7 +1829,7 @@ int qhelp_cmd(UAContext *ua, const char *cmd)
 static int version_cmd(UAContext *ua, const char *cmd)
 {
    ua->send_msg(_("%s Version: %s (%s) %s %s %s %s\n"), my_name, VERSION, BDATE,
-                NPRTB(director->verid), HOST_OS, DISTNAME, DISTVER);
+                HOST_OS, DISTNAME, DISTVER, NPRTB(director->verid));
    return 1;
 }
 #else

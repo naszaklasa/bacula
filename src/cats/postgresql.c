@@ -32,7 +32,7 @@
  *    Dan Langille, December 2003
  *    based upon work done by Kern Sibbald, March 2000
  *
- *    Version $Id: postgresql.c 8458 2009-02-17 09:50:39Z ricozz $
+ *    Version $Id: postgresql.c 8717 2009-04-12 11:53:28Z ricozz $
  */
 
 
@@ -153,6 +153,7 @@ static bool check_database_encoding(JCR *jcr, B_DB *mdb)
               _("Encoding error for database \"%s\". Wanted SQL_ASCII, got %s\n"),
               mdb->db_name, row[0]);
          Jmsg(jcr, M_WARNING, 0, "%s", mdb->errmsg);
+         Dmsg1(50, "%s", mdb->errmsg);
       } 
    }
    return ret;

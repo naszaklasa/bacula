@@ -1,7 +1,60 @@
 
-       Release Notes for Bacula 3.0.0
+               Release Notes for Bacula 3.0.1
 
-  Bacula code: Total files = 520 Total lines = 205,459 (*.h *.c *.in)
+  Bacula code: Total files = 521 Total lines = 206,512 (*.h *.c *.in)
+
+Note, if you are not already running 3.0.0, read the 3.0.0 release notes 
+below.  Important!!!
+
+Version 3.0.1 is primarily a minor bug fix update to version 3.0.0 with
+one enhancement (see below).
+
+Changes since 3.0.0:
+Bug fixes:
+  1276, 1274, 1275, 1272 1246, 1268, 1281, 1282.
+
+Fixed:
+- Check for job_canceled() in fd_plugin code.
+- Update Win32 table creation to have new DB version 11 format
+- Remove illegal Options in Exclude of default Win32/64 bacula-dir.conf
+- Remove 'Reposition' messages when restoring
+- Updated projects file
+- Tweak version string to display versionid field at the end
+  and keep fields order.
+- Add additional mysql connection debug code submitted by:
+  Chandranshu <chandranshu@gmail.com>
+
+Enhancement:
+- Modify insertion of read Volumes in SD to be done *before* the
+  drive reservation. This ensures that a Volume to be read will not
+  be reserved for writing. Significant improvement in eliminating
+  tape deadlock situations.
+
+Note, both the Director and Storage daemons must be upgraded at the
+same time. The 3.0.1 File daemons are compatible with 3.0.0 file
+daemons and as noted below in the 3.0.0 release notes the Director
+and Storage daemon should be compatible with 2.4.x File daemons.  
+In general, we do not expect any of the 3.0.x File daemons to work with older
+Directors and Storage daemons (as has always been the case for Bacula
+releases).
+
+============ Documentation improvements needed ==================
+
+Note!!!!! The 3.0.0+ documentation needs rather extensive modifications in the
+following areas:
+
+1. Missing documentation.
+2. Correction of links within various manuals -- most fail.
+3. Integration of the new features into the main documents.
+4. Much more.
+
+The documentation will not be completed in the near future due to lack
+manpower.  If you are unhappy with this situation as we are, we suggest
+you help by submitting patches to the documentation.  Thanks.
+=====
+
+
+================== 3.0.0 Release Notes ========================
 
 The diff between 2.4.4 and 2.5.x is 208,340 lines, so this release
 represents an enormous effort.
@@ -17,14 +70,14 @@ release of version 2.5.40 or greater requires a database upgrade.
 New Catalog format in version 3.0.0 (2.5.40 or later)
 -----------------------------------------------------
 
-This BETA release of Bacula uses a new catalog format. We provide a set of
+This release of Bacula uses a new catalog format. We provide a set of
 scripts that permit to convert a 2.4.x (version 10) catalog to 3.0.0 (version
 11).  The Bacula project rpms distributed on Source Forge will automatically
 detect the database change and do the upgrade for you.  We strongly
 recommend that you save a copy of your existing database before upgrading
 using rpms.
 
-The simplest way to upgrad the database assuming you are building from
+The simplest way to upgrade the database assuming you are building from
 source:
 1. Stop any current version of Bacula from running.
 2. Save a copy of your existing database.
@@ -110,5 +163,8 @@ Please see the New Features chapter of the new manual, which documents
 some but not all the new features (we are still working on it):
 
 http://www.bacula.org/manuals/en/concepts/concepts/New_Features.html
+
+
+
   
 The ChangeLog has more details.

@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: dircomm.cpp 8660 2009-03-31 03:11:25Z bartleyd2 $
+ *   Version $Id: dircomm.cpp 8755 2009-04-27 23:43:34Z bartleyd2 $
  *
  *  Console Class
  *
@@ -353,8 +353,9 @@ int DirComm::read()
          }
          continue;
       case BNET_START_SELECT:
+         notify(false);
          if (mainWin->m_commDebug) Pmsg1(000, "conn %i START SELECT\n", m_conn);
-         new selectDialog(m_console);
+         new selectDialog(m_console, m_conn);
          break;
       case BNET_YESNO:
          if (mainWin->m_commDebug) Pmsg1(000, "conn %i YESNO\n", m_conn);

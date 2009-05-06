@@ -529,6 +529,7 @@ static VOLRES *find_read_volume(const char *VolumeName)
    VOLRES vol, *fvol;
 
    if (read_vol_list->empty()) {
+      Dmsg0(dbglvl, "find_read_vol: read_vol_list empty.\n");
       return NULL;
    }
    /* Do not lock reservations here */

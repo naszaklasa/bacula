@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: mysql.c 8008 2008-11-07 13:16:56Z ricozz $
+ *    Version $Id: mysql.c 8739 2009-04-16 17:07:21Z kerns $
  */
 
 
@@ -193,6 +193,14 @@ db_open_database(JCR *jcr, B_DB *mdb)
 "Database=%s User=%s\n"
 "MySQL connect failed either server not running or your authorization is incorrect.\n"),
          mdb->db_name, mdb->db_user);
+#if MYSQL_VERSION_ID >= 40101
+      Dmsg3(50, "Error %u (%s): %s\n",
+            mysql_errno(&(mdb->mysql)), mysql_sqlstate(&(mdb->mysql)),
+            mysql_error(&(mdb->mysql)));
+#else
+      Dmsg2(50, "Error %u: %s\n",
+            mysql_errno(&(mdb->mysql)), mysql_error(&(mdb->mysql)));
+#endif
       V(mutex);
       return 0;
    }

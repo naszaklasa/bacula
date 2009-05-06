@@ -33,7 +33,7 @@
  *
  * Kern Sibbald, Nov MM
  *
- *   Version $Id: jcr.h 8508 2009-03-07 20:59:46Z kerns $
+ *   Version $Id: jcr.h 8754 2009-04-27 15:43:34Z ricozz $
  */
 
 
@@ -326,6 +326,7 @@ public:
    bool VSS;                          /* VSS used by FD */
    bool Encrypt;                      /* Encryption used by FD */
    bool stats_enabled;                /* Keep all job records in a table for long term statistics */
+   bool no_maxtime;                   /* Don't check Max*Time for this JCR */
 #endif /* DIRECTOR_DAEMON */
 
 

@@ -55,10 +55,12 @@ uninstall-autostart-rc:
 
 
 clean:
-	@rm -f rc.bacula-sd rc.bacula-fd rc.bacula-dir
+	@rm -f 1 2 3
 
 distclean: clean
+	@rm -f rc.bacula-sd rc.bacula-fd rc.bacula-dir
 	@rm -f Makefile 
 
 devclean: clean
+	@rm -f rc.bacula-sd rc.bacula-fd rc.bacula-dir
 	@rm -f Makefile 

@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: job.c 8640 2009-03-29 10:55:53Z kerns $
+ *   Version $Id: job.c 8737 2009-04-16 13:13:28Z kerns $
  *
  */
 
@@ -41,7 +41,7 @@
 #include "vss.h"
 
 static pthread_mutex_t vss_mutex = PTHREAD_MUTEX_INITIALIZER;
-static int enable_vss;
+static int enable_vss = 0;
 #endif
 
 extern CLIENT *me;                    /* our client resource */
@@ -1591,6 +1591,7 @@ cleanup:
             Jmsg(jcr, msg_type, 0, _("VSS Writer (BackupComplete): %s\n"), g_pVSSClient->GetWriterInfo(i));
          }
       }
+      Win32ConvCleanupCache();
       V(vss_mutex);
    }
 #endif
