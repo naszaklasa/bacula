@@ -14,8 +14,6 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 CFLAGS = -g -Wall
 INSTALL_PROGRAM = install
 
-SHELL := bash
-
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0
 else
@@ -79,7 +77,7 @@ configure-stamp-%: extract-stamp-%
 	cp /usr/share/misc/config.guess /usr/share/misc/config.sub \
 		$(BUILDDIR)-$(*)/autoconf/
 	cd $(BUILDDIR)-$(*) && \
-	 	QMAKE=/usr/bin/qmake-qt4 $(SHELL) ./configure --config-cache \
+		QMAKE=/usr/bin/qmake-qt4 ./configure --config-cache \
 		--host=${DEB_HOST_GNU_TYPE} --build=${DEB_BUILD_GNU_TYPE} \
 		--prefix=/usr \
 		--with-archivedir=/nonexistant/path/to/file/archive/dir \
