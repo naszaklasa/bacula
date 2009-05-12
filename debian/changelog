@@ -1,3 +1,11 @@
+bacula (3.0.1-2) UNRELEASED; urgency=low
+
+  * Apply patches from Sami Haahtinen: correct behavior on systems
+    where bash isn't the default, and move btape into SQL-specific
+    packages because it now links with database code.
+
+ -- John Goerzen <jgoerzen@complete.org>  Tue, 12 May 2009 08:08:47 -0500
+
 bacula (3.0.1-1) experimental; urgency=low
 
   * New Upstream Version
