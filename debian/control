@@ -223,8 +223,8 @@ Description: network backup, recovery and verification - storage daemon
 Package: bacula-sd-sqlite3
 Architecture: any
 Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}, bacula-common-sqlite3 (>= ${binary:Version})
-Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
-Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
+Conflicts: bacula-sd-tools, bacula-sd (<= 3.0.1-1)
+Replaces: bacula-sd-tools, bacula-sd (<= 3.0.1-1)
 Provides: bacula-sd-tools
 Description: network backup, recovery and verification - SQLite 3 SD tools
  Bacula is a set of programs to manage backup, recovery and verification of
@@ -250,8 +250,8 @@ Description: network backup, recovery and verification - SQLite SD tools
 Package: bacula-sd-mysql
 Architecture: any
 Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}, bacula-common-mysql (>= ${binary:Version})
-Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
-Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
+Conflicts: bacula-sd-tools, bacula-sd (<= 3.0.1-1)
+Replaces: bacula-sd-tools, bacula-sd (<= 3.0.1-1)
 Provides: bacula-sd-tools
 Description: network backup, recovery and verification - MySQL SD tools
  Bacula is a set of programs to manage backup, recovery and verification of
@@ -267,8 +267,8 @@ Description: network backup, recovery and verification - MySQL SD tools
 Package: bacula-sd-pgsql
 Architecture: any
 Depends: bacula-sd (= ${binary:Version}), ${shlibs:Depends}, bacula-common-pgsql (>= ${binary:Version})
-Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
-Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
+Conflicts: bacula-sd-tools, bacula-sd (<= 3.0.1-1)
+Replaces: bacula-sd-tools, bacula-sd (<= 3.0.1-1)
 Provides: bacula-sd-tools
 Description: network backup, recovery and verification - PostgreSQL SD tools
  Bacula is a set of programs to manage backup, recovery and verification of
