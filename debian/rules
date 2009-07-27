@@ -168,7 +168,7 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	dh_install -pbacula-fd
 	dh_install -pbacula-console -pbacula-console-qt
 	cp $(DEFAULTINSTALLDIR)/usr/sbin/bconsole debian/bacula-console/usr/sbin/bacula-console
-	cp debian/tmp-build-$(DEFAULTVARIANT)/src/qt-console/bat debian/bacula-console-qt/usr/bin/bat
+	cp debian/tmp-build-$(DEFAULTVARIANT)/src/qt-console/.libs/bat debian/bacula-console-qt/usr/bin/bat
 	ln -s bacula-common debian/bacula-common/usr/share/doc/bacula
 
 
