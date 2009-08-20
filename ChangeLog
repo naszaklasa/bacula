@@ -1,7 +1,107 @@
-              Technical notes on version 2.5.x
+              Technical notes on version 3.0.x
 
 General:
 
+Release Version 3.0.2:
+16Jul09
+ebl  Fix #1323 about a problem when mounting a requested volume
+     during a restore.
+15Jul09
+kes  Add more example SD Device configurations.
+ebl  Force the client_encoding to SQL_ASCII when database is already
+     using this mode.
+ebl  Fix #1335 about postgresql error message during copy session
+ebl  Cleanup old job records when starting the director 
+     (Created/Running -> Failed)
+14Jul09
+kes  Apply patch in bug #1315 by McMichaeli that fixes scripts/logwatch
+kes  Add more output when spooling and no space left
+ebl  Fix postgresql driver bug that displayed <NULL> rows from time to time.
+ebl  Implement the project 'restore' menu: enter a JobId, automatically 
+     select dependents
+ebl  Should fix #1323 about verify accurate jobs and deleted files.
+13Jul09
+kes  Send bootstrap directly from DIR to SD
+kes  Create build scripts for Win64 somewhat equilavent to the Win32 ones.
+10Jul09
+ebl  Print correct JobId in bls, should fix #1331
+kes  Apply python detect patch from Bastian Friedrich <bastian.friedrich@collax.com>
+09Jul09
+kes  Add --with-hostname to ./configure
+mvw  Changed ACL_OTHER into ACL_OTHER_OBJ as IRIX doesn't seem to have
+     ACL_OTHER. Fixes bug #1333
+03Jul09
+ebl  Should fix the first part #1323 about the restore option
+     'List Jobs where a given File is saved' wich display deleted files
+02Jul09
+ebl  Make estimate command accurate compatible. Should fix #1318
+ebl  Add estimate accurate=yes/no
+01Jul09
+kes  Fix bug #1317 Allow duplicate jobs = no does not work
+28Jun09
+mvw  Fix missing case for NetBSD xattr restores.
+25Jun09
+kes  Modify xattr.c and acl.c not to fail the job on errors. This should
+     fix bug #1305.
+23Jun09
+mvw  Fix 2 rather big bugs in the xattr and acl code and fix a small
+     memory leak on a particular code path for Linux xattr/acl handling.
+ebl  Update FileSetId when initializing job.
+ebl  Add '*' when volume is online when displaying volume list in restore.
+	Should complete project 31.
+21Jun09
+kes  Re-fix bug #1311 if MaxDiffInterval exceeded ensure job upgraded
+17Jun09
+kes  Fix bug #1305 make errors obtaining acl during backup non-fatal
+kes  Fix bug #1309 inappropriate error message during btape fill command
+kes  Fix bug #1307 AllowHigherDuplicates=no prevents automatic job escalation
+12Jun09
+kes  Remove non-portable code referencing pthread_t fixes bug #1308.
+kes  Create patch that may fix bug #1298 and bug #1304, which causes
+     an SD crash after canceling a job.
+08Jun09
+kes  Attempt to get bat conf file installation to work with DESTDIR
+05uun09
+kes  Improve error messages when a migration sql query is used and correct
+     the problem identified in bug #1303 with starting Job names
+     containing spaces.
+ebl  Fix #1306 about a problem when building the static bconsole
+26May09
+ebl  Apply Steve Polyack patch to add DirSourceAddress and FDSourceAddress
+     directives. That permits to choose the outgoing interface.
+25May09
+mvw  Allow acl and xattr to be explicitly enabled and fail the configure
+     if we are asked to enable acl or xattr support and the OS doesn't support
+     acls or xattrs.
+23May09
+kes  Create Client record in database at startup -- makes bat work better.
+kes  When doing a tree selection restore, look at the PurgedFiles column
+     in the first JobId, and if non-zero, the Job was purged, so do
+     not do selection.
+21May09
+kes  Add Catalog = all to the default Messages resource.
+19May09
+ebl  Fix #1029 about IPV6/IPV4 address resolution order with help
+     of David Steinn Geirsson.
+kes  During jcr destruction hold jcr_chain lock only for minimum
+     time necessary.  This should fix the SD deadlock in bug #1287.
+18May09
+kes  Simplify messages printed by SD when reserve fails. This
+     should fix bug #1285.
+14May09
+kes  Apply fix to sql_cmds.c suggested by
+     Ulrich Leodolter <ulrich.leodolter at obvsg.at>
+     which prevents restore by file selection from using
+     Copy jobs.
+kes  Add new nagios_plugin_check_bacula.tgz from
+     Masopust, Christian <christian.masopust at siemens.com>
+kes  Add bconsole @help command
+kes  Fix Show FileSet command to handle spaces
+04May09
+kes  Add --with-bsrdir and --with-logdir for placement of Bacula bsr
+     files and Bacula log files.
+
+	
 Release Version 3.0.1:
 29Apr09
 kes  Fix bug #1282 Setting job.Priority in python crashes director by

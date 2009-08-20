@@ -36,7 +36,7 @@
  *  the File daemon, control is passed here to handle the
  *  subsequent File daemon commands.
  *
- *   Version $Id: fd_cmds.c 8713 2009-04-11 12:35:04Z kerns $
+ *   Version $Id: fd_cmds.c 8983 2009-07-14 13:46:39Z kerns $
  *
  */
 
@@ -61,7 +61,6 @@ static bool append_end_session(JCR *jcr);
 static bool read_open_session(JCR *jcr);
 static bool read_data_cmd(JCR *jcr);
 static bool read_close_session(JCR *jcr);
-static bool bootstrap_cmd(JCR *jcr);
 
 /* Exported function */
 bool get_bootstrap_file(JCR *jcr, BSOCK *bs);
@@ -82,7 +81,6 @@ static struct s_cmds fd_cmds[] = {
    {"read open",    read_open_session},
    {"read data",    read_data_cmd},
    {"read close",   read_close_session},
-   {"bootstrap",    bootstrap_cmd},
    {NULL,           NULL}                  /* list terminator */
 };
 
@@ -96,8 +94,6 @@ static char OK_end[]          = "3000 OK end\n";
 static char OK_close[]        = "3000 OK close Status = %d\n";
 static char OK_open[]         = "3000 OK open ticket = %d\n";
 static char ERROR_append[]    = "3903 Error append data\n";
-static char OK_bootstrap[]    = "3000 OK bootstrap\n";
-static char ERROR_bootstrap[] = "3904 Error bootstrap\n";
 
 /* Information sent to the Director */
 static char Job_start[] = "3010 Job %s start\n";
@@ -340,69 +336,6 @@ static bool read_open_session(JCR *jcr)
 
    return true;
 }
-
-static bool bootstrap_cmd(JCR *jcr)
-{
-   return get_bootstrap_file(jcr, jcr->file_bsock);
-}
-
-static pthread_mutex_t bsr_mutex = PTHREAD_MUTEX_INITIALIZER;
-static uint32_t bsr_uniq = 0;
-
-bool get_bootstrap_file(JCR *jcr, BSOCK *sock)
-{
-   POOLMEM *fname = get_pool_memory(PM_FNAME);
-   FILE *bs;
-   bool ok = false;
-
-   if (jcr->RestoreBootstrap) {
-      unlink(jcr->RestoreBootstrap);
-      free_pool_memory(jcr->RestoreBootstrap);
-   }
-   P(bsr_mutex);
-   bsr_uniq++;
-   Mmsg(fname, "%s/%s.%s.%d.bootstrap", me->working_directory, me->hdr.name,
-      jcr->Job, bsr_uniq);
-   V(bsr_mutex);
-   Dmsg1(400, "bootstrap=%s\n", fname);
-   jcr->RestoreBootstrap = fname;
-   bs = fopen(fname, "a+b");           /* create file */
-   if (!bs) {
-      berrno be;
-      Jmsg(jcr, M_FATAL, 0, _("Could not create bootstrap file %s: ERR=%s\n"),
-         jcr->RestoreBootstrap, be.bstrerror());
-      goto bail_out;
-   }
-   Dmsg0(10, "=== Bootstrap file ===\n");
-   while (sock->recv() >= 0) {
-       Dmsg1(10, "%s", sock->msg);
-       fputs(sock->msg, bs);
-   }
-   fclose(bs);
-   Dmsg0(10, "=== end bootstrap file ===\n");
-   jcr->bsr = parse_bsr(jcr, jcr->RestoreBootstrap);
-   if (!jcr->bsr) {
-      Jmsg(jcr, M_FATAL, 0, _("Error parsing bootstrap file.\n"));
-      goto bail_out;
-   }
-   if (debug_level >= 10) {
-      dump_bsr(jcr->bsr, true);
-   }
-   /* If we got a bootstrap, we are reading, so create read volume list */
-   create_restore_volume_list(jcr);
-   ok = true;
-
-bail_out:
-   unlink(jcr->RestoreBootstrap);
-   free_pool_memory(jcr->RestoreBootstrap);
-   jcr->RestoreBootstrap = NULL;
-   if (!ok) {
-      sock->fsend(ERROR_bootstrap);
-      return false;
-   }
-   return sock->fsend(OK_bootstrap);
-}
-
 
 /*
  *   Read Close session command

@@ -28,7 +28,7 @@
 /*
  * Protypes for stored -- Kern Sibbald MM  
  *
- *   Version $Id: protos.h 8235 2008-12-23 13:28:03Z kerns $
+ *   Version $Id: protos.h 8983 2009-07-14 13:46:39Z kerns $
  */
 
 /* From stored.c */
@@ -139,7 +139,6 @@ void     *handle_connection_request(void *arg);
 
 /* From fd_cmds.c */
 void     run_job(JCR *jcr);
-bool     get_bootstrap_file(JCR *jcr, BSOCK *bsock);
 void     do_fd_commands(JCR *jcr);
 
 /* From job.c */

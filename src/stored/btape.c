@@ -37,7 +37,7 @@
  *   Note, this program reads stored.conf, and will only
  *     talk to devices that are configured.
  *
- *   Version $Id: btape.c 8518 2009-03-11 19:32:17Z ricozz $
+ *   Version $Id: btape.c 8905 2009-06-17 16:39:11Z kerns $
  *
  */
 
@@ -414,7 +414,6 @@ static void labelcmd()
       }
    }
    dev->rewind(dcr);
-   dev->weof(1);
    write_new_volume_label_to_dev(dcr, cmd, "Default", false,/*no relabel*/ true /* label dvd now */);
    Pmsg1(-1, _("Wrote Volume label for volume \"%s\".\n"), cmd);
 }

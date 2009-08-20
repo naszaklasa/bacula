@@ -38,7 +38,7 @@
  *
  *    Kern E. Sibbald, August MMII
  *
- *   Version $Id: read_record.c 8748 2009-04-26 13:30:57Z ricozz $
+ *   Version $Id: read_record.c 8854 2009-05-23 12:36:57Z kerns $
  */
 
 #include "bacula.h"
@@ -128,6 +128,7 @@ bool read_records(DCR *dcr,
             continue;
 
          } else if (dev->at_eof()) {
+#ifdef neeeded_xxx
             if (verbose) {
                char *fp;
                uint32_t fp_num;
@@ -139,8 +140,9 @@ bool read_records(DCR *dcr,
                   fp_num = dev->file;
                }
                Jmsg(jcr, M_INFO, 0, _("End of %s %u on device %s, Volume \"%s\"\n"),
-                  fp, fp_num, dev->print_name(), dcr->VolumeName);
+                    fp, fp_num, dev->print_name(), dcr->VolumeName);
             }
+#endif
             Dmsg3(200, "End of file %u  on device %s, Volume \"%s\"\n",
                   dev->file, dev->print_name(), dcr->VolumeName);
             continue;

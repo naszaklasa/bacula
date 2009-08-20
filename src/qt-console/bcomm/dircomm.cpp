@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: dircomm.cpp 8755 2009-04-27 23:43:34Z bartleyd2 $
+ *   Version $Id: dircomm.cpp 9052 2009-07-18 03:00:36Z bartleyd2 $
  *
  *  Console Class
  *
@@ -96,7 +96,9 @@ bool DirComm::connect_dir()
    memset(jcr, 0, sizeof(JCR));
 
    mainWin->set_statusf(_("Connecting to Director %s:%d"), m_console->m_dir->address, m_console->m_dir->DIRport);
-   m_console->display_textf(_("Connecting to Director %s:%d\n\n"), m_console->m_dir->address, m_console->m_dir->DIRport);
+   if (m_conn == 0) {
+      m_console->display_textf(_("Connecting to Director %s:%d\n\n"), m_console->m_dir->address, m_console->m_dir->DIRport);
+   }
 
    /* Give GUI a chance */
    app->processEvents();
@@ -381,8 +383,9 @@ int DirComm::read()
       case BNET_WARNING_MSG:
          if (mainWin->m_commDebug) Pmsg1(000, "conn %i WARNING MSG\n", m_conn);
          stat = sock_read();          /* get the message */
-         m_console->display_text(msg());
-         QMessageBox::critical(m_console, "Warning", msg(), QMessageBox::Ok);
+         if (!m_console->m_warningPrevent) {
+            QMessageBox::critical(m_console, "Warning", msg(), QMessageBox::Ok);
+         }
          break;
       case BNET_INFO_MSG:
          if (mainWin->m_commDebug) Pmsg1(000, "conn %i INFO MSG\n", m_conn);

@@ -1,64 +1,53 @@
                 
 Projects:
                      Bacula Projects Roadmap 
-                    Status updated 26 April 2009
+                    Status updated 14 Jun 2009
 
 Summary:
-Item  1: Allow FD to initiate a backup
-Item  2: Ability to restart failed jobs
-Item  3: Port bat to Win32
-Item  4: Convert Bacula existing tray monitor on Windows to a stand alone program
-Item  5: Ability to import/export Bacula database entities
-Item  6: Ability to defer Batch Insert to a later time
-Item  7: List InChanger flag when doing restore.
-Item  8: Deletion of disk Volumes when pruned
-Item  9: Implement Base jobs
-Item 10: Scheduling syntax that permits more flexibility and options
-Item 11: Reduction of communications bandwidth for a backup
-Item 12: Bacula Dir, FD and SD to support proxies
-Item 13: Message mailing based on backup types
-Item 14: Ability to reconnect a disconnected comm line
-Item 15: Include timestamp of job launch in "stat clients" output
-Item 16: Add an override in Schedule for Pools based on backup types
-Item 17: Automatic promotion of backup levels based on backup size
-Item 18: Allow inclusion/exclusion of files in a fileset by creation/mod times
-Item 19: Archival (removal) of User Files to Tape
-Item 20: Include all conf files in specified directory
-Item 21: Implement an interface between Bacula and Amazon's S3.
-Item 22: Enable/disable compression depending on storage device (disk/tape)
-Item 23: Add EFS support on Windows
-Item 24: Data encryption on storage daemon
-Item 25: "Maximum Concurrent Jobs" for drives when used with changer device
-Item 26: Add MaxVolumeSize/MaxVolumeBytes statement to Storage resource
-Item 27: Start spooling even when waiting on tape
-Item 28: Enable persistent naming/number of SQL queries
-Item 29: Implementation of running Job speed limit.
-Item 30: Restore from volumes on multiple storage daemons
-Item 28:'restore' menu: enter a JobId, automatically select dependents
-Item 31: Backup and Restore of Windows Encrypted Files using Win raw encryption
-Item 32: Possibilty to schedule Jobs on last Friday of the month
-Item 33: Add Minumum Spool Size directive
-Item 34: Cause daemons to use a specific IP address to source communications
-Item 35: Add ability to Verify any specified Job.
-Item 36: Automatic disabling of devices
-Item 37: An option to operate on all pools with update vol parameters
-Item 38: Implement Storage daemon compression
-Item 39: Improve Bacula's tape and drive usage and cleaning management
-Item 40: Multiple threads in file daemon for the same job
+* => item complete
 
+ Item  1: Ability to restart failed jobs
+*Item  2: 'restore' menu: enter a JobId, automatically select dependents
+ Item  3: Scheduling syntax that permits more flexibility and options
+ Item  4: Data encryption on storage daemon
+ Item  5: Deletion of disk Volumes when pruned
+ Item  6: Implement Base jobs
+ Item  7: Add ability to Verify any specified Job.
+ Item  8: Improve Bacula's tape and drive usage and cleaning management
+ Item  9: Allow FD to initiate a backup
+ Item 10: Restore from volumes on multiple storage daemons
+ Item 11: Implement Storage daemon compression
+ Item 12: Reduction of communications bandwidth for a backup
+ Item 13: Ability to reconnect a disconnected comm line
+ Item 14: Start spooling even when waiting on tape
+ Item 15: Enable/disable compression depending on storage device (disk/tape)
+ Item 16: Include all conf files in specified directory
+ Item 17: Multiple threads in file daemon for the same job
+ Item 18: Possibilty to schedule Jobs on last Friday of the month
+ Item 19: Include timestamp of job launch in "stat clients" output
+ Item 20: Cause daemons to use a specific IP address to source communications
+ Item 21: Message mailing based on backup types
+ Item 22: Ability to import/export Bacula database entities
+ Item 23: "Maximum Concurrent Jobs" for drives when used with changer device
+ Item 24: Implementation of running Job speed limit.
+ Item 25: Add an override in Schedule for Pools based on backup types
+ Item 26: Automatic promotion of backup levels based on backup size
+ Item 27: Allow inclusion/exclusion of files in a fileset by creation/mod times
+ Item 28: Archival (removal) of User Files to Tape
+ Item 29: An option to operate on all pools with update vol parameters
+ Item 30: Automatic disabling of devices
+*Item 31: List InChanger flag when doing restore.
+ Item 32: Ability to defer Batch Insert to a later time
+ Item 33: Add MaxVolumeSize/MaxVolumeBytes statement to Storage resource
+ Item 34: Enable persistent naming/number of SQL queries
+ Item 35: Port bat to Win32
+ Item 36: Bacula Dir, FD and SD to support proxies
+ Item 37: Add Minumum Spool Size directive
+ Item 38: Backup and Restore of Windows Encrypted Files using Win raw encryption
+ Item 39: Implement an interface between Bacula and Amazon's S3.
+ Item 40: Convert Bacula existing tray monitor on Windows to a stand alone program
 
-Item  1: Allow FD to initiate a backup
-Origin:  Frank Volf (frank at deze dot org)
-Date:    17 November 2005
-Status: 
-
-What: Provide some means, possibly by a restricted console that
-       allows a FD to initiate a backup, and that uses the connection
-       established by the FD to the Director for the backup so that
-       a Director that is firewalled can do the backup.
-Why:  Makes backup of laptops much easier.
-
-Item  2: Ability to restart failed jobs
+Item  1: Ability to restart failed jobs
    Date: 26 April 2009
  Origin: Kern/Eric
  Status: 
@@ -78,162 +67,34 @@ Item  2: Ability to restart failed jobs
   Notes: Requires Accurate to restart correctly.  Must completed have a minimum
           volume of data or files stored on Volume before enabling.
 
-Item  3: Port bat to Win32
-   Date: 26 April 2009
- Origin: Kern/Eric
- Status: 
 
-  What:  Make bat run on Win32/64.
+Item  2: 'restore' menu: enter a JobId, automatically select dependents 
+Origin: Graham Keeling (graham@equiinet.com)
+Date:  13 March 2009
+Status: Done in 3.0.2
 
-  Why:   To have GUI on Windows
+What:   Add to the bconsole 'restore' menu the ability to select a job
+        by JobId, and have bacula automatically select all the
+        dependent jobs.
 
-  Notes: 
+        Why: Currently, you either have to...
+        a) laboriously type in a date that is greater than the date of the backup that
+        you want and is less than the subsequent backup (bacula then figures out the
+        dependent jobs), or
+        b) manually figure out all the JobIds that you want and laboriously type them
+        all in.
+        It would be extremely useful (in a programmatical sense, as well as for humans)
+        to be able to just give it a single JobId and let bacula do the hard work (work
+        that it already knows how to do).
 
-Item  4: Convert Bacula existing tray monitor on Windows to a stand alone program
-   Date: 26 April 2009
- Origin: Kern/Eric
- Status: 
-
-  What:  Separate Win32 tray monitor to be a separate program.
-
-  Why:   Vista does not allow SYSTEM services to interact with the 
-          desktop, so the current tray monitor does not work on Vista
-          machines.  
-
-  Notes: Requires communicating with the FD via the network (simulate
-          a console connection).
-
-
-
-Item  5: Ability to import/export Bacula database entities
-   Date: 26 April 2009
- Origin: Eric
- Status: 
-
-  What:  Create a Bacula ASCII SQL database independent format that permits
-          importing and exporting database catalog Job entities.
-
-  Why:   For achival, database clustering, tranfer to other databases
-          of any SQL engine.
-
-  Notes: Job selection should be by Job, time, Volume, Client, Pool and possibly
-          other criteria.
+        Notes (Kern): I think this should either be modified to have Bacula print
+        a list of dates that the user can choose from as is done in bwx-console and
+        bat or the name of this command must be carefully chosen so that the user
+        clearly understands that the JobId is being used to specify what Job and the
+        date to which he wishes the restore to happen.
 
 
-Item  6: Ability to defer Batch Insert to a later time
-   Date: 26 April 2009
- Origin: Eric
- Status: 
-
-  What:  Instead of doing a Job Batch Insert at the end of the Job
-          which might create resource contention with lots of Job,
-          defer the insert to a later time.
-
-  Why:   Permits to focus on getting the data on the Volume and
-          putting the metadata into the Catalog outside the backup
-          window.
-
-  Notes: Will use the proposed Bacula ASCII database import/export
-          format (i.e. dependent on the import/export entities project).
-
-
-Item  7: List InChanger flag when doing restore.
- Origin: Jesper Krogh<jesper@krogh.cc>
-   Date: 17 Oct 2008
- Status:
-
-   What: When doing a restore the restore selection dialog ends by telling stuff 
-      like this:
-  The job will require the following
-   Volume(s)                 Storage(s)                SD Device(s)
-   ===========================================================================
-    000741L3                  LTO-4                     LTO3 
-    000866L3                  LTO-4                     LTO3 
-    000765L3                  LTO-4                     LTO3 
-    000764L3                  LTO-4                     LTO3 
-    000756L3                  LTO-4                     LTO3 
-    001759L3                  LTO-4                     LTO3 
-    001763L3                  LTO-4                     LTO3 
-    001762L3                  LTO-4                     LTO3 
-    001767L3                  LTO-4                     LTO3 
-
-   When having an autochanger, it would be really nice with an inChanger 
-   column so the operator knew if this restore job would stop waiting for 
-   operator intervention. This is done just by selecting the inChanger flag 
-   from the catalog and printing it in a seperate column.
-
-
-   Why:   This would help getting large restores through minimizing the 
-      time spent waiting for operator to drop by and change tapes in the library.
-
-  Notes: [Kern] I think it would also be good to have the Slot as well,
-      or some indication that Bacula thinks the volume is in the autochanger
-      because it depends on both the InChanger flag and the Slot being
-      valid.
-
-
-Item  8: Deletion of disk Volumes when pruned
-  Date:  Nov 25, 2005
-  Origin: Ross Boylan <RossBoylan at stanfordalumni dot org> (edited
-          by Kern)
-  Status:        
-
-   What: Provide a way for Bacula to automatically remove Volumes
-          from the filesystem, or optionally to truncate them.
-          Obviously, the Volume must be pruned prior removal.
-
-  Why:   This would allow users more control over their Volumes and
-          prevent disk based volumes from consuming too much space.
-
-  Notes: The following two directives might do the trick:
-
-          Volume Data Retention = <time period>
-          Remove Volume After = <time period>
-
-          The migration project should also remove a Volume that is
-          migrated. This might also work for tape Volumes.
-
-  Notes: (Kern). The data fields to control this have been added
-          to the new 3.0.0 database table structure.
-
-
-
-Item  9: Implement Base jobs 
-  Date:  28 October 2005
-  Origin: Kern
-  Status:
-  
-  What:  A base job is sort of like a Full save except that you 
-          will want the FileSet to contain only files that are
-          unlikely to change in the future (i.e.  a snapshot of
-          most of your system after installing it).  After the
-          base job has been run, when you are doing a Full save,
-          you specify one or more Base jobs to be used.  All
-          files that have been backed up in the Base job/jobs but
-          not modified will then be excluded from the backup.
-          During a restore, the Base jobs will be automatically
-          pulled in where necessary.
-
-  Why:   This is something none of the competition does, as far as
-          we know (except perhaps BackupPC, which is a Perl program that
-          saves to disk only).  It is big win for the user, it
-          makes Bacula stand out as offering a unique
-          optimization that immediately saves time and money.
-          Basically, imagine that you have 100 nearly identical
-          Windows or Linux machine containing the OS and user
-          files.  Now for the OS part, a Base job will be backed
-          up once, and rather than making 100 copies of the OS,
-          there will be only one.  If one or more of the systems
-          have some files updated, no problem, they will be
-          automatically restored.
-
-  Notes: Huge savings in tape usage even for a single machine.
-          Will require more resources because the DIR must send
-          FD a list of files/attribs, and the FD must search the
-          list and compare it for each file to be saved.
-
-
-Item 10: Scheduling syntax that permits more flexibility and options
+Item  3: Scheduling syntax that permits more flexibility and options
    Date: 15 December 2006
   Origin: Gregory Brauer (greg at wildbrain dot com) and
           Florian Schnabel <florian.schnabel at docufy dot de>
@@ -338,371 +199,8 @@ Item 10: Scheduling syntax that permits more flexibility and options
    Notes: Kern: I have merged the previously separate project of skipping 
           jobs (via Schedule syntax) into this.
 
-Item 11: Reduction of communications bandwidth for a backup
-   Date: 14 October 2008
- Origin: Robin O'Leary (Equiinet)
- Status: 
 
-  What:  Using rdiff techniques, Bacula could significantly reduce
-          the network data transfer volume to do a backup.
-
-  Why:   Faster backup across the Internet
-
-  Notes: This requires retaining certain data on the client during a Full
-          backup that will speed up subsequent backups.
-          
-
-Item 12: Bacula Dir, FD and SD to support proxies
-Origin: Karl Grindley @ MIT Lincoln Laboratory <kgrindley at ll dot mit dot edu>
-Date:  25 March 2009
-Status: proposed
-
-What:  Support alternate methods for nailing up a TCP session such
-        as SOCKS5, SOCKS4 and HTTP (CONNECT) proxies.  Such a feature
-        would allow tunneling of bacula traffic in and out of proxied
-        networks.
-
-Why:   Currently, bacula is architected to only function on a flat network, with
-        no barriers or limitations.  Due to the large configuration states of
-        any network and the infinite configuration where file daemons and
-        storage daemons may sit in relation to one another, bacula often is
-        not usable on a network where filtered or air-gaped networks exist.
-        While often solutions such as ACL modifications to firewalls or port
-        redirection via SNAT or DNAT will solve the issue, often however,
-        these solutions are not adequate or not allowed by hard policy.
-
-        In an air-gapped network with only a highly locked down proxy services
-        are provided (SOCKS4/5 and/or HTTP and/or SSH outbound) ACLs or
-        iptable rules will not work.
-
-Notes: Director resource tunneling: This configuration option to utilize a
-        proxy to connect to a client should be specified in the client
-        resource Client resource tunneling: should be configured in the client
-        resource in the director config file?  Or configured on the bacula-fd
-        configuration file on the fd host itself?  If the ladder, this would
-        allow only certain clients to use a proxy, where others do not when
-        establishing the TCP connection to the storage server. 
-
-        Also worth noting, there are other 3rd party, light weight apps that
-        could be utilized to bootstrap this.  Instead of sockifing bacula
-        itself, use an external program to broker proxy authentication, and
-        connection to the remote host.  OpenSSH does this by using the
-        "ProxyCommand" syntax in the client configuration and uses stdin and
-        stdout to the command.  Connect.c is a very popular one.
-        (http://bent.latency.net/bent/darcs/goto-san-connect-1.85/src/connect.html).
-        One could also possibly use stunnel, netcat, etc.
-
-
-Item 13: Message mailing based on backup types
- Origin: Evan Kaufman <evan.kaufman@gmail.com>
-   Date: January 6, 2006
- Status:
-
-   What: In the "Messages" resource definitions, allowing messages
-          to be mailed based on the type (backup, restore, etc.) and level
-          (full, differential, etc) of job that created the originating
-          message(s).
-
- Why:    It would, for example, allow someone's boss to be emailed
-          automatically only when a Full Backup job runs, so he can
-          retrieve the tapes for offsite storage, even if the IT dept.
-          doesn't (or can't) explicitly notify him.  At the same time, his
-          mailbox wouldnt be filled by notifications of Verifies, Restores,
-          or Incremental/Differential Backups (which would likely be kept
-          onsite).
-
- Notes:  One way this could be done is through additional message types, for example:
-
-   Messages {
-     # email the boss only on full system backups
-     Mail = boss@mycompany.com = full, !incremental, !differential, !restore, 
-            !verify, !admin
-     # email us only when something breaks
-     MailOnError = itdept@mycompany.com = all
-   }
-
-   Notes: Kern: This should be rather trivial to implement.
-
-Item 14: Ability to reconnect a disconnected comm line
-  Date:  26 April 2009
-  Origin: Kern/Eric
-  Status: 
-
-  What:  Often jobs fail because of a communications line drop. In that 
-          case, Bacula should be able to reconnect to the other daemon and
-          resume the job.
-
-  Why:   Avoids backuping data already saved.
-
-  Notes: *Very* complicated from a design point of view because of authenication.
-
-
-Item 15: Include timestamp of job launch in "stat clients" output
-  Origin: Mark Bergman <mark.bergman@uphs.upenn.edu>
-  Date:  Tue Aug 22 17:13:39 EDT 2006
-  Status:
-
-  What:  The "stat clients" command doesn't include any detail on when
-          the active backup jobs were launched.
-
-  Why:   Including the timestamp would make it much easier to decide whether
-          a job is running properly. 
-
-  Notes: It may be helpful to have the output from "stat clients" formatted 
-          more like that from "stat dir" (and other commands), in a column
-          format. The per-client information that's currently shown (level,
-          client name, JobId, Volume, pool, device, Files, etc.) is good, but
-          somewhat hard to parse (both programmatically and visually), 
-          particularly when there are many active clients.
-
-
-
-
-Item 16: Add an override in Schedule for Pools based on backup types
-Date:    19 Jan 2005
-Origin:  Chad Slater <chad.slater@clickfox.com>
-Status: 
-                                                
-  What:  Adding a FullStorage=BigTapeLibrary in the Schedule resource
-          would help those of us who use different storage devices for different
-          backup levels cope with the "auto-upgrade" of a backup.
-
-  Why:   Assume I add several new devices to be backed up, i.e. several
-          hosts with 1TB RAID.  To avoid tape switching hassles, incrementals are
-          stored in a disk set on a 2TB RAID.  If you add these devices in the
-          middle of the month, the incrementals are upgraded to "full" backups,
-          but they try to use the same storage device as requested in the
-          incremental job, filling up the RAID holding the differentials.  If we
-          could override the Storage parameter for full and/or differential
-          backups, then the Full job would use the proper Storage device, which
-          has more capacity (i.e. a 8TB tape library.
-
-Item 17: Automatic promotion of backup levels based on backup size
-   Date: 19 January 2006
-  Origin: Adam Thornton <athornton@sinenomine.net>
-  Status: 
-
-    What: Other backup programs have a feature whereby it estimates the space
-          that a differential, incremental, and full backup would take.  If
-          the difference in space required between the scheduled level and the
-          next level up is beneath some user-defined critical threshold, the
-          backup level is bumped to the next type.  Doing this minimizes the
-          number of volumes necessary during a restore, with a fairly minimal
-          cost in backup media space.
-
-    Why: I know at least one (quite sophisticated and smart) user for whom the
-          absence of this feature is a deal-breaker in terms of using Bacula;
-          if we had it it would eliminate the one cool thing other backup
-          programs can do and we can't (at least, the one cool thing I know
-          of).
-
-Item 18: Allow inclusion/exclusion of files in a fileset by creation/mod times
-  Origin: Evan Kaufman <evan.kaufman@gmail.com>
-  Date:  January 11, 2006
-  Status:
-
-  What:  In the vein of the Wild and Regex directives in a Fileset's
-          Options, it would be helpful to allow a user to include or exclude
-          files and directories by creation or modification times.
-
-          You could factor the Exclude=yes|no option in much the same way it
-          affects the Wild and Regex directives.  For example, you could exclude
-          all files modified before a certain date:
-
-   Options {
-     Exclude = yes
-     Modified Before = ####
-   }
-
-           Or you could exclude all files created/modified since a certain date:
-
-   Options {
-      Exclude = yes
-     Created Modified Since = ####
-   }
-
-           The format of the time/date could be done several ways, say the number
-           of seconds since the epoch:
-           1137008553 = Jan 11 2006, 1:42:33PM   # result of `date +%s`
-
-           Or a human readable date in a cryptic form:
-           20060111134233 = Jan 11 2006, 1:42:33PM   # YYYYMMDDhhmmss
-
-  Why:   I imagine a feature like this could have many uses. It would
-          allow a user to do a full backup while excluding the base operating
-          system files, so if I installed a Linux snapshot from a CD yesterday,
-          I'll *exclude* all files modified *before* today.  If I need to
-          recover the system, I use the CD I already have, plus the tape backup.
-          Or if, say, a Windows client is hit by a particularly corrosive
-          virus, and I need to *exclude* any files created/modified *since* the
-          time of infection.
-
-  Notes: Of course, this feature would work in concert with other
-          in/exclude rules, and wouldnt override them (or each other).
-
-  Notes: The directives I'd imagine would be along the lines of
-          "[Created] [Modified] [Before|Since] = <date>".
-          So one could compare against 'ctime' and/or 'mtime', but ONLY 'before'
-           or 'since'.
-
-
-
-Item 19: Archival (removal) of User Files to Tape
-  Date:  Nov. 24/2005 
-  Origin: Ray Pengelly [ray at biomed dot queensu dot ca
-  Status: 
-
-  What:  The ability to archive data to storage based on certain parameters
-          such as age, size, or location.  Once the data has been written to
-          storage and logged it is then pruned from the originating
-          filesystem. Note! We are talking about user's files and not
-          Bacula Volumes.
-
-  Why:   This would allow fully automatic storage management which becomes
-          useful for large datastores.  It would also allow for auto-staging
-          from one media type to another.
-
-          Example 1) Medical imaging needs to store large amounts of data.
-          They decide to keep data on their servers for 6 months and then put
-          it away for long term storage.  The server then finds all files
-          older than 6 months writes them to tape.  The files are then removed
-          from the server.
-
-          Example 2) All data that hasn't been accessed in 2 months could be
-          moved from high-cost, fibre-channel disk storage to a low-cost
-          large-capacity SATA disk storage pool which doesn't have as quick of
-          access time.  Then after another 6 months (or possibly as one
-          storage pool gets full) data is migrated to Tape.
-
-
-Item 20: Include all conf files in specified directory
-Date:  18 October 2008
-Origin: Database, Lda. Maputo, Mozambique
-Contact:Cameron Smith / cameron.ord@database.co.mz 
-Status: New request
-
-What: A directive something like "IncludeConf = /etc/bacula/subconfs" Every
-      time Bacula Director restarts or reloads, it will walk the given
-      directory (non-recursively) and include the contents of any files
-      therein, as though they were appended to bacula-dir.conf
-
-Why: Permits simplified and safer configuration for larger installations with
-      many client PCs.  Currently, through judicious use of JobDefs and
-      similar directives, it is possible to reduce the client-specific part of
-      a configuration to a minimum.  The client-specific directives can be
-      prepared according to a standard template and dropped into a known
-      directory.  However it is still necessary to add a line to the "master"
-      (bacula-dir.conf) referencing each new file.  This exposes the master to
-      unnecessary risk of accidental mistakes and makes automation of adding
-      new client-confs, more difficult (it is easier to automate dropping a
-      file into a dir, than rewriting an existing file).  Ken has previously
-      made a convincing argument for NOT including Bacula's core configuration
-      in an RDBMS, but I believe that the present request is a reasonable
-      extension to the current "flat-file-based" configuration philosophy.
- 
-Notes: There is NO need for any special syntax to these files.  They should
-       contain standard directives which are simply "inlined" to the parent
-       file as already happens when you explicitly reference an external file.
-
-Notes: (kes) this can already be done with scripting
-     From: John Jorgensen <jorgnsn@lcd.uregina.ca>
-     The bacula-dir.conf at our site contains these lines:
-
-   #
-   # Include subfiles associated with configuration of clients.
-   # They define the bulk of the Clients, Jobs, and FileSets.
-   #
-   @|"sh -c 'for f in /etc/bacula/clientdefs/*.conf ; do echo @${f} ; done'"
-
-    and when we get a new client, we just put its configuration into
-    a new file called something like:
-
-    /etc/bacula/clientdefs/clientname.conf
-
-
-
-
-Item 21: Implement an interface between Bacula and Amazon's S3.
-  Date:  25 August 2008
-  Origin: Soren Hansen <soren@ubuntu.com>
-  Status: Not started.
-  What:  Enable the storage daemon to store backup data on Amazon's
-          S3 service.
-
-  Why:   Amazon's S3 is a cheap way to store data off-site. Current
-          ways to integrate Bacula and S3 involve storing all the data
-          locally and syncing them to S3, and manually fetching them
-          again when they're needed. This is very cumbersome.
-
-
-Item 22: Enable/disable compression depending on storage device (disk/tape)
-  Origin: Ralf Gross ralf-lists@ralfgross.de
-  Date:  2008-01-11
-  Status: Initial Request
-
-  What: Add a new option to the storage resource of the director.  Depending
-          on this option, compression will be enabled/disabled for a device.
-
-  Why: If different devices (disks/tapes) are used for full/diff/incr
-          backups, software compression will be enabled for all backups
-          because of the FileSet compression option.  For backup to tapes
-          wich are able to do hardware compression this is not desired.
-          
-
-  Notes:
-         http://news.gmane.org/gmane.comp.sysutils.backup.bacula.devel/cutoff=11124
-         It must be clear to the user, that the FileSet compression option
-         must still be enabled use compression for a backup job at all.
-         Thus a name for the new option in the director must be
-         well-defined.
-
-  Notes: KES I think the Storage definition should probably override what
-         is in the Job definition or vice-versa, but in any case, it must
-         be well defined.
-
-
-
-Item 23: Add EFS support on Windows
-   Origin: Alex Ehrlich (Alex.Ehrlich-at-mail.ee)
-   Date:  05 August 2008
-   Status:
-
-   What:  For each file backed up or restored by FD on Windows, check if
-           the file is encrypted; if so then use OpenEncryptedFileRaw,
-           ReadEncryptedFileRaw, WriteEncryptedFileRaw,
-           CloseEncryptedFileRaw instead of BackupRead and BackupWrite
-           API calls.
-
-   Why:   Many laptop users utilize the EFS functionality today; so do.
-           some non-laptop ones, too.
-           Currently files encrypted by means of EFS cannot be backed up.
-           It means a Windows boutique cannot rely on Bacula as its
-           backup solution, at least when using Windows 2K, XPP,
-           "better" Vista etc on workstations, unless EFS is
-           forbidden by policies.
-           The current situation might result into "false sense of
-           security" among the end-users.
-
-   Notes: Using xxxEncryptedFileRaw API would allow to backup and
-           restore EFS-encrypted files without decrypting their data.
-           Note that such files cannot be restored "portably" (at least,
-           easily) but they would be restoreable to a different (or
-           reinstalled) Win32 machine; the restore would require setup
-           of a EFS recovery agent in advance, of course, and this shall
-           be clearly reflected in the documentation, but this is the
-           normal Windows SysAdmin's business.
-           When "portable" backup is requested the EFS-encrypted files
-           shall be clearly reported as errors.
-           See MSDN on the "Backup and Restore of Encrypted Files" topic:
-           http://msdn.microsoft.com/en-us/library/aa363783.aspx
-           Maybe the EFS support requires a new flag in the database for
-           each file, too?
-           Unfortunately, the implementation is not as straightforward as
-           1-to-1 replacement of BackupRead with ReadEncryptedFileRaw,
-           requiring some FD code rewrite to work with
-           encrypted-file-related callback functions.
-
-Item 24: Data encryption on storage daemon
+Item  4: Data encryption on storage daemon
   Origin: Tobias Barth <tobias.barth at web-arts.com>
   Date:  04 February 2009
   Status: new
@@ -718,389 +216,67 @@ Item 24: Data encryption on storage daemon
           http://www.mail-archive.com/bacula-users@lists.sourceforge.net/msg28860.html
 
 
+Item  5: Deletion of disk Volumes when pruned
+  Date:  Nov 25, 2005
+  Origin: Ross Boylan <RossBoylan at stanfordalumni dot org> (edited
+          by Kern)
+  Status:        
 
-Item 25: "Maximum Concurrent Jobs" for drives when used with changer device
-  Origin: Ralf Gross ralf-lists <at> ralfgross.de
-  Date:  2008-12-12
-  Status: Initial Request
+   What: Provide a way for Bacula to automatically remove Volumes
+          from the filesystem, or optionally to truncate them.
+          Obviously, the Volume must be pruned prior removal.
 
-  What:  respect the "Maximum Concurrent Jobs" directive in the _drives_
-          Storage section in addition to the changer section
+  Why:   This would allow users more control over their Volumes and
+          prevent disk based volumes from consuming too much space.
 
-  Why:   I have a 3 drive changer where I want to be able to let 3 concurrent
-          jobs run in parallel. But only one job per drive at the same time.
-          Right now I don't see how I could limit the number of concurrent jobs
-          per drive in this situation.
+  Notes: The following two directives might do the trick:
 
-  Notes: Using different priorities for these jobs lead to problems that other
-          jobs are blocked. On the user list I got the advice to use the "Prefer Mounted
-          Volumes" directive, but Kern advised against using "Prefer Mounted
-          Volumes" in an other thread:
-          http://article.gmane.org/gmane.comp.sysutils.backup.bacula.devel/11876/
+          Volume Data Retention = <time period>
+          Remove Volume After = <time period>
 
-          In addition I'm not sure if this would be the same as respecting the
-          drive's "Maximum Concurrent Jobs" setting.
+          The migration project should also remove a Volume that is
+          migrated. This might also work for tape Volumes.
 
-          Example:
+  Notes: (Kern). The data fields to control this have been added
+          to the new 3.0.0 database table structure.
 
-          Storage {
-            Name = Neo4100
-            Address = ....
-            SDPort = 9103
-            Password = "wiped"
-            Device = Neo4100
-            Media Type = LTO4
-            Autochanger = yes
-            Maximum Concurrent Jobs = 3
-          }
-          
-          Storage {
-            Name = Neo4100-LTO4-D1
-            Address = ....
-            SDPort = 9103
-            Password = "wiped"
-            Device = ULTRIUM-TD4-D1
-            Media Type = LTO4
-            Maximum Concurrent Jobs = 1
-          }
-          
-          [2 more drives] 
 
-          The "Maximum Concurrent Jobs = 1" directive in the drive's section is ignored.
-
-Item 26: Add MaxVolumeSize/MaxVolumeBytes statement to Storage resource
-   Origin: Bastian Friedrich <bastian.friedrich@collax.com>
-   Date:  2008-07-09
-   Status: -
-
-   What:  SD has a "Maximum Volume Size" statement, which is deprecated and
-           superseded by the Pool resource statement "Maximum Volume Bytes".
-           It would be good if either statement could be used in Storage
-           resources.
-
-   Why:   Pools do not have to be restricted to a single storage type/device;
-           thus, it may be impossible to define Maximum Volume Bytes in the
-           Pool resource.  The old MaxVolSize statement is deprecated, as it
-           is SD side only.  I am using the same pool for different devices.
-
-   Notes: State of idea currently unknown.  Storage resources in the dir
-           config currently translate to very slim catalog entries; these
-           entries would require extensions to implement what is described
-           here.  Quite possibly, numerous other statements that are currently
-           available in Pool resources could be used in Storage resources too
-           quite well.
-
-Item 27: Start spooling even when waiting on tape
-  Origin: Tobias Barth <tobias.barth@web-arts.com>
-  Date:  25 April 2008
+Item  6: Implement Base jobs 
+  Date:  28 October 2005
+  Origin: Kern
   Status:
+  
+  What:  A base job is sort of like a Full save except that you 
+          will want the FileSet to contain only files that are
+          unlikely to change in the future (i.e.  a snapshot of
+          most of your system after installing it).  After the
+          base job has been run, when you are doing a Full save,
+          you specify one or more Base jobs to be used.  All
+          files that have been backed up in the Base job/jobs but
+          not modified will then be excluded from the backup.
+          During a restore, the Base jobs will be automatically
+          pulled in where necessary.
 
-  What: If a job can be spooled to disk before writing it to tape, it should
-          be spooled immediately.  Currently, bacula waits until the correct
-          tape is inserted into the drive.
+  Why:   This is something none of the competition does, as far as
+          we know (except perhaps BackupPC, which is a Perl program that
+          saves to disk only).  It is big win for the user, it
+          makes Bacula stand out as offering a unique
+          optimization that immediately saves time and money.
+          Basically, imagine that you have 100 nearly identical
+          Windows or Linux machine containing the OS and user
+          files.  Now for the OS part, a Base job will be backed
+          up once, and rather than making 100 copies of the OS,
+          there will be only one.  If one or more of the systems
+          have some files updated, no problem, they will be
+          automatically restored.
 
-  Why:   It could save hours.  When bacula waits on the operator who must insert
-          the correct tape (e.g.  a new tape or a tape from another media
-          pool), bacula could already prepare the spooled data in the spooling
-          directory and immediately start despooling when the tape was
-          inserted by the operator.
-         
-          2nd step: Use 2 or more spooling directories.  When one directory is
-          currently despooling, the next (on different disk drives) could
-          already be spooling the next data.
-
-  Notes: I am using bacula 2.2.8, which has none of those features
-         implemented.
-
-Item 28: Enable persistent naming/number of SQL queries
-  Date:  24 Jan, 2007 
-  Origin: Mark Bergman 
-  Status: 
-
-  What: 
-        Change the parsing of the query.sql file and the query command so that
-        queries are named/numbered by a fixed value, not their order in the
-        file.
-
-
-  Why:  
-        One of the real strengths of bacula is the ability to query the
-        database, and the fact that complex queries can be saved and
-        referenced from a file is very powerful. However, the choice
-        of query (both for interactive use, and by scripting input
-        to the bconsole command) is completely dependent on the order
-        within the query.sql file. The descriptve labels are helpful for
-        interactive use, but users become used to calling a particular
-        query "by number", or may use scripts to execute queries. This
-        presents a problem if the number or order of queries in the file
-        changes.
-
-        If the query.sql file used the numeric tags as a real value (rather
-        than a comment), then users could have a higher confidence that they
-        are executing the intended query, that their local changes wouldn't
-        conflict with future bacula upgrades.
-
-        For scripting, it's very important that the intended query is
-        what's actually executed. The current method of parsing the
-        query.sql file discourages scripting because the addition or
-        deletion of queries within the file will require corresponding
-        changes to scripts. It may not be obvious to users that deleting
-        query "17" in the query.sql file will require changing all
-        references to higher numbered queries. Similarly, when new
-        bacula distributions change the number of "official" queries,
-        user-developed queries cannot simply be appended to the file
-        without also changing any references to those queries in scripts
-        or procedural documentation, etc.
-
-        In addition, using fixed numbers for queries would encourage more
-        user-initiated development of queries, by supporting conventions
-        such as:
-
-                queries numbered 1-50 are supported/developed/distributed by
-                        with official bacula releases
-                        
-                queries numbered 100-200 are community contributed, and are
-                related to media management
-
-                queries numbered 201-300 are community contributed, and are
-                related to checksums, finding duplicated files across
-                different backups, etc.
-
-                queries numbered 301-400 are community contributed, and are
-                related to backup statistics (average file size, size per
-                client per backup level, time for all clients by backup level,
-                storage capacity by media type, etc.)
-
-                queries numbered 500-999 are locally created
-
-  Notes:
-        Alternatively, queries could be called by keyword (tag), rather
-        than by number.
-
-Item 29: Implementation of running Job speed limit.
-Origin: Alex F, alexxzell at yahoo dot com
-Date: 29 January 2009
-
-What: I noticed the need for an integrated bandwidth limiter for
-      running jobs.  It would be very useful just to specify another
-      field in bacula-dir.conf, like speed = how much speed you wish
-      for that specific job to run at
-
-Why: Because of a couple of reasons.  First, it's very hard to implement a
-     traffic shaping utility and also make it reliable.  Second, it is very
-     uncomfortable to have to implement these apps to, let's say 50 clients
-     (including desktops, servers).  This would also be unreliable because you
-     have to make sure that the apps are properly working when needed; users
-     could also disable them (accidentally or not).  It would be very useful
-     to provide Bacula this ability.  All information would be centralized,
-     you would not have to go to 50 different clients in 10 different
-     locations for configuration; eliminating 3rd party additions help in
-     establishing efficiency.  Would also avoid bandwidth congestion,
-     especially where there is little available.
-
-Item 30: Restore from volumes on multiple storage daemons
-Origin: Graham Keeling (graham@equiinet.com)
-Date:  12 March 2009
-Status: Proposing
-
-What:  The ability to restore from volumes held by multiple storage daemons
-        would be very useful.
-
-Why:   It is useful to be able to backup to any number of different storage
-        daemons. For example, your first storage daemon may run out of space, so you
-        switch to your second and carry on. Bacula will currently let you do this.
-        However, once you come to restore, bacula cannot cope when volumes on different
-        storage daemons are required.
-
-        Notes: The director knows that more than one storage daemon is needed, as
-        bconsole outputs something like the following table.
-
-        The job will require the following
-           Volume(s)                 Storage(s)                SD Device(s)
-        ===========================================================================
-           
-           backup-0001               Disk 1                    Disk 1.0                 
-           backup-0002               Disk 2                    Disk 2.0             
-
-        However, the bootstrap file that it creates gets sent to the first storage
-        daemon only, which then stalls for a long time, 'waiting for a mount request'
-        for the volume that it doesn't have.
-        The bootstrap file contains no knowledge of the storage daemon.
-        Under the current design:
-
-                The director connects to the storage daemon, and gets an sd_auth_key.
-                The director then connects to the file daemon, and gives it the
-                        sd_auth_key with the 'jobcmd'.
-                (restoring of files happens)
-                The director does a 'wait_for_storage_daemon_termination()'.
-                The director waits for the file daemon to indicate the end of the job.
-
-        With my idea:
-
-        The director connects to the file daemon.
-        Then, for each storage daemon in the .bsr file...  {
-                The director connects to the storage daemon, and gets an sd_auth_key.
-                The director then connects to the file daemon, and gives it the
-                        sd_auth_key with the 'storaddr' command.
-                (restoring of files happens)
-                The director does a 'wait_for_storage_daemon_termination()'.
-                The director waits for the file daemon to indicate the end of the
-                        work on this storage.
-        }
-        The director tells the file daemon that there are no more storages to contact.
-        The director waits for the file daemon to indicate the end of the job.
-
-        As you can see, each restore between the file daemon and storage daemon is
-        handled in the same way that it is currently handled, using the same method
-        for authentication, except that the sd_auth_key is moved from the 'jobcmd' to
-        the 'storaddr' command - where it logically belongs.
+  Notes: Huge savings in tape usage even for a single machine.
+          Will require more resources because the DIR must send
+          FD a list of files/attribs, and the FD must search the
+          list and compare it for each file to be saved.
 
 
-Item 28:'restore' menu: enter a JobId, automatically select dependents 
-Origin: Graham Keeling (graham@equiinet.com)
-Date:  13 March 2009
-
-Status: Proposing
-
-What:  Add to the bconsole 'restore' menu the ability to select a job 
-        by JobId, and have bacula automatically select all the dependent jobs.
-
-        Why: Currently, you either have to...
-        a) laboriously type in a date that is greater than the date of the backup that
-        you want and is less than the subsequent backup (bacula then figures out the
-        dependent jobs), or
-        b) manually figure out all the JobIds that you want and laboriously type them
-        all in.
-        It would be extremely useful (in a programmatical sense, as well as for humans)
-        to be able to just give it a single JobId and let bacula do the hard work (work
-        that it already knows how to do).
-
-        Notes (Kern): I think this should either be modified to have Bacula print
-        a list of dates that the user can choose from as is done in bwx-console and
-        bat or the name of this command must be carefully chosen so that the user
-        clearly understands that the JobId is being used to specify what Job and the
-        date to which he wishes the restore to happen.
-
-
-Item 31: Backup and Restore of Windows Encrypted Files using Win raw encryption
-  Origin: Michael Mohr, SAG  Mohr.External@infineon.com
-  Date:  22 February 2008
-  Status:
-
-  What: Make it possible to backup and restore Encypted Files from and to
-          Windows systems without the need to decrypt it by using the raw
-          encryption functions API (see:
-          http://msdn2.microsoft.com/en-us/library/aa363783.aspx)
-
-          that is provided for that reason by Microsoft.
-          If a file ist encrypted could be examined by evaluating the 
-          FILE_ATTRIBUTE_ENCRYTED flag of the GetFileAttributes
-          function.
-
-  Why:   Without the usage of this interface the fd-daemon running
-          under the system account can't read encypted Files because
-          the key needed for the decrytion is missed by them. As a result 
-          actually encrypted files are not backed up
-          by bacula and also no error is shown while missing these files.
-
-  Notes: ./.
-
-Item 32: Possibilty to schedule Jobs on last Friday of the month
-Origin: Carsten Menke <bootsy52 at gmx dot net>
-Date:   02 March 2008
-Status:
-
-   What: Currently if you want to run your monthly Backups on the last
-           Friday of each month this is only possible with workarounds (e.g
-           scripting) (As some months got 4 Fridays and some got 5 Fridays)
-           The same is true if you plan to run your yearly Backups on the
-           last Friday of the year.  It would be nice to have the ability to
-           use the builtin scheduler for this.
-
-   Why:   In many companies the last working day of the week is Friday (or 
-           Saturday), so to get the most data of the month onto the monthly
-           tape, the employees are advised to insert the tape for the
-           monthly backups on the last friday of the month.
-
-   Notes: To give this a complete functionality it would be nice if the
-           "first" and "last" Keywords could be implemented in the
-           scheduler, so it is also possible to run monthy backups at the
-           first friday of the month and many things more.  So if the syntax
-           would expand to this {first|last} {Month|Week|Day|Mo-Fri} of the
-           {Year|Month|Week} you would be able to run really flexible jobs.
-
-           To got a certain Job run on the last Friday of the Month for example one could 
-           then write
-
-              Run = pool=Monthly last Fri of the Month at 23:50
-
-              ## Yearly Backup
-
-              Run = pool=Yearly last Fri of the Year at 23:50
-
-              ## Certain Jobs the last Week of a Month
-
-              Run = pool=LastWeek last Week of the Month at 23:50
-
-              ## Monthly Backup on the last day of the month
-
-              Run = pool=Monthly last Day of the Month at 23:50
-
-Item 33: Add Minumum Spool Size directive
-Date: 20 March 2008
-Origin: Frank Sweetser <fs@wpi.edu>
-
-   What: Add a new SD directive, "minimum spool size" (or similar).  This
-         directive would specify a minimum level of free space available for
-         spooling.  If the unused spool space is less than this level, any
-         new spooling requests would be blocked as if the "maximum spool
-         size" threshold had bee reached.  Already spooling jobs would be
-         unaffected by this directive.
-
-   Why: I've been bitten by this scenario a couple of times:
-
-        Assume a maximum spool size of 100M. Two concurrent jobs, A and B,
-        are both running.  Due to timing quirks and previously running jobs,
-        job A has used 99.9M of space in the spool directory.  While A is
-        busy despooling to disk, B is happily using the remaining 0.1M of
-        spool space.  This ends up in a spool/despool sequence every 0.1M of
-        data.  In addition to fragmenting the data on the volume far more
-        than was necessary, in larger data sets (ie, tens or hundreds of
-        gigabytes) it can easily produce multi-megabyte report emails!
-
-
-Item 34: Cause daemons to use a specific IP address to source communications
- Origin: Bill Moran <wmoran@collaborativefusion.com>
- Date:   18 Dec 2006
- Status:
- What:   Cause Bacula daemons (dir, fd, sd) to always use the ip address
-          specified in the [DIR|DF|SD]Addr directive as the source IP
-          for initiating communication.
- Why:    On complex networks, as well as extremely secure networks, it's
-          not unusual to have multiple possible routes through the network.
-          Often, each of these routes is secured by different policies
-          (effectively, firewalls allow or deny different traffic depending
-          on the source address)
-          Unfortunately, it can sometimes be difficult or impossible to
-          represent this in a system routing table, as the result is
-          excessive subnetting that quickly exhausts available IP space.
-          The best available workaround is to provide multiple IPs to
-          a single machine that are all on the same subnet.  In order
-          for this to work properly, applications must support the ability
-          to bind outgoing connections to a specified address, otherwise
-          the operating system will always choose the first IP that
-          matches the required route.
- Notes:  Many other programs support this.  For example, the following
-          can be configured in BIND:
-          query-source address 10.0.0.1;
-          transfer-source 10.0.0.2;
-          Which means queries from this server will always come from
-          10.0.0.1 and zone transfers will always originate from
-          10.0.0.2.
-
-
-
-Item 35: Add ability to Verify any specified Job.
+Item  7: Add ability to Verify any specified Job.
 Date: 17 January 2008
 Origin: portrix.net Hamburg, Germany.
 Contact: Christian Sabelmann
@@ -1127,68 +303,8 @@ Status: 70% of the required Code is part of the Verify function since v. 2.x
    verify a certain volume.  All of these would naturaly apply only for 
    Jobs whose file information are still in the catalog.
 
-Item 36: Automatic disabling of devices
-   Date: 2005-11-11
-  Origin: Peter Eriksson <peter at ifm.liu dot se>
-  Status:
 
-   What: After a configurable amount of fatal errors with a tape drive
-          Bacula should automatically disable further use of a certain
-          tape drive. There should also be "disable"/"enable" commands in
-          the "bconsole" tool.
-
-   Why:  On a multi-drive jukebox there is a possibility of tape drives
-          going bad during large backups (needing a cleaning tape run,
-          tapes getting stuck). It would be advantageous if Bacula would
-          automatically disable further use of a problematic tape drive
-          after a configurable amount of errors has occurred.
-
-          An example: I have a multi-drive jukebox (6 drives, 380+ slots)
-          where tapes occasionally get stuck inside the drive. Bacula will
-          notice that the "mtx-changer" command will fail and then fail
-          any backup jobs trying to use that drive. However, it will still
-          keep on trying to run new jobs using that drive and fail -
-          forever, and thus failing lots and lots of jobs... Since we have
-          many drives Bacula could have just automatically disabled
-          further use of that drive and used one of the other ones
-          instead.
-
-Item 37: An option to operate on all pools with update vol parameters
-  Origin: Dmitriy Pinchukov <absh@bossdev.kiev.ua>
-   Date: 16 August 2006
-  Status: Patch made by  Nigel Stepp
-
-   What: When I do update -> Volume parameters -> All Volumes
-          from Pool, then I have to select pools one by one.  I'd like
-          console to have an option like "0: All Pools" in the list of
-          defined pools.
-
-   Why:  I have many pools and therefore unhappy with manually
-          updating each of them using update -> Volume parameters -> All
-          Volumes from Pool -> pool #.
-
-Item 38: Implement Storage daemon compression
-  Date:  18 December 2006
-  Origin: Vadim A. Umanski , e-mail umanski@ext.ru
-  Status:
-  What:  The ability to compress backup data on the SD receiving data
-          instead of doing that on client sending data.
-  Why:   The need is practical. I've got some machines that can send
-          data to the network 4 or 5 times faster than compressing
-          them (I've measured that). They're using fast enough SCSI/FC
-          disk subsystems but rather slow CPUs (ex. UltraSPARC II).
-          And the backup server has got a quite fast CPUs (ex. Dual P4
-          Xeons) and quite a low load. When you have 20, 50 or 100 GB
-          of raw data - running a job 4 to 5 times faster - that
-          really matters. On the other hand, the data can be
-          compressed 50% or better - so losing twice more space for
-          disk backup is not good at all. And the network is all mine
-          (I have a dedicated management/provisioning network) and I
-          can get as high bandwidth as I need - 100Mbps, 1000Mbps...
-          That's why the server-side compression feature is needed!
-  Notes:
-
-Item 39: Improve Bacula's tape and drive usage and cleaning management 
+Item  8: Improve Bacula's tape and drive usage and cleaning management 
   Date:  8 November 2005, November 11, 2005
   Origin: Adam Thornton <athornton at sinenomine dot net>,
           Arno Lehmann <al at its-lehmann dot de>
@@ -1256,7 +372,221 @@ Item 39: Improve Bacula's tape and drive usage and cleaning management
           sub-projects: Measuring Tape and Drive usage, retiring
           volumes, and handling drive cleaning and TAPEALERTs.
 
-Item 40: Multiple threads in file daemon for the same job
+
+Item  9: Allow FD to initiate a backup
+Origin:  Frank Volf (frank at deze dot org)
+Date:    17 November 2005
+Status: 
+
+What: Provide some means, possibly by a restricted console that
+       allows a FD to initiate a backup, and that uses the connection
+       established by the FD to the Director for the backup so that
+       a Director that is firewalled can do the backup.
+Why:  Makes backup of laptops much easier.
+
+
+Item 10: Restore from volumes on multiple storage daemons
+Origin: Graham Keeling (graham@equiinet.com)
+Date:  12 March 2009
+Status: Proposing
+
+What:  The ability to restore from volumes held by multiple storage daemons
+        would be very useful.
+
+Why:   It is useful to be able to backup to any number of different storage
+        daemons. For example, your first storage daemon may run out of space, so you
+        switch to your second and carry on. Bacula will currently let you do this.
+        However, once you come to restore, bacula cannot cope when volumes on different
+        storage daemons are required.
+
+        Notes: The director knows that more than one storage daemon is needed, as
+        bconsole outputs something like the following table.
+
+        The job will require the following
+           Volume(s)                 Storage(s)                SD Device(s)
+        ===========================================================================
+           
+           backup-0001               Disk 1                    Disk 1.0                 
+           backup-0002               Disk 2                    Disk 2.0             
+
+        However, the bootstrap file that it creates gets sent to the first storage
+        daemon only, which then stalls for a long time, 'waiting for a mount request'
+        for the volume that it doesn't have.
+        The bootstrap file contains no knowledge of the storage daemon.
+        Under the current design:
+
+                The director connects to the storage daemon, and gets an sd_auth_key.
+                The director then connects to the file daemon, and gives it the
+                        sd_auth_key with the 'jobcmd'.
+                (restoring of files happens)
+                The director does a 'wait_for_storage_daemon_termination()'.
+                The director waits for the file daemon to indicate the end of the job.
+
+        With my idea:
+
+        The director connects to the file daemon.
+        Then, for each storage daemon in the .bsr file...  {
+                The director connects to the storage daemon, and gets an sd_auth_key.
+                The director then connects to the file daemon, and gives it the
+                        sd_auth_key with the 'storaddr' command.
+                (restoring of files happens)
+                The director does a 'wait_for_storage_daemon_termination()'.
+                The director waits for the file daemon to indicate the end of the
+                        work on this storage.
+        }
+        The director tells the file daemon that there are no more storages to contact.
+        The director waits for the file daemon to indicate the end of the job.
+
+        As you can see, each restore between the file daemon and storage daemon is
+        handled in the same way that it is currently handled, using the same method
+        for authentication, except that the sd_auth_key is moved from the 'jobcmd' to
+        the 'storaddr' command - where it logically belongs.
+
+
+Item 11: Implement Storage daemon compression
+  Date:  18 December 2006
+  Origin: Vadim A. Umanski , e-mail umanski@ext.ru
+  Status:
+  What:  The ability to compress backup data on the SD receiving data
+          instead of doing that on client sending data.
+  Why:   The need is practical. I've got some machines that can send
+          data to the network 4 or 5 times faster than compressing
+          them (I've measured that). They're using fast enough SCSI/FC
+          disk subsystems but rather slow CPUs (ex. UltraSPARC II).
+          And the backup server has got a quite fast CPUs (ex. Dual P4
+          Xeons) and quite a low load. When you have 20, 50 or 100 GB
+          of raw data - running a job 4 to 5 times faster - that
+          really matters. On the other hand, the data can be
+          compressed 50% or better - so losing twice more space for
+          disk backup is not good at all. And the network is all mine
+          (I have a dedicated management/provisioning network) and I
+          can get as high bandwidth as I need - 100Mbps, 1000Mbps...
+          That's why the server-side compression feature is needed!
+  Notes:
+
+
+Item 12: Reduction of communications bandwidth for a backup
+   Date: 14 October 2008
+ Origin: Robin O'Leary (Equiinet)
+ Status: 
+
+  What:  Using rdiff techniques, Bacula could significantly reduce
+          the network data transfer volume to do a backup.
+
+  Why:   Faster backup across the Internet
+
+  Notes: This requires retaining certain data on the client during a Full
+          backup that will speed up subsequent backups.
+     
+     
+Item 13: Ability to reconnect a disconnected comm line
+  Date:  26 April 2009
+  Origin: Kern/Eric
+  Status: 
+
+  What:  Often jobs fail because of a communications line drop. In that 
+          case, Bacula should be able to reconnect to the other daemon and
+          resume the job.
+
+  Why:   Avoids backuping data already saved.
+
+  Notes: *Very* complicated from a design point of view because of authenication.
+
+Item 14: Start spooling even when waiting on tape
+  Origin: Tobias Barth <tobias.barth@web-arts.com>
+  Date:  25 April 2008
+  Status:
+
+  What: If a job can be spooled to disk before writing it to tape, it should
+          be spooled immediately.  Currently, bacula waits until the correct
+          tape is inserted into the drive.
+
+  Why:   It could save hours.  When bacula waits on the operator who must insert
+          the correct tape (e.g.  a new tape or a tape from another media
+          pool), bacula could already prepare the spooled data in the spooling
+          directory and immediately start despooling when the tape was
+          inserted by the operator.
+         
+          2nd step: Use 2 or more spooling directories.  When one directory is
+          currently despooling, the next (on different disk drives) could
+          already be spooling the next data.
+
+  Notes: I am using bacula 2.2.8, which has none of those features
+         implemented.
+
+
+Item 15: Enable/disable compression depending on storage device (disk/tape)
+  Origin: Ralf Gross ralf-lists@ralfgross.de
+  Date:  2008-01-11
+  Status: Initial Request
+
+  What: Add a new option to the storage resource of the director.  Depending
+          on this option, compression will be enabled/disabled for a device.
+
+  Why: If different devices (disks/tapes) are used for full/diff/incr
+          backups, software compression will be enabled for all backups
+          because of the FileSet compression option.  For backup to tapes
+          wich are able to do hardware compression this is not desired.
+          
+
+  Notes:
+         http://news.gmane.org/gmane.comp.sysutils.backup.bacula.devel/cutoff=11124
+         It must be clear to the user, that the FileSet compression option
+         must still be enabled use compression for a backup job at all.
+         Thus a name for the new option in the director must be
+         well-defined.
+
+  Notes: KES I think the Storage definition should probably override what
+         is in the Job definition or vice-versa, but in any case, it must
+         be well defined.
+
+
+Item 16: Include all conf files in specified directory
+Date:  18 October 2008
+Origin: Database, Lda. Maputo, Mozambique
+Contact:Cameron Smith / cameron.ord@database.co.mz 
+Status: New request
+
+What: A directive something like "IncludeConf = /etc/bacula/subconfs" Every
+      time Bacula Director restarts or reloads, it will walk the given
+      directory (non-recursively) and include the contents of any files
+      therein, as though they were appended to bacula-dir.conf
+
+Why: Permits simplified and safer configuration for larger installations with
+      many client PCs.  Currently, through judicious use of JobDefs and
+      similar directives, it is possible to reduce the client-specific part of
+      a configuration to a minimum.  The client-specific directives can be
+      prepared according to a standard template and dropped into a known
+      directory.  However it is still necessary to add a line to the "master"
+      (bacula-dir.conf) referencing each new file.  This exposes the master to
+      unnecessary risk of accidental mistakes and makes automation of adding
+      new client-confs, more difficult (it is easier to automate dropping a
+      file into a dir, than rewriting an existing file).  Ken has previously
+      made a convincing argument for NOT including Bacula's core configuration
+      in an RDBMS, but I believe that the present request is a reasonable
+      extension to the current "flat-file-based" configuration philosophy.
+ 
+Notes: There is NO need for any special syntax to these files.  They should
+       contain standard directives which are simply "inlined" to the parent
+       file as already happens when you explicitly reference an external file.
+
+Notes: (kes) this can already be done with scripting
+     From: John Jorgensen <jorgnsn@lcd.uregina.ca>
+     The bacula-dir.conf at our site contains these lines:
+
+   #
+   # Include subfiles associated with configuration of clients.
+   # They define the bulk of the Clients, Jobs, and FileSets.
+   #
+   @|"sh -c 'for f in /etc/bacula/clientdefs/*.conf ; do echo @${f} ; done'"
+
+    and when we get a new client, we just put its configuration into
+    a new file called something like:
+
+    /etc/bacula/clientdefs/clientname.conf
+
+
+Item 17: Multiple threads in file daemon for the same job
   Date:  27 November 2005
   Origin: Ove Risberg (Ove.Risberg at octocode dot com)
   Status:
@@ -1278,6 +608,705 @@ Item 40: Multiple threads in file daemon for the same job
   Why:   Multiple concurrent backups of a large fileserver with many
           disks and controllers will be much faster.
 
+
+Item 18: Possibilty to schedule Jobs on last Friday of the month
+Origin: Carsten Menke <bootsy52 at gmx dot net>
+Date:   02 March 2008
+Status:
+
+   What: Currently if you want to run your monthly Backups on the last
+           Friday of each month this is only possible with workarounds (e.g
+           scripting) (As some months got 4 Fridays and some got 5 Fridays)
+           The same is true if you plan to run your yearly Backups on the
+           last Friday of the year.  It would be nice to have the ability to
+           use the builtin scheduler for this.
+
+   Why:   In many companies the last working day of the week is Friday (or 
+           Saturday), so to get the most data of the month onto the monthly
+           tape, the employees are advised to insert the tape for the
+           monthly backups on the last friday of the month.
+
+   Notes: To give this a complete functionality it would be nice if the
+           "first" and "last" Keywords could be implemented in the
+           scheduler, so it is also possible to run monthy backups at the
+           first friday of the month and many things more.  So if the syntax
+           would expand to this {first|last} {Month|Week|Day|Mo-Fri} of the
+           {Year|Month|Week} you would be able to run really flexible jobs.
+
+           To got a certain Job run on the last Friday of the Month for example one could 
+           then write
+
+              Run = pool=Monthly last Fri of the Month at 23:50
+
+              ## Yearly Backup
+
+              Run = pool=Yearly last Fri of the Year at 23:50
+
+              ## Certain Jobs the last Week of a Month
+
+              Run = pool=LastWeek last Week of the Month at 23:50
+
+              ## Monthly Backup on the last day of the month
+
+              Run = pool=Monthly last Day of the Month at 23:50
+
+
+Item 19: Include timestamp of job launch in "stat clients" output
+  Origin: Mark Bergman <mark.bergman@uphs.upenn.edu>
+  Date:  Tue Aug 22 17:13:39 EDT 2006
+  Status:
+
+  What:  The "stat clients" command doesn't include any detail on when
+          the active backup jobs were launched.
+
+  Why:   Including the timestamp would make it much easier to decide whether
+          a job is running properly. 
+
+  Notes: It may be helpful to have the output from "stat clients" formatted 
+          more like that from "stat dir" (and other commands), in a column
+          format. The per-client information that's currently shown (level,
+          client name, JobId, Volume, pool, device, Files, etc.) is good, but
+          somewhat hard to parse (both programmatically and visually), 
+          particularly when there are many active clients.
+
+
+Item 20: Cause daemons to use a specific IP address to source communications
+ Origin: Bill Moran <wmoran@collaborativefusion.com>
+ Date:   18 Dec 2006
+ Status: Done
+ What:   Cause Bacula daemons (dir, fd, sd) to always use the ip address
+          specified in the [DIR|DF|SD]Addr directive as the source IP
+          for initiating communication.
+ Why:    On complex networks, as well as extremely secure networks, it's
+          not unusual to have multiple possible routes through the network.
+          Often, each of these routes is secured by different policies
+          (effectively, firewalls allow or deny different traffic depending
+          on the source address)
+          Unfortunately, it can sometimes be difficult or impossible to
+          represent this in a system routing table, as the result is
+          excessive subnetting that quickly exhausts available IP space.
+          The best available workaround is to provide multiple IPs to
+          a single machine that are all on the same subnet.  In order
+          for this to work properly, applications must support the ability
+          to bind outgoing connections to a specified address, otherwise
+          the operating system will always choose the first IP that
+          matches the required route.
+ Notes:  Many other programs support this.  For example, the following
+          can be configured in BIND:
+          query-source address 10.0.0.1;
+          transfer-source 10.0.0.2;
+          Which means queries from this server will always come from
+          10.0.0.1 and zone transfers will always originate from
+          10.0.0.2.
+
+
+Item 21: Message mailing based on backup types
+ Origin: Evan Kaufman <evan.kaufman@gmail.com>
+   Date: January 6, 2006
+ Status:
+
+   What: In the "Messages" resource definitions, allowing messages
+          to be mailed based on the type (backup, restore, etc.) and level
+          (full, differential, etc) of job that created the originating
+          message(s).
+
+ Why:    It would, for example, allow someone's boss to be emailed
+          automatically only when a Full Backup job runs, so he can
+          retrieve the tapes for offsite storage, even if the IT dept.
+          doesn't (or can't) explicitly notify him.  At the same time, his
+          mailbox wouldnt be filled by notifications of Verifies, Restores,
+          or Incremental/Differential Backups (which would likely be kept
+          onsite).
+
+ Notes:  One way this could be done is through additional message types, for example:
+
+   Messages {
+     # email the boss only on full system backups
+     Mail = boss@mycompany.com = full, !incremental, !differential, !restore, 
+            !verify, !admin
+     # email us only when something breaks
+     MailOnError = itdept@mycompany.com = all
+   }
+
+   Notes: Kern: This should be rather trivial to implement.
+
+
+Item 22: Ability to import/export Bacula database entities
+   Date: 26 April 2009
+ Origin: Eric
+ Status: 
+
+  What:  Create a Bacula ASCII SQL database independent format that permits
+          importing and exporting database catalog Job entities.
+
+  Why:   For achival, database clustering, tranfer to other databases
+          of any SQL engine.
+
+  Notes: Job selection should be by Job, time, Volume, Client, Pool and possibly
+          other criteria.
+
+
+Item 23: "Maximum Concurrent Jobs" for drives when used with changer device
+  Origin: Ralf Gross ralf-lists <at> ralfgross.de
+  Date:  2008-12-12
+  Status: Initial Request
+
+  What:  respect the "Maximum Concurrent Jobs" directive in the _drives_
+          Storage section in addition to the changer section
+
+  Why:   I have a 3 drive changer where I want to be able to let 3 concurrent
+          jobs run in parallel. But only one job per drive at the same time.
+          Right now I don't see how I could limit the number of concurrent jobs
+          per drive in this situation.
+
+  Notes: Using different priorities for these jobs lead to problems that other
+          jobs are blocked. On the user list I got the advice to use the "Prefer Mounted
+          Volumes" directive, but Kern advised against using "Prefer Mounted
+          Volumes" in an other thread:
+          http://article.gmane.org/gmane.comp.sysutils.backup.bacula.devel/11876/
+
+          In addition I'm not sure if this would be the same as respecting the
+          drive's "Maximum Concurrent Jobs" setting.
+
+          Example:
+
+          Storage {
+            Name = Neo4100
+            Address = ....
+            SDPort = 9103
+            Password = "wiped"
+            Device = Neo4100
+            Media Type = LTO4
+            Autochanger = yes
+            Maximum Concurrent Jobs = 3
+          }
+          
+          Storage {
+            Name = Neo4100-LTO4-D1
+            Address = ....
+            SDPort = 9103
+            Password = "wiped"
+            Device = ULTRIUM-TD4-D1
+            Media Type = LTO4
+            Maximum Concurrent Jobs = 1
+          }
+          
+          [2 more drives] 
+
+          The "Maximum Concurrent Jobs = 1" directive in the drive's section is ignored.
+
+
+Item 24: Implementation of running Job speed limit.
+Origin: Alex F, alexxzell at yahoo dot com
+Date: 29 January 2009
+
+What: I noticed the need for an integrated bandwidth limiter for
+      running jobs.  It would be very useful just to specify another
+      field in bacula-dir.conf, like speed = how much speed you wish
+      for that specific job to run at
+
+Why: Because of a couple of reasons.  First, it's very hard to implement a
+     traffic shaping utility and also make it reliable.  Second, it is very
+     uncomfortable to have to implement these apps to, let's say 50 clients
+     (including desktops, servers).  This would also be unreliable because you
+     have to make sure that the apps are properly working when needed; users
+     could also disable them (accidentally or not).  It would be very useful
+     to provide Bacula this ability.  All information would be centralized,
+     you would not have to go to 50 different clients in 10 different
+     locations for configuration; eliminating 3rd party additions help in
+     establishing efficiency.  Would also avoid bandwidth congestion,
+     especially where there is little available.
+
+
+Item 25: Add an override in Schedule for Pools based on backup types
+Date:    19 Jan 2005
+Origin:  Chad Slater <chad.slater@clickfox.com>
+Status: 
+                                                
+  What:  Adding a FullStorage=BigTapeLibrary in the Schedule resource
+          would help those of us who use different storage devices for different
+          backup levels cope with the "auto-upgrade" of a backup.
+
+  Why:   Assume I add several new devices to be backed up, i.e. several
+          hosts with 1TB RAID.  To avoid tape switching hassles, incrementals are
+          stored in a disk set on a 2TB RAID.  If you add these devices in the
+          middle of the month, the incrementals are upgraded to "full" backups,
+          but they try to use the same storage device as requested in the
+          incremental job, filling up the RAID holding the differentials.  If we
+          could override the Storage parameter for full and/or differential
+          backups, then the Full job would use the proper Storage device, which
+          has more capacity (i.e. a 8TB tape library.
+
+
+Item 26: Automatic promotion of backup levels based on backup size
+   Date: 19 January 2006
+  Origin: Adam Thornton <athornton@sinenomine.net>
+  Status: 
+
+    What: Other backup programs have a feature whereby it estimates the space
+          that a differential, incremental, and full backup would take.  If
+          the difference in space required between the scheduled level and the
+          next level up is beneath some user-defined critical threshold, the
+          backup level is bumped to the next type.  Doing this minimizes the
+          number of volumes necessary during a restore, with a fairly minimal
+          cost in backup media space.
+
+    Why: I know at least one (quite sophisticated and smart) user for whom the
+          absence of this feature is a deal-breaker in terms of using Bacula;
+          if we had it it would eliminate the one cool thing other backup
+          programs can do and we can't (at least, the one cool thing I know
+          of).
+
+
+Item 27: Allow inclusion/exclusion of files in a fileset by creation/mod times
+  Origin: Evan Kaufman <evan.kaufman@gmail.com>
+  Date:  January 11, 2006
+  Status:
+
+  What:  In the vein of the Wild and Regex directives in a Fileset's
+          Options, it would be helpful to allow a user to include or exclude
+          files and directories by creation or modification times.
+
+          You could factor the Exclude=yes|no option in much the same way it
+          affects the Wild and Regex directives.  For example, you could exclude
+          all files modified before a certain date:
+
+   Options {
+     Exclude = yes
+     Modified Before = ####
+   }
+
+           Or you could exclude all files created/modified since a certain date:
+
+   Options {
+      Exclude = yes
+     Created Modified Since = ####
+   }
+
+           The format of the time/date could be done several ways, say the number
+           of seconds since the epoch:
+           1137008553 = Jan 11 2006, 1:42:33PM   # result of `date +%s`
+
+           Or a human readable date in a cryptic form:
+           20060111134233 = Jan 11 2006, 1:42:33PM   # YYYYMMDDhhmmss
+
+  Why:   I imagine a feature like this could have many uses. It would
+          allow a user to do a full backup while excluding the base operating
+          system files, so if I installed a Linux snapshot from a CD yesterday,
+          I'll *exclude* all files modified *before* today.  If I need to
+          recover the system, I use the CD I already have, plus the tape backup.
+          Or if, say, a Windows client is hit by a particularly corrosive
+          virus, and I need to *exclude* any files created/modified *since* the
+          time of infection.
+
+  Notes: Of course, this feature would work in concert with other
+          in/exclude rules, and wouldnt override them (or each other).
+
+  Notes: The directives I'd imagine would be along the lines of
+          "[Created] [Modified] [Before|Since] = <date>".
+          So one could compare against 'ctime' and/or 'mtime', but ONLY 'before'
+           or 'since'.
+
+
+Item 28: Archival (removal) of User Files to Tape
+  Date:  Nov. 24/2005 
+  Origin: Ray Pengelly [ray at biomed dot queensu dot ca
+  Status: 
+
+  What:  The ability to archive data to storage based on certain parameters
+          such as age, size, or location.  Once the data has been written to
+          storage and logged it is then pruned from the originating
+          filesystem. Note! We are talking about user's files and not
+          Bacula Volumes.
+
+  Why:   This would allow fully automatic storage management which becomes
+          useful for large datastores.  It would also allow for auto-staging
+          from one media type to another.
+
+          Example 1) Medical imaging needs to store large amounts of data.
+          They decide to keep data on their servers for 6 months and then put
+          it away for long term storage.  The server then finds all files
+          older than 6 months writes them to tape.  The files are then removed
+          from the server.
+
+          Example 2) All data that hasn't been accessed in 2 months could be
+          moved from high-cost, fibre-channel disk storage to a low-cost
+          large-capacity SATA disk storage pool which doesn't have as quick of
+          access time.  Then after another 6 months (or possibly as one
+          storage pool gets full) data is migrated to Tape.
+
+
+Item 29: An option to operate on all pools with update vol parameters
+  Origin: Dmitriy Pinchukov <absh@bossdev.kiev.ua>
+   Date: 16 August 2006
+  Status: Patch made by  Nigel Stepp
+
+   What: When I do update -> Volume parameters -> All Volumes
+          from Pool, then I have to select pools one by one.  I'd like
+          console to have an option like "0: All Pools" in the list of
+          defined pools.
+
+   Why:  I have many pools and therefore unhappy with manually
+          updating each of them using update -> Volume parameters -> All
+          Volumes from Pool -> pool #.
+
+
+Item 30: Automatic disabling of devices
+   Date: 2005-11-11
+  Origin: Peter Eriksson <peter at ifm.liu dot se>
+  Status:
+
+   What: After a configurable amount of fatal errors with a tape drive
+          Bacula should automatically disable further use of a certain
+          tape drive. There should also be "disable"/"enable" commands in
+          the "bconsole" tool.
+
+   Why:  On a multi-drive jukebox there is a possibility of tape drives
+          going bad during large backups (needing a cleaning tape run,
+          tapes getting stuck). It would be advantageous if Bacula would
+          automatically disable further use of a problematic tape drive
+          after a configurable amount of errors has occurred.
+
+          An example: I have a multi-drive jukebox (6 drives, 380+ slots)
+          where tapes occasionally get stuck inside the drive. Bacula will
+          notice that the "mtx-changer" command will fail and then fail
+          any backup jobs trying to use that drive. However, it will still
+          keep on trying to run new jobs using that drive and fail -
+          forever, and thus failing lots and lots of jobs... Since we have
+          many drives Bacula could have just automatically disabled
+          further use of that drive and used one of the other ones
+          instead.
+
+
+Item 31: List InChanger flag when doing restore.
+ Origin: Jesper Krogh<jesper@krogh.cc>
+   Date: 17 Oct 2008
+ Status: Done in version 3.0.2
+
+   What: When doing a restore the restore selection dialog ends by telling stuff 
+      like this:
+  The job will require the following
+   Volume(s)                 Storage(s)                SD Device(s)
+   ===========================================================================
+    000741L3                  LTO-4                     LTO3 
+    000866L3                  LTO-4                     LTO3 
+    000765L3                  LTO-4                     LTO3 
+    000764L3                  LTO-4                     LTO3 
+    000756L3                  LTO-4                     LTO3 
+    001759L3                  LTO-4                     LTO3 
+    001763L3                  LTO-4                     LTO3 
+    001762L3                  LTO-4                     LTO3 
+    001767L3                  LTO-4                     LTO3 
+
+   When having an autochanger, it would be really nice with an inChanger 
+   column so the operator knew if this restore job would stop waiting for 
+   operator intervention. This is done just by selecting the inChanger flag 
+   from the catalog and printing it in a seperate column.
+
+
+   Why:   This would help getting large restores through minimizing the 
+      time spent waiting for operator to drop by and change tapes in the library.
+
+  Notes: [Kern] I think it would also be good to have the Slot as well,
+      or some indication that Bacula thinks the volume is in the autochanger
+      because it depends on both the InChanger flag and the Slot being
+      valid.
+
+
+Item 32: Ability to defer Batch Insert to a later time
+   Date: 26 April 2009
+ Origin: Eric
+ Status: 
+
+  What:  Instead of doing a Job Batch Insert at the end of the Job
+          which might create resource contention with lots of Job,
+          defer the insert to a later time.
+
+  Why:   Permits to focus on getting the data on the Volume and
+          putting the metadata into the Catalog outside the backup
+          window.
+
+  Notes: Will use the proposed Bacula ASCII database import/export
+          format (i.e. dependent on the import/export entities project).
+
+
+Item 33: Add MaxVolumeSize/MaxVolumeBytes statement to Storage resource
+   Origin: Bastian Friedrich <bastian.friedrich@collax.com>
+   Date:  2008-07-09
+   Status: -
+
+   What:  SD has a "Maximum Volume Size" statement, which is deprecated and
+           superseded by the Pool resource statement "Maximum Volume Bytes".
+           It would be good if either statement could be used in Storage
+           resources.
+
+   Why:   Pools do not have to be restricted to a single storage type/device;
+           thus, it may be impossible to define Maximum Volume Bytes in the
+           Pool resource.  The old MaxVolSize statement is deprecated, as it
+           is SD side only.  I am using the same pool for different devices.
+
+   Notes: State of idea currently unknown.  Storage resources in the dir
+           config currently translate to very slim catalog entries; these
+           entries would require extensions to implement what is described
+           here.  Quite possibly, numerous other statements that are currently
+           available in Pool resources could be used in Storage resources too
+           quite well.
+
+
+Item 34: Enable persistent naming/number of SQL queries
+  Date:  24 Jan, 2007 
+  Origin: Mark Bergman 
+  Status: 
+
+  What: 
+        Change the parsing of the query.sql file and the query command so that
+        queries are named/numbered by a fixed value, not their order in the
+        file.
+
+
+  Why:  
+        One of the real strengths of bacula is the ability to query the
+        database, and the fact that complex queries can be saved and
+        referenced from a file is very powerful. However, the choice
+        of query (both for interactive use, and by scripting input
+        to the bconsole command) is completely dependent on the order
+        within the query.sql file. The descriptve labels are helpful for
+        interactive use, but users become used to calling a particular
+        query "by number", or may use scripts to execute queries. This
+        presents a problem if the number or order of queries in the file
+        changes.
+
+        If the query.sql file used the numeric tags as a real value (rather
+        than a comment), then users could have a higher confidence that they
+        are executing the intended query, that their local changes wouldn't
+        conflict with future bacula upgrades.
+
+        For scripting, it's very important that the intended query is
+        what's actually executed. The current method of parsing the
+        query.sql file discourages scripting because the addition or
+        deletion of queries within the file will require corresponding
+        changes to scripts. It may not be obvious to users that deleting
+        query "17" in the query.sql file will require changing all
+        references to higher numbered queries. Similarly, when new
+        bacula distributions change the number of "official" queries,
+        user-developed queries cannot simply be appended to the file
+        without also changing any references to those queries in scripts
+        or procedural documentation, etc.
+
+        In addition, using fixed numbers for queries would encourage more
+        user-initiated development of queries, by supporting conventions
+        such as:
+
+                queries numbered 1-50 are supported/developed/distributed by
+                        with official bacula releases
+                        
+                queries numbered 100-200 are community contributed, and are
+                related to media management
+
+                queries numbered 201-300 are community contributed, and are
+                related to checksums, finding duplicated files across
+                different backups, etc.
+
+                queries numbered 301-400 are community contributed, and are
+                related to backup statistics (average file size, size per
+                client per backup level, time for all clients by backup level,
+                storage capacity by media type, etc.)
+
+                queries numbered 500-999 are locally created
+
+  Notes:
+        Alternatively, queries could be called by keyword (tag), rather
+        than by number.
+
+
+Item 35: Port bat to Win32
+   Date: 26 April 2009
+ Origin: Kern/Eric
+ Status: 
+
+  What:  Make bat run on Win32/64.
+
+  Why:   To have GUI on Windows
+
+  Notes: 
+
+
+Item 36: Bacula Dir, FD and SD to support proxies
+Origin: Karl Grindley @ MIT Lincoln Laboratory <kgrindley at ll dot mit dot edu>
+Date:  25 March 2009
+Status: proposed
+
+What:  Support alternate methods for nailing up a TCP session such
+        as SOCKS5, SOCKS4 and HTTP (CONNECT) proxies.  Such a feature
+        would allow tunneling of bacula traffic in and out of proxied
+        networks.
+
+Why:   Currently, bacula is architected to only function on a flat network, with
+        no barriers or limitations.  Due to the large configuration states of
+        any network and the infinite configuration where file daemons and
+        storage daemons may sit in relation to one another, bacula often is
+        not usable on a network where filtered or air-gaped networks exist.
+        While often solutions such as ACL modifications to firewalls or port
+        redirection via SNAT or DNAT will solve the issue, often however,
+        these solutions are not adequate or not allowed by hard policy.
+
+        In an air-gapped network with only a highly locked down proxy services
+        are provided (SOCKS4/5 and/or HTTP and/or SSH outbound) ACLs or
+        iptable rules will not work.
+
+Notes: Director resource tunneling: This configuration option to utilize a
+        proxy to connect to a client should be specified in the client
+        resource Client resource tunneling: should be configured in the client
+        resource in the director config file?  Or configured on the bacula-fd
+        configuration file on the fd host itself?  If the ladder, this would
+        allow only certain clients to use a proxy, where others do not when
+        establishing the TCP connection to the storage server. 
+
+        Also worth noting, there are other 3rd party, light weight apps that
+        could be utilized to bootstrap this.  Instead of sockifing bacula
+        itself, use an external program to broker proxy authentication, and
+        connection to the remote host.  OpenSSH does this by using the
+        "ProxyCommand" syntax in the client configuration and uses stdin and
+        stdout to the command.  Connect.c is a very popular one.
+        (http://bent.latency.net/bent/darcs/goto-san-connect-1.85/src/connect.html).
+        One could also possibly use stunnel, netcat, etc.
+
+
+Item 37: Add Minumum Spool Size directive
+Date: 20 March 2008
+Origin: Frank Sweetser <fs@wpi.edu>
+
+   What: Add a new SD directive, "minimum spool size" (or similar).  This
+         directive would specify a minimum level of free space available for
+         spooling.  If the unused spool space is less than this level, any
+         new spooling requests would be blocked as if the "maximum spool
+         size" threshold had bee reached.  Already spooling jobs would be
+         unaffected by this directive.
+
+   Why: I've been bitten by this scenario a couple of times:
+
+        Assume a maximum spool size of 100M. Two concurrent jobs, A and B,
+        are both running.  Due to timing quirks and previously running jobs,
+        job A has used 99.9M of space in the spool directory.  While A is
+        busy despooling to disk, B is happily using the remaining 0.1M of
+        spool space.  This ends up in a spool/despool sequence every 0.1M of
+        data.  In addition to fragmenting the data on the volume far more
+        than was necessary, in larger data sets (ie, tens or hundreds of
+        gigabytes) it can easily produce multi-megabyte report emails!
+
+
+Item 38: Backup and Restore of Windows Encrypted Files using Win raw encryption
+  Origin: Michael Mohr, SAG  Mohr.External@infineon.com
+  Date:  22 February 2008
+  Origin: Alex Ehrlich (Alex.Ehrlich-at-mail.ee)
+  Date:  05 August 2008
+  Status:
+
+  What: Make it possible to backup and restore Encypted Files from and to
+          Windows systems without the need to decrypt it by using the raw
+          encryption functions API (see:
+          http://msdn2.microsoft.com/en-us/library/aa363783.aspx)
+          that is provided for that reason by Microsoft.
+          If a file ist encrypted could be examined by evaluating the 
+          FILE_ATTRIBUTE_ENCRYTED flag of the GetFileAttributes
+          function.
+          For each file backed up or restored by FD on Windows, check if
+          the file is encrypted; if so then use OpenEncryptedFileRaw,
+          ReadEncryptedFileRaw, WriteEncryptedFileRaw,
+          CloseEncryptedFileRaw instead of BackupRead and BackupWrite
+          API calls.
+
+  Why:   Without the usage of this interface the fd-daemon running
+          under the system account can't read encypted Files because
+          the key needed for the decrytion is missed by them. As a result 
+          actually encrypted files are not backed up
+          by bacula and also no error is shown while missing these files.
+
+   Notes: Using xxxEncryptedFileRaw API would allow to backup and
+           restore EFS-encrypted files without decrypting their data.
+           Note that such files cannot be restored "portably" (at least,
+           easily) but they would be restoreable to a different (or
+           reinstalled) Win32 machine; the restore would require setup
+           of a EFS recovery agent in advance, of course, and this shall
+           be clearly reflected in the documentation, but this is the
+           normal Windows SysAdmin's business.
+           When "portable" backup is requested the EFS-encrypted files
+           shall be clearly reported as errors.
+           See MSDN on the "Backup and Restore of Encrypted Files" topic:
+           http://msdn.microsoft.com/en-us/library/aa363783.aspx
+           Maybe the EFS support requires a new flag in the database for
+           each file, too?
+           Unfortunately, the implementation is not as straightforward as
+           1-to-1 replacement of BackupRead with ReadEncryptedFileRaw,
+           requiring some FD code rewrite to work with
+           encrypted-file-related callback functions.
+
+
+Item 39: Implement an interface between Bacula and Storage clould like Amazon's S3.
+  Date:  25 August 2008
+  Origin: Soren Hansen <soren@ubuntu.com>
+  Status: Not started.
+  What:  Enable the storage daemon to store backup data on Amazon's
+          S3 service.
+
+  Why:   Amazon's S3 is a cheap way to store data off-site. 
+
+  Notes: If we configure the Pool to put only one job per volume (they don't
+         support append operation), and the volume size isn't to big (100MB?),
+         it should be easy to adapt the disk-changer script to add get/put
+         procedure with curl. So, the data would be safetly copied during the
+         Job. 
+
+         Cloud should be only used with Copy jobs, users should always have
+         a copy of their data on their site.
+
+         We should also think to have our own cache, trying always to have
+         cloud volume on the local disk. (I don't know if users want to store
+         100GB on cloud, so it shouldn't be a disk size problem). For example,
+         if bacula want to recycle a volume, it will start by downloading the
+         file to truncate it few seconds later, if we can avoid that...
+
+Item 40: Convert Bacula existing tray monitor on Windows to a stand alone program
+   Date: 26 April 2009
+ Origin: Kern/Eric
+ Status: 
+
+  What:  Separate Win32 tray monitor to be a separate program.
+
+  Why:   Vista does not allow SYSTEM services to interact with the 
+          desktop, so the current tray monitor does not work on Vista
+          machines.  
+
+  Notes: Requires communicating with the FD via the network (simulate
+          a console connection).
+
+
+
+========= End items voted on May 2009 ==================
+
+========= New items after last vote ====================
+
+Item 1:   Relabel disk volume after recycling
+  Origin: Pasi Kärkkäinen <pasik@iki.fi>
+  Date:   07 May 2009.
+  Status: Not implemented yet, no code written.
+
+  What:   The ability to relabel the disk volume (and thus rename the file on the disk) 
+          after it has been recycled. Useful when you have a single job per disk volume, 
+          and you use a custom Label format, for example: 
+          Label Format = "${Client}-${Level}-${NumVols:p/4/0/r}-${Year}_${Month}_${Day}-${Hour}_${Minute}"
+
+  Why:    Disk volumes in Bacula get the label/filename when they are used for the first time.
+          If you use recycling and custom label format like above, the disk
+          volume name doesn't match the contents after it has been recycled.
+          This feature makes it possible to keep the label/filename in sync
+          with the content and thus makes it easy to check/monitor the backups
+          from the shell and/or normal file management tools, because the filenames 
+          of the disk volumes match the content.
+
+  Notes:  The configuration option could be "Relabel after Recycling = Yes".
+
+
 ========= Add new items above this line =================
 
 
@@ -1296,286 +1325,3 @@ Item  n: One line summary ...
 
 
 ========== Items put on hold by Kern ============================
-
-Item h2: Implement support for stacking arbitrary stream filters, sinks.
-Date:    23 November 2006
-Origin:  Landon Fuller <landonf@threerings.net>
-Status:  Planning. Assigned to landonf.
-
-  What:  Implement support for the following:
-          - Stacking arbitrary stream filters (eg, encryption, compression,  
-            sparse data handling))
-          - Attaching file sinks to terminate stream filters (ie, write out  
-            the resultant data to a file)
-          - Refactor the restoration state machine accordingly
-
-   Why: The existing stream implementation suffers from the following: - All
-           state (compression, encryption, stream restoration), is
-             global across the entire restore process, for all streams. There are  
-             multiple entry and exit points in the restoration state machine, and  
-             thus multiple places where state must be allocated, deallocated,  
-             initialized, or reinitialized. This results in exceptional complexity  
-             for the author of a stream filter.
-           - The developer must enumerate all possible combinations of filters  
-             and stream types (ie, win32 data with encryption, without encryption,  
-             with encryption AND compression, etc).
-
-  Notes: This feature request only covers implementing the stream filters/
-          sinks, and refactoring the file daemon's restoration
-          implementation accordingly.  If I have extra time, I will also
-          rewrite the backup implementation.  My intent in implementing the
-          restoration first is to solve pressing bugs in the restoration
-          handling, and to ensure that the new restore implementation
-          handles existing backups correctly.
-
-          I do not plan on changing the network or tape data structures to  
-          support defining arbitrary stream filters, but supporting that  
-          functionality is the ultimate goal.
-
-          Assistance with either code or testing would be fantastic.
-
-  Notes: Kern: this project has a lot of merit, and we need to do it, but
-          it is really an issue for developers rather than a new feature
-          for users, so I have removed it from the voting list, but kept it
-          here, but at some point, it will be implemented.
-
-Item h3: Filesystem watch triggered backup.
-  Date:  31 August 2006
-  Origin: Jesper Krogh <jesper@krogh.cc>
-  Status: 
-
-  What:  With inotify and similar filesystem triggeret notification
-          systems is it possible to have the file-daemon to monitor
-          filesystem changes and initiate backup.
-
-  Why:   There are 2 situations where this is nice to have.
-          1) It is possible to get a much finer-grained backup than
-             the fixed schedules used now.. A file created and deleted
-             a few hours later, can automatically be caught.
-
-          2) The introduced load on the system will probably be
-             distributed more even on the system.
-
-  Notes: This can be combined with configration that specifies
-          something like: "at most every 15 minutes or when changes
-          consumed XX MB".
-
-Kern Notes: I would rather see this implemented by an external program
-          that monitors the Filesystem changes, then uses the console
-
-
-Item h4: Directive/mode to backup only file changes, not entire file
-  Date:  11 November 2005
-  Origin: Joshua Kugler <joshua dot kugler at uaf dot edu>
-          Marek Bajon <mbajon at bimsplus dot com dot pl>
-  Status: 
-
-  What:  Currently when a file changes, the entire file will be backed up in
-          the next incremental or full backup.  To save space on the tapes
-          it would be nice to have a mode whereby only the changes to the
-          file would be backed up when it is changed.
-
-  Why:   This would save lots of space when backing up large files such as 
-          logs, mbox files, Outlook PST files and the like.
-
-  Notes: This would require the usage of disk-based volumes as comparing 
-          files would not be feasible using a tape drive.
-
-  Notes: Kern: I don't know how to implement this. Put on hold until someone
-          provides a detailed implementation plan.
-
-
-Item h5: Implement multiple numeric backup levels as supported by dump
-Date:    3 April 2006
-Origin:  Daniel Rich <drich@employees.org>
-Status:
-What: Dump allows specification of backup levels numerically instead of just
-          "full", "incr", and "diff".  In this system, at any given level,
-          all files are backed up that were were modified since the last
-          backup of a higher level (with 0 being the highest and 9 being the
-          lowest).  A level 0 is therefore equivalent to a full, level 9 an
-          incremental, and the levels 1 through 8 are varying levels of
-          differentials.  For bacula's sake, these could be represented as
-          "full", "incr", and "diff1", "diff2", etc.
-
-Why: Support of multiple backup levels would provide for more advanced
-          backup rotation schemes such as "Towers of Hanoi".  This would
-          allow better flexibility in performing backups, and can lead to
-          shorter recover times.
-
-Notes:   Legato Networker supports a similar system with full, incr, and 1-9 as
-          levels.
-
-Notes:   Kern: I don't see the utility of this, and it would be a *huge* 
-          modification to existing code.
-
-Item h6: Implement NDMP protocol support
-  Origin: Alan Davis
-  Date:  06 March 2007
-  Status: 
-
-  What:  Network Data Management Protocol is implemented by a number of
-          NAS filer vendors to enable backups using third-party
-          software.
-
-  Why:   This would allow NAS filer backups in Bacula without incurring
-          the overhead of NFS or SBM/CIFS.
-
-  Notes: Further information is available:
-          http://www.ndmp.org
-          http://www.ndmp.org/wp/wp.shtml
-          http://www.traakan.com/ndmjob/index.html
-
-          There are currently no viable open-source NDMP
-          implementations.  There is a reference SDK and example
-          app available from ndmp.org but it has problems
-          compiling on recent Linux and Solaris OS'.  The ndmjob
-          reference implementation from Traakan is known to
-          compile on Solaris 10.
-
-  Notes: Kern: I am not at all in favor of this until NDMP becomes
-          an Open Standard or until there are Open Source libraries
-          that interface to it.
-
-Item h7: Commercial database support
-  Origin: Russell Howe <russell_howe dot wreckage dot org>
-  Date:  26 July 2006
-  Status:
-
-  What: It would be nice for the database backend to support more databases.
-          I'm thinking of SQL Server at the moment, but I guess Oracle, DB2,
-          MaxDB, etc are all candidates.  SQL Server would presumably be
-          implemented using FreeTDS or maybe an ODBC library?
-
-  Why: We only really have one database server, which is MS SQL Server 2000.
-          Maintaining a second one for the backup software (we grew out of
-          SQLite, which I liked, but which didn't work so well with our
-          database size).  We don't really have a machine with the resources
-          to run postgres, and would rather only maintain a single DBMS.
-          We're stuck with SQL Server because pretty much all the company's
-          custom applications (written by consultants) are locked into SQL
-          Server 2000.  I can imagine this scenario is fairly common, and it
-          would be nice to use the existing properly specced database server
-          for storing Bacula's catalog, rather than having to run a second
-          DBMS.
-
-  Notes: This might be nice, but someone other than me will probably need to
-          implement it, and at the moment, proprietary code cannot legally
-          be mixed with Bacula GPLed code.  This would be possible only
-          providing the vendors provide GPLed (or OpenSource) interface
-          code.
-
-Item h8: Incorporation of XACML2/SAML2 parsing
-   Date:  19 January 2006
-   Origin: Adam Thornton <athornton@sinenomine.net>
-   Status: Blue sky
-
-   What: XACML is "eXtensible Access Control Markup Language" and "SAML is
-          the "Security Assertion Markup Language"--an XML standard for
-          making statements about identity and authorization.  Having these
-          would give us a framework to approach ACLs in a generic manner,
-          and in a way flexible enough to support the four major sorts of
-          ACLs I see as a concern to Bacula at this point, as well as
-          (probably) to deal with new sorts of ACLs that may appear in the
-          future.
-
-   Why: Bacula is beginning to need to back up systems with ACLs that do not
-          map cleanly onto traditional Unix permissions.  I see four sets of
-          ACLs--in general, mutually incompatible with one another--that
-          we're going to need to deal with.  These are: NTFS ACLs, POSIX
-          ACLs, NFSv4 ACLS, and AFS ACLS. (Some may question the relevance
-          of AFS; AFS is one of Sine Nomine's core consulting businesses,
-          and having a reputable file-level backup and restore technology
-          for it (as Tivoli is probably going to drop AFS support soon since
-          IBM no longer supports AFS) would be of huge benefit to our
-          customers; we'd most likely create the AFS support at Sine Nomine
-          for inclusion into the Bacula (and perhaps some changes to the
-          OpenAFS volserver) core code.)
-
-          Now, obviously, Bacula already handles NTFS just fine.  However, I
-          think there's a lot of value in implementing a generic ACL model,
-          so that it's easy to support whatever particular instances of ACLs
-          come down the pike: POSIX ACLS (think SELinux) and NFSv4 are the
-          obvious things arriving in the Linux world in a big way in the
-          near future.  XACML, although overcomplicated for our needs,
-          provides this framework, and we should be able to leverage other
-          people's implementations to minimize the amount of work *we* have
-          to do to get a generic ACL framework.  Basically, the costs of
-          implementation are high, but they're largely both external to
-          Bacula and already sunk.
-
-   Notes: As you indicate this is a bit of "blue sky" or in other words,
-          at the moment, it is a bit esoteric to consider for Bacula.
-
-Item h9: Archive data
-  Date:  15/5/2006
-  Origin: calvin streeting calvin at absentdream dot com
-  Status:
-
-  What:  The abilty to archive to media (dvd/cd) in a uncompressed format
-          for dead filing (archiving not backing up)
-
-    Why: At work when jobs are finished and moved off of the main
-          file servers (raid based systems) onto a simple Linux
-          file server (ide based system) so users can find old
-          information without contacting the IT dept.
-
-          So this data dosn't realy change it only gets added to,
-          But it also needs backing up.  At the moment it takes
-          about 8 hours to back up our servers (working data) so
-          rather than add more time to existing backups i am trying
-          to implement a system where we backup the acrhive data to
-          cd/dvd these disks would only need to be appended to
-          (burn only new/changed files to new disks for off site
-          storage).  basialy understand the differnce between
-          achive data and live data.
-
-  Notes: Scan the data and email me when it needs burning divide
-          into predefined chunks keep a recored of what is on what
-          disk make me a label (simple php->mysql=>pdf stuff) i
-          could do this bit ability to save data uncompresed so
-          it can be read in any other system (future proof data)
-          save the catalog with the disk as some kind of menu
-          system 
-
-   Notes: Kern: I don't understand this item, and in any case, if it
-          is specific to DVD/CDs, which we do not recommend using, 
-          it is unlikely to be implemented except as a user 
-          submitted patch.
-
-
-Item h10: Clustered file-daemons
-  Origin: Alan Brown ajb2 at mssl dot ucl dot ac dot uk
-  Date:  24 July 2006
-  Status:
-  What:  A "virtual" filedaemon, which is actually a cluster of real ones.
-
-  Why:   In the case of clustered filesystems (SAN setups, GFS, or OCFS2, etc)
-          multiple machines may have access to the same set of filesystems
-
-          For performance reasons, one may wish to initate backups from
-          several of these machines simultaneously, instead of just using
-          one backup source for the common clustered filesystem.
-
-          For obvious reasons, normally backups of $A-FD/$PATH and
-          B-FD/$PATH are treated as different backup sets. In this case
-          they are the same communal set.
-
-          Likewise when restoring, it would be easier to just specify
-          one of the cluster machines and let bacula decide which to use.
-
-          This can be faked to some extent using DNS round robin entries
-          and a virtual IP address, however it means "status client" will
-          always give bogus answers. Additionally there is no way of
-          spreading the load evenly among the servers.
-
-          What is required is something similar to the storage daemon
-          autochanger directives, so that Bacula can keep track of
-          operating backups/restores and direct new jobs to a "free"
-          client.
-
-   Notes: Kern: I don't understand the request enough to be able to
-          implement it. A lot more design detail should be presented
-          before voting on this project.
-
-      Feature Request Form

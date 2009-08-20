@@ -43,7 +43,7 @@
  *
  *     Kern Sibbald, May MMI
  *
- *   Version $Id: dircmd.c 7999 2008-11-06 21:40:43Z kerns $
+ *   Version $Id: dircmd.c 9025 2009-07-16 13:03:53Z ricozz $
  *
  */
 
@@ -61,6 +61,8 @@ extern bool init_done;
 static char derrmsg[]     = "3900 Invalid command\n";
 static char OKsetdebug[]  = "3000 OK setdebug=%d\n";
 static char invalid_cmd[] = "3997 Invalid command for a Director with Monitor directive enabled.\n";
+static char OK_bootstrap[]    = "3000 OK bootstrap\n";
+static char ERROR_bootstrap[] = "3904 Error bootstrap\n";
 
 /* Imported functions */
 extern void terminate_child();
@@ -658,8 +660,9 @@ static bool mount_cmd(JCR *jcr)
             /* Someone is waiting, wake him */
             Dmsg0(100, "Waiting for mount. Attempting to wake thread\n");
             dev->set_blocked(BST_MOUNT);
-            dir->fsend("3001 OK mount. Device=%s\n", 
-               dev->print_name());
+            dir->fsend("3001 OK mount requested. %sDevice=%s\n", 
+                       slot>0?_("Specified slot ignored. "):"",
+                       dev->print_name());
             pthread_cond_broadcast(&dev->wait_next_vol);
             Dmsg1(100, "JobId=%u broadcast wait_device_release\n", (uint32_t)dcr->jcr->JobId);
             pthread_cond_broadcast(&wait_device_release);
@@ -935,13 +938,65 @@ static bool release_cmd(JCR *jcr)
    return true;
 }
 
+static pthread_mutex_t bsr_mutex = PTHREAD_MUTEX_INITIALIZER;
+static uint32_t bsr_uniq = 0;
+
+static bool get_bootstrap_file(JCR *jcr, BSOCK *sock)
+{
+   POOLMEM *fname = get_pool_memory(PM_FNAME);
+   FILE *bs;
+   bool ok = false;
+
+   if (jcr->RestoreBootstrap) {
+      unlink(jcr->RestoreBootstrap);
+      free_pool_memory(jcr->RestoreBootstrap);
+   }
+   P(bsr_mutex);
+   bsr_uniq++;
+   Mmsg(fname, "%s/%s.%s.%d.bootstrap", me->working_directory, me->hdr.name,
+      jcr->Job, bsr_uniq);
+   V(bsr_mutex);
+   Dmsg1(400, "bootstrap=%s\n", fname);
+   jcr->RestoreBootstrap = fname;
+   bs = fopen(fname, "a+b");           /* create file */
+   if (!bs) {
+      berrno be;
+      Jmsg(jcr, M_FATAL, 0, _("Could not create bootstrap file %s: ERR=%s\n"),
+         jcr->RestoreBootstrap, be.bstrerror());
+      goto bail_out;
+   }
+   Dmsg0(10, "=== Bootstrap file ===\n");
+   while (sock->recv() >= 0) {
+       Dmsg1(10, "%s", sock->msg);
+       fputs(sock->msg, bs);
+   }
+   fclose(bs);
+   Dmsg0(10, "=== end bootstrap file ===\n");
+   jcr->bsr = parse_bsr(jcr, jcr->RestoreBootstrap);
+   if (!jcr->bsr) {
+      Jmsg(jcr, M_FATAL, 0, _("Error parsing bootstrap file.\n"));
+      goto bail_out;
+   }
+   if (debug_level >= 10) {
+      dump_bsr(jcr->bsr, true);
+   }
+   /* If we got a bootstrap, we are reading, so create read volume list */
+   create_restore_volume_list(jcr);
+   ok = true;
+
+bail_out:
+   unlink(jcr->RestoreBootstrap);
+   free_pool_memory(jcr->RestoreBootstrap);
+   jcr->RestoreBootstrap = NULL;
+   if (!ok) {
+      sock->fsend(ERROR_bootstrap);
+      return false;
+   }
+   return sock->fsend(OK_bootstrap);
+}
 
 static bool bootstrap_cmd(JCR *jcr)
 {
-   /* If getting the bootstrap file succeeds, we do not need
-    *  the FD because we will be reading.
-    */
-   jcr->need_fd = false;
    return get_bootstrap_file(jcr, jcr->dir_bsock);
 }
 

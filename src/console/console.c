@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *     Version $Id: console.c 8595 2009-03-25 10:23:42Z kerns $
+ *     Version $Id: console.c 8827 2009-05-14 15:02:23Z kerns $
  */
 
 #include "bacula.h"
@@ -101,6 +101,7 @@ static int inputcmd(FILE *input, BSOCK *UA_sock);
 static int outputcmd(FILE *input, BSOCK *UA_sock);
 static int teecmd(FILE *input, BSOCK *UA_sock);
 static int quitcmd(FILE *input, BSOCK *UA_sock);
+static int helpcmd(FILE *input, BSOCK *UA_sock);
 static int echocmd(FILE *input, BSOCK *UA_sock);
 static int timecmd(FILE *input, BSOCK *UA_sock);
 static int sleepcmd(FILE *input, BSOCK *UA_sock);
@@ -176,11 +177,12 @@ static struct cmdstruct commands[] = {
  { N_("exec"),       execcmd,      _("execute an external command")},
  { N_("exit"),       quitcmd,      _("exit = quit")},
  { N_("zed_keys"),   zed_keyscmd,  _("zed_keys = use zed keys instead of bash keys")},
+ { N_("help"),       helpcmd,      _("help listing")},
 #ifdef HAVE_READLINE
  { N_("separator"),  eolcmd,       _("set command separator")},
 #endif
              };
-#define comsize (sizeof(commands)/sizeof(struct cmdstruct))
+#define comsize ((int)(sizeof(commands)/sizeof(struct cmdstruct)))
 
 static int do_a_command(FILE *input, BSOCK *UA_sock)
 {
@@ -1068,8 +1070,7 @@ static int execcmd(FILE *input, BSOCK *UA_sock)
 static int echocmd(FILE *input, BSOCK *UA_sock)
 {
    for (int i=1; i < argc; i++) {
-      senditf("%s", argk[i]);
-      sendit(" ");
+      senditf("%s ", argk[i]);
    }
    sendit("\n");
    return 1;
@@ -1079,6 +1080,16 @@ static int quitcmd(FILE *input, BSOCK *UA_sock)
 {
    return 0;
 }
+
+static int helpcmd(FILE *input, BSOCK *UA_sock)
+{
+   int i;
+   for (i=0; i<comsize; i++) { 
+      senditf("  %-10s %s\n", commands[i].key, commands[i].help);
+   }
+   return 1;   
+}
+
 
 static int sleepcmd(FILE *input, BSOCK *UA_sock)
 {

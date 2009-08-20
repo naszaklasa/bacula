@@ -33,7 +33,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_get.c 8508 2009-03-07 20:59:46Z kerns $
+ *    Version $Id: sql_get.c 8992 2009-07-14 14:56:29Z ricozz $
  */
 
 
@@ -429,7 +429,7 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
    Mmsg(mdb->cmd,
 "SELECT VolumeName,MediaType,FirstIndex,LastIndex,StartFile,"
 "JobMedia.EndFile,StartBlock,JobMedia.EndBlock,Copy,"
-"Slot,StorageId"
+"Slot,StorageId,InChanger"
 " FROM JobMedia,Media WHERE JobMedia.JobId=%s"
 " AND JobMedia.MediaId=Media.MediaId ORDER BY VolIndex,JobMediaId",
         edit_int64(JobId, ed1));
@@ -470,6 +470,7 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
 //             Vols[i].Copy = str_to_uint64(row[8]);
                Vols[i].Slot = str_to_uint64(row[9]);
                StorageId = str_to_uint64(row[10]);
+               Vols[i].InChanger = str_to_uint64(row[11]);
                Vols[i].Storage[0] = 0;
                SId[i] = StorageId;
             }
@@ -1093,6 +1094,9 @@ bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids,
  * Differential : get the last full id
  * Incremental : get the last full + last diff + last incr(s) ids
  *
+ * If you specify jr->StartTime, it will be used to limit the search
+ * in the time. (usually now) 
+ *
  * TODO: look and merge from ua_restore.c
  */
 bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb, 
@@ -1102,7 +1106,11 @@ bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb,
    char clientid[50], jobid[50], filesetid[50];
    char date[MAX_TIME_LENGTH];
    POOL_MEM query(PM_FNAME);
-   bstrutime(date, sizeof(date),  time(NULL) + 1);
+   
+   /* Take the current time as upper limit if nothing else specified */
+   time_t StartTime = (jr->StartTime)?jr->StartTime:time(NULL);
+
+   bstrutime(date, sizeof(date),  StartTime + 1);
    jobids[0]='\0';
 
    /* First, find the last good Full backup for this job/client/fileset */
@@ -1133,11 +1141,13 @@ bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb,
   "WHERE ClientId = %s "
     "AND Level='D' AND JobStatus IN ('T','W') AND Type='B' "
     "AND StartTime > (SELECT EndTime FROM btemp3%s ORDER BY EndTime DESC LIMIT 1) "
+    "AND StartTime < '%s' "
     "AND FileSet.FileSet= (SELECT FileSet FROM FileSet WHERE FileSetId = %s) "
   "ORDER BY Job.JobTDate DESC LIMIT 1 ",
            jobid,
            clientid,
            jobid,
+           date,
            filesetid);
 
       if (!db_sql_query(mdb, query.c_str(), NULL, NULL)) {
@@ -1152,11 +1162,13 @@ bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb,
   "WHERE ClientId = %s "
     "AND Level='I' AND JobStatus IN ('T','W') AND Type='B' "
     "AND StartTime > (SELECT EndTime FROM btemp3%s ORDER BY EndTime DESC LIMIT 1) "
+    "AND StartTime < '%s' "
     "AND FileSet.FileSet= (SELECT FileSet FROM FileSet WHERE FileSetId = %s) "
   "ORDER BY Job.JobTDate DESC ",
            jobid,
            clientid,
            jobid,
+           date,
            filesetid);
       if (!db_sql_query(mdb, query.c_str(), NULL, NULL)) {
          goto bail_out;

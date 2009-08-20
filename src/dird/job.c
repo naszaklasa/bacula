@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c 8754 2009-04-27 15:43:34Z ricozz $
+ *    Version $Id: job.c 8937 2009-07-01 19:00:38Z kerns $
  */
 
 #include "bacula.h"
@@ -200,33 +200,38 @@ bool setup_job(JCR *jcr)
    case JT_BACKUP:
       if (!do_backup_init(jcr)) {
          backup_cleanup(jcr, JS_ErrorTerminated);
+         goto bail_out;
       }
       break;
    case JT_VERIFY:
       if (!do_verify_init(jcr)) {
          verify_cleanup(jcr, JS_ErrorTerminated);
+         goto bail_out;
       }
       break;
    case JT_RESTORE:
       if (!do_restore_init(jcr)) {
          restore_cleanup(jcr, JS_ErrorTerminated);
+         goto bail_out;
       }
       break;
    case JT_ADMIN:
       if (!do_admin_init(jcr)) {
          admin_cleanup(jcr, JS_ErrorTerminated);
+         goto bail_out;
       }
       break;
    case JT_COPY:
    case JT_MIGRATE:
       if (!do_migration_init(jcr)) { 
          migration_cleanup(jcr, JS_ErrorTerminated);
+         goto bail_out;
       }
       break;
    default:
       Pmsg1(0, _("Unimplemented job type: %d\n"), jcr->get_JobType());
       set_jcr_job_status(jcr, JS_ErrorTerminated);
-      break;
+      goto bail_out;
    }
 
    generate_job_event(jcr, "JobInit");
@@ -671,7 +676,9 @@ bool allow_duplicate_job(JCR *jcr)
    }
    if (!job->AllowHigherDuplicates) {
       foreach_jcr(djcr) {
-         char ec1[50];
+         if (jcr == djcr || djcr->JobId == 0) {
+            continue;                   /* do not cancel this job or consoles */
+         }
          if (strcmp(job->name(), djcr->job->name()) == 0) {
             bool cancel_queued = false;
             if (job->DuplicateJobProximity > 0) {
@@ -681,12 +688,6 @@ bool allow_duplicate_job(JCR *jcr)
                }
             }
             /* Cancel */
-            if (!(job->CancelQueuedDuplicates || job->CancelRunningDuplicates)) {
-               /* Zap current job */
-               Jmsg(jcr, M_FATAL, 0, _("Duplicate job not allowed. JobId=%s\n"),
-                  edit_uint64(djcr->JobId, ec1));
-               return false;
-            }
             /* If CancelQueuedDuplicates is set do so only if job is queued */
             if (job->CancelQueuedDuplicates) {
                 switch (djcr->JobStatus) {
@@ -705,13 +706,17 @@ bool allow_duplicate_job(JCR *jcr)
             }
             if (cancel_queued || job->CancelRunningDuplicates) {
                UAContext *ua = new_ua_context(djcr);
-               Jmsg(jcr, M_INFO, 0, _("Cancelling duplicate JobId=%s.\n"), 
-                  edit_uint64(djcr->JobId, ec1));
+               Jmsg(jcr, M_INFO, 0, _("Cancelling duplicate JobId=%d.\n"), djcr->JobId);
                ua->jcr = djcr;
                cancel_job(ua, djcr);
                free_ua_context(ua);
-               Dmsg2(800, "Have cancelled JCR %p Job=%d\n", djcr, djcr->JobId);
+               Dmsg2(800, "Have cancelled JCR %p JobId=%d\n", djcr, djcr->JobId);
+            } else {
+               /* Zap current job */
+               Jmsg(jcr, M_FATAL, 0, _("JobId %d already running. Duplicate job not allowed.\n"),
+                  djcr->JobId);
             }
+            break;                 /* did our work, get out */
          }
       }
       endeach_jcr(djcr);

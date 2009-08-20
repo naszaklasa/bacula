@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: protos.h 8595 2009-03-25 10:23:42Z kerns $
+ *   Version $Id: protos.h 8947 2009-07-02 11:36:26Z ricozz $
  */
 
 extern bool blast_data_to_storage_daemon(JCR *jcr, char *addr);
@@ -54,6 +54,7 @@ bool parse_acl_stream(JCR *jcr, int stream);
 bool accurate_send_deleted_list(JCR *jcr);
 bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt);
 bool accurate_mark_file_as_seen(JCR *jcr, char *fname);
+void accurate_free(JCR *jcr);
 
 /* from backup.c */
 bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream);

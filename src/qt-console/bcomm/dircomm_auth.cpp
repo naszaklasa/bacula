@@ -33,7 +33,7 @@
  *
  *     Kern Sibbald, June MMI   adapted to bat, Jan MMVI
  *
- *     Version $Id: dircomm_auth.cpp 8640 2009-03-29 10:55:53Z kerns $
+ *     Version $Id: dircomm_auth.cpp 9052 2009-07-18 03:00:36Z bartleyd2 $
  *
  */
 
@@ -160,7 +160,9 @@ bool DirComm::authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons,
          dir->host(), dir->port());
       return false;
    } else {
-      bsnprintf(errmsg, errmsg_len, "%s", dir->msg);
+      if (m_conn == 0) { 
+         bsnprintf(errmsg, errmsg_len, "%s", dir->msg);
+      }
    }
    return true;
 

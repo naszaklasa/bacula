@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: pages.h 8660 2009-03-31 03:11:25Z bartleyd2 $
+ *   Version $Id: pages.h 8897 2009-06-13 15:30:42Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -71,6 +71,8 @@ public:
    void setTreeWidgetItemDockColor();
    void consoleCommand(QString &);
    void consoleCommand(QString &, int conn);
+   void consoleCommand(QString &, bool setCurrent);
+   void consoleCommand(QString &, int conn, bool setCurrent);
    QString &name() { return m_name; };
    void getVolumeList(QStringList &);
    void getStatusList(QStringList &);

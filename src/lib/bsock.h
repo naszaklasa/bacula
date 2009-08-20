@@ -38,7 +38,7 @@
  * Negative msglen, is special "signal" (no data follows).
  *   See below for SIGNAL codes.
  *
- *   Version $Id: bsock.h 7410 2008-07-20 23:32:31Z kerns $
+ *   Version $Id: bsock.h 8863 2009-05-26 13:44:08Z ricozz $
  */
 
 #ifndef __BSOCK_H_
@@ -89,6 +89,7 @@ public:
    FILE *m_spool_fd;                  /* spooling file */
    struct sockaddr client_addr;       /* client's IP address */
    struct sockaddr_in peer_addr;      /* peer's IP address */
+   IPADDR *src_addr;                  /* IP address to source connections from */
 
    /* methods -- in bsock.c */
    void init();
@@ -116,6 +117,7 @@ public:
                   TLS_CONTEXT *tls_ctx, char *msg, int msglen);
    bool set_locking();                /* in bsock.c */
    void clear_locking();              /* in bsock.c */
+   void set_source_address(dlist *src_addr_list);
 
    /* Inline functions */
    void set_jcr(JCR *jcr) { m_jcr = jcr; };

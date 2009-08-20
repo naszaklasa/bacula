@@ -162,6 +162,26 @@ void BSOCK::fin_init(JCR * jcr, int sockfd, const char *who, const char *host, i
 }
 
 /*
+ * Copy the address from the configuration dlist that gets passed in
+ */
+void BSOCK::set_source_address(dlist *src_addr_list)
+{
+   IPADDR *addr = NULL;
+
+   // delete the object we already have, if it's allocated
+   if (src_addr) {
+     free( src_addr);
+     src_addr = NULL;
+   }
+
+   if (src_addr_list) {
+     addr = (IPADDR*) src_addr_list->first();
+     src_addr = New( IPADDR(*addr));
+   }
+}
+
+
+/*
  * Open a TCP connection to the server
  * Returns NULL
  * Returns BSOCK * pointer on success
@@ -208,6 +228,19 @@ bool BSOCK::open(JCR *jcr, const char *name, char *host, char *service,
             ipaddr->get_family(), ipaddr->get_port_host_order(), be.bstrerror());
          continue;
       }
+
+      /* Bind to the source address if it is set */
+      if (src_addr) {
+         if (bind(sockfd, src_addr->get_sockaddr(), src_addr->get_sockaddr_len()) < 0) {
+            berrno be;
+            save_errno = errno;
+            *fatal = 1;
+            Pmsg2(000, _("Source address bind error. proto=%d. ERR=%s\n"),
+                  src_addr->get_family(), be.bstrerror() );
+            continue;
+         }
+      }
+
       /*
        * Keep socket from timing out from inactivity
        */
@@ -885,6 +918,10 @@ void BSOCK::destroy()
       free(m_host);
       m_host = NULL;
    }
+   if (src_addr) {
+      free(src_addr);
+      src_addr = NULL;
+   } 
    free(this);
 }
 

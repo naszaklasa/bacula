@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: console.h 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *   Version $Id: console.h 9054 2009-07-18 21:03:34Z kerns $
  *
  *   Kern Sibbald, January 2007
  */
@@ -81,6 +81,7 @@ public:
    bool notify(int conn, bool enable); // enables/disables socket notification - returns the previous state
    bool is_notify_enabled(int conn) const;
    bool availableDirComm(int &conn);
+   bool currentDirComm(int &conn);
    void displayToPrompt(int conn);
 
    bool dir_cmd(int conn, const char *cmd, QStringList &results);
@@ -144,6 +145,7 @@ public slots:
 
 public:
    DIRRES *m_dir;                  /* so various pages can reference it */
+   bool m_warningPrevent;
 
 private:
    QTextEdit *m_textEdit;

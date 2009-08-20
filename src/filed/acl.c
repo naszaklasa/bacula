@@ -51,46 +51,26 @@
  *   Original written by Preben 'Peppe' Guldberg, December MMIV
  *   Major rewrite by Marco van Wieringen, November MMVIII
  *
- *   Version $Id: acl.c 8677 2009-04-02 08:24:40Z marcovw $
+ *   Version $Id: acl.c 8967 2009-07-09 17:34:01Z marcovw $
  */
   
 #include "bacula.h"
 #include "filed.h"
   
-/*
- * List of supported OSes. Everything outside that gets stub functions.
- * Also when ACL support is explicitly disabled.
- * Not sure if all the HAVE_XYZ_OS are correct for autoconf.
- * The ones that says man page, are coded according to man pages only.
- */
-#if !defined(HAVE_ACL)              /* ACL support is required, of course */ \
-   || !( defined(HAVE_AIX_OS)       /* man page -- may need flags         */ \
-      || defined(HAVE_DARWIN_OS)    /* tested   -- compile without flags  */ \
-      || defined(HAVE_FREEBSD_OS)   /* tested   -- compile without flags  */ \
-      || defined(HAVE_HPUX_OS)      /* man page -- may need flags         */ \
-      || defined(HAVE_IRIX_OS)      /* man page -- compile without flags  */ \
-      || defined(HAVE_LINUX_OS)     /* tested   -- compile with -lacl     */ \
-      || defined(HAVE_OSF1_OS)      /* man page -- may need -lpacl        */ \
-      || defined(HAVE_SUN_OS)       /* tested   -- compile with -lsec     */ \
-       )
-
+#if !defined(HAVE_ACL)
 /*
  * Entry points when compiled without support for ACLs or on an unsupported platform.
  */
 bool build_acl_streams(JCR *jcr, FF_PKT *ff_pkt)
 {
-   Jmsg(jcr, M_FATAL, 0, _("ACL support not configured for your machine.\n"));
    return false;
 }
 
 bool parse_acl_stream(JCR *jcr, int stream)
 {
-   Jmsg(jcr, M_FATAL, 0, _("ACL support not configured for your machine.\n"));
    return false;
 }
-
 #else
-
 /*
  * Send an ACL stream to the SD.
  */
@@ -303,7 +283,7 @@ static bool acl_is_trivial(acl_t acl)
        */
       if (tag != ACL_USER_OBJ &&
           tag != ACL_GROUP_OBJ &&
-          tag != ACL_OTHER)
+          tag != ACL_OTHER_OBJ)
          return false;
    }
 
@@ -406,31 +386,35 @@ static int generic_get_acl_from_os(JCR *jcr, bacl_type acltype)
       pm_strcpy(jcr->acl_data, "");
       acl_free(acl);
 
-      return -1;
+      return 0;                       /* non-fatal error */
    }
 
    /*
     * Handle errors gracefully.
     */
-   switch (errno) {
+   if (acl == (acl_t)NULL) {
+      switch (errno) {
 #if defined(BACL_ENOTSUP)
-   case BACL_ENOTSUP:
-      /*
-       * Not supported, just pretend there is nothing to see
-       */
-      pm_strcpy(jcr->acl_data, "");
-      return 0;
+      case BACL_ENOTSUP:
+         break;                       /* not supported */
 #endif
-   default:
-      berrno be;
-      Jmsg2(jcr, M_ERROR, 0, _("acl_get_file error on file \"%s\": ERR=%s\n"),
-         jcr->last_fname, be.bstrerror());
-      Dmsg2(100, "acl_get_file error file=%s ERR=%s\n",  
-         jcr->last_fname, be.bstrerror());
+      default:
+         berrno be;
+         /* Some real error */
+         Jmsg2(jcr, M_ERROR, 0, _("acl_get_file error on file \"%s\": ERR=%s\n"),
+            jcr->last_fname, be.bstrerror());
+         Dmsg2(100, "acl_get_file error file=%s ERR=%s\n",  
+            jcr->last_fname, be.bstrerror());
 
-      pm_strcpy(jcr->acl_data, "");
-      return -1;
+         pm_strcpy(jcr->acl_data, "");
+         return 0;                    /* non-fatal error */
+      }
    }
+   /*
+    * Not supported, just pretend there is nothing to see
+    */
+   pm_strcpy(jcr->acl_data, "");
+   return 0;
 }
 
 /*
@@ -529,12 +513,12 @@ static bool darwin_build_acl_streams(JCR *jcr, FF_PKT *ff_pkt)
     */
    if ((jcr->acl_data_len = generic_get_acl_from_os(jcr, BACL_TYPE_ACCESS)) < 0)
       return false;
+#endif
 
    if (jcr->acl_data_len > 0) {
       if (!send_acl_stream(jcr, STREAM_ACL_DARWIN_ACCESS_ACL))
          return false;
    }
-#endif
 
    return true;
 }
@@ -1141,7 +1125,7 @@ static bool acl_is_trivial(int count, aclent_t *entries)
 /*
  * OS specific functions for handling different types of acl streams.
  */
-static bool solaris_build_acl_streams(JCR *jcr, FF_PKT *ff_pkt);
+static bool solaris_build_acl_streams(JCR *jcr, FF_PKT *ff_pkt)
 {
    int n;
    aclent_t *acls;

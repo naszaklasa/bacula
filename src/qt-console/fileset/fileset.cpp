@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: fileset.cpp 8640 2009-03-29 10:55:53Z kerns $
+ *   Version $Id: fileset.cpp 8896 2009-06-13 14:55:28Z bartleyd2 $
  *
  *  FileSet Class
  *
@@ -92,6 +92,7 @@ void FileSet::populateTable()
 
    QString fileset_comsep("");
    bool first = true;
+   QStringList notFoundList = m_console->fileset_list;
    foreach(QString filesetName, m_console->fileset_list) {
       if (first) {
          fileset_comsep += "'" + filesetName + "'";
@@ -101,6 +102,8 @@ void FileSet::populateTable()
          fileset_comsep += ",'" + filesetName + "'";
    }
 
+   int row = 0;
+   tableWidget->setRowCount(m_console->fileset_list.count());
    if (fileset_comsep != "") {
       /* Set up query QString and header QStringList */
       QString query("");
@@ -115,13 +118,15 @@ void FileSet::populateTable()
          Pmsg1(000, "FileSet query cmd : %s\n",query.toUtf8().data());
       }
       if (m_console->sql_cmd(query, results)) {
-         int row = 0;
          QStringList fieldlist;
-         tableWidget->setRowCount(results.count());
 
          /* Iterate through the record returned from the query */
          foreach (QString resultline, results) {
             fieldlist = resultline.split("\t");
+
+            /* remove this fileSet from notFoundList */
+            int indexOf = notFoundList.indexOf(fieldlist[0]);
+            if (indexOf != -1) { notFoundList.removeAt(indexOf); }
 
             TableItemFormatter item(*tableWidget, row);
   
@@ -142,6 +147,12 @@ void FileSet::populateTable()
          }
       }
    }
+   foreach(QString filesetName, notFoundList) {
+      TableItemFormatter item(*tableWidget, row);
+      item.setTextFld(0, filesetName);
+      row++;
+   }
+   
    /* set default sorting */
    tableWidget->sortByColumn(headerlist.indexOf(tr("Create Time")), Qt::DescendingOrder);
    tableWidget->setSortingEnabled(true);
@@ -218,7 +229,7 @@ void FileSet::createContextMenu()
    connect(actionRefreshFileSet, SIGNAL(triggered()), this,
                 SLOT(populateTable()));
    connect(actionStatusFileSetInConsole, SIGNAL(triggered()), this,
-                SLOT(consoleStatusFileSet()));
+                SLOT(consoleShowFileSet()));
    connect(actionShowJobs, SIGNAL(triggered()), this,
                 SLOT(showJobs()));
 }
@@ -227,10 +238,10 @@ void FileSet::createContextMenu()
  * Function responding to actionListJobsofFileSet which calls mainwin function
  * to create a window of a list of jobs of this fileset.
  */
-void FileSet::consoleStatusFileSet()
+void FileSet::consoleShowFileSet()
 {
-   QString cmd("status fileset=");
-   cmd += m_currentlyselected;
+   QString cmd("show fileset=\"");
+   cmd += m_currentlyselected + "\"";
    consoleCommand(cmd);
 }
 

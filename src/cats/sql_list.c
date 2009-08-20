@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_list.c 8508 2009-03-07 20:59:46Z kerns $
+ *    Version $Id: sql_list.c 9045 2009-07-17 08:22:59Z ricozz $
  */
 
 
@@ -253,18 +253,18 @@ void db_list_copies_records(JCR *jcr, B_DB *mdb, uint32_t limit, char *JobIds,
    }
 
    if (JobIds && JobIds[0]) {
-      Mmsg(str_jobids, " AND (C.PriorJobId IN (%s) OR C.JobId IN (%s)) ", 
+      Mmsg(str_jobids, " AND (Job.PriorJobId IN (%s) OR Job.JobId IN (%s)) ", 
            JobIds, JobIds);      
    }
 
    db_lock(mdb);
    Mmsg(mdb->cmd, 
-   "SELECT DISTINCT C.PriorJobId AS JobId, C.Job, "
-                   "C.JobId AS CopyJobId, M.MediaType "
-     "FROM Job AS C " 
-     "JOIN JobMedia    USING (JobId) "
-     "JOIN Media AS M  USING (MediaId) "
-    "WHERE C.Type = '%c' %s ORDER BY C.PriorJobId DESC %s",
+   "SELECT DISTINCT Job.PriorJobId AS JobId, Job.Job, "
+                   "Job.JobId AS CopyJobId, Media.MediaType "
+     "FROM Job " 
+     "JOIN JobMedia USING (JobId) "
+     "JOIN Media    USING (MediaId) "
+    "WHERE Job.Type = '%c' %s ORDER BY Job.PriorJobId DESC %s",
         (char) JT_JOB_COPY, str_jobids.c_str(), str_limit.c_str());
 
    if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
