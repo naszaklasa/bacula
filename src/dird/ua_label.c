@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, April MMIII
  *
- *   Version $Id: ua_label.c 7701 2008-10-04 14:09:48Z ricozz $
+ *   Version $Id: ua_label.c 9036 2009-07-16 19:58:54Z ricozz $
  */
 
 #include "bacula.h"
@@ -1063,8 +1063,8 @@ void status_slots(UAContext *ua, STORE *store_r)
       goto bail_out;
    }
    if (!ua->api) {
-      ua->info_msg(_(" Slot |   Volume Name    |   Status  |     Media Type       |      Pool          |\n"));
-      ua->info_msg(_("------+------------------+-----------+----------------------+--------------------|\n"));
+      ua->send_msg(_(" Slot |   Volume Name    |   Status  |     Media Type       |      Pool          |\n"));
+      ua->send_msg(_("------+------------------+-----------+----------------------+--------------------|\n"));
    }
 
    /* Walk through the list getting the media records */
@@ -1085,11 +1085,11 @@ void status_slots(UAContext *ua, STORE *store_r)
       if (!vl->VolName) {
          Dmsg1(100, "No VolName for Slot=%d.\n", vl->Slot);
          if (!ua->api) {
-            ua->info_msg(slot_hformat,
+            ua->send_msg(slot_hformat,
                          vl->Slot, '*',
                          "?", "?", "?", "?");
          } else {
-            ua->info_msg(slot_api_empty_format, vl->Slot);
+            ua->send_msg(slot_api_empty_format, vl->Slot);
          }
          continue;
       }
@@ -1098,10 +1098,10 @@ void status_slots(UAContext *ua, STORE *store_r)
       for (; i < vl->Slot; i++) {
          if (slot_list[i]) {
             if (!ua->api) {
-               ua->info_msg(slot_hformat,
+               ua->send_msg(slot_hformat,
                             i, ' ', "", "", "", "");
             } else {
-               ua->info_msg(slot_api_empty_format, i);
+               ua->send_msg(slot_api_empty_format, i);
             }       
             slot_list[i]=0;
          }
@@ -1119,11 +1119,11 @@ void status_slots(UAContext *ua, STORE *store_r)
 
          if (!ua->api) {
             /* Print information */
-            ua->info_msg(slot_hformat,
+            ua->send_msg(slot_hformat,
                          vl->Slot, ((vl->Slot==mr.Slot)?' ':'*'),
                          mr.VolumeName, mr.VolStatus, mr.MediaType, pr.Name);
          } else {
-            ua->info_msg(slot_api_full_format,
+            ua->send_msg(slot_api_full_format,
                          vl->Slot, mr.Slot, mr.VolumeName, mr.VolStatus, 
                          mr.MediaType, pr.Name);
          }
@@ -1131,7 +1131,7 @@ void status_slots(UAContext *ua, STORE *store_r)
          db_unlock(ua->db);
          continue;
       } else {                  /* TODO: get information from catalog  */
-         ua->info_msg(slot_hformat,
+         ua->send_msg(slot_hformat,
                       vl->Slot, '*',
                       mr.VolumeName, "?", "?", "?");
       }
@@ -1143,10 +1143,10 @@ void status_slots(UAContext *ua, STORE *store_r)
    for (; i <= max_slots; i++) {
       if (slot_list[i]) {
          if (!ua->api) {
-            ua->info_msg(slot_hformat,
+            ua->send_msg(slot_hformat,
                          i, ' ', "", "", "", "");
          } else {
-            ua->info_msg(slot_api_empty_format, i);
+            ua->send_msg(slot_api_empty_format, i);
          } 
          slot_list[i]=0;
       }

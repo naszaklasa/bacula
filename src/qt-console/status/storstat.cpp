@@ -36,6 +36,7 @@
 #include <QTableWidgetItem>
 #include "storstat.h"
 #include "mount/mount.h"
+#include "label/label.h"
 
 /*
 .status storage=<storage-name> <keyword>
@@ -67,9 +68,9 @@ StorStat::StorStat(QString &storage, QTreeWidgetItem *parentTreeWidgetItem)
    m_timer = new QTimer(this);
    readSettings();
    dockPage();
-   QWidget::connect(m_timer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
 
    createConnections();
+   m_timer->start(1000);
    setCurrent();
 }
 
@@ -110,10 +111,16 @@ void StorStat::populateAll()
  */
 void StorStat::timerTriggered()
 {
-   bool iscurrent = mainWin->stackedWidget->currentIndex() == mainWin->stackedWidget->indexOf(this);
-   if (((isDocked() && iscurrent) || (!isDocked())) && (checkBox->checkState() == Qt::Checked)) {
-      populateAll();
+   double value = timerDisplay->value();
+   value -= 1;
+   if (value == 0) {
+      value = spinBox->value();
+      bool iscurrent = mainWin->stackedWidget->currentIndex() == mainWin->stackedWidget->indexOf(this);
+      if (((isDocked() && iscurrent) || (!isDocked())) && (checkBox->checkState() == Qt::Checked)) {
+         populateAll();
+      }
    }
+   timerDisplay->display(value);
 }
 
 /*
@@ -291,6 +298,7 @@ void StorStat::PgSeltreeWidgetClicked()
 void StorStat::currentStackItem()
 {
    populateAll();
+   timerDisplay->display(spinBox->value());
    if (!m_populated) {
       m_populated=true;
    }
@@ -302,16 +310,15 @@ void StorStat::currentStackItem()
  */
 void StorStat::createConnections()
 {
-   connect(actionRefresh, SIGNAL(triggered()), this,
-                   SLOT(populateAll()));
-   connect(tabWidget, SIGNAL(currentChanged(int)), this,
-                   SLOT(populateCurrentTab(int)));
-   connect(spinBox, SIGNAL(valueChanged(int)), this,
-                   SLOT(spinBoxValueChanged(int)));
+   connect(actionRefresh, SIGNAL(triggered()), this, SLOT(populateAll()));
+   connect(tabWidget, SIGNAL(currentChanged(int)), this, SLOT(populateCurrentTab(int)));
    connect(mountButton, SIGNAL(pressed()), this, SLOT(mountButtonPushed()));
    connect(umountButton, SIGNAL(pressed()), this, SLOT(umountButtonPushed()));
+   connect(labelButton, SIGNAL(pressed()), this, SLOT(labelButtonPushed()));
+   connect(releaseButton, SIGNAL(pressed()), this, SLOT(releaseButtonPushed()));
    terminatedTable->setContextMenuPolicy(Qt::ActionsContextMenu);
    terminatedTable->addAction(actionRefresh);
+   connect(m_timer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
 }
 
 /*
@@ -324,6 +331,11 @@ void StorStat::writeSettings()
    settings.setValue(m_splitText, splitter->saveState());
    settings.setValue("refreshInterval", spinBox->value());
    settings.setValue("refreshCheck", checkBox->checkState());
+   settings.endGroup();
+
+   settings.beginGroup("OpenOnExit");
+   QString toWrite = "StorageStatus_" + m_storage;
+   settings.setValue(toWrite, 1);
    settings.endGroup();
 }
 
@@ -341,7 +353,7 @@ void StorStat::readSettings()
    checkBox->setCheckState((Qt::CheckState)settings.value("refreshCheck", Qt::Checked).toInt());
    settings.endGroup();
 
-   m_timer->start(spinBox->value()*1000);
+   timerDisplay->display(spinBox->value());
 }
 
 /*
@@ -361,14 +373,6 @@ void StorStat::populateCurrentTab(int index)
       populateSpooling();
    if (index == 5)
       populateRunning();
-}
-
-/*
- * Set the timer when changed
- */
-void StorStat::spinBoxValueChanged(int newval)
-{
-   m_timer->setInterval(newval*1000);
 }
 
 /*
@@ -428,3 +432,17 @@ void StorStat::umountButtonPushed()
    QString cmd("umount storage=" + m_storage);
    consoleCommand(cmd);
 }
+
+/* Release a tape in the drive */
+void StorStat::releaseButtonPushed()
+{
+   QString cmd("release storage=");
+   cmd += m_storage;
+   consoleCommand(cmd);
+}
+
+/* Label Media populating current storage by default */
+void StorStat::labelButtonPushed()
+{
+   new labelPage(m_storage);
+}  

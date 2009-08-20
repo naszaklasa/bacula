@@ -303,6 +303,7 @@ _ZN5BSOCK8fin_initEP3JCRiPKcS3_iP8sockaddr
 _ZN5BSOCK8get_peerEPci
 _ZN5BSOCK9bstrerrorEv
 _ZN5BSOCK9wait_dataEii
+_ZN5BSOCK18set_source_addressEP5dlist
  
 ; bsys.o
 _Z10b_strerroriPcy

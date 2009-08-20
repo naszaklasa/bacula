@@ -3,27 +3,27 @@
 #
 
 Monitor {
-  Name = @hostname@-mon
+  Name = @basename@-mon
   Password = "@mon_dir_password@"         # password for the Directors   
   RefreshInterval = 5 seconds
 }
    
 Client {
-  Name = @hostname@-fd
+  Name = @basename@-fd
   Address = @hostname@
   FDPort = @fd_port@
   Password = "@mon_fd_password@"          # password for FileDaemon
 }
 
 Storage {
-  Name = @hostname@-sd
+  Name = @basename@-sd
   Address = @hostname@
   SDPort = @sd_port@
   Password = "@mon_sd_password@"          # password for StorageDaemon
 }
 
 Director {
-  Name = @hostname@-dir
+  Name = @basename@-dir
   DIRport = @dir_port@
   address = @hostname@
 }

@@ -86,6 +86,7 @@ bsmtp:
 Makefile.inc:
 	@echo Creating $@
 	$(ECHO_CMD)TOPDIR=`(cd ../../..;pwd)`; \
+	TOPDIR=$${DEPKGS:-$${TOPDIR}}; \
 	if test "$(WIN64)" = yes -a -e $${TOPDIR}/cross-tools/mingw-w64/bin/x86_64-pc-mingw32-gcc; then \
 		BINDIR=$${TOPDIR}/cross-tools/mingw-w64/bin; \
 		INCDIR=$${TOPDIR}/cross-tools/mingw-w64/x86_64-pc-mingw32/include; \

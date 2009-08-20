@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: main.cpp 8570 2009-03-21 11:12:26Z kerns $
+ *   Version $Id: main.cpp 8825 2009-05-14 10:41:48Z kerns $
  *
  *  Main program for bat (qt-console)
  *
@@ -49,7 +49,7 @@ static int check_resources();
 
 extern bool parse_bat_config(CONFIG *config, const char *configfile, int exit_code);
 
-#define CONFIG_FILE "./bat.conf"   /* default configuration file */
+#define CONFIG_FILE "bat.conf"     /* default configuration file */
 
 /* Static variables */
 static CONFIG *config;

@@ -28,7 +28,7 @@
 /*
  * Director external function prototypes
  *
- *   Version $Id: protos.h 8713 2009-04-11 12:35:04Z kerns $
+ *   Version $Id: protos.h 8982 2009-07-14 13:44:46Z kerns $
  */
 
 /* admin.c */
@@ -57,6 +57,8 @@ extern bool do_backup_init(JCR *jcr);
 extern bool do_backup(JCR *jcr);
 extern void backup_cleanup(JCR *jcr, int TermCode);
 extern void update_bootstrap_file(JCR *jcr);
+extern bool send_accurate_current_files(JCR *jcr);
+
 
 /* vbackup.c */
 extern bool do_vbackup_init(JCR *jcr);
@@ -95,7 +97,6 @@ extern int connect_to_file_daemon(JCR *jcr, int retry_interval,
                                   int max_retry_time, int verbose);
 extern bool send_include_list(JCR *jcr);
 extern bool send_exclude_list(JCR *jcr);
-extern bool send_bootstrap_file(JCR *jcr, BSOCK *sock);
 extern bool send_level_command(JCR *jcr);
 extern int get_attributes_and_put_in_catalog(JCR *jcr);
 extern void get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId);
@@ -160,6 +161,7 @@ extern bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore,
 extern bool start_storage_daemon_message_thread(JCR *jcr);
 extern int bget_dirmsg(BSOCK *bs);
 extern void wait_for_storage_daemon_termination(JCR *jcr);
+extern bool send_bootstrap_file(JCR *jcr, BSOCK *sd);
 
 /* next_vol.c */
 int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,

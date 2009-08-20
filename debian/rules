@@ -14,8 +14,6 @@ DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 CFLAGS = -g -Wall
 INSTALL_PROGRAM = install
 
-SHELL := bash
-
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0
 else
@@ -52,7 +50,8 @@ CONF_ALL	= --enable-smartalloc \
 		--libdir=\$${prefix}/lib/bacula \
 	--enable-batch-insert \
 	--disable-bwx-console \
-	--without-qwt
+	--without-qwt \
+	--enable-ipv6
 
 
 CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \
@@ -79,7 +78,7 @@ configure-stamp-%: extract-stamp-%
 	cp /usr/share/misc/config.guess /usr/share/misc/config.sub \
 		$(BUILDDIR)-$(*)/autoconf/
 	cd $(BUILDDIR)-$(*) && \
-	 	QMAKE=/usr/bin/qmake-qt4 $(SHELL) ./configure --config-cache \
+		QMAKE=/usr/bin/qmake-qt4 ./configure --config-cache \
 		--host=${DEB_HOST_GNU_TYPE} --build=${DEB_BUILD_GNU_TYPE} \
 		--prefix=/usr \
 		--with-archivedir=/nonexistant/path/to/file/archive/dir \
@@ -170,7 +169,7 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	dh_install -pbacula-fd
 	dh_install -pbacula-console -pbacula-console-qt
 	cp $(DEFAULTINSTALLDIR)/usr/sbin/bconsole debian/bacula-console/usr/sbin/bacula-console
-	cp debian/tmp-build-$(DEFAULTVARIANT)/src/qt-console/bat debian/bacula-console-qt/usr/bin/bat
+	cp debian/tmp-build-$(DEFAULTVARIANT)/src/qt-console/.libs/bat debian/bacula-console-qt/usr/bin/bat
 	ln -s bacula-common debian/bacula-common/usr/share/doc/bacula
 
 
@@ -270,6 +269,7 @@ binary-indep: build install-indep patch
 	dh_installman -i
 	dh_installinfo -i
 	dh_installchangelogs ChangeLog -i
+	rm -r debian/bacula/usr/share/doc/bacula
 	dh_link -i
 	dh_compress -i -X.pdf
 	dh_fixperms -i

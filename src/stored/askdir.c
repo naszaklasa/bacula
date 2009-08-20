@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, December 2000
  *
- *   Version $Id: askdir.c 8561 2009-03-20 14:52:17Z kerns $
+ *   Version $Id: askdir.c 8893 2009-06-12 19:00:50Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -494,6 +494,9 @@ bool dir_ask_sysop_to_create_appendable_volume(DCR *dcr)
    JCR *jcr = dcr->jcr;
    bool got_vol = false;
 
+   if (job_canceled(jcr)) {
+      return false;
+   }
    Dmsg0(400, "enter dir_ask_sysop_to_create_appendable_volume\n");
    ASSERT(dev->blocked());
    for ( ;; ) {

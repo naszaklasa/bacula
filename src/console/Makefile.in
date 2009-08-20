@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in 8464 2009-02-18 11:40:09Z kerns $
+#  Version $Id: Makefile.in 8887 2009-06-05 13:02:10Z ricozz $
 #
 @MCOMMON@
 
@@ -51,7 +51,7 @@ bconsole: Makefile $(CONSOBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libba
 	      $(DLIB) $(CONS_LIBS) -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) \
 	      $(OPENSSL_LIBS)
 
-static-bconsole: Makefile $(CONSOBJS) ../lib/libbac.a../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE)
+static-bconsole: Makefile $(CONSOBJS) ../lib/libbac.a ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE)
 	$(LIBTOOL_LINK) $(CXX) -static $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -L../cats -o $@ $(CONSOBJS) \
 	      $(DLIB) $(CONS_LIBS) -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) \
 	      $(OPENSSL_LIBS)

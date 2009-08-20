@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: medialist.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *   Version $Id: medialist.cpp 8876 2009-05-30 18:51:09Z bartleyd2 $
  *
  *  MediaList Class
  *
@@ -86,7 +86,8 @@ void MediaList::populateTree()
       << tr("Volume Name") << tr("Id") << tr("Status") << tr("Enabled") << tr("Bytes") << tr("Files")
       << tr("Jobs") << tr("Retention") << tr("Media Type") << tr("Slot") << tr("Use Duration")
       << tr("Max Jobs") << tr("Max Files") << tr("Max Bytes") << tr("Recycle")
-      << tr("RecyclePool") << tr("Last Written"));
+      << tr("Last Written") << tr("First Written") << tr("Read Time")
+      << tr("Write Time") << tr("Recycle Count") << tr("Recycle Pool") << tr("Scratch Pool"));
 
    m_checkcurwidget = false;
    mp_treeWidget->clear();
@@ -128,10 +129,15 @@ void MediaList::populateTree()
          " Media.VolUseDuration AS UseDuration,"
          " Media.MaxVolJobs AS MaxJobs, Media.MaxVolFiles AS MaxFiles,"
          " Media.MaxVolBytes AS MaxBytes, Media.Recycle AS Recycle,"
-         " Pol.Name AS RecyclePool, Media.LastWritten AS LastWritten"
+         " Media.LastWritten AS LastWritten,"
+         " Media.FirstWritten AS FirstWritten,"
+         " (VolReadTime/1000000) AS ReadTime, (VolWriteTime/1000000) AS WriteTime,"
+         " RecycleCount AS ReCyCount,"
+         " RecPool.Name AS RecyclePool, ScrPool.Name AS ScratchPool"
          " FROM Media"
          " JOIN Pool ON (Media.PoolId=Pool.PoolId)"
-         " LEFT OUTER JOIN Pool AS Pol ON (Media.RecyclePoolId=Pol.PoolId)"
+         " LEFT OUTER JOIN Pool AS RecPool ON (Media.RecyclePoolId=RecPool.PoolId)"
+         " LEFT OUTER JOIN Pool AS ScrPool ON (Media.ScratchPoolId=ScrPool.PoolId)"
          " WHERE ";
       query += " Pool.Name IN (" + pool_comsep + ")";
       query += " ORDER BY Pool.Name, Media";
@@ -224,10 +230,25 @@ void MediaList::populateTree()
             /* recycle */
             mediaitem.setBoolFld(index++, fld.next());
 
+            /* last written */
+            mediaitem.setTextFld(index++, fld.next()); 
+
+            /* first written */
+            mediaitem.setTextFld(index++, fld.next()); 
+
+            /* read time */
+            mediaitem.setDurationFld(index++, fld.next());
+
+            /* write time */
+            mediaitem.setDurationFld(index++, fld.next());
+
+            /* Recycle Count */
+            mediaitem.setNumericFld(index++, fld.next()); 
+
             /* recycle pool */
             mediaitem.setTextFld(index++, fld.next()); 
 
-            /* last written */
+            /* Scratch pool */
             mediaitem.setTextFld(index++, fld.next()); 
 
          } /* foreach resultline */

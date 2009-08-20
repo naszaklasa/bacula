@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: mediaedit.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *   Version $Id: mediaedit.cpp 9038 2009-07-16 20:13:04Z ricozz $
  *
  *   Dirk Bartley, March 2007
  */
@@ -93,7 +93,7 @@ MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId)
    }
    query += " FROM Media"
             " JOIN Pool ON (Media.PoolId=Pool.PoolId)"
-            " LEFT OUTER JOIN Pool AS Pol ON (Media.recyclepoolid=Pol.PoolId)"
+            " LEFT OUTER JOIN Pool AS Pol ON (Media.RecyclePoolId=Pol.PoolId)"
             " WHERE Media.MediaId='" + mediaId + "'";
 
    if (mainWin->m_sqlDebug) {

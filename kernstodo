@@ -1,5 +1,5 @@
                     Kern's ToDo List
-                    02 May 2008
+                     17 July 2009
 
 Rescue:
 Add to USB key:
@@ -57,14 +57,11 @@ Professional Needs:
 - Detect state change of system (verify)
 - Synthetic Full, Diff, Inc (Virtual, Reconstructed)
 - SD to SD
-- Modules for Databases, Exchange, ...
 - Novell NSS backup http://www.novell.com/coolsolutions/tools/18952.html
 - Compliance norms that compare restored code hash code.
 - When glibc crash, get address with
     info symbol 0x809780c
 - How to sync remote offices.
-- Exchange backup:
-  http://www.microsoft.com/technet/itshowcase/content/exchbkup.mspx
 - David's priorities
    Copypools
    Extract capability (#25)
@@ -81,6 +78,17 @@ Professional Needs:
 Priority:
 ================
 
+- When reserving a device to read, check to see if the Volume
+  is already in use, if so wait.  Probably will need to pass the
+  Volume.  See bug #1313.  Create a regression test to simulate
+  this problem and see if VolumePollInterval fixes it. Possibly turn
+  it on by default.
+
+- Fix restore of acls and extended attributes to count ERROR
+  messages and make errors non-fatal.
+- Put save/restore various platform acl/xattrs on a pointer to simplify
+  the code.
+
 - Why no error message if restore has no permission on the where
   directory?
 - Possibly allow manual "purge" to purge a Volume that has not
@@ -96,11 +104,10 @@ Priority:
   - Add bRC_EndJob -- stops more calls to plugin this job
   - Add bRC_Term (unload plugin)
   - remove time_t from Jmsg and use utime_t?
-- Extended ACLs
 - Deadlock detection, watchdog sees if counter advances when jobs are
   running.  With debug on, can do a "status" command.
 - User options for plugins.
-- Pool Storage override precidence over command line.
+- Pool Storage override precedence over command line.
 - Autolabel only if Volume catalog information indicates tape not
   written. This will avoid overwriting a tape that gets an I/O
   error on reading the volume label.

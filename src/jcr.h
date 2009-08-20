@@ -33,7 +33,7 @@
  *
  * Kern Sibbald, Nov MM
  *
- *   Version $Id: jcr.h 8754 2009-04-27 15:43:34Z ricozz $
+ *   Version $Id: jcr.h 8984 2009-07-14 13:47:15Z kerns $
  */
 
 
@@ -183,7 +183,10 @@ public:
    bool is_job_canceled() {return job_canceled(this); };
    int32_t get_JobType() { return m_JobType; };
    int32_t get_JobLevel() { return m_JobLevel; };
-
+   bool no_client_used() {
+      return (m_JobType == JT_MIGRATE || m_JobType == JT_COPY ||
+              m_JobLevel == L_VIRTUAL_FULL);
+   };
    const char *get_OperationName();    /* in lib/jcr.c */
    const char *get_ActionName(bool past); /* in lib/jcr.c */
    void set_JobLevel(int32_t JobLevel); /* in lib/jcr.c */
@@ -399,7 +402,6 @@ public:
    alist *reserve_msgs;               /* reserve fail messages */
    bool write_part_after_job;         /* Set to write part after job */
    bool PreferMountedVols;            /* Prefer mounted vols rather than new */
-   bool need_fd;                      /* set if we need FD connection */
 
    /* Parmaters for Open Read Session */
    BSR *bsr;                          /* Bootstrap record -- has everything */

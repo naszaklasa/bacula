@@ -50,6 +50,8 @@ extern const char CATS_IMP_EXP *cnt_JobMedia;
 extern const char CATS_IMP_EXP *sel_JobMedia;
 extern const char CATS_IMP_EXP *upd_Purged;
 
+extern const char CATS_IMP_EXP *cleanup_created_job;
+extern const char CATS_IMP_EXP *cleanup_running_job;
 extern const char CATS_IMP_EXP *uar_list_jobs;
 extern const char CATS_IMP_EXP *uar_count_files;
 extern const char CATS_IMP_EXP *uar_sel_files;

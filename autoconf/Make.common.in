@@ -31,6 +31,7 @@ includedir = @includedir@
 sysconfdir = @sysconfdir@
 plugindir = @plugindir@
 scriptdir = @scriptdir@
+archivedir = @archivedir@
 mandir = @mandir@
 manext = 8
 

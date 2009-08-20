@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -37,7 +37,7 @@
  *  Utility functions for sending info to File Daemon.
  *   These functions are used by both backup and verify.
  *
- *   Version $Id: fd_cmds.c 7892 2008-10-24 13:04:16Z kerns $
+ *   Version $Id: fd_cmds.c 8982 2009-07-14 13:44:46Z kerns $
  */
 
 #include "bacula.h"
@@ -80,7 +80,7 @@ extern int FDConnectTimeout;
 int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
                            int verbose)
 {
-   BSOCK   *fd;
+   BSOCK   *fd = new_bsock();
    char ed1[30];
    utime_t heart_beat;
 
@@ -94,8 +94,14 @@ int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
       char name[MAX_NAME_LENGTH + 100];
       bstrncpy(name, _("Client: "), sizeof(name));
       bstrncat(name, jcr->client->name(), sizeof(name));
-      fd = bnet_connect(jcr, retry_interval, max_retry_time, heart_beat,
-           name, jcr->client->address, NULL, jcr->client->FDport, verbose);
+
+      fd->set_source_address(director->DIRsrc_addr);
+      if (!fd->connect(jcr,retry_interval,max_retry_time, heart_beat, name, jcr->client->address,
+           NULL, jcr->client->FDport, verbose)) {
+        fd->destroy();
+        fd = NULL;
+      }
+
       if (fd == NULL) {
          set_jcr_job_status(jcr, JS_ErrorTerminated);
          return 0;
@@ -165,7 +171,7 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
    bool do_full = false;
    bool do_diff = false;
    utime_t now;
-   utime_t last_full_time;
+   utime_t last_full_time = 0;
    utime_t last_diff_time;
 
    since[0] = 0;
@@ -191,23 +197,47 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
       /* Look up start time of last Full job */
       now = (utime_t)time(NULL);
       jcr->jr.JobId = 0;     /* flag to return since time */
-      have_full = db_find_job_start_time(jcr, jcr->db, &jcr->jr, &jcr->stime);
-      /* If there was a successful job, make sure it is recent enough */
-      if (jcr->get_JobLevel() == L_INCREMENTAL && have_full && jcr->job->MaxDiffInterval > 0) {
+      /*
+       * This is probably redundant, but some of the code below
+       * uses jcr->stime, so don't remove unless you are sure.
+       */
+      if (!db_find_job_start_time(jcr, jcr->db, &jcr->jr, &jcr->stime)) {
+         do_full = true;
+      }
+      have_full = db_find_last_job_start_time(jcr, jcr->db, &jcr->jr, &stime, L_FULL);
+      if (have_full) {
+         last_full_time = str_to_utime(stime);
+      } else {
+         do_full = true;               /* No full, upgrade to one */
+      }
+      Dmsg4(50, "have_full=%d do_full=%d now=%lld full_time=%lld\n", have_full, 
+            do_full, now, last_full_time);
+      /* Make sure the last diff is recent enough */
+      if (have_full && jcr->get_JobLevel() == L_INCREMENTAL && jcr->job->MaxDiffInterval > 0) {
          /* Lookup last diff job */
          if (db_find_last_job_start_time(jcr, jcr->db, &jcr->jr, &stime, L_DIFFERENTIAL)) {
             last_diff_time = str_to_utime(stime);
-            do_diff = ((now - last_diff_time) >= jcr->job->MaxDiffInterval);
+            /* If no Diff since Full, use Full time */
+            if (last_diff_time < last_full_time) {
+               last_diff_time = last_full_time;
+            }
+            Dmsg2(50, "last_diff_time=%lld last_full_time=%lld\n", last_diff_time,
+                  last_full_time);
+         } else {
+            /* No last differential, so use last full time */
+            last_diff_time = last_full_time;
+            Dmsg1(50, "No last_diff_time setting to full_time=%lld\n", last_full_time);
          }
+         do_diff = ((now - last_diff_time) >= jcr->job->MaxDiffInterval);
+         Dmsg2(50, "do_diff=%d diffInter=%lld\n", do_diff, jcr->job->MaxDiffInterval);
       }
-      if (have_full && jcr->job->MaxFullInterval > 0 &&
-         db_find_last_job_start_time(jcr, jcr->db, &jcr->jr, &stime, L_FULL)) {
-         last_full_time = str_to_utime(stime);
+      /* Note, do_full takes precedence over do_diff */
+      if (have_full && jcr->job->MaxFullInterval > 0) {
          do_full = ((now - last_full_time) >= jcr->job->MaxFullInterval);
       }
       free_pool_memory(stime);
 
-      if (!have_full || do_full) {
+      if (do_full) {
          /* No recent Full job found, so upgrade this one to Full */
          Jmsg(jcr, M_INFO, 0, "%s", db_strerror(jcr->db));
          Jmsg(jcr, M_INFO, 0, _("No prior or suitable Full backup found in catalog. Doing FULL backup.\n"));
@@ -215,7 +245,7 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
             level_to_str(jcr->get_JobLevel()));
          jcr->set_JobLevel(jcr->jr.JobLevel = L_FULL);
        } else if (do_diff) {
-         /* No recent diff job found, so upgrade this one to Full */
+         /* No recent diff job found, so upgrade this one to Diff */
          Jmsg(jcr, M_INFO, 0, _("No prior or suitable Differential backup found in catalog. Doing Differential backup.\n"));
          bsnprintf(since, since_len, _(" (upgraded from %s)"),
             level_to_str(jcr->get_JobLevel()));
@@ -261,7 +291,7 @@ static void send_since_time(JCR *jcr)
 bool send_level_command(JCR *jcr)
 {
    BSOCK   *fd = jcr->file_bsock;
-   const char *accurate = jcr->job->accurate?"accurate_":"";
+   const char *accurate = jcr->accurate?"accurate_":"";
    const char *not_accurate = "";
    /*
     * Send Level command to File daemon
@@ -510,43 +540,6 @@ bool send_include_list(JCR *jcr)
  */
 bool send_exclude_list(JCR *jcr)
 {
-   return true;
-}
-
-
-/*
- * Send bootstrap file if any to the socket given (FD or SD).
- *  This is used for restore, verify VolumeToCatalog, and
- *  for migration.
- */
-bool send_bootstrap_file(JCR *jcr, BSOCK *sock)
-{
-   FILE *bs;
-   char buf[1000];
-   const char *bootstrap = "bootstrap\n";
-
-   Dmsg1(400, "send_bootstrap_file: %s\n", jcr->RestoreBootstrap);
-   if (!jcr->RestoreBootstrap) {
-      return true;
-   }
-   bs = fopen(jcr->RestoreBootstrap, "rb");
-   if (!bs) {
-      berrno be;
-      Jmsg(jcr, M_FATAL, 0, _("Could not open bootstrap file %s: ERR=%s\n"),
-         jcr->RestoreBootstrap, be.bstrerror());
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
-      return false;
-   }
-   sock->fsend(bootstrap);
-   while (fgets(buf, sizeof(buf), bs)) {
-      sock->fsend("%s", buf);
-   }
-   sock->signal(BNET_EOD);
-   fclose(bs);
-   if (jcr->unlink_bsr) {
-      unlink(jcr->RestoreBootstrap);
-      jcr->unlink_bsr = false;
-   }                         
    return true;
 }
 

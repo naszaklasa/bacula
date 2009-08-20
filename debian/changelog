@@ -1,3 +1,20 @@
+bacula (3.0.2-1) unstable; urgency=low
+
+  * New Upstream Version.  Supports IPv6.  Closes: #523852.
+  * Install bat from the correct place.  Closes: #532646.
+  * Add conflicts between bacula-common-* packages.  Closes: #529645.
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 20 Aug 2009 14:26:44 -0500
+
+bacula (3.0.1-2) experimental; urgency=low
+
+  * Apply patches from Sami Haahtinen: correct behavior on systems
+    where bash isn't the default, and move btape into SQL-specific
+    packages because it now links with database code.
+  * Fixing up links in bacula metapackage
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 18 May 2009 08:46:24 -0500
+
 bacula (3.0.1-1~bpo50+1) lenny-backports; urgency=low
 
   * Rebuild for lenny-backports.

@@ -57,7 +57,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.c 8400 2009-01-24 17:56:41Z kerns $
+ *   Version $Id: parse_conf.c 9010 2009-07-15 16:11:06Z kerns $
  */
 
 
@@ -788,11 +788,11 @@ CONFIG *new_config_parser()
 void CONFIG::init(
    const char *cf,
    LEX_ERROR_HANDLER *scan_error,
-   int err_type,
+   int32_t err_type,
    void *vres_all,
-   int res_all_size,
-   int r_first,
-   int r_last,
+   int32_t res_all_size,
+   int32_t r_first,
+   int32_t r_last,
    RES_TABLE *resources,
    RES **res_head)
 {

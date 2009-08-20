@@ -6,7 +6,7 @@
 # basic defines for every build
 %define _version @VERSION@
 %define _release 1
-%define depkgs_version 11Sep08
+%define depkgs_version 18Feb09
 %define _rescuever @VERSION@
 %define docs_version @VERSION@
 
@@ -323,8 +323,11 @@ Distribution: %{_dist}
 
 BuildRequires: gcc, gcc-c++, make, autoconf
 BuildRequires: ncurses-devel, perl
-BuildRequires: libstdc++-devel = %{gccver}-%{gccrel}, libxml2-devel, zlib-devel
+BuildRequires: libstdc++-devel = %{gccver}-%{gccrel}, zlib-devel
 BuildRequires: openssl-devel
+%if ! %{rh7}
+BuildRequires: libxml2-devel
+%endif
 %if %{python}
 BuildRequires: python, python-devel
 %{expand: %%define pyver %(python -c 'import sys;print(sys.version[0:3])')}
@@ -353,6 +356,7 @@ BuildRequires: qt4-devel >= 4.2
 %if %{rh7}
 BuildRequires: libtermcap-devel
 BuildRequires: glibc-devel >= 2.2
+BuildRequires: libxml-devel
 %endif
 %if %{su9}
 BuildRequires: termcap
@@ -1844,12 +1848,6 @@ cp -p src/filed/static-bacula-fd $RPM_BUILD_ROOT%{script_dir}/rescue/linux/cdrom
 rm -f src/filed/static-bacula-fd
 %endif
 
-# install bat since make doesn't at the moment
-%if %{bat}
-cp -p src/qt-console/bat $RPM_BUILD_ROOT%{_sbindir}/bat
-cp -p src/qt-console/bat.conf $RPM_BUILD_ROOT%{sysconf_dir}/bat.conf
-%endif
-
 # remove the docs installed by make
 %if ! %{single_dir}
 rm -rf $RPM_BUILD_ROOT/usr/share/doc
@@ -1864,9 +1862,20 @@ cp ReleaseNotes $RPM_BUILD_ROOT%{_prefix}/doc/
 cp VERIFYING $RPM_BUILD_ROOT%{_prefix}/doc/
 cp LICENSE $RPM_BUILD_ROOT%{_prefix}/doc/
 cp kernstodo $RPM_BUILD_ROOT%{_prefix}/doc/
-cp %{_docsrc}/manual/bacula.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
-cp %{_docsrc}/developers/developers.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
-cp -r %{_docsrc}/manual/bacula $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/catalog/catalog $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/catalog/catalog.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/concepts/concepts $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/concepts/concepts.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/console/console $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/console/console.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/developers/developers $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/developers/developers.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/install/install $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/install/install.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/problems/problems $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/problems/problems.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/utility/utility $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/utility/utility.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
 cp ../Release_Notes-%{version}-%{release}.txt $RPM_BUILD_ROOT%{_prefix}/doc/
 %endif
 
@@ -1888,6 +1897,10 @@ rm -f $RPM_BUILD_ROOT%{script_dir}/mtx-changer
 rm -f $RPM_BUILD_ROOT%{script_dir}/startmysql
 rm -f $RPM_BUILD_ROOT%{script_dir}/stopmysql
 rm -rf $RPM_BUILD_ROOT%{script_dir}/updatedb
+rm -f $RPM_BUILD_ROOT%{script_dir}/bconsole
+rm -f $RPM_BUILD_ROOT%{script_dir}/bpipe-fd.so
+rm -f $RPM_BUILD_ROOT%{script_dir}/mtx-changer.conf
+rm -f $RPM_BUILD_ROOT%{_sbindir}/bacula
 %endif
 
 %clean
@@ -2011,8 +2024,14 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %endif
 
 %if ! %{client_only} && ! %{single_dir}
-%doc COPYING ChangeLog ReleaseNotes LICENSE VERIFYING kernstodo 
-%doc %{_docsrc}/manual/bacula.pdf %{_docsrc}/developers/developers.pdf %{_docsrc}/manual/bacula ../Release_Notes-%{version}-%{release}.txt
+%doc COPYING ChangeLog ReleaseNotes LICENSE VERIFYING kernstodo ../Release_Notes-%{version}-%{release}.txt
+%doc %{_docsrc}/manuals/en/catalog/catalog %{_docsrc}/manuals/en/catalog/catalog.pdf
+%doc %{_docsrc}/manuals/en/concepts/concepts %{_docsrc}/manuals/en/concepts/concepts.pdf
+%doc %{_docsrc}/manuals/en/console/console %{_docsrc}/manuals/en/console/console.pdf
+%doc %{_docsrc}/manuals/en/developers/developers %{_docsrc}/manuals/en/developers/developers.pdf
+%doc %{_docsrc}/manuals/en/install/install %{_docsrc}/manuals/en/install/install.pdf
+%doc %{_docsrc}/manuals/en/problems/problems %{_docsrc}/manuals/en/problems/problems.pdf
+%doc %{_docsrc}/manuals/en/utility/utility %{_docsrc}/manuals/en/utility/utility.pdf
 %endif
 
 %if ! %{client_only} && %{single_dir}
@@ -2245,9 +2264,8 @@ if [ -d %{sysconf_dir} ]; then
                 done
         done
 fi
-%endif
-
 /sbin/ldconfig
+%endif
 
 %if %{mysql}
 %preun mysql
@@ -2270,15 +2288,16 @@ fi
 
 %if %{mysql}
 %postun mysql
+/sbin/ldconfig
 %endif
 %if %{sqlite}
 %postun sqlite
+/sbin/ldconfig
 %endif
 %if %{postgresql}
 %postun postgresql
-%endif
-
 /sbin/ldconfig
+%endif
 
 
 %if ! %{client_only} && %{mtx}
@@ -2306,8 +2325,14 @@ fi
 %endif
 
 %if ! %{single_dir}
-%doc COPYING ChangeLog ReleaseNotes LICENSE VERIFYING kernstodo 
-%doc %{_docsrc}/manual/bacula.pdf %{_docsrc}/developers/developers.pdf %{_docsrc}/manual/bacula ../Release_Notes-%{version}-%{release}.txt
+%doc COPYING ChangeLog ReleaseNotes LICENSE VERIFYING kernstodo ../Release_Notes-%{version}-%{release}.txt
+%doc %{_docsrc}/manuals/en/catalog/catalog %{_docsrc}/manuals/en/catalog/catalog.pdf
+%doc %{_docsrc}/manuals/en/concepts/concepts %{_docsrc}/manuals/en/concepts/concepts.pdf
+%doc %{_docsrc}/manuals/en/console/console %{_docsrc}/manuals/en/console/console.pdf
+%doc %{_docsrc}/manuals/en/developers/developers %{_docsrc}/manuals/en/developers/developers.pdf
+%doc %{_docsrc}/manuals/en/install/install %{_docsrc}/manuals/en/install/install.pdf
+%doc %{_docsrc}/manuals/en/problems/problems %{_docsrc}/manuals/en/problems/problems.pdf
+%doc %{_docsrc}/manuals/en/utility/utility %{_docsrc}/manuals/en/utility/utility.pdf
 %else
 %{_prefix}/doc
 %endif
@@ -2328,7 +2353,10 @@ fi
 %{_mandir}/man8/bacula.8.%{manpage_ext}
 %{_mandir}/man8/bconsole.8.%{manpage_ext}
 %{_mandir}/man8/btraceback.8.%{manpage_ext}
-%{_libdir}/libbac*
+%{_libdir}/libbac.*
+%{_libdir}/libbaccfg.*
+%{_libdir}/libbacfind.*
+%{_libdir}/libbacpy.*
 
 
 %pre client
@@ -2549,6 +2577,18 @@ fi
 %endif
 
 %changelog
+* Sat Jun 20 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- Fix bat install which is now handled by make and uses shared libs
+* Sat May 16 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- fix libxml dependency for rh7 per Pasi Kärkkäinen <pasik@iki.fi>
+* Mon May 04 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- Fix post ldconfig problem in client only build
+* Sun May 03 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- remove more files installed by client-only build not needed by client package
+- remove libbacsql files from client package
+* Sat May 02 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 3.0.1
+- update for new docs configuration
 * Sat Apr 25 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - add switch to pass Distribution tag
 * Sun Apr 5 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>

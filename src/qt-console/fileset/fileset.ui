@@ -33,7 +33,7 @@
     <iconset resource="../main.qrc" >:/images/status-console.png</iconset>
    </property>
    <property name="text" >
-    <string>Status FileSet In Console</string>
+    <string>Show FileSet In Console</string>
    </property>
   </action>
   <action name="actionShowJobs" >

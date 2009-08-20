@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: util.c 8508 2009-03-07 20:59:46Z kerns $
+ *   Version $Id: util.c 8910 2009-06-18 12:54:45Z kerns $
  */
 
 #include "bacula.h"
@@ -349,11 +349,14 @@ const char *job_status_to_str(int stat)
  */
 const char *job_type_to_str(int type)
 {
-   const char *str;
+   const char *str = NULL;
 
    switch (type) {
    case JT_BACKUP:
       str = _("Backup");
+      break;
+   case JT_MIGRATED_JOB:
+      str = _("Migrated Job");
       break;
    case JT_VERIFY:
       str = _("Verify");
@@ -361,31 +364,34 @@ const char *job_type_to_str(int type)
    case JT_RESTORE:
       str = _("Restore");
       break;
-   case JT_ADMIN:
-      str = _("Admin");
-      break;
-   case JT_MIGRATE:
-      str = _("Migrate");
-      break;
-   case JT_COPY:
-      str = _("Copy");
-      break;
-   case JT_JOB_COPY:
-      str = _("Job Copy");
-      break;
    case JT_CONSOLE:
       str = _("Console");
       break;
    case JT_SYSTEM:
       str = _("System or Console");
       break;
+   case JT_ADMIN:
+      str = _("Admin");
+      break;
+   case JT_ARCHIVE:
+      str = _("Archive");
+      break;
+   case JT_JOB_COPY:
+      str = _("Job Copy");
+      break;
+   case JT_COPY:
+      str = _("Copy");
+      break;
+   case JT_MIGRATE:
+      str = _("Migrate");
+      break;
    case JT_SCAN:
       str = _("Scan");
       break;
-   default:
-      str = _("Unknown Type");
-      break;
    }
+   if (!str) {
+      str = _("Unknown Type");
+   }   
    return str;
 }
 

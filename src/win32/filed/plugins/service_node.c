@@ -48,6 +48,7 @@ bRC
 service_node_t::startBackupFile(exchange_fd_context_t *context, struct save_pkt *sp)
 {
    HRESULT result;
+   char aname[256];
 
    _DebugMessage(100, "startBackupNode_SERVICE state = %d\n", state);
    switch(state)
@@ -61,6 +62,8 @@ service_node_t::startBackupFile(exchange_fd_context_t *context, struct save_pkt 
       // convert name to a wide string
 
       _DebugMessage(100, "Calling HrESEBackupPrepare\n");
+      wcstombs(aname, context->computer_name, 256);
+      _JobMessage(M_INFO, "Preparing Exchange Backup for %s\n", aname);
       result = HrESEBackupPrepare(context->computer_name, PLUGIN_PATH_PREFIX_SERVICE_W, &ibi_count, &ibi, &hccx);
       if (result != 0)
       {

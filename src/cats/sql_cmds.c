@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: sql_cmds.c 8508 2009-03-07 20:59:46Z kerns $
+ *   Version $Id: sql_cmds.c 8999 2009-07-15 10:08:00Z ricozz $
  */
 /*
  * Note, PostgreSQL imposes some constraints on using DISTINCT and GROUP BY
@@ -44,6 +44,11 @@
 #include "bacula.h"
 #include "cats.h"
 
+const char *cleanup_created_job =
+   "UPDATE Job SET JobStatus='f', StartTime=SchedTime, EndTime=SchedTime "
+   "WHERE JobStatus = 'C'";
+const char *cleanup_running_job = 
+   "UPDATE Job SET JobStatus='f', EndTime=StartTime WHERE JobStatus = 'R'";
 
 /* For sql_update.c db_update_stats */
 const char *fill_jobhisto =
@@ -399,6 +404,7 @@ const char *uar_jobid_fileindex =
    "AND Job.ClientId=Client.ClientId "
    "AND Path.PathId=File.PathId "
    "AND Filename.FilenameId=File.FilenameId "
+   "AND JobStatus IN ('T','W') AND Type='B' "
    "ORDER BY Job.StartTime DESC LIMIT 1";
 
 const char *uar_jobids_fileindex =
@@ -425,7 +431,7 @@ const char *uar_jobid_fileindex_from_table =
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: sql_cmds.c 8508 2009-03-07 20:59:46Z kerns $
+ *   Version $Id: sql_cmds.c 8999 2009-07-15 10:08:00Z ricozz $
  */
 /*
  * Note, PostgreSQL imposes some constraints on using DISTINCT and GROUP BY
@@ -481,7 +487,7 @@ const char *uar_file[4] = {
    "StartTime,Type as JobType,JobStatus,JobFiles,JobBytes "
    "FROM Client,Job,File,Filename,Path WHERE Client.Name='%s' "
    "AND Client.ClientId=Job.ClientId "
-   "AND Job.JobId=File.JobId "
+   "AND Job.JobId=File.JobId AND File.FileIndex > 0 "
    "AND Path.PathId=File.PathId AND Filename.FilenameId=File.FilenameId "
    "AND Filename.Name='%s' ORDER BY StartTime DESC LIMIT 20",
    /* Postgresql */
@@ -490,7 +496,7 @@ const char *uar_file[4] = {
    "StartTime,Type as JobType,JobStatus,JobFiles,JobBytes "
    "FROM Client,Job,File,Filename,Path WHERE Client.Name='%s' "
    "AND Client.ClientId=Job.ClientId "
-   "AND Job.JobId=File.JobId "
+   "AND Job.JobId=File.JobId AND File.FileIndex > 0 "
    "AND Path.PathId=File.PathId AND Filename.FilenameId=File.FilenameId "
    "AND Filename.Name='%s' ORDER BY StartTime DESC LIMIT 20",
    /* SQLite */
@@ -499,7 +505,7 @@ const char *uar_file[4] = {
    "StartTime,Type as JobType,JobStatus,JobFiles,JobBytes "
    "FROM Client,Job,File,Filename,Path WHERE Client.Name='%s' "
    "AND Client.ClientId=Job.ClientId "
-   "AND Job.JobId=File.JobId "
+   "AND Job.JobId=File.JobId AND File.FileIndex > 0 "
    "AND Path.PathId=File.PathId AND Filename.FilenameId=File.FilenameId "
    "AND Filename.Name='%s' ORDER BY StartTime DESC LIMIT 20",
    /* SQLite3 */
@@ -508,7 +514,7 @@ const char *uar_file[4] = {
    "StartTime,Type as JobType,JobStatus,JobFiles,JobBytes "
    "FROM Client,Job,File,Filename,Path WHERE Client.Name='%s' "
    "AND Client.ClientId=Job.ClientId "
-   "AND Job.JobId=File.JobId "
+   "AND Job.JobId=File.JobId AND File.FileIndex > 0 "
    "AND Path.PathId=File.PathId AND Filename.FilenameId=File.FilenameId "
    "AND Filename.Name='%s' ORDER BY StartTime DESC LIMIT 20"};
 

@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: joblist.cpp 8640 2009-03-29 10:55:53Z kerns $
+ *   Version $Id: joblist.cpp 8914 2009-06-19 00:10:29Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -122,7 +122,8 @@ void JobList::populateTable()
    QStringList headerlist = (QStringList()
       << tr("Job Id") << tr("Job Name") << tr("Client") << tr("Job Starttime") 
       << tr("Job Type") << tr("Job Level") << tr("Job Files") 
-      << tr("Job Bytes") << tr("Job Status")  << tr("Purged") << tr("File Set"));
+      << tr("Job Bytes") << tr("Job Status")  << tr("Purged") << tr("File Set")
+      << tr("Pool Name") << tr("First Volume") << tr("VolCount"));
 
    m_jobIdIndex = headerlist.indexOf(tr("Job Id"));
    m_purgedIndex = headerlist.indexOf(tr("Purged"));
@@ -158,7 +159,7 @@ void JobList::populateTable()
       QString resultline;
       foreach (resultline, results) {
          fieldlist = resultline.split("\t");
-         if (fieldlist.size() < 12)
+         if (fieldlist.size() < 13)
             continue; /* some fields missing, ignore row */
 
          TableItemFormatter jobitem(*mp_tableWidget, row);
@@ -200,6 +201,14 @@ void JobList::populateTable()
          /* fileset */
          jobitem.setTextFld(col++, fld.next());
 
+         /* pool name */
+         jobitem.setTextFld(col++, fld.next());
+
+         /* First Media */
+         jobitem.setTextFld(col++, fld.next());
+
+         /* Medias count */
+         jobitem.setNumericFld(col++, fld.next());
          row++;
       }
    } 
@@ -257,6 +266,9 @@ void JobList::prepareFilterWidgets()
       fileSetComboBox->addItems(m_console->fileset_list);
       comboSel(fileSetComboBox, m_filesetName);
 
+      poolComboBox->addItem(tr("Any"));
+      poolComboBox->addItems(m_console->pool_list);
+
       jobStatusComboFill(statusComboBox);
    }
 }
@@ -269,15 +281,19 @@ void JobList::fillQueryString(QString &query)
       m_mediaName = volumeComboBox->itemText(volumeIndex);
    QString distinct = "";
    if (m_mediaName != tr("Any")) { distinct = "DISTINCT "; }
-   query += "SELECT " + distinct + "Job.Jobid AS Id, Job.Name AS JobName, " 
+   query += "SELECT " + distinct + "Job.JobId AS JobId, Job.Name AS JobName, " 
             " Client.Name AS Client,"
             " Job.Starttime AS JobStart, Job.Type AS JobType,"
             " Job.Level AS BackupLevel, Job.Jobfiles AS FileCount,"
             " Job.JobBytes AS Bytes, Job.JobStatus AS Status,"
-            " Job.PurgedFiles AS Purged, FileSet.FileSet"
+            " Job.PurgedFiles AS Purged, FileSet.FileSet,"
+            " Pool.Name AS Pool,"
+            " (SELECT Media.VolumeName FROM JobMedia JOIN Media ON JobMedia.MediaId=Media.MediaId WHERE JobMedia.JobId=Job.JobId ORDER BY JobMediaId LIMIT 1) AS FirstVolume,"
+            " (SELECT count(DISTINCT MediaId) FROM JobMedia WHERE JobMedia.JobId=Job.JobId) AS Volumes"
             " FROM Job"
             " JOIN Client ON (Client.ClientId=Job.ClientId)"
-            " LEFT OUTER JOIN FileSet ON (FileSet.FileSetId=Job.FileSetId) ";
+            " LEFT OUTER JOIN FileSet ON (FileSet.FileSetId=Job.FileSetId) "
+            " LEFT OUTER JOIN Pool ON Job.PoolId = Pool.PoolId ";
    QStringList conditions;
    if (m_mediaName != tr("Any")) {
       query += " LEFT OUTER JOIN JobMedia ON (JobMedia.JobId=Job.JobId) "
@@ -291,12 +307,19 @@ void JobList::fillQueryString(QString &query)
    jobStatusComboCond(conditions, statusComboBox, "Job.JobStatus");
    boolComboCond(conditions, purgedComboBox, "Job.PurgedFiles");
    comboCond(conditions, fileSetComboBox, "FileSet.FileSet");
+   comboCond(conditions, poolComboBox, "Pool.Name");
 
    /* If Limit check box For limit by days is checked  */
    if (daysCheckBox->checkState() == Qt::Checked) {
       QDateTime stamp = QDateTime::currentDateTime().addDays(-daysSpinBox->value());
       QString since = stamp.toString(Qt::ISODate);
-      conditions.append("Job.Starttime>'" + since + "'");
+      conditions.append("Job.Starttime > '" + since + "'");
+   }
+   if (filterCopyCheckBox->checkState() == Qt::Checked) {
+      conditions.append("Job.Type != 'c'" );
+   }
+   if (filterMigrationCheckBox->checkState() == Qt::Checked) {
+      conditions.append("Job.Type != 'g'" );
    }
    bool first = true;
    foreach (QString condition, conditions) {
@@ -357,43 +380,6 @@ void JobList::treeWidgetName(QString &desc)
 }
 
 /*
- * This functions much line tableItemChanged for trees like the page selector,
- * but I will do much less here
- */
-void JobList::tableItemChanged(QTableWidgetItem *currentItem, QTableWidgetItem * /*previousItem*/)
-{
-   if (m_checkCurrentWidget) {
-      int row = currentItem->row();
-      QTableWidgetItem* jobitem = mp_tableWidget->item(row, 0);
-      m_currentJob = jobitem->text();
-
-      /* include purged action or not */
-      jobitem = mp_tableWidget->item(row, m_purgedIndex);
-      QString purged = jobitem->text();
-      mp_tableWidget->removeAction(actionPurgeFiles);
-      if (purged == tr("No") ) {
-         mp_tableWidget->addAction(actionPurgeFiles);
-      }
-      /* include restore from time and job action or not */
-      jobitem = mp_tableWidget->item(row, m_typeIndex);
-      QString type = jobitem->text();
-      mp_tableWidget->removeAction(actionRestoreFromJob);
-      mp_tableWidget->removeAction(actionRestoreFromTime);
-      if (type == tr("Backup")) {
-         mp_tableWidget->addAction(actionRestoreFromJob);
-         mp_tableWidget->addAction(actionRestoreFromTime);
-      }
-      /* include cancel action or not */
-      jobitem = mp_tableWidget->item(row, m_statusIndex);
-      QString status = jobitem->text();
-      mp_tableWidget->removeAction(actionCancelJob);
-      if (status == tr("Running") || status == tr("Created, not yet running")) {
-         mp_tableWidget->addAction(actionCancelJob);
-      }
-   }
-}
-
-/*
  * Function to create connections for context sensitive menu for this and
  * the page selector
  */
@@ -410,14 +396,8 @@ void JobList::createConnections()
    graphButton->setEnabled(false);
    graphButton->setVisible(false);
 #endif
-   /* for the tableItemChanged to maintain m_currentJob */
-   connect(mp_tableWidget, SIGNAL(
-           currentItemChanged(QTableWidgetItem *, QTableWidgetItem *)),
-           this, SLOT(tableItemChanged(QTableWidgetItem *, QTableWidgetItem *)));
-
-   /* for the tableItemChanged to maintain a delete selection */
-   connect(mp_tableWidget, SIGNAL( itemSelectionChanged()),
-           this, SLOT(selectedJobsGet()) );
+   /* for the selectionChanged to maintain m_currentJob and a delete selection */
+   connect(mp_tableWidget, SIGNAL(itemSelectionChanged()), this, SLOT(selectionChanged()));
 
    /* Do what is required for the local context sensitive menu */
 
@@ -425,19 +405,6 @@ void JobList::createConnections()
    /* setContextMenuPolicy is required */
    mp_tableWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-   /* Add Actions */
-   mp_tableWidget->addAction(actionRefreshJobList);
-   mp_tableWidget->addAction(actionListJobid);
-   mp_tableWidget->addAction(actionListFilesOnJob);
-   mp_tableWidget->addAction(actionListJobMedia);
-   mp_tableWidget->addAction(actionListVolumes);
-   mp_tableWidget->addAction(actionDeleteJob);
-   mp_tableWidget->addAction(actionPurgeFiles);
-   mp_tableWidget->addAction(actionRestoreFromJob);
-   mp_tableWidget->addAction(actionRestoreFromTime);
-   mp_tableWidget->addAction(actionShowLogForJob);
-
-   /* Make Connections */
    connect(actionListJobid, SIGNAL(triggered()), this,
                 SLOT(consoleListJobid()));
    connect(actionListFilesOnJob, SIGNAL(triggered()), this,
@@ -519,7 +486,8 @@ void JobList::consoleDeleteJob()
 
    QString cmd("delete job jobid=");
    cmd += m_selectedJobs;
-   consoleCommand(cmd);
+   consoleCommand(cmd, false);
+   populateTable();
 }
 void JobList::consolePurgeFiles()
 {
@@ -535,9 +503,14 @@ void JobList::consolePurgeFiles()
       QMessageBox::Ok | QMessageBox::Cancel)
       == QMessageBox::Cancel) { return; }
 
-   QString cmd("purge files jobid=");
-   cmd += m_currentJob;
-   consoleCommand(cmd);
+   m_console->m_warningPrevent = true;
+   foreach(QString job, m_selectedJobsList) {
+      QString cmd("purge files jobid=");
+      cmd += job;
+      consoleCommand(cmd, false);
+   }
+   m_console->m_warningPrevent = false;
+   populateTable();
 }
 
 /*
@@ -607,6 +580,8 @@ void JobList::writeSettings()
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
    settings.setValue(m_splitText, m_splitter->saveState());
+   settings.setValue("FilterCopyCheckState", filterCopyCheckBox->checkState());
+   settings.setValue("FilterMigrationCheckState", filterMigrationCheckBox->checkState());
    settings.endGroup();
 }
 
@@ -620,13 +595,15 @@ void JobList::readSettings()
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
    m_splitter->restoreState(settings.value(m_splitText).toByteArray());
+   filterCopyCheckBox->setCheckState((Qt::CheckState)settings.value("FilterCopyCheckState").toInt());
+   filterMigrationCheckBox->setCheckState((Qt::CheckState)settings.value("FilterMigrationCheckState").toInt());
    settings.endGroup();
 }
 
 /*
  * Function to fill m_selectedJobsCount and m_selectedJobs with selected values
  */
-void JobList::selectedJobsGet()
+void JobList::selectionChanged()
 {
    QList<int> rowList;
    QList<QTableWidgetItem *> sitems = mp_tableWidget->selectedItems();
@@ -638,18 +615,77 @@ void JobList::selectedJobsGet()
    }
 
    m_selectedJobs = "";
+   m_selectedJobsList.clear();
    bool first = true;
    foreach(int row, rowList) {
       QTableWidgetItem * sitem = mp_tableWidget->item(row, m_jobIdIndex);
       if (!first) m_selectedJobs.append(",");
       else first = false;
       m_selectedJobs.append(sitem->text());
+      m_selectedJobsList.append(sitem->text());
    }
    m_selectedJobsCount = rowList.count();
    if (m_selectedJobsCount > 1) {
-     QString text = QString( tr("Delete list of %1 Jobs")).arg(m_selectedJobsCount);
-       actionDeleteJob->setText(text);
+      QString text = QString( tr("Delete list of %1 Jobs")).arg(m_selectedJobsCount);
+      actionDeleteJob->setText(text);
+      text = QString( tr("Purge Files from list of %1 Jobs")).arg(m_selectedJobsCount);
+      actionPurgeFiles->setText(text);
    } else {
-     actionDeleteJob->setText(tr("Delete Single Job"));
+      actionDeleteJob->setText(tr("Delete Single Job"));
+      actionPurgeFiles->setText(tr("Purge Files from single job"));
+   }
+
+   /* remove all actions */
+   foreach(QAction* mediaAction, mp_tableWidget->actions()) {
+      mp_tableWidget->removeAction(mediaAction);
+   }
+
+   /* Add Actions */
+   mp_tableWidget->addAction(actionRefreshJobList);
+   if (m_selectedJobsCount == 1) {
+      mp_tableWidget->addAction(actionListJobid);
+      mp_tableWidget->addAction(actionListFilesOnJob);
+      mp_tableWidget->addAction(actionListJobMedia);
+      mp_tableWidget->addAction(actionListVolumes);
+      mp_tableWidget->addAction(actionRestoreFromJob);
+      mp_tableWidget->addAction(actionRestoreFromTime);
+      mp_tableWidget->addAction(actionShowLogForJob);
+   }
+   if (m_selectedJobsCount >= 1) {
+      mp_tableWidget->addAction(actionDeleteJob);
+      mp_tableWidget->addAction(actionPurgeFiles);
+   }
+
+   /* Make Connections */
+   if (m_checkCurrentWidget) {
+      int row = mp_tableWidget->currentRow();
+      QTableWidgetItem* jobitem = mp_tableWidget->item(row, 0);
+      m_currentJob = jobitem->text();
+
+      /* include purged action or not */
+      jobitem = mp_tableWidget->item(row, m_purgedIndex);
+      QString purged = jobitem->text();
+/*      mp_tableWidget->removeAction(actionPurgeFiles);
+      if (purged == tr("No") ) {
+         mp_tableWidget->addAction(actionPurgeFiles);
+      }*/
+      /* include restore from time and job action or not */
+      jobitem = mp_tableWidget->item(row, m_typeIndex);
+      QString type = jobitem->text();
+      if (m_selectedJobsCount == 1) {
+         mp_tableWidget->removeAction(actionRestoreFromJob);
+         mp_tableWidget->removeAction(actionRestoreFromTime);
+         if (type == tr("Backup")) {
+            mp_tableWidget->addAction(actionRestoreFromJob);
+            mp_tableWidget->addAction(actionRestoreFromTime);
+         }
+      }
+      /* include cancel action or not */
+      jobitem = mp_tableWidget->item(row, m_statusIndex);
+      QString status = jobitem->text();
+      mp_tableWidget->removeAction(actionCancelJob);
+      if (status == tr("Running") || status == tr("Created, not yet running")) {
+         mp_tableWidget->addAction(actionCancelJob);
+      }
    }
 }

@@ -31,7 +31,7 @@
  *
  *    Kern Sibbald, September MMI
  *
- *   Version $Id: estimate.c 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id: estimate.c 8947 2009-07-02 11:36:26Z ricozz $
  *
  */
 
@@ -50,8 +50,14 @@ int make_estimate(JCR *jcr)
    set_jcr_job_status(jcr, JS_Running);
 
    set_find_options((FF_PKT *)jcr->ff, jcr->incremental, jcr->mtime);
+   /* in accurate mode, we overwrite the find_one check function */
+   if (jcr->accurate) {
+      set_find_changed_function((FF_PKT *)jcr->ff, accurate_check_file);
+   } 
+
    stat = find_files(jcr, (FF_PKT *)jcr->ff, tally_file, NULL);
 
+   accurate_free(jcr);
    return stat;
 }
 

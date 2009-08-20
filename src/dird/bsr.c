@@ -34,7 +34,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: bsr.c 8649 2009-03-30 12:50:00Z ricozz $
+ *   Version $Id: bsr.c 8918 2009-06-23 11:56:35Z ricozz $
  */
 
 #include "bacula.h"
@@ -254,13 +254,42 @@ bail_out:
    return count;
 }
 
+static void display_vol_info(UAContext *ua, RESTORE_CTX &rx, JobId_t JobId)
+{
+   POOL_MEM volmsg(PM_MESSAGE);
+   char Device[MAX_NAME_LENGTH];
+   char online;
+   RBSR *bsr;
+
+   for (bsr=rx.bsr; bsr; bsr=bsr->next) {
+      if (JobId && JobId != bsr->JobId) {
+         continue;
+      }
+
+      for (int i=0; i < bsr->VolCount; i++) {
+         if (bsr->VolParams[i].VolumeName[0]) {
+            if (!get_storage_device(Device, bsr->VolParams[i].Storage)) {
+               Device[0] = 0;
+            }
+            if (bsr->VolParams[i].InChanger && bsr->VolParams[i].Slot) {
+               online = '*';
+            } else {
+               online = ' ';
+            }
+            Mmsg(volmsg, "%c%-25.25s %-25.25s %-25.25s", 
+                 online, bsr->VolParams[i].VolumeName,
+                 bsr->VolParams[i].Storage,
+                 Device);
+            add_prompt(ua, volmsg.c_str());
+         }
+      }
+   }
+}
+
 void display_bsr_info(UAContext *ua, RESTORE_CTX &rx)
 {
    char *p;
-   POOL_MEM volmsg(PM_MESSAGE);
    JobId_t JobId;
-   char Device[MAX_NAME_LENGTH];
-   RBSR *bsr;
 
    /* Tell the user what he will need to mount */
    ua->send_msg("\n");
@@ -271,38 +300,11 @@ void display_bsr_info(UAContext *ua, RESTORE_CTX &rx)
    start_prompt(ua, "");
    if (*rx.JobIds == 0) {
       /* Print Volumes in any order */
-      for (bsr=rx.bsr; bsr; bsr=bsr->next) {
-         for (int i=0; i < bsr->VolCount; i++) {
-            if (bsr->VolParams[i].VolumeName[0]) {
-               if (!get_storage_device(Device, bsr->VolParams[i].Storage)) {
-                  Device[0] = 0;
-               }
-               Mmsg(volmsg, "%-25.25s %-25.25s %-25.25s", 
-                    bsr->VolParams[i].VolumeName, 
-                    bsr->VolParams[i].Storage, Device);
-               add_prompt(ua, volmsg.c_str());
-            }
-         }
-      }
+      display_vol_info(ua, rx, 0);
    } else {
       /* Ensure that the volumes are printed in JobId order */
       for (p=rx.JobIds; get_next_jobid_from_list(&p, &JobId) > 0; ) {
-         for (bsr=rx.bsr; bsr; bsr=bsr->next) {
-            if (JobId != bsr->JobId) {
-               continue;
-            }
-            for (int i=0; i < bsr->VolCount; i++) {
-               if (bsr->VolParams[i].VolumeName[0]) {
-                  if (!get_storage_device(Device, bsr->VolParams[i].Storage)) {
-                     Device[0] = 0;
-                  }
-                  Mmsg(volmsg, "%-25.25s %-25.25s %-25.25s", 
-                       bsr->VolParams[i].VolumeName, 
-                       bsr->VolParams[i].Storage, Device);
-                  add_prompt(ua, volmsg.c_str());
-               }
-            }
-         }
+         display_vol_info(ua, rx, JobId);
       }
    }
    for (int i=0; i < ua->num_prompts; i++) {
@@ -311,6 +313,8 @@ void display_bsr_info(UAContext *ua, RESTORE_CTX &rx)
    }
    if (ua->num_prompts == 0) {
       ua->send_msg(_("No Volumes found to restore.\n"));
+   } else {
+      ua->send_msg(_("\nVolumes marked with \"*\" are online.\n"));
    }
    ua->num_prompts = 0;
    ua->send_msg("\n");

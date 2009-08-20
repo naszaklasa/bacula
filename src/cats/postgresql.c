@@ -32,7 +32,7 @@
  *    Dan Langille, December 2003
  *    based upon work done by Kern Sibbald, March 2000
  *
- *    Version $Id: postgresql.c 8717 2009-04-12 11:53:28Z ricozz $
+ *    Version $Id: postgresql.c 9006 2009-07-15 14:03:07Z ricozz $
  */
 
 
@@ -148,7 +148,12 @@ static bool check_database_encoding(JCR *jcr, B_DB *mdb)
       Jmsg(jcr, M_ERROR, 0, "Can't check database encoding %s", mdb->errmsg);
    } else {
       ret = bstrcmp(row[0], "SQL_ASCII");
-      if (!ret) {
+
+      if (ret) {
+         /* if we are in SQL_ASCII, we can force the client_encoding to SQL_ASCII too */
+         db_sql_query(mdb, "SET client_encoding TO 'SQL_ASCII'", NULL, NULL);
+
+      } else {                  /* something is wrong with database encoding */
          Mmsg(mdb->errmsg, 
               _("Encoding error for database \"%s\". Wanted SQL_ASCII, got %s\n"),
               mdb->db_name, row[0]);
@@ -402,7 +407,7 @@ POSTGRESQL_ROW my_postgresql_fetch_row(B_DB *mdb)
    }
 
    // if still within the result set
-   if (mdb->row_number < mdb->num_rows) {
+   if (mdb->row_number >= 0 && mdb->row_number < mdb->num_rows) {
       Dmsg2(500, "my_postgresql_fetch_row row number '%d' is acceptable (0..%d)\n", mdb->row_number, mdb->num_rows);
       // get each value from this row
       for (j = 0; j < mdb->num_fields; j++) {
@@ -538,7 +543,8 @@ int my_postgresql_query(B_DB *mdb, const char *query)
       mdb->num_rows = PQntuples(mdb->result);
       Dmsg1(500, "we have %d rows\n", mdb->num_rows);
 
-      mdb->status = 0;                  /* succeed */
+      mdb->row_number = 0;      /* we can start to fetch something */
+      mdb->status = 0;          /* succeed */
    } else {
       Dmsg1(50, "Result status failed: %s\n", query);
       goto bail_out;
@@ -709,6 +715,7 @@ int my_postgresql_batch_end(JCR *jcr, B_DB *mdb, const char *error)
 {
    int res;
    int count=30;
+   PGresult *result;
    Dmsg0(500, "my_postgresql_batch_end started\n");
 
    if (!mdb) {                  /* no files ? */
@@ -729,7 +736,15 @@ int my_postgresql_batch_end(JCR *jcr, B_DB *mdb, const char *error)
       mdb->status = 0;
       Mmsg1(&mdb->errmsg, _("error ending batch mode: %s"), PQerrorMessage(mdb->db));
    }
-   
+
+   /* Check command status and return to normal libpq state */
+   result = PQgetResult(mdb->db);
+   if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+      Mmsg1(&mdb->errmsg, _("error ending batch mode: %s"), PQerrorMessage(mdb->db));
+      mdb->status = 0;
+   }
+   PQclear(result); 
+
    Dmsg0(500, "my_postgresql_batch_end finishing\n");
 
    return mdb->status;
@@ -774,7 +789,7 @@ int my_postgresql_batch_insert(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
    if (res <= 0) {
       Dmsg0(500, "we failed\n");
       mdb->status = 0;
-      Mmsg1(&mdb->errmsg, _("error ending batch mode: %s"), PQerrorMessage(mdb->db));
+      Mmsg1(&mdb->errmsg, _("error copying in batch mode: %s"), PQerrorMessage(mdb->db));
    }
 
    Dmsg0(500, "my_postgresql_batch_insert finishing\n");

@@ -1,42 +1,45 @@
 
-               Release Notes for Bacula 3.0.1
+               Release Notes for Bacula 3.0.2
 
-  Bacula code: Total files = 521 Total lines = 206,512 (*.h *.c *.in)
+  Bacula code: Total files = 1,009 Total lines = 205,726 (Using SLOCCount)
 
-Note, if you are not already running 3.0.0, read the 3.0.0 release notes 
+Note, if you are not already running 3.0.x, read the 3.0.x release notes 
 below.  Important!!!
 
-Version 3.0.1 is primarily a minor bug fix update to version 3.0.0 with
-one enhancement (see below).
+Version 3.0.2 is primarily a important bug fix update to version 3.0.1 with
+some enhancements (see below).
 
-Changes since 3.0.0:
+Changes since 3.0.1:
+
 Bug fixes:
-  1276, 1274, 1275, 1272 1246, 1268, 1281, 1282.
+  1029, 1285, 1298, 1303, 1304, 1305, 1306, 1307, 1308, 1309, 1311, 1315
+  1317, 1318, 1323, 1325, 1331, 1333, 1335
 
 Fixed:
-- Check for job_canceled() in fd_plugin code.
-- Update Win32 table creation to have new DB version 11 format
-- Remove illegal Options in Exclude of default Win32/64 bacula-dir.conf
-- Remove 'Reposition' messages when restoring
-- Updated projects file
-- Tweak version string to display versionid field at the end
-  and keep fields order.
-- Add additional mysql connection debug code submitted by:
-  Chandranshu <chandranshu@gmail.com>
+ - Fix problem with the Postgresql driver that sometime displays <NULL> values
+ - Cleanup old job records when starting the Director
+ - Fix bugs in xattr code
+ - Fix encoding problem with Postgresql
+ - Fix that prevents restore by file selection from using Copy job
 
-Enhancement:
-- Modify insertion of read Volumes in SD to be done *before* the
-  drive reservation. This ensures that a Volume to be read will not
-  be reserved for writing. Significant improvement in eliminating
-  tape deadlock situations.
+Enhancements:
+ - Security enhancement for the File Daemon
+ - New directive to specify source address for outgoing connexions
+ - Show volume availability in autochanger when doing restore.
+   This is project 31 in the projects file.
+ - Add accurate=yes/no option to estimate command
+ - Add --with-hostname, --with-bsrdir, --with-logdir to ./configure
+ - Add a restore menu that contructs a full restore when entering a JobId.
+   This is project 2 in the projects file.
+ - Add new Nagios plugin
 
-Note, both the Director and Storage daemons must be upgraded at the
-same time. The 3.0.1 File daemons are compatible with 3.0.0 file
-daemons and as noted below in the 3.0.0 release notes the Director
-and Storage daemon should be compatible with 2.4.x File daemons.  
-In general, we do not expect any of the 3.0.x File daemons to work with older
-Directors and Storage daemons (as has always been the case for Bacula
-releases).
+Compatibility:
+Like always, both the Director and Storage daemon must be upgraded at
+the same time.
+
+Older 3.0.x and possibly 2.4.x File Daemons are compatible with the 3.0.2
+Director and Storage daemons. It should be no need to upgrade older File
+Daemon.
 
 ============ Documentation improvements needed ==================
 
@@ -53,6 +56,10 @@ manpower.  If you are unhappy with this situation as we are, we suggest
 you help by submitting patches to the documentation.  Thanks.
 =====
 
+================== 3.0.1 Release Notes ========================
+
+Version 3.0.1 is primarily a minor bug fix update to version 3.0.0 with
+one enhancement.
 
 ================== 3.0.0 Release Notes ========================
 

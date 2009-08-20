@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *     Version $Id: dird_conf.c 8499 2009-03-05 09:43:19Z ricozz $
+ *     Version $Id: dird_conf.c 8937 2009-07-01 19:00:38Z kerns $
  */
 
 
@@ -112,6 +112,7 @@ static RES_ITEM dir_items[] = {
    {"dirport",     store_addresses_port,    ITEM(res_dir.DIRaddrs),  0, ITEM_DEFAULT, 9101},
    {"diraddress",  store_addresses_address, ITEM(res_dir.DIRaddrs),  0, ITEM_DEFAULT, 9101},
    {"diraddresses",store_addresses,         ITEM(res_dir.DIRaddrs),  0, ITEM_DEFAULT, 9101},
+   {"dirsourceaddress",store_addresses_address, ITEM(res_dir.DIRsrc_addr),  0, ITEM_DEFAULT, 0},
    {"queryfile",   store_dir,      ITEM(res_dir.query_file), 0, ITEM_REQUIRED, 0},
    {"workingdirectory", store_dir, ITEM(res_dir.working_directory), 0, ITEM_REQUIRED, 0},
    {"plugindirectory",  store_dir, ITEM(res_dir.plugin_directory),  0, 0, 0},
@@ -334,7 +335,7 @@ RES_ITEM job_items[] = {
    {"accurate",           store_bool, ITEM(res_job.accurate), 0,0,0},
    {"allowduplicatejobs", store_bool, ITEM(res_job.AllowDuplicateJobs), 0, ITEM_DEFAULT, false},
    {"allowhigherduplicates",   store_bool, ITEM(res_job.AllowHigherDuplicates), 0, ITEM_DEFAULT, true},
-   {"cancelqueuedduplicates",  store_bool, ITEM(res_job.CancelQueuedDuplicates), 0, ITEM_DEFAULT, true},
+   {"cancelqueuedduplicates",  store_bool, ITEM(res_job.CancelQueuedDuplicates), 0, ITEM_DEFAULT, false},
    {"cancelrunningduplicates", store_bool, ITEM(res_job.CancelRunningDuplicates), 0, ITEM_DEFAULT, false},
    {"pluginoptions", store_str, ITEM(res_job.PluginOptions), 0, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
@@ -1078,6 +1079,9 @@ void free_resource(RES *sres, int type)
       }
       if (res->res_dir.DIRaddrs) {
          free_addresses(res->res_dir.DIRaddrs);
+      }
+      if (res->res_dir.DIRsrc_addr) {
+         free_addresses(res->res_dir.DIRsrc_addr);
       }
       if (res->res_dir.tls_ctx) { 
          free_tls_context(res->res_dir.tls_ctx);
