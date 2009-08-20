@@ -344,6 +344,9 @@ VOLRES *reserve_volume(DCR *dcr, const char *VolumeName)
    VOLRES *vol, *nvol;
    DEVICE * volatile dev = dcr->dev;
 
+   if (job_canceled(dcr->jcr)) {
+      return NULL;
+   }
    ASSERT(dev != NULL);
 
    Dmsg2(dbglvl, "enter reserve_volume=%s drive=%s\n", VolumeName, 
@@ -701,6 +704,9 @@ bool DCR::can_i_use_volume()
    bool rtn = true;
    VOLRES *vol;
 
+   if (job_canceled(jcr)) {
+      return false;
+   }
    lock_volumes();
    vol = find_volume(VolumeName);
    if (!vol) {

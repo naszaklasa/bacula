@@ -31,7 +31,7 @@
  *
  *  Kern E. Sibbald, December 2000
  *
- *  Version $Id: jcr.c 8502 2009-03-06 20:00:47Z kerns $
+ *  Version $Id: jcr.c 8894 2009-06-12 19:05:34Z kerns $
  *
  *  These routines are thread safe.
  *
@@ -518,6 +518,7 @@ void free_jcr(JCR *jcr)
             jcr->JobId, jcr->use_count(), jcr->Job);
    }
    remove_jcr(jcr);                   /* remove Jcr from chain */
+   unlock_jcr_chain();
 
    dequeue_messages(jcr);
    job_end_pop(jcr);                  /* pop and call hooked routines */
@@ -571,7 +572,6 @@ void free_jcr(JCR *jcr)
       jcr->daemon_free_jcr(jcr);      /* call daemon free routine */
    }
 
-   unlock_jcr_chain();
    free_common_jcr(jcr);
    close_msg(NULL);                   /* flush any daemon messages */
    garbage_collect_memory_pool();
@@ -1063,8 +1063,8 @@ void _dbg_print_jcr(FILE *fp)
       fprintf(fp, "\tuse_count=%i\n",
               jcr->use_count());
 #else
-      fprintf(fp, "\tuse_count=%i threadid=0x%x\n",
-              jcr->use_count(), (int)jcr->my_thread_id);
+      /* KES -- removed non-portable code referencing pthread_t */
+      fprintf(fp, "\tuse_count=%d\n", jcr->use_count());
 #endif
       fprintf(fp, "\tJobType=%c JobLevel=%c\n",
               jcr->get_JobType(), jcr->get_JobLevel());

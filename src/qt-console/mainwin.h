@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /* 
- *   Version $Id: mainwin.h 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *   Version $Id: mainwin.h 8898 2009-06-13 23:33:00Z bartleyd2 $
  *
  * qt-console main window class definition.
  *
@@ -87,8 +87,6 @@ public:
    int m_daysLimitVal;
    bool m_checkMessages;
    int m_checkMessagesInterval;
-   bool m_refreshStatusDir;
-   int m_refreshStatusDirInterval;
    bool m_longList;
    bool m_rtPopDirDebug;
    bool m_rtDirCurICDebug;
@@ -128,7 +126,9 @@ public slots:
    void waitEnter();
    void waitExit();
    void repopLists();
+   void reloadRepopLists();
    void popLists();
+   void goToPreviousPage();
 
 protected:
    void closeEvent(QCloseEvent *event);
@@ -152,6 +152,8 @@ private:
    bool m_isClosing;
    bool m_waitState;
    bool m_doConnect;
+   QList<QTreeWidgetItem *> m_treeWidgetStack;
+   bool m_treeStackTrap;
 };
 
 #include "ui_prefs.h"

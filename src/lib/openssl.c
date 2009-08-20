@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,7 @@
  *
  * Author: Landon Fuller <landonf@opendarwin.org>
  *
- * Version $Id: openssl.c 7380 2008-07-14 10:42:59Z kerns $
+ * Version $Id: openssl.c 8924 2009-06-25 12:02:58Z kerns $
  *
  * This file was contributed to the Bacula project by Landon Fuller.
  *

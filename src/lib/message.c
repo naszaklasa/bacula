@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: message.c 8641 2009-03-29 11:34:33Z kerns $
+ *   Version $Id: message.c 8920 2009-06-23 12:40:45Z ricozz $
  *
  */
 
@@ -784,7 +784,7 @@ send_to_file:
              case MD_DIRECTOR:
                 Dmsg1(850, "DIRECTOR for following msg: %s", msg);
                 if (jcr && jcr->dir_bsock && !jcr->dir_bsock->errors) {
-                   bnet_fsend(jcr->dir_bsock, "Jmsg Job=%s type=%d level=%lld %s",
+                   jcr->dir_bsock->fsend("Jmsg Job=%s type=%d level=%lld %s",
                       jcr->Job, type, mtime, msg);
                 } else {
                    Dmsg1(800, "no jcr for following msg: %s", msg);

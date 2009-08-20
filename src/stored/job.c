@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: job.c 8713 2009-04-11 12:35:04Z kerns $
+ *   Version $Id: job.c 8982 2009-07-14 13:44:46Z kerns $
  *
  */
 
@@ -146,7 +146,6 @@ bool job_cmd(JCR *jcr)
    jcr->PreferMountedVols = PreferMountedVols;
 
    jcr->authenticated = false;
-   jcr->need_fd = true;
 
    /*
     * Pass back an authorization key for the File daemon
@@ -174,7 +173,7 @@ bool run_cmd(JCR *jcr)
    /* If we do not need the FD, we are doing a migrate, copy, or virtual
     *   backup.
     */
-   if (!jcr->need_fd) {
+   if (jcr->no_client_used()) {
       do_mac(jcr);
       return false;
    }

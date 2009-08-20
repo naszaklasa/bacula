@@ -41,7 +41,7 @@
  *       to do the backup.
  *     When the Storage daemon finishes the job, update the DB.
  *
- *   Version $Id: migrate.c 8754 2009-04-27 15:43:34Z ricozz $
+ *   Version $Id: migrate.c 8888 2009-06-05 17:05:49Z kerns $
  */
 
 #include "bacula.h"
@@ -481,6 +481,12 @@ static int unique_dbid_handler(void *ctx, int num_fields, char **row)
 {
    idpkt *ids = (idpkt *)ctx;
 
+   /* Sanity check */
+   if (!row || !row[0]) {
+      Dmsg0(dbglevel, "dbid_hdlr error empty row\n");
+      return 1;              /* stop calling us */
+   }
+
    add_unique_id(ids, row[0]);
    Dmsg3(dbglevel, "dbid_hdlr count=%d Ids=%p %s\n", ids->count, ids->list, ids->list);
    return 0;
@@ -847,9 +853,6 @@ static int get_job_to_migrate(JCR *jcr)
       JobId = 0;
       stat = get_next_jobid_from_list(&p, &JobId);
       Dmsg3(dbglevel, "get_jobid_no=%d stat=%d JobId=%u\n", i, stat, JobId);
-      jcr->MigrateJobId = JobId;
-      start_migration_job(jcr);
-      Dmsg0(dbglevel, "Back from start_migration_job\n");
       if (stat < 0) {
          Jmsg(jcr, M_FATAL, 0, _("Invalid JobId found.\n"));
          goto bail_out;
@@ -857,6 +860,9 @@ static int get_job_to_migrate(JCR *jcr)
          Jmsg(jcr, M_INFO, 0, _("No JobIds found to %s.\n"), jcr->get_ActionName(0));
          goto ok_out;
       }
+      jcr->MigrateJobId = JobId;
+      start_migration_job(jcr);
+      Dmsg0(dbglevel, "Back from start_migration_job\n");
    }
    
    /* Now get the last JobId and handle it in the current job */
@@ -908,7 +914,7 @@ static void start_migration_job(JCR *jcr)
    UAContext *ua = new_ua_context(jcr);
    char ed1[50];
    ua->batch = true;
-   Mmsg(ua->cmd, "run %s jobid=%s", jcr->job->hdr.name, 
+   Mmsg(ua->cmd, "run job=\"%s\" jobid=%s", jcr->job->name(),
         edit_uint64(jcr->MigrateJobId, ed1));
    Dmsg2(dbglevel, "=============== %s cmd=%s\n", jcr->get_OperationName(), ua->cmd);
    parse_ua_args(ua);                 /* parse command */

@@ -60,10 +60,11 @@ public slots:
 
 private slots:
    void timerTriggered();
-   void spinBoxValueChanged(int);
    void populateCurrentTab(int);
    void mountButtonPushed();
    void umountButtonPushed();
+   void releaseButtonPushed();
+   void labelButtonPushed();
 
 private:
    void createConnections();

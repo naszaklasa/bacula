@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: storage.h 7660 2008-09-28 18:12:29Z bartleyd2 $
+ *   Version $Id: storage.h 8866 2009-05-26 18:28:50Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -65,9 +65,11 @@ private slots:
 private:
    void createContextMenu();
    void mediaList(QTreeWidgetItem *parent, const QString &storageID);
+   void settingsOpenStatus(QString& storage);
    QString m_currentStorage;
    bool m_currentAutoChanger;
    bool m_populated;
+   bool m_firstpopulation;
    bool m_checkcurwidget;
    void writeExpandedSettings();
    QTreeWidgetItem *m_topItem;

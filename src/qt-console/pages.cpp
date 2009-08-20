@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: pages.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *   Version $Id: pages.cpp 8897 2009-06-13 15:30:42Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -230,15 +230,29 @@ void Pages::treeWidgetName(QString &name)
  */
 void Pages::consoleCommand(QString &command)
 {
+   consoleCommand(command, true);
+}
+void Pages::consoleCommand(QString &command, bool setCurrent)
+{
    int conn;
+   bool donotify = false;
    if (m_console->availableDirComm(conn))  {
-      consoleCommand(command, conn);
+      if (m_console->is_notify_enabled(conn)) {
+         donotify = true;
+         m_console->notify(conn, false);
+      }
+      consoleCommand(command, conn, setCurrent);
+      if (donotify) { m_console->notify(conn, true); }
    }
 }
 void Pages::consoleCommand(QString &command, int conn)
 {
+   consoleCommand(command, conn, true);
+}
+void Pages::consoleCommand(QString &command, int conn, bool setCurrent)
+{
    /* Bring this director's console to the front of the stack */
-   setConsoleCurrent();
+   if (setCurrent) { setConsoleCurrent(); }
    QString displayhtml("<font color=\"blue\">");
    displayhtml += command + "</font>\n";
    m_console->display_html(displayhtml);

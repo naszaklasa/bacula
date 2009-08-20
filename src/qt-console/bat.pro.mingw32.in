@@ -21,7 +21,7 @@ INCLUDEPATH += .. . ./console ./restore ./select
 
 cross-win32 {
 #  LIBS       +=  ../win32/dll/bacula.a
-  LIBS       +=  -mwindows -L../win32/release -lbacula
+  LIBS       +=  -mwindows -L../win32/release32 -lbacula
 }
 !cross-win32 {
   LIBS        += -L../lib -lbac @OPENSSL_LIBS@
@@ -69,7 +69,7 @@ SOURCES += bcomm/dircomm.cpp bcomm/dircomm_auth.cpp
 
 # Console
 HEADERS += console/console.h
-SOURCES += console/authenticate.cpp console/console.cpp
+SOURCES += console/console.cpp
 
 # Restore
 HEADERS += restore/restore.h

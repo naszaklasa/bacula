@@ -32,7 +32,7 @@
  *              Kern Sibbald, March MMI
  *                 added BB02 format October MMII
  *
- *   Version $Id: block.c 8424 2009-02-05 11:30:35Z kerns $
+ *   Version $Id: block.c 8893 2009-06-12 19:00:50Z kerns $
  *
  */
 
@@ -415,6 +415,9 @@ bool write_block_to_dev(DCR *dcr)
    empty_block(block);
    return true;
 #endif
+   if (job_canceled(jcr)) {
+      return false;
+   }
    ASSERT(block->binbuf == ((uint32_t) (block->bufp - block->buf)));
    ASSERT(dev->is_open());
 
@@ -935,6 +938,9 @@ bool read_block_from_dev(DCR *dcr, bool check_block_numbers)
    DEVICE *dev = dcr->dev;
    DEV_BLOCK *block = dcr->block;
 
+   if (job_canceled(jcr)) {
+      return false;
+   }
    ASSERT(dev->is_open());
    
    if (dev->at_eot()) {

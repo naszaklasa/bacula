@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,7 +34,7 @@
  *
  *    Kern Sibbald, December 2000
  *
- *    Version $Id: sql_find.c 8508 2009-03-07 20:59:46Z kerns $
+ *    Version $Id: sql_find.c 8944 2009-07-02 09:22:20Z kerns $
  */
 
 
@@ -57,7 +57,7 @@
 
 /*
  * Find job start time if JobId specified, otherwise
- * find last full save for Incremental and Differential saves.
+ * find last Job start time Incremental and Differential saves.
  *
  *  StartTime is returned in stime
  *
@@ -75,8 +75,8 @@ db_find_job_start_time(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM **stime)
    pm_strcpy(stime, "0000-00-00 00:00:00");   /* default */
    /* If no Id given, we must find corresponding job */
    if (jr->JobId == 0) {
-         /* Differential is since last Full backup */
-         Mmsg(mdb->cmd,
+      /* Differential is since last Full backup */
+      Mmsg(mdb->cmd,
 "SELECT StartTime FROM Job WHERE JobStatus IN ('T','W') AND Type='%c' AND "
 "Level='%c' AND Name='%s' AND ClientId=%s AND FileSetId=%s "
 "ORDER BY StartTime DESC LIMIT 1",

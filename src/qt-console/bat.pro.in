@@ -1,5 +1,5 @@
 ######################################################################
-# Version $Id: bat.pro.in 8614 2009-03-27 17:59:16Z kerns $
+# Version $Id: bat.pro.in 8890 2009-06-08 08:38:06Z kerns $
 #
 #   !!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
@@ -10,9 +10,9 @@
 CONFIG += qt debug @QWT@
 
 bins.path = /$(DESTDIR)@sbindir@
-bins.files = ./bat
+bins.files = bat
 confs.path = /$(DESTDIR)@sysconfdir@
-confs.commands = ./install_conf_file   
+confs.commands = ./install_conf_file
 help.path = /$(DESTDIR)@htmldir@
 help.files = help/*.html images/status.png images/mail-message-new.png
 
@@ -157,9 +157,7 @@ SOURCES += status/storstat.cpp
 HEADERS += util/fmtwidgetitem.h util/comboutil.h
 SOURCES += util/fmtwidgetitem.cpp util/comboutil.cpp
 
-INSTALLS += bins
-INSTALLS += confs
-INSTALLS += help
+INSTALLS = bins confs help
 
 QMAKE_EXTRA_TARGETS += depend
 

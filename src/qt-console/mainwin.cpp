@@ -27,7 +27,7 @@
 */
 
 /*
- *   Version $Id: mainwin.cpp 8660 2009-03-31 03:11:25Z bartleyd2 $
+ *   Version $Id: mainwin.cpp 9054 2009-07-18 21:03:34Z kerns $
  *
  *  Main Window control for bat (qt-console)
  *
@@ -70,6 +70,7 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent)
    m_isClosing = false;
    m_waitState = false;
    m_doConnect = false;
+   m_treeStackTrap = false;
    m_dtformat = "yyyy-MM-dd HH:mm:ss";
    mainWin = this;
    setupUi(this);                     /* Setup UI defined by main.ui (designer) */
@@ -248,7 +249,7 @@ void MainWin::connectSignals()
    connect(actionAbout_bat, SIGNAL(triggered()), this, SLOT(about()));
    connect(actionBat_Help, SIGNAL(triggered()), this, SLOT(help()));
    connect(treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(treeItemClicked(QTreeWidgetItem *, int)));
-   connect(treeWidget, SIGNAL( currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
+   connect(treeWidget, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
    connect(stackedWidget, SIGNAL(currentChanged(int)), this, SLOT(stackItemChanged(int)));
    connect(actionQuit, SIGNAL(triggered()), app, SLOT(closeAllWindows()));
    connect(actionLabel, SIGNAL(triggered()), this,  SLOT(labelButtonClicked()));
@@ -265,6 +266,7 @@ void MainWin::connectSignals()
    connect(actionClosePage, SIGNAL(triggered()), this,  SLOT(closePage()));
    connect(actionPreferences, SIGNAL(triggered()), this,  SLOT(setPreferences()));
    connect(actionRepopLists, SIGNAL(triggered()), this,  SLOT(repopLists()));
+   connect(actionReloadRepop, SIGNAL(triggered()), this,  SLOT(reloadRepopLists()));
 }
 
 void MainWin::disconnectSignals()
@@ -291,6 +293,7 @@ void MainWin::disconnectSignals()
    disconnect(actionClosePage, SIGNAL(triggered()), this,  SLOT(closePage()));
    disconnect(actionPreferences, SIGNAL(triggered()), this,  SLOT(setPreferences()));
    disconnect(actionRepopLists, SIGNAL(triggered()), this,  SLOT(repopLists()));
+   disconnect(actionReloadRepop, SIGNAL(triggered()), this,  SLOT(reloadRepopLists()));
 }
 
 /*
@@ -318,8 +321,7 @@ void MainWin::waitEnter()
 void MainWin::waitExit()
 {
    m_waitState = false;
-   if (mainWin->m_connDebug)
-      Pmsg0(000, "Exiting Wait State\n");
+   if (mainWin->m_connDebug) Pmsg0(000, "Exiting Wait State\n");
    app->restoreOverrideCursor();
    if (m_waitTreeItem != treeWidget->currentItem())
       treeWidget->setCurrentItem(m_waitTreeItem);
@@ -333,20 +335,29 @@ void MainWin::connectConsoleSignals()
 {
    connect(actionConnect, SIGNAL(triggered()), m_currentConsole, SLOT(connect_dir()));
    connect(actionSelectFont, SIGNAL(triggered()), m_currentConsole, SLOT(set_font()));
-   connect(actionStatusDir, SIGNAL(triggered()), m_currentConsole, SLOT(status_dir()));
    connect(actionMessages, SIGNAL(triggered()), m_currentConsole, SLOT(messages()));
 }
 
 void MainWin::disconnectConsoleSignals(Console *console)
 {
    disconnect(actionConnect, SIGNAL(triggered()), console, SLOT(connect_dir()));
-   disconnect(actionStatusDir, SIGNAL(triggered()), console, SLOT(status_dir()));
    disconnect(actionMessages, SIGNAL(triggered()), console, SLOT(messages()));
    disconnect(actionSelectFont, SIGNAL(triggered()), console, SLOT(set_font()));
 }
 
+
+/* 
+ * Two functions to respond to menu items to repop lists and execute reload and repopulate
+ * the lists for jobs, clients, filesets .. ..
+ */
 void MainWin::repopLists()
 {
+   m_currentConsole->populateLists(false);
+}
+void MainWin::reloadRepopLists()
+{
+   QString cmd = "reload";
+   m_currentConsole->consoleCommand(cmd);
    m_currentConsole->populateLists(false);
 }
 
@@ -357,6 +368,13 @@ void MainWin::closeEvent(QCloseEvent *event)
 {
    m_isClosing = true;
    writeSettings();
+   /* Remove all groups from settings for OpenOnExit so that we can start some of the status windows */
+   foreach(Console *console, m_consoleHash){
+      QSettings settings(console->m_dir->name(), "bat");
+      settings.beginGroup("OpenOnExit");
+      settings.remove("");
+      settings.endGroup();
+   }
    /* close all non console pages, this will call settings in destructors */
    while (m_consoleHash.count() < m_pagehash.count()) {
       foreach(Pages *page, m_pagehash) {
@@ -386,6 +404,7 @@ void MainWin::writeSettings()
    settings.setValue("winPos", pos());
    settings.setValue("state", saveState());
    settings.endGroup();
+
 }
 
 void MainWin::readSettings()
@@ -456,6 +475,9 @@ void MainWin::treeItemChanged(QTreeWidgetItem *currentitem, QTreeWidgetItem *pre
 
    /* this condition prevents a segfault.  The first time there is no previousitem*/
    if (previousitem) {
+      if (m_treeStackTrap == false) { /* keep track of previous items for going Back */
+         m_treeWidgetStack.append(previousitem);
+      }
       /* knowing the treeWidgetItem, get the page from the hash */
       previousPage = getFromHash(previousitem);
       previousConsole = m_consoleHash.value(previousitem);
@@ -568,11 +590,16 @@ void MainWin::jobPlotButtonClicked()
  */
 void MainWin::input_line()
 {
+   int conn;
    QString cmdStr = lineEdit->text();    /* Get the text */
    lineEdit->clear();                    /* clear the lineEdit box */
    if (m_currentConsole->is_connected()) {
-      /* Use consoleCommand to allow typing anything */
-      m_currentConsole->consoleCommand(cmdStr);
+      if (m_currentConsole->currentDirComm(conn)) {
+         m_currentConsole->consoleCommand(cmdStr, conn);
+      } else {
+         /* Use consoleCommand to allow typing anything */
+         m_currentConsole->consoleCommand(cmdStr);
+      }
    } else {
       set_status(tr("Director not connected. Click on connect button."));
    }
@@ -748,8 +775,6 @@ void MainWin::setPreferences()
    prefs.daysSpinBox->setValue(m_daysLimitVal);
    prefs.checkMessages->setCheckState(m_checkMessages ? Qt::Checked : Qt::Unchecked);
    prefs.checkMessagesSpin->setValue(m_checkMessagesInterval);
-   prefs.refreshStatusDir->setCheckState(m_refreshStatusDir ? Qt::Checked : Qt::Unchecked);
-   prefs.refreshStatusDirSpin->setValue(m_refreshStatusDirInterval);
    prefs.executeLongCheckBox->setCheckState(m_longList ? Qt::Checked : Qt::Unchecked);
    prefs.rtPopDirCheckBox->setCheckState(m_rtPopDirDebug ? Qt::Checked : Qt::Unchecked);
    prefs.rtDirCurICCheckBox->setCheckState(m_rtDirCurICDebug ? Qt::Checked : Qt::Unchecked);
@@ -804,8 +829,6 @@ void prefsDialog::accept()
    mainWin->m_daysLimitVal = this->daysSpinBox->value();
    mainWin->m_checkMessages = this->checkMessages->checkState() == Qt::Checked;
    mainWin->m_checkMessagesInterval = this->checkMessagesSpin->value();
-   mainWin->m_refreshStatusDir = this->refreshStatusDir->checkState() == Qt::Checked;
-   mainWin->m_refreshStatusDirInterval = this->refreshStatusDirSpin->value();
    mainWin->m_longList = this->executeLongCheckBox->checkState() == Qt::Checked;
 
    mainWin->m_rtPopDirDebug = this->rtPopDirCheckBox->checkState() == Qt::Checked;
@@ -849,8 +872,6 @@ void prefsDialog::accept()
    settings.beginGroup("Timers");
    settings.setValue("checkMessages", mainWin->m_checkMessages);
    settings.setValue("checkMessagesInterval", mainWin->m_checkMessagesInterval);
-   settings.setValue("refreshStatusDir", mainWin->m_refreshStatusDir);
-   settings.setValue("refreshStatusDirInterval", mainWin->m_refreshStatusDirInterval);
    settings.endGroup();
    settings.beginGroup("Misc");
    settings.setValue("longList", mainWin->m_longList);
@@ -902,8 +923,6 @@ void MainWin::readPreferences()
    settings.beginGroup("Timers");
    m_checkMessages = settings.value("checkMessages", false).toBool();
    m_checkMessagesInterval = settings.value("checkMessagesInterval", 28).toInt();
-   m_refreshStatusDir = settings.value("refreshStatusDir", false).toBool();
-   m_refreshStatusDirInterval = settings.value("refreshStatusDirInterval", 28).toInt();
    settings.endGroup();
    settings.beginGroup("Misc");
    m_longList = settings.value("longList", false).toBool();
@@ -936,4 +955,31 @@ void MainWin::setMessageIcon()
       actionMessages->setIcon(QIcon(QString::fromUtf8(":/images/mail-message-pending.png")));
    else
       actionMessages->setIcon(QIcon(QString::fromUtf8(":/images/mail-message-new.png")));
+}
+
+void MainWin::goToPreviousPage()
+{
+   m_treeStackTrap = true;
+   bool done = false;
+   while (!done) {
+      /* If stack list is emtpty, then done */
+      if (m_treeWidgetStack.isEmpty()) {
+         done = true;
+      } else {
+         QTreeWidgetItem* testItem = m_treeWidgetStack.takeLast();
+         QTreeWidgetItemIterator it(treeWidget);
+         /* lets avoid a segfault by setting an item current that no longer exists */
+         while (*it) {
+            if (*it == testItem) {
+               if (testItem != treeWidget->currentItem()) {
+                  treeWidget->setCurrentItem(testItem);
+                  done = true;
+               }
+               break;
+            }
+            ++it;
+         }
+      }
+   }
+   m_treeStackTrap = false;
 }

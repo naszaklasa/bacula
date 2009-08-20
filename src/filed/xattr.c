@@ -40,39 +40,27 @@
  *
  *   Written by Marco van Wieringen, November MMVIII
  *
- *   Version $Id: xattr.c 8678 2009-04-02 10:29:26Z marcovw $
+ *   Version $Id: xattr.c 8957 2009-07-04 21:18:49Z marcovw $
  */
 
 #include "bacula.h"
 #include "filed.h"
 #include "xattr.h"
 
+#if !defined(HAVE_XATTR)
 /*
- * List of supported OSes. Everything outside that gets stub functions.
- * Also when XATTR support is explicitly disabled.
+ * Entry points when compiled without support for XATTRs or on an unsupported platform.
  */
-#if !defined(HAVE_XATTR)          /* Extended Attributes support is required, of course */ \
-   || !( defined(HAVE_DARWIN_OS)  /* OSX has XATTR support  using getxattr etc. */ \
-      || defined(HAVE_FREEBSD_OS) /* FreeBSD has XATTR support using lgetxattr etc. */ \
-      || defined(HAVE_LINUX_OS)   /* Linux has XATTR support using the lgetxattr etc. */ \
-      || defined(HAVE_NETBSD_OS)  /* NetBSD has XATTR support using the lgetxattr etc. */ \
-      || defined(HAVE_SUN_OS)     /* Solaris has XATTR support using attropen etc. */ \
-        )
-
 bool build_xattr_streams(JCR *jcr, FF_PKT *ff_pkt)
 {
-   Jmsg(jcr, M_FATAL, 0, _("XATTR support not configured for your machine.\n"));
    return false;
 }
 
 bool parse_xattr_stream(JCR *jcr, int stream)
 {
-   Jmsg(jcr, M_FATAL, 0, _("XATTR support not configured for your machine.\n"));
    return false;
 }
-
 #else
-
 /*
  * Send a XATTR stream to the SD.
  */
@@ -96,7 +84,6 @@ static bool send_xattr_stream(JCR *jcr, int stream)
    if (!sd->fsend("%ld %d 0", jcr->JobFiles, stream)) {
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
             sd->bstrerror());
-
       return false;
    }
 
@@ -112,7 +99,6 @@ static bool send_xattr_stream(JCR *jcr, int stream)
       sd->msglen = 0;
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
             sd->bstrerror());
-
       return false;
    }
 
@@ -121,10 +107,8 @@ static bool send_xattr_stream(JCR *jcr, int stream)
    if (!sd->signal(BNET_EOD)) {
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
             sd->bstrerror());
-
       return false;
    }
-
    Dmsg1(200, "XATTR of file: %s successfully backed up!\n", jcr->last_fname);
 
    return true;
@@ -265,8 +249,7 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
          jcr->last_fname, be.bstrerror());
       Dmsg2(100, "llistxattr error file=%s ERR=%s\n",
          jcr->last_fname, be.bstrerror());
-
-      return false;
+      return true;                       /* non-fatal return */
    } else if (xattr_list_len == 0) {
       return true;
    }
@@ -274,11 +257,7 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
    /*
     * Allocate room for the extented attribute list.
     */
-   if ((xattr_list = (char *)malloc(xattr_list_len + 1)) == (char *)NULL) {
-      Emsg1(M_ABORT, 0, _("Out of memory requesting %d bytes\n"), xattr_list_len + 1);
-
-      return false;
-   }
+   xattr_list = (char *)malloc(xattr_list_len + 1);
    memset((caddr_t)xattr_list, 0, xattr_list_len + 1);
 
    /*
@@ -291,10 +270,8 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
          jcr->last_fname, be.bstrerror());
       Dmsg2(100, "llistxattr error file=%s ERR=%s\n",
          jcr->last_fname, be.bstrerror());
-
       free(xattr_list);
-
-      return false;
+      return true;                    /* non-fatal return */
    }
    xattr_list[xattr_list_len] = '\0';
 
@@ -318,18 +295,17 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
       bp = strchr(bp, '\0') + 1;
    }
 
-   if (count == 0)
+   if (count == 0) {
+      free(xattr_list);
+
       return true;
+   }
 
    /*
     * Allocate enough room to hold all extended attributes.
     * After allocating the storage make sure its empty by zeroing it.
     */
-   if ((xattr_value_list = (xattr_t *)malloc(count * sizeof(xattr_t))) == (xattr_t *)NULL) {
-      Emsg1(M_ABORT, 0, _("Out of memory requesting %d bytes\n"), count * sizeof(xattr_t));
-
-      return false;
-   }
+   xattr_value_list = (xattr_t *)malloc(count * sizeof(xattr_t));
    memset((caddr_t)xattr_value_list, 0, count * sizeof(xattr_t));
 
    /*
@@ -342,7 +318,6 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
 #if defined(HAVE_LINUX_OS)
       if (ff_pkt->flags & FO_ACL && !strcmp(bp, "system.posix_acl_access")) {
          bp = strchr(bp, '\0') + 1;
-
          continue;
       }
 #endif
@@ -357,11 +332,7 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
        * Allocate space for storing the name.
        */
       current_xattr->name_length = strlen(bp);
-      if ((current_xattr->name = (char *)malloc(current_xattr->name_length)) == (char *)NULL) {
-         Emsg1(M_ABORT, 0, _("Out of memory requesting %d bytes\n"), current_xattr->name_length);
-
-         goto bail_out;
-      }
+      current_xattr->name = (char *)malloc(current_xattr->name_length);
       memcpy((caddr_t)current_xattr->name, (caddr_t)bp, current_xattr->name_length);
 
       expected_serialize_len += sizeof(current_xattr->name_length) + current_xattr->name_length;
@@ -376,18 +347,13 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
             jcr->last_fname, be.bstrerror());
          Dmsg2(100, "lgetxattr error file=%s ERR=%s\n",
             jcr->last_fname, be.bstrerror());
-
          goto bail_out;
       }
 
       /*
        * Allocate space for storing the value.
        */
-      if ((current_xattr->value = (char *)malloc(xattr_value_len)) == (char *)NULL) {
-         Emsg1(M_ABORT, 0, _("Out of memory requesting %d bytes\n"), xattr_value_len);
-
-         goto bail_out;
-      }
+      current_xattr->value = (char *)malloc(xattr_value_len);
       memset((caddr_t)current_xattr->value, 0, xattr_value_len);
 
       xattr_value_len = lgetxattr(jcr->last_fname, bp, current_xattr->value, xattr_value_len);
@@ -397,7 +363,6 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
             jcr->last_fname, be.bstrerror());
          Dmsg2(100, "lgetxattr error file=%s ERR=%s\n",
             jcr->last_fname, be.bstrerror());
-
          goto bail_out;
       }
 
@@ -413,7 +378,6 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
       if (expected_serialize_len >= MAX_XATTR_STREAM) {
          Jmsg2(jcr, M_ERROR, 0, _("Xattr stream on file \"%s\" exceeds maximum size of %d bytes\n"),
             jcr->last_fname, MAX_XATTR_STREAM);
-
          goto bail_out;
       }
       
@@ -432,7 +396,6 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
          jcr->last_fname);
       Dmsg1(100, "Failed to serialize extended attributes on file \"%s\"\n",
          jcr->last_fname);
-
       goto bail_out;
    }
 
@@ -447,15 +410,14 @@ static bool generic_xattr_build_streams(JCR *jcr, FF_PKT *ff_pkt, int stream)
 bail_out:
    xattr_drop_internal_table(xattr_value_list);
    free(xattr_list);
-
-   return false;
+   return true;                    /* non-fatal return */
 }
 
 static bool generic_xattr_parse_streams(JCR *jcr)
 {
    unser_declare;
    xattr_t current_xattr;
-   bool retval = true;
+   bool retval = true;                /* default non-fatal */
 
    /*
     * Parse the stream and perform the setxattr calls on the file.
@@ -475,8 +437,7 @@ static bool generic_xattr_parse_streams(JCR *jcr)
             jcr->last_fname);
          Dmsg1(100, "Illegal xattr stream, no XATTR_MAGIC on file \"%s\"\n",
             jcr->last_fname);
-
-         return false;
+         return true;                 /* non-fatal return */
       }
 
       /*
@@ -487,11 +448,7 @@ static bool generic_xattr_parse_streams(JCR *jcr)
       /*
        * Allocate room for the name and decode its content.
        */
-      if ((current_xattr.name = (char *)malloc(current_xattr.name_length + 1)) == (char *)NULL) {
-         Emsg1(M_ABORT, 0, _("Out of memory requesting %d bytes\n"), current_xattr.name_length + 1);
-
-         return false;
-      }
+      current_xattr.name = (char *)malloc(current_xattr.name_length + 1);
       unser_bytes(current_xattr.name, current_xattr.name_length);
 
       /*
@@ -507,11 +464,7 @@ static bool generic_xattr_parse_streams(JCR *jcr)
       /*
        * Allocate room for the value and decode its content.
        */
-      if ((current_xattr.value = (char *)malloc(current_xattr.value_length)) == (char *)NULL) {
-         Emsg1(M_ABORT, 0, _("Out of memory requesting %d bytes\n"), current_xattr.value_length);
-
-         return false;
-      }
+      current_xattr.value = (char *)malloc(current_xattr.value_length);
       unser_bytes(current_xattr.value, current_xattr.value_length);
 
       /*
@@ -526,12 +479,6 @@ static bool generic_xattr_parse_streams(JCR *jcr)
             jcr->last_fname, be.bstrerror());
          Dmsg2(100, "lsetxattr error file=%s ERR=%s\n",
             jcr->last_fname, be.bstrerror());
-
-         /*
-          * Reset the return flag to false to indicate one or more extended attributes
-          * could not be restored.
-          */
-         retval = false;
       }
 
       /*
@@ -557,7 +504,10 @@ static bool darwin_parse_xattr_stream(JCR *jcr, int stream)
    case STREAM_XATTR_DARWIN:
       return generic_xattr_parse_streams(jcr);
    default:
-      return false;
+      Jmsg2(jcr, M_WARNING, 0,
+         _("Can't restore Extended Attributes of %s - incompatible xattr stream encountered - %d\n"),
+         jcr->last_fname, stream);
+      return true;                    /* non-fatal error */
    }
 }
 #elif defined(HAVE_FREEBSD_OS)
@@ -572,7 +522,10 @@ static bool freebsd_parse_xattr_stream(JCR *jcr, int stream)
    case STREAM_XATTR_FREEBSD:
       return generic_xattr_parse_streams(jcr);
    default:
-      return false;
+      Jmsg2(jcr, M_WARNING, 0, 
+         _("Can't restore Extended Attributes of %s - incompatible xattr stream encountered - %d\n"),
+         jcr->last_fname, stream);
+      return true;                    /* non-fatal error */
    }
 }
 #elif defined(HAVE_LINUX_OS)
@@ -587,7 +540,10 @@ static bool linux_parse_xattr_stream(JCR *jcr, int stream)
    case STREAM_XATTR_LINUX:
       return generic_xattr_parse_streams(jcr);
    default:
-      return false;
+      Jmsg2(jcr, M_WARNING, 0, 
+         _("Can't restore Extended Attributes of %s - incompatible xattr stream encountered - %d\n"),
+         jcr->last_fname, stream);
+      return true;                    /* non-fatal error */
    }
 }
 #elif defined(HAVE_NETBSD_OS)
@@ -602,7 +558,10 @@ static bool netbsd_parse_xattr_stream(JCR *jcr, int stream)
    case STREAM_XATTR_NETBSD:
       return generic_xattr_parse_streams(jcr);
    default:
-      return false;
+      Jmsg2(jcr, M_WARNING, 0, 
+         _("Can't restore Extended Attributes of %s - incompatible xattr stream encountered - %d\n"),
+         jcr->last_fname, stream);
+      return true;                    /* non-fatal error */
    }
 }
 #endif
@@ -723,10 +682,11 @@ static struct xattr_link_cache_entry *find_xattr_link_cache_entry(ino_t inum)
 {
    xattr_link_cache_entry_t *ptr;
 
-   for (ptr = xattr_link_cache_head; ptr != NULL; ptr = ptr->next)
-      if (ptr->inum == inum)
+   for (ptr = xattr_link_cache_head; ptr != NULL; ptr = ptr->next) {
+      if (ptr->inum == inum) {
          return ptr;
-
+      }
+   }
    return NULL;
 }
 
@@ -734,13 +694,15 @@ static void add_xattr_link_cache_entry(ino_t inum, char *target)
 {
    xattr_link_cache_entry_t *ptr;
 
-   if ((ptr = (xattr_link_cache_entry_t *)malloc(sizeof(struct xattr_link_cache_entry))) != NULL) {
-      memset((caddr_t)ptr, 0, sizeof(struct xattr_link_cache_entry));
-      ptr->inum = inum;
-      strncpy(ptr->target, target, sizeof(ptr->target));
-      if (xattr_link_cache_head == NULL)
-         xattr_link_cache_head = ptr;
-      xattr_link_cache_tail = ptr;
+   ptr = (xattr_link_cache_entry_t *)malloc(sizeof(struct xattr_link_cache_entry));
+   memset((caddr_t)ptr, 0, sizeof(struct xattr_link_cache_entry));
+   ptr->inum = inum;
+   strncpy(ptr->target, target, sizeof(ptr->target));
+   if (xattr_link_cache_head == NULL) {
+      xattr_link_cache_head = ptr;
+   }
+   if (xattr_link_cache_tail != NULL) {
+      xattr_link_cache_tail->next = ptr;
    }
 }
 
@@ -752,7 +714,6 @@ static void drop_xattr_link_cache(void)
       next = ptr->next;
       free(ptr);
    }
-
    xattr_link_cache_head = NULL;
    xattr_link_cache_tail = NULL;
 }
@@ -823,9 +784,9 @@ static bool solaris_has_non_transient_extensible_attributes(int fd)
    }
 
 cleanup:
-   if (response != NULL)
+   if (response != NULL) {
       nvlist_free(response);
-
+   }
    return retval;
 }
 #endif /* HAVE_SYS_NVPAIR_H && _PC_SATTR_ENABLED */
@@ -842,19 +803,17 @@ static bool acl_is_trivial(int count, aclent_t *entries)
 
    for (n = 0; n < count; n++) {
       ace = &entries[n];
-
       if (!(ace->a_type == USER_OBJ ||
             ace->a_type == GROUP_OBJ ||
             ace->a_type == OTHER_OBJ ||
             ace->a_type == CLASS_OBJ))
         return false;
    }
-
    return true;
 }
 #endif /* HAVE_ACL && !HAVE_EXTENDED_ACL */
 
-static bool solaris_archive_xattr_acl(JCR *jcr, int fd, const char *attrname, char **acl_text)
+static bool solaris_save_xattr_acl(JCR *jcr, int fd, const char *attrname, char **acl_text)
 {
 #ifdef HAVE_ACL
 #ifdef HAVE_EXTENDED_ACL
@@ -876,8 +835,7 @@ static bool solaris_archive_xattr_acl(JCR *jcr, int fd, const char *attrname, ch
             attrname, jcr->last_fname, be.bstrerror());
          Dmsg3(100, "facl_get/acl_get of xattr %s on \"%s\" failed: ERR=%s\n",
             attrname, jcr->last_fname, be.bstrerror());
-
-         return false;
+         return true;                    /* non-fatal */
       }
 
       if (aclp != NULL) {
@@ -907,10 +865,11 @@ static bool solaris_archive_xattr_acl(JCR *jcr, int fd, const char *attrname, ch
    /*
     * See if this attribute has an ACL
     */
-   if (fd != -1)
+   if (fd != -1) {
       n = facl(fd, GETACLCNT, 0, NULL);
-   else
+   } else {
       n = acl(attrname, GETACLCNT, 0, NULL);
+   }
 
    if (n >= MIN_ACL_ENTRIES) {
       acls = (aclent_t *)malloc(n * sizeof(aclent_t));
@@ -921,9 +880,8 @@ static bool solaris_archive_xattr_acl(JCR *jcr, int fd, const char *attrname, ch
             attrname, jcr->last_fname, be.bstrerror());
          Dmsg3(100, "facl/acl of xattr %s on \"%s\" failed: ERR=%s\n",
             attrname, jcr->last_fname, be.bstrerror());
-
          free(acls);
-         return false;
+         return true;                 /* non-fatal */
       }
 
       /*
@@ -936,9 +894,8 @@ static bool solaris_archive_xattr_acl(JCR *jcr, int fd, const char *attrname, ch
                attrname, jcr->last_fname, be.bstrerror());
             Dmsg3(100, "acltotext of xattr %s on \"%s\" failed: ERR=%s\n",
                attrname, jcr->last_fname, be.bstrerror());
-
             free(acls);
-            return false;
+            return true;                 /* non-fatal */
          }
       } else {
          *acl_text = NULL;
@@ -951,18 +908,19 @@ static bool solaris_archive_xattr_acl(JCR *jcr, int fd, const char *attrname, ch
 
    return true;
 #endif /* HAVE_EXTENDED_ACL */
+
 #else /* HAVE_ACL */
-   return NULL;
+   return false;                         /* fatal return */
 #endif /* HAVE_ACL */
 }
 
 /*
  * Forward declaration for recursive function call.
  */
-static bool solaris_archive_xattrs(JCR *jcr, const char *xattr_namespace, const char *attr_parent);
+static bool solaris_save_xattrs(JCR *jcr, const char *xattr_namespace, const char *attr_parent);
 
 /*
- * Archive an extended or extensible attribute.
+ * Save an extended or extensible attribute.
  * This is stored as an opaque stream of bytes with the following encoding:
  *
  * <xattr_name>\0<stat_buffer>\0<acl_string>\0<actual_xattr_data>
@@ -976,7 +934,7 @@ static bool solaris_archive_xattrs(JCR *jcr, const char *xattr_namespace, const 
  * acl_string is an acl text when a non trivial acl is set on the xattr.
  * actual_xattr_data is the content of the xattr file.
  */
-static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
+static bool solaris_save_xattr(JCR *jcr, int fd, const char *xattr_namespace,
                                   const char *attrname, bool toplevel_hidden_dir, int stream)
 {
    int cnt;
@@ -988,7 +946,7 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
    char *acl_text = NULL;
    char attribs[MAXSTRING];
    char buffer[BUFSIZ];
-   bool retval = false;
+   bool retval = true;                /* default is non-fatal */
 
    snprintf(target_attrname, sizeof(target_attrname), "%s%s", xattr_namespace, attrname);
 
@@ -1001,7 +959,6 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
          target_attrname, jcr->last_fname, be.bstrerror());
       Dmsg3(100, "fstatat of xattr %s on \"%s\" failed: ERR=%s\n",
          target_attrname, jcr->last_fname, be.bstrerror());
-
       goto cleanup;
    }
 
@@ -1017,7 +974,7 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
       /*
        * Get any acl on the xattr.
        */
-      if (!solaris_archive_xattr_acl(jcr, attrfd, attrname, &acl_text))
+      if (!solaris_save_xattr_acl(jcr, attrfd, attrname, &acl_text))
          goto cleanup;
 
       /*
@@ -1028,15 +985,16 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
       cnt = snprintf(buffer, sizeof(buffer), "%s%c%s%c%s%c",
                      target_attrname, 0, attribs, 0, (acl_text) ? acl_text : "", 0);
       break;
+
    case S_IFDIR:
       /*
        * Get any acl on the xattr.
        */
-      if (!solaris_archive_xattr_acl(jcr, attrfd, attrname, &acl_text))
+      if (!solaris_save_xattr_acl(jcr, attrfd, attrname, &acl_text))
          goto cleanup;
 
       /*
-       * See if this is the toplevel_hidden_dir being archived.
+       * See if this is the toplevel_hidden_dir being saved.
        */
       if (toplevel_hidden_dir) {
          /*
@@ -1049,7 +1007,6 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
                                                        "%s%c%s%c%s%c",
                                                        target_attrname, 0, attribs, 0,
                                                        (acl_text) ? acl_text : "", 0);
-
          goto cleanup;
       } else {
          /*
@@ -1083,7 +1040,7 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
             retval = send_xattr_stream(jcr, stream);
 
             /*
-             * For a hard linked file we are ready now, no need to recursively archive the attributes.
+             * For a hard linked file we are ready now, no need to recursively save the attributes.
              */
             goto cleanup;
          }
@@ -1098,8 +1055,9 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
       /*
        * Get any acl on the xattr.
        */
-      if (!solaris_archive_xattr_acl(jcr, attrfd, attrname, &acl_text))
+      if (!solaris_save_xattr_acl(jcr, attrfd, attrname, &acl_text)) {
          goto cleanup;
+      }
 
       /*
        * Encode the stat struct into an ASCII representation.
@@ -1118,10 +1076,10 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
             target_attrname, jcr->last_fname, be.bstrerror());
          Dmsg3(100, "openat of xattr %s on \"%s\" failed: ERR=%s\n",
             target_attrname, jcr->last_fname, be.bstrerror());
-
          goto cleanup;
       }
       break;
+
    case S_IFLNK:
       /*
        * The current implementation of xattr on Solaris doesn't support this, but if it ever does we are prepared.
@@ -1133,7 +1091,6 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
             target_attrname, jcr->last_fname, be.bstrerror());
          Dmsg3(100, "readlink of xattr %s on \"%s\" failed: ERR=%s\n",
             target_attrname, jcr->last_fname, be.bstrerror());
-
          goto cleanup;
       }
 
@@ -1149,9 +1106,10 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
       retval = send_xattr_stream(jcr, stream);
 
       /*
-       * For a soft linked file we are ready now, no need to recursively archive the attributes.
+       * For a soft linked file we are ready now, no need to recursively save the attributes.
        */
       goto cleanup;
+
    default:
       goto cleanup;
    }
@@ -1162,7 +1120,7 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
    if (nr_xattr_saved == 0) {
       pm_memcpy(jcr->xattr_data, toplevel_hidden_dir_xattr_data, toplevel_hidden_dir_xattr_data_len);
       jcr->xattr_data_len = toplevel_hidden_dir_xattr_data_len;
-      send_xattr_stream(jcr, STREAM_XATTR_SOLARIS);
+      retval = send_xattr_stream(jcr, STREAM_XATTR_SOLARIS);
    }
 
    pm_memcpy(jcr->xattr_data, buffer, cnt);
@@ -1180,7 +1138,6 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
          if (st.st_size >= MAX_XATTR_STREAM) {
             Jmsg2(jcr, M_ERROR, 0, _("Xattr stream on file \"%s\" exceeds maximum size of %d bytes\n"),
                jcr->last_fname, MAX_XATTR_STREAM);
-
             goto cleanup;
          }
 
@@ -1195,24 +1152,26 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
                target_attrname, jcr->last_fname);
             Dmsg2(100, "read of data from xattr %s on \"%s\" failed\n",
                target_attrname, jcr->last_fname);
-
             goto cleanup;
          }
       }
       break;
+
    default:
       break;
    }
 
-   retval = send_xattr_stream(jcr, stream);
-   nr_xattr_saved++;
+   if (retval) {
+      retval = send_xattr_stream(jcr, stream);
+      nr_xattr_saved++;
+   }
 
    /*
-    * Recursivly call solaris_archive_extended_attributes for archiving the attributes
+    * Recursivly call solaris_save_extended_attributes for archiving the attributes
     * available on this extended attribute.
     */
    if (retval) {
-      retval = solaris_archive_xattrs(jcr, xattr_namespace, attrname);
+      retval = solaris_save_xattrs(jcr, xattr_namespace, attrname);
       
       /*
        * The recursive call could change our working dir so change back to the wanted workdir.
@@ -1223,28 +1182,28 @@ static bool solaris_archive_xattr(JCR *jcr, int fd, const char *xattr_namespace,
             jcr->last_fname, be.bstrerror());
          Dmsg3(100, "Unable to fchdir to xattr space of file \"%s\" using fd %d: ERR=%s\n",
             jcr->last_fname, fd, be.bstrerror());
-
          goto cleanup;
       }
    }
 
 cleanup:
-   if (acl_text)
+   if (acl_text) {
       free(acl_text);
-   if (attrfd != -1)
+   }
+   if (attrfd != -1) {
       close(attrfd);
-
+   }
    return retval;
 }
 
-static bool solaris_archive_xattrs(JCR *jcr, const char *xattr_namespace, const char *attr_parent)
+static bool solaris_save_xattrs(JCR *jcr, const char *xattr_namespace, const char *attr_parent)
 {
    const char *name;
    int fd, filefd = -1, attrdirfd = -1;
    DIR *dirp;
    struct dirent *dp;
    char current_xattr_namespace[PATH_MAX];
-   bool retval = false;
+   bool retval = true;                   /* default non-fatal error */
  
    /*
     * Determine what argument to use. Use attr_parent when set
@@ -1253,18 +1212,19 @@ static bool solaris_archive_xattrs(JCR *jcr, const char *xattr_namespace, const 
     */
    if (attr_parent) {
       name = attr_parent;
-      if (xattr_namespace)
+      if (xattr_namespace) {
          snprintf(current_xattr_namespace, sizeof(current_xattr_namespace), "%s%s/",
                   xattr_namespace, attr_parent);
-      else
-         strcpy(current_xattr_namespace, "/");
+      } else {
+         strncpy(current_xattr_namespace, "/", sizeof(current_xattr_namespace));
+      }
    } else {
       name = jcr->last_fname;
-      strcpy(current_xattr_namespace, "/");
+      strncpy(current_xattr_namespace, "/", sizeof(current_xattr_namespace));
    }
 
    /*
-    * Open the file on which to archive the xattrs read-only.
+    * Open the file on which to save the xattrs read-only.
     */
    if ((filefd = open(name, O_RDONLY | O_NONBLOCK)) < 0) {
       berrno be;
@@ -1272,7 +1232,6 @@ static bool solaris_archive_xattrs(JCR *jcr, const char *xattr_namespace, const 
          jcr->last_fname, be.bstrerror());
       Dmsg2(100, "Unable to open file \"%s\": ERR=%s\n",
          jcr->last_fname, be.bstrerror());
-
       goto cleanup;
    }
 
@@ -1296,13 +1255,12 @@ static bool solaris_archive_xattrs(JCR *jcr, const char *xattr_namespace, const 
          Dmsg3(100, "Unable to open xattr space %s on file \"%s\": ERR=%s\n",
             name, jcr->last_fname, be.bstrerror());
       }
-
       goto cleanup;
    }
 
   /*
    * We need to change into the attribute directory to determine if each of the
-   * attributes should be archived.
+   * attributes should be saved.
    */
    if (fchdir(attrdirfd) < 0) {
       berrno be;
@@ -1310,7 +1268,6 @@ static bool solaris_archive_xattrs(JCR *jcr, const char *xattr_namespace, const 
          jcr->last_fname, be.bstrerror());
       Dmsg3(100, "Unable to fchdir to xattr space on file \"%s\" using fd %d: ERR=%s\n",
          jcr->last_fname, attrdirfd, be.bstrerror());
-
       goto cleanup;
    }
 
@@ -1320,7 +1277,7 @@ static bool solaris_archive_xattrs(JCR *jcr, const char *xattr_namespace, const 
     * And as we want this entry before anything else we better just save its data.
     */
    if (!attr_parent)
-      solaris_archive_xattr(jcr, attrdirfd, current_xattr_namespace, ".",
+      solaris_save_xattr(jcr, attrdirfd, current_xattr_namespace, ".",
                             true, STREAM_XATTR_SOLARIS);
 
    if ((fd = dup(attrdirfd)) == -1 ||
@@ -1376,23 +1333,22 @@ static bool solaris_archive_xattrs(JCR *jcr, const char *xattr_namespace, const 
          if (!solaris_has_non_transient_extensible_attributes(filefd)) {
             Dmsg3(400, "Skipping transient extensible attributes %s%s on file \"%s\"\n",
                current_xattr_namespace, dp->d_name, jcr->last_fname);
-
             continue;
          }
 
          /*
-          * Archive the xattr.
+          * Save the xattr.
           */
-         solaris_archive_xattr(jcr, attrdirfd, current_xattr_namespace, dp->d_name,
+         solaris_save_xattr(jcr, attrdirfd, current_xattr_namespace, dp->d_name,
                                false, STREAM_XATTR_SOLARIS_SYS);
          continue;
       }
 #endif /* HAVE_SYS_NVPAIR_H && _PC_SATTR_ENABLED */
 
       /*
-       * Archive the xattr.
+       * Save the xattr.
        */
-      solaris_archive_xattr(jcr, attrdirfd, current_xattr_namespace, dp->d_name,
+      solaris_save_xattr(jcr, attrdirfd, current_xattr_namespace, dp->d_name,
                             false, STREAM_XATTR_SOLARIS);
    }
 
@@ -1404,7 +1360,6 @@ cleanup:
       close(attrdirfd);
    if (filefd != -1)
       close(filefd);
-
    return retval;
 }
 
@@ -1416,7 +1371,9 @@ static bool solaris_restore_xattr_acl(JCR *jcr, int fd, const char *attrname, ch
    acl_t *aclp = NULL;
 
    if ((error = acl_fromtext(acl_text, &aclp)) != 0) {
-      return false;
+      Jmsg1(jcr, M_ERROR, 0, _("Unable to convert acl from text on file \"%s\"\n"),
+               jcr->last_fname);
+      return true;                    /* non-fatal */
    }
 
    if ((fd != -1 && facl_set(fd, aclp) != 0) ||
@@ -1426,14 +1383,14 @@ static bool solaris_restore_xattr_acl(JCR *jcr, int fd, const char *attrname, ch
          attrname, jcr->last_fname, be.bstrerror());
       Dmsg3(100, "Unable to restore acl of xattr %s on file \"%s\": ERR=%s\n",
          attrname, jcr->last_fname, be.bstrerror());
-
-      return false;
+      return true;                    /* non-fatal */
    }
 
-   if (aclp)
+   if (aclp) {
       acl_free(aclp);
-
+   }
    return true;
+
 #else /* HAVE_EXTENDED_ACL */
    int n;
    aclent_t *acls = NULL;
@@ -1447,16 +1404,17 @@ static bool solaris_restore_xattr_acl(JCR *jcr, int fd, const char *attrname, ch
             attrname, jcr->last_fname, be.bstrerror());
          Dmsg3(100, "Unable to restore acl of xattr %s on file \"%s\": ERR=%s\n",
             attrname, jcr->last_fname, be.bstrerror());
-
-         return false;
+         return true;                   /* non-fatal */
       }
    }
 
-   if (acls)
+   if (acls) {
       free(acls);
-
+   }
    return true;
+
 #endif /* HAVE_EXTENDED_ACL */
+
 }
 #endif /* HAVE_ACL */
 
@@ -1471,7 +1429,7 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
    int32_t inum;
    struct stat st;
    struct timeval times[2];
-   bool retval = false;
+   bool retval = true;             /* default non-fatal */
 
    /*
     * Parse the xattr stream. First the part that is the same for all xattrs.
@@ -1500,7 +1458,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
          jcr->last_fname, be.bstrerror());
       Dmsg2(100, "Unable to open file \"%s\": ERR=%s\n",
          jcr->last_fname, be.bstrerror());
-
       goto cleanup;
    }
 
@@ -1513,7 +1470,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
          jcr->last_fname, be.bstrerror());
       Dmsg2(100, "Unable to open xattr space on file \"%s\": ERR=%s\n",
          jcr->last_fname, be.bstrerror());
-
       goto cleanup;
    }
 
@@ -1523,7 +1479,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
          jcr->last_fname, be.bstrerror());
       Dmsg3(100, "Unable to fchdir to xattr space on file \"%s\" using fd %d: ERR=%s\n",
          jcr->last_fname, attrdirfd, be.bstrerror());
-
       goto cleanup;
    }
 
@@ -1541,7 +1496,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
             target_attrname, jcr->last_fname, be.bstrerror());
          Dmsg3(100, "Unable to open xattr %s on file \"%s\": ERR=%s\n",
             target_attrname, jcr->last_fname, be.bstrerror());
-
          goto cleanup;
       }
 
@@ -1557,7 +1511,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
             target_attrname, jcr->last_fname, be.bstrerror());
          Dmsg3(100, "Unable to open xattr space %s on file \"%s\": ERR=%s\n",
             target_attrname, jcr->last_fname, be.bstrerror());
-
          goto cleanup;
       }
 
@@ -1573,7 +1526,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
             target_attrname, jcr->last_fname, be.bstrerror());
          Dmsg4(100, "Unable to fchdir to xattr space %s on file \"%s\" using fd %d: ERR=%s\n",
             target_attrname, jcr->last_fname, attrdirfd, be.bstrerror());
-
          goto cleanup;
       }
 
@@ -1611,8 +1563,7 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
             target_attrname, jcr->last_fname, be.bstrerror());
          Dmsg3(100, "Unable to mkfifo xattr %s on file \"%s\": ERR=%s\n",
             target_attrname,  jcr->last_fname, be.bstrerror());
-
-            goto cleanup;
+         goto cleanup;
       }
       break;
    case S_IFCHR:
@@ -1627,7 +1578,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
             target_attrname, jcr->last_fname, be.bstrerror());
          Dmsg3(100, "Unable to mknod xattr %s on file \"%s\": ERR=%s\n",
             target_attrname,  jcr->last_fname, be.bstrerror());
-
          goto cleanup;
       }
       break;
@@ -1644,7 +1594,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
                target_attrname, jcr->last_fname, be.bstrerror());
             Dmsg3(100, "Unable to mkdir xattr %s on file \"%s\": ERR=%s\n",
                target_attrname,  jcr->last_fname, be.bstrerror());
-
             goto cleanup;
          }
       }
@@ -1663,7 +1612,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
                target_attrname, linked_target, jcr->last_fname, be.bstrerror());
             Dmsg4(100, "Unable to link xattr %s to %s on file \"%s\": ERR=%s\n",
                target_attrname, linked_target, jcr->last_fname, be.bstrerror());
-
             goto cleanup;
          }
 
@@ -1694,7 +1642,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
                target_attrname, jcr->last_fname, be.bstrerror());
             Dmsg3(100, "Unable to open xattr %s on file \"%s\": ERR=%s\n",
                target_attrname, jcr->last_fname, be.bstrerror());
-
             goto cleanup;
          }
       }
@@ -1715,7 +1662,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
                target_attrname, jcr->last_fname);
             Dmsg2(100, "Unable to restore data of xattr %s on file \"%s\": Not all data available in xattr stream\n",
                target_attrname, jcr->last_fname);
-
             goto cleanup;
          }
 
@@ -1727,7 +1673,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
                   target_attrname, jcr->last_fname, be.bstrerror());
                Dmsg3(100, "Unable to restore data of xattr %s on file \"%s\": ERR=%s\n",
                   target_attrname, jcr->last_fname, be.bstrerror());
-
                goto cleanup;
             }
 
@@ -1749,7 +1694,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
             target_attrname, linked_target, jcr->last_fname, be.bstrerror());
          Dmsg4(100, "Unable to symlink xattr %s to %s on file \"%s\": ERR=%s\n",
             target_attrname, linked_target, jcr->last_fname, be.bstrerror());
-
          goto cleanup;
       }
 
@@ -1782,7 +1726,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
             Dmsg3(100, "Unable to restore owner of xattr %s on file \"%s\": ERR=%s\n",
                target_attrname, jcr->last_fname, be.bstrerror());
          }
-
          goto cleanup;
       }
    }
@@ -1808,7 +1751,6 @@ static bool solaris_restore_xattrs(JCR *jcr, bool is_extensible)
             target_attrname, jcr->last_fname, be.bstrerror());
          Dmsg3(100, "Unable to restore filetimes of xattr %s on file \"%s\": ERR=%s\n",
             target_attrname, jcr->last_fname, be.bstrerror());
-
          goto cleanup;
       }
    }
@@ -1826,13 +1768,15 @@ parse_error:
       jcr->last_fname);
 
 cleanup:
-   if (attrfd != -1)
+   if (attrfd != -1) {
       close(attrfd);
-   if (attrdirfd != -1)
+   }
+   if (attrdirfd != -1) {
       close(attrdirfd);
-   if (filefd != -1)
+   }
+   if (filefd != -1) {
       close(filefd);
-
+   }
    return retval;
 }
 
@@ -1854,8 +1798,7 @@ static bool solaris_extract_xattr(JCR *jcr, int stream)
                jcr->last_fname);
          Dmsg1(100, "Unable to restore extensible attributes on file \"%s\", filesystem doesn't support this\n",
             jcr->last_fname);
-
-         return false;
+         return true;
       }
 
       is_extensible = true;
@@ -1868,13 +1811,11 @@ static bool solaris_extract_xattr(JCR *jcr, int stream)
                jcr->last_fname);
          Dmsg1(100, "Unable to restore extended attributes on file \"%s\", filesystem doesn't support this\n",
             jcr->last_fname);
-
-         return false;
+         return true;
       }
-
       break;
    default:
-      return false;
+      return true;
    }
 
    /*
@@ -1884,7 +1825,6 @@ static bool solaris_extract_xattr(JCR *jcr, int stream)
    getcwd(cwd, sizeof(cwd));
    retval = solaris_restore_xattrs(jcr, is_extensible);
    chdir(cwd);
-
    return retval;
 }
 
@@ -1901,13 +1841,12 @@ static int solaris_build_xattr_streams(JCR *jcr, FF_PKT *ff_pkt)
       nr_xattr_saved = 0;
 
       /*
-       * As we change the cwd in the archive function save the current cwd
-       * for restore after return from the solaris_archive_xattrs function.
+       * As we change the cwd in the save function save the current cwd
+       * for restore after return from the solaris_save_xattrs function.
        */
       getcwd(cwd, sizeof(cwd));
-      retval = solaris_archive_xattrs(jcr, NULL, NULL);
+      retval = solaris_save_xattrs(jcr, NULL, NULL);
       chdir(cwd);
-
       drop_xattr_link_cache();
    }
 
@@ -1923,7 +1862,10 @@ static bool solaris_parse_xattr_stream(JCR *jcr, int stream)
    case STREAM_XATTR_SOLARIS:
       return solaris_extract_xattr(jcr, stream);
    default:
-      return false;
+      Jmsg2(jcr, M_WARNING, 0,
+         _("Can't restore Extended Attributes of %s - incompatible xattr stream encountered - %d\n"),
+         jcr->last_fname, stream);
+      return true;                    /* non-fatal error */
    }
 }
 #endif

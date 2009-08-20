@@ -37,7 +37,7 @@
  *
  *  Kern Sibbald, July MMIII
  *
- *   Version $Id: jobq.c 8132 2008-12-09 19:21:38Z ricozz $
+ *   Version $Id: jobq.c 8848 2009-05-20 00:14:13Z jamesharper $
  *
  *  This code was adapted from the Bacula workq, which was
  *    adapted from "Programming with POSIX Threads", by
@@ -358,8 +358,10 @@ static int start_server(jobq_t *jq)
       Dmsg0(2300, "Create worker thread\n");
       /* No idle threads so create a new one */
       set_thread_concurrency(jq->max_workers + 1);
+      jq->num_workers++;
       if ((stat = pthread_create(&id, &jq->attr, jobq_server, (void *)jq)) != 0) {
          berrno be;
+         jq->num_workers--;
          Jmsg1(NULL, M_ERROR, 0, _("pthread_create: ERR=%s\n"), be.bstrerror(stat));
          return stat;
       }
@@ -386,7 +388,6 @@ void *jobq_server(void *arg)
    set_jcr_in_tsd(INVALID_JCR);
    Dmsg0(2300, "Start jobq_server\n");
    P(jq->mutex);
-   jq->num_workers++;
 
    for (;;) {
       struct timeval tv;

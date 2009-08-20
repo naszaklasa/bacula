@@ -42,7 +42,7 @@
  *       to do the restore.
  *     Update the DB according to what files where restored????
  *
- *   Version $Id: restore.c 8508 2009-03-07 20:59:46Z kerns $
+ *   Version $Id: restore.c 8982 2009-07-14 13:44:46Z kerns $
  */
 
 
@@ -57,7 +57,9 @@ static char storaddr[]    = "storage address=%s port=%d ssl=0\n";
 /* Responses received from File daemon */
 static char OKrestore[]   = "2000 OK restore\n";
 static char OKstore[]     = "2000 OK storage\n";
-static char OKbootstrap[] = "2000 OK bootstrap\n";
+
+/* Responses received from the Storage daemon */
+static char OKbootstrap[] = "3000 OK bootstrap\n";
 
 /*
  * Do a restore of the specified files
@@ -67,7 +69,7 @@ static char OKbootstrap[] = "2000 OK bootstrap\n";
  */
 bool do_restore(JCR *jcr)
 {
-   BSOCK   *fd;
+   BSOCK   *fd, *sd;
    JOB_DBR rjr;                       /* restore job record */
    char replace, *where, *cmd;
    char empty = '\0';
@@ -114,13 +116,23 @@ bool do_restore(JCR *jcr)
    if (!connect_to_storage_daemon(jcr, 10, SDConnectTimeout, 1)) {
       goto bail_out;
    }
+   sd = jcr->store_bsock;
    /*
     * Now start a job with the Storage daemon
     */
    if (!start_storage_daemon_job(jcr, jcr->rstorage, NULL)) {
       goto bail_out;
    }
-   if (!jcr->store_bsock->fsend("run")) {
+
+   /*
+    * Send the bootstrap file -- what Volumes/files to restore
+    */
+   if (!send_bootstrap_file(jcr, sd) ||
+       !response(jcr, sd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
+      goto bail_out;
+   }
+
+   if (!sd->fsend("run")) {
       goto bail_out;
    }
    /*
@@ -156,15 +168,6 @@ bool do_restore(JCR *jcr)
    if (!response(jcr, fd, OKstore, "Storage", DISPLAY_ERROR)) {
       goto bail_out;
    }
-
-   /*
-    * Send the bootstrap file -- what Volumes/files to restore
-    */
-   if (!send_bootstrap_file(jcr, fd) ||
-       !response(jcr, fd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
-      goto bail_out;
-   }
-
 
    if (!send_runscripts_commands(jcr)) {
       goto bail_out;

@@ -3,7 +3,7 @@
 #
 
 Director {
-  Name = @hostname@-dir
+  Name = @basename@-dir
   DIRport = @dir_port@
   address = @hostname@
   Password = "@dir_password@"

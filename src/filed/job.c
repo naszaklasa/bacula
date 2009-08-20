@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: job.c 8737 2009-04-16 13:13:28Z kerns $
+ *   Version $Id: job.c 9013 2009-07-15 16:36:28Z kerns $
  *
  */
 
@@ -42,6 +42,22 @@
 
 static pthread_mutex_t vss_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int enable_vss = 0;
+#endif
+
+/*
+ * As Windows saves ACLs as part of the standard backup stream
+ * we just pretend here that is has implicit acl support.
+ */
+#if defined(HAVE_ACL) || defined(HAVE_WIN32)
+const bool have_acl = true;
+#else
+const bool have_acl = false;
+#endif
+
+#if defined(HAVE_XATTR)
+const bool have_xattr = true;
+#else
+const bool have_xattr = false;
 #endif
 
 extern CLIENT *me;                    /* our client resource */
@@ -196,7 +212,7 @@ static char read_close[]   = "read close session %d\n";
  *  5. FD gets/runs ClientRunBeforeJob and sends ClientRunAfterJob
  *  6. Dir sends include/exclude
  *  7. FD sends data to SD
- *  8. SD/FD disconnects while SD despools data and attributes (optionnal)
+ *  8. SD/FD disconnects while SD despools data and attributes (optional)
  *  9. FD runs ClientRunAfterJob
  */
 
@@ -1371,7 +1387,7 @@ static int storage_cmd(JCR *jcr)
    int stored_port;                /* storage daemon port */
    int enable_ssl;                 /* enable ssl to sd */
    BSOCK *dir = jcr->dir_bsock;
-   BSOCK *sd;                         /* storage daemon bsock */
+   BSOCK *sd = new_bsock();        /* storage daemon bsock */
 
    Dmsg1(100, "StorageCmd: %s", dir->msg);
    if (sscanf(dir->msg, storaddr, &jcr->stored_addr, &stored_port, &enable_ssl) != 3) {
@@ -1382,8 +1398,14 @@ static int storage_cmd(JCR *jcr)
    Dmsg3(110, "Open storage: %s:%d ssl=%d\n", jcr->stored_addr, stored_port, enable_ssl);
    /* Open command communications with Storage daemon */
    /* Try to connect for 1 hour at 10 second intervals */
-   sd = bnet_connect(jcr, 10, (int)me->SDConnectTimeout, me->heartbeat_interval,
-                      _("Storage daemon"), jcr->stored_addr, NULL, stored_port, 1);
+
+   sd->set_source_address(me->FDsrc_addr);
+   if (!sd->connect(jcr, 10, (int)me->SDConnectTimeout, me->heartbeat_interval,
+                _("Storage daemon"), jcr->stored_addr, NULL, stored_port, 1)) {
+     sd->destroy();
+     sd = NULL;
+   }
+
    if (sd == NULL) {
       Jmsg(jcr, M_FATAL, 0, _("Failed to connect to Storage daemon: %s:%d\n"),
           jcr->stored_addr, stored_port);
@@ -1432,6 +1454,19 @@ static int backup_cmd(JCR *jcr)
       P(vss_mutex);
    }
 #endif
+
+   /*
+    * Validate some options given to the backup make sense for the compiled in
+    * options of this filed.
+    */
+   if (jcr->ff->flags & FO_ACL && !have_acl) {
+      Jmsg(jcr, M_FATAL, 0, _("ACL support not configured for your machine.\n"));
+      goto cleanup;
+   }
+   if (jcr->ff->flags & FO_XATTR && !have_xattr) {
+      Jmsg(jcr, M_FATAL, 0, _("XATTR support not configured for your machine.\n"));
+      goto cleanup;
+   }
 
    set_jcr_job_status(jcr, JS_Blocked);
    jcr->set_JobType(JT_BACKUP);

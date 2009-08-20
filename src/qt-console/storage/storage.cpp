@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: storage.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *   Version $Id: storage.cpp 8960 2009-07-05 16:51:23Z kerns $
  *
  *  Storage Class
  *
@@ -53,6 +53,7 @@ Storage::Storage()
 
    /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_storage.h */
    m_populated = false;
+   m_firstpopulation = true;
    m_checkcurwidget = true;
    m_closeable = false;
    m_currentStorage = "";
@@ -132,6 +133,9 @@ void Storage::populateTree()
          foreach (QString resultline, results) {
             fieldlist = resultline.split("\t");
             storageName = fieldlist.takeFirst();
+            if (m_firstpopulation) {
+               settingsOpenStatus(storageName);
+            }
             TreeItemFormatter storageItem(*m_topItem, 1);
             storageItem.setTextFld(0, storageName);
             if(settings.contains(storageName))
@@ -158,6 +162,7 @@ void Storage::populateTree()
    for(int cnter=0; cnter<headerlist.size(); cnter++) {
       mp_treeWidget->resizeColumnToContents(cnter);
    }
+   m_firstpopulation = false;
 }
 
 /*
@@ -404,8 +409,20 @@ void Storage::consoleRelease()
  */
 void Storage::statusStorageWindow()
 {
-   QTreeWidgetItem *parentItem = mainWin->getFromHash(this);
-   new StorStat(m_currentStorage, parentItem);
+   /* if one exists, then just set it current */
+   bool found = false;
+   foreach(Pages *page, mainWin->m_pagehash) {
+      if (mainWin->currentConsole() == page->console()) {
+         if (page->name() == tr("Storage Status %1").arg(m_currentStorage)) {
+            found = true;
+            page->setCurrent();
+         }
+      }
+   }
+   if (!found) {
+      QTreeWidgetItem *parentItem = mainWin->getFromHash(this);
+      new StorStat(m_currentStorage, parentItem);
+   }
 }
 
 /*
@@ -419,6 +436,31 @@ void Storage::writeExpandedSettings()
    for (int cnt=0; cnt<childcount; cnt++) {
       QTreeWidgetItem *item = m_topItem->child(cnt);
       settings.setValue(item->text(0), item->isExpanded());
+   }
+   settings.endGroup();
+}
+
+/*
+ * If first time, then check to see if there were status pages open the last time closed
+ * if so open
+ */
+void Storage::settingsOpenStatus(QString &storage)
+{
+   QSettings settings(m_console->m_dir->name(), "bat");
+
+   settings.beginGroup("OpenOnExit");
+   QString toRead = "StorageStatus_" + storage;
+   if (settings.value(toRead) == 1) {
+      if (mainWin->m_sqlDebug) {
+         Pmsg1(000, "Do open Storage Status window for : %s\n", storage.toUtf8().data());
+      }
+      new StorStat(storage, mainWin->getFromHash(this));
+      setCurrent();
+      mainWin->getFromHash(this)->setExpanded(true);
+   } else {
+      if (mainWin->m_sqlDebug) {
+         Pmsg1(000, "Do NOT open Storage Status window for : %s\n", storage.toUtf8().data());
+      }
    }
    settings.endGroup();
 }

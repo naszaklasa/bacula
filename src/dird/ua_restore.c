@@ -37,7 +37,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_restore.c 8770 2009-04-30 07:08:06Z kerns $
+ *   Version $Id: ua_restore.c 8986 2009-07-14 13:49:57Z ricozz $
  */
 
 
@@ -417,6 +417,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
       _("Find the JobIds of the most recent backup for a client"),
       _("Find the JobIds for a backup for a client before a specified time"),
       _("Enter a list of directories to restore for found JobIds"),
+      _("Select full restore to a specified JobId"),
       _("Cancel"),
       NULL };
 
@@ -736,11 +737,32 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
          }
          return 2;
 
-      case 11:                        /* Cancel or quit */
+      case 11:                        /* Choose a jobid and select jobs */
+         if (!get_cmd(ua, _("Enter JobId to restore: ")) ||
+             !is_an_integer(ua->cmd)) 
+         {
+            return 0;
+         }
+
+         memset(&jr, 0, sizeof(JOB_DBR));
+         jr.JobId = str_to_int64(ua->cmd);
+         if (!db_get_job_record(ua->jcr, ua->db, &jr)) {
+            ua->error_msg(_("Unable to get Job record for JobId=%s: ERR=%s\n"),
+                          ua->cmd, db_strerror(ua->db));
+            return 0;
+         }
+         jr.JobLevel = L_INCREMENTAL; /* Take Full+Diff+Incr */
+         if (!db_accurate_get_jobids(ua->jcr, ua->db, &jr, rx->JobIds)) {
+            return 0;
+         }
+         Dmsg1(30, "Item 12: jobids = %s\n", rx->JobIds);
+         break;
+      case 12:                        /* Cancel or quit */
          return 0;
       }
    }
 
+   memset(&jr, 0, sizeof(JOB_DBR));
    POOLMEM *JobIds = get_pool_memory(PM_FNAME);
    *JobIds = 0;
    rx->TotalFiles = 0;
@@ -993,8 +1015,9 @@ static bool ask_for_fileregex(UAContext *ua, RESTORE_CTX *rx)
    if (find_arg(ua, NT_("all")) >= 0) {  /* if user enters all on command line */
       return true;                       /* select everything */
    }
-   ua->send_msg(_("\nThere were no files inserted into the tree, so file selection\n"
-                  "is not possible.Most likely your retention policy pruned the files\n"));
+   ua->send_msg(_("\n\nFor one or more of the JobIds selected, no files were found,\n"
+                 "so file selection is not possible.\n"
+                 "Most likely your retention policy pruned the files.\n"));
    if (get_yesno(ua, _("\nDo you want to restore all the files? (yes|no): "))) {
       if (ua->pint32_val == 1)
          return true;
@@ -1008,8 +1031,9 @@ static bool ask_for_fileregex(UAContext *ua, RESTORE_CTX *rx)
 
             fileregex_re = (regex_t *)bmalloc(sizeof(regex_t));
             rc = regcomp(fileregex_re, ua->cmd, REG_EXTENDED|REG_NOSUB);
-            if (rc != 0)
+            if (rc != 0) {
                regerror(rc, fileregex_re, errmsg, sizeof(errmsg));
+            }
             regfree(fileregex_re);
             free(fileregex_re);
             if (*errmsg) {
@@ -1084,6 +1108,22 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
       }
    }
 #endif
+   /*
+    * Look at the first JobId on the list (presumably the oldest) and
+    *  if it is marked purged, don't do the manual selection because
+    *  the Job was pruned, so the tree is incomplete.
+    */
+   if (tree.FileCount != 0) {
+      /* Find out if any Job is purged */
+      Mmsg(rx->query, "SELECT SUM(PurgedFiles) FROM Job WHERE JobId IN (%s)", rx->JobIds);
+      if (!db_sql_query(ua->db, rx->query, restore_count_handler, (void *)rx)) {
+         ua->error_msg("%s\n", db_strerror(ua->db));
+      }
+      /* rx->JobId is the PurgedFiles flag */
+      if (rx->found && rx->JobId > 0) {
+         tree.FileCount = 0;           /* set count to zero, no tree selection */
+      }
+   }
    if (tree.FileCount == 0) {
       OK = ask_for_fileregex(ua, rx);
       if (OK) {
@@ -1246,7 +1286,7 @@ static bool select_backups_before_date(UAContext *ua, RESTORE_CTX *rx, char *dat
    if (!db_sql_query(ua->db, rx->query, NULL, NULL)) {
       ua->warning_msg("%s\n", db_strerror(ua->db));
    }
-   /* Now update JobTDate to lock onto Differental, if any */
+   /* Now update JobTDate to look into Differental, if any */
    rx->JobTDate = 0;
    if (!db_sql_query(ua->db, uar_sel_all_temp, last_full_handler, (void *)rx)) {
       ua->warning_msg("%s\n", db_strerror(ua->db));

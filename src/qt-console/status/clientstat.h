@@ -53,6 +53,7 @@ public slots:
    void populateTerminated();
    void populateRunning();
    void populateAll();
+   void populateCurrentTab(int);
 
 private slots:
    void timerTriggered();

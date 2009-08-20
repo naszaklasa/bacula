@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: joblist.h 7660 2008-09-28 18:12:29Z bartleyd2 $
+ *   Version $Id: joblist.h 8880 2009-05-31 22:02:20Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -53,8 +53,7 @@ public:
 public slots:
    void populateTable();
    virtual void treeWidgetName(QString &);
-   void tableItemChanged(QTableWidgetItem *, QTableWidgetItem *);
-   void selectedJobsGet();
+   void selectionChanged();
 
 private slots:
    void consoleListJobid();
@@ -95,6 +94,7 @@ private:
    int m_filesIndex;
    int m_selectedJobsCount;
    QString m_selectedJobs;
+   QStringList m_selectedJobsList;
 };
 
 #endif /* _JOBLIST_H_ */

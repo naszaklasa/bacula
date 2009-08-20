@@ -52,10 +52,9 @@ ClientStat::ClientStat(QString &client, QTreeWidgetItem *parentTreeWidgetItem)
    readSettings();
    dockPage();
    m_timer = new QTimer(this);
-   QWidget::connect(m_timer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
-   m_timer->start(mainWin->m_refreshStatusDirInterval*1000);
 
    createConnections();
+   m_timer->start(1000);
    setCurrent();
 }
 
@@ -87,9 +86,8 @@ ClientStat::~ClientStat()
  */
 void ClientStat::populateAll()
 {
-   populateHeader();
    populateTerminated();
-   populateRunning();
+   populateCurrentTab(tabWidget->currentIndex());
 }
 
 /*
@@ -97,10 +95,25 @@ void ClientStat::populateAll()
  */
 void ClientStat::timerTriggered()
 {
-   bool iscurrent = mainWin->stackedWidget->currentIndex() == mainWin->stackedWidget->indexOf(this);
-   if (((isDocked() && iscurrent) || (!isDocked())) && mainWin->m_refreshStatusDir) {
-      populateAll();
+   double value = timerDisplay->value();
+   value -= 1;
+   if (value == 0) {
+      value = spinBox->value();
+      bool iscurrent = mainWin->stackedWidget->currentIndex() == mainWin->stackedWidget->indexOf(this);
+      if (((isDocked() && iscurrent) || (!isDocked())) && (checkBox->checkState() == Qt::Checked)) {
+         populateAll();
+      }
    }
+   timerDisplay->display(value);
+}
+
+
+void ClientStat::populateCurrentTab(int index)
+{
+   if (index == 0)
+      populateRunning();
+   if (index == 1)
+      populateHeader();
 }
 
 /*
@@ -217,6 +230,8 @@ void ClientStat::PgSeltreeWidgetClicked()
 void ClientStat::currentStackItem()
 {
    populateAll();
+   timerDisplay->display(spinBox->value());
+
    if (!m_populated) {
       m_populated=true;
    }
@@ -228,8 +243,11 @@ void ClientStat::currentStackItem()
  */
 void ClientStat::createConnections()
 {
-   connect(actionRefresh, SIGNAL(triggered()), this,
-                   SLOT(populateAll()));
+   connect(actionRefresh, SIGNAL(triggered()), this, SLOT(populateAll()));
+   connect(tabWidget, SIGNAL(currentChanged(int)), this, SLOT(populateCurrentTab(int)));
+   connect(m_timer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
+   terminatedTable->setContextMenuPolicy(Qt::ActionsContextMenu);
+   terminatedTable->addAction(actionRefresh);
 }
 
 /*
@@ -240,6 +258,13 @@ void ClientStat::writeSettings()
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
    settings.setValue(m_splitText, splitter->saveState());
+   settings.setValue("refreshInterval", spinBox->value());
+   settings.setValue("refreshCheck", checkBox->checkState());
+   settings.endGroup();
+
+   settings.beginGroup("OpenOnExit");
+   QString toWrite = "ClientStatus_" + m_client;
+   settings.setValue(toWrite, 1);
    settings.endGroup();
 }
 
@@ -253,5 +278,9 @@ void ClientStat::readSettings()
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
    splitter->restoreState(settings.value(m_splitText).toByteArray());
+   spinBox->setValue(settings.value("refreshInterval", 28).toInt());
+   checkBox->setCheckState((Qt::CheckState)settings.value("refreshCheck", Qt::Checked).toInt());
    settings.endGroup();
+
+   timerDisplay->display(spinBox->value());
 }

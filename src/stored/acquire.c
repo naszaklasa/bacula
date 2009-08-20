@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: acquire.c 8713 2009-04-11 12:35:04Z kerns $
+ *   Version $Id: acquire.c 9025 2009-07-16 13:03:53Z ricozz $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -286,7 +286,18 @@ default_path:
          if (!dir_ask_sysop_to_mount_volume(dcr, ST_READ)) {
             goto get_out;             /* error return */
          }
+
+         /* Volume info is always needed because of VolParts */
+         Dmsg1(150, "dir_get_volume_info vol=%s\n", dcr->VolumeName);
+         if (!dir_get_volume_info(dcr, GET_VOL_INFO_FOR_READ)) {
+            Dmsg2(150, "dir_get_vol_info failed for vol=%s: %s\n", 
+                  dcr->VolumeName, jcr->errmsg);
+            Jmsg1(jcr, M_WARNING, 0, "Read acquire: %s", jcr->errmsg);
+         }
+         dev->set_load();                /* set to load volume */
+
          try_autochanger = true;      /* permit trying the autochanger again */
+
          continue;                    /* try reading again */
       } /* end switch */
       break;

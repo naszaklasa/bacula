@@ -49,11 +49,10 @@ DirStat::DirStat()
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/status.png")));
    m_cursor = new QTextCursor(textEdit->document());
 
+   m_timer = new QTimer(this);
    readSettings();
    dockPage();
-   m_timer = new QTimer(this);
-   QWidget::connect(m_timer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
-   m_timer->start(mainWin->m_refreshStatusDirInterval*1000);
+   m_timer->start(1000);
 
    createConnections();
    setCurrent();
@@ -98,10 +97,16 @@ void DirStat::populateAll()
  */
 void DirStat::timerTriggered()
 {
-   bool iscurrent = mainWin->stackedWidget->currentIndex() == mainWin->stackedWidget->indexOf(this);
-   if (((isDocked() && iscurrent) || (!isDocked())) && mainWin->m_refreshStatusDir) {
-      populateAll();
+   double value = timerDisplay->value();
+   value -= 1;
+   if (value == 0) {
+      value = spinBox->value();
+      bool iscurrent = mainWin->stackedWidget->currentIndex() == mainWin->stackedWidget->indexOf(this);
+      if (((isDocked() && iscurrent) || (!isDocked())) && (checkBox->checkState() == Qt::Checked)) {
+         populateAll();
+      }
    }
+   timerDisplay->display(value);
 }
 
 /*
@@ -290,6 +295,7 @@ void DirStat::PgSeltreeWidgetClicked()
 void DirStat::currentStackItem()
 {
    populateAll();
+   timerDisplay->display(spinBox->value());
    if (!m_populated) {
       m_populated=true;
    }
@@ -301,12 +307,10 @@ void DirStat::currentStackItem()
  */
 void DirStat::createConnections()
 {
-   connect(actionRefresh, SIGNAL(triggered()), this,
-                   SLOT(populateAll()));
-   connect(actionCancelRunning, SIGNAL(triggered()), this,
-                   SLOT(consoleCancelJob()));
-   connect(actionDisableScheduledJob, SIGNAL(triggered()), this,
-                   SLOT(consoleDisableJob()));
+   connect(actionRefresh, SIGNAL(triggered()), this, SLOT(populateAll()));
+   connect(actionCancelRunning, SIGNAL(triggered()), this, SLOT(consoleCancelJob()));
+   connect(actionDisableScheduledJob, SIGNAL(triggered()), this, SLOT(consoleDisableJob()));
+   connect(m_timer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
 
    scheduledTable->setContextMenuPolicy(Qt::ActionsContextMenu);
    scheduledTable->addAction(actionRefresh);
@@ -326,6 +330,8 @@ void DirStat::writeSettings()
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
    settings.setValue(m_splitText, splitter->saveState());
+   settings.setValue("refreshInterval", spinBox->value());
+   settings.setValue("refreshCheck", checkBox->checkState());
    settings.endGroup();
 }
 
@@ -339,7 +345,11 @@ void DirStat::readSettings()
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
    splitter->restoreState(settings.value(m_splitText).toByteArray());
+   spinBox->setValue(settings.value("refreshInterval", 28).toInt());
+   checkBox->setCheckState((Qt::CheckState)settings.value("refreshCheck", Qt::Checked).toInt());
    settings.endGroup();
+
+   timerDisplay->display(spinBox->value());
 }
 
 /*

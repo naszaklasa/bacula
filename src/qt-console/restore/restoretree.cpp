@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: restoretree.cpp 8669 2009-03-31 17:04:28Z bartleyd2 $
+ *   Version $Id: restoretree.cpp 8928 2009-06-28 21:52:27Z bartleyd2 $
  *
  *  Restore Class 
  *
@@ -153,6 +153,8 @@ void restoreTree::updateRefresh()
  */
 void restoreTree::populateDirectoryTree()
 {
+   m_debugTrap = true;
+   m_debugCnt = 0;
    m_slashTrap = false;
    m_dirPaths.clear();
    directoryTree->clear();
@@ -350,10 +352,11 @@ void restoreTree::parseDirectory(QString &dir_in)
                     .arg(dir_in.length()).arg(index).arg(path).arg(direct);
          Pmsg0(000, msg.toUtf8().data());
       }
-      if (addDirectory(path, direct)) done = true;
+      if (addDirectory(path, direct)) { done = true; }
       else {
-         if ((mainWin->m_miscDebug) && (m_debugTrap))
+         if ((mainWin->m_miscDebug) && (m_debugTrap)) {
             Pmsg0(000, "Saving for later\n");
+         }
          pathAfter.prepend(path);
          dirAfter.prepend(direct);
       }
@@ -407,6 +410,7 @@ bool restoreTree::addDirectory(QString &m_cwd, QString &newdirr)
       /* no need to check for windows drive if unix */
       if (isWin32Path(m_cwd)) {
          if (!m_dirPaths.contains(m_cwd)) {
+            if (m_cwd.count('/') > 1) { return false; }
             /* this is a windows drive add the base widget */
             QTreeWidgetItem *item = new QTreeWidgetItem(directoryTree);
             item->setText(0, m_cwd);
@@ -613,7 +617,7 @@ void restoreTree::fileCurrentItemChanged(QTableWidgetItem *currentFileTableItem,
    QBrush blackBrush(Qt::black);
 
    QStringList headerlist = (QStringList() 
-      << tr("Job Id") << tr("Type") << tr("End Time") << tr("Hash") << tr("FileId"));
+      << tr("Job Id") << tr("Type") << tr("End Time") << tr("Hash") << tr("FileId") << tr("Job Type") << tr("First Volume"));
    versionTable->clear();
    versionTable->setColumnCount(headerlist.size());
    versionTable->setHorizontalHeaderLabels(headerlist);
@@ -622,7 +626,10 @@ void restoreTree::fileCurrentItemChanged(QTableWidgetItem *currentFileTableItem,
    int pathid = m_directoryPathIdHash.value(directory, -1);
    if ((pathid != -1) && (fileNameId != -1)) {
       QString cmd = 
-         "SELECT Job.JobId AS JobId,Job.Level AS Type,Job.EndTime AS EndTime,File.MD5 AS MD5,File.FileId AS FileId"
+         "SELECT Job.JobId AS JobId, Job.Level AS Type,"
+           " Job.EndTime AS EndTime, File.MD5 AS MD5,"
+           " File.FileId AS FileId, Job.Type AS JobType,"
+           " (SELECT Media.VolumeName FROM JobMedia JOIN Media ON JobMedia.MediaId=Media.MediaId WHERE JobMedia.JobId=Job.JobId ORDER BY JobMediaId LIMIT 1) AS FirstVolume"
          " FROM File"
          " INNER JOIN Filename on (Filename.FilenameId=File.FilenameId)"
          " INNER JOIN Path ON (Path.PathId=File.PathId)"
@@ -653,6 +660,12 @@ void restoreTree::fileCurrentItemChanged(QTableWidgetItem *currentFileTableItem,
                /* Iterate through fields in the record */
                foreach (field, fieldlist) {
                   field = field.trimmed();  /* strip leading & trailing spaces */
+                  if (column == 5 ) {
+                     QByteArray jtype(field.trimmed().toAscii());
+                     if (jtype.size()) {
+                        field = job_type_to_str(jtype[0]);
+                     }
+                  }
                   tableItem = new QTableWidgetItem(field, 1);
                   tableItem->setFlags(0);
                   tableItem->setForeground(blackBrush);
@@ -735,17 +748,19 @@ void restoreTree::populateJobTable()
 
    if (mainWin->m_rtPopDirDebug) Pmsg0(000, "Repopulating the Job Table\n");
    QStringList headerlist = (QStringList() 
-      << tr("Job Id") << tr("End Time") << tr("Level") 
+      << tr("Job Id") << tr("End Time") << tr("Level") << tr("Type")
       << tr("Name") << tr("Purged") << tr("TU") << tr("TD"));
    m_toggleUpIndex = headerlist.indexOf(tr("TU"));
    m_toggleDownIndex = headerlist.indexOf(tr("TD"));
    int purgedIndex = headerlist.indexOf(tr("Purged"));
+   int typeIndex = headerlist.indexOf(tr("Type"));
    jobTable->clear();
    jobTable->setColumnCount(headerlist.size());
    jobTable->setHorizontalHeaderLabels(headerlist);
    QString jobQuery =
-      "SELECT Job.Jobid AS Id,Job.EndTime AS EndTime,Job.Level AS Level,"
-      "Job.Name AS JobName,Job.purgedfiles AS Purged"
+      "SELECT Job.Jobid AS Id, Job.EndTime AS EndTime,"
+      " Job.Level AS Level, Job.Type AS Type,"
+      " Job.Name AS JobName, Job.purgedfiles AS Purged"
       " FROM Job"
       /* INNER JOIN FileSet eliminates all restore jobs */
       " INNER JOIN Client ON (Job.ClientId=Client.ClientId)"
@@ -794,6 +809,12 @@ void restoreTree::populateJobTable()
             foreach (field, fieldlist) {
                field = field.trimmed();  /* strip leading & trailing spaces */
                if (field != "") {
+                  if (column == typeIndex) {
+                     QByteArray jtype(field.trimmed().toAscii());
+                     if (jtype.size()) {
+                        field = job_type_to_str(jtype[0]);
+                     }
+                  }
                   tableItem = new QTableWidgetItem(field, 1);
                   tableItem->setFlags(0);
                   tableItem->setForeground(blackBrush);
@@ -1555,7 +1576,6 @@ void restoreTree::restoreButtonPushed()
               " INNER JOIN Job ON (Job.JobId=File.JobId)"
               " WHERE File.PathId=" + QString("%1").arg(pathid) +
               " AND Job.Jobid IN (" + m_checkedJobs + ")"
-              " AND File.FilenameId!=" + QString("%1").arg(m_nullFileNameId) +
               " GROUP BY File.FilenameId"
             ") t1, File "
               " INNER JOIN Filename on (Filename.FilenameId=File.FilenameId)"

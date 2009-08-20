@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, November MM
  *
- *   Version $Id: restore.c 8495 2009-02-28 14:52:14Z marcovw $
+ *   Version $Id: restore.c 8957 2009-07-04 21:18:49Z marcovw $
  *
  */
 
@@ -57,9 +57,9 @@ const bool have_acl = false;
 #endif
 
 #ifdef HAVE_SHA2
-   const bool have_sha2 = true;
+const bool have_sha2 = true;
 #else
-   const bool have_sha2 = false;
+const bool have_sha2 = false;
 #endif
 
 #if defined(HAVE_XATTR)
@@ -250,8 +250,12 @@ void do_restore(JCR *jcr)
    binit(&rctx.bfd);
    binit(&rctx.forkbfd);
    attr = rctx.attr = new_attr(jcr);
-   jcr->acl_data = get_pool_memory(PM_MESSAGE);
-   jcr->xattr_data = get_pool_memory(PM_MESSAGE);
+   if (have_acl) {
+      jcr->acl_data = get_pool_memory(PM_MESSAGE);
+   }
+   if (have_xattr) {
+      jcr->xattr_data = get_pool_memory(PM_MESSAGE);
+   }
 
    while (bget_msg(sd) >= 0 && !job_canceled(jcr)) {
       /* Remember previous stream type */
@@ -619,6 +623,7 @@ void do_restore(JCR *jcr)
       case STREAM_XATTR_DARWIN:
       case STREAM_XATTR_FREEBSD:
       case STREAM_XATTR_LINUX:
+      case STREAM_XATTR_NETBSD:
          /*
           * Do not restore Extended Attributes when
           * a) The current file is not extracted
@@ -732,11 +737,11 @@ ok_out:
       jcr->compress_buf_size = 0;
    }
 
-   if (jcr->xattr_data) {
+   if (have_xattr && jcr->xattr_data) {
       free_pool_memory(jcr->xattr_data);
       jcr->xattr_data = NULL;
    }
-   if (jcr->acl_data) {
+   if (have_acl && jcr->acl_data) {
       free_pool_memory(jcr->acl_data);
       jcr->acl_data = NULL;
    }

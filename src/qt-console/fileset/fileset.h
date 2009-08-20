@@ -3,7 +3,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: fileset.h 7660 2008-09-28 18:12:29Z bartleyd2 $
+ *   Version $Id: fileset.h 8827 2009-05-14 15:02:23Z kerns $
  *
  *   Dirk Bartley, March 2007
  */
@@ -53,7 +53,7 @@ public slots:
 
 private slots:
    void populateTable();
-   void consoleStatusFileSet();
+   void consoleShowFileSet();
    void showJobs();
 
 private:

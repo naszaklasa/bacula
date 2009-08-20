@@ -32,7 +32,7 @@
  *
  *   Split from job.c and acquire.c June 2005
  *
- *   Version $Id: reserve.c 8561 2009-03-20 14:52:17Z kerns $
+ *   Version $Id: reserve.c 8893 2009-06-12 19:00:50Z kerns $
  *
  */
 
@@ -353,10 +353,8 @@ static bool use_storage_cmd(JCR *jcr)
           */
          unbash_spaces(dir->msg);
          pm_strcpy(jcr->errmsg, dir->msg);
-         Jmsg(jcr, M_INFO, 0, _("Failed command: %s\n"), jcr->errmsg);
-         Jmsg(jcr, M_FATAL, 0, _("\n"
-            "     Device \"%s\" with MediaType \"%s\" requested by DIR not found in SD Device resources.\n"),
-              dev_name.c_str(), media_type.c_str());
+         Jmsg(jcr, M_FATAL, 0, _("Device reservation failed for JobId=%d: %s\n"), 
+              jcr->JobId, jcr->errmsg);
          dir->fsend(NO_device, dev_name.c_str());
 
          Dmsg1(dbglvl, ">dird: %s", dir->msg);
@@ -757,6 +755,9 @@ static bool reserve_device_for_read(DCR *dcr)
    bool ok = false;
 
    ASSERT(dcr);
+   if (job_canceled(jcr)) {
+      return false;
+   }
 
    dev->dlock();  
 
@@ -811,6 +812,9 @@ static bool reserve_device_for_append(DCR *dcr, RCTX &rctx)
    bool ok = false;
 
    ASSERT(dcr);
+   if (job_canceled(jcr)) {
+      return false;
+   }
 
    dev->dlock();
 

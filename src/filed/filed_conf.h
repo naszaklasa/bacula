@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, Sep MM
  *
- *   Version $Id: filed_conf.h 7737 2008-10-08 19:41:24Z ricozz $
+ *   Version $Id: filed_conf.h 8863 2009-05-26 13:44:08Z ricozz $
  */
 
 /*
@@ -76,6 +76,7 @@ struct DIRRES {
 struct CLIENT {
    RES   hdr;
    dlist *FDaddrs;
+   dlist *FDsrc_addr;                 /* address to source connections from */
    char *working_directory;
    char *pid_directory;
    char *subsys_directory;
