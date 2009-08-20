@@ -50,7 +50,8 @@ CONF_ALL	= --enable-smartalloc \
 		--libdir=\$${prefix}/lib/bacula \
 	--enable-batch-insert \
 	--disable-bwx-console \
-	--without-qwt
+	--without-qwt \
+	--enable-ipv6
 
 
 CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \

@@ -49,6 +49,7 @@ Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, adduser (>= 3.0)
 Depends: bacula-common, ${shlibs:Depends}
 Suggests: bacula-doc
+Conflicts: bacula-common-pgsql, bacula-common-mysql
 Description: network backup, recovery and verification - SQLite v3 common files
  Bacula is a set of programs to manage backup, recovery and verification of
  data across a network of computers of different kinds.
@@ -61,6 +62,7 @@ Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, adduser (>= 3.0)
 Depends: bacula-common, ${shlibs:Depends}
 Suggests: bacula-doc
+Conflicts: bacula-common-sqlite3, bacula-common-mysql
 Description: network backup, recovery and verification - PostgreSQL common files
  Bacula is a set of programs to manage backup, recovery and verification of
  data across a network of computers of different kinds.
@@ -73,6 +75,7 @@ Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, adduser (>= 3.0)
 Depends: bacula-common, ${shlibs:Depends}
 Suggests: bacula-doc
+Conflicts: bacula-common-sqlite3, bacula-common-pgsql
 Description: network backup, recovery and verification - MySQL common files
  Bacula is a set of programs to manage backup, recovery and verification of
  data across a network of computers of different kinds.
