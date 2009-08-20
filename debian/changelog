@@ -1,3 +1,9 @@
+bacula (3.0.2-1~bpo50+1) lenny-backports; urgency=low
+
+  * Rebuild for lenny-backports.
+
+ -- Gerfried Fuchs <rhonda@debian.at>  Thu, 20 Aug 2009 22:29:11 +0200
+
 bacula (3.0.2-1) unstable; urgency=low
 
   * New Upstream Version.  Supports IPv6.  Closes: #523852.
