@@ -47,5 +47,6 @@
         <file>images/utilities-terminal.png</file>
         <file>images/view-refresh.png</file>
         <file>images/weather-severe-alert.png</file>
+        <file>images/go-jump.png</file>
     </qresource>
 </RCC>

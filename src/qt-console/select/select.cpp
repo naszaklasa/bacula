@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, March MMVII
  *
- *  $Id: select.cpp 8755 2009-04-27 23:43:34Z bartleyd2 $
+ *  $Id: select.cpp 8775 2009-04-30 16:57:18Z bartleyd2 $
  */ 
 
 #include "bat.h"
@@ -116,10 +116,10 @@ yesnoPopUp::yesnoPopUp(Console *console, int conn)
    console->displayToPrompt(conn);
    switch (msgBox.exec()) {
    case QMessageBox::Yes:
-      console->write_dir("yes");
+      console->write_dir(conn, "yes");
       break;
    case QMessageBox::No:
-      console->write_dir("no");
+      console->write_dir(conn, "no");
       break;
    }
    console->displayToPrompt(conn);

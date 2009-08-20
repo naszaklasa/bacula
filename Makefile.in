@@ -1,5 +1,5 @@
 # 
-# Version $Id: Makefile.in 8618 2009-03-28 13:05:36Z kerns $
+# Version $Id: Makefile.in 8835 2009-05-16 14:25:36Z kerns $
 # Master Makefile
 #
 @MCOMMON@
@@ -97,6 +97,7 @@ installdirs:
 	$(MKDIR) $(DESTDIR)$(sysconfdir)
 	$(MKDIR) $(DESTDIR)$(scriptdir)
 	$(MKDIR) $(DESTDIR)$(docdir)
+	$(MKDIR) $(DESTDIR)$(archivedir)
 	-if test ! -d $(DESTDIR)$(working_dir) ; then \
 	   $(MKDIR) $(DESTDIR)$(working_dir); \
 	   chmod 770 $(DESTDIR)$(working_dir); \

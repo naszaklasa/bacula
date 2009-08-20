@@ -279,7 +279,6 @@ fi
 dnl -------------------------------------------------------------------------
 dnl  If the user has not set --htmldir, we default to /usr/share/doc/bacula/html
 dnl -------------------------------------------------------------------------
-dnl z
 if test x$htmldir = x${docdir} ; then
    htmldir=`eval echo ${docdir}bacula/html`
 fi
@@ -287,7 +286,6 @@ fi
 dnl -------------------------------------------------------------------------
 dnl  If the user has not set --docdir, we default to /usr/share/doc/
 dnl -------------------------------------------------------------------------
-dnl z
 if test x$docdir = x'/usr/share/doc/' ; then
    docdir=`eval echo ${docdir}bacula`
 fi
@@ -568,8 +566,8 @@ AC_ARG_ENABLE(static-tools,
    [
        if test x$enableval = xyes; then
 	  if test x$use_libtool = xyes; then
-	     echo "Libtool is enabled, not compatible with static tools, please rerun configure with --disable-libtool"
-	     exit 1
+	     AC_MSG_ERROR([Libtool is enabled, not compatible with static tools, 
+  please rerun configure with --disable-libtool])
 	  fi
 	  support_static_tools=yes
        fi
@@ -590,8 +588,8 @@ AC_ARG_ENABLE(static-fd,
    [
        if test x$enableval = xyes; then
 	  if test x$use_libtool = xyes; then
-	     echo "Libtool is enabled, not compatible with static tools, please rerun configure with --disable-libtool"
-	     exit 1
+	     AC_MSG_ERROR([Libtool is enabled, not compatible with static tools, 
+  please rerun configure with --disable-libtool])
 	  fi
 	  support_static_fd=yes
        fi
@@ -612,8 +610,8 @@ AC_ARG_ENABLE(static-sd,
    [
        if test x$enableval = xyes; then
 	  if test x$use_libtool = xyes; then
-	     echo "Libtool is enabled, not compatible with static tools, please rerun configure with --disable-libtool"
-	     exit 1
+	     AC_MSG_ERROR([Libtool is enabled, not compatible with static tools, 
+  please rerun configure with --disable-libtool])
 	  fi
 	  support_static_sd=yes
        fi
@@ -634,8 +632,8 @@ AC_ARG_ENABLE(static-dir,
    [
        if test x$enableval = xyes; then
 	  if test x$use_libtool = xyes; then
-	     echo "Libtool is enabled, not compatible with static tools, please rerun configure with --disable-libtool"
-	     exit 1
+	     AC_MSG_ERROR([Libtool is enabled, not compatible with static tools, 
+  please rerun configure with --disable-libtool])
 	  fi
 	  support_static_dir=yes
        fi
@@ -656,8 +654,8 @@ AC_ARG_ENABLE(static-cons,
    [
        if test x$enableval = xyes; then
 	  if test x$use_libtool = xyes; then
-	     echo "Libtool is enabled, not compatible with static tools, please rerun configure with --disable-libtool"
-	     exit 1
+	     AC_MSG_ERROR([Libtool is enabled, not compatible with static tools, 
+  please rerun configure with --disable-libtool])
 	  fi
 	  support_static_cons=yes
        fi
@@ -924,35 +922,43 @@ AC_ARG_WITH(python,
        PYTHON_LIBS=
        if test "$withval" != "no"; then
 	  if test "$withval" = "yes"; then
-	     for python_root in /usr /usr/local /usr/sfw; do
-		for ver in python2.2 python2.3 python2.4 python2.5 python2.6 python3; do
-		   if test -f $python_root/include/${ver}/Python.h; then
-		      PYTHON_INCDIR=-I$python_root/include/${ver}
-		      if test -d $python_root/lib64/${ver}/config; then
-			 PYTHON_LIBS="-L$python_root/lib64/${ver}/config -l${ver}"
-		      else
-			 PYTHON_LIBS="-L$python_root/lib/${ver}/config -l${ver}"
+	     if test -e /usr/bin/python-config ; then
+		PYTHON_INCDIR=`/usr/bin/python-config --includes`
+		PYTHON_LIBS=`/usr/bin/python-config --libs`
+	     else
+		for python_root in /usr /usr/local /usr/sfw; do
+		   for ver in python2.2 python2.3 python2.4 python2.5 python2.6 python3; do
+		      if test -f $python_root/include/${ver}/Python.h; then
+			 PYTHON_INCDIR=-I$python_root/include/${ver}
+			 if test -d $python_root/lib64/${ver}/config; then
+			    PYTHON_LIBS="-L$python_root/lib64/${ver}/config -l${ver}"
+			 else
+			    PYTHON_LIBS="-L$python_root/lib/${ver}/config -l${ver}"
+			 fi
+			 break 
 		      fi
-		      break 
-		   fi
+		   done
 		done
-	     done
 
-	     if test x$PYTHON_INCDIR = x; then
-		if test -f $prefix/include/Python.h; then
-		   PYTHON_INCDIR=-I$prefix/include
-		   if test -d $prefix/lib64/config; then
-		      PYTHON_LIBS="-L$prefix/lib64/config -lpython"
+		if test x$PYTHON_INCDIR = x; then
+		   if test -f $prefix/include/Python.h; then
+		      PYTHON_INCDIR=-I$prefix/include
+		      if test -d $prefix/lib64/config; then
+			 PYTHON_LIBS="-L$prefix/lib64/config -lpython"
+		      else
+			 PYTHON_LIBS="-L$prefix/lib/config -lpython"
+		      fi
 		   else
-		      PYTHON_LIBS="-L$prefix/lib/config -lpython"
+		      AC_MSG_RESULT(no)
+		      AC_MSG_ERROR(Unable to find Python.h in standard locations)
 		   fi
-		else
-		   AC_MSG_RESULT(no)
-		   AC_MSG_ERROR(Unable to find Python.h in standard locations)
 		fi
 	     fi
 	  else
-	     if test -f $withval/Python.h; then
+	     if test -e $withval/bin/python-config ; then
+		PYTHON_INCDIR=`$withval/bin/python-config --includes`
+		PYTHON_LIBS=`$withval/bin/python-config --libs`
+	     elif test -f $withval/Python.h; then
 		PYTHON_INCDIR=-I$withval
 		PYTHON_LIBS="-L$withval/config -lpython"
 	     elif test -f $withval/include/Python.h; then
@@ -1185,7 +1191,7 @@ AC_SUBST(working_dir)
 dnl ------------------------------------------------------------------
 dnl If the user has not set archivedir, we set our default as /tmp
 dnl ------------------------------------------------------------------
-archive_dir=/tmp
+archivedir=/tmp
 AC_ARG_WITH(archivedir,
    AC_HELP_STRING([--with-archivedir=PATH], [specify path of SD archive directory]),
    [
@@ -1196,6 +1202,40 @@ AC_ARG_WITH(archivedir,
 )
 
 AC_SUBST(archivedir)
+
+dnl ------------------------------------------------------------------
+dnl Allow the user to specify the daemon resource name default hostname
+dnl ------------------------------------------------------------------
+basename=`hostname`
+AC_ARG_WITH(basename,
+   AC_HELP_STRING([--with-basename=RESNAME], [specify base resource name for daemons]),
+   [
+       if test "x$withval" != "xno" ; then     
+	  basename=$withval
+       fi
+   ]
+)
+
+AC_SUBST(basename)
+
+dnl ------------------------------------------------------------------
+dnl Allow the user to override the hostname (default = machine hostname)
+dnl ------------------------------------------------------------------
+hostname=`uname -n | cut -d '.' -f 1`
+if test x${hostname} = x ; then
+  hostname="localhost"
+fi
+AC_ARG_WITH(hostname,
+   AC_HELP_STRING([--with-hostname=RESNAME], [specify host name for daemons]),
+   [
+       if test "x$withval" != "xno" ; then
+	 hostname=$withval
+       fi
+   ]
+)
+
+AC_SUBST(hostname)
+
 
 dnl ------------------------------------------
 dnl Where to place scriptdir (script files)
@@ -1211,6 +1251,38 @@ AC_ARG_WITH(scriptdir,
 )
 
 AC_SUBST(scriptdir)
+
+
+dnl ------------------------------------------
+dnl Where to place bsrdir (bsr files)
+dnl ------------------------------------------
+bsrdir=/tmp
+AC_ARG_WITH(bsrdir,
+   AC_HELP_STRING([--with-bsrdir=PATH], [specify path of Bacula bsrs directory]),
+   [
+       if test "x$withval" != "xno" ; then     
+	  bsrdir=$withval
+       fi
+   ]
+)
+
+AC_SUBST(bsrdir)
+
+dnl ------------------------------------------
+dnl Where to place logdir (bsr files)
+dnl ------------------------------------------
+logdir=/tmp
+AC_ARG_WITH(logdir,
+   AC_HELP_STRING([--with-logdir=PATH], [specify path of Bacula logs directory]),
+   [
+       if test "x$withval" != "xno" ; then     
+	  logdir=$withval
+       fi
+   ]
+)
+
+AC_SUBST(logdir)
+
 
 # ------------------------------------------
 # Where to place plugindir (plugin files)
@@ -2271,11 +2343,13 @@ fi
 dnl
 dnl Check for ACL support and libraries
 dnl
-support_acl=yes
+support_acl=auto
 AC_ARG_ENABLE(acl,
    AC_HELP_STRING([--disable-acl], [disable acl support @<:@default=auto@:>@]),
    [
-       if test x$enableval = xno; then
+       if test x$enableval = xyes; then
+	  support_acl=yes
+       elif test x$enableval = xno; then
 	  support_acl=no
        fi
    ]
@@ -2283,7 +2357,7 @@ AC_ARG_ENABLE(acl,
 
 have_acl=no
 have_extended_acl=no
-if test x$support_acl = xyes; then
+if test x$support_acl = xyes -o x$support_acl = xauto; then
    AC_CHECK_HEADER(sys/acl.h, [ AC_DEFINE(HAVE_SYS_ACL_H,1,[Defines if your system have the sys/acl.h header file])] , )
    AC_CHECK_FUNC(acl_get_file,
       [
@@ -2317,30 +2391,38 @@ if test x$support_acl = xyes; then
 	  )
       ]
    )
-   if test $have_acl = yes; then
-      AC_DEFINE([HAVE_ACL], [], [Normal attribute support])
-   fi
 
-   if test $have_extended_acl = yes; then
-      AC_DEFINE([HAVE_EXTENDED_ACL], [], [Extended attribute support])
+   if test x$support_acl = xyes -a $have_acl != yes; then
+      AC_MSG_ERROR([acl support explicitly enabled but no supported acl implementation found, 
+  please either load the acl libraries or rerun configure without --enable-acl])
+   else
+      if test $have_acl = yes; then
+	 AC_DEFINE([HAVE_ACL], [], [Normal attribute support])
+      fi
+
+      if test $have_extended_acl = yes; then
+	 AC_DEFINE([HAVE_EXTENDED_ACL], [], [Extended attribute support])
+      fi
    fi
 fi
 
 dnl
 dnl Check for XATTR support
 dnl
-support_xattr=yes
+support_xattr=auto
 AC_ARG_ENABLE(xattr,
    AC_HELP_STRING([--disable-xattr], [disable xattr support @<:@default=auto@:>@]),
    [
-       if test x$enableval = xno; then
+       if test x$enableval = xyes; then
+	  support_xattr=yes
+       elif test x$enableval = xno; then
 	  support_xattr=no
        fi
    ]
 )
 
 have_xattr=no
-if test x$support_xattr = xyes; then
+if test x$support_xattr = xyes -o x$support_xattr = xauto; then
    AC_CHECK_HEADER(sys/xattr.h, [ AC_DEFINE(HAVE_SYS_XATTR_H,1,[Defines if your system have the sys/xattr.h header file])] , )
    AC_CHECK_FUNCS(llistxattr lgetxattr lsetxattr,
       [
@@ -2393,8 +2475,13 @@ if test x$support_xattr = xyes; then
       fi
    fi
 
-   if test $have_xattr = yes; then
-      AC_DEFINE([HAVE_XATTR], [], [XATTR support])
+   if test x$support_xattr = xyes -a $have_xattr != yes; then
+      AC_MSG_ERROR([xattr support explicitly enabled but no supported xattr implementation found, 
+  please either load the xattr libraries or rerun configure without --enable-xatt])
+   else
+      if test $have_xattr = yes; then
+	 AC_DEFINE([HAVE_XATTR], [], [XATTR support])
+      fi
    fi
 fi
 
@@ -2908,8 +2995,7 @@ AC_OUTPUT([autoconf/Make.common \
 
 if test "${support_bat}" = "yes" ; then
    if test "x$QMAKE" = "xnone" && test "x$QMAKEQT4" = "xnone"; then
-      echo "Could not find qmake or qmake-qt4 in $PATH. Check your Qt installation"
-      exit 1
+      AC_MSG_ERROR([Could not find qmake or qmake-qt4 in $PATH. Check your Qt installation])
    fi
 
    QMAKEBIN="qmake"
@@ -2920,6 +3006,8 @@ if test "${support_bat}" = "yes" ; then
   
    cd src/qt-console
    echo "Creating bat Makefile"
+   touch bat
+   chmod 755 bat
    $QMAKEBIN
    make clean
    cd ${BUILD_DIR}

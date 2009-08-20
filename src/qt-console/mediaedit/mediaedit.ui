@@ -137,7 +137,7 @@
      <item row="5" column="0" >
       <widget class="QLabel" name="label_6" >
        <property name="text" >
-        <string>Retension:</string>
+        <string>Retention:</string>
        </property>
        <property name="buddy" >
         <cstring>slotSpin</cstring>

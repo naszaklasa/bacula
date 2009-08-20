@@ -1,5 +1,5 @@
 
-Instructions to build Bacula using the Mingw on Linux
+Instructions for cross compiling the Win32/64 FD on Linux
 =======================================================
 
 This file documents the tools (scripts) we use for building Bacula for
@@ -15,17 +15,21 @@ We expect that there may be problems on systems other than Linux where you
 are pretty much on your own.  However, we will try to provide responses to
 your questions on the bacula-devel list, but we can't guarantee anything.
 
+Note: the environment variable DEPKGS must point to a directory that
+contains: depkgs-mingw32 depkgs-mingw-w64 and cross-tools
+
 Directory Structure
 =====================
 The new directory structure is:
 
-  bacula-top                 Top level directory -- any name
+ xxx  (any directory)
     bacula                   Top level Bacula source directory -- any name
       src
         win32                Main directory where Windows version is built.
 
     docs                     Top level Bacula documentation directory
 
+ yyy (any directory, but pointed to by the DEPKGS environment variable)
     depkgs-mingw32 (MinGW32) 3rd Party Dependencies for MinGW32 build
       bin              --    NOTE!  depkgs-msvc is no longer suppored
       include            |
@@ -119,7 +123,9 @@ it is relatively obvious when looking at the src directory.
 In that directory, you should find a make.log, which has the full details
 of the compiles, links, and installs done for that package.
 
-Build the 64 bit cross-tools and mingw64:
+===
+Building the 64 bit cross-tools and mingw64:
+
 When building the mingw64 environment and all dependencies
 (cross-tools, and depkgs-mingw64) should be compiled by hand with
 host=x86_64-pc-linux and target=x86_64-pc-mingw32.  

@@ -13,7 +13,7 @@
 #
 
 Director {                            # define myself
-  Name = @hostname@-dir
+  Name = @basename@-dir
   DIRport = @dir_port@                # where we listen for UA connections
   QueryFile = "@scriptdir@/query.sql"
   WorkingDirectory = "@working_dir@"
@@ -27,7 +27,7 @@ JobDefs {
   Name = "DefaultJob"
   Type = Backup
   Level = Incremental
-  Client = @hostname@-fd 
+  Client = @basename@-fd 
   FileSet = "Full Set"
   Schedule = "WeeklyCycle"
   Storage = File
@@ -41,14 +41,14 @@ JobDefs {
 # Define the main nightly save backup job
 #   By default, this job will back up to disk in @archivedir@
 Job {
-  Name = "Client1"
+  Name = "BackupClient1"
   JobDefs = "DefaultJob"
   Write Bootstrap = "@working_dir@/Client1.bsr"
 }
 
 #Job {
-#  Name = "Client2"
-#  Client = @hostname@2-fd
+#  Name = "BackupClient2"
+#  Client = @basename@2-fd
 #  JobDefs = "DefaultJob"
 #  Write Bootstrap = "@working_dir@/Client2.bsr"
 #}
@@ -79,7 +79,7 @@ Job {
 Job {
   Name = "RestoreFiles"
   Type = Restore
-  Client=@hostname@-fd                 
+  Client=@basename@-fd                 
   FileSet="Full Set"                  
   Storage = File                      
   Pool = Default
@@ -102,14 +102,14 @@ FileSet {
 #    File = <file-name
 #
 #  Note: / backs up everything on the root partition.
-#    if you have other partitons such as /usr or /home
+#    if you have other partitions such as /usr or /home
 #    you will probably want to add them too.
 #
-#  By default this is defined to point to the Bacula build
+#  By default this is defined to point to the Bacula binary
 #    directory to give a reasonable FileSet to backup to
 #    disk storage during initial testing.
 #
-    File = @BUILD_DIR@
+    File = @sbindir@
   }
 
 #
@@ -117,6 +117,8 @@ FileSet {
 #   files can be useful
 #
   Exclude {
+    File = @working_dir@
+    File = @archivedir@
     File = /proc
     File = /tmp
     File = /.journal
@@ -154,7 +156,7 @@ FileSet {
 
 # Client (File Services) to backup
 Client {
-  Name = @hostname@-fd
+  Name = @basename@-fd
   Address = @hostname@
   FDPort = @fd_port@
   Catalog = MyCatalog
@@ -169,7 +171,7 @@ Client {
 #  You should change Name, Address, and Password before using
 #
 #Client {
-#  Name = @hostname@2-fd                
+#  Name = @basename@2-fd                
 #  Address = @hostname@2
 #  FDPort = @fd_port@
 #  Catalog = MyCatalog
@@ -263,6 +265,7 @@ Messages {
 #          also keep all your messages if they scroll off the console.
 #
   append = "@working_dir@/log" = all, !skipped
+  catalog = all
 }
 
 
@@ -298,7 +301,7 @@ Pool {
 # Restricted console used by tray-monitor to get the status of the director
 #
 Console {
-  Name = @hostname@-mon
+  Name = @basename@-mon
   Password = "@mon_dir_password@"
   CommandACL = status, .status
 }

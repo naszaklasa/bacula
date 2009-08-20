@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_update.c 8478 2009-02-18 20:11:55Z kerns $
+ *    Version $Id: sql_update.c 8921 2009-06-23 13:37:57Z ricozz $
  */
 
 /* The following is necessary so that we do not include
@@ -102,7 +102,7 @@ db_update_job_start_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    struct tm tm;
    btime_t JobTDate;
    int stat;
-   char ed1[50], ed2[50], ed3[50], ed4[50];
+   char ed1[50], ed2[50], ed3[50], ed4[50], ed5[50];
 
    stime = jr->StartTime;
    (void)localtime_r(&stime, &tm);
@@ -111,13 +111,14 @@ db_update_job_start_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
 
    db_lock(mdb);
    Mmsg(mdb->cmd, "UPDATE Job SET JobStatus='%c',Level='%c',StartTime='%s',"
-"ClientId=%s,JobTDate=%s,PoolId=%s WHERE JobId=%s",
+"ClientId=%s,JobTDate=%s,PoolId=%s,FileSetId=%s WHERE JobId=%s",
       (char)(jcr->JobStatus),
       (char)(jr->JobLevel), dt, 
       edit_int64(jr->ClientId, ed1),
       edit_uint64(JobTDate, ed2), 
       edit_int64(jr->PoolId, ed3),
-      edit_int64(jr->JobId, ed4));
+      edit_int64(jr->FileSetId, ed4),
+      edit_int64(jr->JobId, ed5));
 
    stat = UPDATE_DB(jcr, mdb, mdb->cmd);
    mdb->changes = 0;

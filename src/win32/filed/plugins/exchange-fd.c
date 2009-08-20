@@ -172,7 +172,10 @@ static bRC newPlugin(bpContext *ctx)
    bfuncs->registerBaculaEvents(ctx, 1, 2, 0);
    size = MAX_COMPUTERNAME_LENGTH + 1;
    context->computer_name = new WCHAR[size];
+   /*
    GetComputerNameW(context->computer_name, &size);
+   */
+   GetComputerNameExW(ComputerNameNetBIOS, context->computer_name, &size);
    context->current_node = NULL;
    context->root_node = NULL;
    return retval;

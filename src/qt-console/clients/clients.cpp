@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: clients.cpp 8640 2009-03-29 10:55:53Z kerns $
+ *   Version $Id: clients.cpp 9041 2009-07-16 21:18:53Z ricozz $
  *
  *  Clients Class
  *
@@ -55,6 +55,7 @@ Clients::Clients()
    m_populated = false;
    m_checkcurwidget = true;
    m_closeable = false;
+   m_firstpopulation = true;
    /* add context sensitive menu items specific to this classto the page
     * selector tree. m_contextActions is QList of QActions */
    m_contextActions.append(actionRefreshClients);
@@ -127,6 +128,10 @@ void Clients::populateTable()
          foreach (QString resultline, results) {
             QStringList fieldlist = resultline.split("\t");
 
+            if (m_firstpopulation) {
+               settingsOpenStatus(fieldlist[0]);
+            }
+
             TableItemFormatter item(*tableWidget, row);
 
             /* Iterate through fields in the record */
@@ -174,6 +179,7 @@ void Clients::populateTable()
          }
       }
    }
+   m_firstpopulation = false;
 }
 
 /*
@@ -202,7 +208,6 @@ void Clients::tableItemChanged(QTableWidgetItem *currentwidgetitem, QTableWidget
       /* The Previous item */
       if (previouswidgetitem) { /* avoid a segfault if first time */
          tableWidget->removeAction(actionListJobsofClient);
-         tableWidget->removeAction(actionStatusClientInConsole);
          tableWidget->removeAction(actionStatusClientWindow);
          tableWidget->removeAction(actionPurgeJobs);
          tableWidget->removeAction(actionPrune);
@@ -212,7 +217,6 @@ void Clients::tableItemChanged(QTableWidgetItem *currentwidgetitem, QTableWidget
          /* set a hold variable to the client name in case the context sensitive
           * menu is used */
          tableWidget->addAction(actionListJobsofClient);
-         tableWidget->addAction(actionStatusClientInConsole);
          tableWidget->addAction(actionStatusClientWindow);
          tableWidget->addAction(actionPurgeJobs);
          tableWidget->addAction(actionPrune);
@@ -239,8 +243,6 @@ void Clients::createContextMenu()
                 SLOT(populateTable()));
    connect(actionListJobsofClient, SIGNAL(triggered()), this,
                 SLOT(showJobs()));
-   connect(actionStatusClientInConsole, SIGNAL(triggered()), this,
-                SLOT(consoleStatusClient()));
    connect(actionStatusClientWindow, SIGNAL(triggered()), this,
                 SLOT(statusClientWindow()));
    connect(actionPurgeJobs, SIGNAL(triggered()), this,
@@ -319,6 +321,36 @@ void Clients::prune()
  */
 void Clients::statusClientWindow()
 {
-   QTreeWidgetItem *parentItem = mainWin->getFromHash(this);
-   new ClientStat(m_currentlyselected, parentItem);
+   /* if one exists, then just set it current */
+   bool found = false;
+   foreach(Pages *page, mainWin->m_pagehash) {
+      if (mainWin->currentConsole() == page->console()) {
+         if (page->name() == tr("Client Status %1").arg(m_currentlyselected)) {
+            found = true;
+            page->setCurrent();
+         }
+      }
+   }
+   if (!found) {
+      QTreeWidgetItem *parentItem = mainWin->getFromHash(this);
+      new ClientStat(m_currentlyselected, parentItem);
+   }
+}
+
+/*
+ * If first time, then check to see if there were status pages open the last time closed
+ * if so open
+ */
+void Clients::settingsOpenStatus(QString &client)
+{
+   QSettings settings(m_console->m_dir->name(), "bat");
+
+   settings.beginGroup("OpenOnExit");
+   QString toRead = "ClientStatus_" + client;
+   if (settings.value(toRead) == 1) {
+      new ClientStat(client, mainWin->getFromHash(this));
+      setCurrent();
+      mainWin->getFromHash(this)->setExpanded(true);
+   }
+   settings.endGroup();
 }

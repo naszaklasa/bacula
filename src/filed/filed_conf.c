@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: filed_conf.c 7737 2008-10-08 19:41:24Z ricozz $
+ *   Version $Id: filed_conf.c 8863 2009-05-26 13:44:08Z ricozz $
  */
 
 #include "bacula.h"
@@ -91,6 +91,7 @@ static RES_ITEM cli_items[] = {
    {"fdport",      store_addresses_port,    ITEM(res_client.FDaddrs),  0, ITEM_DEFAULT, 9102},
    {"fdaddress",   store_addresses_address, ITEM(res_client.FDaddrs),  0, ITEM_DEFAULT, 9102},
    {"fdaddresses", store_addresses,         ITEM(res_client.FDaddrs),  0, ITEM_DEFAULT, 9102},
+   {"fdsourceaddress", store_addresses_address, ITEM(res_client.FDsrc_addr),  0, ITEM_DEFAULT, 0},
 
    {"workingdirectory",  store_dir, ITEM(res_client.working_directory), 0, ITEM_REQUIRED, 0},
    {"piddirectory",  store_dir,     ITEM(res_client.pid_directory),     0, ITEM_REQUIRED, 0},
@@ -266,6 +267,9 @@ void free_resource(RES *sres, int type)
       }
       if (res->res_client.FDaddrs) {
          free_addresses(res->res_client.FDaddrs);
+      }
+      if (res->res_client.FDsrc_addr) {
+         free_addresses(res->res_client.FDsrc_addr);
       }
 
       if (res->res_client.pki_keypair_file) { 

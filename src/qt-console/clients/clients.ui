@@ -19,7 +19,8 @@
   </layout>
   <action name="actionRefreshClients" >
    <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/view-refresh.png</iconset>
+    <iconset resource="../main.qrc" >
+     <normaloff>:/images/view-refresh.png</normaloff>:/images/view-refresh.png</iconset>
    </property>
    <property name="text" >
     <string>Refresh Client List</string>
@@ -30,7 +31,8 @@
   </action>
   <action name="actionListJobsofClient" >
    <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/emblem-system.png</iconset>
+    <iconset resource="../main.qrc" >
+     <normaloff>:/images/emblem-system.png</normaloff>:/images/emblem-system.png</iconset>
    </property>
    <property name="text" >
     <string>List Jobs of Client</string>
@@ -39,20 +41,10 @@
     <string>Open a joblist page selecting this client.</string>
    </property>
   </action>
-  <action name="actionStatusClientInConsole" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/status-console.png</iconset>
-   </property>
-   <property name="text" >
-    <string>Status Client In Console</string>
-   </property>
-   <property name="statusTip" >
-    <string>Execute status client in console.</string>
-   </property>
-  </action>
   <action name="actionPurgeJobs" >
    <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/weather-severe-alert.png</iconset>
+    <iconset resource="../main.qrc" >
+     <normaloff>:/images/weather-severe-alert.png</normaloff>:/images/weather-severe-alert.png</iconset>
    </property>
    <property name="text" >
     <string>Purge Jobs</string>
@@ -63,7 +55,8 @@
   </action>
   <action name="actionPrune" >
    <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/edit-cut.png</iconset>
+    <iconset resource="../main.qrc" >
+     <normaloff>:/images/edit-cut.png</normaloff>:/images/edit-cut.png</iconset>
    </property>
    <property name="text" >
     <string>Prune Jobs</string>
@@ -74,7 +67,8 @@
   </action>
   <action name="actionStatusClientWindow" >
    <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/status.png</iconset>
+    <iconset resource="../main.qrc" >
+     <normaloff>:/images/status.png</normaloff>:/images/status.png</iconset>
    </property>
    <property name="text" >
     <string>Status Client Window</string>

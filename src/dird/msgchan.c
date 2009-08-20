@@ -40,7 +40,7 @@
  *    Create a thread to interact with the Storage daemon
  *      who returns a job status and requests Catalog services, etc.
  *
- *   Version $Id: msgchan.c 8713 2009-04-11 12:35:04Z kerns $
+ *   Version $Id: msgchan.c 8982 2009-07-14 13:44:46Z kerns $
  */
 
 #include "bacula.h"
@@ -76,7 +76,7 @@ extern "C" void *msg_thread(void *arg);
 bool connect_to_storage_daemon(JCR *jcr, int retry_interval,
                               int max_retry_time, int verbose)
 {
-   BSOCK *sd;
+   BSOCK *sd = new_bsock();
    STORE *store;
    utime_t heart_beat;    
 
@@ -102,9 +102,13 @@ bool connect_to_storage_daemon(JCR *jcr, int retry_interval,
     */
    Dmsg2(100, "bnet_connect to Storage daemon %s:%d\n", store->address,
       store->SDport);
-   sd = bnet_connect(jcr, retry_interval, max_retry_time, heart_beat,
-          _("Storage daemon"), store->address,
-          NULL, store->SDport, verbose);
+   sd->set_source_address(director->DIRsrc_addr);
+   if (!sd->connect(jcr, retry_interval, max_retry_time, heart_beat, _("Storage daemon"),
+         store->address, NULL, store->SDport, verbose)) {
+      sd->destroy();
+      sd = NULL;
+   }
+
    if (sd == NULL) {
       return false;
    }
@@ -434,6 +438,43 @@ void wait_for_storage_daemon_termination(JCR *jcr)
    }
    set_jcr_job_status(jcr, JS_Terminated);
 }
+
+/*
+ * Send bootstrap file to Storage daemon.
+ *  This is used for restore, verify VolumeToCatalog, migration,
+ *    and copy Jobs.
+ */
+bool send_bootstrap_file(JCR *jcr, BSOCK *sd)
+{
+   FILE *bs;
+   char buf[1000];
+   const char *bootstrap = "bootstrap\n";
+
+   Dmsg1(400, "send_bootstrap_file: %s\n", jcr->RestoreBootstrap);
+   if (!jcr->RestoreBootstrap) {
+      return true;
+   }
+   bs = fopen(jcr->RestoreBootstrap, "rb");
+   if (!bs) {
+      berrno be;
+      Jmsg(jcr, M_FATAL, 0, _("Could not open bootstrap file %s: ERR=%s\n"),
+         jcr->RestoreBootstrap, be.bstrerror());
+      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      return false;
+   }
+   sd->fsend(bootstrap);
+   while (fgets(buf, sizeof(buf), bs)) {
+      sd->fsend("%s", buf);
+   }
+   sd->signal(BNET_EOD);
+   fclose(bs);
+   if (jcr->unlink_bsr) {
+      unlink(jcr->RestoreBootstrap);
+      jcr->unlink_bsr = false;
+   }                         
+   return true;
+}
+
 
 #ifdef needed
 #define MAX_TRIES 30

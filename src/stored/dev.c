@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -47,7 +47,7 @@
  *     daemon. More complicated coding (double buffering, writer
  *     thread, ...) is left for a later version.
  *
- *   Version $Id: dev.c 8538 2009-03-16 20:52:09Z kerns $
+ *   Version $Id: dev.c 9050 2009-07-17 17:21:15Z kerns $
  */
 
 /*

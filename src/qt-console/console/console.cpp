@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: console.cpp 8660 2009-03-31 03:11:25Z bartleyd2 $
+ *   Version $Id: console.cpp 9054 2009-07-18 21:03:34Z kerns $
  *
  *  Console Class
  *
@@ -47,6 +47,7 @@ Console::Console(QStackedWidget *parent)
    m_parent = parent;
    m_closeable = false;
    m_console = this;
+   m_warningPrevent = false;
    m_dircommCounter = 0;
    m_dircommHash.insert(m_dircommCounter, new DirComm(this, m_dircommCounter));
 
@@ -142,7 +143,7 @@ void Console::populateLists(bool forcenew)
          return;
       }
    } else {
-      if(!availableDirComm(conn)) {
+      if (!availableDirComm(conn)) {
          Pmsg1(000, "availableDirComm Seems to Failed to find a connection for populateListsi %s\n", m_dir->name());
          return;
       }
@@ -154,7 +155,6 @@ void Console::populateLists(int conn)
 {
    job_list.clear();
    client_list.clear();
-   fileset_list.clear();
    fileset_list.clear();
    messages_list.clear();
    pool_list.clear();
@@ -177,6 +177,14 @@ void Console::populateLists(int conn)
         .arg(conn).arg(m_dir->name());
       Pmsg1(000, "%s", dbgmsg.toUtf8().data());
    }
+   job_list.sort();
+   client_list.sort();
+   fileset_list.sort();
+   messages_list.sort();
+   pool_list.sort();
+   storage_list.sort();
+   type_list.sort();
+   level_list.sort();
 }
 
 /*
@@ -631,11 +639,11 @@ void Console::discardToPrompt(int conn)
 /*
  * When the notifier is enabled, read_dir() will automatically be
  * called by the Qt event loop when ever there is any output 
- * from the Directory, and read_dir() will then display it on
+ * from the Director, and read_dir() will then display it on
  * the console.
  *
  * When we are in a bat dialog, we want to control *all* output
- * from the Directory, so we set notify to off.
+ * from the Director, so we set notify to off.
  *    m_console->notifiy(false);
  */
 
@@ -801,6 +809,24 @@ bool Console::availableDirComm(int &conn)
       return true;
    else
       return false;
+}
+
+
+/*
+ * Need current connection.
+ */
+bool Console::currentDirComm(int &conn)
+{
+   QHash<int, DirComm*>::const_iterator iter = m_dircommHash.constBegin();
+   while (iter != m_dircommHash.constEnd()) {
+      DirComm *dircomm = iter.value();
+      if (dircomm->m_at_prompt && !dircomm->m_at_main_prompt && dircomm->is_notify_enabled()) {
+         conn = dircomm->m_conn;
+         return true;
+      }
+      ++iter;
+   }
+   return false;
 }
 
 /*

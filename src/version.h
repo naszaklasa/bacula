@@ -1,11 +1,11 @@
 /*
- *  Version $Id: version.h 8768 2009-04-29 22:00:16Z kerns $
+ *  Version $Id: version.h 9062 2009-07-19 13:51:05Z kerns $
  */
 
 #undef  VERSION
-#define VERSION "3.0.1"
-#define BDATE   "30 April 2009"
-#define LSMDATE "30Apr09"
+#define VERSION "3.0.2"
+#define BDATE   "18 July 2009"
+#define LSMDATE "18Jul09"
 
 #define PROG_COPYRIGHT "Copyright (C) %d-2009 Free Software Foundation Europe e.V.\n"
 #define BYEAR "2009"       /* year for copyright messages in progs */
@@ -54,7 +54,22 @@
  *  penalties.
  */
 #ifdef DEVELOPER
-#define SMCHECK
+# define SMCHECK
+#endif
+
+/*
+ * _USE_LOCKMGR does lock/unlock mutex tracking (dead lock)
+ *   it can always be turned on, but we advise to use it only
+ *   for debug
+ */
+#if DEVELOPER
+# ifndef _USE_LOCKMGR
+#  define _USE_LOCKMGR
+# endif
+#endif
+
+#if !HAVE_LINUX_OS
+# undef _USE_LOCKMGR
 #endif
 
 /*
@@ -62,18 +77,18 @@
  *  run regress test.
  */
 #ifdef HAVE_LINUX_OS
-#define USE_VTAPE
+# define USE_VTAPE
 #endif
 
 /* 
  * for fastest speed but you must have a UPS to avoid unwanted shutdowns
  */
-#define SQLITE3_INIT_QUERY "PRAGMA synchronous = OFF"
+//#define SQLITE3_INIT_QUERY "PRAGMA synchronous = OFF"
 
 /*
  * for more safety, but is 30 times slower than above
  */
-//#define SQLITE3_INIT_QUERY "PRAGMA synchronous = NORMAL"
+#define SQLITE3_INIT_QUERY "PRAGMA synchronous = NORMAL"
 
 /*
  * This should always be on. It enables data encryption code 

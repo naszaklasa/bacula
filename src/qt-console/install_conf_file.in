@@ -3,6 +3,7 @@
 sbindir=@sbindir@
 sysconfdir=@sysconfdir@
 INSTALL_CONFIG="@INSTALL@ -m 640"
+DESTDIR=`echo ${DESTDIR}`
 
 srcconf=bat.conf
 if  test -f ${DESTDIR}${sysconfdir}/${srcconf}; then

@@ -29,8 +29,6 @@
  *  Written by James Harper, October 2008
  */
 
-//#include <windows.h>
-
 extern "C" {
 
 #define BACKUP_NODE_TYPE_MACHINE                0x001
@@ -279,4 +277,25 @@ extern HrESERestoreGetEnvironment_t HrESERestoreGetEnvironment;
 extern HrESERestoreSaveEnvironment_t HrESERestoreSaveEnvironment;
 extern HrESERestoreAddDatabase_t HrESERestoreAddDatabase;
 extern HrESERestoreOpenFile_t HrESERestoreOpenFile;
+
+#if !defined(MINGW64)
+typedef enum _COMPUTER_NAME_FORMAT {
+   ComputerNameNetBIOS,
+   ComputerNameDnsHostname,
+   ComputerNameDnsDomain,
+   ComputerNameDnsFullyQualified,
+   ComputerNamePhysicalNetBIOS,
+   ComputerNamePhysicalDnsHostname,
+   ComputerNamePhysicalDnsDomain,
+   ComputerNamePhysicalDnsFullyQualified,
+   ComputerNameMax
+} COMPUTER_NAME_FORMAT;
+
+BOOL WINAPI GetComputerNameExW(
+   COMPUTER_NAME_FORMAT NameType,
+   LPWSTR lpBuffer,
+   LPDWORD lpnSize
+);
+#endif
+
 }

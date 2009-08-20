@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, Feb MM
  *
- *    Version $Id: dird_conf.h 8407 2009-01-28 10:47:21Z ricozz $
+ *    Version $Id: dird_conf.h 8863 2009-05-26 13:44:08Z ricozz $
  */
 
 /* NOTE:  #includes at the end of this file */
@@ -106,6 +106,7 @@ class DIRRES {
 public:
    RES   hdr;
    dlist *DIRaddrs;
+   dlist *DIRsrc_addr;                /* address to source connections from */
    char *password;                    /* Password for UA access */
    char *query_file;                  /* SQL query file */
    char *working_directory;           /* WorkingDirectory */

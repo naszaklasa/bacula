@@ -38,7 +38,7 @@
  * for the external world. This is control with
  * the define __SQL_C, which is defined only in sql.c
  *
- *    Version $Id: cats.h 8478 2009-02-18 20:11:55Z kerns $
+ *    Version $Id: cats.h 8918 2009-06-23 11:56:35Z ricozz $
  */
 
 /*
@@ -843,6 +843,7 @@ struct VOL_PARAMS {
    int32_t Slot;                      /* Slot */
    uint64_t StartAddr;                /* Start address */
    uint64_t EndAddr;                  /* End address */
+   int32_t InChanger;                 /* InChanger flag */
 // uint32_t Copy;                     /* identical copy */
 // uint32_t Stripe;                   /* RAIT strip number */
 };

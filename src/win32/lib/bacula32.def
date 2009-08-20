@@ -309,6 +309,7 @@ _ZN5BSOCK8fin_initEP3JCRiPKcS3_iP8sockaddr
 _ZN5BSOCK8get_peerEPci
 _ZN5BSOCK9bstrerrorEv
 _ZN5BSOCK9wait_dataEii
+_ZN5BSOCK18set_source_addressEP5dlist
  
 ; bsys.o
 _Z10b_strerroriPcj
@@ -757,6 +758,12 @@ watchdog_thread
 ; lockmgr.o
 _Z6lmgr_pPP16pthread_mutex_t_
 _Z6lmgr_vPP16pthread_mutex_t_
+
+;_Z15lmgr_mutex_lockPP16pthread_mutex_t_PKci
+;_Z17lmgr_mutex_unlockPP16pthread_mutex_t_PKci
+;_Z14lmgr_cond_waitPP15pthread_cond_t_PP16pthread_mutex_t_
+;_Z18lmgr_thread_createPP10pthread_t_PKP15pthread_attr_t_PFPvS6_ES6_
+;_Z17lmgr_cleanup_mainv
 
 console_command DATA
 plugin_list DATA

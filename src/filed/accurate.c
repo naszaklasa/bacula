@@ -128,12 +128,17 @@ bool accurate_send_deleted_list(JCR *jcr)
    term_find_files(ff_pkt);
 bail_out:
    /* TODO: clean htable when this function is not reached ? */
+   accurate_free(jcr);
+   return true;
+}
+
+void accurate_free(JCR *jcr)
+{
    if (jcr->file_list) {
       jcr->file_list->destroy();
       free(jcr->file_list);
       jcr->file_list = NULL;
    }
-   return true;
 }
 
 static bool accurate_add_file(JCR *jcr, char *fname, char *lstat)
@@ -164,6 +169,9 @@ static bool accurate_add_file(JCR *jcr, char *fname, char *lstat)
  * We check in file_list hash if fname have been backuped
  * the last time. After we can compare Lstat field. 
  * Full Lstat usage have been removed on 6612 
+ *
+ * Returns: true   if file has changed (must be backed up)
+ *          false  file not changed
  */
 bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
 {
@@ -200,8 +208,8 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
     */
    if (elt.mtime != ff_pkt->statp.st_mtime) {
 //   Jmsg(jcr, M_SAVED, 0, _("%s      st_mtime differs\n"), fname);
-      Dmsg3(dbglvl, "%s      st_mtime differs (%i!=%i)\n", 
-            fname, elt.mtime, ff_pkt->statp.st_mtime);
+      Dmsg3(dbglvl, "%s      st_mtime differs (%lld!=%lld)\n", 
+            fname, elt.mtime, (utime_t)ff_pkt->statp.st_mtime);
      stat = true;
    } else if (!(ff_pkt->flags & FO_MTIMEONLY) 
               && (elt.ctime != ff_pkt->statp.st_ctime)) {
@@ -212,7 +220,7 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
    }
 
    accurate_mark_file_as_seen(jcr, &elt);
-//   Dmsg2(dbglvl, "accurate %s = %i\n", fname, stat);
+//   Dmsg2(dbglvl, "accurate %s = %d\n", fname, stat);
 
 bail_out:
    unstrip_path(ff_pkt);
@@ -231,7 +239,6 @@ int accurate_cmd(JCR *jcr)
    if (!jcr->accurate || job_canceled(jcr) || jcr->get_JobLevel()==L_FULL) {
       return true;
    }
-
    if (sscanf(dir->msg, "accurate files=%ld", &nb) != 1) {
       dir->fsend(_("2991 Bad accurate command\n"));
       return false;

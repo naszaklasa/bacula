@@ -11,7 +11,7 @@
 # List Directors who are permitted to contact this File daemon
 #
 Director {
-  Name = @hostname@-dir
+  Name = @basename@-dir
   Password = "@fd_password@"
 }
 
@@ -20,7 +20,7 @@ Director {
 #   status of the file daemon
 #
 Director {
-  Name = @hostname@-mon
+  Name = @basename@-mon
   Password = "@mon_fd_password@"
   Monitor = yes
 }
@@ -29,7 +29,7 @@ Director {
 # "Global" File daemon configuration specifications
 #
 FileDaemon {                          # this is me
-  Name = @hostname@-fd
+  Name = @basename@-fd
   FDport = @fd_port@                  # where we listen for the director
   WorkingDirectory = @working_dir@
   Pid Directory = @piddir@
@@ -39,5 +39,5 @@ FileDaemon {                          # this is me
 # Send all messages except skipped files back to Director
 Messages {
   Name = Standard
-  director = @hostname@-dir = all, !skipped, !restored
+  director = @basename@-dir = all, !skipped, !restored
 }

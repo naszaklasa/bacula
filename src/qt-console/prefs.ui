@@ -43,7 +43,7 @@
    <item row="1" column="0" >
     <widget class="QTabWidget" name="tabWidget" >
      <property name="currentIndex" >
-      <number>3</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab" >
       <attribute name="title" >
@@ -101,67 +101,6 @@
           <width>158</width>
           <height>24</height>
          </rect>
-        </property>
-        <property name="maximum" >
-         <number>3600</number>
-        </property>
-       </widget>
-      </widget>
-      <widget class="QGroupBox" name="groupBox_8" >
-       <property name="geometry" >
-        <rect>
-         <x>60</x>
-         <y>200</y>
-         <width>180</width>
-         <height>106</height>
-        </rect>
-       </property>
-       <property name="sizePolicy" >
-        <sizepolicy vsizetype="Fixed" hsizetype="Fixed" >
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="title" >
-        <string>Status Dir</string>
-       </property>
-       <widget class="QLabel" name="checkLabel_2" >
-        <property name="geometry" >
-         <rect>
-          <x>11</x>
-          <y>81</y>
-          <width>158</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="text" >
-         <string>Refresh Status Dir Interval</string>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="refreshStatusDir" >
-        <property name="geometry" >
-         <rect>
-          <x>11</x>
-          <y>25</y>
-          <width>158</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="text" >
-         <string>Refresh Status Dir</string>
-        </property>
-       </widget>
-       <widget class="QSpinBox" name="refreshStatusDirSpin" >
-        <property name="geometry" >
-         <rect>
-          <x>11</x>
-          <y>51</y>
-          <width>158</width>
-          <height>24</height>
-         </rect>
-        </property>
-        <property name="minimum" >
-         <number>15</number>
         </property>
         <property name="maximum" >
          <number>3600</number>
