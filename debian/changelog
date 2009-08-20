@@ -1,6 +1,7 @@
 bacula (3.0.2-1) unstable; urgency=low
 
   * New Upstream Version
+  * Install bat from the correct place.  Closes: #532646.
 
  -- John Goerzen <jgoerzen@complete.org>  Thu, 20 Aug 2009 14:22:48 -0500
 
