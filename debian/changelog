@@ -1,3 +1,10 @@
+bacula (3.0.2-3) UNRELEASED; urgency=low
+
+  * bacula-director-common doesn't require bacula-fd.  Patch from Sven
+    Hartge.  Closes: #542829.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 21 Aug 2009 12:26:04 -0500
+
 bacula (3.0.2-2) unstable; urgency=low
 
   * Fix syntax error in baclua-director-sqlite3 postinst.
