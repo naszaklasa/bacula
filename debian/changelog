@@ -1,3 +1,10 @@
+bacula (3.0.2-2) unstable; urgency=low
+
+  * Fix syntax error in baclua-director-sqlite3 postinst.
+    Closes: #542758.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 21 Aug 2009 08:10:17 -0500
+
 bacula (3.0.2-1) unstable; urgency=low
 
   * New Upstream Version.  Supports IPv6.  Closes: #523852.

@@ -57,12 +57,12 @@ case "$1" in
 			touch $LOGDIR/upgrade.log
 			
 			if dpkg --compare-versions "$2" le '3.0.0' ; then
-			# On upgrade, unconditionally change Catalog 
-			echo -n "Upgrading SQLite3 tables to v11 format..."
-			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 >> $LOGDIR/upgrade.log  2>&1
-			then echo "Ok."
-			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
-			fi
+			    # On upgrade, unconditionally change Catalog 
+			    echo -n "Upgrading SQLite3 tables to v11 format..."
+			    if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 >> $LOGDIR/upgrade.log  2>&1
+  			        then echo "Ok."
+			        else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
+			    fi
 			fi
                 else 
                     if [ -f "$DB" ] && file "$DB" | grep -q "SQLite 2"; then
@@ -74,11 +74,10 @@ case "$1" in
 			# On upgrade, unconditionally change Catalog 
 			echo -n "Upgrading SQLite3 tables to v11 format..."
 			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 >> $LOGDIR/upgrade.log  2>&1
-			then echo "Ok."
-			else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
+			    then echo "Ok."
+			    else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
 		        fi
-                       
-                        
+                    fi   
                 fi
 
 		chmod 640 $DB		
