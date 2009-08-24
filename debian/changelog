@@ -4,8 +4,9 @@ bacula (3.0.2-3) UNRELEASED; urgency=low
     Hartge.  Closes: #542829.
   * Use sed to tweak AUTOINCREMENT columns on sqlite2->sqlite3 upgrades.
     Closes: #542810.
+  * Correct dep on "sqlite2" to "sqlite".  Closes: #543330.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 24 Aug 2009 13:37:19 -0500
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 24 Aug 2009 13:38:37 -0500
 
 bacula (3.0.2-2) unstable; urgency=low
 

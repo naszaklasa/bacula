@@ -98,7 +98,7 @@ Description: network backup, recovery and verification - Director common files
  This package provides common files for the Bacula Director daemon.
 
 Package: bacula-director-sqlite
-Depends: bacula-director-sqlite3 (>= ${binary:Version}), sqlite3, sqlite2, ${shlibs:Depends}
+Depends: bacula-director-sqlite3 (>= ${binary:Version}), sqlite3, sqlite, ${shlibs:Depends}
 Architecture: all
 Description: network backup, recovery and verification - SQLite 2 director transition
  This package exists to upload pre-3.0 Bacula SQLite v2 installations to
