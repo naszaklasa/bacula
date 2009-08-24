@@ -72,6 +72,7 @@ case "$1" in
                             | sqlite3 "$DB.sqlite3"
                         mv "$DB" "$DB.sqlite2"
                         mv "$DB.sqlite3" "$DB"
+                        chown bacula:bacula "$DB"
                         echo "Ok."
 			# On upgrade, unconditionally change Catalog 
 			echo -n "Upgrading SQLite3 tables to v11 format..."
