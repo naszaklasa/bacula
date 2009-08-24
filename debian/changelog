@@ -1,4 +1,4 @@
-bacula (3.0.2-3) UNRELEASED; urgency=low
+bacula (3.0.2-3) unstable; urgency=low
 
   * bacula-director-common doesn't require bacula-fd.  Patch from Sven
     Hartge.  Closes: #542829.
@@ -7,7 +7,7 @@ bacula (3.0.2-3) UNRELEASED; urgency=low
   * Correct dep on "sqlite2" to "sqlite".  Closes: #543330.
   * Chown converted sqlite2->sqlite3 db to bacula:bacula.  Closes: #543345.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 24 Aug 2009 13:42:58 -0500
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 24 Aug 2009 16:22:41 -0500
 
 bacula (3.0.2-2) unstable; urgency=low
 
