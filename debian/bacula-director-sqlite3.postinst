@@ -67,7 +67,9 @@ case "$1" in
                 else 
                     if [ -f "$DB" ] && file "$DB" | grep -q "SQLite 2"; then
                         echo -n "Converting SQLite2 database to SQLite3 format..."
-                        sqlite "$DB" .dump | sqlite3 "$DB.sqlite3"
+                        sqlite "$DB" .dump \
+                            | sed 's/ INTEGER UNSIGNED AUTOINCREMENT,/ INTEGER,/' \
+                            | sqlite3 "$DB.sqlite3"
                         mv "$DB" "$DB.sqlite2"
                         mv "$DB.sqlite3" "$DB"
                         echo "Ok."
