@@ -1,8 +1,19 @@
-bacula (3.0.2-2~bpo50+1) lenny-backports; urgency=low
+bacula (3.0.2-3~bpo50+1) lenny-backports; urgency=low
 
   * Rebuild for lenny-backports.
 
- -- Gerfried Fuchs <rhonda@debian.at>  Fri, 21 Aug 2009 20:16:50 +0200
+ -- Gerfried Fuchs <rhonda@debian.at>  Mon, 31 Aug 2009 19:55:04 +0200
+
+bacula (3.0.2-3) unstable; urgency=low
+
+  * bacula-director-common doesn't require bacula-fd.  Patch from Sven
+    Hartge.  Closes: #542829.
+  * Use sed to tweak AUTOINCREMENT columns on sqlite2->sqlite3 upgrades.
+    Closes: #542810.
+  * Correct dep on "sqlite2" to "sqlite".  Closes: #543330.
+  * Chown converted sqlite2->sqlite3 db to bacula:bacula.  Closes: #543345.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 24 Aug 2009 16:22:41 -0500
 
 bacula (3.0.2-2) unstable; urgency=low
 
