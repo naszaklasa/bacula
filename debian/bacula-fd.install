@@ -1,1 +1,2 @@
 debian/tmp-install-sqlite3/usr/sbin/bacula-fd usr/sbin
+debian/tmp-install-sqlite3/usr/lib/bacula/bpipe-fd.so usr/lib/bacula
