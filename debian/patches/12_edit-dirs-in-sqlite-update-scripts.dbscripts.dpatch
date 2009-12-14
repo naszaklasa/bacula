@@ -1,0 +1,44 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 12_edit-dirs-in-sqlite-update-scripts.dbscripts.dpatch
+#
+# Description: modifies 2 directories in 2 of the sqlite database upgrade
+#   scripts : 6->7 and 8->9
+# Origin: other
+# Reviewed-by: John Goerzen <jgoerzen@complete.org>
+# Last-Update: 2009-12-03
+#
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: 
+## DP: DEBIAN-TODO : basis in policy ? are these the correct new dirs ?
+#
+# 2009.12.7 : tweaked patch to a patchlevel 2, to accomodate dpatch and git
+#
+## Generated from bacula 3.0.2-3 diff.gz with dpatch-convert-diffgz 2.0.31
+
+@DPATCH@
+
+--- a/bacula/updatedb/update_sqlite_tables_6_to_7
++++ b/bacula/updatedb/update_sqlite_tables_6_to_7
+@@ -9,9 +9,9 @@
+ echo " "
+ 
+ # The location of the sqlite program
+-bindir=/usr/lib/sqlite
++bindir=/usr/bin
+ # The location of your bacula working directory
+-cd /var/bacula
++cd /var/lib/bacula
+ 
+ if [ -s bacula.db ];then
+         DB_VER=`echo "select * from Version;" | $bindir/sqlite bacula.db | tail -n 1 2>/dev/null`
+
+--- a/bacula/updatedb/update_sqlite_tables_8_to_9
++++ b/bacula/updatedb/update_sqlite_tables_8_to_9
+@@ -9,7 +9,7 @@
+ echo " "
+ 
+ bindir=/usr/bin
+-cd /var/bacula/working
++cd /var/lib/bacula
+ sqlite=sqlite
+ ${bindir}/${sqlite} $* bacula.db <<END-OF-DATA

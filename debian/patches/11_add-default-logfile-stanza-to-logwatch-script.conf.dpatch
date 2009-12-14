@@ -1,0 +1,25 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 11_add-default-logfile-stanza-to-logwatch-script.dpatch
+##
+# Subject: adds a default LogFile stanza in the provided logwatch script.
+# Origin: other
+# Reviewed-by: John Goerzen <jgoerzen@complete.org>
+# Last-Update: 2009-12-03
+#
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: adds a default LogFile stanza in the provided logwatch script.
+## DP: NOTE: is this Debian-specific ? is upstream interested in merging ?
+## DP: DEBIAN-TODO: should log to /var/log, policy probably covers this
+#
+# 2009.12.7 : tweaked patch to a patchlevel 2, to accomodate dpatch and git
+#
+## Generated from bacula 3.0.2-3 diff.gz with dpatch-convert-diffgz 2.0.31
+#
+@DPATCH@
+
+--- a/bacula/scripts/logwatch/logfile.bacula.conf
++++ b/bacula/scripts/logwatch/logfile.bacula.conf
+@@ -0,0 +1,3 @@
++# What actual file?  Defaults to LogPath if not absolute path....
++LogFile = /var/lib/bacula/log
++

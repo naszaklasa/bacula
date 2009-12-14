@@ -1,0 +1,54 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 13-default-network-config.conf.dpatch
+#
+# Description: Adds *Address stanzas to the four daemon configuration files,
+#   perhaps to allow some out-of-the-box behaviour on single-machine setups.
+# Origin: other
+# Reviewed-by: John Goerzen <jgoerzen@complete.org>
+# Last-Update: 2009-12-03
+#
+# 2009.12.7 : tweaked patch to a patchlevel 2, to accomodate dpatch and git
+#
+## Generated from bacula 3.0.2-3 diff.gz with dpatch-convert-diffgz 2.0.31
+
+@DPATCH@
+
+--- a/bacula/src/dird/bacula-dir.conf.in
++++ b/bacula/src/dird/bacula-dir.conf.in
+@@ -21,6 +21,7 @@
+   Maximum Concurrent Jobs = 1
+   Password = "@dir_password@"         # Console password
+   Messages = Daemon
++  DirAddress = 127.0.0.1
+ }
+ 
+ JobDefs {
+--- a/bacula/src/filed/bacula-fd.conf.in
++++ b/bacula/src/filed/bacula-fd.conf.in
+@@ -34,6 +34,7 @@
+   WorkingDirectory = @working_dir@
+   Pid Directory = @piddir@
+   Maximum Concurrent Jobs = 20
++  FDAddress = 127.0.0.1
+ }
+ 
+ # Send all messages except skipped files back to Director
+--- a/bacula/src/stored/stored.conf.in
++++ b/bacula/src/stored/stored.conf.in
+@@ -13,6 +13,7 @@
+   WorkingDirectory = "@working_dir@"
+   Pid Directory = "@piddir@"
+   Subsys Directory = "@subsysdir@"
++  SDAddress = 127.0.0.1
+ }
+ 
+ #
+--- a/bacula/src/stored/bacula-sd.conf.in
++++ b/bacula/src/stored/bacula-sd.conf.in
+@@ -16,6 +16,7 @@
+   WorkingDirectory = "@working_dir@"
+   Pid Directory = "@piddir@"
+   Maximum Concurrent Jobs = 20
++  SDAddress = 127.0.0.1
+ }
+ 

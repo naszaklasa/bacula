@@ -1,0 +1,3 @@
+# LBC 2009.12.7
+# adapt dpatch behavior to the default git patchlevel of 2
+patch_opts=-p2

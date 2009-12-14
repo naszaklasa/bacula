@@ -1,0 +1,2 @@
+# make the 00template file executable, to allow parameter substitution
+DPEP_OPTION_EXEC_TEMPLATE=1

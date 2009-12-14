@@ -126,7 +126,11 @@ build: patch build-arch build-indep debian/po/templates.pot
 # Cleaning macro
 ###############################################
 
-clean:
+
+# 2009.12.1 : implementing dpatch logic : clean: becomes clean-patch,
+# in other words clean target is 'post-hooked' to call unpatch.
+clean: clean-patched unpatch
+clean-patched:
 
 	$(RM) *stamp*
 
@@ -160,6 +164,15 @@ endef
 define ext-install
 debian/patches/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/install/$(1)
 endef
+
+# 2009.12.1 LBC : implementing dpatch logic : unpatch: target is required
+# even by a utility such as dpatch-convert-diffgz, which does
+# not require acting on the source tree.
+# we use 'dpatch-stamp' as stamp file name to avoid interfering with the 
+# legacy patch system
+unpatch:
+	dpatch deapply-all
+	rm -rf dpatch-stamp debian/patched
 
 install: build install-stamp
 install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
@@ -246,13 +259,21 @@ install-arch: build install-stamp
 	cp $(CURDIR)/debian/common-functions $(CURDIR)/debian/bacula-common/usr/share/bacula-common
 	chmod 755 $(CURDIR)/debian/bacula-common/usr/lib/bacula/btraceback
 
-patch: patch-stamp
+# 2009.12.1 LBC : this target is used by the legacy patch system, and by dpatch
+patch: patch-stamp	
+# 2009.12.1 LBC : this target is used by the legacy patch system, and by dpatch
 patch-stamp:
 	chmod 755 debian/patches/fix_config debian/patches/fix_director \
 		debian/patches/extract_here
 	chmod 755 debian/additions/bconsole
 
 	touch patch-stamp
+	
+	# 2009.12.1 LBC : # we use 'dpatch-stamp' as stamp file name to avoid interfering with the 
+	# legacy patch system
+	dpatch apply-all
+	dpatch cat-all >dpatch-stamp
+
 
 # Build architecture-independent files here.
 # Pass -i to all debhelper commands in this target to reduce clutter.

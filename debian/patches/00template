@@ -1,0 +1,68 @@
+#!/bin/sh
+# debian/patches/00template script
+# era Thu May 15 23:24:07 2003
+
+# 2009.12.3 : implement DEP-3 guidelines (http://dep.debian.net/deps/dep3/)
+
+file="$1"
+shift
+description="$@"
+
+fullnameguess="$(getent passwd $(id -un) | cut -f5 -d: | cut -f1 -d,)"
+domainguess=$([ -f /etc/mailname ] && cat /etc/mailname || hostname -f)
+emailguess="${DEBEMAIL:-${EMAIL:-$(logname)@${domainguess}}}"
+
+dpatch_version="$(dpatch --version)"
+date_iso="$(date --rfc-3339=date)"
+
+cat <<EOF
+#! /bin/sh /usr/share/dpatch/dpatch-run
+# ${file}
+#
+# Subject: ${description:-No description}
+#   Guideline : When Subject is used, it is expected that the long description
+#    is outside of the structured fields...
+#
+# Description: 
+#   Guideline : ...with Description it is possible to embed them in the field
+#   using continuation lines. In both cases [Subject or Description], the long
+#   description allows for a longer explanation of the patch and its history.
+#
+# Origin: upstream|backport|vendor|other, <URL>
+#   Guideline : required, except if Author is present. In most cases, it should
+#    be a simple URL (upstream VCS web interface, commit://, mailing-list
+#    archives, distribution issue tracker, ...)
+#    In general, a user-created patch grabbed in a BTS should be categorized as
+#    “other”. When copying a patch from another vendor, the meta-information
+#    (and hence this field) should be kept if present, or created if necessary
+#    with a “vendor” origin
+#
+# Bug:
+#   Guideline : reserved for the bug URL in the upstream bug tracker. Optional.
+#
+# Bug-<Vendor>:
+#   Guideline : The vendor name is explicitely encoded in the field name so that
+#    vendors can share patches among them without having to update the
+#    meta-information in most cases. Optional.
+#
+# Forwarded: yes|no|not-needed|<URL>
+#   Guideline : Any value other than “no” or “not-needed” means that the patch
+#    has been forwarded upstream. Ideally the value is an URL proving that it
+#    has been forwarded and where one can find more information about its
+#    inclusion status.
+#    When omitted, implicit value is “yes” if the “Bug” field is present,
+#    otherwise it’s “no”.
+#
+# Author: ${DEBFULLNAME:-$fullnameguess} <$emailguess>
+#   Guideline : Can be used multiple times if several people authored the
+#     patch. Optional, but recommended for code and copyright maintainability.
+#
+# Reviewed-by: ${DEBFULLNAME:-$fullnameguess} <$emailguess>
+#   Guideline : Implies approval of the patch. Can be used multiple times.
+#     Optional.
+# Last-Update: ${date_iso}
+#   Guideline : when this meta-information was last updated. ISO format.
+#
+# created by ${DEBFULLNAME:-$fullnameguess} <$emailguess> with ${dpatch_version}
+@DPATCH@
+EOF
