@@ -1,0 +1,41 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+# 27_dbcheck-consistency.manpage.dpatch
+#
+# Description: adds missing and new options in the dbcheck utility's
+#  manpage. Introduces stricter consistency across the different 
+#  Bacula manpages.
+# Origin: vendor, file:///dev/null
+# Bug-Debian: http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=499619
+# Forwarded: http://sourceforge.net/mailarchive/message.php?msg_id=4B0E54F7.70108%40free.fr
+# Author: Lucas B. Cohen <lbc@members.fsf.org>
+# Last-Update: 2009-12-07
+#
+@DPATCH@
+diff --git a/bacula/manpages/dbcheck.8 b/bacula/manpages/dbcheck.8
+index 9e3a6f1..98b470d 100644
+--- a/bacula/manpages/dbcheck.8
++++ b/bacula/manpages/dbcheck.8
+@@ -2,7 +2,7 @@
+ .\" First parameter, NAME, should be all caps
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+-.TH DBCHECK 8 "26 September 2009" "Kern Sibbald" "Network backup, recovery and verification"
++.TH DBCHECK 8 "6 December 2009" "Kern Sibbald" "Network backup, recovery and verification"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+ .SH NAME
+@@ -40,12 +40,12 @@ Usage: dbcheck [-c config] [-C catalog name] [-d debug_level]     []
+        -b              batch mode
+        -C              catalog name in the director conf file
+        -c              director conf filename
+-       -B              print catalog configuration and exit
++       -B              print catalog configuration
+        -dnn            set debug level to nn
+        -dt             print timestamp in debug output
+        -f              fix inconsistencies
+        -v              verbose
+-       -?              print this message
++       -?              show version and usage of program
+ 
+ If the -c option is given with the Director's conf file, there is no
+ need to enter any of the command line arguments, in particular the working

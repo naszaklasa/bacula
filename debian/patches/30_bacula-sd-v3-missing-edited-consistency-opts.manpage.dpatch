@@ -1,0 +1,78 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+# 30_bacula-sd-v3-missing-edited-consistency-opts.manpagedpatchh
+#
+# Description: adds missing and new options in the bacula-sd manpage.
+#  Introduces stricter consistency across the different Bacula
+#  manpages.
+# Origin: vendor, file:///dev/null
+# Bug-Debian: http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=499619
+# Forwarded: http://sourceforge.net/mailarchive/message.php?msg_id=4B0E54F7.70108%40free.fr
+# Author: Lucas B. Cohen <lbc@members.fsf.org>
+# Last-Update: 2009-12-07
+#
+@DPATCH@
+diff --git a/bacula/manpages/bacula-sd.8 b/bacula/manpages/bacula-sd.8
+index fee1b84..dde7279 100644
+--- a/bacula/manpages/bacula-sd.8
++++ b/bacula/manpages/bacula-sd.8
+@@ -2,7 +2,7 @@
+ .\" First parameter, NAME, should be all caps
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+-.TH BACULA\-SD 8 "26 September 2009" "Kern Sibbald" "Network backup, recovery & verification"
++.TH BACULA\-SD 8 "6 December 2009" "Kern Sibbald" "Network backup, recovery & verification"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+ .SH NAME
+@@ -22,36 +22,38 @@ network backup system and a tape drive/autochanger or filesystem where
+ the backups will be stored.
+ .SH OPTIONS
+ .TP
+-.B \-c\  config
+-Change location to read \fIbacula\-sd.conf\fP from (default $CWD)
++.BI \-c\   file
++Specify the configuration file to use.
+ .TP
+-.B \-d <nn>
++.BI \-d\  nn
+ Set debug level to \fInn\fP.
+ .TP
+-.B \-dt
+-Print a timestamp in debug output
++.BI \-dt
++Print timestamp in debug output.
+ .TP
+-.B \-f
+-Run in the foreground (for debuggin)
++.BI \-f
++Run in foreground (for debugging).
+ .TP
+ .BI \-g\  group
+ Set the group/gid to run as.
+ .TP
+-.B \-s
+-No signals. Used in debugging only.
++.BI \-p
++Proceed inspite of I/O errors
++.TP
++.BI \-s
++No signals (for debugging).
+ .TP
+ .B \-t
+-Test config mode: read configuration and exit.
++Test the configuration file and report errors.
+ .TP
+ .BI \-u\  user
+ Set the username/uid to run as.
+ .TP
+-.B \-v
+-Verbose user messages
++.BI \-v
++Set verbose mode.
+ .TP
+ .B \-?
+ Show version and usage of program.
+-
+ .SH SEE ALSO
+ .BR bacula\-dir (8),
+ .BR bacula\-fd (8).

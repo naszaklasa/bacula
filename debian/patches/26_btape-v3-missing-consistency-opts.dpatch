@@ -1,0 +1,74 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+# 26_btape-v3-missing-consistency-opts.dpatch
+#
+# Description: adds missing and new options in the btape utility's 
+#  manpage. ntroduces better consistency across the different 
+#  Bacula manpages.
+# Origin: vendor, 
+#  http://bugs.debian.org/cgi-bin/bugreport.cgi?msg=45;filename=manpage-btape-v3-missing-consistency-opts.patch;att=1;bug=499619
+# Bug-Debian: http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=499619
+# Forwarded: http://sourceforge.net/mailarchive/message.php?msg_name=200912021125.44398.kern%40sibbald.com
+# Author: Lucas B. Cohen <lbc@members.fsf.org>
+# Reviewed-by: Kern Sibbald <kern@sibbald.com>
+# Last-Update: 2009-12-03
+#
+# 2009.12.7 : tweaked patch to a patchlevel 2, to accomodate dpatch and git
+#
+# created by Lucas B. Cohen <lbc@members.fsf.org> with dpatch v2.0.31
+@DPATCH@
+diff -urNad a/bacula-3.0.3/manpages/btape.8 b/bacula-3.0.3/manpages/btape.8
+--- a/bacula-3.0.3/manpages/btape.8	2009-10-18 11:10:16.000000000 +0200
++++ b/bacula-3.0.3/manpages/btape.8	2009-12-03 12:54:11.000000000 +0100
+@@ -2,7 +2,7 @@
+ .\" First parameter, NAME, should be all caps
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+-.TH BTAPE 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery and verification"
++.TH BTAPE 8 "26 November 2009" "Kern Sibbald" "Network backup, recovery and verification"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+ .SH NAME
+@@ -35,23 +35,29 @@
+ .BI \-d\  nn
+ Set debug level to \fInn\fP.
+ .TP
++.BI \-p
++Proceed inspite of I/O errors.
++.TP
+ .B \-t
+ Open the default tape device.
+ .TP
+ .B \-s
+-Turn off signals.
++No signals (for debugging).
++.TP
++.B \-v
++Set verbose mode.
+ .sp 3
+ .SH COMMANDS
+ .TP
++.B autochanger
++test autochanger
++.TP
+ .B bsf
+ backspace file
+ .TP
+ .B bsr
+ backspace record
+ .TP 
+-.B bfill
+-fill tape using Bacula writes
+-.TP
+ .B cap
+ list device capabilities
+ .TP
+@@ -121,6 +127,9 @@
+ .B rr
+ read a single record
+ .TP
++.B rb
++read a single bacula block
++.TP
+ .B qfill
+ quick fill command
+ .br

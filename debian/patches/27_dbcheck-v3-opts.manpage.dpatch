@@ -1,0 +1,49 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+# 27_dbcheck-v3-opts.manpage.dpatch
+#
+# !! needs to be split - updated in 2009.9
+#
+# Description: adds missing and new options in the dbcheck utility's
+#  manpage. Also introduces better consistency between the Bacula
+#  utilities manpages.
+# Origin: vendor, <URL>
+# Bug-Debian: http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=499619
+#   Guideline : The vendor name is explicitely encoded in the field name so that
+#    vendors can share patches among them without having to update the
+#    meta-information in most cases. Optional.
+# Forwarded: yes
+# Author: Lucas B. Cohen <lbc@members.fsf.org>
+#   Guideline : Can be used multiple times if several people authored the
+#     patch. Optional, but recommended for code and copyright maintainability.
+# Last-Update: 2009-12-04
+#
+# 2009.12.7 : tweaked patch to a patchlevel 2, to accomodate dpatch and git
+#
+# created by Lucas B. Cohen <lbc@members.fsf.org> with dpatch 2.0.31
+@DPATCH@
+diff -urNad a/bacula/manpages/dbcheck.8 b/bacula/manpages/dbcheck.8
+--- a/bacula/manpages/dbcheck.8	2009-10-18 11:10:16.000000000 +0200
++++ b/bacula/manpages/dbcheck.8	2009-12-04 02:20:35.000000000 +0100
+@@ -2,7 +2,7 @@
+ .\" First parameter, NAME, should be all caps
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+-.TH DBCHECK 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery and verification"
++.TH DBCHECK 8 " 4 December 2009" "Kern Sibbald" "Network backup, recovery and verification"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+ .SH NAME
+@@ -40,10 +40,12 @@
+        -b              batch mode
+        -C              catalog name in the director conf file
+        -c              director conf filename
++       -B              print catalog configuration
+        -dnn            set debug level to nn
++       -dt             print timestamp in debug output
+        -f              fix inconsistencies
+        -v              verbose
+-       -?              print this message
++       -?              show version and usage of program
+ 
+ If the -c option is given with the Director's conf file, there is no
+ need to enter any of the command line arguments, in particular the working

@@ -1,3 +1,5 @@
 manpages/bacula.8
 #debian/tmp-install-sqlite3/usr/share/man/man8/bacula.8.gz
+manpages/bsmtp.1
+manpages/btraceback.8
 

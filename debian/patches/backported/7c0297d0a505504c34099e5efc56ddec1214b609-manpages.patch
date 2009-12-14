@@ -1,0 +1,526 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+# 7c0297d0a505504c34099e5efc56ddec1214b609-manpages.patch
+#
+# Description: update of 8 manpages (26 September 2009)
+# Origin: upstream, http://bacula.git.sourceforge.net/git/gitweb.cgi?p=bacula/bacula;a=commit;h=7c0297d0a505504c34099e5efc56ddec1214b609
+# Bug-Debian: http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=519573
+# Forwarded: no
+# Author: Kern Sibbald <kern@sibbald.com>
+# Last-Update: 2009.12.7
+@DPATCH@
+diff --git a/bacula/manpages/Makefile.in b/bacula/manpages/Makefile.in
+index 5f9b4c9..9a99d49 100644
+--- a/bacula/manpages/Makefile.in
++++ b/bacula/manpages/Makefile.in
+@@ -8,9 +8,10 @@ MAN8 = bacula.8 bacula-dir.8 bacula-fd.8 bacula-sd.8 \
+        bconsole.8 bcopy.8 bextract.8 bls.8 bscan.8 btape.8 \
+        btraceback.8 dbcheck.8
+ 
+-MAN1 = bacula-bgnome-console.1 bacula-tray-monitor.1 \
+-       bacula-bwxconsole.1 bsmtp.1 bat.1
++MAN1 = bacula-tray-monitor.1 bacula-bwxconsole.1 bsmtp.1 bat.1
+       
++# bacula-bgnome-console.1
++
+ all:
+ 
+ nothing:
+diff --git a/bacula/manpages/bacula-dir.8 b/bacula/manpages/bacula-dir.8
+index 08b3b83..5a33aad 100644
+--- a/bacula/manpages/bacula-dir.8
++++ b/bacula/manpages/bacula-dir.8
+@@ -2,7 +2,7 @@
+ .\" First parameter, NAME, should be all caps
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+-.TH BACULA\-DIR 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery&verification"
++.TH BACULA\-DIR 8 "26 September 2009" "Kern Sibbald" "Network backup, recovery&verification"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+ .SH NAME
+@@ -22,14 +22,36 @@ network backup system: it is responsible for scheduling and
+ coordinating backups across the network.
+ .SH OPTIONS
+ .TP
+-.BI \-c
+-Change location to read \fIbacula-dir.conf\fP from (default $CWD)
++.B \-c\  config
++Change location to read \fIbacula\-sd.conf\fP from (default $CWD)
+ .TP
+-.BI \-u
+-Set the username/uid to run as.
++.B \-d <nn>
++Set debug level to \fInn\fP.
++.TP
++.B \-dt
++Print a timestamp in debug output
++.TP
++.B \-f
++Run in the foreground (for debuggin)
+ .TP
+-.BI \-g
++.BI \-g\  group
+ Set the group/gid to run as.
++.TP
++.B \-s
++No signals. Used in debugging only.
++.TP
++.B \-t
++Test config mode: read configuration and exit.
++.TP
++.BI \-u\  user
++Set the username/uid to run as.
++.TP
++.B \-v
++Verbose user messages
++.TP
++.B \-?
++Show version and usage of program.
++
+ .SH TCP-WRAPPERS CONFIGURATION
+ Tcpwrappers looks for the service name of the bacula daemons in
+ .I hosts.allow
+diff --git a/bacula/manpages/bacula-fd.8 b/bacula/manpages/bacula-fd.8
+index 0d6423a..1754af8 100644
+--- a/bacula/manpages/bacula-fd.8
++++ b/bacula/manpages/bacula-fd.8
+@@ -2,7 +2,7 @@
+ .\" First parameter, NAME, should be all caps
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+-.TH BACULA\-FD 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery & verification"
++.TH BACULA\-FD 8 "26 September 2009" "Kern Sibbald" "Network backup, recovery & verification"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+ .SH NAME
+@@ -24,14 +24,38 @@ backup'd/verified/restored. Network transfer can optionally be
+ compressed. 
+ .SH OPTIONS
+ .TP
+-.BI \-c\  config
+-Change location to read \fIbacula\-fd.conf\fP from (default $CWD)
++.B \-c\  config
++Change location to read \fIbacula\-sd.conf\fP from (default $CWD)
+ .TP
+-.BI \-u\  user
+-Set the username/uid to run as.
++.B \-d <nn>
++Set debug level to \fInn\fP.
++.TP
++.B \-dt
++Print a timestamp in debug output
++.TP
++.B \-f
++Run in the foreground (for debuggin)
+ .TP
+ .BI \-g\  group
+ Set the group/gid to run as.
++.TP
++.BI \-k
++Keep readall permission when dropping privilege.
++.TP
++.B \-s
++No signals. Used in debugging only.
++.TP
++.B \-t
++Test config mode: read configuration and exit.
++.TP
++.BI \-u\  user
++Set the username/uid to run as.
++.TP
++.B \-v
++Verbose user messages
++.TP
++.B \-?
++Show version and usage of program.
+ .SH SEE ALSO
+ .BR bacula\-dir (8),
+ .BR bacula\-sd (8).
+diff --git a/bacula/manpages/bacula-sd.8 b/bacula/manpages/bacula-sd.8
+index d765f63..fee1b84 100644
+--- a/bacula/manpages/bacula-sd.8
++++ b/bacula/manpages/bacula-sd.8
+@@ -2,7 +2,7 @@
+ .\" First parameter, NAME, should be all caps
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+-.TH BACULA\-SD 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery & verification"
++.TH BACULA\-SD 8 "26 September 2009" "Kern Sibbald" "Network backup, recovery & verification"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+ .SH NAME
+@@ -25,11 +25,33 @@ the backups will be stored.
+ .B \-c\  config
+ Change location to read \fIbacula\-sd.conf\fP from (default $CWD)
+ .TP
+-.BI \-u\  user
+-Set the username/uid to run as.
++.B \-d <nn>
++Set debug level to \fInn\fP.
++.TP
++.B \-dt
++Print a timestamp in debug output
++.TP
++.B \-f
++Run in the foreground (for debuggin)
+ .TP
+ .BI \-g\  group
+ Set the group/gid to run as.
++.TP
++.B \-s
++No signals. Used in debugging only.
++.TP
++.B \-t
++Test config mode: read configuration and exit.
++.TP
++.BI \-u\  user
++Set the username/uid to run as.
++.TP
++.B \-v
++Verbose user messages
++.TP
++.B \-?
++Show version and usage of program.
++
+ .SH SEE ALSO
+ .BR bacula\-dir (8),
+ .BR bacula\-fd (8).
+diff --git a/bacula/manpages/bacula.8 b/bacula/manpages/bacula.8
+index a05d5a7..cfc7177 100644
+--- a/bacula/manpages/bacula.8
++++ b/bacula/manpages/bacula.8
+@@ -42,17 +42,12 @@ Director runs as a daemon or a service (i.e.  in the background).
+ .LP
+ Bacula Console services is the program that allows the
+ administrator or user to communicate with the Bacula Director
+-(see above).  Currently, the Bacula Console is available in three
++(see above).  Currently, the Bacula Console is available in two
+ versions.  The first and simplest is to run the Console program
+ in a shell window (i.e.  TTY interface).  Most system
+ administrators will find this completely adequate.  The second
+-version is a GNOME GUI interface that for the moment (07 October
+-2005) is far from complete, but quite functional as it has most
+-the capabilities of the shell Console.  The third version is a
+-wxWidgets GUI with an interactive file restore.  It also has most
+-of the capabilities of the shell console, allows command
+-completion with tabulation, and gives you instant help about the
+-command you are typing.
++version is a Qt 4.2 GUI interface named bat that has
++more features than the bconsole program.
+ 
+ .LP
+ Bacula File services (or Client program) is the software program
+@@ -68,8 +63,8 @@ in some of the documentation, the File daemon is referred to as
+ the Client (for example in Bacula's configuration file).  In
+ addition to Unix/Linux File daemons, there is a Windows File
+ daemon (normally distributed in binary format).  The Windows File
+-daemon runs on all currently known Windows versions (98, Me,
+-NT, 2K, 2003,  XP).
++daemon runs on all currently known Windows versions (2K, 2003,  XP, 
++and Vista).
+ 
+ .LP
+ Bacula Storage services consist of the software programs that
+@@ -78,7 +73,7 @@ to the physical backup media or volumes.  In other words, the
+ Storage daemon is responsible for reading and writing your tapes
+ (or other storage media, e.g.  files).  For more details see the
+ Storage Services Daemon Design Document in the Bacula Developer's
+-Guild.  The Storage services runs as a daemon on the machine that
++Guide.  The Storage services runs as a daemon on the machine that
+ has the backup device (usually a tape drive).
+ 
+ .LP
+@@ -91,7 +86,7 @@ programs like tar and bru, because the catalog maintains a record
+ of all Volumes used, all Jobs run, and all Files saved,
+ permitting efficicient restoration and Volume management.  Bacula
+ currently supports three different databases, MySQL, PostgreSQL,
+-and SQLite, one of which must be chosen when building Bacula.
++and SQLite3, one of which must be chosen when building Bacula.
+ 
+ .SH OPTIONS
+ See the HTML/PDF documentation at:
+@@ -122,7 +117,8 @@ Kern Sibbald
+ Kern Sibbald
+ .SS Contributors
+ An enormous list of past and former persons who have devoted
+-their time and energy to this project -- thanks.
++their time and energy to this project -- thanks. See the AUTHORS
++file in the main Bacula source directory.
+ 
+ .SH COPYRIGHT
+ Bacula is distributed under a modified GPL version 2.0, as described in the
+diff --git a/bacula/manpages/bat.1 b/bacula/manpages/bat.1
+index 5dc3106..e678eb2 100644
+--- a/bacula/manpages/bat.1
++++ b/bacula/manpages/bat.1
+@@ -2,7 +2,7 @@
+ .\" First parameter, NAME, should be all caps
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+-.TH BAT 1 "24 April 2007" "Kern Sibbald" "Network backup, recovery and verification"
++.TH BAT 1 "26 September 2009" "Kern Sibbald" "Network backup, recovery and verification"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+ .SH NAME
+@@ -15,8 +15,8 @@
+ This manual page documents briefly the
+ .B bat
+ command, the Qt4 version of the Bacula Administration Tool console.
+-This is a GUI program that has similar features to the bconsole program,
+-but it is graphical oriented.
++This is a GUI full featured program similar the bconsole program,
++but it is graphical oriented and more features.
+ .PP
+ .SH OPTIONS
+ bat [\-s] [\-c config_file] [\-d debug_level] [-t]
+@@ -37,8 +37,6 @@ Test config mode: read configuration and exit.
+ Show version and usage of program.
+ .SH SEE ALSO
+ .BR bacula-dir (8),
+-.BR bacula-bgnome-console (1)
+-.BR bacula-bwx-console (1)
+ .BR bls (1),
+ .BR bextract (1).
+ .br
+diff --git a/bacula/manpages/bconsole.8 b/bacula/manpages/bconsole.8
+index 1ea6eeb..843712d 100644
+--- a/bacula/manpages/bconsole.8
++++ b/bacula/manpages/bconsole.8
+@@ -2,7 +2,7 @@
+ .\" First parameter, NAME, should be all caps
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+-.TH CONSOLE 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery and verification"
++.TH CONSOLE 8 "26 September 2009" "Kern Sibbald" "Network backup, recovery and verification"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+ .SH NAME
+@@ -24,6 +24,9 @@ Specify configuration file.
+ .BI \-d\  nn
+ Set debug level to \fInn\fP.
+ .TP
++.BI \-dt
++Print a timestamp in debug output.
++.TP
+ .B \-s
+ No signals.
+ .TP
+diff --git a/bacula/manpages/bsmtp.1 b/bacula/manpages/bsmtp.1
+index 08bb30c..fa3cf52 100644
+--- a/bacula/manpages/bsmtp.1
++++ b/bacula/manpages/bsmtp.1
+@@ -1,5 +1,5 @@
+ .\"                                      Hey, EMACS: -*- nroff -*-
+-.TH BACULA\-SMTP 1 "26 May 2006" "Kern Sibbald" "Network backup"
++.TH BACULA\-SMTP 1 "26 September 2009" "Kern Sibbald" "Network backup"
+ .\" Please adjust this date whenever revising the manpage.
+ .SH NAME
+  bsmtp \- Bacula's SMTP (mail delivery program)
+@@ -11,11 +11,15 @@ be used on Windows machines.
+ It is called: 
+ 
+ Usage: bsmtp [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]
++       -8          set the charset to UTF-8
+        -c          set the Cc: field
+        -dnn        set debug level to nn
++       -dt         print a timestamp in debug output
+        -f          set the From: field
+        -h          use mailhost:port as the bsmtp server
+        -s          set the Subject: field
++       -r          set the Reply-To: field
++       -l          set the maximum number of lines that should be sent (default: unlimited)
+        -?          print this message.
+ 
+ If the  -f option is not specified, bsmtp will use your userid. If
+diff --git a/bacula/manpages/dbcheck.8 b/bacula/manpages/dbcheck.8
+index 441b11d..9e3a6f1 100644
+--- a/bacula/manpages/dbcheck.8
++++ b/bacula/manpages/dbcheck.8
+@@ -2,7 +2,7 @@
+ .\" First parameter, NAME, should be all caps
+ .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+ .\" other parameters are allowed: see man(7), man(1)
+-.TH DBCHECK 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery and verification"
++.TH DBCHECK 8 "26 September 2009" "Kern Sibbald" "Network backup, recovery and verification"
+ .\" Please adjust this date whenever revising the manpage.
+ .\"
+ .SH NAME
+@@ -40,7 +40,9 @@ Usage: dbcheck [-c config] [-C catalog name] [-d debug_level]     []
+        -b              batch mode
+        -C              catalog name in the director conf file
+        -c              director conf filename
++       -B              print catalog configuration and exit
+        -dnn            set debug level to nn
++       -dt             print timestamp in debug output
+        -f              fix inconsistencies
+        -v              verbose
+        -?              print this message
+@@ -52,10 +54,10 @@ directory as dbcheck will read them from the file.
+ If the -f option is specified, dbcheck will repair (fix) the
+ inconsistencies it finds. Otherwise, it will report only. 
+ 
+-If the -b option is specified, dbcheck will run in batch mode, and
+-it will proceed to examine and fix (if -f is set) all programmed inconsistency
+-checks. If the -b option is not specified, dbcheck will enter
+-interactive mode and prompt with the following: 
++If the -b option is specified, dbcheck will run in batch mode, and it will
++proceed to examine and fix (if -f is set) all programmed inconsistency
++checks.  If the -b option is not specified, dbcheck will enter interactive
++mode and prompt with the following:
+ 
+ Hello, this is the database check/correct program.
+ Please select the function you want to perform.
+@@ -79,90 +81,91 @@ Please select the function you want to perform.
+ Select function number:
+ 
+ By entering 1 or 2, you can toggle the modify database flag (-f option) and
+-the verbose flag (-v). It can be helpful and reassuring to turn off the modify
+-database flag, then select one or more of the consistency checks (items 3
+-through 9) to see what will be done, then toggle the modify flag on and re-run
+-the check. 
++the verbose flag (-v).  It can be helpful and reassuring to turn off the
++modify database flag, then select one or more of the consistency checks
++(items 3 through 9) to see what will be done, then toggle the modify flag
++on and re-run the check.
+ 
+ The inconsistencies examined are the following: 
+ 
+ .BR
+-   Duplicate filename records. This can happen if you accidentally run  two
+-   copies of Bacula at the same time, and they are both adding  filenames
+-   simultaneously. It is a rare occurrence, but will create  an inconsistent
+-   database. If this is the case, you will receive  error messages during Jobs
+-   warning of duplicate database records.  If you are not getting these error
+-   messages, there is no reason  to run this check. 
++Duplicate filename records.  This can happen if you accidentally run two
++   copies of Bacula at the same time, and they are both adding filenames
++   simultaneously.  It is a rare occurrence, but will create an
++   inconsistent database.  If this is the case, you will receive error
++   messages during Jobs warning of duplicate database records.  If you are
++   not getting these error messages, there is no reason to run this check.
+ 
+ .BR
+-Repair bad Filename records. This checks and corrects filenames  that
+-   have a trailing slash. They should not.  
++Repair bad Filename records.  This checks and corrects filenames that have
++   a trailing slash.  They should not.
+ 
+ .BR
+-Repair bad Path records. This checks and corrects path names  that do
+-   not have a trailing slash. They should.  
++Repair bad Path records.  This checks and corrects path names that do not
++   have a trailing slash.  They should.
+ 
+ .BR
+-Duplicate path records. This can happen if you accidentally run  two
+-   copies of Bacula at the same time, and they are both adding  filenames
+-   simultaneously. It is a rare occurrence, but will create  an inconsistent
+-   database. See the item above for why this occurs and  how you know it is
+-   happening. 
++Duplicate path records.  This can happen if you accidentally run two copies
++   of Bacula at the same time, and they are both adding filenames
++   simultaneously.  It is a rare occurrence, but will create an
++   inconsistent database.  See the item above for why this occurs and how
++   you know it is happening.
+ 
+ .BR
+-Orphaned JobMedia records. This happens when a Job record is deleted 
+-   (perhaps by a user issued SQL statement), but the corresponding  JobMedia
+-   record (one for each Volume used in the Job) was not deleted.  Normally, this
+-   should not happen, and even if it does, these records  generally do not take
+-   much space in your database. However, by running  this check, you can
+-   eliminate any such orphans.  
++Orphaned JobMedia records.  This happens when a Job record is deleted
++   (perhaps by a user issued SQL statement), but the corresponding JobMedia
++   record (one for each Volume used in the Job) was not deleted.  Normally,
++   this should not happen, and even if it does, these records generally do
++   not take much space in your database.  However, by running this check,
++   you can eliminate any such orphans.
+ 
+ .BR
+-Orphaned File records. This happens when a Job record is deleted 
+-   (perhaps by a user issued SQL statement), but the corresponding  File record
+-   (one for each Volume used in the Job) was not deleted.  Note, searching for
+-   these records can be {\bf very} time consuming (i.e.  it may take hours) for a
+-   large database. Normally this should not  happen as Bacula takes care to
+-   prevent it. Just the same, this  check can remove any orphaned File records.
+-   It is recommended that  you run this once a year since orphaned File records
+-   can take a  large amount of space in your database. You might
+-   want to ensure that you have indexes on JobId, FilenameId, and
+-   PathId for the File table in your catalog before running this
+-   command.
++Orphaned File records.  This happens when a Job record is deleted (perhaps
++   by a user issued SQL statement), but the corresponding File record (one
++   for each Volume used in the Job) was not deleted.  Note, searching for
++   these records can be very time consuming (i.e.  it may take hours) for a
++   large database.  Normally this should not happen as Bacula takes care to
++   prevent it.  Just the same, this check can remove any orphaned File
++   records.  It is recommended that you run this once a year since orphaned
++   File records can take a large amount of space in your database.  You
++   might want to ensure that you have indexes on JobId, FilenameId, and
++   PathId for the File table in your catalog before running this command.
+ 
+ .BR
+-Orphaned Path records. This condition happens any time a directory is 
+-   deleted from your system and all associated Job records have been purged. 
+-   During standard purging (or pruning) of Job records, Bacula does  not check
+-   for orphaned Path records. As a consequence, over a period  of time, old
+-   unused Path records will tend to accumulate and use  space in your database.
+-   This check will eliminate them. It is recommended that you run this
+-   check at least once a year. 
++Orphaned Path records.  This condition happens any time a directory is
++   deleted from your system and all associated Job records have been
++   purged.  During standard purging (or pruning) of Job records, Bacula
++   does not check for orphaned Path records.  As a consequence, over a
++   period of time, old unused Path records will tend to accumulate and use
++   space in your database.  This check will eliminate them.  It is
++   recommended that you run this check at least once a year.
+ 
+ .BR
+-Orphaned Filename records. This condition happens any time a file is 
+-   deleted from your system and all associated Job records have been purged. 
+-   This can happen quite frequently as there are quite a large number  of files
+-   that are created and then deleted. In addition, if you  do a system update or
+-   delete an entire directory, there can be  a very large number of Filename
+-   records that remain in the catalog  but are no longer used.  
+-
+-   During standard purging (or pruning) of Job records, Bacula does  not check
+-   for orphaned Filename records. As a consequence, over a period  of time, old
+-   unused Filename records will accumulate and use  space in your database. This
+-   check will eliminate them. It is strongly  recommended that you run this check
+-   at least once a year, and for  large database (more than 200 Megabytes), it is
+-   probably better to  run this once every 6 months.  
++Orphaned Filename records.  This condition happens any time a file is
++   deleted from your system and all associated Job records have been
++   purged.  This can happen quite frequently as there are quite a large
++   number of files that are created and then deleted.  In addition, if you
++   do a system update or delete an entire directory, there can be a very
++   large number of Filename records that remain in the catalog but are no
++   longer used.
++
++   During standard purging (or pruning) of Job records, Bacula does not
++   check for orphaned Filename records.  As a consequence, over a period of
++   time, old unused Filename records will accumulate and use space in your
++   database.  This check will eliminate them.  It is strongly recommended
++   that you run this check at least once a year, and for large database
++   (more than 200 Megabytes), it is probably better to run this once every
++   6 months.
+ 
+ .BR
+-Orphaned Client records. These records can remain in the database  long
+-   after you have removed a client. 
++Orphaned Client records.  These records can remain in the database long
++   after you have removed a client.
+ 
+ .BR
+-Orphaned Job records. If no client is defined for a job or you  do not
+-   run a job for a long time, you can accumulate old job  records. This option
+-   allow you to remove jobs that are not  attached to any client (and thus
+-   useless).  
++Orphaned Job records.  If no client is defined for a job or you do not run
++   a job for a long time, you can accumulate old job records.  This option
++   allow you to remove jobs that are not attached to any client (and thus
++   useless).
+ 
+ .BR
+ All Admin records. This command will remove all Admin records, 
