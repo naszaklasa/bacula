@@ -1,3 +1,18 @@
+bacula (3.0.2-3.1) UNRELEASED; urgency=low
+
+  * Non-maintainer upload.
+  * Fix pending l10n issues. Debconf translations:
+  * German (Helge Kreutzmann).  Closes: #549982, #565877
+  * Russian (Yuri Kozlov).  Closes: #543179
+  * Italian (Luca Monducci).  Closes: #544594
+  * French (Christian Perrier).  Closes: #544610
+  * Swedish (Martin Bagge).  Closes: #545729
+  * Spanish (Francisco Javier Cuadrado).  Closes: #555450
+  * Japanese (Hideki Yamane (Debian-JP)).  Closes: #545408
+  * Czech (Miroslav Kure).  Closes: #567660
+
+ -- Christian Perrier <bubulle@debian.org>  Sun, 24 Jan 2010 08:01:18 +0100
+
 bacula (3.0.2-3) unstable; urgency=low
 
   * bacula-director-common doesn't require bacula-fd.  Patch from Sven

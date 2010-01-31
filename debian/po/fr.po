@@ -1,60 +1,70 @@
 # Translation of bacula debconf templates to French
-# Copyright (C) 2008 Thomas Huriaux <thomas.huriaux@gmail.com>
+# Copyright (C) 2007-2009 Debian French l10n team <debian-l10n-french@lists.debian.org>
 # This file is distributed under the same license as the bacula package.
 #
-# Thomas Huriaux <thomas.huriaux@gmail.com>, 2007, 2008.
+# Translators:
 # Eric Madesclair <eric-m@wanadoo.fr>
+# Thomas Huriaux <thomas.huriaux@gmail.com>, 2007, 2008.
+# Christian Perrier <bubulle@debian.org>, 2009.
 msgid ""
 msgstr ""
 "Project-Id-Version: bacula\n"
 "Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
-"POT-Creation-Date: 2008-01-27 22:28+0100\n"
-"PO-Revision-Date: 2008-01-27 22:51+0100\n"
-"Last-Translator: Thomas Huriaux <thomas.huriaux@gmail.com>\n"
+"POT-Creation-Date: 2010-01-24 08:08+0100\n"
+"PO-Revision-Date: 2009-09-01 22:57+0200\n"
+"Last-Translator: Christian Perrier <bubulle@debian.org>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Lokalize 1.0\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:2001
-msgid "Create tables for Bacula's catalog?"
+#: ../bacula-director-sqlite3.templates:1001
+msgid "Create tables for Bacula's Catalog?"
 msgstr "Faut-il créer les tables du catalogue de Bacula ?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:2001
+#: ../bacula-director-sqlite3.templates:1001
 msgid ""
-"The tables needed for Bacula's catalog are missing. This is normal for a "
-"fresh install of Bacula."
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
 msgstr ""
 "Les tables nécessaires au catalogue de Bacula sont absentes. Cette situation "
-"est normale pour une nouvelle installation."
+"est normale pour une nouvelle installation. Elle sont indispensables pour "
+"que le programme « director » de Bacula fonctionne."
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite3.templates:2001
-msgid ""
-"These tables are needed for the Bacula director to function. Please choose "
-"whether these tables should be automatically created."
-msgstr ""
-"Ces tables sont nécessaires pour le bon fonctionnement de Bacula. Choisissez "
-"cette option pour configurer automatiquement ces tables."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite3.templates:3001
-msgid "Remove catalog on purge?"
+msgid "Remove Catalog on purge?"
 msgstr "Faut-il supprimer le catalogue lors de la purge du paquet ?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:3001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"Please choose whether the Bacula catalog should be removed when the director "
-"package is purged."
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
 msgstr ""
-"Choisissez cette option pour supprimer le catalogue de Bacula lors de la "
-"purge du paquet fournissant le service de supervision (« director ») de "
-"Bacula."
+"Vous devriez choisir cette option pour supprimer le catalogue de Bacula si "
+"le paquet est purgé du système."
+
+#~ msgid ""
+#~ "These tables are needed for the Bacula director to function. Please "
+#~ "choose whether these tables should be automatically created."
+#~ msgstr ""
+#~ "Ces tables sont nécessaires pour le bon fonctionnement de Bacula. "
+#~ "Choisissez cette option pour configurer automatiquement ces tables."
+
+#~ msgid ""
+#~ "Please choose whether the Bacula catalog should be removed when the "
+#~ "director package is purged."
+#~ msgstr ""
+#~ "Choisissez cette option pour supprimer le catalogue de Bacula lors de la "
+#~ "purge du paquet fournissant le service de supervision (« director ») de "
+#~ "Bacula."

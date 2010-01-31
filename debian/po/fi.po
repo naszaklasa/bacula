@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bacula\n"
 "Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
-"POT-Creation-Date: 2008-01-27 22:28+0100\n"
+"POT-Creation-Date: 2010-01-24 08:08+0100\n"
 "PO-Revision-Date: 2008-02-04 12:45+0200\n"
 "Last-Translator: Esko Arajärvi <edu@iki.fi>\n"
 "Language-Team: Finnish <debian-l10n-finnish@lists.debian.org>\n"
@@ -14,16 +14,23 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:2001
-msgid "Create tables for Bacula's catalog?"
+#: ../bacula-director-sqlite3.templates:1001
+#, fuzzy
+#| msgid "Create tables for Bacula's catalog?"
+msgid "Create tables for Bacula's Catalog?"
 msgstr "Luodaanko Baculan luettelon taulut?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:2001
+#: ../bacula-director-sqlite3.templates:1001
+#, fuzzy
+#| msgid ""
+#| "The tables needed for Bacula's catalog are missing. This is normal for a "
+#| "fresh install of Bacula."
 msgid ""
-"The tables needed for Bacula's catalog are missing. This is normal for a "
-"fresh install of Bacula."
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
 msgstr ""
 "Baculan luettelon tarvitsemat taulut puuttuvat. Tämä on normaalia uuden "
 "Bacula-asennuksen yhteydessä."
@@ -31,24 +38,28 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite3.templates:2001
-msgid ""
-"These tables are needed for the Bacula director to function. Please choose "
-"whether these tables should be automatically created."
-msgstr ""
-"Bacula-ohjain tarvitsee nämä taulut toimiakseen. Valitse haluatko, että nämä "
-"taulut luodaan automaattisesti."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite3.templates:3001
-msgid "Remove catalog on purge?"
+#, fuzzy
+#| msgid "Remove catalog on purge?"
+msgid "Remove Catalog on purge?"
 msgstr "Poistetaanko luettelo siivottaessa?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:3001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"Please choose whether the Bacula catalog should be removed when the director "
-"package is purged."
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
 msgstr ""
-"Valitse tulisiko Baculan luettelo poistaa, kun ohjainpaketti siivotaan."
+
+#~ msgid ""
+#~ "These tables are needed for the Bacula director to function. Please "
+#~ "choose whether these tables should be automatically created."
+#~ msgstr ""
+#~ "Bacula-ohjain tarvitsee nämä taulut toimiakseen. Valitse haluatko, että "
+#~ "nämä taulut luodaan automaattisesti."
+
+#~ msgid ""
+#~ "Please choose whether the Bacula catalog should be removed when the "
+#~ "director package is purged."
+#~ msgstr ""
+#~ "Valitse tulisiko Baculan luettelo poistaa, kun ohjainpaketti siivotaan."

@@ -1,23 +1,23 @@
-#
+# 
 #    Translators, if you are not familiar with the PO format, gettext
 #    documentation is worth reading, especially sections dedicated to
 #    this format, e.g. by running:
 #         info -n '(gettext)PO Files'
 #         info -n '(gettext)Header Entry'
-#
+# 
 #    Some information specific to po-debconf are available at
 #            /usr/share/doc/po-debconf/README-trans
 #         or http://www.debian.org/intl/l10n/po-debconf/README-trans
-#
+# 
 #    Developers do not need to manually edit POT or PO files.
-#
-#
+# 
+# 
 msgid ""
 msgstr ""
-"Project-Id-Version: bacula 2.4.0-1\n"
+"Project-Id-Version: bacula 3.0.2-3\n"
 "Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
-"POT-Creation-Date: 2008-01-27 22:28+0100\n"
-"PO-Revision-Date: 2008-01-29 21:26+0900\n"
+"POT-Creation-Date: 2010-01-24 08:08+0100\n"
+"PO-Revision-Date: 2009-09-07 08:26+0900\n"
 "Last-Translator: Hideki Yamane (Debian-JP) <henrich@debian.or.jp>\n"
 "Language-Team: Japanese <debian-japanese@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
@@ -26,43 +26,34 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:2001
-msgid "Create tables for Bacula's catalog?"
+#: ../bacula-director-sqlite3.templates:1001
+msgid "Create tables for Bacula's Catalog?"
 msgstr "Bacula のカタログ用テーブルを作成しますか?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:2001
+#: ../bacula-director-sqlite3.templates:1001
 msgid ""
-"The tables needed for Bacula's catalog are missing. This is normal for a "
-"fresh install of Bacula."
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
 msgstr ""
 "Bacula のカタログに必要なテーブルが存在していません。Bacula を初めてインス"
-"トールする場合は問題ありません。"
+"トールする場合は問題ありません。これらのテーブルは Bacula director が動作する"
+"ために必要です。"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite3.templates:2001
-msgid ""
-"These tables are needed for the Bacula director to function. Please choose "
-"whether these tables should be automatically created."
-msgstr ""
-"これらのテーブルは Bacula director が動作するために必要です。自動的にテーブル"
-"を作成するかどうか決めてください。"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite3.templates:3001
-msgid "Remove catalog on purge?"
+msgid "Remove Catalog on purge?"
 msgstr "purge の際にカタログを削除しますか?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:3001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"Please choose whether the Bacula catalog should be removed when the director "
-"package is purged."
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
 msgstr ""
-"director パッケージを purge する際に Bacula のカタログを削除するかどうかを決めて"
-"ください。"
-
+"パッケージが purge される際に Bacula のカタログを削除したい場合は、このオプ"
+"ションを選んでください。"

@@ -1,15 +1,16 @@
-# translation of ru.po to Russian
+# translation of bacula_3.0.2-2_ru.po to Russian
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 #
 # Yuri Kozlov <kozlov.y@gmail.com>, 2008.
+# Yuri Kozlov <yuray@komyakino.ru>, 2009.
 msgid ""
 msgstr ""
-"Project-Id-Version: 2.2.6-0.2\n"
+"Project-Id-Version: bacula 3.0.2-2\n"
 "Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
-"POT-Creation-Date: 2008-01-27 22:28+0100\n"
-"PO-Revision-Date: 2008-02-05 20:55+0300\n"
-"Last-Translator: Yuri Kozlov <kozlov.y@gmail.com>\n"
+"POT-Creation-Date: 2010-01-24 08:08+0100\n"
+"PO-Revision-Date: 2009-08-23 09:38+0400\n"
+"Last-Translator: Yuri Kozlov <yuray@komyakino.ru>\n"
 "Language-Team: Russian <debian-l10n-russian@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -20,42 +21,34 @@ msgstr ""
 
 #. Type: boolean
 #. Description
+#: ../bacula-director-sqlite3.templates:1001
+msgid "Create tables for Bacula's Catalog?"
+msgstr "Создать таблицы для Bacula Catalog?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite3.templates:1001
+msgid ""
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
+msgstr ""
+"Необходимые таблицы для каталога Bacula отсутствуют. Это нормально, если "
+"установка Bacula выполняется впервые. Данные таблицы необходимы для работы "
+"Bacula Director."
+
+#. Type: boolean
+#. Description
 #: ../bacula-director-sqlite3.templates:2001
-msgid "Create tables for Bacula's catalog?"
-msgstr "Создать таблицы для каталога Bacula?"
+msgid "Remove Catalog on purge?"
+msgstr "Удалять Catalog при вычистке?"
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"The tables needed for Bacula's catalog are missing. This is normal for a "
-"fresh install of Bacula."
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
 msgstr ""
-"Необходимые таблицы для каталога Bacula отсутствуют. Это нормально для "
-"первой установки Bacula."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite3.templates:2001
-msgid ""
-"These tables are needed for the Bacula director to function. Please choose "
-"whether these tables should be automatically created."
-msgstr ""
-"Эти таблицы нужны для работы ведущего процесса (director) Bacula. Выберите, "
-"нужно ли создать эти таблицы автоматически."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite3.templates:3001
-msgid "Remove catalog on purge?"
-msgstr "Удалять каталог при вычистке?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite3.templates:3001
-msgid ""
-"Please choose whether the Bacula catalog should be removed when the director "
-"package is purged."
-msgstr ""
-"Выберите, нужно ли удалять каталог Bacula при вычистке пакета ведущего "
-"(director)."
+"Ответьте утвердительно, если хотите, чтобы при вычистке пакета удалялся "
+"каталог Bacula."

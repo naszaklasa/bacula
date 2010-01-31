@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bacula_2.0.3-4\n"
 "Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
-"POT-Creation-Date: 2008-01-27 22:28+0100\n"
+"POT-Creation-Date: 2010-01-24 08:08+0100\n"
 "PO-Revision-Date: 2008-02-13 12:39+1030\n"
 "Last-Translator: Clytie Siddall <clytie@riverland.net.au>\n"
 "Language-Team: Vietnamese <vi-VN@googlegroups.com>\n"
@@ -18,16 +18,23 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:2001
-msgid "Create tables for Bacula's catalog?"
+#: ../bacula-director-sqlite3.templates:1001
+#, fuzzy
+#| msgid "Create tables for Bacula's catalog?"
+msgid "Create tables for Bacula's Catalog?"
 msgstr "Tạo bảng cho phân loại của Bacula không?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:2001
+#: ../bacula-director-sqlite3.templates:1001
+#, fuzzy
+#| msgid ""
+#| "The tables needed for Bacula's catalog are missing. This is normal for a "
+#| "fresh install of Bacula."
 msgid ""
-"The tables needed for Bacula's catalog are missing. This is normal for a "
-"fresh install of Bacula."
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
 msgstr ""
 "Các bảng cần thiết cho phân loại của Bacula vẫn còn bị thiếu. Tuy nhiên, "
 "trường hợp này là bình thường khi Bacula được cài đặt mới."
@@ -35,24 +42,28 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite3.templates:2001
-msgid ""
-"These tables are needed for the Bacula director to function. Please choose "
-"whether these tables should be automatically created."
-msgstr ""
-"Những bảng này cần thiết để chạy trình điều khiển Bacula hoạt động được. Hãy "
-"chọn có nên tự động tạo các bảng này hay không."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite3.templates:3001
-msgid "Remove catalog on purge?"
+#, fuzzy
+#| msgid "Remove catalog on purge?"
+msgid "Remove Catalog on purge?"
 msgstr "Gỡ bỏ phân loại khi tẩy không?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite3.templates:3001
+#: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"Please choose whether the Bacula catalog should be removed when the director "
-"package is purged."
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
 msgstr ""
-"Hãy chọn có nên gỡ bỏ phân loại Bacula khi gói director bị tẩy, hay không."
+
+#~ msgid ""
+#~ "These tables are needed for the Bacula director to function. Please "
+#~ "choose whether these tables should be automatically created."
+#~ msgstr ""
+#~ "Những bảng này cần thiết để chạy trình điều khiển Bacula hoạt động được. "
+#~ "Hãy chọn có nên tự động tạo các bảng này hay không."
+
+#~ msgid ""
+#~ "Please choose whether the Bacula catalog should be removed when the "
+#~ "director package is purged."
+#~ msgstr ""
+#~ "Hãy chọn có nên gỡ bỏ phân loại Bacula khi gói director bị tẩy, hay không."
