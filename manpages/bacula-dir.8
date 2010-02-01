@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH BACULA\-DIR 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery&verification"
+.TH BACULA\-DIR 8 "26 September 2009" "Kern Sibbald" "Network backup, recovery&verification"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .SH NAME
@@ -22,14 +22,36 @@ network backup system: it is responsible for scheduling and
 coordinating backups across the network.
 .SH OPTIONS
 .TP
-.BI \-c
-Change location to read \fIbacula-dir.conf\fP from (default $CWD)
+.B \-c\  config
+Change location to read \fIbacula\-sd.conf\fP from (default $CWD)
 .TP
-.BI \-u
+.B \-d <nn>
+Set debug level to \fInn\fP.
+.TP
+.B \-dt
+Print a timestamp in debug output
+.TP
+.B \-f
+Run in the foreground (for debuggin)
+.TP
+.BI \-g\  group
+Set the group/gid to run as.
+.TP
+.B \-s
+No signals. Used in debugging only.
+.TP
+.B \-t
+Test config mode: read configuration and exit.
+.TP
+.BI \-u\  user
 Set the username/uid to run as.
 .TP
-.BI \-g
-Set the group/gid to run as.
+.B \-v
+Verbose user messages
+.TP
+.B \-?
+Show version and usage of program.
+
 .SH TCP-WRAPPERS CONFIGURATION
 Tcpwrappers looks for the service name of the bacula daemons in
 .I hosts.allow

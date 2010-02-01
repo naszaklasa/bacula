@@ -1,5 +1,5 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH BACULA\-SMTP 1 "26 May 2006" "Kern Sibbald" "Network backup"
+.TH BACULA\-SMTP 1 "26 September 2009" "Kern Sibbald" "Network backup"
 .\" Please adjust this date whenever revising the manpage.
 .SH NAME
  bsmtp \- Bacula's SMTP (mail delivery program)
@@ -11,11 +11,15 @@ be used on Windows machines.
 It is called: 
 
 Usage: bsmtp [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]
+       -8          set the charset to UTF-8
        -c          set the Cc: field
        -dnn        set debug level to nn
+       -dt         print a timestamp in debug output
        -f          set the From: field
        -h          use mailhost:port as the bsmtp server
        -s          set the Subject: field
+       -r          set the Reply-To: field
+       -l          set the maximum number of lines that should be sent (default: unlimited)
        -?          print this message.
 
 If the  -f option is not specified, bsmtp will use your userid. If

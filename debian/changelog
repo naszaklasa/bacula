@@ -5,6 +5,8 @@ bacula (3.0.2-4) UNRELEASED; urgency=low
   * Improve manpages for: bcopy, bextract
     Patches by Lucas B. Cohen
     Closes: #499619.
+  * Import upstream patch to add bsmtp manpage and update
+    manpages.  Closes: #519573.
 
  -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Feb 2010 08:11:14 -0600
 
