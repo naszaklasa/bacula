@@ -42,7 +42,7 @@
  *       to do the restore.
  *     Update the DB according to what files where restored????
  *
- *   Version $Id: restore.c 8982 2009-07-14 13:44:46Z kerns $
+ *   Version $Id$
  */
 
 

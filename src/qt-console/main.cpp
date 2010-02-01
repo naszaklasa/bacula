@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: main.cpp 8825 2009-05-14 10:41:48Z kerns $
+ *   Version $Id$
  *
  *  Main program for bat (qt-console)
  *

@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *     Version $Id: dird_conf.c 8937 2009-07-01 19:00:38Z kerns $
+ *     Version $Id$
  */
 
 
@@ -806,6 +806,9 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
             }
             sendit(sock, "      N\n");
          }
+         if (incexe->ignoredir) {
+            sendit(sock, "      Z %s\n", incexe->ignoredir);
+         }
          for (j=0; j<incexe->name_list.size(); j++) {
             sendit(sock, "      I %s\n", incexe->name_list.get(j));
          }
@@ -1025,6 +1028,9 @@ static void free_incexe(INCEXE *incexe)
    }
    if (incexe->opts_list) {
       free(incexe->opts_list);
+   }
+   if (incexe->ignoredir) {
+      free(incexe->ignoredir);
    }
    free(incexe);
 }

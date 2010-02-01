@@ -3,7 +3,7 @@
 # Bacula interface to chio autoloader
 # (by Rudolf Cejka <cejkar@fit.vutbr.cz>)
 #
-# $Id: rc-chio-changer 2811 2006-02-23 20:04:22Z kerns $
+# $Id$
 #
 # If you set in your Device resource
 #   Changer Command = "path-to-this-script/chio-changer %c %o %S %a %d"

@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_create.c 8407 2009-01-28 10:47:21Z ricozz $
+ *    Version $Id$
  */
 
 /* The following is necessary so that we do not include

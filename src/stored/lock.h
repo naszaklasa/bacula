@@ -30,7 +30,7 @@
  *
  * Kern Sibbald, pulled out of dev.h June 2007
  *
- *   Version $Id: lock.h 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  *
  */
 

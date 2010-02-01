@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, June MMII
  *
- *   Version $Id: parse_bsr.c 8713 2009-04-11 12:35:04Z kerns $
+ *   Version $Id$
  */
 
 

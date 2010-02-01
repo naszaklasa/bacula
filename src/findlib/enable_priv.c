@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, May MMIII
  *
- *   Version $Id: enable_priv.c 8681 2009-04-03 09:16:48Z kerns $
+ *   Version $Id$
  *
  */
 

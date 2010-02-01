@@ -30,7 +30,7 @@
  *
  *  Kern Sibbald, 2000-2007.  June 2007
  *
- *   Version $Id: lock.c 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */

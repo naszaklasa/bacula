@@ -30,7 +30,7 @@
  *
  *      @(#)fnmatch.h   8.1 (Berkeley) 6/2/93
  */
-/* Version: $Id: fnmatch.h 5440 2007-09-03 10:17:43Z kerns $ */
+/* Version: $Id$ */
 
 #ifndef _FNMATCH_H_
 #define _FNMATCH_H_

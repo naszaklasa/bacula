@@ -29,7 +29,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: bat.h 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *   Version $Id$
  *
  *   Kern Sibbald, January 2007
  */

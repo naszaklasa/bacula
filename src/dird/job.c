@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c 8937 2009-07-01 19:00:38Z kerns $
+ *    Version $Id$
  */
 
 #include "bacula.h"

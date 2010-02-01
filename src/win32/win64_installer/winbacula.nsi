@@ -37,8 +37,8 @@
 ;
 ; Kern Sibbald April 2009
 ; Correct some Win64 install problems
-;
-; Version $Id: winbacula.nsi 7074 2008-05-31 18:43:21Z kerns $
+; It is mind boggling how many lines of this insane scripting language
+;   have been written with absolutely no comments
 ;
 ; Command line options:
 ;
@@ -268,6 +268,7 @@ Function .onInit
   StrCpy $ConfigMonitorName              "$HostName-mon"
   ;StrCpy $ConfigMonitorPassword
 
+; PLUGINSDIR refers to temporary helper programs and not Bacula plugins!
   InitPluginsDir
   File "/oname=$PLUGINSDIR\openssl.exe"  "${SRC_DIR}\openssl.exe"
   File "/oname=$PLUGINSDIR\ssleay32-0.9.8.dll" "${SRC_DIR}\ssleay32-0.9.8.dll"
@@ -281,6 +282,7 @@ Function .onInit
 
   SetPluginUnload alwaysoff
 
+; Set client password
   nsExec::Exec '"$PLUGINSDIR\openssl.exe" rand -base64 -out $PLUGINSDIR\pw.txt 33'
   pop $R0
   ${If} $R0 = 0
@@ -293,6 +295,7 @@ Function .onInit
 
   SetPluginUnload manual
 
+; Set monitor password
   nsExec::Exec '"$PLUGINSDIR\openssl.exe" rand -base64 -out $PLUGINSDIR\pw.txt 33'
   pop $R0
   ${If} $R0 = 0
@@ -373,6 +376,7 @@ Section "-Initialize"
   File "..\..\..\LICENSE"
   Delete /REBOOTOK "$INSTDIR\License.txt"
 
+; Output a series of SED commands to configure the .conf file(s)
   FileOpen $R1 $PLUGINSDIR\config.sed w
   FileWrite $R1 "s;@VERSION@;${VERSION};g$\r$\n"
   FileWrite $R1 "s;@DATE@;${__DATE__};g$\r$\n"
@@ -453,11 +457,11 @@ Section "File Service" SecFileDaemon
 
   File "${SRC_DIR}\bacula-fd.exe"
 
-    File "/oname=$PLUGINSDIR\bacula-fd.conf" "bacula-fd.conf.in"
+  File "/oname=$PLUGINSDIR\bacula-fd.conf" "bacula-fd.conf.in"
 
-    StrCpy $0 "$INSTDIR"
-    StrCpy $1 bacula-fd.conf
-    Call ConfigEditAndCopy
+  StrCpy $0 "$INSTDIR"
+  StrCpy $1 bacula-fd.conf
+  Call ConfigEditAndCopy
 
   StrCpy $0 bacula-fd
   StrCpy $1 "File Service"
@@ -486,27 +490,12 @@ Section "Command Console" SecConsole
 
 SectionEnd
 
+; Essentially deleted because wxconsole is not implemented on Win64
 Section "Graphical Console" SecWxConsole
   SectionIn 1 2 3
   
   SetOutPath "$INSTDIR"
 
-;  Call InstallCommonFiles
-;!if "${BUILD_TOOLS}" == "MinGW64"
-;  File "${SRC_DIR}\wxbase28_gcc_bacula.dll"
-;  File "${SRC_DIR}\wxmsw28_core_gcc_bacula.dll"
-;!endif
-
-;  File "${SRC_DIR}\bwx-console.exe"
-
-;    File "/oname=$PLUGINSDIR\bwx-console.conf" "bwx-console.conf.in"
-;    StrCpy $0 "$INSTDIR"
-;    StrCpy $1 bwx-console.conf
-;    Call ConfigEditAndCopy
-
-  ; Create Start Menu entry
-;  CreateShortCut "$SMPROGRAMS\Bacula\bwx-console.lnk" "$INSTDIR\bwx-console.exe" '-c "$INSTDIR\bwx-console.conf"' "$INSTDIR\bwx-console.exe" 0
-;  CreateShortCut "$SMPROGRAMS\Bacula\Configuration\Edit Graphical Console Configuration.lnk" "write.exe" '"$INSTDIR\bwx-console.conf"'
 SectionEnd
 
 SectionGroupEnd
@@ -543,9 +532,6 @@ SectionEnd
 
 LangString DESC_SecFileDaemon ${LANG_ENGLISH} "Install Bacula File Daemon on this system."
 LangString DESC_SecConsole ${LANG_ENGLISH} "Install command console program on this system."
-;LangString DESC_SecWxConsole ${LANG_ENGLISH} "Install graphical console program on this system."
-;LangString DESC_SecDocPdf ${LANG_ENGLISH} "Install documentation in Acrobat format on this system."
-;LangString DESC_SecDocHtml ${LANG_ENGLISH} "Install documentation in HTML format on this system."
 
 LangString TITLE_ConfigPage1 ${LANG_ENGLISH} "Configuration"
 LangString SUBTITLE_ConfigPage1 ${LANG_ENGLISH} "Set installation configuration."
@@ -562,9 +548,6 @@ LangString SUBTITLE_WriteTemplates ${LANG_ENGLISH} "Create a resource template f
 !InsertMacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !InsertMacro MUI_DESCRIPTION_TEXT ${SecFileDaemon} $(DESC_SecFileDaemon)
   !InsertMacro MUI_DESCRIPTION_TEXT ${SecConsole} $(DESC_SecConsole)
-;  !InsertMacro MUI_DESCRIPTION_TEXT ${SecWxConsole} $(DESC_SecWxConsole)
-;  !InsertMacro MUI_DESCRIPTION_TEXT ${SecDocPdf} $(DESC_SecDocPdf)
-;  !InsertMacro MUI_DESCRIPTION_TEXT ${SecDocHtml} $(DESC_SecDocHtml)
 !InsertMacro MUI_FUNCTION_DESCRIPTION_END
 
 ; Uninstall section
@@ -758,15 +741,6 @@ Function GetSelectedComponents
   ${If} ${SectionIsSelected} ${SecConsole}
     IntOp $R0 $R0 | ${ComponentTextConsole}
   ${EndIf}
-;  ${If} ${SectionIsSelected} ${SecWxConsole}
-;    IntOp $R0 $R0 | ${ComponentGUIConsole}
-;  ${EndIf}
-;  ${If} ${SectionIsSelected} ${SecDocPdf}
-;    IntOp $R0 $R0 | ${ComponentPDFDocs}
-;  ${EndIf}
-;  ${If} ${SectionIsSelected} ${SecDocHtml}
-;    IntOp $R0 $R0 | ${ComponentHTMLDocs}
-;  ${EndIf}
   Exch $R0
 FunctionEnd
 
@@ -815,7 +789,6 @@ Function EnterWriteTemplates
     WriteINIStr "$PLUGINSDIR\WriteTemplates.ini" "Field 2" State 1
     DeleteINIStr "$PLUGINSDIR\WriteTemplates.ini" "Field 2" Flags
     WriteINIStr "$PLUGINSDIR\WriteTemplates.ini" "Field 3" State "C:\$ConfigClientName.conf"
-;    WriteINIStr "$PLUGINSDIR\WriteTemplates.ini" "Field 5" Flags REQ_SAVE|FILE_EXPLORER|WARN_IF_EXIST
   ${EndIf}
 
 
@@ -856,30 +829,6 @@ Function SelectPreviousComponents
       !InsertMacro UnselectSection ${SecConsole}
       !InsertMacro ClearSectionFlag ${SecConsole} ${SF_RO}
     ${EndIf}
-;    IntOp $R1 $PreviousComponents & ${ComponentGUIConsole}
-;    ${If} $R1 <> 0
-;      !InsertMacro SelectSection ${SecWxConsole}
-;      !InsertMacro SetSectionFlag ${SecWxConsole} ${SF_RO}
-;    ${Else}
-;      !InsertMacro UnselectSection ${SecWxConsole}
-;      !InsertMacro ClearSectionFlag ${SecWxConsole} ${SF_RO}
-;    ${EndIf}
-;    IntOp $R1 $PreviousComponents & ${ComponentPDFDocs}
-;    ${If} $R1 <> 0
-;      !InsertMacro SelectSection ${SecDocPdf}
-;      !InsertMacro SetSectionFlag ${SecDocPdf} ${SF_RO}
-;    ${Else}
-;      !InsertMacro UnselectSection ${SecDocPdf}
-;      !InsertMacro ClearSectionFlag ${SecDocPdf} ${SF_RO}
-;    ${EndIf}
-;    IntOp $R1 $PreviousComponents & ${ComponentHTMLDocs}
-;    ${If} $R1 <> 0
-;      !InsertMacro SelectSection ${SecDocHtml}
-;      !InsertMacro SetSectionFlag ${SecDocHtml} ${SF_RO}
-;    ${Else}
-;      !InsertMacro UnselectSection ${SecDocHtml}
-;      !InsertMacro ClearSectionFlag ${SecDocHtml} ${SF_RO}
-;    ${EndIf}
   ${EndIf}
 FunctionEnd
 
@@ -906,24 +855,6 @@ Function UpdateComponentUI
     ${Else}
       !InsertMacro ClearSectionFlag ${SecConsole} ${SF_BOLD}
     ${EndIf}
-;    IntOp $R1 $NewComponents & ${ComponentGUIConsole}
-;    ${If} $R1 <> 0
-;      !InsertMacro SetSectionFlag ${SecWxConsole} ${SF_BOLD}
-;    ${Else}
-;      !InsertMacro ClearSectionFlag ${SecWxConsole} ${SF_BOLD}
-;    ${EndIf}
-;    IntOp $R1 $NewComponents & ${ComponentPDFDocs}
-;    ${If} $R1 <> 0
-;      !InsertMacro SetSectionFlag ${SecDocPdf} ${SF_BOLD}
-;    ${Else}
-;      !InsertMacro ClearSectionFlag ${SecDocPdf} ${SF_BOLD}
-;    ${EndIf}
-;    IntOp $R1 $NewComponents & ${ComponentHTMLDocs}
-;    ${If} $R1 <> 0
-;      !InsertMacro SetSectionFlag ${SecDocHtml} ${SF_BOLD}
-;    ${Else}
-;      !InsertMacro ClearSectionFlag ${SecDocHtml} ${SF_BOLD}
-;    ${EndIf}
   ${EndIf}
 
   GetDlgItem $R0 $HWNDPARENT 1

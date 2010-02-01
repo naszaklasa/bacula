@@ -30,7 +30,7 @@
  *
  *  Kern Sibbald, MM
  *
- *   Version $Id: mem_pool.h 8090 2008-11-26 21:45:55Z kerns $
+ *   Version $Id$
  */
 
 #ifndef __MEM_POOL_H_

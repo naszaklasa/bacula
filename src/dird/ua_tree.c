@@ -33,7 +33,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_tree.c 8435 2009-02-10 13:57:40Z marcovw $
+ *   Version $Id$
  */
 
 #include "bacula.h"

@@ -64,7 +64,7 @@
         http://archives.neohapsis.com/archives/postfix/2000-05/1520.html
  
 
-   Version $Id: bsmtp.c 8597 2009-03-25 13:10:47Z ricozz $
+   Version $Id$
 
  */
 

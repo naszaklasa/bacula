@@ -29,7 +29,7 @@
  * 
  *  Kern Sibbald, August 2007
  *
- *  Version $Id: service.cpp 8681 2009-04-03 09:16:48Z kerns $
+ *  Version $Id$
  *
  * This is a generic service routine, which is used by all three
  *  of the daemons. Each one compiles it with slightly different
@@ -166,7 +166,7 @@ int baculaServiceMain()
    if (have_service_api) {            /* New style service API */
       /* Tell OS where to dispatch service calls to us */
       SERVICE_TABLE_ENTRY dispatchTable[] = {
-         {APP_NAME, (LPSERVICE_MAIN_FUNCTION)serviceStartCallback},
+         {(char *)APP_NAME, (LPSERVICE_MAIN_FUNCTION)serviceStartCallback},
          {NULL, NULL}};
 
       /* Start the service control dispatcher */

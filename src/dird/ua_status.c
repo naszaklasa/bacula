@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, August MMI
  *
- *   Version $Id: ua_status.c 8508 2009-03-07 20:59:46Z kerns $
+ *   Version $Id$
  */
 
 

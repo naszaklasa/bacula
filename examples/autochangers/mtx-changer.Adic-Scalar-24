@@ -2,7 +2,7 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id: mtx-changer.Adic-Scalar-24 8134 2008-12-10 03:48:56Z junkmale $
+#  $Id$
 #
 #  If you set in your Device resource
 #

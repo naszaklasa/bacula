@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,7 +33,7 @@
 
  *     Kern Sibbald, March MMI
  *
- *   Version $Id: next_vol.c 8407 2009-01-28 10:47:21Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -260,11 +260,6 @@ void check_if_volume_valid_or_recyclable(JCR *jcr, MEDIA_DBR *mr, const char **r
 
    *reason = NULL;
 
-   if (!mr->Recycle) {
-      *reason = _("volume has recycling disabled");
-      return;
-   }
-
    /*  Check if a duration or limit has expired */
    if (has_volume_expired(jcr, mr)) {
       *reason = _("volume has expired");
@@ -304,8 +299,12 @@ void check_if_volume_valid_or_recyclable(JCR *jcr, MEDIA_DBR *mr, const char **r
     * it now possible to reuse it for the job that it is currently
     * needed for?
     */
+   if (!mr->Recycle) {
+      *reason = _("volume has recycling disabled");
+      return;
+   }
    if ((mr->LastWritten + mr->VolRetention) < (utime_t)time(NULL)
-         && mr->Recycle && jcr->pool->recycle_current_volume
+         && jcr->pool->recycle_current_volume
          && (strcmp(mr->VolStatus, "Full") == 0 ||
             strcmp(mr->VolStatus, "Used") == 0)) {
       /*

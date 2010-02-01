@@ -2551,6 +2551,7 @@ PFILES="platforms/Makefile"
 PSCMD="ps -e"
 WIN32=
 MACOSX=
+
 hostname=`uname -n | cut -d '.' -f 1`
 if test x${hostname} = x ; then
    hostname="localhost"
@@ -2604,6 +2605,14 @@ darwin)
    MACOSX=macosx
    PFILES="${PFILES} \
       platforms/darwin/Makefile"
+  ;;
+osx)
+   DISTVER=`uname -r`
+   TAPEDRIVE="/dev/nst0"
+   PSCMD="ps -e -o pid,command"
+   MACOSX=macosx
+   PFILES="${PFILES} \
+      platforms/osx/Makefile"
   ;;
 debian)
    dnl Make sure hostname is resolved

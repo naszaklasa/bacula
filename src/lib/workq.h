@@ -34,7 +34,7 @@
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
  *
- *   Version $Id: workq.h 8744 2009-04-21 13:00:16Z kerns $
+ *   Version $Id$
  */
 
 #ifndef __WORKQ_H

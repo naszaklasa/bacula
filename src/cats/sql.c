@@ -35,7 +35,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql.c 8964 2009-07-06 13:30:11Z kerns $
+ *    Version $Id$
  */
 
 /* The following is necessary so that we do not include
@@ -144,7 +144,21 @@ int db_int64_handler(void *ctx, int num_fields, char **row)
    return 0;
 }
 
-
+/*
+ * Use to build a comma separated list of values from a query. "10,20,30"
+ */
+int db_list_handler(void *ctx, int num_fields, char **row)
+{
+   db_list_ctx *lctx = (db_list_ctx *)ctx;
+   if (num_fields == 1 && row[0]) {
+      if (lctx->list[0]) {
+         pm_strcat(lctx->list, ",");
+      }
+      pm_strcat(lctx->list, row[0]);
+      lctx->count++;
+   }
+   return 0;
+}
 
 /* NOTE!!! The following routines expect that the
  *  calling subroutine sets and clears the mutex

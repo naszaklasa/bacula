@@ -34,7 +34,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: bsr.c 8918 2009-06-23 11:56:35Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"

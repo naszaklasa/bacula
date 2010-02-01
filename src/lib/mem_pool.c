@@ -44,7 +44,7 @@
  *
  *           Kern E. Sibbald
  *
- *   Version $Id: mem_pool.c 8093 2008-11-26 23:19:28Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

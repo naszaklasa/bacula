@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, March 2002
  *
- *     Version $Id: bat_conf.h 7380 2008-07-14 10:42:59Z kerns $
+ *     Version $Id$
  */
 
 #ifndef _BAT_CONF_H_

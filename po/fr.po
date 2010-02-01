@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Bacula 1.38\n"
 "Report-Msgid-Bugs-To: bacula-devel@lists.sourceforge.net\n"
-"POT-Creation-Date: 2009-07-19 17:13+0200\n"
+"POT-Creation-Date: 2009-10-17 15:18+0200\n"
 "PO-Revision-Date: 2008-10-12 10:39+0200\n"
 "Last-Translator: Eric Bollengier <eric@eb.homelinux.org>\n"
 "Language-Team: French <bacula-devel-fr@lists.sourceforge.net>\n"
@@ -15,391 +15,6 @@ msgstr ""
 "Content-Type: text/plain; charset=ISO-8859-1\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
-
-#: patches/testing/mtops.c:276 patches/testing/mtops.c:300
-#: patches/testing/mtops.c:320 patches/testing/mtops.c:355
-#: patches/testing/mtops.c:378 src/stored/dev.c:822 src/stored/dev.c:900
-#: src/stored/dev.c:1037 src/stored/dev.c:1626
-#, c-format
-msgid "lseek error on %s. ERR=%s.\n"
-msgstr "erreur de déplacement (lseek) sur %s : ERR=%s\n"
-
-#: patches/testing/bregsed.c:131 src/tools/bwild.c:122 src/tools/bregex.c:153
-#: src/tools/bregtest.c:137
-#, c-format
-msgid "Could not open data file: %s\n"
-msgstr "Impossible d'ouvrir le fichier de données %s.\n"
-
-#: src/testprogs/testfind.map.c:48 src/testprogs/testfind.c:46
-#, c-format
-msgid ""
-"\n"
-"Usage: testfind [-d debug_level] [-] [pattern1 ...]\n"
-"       -a          print extended attributes (Win32 debug)\n"
-"       -dnn        set debug level to nn\n"
-"       -e          specify file of exclude patterns\n"
-"       -i          specify file of include patterns\n"
-"       -           read pattern(s) from stdin\n"
-"       -?          print this message.\n"
-"\n"
-"Patterns are file inclusion -- normally directories.\n"
-"Debug level >= 1 prints each file found.\n"
-"Debug level >= 10 prints path/file for catalog.\n"
-"Errors always printed.\n"
-"Files/paths truncated is number with len > 255.\n"
-"Truncation is only in catalog.\n"
-"\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:160 src/testprogs/testfind.c:155
-#, c-format
-msgid ""
-"Total files    : %d\n"
-"Max file length: %d\n"
-"Max path length: %d\n"
-"Files truncated: %d\n"
-"Paths truncated: %d\n"
-"Hard links     : %d\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:256 src/testprogs/testfind.c:292
-#: src/tools/testfind.c:316 src/tools/testls.c:194
-#, c-format
-msgid "Err: Could not access %s: %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:259 src/testprogs/testfind.c:295
-#: src/tools/testfind.c:319 src/tools/testls.c:197
-#, c-format
-msgid "Err: Could not follow ff->link %s: %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:262 src/testprogs/testfind.c:298
-#: src/tools/testfind.c:322 src/tools/testls.c:200
-#, c-format
-msgid "Err: Could not stat %s: %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:265 src/testprogs/testfind.c:301
-#: src/tools/testfind.c:325 src/tools/testls.c:203
-#, c-format
-msgid "Skip: File not saved. No change. %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:268 src/testprogs/testfind.c:304
-#: src/tools/testfind.c:328 src/tools/testls.c:206
-#, c-format
-msgid "Err: Attempt to backup archive. Not saved. %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:271 src/testprogs/testfind.c:307
-#: src/tools/testls.c:209
-#, c-format
-msgid "Recursion turned off. Directory not entered. %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:274 src/testprogs/testfind.c:310
-#: src/tools/testls.c:212
-#, c-format
-msgid "Skip: File system change prohibited. Directory not entered. %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:277 src/testprogs/testfind.c:313
-#: src/tools/testfind.c:331 src/tools/testls.c:215
-#, c-format
-msgid "Err: Could not open directory %s: %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:280 src/testprogs/testfind.c:316
-#: src/tools/testfind.c:334 src/tools/testls.c:218
-#, c-format
-msgid "Err: Unknown file ff->type %d: %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:330 src/testprogs/testfind.c:366
-#: src/tools/testfind.c:384
-#, c-format
-msgid "===== Filename truncated to 255 chars: %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:347 src/testprogs/testfind.c:383
-#: src/tools/testfind.c:401
-#, c-format
-msgid "========== Path name truncated to 255 chars: %s\n"
-msgstr ""
-
-#: src/testprogs/testfind.map.c:356 src/testprogs/testfind.c:392
-#: src/tools/testfind.c:410
-#, c-format
-msgid "========== Path length is zero. File=%s\n"
-msgstr ""
-
-#: src/testprogs/schedule.c:37 src/console/console.c:120
-#, c-format
-msgid ""
-"\n"
-"Version: "
-msgstr ""
-"\n"
-"Version : "
-
-#: src/testprogs/schedule.c:192 src/dird/dird.c:597
-#, c-format
-msgid ""
-"No Director resource defined in %s\n"
-"Without that I don't know who I am :-(\n"
-msgstr ""
-
-#: src/testprogs/schedule.c:197
-msgid "No working directory specified. Cannot continue.\n"
-msgstr ""
-
-#: src/testprogs/schedule.c:204 src/dird/dird.c:605 src/filed/filed.c:332
-#, c-format
-msgid "No Messages resource defined in %s\n"
-msgstr ""
-
-#: src/testprogs/schedule.c:209 src/dird/dird.c:610
-#, c-format
-msgid "Only one Director resource permitted in %s\n"
-msgstr ""
-
-#: src/testprogs/schedule.c:216 src/dird/dird.c:667
-#, c-format
-msgid "No Job records defined in %s\n"
-msgstr ""
-
-#: src/testprogs/schedule.c:221
-#, fuzzy, c-format
-msgid "No Client record defined for job %s\n"
-msgstr "Pas d'enregistrement trouvé en base pour : %s\n"
-
-#: src/testprogs/schedule.c:225
-#, fuzzy, c-format
-msgid "No FileSet record defined for job %s\n"
-msgstr "Pas de volume trouvé en base pour l'objet %d.\n"
-
-#: src/testprogs/schedule.c:229
-#, fuzzy, c-format
-msgid "No Storage resource defined for job %s\n"
-msgstr "Pas d'enregistrement trouvé en base pour : %s\n"
-
-#: src/testprogs/schedule.c:233
-#, fuzzy, c-format
-msgid "No Pool resource defined for job %s\n"
-msgstr "La ressource Pool « %s » est introuvable !\n"
-
-#: src/testprogs/schedule.c:242
-#, fuzzy, c-format
-msgid "No Catalog resource defined for client %s\n"
-msgstr "Pas d'enregistrement trouvé en base pour : %s\n"
-
-#: src/testprogs/window.c:608
-#, fuzzy
-msgid "Folder"
-msgstr "FileSet"
-
-#: src/testprogs/window.c:744 src/testprogs/window.c:753
-#: src/testprogs/window.c:2449 src/testprogs/window.c:4167
-msgid "File Roller"
-msgstr ""
-
-#: src/testprogs/window.c:752
-msgid "[read only]"
-msgstr ""
-
-#: src/testprogs/window.c:846
-#, fuzzy, c-format
-msgid "1 file (%s)"
-msgstr "Nouveau Fichier : %s\n"
-
-#: src/testprogs/window.c:849
-#, fuzzy, c-format
-msgid "%d files (%s)"
-msgstr "Nouveau Fichier : %s\n"
-
-#: src/testprogs/window.c:857
-#, fuzzy, c-format
-msgid "1 file selected (%s)"
-msgstr ""
-"\n"
-"1 fichier sélectionne pour la restauration.\n"
-"\n"
-
-#: src/testprogs/window.c:860
-#, fuzzy, c-format
-msgid "%d files selected (%s)"
-msgstr ""
-"\n"
-"1 fichier sélectionne pour la restauration.\n"
-"\n"
-
-#: src/testprogs/window.c:1149
-msgid "Reading archive"
-msgstr ""
-
-#: src/testprogs/window.c:1152
-msgid "Deleting files from archive"
-msgstr ""
-
-#: src/testprogs/window.c:1155
-msgid "Adding files to archive"
-msgstr ""
-
-#: src/testprogs/window.c:1158
-msgid "Extracting files from archive"
-msgstr ""
-
-#: src/testprogs/window.c:1161
-msgid "Testing archive"
-msgstr ""
-
-#: src/testprogs/window.c:1167
-msgid "wait please..."
-msgstr ""
-
-#: src/testprogs/window.c:1253
-msgid "Operation stopped"
-msgstr ""
-
-#: src/testprogs/window.c:1271
-#, fuzzy
-msgid "An error occurred while extracting files."
-msgstr "Entrez le nombre de départ : "
-
-#: src/testprogs/window.c:1275
-msgid "An error occurred while loading the archive."
-msgstr ""
-
-#: src/testprogs/window.c:1279
-msgid "An error occurred while deleting files from the archive."
-msgstr ""
-
-#: src/testprogs/window.c:1283
-msgid "An error occurred while adding files to the archive."
-msgstr ""
-
-#: src/testprogs/window.c:1287
-msgid "An error occurred while testing archive."
-msgstr ""
-
-#: src/testprogs/window.c:1293
-#, fuzzy
-msgid "Command not found."
-msgstr "Commande annulée.\n"
-
-#: src/testprogs/window.c:1296
-#, fuzzy
-msgid "Command exited abnormally."
-msgstr "Commande annulée.\n"
-
-#: src/testprogs/window.c:1588
-msgid "You don't have permissions to add files to this archive."
-msgstr ""
-
-#: src/testprogs/window.c:1610
-msgid "You can't add an archive to itself."
-msgstr ""
-
-#: src/testprogs/window.c:1770
-msgid ""
-"Do you want to add this file to the current archive or open it as a new "
-"archive?"
-msgstr ""
-
-#: src/testprogs/window.c:1813
-#, fuzzy
-msgid "Do you want to create a new archive with these files?"
-msgstr ""
-"\n"
-"Voulez vous restaurer tous les fichiers ? (oui|non) : "
-
-#: src/testprogs/window.c:1815
-#, fuzzy
-msgid "Create _Archive"
-msgstr "Crée"
-
-#: src/testprogs/window.c:2158
-#, fuzzy
-msgid "Name"
-msgstr "Job échoué.\n"
-
-#: src/testprogs/window.c:2617
-msgid "_Up"
-msgstr ""
-
-#: src/testprogs/window.c:2639
-#, fuzzy
-msgid "Current Location:"
-msgstr "Le slot courant est : %d\n"
-
-#: src/testprogs/window.c:2671 src/wx-console/wxbrestorepanel.cpp:263
-#: src/wx-console/wxbrestorepanel.cpp:317
-msgid "Add"
-msgstr ""
-
-#: src/testprogs/window.c:2672
-msgid "Add files to the archive"
-msgstr ""
-
-#: src/testprogs/window.c:2682
-msgid "Extract"
-msgstr ""
-
-#: src/testprogs/window.c:2683
-msgid "Extract files from the archive"
-msgstr ""
-
-#: src/testprogs/window.c:2693
-msgid "View"
-msgstr ""
-
-#: src/testprogs/window.c:2694
-#, fuzzy
-msgid "View selected file"
-msgstr ""
-"\n"
-"%u fichiers sélectionnés pour la restauration.\n"
-
-#: src/testprogs/window.c:3093
-msgid "File type not supported."
-msgstr ""
-
-#: src/testprogs/window.c:3162
-msgid "Cannot load archive."
-msgstr ""
-
-#: src/testprogs/window.c:3227
-msgid "Destination folder does not exist.  Do you want to create it?"
-msgstr ""
-
-#: src/testprogs/window.c:3229
-#, fuzzy
-msgid "Create _Folder"
-msgstr "Crée"
-
-#: src/testprogs/window.c:3249
-#, c-format
-msgid ""
-"Could not create the destination folder: %s.\n"
-"Extraction not performed."
-msgstr ""
-
-#: src/testprogs/window.c:3264
-msgid "Extraction not performed."
-msgstr ""
-
-#: src/testprogs/window.c:3576
-msgid "Last Output"
-msgstr ""
-
-#: src/testprogs/window.c:4102
-msgid "Add files to an archive"
-msgstr ""
-
-#: src/testprogs/window.c:4127
-msgid "Extract archive"
-msgstr ""
 
 #: src/gnome2-console/support.c:60 src/gnome2-console/support.c:85
 #, fuzzy, c-format
@@ -901,15 +516,15 @@ msgid "Unknown resource type %d\n"
 msgstr ""
 
 #: src/gnome2-console/console_conf.c:258 src/wx-console/console_conf.c:265
-#: src/console/console_conf.c:259 src/dird/dird_conf.c:1345
-#: src/dird/dird_conf.c:1360 src/tray-monitor/tray_conf.c:288
+#: src/console/console_conf.c:259 src/dird/dird_conf.c:1351
+#: src/dird/dird_conf.c:1366 src/tray-monitor/tray_conf.c:288
 #: src/filed/filed_conf.c:361 src/qt-console/bat_conf.cpp:265
 #, c-format
 msgid "%s item is required in %s resource, but not found.\n"
 msgstr ""
 
 #: src/gnome2-console/console_conf.c:327 src/wx-console/console_conf.c:328
-#: src/console/console_conf.c:322 src/dird/dird_conf.c:1582
+#: src/console/console_conf.c:322 src/dird/dird_conf.c:1588
 #: src/tray-monitor/tray_conf.c:372 src/filed/filed_conf.c:446
 #: src/qt-console/bat_conf.cpp:334
 #, c-format
@@ -997,7 +612,7 @@ msgstr ""
 msgid "Error in %s: ERR=%s\n"
 msgstr ""
 
-#: src/findlib/match.c:202 src/tools/testfind.c:639 src/filed/job.c:1150
+#: src/findlib/match.c:202 src/tools/testfind.c:639 src/filed/job.c:1152
 #, c-format
 msgid "Unknown include/exclude option: %c\n"
 msgstr ""
@@ -1075,12 +690,12 @@ msgstr ""
 msgid "%s size changed during backup.\n"
 msgstr ""
 
-#: src/findlib/find_one.c:352
+#: src/findlib/find_one.c:381
 #, c-format
 msgid "Top level directory \"%s\" has unlisted fstype \"%s\"\n"
 msgstr ""
 
-#: src/findlib/find_one.c:367
+#: src/findlib/find_one.c:396
 #, c-format
 msgid "Top level directory \"%s\" has an unlisted drive type \"%s\"\n"
 msgstr ""
@@ -1343,6 +958,15 @@ msgstr ""
 #: src/findlib/bfile.c:183
 msgid "NetBSD Specific Extended attribs"
 msgstr ""
+
+#: src/console/console.c:120
+#, c-format
+msgid ""
+"\n"
+"Version: "
+msgstr ""
+"\n"
+"Version : "
 
 #: src/console/console.c:169
 msgid "input from file"
@@ -2658,7 +2282,7 @@ msgid "Invalid Catalog request: %s"
 msgstr ""
 
 #: src/dird/catreq.c:409 src/dird/catreq.c:488 src/dird/fd_cmds.c:688
-#: src/dird/fd_cmds.c:746 src/cats/sql.c:445
+#: src/dird/fd_cmds.c:746 src/cats/sql.c:459
 #, c-format
 msgid "Attribute create error. %s"
 msgstr ""
@@ -2750,7 +2374,7 @@ msgstr ""
 #: src/dird/dird_conf.c:661 src/dird/dird_conf.c:665 src/dird/dird_conf.c:669
 #: src/dird/dird_conf.c:699 src/dird/dird_conf.c:716 src/dird/dird_conf.c:720
 #: src/dird/dird_conf.c:724 src/dird/dird_conf.c:728 src/dird/dird_conf.c:732
-#: src/dird/dird_conf.c:745 src/dird/dird_conf.c:965 src/dird/dird_conf.c:972
+#: src/dird/dird_conf.c:745 src/dird/dird_conf.c:968 src/dird/dird_conf.c:975
 msgid "  --> "
 msgstr ""
 
@@ -2922,245 +2546,245 @@ msgstr ""
 msgid "FileSet: name=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:841 src/dird/dird_conf.c:920
+#: src/dird/dird_conf.c:844 src/dird/dird_conf.c:923
 #, c-format
 msgid "Schedule: name=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:846
+#: src/dird/dird_conf.c:849
 #, c-format
 msgid "  --> Run Level=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:847
+#: src/dird/dird_conf.c:850
 msgid "      hour="
 msgstr ""
 
-#: src/dird/dird_conf.c:856
+#: src/dird/dird_conf.c:859
 msgid "      mday="
 msgstr ""
 
-#: src/dird/dird_conf.c:865
+#: src/dird/dird_conf.c:868
 msgid "      month="
 msgstr ""
 
-#: src/dird/dird_conf.c:874
+#: src/dird/dird_conf.c:877
 msgid "      wday="
 msgstr ""
 
-#: src/dird/dird_conf.c:883
+#: src/dird/dird_conf.c:886
 msgid "      wom="
 msgstr ""
 
-#: src/dird/dird_conf.c:892
+#: src/dird/dird_conf.c:895
 msgid "      woy="
 msgstr ""
 
-#: src/dird/dird_conf.c:901
+#: src/dird/dird_conf.c:904
 #, c-format
 msgid "      mins=%d\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:903 src/dird/dird_conf.c:907 src/dird/dird_conf.c:911
+#: src/dird/dird_conf.c:906 src/dird/dird_conf.c:910 src/dird/dird_conf.c:914
 msgid "     --> "
 msgstr ""
 
-#: src/dird/dird_conf.c:925
+#: src/dird/dird_conf.c:928
 #, c-format
 msgid "Pool: name=%s PoolType=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:927
+#: src/dird/dird_conf.c:930
 #, c-format
 msgid "      use_cat=%d use_once=%d cat_files=%d\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:930
+#: src/dird/dird_conf.c:933
 #, c-format
 msgid "      max_vols=%d auto_prune=%d VolRetention=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:933
+#: src/dird/dird_conf.c:936
 #, c-format
 msgid "      VolUse=%s recycle=%d LabelFormat=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:937
+#: src/dird/dird_conf.c:940
 #, c-format
 msgid "      CleaningPrefix=%s LabelType=%d\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:939
+#: src/dird/dird_conf.c:942
 #, c-format
 msgid "      RecyleOldest=%d PurgeOldest=%d\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:942
+#: src/dird/dird_conf.c:945
 #, c-format
 msgid "      MaxVolJobs=%d MaxVolFiles=%d MaxVolBytes=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:946
+#: src/dird/dird_conf.c:949
 #, c-format
 msgid "      MigTime=%s MigHiBytes=%s MigLoBytes=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:951
+#: src/dird/dird_conf.c:954
 #, c-format
 msgid "      NextPool=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:954
+#: src/dird/dird_conf.c:957
 #, c-format
 msgid "      RecyclePool=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:957
+#: src/dird/dird_conf.c:960
 #, fuzzy, c-format
 msgid "      ScratchPool=%s\n"
 msgstr "Utilisation du Catalogue « %s »\n"
 
-#: src/dird/dird_conf.c:960
+#: src/dird/dird_conf.c:963
 #, fuzzy, c-format
 msgid "      Catalog=%s\n"
 msgstr "Utilisation du Catalogue « %s »\n"
 
-#: src/dird/dird_conf.c:980
+#: src/dird/dird_conf.c:983
 #, c-format
 msgid "Messages: name=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:982
+#: src/dird/dird_conf.c:985
 #, c-format
 msgid "      mailcmd=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:984
+#: src/dird/dird_conf.c:987
 #, c-format
 msgid "      opcmd=%s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:988 src/tray-monitor/tray_conf.c:199
+#: src/dird/dird_conf.c:991 src/tray-monitor/tray_conf.c:199
 #, c-format
 msgid "Unknown resource type %d in dump_resource.\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:1313 src/tray-monitor/tray_conf.c:257
+#: src/dird/dird_conf.c:1319 src/tray-monitor/tray_conf.c:257
 #, c-format
 msgid "Unknown resource type %d in free_resource.\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:1351 src/lib/parse_conf.c:223
+#: src/dird/dird_conf.c:1357 src/lib/parse_conf.c:223
 #: src/tray-monitor/tray_conf.c:294
 #, c-format
 msgid "Too many items in %s resource\n"
 msgstr "Trop d'élément dans la ressource %s\n"
 
-#: src/dird/dird_conf.c:1391
+#: src/dird/dird_conf.c:1397
 #, c-format
 msgid "Cannot find Pool resource %s\n"
 msgstr "Impossible de trouver la ressource Pool « %s »\n"
 
-#: src/dird/dird_conf.c:1402
+#: src/dird/dird_conf.c:1408
 #, c-format
 msgid "Cannot find Console resource %s\n"
 msgstr "Impossible de trouver la ressource Console « %s »\n"
 
-#: src/dird/dird_conf.c:1408 src/stored/stored_conf.c:610
+#: src/dird/dird_conf.c:1414 src/stored/stored_conf.c:610
 #: src/filed/filed_conf.c:381
 #, c-format
 msgid "Cannot find Director resource %s\n"
 msgstr "Impossible de trouver la ressource Director « %s »\n"
 
-#: src/dird/dird_conf.c:1415 src/stored/stored_conf.c:616
+#: src/dird/dird_conf.c:1421 src/stored/stored_conf.c:616
 #, c-format
 msgid "Cannot find Storage resource %s\n"
 msgstr "Impossible de trouver la ressource Storage « %s »\n"
 
-#: src/dird/dird_conf.c:1424
+#: src/dird/dird_conf.c:1430
 #, c-format
 msgid "Cannot find Job resource %s\n"
 msgstr "Impossible de trouver la ressource Job « %s »\n"
 
-#: src/dird/dird_conf.c:1473
+#: src/dird/dird_conf.c:1479
 #, c-format
 msgid "Cannot find Counter resource %s\n"
 msgstr "Impossible de trouver la ressource Counter « %s »\n"
 
-#: src/dird/dird_conf.c:1481 src/filed/filed_conf.c:387
+#: src/dird/dird_conf.c:1487 src/filed/filed_conf.c:387
 #, c-format
 msgid "Cannot find Client resource %s\n"
 msgstr "Impossible de trouver la ressource Client « %s »\n"
 
-#: src/dird/dird_conf.c:1494
+#: src/dird/dird_conf.c:1500
 #, c-format
 msgid "Cannot find Schedule resource %s\n"
 msgstr "Impossible de trouver la ressource Schedule « %s »\n"
 
-#: src/dird/dird_conf.c:1499 src/dird/dird_conf.c:1559
+#: src/dird/dird_conf.c:1505 src/dird/dird_conf.c:1565
 #: src/tray-monitor/tray_conf.c:314 src/tray-monitor/tray_conf.c:352
 #, c-format
 msgid "Unknown resource type %d in save_resource.\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:1574
+#: src/dird/dird_conf.c:1580
 #, c-format
 msgid "Name item is required in %s resource, but not found.\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:1587
+#: src/dird/dird_conf.c:1593
 #, c-format
 msgid "Inserting %s res: %s index=%d pass=%d\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:1659
+#: src/dird/dird_conf.c:1665
 #, c-format
 msgid "Expected a Migration Job Type keyword, got: %s"
 msgstr "Attendait un type de Job de Migration, eu : %s"
 
-#: src/dird/dird_conf.c:1685
+#: src/dird/dird_conf.c:1691
 #, c-format
 msgid "Expected a Job Type keyword, got: %s"
 msgstr ""
 
-#: src/dird/dird_conf.c:1709
+#: src/dird/dird_conf.c:1715
 #, c-format
 msgid "Expected a Job Level keyword, got: %s"
 msgstr "Attendait un niveau de sauvegarde, eu : %s"
 
-#: src/dird/dird_conf.c:1729
+#: src/dird/dird_conf.c:1735
 #, c-format
 msgid "Expected a Restore replacement option, got: %s"
 msgstr "Attendait un niveau de remplacement, eu : %s"
 
-#: src/dird/dird_conf.c:1779 src/dird/dird_conf.c:1895
+#: src/dird/dird_conf.c:1785 src/dird/dird_conf.c:1901
 #: src/lib/parse_conf.c:724 src/lib/parse_conf.c:740
 #, c-format
 msgid "Expect %s, got: %s"
 msgstr "Attendait %s, a pas : %s"
 
-#: src/dird/dird_conf.c:1801 src/lib/parse_conf.c:476
+#: src/dird/dird_conf.c:1807 src/lib/parse_conf.c:476
 #, c-format
 msgid "Could not find config Resource %s referenced on line %d : %s\n"
 msgstr ""
 
-#: src/dird/dird_conf.c:1935 src/dird/inc_conf.c:717
+#: src/dird/dird_conf.c:1941 src/dird/inc_conf.c:717
 #, c-format
 msgid "Expecting open brace. Got %s"
 msgstr "Attendait {, eu : %s"
 
-#: src/dird/dird_conf.c:1949 src/dird/inc_conf.c:383 src/dird/inc_conf.c:732
+#: src/dird/dird_conf.c:1955 src/dird/inc_conf.c:383 src/dird/inc_conf.c:732
 #, c-format
 msgid "Expecting keyword, got: %s\n"
 msgstr "Attendait un mot clef, eu : %s\n"
 
-#: src/dird/dird_conf.c:1955 src/dird/inc_conf.c:391 src/dird/inc_conf.c:738
+#: src/dird/dird_conf.c:1961 src/dird/inc_conf.c:391 src/dird/inc_conf.c:738
 #: src/lib/parse_conf.c:939
 #, c-format
 msgid "expected an equals, got: %s"
 msgstr "attendait un égale, eu : %s"
 
-#: src/dird/dird_conf.c:1966 src/dird/inc_conf.c:401 src/dird/inc_conf.c:747
+#: src/dird/dird_conf.c:1972 src/dird/inc_conf.c:401 src/dird/inc_conf.c:747
 #, c-format
 msgid "Keyword %s not permitted in this resource"
 msgstr ""
@@ -3315,31 +2939,31 @@ msgstr ""
 "restaurer parmi la liste totale des fichiers présents dans les jobs\n"
 "sélectionnés.\n"
 
-#: src/dird/ua_restore.c:560
+#: src/dird/ua_restore.c:561
 msgid "To select the JobIds, you have the following choices:\n"
 msgstr "Pour sélectionner les JobIds, vous avez les possibilités suivantes :\n"
 
-#: src/dird/ua_restore.c:565
+#: src/dird/ua_restore.c:566
 msgid "Select item: "
 msgstr "Choix : "
 
-#: src/dird/ua_restore.c:570 src/dird/ua_restore.c:605
+#: src/dird/ua_restore.c:571 src/dird/ua_restore.c:606
 msgid "SQL query not authorized.\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:583
+#: src/dird/ua_restore.c:584
 msgid "Enter Filename (no path):"
 msgstr "Saisissez le nom du fichier (sans le chemin) : "
 
-#: src/dird/ua_restore.c:598 src/dird/ua_restore.c:706
+#: src/dird/ua_restore.c:599 src/dird/ua_restore.c:707
 msgid "Enter JobId(s), comma separated, to restore: "
 msgstr "Saisissez le ou les JobIds à restaurer (ex : id1,id2,id3) : "
 
-#: src/dird/ua_restore.c:608
+#: src/dird/ua_restore.c:609
 msgid "Enter SQL list command: "
 msgstr "Exécuter une requête SQL : "
 
-#: src/dird/ua_restore.c:642 src/dird/ua_restore.c:665
+#: src/dird/ua_restore.c:643 src/dird/ua_restore.c:666
 msgid ""
 "Enter file names with paths, or < to enter a filename\n"
 "containing a list of file names with paths, and terminate\n"
@@ -3349,16 +2973,16 @@ msgstr ""
 "fichier contenant la liste des répertoires et\n"
 "terminez la saisie par une ligne vide.\n"
 
-#: src/dird/ua_restore.c:646 src/dird/ua_restore.c:669
+#: src/dird/ua_restore.c:647 src/dird/ua_restore.c:670
 msgid "Enter full filename: "
 msgstr "Saisissez le nom complet du fichier : "
 
-#: src/dird/ua_restore.c:704
+#: src/dird/ua_restore.c:705
 #, c-format
 msgid "You have already selected the following JobIds: %s\n"
 msgstr "Vous avez déjà sélectionné les JobIds suivants : %s\n"
 
-#: src/dird/ua_restore.c:721
+#: src/dird/ua_restore.c:722
 msgid ""
 "Enter full directory names or start the name\n"
 "with a < to indicate it is a filename containing a list\n"
@@ -3368,90 +2992,90 @@ msgstr ""
 "fichier (commençant par <) contenant la liste des répertoires et\n"
 "terminez la saisie par une ligne vide.\n"
 
-#: src/dird/ua_restore.c:725
+#: src/dird/ua_restore.c:726
 msgid "Enter directory name: "
 msgstr "Saisissez le nom d'un répertoire : "
 
-#: src/dird/ua_restore.c:741
+#: src/dird/ua_restore.c:742
 #, fuzzy
 msgid "Enter JobId to restore: "
 msgstr "Saisissez le JobId à supprimer : "
 
-#: src/dird/ua_restore.c:750 src/dird/ua_restore.c:790
+#: src/dird/ua_restore.c:751 src/dird/ua_restore.c:792
 #, c-format
 msgid "Unable to get Job record for JobId=%s: ERR=%s\n"
 msgstr "Impossible de récupérer le Job du JobId=%s : ERR=%s\n"
 
-#: src/dird/ua_restore.c:777
+#: src/dird/ua_restore.c:779
 msgid "Invalid JobId in list.\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:796
+#: src/dird/ua_restore.c:798
 #, c-format
 msgid "Access to JobId=%s (Job \"%s\") not authorized. Not selected.\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:809
+#: src/dird/ua_restore.c:811
 msgid "No Jobs selected.\n"
 msgstr "Pas de job sélectionné.\n"
 
-#: src/dird/ua_restore.c:813
+#: src/dird/ua_restore.c:815
 #, c-format
 msgid "You have selected the following JobIds: %s\n"
 msgstr "Vous avez sélectionné les JobIds suivants : %s\n"
 
-#: src/dird/ua_restore.c:815
+#: src/dird/ua_restore.c:817
 #, c-format
 msgid "You have selected the following JobId: %s\n"
 msgstr "Vous avez sélectionné le JobId suivant : %s\n"
 
-#: src/dird/ua_restore.c:825
+#: src/dird/ua_restore.c:827
 msgid ""
 "The restored files will the most current backup\n"
 "BEFORE the date you specify below.\n"
 "\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:828
+#: src/dird/ua_restore.c:830
 msgid "Enter date as YYYY-MM-DD HH:MM:SS :"
 msgstr "Saisissez la date au format YYYY-MM-DD HH:MM:SS : "
 
-#: src/dird/ua_restore.c:834
+#: src/dird/ua_restore.c:836
 msgid "Improper date format.\n"
 msgstr "Format de date invalide.\n"
 
-#: src/dird/ua_restore.c:855
+#: src/dird/ua_restore.c:857
 #, c-format
 msgid "Cannot open file %s: ERR=%s\n"
 msgstr "Impossible d'ouvrir le fichier %s : ERR=%s\n"
 
-#: src/dird/ua_restore.c:863 src/dird/ua_restore.c:867
+#: src/dird/ua_restore.c:865 src/dird/ua_restore.c:869
 #, c-format
 msgid "Error occurred on line %d of file \"%s\"\n"
 msgstr "Une erreur est survenue à la ligne %d de  « %s »\n"
 
-#: src/dird/ua_restore.c:907 src/dird/ua_restore.c:935
-#: src/dird/ua_restore.c:956 src/dird/ua_dotcmds.c:460
+#: src/dird/ua_restore.c:909 src/dird/ua_restore.c:937
+#: src/dird/ua_restore.c:958 src/dird/ua_dotcmds.c:460
 #: src/dird/ua_dotcmds.c:504
 #, c-format
 msgid "Query failed: %s. ERR=%s\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:911 src/dird/ua_restore.c:939
+#: src/dird/ua_restore.c:913 src/dird/ua_restore.c:941
 #, c-format
 msgid "No database record found for: %s\n"
 msgstr "Pas d'enregistrement trouvé en base pour : %s\n"
 
-#: src/dird/ua_restore.c:927
+#: src/dird/ua_restore.c:929
 msgid "No JobId specified cannot continue.\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:960
+#: src/dird/ua_restore.c:962
 #, c-format
 msgid "No table found: %s\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:1018
+#: src/dird/ua_restore.c:1020
 msgid ""
 "\n"
 "\n"
@@ -3460,7 +3084,7 @@ msgid ""
 "Most likely your retention policy pruned the files.\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:1021
+#: src/dird/ua_restore.c:1023
 msgid ""
 "\n"
 "Do you want to restore all the files? (yes|no): "
@@ -3468,18 +3092,18 @@ msgstr ""
 "\n"
 "Voulez vous restaurer tous les fichiers ? (oui|non) : "
 
-#: src/dird/ua_restore.c:1024
+#: src/dird/ua_restore.c:1026
 msgid ""
 "\n"
 "Regexp matching files to restore? (empty to abort): "
 msgstr ""
 
-#: src/dird/ua_restore.c:1040
+#: src/dird/ua_restore.c:1042
 #, fuzzy, c-format
 msgid "Regex compile error: %s\n"
 msgstr "erreur sockopt : %s\n"
 
-#: src/dird/ua_restore.c:1086
+#: src/dird/ua_restore.c:1088
 #, fuzzy, c-format
 msgid ""
 "\n"
@@ -3488,7 +3112,7 @@ msgstr ""
 "\n"
 "Analyse des répertoires pour le JobId %s..."
 
-#: src/dird/ua_restore.c:1141
+#: src/dird/ua_restore.c:1143
 #, fuzzy, c-format
 msgid ""
 "\n"
@@ -3497,7 +3121,7 @@ msgstr ""
 "\n"
 "1 Job, %s fichiers analysés et sélectionnés pour la restauration.\n"
 
-#: src/dird/ua_restore.c:1144
+#: src/dird/ua_restore.c:1146
 #, fuzzy, c-format
 msgid ""
 "\n"
@@ -3506,68 +3130,68 @@ msgstr ""
 "\n"
 "1 Job, %s fichiers analysés\n"
 
-#: src/dird/ua_restore.c:1216
+#: src/dird/ua_restore.c:1218
 #, c-format
 msgid "Error getting FileSet \"%s\": ERR=%s\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:1224 src/dird/ua_select.c:183
+#: src/dird/ua_restore.c:1226 src/dird/ua_select.c:183
 msgid "The defined FileSet resources are:\n"
 msgstr "Les FileSet définis sont :\n"
 
-#: src/dird/ua_restore.c:1228 src/dird/ua_run.c:212 src/dird/ua_select.c:191
+#: src/dird/ua_restore.c:1230 src/dird/ua_run.c:212 src/dird/ua_select.c:191
 msgid "FileSet"
 msgstr "FileSet"
 
-#: src/dird/ua_restore.c:1228 src/dird/ua_select.c:191
+#: src/dird/ua_restore.c:1230 src/dird/ua_select.c:191
 msgid "Select FileSet resource"
 msgstr "Sélectionnez le FileSet"
 
-#: src/dird/ua_restore.c:1230
+#: src/dird/ua_restore.c:1232
 #, fuzzy, c-format
 msgid "No FileSet found for client \"%s\".\n"
 msgstr "Pas d'enregistrement trouvé en base pour : %s\n"
 
-#: src/dird/ua_restore.c:1236
+#: src/dird/ua_restore.c:1238
 #, c-format
 msgid "Error getting FileSet record: %s\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:1237
+#: src/dird/ua_restore.c:1239
 msgid ""
 "This probably means you modified the FileSet.\n"
 "Continuing anyway.\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:1252
+#: src/dird/ua_restore.c:1254
 #, c-format
 msgid "Pool \"%s\" not found, using any pool.\n"
 msgstr ""
 
-#: src/dird/ua_restore.c:1279 src/dird/ua_restore.c:1295
+#: src/dird/ua_restore.c:1281 src/dird/ua_restore.c:1297
 #, c-format
 msgid "No Full backup before %s found.\n"
 msgstr "Pas de backup Full trouvé avant %s.\n"
 
-#: src/dird/ua_restore.c:1323
+#: src/dird/ua_restore.c:1325
 msgid "No jobs found.\n"
 msgstr "Pas de jobs trouvé.\n"
 
-#: src/dird/ua_restore.c:1483
+#: src/dird/ua_restore.c:1485
 #, c-format
 msgid "Warning default storage overridden by \"%s\" on command line.\n"
 msgstr ""
 "Attention, le storage par défaut est remplacé par  « %s » en ligne de "
 "commande.\n"
 
-#: src/dird/ua_restore.c:1499
+#: src/dird/ua_restore.c:1501
 #, c-format
 msgid "Storage \"%s\" not found, using Storage \"%s\" from MediaType \"%s\".\n"
 msgstr ""
 "Le Storage « %s » est introuvable, utilisation du Storage « %s » du MediaType "
 "« %s ».\n"
 
-#: src/dird/ua_restore.c:1507
+#: src/dird/ua_restore.c:1509
 #, c-format
 msgid ""
 "\n"
@@ -3617,8 +3241,8 @@ msgid "OK to run? (yes/mod/no): "
 msgstr "OK pour le lancement ? (oui/mod/non) : "
 
 #: src/dird/ua_run.c:172 src/dird/ua_update.c:256 src/dird/ua_update.c:276
-#: src/dird/ua_update.c:674 src/dird/ua_input.c:123 src/dird/backup.c:609
-#: src/dird/backup.c:610 src/dird/backup.c:611 src/tools/dbcheck.c:1275
+#: src/dird/ua_update.c:674 src/dird/ua_input.c:123 src/dird/backup.c:604
+#: src/dird/backup.c:605 src/dird/backup.c:606 src/tools/dbcheck.c:1275
 #: src/stored/parse_bsr.c:851
 msgid "yes"
 msgstr "oui"
@@ -4533,6 +4157,23 @@ msgstr ""
 msgid "Resetting previous configuration.\n"
 msgstr "Retour à la dernière configuration.\n"
 
+#: src/dird/dird.c:597
+#, c-format
+msgid ""
+"No Director resource defined in %s\n"
+"Without that I don't know who I am :-(\n"
+msgstr ""
+
+#: src/dird/dird.c:605 src/filed/filed.c:332
+#, c-format
+msgid "No Messages resource defined in %s\n"
+msgstr ""
+
+#: src/dird/dird.c:610
+#, c-format
+msgid "Only one Director resource permitted in %s\n"
+msgstr ""
+
 #: src/dird/dird.c:627 src/stored/stored.c:431 src/filed/filed.c:508
 #, c-format
 msgid "\"TLS Certificate\" file not defined for Director \"%s\" in %s.\n"
@@ -4554,6 +4195,11 @@ msgstr ""
 #: src/dird/dird.c:659 src/stored/stored.c:462 src/filed/filed.c:539
 #, c-format
 msgid "Failed to initialize TLS context for Director \"%s\" in %s.\n"
+msgstr ""
+
+#: src/dird/dird.c:667
+#, c-format
+msgid "No Job records defined in %s\n"
 msgstr ""
 
 #: src/dird/dird.c:725 src/dird/dird.c:738
@@ -4934,8 +4580,8 @@ msgid "New Recycle flag is: %s\n"
 msgstr ""
 
 #: src/dird/ua_update.c:256 src/dird/ua_update.c:276 src/dird/ua_update.c:674
-#: src/dird/ua_input.c:127 src/dird/backup.c:609 src/dird/backup.c:610
-#: src/dird/backup.c:611 src/stored/parse_bsr.c:851
+#: src/dird/ua_input.c:127 src/dird/backup.c:604 src/dird/backup.c:605
+#: src/dird/backup.c:606 src/stored/parse_bsr.c:851
 msgid "no"
 msgstr "non"
 
@@ -5501,7 +5147,7 @@ msgstr "Le job précédent était en erreur. Passage au type %s.\n"
 msgid "Unimplemented backup level %d %c\n"
 msgstr ""
 
-#: src/dird/fd_cmds.c:462 src/filed/job.c:683
+#: src/dird/fd_cmds.c:462 src/filed/job.c:686
 #, c-format
 msgid "Cannot run program: %s. ERR=%s\n"
 msgstr "Impossible de lancer la commande : %s. ERR=%s\n"
@@ -5901,8 +5547,8 @@ msgstr "\n"
 msgid "Start Admin JobId %d, Job=%s\n"
 msgstr ""
 
-#: src/dird/admin.c:92 src/dird/vbackup.c:313 src/dird/migrate.c:1205
-#: src/dird/backup.c:460
+#: src/dird/admin.c:92 src/dird/vbackup.c:311 src/dird/migrate.c:1205
+#: src/dird/backup.c:455
 #, fuzzy, c-format
 msgid "Error getting Job record for Job report: ERR=%s"
 msgstr "Impossible de récupérer le Job du JobId=%s : ERR=%s\n"
@@ -5919,8 +5565,8 @@ msgstr "*** Admin en Erreur ***"
 msgid "Admin Canceled"
 msgstr "Admin Annulé"
 
-#: src/dird/admin.c:112 src/dird/vbackup.c:363 src/dird/restore.c:289
-#: src/dird/backup.c:513
+#: src/dird/admin.c:112 src/dird/vbackup.c:361 src/dird/restore.c:289
+#: src/dird/backup.c:508
 #, c-format
 msgid "Inappropriate term code: %c\n"
 msgstr ""
@@ -6264,22 +5910,22 @@ msgstr "Impossible de récupérer ou de créer un Pool dans le catalogue.\n"
 msgid "Job Pool's NextPool resource"
 msgstr "Sélectionnez le Pool"
 
-#: src/dird/vbackup.c:146 src/dird/migrate.c:354
+#: src/dird/vbackup.c:147 src/dird/migrate.c:354
 #, c-format
 msgid "Read storage \"%s\" same as write storage.\n"
 msgstr ""
 
-#: src/dird/vbackup.c:153
+#: src/dird/vbackup.c:154
 #, fuzzy, c-format
 msgid "Start Virtual Backup JobId %s, Job=%s\n"
 msgstr "Démarrage du backup JobId %s, Job=%s\n"
 
-#: src/dird/vbackup.c:157
+#: src/dird/vbackup.c:158
 msgid ""
 "This Job is not an Accurate backup so is not equivalent to a Full backup.\n"
 msgstr ""
 
-#: src/dird/vbackup.c:167
+#: src/dird/vbackup.c:165
 #, fuzzy
 msgid "No previous Jobs found.\n"
 msgstr "Aucun Job trouvé pour la migration.\n"
@@ -6294,34 +5940,34 @@ msgstr "Impossible de récupérer le Job du JobId=%s : ERR=%s\n"
 msgid "Could not get or create the FileSet record.\n"
 msgstr "Impossible de créer la structure BSOCK cliente.\n"
 
-#: src/dird/vbackup.c:320 src/dird/backup.c:467
+#: src/dird/vbackup.c:318 src/dird/backup.c:462
 #, fuzzy, c-format
 msgid "Error getting Client record for Job report: ERR=%s"
 msgstr "Impossible de mettre à jour les informations du Volume : ERR=%s"
 
-#: src/dird/vbackup.c:326 src/dird/migrate.c:1235 src/dird/backup.c:473
+#: src/dird/vbackup.c:324 src/dird/migrate.c:1235 src/dird/backup.c:468
 #, c-format
 msgid "Error getting Media record for Volume \"%s\": ERR=%s"
 msgstr ""
 
-#: src/dird/vbackup.c:336 src/dird/backup.c:483 src/dird/backup.c:489
+#: src/dird/vbackup.c:334 src/dird/backup.c:478 src/dird/backup.c:484
 #: src/stored/bscan.c:1171
 msgid "Backup OK -- with warnings"
 msgstr "Backup OK -- avec des erreurs"
 
-#: src/dird/vbackup.c:338 src/dird/backup.c:485 src/stored/bscan.c:1168
+#: src/dird/vbackup.c:336 src/dird/backup.c:480 src/stored/bscan.c:1168
 msgid "Backup OK"
 msgstr "Backup OK"
 
-#: src/dird/vbackup.c:343 src/dird/backup.c:493 src/stored/bscan.c:1175
+#: src/dird/vbackup.c:341 src/dird/backup.c:488 src/stored/bscan.c:1175
 msgid "*** Backup Error ***"
 msgstr "*** Backup en erreur ***"
 
-#: src/dird/vbackup.c:353 src/dird/backup.c:503 src/stored/bscan.c:1178
+#: src/dird/vbackup.c:351 src/dird/backup.c:498 src/stored/bscan.c:1178
 msgid "Backup Canceled"
 msgstr "Backup annulé"
 
-#: src/dird/vbackup.c:400
+#: src/dird/vbackup.c:398
 #, fuzzy, c-format
 msgid ""
 "%s %s %s (%s): %s\n"
@@ -6494,59 +6140,59 @@ msgstr ""
 msgid "Catalog error updating volume \"%s\". ERR=%s"
 msgstr ""
 
-#: src/dird/next_vol.c:264
-#, fuzzy
-msgid "volume has recycling disabled"
-msgstr "le volume a expiré"
-
-#: src/dird/next_vol.c:270
+#: src/dird/next_vol.c:265
 msgid "volume has expired"
 msgstr "le volume a expiré"
 
-#: src/dird/next_vol.c:288 src/dird/next_vol.c:324
+#: src/dird/next_vol.c:283 src/dird/next_vol.c:323
 #, c-format
 msgid "Recycled current volume \"%s\"\n"
 msgstr ""
 
-#: src/dird/next_vol.c:293
+#: src/dird/next_vol.c:288
 msgid "and recycling of current volume failed"
 msgstr ""
 
-#: src/dird/next_vol.c:299
+#: src/dird/next_vol.c:294
 msgid "but should be Append, Purged or Recycle"
 msgstr "mais doit être Append, Purged ou bien Recycle"
 
-#: src/dird/next_vol.c:327
+#: src/dird/next_vol.c:303
+#, fuzzy
+msgid "volume has recycling disabled"
+msgstr "le volume a expiré"
+
+#: src/dird/next_vol.c:326
 msgid ""
 "but should be Append, Purged or Recycle (recycling of the current volume "
 "failed)"
 msgstr ""
 
-#: src/dird/next_vol.c:331
+#: src/dird/next_vol.c:330
 msgid ""
 "but should be Append, Purged or Recycle (cannot automatically recycle "
 "current volume, as it still contains unpruned data or the Volume Retention "
 "time has not expired.)"
 msgstr ""
 
-#: src/dird/next_vol.c:393
+#: src/dird/next_vol.c:392
 #, c-format
 msgid "Unable to get Pool record: ERR=%s"
 msgstr "Impossible de récupérer le Pool depuis le catalogue : ERR=%s"
 
-#: src/dird/next_vol.c:400
+#: src/dird/next_vol.c:399
 #, c-format
 msgid "Unable add Scratch Volume, Pool \"%s\" full MaxVols=%d\n"
 msgstr ""
 "Impossible d'ajouter un volume du Scratch, le Pool « %s » est plein. MaxVols=%"
 "d\n"
 
-#: src/dird/next_vol.c:419
+#: src/dird/next_vol.c:418
 #, c-format
 msgid "Failed to move Scratch Volume. ERR=%s\n"
 msgstr "Impossible de déplacer un Volume du Scratch. ERR=%s\n"
 
-#: src/dird/next_vol.c:424
+#: src/dird/next_vol.c:423
 #, c-format
 msgid "Using Volume \"%s\" from 'Scratch' pool.\n"
 msgstr "Utilisation du Volume « %s » du pool « Scratch ».\n"
@@ -6988,7 +6634,7 @@ msgid "You have messages.\n"
 msgstr "Vous avez des messages.\n"
 
 #: src/dird/msgchan.c:106 src/tray-monitor/tray-monitor.c:952
-#: src/filed/job.c:1404
+#: src/filed/job.c:1406
 msgid "Storage daemon"
 msgstr ""
 
@@ -7027,7 +6673,7 @@ msgstr "Using Device \"%s\"\n"
 msgid "Cannot create message thread: %s\n"
 msgstr ""
 
-#: src/dird/msgchan.c:460 src/filed/job.c:1941
+#: src/dird/msgchan.c:460 src/filed/job.c:1943
 #, c-format
 msgid "Could not open bootstrap file %s: ERR=%s\n"
 msgstr "Impossible d'ouvrir le fichier bootstrap %s : ERR=%s\n"
@@ -7235,7 +6881,7 @@ msgstr "1000 OK: %s Version: %s (%s)\n"
 msgid "No Storage specification found in Job or Pool.\n"
 msgstr "Pas de Storage défini dans le Job ou le Pool.\n"
 
-#: src/dird/backup.c:144
+#: src/dird/backup.c:143
 #, fuzzy
 msgid "Cannot find previous jobids.\n"
 msgstr "Impossible de trouver la ressource Job « %s »\n"
@@ -7244,26 +6890,26 @@ msgstr "Impossible de trouver la ressource Job « %s »\n"
 msgid "Sending Accurate information.\n"
 msgstr ""
 
-#: src/dird/backup.c:194
+#: src/dird/backup.c:189
 #, c-format
 msgid "Start Backup JobId %s, Job=%s\n"
 msgstr "Démarrage du backup JobId %s, Job=%s\n"
 
-#: src/dird/backup.c:377
+#: src/dird/backup.c:372
 #, c-format
 msgid "Unexpected Client Job message: %s\n"
 msgstr ""
 
-#: src/dird/backup.c:389
+#: src/dird/backup.c:384
 #, c-format
 msgid "Network error with FD during %s: ERR=%s\n"
 msgstr ""
 
-#: src/dird/backup.c:413
+#: src/dird/backup.c:408
 msgid "No Job status returned from FD.\n"
 msgstr "Impossible de récupérer le statut du Job depuis le FD.\n"
 
-#: src/dird/backup.c:553
+#: src/dird/backup.c:548
 #, c-format
 msgid ""
 "%s %s %s (%s): %s\n"
@@ -7335,12 +6981,12 @@ msgstr ""
 "  Statut de fin du SD :    %s\n"
 "  Statut de fin :          %s\n"
 
-#: src/dird/backup.c:653
+#: src/dird/backup.c:648
 #, c-format
 msgid "Could not get Job Volume Parameters to update Bootstrap file. ERR=%s\n"
 msgstr ""
 
-#: src/dird/backup.c:689
+#: src/dird/backup.c:684
 #, c-format
 msgid ""
 "Could not open WriteBootstrap file:\n"
@@ -7951,6 +7597,56 @@ msgstr ""
 msgid "\t[will not descend: disallowed drive type]"
 msgstr ""
 
+#: src/tools/testfind.c:316 src/tools/testls.c:194
+#, c-format
+msgid "Err: Could not access %s: %s\n"
+msgstr ""
+
+#: src/tools/testfind.c:319 src/tools/testls.c:197
+#, c-format
+msgid "Err: Could not follow ff->link %s: %s\n"
+msgstr ""
+
+#: src/tools/testfind.c:322 src/tools/testls.c:200
+#, c-format
+msgid "Err: Could not stat %s: %s\n"
+msgstr ""
+
+#: src/tools/testfind.c:325 src/tools/testls.c:203
+#, c-format
+msgid "Skip: File not saved. No change. %s\n"
+msgstr ""
+
+#: src/tools/testfind.c:328 src/tools/testls.c:206
+#, c-format
+msgid "Err: Attempt to backup archive. Not saved. %s\n"
+msgstr ""
+
+#: src/tools/testfind.c:331 src/tools/testls.c:215
+#, c-format
+msgid "Err: Could not open directory %s: %s\n"
+msgstr ""
+
+#: src/tools/testfind.c:334 src/tools/testls.c:218
+#, c-format
+msgid "Err: Unknown file ff->type %d: %s\n"
+msgstr ""
+
+#: src/tools/testfind.c:384
+#, c-format
+msgid "===== Filename truncated to 255 chars: %s\n"
+msgstr ""
+
+#: src/tools/testfind.c:401
+#, c-format
+msgid "========== Path name truncated to 255 chars: %s\n"
+msgstr ""
+
+#: src/tools/testfind.c:410
+#, c-format
+msgid "========== Path length is zero. File=%s\n"
+msgstr ""
+
 #: src/tools/testfind.c:413
 #, c-format
 msgid "Path: %s\n"
@@ -8006,6 +7702,21 @@ msgstr ""
 #, c-format
 msgid "Could not open exclude file: %s\n"
 msgstr ""
+
+#: src/tools/testls.c:209
+#, c-format
+msgid "Recursion turned off. Directory not entered. %s\n"
+msgstr ""
+
+#: src/tools/testls.c:212
+#, c-format
+msgid "Skip: File system change prohibited. Directory not entered. %s\n"
+msgstr ""
+
+#: src/tools/bwild.c:122 src/tools/bregex.c:153 src/tools/bregtest.c:137
+#, c-format
+msgid "Could not open data file: %s\n"
+msgstr "Impossible d'ouvrir le fichier de données %s.\n"
 
 #: src/tools/drivetype.c:47
 #, c-format
@@ -8485,7 +8196,7 @@ msgstr ""
 msgid "Updated MD5/SHA1 record\n"
 msgstr ""
 
-#: src/stored/bscan.c:1331 src/stored/bextract.c:513 src/stored/btape.c:2696
+#: src/stored/bscan.c:1331 src/stored/bextract.c:520 src/stored/btape.c:2696
 #: src/stored/bcopy.c:374 src/stored/bls.c:470
 #, c-format
 msgid "Mount Volume \"%s\" on device %s and press return when ready: "
@@ -8531,35 +8242,35 @@ msgid ""
 "     Device \"%s\" requested by DIR could not be opened or does not exist.\n"
 msgstr ""
 
-#: src/stored/reserve.c:640
+#: src/stored/reserve.c:644
 #, c-format
 msgid "3926 Could not get dcr for device: %s\n"
 msgstr ""
 
-#: src/stored/reserve.c:766
+#: src/stored/reserve.c:770
 #, c-format
 msgid "3601 JobId=%u device %s is BLOCKED due to user unmount.\n"
 msgstr ""
 "3601 JobId=%u device %s est BLOQUÉ car il a été demonté par l'utilisateur.\n"
 
-#: src/stored/reserve.c:776
+#: src/stored/reserve.c:780
 #, c-format
 msgid "3602 JobId=%u device %s is busy (already reading/writing).\n"
 msgstr "3602 JobId=%u device %s est occupé (à lire ou écrire).\n"
 
-#: src/stored/reserve.c:823
+#: src/stored/reserve.c:827
 #, c-format
 msgid "3603 JobId=%u device %s is busy reading.\n"
 msgstr "3603 JobId=%u device %s est occupé en lecture.\n"
 
-#: src/stored/reserve.c:832
+#: src/stored/reserve.c:836
 #, c-format
 msgid "3604 JobId=%u device %s is BLOCKED due to user unmount.\n"
 msgstr ""
 "3604 JobId=%u device %s est bloqué car il a été démonté par l'utilisateur "
 "(unmount).\n"
 
-#: src/stored/reserve.c:869
+#: src/stored/reserve.c:873
 #, fuzzy, c-format
 msgid ""
 "3608 JobId=%u wants Pool=\"%s\" but have Pool=\"%s\" nreserve=%d on drive %"
@@ -8568,66 +8279,66 @@ msgstr ""
 "3608 JobId=%u voulait le Pool=« %s », mais c'est le Pool=« %s » qui est dans "
 "le drive %s.\n"
 
-#: src/stored/reserve.c:895
+#: src/stored/reserve.c:899
 #, fuzzy, c-format
 msgid "3610 JobId=%u Volume max jobs exceeded on drive %s.\n"
 msgstr ""
 "3607 JobId=%u voulait Vol=« %s », c'est le Vol=« %s » qui est dans le drive %"
 "s.\n"
 
-#: src/stored/reserve.c:948
+#: src/stored/reserve.c:952
 #, c-format
 msgid "3605 JobId=%u wants free drive but device %s is busy.\n"
 msgstr ""
 "3605 JobId=%u voulait libérer le lecteur, mais le device %s est occupé.\n"
 
-#: src/stored/reserve.c:956
+#: src/stored/reserve.c:960
 #, c-format
 msgid "3606 JobId=%u prefers mounted drives, but drive %s has no Volume.\n"
 msgstr "3606 JobId=%u voulait un lecteur monté, mais le lecteur %s est vide.\n"
 
-#: src/stored/reserve.c:978
+#: src/stored/reserve.c:982
 #, c-format
 msgid "3607 JobId=%u wants Vol=\"%s\" drive has Vol=\"%s\" on drive %s.\n"
 msgstr ""
 "3607 JobId=%u voulait Vol=« %s », c'est le Vol=« %s » qui est dans le drive %"
 "s.\n"
 
-#: src/stored/reserve.c:1033
+#: src/stored/reserve.c:1037
 #, c-format
 msgid "Logic error!!!! JobId=%u Should not get here.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1034
+#: src/stored/reserve.c:1038
 #, c-format
 msgid "3910 JobId=%u Logic error!!!! drive %s Should not get here.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1037
+#: src/stored/reserve.c:1041
 msgid "Logic error!!!! Should not get here.\n"
 msgstr ""
 
-#: src/stored/reserve.c:1040
+#: src/stored/reserve.c:1044
 #, c-format
 msgid "3911 JobId=%u failed reserve drive %s.\n"
 msgstr ""
 
-#: src/stored/acquire.c:70
+#: src/stored/acquire.c:71
 #, c-format
 msgid "Acquire read: num_writers=%d not zero. Job %d canceled.\n"
 msgstr ""
 
-#: src/stored/acquire.c:79
+#: src/stored/acquire.c:80
 #, c-format
 msgid "No volumes specified for reading. Job %s canceled.\n"
 msgstr "Pas de volume spécifié pour la lecture. Abandon du job %s.\n"
 
-#: src/stored/acquire.c:88
+#: src/stored/acquire.c:89
 #, c-format
 msgid "Logic error: no next volume to read. Numvol=%d Curvol=%d\n"
 msgstr ""
 
-#: src/stored/acquire.c:114
+#: src/stored/acquire.c:115
 #, c-format
 msgid ""
 "Changing read device. Want Media Type=\"%s\" have=\"%s\"\n"
@@ -8636,58 +8347,58 @@ msgstr ""
 "Changement du Device de lecture. Want Media Type=\"%s\" have=\"%s\"\n"
 "  device=%s\n"
 
-#: src/stored/acquire.c:150
+#: src/stored/acquire.c:152
 #, c-format
 msgid "Media Type change.  New read device %s chosen.\n"
 msgstr ""
 
-#: src/stored/acquire.c:163
+#: src/stored/acquire.c:165
 #, c-format
 msgid "No suitable device found to read Volume \"%s\"\n"
 msgstr ""
 
-#: src/stored/acquire.c:202
+#: src/stored/acquire.c:205
 #, fuzzy, c-format
 msgid "Job %s canceled.\n"
 msgstr "Le job %s est annulé.\n"
 
-#: src/stored/acquire.c:220
+#: src/stored/acquire.c:223
 #, c-format
 msgid "Read open device %s Volume \"%s\" failed: ERR=%s\n"
 msgstr ""
 
-#: src/stored/acquire.c:307
+#: src/stored/acquire.c:310
 #, c-format
 msgid "Too many errors trying to mount device %s for reading.\n"
 msgstr ""
 
-#: src/stored/acquire.c:316
+#: src/stored/acquire.c:319
 #, c-format
 msgid "Ready to read from volume \"%s\" on device %s.\n"
 msgstr "Prêt à lire les données du volume « %s » depuis le device %s.\n"
 
-#: src/stored/acquire.c:363
+#: src/stored/acquire.c:367
 #, c-format
 msgid "Want to append, but device %s is busy reading.\n"
 msgstr ""
 
-#: src/stored/acquire.c:393
+#: src/stored/acquire.c:397
 #, c-format
 msgid "Could not ready device %s for append.\n"
 msgstr ""
 
-#: src/stored/acquire.c:466 src/stored/block.c:368 src/stored/block.c:732
+#: src/stored/acquire.c:470 src/stored/block.c:368 src/stored/block.c:732
 #: src/stored/block.c:806 src/stored/spool.c:310
 #, c-format
 msgid "Could not create JobMedia record for Volume=\"%s\" Job=%s\n"
 msgstr "Impossible de créer un JobMedia en base pour le Volume=%s Job=%s\n"
 
-#: src/stored/acquire.c:517
+#: src/stored/acquire.c:521
 #, c-format
 msgid "Alert: %s"
 msgstr "Alert: %s"
 
-#: src/stored/acquire.c:525
+#: src/stored/acquire.c:529
 #, c-format
 msgid "3997 Bad alert command: %s: ERR=%s.\n"
 msgstr ""
@@ -8955,7 +8666,7 @@ msgstr ""
 msgid "Illegal mode given to open dev.\n"
 msgstr ""
 
-#: src/stored/dev.c:473 src/stored/device.c:321
+#: src/stored/dev.c:473 src/stored/device.c:327
 #, c-format
 msgid "Unable to open device %s: ERR=%s\n"
 msgstr ""
@@ -9019,6 +8730,12 @@ msgstr ""
 #, c-format
 msgid "Rewind error on %s. ERR=%s.\n"
 msgstr ""
+
+#: src/stored/dev.c:822 src/stored/dev.c:900 src/stored/dev.c:1037
+#: src/stored/dev.c:1626
+#, c-format
+msgid "lseek error on %s. ERR=%s.\n"
+msgstr "erreur de déplacement (lseek) sur %s : ERR=%s\n"
 
 #: src/stored/dev.c:871
 #, fuzzy, c-format
@@ -10229,12 +9946,13 @@ msgstr "%s doit être un répertoire.\n"
 msgid "%u files restored.\n"
 msgstr "%u fichiers restaurés.\n"
 
-#: src/stored/bextract.c:284 src/stored/bextract.c:290 src/filed/restore.c:999
+#: src/stored/bextract.c:284 src/stored/bextract.c:290
+#: src/filed/restore.c:1018
 #, c-format
 msgid "Write error on %s: %s\n"
 msgstr ""
 
-#: src/stored/bextract.c:321 src/stored/bextract.c:488
+#: src/stored/bextract.c:321 src/stored/bextract.c:495
 msgid "Logic error output file should be open but is not.\n"
 msgstr ""
 
@@ -10253,25 +9971,25 @@ msgstr "Pas de job sélectionné.\n"
 msgid "Seek error on %s: %s\n"
 msgstr ""
 
-#: src/stored/bextract.c:431 src/filed/restore.c:934
+#: src/stored/bextract.c:431 src/filed/restore.c:945
 #, c-format
 msgid "Seek to %s error on %s: ERR=%s\n"
 msgstr ""
 
-#: src/stored/bextract.c:444
+#: src/stored/bextract.c:451
 #, c-format
 msgid "Uncompression error. ERR=%d\n"
 msgstr "Erreur de décompression. ERR=%d\n"
 
-#: src/stored/bextract.c:458 src/filed/restore.c:970
+#: src/stored/bextract.c:465 src/filed/restore.c:989
 msgid "GZIP data stream found, but GZIP not configured!\n"
 msgstr ""
 
-#: src/stored/bextract.c:479
+#: src/stored/bextract.c:486
 msgid "Got Program Name or Data Stream. Ignored.\n"
 msgstr ""
 
-#: src/stored/bextract.c:493 src/filed/restore.c:682
+#: src/stored/bextract.c:500 src/filed/restore.c:693
 #, c-format
 msgid "Unknown stream=%d ignored. This shouldn't happen!\n"
 msgstr ""
@@ -10296,12 +10014,17 @@ msgstr ""
 msgid "write_block_to_device overflow block failed. ERR=%s"
 msgstr ""
 
-#: src/stored/device.c:292 src/stored/btape.c:379 src/stored/bcopy.c:203
+#: src/stored/device.c:191
+#, c-format
+msgid "Catastrophic error. Cannot write overflow block to device %s. ERR=%s"
+msgstr ""
+
+#: src/stored/device.c:298 src/stored/btape.c:379 src/stored/bcopy.c:203
 #, c-format
 msgid "dev open failed: %s\n"
 msgstr ""
 
-#: src/stored/device.c:323
+#: src/stored/device.c:329
 #, c-format
 msgid "Unable to open archive %s: ERR=%s\n"
 msgstr ""
@@ -11636,7 +11359,7 @@ msgstr "Le volume « %s » existe déjà en base.\n"
 msgid "Read block=%u, VolBytes=%s rate=%.1f KB/s\n"
 msgstr ""
 
-#: src/stored/btape.c:2764 src/stored/mount.c:805
+#: src/stored/btape.c:2764 src/stored/mount.c:808
 #, c-format
 msgid "Cannot open Dev=%s, Vol=%s\n"
 msgstr ""
@@ -11670,23 +11393,28 @@ msgstr ""
 msgid "Job %d canceled.\n"
 msgstr "Le job %d est annulé.\n"
 
-#: src/stored/mount.c:268
+#: src/stored/mount.c:218 src/stored/label.c:329 src/stored/label.c:429
+#, fuzzy, c-format
+msgid "Open device %s Volume \"%s\" failed: ERR=%s\n"
+msgstr "Impossible de supprimer le volume « %s ». ERR=%s"
+
+#: src/stored/mount.c:271
 #, c-format
 msgid "Volume \"%s\" previously written, moving to end of data.\n"
 msgstr "Le volume « %s » contient des données, re-positionnement à la fin.\n"
 
-#: src/stored/mount.c:272
+#: src/stored/mount.c:275
 #, c-format
 msgid "Unable to position to end of data on device %s: ERR=%s\n"
 msgstr ""
 "Impossible de se positionner à la fin du média sur le device %s : ERR=%s\n"
 
-#: src/stored/mount.c:385 src/stored/mount.c:669
+#: src/stored/mount.c:388 src/stored/mount.c:672
 #, c-format
 msgid "Volume \"%s\" not on device %s.\n"
 msgstr "Le volume « %s » n'est pas dans le device %s.\n"
 
-#: src/stored/mount.c:418
+#: src/stored/mount.c:421
 #, c-format
 msgid ""
 "Director wanted Volume \"%s\".\n"
@@ -11697,19 +11425,19 @@ msgstr ""
 "    Le volume courant « %s » n'est pas utilisable car :\n"
 "    %s"
 
-#: src/stored/mount.c:437 src/stored/label.c:238 src/stored/label.c:399
+#: src/stored/mount.c:440 src/stored/label.c:238 src/stored/label.c:399
 #, fuzzy, c-format
 msgid "Could not reserve volume %s on %s\n"
 msgstr "Impossible de trouver le prochain volume pour le Job %s.\n"
 
-#: src/stored/mount.c:562
+#: src/stored/mount.c:565
 #, c-format
 msgid "Ready to append to end of Volume \"%s\" part=%d size=%s\n"
 msgstr ""
 "Prêt à ajouter des données à la fin du volume « %s » part=%d size=%s\n"
 "\n"
 
-#: src/stored/mount.c:566
+#: src/stored/mount.c:569
 #, fuzzy, c-format
 msgid ""
 "Bacula cannot write on DVD Volume \"%s\" because: The sizes do not match! "
@@ -11718,12 +11446,12 @@ msgstr ""
 "Impossible d'écrire sur le volume « %s » car :\n"
 "Les tailles ne correspondent pas. Volume=%s Catalogue=%s\n"
 
-#: src/stored/mount.c:580
+#: src/stored/mount.c:583
 #, c-format
 msgid "Ready to append to end of Volume \"%s\" at file=%d.\n"
 msgstr "Prêt à ajouter des données à la fin du volume « %s » file=%d.\n"
 
-#: src/stored/mount.c:583
+#: src/stored/mount.c:586
 #, fuzzy, c-format
 msgid ""
 "Bacula cannot write on tape Volume \"%s\" because:\n"
@@ -11732,14 +11460,14 @@ msgstr ""
 "Impossible d'écrire sur le volume « %s » \n"
 "car le nombre de fichiers ne correspond pas. Volume=%u Catalogue=%u\n"
 
-#: src/stored/mount.c:594
+#: src/stored/mount.c:597
 #, fuzzy, c-format
 msgid "Ready to append to end of Volume \"%s\" size=%s\n"
 msgstr ""
 "Prêt à ajouter des données à la fin du volume « %s » part=%d size=%s\n"
 "\n"
 
-#: src/stored/mount.c:598
+#: src/stored/mount.c:601
 #, fuzzy, c-format
 msgid ""
 "Bacula cannot write on disk Volume \"%s\" because: The sizes do not match! "
@@ -11748,35 +11476,35 @@ msgstr ""
 "Impossible d'écrire sur le volume « %s » car :\n"
 "Les tailles ne correspondent pas. Volume=%s Catalogue=%s\n"
 
-#: src/stored/mount.c:659
+#: src/stored/mount.c:662
 #, c-format
 msgid "Labeled new Volume \"%s\" on device %s.\n"
 msgstr "Le nouveau volume « %s » a été labélisé sur le device %s.\n"
 
-#: src/stored/mount.c:664
+#: src/stored/mount.c:667
 #, fuzzy, c-format
 msgid "Device %s not configured to autolabel Volumes.\n"
 msgstr ""
 "Attention, le device %s n'est pas configuré pour labéliser automatiquement "
 "les volumes.\n"
 
-#: src/stored/mount.c:683
+#: src/stored/mount.c:686
 #, c-format
 msgid "Marking Volume \"%s\" in Error in Catalog.\n"
 msgstr "Le volume « %s » est marqué en Erreur dans le catalogue.\n"
 
-#: src/stored/mount.c:700
+#: src/stored/mount.c:703
 #, c-format
 msgid ""
 "Autochanger Volume \"%s\" not found in slot %d.\n"
 "    Setting InChanger to zero in catalog.\n"
 msgstr ""
 
-#: src/stored/mount.c:719
+#: src/stored/mount.c:722
 msgid "Hey!!!!! WroteVol non-zero !!!!!\n"
 msgstr ""
 
-#: src/stored/mount.c:768
+#: src/stored/mount.c:771
 #, fuzzy, c-format
 msgid ""
 "Invalid tape position on volume \"%s\" on device %s. Expected %d, got %d\n"
@@ -12328,12 +12056,13 @@ msgid "TLS negotiation failed with FD at \"%s:%d\"\n"
 msgstr "Négociation TLS échouée avec le FD  « %s:%d ».\n"
 
 #: src/stored/dircmd.c:155
-msgid "Connection request failed.\n"
+#, fuzzy, c-format
+msgid "Connection request from %s failed.\n"
 msgstr "Demande de connexion échouée.\n"
 
 #: src/stored/dircmd.c:165
-#, c-format
-msgid "Invalid connection. Len=%d\n"
+#, fuzzy, c-format
+msgid "Invalid connection from %s. Len=%d\n"
 msgstr "Connexion invalide. Len=%d\n"
 
 #: src/stored/dircmd.c:208 src/filed/authenticate.c:206
@@ -12549,7 +12278,7 @@ msgstr "3022 Le device %s est libéré.\n"
 msgid "3927 Error scanning release command: %s\n"
 msgstr ""
 
-#: src/stored/dircmd.c:964 src/filed/job.c:1219
+#: src/stored/dircmd.c:964 src/filed/job.c:1221
 #, c-format
 msgid "Could not create bootstrap file %s: ERR=%s\n"
 msgstr "Impossible de créer le fichier bootstrap %s : ERR=%s\n"
@@ -12689,11 +12418,6 @@ msgstr "Le volume sur %s possède un mauvais label Bacula : %x\n"
 #, c-format
 msgid "Cannot write Volume label to block for device %s\n"
 msgstr "Impossible d'écrire le label du Volume sur le Device %s\n"
-
-#: src/stored/label.c:329 src/stored/label.c:429
-#, fuzzy, c-format
-msgid "Open device %s Volume \"%s\" failed: ERR=%s\n"
-msgstr "Impossible de supprimer le volume « %s ». ERR=%s"
 
 #: src/stored/label.c:453
 #, c-format
@@ -13006,7 +12730,7 @@ msgstr "Un nom d'utilisateur PostgreSQL doit être fourni.\n"
 
 #: src/cats/postgresql.c:147 src/cats/sql_get.c:207 src/cats/sql_get.c:258
 #: src/cats/sql_get.c:630 src/cats/sql_get.c:707 src/cats/sql_get.c:976
-#: src/cats/sql_create.c:1015 src/cats/sql.c:293 src/cats/sql.c:300
+#: src/cats/sql_create.c:1015 src/cats/sql.c:307 src/cats/sql.c:314
 #, c-format
 msgid "error fetching row: %s\n"
 msgstr ""
@@ -13395,54 +13119,54 @@ msgstr "Saisie invalide. Veuillez répondre oui ou non.\n"
 msgid "Unknown database type: %s\n"
 msgstr "Mot clef inconnu : %s\n"
 
-#: src/cats/sql.c:180
+#: src/cats/sql.c:194
 #, c-format
 msgid ""
 "query %s failed:\n"
 "%s\n"
 msgstr ""
 
-#: src/cats/sql.c:202
+#: src/cats/sql.c:216
 #, c-format
 msgid ""
 "insert %s failed:\n"
 "%s\n"
 msgstr ""
 
-#: src/cats/sql.c:216
+#: src/cats/sql.c:230
 #, c-format
 msgid "Insertion problem: affected_rows=%s\n"
 msgstr ""
 
-#: src/cats/sql.c:236
+#: src/cats/sql.c:250
 #, c-format
 msgid ""
 "update %s failed:\n"
 "%s\n"
 msgstr ""
 
-#: src/cats/sql.c:246
+#: src/cats/sql.c:260
 #, c-format
 msgid "Update failed: affected_rows=%s for %s\n"
 msgstr ""
 
-#: src/cats/sql.c:267
+#: src/cats/sql.c:281
 #, c-format
 msgid ""
 "delete %s failed:\n"
 "%s\n"
 msgstr ""
 
-#: src/cats/sql.c:555
+#: src/cats/sql.c:569
 #, c-format
 msgid "Path length is zero. File=%s\n"
 msgstr ""
 
-#: src/cats/sql.c:602
+#: src/cats/sql.c:616
 msgid "No results to list.\n"
 msgstr "Liste vide.\n"
 
-#: src/cats/sql.c:731
+#: src/cats/sql.c:745
 #, fuzzy, c-format
 msgid "Could not open database \"%s\": ERR=%s\n"
 msgstr "Impossible d'ouvrir la base de données « %s ».\n"
@@ -14064,7 +13788,7 @@ msgstr "Nom de Volume invalide : %s\n"
 
 #: src/lib/util.c:734 src/lib/util.c:744 src/lib/util.c:752 src/lib/util.c:759
 #: src/lib/util.c:766 src/lib/util.c:780 src/lib/util.c:790 src/lib/util.c:797
-#: src/lib/util.c:808 src/filed/restore.c:799
+#: src/lib/util.c:808 src/filed/restore.c:810
 msgid "*none*"
 msgstr ""
 
@@ -14288,7 +14012,7 @@ msgstr "JCR use_count=%d JobId=%d\n"
 msgid "pthread_setspecific failed: ERR=%s\n"
 msgstr "Erreur sur l'ouverture du périphérique. ERR=%s\n"
 
-#: src/lib/jcr.c:984
+#: src/lib/jcr.c:995
 #, c-format
 msgid ""
 "Watchdog sending kill after %d secs to thread stalled reading Storage "
@@ -14297,7 +14021,7 @@ msgstr ""
 "Le watchdog a envoyé un signal après %d secs au thread bloqué en écoute du "
 "SD.\n"
 
-#: src/lib/jcr.c:996
+#: src/lib/jcr.c:1007
 #, c-format
 msgid ""
 "Watchdog sending kill after %d secs to thread stalled reading File daemon.\n"
@@ -14305,7 +14029,7 @@ msgstr ""
 "Le watchdog a envoyé un signal après %d secs au thread bloqué en écoute du "
 "FD.\n"
 
-#: src/lib/jcr.c:1008
+#: src/lib/jcr.c:1019
 #, c-format
 msgid ""
 "Watchdog sending kill after %d secs to thread stalled reading Director.\n"
@@ -14778,9 +14502,9 @@ msgid "sm_realloc size: %d\n"
 msgstr ""
 
 #: src/lib/smartall.c:332
-#, c-format
-msgid "sm_realloc %d at %x from %s:%d\n"
-msgstr ""
+#, fuzzy, c-format
+msgid "sm_realloc %d at %p from %s:%d\n"
+msgstr "Attendait %d en lecture, eu %d de %s:%s:%d\n"
 
 #: src/lib/smartall.c:394
 #, c-format
@@ -15562,12 +15286,12 @@ msgstr ""
 "CMD=%s\n"
 "ERR=%s\n"
 
-#: src/lib/message.c:593 src/lib/message.c:746
+#: src/lib/message.c:592 src/lib/message.c:746
 #, c-format
 msgid "fopen %s failed: ERR=%s\n"
 msgstr "fopen %s en erreur : ERR=%s\n"
 
-#: src/lib/message.c:728
+#: src/lib/message.c:727
 #, c-format
 msgid ""
 "Operator mail program terminated in error.\n"
@@ -15575,72 +15299,72 @@ msgid ""
 "ERR=%s\n"
 msgstr ""
 
-#: src/lib/message.c:1037
+#: src/lib/message.c:1042
 #, c-format
 msgid "%s: ABORTING due to ERROR in %s:%d\n"
 msgstr ""
 
-#: src/lib/message.c:1041
+#: src/lib/message.c:1046
 #, c-format
 msgid "%s: ERROR TERMINATION at %s:%d\n"
 msgstr ""
 
-#: src/lib/message.c:1046
+#: src/lib/message.c:1051
 #, c-format
 msgid "%s: Fatal Error because: "
 msgstr "%s : Erreur Fatale car : "
 
-#: src/lib/message.c:1048
+#: src/lib/message.c:1053
 #, c-format
 msgid "%s: Fatal Error at %s:%d because:\n"
 msgstr "%s : Erreur Fatale à %s:%d car :\n"
 
-#: src/lib/message.c:1052
+#: src/lib/message.c:1057
 #, c-format
 msgid "%s: ERROR: "
 msgstr "%s : ERREUR : "
 
-#: src/lib/message.c:1054
+#: src/lib/message.c:1059
 #, c-format
 msgid "%s: ERROR in %s:%d "
 msgstr "%s : ERREUR dans %s:%d "
 
-#: src/lib/message.c:1057
+#: src/lib/message.c:1062
 #, c-format
 msgid "%s: Warning: "
 msgstr "%s : Attention : "
 
-#: src/lib/message.c:1060
+#: src/lib/message.c:1065
 #, c-format
 msgid "%s: Security violation: "
 msgstr ""
 
-#: src/lib/message.c:1135
+#: src/lib/message.c:1140
 #, c-format
 msgid "%s ABORTING due to ERROR\n"
 msgstr ""
 
-#: src/lib/message.c:1138
+#: src/lib/message.c:1143
 #, c-format
 msgid "%s ERROR TERMINATION\n"
 msgstr ""
 
-#: src/lib/message.c:1141
+#: src/lib/message.c:1146
 #, fuzzy, c-format
 msgid "%s JobId %u: Fatal error: "
 msgstr "%s : %s Erreur fatale : "
 
-#: src/lib/message.c:1147
+#: src/lib/message.c:1152
 #, fuzzy, c-format
 msgid "%s JobId %u: Error: "
 msgstr "%s : %s Erreur : "
 
-#: src/lib/message.c:1153
+#: src/lib/message.c:1158
 #, fuzzy, c-format
 msgid "%s JobId %u: Warning: "
 msgstr "%s : Attention : "
 
-#: src/lib/message.c:1159
+#: src/lib/message.c:1164
 #, c-format
 msgid "%s JobId %u: Security violation: "
 msgstr ""
@@ -16331,95 +16055,95 @@ msgstr ""
 msgid "Error reading file %s: ERR=%s\n"
 msgstr ""
 
-#: src/filed/job.c:411
+#: src/filed/job.c:414
 #, c-format
 msgid "2901 Job %s not found.\n"
 msgstr "2901 Le job %s est introuvable.\n"
 
-#: src/filed/job.c:421
+#: src/filed/job.c:424
 #, c-format
 msgid "2001 Job %s marked to be canceled.\n"
 msgstr "2001 Le job %s va être annulé.\n"
 
-#: src/filed/job.c:424
+#: src/filed/job.c:427
 msgid "2902 Error scanning cancel command.\n"
 msgstr "2902 Erreur dans le décodage de la commande d'annulation.\n"
 
-#: src/filed/job.c:443
+#: src/filed/job.c:446
 #, c-format
 msgid "2991 Bad setdebug command: %s\n"
 msgstr "2991 Erreur dans la commande setdebug : %s\n"
 
-#: src/filed/job.c:459
+#: src/filed/job.c:462
 #, c-format
 msgid "Bad estimate command: %s"
 msgstr ""
 
-#: src/filed/job.c:460
+#: src/filed/job.c:463
 msgid "2992 Bad estimate command.\n"
 msgstr ""
 
-#: src/filed/job.c:483
+#: src/filed/job.c:486
 #, c-format
 msgid "Bad Job Command: %s"
 msgstr ""
 
-#: src/filed/job.c:507
+#: src/filed/job.c:510
 #, c-format
 msgid "Bad RunBeforeJob command: %s\n"
 msgstr ""
 
-#: src/filed/job.c:508 src/filed/job.c:526
+#: src/filed/job.c:511 src/filed/job.c:529
 msgid "2905 Bad RunBeforeJob command.\n"
 msgstr ""
 
-#: src/filed/job.c:537
+#: src/filed/job.c:540
 msgid "2905 Bad RunBeforeNow command.\n"
 msgstr ""
 
-#: src/filed/job.c:556
+#: src/filed/job.c:559
 #, c-format
 msgid "Bad RunAfter command: %s\n"
 msgstr ""
 
-#: src/filed/job.c:557
+#: src/filed/job.c:560
 msgid "2905 Bad RunAfterJob command.\n"
 msgstr ""
 
-#: src/filed/job.c:591
+#: src/filed/job.c:594
 #, c-format
 msgid "Bad RunScript command: %s\n"
 msgstr "Erreur dans la commande RunScript : %s\n"
 
-#: src/filed/job.c:592
+#: src/filed/job.c:595
 msgid "2905 Bad RunScript command.\n"
 msgstr "2905 Erreur sur la commande RunScript.\n"
 
-#: src/filed/job.c:699
+#: src/filed/job.c:702
 #, c-format
 msgid "Error running program: %s. stat=%d: ERR=%s\n"
 msgstr "Erreur dans l'exécution de la commande : %s. stat=%d: ERR=%s\n"
 
-#: src/filed/job.c:709
+#: src/filed/job.c:712
 #, c-format
 msgid "Cannot open FileSet input file: %s. ERR=%s\n"
 msgstr ""
 
-#: src/filed/job.c:731
+#: src/filed/job.c:734
 msgid "Plugin Directory not defined. Cannot use plugin: \"%\"\n"
 msgstr ""
 
-#: src/filed/job.c:825
+#: src/filed/job.c:828
 #, c-format
 msgid "REGEX %s compile error. ERR=%s\n"
 msgstr ""
 
-#: src/filed/job.c:892
+#: src/filed/job.c:894
 #, c-format
 msgid "Invalid FileSet command: %s\n"
 msgstr ""
 
-#: src/filed/job.c:1331
+#: src/filed/job.c:1333
 #, fuzzy, c-format
 msgid ""
 "DIR and FD clocks differ by %lld seconds, FD automatically compensating.\n"
@@ -16427,66 +16151,66 @@ msgstr ""
 "L'horloge du client et du director ont %d secondes d'écart, le client s'est "
 "ajusté automatiquement.\n"
 
-#: src/filed/job.c:1340
+#: src/filed/job.c:1342
 #, c-format
 msgid "Unknown backup level: %s\n"
 msgstr ""
 
-#: src/filed/job.c:1353
+#: src/filed/job.c:1355
 #, c-format
 msgid "Bad level command: %s\n"
 msgstr ""
 
-#: src/filed/job.c:1374
+#: src/filed/job.c:1376
 #, c-format
 msgid "Bad session command: %s"
 msgstr ""
 
-#: src/filed/job.c:1395
+#: src/filed/job.c:1397
 #, c-format
 msgid "Bad storage command: %s"
 msgstr ""
 
-#: src/filed/job.c:1410
+#: src/filed/job.c:1412
 #, c-format
 msgid "Failed to connect to Storage daemon: %s:%d\n"
 msgstr ""
 
-#: src/filed/job.c:1422
+#: src/filed/job.c:1424
 msgid "Failed to authenticate Storage daemon.\n"
 msgstr ""
 
-#: src/filed/job.c:1463
+#: src/filed/job.c:1465
 msgid "ACL support not configured for your machine.\n"
 msgstr ""
 
-#: src/filed/job.c:1467
+#: src/filed/job.c:1469
 msgid "XATTR support not configured for your machine.\n"
 msgstr ""
 
-#: src/filed/job.c:1476
+#: src/filed/job.c:1478
 msgid "Cannot contact Storage daemon\n"
 msgstr "Impossible de se connecter au démon Storage\n"
 
-#: src/filed/job.c:1495
+#: src/filed/job.c:1497
 #, c-format
 msgid "Bad response to append open: %s\n"
 msgstr ""
 
-#: src/filed/job.c:1500
+#: src/filed/job.c:1502
 msgid "Bad response from stored to open command\n"
 msgstr ""
 
-#: src/filed/job.c:1528
+#: src/filed/job.c:1530
 #, c-format
 msgid "Generate VSS snapshots. Driver=\"%s\", Drive(s)=\"%s\"\n"
 msgstr "Création des snapshot VSS. Driver=« %s », Lecteur(s)=« %s »\n"
 
-#: src/filed/job.c:1530
+#: src/filed/job.c:1532
 msgid "Generate VSS snapshots failed.\n"
 msgstr "Erreur durant la création des snapshots VSS.\n"
 
-#: src/filed/job.c:1537
+#: src/filed/job.c:1539
 #, c-format
 msgid ""
 "Generate VSS snapshot of drive \"%c:\\\" failed. VSS support is disabled on "
@@ -16495,73 +16219,73 @@ msgstr ""
 "Erreur lors de la création du snapshot VSS du lecteur « %c:\\\\ ». Le VSS est "
 "désactivé sur ce lecteur.\n"
 
-#: src/filed/job.c:1544
+#: src/filed/job.c:1546
 #, c-format
 msgid "VSS Writer (PrepareForBackup): %s\n"
 msgstr ""
 
-#: src/filed/job.c:1549
+#: src/filed/job.c:1551
 msgid "No drive letters found for generating VSS snapshots.\n"
 msgstr ""
 
-#: src/filed/job.c:1553
+#: src/filed/job.c:1555
 #, c-format
 msgid "VSS was not initialized properly. VSS support is disabled. ERR=%s\n"
 msgstr ""
 
-#: src/filed/job.c:1604
+#: src/filed/job.c:1606
 msgid "Append Close with SD failed.\n"
 msgstr ""
 
-#: src/filed/job.c:1608
+#: src/filed/job.c:1610
 #, c-format
 msgid "Bad status %d returned from Storage Daemon.\n"
 msgstr ""
 
-#: src/filed/job.c:1626
+#: src/filed/job.c:1628
 #, c-format
 msgid "VSS Writer (BackupComplete): %s\n"
 msgstr ""
 
-#: src/filed/job.c:1650
+#: src/filed/job.c:1652
 #, c-format
 msgid "2994 Bad verify command: %s\n"
 msgstr ""
 
-#: src/filed/job.c:1665 src/filed/job.c:1706
+#: src/filed/job.c:1667 src/filed/job.c:1708
 #, c-format
 msgid "2994 Bad verify level: %s\n"
 msgstr ""
 
-#: src/filed/job.c:1740
+#: src/filed/job.c:1742
 #, c-format
 msgid "Bad replace command. CMD=%s\n"
 msgstr ""
 
-#: src/filed/job.c:1758
+#: src/filed/job.c:1760
 #, c-format
 msgid "Bad where regexp. where=%s\n"
 msgstr ""
 
-#: src/filed/job.c:1825
+#: src/filed/job.c:1827
 msgid "Improper calling sequence.\n"
 msgstr ""
 
-#: src/filed/job.c:1845
+#: src/filed/job.c:1847
 #, c-format
 msgid "Bad response to SD read open: %s\n"
 msgstr ""
 
-#: src/filed/job.c:1850
+#: src/filed/job.c:1852
 msgid "Bad response from stored to read open command\n"
 msgstr ""
 
-#: src/filed/job.c:1917
+#: src/filed/job.c:1919
 #, c-format
 msgid "Comm error with SD. bad response to %s. ERR=%s\n"
 msgstr ""
 
-#: src/filed/job.c:1920
+#: src/filed/job.c:1922
 #, c-format
 msgid "Bad response to %s command. Wanted %s, got %s\n"
 msgstr ""
@@ -16761,198 +16485,198 @@ msgstr ""
 msgid "Actual data size %d not same as header %d\n"
 msgstr ""
 
-#: src/filed/restore.c:395
+#: src/filed/restore.c:404
 msgid "Unexpected cryptographic session data stream.\n"
 msgstr ""
 
-#: src/filed/restore.c:403
+#: src/filed/restore.c:412
 msgid ""
 "No private decryption keys have been defined to decrypt encrypted backup "
 "data.\n"
 msgstr ""
 
-#: src/filed/restore.c:414
+#: src/filed/restore.c:423
 #, fuzzy
 msgid "Could not create digest.\n"
 msgstr "Impossible de créer la structure BSOCK cliente.\n"
 
-#: src/filed/restore.c:428
+#: src/filed/restore.c:437
 msgid "Missing private key required to decrypt encrypted backup data.\n"
 msgstr ""
 
-#: src/filed/restore.c:431
+#: src/filed/restore.c:440
 msgid "Decrypt of the session key failed.\n"
 msgstr "Impossible de décrypter la clef de session.\n"
 
-#: src/filed/restore.c:435
+#: src/filed/restore.c:444
 #, c-format
 msgid "An error occurred while decoding encrypted session data stream: %s\n"
 msgstr ""
 
-#: src/filed/restore.c:484 src/filed/restore.c:529
+#: src/filed/restore.c:493 src/filed/restore.c:539
 #, c-format
 msgid "Missing encryption session data stream for %s\n"
 msgstr ""
 
-#: src/filed/restore.c:492 src/filed/restore.c:536
+#: src/filed/restore.c:501 src/filed/restore.c:546
 #, c-format
 msgid "Failed to initialize decryption context for %s\n"
 msgstr ""
 
-#: src/filed/restore.c:548
+#: src/filed/restore.c:558
 #, c-format
 msgid "     Cannot open resource fork for %s.\n"
 msgstr ""
 
-#: src/filed/restore.c:573
+#: src/filed/restore.c:584
 #, c-format
 msgid "     Invalid length of Finder Info (got %d, not 32)\n"
 msgstr ""
 
-#: src/filed/restore.c:577
+#: src/filed/restore.c:588
 #, c-format
 msgid "     Could not set Finder Info on %s\n"
 msgstr ""
 
-#: src/filed/restore.c:614
+#: src/filed/restore.c:625
 #, fuzzy, c-format
 msgid "Can't restore ACLs of %s\n"
 msgstr "Démarrage du Job de restauration %s\n"
 
-#: src/filed/restore.c:640
+#: src/filed/restore.c:651
 #, c-format
 msgid "Can't restore Extended Attributes of %s\n"
 msgstr ""
 
-#: src/filed/restore.c:650
+#: src/filed/restore.c:661
 msgid "Unexpected cryptographic signature data stream.\n"
 msgstr ""
 
-#: src/filed/restore.c:656
+#: src/filed/restore.c:667
 #, c-format
 msgid "Failed to decode message signature for %s\n"
 msgstr ""
 
-#: src/filed/restore.c:755
+#: src/filed/restore.c:766
 #, c-format
 msgid ""
 "%d non-supported data streams and %d non-supported attrib streams ignored.\n"
 msgstr ""
 
-#: src/filed/restore.c:759
+#: src/filed/restore.c:770
 #, c-format
 msgid "%d non-supported resource fork streams ignored.\n"
 msgstr ""
 
-#: src/filed/restore.c:762
+#: src/filed/restore.c:773
 #, c-format
 msgid "%d non-supported Finder Info streams ignored.\n"
 msgstr ""
 
-#: src/filed/restore.c:765
+#: src/filed/restore.c:776
 #, c-format
 msgid "%d non-supported acl streams ignored.\n"
 msgstr ""
 
-#: src/filed/restore.c:768
+#: src/filed/restore.c:779
 #, fuzzy, c-format
 msgid "%d non-supported crypto streams ignored.\n"
 msgstr "contentEncryptionAlgorithm non supporté : %d\n"
 
-#: src/filed/restore.c:771
+#: src/filed/restore.c:782
 #, fuzzy, c-format
 msgid "%d non-supported xattr streams ignored.\n"
 msgstr "contentEncryptionAlgorithm non supporté : %d\n"
 
-#: src/filed/restore.c:783
+#: src/filed/restore.c:794
 msgid "None"
 msgstr ""
 
-#: src/filed/restore.c:787
+#: src/filed/restore.c:798
 msgid "Zlib errno"
 msgstr ""
 
-#: src/filed/restore.c:789
+#: src/filed/restore.c:800
 msgid "Zlib stream error"
 msgstr ""
 
-#: src/filed/restore.c:791
+#: src/filed/restore.c:802
 msgid "Zlib data error"
 msgstr ""
 
-#: src/filed/restore.c:793
+#: src/filed/restore.c:804
 msgid "Zlib memory error"
 msgstr ""
 
-#: src/filed/restore.c:795
+#: src/filed/restore.c:806
 msgid "Zlib buffer error"
 msgstr ""
 
-#: src/filed/restore.c:797
+#: src/filed/restore.c:808
 msgid "Zlib version error"
 msgstr ""
 
-#: src/filed/restore.c:834
+#: src/filed/restore.c:845
 #, c-format
 msgid "Missing cryptographic signature for %s\n"
 msgstr ""
 
-#: src/filed/restore.c:863 src/filed/restore.c:887
+#: src/filed/restore.c:874 src/filed/restore.c:898
 #, fuzzy, c-format
 msgid "Signature validation failed for file %s: ERR=%s\n"
 msgstr "Impossible de créer le fichier bootstrap %s : ERR=%s\n"
 
-#: src/filed/restore.c:877
+#: src/filed/restore.c:888
 #, fuzzy, c-format
 msgid "Digest one file failed for file: %s\n"
 msgstr "Impossible de créer le fichier bootstrap %s : ERR=%s\n"
 
-#: src/filed/restore.c:908
+#: src/filed/restore.c:919
 #, c-format
 msgid "Signature validation failed for %s: %s\n"
 msgstr ""
 
-#: src/filed/restore.c:961
+#: src/filed/restore.c:980
 #, c-format
 msgid "Uncompression error on file %s. ERR=%s\n"
 msgstr ""
 
-#: src/filed/restore.c:993
+#: src/filed/restore.c:1012
 #, c-format
 msgid "Write error in Win32 Block Decomposition on %s: %s\n"
 msgstr ""
 
-#: src/filed/restore.c:1049
+#: src/filed/restore.c:1067
 msgid "Decryption error\n"
 msgstr ""
 
-#: src/filed/restore.c:1133
+#: src/filed/restore.c:1149
 msgid "Logic error: output file should be open\n"
 msgstr ""
 
-#: src/filed/restore.c:1160
+#: src/filed/restore.c:1176
 msgid "Logic error: output file should not be open\n"
 msgstr ""
 
-#: src/filed/restore.c:1189
+#: src/filed/restore.c:1205
 #, c-format
 msgid "Decryption error. buf_len=%d decrypt_len=%d on file %s\n"
 msgstr ""
 
-#: src/filed/restore.c:1293
+#: src/filed/restore.c:1309
 msgid "Open File Manager paused\n"
 msgstr ""
 
-#: src/filed/restore.c:1297
+#: src/filed/restore.c:1313
 msgid "FAILED to pause Open File Manager\n"
 msgstr ""
 
-#: src/filed/restore.c:1305
+#: src/filed/restore.c:1321
 #, c-format
 msgid "Running as '%s'. Privmask=%#08x\n"
 msgstr ""
 
-#: src/filed/restore.c:1307
+#: src/filed/restore.c:1323
 msgid "Failed to retrieve current UserName\n"
 msgstr ""
 
@@ -17771,6 +17495,11 @@ msgstr "Saisissez le nom d'un répertoire : "
 msgid "Cancel restore"
 msgstr "Annulé"
 
+#: src/wx-console/wxbrestorepanel.cpp:263
+#: src/wx-console/wxbrestorepanel.cpp:317
+msgid "Add"
+msgstr ""
+
 #: src/wx-console/wxbrestorepanel.cpp:265
 #: src/wx-console/wxbrestorepanel.cpp:319
 #, fuzzy
@@ -18513,6 +18242,92 @@ msgstr "Commande annulée.\n"
 #, fuzzy
 msgid "Director disconnected."
 msgstr "Connexion du director le %s\n"
+
+#, fuzzy
+#~ msgid "No Client record defined for job %s\n"
+#~ msgstr "Pas d'enregistrement trouvé en base pour : %s\n"
+
+#, fuzzy
+#~ msgid "No FileSet record defined for job %s\n"
+#~ msgstr "Pas de volume trouvé en base pour l'objet %d.\n"
+
+#, fuzzy
+#~ msgid "No Storage resource defined for job %s\n"
+#~ msgstr "Pas d'enregistrement trouvé en base pour : %s\n"
+
+#, fuzzy
+#~ msgid "No Pool resource defined for job %s\n"
+#~ msgstr "La ressource Pool « %s » est introuvable !\n"
+
+#, fuzzy
+#~ msgid "No Catalog resource defined for client %s\n"
+#~ msgstr "Pas d'enregistrement trouvé en base pour : %s\n"
+
+#, fuzzy
+#~ msgid "Folder"
+#~ msgstr "FileSet"
+
+#, fuzzy
+#~ msgid "1 file (%s)"
+#~ msgstr "Nouveau Fichier : %s\n"
+
+#, fuzzy
+#~ msgid "%d files (%s)"
+#~ msgstr "Nouveau Fichier : %s\n"
+
+#, fuzzy
+#~ msgid "1 file selected (%s)"
+#~ msgstr ""
+#~ "\n"
+#~ "1 fichier sélectionne pour la restauration.\n"
+#~ "\n"
+
+#, fuzzy
+#~ msgid "%d files selected (%s)"
+#~ msgstr ""
+#~ "\n"
+#~ "1 fichier sélectionne pour la restauration.\n"
+#~ "\n"
+
+#, fuzzy
+#~ msgid "An error occurred while extracting files."
+#~ msgstr "Entrez le nombre de départ : "
+
+#, fuzzy
+#~ msgid "Command not found."
+#~ msgstr "Commande annulée.\n"
+
+#, fuzzy
+#~ msgid "Command exited abnormally."
+#~ msgstr "Commande annulée.\n"
+
+#, fuzzy
+#~ msgid "Do you want to create a new archive with these files?"
+#~ msgstr ""
+#~ "\n"
+#~ "Voulez vous restaurer tous les fichiers ? (oui|non) : "
+
+#, fuzzy
+#~ msgid "Create _Archive"
+#~ msgstr "Crée"
+
+#, fuzzy
+#~ msgid "Name"
+#~ msgstr "Job échoué.\n"
+
+#, fuzzy
+#~ msgid "Current Location:"
+#~ msgstr "Le slot courant est : %d\n"
+
+#, fuzzy
+#~ msgid "View selected file"
+#~ msgstr ""
+#~ "\n"
+#~ "%u fichiers sélectionnés pour la restauration.\n"
+
+#, fuzzy
+#~ msgid "Create _Folder"
+#~ msgstr "Crée"
 
 #~ msgid "Reposition from (file:block) %u:%u to %u:%u\n"
 #~ msgstr "Repositionnement de (fichier:bloc) %u:%u à %u:%u\n"

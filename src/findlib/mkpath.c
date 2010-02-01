@@ -32,7 +32,7 @@
  *  This is tricky code, especially when writing from scratch. Fortunately,
  *    a non-copyrighted version of mkdir was available to consult.
  *
- *  Version $Id: mkpath.c 7380 2008-07-14 10:42:59Z kerns $
+ *  Version $Id$
  */
 #include "bacula.h"
 #include "jcr.h"

@@ -29,7 +29,7 @@
  * 
  *  Kern Sibbald, August 2007
  *
- *  Version $Id: trayMonitor.cpp 8384 2009-01-20 15:29:41Z ricozz $
+ *  Version $Id$
  *
  * This is a generic tray monitor routine, which is used by all three
  *  of the daemons. Each one compiles it with slightly different

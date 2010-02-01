@@ -40,8 +40,12 @@ CREATE TABLE file
     primary key (fileid)
 );
 
-CREATE INDEX file_jobid_idx on file (jobid);
-CREATE INDEX file_fp_idx on file (filenameid, pathid);
+CREATE INDEX file_jpfid_idx on file (jobid, pathid, filenameid);
+
+-- If you need performances, you can remove this index
+-- the database engine is able to use the composite index
+-- to find all records with a given JobId
+CREATE INDEX file_jobid_idx on file(jobid);
 
 --
 -- Add this if you have a good number of job
@@ -54,7 +58,6 @@ CREATE INDEX file_fp_idx on file (filenameid, pathid);
 --
 -- CREATE INDEX file_pathid_idx on file(pathid);
 -- CREATE INDEX file_filenameid_idx on file(filenameid);
--- CREATE INDEX file_jpfid_idx on file (jobid, pathid, filenameid);
 
 CREATE TABLE job
 (

@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: mysql.c 8739 2009-04-16 17:07:21Z kerns $
+ *    Version $Id$
  */
 
 

@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, Jan MMI
  *
- *   Version $Id: filed.h 8520 2009-03-12 09:47:51Z ricozz $
+ *   Version $Id$
  */
 
 

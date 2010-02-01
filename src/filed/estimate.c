@@ -31,7 +31,7 @@
  *
  *    Kern Sibbald, September MMI
  *
- *   Version $Id: estimate.c 8947 2009-07-02 11:36:26Z ricozz $
+ *   Version $Id$
  *
  */
 

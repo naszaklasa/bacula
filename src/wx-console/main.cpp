@@ -31,7 +31,7 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: main.cpp 7380 2008-07-14 10:42:59Z kerns $
+ *    Version $Id$
  */
 
 

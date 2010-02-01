@@ -33,7 +33,7 @@
  *
  * Kern Sibbald, Nov MM
  *
- *   Version $Id: jcr.h 8984 2009-07-14 13:47:15Z kerns $
+ *   Version $Id$
  */
 
 
@@ -191,6 +191,7 @@ public:
    const char *get_ActionName(bool past); /* in lib/jcr.c */
    void set_JobLevel(int32_t JobLevel); /* in lib/jcr.c */
    void set_JobType(int32_t JobType);  /* in lib/jcr.c */
+   void setJobStatus(int32_t JobStatus); /* in lib/jcr.c */
    bool JobReads();                    /* in lib/jcr.c */
 
    /* Global part of JCR common to all daemons */

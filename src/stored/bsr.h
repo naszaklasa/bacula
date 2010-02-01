@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, June 2002
  *
- *   Version $Id: bsr.h 8190 2008-12-18 19:56:23Z ricozz $
+ *   Version $Id$
  *
  */
 

@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, Sep MM
  *
- *   Version $Id: filed_conf.h 8863 2009-05-26 13:44:08Z ricozz $
+ *   Version $Id$
  */
 
 /*

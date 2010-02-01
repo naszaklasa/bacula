@@ -34,7 +34,7 @@
  *
  *
  *
- *   Version $Id: ansi_label.c 8561 2009-03-20 14:52:17Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */

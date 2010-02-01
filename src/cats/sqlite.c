@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, January 2002
  *
- *    Version $Id: sqlite.c 7514 2008-08-28 11:23:21Z ricozz $
+ *    Version $Id$
  */
 
 

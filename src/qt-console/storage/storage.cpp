@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: storage.cpp 8960 2009-07-05 16:51:23Z kerns $
+ *   Version $Id$
  *
  *  Storage Class
  *

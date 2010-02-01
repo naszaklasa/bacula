@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_update.c 8921 2009-06-23 13:37:57Z ricozz $
+ *    Version $Id$
  */
 
 /* The following is necessary so that we do not include

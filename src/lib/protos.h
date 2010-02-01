@@ -28,7 +28,7 @@
 /*
  * Prototypes for lib directory of Bacula
  *
- *   Version $Id: protos.h 8209 2008-12-20 22:02:31Z ricozz $
+ *   Version $Id$
  */
 
 #ifndef __LIBPROTOS_H

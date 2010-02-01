@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, April MMIII
  *
- *   Version $Id: ua_label.c 9036 2009-07-16 19:58:54Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"

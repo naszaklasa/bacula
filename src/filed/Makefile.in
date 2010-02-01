@@ -1,7 +1,7 @@
 #
 # Bacula Makefile for the File daemon
 #
-#  Version $Id: Makefile.in 8464 2009-02-18 11:40:09Z kerns $
+#  Version $Id$
 #
 
 @MCOMMON@

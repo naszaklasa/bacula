@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: jobs.cpp 8875 2009-05-30 18:45:18Z bartleyd2 $
+ *   Version $Id$
  *
  *  Jobs Class
  *

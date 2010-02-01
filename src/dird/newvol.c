@@ -37,7 +37,7 @@
  *  Basic tasks done here:
  *      If possible create a new Media entry
  *
- *   Version $Id: newvol.c 8045 2008-11-13 16:27:30Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,7 +33,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_get.c 8992 2009-07-14 14:56:29Z ricozz $
+ *    Version $Id: sql_get.c 8918 2009-06-23 11:56:35Z ricozz $
  */
 
 
@@ -1100,7 +1100,7 @@ bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids,
  * TODO: look and merge from ua_restore.c
  */
 bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb, 
-                            JOB_DBR *jr, POOLMEM *jobids)
+                            JOB_DBR *jr, db_list_ctx *jobids)
 {
    bool ret=false;
    char clientid[50], jobid[50], filesetid[50];
@@ -1111,7 +1111,8 @@ bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb,
    time_t StartTime = (jr->StartTime)?jr->StartTime:time(NULL);
 
    bstrutime(date, sizeof(date),  StartTime + 1);
-   jobids[0]='\0';
+   jobids->list[0] = 0;
+   jobids->count = 0;
 
    /* First, find the last good Full backup for this job/client/fileset */
    Mmsg(query, 
@@ -1177,8 +1178,8 @@ bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb,
 
    /* build a jobid list ie: 1,2,3,4 */
    Mmsg(query, "SELECT JobId FROM btemp3%s ORDER by JobTDate", jobid);
-   db_sql_query(mdb, query.c_str(), db_get_int_handler, jobids);
-   Dmsg1(1, "db_accurate_get_jobids=%s\n", jobids);
+   db_sql_query(mdb, query.c_str(), db_list_handler, jobids);
+   Dmsg1(1, "db_accurate_get_jobids=%s\n", jobids->list);
    ret = true;
 
 bail_out:
@@ -1186,21 +1187,6 @@ bail_out:
    db_sql_query(mdb, query.c_str(), NULL, NULL);
 
    return ret;
-}
-
-/*
- * Use to build a string of int list from a query. "10,20,30"
- */
-int db_get_int_handler(void *ctx, int num_fields, char **row)
-{
-   POOLMEM *ret = (POOLMEM *)ctx;
-   if (num_fields == 1) {
-      if (ret[0]) {
-         pm_strcat(ret, ",");
-      }
-      pm_strcat(ret, row[0]);
-   }
-   return 0;
 }
 
 #endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI */

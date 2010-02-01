@@ -32,7 +32,7 @@
  *
  *   Split from job.c and acquire.c June 2005
  *
- *   Version $Id: reserve.c 8893 2009-06-12 19:00:50Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -634,7 +634,11 @@ static int reserve_device(RCTX &rctx)
 
    rctx.suitable_device = true;
    Dmsg1(dbglvl, "try reserve %s\n", rctx.device->hdr.name);
-   rctx.jcr->dcr = dcr = new_dcr(rctx.jcr, rctx.jcr->dcr, rctx.device->dev);
+   if (rctx.store->append) {
+      dcr = new_dcr(rctx.jcr, rctx.jcr->dcr, rctx.device->dev);
+   } else {
+      dcr = new_dcr(rctx.jcr, rctx.jcr->read_dcr, rctx.device->dev);
+   }
    if (!dcr) {
       BSOCK *dir = rctx.jcr->dir_bsock;
       dir->fsend(_("3926 Could not get dcr for device: %s\n"), rctx.device_name);

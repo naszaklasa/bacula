@@ -34,7 +34,7 @@
  *
  *  Kern E. Sibbald, MM
  *
- *   Version $Id: find.c 8614 2009-03-27 17:59:16Z kerns $
+ *   Version $Id$
  */
 
 
@@ -67,13 +67,13 @@ FF_PKT *init_find_files()
 
    /* Get system path and filename maximum lengths */
    path_max = pathconf(".", _PC_PATH_MAX);
-   if (path_max < 1024) {
-      path_max = 1024;
+   if (path_max < 2048) {
+      path_max = 2048;
    }
 
    name_max = pathconf(".", _PC_NAME_MAX);
-   if (name_max < 1024) {
-      name_max = 1024;
+   if (name_max < 2048) {
+      name_max = 2048;
    }
    path_max++;                        /* add for EOS */
    name_max++;                        /* add for EOS */
@@ -280,7 +280,6 @@ static bool accept_file(FF_PKT *ff)
       findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
       ff->flags = fo->flags;
       ff->GZIP_level = fo->GZIP_level;
-      ff->ignoredir = fo->ignoredir;
       ff->fstypes = fo->fstype;
       ff->drivetypes = fo->drivetype;
 

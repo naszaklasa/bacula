@@ -37,7 +37,7 @@
  *   Note, this program reads stored.conf, and will only
  *     talk to devices that are configured.
  *
- *   Version $Id: btape.c 8905 2009-06-17 16:39:11Z kerns $
+ *   Version $Id$
  *
  */
 

@@ -43,7 +43,7 @@
  *
  *     Kern Sibbald, May MMI
  *
- *   Version $Id: dircmd.c 9025 2009-07-16 13:03:53Z ricozz $
+ *   Version $Id$
  *
  */
 
@@ -152,7 +152,7 @@ void *handle_connection_request(void *arg)
    char tbuf[100];
 
    if (bs->recv() <= 0) {
-      Emsg0(M_ERROR, 0, _("Connection request failed.\n"));
+      Emsg1(M_ERROR, 0, _("Connection request from %s failed.\n"), bs->who());
       bs->close();
       return NULL;
    }
@@ -162,7 +162,7 @@ void *handle_connection_request(void *arg)
     */
    if (bs->msglen < 25 || bs->msglen > (int)sizeof(name)) {
       Dmsg1(000, "<filed: %s", bs->msg);
-      Emsg1(M_ERROR, 0, _("Invalid connection. Len=%d\n"), bs->msglen);
+      Emsg2(M_ERROR, 0, _("Invalid connection from %s. Len=%d\n"), bs->who(), bs->msglen);
       bs->close();
       return NULL;
    }

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -41,7 +41,7 @@
                   http://www.fourmilab.ch/smartall/
 
 
-         Version $Id: smartall.c 8389 2009-01-20 20:01:18Z ricozz $
+         Version $Id$
 
 */
 
@@ -147,7 +147,7 @@ static void *smalloc(const char *fname, int lineno, unsigned int nbytes)
    } else {
       Emsg0(M_ABORT, 0, _("Out of memory\n"));
    }
-   Dmsg4(1150, "smalloc %d at %x from %s:%d\n", nbytes, buf, fname, lineno);
+   Dmsg4(1150, "smalloc %d at %p from %s:%d\n", nbytes, buf, fname, lineno);
 #if    SMALLOC_SANITY_CHECK > 0
    if (sm_bytes > SMALLOC_SANITY_CHECK) {
       Emsg0(M_ABORT, 0, _("Too much memory used."));
@@ -187,7 +187,7 @@ void sm_free(const char *file, int line, void *fp)
    struct abufhead *head = (struct abufhead *)cp;
 
    P(mutex);
-   Dmsg4(1150, "sm_free %d at %x from %s:%d\n",
+   Dmsg4(1150, "sm_free %d at %p from %s:%d\n",
          head->ablen, fp,
          head->abfname, head->ablineno);
 
@@ -289,7 +289,7 @@ void *sm_realloc(const char *fname, int lineno, void *ptr, unsigned int size)
    void *buf;
    char *cp = (char *) ptr;
 
-   Dmsg4(400, "sm_realloc %s:%d 0x%x %d\n", fname, lineno, ptr, size);
+   Dmsg4(400, "sm_realloc %s:%d %p %d\n", fname, lineno, ptr, size);
    if (size <= 0) {
       e_msg(fname, lineno, M_ABORT, 0, _("sm_realloc size: %d\n"), size);
    }
@@ -327,9 +327,9 @@ void *sm_realloc(const char *fname, int lineno, void *ptr, unsigned int size)
       }
 
       /* All done.  Free and dechain the original buffer. */
-      sm_free(__FILE__, __LINE__, ptr);
+      sm_free(fname, lineno, ptr);
    }
-   Dmsg4(150, _("sm_realloc %d at %x from %s:%d\n"), size, buf, fname, lineno);
+   Dmsg4(150, _("sm_realloc %d at %p from %s:%d\n"), size, buf, fname, lineno);
    return buf;
 }
 
@@ -360,7 +360,7 @@ void *actuallycalloc(unsigned int nelem, unsigned int elsize)
 
 void *actuallyrealloc(void *ptr, unsigned int size)
 {
-   Dmsg2(400, "Actuallyrealloc 0x%x %d\n", ptr, size);
+   Dmsg2(400, "Actuallyrealloc %p %d\n", ptr, size);
    return realloc(ptr, size);
 }
 
@@ -560,7 +560,7 @@ void * operator new(size_t size)
 
 void operator delete(void *buf)
 {
-// Dmsg1(000, "free called 0x%x\n", buf);
+// Dmsg1(000, "free called %p\n", buf);
    sm_free(__FILE__, __LINE__, buf);
 }
 #endif

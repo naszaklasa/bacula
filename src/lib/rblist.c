@@ -8,7 +8,7 @@
  *
  *   Kern Sibbald, November MMV
  *
- *   Version $Id: rblist.c 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  *
  */
 /*

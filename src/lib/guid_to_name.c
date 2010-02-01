@@ -31,7 +31,7 @@
  *  Program to convert uid and gid into names, and cache the results
  *   for preformance reasons.
  *
- *  Version $Id: guid_to_name.c 8433 2009-02-09 19:00:56Z kerns $
+ *  Version $Id$
  */
 
 #include "bacula.h"

@@ -37,7 +37,7 @@
  * Compares a filename or pathname to a pattern.
  */
 
-/* Version: $Id: fnmatch.c 5444 2007-09-03 19:16:40Z kerns $ */
+/* Version: $Id$ */
 
 /* Define SYS to use the system fnmatch() rather than ours */
 /* #define SYS 1 */

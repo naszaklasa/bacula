@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, October 2000
  *
- *   Version $Id: authenticate.c 8433 2009-02-09 19:00:56Z kerns $
+ *   Version $Id$
  *
  */
 

@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: stored_conf.c 8062 2008-11-19 19:34:48Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

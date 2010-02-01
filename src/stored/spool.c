@@ -30,7 +30,7 @@
  *
  *      Kern Sibbald, March 2004
  *
- *  Version $Id: spool.c 8995 2009-07-14 18:43:11Z kerns $
+ *  Version $Id$
  */
 
 #include "bacula.h"

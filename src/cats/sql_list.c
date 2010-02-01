@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_list.c 9045 2009-07-17 08:22:59Z ricozz $
+ *    Version $Id$
  */
 
 

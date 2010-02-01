@@ -29,7 +29,7 @@
  * General header file configurations that apply to
  * all daemons.  System dependent stuff goes here.
  *
- *   Version $Id: baconfig.h 8584 2009-03-23 08:56:20Z ricozz $
+ *   Version $Id$
  */
 
 
@@ -648,8 +648,7 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 #endif
 
 
-#ifdef __alpha__
-#define OSF 1
+#ifdef HAVE_OSF1_OS
 #undef  ioctl_req_t
 #define ioctl_req_t int
 #endif

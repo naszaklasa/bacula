@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MMI
  *
- *   Version  $Id: ua_select.c 8535 2009-03-15 11:29:57Z kerns $
+ *   Version  $Id$
  */
 
 #include "bacula.h"

@@ -28,7 +28,7 @@
 /*
  * Bacula RUNSCRIPT Structure definition for FileDaemon and Director
  * Eric Bollengier May 2006
- * Version $Id: runscript.h 7380 2008-07-14 10:42:59Z kerns $
+ * Version $Id$
  */
  
 

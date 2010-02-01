@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: berrno.h 8348 2009-01-09 18:18:53Z kerns $
+ *   Version $Id$
  *
  * Kern Sibbald, July MMIV
  *

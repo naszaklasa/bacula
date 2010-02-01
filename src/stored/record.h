@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: record.h 8142 2008-12-11 19:57:04Z kerns $
+ *   Version $Id$
  *
  */
 

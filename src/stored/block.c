@@ -32,7 +32,7 @@
  *              Kern Sibbald, March MMI
  *                 added BB02 format October MMII
  *
- *   Version $Id: block.c 8893 2009-06-12 19:00:50Z kerns $
+ *   Version $Id$
  *
  */
 

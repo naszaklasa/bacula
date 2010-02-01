@@ -1,3 +1,8 @@
+
+This newinstaller directory is not used or implemented
+
+
+
 Bacula - Windows Version Disclaimer
 ===================================
 

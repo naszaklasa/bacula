@@ -34,7 +34,7 @@
  *
  *     Kern Sibbald, May MM, major revision December MMIII
  *
- *   Version $Id: scheduler.c 8528 2009-03-14 16:51:26Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

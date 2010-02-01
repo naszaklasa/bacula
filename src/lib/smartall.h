@@ -29,7 +29,7 @@
 
         Definitions for the smart memory allocator
 
-     Version $Id: smartall.h 7513 2008-08-27 21:11:04Z kerns $
+     Version $Id$
 
 */
 

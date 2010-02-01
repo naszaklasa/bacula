@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: job.c 8982 2009-07-14 13:44:46Z kerns $
+ *   Version $Id$
  *
  */
 

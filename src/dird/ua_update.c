@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_update.c 8528 2009-03-14 16:51:26Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

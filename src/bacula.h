@@ -28,7 +28,7 @@
 /*
  * bacula.h -- main header file to include in all Bacula source
  *
- *   Version $Id: bacula.h 8926 2009-06-27 20:54:20Z kerns $
+ *   Version $Id$
  */
 
 #ifndef _BACULA_H

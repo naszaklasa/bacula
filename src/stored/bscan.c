@@ -34,7 +34,7 @@
  *   Kern E. Sibbald, December 2001
  *
  *
- *   Version $Id: bscan.c 8508 2009-03-07 20:59:46Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

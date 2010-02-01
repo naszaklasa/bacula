@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,7 @@
  *  Database routines that are exported by the cats library for
  *    use elsewhere in Bacula (mainly the Director).
  *
- *    Version $Id: protos.h 8209 2008-12-20 22:02:31Z ricozz $
+ *    Version $Id$
  */
 
 #ifndef __SQL_PROTOS_H
@@ -57,6 +57,7 @@ bool db_sql_query(B_DB *mdb, const char *cmd, DB_RESULT_HANDLER *result_handler,
 void db_start_transaction(JCR *jcr, B_DB *mdb);
 void db_end_transaction(JCR *jcr, B_DB *mdb);
 int db_int64_handler(void *ctx, int num_fields, char **row);
+int db_list_handler(void *ctx, int num_fields, char **row);
 void db_thread_cleanup();
 void _dbg_print_db(JCR *jcr, FILE *fp);
 
@@ -106,8 +107,8 @@ int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cdbr);
 int db_get_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr);
 bool db_get_query_dbids(JCR *jcr, B_DB *mdb, POOL_MEM &query, dbid_list &ids);
 bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids, DB_RESULT_HANDLER *result_handler, void *ctx);
-bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM *jobids);
-int db_get_int_handler(void *ctx, int num_fields, char **row);
+bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb, JOB_DBR *jr, db_list_ctx *jobids);
+int db_get_int_handler(void *list, int num_fields, char **row);
 
 
 /* sql_list.c */

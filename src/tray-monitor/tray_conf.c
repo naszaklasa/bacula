@@ -46,7 +46,7 @@
 *
 *     Nicolas Boichat, August MMIV
 *
-*     Version $Id: tray_conf.c 7380 2008-07-14 10:42:59Z kerns $
+*     Version $Id$
 */
 
 #include "bacula.h"

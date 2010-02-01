@@ -257,6 +257,7 @@ ESEErrorMessage(HRESULT result);
 #define hrMissingFullBackup         (HRESULT)0xC8000230L
 #define hrBackupInProgress          (HRESULT)0xC80001F9L
 #define hrCBDatabaseNotFound        (HRESULT)0xC7FE1F42L
+#define hrErrorFromESECall          (HRESULT)0xC7FF1004L
 
 extern HrESEBackupRestoreGetNodes_t HrESEBackupRestoreGetNodes;
 extern HrESEBackupPrepare_t HrESEBackupPrepare;

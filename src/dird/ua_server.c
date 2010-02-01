@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *    Version $Id: ua_server.c 8120 2008-12-09 08:53:06Z ricozz $
+ *    Version $Id$
  */
 
 #include "bacula.h"

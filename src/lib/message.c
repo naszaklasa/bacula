@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: message.c 8920 2009-06-23 12:40:45Z ricozz $
+ *   Version $Id$
  *
  */
 
@@ -69,8 +69,8 @@ void create_jcr_key();
 
 /* Static storage */
 
-/* Used to allow only one thread close the daemon messages at a time */
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+/* Allow only one thread to tweak d->fd at a time */
+static pthread_mutex_t fides_mutex = PTHREAD_MUTEX_INITIALIZER;
 static MSGS *daemon_msgs;              /* global messages */
 static char *catalog_db = NULL;       /* database type */
 static void (*message_callback)(int type, char *msg) = NULL;
@@ -421,7 +421,6 @@ void close_msg(JCR *jcr)
 
    if (jcr == NULL) {                /* NULL -> global chain */
       msgs = daemon_msgs;
-      P(mutex);                       /* only one thread walking the chain */
    } else {
       msgs = jcr->jcr_msgs;
       jcr->jcr_msgs = NULL;
@@ -429,6 +428,7 @@ void close_msg(JCR *jcr)
    if (msgs == NULL) {
       return;
    }
+   P(fides_mutex);
    Dmsg1(850, "===Begin close msg resource at %p\n", msgs);
    cmd = get_pool_memory(PM_MESSAGE);
    for (d=msgs->dest_chain; d; ) {
@@ -512,13 +512,12 @@ rem_temp_file:
       }
       d = d->next;                    /* point to next buffer */
    }
+   V(fides_mutex);
    free_pool_memory(cmd);
    Dmsg0(850, "Done walking message chain.\n");
    if (jcr) {
       free_msgs_res(msgs);
       msgs = NULL;
-   } else {
-      V(mutex);
    }
    Dmsg0(850, "===End close msg resource\n");
 }
@@ -736,6 +735,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
              case MD_MAIL_ON_ERROR:
              case MD_MAIL_ON_SUCCESS:
                 Dmsg1(850, "MAIL for following msg: %s", msg);
+                P(fides_mutex);
                 if (!d->fd) {
                    POOLMEM *name = get_pool_memory(PM_MESSAGE);
                    make_unique_mail_filename(jcr, name, d);
@@ -747,6 +747,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                             be.bstrerror());
                       d->fd = NULL;
                       free_pool_memory(name);
+                      V(fides_mutex);
                       break;
                    }
                    d->mail_filename = name;
@@ -757,6 +758,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                    d->max_len = len;      /* keep max line length */
                 }
                 fputs(msg, d->fd);
+                V(fides_mutex);
                 break;
              case MD_APPEND:
                 Dmsg1(850, "APPEND for following msg: %s", msg);
@@ -766,7 +768,9 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                 Dmsg1(850, "FILE for following msg: %s", msg);
                 mode = "w+b";
 send_to_file:
+                P(fides_mutex);
                 if (!d->fd && !open_dest_file(jcr, d, mode)) {
+                   V(fides_mutex);
                    break;
                 }
                 fputs(dt, d->fd);
@@ -780,6 +784,7 @@ send_to_file:
                       fputs(msg, d->fd);
                    }
                 }
+                V(fides_mutex);
                 break;
              case MD_DIRECTOR:
                 Dmsg1(850, "DIRECTOR for following msg: %s", msg);

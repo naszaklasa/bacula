@@ -456,6 +456,8 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
          if (result != 0)
          {
             _JobMessage(M_ERROR, "HrESERestoreComplete failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _DebugMessage(100, "Calling HrESERestoreClose\n");
+            result = HrESERestoreClose(hccx, RESTORE_CLOSE_NORMAL);
             state = 999;
             break;
          }
@@ -498,6 +500,7 @@ storage_group_node_t::endRestoreFile(exchange_fd_context_t *context)
       context->current_node = parent;
       return bRC_OK;
    case 999:
+      context->current_node = parent;
       return bRC_OK;
    }
 

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,7 @@
  *
  *  Kern E. Sibbald, December 2000
  *
- *  Version $Id: jcr.c 8894 2009-06-12 19:05:34Z kerns $
+ *  Version $Id$
  *
  *  These routines are thread safe.
  *
@@ -730,31 +730,6 @@ JCR *get_jcr_by_full_name(char *Job)
    return jcr;
 }
 
-/* 
- * Priority runs from 0 (lowest) to 10 (highest)
- */
-static int get_status_priority(int JobStatus)
-{
-   int priority = 0;
-   switch (JobStatus) {
-   case JS_ErrorTerminated:
-   case JS_FatalError:
-      priority = 10;
-      break;
-   case JS_Canceled:
-      priority = 9;
-      break;
-   case JS_Error:
-      priority = 8;
-      break;
-   case JS_Differences:
-      priority = 7;
-      break;
-   }
-   return priority;
-}
-
-
 static void update_wait_time(JCR *jcr, int newJobStatus)
 {
    bool enter_in_waittime;
@@ -807,31 +782,67 @@ static void update_wait_time(JCR *jcr, int newJobStatus)
    }
 }
 
+/* 
+ * Priority runs from 0 (lowest) to 10 (highest)
+ */
+static int get_status_priority(int JobStatus)
+{
+   int priority = 0;
+   switch (JobStatus) {
+   case JS_ErrorTerminated:
+   case JS_FatalError:
+   case JS_Canceled:
+      priority = 10;
+      break;
+   case JS_Error:
+      priority = 8;
+      break;
+   case JS_Differences:
+      priority = 7;
+      break;
+   }
+   return priority;
+}
+
 void set_jcr_job_status(JCR *jcr, int JobStatus)
 {
+   jcr->setJobStatus(JobStatus);
+}
+
+void JCR::setJobStatus(int newJobStatus)
+{
+   JCR *jcr = this;
    int priority, old_priority;
    int oldJobStatus = jcr->JobStatus;
-   priority = get_status_priority(JobStatus);
+   priority = get_status_priority(newJobStatus);
    old_priority = get_status_priority(oldJobStatus);
    
-   Dmsg2(800, "set_jcr_job_status(%s, %c)\n", jcr->Job, JobStatus);
+   Dmsg2(800, "set_jcr_job_status(%s, %c)\n", Job, newJobStatus);
 
    /* Update wait_time depending on newJobStatus and oldJobStatus */
-   update_wait_time(jcr, JobStatus);
+   update_wait_time(jcr, newJobStatus);
 
    /*
     * For a set of errors, ... keep the current status
     *   so it isn't lost. For all others, set it.
     */
-   Dmsg3(300, "jid=%u OnEntry JobStatus=%c set=%c\n", (uint32_t)jcr->JobId,
-         jcr->JobStatus, JobStatus);
-   if (priority >= old_priority) {
-      jcr->JobStatus = JobStatus;     /* replace with new priority */
+   Dmsg2(800, "OnEntry JobStatus=%c newJobstatus=%c\n", oldJobStatus, newJobStatus);
+   /*
+    * If status priority is > than proposed new status, change it.
+    * If status priority == new priority and both are zero, take
+    *   the new status. 
+    * If it is not zero, then we keep the first non-zero "error" that
+    *   occurred.
+    */
+   if (priority > old_priority || (
+       priority == 0 && old_priority == 0)) {
+      Dmsg4(800, "Set new stat. old: %c,%d new: %c,%d\n",
+         jcr->JobStatus, old_priority, newJobStatus, priority);
+      jcr->JobStatus = newJobStatus;     /* replace with new status */
    }
 
    if (oldJobStatus != jcr->JobStatus) {
-      Dmsg3(200, "jid=%u leave set_old_job_status=%c new_set=%c\n", (uint32_t)jcr->JobId,
-         oldJobStatus, JobStatus);
+      Dmsg2(800, "leave set_job_status old=%c new=%c\n", oldJobStatus, newJobStatus);
 //    generate_plugin_event(jcr, bEventStatusChange, NULL);
    }
 }

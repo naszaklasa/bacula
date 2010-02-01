@@ -32,7 +32,7 @@
  *
  *   Kern E. Sibbald, August 2002
  *
- *   Version $Id: dbcheck.c 7927 2008-10-28 22:03:33Z kerns $
+ *   Version $Id$
  *
  */
 

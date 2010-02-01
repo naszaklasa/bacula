@@ -33,7 +33,7 @@
  *
  *   Kern Sibbald, March 2005
  *
- *   Version $Id: wait.c 8557 2009-03-20 09:49:16Z kerns $
+ *   Version $Id$
  */
 
 

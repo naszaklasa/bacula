@@ -28,7 +28,7 @@
 /*
  * Resource codes -- they must be sequential for indexing
  *
- *   Version $Id: stored_conf.h 7737 2008-10-08 19:41:24Z ricozz $
+ *   Version $Id$
  */
 
 enum {

@@ -57,7 +57,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.c 9010 2009-07-15 16:11:06Z kerns $
+ *   Version $Id$
  */
 
 

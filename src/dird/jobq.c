@@ -37,7 +37,7 @@
  *
  *  Kern Sibbald, July MMIII
  *
- *   Version $Id: jobq.c 8848 2009-05-20 00:14:13Z jamesharper $
+ *   Version $Id$
  *
  *  This code was adapted from the Bacula workq, which was
  *    adapted from "Programming with POSIX Threads", by

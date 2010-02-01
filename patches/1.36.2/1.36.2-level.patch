@@ -40,8 +40,8 @@ diff -u -r1.91.4.2 -r1.91.4.2.2.1
   *
   *    Kern Sibbald, October MM
   *
-- *   Version $Id: 1.36.2-level.patch 1961 2005-04-26 19:29:24Z kerns $
-+ *   Version $Id: 1.36.2-level.patch 1961 2005-04-26 19:29:24Z kerns $
+- *   Version $Id$
++ *   Version $Id$
   *
   */
  /*

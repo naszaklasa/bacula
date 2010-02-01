@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: filed_conf.c 8863 2009-05-26 13:44:08Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"

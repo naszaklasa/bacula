@@ -32,7 +32,7 @@
  *
  *    Nicolas Boichat, April-July 2004
  *
- *   Version $Id: wxbutils.h 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 #ifndef WXBUTILS_H

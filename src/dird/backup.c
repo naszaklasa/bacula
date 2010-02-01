@@ -38,7 +38,7 @@
  *       to do the backup.
  *     When the File daemon finishes the job, update the DB.
  *
- *   Version $Id: backup.c 8947 2009-07-02 11:36:26Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -131,41 +131,36 @@ static int accurate_list_handler(void *ctx, int num_fields, char **row)
 bool send_accurate_current_files(JCR *jcr)
 {
    POOL_MEM buf;
+   db_list_ctx jobids;
+   db_list_ctx nb;
 
    if (!jcr->accurate || job_canceled(jcr) || jcr->get_JobLevel()==L_FULL) {
       return true;
    }
-   POOLMEM *jobids = get_pool_memory(PM_FNAME);
 
-   db_accurate_get_jobids(jcr, jcr->db, &jcr->jr, jobids);
-
-   if (*jobids == 0) {
-      free_pool_memory(jobids);
+   db_accurate_get_jobids(jcr, jcr->db, &jcr->jr, &jobids);
+   if (jobids.count == 0) {
       Jmsg(jcr, M_FATAL, 0, _("Cannot find previous jobids.\n"));
       return false;
    }
+
    if (jcr->JobId) {            /* display the message only for real jobs */
       Jmsg(jcr, M_INFO, 0, _("Sending Accurate information.\n"));
    }
    /* to be able to allocate the right size for htable */
-   POOLMEM *nb = get_pool_memory(PM_FNAME);
-   *nb = 0;                           /* clear buffer */
-   Mmsg(buf, "SELECT sum(JobFiles) FROM Job WHERE JobId IN (%s)",jobids);
-   db_sql_query(jcr->db, buf.c_str(), db_get_int_handler, nb);
-   Dmsg2(200, "jobids=%s nb=%s\n", jobids, nb);
-   jcr->file_bsock->fsend("accurate files=%s\n", nb); 
+   Mmsg(buf, "SELECT sum(JobFiles) FROM Job WHERE JobId IN (%s)",jobids.list);
+   db_sql_query(jcr->db, buf.c_str(), db_list_handler, &nb);
+   Dmsg2(200, "jobids=%s nb=%s\n", jobids.list, nb.list);
+   jcr->file_bsock->fsend("accurate files=%s\n", nb.list); 
 
    if (!db_open_batch_connexion(jcr, jcr->db)) {
       Jmsg0(jcr, M_FATAL, 0, "Can't get dedicate sql connexion");
       return false;
    }
 
-   db_get_file_list(jcr, jcr->db_batch, jobids, accurate_list_handler, (void *)jcr);
+   db_get_file_list(jcr, jcr->db_batch, jobids.list, accurate_list_handler, (void *)jcr);
 
    /* TODO: close the batch connexion ? (can be used very soon) */
-
-   free_pool_memory(jobids);
-   free_pool_memory(nb);
 
    jcr->file_bsock->signal(BNET_EOD);
 

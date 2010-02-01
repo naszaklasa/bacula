@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: signal.c 8132 2008-12-09 19:21:38Z ricozz $
+ *   Version $Id$
  *
  * Note, we probably should do a core dump for the serious
  * signals such as SIGBUS, SIGPFE, ...
@@ -90,7 +90,7 @@ static void dbg_print_bacula()
    char buf[512];
 
    snprintf(buf, sizeof(buf), "%s/%s.%d.bactrace", 
-            working_directory, my_name, getpid());
+            working_directory, my_name, (int)getpid());
    FILE *fp = fopen(buf, "ab") ;
    if (!fp) {
       fp = stderr;

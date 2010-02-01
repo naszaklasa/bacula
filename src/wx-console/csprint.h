@@ -4,7 +4,7 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: csprint.h 7380 2008-07-14 10:42:59Z kerns $
+ *    Version $Id$
  */
 /*
    Bacula® - The Network Backup Solution

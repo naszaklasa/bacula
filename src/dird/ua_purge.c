@@ -35,7 +35,7 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id: ua_purge.c 8236 2008-12-23 14:10:59Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

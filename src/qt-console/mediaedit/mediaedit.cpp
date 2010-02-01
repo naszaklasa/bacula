@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: mediaedit.cpp 9038 2009-07-16 20:13:04Z ricozz $
+ *   Version $Id$
  *
  *   Dirk Bartley, March 2007
  */

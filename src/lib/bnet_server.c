@@ -29,7 +29,7 @@
   * Originally written by Kern Sibbald for inclusion in apcupsd,
   *  but heavily modified for Bacula
   *
-  *   Version $Id: bnet_server.c 8375 2009-01-18 20:44:50Z kerns $
+  *   Version $Id$
   */
 
 #include "bacula.h"

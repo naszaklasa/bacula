@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /* 
- *   Version $Id: mainwin.h 8898 2009-06-13 23:33:00Z bartleyd2 $
+ *   Version $Id$
  *
  * qt-console main window class definition.
  *

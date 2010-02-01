@@ -1,7 +1,52 @@
-              Technical notes for current SVN
+              Technical notes for 3.0.3
           
 General:
 
+Release Version 3.0.3:
+18Oct09
+kes  Apply James' fix for some Exchange plugin crashes
+16Oct09
+kes  Integrate patch for building dmg on OSX from Lorenz Schori <lo@znerol.ch>
+kes  Fix bug #1391 Job status improperly set due to subtle variable overload problem
+13Oct09
+ebl  Fix #1352 about double free with regexp and big filenames on windows
+11Oct09
+kes  Apply Graham's idea for recovering from disk full by recursing
+     when doing fixup_write_error ...
+kes  Make fix for VirtualFull changing device based on suggestion by
+     Nicolae Mihalache <mache@abcpages.com>
+05Oct09
+kes  Fix concurrent Job recycle bug #1288
+kes  Backport part of one possible fix from bug #1346
+03Oct09
+kes  Fix bug #1382 newly created disk volumes -> file not found warning
+kes  Fix Alpha ifdefing -- should fix bug #1359
+ebl  Use old code for selecting file during
+     restore.
+kes  Cherry-pick 3.1.x commits
+     tweak space on projects file
+     Fix seg fault in ignoredir code
+     Apply Frank's slash patch
+10Sep09
+ebl  Apply patches
+     Fix seg fault in SD bug #1371
+       3.0.2-Fix-seg-fault-in-SD-bug-1371.patch 
+     Add more info when SD connection refused
+       3.0.2-Add-more-info-when-SD-connection-refused.patch
+     Fix bug #1355 Director crashes with double free in Accurate SQL query
+       3.0.2-accurate.patch
+     Fixes bug #1368 ASSERT Failure on MacOS.
+       3.0.2-mac-path-len.patch
+     Fix #1364 and #1363 about compression buffer error.
+       3.0.2-zlib-buffer.patch
+     Fixes bug #1365 and #1366 about MacOSX resource forks. 
+       3.0.2-bug-1365.patch and 3.0.2-bug-1366.patch
+     Fix "Exclude Dir Containing" fileset option
+       3.0.2-exclude-dir-containing-fd.patch
+       3.0.2-exclude-dir-containing.patch
+       3.0.2-exclude-dir-containing-top_level.patch
+
+Release version 3.0.2:
 18Jul09
 kes  Fix bat command line input bug
 17Jul09

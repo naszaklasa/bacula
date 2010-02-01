@@ -31,7 +31,7 @@
  *  Program to convert uid and gid into names, and cache the results
  *   for preformance reasons.
  *
- *  Version $Id: guid_to_name.h 7380 2008-07-14 10:42:59Z kerns $
+ *  Version $Id$
  */
 
 class guid_list {

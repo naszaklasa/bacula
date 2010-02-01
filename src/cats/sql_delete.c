@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, December 2000
  *
- *    Version $Id: sql_delete.c 7380 2008-07-14 10:42:59Z kerns $
+ *    Version $Id$
  */
 /*
    Bacula® - The Network Backup Solution

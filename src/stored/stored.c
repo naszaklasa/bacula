@@ -35,7 +35,7 @@
  * it opens a data channel and accepts data from the
  * File daemon.
  *
- *   Version $Id: stored.c 8132 2008-12-09 19:21:38Z ricozz $
+ *   Version $Id$
  *
  */
 

@@ -2,7 +2,7 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id: mtx-changer.in 7395 2008-07-18 08:44:03Z kerns $
+#  $Id$
 #
 #  If you set in your Device resource
 #

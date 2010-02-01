@@ -38,7 +38,7 @@
  * for the external world. This is control with
  * the define __SQL_C, which is defined only in sql.c
  *
- *    Version $Id: cats.h 8918 2009-06-23 11:56:35Z ricozz $
+ *    Version $Id$
  */
 
 /*
@@ -1035,6 +1035,16 @@ struct FILESET_DBR {
 struct db_int64_ctx {
    int64_t value;                     /* value returned */
    int count;                         /* number of values seen */
+};
+
+/* Call back context for getting a list of comma separated strings from the database */
+class db_list_ctx {
+public:
+   POOLMEM *list;                     /* list */
+   int count;                         /* number of values seen */
+
+   db_list_ctx() { list = get_pool_memory(PM_FNAME); *list = 0; count = 0; }
+   ~db_list_ctx() { free_pool_memory(list); list = NULL; }
 };
 
 
