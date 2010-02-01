@@ -2,7 +2,8 @@ bacula (3.0.2-4) UNRELEASED; urgency=low
 
   * Ack NMU.  Closes: #549982, #565877, #543179, #544594, #544610.
     Closes: #545729, #555450, #545408, #567660.
-  * Improve manpages for: bcopy, bextract
+  * Improve manpages for: bcopy, bextract, bls, btraceback, bacula-fd,
+    bacula-sd, bacula-dir, bconsole, dbcheck, btape, bscan.
     Patches by Lucas B. Cohen
     Closes: #499619.
   * Import upstream patch to add bsmtp manpage and update
