@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH BACULA\-DIR 8 "26 September 2009" "Kern Sibbald" "Network backup, recovery&verification"
+.TH BACULA\-DIR 8 "6 December 2009" "Kern Sibbald" "Network backup, recovery&verification"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .SH NAME
@@ -22,36 +22,38 @@ network backup system: it is responsible for scheduling and
 coordinating backups across the network.
 .SH OPTIONS
 .TP
-.B \-c\  config
-Change location to read \fIbacula\-sd.conf\fP from (default $CWD)
+.BI \-c\  file
+Specify the configuration file to use.
 .TP
-.B \-d <nn>
+.BI \-d\  nn
 Set debug level to \fInn\fP.
 .TP
-.B \-dt
-Print a timestamp in debug output
+.BI \-dt
+Print timestamp in debug output.
 .TP
-.B \-f
-Run in the foreground (for debuggin)
+.BI \-f
+Run in foreground (for debugging).
 .TP
 .BI \-g\  group
 Set the group/gid to run as.
 .TP
-.B \-s
-No signals. Used in debugging only.
+.BI \-r\  job
+Run <job>.
+.TP
+.BI \-s
+No signals (for debugging).
 .TP
 .B \-t
-Test config mode: read configuration and exit.
+Test the configuration file and report errors.
 .TP
 .BI \-u\  user
 Set the username/uid to run as.
 .TP
-.B \-v
-Verbose user messages
+.BI \-v
+Set verbose mode.
 .TP
-.B \-?
+.BI \-?
 Show version and usage of program.
-
 .SH TCP-WRAPPERS CONFIGURATION
 Tcpwrappers looks for the service name of the bacula daemons in
 .I hosts.allow
