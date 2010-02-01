@@ -31,7 +31,7 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: console_thread.cpp 7380 2008-07-14 10:42:59Z kerns $
+ *    Version $Id$
  */
 
 // http://66.102.9.104/search?q=cache:Djc1mPF3hRoJ:cvs.sourceforge.net/viewcvs.py/audacity/audacity-src/src/AudioIO.cpp%3Frev%3D1.102+macos+x+wxthread&hl=fr

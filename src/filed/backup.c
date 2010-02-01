@@ -31,7 +31,7 @@
  *
  *    Kern Sibbald, March MM
  *
- *   Version $Id: backup.c 8958 2009-07-05 07:58:51Z marcovw $
+ *   Version $Id$
  *
  */
 

@@ -1,45 +1,27 @@
 
-               Release Notes for Bacula 3.0.2
+               Release Notes for Bacula 3.0.3
 
-  Bacula code: Total files = 1,009 Total lines = 205,726 (Using SLOCCount)
+  Bacula code: Total files = 1,009 Total lines = 206,204 (Using SLOCCount)
 
 Note, if you are not already running 3.0.x, read the 3.0.x release notes 
-below.  Important!!!
+  below.  Important!!!
 
-Version 3.0.2 is primarily a important bug fix update to version 3.0.1 with
-some enhancements (see below).
+Version 3.0.3 is primarily a important bug fix update to version 3.0.2.
 
-Changes since 3.0.1:
-
+Changes since 3.0.2:
 Bug fixes:
-  1029, 1285, 1298, 1303, 1304, 1305, 1306, 1307, 1308, 1309, 1311, 1315
-  1317, 1318, 1323, 1325, 1331, 1333, 1335
-
-Fixed:
- - Fix problem with the Postgresql driver that sometime displays <NULL> values
- - Cleanup old job records when starting the Director
- - Fix bugs in xattr code
- - Fix encoding problem with Postgresql
- - Fix that prevents restore by file selection from using Copy job
-
-Enhancements:
- - Security enhancement for the File Daemon
- - New directive to specify source address for outgoing connexions
- - Show volume availability in autochanger when doing restore.
-   This is project 31 in the projects file.
- - Add accurate=yes/no option to estimate command
- - Add --with-hostname, --with-bsrdir, --with-logdir to ./configure
- - Add a restore menu that contructs a full restore when entering a JobId.
-   This is project 2 in the projects file.
- - Add new Nagios plugin
+ 1391, 1288, 1346, 1352, 1359, 1355, 1363, 1364, 1365, 1366, 1368, 
+ 1369, 1370, 1371, 1382
 
 Compatibility:
-Like always, both the Director and Storage daemon must be upgraded at
-the same time.
+ As always, both the Director and Storage daemon must be upgraded at
+ the same time.
 
-Older 3.0.x and possibly 2.4.x File Daemons are compatible with the 3.0.2
-Director and Storage daemons. It should be no need to upgrade older File
-Daemon.
+ Older 3.0.x and possibly 2.4.x File Daemons are compatible with the 3.0.3
+ Director and Storage daemons. There should be no need to upgrade older File
+ Daemons.
+
+
 
 ============ Documentation improvements needed ==================
 
@@ -55,6 +37,11 @@ The documentation will not be completed in the near future due to lack
 manpower.  If you are unhappy with this situation as we are, we suggest
 you help by submitting patches to the documentation.  Thanks.
 =====
+
+================== 3.0.2 Release Notes ========================
+
+Version 3.0.2 is primarily a important bug fix update to version 3.0.1 with
+some enhancements.
 
 ================== 3.0.1 Release Notes ========================
 

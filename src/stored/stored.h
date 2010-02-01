@@ -28,7 +28,7 @@
 /*
  * Storage daemon specific defines and includes
  *
- *  Version $Id: stored.h 8052 2008-11-18 10:59:12Z ricozz $
+ *  Version $Id$
  */
 
 #ifndef __STORED_H_

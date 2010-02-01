@@ -33,7 +33,7 @@
  *
  *     Kern Sibbald, June MMI   adapted to bat, Jan MMVI
  *
- *     Version $Id: dircomm_auth.cpp 9052 2009-07-18 03:00:36Z bartleyd2 $
+ *     Version $Id$
  *
  */
 

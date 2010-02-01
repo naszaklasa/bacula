@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_cmds.c 8950 2009-07-02 12:39:46Z ricozz $
+ *   Version $Id$
  */
  
 #include "bacula.h"

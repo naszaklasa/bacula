@@ -1,7 +1,7 @@
 /*
  * Define Host machine
  *
- *  Version $Id: winhost.h 8732 2009-04-15 13:50:26Z ricozz $
+ *  Version $Id$
  *
  */
 /*

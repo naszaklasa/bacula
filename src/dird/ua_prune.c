@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id: ua_prune.c 8478 2009-02-18 20:11:55Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

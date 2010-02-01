@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: joblog.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *   Version $Id$
  *
  *  JobLog Class
  *

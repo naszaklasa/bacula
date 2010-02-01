@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: medialist.cpp 8876 2009-05-30 18:51:09Z bartleyd2 $
+ *   Version $Id$
  *
  *  MediaList Class
  *

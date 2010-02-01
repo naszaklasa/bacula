@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: dircomm.cpp 9052 2009-07-18 03:00:36Z bartleyd2 $
+ *   Version $Id$
  *
  *  Console Class
  *

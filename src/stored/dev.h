@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, MM
  *
- *   Version $Id: dev.h 7892 2008-10-24 13:04:16Z kerns $
+ *   Version $Id$
  *
  */
 

@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, June MMIII  (code pulled from filed/restore.c and updated)
  *
- *   Version $Id: attr.c 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 

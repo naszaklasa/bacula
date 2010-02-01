@@ -29,7 +29,7 @@
  * Append code for Storage daemon
  *  Kern Sibbald, May MM
  *
- *  Version $Id: append.c 8528 2009-03-14 16:51:26Z kerns $
+ *  Version $Id$
  */
 
 #include "bacula.h"

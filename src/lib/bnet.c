@@ -33,7 +33,7 @@
  * Adapted and enhanced for Bacula, originally written
  * for inclusion in the Apcupsd package
  *
- *   Version $Id: bnet.c 8863 2009-05-26 13:44:08Z ricozz $
+ *   Version $Id$
  */
 
 

@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: util.c 8910 2009-06-18 12:54:45Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

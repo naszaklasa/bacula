@@ -32,7 +32,7 @@
  *
  *  Bacula utility functions are in util.c
  *
- *   Version $Id: bsys.c 8206 2008-12-20 19:05:40Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

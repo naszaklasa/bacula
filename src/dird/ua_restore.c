@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -37,7 +37,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_restore.c 8986 2009-07-14 13:49:57Z ricozz $
+ *   Version $Id$
  */
 
 
@@ -556,6 +556,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
       char *fname;
       int len;
       bool gui_save;
+      db_list_ctx jobids;
 
       start_prompt(ua, _("To select the JobIds, you have the following choices:\n"));
       for (int i=0; list[i]; i++) {
@@ -752,9 +753,10 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
             return 0;
          }
          jr.JobLevel = L_INCREMENTAL; /* Take Full+Diff+Incr */
-         if (!db_accurate_get_jobids(ua->jcr, ua->db, &jr, rx->JobIds)) {
+         if (!db_accurate_get_jobids(ua->jcr, ua->db, &jr, &jobids)) {
             return 0;
          }
+         pm_strcpy(rx->JobIds, jobids.list);
          Dmsg1(30, "Item 12: jobids = %s\n", rx->JobIds);
          break;
       case 12:                        /* Cancel or quit */
@@ -1086,7 +1088,7 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
    ua->info_msg(_("\nBuilding directory tree for JobId(s) %s ...  "),
                 rx->JobIds);
 
-#define new_get_file_list
+/* Disable accurate query waiting for using StartTime instead of FileId in file selection */
 #ifdef new_get_file_list
    if (!db_get_file_list(ua->jcr, ua->db, rx->JobIds, insert_tree_handler, (void *)&tree)) {
       ua->error_msg("%s", db_strerror(ua->db));

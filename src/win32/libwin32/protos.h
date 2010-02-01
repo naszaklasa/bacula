@@ -28,7 +28,7 @@
 /*
  * Kern Sibbald, August 2007
  *
- *   Version $Id: protos.h 8681 2009-04-03 09:16:48Z kerns $
+ *   Version $Id$
  */
 
 #define log_error_message(msg) LogErrorMsg((msg), __FILE__, __LINE__)

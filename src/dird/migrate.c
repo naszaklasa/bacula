@@ -41,7 +41,7 @@
  *       to do the backup.
  *     When the Storage daemon finishes the job, update the DB.
  *
- *   Version $Id: migrate.c 8888 2009-06-05 17:05:49Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

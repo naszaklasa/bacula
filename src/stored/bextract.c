@@ -31,7 +31,7 @@
  *
  *   Kern E. Sibbald, MM
  *
- *   Version $Id: bextract.c 8235 2008-12-23 13:28:03Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -438,9 +438,16 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
             wbuf = rec->data;
             wsize = rec->data_len;
          }
-         compress_len = compress_buf_size;
-         if ((stat=uncompress((Bytef *)compress_buf, &compress_len,
-               (const Bytef *)wbuf, (uLong)wsize) != Z_OK)) {
+
+         while ((stat=uncompress((Byte *)compress_buf, &compress_len,
+                                 (const Byte *)wbuf, (uLong)wsize)) == Z_BUF_ERROR)
+         {
+            /* The buffer size is too small, try with a bigger one */
+            compress_len = compress_len + (compress_len >> 1);
+            compress_buf = check_pool_memory_size(compress_buf,
+                                                  compress_len);
+         }
+         if (stat != Z_OK) {
             Emsg1(M_ERROR, 0, _("Uncompression error. ERR=%d\n"), stat);
             extract = false;
             return true;

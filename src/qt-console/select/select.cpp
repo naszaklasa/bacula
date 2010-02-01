@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, March MMVII
  *
- *  $Id: select.cpp 8775 2009-04-30 16:57:18Z bartleyd2 $
+ *  $Id$
  */ 
 
 #include "bat.h"

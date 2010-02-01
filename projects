@@ -78,20 +78,21 @@ What:   Add to the bconsole 'restore' menu the ability to select a job
         dependent jobs.
 
         Why: Currently, you either have to...
-        a) laboriously type in a date that is greater than the date of the backup that
-        you want and is less than the subsequent backup (bacula then figures out the
-        dependent jobs), or
-        b) manually figure out all the JobIds that you want and laboriously type them
-        all in.
-        It would be extremely useful (in a programmatical sense, as well as for humans)
-        to be able to just give it a single JobId and let bacula do the hard work (work
-        that it already knows how to do).
 
-        Notes (Kern): I think this should either be modified to have Bacula print
-        a list of dates that the user can choose from as is done in bwx-console and
-        bat or the name of this command must be carefully chosen so that the user
-        clearly understands that the JobId is being used to specify what Job and the
-        date to which he wishes the restore to happen.
+        a) laboriously type in a date that is greater than the date of the
+        backup that you want and is less than the subsequent backup (bacula
+        then figures out the dependent jobs), or
+        b) manually figure out all the JobIds that you want and laboriously
+        type them all in.  It would be extremely useful (in a programmatical
+        sense, as well as for humans) to be able to just give it a single JobId
+        and let bacula do the hard work (work that it already knows how to do).
+
+        Notes (Kern): I think this should either be modified to have Bacula
+        print a list of dates that the user can choose from as is done in
+        bwx-console and bat or the name of this command must be carefully
+        chosen so that the user clearly understands that the JobId is being
+        used to specify what Job and the date to which he wishes the restore to
+        happen.
 
 
 Item  3: Scheduling syntax that permits more flexibility and options
@@ -205,9 +206,14 @@ Item  4: Data encryption on storage daemon
   Date:  04 February 2009
   Status: new
 
-  What:  The storage demon should be able to do the data encryption that can currently be done by the file daemon.
+  What: The storage demon should be able to do the data encryption that can
+        currently be done by the file daemon.
 
-  Why:   This would have 2 advantages: 1) one could encrypt the data of unencrypted tapes by doing a migration job, and 2) the storage daemon would be the only machine that would have to keep the encryption keys.
+  Why: This would have 2 advantages: 
+       1) one could encrypt the data of unencrypted tapes by doing a 
+          migration job
+       2) the storage daemon would be the only machine that would have 
+          to keep the encryption keys.
 
   Notes from Landon:
           As an addendum to the feature request, here are some crypto  
@@ -393,54 +399,53 @@ Status: Proposing
 What:  The ability to restore from volumes held by multiple storage daemons
         would be very useful.
 
-Why:   It is useful to be able to backup to any number of different storage
-        daemons. For example, your first storage daemon may run out of space, so you
-        switch to your second and carry on. Bacula will currently let you do this.
-        However, once you come to restore, bacula cannot cope when volumes on different
-        storage daemons are required.
+Why: It is useful to be able to backup to any number of different storage
+        daemons. For example, your first storage daemon may run out of space,
+        so you switch to your second and carry on. Bacula will currently let
+        you do this.  However, once you come to restore, bacula cannot cope
+        when volumes on different storage daemons are required.
 
-        Notes: The director knows that more than one storage daemon is needed, as
-        bconsole outputs something like the following table.
+        Notes: The director knows that more than one storage daemon is needed,
+        as bconsole outputs something like the following table.
 
         The job will require the following
            Volume(s)                 Storage(s)                SD Device(s)
-        ===========================================================================
+        =====================================================================
            
-           backup-0001               Disk 1                    Disk 1.0                 
-           backup-0002               Disk 2                    Disk 2.0             
+           backup-0001               Disk 1                    Disk 1.0 
+           backup-0002               Disk 2                    Disk 2.0 
 
-        However, the bootstrap file that it creates gets sent to the first storage
-        daemon only, which then stalls for a long time, 'waiting for a mount request'
-        for the volume that it doesn't have.
-        The bootstrap file contains no knowledge of the storage daemon.
-        Under the current design:
+        However, the bootstrap file that it creates gets sent to the first
+        storage daemon only, which then stalls for a long time, 'waiting for a
+        mount request' for the volume that it doesn't have.  The bootstrap file
+        contains no knowledge of the storage daemon.  Under the current design:
 
-                The director connects to the storage daemon, and gets an sd_auth_key.
-                The director then connects to the file daemon, and gives it the
-                        sd_auth_key with the 'jobcmd'.
-                (restoring of files happens)
-                The director does a 'wait_for_storage_daemon_termination()'.
-                The director waits for the file daemon to indicate the end of the job.
+        The director connects to the storage daemon, and gets an sd_auth_key.
+        The director then connects to the file daemon, and gives it the
+        sd_auth_key with the 'jobcmd'.  (restoring of files happens) The
+        director does a 'wait_for_storage_daemon_termination()'.  The director
+        waits for the file daemon to indicate the end of the job.
 
         With my idea:
 
         The director connects to the file daemon.
         Then, for each storage daemon in the .bsr file...  {
-                The director connects to the storage daemon, and gets an sd_auth_key.
-                The director then connects to the file daemon, and gives it the
-                        sd_auth_key with the 'storaddr' command.
-                (restoring of files happens)
-                The director does a 'wait_for_storage_daemon_termination()'.
-                The director waits for the file daemon to indicate the end of the
-                        work on this storage.
+          The director connects to the storage daemon, and gets an sd_auth_key.
+          The director then connects to the file daemon, and gives it the
+                   sd_auth_key with the 'storaddr' command.
+          (restoring of files happens)
+          The director does a 'wait_for_storage_daemon_termination()'.
+          The director waits for the file daemon to indicate the end of the
+                   work on this storage.
         }
-        The director tells the file daemon that there are no more storages to contact.
-        The director waits for the file daemon to indicate the end of the job.
 
-        As you can see, each restore between the file daemon and storage daemon is
-        handled in the same way that it is currently handled, using the same method
-        for authentication, except that the sd_auth_key is moved from the 'jobcmd' to
-        the 'storaddr' command - where it logically belongs.
+        The director tells the file daemon that there are no more storages to
+        contact.  The director waits for the file daemon to indicate the end of
+        the job.  As you can see, each restore between the file daemon and
+        storage daemon is handled in the same way that it is currently handled,
+        using the same method for authentication, except that the sd_auth_key
+        is moved from the 'jobcmd' to the 'storaddr' command - where it
+        logically belongs.
 
 
 Item 11: Implement Storage daemon compression
@@ -633,8 +638,8 @@ Status:
            would expand to this {first|last} {Month|Week|Day|Mo-Fri} of the
            {Year|Month|Week} you would be able to run really flexible jobs.
 
-           To got a certain Job run on the last Friday of the Month for example one could 
-           then write
+           To got a certain Job run on the last Friday of the Month for example
+           one could then write
 
               Run = pool=Monthly last Fri of the Month at 23:50
 
@@ -718,7 +723,8 @@ Item 21: Message mailing based on backup types
           or Incremental/Differential Backups (which would likely be kept
           onsite).
 
- Notes:  One way this could be done is through additional message types, for example:
+ Notes: One way this could be done is through additional message types, for
+ example:
 
    Messages {
      # email the boss only on full system backups
@@ -760,9 +766,9 @@ Item 23: "Maximum Concurrent Jobs" for drives when used with changer device
           per drive in this situation.
 
   Notes: Using different priorities for these jobs lead to problems that other
-          jobs are blocked. On the user list I got the advice to use the "Prefer Mounted
-          Volumes" directive, but Kern advised against using "Prefer Mounted
-          Volumes" in an other thread:
+          jobs are blocked. On the user list I got the advice to use the
+          "Prefer Mounted Volumes" directive, but Kern advised against using
+          "Prefer Mounted Volumes" in an other thread:
           http://article.gmane.org/gmane.comp.sysutils.backup.bacula.devel/11876/
 
           In addition I'm not sure if this would be the same as respecting the
@@ -793,7 +799,8 @@ Item 23: "Maximum Concurrent Jobs" for drives when used with changer device
           
           [2 more drives] 
 
-          The "Maximum Concurrent Jobs = 1" directive in the drive's section is ignored.
+          The "Maximum Concurrent Jobs = 1" directive in the drive's section is
+          ignored.
 
 
 Item 24: Implementation of running Job speed limit.
@@ -983,8 +990,8 @@ Item 31: List InChanger flag when doing restore.
    Date: 17 Oct 2008
  Status: Done in version 3.0.2
 
-   What: When doing a restore the restore selection dialog ends by telling stuff 
-      like this:
+   What: When doing a restore the restore selection dialog ends by telling
+         stuff like this:
   The job will require the following
    Volume(s)                 Storage(s)                SD Device(s)
    ===========================================================================
@@ -1291,18 +1298,19 @@ Item 1:   Relabel disk volume after recycling
   Date:   07 May 2009.
   Status: Not implemented yet, no code written.
 
-  What:   The ability to relabel the disk volume (and thus rename the file on the disk) 
-          after it has been recycled. Useful when you have a single job per disk volume, 
-          and you use a custom Label format, for example: 
-          Label Format = "${Client}-${Level}-${NumVols:p/4/0/r}-${Year}_${Month}_${Day}-${Hour}_${Minute}"
+  What: The ability to relabel the disk volume (and thus rename the file on the
+        disk) after it has been recycled. Useful when you have a single job
+        per disk volume, and you use a custom Label format, for example:
+        Label Format =
+        "${Client}-${Level}-${NumVols:p/4/0/r}-${Year}_${Month}_${Day}-${Hour}_${Minute}"
 
-  Why:    Disk volumes in Bacula get the label/filename when they are used for the first time.
-          If you use recycling and custom label format like above, the disk
-          volume name doesn't match the contents after it has been recycled.
-          This feature makes it possible to keep the label/filename in sync
-          with the content and thus makes it easy to check/monitor the backups
-          from the shell and/or normal file management tools, because the filenames 
-          of the disk volumes match the content.
+  Why: Disk volumes in Bacula get the label/filename when they are used for the
+       first time.  If you use recycling and custom label format like above,
+       the disk volume name doesn't match the contents after it has been
+       recycled.  This feature makes it possible to keep the label/filename
+       in sync with the content and thus makes it easy to check/monitor the
+       backups from the shell and/or normal file management tools, because
+       the filenames of the disk volumes match the content.
 
   Notes:  The configuration option could be "Relabel after Recycling = Yes".
 

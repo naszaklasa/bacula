@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, December MM
  *
- *    Version $Id: dird.h 8040 2008-11-12 13:50:00Z ricozz $
+ *    Version $Id$
  */
 
 #include "lib/runscript.h"

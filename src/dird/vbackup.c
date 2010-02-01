@@ -50,7 +50,7 @@
 
 static const int dbglevel = 10;
 
-static bool create_bootstrap_file(JCR *jcr, POOLMEM *jobids);
+static bool create_bootstrap_file(JCR *jcr, char *jobids);
 void vbackup_cleanup(JCR *jcr, int TermCode);
 
 /* 
@@ -135,6 +135,7 @@ bool do_vbackup(JCR *jcr)
    char ed1[100];
    BSOCK *sd;
    char *p;
+   db_list_ctx jobids;
 
    Dmsg2(100, "rstorage=%p wstorage=%p\n", jcr->rstorage, jcr->wstorage);
    Dmsg2(100, "Read store=%s, write store=%s\n", 
@@ -157,16 +158,15 @@ bool do_vbackup(JCR *jcr)
 _("This Job is not an Accurate backup so is not equivalent to a Full backup.\n"));
    }
 
-   POOLMEM *jobids = get_pool_memory(PM_FNAME);
    jcr->jr.JobLevel = L_VIRTUAL_FULL;
-   db_accurate_get_jobids(jcr, jcr->db, &jcr->jr, jobids);
-   jcr->jr.JobLevel = L_FULL;
-   Dmsg1(10, "Accurate jobids=%s\n", jobids);
-   if (*jobids == 0) {
-      free_pool_memory(jobids);
+   db_accurate_get_jobids(jcr, jcr->db, &jcr->jr, &jobids);
+   Dmsg1(10, "Accurate jobids=%s\n", jobids.list);
+   if (jobids.count == 0) {
       Jmsg(jcr, M_FATAL, 0, _("No previous Jobs found.\n"));
       return false;
    }
+
+   jcr->jr.JobLevel = L_FULL;
 
    /*
     * Now we find the last job that ran and store it's info in
@@ -174,11 +174,11 @@ _("This Job is not an Accurate backup so is not equivalent to a Full backup.\n")
     *  values from that job so that anything changed after that
     *  time will be picked up on the next backup.
     */
-   p = strrchr(jobids, ',');              /* find last jobid */
+   p = strrchr(jobids.list, ',');           /* find last jobid */
    if (p != NULL) {
       p++;
    } else {
-      p = jobids;
+      p = jobids.list;
    }
    memset(&jcr->previous_jr, 0, sizeof(jcr->previous_jr));
    jcr->previous_jr.JobId = str_to_int64(p);
@@ -189,12 +189,10 @@ _("This Job is not an Accurate backup so is not equivalent to a Full backup.\n")
       return false;
    }
 
-   if (!create_bootstrap_file(jcr, jobids)) {
+   if (!create_bootstrap_file(jcr, jobids.list)) {
       Jmsg(jcr, M_FATAL, 0, _("Could not get or create the FileSet record.\n"));
-      free_pool_memory(jobids);
       return false;
    }
-   free_pool_memory(jobids);
 
    /*
     * Open a message channel connection with the Storage
@@ -476,7 +474,7 @@ int insert_bootstrap_handler(void *ctx, int num_fields, char **row)
 }
 
 
-static bool create_bootstrap_file(JCR *jcr, POOLMEM *jobids)
+static bool create_bootstrap_file(JCR *jcr, char *jobids)
 {
    RESTORE_CTX rx;
    UAContext *ua;

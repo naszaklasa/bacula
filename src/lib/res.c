@@ -31,7 +31,7 @@
  *     Kern Sibbald, January MM
  *       Split from parse_conf.c April MMV
  *
- *   Version $Id: res.c 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

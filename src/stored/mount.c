@@ -32,7 +32,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: mount.c 8561 2009-03-20 14:52:17Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -145,6 +145,7 @@ mount_next_vol:
       autochanger = false;
       VolCatInfo.Slot = 0;
       ask = retry >= 2;
+      do_find = true;           /* do find_a_volume if we retry */
    }
    Dmsg1(150, "autoload_dev returns %d\n", autochanger);
    /*
@@ -214,6 +215,8 @@ mount_next_vol:
       if (try_autolabel(false) == try_read_vol) {
          break;                       /* created a new volume label */
       }
+      Jmsg3(jcr, M_WARNING, 0, _("Open device %s Volume \"%s\" failed: ERR=%s\n"),
+            dev->print_name(), dcr->VolumeName, dev->bstrerror());
       Dmsg0(50, "set_unload\n");
       dev->set_unload();              /* force ask sysop */
       ask = true;

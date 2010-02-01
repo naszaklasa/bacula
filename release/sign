@@ -1,0 +1,3 @@
+#!/bin/sh
+gpg --detach-sign --armor --default-key bacula -o $1.sig $1
+gpg --verify $1.sig

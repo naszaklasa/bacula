@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_output.c 8508 2009-03-07 20:59:46Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -456,7 +456,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
          }
          list_nextvol(ua, n);
       } else if (strcasecmp(ua->argk[i], NT_("copies")) == 0) {
-         char *jobids=NULL;
+         char *jobids = NULL;
          uint32_t limit=0;
          for (j=i+1; j<ua->argc; j++) {
             if (strcasecmp(ua->argk[j], NT_("jobid")) == 0 && ua->argv[j]) {

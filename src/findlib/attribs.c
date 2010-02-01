@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, October MMII
  *
- *   Version $Id: attribs.c 8681 2009-04-03 09:16:48Z kerns $
+ *   Version $Id$
  *
  */
 

@@ -32,7 +32,7 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id: lex.h 8176 2008-12-17 14:03:44Z ricozz $
+ *   Version $Id$
  *
  */
 

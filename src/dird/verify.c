@@ -38,7 +38,7 @@
  *     When the File daemon sends the attributes, compare them to
  *       what is in the DB.
  *
- *   Version $Id: verify.c 8988 2009-07-14 14:01:19Z ricozz $
+ *   Version $Id$
  */
 
 

@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, November MM
  *
- *   Version $Id: create_file.c 7700 2008-10-04 10:50:50Z kerns $
+ *   Version $Id$
  *
  */
 

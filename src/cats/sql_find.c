@@ -34,7 +34,7 @@
  *
  *    Kern Sibbald, December 2000
  *
- *    Version $Id: sql_find.c 8944 2009-07-02 09:22:20Z kerns $
+ *    Version $Id$
  */
 
 

@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, August MMI
  *
- *     Version $Id: ua.h 7774 2008-10-13 13:03:44Z ricozz $
+ *     Version $Id$
  */
 
 #ifndef __UA_H_

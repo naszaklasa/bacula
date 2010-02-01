@@ -2,7 +2,7 @@
  * Define Message Types for Bacula
  *    Kern Sibbald, 2000
  *
- *   Version $Id: message.h 8076 2008-11-22 18:36:12Z kerns $
+ *   Version $Id$
  */
 /*
    Bacula® - The Network Backup Solution

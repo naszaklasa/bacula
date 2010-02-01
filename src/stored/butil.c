@@ -36,7 +36,7 @@
  *    daemon because we interact more directly with the user
  *    i.e. printf, ...
  *
- *   Version $Id: butil.c 7873 2008-10-21 21:06:13Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, December MMII
  *
- *   Version $Id: edit.c 8209 2008-12-20 22:02:31Z ricozz $
+ *   Version $Id$
  */
 /*
    Bacula® - The Network Backup Solution

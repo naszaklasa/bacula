@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, March 2002
  *
- *     Version $Id: console_conf.h 7380 2008-07-14 10:42:59Z kerns $
+ *     Version $Id$
  */
 
 #ifndef __CONSOLE_CONF_H_

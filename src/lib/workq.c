@@ -31,7 +31,7 @@
  *
  *  Kern Sibbald, January MMI
  *
- *   Version $Id: workq.c 8132 2008-12-09 19:21:38Z ricozz $
+ *   Version $Id$
  *
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof

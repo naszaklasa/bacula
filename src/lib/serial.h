@@ -29,7 +29,7 @@
  *
  * Written by John Walker, MM
  *
- *   Version $Id: serial.h 8087 2008-11-26 14:11:19Z kerns $
+ *   Version $Id$
  */
 
 /*  Serialisation support functions from serial.c.  */

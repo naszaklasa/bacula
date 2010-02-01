@@ -207,6 +207,9 @@ then
 elif test -f /etc/slackware-version
 then
         DISTNAME=slackware
+elif test x$host_vendor = xapple
+then
+    DISTNAME=osx
 elif test $HAVE_UNAME=yes -a x`uname -s` = xDarwin
 then
     DISTNAME=darwin

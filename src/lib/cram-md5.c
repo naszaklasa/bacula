@@ -32,7 +32,7 @@
  *
  * Written for Bacula by Kern E. Sibbald, May MMI.
  *
- *   Version $Id: cram-md5.c 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

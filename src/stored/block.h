@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: block.h 8062 2008-11-19 19:34:48Z kerns $
+ *   Version $Id$
  *
  */
 

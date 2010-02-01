@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: fileset.cpp 8896 2009-06-13 14:55:28Z bartleyd2 $
+ *   Version $Id$
  *
  *  FileSet Class
  *

@@ -27,7 +27,7 @@
 ; Added Bacula-SD and Bacula-DIR
 ; Replaced ParameterGiven with standard GetOptions
 ;
-; Version $Id: winbacula.nsi 8688 2009-04-04 19:19:26Z kerns $
+; Version $Id$
 ;
 ; Command line options:
 ;

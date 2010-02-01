@@ -45,7 +45,7 @@
  *       Requests are any message that does not begin with a digit.
  *       In affect, they are commands.
  *
- *   Version $Id: getmsg.c 8640 2009-03-29 10:55:53Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

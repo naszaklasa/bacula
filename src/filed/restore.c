@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, November MM
  *
- *   Version $Id: restore.c 8957 2009-07-04 21:18:49Z marcovw $
+ *   Version $Id$
  *
  */
 
@@ -120,7 +120,7 @@ static void close_previous_stream(r_ctx &rctx);
 
 
 static bool verify_signature(JCR *jcr, r_ctx &rctx);
-int32_t extract_data(JCR *jcr, r_ctx &rctx, POOLMEM *buf, int32_t buflen,
+int32_t extract_data(JCR *jcr, BFILE *bfd, POOLMEM *buf, int32_t buflen,
                      uint64_t *addr, int flags, RESTORE_CIPHER_CTX *cipher_ctx);
 bool flush_cipher(JCR *jcr, BFILE *bfd, uint64_t *addr, int flags, 
                   RESTORE_CIPHER_CTX *cipher_ctx);
@@ -207,7 +207,7 @@ void do_restore(JCR *jcr)
 
    if (have_libz) {
       uint32_t compress_buf_size = jcr->buf_size + 12 + ((jcr->buf_size+999) / 1000) + 100;
-      jcr->compress_buf = (char *)bmalloc(compress_buf_size);
+      jcr->compress_buf = get_memory(compress_buf_size);
       jcr->compress_buf_size = compress_buf_size;
    }
 
@@ -363,7 +363,6 @@ void do_restore(JCR *jcr)
             rctx.extract = true;
             /* FALLTHROUGH */
          case CF_CREATED:        /* File created, but there is no content */
-            jcr->JobFiles++;
             rctx.fileAddr = 0;
             print_ls_output(jcr, attr);
 
@@ -373,7 +372,17 @@ void do_restore(JCR *jcr)
                if (attr->type == FT_REG && rsrc_len > 0) {
                   rctx.extract = true;
                }
+
+               /*
+                * Count the resource forks not as regular files being restored.
+                */
+               if (rsrc_len == 0) {
+                  jcr->JobFiles++;
+               }
+            } else {
+               jcr->JobFiles++;
             }
+
             if (!rctx.extract) {
                /* set attributes now because file will not be extracted */
                if (jcr->plugin) {
@@ -504,8 +513,9 @@ void do_restore(JCR *jcr)
                rctx.flags |= FO_WIN32DECOMP;    /* "decompose" BackupWrite data */
             }
 
-            if (extract_data(jcr, rctx, sd->msg, sd->msglen, &rctx.fileAddr, 
+            if (extract_data(jcr, &rctx.bfd, sd->msg, sd->msglen, &rctx.fileAddr,
                              rctx.flags, &rctx.cipher_ctx) < 0) {
+               rctx.extract = false;
                bclose(&rctx.bfd);
                continue;
             }
@@ -554,8 +564,9 @@ void do_restore(JCR *jcr)
                Dmsg0(130, "Restoring resource fork\n");
             }
 
-            if (extract_data(jcr, rctx, sd->msg, sd->msglen, &rctx.fork_addr, rctx.fork_flags, 
+            if (extract_data(jcr, &rctx.forkbfd, sd->msg, sd->msglen, &rctx.fork_addr, rctx.fork_flags,
                              &rctx.fork_cipher_ctx) < 0) {
+               rctx.extract = false;
                bclose(&rctx.forkbfd);
                continue;
             }
@@ -732,7 +743,7 @@ ok_out:
    }
 
    if (jcr->compress_buf) {
-      free(jcr->compress_buf);
+      free_pool_memory(jcr->compress_buf);
       jcr->compress_buf = NULL;
       jcr->compress_buf_size = 0;
    }
@@ -956,10 +967,18 @@ bool decompress_data(JCR *jcr, char **data, uint32_t *length)
     */
    compress_len = jcr->compress_buf_size;
    Dmsg2(200, "Comp_len=%d msglen=%d\n", compress_len, *length);
-   if ((stat=uncompress((Byte *)jcr->compress_buf, &compress_len,
-               (const Byte *)*data, (uLong)*length)) != Z_OK) {
+   while ((stat=uncompress((Byte *)jcr->compress_buf, &compress_len,
+                           (const Byte *)*data, (uLong)*length)) == Z_BUF_ERROR)
+   {
+      /* The buffer size is too small, try with a bigger one */
+      compress_len = jcr->compress_buf_size = jcr->compress_buf_size + (jcr->compress_buf_size >> 1);
+      Dmsg2(200, "Comp_len=%d msglen=%d\n", compress_len, *length);
+      jcr->compress_buf = check_pool_memory_size(jcr->compress_buf,
+                                                 compress_len);
+   }
+   if (stat != Z_OK) {
       Qmsg(jcr, M_ERROR, 0, _("Uncompression error on file %s. ERR=%s\n"),
-            jcr->last_fname, zlib_strerror(stat));
+           jcr->last_fname, zlib_strerror(stat));
       return false;
    }
    *data = jcr->compress_buf;
@@ -1010,10 +1029,9 @@ bool store_data(JCR *jcr, BFILE *bfd, char *data, const int32_t length, bool win
  * The flags specify whether to use sparse files or compression.
  * Return value is the number of bytes written, or -1 on errors.
  */
-int32_t extract_data(JCR *jcr, r_ctx &rctx, POOLMEM *buf, int32_t buflen,
-      uint64_t *addr, int flags, RESTORE_CIPHER_CTX *cipher_ctx)
+int32_t extract_data(JCR *jcr, BFILE *bfd, POOLMEM *buf, int32_t buflen,
+                     uint64_t *addr, int flags, RESTORE_CIPHER_CTX *cipher_ctx)
 {
-   BFILE *bfd = &rctx.bfd;
    char *wbuf;                        /* write buffer */
    uint32_t wsize;                    /* write size */
    uint32_t rsize;                    /* read size */
@@ -1113,9 +1131,7 @@ int32_t extract_data(JCR *jcr, r_ctx &rctx, POOLMEM *buf, int32_t buflen,
    return wsize;
 
 bail_out:
-   rctx.extract = false;
    return -1;
-
 }
 
 

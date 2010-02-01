@@ -30,7 +30,7 @@
  *
  * Later double precision integer time/date routines -- Kern Sibbald
  *
- *   Version $Id: btime.c 8076 2008-11-22 18:36:12Z kerns $
+ *   Version $Id$
  */
 
 

@@ -31,7 +31,7 @@
  * 
  *  Kern Sibbald, MM
  *
- *   Version $Id: bls.c 8976 2009-07-10 20:03:15Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"

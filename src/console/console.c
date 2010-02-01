@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *     Version $Id: console.c 8827 2009-05-14 15:02:23Z kerns $
+ *     Version $Id$
  */
 
 #include "bacula.h"

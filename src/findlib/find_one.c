@@ -34,7 +34,7 @@
 
    Thanks to the TAR programmers.
 
-     Version $Id: find_one.c 8536 2009-03-15 14:40:05Z kerns $
+     Version $Id$
 
  */
 
@@ -299,6 +299,35 @@ static bool check_changes(JCR *jcr, FF_PKT *ff_pkt)
    return true;
 }
 
+static bool have_ignoredir(FF_PKT *ff_pkt)
+{
+   struct stat sb;
+   char tmp_name[MAXPATHLEN];
+   char *ignoredir;
+
+   /* Ensure that pointers are defined */
+   if (!ff_pkt->fileset || !ff_pkt->fileset->incexe) {
+      return false;
+   }
+   ignoredir = ff_pkt->fileset->incexe->ignoredir;
+   
+   if (ignoredir) {
+      if (strlen(ff_pkt->fname) + strlen(ignoredir) + 2 > MAXPATHLEN) {
+         return false;
+      }
+
+      strcpy(tmp_name, ff_pkt->fname);
+      strcat(tmp_name, "/");
+      strcat(tmp_name, ignoredir);
+      if (stat(tmp_name, &sb) == 0) {
+         Dmsg2(100, "Directory '%s' ignored (found %s)\n",
+               ff_pkt->fname, ignoredir);
+         return true;      /* Just ignore this directory */
+      } 
+   }
+   return false;
+}
+
 /*
  * Find a single file.
  * handle_file is the callback for handling the file.
@@ -551,22 +580,8 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
        * Ignore this directory and everything below if the file .nobackup
        * (or what is defined for IgnoreDir in this fileset) exists
        */
-      if (ff_pkt->ignoredir != NULL) {
-         struct stat sb;
-         char fname[MAXPATHLEN];
-
-         if (strlen(ff_pkt->fname) + strlen("/") +
-            strlen(ff_pkt->ignoredir) + 1 > MAXPATHLEN)
-            return 1;   /* Is this wisdom? */
-
-         strcpy(fname, ff_pkt->fname);
-         strcat(fname, "/");
-         strcat(fname, ff_pkt->ignoredir);
-         if (stat(fname, &sb) == 0) {
-            Dmsg2(100, "Directory '%s' ignored (found %s)\n",
-               ff_pkt->fname, ff_pkt->ignoredir);
-            return 1;      /* Just ignore this directory */
-         }
+      if (have_ignoredir(ff_pkt)) {
+         return 1; /* Just ignore this directory */
       }
 
       /* Build a canonical directory name with a trailing slash in link var */

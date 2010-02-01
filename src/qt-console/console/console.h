@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: console.h 9054 2009-07-18 21:03:34Z kerns $
+ *   Version $Id$
  *
  *   Kern Sibbald, January 2007
  */

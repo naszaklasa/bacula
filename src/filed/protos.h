@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: protos.h 8947 2009-07-02 11:36:26Z ricozz $
+ *   Version $Id$
  */
 
 extern bool blast_data_to_storage_daemon(JCR *jcr, char *addr);

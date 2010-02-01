@@ -30,7 +30,7 @@
  *
  *  Eric Bollengier, May 2006
  *
- *  Version $Id: runscript.c 8508 2009-03-07 20:59:46Z kerns $
+ *  Version $Id$
  *
  */
 

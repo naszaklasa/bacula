@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, April MMIII
  *
- *   Version $Id: bfile.c 8495 2009-02-28 14:52:14Z marcovw $
+ *   Version $Id$
  *
  */
 

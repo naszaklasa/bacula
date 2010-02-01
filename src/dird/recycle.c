@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, May MMII
  *
- *   Version $Id: recycle.c 7507 2008-08-26 13:00:32Z kerns $
+ *   Version $Id$
  */
 
 

@@ -89,8 +89,8 @@ diff -u -r1.17 edit.c
   * 
   *    Kern Sibbald, December MMII
   *
-- *   Version $Id: 1.34.6-duration.patch 1659 2004-10-20 13:55:29Z kerns $
-+ *   Version $Id: 1.34.6-duration.patch 1659 2004-10-20 13:55:29Z kerns $
+- *   Version $Id$
++ *   Version $Id$
   */
  
  /*

@@ -32,7 +32,7 @@
  *    Dan Langille, December 2003
  *    based upon work done by Kern Sibbald, March 2000
  *
- *    Version $Id: postgresql.c 9006 2009-07-15 14:03:07Z ricozz $
+ *    Version $Id$
  */
 
 

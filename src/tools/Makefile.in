@@ -1,7 +1,7 @@
 #
 # Bacula Tools Makefile
 #
-# Version $Id: Makefile.in 8464 2009-02-18 11:40:09Z kerns $
+# Version $Id$
 #
 @MCOMMON@
 
@@ -133,6 +133,12 @@ distclean: realclean
 devclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
 	(cd $(srcdir); $(RMF) Makefile)
+
+installall:  $(TOOLS)
+	@for tool in ${TOOLS} ; do \
+	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) $$tool $(DESTDIR)$(sbindir)/$$tool ; \
+	done
+	chmod 755 $(DESTDIR)$(sbindir)/bsmtp
 
 # Allow non-root execution of bsmtp for non-root Directors
 install: $(INSTOOLS)

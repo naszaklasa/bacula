@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: sql_cmds.c 8999 2009-07-15 10:08:00Z ricozz $
+ *   Version $Id$
  */
 /*
  * Note, PostgreSQL imposes some constraints on using DISTINCT and GROUP BY
@@ -310,7 +310,7 @@ const char *uar_last_full =
    "INSERT INTO temp1 SELECT Job.JobId,JobTdate "
    "FROM Client,Job,JobMedia,Media,FileSet WHERE Client.ClientId=%s "
    "AND Job.ClientId=%s "
-   "AND Job.StartTime<'%s' "
+   "AND Job.StartTime < '%s' "
    "AND Level='F' AND JobStatus IN ('T','W') AND Type='B' "
    "AND JobMedia.JobId=Job.JobId "
    "AND Media.Enabled=1 "
@@ -336,7 +336,7 @@ const char *uar_dif =
    "Job.StartTime,Media.VolumeName,JobMedia.StartFile,"
    "Job.VolSessionId,Job.VolSessionTime "
    "FROM Job,JobMedia,Media,FileSet "
-   "WHERE Job.JobTDate>%s AND Job.StartTime<'%s' "
+   "WHERE Job.JobTDate>%s AND Job.StartTime < '%s' "
    "AND Job.ClientId=%s "
    "AND JobMedia.JobId=Job.JobId "
    "AND Media.Enabled=1 "
@@ -353,7 +353,7 @@ const char *uar_inc =
    "Job.StartTime,Media.VolumeName,JobMedia.StartFile,"
    "Job.VolSessionId,Job.VolSessionTime "
    "FROM Job,JobMedia,Media,FileSet "
-   "WHERE Job.JobTDate>%s AND Job.StartTime<'%s' "
+   "WHERE Job.JobTDate>%s AND Job.StartTime < '%s' "
    "AND Job.ClientId=%s "
    "AND Media.Enabled=1 "
    "AND JobMedia.JobId=Job.JobId "
@@ -431,7 +431,7 @@ const char *uar_jobid_fileindex_from_table =
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: sql_cmds.c 8999 2009-07-15 10:08:00Z ricozz $
+ *   Version $Id$
  */
 /*
  * Note, PostgreSQL imposes some constraints on using DISTINCT and GROUP BY

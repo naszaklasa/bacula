@@ -28,7 +28,7 @@
 /*
  * Director external function prototypes
  *
- *   Version $Id: protos.h 8982 2009-07-14 13:44:46Z kerns $
+ *   Version $Id$
  */
 
 /* admin.c */

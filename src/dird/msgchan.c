@@ -40,7 +40,7 @@
  *    Create a thread to interact with the Storage daemon
  *      who returns a job status and requests Catalog services, etc.
  *
- *   Version $Id: msgchan.c 8982 2009-07-14 13:44:46Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

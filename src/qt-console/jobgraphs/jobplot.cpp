@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: jobplot.cpp 8625 2009-03-28 15:30:41Z bartleyd2 $
+ *   Version $Id$
  *
  *  JobPlots Class
  *

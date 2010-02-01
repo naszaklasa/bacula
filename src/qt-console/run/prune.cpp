@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, February MMVII
  *
- *  $Id: prune.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *  $Id$
  */ 
 
 #include "bat.h"

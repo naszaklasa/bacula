@@ -38,7 +38,7 @@
  * Negative msglen, is special "signal" (no data follows).
  *   See below for SIGNAL codes.
  *
- *   Version $Id: bsock.h 8863 2009-05-26 13:44:08Z ricozz $
+ *   Version $Id$
  */
 
 #ifndef __BSOCK_H_

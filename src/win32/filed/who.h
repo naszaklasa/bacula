@@ -28,7 +28,7 @@
 /*
  * Kern Sibbald, August 2007
  *
- * Version $Id: who.h 7380 2008-07-14 10:42:59Z kerns $
+ * Version $Id$
  *
  * This file is pulled in by certain generic routines in libwin32
  *   to define the names of the daemon that is being built.

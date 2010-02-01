@@ -26,7 +26,7 @@
  * Peters, Guido van Rossum, Ka-Ping Yee, Sjoerd Mullender, and
  * probably one or two others that I'm forgetting.
  *
- * $Id: bregex.c 7380 2008-07-14 10:42:59Z kerns $   
+ * $Id$   
  *
  * This file modified to work with Bacula and C++ by
  *    Kern Sibbald, April 2006
@@ -1943,7 +1943,7 @@ int re_search(regex_t * bufp, unsigned char *str, int size, int pos,
       if (!bufp->lcase) {
          bufp->lcase = get_pool_memory(PM_FNAME);
       }
-      check_pool_memory_size(bufp->lcase, len+1);
+      bufp->lcase = check_pool_memory_size(bufp->lcase, len+1);
       unsigned char *dst = (unsigned char *)bufp->lcase;
       while (*string) {
          *dst++ = tolower(*string++);

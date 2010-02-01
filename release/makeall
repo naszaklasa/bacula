@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# Make full release
+#
+version=3.0.3
+#
+# Bacula git repos
+bacula=/home/kern/bacula/k
+docs=/home/kern/bacula/docs
+rescue=/home/kern/bacula/rescue
+
+./makeclean
+./makebacularel $bacula $version
+./makedocsrel $bacula $docs $version
+./makerescuerel $rescue $version
+./makewinrel $bacula $version | tee win$$.log
+
+grep -i warning win$$.log >/dev/null
+if [ $? -eq 0 ] ; then
+  echo " "
+  echo "Warnings in win$$.log"
+  exit 1
+fi
+grep -i error win$$.log >/dev/null
+if [ $? -eq 0 ] ; then
+  echo " "
+  echo "Errors in win$$.log"
+  exit 1
+fi
+rm -f win$$.log

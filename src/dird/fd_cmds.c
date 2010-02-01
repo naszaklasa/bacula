@@ -37,7 +37,7 @@
  *  Utility functions for sending info to File Daemon.
  *   These functions are used by both backup and verify.
  *
- *   Version $Id: fd_cmds.c 8982 2009-07-14 13:44:46Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -354,6 +354,9 @@ static bool send_fileset(JCR *jcr)
             ie = fileset->exclude_items[i];
             fd->fsend("E\n");
          }
+         if (ie->ignoredir) {
+            bnet_fsend(fd, "Z %s\n", ie->ignoredir);
+         }
          for (j=0; j<ie->num_opts; j++) {
             FOPTS *fo = ie->opts_list[j];
             fd->fsend("O %s\n", fo->opts);
@@ -398,9 +401,6 @@ static bool send_fileset(JCR *jcr)
             }
             if (fo->plugin) {
                fd->fsend("G %s\n", fo->plugin);
-            }
-            if (fo->ignoredir) {
-               bnet_fsend(fd, "Z %s\n", fo->ignoredir);
             }
             if (fo->reader) {
                fd->fsend("D %s\n", fo->reader);

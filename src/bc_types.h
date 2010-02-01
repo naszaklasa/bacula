@@ -40,7 +40,7 @@
 
     Also, we define types such as file address lengths.
 
-    Version $Id: bc_types.h 8584 2009-03-23 08:56:20Z ricozz $
+    Version $Id$
 
  */
 

@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: dircomm.h 8571 2009-03-21 14:24:27Z kerns $
+ *   Version $Id$
  *
  *   Kern Sibbald, January 2007
  */

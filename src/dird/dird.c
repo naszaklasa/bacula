@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: dird.c 8999 2009-07-15 10:08:00Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"

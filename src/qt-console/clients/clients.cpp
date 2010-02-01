@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: clients.cpp 9041 2009-07-16 21:18:53Z ricozz $
+ *   Version $Id$
  *
  *  Clients Class
  *

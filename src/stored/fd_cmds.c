@@ -36,7 +36,7 @@
  *  the File daemon, control is passed here to handle the
  *  subsequent File daemon commands.
  *
- *   Version $Id: fd_cmds.c 8983 2009-07-14 13:46:39Z kerns $
+ *   Version $Id$
  *
  */
 

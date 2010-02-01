@@ -35,7 +35,7 @@
  *
  *     Kern Sibbald, April MMII
  *
- *   Version $Id: ua_dotcmds.c 8571 2009-03-21 14:24:27Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

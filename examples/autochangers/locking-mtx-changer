@@ -7,7 +7,7 @@
 #  thread accesses the script at a time.     
 #
 #
-#  $Id: locking-mtx-changer 2805 2006-02-22 18:43:55Z kerns $
+#  $Id$
 #
 #  If you set in your Device resource
 #

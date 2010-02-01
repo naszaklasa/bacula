@@ -31,7 +31,7 @@
  *
  *     Nicolas Boichat, August MMIV
  *
- *     Version $Id: tray-monitor.c 8414 2009-01-30 09:20:41Z kerns $
+ *     Version $Id$
  */
 
 

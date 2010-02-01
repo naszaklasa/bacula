@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, January MMV
  *
- *   Version $Id: pythonsd.c 7789 2008-10-14 18:42:47Z kerns $
+ *   Version $Id$
  *
  */
 

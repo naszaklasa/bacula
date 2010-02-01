@@ -32,7 +32,7 @@
  *   Kern E. Sibbald, October 2002
  *
  *
- *   Version $Id: bcopy.c 8235 2008-12-23 13:28:03Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

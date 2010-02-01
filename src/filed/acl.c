@@ -51,7 +51,7 @@
  *   Original written by Preben 'Peppe' Guldberg, December MMIV
  *   Major rewrite by Marco van Wieringen, November MMVIII
  *
- *   Version $Id: acl.c 8967 2009-07-09 17:34:01Z marcovw $
+ *   Version $Id$
  */
   
 #include "bacula.h"

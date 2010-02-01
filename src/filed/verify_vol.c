@@ -4,7 +4,7 @@
  *
  *    Kern Sibbald, July MMII
  *
- *   Version $Id: verify_vol.c 8988 2009-07-14 14:01:19Z ricozz $
+ *   Version $Id$
  *
  */
 /*

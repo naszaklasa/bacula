@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, November MMIV
  *
- *   Version $Id: pythondir.c 8762 2009-04-29 11:55:58Z kerns $
+ *   Version $Id$
  *
  */
 

@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: job.c 9013 2009-07-15 16:36:28Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -338,13 +338,13 @@ void *handle_client_request(void *dirp)
             fo->base.destroy();
             fo->fstype.destroy();
             fo->drivetype.destroy();
-            if (fo->ignoredir != NULL) {
-               free(fo->ignoredir);
-            }
          }
          incexe->opts_list.destroy();
          incexe->name_list.destroy();
          incexe->plugin_list.destroy();
+         if (incexe->ignoredir) {
+            free(incexe->ignoredir);
+         }
       }
       fileset->include_list.destroy();
 
@@ -367,6 +367,9 @@ void *handle_client_request(void *dirp)
          incexe->opts_list.destroy();
          incexe->name_list.destroy();
          incexe->plugin_list.destroy();
+         if (incexe->ignoredir) {
+            free(incexe->ignoredir);
+         }
       }
       fileset->exclude_list.destroy();
       free(fileset);
@@ -874,9 +877,8 @@ static void add_fileset(JCR *jcr, const char *item)
       state = state_options;
       break;
    case 'Z':
-      current_opts = start_options(ff);
-      current_opts->ignoredir = bstrdup(item);
-      state = state_options;
+      state = state_include;
+      fileset->incexe->ignoredir = bstrdup(item);
       break;
    case 'D':
       current_opts = start_options(ff);
@@ -939,9 +941,9 @@ static bool term_fileset(JCR *jcr)
          for (k=0; k<fo->drivetype.size(); k++) {
             Dmsg1(400, "XD %s\n", (char *)fo->drivetype.get(k));
          }
-         if (fo->ignoredir) {
-            Dmsg1(400, "Z %s\n", fo->ignoredir);
-         }
+      }
+      if (incexe->ignoredir) {
+         Dmsg1(400, "Z %s\n", incexe->ignoredir);
       }
       dlistString *node;
       foreach_dlist(node, &incexe->name_list) {
