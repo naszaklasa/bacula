@@ -272,6 +272,7 @@ binary-indep: build install-indep patch
 	rm -r debian/bacula/usr/share/doc/bacula
 	dh_link -i
 	dh_compress -i -X.pdf
+	dh_lintian -i
 	dh_fixperms -i
 	dh_installdeb -i
 	dh_gencontrol -i
@@ -300,6 +301,7 @@ binary-arch-common: build install
 	dh_installchangelogs ChangeLog -a
 	dh_strip -a
 	dh_link -a
+	dh_lintian -a
 	dh_compress -a
 	dh_fixperms -a
 	dh_makeshlibs -a
