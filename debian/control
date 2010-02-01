@@ -18,7 +18,7 @@ Homepage: http://www.bacula.org/
 
 Package: bacula
 Architecture: all
-Depends: bacula-server, bacula-client
+Depends: bacula-server, bacula-client, bacula-common
 Suggests: bacula-doc
 Description: network backup, recovery and verification - meta-package
  Bacula is a set of programs to manage backup, recovery and verification
