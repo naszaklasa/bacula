@@ -1,4 +1,4 @@
-bacula (3.0.3-1) UNRELEASED; urgency=medium
+bacula (3.0.3-1) unstable; urgency=medium
 
   * New upstream release.  Closes: #566646.
   * Update all PostgreSQL dependencies to 8.4 only.
@@ -12,7 +12,7 @@ bacula (3.0.3-1) UNRELEASED; urgency=medium
   * Import upstream patch to add bsmtp manpage and update
     manpages.  Closes: #519573.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Feb 2010 08:11:14 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Feb 2010 11:33:48 -0600
 
 bacula (3.0.2-3.1) unstable; urgency=low
 
