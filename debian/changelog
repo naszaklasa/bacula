@@ -2,6 +2,9 @@ bacula (3.0.2-4) UNRELEASED; urgency=low
 
   * Ack NMU.  Closes: #549982, #565877, #543179, #544594, #544610.
     Closes: #545729, #555450, #545408, #567660.
+  * Improve manpages for: bcopy
+    Patches by Lucas B. Cohen
+    Closes: #499619.
 
  -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Feb 2010 08:11:14 -0600
 
