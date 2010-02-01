@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH BACULA\-FD 8 "26 September 2009" "Kern Sibbald" "Network backup, recovery & verification"
+.TH BACULA\-SD 8 "6 December 2009" "Kern Sibbald" "Network backup, recovery & verification"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .SH NAME
@@ -24,35 +24,38 @@ backup'd/verified/restored. Network transfer can optionally be
 compressed. 
 .SH OPTIONS
 .TP
-.B \-c\  config
-Change location to read \fIbacula\-sd.conf\fP from (default $CWD)
+.BI \-c\   file
+Specify the configuration file to use.
 .TP
-.B \-d <nn>
+.BI \-d\  nn
 Set debug level to \fInn\fP.
 .TP
-.B \-dt
-Print a timestamp in debug output
+.BI \-dt
+Print timestamp in debug output.
 .TP
-.B \-f
-Run in the foreground (for debuggin)
+.BI \-f
+Run in foreground (for debugging).
 .TP
 .BI \-g\  group
 Set the group/gid to run as.
 .TP
-.BI \-k
-Keep readall permission when dropping privilege.
+.BI \-p
+Proceed inspite of I/O errors
 .TP
-.B \-s
-No signals. Used in debugging only.
+.BI \-k
+Keep readall permission when dropping privileges.
+.TP
+.BI \-s
+No signals (for debugging).
 .TP
 .B \-t
-Test config mode: read configuration and exit.
+Test the configuration file and report errors.
 .TP
 .BI \-u\  user
 Set the username/uid to run as.
 .TP
-.B \-v
-Verbose user messages
+.BI \-v
+Set verbose mode.
 .TP
 .B \-?
 Show version and usage of program.
@@ -61,4 +64,4 @@ Show version and usage of program.
 .BR bacula\-sd (8).
 .br
 .SH AUTHOR
-This manual page was written by Jose Luis Tallon <joseluis@DarkCube.adv\-solutions.net>.
+This manual page was written by Jose Luis Tallon <jltallon@adv\-solutions.net>.
