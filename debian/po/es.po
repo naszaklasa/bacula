@@ -14,8 +14,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
-"POT-Creation-Date: 2007-08-30 22:42+0100\n"
+"Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
+"POT-Creation-Date: 2008-01-27 22:28+0100\n"
 "PO-Revision-Date: 2004-09-08 03:35+CET\n"
 "Last-Translator: Jose Luis Tallon <jltallon@adv-solutions.net>\n"
 "Language-Team: Spanish <debian-l10n-spanish@lists.debian.org>\n"
@@ -25,20 +25,19 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-msgid "Create tables for Bacula's Catalog?"
+#: ../bacula-director-sqlite.templates:2001
+#, fuzzy
+#| msgid "Create tables for Bacula's Catalog?"
+msgid "Create tables for Bacula's catalog?"
 msgstr "¿Crear las tablas para el catálogo?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
+#: ../bacula-director-sqlite.templates:2001
 #, fuzzy
 msgid ""
-"The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula.  These tables are needed for the Bacula director to "
-"function."
+"The tables needed for Bacula's catalog are missing. This is normal for a "
+"fresh install of Bacula."
 msgstr ""
 "Hemos detectado que las tablas necesarias para contener el catálogo de "
 "Bacula no están accesibles (tiene pinta de tratarse de una instalación "
@@ -47,17 +46,25 @@ msgstr ""
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
-msgid "Remove Catalog on purge?"
+msgid ""
+"These tables are needed for the Bacula director to function. Please choose "
+"whether these tables should be automatically created."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:3001
+#, fuzzy
+#| msgid "Remove Catalog on purge?"
+msgid "Remove catalog on purge?"
 msgstr "¿Borrar el catálogo al eliminar el paquete?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
+#: ../bacula-director-sqlite.templates:3001
 msgid ""
-"If you want to remove the Bacula catalog when the package is purged, you "
-"should choose this option."
+"Please choose whether the Bacula catalog should be removed when the director "
+"package is purged."
 msgstr ""
 
 #~ msgid ""

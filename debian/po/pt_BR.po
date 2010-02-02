@@ -1,23 +1,16 @@
-#
-#    Translators, if you are not familiar with the PO format, gettext
-#    documentation is worth reading, especially sections dedicated to
-#    this format, e.g. by running:
-#         info -n '(gettext)PO Files'
-#         info -n '(gettext)Header Entry'
-#
-#    Some information specific to po-debconf are available at
-#            /usr/share/doc/po-debconf/README-trans
-#         or http://www.debian.org/intl/l10n/po-debconf/README-trans
-#
-#    Developers do not need to manually edit POT or PO files.
+# Bacula Brazilian Portuguese translation
+# Copyright (c) 2008 Bacula's COPYRIGHT HOLDER
+# This file is distributed under the same license as the Bacula package.
+# Felipe Augusto van de Wiel (faw) <faw@cathedrallabs.org>, 2007,
+# Eder L. Marques (frolic) <frolic@debian-ce.org>, 2008.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: bacula\n"
-"Report-Msgid-Bugs-To: jgoerzen@complete.org\n"
-"POT-Creation-Date: 2007-08-30 22:42+0100\n"
-"PO-Revision-Date: 2006-07-04 00:29-0300\n"
-"Last-Translator: Felipe Augusto van de Wiel (faw) <faw@cathedrallabs.org>\n"
+"Project-Id-Version: bacula 2.2.6-0.2\n"
+"Report-Msgid-Bugs-To: bacula@packages.debian.org\n"
+"POT-Creation-Date: 2008-01-27 22:28+0100\n"
+"PO-Revision-Date: 2008-01-30 13:00-0300\n"
+"Last-Translator: Eder L. Marques (frolic) <frolic@debian-ce.org>\n"
 "Language-Team: l10n portuguese <debian-l10n-portuguese@lists.debian.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -26,46 +19,45 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-msgid "Create tables for Bacula's Catalog?"
-msgstr "Criar as tabelas para o Catálogo do Bacula ?"
+#: ../bacula-director-sqlite.templates:2001
+msgid "Create tables for Bacula's catalog?"
+msgstr "Criar as tabelas para o catálogo do Bacula?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-#, fuzzy
+#: ../bacula-director-sqlite.templates:2001
 msgid ""
-"The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula.  These tables are needed for the Bacula director to "
-"function."
+"The tables needed for Bacula's catalog are missing. This is normal for a "
+"fresh install of Bacula."
 msgstr ""
 "As tabelas necessárias para o catálogo do Bacula estão faltando. Isso é "
-"normal para uma nova instalação do Bacula."
+"normal para uma primeira instalação do Bacula."
 
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
-msgid "Remove Catalog on purge?"
-msgstr "Remover Catálogo ao expurgar o pacote ?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
 msgid ""
-"If you want to remove the Bacula catalog when the package is purged, you "
-"should choose this option."
+"These tables are needed for the Bacula director to function. Please choose "
+"whether these tables should be automatically created."
 msgstr ""
+"Essas tabelas são necessárias para que o \"Bacula director\" funcione. Por "
+"favor, escolha se essas tabelas devem ser automaticamente criadas."
 
-#~ msgid ""
-#~ "These tables are needed for the Bacula director to function. Should these "
-#~ "tables be automatically set up for you?"
-#~ msgstr ""
-#~ "Essas tabelas são necessárias para que o \"Bacula director\" funcione. As "
-#~ "mesmas devem ser criadas automaticamente para você ?"
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:3001
+msgid "Remove catalog on purge?"
+msgstr "Remover catálogo ao expurgar o pacote?"
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:3001
+msgid ""
+"Please choose whether the Bacula catalog should be removed when the director "
+"package is purged."
+msgstr ""
+"Por favor, escolha se o catálogo do Bacula deve ser removido quando o pacote "
+"\"director\" é expurgado."
 
 #~ msgid ""
 #~ "Do you want the Bacula Catalog to be removed if you purge the Bacula "

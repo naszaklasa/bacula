@@ -76,6 +76,7 @@ configure-stamp-%: extract-stamp-%
 	 	QMAKE=/usr/bin/qmake-qt4 $(SHELL) ./configure --config-cache \
 		--host=${DEB_HOST_GNU_TYPE} --build=${DEB_BUILD_GNU_TYPE} \
 		--prefix=/usr \
+		--with-archivedir=/nonexistant/path/to/file/archive/dir \
 		--sysconfdir=/etc/bacula --with-scriptdir=/etc/bacula/scripts \
 		--sharedstatedir=/var/lib/bacula \
 		--localstatedir=/var/lib/bacula \

@@ -1,3 +1,71 @@
+bacula (2.2.8-8ubuntu1) intrepid; urgency=low
+
+  * Merge from debian unstable, remaining changes:
+    - debian/bacula-director-mysql.postinst
+      debian/bacula-director-pgsql.postinst
+      + Worked in some smarts to do no database configuration if bacula is arelady installed.
+    - debian/control
+      + Added libdbi-perl and libdb-mysql-perl to depends for bacula-director-mysql due to new
+        postinst configuration.
+      + Cleaned up bacula-director-pgsql dependencies and recommends.
+      + Made mysql to default director to install for bacula-server.
+      + Removed liblibjconv build dependency.
+      + Removed dbconfig-common dependency for bacula-director-{mysql|pgsql},
+        added database handling to postinstall scripts and templates, modified
+        postinstall script's sed expressesions.
+      + Removed libwgtk2.6-dev as a build dependency; as a result bacula-console-wx aren't
+        built any more.
+      + Install gawk if not installed. (LP: #207527)
+    - debian/make_catalog_backup_awk.[mysql|pgsql|sqlite3|sqlite]:
+      + new scripts for catalog backup (CVE-2007-5626)
+    - debian/bacula-console-wx.
+      - Droped since we arent building them anymore.
+    - debian/bacula-director-common.bacula-director.init
+      debian/bacula-fd.init
+      debian/bacula-sd.init
+      + Made more LSB specific
+
+ -- Chuck Short <zulcss@ubuntu.com>  Thu, 02 May 2008 08:05:02 -0500
+
+bacula (2.2.8-8) unstable; urgency=high
+
+  * Apply upstream 2.2.8-jobmedia-fix.patch, high urgency.
+  * Hard code an archive directory in call to configure. This prevents
+    the default bacula sd file from having a syntax error.
+    Closes: #472126
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 28 Mar 2008 10:01:41 -0500
+
+bacula (2.2.8-7) unstable; urgency=low
+
+  * Updated for compatibility with PostgreSQL 8.3.  Closes: #468880
+  * Run debconf-updatepo
+  * Update Brazilian Portuguese translation.  Patch from Eder L. Marques.
+    Closes: #466703.
+
+ -- John Goerzen <jgoerzen@complete.org>  Tue, 25 Mar 2008 12:48:53 -0500
+
+bacula (2.2.8-6) unstable; urgency=low
+
+  * Change section to admin to match override file
+  * Add Homepage: line to control per devref 6.2.4
+  * More fixes to make Bacula binNMU safe.  Patch from Lior Kaplan.
+    Closes: #472249.
+  * Debconf templates and debian/control reviewed by the debian-l10n-
+    english team as part of the Smith review project. Closes: #462210
+  * [Debconf translation updates]
+    + German. Closes: #462981
+    + Galician. Closes: #462991
+    + Portuguese. Closes: #463314
+    + Finnish. Closes: #463954
+    + Czech. Closes: #464427
+    + French. Closes: #464838
+    + Italian. Closes: #465068
+    + Russian. Closes: #465079
+    + Vietnamese. Closes: #465536
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 24 Mar 2008 10:42:44 -0500
+
 bacula (2.2.8-5ubuntu7) hardy; urgency=low
 
   * patches/ubuntu_mtx-changer.patch:
@@ -91,6 +159,7 @@ bacula (2.2.8-5ubuntu1) hardy; urgency=low
       installed.
 
  -- Chuck Short <zulcss@ubuntu.com>  Thu, 13 Feb 2008 08:41:35 -0500
+
 bacula (2.2.8-5) unstable; urgency=low
 
   * Added Debian VCS fields to debian/control.
