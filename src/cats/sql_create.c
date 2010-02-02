@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_create.c 5735 2007-10-06 12:49:33Z kerns $
+ *    Version $Id: sql_create.c 6748 2008-04-06 12:34:20Z kerns $
  */
 
 /* The following is necessary so that we do not include
@@ -967,8 +967,8 @@ bail_out:
 static int db_create_file_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
 {
    int stat;
-   static char *no_digest = "0";
-   char *digest;
+   static const char *no_digest = "0";
+   const char *digest;
 
    ASSERT(ar->JobId);
    ASSERT(ar->PathId);

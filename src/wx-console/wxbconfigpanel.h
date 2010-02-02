@@ -1,15 +1,7 @@
 /*
- *
- *   Config panel, used to specify parameters (for example clients, filesets... in restore)
- *
- *    Nicolas Boichat, April 2004
- *
- *    Version $Id: wxbconfigpanel.h 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Config panel, used to specify parameters (for example clients, filesets... in restore)
+ *
+ *    Nicolas Boichat, April 2004
+ *
+ *    Version $Id: wxbconfigpanel.h 6636 2008-03-19 18:01:45Z kerns $
+ */
 
 #ifndef WXBCONFIGPANEL_H
 #define WXBCONFIGPANEL_H
@@ -68,6 +68,7 @@ class wxbConfigParam {
 
      void Clear();
      void Add(wxString value);
+     int GetCount();
 
      wxString GetTitle();
 
@@ -102,6 +103,7 @@ public:
 
    void ClearRowChoices(const wxChar* title);
    void AddRowChoice(const wxChar* title, wxString value);
+   int GetRowCount(const wxChar* title);
 
    /* If enable is true, enables apply button, and disables ok button */
    void EnableApply(bool enable = true);

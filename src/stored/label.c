@@ -32,7 +32,7 @@
  *   Kern Sibbald, MM
  *
  *
- *   Version $Id: label.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: label.c 7044 2008-05-28 13:28:29Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -67,7 +67,7 @@ static void create_volume_label_record(DCR *dcr, DEV_RECORD *rec);
 int read_dev_volume_label(DCR *dcr)
 {
    JCR *jcr = dcr->jcr;
-   DEVICE *dev = dcr->dev;
+   DEVICE * volatile dev = dcr->dev;
    char *VolName = dcr->VolumeName;
    DEV_RECORD *record;
    bool ok = false;
@@ -77,7 +77,7 @@ int read_dev_volume_label(DCR *dcr)
    bool have_ansi_label = false;
 
    Dmsg4(100, "Enter read_volume_label res=%d device=%s vol=%s dev_Vol=%s\n",
-      dev->reserved_device, dev->print_name(), VolName, 
+      dev->num_reserved(), dev->print_name(), VolName, 
       dev->VolHdr.VolumeName[0]?dev->VolHdr.VolumeName:"*NULL*");
 
    if (!dev->is_open()) {
@@ -212,12 +212,15 @@ int read_dev_volume_label(DCR *dcr)
    }
 
    dev->set_labeled();               /* set has Bacula label */
+   Dmsg1(100, "Call reserve_volume=%s\n", dev->VolHdr.VolumeName);
+   Dmsg2(100, "=== dcr->dev=%p dev=%p\n", dcr->dev, dev);
    if (reserve_volume(dcr, dev->VolHdr.VolumeName) == NULL) {
       Mmsg2(jcr->errmsg, _("Could not reserve volume %s on %s\n"),
            dev->VolHdr.VolumeName, dev->print_name());
       stat = VOL_NAME_ERROR;
       goto bail_out;
    }
+   Dmsg2(100, "=== dcr->dev=%p dev=%p\n", dcr->dev, dev);
 
    /* Compare Volume Names */
    Dmsg2(130, "Compare Vol names: VolName=%s hdr=%s\n", VolName?VolName:"*", dev->VolHdr.VolumeName);
@@ -234,6 +237,7 @@ int read_dev_volume_label(DCR *dcr)
       }
       Dmsg0(150, "return VOL_NAME_ERROR\n");
       stat = VOL_NAME_ERROR;
+      volume_unused(dcr);             /* mark volume "released" */
       goto bail_out;
    }
    Dmsg1(130, "Copy vol_name=%s\n", dev->VolHdr.VolumeName);
@@ -249,6 +253,7 @@ int read_dev_volume_label(DCR *dcr)
          stat = read_ansi_ibm_label(dcr);            
          /* If we want a label and didn't find it, return error */
          if (stat != VOL_OK) {
+            volume_unused(dcr);       /* mark volume "released" */
             goto bail_out;
          }
       }
@@ -290,7 +295,8 @@ bool write_volume_label_to_block(DCR *dcr)
          dev->print_name());
       return false;
    } else {
-      Dmsg1(130, "Wrote label of %d bytes to block\n", rec.data_len);
+      Dmsg2(130, "Wrote label of %d bytes to block. Vol=%s\n", rec.data_len,
+            dcr->VolumeName);
    }
    free_pool_memory(rec.data);
    return true;
@@ -309,19 +315,21 @@ bool write_volume_label_to_block(DCR *dcr)
 bool write_new_volume_label_to_dev(DCR *dcr, const char *VolName, 
                                    const char *PoolName, bool relabel, bool dvdnow)
 {
-   DEVICE *dev = dcr->dev;
+   DEVICE * volatile dev = dcr->dev;
 
 
    Dmsg0(150, "write_volume_label()\n");
    empty_block(dcr->block);
 
-   /* If relabeling, truncate the device */
-   if (relabel && !dev->truncate(dcr)) {
-      goto bail_out;
-   }
-
-   if (relabel && !dev->is_tape()) {
-      dev->close_part(dcr);              /* make sure DVD/file closed for rename */
+   if (relabel) {
+      volume_unused(dcr);             /* mark current volume unused */
+      /* Truncate device */
+      if (!dev->truncate(dcr)) {
+         goto bail_out;
+      }
+      if (!dev->is_tape()) {
+         dev->close_part(dcr);        /* make sure DVD/file closed for rename */
+      }
    }
 
    /* Set the new filename for open, ... */
@@ -331,12 +339,13 @@ bool write_new_volume_label_to_dev(DCR *dcr, const char *VolName,
    if (dev->open(dcr, OPEN_READ_WRITE) < 0) {
       /* If device is not tape, attempt to create it */
       if (dev->is_tape() || dev->open(dcr, CREATE_READ_WRITE) < 0) {
+         Jmsg3(dcr->jcr, M_WARNING, 0, _("Open device %s Volume \"%s\" failed: ERR=%s\n"),
+               dev->print_name(), dcr->VolumeName, dev->bstrerror());
          goto bail_out;
       }
    }
    Dmsg1(150, "Label type=%d\n", dev->label_type);
    if (!dev->rewind(dcr)) {
-      dev->clear_volhdr();
       Dmsg2(130, "Bad status on %s from rewind: ERR=%s\n", dev->print_name(), dev->print_errmsg());
       if (!forge_on) {
          goto bail_out;
@@ -398,16 +407,19 @@ bool write_new_volume_label_to_dev(DCR *dcr, const char *VolName,
    if (debug_level >= 20)  {
       dump_volume_label(dev);
    }
+   Dmsg0(100, "Call reserve_volume\n");
    if (reserve_volume(dcr, VolName) == NULL) {
       Mmsg2(dcr->jcr->errmsg, _("Could not reserve volume %s on %s\n"),
            dev->VolHdr.VolumeName, dev->print_name());
       goto bail_out;
    }
+   dev = dcr->dev;                    /* may have changed in reserve_volume */
 
    dev->clear_append();               /* remove append since this is PRE_LABEL */
    return true;
 
 bail_out:
+   volume_unused(dcr);
    dev->clear_volhdr();
    dev->clear_append();               /* remove append since this is PRE_LABEL */
    return false;
@@ -425,6 +437,8 @@ bool rewrite_volume_label(DCR *dcr, bool recycle)
    JCR *jcr = dcr->jcr;
 
    if (dev->open(dcr, OPEN_READ_WRITE) < 0) {
+       Jmsg3(jcr, M_WARNING, 0, _("Open device %s Volume \"%s\" failed: ERR=%s\n"),
+             dev->print_name(), dcr->VolumeName, dev->bstrerror());
       return false;
    }
    Dmsg2(190, "set append found freshly labeled volume. fd=%d dev=%x\n", dev->fd(), dev);
@@ -434,6 +448,7 @@ bool rewrite_volume_label(DCR *dcr, bool recycle)
       Dmsg0(200, "Error from write volume label.\n");
       return false;
    }
+   Dmsg1(150, "wrote vol label to block. Vol=%s\n", dcr->VolumeName);
 
    dev->VolCatInfo.VolCatBytes = 0;        /* reset byte count */
 
@@ -451,6 +466,8 @@ bool rewrite_volume_label(DCR *dcr, bool recycle)
          return false;
       }
       if (recycle) {
+         Dmsg1(150, "Doing recycle. Vol=%s\n", dcr->VolumeName);
+//       volume_unused(dcr);             /* mark volume unused */
          if (!dev->truncate(dcr)) {
             Jmsg2(jcr, M_FATAL, 0, _("Truncate error on device %s: ERR=%s\n"),
                   dev->print_name(), dev->print_errmsg());
@@ -503,8 +520,9 @@ bool rewrite_volume_label(DCR *dcr, bool recycle)
       dev->VolCatInfo.VolCatWrites = 1;
       dev->VolCatInfo.VolCatReads = 1;
    }
-   Dmsg0(150, "dir_update_vol_info. Set Append\n");
+   Dmsg1(150, "dir_update_vol_info. Set Append vol=%s\n", dcr->VolumeName);
    bstrncpy(dev->VolCatInfo.VolCatStatus, "Append", sizeof(dev->VolCatInfo.VolCatStatus));
+   bstrncpy(dev->VolCatInfo.VolCatName, dcr->VolumeName, sizeof(dev->VolCatInfo.VolCatName));
    if (!dir_update_volume_info(dcr, true, true)) {  /* indicate doing relabel */
       return false;
    }
@@ -519,7 +537,7 @@ bool rewrite_volume_label(DCR *dcr, bool recycle)
     * End writing real Volume label (from pre-labeled tape), or recycling
     *  the volume.
     */
-   Dmsg0(200, "OK from rewrite vol label.\n");
+   Dmsg1(150, "OK from rewrite vol label. Vol=%s\n", dcr->VolumeName);
    return true;
 }
 
@@ -575,6 +593,7 @@ static void create_volume_label_record(DCR *dcr, DEV_RECORD *rec)
    ser_string(dev->VolHdr.ProgDate);
 
    ser_end(rec->data, SER_LENGTH_Volume_Label);
+   bstrncpy(dcr->VolumeName, dev->VolHdr.VolumeName, sizeof(dcr->VolumeName));
    rec->data_len = ser_length(rec->data);
    rec->FileIndex = dev->VolHdr.LabelType;
    rec->VolSessionId = jcr->VolSessionId;
@@ -597,7 +616,7 @@ void create_volume_label(DEVICE *dev, const char *VolName,
 
    ASSERT(dev != NULL);
 
-   dev->clear_volhdr();          /* release any old volume */
+   dev->clear_volhdr();          /* clear any old volume info */
 
    bstrncpy(dev->VolHdr.Id, BaculaId, sizeof(dev->VolHdr.Id));
    dev->VolHdr.VerNum = BaculaTapeVersion;
@@ -698,13 +717,7 @@ bool write_session_label(DCR *dcr, int label)
    Dmsg1(130, "session_label record=%x\n", rec);
    switch (label) {
    case SOS_LABEL:
-      if (dev->is_tape()) {
-         dcr->StartBlock = dev->block_num;
-         dcr->StartFile  = dev->file;
-      } else {
-         dcr->StartBlock = (uint32_t)dev->file_addr;
-         dcr->StartFile = (uint32_t)(dev->file_addr >> 32);
-      }
+      set_start_vol_position(dcr);
       break;
    case EOS_LABEL:
       if (dev->is_tape()) {

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: jobs.cpp 5372 2007-08-17 12:17:04Z kerns $
+ *   Version $Id: jobs.cpp 6967 2008-05-13 08:13:50Z kerns $
  *
  *  Jobs Class
  *
@@ -75,9 +75,11 @@ void Jobs::populateTree()
    m_checkcurwidget = false;
    mp_treeWidget->clear();
    m_checkcurwidget = true;
-   QStringList headerlist = (QStringList() << "Job Name" << "Pool" << "Messages"
-      << "Client" << "Storage" << "Where" << "Level" << "Type" << "FileSet" 
-      << "Catalog" << "Enabled");
+   QStringList headerlist = (QStringList() << tr("Job Name")
+      << tr("Pool") << tr("Messages") << tr("Client")
+      << tr("Storage") << tr("Level") << tr("Type")
+      << tr("FileSet") << tr("Catalog") << tr("Enabled")
+      << tr("Where"));
 
    m_typeIndex = headerlist.indexOf("Type");
    topItem = new QTreeWidgetItem(mp_treeWidget);
@@ -104,7 +106,6 @@ void Jobs::populateTree()
          jobsItem->setText(col++, job_defs.messages_name);
          jobsItem->setText(col++, job_defs.client_name);
          jobsItem->setText(col++, job_defs.store_name);
-         jobsItem->setText(col++, job_defs.where);
          jobsItem->setText(col++, job_defs.level);
          jobsItem->setText(col++, job_defs.type);
          jobsItem->setText(col++, job_defs.fileset_name);
@@ -114,6 +115,7 @@ void Jobs::populateTree()
          } else {
             jobsItem->setText(col++, "No");
          }
+         jobsItem->setText(col++, job_defs.where);
       }
    }
    /* Resize the columns */

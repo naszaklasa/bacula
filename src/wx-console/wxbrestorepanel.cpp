@@ -1,15 +1,7 @@
 /*
- *
- *   wxbPanel for restoring files
- *
- *    Nicolas Boichat, April-July 2004
- *
- *    Version $Id: wxbrestorepanel.cpp 5240 2007-07-25 21:13:54Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,14 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   wxbPanel for restoring files
+ *
+ *    Nicolas Boichat, April-July 2004
+ *
+ *    Version $Id: wxbrestorepanel.cpp 6636 2008-03-19 18:01:45Z kerns $
+ */
 
 /* Note concerning "done" output (modifiable marked with +)
 Run Restore job
@@ -551,14 +551,17 @@ void wxbRestorePanel::CmdStart()
       wxbMainFrame::GetInstance()->SetStatusText(_("Please configure your restore parameters."));
    }
    else if (status == entered) {
-/*      if (clientChoice->GetStringSelection().Length() < 1) {
+#ifdef xxx
+      if (clientChoice->GetStringSelection().Length() < 1) {
          wxbMainFrame::GetInstance()->SetStatusText(_("Please select a client."));
          return;
       }
       if (jobChoice->GetStringSelection().Length() < 1) {
          wxbMainFrame::GetInstance()->SetStatusText(_("Please select a restore date."));
          return;
-      }*/
+      }
+#endif
+
       wxbMainFrame::GetInstance()->SetStatusText(_("Building restore tree..."));
       
       SetStatus(choosing);
@@ -577,17 +580,22 @@ void wxbRestorePanel::CmdStart()
          wxT("\" storage=\"") << configPanel->GetRowString(wxT("Storage")) <<
          wxT("\" before=\"") << configPanel->GetRowString(wxT("Before")) <<
          wxT("\" select\n"));
-      //wxbUtils::WaitForPrompt("6\n");
-      //WaitForEnd();
-      /*wxbPromptParser *pp = wxbUtils::WaitForPrompt(wxString() << configPanel->GetRowString(wxT("Before")) << "\n", true);
+
+#ifdef xxx
+      wxbUtils::WaitForPrompt("6\n");
+      WaitForEnd();
+
+      wxbPromptParser *pp = wxbUtils::WaitForPrompt(wxString() << configPanel->GetRowString(wxT("Before")) << "\n", true);
+
       int client = pp->getChoices()->Index(configPanel->GetRowString(wxT("Client")));
       if (client == wxNOT_FOUND) {
          wxbMainFrame::GetInstance()->SetStatusText("Failed to find the selected client.");
          return;
       }
-      delete pp;*/
+      delete pp;
       
-      //wxbMainFrame::GetInstance()->Send(wxString() << configPanel->GetRowString(wxT("Before")) << "\n");
+      wxbMainFrame::GetInstance()->Send(wxString() << configPanel->GetRowString(wxT("Before")) << "\n");
+#endif
    
       while (!tableparser->hasFinished() && !dt->hasFinished()) {
          wxTheApp->Yield(true);
@@ -623,8 +631,10 @@ void wxbRestorePanel::CmdStart()
       gauge->SetValue(0);
       gauge->SetRange(tot);
       
-      /*wxbMainFrame::GetInstance()->Print(
-               wxString("[") << tot << "]", CS_DEBUG);*/
+#ifdef xxx
+      wxbMainFrame::GetInstance()->Print(
+               wxString("[") << tot << "]", CS_DEBUG);
+#endif
       
       wxDateTime base = wxDateTime::Now();
       wxDateTime newdate;
@@ -849,8 +859,8 @@ void wxbRestorePanel::CmdStart()
       }
 
       if (scheduledtime.Subtract(currenttime).IsLongerThan(wxTimeSpan::Seconds(150))) {
-         wxbMainFrame::GetInstance()->Print(_("Restore is scheduled in more than two minutes, bwx-console will not wait for its completion.\n"), CS_DEBUG);
-         wxbMainFrame::GetInstance()->SetStatusText(_("Restore is scheduled in more than two minutes, bwx-console will not wait for its completion."));
+         wxbMainFrame::GetInstance()->Print(_("Restore is scheduled to run. bwx-console will not wait for its completion.\n"), CS_DEBUG);
+         wxbMainFrame::GetInstance()->SetStatusText(_("Restore is scheduled to run. bwx-console will not wait for its completion."));
          SetStatus(finished);
          return;
       }
@@ -1069,7 +1079,8 @@ void wxbRestorePanel::CmdCancel() {
  *  11: JobId (no)
  */
 
-void wxbRestorePanel::CmdConfigApply() {
+void wxbRestorePanel::CmdConfigApply() 
+{
    if (cfgUpdated == 0) return;
    
    wxbMainFrame::GetInstance()->SetStatusText(_("Applying restore configuration changes..."));
@@ -1096,7 +1107,7 @@ void wxbRestorePanel::CmdConfigApply() {
       }
       else if ((cfgUpdated >> ConfigReplace) & 1) {
          wxbUtils::WaitForPrompt(wxT("mod\n")); /* TODO: check results */
-         wxbUtils::WaitForPrompt(wxT("10\n"));
+         wxbUtils::WaitForPrompt(wxT("11\n"));
          dt = new wxbDataTokenizer(true);
          wxbUtils::WaitForPrompt(wxString() << (restorePanel->GetRowSelection(_("Replace"))+1) << wxT("\n"));
          def = wxT("1");
@@ -1119,49 +1130,64 @@ void wxbRestorePanel::CmdConfigApply() {
          cfgUpdated = cfgUpdated & (~(1 << ConfigPriority));
       }
       else if ((cfgUpdated >> ConfigClient) & 1) {
-         wxbUtils::WaitForPrompt(wxT("mod\n")); /* TODO: check results */
-         wxbPromptParser *pp = wxbUtils::WaitForPrompt(wxT("5\n"), true);
-         int client = pp->getChoices()->Index(restorePanel->GetRowString(_("Client")));
-         if (client == wxNOT_FOUND) {
-            wxbMainFrame::GetInstance()->SetStatusText(_("Failed to find the selected client."));
-            failed = true;
-            client = 1;
+         if (restorePanel->GetRowCount(_("Client")) > 1) {
+            wxbUtils::WaitForPrompt(wxT("mod\n")); /* TODO: check results */
+            wxbPromptParser *pp = wxbUtils::WaitForPrompt(wxT("5\n"), true);
+            int client = pp->getChoices()->Index(restorePanel->GetRowString(_("Client")));
+            if (client == wxNOT_FOUND) {
+               wxbMainFrame::GetInstance()->SetStatusText(_("Failed to find the selected client."));
+               failed = true;
+               client = 1;
+            }
+            delete pp;
+            dt = new wxbDataTokenizer(true);
+            wxbUtils::WaitForPrompt(wxString() << client << wxT("\n"));
+            def = wxT("1");
+            cfgUpdated = cfgUpdated & (~(1 << ConfigClient));
+         } else {
+            cfgUpdated = cfgUpdated & (~(1 << ConfigClient));
+            continue;
          }
-         delete pp;
-         dt = new wxbDataTokenizer(true);
-         wxbUtils::WaitForPrompt(wxString() << client << wxT("\n"));
-         def = wxT("1");
-         cfgUpdated = cfgUpdated & (~(1 << ConfigClient));
       }
       else if ((cfgUpdated >> ConfigFileset) & 1) {
-         wxbUtils::WaitForPrompt(wxT("mod\n")); /* TODO: check results */
-         wxbPromptParser *pp = wxbUtils::WaitForPrompt(wxT("4\n"), true);
-         int fileset = pp->getChoices()->Index(restorePanel->GetRowString(_("Fileset")));
-         if (fileset == wxNOT_FOUND) {
-            wxbMainFrame::GetInstance()->SetStatusText(_("Failed to find the selected fileset."));
-            failed = true;
-            fileset = 1;
+         if (restorePanel->GetRowCount(_("Fileset")) > 1) {
+            wxbUtils::WaitForPrompt(wxT("mod\n")); /* TODO: check results */
+            wxbPromptParser *pp = wxbUtils::WaitForPrompt(wxT("4\n"), true);
+            int fileset = pp->getChoices()->Index(restorePanel->GetRowString(_("Fileset")));
+            if (fileset == wxNOT_FOUND) {
+               wxbMainFrame::GetInstance()->SetStatusText(_("Failed to find the selected fileset."));
+               failed = true;
+               fileset = 1;
+            }
+            delete pp;
+            dt = new wxbDataTokenizer(true);
+            wxbUtils::WaitForPrompt(wxString() << fileset << wxT("\n"));
+            def = wxT("1");
+            cfgUpdated = cfgUpdated & (~(1 << ConfigFileset));
+         } else {
+            cfgUpdated = cfgUpdated & (~(1 << ConfigFileset));
+            continue;
          }
-         delete pp;
-         dt = new wxbDataTokenizer(true);
-         wxbUtils::WaitForPrompt(wxString() << fileset << wxT("\n"));
-         def = wxT("1");
-         cfgUpdated = cfgUpdated & (~(1 << ConfigFileset));
       }
       else if ((cfgUpdated >> ConfigStorage) & 1) {
-         wxbUtils::WaitForPrompt(wxT("mod\n")); /* TODO: check results */
-         wxbPromptParser *pp = wxbUtils::WaitForPrompt(wxT("2\n"), true);
-         int fileset = pp->getChoices()->Index(restorePanel->GetRowString(_("Storage")));
-         if (fileset == wxNOT_FOUND) {
-            wxbMainFrame::GetInstance()->SetStatusText(_("Failed to find the selected storage."));
-            failed = true;
-            fileset = 1;
+         if (restorePanel->GetRowCount(_("Storage")) > 1) {
+            wxbUtils::WaitForPrompt(wxT("mod\n")); /* TODO: check results */
+            wxbPromptParser *pp = wxbUtils::WaitForPrompt(wxT("2\n"), true);
+            int storage = pp->getChoices()->Index(restorePanel->GetRowString(_("Storage")));
+            if (storage == wxNOT_FOUND) {
+               wxbMainFrame::GetInstance()->SetStatusText(_("Failed to find the selected storage."));
+               failed = true;
+               storage = 1;
+            }
+            delete pp;
+            dt = new wxbDataTokenizer(true);
+            wxbUtils::WaitForPrompt(wxString() << storage << wxT("\n"));
+            def = wxT("1");
+            cfgUpdated = cfgUpdated & (~(1 << ConfigStorage));
+         } else {
+            cfgUpdated = cfgUpdated & (~(1 << ConfigStorage));
+            continue;
          }
-         delete pp;
-         dt = new wxbDataTokenizer(true);
-         wxbUtils::WaitForPrompt(wxString() << fileset << wxT("\n"));
-         def = wxT("1");
-         cfgUpdated = cfgUpdated & (~(1 << ConfigStorage));
       }
       else {
          cfgUpdated = 0;
@@ -1175,7 +1201,7 @@ void wxbRestorePanel::CmdConfigApply() {
          }
       }
       
-      if (i == dt->GetCount()) {
+      if (i != 0 && i == dt->GetCount()) {
          delete dt;   
          dt = wxbUtils::WaitForEnd(def + wxT("\n"), true);
          failed = true;
@@ -1184,6 +1210,7 @@ void wxbRestorePanel::CmdConfigApply() {
    UpdateSecondConfig(dt); /* TODO: Check result */
    
    EnableConfig(true);
+   restorePanel->EnableApply(false);
 
    if (!failed) {
       wxbMainFrame::GetInstance()->SetStatusText(_("Restore configuration changes were applied."));
@@ -1967,7 +1994,6 @@ void wxbRestorePanel::SetStatus(status_enum newstatus) {
       cfgUpdated = 0;
       break;
    case listing:
-      
       break;
    case choosing:
       start->Enable(true);
@@ -1996,6 +2022,7 @@ void wxbRestorePanel::SetStatus(status_enum newstatus) {
       centerSizer->Layout();
       this->Layout();
       restorePanel->EnableApply(false);
+      cancel->Enable(true);
       break;
    case restoring:
       start->SetLabel(_("Restoring..."));
@@ -2362,7 +2389,8 @@ void wxbRestorePanel::OnListRemove(wxCommandEvent& event) {
    listremove->Enable(false);
 }
 
-void wxbRestorePanel::OnListRefresh(wxCommandEvent& event) {
+void wxbRestorePanel::OnListRefresh(wxCommandEvent& event) 
+{
    if (IsWorking()) {
       return;
    }
@@ -2372,7 +2400,8 @@ void wxbRestorePanel::OnListRefresh(wxCommandEvent& event) {
    SetWorking(false);
 }
 
-void wxbRestorePanel::OnConfigUpdated(wxCommandEvent& event) {
+void wxbRestorePanel::OnConfigUpdated(wxCommandEvent& event) 
+{
    if (status == entered) {
       if (event.GetId() == ConfigJobName) {
          if (IsWorking()) {

@@ -1,16 +1,7 @@
 /*
- *
- *   wxbDataParser, class that receives and analyses data
- *   wxbPanel, main frame's notebook panels
- *
- *    Nicolas Boichat, April-July 2004
- *
- *   Version $Id: wxbutils.h 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   wxbDataParser, class that receives and analyses data
+ *   wxbPanel, main frame's notebook panels
+ *
+ *    Nicolas Boichat, April-July 2004
+ *
+ *   Version $Id: wxbutils.h 6636 2008-03-19 18:01:45Z kerns $
+ */
 
 #ifndef WXBUTILS_H
 #define WXBUTILS_H

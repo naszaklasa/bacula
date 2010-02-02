@@ -37,7 +37,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: ua_restore.c 6108 2007-12-23 12:14:54Z kerns $
+ *   Version $Id: ua_restore.c 6983 2008-05-17 23:28:41Z kerns $
  */
 
 
@@ -1267,11 +1267,12 @@ bail_out:
  */
 int get_next_jobid_from_list(char **p, JobId_t *JobId)
 {
-   char jobid[30];
+   const int maxlen = 30;
+   char jobid[maxlen+1];
    char *q = *p;
 
    jobid[0] = 0;
-   for (int i=0; i<(int)sizeof(jobid); i++) {
+   for (int i=0; i<maxlen; i++) {
       if (*q == 0) {
          break;
       } else if (*q == ',') {
@@ -1436,6 +1437,7 @@ void find_storage_resource(UAContext *ua, RESTORE_CTX &rx, char *Storage, char *
 
    /* Take command line arg, or ask user if none */
    rx.store = get_storage_resource(ua, false /* don't use default */);
-   Dmsg1(200, "Set store=%s\n", rx.store->name());
-
+   if (rx.store) {
+      Dmsg1(200, "Set store=%s\n", rx.store->name());
+   }
 }

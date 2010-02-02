@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -43,7 +43,7 @@
  *
  *     Kern Sibbald, May MMI
  *
- *   Version $Id: dircmd.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: dircmd.c 7014 2008-05-24 09:31:05Z kerns $
  *
  */
 
@@ -149,6 +149,7 @@ void *handle_connection_request(void *arg)
    bool found, quit;
    int bnet_stat = 0;
    char name[500];
+   char tbuf[100];
 
    if (bs->recv() <= 0) {
       Emsg0(M_ERROR, 0, _("Connection request failed.\n"));
@@ -174,7 +175,8 @@ void *handle_connection_request(void *arg)
       Dmsg1(000, "<filed: %s", bs->msg);
    }
    if (sscanf(bs->msg, "Hello Start Job %127s", name) == 1) {
-      Dmsg0(110, "Got a FD connection\n");
+      Dmsg1(110, "Got a FD connection at %s\n", bstrftimes(tbuf, sizeof(tbuf), 
+            (utime_t)time(NULL)));
       handle_filed_connection(bs, name);
       return NULL;
    }
@@ -182,7 +184,8 @@ void *handle_connection_request(void *arg)
    /* 
     * This is a connection from the Director, so setup a JCR 
     */
-   Dmsg0(110, "Got a DIR connection\n");
+   Dmsg1(110, "Got a DIR connection at %s\n", bstrftimes(tbuf, sizeof(tbuf), 
+         (utime_t)time(NULL)));
    jcr = new_jcr(sizeof(JCR), stored_free_jcr); /* create Job Control Record */
    jcr->dir_bsock = bs;               /* save Director bsock */
    jcr->dir_bsock->set_jcr(jcr);
@@ -385,7 +388,7 @@ static bool do_label(JCR *jcr, int relabel)
       if (dcr) {
          dev = dcr->dev;
          dev->dlock();                 /* Use P to avoid indefinite block */
-         if (!dev->is_open()) {
+         if (!dev->is_open() && !dev->is_busy()) {
             Dmsg1(400, "Can %slabel. Device is not open\n", relabel?"re":"");
             label_volume_if_ok(dcr, oldname, newname, poolname, slot, relabel);
             dev->close();
@@ -515,6 +518,7 @@ bail_out:
    if (!dev->is_open()) {
       dev->clear_volhdr();
    }
+   volume_unused(dcr);                   /* no longer using volume */
    give_back_device_lock(dev, &hold);
    return;
 }
@@ -548,6 +552,7 @@ static bool read_label(DCR *dcr)
       ok = false;
       break;
    }
+   volume_unused(dcr);
    give_back_device_lock(dev, &hold);
    return ok;
 }
@@ -668,8 +673,8 @@ static bool mount_cmd(JCR *jcr)
             }
             /* We freed the device, so reopen it and wake any waiting threads */
             if (dev->open(dcr, OPEN_READ_ONLY) < 0) {
-               dir->fsend(_("3901 open device failed: ERR=%s\n"),
-                  dev->bstrerror());
+               dir->fsend(_("3901 Unable to open device %s: ERR=%s\n"),
+                  dev->print_name(), dev->bstrerror());
                if (dev->blocked() == BST_UNMOUNTED) {
                   /* We blocked the device, so unblock it */
                   Dmsg0(100, "Unmounted. Unblocking device\n");
@@ -725,8 +730,8 @@ static bool mount_cmd(JCR *jcr)
                }
             } else if (dev->is_tape()) {
                if (dev->open(dcr, OPEN_READ_ONLY) < 0) {
-                  dir->fsend(_("3901 open device failed: ERR=%s\n"),
-                     dev->bstrerror());
+                  dir->fsend(_("3901 Unable to open device %s: ERR=%s\n"),
+                     dev->print_name(), dev->bstrerror());
                   break;
                }
                read_label(dcr);
@@ -911,9 +916,8 @@ static bool release_cmd(JCR *jcr)
          } else if (dev->is_busy()) {
             send_dir_busy_message(dir, dev);
          } else {                     /* device not being used */
-            Dmsg0(90, "Device not in use, releaseing\n");
-            unload_autochanger(dcr, -1);
-            release_volume(dcr);
+            Dmsg0(90, "Device not in use, releasing\n");
+            dcr->release_volume();
             dir->fsend(_("3022 Device %s released.\n"), 
                dev->print_name());
          }

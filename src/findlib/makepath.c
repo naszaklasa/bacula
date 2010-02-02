@@ -20,7 +20,7 @@
 /*
  *   Modified by Kern Sibbald for use in Bacula, December 2000
  *
- *   Version $Id: makepath.c 5170 2007-07-13 13:33:34Z kerns $
+ *   Version $Id: makepath.c 6867 2008-05-01 16:33:28Z kerns $
  */
 
 #include "bacula.h"
@@ -293,7 +293,7 @@ make_path(
                   ) {
                  /* Note, if we are restoring as NON-root, this may not be fatal */
                  berrno be;
-                 Jmsg(jcr, M_ERROR, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
+                 Jmsg(jcr, M_WARNING, 0, _("Cannot change owner and/or group of %s: ERR=%s\n"),
                       quote(dirpath), be.bstrerror());
               }
               Dmsg0(300, "Chown done.\n");

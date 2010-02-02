@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -29,7 +29,7 @@
  * Append code for Storage daemon
  *  Kern Sibbald, May MM
  *
- *  Version $Id: append.c 5687 2007-09-29 07:09:20Z kerns $
+ *  Version $Id: append.c 6831 2008-04-16 09:49:47Z kerns $
  */
 
 #include "bacula.h"
@@ -70,7 +70,7 @@ bool do_append_data(JCR *jcr)
       return false;
    }                                              
 
-   Dmsg1(100, "Start append data. res=%d\n", dev->reserved_device);
+   Dmsg1(100, "Start append data. res=%d\n", dev->num_reserved());
 
    memset(&rec, 0, sizeof(rec));
 
@@ -296,6 +296,7 @@ bool do_append_data(JCR *jcr)
       }
       if (dev->VolCatInfo.VolCatName[0] == 0) {
          Pmsg0(000, _("NULL Volume name. This shouldn't happen!!!\n"));
+         Dmsg0(000, _("NULL Volume name. This shouldn't happen!!!\n"));
       }
       Dmsg0(90, "back from write_end_session_label()\n");
       /* Flush out final partial block of this session */
@@ -307,6 +308,7 @@ bool do_append_data(JCR *jcr)
       }
       if (dev->VolCatInfo.VolCatName[0] == 0) {
          Pmsg0(000, _("NULL Volume name. This shouldn't happen!!!\n"));
+         Dmsg0(000, _("NULL Volume name. This shouldn't happen!!!\n"));
       }
    }
 

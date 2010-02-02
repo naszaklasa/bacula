@@ -1,16 +1,7 @@
 /*
- *
- *   scan.c scan a directory (on a removable file) for a valid
- *      Volume name. If found, open the file for append.
- *
- *    Kern Sibbald, MMVI
- *
- *   Version $Id: scan.c 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   scan.c scan a directory (on a removable file) for a valid
+ *      Volume name. If found, open the file for append.
+ *
+ *    Kern Sibbald, MMVI
+ *
+ *   Version $Id: scan.c 6831 2008-04-16 09:49:47Z kerns $
+ */
 
 #include "bacula.h"
 #include "stored.h"

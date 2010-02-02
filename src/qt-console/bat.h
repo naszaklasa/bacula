@@ -4,7 +4,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -29,15 +29,16 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: bat.h 5725 2007-10-05 14:59:31Z kerns $
+ *   Version $Id: bat.h 6962 2008-05-13 06:49:45Z kerns $
  *
  *   Kern Sibbald, January 2007
  */
 
+#include "config.h"
+
 #include <QtGui>
 #include <QtCore>
 #include "mainwin.h"
-#include "config.h"
 #include "bacula.h"
 #include "bat_conf.h"
 #include "jcr.h"

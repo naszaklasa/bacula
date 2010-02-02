@@ -1,3 +1,52 @@
+bacula (2.4.0-1ubuntu1) intrepid; urgency=low
+
+  * Merge from debian unstable, remaining changes:
+    - debian/bacula-director-mysql.postinst
+      debian/bacula-director-pgsql.postinst
+      + Worked in some smarts to do no database configration if bacula is already
+        installed.
+    - debian/control
+      + Added libdbi-perl and libdb-mysql-perl to depends for bacula-director-mysql due
+        to new postinst configuration.
+      + Cleaned up bacula-director-pgsql dependencies and recommends.
+      + Made mysql the default director to install for bacula-server.
+      + Removed dbconfig-common dependency for bacula-director-{mysql|pgsql},
+        added database handling to postinstall scripts and templates, modified
+        postinstall script's sed expressions.
+      + Removed libwgtk2.6-dev as a build dependency; as a result bacula-console-wx
+        isn't built anymore.
+      + Install gawk if not installed. (LP: #207527)
+     - debian/make_catalog_backup_awk.[mysql|pgsql|sqlite3|sqlite]:
+       + New scripts for catalog backup. (CVE-2007-5626)
+     - debian/bacula-console-wx:
+       + Dropped since we are not building them anymore.
+     - debian/bacula-director-common.bacula-director.init
+       debian/bacula-fd.init
+       debian/bacula-sd.init
+       + Made more LSB specific.
+     - debian/patches/ubuntu_mtx-changer.patch:
+       - Dropped accepted upstream.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Tue, 01 Jul 2008 01:59:33 +0100
+
+bacula (2.4.0-1) unstable; urgency=low
+
+  [ John Goerzen ]
+  * Removed debian/Makefile and debian/po/Makefile
+  * Apply upstream 2.4.1-restore-wrong-mediatype.patch
+  * bacula-fd: fix LSB init headers to not require bacula-sd.  Closes:
+    #486256.
+
+  [ Mark Hymers ]
+  * Bump Standards-Version to 3.8.0.  No changes needed.
+  * Imported bacula-2.4.0.  Closes: #487767.
+
+  [ John Goerzen ]
+  * Corrected GIT URL
+  * Clarify the presence of BAT
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 30 Jun 2008 09:15:11 -0500
+
 bacula (2.2.8-8ubuntu1) intrepid; urgency=low
 
   * Merge from debian unstable, remaining changes:

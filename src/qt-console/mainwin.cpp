@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,7 +27,7 @@
 */
 
 /*
- *   Version $Id: mainwin.cpp 5285 2007-08-05 17:34:34Z bartleyd2 $
+ *   Version $Id: mainwin.cpp 6956 2008-05-12 09:32:54Z kerns $
  *
  *  Main Window control for bat (qt-console)
  *
@@ -36,6 +36,7 @@
  */ 
 
 #include "bat.h"
+#include "version.h"
 #include "joblist/joblist.h"
 #include "storage/storage.h"
 #include "fileset/fileset.h"
@@ -49,7 +50,9 @@
 #include "restore/restoretree.h"
 #include "help/help.h"
 #include "jobs/jobs.h"
+#ifdef HAVE_QWT
 #include "jobgraphs/jobplot.h"
+#endif
 
 /* 
  * Daemon message callback
@@ -143,9 +146,12 @@ void MainWin::createPages()
       new FileSet();
       new Jobs();
       createPageJobList("", "", "", "", NULL);
+
+#ifdef HAVE_QWT
       JobPlotPass pass;
       pass.use = false;
       new JobPlot(NULL, pass);
+#endif
       new MediaList();
       new Storage();
       new restoreTree();
@@ -232,7 +238,9 @@ void MainWin::createConnections()
    connect(actionRun, SIGNAL(triggered()), this,  SLOT(runButtonClicked()));
    connect(actionEstimate, SIGNAL(triggered()), this,  SLOT(estimateButtonClicked()));
    connect(actionBrowse, SIGNAL(triggered()), this,  SLOT(browseButtonClicked()));
+#ifdef HAVE_QWT
    connect(actionJobPlot, SIGNAL(triggered()), this,  SLOT(jobPlotButtonClicked()));
+#endif
    connect(actionRestore, SIGNAL(triggered()), this,  SLOT(restoreButtonClicked()));
    connect(actionUndock, SIGNAL(triggered()), this,  SLOT(undockWindowButton()));
    connect(actionToggleDock, SIGNAL(triggered()), this,  SLOT(toggleDockContextWindow()));
@@ -259,7 +267,6 @@ void MainWin::closeEvent(QCloseEvent *event)
          }
       }
    }
-   /* close the console pages and terminate connection */
    foreach(Console *console, m_consoleHash){
       console->writeSettings();
       console->terminate();
@@ -434,12 +441,14 @@ void MainWin::restoreButtonClicked()
    new prerestorePage();
 }
 
+#ifdef HAVE_QWT
 void MainWin::jobPlotButtonClicked()
 {
    JobPlotPass pass;
    pass.use = false;
    new JobPlot(NULL, pass);
 }
+#endif
 
 /*
  * The user just finished typing a line in the command line edit box
@@ -464,8 +473,8 @@ void MainWin::input_line()
 void MainWin::about()
 {
    QMessageBox::about(this, tr("About bat"),
-      tr("<br><h2>bat 1.0, by Dirk H Bartley and Kern Sibbald</h2>"
-         "<p>Copyright &copy; " BYEAR " Free Software Foundation Europe e.V."
+      tr("<br><h2>bat " VERSION "(" BDATE "), by Dirk H Bartley and Kern Sibbald</h2>"
+         "<p>Copyright &copy; 2007-" BYEAR " Free Software Foundation Europe e.V."
          "<p>The <b>bat</b> is an administrative console"
          " interface to the Director."));
 }

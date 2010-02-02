@@ -31,7 +31,7 @@
  * 
  *  Kern Sibbald, MM
  *
- *   Version $Id: bls.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: bls.c 6636 2008-03-19 18:01:45Z kerns $
  */
 
 #include "bacula.h"
@@ -453,7 +453,7 @@ bool    dir_send_job_status(JCR *jcr) {return 1;}
 int     generate_job_event(JCR *jcr, const char *event) { return 1; }
        
 
-bool dir_ask_sysop_to_mount_volume(DCR *dcr)
+bool dir_ask_sysop_to_mount_volume(DCR *dcr, int /*mode*/)
 {
    DEVICE *dev = dcr->dev;
    fprintf(stderr, _("Mount Volume \"%s\" on device %s and press return when ready: "),

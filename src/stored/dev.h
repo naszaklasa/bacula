@@ -31,7 +31,38 @@
  *
  * Kern Sibbald, MM
  *
- *   Version $Id: dev.h 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: dev.h 7060 2008-05-30 18:03:03Z kerns $
+ *
+ */
+
+/*
+ * Some details of how volume and device reservations work
+ *
+ * class VOLRES:
+ *   set_in_use()     volume being used on current drive
+ *   clear_in_use()   no longer being used.  Can be re-used or moved.
+ *   set_swapping()   set volume being moved to another drive
+ *   is_swapping()    volume is being moved to another drive
+ *   clear_swapping() volume normal
+ *
+ * class DEVICE:
+ *   set_load()       set to load volume
+ *   needs_load()     volume must be loaded (i.e. set_load done)
+ *   clear_load()     load done.
+ *   set_unload()     set to unload volume
+ *   needs_unload()    volume must be unloaded
+ *   clear_unload()   volume unloaded
+ *
+ *    reservations are temporary until the drive is acquired
+ *   inc_reserved()   increments num of reservations
+ *   dec_reserved()   decrements num of reservations
+ *   num_reserved()   number of reservations
+ *
+ * class DCR:
+ *   set_reserved()   sets local reserve flag and calls dev->inc_reserved()
+ *   clear_reserved() clears local reserve flag and calls dev->dec_reserved()
+ *   is_reserved()    returns local reserved flag
+ *   unreserve_device()  much more complete unreservation
  *
  */
 
@@ -64,7 +95,7 @@ enum {
    B_TAPE_DEV,
    B_DVD_DEV,
    B_FIFO_DEV,
-   B_PROG_DEV
+   B_VTL_DEV 
 };
 
 /* Generic status bits returned from status_dev() */
@@ -166,10 +197,8 @@ struct VOLUME_CAT_INFO {
 
 
 class DEVRES;                        /* Device resource defined in stored_conf.h */
-
 class DCR; /* forward reference */
 class VOLRES; /* forward reference */
-
 
 /*
  * Device structure definition. There is one of these for
@@ -182,7 +211,13 @@ private:
    int m_blocked;                     /* set if we must wait (i.e. change tape) */
    int m_count;                       /* Mutex use count -- DEBUG only */
    pthread_t m_pid;                   /* Thread that locked -- DEBUG only */
+   bool m_unload;                     /* set when Volume must be unloaded */
+   bool m_load;                       /* set when Volume must be loaded */
+   int m_num_reserved;                /* counter of device reservations */
+   int32_t m_slot;                    /* slot loaded in drive or -1 if none */ 
+
 public:
+   DEVICE * volatile swap_dev;        /* Swap vol from this device */
    dlist *attached_dcrs;              /* attached DCR list */
    pthread_mutex_t m_mutex;           /* access control */
    pthread_mutex_t spool_mutex;       /* mutex for updating spool_size */
@@ -192,7 +227,6 @@ public:
    int dev_prev_blocked;              /* previous blocked state */
    int num_waiting;                   /* number of threads waiting */
    int num_writers;                   /* number of writing threads */
-   int reserved_device;               /* number of device reservations */
    int capabilities;                  /* capabilities mask */
    int state;                         /* state mask */
    int dev_errno;                     /* Our own errno */
@@ -203,7 +237,6 @@ public:
    bool initiated;                    /* set when init_dev() called */
    int label_type;                    /* Bacula/ANSI/IBM label types */
    uint32_t drive_index;              /* Autochanger drive index (base 0) */
-   int32_t  Slot;                     /* Slot currently in drive (base 1) */
    POOLMEM *dev_name;                 /* Physical device name */
    POOLMEM *prt_name;                 /* Name used for display purposes */
    char *errmsg;                      /* nicely edited error message */
@@ -277,16 +310,17 @@ public:
    int is_file() const { return dev_type == B_FILE_DEV; }
    int is_fifo() const { return dev_type == B_FIFO_DEV; }
    int is_dvd() const  { return dev_type == B_DVD_DEV; }
-   int is_prog() const  { return dev_type == B_PROG_DEV; }
+   int is_vtl() const  { return dev_type == B_VTL_DEV; }
    int is_open() const { return m_fd >= 0; }
    int is_offline() const { return state & ST_OFFLINE; }
    int is_labeled() const { return state & ST_LABEL; }
    int is_mounted() const { return state & ST_MOUNTED; }
    int is_unmountable() const { return (is_dvd() || (is_file() && is_removable())); }
+   int num_reserved() const { return m_num_reserved; };
    int is_part_spooled() const { return state & ST_PART_SPOOLED; }
    int have_media() const { return state & ST_MEDIA; }
    int is_short_block() const { return state & ST_SHORT; }
-   int is_busy() const { return (state & ST_READ) || num_writers || reserved_device; }
+   int is_busy() const { return (state & ST_READ) || num_writers || num_reserved(); }
    int at_eof() const { return state & ST_EOF; }
    int at_eot() const { return state & ST_EOT; }
    int at_weot() const { return state & ST_WEOT; }
@@ -308,6 +342,8 @@ public:
                     (m_blocked == BST_UNMOUNTED ||
                      m_blocked == BST_WAITING_FOR_SYSOP ||
                      m_blocked == BST_UNMOUNTED_WAITING_FOR_SYSOP); };
+   bool must_unload() const { return m_unload; };
+   bool must_load() const { return m_load; };
    const char *strerror() const;
    const char *archive_name() const;
    const char *name() const;
@@ -327,8 +363,12 @@ public:
    void set_part_spooled(int val) { if (val) state |= ST_PART_SPOOLED; \
           else state &= ~ST_PART_SPOOLED;
    };
+   void set_unload() { m_unload = true; };
+   void set_load() { m_load = true; };
+   void inc_reserved() { m_num_reserved++; }
    void set_mounted(int val) { if (val) state |= ST_MOUNTED; \
           else state &= ~ST_MOUNTED; };
+   void dec_reserved() { m_num_reserved--; ASSERT(m_num_reserved>=0); };
    void clear_append() { state &= ~ST_APPEND; };
    void clear_read() { state &= ~ST_READ; };
    void clear_labeled() { state &= ~ST_LABEL; };
@@ -340,8 +380,11 @@ public:
    void clear_media() { state &= ~ST_MEDIA; };
    void clear_short_block() { state &= ~ST_SHORT; };
    void clear_freespace_ok() { state &= ~ST_FREESPACE_OK; };
+   void clear_unload() { m_unload = false; };
+   void clear_load() { m_load = false; };
    char *bstrerror(void) { return errmsg; };
    char *print_errmsg() { return errmsg; };
+   int32_t get_slot() const { return m_slot; };
 
 
    void clear_volhdr();          /* in dev.c */
@@ -372,6 +415,10 @@ public:
    void clrerror(int func);      /* in dev.c */
    boffset_t lseek(DCR *dcr, boffset_t offset, int whence); /* in dev.c */
    bool update_pos(DCR *dcr);    /* in dev.c */
+   void set_slot(int32_t slot);  /* in dev.c */
+   void clear_slot();            /* in dev.c */
+
+
    bool update_freespace();      /* in dvd.c */
 
    uint32_t get_file() const { return file; };
@@ -419,10 +466,15 @@ inline const char *DEVICE::print_name() const { return prt_name; }
  *  DCRs open, each pointing to a different device. 
  */
 class DCR {
+private:
+   bool m_dev_locked;                 /* set if dev already locked */
+   bool m_reserved;                   /* set if reserved device */
+   bool m_found_in_use;               /* set if a volume found in use */
+
 public:
    dlink dev_link;                    /* link to attach to dev */
    JCR *jcr;                          /* pointer to JCR */
-   DEVICE *dev;                       /* pointer to device */
+   DEVICE * volatile dev;             /* pointer to device */
    DEVRES *device;                    /* pointer to device resource */
    DEV_BLOCK *block;                  /* pointer to block */
    DEV_RECORD *rec;                   /* pointer to record */
@@ -432,14 +484,12 @@ public:
    bool spooling;                     /* set when actually spooling */
    bool despooling;                   /* set when despooling */
    bool despool_wait;                 /* waiting for despooling */
-   bool m_dev_locked;                 /* set if dev already locked */
    bool NewVol;                       /* set if new Volume mounted */
    bool WroteVol;                     /* set if Volume written */
    bool NewFile;                      /* set when EOF written */
-   bool reserved_device;              /* set if reserve done */
+   bool reserved_volume;              /* set if we reserved a volume */
    bool any_volume;                   /* Any OK for dir_find_next... */
    bool attached_to_dev;              /* set when attached to dev */
-   bool volume_in_use;                /* set in dir_find_next_appendable_volume() */
    bool keep_dcr;                     /* do not free dcr in release_dcr */
    uint32_t VolFirstIndex;            /* First file index this Volume */
    uint32_t VolLastIndex;             /* Last file index this Volume */
@@ -461,22 +511,57 @@ public:
    VOLUME_CAT_INFO VolCatInfo;        /* Catalog info for desired volume */
 
    /* Methods */
+   bool found_in_use() const { return m_found_in_use; };
+   void set_found_in_use() { m_found_in_use = true; };
+   void clear_found_in_use() { m_found_in_use = false; };
+   bool is_reserved() const { return m_reserved; };
    bool is_dev_locked() { return m_dev_locked; }
    void dlock() { dev->dlock(); m_dev_locked = true; }
-   void dunlock() { dev->dunlock(); m_dev_locked = false;}
+   void dunlock() { m_dev_locked = false; dev->dunlock(); }
    void dblock(int why) { dev->dblock(why); }
 
+
+   /* Methods in reserve.c */
+   void clear_reserved();
+   void set_reserved();
+   void unreserve_device();
+   bool can_i_use_volume();
+
+   /* Methods in mount.c */
+   bool mount_next_write_volume();
+   bool mount_next_read_volume();
+   void mark_volume_in_error();
+   void mark_volume_not_inchanger();
+   int try_autolabel(bool opened);
+   bool is_suitable_volume_mounted();
+   bool is_eod_valid();
+   int check_volume_label(bool &ask, bool &autochanger);
+   void release_volume();
+   void do_swapping(bool is_writing);
+   bool is_tape_position_ok();
 };
 
 /*
  * Volume reservation class -- see reserve.c
  */
 class VOLRES { 
+   bool m_swapping;                   /* set when swapping to another drive */
+   bool m_in_use;                     /* set when volume reserved or in use */
+   int32_t m_slot;                    /* slot of swapping volume */
 public:
    dlink link;
    char *vol_name;                    /* Volume name */
    DEVICE *dev;                       /* Pointer to device to which we are attached */
-   bool released;                     /* set when the Volume can be released */
+
+   bool is_swapping() const { return m_swapping; };
+   void set_swapping() { m_swapping = true; };
+   void clear_swapping() { m_swapping = false; };
+   bool is_in_use() const { return m_in_use; };
+   void set_in_use() { m_in_use = true; };
+   void clear_in_use() { m_in_use = false; };
+   void set_slot(int32_t slot) { m_slot = slot; };
+   void clear_slot() { m_slot = -1; };
+   int32_t get_slot() const { return m_slot; };
 };
 
 

@@ -32,7 +32,7 @@
  *
  *    Nicolas Boichat, MMV
  *
- *   Version $Id: dvd.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: dvd.c 6831 2008-04-16 09:49:47Z kerns $
  */
 
 #include "bacula.h"
@@ -266,7 +266,7 @@ bool dvd_write_part(DCR *dcr)
       Dmsg1(100, "%s\n", dev->errmsg);
       dev->dev_errno = EIO;
       if (!dev->truncating) {
-         mark_volume_in_error(dcr);
+         dcr->mark_volume_in_error();
       }
       sm_check(__FILE__, __LINE__, false);
       return false;
