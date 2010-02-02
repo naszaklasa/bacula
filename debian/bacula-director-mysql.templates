@@ -6,7 +6,7 @@ _Description: Database server hostname:
 
 Template: bacula/dba_name
 Type: string
-Default: bacula
+Default: root
 _Description: Database administrator username:
  Please enter the MySQL administrator username, needed for
  the database creation.

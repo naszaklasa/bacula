@@ -1,3 +1,11 @@
+bacula (2.2.8-5ubuntu4) hardy; urgency=low
+
+  * Partial rewrite of init script for bacula-director-common (LP: #204145)
+    - includes LSB init functions
+    - fix for couple of typos
+
+ -- Ante Karamatic <ivoks@ubuntu.com>  Fri, 21 Mar 2008 18:46:07 +0100
+
 bacula (2.2.8-5ubuntu3) hardy; urgency=low
 
   * Fix typos in init scripts.
