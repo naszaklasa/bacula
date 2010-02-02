@@ -1,3 +1,10 @@
+bacula (2.4.2-1ubuntu5) intrepid; urgency=low
+
+  * Create postgresql database with SQL_ASCII encoding, not
+    UTF8 (LP: #253648)
+
+ -- Ante Karamatic <ivoks@ubuntu.com>  Sat, 27 Sep 2008 10:11:55 +0200
+
 bacula (2.4.2-1ubuntu4) intrepid; urgency=low
 
   * debian/patches/ubuntu_grant_privileges.patch:
