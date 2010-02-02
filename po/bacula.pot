@@ -16064,6 +16064,16 @@ msgstr ""
 msgid "Bad Command Line Option"
 msgstr ""
 
+#: src/stored/bscan.c:280 src/stored/bscan.c:355
+#, c-format
+msgid "First Volume Size = %sn"
+msgstr ""
+
+#: src/stored/mount.c:233
+#, c-format
+msgid "Could not open device %s: ERR=%s\n"
+msgstr ""
+
 #: src/dird/catreq.c:326
 msgid "1991 Update JobMedia error\n"
 msgstr ""
