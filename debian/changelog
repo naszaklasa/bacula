@@ -1,3 +1,11 @@
+bacula (2.4.3-1ubuntu2) jaunty; urgency=low
+
+  * debian/bacula-common.postrm:
+    Fix the deletion of the bacula user and remove the
+    /var/log/bacula and /var/lib/bacula 
+
+ -- Chuck Short <zulcss@ubuntu.com>  Mon, 08 Dec 2008 20:12:58 +0000
+
 bacula (2.4.3-1ubuntu1) jaunty; urgency=low
 
   * Store sd|fd|director passwords in debconf (LP: #222558)
