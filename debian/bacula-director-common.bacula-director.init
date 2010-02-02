@@ -1,8 +1,10 @@
 #! /bin/sh
 ### BEGIN INIT INFO
 # Provides:          bacula-director
-# Required-Start:    $remote_fs $syslog bacula-fd
-# Required-Stop:     $remote_fs $syslog bacula-fd
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Should-Start:      bacula-fd
+# Shoult-Stop:       bacula-fd
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 ### END INIT INFO

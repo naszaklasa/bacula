@@ -1,3 +1,10 @@
+bacula (2.4.4-1ubuntu9) karmic; urgency=low
+
+  * debian/bacula-director-common.bacula-director.init: doesn't require
+    bacula-fd.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Mon, 05 Oct 2009 10:26:36 -0400
+
 bacula (2.4.4-1ubuntu8) karmic; urgency=low
 
   * bacula.desktop: Run /usr/bin/bat not /usr/sbin/bat (LP: #38778) 
@@ -17,6 +24,7 @@ bacula (2.4.4-1ubuntu6) karmic; urgency=low
 
  -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 23 Jul 2009 11:53:12 +0200
 
+add-console-use-vt
 bacula (2.4.4-1ubuntu5) jaunty; urgency=low
 
   * debian/rules:
