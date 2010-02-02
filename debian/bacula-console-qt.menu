@@ -1,2 +1,0 @@
-?package(bat):needs="X11" section="Apps/System" \
-  title="Bacula qtConsole" command="/usr/bin/bat -c /etc/bacula/bat.conf"

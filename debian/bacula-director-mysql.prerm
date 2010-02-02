@@ -5,16 +5,6 @@
 
 . /usr/share/debconf/confmodule
 
-dbc_first_version=1.38.9-3
-dbc_dbuser=bacula
-dbc_dbname=bacula
-
-# source dbconfig-common shell library, and call the hook function
-if [ -f /usr/share/dbconfig-common/dpkg/config.mysql ]; then
-  . /usr/share/dbconfig-common/dpkg/prerm.mysql
-  dbc_go bacula-director-mysql $@
-fi
-
 
 set -e
 

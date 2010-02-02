@@ -1,0 +1,14 @@
+--- src/dird/bacula-dir.conf.in.old	2008-03-13 03:30:57.000000000 +0100
++++ src/dird/bacula-dir.conf.in	2008-03-13 03:42:41.000000000 +0100
+@@ -62,7 +62,10 @@
+   FileSet="Catalog"
+   Schedule = "WeeklyCycleAfterBackup"
+   # This creates an ASCII copy of the catalog
+-  RunBeforeJob = "@scriptdir@/make_catalog_backup <dbname> <user> <password>"
++  # WARNING!
++  # Ubuntu uses make_catalog_backup_awk script for
++  # security reasons
++  RunBeforeJob = "/usr/bin/awk -f @scriptdir@/make_catalog_backup_awk -v cat1=<CatalogName> @sysconfdir@/bacula-dir.conf"
+   # This deletes the copy of the catalog
+   RunAfterJob  = "@scriptdir@/delete_catalog_backup"
+   Write Bootstrap = "@working_dir@/BackupCatalog.bsr"

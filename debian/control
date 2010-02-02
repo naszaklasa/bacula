@@ -1,14 +1,15 @@
 Source: bacula
 Section: utils
 Priority: optional
-Maintainer: John Goerzen <jgoerzen@complete.org>
+Maintainer: Ubuntu MOTU Developers <ubuntu-motu@lists.ubuntu.com>
+XSBC-Original-Maintainer: John Goerzen <jgoerzen@complete.org>
 Build-Depends: autotools-dev, debhelper (>= 4.2), po-debconf (>= 0.8.2), 
- zlib1g-dev, libreadline5-dev | libreadline-dev, libjconv-dev,
+ zlib1g-dev, libreadline5-dev | libreadline-dev,
  libsqlite0-dev, libsqlite3-dev, libmysqlclient15-dev, libpq-dev, 
- postgresql-server-dev-8.2,
+ postgresql-server-dev-8.3,
  libwrap0-dev, python-dev, libgtk2.0-dev (>= 2.10),
- libgnome2-dev, libwxgtk2.6-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
- libx11-dev, mtx, bc, libxt-dev, dpkg-dev (>= 1.13.19), libqt4-dev, libqwt5-qt4-dev
+ libgnome2-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
+ libx11-dev, mtx, bc, libxt-dev, dpkg-dev (>= 1.13.19), libqt4-dev, 
 Build-Conflicts: python2.2-dev, python2.3, qt3-dev-tools
 Standards-Version: 3.7.2
 Vcs-Browser: http://git.debian.org/?p=users/jgoerzen/bacula
@@ -87,7 +88,7 @@ Description: Network backup, recovery and verification (Director daemon)
 Package: bacula-director-mysql
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
-Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), mysql-client, ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), mysql-client, libdbi-perl, libdbd-mysql-perl, ${shlibs:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -104,11 +105,11 @@ Description: Network backup, recovery and verification (Director daemon)
 Package: bacula-director-pgsql
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), postgresql-client (>= 7.4) | postgresql-client-8.1 | postgresql-client-7.4 , ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), postgresql-client (>= 7.4), ${shlibs:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
-Recommends: postgresql-8.2 | postgresql-8.1 | postgresql-8.0 | postgresql (>= 7.4)
+Recommends: postgresql (>= 7.4)
 Suggests: postgresql-contrib, postgresql-doc
 Description: Network backup, recovery and verification (Director daemon)
  The Bacula Director service supervises all the backup, restore, verify and
@@ -140,7 +141,7 @@ Description: Network backup, recovery and verification (Filer daemon)
 
 Package: bacula-server
 Architecture: all
-Depends: bacula-director-sqlite3 (>= ${source:Version})|bacula-director, bacula-sd (>= ${source:Version}), bacula-sd-sqlite3 (>= ${source:Version})|bacula-sd-tools
+Depends: bacula-director-mysql (>= ${source:Version})|bacula-director, bacula-sd (>= ${source:Version}), bacula-sd-mysql (>= ${source:Version})|bacula-sd-tools
 Recommends: bacula-fd
 Description: Network backup, recovery and verification (Server meta-package)
  Bacula system server: SQL-based catalog (SQLite, MySQL, or PgSQL) and 
@@ -211,36 +212,6 @@ Depends: bacula-common (= ${source:Version}), ${shlibs:Depends}
 Description: Network backup, recovery and verification (Mgmt. Console)
  The Console allows the administrator or user to communicate with the
  Bacula Director. This is the TTY version.
-
-Package: bacula-console-wx
-Provides: bacula-wxconsole
-Replaces: bacula-wxconsole
-Conflicts: bacula-wxconsole
-Architecture: any
-Pre-Depends: debconf (>= 1.4.30)
-Depends: bacula-common (= ${source:Version}), ${shlibs:Depends}
-Description: Network backup, recovery and verification (Console, Gnome version)
- The WX-Console allows the administrator or user to communicate with the
- Bacula Director. It provides a graphical interface to the backup/restore
- operations.
- .
- This GUI interface has been designed to ease restore operations as much as
- possible as compared to the "conventional" console.
- .
- There is a Win32 version of this program available for download from
- Bacula's website: www.bacula.org
-
-Package: bacula-console-qt
-Architecture: any
-Pre-Depends: debconf (>= 1.4.30)
-Depends: bacula-common (= ${source:Version}), ${shlibs:Depends}
-Description: Network backup, recovery and verification (Console, Qt version)
- The Bacula QT-Console (known as bat) allows the administrator or user to
- communicate with the  Bacula Director. It provides a graphical interface
- to the backup/restore operations.
- .
- This GUI interface has been designed to ease restore operations as much as
- possible as compared to the "conventional" console.
 
 Package: bacula-traymonitor
 Architecture: any

@@ -1,3 +1,38 @@
+bacula (2.2.8-5ubuntu1) hardy; urgency=low
+
+  * Merge from debian unstable, remaining changes:
+    - Correct src/dird/bacula-dir.conf.in to pass the correct arguments
+      to "/etc/bacula/scripts/make_catalog_backup"
+    - Modify maintainer value to match the DebianMaintainerField
+      specification.
+
+  [Ante Karamatic]
+  * Removed liblibjconv build dependency.
+  * Bumped build dependency to postgresql-server-dev-8.0.
+  * Removed dbconfig-common dependency for bacula-director-[mysql|pgsql],
+    added database handling to postinstall scripts and templates,
+    modified postinstall script's sed expressions.
+  * Removed libwgtk2.6-dev and libqwt5-qt-dev build dependency; as a result
+    bacula-console-wx and bacula-console-qt aren't built any more.
+  * debian/make_catalog_backup_awk.[mysql|pgsql|sqlite3|sqlite]:
+    - new scripts for catalog backup (CVE-2007-5626)
+  * debian/patches/ubuntu_bacula-dir.conf.patch:
+    - replace RunBeforeJob script with new one and add a warning
+
+  [Chuck Short]
+  * debian/bacula-console-qt, debian/bacula-console-wx.
+    - Dropped since we arent building them anymore.
+  * debian/control
+    - Added libdbi-perl and ibdbd-mysql-perl to Depends for
+      bacula-director-mysql due to new postinst configuration.
+    - Cleaned up bacula-director-pgsql dependencies and recommends.
+    - Made mysql the default director to install for bacula-server.
+  * debian/bacula-director-mysql.postinst
+    debian/bacula-director-pgsql.postinst
+    - Worked in some smarts to no do a database configuration if bacula is already
+      installed.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Thu, 13 Feb 2008 08:41:35 -0500
 bacula (2.2.8-5) unstable; urgency=low
 
   * Added Debian VCS fields to debian/control.
@@ -9,6 +44,16 @@ bacula (2.2.8-5) unstable; urgency=low
   * Apply upstream 2.2.8-strip-path.patch.  Closes: #452195.
 
  -- John Goerzen <jgoerzen@complete.org>  Wed, 27 Feb 2008 05:44:58 -0600
+
+bacula (2.2.8-4ubuntu1) hardy; urgency=low
+
+  * Merge from Debian unstable (LP: #189547). Remaining Ubuntu changes:
+    - Correct src/dird/bacula-dir.conf.in to pass the correct arguments
+      to "/etc/bacula/scripts/make_catalog_backup".
+  * Modify Maintainer value to match the DebianMaintainerField
+    specification.
+
+ -- Cesare Tirabassi <norsetto@ubuntu.com>  Wed, 06 Feb 2008 15:57:53 +0100
 
 bacula (2.2.8-4) unstable; urgency=low
 
@@ -75,6 +120,20 @@ bacula (2.2.8-1) unstable; urgency=low
 
  -- John Goerzen <jgoerzen@complete.org>  Tue, 29 Jan 2008 04:12:36 -0600
 
+bacula (2.2.6-0.1ubuntu1) hardy; urgency=low
+
+  * Merge from debian unstable, remaining changes:
+    - Add gnome-session to bacula-traymonitor Depends.
+    - Create /var/run/bacula, if it doesn't exist, in any init script.
+      Involved files (all in debian/):
+         rules, bacula-sd.init, bacula-fd.init, common-functions (new),
+         bacula-director-common.bacula-director.init
+    - Correct src/dird/bacula-dir.conf.in to pass the correct arguments
+      to "/etc/bacula/scripts/make_catalog_backup".
+    - Move adduser from bacula-common's Depends to Pre-Depends.
+
+ -- Stephan Hermann <sh@sourcecode.de>  Sat, 19 Jan 2008 12:00:57 +0100
+
 bacula (2.2.6-0.1) unstable; urgency=low
 
   * Non-maintainer upload.
@@ -84,6 +143,22 @@ bacula (2.2.6-0.1) unstable; urgency=low
   * Fix hostname replace in default config.
 
  -- Bastian Blank <waldi@debian.org>  Tue, 27 Nov 2007 13:59:29 +0000
+
+bacula (2.2.5-1ubuntu1) hardy; urgency=low
+
+  * Merge from Debian unstable. Remaining Ubuntu changes:
+    - Add gnome-session to bacula-traymonitor Depends.
+    - Create /var/run/bacula, if it doesn't exist, in any init script.
+      Involved files (all in debian/):
+         rules, bacula-sd.init, bacula-fd.init, common-functions (new),
+         bacula-director-common.bacula-director.init
+    - Correct src/dird/bacula-dir.conf.in to pass the correct arguments
+      to "/etc/bacula/scripts/make_catalog_backup".
+    - Move adduser from bacula-common's Depends to Pre-Depends.
+  * Modify Maintainer value to match the DebianMaintainerField
+    specification.
+
+ -- Siegfried-Angel Gevatter Pujals (RainCT) <sgevatter@ubuntu.cat>  Sat, 03 Nov 2007 17:08:40 +0100
 
 bacula (2.2.5-1) unstable; urgency=medium
 
@@ -126,6 +201,47 @@ bacula (2.2.0-1) unstable; urgency=low
     * Remove libwxgtk2.4-dev Build-Depends.  Closes: #425159.
 
  -- John Goerzen <jgoerzen@complete.org>  Fri, 24 Aug 2007 02:13:34 -0500
+
+bacula (2.0.3-4ubuntu4) gutsy; urgency=low
+
+  * Apply 2.2.4-lost-block.patch from upstream bug#964 to address data loss
+
+ -- Emmet Hikory <emmet.hikory@gmail.com>  Fri, 12 Oct 2007 23:09:46 +0900
+
+bacula (2.0.3-4ubuntu3) gutsy; urgency=low
+
+  * restore.patch: apply a patch from upstream which fixes a serious file
+    restore bug (http://www.bacula.org/downloads/bug-935.txt) (LP: #141329)
+
+ -- Luca Falavigna <dktrkranz@ubuntu.com>  Fri, 21 Sep 2007 22:16:19 +0200
+
+bacula (2.0.3-4ubuntu2) gutsy; urgency=low
+
+  * Do non build-depend on libwxgtk2.4-dev.  Closes #115120
+
+ -- Luca Falavigna <dktrkranz@ubuntu.com>  Fri, 18 May 2007 13:29:56 +0200
+
+bacula (2.0.3-4ubuntu1) gutsy; urgency=low
+
+  * Merge from Debian unstable.
+  * Remaining Ubuntu changes:
+    - Add gnome-session to bacula-traymonitor Depends.
+    - Create /var/run/bacula if it doesn't exist in any init script.
+    - Correct src/dird/bacula-dir.conf.in to pass the correct arguments
+      to "/etc/bacula/scripts/make_catalog_backup".
+  * Ubuntu changes dropped:
+    - Teach the build system about python2.5.
+    - Fix FTBFS with glibc >= 2.5.
+    - Adjust build depends to new python style.
+    - Add ${shlibs:Depends} dependency to bacula-director-pgsql.
+    - Check for existence of /var/lib/bacula and /var/lib/bacula/log
+      and create if missing, before we chmod/chown them.
+    - Add -lkrb5support and -ldl to LIBS_pgsql.
+  * Move adduser from bacula-common's Depends to Pre-Depends.
+  * Change how we create /var/run/bacula to not duplicate code.
+  * Munge Maintainer field as per spec.
+
+ -- Steve Kowalik <stevenk@ubuntu.com>  Thu,  3 May 2007 23:38:59 +1000
 
 bacula (2.0.3-4) unstable; urgency=low
 
@@ -196,6 +312,49 @@ bacula (1.38.11-8) unstable; urgency=high
 
  -- John Goerzen <jgoerzen@complete.org>  Thu, 22 Feb 2007 12:58:55 -0600
 
+bacula (1.38.11-7ubuntu6) feisty; urgency=low
+
+  * Add gnome-session to the bacula-traymonitor Recommends.
+  * Fix the bacula-fd init script to create the directory properly.
+    (LP: #65122)
+  * Correct src/dird/bacula-dir.conf.in to pass the correct arguments
+    to "/etc/bacula/scripts/make_catalog_backup. (LP: #68725)
+
+ -- Steve Kowalik <stevenk@ubuntu.com>  Thu,  1 Feb 2007 20:18:32 +1100
+
+bacula (1.38.11-7ubuntu5) feisty; urgency=low
+
+  * Teach the build system about python2.5.
+
+ -- Matthias Klose <doko@ubuntu.com>  Tue, 16 Jan 2007 12:51:27 +0100
+
+bacula (1.38.11-7ubuntu4) feisty; urgency=low
+
+  * Rebuild for python2.5 as the default python version.
+
+ -- Matthias Klose <doko@ubuntu.com>  Mon, 15 Jan 2007 17:53:22 +0000
+
+bacula (1.38.11-7ubuntu3) feisty; urgency=low
+
+  * "Never do patching after midnight" release
+    - debian/rules: don't unpatch if it isn't patched
+
+ -- Ante Karamatic <ivoks@ubuntu.com>  Wed, 20 Dec 2006 10:50:48 +0100
+
+bacula (1.38.11-7ubuntu2) feisty; urgency=low
+
+  * debian/patches/tee.patch:
+    - fix FTBS on libc >= 2.5
+
+ -- Ante Karamatic <ivoks@ubuntu.com>  Wed, 20 Dec 2006 00:52:07 +0100
+
+bacula (1.38.11-7ubuntu1) feisty; urgency=low
+
+  * Merge from debian unstable, remaining changes:
+    - debian/control: adjusted build depends to new python style
+
+ -- Ante Karamatic <ivoks@ubuntu.com>  Mon, 30 Oct 2006 14:02:29 +0000
+
 bacula (1.38.11-7) unstable; urgency=low
 
   * ACK NMU.  Closes: #394605.
@@ -216,6 +375,13 @@ bacula (1.38.11-6) unstable; urgency=high
     Closes: #388220, #388222.
 
  -- John Goerzen <jgoerzen@complete.org>  Fri, 22 Sep 2006 10:06:22 -0500
+
+bacula (1.38.11-5ubuntu1) edgy; urgency=low
+
+  * Merge from debian unstable.
+  * debian/control: adjusted build depends to new python style
+
+ -- Stephan Hermann <sh@sourcecode.de>  Tue, 19 Sep 2006 15:18:40 +0200
 
 bacula (1.38.11-5) unstable; urgency=high
 
@@ -244,6 +410,15 @@ bacula (1.38.11-2) unstable; urgency=low
   * New Portugese translation from Rui Branco.  Closes: #380675.
 
  -- John Goerzen <jgoerzen@complete.org>  Sat, 12 Aug 2006 09:40:36 -0500
+
+bacula (1.38.11-1ubuntu1) edgy; urgency=low
+
+  * Resynchronize with Debian unstable
+    - added ${shlibs:Depends} dependency to bacula-director-pgsql 
+    - changed dependency on python2.3-dev to python2.4-dev
+    - create /var/run/bacula on any service startup
+
+ -- Søren Hansen <sh@linux2go.dk>  Mon, 24 Jul 2006 15:10:25 +0200
 
 bacula (1.38.11-1) unstable; urgency=low
 
@@ -573,6 +748,25 @@ bacula (1.38.8-0.1) unstable; urgency=low
   * Christoph Haas added to "Uploaders"
 
  -- John Goerzen <jgoerzen@complete.org>  Thu, 27 Apr 2006 10:04:07 -0500
+
+bacula (1.36.3-2ubuntu2) dapper; urgency=low
+
+  * debian/bacula-director-common.postinst:
+    - Check for existence of /var/lib/bacula and /var/lib/bacula/log 
+      and create if missing, before chown/chmod them (Ubuntu: #36580)
+
+ -- Ante Karamatic <ivoks@ubuntu.com>  Thu, 13 Apr 2006 23:45:29 +0200
+
+bacula (1.36.3-2ubuntu1) dapper; urgency=low
+
+  * Create /var/run/bacula on (any) service start (Ubuntu: #28921)
+  * Build against libmysqlclient15off
+  * debian/rules:
+    -- add -lkrb5support and -ldl to LIBS_pgsql
+  * debian/control:
+    -- added ${shlibs:Depends} dependency to bacula-direcotr-pgsql
+
+ -- Ante Karamatic <ivoks@ubuntu.com>  Thu, 13 Apr 2006 20:07:08 +0200
 
 bacula (1.36.3-2) unstable; urgency=low
 
@@ -1060,3 +1254,4 @@ bacula (1.32f-4-1) unstable; urgency=low
           * Initial Packaging: 12 binary packages built
 
  -- JosÃ© Luis TallÃ³n <jltallon@adv-solutions.net>  Wed, 18 Feb 2004 00:04:11 +0100
+

@@ -25,37 +25,119 @@ set -e
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
+# DoMySQL from moodle and mythtv Ubuntu packages
+
+escape_quotes() {
+    cat <<EOF | sed -e "s/'/\\\\'/g"
+$1
+EOF
+}
+
+create_tables() {
+touch /var/lib/bacula/.my.install.cf
+chmod 600 /var/lib/bacula/.my.install.cf
+cat << EOF > /var/lib/bacula/.my.install.cf
+[client]
+host=$db_host
+user=$dbu_name
+password=$dbu_password
+EOF
+
+/usr/share/bacula-director/make_mysql_tables --defaults-file=/var/lib/bacula/.my.install.cf
+rm -rf /var/lib/bacula/.my.install.cf
+}
+
+DoMySQL() {
+    local dbtype="$1"
+    local host="$2"
+    local admin_username="$3"
+    local admin_password="$4"
+    local database="$5"
+    local statement="`escape_quotes \"$6\"`"
+    local tmp=`tempfile -m 600`
+        cat <<EOF >$tmp
+$admin_password
+EOF
+    perl -e "
+use DBI;
+chomp(\$password=<>);
+@statements=split(/;/, '$statement');
+\$db = DBI->connect('dbi:mysql:host=$host;database=$database',
+                    '$admin_username', \$password,
+                    { PrintError => 0 }) || die 'Failed to connect to database: ' . \$DBI::errstr;
+for \$s (@statements) { \$db->do(\$s) || die 'Failed to execute SQL: ' . \$s . '\n' . \$DBI::errstr; }
+" < $tmp
+    ret=$?
+    rm -f $tmp
+    return $ret
+}
+
+get_config() {
+    db_get bacula/db_host
+    db_host="$RET"
+
+    db_get bacula/dba_name
+    dba_name="$RET"
+
+    db_get bacula/dba_password
+    dba_password="$RET"
+
+    db_get bacula/dbu_name
+    dbu_name="$RET"
+
+    db_get bacula/dbu_password
+    dbu_password="$RET"
+
+    db_name='bacula'
+}
+
 LOGDIR=/var/log/bacula
 POSTINST_COMMON=/usr/share/bacula-director/postinst-common
 DEFCONFIG=/usr/share/bacula-common/defconfig
 CFGFILE=/etc/bacula/bacula-dir.conf
 
-. /usr/share/debconf/confmodule
-dbc_first_version=1.38.9-3
-dbc_dbuser=bacula
-dbc_dbname=bacula
-
-# source dbconfig-common shell library, and call the hook function
-if [ -f /usr/share/dbconfig-common/dpkg/config.mysql ]; then
-  . /usr/share/dbconfig-common/dpkg/postinst.mysql
-  dbc_go bacula-director-mysql $@
-fi
 
 case "$1" in
 configure)
-	
+   if dpkg --compare-versions "$2" lt 2.2.8-5ubuntu1
+   then
 	# PreProcess configuration
 	echo -n "Processing configuration ..."
-        . /etc/dbconfig-common/bacula-director-mysql.conf
 	TARGET=$CFGFILE.dpkg-tmp
 
-	sed -e "s/dbname = bacula;/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\";/" \
-	-e "s/@db_user@/$dbc_dbuser/" -e "s/@db_pswd@/$dbc_dbpass/" \
+	get_config
+        db_stop
+        exec 0<&1
+
+	if ! DoMySQL "$db_server" "$db_host" "$dba_name" "$dba_password" "$db_name" "SELECT NULL" 2>/dev/null; then
+                        if ! DoMySQL "$db_server" "$db_host" "$dba_name" "$dba_password" "" \
+                             "CREATE DATABASE $db_name"; then
+                                echo "Failed to create database (incorrect admin username/password?)" >&2
+                                echo "It's also possible that mysql-server wasn't running.  After install" >&2
+                                echo "is completed, you will need to make sure mysql-server is running" >&2
+                                echo "and that you supplied correct information. Try:" >&2
+                                echo "sudo dpkg-reconfigure bacula-director-mysql" >&2
+                                # silently exit, instead pop up a notification for user indicating this
+                                #unud=/var/lib/update-notifier/user.d
+                                #if test -d $uund; then
+                                #    cp -f /usr/share/bacula-director/bacula-reconfigure-required.update-notifier \
+                                #          /var/lib/update-notifier/user.d/bacula-reconfigure-required
+                                #fi
+                                exit 0
+                        fi
+                fi
+                DoMySQL "$db_server" "$db_host" "$dba_name" "$dba_password" "$db_name" \
+                    "GRANT ALL PRIVILEGES ON $db_name.* TO $dbu_name@localhost IDENTIFIED BY '$dbu_password'"
+	create_tables
+
+	sed -e "s/dbname = bacula;/dbname = $db_name; DB Address = \"$db_host\";/" \
+	-e "s/@db_user@/$dbu_name/" -e "s/@db_pswd@/$dbu_password/" \
 		$DEFCONFIG/bacula-dir.conf > $TARGET
 
 	/bin/bash $POSTINST_COMMON
 
 	echo "Ok."
+   fi
 	;;
 
 abort-upgrade|abort-remove|abort-deconfigure)

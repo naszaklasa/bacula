@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo ".dump" | /usr/bin/sqlite3 bacula.db > bacula.sql
