@@ -1,3 +1,15 @@
+bacula (2.2.8-5ubuntu6) hardy; urgency=low
+
+  * Revert building of bacula-console-qt:
+    - added build depend on libqwt5-qt4-dev
+    - reverted changes in debian/rules
+    - re-added debian/bacula-console-qt.dirs
+    - re-added debian/bacula-console-qt.manpages
+    - re-added debian/bacula-console-qt.menu
+    - re-added debian/bacula-console-qt.postinst
+
+ -- Ante Karamatic <ivoks@ubuntu.com>  Mon, 31 Mar 2008 23:09:04 +0200
+
 bacula (2.2.8-5ubuntu5) hardy; urgency=low
 
   * debian/control
