@@ -1,3 +1,9 @@
+bacula (2.2.8-5ubuntu3) hardy; urgency=low
+
+  * Fix typos in init scripts.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Mon, 17 Mar 2008 10:29:40 -0400
+
 bacula (2.2.8-5ubuntu2) hardy; urgency=low
 
   * debian/rules
