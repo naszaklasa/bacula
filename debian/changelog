@@ -1,3 +1,9 @@
+bacula (2.4.4-1ubuntu7) karmic; urgency=low
+
+  * debian/control: Change build dependencies to MySQL 5.1. 
+
+ -- Mathias Gug <mathiaz@ubuntu.com>  Mon, 17 Aug 2009 17:20:06 -0400
+
 bacula (2.4.4-1ubuntu6) karmic; urgency=low
 
   * debian/control: Change build and binary dependencies to PostgreSQL 8.4.
