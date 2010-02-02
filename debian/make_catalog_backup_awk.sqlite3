@@ -1,3 +1,3 @@
-#!/bin/bash
+#!/usr/bin/gawk -f
 
-echo ".dump" | /usr/bin/sqlite3 bacula.db > bacula.sql
+system("echo '.dump' | /usr/bin/sqlite3 /var/lib/bacula/bacula.db > /var/lib/bacula/bacula.sql")

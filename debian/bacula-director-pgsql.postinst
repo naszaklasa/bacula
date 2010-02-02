@@ -31,7 +31,7 @@ set -e
 
 ## Globals
 LOGDIR="/var/log/bacula"
-GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_pgsql_privileges"
+GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_postgresql_privileges"
 POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
 DEFCONFIG="/usr/share/bacula-common/defconfig"
 CFGFILE="/etc/bacula/bacula-dir.conf"
@@ -79,7 +79,7 @@ check_pgsafe() {
 
 case "$1" in
 configure)
-  if dpkg --compare-versions lt 2.2.8-5ubuntu1
+  if dpkg --compare-versions "$2" lt 2.2.8-5ubuntu1
   then
 	get_config
 	db_stop
@@ -101,6 +101,7 @@ configure)
 		$DEFCONFIG/bacula-dir.conf > $TARGET
 
 	su -c /usr/share/bacula-director/make_postgresql_tables postgres 1> /dev/null
+	su -c "USER=\"$dbu_name\" db_name=\"$db_name\" $GRANT_SQL_PRIVS" postgres 1> /dev/null
 
 	/bin/sh $POSTINST_COMMON
 	echo "Ok."

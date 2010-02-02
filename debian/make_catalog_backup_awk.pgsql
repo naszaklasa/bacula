@@ -46,6 +46,6 @@ $0 ~ /Catalog[[:space:]]*{/   {
 		printf "[bacula]\n  dbname=%s\n  user=%s\n  password=%s\n",dbname,user,password >> "/var/lib/bacula/pg_service.conf"
 		if (dbport != "")
 			printf "  port=%s\n",dbport >> "/var/lib/bacula/pg_service.conf"
-		system("PGSERVICE=bacula  PGSYSCONFDIR=/tmp pg_dump > /var/lib/bacula/bacula.sql")
+		system("HOME=/var/lib/bacula PGSERVICE=bacula PGSYSCONFDIR=/var/lib/bacula pg_dump > /var/lib/bacula/bacula.sql")
 	}
 }

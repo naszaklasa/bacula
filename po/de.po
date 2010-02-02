@@ -16442,6 +16442,69 @@ msgstr ""
 msgid "Bad Command Line Option"
 msgstr ""
 
+#: src/dird/catreq.c:326
+msgid "1991 Update JobMedia error\n"
+msgstr "1991 Update JobMedia Fehler\n"
+
+#: src/dird/catreq.c:371
+#, c-format
+msgid "1991 Invalid Catalog Update: %s"
+msgstr "1991 Ungültige Catalog Aktualisierung: %s"
+
+#: src/dird/ua_output.c:477
+#, fuzzy, c-format
+msgid "Could not Pool Job %s\n"
+msgstr "Konnte Datenbank \"%s\" nicht öffen.\n"
+
+#: src/stored/autochanger.c:149
+#, c-format
+msgid ""
+"Invalid slot=%d defined in catalog for Volume \"%s\" on %s. Manual load my "
+"be required.\n"
+msgstr ""
+
+#: src/stored/autochanger.c:251
+msgid "3992 Missing Changer command.\n"
+msgstr ""
+
+#: src/stored/mount.c:458
+#, c-format
+msgid "Ready to append to end of Volume \"%s\" at file address=%u.\n"
+msgstr ""
+
+#: src/stored/mount.c:462
+#, c-format
+msgid ""
+"Bacula cannot write on Volume \"%s\" because:\n"
+"The EOD file address is wrong: Volume file address=%u != Catalog Endblock=%u"
+"(+1)\n"
+"Perhaps You removed the DVD last part in spool directory.\n"
+msgstr ""
+
+#: src/stored/dircmd.c:671 src/stored/dircmd.c:728
+#, c-format
+msgid "3901 open device failed: ERR=%s\n"
+msgstr ""
+
+#: src/stored/acquire.c:378
+#, c-format
+msgid ""
+"Cannot recycle volume \"%s\" on device %s because it is in use by another "
+"job.\n"
+msgstr ""
+
+#: src/wx-console/wxbrestorepanel.cpp:852
+msgid ""
+"Restore is scheduled in more than two minutes, bwx-console will not wait for "
+"its completion.\n"
+msgstr ""
+
+#: src/wx-console/wxbrestorepanel.cpp:853
+msgid ""
+"Restore is scheduled in more than two minutes, bwx-console will not wait for "
+"its completion."
+msgstr ""
+
 #, fuzzy
 #~ msgid ""
 #~ ") %s %s %s\n"

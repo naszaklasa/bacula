@@ -1,0 +1,18 @@
+--- src/cats/grant_postgresql_privileges.in-old	2008-05-18 12:00:38.000000000 +0200
++++ src/cats/grant_postgresql_privileges.in	2008-05-18 12:00:38.000000000 +0200
+@@ -2,9 +2,13 @@
+ #
+ # shell script to grant privileges to the bacula database
+ #
+-USER=@db_user@
++if [ ! -n "$USER" ]; then
++	USER=@db_user@
++fi
+ bindir=@SQL_BINDIR@
+-db_name=@db_name@
++if [ ! -n "$db_name" ]; then
++	db_name=@db_name@
++fi
+ 
+ if $bindir/psql -f - -d ${db_name} $* <<END-OF-DATA
+ 

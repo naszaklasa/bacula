@@ -48,6 +48,6 @@ $0 ~ /Catalog[[:space:]]*{/   {
 			printf "  port=%s\n",dbport >> "/var/lib/bacula/.my.cnf"
 		if (dbsocket != "")
 			printf "  socket=%s\n",dbsocket >> "/var/lib/bacula/.my.cnf"
-		system(sprintf ("mysqldump %s > /var/lib/bacula/bacula.sql",dbname))
+		system(sprintf ("HOME=/var/lib/bacula mysqldump %s > /var/lib/bacula/bacula.sql",dbname))
 	}
 }
