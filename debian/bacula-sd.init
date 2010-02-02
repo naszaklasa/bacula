@@ -36,6 +36,18 @@ create_var_run_dir
 
 PIDFILE=/var/run/bacula/$NAME.$PORT.pid
 
+do_start()
+{
+        start-stop-daemon --start --quiet --pidfile $PIDFILE \
+        --exec $DAEMON -- $ARGS
+}
+
+do_stop()
+{
+	start-stop-daemon --oknodo --stop --quiet --pidfile $PIDFILE \
+	--exec $DAEMON -- $ARGS
+}
+
 case "$1" in
   start)
 	if [ -f /etc/bacula/do_not_run ]; then
@@ -43,23 +55,26 @@ case "$1" in
 		exit 0
 	fi
 
-	log_daemon_msg "Starting $DESC $NAME"
-	start-stop-daemon --start --quiet --pidfile $PIDFILE \
-		--exec $DAEMON -- $ARGS
+	log_daemon_msg "Starting $DESC..."
+        if do_start ; then
+                log_end_msg 0
+        else
+                log_end_msg 1
+        fi
 	;;
   stop)
-	log_daemon_msg "Stopping $DESC $NAME "
-	start-stop-daemon --oknodo --stop --quiet --pidfile $PIDFILE \
-		--exec $DAEMON -- $ARGS
+	log_daemon_msg "Stopping $DESC... "
+        if do_stop ; then
+                log_end_msg 0
+        else
+                log_end_msg 1
+        fi
 	;;
 
   restart|force-reload)
-	log_daemon_msg "Restarting $DESC $NAME"
-	start-stop-daemon --stop --quiet --pidfile $PIDFILE \
-		--exec $DAEMON -- $ARGS
+	$0 stop
 	sleep 1
-	start-stop-daemon --start --quiet --pidfile $PIDFILE \
-		--exec $DAEMON -- $ARGS
+	$0 start
 	;;
   *)
 	N=/etc/init.d/$NAME
