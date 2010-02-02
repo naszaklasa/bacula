@@ -1,3 +1,10 @@
+bacula (2.4.4-1ubuntu6) karmic; urgency=low
+
+  * debian/control: Change build and binary dependencies to PostgreSQL 8.4.
+    (LP: #403381)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Thu, 23 Jul 2009 11:53:12 +0200
+
 bacula (2.4.4-1ubuntu5) jaunty; urgency=low
 
   * debian/rules:

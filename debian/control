@@ -6,7 +6,7 @@ XSBC-Original-Maintainer: John Goerzen <jgoerzen@complete.org>
 Build-Depends: autotools-dev, debhelper (>= 4.2), po-debconf (>= 0.8.2), 
  zlib1g-dev, libreadline5-dev | libreadline-dev,
  libsqlite0-dev, libsqlite3-dev, libmysqlclient15-dev, libpq-dev, 
- postgresql-server-dev-8.3, libwrap0-dev, python-dev, libgtk2.0-dev (>= 2.10),
+ postgresql-server-dev-8.4, libwrap0-dev, python-dev, libgtk2.0-dev (>= 2.10),
  libgnome2-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
  libx11-dev, mtx, bc, libxt-dev, dpkg-dev (>= 1.13.19), libqt4-dev, libqwt5-qt4-dev
 Build-Conflicts: python2.2-dev, python2.3, python2.4, python2.5, qt3-dev-tools
@@ -119,7 +119,7 @@ Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.1
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
-Recommends: postgresql-8.3 | postgresql-8.2 | postgresql-8.1 | postgresql-8.0 | postgresql (>= 7.4)
+Recommends: postgresql-8.4 | postgresql (>= 7.4)
 Suggests: postgresql-contrib, postgresql-doc
 Description: network backup, recovery and verification - PostgreSQL storage for Director
  Bacula is a set of programs to manage backup, recovery and verification of
