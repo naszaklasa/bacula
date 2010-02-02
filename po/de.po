@@ -16433,6 +16433,41 @@ msgstr ""
 msgid "Bad Command Line Option"
 msgstr ""
 
+#: src/lib/rwlock.c:369
+#, c-format
+msgid "Write lock failed. ERR=%s\n"
+msgstr ""
+
+#: src/lib/rwlock.c:377
+#, c-format
+msgid "Write unlock failed. ERR=%s\n"
+msgstr ""
+
+#: src/lib/rwlock.c:388
+#, c-format
+msgid "Read lock failed. ERR=%s\n"
+msgstr ""
+
+#: src/lib/rwlock.c:396
+#, c-format
+msgid "Read unlock failed. ERR=%s\n"
+msgstr ""
+
+#: src/lib/rwlock.c:438
+#, c-format
+msgid "Init rwlock failed. ERR=%s\n"
+msgstr ""
+
+#: src/lib/rwlock.c:454
+#, c-format
+msgid "Create thread failed. ERR=%s\n"
+msgstr ""
+
+#: src/lib/rwlock.c:466
+#, c-format
+msgid "Join thread failed. ERR=%s\n"
+msgstr ""
+
 #, fuzzy
 #~ msgid ""
 #~ ") %s %s %s\n"

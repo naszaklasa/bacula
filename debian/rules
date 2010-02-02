@@ -177,6 +177,10 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	dh_install -pbacula-console -pbacula-console-qt
 	cp $(DEFAULTINSTALLDIR)/usr/sbin/bconsole debian/bacula-console/usr/sbin/bacula-console
 	cp debian/tmp-build-$(DEFAULTVARIANT)/src/qt-console/bat debian/bacula-console-qt/usr/bin/bat
+	cp debian/tmp-build-$(DEFAULTVARIANT)/scripts/bat.desktop debian/bacula-console-qt/usr/share/applications/
+	cp debian/tmp-build-$(DEFAULTVARIANT)/src/qt-console/images/bat_icon.png debian/bacula-console-qt/usr/share/pixmaps/
+	cp debian/tmp-build-$(DEFAULTVARIANT)/src/tray-monitor/generic.xpm debian/bacula-traymonitor/usr/share/pixmaps/bacula-tray-monitor.xpm
+	sed -i -e 's/Exec=\/usr\/sbin/Exec=\/usr\/bin/g' debian/tmp-build-$(DEFAULTVARIANT)/scripts/bacula-tray-monitor.desktop
 
 
 ######### dbconfig-common stuff
