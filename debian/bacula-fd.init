@@ -36,30 +36,27 @@ PIDFILE=/var/run/bacula/$NAME.$PORT.pid
 case "$1" in
   start)
 	if [ -f /etc/bacula/do_not_run ]; then
-		echo "Not starting $DESC: disabled via /etc/bacula/do_not_run"
+		log_failure_msg "Not starting $DESC: disabled via /etc/bacula/do_not_run"
 		exit 0
 	fi
 
-	echo -n "Starting $DESC: "
+	log_daemon_msg "Starting $DESC $NAME"
 	start-stop-daemon --start --quiet --pidfile $PIDFILE \
 		--exec $DAEMON -- $ARGS
-	echo "$NAME."
 	;;
   stop)
-	echo -n "Stopping $DESC: "
+	log_daemon_msg "Stopping $DESC $NAME"
 	start-stop-daemon --oknodo --stop --quiet --pidfile $PIDFILE \
 		--exec $DAEMON -- $ARGS
-	echo "$NAME."
 	;;
 
   restart|force-reload)
-	echo -n "Restarting $DESC: "
+	log_daemon_msg "Restarting $DESC $NAME"
 	start-stop-daemon --stop --oknodo --quiet --pidfile $PIDFILE  \
 		--exec $DAEMON -- $ARGS
 	sleep 1
 	start-stop-daemon --start --quiet --pidfile $PIDFILE \
 		--exec $DAEMON -- $ARGS
-	echo "$NAME."
 	;;
   *)
 	N=/etc/init.d/$NAME

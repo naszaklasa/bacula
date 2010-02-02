@@ -1,3 +1,17 @@
+bacula (2.2.8-5ubuntu2) hardy; urgency=low
+
+  * debian/rules
+    - Don't start the daemons when installing so configuration can be done
+      after. (LP: #192224)
+  * debian/bacula-director-common.bacula-director.init
+    debian/bacula-fd.init
+    debian/bacula-sd.init
+    - Made more LSB specific.
+  * debian/control
+    - Update control version.
+
+ -- Chuck Short <zulcss@ubuntu.com>  Fri, 14 Mar 2008 11:02:04 -0400
+
 bacula (2.2.8-5ubuntu1) hardy; urgency=low
 
   * Merge from debian unstable, remaining changes:

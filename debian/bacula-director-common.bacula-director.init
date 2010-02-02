@@ -85,36 +85,32 @@ do_stop()
 case "$1" in
   start)
 	if [ -f /etc/bacula/do_not_run ]; then
-		echo "Not starting $DESC: disabled via /etc/bacula/do_not_run"
+		log_failure_msg "Not starting $DESC: disabled via /etc/bacula/do_not_run"
 		exit 0
 	fi
-	echo -n "Starting $DESC: "
+	log_daemon_msg -n "Starting $DESC: "
 	create_var_run_dir
-	if do_start ; then echo "$NAME."
-	else echo "failed." ; fi
+	if do_start ; log_daemon_msg -n "Starting $DESC: " ; fi
   ;;
 
   stop)
-	echo -n "Stopping $DESC: "
+	log_daemon_msg "Stopping $DESC: "
 	do_stop
-	echo "$NAME."
   ;;
 
   reload)
-  	echo -n "Reloading $DESC..."
+  	log_daemon_msg "Reloading $DESC..."
   	get_pid $PIDFILE
 	if [ -n "$pid" ]; then kill_pid HUP $pid ;
   	else do_start ; 
   	fi
-  	echo "$NAME."
   ;;
   
   restart|force-reload)
-	echo -n "Restarting $DESC: "
+	log_daemon_msg " Restarting $DESC $NAME..."
 	# redirect STDOUT so that it looks prettier :-)
 	do_stop
 	do_start
-	echo "$NAME."
   ;;
   
   *)
