@@ -1,3 +1,9 @@
+bacula (2.4.4-1ubuntu8) karmic; urgency=low
+
+  * bacula.desktop: Run /usr/bin/bat not /usr/sbin/bat (LP: #38778) 
+
+ -- Chuck Short <zulcss@ubuntu.com>  Wed, 09 Sep 2009 10:02:24 -0400
+
 bacula (2.4.4-1ubuntu7) karmic; urgency=low
 
   * debian/control: Change build dependencies to MySQL 5.1. 
