@@ -1,3 +1,9 @@
+bacula (2.4.4-1ubuntu2) jaunty; urgency=low
+
+  * Add missing bacula-director-[pgsql|mysql].templates
+
+ -- Ante Karamatic <ivoks@ubuntu.com>  Tue, 20 Jan 2009 07:45:53 +0000
+
 bacula (2.4.4-1ubuntu1) jaunty; urgency=low
 
   * Upload fixes LP #269251, LP: #308903 and LP: #293515
