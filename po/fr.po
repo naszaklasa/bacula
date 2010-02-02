@@ -16985,6 +16985,28 @@ msgstr "Impossible d'ouvrir la base de données « %s ».\n"
 msgid "Bad Command Line Option"
 msgstr ""
 
+#: src/stored/status.c:201
+msgid "In Use Volume status:\n"
+msgstr "Volume en cours d'utilisation :\n"
+
+#: src/tools/bsmtp.c:186
+#, c-format
+msgid ""
+"\n"
+"Usage: %s [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]\n"
+"       -8          set charset utf-8\n"
+"       -c          set the Cc: field\n"
+"       -dnn        set debug level to nn\n"
+"       -f          set the From: field\n"
+"       -h          use mailhost:port as the SMTP server\n"
+"       -s          set the Subject: field\n"
+"       -r          set the Reply-To: field\n"
+"       -l          set the maximum number of lines that should be sent "
+"(default: unlimited)\n"
+"       -?          print this message.\n"
+"\n"
+msgstr ""
+
 #: src/stored/bscan.c:280 src/stored/bscan.c:355
 #, c-format
 msgid "First Volume Size = %sn"
