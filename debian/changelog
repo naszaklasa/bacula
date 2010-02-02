@@ -1,3 +1,9 @@
+bacula (3.0.2-3ubuntu2) lucid; urgency=low
+
+  * No op rebuild for bacula-console-qt. (LP: #508394) 
+
+ -- Chuck Short <zulcss@ubuntu.com>  Mon, 25 Jan 2010 09:19:56 -0500
+
 bacula (3.0.2-3ubuntu1) lucid; urgency=low
 
   * Merge from debian testing, remaining changes:
