@@ -1,3 +1,10 @@
+bacula (2.4.4-1ubuntu3) jaunty; urgency=low
+
+  * Suggest bacula-traymonitor rather than Recommends so we
+    dont pull in the libgtk libraries on the server seed. 
+
+ -- Chuck Short <zulcss@ubuntu.com>  Thu, 29 Jan 2009 14:53:54 -0500
+
 bacula (2.4.4-1ubuntu2) jaunty; urgency=low
 
   * Add missing bacula-director-[pgsql|mysql].templates

@@ -135,7 +135,7 @@ Description: network backup, recovery and verification - PostgreSQL storage for 
 Package: bacula-client
 Architecture: all
 Depends: bacula-console (>= ${source:Version}), bacula-fd (>= ${source:Version})
-Recommends: bacula-traymonitor
+Suggests: bacula-traymonitor
 Description: network backup, recovery and verification - client meta-package
  Bacula is a set of programs to manage backup, recovery and verification of
  data across a network of computers of different kinds.
