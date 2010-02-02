@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -34,7 +34,7 @@
 
    Thanks to the TAR programmers.
 
-     Version $Id: find_one.c 7325 2008-07-06 13:06:15Z kerns $
+     Version $Id: find_one.c 8536 2009-03-15 14:40:05Z kerns $
 
  */
 
@@ -60,7 +60,6 @@ struct f_link {
     struct f_link *next;
     dev_t dev;                        /* device */
     ino_t ino;                        /* inode with device is unique */
-    short linkcount;
     uint32_t FileIndex;               /* Bacula FileIndex of this file */
     char name[1];                     /* The name */
 };
@@ -212,6 +211,22 @@ static bool volume_has_attrlist(const char *fname)
    return false;
 }
 
+/*
+ * check for BSD nodump flag
+ */
+static bool no_dump(JCR *jcr, FF_PKT *ff_pkt)
+{
+#if defined(HAVE_CHFLAGS) && defined(UF_NODUMP)
+   if ( (ff_pkt->flags & FO_HONOR_NODUMP) &&
+        (ff_pkt->statp.st_flags & UF_NODUMP) ) {
+      Jmsg(jcr, M_INFO, 1, _("     NODUMP flag set - will not process %s\n"),
+           ff_pkt->fname);
+      return true;                    /* do not backup this file */
+   }
+#endif
+   return false;                      /* do backup */
+}
+
 /* check if a file have changed during backup and display an error */
 bool has_file_changed(JCR *jcr, FF_PKT *ff_pkt)
 {
@@ -258,6 +273,33 @@ bool has_file_changed(JCR *jcr, FF_PKT *ff_pkt)
 }
 
 /*
+ * For incremental/diffential or accurate backups, we
+ *   determine if the current file has changed.
+ */
+static bool check_changes(JCR *jcr, FF_PKT *ff_pkt)
+{
+   /* in special mode (like accurate backup), the programmer can 
+    * choose his comparison function.
+    */
+   if (ff_pkt->check_fct) {
+      return ff_pkt->check_fct(jcr, ff_pkt);
+   }
+
+   /* For normal backups (incr/diff), we use this default
+    * behaviour
+    */
+   if (ff_pkt->incremental &&
+       (ff_pkt->statp.st_mtime < ff_pkt->save_time &&
+        ((ff_pkt->flags & FO_MTIMEONLY) ||
+         ff_pkt->statp.st_ctime < ff_pkt->save_time))) 
+   {
+      return false;
+   } 
+
+   return true;
+}
+
+/*
  * Find a single file.
  * handle_file is the callback for handling the file.
  * p is the filename
@@ -267,8 +309,8 @@ bool has_file_changed(JCR *jcr, FF_PKT *ff_pkt)
  */
 int
 find_one_file(JCR *jcr, FF_PKT *ff_pkt, 
-               int handle_file(FF_PKT *ff, void *hpkt, bool top_level),
-               void *pkt, char *fname, dev_t parent_device, bool top_level)
+               int handle_file(JCR *jcr, FF_PKT *ff, bool top_level),
+               char *fname, dev_t parent_device, bool top_level)
 {
    struct utimbuf restore_times;
    int rtn_stat;
@@ -280,7 +322,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
        /* Cannot stat file */
        ff_pkt->type = FT_NOSTAT;
        ff_pkt->ff_errno = errno;
-       return handle_file(ff_pkt, pkt, top_level);
+       return handle_file(jcr, ff_pkt, top_level);
    }
 
    Dmsg1(300, "File ----: %s\n", fname);
@@ -329,20 +371,26 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
    }
 
    /*
+    * Ignore this entry if no_dump() returns true
+    */
+   if (no_dump(jcr, ff_pkt)) {
+           Dmsg1(100, "'%s' ignored (NODUMP flag set)\n",
+                 ff_pkt->fname);
+           return 1;
+   }
+
+   /*
     * If this is an Incremental backup, see if file was modified
     * since our last "save_time", presumably the last Full save
     * or Incremental.
     */
-   if (ff_pkt->incremental && !S_ISDIR(ff_pkt->statp.st_mode)) {
-      Dmsg1(300, "Non-directory incremental: %s\n", ff_pkt->fname);
-      /* Not a directory */
-      if (ff_pkt->statp.st_mtime < ff_pkt->save_time
-          && ((ff_pkt->flags & FO_MTIMEONLY) ||
-              ff_pkt->statp.st_ctime < ff_pkt->save_time)) {
-         /* Incremental option, file not changed */
-         ff_pkt->type = FT_NOCHG;
-         return handle_file(ff_pkt, pkt, top_level);
-      }
+   if (   ff_pkt->incremental 
+       && !S_ISDIR(ff_pkt->statp.st_mode) 
+       && !check_changes(jcr, ff_pkt)) 
+   {
+      Dmsg1(500, "Non-directory incremental: %s\n", ff_pkt->fname);
+      ff_pkt->type = FT_NOCHG;
+      return handle_file(jcr, ff_pkt, top_level);
    }
 
 #ifdef HAVE_DARWIN_OS
@@ -358,7 +406,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
                 sizeof(ff_pkt->hfsinfo), FSOPT_NOFOLLOW) != 0) {
           ff_pkt->type = FT_NOSTAT;
           ff_pkt->ff_errno = errno;
-          return handle_file(ff_pkt, pkt, top_level);
+          return handle_file(jcr, ff_pkt, top_level);
        }
    }
 #endif
@@ -392,13 +440,17 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
              lp->dev == (dev_t)ff_pkt->statp.st_dev) {
              /* If we have already backed up the hard linked file don't do it again */
              if (strcmp(lp->name, fname) == 0) {
+                Dmsg2(400, "== Name identical skip FI=%d file=%s\n", lp->FileIndex, fname);
                 return 1;             /* ignore */
              }
              ff_pkt->link = lp->name;
              ff_pkt->type = FT_LNKSAVED;       /* Handle link, file already saved */
              ff_pkt->LinkFI = lp->FileIndex;
-             ff_pkt->linked = NULL;
-             return handle_file(ff_pkt, pkt, top_level);
+             ff_pkt->linked = 0;
+             rtn_stat = handle_file(jcr, ff_pkt, top_level);
+             Dmsg3(400, "FT_LNKSAVED FI=%d LinkFI=%d file=%s\n", 
+                ff_pkt->FileIndex, lp->FileIndex, lp->name);
+             return rtn_stat;
          }
 
       /* File not previously dumped. Chain it into our list. */
@@ -406,11 +458,12 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       lp = (struct f_link *)bmalloc(sizeof(struct f_link) + len);
       lp->ino = ff_pkt->statp.st_ino;
       lp->dev = ff_pkt->statp.st_dev;
-      lp->FileIndex = 0;              /* set later */
+      lp->FileIndex = 0;                  /* set later */
       bstrncpy(lp->name, fname, len);
       lp->next = ff_pkt->linkhash[linkhash];
       ff_pkt->linkhash[linkhash] = lp;
       ff_pkt->linked = lp;            /* mark saved link */
+      Dmsg2(400, "added to hash FI=%d file=%s\n", ff_pkt->FileIndex, lp->name);
    } else {
       ff_pkt->linked = NULL;
    }
@@ -429,10 +482,12 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       } else {
          ff_pkt->type = FT_REG;
       }
-      rtn_stat = handle_file(ff_pkt, pkt, top_level);
+      rtn_stat = handle_file(jcr, ff_pkt, top_level);
       if (ff_pkt->linked) {
          ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
       }
+      Dmsg3(400, "FT_REG FI=%d linked=%d file=%s\n", ff_pkt->FileIndex, 
+         ff_pkt->linked ? 1 : 0, fname);
       if (ff_pkt->flags & FO_KEEPATIME) {
          utime(fname, &restore_times);
       }       
@@ -448,7 +503,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
          /* Could not follow link */
          ff_pkt->type = FT_NOFOLLOW;
          ff_pkt->ff_errno = errno;
-         rtn_stat = handle_file(ff_pkt, pkt, top_level);
+         rtn_stat = handle_file(jcr, ff_pkt, top_level);
          if (ff_pkt->linked) {
             ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
          }
@@ -457,7 +512,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       buffer[size] = 0;
       ff_pkt->link = buffer;          /* point to link */
       ff_pkt->type = FT_LNK;          /* got a real link */
-      rtn_stat = handle_file(ff_pkt, pkt, top_level);
+      rtn_stat = handle_file(jcr, ff_pkt, top_level);
       if (ff_pkt->linked) {
          ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
       }
@@ -484,11 +539,33 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
             /* Could not access() directory */
             ff_pkt->type = FT_NOACCESS;
             ff_pkt->ff_errno = errno;
-            rtn_stat = handle_file(ff_pkt, pkt, top_level);
+            rtn_stat = handle_file(jcr, ff_pkt, top_level);
             if (ff_pkt->linked) {
                ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
             }
             return rtn_stat;
+         }
+      }
+
+      /*
+       * Ignore this directory and everything below if the file .nobackup
+       * (or what is defined for IgnoreDir in this fileset) exists
+       */
+      if (ff_pkt->ignoredir != NULL) {
+         struct stat sb;
+         char fname[MAXPATHLEN];
+
+         if (strlen(ff_pkt->fname) + strlen("/") +
+            strlen(ff_pkt->ignoredir) + 1 > MAXPATHLEN)
+            return 1;   /* Is this wisdom? */
+
+         strcpy(fname, ff_pkt->fname);
+         strcat(fname, "/");
+         strcat(fname, ff_pkt->ignoredir);
+         if (stat(fname, &sb) == 0) {
+            Dmsg2(100, "Directory '%s' ignored (found %s)\n",
+               ff_pkt->fname, ff_pkt->ignoredir);
+            return 1;      /* Just ignore this directory */
          }
       }
 
@@ -504,10 +581,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       link[len] = 0;
 
       ff_pkt->link = link;
-      if (ff_pkt->incremental &&
-          (ff_pkt->statp.st_mtime < ff_pkt->save_time &&
-             ((ff_pkt->flags & FO_MTIMEONLY) ||
-               ff_pkt->statp.st_ctime < ff_pkt->save_time))) {
+      if (ff_pkt->incremental && !check_changes(jcr, ff_pkt)) {
          /* Incremental option, directory entry not changed */
          ff_pkt->type = FT_DIRNOCHG;
       } else {
@@ -519,9 +593,9 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
        */
 #if defined(HAVE_WIN32)
       if (ff_pkt->statp.st_rdev == WIN32_REPARSE_POINT) {
-          ff_pkt->type = FT_REPARSE;
+         ff_pkt->type = FT_REPARSE;
       }
-#endif
+#endif 
       /*
        * Note, we return the directory to the calling program (handle_file)
        * when we first see the directory (FT_DIRBEGIN.
@@ -530,7 +604,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
        * do not immediately save it, but do so only after everything
        * in the directory is seen (i.e. the FT_DIREND).
        */
-      rtn_stat = handle_file(ff_pkt, pkt, top_level);
+      rtn_stat = handle_file(jcr, ff_pkt, top_level);
       if (rtn_stat < 1 || ff_pkt->type == FT_REPARSE) {   /* ignore or error status */
          free(link);
          return rtn_stat;
@@ -568,7 +642,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
          recurse = false;
       } else if (!top_level && (parent_device != ff_pkt->statp.st_dev ||
                  is_win32_mount_point)) {
-         if (!(ff_pkt->flags & FO_MULTIFS)) {
+         if(!(ff_pkt->flags & FO_MULTIFS)) {
             ff_pkt->type = FT_NOFSCHG;
             recurse = false;
          } else if (!accept_fstype(ff_pkt, NULL)) {
@@ -580,7 +654,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       }
       /* If not recursing, just backup dir and return */
       if (!recurse) {
-         rtn_stat = handle_file(ff_pkt, pkt, top_level);
+         rtn_stat = handle_file(jcr, ff_pkt, top_level);
          if (ff_pkt->linked) {
             ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
          }
@@ -603,7 +677,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       if ((directory = opendir(fname)) == NULL) {
          ff_pkt->type = FT_NOOPEN;
          ff_pkt->ff_errno = errno;
-         rtn_stat = handle_file(ff_pkt, pkt, top_level);
+         rtn_stat = handle_file(jcr, ff_pkt, top_level);
          if (ff_pkt->linked) {
             ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
          }
@@ -647,7 +721,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
          }
          *q = 0;
          if (!file_is_excluded(ff_pkt, link)) {
-            rtn_stat = find_one_file(jcr, ff_pkt, handle_file, pkt, link, our_device, false);
+            rtn_stat = find_one_file(jcr, ff_pkt, handle_file, link, our_device, false);
             if (ff_pkt->linked) {
                ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
             }
@@ -664,7 +738,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
        *  the directory modes and dates.  Temp directory values
        *  were used without this record.
        */
-      handle_file(dir_ff_pkt, pkt, top_level);       /* handle directory entry */
+      handle_file(jcr, dir_ff_pkt, top_level);       /* handle directory entry */
       if (ff_pkt->linked) {
          ff_pkt->linked->FileIndex = dir_ff_pkt->FileIndex;
       }
@@ -702,7 +776,7 @@ find_one_file(JCR *jcr, FF_PKT *ff_pkt,
       /* The only remaining types are special (character, ...) files */
       ff_pkt->type = FT_SPEC;
    }
-   rtn_stat = handle_file(ff_pkt, pkt, top_level);
+   rtn_stat = handle_file(jcr, ff_pkt, top_level);
    if (ff_pkt->linked) {
       ff_pkt->linked->FileIndex = ff_pkt->FileIndex;
    }

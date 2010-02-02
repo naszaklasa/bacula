@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,16 +31,13 @@
  *
  *     Kern Sibbald, September MM
  *
- *    Version $Id: ua_server.c 5981 2007-11-25 14:18:33Z kerns $
+ *    Version $Id: ua_server.c 8120 2008-12-09 08:53:06Z ricozz $
  */
 
 #include "bacula.h"
 #include "dird.h"
 
 /* Imported variables */
-extern int r_first;
-extern int r_last;
-extern struct s_res resources[];
 
 
 /* Forward referenced functions */
@@ -79,9 +76,10 @@ extern "C"
 void *connect_thread(void *arg)
 {
    pthread_detach(pthread_self());
+   set_jcr_in_tsd(INVALID_JCR);
 
-   /* Permit 20 console connections */
-   bnet_thread_server((dlist*)arg, 20, &ua_workq, handle_UA_client_request);
+   /* Permit MaxConsoleConnect console connections */
+   bnet_thread_server((dlist*)arg, director->MaxConsoleConnect, &ua_workq, handle_UA_client_request);
    return NULL;
 }
 
@@ -105,8 +103,8 @@ JCR *new_control_jcr(const char *base_name, int job_type)
    jcr->sd_auth_key = bstrdup("dummy"); /* dummy Storage daemon key */
    create_unique_job_name(jcr, base_name);
    jcr->sched_time = jcr->start_time;
-   jcr->JobType = job_type;
-   jcr->JobLevel = L_NONE;
+   jcr->set_JobType(job_type);
+   jcr->set_JobLevel(L_NONE);
    set_jcr_job_status(jcr, JS_Running);
    jcr->JobId = 0;
    return jcr;
@@ -129,6 +127,7 @@ static void *handle_UA_client_request(void *arg)
 
    ua = new_ua_context(jcr);
    ua->UA_sock = user;
+   set_jcr_in_tsd(INVALID_JCR);
 
    user->recv();             /* Get first message */
    if (!authenticate_user_agent(ua)) {
@@ -142,9 +141,9 @@ static void *handle_UA_client_request(void *arg)
          pm_strcpy(ua->cmd, ua->UA_sock->msg);
          parse_ua_args(ua);
          if (ua->argc > 0 && ua->argk[0][0] == '.') {
-            do_a_dot_command(ua, ua->cmd);
+            do_a_dot_command(ua);
          } else {
-            do_a_command(ua, ua->cmd);
+            do_a_command(ua);
          }
          dequeue_messages(ua->jcr);
          if (!ua->quit) {

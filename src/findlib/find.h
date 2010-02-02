@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -36,6 +36,7 @@
 
 #include "jcr.h"
 #include "bfile.h"
+#include "../filed/fd_plugins.h"
 
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
@@ -43,6 +44,9 @@
 #endif
 
 #include <sys/file.h>
+#if !defined(HAVE_WIN32) || defined(HAVE_MINGW)
+#include <sys/param.h>
+#endif
 #if HAVE_UTIME_H
 #include <utime.h>
 #else
@@ -55,7 +59,7 @@ struct utimbuf {
 #define MODE_RALL (S_IRUSR|S_IRGRP|S_IROTH)
 
 #include "lib/fnmatch.h"
-#include "lib/enh_fnmatch.h"
+// #include "lib/enh_fnmatch.h"
 
 #ifndef HAVE_REGEX_H
 #include "lib/bregex.h"
@@ -63,25 +67,12 @@ struct utimbuf {
 #include <regex.h>
 #endif
 
-#include "save-cwd.h"
-
 #ifndef HAVE_READDIR_R
 int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 #endif
 
-
-/*
- * Status codes returned by create_file()
- */
-enum {
-   CF_SKIP = 1,                       /* skip file (not newer or something) */
-   CF_ERROR,                          /* error creating file */
-   CF_EXTRACT,                        /* file created, data to extract */
-   CF_CREATED                         /* file created, no data to extract */
-};
-
-
-/* Options saved int "options" of the include/exclude lists.
+/*  
+ * Options saved int "options" of the include/exclude lists.
  * They are directly jammed ito  "flag" of ff packet
  */
 #define FO_MD5          (1<<1)        /* Do MD5 checksum */
@@ -109,6 +100,8 @@ enum {
 #define FO_ENHANCEDWILD (1<<23)       /* Enhanced wild card processing */
 #define FO_CHKCHANGES   (1<<24)       /* Check if file have been modified during backup */
 #define FO_STRIPPATH    (1<<25)       /* Check for stripping path */
+#define FO_HONOR_NODUMP (1<<26)       /* honor NODUMP flag */
+#define FO_XATTR        (1<<27)       /* Backup Extended Attributes */
 
 struct s_included_file {
    struct s_included_file *next;
@@ -147,6 +140,7 @@ struct findFOPTS {
    int GZIP_level;                    /* GZIP level */
    int strip_path;                    /* strip path count */
    char VerifyOpts[MAX_FOPTS];        /* verify options */
+   char AccurateOpts[MAX_FOPTS];      /* accurate mode options */
    alist regex;                       /* regex string(s) */
    alist regexdir;                    /* regex string(s) for directories */
    alist regexfile;                   /* regex string(s) for files */
@@ -157,8 +151,7 @@ struct findFOPTS {
    alist base;                        /* list of base names */
    alist fstype;                      /* file system type limitation */
    alist drivetype;                   /* drive type limitation */
-   char *reader;                      /* reader program */
-   char *writer;                      /* writer program */
+   char *ignoredir;                   /* ignore directories with this file */
 };
 
 
@@ -167,6 +160,7 @@ struct findINCEXE {
    findFOPTS *current_opts;           /* points to current options structure */
    alist opts_list;                   /* options list */
    dlist name_list;                   /* filename list -- holds dlistString */
+   dlist plugin_list;                 /* plugin list -- holds dlistString */
 };
 
 /*
@@ -215,14 +209,16 @@ struct FF_PKT {
    struct s_excluded_file *excluded_files_list;
    struct s_excluded_file *excluded_paths_list;
    findFILESET *fileset;
-   int (*callback)(FF_PKT *, void *, bool); /* User's callback */
+   int (*file_save)(JCR *, FF_PKT *, bool); /* User's callback */
+   int (*plugin_save)(JCR *, FF_PKT *, bool); /* User's callback */
+   bool (*check_fct)(JCR *, FF_PKT *); /* optionnal user fct to check file changes */
 
    /* Values set by accept_file while processing Options */
    uint32_t flags;                    /* backup options */
    int GZIP_level;                    /* compression level */
    int strip_path;                    /* strip path count */
-   char *reader;                      /* reader program */
-   char *writer;                      /* writer program */
+   char *ignoredir;                   /* ignore directories with this file */
+   bool cmd_plugin;                   /* set if we have a command plugin */
    alist fstypes;                     /* allowed file system types */
    alist drivetypes;                  /* allowed drive types */
 

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: mysql.c 7402 2008-07-20 10:32:02Z ricozz $
+ *    Version $Id: mysql.c 8739 2009-04-16 17:07:21Z kerns $
  */
 
 
@@ -124,6 +124,7 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
    mdb->path = get_pool_memory(PM_FNAME);
    mdb->esc_name = get_pool_memory(PM_FNAME);
    mdb->esc_path = get_pool_memory(PM_FNAME);
+   mdb->allow_transactions = mult_db_connections;
    qinsert(&db_list, &mdb->bq);            /* put db in list */
    Dmsg3(100, "initdb ref=%d connected=%d db=%p\n", mdb->ref_count,
          mdb->connected, mdb->db);
@@ -192,6 +193,14 @@ db_open_database(JCR *jcr, B_DB *mdb)
 "Database=%s User=%s\n"
 "MySQL connect failed either server not running or your authorization is incorrect.\n"),
          mdb->db_name, mdb->db_user);
+#if MYSQL_VERSION_ID >= 40101
+      Dmsg3(50, "Error %u (%s): %s\n",
+            mysql_errno(&(mdb->mysql)), mysql_sqlstate(&(mdb->mysql)),
+            mysql_error(&(mdb->mysql)));
+#else
+      Dmsg2(50, "Error %u: %s\n",
+            mysql_errno(&(mdb->mysql)), mysql_error(&(mdb->mysql)));
+#endif
       V(mutex);
       return 0;
    }
@@ -309,7 +318,7 @@ db_escape_string(JCR *jcr, B_DB *mdb, char *snew, char *old, int len)
  * Submit a general SQL command (cmd), and for each row returned,
  *  the sqlite_handler is called with the ctx.
  */
-int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler, void *ctx)
+bool db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler, void *ctx)
 {
    SQL_ROW row;
    bool send = true;
@@ -318,7 +327,7 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
    if (sql_query(mdb, query) != 0) {
       Mmsg(mdb->errmsg, _("Query failed: %s: ERR=%s\n"), query, sql_strerror(mdb));
       db_unlock(mdb);
-      return 0;
+      return false;
    }
    if (result_handler != NULL) {
       if ((mdb->result = sql_use_result(mdb)) != NULL) {
@@ -341,7 +350,7 @@ int db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handler
       }
    }
    db_unlock(mdb);
-   return 1;
+   return true;
 
 }
 

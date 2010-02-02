@@ -1,3 +1,4 @@
+
 History:
 The original Bacula code was Copyright Kern Sibbald and John Walker.
 After November 2004, it became Copyright Kern Sibbald, and finally,
@@ -10,45 +11,61 @@ The name Bacula is a registered trademark of Kern Sibbald.
 ===================================
 
 License:
-For the most part, Bacula is licensed under the GPL version 2
-this code is listed under Copyright Free Software Foundation
-Europe e.V. A small part of the code (less than 10 files) is
-copyrighted under the GPL by FSF, or under BSD licenses by various
-authors (see below).
+For the most part, Bacula is licensed under the GPL version 2 this
+code is listed under Copyright Free Software Foundation Europe e.V.
+What follows is the addition(s) to the GPL version 2 license, that
+applies to code that is copyrighted by the Free Software Foundation
+Europe e.V.
+
+Linking: 
+As a special exception to the GPLv2, the Bacula Project gives
+permission to link the code of its release of Bacula with the OpenSSL
+project's "OpenSSL" library (or with modified versions of it that use
+the same license as the "OpenSSL" library), and distribute the linked
+executables.  You must obey the GNU General Public License in all
+respects for all of the code used other than "OpenSSL".
+
+As a special exception to the GPLv2, the Bacula Project gives
+permission to link the code of its release of the Bacula Win32 File
+daemon with the Microsoft supplied Volume Shadow Copy (VSS) libraries
+and distribute the linked executables.  You must obey the GNU General
+Public License in all respects for all of the code used other than for
+the Microsoft VSS code, where you must obey their license terms.
+
+The Bacula Project gives permission for plugins with GPLv2 compatible
+licenses to be loaded and distributed with the Bacula executables as
+long as the combined work is distributed under the terms listed in the 
+Bacula LICENSE file.  A full list of GPLv2 compatible licenses can be
+found at: http://www.fsf.org/licensing/licenses/.  If you wish to load
+or distribute plugins with different licensing terms please contact
+the Bacula Project at: license@bacula.org
+             
+===================================
+
 
 What follows is information from the authors of the code:
 
-Linking: 
-Bacula may be linked with any libraries permitted under the GPL.
-However, if configured with encryption, Bacula does use the
-OpenSSL libraries, and the OpenSSL license is not compatible with
-GPL v2.  To the best of our knowledge these libraries are not
-distributed with Bacula code because they are shared objects, and
-as such there is no conflict with the GPL according what I (Kern)
-understand in talking to FSFE.  In any case, for the code that
-I have written, I have no problems linking in OpenSSL (of course
-this does not speak for the few files in Bacula that are
-copyrighted by others).  If you take a more severe stance on the
-issue of dynamic linking to OpenSSL, and you are going to
-distribute Bacula, then simply do not use the --with-openssl when
-building your package, and Bacula will not use OpenSSL.
-             
+License:
+To the best of our knowledge, all code used in Bacula, which is 
+copyrighted by a third party, has licenses that are compatible
+with the OpenSSL license, and so given the exception that we have 
+made to the GPLv2 above, Bacula can be freely linked and distributed
+with the OpenSSL libraries.
 
-IP rights:
-Recipient understands that although each Contributor to Bacula
-grants the licenses to its Contributions set forth herein, no
-assurances are provided by any Contributor that the Program does
-not infringe the patent or other intellectual property rights of
-any other entity.  Each Contributor disclaims any liability to
-Recipient for claims brought by any other entity based on
-infringement of intellectual property rights or otherwise.  As a
-condition to exercising the rights and licenses granted
-hereunder, each Recipient hereby assumes sole responsibility to
-secure any other intellectual property rights needed, if any.
-For example, if a third party patent license is required to allow
-Recipient to distribute the Program, it is Recipient's
-responsibility to acquire that license before distributing the
-Program.
+Intellectual Property rights:
+Recipient understands that although each Contributor to Bacula grants
+the licenses to its Contributions set forth herein, no assurances are
+provided by any Contributor that the Program does not infringe the
+patent or other intellectual property rights of any other entity.
+Each Contributor disclaims any liability to Recipient for claims
+brought by any other entity based on infringement of intellectual
+property rights or otherwise.  As a condition to exercising the rights
+and licenses granted hereunder, each Recipient hereby assumes sole
+responsibility to secure any other intellectual property rights
+needed, if any.  For example, if a third party patent license is
+required to allow Recipient to distribute the Program, it is
+Recipient's responsibility to acquire that license before distributing
+the Program.
 
 Copyrights:
 Each Contributor to Bacula represents that to its knowledge it has
@@ -59,14 +76,14 @@ Code falling under the above conditions will be marked as follows:
 
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
    modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation, a copy of which
-   is in the LICENSE file
+   License as published by the Free Software Foundation plus additions
+   that are listed in the file LICENSE.
 
    This program is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -90,82 +107,56 @@ Bacula File daemon is copyrighted and or trademarked by Microsoft
 and may contain Microsoft intellectual property (examples:
 Microsoft VC++, the source to the VSS libraries, the Microsoft C
 runtime libraries).  As such we cannot and do not distribute that
-software in source form.  We are permitted however to distribute
-Bacula with the necessary Microsoft libraries in binary form.
+software.  We are permitted however to distribute Bacula with the
+necessary Microsoft libraries in binary form.
 
-You may obtain the parts that we cannot distribute as follows: The
+You may obtain the parts that we cannot distribute as follows.  The
 Microsoft compiler available for purchase, and Microsoft provides a free
-version of the compiler (note, we do not use the Microsoft compiler, but
-rather build the Bacula Win32 client using g++ cross compiling on Linux).
-The Microsoft source code that we use in the Win32 Bacula Client (Volume
-Shadow Copy interface) is available for download from Microsoft public
-Web servers.  We have documented in the src/win32 directory the URLs from
-which we obtained the library source, and how we build the Windows File
-daemon and many users have succeeded in doing so themselves.  Our
-intention is to respect as closely as possible Open Source practices
-while maintaining full respect for proprietary and copyrighted code.
+version of the compiler.  The source code and libraries are available for
+download from Microsoft public Web servers.  We have documented in the
+src/win32 directory the URLs from which we obtained the library source, and
+how we build the Windows File daemon and many users have succeeded in doing
+so themselves.  Our intention is to respect as closely as possible Open
+Source practices while maintaining full respect for proprietary and
+copyrighted code.
 
-BSD code used in the Windows version only:
-Code falling under the BSD license has the following license:
+GPLv2 or later license:
+ src/tools/bsmtp.c
+    Copyright (C) 1997 Ralf S. Engelschall, All Rights Reserved.
+  (note, bsmtp.c does not use OpenSSL, nor is it used with the code
+   of any other part of Bacula)
 
-   Copyright (c)2002-2003 Mark K. Kim
-   All rights reserved.
+3 clause BSD License notice for inclusion with the binary:              
+ src/lib/fnmatch.c
+   * Copyright (c) 1989, 1993, 1994
+   *      The Regents of the University of California.  All rights reserved.
+ src/lib/fnmatch.h
+   * Copyright (c) 1992, 1993
+   *      The Regents of the University of California.  All rights reserved.
+
+Permissive licenses:
+ src/lib/var.c/h
+   **  OSSP var - Variable Expansion
+   **  Copyright (c) 2001-2002 Ralf S. Engelschall <rse@engelschall.com>
+   **  Copyright (c) 2001-2002 The OSSP Project (http://www.ossp.org/)
+   **  Copyright (c) 2001-2002 Cable & Wireless Deutschland (http://www.cw.com/de/)
+
+ src/lib/bsnprintf.c
+   * Copyright Patrick Powell 1995
+
+ src/bregex.c/h
+   * Copyright (c) 1991 Tatu Ylonen, Espoo, Finland
+
+ src/lib/sha1.c/h
+   Copyright (C) The Internet Society (2001).  All Rights Reserved.
+
+ src/win32/compat/getopt.c
+   "... licensed under IBM copyrights to use the IBM-provided source code 
+   in any way he or she deems fit ..."
+
+ src/win32/compat/sys/mtio.h (LGPL)
+   Copyright (C) 1996, 1997 Free Software Foundation, Inc.
    
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions
-   are met:
-
-     * Redistributions of source code must retain the above copyright
-       notice, this list of conditions and the following disclaimer.
-
-     * Redistributions in binary form must reproduce the above copyright
-       notice, this list of conditions and the following disclaimer in
-       the documentation and/or other materials provided with the
-       distribution.
-
-     * Neither the original author of this software nor the names of its
-       contributors may be used to endorse or promote products derived
-       from this software without specific prior written permission.
-
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-   OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-   AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
-   THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
-   DAMAGE.
-
-
-=====================================
-
-The entire GPL is reproduced below, in the manuals distributed with the
-Bacula documentation and can also be found online on the GNU web site
-as well as at www.bacula.org. You may also obtain a copy of the
-GPL (or LGPL) by writing to: Free Software Foundation, Inc., 
-51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-
-The Four Freedoms Guaranteed by the GPL:
-Freedom zero is the freedom to run the program as you wish for any purpose. 
-
-Freedom one is the freedom to study the source code and change it
-to do what you wish.
-
-Freedom two is the freedom to help your neighbour, that's the
-freedom to make copies and distribute them to others when you
-wish.
-
-Freedom three is the freedom to help your community, that's the
-freedom to publish or distribute modified versions when you wish.
-
-Other Licenses:
-Certain parts of the Bacula software are licensed by their
-copyright holder(s) under the GPL or under the BSD license. 
-These software files are clearly marked as such.
 
 Bacula can be enabled with data encryption and/or communications
 encryption. If this is the case, you will be including OpenSSL code that
@@ -174,7 +165,7 @@ that contains cryptographic software written by Eric Young
 (tjh@cryptsoft.com).
 
 There are parts of Bacula that are licensed under the LGPL so
-that they may be used in proprietary code to interface with
+that those files may be used in proprietary code to interface with
 Bacula.
 
 Finally there are parts of Bacula that are in the public domain.
@@ -193,6 +184,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =====================================
 
+
+The entire GPL is reproduced below, in the manuals distributed with the
+Bacula documentation and can also be found online on the GNU web site
+as well as at www.bacula.org. You may also obtain a copy of the
+GPL (or LGPL) by writing to: Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
 
 ============== Text of GPL version 2 license ========
 

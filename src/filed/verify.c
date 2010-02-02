@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,14 +30,14 @@
  *
  *    Kern Sibbald, October MM
  *
- *   Version $Id: verify.c 5077 2007-06-24 17:27:12Z kerns $
+ *   Version $Id: verify.c 8502 2009-03-06 20:00:47Z kerns $
  *
  */
 
 #include "bacula.h"
 #include "filed.h"
 
-static int verify_file(FF_PKT *ff_pkt, void *my_pkt, bool);
+static int verify_file(JCR *jcr, FF_PKT *ff_pkt, bool);
 static int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr);
 
 /*
@@ -56,7 +56,7 @@ void do_verify(JCR *jcr)
    set_find_options((FF_PKT *)jcr->ff, jcr->incremental, jcr->mtime);
    Dmsg0(10, "Start find files\n");
    /* Subroutine verify_file() is called for each file */
-   find_files(jcr, (FF_PKT *)jcr->ff, verify_file, (void *)jcr);
+   find_files(jcr, (FF_PKT *)jcr->ff, verify_file, NULL);
    Dmsg0(10, "End find files\n");
 
    if (jcr->big_buf) {
@@ -71,7 +71,7 @@ void do_verify(JCR *jcr)
  *
  *  Find the file, compute the MD5 or SHA1 and send it back to the Director
  */
-static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
+static int verify_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
 {
    char attribs[MAXSTRING];
    char attribsEx[MAXSTRING];
@@ -79,7 +79,6 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
    int stat;
    DIGEST *digest = NULL;
    BSOCK *dir;
-   JCR *jcr = (JCR *)pkt;
 
    if (job_canceled(jcr)) {
       return 0;
@@ -121,21 +120,21 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
       berrno be;
       be.set_errno(ff_pkt->ff_errno);
       Jmsg(jcr, M_NOTSAVED, 1, _("     Could not access %s: ERR=%s\n"), ff_pkt->fname, be.bstrerror());
-      jcr->Errors++;
+      jcr->JobErrors++;
       return 1;
    }
    case FT_NOFOLLOW: {
       berrno be;
       be.set_errno(ff_pkt->ff_errno);
       Jmsg(jcr, M_NOTSAVED, 1, _("     Could not follow link %s: ERR=%s\n"), ff_pkt->fname, be.bstrerror());
-      jcr->Errors++;
+      jcr->JobErrors++;
       return 1;
    }
    case FT_NOSTAT: {
       berrno be;
       be.set_errno(ff_pkt->ff_errno);
       Jmsg(jcr, M_NOTSAVED, 1, _("     Could not stat %s: ERR=%s\n"), ff_pkt->fname, be.bstrerror());
-      jcr->Errors++;
+      jcr->JobErrors++;
       return 1;
    }
    case FT_DIRNOCHG:
@@ -156,17 +155,17 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
       berrno be;
       be.set_errno(ff_pkt->ff_errno);
       Jmsg(jcr, M_NOTSAVED, 1, _("     Could not open directory %s: ERR=%s\n"), ff_pkt->fname, be.bstrerror());
-      jcr->Errors++;
+      jcr->JobErrors++;
       return 1;
    }
    default:
       Jmsg(jcr, M_NOTSAVED, 0, _("     Unknown file type %d: %s\n"), ff_pkt->type, ff_pkt->fname);
-      jcr->Errors++;
+      jcr->JobErrors++;
       return 1;
    }
 
    /* Encode attributes and possibly extend them */
-   encode_stat(attribs, ff_pkt, 0);
+   encode_stat(attribs, &ff_pkt->statp, ff_pkt->LinkFI, 0);
    encode_attribsEx(jcr, attribsEx, ff_pkt);
 
    jcr->lock();
@@ -248,7 +247,7 @@ static int verify_file(FF_PKT *ff_pkt, void *pkt, bool top_level)
          size = sizeof(md);
          
          if (digest_file(jcr, ff_pkt, digest) != 0) {
-            jcr->Errors++;
+            jcr->JobErrors++;
             goto good_rtn;
          }
 
@@ -334,13 +333,33 @@ int digest_file(JCR *jcr, FF_PKT *ff_pkt, DIGEST *digest)
  * Read message digest of bfd, updating digest
  * In case of errors we need the job control record and file name.
  */
-int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr)
+static int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr)
 {
    char buf[DEFAULT_NETWORK_BUFFER_SIZE];
    int64_t n;
+   int64_t bufsiz = (int64_t)sizeof(buf);
+   FF_PKT *ff_pkt = (FF_PKT *)jcr->ff;
+   uint64_t fileAddr = 0;             /* file address */
+
 
    Dmsg0(50, "=== read_digest\n");
-   while ((n=bread(bfd, buf, sizeof(buf))) > 0) {
+   while ((n=bread(bfd, buf, bufsiz)) > 0) {
+      /* Check for sparse blocks */
+      if (ff_pkt->flags & FO_SPARSE) {
+         bool allZeros = false;
+         if ((n == bufsiz &&
+              fileAddr+n < (uint64_t)ff_pkt->statp.st_size) ||
+             ((ff_pkt->type == FT_RAW || ff_pkt->type == FT_FIFO) &&
+               (uint64_t)ff_pkt->statp.st_size == 0)) {
+            allZeros = is_buf_zero(buf, bufsiz);
+         }
+         fileAddr += n;               /* update file address */
+         /* Skip any block of all zeros */
+         if (allZeros) {
+            continue;                 /* skip block of zeros */
+         }
+      }
+      
       crypto_digest_update(digest, (uint8_t *)buf, n);
       jcr->JobBytes += n;
       jcr->ReadBytes += n;
@@ -351,7 +370,7 @@ int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr)
       Dmsg2(100, "Error reading file %s: ERR=%s\n", jcr->last_fname, be.bstrerror());
       Jmsg(jcr, M_ERROR, 1, _("Error reading file %s: ERR=%s\n"),
             jcr->last_fname, be.bstrerror());
-      jcr->Errors++;
+      jcr->JobErrors++;
       return -1;
    }
    return 0;

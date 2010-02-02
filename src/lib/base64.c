@@ -30,7 +30,7 @@
  *
  *    Written by Kern E. Sibbald, March MM.
  *
- *   Version $Id: base64.c 7949 2008-10-30 12:06:26Z kerns $
+ *   Version $Id: base64.c 8495 2009-02-28 14:52:14Z marcovw $
  */
 
 
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
          printf("Cannot stat %s: %s\n", fname, be.bstrerror(errno));
          continue;
       }
-      encode_stat(where, &statp);
+      encode_stat(where, &statp, 0, 0);
 
       printf("Encoded stat=%s\n", where);
 
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
           statp.st_ctime != statn.st_ctime) {
 
          printf("%s: %s\n", fname, where);
-         encode_stat(where, &statn);
+         encode_stat(where, &statn, 0, 0);
          printf("%s: %s\n", fname, where);
          printf("NOT EQAL\n");
       }

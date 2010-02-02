@@ -6,7 +6,7 @@
 # basic defines for every build
 %define _version @VERSION@
 %define _release 1
-%define depkgs_version 11Sep08
+%define depkgs_version 18Feb09
 %define _rescuever @VERSION@
 %define docs_version @VERSION@
 
@@ -255,6 +255,7 @@ exit 1
 %if %{mdk}
 %define _dist %(grep Mand /etc/mandrake-release)
 %endif
+%{?DISTNAME:%define _dist %{DISTNAME}}
 Distribution: %{_dist}
 
 # Should we build gconsole, possible only if gtk= >= 2.4 available.
@@ -273,9 +274,9 @@ Distribution: %{_dist}
 # specifically disallow gconsole if desired
 %{?nobuild_gconsole:%define gconsole 0}
 
-# specifically disallow rescue files if desired
-%define rescue 1
-%{?nobuild_rescue:%define rescue 0}
+# specifically disallow rescue files
+%define rescue 0
+%{?build_rescue:%define rescue 1}
 
 # Should we build wxconsole, only wxWidgets >=2.6 is supported
 # SuSE 10 and FC4 and newer
@@ -322,8 +323,11 @@ Distribution: %{_dist}
 
 BuildRequires: gcc, gcc-c++, make, autoconf
 BuildRequires: ncurses-devel, perl
-BuildRequires: libstdc++-devel = %{gccver}-%{gccrel}, libxml2-devel, zlib-devel
+BuildRequires: libstdc++-devel = %{gccver}-%{gccrel}, zlib-devel
 BuildRequires: openssl-devel
+%if ! %{rh7}
+BuildRequires: libxml2-devel
+%endif
 %if %{python}
 BuildRequires: python, python-devel
 %{expand: %%define pyver %(python -c 'import sys;print(sys.version[0:3])')}
@@ -352,6 +356,7 @@ BuildRequires: qt4-devel >= 4.2
 %if %{rh7}
 BuildRequires: libtermcap-devel
 BuildRequires: glibc-devel >= 2.2
+BuildRequires: libxml-devel
 %endif
 %if %{su9}
 BuildRequires: termcap
@@ -1565,6 +1570,7 @@ make
 	--disable-batch-insert \
 %endif
 	--mandir=%{_mandir} \
+	--with-plugindir=%{script_dir} \
         --with-subsys-dir=%{_subsysdir} \
         --with-dir-user=%{director_daemon_user} \
         --with-dir-group=%{daemon_group} \
@@ -1614,15 +1620,7 @@ mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT%{sqlite_bindir}
 %endif
 
-make \
-        prefix=$RPM_BUILD_ROOT%{_prefix} \
-        sbindir=$RPM_BUILD_ROOT%{_sbindir} \
-	sysconfdir=$RPM_BUILD_ROOT%{sysconf_dir} \
-	scriptdir=$RPM_BUILD_ROOT%{script_dir} \
-        working_dir=$RPM_BUILD_ROOT%{working_dir} \
-	piddir=$RPM_BUILD_ROOT%{pid_dir} \
-	mandir=$RPM_BUILD_ROOT%{_mandir} \
-        install
+make DESTDIR=$RPM_BUILD_ROOT install
 
 %if ! %{client_only} && %{mtx}
 cd %{depkgs}
@@ -1850,10 +1848,9 @@ cp -p src/filed/static-bacula-fd $RPM_BUILD_ROOT%{script_dir}/rescue/linux/cdrom
 rm -f src/filed/static-bacula-fd
 %endif
 
-# install bat since make doesn't at the moment
-%if %{bat}
-cp -p src/qt-console/bat $RPM_BUILD_ROOT%{_sbindir}/bat
-cp -p src/qt-console/bat.conf $RPM_BUILD_ROOT%{sysconf_dir}/bat.conf
+# remove the docs installed by make
+%if ! %{single_dir}
+rm -rf $RPM_BUILD_ROOT/usr/share/doc
 %endif
 
 # install docs for single dir installation
@@ -1863,10 +1860,22 @@ cp COPYING $RPM_BUILD_ROOT%{_prefix}/doc/
 cp ChangeLog $RPM_BUILD_ROOT%{_prefix}/doc/
 cp ReleaseNotes $RPM_BUILD_ROOT%{_prefix}/doc/
 cp VERIFYING $RPM_BUILD_ROOT%{_prefix}/doc/
+cp LICENSE $RPM_BUILD_ROOT%{_prefix}/doc/
 cp kernstodo $RPM_BUILD_ROOT%{_prefix}/doc/
-cp %{_docsrc}/manual/bacula.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
-cp %{_docsrc}/developers/developers.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
-cp -r %{_docsrc}/manual/bacula $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/catalog/catalog $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/catalog/catalog.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/concepts/concepts $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/concepts/concepts.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/console/console $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/console/console.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/developers/developers $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/developers/developers.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/install/install $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/install/install.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/problems/problems $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/problems/problems.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
+cp -r %{_docsrc}/manuals/en/utility/utility $RPM_BUILD_ROOT%{_prefix}/doc/
+cp %{_docsrc}/manuals/en/utility/utility.pdf $RPM_BUILD_ROOT%{_prefix}/doc/
 cp ../Release_Notes-%{version}-%{release}.txt $RPM_BUILD_ROOT%{_prefix}/doc/
 %endif
 
@@ -1888,6 +1897,10 @@ rm -f $RPM_BUILD_ROOT%{script_dir}/mtx-changer
 rm -f $RPM_BUILD_ROOT%{script_dir}/startmysql
 rm -f $RPM_BUILD_ROOT%{script_dir}/stopmysql
 rm -rf $RPM_BUILD_ROOT%{script_dir}/updatedb
+rm -f $RPM_BUILD_ROOT%{script_dir}/bconsole
+rm -f $RPM_BUILD_ROOT%{script_dir}/bpipe-fd.so
+rm -f $RPM_BUILD_ROOT%{script_dir}/mtx-changer.conf
+rm -f $RPM_BUILD_ROOT%{_sbindir}/bacula
 %endif
 
 %clean
@@ -1955,11 +1968,13 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %attr(-, root, %{daemon_group}) %{script_dir}/bacula-ctl-dir
 %attr(-, root, %{daemon_group}) %{script_dir}/bacula-ctl-fd
 %attr(-, root, %{daemon_group}) %{script_dir}/bacula-ctl-sd
+%attr(-, root, %{daemon_group}) %{script_dir}/bpipe-fd.so
 %attr(-, root, %{daemon_group}) /etc/init.d/bacula-dir
 %attr(-, root, %{daemon_group}) /etc/init.d/bacula-fd
 %attr(-, root, %{storage_daemon_group}) %{script_dir}/dvd-handler
 %attr(-, root, %{storage_daemon_group}) /etc/init.d/bacula-sd
 %attr(-, root, %{storage_daemon_group}) %{script_dir}/mtx-changer
+%attr(-, root, %{storage_daemon_group}) %{script_dir}/mtx-changer.conf
 
 /etc/logrotate.d/bacula
 /etc/log.d/scripts/services/bacula
@@ -1976,6 +1991,7 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %{_sbindir}/bacula-dir
 %{_sbindir}/bacula-fd
 %{_sbindir}/bacula-sd
+%{_sbindir}/bacula
 %{_sbindir}/bcopy
 %{_sbindir}/bextract
 %{_sbindir}/bls
@@ -2000,6 +2016,7 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %{_mandir}/man8/btraceback.8.%{manpage_ext}
 %{_mandir}/man8/dbcheck.8.%{manpage_ext}
 %{_mandir}/man1/bsmtp.1.%{manpage_ext}
+%{_libdir}/libbac*
 %endif
 
 %if ! %{client_only} && %{rescue}
@@ -2007,8 +2024,14 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 %endif
 
 %if ! %{client_only} && ! %{single_dir}
-%doc COPYING ChangeLog ReleaseNotes VERIFYING kernstodo 
-%doc %{_docsrc}/manual/bacula.pdf %{_docsrc}/developers/developers.pdf %{_docsrc}/manual/bacula ../Release_Notes-%{version}-%{release}.txt
+%doc COPYING ChangeLog ReleaseNotes LICENSE VERIFYING kernstodo ../Release_Notes-%{version}-%{release}.txt
+%doc %{_docsrc}/manuals/en/catalog/catalog %{_docsrc}/manuals/en/catalog/catalog.pdf
+%doc %{_docsrc}/manuals/en/concepts/concepts %{_docsrc}/manuals/en/concepts/concepts.pdf
+%doc %{_docsrc}/manuals/en/console/console %{_docsrc}/manuals/en/console/console.pdf
+%doc %{_docsrc}/manuals/en/developers/developers %{_docsrc}/manuals/en/developers/developers.pdf
+%doc %{_docsrc}/manuals/en/install/install %{_docsrc}/manuals/en/install/install.pdf
+%doc %{_docsrc}/manuals/en/problems/problems %{_docsrc}/manuals/en/problems/problems.pdf
+%doc %{_docsrc}/manuals/en/utility/utility %{_docsrc}/manuals/en/utility/utility.pdf
 %endif
 
 %if ! %{client_only} && %{single_dir}
@@ -2017,7 +2040,7 @@ rm -f $RPM_BUILD_DIR/Release_Notes-%{version}-%{release}.txt
 
 %if %{mysql}
 %pre mysql
-# test for bacula database older than version 9
+# test for bacula database older than version 10
 # note: this ASSUMES no password has been set for bacula database
 DB_VER=`mysql 2>/dev/null bacula -e 'select * from Version;'|tail -n 1`
 %endif
@@ -2046,7 +2069,7 @@ if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite ];then
 	echo "chown bacula.bacula bacula.db"
 	exit 1
 fi
-# test for bacula database older than version 9 and sqlite3
+# test for bacula database older than version 10 and sqlite3
 if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite3 ];then
         DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite3 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
 %endif
@@ -2057,13 +2080,13 @@ DB_VER=`echo 'select * from Version;' | psql bacula 2>/dev/null | tail -3 | head
 %endif
 
 %if ! %{client_only}
-if [ -n "$DB_VER" ] && [ "$DB_VER" -lt "9" ]; then
-        echo "This bacula upgrade will update a bacula database from version 9 to 10."
+if [ -n "$DB_VER" ] && [ "$DB_VER" -lt "10" ]; then
+        echo "This bacula upgrade will update a bacula database from version 10 to 11."
         echo "You appear to be running database version $DB_VER. You must first update"
-        echo "your database to version 9 and then install this upgrade. The alternative"
+        echo "your database to version 10 and then install this upgrade. The alternative"
 	echo "is to use %{script_dir}/drop_%{db_backend}_tables to delete all your your current"
         echo "catalog information, then do the upgrade. Information on updating a"
-        echo "database older than version 9 can be found in the release notes."
+        echo "database older than version 10 can be found in the release notes."
         exit 1
 fi
 %endif
@@ -2163,8 +2186,8 @@ if [ -z "$DB_VER" ]; then
         echo "Creating bacula tables..."
 	%{script_dir}/make_mysql_tables
 
-# check to see if we need to upgrade a 1.38 or lower database
-elif [ "$DB_VER" -lt "10" ]; then
+# check to see if we need to upgrade a 2.x database
+elif [ "$DB_VER" -lt "11" ]; then
         echo "This release requires an upgrade to your bacula database."
         echo "Backing up your current database..."
         mysqldump -f --opt bacula | bzip2 > %{working_dir}/bacula_backup.sql.bz2
@@ -2179,8 +2202,8 @@ fi
 # test for an existing database
 if [ -s %{working_dir}/bacula.db ]; then
         DB_VER=`echo "select * from Version;" | %{sqlite_bindir}/sqlite3 2>/dev/null %{working_dir}/bacula.db | tail -n 1`
-        # check to see if we need to upgrade a 1.38 or lower database
-        if [ "$DB_VER" -lt "10" ] && [ "$DB_VER" -ge "9" ]; then
+        # check to see if we need to upgrade a 2.x database
+        if [ "$DB_VER" -lt "11" ] && [ "$DB_VER" -ge "10" ]; then
                 echo "This release requires an upgrade to your bacula database."
                 echo "Backing up your current database..."
                 echo ".dump" | %{sqlite_bindir}/sqlite3 %{working_dir}/bacula.db | bzip2 > %{working_dir}/bacula_backup.sql.bz2
@@ -2214,8 +2237,8 @@ if [ -z "$DB_VER" ]; then
         echo "Granting privileges for PostgreSQL user bacula..."
 	%{script_dir}/grant_postgresql_privileges
 
-# check to see if we need to upgrade a 1.38 or lower database
-elif [ "$DB_VER" -lt "10" ]; then
+# check to see if we need to upgrade a 2.x database
+elif [ "$DB_VER" -lt "11" ]; then
         echo "This release requires an upgrade to your bacula database."
         echo "Backing up your current database..."
         pg_dump bacula | bzip2 > %{working_dir}/bacula_backup.sql.bz2
@@ -2241,6 +2264,7 @@ if [ -d %{sysconf_dir} ]; then
                 done
         done
 fi
+/sbin/ldconfig
 %endif
 
 %if %{mysql}
@@ -2260,6 +2284,19 @@ if [ $1 = 0 ]; then
 /sbin/chkconfig --del bacula-fd
 /sbin/chkconfig --del bacula-sd
 fi
+%endif
+
+%if %{mysql}
+%postun mysql
+/sbin/ldconfig
+%endif
+%if %{sqlite}
+%postun sqlite
+/sbin/ldconfig
+%endif
+%if %{postgresql}
+%postun postgresql
+/sbin/ldconfig
 %endif
 
 
@@ -2288,8 +2325,14 @@ fi
 %endif
 
 %if ! %{single_dir}
-%doc COPYING ChangeLog ReleaseNotes VERIFYING kernstodo 
-%doc %{_docsrc}/manual/bacula.pdf %{_docsrc}/developers/developers.pdf %{_docsrc}/manual/bacula ../Release_Notes-%{version}-%{release}.txt
+%doc COPYING ChangeLog ReleaseNotes LICENSE VERIFYING kernstodo ../Release_Notes-%{version}-%{release}.txt
+%doc %{_docsrc}/manuals/en/catalog/catalog %{_docsrc}/manuals/en/catalog/catalog.pdf
+%doc %{_docsrc}/manuals/en/concepts/concepts %{_docsrc}/manuals/en/concepts/concepts.pdf
+%doc %{_docsrc}/manuals/en/console/console %{_docsrc}/manuals/en/console/console.pdf
+%doc %{_docsrc}/manuals/en/developers/developers %{_docsrc}/manuals/en/developers/developers.pdf
+%doc %{_docsrc}/manuals/en/install/install %{_docsrc}/manuals/en/install/install.pdf
+%doc %{_docsrc}/manuals/en/problems/problems %{_docsrc}/manuals/en/problems/problems.pdf
+%doc %{_docsrc}/manuals/en/utility/utility %{_docsrc}/manuals/en/utility/utility.pdf
 %else
 %{_prefix}/doc
 %endif
@@ -2310,6 +2353,10 @@ fi
 %{_mandir}/man8/bacula.8.%{manpage_ext}
 %{_mandir}/man8/bconsole.8.%{manpage_ext}
 %{_mandir}/man8/btraceback.8.%{manpage_ext}
+%{_libdir}/libbac.*
+%{_libdir}/libbaccfg.*
+%{_libdir}/libbacfind.*
+%{_libdir}/libbacpy.*
 
 
 %pre client
@@ -2356,11 +2403,16 @@ if [ -d %{sysconf_dir} ]; then
         done
 fi
 
+/sbin/ldconfig
+
 %preun client
 # delete our link
 if [ $1 = 0 ]; then
 /sbin/chkconfig --del bacula-fd
 fi
+
+%postun client
+/sbin/ldconfig
 
 %if ! %{client_only}
 %files updatedb
@@ -2525,6 +2577,25 @@ fi
 %endif
 
 %changelog
+* Sat Jun 20 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- Fix bat install which is now handled by make and uses shared libs
+* Sat May 16 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- fix libxml dependency for rh7 per Pasi Kärkkäinen <pasik@iki.fi>
+* Mon May 04 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- Fix post ldconfig problem in client only build
+* Sun May 03 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- remove more files installed by client-only build not needed by client package
+- remove libbacsql files from client package
+* Sat May 02 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 3.0.1
+- update for new docs configuration
+* Sat Apr 25 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add switch to pass Distribution tag
+* Sun Apr 5 2009 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- 3.0.0 release
+- database update version 10 to 11
+- make now installs docs so we rm from buildroot
+- add shared libs in %_libdir and other misc new files
 * Wed Dec 31 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - add su111 target
 * Sat Nov 08 2008 D. Scott Barninger <barninger@fairfieldcomputers.com>

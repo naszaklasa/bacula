@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: acquire.c 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: acquire.c 9025 2009-07-16 13:03:53Z ricozz $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -187,7 +187,7 @@ bool acquire_device_for_read(DCR *dcr)
    if (!dir_get_volume_info(dcr, GET_VOL_INFO_FOR_READ)) {
       Dmsg2(150, "dir_get_vol_info failed for vol=%s: %s\n", 
          dcr->VolumeName, jcr->errmsg);
-      Jmsg1(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+      Jmsg1(jcr, M_WARNING, 0, "Read acquire: %s", jcr->errmsg);
    }
    dev->set_load();                /* set to load volume */
    
@@ -241,7 +241,7 @@ bool acquire_device_for_read(DCR *dcr)
           *  error messages when nothing is mounted.
           */
          if (tape_previously_mounted) {
-            Jmsg(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+            Jmsg(jcr, M_WARNING, 0, "Read acquire: %s", jcr->errmsg);
          }
          goto default_path;
       case VOL_NAME_ERROR:
@@ -257,7 +257,7 @@ bool acquire_device_for_read(DCR *dcr)
          dev->set_load();
          /* Fall through */
       default:
-         Jmsg1(jcr, M_WARNING, 0, "%s", jcr->errmsg);
+         Jmsg1(jcr, M_WARNING, 0, "Read acquire: %s", jcr->errmsg);
 default_path:
          Dmsg0(50, "default path\n");
          tape_previously_mounted = true;
@@ -286,7 +286,18 @@ default_path:
          if (!dir_ask_sysop_to_mount_volume(dcr, ST_READ)) {
             goto get_out;             /* error return */
          }
+
+         /* Volume info is always needed because of VolParts */
+         Dmsg1(150, "dir_get_volume_info vol=%s\n", dcr->VolumeName);
+         if (!dir_get_volume_info(dcr, GET_VOL_INFO_FOR_READ)) {
+            Dmsg2(150, "dir_get_vol_info failed for vol=%s: %s\n", 
+                  dcr->VolumeName, jcr->errmsg);
+            Jmsg1(jcr, M_WARNING, 0, "Read acquire: %s", jcr->errmsg);
+         }
+         dev->set_load();                /* set to load volume */
+
          try_autochanger = true;      /* permit trying the autochanger again */
+
          continue;                    /* try reading again */
       } /* end switch */
       break;
@@ -432,10 +443,11 @@ bool release_device(DCR *dcr)
    if (dev->can_read()) {
       VOLUME_CAT_INFO *vol = &dev->VolCatInfo;
       dev->clear_read();              /* clear read bit */
-      Dmsg2(000, "dir_update_vol_info. label=%d Vol=%s\n",
+      Dmsg2(150, "dir_update_vol_info. label=%d Vol=%s\n",
          dev->is_labeled(), vol->VolCatName);
       if (dev->is_labeled() && vol->VolCatName[0] != 0) {
          dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
+         remove_read_volume(jcr, dcr->VolumeName);
          volume_unused(dcr);
       }
    } else if (dev->num_writers > 0) {
@@ -633,7 +645,7 @@ static void attach_dcr_to_dev(DCR *dcr)
    JCR *jcr = dcr->jcr;
 
    if (jcr) Dmsg1(500, "JobId=%u enter attach_dcr_to_dev\n", (uint32_t)jcr->JobId);
-   if (!dcr->attached_to_dev && dev->initiated && jcr && jcr->JobType != JT_SYSTEM) {
+   if (!dcr->attached_to_dev && dev->initiated && jcr && jcr->get_JobType() != JT_SYSTEM) {
       dev->attached_dcrs->append(dcr);  /* attach dcr to device */
       dcr->attached_to_dev = true;
       Dmsg1(500, "JobId=%u attach_dcr_to_dev\n", (uint32_t)jcr->JobId);
@@ -647,8 +659,8 @@ void detach_dcr_from_dev(DCR *dcr)
 
    /* Detach this dcr only if attached */
    if (dcr->attached_to_dev && dev) {
-      dcr->unreserve_device();
       dev->dlock();
+      dcr->unreserve_device();
       dcr->dev->attached_dcrs->remove(dcr);  /* detach dcr from device */
       dcr->attached_to_dev = false;
 //    remove_dcr_from_dcrs(dcr);      /* remove dcr from jcr list */

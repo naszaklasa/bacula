@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, February MMVII
  *
- *  $Id: run.cpp 5090 2007-06-25 19:15:34Z bartleyd2 $
+ *  $Id: run.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
  */ 
 
 #include "bat.h"
@@ -44,14 +44,14 @@ runPage::runPage(const QString &defJob)
 {
    QDateTime dt;
 
-   m_name = "Run";
+   m_name = tr("Run");
    pgInitialize();
    setupUi(this);
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/run.png")));
-   m_console->notify(false);
+   m_conn = m_console->notifyOff();
 
-   m_console->beginNewCommand();
+   m_console->beginNewCommand(m_conn);
    jobCombo->addItems(m_console->job_list);
    filesetCombo->addItems(m_console->fileset_list);
    levelCombo->addItems(m_console->level_list);
@@ -106,7 +106,7 @@ void runPage::okButtonPushed()
    }
 
    consoleCommand(cmd);
-   m_console->notify(true);
+   m_console->notify(m_conn, true);
    closeStackPage();
    mainWin->resetFocus();
 }
@@ -114,9 +114,9 @@ void runPage::okButtonPushed()
 
 void runPage::cancelButtonPushed()
 {
-   mainWin->set_status(" Canceled");
+   mainWin->set_status(tr(" Canceled"));
    this->hide();
-   m_console->notify(true);
+   m_console->notify(m_conn, true);
    closeStackPage();
    mainWin->resetFocus();
 }
@@ -133,6 +133,7 @@ void runPage::job_name_change(int index)
    (void)index;
    job_defs.job_name = jobCombo->currentText();
    if (m_console->get_job_defaults(job_defs)) {
+      typeLabel->setText("<H3>"+job_defs.type+"</H3>");
       filesetCombo->setCurrentIndex(filesetCombo->findText(job_defs.fileset_name, Qt::MatchExactly));
       levelCombo->setCurrentIndex(levelCombo->findText(job_defs.level, Qt::MatchExactly));
       clientCombo->setCurrentIndex(clientCombo->findText(job_defs.client_name, Qt::MatchExactly));

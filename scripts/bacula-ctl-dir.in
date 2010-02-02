@@ -31,7 +31,7 @@ DIR_PORT=@dir_port@
 
 DIR_USER=@dir_user@
 DIR_GROUP=@dir_group@
-
+Bacula="@BACULA@"
 PIDOF=@PIDOF@	
 
 # A function to stop a program.
@@ -198,7 +198,7 @@ case "$1" in
    start)
       [ -x ${BACDIRBIN}/bacula-dir ] && { 
 	  sleep 2
-	  echo "Starting the Bacula Director daemon"
+	  echo "Starting the $Bacula Director daemon"
 	 OPTIONS=''
 	 if [ "${DIR_USER}" != '' ]; then
 	    OPTIONS="${OPTIONS} -u ${DIR_USER}"
@@ -218,7 +218,7 @@ case "$1" in
 
    stop)
       [ -x ${BACDIRBIN}/bacula-dir ] && {
-	 echo "Stopping the Bacula Director daemon"
+	 echo "Stopping the $Bacula Director daemon"
 	 killproc ${BACDIRBIN}/bacula-dir ${DIR_PORT}
       }
       ;;

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark ofJohn Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -29,7 +29,7 @@
 
         Definitions for the smart memory allocator
 
-     Version $Id: smartall.h 5339 2007-08-10 21:35:04Z kerns $
+     Version $Id: smartall.h 7513 2008-08-27 21:11:04Z kerns $
 
 */
 
@@ -99,7 +99,6 @@ extern void *b_malloc();
 #endif
 
 #ifdef SMARTALLOC
-// #ifdef xxx
 
 #define New(type) new(__FILE__, __LINE__) type
 
@@ -121,20 +120,17 @@ void  operator delete(void *ptr)
 {
    free(ptr);
 }
-void  operator delete[](void *ptr, size_t i)
+void  operator delete[](void *ptr, size_t /*i*/)
 {
-   (void)i;                           /* eliminate compiler complaints */
    free(ptr);
 }
 
-void  operator delete(void *ptr, const char *fname, int line)
+void  operator delete(void *ptr, const char * /*fname*/, int /*line*/)
 {
-   (void)fname; (void)line;          /* eliminate compiler complaints */
    free(ptr);
 }
-void  operator delete[](void *ptr, size_t i, const char *fname, int line)
+void  operator delete[](void *ptr, size_t /*i*/, const char * /*fname*/, int /*line*/)
 {
-   (void)i; (void)fname; (void)line; /* eliminate compiler complaints */
    free(ptr);
 }
 

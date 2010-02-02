@@ -3,7 +3,7 @@
 # shell script to create Bacula PostgreSQL tables
 #
 bindir=@SQL_BINDIR@
-db_name=${db_name:-"@db_name@"}
+db_name=${db_name:-@db_name@}
 
 $bindir/psql -f - -d ${db_name} $* <<END-OF-DATA
 
@@ -14,7 +14,8 @@ CREATE TABLE filename
     primary key (filenameid)
 );
 
-CREATE INDEX filename_name_idx on filename (name);
+ALTER TABLE filename ALTER COLUMN name SET STATISTICS 1000;
+CREATE UNIQUE INDEX filename_name_idx on filename (name);
 
 CREATE TABLE path
 (
@@ -23,11 +24,12 @@ CREATE TABLE path
     primary key (pathid)
 );
 
-CREATE INDEX path_name_idx on path (path);
+ALTER TABLE path ALTER COLUMN path SET STATISTICS 1000;
+CREATE UNIQUE INDEX path_name_idx on path (path);
 
 CREATE TABLE file
 (
-    fileid	      serial	  not null,
+    fileid	      bigserial	  not null,
     fileindex	      integer	  not null  default 0,
     jobid	      integer	  not null,
     pathid	      integer	  not null,
@@ -40,6 +42,11 @@ CREATE TABLE file
 
 CREATE INDEX file_jobid_idx on file (jobid);
 CREATE INDEX file_fp_idx on file (filenameid, pathid);
+
+--
+-- Add this if you have a good number of job
+-- that run at the same time
+-- ALTER SEQUENCE file_fileid_seq CACHE 1000;
 
 --
 -- Possibly add one or more of the following indexes
@@ -67,6 +74,7 @@ CREATE TABLE job
     volsessiontime    integer	  default 0,
     jobfiles	      integer	  default 0,
     jobbytes	      bigint	  default 0,
+    readbytes        bigint      default 0,
     joberrors	      integer	  default 0,
     jobmissingfiles   integer	  default 0,
     poolid	      integer	  default 0,
@@ -78,6 +86,11 @@ CREATE TABLE job
 );
 
 CREATE INDEX job_name_idx on job (name);
+
+-- Create a table like Job for long term statistics 
+CREATE TABLE JobHisto (LIKE Job);
+CREATE INDEX jobhisto_idx ON jobhisto ( starttime );
+
 
 CREATE TABLE Location (
    LocationId	      serial	  not null,
@@ -144,6 +157,7 @@ CREATE TABLE media
 	      'Error','Busy','Used','Cleaning','Scratch')),
     enabled	      smallint	  default 1,
     recycle	      smallint	  default 0,
+    ActionOnPurge     smallint    default 0,
     volretention      bigint	  default 0,
     voluseduration    bigint	  default 0,
     maxvoljobs	      integer	  default 0,
@@ -219,6 +233,7 @@ CREATE TABLE pool
     maxvolbytes       bigint	  default 0,
     autoprune	      smallint	  default 0,
     recycle	      smallint	  default 0,
+    ActionOnPurge     smallint    default 0,
     pooltype	      text			    
       check (pooltype in ('Backup','Copy','Cloned','Archive','Migration','Scratch')),
     labeltype	      integer	  default 0,
@@ -290,7 +305,7 @@ CREATE TABLE basefiles
 (
     baseid	      serial		    not null,
     jobid	      integer		    not null,
-    fileid	      integer		    not null,
+    fileid	      bigint		    not null,
     fileindex	      integer			    ,
     basejobid	      integer			    ,
     primary key (baseid)
@@ -362,9 +377,12 @@ INSERT INTO Status (JobStatus,JobStatusLong) VALUES
    ('t', 'Waiting on start time');
 INSERT INTO Status (JobStatus,JobStatusLong) VALUES
    ('p', 'Waiting on higher priority jobs');
+INSERT INTO Status (JobStatus,JobStatusLong) VALUES
+   ('a', 'SD despooling attributes');
+INSERT INTO Status (JobStatus,JobStatusLong) VALUES
+   ('i', 'Doing batch insert file records');
 
-
-INSERT INTO Version (VersionId) VALUES (10);
+INSERT INTO Version (VersionId) VALUES (11);
 
 -- Make sure we have appropriate permissions
 

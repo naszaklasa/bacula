@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *
  *    Nicolas Boichat, MMV
  *
- *   Version $Id: dvd.c 6831 2008-04-16 09:49:47Z kerns $
+ *   Version $Id: dvd.c 7450 2008-07-30 12:53:47Z kerns $
  */
 
 #include "bacula.h"
@@ -254,7 +254,7 @@ bool dvd_write_part(DCR *dcr)
    }
 
    Dmsg2(20, "Write part: cmd=%s timeout=%d\n", ocmd.c_str(), timeout);
-   status = run_program_full_output(ocmd.c_str(), timeout, results.c_str());
+   status = run_program_full_output(ocmd.c_str(), timeout, results.addr());
    Dmsg2(20, "Write part status=%d result=%s\n", status, results.c_str());
 
    dev->blank_dvd = false;
@@ -486,7 +486,7 @@ boffset_t lseek_dvd(DCR *dcr, boffset_t offset, int whence)
       break;
    case SEEK_CUR:
       Dmsg1(400, "lseek_dvd SEEK_CUR to %s\n", edit_int64(offset, ed1));
-      if ((pos = lseek(dev->fd(), (off_t)0, SEEK_CUR)) < 0) {
+      if ((pos = lseek(dev->fd(), 0, SEEK_CUR)) < 0) {
          Dmsg0(400, "Seek error.\n");
          return pos;                  
       }
@@ -518,7 +518,7 @@ boffset_t lseek_dvd(DCR *dcr, boffset_t offset, int whence)
        *  right part number, simply seek
        */
       if (dev->is_part_spooled() && dev->part > dev->num_dvd_parts) {
-         if ((pos = lseek(dev->fd(), (off_t)0, SEEK_END)) < 0) {
+         if ((pos = lseek(dev->fd(), 0, SEEK_END)) < 0) {
             return pos;   
          } else {
             Dmsg1(400, "lseek_dvd SEEK_END returns %s\n", 

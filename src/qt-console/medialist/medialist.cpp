@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,14 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
  
 /*
- *   Version $Id: medialist.cpp 7460 2008-08-03 16:52:47Z bartleyd2 $
+ *   Version $Id: medialist.cpp 8876 2009-05-30 18:51:09Z bartleyd2 $
  *
  *  MediaList Class
  *
@@ -35,26 +35,27 @@
  *
  */ 
 
+#include "bat.h"
 #include <QAbstractEventDispatcher>
 #include <QMenu>
-#include "bat.h"
+#include <math.h>
 #include "medialist.h"
 #include "mediaedit/mediaedit.h"
 #include "joblist/joblist.h"
 #include "relabel/relabel.h"
 #include "run/run.h"
+#include "util/fmtwidgetitem.h"
 
 MediaList::MediaList()
 {
    setupUi(this);
-   m_name = "Media";
+   m_name = tr("Media");
    pgInitialize();
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/cartridge.png")));
 
    /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_medialist.h */
    m_populated = false;
-   m_populating = false;
    m_checkcurwidget = true;
    m_closeable = false;
    /* add context sensitive menu items specific to this classto the page
@@ -75,29 +76,25 @@ MediaList::~MediaList()
  */
 void MediaList::populateTree()
 {
-   QTreeWidgetItem *mediatreeitem, *pooltreeitem;
-   if (m_populating)
-      return;
-   m_populating = true;
-
-   if (!m_console->preventInUseConnect())
-       return;
-
-   QStringList headerlist = (QStringList()
-      << "Volume Name" << "Id" << "Status" << "Enabled" << "Bytes" << "Files"
-      << "Jobs" << "Retention" << "Media Type" << "Slot" << "In Changer" << "Use Duration"
-      << "Max Jobs" << "Max Files" << "Max Bytes" << "Recycle"
-      << "RecyclePool" << "Last Written");
-   int statusIndex = headerlist.indexOf("Status");
-
-   m_checkcurwidget = false;
    if (m_populated)
       writeExpandedSettings();
+   m_populated = true;
+
+   Freeze frz(*mp_treeWidget); /* disable updating*/
+
+   QStringList headerlist = (QStringList()
+      << tr("Volume Name") << tr("Id") << tr("Status") << tr("Enabled") << tr("Bytes") << tr("Files")
+      << tr("Jobs") << tr("Retention") << tr("Media Type") << tr("Slot") << tr("Use Duration")
+      << tr("Max Jobs") << tr("Max Files") << tr("Max Bytes") << tr("Recycle")
+      << tr("Last Written") << tr("First Written") << tr("Read Time")
+      << tr("Write Time") << tr("Recycle Count") << tr("Recycle Pool") << tr("Scratch Pool"));
+
+   m_checkcurwidget = false;
    mp_treeWidget->clear();
    m_checkcurwidget = true;
    mp_treeWidget->setColumnCount(headerlist.count());
    m_topItem = new QTreeWidgetItem(mp_treeWidget);
-   m_topItem->setText(0, "Pools");
+   m_topItem->setText(0, tr("Pools"));
    m_topItem->setData(0, Qt::UserRole, 0);
    m_topItem->setExpanded(true);
    
@@ -107,80 +104,161 @@ void MediaList::populateTree()
    settings.beginGroup("MediaListTreeExpanded");
    QString query;
 
-   foreach (QString pool_listItem, m_console->pool_list) {
-      pooltreeitem = new QTreeWidgetItem(m_topItem);
-      pooltreeitem->setText(0, pool_listItem);
-      pooltreeitem->setData(0, Qt::UserRole, 1);
-      if(settings.contains(pool_listItem)) {
-         pooltreeitem->setExpanded(settings.value(pool_listItem).toBool());
-      } else {
-         pooltreeitem->setExpanded(true);
-      }
+   QTreeWidgetItem *pooltreeitem;
 
-      query =  "SELECT Media.VolumeName AS Media, "
+   /* Comma separated list of pools first */
+   bool first = true;
+   QString pool_comsep("");
+   foreach (QString pool_listItem, m_console->pool_list) {
+      if (first) {
+         pool_comsep += "'" + pool_listItem + "'";
+         first = false;
+      }
+      else
+         pool_comsep += ",'" + pool_listItem + "'";
+   }
+   /* Now use pool_comsep list to perform just one query */
+   if (pool_comsep != "") {
+      query =  "SELECT Pool.Name AS pul,"
+         " Media.VolumeName AS Media, "
          " Media.MediaId AS Id, Media.VolStatus AS VolStatus,"
          " Media.Enabled AS Enabled, Media.VolBytes AS Bytes,"
          " Media.VolFiles AS FileCount, Media.VolJobs AS JobCount,"
          " Media.VolRetention AS VolumeRetention, Media.MediaType AS MediaType,"
-         " Media.Slot AS Slot, Media.InChanger AS InChanger,"
-	 " Media.VolUseDuration AS UseDuration,"
+         " Media.InChanger AS InChanger, Media.Slot AS Slot, "
+         " Media.VolUseDuration AS UseDuration,"
          " Media.MaxVolJobs AS MaxJobs, Media.MaxVolFiles AS MaxFiles,"
          " Media.MaxVolBytes AS MaxBytes, Media.Recycle AS Recycle,"
-         " Pol.Name AS RecyclePool,"
-         " Media.LastWritten AS LastWritten"
+         " Media.LastWritten AS LastWritten,"
+         " Media.FirstWritten AS FirstWritten,"
+         " (VolReadTime/1000000) AS ReadTime, (VolWriteTime/1000000) AS WriteTime,"
+         " RecycleCount AS ReCyCount,"
+         " RecPool.Name AS RecyclePool, ScrPool.Name AS ScratchPool"
          " FROM Media"
          " JOIN Pool ON (Media.PoolId=Pool.PoolId)"
-         " LEFT OUTER JOIN Pool AS Pol ON (Media.RecyclePoolId=Pol.PoolId)"
-         " WHERE";
-      query += " Pool.Name='" + pool_listItem + "'";
-      query += " ORDER BY Media";
-   
+         " LEFT OUTER JOIN Pool AS RecPool ON (Media.RecyclePoolId=RecPool.PoolId)"
+         " LEFT OUTER JOIN Pool AS ScrPool ON (Media.ScratchPoolId=ScrPool.PoolId)"
+         " WHERE ";
+      query += " Pool.Name IN (" + pool_comsep + ")";
+      query += " ORDER BY Pool.Name, Media";
+
       if (mainWin->m_sqlDebug) {
          Pmsg1(000, "MediaList query cmd : %s\n",query.toUtf8().data());
       }
       QStringList results;
+      int counter = 0;
       if (m_console->sql_cmd(query, results)) {
-         QString field;
          QStringList fieldlist;
+         QString prev_pool("");
+         QString this_pool("");
 
          /* Iterate through the lines of results. */
          foreach (QString resultline, results) {
             fieldlist = resultline.split("\t");
-            int index = 0;
-            mediatreeitem = new QTreeWidgetItem(pooltreeitem);
+            this_pool = fieldlist.takeFirst();
+            if (prev_pool != this_pool) {
+               prev_pool = this_pool;
+               pooltreeitem = new QTreeWidgetItem(m_topItem);
+               pooltreeitem->setText(0, this_pool);
+               pooltreeitem->setData(0, Qt::UserRole, 1);
+            }
+            if(settings.contains(this_pool)) {
+               pooltreeitem->setExpanded(settings.value(this_pool).toBool());
+            } else {
+               pooltreeitem->setExpanded(true);
+            }
 
+            if (fieldlist.size() < 18)
+               continue; // some fields missing, ignore row
+
+            int index = 0;
+            TreeItemFormatter mediaitem(*pooltreeitem, 2);
+  
             /* Iterate through fields in the record */
-            foreach (field, fieldlist) {
-               field = field.trimmed();  /* strip leading & trailing spaces */
-               if (field != "") {
-                  mediatreeitem->setData(index, Qt::UserRole, 2);
-                  mediatreeitem->setData(index, Qt::UserRole, 2);
-                  mediatreeitem->setText(index, field);
-                  if (index == statusIndex) {
-                     setStatusColor(mediatreeitem, field, index);
-                  }
-               }
-               index++;
-            } /* foreach field */
+            QStringListIterator fld(fieldlist);
+
+            /* volname */
+            mediaitem.setTextFld(index++, fld.next()); 
+
+            /* id */
+            mediaitem.setNumericFld(index++, fld.next()); 
+
+            /* status */
+            mediaitem.setVolStatusFld(index++, fld.next());
+
+            /* enabled */
+            mediaitem.setBoolFld(index++, fld.next());
+
+            /* bytes */
+            mediaitem.setBytesFld(index++, fld.next());
+
+            /* files */
+            mediaitem.setNumericFld(index++, fld.next()); 
+
+            /* jobs */
+            mediaitem.setNumericFld(index++, fld.next()); 
+
+            /* retention */
+            mediaitem.setDurationFld(index++, fld.next());
+
+            /* media type */
+            mediaitem.setTextFld(index++, fld.next()); 
+
+            /* inchanger + slot */
+            int inchanger = fld.next().toInt();
+            if (inchanger) {
+               mediaitem.setNumericFld(index++, fld.next()); 
+            }
+            else {
+               /* volume not in changer, show blank slot */
+               mediaitem.setNumericFld(index++, ""); 
+               fld.next();
+            }
+
+            /* use duration */
+            mediaitem.setDurationFld(index++, fld.next());
+
+            /* max jobs */
+            mediaitem.setNumericFld(index++, fld.next()); 
+
+            /* max files */
+            mediaitem.setNumericFld(index++, fld.next()); 
+
+            /* max bytes */
+            mediaitem.setBytesFld(index++, fld.next());
+
+            /* recycle */
+            mediaitem.setBoolFld(index++, fld.next());
+
+            /* last written */
+            mediaitem.setTextFld(index++, fld.next()); 
+
+            /* first written */
+            mediaitem.setTextFld(index++, fld.next()); 
+
+            /* read time */
+            mediaitem.setDurationFld(index++, fld.next());
+
+            /* write time */
+            mediaitem.setDurationFld(index++, fld.next());
+
+            /* Recycle Count */
+            mediaitem.setNumericFld(index++, fld.next()); 
+
+            /* recycle pool */
+            mediaitem.setTextFld(index++, fld.next()); 
+
+            /* Scratch pool */
+            mediaitem.setTextFld(index++, fld.next()); 
+
          } /* foreach resultline */
+         counter += 1;
       } /* if results from query */
    } /* foreach pool_listItem */
    settings.endGroup();
    /* Resize the columns */
    for(int cnter=0; cnter<headerlist.count(); cnter++) {
       mp_treeWidget->resizeColumnToContents(cnter);
-   }
-   m_populating = false;
-}
-
-void MediaList::setStatusColor(QTreeWidgetItem *item, QString &field, int &index)
-{
-   if (field == "Append" ) {
-      item->setBackground(index, Qt::green);
-   } else if (field == "Error") {
-      item->setBackground(index, Qt::red);
-   } else if ((field == "Used") || ("Full")){
-      item->setBackground(index, Qt::yellow);
    }
 }
 
@@ -211,7 +289,6 @@ void MediaList::PgSeltreeWidgetClicked()
    if (!m_populated) {
       populateTree();
       createContextMenu();
-      m_populated=true;
    }
 }
 
@@ -282,7 +359,6 @@ void MediaList::currentStackItem()
       populateTree();
       /* Create the context menu for the medialist tree */
       createContextMenu();
-      m_populated=true;
    }
 }
 
@@ -291,7 +367,7 @@ void MediaList::currentStackItem()
  */
 void MediaList::deleteVolume()
 {
-   if (QMessageBox::warning(this, tr("Bat"),
+   if (QMessageBox::warning(this, "Bat",
       tr("Are you sure you want to delete??  !!!.\n"
 "This delete command is used to delete a Volume record and all associated catalog"
 " records that were created. This command operates only on the Catalog"
@@ -313,7 +389,7 @@ void MediaList::deleteVolume()
  */
 void MediaList::purgeVolume()
 {
-   if (QMessageBox::warning(this, tr("Bat"),
+   if (QMessageBox::warning(this, "Bat",
       tr("Are you sure you want to purge ??  !!!.\n"
 "The Purge command will delete associated Catalog database records from Jobs and"
 " Volumes without considering the retention period. Purge  works only on the"
@@ -384,12 +460,14 @@ void MediaList::volumeFromPool()
  */
 void MediaList::writeExpandedSettings()
 {
-   QSettings settings(m_console->m_dir->name(), "bat");
-   settings.beginGroup("MediaListTreeExpanded");
-   int childcount = m_topItem->childCount();
-   for (int cnt=0; cnt<childcount; cnt++) {
-      QTreeWidgetItem *poolitem = m_topItem->child(cnt);
-      settings.setValue(poolitem->text(0), poolitem->isExpanded());
+   if (m_topItem) {
+      QSettings settings(m_console->m_dir->name(), "bat");
+      settings.beginGroup("MediaListTreeExpanded");
+      int childcount = m_topItem->childCount();
+      for (int cnt=0; cnt<childcount; cnt++) {
+         QTreeWidgetItem *poolitem = m_topItem->child(cnt);
+         settings.setValue(poolitem->text(0), poolitem->isExpanded());
+      }
+      settings.endGroup();
    }
-   settings.endGroup();
 }

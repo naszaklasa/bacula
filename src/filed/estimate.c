@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,14 +31,14 @@
  *
  *    Kern Sibbald, September MMI
  *
- *   Version $Id: estimate.c 5077 2007-06-24 17:27:12Z kerns $
+ *   Version $Id: estimate.c 8947 2009-07-02 11:36:26Z ricozz $
  *
  */
 
 #include "bacula.h"
 #include "filed.h"
 
-static int tally_file(FF_PKT *ff_pkt, void *pkt, bool);
+static int tally_file(JCR *jcr, FF_PKT *ff_pkt, bool);
 
 /*
  * Find all the requested files and count them.
@@ -50,8 +50,14 @@ int make_estimate(JCR *jcr)
    set_jcr_job_status(jcr, JS_Running);
 
    set_find_options((FF_PKT *)jcr->ff, jcr->incremental, jcr->mtime);
-   stat = find_files(jcr, (FF_PKT *)jcr->ff, tally_file, (void *)jcr);
+   /* in accurate mode, we overwrite the find_one check function */
+   if (jcr->accurate) {
+      set_find_changed_function((FF_PKT *)jcr->ff, accurate_check_file);
+   } 
 
+   stat = find_files(jcr, (FF_PKT *)jcr->ff, tally_file, NULL);
+
+   accurate_free(jcr);
    return stat;
 }
 
@@ -59,9 +65,8 @@ int make_estimate(JCR *jcr)
  * Called here by find() for each file included.
  *
  */
-static int tally_file(FF_PKT *ff_pkt, void *ijcr, bool top_level) 
+static int tally_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level) 
 {
-   JCR *jcr = (JCR *)ijcr;
    ATTR attr;
 
    if (job_canceled(jcr)) {

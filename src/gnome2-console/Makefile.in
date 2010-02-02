@@ -1,5 +1,5 @@
 #
-#   Version $Id: Makefile.in 5012 2007-06-14 16:54:30Z kerns $
+#   Version $Id: Makefile.in 8464 2009-02-18 11:40:09Z kerns $
 #
 @MCOMMON@
 
@@ -62,22 +62,25 @@ support.o:   support.c
 	sed "s%parent = g_object_get_data%parent = \(GtkWidget \*\)g_object_get_data%" support.c.orig >support.c
 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(CONS_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
-bgnome-console: $(CONSOBJS) ../lib/libbac.a 
-	$(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -o $@ $(CONSOBJS) \
-	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbac -lm
+bgnome-console: Makefile $(CONSOBJS) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) 
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -o $@ $(CONSOBJS) \
+	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbaccfg -lbac -lm
 
 static-console: static-bgnome-console
 
-static-bgnome-console: $(CONSOBJS) ../lib/libbac.a 
-	$(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -o $@ $(CONSOBJS) \
-	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbac -lm 
+static-bgnome-console: Makefile $(CONSOBJS) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) 
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -o $@ $(CONSOBJS) \
+	      $(LIBS) $(DLIB) $(CONS_LIBS) -lbaccfg -lbac -lm 
 	strip $@
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
-clean:
+libtool-clean:
+	@$(RMF) -r .libs _libs
+
+clean:	libtool-clean
 	@$(RMF) bgnome-console core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
 	@$(RMF) static-bgnome-console gmon.out Makefile.am
 
@@ -101,7 +104,7 @@ install: all
 	   echo " is no longer used, and you might want to delete it."; \
 	   echo " "; \
 	fi
-	$(INSTALL_PROGRAM) bgnome-console $(DESTDIR)$(sbindir)/bgnome-console
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bgnome-console $(DESTDIR)$(sbindir)/bgnome-console
 	@srcconf=bgnome-console.conf; \
 	if  test -f ${DESTDIR}${sysconfdir}/$$srcconf; then \
 	   destconf=$$srcconf.new; \
@@ -112,7 +115,7 @@ install: all
 	echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
 	${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
 	if test -f static-bgnome-console; then \
-	   $(INSTALL_PROGRAM) static-bgnome-console $(DESTDIR)$(sbindir)/static-bgnome-console; \
+	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-bgnome-console $(DESTDIR)$(sbindir)/static-bgnome-console; \
 	fi 
 
 uninstall:

@@ -37,10 +37,12 @@ uninstall-autostart-fd:
 
 
 clean:
-	@rm -f bacula-fd
+	@rm -f 1 2 3
 
 distclean: clean
+	@rm -f bacula-fd
 	@rm -f Makefile
 
 devclean: clean
+	@rm -f bacula-fd
 	@rm -f Makefile

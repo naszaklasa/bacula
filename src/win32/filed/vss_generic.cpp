@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -84,7 +84,7 @@ class IXMLDOMDocument;
 #define uuid(x)
 
 #ifdef B_VSS_XP
-   #pragma message("compile VSS for Windows XP")   
+// #pragma message("compile VSS for Windows XP")   
    #define VSSClientGeneric VSSClientXP
    
    #include "inc/WinXP/vss.h"
@@ -94,7 +94,7 @@ class IXMLDOMDocument;
 #endif
 
 #ifdef B_VSS_W2K3
-   #pragma message("compile VSS for Windows 2003")
+// #pragma message("compile VSS for Windows 2003")
    #define VSSClientGeneric VSSClient2003
    
    #include "inc/Win2003/vss.h"
@@ -103,7 +103,7 @@ class IXMLDOMDocument;
 #endif
 
 #ifdef B_VSS_VISTA
-   #pragma message("compile VSS for Vista")
+// #pragma message("compile VSS for Vista")
    #define VSSClientGeneric VSSClientVista
 
    #include "inc/Win2003/vss.h"
@@ -111,14 +111,13 @@ class IXMLDOMDocument;
    #include "inc/Win2003/vsbackup.h"
 #endif
    
-   /* In VSSAPI.DLL */
-   typedef HRESULT (STDAPICALLTYPE* t_CreateVssBackupComponents)(OUT IVssBackupComponents **);
-   typedef void (APIENTRY* t_VssFreeSnapshotProperties)(IN VSS_SNAPSHOT_PROP*);
+/* In VSSAPI.DLL */
+typedef HRESULT (STDAPICALLTYPE* t_CreateVssBackupComponents)(OUT IVssBackupComponents **);
+typedef void (APIENTRY* t_VssFreeSnapshotProperties)(IN VSS_SNAPSHOT_PROP*);
    
-   static t_CreateVssBackupComponents p_CreateVssBackupComponents = NULL;
-   static t_VssFreeSnapshotProperties p_VssFreeSnapshotProperties = NULL;
+static t_CreateVssBackupComponents p_CreateVssBackupComponents = NULL;
+static t_VssFreeSnapshotProperties p_VssFreeSnapshotProperties = NULL;
 
-   #define VSSVBACK_ENTRY "?CreateVssBackupComponents@@YGJPAPAVIVssBackupComponents@@@Z"
 
 
 #include "vss.h"
@@ -204,13 +203,20 @@ inline const wchar_t* GetStringFromWriterStatus(VSS_WRITER_STATE eWriterStatus)
 
 // Constructor
 
+#ifdef HAVE_VSS64
+/* 64 bit entrypoint name */
+#define VSSVBACK_ENTRY "?CreateVssBackupComponents@@YAJPEAPEAVIVssBackupComponents@@@Z"
+#else
+/* 32 bit entrypoint name */
+#define VSSVBACK_ENTRY "?CreateVssBackupComponents@@YGJPAPAVIVssBackupComponents@@@Z"
+#endif
+
 VSSClientGeneric::VSSClientGeneric()
 {
    m_hLib = LoadLibraryA("VSSAPI.DLL");
    if (m_hLib) {      
       p_CreateVssBackupComponents = (t_CreateVssBackupComponents)
          GetProcAddress(m_hLib, VSSVBACK_ENTRY);
-                                 
       p_VssFreeSnapshotProperties = (t_VssFreeSnapshotProperties)
           GetProcAddress(m_hLib, "VssFreeSnapshotProperties");      
    } 
@@ -278,7 +284,9 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
    // Create the internal backup components object
    hr = p_CreateVssBackupComponents((IVssBackupComponents**) &m_pVssObject);
    if (FAILED(hr)) {
-      Dmsg1(0, "VSSClientGeneric::Initialize: CreateVssBackupComponents returned 0x%08X\n", hr);
+      berrno be;
+      Dmsg2(0, "VSSClientGeneric::Initialize: CreateVssBackupComponents returned 0x%08X. ERR=%s\n",
+            hr, be.bstrerror(b_errno_win32));
       errno = b_errno_win32;
       return FALSE;
    }
@@ -363,21 +371,20 @@ BOOL VSSClientGeneric::WaitAndCheckForAsyncOperation(IVssAsync* pAsync)
       return TRUE;
 
    
-#ifdef DEBUG
+#ifdef xDEBUG 
    // Check if the async operation succeeded...
    if(hrReturned != VSS_S_ASYNC_FINISHED) {   
       wchar_t *pwszBuffer = NULL;
-      DWORD dwRet = ::FormatMessageW(
-                        FORMAT_MESSAGE_ALLOCATE_BUFFER 
-                        | FORMAT_MESSAGE_FROM_SYSTEM 
-                        | FORMAT_MESSAGE_IGNORE_INSERTS,
-                        NULL, hrReturned, 
-                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-                        (LPWSTR)&pwszBuffer, 0, NULL);
+      /* I don't see the usefulness of the following -- KES */
+      FormatMessageW(
+         FORMAT_MESSAGE_ALLOCATE_BUFFER 
+         | FORMAT_MESSAGE_FROM_SYSTEM 
+         | FORMAT_MESSAGE_IGNORE_INSERTS,
+         NULL, hrReturned, 
+         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+         (LPWSTR)&pwszBuffer, 0, NULL);
 
-      if (dwRet != 0) {         
-         LocalFree(pwszBuffer);         
-      }      
+      LocalFree(pwszBuffer);         
       errno = b_errno_win32;
    }
 #endif

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, August MMI
  *
- *   Version $Id: ua_status.c 5986 2007-11-25 21:29:11Z kerns $
+ *   Version $Id: ua_status.c 8508 2009-03-07 20:59:46Z kerns $
  */
 
 
@@ -43,10 +43,11 @@ extern void *start_heap;
 static void list_scheduled_jobs(UAContext *ua);
 static void list_running_jobs(UAContext *ua);
 static void list_terminated_jobs(UAContext *ua);
-static void do_storage_status(UAContext *ua, STORE *store);
-static void do_client_status(UAContext *ua, CLIENT *client);
+static void do_storage_status(UAContext *ua, STORE *store, char *cmd);
+static void do_client_status(UAContext *ua, CLIENT *client, char *cmd);
 static void do_director_status(UAContext *ua);
 static void do_all_status(UAContext *ua);
+void status_slots(UAContext *ua, STORE *store);
 
 static char OKqstatus[]   = "1000 OK .status\n";
 static char DotStatusJob[] = "JobId=%s JobStatus=%c JobErrors=%d\n";
@@ -57,34 +58,60 @@ static char DotStatusJob[] = "JobId=%s JobStatus=%c JobErrors=%d\n";
 
 bool dot_status_cmd(UAContext *ua, const char *cmd)
 {
+   STORE *store;
+   CLIENT *client;
    JCR* njcr = NULL;
    s_last_job* job;
    char ed1[50];
 
-   Dmsg1(20, "status:%s:\n", cmd);
+   Dmsg2(20, "status=\"%s\" argc=%d\n", cmd, ua->argc);
 
-   if ((ua->argc != 3) || (strcasecmp(ua->argk[1], "dir"))) {
+   if (ua->argc < 3) {
       ua->send_msg("1900 Bad .status command, missing arguments.\n");
       return false;
    }
 
-   if (strcasecmp(ua->argk[2], "current") == 0) {
-      ua->send_msg(OKqstatus, ua->argk[2]);
-      foreach_jcr(njcr) {
-         if (njcr->JobId != 0 && acl_access_ok(ua, Job_ACL, njcr->job->name())) {
-            ua->send_msg(DotStatusJob, edit_int64(njcr->JobId, ed1), 
-                     njcr->JobStatus, njcr->JobErrors);
+   if (strcasecmp(ua->argk[1], "dir") == 0) {
+      if (strcasecmp(ua->argk[2], "current") == 0) {
+         ua->send_msg(OKqstatus, ua->argk[2]);
+         foreach_jcr(njcr) {
+            if (njcr->JobId != 0 && acl_access_ok(ua, Job_ACL, njcr->job->name())) {
+               ua->send_msg(DotStatusJob, edit_int64(njcr->JobId, ed1), 
+                        njcr->JobStatus, njcr->JobErrors);
+            }
          }
+         endeach_jcr(njcr);
+      } else if (strcasecmp(ua->argk[2], "last") == 0) {
+         ua->send_msg(OKqstatus, ua->argk[2]);
+         if ((last_jobs) && (last_jobs->size() > 0)) {
+            job = (s_last_job*)last_jobs->last();
+            if (acl_access_ok(ua, Job_ACL, job->Job)) {
+               ua->send_msg(DotStatusJob, edit_int64(job->JobId, ed1), 
+                     job->JobStatus, job->Errors);
+            }
+         }
+      } else if (strcasecmp(ua->argk[2], "header") == 0) {
+          list_dir_status_header(ua);
+      } else if (strcasecmp(ua->argk[2], "scheduled") == 0) {
+          list_scheduled_jobs(ua);
+      } else if (strcasecmp(ua->argk[2], "running") == 0) {
+          list_running_jobs(ua);
+      } else if (strcasecmp(ua->argk[2], "terminated") == 0) {
+          list_terminated_jobs(ua);
+      } else {
+         ua->send_msg("1900 Bad .status command, wrong argument.\n");
+         return false;
       }
-      endeach_jcr(njcr);
-   } else if (strcasecmp(ua->argk[2], "last") == 0) {
-      ua->send_msg(OKqstatus, ua->argk[2]);
-      if ((last_jobs) && (last_jobs->size() > 0)) {
-         job = (s_last_job*)last_jobs->last();
-         if (acl_access_ok(ua, Job_ACL, job->Job)) {
-            ua->send_msg(DotStatusJob, edit_int64(job->JobId, ed1), 
-                  job->JobStatus, job->Errors);
-         }
+   } else if (strcasecmp(ua->argk[1], "client") == 0) {
+      client = get_client_resource(ua);
+      if (client) {
+         Dmsg2(200, "Client=%s arg=%s\n", client->name(), NPRT(ua->argk[2]));
+         do_client_status(ua, client, ua->argk[2]);
+      }
+   } else if (strcasecmp(ua->argk[1], "storage") == 0) {
+      store = get_storage_resource(ua, false /*no default*/);
+      if (store) {
+         do_storage_status(ua, store, ua->argk[2]);
       }
    } else {
       ua->send_msg("1900 Bad .status command, wrong argument.\n");
@@ -125,13 +152,17 @@ int status_cmd(UAContext *ua, const char *cmd)
       } else if (strcasecmp(ua->argk[i], NT_("client")) == 0) {
          client = get_client_resource(ua);
          if (client) {
-            do_client_status(ua, client);
+            do_client_status(ua, client, NULL);
          }
          return 1;
       } else {
          store = get_storage_resource(ua, false/*no default*/);
          if (store) {
-            do_storage_status(ua, store);
+            if (find_arg(ua, NT_("slots")) > 0) {
+               status_slots(ua, store);
+            } else {
+               do_storage_status(ua, store, NULL);
+            }
          }
          return 1;
       }
@@ -157,13 +188,13 @@ int status_cmd(UAContext *ua, const char *cmd)
       case 1:
          store = select_storage_resource(ua);
          if (store) {
-            do_storage_status(ua, store);
+            do_storage_status(ua, store, NULL);
          }
          break;
       case 2:
          client = select_client_resource(ua);
          if (client) {
-            do_client_status(ua, client);
+            do_client_status(ua, client, NULL);
          }
          break;
       case 3:
@@ -215,7 +246,7 @@ static void do_all_status(UAContext *ua)
 
    /* Call each unique Storage daemon */
    for (j=0; j<i; j++) {
-      do_storage_status(ua, unique_store[j]);
+      do_storage_status(ua, unique_store[j], NULL);
    }
    free(unique_store);
 
@@ -249,7 +280,7 @@ static void do_all_status(UAContext *ua)
 
    /* Call each unique File daemon */
    for (j=0; j<i; j++) {
-      do_client_status(ua, unique_client[j]);
+      do_client_status(ua, unique_client[j], NULL);
    }
    free(unique_client);
 
@@ -276,6 +307,23 @@ void list_dir_status_header(UAContext *ua)
             edit_uint64_with_commas(sm_max_bytes, b3),
             edit_uint64_with_commas(sm_buffers, b4),
             edit_uint64_with_commas(sm_max_buffers, b5));
+
+   /* TODO: use this function once for all daemons */
+   if (debug_level > 0 && plugin_list->size() > 0) {
+      int len;
+      Plugin *plugin;
+      POOL_MEM msg(PM_FNAME);
+      pm_strcpy(msg, " Plugin: ");
+      foreach_alist(plugin, plugin_list) {
+         len = pm_strcat(msg, plugin->file);
+         if (len > 80) {
+            pm_strcat(msg, "\n   ");
+         } else {
+            pm_strcat(msg, " ");
+         }
+      }
+      ua->send_msg("%s\n", msg.c_str());
+   }
 }
 
 static void do_director_status(UAContext *ua)
@@ -296,10 +344,10 @@ static void do_director_status(UAContext *ua)
     * List terminated jobs
     */
    list_terminated_jobs(ua);
-   ua->send_msg(_("====\n"));
+   ua->send_msg("====\n");
 }
 
-static void do_storage_status(UAContext *ua, STORE *store)
+static void do_storage_status(UAContext *ua, STORE *store, char *cmd)
 {
    BSOCK *sd;
    USTORE lstore;
@@ -308,7 +356,7 @@ static void do_storage_status(UAContext *ua, STORE *store)
    pm_strcpy(lstore.store_source, _("unknown source"));
    set_wstorage(ua->jcr, &lstore);
    /* Try connecting for up to 15 seconds */
-   ua->send_msg(_("Connecting to Storage daemon %s at %s:%d\n"),
+   if (!ua->api) ua->send_msg(_("Connecting to Storage daemon %s at %s:%d\n"),
       store->name(), store->address, store->SDport);
    if (!connect_to_storage_daemon(ua->jcr, 1, 15, 0)) {
       ua->send_msg(_("\nFailed to connect to Storage daemon %s.\n====\n"),
@@ -321,17 +369,21 @@ static void do_storage_status(UAContext *ua, STORE *store)
    }
    Dmsg0(20, _("Connected to storage daemon\n"));
    sd = ua->jcr->store_bsock;
-   bnet_fsend(sd, "status");
-   while (bnet_recv(sd) >= 0) {
+   if (cmd) {
+      sd->fsend(".status %s", cmd);
+   } else {
+      sd->fsend("status");
+   }
+   while (sd->recv() >= 0) {
       ua->send_msg("%s", sd->msg);
    }
-   bnet_sig(sd, BNET_TERMINATE);
-   bnet_close(sd);
+   sd->signal( BNET_TERMINATE);
+   sd->close();
    ua->jcr->store_bsock = NULL;
    return;
 }
 
-static void do_client_status(UAContext *ua, CLIENT *client)
+static void do_client_status(UAContext *ua, CLIENT *client, char *cmd)
 {
    BSOCK *fd;
 
@@ -346,7 +398,7 @@ static void do_client_status(UAContext *ua, CLIENT *client)
    ua->jcr->sd_auth_key = bstrdup("dummy");
 
    /* Try to connect for 15 seconds */
-   ua->send_msg(_("Connecting to Client %s at %s:%d\n"),
+   if (!ua->api) ua->send_msg(_("Connecting to Client %s at %s:%d\n"),
       client->name(), client->address, client->FDport);
    if (!connect_to_file_daemon(ua->jcr, 1, 15, 0)) {
       ua->send_msg(_("Failed to connect to Client %s.\n====\n"),
@@ -359,12 +411,16 @@ static void do_client_status(UAContext *ua, CLIENT *client)
    }
    Dmsg0(20, _("Connected to file daemon\n"));
    fd = ua->jcr->file_bsock;
-   bnet_fsend(fd, "status");
-   while (bnet_recv(fd) >= 0) {
+   if (cmd) {
+      fd->fsend(".status %s", cmd);
+   } else {
+      fd->fsend("status");
+   }
+   while (fd->recv() >= 0) {
       ua->send_msg("%s", fd->msg);
    }
-   bnet_sig(fd, BNET_TERMINATE);
-   bnet_close(fd);
+   fd->signal(BNET_TERMINATE);
+   fd->close();
    ua->jcr->file_bsock = NULL;
 
    return;
@@ -372,9 +428,11 @@ static void do_client_status(UAContext *ua, CLIENT *client)
 
 static void prt_runhdr(UAContext *ua)
 {
-   ua->send_msg(_("\nScheduled Jobs:\n"));
-   ua->send_msg(_("Level          Type     Pri  Scheduled          Name               Volume\n"));
-   ua->send_msg(_("===================================================================================\n"));
+   if (!ua->api) {
+      ua->send_msg(_("\nScheduled Jobs:\n"));
+      ua->send_msg(_("Level          Type     Pri  Scheduled          Name               Volume\n"));
+      ua->send_msg(_("===================================================================================\n"));
+   }
 }
 
 /* Scheduling packet */
@@ -383,7 +441,7 @@ struct sched_pkt {
    JOB *job;
    int level;
    int priority;
-   time_t runtime;
+   utime_t runtime;
    POOL *pool;
    STORE *store;
 };
@@ -396,7 +454,9 @@ static void prt_runtime(UAContext *ua, sched_pkt *sp)
    bool close_db = false;
    JCR *jcr = ua->jcr;
    MEDIA_DBR mr;
+   int orig_jobtype;
 
+   orig_jobtype = jcr->get_JobType();
    memset(&mr, 0, sizeof(mr));
    if (sp->job->JobType == JT_BACKUP) {
       jcr->db = NULL;
@@ -410,6 +470,7 @@ static void prt_runtime(UAContext *ua, sched_pkt *sp)
          mr.StorageId = sp->store->StorageId;
          jcr->wstore = sp->store;
          Dmsg0(250, "call find_next_volume_for_append\n");
+         /* no need to set ScratchPoolId, since we use fnv_no_create_vol */
          ok = find_next_volume_for_append(jcr, &mr, 1, fnv_no_create_vol, fnv_no_prune);
       }
       if (!ok) {
@@ -426,13 +487,20 @@ static void prt_runtime(UAContext *ua, sched_pkt *sp)
       level_ptr = level_to_str(sp->level);
       break;
    }
-   ua->send_msg(_("%-14s %-8s %3d  %-18s %-18s %s\n"),
-      level_ptr, job_type_to_str(sp->job->JobType), sp->priority, dt,
-      sp->job->name(), mr.VolumeName);
+   if (ua->api) {
+      ua->send_msg(_("%-14s\t%-8s\t%3d\t%-18s\t%-18s\t%s\n"),
+         level_ptr, job_type_to_str(sp->job->JobType), sp->priority, dt,
+         sp->job->name(), mr.VolumeName);
+   } else {
+      ua->send_msg(_("%-14s %-8s %3d  %-18s %-18s %s\n"),
+         level_ptr, job_type_to_str(sp->job->JobType), sp->priority, dt,
+         sp->job->name(), mr.VolumeName);
+   }
    if (close_db) {
       db_close_database(jcr, jcr->db);
    }
    jcr->db = ua->db;                  /* restore ua db to jcr */
+   jcr->set_JobType(orig_jobtype);
 }
 
 /*
@@ -461,7 +529,7 @@ static int my_compare(void *item1, void *item2)
  */
 static void list_scheduled_jobs(UAContext *ua)
 {
-   time_t runtime;
+   utime_t runtime;
    RUN *run;
    JOB *job;
    int level, num_jobs = 0;
@@ -477,8 +545,8 @@ static void list_scheduled_jobs(UAContext *ua)
    i = find_arg_with_value(ua, NT_("days"));
    if (i >= 0) {
      days = atoi(ua->argv[i]);
-     if ((days < 0) || (days > 50)) {
-       ua->send_msg(_("Ignoring invalid value for days. Max is 50.\n"));
+     if (((days < 0) || (days > 500)) && !ua->api) {
+       ua->send_msg(_("Ignoring invalid value for days. Max is 500.\n"));
        days = 1;
      }
    }
@@ -520,10 +588,10 @@ static void list_scheduled_jobs(UAContext *ua)
    foreach_dlist(sp, &sched) {
       prt_runtime(ua, sp);
    }
-   if (num_jobs == 0) {
+   if (num_jobs == 0 && !ua->api) {
       ua->send_msg(_("No Scheduled Jobs.\n"));
    }
-   ua->send_msg(_("====\n"));
+   if (!ua->api) ua->send_msg("====\n");
    Dmsg0(200, "Leave list_sched_jobs_runs()\n");
 }
 
@@ -538,13 +606,13 @@ static void list_running_jobs(UAContext *ua)
    bool pool_mem = false;
 
    Dmsg0(200, "enter list_run_jobs()\n");
-   ua->send_msg(_("\nRunning Jobs:\n"));
+   if (!ua->api) ua->send_msg(_("\nRunning Jobs:\n"));
    foreach_jcr(jcr) {
       if (jcr->JobId == 0) {      /* this is us */
          /* this is a console or other control job. We only show console
           * jobs in the status output.
           */
-         if (jcr->JobType == JT_CONSOLE) {
+         if (jcr->get_JobType() == JT_CONSOLE && !ua->api) {
             bstrftime_nc(dt, sizeof(dt), jcr->start_time);
             ua->send_msg(_("Console connected at %s\n"), dt);
          }
@@ -556,13 +624,15 @@ static void list_running_jobs(UAContext *ua)
 
    if (njobs == 0) {
       /* Note the following message is used in regress -- don't change */
-      ua->send_msg(_("No Jobs running.\n====\n"));
+      if (!ua->api)  ua->send_msg(_("No Jobs running.\n====\n"));
       Dmsg0(200, "leave list_run_jobs()\n");
       return;
    }
    njobs = 0;
-   ua->send_msg(_(" JobId Level   Name                       Status\n"));
-   ua->send_msg(_("======================================================================\n"));
+   if (!ua->api) {
+      ua->send_msg(_(" JobId Level   Name                       Status\n"));
+      ua->send_msg(_("======================================================================\n"));
+   }
    foreach_jcr(jcr) {
       if (jcr->JobId == 0 || !acl_access_ok(ua, Job_ACL, jcr->job->name())) {
          continue;
@@ -580,6 +650,9 @@ static void list_running_jobs(UAContext *ua)
          break;
       case JS_Terminated:
          msg = _("has terminated");
+         break;
+      case JS_Warnings:
+         msg = _("has terminated with warnings");
          break;
       case JS_ErrorTerminated:
          msg = _("has erred");
@@ -636,6 +709,12 @@ static void list_running_jobs(UAContext *ua)
       case JS_WaitPriority:
          msg = _("is waiting for higher priority jobs to finish");
          break;
+      case JS_DataCommitting:
+         msg = _("SD committing Data");
+         break;
+      case JS_DataDespooling:
+         msg = _("SD despooling Data");
+         break;
       case JS_AttrDespooling:
          msg = _("SD despooling Attributes");
          break;
@@ -681,6 +760,12 @@ static void list_running_jobs(UAContext *ua)
         }
         msg = emsg;
         break;
+      case JS_DataCommitting:
+         msg = _("SD committing Data");
+         break;
+      case JS_DataDespooling:
+         msg = _("SD despooling Data");
+         break;
       case JS_AttrDespooling:
          msg = _("SD despooling Attributes");
          break;
@@ -688,22 +773,24 @@ static void list_running_jobs(UAContext *ua)
          msg = _("Dir inserting Attributes");
          break;
       }
-      switch (jcr->JobType) {
+      switch (jcr->get_JobType()) {
       case JT_ADMIN:
       case JT_RESTORE:
          bstrncpy(level, "      ", sizeof(level));
          break;
       default:
-         bstrncpy(level, level_to_str(jcr->JobLevel), sizeof(level));
+         bstrncpy(level, level_to_str(jcr->get_JobLevel()), sizeof(level));
          level[7] = 0;
          break;
       }
 
-      ua->send_msg(_("%6d %-6s  %-20s %s\n"),
-         jcr->JobId,
-         level,
-         jcr->Job,
-         msg);
+      if (ua->api) {
+         ua->send_msg(_("%6d\t%-6s\t%-20s\t%s\n"),
+            jcr->JobId, level, jcr->Job, msg);
+      } else {
+         ua->send_msg(_("%6d %-6s  %-20s %s\n"),
+            jcr->JobId, level, jcr->Job, msg);
+      }
 
       if (pool_mem) {
          free_pool_memory(emsg);
@@ -711,7 +798,7 @@ static void list_running_jobs(UAContext *ua)
       }
    }
    endeach_jcr(jcr);
-   ua->send_msg(_("====\n"));
+   if (!ua->api) ua->send_msg("====\n");
    Dmsg0(200, "leave list_run_jobs()\n");
 }
 
@@ -721,14 +808,16 @@ static void list_terminated_jobs(UAContext *ua)
    char level[10];
 
    if (last_jobs->empty()) {
-      ua->send_msg(_("No Terminated Jobs.\n"));
+      if (!ua->api) ua->send_msg(_("No Terminated Jobs.\n"));
       return;
    }
    lock_last_jobs_list();
    struct s_last_job *je;
-   ua->send_msg(_("\nTerminated Jobs:\n"));
-   ua->send_msg(_(" JobId  Level    Files      Bytes   Status   Finished        Name \n"));
-   ua->send_msg(_("====================================================================\n"));
+   if (!ua->api) {
+      ua->send_msg(_("\nTerminated Jobs:\n"));
+      ua->send_msg(_(" JobId  Level    Files      Bytes   Status   Finished        Name \n"));
+      ua->send_msg(_("====================================================================\n"));
+   }
    foreach_dlist(je, last_jobs) {
       char JobName[MAX_NAME_LENGTH];
       const char *termstat;
@@ -774,18 +863,31 @@ static void list_terminated_jobs(UAContext *ua)
       case JS_Terminated:
          termstat = _("OK");
          break;
+      case JS_Warnings:
+         termstat = _("OK -- with warnings");
+         break;
       default:
          termstat = _("Other");
          break;
       }
-      ua->send_msg(_("%6d  %-6s %8s %10s  %-7s  %-8s %s\n"),
-         je->JobId,
-         level,
-         edit_uint64_with_commas(je->JobFiles, b1),
-         edit_uint64_with_suffix(je->JobBytes, b2),
-         termstat,
-         dt, JobName);
+      if (ua->api) {
+         ua->send_msg(_("%6d\t%-6s\t%8s\t%10s\t%-7s\t%-8s\t%s\n"),
+            je->JobId,
+            level,
+            edit_uint64_with_commas(je->JobFiles, b1),
+            edit_uint64_with_suffix(je->JobBytes, b2),
+            termstat,
+            dt, JobName);
+      } else {
+         ua->send_msg(_("%6d  %-6s %8s %10s  %-7s  %-8s %s\n"),
+            je->JobId,
+            level,
+            edit_uint64_with_commas(je->JobFiles, b1),
+            edit_uint64_with_suffix(je->JobBytes, b2),
+            termstat,
+            dt, JobName);
+      }
    }
-   ua->send_msg(_("\n"));
+   if (!ua->api) ua->send_msg(_("\n"));
    unlock_last_jobs_list();
 }

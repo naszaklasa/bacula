@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, March 2002
  *
- *     Version $Id: bat_conf.h 7164 2008-06-18 19:22:03Z kerns $
+ *     Version $Id: bat_conf.h 7380 2008-07-14 10:42:59Z kerns $
  */
 
 #ifndef _BAT_CONF_H_
@@ -67,6 +67,7 @@ public:
    uint32_t DIRport;                  /* UA server port */
    char *address;                     /* UA server address */
    char *password;                    /* UA server password */
+   bool tls_authenticate;             /* Authenticate with tls */
    bool tls_enable;                   /* Enable TLS */
    bool tls_require;                  /* Require TLS */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
@@ -93,6 +94,7 @@ class CONRES {
 public:
    RES   hdr;
    char *password;                    /* UA server password */
+   bool tls_authenticate;             /* Authenticate with tls */
    bool tls_enable;                   /* Enable TLS on all connections */
    bool tls_require;                  /* Require TLS on all connections */
    char *tls_ca_certfile;             /* TLS CA Certificate File */

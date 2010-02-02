@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,18 +32,21 @@
  *
  *    Kern Sibbald, April MMIII
  *
- *   Version $Id: bfile.c 6636 2008-03-19 18:01:45Z kerns $
+ *   Version $Id: bfile.c 8495 2009-02-28 14:52:14Z marcovw $
  *
  */
 
 #include "bacula.h"
 #include "find.h"
 
-bool    (*python_set_prog)(JCR *jcr, const char *prog) = NULL;
-int     (*python_open)(BFILE *bfd, const char *fname, int flags, mode_t mode) = NULL;
-int     (*python_close)(BFILE *bfd) = NULL;
-ssize_t (*python_read)(BFILE *bfd, void *buf, size_t count) = NULL;
-ssize_t (*python_write)(BFILE *bfd, void *buf, size_t count) = NULL;
+const int dbglvl = 200;
+
+int       (*plugin_bopen)(BFILE *bfd, const char *fname, int flags, mode_t mode) = NULL;
+int       (*plugin_bclose)(BFILE *bfd) = NULL;
+ssize_t   (*plugin_bread)(BFILE *bfd, void *buf, size_t count) = NULL;
+ssize_t   (*plugin_bwrite)(BFILE *bfd, void *buf, size_t count) = NULL;
+boffset_t (*plugin_blseek)(BFILE *bfd, boffset_t offset, int whence) = NULL;
+
 
 #ifdef HAVE_DARWIN_OS
 #include <sys/paths.h>
@@ -53,6 +56,18 @@ ssize_t (*python_write)(BFILE *bfd, void *buf, size_t count) = NULL;
 #define fdatasync(fd)
 #endif
 
+#ifdef HAVE_WIN32
+void pause_msg(const char *file, const char *func, int line, const char *msg)
+{
+   char buf[1000];
+   if (msg) {
+      bsnprintf(buf, sizeof(buf), "%s:%s:%d %s", file, func, line, msg);
+   } else {
+      bsnprintf(buf, sizeof(buf), "%s:%s:%d", file, func, line);
+   }
+   MessageBox(NULL, buf, "Pause", MB_OK);
+}
+#endif
 
 /* ===============================================================
  *
@@ -106,9 +121,9 @@ const char *stream_to_ascii(int stream)
       return _("MacOS Fork data");
    case STREAM_HFSPLUS_ATTRIBUTES:
       return _("HFS+ attribs");
-   case STREAM_UNIX_ATTRIBUTES_ACCESS_ACL:
+   case STREAM_UNIX_ACCESS_ACL:
       return _("Standard Unix ACL attribs");
-   case STREAM_UNIX_ATTRIBUTES_DEFAULT_ACL:
+   case STREAM_UNIX_DEFAULT_ACL:
       return _("Default Unix ACL attribs");
    case STREAM_SHA256_DIGEST:
       return _("SHA256 digest");
@@ -128,6 +143,44 @@ const char *stream_to_ascii(int stream)
       return _("Encrypted Win32 GZIP data");
    case STREAM_ENCRYPTED_MACOS_FORK_DATA:
       return _("Encrypted MacOS fork data");
+   case STREAM_ACL_AIX_TEXT:
+      return _("AIX Specific ACL attribs");
+   case STREAM_ACL_DARWIN_ACCESS_ACL:
+      return _("Darwin Specific ACL attribs");
+   case STREAM_ACL_FREEBSD_DEFAULT_ACL:
+      return _("FreeBSD Specific Default ACL attribs");
+   case STREAM_ACL_FREEBSD_ACCESS_ACL:
+      return _("FreeBSD Specific Access ACL attribs");
+   case STREAM_ACL_HPUX_ACL_ENTRY:
+      return _("HPUX Specific ACL attribs");
+   case STREAM_ACL_IRIX_DEFAULT_ACL:
+      return _("Irix Specific Default ACL attribs");
+   case STREAM_ACL_IRIX_ACCESS_ACL:
+      return _("Irix Specific Access ACL attribs");
+   case STREAM_ACL_LINUX_DEFAULT_ACL:
+      return _("Linux Specific Default ACL attribs");
+   case STREAM_ACL_LINUX_ACCESS_ACL:
+      return _("Linux Specific Access ACL attribs");
+   case STREAM_ACL_TRU64_DEFAULT_ACL:
+      return _("OSF1 Specific Default ACL attribs");
+   case STREAM_ACL_TRU64_ACCESS_ACL:
+      return _("OSF1 Specific Access ACL attribs");
+   case STREAM_ACL_SOLARIS_ACLENT:
+      return _("Solaris Specific ACL attribs");
+   case STREAM_ACL_SOLARIS_ACE:
+      return _("Solaris Specific ACL attribs");
+   case STREAM_XATTR_SOLARIS_SYS:
+      return _("Solaris Specific Extensible attribs or System Extended attribs");
+   case STREAM_XATTR_SOLARIS:
+      return _("Solaris Specific Extended attribs");
+   case STREAM_XATTR_DARWIN:
+      return _("Darwin Specific Extended attribs");
+   case STREAM_XATTR_FREEBSD:
+      return _("FreeBSD Specific Extended attribs");
+   case STREAM_XATTR_LINUX:
+      return _("Linux Specific Extended attribs");
+   case STREAM_XATTR_NETBSD:
+      return _("NetBSD Specific Extended attribs");
    default:
       sprintf(buf, "%d", stream);
       return (const char *)buf;
@@ -139,16 +192,16 @@ void int64_LE2BE(int64_t* pBE, const int64_t v)
 {
    /* convert little endian to big endian */
    if (htonl(1) != 1L) { /* no work if on little endian machine */
-           memcpy(pBE, &v, sizeof(int64_t));
+      memcpy(pBE, &v, sizeof(int64_t));
    } else {
-           int i;
-           uint8_t rv[sizeof(int64_t)];
-           uint8_t *pv = (uint8_t *) &v;
+      int i;
+      uint8_t rv[sizeof(int64_t)];
+      uint8_t *pv = (uint8_t *) &v;
 
-           for (i = 0; i < 8; i++) {
-              rv[i] = pv[7 - i];
-           }
-           memcpy(pBE, &rv, sizeof(int64_t));
+      for (i = 0; i < 8; i++) {
+         rv[i] = pv[7 - i];
+      }
+      memcpy(pBE, &rv, sizeof(int64_t));
    }    
 }
 
@@ -157,16 +210,16 @@ void int32_LE2BE(int32_t* pBE, const int32_t v)
 {
    /* convert little endian to big endian */
    if (htonl(1) != 1L) { /* no work if on little endian machine */
-           memcpy(pBE, &v, sizeof(int32_t));
+      memcpy(pBE, &v, sizeof(int32_t));
    } else {
-           int i;
-           uint8_t rv[sizeof(int32_t)];
-           uint8_t *pv = (uint8_t *) &v;
+      int i;
+      uint8_t rv[sizeof(int32_t)];
+      uint8_t *pv = (uint8_t *) &v;
 
-           for (i = 0; i < 4; i++) {
-              rv[i] = pv[3 - i];
-           }
-           memcpy(pBE, &rv, sizeof(int32_t));
+      for (i = 0; i < 4; i++) {
+         rv[i] = pv[3 - i];
+      }
+      memcpy(pBE, &rv, sizeof(int32_t));
    }    
 }
 
@@ -287,6 +340,7 @@ void binit(BFILE *bfd)
    bfd->fid = -1;
    bfd->mode = BF_CLOSED;
    bfd->use_backup_api = have_win32_api();
+   bfd->cmd_plugin = false;
 }
 
 /*
@@ -308,11 +362,11 @@ bool set_portable_backup(BFILE *bfd)
    return true;
 }
 
-bool set_prog(BFILE *bfd, char *prog, JCR *jcr)
+bool set_cmd_plugin(BFILE *bfd, JCR *jcr)
 {
-   bfd->prog = prog;
+   bfd->cmd_plugin = true;
    bfd->jcr = jcr;
-   return false;
+   return true;
 }
 
 /*
@@ -402,11 +456,37 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
    
    unix_name_to_win32(&win32_fname, (char *)fname);
 
-   if (!(p_CreateFileA || p_CreateFileW))
-      return 0;
+   if (bfd->cmd_plugin && plugin_bopen) {
+      int rtnstat;
+      Dmsg1(50, "call plugin_bopen fname=%s\n", fname);
+      rtnstat = plugin_bopen(bfd, fname, flags, mode);
+      Dmsg1(50, "return from plugin_bopen status=%d\n", rtnstat);
+      if (rtnstat >= 0) {
+         if (flags & O_CREAT || flags & O_WRONLY) {   /* Open existing for write */
+            Dmsg1(50, "plugin_open for write OK file=%s.\n", fname);
+            bfd->mode = BF_WRITE;
+         } else {
+            Dmsg1(50, "plugin_open for read OK file=%s.\n", fname);
+            bfd->mode = BF_READ;
+         }
+      } else {
+         bfd->mode = BF_CLOSED;
+         Dmsg1(000, "==== plugin_bopen returned bad status=%d\n", rtnstat);
+      }
+      free_pool_memory(win32_fname_wchar);
+      free_pool_memory(win32_fname);
+      return bfd->mode == BF_CLOSED ? -1 : 1;
+   }
+   Dmsg0(50, "=== NO plugin\n");
 
-   if (p_CreateFileW && p_MultiByteToWideChar)
+   if (!(p_CreateFileA || p_CreateFileW)) {
+      Dmsg0(50, "No CreateFileA and no CreateFileW!!!!!\n");
+      return 0;
+   }
+
+   if (p_CreateFileW && p_MultiByteToWideChar) {
       make_win32_path_UTF8_2_wchar(&win32_fname_wchar, fname);
+   }
 
    if (flags & O_CREAT) {             /* Create */
       if (bfd->use_backup_api) {
@@ -419,6 +499,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 
       if (p_CreateFileW && p_MultiByteToWideChar) {   
          // unicode open for create write
+         Dmsg1(100, "Create CreateFileW=%s\n", win32_fname);
          bfd->fh = p_CreateFileW((LPCWSTR)win32_fname_wchar,
                 dwaccess,                /* Requested access */
                 0,                       /* Shared mode */
@@ -428,6 +509,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
                 NULL);                   /* TemplateFile */
       } else {
          // ascii open
+         Dmsg1(100, "Create CreateFileA=%s\n", win32_fname);
          bfd->fh = p_CreateFileA(win32_fname,
                 dwaccess,                /* Requested access */
                 0,                       /* Shared mode */
@@ -450,6 +532,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 
       if (p_CreateFileW && p_MultiByteToWideChar) {   
          // unicode open for open existing write
+         Dmsg1(100, "Write only CreateFileW=%s\n", win32_fname);
          bfd->fh = p_CreateFileW((LPCWSTR)win32_fname_wchar,
                 dwaccess,                /* Requested access */
                 0,                       /* Shared mode */
@@ -459,6 +542,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
                 NULL);                   /* TemplateFile */
       } else {
          // ascii open
+         Dmsg1(100, "Write only CreateFileA=%s\n", win32_fname);
          bfd->fh = p_CreateFileA(win32_fname,
                 dwaccess,                /* Requested access */
                 0,                       /* Shared mode */
@@ -485,6 +569,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 
       if (p_CreateFileW && p_MultiByteToWideChar) {   
          // unicode open for open existing read
+         Dmsg1(100, "Read CreateFileW=%s\n", win32_fname);
          bfd->fh = p_CreateFileW((LPCWSTR)win32_fname_wchar,
                 dwaccess,                /* Requested access */
                 dwshare,                 /* Share modes */
@@ -494,6 +579,7 @@ int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
                 NULL);                   /* TemplateFile */
       } else {
          // ascii open 
+         Dmsg1(100, "Read CreateFileA=%s\n", win32_fname);
          bfd->fh = p_CreateFileA(win32_fname,
                 dwaccess,                /* Requested access */
                 dwshare,                 /* Share modes */
@@ -534,8 +620,16 @@ int bclose(BFILE *bfd)
       bfd->errmsg = NULL;
    }
    if (bfd->mode == BF_CLOSED) {
+      Dmsg0(50, "=== BFD already closed.\n");
       return 0;
    }
+
+   if (bfd->cmd_plugin && plugin_bclose) {
+      stat = plugin_bclose(bfd);
+      Dmsg0(50, "==== BFD closed!!!\n");
+      goto all_done;
+   }
+
    /*
     * We need to tell the API to release the buffer it
     *  allocated in lpContext.  We do so by calling the
@@ -570,8 +664,11 @@ int bclose(BFILE *bfd)
       stat = -1;
       errno = b_errno_win32;
    }
+
+all_done:
    bfd->mode = BF_CLOSED;
    bfd->lpContext = NULL;
+   bfd->cmd_plugin = false;
    return stat;
 }
 
@@ -582,6 +679,10 @@ int bclose(BFILE *bfd)
 ssize_t bread(BFILE *bfd, void *buf, size_t count)
 {
    bfd->rw_bytes = 0;
+
+   if (bfd->cmd_plugin && plugin_bread) {
+      return plugin_bread(bfd, buf, count);
+   }
 
    if (bfd->use_backup_api) {
       if (!p_BackupRead(bfd->fh,
@@ -615,6 +716,10 @@ ssize_t bread(BFILE *bfd, void *buf, size_t count)
 ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
 {
    bfd->rw_bytes = 0;
+
+   if (bfd->cmd_plugin && plugin_bwrite) {
+      return plugin_bwrite(bfd, buf, count);
+   }
 
    if (bfd->use_backup_api) {
       if (!p_BackupWrite(bfd->fh,
@@ -654,6 +759,10 @@ boffset_t blseek(BFILE *bfd, boffset_t offset, int whence)
    LONG  offset_low = (LONG)offset;
    LONG  offset_high = (LONG)(offset >> 32);
    DWORD dwResult;
+
+   if (bfd->cmd_plugin && plugin_blseek) {
+      return plugin_blseek(bfd, offset, whence);
+   }
 
    dwResult = SetFilePointer(bfd->fh, offset_low, &offset_high, whence);
 
@@ -710,22 +819,14 @@ bool is_portable_backup(BFILE *bfd)
 
 bool set_prog(BFILE *bfd, char *prog, JCR *jcr)
 {
-#ifdef HAVE_PYTHON
-   if (bfd->prog && strcmp(prog, bfd->prog) == 0) {
-      return true;                    /* already setup */
-   }
-
-   if (python_set_prog(jcr, prog)) {
-      Dmsg1(000, "Set prog=%s\n", prog);
-      bfd->prog = prog;
-      bfd->jcr = jcr;
-      return true;
-   }
-#endif
-   Dmsg0(000, "No prog set\n");
-   bfd->prog = NULL;
    return false;
+}
 
+bool set_cmd_plugin(BFILE *bfd, JCR *jcr)
+{
+   bfd->cmd_plugin = true;
+   bfd->jcr = jcr;
+   return true;
 }
 
 /* 
@@ -788,16 +889,19 @@ bool is_restore_stream_supported(int stream)
 
 int bopen(BFILE *bfd, const char *fname, int flags, mode_t mode)
 {
-   /* Open reader/writer program */
-   if (bfd->prog) {
-      Dmsg1(000, "Open file %d\n", bfd->fid);
-      return python_open(bfd, fname, flags, mode);
+   if (bfd->cmd_plugin && plugin_bopen) {
+      Dmsg1(50, "call plugin_bopen fname=%s\n", fname);
+      bfd->fid = plugin_bopen(bfd, fname, flags, mode);
+      Dmsg1(50, "Plugin bopen stat=%d\n", bfd->fid);
+      return bfd->fid;
    }
 
    /* Normal file open */
-   Dmsg1(400, "open file %s\n", fname);
+   Dmsg1(dbglvl, "open file %s\n", fname);
+
    /* We use fnctl to set O_NOATIME if requested to avoid open error */
    bfd->fid = open(fname, flags & ~O_NOATIME, mode);
+
    /* Set O_NOATIME if possible */
    if (bfd->fid != -1 && flags & O_NOATIME) {
       int oldflags = fcntl(bfd->fid, F_GETFL, 0);
@@ -855,9 +959,10 @@ int bclose(BFILE *bfd)
 
    Dmsg1(400, "Close file %d\n", bfd->fid);
 
-   /* Close reader/writer program */
-   if (bfd->prog) {
-      return python_close(bfd);
+   if (bfd->cmd_plugin && plugin_bclose) {
+      stat = plugin_bclose(bfd);
+      bfd->fid = -1;
+      bfd->cmd_plugin = false;
    }
 
    if (bfd->fid == -1) {
@@ -875,6 +980,7 @@ int bclose(BFILE *bfd)
    stat = close(bfd->fid);
    bfd->berrno = errno;
    bfd->fid = -1;
+   bfd->cmd_plugin = false;
    return stat;
 }
 
@@ -882,9 +988,10 @@ ssize_t bread(BFILE *bfd, void *buf, size_t count)
 {
    ssize_t stat;
 
-   if (bfd->prog) {
-      return python_read(bfd, buf, count);
+   if (bfd->cmd_plugin && plugin_bread) {
+      return plugin_bread(bfd, buf, count);
    }
+
    stat = read(bfd->fid, buf, count);
    bfd->berrno = errno;
    return stat;
@@ -894,8 +1001,8 @@ ssize_t bwrite(BFILE *bfd, void *buf, size_t count)
 {
    ssize_t stat;
 
-   if (bfd->prog) {
-      return python_write(bfd, buf, count);
+   if (bfd->cmd_plugin && plugin_bwrite) {
+      return plugin_bwrite(bfd, buf, count);
    }
    stat = write(bfd->fid, buf, count);
    bfd->berrno = errno;
@@ -909,10 +1016,14 @@ bool is_bopen(BFILE *bfd)
 
 boffset_t blseek(BFILE *bfd, boffset_t offset, int whence)
 {
-    boffset_t pos;
-    pos = (boffset_t)lseek(bfd->fid, (off_t)offset, whence);
-    bfd->berrno = errno;
-    return pos;
+   boffset_t pos;
+
+   if (bfd->cmd_plugin && plugin_bwrite) {
+      return plugin_blseek(bfd, offset, whence);
+   }
+   pos = (boffset_t)lseek(bfd->fid, offset, whence);
+   bfd->berrno = errno;
+   return pos;
 }
 
 #endif

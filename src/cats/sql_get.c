@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -33,7 +33,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_get.c 7566 2008-09-08 19:21:08Z kerns $
+ *    Version $Id: sql_get.c 8992 2009-07-14 14:56:29Z ricozz $
  */
 
 
@@ -45,7 +45,7 @@
 #include "bacula.h"
 #include "cats.h"
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
 
 /* -----------------------------------------------------------------------
  *
@@ -97,6 +97,18 @@ int db_get_file_attributes_record(JCR *jcr, B_DB *mdb, char *fname, JOB_DBR *jr,
  *  Note in this routine, we do not use Jmsg because it may be
  *    called to get attributes of a non-existent file, which is
  *    "normal" if a new file is found during Verify.
+ *
+ *  The following is a bit of a kludge: because we always backup a 
+ *    directory entry, we can end up with two copies of the directory 
+ *    in the backup. One is when we encounter the directory and find 
+ *    we cannot recurse into it, and the other is when we find an 
+ *    explicit mention of the directory. This can also happen if the 
+ *    use includes the directory twice.  In this case, Verify 
+ *    VolumeToCatalog fails because we have two copies in the catalog, 
+ *    and only the first one is marked (twice).  So, when calling from Verify, 
+ *    jr is not NULL and we know jr->FileIndex is the fileindex
+ *    of the version of the directory/file we actually want and do
+ *    a more explicit SQL search.
  */
 static
 int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
@@ -105,16 +117,25 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
    int stat = 0;
    char ed1[50], ed2[50], ed3[50];
 
-   if (jcr->JobLevel == L_VERIFY_DISK_TO_CATALOG) {
-   Mmsg(mdb->cmd,
+   if (jcr->get_JobLevel() == L_VERIFY_DISK_TO_CATALOG) {
+      Mmsg(mdb->cmd,
 "SELECT FileId, LStat, MD5 FROM File,Job WHERE "
 "File.JobId=Job.JobId AND File.PathId=%s AND "
-"File.FilenameId=%s AND Job.Type='B' AND Job.JobStatus='T' AND "
+"File.FilenameId=%s AND Job.Type='B' AND Job.JobStatus IN ('T','W') AND "
 "ClientId=%s ORDER BY StartTime DESC LIMIT 1",
       edit_int64(fdbr->PathId, ed1), 
       edit_int64(fdbr->FilenameId, ed2), 
       edit_int64(jr->ClientId,ed3));
 
+   } else if (jr != NULL) {
+      /* Called from Verify so jr->FileIndex is valid */
+      Mmsg(mdb->cmd,
+"SELECT FileId, LStat, MD5 FROM File WHERE File.JobId=%s AND File.PathId=%s AND "
+"File.FilenameId=%s AND FileIndex=%u", 
+      edit_int64(fdbr->JobId, ed1), 
+      edit_int64(fdbr->PathId, ed2), 
+      edit_int64(fdbr->FilenameId,ed3),
+      jr->FileIndex);
    } else {
       Mmsg(mdb->cmd,
 "SELECT FileId, LStat, MD5 FROM File WHERE File.JobId=%s AND File.PathId=%s AND "
@@ -123,7 +144,7 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
       edit_int64(fdbr->PathId, ed2), 
       edit_int64(fdbr->FilenameId,ed3));
    }
-   Dmsg3(050, "Get_file_record JobId=%u FilenameId=%u PathId=%u\n",
+   Dmsg3(450, "Get_file_record JobId=%u FilenameId=%u PathId=%u\n",
       fdbr->JobId, fdbr->FilenameId, fdbr->PathId);
 
    Dmsg1(100, "Query=%s\n", mdb->cmd);
@@ -134,6 +155,7 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
       if (mdb->num_rows > 1) {
          Mmsg1(mdb->errmsg, _("get_file_record want 1 got rows=%d\n"),
             mdb->num_rows);
+         Dmsg1(000, "=== Problem!  %s", mdb->errmsg);
       }
       if (mdb->num_rows >= 1) {
          if ((row = sql_fetch_row(mdb)) == NULL) {
@@ -275,13 +297,13 @@ bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
       Mmsg(mdb->cmd, "SELECT VolSessionId,VolSessionTime,"
 "PoolId,StartTime,EndTime,JobFiles,JobBytes,JobTDate,Job,JobStatus,"
 "Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId,FileSetId,"
-"SchedTime,RealEndTime "
+"SchedTime,RealEndTime,ReadBytes "
 "FROM Job WHERE Job='%s'", jr->Job);
     } else {
       Mmsg(mdb->cmd, "SELECT VolSessionId,VolSessionTime,"
 "PoolId,StartTime,EndTime,JobFiles,JobBytes,JobTDate,Job,JobStatus,"
 "Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId,FileSetId,"
-"SchedTime,RealEndTime "
+"SchedTime,RealEndTime,ReadBytes "
 "FROM Job WHERE JobId=%s", 
           edit_int64(jr->JobId, ed1));
     }
@@ -319,6 +341,7 @@ bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    jr->FileSetId = str_to_int64(row[17]);
    bstrncpy(jr->cSchedTime, row[3]!=NULL?row[18]:"", sizeof(jr->cSchedTime));
    bstrncpy(jr->cRealEndTime, row[3]!=NULL?row[19]:"", sizeof(jr->cRealEndTime));
+   jr->ReadBytes = str_to_int64(row[20]);
    jr->StartTime = str_to_utime(jr->cStartTime);
    jr->SchedTime = str_to_utime(jr->cSchedTime);
    jr->EndTime = str_to_utime(jr->cEndTime);
@@ -406,7 +429,7 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
    Mmsg(mdb->cmd,
 "SELECT VolumeName,MediaType,FirstIndex,LastIndex,StartFile,"
 "JobMedia.EndFile,StartBlock,JobMedia.EndBlock,Copy,"
-"Slot,StorageId"
+"Slot,StorageId,InChanger"
 " FROM JobMedia,Media WHERE JobMedia.JobId=%s"
 " AND JobMedia.MediaId=Media.MediaId ORDER BY VolIndex,JobMediaId",
         edit_int64(JobId, ed1));
@@ -433,17 +456,21 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
                break;
             } else {
                DBId_t StorageId;
+               uint32_t StartBlock, EndBlock, StartFile, EndFile;
                bstrncpy(Vols[i].VolumeName, row[0], MAX_NAME_LENGTH);
                bstrncpy(Vols[i].MediaType, row[1], MAX_NAME_LENGTH);
                Vols[i].FirstIndex = str_to_uint64(row[2]);
                Vols[i].LastIndex = str_to_uint64(row[3]);
-               Vols[i].StartFile = str_to_uint64(row[4]);
-               Vols[i].EndFile = str_to_uint64(row[5]);
-               Vols[i].StartBlock = str_to_uint64(row[6]);
-               Vols[i].EndBlock = str_to_uint64(row[7]);
+               StartFile = str_to_uint64(row[4]);
+               EndFile = str_to_uint64(row[5]);
+               StartBlock = str_to_uint64(row[6]);
+               EndBlock = str_to_uint64(row[7]);
+               Vols[i].StartAddr = (((uint64_t)StartFile)<<32) | StartBlock;
+               Vols[i].EndAddr =   (((uint64_t)EndFile)<<32) | EndBlock;
 //             Vols[i].Copy = str_to_uint64(row[8]);
                Vols[i].Slot = str_to_uint64(row[9]);
                StorageId = str_to_uint64(row[10]);
+               Vols[i].InChanger = str_to_uint64(row[11]);
                Vols[i].Storage[0] = 0;
                SId[i] = StorageId;
             }
@@ -582,16 +609,15 @@ bool db_get_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr)
       Mmsg(mdb->cmd,
 "SELECT PoolId,Name,NumVols,MaxVols,UseOnce,UseCatalog,AcceptAnyVolume,"
 "AutoPrune,Recycle,VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,"
-"MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId FROM Pool WHERE Pool.PoolId=%s", 
+"MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId,ScratchPoolId FROM Pool WHERE Pool.PoolId=%s", 
          edit_int64(pdbr->PoolId, ed1));
    } else {                           /* find by name */
       Mmsg(mdb->cmd,
 "SELECT PoolId,Name,NumVols,MaxVols,UseOnce,UseCatalog,AcceptAnyVolume,"
 "AutoPrune,Recycle,VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,"
-"MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId FROM Pool WHERE Pool.Name='%s'", 
+"MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId,ScratchPoolId FROM Pool WHERE Pool.Name='%s'", 
          pdbr->Name);
    }
-
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
       mdb->num_rows = sql_num_rows(mdb);
       if (mdb->num_rows > 1) {
@@ -622,6 +648,7 @@ bool db_get_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr)
             pdbr->LabelType = str_to_int64(row[15]);
             bstrncpy(pdbr->LabelFormat, row[16]!=NULL?row[16]:"", sizeof(pdbr->LabelFormat));
             pdbr->RecyclePoolId = str_to_int64(row[17]);
+            pdbr->ScratchPoolId = str_to_int64(row[18]);
             ok = true;
          }
       }
@@ -898,8 +925,6 @@ bool db_get_query_dbids(JCR *jcr, B_DB *mdb, POOL_MEM &query, dbid_list &ids)
    return ok;
 }
 
-
-
 /* Get Media Record
  *
  * Returns: false: on failure
@@ -1018,5 +1043,164 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
    return ok;
 }
 
+/*
+ * Find the last "accurate" backup state (that can take deleted files in account)
+ * 1) Get all files with jobid in list (F subquery) 
+ * 2) Take only the last version of each file (Temp subquery) => accurate list is ok
+ * 3) Join the result to file table to get fileindex, jobid and lstat information
+ *
+ * TODO: See if we can do the SORT only if needed (as an argument)
+ */
+bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids, 
+                      DB_RESULT_HANDLER *result_handler, void *ctx)
+{
+   if (!*jobids) {
+      db_lock(mdb);
+      Mmsg(mdb->errmsg, _("ERR=JobIds are empty\n"));
+      db_unlock(mdb);
+      return false;
+   }
+   POOL_MEM buf(PM_MESSAGE);
+         
+#define new_db_get_file_list
+#ifdef new_db_get_file_list
+   /* This is broken, at least if called from ua_restore.c */
+   Mmsg(buf,
+ "SELECT Path.Path, Filename.Name, File.FileIndex, File.JobId, File.LStat "
+ "FROM ( "
+  "SELECT max(FileId) as FileId, PathId, FilenameId "
+    "FROM (SELECT FileId, PathId, FilenameId FROM File WHERE JobId IN (%s)) AS F "
+   "GROUP BY PathId, FilenameId "
+  ") AS Temp "
+ "JOIN Filename ON (Filename.FilenameId = Temp.FilenameId) "
+ "JOIN Path ON (Path.PathId = Temp.PathId) "
+ "JOIN File ON (File.FileId = Temp.FileId) "
+"WHERE File.FileIndex > 0 ORDER BY JobId, FileIndex ASC",     /* Return sorted by JobId, */
+                                                              /* FileIndex for restore code */ 
+             jobids);
+#else
+   /*  
+    * I am not sure that this works the same as the code in ua_restore.c
+    *  but it is very similar. The accurate-test fails in a restore. Bad file count.
+    */
+   Mmsg(buf, uar_sel_files, jobids);
+#endif
 
-#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL*/
+   return db_sql_query(mdb, buf.c_str(), result_handler, ctx);
+}
+
+/* The decision do change an incr/diff was done before
+ * Full : do nothing
+ * Differential : get the last full id
+ * Incremental : get the last full + last diff + last incr(s) ids
+ *
+ * If you specify jr->StartTime, it will be used to limit the search
+ * in the time. (usually now) 
+ *
+ * TODO: look and merge from ua_restore.c
+ */
+bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb, 
+                            JOB_DBR *jr, POOLMEM *jobids)
+{
+   bool ret=false;
+   char clientid[50], jobid[50], filesetid[50];
+   char date[MAX_TIME_LENGTH];
+   POOL_MEM query(PM_FNAME);
+   
+   /* Take the current time as upper limit if nothing else specified */
+   time_t StartTime = (jr->StartTime)?jr->StartTime:time(NULL);
+
+   bstrutime(date, sizeof(date),  StartTime + 1);
+   jobids[0]='\0';
+
+   /* First, find the last good Full backup for this job/client/fileset */
+   Mmsg(query, 
+"CREATE TABLE btemp3%s AS "
+ "SELECT JobId, StartTime, EndTime, JobTDate, PurgedFiles "
+   "FROM Job JOIN FileSet USING (FileSetId) "
+  "WHERE ClientId = %s "
+    "AND Level='F' AND JobStatus IN ('T','W') AND Type='B' "
+    "AND StartTime<'%s' "
+    "AND FileSet.FileSet=(SELECT FileSet FROM FileSet WHERE FileSetId = %s) "
+  "ORDER BY Job.JobTDate DESC LIMIT 1",
+        edit_uint64(jcr->JobId, jobid),
+        edit_uint64(jr->ClientId, clientid),
+        date,
+        edit_uint64(jr->FileSetId, filesetid));
+
+   if (!db_sql_query(mdb, query.c_str(), NULL, NULL)) {
+      goto bail_out;
+   }
+
+   if (jr->JobLevel == L_INCREMENTAL || jr->JobLevel == L_VIRTUAL_FULL) {
+      /* Now, find the last differential backup after the last full */
+      Mmsg(query, 
+"INSERT INTO btemp3%s (JobId, StartTime, EndTime, JobTDate, PurgedFiles) "
+ "SELECT JobId, StartTime, EndTime, JobTDate, PurgedFiles "
+   "FROM Job JOIN FileSet USING (FileSetId) "
+  "WHERE ClientId = %s "
+    "AND Level='D' AND JobStatus IN ('T','W') AND Type='B' "
+    "AND StartTime > (SELECT EndTime FROM btemp3%s ORDER BY EndTime DESC LIMIT 1) "
+    "AND StartTime < '%s' "
+    "AND FileSet.FileSet= (SELECT FileSet FROM FileSet WHERE FileSetId = %s) "
+  "ORDER BY Job.JobTDate DESC LIMIT 1 ",
+           jobid,
+           clientid,
+           jobid,
+           date,
+           filesetid);
+
+      if (!db_sql_query(mdb, query.c_str(), NULL, NULL)) {
+         goto bail_out;
+      }
+
+      /* We just have to take all incremental after the last Full/Diff */
+      Mmsg(query, 
+"INSERT INTO btemp3%s (JobId, StartTime, EndTime, JobTDate, PurgedFiles) "
+ "SELECT JobId, StartTime, EndTime, JobTDate, PurgedFiles "
+   "FROM Job JOIN FileSet USING (FileSetId) "
+  "WHERE ClientId = %s "
+    "AND Level='I' AND JobStatus IN ('T','W') AND Type='B' "
+    "AND StartTime > (SELECT EndTime FROM btemp3%s ORDER BY EndTime DESC LIMIT 1) "
+    "AND StartTime < '%s' "
+    "AND FileSet.FileSet= (SELECT FileSet FROM FileSet WHERE FileSetId = %s) "
+  "ORDER BY Job.JobTDate DESC ",
+           jobid,
+           clientid,
+           jobid,
+           date,
+           filesetid);
+      if (!db_sql_query(mdb, query.c_str(), NULL, NULL)) {
+         goto bail_out;
+      }
+   }
+
+   /* build a jobid list ie: 1,2,3,4 */
+   Mmsg(query, "SELECT JobId FROM btemp3%s ORDER by JobTDate", jobid);
+   db_sql_query(mdb, query.c_str(), db_get_int_handler, jobids);
+   Dmsg1(1, "db_accurate_get_jobids=%s\n", jobids);
+   ret = true;
+
+bail_out:
+   Mmsg(query, "DROP TABLE btemp3%s", jobid);
+   db_sql_query(mdb, query.c_str(), NULL, NULL);
+
+   return ret;
+}
+
+/*
+ * Use to build a string of int list from a query. "10,20,30"
+ */
+int db_get_int_handler(void *ctx, int num_fields, char **row)
+{
+   POOLMEM *ret = (POOLMEM *)ctx;
+   if (num_fields == 1) {
+      if (ret[0]) {
+         pm_strcat(ret, ",");
+      }
+      pm_strcat(ret, row[0]);
+   }
+   return 0;
+}
+
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI */

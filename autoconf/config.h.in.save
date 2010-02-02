@@ -2,6 +2,9 @@
 /* ------------------------------------------------------------------------- */
 /* --                     CONFIGURE SPECIFIED FEATURES                    -- */
 /* ------------------------------------------------------------------------- */
+
+/* Define if you want to use the lock manager */
+#undef _USE_LOCKMGR
    
 /* Define if you want to use MySQL as Catalog database */
 #undef USE_MYSQL_DB
@@ -152,8 +155,30 @@
 /* Define if you have zlib */
 #undef HAVE_LIBZ
 
+/* Defines if your system have the sys/acl.h header file */
+#undef HAVE_SYS_ACL_H
+
 /* Define if you have libacl */
 #undef HAVE_ACL
+
+/* Define if you have extended acls */
+#undef HAVE_EXTENDED_ACL
+
+/* Defines if your system have the sys/xattr.h header file */
+#undef HAVE_SYS_XATTR_H
+
+/* Define if you have extended attributes */
+#undef HAVE_XATTR
+
+/* Define when you have extended attributes functions starting with l (like lstat) */
+#undef HAVE_LLISTXATTR
+#undef HAVE_LGETXATTR
+#undef HAVE_LSETXATTR
+
+/* Define when you have extended attributes functions not starting with l (like stat) */
+#undef HAVE_LISTXATTR
+#undef HAVE_GETXATTR
+#undef HAVE_SETXATTR
 
 /* General libs */
 #undef LIBS
@@ -302,6 +327,9 @@
 /* Define to 1 if you have the <curses.h> header file. */
 #undef HAVE_CURSES_H
 
+/* Set if you have the DBI driver */
+#undef HAVE_DBI
+
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
 #undef HAVE_DCGETTEXT
@@ -318,6 +346,10 @@
    don't. */
 #undef HAVE_DECL_GETC_UNLOCKED
 
+/* Define to 1 if you have the declaration of `tzname', and to 0 if you don't.
+   */
+#undef HAVE_DECL_TZNAME
+
 /* Define to 1 if you have the declaration of `_snprintf', and to 0 if you
    don't. */
 #undef HAVE_DECL__SNPRINTF
@@ -329,6 +361,9 @@
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */
 #undef HAVE_DIRENT_H
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
 
 /* Define to 1 if you don't have `vprintf' but do have `_doprnt.' */
 #undef HAVE_DOPRNT
@@ -522,6 +557,9 @@
 
 /* Define to 1 if you have the <pwd.h> header file. */
 #undef HAVE_PWD_H
+
+/* Set if bat QWT library found */
+#undef HAVE_QWT
 
 /* Define to 1 if you have the `readdir_r' function. */
 #undef HAVE_READDIR_R
@@ -777,6 +815,10 @@
 /* Define if integer division by zero raises signal SIGFPE. */
 #undef INTDIV0_RAISES_SIGFPE
 
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+#undef LT_OBJDIR
+
 /* Define to 1 if `major', `minor', and `makedev' are declared in <mkdev.h>.
    */
 #undef MAJOR_IN_MKDEV
@@ -812,22 +854,22 @@
 /* Define to 1 if the `setpgrp' function takes no argument. */
 #undef SETPGRP_VOID
 
-/* The size of a `char', as computed by sizeof. */
+/* The size of `char', as computed by sizeof. */
 #undef SIZEOF_CHAR
 
-/* The size of a `int', as computed by sizeof. */
+/* The size of `int', as computed by sizeof. */
 #undef SIZEOF_INT
 
-/* The size of a `int *', as computed by sizeof. */
+/* The size of `int *', as computed by sizeof. */
 #undef SIZEOF_INT_P
 
-/* The size of a `long int', as computed by sizeof. */
+/* The size of `long int', as computed by sizeof. */
 #undef SIZEOF_LONG_INT
 
-/* The size of a `long long int', as computed by sizeof. */
+/* The size of `long long int', as computed by sizeof. */
 #undef SIZEOF_LONG_LONG_INT
 
-/* The size of a `short int', as computed by sizeof. */
+/* The size of `short int', as computed by sizeof. */
 #undef SIZEOF_SHORT_INT
 
 /* Define as the maximum value of type 'size_t', if the system doesn't define
@@ -839,7 +881,7 @@
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
-   automatically deduced at run-time.
+   automatically deduced at runtime.
 	STACK_DIRECTION > 0 => grows toward higher addresses
 	STACK_DIRECTION < 0 => grows toward lower addresses
 	STACK_DIRECTION = 0 => direction of growth unknown */
@@ -899,7 +941,7 @@
 /* Define to `int' if <sys/types.h> does not define. */
 #undef mode_t
 
-/* Define to `long' if <sys/types.h> does not define. */
+/* Define to `long int' if <sys/types.h> does not define. */
 #undef off_t
 
 /* Define to `int' if <sys/types.h> does not define. */
@@ -912,7 +954,7 @@
 /* Define to empty if the C compiler doesn't support this keyword. */
 #undef signed
 
-/* Define to `unsigned' if <sys/types.h> does not define. */
+/* Define to `unsigned int' if <sys/types.h> does not define. */
 #undef size_t
 
 /* Define to `int' if <sys/types.h> does not define. */

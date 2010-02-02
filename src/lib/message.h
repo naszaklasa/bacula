@@ -1,7 +1,13 @@
 /*
+ * Define Message Types for Bacula
+ *    Kern Sibbald, 2000
+ *
+ *   Version $Id: message.h 8076 2008-11-22 18:36:12Z kerns $
+ */
+/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,17 +26,11 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
-/*
- * Define Message Types for Bacula
- *    Kern Sibbald, 2000
- *
- *   Version $Id: message.h 6185 2008-01-03 14:08:43Z kerns $
- */
 
 #include "bits.h"
 
@@ -135,15 +135,15 @@ enum {
 struct MQUEUE_ITEM {
    dlink link;
    int type;
-   time_t mtime;
+   utime_t mtime;
    char msg[1];
 };
 
  
 void d_msg(const char *file, int line, int level, const char *fmt,...);
 void e_msg(const char *file, int line, int type, int level, const char *fmt,...);
-void Jmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...);
-void Qmsg(JCR *jcr, int type, time_t mtime, const char *fmt,...);
+void Jmsg(JCR *jcr, int type, utime_t mtime, const char *fmt,...);
+void Qmsg(JCR *jcr, int type, utime_t mtime, const char *fmt,...);
 bool get_trace(void);
 
 struct B_DB;
@@ -154,12 +154,13 @@ extern DLL_IMP_EXP sql_query     p_sql_query;
 extern DLL_IMP_EXP sql_escape    p_sql_escape;
 
 extern DLL_IMP_EXP int           debug_level;
-extern DLL_IMP_EXP bool          dbg_timestamp;            /* print timestamp in debug output */
+extern DLL_IMP_EXP bool          dbg_timestamp;          /* print timestamp in debug output */
 extern DLL_IMP_EXP int           verbose;
 extern DLL_IMP_EXP char          my_name[];
 extern DLL_IMP_EXP const char *  working_directory;
-extern DLL_IMP_EXP time_t        daemon_start_time;
+extern DLL_IMP_EXP utime_t       daemon_start_time;
 
 extern DLL_IMP_EXP int           console_msg_pending;
 extern DLL_IMP_EXP FILE *        con_fd;                 /* Console file descriptor */
 extern DLL_IMP_EXP brwlock_t     con_lock;               /* Console lock structure */
+

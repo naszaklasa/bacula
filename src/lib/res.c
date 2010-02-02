@@ -1,15 +1,7 @@
 /*
- *  This file handles locking and seaching resources
- *
- *     Kern Sibbald, January MM
- *       Split from parse_conf.c April MMV
- *
- *   Version $Id: res.c 5713 2007-10-03 11:36:47Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,11 +20,19 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  This file handles locking and seaching resources
+ *
+ *     Kern Sibbald, January MM
+ *       Split from parse_conf.c April MMV
+ *
+ *   Version $Id: res.c 7380 2008-07-14 10:42:59Z kerns $
+ */
 
 #include "bacula.h"
 
@@ -40,13 +40,13 @@
  * resources, so it will define the following
  * global values.
  */
-extern int r_first;
-extern int r_last;
+extern int32_t r_first;
+extern int32_t r_last;
 extern RES_TABLE resources[];
 extern RES **res_head;
 
 brwlock_t res_lock;                   /* resource lock */
-static int res_locked = 0;            /* set when resource chains locked -- for debug */
+static int res_locked = 0;            /* resource chain lock count -- for debug */
 
 
 /* #define TRACE_RES */

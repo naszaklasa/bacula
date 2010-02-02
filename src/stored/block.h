@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: block.h 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: block.h 8062 2008-11-19 19:34:48Z kerns $
  *
  */
 
@@ -38,7 +38,7 @@
 #ifndef __BLOCK_H
 #define __BLOCK_H 1
 
-#define MAX_BLOCK_LENGTH  (1024*1024 + 1) /* this is a sort of sanity check */
+#define MAX_BLOCK_LENGTH  2000000       /* this is a sort of sanity check */
 #define DEFAULT_BLOCK_SIZE (512 * 126)  /* 64,512 N.B. do not use 65,636 here */
 
 /* Block Header definitions. */

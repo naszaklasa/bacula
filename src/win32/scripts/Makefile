@@ -27,6 +27,7 @@ clean:
 	@echo "Cleaning `pwd`"
 	$(call clean_obj,$(ALL_OBJS))
 	$(call clean_exe,$(BINDIR)/bsleep.exe)
+	$(ECHO_CMD)rm -rf $(OBJDIRS)
 
 #
 # Rules

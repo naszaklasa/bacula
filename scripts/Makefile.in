@@ -1,5 +1,5 @@
 # 
-# Version $Id: Makefile.in 4567 2007-04-18 17:06:43Z kerns $
+# Version $Id: Makefile.in 8522 2009-03-12 18:05:33Z kerns $
 # 
 @MCOMMON@
 
@@ -38,6 +38,7 @@ install: installdirs
 	$(INSTALL_SCRIPT) bconsole $(DESTDIR)$(scriptdir)/bconsole
 	$(INSTALL_SCRIPT) gconsole $(DESTDIR)$(scriptdir)/gconsole
 	$(INSTALL_SCRIPT) bacula $(DESTDIR)$(scriptdir)/bacula
+	$(INSTALL_SCRIPT) bacula $(DESTDIR)$(sbindir)/bacula
 	$(INSTALL_SCRIPT) bacula-ctl-dir $(DESTDIR)$(scriptdir)/bacula-ctl-dir
 	$(INSTALL_SCRIPT) bacula-ctl-fd $(DESTDIR)$(scriptdir)/bacula-ctl-fd
 	$(INSTALL_SCRIPT) bacula-ctl-sd $(DESTDIR)$(scriptdir)/bacula-ctl-sd
@@ -46,6 +47,12 @@ install: installdirs
 	   $(MV) -f ${DESTDIR}${scriptdir}/mtx-changer ${DESTDIR}${scriptdir}/mtx-changer.old; \
 	fi
 	$(INSTALL_SCRIPT) mtx-changer $(DESTDIR)$(scriptdir)/mtx-changer
+	@if  test -f ${DESTDIR}${scriptdir}/mtx-changer.conf; then \
+	   echo "  ==> Installing mtx-changer.conf to mtx-changer.conf.new"; \
+	   $(INSTALL_SCRIPT) mtx-changer.conf $(DESTDIR)$(scriptdir)/mtx-changer.conf.new; \
+	else \
+	   $(INSTALL_SCRIPT) mtx-changer.conf $(DESTDIR)$(scriptdir)/mtx-changer.conf; \
+	fi
 	@if  test -f ${DESTDIR}${scriptdir}/disk-changer; then \
 	   echo "  ==> Saving existing disk-changer to disk-changer.old"; \
 	   $(MV) -f ${DESTDIR}${scriptdir}/disk-changer ${DESTDIR}${scriptdir}/disk-changer.old; \
@@ -69,6 +76,7 @@ uninstall:
 	(cd $(DESTDIR)$(scriptdir); $(RMF) bconsole)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) gconsole)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) bacula)
+	(cd $(DESTDIR)$(sbindir);   $(RMF) bacula)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) bacula-ctl-dir)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) bacula-ctl-fd)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) bacula-ctl-sd)
@@ -78,7 +86,7 @@ uninstall:
 	(cd $(DESTDIR)$(scriptdir); $(RMF) dvd-handler)  
 	(cd $(DESTDIR)$(scriptdir); $(RMF) btraceback.gdb)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) btraceback.dbx)
-	(cd $(DESTDIR)$(sbindir); $(RMF) btraceback)
+	(cd $(DESTDIR)$(sbindir);   $(RMF) btraceback)
 
 Makefile: Makefile.in
 	cd $(topdir) \

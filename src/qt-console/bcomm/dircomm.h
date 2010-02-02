@@ -3,7 +3,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -22,83 +22,66 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: dircomm.h 5366 2007-08-17 10:18:43Z kerns $
- * 
- *   This is an attempt to move the higher level read/write type
- *     functionality to the Director out of the Console class into
- *     a Bacula Communications class.  This class builds on the 
- *     BSOCK class.
- * 
+ *   Version $Id: dircomm.h 8571 2009-03-21 14:24:27Z kerns $
  *
- *   Kern Sibbald, May 2007
+ *   Kern Sibbald, January 2007
  */
 
-#include "bat.h"
+#include <QtGui>
 #include "pages.h"
+#include "ui_console.h"
+#include <QObject>
+
+#ifndef MAX_NAME_LENGTH
+#define MAX_NAME_LENGTH 128
+#endif
 
 class DIRRES;
 class BSOCK;
+class JCR;
 class CONRES;
 
-class DirComm : public Pages
+//class DirComm : public QObject
+class DirComm : public QObject
 {
    Q_OBJECT
-
+   friend class Console;
 public:
-   DirComm(Console *console);
+   DirComm(Console *parent, int conn);
    ~DirComm();
-   void display_text(const char *buf);
-   void display_text(const QString buf);
-   void display_textf(const char *fmt, ...);
-   void display_html(const QString buf);
-   void update_cursor(void);
-   void write_dir(const char *buf);
-   bool dir_cmd(const char *cmd, QStringList &results);
-   bool dir_cmd(QString &cmd, QStringList &results);
-   bool sql_cmd(const char *cmd, QStringList &results);
-   bool sql_cmd(QString &cmd, QStringList &results);
+   Console *m_console;
+   int  sock_read();
    bool authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons, 
           char *buf, int buflen);
    bool is_connected() { return m_sock != NULL; };
-   bool is_connectedGui();
+   bool is_ready() { return is_connected() && m_at_prompt && m_at_main_prompt; };
    char *msg();
-   void notify(bool enable);
+   bool notify(bool enable); // enables/disables socket notification - returns the previous state
+   bool is_notify_enabled() const;
+   bool is_in_command() const { return m_in_command > 0; };
    void terminate();
-   void beginNewCommand();
-   void displayToPrompt();
-   void discardToPrompt();
-   void setDirectorTreeItem(QTreeWidgetItem *);
-   void setDirRes(DIRRES *dir);
-   void getDirResName(QString &);
-   void startTimer();
-   void stopTimer();
-
-public slots:
-   void connect_dir(DIRRES *dir, CONRES *cons);
-   void read_dir(int fd);
+   bool connect_dir();                     
    int read(void);
    int write(const char *msg);
    int write(QString msg);
-   void poll_messages(void);
 
-public:
+public slots:
+   void read_dir(int fd);
 
 private:
-   DIRRES *m_dir;
    BSOCK *m_sock;   
    bool m_at_prompt;
    bool m_at_main_prompt;
+   int  m_in_command;
    QSocketNotifier *m_notifier;
-   Console *m_console;
    bool m_api_set;
-   bool m_messages_pending;
-   QTimer *m_timer;
+   int m_conn;
 };
 
 #endif /* _DIRCOMM_H_ */

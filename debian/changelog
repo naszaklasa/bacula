@@ -1,3 +1,107 @@
+bacula (3.0.2-3ubuntu1) lucid; urgency=low
+
+  * Merge from debian testing, remaining changes:
+    + debian/rules:
+      - added bat_icon.png and bat.desktop for bacula-console-qt (LP: #314746)
+      - added bacula-tray-monitor.xpm icon, fix Exec path in .desktop
+    + Store sd|fd|director passwords in debconf (LP: #222558)
+      - added debian/bacula-common.templates
+      - modified debian/bacula-common.postinst:
+        + generate random passwords and store them in debconf
+      - modified debian/bacula-[sd|fd|director-mysql|director-pgsql].postinst
+        + read and set passwords from debconf
+    + Daemons listen on all interfaces (LP: #286643)
+    + Start daemons on installation
+    + Build with generic XXX_*_XXX username, password and database name
+      and replace it with dbconfig's settings in postinstall scripts
+    + Drop mt-st to suggests. So that bacula goes back to main. (LP: #286528)
+    + debian/rules: Disable fortify source since it was causing
+      bacula-director to segfault.
+    + debian/control:
+      - Added libdbi-perl and libdb-mysql-perl to depends for
+        bacula-director-mysql due to new postinst configuration.
+      - Cleaned up bacula-director-pgsql dependenices and recommends.
+      - Made mysql the default director to install bacula-director-{mysql|pgsql}
+        added database handling to postinstall scripts and templates, modifiied
+        postinstall script's sed expressions.
+      - Removed libwgtk-2.6-dev as a build dependency; as a result
+        bacula-console-wx isn't built anymore.
+      - Install gawk if not installed. (LP: #207527)
+    + debian/make_catalog_backup_awk.[mysql|pgsql|sqlite3|sqlite]:
+      - New scripts for catalog backup. (CVE-2007-5626)
+    + debian/bacula-console-wx:
+      - Dropped since we are not building them anymore.
+    + debian/bacula-director-common.bacula-director.init,
+      debian/bacula-fd.init, debian/bacula-sd.init:
+      - Made more LSB specific. 
+    + Add missing bacula-director-[pgsql|mysql].templates.
+    + Suggest bacula-traymonitor rather than Recommends so we dont pull in the libgtk libraries
+      on the server seed.
+    + debian/control: Change build dependencies to MySQL 5.1.
+    + bacula.desktop: Run /usr/bin/bat not /usr/sbin/bat (LP: #38778)
+
+ -- Chuck Short <zulcss@ubuntu.com>  Fri, 06 Nov 2009 00:30:35 +0000
+
+bacula (3.0.2-3) unstable; urgency=low
+
+  * bacula-director-common doesn't require bacula-fd.  Patch from Sven
+    Hartge.  Closes: #542829.
+  * Use sed to tweak AUTOINCREMENT columns on sqlite2->sqlite3 upgrades.
+    Closes: #542810.
+  * Correct dep on "sqlite2" to "sqlite".  Closes: #543330.
+  * Chown converted sqlite2->sqlite3 db to bacula:bacula.  Closes: #543345.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 24 Aug 2009 16:22:41 -0500
+
+bacula (3.0.2-2) unstable; urgency=low
+
+  * Fix syntax error in baclua-director-sqlite3 postinst.
+    Closes: #542758.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 21 Aug 2009 08:10:17 -0500
+
+bacula (3.0.2-1) unstable; urgency=low
+
+  * New Upstream Version.  Supports IPv6.  Closes: #523852.
+  * Install bat from the correct place.  Closes: #532646.
+  * Add conflicts between bacula-common-* packages.  Closes: #529645.
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 20 Aug 2009 14:26:44 -0500
+
+bacula (3.0.1-2) experimental; urgency=low
+
+  * Apply patches from Sami Haahtinen: correct behavior on systems
+    where bash isn't the default, and move btape into SQL-specific
+    packages because it now links with database code.
+  * Fixing up links in bacula metapackage
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 18 May 2009 08:46:24 -0500
+
+bacula (3.0.1-1) experimental; urgency=low
+
+  * New Upstream Version
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 06 May 2009 08:49:31 -0500
+
+bacula (3.0.0-1) experimental; urgency=low
+
+  * New upstream version.  Now license-compatible with OpenSSL.
+    Closes: #523479.
+  * Upstream has deprecated Sqlite v2.  No longer build Sqlite v2.
+  * Upstream has deprecated wx console.  No longer build wx console.
+  * Document reload option in bacula-director init option.  Closes: #519563.
+  * This version has mt-st smarts.  Closes: #495464.
+  * Fixed init script stop order.  Closes: #502341.
+  * Make /usr/share/doc/bacula point to bacula-common.
+  * Update NEWS and README.Debian.  Closes: #492664.
+  * Correct NEWS format to shut up lintian warnings.
+  * Move bsmtp to bacula-common.  Closes: #476227.
+  * Update postgresql-client deps.  Closes: #492670.
+  * Remove ancient (pre-lenny) database upgrade scripts from .debs.
+  * Added Spanish translation from Francisco Javier Cuadrado.  Closes: #502950.
+  
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 30 Apr 2009 16:52:53 -0500
+
 bacula (2.4.4-1ubuntu9) karmic; urgency=low
 
   * debian/bacula-director-common.bacula-director.init: doesn't require

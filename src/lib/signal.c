@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: signal.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: signal.c 8132 2008-12-09 19:21:38Z ricozz $
  *
  * Note, we probably should do a core dump for the serious
  * signals such as SIGBUS, SIGPFE, ...
@@ -53,6 +53,7 @@
 extern char my_name[];
 extern char *exepath;
 extern char *exename;
+extern void print_jcr_dbg();
 
 static const char *sig_names[BA_NSIG+1];
 
@@ -68,6 +69,45 @@ const char *get_signal_name(int sig)
       return _("Invalid signal number");
    } else {
       return sig_names[sig];
+   }
+}
+
+/* defined in jcr.c */
+extern void _dbg_print_jcr(FILE *fp);
+/* defined in plugin.c */
+extern void _dbg_print_plugin(FILE *fp);
+/* defined in lockmgr.c */
+extern void dbg_print_lock(FILE *fp);
+
+/*
+ * !!! WARNING !!! 
+ *
+ * This function should be used ONLY after a violent signal. We walk through the
+ * JCR chain without doing any lock, bacula should not be running.
+ */
+static void dbg_print_bacula()
+{
+   char buf[512];
+
+   snprintf(buf, sizeof(buf), "%s/%s.%d.bactrace", 
+            working_directory, my_name, getpid());
+   FILE *fp = fopen(buf, "ab") ;
+   if (!fp) {
+      fp = stderr;
+   }
+   
+   fprintf(stderr, "Dumping: %s\n", buf);
+
+   /* Print also B_DB and RWLOCK structure 
+    * Can add more info about JCR with dbg_jcr_add_hook()
+    */
+   _dbg_print_jcr(fp);
+
+   _dbg_print_plugin(fp);
+   dbg_print_lock(fp);
+
+   if (fp != stderr) {
+      fclose(fp);
    }
 }
 
@@ -91,7 +131,10 @@ extern "C" void signal_handler(int sig)
    if (sig == SIGTERM) {
 //    Emsg1(M_TERM, -1, "Shutting down Bacula service: %s ...\n", my_name);
    } else {
-      Emsg2(M_FATAL, -1, _("Bacula interrupted by signal %d: %s\n"), sig, get_signal_name(sig));
+/* ***FIXME*** Display a message without taking any lock in the system
+ *    Emsg2(M_FATAL, -1, _("Bacula interrupted by signal %d: %s\n"), sig, get_signal_name(sig));
+ */
+      fprintf(stderr, _("Bacula interrupted by signal %d: %s\n"), sig, get_signal_name(sig));
    }
 
 #ifdef TRACEBACK
@@ -156,6 +199,7 @@ extern "C" void signal_handler(int sig)
       default:                        /* parent */
          break;
       }
+
       /* Parent continue here, waiting for child */
       sigdefault.sa_flags = 0;
       sigdefault.sa_handler = SIG_DFL;
@@ -165,8 +209,10 @@ extern "C" void signal_handler(int sig)
       if (pid > 0) {
          Dmsg0(500, "Doing waitpid\n");
          waitpid(pid, NULL, 0);       /* wait for child to produce dump */
-         fprintf(stderr, _("Traceback complete, attempting cleanup ...\n"));
          Dmsg0(500, "Done waitpid\n");
+         fprintf(stderr, _("Traceback complete, attempting cleanup ...\n"));
+         /* print information about the current state into working/<file>.bactrace */
+         dbg_print_bacula();
          exit_handler(sig);           /* clean up if possible */
          Dmsg0(500, "Done exit_handler\n");
       } else {
@@ -174,9 +220,9 @@ extern "C" void signal_handler(int sig)
          bmicrosleep(30, 0);
       }
       fprintf(stderr, _("It looks like the traceback worked ...\n"));
+      dbg_print_bacula();
    }
 #endif
-
    exit_handler(sig);
 }
 
@@ -187,6 +233,7 @@ extern "C" void signal_handler(int sig)
 void init_stack_dump(void)
 {
    main_pid = getpid();               /* save main thread's pid */
+   lmgr_init_thread();                /* initialize the lockmanager stack */
 }
 
 /*

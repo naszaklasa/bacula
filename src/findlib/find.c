@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -34,7 +34,7 @@
  *
  *  Kern E. Sibbald, MM
  *
- *   Version $Id: find.c 5077 2007-06-24 17:27:12Z kerns $
+ *   Version $Id: find.c 8614 2009-03-27 17:59:16Z kerns $
  */
 
 
@@ -48,7 +48,7 @@ int32_t path_max;              /* path name max length */
 #undef bmalloc
 #define bmalloc(x) sm_malloc(__FILE__, __LINE__, x)
 #endif
-static int our_callback(FF_PKT *ff, void *hpkt, bool top_level);
+static int our_callback(JCR *jcr, FF_PKT *ff, bool top_level);
 static bool accept_file(FF_PKT *ff);
 
 static const int fnmode = 0;
@@ -94,6 +94,13 @@ set_find_options(FF_PKT *ff, int incremental, time_t save_time)
   ff->incremental = incremental;
   ff->save_time = save_time;
   Dmsg0(100, "Leave set_find_options()\n");
+}
+
+void
+set_find_changed_function(FF_PKT *ff, bool check_fct(JCR *jcr, FF_PKT *ff))
+{
+   Dmsg0(100, "Enter set_find_changed_function()\n");
+   ff->check_fct = check_fct;
 }
 
 /*
@@ -148,26 +155,18 @@ get_win32_driveletters(FF_PKT *ff, char* szDrives)
 }
 
 /*
- * Find all specified files (determined by calls to name_add()
- * This routine calls the (handle_file) subroutine with all
- * sorts of good information for the final disposition of
- * the file.
- *
  * Call this subroutine with a callback subroutine as the first
  * argument and a packet as the second argument, this packet
  * will be passed back to the callback subroutine as the last
  * argument.
  *
- * The callback subroutine gets called with:
- *  arg1 -- the FF_PKT containing filename, link, stat, ftype, flags, etc
- *  arg2 -- the user supplied packet
- *
  */
 int
-find_files(JCR *jcr, FF_PKT *ff, int callback(FF_PKT *ff_pkt, void *hpkt, bool top_level), 
-           void *his_pkt)
+find_files(JCR *jcr, FF_PKT *ff, int file_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level),
+           int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level)) 
 {
-   ff->callback = callback;
+   ff->file_save = file_save;
+   ff->plugin_save = plugin_save;
 
    /* This is the new way */
    findFILESET *fileset = ff->fileset;
@@ -197,14 +196,64 @@ find_files(JCR *jcr, FF_PKT *ff, int callback(FF_PKT *ff_pkt, void *hpkt, bool t
             char *fname = node->c_str();
             Dmsg1(100, "F %s\n", fname);
             ff->top_fname = fname;
-            if (find_one_file(jcr, ff, our_callback, his_pkt, ff->top_fname, (dev_t)-1, true) == 0) {
+            if (find_one_file(jcr, ff, our_callback, ff->top_fname, (dev_t)-1, true) == 0) {
                return 0;                  /* error return */
+            }
+         }
+         if (plugin_save) {
+            foreach_dlist(node, &incexe->plugin_list) {
+               char *fname = node->c_str();
+               Dmsg1(100, "PluginCommand: %s\n", fname);
+               ff->top_fname = fname;
+               ff->cmd_plugin = true;
+               plugin_save(jcr, ff, true);
+               ff->cmd_plugin = false;
             }
          }
       }
    }
    return 1;
 }
+
+/*
+ * Test if the currently selected directory (in ff->fname) is
+ *  explicitly in the Include list or explicitly in the Exclude 
+ *  list.
+ */
+bool is_in_fileset(FF_PKT *ff)
+{
+   dlistString *node;
+   char *fname;
+   int i;
+   findINCEXE *incexe;
+   findFILESET *fileset = ff->fileset;
+   if (fileset) {
+      for (i=0; i<fileset->include_list.size(); i++) {
+         incexe = (findINCEXE *)fileset->include_list.get(i);
+         foreach_dlist(node, &incexe->name_list) {
+            fname = node->c_str();
+            Dmsg2(100, "Inc fname=%s ff->fname=%s\n", fname, ff->fname);
+            if (strcmp(fname, ff->fname) == 0) {
+               return true;
+            }
+         }
+      }
+#ifdef xxx
+      for (i=0; i<fileset->exclude_list.size(); i++) {
+         incexe = (findINCEXE *)fileset->exclude_list.get(i);
+         foreach_dlist(node, &incexe->name_list) {
+            fname = node->c_str();
+            Dmsg2(000, "Exc fname=%s ff->fname=%s\n", fname, ff->fname);
+            if (strcmp(fname, ff->fname) == 0) {
+               return true;
+            }
+         }
+      }
+#endif
+   }
+   return false;
+}
+
 
 static bool accept_file(FF_PKT *ff)
 {
@@ -216,7 +265,8 @@ static bool accept_file(FF_PKT *ff)
    int (*match_func)(const char *pattern, const char *string, int flags);
 
    if (ff->flags & FO_ENHANCEDWILD) {
-      match_func = enh_fnmatch;
+//    match_func = enh_fnmatch;
+      match_func = fnmatch;
       if ((basename = last_path_separator(ff->fname)) != NULL)
          basename++;
       else
@@ -230,8 +280,7 @@ static bool accept_file(FF_PKT *ff)
       findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
       ff->flags = fo->flags;
       ff->GZIP_level = fo->GZIP_level;
-      ff->reader = fo->reader;
-      ff->writer = fo->writer;
+      ff->ignoredir = fo->ignoredir;
       ff->fstypes = fo->fstype;
       ff->drivetypes = fo->drivetype;
 
@@ -360,10 +409,10 @@ static bool accept_file(FF_PKT *ff)
  * We filter the files, then call the user's callback if
  *    the file is included.
  */
-static int our_callback(FF_PKT *ff, void *hpkt, bool top_level)
+static int our_callback(JCR *jcr, FF_PKT *ff, bool top_level)
 {
    if (top_level) {
-      return ff->callback(ff, hpkt, top_level);   /* accept file */
+      return ff->file_save(jcr, ff, top_level);   /* accept file */
    }
    switch (ff->type) {
    case FT_NOACCESS:
@@ -377,7 +426,7 @@ static int our_callback(FF_PKT *ff, void *hpkt, bool top_level)
    case FT_INVALIDDT:
    case FT_NOOPEN:
    case FT_REPARSE:
-//    return ff->callback(ff, hpkt, top_level);
+//    return ff->file_save(jcr, ff, top_level);
 
    /* These items can be filtered */
    case FT_LNKSAVED:
@@ -391,8 +440,7 @@ static int our_callback(FF_PKT *ff, void *hpkt, bool top_level)
    case FT_SPEC:
    case FT_DIRNOCHG:
       if (accept_file(ff)) {
-//       Dmsg2(000, "Accept file %s; reader=%s\n", ff->fname, NPRT(ff->reader));
-         return ff->callback(ff, hpkt, top_level);
+         return ff->file_save(jcr, ff, top_level);
       } else {
          Dmsg1(100, "Skip file %s\n", ff->fname);
          return -1;                   /* ignore this file */

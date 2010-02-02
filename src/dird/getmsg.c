@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -45,7 +45,7 @@
  *       Requests are any message that does not begin with a digit.
  *       In affect, they are commands.
  *
- *   Version $Id: getmsg.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: getmsg.c 8640 2009-03-29 10:55:53Z kerns $
  */
 
 #include "bacula.h"
@@ -69,6 +69,33 @@ static char Device_update[]   = "DevUpd Job=%127s "
 
 
 static char OK_msg[] = "1000 OK\n";
+
+
+void set_jcr_sd_job_status(JCR *jcr, int SDJobStatus)
+{
+   bool set_waittime=false;
+   Dmsg2(800, "set_jcr_sd_job_status(%s, %c)\n", jcr->Job, SDJobStatus);
+   /* if wait state is new, we keep current time for watchdog MaxWaitTime */
+   switch (SDJobStatus) {
+      case JS_WaitMedia:
+      case JS_WaitMount:
+      case JS_WaitMaxJobs:
+         set_waittime = true;
+      default:
+         break;
+   }
+
+   if (job_waiting(jcr)) {
+      set_waittime = false;
+   }
+
+   if (set_waittime) {
+      /* set it before JobStatus */
+      Dmsg0(800, "Setting wait_time\n");
+      jcr->wait_time = time(NULL);
+   }
+   jcr->SDJobStatus = SDJobStatus;
+}
 
 /*
  * Get a message
@@ -101,13 +128,14 @@ int bget_dirmsg(BSOCK *bs)
    int32_t n;
    char Job[MAX_NAME_LENGTH];
    char MsgType[20];
-   int type, level;
-   JCR *jcr;
+   int type;
+   utime_t mtime;                     /* message time */
+   JCR *jcr = bs->jcr();
    char *msg;
 
    for (;;) {
       n = bs->recv();
-      Dmsg2(100, "bget_dirmsg %d: %s", n, bs->msg);
+      Dmsg2(100, "bget_dirmsg %d: %s\n", n, bs->msg);
 
       if (is_bnet_stop(bs)) {
          return n;                    /* error or terminate */
@@ -142,7 +170,7 @@ int bget_dirmsg(BSOCK *bs)
             bs->fsend("btime %s\n", edit_uint64(get_current_btime(),ed1));
             break;
          default:
-            Emsg1(M_WARNING, 0, _("bget_dirmsg: unknown bnet signal %d\n"), bs->msglen);
+            Jmsg1(jcr, M_WARNING, 0, _("bget_dirmsg: unknown bnet signal %d\n"), bs->msglen);
             return n;
          }
          continue;
@@ -160,33 +188,26 @@ int bget_dirmsg(BSOCK *bs)
        *  Try to fulfill it.
        */
       if (sscanf(bs->msg, "%020s Job=%127s ", MsgType, Job) != 2) {
-         Emsg1(M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
+         Jmsg1(jcr, M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
          continue;
       }
-      if (strcmp(Job, "*System*") == 0) {
-         jcr = NULL;                  /* No jcr */
-      } else if (!(jcr=get_jcr_by_full_name(Job))) {
-         Emsg1(M_ERROR, 0, _("Job not found: %s\n"), bs->msg);
-         continue;
-      }
-      Dmsg1(900, "Getmsg got jcr 0x%x\n", jcr);
 
       /* Skip past "Jmsg Job=nnn" */
       if (!(msg=find_msg_start(bs->msg))) {
-         Emsg1(M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
-         free_jcr(jcr);
+         Jmsg1(jcr, M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
          continue;
       }
 
       /*
        * Here we are expecting a message of the following format:
        *   Jmsg Job=nnn type=nnn level=nnn Message-string
+       * Note, level should really be mtime, but that changes
+       *   the protocol.
        */
       if (bs->msg[0] == 'J') {           /* Job message */
-         if (sscanf(bs->msg, "Jmsg Job=%127s type=%d level=%d",
-                    Job, &type, &level) != 3) {
-            Emsg1(M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
-            free_jcr(jcr);
+         if (sscanf(bs->msg, "Jmsg Job=%127s type=%d level=%lld",
+                    Job, &type, &mtime) != 3) {
+            Jmsg1(jcr, M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
             continue;
          }
          Dmsg1(900, "Got msg: %s\n", bs->msg);
@@ -198,8 +219,7 @@ int bget_dirmsg(BSOCK *bs)
             msg++;                    /* skip leading space */
          }
          Dmsg1(900, "Dispatch msg: %s", msg);
-         dispatch_message(jcr, type, level, msg);
-         free_jcr(jcr);
+         dispatch_message(jcr, type, mtime, msg);
          continue;
       }
       /*
@@ -209,32 +229,42 @@ int bget_dirmsg(BSOCK *bs)
       if (bs->msg[0] == 'C') {        /* Catalog request */
          Dmsg2(900, "Catalog req jcr 0x%x: %s", jcr, bs->msg);
          catalog_request(jcr, bs);
-         Dmsg1(900, "Calling freejcr 0x%x\n", jcr);
-         free_jcr(jcr);
          continue;
       }
       if (bs->msg[0] == 'U') {        /* SD sending attributes */
          Dmsg2(900, "Catalog upd jcr 0x%x: %s", jcr, bs->msg);
          catalog_update(jcr, bs);
-         Dmsg1(900, "Calling freejcr 0x%x\n", jcr);
-         free_jcr(jcr);
+         continue;
+      }
+      if (bs->msg[0] == 'B') {        /* SD sending file spool attributes */
+         Dmsg2(100, "Blast attributes jcr 0x%x: %s", jcr, bs->msg);
+         char filename[256];
+         if (sscanf(bs->msg, "BlastAttr Job=%127s File=%255s", 
+                    Job, filename) != 2) {
+            Jmsg1(jcr, M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
+            continue;
+         }
+         unbash_spaces(filename);
+         if (despool_attributes_from_file(jcr, filename)) {
+            bs->fsend("1000 OK BlastAttr\n");
+         } else {
+            bs->fsend("1990 ERROR BlastAttr\n");
+         }
          continue;
       }
       if (bs->msg[0] == 'M') {        /* Mount request */
          Dmsg1(900, "Mount req: %s", bs->msg);
          mount_request(jcr, bs, msg);
-         free_jcr(jcr);
          continue;
       }
       if (bs->msg[0] == 'S') {       /* Status change */
          int JobStatus;
          char Job[MAX_NAME_LENGTH];
          if (sscanf(bs->msg, Job_status, &Job, &JobStatus) == 2) {
-            jcr->SDJobStatus = JobStatus; /* current status */
+            set_jcr_sd_job_status(jcr, JobStatus); /* current status */
          } else {
-            Emsg1(M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
+            Jmsg1(jcr, M_ERROR, 0, _("Malformed message: %s\n"), bs->msg);
          }
-         free_jcr(jcr);
          continue;
       }
 #ifdef needed

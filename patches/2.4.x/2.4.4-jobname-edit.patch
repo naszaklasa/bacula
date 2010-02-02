@@ -1,0 +1,26 @@
+
+ This patch fixes bug #1255 'variable %n changed'
+
+ Apply it to version 2.4.4 with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.4-jobname-edit.patch
+ ./configure <your options>
+ make
+ ...
+ make install
+
+
+Index: src/dird/job.c
+===================================================================
+--- src/dird/job.c	(revision 8455)
++++ src/dird/job.c	(working copy)
+@@ -787,7 +787,7 @@
+    len = strlen(dt) + 5;   /* dt + .%02d EOS */
+    bstrncpy(name, base_name, sizeof(name));
+    name[sizeof(name)-len] = 0;          /* truncate if too long */
+-   bsnprintf(jcr->Job, sizeof(jcr->Job), "%s.%s.%02d", name, dt, seq); /* add date & time */
++   bsnprintf(jcr->Job, sizeof(jcr->Job), "%s.%s_%02d", name, dt, seq); /* add date & time */
+    /* Convert spaces into underscores */
+    for (p=jcr->Job; *p; p++) {
+       if (*p == ' ') {

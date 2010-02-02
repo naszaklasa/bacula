@@ -1,0 +1,55 @@
+
+ This patch fixes bug #1247 - 64-bit time_t and varargs don't get along in some
+ printf-like formatting
+
+ Apply it to version 2.4.4 with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.4-time_t_64bit.patch
+ ./configure <your options>
+ make
+ ...
+ make install
+
+
+Index: src/stored/spool.c
+===================================================================
+--- src/stored/spool.c	(revision 8455)
++++ src/stored/spool.c	(working copy)
+@@ -306,7 +306,7 @@
+    set_new_file_parameters(dcr);
+ 
+    /* Subtracting run_time give us elapsed time - wait_time since we started despooling */
+-   time_t despool_elapsed = time(NULL) - despool_start - jcr->run_time;
++   int32_t despool_elapsed = time(NULL) - despool_start - jcr->run_time;
+ 
+    if (despool_elapsed <= 0) {
+       despool_elapsed = 1;
+Index: src/stored/append.c
+===================================================================
+--- src/stored/append.c	(revision 8455)
++++ src/stored/append.c	(working copy)
+@@ -270,7 +270,7 @@
+    do_fd_commands(jcr);               /* finish dialog with FD */
+ 
+ 
+-   time_t job_elapsed = time(NULL) - jcr->run_time;
++   int32_t job_elapsed = time(NULL) - jcr->run_time;
+ 
+    if (job_elapsed <= 0) {
+       job_elapsed = 1;
+Index: src/lib/message.c
+===================================================================
+--- src/lib/message.c	(revision 8455)
++++ src/lib/message.c	(working copy)
+@@ -780,8 +780,8 @@
+              case MD_DIRECTOR:
+                 Dmsg1(850, "DIRECTOR for following msg: %s", msg);
+                 if (jcr && jcr->dir_bsock && !jcr->dir_bsock->errors) {
+-                   bnet_fsend(jcr->dir_bsock, "Jmsg Job=%s type=%d level=%d %s",
+-                      jcr->Job, type, mtime, msg);
++                   bnet_fsend(jcr->dir_bsock, "Jmsg Job=%s type=%d level=%lld %s",
++                      jcr->Job, type, (utime_t)mtime, msg);
+                 }
+                 break;
+              case MD_STDOUT:

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,14 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
  
 /*
- *   Version $Id: restoretree.cpp 7357 2008-07-12 12:36:26Z ricozz $
+ *   Version $Id: restoretree.cpp 8928 2009-06-28 21:52:27Z bartleyd2 $
  *
  *  Restore Class 
  *
@@ -66,6 +66,7 @@ restoreTree::restoreTree()
    area->setWidgetResizable(true);
    m_splitter->addWidget(splitter);
    m_splitter->addWidget(area);
+   splitter->setCollapsible(0, false);
 
    gridLayout->addWidget(m_splitter, 0, 0, 1, 1);
 
@@ -152,6 +153,8 @@ void restoreTree::updateRefresh()
  */
 void restoreTree::populateDirectoryTree()
 {
+   m_debugTrap = true;
+   m_debugCnt = 0;
    m_slashTrap = false;
    m_dirPaths.clear();
    directoryTree->clear();
@@ -349,10 +352,11 @@ void restoreTree::parseDirectory(QString &dir_in)
                     .arg(dir_in.length()).arg(index).arg(path).arg(direct);
          Pmsg0(000, msg.toUtf8().data());
       }
-      if (addDirectory(path, direct)) done = true;
+      if (addDirectory(path, direct)) { done = true; }
       else {
-         if ((mainWin->m_miscDebug) && (m_debugTrap))
+         if ((mainWin->m_miscDebug) && (m_debugTrap)) {
             Pmsg0(000, "Saving for later\n");
+         }
          pathAfter.prepend(path);
          dirAfter.prepend(direct);
       }
@@ -406,6 +410,7 @@ bool restoreTree::addDirectory(QString &m_cwd, QString &newdirr)
       /* no need to check for windows drive if unix */
       if (isWin32Path(m_cwd)) {
          if (!m_dirPaths.contains(m_cwd)) {
+            if (m_cwd.count('/') > 1) { return false; }
             /* this is a windows drive add the base widget */
             QTreeWidgetItem *item = new QTreeWidgetItem(directoryTree);
             item->setText(0, m_cwd);
@@ -460,8 +465,6 @@ bool restoreTree::addDirectory(QString &m_cwd, QString &newdirr)
 void restoreTree::currentStackItem()
 {
    if(!m_populated) {
-      if (!m_console->preventInUseConnect())
-         return;
       setupPage();
       m_populated = true;
    }
@@ -478,7 +481,7 @@ void restoreTree::refreshButtonPushed()
 /*
  * Set the values of non-job combo boxes to the job defaults
  */
-void restoreTree::jobComboChanged(int index)
+void restoreTree::jobComboChanged(int)
 {
    if (jobCombo->currentText() == tr("Any")) {
       fileSetCombo->setCurrentIndex(fileSetCombo->findText(tr("Any"), Qt::MatchExactly));
@@ -486,7 +489,7 @@ void restoreTree::jobComboChanged(int index)
    }
    job_defaults job_defs;
 
-   (void)index;
+   //(void)index;
    job_defs.job_name = jobCombo->currentText();
    if (m_console->get_job_defaults(job_defs)) {
       fileSetCombo->setCurrentIndex(fileSetCombo->findText(job_defs.fileset_name, Qt::MatchExactly));
@@ -614,7 +617,7 @@ void restoreTree::fileCurrentItemChanged(QTableWidgetItem *currentFileTableItem,
    QBrush blackBrush(Qt::black);
 
    QStringList headerlist = (QStringList() 
-      << tr("Job Id") << tr("Type") << tr("End Time") << tr("Hash") << tr("FileId"));
+      << tr("Job Id") << tr("Type") << tr("End Time") << tr("Hash") << tr("FileId") << tr("Job Type") << tr("First Volume"));
    versionTable->clear();
    versionTable->setColumnCount(headerlist.size());
    versionTable->setHorizontalHeaderLabels(headerlist);
@@ -623,7 +626,10 @@ void restoreTree::fileCurrentItemChanged(QTableWidgetItem *currentFileTableItem,
    int pathid = m_directoryPathIdHash.value(directory, -1);
    if ((pathid != -1) && (fileNameId != -1)) {
       QString cmd = 
-         "SELECT Job.JobId AS JobId,Job.Level AS Type,Job.EndTime AS EndTime,File.MD5 AS MD5,File.FileId AS FileId"
+         "SELECT Job.JobId AS JobId, Job.Level AS Type,"
+           " Job.EndTime AS EndTime, File.MD5 AS MD5,"
+           " File.FileId AS FileId, Job.Type AS JobType,"
+           " (SELECT Media.VolumeName FROM JobMedia JOIN Media ON JobMedia.MediaId=Media.MediaId WHERE JobMedia.JobId=Job.JobId ORDER BY JobMediaId LIMIT 1) AS FirstVolume"
          " FROM File"
          " INNER JOIN Filename on (Filename.FilenameId=File.FilenameId)"
          " INNER JOIN Path ON (Path.PathId=File.PathId)"
@@ -654,6 +660,12 @@ void restoreTree::fileCurrentItemChanged(QTableWidgetItem *currentFileTableItem,
                /* Iterate through fields in the record */
                foreach (field, fieldlist) {
                   field = field.trimmed();  /* strip leading & trailing spaces */
+                  if (column == 5 ) {
+                     QByteArray jtype(field.trimmed().toAscii());
+                     if (jtype.size()) {
+                        field = job_type_to_str(jtype[0]);
+                     }
+                  }
                   tableItem = new QTableWidgetItem(field, 1);
                   tableItem->setFlags(0);
                   tableItem->setForeground(blackBrush);
@@ -691,7 +703,8 @@ void restoreTree::writeSettings()
 {
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
-   settings.setValue(m_splitText, m_splitter->saveState());
+   settings.setValue(m_splitText1, m_splitter->saveState());
+   settings.setValue(m_splitText2, splitter->saveState());
    settings.endGroup();
 }
 
@@ -701,10 +714,12 @@ void restoreTree::writeSettings()
 void restoreTree::readSettings()
 {
    m_groupText = tr("RestoreTreePage");
-   m_splitText = "splitterSizes_1";
+   m_splitText1 = "splitterSizes1_2";
+   m_splitText2 = "splitterSizes2_2";
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
-   m_splitter->restoreState(settings.value(m_splitText).toByteArray());
+   m_splitter->restoreState(settings.value(m_splitText1).toByteArray());
+   splitter->restoreState(settings.value(m_splitText2).toByteArray());
    settings.endGroup();
 }
 
@@ -733,17 +748,19 @@ void restoreTree::populateJobTable()
 
    if (mainWin->m_rtPopDirDebug) Pmsg0(000, "Repopulating the Job Table\n");
    QStringList headerlist = (QStringList() 
-      << tr("Job Id") << tr("End Time") << tr("Level") 
+      << tr("Job Id") << tr("End Time") << tr("Level") << tr("Type")
       << tr("Name") << tr("Purged") << tr("TU") << tr("TD"));
    m_toggleUpIndex = headerlist.indexOf(tr("TU"));
    m_toggleDownIndex = headerlist.indexOf(tr("TD"));
    int purgedIndex = headerlist.indexOf(tr("Purged"));
+   int typeIndex = headerlist.indexOf(tr("Type"));
    jobTable->clear();
    jobTable->setColumnCount(headerlist.size());
    jobTable->setHorizontalHeaderLabels(headerlist);
    QString jobQuery =
-      "SELECT Job.Jobid AS Id,Job.EndTime AS EndTime,Job.Level AS Level,"
-      "Job.Name AS JobName,Job.purgedfiles AS Purged"
+      "SELECT Job.Jobid AS Id, Job.EndTime AS EndTime,"
+      " Job.Level AS Level, Job.Type AS Type,"
+      " Job.Name AS JobName, Job.purgedfiles AS Purged"
       " FROM Job"
       /* INNER JOIN FileSet eliminates all restore jobs */
       " INNER JOIN Client ON (Job.ClientId=Client.ClientId)"
@@ -792,6 +809,12 @@ void restoreTree::populateJobTable()
             foreach (field, fieldlist) {
                field = field.trimmed();  /* strip leading & trailing spaces */
                if (field != "") {
+                  if (column == typeIndex) {
+                     QByteArray jtype(field.trimmed().toAscii());
+                     if (jtype.size()) {
+                        field = job_type_to_str(jtype[0]);
+                     }
+                  }
                   tableItem = new QTableWidgetItem(field, 1);
                   tableItem->setFlags(0);
                   tableItem->setForeground(blackBrush);
@@ -1200,6 +1223,7 @@ void restoreTree::updateFileTableChecks()
    int rcnt = fileTable->rowCount();
    for (int row=0; row<rcnt; row++) {
       QTableWidgetItem* item = fileTable->item(row, 0);
+      if (!item) { return; }
 
       Qt::CheckState curState = item->checkState();
       Qt::CheckState newState = Qt::PartiallyChecked;
@@ -1241,6 +1265,7 @@ void restoreTree::updateVersionTableChecks()
 
    /* deterimine the default state from the state of the file */
    QTableWidgetItem *fileTableItem = fileTable->item(fileTable->currentRow(), 0);
+   if (!fileTableItem) { return; }
    Qt::CheckState fileState = fileTableItem->checkState();
    QString file = fileTableItem->text();
    QString fullPath = dirName + file;
@@ -1250,6 +1275,7 @@ void restoreTree::updateVersionTableChecks()
    int cnt = versionTable->rowCount();
    for (int row=0; row<cnt; row++) {
       QTableWidgetItem* item = versionTable->item(row, 0);
+      if (!item) { break; }
 
       Qt::CheckState curState = item->checkState();
       Qt::CheckState newState = Qt::Unchecked;
@@ -1550,7 +1576,6 @@ void restoreTree::restoreButtonPushed()
               " INNER JOIN Job ON (Job.JobId=File.JobId)"
               " WHERE File.PathId=" + QString("%1").arg(pathid) +
               " AND Job.Jobid IN (" + m_checkedJobs + ")"
-              " AND File.FilenameId!=" + QString("%1").arg(m_nullFileNameId) +
               " GROUP BY File.FilenameId"
             ") t1, File "
               " INNER JOIN Filename on (Filename.FilenameId=File.FilenameId)"

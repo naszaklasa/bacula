@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -29,13 +29,17 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.h 7164 2008-06-18 19:22:03Z kerns $
+ *   Version $Id: parse_conf.h 7775 2008-10-13 15:48:21Z kerns $
  *
  */
 
 struct RES_ITEM;                    /* Declare forward referenced structure */
+struct RES_ITEM2;                  /* Declare forward referenced structure */
 class RES;                         /* Declare forware referenced structure */
 typedef void (MSG_RES_HANDLER)(LEX *lc, RES_ITEM *item, int index, int pass);
+typedef void (INC_RES_HANDLER)(LEX *lc, RES_ITEM2 *item, int index, int pass, bool exclude);
+
+
 
 /* This is the structure that defines
  * the record types (items) permitted within each
@@ -57,15 +61,36 @@ struct RES_ITEM {
       RES *resvalue;
       RES **presvalue;
    };
-   int32_t code;                       /* item code/additional info */
-   int32_t flags;                      /* flags: default, required, ... */
-   int32_t default_value;              /* default value */
+   int32_t  code;                     /* item code/additional info */
+   uint32_t  flags;                   /* flags: default, required, ... */
+   int32_t  default_value;            /* default value */
 };
+
+struct RES_ITEM2 {
+   const char *name;                  /* Resource name i.e. Director, ... */
+   INC_RES_HANDLER *handler;          /* Routine storing the resource item */
+   union {
+      char **value;                   /* Where to store the item */
+      char **charvalue;
+      uint32_t ui32value;
+      int32_t i32value;
+      uint64_t ui64value;
+      int64_t i64value;
+      bool boolvalue;
+      utime_t utimevalue;
+      RES *resvalue;
+      RES **presvalue;
+   };
+   int32_t  code;                     /* item code/additional info */
+   uint32_t  flags;                   /* flags: default, required, ... */
+   int32_t  default_value;            /* default value */
+};
+
 
 /* For storing name_addr items in res_items table */
 #define ITEM(x) {(char **)&res_all.x}
 
-#define MAX_RES_ITEMS 70              /* maximum resource items per RES */
+#define MAX_RES_ITEMS 80              /* maximum resource items per RES */
 
 /* This is the universal header that is
  * at the beginning of every resource
@@ -77,7 +102,7 @@ public:
    char *name;                        /* resource name */
    char *desc;                        /* resource description */
    uint32_t rcode;                    /* resource id or type */
-   int32_t refcnt;                    /* reference count for releasing */
+   int32_t  refcnt;                   /* reference count for releasing */
    char  item_present[MAX_RES_ITEMS]; /* set if item is present in conf file */
 };
 
@@ -92,6 +117,8 @@ struct RES_TABLE {
    RES_ITEM *items;                   /* list of resource keywords */
    uint32_t rcode;                    /* code if needed */
 };
+
+
 
 /* Common Resource definitions */
 
@@ -116,11 +143,52 @@ public:
 
 inline char *MSGS::name() const { return hdr.name; }
 
-/* Configuration routines */
-int   parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error = NULL, int err_type=M_ERROR_TERM);
+/* 
+ * Old C style configuration routines -- deprecated do not use.
+ */
+//int   parse_config(const char *cf, LEX_ERROR_HANDLER *scan_error = NULL, int err_type=M_ERROR_TERM);
 void    free_config_resources(void);
 RES   **save_config_resources(void);
 RES   **new_res_head();
+
+/*
+ * New C++ configuration routines
+ */
+
+class CONFIG {
+public:
+   const char *m_cf;                   /* config file */
+   LEX_ERROR_HANDLER *m_scan_error;    /* error handler if non-null */
+   int32_t m_err_type;                 /* the way to terminate on failure */
+   void *m_res_all;                    /* pointer to res_all buffer */
+   int32_t m_res_all_size;             /* length of buffer */
+
+   /* The below are not yet implemented */
+   int32_t m_r_first;                  /* first daemon resource type */
+   int32_t m_r_last;                   /* last daemon resource type */
+   RES_TABLE *m_resources;             /* pointer to table of permitted resources */      
+   RES **m_res_head;                   /* pointer to defined resources */
+   brwlock_t m_res_lock;               /* resource lock */
+
+   /* functions */
+   void init(
+      const char *cf,
+      LEX_ERROR_HANDLER *scan_error,
+      int32_t err_type,
+      void *vres_all,
+      int32_t res_all_size,
+      int32_t r_first,
+      int32_t r_last,
+      RES_TABLE *resources,
+      RES **res_head);
+
+   bool parse_config();
+   void free_resources();
+   RES **save_resources();
+   RES **new_res_head();
+};
+ 
+CONFIG *new_config_parser();
 
 
 /* Resource routines */
@@ -144,7 +212,9 @@ const char *res_to_str(int rcode);
 #endif
 
 
-
+/*
+ * Standard global parsers defined in parse_config.c
+ */
 void store_str(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_dir(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_password(LEX *lc, RES_ITEM *item, int index, int pass);
@@ -163,3 +233,10 @@ void store_time(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_size(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_defs(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_label(LEX *lc, RES_ITEM *item, int index, int pass);
+
+/* ***FIXME*** eliminate these globals */
+extern int32_t r_first;
+extern int32_t r_last;
+extern RES_TABLE resources[];
+extern RES **res_head;
+extern int32_t res_all_size;

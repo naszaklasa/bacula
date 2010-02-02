@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -28,12 +28,14 @@
 /*
  * Bacula RUNSCRIPT Structure definition for FileDaemon and Director
  * Eric Bollengier May 2006
- * Version $Id: runscript.h 6074 2007-12-19 14:38:08Z kerns $
+ * Version $Id: runscript.h 7380 2008-07-14 10:42:59Z kerns $
  */
  
 
 #ifndef __RUNSCRIPT_H_
 #define __RUNSCRIPT_H_ 1
+
+#include "protos.h"
 
 /* Usage:
  *
@@ -56,7 +58,13 @@ enum {
    SCRIPT_Never  = 0,
    SCRIPT_After  = (1<<0),      /* AfterJob */
    SCRIPT_Before = (1<<1),      /* BeforeJob */
+   SCRIPT_AfterVSS = (1<<2),	/* BeforeJob and After VSS */
    SCRIPT_Any    = SCRIPT_Before | SCRIPT_After
+};
+
+enum {
+   SHELL_CMD   = '|',
+   CONSOLE_CMD = '@' 
 };
 
 /*
@@ -67,6 +75,7 @@ public:
    POOLMEM *command;            /* command string */
    POOLMEM *target;             /* host target */
    int  when;                   /* SCRIPT_Before|Script_After BEFORE/AFTER JOB*/
+   int  cmd_type;               /* Command type -- Shell, Console */
    char level;                  /* Base|Full|Incr...|All (NYI) */
    bool on_success;             /* execute command on job success (After) */
    bool on_failure;             /* execute command on job failure (After) */
@@ -74,12 +83,12 @@ public:
    /* TODO : drop this with bacula 1.42 */
    bool old_proto;              /* used by old 1.3X protocol */
    job_code_callback_t job_code_callback;
-   				/* Optional callback function passed to edit_job_code */
-
+                                /* Optional callback function passed to edit_job_code */
+   alist *commands;             /* Use during parsing */
    bool run(JCR *job, const char *name=""); /* name must contain "Before" or "After" keyword */
    bool can_run_at_level(int JobLevel) { return true;};        /* TODO */
-   void set_command(const POOLMEM *cmd);
-   void set_target(const POOLMEM *client_name);
+   void set_command(const char *cmd, int cmd_type = SHELL_CMD);
+   void set_target(const char *client_name);
    void reset_default(bool free_string = false);
    bool is_local();             /* true if running on local host */
    void debug();
@@ -101,5 +110,7 @@ void free_runscript(RUNSCRIPT *script);
 
 /* foreach_alist free RUNSCRIPT */
 void free_runscripts(alist *runscripts); /* you have to free alist */
+
+extern DLL_IMP_EXP bool (*console_command)(JCR *jcr, const char *cmd);
 
 #endif /* __RUNSCRIPT_H_ */

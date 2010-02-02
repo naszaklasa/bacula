@@ -1,4 +1,4 @@
-USE bacula;
+USE ${db_name};
 --
 -- Note, we use BLOB rather than TEXT because in MySQL,
 --  BLOBs are identical to TEXT except that BLOB is case
@@ -21,7 +21,7 @@ CREATE TABLE Path (
 
 
 CREATE TABLE File (
-   FileId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+   FileId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
    FileIndex INTEGER UNSIGNED DEFAULT 0,
    JobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
    PathId INTEGER UNSIGNED NOT NULL REFERENCES Path,
@@ -34,16 +34,16 @@ CREATE TABLE File (
    INDEX (JobId, PathId, FilenameId)
    );
 
-#
-# Possibly add one or more of the following indexes
-#  to the above File table if your Verifies are
-#  too slow.
-#
-#  INDEX (PathId),
-#  INDEX (FilenameId),
-#  INDEX (FilenameId, PathId)
-#  INDEX (JobId),
-#
+--
+-- Possibly add one or more of the following indexes
+--  to the above File table if your Verifies are
+--  too slow.
+--
+--  INDEX (PathId),
+--  INDEX (FilenameId),
+--  INDEX (FilenameId, PathId)
+--  INDEX (JobId),
+--
 
 CREATE TABLE MediaType (
    MediaTypeId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -96,6 +96,7 @@ CREATE TABLE Job (
    VolSessionTime INTEGER UNSIGNED DEFAULT 0,
    JobFiles INTEGER UNSIGNED DEFAULT 0,
    JobBytes BIGINT UNSIGNED DEFAULT 0,
+   ReadBytes BIGINT UNSIGNED DEFAULT 0,
    JobErrors INTEGER UNSIGNED DEFAULT 0,
    JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
    PoolId INTEGER UNSIGNED DEFAULT 0 REFERENCES Pool,
@@ -107,6 +108,34 @@ CREATE TABLE Job (
    INDEX (Name(128))
    );
 
+-- Create a table like Job for long term statistics 
+CREATE TABLE JobHisto (
+   JobId INTEGER UNSIGNED NOT NULL,
+   Job TINYBLOB NOT NULL,
+   Name TINYBLOB NOT NULL,
+   Type BINARY(1) NOT NULL,
+   Level BINARY(1) NOT NULL,
+   ClientId INTEGER DEFAULT 0,
+   JobStatus BINARY(1) NOT NULL,
+   SchedTime DATETIME DEFAULT 0,
+   StartTime DATETIME DEFAULT 0,
+   EndTime DATETIME DEFAULT 0,
+   RealEndTime DATETIME DEFAULT 0,
+   JobTDate BIGINT UNSIGNED DEFAULT 0,
+   VolSessionId INTEGER UNSIGNED DEFAULT 0,
+   VolSessionTime INTEGER UNSIGNED DEFAULT 0,
+   JobFiles INTEGER UNSIGNED DEFAULT 0,
+   JobBytes BIGINT UNSIGNED DEFAULT 0,
+   ReadBytes BIGINT UNSIGNED DEFAULT 0,
+   JobErrors INTEGER UNSIGNED DEFAULT 0,
+   JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
+   PoolId INTEGER UNSIGNED DEFAULT 0,
+   FileSetId INTEGER UNSIGNED DEFAULT 0,
+   PriorJobId INTEGER UNSIGNED DEFAULT 0,
+   PurgedFiles TINYINT DEFAULT 0,
+   HasBase TINYINT DEFAULT 0,
+   INDEX (StartTime)
+   );
 
 CREATE TABLE Location (
    LocationId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -129,7 +158,6 @@ CREATE TABLE LocationLog (
 );
 
 
-# 
 CREATE TABLE FileSet (
    FileSetId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
    FileSet TINYBLOB NOT NULL,
@@ -180,6 +208,7 @@ CREATE TABLE Media (
     'Read-Only', 'Disabled', 'Error', 'Busy', 'Used', 'Cleaning') NOT NULL,
    Enabled TINYINT DEFAULT 1,
    Recycle TINYINT DEFAULT 0,
+   ActionOnPurge     TINYINT    DEFAULT 0,
    VolRetention BIGINT UNSIGNED DEFAULT 0,
    VolUseDuration BIGINT UNSIGNED DEFAULT 0,
    MaxVolJobs INTEGER UNSIGNED DEFAULT 0,
@@ -200,12 +229,9 @@ CREATE TABLE Media (
    RecyclePoolId INTEGER UNSIGNED DEFAULT 0 REFERENCES Pool,
    Comment BLOB,
    PRIMARY KEY(MediaId),
+   UNIQUE (VolumeName(128)),
    INDEX (PoolId)
    );
-
-CREATE INDEX inx8 ON Media (PoolId);
-
-
 
 CREATE TABLE Pool (
    PoolId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -222,6 +248,7 @@ CREATE TABLE Pool (
    MaxVolBytes BIGINT UNSIGNED DEFAULT 0,
    AutoPrune TINYINT DEFAULT 0,
    Recycle TINYINT DEFAULT 0,
+   ActionOnPurge     TINYINT    DEFAULT 0,
    PoolType ENUM('Backup', 'Copy', 'Cloned', 'Archive', 'Migration', 'Scratch') NOT NULL,
    LabelType TINYINT DEFAULT 0,
    LabelFormat TINYBLOB,
@@ -240,7 +267,7 @@ CREATE TABLE Pool (
 CREATE TABLE Client (
    ClientId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
    Name TINYBLOB NOT NULL,
-   Uname TINYBLOB NOT NULL,	  /* full uname -a of client */
+   Uname TINYBLOB NOT NULL,       /* full uname -a of client */
    AutoPrune TINYINT DEFAULT 0,
    FileRetention BIGINT UNSIGNED DEFAULT 0,
    JobRetention  BIGINT UNSIGNED DEFAULT 0,
@@ -262,7 +289,7 @@ CREATE TABLE BaseFiles (
    BaseId INTEGER UNSIGNED AUTO_INCREMENT,
    BaseJobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
    JobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
-   FileId INTEGER UNSIGNED NOT NULL REFERENCES File,
+   FileId BIGINT UNSIGNED NOT NULL REFERENCES File,
    FileIndex INTEGER UNSIGNED,
    PRIMARY KEY(BaseId)
    );
@@ -317,11 +344,14 @@ INSERT INTO Status (JobStatus,JobStatusLong) VALUES
    ('c', 'Waiting for client resource'),
    ('d', 'Waiting on maximum jobs'),
    ('t', 'Waiting on start time'),
-   ('p', 'Waiting on higher priority jobs');
+   ('p', 'Waiting on higher priority jobs'),
+   ('i', 'Doing batch insert file records'),
+   ('a', 'SD despooling attributes');
 
 CREATE TABLE Version (
    VersionId INTEGER UNSIGNED NOT NULL 
    );
 
--- Initialize Version		 
-INSERT INTO Version (VersionId) VALUES (10);
+-- Initialize Version            
+INSERT INTO Version (VersionId) VALUES (11);
+

@@ -1,0 +1,64 @@
+#
+# Simple Makefile for building test FD plugins for Bacula
+#
+# Version $Id: Makefile.in 7841 2008-10-19 10:34:03Z kerns $
+#
+@MCOMMON@
+
+
+# No optimization for now for easy debugging
+
+SDDIR=../../stored
+SRCDIR=../..
+LIBDIR=../../lib
+
+.SUFFIXES:    .c .o .lo
+
+.c.o:
+	$(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -I${SRCDIR} -I${SDDIR} -DTEST_PROGRAM -c $<
+
+.c.lo:
+	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -I${SRCDIR} -I${SDDIR} -DTEST_PROGRAM -c $<
+
+all: example-plugin-sd$(DEFAULT_SHARED_OBJECT_TYPE)
+
+test: main example-plugin-sd.so
+
+dir_plugins.o: ${SDDIR}/dir_plugins.h ${SDDIR}/dir_plugins.c
+	$(CXX) -I${SRCDIR} -I${SDDIR} -DTEST_PROGRAM -c ${SDDIR}/dir_plugins.c 
+
+main: dir_plugins.o
+	$(CXX) $(LDFLAGS) -L${LIBDIR} dir_plugins.o -o main -lbac -lpthread -lssl -l crypto -ldl
+
+example-plugin-sd.o: example-plugin-sd.c ${SDDIR}/dir_plugins.h
+	$(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -fPIC -I../.. -I${SDDIR} -c example-plugin-sd.c
+
+example-plugin-sd.so: example-plugin-sd.o 
+	$(CXX) $(LDFLAGS) -shared example-plugin-sd.o -o example-plugin-sd.so
+
+example-plugin-sd.lo: example-plugin-sd.c ${SDDIR}/dir_plugins.h
+	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CFLAGS) -I../.. -I${SDDIR} -c example-plugin-sd.c
+
+example-plugin-sd.la: Makefile example-plugin-sd$(DEFAULT_OBJECT_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -shared example-plugin-sd.lo -o $@ -rpath $(plugindir) -module -export-dynamic -avoid-version
+
+install: all
+	$(MKDIR) $(DESTDIR)$(plugindir)
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) example-plugin-sd$(DEFAULT_SHARED_OBJECT_TYPE) $(DESTDIR)$(plugindir)
+	$(RMF) $(DESTDIR)$(plugindir)/example-plugin-sd.la
+
+libtool-clean:
+	find . -name '*.lo' -print | xargs $(LIBTOOL_CLEAN) $(RMF)
+	$(RMF) *.la
+	$(RMF) -r .libs _libs
+
+clean: @LIBTOOL_CLEAN_TARGET@
+	rm -f main *.so *.o 1 2 3
+
+distclean: clean
+	rm -f Makefile
+
+uninstall:
+	$(RMF) $(DESTDIR)$(plugindir)/example-plugin-sd.so
+
+depend:

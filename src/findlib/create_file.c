@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, November MM
  *
- *   Version $Id: create_file.c 6636 2008-03-19 18:01:45Z kerns $
+ *   Version $Id: create_file.c 7700 2008-10-04 10:50:50Z kerns $
  *
  */
 
@@ -71,7 +71,8 @@ static int path_already_seen(JCR *jcr, char *path, int pnl);
  */
 int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
 {
-   int new_mode, parent_mode, mode;
+   mode_t new_mode, parent_mode;
+   int flags;
    uid_t uid;
    gid_t gid;
    int pnl;
@@ -191,7 +192,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
              * execute bit set (i.e. parent_mode), and preserve what already
              * exists. Normally, this should do nothing.
              */
-            if (make_path(jcr, attr->ofname, parent_mode, parent_mode, uid, gid, 1, NULL) != 0) {
+            if (!makepath(attr, attr->ofname, parent_mode, parent_mode, uid, gid, 1)) {
                Dmsg1(10, "Could not make path. %s\n", attr->ofname);
                attr->ofname[pnl] = savechr;     /* restore full name */
                return CF_ERROR;
@@ -204,23 +205,23 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
       switch(attr->type) {
       case FT_REGE:
       case FT_REG:
-         Dmsg1(100, "Create file %s\n", attr->ofname);
-         mode =  O_WRONLY | O_CREAT | O_TRUNC | O_BINARY; /*  O_NOFOLLOW; */
+         Dmsg1(100, "Create=%s\n", attr->ofname);
+         flags =  O_WRONLY | O_CREAT | O_TRUNC | O_BINARY; /*  O_NOFOLLOW; */
          if (IS_CTG(attr->statp.st_mode)) {
-            mode |= O_CTG;               /* set contiguous bit if needed */
+            flags |= O_CTG;              /* set contiguous bit if needed */
          }
-         Dmsg1(50, "Create file: %s\n", attr->ofname);
          if (is_bopen(bfd)) {
             Qmsg1(jcr, M_ERROR, 0, _("bpkt already open fid=%d\n"), bfd->fid);
             bclose(bfd);
          }
       
 
-         if ((bopen(bfd, attr->ofname, mode, S_IRUSR | S_IWUSR)) < 0) {
+         if ((bopen(bfd, attr->ofname, flags, S_IRUSR | S_IWUSR)) < 0) {
             berrno be;
             be.set_errno(bfd->berrno);
             Qmsg2(jcr, M_ERROR, 0, _("Could not create %s: ERR=%s\n"),
                   attr->ofname, be.bstrerror());
+            Dmsg2(100,"Could not create %s: ERR=%s\n", attr->ofname, be.bstrerror());
             return CF_ERROR;
          }
          return CF_EXTRACT;
@@ -265,19 +266,19 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
          if (attr->type == FT_RAW || attr->type == FT_FIFO) {
             btimer_t *tid;
             Dmsg1(400, "FT_RAW|FT_FIFO %s\n", attr->ofname);
-            mode =  O_WRONLY | O_BINARY;
+            flags =  O_WRONLY | O_BINARY;
             /* Timeout open() in 60 seconds */
             if (attr->type == FT_FIFO) {
                Dmsg0(400, "Set FIFO timer\n");
-               tid = start_thread_timer(pthread_self(), 60);
+               tid = start_thread_timer(jcr, pthread_self(), 60);
             } else {
                tid = NULL;
             }
             if (is_bopen(bfd)) {
                Qmsg1(jcr, M_ERROR, 0, _("bpkt already open fid=%d\n"), bfd->fid);
             }
-            Dmsg2(400, "open %s mode=0x%x\n", attr->ofname, mode);
-            if ((bopen(bfd, attr->ofname, mode, 0)) < 0) {
+            Dmsg2(400, "open %s flags=0x%x\n", attr->ofname, flags);
+            if ((bopen(bfd, attr->ofname, flags, 0)) < 0) {
                berrno be;
                be.set_errno(bfd->berrno);
                Qmsg2(jcr, M_ERROR, 0, _("Could not open %s: ERR=%s\n"),
@@ -327,6 +328,8 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
 #endif /* HAVE_CHFLAGS */
             Qmsg3(jcr, M_ERROR, 0, _("Could not hard link %s -> %s: ERR=%s\n"),
                   attr->ofname, attr->olname, be.bstrerror());
+            Dmsg3(200, "Could not hard link %s -> %s: ERR=%s\n",
+                  attr->ofname, attr->olname, be.bstrerror());
             return CF_ERROR;
 #ifdef HAVE_CHFLAGS
                   }
@@ -357,7 +360,7 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
    case FT_DIRBEGIN:
    case FT_DIREND:
       Dmsg2(200, "Make dir mode=%o dir=%s\n", new_mode, attr->ofname);
-      if (make_path(jcr, attr->ofname, new_mode, parent_mode, uid, gid, 0, NULL) != 0) {
+      if (!makepath(attr, attr->ofname, new_mode, parent_mode, uid, gid, 0)) {
          return CF_ERROR;
       }
       /*
@@ -389,6 +392,9 @@ int create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
          return CF_CREATED;
       }
 
+   case FT_DELETED:
+      Qmsg2(jcr, M_INFO, 0, _("Original file %s have been deleted: type=%d\n"), attr->fname, attr->type);
+      break;
    /* The following should not occur */
    case FT_NOACCESS:
    case FT_NOFOLLOW:

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *              Kern Sibbald, April MMI
  *                added BB02 format October MMII
  *
- *   Version $Id: record.c 6185 2008-01-03 14:08:43Z kerns $
+ *   Version $Id: record.c 8255 2008-12-26 16:49:12Z kerns $
  *
  */
 
@@ -116,6 +116,8 @@ const char *stream_to_ascii(char *buf, int stream, int fi)
        return "PROG-NAMES";
     case STREAM_PROGRAM_DATA:
        return "PROG-DATA";
+    case STREAM_PLUGIN_NAME:
+       return "PLUGIN-NAME";
     case STREAM_MACOS_FORK_DATA:
        return "MACOS-RSRC";
     case STREAM_HFSPLUS_ATTRIBUTES:
@@ -184,6 +186,9 @@ const char *stream_to_ascii(char *buf, int stream, int fi)
        return "contENCRYPTED-WIN32-GZIP";
     case -STREAM_ENCRYPTED_MACOS_FORK_DATA:
        return "contENCRYPTED-MACOS-RSRC";
+    case -STREAM_PLUGIN_NAME:
+       return "contPLUGIN-NAME";
+
     default:
        sprintf(buf, "%d", stream);
        return buf;
@@ -417,6 +422,10 @@ bool can_write_record_to_block(DEV_BLOCK *block, DEV_RECORD *rec)
    return true;
 }
 
+uint64_t get_record_address(DEV_RECORD *rec)
+{
+   return ((uint64_t)rec->File)<<32 | rec->Block;
+}
 
 /*
  * Read a Record from the block
@@ -439,15 +448,14 @@ bool read_record_from_block(DCR *dcr, DEV_BLOCK *block, DEV_RECORD *rec)
    char buf1[100], buf2[100];
 
    remlen = block->binbuf;
-   rec->Block = block->BlockNumber;
-   rec->File = ((DEVICE *)block->dev)->file;
 
    /* Clear state flags */
    rec->state = 0;
    if (block->dev->is_tape()) {
       rec->state |= REC_ISTAPE;
    }
-
+   rec->Block = ((DEVICE *)block->dev)->EndBlock;
+   rec->File = ((DEVICE *)block->dev)->EndFile;
 
    /*
     * Get the header. There is always a full header,

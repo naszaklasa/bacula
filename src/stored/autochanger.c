@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, August MMII
  *                            
- *   Version $Id: autochanger.c 7291 2008-07-02 20:49:44Z kerns $
+ *   Version $Id: autochanger.c 7380 2008-07-14 10:42:59Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -124,6 +124,7 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
 
    /* An empty ChangerCommand => virtual disk autochanger */
    if (dcr->device->changer_command && dcr->device->changer_command[0] == 0) {
+      Dmsg0(100, "ChangerCommand=0, virtual disk changer\n");
       return 1;                       /* nothing to load */
    }
 
@@ -194,7 +195,7 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
          changer = edit_device_codes(dcr, changer, dcr->device->changer_command, "load");
          dev->close();
          Dmsg1(200, "Run program=%s\n", changer);
-         status = run_program_full_output(changer, timeout, results.c_str());
+         status = run_program_full_output(changer, timeout, results.addr());
          if (status == 0) {
             Jmsg(jcr, M_INFO, 0, _("3305 Autochanger \"load slot %d, drive %d\", status is OK.\n"),
                     slot, drive);
@@ -203,8 +204,8 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
          } else {
             berrno be;
             be.set_errno(status);
-            Dmsg4(100, "load slot %d, drive %d, ERR=%s Result=%s\n", slot, drive,
-               be.bstrerror(), results.c_str());
+            Dmsg3(100, "load slot %d, drive %d, bad stats=%s.\n", slot, drive,
+               be.bstrerror());
             Jmsg(jcr, M_FATAL, 0, _("3992 Bad autochanger \"load slot %d, drive %d\": "
                  "ERR=%s.\nResults=%s\n"),
                     slot, drive, be.bstrerror(), results.c_str());
@@ -270,7 +271,7 @@ int get_autochanger_loaded_slot(DCR *dcr)
         drive);
    changer = edit_device_codes(dcr, changer, dcr->device->changer_command, "loaded");
    Dmsg1(100, "Run program=%s\n", changer);
-   status = run_program_full_output(changer, timeout, results.c_str());
+   status = run_program_full_output(changer, timeout, results.addr());
    Dmsg3(100, "run_prog: %s stat=%d result=%s", changer, status, results.c_str());
    if (status == 0) {
       loaded = str_to_int32(results.c_str());
@@ -359,7 +360,7 @@ bool unload_autochanger(DCR *dcr, int loaded)
                    dcr->device->changer_command, "unload");
       dev->close();
       Dmsg1(100, "Run program=%s\n", changer);
-      int stat = run_program_full_output(changer, timeout, results.c_str());
+      int stat = run_program_full_output(changer, timeout, results.addr());
       dcr->VolCatInfo.Slot = slot;
       if (stat != 0) {
          berrno be;
@@ -480,7 +481,7 @@ bool unload_dev(DCR *dcr, DEVICE *dev)
    Dmsg2(200, "close dev=%s reserve=%d\n", dev->print_name(), 
       dev->num_reserved());
    Dmsg1(100, "Run program=%s\n", changer_cmd);
-   int stat = run_program_full_output(changer_cmd, timeout, results.c_str());
+   int stat = run_program_full_output(changer_cmd, timeout, results.addr());
    dcr->VolCatInfo.Slot = save_slot;
    dcr->dev = save_dev;
    if (stat != 0) {

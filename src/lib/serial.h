@@ -1,13 +1,7 @@
 /*
- *
- * Written by John Walker, MM
- *
- *   Version $Id: serial.h 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,11 +20,17 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark ofJohn Walker.
+   Bacula® is a registered trademark ofKern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ * Written by John Walker, MM
+ *
+ *   Version $Id: serial.h 8087 2008-11-26 14:11:19Z kerns $
+ */
 
 /*  Serialisation support functions from serial.c.  */
 
@@ -76,8 +76,8 @@ extern void unserial_string(uint8_t * * const ptr, char * const str);
 
 /*  ser_length  --  Determine length in bytes of serialised into a
                     buffer x.  */
-#define ser_length(x)  (ser_ptr - (uint8_t *)(x))
-#define unser_length(x)  (ser_ptr - (uint8_t *)(x))
+#define ser_length(x)  ((uint32_t)(ser_ptr - (uint8_t *)(x)))
+#define unser_length(x) ((uint32_t)(ser_ptr - (uint8_t *)(x)))
 
 /*  ser_end(x, s)  --  End serialisation into a buffer x of size s.  */
 #define ser_end(x, s)   ASSERT(ser_length(x) <= (s))

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,13 +20,13 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: berrno.h 5269 2007-07-31 12:10:32Z kerns $
+ *   Version $Id: berrno.h 8348 2009-01-09 18:18:53Z kerns $
  *
  * Kern Sibbald, July MMIV
  *
@@ -75,9 +75,7 @@ inline berrno::berrno(int pool)
 {
    m_berrno = errno;
    m_buf = get_pool_memory(pool);
-#ifdef HAVE_WIN32
-   format_win32_message();
-#endif
+   *m_buf = 0;
    errno = m_berrno;
 }
 

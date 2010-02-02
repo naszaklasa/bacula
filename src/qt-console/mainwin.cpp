@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,14 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 
 /*
- *   Version $Id: mainwin.cpp 7475 2008-08-14 07:21:08Z kerns $
+ *   Version $Id: mainwin.cpp 9054 2009-07-18 21:03:34Z kerns $
  *
  *  Main Window control for bat (qt-console)
  *
@@ -53,6 +53,8 @@
 #ifdef HAVE_QWT
 #include "jobgraphs/jobplot.h"
 #endif
+#include "status/dirstat.h"
+#include "util/fmtwidgetitem.h"
 
 /* 
  * Daemon message callback
@@ -64,7 +66,11 @@ void message_callback(int /* type */, char *msg)
 
 MainWin::MainWin(QWidget *parent) : QMainWindow(parent)
 {
+   app->setOverrideCursor(QCursor(Qt::WaitCursor));
    m_isClosing = false;
+   m_waitState = false;
+   m_doConnect = false;
+   m_treeStackTrap = false;
    m_dtformat = "yyyy-MM-dd HH:mm:ss";
    mainWin = this;
    setupUi(this);                     /* Setup UI defined by main.ui (designer) */
@@ -72,29 +78,42 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent)
    readPreferences();
    treeWidget->clear();
    treeWidget->setColumnCount(1);
-   treeWidget->setHeaderLabel("Select Page");
+   treeWidget->setHeaderLabel( tr("Select Page") );
    treeWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
 
    createPages();
 
-   resetFocus();
+   resetFocus(); /* lineEdit->setFocus() */
 
-   createConnections();
+#ifndef HAVE_QWT
+   actionJobPlot->setEnabled(false);
+   actionJobPlot->setVisible(false);
+#endif
 
    this->show();
 
    readSettings();
 
-   foreach(Console *console, m_consoleHash) {
+   foreach(Console *console, m_consoleHash)
       console->connect_dir();
-   }
    m_currentConsole = (Console*)getFromHash(m_firstItem);
-   m_currentConsole->setCurrent();
+   QTimer::singleShot(750, this, SLOT(popLists()));
    if (m_miscDebug) {
       QString directoryResourceName;
       m_currentConsole->getDirResName(directoryResourceName);
-      Pmsg1(000, "Setting initial window to %s\n", directoryResourceName.toUtf8().data());
+      Pmsg1(100, "Setting initial window to %s\n", directoryResourceName.toUtf8().data());
    }
+}
+
+void MainWin::popLists()
+{
+   foreach(Console *console, m_consoleHash)
+      console->populateLists(true);
+   app->restoreOverrideCursor();
+   m_doConnect = true;
+   connectConsoleSignals();
+   connectSignals();
+   m_currentConsole->setCurrent();
 }
 
 void MainWin::createPages()
@@ -123,7 +142,7 @@ void MainWin::createPages()
 
       /* Create Tree Widget Item */
       item = new QTreeWidgetItem(topItem);
-      item->setText(0, "Console");
+      item->setText(0, tr("Console"));
       if (!m_firstItem){ m_firstItem = item; }
       item->setIcon(0,QIcon(QString::fromUtf8(":images/utilities-terminal.png")));
 
@@ -146,15 +165,18 @@ void MainWin::createPages()
       new FileSet();
       new Jobs();
       createPageJobList("", "", "", "", NULL);
-
 #ifdef HAVE_QWT
       JobPlotPass pass;
       pass.use = false;
-      new JobPlot(NULL, pass);
+      if (m_openPlot)
+         new JobPlot(NULL, pass);
 #endif
       new MediaList();
       new Storage();
-      new restoreTree();
+      if (m_openBrowser)
+         new restoreTree();
+      if (m_openDirStat)
+         new DirStat();
 
       treeWidget->expandItem(topItem);
       stackedWidget->setCurrentWidget(m_currentConsole);
@@ -220,24 +242,21 @@ void MainWin::keyPressEvent(QKeyEvent *event)
    lineEdit->setText(m_cmd_history[m_cmd_last]);
 }
 
-void MainWin::createConnections()
+void MainWin::connectSignals()
 {
    /* Connect signals to slots */
    connect(lineEdit, SIGNAL(returnPressed()), this, SLOT(input_line()));
    connect(actionAbout_bat, SIGNAL(triggered()), this, SLOT(about()));
    connect(actionBat_Help, SIGNAL(triggered()), this, SLOT(help()));
-   connect(treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, 
-           SLOT(treeItemClicked(QTreeWidgetItem *, int)));
-   connect(treeWidget, SIGNAL(
-           currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)),
-           this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
-   connect(stackedWidget, SIGNAL(currentChanged(int)),
-           this, SLOT(stackItemChanged(int)));
+   connect(treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(treeItemClicked(QTreeWidgetItem *, int)));
+   connect(treeWidget, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
+   connect(stackedWidget, SIGNAL(currentChanged(int)), this, SLOT(stackItemChanged(int)));
    connect(actionQuit, SIGNAL(triggered()), app, SLOT(closeAllWindows()));
    connect(actionLabel, SIGNAL(triggered()), this,  SLOT(labelButtonClicked()));
    connect(actionRun, SIGNAL(triggered()), this,  SLOT(runButtonClicked()));
    connect(actionEstimate, SIGNAL(triggered()), this,  SLOT(estimateButtonClicked()));
    connect(actionBrowse, SIGNAL(triggered()), this,  SLOT(browseButtonClicked()));
+   connect(actionStatusDirPage, SIGNAL(triggered()), this,  SLOT(statusPageButtonClicked()));
 #ifdef HAVE_QWT
    connect(actionJobPlot, SIGNAL(triggered()), this,  SLOT(jobPlotButtonClicked()));
 #endif
@@ -246,6 +265,100 @@ void MainWin::createConnections()
    connect(actionToggleDock, SIGNAL(triggered()), this,  SLOT(toggleDockContextWindow()));
    connect(actionClosePage, SIGNAL(triggered()), this,  SLOT(closePage()));
    connect(actionPreferences, SIGNAL(triggered()), this,  SLOT(setPreferences()));
+   connect(actionRepopLists, SIGNAL(triggered()), this,  SLOT(repopLists()));
+   connect(actionReloadRepop, SIGNAL(triggered()), this,  SLOT(reloadRepopLists()));
+}
+
+void MainWin::disconnectSignals()
+{
+   /* Connect signals to slots */
+   disconnect(lineEdit, SIGNAL(returnPressed()), this, SLOT(input_line()));
+   disconnect(actionAbout_bat, SIGNAL(triggered()), this, SLOT(about()));
+   disconnect(actionBat_Help, SIGNAL(triggered()), this, SLOT(help()));
+   disconnect(treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(treeItemClicked(QTreeWidgetItem *, int)));
+   disconnect(treeWidget, SIGNAL( currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
+   disconnect(stackedWidget, SIGNAL(currentChanged(int)), this, SLOT(stackItemChanged(int)));
+   disconnect(actionQuit, SIGNAL(triggered()), app, SLOT(closeAllWindows()));
+   disconnect(actionLabel, SIGNAL(triggered()), this,  SLOT(labelButtonClicked()));
+   disconnect(actionRun, SIGNAL(triggered()), this,  SLOT(runButtonClicked()));
+   disconnect(actionEstimate, SIGNAL(triggered()), this,  SLOT(estimateButtonClicked()));
+   disconnect(actionBrowse, SIGNAL(triggered()), this,  SLOT(browseButtonClicked()));
+   disconnect(actionStatusDirPage, SIGNAL(triggered()), this,  SLOT(statusPageButtonClicked()));
+#ifdef HAVE_QWT
+   disconnect(actionJobPlot, SIGNAL(triggered()), this,  SLOT(jobPlotButtonClicked()));
+#endif
+   disconnect(actionRestore, SIGNAL(triggered()), this,  SLOT(restoreButtonClicked()));
+   disconnect(actionUndock, SIGNAL(triggered()), this,  SLOT(undockWindowButton()));
+   disconnect(actionToggleDock, SIGNAL(triggered()), this,  SLOT(toggleDockContextWindow()));
+   disconnect(actionClosePage, SIGNAL(triggered()), this,  SLOT(closePage()));
+   disconnect(actionPreferences, SIGNAL(triggered()), this,  SLOT(setPreferences()));
+   disconnect(actionRepopLists, SIGNAL(triggered()), this,  SLOT(repopLists()));
+   disconnect(actionReloadRepop, SIGNAL(triggered()), this,  SLOT(reloadRepopLists()));
+}
+
+/*
+ *  Enter wait state
+ */
+void MainWin::waitEnter()
+{
+   if (m_waitState){ 
+      if (mainWin->m_connDebug)
+         Pmsg0(000, "Should Never Get Here DANGER DANGER, for now I'll return\n");
+      return;
+   }
+   m_waitState = true;
+   if (mainWin->m_connDebug)
+      Pmsg0(000, "Entering Wait State\n");
+   app->setOverrideCursor(QCursor(Qt::WaitCursor));
+   disconnectSignals();
+   disconnectConsoleSignals(m_currentConsole);
+   m_waitTreeItem = treeWidget->currentItem();
+}
+
+/*
+ *  Leave wait state
+ */
+void MainWin::waitExit()
+{
+   m_waitState = false;
+   if (mainWin->m_connDebug) Pmsg0(000, "Exiting Wait State\n");
+   app->restoreOverrideCursor();
+   if (m_waitTreeItem != treeWidget->currentItem())
+      treeWidget->setCurrentItem(m_waitTreeItem);
+   if (m_doConnect) {
+      connectSignals();
+      connectConsoleSignals();
+   }
+}
+
+void MainWin::connectConsoleSignals()
+{
+   connect(actionConnect, SIGNAL(triggered()), m_currentConsole, SLOT(connect_dir()));
+   connect(actionSelectFont, SIGNAL(triggered()), m_currentConsole, SLOT(set_font()));
+   connect(actionMessages, SIGNAL(triggered()), m_currentConsole, SLOT(messages()));
+}
+
+void MainWin::disconnectConsoleSignals(Console *console)
+{
+   disconnect(actionConnect, SIGNAL(triggered()), console, SLOT(connect_dir()));
+   disconnect(actionMessages, SIGNAL(triggered()), console, SLOT(messages()));
+   disconnect(actionSelectFont, SIGNAL(triggered()), console, SLOT(set_font()));
+}
+
+
+/* 
+ * Two functions to respond to menu items to repop lists and execute reload and repopulate
+ * the lists for jobs, clients, filesets .. ..
+ */
+void MainWin::repopLists()
+{
+   m_currentConsole->populateLists(false);
+}
+void MainWin::reloadRepopLists()
+{
+   QString cmd = "reload";
+   m_currentConsole->consoleCommand(cmd);
+   m_currentConsole->populateLists(false);
 }
 
 /* 
@@ -255,6 +368,13 @@ void MainWin::closeEvent(QCloseEvent *event)
 {
    m_isClosing = true;
    writeSettings();
+   /* Remove all groups from settings for OpenOnExit so that we can start some of the status windows */
+   foreach(Console *console, m_consoleHash){
+      QSettings settings(console->m_dir->name(), "bat");
+      settings.beginGroup("OpenOnExit");
+      settings.remove("");
+      settings.endGroup();
+   }
    /* close all non console pages, this will call settings in destructors */
    while (m_consoleHash.count() < m_pagehash.count()) {
       foreach(Pages *page, m_pagehash) {
@@ -284,6 +404,7 @@ void MainWin::writeSettings()
    settings.setValue("winPos", pos());
    settings.setValue("state", saveState());
    settings.endGroup();
+
 }
 
 void MainWin::readSettings()
@@ -354,6 +475,9 @@ void MainWin::treeItemChanged(QTreeWidgetItem *currentitem, QTreeWidgetItem *pre
 
    /* this condition prevents a segfault.  The first time there is no previousitem*/
    if (previousitem) {
+      if (m_treeStackTrap == false) { /* keep track of previous items for going Back */
+         m_treeWidgetStack.append(previousitem);
+      }
       /* knowing the treeWidgetItem, get the page from the hash */
       previousPage = getFromHash(previousitem);
       previousConsole = m_consoleHash.value(previousitem);
@@ -365,10 +489,7 @@ void MainWin::treeItemChanged(QTreeWidgetItem *currentitem, QTreeWidgetItem *pre
       if ((previousPage) || (previousConsole)) {
          if (nextConsole != previousConsole) {
             /* remove connections to the current console */
-            disconnect(actionConnect, SIGNAL(triggered()), previousConsole, SLOT(connect_dir()));
-            disconnect(actionStatusDir, SIGNAL(triggered()), previousConsole, SLOT(status_dir()));
-            disconnect(actionMessages, SIGNAL(triggered()), previousConsole, SLOT(messages()));
-            disconnect(actionSelectFont, SIGNAL(triggered()), previousConsole, SLOT(set_font()));
+            disconnectConsoleSignals(previousConsole);
             QTreeWidgetItem *dirItem = previousConsole->directorTreeItem();
             QBrush greyBrush(Qt::lightGray);
             dirItem->setBackground(0, greyBrush);
@@ -382,10 +503,8 @@ void MainWin::treeItemChanged(QTreeWidgetItem *currentitem, QTreeWidgetItem *pre
       if (nextConsole != previousConsole) {
          /* make connections to the current console */
          m_currentConsole = nextConsole;
-         connect(actionConnect, SIGNAL(triggered()), m_currentConsole, SLOT(connect_dir()));
-         connect(actionSelectFont, SIGNAL(triggered()), m_currentConsole, SLOT(set_font()));
-         connect(actionStatusDir, SIGNAL(triggered()), m_currentConsole, SLOT(status_dir()));
-         connect(actionMessages, SIGNAL(triggered()), m_currentConsole, SLOT(messages()));
+         connectConsoleSignals();
+         setMessageIcon();
          /* Set director's tree widget background to magenta for ease of identification */
          QTreeWidgetItem *dirItem = m_currentConsole->directorTreeItem();
          QBrush magentaBrush(Qt::magenta);
@@ -436,6 +555,22 @@ void MainWin::browseButtonClicked()
    new restoreTree();
 }
 
+void MainWin::statusPageButtonClicked()
+{
+   /* if one exists, then just set it current */
+   bool found = false;
+   foreach(Pages *page, m_pagehash) {
+      if (m_currentConsole == page->console()) {
+         if (page->name() == tr("Director Status")) {
+            found = true;
+            page->setCurrent();
+         }
+      }
+   }
+   if (!found)
+      new DirStat();
+}
+
 void MainWin::restoreButtonClicked() 
 {
    new prerestorePage();
@@ -455,13 +590,18 @@ void MainWin::jobPlotButtonClicked()
  */
 void MainWin::input_line()
 {
+   int conn;
    QString cmdStr = lineEdit->text();    /* Get the text */
    lineEdit->clear();                    /* clear the lineEdit box */
    if (m_currentConsole->is_connected()) {
-      /* Use consoleInput to allow typing anything */
-      m_currentConsole->consoleInput(cmdStr);
+      if (m_currentConsole->currentDirComm(conn)) {
+         m_currentConsole->consoleCommand(cmdStr, conn);
+      } else {
+         /* Use consoleCommand to allow typing anything */
+         m_currentConsole->consoleCommand(cmdStr);
+      }
    } else {
-      set_status("Director not connected. Click on connect button.");
+      set_status(tr("Director not connected. Click on connect button."));
    }
    m_cmd_history.append(cmdStr);
    m_cmd_last = -1;
@@ -473,10 +613,10 @@ void MainWin::input_line()
 void MainWin::about()
 {
    QMessageBox::about(this, tr("About bat"),
-      tr("<br><h2>bat " VERSION " (" BDATE "), by Dirk H Bartley and Kern Sibbald</h2>"
-         "<p>Copyright &copy; 2007-" BYEAR " Free Software Foundation Europe e.V."
+      tr("<br><h2>bat %1 (%2), by Dirk H Bartley and Kern Sibbald</h2>"
+         "<p>Copyright &copy; 2007-%3 Free Software Foundation Europe e.V."
          "<p>The <b>bat</b> is an administrative console"
-         " interface to the Director."));
+         " interface to the Director.").arg(VERSION).arg(BDATE).arg(BYEAR));
 }
 
 void MainWin::help()
@@ -497,7 +637,7 @@ void MainWin::set_statusf(const char *fmt, ...)
 
 void MainWin::set_status_ready()
 {
-   set_status(" Ready");
+   set_status(tr(" Ready"));
 }
 
 void MainWin::set_status(const QString &str)
@@ -612,6 +752,7 @@ Console *MainWin::currentConsole()
 {
    return m_currentConsole;
 }
+
 /* Quick function to return the tree item for the director */
 QTreeWidgetItem *MainWin::currentTopItem()
 {
@@ -623,6 +764,7 @@ void MainWin::setPreferences()
 {
    prefsDialog prefs;
    prefs.commDebug->setCheckState(m_commDebug ? Qt::Checked : Qt::Unchecked);
+   prefs.connDebug->setCheckState(m_connDebug ? Qt::Checked : Qt::Unchecked);
    prefs.displayAll->setCheckState(m_displayAll ? Qt::Checked : Qt::Unchecked);
    prefs.sqlDebug->setCheckState(m_sqlDebug ? Qt::Checked : Qt::Unchecked);
    prefs.commandDebug->setCheckState(m_commandDebug ? Qt::Checked : Qt::Unchecked);
@@ -646,6 +788,23 @@ void MainWin::setPreferences()
    prefs.rtRestore1CheckBox->setCheckState(m_rtRestore1Debug ? Qt::Checked : Qt::Unchecked);
    prefs.rtRestore2CheckBox->setCheckState(m_rtRestore2Debug ? Qt::Checked : Qt::Unchecked);
    prefs.rtRestore3CheckBox->setCheckState(m_rtRestore3Debug ? Qt::Checked : Qt::Unchecked);
+   switch (ItemFormatterBase::getBytesConversion()) {
+   case ItemFormatterBase::BYTES_CONVERSION_NONE:
+      prefs.radioConvertOff->setChecked(Qt::Checked);
+      break;
+   case ItemFormatterBase::BYTES_CONVERSION_IEC:
+      prefs.radioConvertIEC->setChecked(Qt::Checked);
+      break;
+   default:
+      prefs.radioConvertStandard->setChecked(Qt::Checked);
+      break;
+   }
+   prefs.openPlotCheckBox->setCheckState(m_openPlot ? Qt::Checked : Qt::Unchecked);
+#ifndef HAVE_QWT
+   prefs.openPlotCheckBox->setVisible(false);
+#endif
+   prefs.openBrowserCheckBox->setCheckState(m_openBrowser ? Qt::Checked : Qt::Unchecked);
+   prefs.openDirStatCheckBox->setCheckState(m_openDirStat ? Qt::Checked : Qt::Unchecked);
    prefs.exec();
 }
 
@@ -659,6 +818,7 @@ void prefsDialog::accept()
 {
    this->hide();
    mainWin->m_commDebug = this->commDebug->checkState() == Qt::Checked;
+   mainWin->m_connDebug = this->connDebug->checkState() == Qt::Checked;
    mainWin->m_displayAll = this->displayAll->checkState() == Qt::Checked;
    mainWin->m_sqlDebug = this->sqlDebug->checkState() == Qt::Checked;
    mainWin->m_commandDebug = this->commandDebug->checkState() == Qt::Checked;
@@ -683,10 +843,21 @@ void prefsDialog::accept()
    mainWin->m_rtRestore1Debug = this->rtRestore1CheckBox->checkState() == Qt::Checked;
    mainWin->m_rtRestore2Debug = this->rtRestore2CheckBox->checkState() == Qt::Checked;
    mainWin->m_rtRestore3Debug = this->rtRestore3CheckBox->checkState() == Qt::Checked;
+   if (this->radioConvertOff->isChecked()) {
+      ItemFormatterBase::setBytesConversion(ItemFormatterBase::BYTES_CONVERSION_NONE);
+   } else if (this->radioConvertIEC->isChecked()){
+      ItemFormatterBase::setBytesConversion(ItemFormatterBase::BYTES_CONVERSION_IEC);
+   } else {
+      ItemFormatterBase::setBytesConversion(ItemFormatterBase::BYTES_CONVERSION_SI);
+   }
+   mainWin->m_openPlot = this->openPlotCheckBox->checkState() == Qt::Checked;
+   mainWin->m_openBrowser = this->openBrowserCheckBox->checkState() == Qt::Checked;
+   mainWin->m_openDirStat = this->openDirStatCheckBox->checkState() == Qt::Checked;
 
    QSettings settings("www.bacula.org", "bat");
    settings.beginGroup("Debug");
    settings.setValue("commDebug", mainWin->m_commDebug);
+   settings.setValue("connDebug", mainWin->m_connDebug);
    settings.setValue("displayAll", mainWin->m_displayAll);
    settings.setValue("sqlDebug", mainWin->m_sqlDebug);
    settings.setValue("commandDebug", mainWin->m_commandDebug);
@@ -698,12 +869,16 @@ void prefsDialog::accept()
    settings.setValue("daysLimitCheck", mainWin->m_daysLimitCheck);
    settings.setValue("daysLimitVal", mainWin->m_daysLimitVal);
    settings.endGroup();
-   settings.beginGroup("Messages");
+   settings.beginGroup("Timers");
    settings.setValue("checkMessages", mainWin->m_checkMessages);
    settings.setValue("checkMessagesInterval", mainWin->m_checkMessagesInterval);
    settings.endGroup();
    settings.beginGroup("Misc");
    settings.setValue("longList", mainWin->m_longList);
+   settings.setValue("byteConvert", ItemFormatterBase::getBytesConversion());
+   settings.setValue("openplot", mainWin->m_openPlot);
+   settings.setValue("openbrowser", mainWin->m_openBrowser);
+   settings.setValue("opendirstat", mainWin->m_openDirStat);
    settings.endGroup();
    settings.beginGroup("RestoreTree");
    settings.setValue("rtPopDirDebug", mainWin->m_rtPopDirDebug);
@@ -719,15 +894,12 @@ void prefsDialog::accept()
    settings.setValue("rtRestore2Debug", mainWin->m_rtRestore2Debug);
    settings.setValue("rtRestore3Debug", mainWin->m_rtRestore3Debug);
    settings.endGroup();
-   foreach(Console *console, mainWin->m_consoleHash) {
-      console->startTimer();
-   }
 }
 
 void prefsDialog::reject()
 {
    this->hide();
-   mainWin->set_status("Canceled");
+   mainWin->set_status(tr("Canceled"));
 }
 
 /* read preferences for the prefences dialog box */
@@ -736,6 +908,7 @@ void MainWin::readPreferences()
    QSettings settings("www.bacula.org", "bat");
    settings.beginGroup("Debug");
    m_commDebug = settings.value("commDebug", false).toBool();
+   m_connDebug = settings.value("connDebug", false).toBool();
    m_displayAll = settings.value("displayAll", false).toBool();
    m_sqlDebug = settings.value("sqlDebug", false).toBool();
    m_commandDebug = settings.value("commandDebug", false).toBool();
@@ -747,12 +920,18 @@ void MainWin::readPreferences()
    m_daysLimitCheck = settings.value("daysLimitCheck", false).toBool();
    m_daysLimitVal = settings.value("daysLimitVal", 28).toInt();
    settings.endGroup();
-   settings.beginGroup("Messages");
+   settings.beginGroup("Timers");
    m_checkMessages = settings.value("checkMessages", false).toBool();
    m_checkMessagesInterval = settings.value("checkMessagesInterval", 28).toInt();
    settings.endGroup();
    settings.beginGroup("Misc");
    m_longList = settings.value("longList", false).toBool();
+   ItemFormatterBase::setBytesConversion(
+         (ItemFormatterBase::BYTES_CONVERSION) settings.value("byteConvert", 
+         ItemFormatterBase::BYTES_CONVERSION_IEC).toInt());
+   m_openPlot = settings.value("openplot", false).toBool();
+   m_openBrowser = settings.value("openbrowser", false).toBool();
+   m_openDirStat = settings.value("opendirstat", false).toBool();
    settings.endGroup();
    settings.beginGroup("RestoreTree");
    m_rtPopDirDebug = settings.value("rtPopDirDebug", false).toBool();
@@ -768,4 +947,39 @@ void MainWin::readPreferences()
    m_rtRestore2Debug = settings.value("rtRestore2Debug", false).toBool();
    m_rtRestore3Debug = settings.value("rtRestore3Debug", false).toBool();
    settings.endGroup();
+}
+
+void MainWin::setMessageIcon()
+{
+   if (m_currentConsole->is_messagesPending())
+      actionMessages->setIcon(QIcon(QString::fromUtf8(":/images/mail-message-pending.png")));
+   else
+      actionMessages->setIcon(QIcon(QString::fromUtf8(":/images/mail-message-new.png")));
+}
+
+void MainWin::goToPreviousPage()
+{
+   m_treeStackTrap = true;
+   bool done = false;
+   while (!done) {
+      /* If stack list is emtpty, then done */
+      if (m_treeWidgetStack.isEmpty()) {
+         done = true;
+      } else {
+         QTreeWidgetItem* testItem = m_treeWidgetStack.takeLast();
+         QTreeWidgetItemIterator it(treeWidget);
+         /* lets avoid a segfault by setting an item current that no longer exists */
+         while (*it) {
+            if (*it == testItem) {
+               if (testItem != treeWidget->currentItem()) {
+                  treeWidget->setCurrentItem(testItem);
+                  done = true;
+               }
+               break;
+            }
+            ++it;
+         }
+      }
+   }
+   m_treeStackTrap = false;
 }

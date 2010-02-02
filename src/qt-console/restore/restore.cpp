@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,14 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
  
 /*
- *   Version $Id: restore.cpp 7314 2008-07-05 12:30:27Z kerns $
+ *   Version $Id: restore.cpp 8870 2009-05-28 12:17:28Z bartleyd2 $
  *
  *  Restore Class 
  *
@@ -38,8 +38,12 @@
 #include "bat.h"
 #include "restore.h"
 
-restorePage::restorePage()
+static const int dbglvl = 100;
+
+restorePage::restorePage(int conn)
 {
+   Dmsg1(dbglvl, "Construcing restorePage Instance connection %i\n", conn);
+   m_conn = conn;
    QStringList titles;
 
    setupUi(this);
@@ -48,7 +52,7 @@ restorePage::restorePage()
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/restore.png")));
 
-   m_console->notify(false);          /* this should already be off */
+   m_console->notify(m_conn, false);          /* this should already be off */
    m_closeable = true;
 
    connect(fileWidget, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), 
@@ -69,7 +73,7 @@ restorePage::restorePage()
    connect(actionUnMark, SIGNAL(triggered()), this, SLOT(unmarkButtonPushed()));
 
    setFont(m_console->get_font());
-   m_console->displayToPrompt();
+   m_console->displayToPrompt(m_conn);
 
    titles << tr("Mark") << tr("File") << tr("Mode") << tr("User") 
           << tr("Group") << tr("Size") << tr("Date");
@@ -78,6 +82,9 @@ restorePage::restorePage()
    get_cwd();
 
    readSettings();
+   /* wait was entered from pre-restore 
+    * will exit, but will reenter in fillDirectory */
+   mainWin->waitExit();
    fillDirectory();
    dockPage();
    setCurrent();
@@ -94,6 +101,7 @@ restorePage::~restorePage()
  */
 void restorePage::fillDirectory()
 {
+   mainWin->waitEnter();
    char modes[20], user[20], group[20], size[20], date[30];
    char marked[10];
    int pnl, fnl;
@@ -101,15 +109,19 @@ void restorePage::fillDirectory()
    POOLMEM *path = get_pool_memory(PM_FNAME);
 
    fileWidget->clear();
-   m_console->write_dir("dir");
+   m_console->write_dir(m_conn, "dir", false);
    QList<QTreeWidgetItem *> treeItemList;
    QStringList item;
-   while (m_console->read() > 0) {
-      char *p = m_console->msg();
+   m_rx.setPattern("has no children\\.$");
+   bool first = true;
+   while (m_console->read(m_conn) > 0) {
+      char *p = m_console->msg(m_conn);
       char *l;
       strip_trailing_junk(p);
-      if (*p == '$' || !*p) {
-         continue;
+      if (*p == '$' || !*p) { continue; }
+      if (first) {
+         if (m_rx.indexIn(QString(p)) != -1) { continue; }
+         first = false;
       }
       l = p;
       skip_nonspaces(&p);             /* permissions */
@@ -172,6 +184,7 @@ void restorePage::fillDirectory()
 
    free_pool_memory(file);
    free_pool_memory(path);
+   mainWin->waitExit();
 }
 
 /*
@@ -190,13 +203,13 @@ void restorePage::addDirectory(QString &newdirr)
                     .arg(m_cwd)
                     .arg(newdir)
                     .arg(fullpath);
-      Pmsg0(000, msg.toUtf8().data());
+      Pmsg0(dbglvl, msg.toUtf8().data());
    }
 
    if (isWin32Path(newdir)) {
       /* this is a windows drive */
       if (mainWin->m_miscDebug) {
-         Pmsg0(000, "Found windows drive\n");
+         Pmsg0(dbglvl, "Found windows drive\n");
       }
       windrive = true;
    }
@@ -211,7 +224,7 @@ void restorePage::addDirectory(QString &newdirr)
          item->setIcon(0,QIcon(QString::fromUtf8(":images/folder.png")));
          item->setText(0, fullpath.toUtf8().data());
          if (mainWin->m_miscDebug) {
-            Pmsg1(000, "Pre Inserting %s\n",fullpath.toUtf8().data());
+            Pmsg1(dbglvl, "Pre Inserting %s\n",fullpath.toUtf8().data());
          }
          m_dirPaths.insert(fullpath, item);
          m_dirTreeItems.insert(item, fullpath);
@@ -226,7 +239,7 @@ void restorePage::addDirectory(QString &newdirr)
          QString text("/");
          item->setText(0, text.toUtf8().data());
          if (mainWin->m_miscDebug) {
-            Pmsg1(000, "Pre Inserting %s\n",text.toUtf8().data());
+            Pmsg1(dbglvl, "Pre Inserting %s\n",text.toUtf8().data());
          }
          m_dirPaths.insert(text, item);
          m_dirTreeItems.insert(item, text);
@@ -255,14 +268,14 @@ void restorePage::addDirectory(QString &newdirr)
                QString msg = QString(tr("In else of if parent cwd \"%1\" newdir \"%2\"\n"))
                     .arg(m_cwd)
                     .arg(newdir);
-               Pmsg0(000, msg.toUtf8().data());
+               Pmsg0(dbglvl, msg.toUtf8().data());
             }
          }
       }
       /* insert into both forward and reverse hash */
       if (ok) {
          if (mainWin->m_miscDebug) {
-            Pmsg1(000, "Inserting %s\n",fullpath.toUtf8().data());
+            Pmsg1(dbglvl, "Inserting %s\n",fullpath.toUtf8().data());
          }
          m_dirPaths.insert(fullpath, item);
          m_dirTreeItems.insert(item, fullpath);
@@ -287,10 +300,9 @@ void restorePage::directoryItemChanged(QTreeWidgetItem *currentitem,
 
 void restorePage::okButtonPushed()
 {
-// printf("In restorePage::okButtonPushed\n");
    this->hide();
-   m_console->write("done");
-   m_console->notify(true);
+   m_console->write(m_conn, "done");
+   m_console->notify(m_conn, true);
    setConsoleCurrent();
    closeStackPage();
    mainWin->resetFocus();
@@ -300,11 +312,11 @@ void restorePage::okButtonPushed()
 void restorePage::cancelButtonPushed()
 {
    this->hide();
-   m_console->write("quit");
-   m_console->displayToPrompt();
+   m_console->write(m_conn, "quit");
+   m_console->displayToPrompt(m_conn);
    mainWin->set_status(tr("Canceled"));
    closeStackPage();
-   m_console->notify(true);
+   m_console->notify(m_conn, true);
    mainWin->resetFocus();
 }
 
@@ -313,6 +325,7 @@ void restorePage::fileDoubleClicked(QTreeWidgetItem *item, int column)
    char cmd[1000];
    statusLine->setText("");
    if (column == 0) {                 /* mark/unmark */
+      mainWin->waitEnter();
       if (item->data(0, Qt::UserRole).toBool()) {
          bsnprintf(cmd, sizeof(cmd), "unmark \"%s\"", item->text(1).toUtf8().data());
          item->setIcon(0, QIcon(QString::fromUtf8(":images/unchecked.png")));
@@ -322,12 +335,13 @@ void restorePage::fileDoubleClicked(QTreeWidgetItem *item, int column)
          item->setIcon(0, QIcon(QString::fromUtf8(":images/check.png")));
          item->setData(0, Qt::UserRole, true);
       }
-      m_console->write_dir(cmd);
-      if (m_console->read() > 0) {
-         strip_trailing_junk(m_console->msg());
-         statusLine->setText(m_console->msg());
+      m_console->write_dir(m_conn, cmd, false);
+      if (m_console->read(m_conn) > 0) {
+         strip_trailing_junk(m_console->msg(m_conn));
+         statusLine->setText(m_console->msg(m_conn));
       }
-      m_console->displayToPrompt();
+      m_console->displayToPrompt(m_conn);
+      mainWin->waitExit();
       return;
    }    
    /* 
@@ -343,7 +357,7 @@ void restorePage::fileDoubleClicked(QTreeWidgetItem *item, int column)
          QString msg = QString("DoubleClick else of item column %1 fullpath %2\n")
               .arg(column,10)
               .arg(fullpath);
-         Pmsg0(000, msg.toUtf8().data());
+         Pmsg0(dbglvl, msg.toUtf8().data());
       }
    }
 }
@@ -367,6 +381,7 @@ void restorePage::upButtonPushed()
  */
 void restorePage::markButtonPushed()
 {
+   mainWin->waitEnter();
    QList<QTreeWidgetItem *> treeItemList = fileWidget->selectedItems();
    QTreeWidgetItem *item;
    char cmd[1000];
@@ -376,19 +391,19 @@ void restorePage::markButtonPushed()
       count++;
       bsnprintf(cmd, sizeof(cmd), "mark \"%s\"", item->text(1).toUtf8().data());
       item->setIcon(0, QIcon(QString::fromUtf8(":images/check.png")));
-      m_console->write_dir(cmd);
-      if (m_console->read() > 0) {
-         strip_trailing_junk(m_console->msg());
-         statusLine->setText(m_console->msg());
+      m_console->write_dir(m_conn, cmd, false);
+      if (m_console->read(m_conn) > 0) {
+         strip_trailing_junk(m_console->msg(m_conn));
+         statusLine->setText(m_console->msg(m_conn));
       }
-      Dmsg1(100, "cmd=%s\n", cmd);
-      m_console->discardToPrompt();
+      Dmsg1(dbglvl, "cmd=%s\n", cmd);
+      m_console->discardToPrompt(m_conn);
    }
    if (count == 0) {
       mainWin->set_status("Nothing selected, nothing done");
       statusLine->setText("Nothing selected, nothing done");
    }
-      
+   mainWin->waitExit();
 }
 
 /*
@@ -396,6 +411,7 @@ void restorePage::markButtonPushed()
  */
 void restorePage::unmarkButtonPushed()
 {
+   mainWin->waitEnter();
    QList<QTreeWidgetItem *> treeItemList = fileWidget->selectedItems();
    QTreeWidgetItem *item;
    char cmd[1000];
@@ -405,19 +421,19 @@ void restorePage::unmarkButtonPushed()
       count++;
       bsnprintf(cmd, sizeof(cmd), "unmark \"%s\"", item->text(1).toUtf8().data());
       item->setIcon(0, QIcon(QString::fromUtf8(":images/unchecked.png")));
-      m_console->write_dir(cmd);
-      if (m_console->read() > 0) {
-         strip_trailing_junk(m_console->msg());
-         statusLine->setText(m_console->msg());
+      m_console->write_dir(m_conn, cmd, false);
+      if (m_console->read(m_conn) > 0) {
+         strip_trailing_junk(m_console->msg(m_conn));
+         statusLine->setText(m_console->msg(m_conn));
       }
-      Dmsg1(100, "cmd=%s\n", cmd);
-      m_console->discardToPrompt();
+      Dmsg1(dbglvl, "cmd=%s\n", cmd);
+      m_console->discardToPrompt(m_conn);
    }
    if (count == 0) {
       mainWin->set_status(tr("Nothing selected, nothing done"));
       statusLine->setText(tr("Nothing selected, nothing done"));
    }
-
+   mainWin->waitExit();
 }
 
 /*
@@ -428,20 +444,22 @@ bool restorePage::cwd(const char *dir)
    int stat;
    char cd_cmd[MAXSTRING];
 
+   mainWin->waitEnter();
    statusLine->setText("");
    bsnprintf(cd_cmd, sizeof(cd_cmd), "cd \"%s\"", dir);
-   Dmsg2(100, "dir=%s cmd=%s\n", dir, cd_cmd);
-   m_console->write_dir(cd_cmd);
+   Dmsg2(dbglvl, "dir=%s cmd=%s\n", dir, cd_cmd);
+   m_console->write_dir(m_conn, cd_cmd, false);
    lineEdit->clear();
-   if ((stat = m_console->read()) > 0) {
-      m_cwd = m_console->msg();
+   if ((stat = m_console->read(m_conn)) > 0) {
+      m_cwd = m_console->msg(m_conn);
       lineEdit->insert(m_cwd);
-      Dmsg2(100, "cwd=%s msg=%s\n", m_cwd.toUtf8().data(), m_console->msg());
+      Dmsg2(dbglvl, "cwd=%s msg=%s\n", m_cwd.toUtf8().data(), m_console->msg(m_conn));
    } else {
-      Dmsg1(000, "stat=%d\n", stat);
+      Dmsg1(dbglvl, "stat=%d\n", stat);
       QMessageBox::critical(this, "Error", tr("cd command failed"), QMessageBox::Ok);
    }
-   m_console->discardToPrompt();
+   m_console->discardToPrompt(m_conn);
+   mainWin->waitExit();
    return true;  /* ***FIXME*** return real status */
 }
 
@@ -451,16 +469,18 @@ bool restorePage::cwd(const char *dir)
 char *restorePage::get_cwd()
 {
    int stat;
-   m_console->write_dir(".pwd");
-   Dmsg0(100, "send: .pwd\n");
-   if ((stat = m_console->read()) > 0) {
-      m_cwd = m_console->msg();
-      Dmsg2(100, "cwd=%s msg=%s\n", m_cwd.toUtf8().data(), m_console->msg());
+   mainWin->waitEnter();
+   m_console->write_dir(m_conn, ".pwd", false);
+   Dmsg0(dbglvl, "send: .pwd\n");
+   if ((stat = m_console->read(m_conn)) > 0) {
+      m_cwd = m_console->msg(m_conn);
+      Dmsg2(dbglvl, "cwd=%s msg=%s\n", m_cwd.toUtf8().data(), m_console->msg(m_conn));
    } else {
-      Dmsg1(000, "Something went wrong read stat=%d\n", stat);
+      Dmsg1(dbglvl, "Something went wrong read stat=%d\n", stat);
       QMessageBox::critical(this, "Error", tr(".pwd command failed"), QMessageBox::Ok);
    }
-   m_console->discardToPrompt(); 
+   m_console->discardToPrompt(m_conn); 
+   mainWin->waitExit();
    return m_cwd.toUtf8().data();
 }
 

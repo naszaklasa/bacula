@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *     Version $Id: console.c 7179 2008-06-19 17:01:12Z kerns $
+ *     Version $Id: console.c 8827 2009-05-14 15:02:23Z kerns $
  */
 
 #include "bacula.h"
@@ -61,6 +61,7 @@
 
 /* Imported functions */
 int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons);
+extern bool parse_cons_config(CONFIG *config, const char *configfile, int exit_code);
 
 /* Forward referenced functions */
 static void terminate_console(int sig);
@@ -91,6 +92,7 @@ static int numcon;
 static POOLMEM *args;
 static char *argk[MAX_CMD_ARGS];
 static char *argv[MAX_CMD_ARGS];
+static CONFIG *config;
 
 
 /* Command prototypes */
@@ -99,10 +101,14 @@ static int inputcmd(FILE *input, BSOCK *UA_sock);
 static int outputcmd(FILE *input, BSOCK *UA_sock);
 static int teecmd(FILE *input, BSOCK *UA_sock);
 static int quitcmd(FILE *input, BSOCK *UA_sock);
+static int helpcmd(FILE *input, BSOCK *UA_sock);
 static int echocmd(FILE *input, BSOCK *UA_sock);
 static int timecmd(FILE *input, BSOCK *UA_sock);
 static int sleepcmd(FILE *input, BSOCK *UA_sock);
 static int execcmd(FILE *input, BSOCK *UA_sock);
+#ifdef HAVE_READLINE
+static int eolcmd(FILE *input, BSOCK *UA_sock);
+#endif
 
 
 #define CONFIG_FILE "bconsole.conf"   /* default configuration file */
@@ -114,7 +120,8 @@ PROG_COPYRIGHT
 "\nVersion: " VERSION " (" BDATE ") %s %s %s\n\n"
 "Usage: bconsole [-s] [-c config_file] [-d debug_level]\n"
 "       -c <file>   set configuration file to file\n"
-"       -dnn        set debug level to nn\n"
+"       -d <nn>     set debug level to <nn>\n"
+"       -dt         print timestamp in debug output\n"
 "       -n          no conio\n"
 "       -s          no signals\n"
 "       -t          test - read configuration and exit\n"
@@ -170,8 +177,12 @@ static struct cmdstruct commands[] = {
  { N_("exec"),       execcmd,      _("execute an external command")},
  { N_("exit"),       quitcmd,      _("exit = quit")},
  { N_("zed_keys"),   zed_keyscmd,  _("zed_keys = use zed keys instead of bash keys")},
+ { N_("help"),       helpcmd,      _("help listing")},
+#ifdef HAVE_READLINE
+ { N_("separator"),  eolcmd,       _("set command separator")},
+#endif
              };
-#define comsize (sizeof(commands)/sizeof(struct cmdstruct))
+#define comsize ((int)(sizeof(commands)/sizeof(struct cmdstruct)))
 
 static int do_a_command(FILE *input, BSOCK *UA_sock)
 {
@@ -333,6 +344,223 @@ static int tls_pem_callback(char *buf, int size, const void *userdata)
 #endif
 }
 
+#ifdef HAVE_READLINE
+#define READLINE_LIBRARY 1
+#include "readline.h"
+#include "history.h"
+
+static char eol = '\0';
+static int eolcmd(FILE *input, BSOCK *UA_sock)
+{
+   if ((argc > 1) && (strchr("!$%&'()*+,-/:;<>?[]^`{|}~", argk[1][0]) != NULL)) {
+      eol = argk[1][0];
+   } else if (argc == 1) {
+      eol = '\0';
+   } else {
+      sendit(_("Illegal separator character.\n"));
+   }
+   return 1;
+}
+
+int
+get_cmd(FILE *input, const char *prompt, BSOCK *sock, int sec)
+{
+   static char *line = NULL;
+   static char *next = NULL;
+   static int do_history = 0;
+   char *command;
+
+   if (line == NULL) {
+      do_history = 0;
+      rl_catch_signals = 0;              /* do it ourselves */
+      /* Here, readline does ***real*** malloc
+       * so, be we have to use the real free
+       */
+      line = readline((char *)prompt);   /* cast needed for old readlines */
+      if (!line) {
+         exit(1);
+      }
+      strip_trailing_junk(line);
+      command = line;
+   } else if (next) {
+      command = next + 1;
+   } else {
+     sendit(_("Command logic problem\n"));
+     sock->msglen = 0;
+     sock->msg[0] = 0;
+     return 0;
+   }
+
+   /*
+    * Split "line" into multiple commands separated by the eol character.
+    *   Each part is pointed to by "next" until finally it becomes null.
+    */
+   if (eol == '\0') {
+      next = NULL;
+   } else {
+      next = strchr(command, eol);
+      if (next) {
+         *next = '\0';
+      }
+   }
+   if (command != line && isatty(fileno(input))) {
+      senditf("%s%s\n", prompt, command);
+   }
+
+   sock->msglen = pm_strcpy(&sock->msg, command);
+   if (sock->msglen) {
+      do_history++;
+   }
+
+   if (!next) {
+      if (do_history) {
+        add_history(line);
+      }
+      actuallyfree(line);       /* allocated by readline() malloc */
+      line = NULL;
+   }
+   return 1;
+}
+
+#else /* no readline, do it ourselves */
+
+#ifdef HAVE_CONIO
+static bool bisatty(int fd)
+{
+   if (no_conio) {
+      return false;
+   }
+   return isatty(fd);
+}
+#endif
+
+/*
+ *   Returns: 1 if data available
+ *            0 if timeout
+ *           -1 if error
+ */
+static int
+wait_for_data(int fd, int sec)
+{
+#if defined(HAVE_WIN32)
+   return 1;
+#else
+   fd_set fdset;
+   struct timeval tv;
+
+   tv.tv_sec = sec;
+   tv.tv_usec = 0;
+   for ( ;; ) {
+      FD_ZERO(&fdset);
+      FD_SET((unsigned)fd, &fdset);
+      switch(select(fd + 1, &fdset, NULL, NULL, &tv)) {
+      case 0:                         /* timeout */
+         return 0;
+      case -1:
+         if (errno == EINTR || errno == EAGAIN) {
+            continue;
+         }
+         return -1;                  /* error return */
+      default:
+         return 1;
+      }
+   }
+#endif
+}
+
+/*
+ * Get next input command from terminal.
+ *
+ *   Returns: 1 if got input
+ *            0 if timeout
+ *           -1 if EOF or error
+ */
+int
+get_cmd(FILE *input, const char *prompt, BSOCK *sock, int sec)
+{
+   int len;
+   if (!stop) {
+      if (output == stdout || teeout) {
+         sendit(prompt);
+      }
+   }
+again:
+   switch (wait_for_data(fileno(input), sec)) {
+   case 0:
+      return 0;                    /* timeout */
+   case -1:
+      return -1;                   /* error */
+   default:
+      len = sizeof_pool_memory(sock->msg) - 1;
+      if (stop) {
+         sleep(1);
+         goto again;
+      }
+#ifdef HAVE_CONIO
+      if (bisatty(fileno(input))) {
+         input_line(sock->msg, len);
+         break;
+      }
+#endif
+#ifdef HAVE_WIN32 /* use special console for input on win32 */
+      if (input == stdin) {
+         if (win32_cgets(sock->msg, len) == NULL) {
+            return -1;
+         }
+      }
+      else
+#endif
+      if (fgets(sock->msg, len, input) == NULL) {
+         return -1;
+
+      }
+      break;
+   }
+   if (usrbrk()) {
+      clrbrk();
+   }
+   strip_trailing_junk(sock->msg);
+   sock->msglen = strlen(sock->msg);
+   return 1;
+}
+
+#endif /* ! HAVE_READLINE */
+
+
+static int console_update_history(const char *histfile)
+{
+   int ret=0;
+
+#ifdef HAVE_READLINE
+/* first, try to truncate the history file, and if it
+ * fail, the file is probably not present, and we
+ * can use write_history to create it
+ */
+
+   if (history_truncate_file(histfile, 100) == 0) {
+      ret = append_history(history_length, histfile);
+   } else {
+      ret = write_history(histfile);
+   }
+
+#endif
+
+   return ret;
+}
+
+static int console_init_history(const char *histfile)
+{
+   int ret=0;
+
+#ifdef HAVE_READLINE
+
+   using_history();
+   ret = read_history(histfile);
+
+#endif
+
+   return ret;
+}
 
 /*********************************************************************
  *
@@ -367,9 +595,13 @@ int main(int argc, char *argv[])
          break;
 
       case 'd':
-         debug_level = atoi(optarg);
-         if (debug_level <= 0) {
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
          }
          break;
 
@@ -420,7 +652,8 @@ int main(int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_cons_config(config, configfile, M_ERROR_TERM);
 
    if (init_crypto() != 0) {
       Emsg0(M_ERROR_TERM, 0, _("Cryptography library initialization failed.\n"));
@@ -587,6 +820,9 @@ try_again:
 
    sendit(_("Enter a period to cancel a command.\n"));
 
+   /* Read/Update history file if HOME exists */
+   POOL_MEM history_file;
+
    /* Run commands in ~/.bconsolerc if any */
    char *env = getenv("HOME");
    if (env) {
@@ -598,6 +834,10 @@ try_again:
          read_and_process_input(fd, UA_sock);
          fclose(fd);
       }
+
+      pm_strcpy(history_file, env);
+      pm_strcat(history_file, "/.bconsole_history");
+      console_init_history(history_file.c_str());
    }
 
    read_and_process_input(stdin, UA_sock);
@@ -607,10 +847,13 @@ try_again:
       UA_sock->close();
    }
 
+   if (env) {
+      console_update_history(history_file.c_str());
+   }
+
    terminate_console(0);
    return 0;
 }
-
 
 /* Cleanup and then exit */
 static void terminate_console(int sig)
@@ -622,12 +865,17 @@ static void terminate_console(int sig)
       exit(1);
    }
    already_here = true;
+   config->free_resources();
+   free(config);
+   config = NULL;
    cleanup_crypto();
    free_pool_memory(args);
    if (!no_conio) {
       con_term();
    }
    (void)WSACleanup();               /* Cleanup Windows sockets */
+   lmgr_cleanup_main();
+
    if (sig != 0) {
       exit(1);
    }
@@ -642,6 +890,7 @@ static int check_resources()
 {
    bool OK = true;
    DIRRES *director;
+   bool tls_needed;
 
    LockRes();
 
@@ -659,8 +908,9 @@ static int check_resources()
             continue;
          }
       }
+      tls_needed = director->tls_enable || director->tls_authenticate;
 
-      if ((!director->tls_ca_certfile && !director->tls_ca_certdir) && director->tls_enable) {
+      if ((!director->tls_ca_certfile && !director->tls_ca_certdir) && tls_needed) {
          Emsg2(M_FATAL, 0, _("Neither \"TLS CA Certificate\""
                              " or \"TLS CA Certificate Dir\" are defined for Director \"%s\" in %s."
                              " At least one CA certificate store is required.\n"),
@@ -688,8 +938,8 @@ static int check_resources()
             continue;
          }
       }
-
-      if ((!cons->tls_ca_certfile && !cons->tls_ca_certdir) && cons->tls_enable) {
+      tls_needed = cons->tls_enable || cons->tls_authenticate;
+      if ((!cons->tls_ca_certfile && !cons->tls_ca_certdir) && tls_needed) {
          Emsg2(M_FATAL, 0, _("Neither \"TLS CA Certificate\""
                              " or \"TLS CA Certificate Dir\" are defined for Console \"%s\" in %s.\n"),
                              cons->hdr.name, configfile);
@@ -701,138 +951,6 @@ static int check_resources()
 
    return OK;
 }
-
-
-#ifdef HAVE_READLINE
-#define READLINE_LIBRARY 1
-#undef free
-#include "readline.h"
-#include "history.h"
-
-
-int
-get_cmd(FILE *input, const char *prompt, BSOCK *sock, int sec)
-{
-   char *line;
-
-   rl_catch_signals = 0;              /* do it ourselves */
-   line = readline((char *)prompt);   /* cast needed for old readlines */
-
-   if (!line) {
-      exit(1);
-   }
-   strip_trailing_junk(line);
-   sock->msglen = pm_strcpy(&sock->msg, line);
-   if (sock->msglen) {
-      add_history(sock->msg);
-   }
-   free(line);
-   return 1;
-}
-
-#else /* no readline, do it ourselves */
-
-#ifdef HAVE_CONIO
-static bool bisatty(int fd)
-{
-   if (no_conio) {
-      return false;
-   }
-   return isatty(fd);
-}
-#endif
-
-/*
- *   Returns: 1 if data available
- *            0 if timeout
- *           -1 if error
- */
-static int
-wait_for_data(int fd, int sec)
-{
-#if defined(HAVE_WIN32)
-   return 1;
-#else
-   fd_set fdset;
-   struct timeval tv;
-
-   tv.tv_sec = sec;
-   tv.tv_usec = 0;
-   for ( ;; ) {
-      FD_ZERO(&fdset);
-      FD_SET((unsigned)fd, &fdset);
-      switch(select(fd + 1, &fdset, NULL, NULL, &tv)) {
-      case 0:                         /* timeout */
-         return 0;
-      case -1:
-         if (errno == EINTR || errno == EAGAIN) {
-            continue;
-         }
-         return -1;                  /* error return */
-      default:
-         return 1;
-      }
-   }
-#endif
-}
-
-/*
- * Get next input command from terminal.
- *
- *   Returns: 1 if got input
- *            0 if timeout
- *           -1 if EOF or error
- */
-int
-get_cmd(FILE *input, const char *prompt, BSOCK *sock, int sec)
-{
-   int len;
-   if (!stop) {
-      if (output == stdout || teeout) {
-         sendit(prompt);
-      }
-   }
-again:
-   switch (wait_for_data(fileno(input), sec)) {
-   case 0:
-      return 0;                    /* timeout */
-   case -1:
-      return -1;                   /* error */
-   default:
-      len = sizeof_pool_memory(sock->msg) - 1;
-      if (stop) {
-         sleep(1);
-         goto again;
-      }
-#ifdef HAVE_CONIO
-      if (bisatty(fileno(input))) {
-         input_line(sock->msg, len);
-         break;
-      }
-#endif
-#ifdef HAVE_WIN32 /* use special console for input on win32 */
-      if (input == stdin) {
-         if (win32_cgets(sock->msg, len) == NULL) {
-            return -1;
-         }
-      }
-      else
-#endif
-      if (fgets(sock->msg, len, input) == NULL) {
-         return -1;
-
-      }
-      break;
-   }
-   if (usrbrk()) {
-      clrbrk();
-   }
-   strip_trailing_junk(sock->msg);
-   sock->msglen = strlen(sock->msg);
-   return 1;
-}
-
-#endif /* end non-readline code */
 
 static int versioncmd(FILE *input, BSOCK *UA_sock)
 {
@@ -855,8 +973,9 @@ static int inputcmd(FILE *input, BSOCK *UA_sock)
    }
    fd = fopen(argk[1], "rb");
    if (!fd) {
+      berrno be;
       senditf(_("Cannot open file %s for input. ERR=%s\n"),
-         argk[1], strerror(errno));
+         argk[1], be.bstrerror());
       return 1;
    }
    read_and_process_input(fd, UA_sock);
@@ -951,8 +1070,7 @@ static int execcmd(FILE *input, BSOCK *UA_sock)
 static int echocmd(FILE *input, BSOCK *UA_sock)
 {
    for (int i=1; i < argc; i++) {
-      senditf("%s", argk[i]);
-      sendit(" ");
+      senditf("%s ", argk[i]);
    }
    sendit("\n");
    return 1;
@@ -962,6 +1080,16 @@ static int quitcmd(FILE *input, BSOCK *UA_sock)
 {
    return 0;
 }
+
+static int helpcmd(FILE *input, BSOCK *UA_sock)
+{
+   int i;
+   for (i=0; i<comsize; i++) { 
+      senditf("  %-10s %s\n", commands[i].key, commands[i].help);
+   }
+   return 1;   
+}
+
 
 static int sleepcmd(FILE *input, BSOCK *UA_sock)
 {

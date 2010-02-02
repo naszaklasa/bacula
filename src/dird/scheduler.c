@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -34,7 +34,7 @@
  *
  *     Kern Sibbald, May MM, major revision December MMIII
  *
- *   Version $Id: scheduler.c 6812 2008-04-14 07:08:34Z kerns $
+ *   Version $Id: scheduler.c 8528 2009-03-14 16:51:26Z kerns $
  */
 
 #include "bacula.h"
@@ -118,6 +118,7 @@ JCR *wait_for_next_job(char *one_shot_job_to_run)
          return jcr;
       }
    }
+
    /* Wait until we have something in the
     * next hour or so.
     */
@@ -199,7 +200,7 @@ again:
    ASSERT(job);
    set_jcr_defaults(jcr, job);
    if (run->level) {
-      jcr->JobLevel = run->level;     /* override run level */
+      jcr->set_JobLevel(run->level);  /* override run level */
    }
    if (run->pool) {
       jcr->pool = run->pool;          /* override pool */
@@ -382,19 +383,15 @@ static void add_job(JOB *job, RUN *run, time_t now, time_t runtime)
     */
    if (((runtime - run->last_run) < 61) || ((runtime+59) < now)) {
 #ifdef SCHED_DEBUG
-      char dt[50], dt1[50], dt2[50];
-      bstrftime_nc(dt, sizeof(dt), runtime);
-      bstrftime_nc(dt1, sizeof(dt1), run->last_run);
-      bstrftime_nc(dt2, sizeof(dt2), now);
-      Dmsg7(000, "Drop: Job=\"%s\" run=%s(%x). last_run=%s(%x). now=%s(%x)\n", job->hdr.name, 
-            dt, runtime, dt1, run->last_run, dt2, now);
+      Dmsg4(000, "Drop: Job=\"%s\" run=%lld. last_run=%lld. now=%lld\n", job->hdr.name, 
+            (utime_t)runtime, (utime_t)run->last_run, (utime_t)now);
       fflush(stdout);
 #endif
       return;
    }
 #ifdef SCHED_DEBUG
-   Dmsg4(000, "Add: Job=\"%s\" run=%x last_run=%x now=%x\n", job->hdr.name, 
-            runtime, run->last_run, now);
+   Dmsg4(000, "Add: Job=\"%s\" run=%lld last_run=%lld now=%lld\n", job->hdr.name, 
+            (utime_t)runtime, (utime_t)run->last_run, (utime_t)now);
 #endif
    /* accept to run this job */
    job_item *je = (job_item *)malloc(sizeof(job_item));

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,23 +20,22 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: mediaedit.cpp 5386 2007-08-21 02:09:38Z bartleyd2 $
+ *   Version $Id: mediaedit.cpp 9038 2009-07-16 20:13:04Z ricozz $
  *
  *   Dirk Bartley, March 2007
  */
  
+#include "bat.h"
 #include <QAbstractEventDispatcher>
 #include <QTableWidgetItem>
 #include <QMessageBox>
-#include "bat.h"
 #include "mediaedit.h"
-#include <inttypes.h>
 
 /*
  * A constructor 
@@ -44,8 +43,7 @@
 MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId)
 {
    setupUi(this);
-   m_name = "Media Edit";
-   pgInitialize(parentWidget);
+   pgInitialize(tr("Media Edit"), parentWidget);
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/cartridge-edit.png")));
    m_closeable = true;
@@ -65,14 +63,12 @@ MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId)
    m_status = "";
    m_slot = 0;
 
-   if (!m_console->preventInUseConnect())
-      return;
-
    /* The media's pool */
    poolCombo->addItems(m_console->pool_list);
 
    /* The media's Status */
-   QStringList statusList = (QStringList() << "Full" << "Used" << "Append" << "Error" << "Purged" << "Recycle" << "Read-Only" << "Cleaning");
+   QStringList statusList = (QStringList() << "Full" << "Used" << "Append" 
+       << "Error" << "Purged" << "Recycle" << "Read-Only" << "Cleaning");
    statusCombo->addItems(statusList);
 
    /* Set up the query for the default values */
@@ -97,7 +93,7 @@ MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId)
    }
    query += " FROM Media"
             " JOIN Pool ON (Media.PoolId=Pool.PoolId)"
-            " LEFT OUTER JOIN Pool AS Pol ON (Media.recyclepoolid=Pol.PoolId)"
+            " LEFT OUTER JOIN Pool AS Pol ON (Media.RecyclePoolId=Pol.PoolId)"
             " WHERE Media.MediaId='" + mediaId + "'";
 
    if (mainWin->m_sqlDebug) {
@@ -183,16 +179,14 @@ MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId)
       else enabledCheck->setCheckState(Qt::Unchecked);
       /* default for recycle pool */
       recyclePoolCombo->addItems(m_console->pool_list);
+      recyclePoolCombo->insertItem(0, "*None*");
       index = recyclePoolCombo->findText(m_recyclePool, Qt::MatchExactly);
       if (index == -1) {
-         recyclePoolCombo->insertItem(0, "");
-         index = recyclePoolCombo->findText(m_recyclePool, Qt::MatchExactly);
+         index = 0;
       }
-      if (index != -1) {
-         recyclePoolCombo->setCurrentIndex(index);
-      }
+      recyclePoolCombo->setCurrentIndex(index);
    } else {
-      QMessageBox::warning(this, "No Volume name", "No Volume name given",
+      QMessageBox::warning(this, tr("No Volume name"), tr("No Volume name given"),
                            QMessageBox::Ok, QMessageBox::Ok);
       return;
    }
@@ -257,7 +251,11 @@ void MediaEdit::okButtonPushed()
       docmd = true;
    }
    if (m_recyclePool != recyclePoolCombo->currentText()) {
-      scmd += " recyclepool=\"" + recyclePoolCombo->currentText() + "\"";
+      scmd += " recyclepool=\"";
+      if (recyclePoolCombo->currentText() != "*None*") {
+         scmd += recyclePoolCombo->currentText();
+      }
+      scmd += "\"";
       docmd = true;
    }
    if (docmd) {

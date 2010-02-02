@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -85,6 +85,12 @@ void BSOCK::free_bsock()
    destroy();
 }
 
+void BSOCK::free_tls()
+{
+   free_tls_connection(this->tls);
+   this->tls = NULL;
+}   
+
 /*
  * Try to connect to host for max_retry_time at retry_time intervals.
  *   Note, you must have called the constructor prior to calling
@@ -104,7 +110,7 @@ bool BSOCK::connect(JCR * jcr, int retry_interval, utime_t max_retry_time,
 
    /* Try to trap out of OS call when time expires */
    if (max_retry_time) {
-      tid = start_thread_timer(pthread_self(), (uint32_t)max_retry_time);
+      tid = start_thread_timer(jcr, pthread_self(), (uint32_t)max_retry_time);
    }
    
    for (i = 0; !open(jcr, name, host, service, port, heart_beat, &fatal);
@@ -156,6 +162,26 @@ void BSOCK::fin_init(JCR * jcr, int sockfd, const char *who, const char *host, i
 }
 
 /*
+ * Copy the address from the configuration dlist that gets passed in
+ */
+void BSOCK::set_source_address(dlist *src_addr_list)
+{
+   IPADDR *addr = NULL;
+
+   // delete the object we already have, if it's allocated
+   if (src_addr) {
+     free( src_addr);
+     src_addr = NULL;
+   }
+
+   if (src_addr_list) {
+     addr = (IPADDR*) src_addr_list->first();
+     src_addr = New( IPADDR(*addr));
+   }
+}
+
+
+/*
  * Open a TCP connection to the server
  * Returns NULL
  * Returns BSOCK * pointer on success
@@ -202,6 +228,19 @@ bool BSOCK::open(JCR *jcr, const char *name, char *host, char *service,
             ipaddr->get_family(), ipaddr->get_port_host_order(), be.bstrerror());
          continue;
       }
+
+      /* Bind to the source address if it is set */
+      if (src_addr) {
+         if (bind(sockfd, src_addr->get_sockaddr(), src_addr->get_sockaddr_len()) < 0) {
+            berrno be;
+            save_errno = errno;
+            *fatal = 1;
+            Pmsg2(000, _("Source address bind error. proto=%d. ERR=%s\n"),
+                  src_addr->get_family(), be.bstrerror() );
+            continue;
+         }
+      }
+
       /*
        * Keep socket from timing out from inactivity
        */
@@ -251,7 +290,34 @@ bool BSOCK::open(JCR *jcr, const char *name, char *host, char *service,
    return true;
 }
 
+/*
+ * Force read/write to use locking
+ */
+bool BSOCK::set_locking()
+{
+   int stat;
+   if (m_use_locking) {
+      return true;                      /* already set */
+   }
+   if ((stat = pthread_mutex_init(&m_mutex, NULL)) != 0) {
+      berrno be;
+      Jmsg(m_jcr, M_FATAL, 0, _("Could not init bsock mutex. ERR=%s\n"),
+         be.bstrerror(stat));
+      return false;
+   }
+   m_use_locking = true;
+   return true;
+}
 
+void BSOCK::clear_locking()
+{
+   if (!m_use_locking) {
+      return;
+   }
+   m_use_locking = false;
+   pthread_mutex_destroy(&m_mutex);
+   return;
+}
 
 /*
  * Send a message over the network. The send consists of
@@ -266,10 +332,12 @@ bool BSOCK::send()
    int32_t rc;
    int32_t pktsiz;
    int32_t *hdr;
+   bool ok = true;
 
    if (errors || is_terminated() || msglen > 1000000) {
       return false;
    }
+   if (m_use_locking) P(m_mutex);
    /* Compute total packet length */
    if (msglen <= 0) {
       pktsiz = sizeof(pktsiz);               /* signal, no data */
@@ -310,9 +378,10 @@ bool BSOCK::send()
                _("Wrote %d bytes to %s:%s:%d, but only %d accepted.\n"),
                msglen, m_who, m_host, m_port, rc);
       }
-      return false;
+      ok = false;
    }
-   return true;
+   if (m_use_locking) V(m_mutex);
+   return ok;
 }
 
 /*
@@ -374,6 +443,7 @@ int32_t BSOCK::recv()
       return BNET_HARDEOF;
    }
 
+   if (m_use_locking) P(m_mutex);
    read_seqno++;            /* bump sequence number */
    timer_start = watchdog_time;  /* set start wait time */
    clear_timed_out();
@@ -387,7 +457,8 @@ int32_t BSOCK::recv()
          b_errno = errno;
       }
       errors++;
-      return BNET_HARDEOF;         /* assume hard EOF received */
+      nbytes = BNET_HARDEOF;        /* assume hard EOF received */
+      goto get_out;
    }
    timer_start = 0;         /* clear timer */
    if (nbytes != sizeof(int32_t)) {
@@ -395,16 +466,18 @@ int32_t BSOCK::recv()
       b_errno = EIO;
       Qmsg5(m_jcr, M_ERROR, 0, _("Read expected %d got %d from %s:%s:%d\n"),
             sizeof(int32_t), nbytes, m_who, m_host, m_port);
-      return BNET_ERROR;
+      nbytes = BNET_ERROR;
+      goto get_out;
    }
 
    pktsiz = ntohl(pktsiz);         /* decode no. of bytes that follow */
 
    if (pktsiz == 0) {              /* No data transferred */
-      timer_start = 0;      /* clear timer */
+      timer_start = 0;             /* clear timer */
       in_msg_no++;
       msglen = 0;
-      return 0;                    /* zero bytes read */
+      nbytes = 0;                  /* zero bytes read */
+      goto get_out;
    }
 
    /* If signal or packet size too big */
@@ -418,10 +491,11 @@ int32_t BSOCK::recv()
       if (pktsiz == BNET_TERMINATE) {
          set_terminated();
       }
-      timer_start = 0;      /* clear timer */
+      timer_start = 0;                /* clear timer */
       b_errno = ENODATA;
-      msglen = pktsiz;      /* signal code */
-      return BNET_SIGNAL;          /* signal */
+      msglen = pktsiz;                /* signal code */
+      nbytes =  BNET_SIGNAL;          /* signal */
+      goto get_out;
    }
 
    /* Make sure the buffer is big enough + one byte for EOS */
@@ -442,7 +516,8 @@ int32_t BSOCK::recv()
       errors++;
       Qmsg4(m_jcr, M_ERROR, 0, _("Read error from %s:%s:%d: ERR=%s\n"),
             m_who, m_host, m_port, this->bstrerror());
-      return BNET_ERROR;
+      nbytes = BNET_ERROR;
+      goto get_out;
    }
    timer_start = 0;         /* clear timer */
    in_msg_no++;
@@ -452,7 +527,8 @@ int32_t BSOCK::recv()
       errors++;
       Qmsg5(m_jcr, M_ERROR, 0, _("Read expected %d got %d from %s:%s:%d\n"),
             pktsiz, nbytes, m_who, m_host, m_port);
-      return BNET_ERROR;
+      nbytes = BNET_ERROR;
+      goto get_out;
    }
    /* always add a zero by to properly terminate any
     * string that was send to us. Note, we ensured above that the
@@ -460,6 +536,9 @@ int32_t BSOCK::recv()
     */
    msg[nbytes] = 0; /* terminate in case it is a string */
    sm_check(__FILE__, __LINE__, false);
+
+get_out:
+   if (m_use_locking) V(m_mutex);
    return nbytes;                  /* return actual length of message */
 }
 
@@ -763,6 +842,9 @@ int BSOCK::wait_data_intr(int sec, int usec)
    fd_set fdset;
    struct timeval tv;
 
+   if (this == NULL) {
+      return -1;
+   }
    FD_ZERO(&fdset);
    FD_SET((unsigned)m_fd, &fdset);
    tv.tv_sec = sec;
@@ -781,7 +863,6 @@ int BSOCK::wait_data_intr(int sec, int usec)
    return 1;
 }
 
-
 /*
  * Note, this routine closes and destroys all the sockets
  *  that are open including the duped ones.
@@ -795,6 +876,9 @@ void BSOCK::close()
    BSOCK *bsock = this;
    BSOCK *next;
 
+   if (!m_duped) {
+      clear_locking();
+   }
    for (; bsock; bsock = next) {
       next = bsock->m_next;           /* get possible pointer to next before destoryed */
       if (!bsock->m_duped) {
@@ -834,6 +918,10 @@ void BSOCK::destroy()
       free(m_host);
       m_host = NULL;
    }
+   if (src_addr) {
+      free(src_addr);
+      src_addr = NULL;
+   } 
    free(this);
 }
 
@@ -931,7 +1019,7 @@ bail_out:
    bsnprintf(msg, msglen, _("Authorization problem with Director at \"%s:%d\"\n"
              "Most likely the passwords do not agree.\n"
              "If you are using TLS, there may have been a certificate validation error during the TLS handshake.\n"
-             "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"), 
+             "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"), 
              dir->host(), dir->port());
    return false;
 }

@@ -47,6 +47,7 @@ else
       else
 	PGHOST=""
       fi
+      # you could also add --compress for compression.  See man pg_dump
       exec ${BINDIR}/pg_dump -c $PGHOST -U $2 $1 >$1.sql
     else
       echo ".dump" | ${BINDIR}/sqlite3 $1.db >$1.sql
@@ -67,6 +68,6 @@ fi
 #  To read back a PostgreSQL database use:
 #     cd @working_dir@
 #     dropdb bacula
-#     createdb bacula
+#     createdb bacula -E SQL_ASCII
 #     psql bacula <bacula.sql
 #

@@ -17,8 +17,8 @@ INCLUDES = \
 DEFINES = \
 	$(HAVES)
 
-vpath %.c ../../cats
-vpath %.cpp ../../cats
+vpath %.c $(MAINDIR)/src/cats
+vpath %.cpp $(MAINDIR)/src/cats
 
 ######################################################################
 
@@ -54,8 +54,11 @@ clean:
 	$(call clean_exe,$(BINDIR)/cats_postgresql.dll)
 	$(call clean_exe,$(BINDIR)/cats_sqlite3.dll)
 	$(ECHO_CMD)rm -f $(OBJDIR)/libcats.exp $(LIBDIR)/libcats.a
+	$(ECHO_CMD)rm -rf $(OBJDIRS)
 
 $(LIBDIR)/libcats.a $(OBJDIR)/libcats.exp: bacula_cats.def
+	$(call checkdir,$@)
+	@mkdir -p $(OBJDIRS)
 	$(DLLTOOL) --dllname bacula_cats.dll --no-export-all-symbols --input-def bacula_cats.def --output-exp $(OBJDIR)/libcats.exp --output-lib $(LIBDIR)/libcats.a $^
 
 $(BINDIR)/cats_mysql.dll: $(addprefix $(OBJDIR)/cats_mysql/,mysql.o $(SQL_OBJS)) $(OBJDIR)/libcats.exp
@@ -97,4 +100,3 @@ $(eval $(call Link_Dll,cats_mysql,MYSQL))
 $(eval $(call Link_Dll,cats_postgresql,POSTGRESQL))
 
 $(eval $(call Link_Dll,cats_sqlite3,SQLITE3))
-

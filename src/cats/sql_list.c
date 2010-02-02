@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_list.c 5198 2007-07-19 08:33:25Z kerns $
+ *    Version $Id: sql_list.c 9045 2009-07-17 08:22:59Z ricozz $
  */
 
 
@@ -42,7 +42,9 @@
 #include "bacula.h"
 #include "cats.h"
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL
+extern int db_type;
+
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
 
 /* -----------------------------------------------------------------------
  *
@@ -78,7 +80,7 @@ int db_list_sql_query(JCR *jcr, B_DB *mdb, const char *query, DB_LIST_HANDLER *s
 }
 
 void
-db_list_pool_records(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr, 
+db_list_pool_records(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr,
                      DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
 {
    db_lock(mdb);
@@ -172,7 +174,7 @@ db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
             "EndFile,EndBlock,VolParts,LabelType,StorageId,DeviceId,"
             "LocationId,RecycleCount,InitialWrite,ScratchPoolId,RecyclePoolId, "
             "Comment"
-            " FROM Media WHERE Media.PoolId=%s ORDER BY MediaId", 
+            " FROM Media WHERE Media.PoolId=%s ORDER BY MediaId",
             edit_int64(mdbr->PoolId, ed1));
       }
    } else {
@@ -183,7 +185,7 @@ db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
       } else {
          Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,VolStatus,Enabled,"
             "VolBytes,VolFiles,VolRetention,Recycle,Slot,InChanger,MediaType,LastWritten "
-            "FROM Media WHERE Media.PoolId=%s ORDER BY MediaId", 
+            "FROM Media WHERE Media.PoolId=%s ORDER BY MediaId",
             edit_int64(mdbr->PoolId, ed1));
       }
    }
@@ -240,6 +242,78 @@ void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
 }
 
 
+void db_list_copies_records(JCR *jcr, B_DB *mdb, uint32_t limit, char *JobIds,
+                            DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
+{
+   POOL_MEM str_limit(PM_MESSAGE);
+   POOL_MEM str_jobids(PM_MESSAGE);
+
+   if (limit > 0) {
+      Mmsg(str_limit, " LIMIT %d", limit);
+   }
+
+   if (JobIds && JobIds[0]) {
+      Mmsg(str_jobids, " AND (Job.PriorJobId IN (%s) OR Job.JobId IN (%s)) ", 
+           JobIds, JobIds);      
+   }
+
+   db_lock(mdb);
+   Mmsg(mdb->cmd, 
+   "SELECT DISTINCT Job.PriorJobId AS JobId, Job.Job, "
+                   "Job.JobId AS CopyJobId, Media.MediaType "
+     "FROM Job " 
+     "JOIN JobMedia USING (JobId) "
+     "JOIN Media    USING (MediaId) "
+    "WHERE Job.Type = '%c' %s ORDER BY Job.PriorJobId DESC %s",
+        (char) JT_JOB_COPY, str_jobids.c_str(), str_limit.c_str());
+
+   if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
+      goto bail_out;
+   }
+
+   if (mdb->result && sql_num_rows(mdb)) {
+      if (JobIds && JobIds[0]) {
+         sendit(ctx, _("These JobIds have copies as follows:\n"));
+      } else {
+         sendit(ctx, _("The catalog contains copies as follows:\n"));
+      }
+
+      list_result(jcr, mdb, sendit, ctx, type);
+   }
+
+   sql_free_result(mdb);
+
+bail_out:
+   db_unlock(mdb);
+}
+
+void db_list_joblog_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
+                              DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
+{
+   char ed1[50];
+   db_lock(mdb);
+   if (JobId <= 0) {
+      return;
+   }
+   if (type == VERT_LIST) {
+      Mmsg(mdb->cmd, "SELECT Time,LogText FROM Log "
+           "WHERE Log.JobId=%s", edit_int64(JobId, ed1));
+   } else {
+      Mmsg(mdb->cmd, "SELECT LogText FROM Log "
+           "WHERE Log.JobId=%s", edit_int64(JobId, ed1));
+   }
+   if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
+      goto bail_out;
+   }
+
+   list_result(jcr, mdb, sendit, ctx, type);
+
+   sql_free_result(mdb);
+
+bail_out:
+   db_unlock(mdb);
+}
+
 
 /*
  * List Job record(s) that match JOB_DBR
@@ -281,7 +355,7 @@ db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr, DB_LIST_HANDLER *sendit,
             "Job.FileSetId,FileSet.FileSet "
             "FROM Job,Client,Pool,FileSet WHERE Job.JobId=%s AND "
             "Client.ClientId=Job.ClientId AND Pool.PoolId=Job.PoolId "
-            "AND FileSet.FileSetId=Job.FileSetId", 
+            "AND FileSet.FileSetId=Job.FileSetId",
             edit_int64(jr->JobId, ed1));
       }
    } else {
@@ -294,7 +368,7 @@ db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr, DB_LIST_HANDLER *sendit,
             "SELECT JobId,Name,StartTime,Type,Level,JobFiles,JobBytes,JobStatus "
             "FROM Job WHERE Job='%s' ORDER BY StartTime,JobId ASC", jr->Job);
       } else if (jr->JobId != 0) {
-         Mmsg(mdb->cmd, 
+         Mmsg(mdb->cmd,
             "SELECT JobId,Name,StartTime,Type,Level,JobFiles,JobBytes,JobStatus "
             "FROM Job WHERE JobId=%s", edit_int64(jr->JobId, ed1));
       } else {                           /* all records */
@@ -350,25 +424,26 @@ db_list_job_totals(JCR *jcr, B_DB *mdb, JOB_DBR *jr, DB_LIST_HANDLER *sendit, vo
    db_unlock(mdb);
 }
 
-/*
- * Stupid MySQL is NON-STANDARD !
- */
-#ifdef HAVE_MYSQL
-#define FN "CONCAT(Path.Path,Filename.Name)"
-#else
-#define FN "Path.Path||Filename.Name"
-#endif
-
 void
 db_list_files_for_job(JCR *jcr, B_DB *mdb, JobId_t jobid, DB_LIST_HANDLER *sendit, void *ctx)
 {
    char ed1[50];
    db_lock(mdb);
 
-   Mmsg(mdb->cmd, "SELECT " FN " AS Filename FROM File,"
-"Filename,Path WHERE File.JobId=%s AND Filename.FilenameId=File.FilenameId "
-"AND Path.PathId=File.PathId",
-      edit_int64(jobid, ed1));
+   /*
+    * Stupid MySQL is NON-STANDARD !
+    */
+   if (db_type == SQL_TYPE_MYSQL) {
+      Mmsg(mdb->cmd, "SELECT CONCAT(Path.Path,Filename.Name) AS Filename FROM File,"
+   "Filename,Path WHERE File.JobId=%s AND Filename.FilenameId=File.FilenameId "
+   "AND Path.PathId=File.PathId",
+         edit_int64(jobid, ed1));
+   } else {
+      Mmsg(mdb->cmd, "SELECT Path.Path||Filename.Name AS Filename FROM File,"
+   "Filename,Path WHERE File.JobId=%s AND Filename.FilenameId=File.FilenameId "
+   "AND Path.PathId=File.PathId",
+         edit_int64(jobid, ed1));
+   }
 
    if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
       db_unlock(mdb);

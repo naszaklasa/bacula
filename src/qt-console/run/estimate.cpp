@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, February MMVII
  *
- *  $Id: estimate.cpp 5267 2007-07-30 23:35:57Z bartleyd2 $
+ *  $Id: estimate.cpp 8661 2009-03-31 09:46:54Z kerns $
  */ 
 
 #include "bat.h"
@@ -44,17 +44,18 @@ estimatePage::estimatePage()
 {
    QDateTime dt;
 
-   m_name = "Estimate";
+   m_name = tr("Estimate");
    pgInitialize();
    setupUi(this);
-   m_console->notify(false);
+   m_conn = m_console->notifyOff();
 
-   m_console->beginNewCommand();
+   m_console->beginNewCommand(m_conn);
    jobCombo->addItems(m_console->job_list);
    filesetCombo->addItems(m_console->fileset_list);
    levelCombo->addItems(m_console->level_list);
    clientCombo->addItems(m_console->client_list);
    job_name_change(0);
+   Pmsg1(100, "connecting estimate buttons : %i\n", m_conn);
    connect(jobCombo, SIGNAL(currentIndexChanged(int)), this, SLOT(job_name_change(int)));
    connect(okButton, SIGNAL(pressed()), this, SLOT(okButtonPushed()));
    connect(cancelButton, SIGNAL(pressed()), this, SLOT(cancelButtonPushed()));
@@ -64,10 +65,13 @@ estimatePage::estimatePage()
    dockPage();
    setCurrent();
    this->show();
+   m_aButtonPushed = false;
 }
 
 void estimatePage::okButtonPushed()
 {
+   if (m_aButtonPushed) return;
+   m_aButtonPushed = true;
    this->hide();
    QString cmd;
    QTextStream(&cmd) << "estimate" << 
@@ -83,8 +87,8 @@ void estimatePage::okButtonPushed()
       Pmsg1(000, "command : %s\n", cmd.toUtf8().data());
    }
 
-   consoleCommand(cmd);
-   m_console->notify(true);
+   consoleCommand(cmd, m_conn);
+   m_console->notify(m_conn, true);
    closeStackPage();
    mainWin->resetFocus();
 }
@@ -92,9 +96,11 @@ void estimatePage::okButtonPushed()
 
 void estimatePage::cancelButtonPushed()
 {
+   if (m_aButtonPushed) return;
+   m_aButtonPushed = true;
    mainWin->set_status(" Canceled");
    this->hide();
-   m_console->notify(true);
+   m_console->notify(m_conn, true);
    closeStackPage();
    mainWin->resetFocus();
 }
@@ -110,7 +116,7 @@ void estimatePage::job_name_change(int index)
 
    (void)index;
    job_defs.job_name = jobCombo->currentText();
-   if (m_console->get_job_defaults(job_defs)) {
+   if (m_console->get_job_defaults(m_conn, job_defs)) {
       filesetCombo->setCurrentIndex(filesetCombo->findText(job_defs.fileset_name, Qt::MatchExactly));
       levelCombo->setCurrentIndex(levelCombo->findText(job_defs.level, Qt::MatchExactly));
       clientCombo->setCurrentIndex(clientCombo->findText(job_defs.client_name, Qt::MatchExactly));

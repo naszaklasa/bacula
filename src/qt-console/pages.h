@@ -22,13 +22,13 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: pages.h 5372 2007-08-17 12:17:04Z kerns $
+ *   Version $Id: pages.h 8897 2009-06-13 15:30:42Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -70,7 +70,12 @@ public:
    void setContextMenuDockText();
    void setTreeWidgetItemDockColor();
    void consoleCommand(QString &);
-   void consoleInput(QString &);
+   void consoleCommand(QString &, int conn);
+   void consoleCommand(QString &, bool setCurrent);
+   void consoleCommand(QString &, int conn, bool setCurrent);
+   QString &name() { return m_name; };
+   void getVolumeList(QStringList &);
+   void getStatusList(QStringList &);
 
 public slots:
    /* closeEvent is a virtual function inherited from QWidget */
@@ -78,7 +83,8 @@ public slots:
 
 protected:
    void pgInitialize();
-   void pgInitialize(QTreeWidgetItem *);
+   void pgInitialize(const QString &);
+   void pgInitialize(const QString &, QTreeWidgetItem *);
    virtual void treeWidgetName(QString &);
    virtual void changeEvent(QEvent *event);
    void setConsoleCurrent();

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -28,7 +28,7 @@
 /*
  * Director external function prototypes
  *
- *   Version $Id: protos.h 6262 2008-01-09 10:58:13Z kerns $
+ *   Version $Id: protos.h 8982 2009-07-14 13:44:46Z kerns $
  */
 
 /* admin.c */
@@ -44,7 +44,7 @@ extern int authenticate_user_agent(UAContext *ua);
 
 /* autoprune.c */
 extern void do_autoprune(JCR *jcr);
-extern bool prune_volumes(JCR *jcr, bool InChanger, MEDIA_DBR *mr);
+extern void prune_volumes(JCR *jcr, bool InChanger, MEDIA_DBR *mr);
 
 /* autorecycle.c */
 extern bool recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr);
@@ -52,26 +52,37 @@ extern int recycle_volume(JCR *jcr, MEDIA_DBR *mr);
 extern bool find_recycled_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr);
 
 /* backup.c */
-extern int wait_for_job_termination(JCR *jcr);
+extern int wait_for_job_termination(JCR *jcr, int timeout=0);
 extern bool do_backup_init(JCR *jcr);
 extern bool do_backup(JCR *jcr);
 extern void backup_cleanup(JCR *jcr, int TermCode);
 extern void update_bootstrap_file(JCR *jcr);
+extern bool send_accurate_current_files(JCR *jcr);
+
+
+/* vbackup.c */
+extern bool do_vbackup_init(JCR *jcr);
+extern bool do_vbackup(JCR *jcr);
+extern void vbackup_cleanup(JCR *jcr, int TermCode);
+
 
 /* bsr.c */
 RBSR *new_bsr();
 void free_bsr(RBSR *bsr);
 bool complete_bsr(UAContext *ua, RBSR *bsr);
 uint32_t write_bsr_file(UAContext *ua, RESTORE_CTX &rx);
+void display_bsr_info(UAContext *ua, RESTORE_CTX &rx);
 void add_findex(RBSR *bsr, uint32_t JobId, int32_t findex);
 void add_findex_all(RBSR *bsr, uint32_t JobId);
 RBSR_FINDEX *new_findex();
 void make_unique_restore_filename(UAContext *ua, POOLMEM **fname);
+void print_bsr(UAContext *ua, RESTORE_CTX &rx);
 
 
 /* catreq.c */
 extern void catalog_request(JCR *jcr, BSOCK *bs);
 extern void catalog_update(JCR *jcr, BSOCK *bs);
+extern bool despool_attributes_from_file(JCR *jcr, const char *file);
 
 /* dird_conf.c */
 extern const char *level_to_str(int level);
@@ -86,10 +97,9 @@ extern int connect_to_file_daemon(JCR *jcr, int retry_interval,
                                   int max_retry_time, int verbose);
 extern bool send_include_list(JCR *jcr);
 extern bool send_exclude_list(JCR *jcr);
-extern bool send_bootstrap_file(JCR *jcr, BSOCK *sock);
 extern bool send_level_command(JCR *jcr);
 extern int get_attributes_and_put_in_catalog(JCR *jcr);
-extern int get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId);
+extern void get_attributes_and_compare_to_catalog(JCR *jcr, JobId_t JobId);
 extern int put_file_into_catalog(JCR *jcr, long file_index, char *fname,
                           char *link, char *attr, int stream);
 extern void get_level_since_time(JCR *jcr, char *since, int since_len);
@@ -103,6 +113,7 @@ enum e_prtmsg {
 extern bool response(JCR *jcr, BSOCK *fd, char *resp, const char *cmd, e_prtmsg prtmsg);
 
 /* job.c */
+extern bool allow_duplicate_job(JCR *jcr);
 extern void set_jcr_defaults(JCR *jcr, JOB *job);
 extern void create_unique_job_name(JCR *jcr, const char *base_name);
 extern void update_job_end_record(JCR *jcr);
@@ -130,6 +141,7 @@ extern bool create_restore_bootstrap_file(JCR *jcr);
 extern void dird_free_jcr(JCR *jcr);
 extern void dird_free_jcr_pointers(JCR *jcr);
 extern void cancel_storage_daemon_job(JCR *jcr);
+extern bool run_console_command(JCR *jcr, const char *cmd);
 
 /* migration.c */
 extern bool do_migration(JCR *jcr);
@@ -144,10 +156,12 @@ extern void mount_request(JCR *jcr, BSOCK *bs, char *buf);
 /* msgchan.c */
 extern bool connect_to_storage_daemon(JCR *jcr, int retry_interval,
                               int max_retry_time, int verbose);
-extern bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore);
+extern bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore,
+              bool send_bsr=false);
 extern bool start_storage_daemon_message_thread(JCR *jcr);
 extern int bget_dirmsg(BSOCK *bs);
 extern void wait_for_storage_daemon_termination(JCR *jcr);
+extern bool send_bootstrap_file(JCR *jcr, BSOCK *sd);
 
 /* next_vol.c */
 int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
@@ -174,8 +188,8 @@ bool acl_access_ok(UAContext *ua, int acl, const char *item);
 bool acl_access_ok(UAContext *ua, int acl, const char *item, int len);
 
 /* ua_cmds.c */
-int do_a_command(UAContext *ua, const char *cmd);
-int do_a_dot_command(UAContext *ua, const char *cmd);
+bool do_a_command(UAContext *ua);
+bool do_a_dot_command(UAContext *ua);
 int qmessagescmd(UAContext *ua, const char *cmd);
 bool open_client_db(UAContext *ua);
 bool open_db(UAContext *ua);
@@ -186,9 +200,9 @@ enum e_pool_op {
 };
 int create_pool(JCR *jcr, B_DB *db, POOL *pool, e_pool_op op);
 void set_pool_dbr_defaults_in_media_dbr(MEDIA_DBR *mr, POOL_DBR *pr);
-bool set_pooldbr_recyclepoolid(JCR *jcr, B_DB *db, POOL_DBR *pr, POOL *pool);
+bool set_pooldbr_references(JCR *jcr, B_DB *db, POOL_DBR *pr, POOL *pool);
 void set_pooldbr_from_poolres(POOL_DBR *pr, POOL *pool, e_pool_op op);
-int update_pool_recyclepool(JCR *jcr, B_DB *db, POOL *pool);
+int update_pool_references(JCR *jcr, B_DB *db, POOL *pool);
 
 /* ua_input.c */
 int get_cmd(UAContext *ua, const char *prompt);
@@ -209,7 +223,7 @@ void update_vol_pool(UAContext *ua, char *val, MEDIA_DBR *mr, POOL_DBR *opr);
 /* ua_output.c */
 void prtit(void *ctx, const char *msg);
 bool complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool);
-RUN *find_next_run(RUN *run, JOB *job, time_t &runtime, int ndays);
+RUN *find_next_run(RUN *run, JOB *job, utime_t &runtime, int ndays);
 
 /* ua_restore.c */
 int get_next_jobid_from_list(char **p, JobId_t *JobId);
@@ -267,17 +281,19 @@ int insert_tree_handler(void *ctx, int num_fields, char **row);
 /* ua_prune.c */
 int prune_files(UAContext *ua, CLIENT *client);
 int prune_jobs(UAContext *ua, CLIENT *client, int JobType);
+int prune_stats(UAContext *ua, utime_t retention);
 bool prune_volume(UAContext *ua, MEDIA_DBR *mr);
 int job_delete_handler(void *ctx, int num_fields, char **row);
 int del_count_handler(void *ctx, int num_fields, char **row);
 int file_delete_handler(void *ctx, int num_fields, char **row);
 int get_prune_list_for_volume(UAContext *ua, MEDIA_DBR *mr, del_ctx *del);
+int exclude_running_jobs_from_list(del_ctx *prune_list);
 
 /* ua_purge.c */
-bool is_volume_purged(UAContext *ua, MEDIA_DBR *mr);
+bool is_volume_purged(UAContext *ua, MEDIA_DBR *mr, bool force=false);
 bool mark_media_purged(UAContext *ua, MEDIA_DBR *mr);
-void purge_files_from_volume(UAContext *ua, MEDIA_DBR *mr );
-bool purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr);
+void purge_files_from_volume(UAContext *ua, MEDIA_DBR *mr);
+bool purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr, bool force=false);
 void purge_files_from_jobs(UAContext *ua, char *jobs);
 void purge_jobs_from_catalog(UAContext *ua, char *jobs);
 void purge_job_list_from_catalog(UAContext *ua, del_ctx &del);

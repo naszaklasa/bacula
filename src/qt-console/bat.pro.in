@@ -1,5 +1,5 @@
 ######################################################################
-# Version $Id: bat.pro.in 6956 2008-05-12 09:32:54Z kerns $
+# Version $Id: bat.pro.in 8890 2009-06-08 08:38:06Z kerns $
 #
 #   !!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
@@ -10,17 +10,27 @@
 CONFIG += qt debug @QWT@
 
 bins.path = /$(DESTDIR)@sbindir@
-bins.files = ./bat
+bins.files = bat
 confs.path = /$(DESTDIR)@sysconfdir@
-confs.commands = ./install_conf_file   
+confs.commands = ./install_conf_file
+help.path = /$(DESTDIR)@htmldir@
+help.files = help/*.html images/status.png images/mail-message-new.png
 
 TEMPLATE     = app
 TARGET       = bat
 DEPENDPATH  += .
 INCLUDEPATH += .. . ./console ./restore ./select
-INCLUDEPATH += @QWT_INC@ 
-LIBS        += -L../lib -lbac @OPENSSL_LIBS@
-LIBS        += @QWT_LDFLAGS@ -lqwt-qt4
+LIBS        += -L../lib -lbaccfg -lbac @OPENSSL_LIBS@
+LIBTOOL_LINK = @QMAKE_LIBTOOL@ --silent --tag=CXX --mode=link
+LIBTOOL_INSTALL = @QMAKE_LIBTOOL@ --silent --mode=install
+QMAKE_LINK   = $${LIBTOOL_LINK} $(CXX)
+QMAKE_INSTALL_PROGRAM = $${LIBTOOL_INSTALL} install -m 0754 -p
+QMAKE_CLEAN += .libs/* bat
+
+qwt {
+  INCLUDEPATH += @QWT_INC@ 
+  LIBS        += @QWT_LDFLAGS@ @QWT_LIB@
+}
 
 RESOURCES    = main.qrc
 MOC_DIR      = moc
@@ -42,8 +52,11 @@ FORMS += medialist/medialist.ui mediaedit/mediaedit.ui joblist/joblist.ui
 FORMS += clients/clients.ui storage/storage.ui fileset/fileset.ui
 FORMS += joblog/joblog.ui jobs/jobs.ui
 FORMS += help/help.ui
+FORMS += status/dirstat.ui
+FORMS += status/clientstat.ui
+FORMS += status/storstat.ui
 qwt {
-   FORMS += jobgraphs/jobplotcontrols.ui
+  FORMS += jobgraphs/jobplotcontrols.ui
 }
 
 # Main directory
@@ -56,7 +69,7 @@ SOURCES += bcomm/dircomm.cpp bcomm/dircomm_auth.cpp
 
 # Console
 HEADERS += console/console.h
-SOURCES += console/authenticate.cpp console/console.cpp
+SOURCES += console/console.cpp
 
 # Restore
 HEADERS += restore/restore.h
@@ -128,7 +141,24 @@ qwt {
 HEADERS += help/help.h
 SOURCES += help/help.cpp
 
-INSTALLS += bins
-INSTALLS += confs
+## Status Dir
+HEADERS += status/dirstat.h
+SOURCES += status/dirstat.cpp
+
+## Status Client
+HEADERS += status/clientstat.h
+SOURCES += status/clientstat.cpp
+
+## Status Client
+HEADERS += status/storstat.h
+SOURCES += status/storstat.cpp
+
+# Utility sources
+HEADERS += util/fmtwidgetitem.h util/comboutil.h
+SOURCES += util/fmtwidgetitem.cpp util/comboutil.cpp
+
+INSTALLS = bins confs help
 
 QMAKE_EXTRA_TARGETS += depend
+
+TRANSLATIONS += ts/bat_fr.ts ts/bat_de.ts

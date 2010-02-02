@@ -14,7 +14,8 @@
    <string>bat - Bacula Admin Tool</string>
   </property>
   <property name="windowIcon" >
-   <iconset resource="main.qrc" >:/images/bat.png</iconset>
+   <iconset resource="main.qrc" >
+    <normaloff>:/images/bat.png</normaloff>:/images/bat.png</iconset>
   </property>
   <property name="toolTip" >
    <string/>
@@ -36,9 +37,7 @@
     <item row="0" column="0" >
      <widget class="QStackedWidget" name="stackedWidget" >
       <property name="sizePolicy" >
-       <sizepolicy>
-        <hsizetype>7</hsizetype>
-        <vsizetype>7</vsizetype>
+       <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
         <horstretch>1</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -71,17 +70,9 @@
      <x>0</x>
      <y>0</y>
      <width>882</width>
-     <height>26</height>
+     <height>24</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuEdit" >
-    <property name="title" >
-     <string>&amp;Edit</string>
-    </property>
-    <addaction name="actionCopy" />
-    <addaction name="actionCut" />
-    <addaction name="actionPaste" />
-   </widget>
    <widget class="QMenu" name="menuSettings" >
     <property name="title" >
      <string>Settings</string>
@@ -100,12 +91,12 @@
     <property name="title" >
      <string>&amp;File</string>
     </property>
-    <addaction name="actionPrint" />
-    <addaction name="actionSave" />
+    <addaction name="actionRepopLists" />
+    <addaction name="actionReloadRepop" />
+    <addaction name="separator" />
     <addaction name="actionQuit" />
    </widget>
    <addaction name="menuFile" />
-   <addaction name="menuEdit" />
    <addaction name="menuSettings" />
    <addaction name="menuHelp" />
   </widget>
@@ -131,38 +122,42 @@
     <enum>Qt::Horizontal</enum>
    </property>
    <attribute name="toolBarArea" >
-    <number>4</number>
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak" >
+    <bool>false</bool>
    </attribute>
    <addaction name="actionConnect" />
-   <addaction name="actionStatusDir" />
-   <addaction name="actionMessages" />
-   <addaction name="actionLabel" />
-   <addaction name="actionRestore" />
-   <addaction name="actionRun" />
-   <addaction name="actionEstimate" />
-   <addaction name="actionBrowse" />
+   <addaction name="actionStatusDirPage" />
    <addaction name="actionJobPlot" />
+   <addaction name="actionMessages" />
+   <addaction name="separator" />
+   <addaction name="actionLabel" />
+   <addaction name="separator" />
+   <addaction name="actionEstimate" />
+   <addaction name="actionRun" />
+   <addaction name="actionRestore" />
+   <addaction name="actionBrowse" />
+   <addaction name="separator" />
    <addaction name="actionUndock" />
   </widget>
   <widget class="QDockWidget" name="dockWidget" >
    <property name="sizePolicy" >
-    <sizepolicy>
-     <hsizetype>5</hsizetype>
-     <vsizetype>7</vsizetype>
+    <sizepolicy vsizetype="Expanding" hsizetype="Preferred" >
      <horstretch>0</horstretch>
      <verstretch>1</verstretch>
     </sizepolicy>
    </property>
    <property name="minimumSize" >
     <size>
-     <width>50</width>
-     <height>100</height>
+     <width>79</width>
+     <height>101</height>
     </size>
    </property>
    <property name="maximumSize" >
     <size>
-     <width>16777215</width>
-     <height>16777215</height>
+     <width>524287</width>
+     <height>524287</height>
     </size>
    </property>
    <property name="focusPolicy" >
@@ -178,7 +173,7 @@
     <bool>false</bool>
    </property>
    <property name="features" >
-    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable|QDockWidget::NoDockWidgetFeatures</set>
+    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
    </property>
    <property name="allowedAreas" >
     <set>Qt::AllDockWidgetAreas</set>
@@ -200,9 +195,7 @@
      <item row="0" column="0" >
       <widget class="QTreeWidget" name="treeWidget" >
        <property name="sizePolicy" >
-        <sizepolicy>
-         <hsizetype>5</hsizetype>
-         <vsizetype>7</vsizetype>
+        <sizepolicy vsizetype="Expanding" hsizetype="Preferred" >
          <horstretch>1</horstretch>
          <verstretch>1</verstretch>
         </sizepolicy>
@@ -237,6 +230,11 @@
        <property name="autoFillBackground" >
         <bool>true</bool>
        </property>
+       <column>
+        <property name="text" >
+         <string>1</string>
+        </property>
+       </column>
       </widget>
      </item>
     </layout>
@@ -253,10 +251,10 @@
     <string>Console Command entry Dock Widget</string>
    </property>
    <property name="features" >
-    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable|QDockWidget::NoDockWidgetFeatures</set>
+    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
    </property>
    <property name="allowedAreas" >
-    <set>Qt::BottomDockWidgetArea|Qt::NoDockWidgetArea|Qt::TopDockWidgetArea</set>
+    <set>Qt::BottomDockWidgetArea|Qt::TopDockWidgetArea</set>
    </property>
    <property name="windowTitle" >
     <string>Console Command Line Entry</string>
@@ -274,11 +272,11 @@
      </property>
      <item row="0" column="0" >
       <layout class="QHBoxLayout" >
-       <property name="margin" >
-        <number>0</number>
-       </property>
        <property name="spacing" >
         <number>6</number>
+       </property>
+       <property name="margin" >
+        <number>0</number>
        </property>
        <item>
         <widget class="QLabel" name="label" >
@@ -309,7 +307,8 @@
   </action>
   <action name="actionAbout_bat" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/bat.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/bat.png</normaloff>:/images/bat.png</iconset>
    </property>
    <property name="text" >
     <string>&amp;About bat</string>
@@ -317,7 +316,8 @@
   </action>
   <action name="actionCopy" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/copy.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/copy.png</normaloff>:/images/copy.png</iconset>
    </property>
    <property name="text" >
     <string>&amp;Copy</string>
@@ -325,7 +325,8 @@
   </action>
   <action name="actionCut" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/cut.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/cut.png</normaloff>:/images/cut.png</iconset>
    </property>
    <property name="text" >
     <string>Cu&amp;t</string>
@@ -333,7 +334,8 @@
   </action>
   <action name="actionNew" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/new.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/new.png</normaloff>:/images/new.png</iconset>
    </property>
    <property name="text" >
     <string>new</string>
@@ -341,7 +343,8 @@
   </action>
   <action name="actionOpen" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/open.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/open.png</normaloff>:/images/open.png</iconset>
    </property>
    <property name="text" >
     <string>open</string>
@@ -349,7 +352,8 @@
   </action>
   <action name="actionPaste" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/paste.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/paste.png</normaloff>:/images/paste.png</iconset>
    </property>
    <property name="text" >
     <string>&amp;Paste</string>
@@ -357,7 +361,8 @@
   </action>
   <action name="actionPrint" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/print.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/print.png</normaloff>:/images/print.png</iconset>
    </property>
    <property name="text" >
     <string>&amp;Print</string>
@@ -368,7 +373,8 @@
   </action>
   <action name="actionSave" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/save.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/save.png</normaloff>:/images/save.png</iconset>
    </property>
    <property name="text" >
     <string>&amp;Save</string>
@@ -379,7 +385,8 @@
   </action>
   <action name="actionConnect" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/disconnected.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/disconnected.png</normaloff>:/images/disconnected.png</iconset>
    </property>
    <property name="text" >
     <string>Connect</string>
@@ -390,7 +397,8 @@
   </action>
   <action name="actionLabel" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/label.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/label.png</normaloff>:/images/label.png</iconset>
    </property>
    <property name="text" >
     <string>Label</string>
@@ -404,7 +412,8 @@
   </action>
   <action name="actionRestore" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/restore.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/restore.png</normaloff>:/images/restore.png</iconset>
    </property>
    <property name="text" >
     <string>Restore</string>
@@ -418,7 +427,8 @@
     <bool>false</bool>
    </property>
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/run.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/run.png</normaloff>:/images/run.png</iconset>
    </property>
    <property name="text" >
     <string>Run Job</string>
@@ -438,7 +448,8 @@
     <bool>false</bool>
    </property>
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/estimate-job.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/estimate-job.png</normaloff>:/images/estimate-job.png</iconset>
    </property>
    <property name="text" >
     <string>Estimate Job</string>
@@ -455,7 +466,8 @@
   </action>
   <action name="actionStatusDir" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/status.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/status-console.png</normaloff>:/images/status-console.png</iconset>
    </property>
    <property name="text" >
     <string comment="Query status of director" >Status Dir</string>
@@ -464,10 +476,10 @@
     <string>Status Dir</string>
    </property>
    <property name="toolTip" >
-    <string>Query status of director</string>
+    <string>Query status of director in console</string>
    </property>
    <property name="statusTip" >
-    <string>Query status of director</string>
+    <string>Query status of director in console</string>
    </property>
    <property name="autoRepeat" >
     <bool>true</bool>
@@ -480,7 +492,8 @@
   </action>
   <action name="actionUndock" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/up.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/up.png</normaloff>:/images/up.png</iconset>
    </property>
    <property name="text" >
     <string>Undock Window</string>
@@ -491,7 +504,8 @@
   </action>
   <action name="actionToggleDock" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/up.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/up.png</normaloff>:/images/up.png</iconset>
    </property>
    <property name="text" >
     <string>ToggleDock</string>
@@ -505,7 +519,8 @@
   </action>
   <action name="actionClosePage" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/unmark.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/unmark.png</normaloff>:/images/unmark.png</iconset>
    </property>
    <property name="text" >
     <string>Close Page</string>
@@ -516,7 +531,8 @@
   </action>
   <action name="actionMessages" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/mail-message-new.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/mail-message-new.png</normaloff>:/images/mail-message-new.png</iconset>
    </property>
    <property name="text" >
     <string>Messages</string>
@@ -541,7 +557,8 @@
   </action>
   <action name="actionBat_Help" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/help-browser.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/help-browser.png</normaloff>:/images/help-browser.png</iconset>
    </property>
    <property name="text" >
     <string>bat &amp;Help</string>
@@ -549,7 +566,8 @@
   </action>
   <action name="actionBrowse" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/browse.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/browse.png</normaloff>:/images/browse.png</iconset>
    </property>
    <property name="text" >
     <string>Browse</string>
@@ -563,7 +581,8 @@
   </action>
   <action name="actionJobPlot" >
    <property name="icon" >
-    <iconset resource="main.qrc" >:/images/graph1.png</iconset>
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/applications-graphics.png</normaloff>:/images/applications-graphics.png</iconset>
    </property>
    <property name="text" >
     <string>JobPlot</string>
@@ -573,6 +592,51 @@
    </property>
    <property name="statusTip" >
     <string>Plot Job Files and Bytes</string>
+   </property>
+  </action>
+  <action name="actionStatusDirPage" >
+   <property name="icon" >
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/status.png</normaloff>:/images/status.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Status Dir Page</string>
+   </property>
+   <property name="toolTip" >
+    <string>Director Status Page</string>
+   </property>
+  </action>
+  <action name="actionRepopLists" >
+   <property name="icon" >
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/mark.png</normaloff>:/images/mark.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Repop Lists</string>
+   </property>
+  </action>
+  <action name="actionReloadRepop" >
+   <property name="icon" >
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/mark.png</normaloff>:/images/mark.png</iconset>
+   </property>
+   <property name="text" >
+    <string>Reload and Repop</string>
+   </property>
+  </action>
+  <action name="actionBack" >
+   <property name="icon" >
+    <iconset resource="main.qrc" >
+     <normaloff>:/images/go-jump.png</normaloff>:/images/go-jump.png</iconset>
+   </property>
+   <property name="text" >
+    <string>back</string>
+   </property>
+   <property name="toolTip" >
+    <string>Previous Page</string>
+   </property>
+   <property name="statusTip" >
+    <string>Previous Page</string>
    </property>
   </action>
  </widget>

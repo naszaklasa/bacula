@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, March MMVII
  *
- *  $Id: select.cpp 5257 2007-07-28 10:36:28Z kerns $
+ *  $Id: select.cpp 8775 2009-04-30 16:57:18Z bartleyd2 $
  */ 
 
 #include "bat.h"
@@ -40,8 +40,9 @@
 /*
  * Read the items for the selection
  */
-selectDialog::selectDialog(Console *console) 
+selectDialog::selectDialog(Console *console, int conn) 
 {
+   m_conn = conn;
    QDateTime dt;
    int stat;
    QListWidgetItem *item;
@@ -51,14 +52,14 @@ selectDialog::selectDialog(Console *console)
    setupUi(this);
    connect(listBox, SIGNAL(currentRowChanged(int)), this, SLOT(index_change(int)));
    setAttribute(Qt::WA_DeleteOnClose);
-   m_console->read();                 /* get title */
-   labelWidget->setText(m_console->msg());
-   while ((stat=m_console->read()) > 0) {
+   m_console->read(m_conn);                 /* get title */
+   labelWidget->setText(m_console->msg(m_conn));
+   while ((stat=m_console->read(m_conn)) > 0) {
       item = new QListWidgetItem;
-      item->setText(m_console->msg());
+      item->setText(m_console->msg(m_conn));
       listBox->insertItem(row++, item);
    }
-   m_console->displayToPrompt();
+   m_console->displayToPrompt(m_conn);
    this->show();
 }
 
@@ -68,22 +69,23 @@ void selectDialog::accept()
 
    this->hide();
    bsnprintf(cmd, sizeof(cmd), "%d", m_index+1);
-   m_console->write_dir(cmd);
-   m_console->displayToPrompt();
+   m_console->write_dir(m_conn, cmd);
+   m_console->displayToPrompt(m_conn);
    this->close();
    mainWin->resetFocus();
-   m_console->displayToPrompt();
-
+   m_console->displayToPrompt(m_conn);
+   m_console->notify(m_conn, true);
 }
 
 
 void selectDialog::reject()
 {
    this->hide();
-   mainWin->set_status(" Canceled");
+   mainWin->set_status(tr(" Canceled"));
    this->close();
    mainWin->resetFocus();
-   m_console->beginNewCommand();
+   m_console->beginNewCommand(m_conn);
+   m_console->notify(m_conn, true);
 }
 
 /*
@@ -102,24 +104,24 @@ void selectDialog::index_change(int index)
 /*
  * Read the items for the selection
  */
-yesnoPopUp::yesnoPopUp(Console *console) 
+yesnoPopUp::yesnoPopUp(Console *console, int conn) 
 {
    QMessageBox msgBox;
 
    setAttribute(Qt::WA_DeleteOnClose);
-   console->read();                 /* get yesno question */
-   msgBox.setWindowTitle("Bat Question");
-   msgBox.setText(console->msg());
+   console->read(conn);                 /* get yesno question */
+   msgBox.setWindowTitle(tr("Bat Question"));
+   msgBox.setText(console->msg(conn));
    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-   console->displayToPrompt();
+   console->displayToPrompt(conn);
    switch (msgBox.exec()) {
    case QMessageBox::Yes:
-      console->write_dir("yes");
+      console->write_dir(conn, "yes");
       break;
    case QMessageBox::No:
-      console->write_dir("no");
+      console->write_dir(conn, "no");
       break;
    }
-   console->displayToPrompt();
+   console->displayToPrompt(conn);
    mainWin->resetFocus();
 }

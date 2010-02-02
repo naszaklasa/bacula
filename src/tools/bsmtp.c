@@ -64,7 +64,7 @@
         http://archives.neohapsis.com/archives/postfix/2000-05/1520.html
  
 
-   Version $Id: bsmtp.c 7423 2008-07-23 14:57:01Z kerns $
+   Version $Id: bsmtp.c 8597 2009-03-25 13:10:47Z ricozz $
 
  */
 
@@ -188,6 +188,7 @@ _("\n"
 "       -8          set charset utf-8\n"
 "       -c          set the Cc: field\n"
 "       -d <nn>     set debug level to <nn>\n"
+"       -dt         print timestamp in debug output\n"
 "       -f          set the From: field\n"
 "       -h          use mailhost:port as the SMTP server\n"
 "       -s          set the Subject: field\n"
@@ -211,7 +212,9 @@ static long tz_offset(time_t lnow, struct tm &tm)
 #if defined(HAVE_MINGW)
 __MINGW_IMPORT long     _dstbias;
 #endif
-
+#if defined(MINGW64)
+# define _tzset tzset
+#endif
    /* Win32 code */
    long offset;
    _tzset();
@@ -288,9 +291,13 @@ int main (int argc, char *argv[])
          break;
 
       case 'd':                    /* set debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0) {
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
          }
          Dmsg1(20, "Debug level = %d\n", debug_level);
          break;

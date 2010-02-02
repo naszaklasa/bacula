@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-20087 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, Sep MM
  *
- *   Version $Id: filed_conf.h 7164 2008-06-18 19:22:03Z kerns $
+ *   Version $Id: filed_conf.h 8863 2009-05-26 13:44:08Z ricozz $
  */
 
 /*
@@ -59,6 +59,7 @@ struct DIRRES {
    char *password;                    /* Director password */
    char *address;                     /* Director address or zero */
    bool monitor;                      /* Have only access to status and .status functions */
+   bool tls_authenticate;             /* Authenticate with TSL */
    bool tls_enable;                   /* Enable TLS */
    bool tls_require;                  /* Require TLS */
    bool tls_verify_peer;              /* TLS Verify Client Certificate */
@@ -75,9 +76,11 @@ struct DIRRES {
 struct CLIENT {
    RES   hdr;
    dlist *FDaddrs;
+   dlist *FDsrc_addr;                 /* address to source connections from */
    char *working_directory;
    char *pid_directory;
    char *subsys_directory;
+   char *plugin_directory;            /* Plugin directory */
    char *scripts_directory;
    MSGS *messages;                    /* daemon message handler */
    uint32_t MaxConcurrentJobs;
@@ -89,6 +92,7 @@ struct CLIENT {
    char *pki_keypair_file;            /* PKI Key Pair File */
    alist *pki_signing_key_files;      /* PKI Signing Key Files */
    alist *pki_master_key_files;       /* PKI Master Key Files */
+   bool tls_authenticate;             /* Authenticate with TLS */
    bool tls_enable;                   /* Enable TLS */
    bool tls_require;                  /* Require TLS */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
@@ -100,6 +104,7 @@ struct CLIENT {
    alist *pki_signers;                /* Shared PKI Trusted Signers */
    alist *pki_recipients;             /* Shared PKI Recipients */
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
+   char *verid;                       /* Custom Id to print in version command */
 };
 
 

@@ -13,8 +13,8 @@
 
 Index: src/dird/dird.c
 ===================================================================
---- src/dird/dird.c	(revision 6183)
-+++ src/dird/dird.c	(working copy)
+--- src/dird/dird.c	(révision 6160)
++++ src/dird/dird.c	(copie de travail)
 @@ -58,6 +58,7 @@
  void store_jobtype(LEX *lc, RES_ITEM *item, int index, int pass);
  void store_level(LEX *lc, RES_ITEM *item, int index, int pass);
@@ -23,7 +23,7 @@ Index: src/dird/dird.c
  void init_device_resources();
  
  static char *runjob = NULL;
-@@ -698,6 +699,7 @@
+@@ -707,6 +708,7 @@
                            job_items[i].handler == store_jobtype ||
                            job_items[i].handler == store_level   ||
                            job_items[i].handler == store_pint    ||
@@ -33,8 +33,8 @@ Index: src/dird/dird.c
                    Dmsg5(400, "Job \"%s\", field \"%s\" def_ivalue=%d item %d offset=%u\n",
 Index: src/dird/dird_conf.c
 ===================================================================
---- src/dird/dird_conf.c	(revision 6183)
-+++ src/dird/dird_conf.c	(working copy)
+--- src/dird/dird_conf.c	(révision 6160)
++++ src/dird/dird_conf.c	(copie de travail)
 @@ -74,8 +74,8 @@
  void store_level(LEX *lc, RES_ITEM *item, int index, int pass);
  void store_replace(LEX *lc, RES_ITEM *item, int index, int pass);
@@ -45,7 +45,7 @@ Index: src/dird/dird_conf.c
  static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass);
  static void store_runscript_when(LEX *lc, RES_ITEM *item, int index, int pass);
  static void store_runscript_cmd(LEX *lc, RES_ITEM *item, int index, int pass);
-@@ -1548,7 +1548,7 @@
+@@ -1559,7 +1559,7 @@
   * Store JobType (backup, verify, restore)
   *
   */

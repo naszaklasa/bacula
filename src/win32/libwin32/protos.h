@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -28,15 +28,13 @@
 /*
  * Kern Sibbald, August 2007
  *
- *   Version $Id: protos.h 5358 2007-08-15 16:54:21Z kerns $
+ *   Version $Id: protos.h 8681 2009-04-03 09:16:48Z kerns $
  */
 
 #define log_error_message(msg) LogErrorMsg((msg), __FILE__, __LINE__)
 
 extern int BaculaAppMain();
-extern void LogErrorMsg(char *msg, char *fname, int lineno);
-
-extern void output_status(void sendit(const char *msg, int len, void *sarg), void *arg);
+extern void LogErrorMsg(const char *msg, const char *fname, int lineno);
 
 extern int BaculaMain(int argc, char *argv[]);
 extern BOOL ReportStatus(DWORD state, DWORD exitcode, DWORD waithint);

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: filed_conf.c 7164 2008-06-18 19:22:03Z kerns $
+ *   Version $Id: filed_conf.c 8863 2009-05-26 13:44:08Z ricozz $
  */
 
 #include "bacula.h"
@@ -56,8 +56,8 @@
  * types. Note, these should be unique for each
  * daemon though not a requirement.
  */
-int r_first = R_FIRST;
-int r_last  = R_LAST;
+int32_t r_first = R_FIRST;
+int32_t r_last  = R_LAST;
 static RES *sres_head[R_LAST - R_FIRST + 1];
 RES **res_head = sres_head;
 
@@ -72,12 +72,12 @@ RES **res_head = sres_head;
  */
 #if defined(_MSC_VER)
 extern "C" { // work around visual compiler mangling variables
-    URES res_all;
+   URES res_all;
 }
 #else
 URES res_all;
 #endif
-int  res_all_size = sizeof(res_all);
+int32_t res_all_size = sizeof(res_all);
 
 /* Definition of records permitted within each
  * resource with the routine to process the record
@@ -91,11 +91,13 @@ static RES_ITEM cli_items[] = {
    {"fdport",      store_addresses_port,    ITEM(res_client.FDaddrs),  0, ITEM_DEFAULT, 9102},
    {"fdaddress",   store_addresses_address, ITEM(res_client.FDaddrs),  0, ITEM_DEFAULT, 9102},
    {"fdaddresses", store_addresses,         ITEM(res_client.FDaddrs),  0, ITEM_DEFAULT, 9102},
+   {"fdsourceaddress", store_addresses_address, ITEM(res_client.FDsrc_addr),  0, ITEM_DEFAULT, 0},
 
    {"workingdirectory",  store_dir, ITEM(res_client.working_directory), 0, ITEM_REQUIRED, 0},
    {"piddirectory",  store_dir,     ITEM(res_client.pid_directory),     0, ITEM_REQUIRED, 0},
    {"subsysdirectory",  store_dir,  ITEM(res_client.subsys_directory),  0, 0, 0},
-   {"scriptsdirectory",  store_dir,  ITEM(res_client.scripts_directory),  0, 0, 0},
+   {"plugindirectory",  store_dir,  ITEM(res_client.plugin_directory),  0, 0, 0},
+   {"scriptsdirectory", store_dir,  ITEM(res_client.scripts_directory),  0, 0, 0},
    {"maximumconcurrentjobs", store_pint32,  ITEM(res_client.MaxConcurrentJobs), 0, ITEM_DEFAULT, 20},
    {"messages",      store_res, ITEM(res_client.messages), R_MSGS, 0, 0},
    {"sdconnecttimeout", store_time,ITEM(res_client.SDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
@@ -108,12 +110,14 @@ static RES_ITEM cli_items[] = {
    {"pkisigner",             store_alist_str, ITEM(res_client.pki_signing_key_files), 0, 0, 0},
    {"pkimasterkey",          store_alist_str, ITEM(res_client.pki_master_key_files), 0, 0, 0},
 #endif
+   {"tlsauthenticate",       store_bool,    ITEM(res_client.tls_authenticate),  0, 0, 0},
    {"tlsenable",             store_bool,    ITEM(res_client.tls_enable),  0, 0, 0},
    {"tlsrequire",            store_bool,    ITEM(res_client.tls_require), 0, 0, 0},
    {"tlscacertificatefile",  store_dir,       ITEM(res_client.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir",   store_dir,       ITEM(res_client.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate",        store_dir,       ITEM(res_client.tls_certfile), 0, 0, 0},
    {"tlskey",                store_dir,       ITEM(res_client.tls_keyfile), 0, 0, 0},
+   {"verid",                 store_str,       ITEM(res_client.verid), 0, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -124,6 +128,7 @@ static RES_ITEM dir_items[] = {
    {"password",    store_password, ITEM(res_dir.password),  0, ITEM_REQUIRED, 0},
    {"address",     store_str,      ITEM(res_dir.address),   0, 0, 0},
    {"monitor",     store_bool,   ITEM(res_dir.monitor),   0, ITEM_DEFAULT, 0},
+   {"tlsauthenticate",      store_bool,    ITEM(res_dir.tls_authenticate), 0, 0, 0},
    {"tlsenable",            store_bool,    ITEM(res_dir.tls_enable), 0, 0, 0},
    {"tlsrequire",           store_bool,    ITEM(res_dir.tls_require), 0, 0, 0},
    {"tlsverifypeer",        store_bool,    ITEM(res_dir.tls_verify_peer), 0, ITEM_DEFAULT, 1},
@@ -257,8 +262,14 @@ void free_resource(RES *sres, int type)
       if (res->res_client.scripts_directory) {
          free(res->res_client.scripts_directory);
       }
+      if (res->res_client.plugin_directory) {
+         free(res->res_client.plugin_directory);
+      }
       if (res->res_client.FDaddrs) {
          free_addresses(res->res_client.FDaddrs);
+      }
+      if (res->res_client.FDsrc_addr) {
+         free_addresses(res->res_client.FDsrc_addr);
       }
 
       if (res->res_client.pki_keypair_file) { 
@@ -305,6 +316,9 @@ void free_resource(RES *sres, int type)
       }
       if (res->res_client.tls_keyfile) {
          free(res->res_client.tls_keyfile);
+      }
+      if (res->res_client.verid) {
+         free(res->res_client.verid);
       }
       break;
    case R_MSGS:
@@ -438,4 +452,11 @@ void save_resource(int type, RES_ITEM *items, int pass)
                res->res_dir.hdr.name);
       }
    }
+}
+
+bool parse_fd_config(CONFIG *config, const char *configfile, int exit_code)
+{
+   config->init(configfile, NULL, exit_code, (void *)&res_all, res_all_size,
+      r_first, r_last, resources, res_head);
+   return config->parse_config();
 }

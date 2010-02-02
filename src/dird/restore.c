@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -42,7 +42,7 @@
  *       to do the restore.
  *     Update the DB according to what files where restored????
  *
- *   Version $Id: restore.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: restore.c 8982 2009-07-14 13:44:46Z kerns $
  */
 
 
@@ -50,14 +50,16 @@
 #include "dird.h"
 
 /* Commands sent to File daemon */
-static char restorecmd[]        = "restore replace=%c prelinks=%d where=%s\n";
+static char restorecmd[]  = "restore replace=%c prelinks=%d where=%s\n";
 static char restorecmdR[] = "restore replace=%c prelinks=%d regexwhere=%s\n";
-static char storaddr[]   = "storage address=%s port=%d ssl=0\n";
+static char storaddr[]    = "storage address=%s port=%d ssl=0\n";
 
 /* Responses received from File daemon */
 static char OKrestore[]   = "2000 OK restore\n";
 static char OKstore[]     = "2000 OK storage\n";
-static char OKbootstrap[] = "2000 OK bootstrap\n";
+
+/* Responses received from the Storage daemon */
+static char OKbootstrap[] = "3000 OK bootstrap\n";
 
 /*
  * Do a restore of the specified files
@@ -67,17 +69,23 @@ static char OKbootstrap[] = "2000 OK bootstrap\n";
  */
 bool do_restore(JCR *jcr)
 {
-   BSOCK   *fd;
+   BSOCK   *fd, *sd;
    JOB_DBR rjr;                       /* restore job record */
+   char replace, *where, *cmd;
+   char empty = '\0';
+   int stat;
 
    free_wstorage(jcr);                /* we don't write */
+
+   if (!allow_duplicate_job(jcr)) {
+      goto bail_out;
+   }
 
    memset(&rjr, 0, sizeof(rjr));
    jcr->jr.JobLevel = L_FULL;         /* Full restore */
    if (!db_update_job_start_record(jcr, jcr->db, &jcr->jr)) {
       Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
-      restore_cleanup(jcr, JS_ErrorTerminated);
-      return false;
+      goto bail_out;
    }
    Dmsg0(20, "Updated job start record\n");
 
@@ -87,8 +95,7 @@ bool do_restore(JCR *jcr)
       Jmsg0(jcr, M_FATAL, 0, _("Cannot restore without a bootstrap file.\n"
           "You probably ran a restore job directly. All restore jobs must\n"
           "be run using the restore command.\n"));
-      restore_cleanup(jcr, JS_ErrorTerminated);
-      return false;
+      goto bail_out;
    }
 
 
@@ -107,25 +114,32 @@ bool do_restore(JCR *jcr)
     * Start conversation with Storage daemon
     */
    if (!connect_to_storage_daemon(jcr, 10, SDConnectTimeout, 1)) {
-      restore_cleanup(jcr, JS_ErrorTerminated);
-      return false;
+      goto bail_out;
    }
+   sd = jcr->store_bsock;
    /*
     * Now start a job with the Storage daemon
     */
    if (!start_storage_daemon_job(jcr, jcr->rstorage, NULL)) {
-      restore_cleanup(jcr, JS_ErrorTerminated);
-      return false;
+      goto bail_out;
    }
-   if (!bnet_fsend(jcr->store_bsock, "run")) {
-      return false;
+
+   /*
+    * Send the bootstrap file -- what Volumes/files to restore
+    */
+   if (!send_bootstrap_file(jcr, sd) ||
+       !response(jcr, sd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
+      goto bail_out;
+   }
+
+   if (!sd->fsend("run")) {
+      goto bail_out;
    }
    /*
     * Now start a Storage daemon message thread
     */
    if (!start_storage_daemon_message_thread(jcr)) {
-      restore_cleanup(jcr, JS_ErrorTerminated);
-      return false;
+      goto bail_out;
    }
    Dmsg0(50, "Storage daemon connection OK\n");
 
@@ -135,8 +149,7 @@ bool do_restore(JCR *jcr)
     */
    set_jcr_job_status(jcr, JS_WaitFD);
    if (!connect_to_file_daemon(jcr, 10, FDConnectTimeout, 1)) {
-      restore_cleanup(jcr, JS_ErrorTerminated);
-      return false;
+      goto bail_out;
    }
 
    fd = jcr->file_bsock;
@@ -150,31 +163,17 @@ bool do_restore(JCR *jcr)
    if (jcr->rstore->SDDport == 0) {
       jcr->rstore->SDDport = jcr->rstore->SDport;
    }
-   bnet_fsend(fd, storaddr, jcr->rstore->address, jcr->rstore->SDDport);
+   fd->fsend(storaddr, jcr->rstore->address, jcr->rstore->SDDport);
    Dmsg1(6, "dird>filed: %s\n", fd->msg);
    if (!response(jcr, fd, OKstore, "Storage", DISPLAY_ERROR)) {
-      restore_cleanup(jcr, JS_ErrorTerminated);
-      return false;
+      goto bail_out;
    }
-
-   /*
-    * Send the bootstrap file -- what Volumes/files to restore
-    */
-   if (!send_bootstrap_file(jcr, fd) ||
-       !response(jcr, fd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
-      restore_cleanup(jcr, JS_ErrorTerminated);
-      return false;
-   }
-
 
    if (!send_runscripts_commands(jcr)) {
-      restore_cleanup(jcr, JS_ErrorTerminated);
-      return false;
+      goto bail_out;
    }
 
    /* Send restore command */
-   char replace, *where, *cmd;
-   char empty = '\0';
 
    if (jcr->replace != 0) {
       replace = jcr->replace;
@@ -198,27 +197,29 @@ bool do_restore(JCR *jcr)
       where = jcr->job->RestoreWhere; /* no override take from job */
       cmd = restorecmd;
 
-   } else {			      /* nothing was specified */
-      where = &empty;		      /* use default */
-      cmd   = restorecmd;		     
+   } else {                           /* nothing was specified */
+      where = &empty;                 /* use default */
+      cmd   = restorecmd;                    
    }
    
    jcr->prefix_links = jcr->job->PrefixLinks;
 
    bash_spaces(where);
-   bnet_fsend(fd, cmd, replace, jcr->prefix_links, where);
+   fd->fsend(cmd, replace, jcr->prefix_links, where);
    unbash_spaces(where);
 
    if (!response(jcr, fd, OKrestore, "Restore", DISPLAY_ERROR)) {
-      restore_cleanup(jcr, JS_ErrorTerminated);
-      return false;
+      goto bail_out;
    }
 
    /* Wait for Job Termination */
-   int stat = wait_for_job_termination(jcr);
+   stat = wait_for_job_termination(jcr);
    restore_cleanup(jcr, stat);
-
    return true;
+
+bail_out:
+   restore_cleanup(jcr, JS_ErrorTerminated);
+   return false;
 }
 
 bool do_restore_init(JCR *jcr) 
@@ -260,12 +261,15 @@ void restore_cleanup(JCR *jcr, int TermCode)
          term_msg = _("Restore OK");
       }
       break;
+   case JS_Warnings:
+         term_msg = _("Restore OK -- with warnings");
+         break;
    case JS_FatalError:
    case JS_ErrorTerminated:
       term_msg = _("*** Restore Error ***");
       msg_type = M_ERROR;          /* Generate error message */
       if (jcr->store_bsock) {
-         bnet_sig(jcr->store_bsock, BNET_TERMINATE);
+         jcr->store_bsock->signal(BNET_TERMINATE);
          if (jcr->SD_msg_chan) {
             pthread_cancel(jcr->SD_msg_chan);
          }
@@ -274,7 +278,7 @@ void restore_cleanup(JCR *jcr, int TermCode)
    case JS_Canceled:
       term_msg = _("Restore Canceled");
       if (jcr->store_bsock) {
-         bnet_sig(jcr->store_bsock, BNET_TERMINATE);
+         jcr->store_bsock->signal(BNET_TERMINATE);
          if (jcr->SD_msg_chan) {
             pthread_cancel(jcr->SD_msg_chan);
          }
@@ -299,7 +303,7 @@ void restore_cleanup(JCR *jcr, int TermCode)
    jobstatus_to_ascii(jcr->FDJobStatus, fd_term_msg, sizeof(fd_term_msg));
    jobstatus_to_ascii(jcr->SDJobStatus, sd_term_msg, sizeof(sd_term_msg));
 
-   Jmsg(jcr, msg_type, 0, _("Bacula %s %s (%s): %s\n"
+   Jmsg(jcr, msg_type, 0, _("%s %s %s (%s): %s\n"
 "  Build OS:               %s %s %s\n"
 "  JobId:                  %d\n"
 "  Job:                    %s\n"
@@ -314,7 +318,7 @@ void restore_cleanup(JCR *jcr, int TermCode)
 "  FD termination status:  %s\n"
 "  SD termination status:  %s\n"
 "  Termination:            %s\n\n"),
-        my_name, VERSION, LSMDATE, edt,
+        BACULA, my_name, VERSION, LSMDATE, edt,
         HOST_OS, DISTNAME, DISTVER,
         jcr->jr.JobId,
         jcr->jr.Job,
@@ -325,7 +329,7 @@ void restore_cleanup(JCR *jcr, int TermCode)
         edit_uint64_with_commas((uint64_t)jcr->jr.JobFiles, ec2),
         edit_uint64_with_commas(jcr->jr.JobBytes, ec3),
         (float)kbps,
-        jcr->Errors,
+        jcr->JobErrors,
         fd_term_msg,
         sd_term_msg,
         term_msg);

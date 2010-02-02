@@ -21,7 +21,7 @@ DEFINES = \
 	$(HAVES)
 
 # Replace MODULE with the directory in the main Bacula tree containing the source
-VPATH = ../../MODULE
+VPATH = $(MAINDIR)
 
 ##########################################################################
 

@@ -1,10 +1,7 @@
 /*
- *   Version $Id: protos.h 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -23,11 +20,14 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   Version $Id: protos.h 8947 2009-07-02 11:36:26Z ricozz $
+ */
 
 extern bool blast_data_to_storage_daemon(JCR *jcr, char *addr);
 extern void do_verify_volume(JCR *jcr);
@@ -47,5 +47,20 @@ void start_dir_heartbeat(JCR *jcr);
 void stop_dir_heartbeat(JCR *jcr);
 
 /* From acl.c */
-int bacl_get(JCR *jcr, int acltype);
-int bacl_set(JCR *jcr, int acltype);
+bool build_acl_streams(JCR *jcr, FF_PKT *ff_pkt);
+bool parse_acl_stream(JCR *jcr, int stream);
+
+/* from accurate.c */
+bool accurate_send_deleted_list(JCR *jcr);
+bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt);
+bool accurate_mark_file_as_seen(JCR *jcr, char *fname);
+void accurate_free(JCR *jcr);
+
+/* from backup.c */
+bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream);
+void strip_path(FF_PKT *ff_pkt);
+void unstrip_path(FF_PKT *ff_pkt);
+
+/* from xattr.c */
+bool build_xattr_streams(JCR *jcr, FF_PKT *ff_pkt);
+bool parse_xattr_stream(JCR *jcr, int stream);

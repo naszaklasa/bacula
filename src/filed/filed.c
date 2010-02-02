@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,15 +30,29 @@
  *
  *    Kern Sibbald, March MM
  *
- *   Version $Id: filed.c 6747 2008-04-06 10:00:46Z kerns $
+ *   Version $Id: filed.c 8132 2008-12-09 19:21:38Z ricozz $
  *
  */
 
 #include "bacula.h"
 #include "filed.h"
 
+#ifdef HAVE_PYTHON
+
+#undef _POSIX_C_SOURCE
+#include <Python.h>
+
+#include "lib/pythonlib.h"
+
+/* Imported Functions */
+extern PyObject *job_getattr(PyObject *self, char *attrname);
+extern int job_setattr(PyObject *self, char *attrname, PyObject *value);
+
+#endif /* HAVE_PYTHON */
+
 /* Imported Functions */
 extern void *handle_client_request(void *dir_sock);
+extern bool parse_fd_config(CONFIG *config, const char *configfile, int exit_code);
 
 /* Forward referenced functions */
 void terminate_filed(int sig);
@@ -49,14 +63,13 @@ CLIENT *me;                           /* my resource */
 bool no_signals = false;
 void *start_heap;
 
-
 #define CONFIG_FILE "bacula-fd.conf" /* default config file */
 
 char *configfile = NULL;
 static bool foreground = false;
 static workq_t dir_workq;             /* queue of work from Director */
 static pthread_t server_tid;
-
+static CONFIG *config;
 
 static void usage()
 {
@@ -65,7 +78,8 @@ PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bacula-fd [-f -s] [-c config_file] [-d debug_level]\n"
 "        -c <file>   use <file> as configuration file\n"
-"        -dnn        set debug level to nn\n"
+"        -d <nn>     set debug level to <nn>\n"
+"        -dt         print timestamp in debug output\n"
 "        -f          run in foreground (for debugging)\n"
 "        -g          groupid\n"
 "        -s          no signals (for debugging)\n"
@@ -93,6 +107,9 @@ int main (int argc, char *argv[])
    bool test_config = false;
    char *uid = NULL;
    char *gid = NULL;
+#ifdef HAVE_PYTHON
+   init_python_interpreter_args python_args;
+#endif /* HAVE_PYTHON */
 
    start_heap = sbrk(0);
    setlocale(LC_ALL, "");
@@ -114,9 +131,13 @@ int main (int argc, char *argv[])
          break;
 
       case 'd':                    /* debug level */
-         debug_level = atoi(optarg);
-         if (debug_level <= 0) {
-            debug_level = 1;
+         if (*optarg == 't') {
+            dbg_timestamp = true;
+         } else {
+            debug_level = atoi(optarg);
+            if (debug_level <= 0) {
+               debug_level = 1;
+            }
          }
          break;
 
@@ -176,7 +197,8 @@ int main (int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_fd_config(config, configfile, M_ERROR_TERM);
 
    if (init_crypto() != 0) {
       Emsg0(M_ERROR, 0, _("Cryptography library initialization failed.\n"));
@@ -203,13 +225,25 @@ int main (int argc, char *argv[])
    create_pid_file(me->pid_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
    read_state_file(me->working_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
 
+   load_fd_plugins(me->plugin_directory);
+
    drop(uid, gid);
 
 #ifdef BOMB
    me += 1000000;
 #endif
 
-   init_python_interpreter(me->hdr.name, me->scripts_directory, "FDStartUp");
+#ifdef HAVE_PYTHON
+   python_args.progname = me->hdr.name;
+   python_args.scriptdir = me->scripts_directory;
+   python_args.modulename = "FDStartUp";
+   python_args.configfile = configfile;
+   python_args.workingdir = me->working_directory;
+   python_args.job_getattr = job_getattr;
+   python_args.job_setattr = job_setattr;
+
+   init_python_interpreter(&python_args);
+#endif /* HAVE_PYTHON */
 
    set_thread_concurrency(10);
 
@@ -244,6 +278,7 @@ void terminate_filed(int sig)
 
    bnet_stop_thread_server(server_tid);
    generate_daemon_event(NULL, "Exit");
+   unload_plugins();
    write_state_file(me->working_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
    delete_pid_file(me->pid_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
 
@@ -254,10 +289,15 @@ void terminate_filed(int sig)
    if (debug_level > 0) {
       print_memory_pool_stats();
    }
+   if (config) {
+      config->free_resources();
+      free(config);
+      config = NULL;
+   }
    term_msg();
-   free_config_resources();
    cleanup_crypto();
    close_memory_pool();               /* release free memory in pool */
+   lmgr_cleanup_main();
    sm_dump(false);                    /* dump orphaned buffers */
    exit(sig);
 }
@@ -270,6 +310,7 @@ static bool check_resources()
 {
    bool OK = true;
    DIRRES *director;
+   bool need_tls;
 
    LockRes();
 
@@ -301,8 +342,9 @@ static bool check_resources()
          me->tls_enable = true;
 #endif
       }
+      need_tls = me->tls_enable || me->tls_authenticate;
 
-      if ((!me->tls_ca_certfile && !me->tls_ca_certdir) && me->tls_enable) {
+      if ((!me->tls_ca_certfile && !me->tls_ca_certdir) && need_tls) {
          Emsg1(M_FATAL, 0, _("Neither \"TLS CA Certificate\""
             " or \"TLS CA Certificate Dir\" are defined for File daemon in %s.\n"),
                             configfile);
@@ -310,7 +352,7 @@ static bool check_resources()
       }
 
       /* If everything is well, attempt to initialize our per-resource TLS context */
-      if (OK && (me->tls_enable || me->tls_require)) {
+      if (OK && (need_tls || me->tls_require)) {
          /* Initialize TLS context:
           * Args: CA certfile, CA certdir, Certfile, Keyfile,
           * Keyfile PEM Callback, Keyfile CB Userdata, DHfile, Verify Peer */
@@ -460,20 +502,21 @@ static bool check_resources()
          director->tls_enable = true;
 #endif
       }
+      need_tls = director->tls_enable || director->tls_authenticate;
 
-      if (!director->tls_certfile && director->tls_enable) {
+      if (!director->tls_certfile && need_tls) {
          Emsg2(M_FATAL, 0, _("\"TLS Certificate\" file not defined for Director \"%s\" in %s.\n"),
                director->hdr.name, configfile);
          OK = false;
       }
 
-      if (!director->tls_keyfile && director->tls_enable) {
+      if (!director->tls_keyfile && need_tls) {
          Emsg2(M_FATAL, 0, _("\"TLS Key\" file not defined for Director \"%s\" in %s.\n"),
                director->hdr.name, configfile);
          OK = false;
       }
 
-      if ((!director->tls_ca_certfile && !director->tls_ca_certdir) && director->tls_enable && director->tls_verify_peer) {
+      if ((!director->tls_ca_certfile && !director->tls_ca_certdir) && need_tls && director->tls_verify_peer) {
          Emsg2(M_FATAL, 0, _("Neither \"TLS CA Certificate\""
                              " or \"TLS CA Certificate Dir\" are defined for Director \"%s\" in %s."
                              " At least one CA certificate store is required"
@@ -483,7 +526,7 @@ static bool check_resources()
       }
 
       /* If everything is well, attempt to initialize our per-resource TLS context */
-      if (OK && (director->tls_enable || director->tls_require)) {
+      if (OK && (need_tls || director->tls_require)) {
          /* Initialize TLS context:
           * Args: CA certfile, CA certdir, Certfile, Keyfile,
           * Keyfile PEM Callback, Keyfile CB Userdata, DHfile, Verify Peer */

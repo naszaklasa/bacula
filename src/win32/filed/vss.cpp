@@ -1,15 +1,7 @@
-
-// vss.cpp -- Interface to Volume Shadow Copies (VSS)
-//
-// Copyright transferred from MATRIX-Computer GmbH to
-//   Kern Sibbald by express permission.
-//
-// Author          : Thorsten Engel
-// Created On      : Fri May 06 21:44:00 2005
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,11 +20,18 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+// vss.cpp -- Interface to Volume Shadow Copies (VSS)
+//
+// Copyright transferred from MATRIX-Computer GmbH to
+//   Kern Sibbald by express permission.
+//
+// Author          : Thorsten Engel
+// Created On      : Fri May 06 21:44:00 2005
 
 
 #ifdef WIN32_VSS
@@ -74,9 +73,9 @@ void VSSInit()
          atexit(VSSCleanup);
          return;
       }
-   /* Vista or Longhorn */
-   } else if (g_MajorVersion == 6 && g_MinorVersion == 0) {
-      /* Probably will not work */
+   /* Vista or Longhorn or later */
+//       } else if (g_MajorVersion == 6 && g_MinorVersion == 0) {
+   } else if (g_MajorVersion >= 6) {
       g_pVSSClient = new VSSClientVista();
       atexit(VSSCleanup);
       return;
@@ -216,7 +215,7 @@ const char* VSSClient::GetWriterInfo(int nIndex)
 const int VSSClient::GetWriterState(int nIndex)
 {
    alist* pV = (alist*)m_pAlistWriterState;   
-   return (int)pV->get(nIndex);
+   return (intptr_t)pV->get(nIndex);
 }
 
 void VSSClient::AppendWriterInfo(int nState, const char* pszInfo)

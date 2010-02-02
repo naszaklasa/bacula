@@ -1,26 +1,7 @@
 /*
-**  OSSP var - Variable Expansion
-**  Copyright (c) 2001-2002 Ralf S. Engelschall <rse@engelschall.com>
-**  Copyright (c) 2001-2002 The OSSP Project (http://www.ossp.org/)
-**  Copyright (c) 2001-2002 Cable & Wireless Deutschland (http://www.cw.com/de/)
-**
-**  This file is part of OSSP var, a variable expansion
-**  library which can be found at http://www.ossp.org/pkg/lib/var/.
-**
-**  Permission to use, copy, modify, and distribute this software for
-**  any purpose with or without fee is hereby granted, provided that
-**  the above copyright notice and this permission notice appear in all
-**  copies.
-**
-**  For disclaimer see below.
-*/
-/*
- * Modified for use with Bacula by Kern Sibbald, June 2003
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -39,11 +20,30 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark ofJohn Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+**  OSSP var - Variable Expansion
+**  Copyright (c) 2001-2002 Ralf S. Engelschall <rse@engelschall.com>
+**  Copyright (c) 2001-2002 The OSSP Project (http://www.ossp.org/)
+**  Copyright (c) 2001-2002 Cable & Wireless Deutschland (http://www.cw.com/de/)
+**
+**  This file is part of OSSP var, a variable expansion
+**  library which can be found at http://www.ossp.org/pkg/lib/var/.
+**
+**  Permission to use, copy, modify, and distribute this software for
+**  any purpose with or without fee is hereby granted, provided that
+**  the above copyright notice and this permission notice appear in all
+**  copies.
+**
+**  For disclaimer see below.
+*/
+/*
+ * Modified for use with Bacula by Kern Sibbald, June 2003
+ */
 
 
 

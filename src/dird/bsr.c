@@ -1,18 +1,7 @@
 /*
- *
- *   Bacula Director -- Bootstrap Record routines.
- *
- *      BSR (bootstrap record) handling routines split from
- *        ua_restore.c July MMIII
- *
- *     Kern Sibbald, July MMII
- *
- *   Version $Id: bsr.c 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,19 +20,28 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *   Bacula Director -- Bootstrap Record routines.
+ *
+ *      BSR (bootstrap record) handling routines split from
+ *        ua_restore.c July MMIII
+ *
+ *     Kern Sibbald, July MMII
+ *
+ *   Version $Id: bsr.c 8918 2009-06-23 11:56:35Z ricozz $
+ */
 
 #include "bacula.h"
 #include "dird.h"
 
 /* Forward referenced functions */
 static uint32_t write_bsr(UAContext *ua, RESTORE_CTX &rx, FILE *fd);
-void print_bsr(UAContext *ua, RBSR *bsr);
-
 
 /*
  * Create new FileIndex entry for BSR
@@ -137,21 +135,6 @@ static bool is_volume_selected(RBSR_FINDEX *fi,
 }
 
 
-
-static void print_findex(UAContext *ua, RBSR_FINDEX *fi)
-{
-   ua->send_msg("fi=0x%lx\n", fi);
-   for ( ; fi; fi=fi->next) {
-      if (fi->findex == fi->findex2) {
-         ua->send_msg("FileIndex=%d\n", fi->findex);
-         Dmsg1(1000, "FileIndex=%d\n", fi->findex);
-      } else {
-         ua->send_msg("FileIndex=%d-%d\n", fi->findex, fi->findex2);
-         Dmsg2(1000, "FileIndex=%d-%d\n", fi->findex, fi->findex2);
-      }
-   }
-}
-
 /* Create a new bootstrap record */
 RBSR *new_bsr()
 {
@@ -168,6 +151,9 @@ void free_bsr(RBSR *bsr)
       free_findex(bsr->fi);
       if (bsr->VolParams) {
          free(bsr->VolParams);
+      }
+      if (bsr->fileregex) {
+         free(bsr->fileregex);
       }
       next = bsr->next;
       free(bsr);
@@ -233,12 +219,8 @@ uint32_t write_bsr_file(UAContext *ua, RESTORE_CTX &rx)
 {
    FILE *fd;
    POOL_MEM fname(PM_MESSAGE);
-   POOL_MEM volmsg(PM_MESSAGE);
    uint32_t count = 0;;
    bool err;
-   char *p;
-   JobId_t JobId;
-   char Device[MAX_NAME_LENGTH];
 
    make_unique_restore_filename(ua, fname);
    fd = fopen(fname.c_str(), "w+b");
@@ -253,7 +235,7 @@ uint32_t write_bsr_file(UAContext *ua, RESTORE_CTX &rx)
    err = ferror(fd);
    fclose(fd);
    if (count == 0) {
-      ua->info_msg(_("No files found to restore/migrate. No bootstrap file written.\n"));
+      ua->info_msg(_("No files found to read. No bootstrap file written.\n"));
       goto bail_out;
    }
    if (err) {
@@ -262,8 +244,52 @@ uint32_t write_bsr_file(UAContext *ua, RESTORE_CTX &rx)
       goto bail_out;
    }
 
-
    ua->send_msg(_("Bootstrap records written to %s\n"), fname.c_str());
+
+   if (debug_level >= 10) {
+      print_bsr(ua, rx);
+   }
+
+bail_out:
+   return count;
+}
+
+static void display_vol_info(UAContext *ua, RESTORE_CTX &rx, JobId_t JobId)
+{
+   POOL_MEM volmsg(PM_MESSAGE);
+   char Device[MAX_NAME_LENGTH];
+   char online;
+   RBSR *bsr;
+
+   for (bsr=rx.bsr; bsr; bsr=bsr->next) {
+      if (JobId && JobId != bsr->JobId) {
+         continue;
+      }
+
+      for (int i=0; i < bsr->VolCount; i++) {
+         if (bsr->VolParams[i].VolumeName[0]) {
+            if (!get_storage_device(Device, bsr->VolParams[i].Storage)) {
+               Device[0] = 0;
+            }
+            if (bsr->VolParams[i].InChanger && bsr->VolParams[i].Slot) {
+               online = '*';
+            } else {
+               online = ' ';
+            }
+            Mmsg(volmsg, "%c%-25.25s %-25.25s %-25.25s", 
+                 online, bsr->VolParams[i].VolumeName,
+                 bsr->VolParams[i].Storage,
+                 Device);
+            add_prompt(ua, volmsg.c_str());
+         }
+      }
+   }
+}
+
+void display_bsr_info(UAContext *ua, RESTORE_CTX &rx)
+{
+   char *p;
+   JobId_t JobId;
 
    /* Tell the user what he will need to mount */
    ua->send_msg("\n");
@@ -272,40 +298,13 @@ uint32_t write_bsr_file(UAContext *ua, RESTORE_CTX &rx)
                   "===========================================================================\n"));
    /* Create Unique list of Volumes using prompt list */
    start_prompt(ua, "");
-   if (*rx.JobIds) {
+   if (*rx.JobIds == 0) {
+      /* Print Volumes in any order */
+      display_vol_info(ua, rx, 0);
+   } else {
       /* Ensure that the volumes are printed in JobId order */
       for (p=rx.JobIds; get_next_jobid_from_list(&p, &JobId) > 0; ) {
-         for (RBSR *nbsr=rx.bsr; nbsr; nbsr=nbsr->next) {
-            if (JobId != nbsr->JobId) {
-               continue;
-            }
-            for (int i=0; i < nbsr->VolCount; i++) {
-               if (nbsr->VolParams[i].VolumeName[0]) {
-                  if (!get_storage_device(Device, nbsr->VolParams[i].Storage)) {
-                     Device[0] = 0;
-                  }
-                  Mmsg(volmsg, "%-25.25s %-25.25s %-25.25s", 
-                       nbsr->VolParams[i].VolumeName, 
-                       nbsr->VolParams[i].Storage, Device);
-                  add_prompt(ua, volmsg.c_str());
-               }
-            }
-         }
-      }
-   } else {
-      /* Print Volumes in any order */
-      for (RBSR *nbsr=rx.bsr; nbsr; nbsr=nbsr->next) {
-         for (int i=0; i < nbsr->VolCount; i++) {
-            if (nbsr->VolParams[i].VolumeName[0]) {
-               if (!get_storage_device(Device, nbsr->VolParams[i].Storage)) {
-                  Device[0] = 0;
-               }
-               Mmsg(volmsg, "%-25.25s %-25.25s %-25.25s", 
-                    nbsr->VolParams[i].VolumeName, 
-                    nbsr->VolParams[i].Storage, Device);
-               add_prompt(ua, volmsg.c_str());
-            }
-         }
+         display_vol_info(ua, rx, JobId);
       }
    }
    for (int i=0; i < ua->num_prompts; i++) {
@@ -314,13 +313,13 @@ uint32_t write_bsr_file(UAContext *ua, RESTORE_CTX &rx)
    }
    if (ua->num_prompts == 0) {
       ua->send_msg(_("No Volumes found to restore.\n"));
-      count = 0;
+   } else {
+      ua->send_msg(_("\nVolumes marked with \"*\" are online.\n"));
    }
    ua->num_prompts = 0;
    ua->send_msg("\n");
 
-bail_out:
-   return count;
+   return;
 }
 
 /*
@@ -333,6 +332,7 @@ bail_out:
  */
 static uint32_t write_bsr(UAContext *ua, RESTORE_CTX &rx, FILE *fd)
 {
+   char ed1[50], ed2[50];
    uint32_t count = 0;
    uint32_t total_count = 0;
    uint32_t LastIndex = 0;
@@ -359,6 +359,9 @@ static uint32_t write_bsr(UAContext *ua, RESTORE_CTX &rx, FILE *fd)
             }
             fprintf(fd, "Volume=\"%s\"\n", bsr->VolParams[i].VolumeName);
             fprintf(fd, "MediaType=\"%s\"\n", bsr->VolParams[i].MediaType);
+            if (bsr->fileregex) {
+               fprintf(fd, "FileRegex=%s\n", bsr->fileregex);
+            }
             if (get_storage_device(device, bsr->VolParams[i].Storage)) {
                fprintf(fd, "Device=\"%s\"\n", device);
             }
@@ -367,18 +370,8 @@ static uint32_t write_bsr(UAContext *ua, RESTORE_CTX &rx, FILE *fd)
             }
             fprintf(fd, "VolSessionId=%u\n", bsr->VolSessionId);
             fprintf(fd, "VolSessionTime=%u\n", bsr->VolSessionTime);
-            if (bsr->VolParams[i].StartFile == bsr->VolParams[i].EndFile) {
-               fprintf(fd, "VolFile=%u\n", bsr->VolParams[i].StartFile);
-            } else {
-               fprintf(fd, "VolFile=%u-%u\n", bsr->VolParams[i].StartFile,
-                       bsr->VolParams[i].EndFile);
-            }
-            if (bsr->VolParams[i].StartBlock == bsr->VolParams[i].EndBlock) {
-               fprintf(fd, "VolBlock=%u\n", bsr->VolParams[i].StartBlock);
-            } else {
-               fprintf(fd, "VolBlock=%u-%u\n", bsr->VolParams[i].StartBlock,
-                       bsr->VolParams[i].EndBlock);
-            }
+            fprintf(fd, "VolAddr=%s-%s\n", edit_uint64(bsr->VolParams[i].StartAddr, ed1),
+                    edit_uint64(bsr->VolParams[i].EndAddr, ed2));
    //       Dmsg2(100, "bsr VolParam FI=%u LI=%u\n",
    //          bsr->VolParams[i].FirstIndex, bsr->VolParams[i].LastIndex);
 
@@ -422,6 +415,9 @@ static uint32_t write_bsr(UAContext *ua, RESTORE_CTX &rx, FILE *fd)
             }
             fprintf(fd, "Volume=\"%s\"\n", bsr->VolParams[i].VolumeName);
             fprintf(fd, "MediaType=\"%s\"\n", bsr->VolParams[i].MediaType);
+            if (bsr->fileregex) {
+               fprintf(fd, "FileRegex=%s\n", bsr->fileregex);
+            }
             if (get_storage_device(device, bsr->VolParams[i].Storage)) {
                fprintf(fd, "Device=\"%s\"\n", device);
             }
@@ -430,18 +426,8 @@ static uint32_t write_bsr(UAContext *ua, RESTORE_CTX &rx, FILE *fd)
             }
             fprintf(fd, "VolSessionId=%u\n", bsr->VolSessionId);
             fprintf(fd, "VolSessionTime=%u\n", bsr->VolSessionTime);
-            if (bsr->VolParams[i].StartFile == bsr->VolParams[i].EndFile) {
-               fprintf(fd, "VolFile=%u\n", bsr->VolParams[i].StartFile);
-            } else {
-               fprintf(fd, "VolFile=%u-%u\n", bsr->VolParams[i].StartFile,
-                       bsr->VolParams[i].EndFile);
-            }
-            if (bsr->VolParams[i].StartBlock == bsr->VolParams[i].EndBlock) {
-               fprintf(fd, "VolBlock=%u\n", bsr->VolParams[i].StartBlock);
-            } else {
-               fprintf(fd, "VolBlock=%u-%u\n", bsr->VolParams[i].StartBlock,
-                       bsr->VolParams[i].EndBlock);
-            }
+            fprintf(fd, "VolAddr=%s-%s\n", edit_uint64(bsr->VolParams[i].StartAddr, ed1),
+                    edit_uint64(bsr->VolParams[i].EndAddr, ed2));
    //       Dmsg2(100, "bsr VolParam FI=%u LI=%u\n",
    //          bsr->VolParams[i].FirstIndex, bsr->VolParams[i].LastIndex);
 
@@ -466,22 +452,9 @@ static uint32_t write_bsr(UAContext *ua, RESTORE_CTX &rx, FILE *fd)
    return total_count;
 }
 
-void print_bsr(UAContext *ua, RBSR *bsr)
+void print_bsr(UAContext *ua, RESTORE_CTX &rx)
 {
-   for ( ; bsr; bsr=bsr->next) {
-      for (int i=0; i < bsr->VolCount; i++) {
-         ua->send_msg("Volume=\"%s\"\n", bsr->VolParams[i].VolumeName);
-         ua->send_msg("MediaType\"%s\"\n", bsr->VolParams[i].MediaType);
-         ua->send_msg("VolSessionId=%u\n", bsr->VolSessionId);
-         ua->send_msg("VolSessionTime=%u\n", bsr->VolSessionTime);
-         ua->send_msg("VolFile=%u-%u\n", bsr->VolParams[i].StartFile,
-                  bsr->VolParams[i].EndFile);
-         ua->send_msg("VolBlock=%u-%u\n", bsr->VolParams[i].StartBlock,
-                  bsr->VolParams[i].EndBlock);
-         print_findex(ua, bsr->fi);
-      }
-      print_bsr(ua, bsr->next);
-   }
+   write_bsr(ua, rx, stdout);
 }
 
 
@@ -491,6 +464,7 @@ void print_bsr(UAContext *ua, RBSR *bsr)
  * Add a FileIndex to the list of BootStrap records.
  *  Here we are only dealing with JobId's and the FileIndexes
  *  associated with those JobIds.
+ * We expect that JobId, FileIndex are sorted ascending.
  */
 void add_findex(RBSR *bsr, uint32_t JobId, int32_t findex)
 {

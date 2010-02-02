@@ -23,13 +23,13 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: restoretree.h 5725 2007-10-05 14:59:31Z kerns $
+ *   Version $Id: restoretree.h 8587 2009-03-24 01:30:11Z bartleyd2 $
  *
  *  Kern Sibbald, February 2007
  */
@@ -97,11 +97,10 @@ private:
 
    QSplitter *m_splitter;
    QString m_groupText;
-   QString m_splitText;
+   QString m_splitText1;
+   QString m_splitText2;
    bool m_populated;
    bool m_dropdownChanged;
-   QRegExp m_winRegExpDrive;
-   QRegExp m_winRegExpPath;
    bool m_slashTrap;
    QHash<QString, QTreeWidgetItem *> m_dirPaths;
    QString m_checkedJobs, m_prevJobCombo, m_prevClientCombo, m_prevFileSetCombo;

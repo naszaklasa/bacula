@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -37,7 +37,7 @@
  *
  *  Kern Sibbald, July MMIII
  *
- *   Version $Id: jobq.c 7216 2008-06-22 13:25:55Z kerns $
+ *   Version $Id: jobq.c 8848 2009-05-20 00:14:13Z jamesharper $
  *
  *  This code was adapted from the Bacula workq, which was
  *    adapted from "Programming with POSIX Threads", by
@@ -119,11 +119,7 @@ int jobq_destroy(jobq_t *jq)
    if (jq->valid != JOBQ_VALID) {
       return EINVAL;
    }
-   if ((stat = pthread_mutex_lock(&jq->mutex)) != 0) {
-      berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.bstrerror(stat));
-      return stat;
-   }
+   P(jq->mutex);
    jq->valid = 0;                      /* prevent any more operations */
 
    /* 
@@ -135,7 +131,7 @@ int jobq_destroy(jobq_t *jq)
          if ((stat = pthread_cond_broadcast(&jq->work)) != 0) {
             berrno be;
             Jmsg1(NULL, M_ERROR, 0, _("pthread_cond_broadcast: ERR=%s\n"), be.bstrerror(stat));
-            pthread_mutex_unlock(&jq->mutex);
+            V(jq->mutex);
             return stat;
          }
       }
@@ -143,16 +139,12 @@ int jobq_destroy(jobq_t *jq)
          if ((stat = pthread_cond_wait(&jq->work, &jq->mutex)) != 0) {
             berrno be;
             Jmsg1(NULL, M_ERROR, 0, _("pthread_cond_wait: ERR=%s\n"), be.bstrerror(stat));
-            pthread_mutex_unlock(&jq->mutex);
+            V(jq->mutex);
             return stat;
          }
       }
    }
-   if ((stat = pthread_mutex_unlock(&jq->mutex)) != 0) {
-      berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_unlock: ERR=%s\n"), be.bstrerror(stat));
-      return stat;
-   }
+   V(jq->mutex);
    stat  = pthread_mutex_destroy(&jq->mutex);
    stat1 = pthread_cond_destroy(&jq->work);
    stat2 = pthread_attr_destroy(&jq->attr);
@@ -180,6 +172,7 @@ void *sched_wait(void *arg)
    JCR *jcr = ((wait_pkt *)arg)->jcr;
    jobq_t *jq = ((wait_pkt *)arg)->jq;
 
+   set_jcr_in_tsd(jcr);
    Dmsg0(2300, "Enter sched_wait.\n");
    free(arg);
    time_t wtime = jcr->sched_time - time(NULL);
@@ -253,12 +246,7 @@ int jobq_add(jobq_t *jq, JCR *jcr)
       return stat;
    }
 
-   if ((stat = pthread_mutex_lock(&jq->mutex)) != 0) {
-      berrno be;
-      Jmsg1(jcr, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.bstrerror(stat));
-      free_jcr(jcr);                    /* release jcr */
-      return stat;
-   }
+   P(jq->mutex);
 
    if ((item = (jobq_item_t *)malloc(sizeof(jobq_item_t))) == NULL) {
       free_jcr(jcr);                    /* release jcr */
@@ -266,6 +254,8 @@ int jobq_add(jobq_t *jq, JCR *jcr)
    }
    item->jcr = jcr;
 
+   /* While waiting in a queue this job is not attached to a thread */
+   set_jcr_in_tsd(INVALID_JCR);
    if (job_canceled(jcr)) {
       /* Add job to ready queue so that it is canceled quickly */
       jq->ready_jobs->prepend(item);
@@ -293,7 +283,7 @@ int jobq_add(jobq_t *jq, JCR *jcr)
    /* Ensure that at least one server looks at the queue. */
    stat = start_server(jq);
 
-   pthread_mutex_unlock(&jq->mutex);
+   V(jq->mutex);
    Dmsg0(2300, "Return jobq_add\n");
    return stat;
 }
@@ -318,12 +308,7 @@ int jobq_remove(jobq_t *jq, JCR *jcr)
       return EINVAL;
    }
 
-   if ((stat = pthread_mutex_lock(&jq->mutex)) != 0) {
-      berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.bstrerror(stat));
-      return stat;
-   }
-
+   P(jq->mutex);
    foreach_dlist(item, jq->waiting_jobs) {
       if (jcr == item->jcr) {
          found = true;
@@ -331,7 +316,7 @@ int jobq_remove(jobq_t *jq, JCR *jcr)
       }
    }
    if (!found) {
-      pthread_mutex_unlock(&jq->mutex);
+      V(jq->mutex);
       Dmsg2(2300, "jobq_remove jobid=%d jcr=0x%x not in wait queue\n", jcr->JobId, jcr);
       return EINVAL;
    }
@@ -343,7 +328,7 @@ int jobq_remove(jobq_t *jq, JCR *jcr)
 
    stat = start_server(jq);
 
-   pthread_mutex_unlock(&jq->mutex);
+   V(jq->mutex);
    Dmsg0(2300, "Return jobq_remove\n");
    return stat;
 }
@@ -373,8 +358,10 @@ static int start_server(jobq_t *jq)
       Dmsg0(2300, "Create worker thread\n");
       /* No idle threads so create a new one */
       set_thread_concurrency(jq->max_workers + 1);
+      jq->num_workers++;
       if ((stat = pthread_create(&id, &jq->attr, jobq_server, (void *)jq)) != 0) {
          berrno be;
+         jq->num_workers--;
          Jmsg1(NULL, M_ERROR, 0, _("pthread_create: ERR=%s\n"), be.bstrerror(stat));
          return stat;
       }
@@ -398,13 +385,9 @@ void *jobq_server(void *arg)
    bool timedout = false;
    bool work = true;
 
+   set_jcr_in_tsd(INVALID_JCR);
    Dmsg0(2300, "Start jobq_server\n");
-   if ((stat = pthread_mutex_lock(&jq->mutex)) != 0) {
-      berrno be;
-      Jmsg1(NULL, M_ERROR, 0, _("pthread_mutex_lock: ERR=%s\n"), be.bstrerror(stat));
-      return NULL;
-   }
-   jq->num_workers++;
+   P(jq->mutex);
 
    for (;;) {
       struct timeval tv;
@@ -430,7 +413,7 @@ void *jobq_server(void *arg)
                /* This shouldn't happen */
                Dmsg0(2300, "This shouldn't happen\n");
                jq->num_workers--;
-               pthread_mutex_unlock(&jq->mutex);
+               V(jq->mutex);
                return NULL;
             }
             break;
@@ -449,12 +432,14 @@ void *jobq_server(void *arg)
             Dmsg0(2300, "ready queue not empty start server\n");
             if (start_server(jq) != 0) {
                jq->num_workers--;
-               pthread_mutex_unlock(&jq->mutex);
+               V(jq->mutex);
                return NULL;
             }
          }
          jq->running_jobs->append(je);
-//       set_jcr_in_tsd(jcr);
+
+         /* Attach jcr to this thread while we run the job */
+         set_jcr_in_tsd(jcr);
          Dmsg1(2300, "Took jobid=%d from ready and appended to run\n", jcr->JobId);
 
          /* Release job queue lock */
@@ -464,6 +449,9 @@ void *jobq_server(void *arg)
          Dmsg2(2300, "Calling user engine for jobid=%d use=%d\n", jcr->JobId,
             jcr->use_count());
          jq->engine(je->jcr);
+
+         /* Job finished detach from thread */
+         set_jcr_in_tsd(INVALID_JCR);
 
          Dmsg2(2300, "Back from user engine jobid=%d use=%d.\n", jcr->JobId,
             jcr->use_count());
@@ -504,11 +492,26 @@ void *jobq_server(void *arg)
       Dmsg0(2300, "Done check ready, now check wait queue.\n");
       if (!jq->waiting_jobs->empty() && !jq->quit) {
          int Priority;
+         bool running_allow_mix = false;
          je = (jobq_item_t *)jq->waiting_jobs->first();
          jobq_item_t *re = (jobq_item_t *)jq->running_jobs->first();
          if (re) {
             Priority = re->jcr->JobPriority;
-            Dmsg2(2300, "JobId %d is running. Look for pri=%d\n", re->jcr->JobId, Priority);
+            Dmsg2(2300, "JobId %d is running. Look for pri=%d\n",
+                  re->jcr->JobId, Priority);
+            running_allow_mix = true;
+            for ( ; re; ) {
+               Dmsg2(2300, "JobId %d is also running with %s\n",
+                     re->jcr->JobId, 
+                     re->jcr->job->allow_mixed_priority ? "mix" : "no mix");
+               if (!re->jcr->job->allow_mixed_priority) {
+                  running_allow_mix = false;
+                  break;
+               }
+               re = (jobq_item_t *)jq->running_jobs->next(re);
+            }
+            Dmsg1(2300, "The running job(s) %s mixing priorities.\n",
+                  running_allow_mix ? "allow" : "don't allow");
          } else {
             Priority = je->jcr->JobPriority;
             Dmsg1(2300, "No job running. Look for Job pri=%d\n", Priority);
@@ -522,11 +525,14 @@ void *jobq_server(void *arg)
             JCR *jcr = je->jcr;
             jobq_item_t *jn = (jobq_item_t *)jq->waiting_jobs->next(je);
 
-            Dmsg3(2300, "Examining Job=%d JobPri=%d want Pri=%d\n",
-               jcr->JobId, jcr->JobPriority, Priority);
+            Dmsg4(2300, "Examining Job=%d JobPri=%d want Pri=%d (%s)\n",
+                  jcr->JobId, jcr->JobPriority, Priority,
+                  jcr->job->allow_mixed_priority ? "mix" : "no mix");
 
             /* Take only jobs of correct Priority */
-            if (jcr->JobPriority != Priority) {
+            if (!(jcr->JobPriority == Priority
+                  || (jcr->JobPriority < Priority &&
+                      jcr->job->allow_mixed_priority && running_allow_mix))) {
                set_jcr_job_status(jcr, JS_WaitPriority);
                break;
             }
@@ -612,7 +618,7 @@ static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je)
    if (jcr->job->RescheduleOnError &&
        jcr->JobStatus != JS_Terminated &&
        jcr->JobStatus != JS_Canceled &&
-       jcr->JobType == JT_BACKUP &&
+       jcr->get_JobType() == JT_BACKUP &&
        (jcr->job->RescheduleTimes == 0 ||
         jcr->reschedule_count < jcr->job->RescheduleTimes)) {
        char dt[50], dt2[50];
@@ -634,6 +640,9 @@ static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je)
       jcr->JobStatus = -1;
       set_jcr_job_status(jcr, JS_WaitStartTime);
       jcr->SDJobStatus = 0;
+      if (!allow_duplicate_job(jcr)) {
+         return false;
+      }
       if (jcr->JobBytes == 0) {
          Dmsg2(2300, "Requeue job=%d use=%d\n", jcr->JobId, jcr->use_count());
          V(jq->mutex);
@@ -653,7 +662,7 @@ static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je)
       set_jcr_defaults(njcr, jcr->job);
       njcr->reschedule_count = jcr->reschedule_count;
       njcr->sched_time = jcr->sched_time;
-      njcr->JobLevel = jcr->JobLevel;
+      njcr->set_JobLevel(jcr->get_JobLevel());
       njcr->pool = jcr->pool;
       njcr->run_pool_override = jcr->run_pool_override;
       njcr->full_pool = jcr->full_pool;
@@ -697,17 +706,26 @@ static bool acquire_resources(JCR *jcr)
    bool skip_this_jcr = false;
 
    jcr->acquired_resource_locks = false;
-   if (jcr->rstore == jcr->wstore) {           /* deadlock */
+/*
+ * Turning this code off is likely to cause some deadlocks,
+ *   but we do not really have enough information here to
+ *   know if this is really a deadlock (it may be a dual drive
+ *   autochanger), and in principle, the SD reservation system
+ *   should detect these deadlocks, so push the work off on is.
+ */
+#ifdef xxx
+   if (jcr->rstore && jcr->rstore == jcr->wstore) {    /* possible deadlock */
       Jmsg(jcr, M_FATAL, 0, _("Job canceled. Attempt to read and write same device.\n"
          "    Read storage \"%s\" (From %s) -- Write storage \"%s\" (From %s)\n"), 
          jcr->rstore->name(), jcr->rstore_source, jcr->wstore->name(), jcr->wstore_source);
       set_jcr_job_status(jcr, JS_Canceled);
       return false;
    }
+#endif
    if (jcr->rstore) {
       Dmsg1(200, "Rstore=%s\n", jcr->rstore->name());
       if (jcr->rstore->NumConcurrentJobs < jcr->rstore->MaxConcurrentJobs) {
-//       jcr->rstore->NumConcurrentReadJobs++;
+         jcr->rstore->NumConcurrentReadJobs++;
          jcr->rstore->NumConcurrentJobs++;
          Dmsg1(200, "Inc rncj=%d\n", jcr->rstore->NumConcurrentJobs);
       } else {
@@ -762,10 +780,10 @@ static bool acquire_resources(JCR *jcr)
 static void dec_read_store(JCR *jcr)
 {
    if (jcr->rstore) {
-//    jcr->rstore->NumConcurrentReadJobs--;    /* back out rstore */
+      jcr->rstore->NumConcurrentReadJobs--;    /* back out rstore */
       jcr->rstore->NumConcurrentJobs--;        /* back out rstore */
       Dmsg1(200, "Dec rncj=%d\n", jcr->rstore->NumConcurrentJobs);
-//    ASSERT(jcr->rstore->NumConcurrentReadJobs >= 0);
+      ASSERT(jcr->rstore->NumConcurrentReadJobs >= 0);
       ASSERT(jcr->rstore->NumConcurrentJobs >= 0);
    }
 }

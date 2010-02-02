@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,13 +20,13 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: main.cpp 7416 2008-07-22 14:48:21Z kerns $
+ *   Version $Id: main.cpp 8825 2009-05-14 10:41:48Z kerns $
  *
  *  Main program for bat (qt-console)
  *
@@ -35,8 +35,9 @@
  */ 
 
 
-#include <QApplication>
 #include "bat.h"
+#include <QApplication>
+#include <QTranslator>
 
 MainWin *mainWin;
 QApplication *app;
@@ -46,9 +47,12 @@ void terminate_console(int sig);
 static void usage();
 static int check_resources();
 
-#define CONFIG_FILE "./bat.conf"   /* default configuration file */
+extern bool parse_bat_config(CONFIG *config, const char *configfile, int exit_code);
+
+#define CONFIG_FILE "bat.conf"     /* default configuration file */
 
 /* Static variables */
+static CONFIG *config;
 static char *configfile = NULL;
 
 int main(int argc, char *argv[])
@@ -61,9 +65,18 @@ int main(int argc, char *argv[])
    app = new QApplication(argc, argv);        
    app->setQuitOnLastWindowClosed(true);
    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF-8"));
+     
+   QTranslator qtTranslator;
+   qtTranslator.load(QString("qt_") + QLocale::system().name());
+   app->installTranslator(&qtTranslator);
+
+   QTranslator batTranslator;
+   batTranslator.load(QString("bat_") + QLocale::system().name());
+   app->installTranslator(&batTranslator);
 
 
-#ifdef ENABLE_NLS
+
+#ifdef xENABLE_NLS
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
@@ -131,7 +144,8 @@ int main(int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_bat_config(config, configfile, M_ERROR_TERM);
 
    if (init_crypto() != 0) {
       Emsg0(M_ERROR_TERM, 0, _("Cryptography library initialization failed.\n"));
@@ -147,10 +161,9 @@ int main(int argc, char *argv[])
    return app->exec();
 }
 
-void terminate_console(int sig)
+void terminate_console(int /*sig*/)
 {
-   (void)sig;                         /* avoid compiler complaints */
-   // WSA_Cleanup();                  /* TODO: check when we have to call it */
+// WSA_Cleanup();                  /* TODO: check when we have to call it */
    exit(0);
 }
 
@@ -170,28 +183,6 @@ PROG_COPYRIGHT
    exit(1);
 }
 
-#ifdef xxx
-/*
- * Call-back for reading a passphrase for an encrypted PEM file
- * This function uses getpass(), which uses a static buffer and is NOT thread-safe.
- */
-static int tls_pem_callback(char *buf, int size, const void *userdata)
-{
-#ifdef HAVE_TLS
-   const char *prompt = (const char *) userdata;
-   char *passwd;
-
-   passwd = getpass(prompt);
-   bstrncpy(buf, passwd, size);
-   return (strlen(buf));
-#else
-   buf[0] = 0;
-   return 0;
-#endif
-}
-#endif
-
-
 /*
  * Make a quick check to see that we have all the
  * resources needed.
@@ -201,6 +192,7 @@ static int check_resources()
    bool ok = true;
    DIRRES *director;
    int numdir;
+   bool tls_needed;
 
    LockRes();
 
@@ -217,8 +209,9 @@ static int check_resources()
             continue;
          }
       }
+      tls_needed = director->tls_enable || director->tls_authenticate;
 
-      if ((!director->tls_ca_certfile && !director->tls_ca_certdir) && director->tls_enable) {
+      if ((!director->tls_ca_certfile && !director->tls_ca_certdir) && tls_needed) {
          Emsg2(M_FATAL, 0, _("Neither \"TLS CA Certificate\""
                              " or \"TLS CA Certificate Dir\" are defined for Director \"%s\" in %s."
                              " At least one CA certificate store is required.\n"),
@@ -246,8 +239,9 @@ static int check_resources()
             continue;
          }
       }
+      tls_needed = cons->tls_enable || cons->tls_authenticate;
 
-      if ((!cons->tls_ca_certfile && !cons->tls_ca_certdir) && cons->tls_enable) {
+      if ((!cons->tls_ca_certfile && !cons->tls_ca_certdir) && tls_needed) {
          Emsg2(M_FATAL, 0, _("Neither \"TLS CA Certificate\""
                              " or \"TLS CA Certificate Dir\" are defined for Console \"%s\" in %s.\n"),
                              cons->hdr.name, configfile);

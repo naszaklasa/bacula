@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -47,10 +47,10 @@ void senditf(const char *fmt, ...);
 void sendit(const char *buf);
 
 /* Commands sent to Director */
-static char hello[]    = N_("Hello %s calling\n");
+static char hello[]    = "Hello %s calling\n";
 
 /* Response from Director */
-static char OKhello[]   = N_("1000 OK:");
+static char OKhello[]   = "1000 OK:";
 
 /* Forward referenced functions */
 
@@ -62,6 +62,8 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
    BSOCK *dir = jcr->dir_bsock;
    int tls_local_need = BNET_TLS_NONE;
    int tls_remote_need = BNET_TLS_NONE;
+   bool tls_needed;
+   bool tls_authenticate;
    int compatible = true;
    char bashed_name[MAX_NAME_LENGTH];
    char *password;
@@ -82,7 +84,11 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
             tls_local_need = BNET_TLS_OK;
          }
       }
-
+      if (cons->tls_authenticate) {
+         tls_local_need = BNET_TLS_REQUIRED;
+      }
+      tls_authenticate = cons->tls_authenticate;
+      tls_needed = cons->tls_enable || cons->tls_authenticate;
       tls_ctx = cons->tls_ctx;
    } else {
       bstrncpy(bashed_name, "*UserAgent*", sizeof(bashed_name));
@@ -96,6 +102,11 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
          }
       }
 
+      if (director->tls_authenticate) {
+         tls_local_need = BNET_TLS_REQUIRED;
+      }
+      tls_authenticate = director->tls_authenticate;
+      tls_needed = director->tls_enable || director->tls_authenticate;
       tls_ctx = director->tls_ctx;
    }
 
@@ -124,13 +135,14 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
    }
 
    /* Is TLS Enabled? */
-   if (have_tls) {
-      if (tls_local_need >= BNET_TLS_OK && tls_remote_need >= BNET_TLS_OK) {
-         /* Engage TLS! Full Speed Ahead! */
-         if (!bnet_tls_client(tls_ctx, dir, NULL)) {
-            sendit(_("TLS negotiation failed\n"));
-            goto bail_out;
-         }
+   if (tls_local_need >= BNET_TLS_OK && tls_remote_need >= BNET_TLS_OK) {
+      /* Engage TLS! Full Speed Ahead! */
+      if (!bnet_tls_client(tls_ctx, dir, NULL)) {
+         sendit(_("TLS negotiation failed\n"));
+         goto bail_out;
+      }
+      if (tls_authenticate) {           /* Authenticate only? */
+         dir->free_tls();               /* yes, shutdown tls */
       }
    }
 
@@ -160,6 +172,6 @@ bail_out:
    sendit( _("Director authorization problem.\n"
              "Most likely the passwords do not agree.\n"
              "If you are using TLS, there may have been a certificate validation error during the TLS handshake.\n"
-             "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"));
+             "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"));
    return 0;
 }

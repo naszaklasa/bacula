@@ -2,7 +2,7 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id: mtx-changer.Adic-Scalar-24 2805 2006-02-22 18:43:55Z kerns $
+#  $Id: mtx-changer.Adic-Scalar-24 8134 2008-12-10 03:48:56Z junkmale $
 #
 #  If you set in your Device resource
 #
@@ -102,11 +102,12 @@ case $cmd in
       ;;
 
    loaded)
-      ${MTX} -f $ctl status >/tmp/mtx.$$
+      tempfile=`mktemp -t` || exit 33 
+      ${MTX} -f $ctl status > $tempfile
       rtn=$?
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element $drive:Full" | awk '{print $7}'
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element $drive:Empty" | awk '{print 0}'
-      rm -f /tmp/mtx.$$
+      cat $tempfile | grep "^Data Transfer Element $drive:Full"  | awk '{print $7}'
+      cat $tempfile | grep "^Data Transfer Element $drive:Empty" | awk '{print 0}'
+      rm -f $tempfile
       exit $rtn
       ;;
 

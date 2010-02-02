@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -54,8 +54,8 @@
  * types. Note, these should be unique for each
  * daemon though not a requirement.
  */
-int r_first = R_FIRST;
-int r_last  = R_LAST;
+int32_t r_first = R_FIRST;
+int32_t r_last  = R_LAST;
 static RES *sres_head[R_LAST - R_FIRST + 1];
 RES **res_head = sres_head;
 
@@ -74,7 +74,7 @@ extern "C" { // work around visual compiler mangling variables
 #else
 URES res_all;
 #endif
-int  res_all_size = sizeof(res_all);
+int32_t res_all_size = sizeof(res_all);
 
 /* Definition of records permitted within each
  * resource with the routine to process the record
@@ -88,8 +88,9 @@ static RES_ITEM cons_items[] = {
    {"rcfile",         store_dir,      ITEM(res_cons.rc_file), 0, 0, 0},
    {"historyfile",    store_dir,      ITEM(res_cons.hist_file), 0, 0, 0},
    {"password",       store_password, ITEM(res_cons.password), 0, ITEM_REQUIRED, 0},
-   {"tlsenable",      store_bool,     ITEM(res_cons.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_bool,     ITEM(res_cons.tls_require), 1, 0, 0},
+   {"tlsauthenticate",store_bool,    ITEM(res_cons.tls_authenticate), 0, 0, 0},
+   {"tlsenable",      store_bool,    ITEM(res_cons.tls_enable), 0, 0, 0},
+   {"tlsrequire",     store_bool,    ITEM(res_cons.tls_require), 0, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(res_cons.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(res_cons.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(res_cons.tls_certfile), 0, 0, 0},
@@ -107,8 +108,9 @@ static RES_ITEM dir_items[] = {
    {"dirport",        store_pint32,    ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",        store_str,       ITEM(res_dir.address),  0, 0, 0},
    {"password",       store_password,  ITEM(res_dir.password), 0, ITEM_REQUIRED, 0},
-   {"tlsenable",      store_bool,      ITEM(res_dir.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_bool,      ITEM(res_dir.tls_require), 1, 0, 0},
+   {"tlsauthenticate",store_bool,    ITEM(res_dir.tls_enable), 0, 0, 0},
+   {"tlsenable",      store_bool,    ITEM(res_dir.tls_enable), 0, 0, 0},
+   {"tlsrequire",     store_bool,    ITEM(res_dir.tls_require), 0, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(res_dir.tls_certfile), 0, 0, 0},
@@ -326,4 +328,11 @@ void save_resource(int type, RES_ITEM *items, int pass)
                res->res_dir.hdr.name);
       }
    }
+}
+
+bool parse_cons_config(CONFIG *config, const char *configfile, int exit_code)
+{
+   config->init(configfile, NULL, exit_code, (void *)&res_all, res_all_size,
+      r_first, r_last, resources, res_head);
+   return config->parse_config();
 }

@@ -410,7 +410,7 @@
 #define HAVE_STDLIB_H 1
 
 /* Define to 1 if you have the `strcasecmp' function. */
-#define HAVE_STRCASECMP 1
+/*#define HAVE_STRCASECMP 1*/
 
 /* Define to 1 if you have the `strerror' function. */
 #define HAVE_STRERROR 1

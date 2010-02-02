@@ -1,4 +1,31 @@
 /*
+   Bacula® - The Network Backup Solution
+
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+
+   The main author of Bacula is Kern Sibbald, with contributions from
+   many others, a complete list can be found in the file AUTHORS.
+   This program is Free Software; you can redistribute it and/or
+   modify it under the terms of version two of the GNU General Public
+   License as published by the Free Software Foundation and included
+   in the file LICENSE.
+
+   This program is distributed in the hope that it will be useful, but
+   WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+   General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+   02110-1301, USA.
+
+   Bacula® is a registered trademark of Kern Sibbald.
+   The licensor of Bacula is the Free Software Foundation Europe
+   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
+   Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
  *   Main configuration file parser for Bacula User Agent
  *    some parts may be split into separate files such as
  *    the schedule configuration (sch_config.c).
@@ -19,33 +46,6 @@
  *
  *     Kern Sibbald, January MM, September MM
  */
-/*
-   Bacula® - The Network Backup Solution
-
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
-
-   The main author of Bacula is Kern Sibbald, with contributions from
-   many others, a complete list can be found in the file AUTHORS.
-   This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
-   License as published by the Free Software Foundation and included
-   in the file LICENSE.
-
-   This program is distributed in the hope that it will be useful, but
-   WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-   General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-   02110-1301, USA.
-
-   Bacula® is a registered trademark of John Walker.
-   The licensor of Bacula is the Free Software Foundation Europe
-   (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
-   Switzerland, email:ftf@fsfeurope.org.
-*/
 
 /* _("...") macro returns a wxChar*, so if we need a char*, we need to convert it with:
  * wxString(_("...")).mb_str(*wxConvCurrent) */
@@ -66,8 +66,8 @@
  * types. Note, these should be unique for each
  * daemon though not a requirement.
  */
-int r_first = R_FIRST;
-int r_last  = R_LAST;
+int32_t r_first = R_FIRST;
+int32_t r_last  = R_LAST;
 static RES *sres_head[R_LAST - R_FIRST + 1];
 RES **res_head = sres_head;
 
@@ -86,7 +86,7 @@ extern "C" { // work around visual compiler mangling variables
 #else
 URES res_all;
 #endif
-int  res_all_size = sizeof(res_all);
+int32_t res_all_size = sizeof(res_all);
 
 /* Definition of records permitted within each
  * resource with the routine to process the record
@@ -100,12 +100,12 @@ static RES_ITEM cons_items[] = {
    {"rcfile",      store_dir,      ITEM(res_cons.rc_file), 0, 0, 0},
    {"historyfile", store_dir,      ITEM(res_cons.hist_file), 0, 0, 0},
    {"password",    store_password, ITEM(res_cons.password), 0, ITEM_REQUIRED, 0},
+   {"tlsenable",      store_bool,    ITEM(res_cons.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_bool,    ITEM(res_cons.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(res_cons.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(res_cons.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(res_cons.tls_certfile), 0, 0, 0},
    {"tlskey",         store_dir,       ITEM(res_cons.tls_keyfile), 0, 0, 0},
-   {"tlsenable",      store_bool,    ITEM(res_cons.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_bool,    ITEM(res_cons.tls_require), 1, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -117,12 +117,12 @@ static RES_ITEM dir_items[] = {
    {"dirport",     store_pint32,   ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
    {"address",     store_str,      ITEM(res_dir.address),  0, 0, 0},
    {"password",    store_password, ITEM(res_dir.password), 0, ITEM_REQUIRED, 0},
+   {"tlsenable",      store_bool,    ITEM(res_dir.tls_enable), 1, 0, 0},
+   {"tlsrequire",     store_bool,    ITEM(res_dir.tls_require), 1, 0, 0},
    {"tlscacertificatefile", store_dir, ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir", store_dir,  ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate", store_dir,       ITEM(res_dir.tls_certfile), 0, 0, 0},
    {"tlskey",         store_dir,       ITEM(res_dir.tls_keyfile), 0, 0, 0},
-   {"tlsenable",      store_bool,    ITEM(res_dir.tls_enable), 1, 0, 0},
-   {"tlsrequire",     store_bool,    ITEM(res_dir.tls_require), 1, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -334,4 +334,11 @@ void save_resource(int type, RES_ITEM *items, int pass)
                   res->res_dir.hdr.name);
       }
    }
+}
+
+bool parse_wxcons_config(CONFIG *config, const char *configfile, LEX_ERROR_HANDLER *scan_error)
+{
+   config->init(configfile, scan_error, M_ERROR_TERM, (void *)&res_all, res_all_size,
+      r_first, r_last, resources, res_head);
+   return config->parse_config();
 }

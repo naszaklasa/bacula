@@ -32,7 +32,7 @@
  *   Kern E. Sibbald, October 2002
  *
  *
- *   Version $Id: bcopy.c 8240 2008-12-23 15:50:58Z kerns $
+ *   Version $Id: bcopy.c 8235 2008-12-23 13:28:03Z kerns $
  */
 
 #include "bacula.h"
@@ -40,6 +40,7 @@
 
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
+extern bool parse_sd_config(CONFIG *config, const char *configfile, int exit_code);
 
 /* Forward referenced functions */
 static void get_session_record(DEVICE *dev, DEV_RECORD *rec, SESSION_LABEL *sessrec);
@@ -59,6 +60,7 @@ static uint32_t jobs = 0;
 static DEV_BLOCK *out_block;
 static SESSION_LABEL sessrec;
 
+static CONFIG *config;
 #define CONFIG_FILE "bacula-sd.conf"
 char *configfile = NULL;
 STORES *me = NULL;                    /* our Global resource */
@@ -74,8 +76,9 @@ PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bcopy [-d debug_level] <input-archive> <output-archive>\n"
 "       -b bootstrap      specify a bootstrap file\n"
-"       -c <file>         specify configuration file\n"
+"       -c <file>         specify a Storage configuration file\n"
 "       -d <nn>           set debug level to <nn>\n"
+"       -dt               print timestamp in debug output\n"
 "       -i                specify input Volume names (separated by |)\n"
 "       -o                specify output Volume names (separated by |)\n"
 "       -p                proceed inspite of errors\n"
@@ -168,7 +171,8 @@ int main (int argc, char *argv[])
       configfile = bstrdup(CONFIG_FILE);
    }
 
-   parse_config(configfile);
+   config = new_config_parser();
+   parse_sd_config(config, configfile, M_ERROR_TERM);
 
    /* Setup and acquire input device for reading */
    Dmsg0(100, "About to setup input jcr\n");

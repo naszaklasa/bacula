@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  * Author: Landon Fuller <landonf@opendarwin.org>
  *
- * Version $Id: openssl.c 5068 2007-06-23 10:13:00Z kerns $
+ * Version $Id: openssl.c 8924 2009-06-25 12:02:58Z kerns $
  *
  * This file was contributed to the Bacula project by Landon Fuller.
  *
@@ -66,7 +66,7 @@ struct CRYPTO_dynlock_value {
  */
 void openssl_post_errors(int code, const char *errstring)
 {
-   openssl_post_errors(get_jcr_from_tid(), code, errstring);
+   openssl_post_errors(NULL, code, errstring);
 }
 
 
@@ -82,7 +82,7 @@ void openssl_post_errors(JCR *jcr, int code, const char *errstring)
    while((sslerr = ERR_get_error()) != 0) {
       /* Acquire the human readable string */
       ERR_error_string_n(sslerr, buf, sizeof(buf));
-      Dmsg3(100, "jcr=%p %s: ERR=%s\n", jcr, errstring, buf);
+      Dmsg3(50, "jcr=%p %s: ERR=%s\n", jcr, errstring, buf);
       Qmsg2(jcr, M_ERROR, 0, "%s: ERR=%s\n", errstring, buf);
    }
 }
@@ -94,13 +94,17 @@ void openssl_post_errors(JCR *jcr, int code, const char *errstring)
  */
 static unsigned long get_openssl_thread_id(void)
 {
-   /* Comparison without use of pthread_equal() is mandated by the OpenSSL API */
+#ifdef HAVE_WIN32
+   return (unsigned long)getpid();
+#else
    /*
-    * Note that this creates problems with the new Win32 pthreads
-    *   emulation code, which defines pthread_t as a structure. For
-    *   this reason, we continue to use a very old implementation.
+    * Comparison without use of pthread_equal() is mandated by the OpenSSL API 
+    *
+    * Note: this creates problems with the new Win32 pthreads
+    *   emulation code, which defines pthread_t as a structure.
     */
    return ((unsigned long)pthread_self());
+#endif
 }
 
 /*
@@ -115,8 +119,7 @@ static struct CRYPTO_dynlock_value *openssl_create_dynamic_mutex (const char *fi
 
    if ((stat = pthread_mutex_init(&dynlock->mutex, NULL)) != 0) {
       berrno be;
-      Jmsg1(get_jcr_from_tid(), M_ABORT, 0, _("Unable to init mutex: ERR=%s\n"), 
-            be.bstrerror(stat));
+      Jmsg1(NULL, M_ABORT, 0, _("Unable to init mutex: ERR=%s\n"), be.bstrerror(stat));
    }
 
    return dynlock;
@@ -137,8 +140,7 @@ static void openssl_destroy_dynamic_mutex(struct CRYPTO_dynlock_value *dynlock, 
 
    if ((stat = pthread_mutex_destroy(&dynlock->mutex)) != 0) {
       berrno be;
-      Jmsg1(get_jcr_from_tid(), M_ABORT, 0, _("Unable to destroy mutex: ERR=%s\n"), 
-            be.bstrerror(stat));
+      Jmsg1(NULL, M_ABORT, 0, _("Unable to destroy mutex: ERR=%s\n"), be.bstrerror(stat));
    }
 
    free(dynlock);
@@ -176,8 +178,7 @@ int openssl_init_threads (void)
    for (i = 0; i < numlocks; i++) {
       if ((stat = pthread_mutex_init(&mutexes[i], NULL)) != 0) {
          berrno be;
-         Jmsg1(get_jcr_from_tid(), M_ERROR, 0, _("Unable to init mutex: ERR=%s\n"), 
-               be.bstrerror(stat));
+         Jmsg1(NULL, M_FATAL, 0, _("Unable to init mutex: ERR=%s\n"), be.bstrerror(stat));
          return stat;
       }
    }
@@ -210,7 +211,7 @@ void openssl_cleanup_threads(void)
       if ((stat = pthread_mutex_destroy(&mutexes[i])) != 0) {
          berrno be;
          /* We don't halt execution, reporting the error should be sufficient */
-         Jmsg1(get_jcr_from_tid(), M_ERROR, 0, _("Unable to destroy mutex: ERR=%s\n"), 
+         Jmsg1(NULL, M_ERROR, 0, _("Unable to destroy mutex: ERR=%s\n"), 
                be.bstrerror(stat));
       }
    }

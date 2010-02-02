@@ -28,8 +28,11 @@ It will result something like :
 |-- cross-tools
 `-- bacula
 
-bacula setup
+Linux bacula setup -- Note: I believe that this is *required* before trying
+                      to build the Win32 bat.
 ------------
+$ cd bacula
+$ ./configure <your-options-for Linux>
 $ cd bacula/src/win32
 $ make
 
@@ -42,19 +45,22 @@ Install QT for mingw
 
 Get the mingw installation from http://trolltech.com/developer/downloads/qt/windows
 (Try to get the same version than your linux installation)
+ftp://ftp.qtsoftware.com/qt/source
 
-$ wine qt-win-opensource-4.4.0-mingw.exe
+
+$ wine qt-win-opensource-4.4.1-mingw.exe
  * Install under c:\Qt (no space)
  * no worry about mingw installation
 
-$ cp -r ~/.wine/drive_c/Qt/4.4.0/src/    depkgs-mingw32/include
-$ cp -r ~/.wine/drive_c/Qt/4.4.0/include depkgs-mingw32/include/qt
-$ cp -r ~/.wine/drive_c/Qt/4.4.0/lib     depkgs-mingw32/lib/qt
-# copy ~/.wine/drive_c/Qt/4.4.0/bin/QtCore4.dll to src/win32/release
-# copy ~/.wine/drive_c/Qt/4.4.0/bin/QtGui4.dll to src/win32/release
+$ cp -r ~/.wine/drive_c/Qt/4.4.1/src/    depkgs-mingw32/include
+$ cp -r ~/.wine/drive_c/Qt/4.4.1/include depkgs-mingw32/include/qt
+$ cp -r ~/.wine/drive_c/Qt/4.4.1/lib     depkgs-mingw32/lib/qt
+# cp ~/.wine/drive_c/Qt/4.4.1/bin/QtCore4.dll src/win32/release32
+# cp ~/.wine/drive_c/Qt/4.4.1/bin/QtGui4.dll src/win32/release32
 
 MINGW setup
 -----------
+I think this only needs to be done once ...
 
 --- cross-tools/mingw32/mingw32/include/wchar.h.org     2008-07-13 15:18:52.000000000 +0200
 +++ cross-tools/mingw32/mingw32/include/wchar.h 2008-07-12 14:47:10.000000000 +0200
@@ -79,6 +85,8 @@ Cleanup
 $ cd bacula/src/qt-console
 $ ./make-win32 clean
 
+The bat.exe will be in src/qt-console/debug/bat.exe
+
 
 
 Run Bat on Windows
@@ -95,7 +103,7 @@ You'll need
    mingwm10.dll
    bat.conf
 
-You can find the Qt dlls in ~/.wine/drive_c/Qt/4.4.0/bin
+You can find the Qt dlls in ~/.wine/drive_c/Qt/4.4.1/bin
 
 Run Bat with wine
 -----------------

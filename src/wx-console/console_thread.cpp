@@ -1,15 +1,7 @@
 /*
- *
- *    Interaction thread between director and the GUI
- *
- *    Nicolas Boichat, April 2004
- *
- *    Version $Id: console_thread.cpp 4992 2007-06-07 14:46:43Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,11 +20,19 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ *    Interaction thread between director and the GUI
+ *
+ *    Nicolas Boichat, April 2004
+ *
+ *    Version $Id: console_thread.cpp 7380 2008-07-14 10:42:59Z kerns $
+ */
 
 // http://66.102.9.104/search?q=cache:Djc1mPF3hRoJ:cvs.sourceforge.net/viewcvs.py/audacity/audacity-src/src/AudioIO.cpp%3Frev%3D1.102+macos+x+wxthread&hl=fr
 
@@ -65,12 +65,16 @@ char TERM_msg[] = "2999 Terminate\n";
 
 /* Imported functions */
 int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons);
+bool parse_wxcons_config(CONFIG *config, const char *cfgfile, LEX_ERROR_HANDLER *scan_error);
 
 bool console_thread::inited = false;
 bool console_thread::configloaded = false;
 wxString console_thread::working_dir = wxT(".");
 
 int numdir = 0;
+static CONFIG *config = NULL;
+static void scan_err(const char *file, int line, LEX *lc, const char *msg, ...);
+
 
 /*
  * Call-back for reading a passphrase for an encrypted PEM file
@@ -224,7 +228,10 @@ wxString console_thread::LoadConfig(wxString configfile)
          return _("Error while initializing library.");
    }
    
-   free_config_resources();
+   if (config) {
+      config->free_resources();
+      free(config);
+   }          
    
    MSGS* msgs = (MSGS *)bmalloc(sizeof(MSGS));
    memset(msgs, 0, sizeof(MSGS));
@@ -238,7 +245,8 @@ wxString console_thread::LoadConfig(wxString configfile)
    //init_console_msg(console_thread::working_dir.mb_str(*wxConvCurrent));
 
    errmsg = wxT("");
-   if (!parse_config(configfile.mb_str(*wxConvCurrent), &scan_err)) {
+   config = new_config_parser();
+   if (!parse_wxcons_config(config, configfile.mb_str(*wxConvCurrent), &scan_err)) {
       configloaded = false;
       term_msg();
       return errmsg;

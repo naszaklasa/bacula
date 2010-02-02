@@ -11,7 +11,7 @@ include ../Makefile.inc
 
 INCLUDES = \
 	-I. \
-	-I../../stored \
+	-I$(MAINDIR)/src/stored \
 	$(INCLUDE_DDK) \
 	$(INCLUDE_PTHREADS) \
 	$(INCLUDE_BACULA) \
@@ -25,8 +25,8 @@ DEFINES = \
 	-DWINVER=0x500 \
 	$(HAVES)
 
-vpath %.c ../../stored ../libwin32
-vpath %.cpp ../../stored ../libwin32
+vpath %.c $(MAINDIR)/src/stored $(BUILDDIR)/libwin32
+vpath %.cpp $(MAINDIR)/src/stored $(BUILDDIR)/libwin32
 
 ##########################################################################
 
@@ -51,6 +51,7 @@ COMMON_OBJS = \
 	$(OBJDIR)/scan.o \
 	$(OBJDIR)/spool.o \
 	$(OBJDIR)/stored_conf.o \
+	$(OBJDIR)/vol_mgr.o \
 	$(OBJDIR)/wait.o \
 	$(OBJDIR)/mtops.o
 
@@ -66,6 +67,7 @@ SD_OBJS = \
 	$(OBJDIR)/mac.o \
 	$(OBJDIR)/pythonsd.o \
 	$(OBJDIR)/read.o \
+	$(OBJDIR)/sd_plugins.o \
 	$(OBJDIR)/status.o
 
 # bextract
@@ -93,9 +95,9 @@ ALL_OBJS = \
 
 LIBS_STORED = \
 	$(LIBS_PTHREADS) \
+	$(LIBS_NETWORK) \
 	-lole32 \
 	-loleaut32 \
-	-lwsock32 \
 	-luuid \
 	-lcomctl32
 
@@ -117,6 +119,7 @@ clean:
 	$(call clean_exe,$(BINDIR)/bls.exe)
 	$(call clean_exe,$(BINDIR)/bscan.exe)
 	$(call clean_exe,$(BINDIR)/btape.exe)
+	$(ECHO_CMD)rm -rf $(OBJDIRS)
 
 realclean: clean
 	rm -f tags bacula-sd.conf

@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -41,7 +41,7 @@
  * needed on buffers full of bytes, and then call MD5Final, which
  * will fill a supplied 16-byte array with the digest.
  *
- *   Version $Id: md5.c 5091 2007-06-26 08:43:29Z kerns $
+ *   Version $Id: md5.c 7380 2008-07-14 10:42:59Z kerns $
  */
 
 /* Brutally hacked by John Walker back from ANSI C to K&R (no

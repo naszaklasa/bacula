@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -29,7 +29,7 @@
  * 
  *  Kern Sibbald, August 2007
  *
- *  Version $Id: service.cpp 5358 2007-08-15 16:54:21Z kerns $
+ *  Version $Id: service.cpp 8681 2009-04-03 09:16:48Z kerns $
  *
  * This is a generic service routine, which is used by all three
  *  of the daemons. Each one compiles it with slightly different
@@ -471,11 +471,11 @@ BOOL ReportStatus(DWORD state, DWORD exitcode, DWORD waithint)
 }
 
 /* Log an error message */
-void LogErrorMsg(char *message, char *fname, int lineno)
+void LogErrorMsg(const char *message, const char *fname, int lineno)
 {
    char msgbuf[500];
    HANDLE eventHandler;
-   char *strings[3];
+   const char *strings[3];
    LPTSTR msg;
 
    service_error = GetLastError();

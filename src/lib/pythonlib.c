@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, November MMIV
  *
- *   Version $Id: pythonlib.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: pythonlib.c 7789 2008-10-14 18:42:47Z kerns $
  *
  */
 
@@ -43,18 +43,11 @@
 #undef _POSIX_C_SOURCE
 #include <Python.h>
 
+#include "pythonlib.h"
+
 /* Forward referenced subroutines */
 static void init_python_lock();
 static void term_python_lock();
-void lock_python();
-void unlock_python();
-
-extern char *configfile;
-
-/* Imported subroutines */
-//extern PyMethodDef JobMethods[];
-extern PyObject *job_getattr(PyObject *self, char *attrname);
-extern int job_setattr(PyObject *self, char *attrname, PyObject *value);
 
 static PyObject *bacula_module = NULL;    /* We create this */
 static PyObject *StartUp_module = NULL;   /* We import this */
@@ -80,8 +73,8 @@ static char my_version[] = VERSION " " BDATE;
 
 /*
  * This is a Bacula Job type as defined in Python. We store a pointer
- *   to the jcr. That is all we need, but the user's script may keep
- *   local data attached to this. 
+ * to the jcr. That is all we need, but the user's script may keep
+ * local data attached to this.
  */
 typedef struct s_JobObject {
     PyObject_HEAD
@@ -102,32 +95,30 @@ JCR *get_jcr_from_PyObject(PyObject *self)
    return ((JobObject *)self)->jcr;
 }
 
-
 /* Start the interpreter */
-void init_python_interpreter(const char *progname, const char *scripts,
-    const char *module)
+void init_python_interpreter(init_python_interpreter_args *args)
 {
    char buf[MAXSTRING];
 
-   if (!scripts || scripts[0] == 0) {
-      Dmsg1(100, "No script dir. prog=%s\n", module);
+   if (!args->scriptdir || args->scriptdir[0] == 0) {
+      Dmsg1(100, "No script dir. prog=%s\n", args->modulename);
       return;
    }
-   Dmsg2(100, "Script dir=%s prog=%s\n", scripts, module);
+   Dmsg2(100, "Script dir=%s prog=%s\n", args->scriptdir, args->modulename);
 
-   Py_SetProgramName((char *)progname);
+   Py_SetProgramName((char *)args->progname);
    Py_Initialize();
    PyEval_InitThreads();
    bacula_module = Py_InitModule("bacula", BaculaMethods);
    PyModule_AddStringConstant(bacula_module, "Name", my_name);
    PyModule_AddStringConstant(bacula_module, "Version", my_version);
-   PyModule_AddStringConstant(bacula_module, "ConfigFile", configfile);
-   PyModule_AddStringConstant(bacula_module, "WorkingDir", (char *)working_directory);
+   PyModule_AddStringConstant(bacula_module, "ConfigFile", (char *)args->configfile);
+   PyModule_AddStringConstant(bacula_module, "WorkingDir", (char *)args->workingdir);
    if (!bacula_module) {
       Jmsg0(NULL, M_ERROR_TERM, 0, _("Could not initialize Python\n"));
    }
    bsnprintf(buf, sizeof(buf), "import sys\n"
-            "sys.path.append('%s')\n", scripts);
+            "sys.path.append('%s')\n", args->scriptdir);
    if (PyRun_SimpleString(buf) != 0) {
       Jmsg1(NULL, M_ERROR_TERM, 0, _("Could not Run Python string %s\n"), buf);
    }   
@@ -137,17 +128,17 @@ void init_python_interpreter(const char *progname, const char *scripts,
    JobType.tp_basicsize = sizeof(JobObject);
    JobType.tp_flags = Py_TPFLAGS_DEFAULT;
    JobType.tp_doc = "Bacula Job object";
-   JobType.tp_getattr = job_getattr;
-   JobType.tp_setattr = job_setattr;
+   JobType.tp_getattr = args->job_getattr;
+   JobType.tp_setattr = args->job_setattr;
 
    if (PyType_Ready(&JobType) != 0) {
       Jmsg0(NULL, M_ERROR_TERM, 0, _("Could not initialize Python Job type.\n"));
       PyErr_Print();
    }   
-   StartUp_module = PyImport_ImportModule((char *)module);
+   StartUp_module = PyImport_ImportModule((char *)args->modulename);
    if (!StartUp_module) {
       Emsg2(M_ERROR, 0, _("Could not import Python script %s/%s. Python disabled.\n"),
-           scripts, module);
+           args->scriptdir, args->modulename);
       if (PyErr_Occurred()) {
          PyErr_Print();
          Dmsg0(000, "Python Import error.\n");
@@ -156,7 +147,6 @@ void init_python_interpreter(const char *progname, const char *scripts,
    PyEval_ReleaseLock();
    init_python_lock();
 }
-
 
 void term_python_interpreter()
 {
@@ -198,7 +188,6 @@ static PyObject *bacula_write(PyObject *self, PyObject *args)
    return Py_None;
 }
 
-
 /*
  * Check that a method exists and is callable.
  */
@@ -232,6 +221,7 @@ int generate_daemon_event(JCR *jcr, const char *event)
    PyObject *pJob;
    int stat = -1;
    PyObject *result = NULL;
+   char *obj_fmt = (char *)"O";
 
    if (!StartUp_module) {
       Dmsg0(100, "No startup module.\n");
@@ -254,7 +244,7 @@ int generate_daemon_event(JCR *jcr, const char *event)
       }
       ((JobObject *)pJob)->jcr = jcr;
       bstrncpy(jcr->event, event, sizeof(jcr->event));
-      result = PyObject_CallFunction(JobStart_method, "O", pJob);
+      result = PyObject_CallFunction(JobStart_method, obj_fmt, pJob);
       jcr->event[0] = 0;             /* no event in progress */
       if (result == NULL) {
          JobStart_method = NULL;
@@ -277,7 +267,7 @@ int generate_daemon_event(JCR *jcr, const char *event)
       }
       bstrncpy(jcr->event, event, sizeof(jcr->event));
       Dmsg1(100, "Call daemon event=%s\n", event);
-      result = PyObject_CallFunction(JobEnd_method, "O", jcr->Python_job);
+      result = PyObject_CallFunction(JobEnd_method, obj_fmt, jcr->Python_job);
       jcr->event[0] = 0;             /* no event in progress */
       if (result == NULL) {
          if (PyErr_Occurred()) {
@@ -358,7 +348,6 @@ void unlock_python()
    }
 }
 
-
 #else
 
 /*
@@ -367,8 +356,5 @@ void unlock_python()
  *    problems even if it is not configured.
  */
 int generate_daemon_event(JCR *jcr, const char *event) { return 0; }
-void init_python_interpreter(const char *progname, const char *scripts,
-         const char *module) { }
-void term_python_interpreter() { }
 
 #endif /* HAVE_PYTHON */

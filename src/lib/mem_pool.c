@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -44,7 +44,7 @@
  *
  *           Kern E. Sibbald
  *
- *   Version $Id: mem_pool.c 4992 2007-06-07 14:46:43Z kerns $
+ *   Version $Id: mem_pool.c 8093 2008-11-26 23:19:28Z kerns $
  */
 
 #include "bacula.h"
@@ -94,7 +94,6 @@ struct abufhead {
 };
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
 
 #ifdef SMARTALLOC
 
@@ -154,13 +153,14 @@ POOLMEM *sm_get_memory(const char *fname, int lineno, int32_t size)
    return (POOLMEM *)(((char *)buf)+HEAD_SIZE);
 }
 
-
 /* Return the size of a memory buffer */
 int32_t sm_sizeof_pool_memory(const char *fname, int lineno, POOLMEM *obuf)
 {
    char *cp = (char *)obuf;
 
-   ASSERT(obuf);
+   if (obuf == NULL) {
+      Emsg0(M_ABORT, 0, _("obuf is NULL\n"));
+   }
    cp -= HEAD_SIZE;
    return ((struct abufhead *)cp)->ablen;
 }
@@ -231,7 +231,6 @@ void sm_free_pool_memory(const char *fname, int lineno, POOLMEM *obuf)
    V(mutex);
 }
 
-
 #else
 
 /* =========  NO SMARTALLOC  =========================================  */
@@ -282,7 +281,6 @@ POOLMEM *get_memory(int32_t size)
    return (POOLMEM *)(((char *)buf)+HEAD_SIZE);
 }
 
-
 /* Return the size of a memory buffer */
 int32_t sizeof_pool_memory(POOLMEM *obuf)
 {
@@ -292,8 +290,6 @@ int32_t sizeof_pool_memory(POOLMEM *obuf)
    cp -= HEAD_SIZE;
    return ((struct abufhead *)cp)->ablen;
 }
-
-
 
 /* Realloc pool memory buffer */
 POOLMEM *realloc_pool_memory(POOLMEM *obuf, int32_t size)
@@ -318,7 +314,6 @@ POOLMEM *realloc_pool_memory(POOLMEM *obuf, int32_t size)
    V(mutex);
    return (POOLMEM *)(((char *)buf)+HEAD_SIZE);
 }
-
 
 POOLMEM *check_pool_memory_size(POOLMEM *obuf, int32_t size)
 {
@@ -359,9 +354,7 @@ void free_pool_memory(POOLMEM *obuf)
    Dmsg2(1800, "free_pool_memory %p pool=%d\n", buf, pool);
    V(mutex);
 }
-
 #endif /* SMARTALLOC */
-
 
 /*
  * Clean up memory pool periodically
@@ -391,9 +384,6 @@ void garbage_collect_memory_pool()
    }
 }
 
-
-
-
 /* Release all pooled memory */
 void close_memory_pool()
 {
@@ -421,7 +411,6 @@ void close_memory_pool()
 }
 
 #ifdef DEBUG
-
 static const char *pool_name(int pool)
 {
    static const char *name[] = {"NoPool", "NAME  ", "FNAME ", "MSG   ", "EMSG  "};
@@ -449,7 +438,6 @@ void print_memory_pool_stats()
 #else
 void print_memory_pool_stats() {}
 #endif /* DEBUG */
-
 
 /*
  * Concatenate a string (str) onto a pool memory buffer pm
@@ -481,7 +469,6 @@ int pm_strcat(POOLMEM *&pm, const char *str)
    return pmlen + len - 1;
 }
 
-
 int pm_strcat(POOLMEM *&pm, POOL_MEM &str)
 {
    int pmlen = strlen(pm);
@@ -504,7 +491,6 @@ int pm_strcat(POOL_MEM &pm, const char *str)
    memcpy(pm.c_str()+pmlen, str, len);
    return pmlen + len - 1;
 }
-
 
 /*
  * Copy a string (str) into a pool memory buffer pm
@@ -543,7 +529,6 @@ int pm_strcpy(POOLMEM *&pm, POOL_MEM &str)
    return len - 1;
 }
 
-
 int pm_strcpy(POOL_MEM &pm, const char *str)
 {
    int len;
@@ -554,6 +539,38 @@ int pm_strcpy(POOL_MEM &pm, const char *str)
    pm.check_size(len);
    memcpy(pm.c_str(), str, len);
    return len - 1;
+}
+
+/*
+ * Copy data into a pool memory buffer pm
+ *   Returns: length of data copied
+ */
+int pm_memcpy(POOLMEM **pm, const char *data, int32_t n)
+{
+   *pm = check_pool_memory_size(*pm, n);
+   memcpy(*pm, data, n);
+   return n;
+}
+
+int pm_memcpy(POOLMEM *&pm, const char *data, int32_t n)
+{
+   pm = check_pool_memory_size(pm, n);
+   memcpy(pm, data, n);
+   return n;
+}
+
+int pm_memcpy(POOLMEM *&pm, POOL_MEM &data, int32_t n)
+{
+   pm = check_pool_memory_size(pm, n);
+   memcpy(pm, data.c_str(), n);
+   return n;
+}
+
+int pm_memcpy(POOL_MEM &pm, const char *data, int32_t n)
+{
+   pm.check_size(n);
+   memcpy(pm.c_str(), data, n);
+   return n;
 }
 
 /* ==============  CLASS POOL_MEM   ============== */
@@ -605,7 +622,6 @@ int POOL_MEM::strcat(const char *str)
    memcpy(mem+pmlen, str, len);
    return pmlen + len - 1;
 }
-
 
 int POOL_MEM::strcpy(const char *str)
 {

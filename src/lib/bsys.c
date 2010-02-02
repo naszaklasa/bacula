@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *
  *  Bacula utility functions are in util.c
  *
- *   Version $Id: bsys.c 6636 2008-03-19 18:01:45Z kerns $
+ *   Version $Id: bsys.c 8206 2008-12-20 19:05:40Z kerns $
  */
 
 #include "bacula.h"
@@ -57,7 +57,7 @@ static pthread_cond_t timer = PTHREAD_COND_INITIALIZER;
  *   to recall this routine if he/she REALLY wants to sleep the
  *   requested time.
  */
-int bmicrosleep(time_t sec, long usec)
+int bmicrosleep(int32_t sec, int32_t usec)
 {
    struct timespec timeout;
    struct timeval tv;
@@ -84,7 +84,7 @@ int bmicrosleep(time_t sec, long usec)
       timeout.tv_sec++;
    }
 
-   Dmsg2(200, "pthread_cond_timedwait sec=%d usec=%d\n", sec, usec);
+   Dmsg2(200, "pthread_cond_timedwait sec=%lld usec=%d\n", sec, usec);
    /* Note, this unlocks mutex during the sleep */
    P(timer_mutex);
    stat = pthread_cond_timedwait(&timer, &timer_mutex, &timeout);
@@ -375,69 +375,6 @@ int b_strerror(int errnum, char *buf, size_t bufsiz)
     return stat;
 }
 
-/*
- * These are mutex routines that do error checking
- *  for deadlock and such.  Normally not turned on.
- */
-#ifdef DEBUG_MUTEX
-void _p(char *file, int line, pthread_mutex_t *m)
-{
-   int errstat;
-   if ((errstat = pthread_mutex_trylock(m))) {
-      e_msg(file, line, M_ERROR, 0, _("Possible mutex deadlock.\n"));
-      /* We didn't get the lock, so do it definitely now */
-      if ((errstat=pthread_mutex_lock(m))) {
-         berrno be;
-         e_msg(file, line, M_ABORT, 0, _("Mutex lock failure. ERR=%s\n"),
-               be.bstrerror(errstat));
-      } else {
-         e_msg(file, line, M_ERROR, 0, _("Possible mutex deadlock resolved.\n"));
-      }
-
-   }
-}
-
-void _v(char *file, int line, pthread_mutex_t *m)
-{
-   int errstat;
-
-   /* Note, this trylock *should* fail if the mutex is locked */
-   if ((errstat=pthread_mutex_trylock(m)) == 0) {
-      berrno be;
-      e_msg(file, line, M_ERROR, 0, _("Mutex unlock not locked. ERR=%s\n"),
-           be.bstrerror(errstat));
-    }
-    if ((errstat=pthread_mutex_unlock(m))) {
-       berrno be;
-       e_msg(file, line, M_ABORT, 0, _("Mutex unlock failure. ERR=%s\n"),
-              be.bstrerror(errstat));
-    }
-}
-
-#else
-
-void _p(pthread_mutex_t *m)
-{
-   int errstat;
-   if ((errstat=pthread_mutex_lock(m))) {
-      berrno be;
-      e_msg(__FILE__, __LINE__, M_ABORT, 0, _("Mutex lock failure. ERR=%s\n"),
-            be.bstrerror(errstat));
-   }
-}
-
-void _v(pthread_mutex_t *m)
-{
-   int errstat;
-   if ((errstat=pthread_mutex_unlock(m))) {
-      berrno be;
-      e_msg(__FILE__, __LINE__, M_ABORT, 0, _("Mutex unlock failure. ERR=%s\n"),
-            be.bstrerror(errstat));
-   }
-}
-
-#endif /* DEBUG_MUTEX */
-
 #ifdef DEBUG_MEMSET
 /* These routines are not normally turned on */
 #undef memset
@@ -541,7 +478,7 @@ struct s_state_hdr {
 
 static struct s_state_hdr state_hdr = {
    "Bacula State\n",
-   3,
+   4,
    0
 };
 

@@ -1,7 +1,7 @@
 #
 # Bacula Tools Makefile
 #
-# Version $Id: Makefile.in 5210 2007-07-21 18:22:47Z kerns $
+# Version $Id: Makefile.in 8464 2009-02-18 11:40:09Z kerns $
 #
 @MCOMMON@
 
@@ -56,20 +56,23 @@ all: Makefile $(TOOLS) gigaslam grow
 	@echo "==== Make of tools is good ===="
 	@echo " "
 
-bsmtp:	bsmtp.o ../lib/libbac.a        
-	$(CXX) $(LDFLAGS) -L../lib -o $@ bsmtp.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+bsmtp: Makefile bsmtp.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)	    
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ bsmtp.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-bregtest:	bregtest.o ../lib/libbac.a	  
-	$(CXX) $(LDFLAGS) -L../lib -o $@ bregtest.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+bregtest: Makefile bregtest.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)	   
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ bregtest.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-dbcheck: dbcheck.o ../lib/libbac.a ../cats/libsql.a $(DIRCONFOBJS)
-	$(CXX) $(LDFLAGS) -L../lib -L../cats -o $@ dbcheck.o $(DIRCONFOBJS) -lsql -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+dbcheck: Makefile dbcheck.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) $(DIRCONFOBJS)
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../cats -o $@ dbcheck.o $(DIRCONFOBJS) \
+	  -lbacsql -lbaccfg -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-fstype: fstype.o ../lib/libbac.a ../findlib/libfind.a
-	$(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ fstype.o -lfind -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+fstype: Makefile fstype.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ fstype.o -lbacfind -lbac -lm \
+	  $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-drivetype: drivetype.o ../lib/libbac.a ../findlib/libfind.a
-	$(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ drivetype.o -lfind -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+drivetype: Makefile drivetype.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ drivetype.o -lbacfind -lbac -lm \
+	  $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 dird_conf.o: ../dird/dird_conf.c
 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
@@ -80,25 +83,25 @@ run_conf.o: ../dird/run_conf.c
 inc_conf.o: ../dird/inc_conf.c
 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
-testfind: ../findlib/libfind.a ../lib/libbac.a $(FINDOBJS)
-	$(CXX) -g $(LDFLAGS) -L. -L../lib -L../findlib -o $@ $(FINDOBJS) \
-	  $(DLIB) -lfind -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+testfind: Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) $(FINDOBJS)
+	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -o $@ $(FINDOBJS) -L. -L../lib -L../findlib \
+	  $(DLIB) -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-testls: ../findlib/libfind.a ../lib/libbac.a testls.o
-	$(CXX) -g $(LDFLAGS) -L. -L../lib -L../findlib -o $@ testls.o \
-	  $(DLIB) -lfind -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+testls: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) testls.o
+	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L. -L../lib -L../findlib -o $@ testls.o \
+	  $(DLIB) -lbacfind -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-bregex: ../findlib/libfind.a ../lib/libbac.a bregex.o
-	$(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bregex.o \
+bregex: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) bregex.o
+	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bregex.o \
 	  $(DLIB) -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-bwild:	../findlib/libfind.a ../lib/libbac.a bwild.o
-	$(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bwild.o \
+bwild:	Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) bwild.o
+	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bwild.o \
 	  $(DLIB) -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
-bbatch: ../lib/libbac.a bbatch.o
-	$(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -o $@ bbatch.o \
-	  -lsql -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+bbatch: Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) bbatch.o
+	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -o $@ bbatch.o \
+	  -lbacsql -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 gigaslam.o: gigaslam.c
 	$(CC) -c $<  
@@ -106,14 +109,17 @@ gigaslam.o: gigaslam.c
 gigaslam: gigaslam.o
 	$(CC) -o $@ gigaslam.o
 
-grow: grow.o ../lib/libbac.a
-	$(CXX) $(LDFLAGS) -L../lib -o $@ grow.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+grow: Makefile grow.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ grow.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
 	  && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
 
-clean:
+libtool-clean:
+	@$(RMF) -r .libs _libs
+
+clean:	libtool-clean
 	@$(RMF) bsmtp core core.* a.out *.o *.bak *~ *.intpro *.extpro 1 2 3
 	@$(RMF) $(DIRTOOLS)
 
@@ -131,7 +137,7 @@ devclean: realclean
 # Allow non-root execution of bsmtp for non-root Directors
 install: $(INSTOOLS)
 	@for tool in ${INSTOOLS} ; do \
-	   $(INSTALL_PROGRAM) $$tool $(DESTDIR)$(sbindir)/$$tool ; \
+	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) $$tool $(DESTDIR)$(sbindir)/$$tool ; \
 	done
 	chmod 755 $(DESTDIR)$(sbindir)/bsmtp
 

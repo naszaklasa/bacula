@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  * 
  *  Kern Sibbald, August 2007
  *
- *  Version $Id: main.cpp 5622 2007-09-22 09:08:29Z kerns $
+ *  Version $Id: main.cpp 8584 2009-03-23 08:56:20Z ricozz $
  *
  * Note, some of the original Bacula Windows startup and service handling code
  *  was derived from VNC code that was used in apcupsd then ported to 
@@ -53,7 +53,11 @@
 #include <pthread.h>
 
 #undef  _WIN32_IE
-#define _WIN32_IE 0x0401
+#ifdef MINGW64
+# define _WIN32_IE 0x0501
+#else
+# define _WIN32_IE 0x0401
+#endif  // MINGW64
 #undef  _WIN32_WINNT
 #define _WIN32_WINNT 0x0501
 #include <commctrl.h>
@@ -378,4 +382,16 @@ int BaculaAppMain()
 
    WSACleanup();
    _exit(0);
+}
+
+
+void pause_msg(const char *file, const char *func, int line, const char *msg)
+{
+   char buf[1000];
+   if (msg) {
+      bsnprintf(buf, sizeof(buf), "%s:%s:%d %s", file, func, line, msg);
+   } else {
+      bsnprintf(buf, sizeof(buf), "%s:%s:%d", file, func, line);
+   }
+   MessageBox(NULL, buf, "Pause", MB_OK);
 }

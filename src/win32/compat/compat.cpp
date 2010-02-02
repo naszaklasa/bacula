@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,7 +34,7 @@
 //
 // Author          : Christopher S. Hull
 // Created On      : Sat Jan 31 15:55:00 2004
-// $Id: compat.cpp 8202 2008-12-20 13:22:14Z kerns $
+// $Id: compat.cpp 8737 2009-04-16 13:13:28Z kerns $
 
 
 #include "bacula.h"
@@ -51,8 +51,8 @@
    conversion is called 3 times (lstat, attribs, open),
    by using the cache this is reduced to 1 time */
 
-static POOLMEM *g_pWin32ConvUTF8Cache = get_pool_memory(PM_FNAME);
-static POOLMEM *g_pWin32ConvUCS2Cache = get_pool_memory(PM_FNAME);
+static POOLMEM *g_pWin32ConvUTF8Cache = NULL;
+static POOLMEM *g_pWin32ConvUCS2Cache = NULL;
 static DWORD g_dwWin32ConvUTF8strlen = 0;
 static pthread_mutex_t Win32Convmutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -69,8 +69,18 @@ void SetVSSPathConvert(t_pVSSPathConvert pPathConvert, t_pVSSPathConvertW pPathC
    g_pVSSPathConvertW = pPathConvertW;
 }
 
+static void Win32ConvInitCache()
+{
+   if (g_pWin32ConvUTF8Cache) {
+      return;
+   }
+   g_pWin32ConvUTF8Cache = get_pool_memory(PM_FNAME);
+   g_pWin32ConvUCS2Cache = get_pool_memory(PM_FNAME);
+}
+
 void Win32ConvCleanupCache()
 {
+   P(Win32Convmutex);
    if (g_pWin32ConvUTF8Cache) {
       free_pool_memory(g_pWin32ConvUTF8Cache);
       g_pWin32ConvUTF8Cache = NULL;
@@ -82,6 +92,7 @@ void Win32ConvCleanupCache()
    }
 
    g_dwWin32ConvUTF8strlen = 0;
+   V(Win32Convmutex);
 }
 
 
@@ -451,11 +462,14 @@ make_win32_path_UTF8_2_wchar(POOLMEM **pszUCS, const char *pszUTF, BOOL* pBIsRaw
    /* if we find the utf8 string in cache, we use the cached ucs2 version.
       we compare the stringlength first (quick check) and then compare the content.            
    */
-   if (g_dwWin32ConvUTF8strlen == strlen(pszUTF)) {
+   if (!g_pWin32ConvUTF8Cache) {
+      Win32ConvInitCache();
+   } else if (g_dwWin32ConvUTF8strlen == strlen(pszUTF)) {
       if (bstrcmp(pszUTF, g_pWin32ConvUTF8Cache)) {
+         /* Return cached value */
          int32_t nBufSize = sizeof_pool_memory(g_pWin32ConvUCS2Cache);
          *pszUCS = check_pool_memory_size(*pszUCS, nBufSize);      
-         wcscpy((LPWSTR) *pszUCS, (LPWSTR) g_pWin32ConvUCS2Cache);
+         wcscpy((LPWSTR) *pszUCS, (LPWSTR)g_pWin32ConvUCS2Cache);
          V(Win32Convmutex);
          return nBufSize / sizeof (WCHAR);
       }
@@ -477,7 +491,7 @@ make_win32_path_UTF8_2_wchar(POOLMEM **pszUCS, const char *pszUTF, BOOL* pBIsRaw
    wcscpy((LPWSTR) g_pWin32ConvUCS2Cache, (LPWSTR) *pszUCS);
    
    g_dwWin32ConvUTF8strlen = strlen(pszUTF);
-   g_pWin32ConvUTF8Cache = check_pool_memory_size(g_pWin32ConvUTF8Cache, g_dwWin32ConvUTF8strlen+1);
+   g_pWin32ConvUTF8Cache = check_pool_memory_size(g_pWin32ConvUTF8Cache, g_dwWin32ConvUTF8strlen+2);
    bstrncpy(g_pWin32ConvUTF8Cache, pszUTF, g_dwWin32ConvUTF8strlen+1);
    V(Win32Convmutex);
 
@@ -733,11 +747,11 @@ statDir(const char *file, struct stat *sb)
 }
 
 int
-fstat(int fd, struct stat *sb)
+fstat(intptr_t fd, struct stat *sb)
 {
    BY_HANDLE_FILE_INFORMATION info;
 
-   if (!GetFileInformationByHandle((HANDLE)fd, &info)) {
+   if (!GetFileInformationByHandle((HANDLE)_get_osfhandle(fd), &info)) {
        const char *err = errorString();
        Dmsg1(2099, "GetfileInformationByHandle: %s\n", err);
        LocalFree((void *)err);
@@ -827,7 +841,7 @@ stat2(const char *file, struct stat *sb)
       return -1;
    }
 
-   rval = fstat((int)h, sb);
+   rval = fstat((intptr_t)h, sb);
    CloseHandle(h);
 
    if (attr & FILE_ATTRIBUTE_DIRECTORY &&
@@ -2201,7 +2215,7 @@ open_bpipe(char *prog, int wait, const char *mode)
                                      // process terminates we can
                                      // detect eof.
         // ugly but convert WIN32 HANDLE to FILE*
-        int rfd = _open_osfhandle((long)hChildStdoutRdDup, O_RDONLY | O_BINARY);
+        int rfd = _open_osfhandle((intptr_t)hChildStdoutRdDup, O_RDONLY | O_BINARY);
         if (rfd >= 0) {
            bpipe->rfd = _fdopen(rfd, "rb");
         }
@@ -2210,14 +2224,14 @@ open_bpipe(char *prog, int wait, const char *mode)
         CloseHandle(hChildStdinRd); // close our read side so as not
                                     // to interfre with child's copy
         // ugly but convert WIN32 HANDLE to FILE*
-        int wfd = _open_osfhandle((long)hChildStdinWrDup, O_WRONLY | O_BINARY);
+        int wfd = _open_osfhandle((intptr_t)hChildStdinWrDup, O_WRONLY | O_BINARY);
         if (wfd >= 0) {
            bpipe->wfd = _fdopen(wfd, "wb");
         }
     }
 
     if (wait > 0) {
-        bpipe->timer_id = start_child_timer(bpipe->worker_pid, wait);
+        bpipe->timer_id = start_child_timer(NULL, bpipe->worker_pid, wait);
     }
 
     return bpipe;
@@ -2316,6 +2330,7 @@ close_wpipe(BPIPE *bpipe)
     return result;
 }
 
+#ifndef MINGW64
 int
 utime(const char *fname, struct utimbuf *times)
 {
@@ -2367,6 +2382,7 @@ utime(const char *fname, struct utimbuf *times)
     }
     return rval;
 }
+#endif
 
 #if 0
 int

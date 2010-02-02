@@ -1,12 +1,7 @@
 /*
- * Prototypes for lib directory of Bacula
- *
- *   Version $Id: protos.h 6262 2008-01-09 10:58:13Z kerns $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -25,11 +20,19 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Prototypes for lib directory of Bacula
+ *
+ *   Version $Id: protos.h 8209 2008-12-20 22:02:31Z ricozz $
+ */
+
+#ifndef __LIBPROTOS_H
+#define __LIBPROTOS_H
 
 class JCR;
 
@@ -67,7 +70,7 @@ int       pool_sprintf           (char *pool_buf, const char *fmt, ...);
 void      create_pid_file        (char *dir, const char *progname, int port);
 int       delete_pid_file        (char *dir, const char *progname, int port);
 void      drop                   (char *uid, char *gid);
-int       bmicrosleep            (time_t sec, long usec);
+int       bmicrosleep            (int32_t sec, int32_t usec);
 char     *bfgets                 (char *s, int size, FILE *fd);
 void      make_unique_filename   (POOLMEM **name, int Id, char *what);
 #ifndef HAVE_STRTOLL
@@ -178,10 +181,12 @@ char *           edit_uint64_with_suffix   (uint64_t val, char *buf);
 char *           add_commas              (char *val, char *buf);
 char *           edit_uint64             (uint64_t val, char *buf);
 char *           edit_int64              (int64_t val, char *buf);
+char *           edit_int64_with_commas  (int64_t val, char *buf);
 bool             duration_to_utime       (char *str, utime_t *value);
 bool             size_to_uint64(char *str, int str_len, uint64_t *rtn_value);
 char             *edit_utime             (utime_t val, char *buf, int buf_len);
 bool             is_a_number             (const char *num);
+bool             is_a_number_list        (const char *n);
 bool             is_an_integer           (const char *n);
 bool             is_name_valid           (char *name, POOLMEM **msg);
 
@@ -199,10 +204,10 @@ void unlock_jobs();
 JCR *jcr_walk_start();
 JCR *jcr_walk_next(JCR *prev_jcr);
 void jcr_walk_end(JCR *jcr);
-uint32_t get_jobid_from_tid(pthread_t tid);
-uint32_t get_jobid_from_tid();             
-JCR *get_jcr_from_tid(pthread_t tid);
-JCR *get_jcr_from_tid();
+uint32_t get_jobid_from_tsd();             
+JCR *get_jcr_from_tsd();
+void set_jcr_in_tsd(JCR *jcr);
+void remove_jcr_from_tsd(JCR *jcr);
 
 
 /* lex.c */
@@ -222,8 +227,8 @@ void       term_msg              (void);
 void       close_msg             (JCR *jcr);
 void       add_msg_dest          (MSGS *msg, int dest, int type, char *where, char *dest_code);
 void       rem_msg_dest          (MSGS *msg, int dest, int type, char *where);
-void       Jmsg                  (JCR *jcr, int type, time_t mtime, const char *fmt, ...);
-void       dispatch_message      (JCR *jcr, int type, time_t mtime, char *buf);
+void       Jmsg                  (JCR *jcr, int type, utime_t mtime, const char *fmt, ...);
+void       dispatch_message      (JCR *jcr, int type, utime_t mtime, char *buf);
 void       init_console_msg      (const char *wd);
 void       free_msgs_res         (MSGS *msgs);
 void       dequeue_messages      (JCR *jcr);
@@ -240,15 +245,10 @@ int              net_connect             (int port);
 BSOCK *          bnet_bind               (int port);
 BSOCK *          bnet_accept             (BSOCK *bsock, char *who);
 
-/* python.c */
+/* pythonlib.c */
 typedef int (EVENT_HANDLER)(JCR *jcr, const char *event);
-void init_python_interpreter(const char *progname, const char *scripts,
-                             const char *module);
-void term_python_interpreter();
-//extern EVENT_HANDLER *generate_daemon_event;
+//EVENT_HANDLER *generate_daemon_event;
 int generate_daemon_event(JCR *jcr, const char *event);
-void lock_python();
-void unlock_python();
 
 /* signal.c */
 void             init_signals             (void terminate(int sig));
@@ -284,9 +284,9 @@ TLS_CONTEXT      *new_tls_context        (const char *ca_certfile,
                                           bool verify_peer);
 void             free_tls_context        (TLS_CONTEXT *ctx);
 #ifdef HAVE_TLS
-bool             tls_postconnect_verify_host  (TLS_CONNECTION *tls,
+bool             tls_postconnect_verify_host(JCR *jcr, TLS_CONNECTION *tls,
                                                const char *host);
-bool             tls_postconnect_verify_cn    (TLS_CONNECTION *tls,
+bool             tls_postconnect_verify_cn(JCR *jcr, TLS_CONNECTION *tls,
                                                alist *verify_list);
 TLS_CONNECTION   *new_tls_connection     (TLS_CONTEXT *ctx, int fd);
 bool             tls_bsock_accept        (BSOCK *bsock);
@@ -302,7 +302,7 @@ bool             get_tls_enable          (TLS_CONTEXT *ctx);
 
 /* util.c */
 
-extern "C"{
+extern "C" {
 typedef char *(*job_code_callback_t)(JCR *, const char *);
 }
 
@@ -312,16 +312,20 @@ void             bash_spaces             (char *str);
 void             bash_spaces             (POOL_MEM &pm);
 void             unbash_spaces           (char *str);
 void             unbash_spaces           (POOL_MEM &pm);
-char *           encode_time             (time_t time, char *buf);
+char *           encode_time             (utime_t time, char *buf);
 char *           encode_mode             (mode_t mode, char *buf);
 int              do_shell_expansion      (char *name, int name_len);
 void             jobstatus_to_ascii      (int JobStatus, char *msg, int maxlen);
-int              run_program             (char *prog, int wait, POOLMEM *results);
-int              run_program_full_output (char *prog, int wait, POOLMEM *results);
+void             jobstatus_to_ascii_gui  (int JobStatus, char *msg, int maxlen);
+int              run_program             (char *prog, int wait, POOLMEM *&results);
+int              run_program_full_output (char *prog, int wait, POOLMEM *&results);
 const char *     job_type_to_str         (int type);
 const char *     job_status_to_str       (int stat);
 const char *     job_level_to_str        (int level);
+const char *     volume_status_to_str    (const char *status);
 void             make_session_key        (char *key, char *seed, int mode);
+void             encode_session_key      (char *encode, char *session, char *key, int maxlen);
+void             decode_session_key      (char *decode, char *session, char *key, int maxlen);
 POOLMEM *        edit_job_codes          (JCR *jcr, char *omsg, char *imsg, const char *to, job_code_callback_t job_code_callback = NULL);
 void             set_working_directory   (char *wd);
 const char *     last_path_separator     (const char *str);
@@ -335,9 +339,11 @@ bool register_watchdog(watchdog_t *wd);
 bool unregister_watchdog(watchdog_t *wd);
 
 /* timers.c */
-btimer_t *start_child_timer(pid_t pid, uint32_t wait);
+btimer_t *start_child_timer(JCR *jcr, pid_t pid, uint32_t wait);
 void stop_child_timer(btimer_t *wid);
-btimer_t *start_thread_timer(pthread_t tid, uint32_t wait);
+btimer_t *start_thread_timer(JCR *jcr, pthread_t tid, uint32_t wait);
 void stop_thread_timer(btimer_t *wid);
 btimer_t *start_bsock_timer(BSOCK *bs, uint32_t wait);
 void stop_bsock_timer(btimer_t *wid);
+
+#endif /* __LIBPROTOS_H */

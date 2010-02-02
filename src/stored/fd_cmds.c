@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -36,7 +36,7 @@
  *  the File daemon, control is passed here to handle the
  *  subsequent File daemon commands.
  *
- *   Version $Id: fd_cmds.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: fd_cmds.c 8983 2009-07-14 13:46:39Z kerns $
  *
  */
 
@@ -61,7 +61,6 @@ static bool append_end_session(JCR *jcr);
 static bool read_open_session(JCR *jcr);
 static bool read_data_cmd(JCR *jcr);
 static bool read_close_session(JCR *jcr);
-static bool bootstrap_cmd(JCR *jcr);
 
 /* Exported function */
 bool get_bootstrap_file(JCR *jcr, BSOCK *bs);
@@ -82,7 +81,6 @@ static struct s_cmds fd_cmds[] = {
    {"read open",    read_open_session},
    {"read data",    read_data_cmd},
    {"read close",   read_close_session},
-   {"bootstrap",    bootstrap_cmd},
    {NULL,           NULL}                  /* list terminator */
 };
 
@@ -96,13 +94,11 @@ static char OK_end[]          = "3000 OK end\n";
 static char OK_close[]        = "3000 OK close Status = %d\n";
 static char OK_open[]         = "3000 OK open ticket = %d\n";
 static char ERROR_append[]    = "3903 Error append data\n";
-static char OK_bootstrap[]    = "3000 OK bootstrap\n";
-static char ERROR_bootstrap[] = "3904 Error bootstrap\n";
 
 /* Information sent to the Director */
 static char Job_start[] = "3010 Job %s start\n";
 char Job_end[]   =
-   "3099 Job %s end JobStatus=%d JobFiles=%d JobBytes=%s\n";
+   "3099 Job %s end JobStatus=%d JobFiles=%d JobBytes=%s JobErrors=%u\n";
 
 /*
  * Run a File daemon Job -- File daemon already authorized
@@ -131,7 +127,7 @@ void run_job(JCR *jcr)
    set_jcr_job_status(jcr, JS_Terminated);
    generate_daemon_event(jcr, "JobEnd");
    dir->fsend(Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,
-      edit_uint64(jcr->JobBytes, ec1));
+      edit_uint64(jcr->JobBytes, ec1), jcr->JobErrors);
    dir->signal(BNET_EOD);             /* send EOD to Director daemon */
    return;
 }
@@ -162,7 +158,15 @@ void do_fd_commands(JCR *jcr)
       for (i=0; fd_cmds[i].cmd; i++) {
          if (strncmp(fd_cmds[i].cmd, fd->msg, strlen(fd_cmds[i].cmd)) == 0) {
             found = true;               /* indicate command found */
+            jcr->errmsg[0] = 0;
             if (!fd_cmds[i].func(jcr) || job_canceled(jcr)) {    /* do command */
+               /* Note fd->msg command may be destroyed by comm activity */
+               if (jcr->errmsg[0]) {
+                  Jmsg1(jcr, M_FATAL, 0, _("Command error with FD, hanging up. %s\n"),
+                        jcr->errmsg);
+               } else {
+                  Jmsg0(jcr, M_FATAL, 0, _("Command error with FD, hanging up.\n"));
+               }
                set_jcr_job_status(jcr, JS_ErrorTerminated);
                quit = true;
             }
@@ -170,6 +174,7 @@ void do_fd_commands(JCR *jcr)
          }
       }
       if (!found) {                   /* command not found */
+         Jmsg1(jcr, M_FATAL, 0, _("FD command not found: %s\n"), fd->msg);
          Dmsg1(110, "<filed: Command not found: %s\n", fd->msg);
          fd->fsend(ferrmsg);
          break;
@@ -190,14 +195,16 @@ static bool append_data_cmd(JCR *jcr)
    Dmsg1(120, "Append data: %s", fd->msg);
    if (jcr->session_opened) {
       Dmsg1(110, "<bfiled: %s", fd->msg);
-      jcr->JobType = JT_BACKUP;
+      jcr->set_JobType(JT_BACKUP);
       if (do_append_data(jcr)) {
          return true;
       } else {
+         pm_strcpy(jcr->errmsg, _("Append data error.\n"));
          bnet_suppress_error_messages(fd, 1); /* ignore errors at this point */
          fd->fsend(ERROR_append);
       }
    } else {
+      pm_strcpy(jcr->errmsg, _("Attempt to append on non-open session.\n"));
       fd->fsend(NOT_opened);
    }
    return false;
@@ -209,10 +216,10 @@ static bool append_end_session(JCR *jcr)
 
    Dmsg1(120, "store<file: %s", fd->msg);
    if (!jcr->session_opened) {
+      pm_strcpy(jcr->errmsg, _("Attempt to close non-open session.\n"));
       fd->fsend(NOT_opened);
       return false;
    }
-   set_jcr_job_status(jcr, JS_Terminated);
    return fd->fsend(OK_end);
 }
 
@@ -227,6 +234,7 @@ static bool append_open_session(JCR *jcr)
 
    Dmsg1(120, "Append open session: %s", fd->msg);
    if (jcr->session_opened) {
+      pm_strcpy(jcr->errmsg, _("Attempt to open already open session.\n"));
       fd->fsend(NO_open);
       return false;
    }
@@ -251,6 +259,7 @@ static bool append_close_session(JCR *jcr)
 
    Dmsg1(120, "<filed: %s", fd->msg);
    if (!jcr->session_opened) {
+      pm_strcpy(jcr->errmsg, _("Attempt to close non-open session.\n"));
       fd->fsend(NOT_opened);
       return false;
    }
@@ -279,6 +288,7 @@ static bool read_data_cmd(JCR *jcr)
       Dmsg1(120, "<bfiled: %s", fd->msg);
       return do_read_data(jcr);
    } else {
+      pm_strcpy(jcr->errmsg, _("Attempt to read on non-open session.\n"));
       fd->fsend(NOT_opened);
       return false;
    }
@@ -296,6 +306,7 @@ static bool read_open_session(JCR *jcr)
 
    Dmsg1(120, "%s\n", fd->msg);
    if (jcr->session_opened) {
+      pm_strcpy(jcr->errmsg, _("Attempt to open read on non-open session.\n"));
       fd->fsend(NO_open);
       return false;
    }
@@ -304,6 +315,7 @@ static bool read_open_session(JCR *jcr)
          &jcr->read_VolSessionTime, &jcr->read_StartFile, &jcr->read_EndFile,
          &jcr->read_StartBlock, &jcr->read_EndBlock) == 7) {
       if (jcr->session_opened) {
+         pm_strcpy(jcr->errmsg, _("Attempt to open read on non-open session.\n"));
          fd->fsend(NOT_opened);
          return false;
       }
@@ -316,7 +328,7 @@ static bool read_open_session(JCR *jcr)
    }
 
    jcr->session_opened = true;
-   jcr->JobType = JT_RESTORE;
+   jcr->set_JobType(JT_RESTORE);
 
    /* Send "Ticket" to File Daemon */
    fd->fsend(OK_open, jcr->VolSessionId);
@@ -324,67 +336,6 @@ static bool read_open_session(JCR *jcr)
 
    return true;
 }
-
-static bool bootstrap_cmd(JCR *jcr)
-{
-   return get_bootstrap_file(jcr, jcr->file_bsock);
-}
-
-static pthread_mutex_t bsr_mutex = PTHREAD_MUTEX_INITIALIZER;
-static uint32_t bsr_uniq = 0;
-
-bool get_bootstrap_file(JCR *jcr, BSOCK *sock)
-{
-   POOLMEM *fname = get_pool_memory(PM_FNAME);
-   FILE *bs;
-   bool ok = false;
-
-   if (jcr->RestoreBootstrap) {
-      unlink(jcr->RestoreBootstrap);
-      free_pool_memory(jcr->RestoreBootstrap);
-   }
-   P(bsr_mutex);
-   bsr_uniq++;
-   Mmsg(fname, "%s/%s.%s.%d.bootstrap", me->working_directory, me->hdr.name,
-      jcr->Job, bsr_uniq);
-   V(bsr_mutex);
-   Dmsg1(400, "bootstrap=%s\n", fname);
-   jcr->RestoreBootstrap = fname;
-   bs = fopen(fname, "a+b");           /* create file */
-   if (!bs) {
-      berrno be;
-      Jmsg(jcr, M_FATAL, 0, _("Could not create bootstrap file %s: ERR=%s\n"),
-         jcr->RestoreBootstrap, be.bstrerror());
-      goto bail_out;
-   }
-   Dmsg0(10, "=== Bootstrap file ===\n");
-   while (sock->recv() >= 0) {
-       Dmsg1(10, "%s", sock->msg);
-       fputs(sock->msg, bs);
-   }
-   fclose(bs);
-   Dmsg0(10, "=== end bootstrap file ===\n");
-   jcr->bsr = parse_bsr(jcr, jcr->RestoreBootstrap);
-   if (!jcr->bsr) {
-      Jmsg(jcr, M_FATAL, 0, _("Error parsing bootstrap file.\n"));
-      goto bail_out;
-   }
-   if (debug_level >= 10) {
-      dump_bsr(jcr->bsr, true);
-   }
-   ok = true;
-
-bail_out:
-   unlink(jcr->RestoreBootstrap);
-   free_pool_memory(jcr->RestoreBootstrap);
-   jcr->RestoreBootstrap = NULL;
-   if (!ok) {
-      sock->fsend(ERROR_bootstrap);
-      return false;
-   }
-   return sock->fsend(OK_bootstrap);
-}
-
 
 /*
  *   Read Close session command

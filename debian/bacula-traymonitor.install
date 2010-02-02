@@ -1,2 +1,2 @@
-debian/tmp-install-sqlite/usr/sbin/bacula-tray-monitor	usr/bin
-debian/tmp-build-sqlite/scripts/bacula-tray-monitor.desktop usr/share/applications
+debian/tmp-install-sqlite3/usr/sbin/bacula-tray-monitor	usr/bin
+src/tray-monitor/generic.xpm usr/share/pixmaps/bacula-traymonitor.xpm

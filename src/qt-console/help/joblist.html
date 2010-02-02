@@ -27,8 +27,9 @@ fileset.
 
 <p>The job level is one of "I" for incremental or "F" for full or "D" for differential.
 
-<p>A purged value of 1 means that the files for that job have been purged and you
-are not be able to browse for the files backed up with that jobid.
+<p>A purged value of yes means that the files for that job have been purged from the 
+catalog's file table.  Purged jobs are not be able to have their files browsed when
+restoring from a job with that jobid.
 
 <p>This interface uses a splitter to divide the display of the table and the controls
 used to modify the selection criterion.  There are 7 drop down boxes that can be used
@@ -45,7 +46,8 @@ clicking on the Joblist item in the Page Selector.
 
 <p>Pushing the Graph button opens up a new JobPlot interface.  All of the 
 drop downs and limiting controls in the JobPlot window default to the current
-settings of the controls in the JobList interface.
+settings of the controls in the JobList interface.  If the graph button is not there,
+bat was not compiled with qwt libraries.
 
 <p>There are many options in the context sensitive popup that appear when the user
 right clicks on an item in the job table.

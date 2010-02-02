@@ -21,8 +21,8 @@ DEFINES = \
 	-DWINVER=0x500 \
 	$(HAVES)
 
-vpath %.c ../../dird ../libwin32
-vpath %.cpp ../../dird ../libwin32
+vpath %.c $(MAINDIR)/src/dird $(BUILDDIR)/libwin32
+vpath %.cpp $(MAINDIR)/src/dird $(BUILDDIR)/libwin32
 
 ##########################################################################
 
@@ -33,6 +33,7 @@ DIRD_OBJS = \
 	$(OBJDIR)/backup.o \
 	$(OBJDIR)/bsr.o \
 	$(OBJDIR)/catreq.o \
+	$(OBJDIR)/dir_plugins.o \
 	$(OBJDIR)/dird.o \
 	$(OBJDIR)/dird_conf.o \
 	$(OBJDIR)/expand.o \
@@ -67,6 +68,7 @@ DIRD_OBJS = \
 	$(OBJDIR)/ua_status.o \
 	$(OBJDIR)/ua_tree.o \
 	$(OBJDIR)/ua_update.o \
+	$(OBJDIR)/vbackup.o \
 	$(OBJDIR)/verify.o \
 	$(OBJDIR)/service.o \
 	$(OBJDIR)/main.o \
@@ -77,9 +79,9 @@ ALL_OBJS = $(DIRD_OBJS)
 
 DIRD_LIBS = \
 	$(LIBS_PTHREADS) \
+	$(LIBS_NETWORK) \
 	-lole32 \
 	-loleaut32 \
-	-lwsock32 \
 	-luuid \
 	-lcomctl32
 
@@ -95,6 +97,7 @@ clean:
 	@echo "Cleaning `pwd`"
 	$(call clean_obj,$(ALL_OBJS))
 	$(call clean_exe,$(BINDIR)/bacula-dir.exe)
+	$(ECHO_CMD)rm -rf $(OBJDIRS)
 
 #
 # Rules

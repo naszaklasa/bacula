@@ -37,7 +37,6 @@ PACKAGES
 The virtual package 'bacula-director' is provided by
 
 	- bacula-director-sqlite3
-        - bacula-director-sqlite
 	- bacula-director-mysql
 	- bacula-director-pgsql
 
@@ -53,14 +52,11 @@ Bacula, so that users can contact the director.
  There is, in fact, a wrapper
 script to ease usage by users: /usr/bin/bconsole
 
-The GNOME version of the admin console is contained in the
-bacula-console-gnome package.
+The BAT graphical admin console is contained in the
+bacula-console-qt package.
 
-The wxWidgets-based console is included in the bacula-console-wx
-package.
-
-There are no wrappers for bacula-console-gnome nor
-bacula-wxconsole since they will likely be run from the corresponding
+There are no wrappers for bacula-console-qt since it
+will likely be run from the corresponding
 launchers with appropriate '-c /etc/bacula/<flavor>.conf' arguments.
 The convenient '.menu' files are provided, too.
 
@@ -80,20 +76,10 @@ need to be able to read the console config files.  These files are, by
 default, under /etc/bacula.  You'll need to specify the config file
 with -c for any of the GUI consoles.
 
-SSL/TLS
-=======
-
-Due to licensing concerns (see NEWS.Debian), SSL/TLS is disabled in current
-Debian builds.  This disables both encryption for the on-the-wire
-protocol as well as encryption of the backed-up data.
-
-To build your own package with SSL/TLS support, edit debian/rules and add
---with-openssl to the configure parameters.
-
 POSTGRESQL NOTES
 ================
 
-The PostgreSQL Bacula packages are designed to work with PostgreSQL 8.1.
+The PostgreSQL Bacula packages are designed to work with PostgreSQL 8.3.
 If you are using an older version, you may need to edit some scripts
 in /etc/bacula/scripts so that it uses the correct version of the
 PostgreSQL binaries.  As it is possible to have multiple PostgreSQL
@@ -119,4 +105,4 @@ http://www.bacula.org.
 
 based on a file by Jose Luis Tallon
 
- -- John Goerzen <jgoerzen@complete.org>, Sat, 13 May 2006 10:18:42 -0500
+ -- John Goerzen <jgoerzen@complete.org>, Thu, 30 Apr 2009 16:27:47 -0500

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -30,7 +30,7 @@
  *
  * Author: Robert Nelson, May, 2006 <robertn@the-nelsons.org>
  *
- * Version $Id: mtops.cpp 5358 2007-08-15 16:54:21Z kerns $
+ * Version $Id: mtops.cpp 7380 2008-07-14 10:42:59Z kerns $
  *
  * This file was contributed to the Bacula project by Robert Nelson.
  *
@@ -173,15 +173,15 @@ TAPE_HANDLE_INFO TapeHandleTable[] =
 
 #define  NUMBER_HANDLE_ENTRIES      (sizeof(TapeHandleTable) / sizeof(TapeHandleTable[0]))
 
-DWORD GetTapePositionInfo(HANDLE hDevice, PTAPE_POSITION_INFO TapePositionInfo);
-DWORD GetDensityBlockSize(HANDLE hDevice, DWORD *pdwDensity, DWORD *pdwBlockSize);
+static DWORD GetTapePositionInfo(HANDLE hDevice, PTAPE_POSITION_INFO TapePositionInfo);
+static DWORD GetDensityBlockSize(HANDLE hDevice, DWORD *pdwDensity, DWORD *pdwBlockSize);
 
-int tape_get(int fd, struct mtget *mt_get);
-int tape_op(int fd, struct mtop *mt_com);
-int tape_pos(int fd, struct mtpos *mt_pos);
+static int tape_get(int fd, struct mtget *mt_get);
+static int tape_op(int fd, struct mtop *mt_com);
+static int tape_pos(int fd, struct mtpos *mt_pos);
 
 int
-tape_open(const char *file, int flags, int mode)
+win32_tape_open(const char *file, int flags, ...)
 {
    HANDLE hDevice = INVALID_HANDLE_VALUE;
    char szDeviceName[256] = "\\\\.\\";
@@ -274,8 +274,26 @@ tape_open(const char *file, int flags, int mode)
    return (int)idxFile + 3;
 }
 
+ssize_t
+win32_read(int fd, void *buffer, size_t count)
+{
+   return read(fd, buffer, count);
+}
+
+ssize_t
+win32_write(int fd, const void *buffer, size_t count)
+{
+   return write(fd, buffer, count);
+}
+
 int
-tape_read(int fd, void *buffer, unsigned int count)
+win32_ioctl(int d, unsigned long int req, ...)
+{
+   return -1;
+}
+
+ssize_t
+win32_tape_read(int fd, void *buffer, size_t count)
 {
    if (buffer == NULL) {
       errno = EINVAL;
@@ -346,8 +364,8 @@ tape_read(int fd, void *buffer, unsigned int count)
    }
 }
 
-int
-tape_write(int fd, const void *buffer, unsigned int count)
+ssize_t
+win32_tape_write(int fd, const void *buffer, size_t count)
 {
    if (buffer == NULL) {
       errno = EINVAL;
@@ -405,7 +423,7 @@ tape_write(int fd, const void *buffer, unsigned int count)
 }
 
 int
-tape_close(int fd)
+win32_tape_close(int fd)
 {
    if (fd < 3 || fd >= (int)(NUMBER_HANDLE_ENTRIES + 3) || 
       TapeHandleTable[fd - 3].OSHandle == INVALID_HANDLE_VALUE) {
@@ -427,7 +445,7 @@ tape_close(int fd)
 }
 
 int
-tape_ioctl(int fd, unsigned long int request, ...)
+win32_tape_ioctl(int fd, unsigned long int request, ...)
 {
    va_list argp;
    int result;
@@ -458,7 +476,7 @@ tape_ioctl(int fd, unsigned long int request, ...)
    return result;
 }
 
-int tape_op(int fd, struct mtop *mt_com)
+static int tape_op(int fd, struct mtop *mt_com)
 {
    DWORD result = NO_ERROR;
    int   index;
@@ -797,7 +815,7 @@ int tape_op(int fd, struct mtop *mt_com)
    return result == NO_ERROR ? 0 : -1;
 }
 
-int tape_get(int fd, struct mtget *mt_get)
+static int tape_get(int fd, struct mtget *mt_get)
 {
    TAPE_POSITION_INFO pos_info;
    BOOL result;
@@ -955,7 +973,7 @@ typedef union _READ_POSITION_RESULT {
    SCSI_READ_POSITION_EXTENDED_BUFFER  ExtendedBuffer;
 }  READ_POSITION_RESULT, *PREAD_POSITION_RESULT;
 
-DWORD GetTapePositionInfo(HANDLE hDevice, PTAPE_POSITION_INFO TapePositionInfo)
+static DWORD GetTapePositionInfo(HANDLE hDevice, PTAPE_POSITION_INFO TapePositionInfo)
 {
    PSCSI_PASS_THROUGH   ScsiPassThrough;
    BOOL                 bResult;
@@ -1059,7 +1077,7 @@ DWORD GetTapePositionInfo(HANDLE hDevice, PTAPE_POSITION_INFO TapePositionInfo)
    return NO_ERROR;
 }
 
-DWORD GetDensityBlockSize(HANDLE hDevice, DWORD *pdwDensity, DWORD *pdwBlockSize)
+static DWORD GetDensityBlockSize(HANDLE hDevice, DWORD *pdwDensity, DWORD *pdwBlockSize)
 {
    DWORD             dwBufferSize = sizeof(GET_MEDIA_TYPES) + 5 * sizeof(DEVICE_MEDIA_INFO);
    GET_MEDIA_TYPES * pGetMediaTypes = (GET_MEDIA_TYPES *)malloc(dwBufferSize);
@@ -1132,7 +1150,7 @@ DWORD GetDensityBlockSize(HANDLE hDevice, DWORD *pdwDensity, DWORD *pdwBlockSize
    return ERROR_NO_MEDIA_IN_DRIVE;
 }
 
-int tape_pos(int fd, struct mtpos *mt_pos)
+static int tape_pos(int fd, struct mtpos *mt_pos)
 {
    DWORD partition;
    DWORD offset;

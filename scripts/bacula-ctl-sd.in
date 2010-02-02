@@ -31,7 +31,7 @@ SD_PORT=@sd_port@
 
 SD_USER=@sd_user@
 SD_GROUP=@sd_group@
-
+Bacula="@BACULA@"
 PIDOF=@PIDOF@	
 
 # A function to stop a program.
@@ -197,7 +197,7 @@ fi
 case "$1" in
    start)
       [ -x ${BACSDBIN}/bacula-sd ] && {
-	 echo "Starting the Bacula Storage daemon"
+	 echo "Starting the $Bacula Storage daemon"
 	 OPTIONS=''
 	 if [ "${SD_USER}" != '' ]; then
 	    OPTIONS="${OPTIONS} -u ${SD_USER}"
@@ -214,7 +214,7 @@ case "$1" in
 
    stop)
       [ -x ${BACSDBIN}/bacula-sd ] && {
-	 echo "Stopping the Bacula Storage daemon"
+	 echo "Stopping the $Bacula Storage daemon"
 	 killproc ${BACSDBIN}/bacula-sd ${SD_PORT}
       }
       ;;

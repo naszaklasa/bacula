@@ -21,8 +21,8 @@ DEFINES = \
 
 LDFLAGS:=$(LDFLAGS) -lstdc++
 
-vpath %.c ../../tools ../../dird
-vpath %.cpp ../../tools ../../dird
+vpath %.c $(MAINDIR)/src/tools $(MAINDIR)/src/dird
+vpath %.cpp $(MAINDIR)/src/tools $(MAINDIR)/src/dird
 
 ##########################################################################
 
@@ -48,13 +48,16 @@ ALL_OBJS = \
 
 # Targets
 
-.PHONY: all clean
+.PHONY: all clean bsmtp
 
 all: \
 	$(BINDIR)/bsmtp.exe $(BINDIR)/dbcheck.exe  $(BINDIR)/scsilist.exe \
 	$(BINDIR)/drivetype.exe $(BINDIR)/fstype.exe \
 	$(BINDIR)/testfind.exe $(BINDIR)/testls.exe \
 	$(BINDIR)/bregex.exe $(BINDIR)/bwild.exe
+
+bsmtp: \
+	$(BINDIR)/bsmtp.exe
 
 clean:
 	@echo "Cleaning `pwd`"
@@ -68,6 +71,7 @@ clean:
 	$(call clean_exe,$(BINDIR)/testls.exe)
 	$(call clean_exe,$(BINDIR)/bregex.exe)
 	$(call clean_exe,$(BINDIR)/bwild.exe)
+	$(ECHO_CMD)rm -rf $(OBJDIRS)
 
 #
 # Rules

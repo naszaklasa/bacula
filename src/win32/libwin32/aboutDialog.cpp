@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -29,7 +29,7 @@
  *
  * Kern Sibbald, August 2007
  *
- * Version $Id: aboutDialog.cpp 5358 2007-08-15 16:54:21Z kerns $
+ * Version $Id: aboutDialog.cpp 8384 2009-01-20 15:29:41Z ricozz $
  *
 */
 
@@ -76,6 +76,6 @@ void aboutDialog::show(bool show)
 {
    if (show && !m_visible) {
       DialogBoxParam(appInstance, MAKEINTRESOURCE(IDD_ABOUT), NULL,
-         (DLGPROC)DialogProc, (LONG)this);
+         (DLGPROC)DialogProc, (LPARAM)this);
    }
 }

@@ -4,7 +4,7 @@
  *
  *    Kern Sibbald, July MMII
  *
- *   Version $Id: verify_vol.c 6017 2007-12-03 19:27:38Z kerns $
+ *   Version $Id: verify_vol.c 8988 2009-07-14 14:01:19Z ricozz $
  *
  */
 /*
@@ -29,7 +29,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -199,6 +199,11 @@ void do_verify_volume(JCR *jcr)
             stat = bnet_fsend(dir, "%d %d %s %s%c%s%c%s%c", jcr->JobFiles,
                           STREAM_UNIX_ATTRIBUTES, "pinsug5", fname,
                           0, ap, 0, lname, 0);
+         /* for a deleted record, we set fileindex=0 */
+         } else if (type == FT_DELETED)  {
+            stat = bnet_fsend(dir,"%d %d %s %s%c%s%c%c", 0,
+                          STREAM_UNIX_ATTRIBUTES, "pinsug5", fname,
+                          0, ap, 0, 0);
          } else {
             stat = bnet_fsend(dir,"%d %d %s %s%c%s%c%c", jcr->JobFiles,
                           STREAM_UNIX_ATTRIBUTES, "pinsug5", fname,

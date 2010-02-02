@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -38,8 +38,8 @@
 #include "jcr.h"
 
 /* Exported globals */
-time_t watchdog_time = 0;             /* this has granularity of SLEEP_TIME */
-time_t watchdog_sleep_time = 60;      /* examine things every 60 seconds */
+utime_t watchdog_time = 0;            /* this has granularity of SLEEP_TIME */
+utime_t watchdog_sleep_time = 60;     /* examine things every 60 seconds */
 
 /* Locals */
 static pthread_mutex_t timer_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -80,7 +80,7 @@ int start_watchdog(void)
 
    if ((errstat=rwl_init(&lock)) != 0) {
       berrno be;
-      Emsg1(M_ABORT, 0, _("Unable to initialize watchdog lock. ERR=%s\n"),
+      Jmsg1(NULL, M_ABORT, 0, _("Unable to initialize watchdog lock. ERR=%s\n"),
             be.bstrerror(errstat));
    }
    wd_queue = New(dlist(dummy, &dummy->link));
@@ -177,13 +177,13 @@ watchdog_t *new_watchdog(void)
 bool register_watchdog(watchdog_t *wd)
 {
    if (!wd_is_init) {
-      Emsg0(M_ABORT, 0, _("BUG! register_watchdog called before start_watchdog\n"));
+      Jmsg0(NULL, M_ABORT, 0, _("BUG! register_watchdog called before start_watchdog\n"));
    }
    if (wd->callback == NULL) {
-      Emsg1(M_ABORT, 0, _("BUG! Watchdog %p has NULL callback\n"), wd);
+      Jmsg1(NULL, M_ABORT, 0, _("BUG! Watchdog %p has NULL callback\n"), wd);
    }
    if (wd->interval == 0) {
-      Emsg1(M_ABORT, 0, _("BUG! Watchdog %p has zero interval\n"), wd);
+      Jmsg1(NULL, M_ABORT, 0, _("BUG! Watchdog %p has zero interval\n"), wd);
    }
 
    wd_lock();
@@ -203,7 +203,7 @@ bool unregister_watchdog(watchdog_t *wd)
    bool ok = false;
 
    if (!wd_is_init) {
-      Emsg0(M_ABORT, 0, _("BUG! unregister_watchdog_unlocked called before start_watchdog\n"));
+      Jmsg0(NULL, M_ABORT, 0, _("BUG! unregister_watchdog_unlocked called before start_watchdog\n"));
    }
 
    wd_lock();
@@ -244,8 +244,9 @@ extern "C" void *watchdog_thread(void *arg)
    struct timespec timeout;
    struct timeval tv;
    struct timezone tz;
-   time_t next_time;
+   utime_t next_time;
 
+   set_jcr_in_tsd(INVALID_JCR);
    Dmsg0(800, "NicB-reworked watchdog thread entered\n");
 
    while (!quit) {
@@ -322,7 +323,7 @@ static void wd_lock()
    int errstat;
    if ((errstat=rwl_writelock(&lock)) != 0) {
       berrno be;
-      Emsg1(M_ABORT, 0, _("rwl_writelock failure. ERR=%s\n"),
+      Jmsg1(NULL, M_ABORT, 0, _("rwl_writelock failure. ERR=%s\n"),
            be.bstrerror(errstat));
    }
 }
@@ -337,7 +338,7 @@ static void wd_unlock()
    int errstat;
    if ((errstat=rwl_writeunlock(&lock)) != 0) {
       berrno be;
-      Emsg1(M_ABORT, 0, _("rwl_writeunlock failure. ERR=%s\n"),
+      Jmsg1(NULL, M_ABORT, 0, _("rwl_writeunlock failure. ERR=%s\n"),
            be.bstrerror(errstat));
    }
 }

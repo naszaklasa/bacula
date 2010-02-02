@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -34,7 +34,7 @@
  *
  *
  *
- *   Version $Id: ansi_label.c 6831 2008-04-16 09:49:47Z kerns $
+ *   Version $Id: ansi_label.c 8561 2009-03-20 14:52:17Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -148,6 +148,7 @@ int read_ansi_ibm_label(DCR *dcr)
                }
                *q = 0;
                Dmsg0(100, "Call reserve_volume\n");
+               /* ***FIXME***  why is this reserve_volume() needed???? KES */
                reserve_volume(dcr, dev->VolHdr.VolumeName);
                dev = dcr->dev;            /* may have changed in reserve_volume */
                Dmsg2(100, "Wanted ANSI Vol %s got %6s\n", VolName, dev->VolHdr.VolumeName);
@@ -278,6 +279,7 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
 {
    DEVICE *dev = dcr->dev;
    JCR *jcr = dcr->jcr;
+   char ansi_volname[7];              /* 6 char + \0 */
    char label[80];                    /* tape label */
    char date[20];                     /* ansi date buffer */
    time_t now;
@@ -306,10 +308,19 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
             VolName);
          return false;
       }
+      /* ANSI labels have 6 characters, and are padded with spaces
+       * 'vol1\0' => 'vol1   \0'
+       */
+      strcpy(ansi_volname, VolName);
+      for(int i=len; i < 6; i++) {
+         ansi_volname[i]=' ';
+      }
+      ansi_volname[6]='\0';     /* only for debug */
+
       if (type == ANSI_VOL_LABEL) {
          ser_begin(label, sizeof(label));
          ser_bytes("VOL1", 4);
-         ser_bytes(VolName, len);
+         ser_bytes(ansi_volname, 6);
          /* Write VOL1 label */
          if (label_type == B_IBM_LABEL) {
             ascii_to_ebcdic(label, label, sizeof(label));
@@ -332,7 +343,7 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
       ser_bytes("1", 1);
       ser_bytes("BACULA.DATA", 11);            /* Filename field */
       ser_begin(&label[21], sizeof(label)-21); /* fileset field */
-      ser_bytes(VolName, len);        /* write Vol Ser No. */
+      ser_bytes(ansi_volname, 6);              /* write Vol Ser No. */
       ser_begin(&label[27], sizeof(label)-27);
       ser_bytes("00010001000100", 14);  /* File section, File seq no, Generation no */
       now = time(NULL);

@@ -32,7 +32,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 #, fuzzy
 #| msgid "Create tables for Bacula's Catalog?"
 msgid "Create tables for Bacula's catalog?"
@@ -40,7 +40,7 @@ msgstr "Tabellen creëren voor de catalogus van Bacula?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 #, fuzzy
 #| msgid ""
 #| "The tables needed for Bacula's catalog are missing.  This is normal for a "
@@ -54,7 +54,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
 #, fuzzy
 #| msgid ""
 #| "These tables are needed for the Bacula director to function. Should these "
@@ -68,7 +68,7 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:3001
+#: ../bacula-director-sqlite3.templates:3001
 #, fuzzy
 #| msgid "Remove Catalog on purge?"
 msgid "Remove catalog on purge?"
@@ -76,7 +76,7 @@ msgstr "Catalogus verwijderen bij wissen (purge)?"
 
 #. Type: boolean
 #. Description
-#: ../bacula-director-sqlite.templates:3001
+#: ../bacula-director-sqlite3.templates:3001
 msgid ""
 "Please choose whether the Bacula catalog should be removed when the director "
 "package is purged."

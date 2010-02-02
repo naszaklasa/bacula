@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,18 +20,18 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
  * SD -- mac.c --  responsible for doing
- *     migration, archive, and copy jobs.
+ *     migration, archive, copy, and virtual backup jobs.
  *
  *     Kern Sibbald, January MMVI
  *
- *   Version $Id: mac.c 6421 2008-02-15 08:33:57Z kerns $
+ *   Version $Id: mac.c 8713 2009-04-11 12:35:04Z kerns $
  */
 
 #include "bacula.h"
@@ -57,7 +57,7 @@ bool do_mac(JCR *jcr)
    char ec1[50];
    DEVICE *dev;
 
-   switch(jcr->JobType) {
+   switch(jcr->get_JobType()) {
    case JT_MIGRATE:
       Type = "Migration";
       break;
@@ -66,6 +66,9 @@ bool do_mac(JCR *jcr)
       break;
    case JT_COPY:
       Type = "Copy";
+      break;
+   case JT_BACKUP:
+      Type = "Virtual Backup";
       break;
    default:
       Type = "Unknown";
@@ -81,8 +84,6 @@ bool do_mac(JCR *jcr)
    }
    Dmsg2(100, "read_dcr=%p write_dcr=%p\n", jcr->read_dcr, jcr->dcr);
 
-
-   create_restore_volume_list(jcr);
    if (jcr->NumReadVolumes == 0) {
       Jmsg(jcr, M_FATAL, 0, _("No Volume names found for %s.\n"), Type);
       goto bail_out;
@@ -110,6 +111,7 @@ bool do_mac(JCR *jcr)
    jcr->run_time = time(NULL);
    set_start_vol_position(jcr->dcr);
 
+   jcr->JobFiles = 0;
    ok = read_records(jcr->read_dcr, record_cb, mount_next_read_volume);
    goto ok_out;
 
@@ -119,6 +121,7 @@ bail_out:
 ok_out:
    if (jcr->dcr) {
       dev = jcr->dcr->dev;
+      Dmsg1(100, "ok=%d\n", ok);
       if (ok || dev->can_write()) {
          /* Flush out final partial block of this session */
          if (!write_block_to_device(jcr->dcr)) {
@@ -156,10 +159,7 @@ ok_out:
       }
    }
 
-   free_restore_volume_list(jcr);
-
    dir_send_job_status(jcr);          /* update director */
-
 
    Dmsg0(30, "Done reading.\n");
    jcr->end_time = time(NULL);
@@ -169,8 +169,8 @@ ok_out:
    }
    generate_daemon_event(jcr, "JobEnd");
    dir->fsend(Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,
-      edit_uint64(jcr->JobBytes, ec1));
-   Dmsg4(200, Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles, ec1); 
+      edit_uint64(jcr->JobBytes, ec1), jcr->JobErrors);
+   Dmsg4(100, Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles, ec1); 
        
    dir->signal(BNET_EOD);             /* send EOD to Director daemon */
 
@@ -189,6 +189,12 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    char buf1[100], buf2[100];
    int32_t stream;   
    
+#ifdef xxx
+   Dmsg5(000, "on entry     JobId=%d FI=%s SessId=%d Strm=%s len=%d\n",
+      jcr->JobId,
+      FI_to_ascii(buf1, rec->FileIndex), rec->VolSessionId,
+      stream_to_ascii(buf2, rec->Stream, rec->FileIndex), rec->data_len);
+#endif
    /* If label and not for us, discard it */
    if (rec->FileIndex < 0 && rec->match_stat <= 0) {
       return true;
@@ -201,17 +207,38 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    case EOM_LABEL:
       return true;                    /* don't write vol labels */
    }
+//   if (jcr->get_JobType() == JT_BACKUP) {
+      /*
+       * For normal migration jobs, FileIndex values are sequential because
+       *  we are dealing with one job.  However, for Vbackup (consolidation),
+       *  we will be getting records from multiple jobs and writing them back
+       *  out, so we need to ensure that the output FileIndex is sequential.
+       *  We do so by detecting a FileIndex change and incrementing the
+       *  JobFiles, which we then use as the output FileIndex.
+       */
+      if (rec->FileIndex >= 0) { 
+         /* If something changed, increment FileIndex */
+         if (rec->VolSessionId != rec->last_VolSessionId || 
+             rec->VolSessionTime != rec->last_VolSessionTime ||
+             rec->FileIndex != rec->last_FileIndex) {
+            jcr->JobFiles++;
+            rec->last_VolSessionId = rec->VolSessionId;
+            rec->last_VolSessionTime = rec->VolSessionTime;
+            rec->last_FileIndex = rec->FileIndex;
+         }
+         rec->FileIndex = jcr->JobFiles;     /* set sequential output FileIndex */
+      }
+//   }
    /*
     * Modify record SessionId and SessionTime to correspond to
     * output.
     */
    rec->VolSessionId = jcr->VolSessionId;
    rec->VolSessionTime = jcr->VolSessionTime;
-   Dmsg5(200, "before write_rec JobId=%d FI=%s SessId=%d Strm=%s len=%d\n",
+   Dmsg5(200, "before write JobId=%d FI=%s SessId=%d Strm=%s len=%d\n",
       jcr->JobId,
       FI_to_ascii(buf1, rec->FileIndex), rec->VolSessionId,
-      stream_to_ascii(buf1, rec->Stream,rec->FileIndex), rec->data_len);
-
+      stream_to_ascii(buf2, rec->Stream, rec->FileIndex), rec->data_len);
    while (!write_record_to_block(jcr->dcr->block, rec)) {
       Dmsg4(200, "!write_record_to_block blkpos=%u:%u len=%d rem=%d\n", 
             dev->file, dev->block_num, rec->data_len, rec->remainder);
@@ -224,12 +251,13 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       }
       Dmsg2(200, "===== Wrote block new pos %u:%u\n", dev->file, dev->block_num);
    }
-   jcr->JobBytes += rec->data_len;   /* increment bytes this job */
-   if (rec->FileIndex > 0) {
-      jcr->JobFiles = rec->FileIndex;
-   } else {
+   /* Restore packet */
+   rec->VolSessionId = rec->last_VolSessionId;
+   rec->VolSessionTime = rec->last_VolSessionTime;
+   if (rec->FileIndex < 0) {
       return true;                    /* don't send LABELs to Dir */
    }
+   jcr->JobBytes += rec->data_len;   /* increment bytes this job */
    Dmsg5(500, "wrote_record JobId=%d FI=%s SessId=%d Strm=%s len=%d\n",
       jcr->JobId,
       FI_to_ascii(buf1, rec->FileIndex), rec->VolSessionId,

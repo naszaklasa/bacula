@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, May MM
  *
- *     Version $Id: run_conf.c 4992 2007-06-07 14:46:43Z kerns $
+ *     Version $Id: run_conf.c 7380 2008-07-14 10:42:59Z kerns $
  */
 
 #include "bacula.h"
@@ -186,7 +186,6 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
    int token, state, state2 = 0, code = 0, code2 = 0;
    int options = lc->options;
    RUN **run = (RUN **)(item->value);
-   RUN *trun;
    char *p;
    RES *res;
 
@@ -623,16 +622,24 @@ void store_run(LEX *lc, RES_ITEM *item, int index, int pass)
    }
 
    /* Allocate run record, copy new stuff into it,
-    * and link it into the list of run records
+    * and append it to the list of run records
     * in the schedule resource.
     */
    if (pass == 2) {
-      trun = (RUN *)malloc(sizeof(RUN));
-      memcpy(trun, &lrun, sizeof(RUN));
-      if (*run) {
-         trun->next = *run;
+      RUN *tail;
+
+      /* Create new run record */
+      RUN *nrun = (RUN *)malloc(sizeof(RUN));
+      memcpy(nrun, &lrun, sizeof(RUN));
+      nrun ->next = NULL;
+
+      if (!*run) {                    /* if empty list */
+         *run = nrun;                 /* add new record */
+      } else {
+         for (tail = *run; tail->next; tail=tail->next)
+            {  }
+         tail->next = nrun;
       }
-      *run = trun;
    }
 
    lc->options = options;             /* restore scanner options */

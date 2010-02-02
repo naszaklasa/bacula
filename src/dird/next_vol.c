@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -33,7 +33,7 @@
 
  *     Kern Sibbald, March MMI
  *
- *   Version $Id: next_vol.c 6012 2007-12-02 18:04:07Z kerns $
+ *   Version $Id: next_vol.c 8407 2009-01-28 10:47:21Z ricozz $
  */
 
 #include "bacula.h"
@@ -42,6 +42,8 @@
 /*
  *  Items needed:
  *   mr.PoolId must be set
+ *   mr.StorageId should also be set
+ *   mr.ScratchPoolId could be set (used if create==true)
  *   jcr->wstore
  *   jcr->db
  *   jcr->pool
@@ -76,7 +78,7 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
       ok = db_find_next_volume(jcr, jcr->db, index, InChanger, mr);
 
       if (!ok) {
-         Dmsg4(050, "after find_next_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
+         Dmsg4(150, "after find_next_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
                ok, index, InChanger, mr->VolStatus);
          /*
           * 2. Try finding a recycled volume
@@ -98,22 +100,22 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
                }
                ok = recycle_oldest_purged_volume(jcr, InChanger, mr);
                if (!ok && create) {
-                  Dmsg4(050, "after prune volumes_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
+                  Dmsg4(150, "after prune volumes_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
                         ok, index, InChanger, mr->VolStatus);
                   /*
                    * 5. Try pulling a volume from the Scratch pool
                    */ 
                   ok = get_scratch_volume(jcr, InChanger, mr);
+                  Dmsg4(150, "after get scratch volume ok=%d index=%d InChanger=%d Vstat=%s\n",
+                        ok, index, InChanger, mr->VolStatus);
                }
                /*
                 * If we are using an Autochanger and have not found
                 * a volume, retry looking for any volume. 
                 */
-               if (InChanger) {
+               if (!ok && InChanger) {
                   InChanger = false;
-                  if (!ok) {
-                     continue;           /* retry again accepting any volume */
-                  }
+                  continue;           /* retry again accepting any volume */
                }
             }
          }
@@ -134,10 +136,10 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
                 jcr->pool->purge_oldest_volume, jcr->pool->recycle_oldest_volume);
             /* Find oldest volume to recycle */
             ok = db_find_next_volume(jcr, jcr->db, -1, InChanger, mr);
-            Dmsg1(400, "Find oldest=%d\n", ok);
+            Dmsg1(200, "Find oldest=%d Volume\n", ok);
             if (ok && prune) {
                UAContext *ua;
-               Dmsg0(400, "Try purge.\n");
+               Dmsg0(200, "Try purge Volume.\n");
                /*
                 * 7.  Try to purging oldest volume only if not UA calling us.
                 */
@@ -236,11 +238,13 @@ bool has_volume_expired(JCR *jcr, MEDIA_DBR *mr)
    }
    if (expired) {
       /* Need to update media */
+      Dmsg1(150, "Vol=%s has expired update media record\n", mr->VolumeName);
       if (!db_update_media_record(jcr, jcr->db, mr)) {
          Jmsg(jcr, M_ERROR, 0, _("Catalog error updating volume \"%s\". ERR=%s"),
               mr->VolumeName, db_strerror(jcr->db));
       }
    }
+   Dmsg2(150, "Vol=%s expired=%d\n", mr->VolumeName, expired);
    return expired;
 }
 
@@ -255,6 +259,11 @@ void check_if_volume_valid_or_recyclable(JCR *jcr, MEDIA_DBR *mr, const char **r
    int ok;
 
    *reason = NULL;
+
+   if (!mr->Recycle) {
+      *reason = _("volume has recycling disabled");
+      return;
+   }
 
    /*  Check if a duration or limit has expired */
    if (has_volume_expired(jcr, mr)) {
@@ -339,9 +348,13 @@ bool get_scratch_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
    P(mutex);
    /* 
     * Get Pool record for Scratch Pool
+    * choose between ScratchPoolId and Scratch
+    * db_get_pool_record will first try ScratchPoolId, 
+    * and then try the pool named Scratch
     */
    memset(&spr, 0, sizeof(spr));
    bstrncpy(spr.Name, "Scratch", sizeof(spr.Name));
+   spr.PoolId = mr->ScratchPoolId;
    if (db_get_pool_record(jcr, jcr->db, &spr)) {
       memset(&smr, 0, sizeof(smr));
       smr.PoolId = spr.PoolId;

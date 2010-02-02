@@ -1,2 +1,8 @@
-debian/tmp-install-sqlite/usr/sbin/btraceback usr/lib/bacula
-debian/tmp-install-sqlite/etc/bacula/scripts/btraceback.gdb etc/bacula/scripts
+debian/tmp-install-sqlite3/usr/sbin/btraceback usr/lib/bacula
+debian/tmp-install-sqlite3/etc/bacula/scripts/btraceback.gdb etc/bacula/scripts
+debian/tmp-install-sqlite3/usr/lib/bacula/bipid* usr/lib/bacula
+debian/tmp-install-sqlite3/usr/lib/bacula/libbaccfg* usr/lib/bacula
+debian/tmp-install-sqlite3/usr/lib/bacula/libbacfind* usr/lib/bacula
+debian/tmp-install-sqlite3/usr/lib/bacula/libbac.* usr/lib/bacula
+debian/tmp-install-sqlite3/usr/lib/bacula/libbacpy* usr/lib/bacula
+debian/tmp-install-sqlite3/usr/sbin/bsmtp		usr/lib/bacula

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -37,7 +37,7 @@
  *  Basic tasks done here:
  *      If possible create a new Media entry
  *
- *   Version $Id: newvol.c 5750 2007-10-13 16:46:27Z kerns $
+ *   Version $Id: newvol.c 8045 2008-11-13 16:27:30Z ricozz $
  */
 
 #include "bacula.h"
@@ -71,8 +71,9 @@ bool newVolume(JCR *jcr, MEDIA_DBR *mr)
       set_pool_dbr_defaults_in_media_dbr(mr, &pr);
       jcr->VolumeName[0] = 0;
       bstrncpy(mr->MediaType, jcr->wstore->media_type, sizeof(mr->MediaType));
-      if (generate_job_event(jcr, "NewVolume") == 1 && jcr->VolumeName[0] &&
-          is_volume_name_legal(NULL, jcr->VolumeName)) {
+      generate_job_event(jcr, "NewVolume"); /* return bool */
+      generate_plugin_event(jcr, bEventNewVolume); /* return void... */
+      if (jcr->VolumeName[0] && is_volume_name_legal(NULL, jcr->VolumeName)) {
          bstrncpy(mr->VolumeName, jcr->VolumeName, sizeof(mr->VolumeName));
       /* Check for special characters */
       } else if (pr.LabelFormat[0] && pr.LabelFormat[0] != '*') {

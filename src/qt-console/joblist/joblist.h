@@ -22,13 +22,13 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: joblist.h 7461 2008-08-03 17:11:20Z bartleyd2 $
+ *   Version $Id: joblist.h 8880 2009-05-31 22:02:20Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -53,7 +53,7 @@ public:
 public slots:
    void populateTable();
    virtual void treeWidgetName(QString &);
-   void tableItemChanged(QTableWidgetItem *, QTableWidgetItem *);
+   void selectionChanged();
 
 private slots:
    void consoleListJobid();
@@ -71,9 +71,10 @@ private slots:
 
 private:
    void createConnections();
-   void setStatusColor(QTableWidgetItem *item, QString &field);
    void writeSettings();
    void readSettings();
+   void prepareFilterWidgets();
+   void fillQueryString(QString &query);
    QSplitter *m_splitter;
    QString m_groupText;
    QString m_splitText;
@@ -83,14 +84,17 @@ private:
    QString m_filesetName;
    QString m_currentJob;
    bool m_populated;
-   bool m_populating;
    bool m_checkCurrentWidget;
+   int m_jobIdIndex;
    int m_purgedIndex;
    int m_typeIndex;
    int m_statusIndex;
    int m_startIndex;
    int m_bytesIndex;
    int m_filesIndex;
+   int m_selectedJobsCount;
+   QString m_selectedJobs;
+   QStringList m_selectedJobsList;
 };
 
 #endif /* _JOBLIST_H_ */

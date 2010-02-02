@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -41,9 +41,11 @@
                   http://www.fourmilab.ch/smartall/
 
 
-         Version $Id: smartall.c 7031 2008-05-25 13:16:26Z kerns $
+         Version $Id: smartall.c 8389 2009-01-20 20:01:18Z ricozz $
 
 */
+
+#define _LOCKMGR_COMPLIANT
 
 #include "bacula.h"
 /* Use the real routines here */
@@ -132,7 +134,7 @@ static void *smalloc(const char *fname, int lineno, unsigned int nbytes)
       head->ablineno = (sm_ushort)lineno;
       head->abin_use = true;
       /* Emplace end-clobber detector at end of buffer */
-      buf[nbytes - 1] = (uint8_t)((((long) buf) & 0xFF) ^ 0xC5);
+      buf[nbytes - 1] = (uint8_t)((((intptr_t) buf) & 0xFF) ^ 0xC5);
       buf += HEAD_SIZE;  /* Increment to user data start */
       if (++sm_buffers > sm_max_buffers) {
          sm_max_buffers = sm_buffers;
@@ -210,7 +212,7 @@ void sm_free(const char *file, int line, void *fp)
       allocated  space in the buffer by comparing the end of buffer
       checksum with the address of the buffer.  */
 
-   if (((unsigned char *)cp)[head->ablen - 1] != ((((long) cp) & 0xFF) ^ 0xC5)) {
+   if (((unsigned char *)cp)[head->ablen - 1] != ((((intptr_t) cp) & 0xFF) ^ 0xC5)) {
       V(mutex);
       Emsg2(M_ABORT, 0, _("Buffer overrun called from %s:%d\n"), file, line);
    }
@@ -461,7 +463,7 @@ int sm_check_rtn(const char *fname, int lineno, bool bufdump)
             bad |= 0x2;
          }
          if (((unsigned char *) ap)[((struct abufhead *)ap)->ablen - 1] !=
-              ((((long) ap) & 0xFF) ^ 0xC5)) {
+              ((((intptr_t) ap) & 0xFF) ^ 0xC5)) {
             bad |= 0x4;
          }
       } else {
