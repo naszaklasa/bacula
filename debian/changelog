@@ -1,3 +1,12 @@
+bacula (2.4.2-1ubuntu3) intrepid; urgency=low
+
+  * debian/patches/ubuntu_grant_privileges.patch:
+    - test if $USER and db_name are set in grant_postgresql_privileges.
+  * debian/bacula-director-pgsql.postinst:
+    - Create databse as postgres user only if user exists. (LP: #228693) 
+
+ -- Chuck Short <zulcss@ubuntu.com>  Tue, 19 Aug 2008 10:35:41 -0400
+
 bacula (2.4.2-1ubuntu2) intrepid; urgency=low
 
   * debian/rules: Disable fortify source since it was causing

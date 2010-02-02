@@ -124,6 +124,8 @@ build: patch build-arch build-indep debian/po/templates.pot
 clean:
 
 	[ ! -f patch-stamp ] || patch -R -p0 -i debian/patches/ubuntu_bacula-dir.conf.patch
+	[ ! -f patch-stamp ] || patch -R -p0 -i debian/patches/ubuntu_grant_privileges.patch
+
 	$(RM) *stamp*
 
 	dh_clean
@@ -254,6 +256,7 @@ patch-stamp:
 	chmod 755 debian/additions/bconsole
 
 	patch -p0 -i debian/patches/ubuntu_bacula-dir.conf.patch
+	patch -p0 -i debian/patches/ubuntu_grant_privileges.patch
 
 	touch patch-stamp
 

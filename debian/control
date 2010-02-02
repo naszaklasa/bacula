@@ -46,7 +46,7 @@ Description: network backup, recovery and verification - common support files
 Package: bacula-director-common
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, bacula-common (= ${binary:Version})
-Depends: ${shlibs:Depends}, adduser, mailx
+Depends: ${shlibs:Depends}, adduser, mailx, gawk
 Description: network backup, recovery and verification - Director common files
  Bacula is a set of programs to manage backup, recovery and verification of
  data across a network of computers of different kinds.
@@ -134,7 +134,7 @@ Description: network backup, recovery and verification - PostgreSQL storage for 
 
 Package: bacula-client
 Architecture: all
-Depends: bacula-console (>= ${source:Version}), bacula-fd (>= ${source:Version}), gawk
+Depends: bacula-console (>= ${source:Version}), bacula-fd (>= ${source:Version})
 Recommends: bacula-traymonitor
 Description: network backup, recovery and verification - client meta-package
  Bacula is a set of programs to manage backup, recovery and verification of
@@ -161,7 +161,7 @@ Description: network backup, recovery and verification - file daemon
 
 Package: bacula-server
 Architecture: all
-Depends: bacula-director-mysql (>= ${source:Version})|bacula-director, bacula-sd (>= ${source:Version}), bacula-sd-mysql (>= ${source:Version})|bacula-sd-tools, gawk
+Depends: bacula-director-mysql (>= ${source:Version})|bacula-director, bacula-sd (>= ${source:Version}), bacula-sd-mysql (>= ${source:Version})|bacula-sd-tools
 Recommends: bacula-fd
 Description: network backup, recovery and verification - server meta-package
  Bacula is a set of programs to manage backup, recovery and verification of

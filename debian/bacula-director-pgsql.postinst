@@ -94,14 +94,14 @@ configure)
 		id "$dbu_name" 2> /dev/null || adduser --system --no-create-home --disabled-login "$dbu_name"
 		su -c "psql --command \"CREATE ROLE $dbu_name PASSWORD '$dbu_password' NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;\"" postgres
 		su -c "createdb -E UTF8 -O \"$dbu_name\" \"$db_name\"" postgres
+		su -c /usr/share/bacula-director/make_postgresql_tables postgres 1> /dev/null
+		su -c "USER=\"$dbu_name\" db_name=\"$db_name\" $GRANT_SQL_PRIVS" postgres 1> /dev/null
 	fi
 
 	sed -e "s/dbname = bacula;/dbname = $db_name; DB Address = \"$db_host\";/" \
 	-e "s/@db_user@/$dbu_name/" -e "s/@db_pswd@/$dbu_password/" \
 		$DEFCONFIG/bacula-dir.conf > $TARGET
 
-	su -c /usr/share/bacula-director/make_postgresql_tables postgres 1> /dev/null
-	su -c "USER=\"$dbu_name\" db_name=\"$db_name\" $GRANT_SQL_PRIVS" postgres 1> /dev/null
 
 	/bin/sh $POSTINST_COMMON
 	echo "Ok."
