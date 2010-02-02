@@ -1,3 +1,10 @@
+bacula (2.4.2-1ubuntu2) intrepid; urgency=low
+
+  * debian/rules: Disable fortify source since it was causing
+    bacula-director to segfault. 
+
+ -- Chuck Short <zulcss@ubuntu.com>  Thu, 07 Aug 2008 19:32:41 -0400
+
 bacula (2.4.2-1ubuntu1) intrepid; urgency=low
 
   * Merge from debian unstable, remaining changes:
