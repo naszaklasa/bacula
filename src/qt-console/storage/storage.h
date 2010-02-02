@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: storage.h 5372 2007-08-17 12:17:04Z kerns $
+ *   Version $Id: storage.h 7459 2008-08-03 16:27:06Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -66,6 +66,7 @@ private:
    QString m_currentStorage;
    int m_currentAutoChanger;
    bool m_populated;
+   bool m_populating;
    bool m_checkcurwidget;
 };
 

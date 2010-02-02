@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: jobs.cpp 6967 2008-05-13 08:13:50Z kerns $
+ *   Version $Id: jobs.cpp 7459 2008-08-03 16:27:06Z bartleyd2 $
  *
  *  Jobs Class
  *
@@ -49,6 +49,7 @@ Jobs::Jobs()
 
    /* mp_treeWidget, Storage Tree Tree Widget inherited from ui_client.h */
    m_populated = false;
+   m_populating = false;
    m_checkcurwidget = true;
    m_closeable = false;
    /* add context sensitive menu items specific to this classto the page
@@ -68,6 +69,9 @@ Jobs::~Jobs()
  */
 void Jobs::populateTree()
 {
+   if (m_populating)
+      return;
+   m_populating = true;
    QTreeWidgetItem *jobsItem, *topItem;
 
    if (!m_console->preventInUseConnect())

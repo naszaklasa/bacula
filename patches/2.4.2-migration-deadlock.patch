@@ -1,0 +1,47 @@
+
+  This patch fixes migration SQL not to migrate a job that has not 
+  terminated, or in otherwords do not migrate a running job.
+  This is a partial fix to bug #1164.
+
+  Any prior patches to src/dird/migration must already be applied.
+  Apply it to 2.4.2 with:
+
+  cd <bacula-source>
+  patch -p0 <2.4.2-migration-deadlock.patch
+  ./configure <your-options>
+  make
+  ...
+  make install
+
+
+Index: src/dird/migrate.c
+===================================================================
+--- src/dird/migrate.c	(revision 7729)
++++ src/dird/migrate.c	(working copy)
+@@ -554,7 +554,7 @@
+ const char *sql_jobids_from_mediaid =
+    "SELECT DISTINCT Job.JobId,Job.StartTime FROM JobMedia,Job"
+    " WHERE JobMedia.JobId=Job.JobId AND JobMedia.MediaId IN (%s)"
+-   " AND Job.Type='B'"
++   " AND Job.Type='B' AND Job.JobStatus = 'T'"
+    " ORDER by Job.StartTime";
+ 
+ /* Get the number of bytes in the pool */
+@@ -563,7 +563,7 @@
+    " (SELECT DISTINCT Job.JobId from Pool,Job,Media,JobMedia WHERE"
+    " Pool.Name='%s' AND Media.PoolId=Pool.PoolId AND"
+    " VolStatus in ('Full','Used','Error','Append') AND Media.Enabled=1 AND"
+-   " Job.Type='B' AND"
++   " Job.Type='B' AND Job.JobStatus = 'T' AND"
+    " JobMedia.JobId=Job.JobId AND Job.PoolId=Media.PoolId)";
+ 
+ /* Get the number of bytes in the Jobs */
+@@ -582,7 +582,7 @@
+    "SELECT DISTINCT Job.JobId from Pool,Job,Media,JobMedia WHERE"
+    " Pool.Name='%s' AND Media.PoolId=Pool.PoolId AND"
+    " VolStatus in ('Full','Used','Error') AND Media.Enabled=1 AND"
+-   " Job.Type='B' AND"
++   " Job.Type='B' AND Job.JobStatus = 'T' AND"
+    " JobMedia.JobId=Job.JobId AND Job.PoolId=Media.PoolId"
+    " AND Job.RealEndTime<='%s'";
+ 

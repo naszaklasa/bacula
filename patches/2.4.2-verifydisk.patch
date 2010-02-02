@@ -1,0 +1,26 @@
+
+  This patch fixes a case problem in an SQL command, and could potentially
+  fix the DiskToCatalog problem reported in bug #1149.
+  Apply the patch to version 2.4.2 (and previous versions) with:
+
+  cd <bacula-source>
+  patch -p0 <2.4.2-verifydisk.patch
+  ./configure <your-options>
+  make
+  ...
+  make install
+
+   
+Index: src/cats/sql_get.c
+===================================================================
+--- src/cats/sql_get.c	(revision 7507)
++++ src/cats/sql_get.c	(working copy)
+@@ -109,7 +109,7 @@
+    Mmsg(mdb->cmd,
+ "SELECT FileId, LStat, MD5 FROM File,Job WHERE "
+ "File.JobId=Job.JobId AND File.PathId=%s AND "
+-"File.FilenameId=%s AND Job.Type='B' AND Job.JobSTATUS='T' AND "
++"File.FilenameId=%s AND Job.Type='B' AND Job.JobStatus='T' AND "
+ "ClientId=%s ORDER BY StartTime DESC LIMIT 1",
+       edit_int64(fdbr->PathId, ed1), 
+       edit_int64(fdbr->FilenameId, ed2), 

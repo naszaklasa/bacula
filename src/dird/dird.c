@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: dird.c 7164 2008-06-18 19:22:03Z kerns $
+ *   Version $Id: dird.c 7508 2008-08-26 13:14:38Z kerns $
  */
 
 #include "bacula.h"
@@ -914,6 +914,7 @@ static bool check_catalog()
          db_create_storage_record(NULL, db, &sr);
          store->StorageId = sr.StorageId;   /* set storage Id */
          if (!sr.created) {                 /* if not created, update it */
+            sr.AutoChanger = store->autochanger;
             db_update_storage_record(NULL, db, &sr);
          }
 

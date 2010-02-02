@@ -27,7 +27,7 @@
 */
 
 /*
- *   Version $Id: mainwin.cpp 7416 2008-07-22 14:48:21Z kerns $
+ *   Version $Id: mainwin.cpp 7475 2008-08-14 07:21:08Z kerns $
  *
  *  Main Window control for bat (qt-console)
  *
@@ -441,14 +441,14 @@ void MainWin::restoreButtonClicked()
    new prerestorePage();
 }
 
-#ifdef HAVE_QWT
 void MainWin::jobPlotButtonClicked()
 {
+#ifdef HAVE_QWT
    JobPlotPass pass;
    pass.use = false;
    new JobPlot(NULL, pass);
-}
 #endif
+}
 
 /*
  * The user just finished typing a line in the command line edit box
@@ -473,7 +473,7 @@ void MainWin::input_line()
 void MainWin::about()
 {
    QMessageBox::about(this, tr("About bat"),
-      tr("<br><h2>bat " VERSION "(" BDATE "), by Dirk H Bartley and Kern Sibbald</h2>"
+      tr("<br><h2>bat " VERSION " (" BDATE "), by Dirk H Bartley and Kern Sibbald</h2>"
          "<p>Copyright &copy; 2007-" BYEAR " Free Software Foundation Europe e.V."
          "<p>The <b>bat</b> is an administrative console"
          " interface to the Director."));

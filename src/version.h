@@ -1,11 +1,11 @@
 /*
- *  Version $Id: version.h 7439 2008-07-26 20:52:40Z kerns $
+ *  Version $Id: version.h 7745 2008-10-10 11:51:37Z kerns $
  */
 
 #undef  VERSION
-#define VERSION "2.4.2"
-#define BDATE   "26 July 2008"
-#define LSMDATE "26Jul08"
+#define VERSION "2.4.3"
+#define BDATE   "10 October 2008"
+#define LSMDATE "10Oct08"
 
 #define PROG_COPYRIGHT "Copyright (C) %d-2008 Free Software Foundation Europe e.V.\n"
 #define BYEAR "2008"       /* year for copyright messages in progs */

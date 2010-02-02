@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c 7303 2008-07-04 14:11:23Z kerns $
+ *    Version $Id: job.c 7744 2008-10-10 10:58:59Z ricozz $
  */
 
 #include "bacula.h"
@@ -354,10 +354,11 @@ bool cancel_job(UAContext *ua, JCR *jcr)
 {
    BSOCK *sd, *fd;
    char ed1[50];
+   int32_t old_status = jcr->JobStatus;
 
    set_jcr_job_status(jcr, JS_Canceled);
 
-   switch (jcr->JobStatus) {
+   switch (old_status) {
    case JS_Created:
    case JS_WaitJobRes:
    case JS_WaitClientRes:
