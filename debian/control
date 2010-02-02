@@ -122,7 +122,7 @@ Description: Network backup, recovery and verification (Director daemon)
 
 Package: bacula-client
 Architecture: all
-Depends: bacula-console (>= ${source:Version}), bacula-fd (>= ${source:Version})
+Depends: bacula-console (>= ${source:Version}), bacula-fd (>= ${source:Version}), gawk
 Recommends: bacula-traymonitor
 Description: Network backup, recovery and verification (Client meta-package)
  Minimal Bacula system client (File Daemon and Console only)
@@ -141,7 +141,7 @@ Description: Network backup, recovery and verification (Filer daemon)
 
 Package: bacula-server
 Architecture: all
-Depends: bacula-director-mysql (>= ${source:Version})|bacula-director, bacula-sd (>= ${source:Version}), bacula-sd-mysql (>= ${source:Version})|bacula-sd-tools
+Depends: bacula-director-mysql (>= ${source:Version})|bacula-director, bacula-sd (>= ${source:Version}), bacula-sd-mysql (>= ${source:Version})|bacula-sd-tools, gawk
 Recommends: bacula-fd
 Description: Network backup, recovery and verification (Server meta-package)
  Bacula system server: SQL-based catalog (SQLite, MySQL, or PgSQL) and 

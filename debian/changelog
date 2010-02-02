@@ -1,3 +1,10 @@
+bacula (2.2.8-5ubuntu5) hardy; urgency=low
+
+  * debian/control
+    - Add gawk if isnt installed. (LP: #207527)
+
+ -- Chuck Short <zulcss@ubuntu.com>  Fri, 28 Mar 2008 15:08:02 -0400
+
 bacula (2.2.8-5ubuntu4) hardy; urgency=low
 
   * Partial rewrite of init script for bacula-director-common (LP: #204145)
