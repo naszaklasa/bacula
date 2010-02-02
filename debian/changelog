@@ -1,3 +1,9 @@
+bacula (2.4.2-1ubuntu6) intrepid; urgency=low
+
+  * Drop mt-st to suggests. So that bacula goes back to main. (LP: #286528) 
+
+ -- Chuck Short <zulcss@ubuntu.com>  Tue, 21 Oct 2008 09:38:11 -0400
+
 bacula (2.4.2-1ubuntu5) intrepid; urgency=low
 
   * Create postgresql database with SQL_ASCII encoding, not
