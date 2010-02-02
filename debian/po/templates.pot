@@ -51,3 +51,36 @@ msgid ""
 "Please choose whether the Bacula catalog should be removed when the director "
 "package is purged."
 msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+msgid "Create tables for Bacula's Catalog?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:1001
+#: ../bacula-director-sqlite3.templates:1001
+msgid ""
+"The tables needed for Bacula's catalog are missing.  This is normal for a "
+"fresh install of Bacula.  These tables are needed for the Bacula director to "
+"function."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
+msgid "Remove Catalog on purge?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../bacula-director-sqlite.templates:2001
+#: ../bacula-director-sqlite3.templates:2001
+msgid ""
+"If you want to remove the Bacula catalog when the package is purged, you "
+"should choose this option."
+msgstr ""
