@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: dircomm.cpp 5366 2007-08-17 10:18:43Z kerns $
+ *   Version $Id: dircomm.cpp 7401 2008-07-19 15:50:38Z kerns $
  *
  *  Bacula Communications class that is at a higher level than BSOCK
  *
@@ -536,9 +536,8 @@ static int tls_pem_callback(char *buf, int size, const void *userdata)
    (void)size;
    (void)userdata;
 #ifdef HAVE_TLS
-   const char *prompt = (const char *)userdata;
 # if defined(HAVE_WIN32)
-   sendit(prompt);
+// sendit(prompt);
    if (win32_cgets(buf, size) == NULL) {
       buf[0] = 0;
       return 0;
@@ -546,6 +545,7 @@ static int tls_pem_callback(char *buf, int size, const void *userdata)
       return strlen(buf);
    }
 # else
+   const char *prompt = (const char *)userdata;
    char *passwd;
 
    passwd = getpass(prompt);

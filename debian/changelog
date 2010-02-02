@@ -1,3 +1,57 @@
+bacula (2.4.2-1ubuntu1) intrepid; urgency=low
+
+  * Merge from debian unstable, remaining changes:
+    - debian/bacula-director-mysql.postinst:
+      debian/bacula-director-pgsql.postinst:
+      + Worked in some smarts to do no databases if bacula is already installed.
+    - debian/control:
+      + Added libdbi-perl and libdb-mysql-perl to depends for bacula-director-mysql
+        due to new postinst configuration.
+      + Cleaned up bacula-director-pgsql dependenices and recommends.
+      + Made mysql the default director to install bacula-director-{mysql|pgsql}
+	added database handling to postinstall scripts and templates, modifiied 
+        postinstall script's sed expressions.
+      + Removed libwgtk-2.6-dev as a build dependency; as a result bacula-console-wx
+        isn't built anymore.
+      + Install gawk if not installed. (LP: #207527)
+    - debian/make_catalog_backup_awk.[mysql|pgsql|sqlite3|sqlite]:
+      + New scripts for catalog backup. (CVE-2007-5626)
+    - debian/bacula-console-wx:
+      + Dropped since we are not building them anymore.
+    - debian/bacula-director-common.bacula-director.init, 
+      debian/bacula-fd.init, debian/bacula-sd.init
+      + Made more LSB specific.
+      
+
+ -- Chuck Short <zulcss@ubuntu.com>  Thu, 07 Aug 2008 12:01:16 +0100
+
+bacula (2.4.2-1) unstable; urgency=high
+
+  * Fix sed pattern in debian/rules to correctly remove
+    'USE ${db_name};' from the MySQL command tables.  This prevented
+    bacula-director-mysql from being installed properly and was thus RC.
+    Closes: #441995, #489578.
+  * While investigating the above problem, also discovered 'USE bacula;'
+    statements in some upgrade tables.  This would cause the upgrade of
+    bacula-director-mysql to fail for anyone that had their MySQL
+    database named something other than "bacula".  Added pattern to fix this.
+  * New upstream release is a bugfix release, and fixes these issues:
+    + 2.4.1 included an unintentional debug statement whose purpose
+      was to crash the storage daemon.  This was triggered during a restore
+      at the end of a tape.  Fixed in 2.4.2 (upstream bug 1125).  When the
+      SD is crashed, no backups or restores can be performed until it is
+      restarted.
+    + During a multi-tape restore, Bacula could incorrectly attempt
+      to reread the same tape.  (Upstream bug 1126)
+    + bcopy no longer reads too many records (upstream bug 1107)
+    + Now sets a large timeout on MySQL databases to prevent trouble
+      with the connection timining out before data gets inserted.  
+      Upstream bug 1034.
+    + There are also some other minor bugfixes and win32 changes upstream
+      in this release, which of course don't impact Debian.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 04 Aug 2008 09:22:36 -0500
+
 bacula (2.4.1-1ubuntu1) intrepid; urgency=low
 
   * Merge from debian unstable, remaining changes:

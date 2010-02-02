@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -32,7 +32,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: mount.c 7309 2008-07-05 05:52:04Z kerns $
+ *   Version $Id: mount.c 7432 2008-07-24 15:26:41Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -113,7 +113,9 @@ mount_next_vol:
       ask = true;                     /* ask operator to mount tape */
       do_find = true;                 /* re-find a volume after unload */
    }
-   do_swapping(true /*writing*/);
+   do_unload();
+   do_swapping(true /*is_writing*/);
+   do_load(true /*is_writing*/);
 
    if (do_find && !find_a_volume()) {
       goto no_lock_bail_out;
@@ -142,7 +144,7 @@ mount_next_vol:
    } else {
       autochanger = false;
       VolCatInfo.Slot = 0;
-      ask = true;
+      ask = retry >= 2;
    }
    Dmsg1(150, "autoload_dev returns %d\n", autochanger);
    /*
@@ -500,12 +502,30 @@ bool DCR::is_suitable_volume_mounted()
    return dir_get_volume_info(this, GET_VOL_INFO_FOR_WRITE);
 }
 
-void DCR::do_swapping(bool is_writing)
+bool DCR::do_unload()
 {
    if (dev->must_unload()) {
       Dmsg1(100, "must_unload release %s\n", dev->print_name());
       release_volume();
    }
+   return false;
+}
+
+bool DCR::do_load(bool is_writing)
+{
+   if (dev->must_load()) {
+      Dmsg1(100, "Must load %s\n", dev->print_name());
+      if (autoload_device(this, is_writing, NULL) > 0) {
+         dev->clear_load();
+         return true;
+      }
+      return false;
+   }
+   return true;
+}
+
+void DCR::do_swapping(bool is_writing)
+{
    /*
     * See if we are asked to swap the Volume from another device
     *  if so, unload the other device here, and attach the
@@ -522,16 +542,11 @@ void DCR::do_swapping(bool is_writing)
       }
       if (dev->vol) {
          dev->vol->clear_swapping();
+         Dmsg1(100, "=== set in_use vol=%s\n", dev->vol->vol_name);
          dev->vol->set_in_use();
          dev->VolHdr.VolumeName[0] = 0;  /* don't yet have right Volume */
       }
       dev->swap_dev = NULL;
-   }
-   if (dev->must_load()) {
-      Dmsg1(100, "Must load %s\n", dev->print_name());
-      if (autoload_device(this, is_writing, NULL) > 0) {
-         dev->clear_load();
-      }
    }
 }
 

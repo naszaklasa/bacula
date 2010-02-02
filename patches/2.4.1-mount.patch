@@ -1,0 +1,29 @@
+
+ This patch causes the SD to try at least once to mount a Volume
+ that is not in an Autochanger before asking the operator to
+ intervene. Without it, the user must issue a mount command for
+ every File based volume that is needed.
+
+ Apply to 2.4.1 with the following:
+
+ cd <bacula-source>
+ patch -p0 <2.4.1-mount.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+Index: src/stored/mount.c
+===================================================================
+--- src/stored/mount.c	(revision 7378)
++++ src/stored/mount.c	(working copy)
+@@ -142,7 +142,7 @@
+    } else {
+       autochanger = false;
+       VolCatInfo.Slot = 0;
+-      ask = true;
++      ask = retry >= 2;
+    }
+    Dmsg1(150, "autoload_dev returns %d\n", autochanger);
+    /*

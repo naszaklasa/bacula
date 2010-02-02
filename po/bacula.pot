@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: bacula-devel@lists.sourceforge.net\n"
-"POT-Creation-Date: 2008-07-07 23:08+0200\n"
+"POT-Creation-Date: 2008-07-27 11:07+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -445,7 +445,7 @@ msgstr ""
 msgid "No Job status returned from FD.\n"
 msgstr ""
 
-#: src/dird/backup.c:358 src/dird/migrate.c:1078 src/dird/admin.c:89
+#: src/dird/backup.c:358 src/dird/migrate.c:1093 src/dird/admin.c:89
 #, c-format
 msgid "Error getting Job record for Job report: ERR=%s"
 msgstr ""
@@ -455,7 +455,7 @@ msgstr ""
 msgid "Error getting Client record for Job report: ERR=%s"
 msgstr ""
 
-#: src/dird/backup.c:371 src/dird/migrate.c:1109
+#: src/dird/backup.c:371 src/dird/migrate.c:1124
 #, c-format
 msgid "Error getting Media record for Volume \"%s\": ERR=%s"
 msgstr ""
@@ -1395,138 +1395,138 @@ msgstr ""
 msgid "Job Pool's NextPool resource"
 msgstr ""
 
-#: src/dird/migrate.c:278
-#, c-format
-msgid "Start Migration JobId %s, Job=%s\n"
-msgstr ""
-
-#: src/dird/migrate.c:306
-#, c-format
-msgid "Read storage \"%s\" same as write storage.\n"
-msgstr ""
-
-#: src/dird/migrate.c:650
-msgid "No Migration SQL selection pattern specified.\n"
-msgstr ""
-
-#: src/dird/migrate.c:657 src/dird/migrate.c:677 src/dird/migrate.c:698
-#: src/dird/migrate.c:734 src/dird/migrate.c:762 src/dird/migrate.c:878
-#: src/dird/migrate.c:911 src/dird/migrate.c:1008
-#, c-format
-msgid "SQL failed. ERR=%s\n"
-msgstr ""
-
-#: src/dird/migrate.c:681 src/dird/migrate.c:688 src/dird/migrate.c:702
-#: src/dird/migrate.c:766
-msgid "No Volumes found to migrate.\n"
-msgstr ""
-
-#: src/dird/migrate.c:716 src/dird/migrate.c:801 src/dird/migrate.c:814
-msgid "Invalid JobId found.\n"
-msgstr ""
-
-#: src/dird/migrate.c:773
-msgid "Unknown Migration Selection Type.\n"
-msgstr ""
-
-#: src/dird/migrate.c:785 src/dird/migrate.c:804 src/dird/migrate.c:817
-msgid "No JobIds found to migrate.\n"
-msgstr ""
-
-#: src/dird/migrate.c:789
-#, c-format
-msgid "The following %u JobId%s were chosen to be migrated: %s\n"
-msgstr ""
-
-#: src/dird/migrate.c:825
+#: src/dird/migrate.c:278 src/dird/migrate.c:840
 #, c-format
 msgid "Could not get job record for JobId %s to migrate. ERR=%s"
 msgstr ""
 
-#: src/dird/migrate.c:830
+#: src/dird/migrate.c:293
+#, c-format
+msgid "Start Migration JobId %s, Job=%s\n"
+msgstr ""
+
+#: src/dird/migrate.c:321
+#, c-format
+msgid "Read storage \"%s\" same as write storage.\n"
+msgstr ""
+
+#: src/dird/migrate.c:665
+msgid "No Migration SQL selection pattern specified.\n"
+msgstr ""
+
+#: src/dird/migrate.c:672 src/dird/migrate.c:692 src/dird/migrate.c:713
+#: src/dird/migrate.c:749 src/dird/migrate.c:777 src/dird/migrate.c:893
+#: src/dird/migrate.c:926 src/dird/migrate.c:1023
+#, c-format
+msgid "SQL failed. ERR=%s\n"
+msgstr ""
+
+#: src/dird/migrate.c:696 src/dird/migrate.c:703 src/dird/migrate.c:717
+#: src/dird/migrate.c:781
+msgid "No Volumes found to migrate.\n"
+msgstr ""
+
+#: src/dird/migrate.c:731 src/dird/migrate.c:816 src/dird/migrate.c:829
+msgid "Invalid JobId found.\n"
+msgstr ""
+
+#: src/dird/migrate.c:788
+msgid "Unknown Migration Selection Type.\n"
+msgstr ""
+
+#: src/dird/migrate.c:800 src/dird/migrate.c:819 src/dird/migrate.c:832
+msgid "No JobIds found to migrate.\n"
+msgstr ""
+
+#: src/dird/migrate.c:804
+#, c-format
+msgid "The following %u JobId%s were chosen to be migrated: %s\n"
+msgstr ""
+
+#: src/dird/migrate.c:845
 #, c-format
 msgid "Migration using JobId=%s Job=%s\n"
 msgstr ""
 
-#: src/dird/migrate.c:861
+#: src/dird/migrate.c:876
 msgid "Could not start migration job.\n"
 msgstr ""
 
-#: src/dird/migrate.c:863
+#: src/dird/migrate.c:878
 #, c-format
 msgid "Migration JobId %d started.\n"
 msgstr ""
 
-#: src/dird/migrate.c:882
+#: src/dird/migrate.c:897
 #, c-format
 msgid "No %s found to migrate.\n"
 msgstr ""
 
-#: src/dird/migrate.c:886
+#: src/dird/migrate.c:901
 #, c-format
 msgid "SQL error. Expected 1 MediaId got %d\n"
 msgstr ""
 
-#: src/dird/migrate.c:915 src/dird/migrate.c:1013
+#: src/dird/migrate.c:930 src/dird/migrate.c:1028
 #, c-format
 msgid "No %ss found to migrate.\n"
 msgstr ""
 
-#: src/dird/migrate.c:937
+#: src/dird/migrate.c:952
 #, c-format
 msgid "No Migration %s selection pattern specified.\n"
 msgstr ""
 
-#: src/dird/migrate.c:948
+#: src/dird/migrate.c:963
 #, c-format
 msgid "SQL to get %s failed. ERR=%s\n"
 msgstr ""
 
-#: src/dird/migrate.c:953
+#: src/dird/migrate.c:968
 #, c-format
 msgid "Query of Pool \"%s\" returned no Jobs to migrate.\n"
 msgstr ""
 
-#: src/dird/migrate.c:962
+#: src/dird/migrate.c:977
 #, c-format
 msgid "Could not compile regex pattern \"%s\" ERR=%s\n"
 msgstr ""
 
-#: src/dird/migrate.c:991
+#: src/dird/migrate.c:1006
 msgid "Regex pattern matched no Jobs to migrate.\n"
 msgstr ""
 
-#: src/dird/migrate.c:1117
+#: src/dird/migrate.c:1132
 #, c-format
 msgid "%s OK -- with warnings"
 msgstr ""
 
-#: src/dird/migrate.c:1119
+#: src/dird/migrate.c:1134
 #, c-format
 msgid "%s OK"
 msgstr ""
 
-#: src/dird/migrate.c:1124
+#: src/dird/migrate.c:1139
 #, c-format
 msgid "*** %s Error ***"
 msgstr ""
 
-#: src/dird/migrate.c:1134
+#: src/dird/migrate.c:1149
 #, c-format
 msgid "%s Canceled"
 msgstr ""
 
-#: src/dird/migrate.c:1143
+#: src/dird/migrate.c:1158
 #, c-format
 msgid "Inappropriate %s term code"
 msgstr ""
 
-#: src/dird/migrate.c:1153
+#: src/dird/migrate.c:1168
 #, c-format
 msgid "%s -- no files to migrate"
 msgstr ""
 
-#: src/dird/migrate.c:1169
+#: src/dird/migrate.c:1184
 #, c-format
 msgid ""
 "Bacula %s %s (%s): %s\n"
@@ -1559,17 +1559,17 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/dird/migrate.c:1276
+#: src/dird/migrate.c:1291
 #, c-format
 msgid "No Next Pool specification found in Pool \"%s\".\n"
 msgstr ""
 
-#: src/dird/migrate.c:1282
+#: src/dird/migrate.c:1297
 #, c-format
 msgid "No Storage specification found in Next Pool \"%s\".\n"
 msgstr ""
 
-#: src/dird/migrate.c:1288
+#: src/dird/migrate.c:1303
 msgid "Storage from Pool's NextPool resource"
 msgstr ""
 
@@ -3792,14 +3792,14 @@ msgstr ""
 
 #: src/dird/dird.c:225 src/filed/filed.c:182 src/gnome2-console/console.c:286
 #: src/stored/stored.c:210 src/console/console.c:426
-#: src/qt-console/main.cpp:132
+#: src/qt-console/main.cpp:137
 msgid "Cryptography library initialization failed.\n"
 msgstr ""
 
 #: src/dird/dird.c:229 src/dird/dird.c:246 src/dird/dird.c:478
 #: src/dird/dird.c:481 src/filed/filed.c:187 src/gnome2-console/console.c:290
 #: src/stored/stored.c:214 src/console/console.c:430
-#: src/qt-console/main.cpp:136
+#: src/qt-console/main.cpp:141
 #, c-format
 msgid "Please correct configuration file: %s\n"
 msgstr ""
@@ -3837,7 +3837,7 @@ msgstr ""
 #: src/dird/dird.c:925 src/filed/filed.c:298 src/filed/filed.c:456
 #: src/gnome2-console/console.c:153 src/gnome2-console/console.c:182
 #: src/stored/stored.c:333 src/console/console.c:657 src/console/console.c:686
-#: src/qt-console/main.cpp:209 src/qt-console/main.cpp:238
+#: src/qt-console/main.cpp:215 src/qt-console/main.cpp:244
 #: src/wx-console/console_thread.cpp:114 src/wx-console/console_thread.cpp:140
 msgid "TLS required but not configured in Bacula.\n"
 msgstr ""
@@ -6484,7 +6484,7 @@ msgid ""
 msgstr ""
 
 #: src/gnome2-console/console.c:160 src/console/console.c:664
-#: src/qt-console/main.cpp:216
+#: src/qt-console/main.cpp:222
 #, c-format
 msgid ""
 "Neither \"TLS CA Certificate\" or \"TLS CA Certificate Dir\" are defined for "
@@ -6492,7 +6492,7 @@ msgid ""
 msgstr ""
 
 #: src/gnome2-console/console.c:169 src/console/console.c:673
-#: src/qt-console/main.cpp:225
+#: src/qt-console/main.cpp:231
 #, c-format
 msgid ""
 "No Director resource defined in %s\n"
@@ -6500,7 +6500,7 @@ msgid ""
 msgstr ""
 
 #: src/gnome2-console/console.c:189 src/console/console.c:693
-#: src/qt-console/main.cpp:245
+#: src/qt-console/main.cpp:251
 #, c-format
 msgid ""
 "Neither \"TLS CA Certificate\" or \"TLS CA Certificate Dir\" are defined for "
@@ -6744,7 +6744,7 @@ msgstr ""
 msgid "unknown"
 msgstr ""
 
-#: src/cats/sqlite.c:359 src/cats/mysql.c:315 src/cats/postgresql.c:319
+#: src/cats/sqlite.c:359 src/cats/mysql.c:319 src/cats/postgresql.c:319
 #, c-format
 msgid "Query failed: %s: ERR=%s\n"
 msgstr ""
@@ -7565,11 +7565,11 @@ msgstr ""
 msgid "Forward spacing Volume \"%s\" to file:block %u:%u.\n"
 msgstr ""
 
-#: src/stored/read_record.c:393 src/stored/bcopy.c:312 src/stored/bls.c:416
+#: src/stored/read_record.c:393 src/stored/bcopy.c:327 src/stored/bls.c:416
 msgid "Fresh Volume Label"
 msgstr ""
 
-#: src/stored/read_record.c:396 src/stored/bcopy.c:315 src/stored/bls.c:419
+#: src/stored/read_record.c:396 src/stored/bcopy.c:330 src/stored/bls.c:419
 msgid "Volume Label"
 msgstr ""
 
@@ -7590,7 +7590,7 @@ msgstr ""
 msgid "Unknown code %d\n"
 msgstr ""
 
-#: src/stored/read_record.c:414 src/stored/bcopy.c:337 src/stored/bls.c:440
+#: src/stored/read_record.c:414 src/stored/bcopy.c:352 src/stored/bls.c:440
 #, c-format
 msgid "%s Record: VolSessionId=%d VolSessionTime=%d JobId=%d DataLen=%d\n"
 msgstr ""
@@ -7788,37 +7788,41 @@ msgstr ""
 msgid "Volume label not copied.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:266 src/stored/bcopy.c:274 src/stored/bcopy.c:298
+#: src/stored/bcopy.c:260
+msgid "Copy skipped. Record does not match BSR filter.\n"
+msgstr ""
+
+#: src/stored/bcopy.c:277 src/stored/bcopy.c:285 src/stored/bcopy.c:313
 #: src/stored/btape.c:2390
 #, c-format
 msgid "Cannot fixup device error. %s\n"
 msgstr ""
 
-#: src/stored/bcopy.c:280
+#: src/stored/bcopy.c:291
 msgid "EOM label not copied.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:283
+#: src/stored/bcopy.c:294
 msgid "EOT label not copied.\n"
 msgstr ""
 
-#: src/stored/bcopy.c:319 src/stored/label.c:1047 src/stored/bls.c:423
+#: src/stored/bcopy.c:334 src/stored/label.c:1047 src/stored/bls.c:423
 msgid "Begin Job Session"
 msgstr ""
 
-#: src/stored/bcopy.c:323 src/stored/label.c:1050 src/stored/bls.c:427
+#: src/stored/bcopy.c:338 src/stored/label.c:1050 src/stored/bls.c:427
 msgid "End Job Session"
 msgstr ""
 
-#: src/stored/bcopy.c:328 src/stored/bls.c:431
+#: src/stored/bcopy.c:343 src/stored/bls.c:431
 msgid "End of Medium"
 msgstr ""
 
-#: src/stored/bcopy.c:331 src/stored/label.c:1059 src/stored/bls.c:434
+#: src/stored/bcopy.c:346 src/stored/label.c:1059 src/stored/bls.c:434
 msgid "Unknown"
 msgstr ""
 
-#: src/stored/bcopy.c:355 src/stored/bextract.c:494 src/stored/bls.c:459
+#: src/stored/bcopy.c:370 src/stored/bextract.c:494 src/stored/bls.c:459
 #: src/stored/bscan.c:1300 src/stored/btape.c:2689
 #, c-format
 msgid "Mount Volume \"%s\" on device %s and press return when ready: "
@@ -8001,8 +8005,7 @@ msgstr ""
 msgid "Volume on %s has bad Bacula label type: %x\n"
 msgstr ""
 
-#: src/stored/label.c:259 src/stored/label.c:420 src/stored/mount.c:435
-#: src/stored/acquire.c:180
+#: src/stored/label.c:259 src/stored/label.c:420 src/stored/mount.c:437
 #, c-format
 msgid "Could not reserve volume %s on %s\n"
 msgstr ""
@@ -8437,7 +8440,7 @@ msgid "Device \"%s\" is not open or does not exist.\n"
 msgstr ""
 
 #: src/stored/status.c:201
-msgid "In Use Volume status:\n"
+msgid "Used Volume status:\n"
 msgstr ""
 
 #: src/stored/status.c:208 src/stored/status.c:210
@@ -10266,7 +10269,7 @@ msgstr ""
 msgid "Read block=%u, VolBytes=%s rate=%.1f KB/s\n"
 msgstr ""
 
-#: src/stored/btape.c:2757 src/stored/mount.c:791
+#: src/stored/btape.c:2757 src/stored/mount.c:806
 #, c-format
 msgid "Cannot open Dev=%s, Vol=%s\n"
 msgstr ""
@@ -10316,7 +10319,7 @@ msgstr ""
 msgid "Fatal append error on device %s: ERR=%s\n"
 msgstr ""
 
-#: src/stored/spool.c:302 src/stored/acquire.c:471 src/stored/block.c:368
+#: src/stored/spool.c:302 src/stored/acquire.c:451 src/stored/block.c:368
 #: src/stored/block.c:722 src/stored/block.c:798
 #, c-format
 msgid "Could not create JobMedia record for Volume=\"%s\" Job=%s\n"
@@ -10465,22 +10468,22 @@ msgstr ""
 msgid "Job %d canceled.\n"
 msgstr ""
 
-#: src/stored/mount.c:266
+#: src/stored/mount.c:268
 #, c-format
 msgid "Volume \"%s\" previously written, moving to end of data.\n"
 msgstr ""
 
-#: src/stored/mount.c:270
+#: src/stored/mount.c:272
 #, c-format
 msgid "Unable to position to end of data on device %s: ERR=%s\n"
 msgstr ""
 
-#: src/stored/mount.c:383 src/stored/mount.c:655
+#: src/stored/mount.c:385 src/stored/mount.c:670
 #, c-format
 msgid "Volume \"%s\" not on device %s.\n"
 msgstr ""
 
-#: src/stored/mount.c:416
+#: src/stored/mount.c:418
 #, c-format
 msgid ""
 "Director wanted Volume \"%s\".\n"
@@ -10488,69 +10491,69 @@ msgid ""
 "    %s"
 msgstr ""
 
-#: src/stored/mount.c:548
+#: src/stored/mount.c:563
 #, c-format
 msgid "Ready to append to end of Volume \"%s\" part=%d size=%s\n"
 msgstr ""
 
-#: src/stored/mount.c:552
+#: src/stored/mount.c:567
 #, c-format
 msgid ""
 "Bacula cannot write on DVD Volume \"%s\" because: The sizes do not match! "
 "Volume=%s Catalog=%s\n"
 msgstr ""
 
-#: src/stored/mount.c:566
+#: src/stored/mount.c:581
 #, c-format
 msgid "Ready to append to end of Volume \"%s\" at file=%d.\n"
 msgstr ""
 
-#: src/stored/mount.c:569
+#: src/stored/mount.c:584
 #, c-format
 msgid ""
 "Bacula cannot write on tape Volume \"%s\" because:\n"
 "The number of files mismatch! Volume=%u Catalog=%u\n"
 msgstr ""
 
-#: src/stored/mount.c:580
+#: src/stored/mount.c:595
 #, c-format
 msgid "Ready to append to end of Volume \"%s\" size=%s\n"
 msgstr ""
 
-#: src/stored/mount.c:584
+#: src/stored/mount.c:599
 #, c-format
 msgid ""
 "Bacula cannot write on disk Volume \"%s\" because: The sizes do not match! "
 "Volume=%s Catalog=%s\n"
 msgstr ""
 
-#: src/stored/mount.c:645
+#: src/stored/mount.c:660
 #, c-format
 msgid "Labeled new Volume \"%s\" on device %s.\n"
 msgstr ""
 
-#: src/stored/mount.c:650
+#: src/stored/mount.c:665
 #, c-format
 msgid "Device %s not configured to autolabel Volumes.\n"
 msgstr ""
 
-#: src/stored/mount.c:669
+#: src/stored/mount.c:684
 #, c-format
 msgid "Marking Volume \"%s\" in Error in Catalog.\n"
 msgstr ""
 
-#: src/stored/mount.c:686
+#: src/stored/mount.c:701
 #, c-format
 msgid ""
 "Autochanger Volume \"%s\" not found in slot %d.\n"
 "    Setting InChanger to zero in catalog.\n"
 msgstr ""
 
-#: src/stored/mount.c:705
+#: src/stored/mount.c:720
 msgid "Hey!!!!! WroteVol non-zero !!!!!\n"
 msgstr ""
 
-#: src/stored/mount.c:754
+#: src/stored/mount.c:769
 #, c-format
 msgid ""
 "Invalid tape position on volume \"%s\" on device %s. Expected %d, got %d\n"
@@ -11372,74 +11375,74 @@ msgstr ""
 msgid "Unexpected Tape is Off-line\n"
 msgstr ""
 
-#: src/stored/acquire.c:69
+#: src/stored/acquire.c:70
 #, c-format
 msgid "Acquire read: num_writers=%d not zero. Job %d canceled.\n"
 msgstr ""
 
-#: src/stored/acquire.c:78
+#: src/stored/acquire.c:79
 #, c-format
 msgid "No volumes specified for reading. Job %s canceled.\n"
 msgstr ""
 
-#: src/stored/acquire.c:87
+#: src/stored/acquire.c:88
 #, c-format
 msgid "Logic error: no next volume to read. Numvol=%d Curvol=%d\n"
 msgstr ""
 
-#: src/stored/acquire.c:119
+#: src/stored/acquire.c:114
 #, c-format
 msgid ""
 "Changing device. Want Media Type=\"%s\" have=\"%s\"\n"
 "  device=%s\n"
 msgstr ""
 
-#: src/stored/acquire.c:155
+#: src/stored/acquire.c:150
 #, c-format
 msgid "Media Type change.  New device %s chosen.\n"
 msgstr ""
 
-#: src/stored/acquire.c:168
+#: src/stored/acquire.c:163
 #, c-format
 msgid "No suitable device found to read Volume \"%s\"\n"
 msgstr ""
 
-#: src/stored/acquire.c:215
+#: src/stored/acquire.c:202
 #, c-format
 msgid "Job %s canceled.\n"
 msgstr ""
 
-#: src/stored/acquire.c:230 src/stored/acquire.c:299
+#: src/stored/acquire.c:220
 #, c-format
 msgid "Read open device %s Volume \"%s\" failed: ERR=%s\n"
 msgstr ""
 
-#: src/stored/acquire.c:316
+#: src/stored/acquire.c:296
 #, c-format
 msgid "Too many errors trying to mount device %s for reading.\n"
 msgstr ""
 
-#: src/stored/acquire.c:325
+#: src/stored/acquire.c:305
 #, c-format
 msgid "Ready to read from volume \"%s\" on device %s.\n"
 msgstr ""
 
-#: src/stored/acquire.c:372
+#: src/stored/acquire.c:352
 #, c-format
 msgid "Want to append, but device %s is busy reading.\n"
 msgstr ""
 
-#: src/stored/acquire.c:402
+#: src/stored/acquire.c:382
 #, c-format
 msgid "Could not ready device %s for append.\n"
 msgstr ""
 
-#: src/stored/acquire.c:522
+#: src/stored/acquire.c:502
 #, c-format
 msgid "Alert: %s"
 msgstr ""
 
-#: src/stored/acquire.c:530
+#: src/stored/acquire.c:510
 #, c-format
 msgid "3997 Bad alert command: %s: ERR=%s.\n"
 msgstr ""
@@ -12241,7 +12244,7 @@ msgid ""
 "Usage: %s [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]\n"
 "       -8          set charset utf-8\n"
 "       -c          set the Cc: field\n"
-"       -dnn        set debug level to nn\n"
+"       -d <nn>     set debug level to <nn>\n"
 "       -f          set the From: field\n"
 "       -h          use mailhost:port as the SMTP server\n"
 "       -s          set the Subject: field\n"
@@ -13025,72 +13028,72 @@ msgid ""
 "ERR=%s\n"
 msgstr ""
 
-#: src/lib/message.c:1023
+#: src/lib/message.c:1027
 #, c-format
 msgid "%s: ABORTING due to ERROR in %s:%d\n"
 msgstr ""
 
-#: src/lib/message.c:1027
+#: src/lib/message.c:1031
 #, c-format
 msgid "%s: ERROR TERMINATION at %s:%d\n"
 msgstr ""
 
-#: src/lib/message.c:1032
+#: src/lib/message.c:1036
 #, c-format
 msgid "%s: Fatal Error because: "
 msgstr ""
 
-#: src/lib/message.c:1034
+#: src/lib/message.c:1038
 #, c-format
 msgid "%s: Fatal Error at %s:%d because:\n"
 msgstr ""
 
-#: src/lib/message.c:1038
+#: src/lib/message.c:1042
 #, c-format
 msgid "%s: ERROR: "
 msgstr ""
 
-#: src/lib/message.c:1040
+#: src/lib/message.c:1044
 #, c-format
 msgid "%s: ERROR in %s:%d "
 msgstr ""
 
-#: src/lib/message.c:1043
+#: src/lib/message.c:1047
 #, c-format
 msgid "%s: Warning: "
 msgstr ""
 
-#: src/lib/message.c:1046
+#: src/lib/message.c:1050
 #, c-format
 msgid "%s: Security violation: "
 msgstr ""
 
-#: src/lib/message.c:1121
+#: src/lib/message.c:1125
 #, c-format
 msgid "%s ABORTING due to ERROR\n"
 msgstr ""
 
-#: src/lib/message.c:1124
+#: src/lib/message.c:1128
 #, c-format
 msgid "%s ERROR TERMINATION\n"
 msgstr ""
 
-#: src/lib/message.c:1127
+#: src/lib/message.c:1131
 #, c-format
 msgid "%s JobId %u: Fatal error: "
 msgstr ""
 
-#: src/lib/message.c:1133
+#: src/lib/message.c:1137
 #, c-format
 msgid "%s JobId %u: Error: "
 msgstr ""
 
-#: src/lib/message.c:1139
+#: src/lib/message.c:1143
 #, c-format
 msgid "%s JobId %u: Warning: "
 msgstr ""
 
-#: src/lib/message.c:1142
+#: src/lib/message.c:1146
 #, c-format
 msgid "%s JobId %u: Security violation: "
 msgstr ""
@@ -13309,13 +13312,13 @@ msgstr ""
 msgid "fcntl F_SETFL error. ERR=%s\n"
 msgstr ""
 
-#: src/lib/bsock.c:874 src/qt-console/bcomm/dircomm_auth.cpp:106
+#: src/lib/bsock.c:875 src/qt-console/bcomm/dircomm_auth.cpp:106
 #: src/qt-console/console/authenticate.cpp:105
 #, c-format
 msgid "Director authorization problem at \"%s:%d\"\n"
 msgstr ""
 
-#: src/lib/bsock.c:881 src/qt-console/bcomm/dircomm_auth.cpp:113
+#: src/lib/bsock.c:882 src/qt-console/bcomm/dircomm_auth.cpp:113
 #: src/qt-console/console/authenticate.cpp:112
 #, c-format
 msgid ""
@@ -13323,7 +13326,7 @@ msgid ""
 "TLS support.\n"
 msgstr ""
 
-#: src/lib/bsock.c:889 src/qt-console/bcomm/dircomm_auth.cpp:121
+#: src/lib/bsock.c:890 src/qt-console/bcomm/dircomm_auth.cpp:121
 #: src/qt-console/console/authenticate.cpp:120
 #, c-format
 msgid ""
@@ -13331,13 +13334,13 @@ msgid ""
 "TLS.\n"
 msgstr ""
 
-#: src/lib/bsock.c:901 src/qt-console/bcomm/dircomm_auth.cpp:133
+#: src/lib/bsock.c:902 src/qt-console/bcomm/dircomm_auth.cpp:133
 #: src/qt-console/console/authenticate.cpp:132
 #, c-format
 msgid "TLS negotiation failed with Director at \"%s:%d\"\n"
 msgstr ""
 
-#: src/lib/bsock.c:911 src/qt-console/bcomm/dircomm_auth.cpp:143
+#: src/lib/bsock.c:912 src/qt-console/bcomm/dircomm_auth.cpp:143
 #: src/qt-console/console/authenticate.cpp:142
 #, c-format
 msgid ""
@@ -13345,13 +13348,13 @@ msgid ""
 "The Director at \"%s:%d\" is probably not running.\n"
 msgstr ""
 
-#: src/lib/bsock.c:920 src/qt-console/bcomm/dircomm_auth.cpp:152
+#: src/lib/bsock.c:921 src/qt-console/bcomm/dircomm_auth.cpp:152
 #: src/qt-console/console/authenticate.cpp:151
 #, c-format
 msgid "Director at \"%s:%d\" rejected Hello command\n"
 msgstr ""
 
-#: src/lib/bsock.c:930 src/qt-console/bcomm/dircomm_auth.cpp:162
+#: src/lib/bsock.c:931 src/qt-console/bcomm/dircomm_auth.cpp:162
 #: src/qt-console/console/authenticate.cpp:161
 #, c-format
 msgid ""
@@ -15197,7 +15200,7 @@ msgstr ""
 msgid "Director disconnected."
 msgstr ""
 
-#: src/qt-console/main.cpp:155
+#: src/qt-console/main.cpp:161
 #, c-format
 msgid ""
 "\n"
