@@ -311,7 +311,7 @@ binary-arch-common: build install
 	dh_installlogrotate -a
 	dh_installinit -pbacula-sd -- defaults 90
 	dh_installinit -pbacula-fd -- defaults 91
-	dh_installinit --name=bacula-director -pbacula-director-common -- defaults 92
+	dh_installinit --name=bacula-director --no-start -pbacula-director-common -- defaults 92
 #	dh_installcron -a
 	dh_installman -a
 	dh_installinfo -a
