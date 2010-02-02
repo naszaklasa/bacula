@@ -1,6 +1,56 @@
               Technical notes on version 2.4.x
 
 General:
+Release Version 2.4.4
+28Dec08
+kes  Apply fix suggested by Bruno Friedmann to configure.in to
+     find python2.5
+
+Beta Release Version 2.4.4-b2
+23Dec08
+kes  Fix bug #1208. Inappropriate Volume purging.
+22Dec08
+kes  Modify sql_update.c to edit zeros rather than NULL in unset
+     fields. This should fix bug #1206, where apparently the user
+     has modified the Bacula schema.
+20Dec08
+kes  Backport most recent changes to compat.h and compat.cpp.
+13Dec08
+kes  Create and apply 2.4.3-migrate2.patch, which fixes two bugs
+     - Bug #1206 -- sql error when there are no files to migrate.
+     - Bug #1171 -- Job catalog log is not migrated during migration.
+
+Beta Release Version 2.4.4-b1
+03Dec08
+kes  Apply 2.4.3-sd-deadlock.patch that should fix bug #1192.
+02Dec08
+ebl  Remove extra db_lock() in get_prune_list_for_volume()
+ebl  Apply 2.4.3-prune-deadlock.patch that fixes a problem when
+     using Catalog as message backend.
+20Nov08
+ebl  Apply 2.4.3-win32-runscript-unicode-path.patch for #1110 
+     about a problem when executing a program with Unicode path.
+ebl  Apply 2.4.3-unique-inchanger.patch fix for #1175 about bad slot
+     number if the volume is not in autochanger.
+18Nov08
+kes  Probably fix for bug #1188 where Volume is purged while writing
+     on it.
+kes  Get message enhancement to avoid job name lookup.
+07Nov08
+kes  Fix bug with job name duplication if more than 60 jobs created
+     during a minute.
+kes  Correct some bugs of cleanup in SD if the FD connection fails.
+02Nov08
+kes  Fix orphaned jobs (possible deadlock) while pruning.
+31Oct08
+ebl  Backport of the btraceback script that keeps trace file on working dir
+28Oct08
+kes  Migrate DB Log records too. This fixes last part of bug #1171.
+24Oct08
+kes  Modify SQL so that jobs that failed will not be migrated.
+kes  Correct bug where long retention periods caused immediate
+     pruning.
+
 Release Version 2.4.3
 10Oct08
 ebl  Apply 2.4.2-cancel-non-running-jobs.patch to be able to cancel

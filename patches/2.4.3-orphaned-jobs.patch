@@ -1,0 +1,24 @@
+
+ This patch fixes a case of orphaned jobs (and possible deadlock)
+ during pruning.
+ Apply it to Bacula 2.4.3 (possibly earlier versions) with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.3-orphaned-jobs.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+Index: src/dird/ua_prune.c
+===================================================================
+--- src/dird/ua_prune.c	(revision 7949)
++++ src/dird/ua_prune.c	(working copy)
+@@ -468,6 +468,7 @@
+             break;
+          }
+       }
++      endeach_jcr(jcr);
+       if (skip) {
+          continue;
+       }

@@ -1,3 +1,53 @@
+bacula (2.4.4-1ubuntu1) jaunty; urgency=low
+
+  * Upload fixes LP #269251, LP: #308903 and LP: #293515
+  * debian/rules:
+    - added bat_icon.png and bat.desktop for bacula-console-qt (LP: #314746)
+    - added bacula-tray-monitor.xpm icon, fix Exec path in .desktop
+  * debian/bacula-traymonitor.install
+    - remove bacula-tray-monitor.xpm, add bacula-tray-monitor.desktop
+  * Merge from debian unstable, remaining changes:
+    * Store sd|fd|director passwords in debconf (LP: #222558)
+      - added debian/bacula-common.templates
+      - modified debian/bacula-common.postinst:
+        + generate random passwords and store them in debconf
+      - modified debian/bacula-[sd|fd|director-mysql|director-pgsql].postinst
+        + read and set passwords from debconf
+    * Daemons listen on all interfaces (LP: #286643)
+    * Start daemons on installation
+    * Build with generic XXX_*_XXX username, password and database name
+      and replace it with dbconfig's settings in postinstall scripts
+    * Drop mt-st to suggests. So that bacula goes back to main. (LP: #286528)
+    * debian/rules: Disable fortify source since it was causing
+      bacula-director to segfault.
+    * debian/control:
+      - Added libdbi-perl and libdb-mysql-perl to depends for
+        bacula-director-mysql
+        due to new postinst configuration.
+      - Cleaned up bacula-director-pgsql dependenices and recommends.
+      - Made mysql the default director to install bacula-director-{mysql|pgsql}
+        added database handling to postinstall scripts and templates, modifiied
+        postinstall script's sed expressions.
+      - Removed libwgtk-2.6-dev as a build dependency; as a result
+        bacula-console-wx isn't built anymore.
+      - Install gawk if not installed. (LP: #207527)
+    * debian/make_catalog_backup_awk.[mysql|pgsql|sqlite3|sqlite]:
+      - New scripts for catalog backup. (CVE-2007-5626)
+    * debian/bacula-console-wx:
+      - Dropped since we are not building them anymore.
+    * debian/bacula-director-common.bacula-director.init,
+      debian/bacula-fd.init, debian/bacula-sd.init
+      - Made more LSB specific.
+
+ -- Ante Karamatic <ivoks@ubuntu.com>  Sat, 10 Jan 2009 04:57:41 +0000
+
+bacula (2.4.4-1) unstable; urgency=low
+
+  * New Upstream Version - a bugfix release.  Closes: #508816.
+  * Build-conflicts on Python 2.4.  Closes: #496512.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 09 Jan 2009 14:07:27 -0600
+
 bacula (2.4.3-1ubuntu2) jaunty; urgency=low
 
   * debian/bacula-common.postrm:
@@ -1235,3 +1285,4 @@ bacula (1.32f-4-1) unstable; urgency=low
           * Initial Packaging: 12 binary packages built
 
  -- JosÃ© Luis TallÃ³n <jltallon@adv-solutions.net>  Wed, 18 Feb 2004 00:04:11 +0100
+

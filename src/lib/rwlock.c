@@ -33,7 +33,7 @@
  *
  *  Kern Sibbald, January MMI
  *
- *   Version $Id: rwlock.c 7299 2008-07-03 15:09:49Z kerns $
+ *   Version $Id: rwlock.c 7980 2008-11-05 14:33:44Z kerns $
  *
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
@@ -318,9 +318,9 @@ int rwl_writeunlock(brwlock_t *rwl)
 
 #ifdef TEST_RWLOCK
 
-#define THREADS     5
+#define THREADS     300
 #define DATASIZE   15
-#define ITERATIONS 10000
+#define ITERATIONS 1000000
 
 /*
  * Keep statics for each thread.
@@ -342,8 +342,8 @@ typedef struct data_tag {
    int writes;
 } data_t;
 
-thread_t threads[THREADS];
-data_t data[DATASIZE];
+static thread_t threads[THREADS];
+static data_t data[DATASIZE];
 
 /*
  * Thread start routine that uses read/write locks.
@@ -362,11 +362,21 @@ void *thread_routine(void *arg)
        * update operation (write lock instead of read
        * lock).
        */
-      if ((iteration % self->interval) == 0) {
+//      if ((iteration % self->interval) == 0) {
          status = rwl_writelock(&data[element].lock);
          if (status != 0) {
             berrno be;
-            Emsg1(M_ABORT, 0, _("Write lock failed. ERR=%s\n"), be.bstrerror(status));
+            printf("Write lock failed. ERR=%s\n", be.bstrerror(status));
+            exit(1);
+         }
+         data[element].data = self->thread_num;
+         data[element].writes++;
+         self->writes++;
+         status = rwl_writelock(&data[element].lock);
+         if (status != 0) {
+            berrno be;
+            printf("Write lock failed. ERR=%s\n", be.bstrerror(status));
+            exit(1);
          }
          data[element].data = self->thread_num;
          data[element].writes++;
@@ -374,8 +384,17 @@ void *thread_routine(void *arg)
          status = rwl_writeunlock(&data[element].lock);
          if (status != 0) {
             berrno be;
-            Emsg1(M_ABORT, 0, _("Write unlock failed. ERR=%s\n"), be.bstrerror(status));
+            printf("Write unlock failed. ERR=%s\n", be.bstrerror(status));
+            exit(1);
          }
+         status = rwl_writeunlock(&data[element].lock);
+         if (status != 0) {
+            berrno be;
+            printf("Write unlock failed. ERR=%s\n", be.bstrerror(status));
+            exit(1);
+         }
+
+#ifdef xxx
       } else {
          /*
           * Look at the current data element to see whether
@@ -385,7 +404,8 @@ void *thread_routine(void *arg)
           status = rwl_readlock(&data[element].lock);
           if (status != 0) {
              berrno be;
-             Emsg1(M_ABORT, 0, _("Read lock failed. ERR=%s\n"), be.bstrerror(status));
+             printf("Read lock failed. ERR=%s\n", be.bstrerror(status));
+             exit(1);
           }
           self->reads++;
           if (data[element].data == self->thread_num)
@@ -393,9 +413,11 @@ void *thread_routine(void *arg)
           status = rwl_readunlock(&data[element].lock);
           if (status != 0) {
              berrno be;
-             Emsg1(M_ABORT, 0, _("Read unlock failed. ERR=%s\n"), be.bstrerror(status));
+             printf("Read unlock failed. ERR=%s\n", be.bstrerror(status));
+             exit(1);
           }
       }
+#endif
       element++;
       if (element >= DATASIZE) {
          element = 0;
@@ -435,7 +457,8 @@ int main (int argc, char *argv[])
         status = rwl_init (&data[data_count].lock);
         if (status != 0) {
            berrno be;
-           Emsg1(M_ABORT, 0, _("Init rwlock failed. ERR=%s\n"), be.bstrerror(status));
+           printf("Init rwlock failed. ERR=%s\n", be.bstrerror(status));
+           exit(1);
         }
     }
 
@@ -446,12 +469,16 @@ int main (int argc, char *argv[])
         threads[count].thread_num = count + 1;
         threads[count].writes = 0;
         threads[count].reads = 0;
-        threads[count].interval = rand_r (&seed) % 71;
+        threads[count].interval = rand_r(&seed) % 71;
+        if (threads[count].interval <= 0) {
+           threads[count].interval = 1;
+        }
         status = pthread_create (&threads[count].thread_id,
             NULL, thread_routine, (void*)&threads[count]);
-        if (status != 0) {
+        if (status != 0 || (int)threads[count].thread_id == 0) {
            berrno be;
-           Emsg1(M_ABORT, 0, _("Create thread failed. ERR=%s\n"), be.bstrerror(status));
+           printf("Create thread failed. ERR=%s\n", be.bstrerror(status));
+           exit(1);
         }
     }
 
@@ -463,7 +490,8 @@ int main (int argc, char *argv[])
         status = pthread_join (threads[count].thread_id, NULL);
         if (status != 0) {
            berrno be;
-           Emsg1(M_ABORT, 0, _("Join thread failed. ERR=%s\n"), be.bstrerror(status));
+           printf("Join thread failed. ERR=%s\n", be.bstrerror(status));
+           exit(1);
         }
         thread_writes += threads[count].writes;
         printf (_("%02d: interval %d, writes %d, reads %d\n"),

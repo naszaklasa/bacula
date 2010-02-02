@@ -10,11 +10,14 @@
 #
 PNAME=`basename $1`
 PNAME="${PNAME} on `hostname`"
+WD="@working_dir@"
 if test `uname -s` = SunOS ; then
-  gcore -o @working_dir@/${PNAME} $2
-  dbx $1 $2 <@scriptdir@/btraceback.dbx 2>&1 \
+  gcore -o ${WD}/${PNAME} $2
+  dbx $1 $2 <@scriptdir@/btraceback.dbx >${WD}/bacula.$$.traceback 2>&1
+  cat ${WD}/bacula.$$.traceback \
    | @sbindir@/bsmtp -h @smtp_host@ -f @dump_email@ -s "Bacula DBX traceback of ${PNAME}" @dump_email@
 else
-  gdb -quiet -batch -x @scriptdir@/btraceback.gdb $1 $2 2>&1 \
+  gdb -quiet -batch -x @scriptdir@/btraceback.gdb $1 $2 >${WD}/bacula.$$.traceback 2>&1
+  cat ${WD}/bacula.$$.traceback \
    | @sbindir@/bsmtp -h @smtp_host@ -f @dump_email@ -s "Bacula GDB traceback of ${PNAME}" @dump_email@
 fi 

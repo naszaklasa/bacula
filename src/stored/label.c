@@ -32,7 +32,7 @@
  *   Kern Sibbald, MM
  *
  *
- *   Version $Id: label.c 7309 2008-07-05 05:52:04Z kerns $
+ *   Version $Id: label.c 8240 2008-12-23 15:50:58Z kerns $
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -435,7 +435,8 @@ bail_out:
 
 /*
  * Write a volume label. This is ONLY called if we have a valid Bacula
- *   label of type PRE_LABEL;
+ *   label of type PRE_LABEL or we are recyling an existing Volume.
+ *
  *  Returns: true if OK
  *           false if unable to write it
  */
@@ -522,6 +523,7 @@ bool rewrite_volume_label(DCR *dcr, bool recycle)
    if (recycle) {
       dev->VolCatInfo.VolCatMounts++;
       dev->VolCatInfo.VolCatRecycles++;
+      dir_create_jobmedia_record(dcr, true);
    } else {
       dev->VolCatInfo.VolCatMounts = 1;
       dev->VolCatInfo.VolCatRecycles = 0;

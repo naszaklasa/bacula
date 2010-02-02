@@ -1,0 +1,135 @@
+
+  This patch fixes a problem when canceling job if client looses 
+  connection while being backed up 
+  Apply the patch to version 2.4.3 (and previous versions) with:
+
+  cd <bacula-source>
+  patch -p0 <2.4.3-cancel-after-network-outage.patch
+  ./configure <your-options>
+  make
+  ...
+  make install
+
+
+Index: src/dird/backup.c
+===================================================================
+--- src/dird/backup.c	(révision 7772)
++++ src/dird/backup.c	(copie de travail)
+@@ -240,14 +240,16 @@
+    }     
+    return false;
+ 
+-/* Come here only after starting SD thread */
++/* Come here only after starting SD thread 
++ * and we don't expect any EndJob message because the
++ * the client don't have recieve the "backup" command.
++ */
+ bail_out:
+    set_jcr_job_status(jcr, JS_ErrorTerminated);
+-   Dmsg1(400, "wait for sd. use=%d\n", jcr->use_count());
+-   /* Cancel SD */
+-   cancel_storage_daemon_job(jcr);
+-   wait_for_storage_daemon_termination(jcr);
+-   Dmsg1(400, "after wait for sd. use=%d\n", jcr->use_count());
++   Dmsg1(400, "wait for sd and fd. use=%d\n", jcr->use_count());
++   /* Get status from SD and FD */
++   wait_for_job_termination(jcr, false /* don't expect EndJob message*/);
++   Dmsg1(400, "after wait for sd and fd. use=%d\n", jcr->use_count());
+    return false;
+ }
+ 
+@@ -258,7 +260,7 @@
+  *   are done, we return the job status.
+  * Also used by restore.c
+  */
+-int wait_for_job_termination(JCR *jcr)
++int wait_for_job_termination(JCR *jcr, bool expect_EndJob)
+ {
+    int32_t n = 0;
+    BSOCK *fd = jcr->file_bsock;
+@@ -270,30 +272,51 @@
+    int Encrypt = 0;
+ 
+    set_jcr_job_status(jcr, JS_Running);
+-   /* Wait for Client to terminate */
+-   while ((n = bget_dirmsg(fd)) >= 0) {
+-      if (!fd_ok && 
+-          (sscanf(fd->msg, EndJob, &jcr->FDJobStatus, &JobFiles,
+-              &ReadBytes, &JobBytes, &Errors, &VSS, &Encrypt) == 7 ||
+-           sscanf(fd->msg, OldEndJob, &jcr->FDJobStatus, &JobFiles,
+-                 &ReadBytes, &JobBytes, &Errors) == 5)) {
+-         fd_ok = true;
+-         set_jcr_job_status(jcr, jcr->FDJobStatus);
+-         Dmsg1(100, "FDStatus=%c\n", (char)jcr->JobStatus);
+-      } else {
+-         Jmsg(jcr, M_WARNING, 0, _("Unexpected Client Job message: %s\n"),
+-            fd->msg);
++
++
++   if (fd) {
++      /* Wait for Client to terminate 
++       * In some conditions, the client isn't able to send
++       * any messages and we should not wait for ages
++       */
++      int OK=true;
++      int ret;
++      while (OK && expect_EndJob) {
++
++         /* Even if the job is canceled, we let a chance to FD to 
++          * send EndJob message 
++          */
++         if (job_canceled(jcr)) { 
++            OK=false;
++         }
++         
++         /* wait for data few minutes */
++         ret = fd->wait_data_intr(3*60, 0); 
++         if (ret == 1) {       /* get data */
++            n = bget_dirmsg(fd);
++            if (n >= 0 && 
++                (sscanf(fd->msg, EndJob, &jcr->FDJobStatus, &JobFiles,
++                        &ReadBytes, &JobBytes, &Errors, &VSS, &Encrypt) == 7 ||
++                 sscanf(fd->msg, OldEndJob, &jcr->FDJobStatus, &JobFiles,
++                        &ReadBytes, &JobBytes, &Errors) == 5)) {
++               fd_ok = true;
++               set_jcr_job_status(jcr, jcr->FDJobStatus);
++               OK=false;        /* end of loop */
++            } else {
++               Jmsg(jcr, M_WARNING, 0, _("Unexpected Client Job message: %s\n"),
++                    fd->msg);
++            }
++         } /* else get timeout or network error */
++
++         if (is_bnet_error(fd)) {
++            Jmsg(jcr, M_FATAL, 0, _("Network error with FD during %s: ERR=%s\n"),
++                 job_type_to_str(jcr->JobType), fd->bstrerror());
++            OK=false;
++         }
+       }
+-      if (job_canceled(jcr)) {
+-         break;
+-      }
+-   }
+ 
+-   if (is_bnet_error(fd)) {
+-      Jmsg(jcr, M_FATAL, 0, _("Network error with FD during %s: ERR=%s\n"),
+-          job_type_to_str(jcr->JobType), fd->bstrerror());
++      fd->signal(BNET_TERMINATE);   /* tell Client we are terminating */
+    }
+-   fd->signal(BNET_TERMINATE);   /* tell Client we are terminating */
+ 
+    /* Force cancel in SD if failing */
+    if (job_canceled(jcr) || !fd_ok) {
+Index: src/dird/protos.h
+===================================================================
+--- src/dird/protos.h	(révision 7772)
++++ src/dird/protos.h	(copie de travail)
+@@ -52,7 +52,7 @@
+ extern bool find_recycled_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr);
+ 
+ /* backup.c */
+-extern int wait_for_job_termination(JCR *jcr);
++extern int wait_for_job_termination(JCR *jcr, bool expect_EndJob=true);
+ extern bool do_backup_init(JCR *jcr);
+ extern bool do_backup(JCR *jcr);
+ extern void backup_cleanup(JCR *jcr, int TermCode);

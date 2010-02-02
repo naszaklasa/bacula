@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -20,7 +20,7 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 
-   Bacula® is a registered trademark of John Walker.
+   Bacula® is a registered trademark of Kern Sibbald.
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -29,7 +29,7 @@
   * Originally written by Kern Sibbald for inclusion in apcupsd,
   *  but heavily modified for Bacula
   *
-  *   Version $Id: bnet_server.c 5270 2007-07-31 12:45:41Z kerns $
+  *   Version $Id: bnet_server.c 8012 2008-11-07 16:26:48Z kerns $
   */
 
 #include "bacula.h"
@@ -137,7 +137,7 @@ bnet_thread_server(dlist *addrs, int max_clients, workq_t *client_wq,
                   be.bstrerror());
          }
       }
-      listen(fd_ptr->fd, 5);       /* tell system we are ready */
+      listen(fd_ptr->fd, 20);      /* tell system we are ready */
       sockfds.append(fd_ptr);
    }
    /* Start work queue thread */

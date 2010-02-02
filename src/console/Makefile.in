@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in 4914 2007-05-27 09:34:40Z kerns $
+#  Version $Id: Makefile.in 7829 2008-10-17 12:07:32Z kerns $
 #
 @MCOMMON@
 
@@ -80,7 +80,7 @@ devclean: realclean
 install: all
 	@if test -f ${DESTDIR}${sbindir}/console; then \
 	   echo " "; \
-	   echo "Warning!!!  ${DESTDIR}${sbindir}console found."; \
+	   echo "Warning!!!  ${DESTDIR}${sbindir}/console found."; \
 	   echo " console has been renamed bconsole, so console"; \
 	   echo " is no longer used, and you might want to delete it."; \
 	   echo " "; \

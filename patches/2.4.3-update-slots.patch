@@ -1,0 +1,79 @@
+
+ This patch corrects a problem when removing a volume from
+ an autochanger and the slot is still empty when running
+ update slots command. #1175
+
+ Apply it to version 2.4.3 with:
+
+ cd <bacula-source>
+ patch -p0 <2.4.3-update-slots.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+Index: src/cats/sql_update.c
+===================================================================
+--- src/cats/sql_update.c	(revision 7854)
++++ src/cats/sql_update.c	(working copy)
+@@ -445,14 +445,28 @@
+ db_make_inchanger_unique(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
+ {
+    char ed1[50], ed2[50];
+-   if (mr->InChanger != 0 && mr->Slot != 0 && mr->StorageId != 0 &&
+-       mr->MediaId != 0) {
+-      Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0 WHERE "
+-           "Slot=%d AND StorageId=%s AND MediaId!=%s",
+-            mr->Slot, 
+-            edit_int64(mr->StorageId, ed1), edit_int64(mr->MediaId, ed2));
+-      Dmsg1(400, "%s\n", mdb->cmd);
+-      UPDATE_DB(jcr, mdb, mdb->cmd);
++   if (mr->InChanger != 0 && mr->Slot != 0 && mr->StorageId != 0) {
++
++       if (mr->MediaId != 0) {
++          Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0 WHERE "
++               "Slot=%d AND StorageId=%s AND MediaId!=%s",
++               mr->Slot, 
++               edit_int64(mr->StorageId, ed1), edit_int64(mr->MediaId, ed2));
++
++       } else if (mr->VolumeName[0]) { /* We have a volume name */
++          Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0 WHERE "
++               "Slot=%d AND StorageId=%s AND VolumeName!='%s'",
++               mr->Slot, 
++               edit_int64(mr->StorageId, ed1), mr->VolumeName);
++
++       } else {  /* used by ua_label to reset all volume with this slot */
++          Mmsg(mdb->cmd, "UPDATE Media SET InChanger=0 WHERE "
++               "Slot=%d AND StorageId=%s",
++               mr->Slot, 
++               edit_int64(mr->StorageId, ed1), mr->VolumeName);          
++       }
++       Dmsg1(100, "%s\n", mdb->cmd);
++       UPDATE_DB(jcr, mdb, mdb->cmd);
+    }
+ }
+ 
+Index: src/cats/sql_create.c
+===================================================================
+--- src/cats/sql_create.c	(revision 7854)
++++ src/cats/sql_create.c	(working copy)
+@@ -459,14 +459,13 @@
+               "WHERE MediaId=%d", dt, mr->MediaId);
+          stat = UPDATE_DB(jcr, mdb, mdb->cmd);
+       }
++      /*
++       * Make sure that if InChanger is non-zero any other identical slot
++       *   has InChanger zero.
++       */
++      db_make_inchanger_unique(jcr, mdb, mr);
+    }
+ 
+-   /*
+-    * Make sure that if InChanger is non-zero any other identical slot
+-    *   has InChanger zero.
+-    */
+-   db_make_inchanger_unique(jcr, mdb, mr);
+-
+    db_unlock(mdb);
+    return stat;
+ }

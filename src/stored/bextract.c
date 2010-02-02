@@ -31,7 +31,7 @@
  *
  *   Kern E. Sibbald, MM
  *
- *   Version $Id: bextract.c 6636 2008-03-19 18:01:45Z kerns $
+ *   Version $Id: bextract.c 8240 2008-12-23 15:50:58Z kerns $
  *
  */
 
@@ -482,7 +482,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
 /* Dummies to replace askdir.c */
 bool    dir_find_next_appendable_volume(DCR *dcr) { return 1;}
 bool    dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten) { return 1; }
-bool    dir_create_jobmedia_record(DCR *dcr) { return 1; }
+bool    dir_create_jobmedia_record(DCR *dcr, bool zero) { return 1; }
 bool    dir_ask_sysop_to_create_appendable_volume(DCR *dcr) { return 1; }
 bool    dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec) { return 1;}
 bool    dir_send_job_status(JCR *jcr) {return 1;}
