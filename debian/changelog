@@ -1,3 +1,9 @@
+bacula (2.4.4-1ubuntu4) jaunty; urgency=low
+
+  * Rebuild against python 2.6, adding a build-conflicts with python2.5.
+
+ -- Steve Langasek <steve.langasek@ubuntu.com>  Thu, 05 Mar 2009 22:06:19 +0000
+
 bacula (2.4.4-1ubuntu3) jaunty; urgency=low
 
   * Suggest bacula-traymonitor rather than Recommends so we
