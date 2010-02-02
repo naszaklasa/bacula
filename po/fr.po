@@ -106,8 +106,8 @@ msgstr ""
 #, c-format
 msgid "Unable add Scratch Volume, Pool \"%s\" full MaxVols=%d\n"
 msgstr ""
-"Impossible d'ajouter un volume du Scratch, le Pool « %s » est plein. MaxVols="
-"%d\n"
+"Impossible d'ajouter un volume du Scratch, le Pool « %s » est plein. MaxVols=%"
+"d\n"
 
 #: src/dird/next_vol.c:406
 #, c-format
@@ -279,8 +279,7 @@ msgstr "Le volume « %s » est à jour dans le catalogue.\n"
 #, c-format
 msgid "Volume \"%s\" not found in catalog. Slot=%d InChanger set to zero.\n"
 msgstr ""
-"Volume « %s » absent du catalogue. mise à zéro de InChanger pour le Slot=%"
-"d.\n"
+"Volume « %s » absent du catalogue. mise à zéro de InChanger pour le Slot=%d.\n"
 
 #: src/dird/ua_label.c:378
 #, c-format
@@ -1887,8 +1886,7 @@ msgstr "Impossible de trouver le Pool « %s » : ERR=%s"
 
 #: src/dird/ua_select.c:492
 msgid "No pools defined. Use the \"create\" command to create one.\n"
-msgstr ""
-"Pas de Pool défini. Utilisez la commande « create » pour en créer un.\n"
+msgstr "Pas de Pool défini. Utilisez la commande « create » pour en créer un.\n"
 
 #: src/dird/ua_select.c:496
 msgid "Defined Pools:\n"
@@ -2719,8 +2717,8 @@ msgstr ""
 #, c-format
 msgid "Storage \"%s\" not found, using Storage \"%s\" from MediaType \"%s\".\n"
 msgstr ""
-"Le Storage « %s » est introuvable, utilisation du Storage « %s » du "
-"MediaType « %s ».\n"
+"Le Storage « %s » est introuvable, utilisation du Storage « %s » du MediaType "
+"« %s ».\n"
 
 #: src/dird/ua_restore.c:1434
 #, c-format
@@ -3809,8 +3807,7 @@ msgstr "Négociation TLS échouée avec le SD « %s:%d ».\n"
 #: src/dird/authenticate.c:145
 #, c-format
 msgid "bdird<stored: \"%s:%s\" bad response to Hello command: ERR=%s\n"
-msgstr ""
-"bdird<stored: « %s:%s » Mauvaise réponse à la commande Hello : ERR=%s\n"
+msgstr "bdird<stored: « %s:%s » Mauvaise réponse à la commande Hello : ERR=%s\n"
 
 #: src/dird/authenticate.c:152 src/tray-monitor/authenticate.c:152
 msgid "Storage daemon rejected Hello command\n"
@@ -4450,8 +4447,7 @@ msgstr "%d fichiers en tout ; %d marqués pour la restauration ; %s octets.\n"
 #: src/dird/ua_tree.c:688
 msgid "Too few or too many arguments. Try using double quotes.\n"
 msgstr ""
-"Trop ou pas assez d'arguments sur la commande. Essayez d'utiliser des "
-"« \" »\n"
+"Trop ou pas assez d'arguments sur la commande. Essayez d'utiliser des « \" »\n"
 
 #: src/dird/ua_tree.c:700
 msgid "Invalid path given.\n"
@@ -6092,8 +6088,8 @@ msgid ""
 "Generate VSS snapshot of drive \"%c:\\\" failed. VSS support is disabled on "
 "this drive.\n"
 msgstr ""
-"Erreur lors de la création du snapshot VSS du lecteur « %c:\\\\ ». Le VSS "
-"est désactivé sur ce lecteur.\n"
+"Erreur lors de la création du snapshot VSS du lecteur « %c:\\\\ ». Le VSS est "
+"désactivé sur ce lecteur.\n"
 
 #: src/filed/job.c:1425
 #, c-format
@@ -7850,8 +7846,7 @@ msgstr "Le volume « %s » est utilisé par le device %s\n"
 #: src/stored/autochanger.c:489
 #, c-format
 msgid "3995 Bad autochanger \"unload slot %d, drive %d\": ERR=%s.\n"
-msgstr ""
-"3995 Erreur sur l'autochangeur « unload slot %d, drive %d » : ERR=%s.\n"
+msgstr "3995 Erreur sur l'autochangeur « unload slot %d, drive %d » : ERR=%s.\n"
 
 #: src/stored/autochanger.c:534
 #, c-format
@@ -8624,8 +8619,7 @@ msgstr ""
 #: src/stored/label.c:541
 #, c-format
 msgid "Wrote label to prelabeled Volume \"%s\" on device %s\n"
-msgstr ""
-"Écriture du label sur le Volume pré-labélisé « %s » sur le lecteur %s\n"
+msgstr "Écriture du label sur le Volume pré-labélisé « %s » sur le lecteur %s\n"
 
 #: src/stored/label.c:740
 #, fuzzy, c-format
@@ -11241,8 +11235,7 @@ msgstr ""
 msgid ""
 "Invalid tape position on volume \"%s\" on device %s. Expected %d, got %d\n"
 msgstr ""
-"Fin du volume « %s » à %u:%u sur le device %s. Ecriture de %u octets, eu %"
-"d.\n"
+"Fin du volume « %s » à %u:%u sur le device %s. Ecriture de %u octets, eu %d.\n"
 
 #: src/stored/dircmd.c:155
 msgid "Connection request failed.\n"
@@ -11297,8 +11290,7 @@ msgstr "3910 Impossible d'ouvrir le device %s : ERR=%s\n"
 #, c-format
 msgid "3920 Cannot label Volume because it is already labeled: \"%s\"\n"
 msgstr ""
-"3920 Impossible de labéliser le Volume car il possède déjà le label : « %"
-"s »\n"
+"3920 Impossible de labéliser le Volume car il possède déjà le label : « %s »\n"
 
 #: src/stored/dircmd.c:487
 msgid "3921 Wrong volume mounted.\n"
@@ -12298,8 +12290,7 @@ msgstr "Erreur d'écriture à %u:%u sur le device %s. ERR=%s\n"
 #, c-format
 msgid "End of Volume \"%s\" at %u:%u on device %s. Write of %u bytes got %d.\n"
 msgstr ""
-"Fin du volume « %s » à %u:%u sur le device %s. Ecriture de %u octets, eu %"
-"d.\n"
+"Fin du volume « %s » à %u:%u sur le device %s. Ecriture de %u octets, eu %d.\n"
 
 #: src/stored/block.c:654 src/stored/block.c:660
 #, c-format
@@ -13196,8 +13187,7 @@ msgstr ""
 #: src/tray-monitor/authenticate.c:145
 #, fuzzy, c-format
 msgid "bdird<stored: bad response to Hello command: ERR=%s\n"
-msgstr ""
-"bdird<stored: « %s:%s » Mauvaise réponse à la commande Hello : ERR=%s\n"
+msgstr "bdird<stored: « %s:%s » Mauvaise réponse à la commande Hello : ERR=%s\n"
 
 #: src/tray-monitor/authenticate.c:178
 #, fuzzy, c-format
@@ -17011,102 +17001,23 @@ msgstr "Impossible d'ouvrir la base de données « %s ».\n"
 msgid "Bad Command Line Option"
 msgstr ""
 
-#: src/stored/status.c:201
-msgid "In Use Volume status:\n"
-msgstr "Volume en cours d'utilisation :\n"
+#, fuzzy
+#~ msgid "Could not open device %s: ERR=%s\n"
+#~ msgstr "Impossible d'ouvrir %s : ERR=%s\n"
 
-#: src/tools/bsmtp.c:186
-#, c-format
-msgid ""
-"\n"
-"Usage: %s [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]\n"
-"       -8          set charset utf-8\n"
-"       -c          set the Cc: field\n"
-"       -dnn        set debug level to nn\n"
-"       -f          set the From: field\n"
-"       -h          use mailhost:port as the SMTP server\n"
-"       -s          set the Subject: field\n"
-"       -r          set the Reply-To: field\n"
-"       -l          set the maximum number of lines that should be sent "
-"(default: unlimited)\n"
-"       -?          print this message.\n"
-"\n"
-msgstr ""
+#~ msgid "3901 open device failed: ERR=%s\n"
+#~ msgstr "3901 l'ouverture du device a échoué : ERR=%s\n"
 
-#: src/stored/bscan.c:280 src/stored/bscan.c:355
-#, c-format
-msgid "First Volume Size = %sn"
-msgstr ""
+#~ msgid "Ready to append to end of Volume \"%s\" at file address=%u.\n"
+#~ msgstr ""
+#~ "Prêt à ajouter des données à la fin du volume « %s » file adress=%u.\n"
 
-#: src/stored/mount.c:233
-#, fuzzy, c-format
-msgid "Could not open device %s: ERR=%s\n"
-msgstr "Impossible d'ouvrir %s : ERR=%s\n"
-
-#: src/dird/catreq.c:326
-msgid "1991 Update JobMedia error\n"
-msgstr "1991 Erreur sur la mise à jour du JobMedia\n"
-
-#: src/dird/catreq.c:371
-#, c-format
-msgid "1991 Invalid Catalog Update: %s"
-msgstr ""
-
-#: src/dird/ua_output.c:477
-#, fuzzy, c-format
-msgid "Could not Pool Job %s\n"
-msgstr "Impossible d'ouvrir le device %s\n"
-
-#: src/stored/autochanger.c:149
-#, c-format
-msgid ""
-"Invalid slot=%d defined in catalog for Volume \"%s\" on %s. Manual load my "
-"be required.\n"
-msgstr ""
-
-#: src/stored/autochanger.c:251
-msgid "3992 Missing Changer command.\n"
-msgstr ""
-
-#: src/stored/mount.c:458
-#, c-format
-msgid "Ready to append to end of Volume \"%s\" at file address=%u.\n"
-msgstr "Prêt à ajouter des données à la fin du volume « %s » file adress=%u.\n"
-
-#: src/stored/mount.c:462
-#, c-format
-msgid ""
-"Bacula cannot write on Volume \"%s\" because:\n"
-"The EOD file address is wrong: Volume file address=%u != Catalog Endblock=%u"
-"(+1)\n"
-"Perhaps You removed the DVD last part in spool directory.\n"
-msgstr ""
-
-#: src/stored/dircmd.c:671 src/stored/dircmd.c:728
-#, c-format
-msgid "3901 open device failed: ERR=%s\n"
-msgstr "3901 l'ouverture du device a échoué : ERR=%s\n"
-
-#: src/stored/acquire.c:378
-#, c-format
-msgid ""
-"Cannot recycle volume \"%s\" on device %s because it is in use by another "
-"job.\n"
-msgstr ""
-"Impossible de recycler le volume « %s » sur le device %s car il est utilisé "
-"par un autre job.\n"
-
-#: src/wx-console/wxbrestorepanel.cpp:852
-msgid ""
-"Restore is scheduled in more than two minutes, bwx-console will not wait for "
-"its completion.\n"
-msgstr ""
-
-#: src/wx-console/wxbrestorepanel.cpp:853
-msgid ""
-"Restore is scheduled in more than two minutes, bwx-console will not wait for "
-"its completion."
-msgstr ""
+#~ msgid ""
+#~ "Cannot recycle volume \"%s\" on device %s because it is in use by another "
+#~ "job.\n"
+#~ msgstr ""
+#~ "Impossible de recycler le volume « %s » sur le device %s car il est "
+#~ "utilisé par un autre job.\n"
 
 #~ msgid " ("
 #~ msgstr " ("
@@ -17226,8 +17137,8 @@ msgstr ""
 
 #~ msgid "Please mount Volume \"%s\" on Storage Device %s for Job %s\n"
 #~ msgstr ""
-#~ "Merci de monter le Volume « %s » sur le Storage Device « %s » pour le Job "
-#~ "%s\n"
+#~ "Merci de monter le Volume « %s » sur le Storage Device « %s » pour le Job %"
+#~ "s\n"
 
 #~ msgid "Job %s not found.\n"
 #~ msgstr "Job %s non trouvé.\n"
@@ -17237,8 +17148,8 @@ msgstr ""
 
 #~ msgid "There are no Jobs associated with Volume \"%s\". Prune not needed.\n"
 #~ msgstr ""
-#~ "Il n'y a pas de job associé avec le volume « %s ». Pas besoin de purger "
-#~ "le catalogue (prune).\n"
+#~ "Il n'y a pas de job associé avec le volume « %s ». Pas besoin de purger le "
+#~ "catalogue (prune).\n"
 
 #~ msgid ""
 #~ "There are no Jobs associated with Volume \"%s\". Marking it purged.\n"

@@ -96,7 +96,7 @@ Description: network backup, recovery and verification - SQLite 3 storage for Di
 Package: bacula-director-mysql
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
-Depends: bacula-director-common (= ${binary:Version}), mysql-client, libdbi-perl, libdbd-mysql-perl, ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), mysql-client, libdbi-perl, libdbd-mysql-perl, ${shlibs:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -115,7 +115,7 @@ Description: network backup, recovery and verification - MySQL storage for Direc
 Package: bacula-director-pgsql
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (= ${binary:Version}), postgresql-client (>= 7.4), ${shlibs:Depends}
+Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), postgresql-client (>= 7.4), ${shlibs:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director

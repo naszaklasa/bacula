@@ -7,6 +7,16 @@ set -e
 
 . /usr/share/debconf/confmodule
 
+dbc_first_version=1.38.9-2
+dbc_dbuser=bacula
+dbc_dbname=bacula
+
+# source dbconfig-common shell library, and call the hook function
+if [ -f /usr/share/dbconfig-common/dpkg/prerm.pgsql ]; then
+  . /usr/share/dbconfig-common/dpkg/prerm.pgsql
+  dbc_go bacula-director-pgsql $@
+fi
+
 # summary of how this script can be called:
 #        * <prerm> `remove'
 #        * <old-prerm> `upgrade' <new-version>

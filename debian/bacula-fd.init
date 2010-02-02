@@ -52,37 +52,37 @@ do_stop()
 
 case "$1" in
   start)
-	if [ -f /etc/bacula/do_not_run ]; then
-		log_failure_msg "Not starting $DESC: disabled via /etc/bacula/do_not_run"
-		exit 0
-	fi
+        if [ -f /etc/bacula/do_not_run ]; then
+                log_failure_msg "Not starting $DESC: disabled via /etc/bacula/do_not_run"
+                exit 0
+        fi
 
-	log_daemon_msg "Starting $DESC..."
+        log_daemon_msg "Starting $DESC..."
         if do_start ; then
                 log_end_msg 0
         else
                 log_end_msg 1
         fi
-	;;
+        ;;
   stop)
-	log_daemon_msg "Stopping $DESC..."
+        log_daemon_msg "Stopping $DESC..."
         if do_stop ; then
                 log_end_msg 0
         else
                 log_end_msg 1
         fi
-	;;
+        ;;
 
   restart|force-reload)
-	$0 stop
-	sleep 1
-	$0 start
-	;;
+        $0 stop
+        sleep 1
+        $0 start
+        ;;
   *)
-	N=/etc/init.d/$NAME
-	echo "Usage: $N {start|stop|restart|force-reload}" >&2
-	exit 1
-	;;
+        N=/etc/init.d/$NAME
+        echo "Usage: $N {start|stop|restart|force-reload}" >&2
+        exit 1
+        ;;
 esac
 
 exit 0

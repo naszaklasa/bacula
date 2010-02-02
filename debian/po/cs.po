@@ -67,39 +67,3 @@ msgid ""
 msgstr ""
 "Vyberte si, zda se má při vyčištění balíku Bacula director odstranit také "
 "katalog Baculy."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-msgid "Create tables for Bacula's Catalog?"
-msgstr "Přejete si vytvořit tabulky pro katalog Baculy?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-#, fuzzy
-msgid ""
-"The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula.  These tables are needed for the Bacula director to "
-"function."
-msgstr ""
-"Zjistil jsem, že chybí tabulky potřebné pro katalog Baculy (pravděpodobně "
-"instalujete Baculu prvně)."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
-msgid "Remove Catalog on purge?"
-msgstr "Odebrat při odstraňování balíku také katalog?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
-msgid ""
-"If you want to remove the Bacula catalog when the package is purged, you "
-"should choose this option."
-msgstr ""

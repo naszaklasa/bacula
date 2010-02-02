@@ -3,8 +3,20 @@
 #
 # see: dh_installdeb(1)
 
-. /usr/share/debconf/confmodule
-db_version 2.0
+if [ -f /usr/share/debconf/confmodule ]; then
+    . /usr/share/debconf/confmodule
+    db_version 2.0
+
+    dbc_first_version=1.38.9-3
+    dbc_dbuser=bacula
+    dbc_dbname=bacula
+fi
+
+if [ -f /usr/share/dbconfig-common/dpkg/postrm.mysql ]; then
+    . /usr/share/dbconfig-common/dpkg/postrm.mysql
+    dbc_go bacula-director-mysql $@
+fi
+
 
 set -e
 

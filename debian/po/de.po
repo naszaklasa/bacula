@@ -58,49 +58,6 @@ msgstr ""
 "Bitte wählen Sie aus, ob der Bacula Katalog gelöscht werden soll, wenn das "
 "Paket Director vollständig entfernt (»purged«) wird."
 
-# | msgid "Create tables for Bacula's catalog?"
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-#, fuzzy
-msgid "Create tables for Bacula's Catalog?"
-msgstr "Tabellen für Baculas Katalog erzeugen?"
-
-# | msgid ""
-# | "The tables needed for Bacula's catalog are missing. This is normal for a "
-# | "fresh install of Bacula."
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-#, fuzzy
-msgid ""
-"The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula.  These tables are needed for the Bacula director to "
-"function."
-msgstr ""
-"Die für Baculas Katalog benötigten Tabellen fehlen. Dies ist bei einer "
-"frischen Installation von Bacula normal."
-
-# | msgid "Remove catalog on purge?"
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
-#, fuzzy
-msgid "Remove Catalog on purge?"
-msgstr "Katalog beim vollständigen Entfernen löschen?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
-msgid ""
-"If you want to remove the Bacula catalog when the package is purged, you "
-"should choose this option."
-msgstr ""
-
 #~ msgid ""
 #~ "Do you want the Bacula Catalog to be removed if you purge the Bacula "
 #~ "director?"

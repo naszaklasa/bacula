@@ -23,11 +23,11 @@ msgstr ""
 "Content-Type: text/plain; charset=ISO-8859-15\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-# | msgid "Create tables for Bacula's Catalog?"
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
 #, fuzzy
+#| msgid "Create tables for Bacula's Catalog?"
 msgid "Create tables for Bacula's catalog?"
 msgstr "¿Crear las tablas para el catálogo?"
 
@@ -51,11 +51,11 @@ msgid ""
 "whether these tables should be automatically created."
 msgstr ""
 
-# | msgid "Remove Catalog on purge?"
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:3001
 #, fuzzy
+#| msgid "Remove Catalog on purge?"
 msgid "Remove catalog on purge?"
 msgstr "¿Borrar el catálogo al eliminar el paquete?"
 
@@ -65,43 +65,6 @@ msgstr "¿Borrar el catálogo al eliminar el paquete?"
 msgid ""
 "Please choose whether the Bacula catalog should be removed when the director "
 "package is purged."
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-msgid "Create tables for Bacula's Catalog?"
-msgstr "¿Crear las tablas para el catálogo?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-#, fuzzy
-msgid ""
-"The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula.  These tables are needed for the Bacula director to "
-"function."
-msgstr ""
-"Hemos detectado que las tablas necesarias para contener el catálogo de "
-"Bacula no están accesibles (tiene pinta de tratarse de una instalación "
-"nueva). ¿Debo crearlas ahora?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
-msgid "Remove Catalog on purge?"
-msgstr "¿Borrar el catálogo al eliminar el paquete?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
-msgid ""
-"If you want to remove the Bacula catalog when the package is purged, you "
-"should choose this option."
 msgstr ""
 
 #~ msgid ""

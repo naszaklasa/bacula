@@ -44,8 +44,8 @@ do_start()
 
 do_stop()
 {
-	start-stop-daemon --oknodo --stop --quiet --pidfile $PIDFILE \
-	--exec $DAEMON -- $ARGS
+        start-stop-daemon --oknodo --stop --quiet --pidfile $PIDFILE \
+        --exec $DAEMON -- $ARGS
 }
 
 case "$1" in
@@ -56,7 +56,7 @@ case "$1" in
 	fi
 
 	log_daemon_msg "Starting $DESC..."
-        if do_start ; then
+	if do_start ; then
                 log_end_msg 0
         else
                 log_end_msg 1
@@ -73,8 +73,8 @@ case "$1" in
 
   restart|force-reload)
 	$0 stop
-	sleep 1
-	$0 start
+        sleep 1
+        $0 start
 	;;
   *)
 	N=/etc/init.d/$NAME

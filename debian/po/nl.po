@@ -30,21 +30,21 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-# | msgid "Create tables for Bacula's Catalog?"
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
 #, fuzzy
+#| msgid "Create tables for Bacula's Catalog?"
 msgid "Create tables for Bacula's catalog?"
 msgstr "Tabellen creëren voor de catalogus van Bacula?"
 
-# | msgid ""
-# | "The tables needed for Bacula's catalog are missing.  This is normal for a "
-# | "fresh install of Bacula."
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
 #, fuzzy
+#| msgid ""
+#| "The tables needed for Bacula's catalog are missing.  This is normal for a "
+#| "fresh install of Bacula."
 msgid ""
 "The tables needed for Bacula's catalog are missing. This is normal for a "
 "fresh install of Bacula."
@@ -52,13 +52,13 @@ msgstr ""
 "De benodigde tabellen voor de Bacula catalogus ontbreken. Dit is normaal "
 "voor een verse installatie."
 
-# | msgid ""
-# | "These tables are needed for the Bacula director to function. Should these "
-# | "tables be automatically set up for you?"
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:2001
 #, fuzzy
+#| msgid ""
+#| "These tables are needed for the Bacula director to function. Should these "
+#| "tables be automatically set up for you?"
 msgid ""
 "These tables are needed for the Bacula director to function. Please choose "
 "whether these tables should be automatically created."
@@ -66,11 +66,11 @@ msgstr ""
 "Deze tabellen zijn nodig voor de werking van de 'Bacula director'. Wilt u "
 "deze tabellen automatisch aanmaken?"
 
-# | msgid "Remove Catalog on purge?"
 #. Type: boolean
 #. Description
 #: ../bacula-director-sqlite.templates:3001
 #, fuzzy
+#| msgid "Remove Catalog on purge?"
 msgid "Remove catalog on purge?"
 msgstr "Catalogus verwijderen bij wissen (purge)?"
 
@@ -80,42 +80,6 @@ msgstr "Catalogus verwijderen bij wissen (purge)?"
 msgid ""
 "Please choose whether the Bacula catalog should be removed when the director "
 "package is purged."
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-msgid "Create tables for Bacula's Catalog?"
-msgstr "Tabellen creëren voor de catalogus van Bacula?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:1001
-#: ../bacula-director-sqlite3.templates:1001
-#, fuzzy
-msgid ""
-"The tables needed for Bacula's catalog are missing.  This is normal for a "
-"fresh install of Bacula.  These tables are needed for the Bacula director to "
-"function."
-msgstr ""
-"De benodigde tabellen voor de Bacula catalogus ontbreken. Dit is normaal "
-"voor een verse installatie."
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
-msgid "Remove Catalog on purge?"
-msgstr "Catalogus verwijderen bij wissen (purge)?"
-
-#. Type: boolean
-#. Description
-#: ../bacula-director-sqlite.templates:2001
-#: ../bacula-director-sqlite3.templates:2001
-msgid ""
-"If you want to remove the Bacula catalog when the package is purged, you "
-"should choose this option."
 msgstr ""
 
 #~ msgid ""

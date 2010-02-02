@@ -1,0 +1,20 @@
+--- src/filed/bacula-fd.conf.in.orig	2008-12-01 09:55:54.000000000 +0100
++++ src/filed/bacula-fd.conf.in	2008-12-01 09:56:05.000000000 +0100
+@@ -34,7 +34,6 @@
+   WorkingDirectory = @working_dir@
+   Pid Directory = @piddir@
+   Maximum Concurrent Jobs = 20
+-  FDAddress = 127.0.0.1
+ }
+ 
+ # Send all messages except skipped files back to Director
+--- src/stored/bacula-sd.conf.in.orig	2008-12-01 12:11:08.000000000 +0100
++++ src/stored/bacula-sd.conf.in	2008-12-01 12:11:14.000000000 +0100
+@@ -16,7 +16,6 @@
+   WorkingDirectory = "@working_dir@"
+   Pid Directory = "@piddir@"
+   Maximum Concurrent Jobs = 20
+-  SDAddress = 127.0.0.1
+ }
+ 
+ #

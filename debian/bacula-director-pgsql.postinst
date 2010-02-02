@@ -9,6 +9,18 @@
 . /usr/share/debconf/confmodule
 db_version 2.0
 
+dbc_first_version=1.38.9-2
+dbc_dbuser=bacula
+dbc_dbname=bacula
+
+# source dbconfig-common shell library, and call the hook function
+if [ -f /usr/share/dbconfig-common/dpkg/postinst.pgsql ]; then
+  . /usr/share/dbconfig-common/dpkg/postinst.pgsql
+  dbc_pgsql_createdb_encoding="SQL_ASCII"
+  dbc_sql_substitutions="1"
+  dbc_go bacula-director-pgsql $@
+fi
+
 set -e
 
 # summary of how this script can be called:
@@ -30,82 +42,45 @@ set -e
 #     `abort-remove' or `abort-deconfigure'.
 
 ## Globals
+CATALOG=bacula
+PGSQL=/usr/bin/psql
 LOGDIR="/var/log/bacula"
-GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_postgresql_privileges"
+GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_pgsql_privileges"
 POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
 DEFCONFIG="/usr/share/bacula-common/defconfig"
 CFGFILE="/etc/bacula/bacula-dir.conf"
+AUTHFILE=`getent passwd bacula | cut -d ':' -f 6`/.pgpass
 
-get_config() {
-    db_get bacula/db_host
-    db_host="$RET"
-
-    db_get bacula/dbu_name
-    dbu_name="$RET"
-
-    db_get bacula/dbu_password
-    dbu_password="$RET"
-
-    db_name='bacula'
-}
-
-
-check_pgsafe() {
-    dbname="$1"
-
-    [ -z "`type -p pg_lsclusters`" ] && { echo 'pg_lsclusters is not in my $PATH.'; return 1; }
-    o=$(pg_lsclusters -h) || { echo "pg_lsclusters failed."; return 1; }
-
-    if [ $(echo "$o" | wc -l) != 1 ]; then
-        echo "You have configured more than one PostgreSQL cluster."
-        return 1
-    fi
-
-    echo "$o" | if read VERSION CLUSTER trash; then
-        cf="/etc/postgresql/$VERSION/$CLUSTER/pg_hba.conf"
-        grep -q '^local.*all.*all.*ident.*sameuser$' "$cf" || {
-            echo "Your settings in $cf do not allow me to continue."
-            return 1;
-    }
-    fi
-
-    su -c 'psql -Atl' postgres | grep "^$dbname|" && {
-        echo "There is already a database named $dbname."
-        return 1;
-    }
-
-    return 0
-}
+db_get bacula/dir_passwd
+DIRPASSWD="$RET"
+db_get bacula/dir_monpasswd
+DIRMPASSWD="$RET"
+db_get bacula/sd_passwd
+SDPASSWD="$RET"
+db_get bacula/fd_passwd
+FDPASSWD="$RET"
 
 case "$1" in
 configure)
-  if dpkg --compare-versions "$2" lt 2.2.8-5ubuntu1
-  then
-	get_config
-	db_stop
-	exec 0<&1	
+	
 
 	echo -n "Processing configuration ..."
+        . /etc/dbconfig-common/bacula-director-pgsql.conf
 	TARGET=$CFGFILE.dpkg-tmp
 
-	if ! check_pgsafe "$db_name"; then
-		echo "You must create your PostgreSQL database manually."
-        else
-		id "$dbu_name" 2> /dev/null || adduser --system --no-create-home --disabled-login "$dbu_name"
-		su -c "psql --command \"CREATE ROLE $dbu_name PASSWORD '$dbu_password' NOSUPERUSER CREATEDB NOCREATEROLE INHERIT LOGIN;\"" postgres
-		su -c "createdb -E SQL_ASCII -O \"$dbu_name\" \"$db_name\"" postgres
-		su -c /usr/share/bacula-director/make_postgresql_tables postgres 1> /dev/null
-		su -c "USER=\"$dbu_name\" db_name=\"$db_name\" $GRANT_SQL_PRIVS" postgres 1> /dev/null
-	fi
-
-	sed -e "s/dbname = bacula;/dbname = $db_name; DB Address = \"$db_host\";/" \
-	-e "s/@db_user@/$dbu_name/" -e "s/@db_pswd@/$dbu_password/" \
-		$DEFCONFIG/bacula-dir.conf > $TARGET
-
+        if [ "$dbc_install" = "true" ] ; then
+            sed -e "s/make_catalog_backup bacula bacula/make_catalog_backup -h '$dbc_dbserver' -U $dbc_dbuser/" \
+        -e "s/dbname = \"XXX_DBNAME_XXX\";/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\";/" \
+        -e "s/XXX_DBUSER_XXX/$dbc_dbuser/" -e "s/XXX_DBPASSWORD_XXX/$dbc_dbpass/" \
+        -e s~XXX_DIRPASSWORD_XXX~$DIRPASSWD~ \
+        -e s~XXX_MONDIRPASSWORD_XXX~$DIRMPASSWD~ \
+        -e s~XXX_SDPASSWORD_XXX~$SDPASSWD~ \
+        -e s~XXX_FDPASSWORD_XXX~$FDPASSWD~ \
+                $DEFCONFIG/bacula-dir.conf > $TARGET
+        fi
 
 	/bin/sh $POSTINST_COMMON
 	echo "Ok."
-   fi
 	;;
 
 abort-upgrade|abort-remove|abort-deconfigure)
