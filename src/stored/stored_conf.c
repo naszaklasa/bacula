@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id: stored_conf.c 5358 2007-08-15 16:54:21Z kerns $
+ *   Version $Id: stored_conf.c 7164 2008-06-18 19:22:03Z kerns $
  */
 
 #include "bacula.h"
@@ -75,11 +75,11 @@ static RES_ITEM store_items[] = {
    {"piddirectory",          store_dir,  ITEM(res_store.pid_directory), 0, ITEM_REQUIRED, 0},
    {"subsysdirectory",       store_dir,  ITEM(res_store.subsys_directory), 0, 0, 0},
    {"scriptsdirectory",      store_dir,  ITEM(res_store.scripts_directory), 0, 0, 0},
-   {"maximumconcurrentjobs", store_pint, ITEM(res_store.max_concurrent_jobs), 0, ITEM_DEFAULT, 20},
-   {"heartbeatinterval",     store_time, ITEM(res_store.heartbeat_interval), 0, ITEM_DEFAULT, 0},
-   {"tlsenable",             store_bit,     ITEM(res_store.tls_enable), 1, 0, 0},
-   {"tlsrequire",            store_bit,     ITEM(res_store.tls_require), 1, 0, 0},
-   {"tlsverifypeer",         store_bit,     ITEM(res_store.tls_verify_peer), 1, ITEM_DEFAULT, 1},
+   {"maximumconcurrentjobs", store_pint32,  ITEM(res_store.max_concurrent_jobs), 0, ITEM_DEFAULT, 20},
+   {"heartbeatinterval",     store_time,    ITEM(res_store.heartbeat_interval), 0, ITEM_DEFAULT, 0},
+   {"tlsenable",             store_bool,    ITEM(res_store.tls_enable), 1, 0, 0},
+   {"tlsrequire",            store_bool,    ITEM(res_store.tls_require), 1, 0, 0},
+   {"tlsverifypeer",         store_bool,    ITEM(res_store.tls_verify_peer), 1, ITEM_DEFAULT, 1},
    {"tlscacertificatefile",  store_dir,       ITEM(res_store.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir",   store_dir,       ITEM(res_store.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate",        store_dir,       ITEM(res_store.tls_certfile), 0, 0, 0},
@@ -96,10 +96,10 @@ static RES_ITEM dir_items[] = {
    {"name",        store_name,     ITEM(res_dir.hdr.name),   0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(res_dir.hdr.desc),   0, 0, 0},
    {"password",    store_password, ITEM(res_dir.password),   0, ITEM_REQUIRED, 0},
-   {"monitor",     store_bit,    ITEM(res_dir.monitor),   1, ITEM_DEFAULT, 0},
-   {"tlsenable",            store_bit,     ITEM(res_dir.tls_enable), 1, 0, 0},
-   {"tlsrequire",           store_bit,     ITEM(res_dir.tls_require), 1, 0, 0},
-   {"tlsverifypeer",        store_bit,     ITEM(res_dir.tls_verify_peer), 1, ITEM_DEFAULT, 1},
+   {"monitor",     store_bool,     ITEM(res_dir.monitor),   1, ITEM_DEFAULT, 0},
+   {"tlsenable",            store_bool,    ITEM(res_dir.tls_enable), 1, 0, 0},
+   {"tlsrequire",           store_bool,    ITEM(res_dir.tls_require), 1, 0, 0},
+   {"tlsverifypeer",        store_bool,    ITEM(res_dir.tls_verify_peer), 1, ITEM_DEFAULT, 1},
    {"tlscacertificatefile", store_dir,       ITEM(res_dir.tls_ca_certfile), 0, 0, 0},
    {"tlscacertificatedir",  store_dir,       ITEM(res_dir.tls_ca_certdir), 0, 0, 0},
    {"tlscertificate",       store_dir,       ITEM(res_dir.tls_certfile), 0, 0, 0},
@@ -137,25 +137,25 @@ static RES_ITEM dev_items[] = {
    {"checklabels",           store_bit,  ITEM(res_dev.cap_bits), CAP_CHECKLABELS, ITEM_DEFAULT, 0},
    {"requiresmount",         store_bit,  ITEM(res_dev.cap_bits), CAP_REQMOUNT, ITEM_DEFAULT, 0},
    {"offlineonunmount",      store_bit,  ITEM(res_dev.cap_bits), CAP_OFFLINEUNMOUNT, ITEM_DEFAULT, 0},
-   {"autoselect",            store_bit,  ITEM(res_dev.autoselect), 1, ITEM_DEFAULT, 1},
+   {"autoselect",            store_bool, ITEM(res_dev.autoselect), 1, ITEM_DEFAULT, 1},
    {"changerdevice",         store_strname,ITEM(res_dev.changer_name), 0, 0, 0},
    {"changercommand",        store_strname,ITEM(res_dev.changer_command), 0, 0, 0},
    {"alertcommand",          store_strname,ITEM(res_dev.alert_command), 0, 0, 0},
    {"maximumchangerwait",    store_time,   ITEM(res_dev.max_changer_wait), 0, ITEM_DEFAULT, 5 * 60},
    {"maximumopenwait",       store_time,   ITEM(res_dev.max_open_wait), 0, ITEM_DEFAULT, 5 * 60},
-   {"maximumopenvolumes",    store_pint,   ITEM(res_dev.max_open_vols), 0, ITEM_DEFAULT, 1},
-   {"maximumnetworkbuffersize", store_pint, ITEM(res_dev.max_network_buffer_size), 0, 0, 0},
+   {"maximumopenvolumes",    store_pint32, ITEM(res_dev.max_open_vols), 0, ITEM_DEFAULT, 1},
+   {"maximumnetworkbuffersize", store_pint32, ITEM(res_dev.max_network_buffer_size), 0, 0, 0},
    {"volumepollinterval",    store_time,   ITEM(res_dev.vol_poll_interval), 0, 0, 0},
    {"maximumrewindwait",     store_time,   ITEM(res_dev.max_rewind_wait), 0, ITEM_DEFAULT, 5 * 60},
-   {"minimumblocksize",      store_pint,   ITEM(res_dev.min_block_size), 0, 0, 0},
-   {"maximumblocksize",      store_pint,   ITEM(res_dev.max_block_size), 0, 0, 0},
+   {"minimumblocksize",      store_pint32, ITEM(res_dev.min_block_size), 0, 0, 0},
+   {"maximumblocksize",      store_pint32, ITEM(res_dev.max_block_size), 0, 0, 0},
    {"maximumvolumesize",     store_size,   ITEM(res_dev.max_volume_size), 0, 0, 0},
    {"maximumfilesize",       store_size,   ITEM(res_dev.max_file_size), 0, ITEM_DEFAULT, 1000000000},
    {"volumecapacity",        store_size,   ITEM(res_dev.volume_capacity), 0, 0, 0},
    {"spooldirectory",        store_dir,    ITEM(res_dev.spool_directory), 0, 0, 0},
    {"maximumspoolsize",      store_size,   ITEM(res_dev.max_spool_size), 0, 0, 0},
    {"maximumjobspoolsize",   store_size,   ITEM(res_dev.max_job_spool_size), 0, 0, 0},
-   {"driveindex",            store_pint,   ITEM(res_dev.drive_index), 0, 0, 0},
+   {"driveindex",            store_pint32, ITEM(res_dev.drive_index), 0, 0, 0},
    {"maximumpartsize",       store_size,   ITEM(res_dev.max_part_size), 0, ITEM_DEFAULT, 0},
    {"mountpoint",            store_strname,ITEM(res_dev.mount_point), 0, 0, 0},
    {"mountcommand",          store_strname,ITEM(res_dev.mount_command), 0, 0, 0},
@@ -175,9 +175,6 @@ static RES_ITEM changer_items[] = {
    {"changercommand",    store_strname,   ITEM(res_changer.changer_command), 0, ITEM_REQUIRED, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
-
-
-// {"mountanonymousvolumes", store_bit,  ITEM(res_dev.cap_bits), CAP_ANONVOLS,   ITEM_DEFAULT, 0},
 
 
 /* Message resource */
@@ -225,7 +222,7 @@ static void store_devtype(LEX *lc, RES_ITEM *item, int index, int pass)
    /* Store the label pass 2 so that type is defined */
    for (i=0; dev_types[i].name; i++) {
       if (strcasecmp(lc->str, dev_types[i].name) == 0) {
-         *(int *)(item->value) = dev_types[i].token;
+         *(uint32_t *)(item->value) = dev_types[i].token;
          i = 0;
          break;
       }

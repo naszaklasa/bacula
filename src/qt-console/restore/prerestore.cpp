@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-20087 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: prerestore.cpp 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: prerestore.cpp 7310 2008-07-05 10:39:06Z kerns $
  *
  *  preRestore -> dialog put up to determine the restore type
  *
@@ -59,7 +59,7 @@ prerestorePage::prerestorePage()
  */
 void prerestorePage::buildPage()
 {
-   m_name = "Restore";
+   m_name = tr("Restore");
    setupUi(this);
    pgInitialize();
    m_console->notify(false);
@@ -73,7 +73,7 @@ void prerestorePage::buildPage()
    jobCombo->addItems(m_console->job_list);
    filesetCombo->addItems(m_console->fileset_list);
    clientCombo->addItems(m_console->client_list);
-   poolCombo->addItem("Any");
+   poolCombo->addItem(tr("Any"));
    poolCombo->addItems(m_console->pool_list);
    storageCombo->addItems(m_console->storage_list);
    /* current or before . .  Start out with current checked */
@@ -85,7 +85,7 @@ void prerestorePage::buildPage()
    if (m_dataInType == R_NONE) {
       selectJobRadio->setChecked(true);
       selectJobIdsRadio->setChecked(false);
-      jobIdEdit->setText("Comma separted list of jobs id's");
+      jobIdEdit->setText(tr("Comma separted list of Job Ids"));
       jobIdEdit->setEnabled(false);
    } else if (m_dataInType == R_JOBIDLIST) {
       selectJobIdsRadio->setChecked(true);
@@ -101,7 +101,7 @@ void prerestorePage::buildPage()
    } else if (m_dataInType == R_JOBDATETIME) {
       selectJobRadio->setChecked(true);
       selectJobIdsRadio->setChecked(false);
-      jobIdEdit->setText("Comma separted list of jobs id's");
+      jobIdEdit->setText(tr("Comma separted list of Job Ids"));
       jobIdEdit->setEnabled(false);
       recentCheckBox->setCheckState(Qt::Unchecked);
       jobRadioClicked(true);
@@ -191,7 +191,7 @@ void prerestorePage::okButtonPushed()
  */
 void prerestorePage::cancelButtonPushed()
 {
-   mainWin->set_status("Canceled");
+   mainWin->set_status(tr("Canceled"));
    this->hide();
    m_console->notify(true);
    closeStackPage();
@@ -269,7 +269,7 @@ bool prerestorePage::checkJobIdList()
    /* Need to check and make sure the text is a comma separated list of integers */
    QString line = jobIdEdit->text();
    if (line.contains(" ")) {
-      QMessageBox::warning(this, tr("Bat"),
+      QMessageBox::warning(this, "Bat",
          tr("There can be no spaces in the text for the joblist.\n"
          "Press OK to continue?"), QMessageBox::Ok );
       return false;
@@ -301,8 +301,8 @@ bool prerestorePage::checkJobIdList()
       }
    }
    if (!allintokay){
-      QMessageBox::warning(this, tr("Bat"),
-         tr("The string is not a comma separated list if integers.\n"
+      QMessageBox::warning(this, "Bat",
+         tr("The string is not a comma separated list of integers.\n"
          "Press OK to continue?"), QMessageBox::Ok );
       return false;
    }
@@ -313,7 +313,7 @@ bool prerestorePage::checkJobIdList()
       return false;
    }
    if (!alljobok){
-      QMessageBox::warning(this, tr("Bat"),
+      QMessageBox::warning(this, "Bat",
          tr("All jobs in the list must be of the same jobName and same client.\n"
          "Press OK to continue?"), QMessageBox::Ok );
       return false;

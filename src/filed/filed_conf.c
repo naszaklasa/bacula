@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: filed_conf.c 5358 2007-08-15 16:54:21Z kerns $
+ *   Version $Id: filed_conf.c 7164 2008-06-18 19:22:03Z kerns $
  */
 
 #include "bacula.h"
@@ -96,11 +96,11 @@ static RES_ITEM cli_items[] = {
    {"piddirectory",  store_dir,     ITEM(res_client.pid_directory),     0, ITEM_REQUIRED, 0},
    {"subsysdirectory",  store_dir,  ITEM(res_client.subsys_directory),  0, 0, 0},
    {"scriptsdirectory",  store_dir,  ITEM(res_client.scripts_directory),  0, 0, 0},
-   {"maximumconcurrentjobs", store_pint,  ITEM(res_client.MaxConcurrentJobs), 0, ITEM_DEFAULT, 20},
+   {"maximumconcurrentjobs", store_pint32,  ITEM(res_client.MaxConcurrentJobs), 0, ITEM_DEFAULT, 20},
    {"messages",      store_res, ITEM(res_client.messages), R_MSGS, 0, 0},
    {"sdconnecttimeout", store_time,ITEM(res_client.SDConnectTimeout), 0, ITEM_DEFAULT, 60 * 30},
    {"heartbeatinterval", store_time, ITEM(res_client.heartbeat_interval), 0, ITEM_DEFAULT, 0},
-   {"maximumnetworkbuffersize", store_pint, ITEM(res_client.max_network_buffer_size), 0, 0, 0},
+   {"maximumnetworkbuffersize", store_pint32, ITEM(res_client.max_network_buffer_size), 0, 0, 0},
 #ifdef DATA_ENCRYPTION
    {"pkisignatures",         store_bool,    ITEM(res_client.pki_sign), 0, ITEM_DEFAULT, 0},
    {"pkiencryption",         store_bool,    ITEM(res_client.pki_encrypt), 0, ITEM_DEFAULT, 0},

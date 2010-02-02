@@ -38,7 +38,7 @@
  * for the external world. This is control with
  * the define __SQL_C, which is defined only in sql.c
  *
- *    Version $Id: cats.h 5778 2007-10-22 10:31:08Z kerns $
+ *    Version $Id: cats.h 7179 2008-06-19 17:01:12Z kerns $
  */
 
 /*
@@ -476,7 +476,7 @@ void               my_postgresql_free_result(B_DB *mdb);
 POSTGRESQL_ROW     my_postgresql_fetch_row  (B_DB *mdb);
 int                my_postgresql_query      (B_DB *mdb, const char *query);
 void               my_postgresql_data_seek  (B_DB *mdb, int row);
-int                my_postgresql_currval    (B_DB *mdb, char *table_name);
+int                my_postgresql_currval    (B_DB *mdb, const char *table_name);
 void               my_postgresql_field_seek (B_DB *mdb, int row);
 POSTGRESQL_FIELD * my_postgresql_fetch_field(B_DB *mdb);
 

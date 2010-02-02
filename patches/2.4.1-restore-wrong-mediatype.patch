@@ -1,0 +1,26 @@
+ This patch fixes complex restore where users choose a storage that doesn't
+ have the requested MediaType.
+
+ Apply this patch to version 2.4.1 with:
+
+ cd <bacula-source>
+ patch -p0 < patches/2.4.1-restore-wrong-mediatype.patch
+ ./configure <your-options>
+ make
+ ...
+ make install
+
+
+Index: src/stored/acquire.c
+===================================================================
+--- src/stored/acquire.c	(revision 7148)
++++ src/stored/acquire.c	(working copy)
+@@ -331,6 +331,8 @@
+     */
+    if (dev->is_blocked()) {
+       dev->dunblock(DEV_LOCKED);
++   } else {
++      dev->dunlock();               /* dunblock() unlock the device too */
+    }
+    Dmsg1(950, "jcr->dcr=%p\n", jcr->dcr);
+    return ok;

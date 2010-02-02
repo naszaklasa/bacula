@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, October 2000
  *
- *   Version $Id: authenticate.c 5713 2007-10-03 11:36:47Z kerns $
+ *   Version $Id: authenticate.c 7263 2008-06-30 12:56:49Z kerns $
  *
  */
 
@@ -60,13 +60,13 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
 
    if (rcode != R_DIRECTOR) {
       Dmsg1(dbglvl, "I only authenticate Directors, not %d\n", rcode);
-      Emsg1(M_FATAL, 0, _("I only authenticate Directors, not %d\n"), rcode);
+      Jmsg1(jcr, M_FATAL, 0, _("I only authenticate Directors, not %d\n"), rcode);
       return 0;
    }
    if (bs->msglen < 25 || bs->msglen > 500) {
       Dmsg2(dbglvl, "Bad Hello command from Director at %s. Len=%d.\n",
             bs->who(), bs->msglen);
-      Emsg2(M_FATAL, 0, _("Bad Hello command from Director at %s. Len=%d.\n"),
+      Jmsg2(jcr, M_FATAL, 0, _("Bad Hello command from Director at %s. Len=%d.\n"),
             bs->who(), bs->msglen);
       return 0;
    }
@@ -77,7 +77,7 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
       bs->msg[100] = 0;
       Dmsg2(dbglvl, "Bad Hello command from Director at %s: %s\n",
             bs->who(), bs->msg);
-      Emsg2(M_FATAL, 0, _("Bad Hello command from Director at %s: %s\n"),
+      Jmsg2(jcr, M_FATAL, 0, _("Bad Hello command from Director at %s: %s\n"),
             bs->who(), bs->msg);
       return 0;
    }
@@ -90,7 +90,7 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
    if (!director) {
       Dmsg2(dbglvl, "Connection from unknown Director %s at %s rejected.\n",
             dirname, bs->who());
-      Emsg2(M_FATAL, 0, _("Connection from unknown Director %s at %s rejected.\n"
+      Jmsg2(jcr, M_FATAL, 0, _("Connection from unknown Director %s at %s rejected.\n"
        "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"),
             dirname, bs->who());
       free_pool_memory(dirname);
@@ -123,7 +123,7 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
    }
 
    if (!auth_success) {
-      Emsg0(M_FATAL, 0, _("Incorrect password given by Director.\n"
+      Jmsg0(jcr, M_FATAL, 0, _("Incorrect password given by Director.\n"
        "Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for help.\n"));
       auth_success = false;
       goto auth_fatal;
@@ -131,7 +131,7 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
 
    /* Verify that the remote host is willing to meet our TLS requirements */
    if (tls_remote_need < tls_local_need && tls_local_need != BNET_TLS_OK && tls_remote_need != BNET_TLS_OK) {
-      Emsg0(M_FATAL, 0, _("Authorization problem: Remote server did not" 
+      Jmsg0(jcr, M_FATAL, 0, _("Authorization problem: Remote server did not" 
            " advertise required TLS support.\n"));
       auth_success = false;
       goto auth_fatal;
@@ -139,7 +139,7 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
 
    /* Verify that we are willing to meet the remote host's requirements */
    if (tls_remote_need > tls_local_need && tls_local_need != BNET_TLS_OK && tls_remote_need != BNET_TLS_OK) {
-      Emsg0(M_FATAL, 0, _("Authorization problem: Remote server requires TLS.\n"));
+      Jmsg0(jcr, M_FATAL, 0, _("Authorization problem: Remote server requires TLS.\n"));
       auth_success = false;
       goto auth_fatal;
    }
@@ -147,7 +147,7 @@ static int authenticate(int rcode, BSOCK *bs, JCR* jcr)
    if (tls_local_need >= BNET_TLS_OK && tls_remote_need >= BNET_TLS_OK) {
       /* Engage TLS! Full Speed Ahead! */
       if (!bnet_tls_server(director->tls_ctx, bs, verify_list)) {
-         Emsg0(M_FATAL, 0, _("TLS negotiation failed.\n"));
+         Jmsg0(jcr, M_FATAL, 0, _("TLS negotiation failed.\n"));
          auth_success = false;
          goto auth_fatal;
       }
@@ -179,7 +179,7 @@ int authenticate_director(JCR *jcr)
    if (!authenticate(R_DIRECTOR, dir, jcr)) {
       dir->fsend("%s", Dir_sorry);
       Dmsg1(dbglvl, "Unable to authenticate Director at %s.\n", dir->who());
-      Emsg1(M_ERROR, 0, _("Unable to authenticate Director at %s.\n"), dir->who());
+      Jmsg1(jcr, M_ERROR, 0, _("Unable to authenticate Director at %s.\n"), dir->who());
       bmicrosleep(5, 0);
       return 0;
    }

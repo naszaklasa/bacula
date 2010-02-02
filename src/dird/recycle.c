@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, May MMII
  *
- *   Version $Id: recycle.c 6999 2008-05-20 15:42:58Z kerns $
+ *   Version $Id: recycle.c 7238 2008-06-26 08:31:49Z kerns $
  */
 
 
@@ -83,12 +83,19 @@ bool recycle_oldest_purged_volume(JCR *jcr, bool InChanger, MEDIA_DBR *mr)
    const char *select =
           "SELECT MediaId,LastWritten FROM Media "
           "WHERE PoolId=%s AND Recycle=1 AND VolStatus='Purged' "
-          "AND Enabled=1 AND MediaType='%s' "
+          "AND Enabled=1 AND MediaType='%s' %s"
           "ORDER BY LastWritten ASC,MediaId LIMIT 1";
 
    Dmsg0(100, "Enter recycle_oldest_purged_volume\n");
    oldest.MediaId = 0;
-   Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType);
+   if (InChanger) {
+      char changer[100];
+      bsnprintf(changer, sizeof(changer), "AND InChanger=1 AND StorageId=%s ",
+         edit_int64(mr->StorageId, ed1));
+      Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType, changer);
+   } else {
+      Mmsg(query, select, edit_int64(mr->PoolId, ed1), mr->MediaType, "");
+   }
 
    if (!db_sql_query(jcr->db, query, oldest_handler, (void *)&oldest)) {
       Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db));

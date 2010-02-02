@@ -823,6 +823,7 @@ mon_fd_password
 mon_sd_password
 db_name
 db_user
+db_password
 dir_user
 dir_group
 sd_user
@@ -1509,6 +1510,13 @@ Optional Packages:
   --with-mon-sd-password=PASSWORD	 specify Storage daemon's password used by the monitor
   --with-db-name=DBNAME	       specify database name (default bacula)
   --with-db-user=UNAME	       specify database user (default bacula)
+  --with-db-password=UNAME 	   specify database password (default *none*)
+
+	if test "x$withval" != "x" ; then
+	     db_password=$withval
+	fi
+
+
   --with-dir-user=USER		 specify user for Director daemon
   --with-dir-group=GROUP		 specify group for Director daemon
   --with-sd-user=USER		 specify user for Storage daemon
@@ -17054,6 +17062,14 @@ fi
 
 
 
+db_password=
+
+# Check whether --with-db_password was given.
+if test "${with_db_password+set}" = set; then
+  withval=$with_db_password;
+fi
+
+
 
 #
 # Handle users and groups for each daemon
@@ -31152,6 +31168,7 @@ mon_fd_password!$mon_fd_password$ac_delim
 mon_sd_password!$mon_sd_password$ac_delim
 db_name!$db_name$ac_delim
 db_user!$db_user$ac_delim
+db_password!$db_password$ac_delim
 dir_user!$dir_user$ac_delim
 dir_group!$dir_group$ac_delim
 sd_user!$sd_user$ac_delim
@@ -31190,7 +31207,7 @@ DISTVER!$DISTVER$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 55; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 56; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

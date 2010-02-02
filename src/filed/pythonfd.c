@@ -1,16 +1,7 @@
 /*
- *
- * Bacula interface to Python for the File Daemon
- *
- * Kern Sibbald, March MMV
- *
- *   Version $Id: pythonfd.c 4992 2007-06-07 14:46:43Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,6 +25,15 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *
+ * Bacula interface to Python for the File Daemon
+ *
+ * Kern Sibbald, March MMV
+ *
+ *   Version $Id: pythonfd.c 7297 2008-07-03 10:50:08Z kerns $
+ *
+ */
 
 #include "bacula.h"
 #include "filed.h"
@@ -41,12 +41,6 @@
 #ifdef HAVE_PYTHON
 #undef _POSIX_C_SOURCE
 #include <Python.h>
-
-/* External function pointers to be set */
-extern bool    (*python_set_prog)(JCR *jcr, const char *prog);
-extern int     (*python_open)(BFILE *bfd, const char *fname, int flags, mode_t mode);
-extern int     (*python_close)(BFILE *bfd);
-extern ssize_t (*python_read)(BFILE *bfd, void *buf, size_t count);
 
 
 extern JCR *get_jcr_from_PyObject(PyObject *self);
@@ -64,15 +58,9 @@ PyMethodDef JobMethods[] = {
 };
 
 
-bool my_python_set_prog(JCR *jcr, const char *prog);
-int my_python_open(BFILE *bfd, const char *fname, int flags, mode_t mode);
-int my_python_close(BFILE *bfd);
-ssize_t my_python_read(BFILE *bfd, void *buf, size_t count);
-
-
 struct s_vars {
    const char *name;
-   char *fmt;
+   const char *fmt;
 };
 
 /* Read-only variables */
@@ -121,21 +109,21 @@ PyObject *job_getattr(PyObject *self, char *attrname)
    }
    switch (i) {
    case 0:                            /* FD's name */
-      return Py_BuildValue(getvars[i].fmt, my_name);
+      return Py_BuildValue((char *)getvars[i].fmt, my_name);
    case 1:                            /* level */
-      return Py_BuildValue(getvars[i].fmt, job_level_to_str(jcr->JobLevel));
+      return Py_BuildValue((char *)getvars[i].fmt, job_level_to_str(jcr->JobLevel));
    case 2:                            /* type */
-      return Py_BuildValue(getvars[i].fmt, job_type_to_str(jcr->JobType));
+      return Py_BuildValue((char *)getvars[i].fmt, job_type_to_str(jcr->JobType));
    case 3:                            /* JobId */
-      return Py_BuildValue(getvars[i].fmt, jcr->JobId);
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->JobId);
    case 4:                            /* Client */
-      return Py_BuildValue(getvars[i].fmt, jcr->client_name);
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->client_name);
    case 5:                            /* JobName */
-      return Py_BuildValue(getvars[i].fmt, jcr->Job);
+      return Py_BuildValue((char *)getvars[i].fmt, jcr->Job);
    case 6:                            /* JobStatus */
       buf[1] = 0;
       buf[0] = jcr->JobStatus;
-      return Py_BuildValue(getvars[i].fmt, buf);
+      return Py_BuildValue((char *)getvars[i].fmt, buf);
    }
    bsnprintf(errmsg, sizeof(errmsg), _("Attribute %s not found."), attrname);
 bail_out:
@@ -178,7 +166,7 @@ int job_setattr(PyObject *self, char *attrname, PyObject *value)
    }
    /* Get argument value ***FIXME*** handle other formats */
    if (setvars[i].fmt != NULL) {
-      if (!PyArg_Parse(value, setvars[i].fmt, &strval)) {
+      if (!PyArg_Parse(value, (char *)setvars[i].fmt, &strval)) {
          PyErr_SetString(PyExc_TypeError, _("Read-only attribute"));
          return -1;
       }
@@ -231,12 +219,6 @@ static PyObject *set_job_events(PyObject *self, PyObject *arg)
    Py_INCREF(eObject);
    jcr->Python_events = (void *)eObject;        /* set new events */
 
-   /* Set function pointers to call here */
-   python_set_prog = my_python_set_prog;
-   python_open     = my_python_open;
-   python_close    = my_python_close;
-   python_read     = my_python_read;
-
    Py_INCREF(Py_None);
    return Py_None;
 }
@@ -263,7 +245,7 @@ int generate_job_event(JCR *jcr, const char *event)
    }
 
    bstrncpy(jcr->event, event, sizeof(jcr->event));
-   result = PyObject_CallFunction(method, "O", Job);
+   result = PyObject_CallFunction(method, (char *)"O", Job);
    jcr->event[0] = 0;             /* no event in progress */
    if (result == NULL) {
       if (PyErr_Occurred()) {
@@ -281,45 +263,6 @@ bail_out:
    return stat;
 }
 
-
-bool my_python_set_prog(JCR *jcr, const char *prog)
-{
-   PyObject *events = (PyObject *)jcr->Python_events;
-   BFILE *bfd = &jcr->ff->bfd;
-   char method[MAX_NAME_LENGTH];
-
-   if (!events) {
-      return false;
-   }
-   bstrncpy(method, prog, sizeof(method));
-   bstrncat(method, "_", sizeof(method));
-   bstrncat(method, "open", sizeof(method));
-   bfd->pio.fo = find_method(events, bfd->pio.fo, method);
-   bstrncpy(method, prog, sizeof(method));
-   bstrncat(method, "_", sizeof(method));
-   bstrncat(method, "read", sizeof(method));
-   bfd->pio.fr = find_method(events, bfd->pio.fr, method);
-   bstrncpy(method, prog, sizeof(method));
-   bstrncat(method, "_", sizeof(method));
-   bstrncat(method, "close", sizeof(method));
-   bfd->pio.fc = find_method(events, bfd->pio.fc, method);
-   return bfd->pio.fo && bfd->pio.fr && bfd->pio.fc;
-}
-
-int my_python_open(BFILE *bfd, const char *fname, int flags, mode_t mode)
-{
-   return -1;
-}
-
-int my_python_close(BFILE *bfd) 
-{
-   return 0;
-}
-
-ssize_t my_python_read(BFILE *bfd, void *buf, size_t count)
-{
-   return -1;
-}
 
 #else
 

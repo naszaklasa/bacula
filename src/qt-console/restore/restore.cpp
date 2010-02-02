@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: restore.cpp 7085 2008-06-01 14:31:37Z bartleyd2 $
+ *   Version $Id: restore.cpp 7314 2008-07-05 12:30:27Z kerns $
  *
  *  Restore Class 
  *
@@ -43,7 +43,7 @@ restorePage::restorePage()
    QStringList titles;
 
    setupUi(this);
-   m_name = "Restore Select";
+   m_name = tr("Restore Select");
    pgInitialize();
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/restore.png")));
@@ -71,7 +71,8 @@ restorePage::restorePage()
    setFont(m_console->get_font());
    m_console->displayToPrompt();
 
-   titles << "Mark" << "File" << "Mode" << "User" << "Group" << "Size" << "Date";
+   titles << tr("Mark") << tr("File") << tr("Mode") << tr("User") 
+          << tr("Group") << tr("Size") << tr("Date");
    fileWidget->setHeaderLabels(titles);
 
    get_cwd();
@@ -192,19 +193,36 @@ void restorePage::addDirectory(QString &newdirr)
       Pmsg0(000, msg.toUtf8().data());
    }
 
-   /* add unix '/' directory first */
-   if (m_dirPaths.empty()) {
-      if (isWin32Path(newdir)) {
-         /* this is a windows drive */
-         if (mainWin->m_miscDebug) {
-            Pmsg0(000, "Need to do windows \"letter\":/\n");
-         }
-         fullpath.replace(0,1,"");
-         windrive = true;
-      } else {
+   if (isWin32Path(newdir)) {
+      /* this is a windows drive */
+      if (mainWin->m_miscDebug) {
+         Pmsg0(000, "Found windows drive\n");
+      }
+      windrive = true;
+   }
+   
+   if (windrive) {
+      if (fullpath.left(1) == "/") {
+         fullpath.replace(0, 1, "");           /* strip leading / */
+      }
+      /* If drive and not already in add it */
+      if (fullpath.length() == 3 && !m_dirPaths.contains(fullpath)) {
          QTreeWidgetItem *item = new QTreeWidgetItem(directoryWidget);
          item->setIcon(0,QIcon(QString::fromUtf8(":images/folder.png")));
-
+         item->setText(0, fullpath.toUtf8().data());
+         if (mainWin->m_miscDebug) {
+            Pmsg1(000, "Pre Inserting %s\n",fullpath.toUtf8().data());
+         }
+         m_dirPaths.insert(fullpath, item);
+         m_dirTreeItems.insert(item, fullpath);
+         directoryWidget->setCurrentItem(NULL);
+      }
+   } else {
+      // Unix add / first if not already there 
+      if (m_dirPaths.empty()) {
+         QTreeWidgetItem *item = new QTreeWidgetItem(directoryWidget);
+         item->setIcon(0,QIcon(QString::fromUtf8(":images/folder.png")));
+            
          QString text("/");
          item->setText(0, text.toUtf8().data());
          if (mainWin->m_miscDebug) {
@@ -214,8 +232,8 @@ void restorePage::addDirectory(QString &newdirr)
          m_dirTreeItems.insert(item, text);
       }
    }
-
-   /* is it already existent ?? */
+ 
+   /* Does it already exist ?? */
    if (!m_dirPaths.contains(fullpath)) {
       QTreeWidgetItem *item = NULL;
       if (windrive) {
@@ -234,7 +252,7 @@ void restorePage::addDirectory(QString &newdirr)
          } else {
             ok = false;
             if (mainWin->m_miscDebug) {
-               QString msg = QString("In else of if parent cwd \"%1\" newdir \"%2\"\n")
+               QString msg = QString(tr("In else of if parent cwd \"%1\" newdir \"%2\"\n"))
                     .arg(m_cwd)
                     .arg(newdir);
                Pmsg0(000, msg.toUtf8().data());
@@ -260,6 +278,7 @@ void restorePage::directoryItemChanged(QTreeWidgetItem *currentitem,
                                          QTreeWidgetItem * /*previousitem*/)
 {
    QString fullpath = m_dirTreeItems.value(currentitem);
+   statusLine->setText("");
    if (fullpath != ""){
       cwd(fullpath.toUtf8().data());
       fillDirectory();
@@ -268,7 +287,7 @@ void restorePage::directoryItemChanged(QTreeWidgetItem *currentitem,
 
 void restorePage::okButtonPushed()
 {
-   printf("In restorePage::okButtonPushed\n");
+// printf("In restorePage::okButtonPushed\n");
    this->hide();
    m_console->write("done");
    m_console->notify(true);
@@ -283,7 +302,7 @@ void restorePage::cancelButtonPushed()
    this->hide();
    m_console->write("quit");
    m_console->displayToPrompt();
-   mainWin->set_status("Canceled");
+   mainWin->set_status(tr("Canceled"));
    closeStackPage();
    m_console->notify(true);
    mainWin->resetFocus();
@@ -292,6 +311,7 @@ void restorePage::cancelButtonPushed()
 void restorePage::fileDoubleClicked(QTreeWidgetItem *item, int column)
 {
    char cmd[1000];
+   statusLine->setText("");
    if (column == 0) {                 /* mark/unmark */
       if (item->data(0, Qt::UserRole).toBool()) {
          bsnprintf(cmd, sizeof(cmd), "unmark \"%s\"", item->text(1).toUtf8().data());
@@ -339,6 +359,7 @@ void restorePage::upButtonPushed()
    if (item) {
       directoryWidget->setCurrentItem(item);
    }
+   statusLine->setText("");
 }
 
 /*
@@ -349,7 +370,10 @@ void restorePage::markButtonPushed()
    QList<QTreeWidgetItem *> treeItemList = fileWidget->selectedItems();
    QTreeWidgetItem *item;
    char cmd[1000];
+   int count = 0;
+   statusLine->setText("");
    foreach (item, treeItemList) {
+      count++;
       bsnprintf(cmd, sizeof(cmd), "mark \"%s\"", item->text(1).toUtf8().data());
       item->setIcon(0, QIcon(QString::fromUtf8(":images/check.png")));
       m_console->write_dir(cmd);
@@ -360,6 +384,11 @@ void restorePage::markButtonPushed()
       Dmsg1(100, "cmd=%s\n", cmd);
       m_console->discardToPrompt();
    }
+   if (count == 0) {
+      mainWin->set_status("Nothing selected, nothing done");
+      statusLine->setText("Nothing selected, nothing done");
+   }
+      
 }
 
 /*
@@ -370,7 +399,10 @@ void restorePage::unmarkButtonPushed()
    QList<QTreeWidgetItem *> treeItemList = fileWidget->selectedItems();
    QTreeWidgetItem *item;
    char cmd[1000];
+   int count = 0;
+   statusLine->setText("");
    foreach (item, treeItemList) {
+      count++;
       bsnprintf(cmd, sizeof(cmd), "unmark \"%s\"", item->text(1).toUtf8().data());
       item->setIcon(0, QIcon(QString::fromUtf8(":images/unchecked.png")));
       m_console->write_dir(cmd);
@@ -381,6 +413,11 @@ void restorePage::unmarkButtonPushed()
       Dmsg1(100, "cmd=%s\n", cmd);
       m_console->discardToPrompt();
    }
+   if (count == 0) {
+      mainWin->set_status(tr("Nothing selected, nothing done"));
+      statusLine->setText(tr("Nothing selected, nothing done"));
+   }
+
 }
 
 /*
@@ -391,6 +428,7 @@ bool restorePage::cwd(const char *dir)
    int stat;
    char cd_cmd[MAXSTRING];
 
+   statusLine->setText("");
    bsnprintf(cd_cmd, sizeof(cd_cmd), "cd \"%s\"", dir);
    Dmsg2(100, "dir=%s cmd=%s\n", dir, cd_cmd);
    m_console->write_dir(cd_cmd);
@@ -401,7 +439,7 @@ bool restorePage::cwd(const char *dir)
       Dmsg2(100, "cwd=%s msg=%s\n", m_cwd.toUtf8().data(), m_console->msg());
    } else {
       Dmsg1(000, "stat=%d\n", stat);
-      QMessageBox::critical(this, "Error", "cd command failed", QMessageBox::Ok);
+      QMessageBox::critical(this, "Error", tr("cd command failed"), QMessageBox::Ok);
    }
    m_console->discardToPrompt();
    return true;  /* ***FIXME*** return real status */
@@ -420,7 +458,7 @@ char *restorePage::get_cwd()
       Dmsg2(100, "cwd=%s msg=%s\n", m_cwd.toUtf8().data(), m_console->msg());
    } else {
       Dmsg1(000, "Something went wrong read stat=%d\n", stat);
-      QMessageBox::critical(this, "Error", ".pwd command failed", QMessageBox::Ok);
+      QMessageBox::critical(this, "Error", tr(".pwd command failed"), QMessageBox::Ok);
    }
    m_console->discardToPrompt(); 
    return m_cwd.toUtf8().data();

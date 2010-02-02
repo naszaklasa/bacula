@@ -34,7 +34,7 @@
  *   Kern E. Sibbald, December 2001
  *
  *
- *   Version $Id: bscan.c 6831 2008-04-16 09:49:47Z kerns $
+ *   Version $Id: bscan.c 7237 2008-06-25 22:14:10Z kerns $
  */
 
 #include "bacula.h"
@@ -277,7 +277,7 @@ int main (int argc, char *argv[])
       struct stat sb;
       fstat(dev->fd(), &sb);
       currentVolumeSize = sb.st_size;
-      Pmsg1(000, _("First Volume Size = %sn"), 
+      Pmsg1(000, _("First Volume Size = %s\n"), 
          edit_uint64(currentVolumeSize, ed1));
    }
 
@@ -352,7 +352,7 @@ static bool bscan_mount_next_read_volume(DCR *dcr)
       struct stat sb;
       fstat(dev->fd(), &sb);
       currentVolumeSize = sb.st_size;
-      Pmsg1(000, _("First Volume Size = %sn"), 
+      Pmsg1(000, _("First Volume Size = %s\n"), 
          edit_uint64(currentVolumeSize, ed1));
    }
    return stat;

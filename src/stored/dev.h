@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, MM
  *
- *   Version $Id: dev.h 7060 2008-05-30 18:03:03Z kerns $
+ *   Version $Id: dev.h 7263 2008-06-30 12:56:49Z kerns $
  *
  */
 
@@ -279,9 +279,10 @@ public:
    char pool_name[MAX_NAME_LENGTH];   /* pool name */
    char pool_type[MAX_NAME_LENGTH];   /* pool type */
 
-   /* Device wait times ***FIXME*** look at durations */
-   char BadVolName[MAX_NAME_LENGTH];  /* Last wrong Volume mounted */
+   char UnloadVolName[MAX_NAME_LENGTH];  /* Last wrong Volume mounted */
    bool poll;                         /* set to poll Volume */
+
+   /* Device wait times ***FIXME*** look at durations */
    int min_wait;
    int max_wait;
    int max_num_wait;
@@ -363,7 +364,8 @@ public:
    void set_part_spooled(int val) { if (val) state |= ST_PART_SPOOLED; \
           else state &= ~ST_PART_SPOOLED;
    };
-   void set_unload() { m_unload = true; };
+   bool is_volume_to_unload() const { \
+      return m_unload && strcmp(VolHdr.VolumeName, UnloadVolName) == 0; };
    void set_load() { m_load = true; };
    void inc_reserved() { m_num_reserved++; }
    void set_mounted(int val) { if (val) state |= ST_MOUNTED; \
@@ -380,13 +382,14 @@ public:
    void clear_media() { state &= ~ST_MEDIA; };
    void clear_short_block() { state &= ~ST_SHORT; };
    void clear_freespace_ok() { state &= ~ST_FREESPACE_OK; };
-   void clear_unload() { m_unload = false; };
+   void clear_unload() { m_unload = false; UnloadVolName[0] = 0; };
    void clear_load() { m_load = false; };
    char *bstrerror(void) { return errmsg; };
    char *print_errmsg() { return errmsg; };
    int32_t get_slot() const { return m_slot; };
 
 
+   void set_unload();            /* in dev.c */
    void clear_volhdr();          /* in dev.c */
    void close();                 /* in dev.c */
    void close_part(DCR *dcr);    /* in dev.c */
@@ -533,6 +536,7 @@ public:
    void mark_volume_in_error();
    void mark_volume_not_inchanger();
    int try_autolabel(bool opened);
+   bool find_a_volume();
    bool is_suitable_volume_mounted();
    bool is_eod_valid();
    int check_volume_label(bool &ask, bool &autochanger);
