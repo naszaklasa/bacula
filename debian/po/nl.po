@@ -34,7 +34,6 @@ msgstr ""
 #. Description
 #: ../bacula-director-sqlite3.templates:2001
 #, fuzzy
-#| msgid "Create tables for Bacula's Catalog?"
 msgid "Create tables for Bacula's catalog?"
 msgstr "Tabellen creëren voor de catalogus van Bacula?"
 
@@ -42,9 +41,6 @@ msgstr "Tabellen creëren voor de catalogus van Bacula?"
 #. Description
 #: ../bacula-director-sqlite3.templates:2001
 #, fuzzy
-#| msgid ""
-#| "The tables needed for Bacula's catalog are missing.  This is normal for a "
-#| "fresh install of Bacula."
 msgid ""
 "The tables needed for Bacula's catalog are missing. This is normal for a "
 "fresh install of Bacula."
@@ -56,9 +52,6 @@ msgstr ""
 #. Description
 #: ../bacula-director-sqlite3.templates:2001
 #, fuzzy
-#| msgid ""
-#| "These tables are needed for the Bacula director to function. Should these "
-#| "tables be automatically set up for you?"
 msgid ""
 "These tables are needed for the Bacula director to function. Please choose "
 "whether these tables should be automatically created."
@@ -70,7 +63,6 @@ msgstr ""
 #. Description
 #: ../bacula-director-sqlite3.templates:3001
 #, fuzzy
-#| msgid "Remove Catalog on purge?"
 msgid "Remove catalog on purge?"
 msgstr "Catalogus verwijderen bij wissen (purge)?"
 

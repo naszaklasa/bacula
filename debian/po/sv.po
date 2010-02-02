@@ -38,8 +38,8 @@ msgid ""
 "The tables needed for Bacula's catalog are missing. This is normal for a "
 "fresh install of Bacula."
 msgstr ""
-"Tabeller som behövs för Bacula-kataloger saknas, detta är normalt för nya"
-"installationer."
+"Tabeller som behövs för Bacula-kataloger saknas, detta är normalt för "
+"nyainstallationer."
 
 #. Type: boolean
 #. Description
@@ -48,8 +48,8 @@ msgid ""
 "These tables are needed for the Bacula director to function. Please choose "
 "whether these tables should be automatically created."
 msgstr ""
-"Dessa tabeller behövs för att Baculas kataloger ska fungera. Välj om dessa"
-"tabeller ska skapas automatiskt eller ej."
+"Dessa tabeller behövs för att Baculas kataloger ska fungera. Välj om "
+"dessatabeller ska skapas automatiskt eller ej."
 
 #. Type: boolean
 #. Description

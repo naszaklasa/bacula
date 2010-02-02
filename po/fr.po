@@ -5797,7 +5797,7 @@ msgstr "Spooling des données...\n"
 
 #: src/dird/ua_status.c:722 src/dird/ua_status.c:773 src/lib/util.c:247
 msgid "Dir inserting Attributes"
-msgstr ""
+msgstr "Dir insert les attributs"
 
 #: src/dird/ua_status.c:727
 #, c-format
@@ -8667,9 +8667,9 @@ msgid "Ready to read from volume \"%s\" on device %s.\n"
 msgstr "Prêt à lire les données du volume « %s » depuis le device %s.\n"
 
 #: src/stored/acquire.c:363
-#, c-format
+#, fuzzy, c-format
 msgid "Want to append, but device %s is busy reading.\n"
-msgstr ""
+msgstr "3603 JobId=%u device %s est occupé en lecture.\n"
 
 #: src/stored/acquire.c:393
 #, c-format
@@ -18514,33 +18514,1377 @@ msgstr "Commande annulée.\n"
 msgid "Director disconnected."
 msgstr "Connexion du director le %s\n"
 
-#~ msgid "Reposition from (file:block) %u:%u to %u:%u\n"
-#~ msgstr "Repositionnement de (fichier:bloc) %u:%u à %u:%u\n"
+#: src/dird/backup.c:448
+#, c-format
+msgid ""
+"Bacula %s %s (%s): %s\n"
+"  Build OS:               %s %s %s\n"
+"  JobId:                  %d\n"
+"  Job:                    %s\n"
+"  Backup Level:           %s%s\n"
+"  Client:                 \"%s\" %s\n"
+"  FileSet:                \"%s\" %s\n"
+"  Pool:                   \"%s\" (From %s)\n"
+"  Storage:                \"%s\" (From %s)\n"
+"  Scheduled time:         %s\n"
+"  Start time:             %s\n"
+"  End time:               %s\n"
+"  Elapsed time:           %s\n"
+"  Priority:               %d\n"
+"  FD Files Written:       %s\n"
+"  SD Files Written:       %s\n"
+"  FD Bytes Written:       %s (%sB)\n"
+"  SD Bytes Written:       %s (%sB)\n"
+"  Rate:                   %.1f KB/s\n"
+"  Software Compression:   %s\n"
+"  VSS:                    %s\n"
+"  Storage Encryption:     %s\n"
+"  Volume name(s):         %s\n"
+"  Volume Session Id:      %d\n"
+"  Volume Session Time:    %d\n"
+"  Last Volume Bytes:      %s (%sB)\n"
+"  Non-fatal FD errors:    %d\n"
+"  SD Errors:              %d\n"
+"  FD termination status:  %s\n"
+"  SD termination status:  %s\n"
+"  Termination:            %s\n"
+"\n"
+msgstr ""
+"Bacula %s %s (%s): %s\n"
+"  Build OS :               %s %s %s\n"
+"  JobId :                  %d\n"
+"  Job :                    %s\n"
+"  Niveau de backup :       %s%s\n"
+"  Client :                 « %s » %s\n"
+"  FileSet :                « %s » %s\n"
+"  Pool :                   « %s » (Depuis %s)\n"
+"  Storage :                « %s » (Depuis %s)\n"
+"  Date prévue :            %s\n"
+"  Date de début :          %s\n"
+"  Date de fin :            %s\n"
+"  Temps écoulé :           %s\n"
+"  Priorité :               %d\n"
+"  Fichiers écrits FD :     %s\n"
+"  Fichiers écrits SD :     %s\n"
+"  Octets écrits FD :       %s (%so)\n"
+"  Octets écrits SD :       %s (%so)\n"
+"  Débit :                  %.1f Ko/s\n"
+"  Compression logicielle : %s\n"
+"  VSS :                    %s\n"
+"  Cryptage des médias :    %s\n"
+"  Nom des Volumes :        %s\n"
+"  Volume Session Id :      %d\n"
+"  Volume Session date :    %d\n"
+"  Taille du volume :       %s (%so)\n"
+"  Erreurs FD non fatales : %d\n"
+"  Erreurs du SD :          %d\n"
+"  Statut de fin du FD :    %s\n"
+"  Statut de fin du SD :    %s\n"
+"  Statut de fin :          %s\n"
 
-#~ msgid "Cannot select %s in batch mode.\n"
-#~ msgstr "Impossible de choisir %s en mode batch.\n"
+#: src/dird/ua_update.c:719
+msgid "Enter new RecyclePool name: "
+msgstr "Saisissez le nouveau RecyclePool : "
 
-#~ msgid "add media to a pool"
-#~ msgstr "ajouter un média dans un pool"
+#: src/dird/getmsg.c:169
+#, c-format
+msgid "Job not found: %s\n"
+msgstr "Job non trouvé : %s\n"
 
-#~ msgid "prune expired records from catalog"
-#~ msgstr "purge les entrées expirées du catalogue"
+#: src/dird/migrate.c:144 src/dird/migrate.c:154
+msgid "No previous Job found to migrate.\n"
+msgstr "Aucun Job trouvé pour la migration.\n"
 
-#~ msgid "relabel a tape"
-#~ msgstr "re-labélise une bande"
+#: src/dird/migrate.c:156
+#, fuzzy
+msgid "Previous Job has no data to migrate.\n"
+msgstr "Aucun volume trouvé pour la restauration.\n"
 
-#~ msgid "run <job-name>"
-#~ msgstr "run <nom-job> -- lance un job"
+#: src/dird/migrate.c:278 src/dird/migrate.c:837
+#, fuzzy, c-format
+msgid "Could not get job record for JobId %s to migrate. ERR=%s"
+msgstr "Impossible de récupérer le Job du JobId=%s : ERR=%s\n"
 
-#~ msgid "status [storage | client]=<name>"
-#~ msgstr ""
-#~ "status [storage | client]=<name> -- affiche le statut d'un composant"
+#: src/dird/migrate.c:287
+#, c-format
+msgid "JobId %s already migrated probably by another Job. Migration stopped.\n"
+msgstr ""
 
-#~ msgid "sets debug level"
-#~ msgstr "positionne le niveau de debug"
+#: src/dird/migrate.c:295
+#, c-format
+msgid "Start Migration JobId %s, Job=%s\n"
+msgstr "Début de la Migration JobId %s, Job=%s\n"
 
-#~ msgid "unmount <storage-name>"
-#~ msgstr "unmount <nom-storage> -- démonte un lecteur"
+#: src/dird/migrate.c:662
+msgid "No Migration SQL selection pattern specified.\n"
+msgstr ""
+
+#: src/dird/migrate.c:693 src/dird/migrate.c:700 src/dird/migrate.c:714
+#: src/dird/migrate.c:778
+msgid "No Volumes found to migrate.\n"
+msgstr "Aucun volume trouvé pour la migration.\n"
+
+#: src/dird/migrate.c:785
+msgid "Unknown Migration Selection Type.\n"
+msgstr ""
+
+#: src/dird/migrate.c:797 src/dird/migrate.c:816 src/dird/migrate.c:829
+#, fuzzy
+msgid "No JobIds found to migrate.\n"
+msgstr "Aucun volume trouvé pour la restauration.\n"
+
+#: src/dird/migrate.c:801
+#, fuzzy, c-format
+msgid "The following %u JobId%s were chosen to be migrated: %s\n"
+msgstr "Les fichiers suivants sont absents :\n"
+
+#: src/dird/migrate.c:842
+#, c-format
+msgid "Migration using JobId=%s Job=%s\n"
+msgstr "Migration utilisant JobId=%s Job=%s\n"
+
+#: src/dird/migrate.c:875
+#, c-format
+msgid "Migration JobId %d started.\n"
+msgstr ""
+
+#: src/dird/migrate.c:894
+#, fuzzy, c-format
+msgid "No %s found to migrate.\n"
+msgstr "Aucun volume trouvé pour la restauration.\n"
+
+#: src/dird/migrate.c:927 src/dird/migrate.c:1025
+#, fuzzy, c-format
+msgid "No %ss found to migrate.\n"
+msgstr "Aucun volume trouvé pour la restauration.\n"
+
+#: src/dird/migrate.c:949
+#, c-format
+msgid "No Migration %s selection pattern specified.\n"
+msgstr ""
+
+#: src/dird/migrate.c:965
+#, c-format
+msgid "Query of Pool \"%s\" returned no Jobs to migrate.\n"
+msgstr ""
+
+#: src/dird/migrate.c:1003
+msgid "Regex pattern matched no Jobs to migrate.\n"
+msgstr ""
+
+#: src/dird/migrate.c:1182
+#, fuzzy, c-format
+msgid "%s -- no files to migrate"
+msgstr "Aucun volume trouvé pour la restauration.\n"
+
+#: src/dird/migrate.c:1198
+#, fuzzy, c-format
+msgid ""
+"Bacula %s %s (%s): %s\n"
+"  Build OS:               %s %s %s\n"
+"  Prev Backup JobId:      %s\n"
+"  New Backup JobId:       %s\n"
+"  Migration JobId:        %s\n"
+"  Migration Job:          %s\n"
+"  Backup Level:           %s%s\n"
+"  Client:                 %s\n"
+"  FileSet:                \"%s\" %s\n"
+"  Read Pool:              \"%s\" (From %s)\n"
+"  Read Storage:           \"%s\" (From %s)\n"
+"  Write Pool:             \"%s\" (From %s)\n"
+"  Write Storage:          \"%s\" (From %s)\n"
+"  Start time:             %s\n"
+"  End time:               %s\n"
+"  Elapsed time:           %s\n"
+"  Priority:               %d\n"
+"  SD Files Written:       %s\n"
+"  SD Bytes Written:       %s (%sB)\n"
+"  Rate:                   %.1f KB/s\n"
+"  Volume name(s):         %s\n"
+"  Volume Session Id:      %d\n"
+"  Volume Session Time:    %d\n"
+"  Last Volume Bytes:      %s (%sB)\n"
+"  SD Errors:              %d\n"
+"  SD termination status:  %s\n"
+"  Termination:            %s\n"
+"\n"
+msgstr ""
+"Bacula %s %s (%s): %s\n"
+"  Build OS :               %s %s %s\n"
+"  JobId :                  %d\n"
+"  Job :                    %s\n"
+"  Niveau de backup :       %s%s\n"
+"  Client :                 « %s » %s\n"
+"  FileSet :                « %s » %s\n"
+"  Pool :                   « %s » (Depuis %s)\n"
+"  Storage :                « %s » (Depuis %s)\n"
+"  Date prévue :            %s\n"
+"  Date de début :          %s\n"
+"  Date de fin :            %s\n"
+"  Temps écoulé :           %s\n"
+"  Priorité :               %d\n"
+"  Fichiers écrits FD :     %s\n"
+"  Fichiers écrits SD :     %s\n"
+"  Octets écrits FD :       %s (%so)\n"
+"  Octets écrits SD :       %s (%so)\n"
+"  Débit :                  %.1f Ko/s\n"
+"  Compression logicielle : %s\n"
+"  Nom des Volumes :        %s\n"
+"  Volume Session Id :      %d\n"
+"  Volume Session date :    %d\n"
+"  Taille du volume :       %s (%so)\n"
+"  Erreurs FD non fatales : %d\n"
+"  Erreurs du SD :          %d\n"
+"  Statut de fin du FD :    %s\n"
+"  Statut de fin du SD :    %s\n"
+"  Statut de fin :          %s\n"
+
+#: src/dird/ua_select.c:562
+msgid "Enter MediaId or Volume name: "
+msgstr "Saisissez le MediaId ou le nom du Volume : "
+
+#: src/dird/ua_select.c:754
+#, c-format
+msgid "Cannot select %s in batch mode.\n"
+msgstr "Impossible de choisir %s en mode batch.\n"
+
+#: src/dird/verify.c:421
+#, fuzzy, c-format
+msgid ""
+"Bacula %s %s (%s): %s\n"
+"  Build OS:               %s %s %s\n"
+"  JobId:                  %d\n"
+"  Job:                    %s\n"
+"  FileSet:                %s\n"
+"  Verify Level:           %s\n"
+"  Client:                 %s\n"
+"  Verify JobId:           %d\n"
+"  Verify Job:             %s\n"
+"  Start time:             %s\n"
+"  End time:               %s\n"
+"  Files Expected:         %s\n"
+"  Files Examined:         %s\n"
+"  Non-fatal FD errors:    %d\n"
+"  FD termination status:  %s\n"
+"  SD termination status:  %s\n"
+"  Termination:            %s\n"
+"\n"
+msgstr ""
+"Bacula %s %s (%s): %s\n"
+"  Build OS:               %s %s %s\n"
+"  JobId :                 %d\n"
+"  Job :                   %s\n"
+"  FileSet:                %s\n"
+"  Client :                %s\n"
+"  Début :                 %s\n"
+"  Fin :                   %s\n"
+"  Fichiers attendus :     %s\n"
+"  Fichiers restaurés :    %s\n"
+"  Octets restaurés :      %s\n"
+"  Débit :                 %.1f Ko/s\n"
+"  Erreurs du FD :         %d\n"
+"  Statut de fin du FD :   %s\n"
+"  Statut de fin du SD :   %s\n"
+"  Etat :                  %s\n"
+
+#: src/dird/verify.c:456
+#, fuzzy, c-format
+msgid ""
+"Bacula %s %s (%s): %s\n"
+"  Build:                  %s %s %s\n"
+"  JobId:                  %d\n"
+"  Job:                    %s\n"
+"  FileSet:                %s\n"
+"  Verify Level:           %s\n"
+"  Client:                 %s\n"
+"  Verify JobId:           %d\n"
+"  Verify Job:             %s\n"
+"  Start time:             %s\n"
+"  End time:               %s\n"
+"  Files Examined:         %s\n"
+"  Non-fatal FD errors:    %d\n"
+"  FD termination status:  %s\n"
+"  Termination:            %s\n"
+"\n"
+msgstr ""
+"Bacula %s (%s) : %s\n"
+"  JobId :                 %d\n"
+"  Job :                   %s\n"
+"  Client :                %s\n"
+"  Début :                 %s\n"
+"  Fin :                   %s\n"
+"  Fichiers attendus :     %s\n"
+"  Fichiers restaurés :    %s\n"
+"  Octets restaurés :      %s\n"
+"  Débit :                 %.1f Ko/s\n"
+"  Erreurs du FD :         %d\n"
+"  Statut de fin du FD :   %s\n"
+"  Statut de fin du SD :   %s\n"
+"  Etat :                  %s\n"
+
+#: src/dird/verify.c:714
+#, c-format
+msgid "      %s not same. File=%s Cat=%s\n"
+msgstr ""
+
+#: src/dird/verify.c:717
+#, c-format
+msgid "      %s differs.\n"
+msgstr ""
+
+#: src/dird/verify.c:770
+#, fuzzy, c-format
+msgid ""
+"\n"
+"The following files are in the Catalog but not on %s:\n"
+msgstr ""
+"Les fichiers suivants sont dans le catalogue mais absents du disque :\n"
+
+#: src/dird/ua_restore.c:1031
+#, c-format
+msgid ""
+"\n"
+"Building directory tree for JobId %s ...  "
+msgstr ""
+"\n"
+"Analyse des répertoires pour le JobId %s..."
+
+#: src/dird/ua_restore.c:1043
+msgid ""
+"\n"
+"There were no files inserted into the tree, so file selection\n"
+"is not possible.Most likely your retention policy pruned the files\n"
+msgstr ""
+
+#: src/dird/ua_restore.c:1061
+#, c-format
+msgid ""
+"\n"
+"1 Job, %s files inserted into the tree and marked for extraction.\n"
+msgstr ""
+"\n"
+"1 Job, %s fichiers analysés et sélectionnés pour la restauration.\n"
+
+#: src/dird/ua_restore.c:1065
+#, c-format
+msgid ""
+"\n"
+"1 Job, %s files inserted into the tree.\n"
+msgstr ""
+"\n"
+"1 Job, %s fichiers analysés\n"
+
+#: src/dird/ua_restore.c:1071
+#, c-format
+msgid ""
+"\n"
+"%d Jobs, %s files inserted into the tree and marked for extraction.\n"
+msgstr ""
+"\n"
+"%d Jobs, %s fichiers analysés et sélectionnés pour la restauration.\n"
+
+#: src/dird/ua_restore.c:1075
+#, c-format
+msgid ""
+"\n"
+"%d Jobs, %s files inserted into the tree.\n"
+msgstr ""
+"\n"
+"%d Jobs, %s fichiers analysés.\n"
+
+#: src/dird/job.c:1202
+msgid "Could not start clone job.\n"
+msgstr ""
+
+#: src/dird/ua_cmds.c:104
+msgid "add media to a pool"
+msgstr "ajouter un média dans un pool"
+
+#: src/dird/ua_cmds.c:107
+msgid "cancel [<jobid=nnn> | <job=name>] -- cancel a job"
+msgstr "cancel [<jobid=nnn> | <job=name>] -- annulation d'un job"
+
+#: src/dird/ua_cmds.c:108
+msgid "create DB Pool from resource"
+msgstr ""
+
+#: src/dird/ua_cmds.c:109
+msgid "delete [pool=<pool-name> | media volume=<volume-name>]"
+msgstr "delete [pool=<pool-name> | media volume=<volume-name>]"
+
+#: src/dird/ua_cmds.c:112
+msgid "performs FileSet estimate, listing gives full listing"
+msgstr ""
+"estimate <listing> -- estime un FileSet (listing donne la liste des fichiers)"
+
+#: src/dird/ua_cmds.c:116
+msgid ""
+"list [pools | jobs | jobtotals | media <pool=pool-name> | files <jobid=nn>]; "
+"from catalog"
+msgstr ""
+"list [pools | jobs | jobtotals | media <pool=pool-name> | files <jobid=nn>] "
+"-- depuis le catalogue"
+
+#: src/dird/ua_cmds.c:121
+msgid "mount <storage-name>"
+msgstr ""
+
+#: src/dird/ua_cmds.c:122
+msgid "prune expired records from catalog"
+msgstr "purge les entrées expirées du catalogue"
+
+#: src/dird/ua_cmds.c:128
+msgid "relabel a tape"
+msgstr "re-labélise une bande"
+
+#: src/dird/ua_cmds.c:131
+msgid "run <job-name>"
+msgstr "run <nom-job> -- lance un job"
+
+#: src/dird/ua_cmds.c:132
+msgid "status [storage | client]=<name>"
+msgstr "status [storage | client]=<name> -- affiche le statut d'un composant"
+
+#: src/dird/ua_cmds.c:133
+msgid "sets debug level"
+msgstr "positionne le niveau de debug"
+
+#: src/dird/ua_cmds.c:139
+msgid "unmount <storage-name>"
+msgstr "unmount <nom-storage> -- démonte un lecteur"
+
+#: src/dird/ua_cmds.c:140
+msgid "umount <storage-name> for old-time Unix guys"
+msgstr "umount <nom-storage> -- démonte un lecteur"
+
+#: src/dird/ua_cmds.c:142
+msgid "use catalog xxx"
+msgstr "utilise le catalogue xxx"
+
+#: src/dird/ua_cmds.c:145
+msgid ""
+"wait until no jobs are running [<jobname=name> | <jobid=nnn> | "
+"<ujobid=complete_name>]"
+msgstr ""
+
+#: src/dird/authenticate.c:108
+#, fuzzy, c-format
+msgid ""
+"Director unable to authenticate with Storage daemon at \"%s:%d\". Possible "
+"causes:\n"
+"Passwords or names not the same or\n"
+"Maximum Concurrent Jobs exceeded on the SD or\n"
+"SD networking messed up (restart daemon).\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+"Le Director a rencontré un problème d'authentification avec le Storage "
+"Daemon \"%s:%d\".\n"
+"Les causes possibles sont :\n"
+"- Les mots de pass ne correspondent pas ;\n"
+"- Le nombre maximum de job concurrent est atteint sur le SD ;\n"
+"- La connexion réseau du SD est tombée (il faut le redémarrer).\n"
+"Vous trouverez de l'aide sur\n"
+"http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors\n"
+
+#: src/dird/authenticate.c:210
+#, fuzzy, c-format
+msgid ""
+"Unable to authenticate with File daemon at \"%s:%d\". Possible causes:\n"
+"Passwords or names not the same or\n"
+"Maximum Concurrent Jobs exceeded on the FD or\n"
+"FD networking messed up (restart daemon).\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+"Impossible de s'authentifier avec le File Daemon  « %s:%d ».\n"
+"Les causes possibles sont :\n"
+"- Les mots de pass ne correspondent pas ;\n"
+"- Le nombre maximum de job concurrent est atteint sur le FD ;\n"
+"- La connexion réseau du FD est tombée (il faut le redémarrer).\n"
+"Vous trouverez de l'aide sur\n"
+"http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors\n"
+
+#: src/dird/dird.c:95
+#, c-format
+msgid ""
+"\n"
+"Version: %s (%s)\n"
+"\n"
+"Usage: dird [-f -s] [-c config_file] [-d debug_level] [config_file]\n"
+"       -c <file>   set configuration file to file\n"
+"       -dnn        set debug level to nn\n"
+"       -f          run in foreground (for debugging)\n"
+"       -g          groupid\n"
+"       -r <job>    run <job> now\n"
+"       -s          no signals\n"
+"       -t          test - read configuration and exit\n"
+"       -u          userid\n"
+"       -v          verbose user messages\n"
+"       -?          print this message.\n"
+"\n"
+msgstr ""
+"\n"
+"Version : %s (%s)\n"
+"\n"
+"Usage : dird [-f -s] [-c config_file] [-d debug_level] [config_file]\n"
+"      -c <fich>      utilise fich comme fichier de configuration\n"
+"      -dnn           positionne le niveau de debug à nn\n"
+"      -f             reste en avant-plan (pour debugger)\n"
+"      -g             groupid\n"
+"      -r <job>       lance <job> maintenant\n"
+"      -s             pas de signaux\n"
+"      -t             test - lit seulement le fichier de configuration\n"
+"      -u             userid\n"
+"      -v             affiche les messages utilisateurs\n"
+"      -?             affiche ce message.\n"
+"\n"
+
+#: src/dird/restore.c:302
+#, fuzzy, c-format
+msgid ""
+"Bacula %s %s (%s): %s\n"
+"  Build OS:               %s %s %s\n"
+"  JobId:                  %d\n"
+"  Job:                    %s\n"
+"  Restore Client:         %s\n"
+"  Start time:             %s\n"
+"  End time:               %s\n"
+"  Files Expected:         %s\n"
+"  Files Restored:         %s\n"
+"  Bytes Restored:         %s\n"
+"  Rate:                   %.1f KB/s\n"
+"  FD Errors:              %d\n"
+"  FD termination status:  %s\n"
+"  SD termination status:  %s\n"
+"  Termination:            %s\n"
+"\n"
+msgstr ""
+"Bacula %s %s (%s): %s\n"
+"  Build OS:               %s %s %s\n"
+"  JobId :                 %d\n"
+"  Job :                   %s\n"
+"  Client :                %s\n"
+"  Début :                 %s\n"
+"  Fin :                   %s\n"
+"  Fichiers attendus :     %s\n"
+"  Fichiers restaurés :    %s\n"
+"  Octets restaurés :      %s\n"
+"  Débit :                 %.1f Ko/s\n"
+"  Erreurs du FD :         %d\n"
+"  Statut de fin du FD :   %s\n"
+"  Statut de fin du SD :   %s\n"
+"  Etat :                  %s\n"
+
+#: src/dird/ua_tree.c:130 src/dird/ua_tree.c:145
+msgid "Invalid command. Enter \"done\" to exit.\n"
+msgstr "Commande invalide. Tapez « done » pour quitter.\n"
+
+#: src/dird/bsr.c:256
+msgid "No files found to restore/migrate. No bootstrap file written.\n"
+msgstr ""
+"Aucun fichier trouvé pour la restauration/migration. Pas de fichier "
+"Bootstrap écrit.\n"
+
+#: src/dird/dird_conf.c:591
+#, c-format
+msgid ""
+"Catalog: name=%s address=%s DBport=%d db_name=%s\n"
+"      db_user=%s MutliDBConn=%d\n"
+msgstr ""
+
+#: src/dird/ua_run.c:220
+#, c-format
+msgid "Level %s not valid.\n"
+msgstr "Le type %s est invalide.\n"
+
+#: src/dird/ua_run.c:695
+#, c-format
+msgid ""
+"Run %s job\n"
+"JobName:  %s\n"
+"Level:    %s\n"
+"Client:   %s\n"
+"FileSet:  %s\n"
+"Pool:     %s (From %s)\n"
+"Storage:  %s (From %s)\n"
+"When:     %s\n"
+"Priority: %d\n"
+msgstr ""
+"Lancement du job %s\n"
+"JobName  : %s\n"
+"Niveau   : %s\n"
+"Client   : %s\n"
+"FileSet  : %s\n"
+"Pool     : %s (Depuis %s)\n"
+"Storage  : %s (Depuis %s)\n"
+"Quand    : %s\n"
+"Priorité : %d\n"
+
+#: src/dird/ua_run.c:768
+#, fuzzy, c-format
+msgid ""
+"Run Restore job\n"
+"JobName:        f%s\n"
+"Bootstrap:       %s\n"
+"RegexWhere:      %s\n"
+"Replace:         %s\n"
+"FileSet:         %s\n"
+"Backup Client:   %s\n"
+"Restore Client:  %s\n"
+"Storage:         %s\n"
+"When:            %s\n"
+"Catalog:         %s\n"
+"Priority:        %d\n"
+msgstr ""
+"Lancement de la restauration\n"
+"JobName :         %s\n"
+"Bootstrap :       %s\n"
+"RegexWhere :      %s\n"
+"Écrasement :      %s\n"
+"FileSet :         %s\n"
+"Backup Client :   %s\n"
+"Restore Client :  %s\n"
+"Storage :         %s\n"
+"Quand :           %s\n"
+"Catalogue :       %s\n"
+"Priorité :        %d\n"
+
+#: src/dird/ua_run.c:793
+#, c-format
+msgid ""
+"Run Restore job\n"
+"JobName:         %s\n"
+"Bootstrap:       %s\n"
+"Where:           %s\n"
+"Replace:         %s\n"
+"FileSet:         %s\n"
+"Backup Client:   %s\n"
+"Restore Client:  %s\n"
+"Storage:         %s\n"
+"When:            %s\n"
+"Catalog:         %s\n"
+"Priority:        %d\n"
+msgstr ""
+"Lancement de la restauration\n"
+"JobName :        %s\n"
+"Bootstrap :      %s\n"
+"Déplacement :    %s\n"
+"Écrasement :     %s\n"
+"FileSet :        %s\n"
+"Backup Client :  %s\n"
+"Restore Client : %s\n"
+"Storage :        %s\n"
+"Quand :          %s\n"
+"Catalogue :      %s\n"
+"Priorité :       %d\n"
+
+#: src/dird/ua_run.c:835
+#, c-format
+msgid ""
+"Replace:    %s\n"
+"Client:     %s\n"
+"Storage:    %s\n"
+"JobId:      %s\n"
+"When:       %s\n"
+"Catalog:    %s\n"
+"Priority:   %d\n"
+msgstr ""
+"Écrasement  : %s\n"
+"Client      : %s\n"
+"Storage     : %s\n"
+"JobId       : %s\n"
+"Quand       : %s\n"
+"Catalogue   : %s\n"
+"Priorité    : %d\n"
+
+#: src/dird/ua_run.c:854
+#, fuzzy, c-format
+msgid ""
+"Run Migration job\n"
+"JobName:       %s\n"
+"Bootstrap:     %s\n"
+"Client:        %s\n"
+"FileSet:       %s\n"
+"Pool:          %s (From %s)\n"
+"Read Storage:  %s (From %s)\n"
+"Write Storage: %s (From %s)\n"
+"JobId:         %s\n"
+"When:          %s\n"
+"Catalog:       %s\n"
+"Priority:      %d\n"
+msgstr ""
+"Lancement de la restauration\n"
+"JobName     : %s\n"
+"Bootstrap   : %s\n"
+"Destination : %s\n"
+"Écrasement  : %s\n"
+"Client      : %s\n"
+"Storage     : %s\n"
+"JobId       : %s\n"
+"Quand       : %s\n"
+"Catalogue   : %s\n"
+"Priorité    : %d\n"
+
+#: src/dird/jobq.c:124 src/dird/jobq.c:258 src/dird/jobq.c:323
+#: src/dird/jobq.c:404
+#, c-format
+msgid "pthread_mutex_lock: ERR=%s\n"
+msgstr ""
+
+#: src/dird/jobq.c:153
+#, c-format
+msgid "pthread_mutex_unlock: ERR=%s\n"
+msgstr ""
+
+#: src/filed/backup.c:400
+#, c-format
+msgid "Python reader program \"%s\" not found.\n"
+msgstr ""
+
+#: src/filed/backup.c:974
+#, c-format
+msgid "Error reading ACL of %s\n"
+msgstr ""
+
+#: src/filed/job.c:1238
+#, fuzzy, c-format
+msgid ""
+"DIR and FD clocks differ by %d seconds, FD automatically compensating.\n"
+msgstr ""
+"L'horloge du client et du director ont %d secondes d'écart, le client s'est "
+"ajusté automatiquement.\n"
+
+#: src/filed/authenticate.c:246
+msgid ""
+"Authorization key rejected by Storage daemon.\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+
+#: src/filed/restore.c:588
+#, c-format
+msgid "Can't restore ACL of %s\n"
+msgstr ""
+
+#: src/filed/restore.c:600
+#, c-format
+msgid "Can't restore default ACL of %s\n"
+msgstr ""
+
+#: src/filed/filed.c:65
+#, fuzzy, c-format
+msgid ""
+"\n"
+"Version: %s (%s)\n"
+"\n"
+"Usage: bacula-fd [-f -s] [-c config_file] [-d debug_level]\n"
+"        -c <file>   use <file> as configuration file\n"
+"        -dnn        set debug level to nn\n"
+"        -f          run in foreground (for debugging)\n"
+"        -g          groupid\n"
+"        -s          no signals (for debugging)\n"
+"        -t          test configuration file and exit\n"
+"        -u          userid\n"
+"        -v          verbose user messages\n"
+"        -?          print this message.\n"
+"\n"
+msgstr ""
+"\n"
+"Version : %s (%s)\n"
+"\n"
+"Usage : dird [-f -s] [-c config_file] [-d debug_level] [config_file]\n"
+"      -c <fich>      utilise fich comme fichier de configuration\n"
+"      -dnn           positionne le niveau de debug à nn\n"
+"      -f             reste en avant-plan (pour debugger)\n"
+"      -g             groupid\n"
+"      -r <job>       lance <job> maintenant\n"
+"      -s             pas de signaux\n"
+"      -t             test - lit seulement le fichier de configuration\n"
+"      -u             userid\n"
+"      -v             affiche les messages utilisateurs\n"
+"      -?             affiche ce message.\n"
+"\n"
+
+#: src/gnome2-console/authenticate.c:90
+#, fuzzy
+msgid ""
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+"Problème d'authentification entre le client et le director.\n"
+"Le plus souvent, les mots de pass ne correspondent pas.\n"
+"Vous trouverez de l'aide sur\n"
+"http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors\n"
+
+#: src/cats/sql_create.c:856
+#, fuzzy, c-format
+msgid "Could not init batch database: \"%s\".\n"
+msgstr "Impossible d'ouvrir la base de données « %s ».\n"
+
+#: src/cats/postgresql.c:149
+msgid ""
+"PostgreSQL configuration problem. PostgreSQL library is not thread safe. "
+"Connot continue.\n"
+msgstr ""
+
+#: src/cats/postgresql.c:699 src/cats/postgresql.c:746
+#, c-format
+msgid "error ending batch mode: %s\n"
+msgstr "erreur en terminant le mode batch: %s\n"
+
+#: src/cats/bdb_update.c:88 src/cats/bdb_update.c:119
+#, fuzzy, c-format
+msgid "Error updating DB Job file. ERR=%s\n"
+msgstr ""
+"Erreur pendant l'écriture des données vers le fichier de spool. ERR=%s\n"
+
+#: src/cats/bdb_update.c:158 src/cats/bdb_update.c:194
+#, fuzzy, c-format
+msgid "Error updating DB Media file. ERR=%s\n"
+msgstr "Impossible de mettre à jour les informations du Volume : ERR=%s"
+
+#: src/wx-console/authenticate.c:167 src/console/authenticate.c:160
+msgid ""
+"Director authorization problem.\n"
+"Most likely the passwords do not agree.\n"
+"If you are using TLS, there may have been a certificate validation error "
+"during the TLS handshake.\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+"Problème d'authentification avec le director.\n"
+"Le plus souvent, les mots de pass ne correspondent pas.\n"
+"Si vous utilisez TLS, il peut y avoir une erreur de validation du "
+"certificat\n"
+"pendant l'initialisation de la connexion TLS.\n"
+"Vous trouverez de l'aide sur\n"
+"http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors\n"
+
+#: src/stored/stored.c:82
+#, fuzzy, c-format
+msgid ""
+"\n"
+"Version: %s (%s)\n"
+"\n"
+"Usage: stored [options] [-c config_file] [config_file]\n"
+"        -c <file>   use <file> as configuration file\n"
+"        -dnn        set debug level to nn\n"
+"        -f          run in foreground (for debugging)\n"
+"        -g <group>  set groupid to group\n"
+"        -p          proceed despite I/O errors\n"
+"        -s          no signals (for debugging)\n"
+"        -t          test - read config and exit\n"
+"        -u <user>   userid to <user>\n"
+"        -v          verbose user messages\n"
+"        -?          print this message.\n"
+"\n"
+msgstr ""
+"Copyright (C) 2000-2005 Kern Sibbald.\n"
+"\n"
+"Version : %s (%s)\n"
+"\n"
+"Usage : dird [-f -s] [-c config_file] [-d debug_level] [config_file]\n"
+"      -c <fich>      utilise fich comme fichier de configuration\n"
+"      -dnn           positionne le niveau de debug à nn\n"
+"      -f             reste en avant-plan (pour debugger)\n"
+"      -g             groupid\n"
+"      -r <job>       lance <job> maintenant\n"
+"      -s             pas de signaux\n"
+"      -t             test - lit seulement le fichier de configuration\n"
+"      -u             userid\n"
+"      -v             affiche les messages utilisateurs\n"
+"      -?             affiche ce message.\n"
+"\n"
+
+#: src/stored/read_record.c:347
+#, c-format
+msgid "Reposition from (file:block) %u:%u to %u:%u\n"
+msgstr "Repositionnement de (fichier:bloc) %u:%u à %u:%u\n"
+
+#: src/stored/reserve.c:858
+#, c-format
+msgid ""
+"\n"
+"     Device \"%s\" with MediaType \"%s\" requested by DIR not found in SD "
+"Device resources.\n"
+msgstr ""
+
+#: src/stored/bcopy.c:74
+#, fuzzy, c-format
+msgid ""
+"\n"
+"Version: %s (%s)\n"
+"\n"
+"Usage: bcopy [-d debug_level] <input-archive> <output-archive>\n"
+"       -b bootstrap      specify a bootstrap file\n"
+"       -c <file>         specify configuration file\n"
+"       -d <nn>           set debug level to <nn>\n"
+"       -i                specify input Volume names (separated by |)\n"
+"       -o                specify output Volume names (separated by |)\n"
+"       -p                proceed inspite of errors\n"
+"       -v                verbose\n"
+"       -w <dir>          specify working directory (default /tmp)\n"
+"       -?                print this message\n"
+"\n"
+msgstr ""
+"\n"
+"Version : %s (%s)\n"
+"\n"
+"Usage : dird [-f -s] [-c config_file] [-d debug_level] [config_file]\n"
+"      -c <fich>      utilise fich comme fichier de configuration\n"
+"      -dnn           positionne le niveau de debug à nn\n"
+"      -f             reste en avant-plan (pour debugger)\n"
+"      -g             groupid\n"
+"      -r <job>       lance <job> maintenant\n"
+"      -s             pas de signaux\n"
+"      -t             test - lit seulement le fichier de configuration\n"
+"      -u             userid\n"
+"      -v             affiche les messages utilisateurs\n"
+"      -?             affiche ce message.\n"
+"\n"
+
+#: src/stored/bextract.c:78
+#, fuzzy, c-format
+msgid ""
+"\n"
+"Version: %s (%s)\n"
+"\n"
+"Usage: bextract <options> <bacula-archive-device-name> <directory-to-store-"
+"files>\n"
+"       -b <file>       specify a bootstrap file\n"
+"       -c <file>       specify a configuration file\n"
+"       -d <nn>         set debug level to <nn>\n"
+"       -e <file>       exclude list\n"
+"       -i <file>       include list\n"
+"       -p              proceed inspite of I/O errors\n"
+"       -v              verbose\n"
+"       -V <volumes>    specify Volume names (separated by |)\n"
+"       -?              print this message\n"
+"\n"
+msgstr ""
+"Copyright (C) 2000-2005 Kern Sibbald.\n"
+"\n"
+"Version : %s (%s)\n"
+"\n"
+"Usage : dird [-f -s] [-c config_file] [-d debug_level] [config_file]\n"
+"      -c <fich>      utilise fich comme fichier de configuration\n"
+"      -dnn           positionne le niveau de debug à nn\n"
+"      -f             reste en avant-plan (pour debugger)\n"
+"      -g             groupid\n"
+"      -r <job>       lance <job> maintenant\n"
+"      -s             pas de signaux\n"
+"      -t             test - lit seulement le fichier de configuration\n"
+"      -u             userid\n"
+"      -v             affiche les messages utilisateurs\n"
+"      -?             affiche ce message.\n"
+"\n"
+
+#: src/stored/bextract.c:426
+msgid "===Write error===\n"
+msgstr "===Erreur d'écriture===\n"
+
+#: src/stored/bls.c:78
+#, fuzzy, c-format
+msgid ""
+"\n"
+"Version: %s (%s)\n"
+"\n"
+"Usage: bls [options] <device-name>\n"
+"       -b <file>       specify a bootstrap file\n"
+"       -c <file>       specify a config file\n"
+"       -d <nn>         set debug level to <nn>\n"
+"       -e <file>       exclude list\n"
+"       -i <file>       include list\n"
+"       -j              list jobs\n"
+"       -k              list blocks\n"
+"    (no j or k option) list saved files\n"
+"       -L              dump label\n"
+"       -p              proceed inspite of errors\n"
+"       -v              be verbose\n"
+"       -V              specify Volume names (separated by |)\n"
+"       -?              print this message\n"
+"\n"
+msgstr ""
+"Copyright (C) 2000-2005 Kern Sibbald.\n"
+"\n"
+"Version : %s (%s)\n"
+"\n"
+"Usage : dird [-f -s] [-c config_file] [-d debug_level] [config_file]\n"
+"      -c <fich>      utilise fich comme fichier de configuration\n"
+"      -dnn           positionne le niveau de debug à nn\n"
+"      -f             reste en avant-plan (pour debugger)\n"
+"      -g             groupid\n"
+"      -r <job>       lance <job> maintenant\n"
+"      -s             pas de signaux\n"
+"      -t             test - lit seulement le fichier de configuration\n"
+"      -u             userid\n"
+"      -v             affiche les messages utilisateurs\n"
+"      -?             affiche ce message.\n"
+"\n"
+
+#: src/stored/status.c:338
+#, c-format
+msgid ""
+"num_writers=%d block=%d\n"
+"\n"
+msgstr ""
+
+#: src/stored/bscan.c:115
+#, fuzzy, c-format
+msgid ""
+"\n"
+"Version: %s (%s)\n"
+"\n"
+"Usage: bscan [ options ] <bacula-archive>\n"
+"       -b bootstrap      specify a bootstrap file\n"
+"       -c <file>         specify configuration file\n"
+"       -d <nn>           set debug level to <nn>\n"
+"       -m                update media info in database\n"
+"       -n <name>         specify the database name (default bacula)\n"
+"       -u <user>         specify database user name (default bacula)\n"
+"       -P <password>     specify database password (default none)\n"
+"       -h <host>         specify database host (default NULL)\n"
+"       -p                proceed inspite of I/O errors\n"
+"       -r                list records\n"
+"       -s                synchronize or store in database\n"
+"       -S                show scan progress periodically\n"
+"       -v                verbose\n"
+"       -V <Volumes>      specify Volume names (separated by |)\n"
+"       -w <dir>          specify working directory (default from conf file)\n"
+"       -?                print this message\n"
+"\n"
+msgstr ""
+"Copyright (C) 2000-2005 Kern Sibbald.\n"
+"\n"
+"Version : %s (%s)\n"
+"\n"
+"Usage : dird [-f -s] [-c config_file] [-d debug_level] [config_file]\n"
+"      -c <fich>      utilise fich comme fichier de configuration\n"
+"      -dnn           positionne le niveau de debug à nn\n"
+"      -f             reste en avant-plan (pour debugger)\n"
+"      -g             groupid\n"
+"      -r <job>       lance <job> maintenant\n"
+"      -s             pas de signaux\n"
+"      -t             test - lit seulement le fichier de configuration\n"
+"      -u             userid\n"
+"      -v             affiche les messages utilisateurs\n"
+"      -?             affiche ce message.\n"
+"\n"
+
+#: src/stored/btape.c:2601
+#, fuzzy, c-format
+msgid ""
+"\n"
+"Version: %s (%s)\n"
+"\n"
+"Usage: btape <options> <device_name>\n"
+"       -b <file>   specify bootstrap file\n"
+"       -c <file>   set configuration file to file\n"
+"       -d <nn>     set debug level to <nn>\n"
+"       -p          proceed inspite of I/O errors\n"
+"       -s          turn off signals\n"
+"       -v          be verbose\n"
+"       -?          print this message.\n"
+"\n"
+msgstr ""
+") %s %s %s\n"
+"\n"
+"Usage : bconsole [-s] [-c config_file] [-d niveau_debug]\n"
+"       -c <file>   set configuration file to file\n"
+"       -dnn        set debug level to nn\n"
+"       -s          no signals\n"
+"       -t          test - lecture de la configuration et sortie\n"
+"\n"
+
+#: src/stored/authenticate.c:93
+#, c-format
+msgid ""
+"Connection from unknown Director %s at %s rejected.\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+
+#: src/stored/authenticate.c:126
+msgid ""
+"Incorrect password given by Director.\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+
+#: src/stored/authenticate.c:226 src/stored/authenticate.c:260
+#, c-format
+msgid ""
+"Incorrect authorization key from File daemon at %s rejected.\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+
+#: src/stored/block.c:694
+#, c-format
+msgid ""
+"Re-read of last block OK, but block numbers differ. Last block=%u Current "
+"block=%u.\n"
+msgstr ""
+
+#: src/tools/testls.c:55
+#, c-format
+msgid ""
+"\n"
+"Usage: testls [-d debug_level] [-] [pattern1 ...]\n"
+"       -a          print extended attributes (Win32 debug)\n"
+"       -dnn        set debug level to nn\n"
+"       -e          specify file of exclude patterns\n"
+"       -i          specify file of include patterns\n"
+"       -           read pattern(s) from stdin\n"
+"       -?          print this message.\n"
+"\n"
+"Patterns are file inclusion -- normally directories.\n"
+"Debug level >= 1 prints each file found.\n"
+"Debug level >= 10 prints path/file for catalog.\n"
+"Errors always printed.\n"
+"Files/paths truncated is number with len > 255.\n"
+"Truncation is only in catalog.\n"
+"\n"
+msgstr ""
+
+#: src/tools/testfind.c:66
+#, c-format
+msgid ""
+"\n"
+"Usage: testfind [-d debug_level] [-] [pattern1 ...]\n"
+"       -a          print extended attributes (Win32 debug)\n"
+"       -dnn        set debug level to nn\n"
+"       -c          specify config file containing FileSet resources\n"
+"       -f          specify which FileSet to use\n"
+"       -?          print this message.\n"
+"\n"
+"Patterns are used for file inclusion -- normally directories.\n"
+"Debug level >= 1 prints each file found.\n"
+"Debug level >= 10 prints path/file for catalog.\n"
+"Errors are always printed.\n"
+"Files/paths truncated is the number of files/paths with len > 255.\n"
+"Truncation is only in the catalog.\n"
+"\n"
+msgstr ""
+
+#: src/tools/bbatch.c:78
+#, c-format
+msgid ""
+"\n"
+"Version: %s (%s)\n"
+"Example : bbatch -w /path/to/workdir -h localhost -f dat1 -f dat -f datx\n"
+" will start 3 thread and load dat1, dat and datx in your catalog\n"
+"See bbatch.c to generate datafile\n"
+"\n"
+"Usage: bbatch [ options ] -w working/dir -f datafile\n"
+"       -d <nn>           set debug level to nn\n"
+"       -n <name>         specify the database name (default bacula)\n"
+"       -u <user>         specify database user name (default bacula)\n"
+"       -P <password      specify database password (default none)\n"
+"       -h <host>         specify database host (default NULL)\n"
+"       -w <working>      specify working directory\n"
+"       -v                verbose\n"
+"       -f <file>         specify data file\n"
+"       -?                print this message\n"
+"\n"
+msgstr ""
+
+#: src/tools/bsmtp.c:186
+#, c-format
+msgid ""
+"\n"
+"Usage: %s [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]\n"
+"       -8          set charset utf-8\n"
+"       -c          set the Cc: field\n"
+"       -d <nn>     set debug level to <nn>\n"
+"       -f          set the From: field\n"
+"       -h          use mailhost:port as the SMTP server\n"
+"       -s          set the Subject: field\n"
+"       -r          set the Reply-To: field\n"
+"       -l          set the maximum number of lines that should be sent "
+"(default: unlimited)\n"
+"       -?          print this message.\n"
+"\n"
+msgstr ""
+
+#: src/tray-monitor/authenticate.c:88
+msgid ""
+"Director authorization problem.\n"
+"Most likely the passwords do not agree.\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+"Problème d'authentification avec le director.\n"
+"Le plus souvent, les mots de pass ne correspondent pas.\n"
+"Vous trouverez de l'aide sur\n"
+"http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors\n"
+
+#: src/tray-monitor/authenticate.c:138
+msgid ""
+"Director and Storage daemon passwords or names not the same.\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+"Problème d'authentification entre le storage et le director.\n"
+"Le plus souvent, les mots de pass ne correspondent pas.\n"
+"Vous trouverez de l'aide sur\n"
+"http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors\n"
+
+#: src/tray-monitor/authenticate.c:184
+msgid ""
+"Director and File daemon passwords or names not the same.\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+"Problème d'authentification entre le client et le director.\n"
+"Le plus souvent, les mots de pass ne correspondent pas.\n"
+"Vous trouverez de l'aide sur\n"
+"http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors\n"
+
+#: src/tray-monitor/tray-monitor.c:111
+#, fuzzy, c-format
+msgid ""
+"Written by Nicolas Boichat (2004)\n"
+"\n"
+"Version: %s (%s) %s %s %s\n"
+"\n"
+"Usage: tray-monitor [-c config_file] [-d debug_level]\n"
+"       -c <file>     set configuration file to file\n"
+"       -dnn          set debug level to nn\n"
+"       -t            test - read configuration and exit\n"
+"       -?            print this message.\n"
+"\n"
+msgstr ""
+") %s %s %s\n"
+"\n"
+"Usage : bconsole [-s] [-c config_file] [-d niveau_debug]\n"
+"       -c <file>   set configuration file to file\n"
+"       -dnn        set debug level to nn\n"
+"       -s          no signals\n"
+"       -t          test - lecture de la configuration et sortie\n"
+"\n"
+
+#: src/lib/bnet.c:306
+#, c-format
+msgid ""
+"TLS host certificate verification failed. Host %s did not match presented "
+"certificate\n"
+msgstr ""
+
+#: src/lib/bpipe.c:362 src/lib/bpipe.c:452
+msgid "Program killed by Bacula watchdog (timeout)\n"
+msgstr ""
+
+#: src/lib/bsock.c:931 src/qt-console/bcomm/dircomm_auth.cpp:162
+#: src/qt-console/console/authenticate.cpp:161
+#, fuzzy, c-format
+msgid ""
+"Authorization problem with Director at \"%s:%d\"\n"
+"Most likely the passwords do not agree.\n"
+"If you are using TLS, there may have been a certificate validation error "
+"during the TLS handshake.\n"
+"Please see http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors for "
+"help.\n"
+msgstr ""
+"Problème d'authentification avec le director.\n"
+"Le plus souvent, les mots de pass ne correspondent pas.\n"
+"Si vous utilisez TLS, il peut y avoir une erreur de validation du "
+"certificat\n"
+"pendant l'initialisation de la connexion TLS.\n"
+"Vous trouverez de l'aide sur\n"
+"http://www.bacula.org/rel-manual/faq.html#AuthorizationErrors\n"
+
+#: src/lib/bnet_server.c:265
+#, c-format
+msgid "Cannot open stream socket: %s\n"
+msgstr ""
+
+#: src/lib/bnet_server.c:295
+#, c-format
+msgid "Cannot bind port %d: ERR=%s: retrying ...\n"
+msgstr "Impossible de s'attacher au port %d : ERR=%s : Réessaie...\n"
+
+#: src/lib/bnet_server.c:301
+msgid "Server socket"
+msgstr "Socket serveur"
+
+#: src/lib/bnet_server.c:301 src/lib/bnet_server.c:398
+msgid "client"
+msgstr "client"
+
+#: src/lib/bnet_server.c:386
+#, c-format
+msgid "Socket accept error for %s. ERR=%s\n"
+msgstr ""
+
+#: src/lib/bsys.c:387
+msgid "Possible mutex deadlock.\n"
+msgstr ""
+
+#: src/lib/bsys.c:394
+msgid "Possible mutex deadlock resolved.\n"
+msgstr ""
+
+#: src/lib/bsys.c:407
+#, c-format
+msgid "Mutex unlock not locked. ERR=%s\n"
+msgstr ""
+
+#: src/lib/runscript.c:214
+#, c-format
+msgid "%s: run command \"%s\"\n"
+msgstr "%s: exécution de la commande « %s »\n"
+
+#: src/findlib/save-cwd.c:48
+#, c-format
+msgid "Cannot open current directory: %s\n"
+msgstr ""
+
+#: src/findlib/save-cwd.c:62
+#, c-format
+msgid "Current directory: %s\n"
+msgstr ""
+
+#: src/findlib/save-cwd.c:84
+#, c-format
+msgid "Cannot get current directory: %s\n"
+msgstr ""
+
+#: src/findlib/save-cwd.c:105
+#, c-format
+msgid "Cannot return to %s from %s: %s\n"
+msgstr ""
+
+#: src/findlib/save-cwd.c:109
+#, c-format
+msgid "Cannot return to saved working directory from %s: %s\n"
+msgstr ""
+
+#: src/findlib/save-cwd.c:115
+#, c-format
+msgid "Cannot return to %s: %s\n"
+msgstr ""
+
+#: src/findlib/save-cwd.c:119
+#, c-format
+msgid "Cannot return to saved working directory: %s\n"
+msgstr ""
+
+#: src/findlib/makepath.c:120 src/findlib/makepath.c:398
+#, c-format
+msgid "%s exists but is not a directory\n"
+msgstr ""
+
+#: src/findlib/makepath.c:229
+#, c-format
+msgid "%c: is not a valid drive\n"
+msgstr ""
+
+#: src/findlib/makepath.c:317
+#, c-format
+msgid "Cannot chdir to directory, %s: ERR=%s\n"
+msgstr ""
 
 #: src/lib/rwlock.c:369
 #, c-format
@@ -18581,33 +19925,6 @@ msgstr ""
 #~ msgid "Cannot find previous JobIds.\n"
 #~ msgstr "Impossible de trouver la ressource Job « %s »\n"
 
-#~ msgid "Enter new RecyclePool name: "
-#~ msgstr "Saisissez le nouveau RecyclePool : "
-
-#~ msgid "Start Migration JobId %s, Job=%s\n"
-#~ msgstr "Début de la Migration JobId %s, Job=%s\n"
-
-#~ msgid "No Volumes found to migrate.\n"
-#~ msgstr "Aucun volume trouvé pour la migration.\n"
-
-#, fuzzy
-#~ msgid "No JobIds found to migrate.\n"
-#~ msgstr "Aucun volume trouvé pour la restauration.\n"
-
-#~ msgid ""
-#~ "\n"
-#~ "%d Jobs, %s files inserted into the tree and marked for extraction.\n"
-#~ msgstr ""
-#~ "\n"
-#~ "%d Jobs, %s fichiers analysés et sélectionnés pour la restauration.\n"
-
-#~ msgid ""
-#~ "\n"
-#~ "%d Jobs, %s files inserted into the tree.\n"
-#~ msgstr ""
-#~ "\n"
-#~ "%d Jobs, %s fichiers analysés.\n"
-
 #~ msgid " ("
 #~ msgstr " ("
 
@@ -18627,45 +19944,6 @@ msgstr ""
 #~ "  Fin :                    %s\n"
 #~ "  Statut de fin :          %s\n"
 #~ "\n"
-
-#, fuzzy
-#~ msgid ""
-#~ "Run Migration job\n"
-#~ "JobName:       %s\n"
-#~ "Bootstrap:     %s\n"
-#~ "Client:        %s\n"
-#~ "FileSet:       %s\n"
-#~ "Pool:          %s (From %s)\n"
-#~ "Read Storage:  %s (From %s)\n"
-#~ "Write Storage: %s (From %s)\n"
-#~ "JobId:         %s\n"
-#~ "When:          %s\n"
-#~ "Catalog:       %s\n"
-#~ "Priority:      %d\n"
-#~ msgstr ""
-#~ "Lancement de la restauration\n"
-#~ "JobName     : %s\n"
-#~ "Bootstrap   : %s\n"
-#~ "Destination : %s\n"
-#~ "Écrasement  : %s\n"
-#~ "Client      : %s\n"
-#~ "Storage     : %s\n"
-#~ "JobId       : %s\n"
-#~ "Quand       : %s\n"
-#~ "Catalogue   : %s\n"
-#~ "Priorité    : %d\n"
-
-#, fuzzy
-#~ msgid "Error updating DB Job file. ERR=%s\n"
-#~ msgstr ""
-#~ "Erreur pendant l'écriture des données vers le fichier de spool. ERR=%s\n"
-
-#, fuzzy
-#~ msgid "Error updating DB Media file. ERR=%s\n"
-#~ msgstr "Impossible de mettre à jour les informations du Volume : ERR=%s"
-
-#~ msgid "===Write error===\n"
-#~ msgstr "===Erreur d'écriture===\n"
 
 #~ msgid "Ready to append to end of Volume \"%s\" at file address=%u.\n"
 #~ msgstr ""
@@ -18713,15 +19991,6 @@ msgstr ""
 
 #~ msgid "%s: %s Warning: "
 #~ msgstr "%s : %s Attention : "
-
-#~ msgid "Cannot bind port %d: ERR=%s: retrying ...\n"
-#~ msgstr "Impossible de s'attacher au port %d : ERR=%s : Réessaie...\n"
-
-#~ msgid "Server socket"
-#~ msgstr "Socket serveur"
-
-#~ msgid "client"
-#~ msgstr "client"
 
 #, fuzzy
 #~ msgid " could not be installed"
