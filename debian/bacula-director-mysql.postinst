@@ -30,7 +30,6 @@ POSTINST_COMMON=/usr/share/bacula-director/postinst-common
 DEFCONFIG=/usr/share/bacula-common/defconfig
 CFGFILE=/etc/bacula/bacula-dir.conf
 
-. /usr/share/debconf/confmodule
 dbc_first_version=1.38.9-3
 dbc_dbuser=bacula
 dbc_dbname=bacula
