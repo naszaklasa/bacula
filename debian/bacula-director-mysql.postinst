@@ -42,8 +42,7 @@ CFGFILE="/etc/bacula/bacula-dir.conf"
 
 case "$1" in
 configure)
-	
-	# PreProcess configuration
+
 	echo -n "Processing configuration ..."
         . /etc/dbconfig-common/bacula-director-mysql.conf
 	TARGET=$CFGFILE.dpkg-tmp

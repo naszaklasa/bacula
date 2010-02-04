@@ -37,21 +37,19 @@ if [ -f /usr/share/dbconfig-common/dpkg/postinst.pgsql ]; then
   dbc_go bacula-director-pgsql $@
 fi
 
-## Globals
-CATALOG=bacula
-PGSQL=/usr/bin/psql
 LOGDIR="/var/log/bacula"
-GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_pgsql_privileges"
 POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
 DEFCONFIG="/usr/share/bacula-common/defconfig"
 CFGFILE="/etc/bacula/bacula-dir.conf"
+CATALOG=bacula
+PGSQL=/usr/bin/psql
+GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_pgsql_privileges"
 AUTHFILE=`getent passwd bacula | cut -d ':' -f 6`/.pgpass
 
 case "$1" in
 configure)
 	
-
-	echo -n "Processing configuration ..."
+	echo -n "Processing configuration..."
         . /etc/dbconfig-common/bacula-director-pgsql.conf
 	TARGET=$CFGFILE.dpkg-tmp
 
