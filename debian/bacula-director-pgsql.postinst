@@ -1,25 +1,9 @@
 #! /bin/bash
 # postinst script for bacula-director-pgsql
-# by Jose Luis Tallon <jltallon@adv-solutions.net>
-# most ideas/code contributed by:
-# - Alvaro Hernandez Tortosa <aht@ahtech.net>
-# - Philip Mattias Hahn <pmhahn@debian.org>
 #
 
 . /usr/share/debconf/confmodule
 db_version 2.0
-
-dbc_first_version=1.38.9-2
-dbc_dbuser=bacula
-dbc_dbname=bacula
-
-# source dbconfig-common shell library, and call the hook function
-if [ -f /usr/share/dbconfig-common/dpkg/postinst.pgsql ]; then
-  . /usr/share/dbconfig-common/dpkg/postinst.pgsql
-  dbc_pgsql_createdb_encoding="SQL_ASCII"
-  dbc_sql_substitutions="1"
-  dbc_go bacula-director-pgsql $@
-fi
 
 set -e
 
@@ -41,21 +25,31 @@ set -e
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
-## Globals
-CATALOG=bacula
-PGSQL=/usr/bin/psql
+dbc_first_version=1.38.9-2
+dbc_dbuser=bacula
+dbc_dbname=bacula
+
+# source dbconfig-common shell library, and call the hook function
+if [ -f /usr/share/dbconfig-common/dpkg/postinst.pgsql ]; then
+  . /usr/share/dbconfig-common/dpkg/postinst.pgsql
+  dbc_pgsql_createdb_encoding="SQL_ASCII"
+  dbc_sql_substitutions="1"
+  dbc_go bacula-director-pgsql $@
+fi
+
 LOGDIR="/var/log/bacula"
-GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_pgsql_privileges"
 POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
 DEFCONFIG="/usr/share/bacula-common/defconfig"
 CFGFILE="/etc/bacula/bacula-dir.conf"
+CATALOG=bacula
+PGSQL=/usr/bin/psql
+GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_pgsql_privileges"
 AUTHFILE=`getent passwd bacula | cut -d ':' -f 6`/.pgpass
 
 case "$1" in
 configure)
 	
-
-	echo -n "Processing configuration ..."
+	echo -n "Processing configuration..."
         . /etc/dbconfig-common/bacula-director-pgsql.conf
 	TARGET=$CFGFILE.dpkg-tmp
 
