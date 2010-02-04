@@ -1,9 +1,5 @@
 #! /bin/bash
 # postinst script for bacula-director-pgsql
-# by Jose Luis Tallon <jltallon@adv-solutions.net>
-# most ideas/code contributed by:
-# - Alvaro Hernandez Tortosa <aht@ahtech.net>
-# - Philip Mattias Hahn <pmhahn@debian.org>
 #
 
 . /usr/share/debconf/confmodule
