@@ -3,8 +3,11 @@ bacula (3.0.3-2) unstable; urgency=medium
   * Update build-dep from libmysqlclient15-dev to libmysqlclient-dev.
     Rebuild on a newer i386 sid machine; 3.0.3-1 will not migrate to testing
     due to dep on old libmysqlclient15 on i386.
+  * Remove bacula-doc ln in debian/rules, correcting dpkg's idea that bacula
+    has been completely removed on upgrade.
+    Closes: #545473, #554197, #545313.
 
- -- John Goerzen <jgoerzen@complete.org>  Wed, 03 Feb 2010 21:26:47 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 03 Feb 2010 21:30:20 -0600
 
 bacula (3.0.3-1) unstable; urgency=medium
 
