@@ -1,5 +1,5 @@
 #! /bin/bash
-# postinst script for bacula-director-sqlite
+# postinst script for bacula-director-sqlite3
 #
 
 . /usr/share/debconf/confmodule
