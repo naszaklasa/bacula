@@ -25,6 +25,20 @@ set -e
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
+dbc_first_version=3.0.3-3
+dbc_dbuser=bacula
+dbc_dbname=bacula.db
+dbc_basepath=/var/lib/bacula
+
+#FIXME: migrate from v2 here
+
+# source dbconfig-common shell library, and call the hook function
+if [ -f /usr/share/dbconfig-common/dpkg/config.sqlite3 ]; then
+  . /usr/share/dbconfig-common/dpkg/postinst.sqlite3
+  dbc_go bacula-director-sqlite3 $@
+fi
+
+
 DB="/var/lib/bacula/bacula.db"
 MAKE_SQL_TABLES=/usr/share/bacula-director/make_sqlite3_tables
 UPGRADE_SQL_DIR=/usr/share/bacula-director
