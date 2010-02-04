@@ -6,8 +6,9 @@ bacula (3.0.3-2) unstable; urgency=medium
   * Remove bacula-doc ln in debian/rules, correcting dpkg's idea that bacula
     has been completely removed on upgrade.
     Closes: #545473, #554197, #545313.
+  * Add bpipe to built package.  Patch from Alex Bramley.  Closes: #549081.
 
- -- John Goerzen <jgoerzen@complete.org>  Wed, 03 Feb 2010 21:30:20 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 03 Feb 2010 21:35:04 -0600
 
 bacula (3.0.3-1) unstable; urgency=medium
 
