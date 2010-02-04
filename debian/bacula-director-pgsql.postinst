@@ -5,18 +5,6 @@
 . /usr/share/debconf/confmodule
 db_version 2.0
 
-dbc_first_version=1.38.9-2
-dbc_dbuser=bacula
-dbc_dbname=bacula
-
-# source dbconfig-common shell library, and call the hook function
-if [ -f /usr/share/dbconfig-common/dpkg/postinst.pgsql ]; then
-  . /usr/share/dbconfig-common/dpkg/postinst.pgsql
-  dbc_pgsql_createdb_encoding="SQL_ASCII"
-  dbc_sql_substitutions="1"
-  dbc_go bacula-director-pgsql $@
-fi
-
 set -e
 
 # summary of how this script can be called:
@@ -36,6 +24,18 @@ set -e
 #     so that unnecessary prompting doesn't happen if a package's
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
+
+dbc_first_version=1.38.9-2
+dbc_dbuser=bacula
+dbc_dbname=bacula
+
+# source dbconfig-common shell library, and call the hook function
+if [ -f /usr/share/dbconfig-common/dpkg/postinst.pgsql ]; then
+  . /usr/share/dbconfig-common/dpkg/postinst.pgsql
+  dbc_pgsql_createdb_encoding="SQL_ASCII"
+  dbc_sql_substitutions="1"
+  dbc_go bacula-director-pgsql $@
+fi
 
 ## Globals
 CATALOG=bacula
