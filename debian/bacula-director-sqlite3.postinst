@@ -49,6 +49,7 @@ if [ "$1" = "configure" ]; then
             mv -v "$DB" "$DB.old-sqlite2"
             echo -n "Renaming: "
             mv -v "$DB.sqlite3" "$DB"
+            chown bacula:bacula "$DB"
             echo " *** Conversion complete.  Your sqlite v2 database was left in"
             echo " *** $DB.old-sqlite2.  You may delete it at your leisure."
             echo " *** Continuing with upgrade  process..."
