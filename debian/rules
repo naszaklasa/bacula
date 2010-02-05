@@ -69,7 +69,7 @@ extract-stamp: $(foreach s,$(VARIANTS),extract-stamp-$(s))
 extract-stamp-%:
 	@echo " *** DEBIAN *** VARIANT $(*): EXTRACTING to $(BUILDDIR)-$(*)"
 	mkdir $(BUILDDIR)-$(*)
-	tar -cSf - --exclude=./_darcs --exclude=./debian . | tar -xSpf - -C $(BUILDDIR)-$(*)
+	tar -cSf - --exclude=./.git --exclude=./debian . | tar -xSpf - -C $(BUILDDIR)-$(*)
 	touch $@
 
 configure-stamp-%: extract-stamp-%
