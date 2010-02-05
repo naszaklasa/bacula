@@ -30,7 +30,6 @@ dbc_dbuser=bacula
 dbc_dbname=bacula.db
 dbc_basepath=/var/lib/bacula
 
-#FIXME: migrate from v2 here
 if [ "$1" = "configure" ]; then
     . /etc/dbconfig-common/bacula-director-sqlite3.conf
     DB="$dbc_basepath/$dbc_dbname"
@@ -60,6 +59,7 @@ if [ "$1" = "configure" ]; then
         echo "None"
         echo " *** Will create new database at this location."
     fi
+fi
 
 # source dbconfig-common shell library, and call the hook function
 if [ -f /usr/share/dbconfig-common/dpkg/config.sqlite3 ]; then
