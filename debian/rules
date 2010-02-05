@@ -151,6 +151,15 @@ define ext-upgrade
 debian/patches/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/upgrade/$(1)/$(3)
 endef
 
+# Macro to process upgrades for all flavors
+# args: 1 -- file to extract relative to updatedb/update_x_tables_
+#       2 -- version
+define ext-upgrade-all
+$(call ext-upgrade,pgsql,debian/tmp-build-pgsql/src/updatedb/update_postgresql_tables_$(1),$(2))
+$(call ext-upgrade,mysql,debian/tmp-build-mysql/src/updatedb/update_mysql_tables_$(1),$(2))
+$(call ext-upgrade,sqlite3,debian/tmp-build-sqlite3/src/updatedb/update_sqlite3_tables_$(1),$(2))
+endef
+
 # Macro to extract a here document for install and put it in place
 # args: 1 -- db name, 2 -- file to extract
 # We append so we can do the postgresql hack for datestyle
