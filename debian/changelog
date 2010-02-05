@@ -1,3 +1,16 @@
+bacula (3.0.3-3) experimental; urgency=low
+
+  * Convert Sqlite3 to use dbconfig-common like PostgreSQL and MySQL directors
+    have been for some time now.
+  * This change means it now correctly upgrades from Sqlite2.
+    Closes: #552413.
+  * This change means that all Bacula debconf templates are finally removed.
+    As a result, no need for translations remains.  Closing open translation
+    bugs since there is no longer anything to translate in this package.
+    Closes: #568469.
+
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 05 Feb 2010 10:53:12 -0600
+
 bacula (3.0.3-2) unstable; urgency=medium
 
   * Update build-dep from libmysqlclient15-dev to libmysqlclient-dev.
