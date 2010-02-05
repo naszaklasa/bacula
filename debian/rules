@@ -120,7 +120,7 @@ build-indep-stamp:
 	touch $@
 
 
-build: patch build-arch build-indep debian/po/templates.pot
+build: patch build-arch build-indep
 
 ###############################################
 # Cleaning macro
@@ -144,9 +144,6 @@ clean:
 
 	$(RM) patch-stamp
 
-
-debian/po/templates.pot: $(TEMPLATES)
-	@debconf-updatepo
 
 # Macro to extract a here document and put it in place
 # args: 1 -- db name, 2 -- file to extract, 3 -- version
