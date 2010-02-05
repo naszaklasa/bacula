@@ -8,6 +8,8 @@ bacula (3.0.3-3) experimental; urgency=low
     As a result, no need for translations remains.  Closing open translation
     bugs since there is no longer anything to translate in this package.
     Closes: #568469.
+  * Clean up handling of database upgrade scripts in debian/rules to make it
+    easier to handle new Bacula versions when they arrive.
 
  -- John Goerzen <jgoerzen@complete.org>  Fri, 05 Feb 2010 10:53:12 -0600
 
