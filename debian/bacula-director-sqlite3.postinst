@@ -30,8 +30,14 @@ dbc_dbuser=bacula
 dbc_dbname=bacula.db
 dbc_basepath=/var/lib/bacula
 
-if [ "$1" = "configure" ]; then
-    . /etc/dbconfig-common/bacula-director-sqlite3.conf
+
+#### REMOVE THIS CODE POST-SQUEEZE
+CONVERTED_SQLITE2=NO
+
+if [ "$1" = "configure" ] ; then
+    if [ -f /etc/dbconfig-common/bacula-director-sqlite3.conf ]; then
+      . /etc/dbconfig-common/bacula-director-sqlite3.conf
+    fi
     DB="$dbc_basepath/$dbc_dbname"
     echo -n " *** Checking type of existing DB at $DB: "
     if [ -f "$DB" ]; then
@@ -52,6 +58,7 @@ if [ "$1" = "configure" ]; then
             echo " *** Conversion complete.  Your sqlite v2 database was left in"
             echo " *** $DB.old-sqlite2.  You may delete it at your leisure."
             echo " *** Continuing with upgrade  process..."
+            CONVERTED_SQLITE2=YES
         else
             echo "SQLite v3"
         fi
@@ -61,10 +68,22 @@ if [ "$1" = "configure" ]; then
     fi
 fi
 
+#### END OF CODE TO REMOVE POST-SQUEEZE
+
 # source dbconfig-common shell library, and call the hook function
 if [ -f /usr/share/dbconfig-common/dpkg/config.sqlite3 ]; then
   . /usr/share/dbconfig-common/dpkg/postinst.sqlite3
-  dbc_go bacula-director-sqlite3 $@
+  #### POST-SQUEEZE, REMOVE THE FOLLOWING LINES AND SIMPLY USE:
+  # dbc_go bacula-director-sqlite3 $@
+  if [ "$1" = "configure" -a "$CONVERTED_SQLITE2" = "YES" ]; then
+      # If we converted from Sqlite v2 in this run, then we have to
+      # pass a fake prior version number to dbc_go.  Otherwise, it
+      # would think that this is a new sqlite3 install and not upgrade
+      # the database.
+      dbc_go bacula-director-sqlite3 bacula-director-sqlite3 configure 2.4.4-1
+  else
+      dbc_go bacula-director-sqlite3 $@
+  fi
 fi
 
 LOGDIR="/var/log/bacula"
