@@ -160,6 +160,14 @@ $(call ext-upgrade,mysql,debian/tmp-build-mysql/updatedb/update_mysql_tables_$(1
 $(call ext-upgrade,sqlite3,debian/tmp-build-sqlite3/updatedb/update_sqlite3_tables_$(1),$(2))
 endef
 
+# Macro to process latest version upgrades for all flavors
+# args: 1 -- version
+define ext-upgrade-latest
+$(call ext-upgrade,pgsql,debian/tmp-build-pgsql/src/cats/update_postgresql_tables,$(1))
+$(call ext-upgrade,mysql,debian/tmp-build-mysql/src/cats/update_mysql_tables,$(1))
+$(call ext-upgrade,sqlite3,debian/tmp-build-sqlite3/src/cats/update_sqlite3_tables,$(1))
+endef
+
 # Macro to extract a here document for install and put it in place
 # args: 1 -- db name, 2 -- file to extract
 # We append so we can do the postgresql hack for datestyle
@@ -183,6 +191,12 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 #	$(call ext-upgrade-all,9_to_10,2.0.0)
 # above lines commented out because they are pre-lenny and no longer needed
 	$(call ext-upgrade-all,10_to_11,3.0.0)
+
+# Sometimes the latest release doesn't have a copy of the data in updatedb.
+# Manually install those.  CHECK THIS FOR EACH NEW RELEASE, and move older
+# versions to an ext-upgrade-all line as above.
+
+	$(call ext-upgrade-latest,5.0.0) # 5.0.0 upgrade 11 to 12
 
 
 # PostgreSQL
