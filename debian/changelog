@@ -1,3 +1,9 @@
+bacula (5.0.0-1) experimental; urgency=low
+
+  * New upstream version.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 08 Feb 2010 15:14:01 -0600
+
 bacula (3.0.3-3) unstable; urgency=medium
 
   * Fixed situation where dbconfig-common bits weren't being called.  This
