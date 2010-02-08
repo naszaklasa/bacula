@@ -90,7 +90,6 @@ if [ -f /usr/share/dbconfig-common/dpkg/config.sqlite3 ]; then
       # the database.
       dbc_go bacula-director-sqlite3 bacula-director-sqlite3 configure 2.4.4-1
   else
-      echo "Running dbc_go bacula-director-sqlite3 $@"
       dbc_go bacula-director-sqlite3 $@
   fi
 fi
