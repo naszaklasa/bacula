@@ -63,10 +63,13 @@ Function EnterInstallType
     ${If} ${FileExists} "$R1\bconsole.conf"
       IntOp $PreviousComponents $PreviousComponents | ${ComponentTextConsole}
     ${EndIf}
+    ${If} ${FileExists} "$R1\bat.conf"
+      IntOp $PreviousComponents $PreviousComponents | ${ComponentBatConsole}
+    ${EndIf}
     ${If} ${FileExists} "$R1\wx-console.conf"
       IntOp $PreviousComponents $PreviousComponents | ${ComponentGUIConsole}
     ${EndIf}
-    ${If} ${FileExists} "$R2\bacula.pdf"
+    ${If} ${FileExists} "$R2\main.pdf"
       IntOp $PreviousComponents $PreviousComponents | ${ComponentPDFDocs}
     ${EndIf}
     ${If} ${FileExists} "$R2\bacula\bacula.html"

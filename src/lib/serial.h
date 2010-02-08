@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -29,7 +29,6 @@
  *
  * Written by John Walker, MM
  *
- *   Version $Id$
  */
 
 /*  Serialisation support functions from serial.c.  */
@@ -52,7 +51,7 @@ extern int64_t unserial_int64(uint8_t * * const ptr);
 extern uint64_t unserial_uint64(uint8_t * * const ptr);
 extern btime_t unserial_btime(uint8_t * * const ptr);
 extern float64_t unserial_float64(uint8_t * * const ptr);
-extern void unserial_string(uint8_t * * const ptr, char * const str);
+extern void unserial_string(uint8_t * * const ptr, char * const str, int max);
 
 /*
 
@@ -165,7 +164,10 @@ extern void unserial_string(uint8_t * * const ptr, char * const str);
 /*  Binary byte stream not requiring serialisation (length obtained by sizeof)  */
 #define unser_buffer(x)  unser_bytes((x), (sizeof (x)))
 
-/* Binary string not requiring serialization */
-#define unser_string(x) unserial_string(&ser_ptr, (x))
+/* Binary string not requiring serialization (length obtained from max) */
+#define unser_nstring(x,max) unserial_string(&ser_ptr, (x), (int)(max))
+
+/*  Binary string not requiring serialisation (length obtained by sizeof)  */
+#define unser_string(x) unserial_string(&ser_ptr, (x), sizeof(x))
 
 #endif /* __SERIAL_H_ */

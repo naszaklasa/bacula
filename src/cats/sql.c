@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -35,7 +35,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id$
+ *    Version $Id: sql.c 8034 2008-11-11 14:33:46Z ricozz $
  */
 
 /* The following is necessary so that we do not include
@@ -46,7 +46,7 @@
 #include "bacula.h"
 #include "cats.h"
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
 
 uint32_t bacula_db_version = 0;
 
@@ -84,6 +84,8 @@ B_DB *db_init(JCR *jcr, const char *db_driver, const char *db_name, const char *
    db_type = SQL_TYPE_MYSQL;
 #elif HAVE_POSTGRESQL
    db_type = SQL_TYPE_POSTGRESQL;
+#elif HAVE_INGRES
+   db_type = SQL_TYPE_INGRES;
 #elif HAVE_SQLITE
    db_type = SQL_TYPE_SQLITE;
 #elif HAVE_SQLITE3
@@ -108,11 +110,10 @@ dbid_list::~dbid_list()
    free(DBId);
 }
 
-
 /*
  * Called here to retrieve an integer from the database
  */
-static int int_handler(void *ctx, int num_fields, char **row)
+int db_int_handler(void *ctx, int num_fields, char **row)
 {
    uint32_t *val = (uint32_t *)ctx;
 
@@ -160,6 +161,54 @@ int db_list_handler(void *ctx, int num_fields, char **row)
    return 0;
 }
 
+
+/*
+ * Called here to retrieve an integer from the database
+ */
+static int db_max_connections_handler(void *ctx, int num_fields, char **row)
+{
+   uint32_t *val = (uint32_t *)ctx;
+   uint32_t index = sql_get_max_connections_index[db_type];
+   if (row[index]) {
+      *val = str_to_int64(row[index]);
+   } else {
+      Dmsg0(800, "int_handler finds zero\n");
+      *val = 0;
+   }
+   return 0;
+}
+
+/* 
+ * Check catalog max_connections setting
+ */
+bool db_check_max_connections(JCR *jcr, B_DB *mdb, uint32_t max_concurrent_jobs)
+{
+   uint32_t max_conn=0;
+   int ret=true;
+
+   /* Without Batch insert, no need to verify max_connections */
+#ifndef HAVE_BATCH_FILE_INSERT
+   return ret;
+#endif
+
+   /* Check max_connections setting */
+   if (!db_sql_query(mdb, sql_get_max_connections[db_type], 
+                     db_max_connections_handler, &max_conn)) {
+      Jmsg(jcr, M_ERROR, 0, "Can't verify max_connections settings %s", mdb->errmsg);
+      return ret;
+   }
+   if (max_conn && max_concurrent_jobs && max_concurrent_jobs > max_conn) {
+      Mmsg(mdb->errmsg, 
+           _("On db_name=%s, %s max_connections=%d is lower than Director "
+             "MaxConcurentJobs=%d\n"),
+           mdb->db_name, db_get_type(), max_conn, max_concurrent_jobs);
+      Jmsg(jcr, M_WARNING, 0, "%s", mdb->errmsg);
+      ret = false;
+   }
+
+   return ret;
+}
+
 /* NOTE!!! The following routines expect that the
  *  calling subroutine sets and clears the mutex
  */
@@ -170,7 +219,7 @@ bool check_tables_version(JCR *jcr, B_DB *mdb)
    const char *query = "SELECT VersionId FROM Version";
 
    bacula_db_version = 0;
-   if (!db_sql_query(mdb, query, int_handler, (void *)&bacula_db_version)) {
+   if (!db_sql_query(mdb, query, db_int_handler, (void *)&bacula_db_version)) {
       Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
       return false;
    }
@@ -407,6 +456,23 @@ void db_start_transaction(JCR *jcr, B_DB *mdb)
    db_unlock(mdb);
 #endif
 
+#ifdef HAVE_INGRES
+   if (!mdb->allow_transactions) {
+      return;
+   }
+   db_lock(mdb);
+   /* Allow only 25,000 changes per transaction */
+   if (mdb->transaction && mdb->changes > 25000) {
+      db_end_transaction(jcr, mdb);
+   }
+   if (!mdb->transaction) {
+      db_sql_query(mdb, "BEGIN", NULL, NULL);  /* begin transaction */
+      Dmsg0(400, "Start Ingres transaction\n");
+      mdb->transaction = 1;
+   }
+   db_unlock(mdb);
+#endif
+
 #ifdef HAVE_DBI
    if (db_type == SQL_TYPE_SQLITE) {
       if (!mdb->allow_transactions) {
@@ -455,7 +521,7 @@ void db_end_transaction(JCR *jcr, B_DB *mdb)
 
    if (jcr && jcr->cached_attribute) {
       Dmsg0(400, "Flush last cached attribute.\n");
-      if (!db_create_file_attributes_record(jcr, mdb, jcr->ar)) {
+      if (!db_create_attributes_record(jcr, mdb, jcr->ar)) {
          Jmsg1(jcr, M_FATAL, 0, _("Attribute create error. %s"), db_strerror(jcr->db));
       }
       jcr->cached_attribute = false;
@@ -474,6 +540,23 @@ void db_end_transaction(JCR *jcr, B_DB *mdb)
    mdb->changes = 0;
    db_unlock(mdb);
 #endif
+
+
+
+#ifdef HAVE_INGRES
+   if (!mdb->allow_transactions) {
+      return;
+   }
+   db_lock(mdb);
+   if (mdb->transaction) {
+      db_sql_query(mdb, "COMMIT", NULL, NULL); /* end transaction */
+      mdb->transaction = 0;
+      Dmsg1(400, "End Ingres transaction changes=%d\n", mdb->changes);
+   }
+   mdb->changes = 0;
+   db_unlock(mdb);
+#endif
+
 
 #ifdef HAVE_POSTGRESQL
    if (!mdb->allow_transactions) {
@@ -576,6 +659,21 @@ void split_path_and_file(JCR *jcr, B_DB *mdb, const char *fname)
 }
 
 /*
+ * Set maximum field length to something reasonable
+ */
+static int max_length(int max_length)
+{
+   int max_len = max_length;
+   /* Sanity check */
+   if (max_len < 0) {
+      max_len = 2;
+   } else if (max_len > 100) {
+      max_len = 100;
+   }
+   return max_len;
+}
+
+/*
  * List dashes as part of header for listing SQL results in a table
  */
 void
@@ -583,6 +681,7 @@ list_dashes(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx)
 {
    SQL_FIELD  *field;
    int i, j;
+   int len;
 
    sql_field_seek(mdb, 0);
    send(ctx, "+");
@@ -591,7 +690,8 @@ list_dashes(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx)
       if (!field) {
          break;
       }
-      for (j = 0; j < (int)field->max_length + 2; j++) {
+      len = max_length(field->max_length + 2);
+      for (j = 0; j < len; j++) {
          send(ctx, "-");
       }
       send(ctx, "+");
@@ -660,7 +760,8 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
       if (!field) {
          break;
       }
-      bsnprintf(buf, sizeof(buf), " %-*s |", (int)field->max_length, field->name);
+      max_len = max_length(field->max_length);
+      bsnprintf(buf, sizeof(buf), " %-*s |", max_len, field->name);
       send(ctx, buf);
    }
    send(ctx, "\n");
@@ -675,13 +776,14 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
          if (!field) {
             break;
          }
+         max_len = max_length(field->max_length);
          if (row[i] == NULL) {
-            bsnprintf(buf, sizeof(buf), " %-*s |", (int)field->max_length, "NULL");
+            bsnprintf(buf, sizeof(buf), " %-*s |", max_len, "NULL");
          } else if (IS_NUM(field->type) && !jcr->gui && is_an_integer(row[i])) {
-            bsnprintf(buf, sizeof(buf), " %*s |", (int)field->max_length,
+            bsnprintf(buf, sizeof(buf), " %*s |", max_len,
                       add_commas(row[i], ewc));
          } else {
-            bsnprintf(buf, sizeof(buf), " %-*s |", (int)field->max_length, row[i]);
+            bsnprintf(buf, sizeof(buf), " %-*s |", max_len, row[i]);
          }
          send(ctx, buf);
       }
@@ -721,10 +823,10 @@ vertical_list:
  */
 bool db_open_batch_connexion(JCR *jcr, B_DB *mdb)
 {
-   int multi_db=false;
-
 #ifdef HAVE_BATCH_FILE_INSERT
-   multi_db=true;               /* we force a new connexion only if batch insert is enabled */
+   const int multi_db = true;   /* we force a new connection only if batch insert is enabled */
+#else
+   const int multi_db = false;
 #endif
 
    if (!jcr->db_batch) {
@@ -737,14 +839,15 @@ bool db_open_batch_connexion(JCR *jcr, B_DB *mdb)
                                       mdb->db_socket,
                                       multi_db /* multi_db = true when using batch mode */);
       if (!jcr->db_batch) {
-         Jmsg0(jcr, M_FATAL, 0, "Could not init batch connexion");
+         Mmsg0(&mdb->errmsg, _("Could not init database batch connection"));
+         Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
          return false;
       }
 
       if (!db_open_database(jcr, jcr->db_batch)) {
-         Mmsg2(&jcr->db_batch->errmsg,  _("Could not open database \"%s\": ERR=%s\n"),
+         Mmsg2(&mdb->errmsg,  _("Could not open database \"%s\": ERR=%s\n"),
               jcr->db_batch->db_name, db_strerror(jcr->db_batch));
-         Jmsg1(jcr, M_FATAL, 0, "%s", jcr->db_batch->errmsg);
+         Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
          return false;
       }      
       Dmsg3(100, "initdb ref=%d connected=%d db=%p\n", jcr->db_batch->ref_count,
@@ -759,7 +862,7 @@ bool db_open_batch_connexion(JCR *jcr, B_DB *mdb)
  * ie, after a fatal signal and before exiting the program
  * Print information about a B_DB object.
  */
-void _dbg_print_db(JCR *jcr, FILE *fp)
+void db_debug_print(JCR *jcr, FILE *fp)
 {
    B_DB *mdb = jcr->db;
 
@@ -775,4 +878,4 @@ void _dbg_print_db(JCR *jcr, FILE *fp)
    }
 }
 
-#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL*/
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES*/

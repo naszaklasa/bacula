@@ -49,6 +49,7 @@ class restoreTree : public Pages, public Ui::restoreTreeForm
 public:
    restoreTree();
    ~restoreTree();
+   virtual void PgSeltreeWidgetClicked();
    virtual void currentStackItem();
    enum folderCheckState
    {

@@ -35,7 +35,7 @@ REM
 REM   To read back a PostgreSQL database use:
 REM      cd @working_dir_cmd@
 REM      dropdb bacula
-REM      createdb bacula
+REM      createdb -T template0 -E SQL_ASCII  bacula
 REM      psql bacula < bacula.sql
 REM
 EXIT /b 0

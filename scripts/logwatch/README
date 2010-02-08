@@ -7,7 +7,7 @@ straightforward. Run 'make install' as root from this directory.
 For manual install copy the files as indicated below:
 
 cp -p scripts/logwatch/bacula /etc/log.d/scripts/services/bacula
-cp -p scripts/logwatch/bacula /etc/log.d/scripts/shared/applybaculadate
+cp -p scripts/logwatch/applybacula /etc/log.d/scripts/shared/applybaculadate
 cp -p scripts/logwatch/logfile.bacula.conf /etc/log.d/conf/logfiles/bacula.conf
 cp -p scripts/logwatch/services.bacula.conf /etc/log.d/conf/services/bacula.conf
 chmod 755 /etc/log.d/scripts/services/bacula
@@ -41,4 +41,3 @@ Jobs Run:
 
 
  ---------------------- bacula End ------------------------- 
-

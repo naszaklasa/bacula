@@ -1,12 +1,127 @@
-              Technical notes for 3.0.3
+              Technical notes for current GIT
           
 General:
 
-Release Version 3.0.3:
+20Jan10
+kes  Make missing plugin during backup fatal.
+18Jan10
+kes  Fix unserial to limit size. Fixes bug submitted by Graham.
+11Jan10
+ebl  Upgrade DB version from 11 to 12.
+08Jan180
+kes  Remove requirement for different storages for migrate, something
+     forgotten, but reminded by Jim Barber.
+06Jan10
+ebl  Add make_catalog_backup.pl script that uses env variables and
+     disk file to pass database password for backup
+ebl  Modify the sql query to get alphabetical order of clients when
+     selecting the most recent backup for a client. Thanks to  
+     Holger Mueller for this suggestion.
+03Jan10
+ebl  Fix initgroups definition on aix >= 5
+27Dec09
+mvw  Plugins are only build when libtool is used
+22Dec09
+ebl  Add bacula_config script for support issues
+ebl  Display a warning message if postgresql client libs <= 8.1 and
+     batch insert is enabled.
+21Dec09
+ebl  if batch insert is turned on when we try to open a connection and 
+     thread safe is not enabled, we M_ABORT Bacula
+ebl  Add dbcheck -t option that test if the current backend is thread-safe
+20Dec09
+kes  Fix old way of detecting thread safe SQL in ./configure
+     We should really phase this out.
+17Dec09
+ebl  LSBize Debian init scripts
+10Dec09
+ebl  Update the lock manager to detect possible race condition
+     on the fly. You can activate it with USE_LOCKMGR_PRIORITY in
+     version.h
+08Dec09
+ebl  Fix bug #1431 about bad reload command.
+     Still an object to free in this case.
+06Dec09
+kes  Fix seg fault in new AllowCompression code
+kes  Add AllowCompression feature that turns off compression in Storage
+     resource.  Submitted by: Steve Polyack <korvus@comcast.net>
+05Dec09
+ebl  Fix #1403 about windows directory attributes not well restored
+03Dec09
+ebl  Remove SQLite2 scripts
+ebl  Apply Arno's patch for check_bacula nagios plugin
+02Dec09
+ebl  Rename bvfs brestore_ table
+01Dec09
+kes  Remove support for SQLite 2
+kes  Fix rpm spec files bug #1420
+kes  Fix include of MySQL libs to use shared object. Fixes bug #1427
+kes  Fix search for libdbd in DBI option. Fixes bug #1422
+kes  Fix RH spec files to use /etc/logwatch instead of /etc/log.d
+     Fixes bug #1428
+23Nov09
+ebl  Apply Lorenzo's MacOSX patches
+16Nov09
+ebl  Add basic completion for restore mode 
+14Nov09
+kes  Fix bug #1367 buy creating an empty query.sql file. The old query.sql
+     file is now in exmaples/sample-query.sql, but is unsupported.
+13Nov09
+ebl  Add .jobs type=B/C/R command to filter jobs listing
+11Nov09
+ebl  Fix basejob code for Mysql
+ebl  Fix segfault in basejob code
+05Nov09
+ebl  Display a message if catalog max_connections setting is too low
+04Nov09
+kes  Apply Victor Hugo dos Santos' Spanish translation patch
+kes  Fix double send of attributes introduced in 84aab...
+kes  Cleanup error handling in SD append to reduce spurious error messages
+ebl  Check pthread_mutex_lock return code in lockmgr
+03Nov09
+kes  Fix bug #1409: increase ls field width for file size from 10 to 12.  
+     At some point we will need to make this totally variable.
+02Nov09
+ebl  Avoid orphan buffers in testls
+01Nov09
+kes  Fix DCR race condition in SD that could lead to seg faults.
+kes  Make many regress tests timeout after 30 mins.
+30Nov09
+kes  Fix Win32 bat so that it runs better.
+kes  Fix seg fault in bat.
+29Nov09
+kes  Make builds stop if any errors.
+kes  Revert James' Win32 make_defs fix -- it builds incorrect def files
+27Oct09
+ebl  Add readline completion support for bconsole. It gives help
+     on all commands, and complete job=, pool=, client=, fileset=, ...
+     It works with --disable-conio and --with-readline=/usr/include/readline
+25Oct09
+mvw  Add support for running tape mount and unmount commands
+23Oct09
+kes  When dequeuing messages, don't allow queuing more, but send them
+     to syslog. Fixes Eric's messages-test regression script.
+kes  Make queuing messages work on jcr local mutex. Improves concurrent
+     throughput.
+20Oct09
+ebl  Add dot functions for bat to list location, mediatype and volstatus
+ebl  Add bat screen to list Media in a table view (permits to search, filter
+     and sort media)
+ebl  Permits update slot(s) and label barcodes slot(s) commands.
+19Oct09
+ebl  Fix typo in disk-changer listall command
+ebl  Fix status slots command when slots are mixed
 18Oct09
 kes  Apply James' fix for some Exchange plugin crashes
+17Oct09
+ebl  Add ActionOnPurge pool parameter starting from Michael Stapelberg work.
+mvw  Fix bug #1361 where device was not unmounted.
+     One big warning however when you now set Requires Mount to yes for a file device
+     you NEED to define a mount and unmount command or the stored will scream.
 16Oct09
-kes  Integrate patch for building dmg on OSX from Lorenz Schori <lo@znerol.ch>
+kes  Fix switching read device reported by Nicolae Mihalache <mache@abcpages.com>
+mvw  Merged xattr overhaul which implements the extattr interface for *BSD
+15Oct09
 kes  Fix bug #1391 Job status improperly set due to subtle variable overload problem
 13Oct09
 ebl  Fix #1352 about double free with regexp and big filenames on windows
@@ -15,36 +130,223 @@ kes  Apply Graham's idea for recovering from disk full by recursing
      when doing fixup_write_error ...
 kes  Make fix for VirtualFull changing device based on suggestion by
      Nicolae Mihalache <mache@abcpages.com>
+08Oct09
+ebl  Add listall command to autochanger interface
+ebl  Tweak autochanger screen in bat with new commands
+ebl  Add listall and transfer command to disk-changer and mtx-changer
 05Oct09
 kes  Fix concurrent Job recycle bug #1288
-kes  Backport part of one possible fix from bug #1346
+mvw  Fix logic error in xattr code
+ebl  Apply Andreas's patch to remove ScratchPool ref from bat Media list screen.
 03Oct09
-kes  Fix bug #1382 newly created disk volumes -> file not found warning
+kes  Add a MaxVolBytes test that create over 100 Vols
+kes  Fix bug #1382 newly created disk volumes -> file not found warning 
+02Oct09
+ebl  Cleanup the console timeout code.
+29Sep09
+kes  Apply console timeout patch from Vitaly Kuznetsov <vitty@altlinux.ru>
+ebl  Remove the inx4 index for SQLite2/3 (FilenameId, PathId) on
+     File table. 
+     It is useless for common usage, and causes performance issues.
+     This index fragments over the time and the update cost grows
+     very quickly. (This index is not present on Mysql schema)
+26Sep09
+kes  Remove gnome-console
+kes  Implement store_size32 and store_size64
+25Sep09
 kes  Fix Alpha ifdefing -- should fix bug #1359
-ebl  Use old code for selecting file during
-     restore.
-kes  Cherry-pick 3.1.x commits
-     tweak space on projects file
-     Fix seg fault in ignoredir code
-     Apply Frank's slash patch
+kes  Add more smtp document -- resolves bug #1376
+22Sep09
+ebl  Remove the file_fp_idx index for Postgresql (FilenameId, PathId) on
+     File table. 
+     It is useless for common usage, and causes performance issues.
+     This index fragments over the time and the update cost grows
+     very quickly. (This index is not present on Mysql schema)
+17Sep09
+kes  Fix seg fault in ignoredir code
+15Sep09
+ebl  Update restore menu 12 explanation
+14Sep09
+ebl  Rename .lsdirs/.lsfiles/.update to .bvfs_xxx
+     to avoid confusion with future commands
+11Sep09
+kes  Set Volume Poll Interval to 5 mins by default.
+kes  Create an inline definition of bigendian().
+kes  Apply Frank's patch to change / to - in cdash tests. 
+     Hopefully it will fix some submit problems.
 10Sep09
-ebl  Apply patches
-     Fix seg fault in SD bug #1371
-       3.0.2-Fix-seg-fault-in-SD-bug-1371.patch 
-     Add more info when SD connection refused
-       3.0.2-Add-more-info-when-SD-connection-refused.patch
-     Fix bug #1355 Director crashes with double free in Accurate SQL query
-       3.0.2-accurate.patch
-     Fixes bug #1368 ASSERT Failure on MacOS.
-       3.0.2-mac-path-len.patch
-     Fix #1364 and #1363 about compression buffer error.
-       3.0.2-zlib-buffer.patch
-     Fixes bug #1365 and #1366 about MacOSX resource forks. 
-       3.0.2-bug-1365.patch and 3.0.2-bug-1366.patch
-     Fix "Exclude Dir Containing" fileset option
-       3.0.2-exclude-dir-containing-fd.patch
-       3.0.2-exclude-dir-containing.patch
-       3.0.2-exclude-dir-containing-top_level.patch
+kes  Fix seg fault in SD bug #1371
+09Sep09
+ebl  Fix problem when the top_level contains a Exclude Dir flag.
+ebl  Fix #1370 about the implementation of the "Exclude Dir Containing"
+     option on FD.
+ebl  Fix #1369 about a segfault when using ExcludeDirContaining option
+     before the Options{} block in fileset.
+08Sep09
+ebl  Apply Lorenz fix for minor issues in the osx installer package builder.
+ebl  Fix #1373 about typo in bscan manpages. Thanks to John Goerzen.
+07Sep09
+ebl  Make output of new commands .lsdir/.lsfile more usable.
+kes  Apply Marco's git format-patch patches for bugs #1365 and #1366
+06Sep09
+kes  Increment minor version to avoid future conflict.
+kes  Increase default path/file length to 2048. This should fix
+     bug #1368.  Too bad Mac OS programmers don't respect POSIX
+     standards.
+04Sep09
+kes  Implement BlockChecksum in Device to be able to turn off checksum
+       for performance reasons
+ebl  btape: Add speed command and test drive speed with Bacula blocks
+03Sep09
+ebl  Use MaxFileSize device configuration in btape
+ebl  Make less tweaks in random buffer in btape
+ebl  Fix #1364 and #1363 about compression buffer error.
+01Sep09
+kes  Many debug code fixes in regression scripts
+kes  Update tape tests for hardware certification
+     Add script for doing btape test command 
+     Make btape return error status if test command fails 
+kes  Eliminate xattr.c compiler warning
+31Aug09
+ebl  Prohibit copy and assignment in db_list_ctx.
+mvw  Exclude OSX resource forks from saving using the xattr code
+     Exclude OSX acl data from saving using the xattr code when
+     normal acl mode is also enabled.
+     Make excluding certain xattr in the generic functions somewhat
+     easier for certain OS specific attributes.
+30Aug09
+kes  Fix Win32/64 build
+kes  Fix bug #1355 Director crashes with double free in Accurate SQL query
+ebl  Prohibit copy and assignment in Bvfs.
+28Aug09
+kes  Fix bug #1357 Verify jobs fail when job has zero files
+26Aug09
+kes  Fix possible seg fault in db_get_int_handler in accurate code
+kes  Release orphanned buffers in accurate code.
+25Aug09
+kes  Suppress some error messages generated after cancelling a job.
+     This should reduce some of the unwanted error messages after
+     a job has been canceled as described in bug #1354. However,
+     there are many other places.
+24Aug09
+kes  Apply and commit Lorenz Schori <lo@znerol.ch> patch for OSX
+   * Add platforms/osx/{build,dl,products,tools} to .gitignore
+   * Put configuration files into /Library/Preferences/bacula in order to  
+     simplify access to the for Mac Users without Shell experience and to  
+     prevent loss of configuration after upgrades.
+   * Complete Info.plist in order to prevent Installer.app on 10.4 from  
+     displaying "My Great App" instead of "Bacula File Daemon x.y.z" in the  
+     welcome screen.
+   * Add the README file to platforms/osx
+kes  Confirmation of procedure suggested for upgrading from SQLite2
+     to SQLite3.  This fixes bug #1351.  Procedure is:
+     echo ".dump" | sqlite bacula.db >bacula.sql
+     mv bacula.db bacula.db.old
+     sed -i -e 's%INTEGER UNSIGNED AUTOINCREMENT,%INTEGER,%g' bacula.sql
+     (note: the above only works on Linux systems. On some systems
+      the -i option is not available. Adapt as necessary)
+     sqlite3 bacula.db
+     .quit
+     sqlite3 bacula.db <bacula.sql
+     rm -f bacula.sql
+23Aug09
+ebl  Run job when double-click in Jobs list item
+ebl  Simplify the code to make TableWidget in read-only
+kes  Free Volume in several places. Fixes virtual-changer problem
+     and possibly bug #1346.
+kes  Add SD Volume debug code
+22Aug09
+kes  Don't print different filesystem. Will not descend 
+     message if directory explicitly excluded
+21Aug09
+ebl  Tweak status storage slot command to release db lock just
+     after the usage.
+kes  Rework the bsock.h class to put public structures last
+20Aug09
+kes  Integrate patch for building dmg on OSX from Lorenz Schori <lo@znerol.ch>
+kes  Add commas in num files for estimate command
+19Aug09
+kes  Fix bat crash due to alignment diff in bat and core code
+     In bsock.h, exact reason unknown.
+kes  Ensure timestamp put in SQL log
+15Aug09
+kes  Modify acquire alogrithm so jobs do not block during despooling
+     This can give significantly more parallelism
+ebl  Fix couple of segfault with new ACL/XATTR code
+kes  Apply Marco's branch with jcr structure cleanup
+kes  Apply Marco's branch with new acl/xattr code
+13Aug09
+ebl  update lock manager to display file:line all the time
+kes  Make SD lock tracing work again. Has not worked for some time.
+ebl  bat: Add a re-run button on job info page, that allows to
+          run the selected job with the same properties (level, pool, 
+          etc...)
+ebl  bat: tweak the run job window to make it a bit more sexy
+12Aug09
+kes  Make new big-virtual-changer test. Test concurrency.
+ebl  Add .lsfiles, .lsdirs, .update command to interface user with bvfs object
+10Aug09
+kes  Pull Philipp Storz' bacula.spec changes for OpenSuSE build service
+kes  Implement MaximumConcurrentJobs for SD devices.
+     This should significantly help spread jobs among different drives.
+09Aug09
+kes  Fix bug #1344 show pool displayed wrong variable for maxvolbytes
+kes  Fix compiler warnings in acl and xattr code
+kes  Fix screw up with setting JobLevel and JobType
+kes  Change version
+kes  Apply Marco's acl/xattr rework code
+08Aug09
+ebl  bat: display a Warning icon when having Errors>0 and Status=T
+07Aug09
+ebl  bvfs: Add example to list files versions
+ebl  bvfs: Fix directory listing
+ebl  bvfs: Add limit/offset implementation to save resources on director
+ebl  bvfs: Create cache tables on the fly when using Bvfs object (for testing)
+06Aug09
+ebl  Document FT_DELETED FileIndex=0 special value in database Schema
+ebl  Add a new Bvfs class that implements brestore instant navigation
+     cache inside Bacula. Works for Mysql, Postgresql and Sqlite3
+kes  bat: fix compiler warning for unreferenced argument
+04Aug09
+ebl  bat: Go to the media info panel when double-click on job page or media list
+ebl  bat: cleanup job and mediainfo panel
+03Aug09
+ebl  Add new media info panel to bat
+02Aug09
+kes  Remove old sqlite3 build from bacula.spec
+kes  Move bat from bacula.spec to bacula-bat.spec
+kes  Remove installing gconsole start script from Makefile.in
+01Aug09
+ebl  Add Job Info panel to bat
+30Jul09
+ebl  Add restore from multiple storage functionality with
+     a part of Graham's patch.
+kes  Add 'show disabled' command that lists the disabled jobs.
+kes  Modify enable/disable commands to show only appropriate Jobs.
+29Jul09
+kes  Add ACL check for client in estimate command
+ebl  Change time_t by utime_t in accurate function
+kes  Start reworking 3.0.2 bacula.spec file
+     - Add SuSE build codes
+     - Add depkgs-qt so bat can build on any system
+     - Reorganize defines
+26Jul09
+kes  Tweak RedHat spec files
+24Jul09
+kes  Add format to a fprintf
+kes  Attempt to fix SQLite seg fault problem
+23Jul09
+kes  Fix int/int32_t problem in accurate_add_file 
+     reported by "Eli Shemer" <elish@consist.co.il>
+kes  Remove Qt 4.4 code so it compiles on 4.3 (setHeaderHidden).
+22Jul09
+kes  Apply idea of part of Graham's tidy-bsr-source.patch, but modified
+kes  Fix bug #1337 Console tries to build with SSL when libssl-dev not installed. 
+21Jul09
+kes  Add setJobStatus method to JCR class.
+kes  Modify setJobStatus so cancel has same priority as fatal errors
+20Jul09
+kes  Fix Solaris compiler warning in signal.c
 
 Release version 3.0.2:
 18Jul09
@@ -77,7 +379,7 @@ ebl  Implement the project 'restore' menu: enter a JobId, automatically
 ebl  Should fix #1323 about verify accurate jobs and deleted files.
 13Jul09
 kes  Send bootstrap directly from DIR to SD
-kes  Create build scripts for Win64 somewhat equilavent to the Win32 ones.
+kes  Create build scripts for Win64 somewhat equivalent to the Win32 ones.
 10Jul09
 ebl  Print correct JobId in bls, should fix #1331
 kes  Apply python detect patch from Bastian Friedrich <bastian.friedrich@collax.com>
@@ -93,7 +395,7 @@ mvw  Call acl and xattr function only when requested for fileset
 mvw  Fix typo introduces by fix for bug #1305
 03Jul09
 ebl  Should fix the first part #1323 about the restore option
-     'List Jobs where a given File is saved' wich display deleted files
+     'List Jobs where a given File is saved' which display deleted files
 02Jul09
 kes  Another fix for bug #1311 to get the correct last_full_time
 ebl  Make estimate command accurate compatible. Should fix #1318

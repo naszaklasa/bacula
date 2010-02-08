@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -29,8 +29,6 @@
  *  Bacula File Daemon
  *
  *    Kern Sibbald, March MM
- *
- *   Version $Id$
  *
  */
 
@@ -79,9 +77,11 @@ PROG_COPYRIGHT
 "Usage: bacula-fd [-f -s] [-c config_file] [-d debug_level]\n"
 "        -c <file>   use <file> as configuration file\n"
 "        -d <nn>     set debug level to <nn>\n"
-"        -dt         print timestamp in debug output\n"
+"        -dt         print a timestamp in debug output\n"
 "        -f          run in foreground (for debugging)\n"
 "        -g          groupid\n"
+"        -k          keep readall capabilities\n"
+"        -m          print kaboom output (for debugging)\n"
 "        -s          no signals (for debugging)\n"
 "        -t          test configuration file and exit\n"
 "        -u          userid\n"
@@ -105,6 +105,7 @@ int main (int argc, char *argv[])
 {
    int ch;
    bool test_config = false;
+   bool keep_readall_caps = false;
    char *uid = NULL;
    char *gid = NULL;
 #ifdef HAVE_PYTHON
@@ -121,7 +122,7 @@ int main (int argc, char *argv[])
    init_msg(NULL, NULL);
    daemon_start_time = time(NULL);
 
-   while ((ch = getopt(argc, argv, "c:d:fg:stu:v?")) != -1) {
+   while ((ch = getopt(argc, argv, "c:d:fg:kmstu:v?")) != -1) {
       switch (ch) {
       case 'c':                    /* configuration file */
          if (configfile != NULL) {
@@ -147,6 +148,14 @@ int main (int argc, char *argv[])
 
       case 'g':                    /* set group */
          gid = optarg;
+         break;
+
+      case 'k':
+         keep_readall_caps = true;
+         break;
+
+      case 'm':                    /* print kaboom output */
+         prt_kaboom = true;
          break;
 
       case 's':
@@ -185,6 +194,10 @@ int main (int argc, char *argv[])
       usage();
    }
 
+   if (!uid && keep_readall_caps) {
+      Emsg0(M_ERROR_TERM, 0, _("-k option has no meaning without -u option.\n"));
+   }
+
    server_tid = pthread_self();
    if (!no_signals) {
       init_signals(terminate_filed);
@@ -221,13 +234,18 @@ int main (int argc, char *argv[])
       init_stack_dump();              /* set new pid */
    }
 
+   set_thread_concurrency(me->MaxConcurrentJobs + 10);
+   lmgr_init_thread(); /* initialize the lockmanager stack */
+
    /* Maximum 1 daemon at a time */
-   create_pid_file(me->pid_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
-   read_state_file(me->working_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
+   create_pid_file(me->pid_directory, "bacula-fd",
+                   get_first_port_host_order(me->FDaddrs));
+   read_state_file(me->working_directory, "bacula-fd",
+                   get_first_port_host_order(me->FDaddrs));
 
    load_fd_plugins(me->plugin_directory);
 
-   drop(uid, gid);
+   drop(uid, gid, keep_readall_caps);
 
 #ifdef BOMB
    me += 1000000;
@@ -244,8 +262,6 @@ int main (int argc, char *argv[])
 
    init_python_interpreter(&python_args);
 #endif /* HAVE_PYTHON */
-
-   set_thread_concurrency(10);
 
    if (!no_signals) {
       start_watchdog();               /* start watchdog thread */

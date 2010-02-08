@@ -31,7 +31,6 @@
  *
  *     Kern Sibbald, October MMI
  *
- *   Version  $Id$
  */
 
 #include "bacula.h"
@@ -243,6 +242,33 @@ CAT *get_catalog_resource(UAContext *ua)
    return catalog;
 }
 
+
+/*
+ * Select a job to enable or disable   
+ */
+JOB *select_enable_disable_job_resource(UAContext *ua, bool enable)
+{
+   char name[MAX_NAME_LENGTH];
+   JOB *job;
+
+   LockRes();
+   start_prompt(ua, _("The defined Job resources are:\n"));
+   foreach_res(job, R_JOB) {
+      if (!acl_access_ok(ua, Job_ACL, job->name())) {
+         continue;
+      }
+      if (job->enabled == enable) {   /* Already enabled/disabled? */
+         continue;                    /* yes, skip */
+      }
+      add_prompt(ua, job->name());
+   }
+   UnlockRes();
+   if (do_prompt(ua, _("Job"), _("Select Job resource"), name, sizeof(name)) < 0) {
+      return NULL;
+   }
+   job = (JOB *)GetResWithName(R_JOB, name);
+   return job;
+}
 
 /*
  * Select a Job resource from prompt list

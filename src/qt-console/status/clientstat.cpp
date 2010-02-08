@@ -99,7 +99,7 @@ void ClientStat::timerTriggered()
    value -= 1;
    if (value == 0) {
       value = spinBox->value();
-      bool iscurrent = mainWin->stackedWidget->currentIndex() == mainWin->stackedWidget->indexOf(this);
+      bool iscurrent = mainWin->tabWidget->currentIndex() == mainWin->tabWidget->indexOf(this);
       if (((isDocked() && iscurrent) || (!isDocked())) && (checkBox->checkState() == Qt::Checked)) {
          populateAll();
       }
@@ -179,8 +179,8 @@ void ClientStat::populateTerminated()
                if (field == "OK")
                   p_tableitem->setBackground(Qt::green);
                else
-		 p_tableitem->setBackground(Qt::red);
-	    }
+                 p_tableitem->setBackground(Qt::red);
+            }
             terminatedTable->setItem(results.size() - row - 1, column, p_tableitem);
             column += 1;
          }
@@ -277,7 +277,7 @@ void ClientStat::readSettings()
    m_splitText = "splitterSizes_1";
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
-   splitter->restoreState(settings.value(m_splitText).toByteArray());
+   if (settings.contains(m_splitText)) { splitter->restoreState(settings.value(m_splitText).toByteArray()); }
    spinBox->setValue(settings.value("refreshInterval", 28).toInt());
    checkBox->setCheckState((Qt::CheckState)settings.value("refreshCheck", Qt::Checked).toInt());
    settings.endGroup();

@@ -13,4 +13,6 @@ if test -e ../config.h.orig ; then
 fi
 if test -d ../win32/release32; then
    cp -f debug/bat.exe ../win32/release32
+   cp -f ${DEPKGS}/depkgs-mingw32/lib/qt/QtGui4.dll ../win32/release32
+   cp -f ${DEPKGS}/depkgs-mingw32/lib/qt/QtCore4.dll ../win32/release32
 fi

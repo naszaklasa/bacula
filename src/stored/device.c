@@ -97,7 +97,7 @@ bool fixup_device_block_write_error(DCR *dcr, int retries)
 
    wait_time = time(NULL);
 
-   Dmsg0(100, "Enter fixup_device_block_write_error\n");
+   Dmsg0(100, "=== Enter fixup_device_block_write_error\n");
 
    /*
     * If we are blocked at entry, unblock it, and set our own block status

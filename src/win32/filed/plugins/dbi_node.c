@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -285,7 +285,7 @@ dbi_node_t::pluginIoClose(exchange_fd_context_t *context, struct io_pkt *io)
    buffer = NULL;
    return bRC_OK;
 restore_fail:
-   _JobMessage(M_ERROR, "Format of %s is incorrect", full_path);
+   _JobMessage(M_FATAL, "Format of %s is incorrect", full_path);
    delete buffer;
    buffer = NULL;
    return bRC_Error;

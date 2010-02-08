@@ -64,8 +64,9 @@ int update_cmd(UAContext *ua, const char *cmd)
       NT_("volume"), /* 1 */
       NT_("pool"),   /* 2 */
       NT_("slots"),  /* 3 */
-      NT_("jobid"),  /* 4 */
-      NT_("stats"),  /* 5 */
+      NT_("slot"),   /* 4 */
+      NT_("jobid"),  /* 5 */
+      NT_("stats"),  /* 6 */
       NULL};
 
    if (!open_client_db(ua)) {
@@ -81,12 +82,13 @@ int update_cmd(UAContext *ua, const char *cmd)
       update_pool(ua);
       return 1;
    case 3:
+   case 4:
       update_slots(ua);
       return 1;
-   case 4:
+   case 5:
       update_job(ua);
       return 1;
-   case 5:
+   case 6:
       update_stats(ua);
       return 1;
    default:
@@ -465,13 +467,30 @@ static void update_volenabled(UAContext *ua, char *val, MEDIA_DBR *mr)
       return;
    }
    if (!db_update_media_record(ua->jcr, ua->db, mr)) {
-      ua->error_msg(_("Error updating media record Enabled: ERR=%s"), db_strerror(ua->db));
+      ua->error_msg(_("Error updating media record Enabled: ERR=%s"),
+                    db_strerror(ua->db));
    } else {
       ua->info_msg(_("New Enabled is: %d\n"), mr->Enabled);
    }
 }
 
-
+static void update_vol_actiononpurge(UAContext *ua, char *val, MEDIA_DBR *mr)
+{
+   POOL_MEM ret;
+   if (strcasecmp(val, "truncate") == 0) {
+      mr->ActionOnPurge = AOP_TRUNCATE;
+   } else {
+      mr->ActionOnPurge = 0;
+   }
+   
+   if (!db_update_media_record(ua->jcr, ua->db, mr)) {
+      ua->error_msg(_("Error updating media record ActionOnPurge: ERR=%s"),
+                    db_strerror(ua->db));
+   } else {
+      ua->info_msg(_("New ActionOnPurge is: %s\n"), 
+                   aop_to_str(mr->ActionOnPurge, ret));
+   }
+}
 
 /*
  * Update a media record -- allows you to change the
@@ -485,6 +504,7 @@ static int update_volume(UAContext *ua)
    POOL *pool;
    POOL_DBR pr;
    POOLMEM *query;
+   POOL_MEM ret;
    char buf[1000];
    char ed1[130];
    bool done = false;
@@ -504,6 +524,7 @@ static int update_volume(UAContext *ua)
       NT_("AllFromPool"),              /* 11 !!! see below !!! */
       NT_("Enabled"),                  /* 12 */
       NT_("RecyclePool"),              /* 13 */
+      NT_("ActionOnPurge"),            /* 14 */
       NULL };
 
 #define AllFromPool 11               /* keep this updated with above */
@@ -566,6 +587,9 @@ static int update_volume(UAContext *ua)
          case 13:
             update_vol_recyclepool(ua, ua->argv[j], &mr);
             break;
+	 case 14:
+	    update_vol_actiononpurge(ua, ua->argv[j], &mr);
+	    break;
          }
          done = true;
       }
@@ -595,12 +619,13 @@ static int update_volume(UAContext *ua)
       add_prompt(ua, _("All Volumes from all Pools")); /* 13 */
       add_prompt(ua, _("Enabled")),                    /* 14 */
       add_prompt(ua, _("RecyclePool")),                /* 15 */
-      add_prompt(ua, _("Done"));                       /* 16 */
+      add_prompt(ua, _("Action On Purge")),            /* 16 */
+      add_prompt(ua, _("Done"));                       /* 17 */
       i = do_prompt(ua, "", _("Select parameter to modify"), NULL, 0);  
 
       /* For All Volumes, All Volumes from Pool, and Done, we don't need
            * a Volume record */
-      if ( i != 12 && i != 13 && i != 16) {
+      if ( i != 12 && i != 13 && i != 17) {
          if (!select_media_dbr(ua, &mr)) {  /* Get Volume record */
             return 0;
          }
@@ -790,6 +815,17 @@ static int update_volume(UAContext *ua)
          }
          update_vol_recyclepool(ua, pr.Name, &mr);
          return 1;
+
+      case 16:
+         pm_strcpy(ret, "");
+	 ua->info_msg(_("Current ActionOnPurge is: %s\n"), 
+                      aop_to_str(mr.ActionOnPurge, ret));
+	 if (!get_cmd(ua, _("Enter new ActionOnPurge (one of: Truncate, None): "))) {
+            return 0;
+	 }
+
+         update_vol_actiononpurge(ua, ua->cmd, &mr);
+	 break;
 
       default:                        /* Done or error */
          ua->info_msg(_("Selection terminated.\n"));

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -53,7 +53,11 @@
 #define ETIME ETIMEDOUT
 #endif
 
-#define ioctl_req_t long unsigned int
+#ifdef HAVE_IOCTL_ULINT_REQUEST
+#define ioctl_req_t unsigned long int
+#else
+#define ioctl_req_t int
+#endif
 
 #ifdef PROTOTYPES
 # define __PROTO(p)     p
@@ -65,6 +69,7 @@
 #define ASSERT(x) if (!(x)) { \
    char *jcr = NULL; \
    Emsg1(M_ERROR, 0, _("Failed ASSERT: %s\n"), #x); \
+   Pmsg1(000, _("Failed ASSERT: %s\n"), #x); \
    jcr[0] = 0; }
 #else
 #define ASSERT(x)
@@ -287,6 +292,7 @@ void InitWinAPIWrapper();
 #define STREAM_ACL_SOLARIS_ACE           1013    /* Solaris specific ace_t string representation from
                                                   * from acl_totext (NFSv4 or ZFS acl)
                                                   */
+#define STREAM_XATTR_OPENBSD             1993    /* OpenBSD specific extended attributes */
 #define STREAM_XATTR_SOLARIS_SYS         1994    /* Solaris specific extensible attributes or
                                                   * otherwise named extended system attributes.
                                                   */
@@ -332,6 +338,7 @@ void InitWinAPIWrapper();
 #define FT_REPARSE   21               /* Win NTFS reparse point */
 #define FT_PLUGIN    22               /* Plugin generated filename */
 #define FT_DELETED   23               /* Deleted file entry */
+#define FT_BASE      24               /* Duplicate base file entry */
 
 /* Definitions for upper part of type word (see above). */
 #define AR_DATA_STREAM (1<<16)        /* Data stream id present */
@@ -342,6 +349,11 @@ void InitWinAPIWrapper();
 #define B_BACULA_LABEL 0
 #define B_ANSI_LABEL   1
 #define B_IBM_LABEL    2
+
+/*
+ * Actions on purge (bit mask)
+ */
+#define AOP_TRUNCATE 1
 
 /* Size of File Address stored in STREAM_SPARSE_DATA. Do NOT change! */
 #define SPARSE_FADDR_SIZE (sizeof(uint64_t))
@@ -411,6 +423,7 @@ typedef int (INTHANDLER)();
 
 #if defined(HAVE_WIN32)
 typedef int64_t   boffset_t;
+#define caddr_t  char *
 #else
 typedef off_t     boffset_t;
 #endif
@@ -612,6 +625,9 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 #define bmalloc(size) b_malloc(__FILE__, __LINE__, (size))
 #endif
 
+/* Macro to simplify free/reset pointers */
+#define bfree_and_null(a) do{if(a){free(a); (a)=NULL;}} while(0)
+
 /*
  * Replace codes needed in both file routines and non-file routines
  * Job replace codes -- in "replace"
@@ -643,15 +659,8 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 /* take this 'shortcut' */
 #define fseeko fseek
 #define ftello ftell
-#undef  ioctl_req_t
-#define ioctl_req_t int
 #endif
 
-
-#ifdef HAVE_OSF1_OS
-#undef  ioctl_req_t
-#define ioctl_req_t int
-#endif
 
 #ifdef HAVE_SUN_OS
    /*
@@ -662,8 +671,6 @@ int  m_msg(const char *file, int line, POOLMEM *&pool_buf, const char *fmt, ...)
 #define set_thread_concurrency(x)  thr_setconcurrency(x)
 extern int thr_setconcurrency(int);
 #define SunOS 1
-#undef  ioctl_req_t
-#define ioctl_req_t int
 
 #else
 
@@ -717,17 +724,13 @@ extern int h_errno;
  */
 extern "C" int getdomainname(char *name, int namelen);
 extern "C" int setdomainname(char *name, int namelen);
-#undef  ioctl_req_t
-#define ioctl_req_t int
 #endif /* HAVE_HPUX_OS */
 
 
 #ifdef HAVE_OSF1_OS
 extern "C" int fchdir(int filedes);
 extern "C" long gethostid(void);
-extern "C" int mknod ( const char *path, int mode, dev_t device );
-#undef  ioctl_req_t
-#define ioctl_req_t int
+extern "C" int mknod(const char *path, int mode, dev_t device );
 #endif
 
 
@@ -744,5 +747,8 @@ extern "C" int mknod ( const char *path, int mode, dev_t device );
 #define nl_langinfo(x) ("ANSI_X3.4-1968")
 #endif
 */
+
+/* Determine endiannes */
+static inline bool bigendian() { return htonl(1) == 1L; }
 
 #endif /* _BACONFIG_H */

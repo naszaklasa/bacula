@@ -33,13 +33,13 @@
 #include "bacula.h"
 #include "filed.h"
 
-static int dbglvl=200;
+static int dbglvl=100;
 
 typedef struct PrivateCurFile {
    hlink link;
    char *fname;
-   utime_t ctime;
-   utime_t mtime;
+   char *lstat;
+   char *chksum;
    bool seen;
 } CurFile;
 
@@ -92,22 +92,60 @@ static bool accurate_init(JCR *jcr, int nbfile)
    return true;
 }
 
+static bool accurate_send_base_file_list(JCR *jcr)
+{
+   CurFile *elt;
+   struct stat statc;
+   int32_t LinkFIc;
+   FF_PKT *ff_pkt;
+   int stream = STREAM_UNIX_ATTRIBUTES;
+
+   if (!jcr->accurate || jcr->getJobLevel() != L_FULL) {
+      return true;
+   }
+
+   if (jcr->file_list == NULL) {
+      return true;
+   }
+
+   ff_pkt = init_find_files();
+   ff_pkt->type = FT_BASE;
+
+   foreach_htable(elt, jcr->file_list) {
+      if (elt->seen) {
+         Dmsg2(dbglvl, "base file fname=%s seen=%i\n", elt->fname, elt->seen);
+         /* TODO: skip the decode and use directly the lstat field */
+         decode_stat(elt->lstat, &statc, &LinkFIc); /* decode catalog stat */  
+         ff_pkt->fname = elt->fname;
+         ff_pkt->statp = statc;
+         encode_and_send_attributes(jcr, ff_pkt, stream);
+//       free(elt->fname);
+      }
+   }
+
+   term_find_files(ff_pkt);
+   return true;
+}
+
+
 /* This function is called at the end of backup
  * We walk over all hash disk element, and we check
  * for elt.seen.
  */
-bool accurate_send_deleted_list(JCR *jcr)
+static bool accurate_send_deleted_list(JCR *jcr)
 {
    CurFile *elt;
+   struct stat statc;
+   int32_t LinkFIc;
    FF_PKT *ff_pkt;
    int stream = STREAM_UNIX_ATTRIBUTES;
 
-   if (!jcr->accurate || jcr->get_JobLevel() == L_FULL) {
-      goto bail_out;
+   if (!jcr->accurate) {
+      return true;
    }
 
    if (jcr->file_list == NULL) {
-      goto bail_out;
+      return true;
    }
 
    ff_pkt = init_find_files();
@@ -118,17 +156,16 @@ bool accurate_send_deleted_list(JCR *jcr)
          continue;
       }
       Dmsg2(dbglvl, "deleted fname=%s seen=%i\n", elt->fname, elt->seen);
+      /* TODO: skip the decode and use directly the lstat field */
+      decode_stat(elt->lstat, &statc, &LinkFIc); /* decode catalog stat */
       ff_pkt->fname = elt->fname;
-      ff_pkt->statp.st_mtime = elt->mtime;
-      ff_pkt->statp.st_ctime = elt->ctime;
+      ff_pkt->statp.st_mtime = statc.st_mtime;
+      ff_pkt->statp.st_ctime = statc.st_ctime;
       encode_and_send_attributes(jcr, ff_pkt, stream);
 //    free(elt->fname);
    }
 
    term_find_files(ff_pkt);
-bail_out:
-   /* TODO: clean htable when this function is not reached ? */
-   accurate_free(jcr);
    return true;
 }
 
@@ -141,26 +178,50 @@ void accurate_free(JCR *jcr)
    }
 }
 
-static bool accurate_add_file(JCR *jcr, char *fname, char *lstat)
+/* Send the deleted or the base file list and cleanup  */
+bool accurate_finish(JCR *jcr)
+{
+   bool ret=true;
+   if (jcr->accurate) {
+      if (jcr->getJobLevel() == L_FULL) {
+         ret = accurate_send_base_file_list(jcr);
+      } else {
+         ret = accurate_send_deleted_list(jcr);
+      }
+      
+      accurate_free(jcr);
+      if (jcr->getJobLevel() == L_FULL) {
+         Jmsg(jcr, M_INFO, 0, _("Space saved with Base jobs: %lld MB\n"), 
+              jcr->base_size/(1024*1024));
+      }
+   }
+   return ret;
+}
+
+static bool accurate_add_file(JCR *jcr, uint32_t len, 
+                              char *fname, char *lstat, char *chksum)
 {
    bool ret = true;
    CurFile elt;
-   struct stat statp;
-   int LinkFIc;
-   decode_stat(lstat, &statp, &LinkFIc); /* decode catalog stat */
-   elt.ctime = statp.st_ctime;
-   elt.mtime = statp.st_mtime;
    elt.seen = 0;
 
    CurFile *item;
    /* we store CurFile, fname and ctime/mtime in the same chunk */
-   item = (CurFile *)jcr->file_list->hash_malloc(sizeof(CurFile)+strlen(fname)+1);
+   item = (CurFile *)jcr->file_list->hash_malloc(sizeof(CurFile)+len+3);
    memcpy(item, &elt, sizeof(CurFile));
+
    item->fname  = (char *)item+sizeof(CurFile);
    strcpy(item->fname, fname);
+
+   item->lstat  = item->fname+strlen(item->fname)+1;
+   strcpy(item->lstat, lstat);
+
+   item->chksum = item->lstat+strlen(item->lstat)+1;
+   strcpy(item->chksum, chksum);
+
    jcr->file_list->insert(item->fname, item); 
 
-   Dmsg2(dbglvl, "add fname=<%s> lstat=%s\n", fname, lstat);
+   Dmsg3(dbglvl, "add fname=<%s> lstat=%s chksum=%s\n", fname, lstat, chksum);
    return ret;
 }
 
@@ -175,11 +236,17 @@ static bool accurate_add_file(JCR *jcr, char *fname, char *lstat)
  */
 bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
 {
+   int digest_stream = STREAM_NONE;
+   DIGEST *digest = NULL;
+
+   struct stat statc;
+   int32_t LinkFIc;
    bool stat = false;
+   char *opts;
    char *fname;
    CurFile elt;
 
-   if (!jcr->accurate || jcr->get_JobLevel() == L_FULL) {
+   if (!jcr->accurate) {
       return true;
    }
 
@@ -202,25 +269,202 @@ bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt)
       goto bail_out;
    }
 
-   /*
-    * We check only mtime/ctime like with the normal
-    * incremental/differential mode
-    */
-   if (elt.mtime != ff_pkt->statp.st_mtime) {
-//   Jmsg(jcr, M_SAVED, 0, _("%s      st_mtime differs\n"), fname);
-      Dmsg3(dbglvl, "%s      st_mtime differs (%lld!=%lld)\n", 
-            fname, elt.mtime, (utime_t)ff_pkt->statp.st_mtime);
-     stat = true;
-   } else if (!(ff_pkt->flags & FO_MTIMEONLY) 
-              && (elt.ctime != ff_pkt->statp.st_ctime)) {
-//   Jmsg(jcr, M_SAVED, 0, _("%s      st_ctime differs\n"), fname);
-      Dmsg3(dbglvl, "%s      st_ctime differs\n", 
-            fname, elt.ctime, ff_pkt->statp.st_ctime);
-     stat = true;
+   decode_stat(elt.lstat, &statc, &LinkFIc); /* decode catalog stat */
+
+   if (jcr->getJobLevel() == L_FULL) {
+      opts = ff_pkt->BaseJobOpts;
+   } else {
+      opts = ff_pkt->AccurateOpts;
    }
 
-   accurate_mark_file_as_seen(jcr, &elt);
-//   Dmsg2(dbglvl, "accurate %s = %d\n", fname, stat);
+   /*
+    * Loop over options supplied by user and verify the
+    * fields he requests.
+    */
+   for (char *p=opts; !stat && *p; p++) {
+      char ed1[30], ed2[30];
+      switch (*p) {
+      case 'i':                /* compare INODEs */
+         if (statc.st_ino != ff_pkt->statp.st_ino) {
+            Dmsg3(dbglvl-1, "%s      st_ino   differ. Cat: %s File: %s\n",
+                  fname,
+                  edit_uint64((uint64_t)statc.st_ino, ed1),
+                  edit_uint64((uint64_t)ff_pkt->statp.st_ino, ed2));
+            stat = true;
+         }
+         break;
+      case 'p':                /* permissions bits */
+         /* TODO: If something change only in perm, user, group
+          * Backup only the attribute stream
+          */
+         if (statc.st_mode != ff_pkt->statp.st_mode) {
+            Dmsg3(dbglvl-1, "%s     st_mode  differ. Cat: %x File: %x\n",
+                  fname,
+                  (uint32_t)statc.st_mode, (uint32_t)ff_pkt->statp.st_mode);
+            stat = true;
+         }
+         break;
+      case 'n':                /* number of links */
+         if (statc.st_nlink != ff_pkt->statp.st_nlink) {
+            Dmsg3(dbglvl-1, "%s      st_nlink differ. Cat: %d File: %d\n",
+                  fname,
+                  (uint32_t)statc.st_nlink, (uint32_t)ff_pkt->statp.st_nlink);
+            stat = true;
+         }
+         break;
+      case 'u':                /* user id */
+         if (statc.st_uid != ff_pkt->statp.st_uid) {
+            Dmsg3(dbglvl-1, "%s      st_uid   differ. Cat: %u File: %u\n",
+                  fname,
+                  (uint32_t)statc.st_uid, (uint32_t)ff_pkt->statp.st_uid);
+            stat = true;
+         }
+         break;
+      case 'g':                /* group id */
+         if (statc.st_gid != ff_pkt->statp.st_gid) {
+            Dmsg3(dbglvl-1, "%s      st_gid   differ. Cat: %u File: %u\n",
+                  fname,
+                  (uint32_t)statc.st_gid, (uint32_t)ff_pkt->statp.st_gid);
+            stat = true;
+         }
+         break;
+      case 's':                /* size */
+         if (statc.st_size != ff_pkt->statp.st_size) {
+            Dmsg3(dbglvl-1, "%s      st_size  differ. Cat: %s File: %s\n",
+                  fname,
+                  edit_uint64((uint64_t)statc.st_size, ed1),
+                  edit_uint64((uint64_t)ff_pkt->statp.st_size, ed2));
+            stat = true;
+         }
+         break;
+      case 'a':                /* access time */
+         if (statc.st_atime != ff_pkt->statp.st_atime) {
+            Dmsg1(dbglvl-1, "%s      st_atime differs\n", fname);
+            stat = true;
+         }
+         break;
+      case 'm':                 /* modification time */
+         if (statc.st_mtime != ff_pkt->statp.st_mtime) {
+            Dmsg1(dbglvl-1, "%s      st_mtime differs\n", fname);
+            stat = true;
+         }
+         break;
+      case 'c':                /* ctime */
+         if (statc.st_ctime != ff_pkt->statp.st_ctime) {
+            Dmsg1(dbglvl-1, "%s      st_ctime differs\n", fname);
+            stat = true;
+         }
+         break;
+      case 'd':                /* file size decrease */
+         if (statc.st_size > ff_pkt->statp.st_size) {
+            Dmsg3(dbglvl-1, "%s      st_size  decrease. Cat: %s File: %s\n",
+                  fname,
+                  edit_uint64((uint64_t)statc.st_size, ed1),
+                  edit_uint64((uint64_t)ff_pkt->statp.st_size, ed2));
+            stat = true;
+         }
+         break;
+
+      /* TODO: cleanup and factorise this function with verify.c */
+      case '5':                /* compare MD5 */
+      case '1':                 /* compare SHA1 */
+        /*
+          * The remainder of the function is all about getting the checksum.
+          * First we initialise, then we read files, other streams and Finder Info.
+          */
+         if (!stat && ff_pkt->type != FT_LNKSAVED && 
+             (S_ISREG(ff_pkt->statp.st_mode) && 
+              ff_pkt->flags & (FO_MD5|FO_SHA1|FO_SHA256|FO_SHA512))) 
+         {
+
+            if (!*elt.chksum) {
+               Jmsg(jcr, M_WARNING, 0, _("Can't verify checksum for %s\n"),
+                    ff_pkt->fname);
+               stat = true;
+               break;
+            }
+
+            /*
+             * Create our digest context. If this fails, the digest will be set
+             * to NULL and not used.
+             */
+            if (ff_pkt->flags & FO_MD5) {
+               digest = crypto_digest_new(jcr, CRYPTO_DIGEST_MD5);
+               digest_stream = STREAM_MD5_DIGEST;
+               
+            } else if (ff_pkt->flags & FO_SHA1) {
+               digest = crypto_digest_new(jcr, CRYPTO_DIGEST_SHA1);
+               digest_stream = STREAM_SHA1_DIGEST;
+               
+            } else if (ff_pkt->flags & FO_SHA256) {
+               digest = crypto_digest_new(jcr, CRYPTO_DIGEST_SHA256);
+               digest_stream = STREAM_SHA256_DIGEST;
+               
+            } else if (ff_pkt->flags & FO_SHA512) {
+               digest = crypto_digest_new(jcr, CRYPTO_DIGEST_SHA512);
+               digest_stream = STREAM_SHA512_DIGEST;
+            }
+            
+            /* Did digest initialization fail? */
+            if (digest_stream != STREAM_NONE && digest == NULL) {
+               Jmsg(jcr, M_WARNING, 0, _("%s digest initialization failed\n"),
+                    stream_to_ascii(digest_stream));
+            }
+
+            /* compute MD5 or SHA1 hash */
+            if (digest) {
+               char md[CRYPTO_DIGEST_MAX_SIZE];
+               uint32_t size;
+               
+               size = sizeof(md);
+               
+               if (digest_file(jcr, ff_pkt, digest) != 0) {
+                  jcr->JobErrors++;
+
+               } else if (crypto_digest_finalize(digest, (uint8_t *)md, &size)) {
+                  char *digest_buf;
+                  const char *digest_name;
+                  
+                  digest_buf = (char *)malloc(BASE64_SIZE(size));
+                  digest_name = crypto_digest_name(digest);
+                  
+                  bin_to_base64(digest_buf, BASE64_SIZE(size), md, size, true);
+
+                  if (strcmp(digest_buf, elt.chksum)) {
+                     Dmsg3(dbglvl-1, "%s      chksum  diff. Cat: %s File: %s\n",
+                           fname,
+                           elt.chksum,
+                           digest_buf);
+                     stat = true;
+                  }
+                  
+                  free(digest_buf);
+               }
+               crypto_digest_free(digest);
+            }
+         }
+
+         break;
+      case ':':
+      case 'J':
+      case 'C':
+      default:
+         break;
+      }
+   }
+
+   /* In Incr/Diff accurate mode, we mark all files as seen
+    * When in Full+Base mode, we mark only if the file match exactly
+    */
+   if (jcr->getJobLevel() == L_FULL) {
+      if (!stat) {               
+         /* compute space saved with basefile */
+         jcr->base_size += ff_pkt->statp.st_size;
+         accurate_mark_file_as_seen(jcr, &elt);
+      }
+   } else {
+      accurate_mark_file_as_seen(jcr, &elt);
+   }
 
 bail_out:
    unstrip_path(ff_pkt);
@@ -233,10 +477,10 @@ bail_out:
 int accurate_cmd(JCR *jcr)
 {
    BSOCK *dir = jcr->dir_bsock;
-   int len;
+   int lstat_pos, chksum_pos;
    int32_t nb;
 
-   if (!jcr->accurate || job_canceled(jcr) || jcr->get_JobLevel()==L_FULL) {
+   if (job_canceled(jcr)) {
       return true;
    }
    if (sscanf(dir->msg, "accurate files=%ld", &nb) != 1) {
@@ -244,17 +488,28 @@ int accurate_cmd(JCR *jcr)
       return false;
    }
 
+   jcr->accurate = true;
+
    accurate_init(jcr, nb);
 
    /*
     * buffer = sizeof(CurFile) + dirmsg
-    * dirmsg = fname + \0 + lstat
+    * dirmsg = fname + \0 + lstat + \0 + checksum + \0
     */
    /* get current files */
    while (dir->recv() >= 0) {
-      len = strlen(dir->msg) + 1;
-      if (len < dir->msglen) {
-         accurate_add_file(jcr, dir->msg, dir->msg + len);
+      lstat_pos = strlen(dir->msg) + 1;
+      if (lstat_pos < dir->msglen) {
+         chksum_pos = lstat_pos + strlen(dir->msg + lstat_pos) + 1;
+
+         if (chksum_pos >= dir->msglen) {
+            chksum_pos = lstat_pos - 1;    /* tweak: no checksum, point to the last \0 */
+         } 
+
+         accurate_add_file(jcr, dir->msglen, 
+                           dir->msg,               /* Path */
+                           dir->msg + lstat_pos,   /* LStat */
+                           dir->msg + chksum_pos); /* CheckSum */
       }
    }
 

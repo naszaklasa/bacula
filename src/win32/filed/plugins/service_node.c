@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -56,7 +56,7 @@ service_node_t::startBackupFile(exchange_fd_context_t *context, struct save_pkt 
    case 0:
       if (strcmp(PLUGIN_PATH_PREFIX_SERVICE, name) != 0)
       {
-         _JobMessage(M_ERROR, "Invalid restore path specified, must start with /" PLUGIN_PATH_PREFIX_BASE "/" PLUGIN_PATH_PREFIX_SERVICE "/\n");
+         _JobMessage(M_FATAL, "Invalid restore path specified, must start with /" PLUGIN_PATH_PREFIX_BASE "/" PLUGIN_PATH_PREFIX_SERVICE "/\n");
          return bRC_Error;
       }
       // convert name to a wide string
@@ -67,7 +67,7 @@ service_node_t::startBackupFile(exchange_fd_context_t *context, struct save_pkt 
       result = HrESEBackupPrepare(context->computer_name, PLUGIN_PATH_PREFIX_SERVICE_W, &ibi_count, &ibi, &hccx);
       if (result != 0)
       {
-         _JobMessage(M_ERROR, "HrESEBackupPrepare failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+         _JobMessage(M_FATAL, "HrESEBackupPrepare failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
          return bRC_Error;
       }
       state = 1;
@@ -99,7 +99,7 @@ service_node_t::startBackupFile(exchange_fd_context_t *context, struct save_pkt 
          delete tmp;
          if (current_ibi == ibi_count)
          {
-            _JobMessage(M_ERROR, "Invalid Storage Group '%s'\n", context->path_bits[level + 1]);
+            _JobMessage(M_FATAL, "Invalid Storage Group '%s'\n", context->path_bits[level + 1]);
             return bRC_Error;
          }
          _DebugMessage(100, "storage group name = %s\n", first_storage_group_node->name);
@@ -155,7 +155,7 @@ service_node_t::endBackupFile(exchange_fd_context_t *context)
       result = HrESEBackupEnd(hccx);
       if (result != 0)
       {
-         _JobMessage(M_ERROR, "HrESEBackupEnd failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+         _JobMessage(M_FATAL, "HrESEBackupEnd failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
          return bRC_Error;
       }
 
@@ -174,7 +174,7 @@ service_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *r
    _DebugMessage(0, "createFile_SERVICE state = %d\n", state);
    if (strcmp(name, "Microsoft Information Store") != 0)
    {
-      _JobMessage(M_ERROR, "Invalid restore path specified, must start with '/" PLUGIN_PATH_PREFIX_BASE "/" PLUGIN_PATH_PREFIX_SERVICE "/'\n", state);
+      _JobMessage(M_FATAL, "Invalid restore path specified, must start with '/" PLUGIN_PATH_PREFIX_BASE "/" PLUGIN_PATH_PREFIX_SERVICE "/'\n", state);
       return bRC_Error;
    }
    for(;;)

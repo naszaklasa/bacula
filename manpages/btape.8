@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH BTAPE 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery and verification"
+.TH BTAPE 8 "26 November 2009" "Kern Sibbald" "Network backup, recovery and verification"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .SH NAME
@@ -35,13 +35,22 @@ Specify configuration file.
 .BI \-d\  nn
 Set debug level to \fInn\fP.
 .TP
+.BI \-p
+Proceed inspite of I/O errors.
+.TP
 .B \-t
 Open the default tape device.
 .TP
 .B \-s
-Turn off signals.
+No signals (for debugging).
+.TP
+.B \-v
+Set verbose mode.
 .sp 3
 .SH COMMANDS
+.TP
+.B autochanger
+test autochanger
 .TP
 .B bsf
 backspace file
@@ -49,9 +58,6 @@ backspace file
 .B bsr
 backspace record
 .TP 
-.B bfill
-fill tape using Bacula writes
-.TP
 .B cap
 list device capabilities
 .TP
@@ -120,6 +126,9 @@ write a single Bacula block
 .TP
 .B rr
 read a single record
+.TP
+.B rb
+read a single bacula block
 .TP
 .B qfill
 quick fill command

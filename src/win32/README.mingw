@@ -71,20 +71,32 @@ The new directory structure is:
 One-time Setup
 ==============
 
-If you're reading this file you've probably already enlisted in the SVN tree or
-extracted the contents of the source tar.  If not you need to do that first.
+If you're reading this file you've probably already cloned the GIT source tree or
+extracted the contents of the source tar. If not you need to do that first.
 
 You also need to download one of the doc tar balls and extract to your
-top level Bacula directory. 
+top level Bacula directory. For the moment, the 3.0.2 version of the 
+installer requires doc files in the old 2.4.4 format.
 
 The extracted doc directory name will be bacula-docs-version where version
 is the version number.  The directory must be renamed to docs (ie remove
 the leading bacula- and the -version portion of the name).
 
+An alternative to setting up the old documents that are needed by the Win32
+installer, you may comment out the following lines in 
+src/win32/win32_installer/Makefile:
+
+#DOC_FILES := \
+#       manual/bacula.pdf \
+#       manual/bacula/*.html \
+#       manual/bacula/*.png  \
+#       manual/bacula/*.css
+
 Note, a number of packages must be installed to build the cross-tools
 and the depkgs files.  Most are rather standard such as gcc, g++,
 make, ...  However a few that you may not have are:
 
+  wget
   texinfo
   flex
   bison
@@ -111,7 +123,8 @@ Download and build the 3rd party dependencies
         ./build-depkgs-mingw32
 
 Note, that during the build process you will see a moderate amount of
-output. If something fails, it is probably because you don't have one
+output and some warnings.  If something more serious happens
+and the build fails, it is probably because you don't have one
 of the build dependencies (hopefully all mentioned above) loaded on your  
 system. To find out what is going wrong, do the following:
 
@@ -139,7 +152,7 @@ or
 gmp-4.2.4, mpfr-2.3.2. The mingw64 project delivers binaries that should do the
 work.
 
-Internal scripts and patches are using mingw32-xxx binaries, so you need to
+The Win64 internal scripts and patches use the  mingw32-xxx binaries, so you need to
 make links in the gcc bin ($ROOT/cross-tools/mingw-w64/bin) directory.
 
 ---8<------8<-------8<--------
@@ -170,7 +183,8 @@ If that link doesn't work then go to http://www.microsoft.com and search for
 
         "download volume shadow copy service sdk"
 
-we are currently using version 7.2 released 8/3/2005.
+we are currently using version 7.2 released 8/3/2005 (a bit old, but it 
+works).
 
 Normally the files will be installed in:
 
@@ -189,6 +203,7 @@ following:
 
         gcc
         g++
+        patch
         wget
         texinfo
         bison

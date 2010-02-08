@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,6 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -104,8 +103,8 @@ int file_delete_handler(void *ctx, int num_fields, char **row)
 /*
  *   Prune records from database
  *
- *    prune files (from) client=xxx
- *    prune jobs (from) client=xxx
+ *    prune files (from) client=xxx [pool=yyy]
+ *    prune jobs (from) client=xxx [pool=yyy]
  *    prune volume=xxx
  *    prune stats
  */
@@ -113,6 +112,7 @@ int prunecmd(UAContext *ua, const char *cmd)
 {
    DIRRES *dir;
    CLIENT *client;
+   POOL *pool;
    POOL_DBR pr;
    MEDIA_DBR mr;
    utime_t retention;
@@ -139,18 +139,38 @@ int prunecmd(UAContext *ua, const char *cmd)
    switch (kw) {
    case 0:  /* prune files */
       client = get_client_resource(ua);
-      if (!client || !confirm_retention(ua, &client->FileRetention, "File")) {
+      if (find_arg_with_value(ua, "pool") >= 0) {
+         pool = get_pool_resource(ua);
+      } else {
+         pool = NULL;
+      }
+      /* Pool File Retention takes precedence over client File Retention */
+      if (pool && pool->FileRetention > 0) {
+         if (!confirm_retention(ua, &pool->FileRetention, "File")) {
+            return false;
+         }
+      } else if (!client || !confirm_retention(ua, &client->FileRetention, "File")) {
          return false;
       }
-      prune_files(ua, client);
+      prune_files(ua, client, pool);
       return true;
    case 1:  /* prune jobs */
       client = get_client_resource(ua);
-      if (!client || !confirm_retention(ua, &client->JobRetention, "Job")) {
+      if (find_arg_with_value(ua, "pool") >= 0) {
+         pool = get_pool_resource(ua);
+      } else {
+         pool = NULL;
+      }
+      /* Pool Job Retention takes precedence over client Job Retention */
+      if (pool && pool->JobRetention > 0) {
+         if (!confirm_retention(ua, &pool->JobRetention, "Job")) {
+            return false;
+         }
+      } else if (!client || !confirm_retention(ua, &client->JobRetention, "Job")) {
          return false;
       }
       /* ****FIXME**** allow user to select JobType */
-      prune_jobs(ua, client, JT_BACKUP);
+      prune_jobs(ua, client, pool, JT_BACKUP);
       return 1;
    case 2:  /* prune volume */
       if (!select_pool_and_media_dbr(ua, &pr, &mr)) {
@@ -214,8 +234,10 @@ int prune_stats(UAContext *ua, utime_t retention)
  *
  * This routine assumes you want the pruning to be done. All checking
  *  must be done before calling this routine.
+ *
+ * Note: pool can possibly be NULL.
  */
-int prune_files(UAContext *ua, CLIENT *client)
+int prune_files(UAContext *ua, CLIENT *client, POOL *pool)
 {
    struct del_ctx del;
    struct s_count_ctx cnt;
@@ -227,18 +249,25 @@ int prune_files(UAContext *ua, CLIENT *client)
    db_lock(ua->db);
    memset(&cr, 0, sizeof(cr));
    memset(&del, 0, sizeof(del));
-   bstrncpy(cr.Name, client->hdr.name, sizeof(cr.Name));
+   bstrncpy(cr.Name, client->name(), sizeof(cr.Name));
    if (!db_create_client_record(ua->jcr, ua->db, &cr)) {
       db_unlock(ua->db);
       return 0;
    }
 
-   period = client->FileRetention;
+   if (pool && pool->FileRetention > 0) {
+      period = pool->FileRetention;
+   } else {
+      period = client->FileRetention;
+   }
    now = (utime_t)time(NULL);
 
-   /* Select Jobs -- for counting */
-   Mmsg(query, count_select_job, edit_int64(now - period, ed1), 
-        edit_int64(cr.ClientId, ed2));
+//   edit_utime(now-period, ed1, sizeof(ed1));
+//   Jmsg(ua->jcr, M_INFO, 0, _("Begin pruning Jobs older than %s secs.\n"), ed1);
+   Jmsg(ua->jcr, M_INFO, 0, _("Begin pruning Jobs.\n"));
+   /* Select Jobs -- for counting */ 
+   edit_int64(now - period, ed1);
+   Mmsg(query, count_select_job, ed1, edit_int64(cr.ClientId, ed2));
    Dmsg3(050, "select now=%u period=%u sql=%s\n", (uint32_t)now, 
                (uint32_t)period, query.c_str());
    cnt.count = 0;
@@ -322,7 +351,7 @@ static bool create_temp_tables(UAContext *ua)
  *
  * For Restore Jobs there are no restrictions.
  */
-int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
+int prune_jobs(UAContext *ua, CLIENT *client, POOL *pool, int JobType)
 {
    struct del_ctx del;
    POOL_MEM query(PM_MESSAGE);
@@ -340,7 +369,11 @@ int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
       return 0;
    }
 
-   period = client->JobRetention;
+   if (pool && pool->JobRetention > 0) {
+      period = pool->JobRetention;
+   } else {
+      period = client->JobRetention;
+   }
    now = (utime_t)time(NULL);
 
    /* Drop any previous temporary tables still there */
@@ -351,10 +384,13 @@ int prune_jobs(UAContext *ua, CLIENT *client, int JobType)
       goto bail_out;
    }
 
+
    /*
     * Select all files that are older than the JobRetention period
     *  and stuff them into the "DeletionCandidates" table.
     */
+   edit_utime(now-period, ed1, sizeof(ed1));
+   Jmsg(ua->jcr, M_INFO, 0, _("Begin pruning Jobs older than %s.\n"), ed1);
    edit_int64(now - period, ed1);
    Mmsg(query, insert_delcand, (char)JobType, ed1, 
         edit_int64(cr.ClientId, ed2));

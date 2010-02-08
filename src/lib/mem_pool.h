@@ -58,7 +58,6 @@ extern POOLMEM  *sm_check_pool_memory_size(const char *fname, int line, POOLMEM 
 #define free_memory(x) sm_free_pool_memory(__FILE__, __LINE__, x)
 extern void sm_free_pool_memory(const char *fname, int line, POOLMEM *buf);
 
-
 #else
 
 extern POOLMEM *get_pool_memory(int pool);
@@ -70,6 +69,9 @@ extern POOLMEM  *check_pool_memory_size(POOLMEM *buf, int32_t size);
 extern void   free_pool_memory(POOLMEM *buf);
 
 #endif
+
+/* Macro to simplify free/reset pointers */
+#define free_and_null_pool_memory(a) do{if(a){free_pool_memory(a); (a)=NULL;}} while(0)
 
 extern void garbage_collect_memory_pool();
 extern void  close_memory_pool();

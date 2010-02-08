@@ -45,13 +45,13 @@ Function EnterInstallType
       StrCpy $R2 "$OldInstallDir\Doc"
 
       WriteINIStr "$PLUGINSDIR\InstallType.ini" "Field 1" "Text" "An old installation has been found in $OldInstallDir.  The Configuration will be migrated.  Please choose the installation type for any additional components you select."
-      WriteINIStr "$PLUGINSDIR\InstallType.ini" "Field 5" "Text" "The software will be installed in the default directory $\"$PROGRAMFILES\Bacula$\".  The configuration files for additional components will be generated using defaults applicable to most installations."
+      WriteINIStr "$PLUGINSDIR\InstallType.ini" "Field 5" "Text" "The software will be installed in the default directory $\"C:\Program Files\Bacula$\".  The configuration files for additional components will be generated using defaults applicable to most installations."
       WriteINIStr "$PLUGINSDIR\InstallType.ini" "Field 6" "Text" "You have more options, but you will have to manually edit your bacula-fd.conf file before Bacula will work."
     ${EndIf}
   ${Else}
     ; New Install
     StrCpy $InstallType ${NewInstall}
-    WriteINIStr "$PLUGINSDIR\InstallType.ini" "Field 5" "Text" "The software will be installed in the default directory $\"$PROGRAMFILES\Bacula$\".  The configuration files will be generated using defaults applicable to most installations."
+    WriteINIStr "$PLUGINSDIR\InstallType.ini" "Field 5" "Text" "The software will be installed in the default directory $\"C:\Program Files\Bacula$\".  The configuration files will be generated using defaults applicable to most installations."
     WriteINIStr "$PLUGINSDIR\InstallType.ini" "Field 6" "Text" "You have more options, but you will have to manually edit your bacula-fd.conf file before Bacula will work."
   ${EndIf}
 
@@ -63,17 +63,11 @@ Function EnterInstallType
     ${If} ${FileExists} "$R1\bconsole.conf"
       IntOp $PreviousComponents $PreviousComponents | ${ComponentTextConsole}
     ${EndIf}
-    ${If} ${FileExists} "$R1\wx-console.conf"
-      IntOp $PreviousComponents $PreviousComponents | ${ComponentGUIConsole}
+    ${If} ${FileExists} "$R1\bat.conf"
+      IntOp $PreviousComponents $PreviousComponents | ${ComponentBatConsole}
     ${EndIf}
-    ${If} ${FileExists} "$R2\bacula.pdf"
+    ${If} ${FileExists} "$R2\main.pdf"
       IntOp $PreviousComponents $PreviousComponents | ${ComponentPDFDocs}
-    ${EndIf}
-    ${If} ${FileExists} "$R2\bacula\bacula.html"
-      IntOp $PreviousComponents $PreviousComponents | ${ComponentHTMLDocs}
-    ${EndIf}
-    ${If} ${FileExists} "$R2\bacula.html"
-      IntOp $PreviousComponents $PreviousComponents | ${ComponentHTMLDocs}
     ${EndIf}
   ${EndIf}
 

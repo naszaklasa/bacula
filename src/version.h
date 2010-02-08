@@ -1,19 +1,16 @@
-/*
- *
- */
 
 #undef  VERSION
-#define VERSION "3.0.3"
-#define BDATE   "18 October 2009"
-#define LSMDATE "18Oct09"
+#define VERSION "5.0.0"
+#define BDATE   "26 January 2010"
+#define LSMDATE "26Jan10"
 
-#define PROG_COPYRIGHT "Copyright (C) %d-2009 Free Software Foundation Europe e.V.\n"
-#define BYEAR "2009"       /* year for copyright messages in progs */
+#define PROG_COPYRIGHT "Copyright (C) %d-2010 Free Software Foundation Europe e.V.\n"
+#define BYEAR "2010"       /* year for copyright messages in progs */
 
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -65,10 +62,19 @@
 #if DEVELOPER
 # ifndef _USE_LOCKMGR
 #  define _USE_LOCKMGR
-# endif
-#endif
+# endif /* _USE_LOCKMGR */
+/*
+ * Enable priority management with the lock manager
+ *
+ * Note, turning this on will cause the Bacula SD to abort if
+ *  mutexes are executed out of order, which could lead to a
+ *  deadlock.  However, note that this is not necessarily a
+ *  deadlock, so turn this on only for debugging.
+ */
+#define USE_LOCKMGR_PRIORITY
+#endif  /* DEVELOPER */
 
-#if !HAVE_LINUX_OS
+#if !HAVE_LINUX_OS && !HAVE_SUN_OS && !HAVE_DARWIN_OS && !HAVE_FREEBSD_OS
 # undef _USE_LOCKMGR
 #endif
 

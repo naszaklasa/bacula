@@ -292,7 +292,7 @@ void restorePage::directoryItemChanged(QTreeWidgetItem *currentitem,
 {
    QString fullpath = m_dirTreeItems.value(currentitem);
    statusLine->setText("");
-   if (fullpath != ""){
+   if (fullpath != "") {
       cwd(fullpath.toUtf8().data());
       fillDirectory();
    }
@@ -491,7 +491,7 @@ void restorePage::writeSettings()
 {
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup("RestorePage");
-   settings.setValue("splitterSizes", splitter->saveState());
+   settings.setValue(m_splitText, splitter->saveState());
    settings.endGroup();
 }
 
@@ -500,8 +500,11 @@ void restorePage::writeSettings()
  */
 void restorePage::readSettings()
 {
+   m_splitText = "splitterSizes_2";
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup("RestorePage");
-   splitter->restoreState(settings.value("splitterSizes").toByteArray());
+   if (settings.contains(m_splitText)) { 
+      splitter->restoreState(settings.value(m_splitText).toByteArray());
+   }
    settings.endGroup();
 }

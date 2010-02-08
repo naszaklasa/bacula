@@ -84,6 +84,7 @@ int main(int argc, char *argv[])
 
    init_stack_dump();
    my_name_is(argc, argv, "bat");
+   lmgr_init_thread();
    init_msg(NULL, NULL);
    working_directory  = "/tmp";
 

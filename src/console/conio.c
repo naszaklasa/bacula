@@ -1,17 +1,7 @@
 /*
-      Generalized console input/output handler
-      A maintanable replacement for readline()
-
-         Updated for Bacula, Kern Sibbald, December MMIII
-
-      This code is in part derived from code that I wrote in
-      1981, so some of it is a bit old and could use a cleanup.
-
-*/
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 1981-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 1981-2009 Free Software Foundation Europe e.V.
              Yes, that is 1981 no error.
 
    The main author of Bacula is Kern Sibbald, with contributions from
@@ -35,6 +25,16 @@
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
+*/
+/*
+      Generalized console input/output handler
+      A maintanable replacement for readline()
+
+         Updated for Bacula, Kern Sibbald, December MMIII
+
+      This code is in part derived from code that I wrote in
+      1981, so some of it is a bit old and could use a cleanup.
+
 */
 
 /*
@@ -188,7 +188,7 @@ static struct lstr *slptr;            /* store line pointer */
 static int cl, cp;
 static char *getnext(), *getprev();
 static int first = 1;
-static int mode_insert = 0;
+static int mode_insert = 1;
 static int mode_wspace = 1;           /* words separated by spaces */
 
 
@@ -629,8 +629,10 @@ input_line(char *string, int length)
 done:
    curline[cl++] = EOS;              /* terminate */
    bstrncpy(string,curline,length);           /* return line to caller */
-   /* Note, put line zaps curline */
-   putline(curline,cl);              /* save line for posterity */
+   /* Save non-blank lines. Note, put line zaps curline */
+   if (curline[0] != EOS) {
+      putline(curline,cl);            /* save line for posterity */
+   }
    return 0;                         /* give it to him/her */
 }
 
@@ -640,7 +642,7 @@ insert_space(char *curline, int curline_len)
 {
    int i;
 
-   if (cp > cl || cl+1 > curline_len) {
+   if (cp >= cl || cl+1 > curline_len) {
       return;
    }
    /* Note! source and destination overlap */
@@ -739,7 +741,7 @@ delchr(int del, char *curline, int line_len)
    if (cp > cl || del == 0) {
       return;
    }
-   while (del-- && cp > 0) {
+   while (del-- && cl > 0) {
       cnt = char_count(cp, curline);
       if ((i=cl-cp-cnt) > 0) {
          memcpy(&curline[cp], &curline[cp+cnt], i);

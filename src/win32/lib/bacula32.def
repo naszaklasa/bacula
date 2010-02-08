@@ -320,7 +320,6 @@ _Z15escape_filenamePKc
 _Z15read_state_filePcPKci
 _Z16write_state_filePcPKci
 _Z20make_unique_filenamePPciS_
-_Z4dropPcS_
 _Z5bfreePv
 _Z6bfgetsPciP6_iobuf
 _Z7bcallocjj
@@ -501,6 +500,7 @@ _Z18get_jobid_from_tsdv
 _Z18get_jcr_by_sessionjj
 _Z18init_jcr_subsystemv
 _Z18set_jcr_job_statusP3JCRi
+_ZN3JCR12setJobStatusEi
 _Z19init_last_jobs_listv
 _Z19lock_last_jobs_listv
 _Z19read_last_jobs_listiy
@@ -509,12 +509,9 @@ _Z20get_jcr_by_full_namePc
 _Z20write_last_jobs_listiy
 _Z21unlock_last_jobs_listv
 _Z23get_jcr_by_partial_namePc
+_Z24get_next_jobid_from_listPPcPj
 _Z7new_jcriPFvP3JCRE
 _Z9lock_jobsv
-_ZN3JCR11set_JobTypeEi
-_ZN3JCR12set_JobLevelEi
-_ZN3JCR11set_JobTypeEi
-_ZN3JCR12set_JobLevelEi
 _ZN3JCR14get_ActionNameEb
 _ZN3JCR17get_OperationNameEv
 _ZN3JCR8JobReadsEv
@@ -597,7 +594,10 @@ _Z8term_msgv
 _Z9close_msgP3JCR
 _Z9get_tracev
 _Z9set_tracei
- 
+
+; priv.o
+_Z4dropPcS_b
+
 ; pythonlib.o
 _Z21generate_daemon_eventP3JCRPKc
  
@@ -641,7 +641,7 @@ _Z14rwl_readunlockP12s_rwlock_tag
 _Z15rwl_readtrylockP12s_rwlock_tag
 _Z15rwl_writeunlockP12s_rwlock_tag
 _Z16rwl_writetrylockP12s_rwlock_tag
-_Z8rwl_initP12s_rwlock_tag
+_Z8rwl_initP12s_rwlock_tagi
  
 ; scan.o
 _Z10parse_argsPcPS_PiS0_S0_i
@@ -670,11 +670,11 @@ _Z14serial_float64PPhd
 _Z14unserial_btimePPh
 _Z14unserial_int16PPh
 _Z14unserial_int32PPh
-_Z15unserial_stringPPhPc
 _Z15unserial_uint16PPh
 _Z15unserial_uint32PPh
 _Z15unserial_uint64PPh
 _Z16unserial_float64PPh
+_Z15unserial_stringPPhPci
  
 ; smartall.o
 _Z10sm_reallocPKciPvj
@@ -731,6 +731,7 @@ _Z16make_session_keyPcS_i
 _Z17job_status_to_stri
 _Z18do_shell_expansionPci
 _Z18jobstatus_to_asciiiPci
+_Z10aop_to_striR8POOL_MEM
 _Z19last_path_separatorPKc
 _Z21set_working_directoryPc
 _Z5lcasePc

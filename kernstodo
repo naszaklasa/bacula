@@ -29,66 +29,45 @@ Document:
   \bacula\working).
 - Document techniques for restoring large numbers of files.
 - Document setting my.cnf to big file usage.
-- Add example of proper index output to doc. show index from File;
 - Correct the Include syntax in the m4.xxx files in examples/conf
-- Document JobStatus and Termination codes.
-- Fix the error with the "DVI file can't be opened" while
-  building the French PDF.
-- Document more DVD stuff
-- Doc
-   { "JobErrors",  "i"},
-   { "JobFiles",   "i"},
-   { "SDJobFiles", "i"},
-   { "SDErrors",   "i"},
-   { "FDJobStatus","s"},
-   { "SDJobStatus","s"},
 - Document all the little details of setting up certificates for
   the Bacula data encryption code.
 - Document more precisely how to use master keys -- especially
   for disaster recovery.
  
-Professional Needs:
-- Migration from other vendors
-  - Date change
-  - Path change
-- Filesystem types
-- Backup conf/exe (all daemons) 
-- Backup up system state
-- Detect state change of system (verify)
-- Synthetic Full, Diff, Inc (Virtual, Reconstructed)
-- SD to SD
-- Novell NSS backup http://www.novell.com/coolsolutions/tools/18952.html
-- Compliance norms that compare restored code hash code.
-- When glibc crash, get address with
-    info symbol 0x809780c
-- How to sync remote offices.
-- David's priorities
-   Copypools
-   Extract capability (#25)
-   Continued enhancement of bweb
-   Threshold triggered migration jobs (not currently in list, but will be
-    needed ASAP)
-   Client triggered backups
-   Complete rework of the scheduling system (not in list)
-   Performance and usage instrumentation (not in list)
-   See email of 21Aug2007 for details.
-- Look at: http://tech.groups.yahoo.com/group/cfg2html
-   and http://www.openeyet.nl/scc/ for managing customer changes
-
 Priority:
 ================
-
+- Possibly allow SD to spool even if a tape is not mounted.
+- How to sync remote offices.
+- Windows Bare Metal 
+- Backup up windows system state 
+- Complete Job restart 
+- Look at rsysnc for incremental updates and dedupping 
+- Implement rwlock() for SD that takes why and can_steal to replace
+  existing block/lock mechanism. rlock() would allow multiple readers
+  wlock would allow only one writer.
+- For Windows disaster recovery see http://unattended.sf.net/
+- Add "before=" "olderthan=" to FileSet for doing Base of
+  unchanged files.
+- Show files/second in client status output.
+- Don't attempt to restore from "Disabled" Volumes.
+- Have SD compute MD5 or SHA1 and compare to what FD computes.
+- Make VolumeToCatalog calculate an MD5 or SHA1 from the 
+  actual data on the Volume and compare it.                  
+- Remove queue.c code.
+- Implement multiple jobid specification for the cancel command,
+  similar to what is permitted on the update slots command.
+- Ensure that the SD re-reads the Media record if the JobFiles
+  does not match -- it may have been updated by another job.
+- Add MD5 or SHA1 check in SD for data validation
 - When reserving a device to read, check to see if the Volume
   is already in use, if so wait.  Probably will need to pass the
   Volume.  See bug #1313.  Create a regression test to simulate
   this problem and see if VolumePollInterval fixes it. Possibly turn
   it on by default.
 
-- Fix restore of acls and extended attributes to count ERROR
-  messages and make errors non-fatal.
-- Put save/restore various platform acl/xattrs on a pointer to simplify
-  the code.
-
+- Page hash tables
+- Deduplication
 - Why no error message if restore has no permission on the where
   directory?
 - Possibly allow manual "purge" to purge a Volume that has not
@@ -96,7 +75,6 @@ Priority:
   is_volume_purged().
 - Add disk block detection bsr code (make it work).
 - Remove done bsrs.
-- Add blast attributes to DIR to SD.
 - Detect deadlocks in reservations.
 - Plugins:
   - Add list during dump
@@ -132,23 +110,14 @@ Priority:
   for non I/O reasons.
 - Fix #ifdefing so that smartalloc can be disabled. Check manual
   -- the default is enabled.
-- Change calling sequence to delete_job_id_range() in ua_cmds.c 
-  the preceding strtok() is done inside the subroutine only once.
 - Dangling softlinks are not restored properly.  For example, take a
   soft link such as src/testprogs/install-sh, which points to /usr/share/autoconf...
   move the directory to another machine where the file /usr/share/autoconf does
   not exist, back it up, then try a full restore.  It fails.
 - Softlinks that point to non-existent file are not restored in restore all,
   but are restored if the file is individually selected.  BUG!
-- New directive "Delete purged Volumes"
 - Prune by Job
 - Prune by Job Level (Full, Differential, Incremental)
-- Strict automatic pruning 
-- Implement unmount of USB volumes.
-- Use "./config no-idea no-mdc2 no-rc5" on building OpenSSL for
-  Win32 to avoid patent problems.
-- Implement multiple jobid specification for the cancel command,
-  similar to what is permitted on the update slots command.
 - modify pruning to keep a fixed number of versions of a file, 
   if requested.
 - the cd-command should allow complete paths
@@ -167,44 +136,24 @@ Priority:
   jcr->last_runtime
   MA = (last_MA * 3 + rate) / 4
   rate = (bytes - last_bytes) / (runtime - last_runtime)
+===
 - Add a recursive mark command (rmark) to restore.
-- "Minimum Job Interval = nnn" sets minimum interval between Jobs
-  of the same level and does not permit multiple simultaneous
-  running of that Job (i.e. lets any previous invocation finish
-  before doing Interval testing).
 - Look at simplifying File exclusions.
 - Scripts
-- Auto update of slot:
-   rufus-dir: ua_run.c:456-10 JobId=10 NewJobId=10 using pool Full priority=10
-   02-Nov 12:58 rufus-dir JobId 10: Start Backup JobId 10, Job=kernsave.2007-11-02_12.58.03
-   02-Nov 12:58 rufus-dir JobId 10: Using Device "DDS-4"
-   02-Nov 12:58 rufus-sd JobId 10: Invalid slot=0 defined in catalog for Volume "Vol001" on "DDS-4" (/dev/nst0). Manual load my be required.
-   02-Nov 12:58 rufus-sd JobId 10: 3301 Issuing autochanger "loaded? drive 0" command.
-   02-Nov 12:58 rufus-sd JobId 10: 3302 Autochanger "loaded? drive 0", result is Slot 2.
-   02-Nov 12:58 rufus-sd JobId 10: Wrote label to prelabeled Volume "Vol001" on device "DDS-4" (/dev/nst0)
-   02-Nov 12:58 rufus-sd JobId 10: Alert: TapeAlert[7]:   Media Life: The tape has reached the end of its useful life.
-   02-Nov 12:58 rufus-dir JobId 10: Bacula rufus-dir 2.3.6 (26Oct07): 02-Nov-2007 12:58:51
 - Separate Files and Directories in catalog
 - Create FileVersions table
-- Look at rsysnc for incremental updates and dedupping
-- Add MD5 or SHA1 check in SD for data validation
 - finish implementation of fdcalled -- see ua_run.c:105
 - Fix problem in postgresql.c in my_postgresql_query, where the
   generation of the error message doesn't differentiate result==NULL
   and a bad status from that result.  Not only that, the result is
   cleared on a bail_out without having generated the error message.
-- KIWI
 - Implement SDErrors (must return from SD)
-- Implement USB keyboard support in rescue CD.
 - Implement continue spooling while despooling.
 - Remove all install temp files in Win32 PLUGINSDIR.
-- Audit retention periods to make sure everything is 64 bit.
 - No where in restore causes kaboom.
 - Performance: multiple spool files for a single job.
 - Performance: despool attributes when despooling data (problem
   multiplexing Dir connection).
-- Make restore use the in-use volume reservation algorithm.
-- When Pool specifies Storage command override does not work.
 - Implement wait_for_sysop() message display in wait_for_device(), which
   now prints warnings too often.
 - Ensure that each device in an Autochanger has a different
@@ -231,21 +180,36 @@ Priority:
    > configuration string value to a CRYPTO_CIPHER_* value, if anyone is  
    > interested in implementing this functionality.
 
-- Figure out some way to "automatically" backup conf changes.
 - Add the OS version back to the Win32 client info.
 - Restarted jobs have a NULL in the from field.
 - Modify SD status command to indicate when the SD is writing
   to a DVD (the device is not open -- see bug #732).
 - Look at the possibility of adding "SET NAMES UTF8" for MySQL,
   and possibly changing the blobs into varchar.
-- Ensure that the SD re-reads the Media record if the JobFiles
-  does not match -- it may have been updated by another job.
-- Doc items
 - Test Volume compatibility between machine architectures
 - Encryption documentation
-- Wrong jobbytes with query 12 (todo)
-- Bare-metal recovery Windows (todo)
-   
+
+Professional Needs:
+- Migration from other vendors
+  - Date change
+  - Path change
+- Filesystem types
+- Backup conf/exe (all daemons) 
+- Detect state change of system (verify)
+- SD to SD
+- Novell NSS backup http://www.novell.com/coolsolutions/tools/18952.html
+- Compliance norms that compare restored code hash code.
+- David's priorities
+   Copypools
+   Extract capability (#25)
+   Threshold triggered migration jobs (not currently in list, but will be
+    needed ASAP)
+   Client triggered backups
+   Complete rework of the scheduling system (not in list)
+   Performance and usage instrumentation (not in list)
+   See email of 21Aug2007 for details.
+- Look at: http://tech.groups.yahoo.com/group/cfg2html
+   and http://www.openeyet.nl/scc/ for managing customer changes
 
 Projects:
 - Pool enhancements
@@ -275,12 +239,6 @@ Projects:
               GROUP BY Media.MediaType
                ) AS media_avg_size ON (Media.MediaType = media_avg_size.MediaType)
     GROUP BY Media.MediaType, Media.PoolId, media_avg_size.volavg
-- GUI
-  - Admin
-  - Management reports
-  - Add doc for bweb -- especially Installation
-  - Look at Webmin
-     http://www.orangecrate.com/modules.php?name=News&file=article&sid=501
 - Performance
   - Despool attributes in separate thread
   - Database speedups
@@ -290,12 +248,8 @@ Projects:
 - Features
   - Better scheduling  
   - More intelligent re-run
-  - FD plugins
   - Incremental backup -- rsync, Stow
 
-For next release:
-- Try to fix bscan not working with multiple DVD volumes bug #912.
-- Look at mondo/mindi
 - Make Bacula by default not backup tmpfs, procfs, sysfs, ...
 - Fix hardlinked immutable files when linking a second file, the
   immutable flag must be removed prior to trying to link it.
@@ -307,12 +261,7 @@ For next release:
 - Look at why SIGPIPE during connection can cause seg fault in
   writing the daemon message, when Dir dropped to bacula:bacula
 - Look at zlib 32 => 64 problems.
-- Possibly turn on St. Bernard code.
 - Fix bextract to restore ACLs, or better yet, use common routines.
-- Do we migrate appendable Volumes?
-- Remove queue.c code.
-- Print warning message if LANG environment variable does not specify
-  UTF-8.
 - New dot commands from Arno.
   .show device=xxx lists information from one storage device, including 
      devices (I'm not even sure that information exists in the DIR...)
@@ -350,7 +299,6 @@ Low priority:
   http://www.clarkconnect.com/wiki/index.php?title=Modules_-_LAN_Backup/Recovery
   http://linuxwiki.de/Bacula   (in German)
 
-- Possibly allow SD to spool even if a tape is not mounted.
 - Figure out how to configure query.sql.  Suggestion to use m4:
     == changequote.m4 ===
     changequote(`[',`]')dnl
@@ -385,12 +333,6 @@ select FilenameId from Filename where Name='';
 select Path.Path from Path,File where File.JobId=nnn and
   File.FilenameId=(FilenameId-from-above) and File.PathId=Path.PathId
   order by Path.Path ASC;
-
-- Look into using Dart for testing
-  http://public.kitware.com/Dart/HTML/Index.shtml
-
-- Look into replacing autotools with cmake
-  http://www.cmake.org/HTML/Index.html
 
 - Mount on an Autochanger with no tape in the drive causes:
    Automatically selected Storage: LTO-changer
@@ -515,16 +457,13 @@ select Path.Path from Path,File where File.JobId=nnn and
 - Directive: at <event> "command"
 - Command: pycmd "command" generates "command" event.  How to
   attach to a specific job?
-- Integrate Christopher's St. Bernard code.
 - run_cmd() returns int should return JobId_t
 - get_next_jobid_from_list() returns int should return JobId_t
 - Document export LDFLAGS=-L/usr/lib64
-- Don't attempt to restore from "Disabled" Volumes.
 - Network error on Win32 should set Win32 error code.
 - What happens when you rename a Disk Volume?
 - Job retention period in a Pool (and hence Volume).  The job would
   then be migrated.
-- Look at -D_FORTIFY_SOURCE=2
 - Add Win32 FileSet definition somewhere
 - Look at fixing restore status stats in SD.
 - Look at using ioctl(FIMAP) and FIGETBSZ for sparse files.
@@ -539,7 +478,6 @@ select Path.Path from Path,File where File.JobId=nnn and
   ("F","Full"),
   ("D","Diff"),
   ("I","Inc");
-- Show files/second in client status output.
 - new pool XXX with ScratchPoolId = MyScratchPool's PoolId and
   let it fill itself, and RecyclePoolId = XXX's PoolId so I can
   see if it become stable and I just have to supervise
@@ -577,7 +515,6 @@ select Path.Path from Path,File where File.JobId=nnn and
   backups of the same client and if we again try to start a full backup of 
   client backup abc bacula won't complain. That should be fixed.
 
-- For Windows disaster recovery see http://unattended.sf.net/
 - regardless of the retention period, Bacula will not prune the
   last Full, Diff, or Inc File data until a month after the
   retention period for the last Full backup that was done.
@@ -785,16 +722,6 @@ Notes:
     in a Job Resource that after this certain job is run, the Volume State
     should be set to "Volume State = Used", this give more flexibility (IMHO).
 
-6. Localization of Bacula Messages
-
-    Why:
-    Unfortunatley many,many people I work with don't speak english very well.
-    So if at least the Reporting messages would be localized then they
-    would  understand that they have to change the tape,etc. etc.
-
-    I volunteer to do the german translations, and if I can convince my wife also
-    french and Morre (western african language).
-
 7. OK, this is evil, probably bound to security risks and maybe not possible
     due to the design of bacula.
 
@@ -819,7 +746,6 @@ Why:
    http://dev.mysql.com/doc/mysql/en/Full_table.html ; I think the
    "Installing and Configuring MySQL" chapter should talk a bit
    about this potential problem, and recommend a solution.
-- For Solaris must use POSIX awk.
 - Want speed of writing to tape while despooling.
 - Supported autochanger:
 OS: Linux
@@ -835,22 +761,15 @@ Cap: 200GB
 - Use only shell tools no make in CDROM package.
 - Include within include does it work?
 - Implement a Pool of type Cleaning?
-- Implement VolReadTime and VolWriteTime in SD
-- Modify Backing up Your Database to include a bootstrap file.
 - Think about making certain database errors fatal.
 - Look at correcting the time jump in the scheduler for daylight
   savings time changes.
-- Add a "real" timer to network connections.
-- Promote to Full = Time period 
 - Check dates entered by user for correctness (month/day/... ranges)
 - Compress restore Volume listing by date and first file.
 - Look at patches/bacula_db.b2z postgresql that loops during restore.
   See Gregory Wright.
 - Perhaps add read/write programs and/or plugins to FileSets.
 - How to handle backing up portables ...
-- Add some sort of guaranteed Interval for upgrading jobs.
-- Can we write the state file after every job terminates? On Win32
-  the system crashes and the state file is not updated.
 - Limit bandwidth
 
 Documentation to do: (any release a little bit at a time)
@@ -897,8 +816,6 @@ Documentation to do: (any release a little bit at a time)
   block numbers in btape "test".  Possibly adjust in Bacula.
 - Fix list volumes to output volume retention in some other
   units, perhaps via a directive.
-- Allow Simultaneous Priorities = yes  => run up to Max concurrent jobs even
-  with multiple priorities.
 - If you use restore replace=never, the directory attributes for
   non-existent directories will not be restored properly.
 
@@ -1010,8 +927,6 @@ Documentation to do: (any release a little bit at a time)
   correctly for multiple simultaneous jobs.
 - Implement the Media record flag that indicates that the Volume does disk 
   addressing.
-- Implement VolAddr, which is used when Volume is addressed like a disk,
-  and form it from VolFile and VolBlock.
 - Fix fast block rejection (stored/read_record.c:118). It passes a null
   pointer (rec) to try_repositioning().
 - Implement RestoreJobRetention? Maybe better "JobRetention" in a Job,
@@ -1065,7 +980,6 @@ Documentation to do: (any release a little bit at a time)
         it's pushing toward heterogeneous systems capability
   big things:
    Macintosh file client
-        macs are an interesting niche, but I fear a server is a rathole
    working bare iron recovery for windows
    the option for  inc/diff backups not reset on fileset revision
         a) use both change and inode update time against base time
@@ -1075,15 +989,10 @@ Documentation to do: (any release a little bit at a time)
    an integration guide
         or how to get at fancy things that one could do with bacula
    logwatch code for bacula logs (or similar)
-   linux distro inclusion of bacula (brings good and bad, but necessary)
-   win2k/XP server capability (icky but you asked)
    support for Oracle database ??
 ===
 - Look at adding SQL server and Exchange support for Windows. 
-- Create VolAddr for disk files in place of VolFile and VolBlock. This
-  is needed to properly specify ranges.
 - Add progress of files/bytes to SD and FD.
-- Print warning message if FileId > 4 billion
 - do a "messages" before the first prompt in Console
 - Client does not show busy during Estimate command.
 - Implement Console mtx commands.
@@ -1143,7 +1052,6 @@ Documentation to do: (any release a little bit at a time)
 - Make things like list where a file is saved case independent for
   Windows.
 - Implement a Recycle command
-- Start working on Base jobs.
 - From Phil Stracchino:
   It would probably be a per-client option, and would be called
   something like, say, "Automatically purge obsoleted jobs".  What it
@@ -1179,9 +1087,6 @@ Documentation to do: (any release a little bit at a time)
 - Figure out some way to estimate output size and to avoid splitting
   a backup across two Volumes -- this could be useful for writing CDROMs
   where you really prefer not to have it split -- not serious.
-- Have SD compute MD5 or SHA1 and compare to what FD computes.
-- Make VolumeToCatalog calculate an MD5 or SHA1 from the 
-  actual data on the Volume and compare it.                  
 - Make bcopy read through bad tape records.
 - Program files (i.e. execute a program to read/write files).
   Pass read date of last backup, size of file last time.
@@ -1278,7 +1183,6 @@ Documentation to do: (any release a little bit at a time)
   See afbackup.
 - Need something that monitors the JCR queue and
   times out jobs by asking the deamons where they are.
-- Enhance Jmsg code to permit buffering and saving to disk.
 - Verify from Volume
 - Need report class for messages. Perhaps
   report resource where report=group of messages
@@ -1368,19 +1272,12 @@ Also, the benefits of this are huge for very large shops, especially
 with media robots, but are a pain for shops with manual media
 mounting.
 
->
-> Base jobs sound pretty useful, but I'm not dying for them.
-
-Nobody is dying for them, but when you see what it does, you will die
-without it.
-
 Regards,
 Jerry Schieffer
 
 ==============================
 
 Longer term to do:
-- Implement FSM (File System Modules).
 - Audit M_ error codes to ensure they are correct and consistent.
 - Add variable break characters to lex analyzer.
   Either a bit mask or a string of chars so that
@@ -1394,6 +1291,34 @@ Longer term to do:
   the same time -- e.g. onsite, offsite.
 
 ======================================================
+
+====
+   Handling removable disks
+
+   From: Karl Cunningham <karlc@keckec.com>
+
+   My backups are only to hard disk these days, in removable bays. This is my
+   idea of how a backup to hard disk would work more smoothly. Some of these
+   things Bacula does already, but I mention them for completeness. If others
+   have better ways to do this, I'd like to hear about it.
+
+   1. Accommodate several disks, rotated similar to how tapes are.  Identified
+   by partition volume ID or perhaps by the name of a subdirectory.
+   2. Abort & notify the admin if the wrong disk is in the bay.
+   3. Write backups to different subdirectories for each machine to be backed
+   up.
+   4. Volumes (files) get created as needed in the proper subdirectory, one
+   for each backup.
+   5. When a disk is recycled, remove or zero all old backup files. This is
+   important as the disk being recycled may be close to full. This may be
+   better done manually since the backup files for many machines may be
+   scattered in many subdirectories.
+====
+
+
+=== Done
+
+===
         Base Jobs design
 It is somewhat like a Full save becomes an incremental since
 the Base job (or jobs) plus other non-base files.
@@ -1443,34 +1368,13 @@ Need:
   This would avoid the need to explicitly fetch each File record for
   the Base job.  The Base Job record will be fetched to get the
   VolSessionId and VolSessionTime.
-=========================================================  
-
-====
-   Handling removable disks
-
-   From: Karl Cunningham <karlc@keckec.com>
-
-   My backups are only to hard disk these days, in removable bays. This is my
-   idea of how a backup to hard disk would work more smoothly. Some of these
-   things Bacula does already, but I mention them for completeness. If others
-   have better ways to do this, I'd like to hear about it.
-
-   1. Accommodate several disks, rotated similar to how tapes are.  Identified
-   by partition volume ID or perhaps by the name of a subdirectory.
-   2. Abort & notify the admin if the wrong disk is in the bay.
-   3. Write backups to different subdirectories for each machine to be backed
-   up.
-   4. Volumes (files) get created as needed in the proper subdirectory, one
-   for each backup.
-   5. When a disk is recycled, remove or zero all old backup files. This is
-   important as the disk being recycled may be close to full. This may be
-   better done manually since the backup files for many machines may be
-   scattered in many subdirectories.
-====
-
-
-=== Done
-
-===
 - Fix bpipe.c so that it does not modify results pointer.
   ***FIXME*** calling sequence should be changed.
+- Fix restore of acls and extended attributes to count ERROR
+  messages and make errors non-fatal.
+- Put save/restore various platform acl/xattrs on a pointer to simplify
+  the code.
+- Add blast attributes to DIR to SD.
+- Implement unmount of USB volumes.
+- Look into using Dart for testing
+  http://public.kitware.com/Dart/HTML/Index.shtml

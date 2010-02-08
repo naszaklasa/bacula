@@ -31,7 +31,6 @@
  *
  *     Kern Sibbald, March MM
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -74,7 +73,7 @@ void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass);
 void init_device_resources();
 
 static char *runjob = NULL;
-static int background = 1;
+static bool background = true;
 static void init_reload(void);
 static CONFIG *config;
  
@@ -116,6 +115,7 @@ PROG_COPYRIGHT
 "       -dt         print timestamp in debug output\n"
 "       -f          run in foreground (for debugging)\n"
 "       -g          groupid\n"
+"       -m          print kaboom output (for debugging)\n"
 "       -r <job>    run <job> now\n"
 "       -s          no signals\n"
 "       -t          test - read configuration and exit\n"
@@ -130,7 +130,7 @@ PROG_COPYRIGHT
 
 /*********************************************************************
  *
- *         Main Bacula Server program
+ *         Main Bacula Director Server program
  *
  */
 #if defined(HAVE_WIN32)
@@ -163,7 +163,7 @@ int main (int argc, char *argv[])
 
    console_command = run_console_command;
 
-   while ((ch = getopt(argc, argv, "c:d:fg:r:stu:v?")) != -1) {
+   while ((ch = getopt(argc, argv, "c:d:fg:mr:stu:v?")) != -1) {
       switch (ch) {
       case 'c':                    /* specify config file */
          if (configfile != NULL) {
@@ -185,11 +185,15 @@ int main (int argc, char *argv[])
          break;
 
       case 'f':                    /* run in foreground */
-         background = FALSE;
+         background = false;
          break;
 
       case 'g':                    /* set group id */
          gid = optarg;
+         break;
+
+      case 'm':                    /* print kaboom output */
+         prt_kaboom = true;
          break;
 
       case 'r':                    /* run job */
@@ -261,16 +265,22 @@ int main (int argc, char *argv[])
       if (background) {
          daemon_start();
          init_stack_dump();              /* grab new pid */
-      }
-   
+      }   
       /* Create pid must come after we are a daemon -- so we have our final pid */
-      create_pid_file(director->pid_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
-      read_state_file(director->working_directory, "bacula-dir", get_first_port_host_order(director->DIRaddrs));
+      create_pid_file(director->pid_directory, "bacula-dir", 
+                      get_first_port_host_order(director->DIRaddrs));
+      read_state_file(director->working_directory, "bacula-dir",
+                      get_first_port_host_order(director->DIRaddrs));
    }
+
+   set_jcr_in_tsd(INVALID_JCR);
+   set_thread_concurrency(director->MaxConcurrentJobs * 2 +
+                          4 /* UA */ + 5 /* sched+watchdog+jobsvr+misc */);
+   lmgr_init_thread(); /* initialize the lockmanager stack */
 
    load_dir_plugins(director->plugin_directory);
 
-   drop(uid, gid);                    /* reduce privileges if requested */
+   drop(uid, gid, false);                    /* reduce privileges if requested */
 
    /* If we are in testing mode, we don't try to fix the catalog */
    cat_op mode=(test_config)?CHECK_CONNECTION:UPDATE_AND_FIX;
@@ -310,10 +320,6 @@ int main (int argc, char *argv[])
    init_python_interpreter(&python_args);
 #endif /* HAVE_PYTHON */
 
-   set_jcr_in_tsd(INVALID_JCR);
-   set_thread_concurrency(director->MaxConcurrentJobs * 2 +
-      4 /* UA */ + 4 /* sched+watchdog+jobsvr+misc */);
-
    Dmsg0(200, "Start UA server\n");
    start_UA_server(director->DIRaddrs);
 
@@ -323,7 +329,7 @@ int main (int argc, char *argv[])
 
    init_job_server(director->MaxConcurrentJobs);
 
-   dbg_jcr_add_hook(_dbg_print_db); /* used to debug B_DB connexion after fatal signal */
+   dbg_jcr_add_hook(db_debug_print); /* used to debug B_DB connexion after fatal signal */
 
 //   init_device_resources();
 
@@ -546,7 +552,7 @@ void reload_config(int sig)
        * Hook all active jobs so that they release this table
        */
       foreach_jcr(jcr) {
-         if (jcr->get_JobType() != JT_SYSTEM) {
+         if (jcr->getJobType() != JT_SYSTEM) {
             reload_table[table].job_count++;
             job_end_push(jcr, reload_job_end_cb, (void *)((long int)table));
             njobs++;
@@ -755,6 +761,7 @@ static bool check_resources()
                           job_items[i].handler == store_jobtype ||
                           job_items[i].handler == store_level   ||
                           job_items[i].handler == store_int32   ||
+                          job_items[i].handler == store_size32  ||
                           job_items[i].handler == store_migtype ||
                           job_items[i].handler == store_replace) {
                   def_ivalue = (uint32_t *)((char *)(job->jobdefs) + offset);
@@ -767,7 +774,7 @@ static bool check_resources()
                 * Handle 64 bit integer fields
                 */
                } else if (job_items[i].handler == store_time   ||
-                          job_items[i].handler == store_size   ||
+                          job_items[i].handler == store_size64 ||
                           job_items[i].handler == store_int64) {
                   def_lvalue = (int64_t *)((char *)(job->jobdefs) + offset);
                   Dmsg5(400, "Job \"%s\", field \"%s\" def_lvalue=%" lld " item %d offset=%u\n",
@@ -950,6 +957,12 @@ static bool check_catalog(cat_op mode)
          }
          OK = false;
          continue;
+      }
+      
+      /* Display a message if the db max_connections is too low */
+      if (!db_check_max_connections(NULL, db, director->MaxConcurrentJobs+1)) {
+         Pmsg1(000, "Warning, settings problem for Catalog=%s\n", catalog->name());
+         Pmsg1(000, "%s", db_strerror(db));
       }
 
       /* we are in testing mode, so don't touch anything in the catalog */

@@ -52,6 +52,7 @@ cwd=`pwd`
 cd ${TOPDIR}
 # Make TOPDIR absolute 
 TOPDIR=`pwd`
+TOPDIR=${DEPKGS:-${TOPDIR}}
 
 cd ${cwd}/`dirname $0`
 SCRIPTDIR=`pwd`
@@ -85,7 +86,8 @@ PURGE_DIR="Y"
 # You need to set both the URL they will be downloaded from
 # and the exact name of the individual component files.
 
-MINGW_URL="http://superb-west.dl.sourceforge.net/sourceforge/mingw"
+#MINGW_URL="http://superb-west.dl.sourceforge.net/sourceforge/mingw"
+MINGW_URL="http://www.bacula.org/cross-tools"
 
 # GCC_CORE is required; the other components are optional.
 # Set any you don't want to "".  You need binutils,
@@ -115,7 +117,8 @@ MINGW_UTILS_ARCHIVE="mingw-utils-0.3-src.tar.gz"
 # These are the files from the SDL website
 # These are optional, set them to "" if you don't want them)
 
-SDL_URL="http://www.libsdl.org/extras/win32/common"
+#SDL_URL="http://www.libsdl.org/extras/win32/common"
+SDL_URL="http://www.bacula.org/cross-tools"
 
 OPENGL_ARCHIVE="opengl-devel.tar.gz"
 DIRECTX_ARCHIVE="directx-devel.tar.gz"

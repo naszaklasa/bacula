@@ -33,7 +33,6 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_get.c 8918 2009-06-23 11:56:35Z ricozz $
  */
 
 
@@ -45,7 +44,7 @@
 #include "bacula.h"
 #include "cats.h"
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
 
 /* -----------------------------------------------------------------------
  *
@@ -57,7 +56,6 @@
 /* Forward referenced functions */
 static int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr);
 static int db_get_filename_record(JCR *jcr, B_DB *mdb);
-static int db_get_path_record(JCR *jcr, B_DB *mdb);
 
 
 /*
@@ -117,7 +115,7 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
    int stat = 0;
    char ed1[50], ed2[50], ed3[50];
 
-   if (jcr->get_JobLevel() == L_VERIFY_DISK_TO_CATALOG) {
+   if (jcr->getJobLevel() == L_VERIFY_DISK_TO_CATALOG) {
       Mmsg(mdb->cmd,
 "SELECT FileId, LStat, MD5 FROM File,Job WHERE "
 "File.JobId=Job.JobId AND File.PathId=%s AND "
@@ -152,11 +150,6 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
       mdb->num_rows = sql_num_rows(mdb);
       Dmsg1(050, "get_file_record num_rows=%d\n", (int)mdb->num_rows);
-      if (mdb->num_rows > 1) {
-         Mmsg1(mdb->errmsg, _("get_file_record want 1 got rows=%d\n"),
-            mdb->num_rows);
-         Dmsg1(000, "=== Problem!  %s", mdb->errmsg);
-      }
       if (mdb->num_rows >= 1) {
          if ((row = sql_fetch_row(mdb)) == NULL) {
             Mmsg1(mdb->errmsg, _("Error fetching row: %s\n"), sql_strerror(mdb));
@@ -165,6 +158,13 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
             bstrncpy(fdbr->LStat, row[1], sizeof(fdbr->LStat));
             bstrncpy(fdbr->Digest, row[2], sizeof(fdbr->Digest));
             stat = 1;
+            if (mdb->num_rows > 1) {
+               Mmsg3(mdb->errmsg, _("get_file_record want 1 got rows=%d PathId=%s FilenameId=%s\n"),
+                  mdb->num_rows, 
+                  edit_int64(fdbr->PathId, ed1), 
+                  edit_int64(fdbr->FilenameId, ed2));
+               Dmsg1(000, "=== Problem!  %s", mdb->errmsg);
+            }
          }
       } else {
          Mmsg2(mdb->errmsg, _("File record for PathId=%s FilenameId=%s not found.\n"),
@@ -229,7 +229,7 @@ static int db_get_filename_record(JCR *jcr, B_DB *mdb)
  *
  *   DO NOT use Jmsg in this routine (see notes for get_file_record)
  */
-static int db_get_path_record(JCR *jcr, B_DB *mdb)
+int db_get_path_record(JCR *jcr, B_DB *mdb)
 {
    SQL_ROW row;
    uint32_t PathId = 0;
@@ -297,13 +297,13 @@ bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
       Mmsg(mdb->cmd, "SELECT VolSessionId,VolSessionTime,"
 "PoolId,StartTime,EndTime,JobFiles,JobBytes,JobTDate,Job,JobStatus,"
 "Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId,FileSetId,"
-"SchedTime,RealEndTime,ReadBytes "
+"SchedTime,RealEndTime,ReadBytes,HasBase "
 "FROM Job WHERE Job='%s'", jr->Job);
     } else {
       Mmsg(mdb->cmd, "SELECT VolSessionId,VolSessionTime,"
 "PoolId,StartTime,EndTime,JobFiles,JobBytes,JobTDate,Job,JobStatus,"
 "Type,Level,ClientId,Name,PriorJobId,RealEndTime,JobId,FileSetId,"
-"SchedTime,RealEndTime,ReadBytes "
+"SchedTime,RealEndTime,ReadBytes,HasBase "
 "FROM Job WHERE JobId=%s", 
           edit_int64(jr->JobId, ed1));
     }
@@ -346,6 +346,7 @@ bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr)
    jr->SchedTime = str_to_utime(jr->cSchedTime);
    jr->EndTime = str_to_utime(jr->cEndTime);
    jr->RealEndTime = str_to_utime(jr->cRealEndTime);
+   jr->HasBase = str_to_int64(row[21]);
    sql_free_result(mdb);
 
    db_unlock(mdb);
@@ -428,7 +429,7 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
    db_lock(mdb);
    Mmsg(mdb->cmd,
 "SELECT VolumeName,MediaType,FirstIndex,LastIndex,StartFile,"
-"JobMedia.EndFile,StartBlock,JobMedia.EndBlock,Copy,"
+"JobMedia.EndFile,StartBlock,JobMedia.EndBlock,"
 "Slot,StorageId,InChanger"
 " FROM JobMedia,Media WHERE JobMedia.JobId=%s"
 " AND JobMedia.MediaId=Media.MediaId ORDER BY VolIndex,JobMediaId",
@@ -467,10 +468,9 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
                EndBlock = str_to_uint64(row[7]);
                Vols[i].StartAddr = (((uint64_t)StartFile)<<32) | StartBlock;
                Vols[i].EndAddr =   (((uint64_t)EndFile)<<32) | EndBlock;
-//             Vols[i].Copy = str_to_uint64(row[8]);
-               Vols[i].Slot = str_to_uint64(row[9]);
-               StorageId = str_to_uint64(row[10]);
-               Vols[i].InChanger = str_to_uint64(row[11]);
+               Vols[i].Slot = str_to_uint64(row[8]);
+               StorageId = str_to_uint64(row[9]);
+               Vols[i].InChanger = str_to_uint64(row[10]);
                Vols[i].Storage[0] = 0;
                SId[i] = StorageId;
             }
@@ -568,7 +568,7 @@ int db_get_client_ids(JCR *jcr, B_DB *mdb, int *num_ids, uint32_t *ids[])
 
    db_lock(mdb);
    *ids = NULL;
-   Mmsg(mdb->cmd, "SELECT ClientId FROM Client");
+   Mmsg(mdb->cmd, "SELECT ClientId FROM Client ORDER BY Name");
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
       *num_ids = sql_num_rows(mdb);
       if (*num_ids > 0) {
@@ -609,13 +609,15 @@ bool db_get_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr)
       Mmsg(mdb->cmd,
 "SELECT PoolId,Name,NumVols,MaxVols,UseOnce,UseCatalog,AcceptAnyVolume,"
 "AutoPrune,Recycle,VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,"
-"MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId,ScratchPoolId FROM Pool WHERE Pool.PoolId=%s", 
+"MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId,ScratchPoolId,"
+"ActionOnPurge FROM Pool WHERE Pool.PoolId=%s", 
          edit_int64(pdbr->PoolId, ed1));
    } else {                           /* find by name */
       Mmsg(mdb->cmd,
 "SELECT PoolId,Name,NumVols,MaxVols,UseOnce,UseCatalog,AcceptAnyVolume,"
 "AutoPrune,Recycle,VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,"
-"MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId,ScratchPoolId FROM Pool WHERE Pool.Name='%s'", 
+"MaxVolBytes,PoolType,LabelType,LabelFormat,RecyclePoolId,ScratchPoolId,"
+"ActionOnPurge FROM Pool WHERE Pool.Name='%s'", 
          pdbr->Name);
    }
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
@@ -649,6 +651,7 @@ bool db_get_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr)
             bstrncpy(pdbr->LabelFormat, row[16]!=NULL?row[16]:"", sizeof(pdbr->LabelFormat));
             pdbr->RecyclePoolId = str_to_int64(row[17]);
             pdbr->ScratchPoolId = str_to_int64(row[18]);
+            pdbr->ActionOnPurge = str_to_int32(row[19]);
             ok = true;
          }
       }
@@ -950,7 +953,7 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
          "MaxVolFiles,Recycle,Slot,FirstWritten,LastWritten,InChanger,"
          "EndFile,EndBlock,VolParts,LabelType,LabelDate,StorageId,"
          "Enabled,LocationId,RecycleCount,InitialWrite,"
-         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime "
+         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime,ActionOnPurge "
          "FROM Media WHERE MediaId=%s", 
          edit_int64(mr->MediaId, ed1));
    } else {                           /* find by name */
@@ -960,7 +963,7 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
          "MaxVolFiles,Recycle,Slot,FirstWritten,LastWritten,InChanger,"
          "EndFile,EndBlock,VolParts,LabelType,LabelDate,StorageId,"
          "Enabled,LocationId,RecycleCount,InitialWrite,"
-         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime "
+         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime,ActionOnPurge "
          "FROM Media WHERE VolumeName='%s'", mr->VolumeName);
    }
 
@@ -1018,6 +1021,7 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
             mr->RecyclePoolId = str_to_int64(row[34]);
             mr->VolReadTime = str_to_int64(row[35]);
             mr->VolWriteTime = str_to_int64(row[36]);
+            mr->ActionOnPurge = str_to_int32(row[37]);
             
             ok = true;
          }
@@ -1044,9 +1048,12 @@ bool db_get_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 }
 
 /*
- * Find the last "accurate" backup state (that can take deleted files in account)
- * 1) Get all files with jobid in list (F subquery) 
- * 2) Take only the last version of each file (Temp subquery) => accurate list is ok
+ * Find the last "accurate" backup state (that can take deleted files in
+ * account)
+ * 1) Get all files with jobid in list (F subquery)
+ *    Get all files in BaseFiles with jobid in list
+ * 2) Take only the last version of each file (Temp subquery) => accurate list
+ *    is ok
  * 3) Join the result to file table to get fileindex, jobid and lstat information
  *
  * TODO: See if we can do the SORT only if needed (as an argument)
@@ -1064,29 +1071,42 @@ bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids,
          
 #define new_db_get_file_list
 #ifdef new_db_get_file_list
-   /* This is broken, at least if called from ua_restore.c */
+   POOL_MEM buf2(PM_MESSAGE);
+   Mmsg(buf2, select_recent_version_with_basejob[db_type], 
+        jobids, jobids, jobids, jobids);
    Mmsg(buf,
- "SELECT Path.Path, Filename.Name, File.FileIndex, File.JobId, File.LStat "
- "FROM ( "
-  "SELECT max(FileId) as FileId, PathId, FilenameId "
-    "FROM (SELECT FileId, PathId, FilenameId FROM File WHERE JobId IN (%s)) AS F "
-   "GROUP BY PathId, FilenameId "
-  ") AS Temp "
+"SELECT Path.Path, Filename.Name, Temp.FileIndex, Temp.JobId, LStat, MD5 "
+ "FROM ( %s ) AS Temp "
  "JOIN Filename ON (Filename.FilenameId = Temp.FilenameId) "
  "JOIN Path ON (Path.PathId = Temp.PathId) "
- "JOIN File ON (File.FileId = Temp.FileId) "
-"WHERE File.FileIndex > 0 ORDER BY JobId, FileIndex ASC",     /* Return sorted by JobId, */
-                                                              /* FileIndex for restore code */ 
-             jobids);
+"WHERE FileIndex > 0 "
+"ORDER BY Temp.JobId, FileIndex ASC",/* Return sorted by JobId, */
+                                     /* FileIndex for restore code */ 
+        buf2.c_str());
 #else
    /*  
-    * I am not sure that this works the same as the code in ua_restore.c
-    *  but it is very similar. The accurate-test fails in a restore. Bad file count.
+    * I am not sure that this works the same as the code in ua_restore.c but it
+    *  is very similar. The accurate-test fails in a restore. Bad file count.
     */
    Mmsg(buf, uar_sel_files, jobids);
 #endif
 
    return db_sql_query(mdb, buf.c_str(), result_handler, ctx);
+}
+
+/*
+ * This procedure gets the base jobid list used by jobids,
+ */
+bool db_get_used_base_jobids(JCR *jcr, B_DB *mdb, 
+                             POOLMEM *jobids, db_list_ctx *result)
+{
+   POOL_MEM buf;
+   Mmsg(buf,
+ "SELECT DISTINCT BaseJobId "
+ "  FROM Job JOIN BaseFiles USING (JobId) "
+ " WHERE Job.HasBase = 1 "
+ "   AND Job.JobId IN (%s) ", jobids);
+   return db_sql_query(mdb, buf.c_str(), db_list_handler, result);
 }
 
 /* The decision do change an incr/diff was done before
@@ -1108,7 +1128,7 @@ bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb,
    POOL_MEM query(PM_FNAME);
    
    /* Take the current time as upper limit if nothing else specified */
-   time_t StartTime = (jr->StartTime)?jr->StartTime:time(NULL);
+   utime_t StartTime = (jr->StartTime)?jr->StartTime:time(NULL);
 
    bstrutime(date, sizeof(date),  StartTime + 1);
    jobids->list[0] = 0;
@@ -1189,4 +1209,61 @@ bail_out:
    return ret;
 }
 
-#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI */
+bool db_get_base_file_list(JCR *jcr, B_DB *mdb,
+                           DB_RESULT_HANDLER *result_handler, void *ctx)
+{
+   POOL_MEM buf(PM_MESSAGE);
+         
+   Mmsg(buf,
+ "SELECT Path, Name, FileIndex, JobId, LStat, MD5 "
+   "FROM new_basefile%lld ORDER BY JobId, FileIndex ASC",
+        (uint64_t) jcr->JobId);
+
+   return db_sql_query(mdb, buf.c_str(), result_handler, ctx);
+}
+
+bool db_get_base_jobid(JCR *jcr, B_DB *mdb, JOB_DBR *jr, JobId_t *jobid)
+{
+   POOL_MEM query(PM_FNAME);
+   utime_t StartTime;
+   db_int64_ctx lctx;
+   char date[MAX_TIME_LENGTH];
+   bool ret=false;
+   *jobid = 0;
+
+// char clientid[50], filesetid[50];
+
+   StartTime = (jr->StartTime)?jr->StartTime:time(NULL);
+   bstrutime(date, sizeof(date),  StartTime + 1);
+
+   /* we can take also client name, fileset, etc... */
+
+   Mmsg(query,
+ "SELECT JobId, Job, StartTime, EndTime, JobTDate, PurgedFiles "
+   "FROM Job "
+// "JOIN FileSet USING (FileSetId) JOIN Client USING (ClientId) "
+  "WHERE Job.Name = '%s' "
+    "AND Level='B' AND JobStatus IN ('T','W') AND Type='B' "
+//    "AND FileSet.FileSet= '%s' "
+//    "AND Client.Name = '%s' "
+    "AND StartTime<'%s' "
+  "ORDER BY Job.JobTDate DESC LIMIT 1",
+        jr->Name,
+//      edit_uint64(jr->ClientId, clientid),
+//      edit_uint64(jr->FileSetId, filesetid));
+        date);
+
+   Dmsg1(10, "db_get_base_jobid q=%s\n", query.c_str());
+   if (!db_sql_query(mdb, query.c_str(), db_int64_handler, &lctx)) {
+      goto bail_out;
+   }
+   *jobid = (JobId_t) lctx.value;
+
+   Dmsg1(10, "db_get_base_jobid=%lld\n", *jobid);
+   ret = true;
+
+bail_out:
+   return ret;
+}
+
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI */

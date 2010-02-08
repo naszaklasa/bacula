@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -150,6 +150,7 @@ int main (int argc, char *argv[])
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
    init_stack_dump();
+   lmgr_init_thread();
 
    my_name_is(argc, argv, "bscan");
    init_msg(NULL, NULL);
@@ -593,7 +594,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          /* Create JobMedia record */
          mjcr->read_dcr->VolLastIndex = dcr->VolLastIndex;
          create_jobmedia_record(db, mjcr);
-         detach_dcr_from_dev(mjcr->read_dcr);
+         free_dcr(mjcr->read_dcr);
          free_jcr(mjcr);
 
          break;
@@ -665,11 +666,6 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
 
       if (!unpack_attributes_record(bjcr, rec->Stream, rec->data, attr)) {
          Emsg0(M_ERROR_TERM, 0, _("Cannot continue.\n"));
-      }
-
-      if (attr->file_index != rec->FileIndex) {
-         Emsg2(M_ERROR_TERM, 0, _("Record header file index %ld not equal record index %ld\n"),
-            rec->FileIndex, attr->file_index);
       }
 
       if (verbose > 1) {
@@ -810,6 +806,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       /* Ignore Unix ACL attributes */
       break;
 
+   case STREAM_XATTR_OPENBSD:
    case STREAM_XATTR_SOLARIS_SYS:
    case STREAM_XATTR_SOLARIS:
    case STREAM_XATTR_DARWIN:
@@ -912,6 +909,7 @@ static int create_media_record(B_DB *db, MEDIA_DBR *mr, VOLUME_LABEL *vl)
    mr->VolRetention = 365 * 3600 * 24; /* 1 year */
    mr->Enabled = 1;
    if (vl->VerNum >= 11) {
+      mr->set_first_written = true; /* Save FirstWritten during update_media */
       mr->FirstWritten = btime_to_utime(vl->write_btime);
       mr->LabelDate    = btime_to_utime(vl->label_btime);
    } else {
@@ -1155,7 +1153,7 @@ static int update_job_record(B_DB *db, JOB_DBR *jr, SESSION_LABEL *elabel,
    }
    if (verbose) {
       Pmsg3(000, _("Updated Job termination record for JobId=%u Level=%s TermStat=%c\n"), 
-         jr->JobId, job_level_to_str(mjcr->get_JobLevel()), jr->JobStatus);
+         jr->JobId, job_level_to_str(mjcr->getJobLevel()), jr->JobStatus);
    }
    if (verbose > 1) {
       const char *term_msg;
@@ -1202,7 +1200,7 @@ static int update_job_record(B_DB *db, JOB_DBR *jr, SESSION_LABEL *elabel,
         mjcr->JobId,
         mjcr->Job,
         mjcr->fileset_name,
-        job_level_to_str(mjcr->get_JobLevel()),
+        job_level_to_str(mjcr->getJobLevel()),
         mjcr->client_name,
         sdt,
         edt,

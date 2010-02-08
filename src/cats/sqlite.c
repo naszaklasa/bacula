@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -56,8 +56,6 @@
 static BQUEUE db_list = {&db_list, &db_list};
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-int QueryDB(const char *file, int line, JCR *jcr, B_DB *db, char *select_cmd);
 
 /*
  * Retrieve database type
@@ -121,7 +119,7 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
    mdb = (B_DB *) malloc(sizeof(B_DB));
    memset(mdb, 0, sizeof(B_DB));
    mdb->db_name = bstrdup(db_name);
-   mdb->have_insert_id = TRUE;
+   mdb->have_insert_id = true;
    mdb->errmsg = get_pool_memory(PM_EMSG); /* get error message buffer */
    *mdb->errmsg = 0;
    mdb->cmd = get_pool_memory(PM_EMSG);    /* get command buffer */
@@ -267,6 +265,16 @@ db_close_database(JCR *jcr, B_DB *mdb)
    V(mutex);
 }
 
+void db_check_backend_thread_safe()
+{
+#ifdef HAVE_BATCH_FILE_INSERT
+   if (!sqlite3_threadsafe()) {
+      Emsg0(M_ABORT, 0, _("SQLite3 client library must be thread-safe "
+                          "when using BatchMode.\n"));
+   }
+#endif
+}
+
 void db_thread_cleanup()
 {
 #ifdef HAVE_SQLITE3
@@ -358,7 +366,7 @@ bool db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handle
    rh_data.result_handler = result_handler;
    rh_data.ctx = ctx;
    stat = sqlite_exec(mdb->db, query, sqlite_result, (void *)&rh_data, &mdb->sqlite_errmsg);
-   if (stat != 0) {
+   if (stat != SQLITE_OK) {
       Mmsg(mdb->errmsg, _("Query failed: %s: ERR=%s\n"), query, sql_strerror(mdb));
       db_unlock(mdb);
       return false;
@@ -385,14 +393,17 @@ int my_sqlite_query(B_DB *mdb, const char *cmd)
    }
    stat = sqlite_get_table(mdb->db, (char *)cmd, &mdb->result, &mdb->nrow, &mdb->ncolumn,
             &mdb->sqlite_errmsg);
-   mdb->row = 0;                      /* row fetched */
+   mdb->row = 0;                      /* no row fetched yet */
+   if (stat != 0) {                   /* something went wrong */
+      mdb->nrow = mdb->ncolumn = 0;
+   }
    return stat;
 }
 
 /* Fetch one row at a time */
 SQL_ROW my_sqlite_fetch_row(B_DB *mdb)
 {
-   if (mdb->row >= mdb->nrow) {
+   if (!mdb->result || (mdb->row >= mdb->nrow)) {
       return NULL;
    }
    mdb->row++;
@@ -405,9 +416,15 @@ void my_sqlite_free_table(B_DB *mdb)
 
    if (mdb->fields_defined) {
       for (i=0; i < sql_num_fields(mdb); i++) {
-         free(mdb->fields[i]);
+         if (mdb->fields[i]) {
+            free(mdb->fields[i]);
+            mdb->fields[i] = NULL;
+         }
       }
-      free(mdb->fields);
+      if (mdb->fields) {
+         free(mdb->fields);
+         mdb->fields = NULL;
+      }
       mdb->fields_defined = false;
    }
    if (mdb->result) {
@@ -421,6 +438,7 @@ void my_sqlite_field_seek(B_DB *mdb, int field)
 {
    int i, j;
    if (mdb->result == NULL) {
+      mdb->field = 0;
       return;
    }
    /* On first call, set up the fields */
@@ -445,18 +463,24 @@ void my_sqlite_field_seek(B_DB *mdb, int field)
          mdb->fields[i]->type = 0;
          mdb->fields[i]->flags = 1;        /* not null */
       }
-      mdb->fields_defined = TRUE;
+      mdb->fields_defined = true;
    }
-   if (field > sql_num_fields(mdb)) {
-      field = sql_num_fields(mdb);
+   if (sql_num_fields(mdb) <= 0) {
+      field = 0;
+   } else if (field > sql_num_fields(mdb) - 1) {
+      field = sql_num_fields(mdb) - 1;
     }
     mdb->field = field;
-
 }
 
 SQL_FIELD *my_sqlite_fetch_field(B_DB *mdb)
 {
-   return mdb->fields[mdb->field++];
+   if (mdb->fields_defined && mdb->field < sql_num_fields(mdb)) {
+      return mdb->fields[mdb->field++];
+   } else {
+      mdb->field = 0;
+      return NULL;
+   }
 }
 
 #ifdef HAVE_BATCH_FILE_INSERT

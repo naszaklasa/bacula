@@ -47,12 +47,13 @@ FORMS += console/console.ui
 FORMS += restore/restore.ui restore/prerestore.ui restore/brestore.ui
 FORMS += restore/restoretree.ui
 FORMS += run/run.ui run/runcmd.ui run/estimate.ui run/prune.ui
-FORMS += select/select.ui
+FORMS += select/select.ui select/textinput.ui
 FORMS += medialist/medialist.ui mediaedit/mediaedit.ui joblist/joblist.ui
+FORMS += medialist/mediaview.ui
 FORMS += clients/clients.ui storage/storage.ui fileset/fileset.ui
-FORMS += joblog/joblog.ui jobs/jobs.ui
-FORMS += help/help.ui
-FORMS += status/dirstat.ui
+FORMS += joblog/joblog.ui jobs/jobs.ui job/job.ui
+FORMS += help/help.ui mediainfo/mediainfo.ui
+FORMS += status/dirstat.ui storage/content.ui
 FORMS += status/clientstat.ui
 FORMS += status/storstat.ui
 qwt {
@@ -92,12 +93,16 @@ HEADERS += run/run.h
 SOURCES += run/run.cpp run/runcmd.cpp run/estimate.cpp run/prune.cpp
 
 # Select dialog
-HEADERS += select/select.h
-SOURCES += select/select.cpp
+HEADERS += select/select.h select/textinput.h
+SOURCES += select/select.cpp select/textinput.cpp
 
 ## MediaList
 HEADERS += medialist/medialist.h
 SOURCES += medialist/medialist.cpp
+
+# MediaView
+HEADERS += medialist/mediaview.h
+SOURCES += medialist/mediaview.cpp
 
 ## MediaEdit
 HEADERS += mediaedit/mediaedit.h
@@ -115,6 +120,10 @@ SOURCES += clients/clients.cpp
 HEADERS += storage/storage.h
 SOURCES += storage/storage.cpp
 
+## Storage content
+HEADERS += storage/content.h
+SOURCES += storage/content.cpp
+
 ## Fileset
 HEADERS += fileset/fileset.h
 SOURCES += fileset/fileset.cpp
@@ -122,6 +131,10 @@ SOURCES += fileset/fileset.cpp
 ## Job log
 HEADERS += joblog/joblog.h
 SOURCES += joblog/joblog.cpp
+
+## Job
+HEADERS += job/job.h
+SOURCES += job/job.cpp
 
 ## Jobs
 HEADERS += jobs/jobs.h
@@ -140,6 +153,10 @@ qwt {
 # Help dialog
 HEADERS += help/help.h
 SOURCES += help/help.cpp
+
+# Media info dialog
+HEADERS += mediainfo/mediainfo.h
+SOURCES += mediainfo/mediainfo.cpp
 
 ## Status Dir
 HEADERS += status/dirstat.h

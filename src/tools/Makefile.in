@@ -35,7 +35,7 @@ EXTRAOBJS = @OBJLIST@
 DIRCONFOBJS = ../dird/dird_conf.o ../dird/run_conf.o ../dird/inc_conf.o
 
 NODIRTOOLS = bsmtp
-DIRTOOLS = bsmtp dbcheck drivetype fstype testfind testls bregex bwild bbatch bregtest
+DIRTOOLS = bsmtp dbcheck drivetype fstype testfind testls bregex bwild bbatch bregtest bvfs_test
 TOOLS = $(@DIR_TOOLS@)
 
 INSNODIRTOOLS = bsmtp
@@ -102,6 +102,10 @@ bwild:	Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) bwild.o
 bbatch: Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) bbatch.o
 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -o $@ bbatch.o \
 	  -lbacsql -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+
+bvfs_test: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) bvfs_test.o
+	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -L../findlib -o $@ bvfs_test.o  \
+	  -lbacsql -lbacfind -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 gigaslam.o: gigaslam.c
 	$(CC) -c $<  

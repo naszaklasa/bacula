@@ -278,10 +278,9 @@ db_open_database(JCR *jcr, B_DB *mdb)
    }
 
    if ( dbstat != 0 ) {
-      Mmsg3(&mdb->errmsg, _("Unable to connect to DBI interface.\n"
-                       "Type=%s Database=%s User=%s\n"
-                       "It is probably not running or your password is incorrect.\n"),
-                        mdb->db_driver, mdb->db_name, mdb->db_user);
+      Mmsg3(&mdb->errmsg, _("Unable to connect to DBI interface. Type=%s Database=%s User=%s\n"
+         "Possible causes: SQL server not running; password incorrect; max_connections exceeded.\n"),
+         mdb->db_driver, mdb->db_name, mdb->db_user);
       V(mutex);
       return 0;
    }
@@ -1324,5 +1323,16 @@ const char *my_dbi_batch_fill_filename_query[4] = {
    " EXCEPT SELECT Name FROM Filename"};
 
 #endif /* HAVE_BATCH_FILE_INSERT */
+
+const char *my_dbi_match[4] = {
+   /* Mysql */
+   "MATCH",
+   /* Postgresql */
+   "~",
+   /* SQLite */
+   "MATCH",
+   /* SQLite3 */
+   "MATCH"
+};
 
 #endif /* HAVE_DBI */

@@ -1,46 +1,36 @@
 ECHO_CMD=@
 
+WIN32_DIRS=lib filed filed/plugins console scripts
+
+WIN64_DIRS=lib filed filed/plugins console scripts
+
 ifeq ($(WIN64),yes)
- DIRS=	lib \
-	filed \
-	filed/plugins \
-	console \
-	scripts
-
-  INSTALLER=win64_installer
-
-  SPECIAL=bsmtp
+	 DIRS=$(WIN64_DIRS)
+	 INSTALLER=win64_installer
+	 SPECIAL=bsmtp
 else
- DIRS=	lib \
-	cats \
-	filed \
-	filed/plugins \
-	dird \
-	stored \
-	console \
-	wx-console \
-	tools \
-	scripts 
-
-  INSTALLER=win32_installer
-
-  SPECIAL=
+	 DIRS=$(WIN32_DIRS)
+	 INSTALLER=win32_installer
+	 SPECIAL=bat bsmtp
 endif
 
-.PHONY: $(DIRS) clean all Makefile.inc win32_installer newinstaller \
+.PHONY: $(DIRS) clean all Makefile.inc win32_installer full_win32_installer \
 	 win64_installer bsmtp
 
 all: Makefile.inc $(DIRS) $(SPECIAL) $(INSTALLER)
 
-clean: $(DIRS) win32_installer newinstaller win64_installer
+clean: $(DIRS) win32_installer win64_installer
 	$(ECHO_CMD)-rm -rf release32 release64
 
-newinstaller:
+bat:
+	(cd ../qt-console; ./make-win32)
+
+full_win32_installer:
 	@if test -f Makefile.inc; then \
 	   if $(MAKE) -C $@ $(MAKECMDGOALS); then \
 		echo "\n===== Make of $@ succeeded =====\n\n" ; \
 	   else  \
-		echo "\n!!!!! Make of $@ failed !!!!!\n\n" ; \
+		echo "\n!!!!! Make of $@ failed !!!!!\n\n" ; exit 1; \
 	   fi ; \
 	fi
 
@@ -49,7 +39,7 @@ win32_installer:
 	   if $(MAKE) -C $@ $(MAKECMDGOALS); then \
 		echo "\n===== Make of $@ succeeded =====\n\n" ; \
 	   else  \
-		echo "\n!!!!! Make of $@ failed !!!!!\n\n" ; \
+		echo "\n!!!!! Make of $@ failed !!!!!\n\n" ; exit 1; \
 	   fi ; \
 	fi
 
@@ -58,7 +48,7 @@ win64_installer:
 	   if $(MAKE) -C $@ $(MAKECMDGOALS); then \
 		echo "\n===== Make of $@ succeeded =====\n\n" ; \
 	   else  \
-		echo "\n!!!!! Make of $@ failed !!!!!\n\n" ; \
+		echo "\n!!!!! Make of $@ failed !!!!!\n\n" ; exit 1; \
 	   fi ; \
 	fi
 
@@ -68,7 +58,7 @@ $(DIRS):
 	   if $(MAKE) -C $@ $(MAKECMDGOALS); then \
 		echo "\n===== Make of $@ succeeded =====\n\n" ; \
 	   else  \
-		echo "\n!!!!! Make of $@ failed !!!!!\n\n" ; \
+		echo "\n!!!!! Make of $@ failed !!!!!\n\n" ; exit 1; \
 	   fi ; \
 	fi
 
@@ -77,7 +67,7 @@ bsmtp:
 	   if $(MAKE) -C tools bsmtp $(MAKECMDGOALS); then \
 		echo "\n===== Make of tools/bsmtp succeeded =====\n\n" ; \
 	   else  \
-		echo "\n!!!!! Make of tools/bsmtp failed !!!!!\n\n" ; \
+		echo "\n!!!!! Make of tools/bsmtp failed !!!!!\n\n" ; exit 1; \
 	   fi ; \
 	fi
 

@@ -47,11 +47,11 @@ void start_dir_heartbeat(JCR *jcr);
 void stop_dir_heartbeat(JCR *jcr);
 
 /* From acl.c */
-bool build_acl_streams(JCR *jcr, FF_PKT *ff_pkt);
-bool parse_acl_stream(JCR *jcr, int stream);
+bacl_exit_code build_acl_streams(JCR *jcr, FF_PKT *ff_pkt);
+bacl_exit_code parse_acl_streams(JCR *jcr, int stream);
 
 /* from accurate.c */
-bool accurate_send_deleted_list(JCR *jcr);
+bool accurate_finish(JCR *jcr);
 bool accurate_check_file(JCR *jcr, FF_PKT *ff_pkt);
 bool accurate_mark_file_as_seen(JCR *jcr, char *fname);
 void accurate_free(JCR *jcr);
@@ -62,5 +62,5 @@ void strip_path(FF_PKT *ff_pkt);
 void unstrip_path(FF_PKT *ff_pkt);
 
 /* from xattr.c */
-bool build_xattr_streams(JCR *jcr, FF_PKT *ff_pkt);
-bool parse_xattr_stream(JCR *jcr, int stream);
+bxattr_exit_code build_xattr_streams(JCR *jcr, FF_PKT *ff_pkt);
+bxattr_exit_code parse_xattr_streams(JCR *jcr, int stream);

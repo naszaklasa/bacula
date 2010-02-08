@@ -38,6 +38,7 @@
 #include "console.h"
 #include "restore.h"
 #include "select.h"
+#include "textinput.h"
 #include "run/run.h"
 
 static int tls_pem_callback(char *buf, int size, const void *userdata);
@@ -50,6 +51,7 @@ DirComm::DirComm(Console *parent, int conn):  m_notifier(NULL),  m_api_set(false
    m_at_main_prompt = false;
    m_conn = conn;
    m_in_command = 0;
+   m_in_select = false;
 }
 
 DirComm::~DirComm()
@@ -196,11 +198,12 @@ bool DirComm::connect_dir()
 
    mainWin->set_status(_("Initializing ..."));
 
-#ifndef HAVE_WIN32
-   /* Set up input notifier */
+   /* 
+    * Set up input notifier
+    */
    m_notifier = new QSocketNotifier(m_sock->m_fd, QSocketNotifier::Read, 0);
    QObject::connect(m_notifier, SIGNAL(activated(int)), this, SLOT(read_dir(int)));
-#endif
+   m_notifier->setEnabled(false);
 
    write(".api 1");
    m_api_set = true;
@@ -312,9 +315,7 @@ int DirComm::read()
          if (mainWin->m_commDebug) Pmsg1(000, "conn %i CMD OK\n", m_conn);
          m_at_prompt = false;
          m_at_main_prompt = false;
-//       Pmsg1(000, "before dec m_in_command=%d\n", m_in_command);
          if (--m_in_command < 0) {
-//          Pmsg0(000, "m_in_command < 0\n");
             m_in_command = 0;
          }
          mainWin->set_status(_("Command completed ..."));
@@ -324,7 +325,6 @@ int DirComm::read()
          m_at_prompt = false;
          m_at_main_prompt = false;
          m_in_command++;
-//       Pmsg1(000, "after inc m_in_command=%d\n", m_in_command);
          mainWin->set_status(_("Processing command ..."));
          continue;
       case BNET_MAIN_PROMPT:
@@ -334,10 +334,18 @@ int DirComm::read()
          mainWin->set_status(_("At main prompt waiting for input ..."));
          break;
       case BNET_PROMPT:
-         if (mainWin->m_commDebug) Pmsg1(000, "conn %i PROMPT\n", m_conn);
+         if (mainWin->m_commDebug) Pmsg2(000, "conn %i PROMPT m_in_select %i\n", m_conn, m_in_select);
          m_at_prompt = true;
          m_at_main_prompt = false;
          mainWin->set_status(_("At prompt waiting for input ..."));
+         /***** FIXME *****/
+         /* commented out until the prompt communication issue with the director is resolved 
+          * This is where I call a new text input dialog class to prevent the connection issues
+          * when a text input is requited.
+          *   if (!m_in_select) {
+          *      new textInputDialog(m_console, m_conn);
+          *   }
+          */
          break;
       case BNET_CMD_FAILED:
          if (mainWin->m_commDebug) Pmsg1(000, "CMD FAILED\n", m_conn);
@@ -357,7 +365,9 @@ int DirComm::read()
       case BNET_START_SELECT:
          notify(false);
          if (mainWin->m_commDebug) Pmsg1(000, "conn %i START SELECT\n", m_conn);
+         m_in_select = true;
          new selectDialog(m_console, m_conn);
+         m_in_select = false;
          break;
       case BNET_YESNO:
          if (mainWin->m_commDebug) Pmsg1(000, "conn %i YESNO\n", m_conn);
@@ -409,7 +419,6 @@ int DirComm::read()
             m_notifier = NULL;
          }
          mainWin->set_status(_("Director disconnected."));
-//         QApplication::restoreOverrideCursor();
          stat = BNET_HARDEOF;
       }
       break;
@@ -420,10 +429,16 @@ int DirComm::read()
 /* Called by signal when the Director has output for us */
 void DirComm::read_dir(int /* fd */)
 {
-   if (mainWin->m_commDebug) Pmsg1(000, "conn %i read_dir\n", m_conn);
-   while (read() >= 0) {
-      m_console->display_text(msg());
+   int stat;
+   if (mainWin->m_commDebug) Pmsg1(000, "enter read_dir conn %i read_dir\n", m_conn);
+   stat = m_sock->wait_data(0, 5000);
+   if (stat > 0) {
+      if (mainWin->m_commDebug) Pmsg2(000, "read_dir conn %i stat=%d\n", m_conn, stat);
+      while (read() >= 0) {
+         m_console->display_text(msg());
+      }
    }
+   if (mainWin->m_commDebug) Pmsg2(000, "exit read_dir conn %i stat=%d\n", m_conn, stat);
 }
 
 /*
@@ -456,8 +471,9 @@ bool DirComm::notify(bool enable)
 bool DirComm::is_notify_enabled() const
 {
    bool enabled = false;
-   if (m_notifier)
+   if (m_notifier) {
       enabled = m_notifier->isEnabled();   
+   }
    return enabled;
 }
 
@@ -471,7 +487,6 @@ static int tls_pem_callback(char *buf, int size, const void *userdata)
    (void)size;
    (void)userdata;
 #ifdef HAVE_TLS
-   const char *prompt = (const char *)userdata;
 # if defined(HAVE_WIN32)
    //sendit(prompt);
    if (win32_cgets(buf, size) == NULL) {
@@ -481,6 +496,7 @@ static int tls_pem_callback(char *buf, int size, const void *userdata)
       return strlen(buf);
    }
 # else
+   const char *prompt = (const char *)userdata;
    char *passwd;
 
    passwd = getpass(prompt);

@@ -56,7 +56,9 @@ Jobs::Jobs()
     * selector tree. m_contextActions is QList of QActions */
    m_contextActions.append(actionRefreshJobs);
    createContextMenu();
-   dockPage();
+
+   connect(tableWidget, SIGNAL(itemDoubleClicked(QTableWidgetItem*)),
+           this, SLOT(runJob()));
 }
 
 Jobs::~Jobs()
@@ -125,17 +127,10 @@ void Jobs::populateTable()
    tableWidget->resizeRowsToContents();
 
    /* make read only */
-   int rcnt = tableWidget->rowCount();
-   int ccnt = tableWidget->columnCount();
-   for(int r=0; r < rcnt; r++) {
-      for(int c=0; c < ccnt; c++) {
-         QTableWidgetItem* item = tableWidget->item(r, c);
-         if (item) {
-            item->setFlags(Qt::ItemFlags(item->flags() & (~Qt::ItemIsEditable)));
-         }
-      }
-   }
+   tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
    mainWin->waitExit();
+   dockPage();
 }
 
 /*

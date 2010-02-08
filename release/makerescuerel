@@ -15,7 +15,7 @@ tagbase=Release-
 base_pkg=bacula-rescue
 base_dir=rescue
 branch=$2
-ver=$2
+
 if [ $# != 2 ] ; then
   echo "Need $0 <rescue-source-directory> <branch>"
   echo "e.g. $0 rescue-source master"
@@ -31,6 +31,8 @@ if [ $?  -ne 0 ]; then
    echo "Directory: $1 does not exist"
    exit 1
 fi
+
+ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' version.h`
 src=`pwd` 
 git checkout ${branch}
 if [ $? -ne 0 ]; then
@@ -72,6 +74,8 @@ cd ${cwd}
 ./sign $base_pkg-$ver.tar.gz
 ls -l $base_pkg-$ver.tar.*
 
-cd ${src}
-git push
-git push --tags
+if [ a$push != ano ]; then
+   cd ${src}
+   git push origin $branch
+   git push origin tag $fulltag
+fi

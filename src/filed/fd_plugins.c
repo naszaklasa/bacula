@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -218,6 +218,7 @@ int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    POOL_MEM link(PM_FNAME);
 
    if (!plugin_list || !jcr->plugin_ctx_list || job_canceled(jcr)) {
+      Jmsg1(jcr, M_FATAL, 0, "Command plugin \"%s\" not loaded.\n", cmd);
       return 1;                            /* Return if no plugins loaded */
    }
 
@@ -302,7 +303,7 @@ int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       }
       goto bail_out;
    }
-   Jmsg1(jcr, M_ERROR, 0, "Command plugin \"%s\" not found.\n", cmd);
+   Jmsg1(jcr, M_FATAL, 0, "Command plugin \"%s\" not found.\n", cmd);
 
 bail_out:
    jcr->cmd_plugin = false;
@@ -710,6 +711,9 @@ static int my_plugin_bopen(BFILE *bfd, const char *fname, int flags, mode_t mode
    struct io_pkt io;
 
    Dmsg1(dbglvl, "plugin_bopen flags=%x\n", flags);
+   if (!plugin || !jcr->plugin_ctx) {
+      return 0;
+   }
    io.pkt_size = sizeof(io);
    io.pkt_end = sizeof(io);
    io.func = IO_OPEN;
@@ -737,7 +741,11 @@ static int my_plugin_bclose(BFILE *bfd)
    JCR *jcr = bfd->jcr;
    Plugin *plugin = (Plugin *)jcr->plugin;
    struct io_pkt io;
+
    Dmsg0(dbglvl, "===== plugin_bclose\n");
+   if (!plugin || !jcr->plugin_ctx) {
+      return 0;
+   }
    io.pkt_size = sizeof(io);
    io.pkt_end = sizeof(io);
    io.func = IO_CLOSE;
@@ -762,7 +770,11 @@ static ssize_t my_plugin_bread(BFILE *bfd, void *buf, size_t count)
    JCR *jcr = bfd->jcr;
    Plugin *plugin = (Plugin *)jcr->plugin;
    struct io_pkt io;
+
    Dmsg0(dbglvl, "plugin_bread\n");
+   if (!plugin || !jcr->plugin_ctx) {
+      return 0;
+   }
    io.pkt_size = sizeof(io);
    io.pkt_end = sizeof(io);
    io.func = IO_READ;
@@ -786,7 +798,11 @@ static ssize_t my_plugin_bwrite(BFILE *bfd, void *buf, size_t count)
    JCR *jcr = bfd->jcr;
    Plugin *plugin = (Plugin *)jcr->plugin;
    struct io_pkt io;
+
    Dmsg0(dbglvl, "plugin_bwrite\n");
+   if (!plugin || !jcr->plugin_ctx) {
+      return 0;
+   }
    io.pkt_size = sizeof(io);
    io.pkt_end = sizeof(io);
    io.func = IO_WRITE;
@@ -810,7 +826,11 @@ static boffset_t my_plugin_blseek(BFILE *bfd, boffset_t offset, int whence)
    JCR *jcr = bfd->jcr;
    Plugin *plugin = (Plugin *)jcr->plugin;
    struct io_pkt io;
+
    Dmsg0(dbglvl, "plugin_bseek\n");
+   if (!plugin || !jcr->plugin_ctx) {
+      return 0;
+   }
    io.pkt_size = sizeof(io);
    io.pkt_end = sizeof(io);
    io.func = IO_SEEK;
@@ -858,12 +878,12 @@ static bRC baculaGetValue(bpContext *ctx, bVariable var, void *value)
       Dmsg1(dbglvl, "Bacula: return my_name=%s\n", my_name);
       break;
    case bVarLevel:
-      *((int *)value) = jcr->get_JobLevel();
-      Dmsg1(dbglvl, "Bacula: return bVarJobLevel=%d\n", jcr->get_JobLevel());
+      *((int *)value) = jcr->getJobLevel();
+      Dmsg1(dbglvl, "Bacula: return bVarJobLevel=%d\n", jcr->getJobLevel());
       break;
    case bVarType:
-      *((int *)value) = jcr->get_JobType();
-      Dmsg1(dbglvl, "Bacula: return bVarJobType=%d\n", jcr->get_JobType());
+      *((int *)value) = jcr->getJobType();
+      Dmsg1(dbglvl, "Bacula: return bVarJobType=%d\n", jcr->getJobType());
       break;
    case bVarClient:
       *((char **)value) = jcr->client_name;

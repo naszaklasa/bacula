@@ -56,18 +56,18 @@ public slots:
    void selectionChanged();
 
 private slots:
-   void consoleListJobid();
    void consoleListFilesOnJob();
    void consoleListJobMedia();
-   void consoleListVolumes();
    void consoleListJobTotals();
    void consoleDeleteJob();
    void consolePurgeFiles();
    void preRestoreFromJob();
    void preRestoreFromTime();
    void showLogForJob();
+   void showInfoForJob(QTableWidgetItem * item=NULL);
    void consoleCancelJob();
    void graphTable();
+   void splitterMoved(int pos, int index);
 
 private:
    void createConnections();

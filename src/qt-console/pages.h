@@ -59,8 +59,9 @@ public:
    void undockPage();
    void togglePageDocking();
    bool isDocked();
+   bool isOnceDocked();
    bool isCloseable();
-   QStackedWidget *m_parent;
+   QTabWidget *m_parent;
    QList<QAction*> m_contextActions;
    virtual void PgSeltreeWidgetClicked();
    virtual void currentStackItem();
@@ -91,6 +92,7 @@ protected:
    void setTitle();
    bool m_closeable;
    bool m_docked;
+   bool m_onceDocked;
    Console *m_console;
    QString m_name;
 };

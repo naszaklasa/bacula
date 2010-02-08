@@ -1516,15 +1516,15 @@ export QTLIB=/usr/lib64/qt4/
 %configure \
         --prefix=%{_prefix} \
         --sbindir=%{_sbindir} \
-	--sysconfdir=%{sysconf_dir} \
-	--with-scriptdir=%{script_dir} \
-	--with-working-dir=%{working_dir} \
-	--with-pid-dir=%{pid_dir} \
+        --sysconfdir=%{sysconf_dir} \
+        --with-scriptdir=%{script_dir} \
+        --with-working-dir=%{working_dir} \
+        --with-pid-dir=%{pid_dir} \
         --enable-smartalloc \
         --enable-client-only \
-	%if %{mdk}
-	--disable-nls \
-	%endif
+        %if %{mdk}
+        --disable-nls \
+        %endif
         --enable-static-fd
 
 make
@@ -1533,10 +1533,10 @@ make
 %configure \
         --prefix=%{_prefix} \
         --sbindir=%{_sbindir} \
-	--sysconfdir=%{sysconf_dir} \
-	--with-scriptdir=%{script_dir} \
-	--with-working-dir=%{working_dir} \
-	--with-pid-dir=%{pid_dir} \
+        --sysconfdir=%{sysconf_dir} \
+        --with-scriptdir=%{script_dir} \
+        --with-working-dir=%{working_dir} \
+        --with-pid-dir=%{pid_dir} \
         --enable-smartalloc \
 %if %{gconsole}
         --enable-gnome \
@@ -1554,23 +1554,23 @@ make
         --with-postgresql \
 %endif
 %if %{wxconsole}
-	--enable-bwx-console \
+        --enable-bwx-console \
 %endif
 %if %{bat}
-	--enable-bat \
-	--with-qwt=${cwd}/%{depkgs}/qwt \
+        --enable-bat \
+        --with-qwt=${cwd}/%{depkgs}/qwt \
 %endif
 %if %{python}
-	--with-python \
+        --with-python \
 %endif
 %if %{client_only}
-	--enable-client-only \
+        --enable-client-only \
 %endif
 %if %{rh7} || %{rh8} || %{rh9} || %{fc1} || %{fc3} || %{wb3} 
-	--disable-batch-insert \
+        --disable-batch-insert \
 %endif
-	--mandir=%{_mandir} \
-	--with-plugindir=%{script_dir} \
+        --mandir=%{_mandir} \
+        --with-plugindir=%{script_dir} \
         --with-subsys-dir=%{_subsysdir} \
         --with-dir-user=%{director_daemon_user} \
         --with-dir-group=%{daemon_group} \
@@ -1627,10 +1627,10 @@ cd %{depkgs}
 make \
         prefix=$RPM_BUILD_ROOT%{_prefix} \
         sbindir=$RPM_BUILD_ROOT%{_sbindir} \
-	sysconfdir=$RPM_BUILD_ROOT%{sysconf_dir} \
-	scriptdir=$RPM_BUILD_ROOT%{script_dir} \
+        sysconfdir=$RPM_BUILD_ROOT%{sysconf_dir} \
+        scriptdir=$RPM_BUILD_ROOT%{script_dir} \
         working_dir=$RPM_BUILD_ROOT%{working_dir} \
-	piddir=$RPM_BUILD_ROOT%{pid_dir} \
+        piddir=$RPM_BUILD_ROOT%{pid_dir} \
         mandir=$RPM_BUILD_ROOT%{_mandir} \
         mtx-install
 cd ${cwd}
@@ -2050,24 +2050,24 @@ DB_VER=`mysql 2>/dev/null bacula -e 'select * from Version;'|tail -n 1`
 # are we upgrading from sqlite to sqlite3?
 if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite ];then
         echo "This version of bacula-sqlite involves an upgrade to sqlite3."
-	echo "Your catalog database file is not compatible with sqlite3, thus"
-	echo "you will need to dump the data, delete the old file, and re-run"
-	echo "this rpm upgrade."
-	echo ""
-	echo "Backing up your current database..."
+        echo "Your catalog database file is not compatible with sqlite3, thus"
+        echo "you will need to dump the data, delete the old file, and re-run"
+        echo "this rpm upgrade."
+        echo ""
+        echo "Backing up your current database..."
         echo ".dump" | %{sqlite_bindir}/sqlite %{working_dir}/bacula.db > %{working_dir}/bacula_backup.sql
-	mv %{working_dir}/bacula.db %{working_dir}/bacula.db.old
-	echo "Your catalog data has been saved in %{working_dir}/bacula_backup.sql and your"
-	echo "catalog file has been renamed %{working_dir}/bacula.db.old."
-	echo ""
-	echo "Please re-run this rpm package upgrade."
-	echo "After the upgrade is complete, restore your catalog"
-	echo "with the following commands:"
-	echo "%{script_dir}/drop_sqlite3_tables"
-	echo "cd %{working_dir}"
-	echo "%{sqlite_bindir}/sqlite3 $* bacula.db < bacula_backup.sql"
-	echo "chown bacula.bacula bacula.db"
-	exit 1
+        mv %{working_dir}/bacula.db %{working_dir}/bacula.db.old
+        echo "Your catalog data has been saved in %{working_dir}/bacula_backup.sql and your"
+        echo "catalog file has been renamed %{working_dir}/bacula.db.old."
+        echo ""
+        echo "Please re-run this rpm package upgrade."
+        echo "After the upgrade is complete, restore your catalog"
+        echo "with the following commands:"
+        echo "%{script_dir}/drop_sqlite3_tables"
+        echo "cd %{working_dir}"
+        echo "%{sqlite_bindir}/sqlite3 $* bacula.db < bacula_backup.sql"
+        echo "chown bacula.bacula bacula.db"
+        exit 1
 fi
 # test for bacula database older than version 10 and sqlite3
 if [ -s %{working_dir}/bacula.db ] && [ -s %{sqlite_bindir}/sqlite3 ];then
@@ -2084,7 +2084,7 @@ if [ -n "$DB_VER" ] && [ "$DB_VER" -lt "10" ]; then
         echo "This bacula upgrade will update a bacula database from version 10 to 11."
         echo "You appear to be running database version $DB_VER. You must first update"
         echo "your database to version 10 and then install this upgrade. The alternative"
-	echo "is to use %{script_dir}/drop_%{db_backend}_tables to delete all your your current"
+        echo "is to use %{script_dir}/drop_%{db_backend}_tables to delete all your your current"
         echo "catalog information, then do the upgrade. Information on updating a"
         echo "database older than version 10 can be found in the release notes."
         exit 1
@@ -2098,7 +2098,7 @@ fi
 %if ! %{client_only}
 # check for and copy %{sysconf_dir}/console.conf to bconsole.conf
 if [ -s %{sysconf_dir}/console.conf ];then
-	cp -p %{sysconf_dir}/console.conf %{sysconf_dir}/bconsole.conf
+        cp -p %{sysconf_dir}/console.conf %{sysconf_dir}/bconsole.conf
 fi
 
 # create the daemon users and groups
@@ -2180,11 +2180,11 @@ DB_VER=`mysql 2>/dev/null bacula -e 'select * from Version;'|tail -n 1`
 if [ -z "$DB_VER" ]; then
         echo "Hmm, doesn't look like you have an existing database."
         echo "Granting privileges for MySQL user bacula..."
-	%{script_dir}/grant_mysql_privileges
+        %{script_dir}/grant_mysql_privileges
         echo "Creating MySQL bacula database..."
-	%{script_dir}/create_mysql_database
+        %{script_dir}/create_mysql_database
         echo "Creating bacula tables..."
-	%{script_dir}/make_mysql_tables
+        %{script_dir}/make_mysql_tables
 
 # check to see if we need to upgrade a 2.x database
 elif [ "$DB_VER" -lt "11" ]; then
@@ -2192,7 +2192,7 @@ elif [ "$DB_VER" -lt "11" ]; then
         echo "Backing up your current database..."
         mysqldump -f --opt bacula | bzip2 > %{working_dir}/bacula_backup.sql.bz2
         echo "Upgrading bacula database ..."
-	%{script_dir}/update_mysql_tables
+        %{script_dir}/update_mysql_tables
         echo "If bacula works correctly you can remove the backup file %{working_dir}/bacula_backup.sql.bz2"
 
 fi
@@ -2208,17 +2208,17 @@ if [ -s %{working_dir}/bacula.db ]; then
                 echo "Backing up your current database..."
                 echo ".dump" | %{sqlite_bindir}/sqlite3 %{working_dir}/bacula.db | bzip2 > %{working_dir}/bacula_backup.sql.bz2
                 echo "Upgrading bacula database ..."
-		%{script_dir}/update_sqlite3_tables
+                %{script_dir}/update_sqlite3_tables
                 echo "If bacula works correctly you can remove the backup file %{working_dir}/bacula_backup.sql.bz2"
         fi
 else
         # create the database and tables
         echo "Hmm, doesn't look like you have an existing database."
         echo "Creating SQLite database..."
-	%{script_dir}/create_sqlite3_database
-	chown %{director_daemon_user}.%{daemon_group} %{working_dir}/bacula.db
+        %{script_dir}/create_sqlite3_database
         echo "Creating the SQLite tables..."
-	%{script_dir}/make_sqlite3_tables
+        %{script_dir}/make_sqlite3_tables
+        chown %{director_daemon_user}.%{daemon_group} %{working_dir}/bacula.db
 fi
 %endif
 
@@ -2231,11 +2231,11 @@ DB_VER=`echo 'select * from Version;' | psql bacula 2>/dev/null | tail -3 | head
 if [ -z "$DB_VER" ]; then
         echo "Hmm, doesn't look like you have an existing database."
         echo "Creating PostgreSQL bacula database..."
-	%{script_dir}/create_postgresql_database
+        %{script_dir}/create_postgresql_database
         echo "Creating bacula tables..."
-	%{script_dir}/make_postgresql_tables
+        %{script_dir}/make_postgresql_tables
         echo "Granting privileges for PostgreSQL user bacula..."
-	%{script_dir}/grant_postgresql_privileges
+        %{script_dir}/grant_postgresql_privileges
 
 # check to see if we need to upgrade a 2.x database
 elif [ "$DB_VER" -lt "11" ]; then
@@ -2243,7 +2243,7 @@ elif [ "$DB_VER" -lt "11" ]; then
         echo "Backing up your current database..."
         pg_dump bacula | bzip2 > %{working_dir}/bacula_backup.sql.bz2
         echo "Upgrading bacula database ..."
-	%{script_dir}/update_postgresql_tables
+        %{script_dir}/update_postgresql_tables
         echo "If bacula works correctly you can remove the backup file %{working_dir}/bacula_backup.sql.bz2"
         
 fi
@@ -2252,7 +2252,7 @@ fi
 %if ! %{client_only}
 # generate passwords if needed
 if [ -d %{sysconf_dir} ]; then
-	cd %{sysconf_dir}
+        cd %{sysconf_dir}
         for file in *.conf; do
                 for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
                         need_password=`grep $string $file 2>/dev/null`
@@ -2390,7 +2390,7 @@ fi
 
 # generate passwords if needed
 if [ -d %{sysconf_dir} ]; then
-	cd %{sysconf_dir}
+        cd %{sysconf_dir}
         for file in *.conf; do
                 for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
                         need_password=`grep $string $file 2>/dev/null`
@@ -2472,7 +2472,7 @@ fi
 %post gconsole
 # generate passwords if needed
 if [ -d %{sysconf_dir} ]; then
-	cd %{sysconf_dir}
+        cd %{sysconf_dir}
         for file in *.conf; do
                 for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
                         need_password=`grep $string $file 2>/dev/null`
@@ -2517,7 +2517,7 @@ fi
 %post wxconsole
 # generate passwords if needed
 if [ -d %{sysconf_dir} ]; then
-	cd %{sysconf_dir}
+        cd %{sysconf_dir}
         for file in *.conf; do
                 for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
                         need_password=`grep $string $file 2>/dev/null`
@@ -2562,7 +2562,7 @@ fi
 %post bat
 # generate passwords if needed
 if [ -d %{sysconf_dir} ]; then
-	cd %{sysconf_dir}
+        cd %{sysconf_dir}
         for file in *.conf; do
                 for string in XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX; do
                         need_password=`grep $string $file 2>/dev/null`

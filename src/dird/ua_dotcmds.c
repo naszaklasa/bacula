@@ -35,11 +35,12 @@
  *
  *     Kern Sibbald, April MMII
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
 #include "dird.h"
+#include "cats/bvfs.h"
+#include "findlib/find.h"
 
 /* Imported variables */
 
@@ -63,6 +64,15 @@ static bool typescmd(UAContext *ua, const char *cmd);
 static bool backupscmd(UAContext *ua, const char *cmd);
 static bool levelscmd(UAContext *ua, const char *cmd);
 static bool getmsgscmd(UAContext *ua, const char *cmd);
+static bool volstatuscmd(UAContext *ua, const char *cmd);
+static bool mediatypescmd(UAContext *ua, const char *cmd);
+static bool locationscmd(UAContext *ua, const char *cmd);
+static bool mediacmd(UAContext *ua, const char *cmd);
+static bool aopcmd(UAContext *ua, const char *cmd);
+
+static bool dot_bvfs_lsdirs(UAContext *ua, const char *cmd);
+static bool dot_bvfs_lsfiles(UAContext *ua, const char *cmd);
+static bool dot_bvfs_update(UAContext *ua, const char *cmd);
 
 static bool api_cmd(UAContext *ua, const char *cmd);
 static bool sql_cmd(UAContext *ua, const char *cmd);
@@ -88,6 +98,14 @@ static struct cmdstruct commands[] = { /* help */  /* can be used in runscript *
  { NT_(".sql"),        sql_cmd,          NULL,       false},
  { NT_(".status"),     dot_status_cmd,   NULL,       false},
  { NT_(".storage"),    storagecmd,       NULL,       true},
+ { NT_(".volstatus"),  volstatuscmd,     NULL,       true},
+ { NT_(".media"),      mediacmd,         NULL,       true},
+ { NT_(".mediatypes"), mediatypescmd,    NULL,       true},
+ { NT_(".locations"),  locationscmd,     NULL,       true},
+ { NT_(".actiononpurge"),aopcmd,         NULL,       true},
+ { NT_(".bvfs_lsdirs"), dot_bvfs_lsdirs, NULL,       true},
+ { NT_(".bvfs_lsfiles"),dot_bvfs_lsfiles,NULL,       true},
+ { NT_(".bvfs_update"), dot_bvfs_update, NULL,       true},
  { NT_(".types"),      typescmd,         NULL,       false} 
              };
 #define comsize ((int)(sizeof(commands)/sizeof(struct cmdstruct)))
@@ -143,6 +161,177 @@ bool do_a_dot_command(UAContext *ua)
       ok = false;
    }
    return ok;
+}
+
+static bool dot_bvfs_update(UAContext *ua, const char *cmd)
+{
+
+   if (!open_client_db(ua)) {
+      return 1;
+   }
+
+   int pos = find_arg_with_value(ua, "jobid");
+   if (pos != -1 && is_a_number_list(ua->argv[pos])) {
+      POOL_MEM jobids;
+      pm_strcpy(jobids, ua->argv[pos]);
+      bvfs_update_path_hierarchy_cache(ua->jcr, ua->db, jobids.c_str());
+   } else {
+      /* update cache for all jobids */
+      bvfs_update_cache(ua->jcr, ua->db);
+   }
+   return true;
+}
+
+static int bvfs_result_handler(void *ctx, int fields, char **row)
+{
+   UAContext *ua = (UAContext *)ctx;
+   struct stat statp;
+   int32_t LinkFI;
+   const char *fileid;
+   char *lstat;
+   char empty[] = "A A A A A A A A A A A A A A";
+
+   lstat = (row[BVFS_LStat] && row[BVFS_LStat][0])?row[BVFS_LStat]:empty;
+   fileid = (row[BVFS_FileId] && row[BVFS_FileId][0])?row[BVFS_FileId]:"0";
+
+   memset(&statp, 0, sizeof(struct stat));
+   decode_stat(lstat, &statp, &LinkFI);
+
+   Dmsg1(100, "type=%s\n", row[0]);
+   if (bvfs_is_dir(row)) {
+      char *path = bvfs_basename_dir(row[BVFS_Name]);
+      ua->send_msg("%s\t0\t%s\t%s\t%s\t%s\n", row[BVFS_PathId], fileid,
+                   row[BVFS_JobId], row[BVFS_LStat], path);
+
+   } else if (bvfs_is_file(row)) {
+      ua->send_msg("%s\t%s\t%s\t%s\t%s\t%s\n", row[BVFS_PathId],
+                   row[BVFS_FilenameId], fileid, row[BVFS_JobId],
+                   row[BVFS_LStat], row[BVFS_Name]);
+   }
+
+   return 0;
+}
+
+static bool bvfs_parse_arg(UAContext *ua, 
+                           DBId_t *pathid, char **path, char **jobid,
+                           int *limit, int *offset)
+{
+   *pathid=0;
+   *limit=2000;
+   *offset=0;
+   *path=NULL;
+   *jobid=NULL;
+
+   for (int i=1; i<ua->argc; i++) {
+      if (strcasecmp(ua->argk[i], NT_("pathid")) == 0) {
+         if (is_a_number(ua->argv[i])) {
+            *pathid = str_to_int64(ua->argv[i]);
+         }
+      }
+      if (strcasecmp(ua->argk[i], NT_("path")) == 0) {
+         *path = ua->argv[i];
+      }
+      
+      if (strcasecmp(ua->argk[i], NT_("jobid")) == 0) {
+         if (is_a_number_list(ua->argv[i])) {
+            *jobid = ua->argv[i];
+         }
+      }
+
+      if (strcasecmp(ua->argk[i], NT_("limit")) == 0) {
+         if (is_a_number(ua->argv[i])) {
+            *limit = str_to_int64(ua->argv[i]);
+         }
+      }
+
+      if (strcasecmp(ua->argk[i], NT_("offset")) == 0) {
+         if (is_a_number(ua->argv[i])) {
+            *offset = str_to_int64(ua->argv[i]);
+         }
+      }
+   }
+
+   if (!((*pathid || *path) && *jobid)) {
+      return false;
+   }
+
+   if (!open_client_db(ua)) {
+      return false;
+   }
+
+   return true;
+}
+
+/* 
+ * .bvfs_lsfiles jobid=1,2,3,4 pathid=10
+ * .bvfs_lsfiles jobid=1,2,3,4 path=/
+ */
+static bool dot_bvfs_lsfiles(UAContext *ua, const char *cmd)
+{
+   DBId_t pathid=0;
+   int limit=2000, offset=0;
+   char *path=NULL, *jobid=NULL;
+
+   if (!bvfs_parse_arg(ua, &pathid, &path, &jobid,
+                       &limit, &offset))
+   {
+      ua->error_msg("Can't find jobid, pathid or path argument\n");
+      return true;              /* not enough param */
+   }
+
+   Bvfs fs(ua->jcr, ua->db);
+   fs.set_jobids(jobid);   
+   fs.set_handler(bvfs_result_handler, ua);
+   fs.set_limit(limit);
+
+   if (pathid) {
+      fs.ch_dir(pathid);
+   } else {
+      fs.ch_dir(path);
+   }
+
+   fs.set_offset(offset);
+
+   fs.ls_files();
+
+   return true;
+}
+
+/* 
+ * .bvfs_lsdirs jobid=1,2,3,4 pathid=10
+ * .bvfs_lsdirs jobid=1,2,3,4 path=/
+ * .bvfs_lsdirs jobid=1,2,3,4 path=
+ */
+static bool dot_bvfs_lsdirs(UAContext *ua, const char *cmd)
+{
+   DBId_t pathid=0;
+   int limit=2000, offset=0;
+   char *path=NULL, *jobid=NULL;
+
+   if (!bvfs_parse_arg(ua, &pathid, &path, &jobid,
+                       &limit, &offset))
+   {
+      ua->error_msg("Can't find jobid, pathid or path argument\n");
+      return true;              /* not enough param */
+   }
+
+   Bvfs fs(ua->jcr, ua->db);
+   fs.set_jobids(jobid);   
+   fs.set_limit(limit);
+   fs.set_handler(bvfs_result_handler, ua);
+
+   if (pathid) {
+      fs.ch_dir(pathid);
+   } else {
+      fs.ch_dir(path);
+   }
+
+   fs.set_offset(offset);
+
+   fs.ls_special_dirs();
+   fs.ls_dirs();
+
+   return true;
 }
 
 static bool dot_quit_cmd(UAContext *ua, const char *cmd)
@@ -321,13 +510,24 @@ static bool diecmd(UAContext *ua, const char *cmd)
 
 #endif
 
+/* 
+ * Can use an argument to filter on JobType
+ * .jobs [type=B]
+ */
 static bool jobscmd(UAContext *ua, const char *cmd)
 {
    JOB *job;
+   uint32_t type = 0;
+   int pos;
+   if ((pos = find_arg_with_value(ua, "type")) >= 0) {
+      type = ua->argv[pos][0];
+   }
    LockRes();
    foreach_res(job, R_JOB) {
-      if (acl_access_ok(ua, Job_ACL, job->name())) {
-         ua->send_msg("%s\n", job->name());
+      if (!type || type == job->JobType) {
+         if (acl_access_ok(ua, Job_ACL, job->name())) {
+            ua->send_msg("%s\n", job->name());
+         }
       }
    }
    UnlockRes();
@@ -397,6 +597,12 @@ static bool storagecmd(UAContext *ua, const char *cmd)
    return true;
 }
 
+static bool aopcmd(UAContext *ua, const char *cmd)
+{
+   ua->send_msg("None\n");
+   ua->send_msg("Truncate\n");
+   return true;
+}
 
 static bool typescmd(UAContext *ua, const char *cmd)
 {
@@ -407,7 +613,6 @@ static bool typescmd(UAContext *ua, const char *cmd)
    ua->send_msg("Migrate\n");
    return true;
 }
-
 
 /*
  * If this command is called, it tells the director that we
@@ -507,7 +712,54 @@ static bool sql_cmd(UAContext *ua, const char *cmd)
    return true;
 }
       
+static int one_handler(void *ctx, int num_field, char **row)
+{
+   UAContext *ua = (UAContext *)ctx;
+   ua->send_msg("%s\n", row[0]);
+   return 0;
+}
 
+static bool mediatypescmd(UAContext *ua, const char *cmd)
+{
+   if (!open_client_db(ua)) {
+      return true;
+   }
+   if (!db_sql_query(ua->db, 
+                  "SELECT DISTINCT MediaType FROM MediaType ORDER BY MediaType",
+                  one_handler, (void *)ua)) 
+   {
+      ua->error_msg(_("List MediaType failed: ERR=%s\n"), db_strerror(ua->db));
+   }
+   return true;
+}
+
+static bool mediacmd(UAContext *ua, const char *cmd)
+{
+   if (!open_client_db(ua)) {
+      return true;
+   }
+   if (!db_sql_query(ua->db, 
+                  "SELECT DISTINCT Media.VolumeName FROM Media ORDER BY VolumeName",
+                  one_handler, (void *)ua)) 
+   {
+      ua->error_msg(_("List Media failed: ERR=%s\n"), db_strerror(ua->db));
+   }
+   return true;
+}
+
+static bool locationscmd(UAContext *ua, const char *cmd)
+{
+   if (!open_client_db(ua)) {
+      return true;
+   }
+   if (!db_sql_query(ua->db, 
+                  "SELECT DISTINCT Location FROM Location ORDER BY Location",
+                  one_handler, (void *)ua)) 
+   {
+      ua->error_msg(_("List Location failed: ERR=%s\n"), db_strerror(ua->db));
+   }
+   return true;
+}
 
 static bool levelscmd(UAContext *ua, const char *cmd)
 {
@@ -518,6 +770,18 @@ static bool levelscmd(UAContext *ua, const char *cmd)
    ua->send_msg("Catalog\n");
    ua->send_msg("InitCatalog\n");
    ua->send_msg("VolumeToCatalog\n");
+   return true;
+}
+
+static bool volstatuscmd(UAContext *ua, const char *cmd)
+{
+   ua->send_msg("Append\n");
+   ua->send_msg("Full\n");
+   ua->send_msg("Used\n");
+   ua->send_msg("Recycle\n");
+   ua->send_msg("Purged\n");
+   ua->send_msg("Cleaning\n");
+   ua->send_msg("Error\n");
    return true;
 }
 
@@ -618,6 +882,8 @@ static bool defaultscmd(UAContext *ua, const char *cmd)
          ua->send_msg("max_vol_bytes=%s", edit_uint64(pool->MaxVolBytes, ed1));
          ua->send_msg("auto_prune=%d", pool->AutoPrune);
          ua->send_msg("recycle=%d", pool->Recycle);
+         ua->send_msg("file_retention=%s", edit_uint64(pool->FileRetention, ed1));
+         ua->send_msg("job_retention=%s", edit_uint64(pool->JobRetention, ed1));
       }
    }
    return true;

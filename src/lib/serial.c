@@ -2,14 +2,11 @@
 
                    Serialisation Support Functions
                           John Walker
-
-
-     Version $Id$
 */
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -92,7 +89,7 @@ void serial_uint32(uint8_t * * const ptr, const uint32_t v)
 
 void serial_int64(uint8_t * * const ptr, const int64_t v)
 {
-    if (htonl(1) == 1L) {
+    if (bigendian()) {
         memcpy(*ptr, &v, sizeof(int64_t));
     } else {
         int i;
@@ -112,7 +109,7 @@ void serial_int64(uint8_t * * const ptr, const int64_t v)
 
 void serial_uint64(uint8_t * * const ptr, const uint64_t v)
 {
-    if (htonl(1) == 1L) {
+    if (bigendian()) {
         memcpy(*ptr, &v, sizeof(uint64_t));
     } else {
         int i;
@@ -132,7 +129,7 @@ void serial_uint64(uint8_t * * const ptr, const uint64_t v)
 
 void serial_btime(uint8_t * * const ptr, const btime_t v)
 {
-    if (htonl(1) == 1L) {
+    if (bigendian()) {
         memcpy(*ptr, &v, sizeof(btime_t));
     } else {
         int i;
@@ -158,7 +155,7 @@ void serial_btime(uint8_t * * const ptr, const btime_t v)
 
 void serial_float64(uint8_t * * const ptr, const float64_t v)
 {
-    if (htonl(1) == 1L) {
+    if (bigendian()) {
         memcpy(*ptr, &v, sizeof(float64_t));
     } else {
         int i;
@@ -175,10 +172,15 @@ void serial_float64(uint8_t * * const ptr, const float64_t v)
 
 void serial_string(uint8_t * * const ptr, const char * const str)
 {
-   int len = strlen(str) + 1;
-
-   memcpy(*ptr, str, len);
-   *ptr += len;
+   int i;                   
+   char *dest = (char *)*ptr;
+   char *src = (char *)str;
+   for (i=0; src[i] != 0;  i++) {
+      dest[i] = src[i];
+   }
+   dest[i++] = 0;                  /* terminate output string */
+   *ptr += i;                      /* update pointer */
+// Dmsg2(000, "ser src=%s dest=%s\n", src, dest);
 }
 
 
@@ -232,7 +234,7 @@ uint64_t unserial_uint64(uint8_t * * const ptr)
 {
     uint64_t v;
 
-    if (htonl(1) == 1L) {
+    if (bigendian()) {
         memcpy(&v, *ptr, sizeof(uint64_t));
     } else {
         int i;
@@ -255,7 +257,7 @@ btime_t unserial_btime(uint8_t * * const ptr)
 {
     btime_t v;
 
-    if (htonl(1) == 1L) {
+    if (bigendian()) {
         memcpy(&v, *ptr, sizeof(btime_t));
     } else {
         int i;
@@ -285,7 +287,7 @@ float64_t unserial_float64(uint8_t * * const ptr)
 {
     float64_t v;
 
-    if (htonl(1) == 1L) {
+    if (bigendian()) {
         memcpy(&v, *ptr, sizeof(float64_t));
     } else {
         int i;
@@ -302,9 +304,15 @@ float64_t unserial_float64(uint8_t * * const ptr)
     return v;
 }
 
-void unserial_string(uint8_t * * const ptr, char * const str)
+void unserial_string(uint8_t * * const ptr, char * const str, int max)
 {
-   int len = strlen((char *) *ptr) + 1;
-   memcpy(str, (char *) *ptr, len);
-   *ptr += len;
+   int i;                   
+   char *src = (char*)(*ptr);
+   char *dest = str;
+   for (i=0; i<max && src[i] != 0;  i++) {
+      dest[i] = src[i];
+   }
+   dest[i++] = 0;            /* terminate output string */
+   *ptr += i;                /* update pointer */
+// Dmsg2(000, "unser src=%s dest=%s\n", src, dest);
 }

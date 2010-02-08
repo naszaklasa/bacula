@@ -132,8 +132,9 @@ void prerestorePage::buildPage()
 void prerestorePage::okButtonPushed()
 {
    if (!selectJobRadio->isChecked()) {
-      if (!checkJobIdList())
+      if (!checkJobIdList()) {
          return;
+      }
    }
    QString cmd;
 

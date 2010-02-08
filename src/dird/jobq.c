@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -37,7 +37,6 @@
  *
  *  Kern Sibbald, July MMIII
  *
- *   Version $Id$
  *
  *  This code was adapted from the Bacula workq, which was
  *    adapted from "Programming with POSIX Threads", by
@@ -446,8 +445,8 @@ void *jobq_server(void *arg)
          V(jq->mutex);
 
          /* Call user's routine here */
-         Dmsg2(2300, "Calling user engine for jobid=%d use=%d\n", jcr->JobId,
-            jcr->use_count());
+         Dmsg3(2300, "Calling user engine for jobid=%d use=%d stat=%c\n", jcr->JobId,
+            jcr->use_count(), jcr->JobStatus);
          jq->engine(je->jcr);
 
          /* Job finished detach from thread */
@@ -618,7 +617,7 @@ static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je)
    if (jcr->job->RescheduleOnError &&
        jcr->JobStatus != JS_Terminated &&
        jcr->JobStatus != JS_Canceled &&
-       jcr->get_JobType() == JT_BACKUP &&
+       jcr->getJobType() == JT_BACKUP &&
        (jcr->job->RescheduleTimes == 0 ||
         jcr->reschedule_count < jcr->job->RescheduleTimes)) {
        char dt[50], dt2[50];
@@ -662,7 +661,7 @@ static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je)
       set_jcr_defaults(njcr, jcr->job);
       njcr->reschedule_count = jcr->reschedule_count;
       njcr->sched_time = jcr->sched_time;
-      njcr->set_JobLevel(jcr->get_JobLevel());
+      njcr->set_JobLevel(jcr->getJobLevel());
       njcr->pool = jcr->pool;
       njcr->run_pool_override = jcr->run_pool_override;
       njcr->full_pool = jcr->full_pool;

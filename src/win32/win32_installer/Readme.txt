@@ -1,24 +1,11 @@
 Bacula - Windows Version Disclaimer
 ===================================
 
-Please note, only the Win32 Client (File daemon) is supported.  All the
-other components (Director, Storage daemon, their utilities) are provided
-on an "as is" basis.  Unfortunately, they are neither properly tested,   
-documented, or supported.  This means that we cannot ensure that bug reports
-against the non-supported components will be fixed.  For them to be supported, 
-we need three things from the Open Source community:
+Please note, only the Win32 Client (File daemon) is supported, and the other
+components (Director, Storage daemon, their utilities) are not provided
+because they have not been ported.  If you want these components, either build
+them yourself or ask Bacula Systems about them.
 
-1. Full documentation of the Windows particularities of the Director,
-   the Storage daemon, and their utilities in the Bacula manual.
-
-2. Someone to periodically and on demand run the regressions tests.
-
-3. One or more developers who are willing to accept and correct Windows
-   related bugs as they occur.
-
-4. A certain Win32 community that will respond to user support questions
-   on the bacula-users list.  (This is probably already fullfilled). 
-             
 
 Bacula - Windows Version Notes
 ==============================
@@ -41,10 +28,10 @@ choices available will vary depending on the options you chose to install.
 
 File Locations
 --------------
-The programs and documentation are installed in the directory 
+Everything is installed in the directory 
 "C:\Program Files\Bacula" unless a different directory was selected during
-installation.  The configuration and other application data files are in the
-"C:\Documents and Settings\All Users\Application Data\Bacula" directory.
+installation. 
+
 
 Code Page Problems
 -------------------
@@ -57,29 +44,5 @@ The workaround is to manually edit the appropriate conf file and ensure that it
 is written out in UTF-8 format.
 
 The conf files can be edited with any UTF-8 compatible editor, or on most 
-modern Win32 machines, you can edit them with notepad, then choose UTF-8
+modern Windows machines, you can edit them with notepad, then choose UTF-8
 output encoding before saving them.
-
-
-Storage and Director Services
------------------------------
-These services are still considered experimental in this release.  Use of 
-them should be approached with caution since they haven't received the
-same level of extensive usage and testing that the File service has 
-received.
-
-Storage Device Names
---------------------
-There is a utility installed called scsilist.exe which displays the installed 
-devices, their physical address and their device name.  A link to it is 
-created in the Bacula menu when the Storage service is installed.
-
-Changer and Tape device names in Windows are Changer0, Changer1, etc and 
-Tape0, Tape1, etc.  If there isn't a device driver loaded for the Changer 
-then you need to use the address <Port>:<Bus>:<Target>:<Lun>.  Port is the 
-SCSI Adapter Number, Bus is the Bus Number on the adapter (usually 0 since 
-most adapters only have one bus), Target is the device's Target Device ID, 
-Lun is the Logical Unit Number.
- 
-You must specify DeviceType = tape in the Device resource in bacula-sd.conf 
-since auto detection of device type doesn't work at the present time.

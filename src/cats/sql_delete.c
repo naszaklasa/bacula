@@ -3,7 +3,7 @@
  *
  *    Kern Sibbald, December 2000
  *
- *    Version $Id$
+ *    Version $Id: sql_delete.c 7380 2008-07-14 10:42:59Z kerns $
  */
 /*
    Bacula® - The Network Backup Solution
@@ -44,7 +44,7 @@
 #include "cats.h"
 
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
 /* -----------------------------------------------------------------------
  *
  *   Generic Routines (or almost generic)
@@ -237,4 +237,4 @@ int db_purge_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 }
 
 
-#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL*/
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES */

@@ -1,19 +1,20 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>JobListForm</class>
- <widget class="QWidget" name="JobListForm" >
-  <property name="geometry" >
+ <widget class="QWidget" name="JobListForm">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>739</width>
-    <height>790</height>
+    <width>696</width>
+    <height>456</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QTableWidget" name="mp_tableWidget" >
-   <property name="geometry" >
+  <widget class="QTableWidget" name="mp_tableWidget">
+   <property name="geometry">
     <rect>
      <x>60</x>
      <y>10</y>
@@ -22,78 +23,60 @@
     </rect>
    </property>
   </widget>
-  <widget class="QFrame" name="frame" >
-   <property name="geometry" >
+  <widget class="QFrame" name="frame">
+   <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>220</y>
-     <width>573</width>
-     <height>149</height>
+     <x>50</x>
+     <y>190</y>
+     <width>541</width>
+     <height>171</height>
     </rect>
    </property>
-   <property name="maximumSize" >
+   <property name="maximumSize">
     <size>
      <width>900</width>
      <height>172</height>
     </size>
    </property>
-   <property name="frameShape" >
+   <property name="frameShape">
     <enum>QFrame::StyledPanel</enum>
    </property>
-   <property name="frameShadow" >
+   <property name="frameShadow">
     <enum>QFrame::Raised</enum>
    </property>
-   <layout class="QGridLayout" >
-    <item row="0" column="0" >
-     <layout class="QVBoxLayout" >
-      <property name="spacing" >
+   <layout class="QGridLayout">
+    <item row="0" column="0">
+     <layout class="QVBoxLayout">
+      <property name="spacing">
        <number>6</number>
       </property>
-      <property name="leftMargin" >
-       <number>3</number>
-      </property>
-      <property name="topMargin" >
-       <number>3</number>
-      </property>
-      <property name="rightMargin" >
-       <number>3</number>
-      </property>
-      <property name="bottomMargin" >
+      <property name="margin">
        <number>3</number>
       </property>
       <item>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>6</number>
         </property>
-        <property name="leftMargin" >
-         <number>3</number>
-        </property>
-        <property name="topMargin" >
-         <number>3</number>
-        </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
+        <property name="margin">
          <number>3</number>
         </property>
         <item>
-         <widget class="QCheckBox" name="limitCheckBox" >
-          <property name="text" >
+         <widget class="QCheckBox" name="limitCheckBox">
+          <property name="text">
            <string>Record Limit</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="limitSpinBox" >
-          <property name="minimum" >
+         <widget class="QSpinBox" name="limitSpinBox">
+          <property name="minimum">
            <number>1</number>
           </property>
-          <property name="maximum" >
+          <property name="maximum">
            <number>10000</number>
           </property>
-          <property name="singleStep" >
+          <property name="singleStep">
            <number>25</number>
           </property>
          </widget>
@@ -101,32 +84,23 @@
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>6</number>
         </property>
-        <property name="leftMargin" >
-         <number>3</number>
-        </property>
-        <property name="topMargin" >
-         <number>3</number>
-        </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
+        <property name="margin">
          <number>3</number>
         </property>
         <item>
-         <widget class="QCheckBox" name="daysCheckBox" >
-          <property name="text" >
+         <widget class="QCheckBox" name="daysCheckBox">
+          <property name="text">
            <string>Days Limit</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="daysSpinBox" >
-          <property name="singleStep" >
+         <widget class="QSpinBox" name="daysSpinBox">
+          <property name="singleStep">
            <number>7</number>
           </property>
          </widget>
@@ -135,365 +109,247 @@
       </item>
      </layout>
     </item>
-    <item row="0" column="1" >
-     <layout class="QVBoxLayout" >
-      <property name="spacing" >
+    <item row="0" column="1">
+     <layout class="QVBoxLayout">
+      <property name="spacing">
        <number>6</number>
       </property>
-      <property name="leftMargin" >
-       <number>3</number>
-      </property>
-      <property name="topMargin" >
-       <number>3</number>
-      </property>
-      <property name="rightMargin" >
-       <number>3</number>
-      </property>
-      <property name="bottomMargin" >
+      <property name="margin">
        <number>3</number>
       </property>
       <item>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>6</number>
         </property>
-        <property name="leftMargin" >
-         <number>3</number>
-        </property>
-        <property name="topMargin" >
-         <number>3</number>
-        </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
+        <property name="margin">
          <number>3</number>
         </property>
         <item>
-         <widget class="QLabel" name="clientsLabel" >
-          <property name="text" >
+         <widget class="QLabel" name="clientsLabel">
+          <property name="text">
            <string>Clients</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="clientComboBox" />
+         <widget class="QComboBox" name="clientComboBox"/>
         </item>
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>6</number>
         </property>
-        <property name="leftMargin" >
-         <number>3</number>
-        </property>
-        <property name="topMargin" >
-         <number>3</number>
-        </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
+        <property name="margin">
          <number>3</number>
         </property>
         <item>
-         <widget class="QLabel" name="volumeLabel" >
-          <property name="text" >
+         <widget class="QLabel" name="volumeLabel">
+          <property name="text">
            <string>Volume</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="volumeComboBox" />
+         <widget class="QComboBox" name="volumeComboBox"/>
         </item>
        </layout>
       </item>
      </layout>
     </item>
-    <item row="0" column="2" >
-     <layout class="QVBoxLayout" >
-      <property name="spacing" >
+    <item row="0" column="2">
+     <layout class="QVBoxLayout">
+      <property name="spacing">
        <number>6</number>
       </property>
-      <property name="leftMargin" >
-       <number>3</number>
-      </property>
-      <property name="topMargin" >
-       <number>3</number>
-      </property>
-      <property name="rightMargin" >
-       <number>3</number>
-      </property>
-      <property name="bottomMargin" >
+      <property name="margin">
        <number>3</number>
       </property>
       <item>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>6</number>
         </property>
-        <property name="leftMargin" >
-         <number>3</number>
-        </property>
-        <property name="topMargin" >
-         <number>3</number>
-        </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
+        <property name="margin">
          <number>3</number>
         </property>
         <item>
-         <widget class="QLabel" name="jobLabel" >
-          <property name="text" >
+         <widget class="QLabel" name="jobLabel">
+          <property name="text">
            <string>Job</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="jobComboBox" />
+         <widget class="QComboBox" name="jobComboBox"/>
         </item>
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>6</number>
         </property>
-        <property name="leftMargin" >
-         <number>3</number>
-        </property>
-        <property name="topMargin" >
-         <number>3</number>
-        </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
+        <property name="margin">
          <number>3</number>
         </property>
         <item>
-         <widget class="QLabel" name="levelLabel" >
-          <property name="text" >
+         <widget class="QLabel" name="levelLabel">
+          <property name="text">
            <string>Level</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="levelComboBox" />
+         <widget class="QComboBox" name="levelComboBox"/>
         </item>
        </layout>
       </item>
      </layout>
     </item>
-    <item row="0" column="3" >
-     <layout class="QVBoxLayout" >
-      <property name="spacing" >
+    <item row="0" column="3">
+     <layout class="QVBoxLayout">
+      <property name="spacing">
        <number>6</number>
       </property>
-      <property name="leftMargin" >
-       <number>3</number>
-      </property>
-      <property name="topMargin" >
-       <number>3</number>
-      </property>
-      <property name="rightMargin" >
-       <number>3</number>
-      </property>
-      <property name="bottomMargin" >
+      <property name="margin">
        <number>3</number>
       </property>
       <item>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>6</number>
         </property>
-        <property name="leftMargin" >
-         <number>3</number>
-        </property>
-        <property name="topMargin" >
-         <number>3</number>
-        </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
+        <property name="margin">
          <number>3</number>
         </property>
         <item>
-         <widget class="QLabel" name="statusLabel" >
-          <property name="text" >
+         <widget class="QLabel" name="statusLabel">
+          <property name="text">
            <string>Status</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="statusComboBox" />
+         <widget class="QComboBox" name="statusComboBox"/>
         </item>
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>6</number>
         </property>
-        <property name="leftMargin" >
-         <number>3</number>
-        </property>
-        <property name="topMargin" >
-         <number>3</number>
-        </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
+        <property name="margin">
          <number>3</number>
         </property>
         <item>
-         <widget class="QLabel" name="purgedLabel" >
-          <property name="text" >
+         <widget class="QLabel" name="purgedLabel">
+          <property name="text">
            <string>Purged</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="purgedComboBox" />
+         <widget class="QComboBox" name="purgedComboBox"/>
         </item>
        </layout>
       </item>
      </layout>
     </item>
-    <item row="0" column="4" >
-     <layout class="QVBoxLayout" >
-      <property name="leftMargin" >
-       <number>3</number>
-      </property>
-      <property name="topMargin" >
-       <number>3</number>
-      </property>
-      <property name="rightMargin" >
-       <number>3</number>
-      </property>
-      <property name="bottomMargin" >
+    <item row="0" column="4">
+     <layout class="QVBoxLayout">
+      <property name="margin">
        <number>3</number>
       </property>
       <item>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>6</number>
         </property>
-        <property name="leftMargin" >
-         <number>3</number>
-        </property>
-        <property name="topMargin" >
-         <number>3</number>
-        </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
+        <property name="margin">
          <number>3</number>
         </property>
         <item>
-         <widget class="QLabel" name="fileSetLabel" >
-          <property name="text" >
+         <widget class="QLabel" name="fileSetLabel">
+          <property name="text">
            <string>FileSet</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="fileSetComboBox" />
+         <widget class="QComboBox" name="fileSetComboBox"/>
         </item>
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" >
-        <property name="spacing" >
+       <layout class="QVBoxLayout">
+        <property name="spacing">
          <number>6</number>
         </property>
-        <property name="leftMargin" >
-         <number>3</number>
-        </property>
-        <property name="topMargin" >
-         <number>3</number>
-        </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
+        <property name="margin">
          <number>3</number>
         </property>
         <item>
-         <widget class="QLabel" name="poolLabel" >
-          <property name="text" >
+         <widget class="QLabel" name="poolLabel">
+          <property name="text">
            <string>Pool</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="poolComboBox" />
+         <widget class="QComboBox" name="poolComboBox"/>
         </item>
        </layout>
       </item>
      </layout>
     </item>
-    <item row="0" column="5" >
-     <layout class="QVBoxLayout" >
+    <item row="0" column="5">
+     <layout class="QVBoxLayout">
       <item>
-       <layout class="QGridLayout" >
-        <property name="leftMargin" >
+       <layout class="QGridLayout">
+        <property name="margin">
          <number>3</number>
         </property>
-        <property name="topMargin" >
+        <property name="spacing">
          <number>3</number>
         </property>
-        <property name="rightMargin" >
-         <number>3</number>
-        </property>
-        <property name="bottomMargin" >
-         <number>3</number>
-        </property>
-        <property name="horizontalSpacing" >
-         <number>3</number>
-        </property>
-        <property name="verticalSpacing" >
-         <number>3</number>
-        </property>
-        <item row="0" column="0" >
-         <widget class="QPushButton" name="refreshButton" >
-          <property name="text" >
+        <item row="0" column="0">
+         <widget class="QPushButton" name="refreshButton">
+          <property name="text">
            <string>Refresh</string>
           </property>
-          <property name="icon" >
-           <iconset resource="../main.qrc" >:/images/view-refresh.png</iconset>
+          <property name="icon">
+           <iconset resource="../main.qrc">
+            <normaloff>:/images/view-refresh.png</normaloff>:/images/view-refresh.png</iconset>
           </property>
          </widget>
         </item>
-        <item row="1" column="0" >
-         <widget class="QPushButton" name="graphButton" >
-          <property name="text" >
+        <item row="1" column="0">
+         <widget class="QPushButton" name="graphButton">
+          <property name="text">
            <string>Graph</string>
           </property>
-          <property name="icon" >
-           <iconset resource="../main.qrc" >:/images/applications-graphics.png</iconset>
+          <property name="icon">
+           <iconset resource="../main.qrc">
+            <normaloff>:/images/applications-graphics.png</normaloff>:/images/applications-graphics.png</iconset>
           </property>
          </widget>
         </item>
        </layout>
       </item>
       <item>
-       <widget class="QCheckBox" name="filterCopyCheckBox" >
-        <property name="text" >
+       <widget class="QCheckBox" name="filterCopyCheckBox">
+        <property name="text">
          <string>Filter Copy Jobs</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="filterMigrationCheckBox" >
-        <property name="text" >
+       <widget class="QCheckBox" name="filterMigrationCheckBox">
+        <property name="text">
          <string>Filter Migration Jobs</string>
         </property>
        </widget>
@@ -502,108 +358,120 @@
     </item>
    </layout>
   </widget>
-  <action name="actionRefreshJobList" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/view-refresh.png</iconset>
+  <action name="actionRefreshJobList">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/view-refresh.png</normaloff>:/images/view-refresh.png</iconset>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>Refresh Job List</string>
    </property>
-   <property name="statusTip" >
+   <property name="statusTip">
     <string>Requery the director for the list of jobs.</string>
    </property>
   </action>
-  <action name="actionListJobid" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/utilities-terminal.png</iconset>
+  <action name="actionListFilesOnJob">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/utilities-terminal.png</normaloff>:/images/utilities-terminal.png</iconset>
    </property>
-   <property name="text" >
-    <string>ListJobid</string>
-   </property>
-  </action>
-  <action name="actionListFilesOnJob" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/utilities-terminal.png</iconset>
-   </property>
-   <property name="text" >
+   <property name="text">
     <string>List Files On Job</string>
    </property>
   </action>
-  <action name="actionListJobMedia" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/utilities-terminal.png</iconset>
+  <action name="actionListJobMedia">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/utilities-terminal.png</normaloff>:/images/utilities-terminal.png</iconset>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>ListJobMedia</string>
    </property>
   </action>
-  <action name="actionListVolumes" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/utilities-terminal.png</iconset>
+  <action name="actionListVolumes">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/utilities-terminal.png</normaloff>:/images/utilities-terminal.png</iconset>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>ListVolumes</string>
    </property>
   </action>
-  <action name="actionDeleteJob" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/weather-severe-alert.png</iconset>
+  <action name="actionDeleteJob">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/weather-severe-alert.png</normaloff>:/images/weather-severe-alert.png</iconset>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>DeleteJob</string>
    </property>
   </action>
-  <action name="actionPurgeFiles" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/weather-severe-alert.png</iconset>
+  <action name="actionPurgeFiles">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/weather-severe-alert.png</normaloff>:/images/weather-severe-alert.png</iconset>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>PurgeFiles</string>
    </property>
   </action>
-  <action name="actionRestoreFromJob" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/restore.png</iconset>
+  <action name="actionRestoreFromJob">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/restore.png</normaloff>:/images/restore.png</iconset>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>Restore From Job</string>
    </property>
   </action>
-  <action name="actionRestoreFromTime" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/restore.png</iconset>
+  <action name="actionRestoreFromTime">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/restore.png</normaloff>:/images/restore.png</iconset>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>Restore From Time</string>
    </property>
   </action>
-  <action name="actionShowLogForJob" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/joblog.png</iconset>
+  <action name="actionShowLogForJob">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/joblog.png</normaloff>:/images/joblog.png</iconset>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>Show Log for Job</string>
    </property>
   </action>
-  <action name="actionCancelJob" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/unmark.png</iconset>
+  <action name="actionShowInfoForJob">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/joblog.png</normaloff>:/images/joblog.png</iconset>
    </property>
-   <property name="text" >
+   <property name="text">
+    <string>Show Info for Job</string>
+   </property>
+  </action>
+  <action name="actionCancelJob">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/unmark.png</normaloff>:/images/unmark.png</iconset>
+   </property>
+   <property name="text">
     <string>Cancel Currently Running Job</string>
    </property>
   </action>
-  <action name="actionListJobTotals" >
-   <property name="icon" >
-    <iconset resource="../main.qrc" >:/images/utilities-terminal.png</iconset>
+  <action name="actionListJobTotals">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/utilities-terminal.png</normaloff>:/images/utilities-terminal.png</iconset>
    </property>
-   <property name="text" >
+   <property name="text">
     <string>List Job Totals in Console</string>
    </property>
   </action>
  </widget>
  <resources>
-  <include location="../main.qrc" />
+  <include location="../main.qrc"/>
  </resources>
  <connections/>
 </ui>

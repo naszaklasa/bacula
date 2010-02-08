@@ -1,19 +1,7 @@
 /*
- * Bacula Thread Read/Write locking code. It permits
- *  multiple readers but only one writer.
- *
- *  Kern Sibbald, January MMI
- *
- *  This code adapted from "Programming with POSIX Threads", by
- *    David R. Butenhof
- *
- *   Version $Id$
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -37,6 +25,18 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Bacula Thread Read/Write locking code. It permits
+ *  multiple readers but only one writer.
+ *
+ *  Kern Sibbald, January MMI
+ *
+ *  This code adapted from "Programming with POSIX Threads", by
+ *    David R. Butenhof
+ *
+ *   Version $Id$
+ *
+ */
 
 #ifndef __RWLOCK_H
 #define __RWLOCK_H 1
@@ -46,6 +46,7 @@ typedef struct s_rwlock_tag {
    pthread_cond_t    read;            /* wait for read */
    pthread_cond_t    write;           /* wait for write */
    pthread_t         writer_id;       /* writer's thread id */
+   int               priority;        /* used in deadlock detection */
    int               valid;           /* set when valid */
    int               r_active;        /* readers active */
    int               w_active;        /* writers active */
@@ -68,7 +69,7 @@ typedef struct s_rwsteal_tag {
 /*
  * read/write lock prototypes
  */
-extern int rwl_init(brwlock_t *wrlock);
+extern int rwl_init(brwlock_t *wrlock, int priority=0);
 extern int rwl_destroy(brwlock_t *rwlock);
 extern int rwl_readlock(brwlock_t *rwlock);
 extern int rwl_readtrylock(brwlock_t *rwlock);

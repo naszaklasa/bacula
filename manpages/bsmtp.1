@@ -1,63 +1,118 @@
 .\"                                      Hey, EMACS: -*- nroff -*-
-.TH BACULA\-SMTP 1 "26 May 2006" "Kern Sibbald" "Network backup"
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH BSMTP 1 "6 December 2009" "Kern Sibbald" "Network backup, recovery and verification"
 .\" Please adjust this date whenever revising the manpage.
+.\"
 .SH NAME
- bsmtp \- Bacula's SMTP (mail delivery program)
+ bsmtp \- Bacula's SMTP client (mail submission program)
+
+.SH SYNOPSIS
+.B bsmtp 
+.RI [ options ] 
+.I <recipient> <...>
+
 .SH DESCRIPTION
-bsmtp is a simple mail transport program that permits more flexibility
-than the standard mail programs typically found on Unix systems. It can even
-be used on Windows machines. 
+.B bsmtp
+is a simple mail user agent designed to permit more flexibility
+than the standard mail programs typically found on Unix systems, and to
+ease portability. It can even run on Windows machines. It is used
+by the Director daemon to send notifications and requests to the
+operator.
 
-It is called: 
+.SH OPTIONS
+.TP
+.B \-8
+Encode the mail in UTF-8.
+.TP
+.B \-c
+Set the \fBCc:\fR header.
+.TP
+.BI \-d\  nn
+Set debug level to \fInn\fP.
+.TP
+.BI \-dt
+Print timestamp in debug output.
+.TP
+.B \-f
+Set the \fBFrom:\fR header. If not specified,
+.B bsmtp
+will try to use your username.
+.TP
+.BI \-h\  mailhost:port
+Use mailhost:port as the SMTP server. (default port: 25)
+.TP
+.B \-s
+Set the \fBSubject:\fR header.
+.TP
+.B \-r
+Set the \fBReply-To:\fR: header.
+.TP
+.B \-l
+Set the maximum number of lines to be sent. (default: unlimited)
+.TP
+.B \-?
+Show version and usage of program.
 
-Usage: bsmtp [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]
-       -c          set the Cc: field
-       -dnn        set debug level to nn
-       -f          set the From: field
-       -h          use mailhost:port as the bsmtp server
-       -s          set the Subject: field
-       -?          print this message.
+.SH USAGE
+\fIrecipients\fR is a space separated list of email addresses. 
 
-If the  -f option is not specified, bsmtp will use your userid. If
-the option is not specified bsmtp will use the value in the environment
-variable bsmtpSERVER or if there is none localhost. By default
-port 25 is used. 
+The body of the email message is read from standard input. Message is
+ended by sending the EOF character (Ctrl-D on many systems) on the 
+start of a new line, much like many 'mail' commands.
 
-recipients is a space separated list of email recipients. 
+The actual, automated behavior of \fBbsmtp\fR will depend on the
+mail-related configuration of the Director in the \fIMessages\fR ressource 
+of \fIbacula-dir.conf\fR.
 
-The body of the email message is read from standard input. 
+Interactive use of \fBbsmtp\fR is pertinent to manually test and ensure these
+configuration bits are valid. This is highly recommended.
 
-An example of the use of bsmtp would be to put the following statement
-in the Messages resource of your bacula-dir.conf file. Note, these
-commands should appear on a single line each. 
+.SH CONFIGURATION
+These commands should each appear on a single line in the configuration
+file.
 
-  mailcommand = "/home/bacula/bin/bsmtp -h mail.domain.com -f \"\(Bacula\) %r\"
-                 -s \"Bacula: %t %e of %c %l\" %r"
-  operatorcommand = "/home/bacula/bin/bsmtp -h mail.domain.com -f \"\(Bacula\) %r\"
-                    -s \"Bacula: Intervention needed for %j\" %r"
+Messages {
+  Name = Standard
+  mailcommand = "/home/bacula/bin/bsmtp -h mail.domain.com -f \"\(Bacula\) %r\" 
+                           -s \"Bacula: %t %e of %c %l\" %r"
+  operatorcommand = "/home/bacula/bin/bsmtp -h mail.domain.com -f \"\(Bacula\) %r\" 
+                                 -s \"Bacula: Intervention needed for %j\" %r"
+  mail = sysadmin@site.domain.com = all, !skipped
+  operator = sysop@site.domain.com = mount
+  console = all, !skipped, !saved
+ }
 
-Where you replace home/bacula/bin with the path to your Bacula
-binary directory, and you replace mail.domain.com with the fully
-qualified name of your bsmtp (email) server, which normally listens on port
+\fIhome/bacula/bin\fR is replaced with the path to the Bacula
+binary directory, and mail.domain.com is replaced with the fully
+qualified name of an SMTP server, which usually listen on port 25.
 
-It is HIGHLY recommended that you test one or two cases by hand to make sure
-that the mailhost that you specified is correct and that it will accept
-your email requests. Since bsmtp always uses a TCP connection rather
-than writing in the spool file, you may find that your from address is
-being rejected because it does not contain a valid domain, or because your
-message is caught in your spam filtering rules. Generally, you should specify
-a fully qualified domain name in the from field, and depending on
-whether your bsmtp gateway is Exim or Sendmail, you may need to modify the
-syntax of the from part of the message. Please test. 
+.SH ENVIRONMENT
+If the \fB-h\fR option is not specified, \fBbsmtp\fR will use environment variable \fBSMTPSERVER\fR, or 'localhost' if not set.
 
-When running bsmtp by hand, you will need to terminate the message by
-entering a ctl-d in column 1 of the last line. 
+.SH NOTES
+Since \fBbsmtp\fR always uses a TCP connection rather than writing to a 
+spool file, you may find that your \fBFrom:\fR address is being rejected
+because it does not contain a valid domain, or because your
+message has gotten caught in spam filtering rules. Generally, you
+should specify a fully qualified domain name in the from field, and
+depending on whether your SMTP gateway is Exim or Sendmail, you may
+need to modify the syntax of the from part of the message.
 
+If \fBbsmtp\fR cannot connect to the specified mail host, it will retry 
+to connect to \fBlocalhost\fR.
+
+.SH BUGS
 If you are getting incorrect dates (e.g. 1970) and you are
-running with a non-English language setting, you might try adding
-a LANG="en_US" immediately before the bsmtp call.
-.br
+running with a non-English locale, you might try setting the 
+\fBLANG="en_US"\fR environment variable.
+
 .SH AUTHOR
 This manual page was written by Jose Luis Tallon
 .nh 
-<jltallon@adv\-solutions.net>.
+<jltallon@adv\-solutions.net>, revised and edited by Lucas B. Cohen
+.nh
+<lbc@members.fsf.org>.
+.SH SEE ALSO
+.BR "bacula-dir" "(8) "

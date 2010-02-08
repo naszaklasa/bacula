@@ -49,6 +49,7 @@ static pthread_mutex_t read_vol_lock = PTHREAD_MUTEX_INITIALIZER;
 /* Forward referenced functions */
 static void free_vol_item(VOLRES *vol);
 static VOLRES *new_vol_item(DCR *dcr, const char *VolumeName);
+static void debug_list_volumes(const char *imsg);
 
 /*
  * For append volumes the key is the VolumeName.
@@ -89,7 +90,7 @@ int vol_list_lock_count = 0;
 void init_vol_list_lock()
 {
    int errstat;
-   if ((errstat=rwl_init(&vol_list_lock)) != 0) {
+   if ((errstat=rwl_init(&vol_list_lock, PRIO_SD_VOL_LIST)) != 0) {
       berrno be;
       Emsg1(M_ABORT, 0, _("Unable to initialize volume list lock. ERR=%s\n"),
             be.bstrerror(errstat));
@@ -100,8 +101,6 @@ void term_vol_list_lock()
 {
    rwl_destroy(&vol_list_lock);
 }
-
-
 
 /* 
  * This allows a given thread to recursively call to lock_volumes()
@@ -195,7 +194,7 @@ enum {
    debug_nolock = false
 };
 
-void debug_list_volumes(const char *imsg)
+static void debug_list_volumes(const char *imsg)
 {
    VOLRES *vol;
    POOL_MEM msg(PM_MESSAGE);
@@ -416,6 +415,10 @@ VOLRES *reserve_volume(DCR *dcr, const char *VolumeName)
       nvol->dev = NULL;                  /* don't zap dev entry */
       free_vol_item(nvol);
 
+      if (vol->dev) {
+         Dmsg2(dbglvl, "dev=%s vol->dev=%s\n", dev->print_name(), vol->dev->print_name());
+      }
+         
       /*
        * Check if we are trying to use the Volume on a different drive
        *  dev      is our device
@@ -442,8 +445,15 @@ VOLRES *reserve_volume(DCR *dcr, const char *VolumeName)
             vol->dev = dev;              /* point the Volume at our drive */
             dev->vol = vol;              /* point our drive at the Volume */
          } else {
-            Dmsg3(dbglvl, "==== Swap not possible Vol busy vol=%s from dev=%s to %s\n", 
+            Dmsg5(dbglvl, "==== Swap not possible Vol busy=%d swap=%d vol=%s from dev=%s to %s\n", 
+               vol->dev->is_busy(), vol->is_swapping(),
                VolumeName, vol->dev->print_name(), dev->print_name());
+            if (vol->is_swapping() && dev->swap_dev) {
+               Dmsg2(dbglvl, "Swap vol=%s dev=%s\n", vol->vol_name, dev->swap_dev->print_name());
+            } else {
+               Dmsg1(dbglvl, "swap_dev=%p\n", dev->swap_dev);
+            }
+            debug_list_volumes("failed swap");
             vol = NULL;                  /* device busy */
             goto get_out;
          }
@@ -610,12 +620,14 @@ bool free_volume(DEVICE *dev)
    vol = dev->vol;
    /* Don't free a volume while it is being swapped */
    if (!vol->is_swapping()) {
-      Dmsg1(dbglvl, "=== clear in_use vol=%s\n", dev->vol->vol_name);
+      Dmsg1(dbglvl, "=== clear in_use vol=%s\n", vol->vol_name);
       dev->vol = NULL;
       vol_list->remove(vol);
       Dmsg2(dbglvl, "=== remove volume %s dev=%s\n", vol->vol_name, dev->print_name());
       free_vol_item(vol);
       debug_list_volumes("free_volume");
+   } else {
+      Dmsg1(dbglvl, "=== cannot clear swapping vol=%s\n", vol->vol_name);
    }
    unlock_volumes();
    return true;

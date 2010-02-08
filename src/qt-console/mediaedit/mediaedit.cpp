@@ -91,10 +91,15 @@ MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId)
       query += field + " AS " + AsList[i];
       i += 1;
    }
+
+   QString where = " WHERE Media.VolumeName = '" + mediaId + "' ";
+   if (mediaId.contains(QRegExp("^[0-9]+$"))) {
+      where = " WHERE Media.MediaId=" + mediaId;
+   }
    query += " FROM Media"
             " JOIN Pool ON (Media.PoolId=Pool.PoolId)"
             " LEFT OUTER JOIN Pool AS Pol ON (Media.RecyclePoolId=Pol.PoolId)"
-            " WHERE Media.MediaId='" + mediaId + "'";
+            + where;
 
    if (mainWin->m_sqlDebug) {
       Pmsg1(000, "MediaList query cmd : %s\n",query.toUtf8().data());
