@@ -298,6 +298,7 @@ Description: network backup, recovery and verification - text console
  This package provides the text-interface version of the console.
 
 Package: bacula-console-qt
+Section: utils
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30)
 Depends: bacula-common (= ${binary:Version}), ${shlibs:Depends}
