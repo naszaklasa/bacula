@@ -1,5 +1,7 @@
-bacula (3.0.3-3) experimental; urgency=low
+bacula (3.0.3-3) unstable; urgency=medium
 
+  * Fixed situation where dbconfig-common bits weren't being called.  This
+    prevented proper upgrades from lenny.  Closes: #516900.
   * Convert Sqlite3 to use dbconfig-common like PostgreSQL and MySQL directors
     have been for some time now.
   * This change means it now correctly upgrades from Sqlite2.
