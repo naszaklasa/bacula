@@ -1100,12 +1100,30 @@ gettimeofday(struct timeval *tv, struct timezone *)
 
 }
 
-/* For apcupsd this is in src/lib/wincompat.c */
+/* 
+ * Write in Windows System log 
+ */
 extern "C" void syslog(int type, const char *fmt, ...) 
 {
-/*#ifndef HAVE_CONSOLE
-    MessageBox(NULL, msg, "Bacula", MB_OK);
-#endif*/
+   va_list   arg_ptr;
+   int len, maxlen;
+   POOLMEM *msg;
+
+   msg = get_pool_memory(PM_EMSG);
+
+   for (;;) {
+      maxlen = sizeof_pool_memory(msg) - 1;
+      va_start(arg_ptr, fmt);
+      len = bvsnprintf(msg, maxlen, fmt, arg_ptr);
+      va_end(arg_ptr);
+      if (len < 0 || len >= (maxlen-5)) {
+         msg = realloc_pool_memory(msg, maxlen + maxlen/2);
+         continue;
+      }
+      break;
+   }
+   LogErrorMsg((const char *)msg);
+   free_memory(msg);
 }
 
 void
@@ -1143,6 +1161,7 @@ opendir(const char *path)
 {
     /* enough space for VSS !*/
     int max_len = strlen(path) + MAX_PATH;
+    char *tspec = NULL;
     _dir *rval = NULL;
     if (path == NULL) {
        errno = ENOENT;
@@ -1151,10 +1170,15 @@ opendir(const char *path)
 
     Dmsg1(100, "Opendir path=%s\n", path);
     rval = (_dir *)malloc(sizeof(_dir));
+    if (!rval) {
+       goto err;
+    }
     memset (rval, 0, sizeof (_dir));
-    if (rval == NULL) return NULL;
-    char *tspec = (char *)malloc(max_len);
-    if (tspec == NULL) return NULL;
+
+    tspec = (char *)malloc(max_len);
+    if (!tspec) { 
+       goto err;
+    }
 
     conv_unix_to_win32_path(path, tspec, max_len);
     Dmsg1(100, "win32 path=%s\n", tspec);
@@ -1204,8 +1228,12 @@ opendir(const char *path)
     return (DIR *)rval;
 
 err:
-    free((void *)rval->spec);
-    free(rval);
+    if (rval) {
+       free(rval);
+    }
+    if (tspec) {
+       free(tspec);
+    }
     errno = b_errno_win32;
     return NULL;
 }
@@ -1378,11 +1406,35 @@ WSA_Init(void)
     return 0;
 }
 
+static DWORD fill_attribute(DWORD attr, mode_t mode)
+{
+   Dmsg1(200, "  before attr=%lld\n", (uint64_t) attr);
+   /* Use Bacula mappings define in stat() above */
+   if (mode & (S_IRUSR|S_IRGRP|S_IROTH)) { // If file is readable
+      attr &= ~FILE_ATTRIBUTE_READONLY;    // then this is not READONLY
+   } else {
+      attr |= FILE_ATTRIBUTE_READONLY;
+   }
+   if (mode & S_ISVTX) {                   // The sticky bit <=> HIDDEN 
+      attr |= FILE_ATTRIBUTE_HIDDEN;
+   } else {
+      attr &= ~FILE_ATTRIBUTE_HIDDEN;
+   }
+   if (mode & S_IRWXO) {              // Other can read/write/execute ?
+      attr &= ~FILE_ATTRIBUTE_SYSTEM; // => Not system
+   } else {
+      attr |= FILE_ATTRIBUTE_SYSTEM;
+   }
+   Dmsg1(200, "  after attr=%lld\n", (uint64_t)attr);
+   return attr;
+}
+
 int win32_chmod(const char *path, mode_t mode)
 {
-   DWORD attr = (DWORD)-1;
+   bool ret=false;
+   DWORD attr;
 
-    Dmsg1(100, "Enter win32_chmod. path=%s\n", path);
+   Dmsg2(100, "win32_chmod(path=%s mode=%lld)\n", path, (uint64_t)mode);
    if (p_GetFileAttributesW) {
       POOLMEM* pwszBuf = get_pool_memory(PM_FNAME);
       make_win32_path_UTF8_2_wchar(&pwszBuf, path);
@@ -1390,52 +1442,23 @@ int win32_chmod(const char *path, mode_t mode)
       attr = p_GetFileAttributesW((LPCWSTR) pwszBuf);
       if (attr != INVALID_FILE_ATTRIBUTES) {
          /* Use Bacula mappings define in stat() above */
-         if (mode & (S_IRUSR|S_IRGRP|S_IROTH)) {
-            attr |= FILE_ATTRIBUTE_READONLY;
-         } else {
-            attr &= ~FILE_ATTRIBUTE_READONLY;
-         }
-         if (mode & S_ISVTX) {
-            attr |= FILE_ATTRIBUTE_HIDDEN;
-         } else {
-            attr &= ~FILE_ATTRIBUTE_HIDDEN;
-         }
-         if (mode & S_IRWXO) { 
-            attr |= FILE_ATTRIBUTE_SYSTEM;
-         } else {
-            attr &= ~FILE_ATTRIBUTE_SYSTEM;
-         }
-         attr = p_SetFileAttributesW((LPCWSTR)pwszBuf, attr);
+         attr = fill_attribute(attr, mode);
+         ret = p_SetFileAttributesW((LPCWSTR)pwszBuf, attr);
       }
       free_pool_memory(pwszBuf);
       Dmsg0(100, "Leave win32_chmod. AttributesW\n");
    } else if (p_GetFileAttributesA) {
-         if (mode & (S_IRUSR|S_IRGRP|S_IROTH)) {
-            attr |= FILE_ATTRIBUTE_READONLY;
-         } else {
-            attr &= ~FILE_ATTRIBUTE_READONLY;
-         }
-         if (mode & S_ISVTX) {
-            attr |= FILE_ATTRIBUTE_HIDDEN;
-         } else {
-            attr &= ~FILE_ATTRIBUTE_HIDDEN;
-         }
-         if (mode & S_IRWXO) { 
-            attr |= FILE_ATTRIBUTE_SYSTEM;
-         } else {
-            attr &= ~FILE_ATTRIBUTE_SYSTEM;
-         }
       attr = p_GetFileAttributesA(path);
       if (attr != INVALID_FILE_ATTRIBUTES) {
-         attr = p_SetFileAttributesA(path, attr);
+         attr = fill_attribute(attr, mode);
+         ret = p_SetFileAttributesA(path, attr);
       }
       Dmsg0(100, "Leave win32_chmod did AttributesA\n");
    } else {
       Dmsg0(100, "Leave win32_chmod did nothing\n");
    }
     
-
-   if (attr == (DWORD)-1) {
+   if (!ret) {
       const char *err = errorString();
       Dmsg2(99, "Get/SetFileAttributes(%s): %s\n", path, err);
       LocalFree((void *)err);
@@ -2580,3 +2603,28 @@ int munmap(void *start, size_t length)
 /* syslog function, added by Nicolas Boichat */
 void openlog(const char *ident, int option, int facility) {}  
 #endif //HAVE_MINGW
+
+/* Log an error message */
+void LogErrorMsg(const char *message)
+{
+   HANDLE eventHandler;
+   const char *strings[2];
+
+   /* Use the OS event logging to log the error */
+   eventHandler = RegisterEventSource(NULL, "Bacula");
+
+   strings[0] = _("\n\nBacula ERROR: ");
+   strings[1] = message;
+
+   if (eventHandler) {
+      ReportEvent(eventHandler, EVENTLOG_ERROR_TYPE,
+              0,                      /* category */
+              0,                      /* ID */
+              NULL,                   /* SID */
+              2,                      /* Number of strings */
+              0,                      /* raw data size */
+              (const char **)strings, /* error strings */
+              NULL);                  /* raw data */
+      DeregisterEventSource(eventHandler);
+   }
+}

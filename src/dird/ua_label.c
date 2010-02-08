@@ -84,6 +84,9 @@ static bool get_user_slot_list(UAContext *ua, char *slot_list, int num_slots)
       slot_list[i] = 0;
    }
    i = find_arg_with_value(ua, "slots");
+   if (i == -1) {  /* not found */
+      i = find_arg_with_value(ua, "slot");
+   }
    if (i > 0) {
       /* scan slot list in ua->argv[i] */
       char *p, *e, *h;
@@ -893,13 +896,28 @@ static vol_list_t *get_vol_list_from_SD(UAContext *ua, bool scan)
          vl->next = vol_list;
          vol_list = vl;
       } else {
-         /* Add new entry to end of list */
+         vol_list_t *prev=vol_list;
+         /* Add new entry to the right place in the list */
          for (vol_list_t *tvl=vol_list; tvl; tvl=tvl->next) {
+            if (tvl->Slot > vl->Slot) {
+               /* no previous item, update vol_list directly */
+               if (prev == vol_list) {  
+                  vl->next = vol_list;
+                  vol_list = vl;
+
+               } else {     /* replace the previous pointer */
+                  prev->next = vl;
+                  vl->next = tvl;
+               }
+               break;
+            }
+            /* we are at the end */
             if (!tvl->next) {
                tvl->next = vl;
                vl->next = NULL;
                break;
             }
+            prev = tvl;
          }
       }
    }
@@ -987,9 +1005,6 @@ int get_num_drives_from_SD(UAContext *ua)
    return drives;
 }
 
-
-
-
 /*
  * Check if this is a cleaning tape by comparing the Volume name
  *  with the Cleaning Prefix. If they match, this is a cleaning
@@ -1016,6 +1031,160 @@ static bool is_cleaning_tape(UAContext *ua, MEDIA_DBR *mr, POOL_DBR *pr)
                   strlen(ua->jcr->pool->cleaning_prefix)) == 0;
 }
 
+static void content_send_info(UAContext *ua, char type, int Slot, char *vol_name)
+{
+   char ed1[50], ed2[50], ed3[50];
+   POOL_DBR pr;
+   MEDIA_DBR mr;
+   /* Type|Slot|RealSlot|Volume|Bytes|Status|MediaType|Pool|LastW|Expire */
+   const char *slot_api_full_format="%c|%i|%i|%s|%s|%s|%s|%s|%s|%s\n";
+   const char *slot_api_empty_format="%c|%i||||||||\n";
+
+   if (is_volume_name_legal(NULL, vol_name)) {
+      memset(&mr, 0, sizeof(mr));
+      bstrncpy(mr.VolumeName, vol_name, sizeof(mr.VolumeName));
+      if (db_get_media_record(ua->jcr, ua->db, &mr)) {
+         memset(&pr, 0, sizeof(POOL_DBR));
+         pr.PoolId = mr.PoolId;
+         if (!db_get_pool_record(ua->jcr, ua->db, &pr)) {
+            strcpy(pr.Name, "?");
+         }
+         ua->send_msg(slot_api_full_format, type,
+                      Slot, mr.Slot, mr.VolumeName, 
+                      edit_uint64(mr.VolBytes, ed1), 
+                      mr.VolStatus, mr.MediaType, pr.Name, 
+                      edit_uint64(mr.LastWritten, ed2),
+                      edit_uint64(mr.LastWritten+mr.VolRetention, ed3));
+         
+      } else {                  /* Media unknown */
+         ua->send_msg(slot_api_full_format,
+                      type, Slot, 0, mr.VolumeName, "?", "?", "?", "?", 
+                      "0", "0");
+         
+      }
+   } else {
+      ua->send_msg(slot_api_empty_format, type, Slot);
+   }
+}         
+
+/* 
+ * Input (output of mxt-changer listall):
+ *
+ * Drive content:         D:Drive num:F:Slot loaded:Volume Name
+ * D:0:F:2:vol2        or D:Drive num:E
+ * D:1:F:42:vol42   
+ * D:3:E
+ *
+ * Slot content:
+ * S:1:F:vol1             S:Slot num:F:Volume Name
+ * S:2:E               or S:Slot num:E
+ * S:3:F:vol4
+ *
+ * Import/Export tray slots:
+ * I:10:F:vol10           I:Slot num:F:Volume Name
+ * I:11:E              or I:Slot num:E
+ * I:12:F:vol40
+ *
+ * If a drive is loaded, the slot *should* be empty 
+ * 
+ * Output:
+ *
+ * Drive list:       D|Drive num|Slot loaded|Volume Name
+ * D|0|45|vol45
+ * D|1|42|vol42
+ * D|3||
+ *
+ * Slot list: Type|Slot|RealSlot|Volume|Bytes|Status|MediaType|Pool|LastW|Expire
+ *
+ * S|1|1|vol1|31417344|Full|LTO1-ANSI|Inc|1250858902|1282394902
+ * S|2||||||||
+ * S|3|3|vol4|15869952|Append|LTO1-ANSI|Inc|1250858907|1282394907
+ *
+ * TODO: need to merge with status_slots()
+ */
+void status_content(UAContext *ua, STORE *store)
+{
+   int Slot, Drive;
+   char type;
+   char dev_name[MAX_NAME_LENGTH];
+   char vol_name[MAX_NAME_LENGTH];
+   BSOCK *sd;
+   vol_list_t *vl=NULL, *vol_list = NULL;
+
+   if (!(sd=open_sd_bsock(ua))) {
+      return;
+   }
+
+   if (!open_client_db(ua)) {
+      return;
+   }
+
+   bstrncpy(dev_name, store->dev_name(), sizeof(dev_name));
+   bash_spaces(dev_name);
+   /* Ask for autochanger list of volumes */
+   bnet_fsend(sd, NT_("autochanger listall %s \n"), dev_name);
+
+   /* Read and organize list of Drive, Slots and I/O Slots */
+   while (bnet_recv(sd) >= 0) {
+      strip_trailing_junk(sd->msg);
+
+      /* Check for returned SD messages */
+      if (sd->msg[0] == '3'     && B_ISDIGIT(sd->msg[1]) &&
+          B_ISDIGIT(sd->msg[2]) && B_ISDIGIT(sd->msg[3]) &&
+          sd->msg[4] == ' ') {
+         ua->send_msg("%s\n", sd->msg);   /* pass them on to user */
+         continue;
+      }
+
+      Drive = Slot = -1;
+      *vol_name = 0;
+
+      if (sscanf(sd->msg, "D:%d:F:%d:%127s", &Drive, &Slot, vol_name) == 3) {
+         ua->send_msg("D|%d|%d|%s\n", Drive, Slot, vol_name);
+
+         /* we print information on the slot if we have a volume name */
+         if (*vol_name) {
+            /* Add Slot and VolumeName to list */
+            vl = (vol_list_t *)malloc(sizeof(vol_list_t));
+            vl->Slot = Slot;
+            vl->VolName = bstrdup(vol_name);
+            vl->next = vol_list;
+            vol_list = vl;
+         }
+
+      } else if (sscanf(sd->msg, "D:%d:E", &Drive) == 1) {
+         ua->send_msg("D|%d||\n", Drive);
+
+      } else if (sscanf(sd->msg, "%c:%d:F:%127s", &type, &Slot, vol_name)== 3) {
+         content_send_info(ua, type, Slot, vol_name);
+
+      } else if (sscanf(sd->msg, "%c:%d:E", &type, &Slot) == 2) {
+         /* type can be S (slot) or I (Import/Export slot) */
+         vol_list_t *prev=NULL;
+         for (vl = vol_list; vl; vl = vl->next) {
+            if (vl->Slot == Slot) {
+               bstrncpy(vol_name, vl->VolName, MAX_NAME_LENGTH);
+
+               /* remove the node */
+               if (prev) {
+                  prev->next = vl->next;
+               } else {
+                  vol_list = vl->next;
+               }
+               free(vl->VolName);
+               free(vl);
+               break;
+            }
+            prev = vl;
+         }
+         content_send_info(ua, type, Slot, vol_name);
+
+      } else {
+         Dmsg1(10, "Discarding msg=%s\n", sd->msg);
+      }
+   }
+   close_sd_bsock(ua);
+}
 
 /*
  * Print slots from AutoChanger
@@ -1030,10 +1199,13 @@ void status_slots(UAContext *ua, STORE *store_r)
    int max_slots;
    int drive;
    int i=1;
-   /* output format */
-   const char *slot_api_empty_format="%i|||||\n";
-   const char *slot_api_full_format="%i|%i|%s|%s|%s|%s|\n";
+   /* Slot | Volume | Status | MediaType | Pool */
    const char *slot_hformat=" %4i%c| %16s | %9s | %20s | %18s |\n";
+
+   if (ua->api) {
+      status_content(ua, store_r);
+      return;
+   }
 
    if (!open_client_db(ua)) {
       return;
@@ -1062,10 +1234,8 @@ void status_slots(UAContext *ua, STORE *store_r)
       ua->warning_msg(_("No Volumes found, or no barcodes.\n"));
       goto bail_out;
    }
-   if (!ua->api) {
-      ua->send_msg(_(" Slot |   Volume Name    |   Status  |     Media Type       |      Pool          |\n"));
-      ua->send_msg(_("------+------------------+-----------+----------------------+--------------------|\n"));
-   }
+   ua->send_msg(_(" Slot |   Volume Name    |   Status  |     Media Type       |      Pool          |\n"));
+   ua->send_msg(_("------+------------------+-----------+----------------------+--------------------|\n"));
 
    /* Walk through the list getting the media records */
    for (vl=vol_list; vl; vl=vl->next) {
@@ -1084,25 +1254,17 @@ void status_slots(UAContext *ua, STORE *store_r)
 
       if (!vl->VolName) {
          Dmsg1(100, "No VolName for Slot=%d.\n", vl->Slot);
-         if (!ua->api) {
-            ua->send_msg(slot_hformat,
-                         vl->Slot, '*',
-                         "?", "?", "?", "?");
-         } else {
-            ua->send_msg(slot_api_empty_format, vl->Slot);
-         }
+         ua->send_msg(slot_hformat,
+                      vl->Slot, '*',
+                      "?", "?", "?", "?");
          continue;
       }
 
       /* Hope that slots are ordered */
       for (; i < vl->Slot; i++) {
          if (slot_list[i]) {
-            if (!ua->api) {
-               ua->send_msg(slot_hformat,
-                            i, ' ', "", "", "", "");
-            } else {
-               ua->send_msg(slot_api_empty_format, i);
-            }       
+            ua->send_msg(slot_hformat,
+                         i, ' ', "", "", "", "");
             slot_list[i]=0;
          }
       }
@@ -1116,19 +1278,12 @@ void status_slots(UAContext *ua, STORE *store_r)
          if (!db_get_pool_record(ua->jcr, ua->db, &pr)) {
             strcpy(pr.Name, "?");
          }
-
-         if (!ua->api) {
-            /* Print information */
-            ua->send_msg(slot_hformat,
-                         vl->Slot, ((vl->Slot==mr.Slot)?' ':'*'),
-                         mr.VolumeName, mr.VolStatus, mr.MediaType, pr.Name);
-         } else {
-            ua->send_msg(slot_api_full_format,
-                         vl->Slot, mr.Slot, mr.VolumeName, mr.VolStatus, 
-                         mr.MediaType, pr.Name);
-         }
-
          db_unlock(ua->db);
+
+         /* Print information */
+         ua->send_msg(slot_hformat,
+                      vl->Slot, ((vl->Slot==mr.Slot)?' ':'*'),
+                      mr.VolumeName, mr.VolStatus, mr.MediaType, pr.Name);
          continue;
       } else {                  /* TODO: get information from catalog  */
          ua->send_msg(slot_hformat,
@@ -1142,12 +1297,8 @@ void status_slots(UAContext *ua, STORE *store_r)
     */
    for (; i <= max_slots; i++) {
       if (slot_list[i]) {
-         if (!ua->api) {
-            ua->send_msg(slot_hformat,
-                         i, ' ', "", "", "", "");
-         } else {
-            ua->send_msg(slot_api_empty_format, i);
-         } 
+         ua->send_msg(slot_hformat,
+                      i, ' ', "", "", "", "");
          slot_list[i]=0;
       }
    }

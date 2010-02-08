@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -51,6 +51,32 @@ void stop_bsock_timer(btimer_t *wid);
 
 
 class BSOCK {
+/* 
+ * Note, keep this public part before the private otherwise
+ *  bat breaks on some systems such as RedHat.
+ */
+public:
+   uint64_t read_seqno;               /* read sequence number */
+   POOLMEM *msg;                      /* message pool buffer */
+   POOLMEM *errmsg;                   /* edited error message */
+   RES *res;                          /* Resource to which we are connected */
+   FILE *m_spool_fd;                  /* spooling file */
+   TLS_CONNECTION *tls;               /* associated tls connection */
+   IPADDR *src_addr;                  /* IP address to source connections from */
+   uint32_t in_msg_no;                /* input message number */
+   uint32_t out_msg_no;               /* output message number */
+   int32_t msglen;                    /* message length */
+   volatile time_t timer_start;       /* time started read/write */
+   volatile time_t timeout;           /* timeout BSOCK after this interval */
+   int m_fd;                          /* socket file descriptor */
+   int b_errno;                       /* bsock errno */
+   int m_blocking;                    /* blocking state (0 = nonblocking, 1 = blocking) */
+   volatile int errors;               /* incremented for each error on socket */
+   volatile bool m_suppress_error_msgs; /* set to suppress error messages */
+
+   struct sockaddr client_addr;       /* client's IP address */
+   struct sockaddr_in peer_addr;      /* peer's IP address */
+
 private:
    BSOCK *m_next;                     /* next BSOCK if duped */
    JCR *m_jcr;                        /* jcr or NULL for error msgs */
@@ -59,6 +85,7 @@ private:
    char *m_host;                      /* Host name/IP */
    int m_port;                        /* desired port */
    btimer_t *m_tid;                   /* timer id */
+   boffset_t m_data_end;              /* offset of last valid data written */
    volatile bool m_timed_out: 1;      /* timed out in read/write */
    volatile bool m_terminated: 1;     /* set when BNET_TERMINATE arrives */
    bool m_duped: 1;                   /* set if duped BSOCK */
@@ -71,26 +98,6 @@ private:
                int port, utime_t heart_beat, int *fatal);
    
 public:
-   uint64_t read_seqno;               /* read sequence number */
-   uint32_t in_msg_no;                /* input message number */
-   uint32_t out_msg_no;               /* output message number */
-   int m_fd;                          /* socket file descriptor */
-   TLS_CONNECTION *tls;               /* associated tls connection */
-   int32_t msglen;                    /* message length */
-   int b_errno;                       /* bsock errno */
-   int m_blocking;                    /* blocking state (0 = nonblocking, 1 = blocking) */
-   volatile int errors;               /* incremented for each error on socket */
-   volatile bool m_suppress_error_msgs: 1; /* set to suppress error messages */
-   volatile time_t timer_start;       /* time started read/write */
-   volatile time_t timeout;           /* timeout BSOCK after this interval */
-   POOLMEM *msg;                      /* message pool buffer */
-   POOLMEM *errmsg;                   /* edited error message */
-   RES *res;                          /* Resource to which we are connected */
-   FILE *m_spool_fd;                  /* spooling file */
-   struct sockaddr client_addr;       /* client's IP address */
-   struct sockaddr_in peer_addr;      /* peer's IP address */
-   IPADDR *src_addr;                  /* IP address to source connections from */
-
    /* methods -- in bsock.c */
    void init();
    void free_bsock();
@@ -135,6 +142,7 @@ public:
    bool is_timed_out() { return m_timed_out; };
    bool is_stop() { return errors || is_terminated(); }
    bool is_error() { errno = b_errno; return errors; }
+   void set_data_end() { if (m_spool) m_data_end = ftello(m_spool_fd); };
    void set_spooling() { m_spool = true; };
    void clear_spooling() { m_spool = false; };
    void set_duped() { m_duped = true; };

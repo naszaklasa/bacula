@@ -37,6 +37,12 @@
 #include "bacula.h"
 #include "filed.h"
 
+#ifdef HAVE_DARWIN_OS
+const bool have_darwin_os = true;
+#else
+const bool have_darwin_os = false;
+#endif
+
 static int verify_file(JCR *jcr, FF_PKT *ff_pkt, bool);
 static int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr);
 
@@ -187,18 +193,18 @@ static int verify_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    /* Send file attributes to Director (note different format than for Storage) */
    Dmsg2(400, "send ATTR inx=%d fname=%s\n", jcr->JobFiles, ff_pkt->fname);
    if (ff_pkt->type == FT_LNK || ff_pkt->type == FT_LNKSAVED) {
-      stat = bnet_fsend(dir, "%d %d %s %s%c%s%c%s%c", jcr->JobFiles,
-            STREAM_UNIX_ATTRIBUTES, ff_pkt->VerifyOpts, ff_pkt->fname,
-            0, attribs, 0, ff_pkt->link, 0);
+      stat = dir->fsend("%d %d %s %s%c%s%c%s%c", jcr->JobFiles,
+                        STREAM_UNIX_ATTRIBUTES, ff_pkt->VerifyOpts, ff_pkt->fname,
+                        0, attribs, 0, ff_pkt->link, 0);
    } else if (ff_pkt->type == FT_DIREND || ff_pkt->type == FT_REPARSE) {
-         /* Here link is the canonical filename (i.e. with trailing slash) */
-         stat = bnet_fsend(dir,"%d %d %s %s%c%s%c%c", jcr->JobFiles,
-               STREAM_UNIX_ATTRIBUTES, ff_pkt->VerifyOpts, ff_pkt->link,
-               0, attribs, 0, 0);
+      /* Here link is the canonical filename (i.e. with trailing slash) */
+      stat = dir->fsend("%d %d %s %s%c%s%c%c", jcr->JobFiles,
+                        STREAM_UNIX_ATTRIBUTES, ff_pkt->VerifyOpts, ff_pkt->link,
+                        0, attribs, 0, 0);
    } else {
-      stat = bnet_fsend(dir,"%d %d %s %s%c%s%c%c", jcr->JobFiles,
-            STREAM_UNIX_ATTRIBUTES, ff_pkt->VerifyOpts, ff_pkt->fname,
-            0, attribs, 0, 0);
+      stat = dir->fsend("%d %d %s %s%c%s%c%c", jcr->JobFiles,
+                        STREAM_UNIX_ATTRIBUTES, ff_pkt->VerifyOpts, ff_pkt->fname,
+                        0, attribs, 0, 0);
    }
    Dmsg2(20, "bfiled>bdird: attribs len=%d: msg=%s\n", dir->msglen, dir->msg);
    if (!stat) {
@@ -260,10 +266,10 @@ static int verify_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
 
             bin_to_base64(digest_buf, BASE64_SIZE(size), md, size, true);
             Dmsg3(400, "send inx=%d %s=%s\n", jcr->JobFiles, digest_name, digest_buf);
-            bnet_fsend(dir, "%d %d %s *%s-%d*", jcr->JobFiles, digest_stream, digest_buf,
+            dir->fsend("%d %d %s *%s-%d*", jcr->JobFiles, digest_stream, digest_buf,
                        digest_name, jcr->JobFiles);
             Dmsg3(20, "bfiled>bdird: %s len=%d: msg=%s\n", digest_name,
-            dir->msglen, dir->msg);
+                  dir->msglen, dir->msg);
 
             free(digest_buf);
          }
@@ -288,8 +294,9 @@ int digest_file(JCR *jcr, FF_PKT *ff_pkt, DIGEST *digest)
    Dmsg0(50, "=== digest_file\n");
    binit(&bfd);
 
-   if (ff_pkt->statp.st_size > 0 || ff_pkt->type == FT_RAW
-         || ff_pkt->type == FT_FIFO) {
+   if (ff_pkt->statp.st_size > 0 ||
+       ff_pkt->type == FT_RAW ||
+       ff_pkt->type == FT_FIFO) {
       int noatime = ff_pkt->flags & FO_NOATIME ? O_NOATIME : 0;
       if ((bopen(&bfd, ff_pkt->fname, O_RDONLY | O_BINARY | noatime, 0)) < 0) {
          ff_pkt->ff_errno = errno;
@@ -304,28 +311,27 @@ int digest_file(JCR *jcr, FF_PKT *ff_pkt, DIGEST *digest)
       bclose(&bfd);
    }
 
-#ifdef HAVE_DARWIN_OS
+   if (have_darwin_os) {
       /* Open resource fork if necessary */
-   if (ff_pkt->flags & FO_HFSPLUS && ff_pkt->hfsinfo.rsrclength > 0) {
-      if (bopen_rsrc(&bfd, ff_pkt->fname, O_RDONLY | O_BINARY, 0) < 0) {
-         ff_pkt->ff_errno = errno;
-         berrno be;
-         Jmsg(jcr, M_ERROR, -1, _("     Cannot open resource fork for %s: ERR=%s.\n"),
-               ff_pkt->fname, be.bstrerror());
-         if (is_bopen(&ff_pkt->bfd)) {
-            bclose(&ff_pkt->bfd);
+      if (ff_pkt->flags & FO_HFSPLUS && ff_pkt->hfsinfo.rsrclength > 0) {
+         if (bopen_rsrc(&bfd, ff_pkt->fname, O_RDONLY | O_BINARY, 0) < 0) {
+            ff_pkt->ff_errno = errno;
+            berrno be;
+            Jmsg(jcr, M_ERROR, -1, _("     Cannot open resource fork for %s: ERR=%s.\n"),
+                  ff_pkt->fname, be.bstrerror());
+            if (is_bopen(&ff_pkt->bfd)) {
+               bclose(&ff_pkt->bfd);
+            }
+            return 1;
          }
-         return 1;
+         read_digest(&bfd, digest, jcr);
+         bclose(&bfd);
       }
-      read_digest(&bfd, digest, jcr);
-      bclose(&bfd);
-   }
 
-   if (digest && ff_pkt->flags & FO_HFSPLUS) {
-      crypto_digest_update(digest, (uint8_t *)ff_pkt->hfsinfo.fndrinfo, 32);
+      if (digest && ff_pkt->flags & FO_HFSPLUS) {
+         crypto_digest_update(digest, (uint8_t *)ff_pkt->hfsinfo.fndrinfo, 32);
+      }
    }
-#endif
-
    return 0;
 }
 
@@ -361,8 +367,12 @@ static int read_digest(BFILE *bfd, DIGEST *digest, JCR *jcr)
       }
       
       crypto_digest_update(digest, (uint8_t *)buf, n);
-      jcr->JobBytes += n;
-      jcr->ReadBytes += n;
+
+      /* Can be used by BaseJobs, update only for Verify jobs */
+      if (jcr->getJobLevel() != L_FULL) {
+         jcr->JobBytes += n;
+         jcr->ReadBytes += n;
+      }
    }
    if (n < 0) {
       berrno be;

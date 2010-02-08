@@ -26,8 +26,8 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 
-#ifndef _BACULA_XATTR_
-#define _BACULA_XATTR_
+#ifndef __XATTR_H
+#define __XATTR_H
 
 /*
  * Magic used in the magic field of the xattr struct.
@@ -38,26 +38,41 @@
 /*
  * Internal representation of an extended attribute.
  */
-typedef struct xattr {
+struct xattr_t {
    uint32_t magic;
    uint32_t name_length;
    char *name;
    uint32_t value_length;
    char *value;
-} xattr_t;
+};
 
 /*
  * Internal representation of an extended attribute hardlinked file.
  */
-typedef struct xattr_link_cache_entry {
+struct xattr_link_cache_entry_t {
    uint32_t inum;
    char target[PATH_MAX];
-   struct xattr_link_cache_entry *next;
-} xattr_link_cache_entry_t;
+};
+
+/*
+ * Internal tracking data.
+ */
+struct xattr_data_t {
+   POOLMEM *content;
+   uint32_t content_length;
+   uint32_t nr_errors;
+   uint32_t nr_saved;
+   alist *link_cache;
+};
 
 /*
  * Maximum size of the XATTR stream this prevents us from blowing up the filed.
  */
 #define MAX_XATTR_STREAM  (1 * 1024 * 1024) /* 1 Mb */
+
+/*
+ * Upperlimit on a xattr internal buffer
+ */
+#define XATTR_BUFSIZ	1024
 
 #endif

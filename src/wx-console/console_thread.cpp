@@ -375,7 +375,7 @@ void* console_thread::Entry() {
 
    memset(&jcr, 0, sizeof(jcr));
    
-   jcr.dequeuing = 1; /* TODO: catch messages */
+   jcr.dequeuing_msgs = 1; /* TODO: catch messages */
 
    LockRes();
    /* If cons==NULL, default console will be used */

@@ -54,11 +54,13 @@ if [ $reltype != "beta" ] ; then
    rm -f 1
    cd ..
 fi
-./configure --enable-client-only
-cd po
-make update-po
-cd ${src}   
-git commit -am "Final po changes for ${fulltag}"
+if [ a$updatepo != ano ]; then
+   ./configure --enable-client-only
+   cd po
+   make update-po
+   cd ${src}   
+   git commit -am "Final po changes for ${fulltag}"
+fi
 git tag -d ${fulltag}
 echo "Creating new tag -- $fulltag"
 git tag $fulltag
@@ -96,6 +98,8 @@ cd ..
 ./sign $base_pkg-gui-$ver.tar.gz
 ./sign $base_pkg-regress-$ver.tar.gz
 
-cd ${src}
-git push
-git push --tags
+if [ a$push != ano ]; then
+   cd ${src}
+   git push origin $branch
+   git push origin tag $fulltag
+fi

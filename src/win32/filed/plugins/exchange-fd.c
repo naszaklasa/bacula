@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -296,7 +296,7 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
       _DebugMessage(0, "path = %s\n", path);
       if (*path != '/')
       {
-         _JobMessage(M_ERROR, "Path does not begin with a '/'\n");
+         _JobMessage(M_FATAL, "Path does not begin with a '/'\n");
          return bRC_Error;
       }
 
@@ -313,7 +313,7 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
 
       if (i < 2 || i > 4)
       {
-         _JobMessage(M_ERROR, "Invalid plugin backup path\n");
+         _JobMessage(M_FATAL, "Invalid plugin backup path\n");
          return bRC_Error;
       }
       context->root_node = new root_node_t(context->path_bits[0]);
@@ -323,7 +323,7 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
       break;
 
    default:
-      _JobMessage(M_ERROR, "unknown event=%d\n", event->eventType);
+      _JobMessage(M_FATAL, "unknown event=%d\n", event->eventType);
    }
    bfuncs->getBaculaValue(ctx, bVarFDName, (void *)&name);
    return bRC_OK;
@@ -381,7 +381,7 @@ static bRC pluginIO(bpContext *ctx, struct io_pkt *io)
 
    if (io->pkt_size != sizeof(struct io_pkt) || io->pkt_end != sizeof(struct io_pkt))
    {
-      _JobMessage(M_ERROR, "io_pkt size mismatch - sizeof(struct io_pkt) = %d, pkt_size = %d, pkt_end = %d\n", sizeof(struct io_pkt), io->pkt_size, io->pkt_end);
+      _JobMessage(M_FATAL, "io_pkt size mismatch - sizeof(struct io_pkt) = %d, pkt_size = %d, pkt_end = %d\n", sizeof(struct io_pkt), io->pkt_size, io->pkt_end);
    }
 
    switch(io->func) {
@@ -442,7 +442,8 @@ static bRC createFile(bpContext *ctx, struct restore_pkt *rp)
    _DebugMessage(100, "createFile - type = %d, ofname = %s\n", rp->type, rp->ofname);
    if (rp->pkt_size != sizeof(struct restore_pkt) || rp->pkt_end != sizeof(struct restore_pkt))
    {
-      _JobMessage(M_ERROR, "restore_pkt size mismatch - sizeof(struct restore_pkt) = %d, pkt_size = %d, pkt_end = %d\n", sizeof(struct restore_pkt), rp->pkt_size, rp->pkt_end);
+      _JobMessage(M_FATAL, "restore_pkt size mismatch - sizeof(struct restore_pkt) = %d, pkt_size = %d, pkt_end = %d\n", sizeof(struct restore_pkt), rp->pkt_size, rp->pkt_end);
+      return bRC_Error;
    }
 
    for (i = 0; i < 6; i++)

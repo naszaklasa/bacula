@@ -25,6 +25,16 @@
          <property name="currentIndex" >
           <number>0</number>
          </property>
+         <widget class="QWidget" name="tab_2" >
+          <attribute name="title" >
+           <string>Running</string>
+          </attribute>
+          <layout class="QGridLayout" >
+           <item row="0" column="0" >
+            <widget class="QTextEdit" name="textEditRunning" />
+           </item>
+          </layout>
+         </widget>
          <widget class="QWidget" name="tab" >
           <attribute name="title" >
            <string>Header</string>
@@ -90,16 +100,6 @@
               <bool>true</bool>
              </property>
             </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="tab_2" >
-          <attribute name="title" >
-           <string>Running</string>
-          </attribute>
-          <layout class="QGridLayout" >
-           <item row="0" column="0" >
-            <widget class="QTextEdit" name="textEditRunning" />
            </item>
           </layout>
          </widget>

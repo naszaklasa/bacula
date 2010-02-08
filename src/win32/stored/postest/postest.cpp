@@ -293,6 +293,7 @@ main(int argc, char **argv)
    ulBlockNumber++;
 
    run_script(fd, TestScript, SCRIPT_LENGTH);
-
+   tape_close(fd);
+   free(pBuffer);
    return 0;
 }

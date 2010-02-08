@@ -30,8 +30,6 @@
  *
  *   Kern Sibbald, MM
  *
- *   Version $Id$
- *
  */
 
 #include "bacula.h"
@@ -47,10 +45,15 @@ extern uint32_t newVolSessionId();
 extern bool do_mac(JCR *jcr);
 
 /* Requests from the Director daemon */
+/* Added in 3.1.4 14Sep09 KES */
 static char jobcmd[] = "JobId=%d job=%127s job_name=%127s client_name=%127s "
       "type=%d level=%d FileSet=%127s NoAttr=%d SpoolAttr=%d FileSetMD5=%127s "
-      "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d SpoolSize=%s\n";
+      "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d SpoolSize=%s "
+      "Resched=%d\n";
 static char oldjobcmd[] = "JobId=%d job=%127s job_name=%127s client_name=%127s "
+      "type=%d level=%d FileSet=%127s NoAttr=%d SpoolAttr=%d FileSetMD5=%127s "
+      "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d SpoolSize=%s\n";
+static char oldoldjobcmd[] = "JobId=%d job=%127s job_name=%127s client_name=%127s "
       "type=%d level=%d FileSet=%127s NoAttr=%d SpoolAttr=%d FileSetMD5=%127s "
       "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d\n";
 
@@ -83,6 +86,7 @@ bool job_cmd(JCR *jcr)
    POOL_MEM job_name, client_name, job, fileset_name, fileset_md5;
    int JobType, level, spool_attributes, no_attributes, spool_data;
    int write_part_after_job, PreferMountedVols;
+   int Resched = 0;
    int stat;
    JCR *ojcr;
 
@@ -95,20 +99,29 @@ bool job_cmd(JCR *jcr)
               client_name.c_str(),
               &JobType, &level, fileset_name.c_str(), &no_attributes,
               &spool_attributes, fileset_md5.c_str(), &spool_data,
-              &write_part_after_job, &PreferMountedVols, spool_size);
-   if (stat != 14) {
+              &write_part_after_job, &PreferMountedVols, spool_size,
+              &Resched);
+   if (stat != 15) {
       /* Try old version */
       stat = sscanf(dir->msg, oldjobcmd, &JobId, job.c_str(), job_name.c_str(),
-              client_name.c_str(),
-              &JobType, &level, fileset_name.c_str(), &no_attributes,
-              &spool_attributes, fileset_md5.c_str(), &spool_data,
-              &write_part_after_job, &PreferMountedVols);
-      if (stat != 13) {
-         pm_strcpy(jcr->errmsg, dir->msg);
-         dir->fsend(BAD_job, stat, jcr->errmsg);
-         Dmsg1(100, ">dird: %s", dir->msg);
-         set_jcr_job_status(jcr, JS_ErrorTerminated);
-         return false;
+                 client_name.c_str(),
+                 &JobType, &level, fileset_name.c_str(), &no_attributes,
+                 &spool_attributes, fileset_md5.c_str(), &spool_data,
+                 &write_part_after_job, &PreferMountedVols, spool_size);
+      if (stat != 14) {
+         /* Try oldold version */
+         stat = sscanf(dir->msg, oldoldjobcmd, &JobId, job.c_str(), job_name.c_str(),
+                 client_name.c_str(),
+                 &JobType, &level, fileset_name.c_str(), &no_attributes,
+                 &spool_attributes, fileset_md5.c_str(), &spool_data,
+                 &write_part_after_job, &PreferMountedVols);
+         if (stat != 13) {
+            pm_strcpy(jcr->errmsg, dir->msg);
+            dir->fsend(BAD_job, stat, jcr->errmsg);
+            Dmsg1(100, ">dird: %s", dir->msg);
+            set_jcr_job_status(jcr, JS_ErrorTerminated);
+            return false;
+         }
       }
    }
    /*
@@ -144,6 +157,7 @@ bool job_cmd(JCR *jcr)
    jcr->fileset_md5 = get_pool_memory(PM_NAME);
    pm_strcpy(jcr->fileset_md5, fileset_md5);
    jcr->PreferMountedVols = PreferMountedVols;
+
 
    jcr->authenticated = false;
 

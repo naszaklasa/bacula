@@ -59,6 +59,7 @@ static BSR *store_exclude(LEX *lc, BSR *bsr);
 static BSR *store_stream(LEX *lc, BSR *bsr);
 static BSR *store_slot(LEX *lc, BSR *bsr);
 static BSR *store_fileregex(LEX *lc, BSR *bsr);
+static BSR *store_nothing(LEX *lc, BSR *bsr);
 static bool is_fast_rejection_ok(BSR *bsr);
 static bool is_positioning_ok(BSR *bsr);
 
@@ -91,6 +92,7 @@ struct kw_items items[] = {
    {"slot",     store_slot},
    {"device",   store_device},
    {"fileregex", store_fileregex},
+   {"storage",  store_nothing},
    {NULL, NULL}
 };
 
@@ -282,6 +284,17 @@ static BSR *store_mediatype(LEX *lc, BSR *bsr)
    BSR_VOLUME *bv;
    for (bv=bsr->volume; bv; bv=bv->next) {
       bstrncpy(bv->MediaType, lc->str, sizeof(bv->MediaType));
+   }
+   return bsr;
+}
+
+static BSR *store_nothing(LEX *lc, BSR *bsr)
+{
+   int token;
+
+   token = lex_get_token(lc, T_STRING);
+   if (token == T_ERROR) {
+      return NULL;
    }
    return bsr;
 }

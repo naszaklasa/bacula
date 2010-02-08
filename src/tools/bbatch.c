@@ -103,6 +103,7 @@ int main (int argc, char *argv[])
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
    init_stack_dump();
+   lmgr_init_thread();
    
    char **files = (char **) malloc (10 * sizeof(char *));
    int i;

@@ -52,128 +52,22 @@
 /* Commands sent to File daemon */
 static char restorecmd[]  = "restore replace=%c prelinks=%d where=%s\n";
 static char restorecmdR[] = "restore replace=%c prelinks=%d regexwhere=%s\n";
-static char storaddr[]    = "storage address=%s port=%d ssl=0\n";
+static char storaddr[]    = "storage address=%s port=%d ssl=0 Authorization=%s\n";
 
 /* Responses received from File daemon */
 static char OKrestore[]   = "2000 OK restore\n";
 static char OKstore[]     = "2000 OK storage\n";
+static char OKstoreend[]  = "2000 OK storage end\n";
 
 /* Responses received from the Storage daemon */
 static char OKbootstrap[] = "3000 OK bootstrap\n";
 
-/*
- * Do a restore of the specified files
- *
- *  Returns:  0 on failure
- *            1 on success
- */
-bool do_restore(JCR *jcr)
+static void build_restore_command(JCR *jcr, POOL_MEM &ret)
 {
-   BSOCK   *fd, *sd;
-   JOB_DBR rjr;                       /* restore job record */
    char replace, *where, *cmd;
    char empty = '\0';
-   int stat;
 
-   free_wstorage(jcr);                /* we don't write */
-
-   if (!allow_duplicate_job(jcr)) {
-      goto bail_out;
-   }
-
-   memset(&rjr, 0, sizeof(rjr));
-   jcr->jr.JobLevel = L_FULL;         /* Full restore */
-   if (!db_update_job_start_record(jcr, jcr->db, &jcr->jr)) {
-      Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
-      goto bail_out;
-   }
-   Dmsg0(20, "Updated job start record\n");
-
-   Dmsg1(20, "RestoreJobId=%d\n", jcr->job->RestoreJobId);
-
-   if (!jcr->RestoreBootstrap) {
-      Jmsg0(jcr, M_FATAL, 0, _("Cannot restore without a bootstrap file.\n"
-          "You probably ran a restore job directly. All restore jobs must\n"
-          "be run using the restore command.\n"));
-      goto bail_out;
-   }
-
-
-   /* Print Job Start message */
-   Jmsg(jcr, M_INFO, 0, _("Start Restore Job %s\n"), jcr->Job);
-
-   /*
-    * Open a message channel connection with the Storage
-    * daemon. This is to let him know that our client
-    * will be contacting him for a backup  session.
-    *
-    */
-   Dmsg0(10, "Open connection with storage daemon\n");
-   set_jcr_job_status(jcr, JS_WaitSD);
-   /*
-    * Start conversation with Storage daemon
-    */
-   if (!connect_to_storage_daemon(jcr, 10, SDConnectTimeout, 1)) {
-      goto bail_out;
-   }
-   sd = jcr->store_bsock;
-   /*
-    * Now start a job with the Storage daemon
-    */
-   if (!start_storage_daemon_job(jcr, jcr->rstorage, NULL)) {
-      goto bail_out;
-   }
-
-   /*
-    * Send the bootstrap file -- what Volumes/files to restore
-    */
-   if (!send_bootstrap_file(jcr, sd) ||
-       !response(jcr, sd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
-      goto bail_out;
-   }
-
-   if (!sd->fsend("run")) {
-      goto bail_out;
-   }
-   /*
-    * Now start a Storage daemon message thread
-    */
-   if (!start_storage_daemon_message_thread(jcr)) {
-      goto bail_out;
-   }
-   Dmsg0(50, "Storage daemon connection OK\n");
-
-
-   /*
-    * Start conversation with File daemon
-    */
-   set_jcr_job_status(jcr, JS_WaitFD);
-   if (!connect_to_file_daemon(jcr, 10, FDConnectTimeout, 1)) {
-      goto bail_out;
-   }
-
-   fd = jcr->file_bsock;
-   set_jcr_job_status(jcr, JS_Running);
-
-   /*
-    * send Storage daemon address to the File daemon,
-    *   then wait for File daemon to make connection
-    *   with Storage daemon.
-    */
-   if (jcr->rstore->SDDport == 0) {
-      jcr->rstore->SDDport = jcr->rstore->SDport;
-   }
-   fd->fsend(storaddr, jcr->rstore->address, jcr->rstore->SDDport);
-   Dmsg1(6, "dird>filed: %s\n", fd->msg);
-   if (!response(jcr, fd, OKstore, "Storage", DISPLAY_ERROR)) {
-      goto bail_out;
-   }
-
-   if (!send_runscripts_commands(jcr)) {
-      goto bail_out;
-   }
-
-   /* Send restore command */
+   /* Build the restore command */
 
    if (jcr->replace != 0) {
       replace = jcr->replace;
@@ -205,10 +99,374 @@ bool do_restore(JCR *jcr)
    jcr->prefix_links = jcr->job->PrefixLinks;
 
    bash_spaces(where);
-   fd->fsend(cmd, replace, jcr->prefix_links, where);
+   Mmsg(ret, cmd, replace, jcr->prefix_links, where);
    unbash_spaces(where);
+}
 
-   if (!response(jcr, fd, OKrestore, "Restore", DISPLAY_ERROR)) {
+struct bootstrap_info
+{
+   FILE *bs;
+   UAContext *ua;
+   char storage[MAX_NAME_LENGTH+1];
+};
+
+#define UA_CMD_SIZE 1000
+
+/* Open the bootstrap file and find the first Storage= 
+ * Returns ok if able to open
+ * It fills the storage name (should be the first line) 
+ * and the file descriptor to the bootstrap file, 
+ * it should be used for next operations, and need to be closed
+ * at the end.
+ */
+static bool open_bootstrap_file(JCR *jcr, struct bootstrap_info &info)
+{
+   FILE *bs;
+   UAContext *ua;
+   info.bs = NULL;
+   info.ua = NULL;
+
+   if (!jcr->RestoreBootstrap) {
+      return false;
+   }
+   strncpy(info.storage, jcr->rstore->name(), MAX_NAME_LENGTH);
+
+   bs = fopen(jcr->RestoreBootstrap, "rb");
+   if (!bs) {
+      berrno be;
+      Jmsg(jcr, M_FATAL, 0, _("Could not open bootstrap file %s: ERR=%s\n"),
+         jcr->RestoreBootstrap, be.bstrerror());
+      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      return false;
+   }
+
+   ua = new_ua_context(jcr);
+   ua->cmd = check_pool_memory_size(ua->cmd, UA_CMD_SIZE+1);
+   while (!fgets(ua->cmd, UA_CMD_SIZE, bs)) {
+      parse_ua_args(ua);
+      if (ua->argc != 1) {
+         continue;
+      }
+      if (!strcasecmp(ua->argk[0], "Storage")) {
+         strncpy(info.storage, ua->argv[0], MAX_NAME_LENGTH);
+         break;
+      }
+   }
+   info.bs = bs;
+   info.ua = ua;
+   fseek(bs, 0, SEEK_SET);      /* return to the top of the file */
+   return true;
+}
+
+/* 
+ * This function compare the given storage name with the
+ * the current one. We compare the name and the address:port.
+ * Returns true if we use the same storage.
+ */
+static bool is_on_same_storage(JCR *jcr, char *new_one)
+{
+   STORE *new_store;
+
+   /* with old FD, we send the whole bootstrap to the storage */
+   if (jcr->FDVersion < 2) {
+      return true;
+   }
+   /* we are in init loop ? shoudn't fall here */
+   if (!*new_one) {
+      return true;
+   }
+   /* same name */
+   if (!strcmp(new_one, jcr->rstore->name())) {
+      return true;
+   }
+   new_store = (STORE *)GetResWithName(R_STORAGE, new_one);
+   if (!new_store) {
+      Jmsg(jcr, M_FATAL, 0,
+           _("Could not get storage resource '%s'.\n"), new_one);
+      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      return false;
+   }
+   /* if Port and Hostname/IP are same, we are talking to the same
+    * Storage Daemon
+    */
+   if (jcr->rstore->SDport != new_store->SDport ||
+       strcmp(jcr->rstore->address, new_store->address))
+   {
+      return false;
+   }
+   return true;
+}
+
+/* 
+ * Check if the current line contains Storage="xxx", and compare the
+ * result to the current storage. We use UAContext to analyse the bsr 
+ * string.
+ *
+ * Returns true if we need to change the storage, and it set the new
+ * Storage resource name in "storage" arg. 
+ */
+static bool check_for_new_storage(JCR *jcr, struct bootstrap_info &info)
+{
+   UAContext *ua = info.ua;
+   parse_ua_args(ua);
+   if (ua->argc != 1) {
+      return false;
+   }
+   if (!strcasecmp(ua->argk[0], "Storage")) {
+      /* Continue if this is a volume from the same storage. */
+      if (is_on_same_storage(jcr, ua->argv[0])) {
+         return false;
+      }
+      /* note the next storage name */
+      strncpy(info.storage, ua->argv[0], MAX_NAME_LENGTH);
+      Dmsg1(5, "Change storage to %s\n", info.storage);
+      return true;
+   }
+   return false;
+}
+
+/*
+ * Send bootstrap file to Storage daemon section by section.
+ */
+static bool send_bootstrap_file(JCR *jcr, BSOCK *sock,
+                                struct bootstrap_info &info)
+{
+   boffset_t pos;
+   const char *bootstrap = "bootstrap\n";
+   UAContext *ua = info.ua;
+   FILE *bs = info.bs;
+
+   Dmsg1(400, "send_bootstrap_file: %s\n", jcr->RestoreBootstrap);
+   if (!jcr->RestoreBootstrap) {
+      return false;
+   }
+   sock->fsend(bootstrap);
+   pos = ftello(bs);
+   while(fgets(ua->cmd, UA_CMD_SIZE, bs)) {
+      if (check_for_new_storage(jcr, info)) {
+         /* Otherwise, we need to contact another storage daemon.
+          * Reset bs to the beginning of the current segment. 
+          */
+         fseeko(bs, pos, SEEK_SET);
+         break;
+      }
+      sock->fsend("%s", ua->cmd);
+      pos = ftello(bs);
+   }
+   sock->signal(BNET_EOD);
+   return true;
+}
+
+/* 
+ * Change the read storage resource for the current job.
+ */
+static void select_rstore(JCR *jcr, struct bootstrap_info &info)
+{
+   USTORE ustore;
+   if (!strcmp(jcr->rstore->name(), info.storage)) {
+      return;
+   }
+
+   if (!(ustore.store = (STORE *)GetResWithName(R_STORAGE,info.storage))) {
+      Jmsg(jcr, M_FATAL, 0,
+           _("Could not get storage resource '%s'.\n"), info.storage);
+      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      return;
+   }
+   
+   if (jcr->store_bsock) {
+      jcr->store_bsock->destroy();
+      jcr->store_bsock = NULL;
+   }
+   
+   free_rstorage(jcr);
+   set_rstorage(jcr, &ustore);
+}
+
+/* 
+ * Clean the struct bootstrap_info struct
+ */
+static void close_bootstrap_file(struct bootstrap_info &info)
+{
+   if (info.bs) {
+      fclose(info.bs);
+   }
+   if (info.ua) {
+      free_ua_context(info.ua);
+   }
+}
+
+/* 
+ * Take a bootstrap and for each different storage, we change the storage
+ * resource and start a new restore session between the client and the storage
+ *
+ */
+bool restore_bootstrap(JCR *jcr)
+{
+   BSOCK *fd=NULL, *sd;
+   bool end_loop=false;
+   bool first_time=true;
+   struct bootstrap_info info;
+   POOL_MEM restore_cmd(PM_MESSAGE);
+   bool ret=false;
+
+   /* this command is used for each part */
+   build_restore_command(jcr, restore_cmd);
+   
+   if (!open_bootstrap_file(jcr, info)) {
+      goto bail_out;
+   }
+   while (!end_loop && !feof(info.bs)) {
+      
+      select_rstore(jcr, info);
+
+      /*
+       * Open a message channel connection with the Storage
+       * daemon. This is to let him know that our client
+       * will be contacting him for a backup  session.
+       *
+       */
+      Dmsg0(10, "Open connection with storage daemon\n");
+      set_jcr_job_status(jcr, JS_WaitSD);
+      /*
+       * Start conversation with Storage daemon
+       */
+      if (!connect_to_storage_daemon(jcr, 10, SDConnectTimeout, 1)) {
+         goto bail_out;
+      }
+      sd = jcr->store_bsock;
+      /*
+       * Now start a job with the Storage daemon
+       */
+      if (!start_storage_daemon_job(jcr, jcr->rstorage, NULL)) {
+         goto bail_out;
+      }
+
+      if (first_time) {
+         /*
+          * Start conversation with File daemon
+          */
+         set_jcr_job_status(jcr, JS_WaitFD);
+         jcr->keep_sd_auth_key = true; /* don't clear the sd_auth_key now */
+         if (!connect_to_file_daemon(jcr, 10, FDConnectTimeout, 1)) {
+            goto bail_out;
+         }
+
+         fd = jcr->file_bsock;
+      }
+
+      set_jcr_job_status(jcr, JS_WaitSD);
+
+      /*
+       * Send the bootstrap file -- what Volumes/files to restore
+       */
+      if (!send_bootstrap_file(jcr, sd, info) ||
+          !response(jcr, sd, OKbootstrap, "Bootstrap", DISPLAY_ERROR)) {
+         goto bail_out;
+      }
+
+      if (!sd->fsend("run")) {
+         goto bail_out;
+      }
+      /*
+       * Now start a Storage daemon message thread
+       */
+      if (!start_storage_daemon_message_thread(jcr)) {
+         goto bail_out;
+      }
+      Dmsg0(50, "Storage daemon connection OK\n");
+
+      /*
+       * send Storage daemon address to the File daemon,
+       *   then wait for File daemon to make connection
+       *   with Storage daemon.
+       */
+      if (jcr->rstore->SDDport == 0) {
+         jcr->rstore->SDDport = jcr->rstore->SDport;
+      }
+      fd->fsend(storaddr, jcr->rstore->address, jcr->rstore->SDDport,
+                jcr->sd_auth_key);
+      memset(jcr->sd_auth_key, 0, strlen(jcr->sd_auth_key));
+
+      Dmsg1(6, "dird>filed: %s\n", fd->msg);
+      if (!response(jcr, fd, OKstore, "Storage", DISPLAY_ERROR)) {
+         goto bail_out;
+      }
+
+      if (first_time) {
+         if (!send_runscripts_commands(jcr)) {
+            goto bail_out;
+         }
+         first_time=false;
+      }
+
+      fd->fsend("%s", restore_cmd.c_str());
+
+      if (!response(jcr, fd, OKrestore, "Restore", DISPLAY_ERROR)) {
+         goto bail_out;
+      }
+
+      if (jcr->FDVersion < 2) { /* Old FD */
+         end_loop=true;         /* we do only one loop */
+
+      } else {
+         if (!response(jcr, fd, OKstoreend, "Store end", DISPLAY_ERROR)) {
+            goto bail_out;
+         }
+         wait_for_storage_daemon_termination(jcr);
+      }
+   } /* the whole boostrap has been send */
+
+   if (fd && jcr->FDVersion >= 2) {
+      fd->fsend("endrestore");
+   }
+
+   ret = true;
+
+bail_out:
+   close_bootstrap_file(info);
+   return ret;
+}
+
+/*
+ * Do a restore of the specified files
+ *
+ *  Returns:  0 on failure
+ *            1 on success
+ */
+bool do_restore(JCR *jcr)
+{
+   JOB_DBR rjr;                       /* restore job record */
+   int stat;
+
+   free_wstorage(jcr);                /* we don't write */
+
+   if (!allow_duplicate_job(jcr)) {
+      goto bail_out;
+   }
+
+   memset(&rjr, 0, sizeof(rjr));
+   jcr->jr.JobLevel = L_FULL;         /* Full restore */
+   if (!db_update_job_start_record(jcr, jcr->db, &jcr->jr)) {
+      Jmsg(jcr, M_FATAL, 0, "%s", db_strerror(jcr->db));
+      goto bail_out;
+   }
+   Dmsg0(20, "Updated job start record\n");
+
+   Dmsg1(20, "RestoreJobId=%d\n", jcr->job->RestoreJobId);
+
+   if (!jcr->RestoreBootstrap) {
+      Jmsg(jcr, M_FATAL, 0, _("Cannot restore without a bootstrap file.\n"
+          "You probably ran a restore job directly. All restore jobs must\n"
+          "be run using the restore command.\n"));
+      goto bail_out;
+   }
+
+
+   /* Print Job Start message */
+   Jmsg(jcr, M_INFO, 0, _("Start Restore Job %s\n"), jcr->Job);
+
+   if (!restore_bootstrap(jcr)) {
       goto bail_out;
    }
 

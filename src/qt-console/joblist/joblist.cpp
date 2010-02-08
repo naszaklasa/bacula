@@ -36,6 +36,7 @@
 #include <QTableWidgetItem>
 #include "joblist.h"
 #include "restore.h"
+#include "job/job.h"
 #include "joblog/joblog.h"
 #ifdef HAVE_QWT
 #include "jobgraphs/jobplot.h"
@@ -50,7 +51,7 @@ JobList::JobList(const QString &mediaName, const QString &clientName,
           const QString &jobName, const QString &filesetName, QTreeWidgetItem *parentTreeWidgetItem)
 {
    setupUi(this);
-   m_name = ""; /* treeWidgetName has a virtual override in this class */
+   m_name = "Jobs Run"; /* treeWidgetName has a virtual override in this class */
    m_mediaName = mediaName;
    m_clientName = clientName;
    m_jobName = jobName;
@@ -63,17 +64,16 @@ JobList::JobList(const QString &mediaName, const QString &clientName,
    m_resultCount = 0;
    m_populated = false;
    m_closeable = false;
-   if ((m_mediaName != "") || (m_clientName != "") || (m_jobName != "") || (m_filesetName != ""))
+   if ((m_mediaName != "") || (m_clientName != "") || (m_jobName != "") || (m_filesetName != "")) {
       m_closeable=true;
+   }
    m_checkCurrentWidget = true;
-   createConnections();
 
    /* Set Defaults for check and spin for limits */
    limitCheckBox->setCheckState(mainWin->m_recordLimitCheck ? Qt::Checked : Qt::Unchecked);
    limitSpinBox->setValue(mainWin->m_recordLimitVal);
    daysCheckBox->setCheckState(mainWin->m_daysLimitCheck ? Qt::Checked : Qt::Unchecked);
    daysSpinBox->setValue(mainWin->m_daysLimitVal);
-   dockPage();
 
    QGridLayout *gridLayout = new QGridLayout(this);
    gridLayout->setSpacing(6);
@@ -85,11 +85,13 @@ JobList::JobList(const QString &mediaName, const QString &clientName,
    area->setObjectName(QString::fromUtf8("area"));
    area->setWidget(frame);
    area->setWidgetResizable(true);
-   m_splitter->addWidget(mp_tableWidget);
    m_splitter->addWidget(area);
+   m_splitter->addWidget(mp_tableWidget);
 
    gridLayout->addWidget(m_splitter, 0, 0, 1, 1);
+   createConnections();
    readSettings();
+   if (m_closeable) { dockPage(); }
 }
 
 /*
@@ -229,16 +231,7 @@ void JobList::populateTable()
    }
 
    /* make read only */
-   int rcnt = mp_tableWidget->rowCount();
-   int ccnt = mp_tableWidget->columnCount();
-   for(int r=0; r < rcnt; r++) {
-      for(int c=0; c < ccnt; c++) {
-         QTableWidgetItem* item = mp_tableWidget->item(r, c);
-         if (item) {
-            item->setFlags(Qt::ItemFlags(item->flags() & (~Qt::ItemIsEditable)));
-         }
-      }
-   }
+   mp_tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
 }
 
 void JobList::prepareFilterWidgets()
@@ -348,7 +341,19 @@ void JobList::PgSeltreeWidgetClicked()
 {
    if (!m_populated) {
       populateTable();
+      /* Lets make sure the splitter is not all the way to size index 0 == 0 */
+      QList<int> sizes = m_splitter->sizes();
+      if (sizes[0] == 0) {
+         int frameMax = frame->maximumHeight();
+         int sizeSum = 0;
+         foreach(int size, sizes) { sizeSum += size; }
+         int tabHeight = mainWin->tabWidget->geometry().height();
+         sizes[0] = frameMax;
+         sizes[1] = tabHeight - frameMax;
+         m_splitter->setSizes(sizes);
+      }
    }
+   dockPage();
 }
 
 /*
@@ -367,15 +372,15 @@ void JobList::currentStackItem()
 void JobList::treeWidgetName(QString &desc)
 {
    if (m_mediaName != "" ) {
-     desc = tr("JobList of Volume %1").arg(m_mediaName);
+     desc = tr("Jobs Run on Volume %1").arg(m_mediaName);
    } else if (m_clientName != "" ) {
-     desc = tr("JobList of Client %1").arg(m_clientName);
+     desc = tr("Jobs Run from Client %1").arg(m_clientName);
    } else if (m_jobName != "" ) {
-     desc = tr("JobList of Job %1").arg(m_jobName);
+     desc = tr("Jobs Run of Job %1").arg(m_jobName);
    } else if (m_filesetName != "" ) {
-     desc = tr("JobList of fileset %1").arg(m_filesetName);
+     desc = tr("Jobs Run with fileset %1").arg(m_filesetName);
    } else {
-     desc = tr("JobList");
+     desc = tr("Jobs Run");
    }
 }
 
@@ -387,8 +392,7 @@ void JobList::createConnections()
 {
    /* connect to the action specific to this pages class that shows up in the 
     * page selector tree */
-   connect(actionRefreshJobList, SIGNAL(triggered()), this,
-                SLOT(populateTable()));
+   connect(actionRefreshJobList, SIGNAL(triggered()), this, SLOT(populateTable()));
    connect(refreshButton, SIGNAL(pressed()), this, SLOT(populateTable()));
 #ifdef HAVE_QWT
    connect(graphButton, SIGNAL(pressed()), this, SLOT(graphTable()));
@@ -398,6 +402,7 @@ void JobList::createConnections()
 #endif
    /* for the selectionChanged to maintain m_currentJob and a delete selection */
    connect(mp_tableWidget, SIGNAL(itemSelectionChanged()), this, SLOT(selectionChanged()));
+   connect(mp_tableWidget, SIGNAL(itemDoubleClicked(QTableWidgetItem*)), this, SLOT(showInfoForJob()));
 
    /* Do what is required for the local context sensitive menu */
 
@@ -405,28 +410,17 @@ void JobList::createConnections()
    /* setContextMenuPolicy is required */
    mp_tableWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
 
-   connect(actionListJobid, SIGNAL(triggered()), this,
-                SLOT(consoleListJobid()));
-   connect(actionListFilesOnJob, SIGNAL(triggered()), this,
-                SLOT(consoleListFilesOnJob()));
-   connect(actionListJobMedia, SIGNAL(triggered()), this,
-                SLOT(consoleListJobMedia()));
-   connect(actionListVolumes, SIGNAL(triggered()), this,
-                SLOT(consoleListVolumes()));
-   connect(actionDeleteJob, SIGNAL(triggered()), this,
-                SLOT(consoleDeleteJob()));
-   connect(actionPurgeFiles, SIGNAL(triggered()), this,
-                SLOT(consolePurgeFiles()));
-   connect(actionRestoreFromJob, SIGNAL(triggered()), this,
-                SLOT(preRestoreFromJob()));
-   connect(actionRestoreFromTime, SIGNAL(triggered()), this,
-                SLOT(preRestoreFromTime()));
-   connect(actionShowLogForJob, SIGNAL(triggered()), this,
-                SLOT(showLogForJob()));
-   connect(actionCancelJob, SIGNAL(triggered()), this,
-                SLOT(consoleCancelJob()));
-   connect(actionListJobTotals, SIGNAL(triggered()), this,
-                SLOT(consoleListJobTotals()));
+   connect(actionListFilesOnJob, SIGNAL(triggered()), this, SLOT(consoleListFilesOnJob()));
+   connect(actionListJobMedia, SIGNAL(triggered()), this, SLOT(consoleListJobMedia()));
+   connect(actionDeleteJob, SIGNAL(triggered()), this, SLOT(consoleDeleteJob()));
+   connect(actionPurgeFiles, SIGNAL(triggered()), this, SLOT(consolePurgeFiles()));
+   connect(actionRestoreFromJob, SIGNAL(triggered()), this, SLOT(preRestoreFromJob()));
+   connect(actionRestoreFromTime, SIGNAL(triggered()), this, SLOT(preRestoreFromTime()));
+   connect(actionShowLogForJob, SIGNAL(triggered()), this, SLOT(showLogForJob()));
+   connect(actionShowInfoForJob, SIGNAL(triggered()), this, SLOT(showInfoForJob()));
+   connect(actionCancelJob, SIGNAL(triggered()), this, SLOT(consoleCancelJob()));
+   connect(actionListJobTotals, SIGNAL(triggered()), this, SLOT(consoleListJobTotals()));
+   connect(m_splitter, SIGNAL(splitterMoved(int, int)), this, SLOT(splitterMoved(int, int)));
 
    m_contextActions.append(actionRefreshJobList);
    m_contextActions.append(actionListJobTotals);
@@ -436,13 +430,6 @@ void JobList::createConnections()
  * Functions to respond to local context sensitive menu sending console commands
  * If I could figure out how to make these one function passing a string, Yaaaaaa
  */
-void JobList::consoleListJobid()
-{
-   QString cmd("list jobid=");
-   cmd += m_currentJob;
-   if (mainWin->m_longList) { cmd.prepend("l"); }
-   consoleCommand(cmd);
-}
 void JobList::consoleListFilesOnJob()
 {
    QString cmd("list files jobid=");
@@ -457,13 +444,7 @@ void JobList::consoleListJobMedia()
    if (mainWin->m_longList) { cmd.prepend("l"); }
    consoleCommand(cmd);
 }
-void JobList::consoleListVolumes()
-{
-   QString cmd("list volumes jobid=");
-   cmd += m_currentJob;
-   if (mainWin->m_longList) { cmd.prepend("l"); }
-   consoleCommand(cmd);
-}
+
 void JobList::consoleListJobTotals()
 {
    QString cmd("list jobtotals");
@@ -539,6 +520,15 @@ void JobList::showLogForJob()
 }
 
 /*
+ * Subroutine to call class to show the log in the database from that job
+ */
+void JobList::showInfoForJob(QTableWidgetItem * /*item*/)
+{
+   QTreeWidgetItem* pageSelectorTreeWidgetItem = mainWin->getFromHash(this);
+   new Job(m_currentJob, pageSelectorTreeWidgetItem);
+}
+
+/*
  * Cancel a running job
  */
 void JobList::consoleCancelJob()
@@ -591,10 +581,12 @@ void JobList::writeSettings()
 void JobList::readSettings()
 {
    m_groupText = "JobListPage";
-   m_splitText = "splitterSizes_1";
+   m_splitText = "splitterSizes_2";
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
-   m_splitter->restoreState(settings.value(m_splitText).toByteArray());
+   if (settings.contains(m_splitText)) {
+      m_splitter->restoreState(settings.value(m_splitText).toByteArray());
+   }
    filterCopyCheckBox->setCheckState((Qt::CheckState)settings.value("FilterCopyCheckState").toInt());
    filterMigrationCheckBox->setCheckState((Qt::CheckState)settings.value("FilterMigrationCheckState").toInt());
    settings.endGroup();
@@ -643,13 +635,12 @@ void JobList::selectionChanged()
    /* Add Actions */
    mp_tableWidget->addAction(actionRefreshJobList);
    if (m_selectedJobsCount == 1) {
-      mp_tableWidget->addAction(actionListJobid);
       mp_tableWidget->addAction(actionListFilesOnJob);
       mp_tableWidget->addAction(actionListJobMedia);
-      mp_tableWidget->addAction(actionListVolumes);
       mp_tableWidget->addAction(actionRestoreFromJob);
       mp_tableWidget->addAction(actionRestoreFromTime);
       mp_tableWidget->addAction(actionShowLogForJob);
+      mp_tableWidget->addAction(actionShowInfoForJob);
    }
    if (m_selectedJobsCount >= 1) {
       mp_tableWidget->addAction(actionDeleteJob);
@@ -687,5 +678,22 @@ void JobList::selectionChanged()
       if (status == tr("Running") || status == tr("Created, not yet running")) {
          mp_tableWidget->addAction(actionCancelJob);
       }
+   }
+}
+
+/*
+ *  Function to prevent the splitter from making index 0 of the size larger than it
+ *  needs to be
+ */
+void JobList::splitterMoved(int /*pos*/, int /*index*/)
+{
+   int frameMax = frame->maximumHeight();
+   QList<int> sizes = m_splitter->sizes();
+   int sizeSum = 0;
+   foreach(int size, sizes) { sizeSum += size; }
+   if (sizes[0] > frameMax) {
+      sizes[0] = frameMax;
+      sizes[1] = sizeSum - frameMax;
+      m_splitter->setSizes(sizes);
    }
 }

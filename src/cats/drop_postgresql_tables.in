@@ -29,6 +29,8 @@ drop table MAC;
 drop table log;
 drop table Location;
 drop table locationlog;
+drop table PathVisibility;
+drop table PathHierarchy;
 END-OF-DATA
 pstat=$?
 if test $pstat = 0; 

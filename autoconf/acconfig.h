@@ -215,8 +215,6 @@
 
 #undef HAVE_OLD_SOCKOPT
  
-#undef HAVE_BIGENDIAN
-
 /* Defined if Gtk+-2.4 or greater is present */
 #undef HAVE_GTK_2_4
 

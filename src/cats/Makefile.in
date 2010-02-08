@@ -26,11 +26,13 @@ dummy:
 #
 INCLUDE_FILES = bdb.h cats.h protos.h sql_cmds.h
 
-LIBSRCS = mysql.c bdb.c dbi.c \
-	  sql.c sql_cmds.c sql_create.c sql_delete.c sql_find.c \
-	  sql_get.c sql_list.c sql_update.c sqlite.c \
-	  postgresql.c
-LIBOBJS = $(LIBSRCS:.c=$(DEFAULT_OBJECT_TYPE))
+LIBBACSQL_SRCS = mysql.c bdb.c dbi.c \
+		 sql.c sql_cmds.c sql_create.c sql_delete.c sql_find.c \
+		 sql_get.c sql_list.c sql_update.c sqlite.c \
+		 postgresql.c ingres.c myingres.c \
+		 bvfs.c
+LIBBACSQL_OBJS = $(LIBBACSQL_SRCS:.c=.o)
+LIBBACSQL_LOBJS = $(LIBBACSQL_SRCS:.c=.lo)
 
 LIBBACSQL_LT_CURRENT = 1
 LIBBACSQL_LT_REVISION = 0
@@ -48,19 +50,25 @@ LIBBACSQL_LT_AGE = 0
 .c.lo:
 	@echo "Compiling $<"
 	$(NO_ECHO)$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(SQL_INC) $(DINCLUDE) $(CFLAGS) $<
+
 #-------------------------------------------------------------------------
 all: Makefile libbacsql$(DEFAULT_ARCHIVE_TYPE)
 	@echo "==== Make of sqllib is good ===="
 	@echo " "
 
-libbacsql.a: $(LIBOBJS)
+# SRE: embeddedSQL precompiler run
+esql:
+	$(II_SYSTEM)/ingres/bin/esqlc -omyingres.c myingres.sc
+	$(II_SYSTEM)/ingres/bin/esqlc -omyingres.h myingres.sh
+
+libbacsql.a: $(LIBBACSQL_OBJS)
 	@echo "Making $@ ..."	  
-	$(AR) rc  $@ $(LIBOBJS)
+	$(AR) rc  $@ $(LIBBACSQL_OBJS)
 	$(RANLIB) $@
 
-libbacsql.la: Makefile $(LIBOBJS)
+libbacsql.la: Makefile $(LIBBACSQL_LOBJS)
 	@echo "Making $@ ..."	  
-	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBOBJS) -export-dynamic -rpath $(libdir) -version-info $(LIBBACSQL_LT_CURRENT):$(LIBBACSQL_LT_REVISION):$(LIBBACSQL_LT_AGE) $(DB_LIBS)
+	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACSQL_LOBJS) -export-dynamic -rpath $(libdir) -version-info $(LIBBACSQL_LT_CURRENT):$(LIBBACSQL_LT_REVISION):$(LIBBACSQL_LT_AGE) $(DB_LIBS)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
@@ -89,14 +97,17 @@ realclean: clean
 	$(RMF) create_postgresql_database  update_postgresql_tables make_postgresql_tables
 	$(RMF) grant_postgresql_privileges drop_postgresql_tables   drop_postgresql_database
 
+	$(RMF) create_ingres_database update_ingres_tables make_ingres_tables
+	$(RMF) grant_ingres_privileges drop_ingres_tables   drop_ingres_database
+
 	$(RMF) create_sqlite_database	   update_sqlite_tables     make_sqlite_tables
 	$(RMF) grant_sqlite_privileges	   drop_sqlite_tables	    drop_sqlite_database
 
 	$(RMF) create_sqlite3_database	   update_sqlite3_tables     make_sqlite3_tables
 	$(RMF) grant_sqlite3_privileges    drop_sqlite3_tables	    drop_sqlite3_database
 
-	$(RMF) mysql sqlite postgresql
-	$(RMF) make_catalog_backup delete_catalog_backup
+	$(RMF) mysql sqlite postgresql ingres
+	$(RMF) make_catalog_backup make_catalog_backup.pl delete_catalog_backup
 
 distclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
@@ -139,6 +150,15 @@ install: @LIBTOOL_INSTALL_TARGET@ @INCLUDE_INSTALL_TARGET@
 	$(INSTALL_SCRIPT) drop_bacula_tables $(DESTDIR)$(scriptdir)/drop_bacula_tables
 	$(INSTALL_SCRIPT) drop_bacula_database $(DESTDIR)$(scriptdir)/drop_bacula_database
 
+	@filename=make_catalog_backup.pl; \
+	   if  test -f $(DESTDIR)$(scriptdir)/$$filename; then \
+	      destname=$$filename.new; \
+	      echo "  ==> Found existing $$filename, installing new file as $$destname"; \
+	   else \
+	      destname=$$filename; \
+	   fi; \
+	   echo "$(INSTALL_SCRIPT) $$filename $(DESTDIR)$(scriptdir)/$$destname"; \
+	   $(INSTALL_SCRIPT) $$filename $(DESTDIR)$(scriptdir)/$$destname
 	@filename=make_catalog_backup; \
 	   if  test -f $(DESTDIR)$(scriptdir)/$$filename; then \
 	      destname=$$filename.new; \
@@ -174,6 +194,7 @@ uninstall: @LIBTOOL_UNINSTALL_TARGET@ @INCLUDE_UNINSTALL_TARGET@
 	(cd $(DESTDIR)$(scriptdir); $(RMF) drop_bacula_database)
 
 	(cd $(DESTDIR)$(scriptdir); $(RMF) make_catalog_backup)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) make_catalog_backup.pl)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) delete_catalog_backup)
 
 # Semi-automatic generation of dependencies:
@@ -181,11 +202,12 @@ uninstall: @LIBTOOL_UNINSTALL_TARGET@ @INCLUDE_UNINSTALL_TARGET@
 # and it also includes system headers.
 # `semi'-automatic since dependencies are generated at distribution time.
 
-depend:
+#depend: esql  <-  SRE: if generating from 'real' ingres source
+depend: 
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@for src in $(LIBSRCS); do \
+	@for src in $(LIBBACSQL_SRCS); do \
 	    $(CXX) -S -M -MT `basename $$src .c`$(DEFAULT_OBJECT_TYPE) $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) $$src >> Makefile; \
 	done
 	@if test -f Makefile ; then \

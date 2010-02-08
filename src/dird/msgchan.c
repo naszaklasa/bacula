@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -40,7 +40,6 @@
  *    Create a thread to interact with the Storage daemon
  *      who returns a job status and requests Catalog services, etc.
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -51,7 +50,8 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 /* Commands sent to Storage daemon */
 static char jobcmd[]     = "JobId=%s job=%s job_name=%s client_name=%s "
    "type=%d level=%d FileSet=%s NoAttr=%d SpoolAttr=%d FileSetMD5=%s "
-   "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d SpoolSize=%s\n";
+   "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d SpoolSize=%s "
+   "Resched=%d\n";
 static char use_storage[] = "use storage=%s media_type=%s pool_name=%s "
    "pool_type=%s append=%d copy=%d stripe=%d\n";
 static char use_device[] = "use device=%s\n";
@@ -190,7 +190,7 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore, bool send_
    } 
    sd->fsend(jobcmd, edit_int64(jcr->JobId, ed1), jcr->Job, 
              job_name.c_str(), client_name.c_str(), 
-             jcr->get_JobType(), jcr->get_JobLevel(),
+             jcr->getJobType(), jcr->getJobLevel(),
              fileset_name.c_str(), !jcr->pool->catalog_files,
              jcr->job->SpoolAttributes, jcr->fileset->MD5, jcr->spool_data, 
              jcr->write_part_after_job, jcr->job->PreferMountedVolumes,
@@ -204,6 +204,7 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore, bool send_
           Jmsg(jcr, M_FATAL, 0, _("Storage daemon rejected Job command: %s\n"), sd->msg);
           return false;
        } else {
+          bfree_and_null(jcr->sd_auth_key);
           jcr->sd_auth_key = bstrdup(auth_key);
           Dmsg1(150, "sd_auth_key=%s\n", jcr->sd_auth_key);
        }
@@ -230,8 +231,8 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore, bool send_
    /* Do read side of storage daemon */
    if (ok && rstore) {
       /* For the moment, only migrate, copy and vbackup have rpool */
-      if (jcr->get_JobType() == JT_MIGRATE || jcr->get_JobType() == JT_COPY ||
-           (jcr->get_JobType() == JT_BACKUP && jcr->get_JobLevel() == L_VIRTUAL_FULL)) {
+      if (jcr->getJobType() == JT_MIGRATE || jcr->getJobType() == JT_COPY ||
+           (jcr->getJobType() == JT_BACKUP && jcr->getJobLevel() == L_VIRTUAL_FULL)) {
          pm_strcpy(pool_type, jcr->rpool->pool_type);
          pm_strcpy(pool_name, jcr->rpool->name());
       } else {

@@ -75,6 +75,7 @@ void store_level(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_replace(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_acl(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_migtype(LEX *lc, RES_ITEM *item, int index, int pass);
+static void store_actiononpurge(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_device(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass);
 static void store_runscript_when(LEX *lc, RES_ITEM *item, int index, int pass);
@@ -221,6 +222,7 @@ static RES_ITEM store_items[] = {
    {"mediatype",   store_strname,  ITEM(res_store.media_type), 0, ITEM_REQUIRED, 0},
    {"autochanger", store_bool,     ITEM(res_store.autochanger), 0, ITEM_DEFAULT, 0},
    {"enabled",     store_bool,     ITEM(res_store.enabled),     0, ITEM_DEFAULT, true},
+   {"allowcompression",  store_bool, ITEM(res_store.AllowCompress), 0, ITEM_DEFAULT, true},
    {"heartbeatinterval", store_time, ITEM(res_store.heartbeat_interval), 0, ITEM_DEFAULT, 0},
    {"maximumconcurrentjobs", store_pint32, ITEM(res_store.MaxConcurrentJobs), 0, ITEM_DEFAULT, 1},
    {"sddport", store_pint32, ITEM(res_store.SDDport), 0, 0, 0}, /* deprecated */
@@ -306,7 +308,6 @@ RES_ITEM job_items[] = {
    {"maxstartdelay",store_time, ITEM(res_job.MaxStartDelay), 0, 0, 0},
    {"maxfullinterval",  store_time, ITEM(res_job.MaxFullInterval), 0, 0, 0},
    {"maxdiffinterval",  store_time, ITEM(res_job.MaxDiffInterval), 0, 0, 0},
-   {"jobretention", store_time, ITEM(res_job.JobRetention),  0, 0, 0},
    {"prefixlinks", store_bool, ITEM(res_job.PrefixLinks), 0, ITEM_DEFAULT, false},
    {"prunejobs",   store_bool, ITEM(res_job.PruneJobs), 0, ITEM_DEFAULT, false},
    {"prunefiles",  store_bool, ITEM(res_job.PruneFiles), 0, ITEM_DEFAULT, false},
@@ -314,7 +315,7 @@ RES_ITEM job_items[] = {
    {"enabled",     store_bool, ITEM(res_job.enabled), 0, ITEM_DEFAULT, true},
    {"spoolattributes",store_bool, ITEM(res_job.SpoolAttributes), 0, ITEM_DEFAULT, false},
    {"spooldata",   store_bool, ITEM(res_job.spool_data), 0, ITEM_DEFAULT, false},
-   {"spoolsize",   store_size, ITEM(res_job.spool_size), 0, 0, 0},
+   {"spoolsize",   store_size64, ITEM(res_job.spool_size), 0, 0, 0},
    {"rerunfailedlevels",   store_bool, ITEM(res_job.rerun_failed_levels), 0, ITEM_DEFAULT, false},
    {"prefermountedvolumes", store_bool, ITEM(res_job.PreferMountedVolumes), 0, ITEM_DEFAULT, true},
    {"runbeforejob", store_short_runscript,  ITEM(res_job.RunScripts),  0, 0, 0},
@@ -338,6 +339,7 @@ RES_ITEM job_items[] = {
    {"cancelqueuedduplicates",  store_bool, ITEM(res_job.CancelQueuedDuplicates), 0, ITEM_DEFAULT, false},
    {"cancelrunningduplicates", store_bool, ITEM(res_job.CancelRunningDuplicates), 0, ITEM_DEFAULT, false},
    {"pluginoptions", store_str, ITEM(res_job.PluginOptions), 0, 0, 0},
+   {"base", store_alist_res, ITEM(res_job.base),  R_JOB, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -381,18 +383,19 @@ static RES_ITEM pool_items[] = {
    {"usecatalog",      store_bool,    ITEM(res_pool.use_catalog),    0, ITEM_DEFAULT, true},
    {"usevolumeonce",   store_bool,    ITEM(res_pool.use_volume_once), 0, 0,   0},
    {"purgeoldestvolume", store_bool,  ITEM(res_pool.purge_oldest_volume), 0, 0, 0},
+   {"actiononpurge",   store_actiononpurge, ITEM(res_pool.action_on_purge), 0, 0, 0},
    {"recycleoldestvolume", store_bool,  ITEM(res_pool.recycle_oldest_volume), 0, 0, 0},
    {"recyclecurrentvolume", store_bool, ITEM(res_pool.recycle_current_volume), 0, 0, 0},
    {"maximumvolumes",  store_pint32,    ITEM(res_pool.max_volumes),   0, 0,        0},
    {"maximumvolumejobs", store_pint32,  ITEM(res_pool.MaxVolJobs),    0, 0,       0},
    {"maximumvolumefiles", store_pint32, ITEM(res_pool.MaxVolFiles),   0, 0,       0},
-   {"maximumvolumebytes", store_size, ITEM(res_pool.MaxVolBytes),   0, 0,       0},
+   {"maximumvolumebytes", store_size64, ITEM(res_pool.MaxVolBytes),   0, 0,       0},
    {"catalogfiles",    store_bool,    ITEM(res_pool.catalog_files),  0, ITEM_DEFAULT, true},
    {"volumeretention", store_time,    ITEM(res_pool.VolRetention),   0, ITEM_DEFAULT, 60*60*24*365},
    {"volumeuseduration", store_time,  ITEM(res_pool.VolUseDuration), 0, 0, 0},
    {"migrationtime",  store_time,     ITEM(res_pool.MigrationTime), 0, 0, 0},
-   {"migrationhighbytes", store_size, ITEM(res_pool.MigrationHighBytes), 0, 0, 0},
-   {"migrationlowbytes", store_size,  ITEM(res_pool.MigrationLowBytes), 0, 0, 0},
+   {"migrationhighbytes", store_size64, ITEM(res_pool.MigrationHighBytes), 0, 0, 0},
+   {"migrationlowbytes", store_size64,  ITEM(res_pool.MigrationLowBytes), 0, 0, 0},
    {"nextpool",      store_res,       ITEM(res_pool.NextPool), R_POOL, 0, 0},
    {"storage",       store_alist_res, ITEM(res_pool.storage),  R_STORAGE, 0, 0},
    {"autoprune",     store_bool,      ITEM(res_pool.AutoPrune), 0, ITEM_DEFAULT, true},
@@ -401,6 +404,9 @@ static RES_ITEM pool_items[] = {
    {"scratchpool",   store_res,       ITEM(res_pool.ScratchPool), R_POOL, 0, 0},
    {"copypool",      store_alist_res, ITEM(res_pool.CopyPool), R_POOL, 0, 0},
    {"catalog",       store_res,       ITEM(res_pool.catalog), R_CATALOG, 0, 0},
+   {"fileretention", store_time,      ITEM(res_pool.FileRetention), 0, 0, 0},
+   {"jobretention",  store_time,      ITEM(res_pool.JobRetention),  0, 0, 0},
+
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -700,6 +706,12 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
             dump_resource(-R_STORAGE, (RES *)store, sendit, sock);
          }
       }
+      if (res->res_job.base) {
+         JOB *job;
+         foreach_alist(job, res->res_job.base) {
+            sendit(sock, _("  --> Base %s\n"), job->name());
+         }
+      }
       if (res->res_job.RunScripts) {
         RUNSCRIPT *script;
         foreach_alist(script, res->res_job.RunScripts) {
@@ -939,17 +951,21 @@ next_run:
               NPRT(res->res_pool.label_format));
       sendit(sock, _("      CleaningPrefix=%s LabelType=%d\n"),
               NPRT(res->res_pool.cleaning_prefix), res->res_pool.LabelType);
-      sendit(sock, _("      RecyleOldest=%d PurgeOldest=%d\n"), 
+      sendit(sock, _("      RecyleOldest=%d PurgeOldest=%d ActionOnPurge=%d\n"), 
               res->res_pool.recycle_oldest_volume,
-              res->res_pool.purge_oldest_volume);
+              res->res_pool.purge_oldest_volume,
+              res->res_pool.action_on_purge);
       sendit(sock, _("      MaxVolJobs=%d MaxVolFiles=%d MaxVolBytes=%s\n"),
               res->res_pool.MaxVolJobs, 
               res->res_pool.MaxVolFiles,
-              edit_uint64(res->res_pool.MaxVolFiles, ed1));
+              edit_uint64(res->res_pool.MaxVolBytes, ed1));
       sendit(sock, _("      MigTime=%s MigHiBytes=%s MigLoBytes=%s\n"),
               edit_utime(res->res_pool.MigrationTime, ed1, sizeof(ed1)),
               edit_uint64(res->res_pool.MigrationHighBytes, ed2),
               edit_uint64(res->res_pool.MigrationLowBytes, ed3));
+      sendit(sock, _("      JobRetention=%s FileRetention=%s\n"),
+         edit_utime(res->res_client.JobRetention, ed1, sizeof(ed1)),
+         edit_utime(res->res_client.FileRetention, ed2, sizeof(ed2)));
       if (res->res_pool.NextPool) {
          sendit(sock, _("      NextPool=%s\n"), res->res_pool.NextPool->name());
       }
@@ -1300,6 +1316,9 @@ void free_resource(RES *sres, int type)
       if (res->res_job.storage) {
          delete res->res_job.storage;
       }
+      if (res->res_job.base) {
+         delete res->res_job.base;
+      }
       if (res->res_job.RunScripts) {
          free_runscripts(res->res_job.RunScripts);
          delete res->res_job.RunScripts;
@@ -1435,6 +1454,7 @@ void save_resource(int type, RES_ITEM *items, int pass)
          res->res_job.client     = res_all.res_job.client;
          res->res_job.fileset    = res_all.res_job.fileset;
          res->res_job.storage    = res_all.res_job.storage;
+         res->res_job.base       = res_all.res_job.base;
          res->res_job.pool       = res_all.res_job.pool;
          res->res_job.full_pool  = res_all.res_job.full_pool;
          res->res_job.inc_pool   = res_all.res_job.inc_pool;
@@ -1594,6 +1614,20 @@ void save_resource(int type, RES_ITEM *items, int pass)
                res->res_dir.hdr.name, rindex, pass);
       }
    }
+}
+
+static void store_actiononpurge(LEX *lc, RES_ITEM *item, int index, int pass)
+{
+   uint32_t *destination = (uint32_t*)item->value;
+   lex_get_token(lc, T_NAME);
+   if (strcasecmp(lc->str, "truncate") == 0) {
+      *destination = (*destination) | AOP_TRUNCATE;
+   } else {
+      scan_err2(lc, _("Expected one of: %s, got: %s"), "Truncate", lc->str);
+      return;
+   }
+   scan_to_eol(lc);
+   set_bit(index, res_all.hdr.item_present);
 }
 
 /*

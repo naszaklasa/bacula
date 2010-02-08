@@ -1,3 +1,5 @@
+src/cats/make_catalog_backup.pl
+scripts/make_catalog_backup.pl
 src/TAGS
 # git-ls-files --others --exclude-from=.git/info/exclude
 # Lines that start with '#' are comments.
@@ -168,6 +170,7 @@ po/*.mo
 po/*.gmo
 
 # scripts/
+scripts/bacula_config
 scripts/wxconsole.console_apps
 scripts/wxconsole.desktop.consolehelper
 scripts/wxconsole.desktop.xsu
@@ -237,20 +240,24 @@ src/cats/create_bdb_database
 src/cats/create_mysql_database
 src/cats/create_postgresql_database
 src/cats/create_sqlite_database
+src/cats/create_ingres_database
 src/cats/drop_bdb_tables
 src/cats/drop_mysql_tables
 src/cats/drop_postgresql_tables
 src/cats/drop_sqlite_tables
+src/cats/drop_ingres_tables
 src/cats/grant_bacula_privileges
 src/cats/grant_mysql_privileges
 src/cats/grant_postgresql_privileges
 src/cats/grant_sqlite_privileges
+src/cats/grant_ingres_privileges
 src/cats/list_files.sql
 src/cats/list_jobs.sql
 src/cats/make_bdb_tables
 src/cats/make_mysql_tables
 src/cats/make_postgresql_tables
 src/cats/make_sqlite_tables
+src/cats/make_ingres_tables
 src/cats/mysql
 src/cats/sqlite
 src/cats/make_bacula_tables
@@ -261,11 +268,13 @@ src/cats/update_bacula_tables
 src/cats/update_mysql_tables
 src/cats/update_postgresql_tables
 src/cats/update_sqlite_tables
+src/cats/update_ingres_tables
 src/cats/drop_bacula_database
 src/cats/drop_bdb_database
 src/cats/drop_mysql_database
 src/cats/drop_postgresql_database
 src/cats/drop_sqlite_database
+src/cats/drop_ingres_database
 src/cats/grant_bdb_privileges
 src/cats/update_bdb_tables
 src/cats/create_sqlite3_database
@@ -440,7 +449,10 @@ src/qt-console/moc/moc_*.cpp
 src/qt-console/mount/.*.swp
 
 # src/qt-console/obj/
-src/qt-console/obj/*.o
+src/qt-console/obj
+src/qt-console/obj32
+src/qt-console/moc32
+src/qt-console/ui32
 
 # src/qt-console/testprogs/examp/
 src/qt-console/testprogs/examp/main
@@ -1333,3 +1345,4 @@ platforms/osx/build
 platforms/osx/dl
 platforms/osx/products
 platforms/osx/tools
+TAGS

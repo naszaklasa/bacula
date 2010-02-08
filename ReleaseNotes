@@ -1,72 +1,95 @@
 
-               Release Notes for Bacula 3.0.3
+               Release Notes for Bacula 5.0.0
 
-  Bacula code: Total files = 1,009 Total lines = 206,204 (Using SLOCCount)
+  Bacula code: Total files = 1,081 Total lines = 217,272 (Using SLOCCount)
 
-Note, if you are not already running 3.0.x, read the 3.0.x release notes 
-  below.  Important!!!
 
-Version 3.0.3 is primarily a important bug fix update to version 3.0.2.
+Release Numbering:
+-----------------------------------------------------------
+You might be wondering why this release jumps from 3.0.x to 
+5.0.0 thus skipping version 4.0.0.  We have done this for 
+several reasons: first, we wanted a way of distinguishing
+the numbering system for the Bacula System Enterprise version
+and the Bacula Project version.  So, to do so, we have decided
+that the first number of the Bacula Project version will always
+be odd, and the first number of the Enterprise version will always
+be even. Thus the Bacula Project now moves from 3.0.x to 5.0.x.
+In addition, we want to keep the Bacula Project version larger
+than the Enterprise version to indicate that the Bacula Project
+version is more advanced or has more features than the 
+Enterprise version. For memory, the current Enterprise version
+is 2.6.1, and the next release (in a few months -- before June 2010)
+will be version 4.0.0.
 
-Changes since 3.0.2:
+Warning:
+--------------------------------------------------------------
+Please note the three Warnings below before doing any install or
+upgrade.
+       
+
+Changes since 3.0.3a (the last Bacula Project release):
+-------------------------------------------------------
+
 Bug fixes:
- 1391, 1288, 1346, 1352, 1359, 1355, 1363, 1364, 1365, 1366, 1368, 
- 1369, 1370, 1371, 1382
+1337 1351 1352 1354 1357 1361 1367 1369 1370 1373 
+1376 1391 1403 1409 1420 1422 1427 1428 1431 1450 
+1454 1455 1458 1456
+
+Fixed:
+ - Problem that locks the Director when the SMTP server wasn't 
+   responding to the bsmtp program 
+ - Restore's dir command shows incorrect file sizes 
+ - Fix various problems with the reload command   
+ - Fix problems with conio
+ - Eliminate several deadlocks or potential race conditions from SD
+
+Enhancements:
+ - Project 5: Truncate volume after purge
+ - Project 6: File Deduplication using Base Jobs 
+ - Project 10: Restore from Multiple Storage Daemons
+ - Project 11: AllowCompression per Device
+ - Project 23: Add Maximum Concurent Jobs for Devices to balance load 
+   between drives
+ - Add Accurate Fileset Options to configure accurate detection. Can use 
+   checksum verification for example.
+ - Allow FD to keep root read but drop write permission (CAP)
+ - Secure handling of passwords for catalog backup
+ - Add Tab-completion for Bconsole when using Readline
+ - Add Bvfs API to query the catalog without building a memory tree
+ - Add new speed test to btape program
+ - Add new Bat screens (Autochanger content, Job view, Media view, ...)
+ - Windows version of Bat
+ - Added Spanish Bacula translation   
+ - New bconsole -u nnn option to have timeout on commands
+ - Allow Migrate, Copy, and Virtual Full to read and write
+   to the same Pool
+ - show disabled   -- shows disabled Jobs
+ - Add Pool File and Job retention periods (take precedence over Client)
+ - Many ACL improvements
+ - Level added to FD status Job entry
+ - Allow turning on/off Block Checksum per device
+ - Set Device Poll interval to 5 minutes -- previously did not poll
+ - Implement lock manager with bad order protection
 
 Compatibility:
- As always, both the Director and Storage daemon must be upgraded at
- the same time.
+As always, both the Director and Storage daemon must be upgraded at
+the same time, and on any given machine, you must run only one version
+of Bacula. This means that on the Director and Storage daemon machines,
+you *must* upgrade your File daemon as well.
 
- Older 3.0.x and possibly 2.4.x File Daemons are compatible with the 3.0.3
- Director and Storage daemons. There should be no need to upgrade older File
- Daemons.
-
-
-
-============ Documentation improvements needed ==================
-
-Note!!!!! The 3.0.0+ documentation needs rather extensive modifications in the
-following areas:
-
-1. Missing documentation.
-2. Correction of links within various manuals -- most fail.
-3. Integration of the new features into the main documents.
-4. Much more.
-
-The documentation will not be completed in the near future due to lack
-manpower.  If you are unhappy with this situation as we are, we suggest
-you help by submitting patches to the documentation.  Thanks.
-=====
-
-================== 3.0.2 Release Notes ========================
-
-Version 3.0.2 is primarily a important bug fix update to version 3.0.1 with
-some enhancements.
-
-================== 3.0.1 Release Notes ========================
-
-Version 3.0.1 is primarily a minor bug fix update to version 3.0.0 with
-one enhancement.
-
-================== 3.0.0 Release Notes ========================
-
-The diff between 2.4.4 and 2.5.x is 208,340 lines, so this release
-represents an enormous effort.
-
-This Director and Storage daemon must be upgraded at the same time,
-but they should be compatible with all 2.4.x File daemons, unless you
-use some of the new features that affect the FD.  In other words, you should
-not have to upgrade all your File daemons when you upgrade. However, any
-release of version 2.5.40 or greater requires a database upgrade.
+Older 3.0.x and possibly 2.4.x File Daemons are compatible with the 5.0.0
+Director and Storage daemons. There should be no need to upgrade older File
+Daemons immediately. However, we recommend that you do so as soon
+as is reasonable for your situation.
 
 ================== Warning !!!!!! ==========================
 
-New Catalog format in version 3.0.0 (2.5.40 or later)
+New Catalog format in version 5.0.0 (3.1.9 or later)
 -----------------------------------------------------
 
 This release of Bacula uses a new catalog format. We provide a set of
-scripts that permit to convert a 2.4.x (version 10) catalog to 3.0.0 (version
-11).  The Bacula project rpms distributed on Source Forge will automatically
+scripts that permit to convert a 3.0.x (version 11) catalog to 5.0.0 (version
+12).  The Bacula project rpms distributed on Source Forge will automatically
 detect the database change and do the upgrade for you.  We strongly
 recommend that you save a copy of your existing database before upgrading
 using rpms.
@@ -75,7 +98,7 @@ The simplest way to upgrade the database assuming you are building from
 source:
 1. Stop any current version of Bacula from running.
 2. Save a copy of your existing database.
-3. Configure, build, and install the 3.0.0 version of Bacula
+3. Configure, build, and install the 5.0.0 version of Bacula
    Note the new ./configure options in the manuals see the link
    at the bottom of this file.
 4. cd <your-scripts-installation-directory>
@@ -87,66 +110,57 @@ source:
 7. Start the new Bacula.  If everything worked, it should
    not print any error messages.
 
-The upgrade operation will convert the FileId index field of the File table
-from 32 bits to 64 bits.  This operation will take TIME and will *temporarily* 
-DOUBLE THE SIZE of your catalog. Bacula must be shutdown during this update,
-so, won't be able to run jobs during this period.  For example, a 3 million files
-catalog will take 2 mins to upgrade on a normal machine.  Don't forget to
-backup it before executing the script.
-
 If you start from scratch, you don't need to run the update_bacula_tables
 script because the create_bacula_tables script automatically creates the new
-table format.  However, if you are using a version of Bacula older than 2.5.40
-(e.g.  2.4.4) then you need to run the update_bacula_tables script that will
+table format.  However, if you are using a version of Bacula older than 3.1.9
+(e.g.  3.0.3) then you need to run the update_bacula_tables script that will
 be found in the <bacula>/src/cats directory after you run the ./configure
 command.  As mentioned above, before running this script, please backup your
 catalog database, and when you do running it, be sure shutdown Bacula and be
 aware that running the script can take some time depending on your database
 size.
+================================================================
 
 
-Important New configure options :
-----------------------
+================== Warning !!!!!! ==========================
+If you upgrade a previous Win32 client installation, you must
+first stop the File daemon, then uninstall it before attempting
+the upgrade. If you do not do so, the upgrade will probably
+fail and you will need to manually find and run the 
+Uninstall.exe file, before you can upgrade to the new version.
+This is because the file locations are different.  If you want
+to save your previous bacula-fd.conf file, please do so before
+uninstalling it.
+================================================================
 
-This release of Bacula 3.0.0 uses libtool by default
-to generate the Bacula libraries as shared objects rather than
-being directly linked in as in prior versions.  This means that
-the Bacula shared objects, must either be in a shared object 
-directory known to the loader or they must be in the directory
-where the Bacula binaries are installed.  It is also possible
-to explicitly specify the libraries directory on the ./configure
-line (--libdir=/full-path/dir), but this should not be necessary.
+================== Warning !!!!!! ==========================
+Due to permissions problems on Windows Vista and later systems,
+we no longer require SYSTEM or Administrator permissions to 
+access the binaries and configuation files.  If you wish
+to restrict access to these files, please see the New Features
+section of the manual for how to set access control lists.
+================================================================
 
-  ./configure --libdir=<full-path>
+Note, the Win32 Installer no longer installs the Bacula Servers
+(Director and Storage daemon). See the New Features section of
+the manual for more details.
 
-If you have problems with libtool or you wish to use the old 
-way of building libraries and linking them into Bacula, you 
-can do so by disabling libtool on the configure command line with:
+============ Documentation improvements needed ==================
 
-  ./configure --disable-libtool
+Note!!!!! The 5.0.0+ documentation has a number of known problems:
 
-During the installation of Bacula 3.0.0, it will now install
-bat help files (if you have configured bat).  These files
-are placed in /usr/share/doc/bacula/html by default. If you
-want to put them elsewhere use:
+1. We have reduced the number of manuals, which has fixed many
+   of the broken links found in the old 3.0.x version, but there
+   are still some that need fixing.
 
-  ./configure --htmldir=<full-path>
+2. Integration of the 3.0.x features into the main manuals has
+   not yet been done.
 
-During the installation of Bacula, it will now install the
-ReleaseNotes, License, technotes, ChangeLog, and similar
-files in /usr/share/doc/bacula by default.  If you
-want to put them elsewhere use:
+The documentation will not be completed in the near future due to lack
+manpower.  If you are unhappy with this situation as we are, we suggest
+you help by submitting patches to the documentation.  Thanks.
+=====
 
-  ./configure --docdir=<full-path>
-
-During the installation of Bacula, any plugins will be
-installed in the plugindir, which is by default the
-same as libdir (/usr/lib).  You can specify an alternate
-location with:
-
-  ./configure --with-plugindir=<full-path>
-
-==============================================================
 
 This release includes large number of new features and changes.
 It should be more or less compatible with previous xx.conf files
@@ -156,9 +170,6 @@ features.
 Please see the New Features chapter of the new manual, which documents
 some but not all the new features (we are still working on it):
 
-http://www.bacula.org/manuals/en/concepts/concepts/New_Features.html
-
-
-
+http://www.bacula.org/5.0.x-manuals/en/main/main/New_Features_in_5_0_0.html
   
 The ChangeLog has more details.

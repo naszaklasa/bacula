@@ -68,6 +68,6 @@ fi
 #  To read back a PostgreSQL database use:
 #     cd @working_dir@
 #     dropdb bacula
-#     createdb bacula -E SQL_ASCII
+#     createdb bacula -T template0 -E SQL_ASCII
 #     psql bacula <bacula.sql
 #

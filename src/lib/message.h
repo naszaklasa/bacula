@@ -1,13 +1,7 @@
 /*
- * Define Message Types for Bacula
- *    Kern Sibbald, 2000
- *
- *   Version $Id$
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,6 +25,12 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ * Define Message Types for Bacula
+ *    Kern Sibbald, 2000
+ *
+ */
+
 
 #include "bits.h"
 
@@ -155,6 +155,7 @@ extern DLL_IMP_EXP sql_escape    p_sql_escape;
 
 extern DLL_IMP_EXP int           debug_level;
 extern DLL_IMP_EXP bool          dbg_timestamp;          /* print timestamp in debug output */
+extern DLL_IMP_EXP bool          prt_kaboom;             /* Print kaboom output */
 extern DLL_IMP_EXP int           verbose;
 extern DLL_IMP_EXP char          my_name[];
 extern DLL_IMP_EXP const char *  working_directory;
@@ -163,4 +164,3 @@ extern DLL_IMP_EXP utime_t       daemon_start_time;
 extern DLL_IMP_EXP int           console_msg_pending;
 extern DLL_IMP_EXP FILE *        con_fd;                 /* Console file descriptor */
 extern DLL_IMP_EXP brwlock_t     con_lock;               /* Console lock structure */
-

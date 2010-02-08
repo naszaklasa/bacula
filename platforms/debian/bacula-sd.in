@@ -8,9 +8,19 @@
 #
 #  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
 #
+### BEGIN INIT INFO
+# Provides:          bacula-sd
+# Required-Start:    $network
+# Required-Stop:     $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start @BACULA@ Storage daemon at boot time
+# Description:       Enable @BACULA@ Storage daemon.
+### END INIT INFO
+
 
 NAME="bacula-sd"
-DESC="Bacula Storage Daemon"
+DESC="@BACULA@ Storage Daemon"
 DAEMON=@sbindir@/${NAME}
 BUSER=@sd_user@
 BGROUP=@sd_group@

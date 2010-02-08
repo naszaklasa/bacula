@@ -59,9 +59,12 @@ void db_end_transaction(JCR *jcr, B_DB *mdb);
 int db_int64_handler(void *ctx, int num_fields, char **row);
 int db_list_handler(void *ctx, int num_fields, char **row);
 void db_thread_cleanup();
-void _dbg_print_db(JCR *jcr, FILE *fp);
+void db_debug_print(JCR *jcr, FILE *fp);
+int db_int_handler(void *ctx, int num_fields, char **row);
+void db_check_backend_thread_safe();
 
 /* sql_create.c */
+int db_create_path_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 bool db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 bool db_create_job_record(JCR *jcr, B_DB *db, JOB_DBR *jr);
 int db_create_media_record(JCR *jcr, B_DB *db, MEDIA_DBR *media_dbr);
@@ -77,6 +80,10 @@ bool db_write_batch_file_records(JCR *jcr);
 bool my_batch_start(JCR *jcr, B_DB *mdb);
 bool my_batch_end(JCR *jcr, B_DB *mdb, const char *error);
 bool my_batch_insert(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
+bool db_create_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
+bool db_create_base_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
+bool db_commit_base_file_attributes_record(JCR *jcr, B_DB *mdb);
+bool db_create_base_file_list(JCR *jcr, B_DB *mdb, char *jobids);
 
 /* sql_delete.c */
 int db_delete_pool_record(JCR *jcr, B_DB *db, POOL_DBR *pool_dbr);
@@ -90,6 +97,9 @@ int db_find_next_volume(JCR *jcr, B_DB *mdb, int index, bool InChanger, MEDIA_DB
 bool db_find_failed_job_since(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM *stime, int &JobLevel);
 
 /* sql_get.c */
+bool db_get_base_file_list(JCR *jcr, B_DB *mdb,
+                           DB_RESULT_HANDLER *result_handler,void *ctx);
+int db_get_path_record(JCR *jcr, B_DB *mdb);
 bool db_get_pool_record(JCR *jcr, B_DB *db, POOL_DBR *pdbr);
 int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr);
 bool db_get_job_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr);
@@ -107,10 +117,9 @@ int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cdbr);
 int db_get_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr);
 bool db_get_query_dbids(JCR *jcr, B_DB *mdb, POOL_MEM &query, dbid_list &ids);
 bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids, DB_RESULT_HANDLER *result_handler, void *ctx);
+bool db_get_base_jobid(JCR *jcr, B_DB *mdb, JOB_DBR *jr, JobId_t *jobid);
 bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb, JOB_DBR *jr, db_list_ctx *jobids);
-int db_get_int_handler(void *list, int num_fields, char **row);
-
-
+bool db_get_used_base_jobids(JCR *jcr, B_DB *mdb, POOLMEM *jobids, db_list_ctx *result);
 /* sql_list.c */
 enum e_list_type {
    HORZ_LIST,
@@ -126,6 +135,9 @@ void db_list_joblog_records(JCR *jcr, B_DB *mdb, JobId_t JobId, DB_LIST_HANDLER 
 int  db_list_sql_query(JCR *jcr, B_DB *mdb, const char *query, DB_LIST_HANDLER *sendit, void *ctx, int verbose, e_list_type type);
 void db_list_client_records(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *sendit, void *ctx, e_list_type type);
 void db_list_copies_records(JCR *jcr, B_DB *mdb, uint32_t limit, char *jobids, DB_LIST_HANDLER *sendit, void *ctx, e_list_type type);
+void
+db_list_base_files_for_job(JCR *jcr, B_DB *mdb, JobId_t jobid, DB_LIST_HANDLER *sendit, void *ctx);
+
 
 /* sql_update.c */
 bool db_update_job_start_record(JCR *jcr, B_DB *db, JOB_DBR *jr);

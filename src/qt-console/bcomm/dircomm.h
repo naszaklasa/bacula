@@ -82,6 +82,7 @@ private:
    QSocketNotifier *m_notifier;
    bool m_api_set;
    int m_conn;
+   bool m_in_select;
 };
 
 #endif /* _DIRCOMM_H_ */

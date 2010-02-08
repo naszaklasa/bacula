@@ -558,14 +558,21 @@ void tls_bsock_shutdown(BSOCK *bsock)
     */
    int err;
 
+   btimer_t *tid;
+
    /* Set socket blocking for shutdown */
    bsock->set_blocking();
 
+   tid = start_bsock_timer(bsock, 60 * 2);
    err = SSL_shutdown(bsock->tls->openssl);
+   stop_bsock_timer(tid);
    if (err == 0) {
       /* Complete shutdown */
+      tid = start_bsock_timer(bsock, 60 * 2);
       err = SSL_shutdown(bsock->tls->openssl);
+      stop_bsock_timer(tid);
    }
+
 
    switch (SSL_get_error(bsock->tls->openssl, err)) {
    case SSL_ERROR_NONE:

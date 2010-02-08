@@ -102,6 +102,7 @@ int main (int argc, char *argv[])
    init_stack_dump();
 
    my_name_is(argc, argv, "bcopy");
+   lmgr_init_thread();
    init_msg(NULL, NULL);
 
    while ((ch = getopt(argc, argv, "b:c:d:i:o:pvw:?")) != -1) {

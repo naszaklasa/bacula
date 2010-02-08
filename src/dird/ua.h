@@ -106,6 +106,7 @@ struct RESTORE_CTX {
    char RestoreClientName[MAX_NAME_LENGTH];  /* restore client */
    char last_jobid[20];
    POOLMEM *JobIds;                   /* User entered string of JobIds */
+   POOLMEM *BaseJobIds;               /* Base jobids */
    STORE  *store;
    JOB *restore_job;
    POOL *pool;

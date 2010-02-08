@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -52,23 +52,22 @@
 
 #include "bacula.h"
 
-#ifndef HAVE_BIGENDIAN
-#define byteReverse(buf, len)   /* Nothing */
-#else
 /*
- * Note: this code is harmless on little-endian machines.
+ * Note: this code is harmless on little-endian machines. We'll swap the bytes
+ * on big-endian machines.
  */
 void byteReverse(unsigned char *buf, unsigned longs)
 {
     uint32_t t;
-    do {
-        t = (uint32_t) ((unsigned) buf[3] << 8 | buf[2]) << 16 |
-            ((unsigned) buf[1] << 8 | buf[0]);
-        *(uint32_t *) buf = t;
-        buf += 4;
-    } while (--longs);
+    if (bigendian()) {
+        do {
+            t = (uint32_t) ((unsigned) buf[3] << 8 | buf[2]) << 16 |
+                ((unsigned) buf[1] << 8 | buf[0]);
+            *(uint32_t *) buf = t;
+            buf += 4;
+        } while (--longs);
+    }
 }
-#endif
 
 /*
  * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
@@ -379,5 +378,6 @@ decode_it:
       bin_to_base64(bin, sizeof(bin), (char *)signature, 16, true);
       printf("%s\n", bin);
    }
+   fclose(fd);
 }
 #endif

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,7 +34,6 @@
  *
  *  Kern E. Sibbald, MM
  *
- *   Version $Id$
  */
 
 
@@ -175,6 +174,8 @@ find_files(JCR *jcr, FF_PKT *ff, int file_save(JCR *jcr, FF_PKT *ff_pkt, bool to
       ff->flags = 0;
       ff->VerifyOpts[0] = 'V';
       ff->VerifyOpts[1] = 0;
+      strcpy(ff->AccurateOpts, "C:mcs"); /* mtime+ctime+size by default */
+      strcpy(ff->BaseJobOpts, "J:mspug5"); /* mtime+size+perm+user+group+chk  */
       for (i=0; i<fileset->include_list.size(); i++) {
          findINCEXE *incexe = (findINCEXE *)fileset->include_list.get(i);
          fileset->incexe = incexe;
@@ -190,6 +191,8 @@ find_files(JCR *jcr, FF_PKT *ff, int file_save(JCR *jcr, FF_PKT *ff_pkt, bool to
             ff->fstypes = fo->fstype;
             ff->drivetypes = fo->drivetype;
             bstrncat(ff->VerifyOpts, fo->VerifyOpts, sizeof(ff->VerifyOpts));
+            bstrncat(ff->AccurateOpts, fo->AccurateOpts, sizeof(ff->AccurateOpts));
+            bstrncat(ff->BaseJobOpts, fo->BaseJobOpts, sizeof(ff->BaseJobOpts));
          }
          dlistString *node;
          foreach_dlist(node, &incexe->name_list) {
@@ -199,15 +202,23 @@ find_files(JCR *jcr, FF_PKT *ff, int file_save(JCR *jcr, FF_PKT *ff_pkt, bool to
             if (find_one_file(jcr, ff, our_callback, ff->top_fname, (dev_t)-1, true) == 0) {
                return 0;                  /* error return */
             }
+            if (job_canceled(jcr)) {
+               return 0;
+            }
          }
-         if (plugin_save) {
-            foreach_dlist(node, &incexe->plugin_list) {
-               char *fname = node->c_str();
-               Dmsg1(100, "PluginCommand: %s\n", fname);
-               ff->top_fname = fname;
-               ff->cmd_plugin = true;
-               plugin_save(jcr, ff, true);
-               ff->cmd_plugin = false;
+         foreach_dlist(node, &incexe->plugin_list) {
+            char *fname = node->c_str();
+            if (!plugin_save) {
+               Jmsg(jcr, M_FATAL, 0, _("Plugin: \"%s\" not found.\n"), fname);
+               return 0;
+            }
+            Dmsg1(100, "PluginCommand: %s\n", fname);
+            ff->top_fname = fname;
+            ff->cmd_plugin = true;
+            plugin_save(jcr, ff, true);
+            ff->cmd_plugin = false;
+            if (job_canceled(jcr)) {
+               return 0;
             }
          }
       }
@@ -238,18 +249,16 @@ bool is_in_fileset(FF_PKT *ff)
             }
          }
       }
-#ifdef xxx
       for (i=0; i<fileset->exclude_list.size(); i++) {
          incexe = (findINCEXE *)fileset->exclude_list.get(i);
          foreach_dlist(node, &incexe->name_list) {
             fname = node->c_str();
-            Dmsg2(000, "Exc fname=%s ff->fname=%s\n", fname, ff->fname);
+            Dmsg2(100, "Exc fname=%s ff->fname=%s\n", fname, ff->fname);
             if (strcmp(fname, ff->fname) == 0) {
                return true;
             }
          }
       }
-#endif
    }
    return false;
 }

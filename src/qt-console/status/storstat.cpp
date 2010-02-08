@@ -67,11 +67,12 @@ StorStat::StorStat(QString &storage, QTreeWidgetItem *parentTreeWidgetItem)
 
    m_timer = new QTimer(this);
    readSettings();
-   dockPage();
 
    createConnections();
    m_timer->start(1000);
    setCurrent();
+
+   dockPage();
 }
 
 void StorStat::getFont()
@@ -115,7 +116,7 @@ void StorStat::timerTriggered()
    value -= 1;
    if (value == 0) {
       value = spinBox->value();
-      bool iscurrent = mainWin->stackedWidget->currentIndex() == mainWin->stackedWidget->indexOf(this);
+      bool iscurrent = mainWin->tabWidget->currentIndex() == mainWin->tabWidget->indexOf(this);
       if (((isDocked() && iscurrent) || (!isDocked())) && (checkBox->checkState() == Qt::Checked)) {
          populateAll();
       }
@@ -348,7 +349,7 @@ void StorStat::readSettings()
    m_splitText = "splitterSizes_0";
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
-   splitter->restoreState(settings.value(m_splitText).toByteArray());
+   if (settings.contains(m_splitText)) { splitter->restoreState(settings.value(m_splitText).toByteArray()); }
    spinBox->setValue(settings.value("refreshInterval", 28).toInt());
    checkBox->setCheckState((Qt::CheckState)settings.value("refreshCheck", Qt::Checked).toInt());
    settings.endGroup();

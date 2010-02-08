@@ -141,14 +141,6 @@ bool do_vbackup(JCR *jcr)
    Dmsg2(100, "Read store=%s, write store=%s\n", 
       ((STORE *)jcr->rstorage->first())->name(),
       ((STORE *)jcr->wstorage->first())->name());
-   /* ***FIXME***  we really should simply verify that the pools are different */
-#ifdef xxx
-   if (((STORE *)jcr->rstorage->first())->name() == ((STORE *)jcr->wstorage->first())->name()) {
-      Jmsg(jcr, M_FATAL, 0, _("Read storage \"%s\" same as write storage.\n"),
-           ((STORE *)jcr->rstorage->first())->name());
-      return false;
-   }
-#endif
 
    /* Print Job Start message */
    Jmsg(jcr, M_INFO, 0, _("Start Virtual Backup JobId %s, Job=%s\n"),

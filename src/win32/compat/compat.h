@@ -381,6 +381,8 @@ void closelog();
 void openlog(const char *ident, int option, int facility);
 #endif //HAVE_MINGW
 
+extern void LogErrorMsg(const char *message);
+
 #if !defined(INVALID_FILE_ATTRIBUTES)
 #define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
 #endif

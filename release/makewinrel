@@ -14,9 +14,9 @@ reltype=release
 tagbase=Release-
 base_pkg=windows
 branch=$2
-ver=$2
+
 if [ $# != 2 ] ; then
-  echo "Need $0 <rescue-source-directory> <branch>"
+  echo "Need $0 <bacula-source-directory> <branch>"
   echo "e.g. $0 rescue-source master"
   exit 1
 fi
@@ -30,6 +30,7 @@ if [ $?  -ne 0 ]; then
    echo "Directory: $1 does not exist"
    exit 1
 fi
+ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' src/version.h`
 src=`pwd` 
 git checkout ${branch}
 if [ $? -ne 0 ]; then

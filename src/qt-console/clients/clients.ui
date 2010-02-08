@@ -71,7 +71,7 @@
      <normaloff>:/images/status.png</normaloff>:/images/status.png</iconset>
    </property>
    <property name="text" >
-    <string>Status Client Window</string>
+    <string>Status Client</string>
    </property>
   </action>
  </widget>

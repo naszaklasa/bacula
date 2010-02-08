@@ -237,6 +237,7 @@ int read_dev_volume_label(DCR *dcr)
    if (reserve_volume(dcr, dev->VolHdr.VolumeName) == NULL) {
       Mmsg2(jcr->errmsg, _("Could not reserve volume %s on %s\n"),
            dev->VolHdr.VolumeName, dev->print_name());
+      Dmsg2(150, "Could not reserve volume %s on %s\n", dev->VolHdr.VolumeName, dev->print_name());
       stat = VOL_NAME_ERROR;
       goto bail_out;
    }
@@ -670,8 +671,8 @@ void create_session_label(DCR *dcr, DEV_RECORD *rec, int label)
    /* Added in VerNum 10 */
    ser_string(jcr->Job);              /* Unique name of this Job */
    ser_string(jcr->fileset_name);
-   ser_uint32(jcr->get_JobType());
-   ser_uint32(jcr->get_JobLevel());
+   ser_uint32(jcr->getJobType());
+   ser_uint32(jcr->getJobLevel());
    /* Added in VerNum 11 */
    ser_string(jcr->fileset_md5);
 

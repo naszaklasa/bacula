@@ -69,7 +69,7 @@ int wait_for_sysop(DCR *dcr)
     */
    volume_unused(dcr);
 
-   unmounted = is_device_unmounted(dev);
+   unmounted = dev->is_device_unmounted();
    dev->poll = false;
    /*
     * Wait requested time (dev->rem_wait_sec).  However, we also wake up every
@@ -104,11 +104,12 @@ int wait_for_sysop(DCR *dcr)
       Dmsg4(dbglvl, "I'm going to sleep on device %s. HB=%d rem_wait=%d add_wait=%d\n", 
          dev->print_name(), (int)me->heartbeat_interval, dev->rem_wait_sec, add_wait);
       start = time(NULL);
+
       /* Wait required time */
       stat = pthread_cond_timedwait(&dev->wait_next_vol, &dev->m_mutex, &timeout);
+
       Dmsg2(dbglvl, "Wokeup from sleep on device stat=%d blocked=%s\n", stat,
          dev->print_blocked());
-
       now = time(NULL);
       total_waited = now - first_start;
       dev->rem_wait_sec -= (now - start);
@@ -135,7 +136,6 @@ int wait_for_sysop(DCR *dcr)
          break;
       }
 
-
       if (dev->rem_wait_sec <= 0) {  /* on exceeding wait time return */
          Dmsg0(dbglvl, "Exceed wait time.\n");
          stat = W_TIMEOUT;
@@ -145,7 +145,7 @@ int wait_for_sysop(DCR *dcr)
       /*
        * Check if user unmounted the device while we were waiting
        */
-      unmounted = is_device_unmounted(dev);
+      unmounted = dev->is_device_unmounted();
 
       if (!unmounted && dev->vol_poll_interval &&
           (total_waited >= dev->vol_poll_interval)) {

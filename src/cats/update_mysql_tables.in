@@ -1,60 +1,62 @@
 #!/bin/sh
 #
-# Shell script to update MySQL tables from version 2.0 to 3.0	
+# Shell script to update MySQL tables from Bacula Enterprise 2.6 to 4.0 or
+# Standard version 3.0 to 5.0
 #
 echo " "
-echo "This script will update a Bacula MySQL database from version 10 to 11"
-echo " which is needed to convert from Bacula version 2.0.x to 3.0.x or higher"
+echo "This script will update a Bacula MySQL database from version 11 to 12"
+echo " which is needed to convert from Bacula Enterprise 2.6 to 4.0 or "
+echo " Standard version 3.0 to 5.0"
 echo " "
 bindir=@SQL_BINDIR@
+PATH="$bindir:$PATH"
 db_name=@db_name@
 
-if $bindir/mysql $* -f <<END-OF-DATA
+if mysql $* -f <<END-OF-DATA
 USE ${db_name};
 
--- Fix bad index on Media table
-DROP INDEX inx8 ON Media;
-CREATE UNIQUE INDEX inx8 ON Media (VolumeName(128));
-ALTER TABLE File CHANGE FileId FileId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT;
-ALTER TABLE BaseFiles CHANGE FileId FileId BIGINT UNSIGNED NOT NULL;
-ALTER TABLE Job ADD ReadBytes BIGINT UNSIGNED DEFAULT 0 AFTER JobBytes; 
-ALTER TABLE Media ADD ActionOnPurge TINYINT DEFAULT 0 AFTER Recycle;
-ALTER TABLE Pool ADD ActionOnPurge TINYINT DEFAULT 0 AFTER Recycle;
+ALTER TABLE JobMedia DROP Stripe ;
+ALTER TABLE JobMedia DROP Copy ;
+ALTER TABLE Job ADD COLUMN HasCache tinyint default 0 after HasBase;
+ALTER TABLE Job ADD COLUMN Reviewed tinyint default 0 after HasCache;
+ALTER TABLE Job ADD COLUMN Comment BLOB AFTER Reviewed;
+ALTER TABLE JobHisto ADD COLUMN HasCache tinyint default 0 after HasBase;
+ALTER TABLE JobHisto ADD COLUMN Reviewed tinyint default 0 after HasCache;
+ALTER TABLE JobHisto ADD COLUMN Comment BLOB AFTER Reviewed;
+
+ALTER TABLE Status ADD COLUMN Severity int;
+UPDATE Status SET Severity = 15;
+UPDATE Status SET Severity = 100 where JobStatus = 'f';
+UPDATE Status SET Severity = 90 where JobStatus = 'A';
+UPDATE Status SET Severity = 10 where JobStatus = 'T';
+UPDATE Status SET Severity = 20 where JobStatus = 'e';
+UPDATE Status SET Severity = 25 where JobStatus = 'E';
+
+CREATE TABLE PathHierarchy
+(
+     PathId integer NOT NULL,
+     PPathId integer NOT NULL,
+     CONSTRAINT pathhierarchy_pkey PRIMARY KEY (PathId)
+);
+
+CREATE INDEX pathhierarchy_ppathid 
+          ON PathHierarchy (PPathId);
+
+CREATE TABLE PathVisibility
+(
+      PathId integer NOT NULL,
+      JobId integer NOT NULL,
+      Size int8 DEFAULT 0,
+      Files int4 DEFAULT 0,
+      CONSTRAINT pathvisibility_pkey PRIMARY KEY (JobId, PathId)
+);
+CREATE INDEX pathvisibility_jobid
+             ON PathVisibility (JobId);
+
+CREATE INDEX basefiles_jobid_idx ON BaseFiles ( JobId );
 
 DELETE FROM Version;
-INSERT INTO Version (VersionId) VALUES (11);
-
--- If you have already this table, you can remove it with:
--- DROP TABLE JobHistory;
-
--- Create a table like Job for long term statistics
-CREATE TABLE JobHisto (
-   JobId INTEGER UNSIGNED NOT NULL,
-   Job TINYBLOB NOT NULL,
-   Name TINYBLOB NOT NULL,
-   Type BINARY(1) NOT NULL,
-   Level BINARY(1) NOT NULL,
-   ClientId INTEGER DEFAULT 0,
-   JobStatus BINARY(1) NOT NULL,
-   SchedTime DATETIME DEFAULT 0,
-   StartTime DATETIME DEFAULT 0,
-   EndTime DATETIME DEFAULT 0,
-   RealEndTime DATETIME DEFAULT 0,
-   JobTDate BIGINT UNSIGNED DEFAULT 0,
-   VolSessionId INTEGER UNSIGNED DEFAULT 0,
-   VolSessionTime INTEGER UNSIGNED DEFAULT 0,
-   JobFiles INTEGER UNSIGNED DEFAULT 0,
-   JobBytes BIGINT UNSIGNED DEFAULT 0,
-   ReadBytes BIGINT UNSIGNED DEFAULT 0,
-   JobErrors INTEGER UNSIGNED DEFAULT 0,
-   JobMissingFiles INTEGER UNSIGNED DEFAULT 0,
-   PoolId INTEGER UNSIGNED DEFAULT 0,
-   FileSetId INTEGER UNSIGNED DEFAULT 0,
-   PriorJobId INTEGER UNSIGNED DEFAULT 0,
-   PurgedFiles TINYINT DEFAULT 0,
-   HasBase TINYINT DEFAULT 0,
-   INDEX (StartTime)
-   );
+INSERT INTO Version (VersionId) VALUES (12);
 
 END-OF-DATA
 then

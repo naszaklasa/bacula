@@ -166,7 +166,7 @@ int baculaServiceMain()
    if (have_service_api) {            /* New style service API */
       /* Tell OS where to dispatch service calls to us */
       SERVICE_TABLE_ENTRY dispatchTable[] = {
-         {(char *)APP_NAME, (LPSERVICE_MAIN_FUNCTION)serviceStartCallback},
+         {APP_NAME, (LPSERVICE_MAIN_FUNCTION)serviceStartCallback},
          {NULL, NULL}};
 
       /* Start the service control dispatcher */
@@ -470,8 +470,8 @@ BOOL ReportStatus(DWORD state, DWORD exitcode, DWORD waithint)
    return result;
 }
 
-/* Log an error message */
-void LogErrorMsg(const char *message, const char *fname, int lineno)
+/* Log an error message for the last Windows error */
+void LogLastErrorMsg(const char *message, const char *fname, int lineno)
 {
    char msgbuf[500];
    HANDLE eventHandler;

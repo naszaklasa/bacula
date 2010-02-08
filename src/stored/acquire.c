@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,6 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -38,6 +37,7 @@
 
 /* Forward referenced functions */
 static void attach_dcr_to_dev(DCR *dcr);
+static void detach_dcr_from_dev(DCR *dcr);
 static void set_dcr_from_vol(DCR *dcr, VOL_LIST *vol);
 
 
@@ -248,7 +248,8 @@ bool acquire_device_for_read(DCR *dcr)
          }
          goto default_path;
       case VOL_NAME_ERROR:
-         Dmsg0(50, "Vol name error.\n");
+         Dmsg3(50, "Vol name=%s want=%s drv=%s.\n", dev->VolHdr.VolumeName, 
+               dcr->VolumeName, dev->print_name());
          if (dev->is_volume_to_unload()) {
             goto default_path;
          }
@@ -256,6 +257,7 @@ bool acquire_device_for_read(DCR *dcr)
          if (!unload_autochanger(dcr, -1)) {
             /* at least free the device so we can re-open with correct volume */
             dev->close();                                                          
+            free_volume(dev);
          }
          dev->set_load();
          /* Fall through */
@@ -270,6 +272,7 @@ default_path:
           */
          if (dev->requires_mount()) {
             dev->close();
+            free_volume(dev);
          }
          
          /* Call autochanger only once unless ask_sysop called */
@@ -337,7 +340,6 @@ get_out:
    return ok;
 }
 
-
 /*
  * Acquire device for writing. We permit multiple writers.
  *  If this is the first one, we read the label.
@@ -356,7 +358,8 @@ DCR *acquire_device_for_append(DCR *dcr)
 
    init_device_wait_timers(dcr);
 
-   dev->dblock(BST_DOING_ACQUIRE);
+   P(dev->acquire_mutex);           /* only one job at a time */
+   dev->dlock();
    Dmsg1(100, "acquire_append device is %s\n", dev->is_tape()?"tape":
         (dev->is_dvd()?"DVD":"disk"));
 
@@ -390,6 +393,9 @@ DCR *acquire_device_for_append(DCR *dcr)
    }
 
    if (!have_vol) {
+      dev->r_dlock(true);
+      block_device(dev, BST_DOING_ACQUIRE);
+      dev->dunlock();
       Dmsg1(190, "jid=%u Do mount_next_write_vol\n", (uint32_t)jcr->JobId);
       if (!dcr->mount_next_write_volume()) {
          if (!job_canceled(jcr)) {
@@ -399,9 +405,13 @@ DCR *acquire_device_for_append(DCR *dcr)
             Dmsg1(200, "Could not ready device %s for append.\n", 
                dev->print_name());
          }
+         dev->dlock();
+         unblock_device(dev);
          goto get_out;
       }
       Dmsg2(190, "Output pos=%u:%u\n", dcr->dev->file, dcr->dev->block_num);
+      dev->dlock();
+      unblock_device(dev);
    }
 
    dev->num_writers++;                /* we are now a writer */
@@ -409,13 +419,16 @@ DCR *acquire_device_for_append(DCR *dcr)
       jcr->NumWriteVolumes = 1;
    }
    dev->VolCatInfo.VolCatJobs++;              /* increment number of jobs on vol */
+   Dmsg4(100, "=== nwriters=%d nres=%d vcatjob=%d dev=%s\n", 
+      dev->num_writers, dev->num_reserved(), dev->VolCatInfo.VolCatJobs, 
+      dev->print_name());
    dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
    ok = true;
 
 get_out:
-   dev->dlock();
    dcr->clear_reserved();
-   dev->dunblock(DEV_LOCKED);
+   dev->dunlock();
+   V(dev->acquire_mutex);
    return ok ? dcr : NULL;
 }
 
@@ -423,8 +436,8 @@ get_out:
  * This job is done, so release the device. From a Unix standpoint,
  *  the device remains open.
  *
- * Note, if we are spooling, we may enter with the device locked.
- * However, in all cases, unlock the device when leaving.
+ * Note, if we are spooling, we may enter with the device blocked.
+ * However, in all cases, unblock the device when leaving.
  *
  */
 bool release_device(DCR *dcr)
@@ -434,9 +447,11 @@ bool release_device(DCR *dcr)
    bool ok = true;
    char tbuf[100];
 
-   /* lock only if not already locked by this thread */
-   if (!dcr->is_dev_locked()) {
-      dev->r_dlock();
+   dev->dlock();
+   if (!dev->is_blocked()) {
+      block_device(dev, BST_RELEASING);
+   } else if (dev->blocked() == BST_DESPOOLING) {
+      dev->set_blocked(BST_RELEASING);
    }
    lock_volumes();
    Dmsg2(100, "release_device device %s is %s\n", dev->print_name(), dev->is_tape()?"tape":"disk");
@@ -495,16 +510,14 @@ bool release_device(DCR *dcr)
        */
       volume_unused(dcr);
    }
-   unlock_volumes();
    Dmsg3(100, "%d writers, %d reserve, dev=%s\n", dev->num_writers, dev->num_reserved(),
          dev->print_name());
-   debug_list_volumes("acquire:release_device()");
-
 
    /* If no writers, close if file or !CAP_ALWAYS_OPEN */
    if (dev->num_writers == 0 && (!dev->is_tape() || !dev->has_cap(CAP_ALWAYSOPEN))) {
       dvd_remove_empty_part(dcr);        /* get rid of any empty spool part */
       dev->close();
+      free_volume(dev);
    }
 
    /* Fire off Alert command and include any output */
@@ -537,16 +550,11 @@ bool release_device(DCR *dcr)
    Dmsg2(100, "JobId=%u broadcast wait_device_release at %s\n", 
          (uint32_t)jcr->JobId, bstrftimes(tbuf, sizeof(tbuf), (utime_t)time(NULL)));
    pthread_cond_broadcast(&wait_device_release);
-   dev->dunlock();
+   unlock_volumes();
+   dev->dunblock(true);
    if (dcr->keep_dcr) {
       detach_dcr_from_dev(dcr);
    } else {
-      if (jcr->read_dcr == dcr) {
-         jcr->read_dcr = NULL;
-      }
-      if (jcr->dcr == dcr) {
-         jcr->dcr = NULL;
-      }
       free_dcr(dcr);
    }
    Dmsg2(100, "===== Device %s released by JobId=%u\n", dev->print_name(),
@@ -582,10 +590,17 @@ bool clean_device(DCR *dcr)
 DCR *new_dcr(JCR *jcr, DCR *dcr, DEVICE *dev)
 {
    if (!dcr) {
+      int errstat;
       dcr = (DCR *)malloc(sizeof(DCR));
       memset(dcr, 0, sizeof(DCR));
       dcr->tid = pthread_self();
       dcr->spool_fd = -1;
+      if ((errstat = pthread_mutex_init(&dcr->m_mutex, NULL)) != 0) {
+         berrno be;
+         dev->dev_errno = errstat;
+         Mmsg1(dev->errmsg, _("Unable to init mutex: ERR=%s\n"), be.bstrerror(errstat));
+         Jmsg0(jcr, M_ERROR_TERM, 0, dev->errmsg);
+      }
    }
    dcr->jcr = jcr;                 /* point back to jcr */
    /* Set device information, possibly change device */
@@ -645,31 +660,46 @@ static void remove_dcr_from_dcrs(DCR *dcr)
 
 static void attach_dcr_to_dev(DCR *dcr)
 {
-   DEVICE *dev = dcr->dev;
-   JCR *jcr = dcr->jcr;
+   DEVICE *dev;
+   JCR *jcr;
 
+   P(dcr->m_mutex);
+   dev = dcr->dev;
+   jcr = dcr->jcr;
    if (jcr) Dmsg1(500, "JobId=%u enter attach_dcr_to_dev\n", (uint32_t)jcr->JobId);
-   if (!dcr->attached_to_dev && dev->initiated && jcr && jcr->get_JobType() != JT_SYSTEM) {
+   if (!dcr->attached_to_dev && dev->initiated && jcr && jcr->getJobType() != JT_SYSTEM) {
       dev->attached_dcrs->append(dcr);  /* attach dcr to device */
       dcr->attached_to_dev = true;
       Dmsg1(500, "JobId=%u attach_dcr_to_dev\n", (uint32_t)jcr->JobId);
    }
+   V(dcr->m_mutex);
 }
 
-void detach_dcr_from_dev(DCR *dcr)
+/* 
+ * DCR is locked before calling this routine
+ */
+static void locked_detach_dcr_from_dev(DCR *dcr)
 {
    DEVICE *dev = dcr->dev;
    Dmsg0(500, "Enter detach_dcr_from_dev\n"); /* jcr is NULL in some cases */
 
    /* Detach this dcr only if attached */
    if (dcr->attached_to_dev && dev) {
-      dev->dlock();
       dcr->unreserve_device();
+      dev->dlock();
       dcr->dev->attached_dcrs->remove(dcr);  /* detach dcr from device */
-      dcr->attached_to_dev = false;
 //    remove_dcr_from_dcrs(dcr);      /* remove dcr from jcr list */
       dev->dunlock();
    }
+   dcr->attached_to_dev = false;
+}
+
+
+static void detach_dcr_from_dev(DCR *dcr)
+{
+   P(dcr->m_mutex);
+   locked_detach_dcr_from_dev(dcr);
+   V(dcr->m_mutex);
 }
 
 /*
@@ -678,9 +708,11 @@ void detach_dcr_from_dev(DCR *dcr)
  */
 void free_dcr(DCR *dcr)
 {
-   JCR *jcr = dcr->jcr;
+   JCR *jcr;
 
-   detach_dcr_from_dev(dcr);
+   P(dcr->m_mutex);
+   jcr = dcr->jcr;
+   locked_detach_dcr_from_dev(dcr);
 
    if (dcr->block) {
       free_block(dcr->block);
@@ -691,6 +723,11 @@ void free_dcr(DCR *dcr)
    if (jcr && jcr->dcr == dcr) {
       jcr->dcr = NULL;
    }
+   if (jcr && jcr->read_dcr == dcr) {
+      jcr->read_dcr = NULL;
+   }
+   V(dcr->m_mutex);
+   pthread_mutex_destroy(&dcr->m_mutex);
    free(dcr);
 }
 

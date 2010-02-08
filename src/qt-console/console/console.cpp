@@ -40,15 +40,20 @@
 #include "select.h"
 #include "run/run.h"
 
-Console::Console(QStackedWidget *parent)
+Console::Console(QTabWidget *parent)
 {
    QFont font;
+   m_name = tr("Console");
    m_messages_pending = false;
    m_parent = parent;
    m_closeable = false;
    m_console = this;
    m_warningPrevent = false;
    m_dircommCounter = 0;
+
+   /* 
+    * Create a connection to the Director and put it in a hash table
+    */
    m_dircommHash.insert(m_dircommCounter, new DirComm(this, m_dircommCounter));
 
    setupUi(this);
@@ -134,19 +139,12 @@ void Console::connect_dir()
  * A function created to separate out the population of the lists
  * from the Console::connect_dir function
  */
-void Console::populateLists(bool forcenew)
+void Console::populateLists(bool /*forcenew*/)
 {
    int conn;
-   if (forcenew) {
-      if (!newDirComm(conn)) {
-         Pmsg1(000, "newDirComm Seems to Failed to create a connection for populateLists %s\n", m_dir->name());
-         return;
-      }
-   } else {
-      if (!availableDirComm(conn)) {
-         Pmsg1(000, "availableDirComm Seems to Failed to find a connection for populateListsi %s\n", m_dir->name());
-         return;
-      }
+   if (!availableDirComm(conn) && !newDirComm(conn)) {
+      Pmsg1(000, "newDirComm Seems to Failed to create a connection for populateLists %s\n", m_dir->name());
+      return;
    }
    populateLists(conn);
 }
@@ -161,6 +159,8 @@ void Console::populateLists(int conn)
    storage_list.clear();
    type_list.clear();
    level_list.clear();
+   volstatus_list.clear();
+   mediatype_list.clear();
    dir_cmd(conn, ".jobs", job_list);
    dir_cmd(conn, ".clients", client_list);
    dir_cmd(conn, ".filesets", fileset_list);  
@@ -169,6 +169,9 @@ void Console::populateLists(int conn)
    dir_cmd(conn, ".storage", storage_list);
    dir_cmd(conn, ".types", type_list);
    dir_cmd(conn, ".levels", level_list);
+   dir_cmd(conn, ".volstatus", volstatus_list);
+   dir_cmd(conn, ".mediatypes", mediatype_list);
+   dir_cmd(conn, ".locations", location_list);
 
    if (mainWin->m_connDebug) {
       QString dbgmsg = QString("jobs=%1 clients=%2 filesets=%3 msgs=%4 pools=%5 storage=%6 types=%7 levels=%8 conn=%9 %10\n")
@@ -636,6 +639,23 @@ void Console::discardToPrompt(int conn)
    if (mainWin->m_commDebug) Pmsg2(000, "endDiscardToPrompt=%d %s\n", stat, m_dir->name());
 }
 
+QString Console::returnFromPrompt(int conn)
+{ 
+   DirComm *dircomm = m_dircommHash.value(conn);
+   QString text("");
+
+   int stat = 0;
+   text = "";
+   if (mainWin->m_commDebug) Pmsg1(000, "returnFromPrompt %s\n", m_dir->name());
+   while (!dircomm->m_at_prompt) {
+      if ((stat=dircomm->read()) > 0) {
+         text += dircomm->msg();
+      }
+   }
+   if (mainWin->m_commDebug) Pmsg2(000, "endreturnFromPrompt=%d %s\n", stat, m_dir->name());
+   return text;
+}
+
 /*
  * When the notifier is enabled, read_dir() will automatically be
  * called by the Qt event loop when ever there is any output 
@@ -706,7 +726,7 @@ void Console::consoleReload()
  * This may be rendered not needed if the multiple connections feature gets working */
 bool Console::hasFocus()
 {
-   if (mainWin->stackedWidget->currentIndex() == mainWin->stackedWidget->indexOf(this))
+   if (mainWin->tabWidget->currentIndex() == mainWin->tabWidget->indexOf(this))
       return true;
    else
       return false;

@@ -12,32 +12,12 @@ FDDIR=../../filed
 SRCDIR=../..
 LIBDIR=../../lib
 
-.SUFFIXES:    .c .o .lo
-
-.c.o:
-	$(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -I${SRCDIR} -I${FDDIR} -DTEST_PROGRAM -c $<
+.SUFFIXES:    .c .lo
 
 .c.lo:
 	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -I${SRCDIR} -I${FDDIR} -DTEST_PROGRAM -c $<
 
-all: bpipe-fd$(DEFAULT_SHARED_OBJECT_TYPE)
-
-test: main example-plugin-fd.so
-
-fd_plugins.o: ${FDDIR}/fd_plugins.h ${FDDIR}/fd_plugins.c
-	$(CXX) -I${SRCDIR} -I${FDDIR} -DTEST_PROGRAM -c ${FDDIR}/fd_plugins.c 
-
-main: fd_plugins.o
-	$(CXX) $(LDFLAGS) -L${LIBDIR} fd_plugins.o -o main -lbac -lpthread -lssl -l crypto -ldl
-
-example-plugin-fd.o: example-plugin-fd.c ${FDDIR}/fd_plugins.h
-	$(CXX) -fPIC -I../.. -I${FDDIR} -c example-plugin-fd.c
-
-example-plugin-fd.so: example-plugin-fd.o 
-	$(CXX) $(LDFLAGS) -shared example-plugin-fd.o -o example-plugin-fd.so
-
-bpipe-fd.o: bpipe-fd.c ${FDDIR}/fd_plugins.h
-	$(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -fPIC -I../.. -I${FDDIR} -c bpipe-fd.c
+all: bpipe-fd.la
 
 bpipe-fd.lo: bpipe-fd.c ${FDDIR}/fd_plugins.h
 	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) $(CFLAGS) -I../.. -I${FDDIR} -c bpipe-fd.c
@@ -45,12 +25,9 @@ bpipe-fd.lo: bpipe-fd.c ${FDDIR}/fd_plugins.h
 bpipe-fd.la: Makefile bpipe-fd$(DEFAULT_OBJECT_TYPE)
 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -shared bpipe-fd.lo -o $@ -rpath $(plugindir) -module -export-dynamic -avoid-version 
 
-bpipe-fd.so: bpipe-fd.o
-	$(CXX) $(LDFLAGS) -shared bpipe-fd.o -o $@
-
 install: all
 	$(MKDIR) $(DESTDIR)$(plugindir)
-	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bpipe-fd$(DEFAULT_SHARED_OBJECT_TYPE) $(DESTDIR)$(plugindir)
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bpipe-fd.la $(DESTDIR)$(plugindir)
 	$(RMF) $(DESTDIR)$(plugindir)/bpipe-fd.la
 
 libtool-clean:
@@ -64,7 +41,9 @@ clean:	libtool-clean
 distclean: clean
 	@rm -f Makefile
 
-uninstall:
-	$(RMF) $(DESTDIR)$(plugindir)/bpipe-fd.so
+libtool-uninstall:
+	$(LIBTOOL_UNINSTALL) $(RMF) $(DESTDIR)$(plugindir)/bpipe-fd.so
+
+uninstall: @LIBTOOL_UNINSTALL_TARGET@
 
 depend:

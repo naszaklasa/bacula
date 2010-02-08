@@ -14,37 +14,20 @@ LIBDIR=../../lib
 
 .SUFFIXES:    .c .o .lo
 
-.c.o:
-	$(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -I${SRCDIR} -I${DIRDIR} -DTEST_PROGRAM -c $<
-
 .c.lo:
 	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -I${SRCDIR} -I${DIRDIR} -DTEST_PROGRAM -c $<
 
-all: example-plugin-dir$(DEFAULT_SHARED_OBJECT_TYPE)
-
-test: main example-plugin-dir.so
-
-dir_plugins.o: ${DIRDIR}/dir_plugins.h ${DIRDIR}/dir_plugins.c
-	$(CXX) -I${SRCDIR} -I${DIRDIR} -DTEST_PROGRAM -c ${DIRDIR}/dir_plugins.c 
-
-main: dir_plugins.o
-	$(CXX) $(LDFLAGS) -L${LIBDIR} dir_plugins.o -o main -lbac -lpthread -lssl -l crypto -ldl
-
-example-plugin-dir.o: example-plugin-dir.c ${DIRDIR}/dir_plugins.h
-	$(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -fPIC -I../.. -I${DIRDIR} -c example-plugin-dir.c
-
-example-plugin-dir.so: example-plugin-dir.o 
-	$(CXX) $(LDFLAGS) -shared example-plugin-dir.o -o example-plugin-dir.so
+all: example-plugin-dir.la
 
 example-plugin-dir.lo: example-plugin-dir.c ${DIRDIR}/dir_plugins.h
 	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CFLAGS) -I../.. -I${DIRDIR} -c example-plugin-dir.c
 
-example-plugin-dir.la: Makefile example-plugin-dir$(DEFAULT_OBJECT_TYPE)
+example-plugin-dir.la: Makefile example-plugin-dir.lo
 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -shared example-plugin-dir.lo -o $@ -rpath $(plugindir) -module -export-dynamic -avoid-version
 
 install: all
 	$(MKDIR) $(DESTDIR)$(plugindir)
-	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) example-plugin-dir$(DEFAULT_SHARED_OBJECT_TYPE) $(DESTDIR)$(plugindir)
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) example-plugin-dir.la $(DESTDIR)$(plugindir)
 	$(RMF) $(DESTDIR)$(plugindir)/example-plugin-dir.la
 
 libtool-clean:
@@ -58,7 +41,9 @@ clean: @LIBTOOL_CLEAN_TARGET@
 distclean: clean
 	rm -f Makefile
 
-uninstall:
-	$(RMF) $(DESTDIR)$(plugindir)/example-plugin-dir.so
+libtool-uninstall:
+	$(LIBTOOL_UNINSTALL) $(RMF) $(DESTDIR)$(plugindir)/example-plugin-dir.la
+
+uninstall: @LIBTOOL_UNINSTALL_TARGET@
 
 depend:

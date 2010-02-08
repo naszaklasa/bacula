@@ -71,7 +71,7 @@ DWORD service_thread_id = 0;
 
 
 #define MAX_COMMAND_ARGS 100
-static char *command_args[MAX_COMMAND_ARGS] = {(char *)LC_APP_NAME, NULL};
+static char *command_args[MAX_COMMAND_ARGS] = {LC_APP_NAME, NULL};
 static int num_command_args = 1;
 static pid_t main_pid;
 static pthread_t main_tid;

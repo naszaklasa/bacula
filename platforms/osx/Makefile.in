@@ -22,7 +22,6 @@ PM:=/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMak
 MAKE:=/usr/bin/make
 CURL:=/usr/bin/curl
 TAR:=/usr/bin/tar
-FAKEROOT:=/usr/local/bin/fakeroot
 
 ########### you should not have to edit anything beyond this line ###########
 
@@ -38,6 +37,7 @@ BACULA_DESTDIR:=${WORKING_DIR}/destdir
 BACULA_PREFIX:=/usr/local/bacula-${BACULA_VERSION}
 BACULA_FD_CONF:=/Library/Preferences/bacula/bacula-fd.conf
 BACULA_WORKING_DIR:=/private/var/bacula/working
+BACULA_PMDOC:=${WORKING_DIR}/installer.pmdoc
 
 # Detect whether we sit inside the bacula source tree. In this case we won't
 # download the tar from sourceforge but instead work with what its there
@@ -50,10 +50,11 @@ ifneq ($(CURDIR),$(CURSUB))
 endif
 
 PACKAGE_TITLE:=Bacula File Daemon ${BACULA_VERSION}
+PACKAGE_ID:=org.bacula.bacula-fd.pkg
 PACKAGE_DIR:=${PRODUCTS_DIR}/${PACKAGE_TITLE}
 PACKAGE_BUNDLE:=${PACKAGE_DIR}/${PACKAGE_TITLE}.pkg
 PACKAGE_DMG:=${PRODUCTS_DIR}/${PACKAGE_TITLE}.dmg
-PACKAGE_RESOURCES:=Description.plist ReadMe.html postflight preupgrade
+PACKAGE_RESOURCES:=ReadMe.html postflight preupgrade
 PACKAGE_XRESOURCES:=postflight preupgrade
 
 # Flags for the toolchain
@@ -66,31 +67,46 @@ CONFIGFLAGS:=--enable-client-only --prefix=${BACULA_PREFIX} \
 CPPFLAGS:=-isysroot ${MACOSX_SDK_SYSROOT} ${MACOSX_VERSION_FLAGS}
 CFLAGS:=-O -g ${ARCHFLAGS}
 CXXFLAGS:=${CFLAGS}
-LDFLAGS:=${MACOSX_VERSION_FLAGS} ${ARCHFLAGS}
+LDFLAGS:=-Wl,-syslibroot,${MACOSX_SDK_SYSROOT} ${MACOSX_VERSION_FLAGS} ${ARCHFLAGS}
+
+# required on snow leopard: compiling for 10.4 requires usage of gcc 4.0
+# system defaults to version 4.2
+CC:=gcc-4.0
+CPP:=cpp-4.0
+CXX:=g++-4.0
+CXXPP:=cpp-4.0
 
 # Placeholders for *.in files
 INFILE_SUBST=\
   -e "s,@PREFIX@,${BACULA_PREFIX},g" \
   -e "s,@BACULA_VERSION@,${BACULA_VERSION},g" \
-  -e "s,@FD_CONF@,${BACULA_FD_CONF},g"
+  -e "s,@FD_CONF@,${BACULA_FD_CONF},g" \
+  -e "s,@BACULA_DESTDIR@,${BACULA_DESTDIR},g" \
+  -e "s,@PACKAGE_ID@,${PACKAGE_ID},g"
 
 dmg: pkg
 	hdiutil create -srcfolder "${PACKAGE_DIR}" "${PACKAGE_DMG}"
 
-pkg: ${BACULA_DESTDIR} ${WORKING_DIR}/resources
+pkg: ${BACULA_DESTDIR} ${BACULA_PMDOC} ${WORKING_DIR}/resources
 	mkdir -p "${PACKAGE_DIR}"
 
-	sed ${INFILE_SUBST} \
-		files/Info.plist.in > "${WORKING_DIR}/Info.plist";
-
-	${FAKEROOT} ${PM} -build -ds -v -f "\"${BACULA_DESTDIR}\"" -p "\"${PACKAGE_BUNDLE}\"" \
-		-r "\"${WORKING_DIR}/resources\"" -i "\"${WORKING_DIR}/Info.plist\""
+	${PM} --doc "${BACULA_PMDOC}" --id "${PACKAGE_ID}" --no-recommend --out "${PACKAGE_BUNDLE}"
 
 	cp ${WORKING_DIR}/resources/ReadMe.html "${PACKAGE_DIR}/ReadMe.html"
 
 	sed ${INFILE_SUBST} \
 		files/uninstall.command.in > "${PACKAGE_DIR}/uninstall.command";
 	chmod 0775 "${PACKAGE_DIR}/uninstall.command"
+
+${BACULA_PMDOC}: ${BACULA_DESTDIR} ${WORKING_DIR}/resources
+	mkdir -p "${BACULA_PMDOC}"
+
+	for f in index.xml 01destdir.xml; do \
+		sed ${INFILE_SUBST} \
+			files/installer.pmdoc.in/$$f > "${BACULA_PMDOC}/$$f"; \
+	done
+
+	python installer-gencontents.py ${BACULA_DESTDIR} > ${BACULA_PMDOC}/01destdir-contents.xml
 
 ${WORKING_DIR}/resources: ${BACULA_DESTDIR}
 	mkdir -p "${WORKING_DIR}/resources"
@@ -107,8 +123,8 @@ ${WORKING_DIR}/resources: ${BACULA_DESTDIR}
 	cp "${BACULA_SOURCE}/LICENSE" "${WORKING_DIR}/resources/License.txt"
 
 ${BACULA_DESTDIR}: ${BACULA_SOURCE}
-	(cd ${BACULA_SOURCE} && ./configure ${CONFIGFLAGS} CPPFLAGS="${CPPFLAGS}" CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" LDFLAGS="${LDFLAGS}")
-	${MAKE} -C ${BACULA_SOURCE} LDFLAGS="-Wl,-syslibroot,${MACOSX_SDK_SYSROOT} ${LDFLAGS}"
+	(cd ${BACULA_SOURCE} && ./configure ${CONFIGFLAGS} CPPFLAGS="${CPPFLAGS}" CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" LDFLAGS="${LDFLAGS}" CC="${CC}" CPP="${CPP}" CXX="${CXX}" CXXPP="${CXXPP}")
+	${MAKE} -C ${BACULA_SOURCE}
 	${MAKE} -C ${BACULA_SOURCE} install DESTDIR="${CURDIR}/${BACULA_DESTDIR}"
 
 	rm -rf "${BACULA_DESTDIR}/tmp"

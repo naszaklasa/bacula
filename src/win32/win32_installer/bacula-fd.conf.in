@@ -15,7 +15,7 @@ FileDaemon {                            # this is me
   FDport = @client_port@                # where we listen for the director
   WorkingDirectory = "@working_dir@"
   Pid Directory = "@working_dir@"
-  #Plugin Directory = "@fdplugins_dir@"
+# Plugin Directory = "@fdplugins_dir@"
   Maximum Concurrent Jobs = @client_maxjobs@
 }
 

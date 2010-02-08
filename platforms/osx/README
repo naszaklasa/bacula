@@ -11,10 +11,8 @@ passwords in the configuration files are generated during a first time
 installation and file permissions are checked and corrected on upgrades.
 
 Requirements:
-* Mac OS X 10.4 or later
+* Mac OS X 10.5 or later (building/packaging), 10.4 or later (deployment)
 * Mac OS X developer tools installed
-* fakeroot >= 1.13 (http://ftp.debian.org/debian/pool/main/f/fakeroot/)
-  The makefile expects the compiled binary at /usr/local/bin/fakeroot.
 
 Example (compile and create package from within bacula source tree):
 $ ./configure --enable-client-only
@@ -55,14 +53,3 @@ Additional notes on the build-script:
     CFLAGS=-O -g -arch i386 -arch ppc
     CXXFLAGS=${CFLAGS}
     LDFLAGS=-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4 -arch i386 -arch ppc
-
-    Because the configure-scripts fails on 10.4 when -syslibroot is specified,
-    this option is supplied to make only.
-
-  * In order to build Mac OS X installer packages in a repeatable manner with
-    the correct owner/group and permissions, PackageMakers's cheap and broken
-    mechanism of applying recommended permissions is not used. Instead
-    Debian's fakeroot tool is used during package building phase to ensure
-    that the ownership of the files in the installer's Archive.pax.gz is set
-    to root and that permissions are kept exactly like "make install" set them
-    before.

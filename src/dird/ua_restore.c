@@ -70,6 +70,7 @@ static int get_restore_client_name(UAContext *ua, RESTORE_CTX &rx);
 static int get_date(UAContext *ua, char *date, int date_len);
 static int restore_count_handler(void *ctx, int num_fields, char **row);
 static bool insert_table_into_findex_list(UAContext *ua, RESTORE_CTX *rx, char *table);
+static void get_and_display_basejobs(UAContext *ua, RESTORE_CTX *rx);
 
 /*
  *   Restore files
@@ -90,6 +91,7 @@ int restore_cmd(UAContext *ua, const char *cmd)
    rx.path = get_pool_memory(PM_FNAME);
    rx.fname = get_pool_memory(PM_FNAME);
    rx.JobIds = get_pool_memory(PM_FNAME);
+   rx.BaseJobIds = get_pool_memory(PM_FNAME);
    rx.query = get_pool_memory(PM_FNAME);
    rx.bsr = new_bsr();
 
@@ -174,6 +176,7 @@ int restore_cmd(UAContext *ua, const char *cmd)
    case 0:                            /* error */
       goto bail_out;
    case 1:                            /* selected by jobid */
+      get_and_display_basejobs(ua, &rx);
       if (!build_directory_tree(ua, &rx)) {
          ua->send_msg(_("Restore not done.\n"));
          goto bail_out;
@@ -184,26 +187,20 @@ int restore_cmd(UAContext *ua, const char *cmd)
    }
 
    if (rx.bsr->JobId) {
-      uint32_t selected_files;
       char ed1[50];
       if (!complete_bsr(ua, rx.bsr)) {   /* find Vol, SessId, SessTime from JobIds */
          ua->error_msg(_("Unable to construct a valid BSR. Cannot continue.\n"));
          goto bail_out;
       }
-      if (!(selected_files = write_bsr_file(ua, rx))) {
+      if (!(rx.selected_files = write_bsr_file(ua, rx))) {
          ua->warning_msg(_("No files selected to be restored.\n"));
          goto bail_out;
       }
       display_bsr_info(ua, rx);          /* display vols needed, etc */
 
-      /* If no count of files, use bsr generated value (often wrong) */
-      if (rx.selected_files == 0) {
-         rx.selected_files = selected_files;
-      }
       if (rx.selected_files==1) {
          ua->info_msg(_("\n1 file selected to be restored.\n\n"));
-      }
-      else {
+      } else {
          ua->info_msg(_("\n%s files selected to be restored.\n\n"), 
             edit_uint64_with_commas(rx.selected_files, ed1));
       }
@@ -302,26 +299,35 @@ bail_out:
 
 }
 
+/* 
+ * Fill the rx->BaseJobIds and display the list
+ */
+static void get_and_display_basejobs(UAContext *ua, RESTORE_CTX *rx)
+{
+   db_list_ctx jobids;
+
+   if (!db_get_used_base_jobids(ua->jcr, ua->db, rx->JobIds, &jobids)) {
+      ua->warning_msg("%s", db_strerror(ua->db));
+   }
+   
+   if (jobids.count) {
+      POOL_MEM q;
+      Mmsg(q, uar_print_jobs, jobids.list);
+      ua->send_msg(_("The restore will use the following job(s) as Base\n"));
+      db_list_sql_query(ua->jcr, ua->db, q.c_str(), prtit, ua, 1, HORZ_LIST);
+   }
+   pm_strcpy(rx->BaseJobIds, jobids.list);
+}
+
 static void free_rx(RESTORE_CTX *rx)
 {
    free_bsr(rx->bsr);
    rx->bsr = NULL;
-   if (rx->JobIds) {
-      free_pool_memory(rx->JobIds);
-      rx->JobIds = NULL;
-   }
-   if (rx->fname) {
-      free_pool_memory(rx->fname);
-      rx->fname = NULL;
-   }
-   if (rx->path) {
-      free_pool_memory(rx->path);
-      rx->path = NULL;
-   }
-   if (rx->query) {
-      free_pool_memory(rx->query);
-      rx->query = NULL;
-   }
+   free_and_null_pool_memory(rx->JobIds);
+   free_and_null_pool_memory(rx->BaseJobIds);
+   free_and_null_pool_memory(rx->fname);
+   free_and_null_pool_memory(rx->path);
+   free_and_null_pool_memory(rx->query);
    free_name_list(&rx->name_list);
 }
 
@@ -417,7 +423,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
       _("Find the JobIds of the most recent backup for a client"),
       _("Find the JobIds for a backup for a client before a specified time"),
       _("Enter a list of directories to restore for found JobIds"),
-      _("Select full restore to a specified JobId"),
+      _("Select full restore to a specified Job date"),
       _("Cancel"),
       NULL };
 
@@ -449,7 +455,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
       NULL
    };
 
-   *rx->JobIds = 0;
+   rx->JobIds[0] = 0;
 
    for (i=1; i<ua->argc; i++) {       /* loop through arguments */
       bool found_kw = false;
@@ -739,7 +745,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
          return 2;
 
       case 11:                        /* Choose a jobid and select jobs */
-         if (!get_cmd(ua, _("Enter JobId to restore: ")) ||
+         if (!get_cmd(ua, _("Enter JobId to get the state to restore: ")) ||
              !is_an_integer(ua->cmd)) 
          {
             return 0;
@@ -752,6 +758,8 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
                           ua->cmd, db_strerror(ua->db));
             return 0;
          }
+         ua->send_msg(_("Selecting jobs to build the Full state at %s\n"),
+                      jr.cStartTime);
          jr.JobLevel = L_INCREMENTAL; /* Take Full+Diff+Incr */
          if (!db_accurate_get_jobids(ua->jcr, ua->db, &jr, &jobids)) {
             return 0;
@@ -811,6 +819,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
       ua->warning_msg(_("No Jobs selected.\n"));
       return 0;
    }
+
    if (strchr(rx->JobIds,',')) {
       ua->info_msg(_("You have selected the following JobIds: %s\n"), rx->JobIds);
    } else {
@@ -1088,10 +1097,14 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
    ua->info_msg(_("\nBuilding directory tree for JobId(s) %s ...  "),
                 rx->JobIds);
 
-/* Disable accurate query waiting for using StartTime instead of FileId in file selection */
+#define new_get_file_list
 #ifdef new_get_file_list
    if (!db_get_file_list(ua->jcr, ua->db, rx->JobIds, insert_tree_handler, (void *)&tree)) {
       ua->error_msg("%s", db_strerror(ua->db));
+   }
+   if (*rx->BaseJobIds) {
+      pm_strcat(rx->JobIds, ",");
+      pm_strcat(rx->JobIds, rx->BaseJobIds);
    }
 #else
    for (p=rx->JobIds; get_next_jobid_from_list(&p, &JobId) > 0; ) {
@@ -1160,7 +1173,7 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
          for (TREE_NODE *node=first_tree_node(tree.root); node; node=next_tree_node(node)) {
             Dmsg2(400, "FI=%d node=0x%x\n", node->FileIndex, node);
             if (node->extract || node->extract_dir) {
-               Dmsg2(400, "type=%d FI=%d\n", node->type, node->FileIndex);
+               Dmsg3(400, "JobId=%lld type=%d FI=%d\n", (uint64_t)node->JobId, node->type, node->FileIndex);
                add_findex(rx->bsr, node->JobId, node->FileIndex);
                if (node->extract && node->type != TN_NEWDIR) {
                   rx->selected_files++;  /* count only saved files */
@@ -1306,8 +1319,8 @@ static bool select_backups_before_date(UAContext *ua, RESTORE_CTX *rx, char *dat
    }
 
    /* Get the JobIds from that list */
-   rx->JobIds[0] = 0;
-   rx->last_jobid[0] = 0;
+   rx->last_jobid[0] = rx->JobIds[0] = 0;
+
    if (!db_sql_query(ua->db, uar_sel_jobid_temp, jobid_handler, (void *)rx)) {
       ua->warning_msg("%s\n", db_strerror(ua->db));
    }
@@ -1319,8 +1332,9 @@ static bool select_backups_before_date(UAContext *ua, RESTORE_CTX *rx, char *dat
                                 prtit, ua, HORZ_LIST);
       }
       /* Display a list of Jobs selected for this restore */
-      db_list_sql_query(ua->jcr, ua->db, uar_list_temp, prtit, ua, 1, HORZ_LIST);
+      db_list_sql_query(ua->jcr, ua->db, uar_list_temp, prtit, ua, 1,HORZ_LIST);
       ok = true;
+
    } else {
       ua->warning_msg(_("No jobs found.\n"));
    }
@@ -1329,42 +1343,6 @@ bail_out:
    db_sql_query(ua->db, uar_del_temp, NULL, NULL);
    db_sql_query(ua->db, uar_del_temp1, NULL, NULL);
    return ok;
-}
-
-
-/* 
- * Return next JobId from comma separated list   
- *
- * Returns:
- *   1 if next JobId returned
- *   0 if no more JobIds are in list
- *  -1 there is an error
- */
-int get_next_jobid_from_list(char **p, JobId_t *JobId)
-{
-   const int maxlen = 30;
-   char jobid[maxlen+1];
-   char *q = *p;
-
-   jobid[0] = 0;
-   for (int i=0; i<maxlen; i++) {
-      if (*q == 0) {
-         break;
-      } else if (*q == ',') {
-         q++;
-         break;
-      }
-      jobid[i] = *q++;
-      jobid[i+1] = 0;
-   }
-   if (jobid[0] == 0) {
-      return 0;
-   } else if (!is_a_number(jobid)) {
-      return -1;                      /* error */
-   }
-   *p = q;
-   *JobId = str_to_int64(jobid);
-   return 1;
 }
 
 static int restore_count_handler(void *ctx, int num_fields, char **row)
@@ -1441,10 +1419,7 @@ static void free_name_list(NAME_LIST *name_list)
    for (int i=0; i < name_list->num_ids; i++) {
       free(name_list->name[i]);
    }
-   if (name_list->name) {
-      free(name_list->name);
-      name_list->name = NULL;
-   }
+   bfree_and_null(name_list->name);
    name_list->max_ids = 0;
    name_list->num_ids = 0;
 }

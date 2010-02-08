@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -185,15 +185,15 @@ static void usage()
    fprintf(stderr,
 _("\n"
 "Usage: %s [-f from] [-h mailhost] [-s subject] [-c copy] [recipient ...]\n"
-"       -8          set charset utf-8\n"
+"       -8          set charset to UTF-8\n"
 "       -c          set the Cc: field\n"
 "       -d <nn>     set debug level to <nn>\n"
-"       -dt         print timestamp in debug output\n"
+"       -dt         print a timestamp in debug output\n"
 "       -f          set the From: field\n"
 "       -h          use mailhost:port as the SMTP server\n"
 "       -s          set the Subject: field\n"
 "       -r          set the Reply-To: field\n"
-"       -l          set the maximum number of lines that should be sent (default: unlimited)\n"
+"       -l          set the maximum number of lines to send (default: unlimited)\n"
 "       -?          print this message.\n"
 "\n"), MY_NAME);
 

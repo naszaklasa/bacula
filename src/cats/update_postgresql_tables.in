@@ -1,38 +1,78 @@
 #!/bin/sh
 #
-# Shell script to update PostgreSQL tables from version 2.0.0 to 3.0.0 or higher
+# Shell script to update PostgreSQL tables from version 11 to 12
 #
 echo " "
-echo "This script will update a Bacula PostgreSQL database from version 10 to 11"
-echo " which is needed to convert from Bacula version 2.0.0 to 3.0.x or higher"
+echo "This script will update a Bacula PostgreSQL database from version 11 to 12"
+echo " which is needed to convert from Bacula Enterprise 2.6 to 4.0 or "
+echo " Standard version 3.0 to 5.0"
 echo " "
+
 bindir=@SQL_BINDIR@
+export PATH="$bindir:$PATH"
 db_name=@db_name@
 
-if $bindir/psql -f - -d ${db_name} $* <<END-OF-DATA
-
--- The alter table operation can be faster with a big maintenance_work_mem
--- Uncomment and adapt this value to your environment
--- SET maintenance_work_mem = '1GB';
-
-BEGIN;
-ALTER TABLE file ALTER fileid TYPE bigint ;
-ALTER TABLE basefiles ALTER fileid TYPE bigint;
-ALTER TABLE job ADD COLUMN readbytes bigint default 0;
-ALTER TABLE media ADD COLUMN ActionOnPurge smallint default 0;
-ALTER TABLE pool ADD COLUMN ActionOnPurge smallint default 0;
-
--- Create a table like Job for long term statistics
-CREATE TABLE JobHisto (LIKE Job);
-CREATE INDEX jobhisto_idx ON JobHisto ( starttime );
-
-UPDATE Version SET VersionId=11;
+if psql -f - -d ${db_name} $* <<END-OF-DATA
+BEGIN; -- Necessary for Bacula core
+ALTER TABLE JobMedia DROP Copy ;
+ALTER TABLE Job ADD COLUMN HasCache smallint default 0;
+ALTER TABLE Job ADD COLUMN Reviewed smallint default 0;
+ALTER TABLE Job ADD COLUMN Comment text;
+ALTER TABLE JobHisto ADD COLUMN HasCache smallint default 0;
+ALTER TABLE JobHisto ADD COLUMN Reviewed smallint default 0;
+ALTER TABLE JobHisto ADD COLUMN Comment text;
+UPDATE Version SET VersionId=12;
 COMMIT;
 
--- If you have already this table, you can remove it with:
--- DROP TABLE JobHistory;
+BEGIN; -- Can conflict with previous Bweb installation
+ALTER TABLE Status ADD COLUMN Severity int;
+UPDATE Status SET Severity = 15;
+UPDATE Status SET Severity = 100 where JobStatus = 'f';
+UPDATE Status SET Severity = 90 where JobStatus = 'A';
+UPDATE Status SET Severity = 10 where JobStatus = 'T';
+UPDATE Status SET Severity = 20 where JobStatus = 'e';
+UPDATE Status SET Severity = 25 where JobStatus = 'E';
+COMMIT;
 
--- vacuum analyse;
+BEGIN; -- Can already exists if using 3.1.x release
+CREATE TABLE PathHierarchy
+(
+     PathId integer NOT NULL,
+     PPathId integer NOT NULL,
+     CONSTRAINT pathhierarchy_pkey PRIMARY KEY (PathId)
+);
+
+CREATE INDEX pathhierarchy_ppathid 
+          ON PathHierarchy (PPathId);
+
+CREATE TABLE PathVisibility
+(
+      PathId integer NOT NULL,
+      JobId integer NOT NULL,
+      Size int8 DEFAULT 0,
+      Files int4 DEFAULT 0,
+      CONSTRAINT pathvisibility_pkey PRIMARY KEY (JobId, PathId)
+);
+
+CREATE INDEX pathvisibility_jobid
+          ON PathVisibility (JobId);
+
+COMMIT;
+
+CREATE INDEX basefiles_jobid_idx ON BaseFiles ( JobId );
+
+-- Remove bad PostgreSQL index
+DROP INDEX file_fp_idx;
+
+-- Create the good one
+-- If you want to create this index during production, you can use 
+-- CREATE INDEX CONCURRENTLY file_jpf_idx ON File (JobId, PathId, FilenameId)
+-- to make it without locks (require PostgreSQL 8.2 version)
+
+CREATE INDEX file_jpfid_idx on File (JobId, PathId, FilenameId);
+
+ANALYSE;
+
 END-OF-DATA
 then
    echo "Update of Bacula PostgreSQL tables succeeded."

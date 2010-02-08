@@ -25,7 +25,7 @@ Function EnterConfigPage2
     ${Else}
       IntOp $R8 $R7 + 26
     ${EndIf}
-    FileWrite $R5 '[Field $R6]$\r$\nType="GroupBox"$\r$\nText="Enter data for Director Allowed to access this Client"$\r$\nLeft=0$\r$\nTop=$R7$\r$\nRight=300$\r$\nBottom=$R8$\r$\n$\r$\n'
+    FileWrite $R5 '[Field $R6]$\r$\nType="GroupBox"$\r$\nText="Enter Director Information"$\r$\nLeft=0$\r$\nTop=$R7$\r$\nRight=300$\r$\nBottom=$R8$\r$\n$\r$\n'
   ${EndIf}
 
   IntOp $R6 $R6 + 1
@@ -52,12 +52,12 @@ Function EnterConfigPage2
   ${If} $R0 = 0
   ${OrIf} $AutomaticInstall = 0
     IntOp $R8 $R7 + 8
-    FileWrite $R5 '[Field $R6]$\r$\nType="Label"$\r$\nText="Name"$\r$\nLeft=6$\r$\nTop=$R7$\r$\nRight=26$\r$\nBottom=$R8$\r$\n$\r$\n'
+    FileWrite $R5 '[Field $R6]$\r$\nType="Label"$\r$\nText="DIR Name"$\r$\nLeft=6$\r$\nTop=$R7$\r$\nRight=60$\r$\nBottom=$R8$\r$\n$\r$\n'
     IntOp $R6 $R6 + 1
     IntOp $R7 $R7 - 2
 
     IntOp $R8 $R8 + 2
-    FileWrite $R5 '[Field $R6]$\r$\nType="Text"$\r$\nState=$ConfigDirectorName$\r$\nLeft=50$\r$\nTop=$R7$\r$\nRight=158$\r$\nBottom=$R8$\r$\n$\r$\n'
+    FileWrite $R5 '[Field $R6]$\r$\nType="Text"$\r$\nState=$ConfigDirectorName$\r$\nLeft=60$\r$\nTop=$R7$\r$\nRight=158$\r$\nBottom=$R8$\r$\n$\r$\n'
     IntOp $R6 $R6 + 1
 
     ${If} $AutomaticInstall = 0
@@ -65,7 +65,7 @@ Function EnterConfigPage2
       ${If} $R0 <> 0
         IntOp $R7 $R7 + 2
         IntOp $R8 $R8 - 2
-        FileWrite $R5 '[Field $R6]$\r$\nType="Label"$\r$\nText="Port"$\r$\nLeft=172$\r$\nTop=$R7$\r$\nRight=188$\r$\nBottom=$R8$\r$\n$\r$\n'
+        FileWrite $R5 '[Field $R6]$\r$\nType="Label"$\r$\nText="DIR Port"$\r$\nLeft=172$\r$\nTop=$R7$\r$\nRight=188$\r$\nBottom=$R8$\r$\n$\r$\n'
         IntOp $R6 $R6 + 1
         IntOp $R7 $R7 - 2
 
@@ -99,13 +99,13 @@ Function EnterConfigPage2
       IntOp $R7 $R7 + 2
       IntOp $R8 $R7 + 8
 
-      FileWrite $R5 '[Field $R6]$\r$\nType="Label"$\r$\nText="Password"$\r$\nLeft=6$\r$\nTop=$R7$\r$\nRight=38$\r$\nBottom=$R8$\r$\n$\r$\n'
+      FileWrite $R5 '[Field $R6]$\r$\nType="Label"$\r$\nText="DIR Password"$\r$\nLeft=6$\r$\nTop=$R7$\r$\nRight=60$\r$\nBottom=$R8$\r$\n$\r$\n'
 
       IntOp $R6 $R6 + 1
       IntOp $R7 $R7 - 2
       IntOp $R8 $R8 + 2
 
-      FileWrite $R5 '[Field $R6]$\r$\nType="Text"$\r$\nState=$ConfigDirectorPassword$\r$\nLeft=50$\r$\nTop=$R7$\r$\nRight=294$\r$\nBottom=$R8$\r$\n$\r$\n'
+      FileWrite $R5 '[Field $R6]$\r$\nType="Text"$\r$\nState=$ConfigDirectorPassword$\r$\nLeft=60$\r$\nTop=$R7$\r$\nRight=294$\r$\nBottom=$R8$\r$\n$\r$\n'
 
       IntOp $R6 $R6 + 1
       IntOp $R7 $R7 + 14
@@ -202,13 +202,13 @@ Function EnterConfigPage2
       IntOp $R7 $R7 + 2
       IntOp $R8 $R7 + 8
 
-      FileWrite $R5 '[Field $R6]$\r$\nType="Label"$\r$\nText="Address"$\r$\nLeft=6$\r$\nTop=$R7$\r$\nRight=48$\r$\nBottom=$R8$\r$\n$\r$\n'
+      FileWrite $R5 '[Field $R6]$\r$\nType="Label"$\r$\nText="DIR Address"$\r$\nLeft=6$\r$\nTop=$R7$\r$\nRight=60$\r$\nBottom=$R8$\r$\n$\r$\n'
 
       IntOp $R6 $R6 + 1
       IntOp $R7 $R7 - 2
       IntOp $R8 $R8 + 2
 
-      FileWrite $R5 '[Field $R6]$\r$\nType="Text"$\r$\nState=$ConfigDirectorAddress$\r$\nLeft=50$\r$\nTop=$R7$\r$\nRight=294$\r$\nBottom=$R8$\r$\n$\r$\n'
+      FileWrite $R5 '[Field $R6]$\r$\nType="Text"$\r$\nState=$ConfigDirectorAddress$\r$\nLeft=60$\r$\nTop=$R7$\r$\nRight=294$\r$\nBottom=$R8$\r$\n$\r$\n'
       IntOp $R6 $R6 + 1
       IntOp $R7 $R7 + 14
       IntOp $R8 $R7 + 8

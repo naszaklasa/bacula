@@ -33,8 +33,9 @@ JobDefs {
   Schedule = "WeeklyCycle"
   Storage = File
   Messages = Standard
-  Pool = Default
+  Pool = File
   Priority = 10
+  Write Bootstrap = "@working_dir@/%c.bsr"
 }
 
 
@@ -44,14 +45,12 @@ JobDefs {
 Job {
   Name = "BackupClient1"
   JobDefs = "DefaultJob"
-  Write Bootstrap = "@working_dir@/Client1.bsr"
 }
 
 #Job {
 #  Name = "BackupClient2"
 #  Client = @basename@2-fd
 #  JobDefs = "DefaultJob"
-#  Write Bootstrap = "@working_dir@/Client2.bsr"
 #}
 
 # Backup the catalog database (after the nightly save)
@@ -62,14 +61,12 @@ Job {
   FileSet="Catalog"
   Schedule = "WeeklyCycleAfterBackup"
   # This creates an ASCII copy of the catalog
-  # WARNING!!! Passing the password via the command line is insecure.
-  # see comments in make_catalog_backup for details.
-  # Arguments to make_catalog_backup are:
-  #  make_catalog_backup <database-name> <user-name> <password> <host>
-  RunBeforeJob = "@scriptdir@/make_catalog_backup @db_name@ @db_user@"
+  # Arguments to make_catalog_backup.pl are:
+  #  make_catalog_backup.pl <catalog-name>
+  RunBeforeJob = "@scriptdir@/make_catalog_backup.pl MyCatalog"
   # This deletes the copy of the catalog
   RunAfterJob  = "@scriptdir@/delete_catalog_backup"
-  Write Bootstrap = "@working_dir@/BackupCatalog.bsr"
+  Write Bootstrap = "@working_dir@/%n.bsr"
   Priority = 11                   # run after main backup
 }
 
@@ -151,7 +148,7 @@ FileSet {
     Options {
       signature = MD5
     }
-    File = @working_dir@/bacula.sql
+    File = "@working_dir@/@db_name@.sql"
   }
 }
 
@@ -280,9 +277,6 @@ Messages {
   append = "@working_dir@/log" = all, !skipped
 }
 
-
-
-    
 # Default pool definition
 Pool {
   Name = Default
@@ -291,6 +285,18 @@ Pool {
   AutoPrune = yes                     # Prune expired volumes
   Volume Retention = 365 days         # one year
 }
+
+# File Pool definition
+Pool {
+  Name = File
+  Pool Type = Backup
+  Recycle = yes                       # Bacula can automatically recycle Volumes
+  AutoPrune = yes                     # Prune expired volumes
+  Volume Retention = 365 days         # one year
+  Maximum Volume Bytes = 50G          # Limit Volume size to something reasonable
+  Maximum Volumes = 100               # Limit number of Volumes in Pool
+}
+
 
 # Scratch pool definition
 Pool {

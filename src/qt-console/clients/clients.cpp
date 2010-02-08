@@ -60,7 +60,6 @@ Clients::Clients()
     * selector tree. m_contextActions is QList of QActions */
    m_contextActions.append(actionRefreshClients);
    createContextMenu();
-   dockPage();
 }
 
 Clients::~Clients()
@@ -191,6 +190,7 @@ void Clients::PgSeltreeWidgetClicked()
    if(!m_populated) {
       populateTable();
    }
+   dockPage();
 }
 
 /*

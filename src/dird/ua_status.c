@@ -48,6 +48,7 @@ static void do_client_status(UAContext *ua, CLIENT *client, char *cmd);
 static void do_director_status(UAContext *ua);
 static void do_all_status(UAContext *ua);
 void status_slots(UAContext *ua, STORE *store);
+void status_content(UAContext *ua, STORE *store);
 
 static char OKqstatus[]   = "1000 OK .status\n";
 static char DotStatusJob[] = "JobId=%s JobStatus=%c JobErrors=%d\n";
@@ -456,7 +457,7 @@ static void prt_runtime(UAContext *ua, sched_pkt *sp)
    MEDIA_DBR mr;
    int orig_jobtype;
 
-   orig_jobtype = jcr->get_JobType();
+   orig_jobtype = jcr->getJobType();
    memset(&mr, 0, sizeof(mr));
    if (sp->job->JobType == JT_BACKUP) {
       jcr->db = NULL;
@@ -612,7 +613,7 @@ static void list_running_jobs(UAContext *ua)
          /* this is a console or other control job. We only show console
           * jobs in the status output.
           */
-         if (jcr->get_JobType() == JT_CONSOLE && !ua->api) {
+         if (jcr->getJobType() == JT_CONSOLE && !ua->api) {
             bstrftime_nc(dt, sizeof(dt), jcr->start_time);
             ua->send_msg(_("Console connected at %s\n"), dt);
          }
@@ -773,13 +774,13 @@ static void list_running_jobs(UAContext *ua)
          msg = _("Dir inserting Attributes");
          break;
       }
-      switch (jcr->get_JobType()) {
+      switch (jcr->getJobType()) {
       case JT_ADMIN:
       case JT_RESTORE:
          bstrncpy(level, "      ", sizeof(level));
          break;
       default:
-         bstrncpy(level, level_to_str(jcr->get_JobLevel()), sizeof(level));
+         bstrncpy(level, level_to_str(jcr->getJobLevel()), sizeof(level));
          level[7] = 0;
          break;
       }

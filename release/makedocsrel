@@ -104,6 +104,8 @@ bzip2 $base_pkg-$ver.tar
 ./sign $base_pkg-$ver.tar.bz2
 ls -l $base_pkg-$ver.tar.*
 
-cd ${src}
-git push
-git push --tags
+if [ a$push != ano ]; then
+   cd ${src}
+   git push origin $branch
+   git push origin tag $fulltag
+fi

@@ -50,6 +50,7 @@
 #include "restore/restoretree.h"
 #include "help/help.h"
 #include "jobs/jobs.h"
+#include "medialist/mediaview.h"
 #ifdef HAVE_QWT
 #include "jobgraphs/jobplot.h"
 #endif
@@ -80,7 +81,7 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent)
    treeWidget->setColumnCount(1);
    treeWidget->setHeaderLabel( tr("Select Page") );
    treeWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
-
+   // tabWidget->setTabsClosable(true);  /* wait for QT 4.5 */
    createPages();
 
    resetFocus(); /* lineEdit->setFocus() */
@@ -103,16 +104,17 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent)
       m_currentConsole->getDirResName(directoryResourceName);
       Pmsg1(100, "Setting initial window to %s\n", directoryResourceName.toUtf8().data());
    }
+   app->restoreOverrideCursor();
 }
 
 void MainWin::popLists()
 {
    foreach(Console *console, m_consoleHash)
       console->populateLists(true);
-   app->restoreOverrideCursor();
    m_doConnect = true;
    connectConsoleSignals();
    connectSignals();
+   app->restoreOverrideCursor();
    m_currentConsole->setCurrent();
 }
 
@@ -126,7 +128,7 @@ void MainWin::createPages()
    foreach_res(dir, R_DIRECTOR) {
 
       /* Create console tree stacked widget item */
-      m_currentConsole = new Console(stackedWidget);
+      m_currentConsole = new Console(tabWidget);
       m_currentConsole->setDirRes(dir);
       m_currentConsole->readSettings();
 
@@ -172,6 +174,7 @@ void MainWin::createPages()
          new JobPlot(NULL, pass);
 #endif
       new MediaList();
+      new MediaView();
       new Storage();
       if (m_openBrowser)
          new restoreTree();
@@ -179,7 +182,7 @@ void MainWin::createPages()
          new DirStat();
 
       treeWidget->expandItem(topItem);
-      stackedWidget->setCurrentWidget(m_currentConsole);
+      tabWidget->setCurrentWidget(m_currentConsole);
    }
    UnlockRes();
 }
@@ -250,7 +253,7 @@ void MainWin::connectSignals()
    connect(actionBat_Help, SIGNAL(triggered()), this, SLOT(help()));
    connect(treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(treeItemClicked(QTreeWidgetItem *, int)));
    connect(treeWidget, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
-   connect(stackedWidget, SIGNAL(currentChanged(int)), this, SLOT(stackItemChanged(int)));
+   connect(tabWidget, SIGNAL(currentChanged(int)), this, SLOT(stackItemChanged(int)));
    connect(actionQuit, SIGNAL(triggered()), app, SLOT(closeAllWindows()));
    connect(actionLabel, SIGNAL(triggered()), this,  SLOT(labelButtonClicked()));
    connect(actionRun, SIGNAL(triggered()), this,  SLOT(runButtonClicked()));
@@ -277,7 +280,7 @@ void MainWin::disconnectSignals()
    disconnect(actionBat_Help, SIGNAL(triggered()), this, SLOT(help()));
    disconnect(treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(treeItemClicked(QTreeWidgetItem *, int)));
    disconnect(treeWidget, SIGNAL( currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
-   disconnect(stackedWidget, SIGNAL(currentChanged(int)), this, SLOT(stackItemChanged(int)));
+   disconnect(tabWidget, SIGNAL(currentChanged(int)), this, SLOT(stackItemChanged(int)));
    disconnect(actionQuit, SIGNAL(triggered()), app, SLOT(closeAllWindows()));
    disconnect(actionLabel, SIGNAL(triggered()), this,  SLOT(labelButtonClicked()));
    disconnect(actionRun, SIGNAL(triggered()), this,  SLOT(runButtonClicked()));
@@ -322,13 +325,13 @@ void MainWin::waitExit()
 {
    m_waitState = false;
    if (mainWin->m_connDebug) Pmsg0(000, "Exiting Wait State\n");
-   app->restoreOverrideCursor();
    if (m_waitTreeItem != treeWidget->currentItem())
       treeWidget->setCurrentItem(m_waitTreeItem);
    if (m_doConnect) {
       connectSignals();
       connectConsoleSignals();
    }
+   app->restoreOverrideCursor();
 }
 
 void MainWin::connectConsoleSignals()
@@ -427,10 +430,10 @@ void MainWin::treeItemClicked(QTreeWidgetItem *item, int /*column*/)
    /* Is this a page that has been inserted into the hash  */
    if (getFromHash(item)) {
       Pages* page = getFromHash(item);
-      int stackindex=stackedWidget->indexOf(page);
+      int stackindex=tabWidget->indexOf(page);
 
       if (stackindex >= 0) {
-         stackedWidget->setCurrentWidget(page);
+         tabWidget->setCurrentWidget(page);
       }
       /* run the virtual function in case this class overrides it */
       page->PgSeltreeWidgetClicked();
@@ -511,12 +514,12 @@ void MainWin::treeItemChanged(QTreeWidgetItem *currentitem, QTreeWidgetItem *pre
          dirItem->setBackground(0, magentaBrush);
       }
       /* set the value for the currently active console */
-      int stackindex = stackedWidget->indexOf(nextPage);
+      int stackindex = tabWidget->indexOf(nextPage);
    
       /* Is this page currently on the stack or is it undocked */
       if (stackindex >= 0) {
          /* put this page on the top of the stack */
-         stackedWidget->setCurrentIndex(stackindex);
+         tabWidget->setCurrentIndex(stackindex);
       } else {
          /* it is undocked, raise it to the front */
          nextPage->raise();
@@ -655,7 +658,7 @@ void MainWin::set_status(const char *buf)
  */
 void MainWin::undockWindowButton()
 {
-   Pages* page = (Pages*)stackedWidget->currentWidget();
+   Pages* page = (Pages*)tabWidget->currentWidget();
    page->togglePageDocking();
 }
 
@@ -683,9 +686,16 @@ void MainWin::toggleDockContextWindow()
 void MainWin::stackItemChanged(int)
 {
    if (m_isClosing) return; /* if closing the application, do nothing here */
-   Pages* page = (Pages*)stackedWidget->currentWidget();
+   Pages* page = (Pages*)tabWidget->currentWidget();
    /* run the virtual function in case this class overrides it */
    page->currentStackItem();
+   if (!m_waitState) {
+      disconnect(treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(treeItemClicked(QTreeWidgetItem *, int)));
+      disconnect(treeWidget, SIGNAL( currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
+      treeWidget->setCurrentItem(getFromHash(page));
+      connect(treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(treeItemClicked(QTreeWidgetItem *, int)));
+      connect(treeWidget, SIGNAL(currentItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)), this, SLOT(treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *)));
+   }
 }
 
 /*

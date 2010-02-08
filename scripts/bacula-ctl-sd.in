@@ -128,7 +128,8 @@ pidofproc() {
    fi
 
    # Finally try to extract it from ps
-   ${PSCMD} | grep $1 | ${AWK} '{ print $1 }' | tr '\n' ' '
+   pid=`${PSCMD} | grep $1 | ${AWK} '{ print $1 }' | tr '\n' ' '`
+   echo $pid
    return 0
 }
 
@@ -207,7 +208,7 @@ case "$1" in
 	    OPTIONS="${OPTIONS} -g ${SD_GROUP}"
 	 fi
 
-	 ${BACSDBIN}/bacula-sd $2 ${OPTIONS} -v -c ${BACSDCFG}/bacula-sd.conf
+	 ${BACSDBIN}/bacula-sd $2 $3 ${OPTIONS} -v -c ${BACSDCFG}/bacula-sd.conf
       }
       ;;
 

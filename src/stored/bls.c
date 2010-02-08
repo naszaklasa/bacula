@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,6 @@
  * 
  *  Kern Sibbald, MM
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -110,6 +109,7 @@ int main (int argc, char *argv[])
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
    init_stack_dump();
+   lmgr_init_thread();
 
    working_directory = "/tmp";
    my_name_is(argc, argv, "bls");
@@ -385,14 +385,11 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       if (!unpack_attributes_record(jcr, rec->Stream, rec->data, attr)) {
          if (!forge_on) {
             Emsg0(M_ERROR_TERM, 0, _("Cannot continue.\n"));
+         } else {
+            Emsg0(M_ERROR, 0, _("Attrib unpack error!\n"));
          }
          num_files++;
          return true;
-      }
-
-      if (attr->file_index != rec->FileIndex) {
-         Emsg2(forge_on?M_WARNING:M_ERROR_TERM, 0, _("Record header file index %ld not equal record index %ld\n"),
-               rec->FileIndex, attr->file_index);
       }
 
       attr->data_stream = decode_stat(attr->attr, &attr->statp, &attr->LinkFI);
@@ -441,8 +438,18 @@ static void get_session_record(DEVICE *dev, DEV_RECORD *rec, SESSION_LABEL *sess
    case EOM_LABEL:
       rtype = _("End of Medium");
       break;
+   case EOT_LABEL:
+      rtype = _("End of Physical Medium");
+      break;
+   case SOB_LABEL:
+      rtype = _("Start of object");
+      break;
+   case EOB_LABEL:
+      rtype = _("End of object");
+      break;
    default:
       rtype = _("Unknown");
+      Dmsg1(10, "FI rtype=%d unknown\n", rec->FileIndex);     
       break;
    }
    Dmsg5(10, "%s Record: VolSessionId=%d VolSessionTime=%d JobId=%d DataLen=%d\n",

@@ -48,15 +48,15 @@ Get the mingw installation from http://trolltech.com/developer/downloads/qt/wind
 ftp://ftp.qtsoftware.com/qt/source
 
 
-$ wine qt-win-opensource-4.4.1-mingw.exe
+$ wine qt-win-opensource-4.3.5-mingw.exe
  * Install under c:\Qt (no space)
  * no worry about mingw installation
 
-$ cp -r ~/.wine/drive_c/Qt/4.4.1/src/    depkgs-mingw32/include
-$ cp -r ~/.wine/drive_c/Qt/4.4.1/include depkgs-mingw32/include/qt
-$ cp -r ~/.wine/drive_c/Qt/4.4.1/lib     depkgs-mingw32/lib/qt
-# cp ~/.wine/drive_c/Qt/4.4.1/bin/QtCore4.dll src/win32/release32
-# cp ~/.wine/drive_c/Qt/4.4.1/bin/QtGui4.dll src/win32/release32
+$ cp -r ~/.wine/drive_c/Qt/4.3.5/src/    depkgs-mingw32/include
+$ cp -r ~/.wine/drive_c/Qt/4.3.5/include depkgs-mingw32/include/qt
+$ cp -r ~/.wine/drive_c/Qt/4.3.5/lib     depkgs-mingw32/lib/qt
+# cp ~/.wine/drive_c/Qt/4.3.5/bin/QtCore4.dll src/win32/release32
+# cp ~/.wine/drive_c/Qt/4.3.5/bin/QtGui4.dll src/win32/release32
 
 MINGW setup
 -----------
@@ -78,6 +78,8 @@ Compile bat
 -----------
 
 $ cd bacula/src/qt-console
+$ export DEPKGS="directory above cross-tools and depkgs"
+$ ./make-win32 clean
 $ ./make-win32
 
 Cleanup
@@ -103,7 +105,7 @@ You'll need
    mingwm10.dll
    bat.conf
 
-You can find the Qt dlls in ~/.wine/drive_c/Qt/4.4.1/bin
+You can find the Qt dlls in ~/.wine/drive_c/Qt/4.3.5/bin
 
 Run Bat with wine
 -----------------

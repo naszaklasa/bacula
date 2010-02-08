@@ -42,8 +42,9 @@ const int dbglvl = 50;
 /* Version at end of Hello
  *   prior to 10Mar08 no version
  *   1 10Mar08
+ *   2 13Mar09 - added the ability to restore from multiple storages
  */
-static char OK_hello[]  = "2000 OK Hello 1\n";
+static char OK_hello[]  = "2000 OK Hello 2\n";
 static char Dir_sorry[] = "2999 Authentication failed.\n";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 

@@ -1,15 +1,18 @@
 #!/bin/sh
 #
 # This routine creates the Bacula database
-#  using PostgreSQL, MySQL, or SQLite.
+#  using PostgreSQL, Ingres, MySQL, or SQLite.
 #
-if test xsqlite = x@DB_TYPE@ -o xsqlite3 = x@DB_TYPE@ ; then
+if test xsqlite3 = x@DB_TYPE@ ; then
   echo "Creating SQLite database"
   @scriptdir@/create_@DB_TYPE@_database
 else
   if test xmysql = x@DB_TYPE@ ; then
     echo "Creating MySQL database"
     @scriptdir@/create_mysql_database $*
+  elif test xingres = x@DB_TYPE@ ; then
+    echo "Creating Ingres database"
+    @scriptdir@/create_ingres_database $*
   else
     echo "Creating PostgreSQL database"
     @scriptdir@/create_postgresql_database $*

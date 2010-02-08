@@ -13,109 +13,56 @@ DEFINES := \
 	-DVERSION=$(VERSION) \
 	-DOUT_DIR=..\\release32 \
 	-DSRC_DIR=release32 \
-	-DBUILD_TOOLS=MinGW \
+	-DBUILD_TOOLS=MinGW32 \
+	-DWINVER=32
 
 INSTALL_EXE := $(BUILDDIR)/release32/winbacula-$(VERSION).exe
 
 BACULA_BINARIES := \
 	bacula.dll \
-	cats_mysql.dll \
-	cats_postgresql.dll \
-	cats_sqlite3.dll \
 	exchange-fd.dll \
-	bacula-dir.exe \
 	bacula-fd.exe \
-	bacula-sd.exe \
 	bconsole.exe \
-	bcopy.exe \
-	bextract.exe \
-	bls.exe \
-	bscan.exe \
 	bsleep.exe \
 	bsmtp.exe \
-	btape.exe \
-	dbcheck.exe \
-	scsilist.exe \
-	bwx-console.exe
+	bat.exe
 
 DEPKGS_BINARIES := \
 	libeay32.dll \
 	pthreadGCE.dll \
 	ssleay32.dll \
 	zlib1.dll \
-	sqlite3.exe \
 	openssl.exe \
-	loaderinfo.exe \
-	mt.exe \
-	mtx.exe \
-	scsitape.exe \
 	sed.exe \
-	tapeinfo.exe \
 	expr64.exe \
 	snooze.exe \
 	mkisofs.exe \
 	growisofs.exe \
-	dvd-ram-control.exe \
-	dvd+rw-booktype.exe \
-	dvd+rw-format.exe \
-	dvd+rw-mediainfo.exe \
-	wxbase28_gcc_bacula.dll \
-	wxmsw28_core_gcc_bacula.dll
+	QtCore4.dll \
+	QtGui4.dll
 
-NONGCC_BINARIES := \
-	libmysql.dll
+NONGCC_BINARIES :=
 
-NONGCC_LIBRARIES := \
-	libpq.dll
+NONGCC_LIBRARIES := 
 
 MINGW_BINARIES := \
 	mingwm10.dll
 
-SCRIPT_FILES := \
-	mtx-changer.cmd \
-	disk-changer.cmd \
-	dvd-handler.cmd
+SCRIPT_FILES := 
 
-CAT_FILES := \
-	create_mysql_database.cmd \
-	drop_mysql_database.cmd \
-	make_mysql_tables.cmd \
-	make_mysql_tables.sql \
-	drop_mysql_tables.cmd \
-	drop_mysql_tables.sql \
-	grant_mysql_privileges.cmd \
-	grant_mysql_privileges.sql \
-	make_mysql_catalog_backup.cmd \
-	create_postgresql_database.cmd \
-	create_postgresql_database.sql \
-	drop_postgresql_database.cmd \
-	make_postgresql_tables.cmd \
-	make_postgresql_tables.sql \
-	drop_postgresql_tables.cmd \
-	drop_postgresql_tables.sql \
-	grant_postgresql_privileges.cmd \
-	grant_postgresql_privileges.sql \
-	make_postgresql_catalog_backup.cmd \
-	create_sqlite3_database.cmd \
-	drop_sqlite3_database.cmd \
-	make_sqlite3_tables.cmd \
-	make_sqlite3_tables.sql \
-	drop_sqlite3_tables.cmd \
-	grant_sqlite3_privileges.cmd \
-	make_sqlite3_catalog_backup.cmd \
-	delete_catalog_backup.cmd
+CAT_FILES := 
 
-DIRD_FILES := \
-	query.sql
+DIRD_FILES := 
 
 SSL_FILES := \
 	openssl.cnf
 
 DOC_FILES := \
-	manual/bacula.pdf \
-	manual/bacula/*.html \
-	manual/bacula/*.png  \
-	manual/bacula/*.css
+	docs/manuals/en/console/console.pdf \
+	docs/manuals/en/main/main.pdf \
+	docs/manuals/en/misc/misc.pdf \
+	docs/manuals/en/problems/problems.pdf \
+	docs/manuals/en/utility/utility.pdf
 
 ##########################################################################
 

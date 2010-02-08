@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -38,7 +38,6 @@
  * for the external world. This is control with
  * the define __SQL_C, which is defined only in sql.c
  *
- *    Version $Id$
  */
 
 /*
@@ -73,7 +72,8 @@ enum {
    SQL_TYPE_MYSQL      = 0,
    SQL_TYPE_POSTGRESQL = 1,
    SQL_TYPE_SQLITE     = 2,
-   SQL_TYPE_SQLITE3
+   SQL_TYPE_SQLITE3    = 3,
+   SQL_TYPE_INGRES     = 4
 };
 
 
@@ -87,8 +87,9 @@ typedef int (DB_RESULT_HANDLER)(void *, int, char **);
 
 #if defined(BUILDING_CATS)
 #ifdef HAVE_SQLITE
+#error "SQLite2 is now deprecated, use SQLite3 instead."
 
-#define BDB_VERSION 11
+#define BDB_VERSION 12
 
 #include <sqlite.h>
 
@@ -166,18 +167,20 @@ struct B_DB {
 #ifdef HAVE_SQLITE3
 #define sql_insert_id(x,y)    sqlite3_last_insert_rowid((x)->db)
 #define sql_close(x)          sqlite3_close((x)->db)
+#define sql_affected_rows(x)  sqlite3_changes((x)->db)
 #else
 #define sql_insert_id(x,y)    sqlite_last_insert_rowid((x)->db)
 #define sql_close(x)          sqlite_close((x)->db)
+#define sql_affected_rows(x)  1
 #endif
 #define sql_strerror(x)       (x)->sqlite_errmsg?(x)->sqlite_errmsg:"unknown"
 #define sql_num_rows(x)       (x)->nrow
 #define sql_data_seek(x, i)   (x)->row = (i)
-#define sql_affected_rows(x)  1
 #define sql_field_seek(x, y)  my_sqlite_field_seek((x), (y))
 #define sql_fetch_field(x)    my_sqlite_fetch_field(x)
 #define sql_num_fields(x)     ((x)->ncolumn)
 #define SQL_ROW               char**
+#define SQL_MATCH             "MATCH"
 
 #define sql_batch_start(x,y)    my_batch_start(x,y)
 #define sql_batch_end(x,y,z)    my_batch_end(x,y,z)
@@ -208,7 +211,7 @@ extern const char* my_sqlite_batch_fill_path_query;
 #ifdef HAVE_SQLITE3
 
 
-#define BDB_VERSION 11
+#define BDB_VERSION 12
 
 #include <sqlite3.h>
 
@@ -304,7 +307,7 @@ struct B_DB {
 #define sql_strerror(x)       (x)->sqlite_errmsg?(x)->sqlite_errmsg:"unknown"
 #define sql_num_rows(x)       (x)->nrow
 #define sql_data_seek(x, i)   (x)->row = (i)
-#define sql_affected_rows(x)  1
+#define sql_affected_rows(x)  sqlite3_changes((x)->db)
 #define sql_field_seek(x, y)  my_sqlite_field_seek((x), (y))
 #define sql_fetch_field(x)    my_sqlite_fetch_field(x)
 #define sql_num_fields(x)     ((x)->ncolumn)
@@ -312,6 +315,7 @@ struct B_DB {
 #define sql_batch_end(x,y,z)    my_batch_end(x,y,z)
 #define sql_batch_insert(x,y,z) my_batch_insert(x,y,z)
 #define SQL_ROW               char**
+#define SQL_MATCH             "MATCH"
 #define sql_batch_lock_path_query       my_sqlite_batch_lock_query
 #define sql_batch_lock_filename_query   my_sqlite_batch_lock_query
 #define sql_batch_unlock_tables_query   my_sqlite_batch_unlock_query
@@ -334,7 +338,7 @@ extern const char* my_sqlite_batch_fill_path_query;
 
 #ifdef HAVE_MYSQL
 
-#define BDB_VERSION 11
+#define BDB_VERSION 12
 
 #include <mysql.h>
 
@@ -395,6 +399,7 @@ struct B_DB {
 #define sql_num_fields(x)     (int)mysql_num_fields((x)->result)
 #define SQL_ROW               MYSQL_ROW
 #define SQL_FIELD             MYSQL_FIELD
+#define SQL_MATCH             "MATCH"
 
 #define sql_batch_start(x,y)    my_batch_start(x,y)
 #define sql_batch_end(x,y,z)    my_batch_end(x,y,z)
@@ -417,7 +422,7 @@ extern void  my_mysql_free_result(B_DB *mdb);
 
 #ifdef HAVE_POSTGRESQL
 
-#define BDB_VERSION 11
+#define BDB_VERSION 12
 
 #include <libpq-fe.h>
 
@@ -526,12 +531,121 @@ extern const char* my_pg_batch_fill_path_query;
 
 #define SQL_ROW               POSTGRESQL_ROW
 #define SQL_FIELD             POSTGRESQL_FIELD
+#define SQL_MATCH             "~"
+
+#else
+
+#ifdef HAVE_INGRES
+
+#include "myingres.h"
+
+#define BDB_VERSION 11
+
+/* TEMP: the following is taken from select OID, typname from pg_type; */ /*SRE: huh? */
+#define IS_NUM(x)        ((x) == 20 || (x) == 21 || (x) == 23 || (x) == 700 || (x) == 701)
+#define IS_NOT_NULL(x)   ((x) == 1)
+
+typedef char **INGRES_ROW;
+
+/*
+ * This is the "real" definition that should only be
+ * used inside sql.c and associated database interface
+ * subroutines.
+ *
+ *                     I N G R E S
+ */
+struct B_DB {
+   BQUEUE bq;                         /* queue control */
+   brwlock_t lock;                    /* transaction lock */
+   INGconn *db;
+   INGresult *result;
+   int status;
+   INGRES_ROW row;
+   INGRES_FIELD *fields;
+   int num_rows;
+   int row_size;                  /* size of malloced rows */
+   int num_fields;
+   int fields_size;               /* size of malloced fields */
+   int row_number;                /* row number from my_ingres_data_seek */
+   int field_number;              /* field number from my_ingres_field_seek */
+   int ref_count;
+   char *db_name;
+   char *db_user;
+   char *db_password;
+   char *db_address;              /* host address */
+   char *db_socket;               /* socket for local access */
+   int db_port;                   /* port of host address */
+   int have_insert_id;            /* do have insert_id() */
+   bool connected;
+   POOLMEM *errmsg;               /* nicely edited error message */
+   POOLMEM *cmd;                  /* SQL command string */
+   POOLMEM *cached_path;
+   int cached_path_len;           /* length of cached path */
+   uint32_t cached_path_id;
+   bool allow_transactions;       /* transactions allowed */
+   bool transaction;              /* transaction started */
+   int changes;                   /* changes made to db */
+   POOLMEM *fname;                /* Filename only */
+   POOLMEM *path;                 /* Path only */
+   POOLMEM *esc_name;             /* Escaped file name */
+   POOLMEM *esc_path;             /* Escaped path name */
+   int fnl;                       /* file name length */
+   int pnl;                       /* path name length */
+};
+
+void               my_ingres_free_result(B_DB *mdb);
+INGRES_ROW         my_ingres_fetch_row  (B_DB *mdb);
+int                my_ingres_query      (B_DB *mdb, const char *query);
+void               my_ingres_data_seek  (B_DB *mdb, int row);
+int                my_ingres_currval    (B_DB *mdb, const char *table_name);
+void               my_ingres_field_seek (B_DB *mdb, int row);
+INGRES_FIELD *     my_ingres_fetch_field(B_DB *mdb);
+void               my_ingres_close      (B_DB *mdb);
+
+int my_ingres_batch_start(JCR *jcr, B_DB *mdb);
+int my_ingres_batch_end(JCR *jcr, B_DB *mdb, const char *error);
+typedef struct ATTR_DBR ATTR_DBR;
+int my_ingres_batch_insert(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
+char *my_ingres_copy_escape(char *dest, char *src, size_t len);
+
+extern const char* my_ingres_batch_lock_path_query;
+extern const char* my_ingres_batch_lock_filename_query;
+extern const char* my_ingres_batch_unlock_tables_query;
+extern const char* my_ingres_batch_fill_filename_query;
+extern const char* my_ingres_batch_fill_path_query;
+
+/* "Generic" names for easier conversion */
+#define sql_store_result(x)   ((x)->result)
+#define sql_free_result(x)    my_ingres_free_result(x)
+#define sql_fetch_row(x)      my_ingres_fetch_row(x)
+#define sql_query(x, y)       my_ingres_query((x), (y))
+#define sql_close(x)          my_ingres_close(x)
+#define sql_strerror(x)       INGerrorMessage((x)->db)
+#define sql_num_rows(x)       ((unsigned) INGntuples((x)->result))
+#define sql_data_seek(x, i)   my_ingres_data_seek((x), (i))
+#define sql_affected_rows(x)  ((unsigned) atoi(INGcmdTuples((x)->result)))
+#define sql_insert_id(x,y)    my_ingres_currval((x), (y))
+#define sql_field_seek(x, y)  my_ingres_field_seek((x), (y))
+#define sql_fetch_field(x)    my_ingres_fetch_field(x)
+#define sql_num_fields(x)     ((x)->num_fields)
+
+#define sql_batch_start(x,y)    my_ingres_batch_start(x,y)
+#define sql_batch_end(x,y,z)    my_ingres_batch_end(x,y,z)
+#define sql_batch_insert(x,y,z) my_ingres_batch_insert(x,y,z)
+#define sql_batch_lock_path_query       my_ingres_batch_lock_path_query
+#define sql_batch_lock_filename_query   my_ingres_batch_lock_filename_query
+#define sql_batch_unlock_tables_query   my_ingres_batch_unlock_tables_query
+#define sql_batch_fill_filename_query   my_ingres_batch_fill_filename_query
+#define sql_batch_fill_path_query       my_ingres_batch_fill_path_query
+
+#define SQL_ROW               INGRES_ROW
+#define SQL_FIELD             INGRES_FIELD
 
 #else
 
 #ifdef HAVE_DBI
 
-#define BDB_VERSION 11
+#define BDB_VERSION 12
 
 #include <dbi/dbi.h>
 
@@ -633,6 +747,7 @@ extern const char* my_dbi_batch_lock_filename_query[4];
 extern const char* my_dbi_batch_unlock_tables_query[4];
 extern const char* my_dbi_batch_fill_filename_query[4];
 extern const char* my_dbi_batch_fill_path_query[4];
+extern const char* my_dbi_match[4];
 
 /* "Generic" names for easier conversion */
 #define sql_store_result(x)   (x)->result
@@ -643,6 +758,7 @@ extern const char* my_dbi_batch_fill_path_query[4];
 #define sql_strerror(x)       my_dbi_strerror(x)
 #define sql_num_rows(x)       dbi_result_get_numrows((x)->result)
 #define sql_data_seek(x, i)   my_dbi_data_seek((x), (i))
+#define SQL_MATCH             my_dbi_match[db_type]
 /* #define sql_affected_rows(x)  dbi_result_get_numrows_affected((x)->result) */
 #define sql_affected_rows(x)  1
 #define sql_insert_id(x,y)    my_dbi_sql_insert_id((x), (y))
@@ -711,6 +827,7 @@ struct B_DB {
 #endif /* HAVE_MYSQL */
 #endif /* HAVE_SQLITE */
 #endif /* HAVE_POSTGRESQL */
+#endif /* HAVE_INGRES */
 #endif /* HAVE_DBI */
 #endif
 
@@ -828,7 +945,7 @@ struct JOBMEDIA_DBR {
    uint32_t EndFile;                  /* End file on Volume */
    uint32_t StartBlock;               /* start block on tape */
    uint32_t EndBlock;                 /* last block */
-   uint32_t Copy;                     /* identical copy */
+// uint32_t Copy;                     /* identical copy */
 };
 
 
@@ -859,6 +976,7 @@ struct ATTR_DBR {
    char *attr;                        /* attributes statp */
    uint32_t FileIndex;
    uint32_t Stream;
+   uint32_t FileType;
    JobId_t  JobId;
    DBId_t ClientId;
    DBId_t PathId;
@@ -894,6 +1012,7 @@ struct POOL_DBR {
    int32_t AcceptAnyVolume;           /* set to accept any volume sequence */
    int32_t AutoPrune;                 /* set to prune automatically */
    int32_t Recycle;                   /* default Vol recycle flag */
+   uint32_t ActionOnPurge;            /* action on purge, e.g. truncate the disk volume */
    utime_t  VolRetention;             /* retention period in seconds */
    utime_t  VolUseDuration;           /* time in secs volume can be used */
    uint32_t MaxVolJobs;               /* Max Jobs on Volume */
@@ -969,6 +1088,7 @@ struct MEDIA_DBR {
    uint64_t VolWriteTime;             /* time spent writing volume */
    utime_t  VolRetention;             /* Volume retention in seconds */
    utime_t  VolUseDuration;           /* time in secs volume can be used */
+   uint32_t ActionOnPurge;            /* action on purge, e.g. truncate the disk volume */
    uint32_t MaxVolJobs;               /* Max Jobs on Volume */
    uint32_t MaxVolFiles;              /* Max files on Volume */
    int32_t  Recycle;                  /* recycle yes/no */
@@ -1037,7 +1157,9 @@ struct db_int64_ctx {
    int count;                         /* number of values seen */
 };
 
-/* Call back context for getting a list of comma separated strings from the database */
+/* Call back context for getting a list of comma separated strings from the
+ * database 
+ */
 class db_list_ctx {
 public:
    POOLMEM *list;                     /* list */
@@ -1045,6 +1167,10 @@ public:
 
    db_list_ctx() { list = get_pool_memory(PM_FNAME); *list = 0; count = 0; }
    ~db_list_ctx() { free_pool_memory(list); list = NULL; }
+
+private:
+   db_list_ctx(const db_list_ctx&);            /* prohibit pass by value */
+   db_list_ctx &operator=(const db_list_ctx&); /* prohibit class assignment */
 };
 
 
@@ -1055,7 +1181,7 @@ public:
 /*
  * Exported globals from sql.c
  */
-extern int DLL_IMP_EXP db_type;        /* SQL engine type index */
+extern int CATS_IMP_EXP db_type;        /* SQL engine type index */
 
 /*
  * Some functions exported by sql.c for use within the
@@ -1065,6 +1191,7 @@ void list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_t
 void list_dashes(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx);
 int get_sql_record_max(JCR *jcr, B_DB *mdb);
 bool check_tables_version(JCR *jcr, B_DB *mdb);
+bool db_check_max_connections(JCR *jcr, B_DB *mdb, uint32_t nb);
 void _db_unlock(const char *file, int line, B_DB *mdb);
 void _db_lock(const char *file, int line, B_DB *mdb);
 const char *db_get_type(void);

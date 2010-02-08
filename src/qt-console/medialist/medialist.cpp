@@ -41,6 +41,7 @@
 #include <math.h>
 #include "medialist.h"
 #include "mediaedit/mediaedit.h"
+#include "mediainfo/mediainfo.h"
 #include "joblist/joblist.h"
 #include "relabel/relabel.h"
 #include "run/run.h"
@@ -49,7 +50,7 @@
 MediaList::MediaList()
 {
    setupUi(this);
-   m_name = tr("Media");
+   m_name = tr("Pools");
    pgInitialize();
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/cartridge.png")));
@@ -61,7 +62,6 @@ MediaList::MediaList()
    /* add context sensitive menu items specific to this classto the page
     * selector tree. m_contextActions is QList of QActions */
    m_contextActions.append(actionRefreshMediaList);
-   dockPage();
 }
 
 MediaList::~MediaList()
@@ -87,7 +87,7 @@ void MediaList::populateTree()
       << tr("Jobs") << tr("Retention") << tr("Media Type") << tr("Slot") << tr("Use Duration")
       << tr("Max Jobs") << tr("Max Files") << tr("Max Bytes") << tr("Recycle")
       << tr("Last Written") << tr("First Written") << tr("Read Time")
-      << tr("Write Time") << tr("Recycle Count") << tr("Recycle Pool") << tr("Scratch Pool"));
+      << tr("Write Time") << tr("Recycle Count") << tr("Recycle Pool"));
 
    m_checkcurwidget = false;
    mp_treeWidget->clear();
@@ -133,11 +133,10 @@ void MediaList::populateTree()
          " Media.FirstWritten AS FirstWritten,"
          " (VolReadTime/1000000) AS ReadTime, (VolWriteTime/1000000) AS WriteTime,"
          " RecycleCount AS ReCyCount,"
-         " RecPool.Name AS RecyclePool, ScrPool.Name AS ScratchPool"
+         " RecPool.Name AS RecyclePool"
          " FROM Media"
          " JOIN Pool ON (Media.PoolId=Pool.PoolId)"
          " LEFT OUTER JOIN Pool AS RecPool ON (Media.RecyclePoolId=RecPool.PoolId)"
-         " LEFT OUTER JOIN Pool AS ScrPool ON (Media.ScratchPoolId=ScrPool.PoolId)"
          " WHERE ";
       query += " Pool.Name IN (" + pool_comsep + ")";
       query += " ORDER BY Pool.Name, Media";
@@ -248,9 +247,6 @@ void MediaList::populateTree()
             /* recycle pool */
             mediaitem.setTextFld(index++, fld.next()); 
 
-            /* Scratch pool */
-            mediaitem.setTextFld(index++, fld.next()); 
-
          } /* foreach resultline */
          counter += 1;
       } /* if results from query */
@@ -281,6 +277,17 @@ void MediaList::showJobs()
 }
 
 /*
+ * Called from the signal of the context sensitive menu!
+ */
+void MediaList::viewVolume()
+{
+   QTreeWidgetItem *parentItem = mainWin->getFromHash(this);
+   MediaInfo* view = new MediaInfo(parentItem, m_currentVolumeName);
+   connect(view, SIGNAL(destroyed()), this, SLOT(populateTree()));
+
+}
+
+/*
  * When the treeWidgetItem in the page selector tree is singleclicked, Make sure
  * The tree has been populated.
  */
@@ -290,6 +297,7 @@ void MediaList::PgSeltreeWidgetClicked()
       populateTree();
       createContextMenu();
    }
+   dockPage();
 }
 
 /*
@@ -333,6 +341,7 @@ void MediaList::treeItemChanged(QTreeWidgetItem *currentwidgetitem, QTreeWidgetI
 void MediaList::createContextMenu()
 {
    mp_treeWidget->setContextMenuPolicy(Qt::ActionsContextMenu);
+   connect(mp_treeWidget, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int)), this, SLOT(viewVolume()));
    connect(actionEditVolume, SIGNAL(triggered()), this, SLOT(editVolume()));
    connect(actionListJobsOnVolume, SIGNAL(triggered()), this, SLOT(showJobs()));
    connect(actionDeleteVolume, SIGNAL(triggered()), this, SLOT(deleteVolume()));

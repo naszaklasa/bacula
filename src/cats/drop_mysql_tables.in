@@ -33,6 +33,8 @@ DROP TABLE IF EXISTS MAC;
 DROP TABLE IF EXISTS Log;
 DROP TABLE IF EXISTS Location;
 DROP TABLE IF EXISTS LocationLog;
+DROP TABLE IF EXISTS PathVisibility;
+DROP TABLE IF EXISTS PathHierarchy;
 END-OF-DATA
 then
    echo "Deletion of ${db_name} MySQL tables succeeded."
