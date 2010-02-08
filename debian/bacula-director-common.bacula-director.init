@@ -32,6 +32,7 @@ fi
 
 PIDFILE=/var/run/bacula/$NAME.$PORT.pid
 
+. /lib/lsb/init-functions
 . /usr/share/bacula-common/common-functions
 create_var_run_dir
 
@@ -118,11 +119,15 @@ case "$1" in
 	do_start
 	echo "$NAME."
   ;;
-  
+
+  status)
+       status_of_proc -p $PIDFILE $DAEMON $NAME
+  ;;
+
   *)
 	N=/etc/init.d/$NAME
 	# echo "Usage: $N {start|stop|restart|reload|force-reload}" >&2
-	echo "Usage: $N {start|stop|restart|reload|force-reload}" >&2
+	echo "Usage: $N {start|stop|restart|reload|force-reload|status}" >&2
 	exit 1
 	;;
 esac

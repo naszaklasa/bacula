@@ -30,6 +30,7 @@ if [ -n "`getent services bacula-fd`" ]; then
 	PORT=`getent services bacula-fd | awk '{ gsub("/tcp","",$2); print $2; }'`
 fi
 
+. /lib/lsb/init-functions
 . /usr/share/bacula-common/common-functions
 create_var_run_dir
 
@@ -63,9 +64,12 @@ case "$1" in
 		--exec $DAEMON -- $ARGS
 	echo "$NAME."
 	;;
+  status)
+	status_of_proc -p $PIDFILE $DAEMON $NAME
+	;;
   *)
 	N=/etc/init.d/$NAME
-	echo "Usage: $N {start|stop|restart|force-reload}" >&2
+	echo "Usage: $N {start|stop|restart|force-reload|status}" >&2
 	exit 1
 	;;
 esac

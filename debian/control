@@ -86,7 +86,7 @@ Description: network backup, recovery and verification - MySQL common files
 Package: bacula-director-common
 Architecture: any
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0, bacula-common (= ${binary:Version})
-Depends: ${shlibs:Depends}, adduser, mailx
+Depends: ${shlibs:Depends}, adduser, mailx, lsb-base (>= 3.2-13)
 Description: network backup, recovery and verification - Director common files
  Bacula is a set of programs to manage backup, recovery and verification of
  data across a network of computers of different kinds.
@@ -185,7 +185,7 @@ Description: network backup, recovery and verification - client meta-package
 
 Package: bacula-fd
 Architecture: any
-Depends: bacula-common (= ${binary:Version}), ${shlibs:Depends}
+Depends: bacula-common (= ${binary:Version}), ${shlibs:Depends}, lsb-base (>= 3.2-13)
 Suggests: bacula-traymonitor
 Description: network backup, recovery and verification - file daemon
  Bacula is a set of programs to manage backup, recovery and verification of
@@ -209,7 +209,7 @@ Description: network backup, recovery and verification - server meta-package
 Package: bacula-sd
 Architecture: any
 Pre-Depends: bacula-common (= ${binary:Version})
-Depends: ${shlibs:Depends}, mtx, python
+Depends: ${shlibs:Depends}, mtx, python, lsb-base (>= 3.2-13)
 Recommends: mt-st, bacula-sd-tools
 Suggests: dds2tar, scsitools, sg3-utils
 Description: network backup, recovery and verification - storage daemon
