@@ -30,23 +30,17 @@ dbc_first_version=3.0.3-3
 # set in config, must not be set here: dbc_dbname=bacula.db
 # set in config, must not be set here: dbc_basepath=/var/lib/bacula
 
-if [ -n "$2" ]; then
+#if [ -n "$2" ]; then
 	/etc/init.d/bacula-director stop || true
 	sleep 1
-fi
+#fi
 
 
 #### REMOVE THIS CODE POST-SQUEEZE
 CONVERTED_SQLITE2=NO
 
 if [ "$1" = "configure" ] ; then
-    if [ -f /etc/dbconfig-common/bacula-director-sqlite3.conf ]; then
-      . /etc/dbconfig-common/bacula-director-sqlite3.conf
-    fi
-    DB="$dbc_basepath/$dbc_dbname"
-    if [ -z "$DB" ]; then
-        DB=/var/lib/bacula/bacula.db
-    fi
+    DB=/var/lib/bacula/bacula.db
     echo -n " *** Checking type of existing DB at $DB: "
     if [ -f "$DB" ]; then
         if file "$DB" | grep -q "SQLite 2"; then
@@ -88,7 +82,7 @@ if [ -f /usr/share/dbconfig-common/dpkg/config.sqlite3 ]; then
       # pass a fake prior version number to dbc_go.  Otherwise, it
       # would think that this is a new sqlite3 install and not upgrade
       # the database.
-      dbc_go bacula-director-sqlite3 bacula-director-sqlite3 configure 2.4.4-1
+      dbc_go bacula-director-sqlite3 configure 2.4.4-1
   else
       dbc_go bacula-director-sqlite3 $@
   fi
