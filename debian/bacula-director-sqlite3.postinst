@@ -103,7 +103,7 @@ configure)
         . /etc/dbconfig-common/bacula-director-sqlite3.conf
 	TARGET=$CFGFILE.dpkg-tmp
         # FIXME: should this tweak make_catalog_backup like bacula-director-pgsql.postinst does?
-	sed -e "s/dbname = bacula;/dbname = \"$dbc_basepath/$dbc_dbname\";" \
+	sed -e "s,dbname = bacula;,dbname = \"$dbc_basepath/$dbc_dbname\";," \
             -e 's/ user = @db_user@;//' -e 's/ password = "@db_pswd@";//' \
 		$DEFCONFIG/bacula-dir.conf > $TARGET
         
