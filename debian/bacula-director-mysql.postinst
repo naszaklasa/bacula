@@ -40,6 +40,12 @@ POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
 DEFCONFIG="/usr/share/bacula-common/defconfig"
 CFGFILE="/etc/bacula/bacula-dir.conf"
 
+if [ -n "$2" ]; then
+	/etc/init.d/bacula-director stop || true
+	sleep 1
+fi
+
+
 case "$1" in
 configure)
 
@@ -68,11 +74,6 @@ esac
 
 # Do start daemon
 db_stop
-
-if [ -n "$2" ]; then
-	/etc/init.d/bacula-director stop
-	sleep 1
-fi
 
 invoke-rc.d --quiet bacula-director start
 

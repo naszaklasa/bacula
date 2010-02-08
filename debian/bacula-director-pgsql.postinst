@@ -46,6 +46,12 @@ PGSQL=/usr/bin/psql
 GRANT_SQL_PRIVS="/usr/share/bacula-director/grant_pgsql_privileges"
 AUTHFILE=`getent passwd bacula | cut -d ':' -f 6`/.pgpass
 
+if [ -n "$2" ]; then
+	/etc/init.d/bacula-director stop || true
+	sleep 1
+fi
+
+
 case "$1" in
 configure)
 	
@@ -78,11 +84,6 @@ esac
 
 # Do start daemon
 db_stop
-
-if [ -n "$2" ]; then
-	/etc/init.d/bacula-director stop
-	sleep 1
-fi
 
 invoke-rc.d --quiet bacula-director start
 

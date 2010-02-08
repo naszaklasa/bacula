@@ -30,6 +30,11 @@ dbc_dbuser=bacula
 dbc_dbname=bacula.db
 dbc_basepath=/var/lib/bacula
 
+if [ -n "$2" ]; then
+	/etc/init.d/bacula-director stop || true
+	sleep 1
+fi
+
 
 #### REMOVE THIS CODE POST-SQUEEZE
 CONVERTED_SQLITE2=NO
@@ -119,11 +124,6 @@ esac
 
 # Do start daemon
 db_stop
-
-if [ -n "$2" ]; then
-	/etc/init.d/bacula-director stop
-	sleep 1
-fi
 
 invoke-rc.d --quiet bacula-director start
 
