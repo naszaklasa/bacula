@@ -1,7 +1,7 @@
 bacula (3.0.3-3) unstable; urgency=medium
 
   * Fixed situation where dbconfig-common bits weren't being called.  This
-    prevented proper upgrades from lenny.  Closes: #516900.
+    prevented proper upgrades from lenny.  Closes: #516900, #542774.
   * Convert Sqlite3 to use dbconfig-common like PostgreSQL and MySQL directors
     have been for some time now.
   * This change means it now correctly upgrades from Sqlite2.
@@ -16,7 +16,7 @@ bacula (3.0.3-3) unstable; urgency=medium
   * Add lsb init.d status support.  Patch from Peter Eisentraut.
     Closes: #536573.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 08 Feb 2010 14:32:36 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 08 Feb 2010 14:37:04 -0600
 
 bacula (3.0.3-2) unstable; urgency=medium
 
