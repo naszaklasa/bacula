@@ -26,9 +26,9 @@ set -e
 #     `abort-remove' or `abort-deconfigure'.
 
 dbc_first_version=3.0.3-3
-dbc_dbuser=bacula
-dbc_dbname=bacula.db
-dbc_basepath=/var/lib/bacula
+# set in config, must not be set here: dbc_dbuser=bacula
+# set in config, must not be set here: dbc_dbname=bacula.db
+# set in config, must not be set here: dbc_basepath=/var/lib/bacula
 
 if [ -n "$2" ]; then
 	/etc/init.d/bacula-director stop || true
@@ -44,6 +44,9 @@ if [ "$1" = "configure" ] ; then
       . /etc/dbconfig-common/bacula-director-sqlite3.conf
     fi
     DB="$dbc_basepath/$dbc_dbname"
+    if [ -z "$DB" ]; then
+        DB=/var/lib/bacula/bacula.db
+    fi
     echo -n " *** Checking type of existing DB at $DB: "
     if [ -f "$DB" ]; then
         if file "$DB" | grep -q "SQLite 2"; then
