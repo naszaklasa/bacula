@@ -4,8 +4,9 @@ bacula (5.0.0-1) experimental; urgency=low
   * Removed build-dep option libreadline5-dev, leaving only libreadline-dev
     option.  Closes: #553735.
   * Update bacula-console-qt section to utils to match override file.
+  * Update standards-version to 3.8.3.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 08 Feb 2010 15:40:01 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 08 Feb 2010 15:44:00 -0600
 
 bacula (3.0.3-3) unstable; urgency=medium
 
