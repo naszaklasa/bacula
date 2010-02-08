@@ -10,8 +10,9 @@ bacula (3.0.3-3) experimental; urgency=low
     Closes: #568469.
   * Clean up handling of database upgrade scripts in debian/rules to make it
     easier to handle new Bacula versions when they arrive.
+  * Make sure to stop the director before upgrading its database.
 
- -- John Goerzen <jgoerzen@complete.org>  Fri, 05 Feb 2010 10:53:12 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 08 Feb 2010 11:10:20 -0600
 
 bacula (3.0.3-2) unstable; urgency=medium
 
