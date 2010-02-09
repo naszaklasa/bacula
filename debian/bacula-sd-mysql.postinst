@@ -1,9 +1,8 @@
 #! /bin/bash
-# postinst script for bacula-fd
+# postinst script for bacula-sd-*
 #
 
 . /usr/share/debconf/confmodule
-db_version 2.0
  
 set -e
 
@@ -25,28 +24,11 @@ set -e
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
-SRCDIR="/usr/share/bacula-common/defconfig"
-DSTDIR="/etc/bacula"
-CONFIG="bacula-fd.conf"
 
 
 case "$1" in
     configure)
-
-	if [ ! -f $DSTDIR/$CONFIG ]; then
-		TARGET=$DSTDIR/$CONFIG
-	else
-		TARGET=$DSTDIR/$CONFIG.dist
-	fi
-
-	sed -e s~@hostname@~`hostname`~ < $SRCDIR/$CONFIG > $TARGET
-
-	# Harden permissions, so that passwords can not be looked at
-	chown root:root $TARGET
-	chmod 640 $TARGET
-
-        invoke-rc.d bacula-fd restart
-
+        invoke-rc.d bacula-sd restart
     ;; 
 
     abort-upgrade|abort-remove|abort-deconfigure)
