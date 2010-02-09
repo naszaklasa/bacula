@@ -1,8 +1,9 @@
 bacula (5.0.0-3) unstable; urgency=low
 
   * Added MySQL indices to match PostgreSQL ones.  Closes: #563899.
+  * Copy slight spelling tweak to debian/copyright.
 
- -- John Goerzen <jgoerzen@complete.org>  Tue, 09 Feb 2010 16:01:13 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Tue, 09 Feb 2010 16:10:11 -0600
 
 bacula (5.0.0-2) unstable; urgency=low
 
