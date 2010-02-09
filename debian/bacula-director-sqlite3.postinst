@@ -30,6 +30,7 @@ dbc_first_version=3.0.3-3
 # set in config, must not be set here: dbc_dbname=bacula.db
 # set in config, must not be set here: dbc_basepath=/var/lib/bacula
 
+# After squeeze, restore this test.  This was needed for sqlite2 migration.
 #if [ -n "$2" ]; then
 	/etc/init.d/bacula-director stop || true
 	sleep 1
