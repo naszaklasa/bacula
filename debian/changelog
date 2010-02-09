@@ -1,5 +1,6 @@
 bacula (5.0.0-2) unstable; urgency=low
 
+  * Now upload 5.0.x to unstable.
   * Now install mtx-changer.conf in bacula-sd.  Closes: #531471.
   * Now restart fd and sd on postinst configure.  Closes: #444636.
 
