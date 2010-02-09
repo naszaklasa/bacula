@@ -43,6 +43,8 @@ CREATE TABLE File (
    PRIMARY KEY(FileId),
    INDEX (JobId),
    INDEX (JobId, PathId, FilenameId)
+   INDEX (PathId),
+   INDEX (FilenameId),
    );
 
 #
@@ -50,8 +52,6 @@ CREATE TABLE File (
 #  to the above File table if your Verifies are
 #  too slow.
 #
-#  INDEX (PathId),
-#  INDEX (FilenameId),
 #  INDEX (FilenameId, PathId)
 #  INDEX (JobId),
 #
