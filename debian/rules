@@ -43,7 +43,7 @@ DBC := usr/share/dbconfig-common/data/
 CONF_ALL	= --enable-smartalloc \
 	--with-python --with-tcp-wrappers \
 	--with-openssl \
-	--with-libiconv-prefix=/usr/include --with-readline \
+	--with-libiconv-prefix=/usr/include --with-readline=/usr/include/readline \
 	--disable-conio \
 	--with-libintl-prefix=/usr/include --with-x \
 		--docdir=\$${prefix}/share/doc/bacula-common \
