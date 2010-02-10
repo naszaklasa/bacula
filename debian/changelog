@@ -11,8 +11,10 @@ bacula (5.0.0-3) unstable; urgency=low
   * [lintian] Add ${misc:Depends} to all package Depends lines.
   * [lintian] Bump debhelper compat level to 6.
   * [lintian] Update build-dep on debhelper due to use of dh_lintian.
+  * [lintian] No longer create /var/run in .dirs files.  init scripts are
+    already making sure it's there.
 
- -- John Goerzen <jgoerzen@complete.org>  Wed, 10 Feb 2010 13:59:15 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 10 Feb 2010 14:02:38 -0600
 
 bacula (5.0.0-2) unstable; urgency=low
 
