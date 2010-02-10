@@ -1,3 +1,10 @@
+bacula (5.0.0-4) unstable; urgency=low
+
+  * Remove bad patch that caused double-restart of init scripts.
+    Closes: #569126.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 10 Feb 2010 13:17:54 -0600
+
 bacula (5.0.0-3) unstable; urgency=low
 
   * Added MySQL indices to match PostgreSQL ones.  Closes: #563899.
