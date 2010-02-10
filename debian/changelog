@@ -1,18 +1,13 @@
-bacula (5.0.0-4) unstable; urgency=low
+bacula (5.0.0-3) unstable; urgency=low
 
+  * Added MySQL indices to match PostgreSQL ones.  Closes: #563899.
+  * Copy slight spelling tweak to debian/copyright.
   * Remove bad patch that caused double-restart of init scripts.
     Closes: #569126.
   * Fixed errant DROP INDEX command in sqlite upgrade process.
   * Added --disable-conio to ./configure args to force use of readline.
     --with-readline=yes was already supplied.  This will enable
     new tab completion code.  Closes: #569154, #513393.
-
- -- John Goerzen <jgoerzen@complete.org>  Wed, 10 Feb 2010 13:52:15 -0600
-
-bacula (5.0.0-3) unstable; urgency=low
-
-  * Added MySQL indices to match PostgreSQL ones.  Closes: #563899.
-  * Copy slight spelling tweak to debian/copyright.
 
  -- John Goerzen <jgoerzen@complete.org>  Tue, 09 Feb 2010 16:10:11 -0600
 
