@@ -44,9 +44,6 @@ case "$1" in
 	# Harden permissions, so that passwords can not be looked at
 	chown root:root $TARGET
 	chmod 640 $TARGET
-
-        invoke-rc.d bacula-fd restart
-
     ;; 
 
     abort-upgrade|abort-remove|abort-deconfigure)
