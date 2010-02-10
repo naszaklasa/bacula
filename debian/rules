@@ -44,6 +44,7 @@ CONF_ALL	= --enable-smartalloc \
 	--with-python --with-tcp-wrappers \
 	--with-openssl \
 	--with-libiconv-prefix=/usr/include --with-readline=yes \
+	--disable-conio \
 	--with-libintl-prefix=/usr/include --with-x --with-readline=yes \
 		--docdir=\$${prefix}/share/doc/bacula-common \
 		--htmldir=\$${prefix}/share/doc/bacula-common/html \

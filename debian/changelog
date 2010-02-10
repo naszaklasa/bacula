@@ -3,8 +3,11 @@ bacula (5.0.0-4) unstable; urgency=low
   * Remove bad patch that caused double-restart of init scripts.
     Closes: #569126.
   * Fixed errant DROP INDEX command in sqlite upgrade process.
+  * Added --disable-conio to ./configure args to force use of readline.
+    --with-readline=yes was already supplied.  This will enable
+    new tab completion code.  Closes: #569154, #513393.
 
- -- John Goerzen <jgoerzen@complete.org>  Wed, 10 Feb 2010 13:36:37 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 10 Feb 2010 13:52:15 -0600
 
 bacula (5.0.0-3) unstable; urgency=low
 
