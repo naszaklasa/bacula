@@ -1,3 +1,7 @@
+# jgoerzen additions
+.pc/
+debian/patches/
+# upstream follows
 src/cats/make_catalog_backup.pl
 scripts/make_catalog_backup.pl
 src/TAGS
