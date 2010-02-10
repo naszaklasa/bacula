@@ -62,7 +62,7 @@ UPDATE Version SET VersionId=12;
 COMMIT;
 
 DROP INDEX inx4;
-DROP INDEX inx9; -- can generate errors
+DROP INDEX IF EXISTS inx9;
 CREATE INDEX file_jpf_idx ON File (JobId, PathId, FilenameId);
 
 END-OF-DATA

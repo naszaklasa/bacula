@@ -2,8 +2,9 @@ bacula (5.0.0-4) unstable; urgency=low
 
   * Remove bad patch that caused double-restart of init scripts.
     Closes: #569126.
+  * Fixed errant DROP INDEX command in sqlite upgrade process.
 
- -- John Goerzen <jgoerzen@complete.org>  Wed, 10 Feb 2010 13:17:54 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 10 Feb 2010 13:36:37 -0600
 
 bacula (5.0.0-3) unstable; urgency=low
 
