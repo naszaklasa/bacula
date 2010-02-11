@@ -1,3 +1,9 @@
+bacula (5.0.0-5) UNRELEASED; urgency=low
+
+  * Fix bashism in scripts/disk-changer.in.  Closes: #530049.
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 11 Feb 2010 09:14:35 -0600
+
 bacula (5.0.0-4) unstable; urgency=low
 
   * Corrected fail to install bug: after removing /var/run from the package
