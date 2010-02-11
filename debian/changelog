@@ -1,3 +1,11 @@
+bacula (5.0.0-4) unstable; urgency=low
+
+  * Corrected fail to install bug: after removing /var/run from the package
+    in 5.0.0-3, needed to also remove reference to it in
+    bacula-common.postinst.  Closes: #569288, #569298, #569305, #569326.
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 11 Feb 2010 08:05:47 -0600
+
 bacula (5.0.0-3) unstable; urgency=low
 
   * Added MySQL indices to match PostgreSQL ones.  Closes: #563899.

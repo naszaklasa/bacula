@@ -27,8 +27,6 @@ set -e
 
 case "$1" in
     configure)
-	chown bacula:daemon /var/run/bacula
-	chmod 755 /var/run/bacula
 	chown bacula:bacula /var/lib/bacula
 	chmod 700 /var/lib/bacula
 	chown bacula:adm /var/log/bacula
