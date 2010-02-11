@@ -136,8 +136,10 @@ get_dir() {
    bn=`basename $device`
    dir=`echo "$device" | sed -e s%/$bn%%g`
    if [ ! -d $dir ]; then
-      echo "ERROR: Autochanger directory \"$dir\" does not exist.\n"
-      echo "	   You must create it.\n"
+      echo "ERROR: Autochanger directory \"$dir\" does not exist."
+      echo " "
+      echo "	   You must create it."
+      echo " "
       exit 1
    fi
 }
