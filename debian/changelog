@@ -1,8 +1,9 @@
 bacula (5.0.0-5) UNRELEASED; urgency=low
 
   * Fix bashism in scripts/disk-changer.in.  Closes: #530049.
+  * Correct MySQL index patch to avoid syntax error.  Closes: #569535.
 
- -- John Goerzen <jgoerzen@complete.org>  Thu, 11 Feb 2010 09:14:35 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Fri, 12 Feb 2010 10:27:55 -0600
 
 bacula (5.0.0-4) unstable; urgency=low
 
