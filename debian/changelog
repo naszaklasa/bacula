@@ -5,6 +5,8 @@ bacula (5.0.0-5) UNRELEASED; urgency=medium
   * Corrected MySQL upgrade issue by adding a shell script to determine
     whether to remove Stripe column from JobMedia table.
     Closes: #569285.
+  * Patch from Petr Salinger to disable ACLs on kfreebsd-* archs.
+    This corrects a FTBFS and Closes: #570890.
 
  -- John Goerzen <jgoerzen@complete.org>  Mon, 22 Feb 2010 11:14:09 -0600
 
