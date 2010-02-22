@@ -35,6 +35,7 @@ mysqlcmd () {
     MYSQLUSER="--skip-comments"    # a no-op for us
     MYSQLPASS="--skip-comments"
     MYSQLSERVER="--skip-comments"
+    MYSQLPORT="--skip-comments"
     if [ -n "$dbc_dbuser" ]; 
         then MYSQLUSER="--user=$dbc_dbuser"
     fi
@@ -51,7 +52,7 @@ mysqlcmd () {
         then MYSQLPORT="$MYSQL --port=$dbc_dbport"
     fi
 
-    mysql "$MYSQLUSER" "$MYSQLPASS" "$MYSQLSERVER" "$MYSQLPORT" "$@" "$dbc_dbname"
+    mysql "$MYSQLUSER" "$MYSQLPASS" "$MYSQLSERVER" "$MYSQLPORT" "$dbc_dbname"
 }
 
 if echo "DESCRIBE JobMedia;" | mysqlcmd | grep -q -i Stripe; then
