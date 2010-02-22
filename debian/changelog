@@ -10,8 +10,10 @@ bacula (5.0.0-5) UNRELEASED; urgency=medium
     Closes: #569285.
   * Patch from Petr Salinger to disable ACLs on kfreebsd-* archs.
     This corrects a FTBFS and Closes: #570890.
+  * Correct saving password to bacula-dir.conf on new install
+    with MySQL or PostgreSQL flavor.  Closes: #538824.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 22 Feb 2010 11:14:09 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 22 Feb 2010 12:12:54 -0600
 
 bacula (5.0.0-4) unstable; urgency=low
 
