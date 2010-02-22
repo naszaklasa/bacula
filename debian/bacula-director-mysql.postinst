@@ -53,9 +53,7 @@ configure)
         . /etc/dbconfig-common/bacula-director-mysql.conf
 	TARGET=$CFGFILE.dpkg-tmp
         # FIXME: should this tweak make_catalog_backup like bacula-director-pgsql.postinst does?
-	sed -e "s/dbname = bacula;/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\";/" \
-	-e "s/@db_user@/$dbc_dbuser/" -e "s/@db_pswd@/$dbc_dbpass/" \
-		$DEFCONFIG/bacula-dir.conf > $TARGET
+        sed "s/dbname =.*/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\"; dbuser = \"$dbc_dbuser\"; dbpassword = \"$dbc_dbpass\";" $DEFCONFIG/bacula-dir.conf > $TARGET
         
 	/bin/bash $POSTINST_COMMON
 

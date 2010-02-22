@@ -61,8 +61,7 @@ configure)
 
         if [ "$dbc_install" = "true" ] ; then
             sed -e "s/make_catalog_backup bacula bacula/make_catalog_backup -h '$dbc_dbserver' -U $dbc_dbuser/" \
-		-e "s/dbname = bacula;/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\";/" \
-		-e "s/@db_user@/$dbc_dbuser/" -e "s/@db_pswd@/$dbc_dbpass/" \
+                -e "s/dbname =.*/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\"; dbuser = \"$dbc_dbuser\"; dbpassword = \"$dbc_dbpass\";" \
 		$DEFCONFIG/bacula-dir.conf > $TARGET
         fi
 
