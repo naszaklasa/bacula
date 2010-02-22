@@ -1,4 +1,4 @@
-bacula (5.0.0-5) UNRELEASED; urgency=medium
+bacula (5.0.0-5) unstable; urgency=medium
 
   * Fix bashism in scripts/disk-changer.in.  Closes: #530049.
   * Correct MySQL index patch to avoid syntax error on install.
@@ -14,7 +14,7 @@ bacula (5.0.0-5) UNRELEASED; urgency=medium
     with MySQL or PostgreSQL flavor.  Closes: #538824.
   * Added make_catalog_backup.pl script to *-director debs.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 22 Feb 2010 12:16:15 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 22 Feb 2010 13:47:19 -0600
 
 bacula (5.0.0-4) unstable; urgency=low
 
