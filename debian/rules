@@ -213,6 +213,9 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	$(call ext-install,mysql,debian/tmp-build-mysql/src/cats/make_mysql_tables)
 # Remove USE bacula -- dbconfig-common selects the database for us
 	sed -i -e 's/USE \$${db_name};//' -e 's/USE bacula;//' debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/install/mysql debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/upgrade/mysql/*
+
+# Next two lines required for upgrade to 5.0.0.  Remove that and
+# debian/bacula-director-mysql.script.5.0.0 post-squeeze
 	cp debian/bacula-director-mysql.script.5.0.0 \
 			debian/bacula-director-mysql/usr/share/dbconfig-common/scripts/bacula-director-mysql/upgrade/mysql/5.0.0
 	chmod 0755 debian/bacula-director-mysql/usr/share/dbconfig-common/scripts/bacula-director-mysql/upgrade/mysql/5.0.0
