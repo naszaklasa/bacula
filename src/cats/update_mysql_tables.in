@@ -15,7 +15,6 @@ db_name=@db_name@
 if mysql $* -f <<END-OF-DATA
 USE ${db_name};
 
-ALTER TABLE JobMedia DROP Stripe ;
 ALTER TABLE JobMedia DROP Copy ;
 ALTER TABLE Job ADD COLUMN HasCache tinyint default 0 after HasBase;
 ALTER TABLE Job ADD COLUMN Reviewed tinyint default 0 after HasCache;
