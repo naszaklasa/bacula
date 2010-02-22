@@ -32,9 +32,9 @@
 . /etc/dbconfig-common/bacula-director-mysql.conf
 
 mysqlcmd () {
-    MYSQLUSER=""
-    MYSQLPASS=""
-    MYSQLSERVER=""
+    MYSQLUSER="--skip-comments"    # a no-op for us
+    MYSQLPASS="--skip-comments"
+    MYSQLSERVER="--skip-comments"
     if [ -n "$dbc_dbuser" ]; 
         then MYSQLUSER="--user=$dbc_dbuser"
     fi
