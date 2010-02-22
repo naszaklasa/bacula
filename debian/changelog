@@ -1,9 +1,12 @@
 bacula (5.0.0-5) UNRELEASED; urgency=medium
 
   * Fix bashism in scripts/disk-changer.in.  Closes: #530049.
-  * Correct MySQL index patch to avoid syntax error.  Closes: #569535.
+  * Correct MySQL index patch to avoid syntax error on install.
+    Closes: #569535.
   * Corrected MySQL upgrade issue by adding a shell script to determine
-    whether to remove Stripe column from JobMedia table.
+    whether to remove Stripe column from JobMedia table.  This would have
+    caused upgrade to crash for people that had upgraded all the way from
+    the 1.x days.
     Closes: #569285.
   * Patch from Petr Salinger to disable ACLs on kfreebsd-* archs.
     This corrects a FTBFS and Closes: #570890.
