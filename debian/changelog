@@ -1,9 +1,12 @@
-bacula (5.0.0-5) UNRELEASED; urgency=low
+bacula (5.0.0-5) UNRELEASED; urgency=medium
 
   * Fix bashism in scripts/disk-changer.in.  Closes: #530049.
   * Correct MySQL index patch to avoid syntax error.  Closes: #569535.
+  * Corrected MySQL upgrade issue by adding a shell script to determine
+    whether to remove Stripe column from JobMedia table.
+    Closes: #569285.
 
- -- John Goerzen <jgoerzen@complete.org>  Fri, 12 Feb 2010 10:27:55 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 22 Feb 2010 11:14:09 -0600
 
 bacula (5.0.0-4) unstable; urgency=low
 
