@@ -20,9 +20,11 @@ set -e
 
 case "$1" in
 	purge)
-		userdel bacula 2>&1 > /dev/null || true
+		userdel bacula > /dev/nulli 2>&1 || true
 		rm -rf /var/run/bacula
 		rm -rf /etc/bacula
+		rm -rf /var/log/bacula
+		rm -rf /var/lib/bacula
 	;;
 
 	remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)

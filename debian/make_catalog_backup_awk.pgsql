@@ -1,0 +1,51 @@
+#!/usr/bin/gawk -f
+# extract.awk script expects Catalog definition in a form of:
+# Catalog {
+#	Name = NameOfCatalog
+#	dbname = ""; DB Address = ""; user = ""; password = ""; DB Socket = ""; DB Port = ""
+# }
+#
+
+     
+BEGIN { RS= "}" ; FS="[;\n]+"}
+
+function trim(v) {
+	## Remove leading and trailing spaces
+	sub(/^ */,"",v)
+	sub(/ *$/,"",v)
+	return v
+}
+
+
+$0 ~ /Catalog[[:space:]]*{/   { 
+	for ( i = 1; i <= NF ; i++)
+	{
+		split($i,a,"=")
+		if (a[1] ~ /dbname/) 
+			dbname = trim(gensub("\"","","g",a[2])) # remove " char
+		if (a[1] ~ /user/)
+			user = trim(gensub("\"","","g",a[2]))
+		if (a[1] ~ /Name/)
+			catname = trim(gensub("\"","","g",a[2]))
+		if (a[1] ~ /password/)
+			password = trim(gensub("\"","","g",a[2]))
+		if (a[1] ~ /DB Address/)
+			dbaddress = trim(gensub("\"","","g",a[2]))
+		if (a[1] ~ /DB Socket/)
+			dbsocket = trim(gensub("\"","","g",a[2]))
+		if (a[1] ~ /DB Port/)
+			dbport = trim(gensub("\"","","g",a[2]))
+	}
+
+	if (catname == cat1 || catname == cat2 || catname == cat3 || catname == cat4) {
+		if (dbaddress == "") #Not optional in the case of MySQL
+			dbaddress = "localhost"
+		system("rm -rf /var/lib/bacula/pg_service.conf")
+		system("touch /var/lib/bacula/pg_service.conf")
+		system("chmod 600 /var/lib/bacula/pg_service.conf")
+		printf "[bacula]\n  dbname=%s\n  user=%s\n  password=%s\n",dbname,user,password >> "/var/lib/bacula/pg_service.conf"
+		if (dbport != "")
+			printf "  port=%s\n",dbport >> "/var/lib/bacula/pg_service.conf"
+		system("HOME=/var/lib/bacula PGSERVICE=bacula PGSYSCONFDIR=/var/lib/bacula pg_dump > /var/lib/bacula/bacula.sql")
+	}
+}
