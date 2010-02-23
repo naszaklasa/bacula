@@ -25,12 +25,30 @@ set -e
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
+DBCHECK=`db_get bacula/dir_passwd`
+
+if [ "$DBCHECK" = "" ]; then
+        DIRPASSWD=`cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c33`
+        DIRMPASSWD=`cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c33`
+        SDPASSWD=`cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c33`
+        SDMPASSWD=`cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c33`
+        FDPASSWD=`cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c33`
+        FDMPASSWD=`cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c33`
+fi
+
+
 case "$1" in
     configure)
 	chown bacula:bacula /var/lib/bacula
 	chmod 700 /var/lib/bacula
 	chown bacula:adm /var/log/bacula
 	chmod 750 /var/log/bacula
+        db_set bacula/dir_passwd "$DIRPASSWD"
+        db_set bacula/dir_monpasswd "$DIRMPASSWD"
+        db_set bacula/sd_passwd "$SDPASSWD"
+        db_set bacula/sd_monpasswd "$SDMPASSWD"
+        db_set bacula/fd_passwd "$FDPASSWD"
+        db_set bacula/fd_monpasswd "$FDMPASSWD"
 
     ;;
 
