@@ -13,6 +13,9 @@
 #       Modified for Debian GNU/Linux by Ian Murdock <imurdock@gnu.ai.mit.edu>
 #       Customized for Bacula by Jose Luis Tallon <jltallon@adv-solutions.net>
 #
+
+. /lib/lsb/init-functions
+
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/sbin/bacula-sd
 NAME="bacula-sd"
@@ -33,33 +36,45 @@ create_var_run_dir
 
 PIDFILE=/var/run/bacula/$NAME.$PORT.pid
 
+do_start()
+{
+        start-stop-daemon --start --quiet --pidfile $PIDFILE \
+        --exec $DAEMON -- $ARGS
+}
+
+do_stop()
+{
+        start-stop-daemon --oknodo --stop --quiet --pidfile $PIDFILE \
+        --exec $DAEMON -- $ARGS
+}
+
 case "$1" in
   start)
 	if [ -f /etc/bacula/do_not_run ]; then
-		echo "Not starting $DESC: disabled via /etc/bacula/do_not_run"
+		log_failure_msg "Not starting $DESC: disabled via /etc/bacula/do_not_run"
 		exit 0
 	fi
 
-	echo -n "Starting $DESC: "
-	start-stop-daemon --start --quiet --pidfile $PIDFILE \
-		--exec $DAEMON -- $ARGS
-	echo "$NAME."
+	log_daemon_msg "Starting $DESC..."
+	if do_start ; then
+                log_end_msg 0
+        else
+                log_end_msg 1
+        fi
 	;;
   stop)
-	echo -n "Stopping $DESC: "
-	start-stop-daemon --oknodo --stop --quiet --pidfile $PIDFILE \
-		--exec $DAEMON -- $ARGS
-	echo "$NAME."
+	log_daemon_msg "Stopping $DESC... "
+        if do_stop ; then
+                log_end_msg 0
+        else
+                log_end_msg 1
+        fi
 	;;
 
   restart|force-reload)
-	echo -n "Restarting $DESC: "
-	start-stop-daemon --stop --quiet --pidfile $PIDFILE \
-		--exec $DAEMON -- $ARGS
-	sleep 1
-	start-stop-daemon --start --quiet --pidfile $PIDFILE \
-		--exec $DAEMON -- $ARGS
-	echo "$NAME."
+	$0 stop
+        sleep 1
+        $0 start
 	;;
   *)
 	N=/etc/init.d/$NAME

@@ -33,6 +33,7 @@ fi
 PIDFILE=/var/run/bacula/$NAME.$PORT.pid
 
 . /usr/share/bacula-common/common-functions
+. /lib/lsb/init-functions
 create_var_run_dir
 
 get_pid()
@@ -87,36 +88,39 @@ do_stop()
 case "$1" in
   start)
 	if [ -f /etc/bacula/do_not_run ]; then
-		echo "Not starting $DESC: disabled via /etc/bacula/do_not_run"
+                log_failure_msg "Not starting $DESC: disabled via /etc/bacula/do_not_run"
 		exit 0
 	fi
-	echo -n "Starting $DESC: "
 	create_var_run_dir
-	if do_start ; then echo "$NAME."
-	else echo "failed." ; fi
+	log_daemon_msg "Starting $DESC..."
+        if do_start ; then
+                log_end_msg 0
+        else
+                log_end_msg 1
+        fi
   ;;
 
   stop)
-	echo -n "Stopping $DESC: "
-	do_stop
-	echo "$NAME."
+        log_daemon_msg "Stopping $DESC..."
+        if do_stop ; then
+                log_end_msg 0
+        else
+                log_end_msg 1
+        fi
   ;;
 
   reload)
-  	echo -n "Reloading $DESC..."
-  	get_pid $PIDFILE
-	if [ -n "$pid" ]; then kill_pid HUP $pid ;
-  	else do_start ; 
-  	fi
-  	echo "$NAME."
+        log_daemon_msg "Reloading $DESC..."
+        get_pid $PIDFILE
+        if [ -n "$pid" ]; then kill_pid HUP $pid ;
+        else do_start ;
+        fi
   ;;
   
   restart|force-reload)
-	echo -n "Restarting $DESC: "
-	# redirect STDOUT so that it looks prettier :-)
-	do_stop
-	do_start
-	echo "$NAME."
+	$0 stop
+	sleep 1
+	$0 start
   ;;
   
   *)
