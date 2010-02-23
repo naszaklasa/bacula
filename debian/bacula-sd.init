@@ -13,9 +13,6 @@
 #       Modified for Debian GNU/Linux by Ian Murdock <imurdock@gnu.ai.mit.edu>
 #       Customized for Bacula by Jose Luis Tallon <jltallon@adv-solutions.net>
 #
-
-. /lib/lsb/init-functions
-
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/sbin/bacula-sd
 NAME="bacula-sd"

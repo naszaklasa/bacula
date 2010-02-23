@@ -34,7 +34,6 @@ PIDFILE=/var/run/bacula/$NAME.$PORT.pid
 
 . /lib/lsb/init-functions
 . /usr/share/bacula-common/common-functions
-. /lib/lsb/init-functions
 create_var_run_dir
 
 get_pid()
