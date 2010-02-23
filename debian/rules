@@ -141,7 +141,6 @@ build: patch build-arch build-indep
 ###############################################
 
 clean:
-	[ ! -f patch-stamp ] || patch -R -p0 -i debian/patches/ubuntu_bacula-dir.conf.patch
 
 	$(RM) *stamp*
 
@@ -244,7 +243,6 @@ install-stamp-%: build-stamp-%
 	$(MAKE) -C $(BUILDDIR)-$(*) install DESTDIR=$(INSTALLDIR)-$(*)
 
 	dh_install -pbacula-director-$(*)
-	cp debian/make_catalog_backup_awk.$(*) debian/bacula-director-$(*)/etc/bacula/scripts/make_catalog_backup_awk
 	touch $@
 
 
