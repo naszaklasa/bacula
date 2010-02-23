@@ -1,3 +1,13 @@
+bacula (5.0.0-6) UNRELEASED; urgency=low
+
+  * Generate default passwords at install time instead of at build time.
+    Closes: #365097.  Patch originated in Ubuntu; modified for Debian.
+    Merged to Debian master at 8381602cfbecaea0ca8559100020f878af81a237.
+  * Call rm -rf /var/{log,lib}/bacula on purge.  This patch was part of
+    Ubuntu's set merged above.
+
+ -- John Goerzen <jgoerzen@complete.org>  Tue, 23 Feb 2010 09:34:54 -0600
+
 bacula (5.0.0-5) unstable; urgency=medium
 
   * Fix bashism in scripts/disk-changer.in.  Closes: #530049.
