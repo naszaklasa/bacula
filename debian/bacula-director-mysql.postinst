@@ -41,6 +41,15 @@ if [ -f /usr/share/dbconfig-common/dpkg/config.mysql ]; then
   dbc_go bacula-director-mysql $@
 fi
 
+db_get bacula/dir_passwd
+DIRPASSWD="$RET"
+db_get bacula/dir_monpasswd
+DIRMPASSWD="$RET"
+db_get bacula/sd_passwd
+SDPASSWD="$RET"
+db_get bacula/fd_passwd
+FDPASSWD="$RET"
+
 case "$1" in
 configure)
 	
@@ -49,8 +58,13 @@ configure)
         . /etc/dbconfig-common/bacula-director-mysql.conf
 	TARGET=$CFGFILE.dpkg-tmp
 
-	sed -e "s/dbname = bacula;/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\";/" \
-	-e "s/@db_user@/$dbc_dbuser/" -e "s/@db_pswd@/$dbc_dbpass/" \
+	sed -e "s/make_catalog_backup bacula bacula/make_catalog_backup -h '$dbc_dbserver' -U $dbc_dbuser/" \
+	-e "s/dbname = \"XXX_DBNAME_XXX\";/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\";/" \
+	-e "s/XXX_DBUSER_XXX/$dbc_dbuser/" -e "s/XXX_DBPASSWORD_XXX/$dbc_dbpass/" \
+	-e s~XXX_DIRPASSWORD_XXX~$DIRPASSWD~ \
+	-e s~XXX_MONDIRPASSWORD_XXX~$DIRMPASSWD~ \
+	-e s~XXX_SDPASSWORD_XXX~$SDPASSWD~ \
+	-e s~XXX_FDPASSWORD_XXX~$FDPASSWD~ \
 		$DEFCONFIG/bacula-dir.conf > $TARGET
 
 	/bin/bash $POSTINST_COMMON

@@ -1,0 +1,23 @@
+Template: bacula/dir_passwd
+Type: string
+Description: Password for bacula-director
+
+Template: bacula/dir_monpasswd
+Type: string
+Description: Password for bacula-director monitor
+
+Template: bacula/sd_passwd
+Type: string
+Description: Password for bacula-sd
+
+Template: bacula/sd_monpasswd
+Type: string
+Description: Password for bacula-sd monitor
+
+Template: bacula/fd_passwd
+Type: string
+Description: Password for bacula-fd
+
+Template: bacula/fd_monpasswd
+Type: string
+Description: Password for bacula-fd monitor

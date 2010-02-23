@@ -1,0 +1,52 @@
+Template: bacula/db_host
+Type: string
+Default: localhost
+_Description: Database server hostname:
+ Please enter the hostname of the database server host.
+
+Template: bacula/dba_name
+Type: string
+Default: root
+_Description: Database administrator username:
+ Please enter the PostgreSQL administrator username, needed for
+ the database creation.
+
+Template: bacula/dba_password
+Type: password
+_Description: Database administrator password:
+ Please enter the PostgreSQL administrator password, needed for
+ the database creation.
+
+Template: bacula/dba_confirm
+Type: password
+_Description: DBA password confirmation:
+ Please confirm the password in order to continue the process.
+
+Template: bacula/mismatch
+Type: note
+_Description: Password mismatch
+ The password and its confirmation do not match. Please
+ reenter the passwords.
+
+Template: bacula/dbu_name
+Type: string
+Default: bacula
+_Description: Database owner username:
+ Please enter the username of the Bacula database owner.
+
+Template: bacula/dbu_password
+Type: password
+_Description: Database owner password:
+ Please enter the password of the Bacula database owner.
+
+Template: bacula/dbu_confirm
+Type: password
+_Description: Database user password confirmation:
+ Please confirm the password of the Bacula database owner.
+
+Template: bacula/notconfigured
+Type: note
+_Description: Warning - Bacula is not configured
+ Please note that you have not completed the Bacula configuration. For
+ completing it, please use "dpkg-reconfigure bacula-director-pgsql" later.
+

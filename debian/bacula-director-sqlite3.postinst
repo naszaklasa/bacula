@@ -34,6 +34,15 @@ POSTINST_COMMON=/usr/share/bacula-director/postinst-common
 DEFCONFIG=/usr/share/bacula-common/defconfig
 CFGFILE=/etc/bacula/bacula-dir.conf
 
+db_get bacula/dir_passwd
+DIRPASSWD="$RET"
+db_get bacula/dir_monpasswd
+DIRMPASSWD="$RET"
+db_get bacula/sd_passwd
+SDPASSWD="$RET"
+db_get bacula/fd_passwd
+FDPASSWD="$RET"
+
 case "$1" in
     configure)
 		touch $DB;	#Bug 243983
@@ -88,7 +97,13 @@ case "$1" in
 		# Preprocess configuration
 		TARGET=$CFGFILE.dpkg-tmp
 
-		sed -e 's/ user = @db_user@;//' -e 's/ password = "@db_pswd@";//' \
+		sed -e s~XXX_DIRPASSWORD_XXX~$DIRPASSWD~ \
+	        -e s~XXX_MONDIRPASSWORD_XXX~$DIRMPASSWD~ \
+	        -e s~XXX_SDPASSWORD_XXX~$SDPASSWD~ \
+	        -e s~XXX_FDPASSWORD_XXX~$FDPASSWD~ \
+		-e s~XXX_DBNAME_XXX~bacula~ \
+		-e s~XXX_DBUSER_XXX~~ \
+		-e s~XXX_DBPASSWORD_XXX~~ \
 			$DEFCONFIG/bacula-dir.conf > $TARGET
 
 		/bin/bash $POSTINST_COMMON
