@@ -1,7 +1,0 @@
-#!/bin/sh
-#
-# shell script to create Bacula SQLite tables
-db_name=@db_name@
-
-touch @working_dir@/${db_name}.db
-exit 0

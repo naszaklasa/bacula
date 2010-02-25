@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,7 @@
  *              Kern Sibbald, April MMI
  *                added BB02 format October MMII
  *
- *   Version $Id: record.c 8255 2008-12-26 16:49:12Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -66,6 +66,12 @@ const char *FI_to_ascii(char *buf, int fi)
       return "EOS_LABEL";
    case EOT_LABEL:
       return "EOT_LABEL";
+      break;
+   case SOB_LABEL:
+      return "SOB_LABEL";
+      break;
+   case EOB_LABEL:
+      return "EOB_LABEL";
       break;
    default:
      sprintf(buf, _("unknown: %d"), fi);

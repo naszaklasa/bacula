@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,8 +30,6 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: signal.c 8132 2008-12-09 19:21:38Z ricozz $
- *
  * Note, we probably should do a core dump for the serious
  * signals such as SIGBUS, SIGPFE, ...
  * Also, for SIGHUP and SIGUSR1, we should re-read the
@@ -53,7 +51,7 @@
 extern char my_name[];
 extern char *exepath;
 extern char *exename;
-extern void print_jcr_dbg();
+extern bool prt_kaboom;
 
 static const char *sig_names[BA_NSIG+1];
 
@@ -73,9 +71,9 @@ const char *get_signal_name(int sig)
 }
 
 /* defined in jcr.c */
-extern void _dbg_print_jcr(FILE *fp);
-/* defined in plugin.c */
-extern void _dbg_print_plugin(FILE *fp);
+extern void dbg_print_jcr(FILE *fp);
+/* defined in plugins.c */
+extern void dbg_print_plugin(FILE *fp);
 /* defined in lockmgr.c */
 extern void dbg_print_lock(FILE *fp);
 
@@ -83,15 +81,15 @@ extern void dbg_print_lock(FILE *fp);
  * !!! WARNING !!! 
  *
  * This function should be used ONLY after a violent signal. We walk through the
- * JCR chain without doing any lock, bacula should not be running.
+ * JCR chain without locking, Bacula should not be running.
  */
 static void dbg_print_bacula()
 {
    char buf[512];
 
    snprintf(buf, sizeof(buf), "%s/%s.%d.bactrace", 
-            working_directory, my_name, getpid());
-   FILE *fp = fopen(buf, "ab") ;
+            working_directory, my_name, (int)getpid());
+   FILE *fp = fopen(buf, "a+") ;
    if (!fp) {
       fp = stderr;
    }
@@ -101,12 +99,30 @@ static void dbg_print_bacula()
    /* Print also B_DB and RWLOCK structure 
     * Can add more info about JCR with dbg_jcr_add_hook()
     */
-   _dbg_print_jcr(fp);
-
-   _dbg_print_plugin(fp);
    dbg_print_lock(fp);
+   dbg_print_jcr(fp);
+   dbg_print_plugin(fp);
 
    if (fp != stderr) {
+#define direct_print
+#ifdef direct_print
+      if (prt_kaboom) {
+         rewind(fp);
+         printf("\n\n ==== bactrace output ====\n\n");
+         while (fgets(buf, (int)sizeof(buf), fp) != NULL) {
+            printf("%s", buf);
+         }
+         printf(" ==== End baktrace output ====\n\n");
+      }
+#else
+      if (prt_kaboom) {
+         char buf1[512];
+         printf("\n\n ==== bactrace output ====\n\n");
+         snprintf(buf1, sizeof(buf1), "/bin/cat %s", buf);
+         system(buf1);
+         printf(" ==== End baktrace output ====\n\n");
+      }
+#endif
       fclose(fp);
    }
 }
@@ -128,22 +144,22 @@ extern "C" void signal_handler(int sig)
       return;
    }
    already_dead++;
+   /* Don't use Emsg here as it may lock and thus block us */
    if (sig == SIGTERM) {
-//    Emsg1(M_TERM, -1, "Shutting down Bacula service: %s ...\n", my_name);
+       syslog(LOG_DAEMON|LOG_ERR, "Shutting down Bacula service: %s ...\n", my_name);
    } else {
-/* ***FIXME*** Display a message without taking any lock in the system
- *    Emsg2(M_FATAL, -1, _("Bacula interrupted by signal %d: %s\n"), sig, get_signal_name(sig));
- */
       fprintf(stderr, _("Bacula interrupted by signal %d: %s\n"), sig, get_signal_name(sig));
+      syslog(LOG_DAEMON|LOG_ERR, 
+         _("Bacula interrupted by signal %d: %s\n"), sig, get_signal_name(sig));
    }
 
 #ifdef TRACEBACK
    if (sig != SIGTERM) {
       struct sigaction sigdefault;
-      static char *argv[4];
+      static char *argv[5];
       static char pid_buf[20];
       static char btpath[400];
-      char buf[100];
+      char buf[400];
       pid_t pid;
       int exelen = strlen(exepath);
 
@@ -189,8 +205,10 @@ extern "C" void signal_handler(int sig)
          argv[0] = btpath;            /* path to btraceback */
          argv[1] = exepath;           /* path to exe */
          argv[2] = pid_buf;
-         argv[3] = (char *)NULL;
-         fprintf(stderr, _("Calling: %s %s %s\n"), btpath, exepath, pid_buf);
+         argv[3] = (char *)working_directory;
+         argv[4] = (char *)NULL;
+         fprintf(stderr, _("Calling: %s %s %s %s\n"), btpath, exepath, pid_buf,
+            working_directory);
          if (execv(btpath, argv) != 0) {
             berrno be;
             printf(_("execv: %s failed: ERR=%s\n"), btpath, be.bstrerror());
@@ -210,20 +228,40 @@ extern "C" void signal_handler(int sig)
          Dmsg0(500, "Doing waitpid\n");
          waitpid(pid, NULL, 0);       /* wait for child to produce dump */
          Dmsg0(500, "Done waitpid\n");
-         fprintf(stderr, _("Traceback complete, attempting cleanup ...\n"));
-         /* print information about the current state into working/<file>.bactrace */
-         dbg_print_bacula();
-         exit_handler(sig);           /* clean up if possible */
-         Dmsg0(500, "Done exit_handler\n");
       } else {
          Dmsg0(500, "Doing sleep\n");
          bmicrosleep(30, 0);
       }
       fprintf(stderr, _("It looks like the traceback worked ...\n"));
+      /* If we want it printed, do so */
+#ifdef direct_print
+      if (prt_kaboom) {
+         FILE *fd;
+         snprintf(buf, sizeof(buf), "%s/bacula.%s.traceback", working_directory, pid_buf); 
+         fd = fopen(buf, "r"); 
+         if (fd != NULL) {
+            printf("\n\n ==== Traceback output ====\n\n");
+            while (fgets(buf, (int)sizeof(buf), fd) != NULL) {
+               printf("%s", buf);
+            }
+            fclose(fd);
+            printf(" ==== End traceback output ====\n\n");
+         }
+      }
+#else
+      if (prt_kaboom) {
+         snprintf(buf, sizeof(buf), "/bin/cat %s/bacula.%s.traceback", working_directory, pid_buf);
+         fprintf(stderr, "\n\n ==== Traceback output ====\n\n");
+         system(buf);
+         fprintf(stderr, " ==== End traceback output ====\n\n");
+      }
+#endif
+      /* print information about the current state into working/<file>.bactrace */
       dbg_print_bacula();
    }
 #endif
    exit_handler(sig);
+   Dmsg0(500, "Done exit_handler\n");
 }
 
 /*
@@ -233,7 +271,6 @@ extern "C" void signal_handler(int sig)
 void init_stack_dump(void)
 {
    main_pid = getpid();               /* save main thread's pid */
-   lmgr_init_thread();                /* initialize the lockmanager stack */
 }
 
 /*

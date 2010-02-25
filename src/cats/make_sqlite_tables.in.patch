@@ -1,4 +1,0 @@
-5c5
-< bindir=@SQL_BINDIR@
----
-> bindir=/usr/lib/bacula/sqlite

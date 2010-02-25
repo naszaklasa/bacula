@@ -10,25 +10,25 @@ Summary:
 *Item  2: 'restore' menu: enter a JobId, automatically select dependents
  Item  3: Scheduling syntax that permits more flexibility and options
  Item  4: Data encryption on storage daemon
- Item  5: Deletion of disk Volumes when pruned
- Item  6: Implement Base jobs
+*Item  5: Deletion of disk Volumes when pruned (partial -- truncate when pruned)
+*Item  6: Implement Base jobs
  Item  7: Add ability to Verify any specified Job.
  Item  8: Improve Bacula's tape and drive usage and cleaning management
  Item  9: Allow FD to initiate a backup
- Item 10: Restore from volumes on multiple storage daemons
+*Item 10: Restore from volumes on multiple storage daemons
  Item 11: Implement Storage daemon compression
  Item 12: Reduction of communications bandwidth for a backup
  Item 13: Ability to reconnect a disconnected comm line
  Item 14: Start spooling even when waiting on tape
- Item 15: Enable/disable compression depending on storage device (disk/tape)
+*Item 15: Enable/disable compression depending on storage device (disk/tape)
  Item 16: Include all conf files in specified directory
  Item 17: Multiple threads in file daemon for the same job
  Item 18: Possibilty to schedule Jobs on last Friday of the month
  Item 19: Include timestamp of job launch in "stat clients" output
- Item 20: Cause daemons to use a specific IP address to source communications
+*Item 20: Cause daemons to use a specific IP address to source communications
  Item 21: Message mailing based on backup types
  Item 22: Ability to import/export Bacula database entities
- Item 23: "Maximum Concurrent Jobs" for drives when used with changer device
+*Item 23: "Maximum Concurrent Jobs" for drives when used with changer device
  Item 24: Implementation of running Job speed limit.
  Item 25: Add an override in Schedule for Pools based on backup types
  Item 26: Automatic promotion of backup levels based on backup size
@@ -40,7 +40,7 @@ Summary:
  Item 32: Ability to defer Batch Insert to a later time
  Item 33: Add MaxVolumeSize/MaxVolumeBytes statement to Storage resource
  Item 34: Enable persistent naming/number of SQL queries
- Item 35: Port bat to Win32
+*Item 35: Port bat to Win32
  Item 36: Bacula Dir, FD and SD to support proxies
  Item 37: Add Minumum Spool Size directive
  Item 38: Backup and Restore of Windows Encrypted Files using Win raw encryption
@@ -78,20 +78,21 @@ What:   Add to the bconsole 'restore' menu the ability to select a job
         dependent jobs.
 
         Why: Currently, you either have to...
-        a) laboriously type in a date that is greater than the date of the backup that
-        you want and is less than the subsequent backup (bacula then figures out the
-        dependent jobs), or
-        b) manually figure out all the JobIds that you want and laboriously type them
-        all in.
-        It would be extremely useful (in a programmatical sense, as well as for humans)
-        to be able to just give it a single JobId and let bacula do the hard work (work
-        that it already knows how to do).
 
-        Notes (Kern): I think this should either be modified to have Bacula print
-        a list of dates that the user can choose from as is done in bwx-console and
-        bat or the name of this command must be carefully chosen so that the user
-        clearly understands that the JobId is being used to specify what Job and the
-        date to which he wishes the restore to happen.
+        a) laboriously type in a date that is greater than the date of the
+        backup that you want and is less than the subsequent backup (bacula
+        then figures out the dependent jobs), or
+        b) manually figure out all the JobIds that you want and laboriously
+        type them all in.  It would be extremely useful (in a programmatical
+        sense, as well as for humans) to be able to just give it a single JobId
+        and let bacula do the hard work (work that it already knows how to do).
+
+        Notes (Kern): I think this should either be modified to have Bacula
+        print a list of dates that the user can choose from as is done in
+        bwx-console and bat or the name of this command must be carefully
+        chosen so that the user clearly understands that the JobId is being
+        used to specify what Job and the date to which he wishes the restore to
+        happen.
 
 
 Item  3: Scheduling syntax that permits more flexibility and options
@@ -205,9 +206,14 @@ Item  4: Data encryption on storage daemon
   Date:  04 February 2009
   Status: new
 
-  What:  The storage demon should be able to do the data encryption that can currently be done by the file daemon.
+  What: The storage demon should be able to do the data encryption that can
+        currently be done by the file daemon.
 
-  Why:   This would have 2 advantages: 1) one could encrypt the data of unencrypted tapes by doing a migration job, and 2) the storage daemon would be the only machine that would have to keep the encryption keys.
+  Why: This would have 2 advantages: 
+       1) one could encrypt the data of unencrypted tapes by doing a 
+          migration job
+       2) the storage daemon would be the only machine that would have 
+          to keep the encryption keys.
 
   Notes from Landon:
           As an addendum to the feature request, here are some crypto  
@@ -220,7 +226,7 @@ Item  5: Deletion of disk Volumes when pruned
   Date:  Nov 25, 2005
   Origin: Ross Boylan <RossBoylan at stanfordalumni dot org> (edited
           by Kern)
-  Status:        
+  Status: Truncate operation implemented in 3.1.4        
 
    What: Provide a way for Bacula to automatically remove Volumes
           from the filesystem, or optionally to truncate them.
@@ -388,59 +394,58 @@ Why:  Makes backup of laptops much easier.
 Item 10: Restore from volumes on multiple storage daemons
 Origin: Graham Keeling (graham@equiinet.com)
 Date:  12 March 2009
-Status: Proposing
+Status: Done in 3.0.2
 
 What:  The ability to restore from volumes held by multiple storage daemons
         would be very useful.
 
-Why:   It is useful to be able to backup to any number of different storage
-        daemons. For example, your first storage daemon may run out of space, so you
-        switch to your second and carry on. Bacula will currently let you do this.
-        However, once you come to restore, bacula cannot cope when volumes on different
-        storage daemons are required.
+Why: It is useful to be able to backup to any number of different storage
+        daemons. For example, your first storage daemon may run out of space,
+        so you switch to your second and carry on. Bacula will currently let
+        you do this.  However, once you come to restore, bacula cannot cope
+        when volumes on different storage daemons are required.
 
-        Notes: The director knows that more than one storage daemon is needed, as
-        bconsole outputs something like the following table.
+        Notes: The director knows that more than one storage daemon is needed,
+        as bconsole outputs something like the following table.
 
         The job will require the following
            Volume(s)                 Storage(s)                SD Device(s)
-        ===========================================================================
+        =====================================================================
            
-           backup-0001               Disk 1                    Disk 1.0                 
-           backup-0002               Disk 2                    Disk 2.0             
+           backup-0001               Disk 1                    Disk 1.0 
+           backup-0002               Disk 2                    Disk 2.0 
 
-        However, the bootstrap file that it creates gets sent to the first storage
-        daemon only, which then stalls for a long time, 'waiting for a mount request'
-        for the volume that it doesn't have.
-        The bootstrap file contains no knowledge of the storage daemon.
-        Under the current design:
+        However, the bootstrap file that it creates gets sent to the first
+        storage daemon only, which then stalls for a long time, 'waiting for a
+        mount request' for the volume that it doesn't have.  The bootstrap file
+        contains no knowledge of the storage daemon.  Under the current design:
 
-                The director connects to the storage daemon, and gets an sd_auth_key.
-                The director then connects to the file daemon, and gives it the
-                        sd_auth_key with the 'jobcmd'.
-                (restoring of files happens)
-                The director does a 'wait_for_storage_daemon_termination()'.
-                The director waits for the file daemon to indicate the end of the job.
+        The director connects to the storage daemon, and gets an sd_auth_key.
+        The director then connects to the file daemon, and gives it the
+        sd_auth_key with the 'jobcmd'.  (restoring of files happens) The
+        director does a 'wait_for_storage_daemon_termination()'.  The director
+        waits for the file daemon to indicate the end of the job.
 
         With my idea:
 
         The director connects to the file daemon.
         Then, for each storage daemon in the .bsr file...  {
-                The director connects to the storage daemon, and gets an sd_auth_key.
-                The director then connects to the file daemon, and gives it the
-                        sd_auth_key with the 'storaddr' command.
-                (restoring of files happens)
-                The director does a 'wait_for_storage_daemon_termination()'.
-                The director waits for the file daemon to indicate the end of the
-                        work on this storage.
+          The director connects to the storage daemon, and gets an sd_auth_key.
+          The director then connects to the file daemon, and gives it the
+                   sd_auth_key with the 'storaddr' command.
+          (restoring of files happens)
+          The director does a 'wait_for_storage_daemon_termination()'.
+          The director waits for the file daemon to indicate the end of the
+                   work on this storage.
         }
-        The director tells the file daemon that there are no more storages to contact.
-        The director waits for the file daemon to indicate the end of the job.
 
-        As you can see, each restore between the file daemon and storage daemon is
-        handled in the same way that it is currently handled, using the same method
-        for authentication, except that the sd_auth_key is moved from the 'jobcmd' to
-        the 'storaddr' command - where it logically belongs.
+        The director tells the file daemon that there are no more storages to
+        contact.  The director waits for the file daemon to indicate the end of
+        the job.  As you can see, each restore between the file daemon and
+        storage daemon is handled in the same way that it is currently handled,
+        using the same method for authentication, except that the sd_auth_key
+        is moved from the 'jobcmd' to the 'storaddr' command - where it
+        logically belongs.
 
 
 Item 11: Implement Storage daemon compression
@@ -518,7 +523,7 @@ Item 14: Start spooling even when waiting on tape
 Item 15: Enable/disable compression depending on storage device (disk/tape)
   Origin: Ralf Gross ralf-lists@ralfgross.de
   Date:  2008-01-11
-  Status: Initial Request
+  Status: Done
 
   What: Add a new option to the storage resource of the director.  Depending
           on this option, compression will be enabled/disabled for a device.
@@ -633,8 +638,8 @@ Status:
            would expand to this {first|last} {Month|Week|Day|Mo-Fri} of the
            {Year|Month|Week} you would be able to run really flexible jobs.
 
-           To got a certain Job run on the last Friday of the Month for example one could 
-           then write
+           To got a certain Job run on the last Friday of the Month for example
+           one could then write
 
               Run = pool=Monthly last Fri of the Month at 23:50
 
@@ -673,7 +678,7 @@ Item 19: Include timestamp of job launch in "stat clients" output
 Item 20: Cause daemons to use a specific IP address to source communications
  Origin: Bill Moran <wmoran@collaborativefusion.com>
  Date:   18 Dec 2006
- Status: Done
+ Status: Done in 3.0.2
  What:   Cause Bacula daemons (dir, fd, sd) to always use the ip address
           specified in the [DIR|DF|SD]Addr directive as the source IP
           for initiating communication.
@@ -718,7 +723,8 @@ Item 21: Message mailing based on backup types
           or Incremental/Differential Backups (which would likely be kept
           onsite).
 
- Notes:  One way this could be done is through additional message types, for example:
+ Notes: One way this could be done is through additional message types, for
+ example:
 
    Messages {
      # email the boss only on full system backups
@@ -749,7 +755,7 @@ Item 22: Ability to import/export Bacula database entities
 Item 23: "Maximum Concurrent Jobs" for drives when used with changer device
   Origin: Ralf Gross ralf-lists <at> ralfgross.de
   Date:  2008-12-12
-  Status: Initial Request
+  Status: Done in 3.0.3
 
   What:  respect the "Maximum Concurrent Jobs" directive in the _drives_
           Storage section in addition to the changer section
@@ -760,9 +766,9 @@ Item 23: "Maximum Concurrent Jobs" for drives when used with changer device
           per drive in this situation.
 
   Notes: Using different priorities for these jobs lead to problems that other
-          jobs are blocked. On the user list I got the advice to use the "Prefer Mounted
-          Volumes" directive, but Kern advised against using "Prefer Mounted
-          Volumes" in an other thread:
+          jobs are blocked. On the user list I got the advice to use the
+          "Prefer Mounted Volumes" directive, but Kern advised against using
+          "Prefer Mounted Volumes" in an other thread:
           http://article.gmane.org/gmane.comp.sysutils.backup.bacula.devel/11876/
 
           In addition I'm not sure if this would be the same as respecting the
@@ -793,7 +799,8 @@ Item 23: "Maximum Concurrent Jobs" for drives when used with changer device
           
           [2 more drives] 
 
-          The "Maximum Concurrent Jobs = 1" directive in the drive's section is ignored.
+          The "Maximum Concurrent Jobs = 1" directive in the drive's section is
+          ignored.
 
 
 Item 24: Implementation of running Job speed limit.
@@ -983,8 +990,8 @@ Item 31: List InChanger flag when doing restore.
    Date: 17 Oct 2008
  Status: Done in version 3.0.2
 
-   What: When doing a restore the restore selection dialog ends by telling stuff 
-      like this:
+   What: When doing a restore the restore selection dialog ends by telling
+         stuff like this:
   The job will require the following
    Volume(s)                 Storage(s)                SD Device(s)
    ===========================================================================
@@ -1291,20 +1298,275 @@ Item 1:   Relabel disk volume after recycling
   Date:   07 May 2009.
   Status: Not implemented yet, no code written.
 
-  What:   The ability to relabel the disk volume (and thus rename the file on the disk) 
-          after it has been recycled. Useful when you have a single job per disk volume, 
-          and you use a custom Label format, for example: 
-          Label Format = "${Client}-${Level}-${NumVols:p/4/0/r}-${Year}_${Month}_${Day}-${Hour}_${Minute}"
+  What: The ability to relabel the disk volume (and thus rename the file on the
+        disk) after it has been recycled. Useful when you have a single job
+        per disk volume, and you use a custom Label format, for example:
+        Label Format =
+        "${Client}-${Level}-${NumVols:p/4/0/r}-${Year}_${Month}_${Day}-${Hour}_${Minute}"
 
-  Why:    Disk volumes in Bacula get the label/filename when they are used for the first time.
-          If you use recycling and custom label format like above, the disk
-          volume name doesn't match the contents after it has been recycled.
-          This feature makes it possible to keep the label/filename in sync
-          with the content and thus makes it easy to check/monitor the backups
-          from the shell and/or normal file management tools, because the filenames 
-          of the disk volumes match the content.
+  Why: Disk volumes in Bacula get the label/filename when they are used for the
+       first time.  If you use recycling and custom label format like above,
+       the disk volume name doesn't match the contents after it has been
+       recycled.  This feature makes it possible to keep the label/filename
+       in sync with the content and thus makes it easy to check/monitor the
+       backups from the shell and/or normal file management tools, because
+       the filenames of the disk volumes match the content.
 
   Notes:  The configuration option could be "Relabel after Recycling = Yes".
+
+Item n: Command that releases all drives in an autochanger
+  Origin: Blake Dunlap (blake@nxs.net)
+  Date:   10/07/2009
+  Status: Request
+
+  What:  It would be nice if there was a release command that
+         would release all drives in an autochanger instead of having to
+         do each one in turn.
+
+  Why: It can take some time for a release to occur, and the
+       commands must be given for each drive in turn, which can quicky
+       scale if there are several drives in the library.  (Having to
+       watch the console, to give each command can waste a good bit of
+       time when you start getting into the 16 drive range when the
+       tapes can take up to 3 minutes to eject each)
+
+  Notes: Due to the way some autochangers/libraries work, you
+       cannot assume that new tapes inserted will go into slots that are
+       not currently believed to be in use by bacula (the tape from that
+       slot is in a drive).  This would make any changes in
+       configuration quicker/easier, as all drives need to be released
+       before any modifications to slots.
+
+Item  n: Run bscan on a remote storage daemon from within bconsole.
+  Date:  07 October 2009
+  Origin: Graham Keeling <graham@equiinet.com>
+  Status: Proposing
+
+  What:  The ability to be able to run bscan on a remote storage daemon from
+         within bconsole in order to populate your catalog.
+
+  Why:   Currently, it seems you have to:
+         a) log in to a console on the remote machine
+         b) figure out where the storage daemon config file is
+         c) figure out the storage device from the config file
+         d) figure out the catalog IP address
+         e) figure out the catalog port
+         f) open the port on the catalog firewall
+         g) configure the catalog database to accept connections from the
+            remote host
+         h) build a 'bscan' command from (b)-(e) above and run it
+         It would be much nicer to be able to type something like this into
+         bconsole:
+         *bscan storage=<storage> device=<device> volume=<volume>
+         or something like:
+         *bscan storage=<storage> all
+         It seems to me that the scan could also do a better job than the
+         external bscan program currently does. It would possibly be able to
+         deduce some extra details, such as the catalog StorageId for the
+         volumes.
+
+  Notes: (Kern). If you need to do a bscan, you have done something wrong,
+         so this functionality should not need to be integrated into the
+         the Storage daemon.  However, I am not opposed to someone implementing
+         this feature providing that all the code is in a shared object (or dll)
+         and does not add significantly to the size of the Storage daemon. In
+         addition, the code should be written in a way such that the same source
+         code is used in both the bscan program and the Storage daemon to avoid
+         adding a lot of new code that must be maintained by the project.
+
+Item n:   Implement a Migration job type that will create a reverse
+          incremental (or decremental) backup from two existing full backups.
+  Date:   05 October 2009
+  Origin: Griffith College Dublin.  Some sponsorship available.
+          Contact: Gavin McCullagh <gavin.mccullagh@gcd.ie>
+  Status: 
+
+  What:   The ability to take two full backup jobs and derive a reverse
+          incremental backup from them.  The older full backup data may then
+          be discarded.
+
+  Why:    Long-term backups based on keeping full backups can be expensive in
+          media.  In many cases (eg a NAS), as the client accumulates files
+          over months and years, the same file will be duplicated unchanged,
+          across many media and datasets.  Eg, Less than 10% (and
+          shrinking) of our monthly full mail server backup is new files,
+          the other 90% is also in the previous full backup.
+          Regularly converting the oldest full backup into a reverse
+          incremental backup allows the admin to keep access to old backup
+          jobs, but remove all of the duplicated files, freeing up media.
+
+  Notes:  This feature was previously discussed on the bacula-devel list
+          here: http://www.mail-archive.com/bacula-devel@lists.sourceforge.net/msg04962.html
+
+Item n: Job migration between different SDs
+Origin: Mariusz Czulada <manieq AT wp DOT eu>
+Date:   07 May 2007
+Status: NEW
+
+What:   Allow to specify in migration job devices on Storage Daemon other then
+        the one used for migrated jobs (possibly on different/distant host)
+
+Why:    Sometimes we have more then one system which requires backup
+        implementation.  Often, these systems are functionally unrelated and
+        placed in different locations.  Having a big backup device (a tape
+        library) in each location is not cost-effective.  It would be much
+        better to have one powerful enough tape library which could handle
+        backups from all systems, assuming relatively fast and reliable WAN
+        connections.  In such architecture backups are done in service windows
+        on local bacula servers, then migrated to central storage off the peak
+        hours.
+
+Notes:  If migration to different SD is working, migration to the same SD, as
+        now, could be done the same way (i mean 'localhost') to unify the
+        whole process
+
+Item  n: Concurrent spooling and despooling withini a single job.
+Date:  17 nov 2009
+Origin: Jesper Krogh <jesper@krogh.cc>
+Status: NEW
+What:  When a job has spooling enabled and the spool area size is
+       less than the total volumes size the storage daemon will:
+       1) Spool to spool-area
+       2) Despool to tape
+       3) Go to 1 if more data to be backed up.
+
+       Typical disks will serve data with a speed of 100MB/s when
+       dealing with large files, network it typical capable of doing 115MB/s
+       (GbitE). Tape drives will despool with 50-90MB/s (LTO3) 70-120MB/s
+       (LTO4) depending on compression and data.
+
+       As bacula currently works it'll hold back data from the client until
+       de-spooling is done, now matter if the spool area can handle another
+       block of data. Say given a FileSet of 4TB and a spool-area of 100GB and
+       a Maximum Job Spool Size set to 50GB then above sequence could be
+       changed to allow to spool to the other 50GB while despooling the first
+       50GB and not holding back the client while doing it. As above numbers
+       show, depending on tape-drive and disk-arrays this potentially leads to
+       a cut of the backup-time of 50% for the individual jobs.
+
+       Real-world example, backing up 112.6GB (large files) to LTO4 tapes
+       (despools with ~75MB/s, data is gzipped on the remote filesystem.
+       Maximum Job Spool Size = 8GB
+
+       Current:
+       Size: 112.6GB
+       Elapsed time (total time): 46m 15s => 2775s
+       Despooling time: 25m 41s => 1541s (55%)
+       Spooling time: 20m 34s => 1234s (45%)
+       Reported speed: 40.58MB/s
+       Spooling speed: 112.6GB/1234s => 91.25MB/s
+       Despooling speed: 112.6GB/1541s => 73.07MB/s
+
+       So disk + net can "keep up" with the LTO4 drive (in this test)
+
+       Prosed change would effectively make the backup run in the "despooling
+       time" 1541s giving a reduction to 55% of the total run time.
+
+       In the situation where the individual job cannot keep up with LTO-drive
+       spooling enables efficient multiplexing of multiple concurrent jobs onto
+       the same drive.
+
+Why:   When dealing with larger volumes the general utillization of the
+       network/disk is important to maximize in order to be able to run a full
+       backup over a weekend. Current work-around is to split the FileSet in
+       smaller FileSet and Jobs but that leads to more configuration mangement
+       and is harder to review for completeness. Subsequently it makes restores
+       more complex.
+
+Item 1:   Extend the verify code to make it possible to verify
+          older jobs, not only the last one that has finished
+  Date:   10 April 2009
+  Origin: Ralf Gross (Ralf-Lists <at> ralfgross.de)
+  Status: not implemented or documented
+
+  What:   At the moment a VolumeToCatalog job compares only the
+          last job with the data in the catalog. It's not possible
+          to compare the data (md5sums) of an older volume with the
+          data in the catalog.
+
+  Why:    If a verify job fails, one has to immediately check the
+          source of the problem, fix it and rerun the verify job.
+          This has to happen before the next backup of the
+          verified backup job starts.
+          More important: It's not possible to check jobs that are
+          kept for a long time (archiv). If a jobid could be
+          specified for a verify job, older backups/tapes could be
+          checked on a regular base.
+
+  Notes:  verify documentation:
+          VolumeToCatalog: This level causes Bacula to read the file
+          attribute data written to the Volume from the last Job [...]
+          
+          Verify Job = <Job-Resource-Name> If you run a verify job
+          without this directive, the last job run will be compared
+          with the catalog, which means that you must immediately
+          follow a backup by a verify command. If you specify a Verify
+          Job Bacula will find the last job with that name that ran [...]
+
+          example bconsole verify dialog:
+
+          Run Verify job
+          JobName:     VerifyServerXXX
+          Level:       VolumeToCatalog
+          Client:      ServerXXX-fd
+          FileSet:     ServerXXX-Vol1
+          Pool:        Full (From Job resource)
+          Storage:     Neo4100 (From Pool resource)
+          Verify Job:  ServerXXX-Vol1
+          Verify List: 
+          When:        2009-04-20 09:03:04
+          Priority:    10
+          OK to run? (yes/mod/no): m
+          Parameters to modify:
+               1: Level
+               2: Storage
+               3: Job
+               4: FileSet
+               5: Client
+               6: When
+               7: Priority
+               8: Pool
+               9: Verify Job
+
+
+
+Item n:   Separate "Storage" and "Device" in the bacula-dir.conf
+  Date:   29 April 2009
+  Origin: "James Harper" <james.harper@bendigoit.com.au>
+  Status: not implemented or documented
+
+  What:   Separate "Storage" and "Device" in the bacula-dir.conf
+          The resulting config would looks something like:
+
+          Storage {
+            Name = name_of_server
+            Address = hostname/IP address
+            SDPort = 9103
+            Password = shh_its_a_secret
+            Maximum Concurrent Jobs = 7
+          }
+
+          Device {
+            Name = name_of_device
+            Storage = name_of_server
+            Device = name_of_device_on_sd
+            Media Type = media_type
+            Maximum Concurrent Jobs = 1
+          }
+
+          Maximum Concurrent Jobs would be specified with a server and a device
+          maximum, which would both be honoured by the director. Almost everything
+          that mentions a 'Storage' would need to be changed to 'Device', although
+          perhaps a 'Storage' would just be a synonym for 'Device' for backwards
+          compatibility...
+
+  Why:    If you have multiple Storage definitions pointing to different
+          Devices in the same Storage daemon, the "status storage" command
+          prompts for each different device, but they all give the same 
+          information.
+
+  Notes:  
+
 
 
 ========= Add new items above this line =================

@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: pages.cpp 8897 2009-06-13 15:30:42Z bartleyd2 $
+ *   Version $Id$
  *
  *   Dirk Bartley, March 2007
  */
@@ -59,17 +59,36 @@ bool isWin32Path(QString &fullPath)
 
 void Pages::dockPage()
 {
+   if (isDocked()) {
+      return;
+   }
+
    /* These two lines are for making sure if it is being changed from a window
     * that it has the proper window flag and parent.
     */
    setWindowFlags(Qt::Widget);
 
+   /* calculate the index that the tab should be inserted into */
+   int tabPos = 0;
+   QTreeWidgetItemIterator it(mainWin->treeWidget);
+   while (*it) {
+      Pages *somepage = mainWin->getFromHash(*it);
+      if (this == somepage) {
+         tabPos += 1;
+         break;
+      }
+      int pageindex = mainWin->tabWidget->indexOf(somepage);
+      if (pageindex != -1) { tabPos = pageindex; }
+      ++it;
+   }
+
    /* This was being done already */
-   m_parent->addWidget(this);
+   m_parent->insertTab(tabPos, this, m_name);
 
    /* Set docked flag */
    m_docked = true;
-   mainWin->stackedWidget->setCurrentWidget(this);
+   m_onceDocked = true;
+   mainWin->tabWidget->setCurrentWidget(this);
    /* lets set the page selectors action for docking or undocking */
    setContextMenuDockText();
 }
@@ -82,8 +101,12 @@ void Pages::dockPage()
 
 void Pages::undockPage()
 {
+   if (!isDocked()) {
+      return;
+   }
+
    /* Change from a stacked widget to a normal window */
-   m_parent->removeWidget(this);
+   m_parent->removeTab(m_parent->indexOf(this));
    setWindowFlags(Qt::Window);
    show();
    /* Clear docked flag */
@@ -116,6 +139,17 @@ bool Pages::isDocked()
 {
    return m_docked;
 }
+
+/*
+ * This function is because after the tabbed widget was added I could not tell
+ * from is docked if it had been docked yet.  To prevent status pages from requesting
+ * status from the director
+ */
+bool Pages::isOnceDocked()
+{
+   return m_onceDocked;
+}
+
 
 /*
  * To keep m_closeable protected as well
@@ -197,10 +231,12 @@ void Pages::pgInitialize(const QString &name)
 
 void Pages::pgInitialize(const QString &tname, QTreeWidgetItem *parentTreeWidgetItem)
 {
+   m_docked = false;
+   m_onceDocked = false;
    if (tname.size()) {
       m_name = tname;
    }
-   m_parent = mainWin->stackedWidget;
+   m_parent = mainWin->tabWidget;
    m_console = mainWin->currentConsole();
 
    if (!parentTreeWidgetItem) {

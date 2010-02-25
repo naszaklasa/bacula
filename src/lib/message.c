@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,10 +30,7 @@
  *
  *   Kern Sibbald, April 2000
  *
- *   Version $Id: message.c 8920 2009-06-23 12:40:45Z ricozz $
- *
  */
-
 
 #include "bacula.h"
 #include "jcr.h"
@@ -51,6 +48,7 @@ const char *working_directory = NULL;       /* working directory path stored her
 int verbose = 0;                      /* increase User messages */
 int debug_level = 0;                  /* debug level */
 bool dbg_timestamp = false;           /* print timestamp in debug output */
+bool prt_kaboom = false;              /* Print kaboom output */
 utime_t daemon_start_time = 0;        /* Daemon start time */
 const char *version = VERSION " (" BDATE ")";
 char my_name[30];                     /* daemon name is stored here */
@@ -69,8 +67,8 @@ void create_jcr_key();
 
 /* Static storage */
 
-/* Used to allow only one thread close the daemon messages at a time */
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+/* Allow only one thread to tweak d->fd at a time */
+static pthread_mutex_t fides_mutex = PTHREAD_MUTEX_INITIALIZER;
 static MSGS *daemon_msgs;              /* global messages */
 static char *catalog_db = NULL;       /* database type */
 static void (*message_callback)(int type, char *msg) = NULL;
@@ -421,7 +419,6 @@ void close_msg(JCR *jcr)
 
    if (jcr == NULL) {                /* NULL -> global chain */
       msgs = daemon_msgs;
-      P(mutex);                       /* only one thread walking the chain */
    } else {
       msgs = jcr->jcr_msgs;
       jcr->jcr_msgs = NULL;
@@ -429,6 +426,7 @@ void close_msg(JCR *jcr)
    if (msgs == NULL) {
       return;
    }
+   P(fides_mutex);
    Dmsg1(850, "===Begin close msg resource at %p\n", msgs);
    cmd = get_pool_memory(PM_MESSAGE);
    for (d=msgs->dest_chain; d; ) {
@@ -482,7 +480,7 @@ void close_msg(JCR *jcr)
             if (msgs != daemon_msgs) {
                /* read what mail prog returned -- should be nothing */
                while (fgets(line, len, bpipe->rfd)) {
-                  Jmsg1(jcr, M_INFO, 0, _("Mail prog: %s"), line);
+                  Qmsg1(jcr, M_INFO, 0, _("Mail prog: %s"), line);
                }
             }
 
@@ -491,7 +489,7 @@ void close_msg(JCR *jcr)
                berrno be;
                be.set_errno(stat);
                Dmsg1(850, "Calling emsg. CMD=%s\n", cmd);
-               Jmsg2(jcr, M_ERROR, 0, _("Mail program terminated in error.\n"
+               Qmsg2(jcr, M_ERROR, 0, _("Mail program terminated in error.\n"
                                         "CMD=%s\n"
                                         "ERR=%s\n"), cmd, be.bstrerror());
             }
@@ -512,13 +510,12 @@ rem_temp_file:
       }
       d = d->next;                    /* point to next buffer */
    }
+   V(fides_mutex);
    free_pool_memory(cmd);
    Dmsg0(850, "Done walking message chain.\n");
    if (jcr) {
       free_msgs_res(msgs);
       msgs = NULL;
-   } else {
-      V(mutex);
    }
    Dmsg0(850, "===End close msg resource\n");
 }
@@ -624,6 +621,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
     if (mtime == 1) {
        *dt = 0;
        dtlen = 0;
+       mtime = time(NULL);      /* get time for SQL log */
     } else {
        bstrftime_ny(dt, sizeof(dt), mtime);
        dtlen = strlen(dt);
@@ -641,6 +639,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
        fputs(dt, stdout);
        fputs(msg, stdout);         /* print this here to INSURE that it is printed */
        fflush(stdout);
+       syslog(LOG_DAEMON|LOG_ERR, "%s", msg);
     }
 
 
@@ -736,6 +735,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
              case MD_MAIL_ON_ERROR:
              case MD_MAIL_ON_SUCCESS:
                 Dmsg1(850, "MAIL for following msg: %s", msg);
+                P(fides_mutex);
                 if (!d->fd) {
                    POOLMEM *name = get_pool_memory(PM_MESSAGE);
                    make_unique_mail_filename(jcr, name, d);
@@ -747,6 +747,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                             be.bstrerror());
                       d->fd = NULL;
                       free_pool_memory(name);
+                      V(fides_mutex);
                       break;
                    }
                    d->mail_filename = name;
@@ -757,6 +758,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                    d->max_len = len;      /* keep max line length */
                 }
                 fputs(msg, d->fd);
+                V(fides_mutex);
                 break;
              case MD_APPEND:
                 Dmsg1(850, "APPEND for following msg: %s", msg);
@@ -766,7 +768,9 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                 Dmsg1(850, "FILE for following msg: %s", msg);
                 mode = "w+b";
 send_to_file:
+                P(fides_mutex);
                 if (!d->fd && !open_dest_file(jcr, d, mode)) {
+                   V(fides_mutex);
                    break;
                 }
                 fputs(dt, d->fd);
@@ -780,6 +784,7 @@ send_to_file:
                       fputs(msg, d->fd);
                    }
                 }
+                V(fides_mutex);
                 break;
              case MD_DIRECTOR:
                 Dmsg1(850, "DIRECTOR for following msg: %s", msg);
@@ -1319,8 +1324,6 @@ int Mmsg(POOL_MEM &pool_buf, const char *fmt, ...)
 }
 
 
-static pthread_mutex_t msg_queue_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 /*
  * We queue messages rather than print them directly. This
  *  is generally used in low level routines (msg handler, bnet)
@@ -1355,16 +1358,15 @@ void Qmsg(JCR *jcr, int type, utime_t mtime, const char *fmt,...)
    if (!jcr) {
       jcr = get_jcr_from_tsd();
    }
-   /* If no jcr or dequeuing send to daemon to avoid recursion */
-   if ((jcr && !jcr->msg_queue) || !jcr || jcr->dequeuing) {
-      /* jcr==NULL => daemon message, safe to send now */
-      Jmsg(jcr, item->type, item->mtime, "%s", item->msg);
+   /* If no jcr or no queue or dequeuing send to syslog */
+   if (!jcr || !jcr->msg_queue || jcr->dequeuing_msgs) {
+      syslog(LOG_DAEMON|LOG_ERR, "%s", item->msg);
       free(item);
    } else {
       /* Queue message for later sending */
-      P(msg_queue_mutex);
+      P(jcr->msg_queue_mutex);
       jcr->msg_queue->append(item);
-      V(msg_queue_mutex);
+      V(jcr->msg_queue_mutex);
    }
    free_memory(pool_buf);
 }
@@ -1375,19 +1377,18 @@ void Qmsg(JCR *jcr, int type, utime_t mtime, const char *fmt,...)
 void dequeue_messages(JCR *jcr)
 {
    MQUEUE_ITEM *item;
-   P(msg_queue_mutex);
    if (!jcr->msg_queue) {
-      goto bail_out;
+      return;
    }
-   jcr->dequeuing = true;
+   P(jcr->msg_queue_mutex);
+   jcr->dequeuing_msgs = true;
    foreach_dlist(item, jcr->msg_queue) {
       Jmsg(jcr, item->type, item->mtime, "%s", item->msg);
    }
+   /* Remove messages just sent */
    jcr->msg_queue->destroy();
-   jcr->dequeuing = false;
-
-bail_out:
-   V(msg_queue_mutex);
+   jcr->dequeuing_msgs = false;
+   V(jcr->msg_queue_mutex);
 }
 
 

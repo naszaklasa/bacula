@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: dircomm.h 8571 2009-03-21 14:24:27Z kerns $
+ *   Version $Id$
  *
  *   Kern Sibbald, January 2007
  */
@@ -82,6 +82,7 @@ private:
    QSocketNotifier *m_notifier;
    bool m_api_set;
    int m_conn;
+   bool m_in_select;
 };
 
 #endif /* _DIRCOMM_H_ */

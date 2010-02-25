@@ -28,7 +28,7 @@
 /*
  * Prototypes for lib directory of Bacula
  *
- *   Version $Id: protos.h 8209 2008-12-20 22:02:31Z ricozz $
+ *   Version $Id$
  */
 
 #ifndef __LIBPROTOS_H
@@ -69,7 +69,7 @@ int       bvsnprintf             (char *str, int32_t size, const char *format, v
 int       pool_sprintf           (char *pool_buf, const char *fmt, ...);
 void      create_pid_file        (char *dir, const char *progname, int port);
 int       delete_pid_file        (char *dir, const char *progname, int port);
-void      drop                   (char *uid, char *gid);
+void      drop                   (char *uid, char *gid, bool keep_readall_caps);
 int       bmicrosleep            (int32_t sec, int32_t usec);
 char     *bfgets                 (char *s, int size, FILE *fd);
 void      make_unique_filename   (POOLMEM **name, int Id, char *what);
@@ -191,23 +191,24 @@ bool             is_an_integer           (const char *n);
 bool             is_name_valid           (char *name, POOLMEM **msg);
 
 /* jcr.c (most definitions are in src/jcr.h) */
-void init_last_jobs_list();
-void term_last_jobs_list();
-void lock_last_jobs_list();
-void unlock_last_jobs_list();
-bool read_last_jobs_list(int fd, uint64_t addr);
+void     init_last_jobs_list();
+void     term_last_jobs_list();
+void     lock_last_jobs_list();
+void     unlock_last_jobs_list();
+bool     read_last_jobs_list(int fd, uint64_t addr);
 uint64_t write_last_jobs_list(int fd, uint64_t addr);
-void write_state_file(char *dir, const char *progname, int port);
-void job_end_push(JCR *jcr, void job_end_cb(JCR *jcr,void *), void *ctx);
-void lock_jobs();
-void unlock_jobs();
-JCR *jcr_walk_start();
-JCR *jcr_walk_next(JCR *prev_jcr);
-void jcr_walk_end(JCR *jcr);
+void     write_state_file(char *dir, const char *progname, int port);
+void     job_end_push(JCR *jcr, void job_end_cb(JCR *jcr,void *), void *ctx);
+void     lock_jobs();
+void     unlock_jobs();
+JCR     *jcr_walk_start();
+JCR     *jcr_walk_next(JCR *prev_jcr);
+void     jcr_walk_end(JCR *jcr);
+JCR     *get_jcr_from_tsd();
+void     set_jcr_in_tsd(JCR *jcr);
+void     remove_jcr_from_tsd(JCR *jcr);
 uint32_t get_jobid_from_tsd();             
-JCR *get_jcr_from_tsd();
-void set_jcr_in_tsd(JCR *jcr);
-void remove_jcr_from_tsd(JCR *jcr);
+uint32_t get_jobid_from_tid(pthread_t tid);
 
 
 /* lex.c */
@@ -319,6 +320,7 @@ void             jobstatus_to_ascii      (int JobStatus, char *msg, int maxlen);
 void             jobstatus_to_ascii_gui  (int JobStatus, char *msg, int maxlen);
 int              run_program             (char *prog, int wait, POOLMEM *&results);
 int              run_program_full_output (char *prog, int wait, POOLMEM *&results);
+char *           aop_to_str              (int aop, POOL_MEM &ret);
 const char *     job_type_to_str         (int type);
 const char *     job_status_to_str       (int stat);
 const char *     job_level_to_str        (int level);

@@ -9,8 +9,20 @@
 HST=x86_64-pc-linux
 TGT=x86_64-pc-mingw32
 RT=mingw-w64
-mkdir -p ../../../cross-tools
-cd ../../../cross-tools
+# Directory where cross-tools directory will be placed
+TOPDIR=../../..
+# Cross tools directory name under TOPDIR
+CROSSTOOLS=cross-tools
+cwd=`pwd`
+
+cd ${TOPDIR}
+# Make TOPDIR absolute
+TOPDIR=`pwd`
+TOPDIR=${DEPKGS:-${TOPDIR}}
+
+mkdir -p ${TOPDIR}/cross-tools
+cd ${TOPDIR}/cross-tools
+echo "Buiding in ${TOPDIR}/cross-tools"
 PF=`pwd`/$RT
 BD=`pwd`/build
 SRC=`pwd`/source

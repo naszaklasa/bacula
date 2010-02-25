@@ -1,7 +1,7 @@
 #
 # Bacula Tools Makefile
 #
-# Version $Id: Makefile.in 8464 2009-02-18 11:40:09Z kerns $
+# Version $Id$
 #
 @MCOMMON@
 
@@ -35,7 +35,7 @@ EXTRAOBJS = @OBJLIST@
 DIRCONFOBJS = ../dird/dird_conf.o ../dird/run_conf.o ../dird/inc_conf.o
 
 NODIRTOOLS = bsmtp
-DIRTOOLS = bsmtp dbcheck drivetype fstype testfind testls bregex bwild bbatch bregtest
+DIRTOOLS = bsmtp dbcheck drivetype fstype testfind testls bregex bwild bbatch bregtest bvfs_test
 TOOLS = $(@DIR_TOOLS@)
 
 INSNODIRTOOLS = bsmtp
@@ -103,6 +103,10 @@ bbatch: Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT
 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -o $@ bbatch.o \
 	  -lbacsql -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
+bvfs_test: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) bvfs_test.o
+	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -L../findlib -o $@ bvfs_test.o  \
+	  -lbacsql -lbacfind -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+
 gigaslam.o: gigaslam.c
 	$(CC) -c $<  
 
@@ -133,6 +137,12 @@ distclean: realclean
 devclean: realclean
 	if test $(srcdir) = .; then $(MAKE) realclean; fi
 	(cd $(srcdir); $(RMF) Makefile)
+
+installall:  $(TOOLS)
+	@for tool in ${TOOLS} ; do \
+	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) $$tool $(DESTDIR)$(sbindir)/$$tool ; \
+	done
+	chmod 755 $(DESTDIR)$(sbindir)/bsmtp
 
 # Allow non-root execution of bsmtp for non-root Directors
 install: $(INSTOOLS)

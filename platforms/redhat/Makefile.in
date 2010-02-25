@@ -82,9 +82,9 @@ clean:
 	@rm -f 1 2 3
 
 distclean: clean
-	@rm -f Makefile bacula-*.spec bacula.*.spec bacula.spec
+	@rm -f Makefile 
 	@rm -f bacula-sd bacula-fd bacula-dir
 
 devclean: clean
-	@rm -f Makefile bacula-*.spec bacula.*.spec bacula.spec
+	@rm -f Makefile 
 	@rm -f bacula-sd bacula-fd bacula-dir

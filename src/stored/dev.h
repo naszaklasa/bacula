@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, MM
  *
- *   Version $Id: dev.h 7892 2008-10-24 13:04:16Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -134,8 +134,9 @@ enum {
 #define CAP_CLOSEONPOLL    (1<<18)    /* Close device on polling */
 #define CAP_POSITIONBLOCKS (1<<19)    /* Use block positioning */
 #define CAP_MTIOCGET       (1<<20)    /* Basic support for fileno and blkno */
-#define CAP_REQMOUNT       (1<<21)    /* Require mount to read files back (typically: DVD) */
+#define CAP_REQMOUNT       (1<<21)    /* Require mount/unmount */
 #define CAP_CHECKLABELS    (1<<22)    /* Check for ANSI/IBM labels */
+#define CAP_BLOCKCHECKSUM  (1<<23)    /* Create/test block checksum */
 
 /* Test state */
 #define dev_state(dev, st_state) ((dev)->state & (st_state))
@@ -211,17 +212,18 @@ private:
    int m_fd;                          /* file descriptor */
    int m_blocked;                     /* set if we must wait (i.e. change tape) */
    int m_count;                       /* Mutex use count -- DEBUG only */
+   int m_num_reserved;                /* counter of device reservations */
+   int32_t m_slot;                    /* slot loaded in drive or -1 if none */ 
    pthread_t m_pid;                   /* Thread that locked -- DEBUG only */
    bool m_unload;                     /* set when Volume must be unloaded */
    bool m_load;                       /* set when Volume must be loaded */
-   int m_num_reserved;                /* counter of device reservations */
-   int32_t m_slot;                    /* slot loaded in drive or -1 if none */ 
 
 public:
    DEVICE * volatile swap_dev;        /* Swap vol from this device */
    dlist *attached_dcrs;              /* attached DCR list */
-   pthread_mutex_t m_mutex;           /* access control */
-   pthread_mutex_t spool_mutex;       /* mutex for updating spool_size */
+   bthread_mutex_t m_mutex;           /* access control */
+   bthread_mutex_t spool_mutex;       /* mutex for updating spool_size */
+   bthread_mutex_t acquire_mutex;     /* mutex for acquire code */
    pthread_cond_t wait;               /* thread wait variable */
    pthread_cond_t wait_next_vol;      /* wait for tape to be mounted */
    pthread_t no_wait_id;              /* this thread must not wait */
@@ -252,6 +254,7 @@ public:
    uint32_t max_block_size;           /* max block size */
    uint64_t max_volume_size;          /* max bytes to put on one volume */
    uint64_t max_file_size;            /* max file size to put in one file on volume */
+   uint64_t max_concurrent_jobs;      /* maximum simultaneous jobs this drive */
    uint64_t volume_capacity;          /* advisory capacity */
    uint64_t max_spool_size;           /* maximum spool file size */
    uint64_t spool_size;               /* current spool size for this device */
@@ -305,6 +308,7 @@ public:
    int has_cap(int cap) const { return capabilities & cap; }
    void clear_cap(int cap) { capabilities &= ~cap; }
    void set_cap(int cap) { capabilities |= cap; }
+   bool do_checksum() const { return (capabilities & CAP_BLOCKCHECKSUM) != 0; }
    int is_autochanger() const { return capabilities & CAP_AUTOCHANGER; }
    int requires_mount() const { return capabilities & CAP_REQMOUNT; }
    int is_removable() const { return capabilities & CAP_REM; }
@@ -442,29 +446,31 @@ public:
     * Locking and blocking calls
     */
 #ifdef  SD_DEBUG_LOCK
-   void _r_dlock(const char *, int);      /* in lock.c */
+   void _r_dlock(const char *, int, bool locked=false);      /* in lock.c */
    void _r_dunlock(const char *, int);    /* in lock.c */
    void _dlock(const char *, int);        /* in lock.c */
    void _dunlock(const char *, int);      /* in lock.c */
 #else
-   void r_dlock();                        /* in lock.c */
+   void r_dlock(bool locked=false);       /* in lock.c */
    void r_dunlock() { dunlock(); }
    void dlock() { P(m_mutex); } 
    void dunlock() { V(m_mutex); } 
 #endif
    void dblock(int why);                  /* in lock.c */
    void dunblock(bool locked=false);      /* in lock.c */
+   bool is_device_unmounted();            /* in lock.c */
    void set_blocked(int block) { m_blocked = block; };
    int blocked() const { return m_blocked; };
    bool is_blocked() const { return m_blocked != BST_NOT_BLOCKED; };
    const char *print_blocked() const;     /* in dev.c */
 
 private:
-   bool do_mount(int mount, int timeout);      /* in dev.c */
-   void set_mode(int omode);                   /* in dev.c */
-   void open_tape_device(DCR *dcr, int omode); /* in dev.c */
-   void open_file_device(DCR *dcr, int omode); /* in dev.c */
-   void open_dvd_device(DCR *dcr, int omode);  /* in dev.c */
+   bool do_tape_mount(int mount, int dotimeout);  /* in dev.c */
+   bool do_file_mount(int mount, int dotimeout);  /* in dev.c */
+   void set_mode(int omode);                      /* in dev.c */
+   void open_tape_device(DCR *dcr, int omode);    /* in dev.c */
+   void open_file_device(DCR *dcr, int omode);    /* in dev.c */
+   void open_dvd_device(DCR *dcr, int omode);     /* in dev.c */
 };
 
 inline const char *DEVICE::strerror() const { return errmsg; }
@@ -477,6 +483,11 @@ inline const char *DEVICE::print_name() const { return prt_name; }
  *  the device. Items in this record are "local" to the Job and
  *  do not affect other Jobs. Note, a job can have multiple
  *  DCRs open, each pointing to a different device. 
+ * Normally, there is only one JCR thread per DCR. However, the
+ *  big and important exception to this is when a Job is being
+ *  canceled. At that time, there may be two threads using the 
+ *  same DCR. Consequently, when creating/attaching/detaching
+ *  and freeing the DCR we must lock it (m_mutex).
  */
 class DCR {
 private:
@@ -487,6 +498,7 @@ private:
 public:
    dlink dev_link;                    /* link to attach to dev */
    JCR *jcr;                          /* pointer to JCR */
+   bthread_mutex_t m_mutex;           /* access control */
    DEVICE * volatile dev;             /* pointer to device */
    DEVRES *device;                    /* pointer to device resource */
    DEV_BLOCK *block;                  /* pointer to block */
@@ -529,8 +541,13 @@ public:
    void clear_found_in_use() { m_found_in_use = false; };
    bool is_reserved() const { return m_reserved; };
    bool is_dev_locked() { return m_dev_locked; }
+#ifdef SD_DEBUG_LOCK
+   void _dlock(const char *, int);      /* in lock.c */
+   void _dunlock(const char *, int);    /* in lock.c */
+#else
    void dlock() { dev->dlock(); m_dev_locked = true; }
    void dunlock() { m_dev_locked = false; dev->dunlock(); }
+#endif
    void dblock(int why) { dev->dblock(why); }
 
 

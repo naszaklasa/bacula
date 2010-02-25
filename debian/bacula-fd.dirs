@@ -1,5 +1,5 @@
 usr/sbin
+usr/lib/bacula
 var/lib/bacula
-var/run/bacula
 etc/bacula
 etc/bacula/scripts

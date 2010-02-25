@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -52,7 +52,7 @@ root_node_t::startBackupFile(exchange_fd_context_t *context, struct save_pkt *sp
    case 0:
       if (strcmp(PLUGIN_PATH_PREFIX_BASE, name) != 0)
       {
-         _JobMessage(M_ERROR, "Invalid backup path specified, must start with '/" PLUGIN_PATH_PREFIX_BASE "/'\n");
+         _JobMessage(M_FATAL, "Invalid backup path specified, must start with '/" PLUGIN_PATH_PREFIX_BASE "/'\n");
          state = 999;
          return bRC_Error;
       }
@@ -77,7 +77,7 @@ root_node_t::startBackupFile(exchange_fd_context_t *context, struct save_pkt *sp
    case 999:
       return bRC_Error;
    default:
-      _JobMessage(M_ERROR, "Invalid state %d", state);
+      _JobMessage(M_FATAL, "Invalid internal state %d", state);
       state = 999;
    }
    return retval;
@@ -102,7 +102,7 @@ root_node_t::endBackupFile(exchange_fd_context_t *context)
    case 999:
       retval = bRC_Error;
    default:
-      _JobMessage(M_ERROR, "Invalid state %d", state);
+      _JobMessage(M_FATAL, "Invalid internal state %d", state);
       state = 999;
       return bRC_Error;
    }
@@ -118,7 +118,7 @@ root_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
    case 0:
       if (strcmp(name, PLUGIN_PATH_PREFIX_BASE) != 0)
       {
-         _JobMessage(M_ERROR, "Invalid restore path specified, must start with '/" PLUGIN_PATH_PREFIX_BASE "/'\n");
+         _JobMessage(M_FATAL, "Invalid restore path specified, must start with '/" PLUGIN_PATH_PREFIX_BASE "/'\n");
          state = 999;
          return bRC_Error;
       }
@@ -131,7 +131,7 @@ root_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
    case 999:
       return bRC_Error;
    default:
-      _JobMessage(M_ERROR, "Invalid state %d", state);
+      _JobMessage(M_FATAL, "Invalid internal state %d", state);
       state = 999;
    }
    return bRC_Error;
@@ -150,7 +150,7 @@ root_node_t::endRestoreFile(exchange_fd_context_t *context)
    case 1:
       return bRC_OK;
    default:
-      _JobMessage(M_ERROR, "Invalid state %d", state);
+      _JobMessage(M_FATAL, "Invalid internal state %d", state);
       state = 999;
    }
    return bRC_Error;

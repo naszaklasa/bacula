@@ -166,6 +166,9 @@ btimer_t *start_thread_timer(JCR *jcr, pthread_t tid, uint32_t wait)
 btimer_t *start_bsock_timer(BSOCK *bsock, uint32_t wait)
 {
    btimer_t *wid;
+   if (wait <= 0) {                 /* wait should be > 0 */
+      return NULL;
+   }
    wid = btimer_start_common(wait);
    if (wid == NULL) {
       return NULL;

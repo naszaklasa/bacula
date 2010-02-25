@@ -31,7 +31,7 @@
  *
  * Kern Sibbald, January MMV
  *
- *   Version $Id: pythonsd.c 7789 2008-10-14 18:42:47Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -118,9 +118,9 @@ PyObject *job_getattr(PyObject *self, char *attrname)
    case 1:                            /* SD's name */
       return Py_BuildValue((char *)getvars[i].fmt, my_name);
    case 2:                            /* level */
-      return Py_BuildValue((char *)getvars[i].fmt, job_level_to_str(jcr->get_JobLevel()));
+      return Py_BuildValue((char *)getvars[i].fmt, job_level_to_str(jcr->getJobLevel()));
    case 3:                            /* type */
-      return Py_BuildValue((char *)getvars[i].fmt, job_type_to_str(jcr->get_JobType()));
+      return Py_BuildValue((char *)getvars[i].fmt, job_type_to_str(jcr->getJobType()));
    case 4:                            /* JobId */
       return Py_BuildValue((char *)getvars[i].fmt, jcr->JobId);
    case 5:                            /* Client */

@@ -34,7 +34,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: bsr.h 7713 2008-10-05 19:01:24Z kerns $
+ *   Version $Id$
  */
 
 

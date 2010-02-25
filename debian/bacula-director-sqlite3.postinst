@@ -1,5 +1,5 @@
 #! /bin/bash
-# postinst script for bacula-director-sqlite
+# postinst script for bacula-director-sqlite3
 #
 
 . /usr/share/debconf/confmodule
@@ -25,96 +25,106 @@ set -e
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
-DB="/var/lib/bacula/bacula.db"
-MAKE_SQL_TABLES=/usr/share/bacula-director/make_sqlite3_tables
-UPGRADE_SQL_DIR=/usr/share/bacula-director
-UPGRADE_TABLES1=update_sqlite3_tables
-LOGDIR=/var/log/bacula
-POSTINST_COMMON=/usr/share/bacula-director/postinst-common
-DEFCONFIG=/usr/share/bacula-common/defconfig
-CFGFILE=/etc/bacula/bacula-dir.conf
+dbc_first_version=3.0.3-3
+# set in config, must not be set here: dbc_dbuser=bacula
+# set in config, must not be set here: dbc_dbname=bacula.db
+# set in config, must not be set here: dbc_basepath=/var/lib/bacula
+
+# After squeeze, restore this test.  This was needed for sqlite2 migration.
+#if [ -n "$2" ]; then
+	/etc/init.d/bacula-director stop || true
+	sleep 1
+#fi
+
+
+#### REMOVE THIS CODE POST-SQUEEZE
+CONVERTED_SQLITE2=NO
+
+if [ "$1" = "configure" ] ; then
+    DB=/var/lib/bacula/bacula.db
+    echo -n " *** Checking type of existing DB at $DB: "
+    if [ -f "$DB" ]; then
+        if file "$DB" | grep -q "SQLite 2"; then
+            echo "SQLite v2"
+            echo " *** Converting SQLite2 database to SQLite3 format."
+            echo " *** This may take awhile.  Please be patient..."
+            echo "Converting $DB to temporary location $DB.sqlite3"
+            sqlite "$DB" .dump \
+                | sed 's/ INTEGER UNSIGNED AUTOINCREMENT,/ INTEGER,/' \
+                | sqlite3 "$DB.sqlite3"
+            echo "SQLite conversion complete.  Cleaning up:"
+            echo -n "Renaming: "
+            mv -v "$DB" "$DB.old-sqlite2"
+            echo -n "Renaming: "
+            mv -v "$DB.sqlite3" "$DB"
+            chown bacula:bacula "$DB"
+            echo " *** Conversion complete.  Your sqlite v2 database was left in"
+            echo " *** $DB.old-sqlite2.  You may delete it at your leisure."
+            echo " *** Continuing with upgrade  process..."
+            CONVERTED_SQLITE2=YES
+        else
+            echo "SQLite v3"
+        fi
+    else
+        echo "None"
+        echo " *** Will create new database at this location."
+    fi
+fi
+
+#### END OF CODE TO REMOVE POST-SQUEEZE
+
+# source dbconfig-common shell library, and call the hook function
+if [ -f /usr/share/dbconfig-common/dpkg/config.sqlite3 ]; then
+  . /usr/share/dbconfig-common/dpkg/postinst.sqlite3
+  #### POST-SQUEEZE, REMOVE THE FOLLOWING LINES AND SIMPLY USE:
+  # dbc_go bacula-director-sqlite3 $@
+  if [ "$1" = "configure" -a "$CONVERTED_SQLITE2" = "YES" ]; then
+      # If we converted from Sqlite v2 in this run, then we have to
+      # pass a fake prior version number to dbc_go.  Otherwise, it
+      # would think that this is a new sqlite3 install and not upgrade
+      # the database.
+      dbc_go bacula-director-sqlite3 configure 2.4.4-1
+  else
+      dbc_go bacula-director-sqlite3 $@
+  fi
+fi
+
+LOGDIR="/var/log/bacula"
+POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
+DEFCONFIG="/usr/share/bacula-common/defconfig"
+CFGFILE="/etc/bacula/bacula-dir.conf"
 
 case "$1" in
-    configure)
-		touch $DB;	#Bug 243983
-		chown bacula:bacula $DB
+configure)
 
-		db_get bacula-director-sqlite3/create_tables || true
-		if [ "$RET" = "true" ]; then
-			touch $DB;      #Bug 243983
-			chown bacula:bacula $DB
+	echo -n "Processing configuration..."
+        . /etc/dbconfig-common/bacula-director-sqlite3.conf
+	TARGET=$CFGFILE.dpkg-tmp
+        # FIXME: should this tweak make_catalog_backup like bacula-director-pgsql.postinst does?
+	sed -e "s,dbname = bacula;,dbname = \"$dbc_basepath/$dbc_dbname\";," \
+            -e 's/ user = @db_user@;//' -e 's/ password = "@db_pswd@";//' \
+		$DEFCONFIG/bacula-dir.conf > $TARGET
+        
+	/bin/bash $POSTINST_COMMON
 
-			if [ -z "$2" ]; then
-				# if we are not upgrading, we must create the tables
-				echo -n "Creating tables in DB $DB ..." >&2
-				if $MAKE_SQL_TABLES 2>&1 > /dev/null; then echo "Ok." ;
-				else echo "ERROR"; exit 100; fi
-			fi
-		fi
+	echo "Ok."
+	;;
 
-		# fix for upgrade -- <mechanix@debian.org>
-		if [ -n "$2" ]; then
-			touch $LOGDIR/upgrade.log
-			
-			if dpkg --compare-versions "$2" le '3.0.0' ; then
-			    # On upgrade, unconditionally change Catalog 
-			    echo -n "Upgrading SQLite3 tables to v11 format..."
-			    if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 >> $LOGDIR/upgrade.log  2>&1
-  			        then echo "Ok."
-			        else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
-			    fi
-			fi
-                else 
-                    if [ -f "$DB" ] && file "$DB" | grep -q "SQLite 2"; then
-                        echo -n "Converting SQLite2 database to SQLite3 format..."
-                        sqlite "$DB" .dump \
-                            | sed 's/ INTEGER UNSIGNED AUTOINCREMENT,/ INTEGER,/' \
-                            | sqlite3 "$DB.sqlite3"
-                        mv "$DB" "$DB.sqlite2"
-                        mv "$DB.sqlite3" "$DB"
-                        chown bacula:bacula "$DB"
-                        echo "Ok."
-			# On upgrade, unconditionally change Catalog 
-			echo -n "Upgrading SQLite3 tables to v11 format..."
-			if ${UPGRADE_SQL_DIR}/$UPGRADE_TABLES1 >> $LOGDIR/upgrade.log  2>&1
-			    then echo "Ok."
-			    else echo -e "\nERROR: could not upgrade Catalog. Please check $LOGDIR/upgrade.log for details."
-		        fi
-                    fi   
-                fi
+abort-upgrade|abort-remove|abort-deconfigure)
 
-		chmod 640 $DB		
+	;;
 
-		# Preprocess configuration
-		TARGET=$CFGFILE.dpkg-tmp
-
-		sed -e 's/ user = @db_user@;//' -e 's/ password = "@db_pswd@";//' \
-			$DEFCONFIG/bacula-dir.conf > $TARGET
-
-		/bin/bash $POSTINST_COMMON
-    ;;
-
-    abort-upgrade|abort-remove|abort-deconfigure)
-
-    ;;
-
-    *)
-        echo "postinst called with unknown argument \`$1'" >&2
-        exit 1
-    ;;
+*)
+	echo "postinst called with unknown argument \`$1'" >&2
+	exit 1
+	;;
 esac
 
 # Do start daemon
 db_stop
 
-if [ -n "$2" ]; then
-        /etc/init.d/bacula-director stop
-        sleep 1
-fi
- 
 invoke-rc.d --quiet bacula-director start
 
 #DEBHELPER#
 
 exit 0
-

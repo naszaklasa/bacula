@@ -3,7 +3,7 @@
  *
  * Author: Robert Nelson, August, 2006 <robertn@the-nelsons.org>
  *
- * Version $Id: ScsiDeviceList.cpp 7380 2008-07-14 10:42:59Z kerns $
+ * Version $Id$
  *
  * This file was contributed to the Bacula project by Robert Nelson.
  *

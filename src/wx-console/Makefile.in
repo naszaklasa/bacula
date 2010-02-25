@@ -1,5 +1,5 @@
 #
-#  Version $Id: Makefile.in 8513 2009-03-09 15:34:05Z kerns $
+#  Version $Id$
 #
 @MCOMMON@
 
@@ -82,8 +82,8 @@ bwx-console.app: bwx-console
 	cp bwx-console.conf /Library/Preferences/org.bacula.wxconsole.conf
 
 bwx-console: Makefile $(CONSOBJS) @WIN32@ ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
-	$(LIBTOOL_LINK) $(CXX) $(CONSOBJS) $(WIN32RES) -o $@ $(LIBS) -L../lib $(CONS_LDFLAGS) \
-	  -lbaccfg -lbac $(OPENSSL_LIBS)
+	$(LIBTOOL_LINK) $(CXX) $(CONSOBJS) $(WIN32RES) -o $@ -L../lib $(CONS_LDFLAGS) \
+	  -lbaccfg -lbac $(LIBS) $(OPENSSL_LIBS)
 
 win32: bwx-console_private.res
 	

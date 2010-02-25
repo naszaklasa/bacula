@@ -30,7 +30,7 @@
  *
  *  Kern Sibbald, February MMVI
  *
- *  Version $Id: reserve.h 7380 2008-07-14 10:42:59Z kerns $
+ *  Version $Id$
  */ 
 
 /*

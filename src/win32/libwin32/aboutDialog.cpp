@@ -29,7 +29,7 @@
  *
  * Kern Sibbald, August 2007
  *
- * Version $Id: aboutDialog.cpp 8384 2009-01-20 15:29:41Z ricozz $
+ * Version $Id$
  *
 */
 

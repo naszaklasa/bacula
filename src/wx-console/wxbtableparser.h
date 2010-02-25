@@ -11,7 +11,7 @@
  *
  *    Nicolas Boichat, April 2004
  *
- *    Version $Id: wxbtableparser.h 8508 2009-03-07 20:59:46Z kerns $
+ *    Version $Id$
  */
 /*
    Bacula® - The Network Backup Solution

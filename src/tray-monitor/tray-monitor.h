@@ -30,7 +30,7 @@
  *
  *     Nicolas Boichat, August MMIV
  *
- *    Version $Id: tray-monitor.h 7380 2008-07-14 10:42:59Z kerns $
+ *    Version $Id$
  */
 
 #include <gtk/gtk.h>

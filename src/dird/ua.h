@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, August MMI
  *
- *     Version $Id: ua.h 7774 2008-10-13 13:03:44Z ricozz $
+ *     Version $Id$
  */
 
 #ifndef __UA_H_
@@ -106,6 +106,7 @@ struct RESTORE_CTX {
    char RestoreClientName[MAX_NAME_LENGTH];  /* restore client */
    char last_jobid[20];
    POOLMEM *JobIds;                   /* User entered string of JobIds */
+   POOLMEM *BaseJobIds;               /* Base jobids */
    STORE  *store;
    JOB *restore_job;
    POOL *pool;

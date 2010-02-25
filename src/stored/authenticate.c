@@ -30,7 +30,7 @@
  *
  *   Kern Sibbald, October 2000
  *
- *   Version $Id: authenticate.c 7435 2008-07-25 18:27:23Z junkmale $
+ *   Version $Id$
  *
  */
 

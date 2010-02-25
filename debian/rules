@@ -9,7 +9,7 @@
 # from having to guess our platform (since we know it already)
 DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
-
+DEB_HOST_ARCH_OS    ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 
 CFLAGS = -g -Wall
 INSTALL_PROGRAM = install
@@ -43,8 +43,9 @@ DBC := usr/share/dbconfig-common/data/
 CONF_ALL	= --enable-smartalloc \
 	--with-python --with-tcp-wrappers \
 	--with-openssl \
-	--with-libiconv-prefix=/usr/include --with-readline=yes \
-	--with-libintl-prefix=/usr/include --with-x --with-readline=yes \
+	--with-libiconv-prefix=/usr/include --with-readline=/usr/include/readline \
+	--disable-conio \
+	--with-libintl-prefix=/usr/include --with-x \
 		--docdir=\$${prefix}/share/doc/bacula-common \
 		--htmldir=\$${prefix}/share/doc/bacula-common/html \
 		--libdir=\$${prefix}/lib/bacula \
@@ -56,6 +57,10 @@ CONF_ALL	= --enable-smartalloc \
 
 CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \
 			--disable-bat
+
+ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
+CONF_ALL	+= --disable-acl --disable-xattr
+endif
 
 CONF_sqlite3	= --with-sqlite3 --without-mysql --without-postgresql --without-sqlite \
 			--enable-tray-monitor --enable-bat
@@ -69,7 +74,7 @@ extract-stamp: $(foreach s,$(VARIANTS),extract-stamp-$(s))
 extract-stamp-%:
 	@echo " *** DEBIAN *** VARIANT $(*): EXTRACTING to $(BUILDDIR)-$(*)"
 	mkdir $(BUILDDIR)-$(*)
-	tar -cSf - --exclude=./_darcs --exclude=./debian . | tar -xSpf - -C $(BUILDDIR)-$(*)
+	tar -cSf - --exclude=./.git --exclude=./debian . | tar -xSpf - -C $(BUILDDIR)-$(*)
 	touch $@
 
 configure-stamp-%: extract-stamp-%
@@ -120,7 +125,7 @@ build-indep-stamp:
 	touch $@
 
 
-build: patch build-arch build-indep debian/po/templates.pot
+build: patch build-arch build-indep
 
 ###############################################
 # Cleaning macro
@@ -145,13 +150,27 @@ clean:
 	$(RM) patch-stamp
 
 
-debian/po/templates.pot: $(TEMPLATES)
-	@debconf-updatepo
-
 # Macro to extract a here document and put it in place
 # args: 1 -- db name, 2 -- file to extract, 3 -- version
 define ext-upgrade
 debian/patches/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/upgrade/$(1)/$(3)
+endef
+
+# Macro to process upgrades for all flavors
+# args: 1 -- file to extract relative to updatedb/update_x_tables_
+#       2 -- version
+define ext-upgrade-all
+$(call ext-upgrade,pgsql,debian/tmp-build-pgsql/updatedb/update_postgresql_tables_$(1),$(2))
+$(call ext-upgrade,mysql,debian/tmp-build-mysql/updatedb/update_mysql_tables_$(1),$(2))
+$(call ext-upgrade,sqlite3,debian/tmp-build-sqlite3/updatedb/update_sqlite3_tables_$(1),$(2))
+endef
+
+# Macro to process latest version upgrades for all flavors
+# args: 1 -- version
+define ext-upgrade-latest
+$(call ext-upgrade,pgsql,debian/tmp-build-pgsql/src/cats/update_postgresql_tables,$(1))
+$(call ext-upgrade,mysql,debian/tmp-build-mysql/src/cats/update_mysql_tables,$(1))
+$(call ext-upgrade,sqlite3,debian/tmp-build-sqlite3/src/cats/update_sqlite3_tables,$(1))
 endef
 
 # Macro to extract a here document for install and put it in place
@@ -170,40 +189,39 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	dh_install -pbacula-console -pbacula-console-qt
 	cp $(DEFAULTINSTALLDIR)/usr/sbin/bconsole debian/bacula-console/usr/sbin/bacula-console
 	cp debian/tmp-build-$(DEFAULTVARIANT)/src/qt-console/.libs/bat debian/bacula-console-qt/usr/bin/bat
-	ln -s bacula-common debian/bacula-common/usr/share/doc/bacula
-
 
 ######### dbconfig-common stuff
-# PostgreSQL
-# Releases prior to 2.0 put update scripts in updatedb.
-# 2.0.0 now has it in src/cats without a version number.
-# Will need to watch this on the next upgrade (also check it with mysql)
-#	$(call ext-upgrade,pgsql,updatedb/update_postgresql_tables_7_to_8,1.36.0)
-#	$(call ext-upgrade,pgsql,updatedb/update_postgresql_tables_8_to_9,1.38.0)
-#	$(call ext-upgrade,pgsql,updatedb/update_postgresql_tables_9_to_10,2.0.0)
+#	$(call ext-upgrade-all,7_to_8,1.36.0)
+#	$(call ext-upgrade-all,8_to_9,1.38.0)
+#	$(call ext-upgrade-all,9_to_10,2.0.0)
 # above lines commented out because they are pre-lenny and no longer needed
-	$(call ext-upgrade,pgsql,debian/tmp-build-pgsql/src/cats/update_postgresql_tables,3.0.0)
+	$(call ext-upgrade-all,10_to_11,3.0.0)
+
+# Sometimes the latest release doesn't have a copy of the data in updatedb.
+# Manually install those.  CHECK THIS FOR EACH NEW RELEASE, and move older
+# versions to an ext-upgrade-all line as above.
+
+	$(call ext-upgrade-latest,5.0.0) # 5.0.0 upgrade 11 to 12
+
+
+# PostgreSQL
 	echo "ALTER DATABASE _DBC_DBNAME_ SET datestyle TO 'ISO, YMD';" > \
 		debian/bacula-director-pgsql/$(DBC)/bacula-director-pgsql/install-dbadmin/pgsql
+
 	$(call ext-install,pgsql,debian/tmp-build-pgsql/src/cats/make_postgresql_tables)
 # MySQL
-#	$(call ext-upgrade,mysql,updatedb/update_mysql_tables_6_to_7,1.32f-5)
-#	$(call ext-upgrade,mysql,updatedb/update_mysql_tables_7_to_8,1.36.0)
-#	$(call ext-upgrade,mysql,updatedb/update_mysql_tables_8_to_9,1.38.0)
-#	$(call ext-upgrade,mysql,updatedb/update_mysql_tables_9_to_10,2.0.0)
-# above lines commented out because they are pre-lenny and no longer needed
-	$(call ext-upgrade,mysql,debian/tmp-build-mysql/src/cats/update_mysql_tables,3.0.0)
 	$(call ext-install,mysql,debian/tmp-build-mysql/src/cats/make_mysql_tables)
 # Remove USE bacula -- dbconfig-common selects the database for us
 	sed -i -e 's/USE \$${db_name};//' -e 's/USE bacula;//' debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/install/mysql debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/upgrade/mysql/*
 
+# Next two lines required for upgrade to 5.0.0.  Remove that and
+# debian/bacula-director-mysql.script.5.0.0 post-squeeze
+	cp debian/bacula-director-mysql.script.5.0.0 \
+			debian/bacula-director-mysql/usr/share/dbconfig-common/scripts/bacula-director-mysql/upgrade/mysql/5.0.0
+	chmod 0755 debian/bacula-director-mysql/usr/share/dbconfig-common/scripts/bacula-director-mysql/upgrade/mysql/5.0.0
+
 # SQLite3
-	cp debian/tmp-install-sqlite3/etc/bacula/scripts/make_sqlite3_tables \
-		debian/bacula-director-sqlite3/usr/share/bacula-director
-	cp debian/tmp-build-sqlite3/src/cats/update_sqlite3_tables \
-		debian/bacula-director-sqlite3/usr/share/bacula-director/
-	sed -i 's./var/bacula./var/lib/bacula.' \
-		debian/bacula-director-sqlite3/usr/share/bacula-director/update*
+	$(call ext-install,sqlite3,debian/tmp-build-sqlite3/src/cats/make_sqlite3_tables)
 
 	dh_link -pbacula-console usr/share/man/man8/bconsole.8.gz usr/share/man/man8/bacula-console.8.gz
 
@@ -272,6 +290,7 @@ binary-indep: build install-indep patch
 	rm -r debian/bacula/usr/share/doc/bacula
 	dh_link -i
 	dh_compress -i -X.pdf
+	dh_lintian -i
 	dh_fixperms -i
 	dh_installdeb -i
 	dh_gencontrol -i
@@ -300,6 +319,7 @@ binary-arch-common: build install
 	dh_installchangelogs ChangeLog -a
 	dh_strip -a
 	dh_link -a
+	dh_lintian -a
 	dh_compress -a
 	dh_fixperms -a
 	dh_makeshlibs -a

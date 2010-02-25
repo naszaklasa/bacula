@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, January MMVI
  *
- *   Version $Id: mac.c 8713 2009-04-11 12:35:04Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -57,7 +57,7 @@ bool do_mac(JCR *jcr)
    char ec1[50];
    DEVICE *dev;
 
-   switch(jcr->get_JobType()) {
+   switch(jcr->getJobType()) {
    case JT_MIGRATE:
       Type = "Migration";
       break;
@@ -136,7 +136,7 @@ ok_out:
       if (!ok) {
          discard_data_spool(jcr->dcr);
       } else {
-         /* Note: if commit is OK, the device will remain locked */
+         /* Note: if commit is OK, the device will remain blocked */
          commit_data_spool(jcr->dcr);
       }
 
@@ -207,7 +207,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    case EOM_LABEL:
       return true;                    /* don't write vol labels */
    }
-//   if (jcr->get_JobType() == JT_BACKUP) {
+//   if (jcr->getJobType() == JT_BACKUP) {
       /*
        * For normal migration jobs, FileIndex values are sequential because
        *  we are dealing with one job.  However, for Vbackup (consolidation),

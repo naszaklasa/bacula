@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, MM
  *
- *   Version $Id: util.c 8910 2009-06-18 12:54:45Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -393,6 +393,19 @@ const char *job_type_to_str(int type)
       str = _("Unknown Type");
    }   
    return str;
+}
+
+/* Convert ActionOnPurge to string (Truncate, Erase, Destroy)
+ */
+char *aop_to_str(int aop, POOL_MEM &ret)
+{
+   if (aop & AOP_TRUNCATE) {
+      pm_strcpy(ret, _("Truncate"));
+   }
+   if (!aop) {
+      pm_strcpy(ret, _("None"));
+   }
+   return ret.c_str();
 }
 
 /*
@@ -761,7 +774,7 @@ POOLMEM *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to, job_co
             break;
          case 'l':
             if (jcr) {
-               str = job_level_to_str(jcr->get_JobLevel());
+               str = job_level_to_str(jcr->getJobLevel());
             } else {
                str = _("*none*");
             }
@@ -792,7 +805,7 @@ POOLMEM *edit_job_codes(JCR *jcr, char *omsg, char *imsg, const char *to, job_co
             break;
          case 't':
             if (jcr) {
-               str = job_type_to_str(jcr->get_JobType());
+               str = job_type_to_str(jcr->getJobType());
             } else {
                str = _("*none*");
             }

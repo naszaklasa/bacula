@@ -26,7 +26,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: main.cpp 8825 2009-05-14 10:41:48Z kerns $
+ *   Version $Id$
  *
  *  Main program for bat (qt-console)
  *
@@ -84,6 +84,7 @@ int main(int argc, char *argv[])
 
    init_stack_dump();
    my_name_is(argc, argv, "bat");
+   lmgr_init_thread();
    init_msg(NULL, NULL);
    working_directory  = "/tmp";
 

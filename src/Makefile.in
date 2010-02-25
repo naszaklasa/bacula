@@ -1,5 +1,5 @@
 #
-# Version $Id: Makefile.in 7789 2008-10-14 18:42:47Z kerns $
+# Version $Id$
 #
 @MCOMMON@
 
@@ -42,7 +42,6 @@ clean:
 	@$(RMF) AUTHORS ChangeLog Makefile.am NEWS README acconfig.h autogen.sh 
 	@$(RMF) configure.in stamp.h stamp-h.in
 	@$(RMF) -r po
-	(cd gnome2-console && $(MAKE) clean)
 
 realclean: clean
 	@$(RMF) tags

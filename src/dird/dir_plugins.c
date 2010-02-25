@@ -208,12 +208,12 @@ static bRC baculaGetValue(bpContext *ctx, brVariable var, void *value)
       Dmsg1(dbglvl, "Bacula: return bVarJob=%s\n", jcr->job->hdr.name);
       break;
    case bVarLevel:
-      *((int *)value) = jcr->get_JobLevel();
-      Dmsg1(dbglvl, "Bacula: return bVarLevel=%c\n", jcr->get_JobLevel());
+      *((int *)value) = jcr->getJobLevel();
+      Dmsg1(dbglvl, "Bacula: return bVarLevel=%c\n", jcr->getJobLevel());
       break;
    case bVarType:
-      *((int *)value) = jcr->get_JobType();
-      Dmsg1(dbglvl, "Bacula: return bVarType=%c\n", jcr->get_JobType());
+      *((int *)value) = jcr->getJobType();
+      Dmsg1(dbglvl, "Bacula: return bVarType=%c\n", jcr->getJobType());
       break;
    case bVarClient:
       *((char **)value) = jcr->client->hdr.name;
@@ -370,9 +370,9 @@ static bRC baculaSetValue(bpContext *ctx, bwVariable var, void *value)
       if (jcr->eventType == bEventJobInit) {
          for (int i=0; ok && joblevels[i].level_name; i++) {
             if (strcasecmp(strval, joblevels[i].level_name) == 0) {
-               if (joblevels[i].job_type == jcr->get_JobType()) {
+               if (joblevels[i].job_type == jcr->getJobType()) {
                   jcr->set_JobLevel(joblevels[i].level);
-                  jcr->jr.JobLevel = jcr->get_JobLevel();
+                  jcr->jr.JobLevel = jcr->getJobLevel();
                   ok = false;
                }
             }

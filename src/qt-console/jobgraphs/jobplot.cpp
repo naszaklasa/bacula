@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: jobplot.cpp 8625 2009-03-28 15:30:41Z bartleyd2 $
+ *   Version $Id$
  *
  *  JobPlots Class
  *
@@ -135,7 +135,7 @@ void JobPlot::reGraph()
 void JobPlot::setupControls()
 {
    QStringList graphType = QStringList() << /* tr("Fitted") <<*/ tr("Sticks")
-					 << tr("Lines") << tr("Steps") << tr("None");
+                                         << tr("Lines") << tr("Steps") << tr("None");
    controls->plotTypeCombo->addItems(graphType);
 
    fillSymbolCombo(controls->fileSymbolTypeCombo);
@@ -219,7 +219,7 @@ void JobPlot::runQuery()
    int volumeIndex = controls->volumeComboBox->currentIndex();
    if ((volumeIndex != -1) && (controls->volumeComboBox->itemText(volumeIndex) != tr("Any"))) {
       query += " LEFT OUTER JOIN JobMedia ON (JobMedia.JobId=Job.JobId)"
-	       " LEFT OUTER JOIN Media ON (JobMedia.MediaId=Media.MediaId)";
+               " LEFT OUTER JOIN Media ON (JobMedia.MediaId=Media.MediaId)";
       conditions.append("Media.VolumeName='" + controls->volumeComboBox->itemText(volumeIndex) + "'");
    }
    comboCond(conditions, controls->fileSetComboBox, "FileSet.FileSet");
@@ -571,6 +571,8 @@ void JobPlot::readSplitterSettings()
 {
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup("JobPlot");
-   m_splitter->restoreState(settings.value("m_splitterSizes").toByteArray());
+   if (settings.contains("m_splitterSizes")) { 
+      m_splitter->restoreState(settings.value("m_splitterSizes").toByteArray());
+   }
    settings.endGroup();
 }

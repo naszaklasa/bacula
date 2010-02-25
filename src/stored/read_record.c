@@ -38,7 +38,7 @@
  *
  *    Kern E. Sibbald, August MMII
  *
- *   Version $Id: read_record.c 8854 2009-05-23 12:36:57Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

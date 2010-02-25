@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, June MMII
  *
- *   Version $Id: match_bsr.c 8256 2008-12-27 08:06:56Z kerns $
+ *   Version $Id$
  */
 
 /*

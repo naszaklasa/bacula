@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, May MMVII
  *
- *  $Id: help.cpp 8614 2009-03-27 17:59:16Z kerns $
+ *  $Id$
  */ 
 
 #include "bat.h"

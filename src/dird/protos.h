@@ -28,7 +28,7 @@
 /*
  * Director external function prototypes
  *
- *   Version $Id: protos.h 8982 2009-07-14 13:44:46Z kerns $
+ *   Version $Id$
  */
 
 /* admin.c */
@@ -137,7 +137,7 @@ extern void set_rstorage(JCR *jcr, USTORE *store);
 extern void free_rstorage(JCR *jcr);
 extern bool setup_job(JCR *jcr);
 extern void create_clones(JCR *jcr);
-extern bool create_restore_bootstrap_file(JCR *jcr);
+extern int create_restore_bootstrap_file(JCR *jcr);
 extern void dird_free_jcr(JCR *jcr);
 extern void dird_free_jcr_pointers(JCR *jcr);
 extern void cancel_storage_daemon_job(JCR *jcr);
@@ -226,7 +226,6 @@ bool complete_jcr_for_job(JCR *jcr, JOB *job, POOL *pool);
 RUN *find_next_run(RUN *run, JOB *job, utime_t &runtime, int ndays);
 
 /* ua_restore.c */
-int get_next_jobid_from_list(char **p, JobId_t *JobId);
 void find_storage_resource(UAContext *ua, RESTORE_CTX &rx, char *Storage, char *MediaType);
 
 /* ua_server.c */
@@ -241,6 +240,7 @@ void free_ua_context(UAContext *ua);
 /* ua_select.c */
 STORE   *select_storage_resource(UAContext *ua);
 JOB     *select_job_resource(UAContext *ua);
+JOB     *select_enable_disable_job_resource(UAContext *ua, bool enable);
 JOB     *select_restore_job_resource(UAContext *ua);
 CLIENT  *select_client_resource(UAContext *ua);
 FILESET *select_fileset_resource(UAContext *ua);
@@ -279,8 +279,8 @@ bool user_select_files_from_tree(TREE_CTX *tree);
 int insert_tree_handler(void *ctx, int num_fields, char **row);
 
 /* ua_prune.c */
-int prune_files(UAContext *ua, CLIENT *client);
-int prune_jobs(UAContext *ua, CLIENT *client, int JobType);
+int prune_files(UAContext *ua, CLIENT *client, POOL *pool);
+int prune_jobs(UAContext *ua, CLIENT *client, POOL *pool, int JobType);
 int prune_stats(UAContext *ua, utime_t retention);
 bool prune_volume(UAContext *ua, MEDIA_DBR *mr);
 int job_delete_handler(void *ctx, int num_fields, char **row);

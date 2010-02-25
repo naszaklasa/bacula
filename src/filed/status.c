@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, August MMI
  *
- *   Version $Id: status.c 8502 2009-03-06 20:00:47Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -191,8 +191,9 @@ static void  list_running_jobs(STATUS_PKT *sp)
          len = Mmsg(msg, _("JobId %d Job %s is running.\n"),
                     njcr->JobId, njcr->Job);
          sendit(msg.c_str(), len, sp);
-         len = Mmsg(msg, _("    %s%s Job started: %s\n"),
-                    vss, job_type_to_str(njcr->get_JobType()), dt);
+         len = Mmsg(msg, _("    %s%s %s Job started: %s\n"),
+                    vss, level_to_str(njcr->getJobLevel()), 
+                    job_type_to_str(njcr->getJobType()), dt);
       }
       sendit(msg.c_str(), len, sp);
       if (njcr->JobId == 0) {

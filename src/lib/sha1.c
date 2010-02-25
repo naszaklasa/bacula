@@ -505,5 +505,6 @@ int main(int argc, char *argv[])
       printf("%02x", signature[i]& 0xFF);
    }
    printf("  %s\n", argv[1]);
+   fclose(fd);
 }
 #endif

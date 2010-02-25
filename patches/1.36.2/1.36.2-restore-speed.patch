@@ -47,8 +47,8 @@ diff -u -u -b -r1.47.4.1 read_record.c
   *
   *    Kern E. Sibbald, August MMII
   *
-- *   Version $Id: 1.36.2-restore-speed.patch 1961 2005-04-26 19:29:24Z kerns $
-+ *   Version $Id: 1.36.2-restore-speed.patch 1961 2005-04-26 19:29:24Z kerns $
+- *   Version $Id$
++ *   Version $Id$
   */
  /*
 -   Copyright (C) 2000-2004 Kern Sibbald and John Walker

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -53,7 +53,7 @@
  *
  *   Kern Sibbald, MM, MMI
  *
- *   Version $Id: device.c 7939 2008-10-29 14:21:32Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -82,7 +82,7 @@
  *  Returns: true  on success
  *           false on failure
  */
-bool fixup_device_block_write_error(DCR *dcr)
+bool fixup_device_block_write_error(DCR *dcr, int retries)
 {
    char PrevVolName[MAX_NAME_LENGTH];
    DEV_BLOCK *label_blk;
@@ -97,7 +97,7 @@ bool fixup_device_block_write_error(DCR *dcr)
 
    wait_time = time(NULL);
 
-   Dmsg0(100, "Enter fixup_device_block_write_error\n");
+   Dmsg0(100, "=== Enter fixup_device_block_write_error\n");
 
    /*
     * If we are blocked at entry, unblock it, and set our own block status
@@ -185,7 +185,13 @@ bool fixup_device_block_write_error(DCR *dcr)
       berrno be;
       Dmsg1(0, _("write_block_to_device overflow block failed. ERR=%s"),
         be.bstrerror(dev->dev_errno));
-      goto bail_out;
+      /* Note: recursive call */
+      if (retries-- <= 0 || !fixup_device_block_write_error(dcr, retries)) {
+         Jmsg2(jcr, M_FATAL, 0, 
+              _("Catastrophic error. Cannot write overflow block to device %s. ERR=%s"),
+              dev->print_name(), be.bstrerror(dev->dev_errno));
+         goto bail_out;
+      }
    }
    ok = true;
 

@@ -611,7 +611,7 @@ int vtape::fsf()
 bool vtape::read_fm(VT_READ_FM_MODE read_all)
 {
    int ret;
-   uint32_t c;
+   uint32_t c = 0;
    if (read_all == VT_READ_EOF) {
       ::read(fd, &c, sizeof(c));
       if (c != 0) {

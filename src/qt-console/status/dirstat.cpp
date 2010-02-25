@@ -51,7 +51,6 @@ DirStat::DirStat()
 
    m_timer = new QTimer(this);
    readSettings();
-   dockPage();
    m_timer->start(1000);
 
    createConnections();
@@ -101,8 +100,8 @@ void DirStat::timerTriggered()
    value -= 1;
    if (value == 0) {
       value = spinBox->value();
-      bool iscurrent = mainWin->stackedWidget->currentIndex() == mainWin->stackedWidget->indexOf(this);
-      if (((isDocked() && iscurrent) || (!isDocked())) && (checkBox->checkState() == Qt::Checked)) {
+      bool iscurrent = mainWin->tabWidget->currentIndex() == mainWin->tabWidget->indexOf(this);
+      if (((isDocked() && iscurrent) || ((!isDocked()) && isOnceDocked())) && (checkBox->checkState() == Qt::Checked)) {
          populateAll();
       }
    }
@@ -205,6 +204,8 @@ void DirStat::populateScheduled()
 
    scheduledTable->setColumnCount(headerlist.size());
    scheduledTable->setHorizontalHeaderLabels(headerlist);
+   scheduledTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+   scheduledTable->setSelectionMode(QAbstractItemView::SingleSelection);
 
    if (m_console->dir_cmd(command, results)) {
       int row = 0;
@@ -220,7 +221,6 @@ void DirStat::populateScheduled()
             field = field.trimmed();  /* strip leading & trailing spaces */
             p_tableitem = new QTableWidgetItem(field, 1);
             p_tableitem->setForeground(blackBrush);
-            p_tableitem->setFlags(0);
             scheduledTable->setItem(row, column, p_tableitem);
             column += 1;
          }
@@ -249,6 +249,7 @@ void DirStat::populateRunning()
 
    runningTable->setColumnCount(headerlist.size());
    runningTable->setHorizontalHeaderLabels(headerlist);
+   runningTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 
    if (m_console->dir_cmd(command, results)) {
       int row = 0;
@@ -264,7 +265,6 @@ void DirStat::populateRunning()
             field = field.trimmed();  /* strip leading & trailing spaces */
             p_tableitem = new QTableWidgetItem(field, 1);
             p_tableitem->setForeground(blackBrush);
-            p_tableitem->setFlags(Qt::ItemIsSelectable);
             runningTable->setItem(row, column, p_tableitem);
             column += 1;
          }
@@ -286,6 +286,7 @@ void DirStat::PgSeltreeWidgetClicked()
       populateAll();
       m_populated=true;
    }
+   dockPage();
 }
 
 /*
@@ -344,7 +345,7 @@ void DirStat::readSettings()
    m_splitText = "splitterSizes_0";
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
-   splitter->restoreState(settings.value(m_splitText).toByteArray());
+   if (settings.contains(m_splitText)) { splitter->restoreState(settings.value(m_splitText).toByteArray()); }
    spinBox->setValue(settings.value("refreshInterval", 28).toInt());
    checkBox->setCheckState((Qt::CheckState)settings.value("refreshCheck", Qt::Checked).toInt());
    settings.endGroup();

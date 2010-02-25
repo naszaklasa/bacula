@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: clients.cpp 9041 2009-07-16 21:18:53Z ricozz $
+ *   Version $Id$
  *
  *  Clients Class
  *
@@ -60,7 +60,6 @@ Clients::Clients()
     * selector tree. m_contextActions is QList of QActions */
    m_contextActions.append(actionRefreshClients);
    createContextMenu();
-   dockPage();
 }
 
 Clients::~Clients()
@@ -191,6 +190,7 @@ void Clients::PgSeltreeWidgetClicked()
    if(!m_populated) {
       populateTable();
    }
+   dockPage();
 }
 
 /*

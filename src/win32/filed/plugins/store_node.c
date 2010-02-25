@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -146,7 +146,7 @@ store_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
       case 0:
          if (strcmp("DatabaseBackupInfo", context->path_bits[level + 1]) != 0)
          {
-            _JobMessage(M_ERROR, "DatabaseBackupInfo file must exist and must be first in directory\n");
+            _JobMessage(M_FATAL, "DatabaseBackupInfo file must exist and must be first in directory\n");
             state = 999;
             break;
          }
@@ -216,7 +216,7 @@ store_node_t::endRestoreFile(exchange_fd_context_t *context)
          result = HrESERestoreAddDatabase(hccx, dbi_node->restore_display_name, dbi_node->restore_guid, dbi_node->restore_input_streams, &dbi_node->restore_output_streams);
          if (result != 0)
          {
-            _JobMessage(M_ERROR, "HrESERestoreAddDatabase failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _JobMessage(M_FATAL, "HrESERestoreAddDatabase failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
             state = 999;
             break;
          }

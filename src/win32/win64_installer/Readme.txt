@@ -1,11 +1,15 @@
 Bacula - Windows Version Disclaimer
 ===================================
 
-Please note, only the Win64 Client (File daemon) is supported, and
-contrary to the Win32 Client, the other components (Director, Storage daemon,
+Please note, only the Win64 Client (File daemon) is supported.
+The other components (Director, Storage daemon,
 their utilities) are not provided because they have not been ported.
+If you need these components, you can either build them yourself or
+ask Bacula Systems.
+
 Note: the Win64 Client can only be installed on 64 bit Windows Operating
 systems.
+
 
 Bacula - Windows Version Notes
 ==============================

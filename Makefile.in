@@ -1,5 +1,5 @@
 # 
-# Version $Id: Makefile.in 8835 2009-05-16 14:25:36Z kerns $
+# Version $Id$
 # Master Makefile
 #
 @MCOMMON@
@@ -20,8 +20,8 @@ dummy:
 
 # --client-only directories
 fd_subdirs = src scripts src/lib src/findlib src/filed \
-       @READLINE_SRC@ @BAT_DIR@ @GNOME_DIR@ @TRAY_MONITOR_DIR@ @WX_DIR@ \
-       src/console src/plugins/fd
+       @READLINE_SRC@ @BAT_DIR@ @TRAY_MONITOR_DIR@ @WX_DIR@ \
+       src/console @FD_PLUGIN_DIR@
 
 # Non-client-only directores
 subdirs =    src/cats @DIRD_DIR@ @STORED_DIR@ src/tools
@@ -45,8 +45,8 @@ LIBTOOL_DEPS = @LIBTOOL_DEPS@
 all: Makefile
 	@for I in ${all_subdirs}; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; \
-	      $(MAKE) $@ || (echo ""; echo ""; echo "  ====== Error in `pwd` ======"; \
-			    echo ""; echo "";)); \
+	      $(MAKE) DESTDIR=$(DESTDIR) $@ || (echo ""; echo ""; echo "  ====== Error in `pwd` ======"; \
+			    echo ""; echo ""; exit 1;)); \
 	done
 
 depend:
@@ -56,8 +56,8 @@ depend:
 bacula-fd: Makefile	   
 	@for I in ${fd_subdirs}; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; \
-	      $(MAKE) all || (echo ""; echo ""; echo "	 ====== Error in `pwd` ======; \
-			    echo ""; echo "";)); \
+	      $(MAKE) DESTDIR=$(DESTDIR) all || (echo ""; echo ""; echo "   ====== Error in `pwd` ======; \
+			    echo ""; echo ""; exit 1;)); \
 	done
 
 #-------------------------------------------------------------------------

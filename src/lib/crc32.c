@@ -1,15 +1,7 @@
 /*
- *  32 bit CRC.  Algorithm from RFC 2083 (png format)
- *
- *   By Kern Sibbald, January 2001
- *
- *   Version $Id: crc32.c 7380 2008-07-14 10:42:59Z kerns $
- *
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *  32 bit CRC.  Algorithm from RFC 2083 (png format)
+ *
+ *   By Kern Sibbald, January 2001
+ *
+ */
+
 
 #ifdef GENERATE_STATIC_CRC_TABLE
 /*

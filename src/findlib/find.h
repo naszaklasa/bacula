@@ -141,6 +141,7 @@ struct findFOPTS {
    int strip_path;                    /* strip path count */
    char VerifyOpts[MAX_FOPTS];        /* verify options */
    char AccurateOpts[MAX_FOPTS];      /* accurate mode options */
+   char BaseJobOpts[MAX_FOPTS];       /* basejob mode options */
    alist regex;                       /* regex string(s) */
    alist regexdir;                    /* regex string(s) for directories */
    alist regexfile;                   /* regex string(s) for files */
@@ -151,7 +152,6 @@ struct findFOPTS {
    alist base;                        /* list of base names */
    alist fstype;                      /* file system type limitation */
    alist drivetype;                   /* drive type limitation */
-   char *ignoredir;                   /* ignore directories with this file */
 };
 
 
@@ -161,6 +161,7 @@ struct findINCEXE {
    alist opts_list;                   /* options list */
    dlist name_list;                   /* filename list -- holds dlistString */
    dlist plugin_list;                 /* plugin list -- holds dlistString */
+   char *ignoredir;                   /* ignore directories with this file */
 };
 
 /*
@@ -174,13 +175,11 @@ struct findFILESET {
    alist exclude_list;
 };
 
-#ifdef HAVE_DARWIN_OS
 struct HFSPLUS_INFO {
    unsigned long length;              /* Mandatory field */
    char fndrinfo[32];                 /* Finder Info */
    off_t rsrclength;                  /* Size of resource fork */
 };
-#endif
 
 /*
  * Definition of the find_files packet passed as the
@@ -205,6 +204,8 @@ struct FF_PKT {
    bool null_output_device;           /* using null output device */
    bool incremental;                  /* incremental save */
    char VerifyOpts[20];
+   char AccurateOpts[20];
+   char BaseJobOpts[20];
    struct s_included_file *included_files_list;
    struct s_excluded_file *excluded_files_list;
    struct s_excluded_file *excluded_paths_list;
@@ -217,7 +218,6 @@ struct FF_PKT {
    uint32_t flags;                    /* backup options */
    int GZIP_level;                    /* compression level */
    int strip_path;                    /* strip path count */
-   char *ignoredir;                   /* ignore directories with this file */
    bool cmd_plugin;                   /* set if we have a command plugin */
    alist fstypes;                     /* allowed file system types */
    alist drivetypes;                  /* allowed drive types */
@@ -229,9 +229,7 @@ struct FF_PKT {
     * To avoid clutter, we always include rsrc_bfd and volhas_attrlist */
    BFILE rsrc_bfd;                    /* fd for resource forks */
    bool volhas_attrlist;              /* Volume supports getattrlist() */
-#ifdef HAVE_DARWIN_OS
    struct HFSPLUS_INFO hfsinfo;       /* Finder Info and resource fork size */
-#endif
 };
 
 

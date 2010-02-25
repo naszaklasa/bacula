@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_output.c 8508 2009-03-07 20:59:46Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -96,7 +96,29 @@ int gui_cmd(UAContext *ua, const char *cmd)
    return 1;
 }
 
-
+/* 
+ * Enter with Resources locked 
+ */
+static void show_disabled_jobs(UAContext *ua)
+{
+   JOB *job;
+   bool first = true;
+   foreach_res(job, R_JOB) {   
+      if (!acl_access_ok(ua, Job_ACL, job->name())) {
+         continue;
+      }
+      if (!job->enabled) {
+         if (first) {
+            first = false;
+            ua->send_msg(_("Disabled Jobs:\n"));
+         }
+         ua->send_msg("   %s\n", job->name());
+     }
+  }
+  if (first) {
+     ua->send_msg(_("No disabled Jobs.\n"));
+  }
+}
 
 struct showstruct {const char *res_name; int type;};
 static struct showstruct reses[] = {
@@ -123,6 +145,7 @@ static struct showstruct reses[] = {
  *  show all
  *  show <resource-keyword-name>  e.g. show directors
  *  show <resource-keyword-name>=<name> e.g. show director=HeadMan
+ *  show disabled    shows disabled jobs
  *
  */
 int show_cmd(UAContext *ua, const char *cmd)
@@ -137,6 +160,10 @@ int show_cmd(UAContext *ua, const char *cmd)
 
    LockRes();
    for (i=1; i<ua->argc; i++) {
+      if (strcasecmp(ua->argk[i], _("disabled")) == 0) {
+         show_disabled_jobs(ua);
+         goto bail_out;
+      }
       type = 0;
       res_name = ua->argk[i];
       if (!ua->argv[i]) {             /* was a name given? */
@@ -299,6 +326,25 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
          jr.JobId = 0;
          db_list_job_records(ua->jcr, ua->db, &jr, prtit, ua, llist);
 
+      /* List Base files */
+      } else if (strcasecmp(ua->argk[i], NT_("basefiles")) == 0) {
+         /* TODO: cleanup this block */
+         for (j=i+1; j<ua->argc; j++) {
+            if (strcasecmp(ua->argk[j], NT_("ujobid")) == 0 && ua->argv[j]) {
+               bstrncpy(jr.Job, ua->argv[j], MAX_NAME_LENGTH);
+               jr.JobId = 0;
+               db_get_job_record(ua->jcr, ua->db, &jr);
+               jobid = jr.JobId;
+            } else if (strcasecmp(ua->argk[j], NT_("jobid")) == 0 && ua->argv[j]) {
+               jobid = str_to_int64(ua->argv[j]);
+            } else {
+               continue;
+            }
+            if (jobid > 0) {
+               db_list_base_files_for_job(ua->jcr, ua->db, jobid, prtit, ua);
+            }
+         }
+      
       /* List FILES */
       } else if (strcasecmp(ua->argk[i], NT_("files")) == 0) {
 
@@ -456,7 +502,7 @@ static int do_list_cmd(UAContext *ua, const char *cmd, e_list_type llist)
          }
          list_nextvol(ua, n);
       } else if (strcasecmp(ua->argk[i], NT_("copies")) == 0) {
-         char *jobids=NULL;
+         char *jobids = NULL;
          uint32_t limit=0;
          for (j=i+1; j<ua->argc; j++) {
             if (strcasecmp(ua->argk[j], NT_("jobid")) == 0 && ua->argv[j]) {

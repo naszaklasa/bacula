@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, June MMIII
  *
- *   Version $Id: attr.h 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 #ifndef __ATTR_H_

@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id: ua_cmds.c 8950 2009-07-02 12:39:46Z ricozz $
+ *   Version $Id$
  */
  
 #include "bacula.h"
@@ -100,7 +100,7 @@ static int version_cmd(UAContext *ua, const char *cmd);
 static int wait_cmd(UAContext *ua, const char *cmd);
 
 static void do_job_delete(UAContext *ua, JobId_t JobId);
-static void delete_job_id_range(UAContext *ua, char *tok);
+static bool delete_job_id_range(UAContext *ua, char *tok);
 static int delete_volume(UAContext *ua);
 static int delete_pool(UAContext *ua);
 static void delete_job(UAContext *ua);
@@ -110,63 +110,94 @@ int quit_cmd(UAContext *ua, const char *cmd);
 
 /* not all in alphabetical order.  New commands are added after existing commands with similar letters
    to prevent breakage of existing user scripts.  */
-struct cmdstruct { const char *key; int (*func)(UAContext *ua, const char *cmd); const char *help; const bool use_in_rs;};
+struct cmdstruct { 
+   const char *key;                             /* command */
+   int (*func)(UAContext *ua, const char *cmd); /* handler */
+   const char *help;            /* main purpose */
+   const char *usage;           /* all arguments to build usage */
+   const bool use_in_rs;        /* Can use it in Console RunScript */
+};
 static struct cmdstruct commands[] = {                                      /* Can use it in Console RunScript*/
- { NT_("add"),        add_cmd,         _("add [pool=<pool-name> storage=<storage> jobid=<JobId>] -- "
-       "\n               add media to a pool"),  false},
- { NT_("autodisplay"), autodisplay_cmd, _("autodisplay [on|off] -- console messages"),false},
- { NT_("automount"),   automount_cmd,  _("automount [on|off] -- after label"),        false},
- { NT_("cancel"),     cancel_cmd,    _("cancel [jobid=<number> job=<job-name> ujobid=<unique-jobid>] -- "
-       "\n               cancel a job"), false},
- { NT_("create"),     create_cmd,    _("create [pool=<pool-name>] -- create DB Pool from resource"),               false},
- { NT_("delete"),     delete_cmd,    _("delete [volume=<vol-name> pool=<pool-name> job jobid=<id>]"), true},
- { NT_("disable"),    disable_cmd,   _("disable <job=name> -- disable a job"),        true},
- { NT_("enable"),     enable_cmd,    _("enable <job=name> -- enable a job"),          true},
- { NT_("estimate"),   estimate_cmd,  _("performs FileSet estimate, listing gives full listing"
-       "\n               you can make it more accurate with accurate=yes/no"), true},
- { NT_("exit"),       quit_cmd,      _("exit = quit"),                                false},
- { NT_("gui"),        gui_cmd,       _("gui [on|off] -- non-interactive gui mode"),   false},
- { NT_("help"),       help_cmd,      _("print this command"),                         false},
- { NT_("label"),      label_cmd,     _("label a tape"),                               false},
- { NT_("list"),       list_cmd,      _("list [pools | jobs | jobtotals | media <pool=pool-name> | "
-       "\n               files <jobid=nn> | copies <jobid=nn>]; from catalog"), true},
- { NT_("llist"),      llist_cmd,     _("full or long list like list command"),        true},
- { NT_("messages"),   messagescmd,   _("messages"),                                   false},
- { NT_("memory"),     memory_cmd,    _("print current memory usage"),                 true},
- { NT_("mount"),      mount_cmd,     _("mount storage=<storage-name> [ slot=<num> ] [ drive=<num> ] "
-       "\n               or mount [ jobid=<id> | job=<job-name> ]"), false},
- { NT_("prune"),      prunecmd,      _("prune files|jobs|volume client=<client-name> volume=<volume-name> "
-       "\n               prune expired records from catalog"), true},
- { NT_("purge"),      purgecmd,      _("purge records from catalog"),                 true},
- { NT_("python"),     python_cmd,    _("python control commands"),                    false},
- { NT_("quit"),       quit_cmd,      _("quit"),                                       false},
- { NT_("query"),      querycmd,      _("query catalog"),                              false},
- { NT_("restore"),    restore_cmd,   _("restore files"),                              false},
- { NT_("relabel"),    relabel_cmd,   _("relabel storage=<storage-name> oldvolume=<old-volume-name> "
-       "\n               volume=<newvolume-name> -- relabel a tape"), false},
- { NT_("release"),    release_cmd,   _("release <storage-name>"),                     false},
- { NT_("reload"),     reload_cmd,    _("reload conf file"),                           true},
- { NT_("run"),        run_cmd,       _("run job=<job-name> client=<client-name> fileset=<FileSet-name> "
-       "\n               level=<level-keyword> storage=<storage-name> where=<directory-prefix> "
-       "\n               when=<universal-time-specification> yes"), false}, /* need to be check */
- { NT_("status"),     status_cmd,    _("status [all | dir=<dir-name> | director | client=<client-name> |"
-       "\n               storage=<storage-name> | days=nnn]"), true},
- { NT_("setdebug"),   setdebug_cmd,  _("setdebug level=nn [trace=0/1 client=<client-name> |"
-       "\n               dir | director | storage=<storage-name> | all]  -- sets debug level"), true},
- { NT_("setip"),      setip_cmd,     _("sets new client address -- if authorized"),   false},
- { NT_("show"),       show_cmd,      _("show (resource records) [jobs | pools | ... | all]"), true},
- { NT_("sqlquery"),   sqlquerycmd,   _("use SQL to query catalog"),                   false},
- { NT_("time"),       time_cmd,      _("print current time"),                         true},
- { NT_("trace"),      trace_cmd,     _("turn on/off trace to file"),                  true},
- { NT_("unmount"),    unmount_cmd,   _("unmount storage=<storage-name> [ drive=<num> ] "
-       "\n               or unmount [ jobid=<id> | job=<job-name> ]"), false},
- { NT_("umount"),     unmount_cmd,   _("umount - for old-time Unix guys, see unmount"),false},
- { NT_("update"),     update_cmd,    _("update Volume, Pool or slots"),               true},
- { NT_("use"),        use_cmd,       _("use <database-name> -- catalog xxx"),                            false},
- { NT_("var"),        var_cmd,       _("does variable expansion"),                    false},
- { NT_("version"),    version_cmd,   _("print Director version"),                     true},
- { NT_("wait"),       wait_cmd,      _("wait [<jobname=name> | <jobid=nnn> | <ujobid=complete_name>] -- "
-       "\n               wait until no jobs are running"), false}
+ { NT_("add"),        add_cmd,     _("Add media to a pool"),   NT_("pool=<pool-name> storage=<storage> jobid=<JobId>"),  false},
+ { NT_("autodisplay"), autodisplay_cmd,_("Autodisplay console messages"), NT_("on | off"),    false},
+ { NT_("automount"),   automount_cmd,  _("Automount after label"),        NT_("on | off"),    false},
+ { NT_("cancel"),     cancel_cmd,    _("Cancel a job"), NT_("jobid=<number> job=<job-name> ujobid=<unique-jobid>"), false},
+ { NT_("create"),     create_cmd,    _("Create DB Pool from resource"), NT_("pool=<pool-name>"),                    false},
+ { NT_("delete"),     delete_cmd,    _("Delete volume, pool or job"), NT_("volume=<vol-name> pool=<pool-name> jobid=<id>"), true},
+ { NT_("disable"),    disable_cmd,   _("Disable a job"), NT_("job=<name>"),        true},
+ { NT_("enable"),     enable_cmd,    _("Enable a job"), NT_("job=<name>"),          true},
+ { NT_("estimate"),   estimate_cmd,  _("Performs FileSet estimate, listing gives full listing"), 
+   NT_("fileset=<fs> client=<cli> accurate=<yes/no> job=<job> listing"), true},
+
+ { NT_("exit"),       quit_cmd,      _("Terminate Bconsole session"), NT_(""),         false},
+ { NT_("gui"),        gui_cmd,       _("Non-interactive gui mode"),   NT_("on | off"), false},
+ { NT_("help"),       help_cmd,      _("Print help on specific command"),  
+   NT_("add autodisplay automount cancel create delete disable\n\tenable estimate exit gui label list llist"
+       "\n\tmessages memory mount prune purge python quit query\n\trestore relabel release reload run status"
+       "\n\tsetdebug setip show sqlquery time trace unmount umount\n\tupdate use var version wait"),         false},
+
+ { NT_("label"),      label_cmd,     _("Label a tape"), NT_("storage=<storage> volume=<vol> pool=<pool>"), false},
+ { NT_("list"),       list_cmd,      _("List objects from catalog"), 
+   NT_("pools | jobs | jobtotals | media <pool=pool-name> | files jobid=<nn> | copies jobid=<nn>"), true},
+
+ { NT_("llist"),      llist_cmd,     _("Full or long list like list command"),
+   NT_("pools | jobs | jobtotals | media <pool=pool-name> | files jobid=<nn> | copies jobid=<nn>"), true},
+
+ { NT_("messages"),   messagescmd,   _("Display pending messages"),   NT_(""),    false},
+ { NT_("memory"),     memory_cmd,    _("Print current memory usage"), NT_(""),    true},
+ { NT_("mount"),      mount_cmd,     _("Mount storage"), 
+   NT_("storage=<storage-name> slot=<num> drive=<num> [ jobid=<id> | job=<job-name> ]"), false},
+
+ { NT_("prune"),      prunecmd,      _("Prune expired records from catalog"), 
+   NT_("files | jobs | pool=<pool> | client=<client-name> | volume=<volume-name> "), true},
+
+ { NT_("purge"),      purgecmd,      _("Purge records from catalog"), NT_("volume=<vol>"),  true},
+ { NT_("python"),     python_cmd,    _("Python control commands"),    NT_(""),              false},
+ { NT_("quit"),       quit_cmd,      _("Terminate Bconsole session"), NT_(""),              false},
+ { NT_("query"),      querycmd,      _("Query catalog"),              NT_(""),              false},
+ { NT_("restore"),    restore_cmd,   _("Restore files"), 
+   NT_("where=</path> client=<client> storage=<storage> bootstrap=<file>"
+       "\n\tjobid=<jobid> done select all"), false},
+
+ { NT_("relabel"),    relabel_cmd,   _("Relabel a tape"), 
+   NT_("storage=<storage-name> oldvolume=<old-volume-name>\n\tvolume=<newvolume-name> pool=<pool>"), false},
+
+ { NT_("release"),    release_cmd,   _("Release storage"),  NT_("storage-name"),      false},
+ { NT_("reload"),     reload_cmd,    _("Reload conf file"), NT_(""),                  true},
+ { NT_("run"),        run_cmd,       _("Run a job"), 
+   NT_("job=<job-name> client=<client-name>\n\tfileset=<FileSet-name> level=<level-keyword>\n\tstorage=<storage-name>"
+       "where=<directory-prefix>\n\twhen=<universal-time-specification>\n\tyes"), false}, /* need to be check */
+
+ { NT_("status"),     status_cmd,    _("Report status"), 
+   NT_("all | dir=<dir-name> | director | client=<client-name> | storage=<storage-name> slots | days=nnn"), true},
+
+ { NT_("setdebug"),   setdebug_cmd,  _("Sets debug level"), 
+   NT_("level=<nn> trace=0/1 client=<client-name> | dir | storage=<storage-name> | all"), true},
+
+ { NT_("setip"),      setip_cmd,     _("Sets new client address -- if authorized"), NT_(""),   false},
+ { NT_("show"),       show_cmd,      _("Show resource records"), 
+   NT_("job=<xxx> |  pool=<yyy> | fileset=<aaa> schedule=<sss> | client=<zzz> | disabled | all"), true},
+
+ { NT_("sqlquery"),   sqlquerycmd,   _("Use SQL to query catalog"), NT_(""),          false},
+ { NT_("time"),       time_cmd,      _("Print current time"),       NT_(""),          true},
+ { NT_("trace"),      trace_cmd,     _("Turn on/off trace to file"), NT_("on | off"), true},
+ { NT_("unmount"),    unmount_cmd,   _("Unmount storage"), 
+   NT_("storage=<storage-name> [ drive=<num> ] | jobid=<id> | job=<job-name>"), false},
+
+ { NT_("umount"),     unmount_cmd,   _("Umount - for old-time Unix guys, see unmount"), 
+   NT_("storage=<storage-name> [ drive=<num> ] | jobid=<id> | job=<job-name>"), false},
+
+ { NT_("update"),     update_cmd,    _("Update volume, pool or stats"), 
+   NT_("stats\n\tpool=<poolname>\n\tslots storage=<storage> scan"
+       "\n\tvolume=<volname> volstatus=<status> volretention=<time-def>"
+       "\n\t pool=<pool> recycle=<yes/no> slot=<number>\n\t inchanger=<yes/no>"
+       "\n\t maxvolbytes=<size> maxvolfiles=<nb> maxvoljobs=<nb>"
+       "\n\t enable=<yes/no> recyclepool=<pool> actiononpurge=<action>"),true},
+ { NT_("use"),        use_cmd,       _("Use catalog xxx"), NT_(""),     false},
+ { NT_("var"),        var_cmd,       _("Does variable expansion"), NT_(""),  false},
+ { NT_("version"),    version_cmd,   _("Print Director version"),  NT_(""),  true},
+ { NT_("wait"),       wait_cmd,      _("Wait until no jobs are running"), 
+   NT_("jobname=<name> | jobid=<nnn> | ujobid=<complete_name>"), false}
 };
 
 #define comsize ((int)(sizeof(commands)/sizeof(struct cmdstruct)))
@@ -231,6 +262,7 @@ void set_pool_dbr_defaults_in_media_dbr(MEDIA_DBR *mr, POOL_DBR *pr)
    mr->Recycle = pr->Recycle;
    mr->VolRetention = pr->VolRetention;
    mr->VolUseDuration = pr->VolUseDuration;
+   mr->ActionOnPurge = pr->ActionOnPurge;
    mr->RecyclePoolId = pr->RecyclePoolId;
    mr->MaxVolJobs = pr->MaxVolJobs;
    mr->MaxVolFiles = pr->MaxVolFiles;
@@ -571,6 +603,7 @@ void set_pooldbr_from_poolres(POOL_DBR *pr, POOL *pool, e_pool_op op)
    pr->MaxVolFiles = pool->MaxVolFiles;
    pr->MaxVolBytes = pool->MaxVolBytes;
    pr->AutoPrune = pool->AutoPrune;
+   pr->ActionOnPurge = pool->action_on_purge;
    pr->Recycle = pool->Recycle;
    if (pool->label_format) {
       bstrncpy(pr->LabelFormat, pool->label_format, sizeof(pr->LabelFormat));
@@ -803,7 +836,7 @@ static void do_en_disable_cmd(UAContext *ua, bool setting)
 
    i = find_arg_with_value(ua, NT_("job")); 
    if (i < 0) { 
-      job = select_job_resource(ua);
+      job = select_enable_disable_job_resource(ua, setting);
       if (!job) {
          return;
       }
@@ -1150,6 +1183,10 @@ static int estimate_cmd(UAContext *ua, const char *cmd)
                ua->error_msg(_("Client \"%s\" not found.\n"), ua->argv[i]);
                return 1;
             }
+            if (!acl_access_ok(ua, Client_ACL, client->name())) {
+               ua->error_msg(_("No authorization for Client \"%s\"\n"), client->name());
+               return 1;
+            }
             continue;
          } else {
             ua->error_msg(_("Client name missing.\n"));
@@ -1293,7 +1330,7 @@ static int estimate_cmd(UAContext *ua, const char *cmd)
     * If the job is in accurate mode, we send the list of
     * all files to FD.
     */
-   Dmsg1(40, "estimate accurate=%i\n", jcr->accurate);
+   Dmsg1(40, "estimate accurate=%d\n", jcr->accurate);
    if (!send_accurate_current_files(jcr)) {
       goto bail_out;
    }
@@ -1425,9 +1462,7 @@ static void delete_job(UAContext *ua)
         sep = strchr(tok, ',');
         while (sep != NULL) {
            *sep = '\0';
-           if (strchr(tok, '-')) {
-               delete_job_id_range(ua, tok);
-           } else {
+           if (!delete_job_id_range(ua, tok)) {
               JobId = str_to_int64(tok);
               do_job_delete(ua, JobId);
            }
@@ -1435,9 +1470,7 @@ static void delete_job(UAContext *ua)
            sep = strchr(tok, ',');
         }
         /* pick up the last token */
-        if (strchr(tok, '-')) {
-            delete_job_id_range(ua, tok);
-        } else {
+        if (!delete_job_id_range(ua, tok)) {
             JobId = str_to_int64(tok);
             do_job_delete(ua, JobId);
         }
@@ -1458,12 +1491,15 @@ static void delete_job(UAContext *ua)
 /*
  * we call delete_job_id_range to parse range tokens and iterate over ranges
  */
-static void delete_job_id_range(UAContext *ua, char *tok)
+static bool delete_job_id_range(UAContext *ua, char *tok)
 {
    char *tok2;
    JobId_t j,j1,j2;
 
    tok2 = strchr(tok, '-');
+   if (!tok2) {
+      return false;
+   }
    *tok2 = '\0';
    tok2++;
    j1 = str_to_int64(tok);
@@ -1471,6 +1507,7 @@ static void delete_job_id_range(UAContext *ua, char *tok)
    for (j=j1; j<=j2; j++) {
       do_job_delete(ua, j);
    }
+   return true;
 }
 
 /*
@@ -1843,10 +1880,20 @@ int wait_cmd(UAContext *ua, const char *cmd)
 static int help_cmd(UAContext *ua, const char *cmd)
 {
    int i;
-
-   ua->send_msg(_("  Command    Description\n  =======    ===========\n"));
+   ua->send_msg(_("  Command       Description\n  =======       ===========\n"));
    for (i=0; i<comsize; i++) {
-      ua->send_msg(_("  %-10s %s\n"), _(commands[i].key), _(commands[i].help));
+      if (ua->argc == 2) {
+         if (!strcasecmp(ua->argk[1], commands[i].key)) {
+            ua->send_msg(_("  %-13s %s\n\nArguments:\n\t%s\n"), commands[i].key, 
+                         commands[i].help, commands[i].usage);
+            break;
+         }
+      } else {
+         ua->send_msg(_("  %-13s %s\n"), commands[i].key, commands[i].help);
+      }
+   }
+   if (i == comsize && ua->argc == 2) {
+      ua->send_msg(_("\nCan't find %s command.\n\n"), ua->argk[1]);
    }
    ua->send_msg(_("\nWhen at a prompt, entering a period cancels the command.\n\n"));
    return 1;
@@ -1854,10 +1901,29 @@ static int help_cmd(UAContext *ua, const char *cmd)
 
 int qhelp_cmd(UAContext *ua, const char *cmd)
 {
-   int i;
-
+   int i,j;
+   /* Want to display only commands */
+   j = find_arg(ua, NT_("all"));
+   if (j >= 0) {
+      for (i=0; i<comsize; i++) {
+         ua->send_msg("%s\n", commands[i].key);
+      }
+      return 1;
+   }
+   /* Want to display a specific help section */
+   j = find_arg_with_value(ua, NT_("item"));
+   if (j >= 0 && ua->argk[j]) {
+      for (i=0; i<comsize; i++) {
+         if (bstrcmp(commands[i].key, ua->argv[j])) {
+            ua->send_msg("%s\n", commands[i].usage);
+            break;
+         }
+      }
+      return 1;
+   }
+   /* Want to display everything */
    for (i=0; i<comsize; i++) {
-      ua->send_msg("%s %s\n", commands[i].key, _(commands[i].help));
+      ua->send_msg("%s %s -- %s\n", commands[i].key, commands[i].help, commands[i].usage);
    }
    return 1;
 }

@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, November MMII
  *
- *   Version $Id: bpipe.c 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 
@@ -403,7 +403,8 @@ int run_program_full_output(char *prog, int wait, POOLMEM *&results)
    mode = (char *)"r";
    bpipe = open_bpipe(prog, wait, mode);
    if (!bpipe) {
-      return ENOENT;
+      stat1 = ENOENT;
+      goto bail_out;
    }
    
    sm_check(__FILE__, __LINE__, false);
@@ -449,6 +450,7 @@ int run_program_full_output(char *prog, int wait, POOLMEM *&results)
    stat1 = stat2 != 0 ? stat2 : stat1;
    
    Dmsg1(900, "Run program returning %d\n", stat1);
+bail_out:
    free_pool_memory(tmp);
    free(buf);
    return stat1;

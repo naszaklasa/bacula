@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# shell script to delete Bacula tables for PostgreSQL
+
+bindir=@SQL_BINDIR@
+db_name=@db_name@
+
+sql -u${db_user} ${db_name} $* <<END-OF-DATA
+drop table unsavedfiles;
+drop table basefiles;
+drop table jobmedia;
+drop table file;
+drop table job;
+drop table jobhisto;
+drop table media;
+drop table client;
+drop table pool;
+drop table fileset;
+drop table path;
+drop table filename;
+drop table counters;
+drop table version;
+drop table CDImages;
+drop table Device;
+drop table Storage;
+drop table MediaType;
+drop table Status;
+drop table MAC;
+drop table log;
+drop table Location;
+drop table locationlog;
+END-OF-DATA
+pstat=$?
+if test $pstat = 0; 
+then
+   echo "Deletion of Bacula Ingres tables succeeded."
+else
+   echo "Deletion of Bacula Ingres tables failed."
+fi
+exit $pstat

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>882</width>
-    <height>689</height>
+    <width>785</width>
+    <height>660</height>
    </rect>
   </property>
   <property name="windowTitle" >
@@ -35,28 +35,7 @@
      <number>6</number>
     </property>
     <item row="0" column="0" >
-     <widget class="QStackedWidget" name="stackedWidget" >
-      <property name="sizePolicy" >
-       <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
-        <horstretch>1</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="sizeIncrement" >
-       <size>
-        <width>1</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="focusPolicy" >
-       <enum>Qt::StrongFocus</enum>
-      </property>
-      <property name="toolTip" >
-       <string/>
-      </property>
-      <property name="statusTip" >
-       <string/>
-      </property>
+     <widget class="QTabWidget" name="tabWidget" >
       <property name="currentIndex" >
        <number>-1</number>
       </property>
@@ -69,7 +48,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>882</width>
+     <width>785</width>
      <height>24</height>
     </rect>
    </property>
@@ -150,8 +129,8 @@
    </property>
    <property name="minimumSize" >
     <size>
-     <width>79</width>
-     <height>101</height>
+     <width>97</width>
+     <height>157</height>
     </size>
    </property>
    <property name="maximumSize" >
@@ -179,20 +158,14 @@
     <set>Qt::AllDockWidgetAreas</set>
    </property>
    <property name="windowTitle" >
-    <string>Page Selector</string>
+    <string></string>
    </property>
    <attribute name="dockWidgetArea" >
     <number>1</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents" >
-    <layout class="QGridLayout" >
-     <property name="margin" >
-      <number>9</number>
-     </property>
-     <property name="spacing" >
-      <number>6</number>
-     </property>
-     <item row="0" column="0" >
+    <layout class="QVBoxLayout" name="verticalLayout" >
+     <item>
       <widget class="QTreeWidget" name="treeWidget" >
        <property name="sizePolicy" >
         <sizepolicy vsizetype="Expanding" hsizetype="Preferred" >
@@ -237,62 +210,19 @@
        </column>
       </widget>
      </item>
-    </layout>
-   </widget>
-  </widget>
-  <widget class="QDockWidget" name="dockWidget_2" >
-   <property name="toolTip" >
-    <string>Console Entry</string>
-   </property>
-   <property name="statusTip" >
-    <string>Enter a bacula command</string>
-   </property>
-   <property name="whatsThis" >
-    <string>Console Command entry Dock Widget</string>
-   </property>
-   <property name="features" >
-    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
-   </property>
-   <property name="allowedAreas" >
-    <set>Qt::BottomDockWidgetArea|Qt::TopDockWidgetArea</set>
-   </property>
-   <property name="windowTitle" >
-    <string>Console Command Line Entry</string>
-   </property>
-   <attribute name="dockWidgetArea" >
-    <number>8</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents_2" >
-    <layout class="QGridLayout" >
-     <property name="margin" >
-      <number>9</number>
-     </property>
-     <property name="spacing" >
-      <number>6</number>
-     </property>
-     <item row="0" column="0" >
-      <layout class="QHBoxLayout" >
-       <property name="spacing" >
-        <number>6</number>
+     <item>
+      <widget class="QLabel" name="label" >
+       <property name="text" >
+        <string>Command:</string>
        </property>
-       <property name="margin" >
-        <number>0</number>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lineEdit" >
+       <property name="statusTip" >
+        <string>Click here to enter command</string>
        </property>
-       <item>
-        <widget class="QLabel" name="label" >
-         <property name="text" >
-          <string>Command:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEdit" >
-         <property name="statusTip" >
-          <string>Click here to enter command</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+      </widget>
      </item>
     </layout>
    </widget>

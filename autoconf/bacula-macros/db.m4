@@ -55,6 +55,12 @@ AC_HELP_STRING([--with-dbi@<:@=DIR@:>@], [Include DBI support. DIR is the DBD ba
            else
               DRIVERDIR=$prefix/lib/dbd
            fi
+        elif test -d /usr/local/lib64/dbd; then
+           DRIVERDIR=/usr/local/lib64/dbd
+        elif test -d /usr/lib64/dbd; then
+           DRIVERDIR=/usr/lib64/dbd
+        elif test -d $prefix/lib64/dbd; then
+           DRIVERDIR=$prefix/lib64/dbd
         else
            AC_MSG_RESULT(no)
            AC_MSG_ERROR(Unable to find DBD drivers in standard locations)
@@ -84,6 +90,8 @@ AC_HELP_STRING([--with-dbi@<:@=DIR@:>@], [Include DBI support. DIR is the DBD ba
            else
               DRIVERDIR=$withval/lib/dbd
            fi
+        elif test -d $withval/lib64/dbd; then
+           DRIVERDIR=$withval/lib64/dbd
         else
            AC_MSG_RESULT(no)
            AC_MSG_ERROR(Invalid DBD driver directory $withval - unable to find DBD drivers under $withval)
@@ -414,7 +422,7 @@ AC_HELP_STRING([--with-mysql@<:@=DIR@:>@], [Include MySQL support. DIR is the My
     SQL_BINDIR=$MYSQL_BINDIR
     SQL_LIB=$MYSQL_LIBDIR/libmysqlclient_r.a
 
-    AC_DEFINE(HAVE_MYSQL)
+    AC_DEFINE(HAVE_MYSQL, 1, [Set if you have an Ingres Database])
     AC_MSG_RESULT(yes)
     db_found=yes
     support_mysql=yes
@@ -525,72 +533,47 @@ AC_SUBST(SQL_BINDIR)
 ])
 
 
-AC_DEFUN([BA_CHECK_SQLITE_DB],
+AC_DEFUN([BA_CHECK_INGRES_DB],
 [
 db_found=no
-AC_MSG_CHECKING(for SQLite support)
-AC_ARG_WITH(sqlite,
-AC_HELP_STRING([--with-sqlite@<:@=DIR@:>@], [Include SQLite support.  DIR is the SQLite base install directory, default is to search through a number of common places for the SQLite files.]),
+AC_MSG_CHECKING(for Ingres support)
+AC_ARG_WITH(ingres,
+AC_HELP_STRING([--with-ingres@<:@=DIR@:>@], [Include Ingres support. DIR is the Ingres base install directory, default is to search through a number of common places for the Ingres files.]),
 [
   if test "$withval" != "no"; then
      if test "$withval" = "yes"; then
-        if test -f /usr/local/include/sqlite.h; then
-           SQLITE_INCDIR=/usr/local/include
-           if test -d /usr/local/lib64; then
-              SQLITE_LIBDIR=/usr/local/lib64
-           else
-              SQLITE_LIBDIR=/usr/local/lib
-           fi
-           SQLITE_BINDIR=/usr/local/bin
-        elif test -f /usr/include/sqlite.h; then
-           SQLITE_INCDIR=/usr/include
-           if test -d /usr/lib64; then
-              SQLITE_LIBDIR=/usr/lib64
-           else
-              SQLITE_LIBDIR=/usr/lib
-           fi
-           SQLITE_BINDIR=/usr/bin      
-        elif test -f $prefix/include/sqlite.h; then
-           SQLITE_INCDIR=$prefix/include
-           if test -d $prefix/lib64; then
-              SQLITE_LIBDIR=$prefix/lib64
-           else
-              SQLITE_LIBDIR=$prefix/lib
-           fi
-           SQLITE_BINDIR=$prefix/bin      
+        if test -f ${II_SYSTEM}/files/eqdefc.h; then
+           INGRES_INCDIR=${II_SYSTEM}/files
+           INGRES_LIBDIR=${II_SYSTEM}/lib
+           INGRES_BINDIR=${II_SYSTEM}/bin
+        elif test -f ${II_SYSTEM}/ingres/files/eqdefc.h; then
+           INGRES_INCDIR=${II_SYSTEM}/ingres/files
+           INGRES_LIBDIR=${II_SYSTEM}/ingres/lib
+           INGRES_BINDIR=${II_SYSTEM}/bin      
         else
            AC_MSG_RESULT(no)
-           AC_MSG_ERROR(Unable to find sqlite.h in standard locations)
+           AC_MSG_ERROR(Unable to find eqdefc.h in standard locations)
         fi
      else
-        if test -f $withval/sqlite.h; then
-           SQLITE_INCDIR=$withval
-           SQLITE_LIBDIR=$withval
-           SQLITE_BINDIR=$withval
-        elif test -f $withval/include/sqlite.h; then
-           SQLITE_INCDIR=$withval/include
-           if test -d $withval/lib64; then
-              SQLITE_LIBDIR=$withval/lib64
-           else
-              SQLITE_LIBDIR=$withval/lib
-           fi
-           SQLITE_BINDIR=$withval/bin
+        if test -f $withval/files/eqdefc.h; then
+           INGRES_INCDIR=$withval/files
+           INGRES_LIBDIR=$withval/lib
+           INGRES_BINDIR=$withval/bin
         else
            AC_MSG_RESULT(no)
-           AC_MSG_ERROR(Invalid SQLite directory $withval - unable to find sqlite.h under $withval)
+           AC_MSG_ERROR(Invalid Ingres directory $withval - unable to find sqlite3.h under $withval)
         fi
      fi
-     SQL_INCLUDE=-I$SQLITE_INCDIR
-     SQL_LFLAGS="-L$SQLITE_LIBDIR -lsqlite"
-     SQL_BINDIR=$SQLITE_BINDIR
-     SQL_LIB=$SQLITE_LIBDIR/libsqlite.a
-
-     AC_DEFINE(HAVE_SQLITE)
+     SQL_INCLUDE=-I$INGRES_INCDIR
+     SQL_LFLAGS="-L$INGRES_LIBDIR -lingres"
+     SQL_BINDIR=$INGRES_BINDIR
+     SQL_LIB=$INGRES_LIBDIR/libingres.a
+     AC_DEFINE(HAVE_INGRES, 1, [Set if have Ingres Database])
      AC_MSG_RESULT(yes)
      db_found=yes
-     support_sqlite=yes
-     db_type=SQLite
-     DB_TYPE=sqlite
+     support_ingres=yes
+     db_type=Ingres
+     DB_TYPE=ingres
 
   else
      AC_MSG_RESULT(no)
@@ -598,10 +581,10 @@ AC_HELP_STRING([--with-sqlite@<:@=DIR@:>@], [Include SQLite support.  DIR is the
 ],[
   AC_MSG_RESULT(no)
 ])
+
 AC_SUBST(SQL_LFLAGS)
 AC_SUBST(SQL_INCLUDE)
 AC_SUBST(SQL_BINDIR)
-  
 ])
 
 AC_DEFUN([BA_CHECK_SQLITE3_DB],
@@ -682,7 +665,6 @@ AC_SUBST(SQL_INCLUDE)
 AC_SUBST(SQL_BINDIR)
   
 ])
-
 
 
 AC_DEFUN([BA_CHECK_POSTGRESQL_DB],

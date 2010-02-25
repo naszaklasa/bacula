@@ -32,7 +32,7 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id: mount.c 8561 2009-03-20 14:52:17Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -63,6 +63,9 @@ enum {
  *
  * This routine returns a 0 only if it is REALLY
  *  impossible to get the requested Volume.
+ *
+ * This routine is entered with the device blocked, but not
+ *   locked.
  *
  */
 bool DCR::mount_next_write_volume()
@@ -113,9 +116,11 @@ mount_next_vol:
       ask = true;                     /* ask operator to mount tape */
       do_find = true;                 /* re-find a volume after unload */
    }
+   unlock_volumes();
    do_unload();
    do_swapping(true /*is_writing*/);
    do_load(true /*is_writing*/);
+   lock_volumes();
 
    if (do_find && !find_a_volume()) {
       goto no_lock_bail_out;
@@ -138,6 +143,7 @@ mount_next_vol:
     * and move the tape to the end of data.
     *
     */
+   unlock_volumes();
    if (autoload_device(dcr, true/*writing*/, NULL) > 0) {
       autochanger = true;
       ask = false;
@@ -145,7 +151,9 @@ mount_next_vol:
       autochanger = false;
       VolCatInfo.Slot = 0;
       ask = retry >= 2;
+      do_find = true;           /* do find_a_volume if we retry */
    }
+   lock_volumes();
    Dmsg1(150, "autoload_dev returns %d\n", autochanger);
    /*
     * If we autochanged to correct Volume or (we have not just
@@ -180,6 +188,7 @@ mount_next_vol:
 
    if (dev->poll && dev->has_cap(CAP_CLOSEONPOLL)) {
       dev->close();
+      free_volume(dev);
    }
 
    /* Ensure the device is open */
@@ -214,6 +223,8 @@ mount_next_vol:
       if (try_autolabel(false) == try_read_vol) {
          break;                       /* created a new volume label */
       }
+      Jmsg3(jcr, M_WARNING, 0, _("Open device %s Volume \"%s\" failed: ERR=%s\n"),
+            dev->print_name(), dcr->VolumeName, dev->bstrerror());
       Dmsg0(50, "set_unload\n");
       dev->set_unload();              /* force ask sysop */
       ask = true;
@@ -306,6 +317,9 @@ no_lock_bail_out:
  * This routine is meant to be called once the first pass
  *   to ensure that we have a candidate volume to mount.
  *   Otherwise, we ask the sysop to created one.
+ * Note, the the Volumes are locked on entry.
+ *   They are unlocked on failure and remain locked on
+ *   success.  The caller must know this!!!
  */
 bool DCR::find_a_volume()  
 {
@@ -474,6 +488,7 @@ int DCR::check_volume_label(bool &ask, bool &autochanger)
       /* Needed, so the medium can be changed */
       if (dev->requires_mount()) {
          dev->close();
+         free_volume(dev);
       }
       goto check_next_volume;
    }
@@ -544,6 +559,12 @@ void DCR::do_swapping(bool is_writing)
          Dmsg1(100, "=== set in_use vol=%s\n", dev->vol->vol_name);
          dev->vol->set_in_use();
          dev->VolHdr.VolumeName[0] = 0;  /* don't yet have right Volume */
+      } else {
+         Dmsg1(100, "No vol on dev=%s\n", dev->print_name());
+      }
+      if (dev->swap_dev->vol) {
+         Dmsg2(100, "Vol=%s on dev=%s\n", dev->swap_dev->vol->vol_name,
+              dev->swap_dev->print_name());
       }
       dev->swap_dev = NULL;
    }

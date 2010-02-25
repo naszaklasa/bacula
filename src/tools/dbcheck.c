@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,7 @@
  *
  *   Kern E. Sibbald, August 2002
  *
- *   Version $Id: dbcheck.c 7927 2008-10-28 22:03:33Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -118,8 +118,9 @@ static void usage()
 "       -c              Director conf filename\n"
 "       -B              print catalog configuration and exit\n"
 "       -d <nn>         set debug level to <nn>\n"
-"       -dt             print timestamp in debug output\n"
+"       -dt             print a timestamp in debug output\n"
 "       -f              fix inconsistencies\n"
+"       -t              test if client library is thread-safe\n"
 "       -v              verbose\n"
 "       -?              print this message\n\n");
    exit(1);
@@ -130,6 +131,7 @@ int main (int argc, char *argv[])
    int ch;
    const char *user, *password, *db_name, *dbhost;
    int dbport = 0;
+   bool test_thread=false;
    bool print_catalog=false;
    char *configfile = NULL;
    char *catalogname = NULL;
@@ -138,6 +140,7 @@ int main (int argc, char *argv[])
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
+   lmgr_init_thread();
 
    my_name_is(argc, argv, "dbcheck");
    init_msg(NULL, NULL);              /* setup message handler */
@@ -145,7 +148,7 @@ int main (int argc, char *argv[])
    memset(&id_list, 0, sizeof(id_list));
    memset(&name_list, 0, sizeof(name_list));
 
-   while ((ch = getopt(argc, argv, "bc:C:d:fvB?")) != -1) {
+   while ((ch = getopt(argc, argv, "bc:C:d:fvBt?")) != -1) {
       switch (ch) {
       case 'B':
          print_catalog = true;     /* get catalog information from config */
@@ -181,6 +184,9 @@ int main (int argc, char *argv[])
       case 'v':
          verbose++;
          break;
+      case 't':
+         test_thread=true;
+         break;
 
       case '?':
       default:
@@ -191,6 +197,16 @@ int main (int argc, char *argv[])
    argv += optind;
 
    OSDependentInit();
+
+   if (test_thread) {
+      /* When we will load the SQL backend with ldopen, this check would be
+       * moved after the database initialization. It will need a valid config
+       * file.
+       */
+      db_check_backend_thread_safe();
+      Pmsg0(0, _("OK - DB backend seems to be thread-safe.\n"));
+      exit(0);
+   }
 
    if (configfile) {
       CAT *catalog = NULL;
@@ -325,6 +341,7 @@ int main (int argc, char *argv[])
    db_close_database(NULL, db);
    close_msg(NULL);
    term_msg();
+   lmgr_cleanup_main();
    return 0;
 }
 
@@ -342,7 +359,7 @@ static void do_interactive_mode()
    else
       printf(_(" Verbose is off.\n"));
 
-   printf(_("Please select the fuction you want to perform.\n"));
+   printf(_("Please select the function you want to perform.\n"));
 
    while (!quit) {
       if (fix) {

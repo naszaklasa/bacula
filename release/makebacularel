@@ -1,0 +1,105 @@
+#!/bin/sh
+#
+#
+# This script is used to make a Bacula release
+#   bacula
+#   regress
+#   gui
+# It writes in the current directory, so we recommend that you
+#  do not run it in the Bacula source or Git directory, but
+#  in a special release directory.
+#
+# Commit all changes, update the language files, 
+#    export the release, make a release tar.
+#
+cwd=`pwd`
+reltype=release
+tagbase=Release-
+base_pkg=bacula
+if [ $# != 2 ] ; then
+  echo "Need $0 <source-directory> <branch>"
+  echo "e.g. $0 release-source 3.0.3"
+  exit 1
+fi
+cd $1
+if [ $? -ne 0 ]; then
+   echo "Directory: $1 does not exist"
+   exit 1
+fi
+src=`pwd` 
+cd $base_pkg 
+if [ $?  -ne 0 ]; then
+   echo "Directory: $1 does not exist"
+   exit 1
+fi
+branch=$2
+git checkout ${branch}
+git pull origin ${branch}
+if [ $? -ne 0 ]; then
+   echo "Checkout of branch ${branch} failed."
+   exit 1
+fi
+ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' src/version.h`
+fulltag=$tagbase$ver
+echo " "
+echo "Making $reltype for $base_pkg-$ver ..."
+echo " "
+echo "OK?  ctl-c to stop"
+read a
+rm -rf Release-$ver
+if [ $reltype != "beta" ] ; then
+   cd src
+   cp -fp version.h 1
+   sed 's%^#define DEVELOPER 1%/* #define DEVELOPER 1 */%g' 1 >version.h
+   rm -f 1
+   cd ..
+fi
+if [ a$updatepo != ano ]; then
+   ./configure --enable-client-only
+   cd po
+   make update-po
+   cd ${src}   
+   git commit -am "Final po changes for ${fulltag}"
+fi
+git tag -d ${fulltag}
+echo "Creating new tag -- $fulltag"
+git tag $fulltag
+if [ $? != 0 ] ; then
+  echo " "
+  echo "Non-zero return status from Git"
+  echo " "
+  exit 1
+fi
+echo "Create Tag $fulltag done"
+cd ${cwd}
+rm -rf $base_pkg-$ver $base_pkg-$ver.tar.gz $base_pkg-$ver.tar.gz.sig
+rm -rf $fulltag
+cd ${src}
+git archive --format=tar --prefix=$base_pkg-$ver/ $fulltag | gzip >${cwd}/$base_pkg-$ver.tar.gz
+if [ $? != 0 ] ; then
+  echo " "
+  echo "Non-zero return status from Git"
+  echo " "
+  exit 1
+fi
+echo "Exported release into ${cwd}/$base_pkg-$ver.tar.gz"
+git checkout master
+cd ${cwd}
+tar xfz $base_pkg-$ver.tar.gz 
+cd $base_pkg-$ver/
+mv bacula $base_pkg-$ver
+mv gui $base_pkg-gui-$ver
+mv regress $base_pkg-regress-$ver
+tar cvfz ../$base_pkg-$ver.tar.gz $base_pkg-$ver
+tar cvfz ../$base_pkg-gui-$ver.tar.gz $base_pkg-gui-$ver
+tar cvfz ../$base_pkg-regress-$ver.tar.gz $base_pkg-regress-$ver
+cd ..
+./sign $base_pkg-$ver.tar.gz
+./sign $base_pkg-gui-$ver.tar.gz
+./sign $base_pkg-regress-$ver.tar.gz
+
+if [ a$push != ano ]; then
+   cd ${src}
+   git push origin $branch
+   git push origin tag $fulltag
+fi

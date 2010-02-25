@@ -1,7 +1,7 @@
 #
 # Default  Bacula File Daemon Configuration file
 #
-#  For Bacula Systems release @VERSION@ (@DATE@) -- @DISTNAME@ @DISTVER@
+#  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@ @DISTVER@
 #
 # There is not much to change here except perhaps the
 # File daemon Name

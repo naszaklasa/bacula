@@ -99,6 +99,7 @@ main (int argc, char *const *argv)
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
+   lmgr_init_thread();
 
    while ((ch = getopt(argc, argv, "ac:d:f:?")) != -1) {
       switch (ch) {
@@ -242,6 +243,7 @@ main (int argc, char *const *argv)
    term_msg();
 
    close_memory_pool();
+   lmgr_cleanup_main();
    sm_dump(false);
    exit(0);
 }

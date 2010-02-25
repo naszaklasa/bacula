@@ -14059,7 +14059,7 @@ msgstr ""
 
 #: src/tools/dbcheck.c:295
 #, c-format
-msgid "Please select the fuction you want to perform.\n"
+msgid "Please select the function you want to perform.\n"
 msgstr ""
 
 #: src/tools/dbcheck.c:299

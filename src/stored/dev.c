@@ -47,12 +47,12 @@
  *     daemon. More complicated coding (double buffering, writer
  *     thread, ...) is left for a later version.
  *
- *   Version $Id: dev.c 9050 2009-07-17 17:21:15Z kerns $
+ *   Version $Id$
  */
 
 /*
  * Handling I/O errors and end of tape conditions are a bit tricky.
- * This is how it is currently done when writting.
+ * This is how it is currently done when writing.
  * On either an I/O error or end of tape,
  * we will stop writing on the physical device (no I/O recovery is
  * attempted at least in this daemon). The state flag will be sent
@@ -160,6 +160,7 @@ init_dev(JCR *jcr, DEVRES *device)
    dev->max_block_size = device->max_block_size;
    dev->max_volume_size = device->max_volume_size;
    dev->max_file_size = device->max_file_size;
+   dev->max_concurrent_jobs = device->max_concurrent_jobs;
    dev->volume_capacity = device->volume_capacity;
    dev->max_rewind_wait = device->max_rewind_wait;
    dev->max_open_wait = device->max_open_wait;
@@ -198,11 +199,12 @@ init_dev(JCR *jcr, DEVRES *device)
          Jmsg2(jcr, M_ERROR_TERM, 0, _("Unable to stat mount point %s: ERR=%s\n"), 
             device->mount_point, be.bstrerror());
       }
-   }
-   if (dev->is_dvd()) {
+   
       if (!device->mount_command || !device->unmount_command) {
          Jmsg0(jcr, M_ERROR_TERM, 0, _("Mount and unmount commands must defined for a device which requires mount.\n"));
       }
+   }
+   if (dev->is_dvd()) {
       if (!device->write_part_command) {
          Jmsg0(jcr, M_ERROR_TERM, 0, _("Write part command must be defined for a device which requires mount.\n"));
       }
@@ -226,6 +228,10 @@ init_dev(JCR *jcr, DEVRES *device)
    if (dev->max_block_size % TAPE_BSIZE != 0) {
       Jmsg2(jcr, M_WARNING, 0, _("Max block size %u not multiple of device %s block size.\n"),
          dev->max_block_size, dev->print_name());
+   }
+   if (dev->max_volume_size != 0 && dev->max_volume_size < (dev->max_block_size << 4)) {
+      Jmsg(jcr, M_ERROR_TERM, 0, _("Max Vol Size < 8 * Max Block Size on device %s\n"), 
+           dev->print_name());
    }
 
    dev->errmsg = get_pool_memory(PM_EMSG);
@@ -255,6 +261,16 @@ init_dev(JCR *jcr, DEVRES *device)
       Mmsg1(dev->errmsg, _("Unable to init mutex: ERR=%s\n"), be.bstrerror(errstat));
       Jmsg0(jcr, M_ERROR_TERM, 0, dev->errmsg);
    }
+   if ((errstat = pthread_mutex_init(&dev->acquire_mutex, NULL)) != 0) {
+      berrno be;
+      dev->dev_errno = errstat;
+      Mmsg1(dev->errmsg, _("Unable to init mutex: ERR=%s\n"), be.bstrerror(errstat));
+      Jmsg0(jcr, M_ERROR_TERM, 0, dev->errmsg);
+   }
+   /* Ensure that we respect this order in P/V operations */
+   bthread_mutex_set_priority(&dev->m_mutex,       PRIO_SD_DEV_ACCESS);
+   bthread_mutex_set_priority(&dev->spool_mutex,   PRIO_SD_DEV_SPOOL);
+   bthread_mutex_set_priority(&dev->acquire_mutex, PRIO_SD_DEV_ACQUIRE);
 #ifdef xxx
    if ((errstat = rwl_init(&dev->lock)) != 0) {
       berrno be;
@@ -390,6 +406,7 @@ void DEVICE::open_tape_device(DCR *dcr, int omode)
    utime_t start_time = time(NULL);
 #endif
 
+   mount(1);                          /* do mount if required */
 
    Dmsg0(100, "Open dev: device is tape\n");
 
@@ -531,7 +548,7 @@ void DEVICE::open_file_device(DCR *dcr, int omode)
       Mmsg2(errmsg, _("Could not open: %s, ERR=%s\n"), archive_name.c_str(), 
             be.bstrerror());
       Dmsg1(100, "open failed: %s", errmsg);
-      Jmsg1(NULL, M_WARNING, 0, "%s", errmsg);
+//    Jmsg1(NULL, M_WARNING, 0, "%s", errmsg);
    } else {
       dev_errno = 0;
       file = 0;
@@ -1917,7 +1934,10 @@ void DEVICE::close()
       unlock_door(); 
    default:
       d_close(m_fd);
+      break;
    }
+
+   unmount(1);                        /* do unmount if required */
 
    /* Clean up device packet so it can be reused */
    clear_opened();
@@ -2054,74 +2074,165 @@ bool DEVICE::truncate(DCR *dcr) /* We need the DCR for DVD-writing */
    return false;
 }
 
-/* Mount the device.
+/*
+ * Mount the device.
  * If timeout, wait until the mount command returns 0.
  * If !timeout, try to mount the device only once.
  */
 bool DEVICE::mount(int timeout) 
 {
    Dmsg0(190, "Enter mount\n");
+
    if (is_mounted()) {
       return true;
-   } else if (requires_mount()) {
-      return do_mount(1, timeout);
-   }       
+   }
+
+   switch (dev_type) {
+   case B_VTL_DEV:
+   case B_VTAPE_DEV:
+   case B_TAPE_DEV:
+      if (device->mount_command) {
+         return do_tape_mount(1, timeout);
+      }
+      break;
+   case B_FILE_DEV:
+   case B_DVD_DEV:
+      if (requires_mount() && device->mount_command) {
+         return do_file_mount(1, timeout);
+      }
+      break;
+   default:
+      break;
+   }
+
    return true;
 }
 
-/* Unmount the device
+/*
+ * Unmount the device
  * If timeout, wait until the unmount command returns 0.
  * If !timeout, try to unmount the device only once.
  */
 bool DEVICE::unmount(int timeout) 
 {
    Dmsg0(100, "Enter unmount\n");
-   if (is_mounted()) {
-      return do_mount(0, timeout);
+
+   if (!is_mounted()) {
+      return true;
    }
+
+   switch (dev_type) {
+   case B_VTL_DEV:
+   case B_VTAPE_DEV:
+   case B_TAPE_DEV:
+      if (device->unmount_command) {
+         return do_tape_mount(0, timeout);
+      }
+      break;
+   case B_FILE_DEV:
+   case B_DVD_DEV:
+      if (requires_mount() && device->unmount_command) {
+         return do_file_mount(0, timeout);
+      }
+      break;
+   default:
+      break;
+   }
+
    return true;
 }
 
-/* (Un)mount the device */
-bool DEVICE::do_mount(int mount, int dotimeout) 
+/*
+ * (Un)mount the device (for tape devices)
+ */
+bool DEVICE::do_tape_mount(int mount, int dotimeout)
 {
    POOL_MEM ocmd(PM_FNAME);
    POOLMEM *results;
    char *icmd;
-   int status, timeout;
-   
+   int status, tries;
+   berrno be;
+
    Dsm_check(1);
    if (mount) {
-      if (is_mounted()) {
-         Dmsg0(200, "======= mount=1\n");
-         return true;
-      }
       icmd = device->mount_command;
    } else {
-      if (!is_mounted()) {
-         Dmsg0(200, "======= mount=0\n");
-         return true;
+      icmd = device->unmount_command;
+   }
+
+   edit_mount_codes(ocmd, icmd);
+
+   Dmsg2(100, "do_tape_mount: cmd=%s mounted=%d\n", ocmd.c_str(), !!is_mounted());
+
+   if (dotimeout) {
+      /* Try at most 10 times to (un)mount the device. This should perhaps be configurable. */
+      tries = 10;
+   } else {
+      tries = 1;
+   }
+   results = get_memory(4000);
+
+   /* If busy retry each second */
+   Dmsg1(100, "do_tape_mount run_prog=%s\n", ocmd.c_str());
+   while ((status = run_program_full_output(ocmd.c_str(), max_open_wait/2, results)) != 0) {
+      if (tries-- > 0) {
+         continue;
       }
+
+      Dmsg5(100, "Device %s cannot be %smounted. stat=%d result=%s ERR=%s\n", print_name(),
+           (mount ? "" : "un"), status, results, be.bstrerror(status));
+      Mmsg(errmsg, _("Device %s cannot be %smounted. ERR=%s\n"),
+           print_name(), (mount ? "" : "un"), be.bstrerror(status));
+
+      set_mounted(false);
+      free_pool_memory(results);
+      Dmsg0(200, "============ mount=0\n");
+      Dsm_check(1);
+      return false;
+   }
+
+   set_mounted(mount);              /* set/clear mounted flag */
+   free_pool_memory(results);
+   Dmsg1(200, "============ mount=%d\n", mount);
+   return true;
+}
+
+/*
+ * (Un)mount the device (either a FILE or DVD device)
+ */
+bool DEVICE::do_file_mount(int mount, int dotimeout) 
+{
+   POOL_MEM ocmd(PM_FNAME);
+   POOLMEM *results;
+   DIR* dp;
+   char *icmd;
+   struct dirent *entry, *result;
+   int status, tries, name_max, count;
+   berrno be;
+
+   Dsm_check(1);
+   if (mount) {
+      icmd = device->mount_command;
+   } else {
       icmd = device->unmount_command;
    }
    
    clear_freespace_ok();
    edit_mount_codes(ocmd, icmd);
    
-   Dmsg2(100, "do_mount: cmd=%s mounted=%d\n", ocmd.c_str(), !!is_mounted());
+   Dmsg2(100, "do_file_mount: cmd=%s mounted=%d\n", ocmd.c_str(), !!is_mounted());
 
    if (dotimeout) {
       /* Try at most 10 times to (un)mount the device. This should perhaps be configurable. */
-      timeout = 10;
+      tries = 10;
    } else {
-      timeout = 0;
+      tries = 1;
    }
    results = get_memory(4000);
 
    /* If busy retry each second */
-   Dmsg1(100, "do_mount run_prog=%s\n", ocmd.c_str());
-   while ((status = run_program_full_output(ocmd.c_str(), 
-                       max_open_wait/2, results)) != 0) {
+   Dmsg1(100, "do_file_mount run_prog=%s\n", ocmd.c_str());
+   while ((status = run_program_full_output(ocmd.c_str(), max_open_wait/2, results)) != 0) {
       /* Doesn't work with internationalization (This is not a problem) */
       if (mount && fnmatch("*is already mounted on*", results, 0) == 0) {
          break;
@@ -2129,37 +2240,24 @@ bool DEVICE::do_mount(int mount, int dotimeout)
       if (!mount && fnmatch("* not mounted*", results, 0) == 0) {
          break;
       }
-      if (timeout-- > 0) {
+      if (tries-- > 0) {
          /* Sometimes the device cannot be mounted because it is already mounted.
           * Try to unmount it, then remount it */
          if (mount) {
             Dmsg1(400, "Trying to unmount the device %s...\n", print_name());
-            do_mount(0, 0);
+            do_file_mount(0, 0);
          }
          bmicrosleep(1, 0);
          continue;
       }
-      if (status != 0) {
-         berrno be;
-         Dmsg5(100, "Device %s cannot be %smounted. stat=%d result=%s ERR=%s\n", print_name(),
-              (mount ? "" : "un"), status, results, be.bstrerror(status));
-         Mmsg(errmsg, _("Device %s cannot be %smounted. ERR=%s\n"), 
-              print_name(), (mount ? "" : "un"), be.bstrerror(status));
-      } else {
-         Dmsg4(100, "Device %s cannot be %smounted. stat=%d ERR=%s\n", print_name(),
-              (mount ? "" : "un"), status, results);
-         Mmsg(errmsg, _("Device %s cannot be %smounted. ERR=%s\n"), 
-              print_name(), (mount ? "" : "un"), results);
-      }
+      Dmsg5(100, "Device %s cannot be %smounted. stat=%d result=%s ERR=%s\n", print_name(),
+           (mount ? "" : "un"), status, results, be.bstrerror(status));
+      Mmsg(errmsg, _("Device %s cannot be %smounted. ERR=%s\n"),
+           print_name(), (mount ? "" : "un"), be.bstrerror(status));
+
       /*
-       * Now, just to be sure it is not mounted, try to read the
-       *  filesystem.
+       * Now, just to be sure it is not mounted, try to read the filesystem.
        */
-      DIR* dp;
-      struct dirent *entry, *result;
-      int name_max;
-      int count;
-      
       name_max = pathconf(".", _PC_NAME_MAX);
       if (name_max < 1024) {
          name_max = 1024;
@@ -2168,7 +2266,7 @@ bool DEVICE::do_mount(int mount, int dotimeout)
       if (!(dp = opendir(device->mount_point))) {
          berrno be;
          dev_errno = errno;
-         Dmsg3(100, "do_mount: failed to open dir %s (dev=%s), ERR=%s\n", 
+         Dmsg3(100, "do_file_mount: failed to open dir %s (dev=%s), ERR=%s\n", 
                device->mount_point, print_name(), be.bstrerror());
          goto get_out;
       }
@@ -2178,7 +2276,7 @@ bool DEVICE::do_mount(int mount, int dotimeout)
       while (1) {
          if ((readdir_r(dp, entry, &result) != 0) || (result == NULL)) {
             dev_errno = EIO;
-            Dmsg2(129, "do_mount: failed to find suitable file in dir %s (dev=%s)\n", 
+            Dmsg2(129, "do_file_mount: failed to find suitable file in dir %s (dev=%s)\n", 
                   device->mount_point, print_name());
             break;
          }
@@ -2186,13 +2284,13 @@ bool DEVICE::do_mount(int mount, int dotimeout)
             count++; /* result->d_name != ., .. or .keep (Gentoo-specific) */
             break;
          } else {
-            Dmsg2(129, "do_mount: ignoring %s in %s\n", result->d_name, device->mount_point);
+            Dmsg2(129, "do_file_mount: ignoring %s in %s\n", result->d_name, device->mount_point);
          }
       }
       free(entry);
       closedir(dp);
       
-      Dmsg1(100, "do_mount: got %d files in the mount point (not counting ., .. and .keep)\n", count);
+      Dmsg1(100, "do_file_mount: got %d files in the mount point (not counting ., .. and .keep)\n", count);
       
       if (count > 0) {
          /* If we got more than ., .. and .keep */

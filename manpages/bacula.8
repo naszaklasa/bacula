@@ -42,17 +42,12 @@ Director runs as a daemon or a service (i.e.  in the background).
 .LP
 Bacula Console services is the program that allows the
 administrator or user to communicate with the Bacula Director
-(see above).  Currently, the Bacula Console is available in three
+(see above).  Currently, the Bacula Console is available in two
 versions.  The first and simplest is to run the Console program
 in a shell window (i.e.  TTY interface).  Most system
 administrators will find this completely adequate.  The second
-version is a GNOME GUI interface that for the moment (07 October
-2005) is far from complete, but quite functional as it has most
-the capabilities of the shell Console.  The third version is a
-wxWidgets GUI with an interactive file restore.  It also has most
-of the capabilities of the shell console, allows command
-completion with tabulation, and gives you instant help about the
-command you are typing.
+version is a Qt 4.2 GUI interface named bat that has
+more features than the bconsole program.
 
 .LP
 Bacula File services (or Client program) is the software program
@@ -68,8 +63,8 @@ in some of the documentation, the File daemon is referred to as
 the Client (for example in Bacula's configuration file).  In
 addition to Unix/Linux File daemons, there is a Windows File
 daemon (normally distributed in binary format).  The Windows File
-daemon runs on all currently known Windows versions (98, Me,
-NT, 2K, 2003,  XP).
+daemon runs on all currently known Windows versions (2K, 2003,  XP, 
+and Vista).
 
 .LP
 Bacula Storage services consist of the software programs that
@@ -78,7 +73,7 @@ to the physical backup media or volumes.  In other words, the
 Storage daemon is responsible for reading and writing your tapes
 (or other storage media, e.g.  files).  For more details see the
 Storage Services Daemon Design Document in the Bacula Developer's
-Guild.  The Storage services runs as a daemon on the machine that
+Guide.  The Storage services runs as a daemon on the machine that
 has the backup device (usually a tape drive).
 
 .LP
@@ -91,7 +86,7 @@ programs like tar and bru, because the catalog maintains a record
 of all Volumes used, all Jobs run, and all Files saved,
 permitting efficicient restoration and Volume management.  Bacula
 currently supports three different databases, MySQL, PostgreSQL,
-and SQLite, one of which must be chosen when building Bacula.
+and SQLite3, one of which must be chosen when building Bacula.
 
 .SH OPTIONS
 See the HTML/PDF documentation at:
@@ -122,7 +117,8 @@ Kern Sibbald
 Kern Sibbald
 .SS Contributors
 An enormous list of past and former persons who have devoted
-their time and energy to this project -- thanks.
+their time and energy to this project -- thanks. See the AUTHORS
+file in the main Bacula source directory.
 
 .SH COPYRIGHT
 Bacula is distributed under a modified GPL version 2.0, as described in the

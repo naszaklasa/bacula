@@ -34,7 +34,7 @@
  *
  *    Kern Sibbald, December 2000
  *
- *    Version $Id: sql_find.c 8944 2009-07-02 09:22:20Z kerns $
+ *    Version $Id: sql_find.c 8508 2009-03-07 20:59:46Z kerns $
  */
 
 
@@ -46,7 +46,7 @@
 #include "bacula.h"
 #include "cats.h"
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
 
 /* -----------------------------------------------------------------------
  *

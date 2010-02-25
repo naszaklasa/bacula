@@ -29,8 +29,8 @@
  * Properties we use for getting and setting ACLs.
  */
 
-#ifndef _BACULA_ACL_
-#define _BACULA_ACL_
+#ifndef __ACL_H
+#define __ACL_H
 
 /* For shorter ACL strings when possible, define BACL_WANT_SHORT_ACLS */
 /* #define BACL_WANT_SHORT_ACLS */
@@ -50,7 +50,7 @@ typedef enum {
 } bacl_type;
 
 /*
- * This value is used as ostype when we encounter a invalid acl type.
+ * This value is used as ostype when we encounter an invalid acl type.
  * The way the code is build this should never happen.
  */
 #if !defined(ACL_TYPE_NONE)
@@ -68,5 +68,14 @@ typedef enum {
 #elif defined(HAVE_LINUX_OS) 
 #define BACL_ENOTSUP          ENOTSUP
 #endif
+
+/*
+ * Internal tracking data.
+ */
+struct acl_data_t {
+   POOLMEM *content;
+   uint32_t content_length;
+   uint32_t nr_errors;
+};
 
 #endif

@@ -29,7 +29,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: restoretree.h 8587 2009-03-24 01:30:11Z bartleyd2 $
+ *   Version $Id$
  *
  *  Kern Sibbald, February 2007
  */
@@ -49,6 +49,7 @@ class restoreTree : public Pages, public Ui::restoreTreeForm
 public:
    restoreTree();
    ~restoreTree();
+   virtual void PgSeltreeWidgetClicked();
    virtual void currentStackItem();
    enum folderCheckState
    {

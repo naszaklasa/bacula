@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: storage.cpp 8960 2009-07-05 16:51:23Z kerns $
+ *   Version $Id$
  *
  *  Storage Class
  *
@@ -39,6 +39,7 @@
 #include <QAbstractEventDispatcher>
 #include <QMenu>
 #include "storage.h"
+#include "content.h"
 #include "label/label.h"
 #include "mount/mount.h"
 #include "status/storstat.h"
@@ -60,7 +61,6 @@ Storage::Storage()
    /* add context sensitive menu items specific to this classto the page
     * selector tree. m_contextActions is QList of QActions */
    m_contextActions.append(actionRefreshStorage);
-   dockPage();
 }
 
 Storage::~Storage()
@@ -234,6 +234,7 @@ void Storage::PgSeltreeWidgetClicked()
       populateTree();
       createContextMenu();
    }
+   dockPage();
 }
 
 /*
@@ -326,6 +327,17 @@ void Storage::createContextMenu()
                 SLOT(consoleRelease()));
    connect(actionStatusStorageWindow, SIGNAL(triggered()), this,
                 SLOT(statusStorageWindow()));
+   connect(mp_treeWidget, SIGNAL(itemDoubleClicked(QTreeWidgetItem *, int)),
+           this, SLOT(contentWindow()));
+
+}
+
+void Storage::contentWindow()
+{
+   if (m_currentStorage != "" && m_currentAutoChanger) { 
+      QTreeWidgetItem *parentItem = mainWin->getFromHash(this);
+      new Content(m_currentStorage, parentItem);
+   }
 }
 
 /*

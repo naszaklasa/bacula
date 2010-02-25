@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,7 +33,7 @@
  *
  *  Kern Sibbald, January MMI
  *
- *   Version $Id: rwlock.c 8132 2008-12-09 19:21:38Z ricozz $
+ *   Version $Id$
  *
  *  This code adapted from "Programming with POSIX Threads", by
  *    David R. Butenhof
@@ -49,12 +49,13 @@
  *  Returns: 0 on success
  *           errno on failure
  */
-int rwl_init(brwlock_t *rwl)
+int rwl_init(brwlock_t *rwl, int priority)
 {
    int stat;
 
    rwl->r_active = rwl->w_active = 0;
    rwl->r_wait = rwl->w_wait = 0;
+   rwl->priority = priority;
    if ((stat = pthread_mutex_init(&rwl->mutex, NULL)) != 0) {
       return stat;
    }
@@ -233,7 +234,7 @@ int rwl_writelock(brwlock_t *rwl)
       pthread_mutex_unlock(&rwl->mutex);
       return 0;
    }
-   lmgr_pre_lock(rwl);
+   lmgr_pre_lock(rwl, rwl->priority, __FILE__, __LINE__);
    if (rwl->w_active || rwl->r_active > 0) {
       rwl->w_wait++;                  /* indicate that we are waiting */
       pthread_cleanup_push(rwl_write_release, (void *)rwl);
@@ -278,7 +279,7 @@ int rwl_writetrylock(brwlock_t *rwl)
    } else {
       rwl->w_active = 1;              /* we are running */
       rwl->writer_id = pthread_self(); /* save writer thread's id */
-      lmgr_do_lock(rwl);
+      lmgr_do_lock(rwl, rwl->priority, __FILE__, __LINE__);
    }
    stat2 = pthread_mutex_unlock(&rwl->mutex);
    return (stat == 0 ? stat2 : stat);
@@ -460,7 +461,7 @@ int main (int argc, char *argv[])
     for (data_count = 0; data_count < DATASIZE; data_count++) {
         data[data_count].data = 0;
         data[data_count].writes = 0;
-        status = rwl_init (&data[data_count].lock);
+        status = rwl_init(&data[data_count].lock);
         if (status != 0) {
            berrno be;
            printf("Init rwlock failed. ERR=%s\n", be.bstrerror(status));
@@ -634,7 +635,7 @@ int main (int argc, char *argv[])
     for (data_count = 0; data_count < DATASIZE; data_count++) {
         data[data_count].data = 0;
         data[data_count].updates = 0;
-        rwl_init (&data[data_count].lock);
+        rwl_init(&data[data_count].lock);
     }
 
     /*

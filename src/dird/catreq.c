@@ -37,7 +37,7 @@
  *  Basic tasks done here:
  *      Handle Catalog services.
  *
- *   Version $Id: catreq.c 8407 2009-01-28 10:47:21Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -110,7 +110,7 @@ void catalog_request(JCR *jcr, BSOCK *bs)
    int index, ok, label, writing;
    POOLMEM *omsg;
    POOL_DBR pr;
-   uint32_t Stripe;
+   uint32_t Stripe, Copy;
    uint64_t MediaId;
    utime_t VolFirstWritten;
    utime_t VolLastWritten;
@@ -326,7 +326,7 @@ void catalog_request(JCR *jcr, BSOCK *bs)
     */
    } else if (sscanf(bs->msg, Create_job_media, &Job,
       &jm.FirstIndex, &jm.LastIndex, &jm.StartFile, &jm.EndFile,
-      &jm.StartBlock, &jm.EndBlock, &jm.Copy, &Stripe, &MediaId) == 10) {
+      &jm.StartBlock, &jm.EndBlock, &Copy, &Stripe, &MediaId) == 10) {
 
       if (jcr->mig_jcr) {
          jm.JobId = jcr->mig_jcr->JobId;
@@ -370,7 +370,6 @@ static void update_attribute(JCR *jcr, char *msg, int32_t msglen)
    uint32_t FileIndex;
    uint32_t data_len;
    char *p;
-   int filetype;
    int len;
    char *fname, *attr;
    ATTR_DBR *ar = NULL;
@@ -405,7 +404,7 @@ static void update_attribute(JCR *jcr, char *msg, int32_t msglen)
    if (Stream == STREAM_UNIX_ATTRIBUTES || Stream == STREAM_UNIX_ATTRIBUTES_EX) {
       if (jcr->cached_attribute) {
          Dmsg2(400, "Cached attr. Stream=%d fname=%s\n", ar->Stream, ar->fname);
-         if (!db_create_file_attributes_record(jcr, jcr->db, ar)) {
+         if (!db_create_attributes_record(jcr, jcr->db, ar)) {
             Jmsg1(jcr, M_FATAL, 0, _("Attribute create error. %s"), db_strerror(jcr->db));
          }
       }
@@ -415,7 +414,7 @@ static void update_attribute(JCR *jcr, char *msg, int32_t msglen)
       p = jcr->attr - msg + p;    /* point p into jcr->attr */
       skip_nonspaces(&p);             /* skip FileIndex */
       skip_spaces(&p);
-      filetype = str_to_int32(p);     /* TODO: choose between unserialize and str_to_int32 */
+      ar->FileType = str_to_int32(p);     /* TODO: choose between unserialize and str_to_int32 */
       skip_nonspaces(&p);             /* skip FileType */
       skip_spaces(&p);
       fname = p;
@@ -426,7 +425,7 @@ static void update_attribute(JCR *jcr, char *msg, int32_t msglen)
       Dmsg1(400, "dird<stored: attr=%s\n", attr);
       ar->attr = attr;
       ar->fname = fname;
-      if (filetype == FT_DELETED) {
+      if (ar->FileType == FT_DELETED) {
          ar->FileIndex = 0;     /* special value */
       } else {
          ar->FileIndex = FileIndex;
@@ -479,13 +478,18 @@ static void update_attribute(JCR *jcr, char *msg, int32_t msglen)
          }
 
          bin_to_base64(digestbuf, sizeof(digestbuf), fname, len, true);
-         Dmsg3(400, "DigestLen=%d Digest=%s type=%d\n", strlen(digestbuf), digestbuf, Stream);
+         Dmsg3(400, "DigestLen=%d Digest=%s type=%d\n", strlen(digestbuf),
+               digestbuf, Stream);
          if (jcr->cached_attribute) {
             ar->Digest = digestbuf;
             ar->DigestType = type;
-            Dmsg2(400, "Cached attr with digest. Stream=%d fname=%s\n", ar->Stream, ar->fname);
-            if (!db_create_file_attributes_record(jcr, jcr->db, ar)) {
-               Jmsg1(jcr, M_FATAL, 0, _("Attribute create error. %s"), db_strerror(jcr->db));
+            Dmsg2(400, "Cached attr with digest. Stream=%d fname=%s\n",
+                  ar->Stream, ar->fname);
+
+            /* Update BaseFile table */
+            if (!db_create_attributes_record(jcr, jcr->db, ar)) {
+               Jmsg1(jcr, M_FATAL, 0, _("attribute create error. %s"),
+                        db_strerror(jcr->db));
             }
             jcr->cached_attribute = false; 
          } else {
@@ -504,21 +508,20 @@ static void update_attribute(JCR *jcr, char *msg, int32_t msglen)
  */
 void catalog_update(JCR *jcr, BSOCK *bs)
 {
-   POOLMEM *omsg;
-
-   if (job_canceled(jcr) || !jcr->pool->catalog_files) {
-      goto bail_out;                  /* user disabled cataloging */
+   if (!jcr->pool->catalog_files) {
+      return;                         /* user disabled cataloging */
+   }
+   if (job_canceled(jcr)) {
+      goto bail_out;
    }
    if (!jcr->db) {
-      omsg = get_memory(bs->msglen+1);
+      POOLMEM *omsg = get_memory(bs->msglen+1);
       pm_strcpy(omsg, bs->msg);
       bs->fsend(_("1994 Invalid Catalog Update: %s"), omsg);    
       Jmsg1(jcr, M_FATAL, 0, _("Invalid Catalog Update; DB not open: %s"), omsg);
       free_memory(omsg);
       goto bail_out;
-
    }
-
    update_attribute(jcr, bs->msg, bs->msglen);
 
 bail_out:
@@ -580,7 +583,12 @@ bool despool_attributes_from_file(JCR *jcr, const char *file)
             last = size;
          }
       }
-      update_attribute(jcr, msg, msglen);
+      if (!job_canceled(jcr)) {
+         update_attribute(jcr, msg, msglen);
+         if (job_canceled(jcr)) {
+            goto bail_out;
+         }
+      }
    }
    if (ferror(spool_fd)) {
       berrno be;

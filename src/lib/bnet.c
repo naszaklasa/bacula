@@ -33,7 +33,7 @@
  * Adapted and enhanced for Bacula, originally written
  * for inclusion in the Apcupsd package
  *
- *   Version $Id: bnet.c 8863 2009-05-26 13:44:08Z ricozz $
+ *   Version $Id$
  */
 
 
@@ -86,7 +86,7 @@ int32_t read_nbytes(BSOCK * bsock, char *ptr, int32_t nbytes)
             continue;
          }
          if (errno == EAGAIN) {
-            bmicrosleep(0, 200000);  /* try again in 200ms */
+            bmicrosleep(0, 20000);  /* try again in 20ms */
             continue;
          }
       }
@@ -149,7 +149,7 @@ int32_t write_nbytes(BSOCK * bsock, char *ptr, int32_t nbytes)
 
          FD_ZERO(&fdset);
          FD_SET((unsigned)bsock->m_fd, &fdset);
-         tv.tv_sec = 10;
+         tv.tv_sec = 1;
          tv.tv_usec = 0;
          select(bsock->m_fd + 1, NULL, &fdset, NULL, &tv);
          continue;
@@ -192,7 +192,7 @@ int32_t bnet_recv(BSOCK * bsock)
  */
 bool is_bnet_stop(BSOCK * bsock)
 {
-   return bsock->errors || bsock->is_terminated();
+   return bsock->is_stop();
 }
 
 /*
@@ -200,8 +200,7 @@ bool is_bnet_stop(BSOCK * bsock)
  */
 int is_bnet_error(BSOCK * bsock)
 {
-   errno = bsock->b_errno;
-   return bsock->errors;
+   return bsock->is_error();
 }
 
 /*

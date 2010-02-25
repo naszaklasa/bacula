@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, August MMII
  *                            
- *   Version $Id: autochanger.c 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -427,11 +427,12 @@ static bool unload_other_drive(DCR *dcr, int slot)
       break;
    }
    if (dev->is_busy()) {
-      Jmsg(dcr->jcr, M_WARNING, 0, _("Volume \"%s\" is in use by device %s\n"),
-           dcr->VolumeName, dev->print_name());
+      Jmsg(dcr->jcr, M_WARNING, 0, _("Volume \"%s\" wanted on %s is in use by device %s\n"),
+           dcr->VolumeName, dcr->dev->print_name(), dev->print_name());
       Dmsg4(100, "Vol %s for dev=%s is busy dev=%s slot=%d\n",
            dcr->VolumeName, dcr->dev->print_name(), dev->print_name(), dev->get_slot());
       Dmsg2(100, "num_writ=%d reserv=%d\n", dev->num_writers, dev->num_reserved());
+      volume_unused(dcr);
       return false;
    }
    return unload_dev(dcr, dev);
@@ -559,7 +560,7 @@ bool autochanger_cmd(DCR *dcr, BSOCK *dir, const char *cmd)
       dir->fsend(_("3996 Open bpipe failed.\n"));
       goto bail_out;
    }
-   if (strcmp(cmd, "list") == 0) {
+   if (bstrcmp(cmd, "list") || bstrcmp(cmd, "listall")) {
       /* Get output from changer */
       while (fgets(dir->msg, len, bpipe->rfd)) {
          dir->msglen = strlen(dir->msg);

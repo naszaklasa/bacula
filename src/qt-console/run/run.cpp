@@ -31,16 +31,53 @@
  *
  *   Kern Sibbald, February MMVII
  *
- *  $Id: run.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *  $Id$
  */ 
 
 #include "bat.h"
 #include "run.h"
 
+
+runPage::runPage()
+{
+   init();
+   show();
+}
+
+runPage::runPage(const QString &defJob)
+{
+   init();
+   if (defJob != "")
+      jobCombo->setCurrentIndex(jobCombo->findText(defJob, Qt::MatchExactly));
+   show();
+}
+
+
+runPage::runPage(const QString &defJob, const QString &level, 
+                 const QString &pool, const QString &storage,
+                 const QString &client, const QString &fileset)
+{
+   init();
+   jobCombo->setCurrentIndex(jobCombo->findText(defJob, Qt::MatchExactly));
+   job_name_change(0);
+   filesetCombo->setCurrentIndex(filesetCombo->findText(fileset,
+                                                        Qt::MatchExactly));
+   levelCombo->setCurrentIndex(levelCombo->findText(level, Qt::MatchExactly));
+   clientCombo->setCurrentIndex(clientCombo->findText(client,Qt::MatchExactly));
+   poolCombo->setCurrentIndex(poolCombo->findText(pool, Qt::MatchExactly));
+
+   if (storage != "") {         // TODO: enable storage
+      storageCombo->setCurrentIndex(storageCombo->findText(storage, 
+                                                           Qt::MatchExactly));
+   }
+   show();
+}
+
+
 /*
  * Setup all the combo boxes and display the dialog
  */
-runPage::runPage(const QString &defJob)
+void runPage::init()
 {
    QDateTime dt;
 
@@ -71,11 +108,10 @@ runPage::runPage(const QString &defJob)
    connect(okButton, SIGNAL(pressed()), this, SLOT(okButtonPushed()));
    connect(cancelButton, SIGNAL(pressed()), this, SLOT(cancelButtonPushed()));
 
-   dockPage();
+   // find a way to place the new window at the cursor position
+   // or in the midle of the page
+//   dockPage();
    setCurrent();
-   this->show();
-   if (defJob != "")
-      jobCombo->setCurrentIndex(jobCombo->findText(defJob, Qt::MatchExactly));
 }
 
 void runPage::okButtonPushed()

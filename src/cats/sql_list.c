@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: sql_list.c 9045 2009-07-17 08:22:59Z ricozz $
+ *    Version $Id: sql_list.c 8508 2009-03-07 20:59:46Z kerns $
  */
 
 
@@ -44,7 +44,7 @@
 
 extern int db_type;
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
 
 /* -----------------------------------------------------------------------
  *
@@ -210,13 +210,13 @@ void db_list_jobmedia_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
       if (JobId > 0) {                   /* do by JobId */
          Mmsg(mdb->cmd, "SELECT JobMediaId,JobId,Media.MediaId,Media.VolumeName,"
             "FirstIndex,LastIndex,StartFile,JobMedia.EndFile,StartBlock,"
-            "JobMedia.EndBlock,Copy "
+            "JobMedia.EndBlock "
             "FROM JobMedia,Media WHERE Media.MediaId=JobMedia.MediaId "
             "AND JobMedia.JobId=%s", edit_int64(JobId, ed1));
       } else {
          Mmsg(mdb->cmd, "SELECT JobMediaId,JobId,Media.MediaId,Media.VolumeName,"
             "FirstIndex,LastIndex,StartFile,JobMedia.EndFile,StartBlock,"
-            "JobMedia.EndBlock,Copy "
+            "JobMedia.EndBlock "
             "FROM JobMedia,Media WHERE Media.MediaId=JobMedia.MediaId");
       }
 
@@ -434,15 +434,67 @@ db_list_files_for_job(JCR *jcr, B_DB *mdb, JobId_t jobid, DB_LIST_HANDLER *sendi
     * Stupid MySQL is NON-STANDARD !
     */
    if (db_type == SQL_TYPE_MYSQL) {
-      Mmsg(mdb->cmd, "SELECT CONCAT(Path.Path,Filename.Name) AS Filename FROM File,"
-   "Filename,Path WHERE File.JobId=%s AND Filename.FilenameId=File.FilenameId "
-   "AND Path.PathId=File.PathId",
+      Mmsg(mdb->cmd, "SELECT CONCAT(Path.Path,Filename.Name) AS Filename "
+           "FROM (SELECT PathId, FilenameId FROM File WHERE JobId=%s "
+                  "UNION ALL "
+                 "SELECT PathId, FilenameId "
+                   "FROM BaseFiles JOIN File "
+                         "ON (BaseFiles.FileId = File.FileId) "
+                  "WHERE BaseFiles.JobId = %s"
+           ") AS F, Filename,Path "
+           "WHERE Filename.FilenameId=F.FilenameId "
+           "AND Path.PathId=F.PathId",
+           edit_int64(jobid, ed1), ed1);
+   } else {
+      Mmsg(mdb->cmd, "SELECT Path.Path||Filename.Name AS Filename "
+           "FROM (SELECT PathId, FilenameId FROM File WHERE JobId=%s "
+                  "UNION ALL "
+                 "SELECT PathId, FilenameId "
+                   "FROM BaseFiles JOIN File "
+                         "ON (BaseFiles.FileId = File.FileId) "
+                  "WHERE BaseFiles.JobId = %s"
+           ") AS F, Filename,Path "
+           "WHERE Filename.FilenameId=F.FilenameId "
+           "AND Path.PathId=F.PathId",
+           edit_int64(jobid, ed1), ed1);
+   }
+
+   if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
+      db_unlock(mdb);
+      return;
+   }
+
+   list_result(jcr, mdb, sendit, ctx, HORZ_LIST);
+
+   sql_free_result(mdb);
+   db_unlock(mdb);
+}
+
+void
+db_list_base_files_for_job(JCR *jcr, B_DB *mdb, JobId_t jobid, DB_LIST_HANDLER *sendit, void *ctx)
+{
+   char ed1[50];
+   db_lock(mdb);
+
+   /*
+    * Stupid MySQL is NON-STANDARD !
+    */
+   if (db_type == SQL_TYPE_MYSQL) {
+      Mmsg(mdb->cmd, "SELECT CONCAT(Path.Path,Filename.Name) AS Filename "
+           "FROM BaseFiles, File, Filename, Path "
+           "WHERE BaseFiles.JobId=%s AND BaseFiles.BaseJobId = File.JobId "
+           "AND BaseFiles.FileId = File.FileId "
+           "AND Filename.FilenameId=File.FilenameId "
+           "AND Path.PathId=File.PathId",
          edit_int64(jobid, ed1));
    } else {
-      Mmsg(mdb->cmd, "SELECT Path.Path||Filename.Name AS Filename FROM File,"
-   "Filename,Path WHERE File.JobId=%s AND Filename.FilenameId=File.FilenameId "
-   "AND Path.PathId=File.PathId",
-         edit_int64(jobid, ed1));
+      Mmsg(mdb->cmd, "SELECT Path.Path||Filename.Name AS Filename "
+           "FROM BaseFiles, File, Filename, Path "
+           "WHERE BaseFiles.JobId=%s AND BaseFiles.BaseJobId = File.JobId "
+           "AND BaseFiles.FileId = File.FileId "
+           "AND Filename.FilenameId=File.FilenameId "
+           "AND Path.PathId=File.PathId",
+           edit_int64(jobid, ed1));
    }
 
    if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
@@ -457,4 +509,4 @@ db_list_files_for_job(JCR *jcr, B_DB *mdb, JobId_t jobid, DB_LIST_HANDLER *sendi
 }
 
 
-#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL*/
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES */

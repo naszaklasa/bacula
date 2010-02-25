@@ -29,7 +29,7 @@
  *
  *     Kern Sibbald, January MM
  *
- *   Version $Id: parse_conf.h 7775 2008-10-13 15:48:21Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -230,7 +230,8 @@ void store_int64(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_bit(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_bool(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_time(LEX *lc, RES_ITEM *item, int index, int pass);
-void store_size(LEX *lc, RES_ITEM *item, int index, int pass);
+void store_size64(LEX *lc, RES_ITEM *item, int index, int pass);
+void store_size32(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_defs(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_label(LEX *lc, RES_ITEM *item, int index, int pass);
 

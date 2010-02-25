@@ -41,9 +41,9 @@
 #include "bacula.h"
 #include "cats.h"
 
-static const int dbglevel = 500;
+static const int dbglevel = 100;
 
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI
+#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
 
 /* -----------------------------------------------------------------------
  *
@@ -56,7 +56,6 @@ static const int dbglevel = 500;
 #ifndef HAVE_BATCH_FILE_INSERT
 static int db_create_file_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 static int db_create_filename_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
-static int db_create_path_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 #endif /* HAVE_BATCH_FILE_INSERT */
 
 
@@ -133,13 +132,12 @@ db_create_jobmedia_record(JCR *jcr, B_DB *mdb, JOBMEDIA_DBR *jm)
     */
    Mmsg(mdb->cmd,
         "INSERT INTO JobMedia (JobId,MediaId,FirstIndex,LastIndex,"
-        "StartFile,EndFile,StartBlock,EndBlock,VolIndex,Copy) "
-        "VALUES (%s,%s,%u,%u,%u,%u,%u,%u,%u,%u)",
+        "StartFile,EndFile,StartBlock,EndBlock,VolIndex) "
+        "VALUES (%s,%s,%u,%u,%u,%u,%u,%u,%u)",
         edit_int64(jm->JobId, ed1),
         edit_int64(jm->MediaId, ed2),
         jm->FirstIndex, jm->LastIndex,
-        jm->StartFile, jm->EndFile, jm->StartBlock, jm->EndBlock,count,
-        jm->Copy);
+        jm->StartFile, jm->EndFile, jm->StartBlock, jm->EndBlock,count);
 
    Dmsg0(300, mdb->cmd);
    if (!INSERT_DB(jcr, mdb, mdb->cmd)) {
@@ -193,8 +191,8 @@ db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
 "INSERT INTO Pool (Name,NumVols,MaxVols,UseOnce,UseCatalog,"
 "AcceptAnyVolume,AutoPrune,Recycle,VolRetention,VolUseDuration,"
 "MaxVolJobs,MaxVolFiles,MaxVolBytes,PoolType,LabelType,LabelFormat,"
-"RecyclePoolId,ScratchPoolId) "
-"VALUES ('%s',%u,%u,%d,%d,%d,%d,%d,%s,%s,%u,%u,%s,'%s',%d,'%s',%s,%s)",
+"RecyclePoolId,ScratchPoolId,ActionOnPurge) "
+"VALUES ('%s',%u,%u,%d,%d,%d,%d,%d,%s,%s,%u,%u,%s,'%s',%d,'%s',%s,%s,%d)",
                   pr->Name,
                   pr->NumVols, pr->MaxVols,
                   pr->UseOnce, pr->UseCatalog,
@@ -206,7 +204,9 @@ db_create_pool_record(JCR *jcr, B_DB *mdb, POOL_DBR *pr)
                   edit_uint64(pr->MaxVolBytes, ed3),
                   pr->PoolType, pr->LabelType, pr->LabelFormat,
                   edit_int64(pr->RecyclePoolId,ed4),
-                  edit_int64(pr->ScratchPoolId,ed5));
+                  edit_int64(pr->ScratchPoolId,ed5),
+                  pr->ActionOnPurge
+      );
    Dmsg1(200, "Create Pool: %s\n", mdb->cmd);
    if (!INSERT_DB(jcr, mdb, mdb->cmd)) {
       Mmsg2(&mdb->errmsg, _("Create db Pool record %s failed: ERR=%s\n"),
@@ -411,9 +411,9 @@ db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
 "VolCapacityBytes,Recycle,VolRetention,VolUseDuration,MaxVolJobs,MaxVolFiles,"
 "VolStatus,Slot,VolBytes,InChanger,VolReadTime,VolWriteTime,VolParts,"
 "EndFile,EndBlock,LabelType,StorageId,DeviceId,LocationId,"
-"ScratchPoolId,RecyclePoolId,Enabled)"
+"ScratchPoolId,RecyclePoolId,Enabled,ActionOnPurge)"
 "VALUES ('%s','%s',0,%u,%s,%s,%d,%s,%s,%u,%u,'%s',%d,%s,%d,%s,%s,%d,0,0,%d,%s,"
-"%s,%s,%s,%s,%d)",
+"%s,%s,%s,%s,%d,%d)",
           mr->VolumeName,
           mr->MediaType, mr->PoolId,
           edit_uint64(mr->MaxVolBytes,ed1),
@@ -436,7 +436,7 @@ db_create_media_record(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr)
           edit_int64(mr->LocationId, ed10), 
           edit_int64(mr->ScratchPoolId, ed11), 
           edit_int64(mr->RecyclePoolId, ed12), 
-          mr->Enabled
+          mr->Enabled, mr->ActionOnPurge
           );
 
 
@@ -535,8 +535,76 @@ int db_create_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cr)
 }
 
 
+/* Create a Unique record for the Path -- no duplicates */
+int db_create_path_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
+{
+   SQL_ROW row;
+   int stat;
 
+   mdb->esc_name = check_pool_memory_size(mdb->esc_name, 2*mdb->pnl+2);
+   db_escape_string(jcr, mdb, mdb->esc_name, mdb->path, mdb->pnl);
 
+   if (mdb->cached_path_id != 0 && mdb->cached_path_len == mdb->pnl &&
+       strcmp(mdb->cached_path, mdb->path) == 0) {
+      ar->PathId = mdb->cached_path_id;
+      return 1;
+   }
+
+   Mmsg(mdb->cmd, "SELECT PathId FROM Path WHERE Path='%s'", mdb->esc_name);
+
+   if (QUERY_DB(jcr, mdb, mdb->cmd)) {
+      mdb->num_rows = sql_num_rows(mdb);
+      if (mdb->num_rows > 1) {
+         char ed1[30];
+         Mmsg2(&mdb->errmsg, _("More than one Path!: %s for path: %s\n"),
+            edit_uint64(mdb->num_rows, ed1), mdb->path);
+         Jmsg(jcr, M_WARNING, 0, "%s", mdb->errmsg);
+      }
+      /* Even if there are multiple paths, take the first one */
+      if (mdb->num_rows >= 1) {
+         if ((row = sql_fetch_row(mdb)) == NULL) {
+            Mmsg1(&mdb->errmsg, _("error fetching row: %s\n"), sql_strerror(mdb));
+            Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
+            sql_free_result(mdb);
+            ar->PathId = 0;
+            ASSERT(ar->PathId);
+            return 0;
+         }
+         ar->PathId = str_to_int64(row[0]);
+         sql_free_result(mdb);
+         /* Cache path */
+         if (ar->PathId != mdb->cached_path_id) {
+            mdb->cached_path_id = ar->PathId;
+            mdb->cached_path_len = mdb->pnl;
+            pm_strcpy(mdb->cached_path, mdb->path);
+         }
+         ASSERT(ar->PathId);
+         return 1;
+      }
+      sql_free_result(mdb);
+   }
+
+   Mmsg(mdb->cmd, "INSERT INTO Path (Path) VALUES ('%s')", mdb->esc_name);
+
+   if (!INSERT_DB(jcr, mdb, mdb->cmd)) {
+      Mmsg2(&mdb->errmsg, _("Create db Path record %s failed. ERR=%s\n"),
+         mdb->cmd, sql_strerror(mdb));
+      Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
+      ar->PathId = 0;
+      stat = 0;
+   } else {
+      ar->PathId = sql_insert_id(mdb, NT_("Path"));
+      stat = 1;
+   }
+
+   /* Cache path */
+   if (stat && ar->PathId != mdb->cached_path_id) {
+      mdb->cached_path_id = ar->PathId;
+      mdb->cached_path_len = mdb->pnl;
+      pm_strcpy(mdb->cached_path, mdb->path);
+   }
+   return stat;
+}
 
 /*
  * Create a Unique record for the counter -- no duplicates
@@ -840,38 +908,32 @@ bool db_write_batch_file_records(JCR *jcr)
  *  is a single FileName record and a single Path record, no matter
  *  how many times it occurs.  This is this subroutine, we separate
  *  the file and the path and fill temporary tables with this three records.
+ *
+ *  Note: all routines that call this expect to be able to call
+ *    db_strerror(mdb) to get the error message, so the error message
+ *    MUST be edited into mdb->errmsg before returning an error status.
  */
 bool db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
 {
+   ASSERT(ar->FileType != FT_BASE);
+
    Dmsg1(dbglevel, "Fname=%s\n", ar->fname);
    Dmsg0(dbglevel, "put_file_into_catalog\n");
 
    /* Open the dedicated connexion */
    if (!jcr->batch_started) {
-
       if (!db_open_batch_connexion(jcr, mdb)) {
-         return false;
+         return false;     /* error already printed */
       }
       if (!sql_batch_start(jcr, jcr->db_batch)) {
          Mmsg1(&mdb->errmsg, 
               "Can't start batch mode: ERR=%s", db_strerror(jcr->db_batch));
-         Jmsg1(jcr, M_FATAL, 0, "%s", mdb->errmsg);
+         Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
          return false;
       }
       jcr->batch_started = true;
    }
    B_DB *bdb = jcr->db_batch;
-
-   /*
-    * Make sure we have an acceptable attributes record.
-    */
-   if (!(ar->Stream == STREAM_UNIX_ATTRIBUTES ||
-         ar->Stream == STREAM_UNIX_ATTRIBUTES_EX)) {
-      Mmsg1(&mdb->errmsg, _("Attempt to put non-attributes into catalog. Stream=%d\n"),
-         ar->Stream);
-      Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
-      return false;
-   }
 
    split_path_and_file(jcr, bdb, ar->fname);
 
@@ -903,17 +965,6 @@ bool db_create_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
    db_lock(mdb);
    Dmsg1(dbglevel, "Fname=%s\n", ar->fname);
    Dmsg0(dbglevel, "put_file_into_catalog\n");
-   /*
-    * Make sure we have an acceptable attributes record.
-    */
-   if (!(ar->Stream == STREAM_UNIX_ATTRIBUTES ||
-         ar->Stream == STREAM_UNIX_ATTRIBUTES_EX)) {
-      Mmsg1(&mdb->errmsg, _("Attempt to put non-attributes into catalog. Stream=%d\n"),
-         ar->Stream);
-      Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
-      goto bail_out;
-   }
-
 
    split_path_and_file(jcr, mdb, ar->fname);
 
@@ -984,77 +1035,6 @@ static int db_create_file_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
    return stat;
 }
 
-/* Create a Unique record for the Path -- no duplicates */
-static int db_create_path_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
-{
-   SQL_ROW row;
-   int stat;
-
-   mdb->esc_name = check_pool_memory_size(mdb->esc_name, 2*mdb->pnl+2);
-   db_escape_string(jcr, mdb, mdb->esc_name, mdb->path, mdb->pnl);
-
-   if (mdb->cached_path_id != 0 && mdb->cached_path_len == mdb->pnl &&
-       strcmp(mdb->cached_path, mdb->path) == 0) {
-      ar->PathId = mdb->cached_path_id;
-      return 1;
-   }
-
-   Mmsg(mdb->cmd, "SELECT PathId FROM Path WHERE Path='%s'", mdb->esc_name);
-
-   if (QUERY_DB(jcr, mdb, mdb->cmd)) {
-      mdb->num_rows = sql_num_rows(mdb);
-      if (mdb->num_rows > 1) {
-         char ed1[30];
-         Mmsg2(&mdb->errmsg, _("More than one Path!: %s for path: %s\n"),
-            edit_uint64(mdb->num_rows, ed1), mdb->path);
-         Jmsg(jcr, M_WARNING, 0, "%s", mdb->errmsg);
-      }
-      /* Even if there are multiple paths, take the first one */
-      if (mdb->num_rows >= 1) {
-         if ((row = sql_fetch_row(mdb)) == NULL) {
-            Mmsg1(&mdb->errmsg, _("error fetching row: %s\n"), sql_strerror(mdb));
-            Jmsg(jcr, M_ERROR, 0, "%s", mdb->errmsg);
-            sql_free_result(mdb);
-            ar->PathId = 0;
-            ASSERT(ar->PathId);
-            return 0;
-         }
-         ar->PathId = str_to_int64(row[0]);
-         sql_free_result(mdb);
-         /* Cache path */
-         if (ar->PathId != mdb->cached_path_id) {
-            mdb->cached_path_id = ar->PathId;
-            mdb->cached_path_len = mdb->pnl;
-            pm_strcpy(mdb->cached_path, mdb->path);
-         }
-         ASSERT(ar->PathId);
-         return 1;
-      }
-      sql_free_result(mdb);
-   }
-
-   Mmsg(mdb->cmd, "INSERT INTO Path (Path) VALUES ('%s')", mdb->esc_name);
-
-   if (!INSERT_DB(jcr, mdb, mdb->cmd)) {
-      Mmsg2(&mdb->errmsg, _("Create db Path record %s failed. ERR=%s\n"),
-         mdb->cmd, sql_strerror(mdb));
-      Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
-      ar->PathId = 0;
-      stat = 0;
-   } else {
-      ar->PathId = sql_insert_id(mdb, NT_("Path"));
-      stat = 1;
-   }
-
-   /* Cache path */
-   if (stat && ar->PathId != mdb->cached_path_id) {
-      mdb->cached_path_id = ar->PathId;
-      mdb->cached_path_len = mdb->pnl;
-      pm_strcpy(mdb->cached_path, mdb->path);
-   }
-   return stat;
-}
-
 /* Create a Unique record for the filename -- no duplicates */
 static int db_create_filename_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
 {
@@ -1108,4 +1088,171 @@ bool db_write_batch_file_records(JCR *jcr)
 
 #endif /* ! HAVE_BATCH_FILE_INSERT */
 
-#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_DBI */
+
+/* List of SQL commands to create temp table and indicies  */
+const char *create_temp_basefile[4] = {
+   /* MySQL */
+   "CREATE TEMPORARY TABLE basefile%lld ("
+//   "CREATE TABLE basefile%lld ("
+   "Path BLOB NOT NULL,"
+   "Name BLOB NOT NULL)",
+
+   /* Postgresql */
+   "CREATE TEMPORARY TABLE basefile%lld (" 
+//   "CREATE TABLE basefile%lld (" 
+   "Path TEXT,"
+   "Name TEXT)",
+
+   /* SQLite */
+   "CREATE TEMPORARY TABLE basefile%lld (" 
+   "Path TEXT,"
+   "Name TEXT)",
+
+   /* SQLite3 */
+   "CREATE TEMPORARY TABLE basefile%lld (" 
+   "Path TEXT,"
+   "Name TEXT)"
+};
+
+/* 
+ * Create file attributes record, or base file attributes record
+ */
+bool db_create_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
+{
+   bool ret;
+
+   /*
+    * Make sure we have an acceptable attributes record.
+    */
+   if (!(ar->Stream == STREAM_UNIX_ATTRIBUTES ||
+         ar->Stream == STREAM_UNIX_ATTRIBUTES_EX)) {
+      Jmsg(jcr, M_FATAL, 0, _("Attempt to put non-attributes into catalog. Stream=%d\n"));
+      return false;
+   }
+
+   if (ar->FileType != FT_BASE) {
+      ret = db_create_file_attributes_record(jcr, mdb, ar);
+
+   } else if (jcr->HasBase) {
+      ret = db_create_base_file_attributes_record(jcr, mdb, ar);
+
+   } else {
+      Jmsg0(jcr, M_FATAL, 0, _("Can't Copy/Migrate job using BaseJob"));
+      ret = true;               /* in copy/migration what do we do ? */
+   }
+
+   return ret;
+}
+
+/*
+ * Create Base File record in B_DB
+ *
+ */
+bool db_create_base_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar)
+{
+   bool ret;
+   Dmsg1(dbglevel, "create_base_file Fname=%s\n", ar->fname);
+   Dmsg0(dbglevel, "put_base_file_into_catalog\n");
+
+   db_lock(mdb); 
+   split_path_and_file(jcr, mdb, ar->fname);
+   
+   mdb->esc_name = check_pool_memory_size(mdb->esc_name, mdb->fnl*2+1);
+   db_escape_string(jcr, mdb, mdb->esc_name, mdb->fname, mdb->fnl);
+   
+   mdb->esc_path = check_pool_memory_size(mdb->esc_path, mdb->pnl*2+1);
+   db_escape_string(jcr, mdb, mdb->esc_path, mdb->path, mdb->pnl);
+   
+   Mmsg(mdb->cmd, "INSERT INTO basefile%lld (Path, Name) VALUES ('%s','%s')",
+        (uint64_t)jcr->JobId, mdb->esc_path, mdb->esc_name);
+
+   ret = INSERT_DB(jcr, mdb, mdb->cmd);
+   db_unlock(mdb);
+
+   return ret;
+}
+
+/* 
+ * Cleanup the base file temporary tables
+ */
+static void db_cleanup_base_file(JCR *jcr, B_DB *mdb)
+{
+   POOL_MEM buf(PM_MESSAGE);
+   Mmsg(buf, "DROP TABLE new_basefile%lld", (uint64_t) jcr->JobId);
+   db_sql_query(mdb, buf.c_str(), NULL, NULL);
+
+   Mmsg(buf, "DROP TABLE basefile%lld", (uint64_t) jcr->JobId);
+   db_sql_query(mdb, buf.c_str(), NULL, NULL);
+}
+
+/*
+ * Put all base file seen in the backup to the BaseFile table
+ * and cleanup temporary tables
+ */
+bool db_commit_base_file_attributes_record(JCR *jcr, B_DB *mdb)
+{
+   bool ret;
+   char ed1[50];
+
+   db_lock(mdb);
+
+   Mmsg(mdb->cmd, 
+  "INSERT INTO BaseFiles (BaseJobId, JobId, FileId, FileIndex) "
+   "SELECT B.JobId AS BaseJobId, %s AS JobId, "
+          "B.FileId, B.FileIndex "
+     "FROM basefile%s AS A, new_basefile%s AS B "
+    "WHERE A.Path = B.Path "
+      "AND A.Name = B.Name "
+    "ORDER BY B.FileId", 
+        edit_uint64(jcr->JobId, ed1), ed1, ed1);
+   ret = db_sql_query(mdb, mdb->cmd, NULL, NULL);
+   jcr->nb_base_files_used = sql_affected_rows(mdb);
+   db_cleanup_base_file(jcr, mdb);
+
+   db_unlock(mdb);
+   return ret;
+}
+
+/*
+ * Find the last "accurate" backup state with Base jobs
+ * 1) Get all files with jobid in list (F subquery) 
+ * 2) Take only the last version of each file (Temp subquery) => accurate list is ok
+ * 3) Put the result in a temporary table for the end of job
+ *
+ */
+bool db_create_base_file_list(JCR *jcr, B_DB *mdb, char *jobids)
+{
+   POOL_MEM buf;
+   bool ret=false;
+
+   db_lock(mdb);   
+
+   if (!*jobids) {
+      Mmsg(mdb->errmsg, _("ERR=JobIds are empty\n"));
+      goto bail_out;
+   }
+
+   Mmsg(mdb->cmd, create_temp_basefile[db_type], (uint64_t) jcr->JobId);
+   if (!db_sql_query(mdb, mdb->cmd, NULL, NULL)) {
+      goto bail_out;
+   }
+   Mmsg(buf, select_recent_version[db_type], jobids, jobids);
+   Mmsg(mdb->cmd,
+"CREATE TEMPORARY TABLE new_basefile%lld AS  "
+//"CREATE TABLE new_basefile%lld AS "
+  "SELECT Path.Path AS Path, Filename.Name AS Name, Temp.FileIndex AS FileIndex,"
+         "Temp.JobId AS JobId, Temp.LStat AS LStat, Temp.FileId AS FileId, "
+         "Temp.MD5 AS MD5 "
+  "FROM ( %s ) AS Temp "
+  "JOIN Filename ON (Filename.FilenameId = Temp.FilenameId) "
+  "JOIN Path ON (Path.PathId = Temp.PathId) "
+ "WHERE Temp.FileIndex > 0",
+        (uint64_t)jcr->JobId, buf.c_str());
+
+   ret = db_sql_query(mdb, mdb->cmd, NULL, NULL);
+bail_out:
+   db_unlock(mdb);
+   return ret;
+}
+
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI */

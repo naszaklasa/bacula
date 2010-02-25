@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: fileset.cpp 8896 2009-06-13 14:55:28Z bartleyd2 $
+ *   Version $Id$
  *
  *  FileSet Class
  *
@@ -57,7 +57,6 @@ FileSet::FileSet()
    /* add context sensitive menu items specific to this classto the page
     * selector tree. m_contextActions is QList of QActions */
    m_contextActions.append(actionRefreshFileSet);
-   dockPage();
 }
 
 FileSet::~FileSet()
@@ -154,7 +153,7 @@ void FileSet::populateTable()
    }
    
    /* set default sorting */
-   tableWidget->sortByColumn(headerlist.indexOf(tr("Create Time")), Qt::DescendingOrder);
+   tableWidget->sortByColumn(headerlist.indexOf(tr("FileSet Name")), Qt::AscendingOrder);
    tableWidget->setSortingEnabled(true);
    
    /* Resize rows and columns */
@@ -184,6 +183,7 @@ void FileSet::PgSeltreeWidgetClicked()
       populateTable();
       createContextMenu();
    }
+   dockPage();
 }
 
 /*

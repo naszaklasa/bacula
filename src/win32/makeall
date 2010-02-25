@@ -1,4 +1,5 @@
 #!/bin/sh
+make clean
 # Build win32 Bacula
 make
 #

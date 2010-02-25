@@ -32,7 +32,7 @@
  *
  *   Split from job.c and acquire.c June 2005
  *
- *   Version $Id: reserve.c 8893 2009-06-12 19:00:50Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -145,6 +145,7 @@ void DCR::clear_reserved()
  */
 void DCR::unreserve_device()
 {
+   dev->dlock();
    lock_volumes();
    if (is_reserved()) {
       clear_reserved();
@@ -162,6 +163,7 @@ void DCR::unreserve_device()
       }
    }
    unlock_volumes();
+   dev->dunlock();
 }
 
 /*
@@ -634,7 +636,11 @@ static int reserve_device(RCTX &rctx)
 
    rctx.suitable_device = true;
    Dmsg1(dbglvl, "try reserve %s\n", rctx.device->hdr.name);
-   rctx.jcr->dcr = dcr = new_dcr(rctx.jcr, rctx.jcr->dcr, rctx.device->dev);
+   if (rctx.store->append) {
+      dcr = new_dcr(rctx.jcr, rctx.jcr->dcr, rctx.device->dev);
+   } else {
+      dcr = new_dcr(rctx.jcr, rctx.jcr->read_dcr, rctx.device->dev);
+   }
    if (!dcr) {
       BSOCK *dir = rctx.jcr->dir_bsock;
       dir->fsend(_("3926 Could not get dcr for device: %s\n"), rctx.device_name);
@@ -761,7 +767,7 @@ static bool reserve_device_for_read(DCR *dcr)
 
    dev->dlock();  
 
-   if (is_device_unmounted(dev)) {             
+   if (dev->is_device_unmounted()) {             
       Dmsg1(dbglvl, "Device %s is BLOCKED due to user unmount.\n", dev->print_name());
       Mmsg(jcr->errmsg, _("3601 JobId=%u device %s is BLOCKED due to user unmount.\n"),
            jcr->JobId, dev->print_name());
@@ -828,7 +834,7 @@ static bool reserve_device_for_append(DCR *dcr, RCTX &rctx)
    }
 
    /* If device is unmounted, we are out of luck */
-   if (is_device_unmounted(dev)) {
+   if (dev->is_device_unmounted()) {
       Mmsg(jcr->errmsg, _("3604 JobId=%u device %s is BLOCKED due to user unmount.\n"), 
          jcr->JobId, dev->print_name());
       Dmsg1(dbglvl, "%s", jcr->errmsg);
@@ -886,6 +892,16 @@ static bool is_max_jobs_ok(DCR *dcr)
          dcr->VolCatInfo.VolCatJobs, dev->num_reserved(),
          dcr->VolCatInfo.VolCatStatus,
          dcr->VolumeName);
+   /* Limit max concurrent jobs on this drive */
+   if (dev->max_concurrent_jobs > 0 && dev->max_concurrent_jobs <= 
+              (uint32_t)(dev->num_writers + dev->num_reserved())) {
+      /* Max Concurrent Jobs depassed or already reserved */
+      Mmsg(jcr->errmsg, _("3609 JobId=%u Max concurrent jobs exceeded on drive %s.\n"), 
+            (uint32_t)jcr->JobId, dev->print_name());
+      queue_reserve_message(jcr);
+      Dmsg1(dbglvl, "reserve dev failed: %s", jcr->errmsg);
+      return false;
+   }
    if (strcmp(dcr->VolCatInfo.VolCatStatus, "Recycle") == 0) {
       return true;
    }

@@ -46,7 +46,7 @@
  *
  *     Kern Sibbald, January MM, September MM
  *
- *     Version $Id: bat_conf.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *     Version $Id$
  */
 
 #include "bacula.h"

@@ -661,4 +661,7 @@
 /* Define to `int' if <sys/types.h> doesn't define. */
 /* #undef uid_t */
 
+/* Use long unsigned int for ioctl request */
+#define HAVE_IOCTL_ULINT_REQUEST
+
 #endif /* __WINCONFIG_H */

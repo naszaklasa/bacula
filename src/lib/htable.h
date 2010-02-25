@@ -29,7 +29,7 @@
  *
  * Written by Kern Sibbald, MMIV
  *
- *   Version $Id: htable.h 7599 2008-09-16 08:40:35Z kerns $
+ *   Version $Id$
  */
 
 /* ========================================================================

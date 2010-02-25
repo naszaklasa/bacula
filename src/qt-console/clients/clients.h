@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: clients.h 8866 2009-05-26 18:28:50Z bartleyd2 $
+ *   Version $Id$
  *
  *   Dirk Bartley, March 2007
  */

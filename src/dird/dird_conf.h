@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, Feb MM
  *
- *    Version $Id: dird_conf.h 8863 2009-05-26 13:44:08Z ricozz $
+ *    Version $Id$
  */
 
 /* NOTE:  #includes at the end of this file */
@@ -306,6 +306,7 @@ public:
    bool tls_require;                  /* Require TLS */
    bool enabled;                      /* Set if device is enabled */
    bool  autochanger;                 /* set if autochanger */
+   bool AllowCompress;                /* set if this Storage should allow jobs to enable compression */
    int64_t StorageId;                 /* Set from Storage DB record */
    utime_t heartbeat_interval;        /* Interval to send heartbeats */
    uint32_t drives;                   /* number of drives in autochanger */
@@ -393,7 +394,6 @@ public:
    utime_t MaxStartDelay;             /* max start delay in seconds */
    utime_t MaxRunSchedTime;           /* max run time in seconds from Scheduled time*/
    utime_t RescheduleInterval;        /* Reschedule interval */
-   utime_t JobRetention;              /* job retention period in seconds */
    utime_t MaxFullInterval;           /* Maximum time interval between Fulls */
    utime_t MaxDiffInterval;           /* Maximum time interval between Diffs */
    utime_t DuplicateJobProximity;     /* Permitted time between duplicicates */
@@ -436,7 +436,7 @@ public:
    bool AllowHigherDuplicates;        /* Permit Higher Level */
    bool CancelQueuedDuplicates;       /* Cancel queued jobs */
    bool CancelRunningDuplicates;      /* Cancel Running jobs */
-   
+   alist *base;                       /* Base jobs */   
 
    /* Methods */
    char *name() const;
@@ -462,7 +462,6 @@ struct FOPTS {
    alist drivetype;                   /* drive type limitation */
    char *reader;                      /* reader program */
    char *writer;                      /* writer program */
-   char *ignoredir;                   /* ignoredir string */
    char *plugin;                      /* plugin program */
 };
 
@@ -474,6 +473,7 @@ struct INCEXE {
    int32_t num_opts;                  /* number of options items */
    alist name_list;                   /* filename list -- holds char * */
    alist plugin_list;                 /* filename list for plugins */
+   char *ignoredir;                   /* ignoredir string */
 };
 
 /*
@@ -562,10 +562,14 @@ public:
    bool  recycle_current_volume;      /* attempt recycle of current volume */
    bool  AutoPrune;                   /* default for pool auto prune */
    bool  Recycle;                     /* default for media recycle yes/no */
+   uint32_t action_on_purge;          /* action on purge, e.g. truncate the disk volume */
    POOL  *RecyclePool;                /* RecyclePool destination when media is purged */
    POOL  *ScratchPool;                /* ScratchPool source when requesting media */
    alist *CopyPool;                   /* List of copy pools */
    CAT *catalog;                      /* Catalog to be used */
+   utime_t FileRetention;             /* file retention period in seconds */
+   utime_t JobRetention;              /* job retention period in seconds */
+
    /* Methods */
    char *name() const;
 };

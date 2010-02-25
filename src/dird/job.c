@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id: job.c 8937 2009-07-01 19:00:38Z kerns $
+ *    Version $Id$
  */
 
 #include "bacula.h"
@@ -118,7 +118,7 @@ bool setup_job(JCR *jcr)
    jcr->term_wait_inited = true;
 
    create_unique_job_name(jcr, jcr->job->name());
-   set_jcr_job_status(jcr, JS_Created);
+   jcr->setJobStatus(JS_Created);
    jcr->unlock();
 
    /*
@@ -196,7 +196,7 @@ bool setup_job(JCR *jcr)
     *  this allows us to setup a proper job start record for restarting
     *  in case of later errors.
     */
-   switch (jcr->get_JobType()) {
+   switch (jcr->getJobType()) {
    case JT_BACKUP:
       if (!do_backup_init(jcr)) {
          backup_cleanup(jcr, JS_ErrorTerminated);
@@ -229,8 +229,8 @@ bool setup_job(JCR *jcr)
       }
       break;
    default:
-      Pmsg1(0, _("Unimplemented job type: %d\n"), jcr->get_JobType());
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      Pmsg1(0, _("Unimplemented job type: %d\n"), jcr->getJobType());
+      jcr->setJobStatus(JS_ErrorTerminated);
       goto bail_out;
    }
 
@@ -246,7 +246,7 @@ bail_out:
 void update_job_end(JCR *jcr, int TermCode)
 {
    dequeue_messages(jcr);             /* display any queued messages */
-   set_jcr_job_status(jcr, TermCode);
+   jcr->setJobStatus(TermCode);
    update_job_end_record(jcr);
 }
 
@@ -264,18 +264,18 @@ static void *job_thread(void *arg)
    Dsm_check(1);
 
    Dmsg0(200, "=====Start Job=========\n");
-   set_jcr_job_status(jcr, JS_Running);   /* this will be set only if no error */
+   jcr->setJobStatus(JS_Running);   /* this will be set only if no error */
    jcr->start_time = time(NULL);      /* set the real start time */
    jcr->jr.StartTime = jcr->start_time;
 
    if (jcr->job->MaxStartDelay != 0 && jcr->job->MaxStartDelay <
        (utime_t)(jcr->start_time - jcr->sched_time)) {
-      set_jcr_job_status(jcr, JS_Canceled);
+      jcr->setJobStatus(JS_Canceled);
       Jmsg(jcr, M_FATAL, 0, _("Job canceled because max start delay time exceeded.\n"));
    }
 
    if (job_check_maxschedruntime(jcr)) {
-      set_jcr_job_status(jcr, JS_Canceled);
+      jcr->setJobStatus(JS_Canceled);
       Jmsg(jcr, M_FATAL, 0, _("Job canceled because max sched run time exceeded.\n"));
    }
 
@@ -310,7 +310,7 @@ static void *job_thread(void *arg)
    generate_job_event(jcr, "JobRun");
    generate_plugin_event(jcr, bEventJobRun);
 
-   switch (jcr->get_JobType()) {
+   switch (jcr->getJobType()) {
    case JT_BACKUP:
       if (!job_canceled(jcr) && do_backup(jcr)) {
          do_autoprune(jcr);
@@ -348,7 +348,7 @@ static void *job_thread(void *arg)
       }
       break;
    default:
-      Pmsg1(0, _("Unimplemented job type: %d\n"), jcr->get_JobType());
+      Pmsg1(0, _("Unimplemented job type: %d\n"), jcr->getJobType());
       break;
    }
 
@@ -380,7 +380,7 @@ bool cancel_job(UAContext *ua, JCR *jcr)
    char ed1[50];
    int32_t old_status = jcr->JobStatus;
 
-   set_jcr_job_status(jcr, JS_Canceled);
+   jcr->setJobStatus(JS_Canceled);
 
    switch (old_status) {
    case JS_Created:
@@ -393,7 +393,7 @@ bool cancel_job(UAContext *ua, JCR *jcr)
       ua->info_msg(_("JobId %s, Job %s marked to be canceled.\n"),
               edit_uint64(jcr->JobId, ed1), jcr->Job);
       jobq_remove(&job_queue, jcr); /* attempt to remove it from queue */
-      return true;
+      break;
 
    default:
       /* Cancel File daemon */
@@ -446,6 +446,7 @@ bool cancel_job(UAContext *ua, JCR *jcr)
          sd->close();
          ua->jcr->store_bsock = NULL;
       }
+      break;
    }
 
    return true;
@@ -453,6 +454,10 @@ bool cancel_job(UAContext *ua, JCR *jcr)
 
 void cancel_storage_daemon_job(JCR *jcr)
 {
+   if (jcr->sd_canceled) { 
+      return;                   /* cancel only once */
+   }
+
    UAContext *ua = new_ua_context(jcr);
    JCR *control_jcr = new_control_jcr("*JobCancel*", JT_SYSTEM);
    BSOCK *sd;
@@ -486,6 +491,7 @@ void cancel_storage_daemon_job(JCR *jcr)
       sd->signal(BNET_TERMINATE);
       sd->close();
       ua->jcr->store_bsock = NULL;
+      jcr->sd_canceled = true;
    }
 bail_out:
    free_jcr(control_jcr);
@@ -518,17 +524,17 @@ static void job_monitor_watchdog(watchdog_t *self)
 
       /* check MaxWaitTime */
       if (job_check_maxwaittime(jcr)) {
-         set_jcr_job_status(jcr, JS_Canceled);
+         jcr->setJobStatus(JS_Canceled);
          Qmsg(jcr, M_FATAL, 0, _("Max wait time exceeded. Job canceled.\n"));
          cancel = true;
       /* check MaxRunTime */
       } else if (job_check_maxruntime(jcr)) {
-         set_jcr_job_status(jcr, JS_Canceled);
+         jcr->setJobStatus(JS_Canceled);
          Qmsg(jcr, M_FATAL, 0, _("Max run time exceeded. Job canceled.\n"));
          cancel = true;
       /* check MaxRunSchedTime */ 
       } else if (job_check_maxschedruntime(jcr)) {
-         set_jcr_job_status(jcr, JS_Canceled);
+         jcr->setJobStatus(JS_Canceled);
          Qmsg(jcr, M_FATAL, 0, _("Max sched run time exceeded. Job canceled.\n"));
          cancel = true;
       }
@@ -597,15 +603,15 @@ static bool job_check_maxruntime(JCR *jcr)
          watchdog_time, jcr->start_time, run_time, job->MaxRunTime, job->FullMaxRunTime, 
          job->IncMaxRunTime, job->DiffMaxRunTime);
 
-   if (jcr->get_JobLevel() == L_FULL && job->FullMaxRunTime != 0 &&
+   if (jcr->getJobLevel() == L_FULL && job->FullMaxRunTime != 0 &&
          run_time >= job->FullMaxRunTime) {
       Dmsg0(200, "check_maxwaittime: FullMaxcancel\n");
       cancel = true;
-   } else if (jcr->get_JobLevel() == L_DIFFERENTIAL && job->DiffMaxRunTime != 0 &&
+   } else if (jcr->getJobLevel() == L_DIFFERENTIAL && job->DiffMaxRunTime != 0 &&
          run_time >= job->DiffMaxRunTime) {
       Dmsg0(200, "check_maxwaittime: DiffMaxcancel\n");
       cancel = true;
-   } else if (jcr->get_JobLevel() == L_INCREMENTAL && job->IncMaxRunTime != 0 &&
+   } else if (jcr->getJobLevel() == L_INCREMENTAL && job->IncMaxRunTime != 0 &&
          run_time >= job->IncMaxRunTime) {
       Dmsg0(200, "check_maxwaittime: IncMaxcancel\n");
       cancel = true;
@@ -734,7 +740,7 @@ void apply_pool_overrides(JCR *jcr)
    /*
     * Apply any level related Pool selections
     */
-   switch (jcr->get_JobLevel()) {
+   switch (jcr->getJobLevel()) {
    case L_FULL:
       if (jcr->full_pool) {
          jcr->pool = jcr->full_pool;
@@ -852,8 +858,8 @@ void init_jcr_job_record(JCR *jcr)
    jcr->jr.SchedTime = jcr->sched_time;
    jcr->jr.StartTime = jcr->start_time;
    jcr->jr.EndTime = 0;               /* perhaps rescheduled, clear it */
-   jcr->jr.JobType = jcr->get_JobType();
-   jcr->jr.JobLevel = jcr->get_JobLevel();
+   jcr->jr.JobType = jcr->getJobType();
+   jcr->jr.JobLevel = jcr->getJobLevel();
    jcr->jr.JobStatus = jcr->JobStatus;
    jcr->jr.JobId = jcr->JobId;
    bstrncpy(jcr->jr.Name, jcr->job->name(), sizeof(jcr->jr.Name));
@@ -875,6 +881,7 @@ void update_job_end_record(JCR *jcr)
    jcr->jr.VolSessionId = jcr->VolSessionId;
    jcr->jr.VolSessionTime = jcr->VolSessionTime;
    jcr->jr.JobErrors = jcr->JobErrors;
+   jcr->jr.HasBase = jcr->HasBase;
    if (!db_update_job_end_record(jcr, jcr->db, &jcr->jr)) {
       Jmsg(jcr, M_WARNING, 0, _("Error updating job record. %s"),
          db_strerror(jcr->db));
@@ -1087,7 +1094,7 @@ void set_jcr_defaults(JCR *jcr, JOB *job)
    jcr->set_JobType(job->JobType);
    jcr->JobStatus = JS_Created;
 
-   switch (jcr->get_JobType()) {
+   switch (jcr->getJobType()) {
    case JT_ADMIN:
       jcr->set_JobLevel(L_NONE);
       break;
@@ -1149,8 +1156,8 @@ void set_jcr_defaults(JCR *jcr, JOB *job)
    /* This can be overridden by Console program */
    jcr->verify_job = job->verify_job;
    /* If no default level given, set one */
-   if (jcr->get_JobLevel() == 0) {
-      switch (jcr->get_JobType()) {
+   if (jcr->getJobLevel() == 0) {
+      switch (jcr->getJobType()) {
       case JT_VERIFY:
          jcr->set_JobLevel(L_VERIFY_CATALOG);
          break;
@@ -1367,17 +1374,22 @@ void create_clones(JCR *jcr)
 /*
  * Given: a JobId in jcr->previous_jr.JobId,
  *  this subroutine writes a bsr file to restore that job.
+ * Returns: -1 on error
+ *           number of files if OK
  */
-bool create_restore_bootstrap_file(JCR *jcr)
+int create_restore_bootstrap_file(JCR *jcr)
 {
    RESTORE_CTX rx;
    UAContext *ua;
+   int files;
+
    memset(&rx, 0, sizeof(rx));
    rx.bsr = new_bsr();
    rx.JobIds = (char *)"";                       
    rx.bsr->JobId = jcr->previous_jr.JobId;
    ua = new_ua_context(jcr);
    if (!complete_bsr(ua, rx.bsr)) {
+      files = -1;
       goto bail_out;
    }
    rx.bsr->fi = new_findex();
@@ -1385,17 +1397,18 @@ bool create_restore_bootstrap_file(JCR *jcr)
    rx.bsr->fi->findex2 = jcr->previous_jr.JobFiles;
    jcr->ExpectedFiles = write_bsr_file(ua, rx);
    if (jcr->ExpectedFiles == 0) {
+      files = 0;
       goto bail_out;
    }
    free_ua_context(ua);
    free_bsr(rx.bsr);
    jcr->needs_sd = true;
-   return true;
+   return jcr->ExpectedFiles;
 
 bail_out:
    free_ua_context(ua);
    free_bsr(rx.bsr);
-   return false;
+   return files;
 }
 
 /* TODO: redirect command ouput to job log */

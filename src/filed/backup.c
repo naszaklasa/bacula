@@ -31,12 +31,18 @@
  *
  *    Kern Sibbald, March MM
  *
- *   Version $Id: backup.c 8958 2009-07-05 07:58:51Z marcovw $
+ *   Version $Id$
  *
  */
 
 #include "bacula.h"
 #include "filed.h"
+
+#ifdef HAVE_DARWIN_OS
+const bool have_darwin_os = true;
+#else
+const bool have_darwin_os = false;
+#endif
 
 #if defined(HAVE_ACL)
 const bool have_acl = true;
@@ -141,10 +147,15 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
    start_heartbeat_monitor(jcr);
 
    if (have_acl) {
-      jcr->acl_data = get_pool_memory(PM_MESSAGE);
+      jcr->acl_data = (acl_data_t *)malloc(sizeof(acl_data_t));
+      memset((caddr_t)jcr->acl_data, 0, sizeof(acl_data_t));
+      jcr->acl_data->content = get_pool_memory(PM_MESSAGE);
    }
+
    if (have_xattr) {
-      jcr->xattr_data = get_pool_memory(PM_MESSAGE);
+      jcr->xattr_data = (xattr_data_t *)malloc(sizeof(xattr_data_t));
+      memset((caddr_t)jcr->xattr_data, 0, sizeof(xattr_data_t));
+      jcr->xattr_data->content = get_pool_memory(PM_MESSAGE);
    }
 
    /* Subroutine save_file() is called for each file */
@@ -153,18 +164,29 @@ bool blast_data_to_storage_daemon(JCR *jcr, char *addr)
       set_jcr_job_status(jcr, JS_ErrorTerminated);
    }
 
-   accurate_send_deleted_list(jcr);              /* send deleted list to SD  */
+   if (have_acl && jcr->acl_data->nr_errors > 0) {
+      Jmsg(jcr, M_ERROR, 0, _("Encountered %ld acl errors while doing backup\n"),
+           jcr->acl_data->nr_errors);
+   }
+   if (have_xattr && jcr->xattr_data->nr_errors > 0) {
+      Jmsg(jcr, M_ERROR, 0, _("Encountered %ld xattr errors while doing backup\n"),
+           jcr->xattr_data->nr_errors);
+   }
+
+   accurate_finish(jcr);              /* send deleted or base file list to SD */
 
    stop_heartbeat_monitor(jcr);
 
    sd->signal(BNET_EOD);            /* end of sending data */
 
    if (have_acl && jcr->acl_data) {
-      free_pool_memory(jcr->acl_data);
+      free_pool_memory(jcr->acl_data->content);
+      free(jcr->acl_data);
       jcr->acl_data = NULL;
    }
    if (have_xattr && jcr->xattr_data) {
-      free_pool_memory(jcr->xattr_data);
+      free_pool_memory(jcr->xattr_data->content);
+      free(jcr->xattr_data);
       jcr->xattr_data = NULL;
    }
    if (jcr->big_buf) {
@@ -438,10 +460,12 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       }
 
       /*
-       * Set up signature digest handling. If this fails, the signature digest will be set to
-       * NULL and not used.
+       * Set up signature digest handling. If this fails, the signature digest
+       * will be set to NULL and not used.
        */
-      // TODO landonf: We should really only calculate the digest once, for both verification and signing.
+      /* TODO landonf: We should really only calculate the digest once, for
+       * both verification and signing.
+       */
       if (jcr->crypto.pki_sign) {
          signing_digest = crypto_digest_new(jcr, signing_algorithm);
 
@@ -546,62 +570,76 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
       }
    }
 
-#ifdef HAVE_DARWIN_OS
-   /* Regular files can have resource forks and Finder Info */
-   if (ff_pkt->type != FT_LNKSAVED && (S_ISREG(ff_pkt->statp.st_mode) &&
-            ff_pkt->flags & FO_HFSPLUS)) {
-      if (ff_pkt->hfsinfo.rsrclength > 0) {
-         int flags;
-         int rsrc_stream;
-         if (!bopen_rsrc(&ff_pkt->bfd, ff_pkt->fname, O_RDONLY | O_BINARY, 0) < 0) {
-            ff_pkt->ff_errno = errno;
-            berrno be;
-            Jmsg(jcr, M_NOTSAVED, -1, _("     Cannot open resource fork for \"%s\": ERR=%s.\n"), 
-                 ff_pkt->fname, be.bstrerror());
-            jcr->JobErrors++;
-            if (is_bopen(&ff_pkt->bfd)) {
-               bclose(&ff_pkt->bfd);
+   if (have_darwin_os) {
+      /* Regular files can have resource forks and Finder Info */
+      if (ff_pkt->type != FT_LNKSAVED && (S_ISREG(ff_pkt->statp.st_mode) &&
+          ff_pkt->flags & FO_HFSPLUS)) {
+         if (ff_pkt->hfsinfo.rsrclength > 0) {
+            int flags;
+            int rsrc_stream;
+            if (!bopen_rsrc(&ff_pkt->bfd, ff_pkt->fname, O_RDONLY | O_BINARY, 0) < 0) {
+               ff_pkt->ff_errno = errno;
+               berrno be;
+               Jmsg(jcr, M_NOTSAVED, -1, _("     Cannot open resource fork for \"%s\": ERR=%s.\n"),
+                    ff_pkt->fname, be.bstrerror());
+               jcr->JobErrors++;
+               if (is_bopen(&ff_pkt->bfd)) {
+                  bclose(&ff_pkt->bfd);
+               }
+               goto good_rtn;
             }
-            goto good_rtn;
+            flags = ff_pkt->flags;
+            ff_pkt->flags &= ~(FO_GZIP|FO_SPARSE);
+            if (flags & FO_ENCRYPT) {
+               rsrc_stream = STREAM_ENCRYPTED_MACOS_FORK_DATA;
+            } else {
+               rsrc_stream = STREAM_MACOS_FORK_DATA;
+            }
+            stat = send_data(jcr, rsrc_stream, ff_pkt, digest, signing_digest);
+            ff_pkt->flags = flags;
+            bclose(&ff_pkt->bfd);
+            if (!stat) {
+               goto bail_out;
+            }
          }
-         flags = ff_pkt->flags;
-         ff_pkt->flags &= ~(FO_GZIP|FO_SPARSE);
-         if (flags & FO_ENCRYPT) {
-            rsrc_stream = STREAM_ENCRYPTED_MACOS_FORK_DATA;
-         } else {
-            rsrc_stream = STREAM_MACOS_FORK_DATA;
-         }
-         stat = send_data(jcr, rsrc_stream, ff_pkt, digest, signing_digest);
-         ff_pkt->flags = flags;
-         bclose(&ff_pkt->bfd);
-         if (!stat) {
-            goto bail_out;
-         }
-      }
 
-      Dmsg1(300, "Saving Finder Info for \"%s\"\n", ff_pkt->fname);
-      sd->fsend("%ld %d 0", jcr->JobFiles, STREAM_HFSPLUS_ATTRIBUTES);
-      Dmsg1(300, "bfiled>stored:header %s\n", sd->msg);
-      pm_memcpy(sd->msg, ff_pkt->hfsinfo.fndrinfo, 32);
-      sd->msglen = 32;
-      if (digest) {
-         crypto_digest_update(digest, (uint8_t *)sd->msg, sd->msglen);
+         Dmsg1(300, "Saving Finder Info for \"%s\"\n", ff_pkt->fname);
+         sd->fsend("%ld %d 0", jcr->JobFiles, STREAM_HFSPLUS_ATTRIBUTES);
+         Dmsg1(300, "bfiled>stored:header %s\n", sd->msg);
+         pm_memcpy(sd->msg, ff_pkt->hfsinfo.fndrinfo, 32);
+         sd->msglen = 32;
+         if (digest) {
+            crypto_digest_update(digest, (uint8_t *)sd->msg, sd->msglen);
+         }
+         if (signing_digest) {
+            crypto_digest_update(signing_digest, (uint8_t *)sd->msg, sd->msglen);
+         }
+         sd->send();
+         sd->signal(BNET_EOD);
       }
-      if (signing_digest) {
-         crypto_digest_update(signing_digest, (uint8_t *)sd->msg, sd->msglen);
-      }
-      sd->send();
-      sd->signal(BNET_EOD);
    }
-#endif
 
    /*
     * Save ACLs when requested and available for anything not being a symlink and not being a plugin.
     */
    if (have_acl) {
       if (ff_pkt->flags & FO_ACL && ff_pkt->type != FT_LNK && !ff_pkt->cmd_plugin) {
-         if (!build_acl_streams(jcr, ff_pkt))
+         switch (build_acl_streams(jcr, ff_pkt)) {
+         case bacl_exit_fatal:
             goto bail_out;
+         case bacl_exit_error:
+            /*
+             * Non-fatal errors, count them and when the number is under ACL_REPORT_ERR_MAX_PER_JOB
+             * print the error message set by the lower level routine in jcr->errmsg.
+             */
+            if (jcr->acl_data->nr_errors < ACL_REPORT_ERR_MAX_PER_JOB) {
+               Jmsg(jcr, M_ERROR, 0, "%s", jcr->errmsg);
+            }
+            jcr->acl_data->nr_errors++;
+            break;
+         case bacl_exit_ok:
+            break;
+         }
       }
    }
 
@@ -610,8 +648,22 @@ int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
     */
    if (have_xattr) {
       if (ff_pkt->flags & FO_XATTR && !ff_pkt->cmd_plugin) {
-         if (!build_xattr_streams(jcr, ff_pkt))
+         switch (build_xattr_streams(jcr, ff_pkt)) {
+         case bxattr_exit_fatal:
             goto bail_out;
+         case bxattr_exit_error:
+            /*
+             * Non-fatal errors, count them and when the number is under XATTR_REPORT_ERR_MAX_PER_JOB
+             * print the error message set by the lower level routine in jcr->errmsg.
+             */
+            if (jcr->xattr_data->nr_errors < XATTR_REPORT_ERR_MAX_PER_JOB) {
+               Jmsg(jcr, M_ERROR, 0, "%s", jcr->errmsg);
+            }
+            jcr->xattr_data->nr_errors++;
+            break;
+         case bxattr_exit_ok:
+            break;
+         }
       }
    }
 
@@ -802,8 +854,10 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
     *    <file-index> <stream> <info>
     */
    if (!sd->fsend("%ld %d 0", jcr->JobFiles, stream)) {
-      Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            sd->bstrerror());
+      if (!job_canceled(jcr)) {
+         Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
+               sd->bstrerror());
+      }
       goto err;
    }
    Dmsg1(300, ">stored: datahdr %s\n", sd->msg);
@@ -960,8 +1014,10 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
       }
       sd->msg = wbuf;              /* set correct write buffer */
       if (!sd->send()) {
-         Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-               sd->bstrerror());
+         if (!job_canceled(jcr)) {
+            Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
+                  sd->bstrerror());
+         }
          goto err;
       }
       Dmsg1(130, "Send data to SD len=%d\n", sd->msglen);
@@ -976,7 +1032,7 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
       Jmsg(jcr, M_ERROR, 0, _("Read error on file %s. ERR=%s\n"),
          ff_pkt->fname, be.bstrerror(ff_pkt->bfd.berrno));
       if (jcr->JobErrors++ > 1000) {       /* insanity check */
-         Jmsg(jcr, M_FATAL, 0, _("Too many errors.\n"));
+         Jmsg(jcr, M_FATAL, 0, _("Too many errors. JobErrors=%d.\n"), jcr->JobErrors);
       }
    } else if (ff_pkt->flags & FO_ENCRYPT) {
       /* 
@@ -995,8 +1051,10 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
          sd->msglen = encrypted_len;      /* set encrypted length */
          sd->msg = jcr->crypto.crypto_buf;       /* set correct write buffer */
          if (!sd->send()) {
-            Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-                  sd->bstrerror());
+            if (!job_canceled(jcr)) {
+               Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
+                     sd->bstrerror());
+            }
             goto err;
          }
          Dmsg1(130, "Send data to SD len=%d\n", sd->msglen);
@@ -1006,8 +1064,10 @@ static int send_data(JCR *jcr, int stream, FF_PKT *ff_pkt, DIGEST *digest,
    }
 
    if (!sd->signal(BNET_EOD)) {        /* indicate end of file data */
-      Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            sd->bstrerror());
+      if (!job_canceled(jcr)) {
+         Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
+               sd->bstrerror());
+      }
       goto err;
    }
 
@@ -1064,8 +1124,10 @@ bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream)
     *    <file-index> <stream> <info>
     */
    if (!sd->fsend("%ld %d 0", jcr->JobFiles, attr_stream)) {
-      Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            sd->bstrerror());
+      if (!job_canceled(jcr)) {
+         Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
+               sd->bstrerror());
+      }
       return false;
    }
    Dmsg1(300, ">stored: attrhdr %s\n", sd->msg);
@@ -1104,8 +1166,10 @@ bool encode_and_send_attributes(JCR *jcr, FF_PKT *ff_pkt, int &data_stream)
 
    Dmsg2(300, ">stored: attr len=%d: %s\n", sd->msglen, sd->msg);
    if (!stat) {
-      Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
-            sd->bstrerror());
+      if (!job_canceled(jcr)) {
+         Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
+               sd->bstrerror());
+      }
       return false;
    }
    sd->signal(BNET_EOD);            /* indicate end of attributes data */

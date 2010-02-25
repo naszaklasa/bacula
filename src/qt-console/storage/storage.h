@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: storage.h 8866 2009-05-26 18:28:50Z bartleyd2 $
+ *   Version $Id$
  *
  *   Dirk Bartley, March 2007
  */
@@ -61,6 +61,7 @@ private slots:
    void consoleUpdateSlotsScan();
    void consoleRelease();
    void statusStorageWindow();
+   void contentWindow();
 
 private:
    void createContextMenu();
@@ -74,5 +75,7 @@ private:
    void writeExpandedSettings();
    QTreeWidgetItem *m_topItem;
 };
+
+void table_get_selection(QTableWidget *table, QString &sel);
 
 #endif /* _STORAGE_H_ */

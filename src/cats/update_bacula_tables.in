@@ -1,15 +1,19 @@
 #!/bin/sh
 #
 # This routine alters the appropriately configured
-#  Bacula tables for PostgreSQL, MySQL, or SQLite.
+#  Bacula tables for PostgreSQL, Ingres, MySQL, or SQLite.
 #
-if test xsqlite = x@DB_TYPE@ -o xsqlite3 = x@DB_TYPE@ ; then
+if test xsqlite3 = x@DB_TYPE@ ; then
   echo "Altering SQLite tables"
   @scriptdir@/update_@DB_TYPE@_tables $*
 fi
 if test xmysql = x@DB_TYPE@ ; then
   echo "Altering MySQL tables"
   @scriptdir@/update_mysql_tables $*
+fi
+if test xingres = x@DB_TYPE@ ; then
+  echo "Altering Ingres tables"
+  @scriptdir@/update_ingres_tables $*
 fi
 if test xpostgresql = x@DB_TYPE@ ; then
   echo "Altering PostgreSQL tables"

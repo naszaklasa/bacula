@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: prerestore.cpp 8672 2009-03-31 19:25:51Z bartleyd2 $
+ *   Version $Id$
  *
  *  preRestore -> dialog put up to determine the restore type
  *
@@ -132,8 +132,9 @@ void prerestorePage::buildPage()
 void prerestorePage::okButtonPushed()
 {
    if (!selectJobRadio->isChecked()) {
-      if (!checkJobIdList())
+      if (!checkJobIdList()) {
          return;
+      }
    }
    QString cmd;
 

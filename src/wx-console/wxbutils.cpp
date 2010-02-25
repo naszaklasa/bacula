@@ -31,7 +31,7 @@
  *
  *    Nicolas Boichat, April-July 2004
  *
- *    Version $Id: wxbutils.cpp 7380 2008-07-14 10:42:59Z kerns $
+ *    Version $Id$
  */
 
 /*  Windows debug builds set _DEBUG which is used by wxWidgets to select their

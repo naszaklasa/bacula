@@ -6,31 +6,56 @@
 bindir=@SQL_BINDIR@
 db_name=@db_name@
 
+#
 # use SQL_ASCII to be able to put any filename into
 #  the database even those created with unusual character sets
-ENCODING="ENCODING 'SQL_ASCII'"
- 
-# use UTF8 if you are using standard Unix/Linux LANG specifications
-#  that use UTF8 -- this is normally the default and *should* be
-#  your standard.  Bacula works correctly *only* with correct UTF8.
+
+PSQLVERSION=`$bindir/psql -d template1 -c 'select version()' | head -n1  | cut -d ' ' -f 2 | cut -d '.' -f 1,2`
+
 #
-#  Note, with this encoding, if you have any "weird" filenames on
-#  your system (names generated from Win32 or Mac OS), you may
-#  get Bacula batch insert failures.
+# Note, LC_COLLATE and LC_TYPE are needed on 8.4 and beyond, but are
+#   not implemented in 8.3 or below.
+# This must be updated for future versions of PostgreSQL
 #
-#ENCODING="ENCODING 'UTF8'"
-     
+case ${PSQLVERSION} in
+   "9.*")
+	ENCODING="ENCODING 'SQL_ASCII' LC_COLLATE 'C' LC_CTYPE 'C'"
+   ;;
+   "8.[456789]")
+	ENCODING="ENCODING 'SQL_ASCII' LC_COLLATE 'C' LC_CTYPE 'C'"
+    ;;
+    *)
+	ENCODING="ENCODING 'SQL_ASCII'"
+    ;;
+esac
+
+
+
 #
-# KES: Note: the CREATE DATABASE, probably should be
-#   CREATE DATABASE ${db_name} $ENCODING TEMPLATE template0
+# Please note: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#  We do not recommend that you use ENCODING 'SQL_UTF8'
+#  It can result in creating filenames in the database that
+#  cannot be seen or restored.
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
 #
 if $bindir/psql -f - -d template1 $* <<END-OF-DATA
-CREATE DATABASE ${db_name} $ENCODING;
+\set ON_ERROR_STOP on
+CREATE DATABASE ${db_name} $ENCODING TEMPLATE template0;
 ALTER DATABASE ${db_name} SET datestyle TO 'ISO, YMD';
 END-OF-DATA
 then
    echo "Creation of ${db_name} database succeeded."
 else
-   echo "Creation of ${db_name} database failed."
+   echo " "
+   echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+   echo "!!!! Creation of ${db_name} database failed. !!!!"
+   echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 fi
-exit 0
+if $bindir/psql -l ${dbname} | grep " ${db_name}.*SQL_ASCII" >/dev/null; then 
+   echo "Database encoding OK"
+else
+   echo " "
+   echo "Database encoding bad. Do not use this database"
+   echo " "
+fi

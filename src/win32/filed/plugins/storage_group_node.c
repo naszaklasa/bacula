@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -86,7 +86,7 @@ storage_group_node_t::startBackupFile(exchange_fd_context_t *context, struct sav
          }
          if (result != 0)
          {
-            _JobMessage(M_ERROR, "HrESEBackupSetup failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _JobMessage(M_FATAL, "HrESEBackupSetup failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
             state = 999;
             return bRC_Error;
          }
@@ -118,7 +118,7 @@ storage_group_node_t::startBackupFile(exchange_fd_context_t *context, struct sav
             }
             if (current_dbi == ibi->cDatabase)
             {
-               _JobMessage(M_ERROR, "Invalid Database '%s'\n", context->path_bits[level + 1]);
+               _JobMessage(M_FATAL, "Invalid Database '%s'\n", context->path_bits[level + 1]);
                return bRC_Error;
             }
             store_node = new store_node_t(tmp, this);
@@ -134,7 +134,7 @@ storage_group_node_t::startBackupFile(exchange_fd_context_t *context, struct sav
          result = HrESEBackupGetLogAndPatchFiles(hccx, &tmp_logfiles);
          if (result != 0)
          {
-            _JobMessage(M_ERROR, "HrESEBackupGetLogAndPatchFiles failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _JobMessage(M_FATAL, "HrESEBackupGetLogAndPatchFiles failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
             return bRC_Error;
          }
          for (len = 0, tmp_logfile_ptr = tmp_logfiles; *tmp_logfile_ptr != 0; tmp_logfile_ptr += wcslen(tmp_logfile_ptr) + 1)
@@ -275,7 +275,7 @@ storage_group_node_t::endBackupFile(exchange_fd_context_t *context)
          result = HrESEBackupTruncateLogs(hccx);
          if (result != 0)
          {
-            _JobMessage(M_ERROR, "HrESEBackupTruncateLogs failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _JobMessage(M_FATAL, "HrESEBackupTruncateLogs failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
          }
          else
          {
@@ -290,7 +290,7 @@ storage_group_node_t::endBackupFile(exchange_fd_context_t *context)
       result = HrESEBackupInstanceEnd(hccx, ESE_BACKUP_INSTANCE_END_SUCCESS);
       if (result != 0)
       {
-         _JobMessage(M_ERROR, "HrESEBackupInstanceEnd failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+         _JobMessage(M_FATAL, "HrESEBackupInstanceEnd failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
          return bRC_Error;
       }
       retval = bRC_OK;
@@ -317,7 +317,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
       result = HrESERestoreSaveEnvironment(hccx);
       if (result != 0)
       {
-         _JobMessage(M_ERROR, "HrESERestoreSaveEnvironment failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+         _JobMessage(M_FATAL, "HrESERestoreSaveEnvironment failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
          state = 999;
          rp->create_status = CF_CREATED;
          return bRC_OK;
@@ -326,7 +326,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
       result = HrESERestoreClose(hccx, RESTORE_CLOSE_NORMAL);
       if (result != 0)
       {
-         _JobMessage(M_ERROR, "HrESERestoreClose failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+         _JobMessage(M_FATAL, "HrESERestoreClose failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
          state = 999;
          rp->create_status = CF_CREATED;
          return bRC_OK;
@@ -340,7 +340,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
       result = HrESERestoreReopen(context->computer_name, service_name, saved_log_path, &hccx);
       if (result != 0)
       {
-         _JobMessage(M_ERROR, "HrESERestoreReopen failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+         _JobMessage(M_FATAL, "HrESERestoreReopen failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
          state = 999;
          saved_log_path = NULL;
          rp->create_status = CF_CREATED;
@@ -350,7 +350,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
       result = HrESERestoreGetEnvironment(hccx, &restore_environment);
       if (result != 0)
       {
-         _JobMessage(M_ERROR, "HrESERestoreGetEnvironment failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+         _JobMessage(M_FATAL, "HrESERestoreGetEnvironment failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
          state = 999;
          saved_log_path = NULL;
          rp->create_status = CF_CREATED;
@@ -378,7 +378,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
          result = HrESERestoreOpen(context->computer_name, service_name, storage_group_name, NULL, &hccx);
          if (result != 0)
          {
-            _JobMessage(M_ERROR, "HrESERestoreOpen failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _JobMessage(M_FATAL, "HrESERestoreOpen failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
             state = 999;
             break;
          }
@@ -386,7 +386,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
          result = HrESERestoreGetEnvironment(hccx, &restore_environment);
          if (result != 0)
          {
-            _JobMessage(M_ERROR, "HrESERestoreGetEnvironment failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _JobMessage(M_FATAL, "HrESERestoreGetEnvironment failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
             state = 999;
             break;
          }
@@ -445,7 +445,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
          result = HrESERestoreSaveEnvironment(hccx);
          if (result != 0)
          {
-            _JobMessage(M_ERROR, "HrESERestoreSaveEnvironment failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _JobMessage(M_FATAL, "HrESERestoreSaveEnvironment failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
             state = 999;
             break;
          }
@@ -455,7 +455,9 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
             restore_environment->m_wszRestoreLogPath, storage_group_name, ESE_RESTORE_COMPLETE_ATTACH_DBS);
          if (result != 0)
          {
-            _JobMessage(M_ERROR, "HrESERestoreComplete failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _JobMessage(M_FATAL, "HrESERestoreComplete failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _DebugMessage(100, "Calling HrESERestoreClose\n");
+            result = HrESERestoreClose(hccx, RESTORE_CLOSE_NORMAL);
             state = 999;
             break;
          }
@@ -468,7 +470,7 @@ storage_group_node_t::createFile(exchange_fd_context_t *context, struct restore_
          result = HrESERestoreClose(hccx, RESTORE_CLOSE_NORMAL);
          if (result != 0)
          {
-            _JobMessage(M_ERROR, "HrESERestoreClose failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+            _JobMessage(M_FATAL, "HrESERestoreClose failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
             state = 999;
             break;
          }
@@ -498,6 +500,7 @@ storage_group_node_t::endRestoreFile(exchange_fd_context_t *context)
       context->current_node = parent;
       return bRC_OK;
    case 999:
+      context->current_node = parent;
       return bRC_OK;
    }
 

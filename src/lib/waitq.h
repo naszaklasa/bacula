@@ -7,7 +7,7 @@
  *  This code inspired from "Programming with POSIX Threads", by
  *    David R. Butenhof
  *
- *   Version $Id: waitq.h 8744 2009-04-21 13:00:16Z kerns $
+ *   Version $Id$
  *
  */
 /*

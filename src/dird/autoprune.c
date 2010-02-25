@@ -32,7 +32,7 @@
  *
  *     Kern Sibbald, May MMII
  *
- *   Version $Id: autoprune.c 8407 2009-01-28 10:47:21Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -50,6 +50,7 @@ void do_autoprune(JCR *jcr)
 {
    UAContext *ua;
    CLIENT *client;
+   POOL *pool;
    bool pruned;
 
    if (!jcr->client) {                /* temp -- remove me */
@@ -58,18 +59,17 @@ void do_autoprune(JCR *jcr)
 
    ua = new_ua_context(jcr);
    client = jcr->client;
+   pool = jcr->pool;
 
    if (jcr->job->PruneJobs || jcr->client->AutoPrune) {
-      Jmsg(jcr, M_INFO, 0, _("Begin pruning Jobs.\n"));
-      prune_jobs(ua, client, jcr->get_JobType());
+      prune_jobs(ua, client, pool, jcr->getJobType());
       pruned = true;
    } else {
       pruned = false;
    }
 
    if (jcr->job->PruneFiles || jcr->client->AutoPrune) {
-      Jmsg(jcr, M_INFO, 0, _("Begin pruning Files.\n"));
-      prune_files(ua, client);
+      prune_files(ua, client, pool);
       pruned = true;
    }
    if (pruned) {

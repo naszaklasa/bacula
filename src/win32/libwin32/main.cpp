@@ -30,7 +30,7 @@
  * 
  *  Kern Sibbald, August 2007
  *
- *  Version $Id: main.cpp 8584 2009-03-23 08:56:20Z ricozz $
+ *  Version $Id$
  *
  * Note, some of the original Bacula Windows startup and service handling code
  *  was derived from VNC code that was used in apcupsd then ported to 

@@ -28,7 +28,7 @@
 /*
  * Kern Sibbald, August 2007
  *
- *   Version $Id: trayMonitor.h 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 #ifndef __TRAY_MONITOR_H_

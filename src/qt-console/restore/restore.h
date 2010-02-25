@@ -29,7 +29,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: restore.h 8870 2009-05-28 12:17:28Z bartleyd2 $
+ *   Version $Id$
  *
  *  Kern Sibbald, February 2007
  */
@@ -110,6 +110,7 @@ private:
    QHash<QString, QTreeWidgetItem *> m_dirPaths;
    QHash<QTreeWidgetItem *,QString> m_dirTreeItems;
    QRegExp m_rx;
+   QString m_splitText;
 };
 
 

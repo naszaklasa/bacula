@@ -1,4 +1,4 @@
-# $Id: Makefile.in 8464 2009-02-18 11:40:09Z kerns $
+# $Id$
 @MCOMMON@
 
 srcdir =	.
@@ -70,6 +70,7 @@ COPYOBJS = bcopy.o block.o device.o dev.o label.o vtape.o \
 # these are the objects that are changed by the .configure process
 EXTRAOBJS = @OBJLIST@
 
+CAP_LIBS = @CAP_LIBS@
 FDLIBS=@FDLIBS@
 
 
@@ -91,12 +92,12 @@ bacula-sd: Makefile $(SDOBJS) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libb
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -o $@ $(SDOBJS) $(FDLIBS) \
 	   -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
-	$(GETTEXT_LIBS) $(OPENSSL_LIBS)
+	$(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
 
 static-bacula-sd: Makefile $(SDOBJS) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -o $@ $(SDOBJS) $(FDLIBS) \
 	   -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
-	$(GETTEXT_LIBS) $(OPENSSL_LIBS)
+	$(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
 	strip $@
 
 btape.o: btape.c

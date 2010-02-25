@@ -14,27 +14,10 @@ LIBDIR=../../lib
 
 .SUFFIXES:    .c .o .lo
 
-.c.o:
-	$(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -I${SRCDIR} -I${SDDIR} -DTEST_PROGRAM -c $<
-
 .c.lo:
 	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -I${SRCDIR} -I${SDDIR} -DTEST_PROGRAM -c $<
 
-all: example-plugin-sd$(DEFAULT_SHARED_OBJECT_TYPE)
-
-test: main example-plugin-sd.so
-
-dir_plugins.o: ${SDDIR}/dir_plugins.h ${SDDIR}/dir_plugins.c
-	$(CXX) -I${SRCDIR} -I${SDDIR} -DTEST_PROGRAM -c ${SDDIR}/dir_plugins.c 
-
-main: dir_plugins.o
-	$(CXX) $(LDFLAGS) -L${LIBDIR} dir_plugins.o -o main -lbac -lpthread -lssl -l crypto -ldl
-
-example-plugin-sd.o: example-plugin-sd.c ${SDDIR}/dir_plugins.h
-	$(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -fPIC -I../.. -I${SDDIR} -c example-plugin-sd.c
-
-example-plugin-sd.so: example-plugin-sd.o 
-	$(CXX) $(LDFLAGS) -shared example-plugin-sd.o -o example-plugin-sd.so
+all: example-plugin-sd.la
 
 example-plugin-sd.lo: example-plugin-sd.c ${SDDIR}/dir_plugins.h
 	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CFLAGS) -I../.. -I${SDDIR} -c example-plugin-sd.c
@@ -58,7 +41,9 @@ clean: @LIBTOOL_CLEAN_TARGET@
 distclean: clean
 	rm -f Makefile
 
-uninstall:
-	$(RMF) $(DESTDIR)$(plugindir)/example-plugin-sd.so
+libtool-uninstall:
+	$(LIBTOOL_UNINSTALL) $(RMF) $(DESTDIR)$(plugindir)/example-plugin-sd.so
+
+uninstall: @LIBTOOL_UNINSTALL_TARGET@
 
 depend:

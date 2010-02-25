@@ -1,14 +1,7 @@
 /*
- *   edit.c  edit string to ascii, and ascii to internal
- *
- *    Kern Sibbald, December MMII
- *
- *   Version $Id: edit.c 8209 2008-12-20 22:02:31Z ricozz $
- */
-/*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2006 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,6 +25,13 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+/*
+ *   edit.c  edit string to ascii, and ascii to internal
+ *
+ *    Kern Sibbald, December MMII
+ *
+ *   Version $Id$
+ */
 
 #include "bacula.h"
 #include <math.h>
@@ -407,7 +407,7 @@ bool is_a_number(const char *n)
 }
 
 /*
- * Check if specified string is a list of number or not
+ * Check if specified string is a list of numbers or not
  */
 bool is_a_number_list(const char *n)
 {

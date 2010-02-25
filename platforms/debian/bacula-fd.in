@@ -8,9 +8,19 @@
 #
 #  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
 #
+### BEGIN INIT INFO
+# Provides:          bacula-fd
+# Required-Start:    $network
+# Required-Stop:     $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start @BACULA@ Client daemon at boot time
+# Description:       Enable @BACULA@ Client.
+### END INIT INFO
+
 
 NAME="bacula-fd"
-DESC="Bacula File Daemon"
+DESC="@BACULA@ File Daemon"
 DAEMON=@sbindir@/${NAME}
 BUSER=@fd_user@
 BGROUP=@fd_group@

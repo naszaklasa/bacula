@@ -30,7 +30,7 @@
  *
  *    Kern Sibbald, June MMIII  (code pulled from filed/restore.c and updated)
  *
- *   Version $Id: attr.c 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 
@@ -259,7 +259,7 @@ void print_ls_output(JCR *jcr, ATTR *attr)
    p += sprintf(p, "%-8.8s %-8.8s", 
                 guid->uid_to_name(attr->statp.st_uid, en1, sizeof(en1)),
                 guid->gid_to_name(attr->statp.st_gid, en2, sizeof(en2)));
-   p += sprintf(p, "%10.10s ", edit_int64(attr->statp.st_size, ec1));
+   p += sprintf(p, "%12.12s ", edit_int64(attr->statp.st_size, ec1));
    p = encode_time(attr->statp.st_ctime, p);
    *p++ = ' ';
    *p++ = ' ';

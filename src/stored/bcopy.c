@@ -32,7 +32,7 @@
  *   Kern E. Sibbald, October 2002
  *
  *
- *   Version $Id: bcopy.c 8235 2008-12-23 13:28:03Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -102,6 +102,7 @@ int main (int argc, char *argv[])
    init_stack_dump();
 
    my_name_is(argc, argv, "bcopy");
+   lmgr_init_thread();
    init_msg(NULL, NULL);
 
    while ((ch = getopt(argc, argv, "b:c:d:i:o:pvw:?")) != -1) {

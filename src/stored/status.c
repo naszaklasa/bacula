@@ -30,7 +30,7 @@
  *
  *     Kern Sibbald, May MMIII
  *
- *   Version $Id: status.c 8508 2009-03-07 20:59:46Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -400,7 +400,7 @@ static void list_running_jobs(STATUS_PKT *sp)
    foreach_jcr(jcr) {
       if (jcr->JobStatus == JS_WaitFD) {
          len = Mmsg(msg, _("%s Job %s waiting for Client connection.\n"),
-            job_type_to_str(jcr->get_JobType()), jcr->Job);
+            job_type_to_str(jcr->getJobType()), jcr->Job);
          sendit(msg, len, sp);
       }
       dcr = jcr->dcr;
@@ -417,8 +417,8 @@ static void list_running_jobs(STATUS_PKT *sp)
          if (rdcr && rdcr->device) {
             len = Mmsg(msg, _("Reading: %s %s job %s JobId=%d Volume=\"%s\"\n"
                             "    pool=\"%s\" device=%s\n"),
-                   job_level_to_str(jcr->get_JobLevel()),
-                   job_type_to_str(jcr->get_JobType()),
+                   job_level_to_str(jcr->getJobLevel()),
+                   job_type_to_str(jcr->getJobType()),
                    JobName,
                    jcr->JobId,
                    rdcr->VolumeName,
@@ -430,8 +430,8 @@ static void list_running_jobs(STATUS_PKT *sp)
          if (dcr && dcr->device) {
             len = Mmsg(msg, _("Writing: %s %s job %s JobId=%d Volume=\"%s\"\n"
                             "    pool=\"%s\" device=%s\n"),
-                   job_level_to_str(jcr->get_JobLevel()),
-                   job_type_to_str(jcr->get_JobType()),
+                   job_level_to_str(jcr->getJobLevel()),
+                   job_type_to_str(jcr->getJobType()),
                    JobName,
                    jcr->JobId,
                    dcr->VolumeName,

@@ -36,6 +36,7 @@ SCRIPT_DIR=`pwd`
 
 cd ../../..
 TOP_DIR=`pwd`
+TOP_DIR=${DEPKGS:-${TOP_DIR}}
 
 if [ -e ${TOP_DIR}/cross-tools/mingw32/bin/mingw32-gcc ]
 then
@@ -63,7 +64,7 @@ export PATH=${BIN_DIR}:${PATH}
 
 OLD_IFS=${IFS};IFS="|";
 while read package url dir mkd; do
-   echo "Got package ${package}"
+#  echo "Got package ${package}"
    case ${package} in
    \#*) ;;
    *) eval "URL_${package}=${url};DIR_${package}=${dir};MKD_${package}=${mkd}";;
@@ -512,7 +513,13 @@ process_dvd_rw_tools()
 process_qt4()
 {
    get_source "${URL_Qt4}" "${DIR_Qt4}" "${MKD_Qt4}"
-
+   echo "Installing Qt4"
+   rm -rf ${DEPPKG_DIR}/include/qt ${DEPPKG_DIR}/include/src
+   cp -a include/* ${DEPPKG_DIR}/include/
+   rm -rf ${DEPPKG_DIR}/lib/qt
+#  cp -a ${DEPPKG_DIR}/src/${DIR_Qt4}/lib/* ${DEPPKG_DIR}/lib/
+   cp -a lib/* ${DEPPKG_DIR}/lib/
+   cp -p lib/qt/*.dll ${DEPPKG_DIR}/bin/
 }
 
 if [ "$#" -eq 0 ]

@@ -30,7 +30,7 @@
  *
  *      Kern Sibbald, March 2004
  *
- *  Version $Id: spool.c 8995 2009-07-14 18:43:11Z kerns $
+ *  Version $Id$
  */
 
 #include "bacula.h"
@@ -324,7 +324,7 @@ static bool despool_data(DCR *dcr, bool commit)
       despool_elapsed = 1;
    }
 
-   Jmsg(dcr->jcr, M_INFO, 0, _("Despooling elapsed time = %02d:%02d:%02d, Transfer rate = %s bytes/second\n"),
+   Jmsg(dcr->jcr, M_INFO, 0, _("Despooling elapsed time = %02d:%02d:%02d, Transfer rate = %s Bytes/second\n"),
          despool_elapsed / 3600, despool_elapsed % 3600 / 60, despool_elapsed % 60,
          edit_uint64_with_suffix(jcr->dcr->job_spool_size / despool_elapsed, ec1));
 
@@ -358,17 +358,12 @@ static bool despool_data(DCR *dcr, bool commit)
    free(rdev);
    dcr->spooling = true;           /* turn on spooling again */
    dcr->despooling = false;
-
-   /* 
-    * We are done, so unblock the device, but if we have done a 
-    *  commit, leave it locked so that the job cleanup does not
-    *  need to wait to release the device (no re-acquire of the lock).
+   /*
+    * Note, if committing we leave the device blocked. It will be removed in
+    *  release_device();
     */
-   dcr->dlock();
-   unblock_device(dcr->dev);
-   /* If doing a commit, leave the device locked -- unlocked in release_device() */
    if (!commit) {
-      dcr->dunlock();
+      dcr->dev->dunblock();
    }
    set_jcr_job_status(jcr, JS_Running);
    dir_send_job_status(jcr);
@@ -642,14 +637,19 @@ static void make_unique_spool_filename(JCR *jcr, POOLMEM **name, int fd)
       jcr->Job, fd);
 }
 
+/*
+ * Tell Director where to find the attributes spool file 
+ *  Note, if we are not on the same machine, the Director will
+ *  return an error, and the higher level routine will transmit
+ *  the data record by record -- using bsock->despool().
+ */
 static bool blast_attr_spool_file(JCR *jcr, boffset_t size)
 {
    /* send full spool file name */
    POOLMEM *name  = get_pool_memory(PM_MESSAGE);
    make_unique_spool_filename(jcr, &name, jcr->dir_bsock->m_fd);
    bash_spaces(name);
-   jcr->dir_bsock->fsend("BlastAttr Job=%s File=%s\n",
-                         jcr->Job, name);
+   jcr->dir_bsock->fsend("BlastAttr Job=%s File=%s\n", jcr->Job, name);
    free_pool_memory(name);
    
    if (jcr->dir_bsock->recv() <= 0) {
@@ -711,7 +711,7 @@ bail_out:
    return false;
 }
 
-bool open_attr_spool_file(JCR *jcr, BSOCK *bs)
+static bool open_attr_spool_file(JCR *jcr, BSOCK *bs)
 {
    POOLMEM *name  = get_pool_memory(PM_MESSAGE);
 
@@ -731,7 +731,7 @@ bool open_attr_spool_file(JCR *jcr, BSOCK *bs)
    return true;
 }
 
-bool close_attr_spool_file(JCR *jcr, BSOCK *bs)
+static bool close_attr_spool_file(JCR *jcr, BSOCK *bs)
 {
    POOLMEM *name;
 

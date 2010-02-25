@@ -34,7 +34,7 @@
  *
  *     Kern Sibbald, July MMII
  *
- *   Version $Id: bsr.c 8918 2009-06-23 11:56:35Z ricozz $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -176,6 +176,10 @@ bool complete_bsr(UAContext *ua, RBSR *bsr)
       }
       bsr->VolSessionId = jr.VolSessionId;
       bsr->VolSessionTime = jr.VolSessionTime;
+      if (jr.JobFiles == 0) {      /* zero files is OK, not an error, but */
+         bsr->VolCount = 0;        /*   there are no volumes */
+         continue;
+      }
       if ((bsr->VolCount=db_get_job_volume_parameters(ua->jcr, ua->db, bsr->JobId,
            &(bsr->VolParams))) == 0) {
          ua->error_msg(_("Unable to get Job Volume Parameters. ERR=%s\n"), db_strerror(ua->db));
@@ -323,6 +327,70 @@ void display_bsr_info(UAContext *ua, RESTORE_CTX &rx)
 }
 
 /*
+ * Write bsr data for a single bsr record
+ */
+static uint32_t write_bsr_item(RBSR *bsr, UAContext *ua, 
+                   RESTORE_CTX &rx, FILE *fd, bool &first, uint32_t &LastIndex)
+{
+   char ed1[50], ed2[50];
+   uint32_t count = 0;
+   uint32_t total_count = 0;
+   char device[MAX_NAME_LENGTH];
+
+   /*
+    * For a given volume, loop over all the JobMedia records.
+    *   VolCount is the number of JobMedia records.
+    */
+   for (int i=0; i < bsr->VolCount; i++) {
+      if (!is_volume_selected(bsr->fi, bsr->VolParams[i].FirstIndex,
+           bsr->VolParams[i].LastIndex)) {
+         bsr->VolParams[i].VolumeName[0] = 0;  /* zap VolumeName */
+         continue;
+      }
+      if (!rx.store) {
+         find_storage_resource(ua, rx, bsr->VolParams[i].Storage,
+                                       bsr->VolParams[i].MediaType);
+      }
+      fprintf(fd, "Storage=\"%s\"\n", bsr->VolParams[i].Storage);
+      fprintf(fd, "Volume=\"%s\"\n", bsr->VolParams[i].VolumeName);
+      fprintf(fd, "MediaType=\"%s\"\n", bsr->VolParams[i].MediaType);
+      if (bsr->fileregex) {
+         fprintf(fd, "FileRegex=%s\n", bsr->fileregex);
+      }
+      if (get_storage_device(device, bsr->VolParams[i].Storage)) {
+         fprintf(fd, "Device=\"%s\"\n", device);
+      }
+      if (bsr->VolParams[i].Slot > 0) {
+         fprintf(fd, "Slot=%d\n", bsr->VolParams[i].Slot);
+      }
+      fprintf(fd, "VolSessionId=%u\n", bsr->VolSessionId);
+      fprintf(fd, "VolSessionTime=%u\n", bsr->VolSessionTime);
+      fprintf(fd, "VolAddr=%s-%s\n", edit_uint64(bsr->VolParams[i].StartAddr, ed1),
+              edit_uint64(bsr->VolParams[i].EndAddr, ed2));
+//    Dmsg2(100, "bsr VolParam FI=%u LI=%u\n",
+//      bsr->VolParams[i].FirstIndex, bsr->VolParams[i].LastIndex);
+
+      count = write_findex(bsr->fi, bsr->VolParams[i].FirstIndex,
+                           bsr->VolParams[i].LastIndex, fd);
+      if (count) {
+         fprintf(fd, "Count=%u\n", count);
+      }
+      total_count += count;
+      /* If the same file is present on two tapes or in two files
+       *   on a tape, it is a continuation, and should not be treated
+       *   twice in the totals.
+       */
+      if (!first && LastIndex == bsr->VolParams[i].FirstIndex) {
+         total_count--;
+      }
+      first = false;
+      LastIndex = bsr->VolParams[i].LastIndex;
+   }
+   return total_count;
+}
+
+
+/*
  * Here we actually write out the details of the bsr file.
  *  Note, there is one bsr for each JobId, but the bsr may
  *  have multiple volumes, which have been entered in the
@@ -332,120 +400,22 @@ void display_bsr_info(UAContext *ua, RESTORE_CTX &rx)
  */
 static uint32_t write_bsr(UAContext *ua, RESTORE_CTX &rx, FILE *fd)
 {
-   char ed1[50], ed2[50];
-   uint32_t count = 0;
-   uint32_t total_count = 0;
-   uint32_t LastIndex = 0;
    bool first = true;
+   uint32_t LastIndex = 0;
+   uint32_t total_count = 0;
    char *p;
    JobId_t JobId;
-   char device[MAX_NAME_LENGTH];
    RBSR *bsr;
    if (*rx.JobIds == 0) {
       for (bsr=rx.bsr; bsr; bsr=bsr->next) {
-         /*
-          * For a given volume, loop over all the JobMedia records.
-          *   VolCount is the number of JobMedia records.
-          */
-         for (int i=0; i < bsr->VolCount; i++) {
-            if (!is_volume_selected(bsr->fi, bsr->VolParams[i].FirstIndex,
-                 bsr->VolParams[i].LastIndex)) {
-               bsr->VolParams[i].VolumeName[0] = 0;  /* zap VolumeName */
-               continue;
-            }
-            if (!rx.store) {
-               find_storage_resource(ua, rx, bsr->VolParams[i].Storage,
-                                             bsr->VolParams[i].MediaType);
-            }
-            fprintf(fd, "Volume=\"%s\"\n", bsr->VolParams[i].VolumeName);
-            fprintf(fd, "MediaType=\"%s\"\n", bsr->VolParams[i].MediaType);
-            if (bsr->fileregex) {
-               fprintf(fd, "FileRegex=%s\n", bsr->fileregex);
-            }
-            if (get_storage_device(device, bsr->VolParams[i].Storage)) {
-               fprintf(fd, "Device=\"%s\"\n", device);
-            }
-            if (bsr->VolParams[i].Slot > 0) {
-               fprintf(fd, "Slot=%d\n", bsr->VolParams[i].Slot);
-            }
-            fprintf(fd, "VolSessionId=%u\n", bsr->VolSessionId);
-            fprintf(fd, "VolSessionTime=%u\n", bsr->VolSessionTime);
-            fprintf(fd, "VolAddr=%s-%s\n", edit_uint64(bsr->VolParams[i].StartAddr, ed1),
-                    edit_uint64(bsr->VolParams[i].EndAddr, ed2));
-   //       Dmsg2(100, "bsr VolParam FI=%u LI=%u\n",
-   //          bsr->VolParams[i].FirstIndex, bsr->VolParams[i].LastIndex);
-
-            count = write_findex(bsr->fi, bsr->VolParams[i].FirstIndex,
-                                 bsr->VolParams[i].LastIndex, fd);
-            if (count) {
-               fprintf(fd, "Count=%u\n", count);
-            }
-            total_count += count;
-            /* If the same file is present on two tapes or in two files
-             *   on a tape, it is a continuation, and should not be treated
-             *   twice in the totals.
-             */
-            if (!first && LastIndex == bsr->VolParams[i].FirstIndex) {
-               total_count--;
-            }
-            first = false;
-            LastIndex = bsr->VolParams[i].LastIndex;
-         }
+         total_count += write_bsr_item(bsr, ua, rx, fd, first, LastIndex);
       }
       return total_count;
    }
    for (p=rx.JobIds; get_next_jobid_from_list(&p, &JobId) > 0; ) {
       for (bsr=rx.bsr; bsr; bsr=bsr->next) {
-         if (JobId != bsr->JobId) {
-            continue;
-         }
-         /*
-          * For a given volume, loop over all the JobMedia records.
-          *   VolCount is the number of JobMedia records.
-          */
-         for (int i=0; i < bsr->VolCount; i++) {
-            if (!is_volume_selected(bsr->fi, bsr->VolParams[i].FirstIndex,
-                 bsr->VolParams[i].LastIndex)) {
-               bsr->VolParams[i].VolumeName[0] = 0;  /* zap VolumeName */
-               continue;
-            }
-            if (!rx.store) {
-               find_storage_resource(ua, rx, bsr->VolParams[i].Storage,
-                                             bsr->VolParams[i].MediaType);
-            }
-            fprintf(fd, "Volume=\"%s\"\n", bsr->VolParams[i].VolumeName);
-            fprintf(fd, "MediaType=\"%s\"\n", bsr->VolParams[i].MediaType);
-            if (bsr->fileregex) {
-               fprintf(fd, "FileRegex=%s\n", bsr->fileregex);
-            }
-            if (get_storage_device(device, bsr->VolParams[i].Storage)) {
-               fprintf(fd, "Device=\"%s\"\n", device);
-            }
-            if (bsr->VolParams[i].Slot > 0) {
-               fprintf(fd, "Slot=%d\n", bsr->VolParams[i].Slot);
-            }
-            fprintf(fd, "VolSessionId=%u\n", bsr->VolSessionId);
-            fprintf(fd, "VolSessionTime=%u\n", bsr->VolSessionTime);
-            fprintf(fd, "VolAddr=%s-%s\n", edit_uint64(bsr->VolParams[i].StartAddr, ed1),
-                    edit_uint64(bsr->VolParams[i].EndAddr, ed2));
-   //       Dmsg2(100, "bsr VolParam FI=%u LI=%u\n",
-   //          bsr->VolParams[i].FirstIndex, bsr->VolParams[i].LastIndex);
-
-            count = write_findex(bsr->fi, bsr->VolParams[i].FirstIndex,
-                                 bsr->VolParams[i].LastIndex, fd);
-            if (count) {
-               fprintf(fd, "Count=%u\n", count);
-            }
-            total_count += count;
-            /* If the same file is present on two tapes or in two files
-             *   on a tape, it is a continuation, and should not be treated
-             *   twice in the totals.
-             */
-            if (!first && LastIndex == bsr->VolParams[i].FirstIndex) {
-               total_count--;
-            }
-            first = false;
-            LastIndex = bsr->VolParams[i].LastIndex;
+         if (JobId == bsr->JobId) {
+            total_count += write_bsr_item(bsr, ua, rx, fd, first, LastIndex);
          }
       }
    }

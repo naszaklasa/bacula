@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH BLS 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery and verification"
+.TH BLS 8 "26 November 2009" "Kern Sibbald" "Network backup, recovery and verification"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .\" Some roff macros, for reference:
@@ -45,26 +45,29 @@ Specify configuration file.
 .BI \-d\  nn
 Set debug level to \fInn\fP.
 .TP
+.BI \-dt
+Print timestamp in debug output
+.TP
 .BI \-e\ <file>
-Specify exclude list file
+Specify exclude list file.
 .TP
 .BI \-i\  <file>
-Specify include list file
+Specify include list file.
 .TP
 .BI \-j
-List jobs
+List jobs.
 .TP
 .BI \-k
-List blocks
+List blocks.
 .TP 
 .I (no \-j or \-k option)
 List saved files
 .TP
 .BI -L
-Dump label
+Dump label.
 .TP
 .BI \-p
-Proceed despite errors
+Proceed inspite of errors.
 .TP
 .BI \-V\  volumes
 Specify volume names (separated by '|').

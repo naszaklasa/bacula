@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -127,7 +127,7 @@ file_node_t::pluginIoOpen(exchange_fd_context_t *context, struct io_pkt *io)
       result = HrESEBackupOpenFile(hccx, filename, 65535, 1, &backup_file_handle, &section_size);
       if (result)
       {
-         _JobMessage(M_ERROR, "HrESEBackupOpenFile failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+         _JobMessage(M_FATAL, "HrESEBackupOpenFile failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
          backup_file_handle = INVALID_HANDLE_VALUE;
          io->io_errno = 1;
          return bRC_Error;
@@ -144,7 +144,7 @@ file_node_t::pluginIoOpen(exchange_fd_context_t *context, struct io_pkt *io)
          handle = CreateFileW(filename, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
          if (handle == INVALID_HANDLE_VALUE)
          {
-            _JobMessage(M_ERROR, "CreateFile failed");
+            _JobMessage(M_FATAL, "CreateFile failed");
             return bRC_Error;
          }
          restore_file_handle = (void *)handle;
@@ -152,13 +152,13 @@ file_node_t::pluginIoOpen(exchange_fd_context_t *context, struct io_pkt *io)
       }
       else if (result == 0)
       {
-         _JobMessage(M_ERROR, "Exchange File IO API not yet supported for restore\n");
+         _JobMessage(M_FATAL, "Exchange File IO API not yet supported for restore\n");
          restore_at_file_level = false;
          return bRC_Error;
       }
       else
       {
-         _JobMessage(M_ERROR, "HrESERestoreOpenFile failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
+         _JobMessage(M_FATAL, "HrESERestoreOpenFile failed with error 0x%08x - %s\n", result, ESEErrorMessage(result));
          return bRC_Error;
       }
    }
@@ -196,13 +196,13 @@ file_node_t::pluginIoWrite(exchange_fd_context_t *context, struct io_pkt *io)
 
    if (!WriteFile(restore_file_handle, io->buf, io->count, &bytes_written, NULL))
    {
-      _JobMessage(M_ERROR, "Write Error");
+      _JobMessage(M_FATAL, "Write Error");
       return bRC_Error;
    }
 
    if (bytes_written != (DWORD)io->count)
    {
-      _JobMessage(M_ERROR, "Short write");
+      _JobMessage(M_FATAL, "Short write");
       return bRC_Error;
    }
    io->status = bytes_written;

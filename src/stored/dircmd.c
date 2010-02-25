@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -43,7 +43,7 @@
  *
  *     Kern Sibbald, May MMI
  *
- *   Version $Id: dircmd.c 9025 2009-07-16 13:03:53Z ricozz $
+ *   Version $Id$
  *
  */
 
@@ -83,6 +83,7 @@ static bool setdebug_cmd(JCR *jcr);
 static bool cancel_cmd(JCR *cjcr);
 static bool mount_cmd(JCR *jcr);
 static bool unmount_cmd(JCR *jcr);
+static bool action_on_purge_cmd(JCR *jcr);
 static bool bootstrap_cmd(JCR *jcr);
 static bool changer_cmd(JCR *sjcr);
 static bool do_label(JCR *jcr, int relabel);
@@ -118,6 +119,7 @@ static struct s_cmds cmds[] = {
    {"status",      status_cmd,      1},
    {".status",     qstatus_cmd,     1},
    {"unmount",     unmount_cmd,     0},
+   {"action_on_purge",  action_on_purge_cmd,    0},
    {"use storage=", use_cmd,        0},
    {"run",         run_cmd,         0},
 // {"query",       query_cmd,       0},
@@ -152,7 +154,7 @@ void *handle_connection_request(void *arg)
    char tbuf[100];
 
    if (bs->recv() <= 0) {
-      Emsg0(M_ERROR, 0, _("Connection request failed.\n"));
+      Emsg1(M_ERROR, 0, _("Connection request from %s failed.\n"), bs->who());
       bs->close();
       return NULL;
    }
@@ -162,7 +164,7 @@ void *handle_connection_request(void *arg)
     */
    if (bs->msglen < 25 || bs->msglen > (int)sizeof(name)) {
       Dmsg1(000, "<filed: %s", bs->msg);
-      Emsg1(M_ERROR, 0, _("Invalid connection. Len=%d\n"), bs->msglen);
+      Emsg2(M_ERROR, 0, _("Invalid connection from %s. Len=%d\n"), bs->who(), bs->msglen);
       bs->close();
       return NULL;
    }
@@ -325,7 +327,8 @@ static bool cancel_cmd(JCR *cjcr)
             Dmsg1(100, "JobId=%u broadcast wait_device_release\n", (uint32_t)jcr->JobId);
             pthread_cond_broadcast(&wait_device_release);
          }
-         Jmsg(jcr, M_INFO, 0, _("Job %s marked to be canceled.\n"), jcr->Job);
+         Jmsg(jcr, M_INFO, 0, _("JobId=%d Job=\"%s\" marked to be canceled.\n"), 
+            (int)jcr->JobId, jcr->Job);
          dir->fsend(_("3000 Job %s marked to be canceled.\n"), jcr->Job);
          free_jcr(jcr);
       }
@@ -756,6 +759,9 @@ static bool mount_cmd(JCR *jcr)
             } else { /* must be file */
                dir->fsend(_("3906 File device %s is always mounted.\n"),
                   dev->print_name());
+               pthread_cond_broadcast(&dev->wait_next_vol);
+               Dmsg1(100, "JobId=%u broadcast wait_device_release\n", (uint32_t)dcr->jcr->JobId);
+               pthread_cond_broadcast(&wait_device_release);
             }
             break;
 
@@ -814,6 +820,7 @@ static bool unmount_cmd(JCR *jcr)
             if (!unload_autochanger(dcr, -1)) {
                /* ***FIXME**** what is this ????  */
                dev->close();
+               free_volume(dev);
             }
             if (dev->is_unmountable() && !dev->unmount(0)) {
                dir->fsend(_("3907 %s"), dev->bstrerror());
@@ -845,6 +852,7 @@ static bool unmount_cmd(JCR *jcr)
             clear_thread_id(dev->no_wait_id);
             if (!unload_autochanger(dcr, -1)) {
                dev->close();
+               free_volume(dev);
             }
             if (dev->is_unmountable() && !dev->unmount(0)) {
                dir->fsend(_("3907 %s"), dev->bstrerror());
@@ -863,6 +871,54 @@ static bool unmount_cmd(JCR *jcr)
       pm_strcpy(jcr->errmsg, dir->msg);
       dir->fsend(_("3907 Error scanning unmount command: %s\n"), jcr->errmsg);
    }
+   dir->signal(BNET_EOD);
+   return true;
+}
+
+/*
+ * The truncate command will recycle a volume. The director can call this
+ * after purging a volume so that disk space will not be wasted. Only useful
+ * for File Storage, of course.
+ *
+ */
+static bool action_on_purge_cmd(JCR *jcr)
+{
+   POOL_MEM devname;
+   POOL_MEM volumename;
+   BSOCK *dir = jcr->dir_bsock;
+   DEVICE *dev;
+   DCR *dcr;
+   int action;
+
+   if (sscanf(dir->msg, "action_on_purge %127s vol=%s action=%d",
+              devname.c_str(), volumename.c_str(), &action) != 3) {
+      dir->fsend(_("3916 Error scanning action_on_purge command\n"));
+      goto done;
+   }
+   unbash_spaces(volumename.c_str());
+
+   /* FIXME: autochanger, drive = 0? how can we avoid that? we only work on
+    * files 
+    */
+   if ((dcr = find_device(jcr, devname, 0)) == NULL) {
+      dir->fsend(_("3999 Device \"%s\" not found or could not be opened.\n"), devname.c_str());
+      goto done;
+   }
+
+   dev = dcr->dev;
+
+   /* Store the VolumeName for opening and re-labeling the volume */
+   bstrncpy(dcr->VolumeName, volumename.c_str(), sizeof(dcr->VolumeName));
+   bstrncpy(dev->VolHdr.VolumeName, volumename.c_str(), sizeof(dev->VolHdr.VolumeName));
+
+   /* Re-write the label with the recycle flag */
+   if (rewrite_volume_label(dcr, true)) {
+      dir->fsend(_("3917 Volume recycled\n"));
+   } else {
+      dir->fsend(_("3918 Recycle failed\n"));
+   }
+
+done:
    dir->signal(BNET_EOD);
    return true;
 }
@@ -1017,7 +1073,10 @@ static bool changer_cmd(JCR *jcr)
     */
    bool safe_cmd = false;
 
-   if (sscanf(dir->msg, "autochanger list %127s", devname.c_str()) == 1) {
+   if (sscanf(dir->msg, "autochanger listall %127s", devname.c_str()) == 1) {
+      cmd = "listall";
+      safe_cmd = ok = true;
+   } else if (sscanf(dir->msg, "autochanger list %127s", devname.c_str()) == 1) {
       cmd = "list";
       safe_cmd = ok = true;
    } else if (sscanf(dir->msg, "autochanger slots %127s", devname.c_str()) == 1) {

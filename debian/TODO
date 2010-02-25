@@ -1,3 +1,9 @@
+POST SQUEEZE:
+
+ * Remove old -sqlite (sqlitev2) packages
+ * Remove old -sqlite logic in sqlite3 .config, .postinst
+ * Remove old -sqlite logic in rules, if any
+
 * Make sure btraceback can be found in /usr/lib/bacula?
 
 * Verify upgrades work as expected
@@ -6,13 +12,6 @@
   
   Remove old AUTHFILE=`getent passwd bacula | cut -d ':' -f 6`/.pgpass
   and $AUTHFILE.bak
-
-* Make SQLite&sqlite3 purge actually remove the DB like the debconf questions
-  say it will
- 
-* Should we zap old debconf stuff on install of the new version?
-
-* Need a MySQL preinst?
 
 * check backup_catalog scripts & make sure they're getting installed
 

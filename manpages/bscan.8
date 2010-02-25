@@ -2,7 +2,7 @@
 .\" First parameter, NAME, should be all caps
 .\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
 .\" other parameters are allowed: see man(7), man(1)
-.TH BSCAN 8 "26 May 2006" "Kern Sibbald" "Network backup, recovery and verification"
+.TH BSCAN 8 "26 November 2009" "Kern Sibbald" "Network backup, recovery and verification"
 .\" Please adjust this date whenever revising the manpage.
 .\"
 .SH NAME
@@ -49,8 +49,14 @@ Specify configuration file.
 .BI \-d\  nn
 Set debug level to \fInn\fP.
 .TP
+.BI \-dt
+Print timestamp in debug output.
+.TP
 .B \-m
 Update media info in database.
+.TP
+.B \-D
+Specify the driver database name (default: \fINULL\fP)
 .TP
 .BI \-n\  name
 Specify the database name (default: \fIbacula\fP)
@@ -58,17 +64,26 @@ Specify the database name (default: \fIbacula\fP)
 .BI \-u\  username
 Specify database username (default: \fIbacula\fP)
 .TP
-.BI \-p\  password
+.BI \-P\  password
 Specify database password (default: \fInone\fP)
 .TP
 .BI \-h\  host
 Specify database host (default: \fINULL\fP)
+.TP
+.BI \-t\  port
+Specify database port (default: 0)
+.TP
+.B \-p
+Proceed inspite of I/O errors.
 .TP
 .B \-r
 List records.
 .TP
 .B \-s
 Synchronize or store in Database.
+.TP
+.B \-S
+Show scan progress periodically.
 .TP
 .B \-v
 Verbose output mode.

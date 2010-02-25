@@ -98,13 +98,13 @@ typedef enum {
   bwVarJobReport  = 1,
   bwVarVolumeName = 2,
   bwVarPriority   = 3,
-  bwVarJobLevel   = 4,
+  bwVarJobLevel   = 4
 } bwVariable;
 
 
 typedef enum {
   bEventJobStart      = 1,
-  bEventJobEnd        = 2,
+  bEventJobEnd        = 2
 } bEventType;
 
 typedef struct s_bEvent {

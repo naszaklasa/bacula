@@ -32,7 +32,7 @@
  *    Dan Langille, December 2003
  *    based upon work done by Kern Sibbald, March 2000
  *
- *    Version $Id: postgresql.c 9006 2009-07-15 14:03:07Z ricozz $
+ *    Version $Id$
  */
 
 
@@ -176,12 +176,6 @@ db_open_database(JCR *jcr, B_DB *mdb)
    int errstat;
    char buf[10], *port;
 
-#ifdef xxx                      /* require libpq >= 8.2 */
-   if (!PQisthreadsafe()) {
-      Jmsg(jcr, M_ABORT, 0, _("PostgreSQL configuration problem. "          
-           "PostgreSQL library is not thread safe. Cannot continue.\n"));
-   }
-#endif
    P(mutex);
    if (mdb->connected) {
       V(mutex);
@@ -228,10 +222,9 @@ db_open_database(JCR *jcr, B_DB *mdb)
             mdb->db_password==NULL?"(NULL)":mdb->db_password);
 
    if (PQstatus(mdb->db) != CONNECTION_OK) {
-      Mmsg2(&mdb->errmsg, _("Unable to connect to PostgreSQL server.\n"
-            "Database=%s User=%s\n"
-            "It is probably not running or your password is incorrect.\n"),
-             mdb->db_name, mdb->db_user);
+      Mmsg2(&mdb->errmsg, _("Unable to connect to PostgreSQL server. Database=%s User=%s\n"
+         "Possible causes: SQL server not running; password incorrect; max_connections exceeded.\n"),
+         mdb->db_name, mdb->db_user);
       V(mutex);
       return 0;
    }
@@ -299,6 +292,18 @@ db_close_database(JCR *jcr, B_DB *mdb)
       free(mdb);
    }
    V(mutex);
+}
+
+void db_check_backend_thread_safe()
+{
+#ifdef HAVE_BATCH_FILE_INSERT
+# ifdef HAVE_PQISTHREADSAFE 
+   if (!PQisthreadsafe()) {
+      Emsg0(M_ABORT, 0, _("Pg client library must be thread-safe "
+                          "when using BatchMode.\n"));
+   }
+# endif
+#endif
 }
 
 void db_thread_cleanup()

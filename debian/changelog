@@ -1,3 +1,132 @@
+bacula (5.0.0-5) unstable; urgency=medium
+
+  * Fix bashism in scripts/disk-changer.in.  Closes: #530049.
+  * Correct MySQL index patch to avoid syntax error on install.
+    Closes: #569535.
+  * Corrected MySQL upgrade issue by adding a shell script to determine
+    whether to remove Stripe column from JobMedia table.  This would have
+    caused upgrade to crash for people that had upgraded all the way from
+    the 1.x days.
+    Closes: #569285.
+  * Patch from Petr Salinger to disable ACLs on kfreebsd-* archs.
+    This corrects a FTBFS and Closes: #570890.
+  * Correct saving password to bacula-dir.conf on new install
+    with MySQL or PostgreSQL flavor.  Closes: #538824.
+  * Added make_catalog_backup.pl script to *-director debs.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 22 Feb 2010 13:47:19 -0600
+
+bacula (5.0.0-4) unstable; urgency=low
+
+  * Corrected fail to install bug: after removing /var/run from the package
+    in 5.0.0-3, needed to also remove reference to it in
+    bacula-common.postinst.  Closes: #569288, #569298, #569305, #569326.
+
+ -- John Goerzen <jgoerzen@complete.org>  Thu, 11 Feb 2010 08:05:47 -0600
+
+bacula (5.0.0-3) unstable; urgency=low
+
+  * Added MySQL indices to match PostgreSQL ones.  Closes: #563899.
+  * Copy slight spelling tweak to debian/copyright.
+  * Remove bad patch that caused double-restart of init scripts.
+    Closes: #569126.
+  * Fixed errant DROP INDEX command in sqlite upgrade process.
+  * Added --disable-conio to ./configure args to force use of readline.
+    --with-readline=yes was already supplied.  This will enable
+    new tab completion code.  Closes: #569154, #513393.
+  * [lintian] Add ${misc:Depends} to all package Depends lines.
+  * [lintian] Bump debhelper compat level to 6.
+  * [lintian] Update build-dep on debhelper due to use of dh_lintian.
+  * [lintian] No longer create /var/run in .dirs files.  init scripts are
+    already making sure it's there.
+  * [lintian] Remove now-useless bacula-director-common.preinst
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 10 Feb 2010 14:05:08 -0600
+
+bacula (5.0.0-2) unstable; urgency=low
+
+  * Now upload 5.0.x to unstable.
+  * Now install mtx-changer.conf in bacula-sd.  Closes: #531471.
+
+ -- John Goerzen <jgoerzen@complete.org>  Tue, 09 Feb 2010 12:05:20 -0600
+
+bacula (5.0.0-1) experimental; urgency=low
+
+  * New upstream version.
+  * Removed build-dep option libreadline5-dev, leaving only libreadline-dev
+    option.  Closes: #553735.
+  * Update bacula-console-qt section to utils to match override file.
+  * Update standards-version to 3.8.3.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 08 Feb 2010 15:44:00 -0600
+
+bacula (3.0.3-3) unstable; urgency=medium
+
+  * Fixed situation where dbconfig-common bits weren't being called.  This
+    prevented proper upgrades from lenny.  Closes: #516900, #542774.
+  * Convert Sqlite3 to use dbconfig-common like PostgreSQL and MySQL directors
+    have been for some time now.
+  * This change means it now correctly upgrades from Sqlite2.
+    Closes: #552413.
+  * This change means that all Bacula debconf templates are finally removed.
+    As a result, no need for translations remains.  Closing open translation
+    bugs since there is no longer anything to translate in this package.
+    Closes: #568469.
+  * Clean up handling of database upgrade scripts in debian/rules to make it
+    easier to handle new Bacula versions when they arrive.
+  * Make sure to stop the director before upgrading its database.
+  * Add lsb init.d status support.  Patch from Peter Eisentraut.
+    Closes: #536573.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 08 Feb 2010 14:37:04 -0600
+
+bacula (3.0.3-2) unstable; urgency=medium
+
+  * Update build-dep from libmysqlclient15-dev to libmysqlclient-dev.
+    Rebuild on a newer i386 sid machine; 3.0.3-1 will not migrate to testing
+    due to dep on old libmysqlclient15 on i386.
+  * Remove bacula-doc ln in debian/rules, correcting dpkg's idea that bacula
+    has been completely removed on upgrade.
+    Closes: #545473, #554197, #545313.
+  * Add bpipe to built package.  Patch from Alex Bramley.  Closes: #549081.
+  * Added comments about make_catalog_backup to README.Debian.  Closes: #452687.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 03 Feb 2010 21:37:56 -0600
+
+bacula (3.0.3-1) unstable; urgency=medium
+
+  * New upstream release.  Closes: #566646.
+  * Update all PostgreSQL dependencies to 8.4 only.
+    Closes: #559581.
+  * Ack NMU.  Closes: #549982, #565877, #543179, #544594, #544610.
+    Closes: #545729, #555450, #545408, #567660.
+  * Improve manpages for: bcopy, bextract, bls, btraceback, bacula-fd,
+    bacula-sd, bacula-dir, bconsole, dbcheck, btape, bscan.
+    Patches by Lucas B. Cohen
+    Closes: #499619.
+  * Import upstream patch to add bsmtp manpage and update
+    manpages.  Closes: #519573.
+  * Add lintian overrides for rpath warning for /usr/lib/bacula.
+  * Add explicit dep from bacula to bacula-common.  This dep is enforced
+    by other deps already, but was causing a lintian warning.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Feb 2010 11:33:48 -0600
+
+bacula (3.0.2-3.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Fix pending l10n issues. Debconf translations:
+  * German (Helge Kreutzmann).  Closes: #549982, #565877
+  * Russian (Yuri Kozlov).  Closes: #543179
+  * Italian (Luca Monducci).  Closes: #544594
+  * French (Christian Perrier).  Closes: #544610
+  * Swedish (Martin Bagge).  Closes: #545729
+  * Spanish (Francisco Javier Cuadrado).  Closes: #555450
+  * Japanese (Hideki Yamane (Debian-JP)).  Closes: #545408
+  * Czech (Miroslav Kure).  Closes: #567660
+
+ -- Christian Perrier <bubulle@debian.org>  Sun, 24 Jan 2010 08:01:18 +0100
+
 bacula (3.0.2-3~bpo50+1) lenny-backports; urgency=low
 
   * Rebuild for lenny-backports.

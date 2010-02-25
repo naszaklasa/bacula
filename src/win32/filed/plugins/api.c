@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -64,7 +64,7 @@ loadExchangeApi()
    status = RegOpenKeyW(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Control\\BackupRestore\\DLLPaths", &key_handle);
    if (status != ERROR_SUCCESS)
    {
-      _JobMessageNull(M_ERROR, "Cannot get key for Exchange DLL path, result = %08x\n", status);
+      _JobMessageNull(M_FATAL, "Cannot get key for Exchange DLL path, result = %08x\n", status);
       return bRC_Error;
    }
    
@@ -72,7 +72,7 @@ loadExchangeApi()
    status = RegQueryValueExW(key_handle, L"esebcli2", NULL, &type, NULL, &buf_len);
    if (status != ERROR_SUCCESS)
    {
-      _JobMessageNull(M_ERROR, "Cannot get key for Exchange DLL path, result = %08x\n", status);
+      _JobMessageNull(M_FATAL, "Cannot get key for Exchange DLL path, result = %08x\n", status);
       return bRC_Error;
    }
    buf_len += 2;
@@ -82,7 +82,7 @@ loadExchangeApi()
    status = RegQueryValueExW(key_handle, L"esebcli2", NULL, &type, (LPBYTE)buf, &buf_len);
    if (status != ERROR_SUCCESS)
    {
-      _JobMessageNull(M_ERROR, "Cannot get key for Exchange DLL path, result = %08x\n", status);
+      _JobMessageNull(M_FATAL, "Cannot get key for Exchange DLL path, result = %08x\n", status);
       delete buf;
       return bRC_Error;
    }
@@ -94,6 +94,7 @@ printf("Got value %S\n", buf);
    h = LoadLibraryW(buf);
    delete buf;
    if (!h) {
+      _JobMessageNull(M_FATAL, "Cannot load Exchange DLL\n");
       return bRC_Error;
    }
    HrESEBackupRestoreGetNodes = (HrESEBackupRestoreGetNodes_t)GetProcAddress(h, "HrESEBackupRestoreGetNodes");
@@ -135,6 +136,8 @@ ESEErrorMessage(HRESULT result)
       return "Exchange backup already in progress.";
    case hrLogfileNotContiguous:
       return "Existing log file is not contiguous. Check that no stale files are left in the Exchange data/log directories.";
+   case hrErrorFromESECall:
+      return "Error returned from ESE function call. Check the Windows Event Logs for more information.";
    case hrCBDatabaseNotFound:
       return "Database not found. Check that the Database you are trying to restore actually exists in the Storage Group you are restoring to.";
    default:

@@ -35,7 +35,7 @@
 #	       is useless.
 #
 # 
-# $Id: dvd-handler.in 3842 2006-12-22 15:01:05Z kerns $
+# $Id$
 #
 
 import popen2

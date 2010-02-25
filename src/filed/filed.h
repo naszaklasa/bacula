@@ -30,17 +30,45 @@
  *
  *     Kern Sibbald, Jan MMI
  *
- *   Version $Id: filed.h 8520 2009-03-12 09:47:51Z ricozz $
+ *   Version $Id$
  */
 
+/*
+ * Number of acl errors to report per job.
+ */
+#define ACL_REPORT_ERR_MAX_PER_JOB	25
+
+/*
+ * Number of xattr errors to report per job.
+ */
+#define XATTR_REPORT_ERR_MAX_PER_JOB	25
+
+/*
+ * Return codes from acl subroutines.
+ */
+typedef enum {
+   bacl_exit_fatal = -1,
+   bacl_exit_error = 0,
+   bacl_exit_ok = 1
+} bacl_exit_code;
+
+/*
+ * Return codes from xattr subroutines.
+ */
+typedef enum {
+   bxattr_exit_fatal = -1,
+   bxattr_exit_error = 0,
+   bxattr_exit_ok = 1
+} bxattr_exit_code;
 
 #define FILE_DAEMON 1
 #include "lib/htable.h"
 #include "filed_conf.h"
 #include "fd_plugins.h"
 #include "findlib/find.h"
-#include "jcr.h"
 #include "acl.h"
+#include "xattr.h"
+#include "jcr.h"
 #include "protos.h"                   /* file daemon prototypes */
 #include "lib/runscript.h"
 #include "lib/breg.h"

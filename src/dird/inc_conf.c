@@ -31,7 +31,7 @@
  *
  *     Kern Sibbald, March MMIII
  *
- *     Version $Id: inc_conf.c 8626 2009-03-28 17:09:55Z kerns $
+ *     Version $Id$
  */
 
 #include "bacula.h"
@@ -98,6 +98,7 @@ static RES_ITEM2 newinc_items[] = {
 static RES_ITEM options_items[] = {
    {"compression",     store_opts,    {0},     0, 0, 0},
    {"signature",       store_opts,    {0},     0, 0, 0},
+   {"basejob",         store_opts,    {0},     0, 0, 0},
    {"accurate",        store_opts,    {0},     0, 0, 0},
    {"verify",          store_opts,    {0},     0, 0, 0},
    {"onefs",           store_opts,    {0},     0, 0, 0},
@@ -140,6 +141,7 @@ enum {
    INC_KW_DIGEST,
    INC_KW_ENCRYPTION,
    INC_KW_VERIFY,
+   INC_KW_BASEJOB,
    INC_KW_ACCURATE,
    INC_KW_ONEFS,
    INC_KW_RECURSE,
@@ -173,6 +175,7 @@ static struct s_kw FS_option_kw[] = {
    {"signature",   INC_KW_DIGEST},
    {"encryption",  INC_KW_ENCRYPTION},
    {"verify",      INC_KW_VERIFY},
+   {"basejob",     INC_KW_BASEJOB},
    {"accurate",    INC_KW_ACCURATE},
    {"onefs",       INC_KW_ONEFS},
    {"recurse",     INC_KW_RECURSE},
@@ -294,6 +297,12 @@ static void scan_include_options(LEX *lc, int keyword, char *opts, int optlen)
    } else if (keyword == INC_KW_ACCURATE) { /* special case */
       /* ***FIXME**** ensure these are in permitted set */
       bstrncat(opts, "C", optlen);         /* indicate Accurate */
+      bstrncat(opts, lc->str, optlen);
+      bstrncat(opts, ":", optlen);         /* terminate it */
+      Dmsg3(900, "Catopts=%s option=%s optlen=%d\n", opts, option,optlen);
+   } else if (keyword == INC_KW_BASEJOB) { /* special case */
+      /* ***FIXME**** ensure these are in permitted set */
+      bstrncat(opts, "J", optlen);         /* indicate BaseJob */
       bstrncat(opts, lc->str, optlen);
       bstrncat(opts, ":", optlen);         /* terminate it */
       Dmsg3(900, "Catopts=%s option=%s optlen=%d\n", opts, option,optlen);
@@ -588,7 +597,7 @@ static void store_excludedir(LEX *lc, RES_ITEM2 *item, int index, int pass, bool
    }
    token = lex_get_token(lc, T_NAME);
    if (pass == 1) {
-      res_incexe.current_opts->ignoredir = bstrdup(lc->str);
+      res_incexe.ignoredir = bstrdup(lc->str);
    }
    scan_to_eol(lc);
 }

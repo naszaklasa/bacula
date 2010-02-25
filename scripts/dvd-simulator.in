@@ -38,7 +38,7 @@
 # If an error occurs, prints a negative number (-errno), followed,
 # on the second line, by an error message.
 # 
-# $Id: dvd-simulator.in 3475 2006-09-16 07:46:08Z kerns $
+# $Id$
 #
 
 import popen2

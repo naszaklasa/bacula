@@ -37,7 +37,7 @@
  * Last Modified By: Thorsten Engel
  * Last Modified On: Fri Apr 22 19:30:00 2004
  * Update Count    : 218
- * $Id: compat.h 8584 2009-03-23 08:56:20Z ricozz $
+ * $Id$
  */
 
 
@@ -380,6 +380,8 @@ void Win32ConvCleanupCache();
 void closelog();
 void openlog(const char *ident, int option, int facility);
 #endif //HAVE_MINGW
+
+extern void LogErrorMsg(const char *message);
 
 #if !defined(INVALID_FILE_ATTRIBUTES)
 #define INVALID_FILE_ATTRIBUTES ((DWORD)-1)

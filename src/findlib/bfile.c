@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,8 +31,6 @@
  *    I.e. on Windows, we use Windows APIs.
  *
  *    Kern Sibbald, April MMIII
- *
- *   Version $Id: bfile.c 8495 2009-02-28 14:52:14Z marcovw $
  *
  */
 
@@ -169,6 +167,8 @@ const char *stream_to_ascii(int stream)
       return _("Solaris Specific ACL attribs");
    case STREAM_ACL_SOLARIS_ACE:
       return _("Solaris Specific ACL attribs");
+   case STREAM_XATTR_OPENBSD:
+      return _("OpenBSD Specific Extended attribs");
    case STREAM_XATTR_SOLARIS_SYS:
       return _("Solaris Specific Extensible attribs or System Extended attribs");
    case STREAM_XATTR_SOLARIS:
@@ -615,10 +615,6 @@ int bclose(BFILE *bfd)
 {
    int stat = 0;
 
-   if (bfd->errmsg) {
-      free_pool_memory(bfd->errmsg);
-      bfd->errmsg = NULL;
-   }
    if (bfd->mode == BF_CLOSED) {
       Dmsg0(50, "=== BFD already closed.\n");
       return 0;
@@ -666,6 +662,10 @@ int bclose(BFILE *bfd)
    }
 
 all_done:
+   if (bfd->errmsg) {
+      free_pool_memory(bfd->errmsg);
+      bfd->errmsg = NULL;
+   }
    bfd->mode = BF_CLOSED;
    bfd->lpContext = NULL;
    bfd->cmd_plugin = false;
@@ -949,6 +949,11 @@ int bopen_rsrc(BFILE *bfd, const char *fname, int flags, mode_t mode)
    bopen(bfd, rsrc_fname, flags, mode);
    free_pool_memory(rsrc_fname);
    return bfd->fid;
+}
+#else
+int bopen_rsrc(BFILE *bfd, const char *fname, int flags, mode_t mode)
+{
+   return -1;
 }
 #endif
 

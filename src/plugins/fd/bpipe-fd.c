@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -173,6 +173,9 @@ static bRC newPlugin(bpContext *ctx)
 static bRC freePlugin(bpContext *ctx)
 {
    struct plugin_ctx *p_ctx = (struct plugin_ctx *)ctx->pContext;
+   if (!p_ctx) {
+      return bRC_Error;
+   }
    if (p_ctx->cmd) {
       free(p_ctx->cmd);                  /* free any allocated command string */
    }
@@ -203,6 +206,10 @@ static bRC setPluginValue(bpContext *ctx, pVariable var, void *value)
 static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
 {
    struct plugin_ctx *p_ctx = (struct plugin_ctx *)ctx->pContext;
+   if (!p_ctx) {
+      return bRC_Error;
+   }
+
 // char *name;
 
    /*
@@ -284,6 +291,9 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
 static bRC startBackupFile(bpContext *ctx, struct save_pkt *sp)
 {
    struct plugin_ctx *p_ctx = (struct plugin_ctx *)ctx->pContext;
+   if (!p_ctx) {
+      return bRC_Error;
+   }
    time_t now = time(NULL);
    sp->fname = p_ctx->fname;
    sp->type = FT_REG;
@@ -318,6 +328,9 @@ static bRC endBackupFile(bpContext *ctx)
 static bRC pluginIO(bpContext *ctx, struct io_pkt *io)
 {
    struct plugin_ctx *p_ctx = (struct plugin_ctx *)ctx->pContext;
+   if (!p_ctx) {
+      return bRC_Error;
+   }
     
    io->status = 0;
    io->io_errno = 0;

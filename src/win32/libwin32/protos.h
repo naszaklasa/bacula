@@ -28,13 +28,13 @@
 /*
  * Kern Sibbald, August 2007
  *
- *   Version $Id: protos.h 8681 2009-04-03 09:16:48Z kerns $
+ *   Version $Id$
  */
 
-#define log_error_message(msg) LogErrorMsg((msg), __FILE__, __LINE__)
+#define log_error_message(msg) LogLastErrorMsg((msg), __FILE__, __LINE__)
 
 extern int BaculaAppMain();
-extern void LogErrorMsg(const char *msg, const char *fname, int lineno);
+extern void LogLastErrorMsg(const char *msg, const char *fname, int lineno);
 
 extern int BaculaMain(int argc, char *argv[]);
 extern BOOL ReportStatus(DWORD state, DWORD exitcode, DWORD waithint);

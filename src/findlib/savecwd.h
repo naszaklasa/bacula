@@ -29,7 +29,7 @@
 /*
  *  Kern Sibbald, August MMVII
  *
- *  Version $Id: savecwd.h 7380 2008-07-14 10:42:59Z kerns $
+ *  Version $Id$
  */
 
 #ifndef _SAVECWD_H

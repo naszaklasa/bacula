@@ -28,7 +28,7 @@
 /*
  * Protypes for stored -- Kern Sibbald MM  
  *
- *   Version $Id: protos.h 8983 2009-07-14 13:46:39Z kerns $
+ *   Version $Id$
  */
 
 /* From stored.c */
@@ -41,7 +41,6 @@ bool     release_device(DCR *dcr);
 bool     clean_device(DCR *dcr);
 DCR     *new_dcr(JCR *jcr, DCR *dcr, DEVICE *dev);
 void     free_dcr(DCR *dcr);
-void     detach_dcr_from_dev(DCR *dcr);
 
 /* From askdir.c */
 enum get_vol_info_rw {
@@ -127,11 +126,10 @@ void    dvd_remove_empty_part(DCR *dcr);
 /* From device.c */
 bool     open_device(DCR *dcr);
 bool     first_open_device(DCR *dcr);
-bool     fixup_device_block_write_error(DCR *dcr);
+bool     fixup_device_block_write_error(DCR *dcr, int retries=4);
 void     set_start_vol_position(DCR *dcr);
 void     set_new_volume_parameters(DCR *dcr);
 void     set_new_file_parameters(DCR *dcr);
-bool     is_device_unmounted(DEVICE *dev);
 
 /* From dircmd.c */
 void     *handle_connection_request(void *arg);
@@ -231,32 +229,30 @@ extern int reservations_lock_count;
 #ifdef  SD_DEBUG_LOCK
 
 #define lock_reservations() \
-         do { Dmsg4(sd_dbglvl, "lock_reservations at %s:%d precnt=%d JobId=%u\n", \
+         do { Dmsg3(sd_dbglvl, "lock_reservations at %s:%d precnt=%d\n", \
               __FILE__, __LINE__, \
-              reservations_lock_count, get_jobid_from_tid(pthread_self())); \
+              reservations_lock_count); \
               _lock_reservations(); \
-              Dmsg1(sd_dbglvl, "lock_reservations: got lock JobId=%u\n", \
-               get_jobid_from_tid(pthread_self())); \
+              Dmsg0(sd_dbglvl, "lock_reservations: got lock\n"); \
          } while (0)
 #define unlock_reservations() \
-         do { Dmsg4(sd_dbglvl, "unlock_reservations at %s:%d precnt=%d JobId=%u\n", \
+         do { Dmsg3(sd_dbglvl, "unlock_reservations at %s:%d precnt=%d\n", \
               __FILE__, __LINE__, \
-              reservations_lock_count, get_jobid_from_tid(pthread_self())); \
+              reservations_lock_count); \
                    _unlock_reservations(); } while (0)
 
 #define lock_volumes() \
-         do { Dmsg4(sd_dbglvl, "lock_volumes at %s:%d precnt=%d JobId=%u\n", \
+         do { Dmsg3(sd_dbglvl, "lock_volumes at %s:%d precnt=%d\n", \
               __FILE__, __LINE__, \
-              vol_list_lock_count, get_jobid_from_tid(pthread_self())); \
+              vol_list_lock_count); \
               _lock_volumes(); \
-              Dmsg1(sd_dbglvl, "lock_volumes: got lock JobId=%u\n", \
-               get_jobid_from_tid(pthread_self())); \
+              Dmsg0(sd_dbglvl, "lock_volumes: got lock\n"); \
          } while (0)
 
 #define unlock_volumes() \
-         do { Dmsg4(sd_dbglvl, "unlock_volumes at %s:%d precnt=%d JobId=%u\n", \
+         do { Dmsg3(sd_dbglvl, "unlock_volumes at %s:%d precnt=%d\n", \
               __FILE__, __LINE__, \
-              vol_list_lock_count, get_jobid_from_tid(pthread_self())); \
+              vol_list_lock_count); \
                    _unlock_volumes(); } while (0)
 
 #else
@@ -282,7 +278,6 @@ void    create_volume_lists();
 void    free_volume_lists();
 void    list_volumes(void sendit(const char *msg, int len, void *sarg), void *arg);
 bool    is_volume_in_use(DCR *dcr);
-void    debug_list_volumes(const char *imsg);
 extern  int vol_list_lock_count;
 void    add_read_volume(JCR *jcr, const char *VolumeName);
 void    remove_read_volume(JCR *jcr, const char *VolumeName);

@@ -32,7 +32,7 @@
  *
  *    Nicolas Boichat, MMV
  *
- *   Version $Id: dvd.c 7450 2008-07-30 12:53:47Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"

@@ -33,6 +33,7 @@ SQL_OBJS = \
 	sql_get.o \
 	sql_list.o \
 	sql_update.o \
+	bvfs.o
 
 LIBS_DLL = \
 	$(LIBS_BACULA)

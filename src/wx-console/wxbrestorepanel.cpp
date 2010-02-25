@@ -31,7 +31,7 @@
  *
  *    Nicolas Boichat, April-July 2004
  *
- *    Version $Id: wxbrestorepanel.cpp 7380 2008-07-14 10:42:59Z kerns $
+ *    Version $Id$
  */
 
 /* Note concerning "done" output (modifiable marked with +)

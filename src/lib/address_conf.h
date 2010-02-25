@@ -29,7 +29,7 @@
  *
  *   Written by Meno Abels, June MMIV
  *
- *   Version $Id: address_conf.h 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  */
 
 

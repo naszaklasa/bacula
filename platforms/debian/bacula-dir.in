@@ -8,9 +8,19 @@
 #
 #  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
 #
+### BEGIN INIT INFO
+# Provides:          bacula-dir
+# Required-Start:    $network
+# Required-Stop:     $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start @BACULA@ Director daemon at boot time
+# Description:       Enable @BACULA@ Director.
+### END INIT INFO
+#
 
 NAME="bacula-dir"
-DESC="Bacula Director"
+DESC="@BACULA@ Director"
 DAEMON=@sbindir@/${NAME}
 BUSER=@dir_user@
 BGROUP=@dir_group@

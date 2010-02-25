@@ -28,7 +28,7 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: medialist.h 7660 2008-09-28 18:12:29Z bartleyd2 $
+ *   Version $Id$
  *
  *   Dirk Bartley, March 2007
  */
@@ -54,6 +54,7 @@ public slots:
 private slots:
    void populateTree();
    void showJobs();
+   void viewVolume();
    void editVolume();
    void deleteVolume();
    void purgeVolume();

@@ -29,7 +29,7 @@
  * 
  *  Kern Sibbald, August 2007
  *
- *  Version $Id: service.cpp 8681 2009-04-03 09:16:48Z kerns $
+ *  Version $Id$
  *
  * This is a generic service routine, which is used by all three
  *  of the daemons. Each one compiles it with slightly different
@@ -470,8 +470,8 @@ BOOL ReportStatus(DWORD state, DWORD exitcode, DWORD waithint)
    return result;
 }
 
-/* Log an error message */
-void LogErrorMsg(const char *message, const char *fname, int lineno)
+/* Log an error message for the last Windows error */
+void LogLastErrorMsg(const char *message, const char *fname, int lineno)
 {
    char msgbuf[500];
    HANDLE eventHandler;

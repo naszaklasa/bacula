@@ -30,7 +30,7 @@
  *
  * Kern Sibbald, pulled out of dev.h June 2007
  *
- *   Version $Id: lock.h 7380 2008-07-14 10:42:59Z kerns $
+ *   Version $Id$
  *
  */
 
@@ -59,7 +59,8 @@ enum {
    BST_WRITING_LABEL,                 /* Labeling a tape */
    BST_UNMOUNTED_WAITING_FOR_SYSOP,   /* User unmounted during wait for op */
    BST_MOUNT,                         /* Mount request */
-   BST_DESPOOLING                     /* Despooling -- i.e. multiple writes */
+   BST_DESPOOLING,                    /* Despooling -- i.e. multiple writes */
+   BST_RELEASING                      /* Releasing the device */
 };
 
 typedef struct s_steal_lock {

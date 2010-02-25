@@ -95,6 +95,13 @@ automatically upgrade your catalog during a major Bacula upgrade.
 However, please be sure to examine /usr/share/doc/bacula-common/ReleaseNotes
 for potential changes in the configuration files.
 
+CATALOG BACKUPS
+===============
+
+Please see the comments in the bacula-dir.conf file regarding the
+make_catalog_backup script for information on tailoring it for your own
+particular environment.
+
 FURTHER READING
 ===============
 

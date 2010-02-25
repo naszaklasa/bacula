@@ -31,7 +31,7 @@
  *
  *   Kern Sibbald, December 2000
  *
- *   Version $Id: askdir.c 8893 2009-06-12 19:00:50Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -330,7 +330,7 @@ bool dir_update_volume_info(DCR *dcr, bool label, bool update_LastWritten)
    POOL_MEM VolumeName;
 
    /* If system job, do not update catalog */
-   if (jcr->get_JobType() == JT_SYSTEM) {
+   if (jcr->getJobType() == JT_SYSTEM) {
       return true;
    }
 
@@ -394,7 +394,7 @@ bool dir_create_jobmedia_record(DCR *dcr, bool zero)
    char ed1[50];
 
    /* If system job, do not update catalog */
-   if (jcr->get_JobType() == JT_SYSTEM) {
+   if (jcr->getJobType() == JT_SYSTEM) {
       return true;
    }
 
@@ -465,6 +465,10 @@ bool dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec)
    ser_bytes(rec->data, rec->data_len);
    dir->msglen = ser_length(dir->msg);
    Dmsg1(1800, ">dird %s\n", dir->msg);    /* Attributes */
+   if (rec->Stream == STREAM_UNIX_ATTRIBUTES || 
+       rec->Stream == STREAM_UNIX_ATTRIBUTES_EX) {
+      dir->set_data_end();                 /* set offset of last valid data */
+   }
    return dir->send();
 }
 
@@ -513,8 +517,8 @@ bool dir_ask_sysop_to_create_appendable_volume(DCR *dcr)
       } else {
          if (stat == W_TIMEOUT || stat == W_MOUNT) {
             Mmsg(dev->errmsg, _(
-"Job %s waiting. Cannot find any appendable volumes.\n"
-"Please use the \"label\"  command to create a new Volume for:\n"
+"Job %s is waiting. Cannot find any appendable volumes.\n"
+"Please use the \"label\" command to create a new Volume for:\n"
 "    Storage:      %s\n"
 "    Pool:         %s\n"
 "    Media type:   %s\n"),

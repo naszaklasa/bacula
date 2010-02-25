@@ -43,8 +43,6 @@
 #include "bacula.h"
 #include "find.h"
 
-#include <pwd.h>
-#include <grp.h>
 #include <sys/types.h>
 
 #ifndef FNM_LEADING_DIR

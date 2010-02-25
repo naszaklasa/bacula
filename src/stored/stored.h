@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,7 +28,7 @@
 /*
  * Storage daemon specific defines and includes
  *
- *  Version $Id: stored.h 8052 2008-11-18 10:59:12Z ricozz $
+ *  Version $Id$
  */
 
 #ifndef __STORED_H_
@@ -38,7 +38,11 @@
 
 /* Set to debug mutexes */
 //#define SD_DEBUG_LOCK
+#ifdef SD_DEBUG_LOCK
+const int sd_dbglvl = 3;
+#else
 const int sd_dbglvl = 300;
+#endif
 
 #ifdef HAVE_MTIO_H
 #include <mtio.h>
@@ -48,6 +52,9 @@ const int sd_dbglvl = 300;
 # else
 #   ifdef HAVE_SYS_TAPE_H
 #   include <sys/tape.h>
+#   else
+    /* Needed for Mac 10.6 (Snow Leopard) */
+#   include "lib/bmtio.h"
 #   endif
 # endif
 #endif

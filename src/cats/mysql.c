@@ -32,7 +32,7 @@
  *
  *    Kern Sibbald, March 2000
  *
- *    Version $Id: mysql.c 8739 2009-04-16 17:07:21Z kerns $
+ *    Version $Id$
  */
 
 
@@ -98,6 +98,7 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
          }
       }
    }
+   db_check_backend_thread_safe();
    Dmsg0(100, "db_open first time\n");
    mdb = (B_DB *)malloc(sizeof(B_DB));
    memset(mdb, 0, sizeof(B_DB));
@@ -270,6 +271,16 @@ db_close_database(JCR *jcr, B_DB *mdb)
       free(mdb);
    }
    V(mutex);
+}
+
+void db_check_backend_thread_safe()
+{
+#ifdef HAVE_BATCH_FILE_INSERT
+   if (!mysql_thread_safe()) {
+      Emsg0(M_ABORT, 0, _("MySQL client library must be thread-safe "
+                          "when using BatchMode.\n"));
+   }
+#endif
 }
 
 /*

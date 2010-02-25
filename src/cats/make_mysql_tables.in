@@ -3,9 +3,10 @@
 # shell script to create Bacula MySQL tables
 #
 bindir=@SQL_BINDIR@
+PATH="$bindir:$PATH"
 db_name=${db_name:-@db_name@}
 
-if $bindir/mysql $* -f <<END-OF-DATA
+if mysql $* -f <<END-OF-DATA
 USE ${db_name};
 --
 -- Note, we use BLOB rather than TEXT because in MySQL,
@@ -27,7 +28,9 @@ CREATE TABLE Path (
    INDEX (Path(255))
    );
 
-
+-- In File table
+-- FileIndex can be 0 for FT_DELETED files
+-- FileNameId can link to Filename.Name='' for directories
 CREATE TABLE File (
    FileId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
    FileIndex INTEGER UNSIGNED DEFAULT 0,
@@ -39,6 +42,8 @@ CREATE TABLE File (
    MD5 TINYBLOB,
    PRIMARY KEY(FileId),
    INDEX (JobId),
+   INDEX (PathId),
+   INDEX (FilenameId),
    INDEX (JobId, PathId, FilenameId)
    );
 
@@ -47,8 +52,6 @@ CREATE TABLE File (
 #  to the above File table if your Verifies are
 #  too slow.
 #
-#  INDEX (PathId),
-#  INDEX (FilenameId),
 #  INDEX (FilenameId, PathId)
 #  INDEX (JobId),
 #
@@ -112,6 +115,9 @@ CREATE TABLE Job (
    PriorJobId INTEGER UNSIGNED DEFAULT 0 REFERENCES Job,
    PurgedFiles TINYINT DEFAULT 0,
    HasBase TINYINT DEFAULT 0,
+   HasCache TINYINT DEFAULT 0,
+   Reviewed TINYINT DEFAULT 0,
+   Comment BLOB,
    PRIMARY KEY(JobId),
    INDEX (Name(128))
    );
@@ -142,6 +148,9 @@ CREATE TABLE JobHisto (
    PriorJobId INTEGER UNSIGNED DEFAULT 0,
    PurgedFiles TINYINT DEFAULT 0,
    HasBase TINYINT DEFAULT 0,
+   HasCache TINYINT DEFAULT 0,
+   Reviewed TINYINT DEFAULT 0,
+   Comment BLOB,
    INDEX (StartTime)
    );
 
@@ -186,8 +195,6 @@ CREATE TABLE JobMedia (
    StartBlock INTEGER UNSIGNED DEFAULT 0,
    EndBlock INTEGER UNSIGNED DEFAULT 0,
    VolIndex INTEGER UNSIGNED DEFAULT 0,
-   Copy INTEGER UNSIGNED DEFAULT 0,
-   Stripe INTEGER UNSIGNED DEFAULT 0,
    PRIMARY KEY(JobMediaId),
    INDEX (JobId, MediaId)
    );
@@ -303,6 +310,8 @@ CREATE TABLE BaseFiles (
    PRIMARY KEY(BaseId)
    );
 
+CREATE INDEX basefiles_jobid_idx ON BaseFiles ( JobId );
+
 CREATE TABLE UnsavedFiles (
    UnsavedId INTEGER UNSIGNED AUTO_INCREMENT,
    JobId INTEGER UNSIGNED NOT NULL REFERENCES Job,
@@ -330,39 +339,61 @@ CREATE TABLE CDImages (
 
 CREATE TABLE Status (
    JobStatus CHAR(1) BINARY NOT NULL,
-   JobStatusLong BLOB, 
+   JobStatusLong BLOB,
+   Severity INT,
    PRIMARY KEY (JobStatus)
    );
 
-INSERT INTO Status (JobStatus,JobStatusLong) VALUES
-   ('C', 'Created, not yet running'),
-   ('R', 'Running'),
-   ('B', 'Blocked'),
-   ('T', 'Completed successfully'),
-   ('E', 'Terminated with errors'),
-   ('e', 'Non-fatal error'),
-   ('f', 'Fatal error'),
-   ('D', 'Verify found differences'),
-   ('A', 'Canceled by user'),
-   ('F', 'Waiting for Client'),
-   ('S', 'Waiting for Storage daemon'),
-   ('m', 'Waiting for new media'),
-   ('M', 'Waiting for media mount'),
-   ('s', 'Waiting for storage resource'),
-   ('j', 'Waiting for job resource'),
-   ('c', 'Waiting for client resource'),
-   ('d', 'Waiting on maximum jobs'),
-   ('t', 'Waiting on start time'),
-   ('p', 'Waiting on higher priority jobs'),
-   ('i', 'Doing batch insert file records'),
-   ('a', 'SD despooling attributes');
+INSERT INTO Status (JobStatus,JobStatusLong,Severity) VALUES
+   ('C', 'Created, not yet running',15),
+   ('R', 'Running',15),
+   ('B', 'Blocked',15),
+   ('T', 'Completed successfully',10),
+   ('E', 'Terminated with errors',25),
+   ('e', 'Non-fatal error',20),
+   ('f', 'Fatal error',100),
+   ('D', 'Verify found differences',15),
+   ('A', 'Canceled by user',90),
+   ('F', 'Waiting for Client',15),
+   ('S', 'Waiting for Storage daemon',15),
+   ('m', 'Waiting for new media',15),
+   ('M', 'Waiting for media mount',15),
+   ('s', 'Waiting for storage resource',15),
+   ('j', 'Waiting for job resource',15),
+   ('c', 'Waiting for client resource',15),
+   ('d', 'Waiting on maximum jobs',15),
+   ('t', 'Waiting on start time',15),
+   ('p', 'Waiting on higher priority jobs',15),
+   ('i', 'Doing batch insert file records',15),
+   ('a', 'SD despooling attributes',15);
+
+CREATE TABLE PathHierarchy
+(
+     PathId integer NOT NULL,
+     PPathId integer NOT NULL,
+     CONSTRAINT pathhierarchy_pkey PRIMARY KEY (PathId)
+);
+
+CREATE INDEX pathhierarchy_ppathid 
+          ON PathHierarchy (PPathId);
+
+CREATE TABLE PathVisibility
+(
+      PathId integer NOT NULL,
+      JobId integer NOT NULL,
+      Size int8 DEFAULT 0,
+      Files int4 DEFAULT 0,
+      CONSTRAINT pathvisibility_pkey PRIMARY KEY (JobId, PathId)
+);
+CREATE INDEX pathvisibility_jobid
+             ON PathVisibility (JobId);
 
 CREATE TABLE Version (
    VersionId INTEGER UNSIGNED NOT NULL 
    );
 
 -- Initialize Version		 
-INSERT INTO Version (VersionId) VALUES (11);
+INSERT INTO Version (VersionId) VALUES (12);
 
 END-OF-DATA
 then

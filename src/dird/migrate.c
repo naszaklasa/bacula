@@ -41,7 +41,7 @@
  *       to do the backup.
  *     When the Storage daemon finishes the job, update the DB.
  *
- *   Version $Id: migrate.c 8888 2009-06-05 17:05:49Z kerns $
+ *   Version $Id$
  */
 
 #include "bacula.h"
@@ -55,7 +55,7 @@
 
 static const int dbglevel = 10;
 
-static int get_job_to_migrate(JCR *jcr);
+static int getJob_to_migrate(JCR *jcr);
 struct idpkt;
 static bool regex_find_jobids(JCR *jcr, idpkt *ids, const char *query1,
                  const char *query2, const char *type);
@@ -134,7 +134,7 @@ bool do_migration_init(JCR *jcr)
    }
 
    /* If we find a job or jobs to migrate it is previous_jr.JobId */
-   count = get_job_to_migrate(jcr);
+   count = getJob_to_migrate(jcr);
    if (count < 0) {
       return false;
    }
@@ -143,7 +143,7 @@ bool do_migration_init(JCR *jcr)
       return true;                    /* no work */
    }
 
-   Dmsg1(dbglevel, "Back from get_job_to_migrate JobId=%d\n", (int)jcr->JobId);
+   Dmsg1(dbglevel, "Back from getJob_to_migrate JobId=%d\n", (int)jcr->JobId);
 
    if (jcr->previous_jr.JobId == 0) {
       Dmsg1(dbglevel, "JobId=%d no previous JobId\n", (int)jcr->JobId);
@@ -152,7 +152,10 @@ bool do_migration_init(JCR *jcr)
       return true;                    /* no work */
    }
 
-   create_restore_bootstrap_file(jcr);
+   if (create_restore_bootstrap_file(jcr) < 0) {
+      Jmsg(jcr, M_FATAL, 0, _("Create bootstrap file failed.\n"));
+      return false;
+   }
 
    if (jcr->previous_jr.JobId == 0 || jcr->ExpectedFiles == 0) {
       set_jcr_job_status(jcr, JS_Terminated);
@@ -350,11 +353,7 @@ bool do_migration(JCR *jcr)
    Dmsg2(dbglevel, "Read store=%s, write store=%s\n", 
       ((STORE *)jcr->rstorage->first())->name(),
       ((STORE *)jcr->wstorage->first())->name());
-   if (((STORE *)jcr->rstorage->first())->name() == ((STORE *)jcr->wstorage->first())->name()) {
-      Jmsg(jcr, M_FATAL, 0, _("Read storage \"%s\" same as write storage.\n"),
-           ((STORE *)jcr->rstorage->first())->name());
-      return false;
-   }
+
    if (!start_storage_daemon_job(jcr, jcr->rstorage, jcr->wstorage, /*send_bsr*/true)) {
       return false;
    }
@@ -648,7 +647,7 @@ const char *sql_jobids_of_pool_uncopied_jobs =
  *           0  if no jobs to migrate
  *           1  if OK and jcr->previous_jr filled in
  */
-static int get_job_to_migrate(JCR *jcr)
+static int getJob_to_migrate(JCR *jcr)
 {
    char ed1[30], ed2[30];
    POOL_MEM query(PM_MESSAGE);
@@ -852,7 +851,7 @@ static int get_job_to_migrate(JCR *jcr)
    for (int i=1; i < (int)ids.count; i++) {
       JobId = 0;
       stat = get_next_jobid_from_list(&p, &JobId);
-      Dmsg3(dbglevel, "get_jobid_no=%d stat=%d JobId=%u\n", i, stat, JobId);
+      Dmsg3(dbglevel, "getJobid_no=%d stat=%d JobId=%u\n", i, stat, JobId);
       if (stat < 0) {
          Jmsg(jcr, M_FATAL, 0, _("Invalid JobId found.\n"));
          goto bail_out;
@@ -994,7 +993,7 @@ static bool find_jobids_of_pool_uncopied_jobs(JCR *jcr, idpkt *ids)
    POOL_MEM query(PM_MESSAGE);
 
    /* Only a copy job is allowed */
-   if (jcr->get_JobType() != JT_COPY) {
+   if (jcr->getJobType() != JT_COPY) {
       Jmsg(jcr, M_FATAL, 0,
            _("Selection Type 'pooluncopiedjobs' only applies to Copy Jobs"));
       goto bail_out;
@@ -1171,7 +1170,7 @@ void migration_cleanup(JCR *jcr, int TermCode)
        *   - move any Log records to the new JobId
        *   - Purge the File records from the previous job
        */
-      if (jcr->get_JobType() == JT_MIGRATE && jcr->JobStatus == JS_Terminated) {
+      if (jcr->getJobType() == JT_MIGRATE && jcr->JobStatus == JS_Terminated) {
          Mmsg(query, "UPDATE Job SET Type='%c' WHERE JobId=%s",
               (char)JT_MIGRATED_JOB, old_jobid);
          db_sql_query(mig_jcr->db, query.c_str(), NULL, NULL);
@@ -1190,7 +1189,7 @@ void migration_cleanup(JCR *jcr, int TermCode)
        *   - copy any Log records to the new JobId
        *   - set type="Job Copy" for the new job
        */
-      if (jcr->get_JobType() == JT_COPY && jcr->JobStatus == JS_Terminated) {
+      if (jcr->getJobType() == JT_COPY && jcr->JobStatus == JS_Terminated) {
          /* Copy JobLog to new JobId */
          Mmsg(query, "INSERT INTO Log (JobId, Time, LogText ) " 
                       "SELECT %s, Time, LogText FROM Log WHERE JobId=%s",
@@ -1270,7 +1269,7 @@ void migration_cleanup(JCR *jcr, int TermCode)
          break;
       }
    } else {
-      if (jcr->get_JobType() == JT_MIGRATE && jcr->previous_jr.JobId != 0) {
+      if (jcr->getJobType() == JT_MIGRATE && jcr->previous_jr.JobId != 0) {
          /* Mark previous job as migrated */
          Mmsg(query, "UPDATE Job SET Type='%c' WHERE JobId=%s",
               (char)JT_MIGRATED_JOB, edit_uint64(jcr->previous_jr.JobId, ec1));
@@ -1327,7 +1326,7 @@ void migration_cleanup(JCR *jcr, int TermCode)
         mig_jcr ? edit_uint64(mig_jcr->jr.JobId, ec7) : "0",
         edit_uint64(jcr->jr.JobId, ec8),
         jcr->jr.Job,
-        level_to_str(jcr->get_JobLevel()), jcr->since,
+        level_to_str(jcr->getJobLevel()), jcr->since,
         jcr->client->name(),
         jcr->fileset->name(), jcr->FSCreateTime,
         jcr->rpool->name(), jcr->rpool_source,

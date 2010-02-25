@@ -27,7 +27,7 @@
 */
  
 /*
- *   Version $Id: restoretree.cpp 8928 2009-06-28 21:52:27Z bartleyd2 $
+ *   Version $Id$
  *
  *  Restore Class 
  *
@@ -50,7 +50,6 @@ restoreTree::restoreTree()
    m_closeable = true;
    m_populated = false;
 
-   dockPage();
    m_debugCnt = 0;
    m_debugTrap = true;
 
@@ -64,9 +63,9 @@ restoreTree::restoreTree()
    area->setObjectName(QString::fromUtf8("area"));
    area->setWidget(widget);
    area->setWidgetResizable(true);
-   m_splitter->addWidget(splitter);
    m_splitter->addWidget(area);
-   splitter->setCollapsible(0, false);
+   m_splitter->addWidget(splitter);
+   splitter->setChildrenCollapsible(false);
 
    gridLayout->addWidget(m_splitter, 0, 0, 1, 1);
 
@@ -714,12 +713,12 @@ void restoreTree::writeSettings()
 void restoreTree::readSettings()
 {
    m_groupText = tr("RestoreTreePage");
-   m_splitText1 = "splitterSizes1_2";
-   m_splitText2 = "splitterSizes2_2";
+   m_splitText1 = "splitterSizes1_3";
+   m_splitText2 = "splitterSizes2_3";
    QSettings settings(m_console->m_dir->name(), "bat");
    settings.beginGroup(m_groupText);
-   m_splitter->restoreState(settings.value(m_splitText1).toByteArray());
-   splitter->restoreState(settings.value(m_splitText2).toByteArray());
+   if (settings.contains(m_splitText1)) { m_splitter->restoreState(settings.value(m_splitText1).toByteArray()); }
+   if (settings.contains(m_splitText2)) { splitter->restoreState(settings.value(m_splitText2).toByteArray()); }
    settings.endGroup();
 }
 
@@ -1856,4 +1855,10 @@ int restoreTree::queryFileIndex(QString &fullPath, int jobId)
       }
    } /* if (index != -1) */
    return qfileIndex;
+}
+
+
+void restoreTree::PgSeltreeWidgetClicked()
+{
+   dockPage();
 }

@@ -25,15 +25,9 @@ set -e
 #     installation fails and the `postinst' is called with `abort-upgrade',
 #     `abort-remove' or `abort-deconfigure'.
 
-LOGDIR=/var/log/bacula
-POSTINST_COMMON=/usr/share/bacula-director/postinst-common
-DEFCONFIG=/usr/share/bacula-common/defconfig
-CFGFILE=/etc/bacula/bacula-dir.conf
-
-. /usr/share/debconf/confmodule
 dbc_first_version=1.38.9-3
-dbc_dbuser=bacula
-dbc_dbname=bacula
+# set in config, must not be set here: dbc_dbuser=bacula
+# set in config, must not be set here: dbc_dbname=bacula
 
 # source dbconfig-common shell library, and call the hook function
 if [ -f /usr/share/dbconfig-common/dpkg/config.mysql ]; then
@@ -41,18 +35,26 @@ if [ -f /usr/share/dbconfig-common/dpkg/config.mysql ]; then
   dbc_go bacula-director-mysql $@
 fi
 
+LOGDIR="/var/log/bacula"
+POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
+DEFCONFIG="/usr/share/bacula-common/defconfig"
+CFGFILE="/etc/bacula/bacula-dir.conf"
+
+if [ -n "$2" ]; then
+	/etc/init.d/bacula-director stop || true
+	sleep 1
+fi
+
+
 case "$1" in
 configure)
-	
-	# PreProcess configuration
-	echo -n "Processing configuration ..."
+
+	echo -n "Processing configuration..."
         . /etc/dbconfig-common/bacula-director-mysql.conf
 	TARGET=$CFGFILE.dpkg-tmp
-
-	sed -e "s/dbname = bacula;/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\";/" \
-	-e "s/@db_user@/$dbc_dbuser/" -e "s/@db_pswd@/$dbc_dbpass/" \
-		$DEFCONFIG/bacula-dir.conf > $TARGET
-
+        # FIXME: should this tweak make_catalog_backup like bacula-director-pgsql.postinst does?
+        sed "s/dbname =.*/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\"; dbuser = \"$dbc_dbuser\"; dbpassword = \"$dbc_dbpass\";/" $DEFCONFIG/bacula-dir.conf > $TARGET
+        
 	/bin/bash $POSTINST_COMMON
 
 	echo "Ok."
@@ -70,11 +72,6 @@ esac
 
 # Do start daemon
 db_stop
-
-if [ -n "$2" ]; then
-	/etc/init.d/bacula-director stop
-	sleep 1
-fi
 
 invoke-rc.d --quiet bacula-director start
 
