@@ -1,3 +1,14 @@
+bacula (5.0.0-5~bpo50+1) lenny-backports; urgency=low
+
+  * Rebuild for lenny-backports.
+  * The following debian/control changes got reverted:
+    - libreadline-dev -> libreadline5-dev | libreadline-dev
+    - libmysqlclient-dev -> libmysqlclient15-dev
+    - libpq-dev (>= 8.4) -> libpq-dev
+    - postgresql-server-dev-8.4 -> postgresql-server-dev-8.3
+
+ -- Gerfried Fuchs <rhonda@debian.at>  Thu, 25 Feb 2010 19:46:04 +0100
+
 bacula (5.0.0-5) unstable; urgency=medium
 
   * Fix bashism in scripts/disk-changer.in.  Closes: #530049.
