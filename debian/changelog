@@ -5,6 +5,9 @@ bacula (5.0.0-6) UNRELEASED; urgency=low
     Merged to Debian master at 8381602cfbecaea0ca8559100020f878af81a237.
   * Call rm -rf /var/{log,lib}/bacula on purge.  This patch was part of
     Ubuntu's set merged above.
+  * Modified Ubuntu's password patch to use
+    /etc/bacula/common_default_passwords instead of debconf per Debian
+    practice.
   * Added full LSB support to init scripts.  Patch originated in Ubuntu,
     and was merged with LSB status support already in Debian.
     Merged to Debian master at b3e2b4bc8dc1ad2a66b1e80c4cfa6176a15a062d.
