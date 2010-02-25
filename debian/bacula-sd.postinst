@@ -29,12 +29,8 @@ SRCDIR="/usr/share/bacula-common/defconfig"
 DSTDIR="/etc/bacula"
 CONFIG="bacula-sd.conf"
 
-db_get bacula/sd_passwd
-SDPASSWD="$RET"
-db_get bacula/sd_monpasswd
-SDMPASSWD="$RET"
-
-db_stop
+. /usr/share/bacula-common/common-functions
+readOrCreatePasswords
 
 case "$1" in
     configure)

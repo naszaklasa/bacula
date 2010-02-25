@@ -29,12 +29,8 @@ SRCDIR="/usr/share/bacula-common/defconfig"
 DSTDIR="/etc/bacula"
 CONFIG="bacula-fd.conf"
 
-db_get bacula/fd_passwd
-FDPASSWD="$RET"
-db_get bacula/fd_monpasswd
-FDMPASSWD="$RET"
-
-db_stop
+. /usr/share/bacula-common/common-functions
+readOrCreatePasswords
 
 case "$1" in
     configure)

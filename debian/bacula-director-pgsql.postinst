@@ -51,14 +51,8 @@ if [ -n "$2" ]; then
 	sleep 1
 fi
 
-db_get bacula/dir_passwd
-DIRPASSWD="$RET"
-db_get bacula/dir_monpasswd
-DIRMPASSWD="$RET"
-db_get bacula/sd_passwd
-SDPASSWD="$RET"
-db_get bacula/fd_passwd
-FDPASSWD="$RET"
+. /usr/share/bacula-common/common-functions
+readOrCreatePasswords
 
 case "$1" in
 configure)
