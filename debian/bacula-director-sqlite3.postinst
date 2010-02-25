@@ -94,14 +94,8 @@ POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
 DEFCONFIG="/usr/share/bacula-common/defconfig"
 CFGFILE="/etc/bacula/bacula-dir.conf"
 
-db_get bacula/dir_passwd
-DIRPASSWD="$RET"
-db_get bacula/dir_monpasswd
-DIRMPASSWD="$RET"
-db_get bacula/sd_passwd
-SDPASSWD="$RET"
-db_get bacula/fd_passwd
-FDPASSWD="$RET"
+. /usr/share/bacula-common/common-functions
+readOrCreatePasswords
 
 case "$1" in
 configure)
