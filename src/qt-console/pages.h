@@ -55,6 +55,7 @@ class Console;
 class Pages : public QWidget
 {
 public:
+   Pages();
    void dockPage();
    void undockPage();
    void togglePageDocking();

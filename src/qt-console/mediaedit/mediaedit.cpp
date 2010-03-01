@@ -46,7 +46,6 @@ MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId)
    pgInitialize(tr("Media Edit"), parentWidget);
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/cartridge-edit.png")));
-   m_closeable = true;
    dockPage();
    setCurrent();
 

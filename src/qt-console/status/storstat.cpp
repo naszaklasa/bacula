@@ -59,7 +59,6 @@ StorStat::StorStat(QString &storage, QTreeWidgetItem *parentTreeWidgetItem)
 {
    m_storage = storage;
    setupUi(this);
-   m_closeable = true;
    pgInitialize(tr("Storage Status %1").arg(m_storage), parentTreeWidgetItem);
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/status.png")));

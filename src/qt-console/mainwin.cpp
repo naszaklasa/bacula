@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,7 +27,6 @@
 */
 
 /*
- *   Version $Id$
  *
  *  Main Window control for bat (qt-console)
  *
@@ -95,10 +94,11 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent)
 
    readSettings();
 
-   foreach(Console *console, m_consoleHash)
+   foreach(Console *console, m_consoleHash) {
       console->connect_dir();
+   }
    m_currentConsole = (Console*)getFromHash(m_firstItem);
-   QTimer::singleShot(750, this, SLOT(popLists()));
+   QTimer::singleShot(2000, this, SLOT(popLists()));
    if (m_miscDebug) {
       QString directoryResourceName;
       m_currentConsole->getDirResName(directoryResourceName);
@@ -109,8 +109,9 @@ MainWin::MainWin(QWidget *parent) : QMainWindow(parent)
 
 void MainWin::popLists()
 {
-   foreach(Console *console, m_consoleHash)
+   foreach(Console *console, m_consoleHash) {
       console->populateLists(true);
+   }
    m_doConnect = true;
    connectConsoleSignals();
    connectSignals();
@@ -150,13 +151,13 @@ void MainWin::createPages()
 
       /* insert the cosole and tree widget item into the hashes */
       hashInsert(item, m_currentConsole);
+      m_currentConsole->dockPage();
 
       /* Set Color of treeWidgetItem for the console
       * It will be set to green in the console class if the connection is made.
       */
       QBrush redBrush(Qt::red);
       item->setForeground(0, redBrush);
-      m_currentConsole->dockPage();
 
       /*
        * Create instances in alphabetic order of the rest 
@@ -310,8 +311,7 @@ void MainWin::waitEnter()
       return;
    }
    m_waitState = true;
-   if (mainWin->m_connDebug)
-      Pmsg0(000, "Entering Wait State\n");
+   if (mainWin->m_connDebug) Pmsg0(000, "Entering Wait State\n");
    app->setOverrideCursor(QCursor(Qt::WaitCursor));
    disconnectSignals();
    disconnectConsoleSignals(m_currentConsole);
@@ -515,6 +515,9 @@ void MainWin::treeItemChanged(QTreeWidgetItem *currentitem, QTreeWidgetItem *pre
       }
       /* set the value for the currently active console */
       int stackindex = tabWidget->indexOf(nextPage);
+      if (!nextPage->isOnceDocked()) {
+         nextPage->dockPage();
+      }
    
       /* Is this page currently on the stack or is it undocked */
       if (stackindex >= 0) {
@@ -570,13 +573,15 @@ void MainWin::statusPageButtonClicked()
          }
       }
    }
-   if (!found)
+   if (!found) {
       new DirStat();
+   }
 }
 
 void MainWin::restoreButtonClicked() 
 {
    new prerestorePage();
+   if (mainWin->m_miscDebug) Pmsg0(000, "in restoreButtonClicked after prerestorePage\n");
 }
 
 void MainWin::jobPlotButtonClicked()
@@ -597,7 +602,7 @@ void MainWin::input_line()
    QString cmdStr = lineEdit->text();    /* Get the text */
    lineEdit->clear();                    /* clear the lineEdit box */
    if (m_currentConsole->is_connected()) {
-      if (m_currentConsole->currentDirComm(conn)) {
+      if (m_currentConsole->findDirComm(conn)) {
          m_currentConsole->consoleCommand(cmdStr, conn);
       } else {
          /* Use consoleCommand to allow typing anything */

@@ -64,6 +64,8 @@ DOC_FILES := \
 	docs/manuals/en/problems/problems.pdf \
 	docs/manuals/en/utility/utility.pdf
 
+HELP_FILES := help/*
+
 ##########################################################################
 
 # Targets
@@ -122,7 +124,12 @@ $(foreach file,$(addprefix ../../dird/, $(DIRD_FILES)),$(eval $(call Copy_Binary
 
 $(foreach file,$(DOC_FILES),$(eval $(call Copy_Docs,$(file))))
 
+
+
 $(INSTALL_EXE): winbacula.nsi $(addprefix release32/,$(BACULA_BINARIES) $(SCRIPT_FILES) $(CAT_FILES) $(DEPKGS_BINARIES) $(NONGCC_BINARIES) $(NONGCC_LIBRARIES) $(MINGW_BINARIES) $(SSL_FILES) $(DIRD_FILES) $(DOC_FILES))
+	rm -rf release32/help
+	mkdir release32/help
+	cp -f $(BINDIR)/$(HELP_FILES) release32/help/
 	NSISDIR=$(NSIS_DIR) \
 	$(NSIS_DIR)/makensis -V3 $(DEFINES) winbacula.nsi
 

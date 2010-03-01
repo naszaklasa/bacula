@@ -125,7 +125,7 @@ void set_jcr_sd_job_status(JCR *jcr, int SDJobStatus)
  */
 int bget_dirmsg(BSOCK *bs)
 {
-   int32_t n;
+   int32_t n = BNET_TERMINATE;
    char Job[MAX_NAME_LENGTH];
    char MsgType[20];
    int type;
@@ -133,11 +133,11 @@ int bget_dirmsg(BSOCK *bs)
    JCR *jcr = bs->jcr();
    char *msg;
 
-   for (;;) {
+   for ( ; !bs->is_stop() && !bs->is_timed_out(); ) {
       n = bs->recv();
       Dmsg2(100, "bget_dirmsg %d: %s\n", n, bs->msg);
 
-      if (is_bnet_stop(bs)) {
+      if (bs->is_stop() || bs->is_timed_out()) {
          return n;                    /* error or terminate */
       }
       if (n == BNET_SIGNAL) {          /* handle signal */
@@ -328,6 +328,7 @@ int bget_dirmsg(BSOCK *bs)
 #endif
       return n;
    }
+   return n;
 }
 
 static char *find_msg_start(char *msg)

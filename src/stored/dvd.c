@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,6 @@
  *
  *    Nicolas Boichat, MMV
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -69,7 +68,7 @@ static void add_file_and_part_name(DEVICE *dev, POOL_MEM &archive_name)
       pm_strcat(archive_name, "/");
    }
 
-   pm_strcat(archive_name, dev->VolCatInfo.VolCatName);
+   pm_strcat(archive_name, dev->getVolCatName());
    /* if part > 1, append .# to the filename (where # is the part number) */
    if (dev->part > 1) {
       pm_strcat(archive_name, ".");
@@ -308,7 +307,7 @@ int dvd_open_next_part(DCR *dcr)
 
    Dmsg6(29, "Enter: == open_next_part part=%d npart=%d dev=%s vol=%s mode=%d file_addr=%d\n", 
       dev->part, dev->num_dvd_parts, dev->print_name(),
-         dev->VolCatInfo.VolCatName, dev->openmode, dev->file_addr);
+         dev->getVolCatName(), dev->openmode, dev->file_addr);
    if (!dev->is_dvd()) {
       Dmsg1(100, "Device %s is not dvd!!!!\n", dev->print_name()); 
       return -1;
@@ -383,7 +382,7 @@ int dvd_open_next_part(DCR *dcr)
 #endif
    }
 
-   Dmsg2(400, "Call dev->open(vol=%s, mode=%d)\n", dcr->VolCatInfo.VolCatName, 
+   Dmsg2(400, "Call dev->open(vol=%s, mode=%d)\n", dcr->getVolCatName(), 
          dev->openmode);
 
    /* Open next part.  Note, this sets part_size for part opened. */
@@ -405,12 +404,12 @@ static bool dvd_open_first_part(DCR *dcr, int mode)
    DEVICE *dev = dcr->dev;
 
    Dmsg5(29, "Enter: ==== open_first_part dev=%s Vol=%s mode=%d num_dvd_parts=%d append=%d\n", dev->print_name(), 
-         dev->VolCatInfo.VolCatName, dev->openmode, dev->num_dvd_parts, dev->can_append());
+         dev->getVolCatName(), dev->openmode, dev->num_dvd_parts, dev->can_append());
 
 
    dev->close_part(dcr);
 
-   Dmsg2(400, "Call dev->open(vol=%s, mode=%d)\n", dcr->VolCatInfo.VolCatName, 
+   Dmsg2(400, "Call dev->open(vol=%s, mode=%d)\n", dcr->getVolCatName(), 
          mode);
    Dmsg0(100, "Set part=1\n");
    dev->part = 1;
@@ -609,7 +608,7 @@ void dvd_remove_empty_part(DCR *dcr)
       status = stat(archive_name.c_str(), &statp);
       if (status == 0 && statp.st_size == 0) {
          Dmsg3(100, "Unlink empty part in close call make_dvd_filename. part=%d num=%d vol=%s\n", 
-                part_save, dev->num_dvd_parts, dev->VolCatInfo.VolCatName);
+                part_save, dev->num_dvd_parts, dev->getVolCatName());
          Dmsg1(100, "unlink(%s)\n", archive_name.c_str());
          unlink(archive_name.c_str());
          if (part_save == dev->part) {
@@ -733,7 +732,7 @@ bool check_can_write_on_non_blank_dvd(DCR *dcr)
          break;
       } else {
          Dmsg2(99, "check_can_write_on_non_blank_dvd: found %s (versus %s)\n", 
-               result->d_name, dev->VolCatInfo.VolCatName);
+               result->d_name, dev->getVolCatName());
          if (strcmp(result->d_name, ".") && strcmp(result->d_name, "..") &&
              strcmp(result->d_name, ".keep")) {
             /* Found a file, checking it is empty */
@@ -784,7 +783,7 @@ int find_num_dvd_parts(DCR *dcr)
       DIR* dp;
       struct dirent *entry, *result;
       int name_max;
-      int len = strlen(dcr->VolCatInfo.VolCatName);
+      int len = strlen(dcr->getVolCatName());
 
       /* Now count the number of parts */
       name_max = pathconf(".", _PC_NAME_MAX);
@@ -802,7 +801,7 @@ int find_num_dvd_parts(DCR *dcr)
       
       entry = (struct dirent *)malloc(sizeof(struct dirent) + name_max + 1000);
 
-      Dmsg1(100, "Looking for Vol=%s\n", dcr->VolCatInfo.VolCatName);
+      Dmsg1(100, "Looking for Vol=%s\n", dcr->getVolCatName());
       for ( ;; ) {
          int flen;
          bool ignore;
@@ -816,7 +815,7 @@ int find_num_dvd_parts(DCR *dcr)
          ignore = true;
          if (flen >= len) {
             result->d_name[len] = 0;
-            if (strcmp(dcr->VolCatInfo.VolCatName, result->d_name) == 0) {
+            if (strcmp(dcr->getVolCatName(), result->d_name) == 0) {
                num_parts++;
                Dmsg1(100, "find_num_dvd_parts: found part: %s\n", result->d_name);
                ignore = false;

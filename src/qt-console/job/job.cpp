@@ -35,7 +35,6 @@
 Job::Job(QString &jobId, QTreeWidgetItem *parentTreeWidgetItem)
 {
    setupUi(this);
-   m_closeable = true;
    pgInitialize(tr("Job"), parentTreeWidgetItem);
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/joblog.png")));
@@ -218,9 +217,9 @@ void Job::populateForm()
    char buf[256];
    QString query = 
       "SELECT JobId, Job.Name, Level, Client.Name, Pool.Name, FileSet, SchedTime, StartTime, EndTime, "
-      "EndTime - StartTime AS Duration, JobBytes, JobFiles, JobErrors, JobStatus, PurgedFiles "
-      "FROM Job JOIN Client USING (ClientId) LEFT JOIN Pool USING (PoolId) "
-      "LEFT JOIN FileSet USING (FileSetId)"
+      "EndTime-StartTime AS Duration, JobBytes, JobFiles, JobErrors, JobStatus, PurgedFiles "
+      "FROM Job JOIN Client USING (ClientId) LEFT JOIN Pool ON (Job.PoolId = Pool.PoolId) "
+      "LEFT JOIN FileSet ON (Job.FileSetId = FileSet.FileSetId)"
       "WHERE JobId=" + m_jobId; 
    QStringList results;
    if (m_console->sql_cmd(query, results)) {

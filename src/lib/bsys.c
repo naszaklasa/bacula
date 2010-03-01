@@ -160,6 +160,9 @@ int cstrlen(const char *str)
 {
    uint8_t *p = (uint8_t *)str;
    int len = 0;
+   if (str == NULL) {
+      return 0;
+   }
    while (*p) {
       if ((*p & 0xC0) != 0xC0) {
          p++;

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,8 +30,6 @@
  *  Tape and File storage access
  *
  * Kern Sibbald, MM
- *
- *   Version $Id$
  *
  */
 
@@ -193,6 +191,7 @@ struct VOLUME_CAT_INFO {
    utime_t  VolFirstWritten;          /* Time of first write */
    utime_t  VolLastWritten;           /* Time of last write */
    bool     InChanger;                /* Set if vol in current magazine */
+   bool     is_valid;                 /* set if this data is valid */
    char VolCatStatus[20];             /* Volume status */
    char VolCatName[MAX_NAME_LENGTH];  /* Desired volume to mount */
 };
@@ -394,6 +393,13 @@ public:
    char *bstrerror(void) { return errmsg; };
    char *print_errmsg() { return errmsg; };
    int32_t get_slot() const { return m_slot; };
+   void setVolCatInfo(bool valid) { VolCatInfo.is_valid = valid; };
+   bool haveVolCatInfo() const { return VolCatInfo.is_valid; };
+   void setVolCatName(const char *name) {
+     bstrncpy(VolCatInfo.VolCatName, name, sizeof(VolCatInfo.VolCatName));
+     setVolCatInfo(false);
+   };
+   char *getVolCatName() { return VolCatInfo.VolCatName; };
 
    void set_unload();            /* in dev.c */
    void clear_volhdr();          /* in dev.c */
@@ -549,6 +555,13 @@ public:
    void dunlock() { m_dev_locked = false; dev->dunlock(); }
 #endif
    void dblock(int why) { dev->dblock(why); }
+   void setVolCatInfo(bool valid) { VolCatInfo.is_valid = valid; };
+   bool haveVolCatInfo() const { return VolCatInfo.is_valid; };
+   void setVolCatName(const char *name) {
+     bstrncpy(VolCatInfo.VolCatName, name, sizeof(VolCatInfo.VolCatName));
+     setVolCatInfo(false);
+   };
+   char *getVolCatName() { return VolCatInfo.VolCatName; };
 
 
    /* Methods in reserve.c */

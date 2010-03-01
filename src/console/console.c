@@ -873,6 +873,7 @@ static int console_init_history(const char *histfile)
    rl_completion_entry_function = dummy_completion_function;
    rl_attempted_completion_function = readline_completion;
    rl_filename_completion_desired = 0;
+   stifle_history(100);
 #endif
 
    return ret;

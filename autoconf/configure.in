@@ -43,7 +43,46 @@ AC_SUBST(DATE)dnl
 AC_SUBST(LSMDATE)dnl 
 AC_SUBST(BACULA)dnl
 AC_SUBST(post_host)dnl
+
+dnl src/lib
+LIBBAC_LT_CURRENT=`sed -n -e 's/^.*LIBBAC_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBAC_LT_REVISION=`sed -n -e 's/^.*LIBBAC_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBAC_LT_AGE=`sed -n -e 's/^.*LIBBAC_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBACCFG_LT_CURRENT=`sed -n -e 's/^.*LIBBACCFG_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBACCFG_LT_REVISION=`sed -n -e 's/^.*LIBBACCFG_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBACCFG_LT_AGE=`sed -n -e 's/^.*LIBBACCFG_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBACPY_LT_CURRENT=`sed -n -e 's/^.*LIBBACPY_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBACPY_LT_REVISION=`sed -n -e 's/^.*LIBBACPY_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBACPY_LT_AGE=`sed -n -e 's/^.*LIBBACPY_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+
+AC_SUBST(LIBBAC_LT_CURRENT)dnl
+AC_SUBST(LIBBAC_LT_REVISION)dnl
+AC_SUBST(LIBBAC_LT_AGE)dnl
+AC_SUBST(LIBBACCFG_LT_CURRENT)dnl
+AC_SUBST(LIBBACCFG_LT_REVISION)dnl
+AC_SUBST(LIBBACCFG_LT_AGE)dnl
+AC_SUBST(LIBBACPY_LT_CURRENT)dnl
+AC_SUBST(LIBBACPY_LT_REVISION)dnl
+AC_SUBST(LIBBACPY_LT_AGE)dnl
+
+dnl src/cats
+LIBBACSQL_LT_CURRENT=`sed -n -e 's/^.*LIBBACSQL_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBACSQL_LT_REVISION=`sed -n -e 's/^.*LIBBACSQL_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBACSQL_LT_AGE=`sed -n -e 's/^.*LIBBACSQL_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+AC_SUBST(LIBBACSQL_LT_CURRENT)dnl
+AC_SUBST(LIBBACSQL_LT_REVISION)dnl
+AC_SUBST(LIBBACSQL_LT_AGE)dnl
+
+dnl src/findlib
+LIBBACFIND_LT_CURRENT=`sed -n -e 's/^.*LIBBACFIND_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBACFIND_LT_REVISION=`sed -n -e 's/^.*LIBBACFIND_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+LIBBACFIND_LT_AGE=`sed -n -e 's/^.*LIBBACFIND_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+AC_SUBST(LIBBACFIND_LT_CURRENT)dnl
+AC_SUBST(LIBBACFIND_LT_REVISION)dnl
+AC_SUBST(LIBBACFIND_LT_AGE)dnl
+
 echo "configuring for ${BACULA} $VERSION ($DATE)"
+
 
 dnl -------------------------------------------------------
 dnl Check for compiler.
@@ -92,7 +131,6 @@ AC_PATH_PROG(DVDRWMEDIAINFO, dvd+rw-mediainfo, dvd+rw-mediainfo)
 AC_PATH_PROG(DVDRWFORMAT, dvd+rw-format, dvd+rw-format)
 AC_PATH_PROG(PKGCONFIG, pkg-config, pkg-config)
 AC_PATH_PROG(QMAKE, qmake, none)
-AC_PATH_PROG(QMAKEQT4, qmake-qt4, none)
 AC_PATH_PROG(GMAKE, gmake, none)
 AC_ARG_VAR(WXCONFIG, [wx-config command. On some systems, you must set it to wx-config-2.6 to use wxWidgets 2.6.])
 if test "x$WXCONFIG" = x; then
@@ -1753,6 +1791,7 @@ if test x$DB_TYPE = xdbi; then
    if test $DB_PROG = sqlite3; then
       A=`test -f $SQL_LIB && nm $DB_PROG_LIB | grep pthread_mutex_lock`
       pkg=$?
+      AC_CHECK_LIB(sqlite3, sqlite3_threadsafe, AC_DEFINE(HAVE_SQLITE3_THREADSAFE, 1, [Set if have sqlite3_threadsafe]))
    fi
 
    if test $pkg = 0; then
@@ -3063,20 +3102,16 @@ AC_OUTPUT([autoconf/Make.common \
 )
 
 if test "${support_bat}" = "yes" ; then
-   if test "x$QMAKE" = "xnone" && test "x$QMAKEQT4" = "xnone"; then
-      AC_MSG_ERROR([Could not find qmake or qmake-qt4 in $PATH. Check your Qt installation])
+   if test "x$QMAKE" = "xnone"; then
+      AC_MSG_ERROR([Could not find qmake $PATH. Check your Qt installation])
    fi
 
    QMAKEBIN="qmake"
-
-   if test "x$QMAKEQT4" != "xnone"; then
-       QMAKEBIN=qmake-qt4
-   fi
-  
    cd src/qt-console
    echo "Creating bat Makefile"
    touch bat
    chmod 755 bat
+   rm -f Makefile
    $QMAKEBIN
    ${MAKE:-make} clean
    cd ${BUILD_DIR}
@@ -3126,7 +3161,7 @@ chmod 755 $c/create_ingres_database  $c/update_ingres_tables $c/make_ingres_tabl
 chmod 755 $c/grant_ingres_privileges $c/drop_ingres_tables   $c/drop_ingres_database
 
 
-chmod 755 $c/make_catalog_backup $c/delete_catalog_backup  make_catalog_backup.pl
+chmod 755 $c/make_catalog_backup $c/delete_catalog_backup  $c/make_catalog_backup.pl
 chmod 755 $c/sqlite
 chmod 755 $c/mysql
 

@@ -138,7 +138,7 @@ static struct cmdstruct commands[] = {                                      /* C
 
  { NT_("label"),      label_cmd,     _("Label a tape"), NT_("storage=<storage> volume=<vol> pool=<pool>"), false},
  { NT_("list"),       list_cmd,      _("List objects from catalog"), 
-   NT_("pools | jobs | jobtotals | media <pool=pool-name> | files jobid=<nn> | copies jobid=<nn>"), true},
+   NT_("pools | jobs | jobtotals | volume | media <pool=pool-name> | files jobid=<nn> | copies jobid=<nn>"), true},
 
  { NT_("llist"),      llist_cmd,     _("Full or long list like list command"),
    NT_("pools | jobs | jobtotals | media <pool=pool-name> | files jobid=<nn> | copies jobid=<nn>"), true},
@@ -151,13 +151,13 @@ static struct cmdstruct commands[] = {                                      /* C
  { NT_("prune"),      prunecmd,      _("Prune expired records from catalog"), 
    NT_("files | jobs | pool=<pool> | client=<client-name> | volume=<volume-name> "), true},
 
- { NT_("purge"),      purgecmd,      _("Purge records from catalog"), NT_("volume=<vol>"),  true},
+ { NT_("purge"),      purgecmd,      _("Purge records from catalog"), NT_("files jobs volume=<vol> [action=<action> devicetype=<type> pool=<pool> allpools storage=<st> drive=<num>]"),  true},
  { NT_("python"),     python_cmd,    _("Python control commands"),    NT_(""),              false},
  { NT_("quit"),       quit_cmd,      _("Terminate Bconsole session"), NT_(""),              false},
  { NT_("query"),      querycmd,      _("Query catalog"),              NT_(""),              false},
  { NT_("restore"),    restore_cmd,   _("Restore files"), 
    NT_("where=</path> client=<client> storage=<storage> bootstrap=<file>"
-       "\n\tjobid=<jobid> done select all"), false},
+       "\n\tcomment=<text> jobid=<jobid> done select all"), false},
 
  { NT_("relabel"),    relabel_cmd,   _("Relabel a tape"), 
    NT_("storage=<storage-name> oldvolume=<old-volume-name>\n\tvolume=<newvolume-name> pool=<pool>"), false},
@@ -166,7 +166,7 @@ static struct cmdstruct commands[] = {                                      /* C
  { NT_("reload"),     reload_cmd,    _("Reload conf file"), NT_(""),                  true},
  { NT_("run"),        run_cmd,       _("Run a job"), 
    NT_("job=<job-name> client=<client-name>\n\tfileset=<FileSet-name> level=<level-keyword>\n\tstorage=<storage-name>"
-       "where=<directory-prefix>\n\twhen=<universal-time-specification>\n\tyes"), false}, /* need to be check */
+       "where=<directory-prefix>\n\twhen=<universal-time-specification>\n\tcomment=<text> yes"), false}, 
 
  { NT_("status"),     status_cmd,    _("Report status"), 
    NT_("all | dir=<dir-name> | director | client=<client-name> | storage=<storage-name> slots | days=nnn"), true},

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -45,10 +45,11 @@ void generate_plugin_event(JCR *jcr, bEventType eventType, void *value) { }
 int attrs = 0;
 
 static JCR *jcr;
-
+static int num_files = 0;
 
 static int print_file(JCR *jcr, FF_PKT *ff, bool);
 static void print_ls_output(char *fname, char *link, int type, struct stat *statp);
+static int count_files(JCR *jcr, FF_PKT *ff, bool top_level);
 
 static void usage()
 {
@@ -60,6 +61,7 @@ static void usage()
 "       -dt         print timestamp in debug output\n"
 "       -e          specify file of exclude patterns\n"
 "       -i          specify file of include patterns\n"
+"       -q          quiet, don't print filenames (debug)\n"
 "       -           read pattern(s) from stdin\n"
 "       -?          print this message.\n"
 "\n"
@@ -75,11 +77,11 @@ static void usage()
 }
 
 
-int
-main (int argc, char *const *argv)
+int main(int argc, char *const *argv)
 {
    FF_PKT *ff;
    char name[1000];
+   bool quiet = false;
    int i, ch, hard_links;
    char *inc = NULL;
    char *exc = NULL;
@@ -90,7 +92,7 @@ main (int argc, char *const *argv)
    textdomain("bacula");
    lmgr_init_thread();
 
-   while ((ch = getopt(argc, argv, "ad:e:i:?")) != -1) {
+   while ((ch = getopt(argc, argv, "ad:e:i:q?")) != -1) {
       switch (ch) {
       case 'a':                       /* print extended attributes *debug* */
          attrs = 1;
@@ -113,6 +115,10 @@ main (int argc, char *const *argv)
 
       case 'i':                       /* include patterns */
          inc = optarg;
+         break;
+
+      case 'q':
+         quiet = true;
          break;
 
       case '?':
@@ -166,7 +172,12 @@ main (int argc, char *const *argv)
       }
       fclose(fd);
    }
-   match_files(jcr, ff, print_file);
+   if (quiet) {
+      match_files(jcr, ff, count_files);
+   } else {
+      match_files(jcr, ff, print_file);
+   }
+   printf(_("Files seen = %d\n"), num_files);
    term_include_exclude_files(ff);
    hard_links = term_find_files(ff);
 
@@ -176,6 +187,12 @@ main (int argc, char *const *argv)
    lmgr_cleanup_main();
    sm_dump(false);
    exit(0);
+}
+
+static int count_files(JCR *jcr, FF_PKT *ff, bool top_level)
+{
+   num_files++;
+   return 1;
 }
 
 static int print_file(JCR *jcr, FF_PKT *ff, bool top_level) 
@@ -220,6 +237,7 @@ static int print_file(JCR *jcr, FF_PKT *ff, bool top_level)
       printf(_("Err: Unknown file ff->type %d: %s\n"), ff->type, ff->fname);
       break;
    }
+   num_files++;
    return 1;
 }
 

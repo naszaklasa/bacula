@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,8 +31,6 @@
  *
  *              Kern Sibbald, March MMI
  *                 added BB02 format October MMII
- *
- *   Version $Id$
  *
  */
 
@@ -368,7 +366,7 @@ bool write_block_to_device(DCR *dcr)
       if (!dir_create_jobmedia_record(dcr)) {
          dev->dev_errno = EIO;
          Jmsg2(jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
-            dcr->VolCatInfo.VolCatName, jcr->Job);
+            dcr->getVolCatName(), jcr->Job);
          set_new_volume_parameters(dcr);
          stat = false;
          goto bail_out;
@@ -577,7 +575,7 @@ bool write_block_to_dev(DCR *dcr)
       }
       if (dev->dev_errno == ENOSPC) {
          Jmsg(jcr, M_INFO, 0, _("End of Volume \"%s\" at %u:%u on device %s. Write of %u bytes got %d.\n"),
-            dev->VolCatInfo.VolCatName,
+            dev->getVolCatName(),
             dev->file, dev->block_num, dev->print_name(), wlen, stat);
       }
       if (debug_level >= 100) {
@@ -732,7 +730,7 @@ static bool terminate_writing_volume(DCR *dcr)
       Dmsg0(190, "Error from create JobMedia\n");
       dev->dev_errno = EIO;
        Jmsg2(dcr->jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
-            dcr->VolCatInfo.VolCatName, dcr->jcr->Job);
+            dcr->getVolCatName(), dcr->jcr->Job);
        ok = false;
    }
    dcr->block->write_failed = true;
@@ -806,7 +804,7 @@ static bool do_new_file_bookkeeping(DCR *dcr)
       Dmsg0(190, "Error from create_job_media.\n");
       dev->dev_errno = EIO;
       Jmsg2(jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
-           dcr->VolCatInfo.VolCatName, jcr->Job);
+           dcr->getVolCatName(), jcr->Job);
       terminate_writing_volume(dcr);
       dev->dev_errno = EIO;
       return false;
@@ -884,7 +882,7 @@ static bool do_dvd_size_checks(DCR *dcr)
       Dmsg1(100, "Cannot get free space on the device ERR=%s.\n", dev->errmsg);
       Jmsg(jcr, M_FATAL, 0, _("End of Volume \"%s\" at %u:%u on device %s "
          "(part_size=%s, free_space=%s, free_space_errno=%d, errmsg=%s).\n"),
-           dev->VolCatInfo.VolCatName,
+           dev->getVolCatName(),
            dev->file, dev->block_num, dev->print_name(),
            edit_uint64_with_commas(dev->part_size, ed1), edit_uint64_with_commas(dev->free_space, ed2),
            dev->free_space_errno, dev->errmsg);
@@ -897,7 +895,7 @@ static bool do_dvd_size_checks(DCR *dcr)
       Dmsg0(100, "==== Just enough free space on the device to write the current part...\n");
       Jmsg(jcr, M_INFO, 0, _("End of Volume \"%s\" at %u:%u on device %s "
          "(part_size=%s, free_space=%s, free_space_errno=%d).\n"),
-            dev->VolCatInfo.VolCatName,
+            dev->getVolCatName(),
             dev->file, dev->block_num, dev->print_name(),
             edit_uint64_with_commas(dev->part_size, ed1), edit_uint64_with_commas(dev->free_space, ed2),
             dev->free_space_errno);

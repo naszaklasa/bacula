@@ -484,8 +484,8 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr, int /*mode*/)
 bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing)
 {
    Dmsg0(100, "Fake dir_get_volume_info\n");
-   bstrncpy(dcr->VolCatInfo.VolCatName, dcr->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
+   dcr->setVolCatName(dcr->VolumeName);
    dcr->VolCatInfo.VolCatParts = find_num_dvd_parts(dcr);
-   Dmsg2(500, "Vol=%s num_parts=%d\n", dcr->VolCatInfo.VolCatName, dcr->VolCatInfo.VolCatParts);
+   Dmsg2(500, "Vol=%s num_parts=%d\n", dcr->getVolCatName(), dcr->VolCatInfo.VolCatParts);
    return 1;
 }

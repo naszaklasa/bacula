@@ -224,7 +224,7 @@
      </property>
      <column>
       <property name="text" >
-       <string>Volume Name</string>
+       <string> Volume Name </string>
       </property>
      </column>
      <column>

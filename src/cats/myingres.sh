@@ -50,7 +50,8 @@ typedef struct ing_conn {
     char user[32];
     char password[32];
     char connection_name[32];
-    int session_id;    
+    int session_id;
+    char *msg;
 } INGconn;
 
 

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,6 @@
  *
  *     Kern Sibbald, October MM
  *
- *    Version $Id$
  */
 
 #include "bacula.h"
@@ -412,6 +411,11 @@ bool cancel_job(UAContext *ua, JCR *jcr)
          fd->signal(BNET_TERMINATE);
          fd->close();
          ua->jcr->file_bsock = NULL;
+         jcr->file_bsock->set_terminated();
+         if (jcr->my_thread_id) {
+            pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
+            Dmsg1(800, "Send kill to jid=%d\n", jcr->JobId);
+         }
       }
 
       /* Cancel Storage daemon */
@@ -445,6 +449,15 @@ bool cancel_job(UAContext *ua, JCR *jcr)
          sd->signal(BNET_TERMINATE);
          sd->close();
          ua->jcr->store_bsock = NULL;
+         jcr->store_bsock->set_timed_out();
+         jcr->store_bsock->set_terminated();
+         if (jcr->SD_msg_chan) {
+            Dmsg2(400, "kill jobid=%d use=%d\n", (int)jcr->JobId, jcr->use_count());
+            pthread_kill(jcr->SD_msg_chan, TIMEOUT_SIGNAL);
+         }
+         if (jcr->my_thread_id) {
+            pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
+         }
       }
       break;
    }
@@ -492,6 +505,15 @@ void cancel_storage_daemon_job(JCR *jcr)
       sd->close();
       ua->jcr->store_bsock = NULL;
       jcr->sd_canceled = true;
+      jcr->store_bsock->set_timed_out();
+      jcr->store_bsock->set_terminated();
+      if (jcr->SD_msg_chan) {
+         Dmsg2(400, "kill jobid=%d use=%d\n", (int)jcr->JobId, jcr->use_count());
+         pthread_kill(jcr->SD_msg_chan, TIMEOUT_SIGNAL);
+      }
+      if (jcr->my_thread_id) {
+         pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
+      }
    }
 bail_out:
    free_jcr(control_jcr);
@@ -675,58 +697,102 @@ DBId_t get_or_create_pool_record(JCR *jcr, char *pool_name)
 bool allow_duplicate_job(JCR *jcr)
 {
    JOB *job = jcr->job;
-   JCR *djcr;                /* possible duplicate */
+   JCR *djcr;                /* possible duplicate job */
 
    if (job->AllowDuplicateJobs) {
       return true;
    }
-   if (!job->AllowHigherDuplicates) {
-      foreach_jcr(djcr) {
-         if (jcr == djcr || djcr->JobId == 0) {
-            continue;                   /* do not cancel this job or consoles */
+   Dmsg0(800, "Enter allow_duplicate_job\n");
+   /*
+    * After this point, we do not want to allow any duplicate
+    * job to run.
+    */
+
+   foreach_jcr(djcr) {
+      if (jcr == djcr || djcr->JobId == 0) {
+         continue;                   /* do not cancel this job or consoles */
+      }
+      if (strcmp(job->name(), djcr->job->name()) == 0) {
+         bool cancel_dup = false;
+         bool cancel_me = false; 
+         if (job->DuplicateJobProximity > 0) {
+            utime_t now = (utime_t)time(NULL);
+            if ((now - djcr->start_time) > job->DuplicateJobProximity) {
+               continue;               /* not really a duplicate */
+            }
          }
-         if (strcmp(job->name(), djcr->job->name()) == 0) {
-            bool cancel_queued = false;
-            if (job->DuplicateJobProximity > 0) {
-               utime_t now = (utime_t)time(NULL);
-               if ((now - djcr->start_time) > job->DuplicateJobProximity) {
-                  continue;               /* not really a duplicate */
+         if (job->CancelLowerLevelDuplicates &&                         
+             djcr->getJobType() == 'B' && jcr->getJobType() == 'B') {
+            switch (jcr->getJobLevel()) {
+            case L_FULL:
+               if (djcr->getJobLevel() == L_DIFFERENTIAL ||
+                   djcr->getJobLevel() == L_INCREMENTAL) {
+                  cancel_dup = true;
+               }
+               break;
+            case L_DIFFERENTIAL:
+               if (djcr->getJobLevel() == L_INCREMENTAL) {
+                  cancel_dup = true;
+               }
+               if (djcr->getJobLevel() == L_FULL) {
+                  cancel_me = true;
+               }
+               break;
+            case L_INCREMENTAL:
+               if (djcr->getJobLevel() == L_FULL ||
+                   djcr->getJobLevel() == L_DIFFERENTIAL) {
+                  cancel_me = true;
                }
             }
-            /* Cancel */
-            /* If CancelQueuedDuplicates is set do so only if job is queued */
-            if (job->CancelQueuedDuplicates) {
-                switch (djcr->JobStatus) {
-                case JS_Created:
-                case JS_WaitJobRes:
-                case JS_WaitClientRes:
-                case JS_WaitStoreRes:
-                case JS_WaitPriority:
-                case JS_WaitMaxJobs:
-                case JS_WaitStartTime:
-                   cancel_queued = true;
-                   break;
-                default:
-                   break;
-                }
+            /*
+             * cancel_dup will be done below   
+             */
+            if (cancel_me) {
+              /* Zap current job */
+              Jmsg(jcr, M_FATAL, 0, _("JobId %d already running. Duplicate job not allowed.\n"),
+                 djcr->JobId);
+              break;     /* get out of foreach_jcr */
             }
-            if (cancel_queued || job->CancelRunningDuplicates) {
-               UAContext *ua = new_ua_context(djcr);
-               Jmsg(jcr, M_INFO, 0, _("Cancelling duplicate JobId=%d.\n"), djcr->JobId);
-               ua->jcr = djcr;
-               cancel_job(ua, djcr);
-               free_ua_context(ua);
-               Dmsg2(800, "Have cancelled JCR %p JobId=%d\n", djcr, djcr->JobId);
-            } else {
-               /* Zap current job */
-               Jmsg(jcr, M_FATAL, 0, _("JobId %d already running. Duplicate job not allowed.\n"),
-                  djcr->JobId);
-            }
-            break;                 /* did our work, get out */
+         }   
+         /* Cancel one of the two jobs (me or dup) */
+         /* If CancelQueuedDuplicates is set do so only if job is queued */
+         if (job->CancelQueuedDuplicates) {
+             switch (djcr->JobStatus) {
+             case JS_Created:
+             case JS_WaitJobRes:
+             case JS_WaitClientRes:
+             case JS_WaitStoreRes:
+             case JS_WaitPriority:
+             case JS_WaitMaxJobs:
+             case JS_WaitStartTime:
+                cancel_dup = true;  /* cancel queued duplicate */
+                break;
+             default:
+                break;
+             }
          }
+         if (cancel_dup || job->CancelRunningDuplicates) {
+            /* Zap the duplicated job djcr */
+            UAContext *ua = new_ua_context(jcr);
+            Jmsg(jcr, M_INFO, 0, _("Cancelling duplicate JobId=%d.\n"), djcr->JobId);
+            cancel_job(ua, djcr);
+            bmicrosleep(0, 500000);
+            cancel_job(ua, djcr);
+            free_ua_context(ua);
+            Dmsg2(800, "Cancel dup %p JobId=%d\n", djcr, djcr->JobId);
+         } else {
+            /* Zap current job */
+            Jmsg(jcr, M_FATAL, 0, _("JobId %d already running. Duplicate job not allowed.\n"),
+               djcr->JobId);
+            Dmsg2(800, "Cancel me %p JobId=%d\n", jcr, jcr->JobId);
+         }
+         Dmsg4(800, "curJobId=%d use_cnt=%d dupJobId=%d use_cnt=%d\n",
+               jcr->JobId, jcr->use_count(), djcr->JobId, djcr->use_count());
+         break;                 /* did our work, get out of foreach loop */
       }
-      endeach_jcr(djcr);
    }
+   endeach_jcr(djcr);
+
    return true;   
 }
 

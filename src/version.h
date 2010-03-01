@@ -1,8 +1,8 @@
 
 #undef  VERSION
-#define VERSION "5.0.0"
-#define BDATE   "26 January 2010"
-#define LSMDATE "26Jan10"
+#define VERSION "5.0.1"
+#define BDATE   "24 February 2010"
+#define LSMDATE "24Feb10"
 
 #define PROG_COPYRIGHT "Copyright (C) %d-2010 Free Software Foundation Europe e.V.\n"
 #define BYEAR "2010"       /* year for copyright messages in progs */
@@ -34,6 +34,28 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
+
+/* Shared object library versions */
+#define LIBBAC_LT_CURRENT  5
+#define LIBBAC_LT_REVISION 0
+#define LIBBAC_LT_AGE 1
+
+#define LIBBACCFG_LT_CURRENT 5
+#define LIBBACCFG_LT_REVISION 0
+#define LIBBACCFG_LT_AGE 1
+
+#define LIBBACPY_LT_CURRENT 5
+#define LIBBACPY_LT_REVISION 0
+#define LIBBACPY_LT_AGE 1
+
+#define LIBBACSQL_LT_CURRENT 5
+#define LIBBACSQL_LT_REVISION 0
+#define LIBBACSQL_LT_AGE 1
+
+#define LIBBACFIND_LT_CURRENT 5
+#define LIBBACFIND_LT_REVISION 0
+#define LIBBACFIND_LT_AGE 1
+
 
 
 /* Debug flags */

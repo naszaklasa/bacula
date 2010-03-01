@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -38,7 +38,6 @@
  *
  *   Kern Sibbald, November MMV
  *
- *   Version $Id$
  */
 
 
@@ -805,13 +804,14 @@ static int32_t fmtfp(char *buffer, int32_t currlen, int32_t maxlen,
 #ifndef LONG_STRING
 #define LONG_STRING 1024
 #endif
-int main(void)
+
+int main(int argc, char *argv[])
 {
    char buf1[LONG_STRING];
    char buf2[LONG_STRING];
 
 #ifdef FP_OUTPUT
-   char *fp_fmt[] = {
+   const char *fp_fmt[] = {
       "%-1.5f",
       "%1.5f",
       "%123.9f",
@@ -831,7 +831,7 @@ int main(void)
       0.9996, 1.996, 4.136, 6442452944.1234, 0, 23365.5
    };
 #endif
-   char *int_fmt[] = {
+   const char *int_fmt[] = {
       "%-1.5d",
       "%1.5d",
       "%123.9d",
@@ -854,7 +854,7 @@ int main(void)
    };
    long int_nums[] = { -1, 134, 91340, 341, 0203, 0 };
 
-   char *ll_fmt[] = {
+   const char *ll_fmt[] = {
       "%-1.8lld",
       "%1.8lld",
       "%123.9lld",
@@ -868,7 +868,7 @@ int main(void)
    };
    int64_t ll_nums[] = { -1976, 789134567890LL, 91340, 34123, 0203, 0 };
 
-   char *s_fmt[] = {
+   const char *s_fmt[] = {
       "%-1.8s",
       "%1.8s",
       "%123.9s",
@@ -884,7 +884,7 @@ int main(void)
       "%3.s",
       NULL
    };
-   char *s_nums[] = { "abc", "def", "ghi", "123", "4567", "a", "bb", "ccccccc", NULL};
+   const char *s_nums[] = { "abc", "def", "ghi", "123", "4567", "a", "bb", "ccccccc", NULL};
 
 
    int x, y;
@@ -969,6 +969,8 @@ int main(void)
 
 
    printf("%d tests failed out of %d.\n", fail, num);
+
+   exit(fail > 0);
 }
 #endif /* TEST_PROGRAM */
 

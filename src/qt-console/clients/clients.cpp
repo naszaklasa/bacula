@@ -190,7 +190,9 @@ void Clients::PgSeltreeWidgetClicked()
    if(!m_populated) {
       populateTable();
    }
-   dockPage();
+   if (!isOnceDocked()) {
+      dockPage();
+   }
 }
 
 /*

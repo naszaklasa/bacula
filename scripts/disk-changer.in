@@ -136,8 +136,8 @@ get_dir() {
    bn=`basename $device`
    dir=`echo "$device" | sed -e s%/$bn%%g`
    if [ ! -d $dir ]; then
-      echo "ERROR: Autochanger directory \"$dir\" does not exist.\n"
-      echo "	   You must create it.\n"
+      echo "ERROR: Autochanger directory \"$dir\" does not exist."
+      echo "	   You must create it."
       exit 1
    fi
 }
@@ -171,12 +171,12 @@ case $2 in
 	check_parm_count $# 2
 	;;
     transfer)
-        check_parm_count $# 4
+	check_parm_count $# 4
 	if [ $slot -gt $maxslot ]; then
 	   echo "Slot ($slot) out of range (1-$maxslot)"
 	   exit 1
 	fi
-        ;;
+	;;
     *)
 	check_parm_count $# 5
 	if [ $drive -gt $maxdrive ]; then
@@ -275,7 +275,7 @@ case $cmd in
       debug "Doing disk -f $ctl -- to list volumes"
       get_dir 
       if [ ! -f $dir/barcodes ]; then
-          exit 0
+	  exit 0
       fi
 
       # we print drive content seen by autochanger
@@ -283,10 +283,10 @@ case $cmd in
       i=0
       while [ $i -le $maxdrive ]; do
 	 if [ -f $dir/loaded${i} ]; then
-             ld=`cat $dir/loaded${i}`
-             v=`awk -F: "/^$ld:/"' { print $2 }' $dir/barcodes`
-             echo "D:$i:F:$ld:$v"
-             echo "^$ld:" >> $TMPFILE
+	     ld=`cat $dir/loaded${i}`
+	     v=`awk -F: "/^$ld:/"' { print $2 }' $dir/barcodes`
+	     echo "D:$i:F:$ld:$v"
+	     echo "^$ld:" >> $TMPFILE
 	 fi
 	 i=`expr $i + 1`
       done
@@ -297,15 +297,15 @@ case $cmd in
       grep -v -f $TMPFILE $dir/barcodes | sort -n | \
       perl -ne 'BEGIN { $cur=1 } 
        if (/(\d+):(.+)?/) {
-         if ($cur == $1) { 
-           print "S:$1:F:$2\n" 
-         } else { 
-           while ($cur < $1) {
-              print "S:$cur:E\n";
-              $cur++;
-           }
-         }
-         $cur++;
+	 if ($cur == $1) { 
+	   print "S:$1:F:$2\n" 
+	 } else { 
+	   while ($cur < $1) {
+	      print "S:$cur:E\n";
+	      $cur++;
+	   }
+	 }
+	 $cur++;
        } 
        END { while ($cur < '"$maxslot"') { print "S:$cur:E\n"; $cur++; } } '
 
@@ -329,8 +329,8 @@ case $cmd in
       mv $dir/slot${slot} $dir/slot{$slotdest}
 
       if [ -f $dir/barcodes ]; then
-         sed "s/^$slot:/$slotdest:/" >  $TMPFILE
-         sort -n $TMPFILE > $dir/barcodes
+	 sed "s/^$slot:/$slotdest:/" >	$TMPFILE
+	 sort -n $TMPFILE > $dir/barcodes
       fi
       exit 0
       ;;

@@ -43,7 +43,6 @@ bRestore::bRestore()
    m_name = "bRestore";
    setupUi(this);
    pgInitialize();
-   m_closeable = true;
    dockPage();
 }
 

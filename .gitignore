@@ -503,6 +503,7 @@ src/stored/unmount-simulator
 src/stored/.libs
 
 # src/tools/
+src/tools/ing_test
 src/tools/bregex
 src/tools/bwild
 src/tools/testls

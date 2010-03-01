@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,11 +31,14 @@
  *
  *   Kern Sibbald, May MMVII
  *
- *  $Id$
  */ 
 
 #include "bat.h"
 #include "help.h"
+
+/*
+ * Note: HELPDIR is defined in src/host.h
+ */
 
 Help::Help(const QString &path, const QString &file, QWidget *parent) :
         QWidget(parent)

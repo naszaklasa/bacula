@@ -1,8 +1,182 @@
 
-               Release Notes for Bacula 5.0.0
+               Release Notes for Bacula 5.0.1
 
   Bacula code: Total files = 1,081 Total lines = 217,272 (Using SLOCCount)
 
+!!!!!!!!!!!!!!!!!!!!! NOTE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+The Allow Duplicate Jobs directive has been significantly 
+reworked, and the default value has changed. See below.
+
+Truncate On Purge has been totally rewritten. See the new
+features section of the manual.
+
+When Volume Poll Interval is set in the SD DEVICE configuration,
+(default 5 mins), after a certain number of polling tries (approx
+10) polling will stop and the operator will be asked to
+resolve the problem.  Previously there was no limit, and an
+error message could be produced at each poll attempt.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Changes since 5.0.0
+-------------------
+- We believe that we have resolved most of the problems
+  concerning canceled or failed jobs being "stuck" in the
+  Director.  There is one outstanding problem in the SD when
+  canceling jobs that we will fix in the next major release.
+  If you see jobs that seem to be stuck, in general issuing
+  a cancel command in bconsole should now make them go away.
+
+Directives:
+- The default for "Allow Duplicate Jobs" has been changed from 
+  no to yes.  If you use this directive, please check your
+  conf file, and note the next two items !!!!!!!!!!!!!!!!!!!
+- AllowHigherDuplicates disabled. It did not work as documented   
+    and was confusing.
+- New directive "CancelLowerLevelDuplicates" See New Features
+  section in the manual.
+- Truncate on Purge rewritten.  See New Features section in the manual.
+
+Bug fixes:
+1448 1466 1467 1468 1476 1481 1486 1488 1494 1497 
+1499 1501 1505 1509 1513
+
+- Ensure SD asks for help when looping even if poll set. Fixes bug #1513.
+- Fix three-pool regress bug
+- Modify bacula.spec fixes bug #1505
+- This version fixes an issue where the console window would start out
+  docked. It is fixed by initiating the variables in the Pages class wi
+  constructor.
+- Fix make_catalog_backup.pl fails when catalog db is on other host
+- Apply MacOSX installer patch from bug #1509
+- Apply fix to previous fix of Copy problem. Fix proposed by reporter o
+  #1476
+- Fix bug #1501 -t does not print errors
+- Apply SQLite3 update fix from bug #1497
+- Apply bashism fix for diskchanger.in script from bug #1499
+- Apply rpm fix for Sci Linux from bug #1494
+- Take most recent Ukranian po from bug #1448
+- Probable fix for Copy/Migration bug #1476
+- Fix bug #1488 -- avoid recursion and race conditions in messages.c
+- Upgrade cats library also to 5.0.0
+- Fix missing console page in bat
+- Add bat help files to Window install
+- Improve Windows upgrade to ensure old FD is shutdown
+- Fix bug #1481 -- bat consumes all console file descriptors
+- Backport truncate on purge from 5.1.x
+- Fix bug #1486 -- bat doesn't show any errors on command-line
+- Update the bsock error URL
+- Correct .my.cnf umask in make_catalog_backup.pl
+- Apply fix for dbcheck use by make_catalog_backup.pl
+- Fix seg fault in bscan from new comment field
+- Allow multiple CNs when using TLS
+- Fix seg fault in SQlite driver
+- Make shared libs version the same as the Bacula release version
+- Remove file_index sequential check
+- Fix #1466 about Bogus pruning message
+
+For Packagers:
+1.  The default query.sql file is now, except for some comments, empty.
+The old file, which we no longer support (it is impossible or difficult to
+make it work on every backend, and the queries are mostly contributed) can
+be found in <bacula-source>/examples/sample-query.sql.  The sample file is
+not installed by the Makefiles
+
+2.  When you install the mtx-changer script, you must also install
+mtx-changer.conf if it does not exist.  This new file (mtx-changer.conf) is
+required for mtx-changer to work, but it is a user configurable file, so on
+any update, any existing file should not be overwritten.
+
+3.  Bat should be built on every platform that is capabable of running Qt.
+However, the Qt code is changing rather quickly and is not always
+compatible from version to version.  We have built and verified bat on Qt
+4.3.4.  We strongly recommend that you do not build and distribute bat with
+any other version of Qt unless you personally test it.  To build against Qt
+4.3.4, download the depkgs-qt package from the Bacula Source Forge download
+location, read the README file and follow the instructions.
+
+If you are building for Bacula version 5.0.0, please ensure that you do not
+have qmake-qt4 loaded on your system.  If you do, either remove it or
+rename it before trying to build bat.  If you do not, bat will probably be
+built using the shared objects on your system.  For Bacula 5.0.1 and later,
+this problem (bug) does not exist.
+
+depkgs-qt does not install Qt on your system, nor does it interfere with
+you having any other version of Qt installed on your system.  Once you
+build bat with depkgs-qt, it should *not* use the Qt shared objects, but
+rather they will be linked into the program.  After fully installing bat
+(make install), you can run "ldd bat" to see what shared objects it will
+use.  If any Qt shared objects are referenced, something has gone wrong.
+
+4.  Unless absolutely necessary, we recommend that you do not define any
+special library environment variables that apply to the ./configure -- for
+example: LIBDIR=/...  ./configure <your-options> is strongly discouraged.
+Doing so, could potentially cause Bacula to be linked against the wrong
+shared objects.
+
+5.  The Bacula project strongly recommends that you install Bacula into a
+single directory, with a few minor exceptions such as the MySQL or
+PostgreSQL databases.  Preferrably this should be /opt/bacula.  The full
+recommendation is:
+
+#!/bin/sh
+# Recommended configure script for Bacula
+prefix=/opt/bacula
+email=xxx@yyy.zz
+CFLAGS="-g -O2 -Wall" \
+  ./configure \
+    --sbindir=${prefix}/bin \
+    --sysconfdir=${prefix}/etc \
+    --docdir=${prefix}/html \
+    --htmldir=${prefix}/html \
+    --with-working-dir=${prefix}/working \
+    --with-pid-dir=${prefix}/working \
+    --with-subsys-dir=${prefix}/working \
+    --with-scriptdir=${prefix}/scripts \
+    --with-plugindir=${prefix}/plugins \
+    --libdir=${prefix}/lib \
+    --enable-smartalloc \
+    --enable-tray-monitor \
+    --enable-bat \
+    --with-mysql \
+    --with-dump-email=${email} \
+    --with-job-email=${email} \
+    --with-smtp-host=localhost \
+    --with-baseport=9101
+
+Obviously, the email, and some of the minor options (mysql, postgresql,
+...) can be changed to suit your distribution, but the directory names
+defined above are strongly recommended, and over time the default values in
+the bacula-dir.conf and bacula-sd.conf will reflect these choices.
+
+If you have any questions about this or would like a detailed document
+describing our recommendations including packaging requirements, please
+send an email to the bacula-devel list.
+
+6.  Starting with Bacula version 3.0.0 up to Bacula 5.0.0, the shared
+libraries that Bacula uses by default are named xxx-1.0.0.  Starting with
+Bacula 5.0.1, we are going to name the libraries using the Bacula version.
+So in Bacula 5.0.1, the libraries will be named xxx-5.0.1.  With future
+versions, the last digit may or may not change when we distribute patch
+updates (i.e.  the last digit of the version changes).  This will depend on
+whether or not we have changed something in the library.  Hopefully this
+new procedure will resolve some of the incompatibility problems between
+different versions of the shared objects.
+
+7.  The default build option for bconsole is conio (my own little console
+routines).  I did this because some years ago, readline was very difficult
+to maintain -- it and where it was found seemed to change on every release.
+This generated at the time a number of support problems.  It seems to me
+that since then there have been very few problems with readline.  As a
+consequence, I have no problem if you want to make bconsole with readline
+enabled.  It will actually give some very nice new bconsole command
+completion functionality that Eric has written.  Bottom line: feel free to
+use readline or not as you please.
+
+==========================================================
+
+
+
+Release Notes for Bacula 5.0.0
 
 Release Numbering:
 -----------------------------------------------------------
@@ -26,6 +200,8 @@ Warning:
 Please note the three Warnings below before doing any install or
 upgrade.
        
+
+
 
 Changes since 3.0.3a (the last Bacula Project release):
 -------------------------------------------------------

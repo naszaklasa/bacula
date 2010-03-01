@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,6 @@
  *
  *   Kern Sibbald, December 2000
  *
- *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -173,6 +172,7 @@ static bool do_get_volume_info(DCR *dcr)
     int n;
     int32_t InChanger;
 
+    dcr->setVolCatInfo(false);
     if (dir->recv() <= 0) {
        Dmsg0(200, "getvolname error bnet_recv\n");
        Mmsg(jcr->errmsg, _("Network error on bnet_recv in req_vol_info.\n"));
@@ -197,6 +197,7 @@ static bool do_get_volume_info(DCR *dcr)
        return false;
     }
     vol.InChanger = InChanger;        /* bool in structure */
+    vol.is_valid = true;
     unbash_spaces(vol.VolCatName);
     bstrncpy(dcr->VolumeName, vol.VolCatName, sizeof(dcr->VolumeName));
     dcr->VolCatInfo = vol;            /* structure assignment */
@@ -223,12 +224,12 @@ bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw writing)
     BSOCK *dir = jcr->dir_bsock;
 
     P(vol_info_mutex);
-    bstrncpy(dcr->VolCatInfo.VolCatName, dcr->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
-    bash_spaces(dcr->VolCatInfo.VolCatName);
-    dir->fsend(Get_Vol_Info, jcr->Job, dcr->VolCatInfo.VolCatName,
+    dcr->setVolCatName(dcr->VolumeName);
+    bash_spaces(dcr->getVolCatName());
+    dir->fsend(Get_Vol_Info, jcr->Job, dcr->getVolCatName(),
        writing==GET_VOL_INFO_FOR_WRITE?1:0);
     Dmsg1(100, ">dird %s", dir->msg);
-    unbash_spaces(dcr->VolCatInfo.VolCatName);
+    unbash_spaces(dcr->getVolCatName());
     bool ok = do_get_volume_info(dcr);
     V(vol_info_mutex);
     return ok;
@@ -342,7 +343,7 @@ bool dir_update_volume_info(DCR *dcr, bool label, bool update_LastWritten)
 
    /* Lock during Volume update */
    P(vol_info_mutex);
-   Dmsg1(100, "Update cat VolFiles=%d\n", dev->file);
+   Dmsg1(100, "Update cat VolBytes=%lld\n", vol->VolCatBytes);
    /* Just labeled or relabeled the tape */
    if (label) {
       bstrncpy(vol->VolCatStatus, "Append", sizeof(vol->VolCatStatus));
@@ -608,7 +609,7 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr, int mode)
        *   Otherwise skip it.
        */
       if (!dev->poll && (stat == W_TIMEOUT || stat == W_MOUNT)) {
-         char *msg;
+         const char *msg;
          if (mode == ST_APPEND) {
             msg = _("Please mount Volume \"%s\" or label a new one for:\n"
               "    Job:          %s\n"

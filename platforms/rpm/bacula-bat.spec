@@ -6,7 +6,7 @@
 
 # basic defines for every build
 %define _release           1
-%define _version           3.0.3
+%define _version           5.0.0
 %define depkgs_qt_version  28Jul09
 %define _packager D. Scott Barninger <barninger@fairfieldcomputers.com>
 
@@ -55,6 +55,28 @@
 
 %{?contrib_packager:%define _packager %{contrib_packager}}
 
+# determine what platform we are building on
+%define fedora 0
+%define suse 0
+%define mdk 0
+
+%if %{_vendor} == redhat
+	%define fedora 1
+	%define _dist %(cat /etc/redhat-release)
+%endif
+%if %{_vendor} == suse
+	%define suse 1
+	%define _dist %(grep -i SuSE /etc/SuSE-release)
+%endif
+%if %{_vendor} == Mandriva
+	%define mdk 1
+	%define _dist %(grep Mand /etc/mandrake-release)
+%endif
+%if ! %{fedora} && ! %{suse} && ! %{mdk}
+%{error: Unknown platform. Please examine the spec file.}
+exit 1
+%endif
+
 Summary: Bacula - The Network Backup Solution
 Name: bacula-bat
 Version: %{_version}
@@ -66,11 +88,32 @@ URL: http://www.bacula.org/
 Vendor: The Bacula Team
 Packager: %{_packager}
 Prefix: %{_prefix}
-Distribution: Bacula Bat
+Distribution: %{_dist}
 
 Source0: http://www.prdownloads.sourceforge.net/bacula/bacula-%{version}.tar.gz
 Source1: http://www.prdownloads.sourceforge.net/bacula/depkgs-qt-%{depkgs_qt_version}.tar.gz
 
+BuildRequires: gcc, gcc-c++, make, autoconf
+BuildRequires: libstdc++-devel = %{gccver}-%{gccrel}, zlib-devel
+BuildRequires: openssl-devel, fontconfig-devel, libpng-devel, libstdc++-devel, zlib-devel
+
+Requires: openssl
+Requires: fontconfig
+Requires: freetype2
+Requires: libgcc
+Requires: libpng
+Requires: libstdc++
+Requires: zlib
+
+%if %{suse}
+Requires: /usr/bin/kdesu
+Requires: freetype2
+BuildRequires: freetype2-devel
+%else
+Requires: usermode
+Requires: freetype
+BuildRequires: freetype-devel
+%endif
 
 # Source directory locations
 %define depkgs_qt ../depkgs-qt
@@ -159,33 +202,50 @@ make
 %install
 mkdir -p $RPM_BUILD_ROOT/usr/share/applications
 mkdir -p $RPM_BUILD_ROOT/usr/share/pixmaps
+%if ! %{suse}
 mkdir -p $RPM_BUILD_ROOT/etc/pam.d
 mkdir -p $RPM_BUILD_ROOT/etc/security/console.apps
 mkdir -p $RPM_BUILD_ROOT%{_sbindir}
+mkdir -p $RPM_BUILD_ROOT/usr/bin
+%endif
 
 cd src/qt-console
 make DESTDIR=$RPM_BUILD_ROOT install
 cd ../..
 
+rm -rf $RPM_BUILD_ROOT%{_prefix}/share/doc/bacula
+
+%if %{suse}
+cp -p src/qt-console/images/bat_icon.png $RPM_BUILD_ROOT/usr/share/pixmaps/bat_icon.png
+cp -p scripts/bat.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
+touch RPM_BUILD_ROOT%{sysconfdir}/bat.kdesu
+%else
 cp -p src/qt-console/images/bat_icon.png $RPM_BUILD_ROOT/usr/share/pixmaps/bat_icon.png
 cp -p scripts/bat.desktop.consolehelper $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
 cp -p scripts/bat.console_apps $RPM_BUILD_ROOT/etc/security/console.apps/bat
 cp -p scripts/bat.pamd $RPM_BUILD_ROOT/etc/pam.d/bat
-ln -sf consolehelper $RPM_BUILD_ROOT/%{_sbindir}/bat
+ln -sf consolehelper $RPM_BUILD_ROOT/usr/bin/bat
+%endif
 
 %files
 %defattr(-,root,root)
-%{_sbindir}/bat
+%attr(-, root, %{daemon_group}) %{_sbindir}/bat
 %attr(-, root, %{daemon_group}) %dir %{sysconf_dir}
 %attr(-, root, %{daemon_group}) %config(noreplace) %{sysconf_dir}/bat.conf
 /usr/share/pixmaps/bat_icon.png
 /usr/share/applications/bat.desktop
-/usr/share/doc/bacula/*
-#%{_mandir}/man1/bat.1.%{manpage_ext}
 
+# if user is a member of daemon_group then kdesu will run bat as user
+%if %{suse}
+%attr(0660, root, %{daemon_group}) %{sysconf_dir}/bat.kdesu
+%endif
+
+%if ! %{suse}
 # add the console helper files
 %config(noreplace,missingok) /etc/pam.d/bat
 %config(noreplace,missingok) /etc/security/console.apps/bat
+/usr/bin/bat
+%endif
 
 %pre
 # create the daemon group
@@ -228,5 +288,10 @@ fi
 rm -rf $RPM_BUILD_DIR/depkgs-qt
 
 %changelog
+* Sat Feb 13 2010 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- create file to allow bat to run nonroot with kdesu
+- add dependency information
+* Sat Jan 30 2010 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- fix consolehelper/xsu for suse packages
 * Sat Aug 1 2009 Kern Sibbald <kern@sibbald.com>
 - Split bat into separate bacula-bat.spec

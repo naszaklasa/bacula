@@ -612,6 +612,9 @@
 /* Set if have PQputCopyData */
 #undef HAVE_PQ_COPY
 
+/* Set if have sqlite3_threadsafe */
+#undef HAVE_SQLITE3_THREADSAFE
+
 /* Define to 1 if you have the `prctl' function. */
 #undef HAVE_PRCTL
 

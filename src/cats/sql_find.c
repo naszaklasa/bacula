@@ -331,7 +331,7 @@ db_find_next_volume(JCR *jcr, B_DB *mdb, int item, bool InChanger, MEDIA_DBR *mr
          "MaxVolFiles,Recycle,Slot,FirstWritten,LastWritten,InChanger,"
          "EndFile,EndBlock,VolParts,LabelType,LabelDate,StorageId,"
          "Enabled,LocationId,RecycleCount,InitialWrite,"
-         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime "
+         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime,ActionOnPurge "
          "FROM Media WHERE PoolId=%s AND MediaType='%s' AND VolStatus IN ('Full',"
          "'Recycle','Purged','Used','Append') AND Enabled=1 "
          "ORDER BY LastWritten LIMIT 1", 
@@ -356,7 +356,7 @@ db_find_next_volume(JCR *jcr, B_DB *mdb, int item, bool InChanger, MEDIA_DBR *mr
          "MaxVolFiles,Recycle,Slot,FirstWritten,LastWritten,InChanger,"
          "EndFile,EndBlock,VolParts,LabelType,LabelDate,StorageId,"
          "Enabled,LocationId,RecycleCount,InitialWrite,"
-         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime "
+         "ScratchPoolId,RecyclePoolId,VolReadTime,VolWriteTime,ActionOnPurge "
          "FROM Media WHERE PoolId=%s AND MediaType='%s' AND Enabled=1 "
          "AND VolStatus='%s' "
          "%s "
@@ -437,6 +437,7 @@ db_find_next_volume(JCR *jcr, B_DB *mdb, int item, bool InChanger, MEDIA_DBR *mr
    mr->RecyclePoolId = str_to_int64(row[34]);
    mr->VolReadTime = str_to_int64(row[35]);
    mr->VolWriteTime = str_to_int64(row[36]);
+   mr->ActionOnPurge = str_to_int64(row[37]);
 
    sql_free_result(mdb);
 

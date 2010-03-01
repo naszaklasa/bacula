@@ -26,14 +26,14 @@ INCLUDE_FILES = bfile.h find.h protos.h savecwd.h
 
 #
 LIBBACFIND_SRCS = find.c match.c find_one.c attribs.c create_file.c \
-                  bfile.c drivetype.c enable_priv.c fstype.c mkpath.c \
-	          savecwd.c
+		  bfile.c drivetype.c enable_priv.c fstype.c mkpath.c \
+		  savecwd.c
 LIBBACFIND_OBJS = $(LIBBACFIND_SRCS:.c=.o)
 LIBBACFIND_LOBJS = $(LIBBACFIND_SRCS:.c=.lo)
 
-LIBBACFIND_LT_CURRENT = 1
-LIBBACFIND_LT_REVISION = 0
-LIBBACFIND_LT_AGE = 0
+LIBBACFIND_LT_CURRENT = @LIBBACFIND_LT_CURRENT@
+LIBBACFIND_LT_REVISION = @LIBBACFIND_LT_REVISION@
+LIBBACFIND_LT_AGE = @LIBBACFIND_LT_AGE@
 
 .SUFFIXES:	.c .o .lo
 .PHONY:
@@ -59,7 +59,7 @@ libbacfind.a: $(LIBBACFIND_OBJS)
 
 libbacfind.la: Makefile $(LIBBACFIND_LOBJS) 
 	@echo "Making $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACFIND_LOBJS) -export-dynamic -rpath $(libdir) -version-info $(LIBBACFIND_LT_CURRENT):$(LIBBACFIND_LT_REVISION):$(LIBBACFIND_LT_AGE)
+	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACFIND_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBACFIND_LT_CURRENT).$(LIBBACFIND_LT_REVISION).$(LIBBACFIND_LT_AGE)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,6 @@
  *
  *   Kern Sibbald, August MMII
  *                            
- *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -130,7 +129,7 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
 
    slot = dcr->VolCatInfo.InChanger ? dcr->VolCatInfo.Slot : 0;
    Dmsg3(100, "autoload: slot=%d InChgr=%d Vol=%s\n", dcr->VolCatInfo.Slot,
-         dcr->VolCatInfo.InChanger, dcr->VolCatInfo.VolCatName);
+         dcr->VolCatInfo.InChanger, dcr->getVolCatName());
    /*
     * Handle autoloaders here.  If we cannot autoload it, we
     *  will return 0 so that the sysop will be asked to load it.
@@ -151,7 +150,7 @@ int autoload_device(DCR *dcr, int writing, BSOCK *dir)
    changer = get_pool_memory(PM_FNAME);
    if (slot <= 0) {
       Jmsg(jcr, M_INFO, 0, _("Invalid slot=%d defined in catalog for Volume \"%s\" "
-           "on %s. Manual load may be required.\n"), slot, dcr->VolCatInfo.VolCatName,
+           "on %s. Manual load may be required.\n"), slot, dcr->getVolCatName(),
            dev->print_name());
       rtn_stat = 0;
    } else if (!dcr->device->changer_name) {

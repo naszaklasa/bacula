@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,6 @@
  *
  *      Kern Sibbald, March 2004
  *
- *  Version $Id$
  */
 
 #include "bacula.h"
@@ -308,7 +307,7 @@ static bool despool_data(DCR *dcr, bool commit)
 
    if (!dir_create_jobmedia_record(dcr)) {
       Jmsg2(jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
-         dcr->VolCatInfo.VolCatName, jcr->Job);
+         dcr->getVolCatName(), jcr->Job);
    }
    /* Set new file/block parameters for current dcr */
    set_new_file_parameters(dcr);
