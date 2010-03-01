@@ -26,6 +26,7 @@ set -e
 #     `abort-remove' or `abort-deconfigure'.
 
 dbc_first_version=3.0.3-3
+dbc_dbfile_owner=bacula:bacula
 # set in config, must not be set here: dbc_dbuser=bacula
 # set in config, must not be set here: dbc_dbname=bacula.db
 # set in config, must not be set here: dbc_basepath=/var/lib/bacula

@@ -11,8 +11,9 @@ bacula (5.0.0-6) UNRELEASED; urgency=low
   * Added full LSB support to init scripts.  Patch originated in Ubuntu,
     and was merged with LSB status support already in Debian.
     Merged to Debian master at b3e2b4bc8dc1ad2a66b1e80c4cfa6176a15a062d.
+  * Correct perms on new Sqlite3 database so it's owned by bacula:bacula.
 
- -- John Goerzen <jgoerzen@complete.org>  Tue, 23 Feb 2010 09:37:34 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Mar 2010 09:57:05 -0600
 
 bacula (5.0.0-5) unstable; urgency=medium
 
