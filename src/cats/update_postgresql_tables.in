@@ -9,7 +9,7 @@ echo " Standard version 3.0 to 5.0"
 echo " "
 
 bindir=@SQL_BINDIR@
-export PATH="$bindir:$PATH"
+PATH="$bindir:$PATH"
 db_name=@db_name@
 
 if psql -f - -d ${db_name} $* <<END-OF-DATA

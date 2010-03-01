@@ -321,8 +321,8 @@ bool write_new_volume_label_to_dev(DCR *dcr, const char *VolName,
    }
 
    /* Set the new filename for open, ... */
-   bstrncpy(dev->VolCatInfo.VolCatName, VolName, sizeof(dev->VolCatInfo.VolCatName));
-   bstrncpy(dcr->VolCatInfo.VolCatName, VolName, sizeof(dcr->VolCatInfo.VolCatName));
+   dev->setVolCatName(VolName);
+   dcr->setVolCatName(VolName);
    Dmsg1(150, "New VolName=%s\n", VolName);
    if (dev->open(dcr, OPEN_READ_WRITE) < 0) {
       /* If device is not tape, attempt to create it */
@@ -440,6 +440,7 @@ bool rewrite_volume_label(DCR *dcr, bool recycle)
    }
    Dmsg1(150, "wrote vol label to block. Vol=%s\n", dcr->VolumeName);
 
+   dev->setVolCatInfo(false);
    dev->VolCatInfo.VolCatBytes = 0;        /* reset byte count */
 
    /*
@@ -513,7 +514,7 @@ bool rewrite_volume_label(DCR *dcr, bool recycle)
    }
    Dmsg1(150, "dir_update_vol_info. Set Append vol=%s\n", dcr->VolumeName);
    bstrncpy(dev->VolCatInfo.VolCatStatus, "Append", sizeof(dev->VolCatInfo.VolCatStatus));
-   bstrncpy(dev->VolCatInfo.VolCatName, dcr->VolumeName, sizeof(dev->VolCatInfo.VolCatName));
+   dev->setVolCatName(dcr->VolumeName);
    if (!dir_update_volume_info(dcr, true, true)) {  /* indicate doing relabel */
       return false;
    }

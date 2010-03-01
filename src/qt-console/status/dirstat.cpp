@@ -43,7 +43,6 @@ DirStat::DirStat()
 {
    setupUi(this);
    m_name = tr("Director Status");
-   m_closeable = true;
    pgInitialize();
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/status.png")));
@@ -286,7 +285,9 @@ void DirStat::PgSeltreeWidgetClicked()
       populateAll();
       m_populated=true;
    }
-   dockPage();
+   if (!isOnceDocked()) {
+      dockPage();
+   }
 }
 
 /*

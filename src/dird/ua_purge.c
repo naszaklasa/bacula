@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -35,7 +35,6 @@
  *
  *     Kern Sibbald, February MMII
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -44,6 +43,7 @@
 /* Forward referenced functions */
 static int purge_files_from_client(UAContext *ua, CLIENT *client);
 static int purge_jobs_from_client(UAContext *ua, CLIENT *client);
+static int action_on_purge_cmd(UAContext *ua, const char *cmd);
 
 static const char *select_jobsfiles_from_client =
    "SELECT JobId FROM Job "
@@ -138,6 +138,11 @@ int purgecmd(UAContext *ua, const char *cmd)
       }
    /* Volume */
    case 2:
+      /* Perform ActionOnPurge (action=truncate) */
+      if (find_arg(ua, "action") >= 0) {
+         return action_on_purge_cmd(ua, ua->cmd);
+      }
+
       while ((i=find_arg(ua, NT_("volume"))) >= 0) {
          if (select_media_dbr(ua, &mr)) {
             purge_jobs_from_volume(ua, &mr, /*force*/true);
@@ -571,6 +576,176 @@ static BSOCK *open_sd_bsock(UAContext *ua)
    return ua->jcr->store_bsock;
 }
 
+static void do_truncate_on_purge(UAContext *ua, MEDIA_DBR *mr, 
+                                 char *pool, char *storage,
+                                 int drive, BSOCK *sd)
+{
+   int dvd;
+   bool ok=false;
+   uint64_t VolBytes = 0;
+   
+   /* TODO: Return if not mr->Recyle ? */
+   if (!mr->Recycle) {
+      return;
+   }
+
+   if (mr->ActionOnPurge & AOP_TRUNCATE) {
+      /* Send the command to truncate the volume after purge. If this feature
+       * is disabled for the specific device, this will be a no-op.
+       */
+
+      /* Protect us from spaces */
+      bash_spaces(mr->VolumeName);
+      bash_spaces(mr->MediaType);
+      bash_spaces(pool);
+      bash_spaces(storage);
+         
+      sd->fsend("relabel %s OldName=%s NewName=%s PoolName=%s "
+                "MediaType=%s Slot=%d drive=%d\n",
+                   storage,
+                   mr->VolumeName, mr->VolumeName,
+                   pool, mr->MediaType, mr->Slot, drive);
+         
+      unbash_spaces(mr->VolumeName);
+      unbash_spaces(mr->MediaType);
+      unbash_spaces(pool);
+      unbash_spaces(storage);
+
+      while (sd->recv() >= 0) {
+         ua->send_msg("%s", sd->msg);
+         if (sscanf(sd->msg, "3000 OK label. VolBytes=%llu DVD=%d ",
+                    &VolBytes, &dvd) == 2) 
+         {
+            ok = true;
+         }
+      }
+
+      if (ok) {
+         mr->VolBytes = VolBytes;
+         mr->VolFiles = 0;
+         if (!db_update_media_record(ua->jcr, ua->db, mr)) {
+            ua->error_msg(_("Can't update volume size in the catalog\n"));
+         }
+         ua->send_msg(_("The volume \"%s\" has been truncated\n"), mr->VolumeName);
+      } else {
+         ua->warning_msg(_("Unable to truncate volume \"%s\"\n"), mr->VolumeName);
+      }
+   }
+}
+
+/* purge action= pool= volume= storage= devicetype= */
+static int action_on_purge_cmd(UAContext *ua, const char *cmd)
+{
+   bool allpools=false;
+   int drive=-1;
+   int nb=0;
+
+   uint32_t *results=NULL;
+   const char *action="all";
+   STORE *store=NULL;
+   POOL *pool=NULL;
+   MEDIA_DBR mr;
+   POOL_DBR pr;
+
+   BSOCK *sd=NULL;
+   
+   memset(&pr, 0, sizeof(pr));
+   memset(&mr, 0, sizeof(mr));
+
+   /* Look arguments */
+   for (int i=1; i<ua->argc; i++) {
+      if (strcasecmp(ua->argk[i], NT_("allpools")) == 0) {
+         allpools = true;
+            
+      } else if (strcasecmp(ua->argk[i], NT_("volume")) == 0 && ua->argv[i]) {
+         bstrncpy(mr.VolumeName, ua->argv[i], sizeof(mr.VolumeName));
+
+      } else if (strcasecmp(ua->argk[i], NT_("devicetype")) == 0 && ua->argv[i]) {
+         bstrncpy(mr.MediaType, ua->argv[i], sizeof(mr.MediaType));
+         
+      } else if (strcasecmp(ua->argk[i], NT_("drive")) == 0 && ua->argv[i]) {
+         drive = atoi(ua->argv[i]);
+
+      } else if (strcasecmp(ua->argk[i], NT_("action")) == 0 && ua->argv[i]) {
+         action=ua->argv[i];
+      }
+   }
+
+   /* Choose storage */
+   ua->jcr->wstore = store =  get_storage_resource(ua, false);
+   if (!store) {
+      goto bail_out;
+   }
+   mr.StorageId = store->StorageId;
+
+   if (!open_db(ua)) {
+      Dmsg0(100, "Can't open db\n");
+      goto bail_out;
+   }
+
+   if (!allpools) {
+      /* force pool selection */
+      pool = get_pool_resource(ua);
+      if (!pool) {
+         Dmsg0(100, "Can't get pool resource\n");
+         goto bail_out;
+      }
+      bstrncpy(pr.Name, pool->name(), sizeof(pr.Name));
+      if (!db_get_pool_record(ua->jcr, ua->db, &pr)) {
+         Dmsg0(100, "Can't get pool record\n");
+         goto bail_out;
+      }
+      mr.PoolId = pr.PoolId;
+   }
+
+   mr.Recycle = 1;
+   mr.Enabled = 1;
+   mr.VolBytes = 10000;
+   bstrncpy(mr.VolStatus, "Purged", sizeof(mr.VolStatus));
+
+   if (!db_get_media_ids(ua->jcr, ua->db, &mr, &nb, &results)) {
+      Dmsg0(100, "No results from db_get_media_ids\n");
+      goto bail_out;
+   }
+   
+   if (!nb) {
+      ua->send_msg(_("No volume founds to perform %s action(s)\n"), action);
+      goto bail_out;
+   }
+
+   if ((sd=open_sd_bsock(ua)) == NULL) {
+      Dmsg0(100, "Can't open connection to sd\n");
+      goto bail_out;
+   }
+
+   for (int i=0; i < nb; i++) {
+      memset(&mr, 0, sizeof(mr));
+      mr.MediaId = results[i];
+      if (db_get_media_record(ua->jcr, ua->db, &mr)) {         
+         /* TODO: ask for drive and change Pool */
+         if (!strcasecmp("truncate", action) || !strcasecmp("all", action)) {
+            do_truncate_on_purge(ua, &mr, pr.Name, store->dev_name(), drive, sd);
+         }
+      } else {
+         Dmsg1(0, "Can't find MediaId=%lld\n", (uint64_t) mr.MediaId);
+      }
+   }
+
+bail_out:
+   close_db(ua);
+   if (sd) {
+      sd->signal(BNET_TERMINATE);
+      sd->close();
+      ua->jcr->store_bsock = NULL;
+   }
+   ua->jcr->wstore = NULL;
+   if (results) {
+      free(results);
+   }
+
+   return 1;
+}
+
 /*
  * IF volume status is Append, Full, Used, or Error, mark it Purged
  *   Purged volumes can then be recycled (if enabled).
@@ -586,32 +761,6 @@ bool mark_media_purged(UAContext *ua, MEDIA_DBR *mr)
       if (!db_update_media_record(jcr, ua->db, mr)) {
          return false;
       }
-
-      if (mr->ActionOnPurge > 0) {
-         /* Send the command to truncate the volume after purge. If this feature
-          * is disabled for the specific device, this will be a no-op.
-          */
-         BSOCK *sd;
-         if ((sd=open_sd_bsock(ua)) != NULL) {
-            bash_spaces(mr->VolumeName);
-            sd->fsend("action_on_purge %s vol=%s action=%d",
-                      ua->jcr->wstore->dev_name(),
-		      mr->VolumeName,
-		      mr->ActionOnPurge);
-            unbash_spaces(mr->VolumeName);
-            while (sd->recv() >= 0) {
-               ua->send_msg("%s", sd->msg);
-            }
-
-            sd->signal(BNET_TERMINATE);
-            sd->close();
-            ua->jcr->store_bsock = NULL;
-         } else {
-            ua->error_msg(_("Could not connect to storage daemon"));
-	    return false;
-	 }
-      }
-
       pm_strcpy(jcr->VolumeName, mr->VolumeName);
       generate_job_event(jcr, "VolumePurged");
       generate_plugin_event(jcr, bEventVolumePurged);
@@ -640,6 +789,7 @@ bool mark_media_purged(UAContext *ua, MEDIA_DBR *mr)
             ua->error_msg("%s", db_strerror(ua->db));
          }
       }
+
       /* Send message to Job report, if it is a *real* job */           
       if (jcr && jcr->JobId > 0) {
          Jmsg(jcr, M_INFO, 0, _("All records pruned from Volume \"%s\"; marking it \"Purged\"\n"),

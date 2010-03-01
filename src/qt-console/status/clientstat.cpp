@@ -43,7 +43,6 @@ ClientStat::ClientStat(QString &client, QTreeWidgetItem *parentTreeWidgetItem)
 {
    m_client = client;
    setupUi(this);
-   m_closeable = true;
    pgInitialize(tr("Client Status %1").arg(m_client), parentTreeWidgetItem);
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/status.png")));

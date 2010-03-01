@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,8 +27,6 @@
 */
  
 /*
- *   Version $Id$
- *
  *  Restore Class 
  *
  *   Kern Sibbald, February MMVII
@@ -53,7 +51,6 @@ restorePage::restorePage(int conn)
    thisitem->setIcon(0,QIcon(QString::fromUtf8(":images/restore.png")));
 
    m_console->notify(m_conn, false);          /* this should already be off */
-   m_closeable = true;
 
    connect(fileWidget, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), 
            this, SLOT(fileDoubleClicked(QTreeWidgetItem *, int)));
@@ -89,6 +86,7 @@ restorePage::restorePage(int conn)
    dockPage();
    setCurrent();
    this->show();
+   if (mainWin->m_miscDebug) Pmsg0(000, "Leave restorePage\n");
 }
 
 restorePage::~restorePage()

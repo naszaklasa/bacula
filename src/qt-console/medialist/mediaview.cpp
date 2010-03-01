@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -304,7 +304,7 @@ void MediaView::populateTable()
       "Slot, MediaType, VolStatus, VolBytes, Pool.Name,  "
       "LastWritten, Media.VolRetention "
       "FROM Media JOIN Pool USING (PoolId) "
-      "LEFT JOIN Location USING (LocationId) "
+      "LEFT JOIN Location ON (Media.LocationId=Location.LocationId) "
       + cmd + 
       " ORDER BY VolumeName LIMIT " + m_sbLimit->cleanText();
 
@@ -317,13 +317,13 @@ void MediaView::populateTable()
       m_tableMedia->setRowCount(results.size());
 
       foreach (resultline, results) { // should have only one result
+         int index = 0;
          QString VolBytes, MediaType, LastWritten, VolStatus;
          fieldlist = resultline.split("\t");
          if (fieldlist.size() != 10) {
             continue;
          }
          QStringListIterator fld(fieldlist);
-         int index=0;
          TableItemFormatter mediaitem(*m_tableMedia, row);
 
          /* VolumeName */
@@ -343,8 +343,7 @@ void MediaView::populateTable()
          /* Usage */
          usage = 0;
          if (hash_size.contains(MediaType) &&
-             hash_size[MediaType] != 0) 
-         {
+             hash_size[MediaType] != 0) {
             usage = VolBytes.toLongLong() * 100 / hash_size[MediaType];
          }
          mediaitem.setPercent(index++, usage);
@@ -396,7 +395,9 @@ void MediaView::PgSeltreeWidgetClicked()
       populateForm();
       populateTable();
    }
-   dockPage();
+   if (!isOnceDocked()) {
+      dockPage();
+   }
 }
 
 /*

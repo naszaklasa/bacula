@@ -268,10 +268,12 @@ db_close_database(JCR *jcr, B_DB *mdb)
 void db_check_backend_thread_safe()
 {
 #ifdef HAVE_BATCH_FILE_INSERT
+# ifdef HAVE_SQLITE3_THREADSAFE
    if (!sqlite3_threadsafe()) {
       Emsg0(M_ABORT, 0, _("SQLite3 client library must be thread-safe "
                           "when using BatchMode.\n"));
    }
+# endif
 #endif
 }
 
@@ -446,6 +448,13 @@ void my_sqlite_field_seek(B_DB *mdb, int field)
       mdb->fields = (SQL_FIELD **)malloc(sizeof(SQL_FIELD) * mdb->ncolumn);
       for (i=0; i < sql_num_fields(mdb); i++) {
          mdb->fields[i] = (SQL_FIELD *)malloc(sizeof(SQL_FIELD));
+         if (mdb->result[i] == NULL) {
+            mdb->fields_defined = false;
+            free(mdb->fields);
+            mdb->fields = NULL;
+            mdb->field = 0;
+            return;
+         }
          mdb->fields[i]->name = mdb->result[i];
          mdb->fields[i]->length = cstrlen(mdb->fields[i]->name);
          mdb->fields[i]->max_length = mdb->fields[i]->length;

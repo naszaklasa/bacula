@@ -1,7 +1,15 @@
+<<<<<<< HEAD:bacula/src/cats/myingres.h
 # include "/opt/Ingres/IngresII/ingres/files/eqdefc.h"
 #ifndef _MYINGRES_SH
 #define _MYINGRES_SH
 # include "/opt/Ingres/IngresII/ingres/files/eqsqlda.h"
+=======
+#ifndef _MYINGRES_SH
+#define _MYINGRES_SH
+#include <eqdefc.h>
+#include <eqsqlda.h>
+/* # line 6 "myingres.sh" */	/* host code */
+>>>>>>> 289e3c7... Added patch from Stefan Reddig -- fixed date types, errmsg:bacula/src/cats/myingres.h
 /* ---typedefs--- */
 typedef struct ing_field {
    char          name[34];
@@ -42,7 +50,8 @@ typedef struct ing_conn {
     char user[32];
     char password[32];
     char connection_name[32];
-    int session_id;    
+    int session_id;
+    char *msg;
 } INGconn;
 /* ---Prototypes--- */
 int	INGcheck();
@@ -69,4 +78,5 @@ INGconn *INGconnectDB(char *dbname, char *user, char *passwd);
 void 	INGdisconnectDB(INGconn *dbconn);
 char	*INGerrorMessage(const INGconn *conn);
 char	*INGcmdTuples(INGresult *res);
+/* # line 85 "myingres.sh" */	
 #endif /* _MYINGRES_SH */

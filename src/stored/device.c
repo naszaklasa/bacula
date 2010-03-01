@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -110,7 +110,7 @@ bool fixup_device_block_write_error(DCR *dcr, int retries)
    /* Continue unlocked, but leave BLOCKED */
    dev->dunlock();
 
-   bstrncpy(PrevVolName, dev->VolCatInfo.VolCatName, sizeof(PrevVolName));
+   bstrncpy(PrevVolName, dev->getVolCatName(), sizeof(PrevVolName));
    bstrncpy(dev->VolHdr.PrevVolumeName, PrevVolName, sizeof(dev->VolHdr.PrevVolumeName));
 
    label_blk = new_block(dev);
@@ -160,7 +160,7 @@ bool fixup_device_block_write_error(DCR *dcr, int retries)
    /*
     * Walk through all attached jcrs indicating the volume has changed
     */
-   Dmsg1(100, "Notify vol change. Volume=%s\n", dev->VolCatInfo.VolCatName);
+   Dmsg1(100, "Notify vol change. Volume=%s\n", dev->getVolCatName());
    DCR *mdcr;
    foreach_dlist(mdcr, dev->attached_dcrs) {
       JCR *mjcr = mdcr->jcr;

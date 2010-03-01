@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -154,7 +154,7 @@ bool acquire_device_for_read(DCR *dcr)
          Dmsg1(50, "Media Type change.  New read device %s chosen.\n", dev->print_name());
 
          bstrncpy(dcr->VolumeName, vol->VolumeName, sizeof(dcr->VolumeName));
-         bstrncpy(dcr->VolCatInfo.VolCatName, vol->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
+         dcr->setVolCatName(vol->VolumeName);
          bstrncpy(dcr->media_type, vol->MediaType, sizeof(dcr->media_type));
          dcr->VolCatInfo.Slot = vol->Slot;
          dcr->VolCatInfo.InChanger = vol->Slot > 0; 
@@ -387,7 +387,7 @@ DCR *acquire_device_for_append(DCR *dcr)
        *   we need to recycle the tape.
        */
        if (dev->num_writers == 0) {
-          memcpy(&dev->VolCatInfo, &dcr->VolCatInfo, sizeof(dev->VolCatInfo));
+          dev->VolCatInfo = dcr->VolCatInfo;   /* structure assignment */
        }
        have_vol = dcr->is_tape_position_ok();
    }
@@ -480,10 +480,10 @@ bool release_device(DCR *dcr)
       Dmsg1(100, "There are %d writers in release_device\n", dev->num_writers);
       if (dev->is_labeled()) {
          Dmsg2(200, "dir_create_jobmedia. Release vol=%s dev=%s\n", 
-               dev->VolCatInfo.VolCatName, dev->print_name());
+               dev->getVolCatName(), dev->print_name());
          if (!dev->at_weot() && !dir_create_jobmedia_record(dcr)) {
             Jmsg2(jcr, M_FATAL, 0, _("Could not create JobMedia record for Volume=\"%s\" Job=%s\n"),
-               dcr->VolCatInfo.VolCatName, jcr->Job);
+               dcr->getVolCatName(), jcr->Job);
          }
          /* If no more writers, and no errors, and wrote something, write an EOF */
          if (!dev->num_writers && dev->can_write() && dev->block_num > 0) {
@@ -495,7 +495,7 @@ bool release_device(DCR *dcr)
             /* Note! do volume update before close, which zaps VolCatInfo */
             dir_update_volume_info(dcr, false, false); /* send Volume info to Director */
             Dmsg2(200, "dir_update_vol_info. Release vol=%s dev=%s\n", 
-                  dev->VolCatInfo.VolCatName, dev->print_name());
+                  dev->getVolCatName(), dev->print_name());
          }
          if (dev->num_writers == 0) {         /* if not being used */
             volume_unused(dcr);               /*  we obviously are not using the volume */
@@ -738,7 +738,7 @@ static void set_dcr_from_vol(DCR *dcr, VOL_LIST *vol)
     *  for disaster recovery, we must "simulate" reading the catalog
     */
    bstrncpy(dcr->VolumeName, vol->VolumeName, sizeof(dcr->VolumeName));
-   bstrncpy(dcr->VolCatInfo.VolCatName, vol->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
+   dcr->setVolCatName(vol->VolumeName);
    bstrncpy(dcr->media_type, vol->MediaType, sizeof(dcr->media_type));
    dcr->VolCatInfo.Slot = vol->Slot;
    dcr->VolCatInfo.InChanger = vol->Slot > 0; 

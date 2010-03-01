@@ -15,4 +15,9 @@ if test -d ../win32/release32; then
    cp -f debug/bat.exe ../win32/release32
    cp -f ${DEPKGS}/depkgs-mingw32/lib/qt/QtGui4.dll ../win32/release32
    cp -f ${DEPKGS}/depkgs-mingw32/lib/qt/QtCore4.dll ../win32/release32
+   rm -rf ../win32/release32/help
+   mkdir ../win32/release32/help
+   cp -f help/*.html ../win32/release32/help/
+   cp -f images/status.png ../win32/release32/help/
+   cp -f images/mail-message-new.png ../win32/release32/help/
 fi

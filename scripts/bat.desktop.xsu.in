@@ -2,7 +2,7 @@
 Name=Bacula Administration Tool
 Comment=Bacula Director Console
 Icon=/usr/share/pixmaps/bat_icon.png
-Exec=gnomesu -t "Query" -c "@sbindir@/bat -c @sysconfdir@/bat.conf" -d -e -m "In order to run the bacula console as root, ^additional information is required."
+Exec=kdesu -t -c "@sbindir@/bat -c @sysconfdir@/bat.conf" -f @sysconfdir@/bat.kdesu
 Terminal=false
 Type=Application
 Encoding=UTF-8

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -166,7 +166,15 @@ static bool check_database_encoding(JCR *jcr, B_DB *mdb)
  */
 static int sql_check(B_DB *mdb)
 {
-    return INGcheck();
+    int errorcode;
+
+    if ((errorcode = INGcheck()) < 0) {
+        /* TODO: fill mdb->errmsg */
+        Mmsg(mdb->errmsg, "Something went wrong - still searching!\n");
+    } else if (errorcode > 0) {
+	/* just a warning, proceed */
+    }
+    return errorcode;
 }
 
 /*
@@ -277,6 +285,11 @@ db_close_database(JCR *jcr, B_DB *mdb)
    V(mutex);
 }
 
+void db_check_backend_thread_safe()
+{ }
+
+
+
 void db_thread_cleanup()
 { }
 
@@ -284,7 +297,7 @@ void db_thread_cleanup()
  * Return the next unique index (auto-increment) for
  * the given table.  Return NULL on error.
  *
- * For Ingres, NULL causes the auto-increment value	SRE: true?
+ * For Ingres, NULL causes the auto-increment value     SRE: true?
  *  to be updated.
  */
 int db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index)
@@ -439,7 +452,7 @@ int my_ingres_max_length(B_DB *mdb, int field_num) {
 
 INGRES_FIELD * my_ingres_fetch_field(B_DB *mdb)
 {
-   int     i;
+   int i;
 
    Dmsg0(500, "my_ingres_fetch_field starts\n");
 
@@ -485,7 +498,6 @@ void my_ingres_field_seek(B_DB *mdb, int field)
 /*
  * Note, if this routine returns 1 (failure), Bacula expects
  *  that no result has been stored.
- * This is where QUERY_DB comes with Ingres.   SRE: true?
  *
  *  Returns:  0  on success
  *            1  on failure
@@ -499,43 +511,53 @@ int my_ingres_query(B_DB *mdb, const char *query)
    mdb->row_number   = -1;
    mdb->field_number = -1;
 
+   int cols = -1;
+
    if (mdb->result) {
       INGclear(mdb->result);  /* hmm, someone forgot to free?? */
       mdb->result = NULL;
    }
 
    Dmsg1(500, "my_ingres_query starts with '%s'\n", query);
-   mdb->result = INGexec(mdb->db, query);
-   if (!mdb->result) {
-      Dmsg1(50, "Query failed: %s\n", query);
-      goto bail_out;
-   }
 
-   mdb->status = INGresultStatus(mdb->result);
-   if (mdb->status == ING_COMMAND_OK) {
-      Dmsg1(500, "we have a result\n", query);
+   /* TODO: differentiate between SELECTs and other queries */
 
-      // how many fields in the set?
-      mdb->num_fields = (int)INGnfields(mdb->result);
-      Dmsg1(500, "we have %d fields\n", mdb->num_fields);
-
-      mdb->num_rows = INGntuples(mdb->result);
-      Dmsg1(500, "we have %d rows\n", mdb->num_rows);
-
-      mdb->status = 0;                  /* succeed */
+   if ((cols = INGgetCols(query)) <= 0) {
+      if (cols < 0 ) {
+         Dmsg0(500,"my_ingres_query: neg.columns: no DML stmt!\n");
+      }
+      Dmsg0(500,"my_ingres_query (non SELECT) starting...\n");
+      /* non SELECT */
+      mdb->num_rows = INGexec(mdb->db, query);
+      if (INGcheck()) {
+        Dmsg0(500,"my_ingres_query (non SELECT) went wrong\n");
+        mdb->status = 1;
+      } else {
+        Dmsg0(500,"my_ingres_query (non SELECT) seems ok\n");
+        mdb->status = 0;
+      }
    } else {
-      Dmsg1(50, "Result status failed: %s\n", query);
-      goto bail_out;
+      /* SELECT */
+      Dmsg0(500,"my_ingres_query (SELECT) starting...\n");
+      mdb->result = INGquery(mdb->db, query);
+      if ( mdb->result != NULL ) {
+        Dmsg1(500, "we have a result\n", query);
+
+        // how many fields in the set?
+        mdb->num_fields = (int)INGnfields(mdb->result);
+        Dmsg1(500, "we have %d fields\n", mdb->num_fields);
+
+        mdb->num_rows = INGntuples(mdb->result);
+        Dmsg1(500, "we have %d rows\n", mdb->num_rows);
+
+        mdb->status = 0;                  /* succeed */
+      } else {
+        Dmsg0(500, "No resultset...\n");
+        mdb->status = 1; /* failed */
+      }
    }
 
    Dmsg0(500, "my_ingres_query finishing\n");
-   return mdb->status;
-
-bail_out:
-   Dmsg1(500, "we failed\n", query);
-   INGclear(mdb->result);
-   mdb->result = NULL;
-   mdb->status = 1;                   /* failed */
    return mdb->status;
 }
 

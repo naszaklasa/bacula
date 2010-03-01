@@ -21,31 +21,28 @@
 ###########################################################################################
 # script configuration section
 
-VERSION=3.0.0
+VERSION=5.0.0
 RELEASE=1
 
 # build platform for spec
-# set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,fc9,wb3,rhel3,rhel4,rhel5,centos3,centos4,centos5,sl3, sl4,sl5,su9,su10,su102,su103,su110,su111,mdk,mdv
+# set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,fc9,fc10,wb3,rhel3,rhel4,rhel5,centos3,centos4,centos5,sl3, sl4,sl5,su9,su10,su102,su103,su110,su111,su112,mdk,mdv
 PLATFORM=su111
 
 # platform designator for file names
-# for RedHat/Fedora set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,fc9 OR
+# for RedHat/Fedora set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,fc9,fc10 OR
 # for RHEL3/clones wb3, rhel3, sl3 & centos3 set to el3 OR
 # for RHEL4/clones rhel4, sl4 & centos4 set to el4 OR
 # for RHEL5/clones rhel5, sl5 & centos5 set to el5 OR
-# for SuSE set to su90, su91, su92, su100 or su101 or su102 or su103 or su110 or su111 OR
+# for SuSE set to su90, su91, su92, su100 or su101 or su102 or su103 or su110 or su111 or su112 OR
 # for Mandrake set to 101mdk or 20060mdk
 FILENAME=su111
-
-# MySQL version
-# set to empty (for MySQL 3), 4 or 5
-MYSQL=5
 
 # enter your name and email address here
 PACKAGER="Your Name <your-email@site.org>"
 
 # enter the full path to your RPMS output directory
 RPMDIR=/usr/src/packages/RPMS/i586
+RPMDIR2=/usr/src/packages/RPMS/noarch
 
 # enter the full path to your rpm BUILD directory
 RPMBUILD=/usr/src/packages/BUILD
@@ -57,8 +54,14 @@ ARCH=i586
 # with trailing slash where it is found.
 SRPMDIR=
 
+# to build the mtx package set to 1, else 0
+BUILDMTX=0
+
+# to build the bat package set to 1, else 0
+BUILDBAT=1
+
 # set to 1 to sign packages, 0 not to sign if you want to sign on another machine.
-SIGN=1
+SIGN=0
 
 # to save the bacula-updatedb package set to 1, else 0
 # only one updatedb package is required per release so normally this should be 0
@@ -79,13 +82,15 @@ SAVEUPDATEDB=0
 ############################################################################################
 
 SRPM=${SRPMDIR}bacula-$VERSION-$RELEASE.src.rpm
+SRPM2=${SRPMDIR}bacula-bat-$VERSION-$RELEASE.src.rpm
+SRPM3=${SRPMDIR}bacula-docs-$VERSION-$RELEASE.src.rpm
+SRPM4=${SRPMDIR}bacula-mtx-$VERSION-$RELEASE.src.rpm
 
 echo Building MySQL packages for "$PLATFORM"...
 sleep 2
 rpmbuild --rebuild --define "build_${PLATFORM} 1" \
---define "build_mysql${MYSQL} 1" \
+--define "build_mysql 1" \
 --define "build_python 1" \
---define "nobuild_gconsole 1" \
 --define "contrib_packager ${PACKAGER}" ${SRPM}
 rm -rf ${RPMBUILD}/*
 
@@ -94,9 +99,7 @@ sleep 2
 rpmbuild --rebuild --define "build_${PLATFORM} 1" \
 --define "build_postgresql 1" \
 --define "contrib_packager ${PACKAGER}" \
---define "build_python 1" \
---define "build_bat 1" \
---define "nobuild_gconsole 1" ${SRPM}
+--define "build_python 1" ${SRPM}
 rm -rf ${RPMBUILD}/*
 
 echo Building SQLite packages for "$PLATFORM"...
@@ -104,9 +107,27 @@ sleep 2
 rpmbuild --rebuild --define "build_${PLATFORM} 1" \
 --define "build_sqlite 1" \
 --define "contrib_packager ${PACKAGER}" \
---define "build_python 1" \
---define "nobuild_gconsole 1" ${SRPM}
+--define "build_python 1" ${SRPM}
 rm -rf ${RPMBUILD}/*
+
+if [ "$BUILDBAT" = "1" ]; then
+	echo Building Bat package for "$PLATFORM"...
+	sleep 2
+	rpmbuild --rebuild ${SRPM2}
+	rm -rf ${RPMBUILD}/*
+fi
+
+echo Building Docs package for "$PLATFORM"...
+sleep 2
+rpmbuild --rebuild ${SRPM3}
+rm -rf ${RPMBUILD}/*
+
+if [ "$BUILDMTX" = "1" ]; then
+	echo Building mtx package for "$PLATFORM"...
+	sleep 2
+	rpmbuild --rebuild ${SRPM4}
+	rm -rf ${RPMBUILD}/*
+fi
 
 # delete the updatedb package and any debuginfo packages built
 rm -f ${RPMDIR}/bacula*debug*
@@ -127,14 +148,20 @@ mv -f ${RPMDIR}/bacula-postgresql-${VERSION}-${RELEASE}.${ARCH}.rpm \
 mv -f ${RPMDIR}/bacula-sqlite-${VERSION}-${RELEASE}.${ARCH}.rpm \
 ./bacula-sqlite-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
 
-mv -f ${RPMDIR}/bacula-mtx-${VERSION}-${RELEASE}.${ARCH}.rpm \
-./bacula-mtx-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
+if [ "$BUILDMTX" = "1" ]; then
+	mv -f ${RPMDIR}/bacula-mtx-${VERSION}-${RELEASE}.${ARCH}.rpm \
+	./bacula-mtx-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
+fi
 
 mv -f ${RPMDIR}/bacula-client-${VERSION}-${RELEASE}.${ARCH}.rpm \
 ./bacula-client-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
 
-mv -f ${RPMDIR}/bacula-bat-${VERSION}-${RELEASE}.${ARCH}.rpm \
-./bacula-bat-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
+if [ "$BUILDBAT" = "1" ]; then
+	mv -f ${RPMDIR}/bacula-bat-${VERSION}-${RELEASE}.${ARCH}.rpm \
+	./bacula-bat-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
+fi
+
+mv -f ${RPMDIR2}/bacula-docs-${VERSION}-${RELEASE}.noarch.rpm .
 
 # now sign the packages
 if [ "$SIGN" = "1" ]; then
@@ -164,3 +191,5 @@ ls
 # 08 Nov 2008 add use of pkgconfig to obtain QT4 paths
 # 31 Dec 2008 add su111
 # 05 Apr 2009 deprecate gconsole and wxconsole, bat built by default
+# 30 Jan 2010 adjust for mtx, bat and docs in separate srpm
+# 20 Feb 2010 remove mysql version number

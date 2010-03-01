@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -3005,7 +3005,7 @@ bool dir_update_volume_info(DCR *dcr, bool relabel, bool update_LastWritten)
 bool dir_get_volume_info(DCR *dcr, enum get_vol_info_rw  writing)
 {
    Dmsg0(20, "Enter dir_get_volume_info\n");
-   bstrncpy(dcr->VolCatInfo.VolCatName, dcr->VolumeName, sizeof(dcr->VolCatInfo.VolCatName));
+   dcr->setVolCatName(dcr->VolumeName);
    return 1;
 }
 
@@ -3117,8 +3117,8 @@ static void set_volume_name(const char *VolName, int volnum)
    DCR *dcr = jcr->dcr;
    VolumeName = VolName;
    vol_num = volnum;
-   bstrncpy(dev->VolCatInfo.VolCatName, VolName, sizeof(dev->VolCatInfo.VolCatName));
-   bstrncpy(dcr->VolCatInfo.VolCatName, VolName, sizeof(dcr->VolCatInfo.VolCatName));
+   dev->setVolCatName(VolName);
+   dcr->setVolCatName(VolName);
    bstrncpy(dcr->VolumeName, VolName, sizeof(dcr->VolumeName));
    dcr->VolCatInfo.Slot = volnum;
    dcr->VolCatInfo.InChanger = true;

@@ -34,7 +34,7 @@
 #include <unistd.h>
 #include <string.h>
 
-int main(void)
+int main(int argc, char *const *argv)
 {
     FILE *fp = fopen("gigaslam.gif", "w");
     char header[] = "<html>\n<table>\n<tr><td>\n";

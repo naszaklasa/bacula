@@ -49,6 +49,7 @@ selectDialog::selectDialog(Console *console, int conn)
    int row = 0;
 
    m_console = console;
+   m_console->notify(m_conn, false);
    setupUi(this);
    connect(listBox, SIGNAL(currentRowChanged(int)), this, SLOT(index_change(int)));
    setAttribute(Qt::WA_DeleteOnClose);

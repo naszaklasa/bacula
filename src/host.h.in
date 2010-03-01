@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,12 +28,14 @@
 /*
  * Define Host machine
  *
- *  Version $Id$
- *
  */
 
 #define HOST_OS  "@host@@post_host@"
 #define BACULA   "@BACULA@"
 #define DISTNAME "@DISTNAME@"
 #define DISTVER  "@DISTVER@"
+#ifdef HAVE_WIN32
+#define HELPDIR   "c://Program Files//Bacula//help"
+#else
 #define HELPDIR  "@htmldir@"
+#endif

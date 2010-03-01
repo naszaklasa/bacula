@@ -85,7 +85,6 @@ JobPlot::JobPlot(QTreeWidgetItem *parentTreeWidgetItem, JobPlotPass &passVals)
 
    /* this invokes the pass values = operator function */
    m_pass = passVals;
-   m_closeable = true;
    dockPage();
    /* If the values of the controls are predetermined (from joblist), then set
     * this class as current window at the front of the stack */

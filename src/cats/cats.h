@@ -539,7 +539,7 @@ extern const char* my_pg_batch_fill_path_query;
 
 #include "myingres.h"
 
-#define BDB_VERSION 11
+#define BDB_VERSION 12
 
 /* TEMP: the following is taken from select OID, typname from pg_type; */ /*SRE: huh? */
 #define IS_NUM(x)        ((x) == 20 || (x) == 21 || (x) == 23 || (x) == 700 || (x) == 701)

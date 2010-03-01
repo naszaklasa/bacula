@@ -34,9 +34,9 @@ LIBBACSQL_SRCS = mysql.c bdb.c dbi.c \
 LIBBACSQL_OBJS = $(LIBBACSQL_SRCS:.c=.o)
 LIBBACSQL_LOBJS = $(LIBBACSQL_SRCS:.c=.lo)
 
-LIBBACSQL_LT_CURRENT = 1
-LIBBACSQL_LT_REVISION = 0
-LIBBACSQL_LT_AGE = 0
+LIBBACSQL_LT_CURRENT = @LIBBACSQL_LT_CURRENT@
+LIBBACSQL_LT_REVISION = @LIBBACSQL_LT_REVISION@
+LIBBACSQL_LT_AGE = @LIBBACSQL_LT_AGE@
 
 .SUFFIXES:	.c .o .lo
 .PHONY:
@@ -68,7 +68,7 @@ libbacsql.a: $(LIBBACSQL_OBJS)
 
 libbacsql.la: Makefile $(LIBBACSQL_LOBJS)
 	@echo "Making $@ ..."	  
-	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACSQL_LOBJS) -export-dynamic -rpath $(libdir) -version-info $(LIBBACSQL_LT_CURRENT):$(LIBBACSQL_LT_REVISION):$(LIBBACSQL_LT_AGE) $(DB_LIBS)
+	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACSQL_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBACSQL_LT_CURRENT).$(LIBBACSQL_LT_REVISION).$(LIBBACSQL_LT_AGE) $(DB_LIBS)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \

@@ -42,7 +42,7 @@ CREATE TABLE PathHierarchy
 );
 
 CREATE INDEX pathhierarchy_ppathid 
-          ON PathHierarchy (PPathId);
+	  ON PathHierarchy (PPathId);
 
 CREATE TABLE PathVisibility
 (
@@ -54,7 +54,7 @@ CREATE TABLE PathVisibility
 );
 
 CREATE INDEX pathvisibility_jobid
-          ON PathVisibility (JobId);
+	  ON PathVisibility (JobId);
 
 CREATE INDEX basefiles_jobid_idx ON BaseFiles ( JobId );
 
