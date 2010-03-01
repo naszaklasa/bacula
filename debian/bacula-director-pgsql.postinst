@@ -64,6 +64,7 @@ configure)
         if [ "$dbc_install" = "true" ] ; then
             sed -e "s/make_catalog_backup bacula bacula/make_catalog_backup -h '$dbc_dbserver' -U $dbc_dbuser/" \
         -e "s/dbname = \"XXX_DBNAME_XXX\";/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\";/" \
+	-e "s~/XXX_DBNAME_XXX~/$dbc_dbname~" \
         -e "s/XXX_DBUSER_XXX/$dbc_dbuser/" -e "s/XXX_DBPASSWORD_XXX/$dbc_dbpass/" \
         -e s~XXX_DIRPASSWORD_XXX~$DIRPASSWD~ \
         -e s~XXX_MONDIRPASSWORD_XXX~$DIRMPASSWD~ \

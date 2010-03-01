@@ -8,8 +8,10 @@ bacula (5.0.1-1) UNRELEASED; urgency=low
     significant performance problems in other areas."
   * Reverted other Debian-specific patches to database update scripts
     that are no longer included in our packages.
+  * Fix for MySQL and PostgreSQL postinst to correctly put catalog backup
+    name in bacula-dir.conf.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Mar 2010 15:59:05 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Mar 2010 16:41:37 -0600
 
 bacula (5.0.0-6) unstable; urgency=low
 
