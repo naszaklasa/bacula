@@ -1,3 +1,9 @@
+bacula (5.0.1-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Mar 2010 15:46:40 -0600
+
 bacula (5.0.0-6) unstable; urgency=low
 
   * Generate default passwords at install time instead of at build time.
