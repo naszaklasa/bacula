@@ -1,4 +1,4 @@
-bacula (5.0.0-6) UNRELEASED; urgency=low
+bacula (5.0.0-6) unstable; urgency=low
 
   * Generate default passwords at install time instead of at build time.
     Closes: #365097.  Patch originated in Ubuntu; modified for Debian.
@@ -14,7 +14,7 @@ bacula (5.0.0-6) UNRELEASED; urgency=low
   * Correct perms on new Sqlite3 database so it's owned by bacula:bacula.
   * Correct Sqlite3 postinst to handle paths of DBNAME correctly.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Mar 2010 11:12:30 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Mar 2010 15:43:02 -0600
 
 bacula (5.0.0-5) unstable; urgency=medium
 
