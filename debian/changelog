@@ -6,8 +6,10 @@ bacula (5.0.1-1) UNRELEASED; urgency=low
     new upstream statement saying "we strongly recommend to avoid the
     temptation to add new indexes.  In general, these will cause very
     significant performance problems in other areas."
+  * Reverted other Debian-specific patches to database update scripts
+    that are no longer included in our packages.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Mar 2010 15:55:40 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Mar 2010 15:59:05 -0600
 
 bacula (5.0.0-6) unstable; urgency=low
 

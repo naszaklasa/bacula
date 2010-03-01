@@ -9,7 +9,7 @@ echo "this script may take several minutes to run."
 echo " "
 
 bindir=/usr/bin
-cd /var/lib/bacula
+cd /var/bacula/working
 sqlite=sqlite
 
 ${bindir}/${sqlite} $* bacula.db <<END-OF-DATA
