@@ -76,10 +76,43 @@ need to be able to read the console config files.  These files are, by
 default, under /etc/bacula.  You'll need to specify the config file
 with -c for any of the GUI consoles.
 
+PERFORMANCE NOTES
+=================
+
+This was announced on Bacula's website with the release of Bacula 5.0.1:
+
+ Some of you have encountered performance problems with your
+ database (mainly with MySQL) with Bacula version 5.0.0.  This is
+ mainly because we've changed the SQL query used for restore,
+ accurate jobs and base jobs.  We have extensively tested this
+ change, and though it should be a little bit slower than the previous
+ versions, on a well configured database it should run
+ extremely well.  
+
+ We strongly recommend to avoid the temptation to add new indexes.
+ In general, these will cause very significant performance
+ problems in other areas.  A better approch is to carefully check
+ that all your MySQL memory configuation parameters are are
+ suitable for the size of your installation.  If you backup
+ millions of files, you need to adapt the database memory
+ configuration parameters concerning sorting, joining and global
+ memory.  By default, sort and join parameters are very small
+ (sometimes 8Kb), and having sufficient memory specified by those
+ parameters is extremely important to run fast.  
+
+ If adjusting your MySQL memory configuration values does not
+ solve your problem, you can also consider switching to
+ PostgreSQL, which performs much better with Bacula on big
+ installations (many millions of files per Job).  However for
+ large installations, you will also need to adjust the default
+ PostgreSQL memory configuration parameters.
+
+from http://www.bacula.org/en/?page=news
+
 POSTGRESQL NOTES
 ================
 
-The PostgreSQL Bacula packages are designed to work with PostgreSQL 8.3.
+The PostgreSQL Bacula packages are designed to work with PostgreSQL 8.4.
 If you are using an older version, you may need to edit some scripts
 in /etc/bacula/scripts so that it uses the correct version of the
 PostgreSQL binaries.  As it is possible to have multiple PostgreSQL
@@ -112,4 +145,4 @@ http://www.bacula.org.
 
 based on a file by Jose Luis Tallon
 
- -- John Goerzen <jgoerzen@complete.org>, Thu, 30 Apr 2009 16:27:47 -0500
+ -- John Goerzen <jgoerzen@complete.org>, Mon,  1 Mar 2010 16:03:29 -0600
