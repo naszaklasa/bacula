@@ -111,7 +111,7 @@ configure)
 	        -e s~XXX_MONDIRPASSWORD_XXX~$DIRMPASSWD~ \
 	        -e s~XXX_SDPASSWORD_XXX~$SDPASSWD~ \
 	        -e s~XXX_FDPASSWORD_XXX~$FDPASSWD~ \
-                -e "s~/XXX_DBNAME_XXX~/$dbc_dbname~" \
+                -e "s~/XXX_DBNAME_XXX~/$BACULADBNAME~" \
 		-e "s~\"XXX_DBNAME_XXX~\"$BACULADBNAME~" \
 		-e s~XXX_DBUSER_XXX~~ \
 		-e s~XXX_DBPASSWORD_XXX~~ \
