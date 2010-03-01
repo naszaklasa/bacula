@@ -42,8 +42,6 @@ CREATE TABLE File (
    MD5 TINYBLOB,
    PRIMARY KEY(FileId),
    INDEX (JobId),
-   INDEX (PathId),
-   INDEX (FilenameId),
    INDEX (JobId, PathId, FilenameId)
    );
 
@@ -52,6 +50,8 @@ CREATE TABLE File (
 #  to the above File table if your Verifies are
 #  too slow.
 #
+#  INDEX (PathId),
+#  INDEX (FilenameId),
 #  INDEX (FilenameId, PathId)
 #  INDEX (JobId),
 #
