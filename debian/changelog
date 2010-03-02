@@ -1,6 +1,6 @@
 bacula (5.0.1-1) UNRELEASED; urgency=low
 
-  * New upstream release.
+  * New upstream release.  Closes: #572166.
   * Revert dbcheck.8 to exact upstream version.
   * Drop Debian patches that add indices to databases.  This is per the
     new upstream statement saying "we strongly recommend to avoid the
