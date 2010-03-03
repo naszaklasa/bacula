@@ -1,4 +1,4 @@
-bacula (5.0.1-1) UNRELEASED; urgency=low
+bacula (5.0.1-1) unstable; urgency=low
 
   * New upstream release.  Closes: #572166.
   * Revert dbcheck.8 to exact upstream version.
@@ -11,7 +11,7 @@ bacula (5.0.1-1) UNRELEASED; urgency=low
   * Fix for MySQL and PostgreSQL postinst to correctly put catalog backup
     name in bacula-dir.conf.
 
- -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Mar 2010 16:41:37 -0600
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 03 Mar 2010 08:38:35 -0600
 
 bacula (5.0.0-6) unstable; urgency=low
 
