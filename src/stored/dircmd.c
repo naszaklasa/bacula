@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -43,8 +43,6 @@
  *
  *     Kern Sibbald, May MMI
  *
- *   Version $Id$
- *
  */
 
 #include "bacula.h"
@@ -58,7 +56,7 @@ extern struct s_last_job last_job;
 extern bool init_done;
 
 /* Static variables */
-static char derrmsg[]     = "3900 Invalid command\n";
+static char derrmsg[]     = "3900 Invalid command:";
 static char OKsetdebug[]  = "3000 OK setdebug=%d\n";
 static char invalid_cmd[] = "3997 Invalid command for a Director with Monitor directive enabled.\n";
 static char OK_bootstrap[]    = "3000 OK bootstrap\n";
@@ -83,7 +81,7 @@ static bool setdebug_cmd(JCR *jcr);
 static bool cancel_cmd(JCR *cjcr);
 static bool mount_cmd(JCR *jcr);
 static bool unmount_cmd(JCR *jcr);
-static bool action_on_purge_cmd(JCR *jcr);
+//static bool action_on_purge_cmd(JCR *jcr);
 static bool bootstrap_cmd(JCR *jcr);
 static bool changer_cmd(JCR *sjcr);
 static bool do_label(JCR *jcr, int relabel);
@@ -119,7 +117,7 @@ static struct s_cmds cmds[] = {
    {"status",      status_cmd,      1},
    {".status",     qstatus_cmd,     1},
    {"unmount",     unmount_cmd,     0},
-   {"action_on_purge",  action_on_purge_cmd,    0},
+//   {"action_on_purge",  action_on_purge_cmd,    0},
    {"use storage=", use_cmd,        0},
    {"run",         run_cmd,         0},
 // {"query",       query_cmd,       0},
@@ -234,14 +232,16 @@ void *handle_connection_request(void *arg)
            Dmsg1(200, "Do command: %s\n", cmds[i].cmd);
            if (!cmds[i].func(jcr)) { /* do command */
               quit = true; /* error, get out */
-              Dmsg1(190, "Command %s reqeusts quit\n", cmds[i].cmd);
+              Dmsg1(190, "Command %s requests quit\n", cmds[i].cmd);
            }
            found = true;             /* indicate command found */
            break;
         }
       }
       if (!found) {                   /* command not found */
-        bs->fsend(derrmsg);
+        POOL_MEM err_msg;
+        Mmsg(err_msg, "%s %s\n", derrmsg, bs->msg);
+        bs->fsend(err_msg.c_str());
         break;
       }
    }
@@ -307,14 +307,18 @@ static bool cancel_cmd(JCR *cjcr)
       } else {
          oldStatus = jcr->JobStatus;
          set_jcr_job_status(jcr, JS_Canceled);
+         Dmsg2(800, "Cancel JobId=%d %p\n", jcr->JobId, jcr);
          if (!jcr->authenticated && oldStatus == JS_WaitFD) {
             pthread_cond_signal(&jcr->job_start_wait); /* wake waiting thread */
          }
          if (jcr->file_bsock) {
-            bnet_sig(jcr->file_bsock, BNET_TERMINATE);
+            jcr->file_bsock->signal(BNET_TERMINATE);
+            jcr->file_bsock->set_terminated();
+            Dmsg2(800, "Term bsock jid=%d %p\n", jcr->JobId, jcr);
          } else {
             /* Still waiting for FD to connect, release it */
             pthread_cond_signal(&jcr->job_start_wait); /* wake waiting job */
+            Dmsg2(800, "Signal FD connect jid=%d %p\n", jcr->JobId, jcr);
          }
          /* If thread waiting on mount, wake him */
          if (jcr->dcr && jcr->dcr->dev && jcr->dcr->dev->waiting_for_mount()) {
@@ -462,7 +466,7 @@ static void label_volume_if_ok(DCR *dcr, char *oldname,
       dev->truncating = true;         /* let open() know we will truncate it */
    }
    /* Set old volume name for open if relabeling */
-   bstrncpy(dcr->VolCatInfo.VolCatName, volname, sizeof(dcr->VolCatInfo.VolCatName));
+   dcr->setVolCatName(volname);
    if (dev->open(dcr, mode) < 0) {
       dir->fsend(_("3910 Unable to open device %s: ERR=%s\n"),
          dev->print_name(), dev->bstrerror());
@@ -473,7 +477,7 @@ static void label_volume_if_ok(DCR *dcr, char *oldname,
    label_status = read_dev_volume_label(dcr);
    
    /* Set new volume name */
-   bstrncpy(dcr->VolCatInfo.VolCatName, newname, sizeof(dcr->VolCatInfo.VolCatName));
+   dcr->setVolCatName(newname);
    switch(label_status) {
    case VOL_NAME_ERROR:
    case VOL_VERSION_ERROR:
@@ -875,53 +879,45 @@ static bool unmount_cmd(JCR *jcr)
    return true;
 }
 
+#if 0
 /*
  * The truncate command will recycle a volume. The director can call this
  * after purging a volume so that disk space will not be wasted. Only useful
  * for File Storage, of course.
  *
+ *
+ * It is currently disabled
  */
 static bool action_on_purge_cmd(JCR *jcr)
 {
-   POOL_MEM devname;
-   POOL_MEM volumename;
    BSOCK *dir = jcr->dir_bsock;
-   DEVICE *dev;
-   DCR *dcr;
+
+   char devname[MAX_NAME_LENGTH];
+   char volumename[MAX_NAME_LENGTH];
    int action;
 
-   if (sscanf(dir->msg, "action_on_purge %127s vol=%s action=%d",
-              devname.c_str(), volumename.c_str(), &action) != 3) {
+   /* TODO: Need to find a free device and ask for slot to the director */
+   if (sscanf(dir->msg, 
+              "action_on_purge %127s vol=%127s action=%d",
+              devname, volumename, &action)!= 5) 
+   {
       dir->fsend(_("3916 Error scanning action_on_purge command\n"));
       goto done;
    }
-   unbash_spaces(volumename.c_str());
+   unbash_spaces(volumename);
+   unbash_spaces(devname);
 
-   /* FIXME: autochanger, drive = 0? how can we avoid that? we only work on
-    * files 
-    */
-   if ((dcr = find_device(jcr, devname, 0)) == NULL) {
-      dir->fsend(_("3999 Device \"%s\" not found or could not be opened.\n"), devname.c_str());
-      goto done;
-   }
+   /* Check if action is correct */
+   if (action & AOP_TRUNCTATE) {
 
-   dev = dcr->dev;
-
-   /* Store the VolumeName for opening and re-labeling the volume */
-   bstrncpy(dcr->VolumeName, volumename.c_str(), sizeof(dcr->VolumeName));
-   bstrncpy(dev->VolHdr.VolumeName, volumename.c_str(), sizeof(dev->VolHdr.VolumeName));
-
-   /* Re-write the label with the recycle flag */
-   if (rewrite_volume_label(dcr, true)) {
-      dir->fsend(_("3917 Volume recycled\n"));
-   } else {
-      dir->fsend(_("3918 Recycle failed\n"));
-   }
+   } 
+   /* ... */
 
 done:
    dir->signal(BNET_EOD);
    return true;
 }
+#endif
 
 /*
  * Release command from Director. This rewinds the device and if

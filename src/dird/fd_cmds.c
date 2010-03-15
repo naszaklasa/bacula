@@ -122,6 +122,9 @@ int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
    /*
     * Now send JobId and authorization key
     */
+   if (jcr->sd_auth_key == NULL) {
+      jcr->sd_auth_key = bstrdup("dummy");
+   }
    fd->fsend(jobcmd, edit_int64(jcr->JobId, ed1), jcr->Job, jcr->VolSessionId,
              jcr->VolSessionTime, jcr->sd_auth_key);
    if (!jcr->keep_sd_auth_key && strcmp(jcr->sd_auth_key, "dummy")) {

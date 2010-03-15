@@ -346,7 +346,8 @@ void update_vol_recyclepool(UAContext *ua, char *val, MEDIA_DBR *mr)
 {
    POOL_DBR pr;
    POOL_MEM query(PM_MESSAGE);
-   char ed1[50], ed2[50], *poolname;
+   char ed1[50], ed2[50];
+   const char *poolname;
 
    if(val && *val) { /* update volume recyclepool="Scratch" */
      /* If a pool name is given, look up the PoolId */
@@ -587,9 +588,9 @@ static int update_volume(UAContext *ua)
          case 13:
             update_vol_recyclepool(ua, ua->argv[j], &mr);
             break;
-	 case 14:
-	    update_vol_actiononpurge(ua, ua->argv[j], &mr);
-	    break;
+         case 14:
+            update_vol_actiononpurge(ua, ua->argv[j], &mr);
+            break;
          }
          done = true;
       }
@@ -818,14 +819,14 @@ static int update_volume(UAContext *ua)
 
       case 16:
          pm_strcpy(ret, "");
-	 ua->info_msg(_("Current ActionOnPurge is: %s\n"), 
+         ua->info_msg(_("Current ActionOnPurge is: %s\n"), 
                       aop_to_str(mr.ActionOnPurge, ret));
-	 if (!get_cmd(ua, _("Enter new ActionOnPurge (one of: Truncate, None): "))) {
+         if (!get_cmd(ua, _("Enter new ActionOnPurge (one of: Truncate, None): "))) {
             return 0;
-	 }
+         }
 
          update_vol_actiononpurge(ua, ua->cmd, &mr);
-	 break;
+         break;
 
       default:                        /* Done or error */
          ua->info_msg(_("Selection terminated.\n"));

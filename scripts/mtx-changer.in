@@ -2,8 +2,6 @@
 #
 # Bacula interface to mtx autoloader
 #
-#  $Id$
-#
 #  If you set in your Device resource
 #
 #  Changer Command = "path-to-this-script/mtx-changer %c %o %S %a %d"
@@ -30,7 +28,7 @@
 #      loaded		  which slot is loaded?
 #      list		  list Volume names (requires barcode reader)
 #      slots		  how many slots total?
-#      listall            list all info
+#      listall		  list all info
 #      transfer
 #
 #  Slots are numbered from 1 ...
@@ -49,6 +47,12 @@
 #
 
 # source our conf file
+if test ! -f @scriptdir@/mtx-changer.conf ; then
+  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  echo "ERROR: @scriptdir@/mtx-changer.conf file not found!!!!"
+  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+  exit 1
+fi
 . @scriptdir@/mtx-changer.conf
 
 MTX=@MTX@
@@ -72,7 +76,7 @@ make_temp_file() {
   if test x${TMPFILE} = x; then
      TMPFILE="@working_dir@/mtx.$$"
      if test -f ${TMPFILE}; then
-	echo "Temp file security problem on: ${TMPFILE}"
+	echo "ERROR: Temp file security problem on: ${TMPFILE}"
 	exit 1
      fi
   fi
@@ -107,7 +111,7 @@ check_parm_count() {
     pCount=$1
     pCountNeed=$2
     if test $pCount -lt $pCountNeed; then
-	echo "usage: mtx-changer ctl-device command [slot archive-device drive-index]"
+	echo "ERROR: usage: mtx-changer ctl-device command [slot archive-device drive-index]"
 	echo "	Insufficient number of arguments given."
 	if test $pCount -lt 2; then
 	    echo "  Mimimum usage is first two arguments ..."
@@ -129,8 +133,8 @@ case $2 in
 	check_parm_count $# 2
 	;;
     transfer)
-        check_parm_count $# 4
-        ;;
+	check_parm_count $# 4
+	;;
     *)
 	check_parm_count $# 5
 	;;
@@ -189,19 +193,19 @@ case $cmd in
       ;;
 
    listall)
-#  Drive content:         D:Drive num:F:Slot loaded:Volume Name
+#  Drive content:	  D:Drive num:F:Slot loaded:Volume Name
 #  D:0:F:2:vol2        or D:Drive num:E
 #  D:1:F:42:vol42   
 #  D:3:E
 # 
 #  Slot content:
-#  S:1:F:vol1             S:Slot num:F:Volume Name
-#  S:2:E               or S:Slot num:E
+#  S:1:F:vol1		  S:Slot num:F:Volume Name
+#  S:2:E	       or S:Slot num:E
 #  S:3:F:vol4
 # 
 #  Import/Export tray slots:
-#  I:10:F:vol10           I:Slot num:F:Volume Name
-#  I:11:E              or I:Slot num:E
+#  I:10:F:vol10 	  I:Slot num:F:Volume Name
+#  I:11:E	       or I:Slot num:E
 #  I:12:F:vol40
  
       debug "Doing mtx -f $ctl -- to list all"

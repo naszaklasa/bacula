@@ -435,7 +435,14 @@ Section "-Initialize"
 
   FileClose $R1
 
+  ${If} ${FileExists} "$OldInstallDir\bacula-fd.exe"
+    nsExec::ExecToLog '"$OldInstallDir\bacula-fd.exe" /kill'     ; Shutdown any bacula that could be running
+    Sleep 3000
+    nsExec::ExecToLog '"$OldInstallDir\bacula-fd.exe" /remove'   ; Remove existing service
+  ${EndIf}
+
 SectionEnd
+
 
 SectionGroup "Client" SecGroupClient
 
@@ -502,6 +509,11 @@ Section "Bat Console" SecBatConsole
   StrCpy $0 "$INSTDIR"
   StrCpy $1 bat.conf
   Call ConfigEditAndCopy
+
+  SetOutPath "$INSTDIR\help"
+  File "${SRC_DIR}\help\*"
+  SetOutPath "$INSTDIR"
+   
 
   ; Create Start Menu entry
   CreateShortCut "$SMPROGRAMS\Bacula\Bat.lnk" "$INSTDIR\bat.exe" '-c "$INSTDIR\bat.conf"' "$INSTDIR\bat.exe" 0
@@ -611,7 +623,7 @@ UninstallText "This will uninstall Bacula. Click Uninstall to continue."
 Section "Uninstall"
   ; Shutdown any baculum that could be running
   nsExec::ExecToLog '"$INSTDIR\bacula-fd.exe" /kill'
-  Sleep 5000
+  Sleep 3000
 
 ; ReadRegDWORD $R0 HKLM "Software\Bacula" "Service_Bacula-fd"
   ; Remove bacula service
@@ -630,6 +642,7 @@ Section "Uninstall"
   ; remove files and uninstaller (preserving config for now)
   Delete /REBOOTOK "$INSTDIR\doc\*"
   Delete /REBOOTOK "$INSTDIR\*"
+  Delete /REBOOTOK "$INSTDIR\help\*"
 
   ; Check for existing installation
   MessageBox MB_YESNO|MB_ICONQUESTION \
@@ -655,6 +668,7 @@ NoDel:
 
   ; remove directories used
   RMDir "$INSTDIR\doc"
+  RMDir "$INSTDIR\help"
   RMDir "$INSTDIR"
 SectionEnd
 

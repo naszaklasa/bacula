@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,7 +27,6 @@
 */
  
 /*
- *   Version $Id$
  *
  *  Helper functions for tree widget formatting
  *
@@ -309,11 +308,11 @@ void ItemFormatterBase::setDurationFld(int index, const QString &fld)
    char suffix = 's';
    if (dfld) {
       for (int pos = 0 ; sufs[pos] ; ++pos) {
-	  if (dfld % divs[pos] == 0) {
-	     dfld /= divs[pos];
-	     suffix = sufs[pos];
-	     break;
-	  }
+          if (dfld % divs[pos] == 0) {
+             dfld /= divs[pos];
+             suffix = sufs[pos];
+             break;
+          }
       }
    }
    QString msg;
@@ -325,13 +324,13 @@ void ItemFormatterBase::setDurationFld(int index, const QString &fld)
       dfld = fld.trimmed().toLongLong();
       msg = "";
       for (int pos = 0 ; sufs[pos] ; ++pos) {
-	  if (dfld / divs[pos] != 0) {
-	     msg += QString(" %1%2").arg(dfld / divs[pos]).arg(sufs[pos]);
-	     dfld %= divs[pos];
-	  }
+          if (dfld / divs[pos] != 0) {
+             msg += QString(" %1%2").arg(dfld / divs[pos]).arg(sufs[pos]);
+             dfld %= divs[pos];
+          }
       }
       if (dfld)
- 	 msg += QString(" %1s").arg(dfld);
+         msg += QString(" %1s").arg(dfld);
    }
 
    setNumericFld(index, msg, fld.trimmed().toLongLong());
@@ -536,4 +535,3 @@ const QTableWidgetItem *TableItemFormatter::widget(int col) const
 {
    return parent->item(row, col);
 }
-

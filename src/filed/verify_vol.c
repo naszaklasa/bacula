@@ -147,12 +147,6 @@ void do_verify_volume(JCR *jcr)
             goto bail_out;
          }
          Dmsg2(30, "Got Attr: FilInx=%d type=%d\n", record_file_index, type);
-         if (record_file_index != file_index) {
-            Jmsg(jcr, M_FATAL, 0, _("Record header file index %ld not equal record index %ld\n"),
-               file_index, record_file_index);
-            Dmsg0(0, "File index error\n");
-            goto bail_out;
-         }
          ap = sd->msg;
          while (*ap++ != ' ')         /* skip record file index */
             ;

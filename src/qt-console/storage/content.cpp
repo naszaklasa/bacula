@@ -52,7 +52,6 @@ Content::Content(QString storage, QTreeWidgetItem *parentWidget)
    m_populated = false;
    m_firstpopulation = true;
    m_checkcurwidget = true;
-   m_closeable = true;
    m_currentStorage = storage;
 
    connect(pbUpdate, SIGNAL(clicked()), this,

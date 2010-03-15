@@ -1,3 +1,6 @@
+#include "bacula.h"
+
+#ifdef HAVE_INGRES
 EXEC SQL INCLUDE SQLCA;
 EXEC SQL INCLUDE SQLDA;
 
@@ -7,503 +10,543 @@ EXEC SQL INCLUDE SQLDA;
 
 #include "myingres.h"
 
-#define INGRES_DEBUG 0
-#define DEBB(x) if (INGRES_DEBUG >= x) {
-#define DEBE }
-
-/* ---Implementations--- */
+/*
+ * ---Implementations---
+ */
 int INGcheck()
 {
-    EXEC SQL BEGIN DECLARE SECTION;
-		char errbuf[256];
-    EXEC SQL END DECLARE SECTION;
-    
-	if (sqlca.sqlcode < 0) 
-	{
-		EXEC SQL INQUIRE_INGRES(:errbuf = ERRORTEXT);
-		printf("Ingres-DBMS-Fehler: %s\n", errbuf);
-		return sqlca.sqlcode;
-    } 
-	else 
-		return 0;
+   return (sqlca.sqlcode < 0) ? sqlca.sqlcode : 0;
 }
 
 short INGgetCols(const char *stmt)
 {
-    short number = 1;
-    IISQLDA *sqlda;
-    sqlda = (IISQLDA *)calloc(1,IISQDA_HEAD_SIZE + (number * IISQDA_VAR_SIZE));
-    if (sqlda == (IISQLDA *)0)
-	{ printf("Failure allocating %d SQLDA elements\n",number); }
-    sqlda->sqln = number;
-    
-    EXEC SQL BEGIN DECLARE SECTION;
-	char stmt_buffer[2000];
-    EXEC SQL END DECLARE SECTION;
-    
-    strcpy(stmt_buffer,stmt);
-    
-    EXEC SQL PREPARE s1 from :stmt_buffer;
-    EXEC SQL DESCRIBE s1 into :sqlda;
-    
-    number = sqlda->sqld;
-    free(sqlda);
-    return number;
+   EXEC SQL BEGIN DECLARE SECTION;
+   char *stmtd;
+   EXEC SQL END DECLARE SECTION;
+   
+   short number = 1;
+   IISQLDA *sqlda;
+
+   sqlda = (IISQLDA *)malloc(IISQDA_HEAD_SIZE + (number * IISQDA_VAR_SIZE));
+   memset(sqlda, 0, (IISQDA_HEAD_SIZE + (number * IISQDA_VAR_SIZE)));
+   
+   sqlda->sqln = number;
+   
+   stmtd = (char*)malloc(strlen(stmt)+1);
+   strncpy(stmtd,stmt,strlen(stmt)+1);
+     
+   EXEC SQL PREPARE s1 from :stmtd;
+   if (INGcheck() < 0) {
+      free(stmtd);
+      free(sqlda);
+      return -1;
+   }
+   EXEC SQL DESCRIBE s1 into :sqlda;
+   if (INGcheck() < 0) {
+      free(stmtd);
+      free(sqlda);
+      return -1;
+   }
+     
+   number = sqlda->sqld;
+   free(stmtd);
+   free(sqlda);
+   return number;
 }
 
 IISQLDA *INGgetDescriptor(short numCols, const char *stmt)
 {
-    IISQLDA *sqlda;
-    sqlda = (IISQLDA *)calloc(1,IISQDA_HEAD_SIZE + (numCols * IISQDA_VAR_SIZE));
-    if (sqlda == (IISQLDA *)0) 
-	{ printf("Failure allocating %d SQLDA elements\n",numCols); }
-    
-    sqlda->sqln = numCols;
-    
-    EXEC SQL BEGIN DECLARE SECTION;
-	char stmt_buffer[2000];
-    EXEC SQL END DECLARE SECTION;
+   EXEC SQL BEGIN DECLARE SECTION;
+   char *stmtd;
+   EXEC SQL END DECLARE SECTION;
 
-    strcpy(stmt_buffer,stmt);
+   int i;
+   IISQLDA *sqlda;
 
-    EXEC SQL PREPARE s2 INTO :sqlda FROM :stmt_buffer;
+   sqlda = (IISQLDA *)malloc(IISQDA_HEAD_SIZE + (numCols * IISQDA_VAR_SIZE));
+   memset(sqlda, 0, (IISQDA_HEAD_SIZE + (numCols * IISQDA_VAR_SIZE)));
+   
+   sqlda->sqln = numCols;
+   
+   stmtd = (char *)malloc(strlen(stmt)+1);
+   strncpy(stmtd,stmt,strlen(stmt)+1);
+  
+   EXEC SQL PREPARE s2 INTO :sqlda FROM :stmtd;
+  
+   free(stmtd);
 
-    int i;
-    for (i=0;i<sqlda->sqld;++i)
-    {
-	sqlda->sqlvar[i].sqldata =
-	    (char *)malloc(sqlda->sqlvar[i].sqllen);
-	if (sqlda->sqlvar[i].sqldata == (char *)0)
-	    { printf("Failure allocating %d bytes for SQLVAR data\n",sqlda->sqlvar[i].sqllen); }
-
-	sqlda->sqlvar[i].sqlind = (short *)malloc(sizeof(short));
-	if (sqlda->sqlvar[i].sqlind == (short *)0) 
-	    { printf("Failure allocating sqlind\n"); }
-    }
-    
-    return sqlda;
+   for (i = 0; i < sqlda->sqld; ++i) {
+      /*
+       * Alloc space for variable like indicated in sqllen
+       * for date types sqllen is always 0 -> allocate by type
+       */
+      switch (abs(sqlda->sqlvar[i].sqltype)) {
+      case IISQ_TSW_TYPE:
+         sqlda->sqlvar[i].sqldata = (char *)malloc(IISQ_TSW_LEN);
+         break;
+      case IISQ_TSWO_TYPE:
+         sqlda->sqlvar[i].sqldata = (char *)malloc(IISQ_TSWO_LEN);
+         break;
+      case IISQ_TSTMP_TYPE:
+         sqlda->sqlvar[i].sqldata = (char *)malloc(IISQ_TSTMP_LEN);
+         break;
+      default:
+         sqlda->sqlvar[i].sqldata = (char *)malloc(sqlda->sqlvar[i].sqllen);
+         break;
+      }
+   }
+   
+   return sqlda;
 }
+
 void INGfreeDescriptor(IISQLDA *sqlda)
 {
-    int i;
-    for ( i = 0 ; i < sqlda->sqld ; ++i )
-    {
-    	free(sqlda->sqlvar[i].sqldata);
-	free(sqlda->sqlvar[i].sqlind);
-    }
-    free(sqlda);
-    sqlda = NULL;
+   int i;
+
+   for (i = 0; i < sqlda->sqld; ++i) {
+      if (sqlda->sqlvar[i].sqldata) {
+         free(sqlda->sqlvar[i].sqldata);
+      }
+      if (sqlda->sqlvar[i].sqlind) {
+         free(sqlda->sqlvar[i].sqlind);
+      }
+   }
+   free(sqlda);
+   sqlda = NULL;
 }
 
 int INGgetTypeSize(IISQLVAR *ingvar)
 {
-    int inglength = 0;
-    
-	switch (ingvar->sqltype)
-    {
-		case IISQ_DTE_TYPE:
-	    	inglength = 25;
-		    break;
-		case IISQ_MNY_TYPE:
-		    inglength = 8;
-		    break;
-		default:
-		    inglength = ingvar->sqllen;
-    }
-    
-	return inglength;
+   int inglength = 0;
+   
+   /*
+    * TODO: add date types (at least TSTMP,TSW TSWO)
+    */
+   switch (ingvar->sqltype) {
+   case IISQ_DTE_TYPE:
+      inglength = 25;
+      break;
+   case IISQ_MNY_TYPE:
+      inglength = 8;
+      break;
+   default:
+      inglength = ingvar->sqllen;
+      break;
+   }
+   
+   return inglength;
 }
 
 INGresult *INGgetINGresult(IISQLDA *sqlda)
 {
-    INGresult *result = NULL;
-    
-    result = (INGresult *)calloc(1, sizeof(INGresult));
-    if (result == (INGresult *)0) 
-	{ printf("Failure allocating INGresult\n"); }
-    
-    result->sqlda	= sqlda;
-    result->num_fields	= sqlda->sqld;
-    result->num_rows	= 0;
-    result->first_row	= NULL;
-    result->status	= ING_EMPTY_RESULT;
-    result->act_row	= NULL;
-    strcpy(result->numrowstring,"");
-    
-    result->fields = (INGRES_FIELD *)calloc(1, sizeof(INGRES_FIELD) * result->num_fields);
-    if (result->fields == (INGRES_FIELD *)0)
-	{ printf("Failure allocating %d INGRES_FIELD elements\n",result->num_fields); }
+   int i;
+   INGresult *result = NULL;
+   
+   result = (INGresult *)malloc(sizeof(INGresult));
+   memset(result, 0, sizeof(INGresult));
+   
+   result->sqlda = sqlda;
+   result->num_fields = sqlda->sqld;
+   result->num_rows = 0;
+   result->first_row = NULL;
+   result->status = ING_EMPTY_RESULT;
+   result->act_row = NULL;
+   memset(result->numrowstring, 0, sizeof(result->numrowstring));
+   
+   if (result->num_fields) {
+      result->fields = (INGRES_FIELD *)malloc(sizeof(INGRES_FIELD) * result->num_fields);
+      memset(result->fields, 0, sizeof(INGRES_FIELD) * result->num_fields);
 
-    DEBB(2)
-	printf("INGgetINGresult, before loop over %d fields\n", result->num_fields);
-    DEBE
+      for (i = 0; i < result->num_fields; ++i) {
+         memset(result->fields[i].name, 0, 34);
+         strncpy(result->fields[i].name, sqlda->sqlvar[i].sqlname.sqlnamec, sqlda->sqlvar[i].sqlname.sqlnamel);
+         result->fields[i].max_length = INGgetTypeSize(&sqlda->sqlvar[i]);
+         result->fields[i].type = abs(sqlda->sqlvar[i].sqltype);
+         result->fields[i].flags = (abs(sqlda->sqlvar[i].sqltype)<0) ? 1 : 0;
+      }
+   }
 
-    int i;
-    for (i=0;i<result->num_fields;++i)
-    {
-	memset(result->fields[i].name,'\0',34);
-	strncpy(result->fields[i].name,
-	    sqlda->sqlvar[i].sqlname.sqlnamec,
-	    sqlda->sqlvar[i].sqlname.sqlnamel);
-	result->fields[i].max_length 	= INGgetTypeSize(&sqlda->sqlvar[i]);
-	result->fields[i].type 		= abs(sqlda->sqlvar[i].sqltype);
-	result->fields[i].flags		= (abs(sqlda->sqlvar[i].sqltype)<0) ? 1 : 0;
-    }
-
-    return result;
+   return result;
 }
 
 void INGfreeINGresult(INGresult *ing_res)
 {
-    /* TODO: free all rows and fields, then res, not descriptor! */
-    if( ing_res != NULL )
-    {
-	/* use of rows is a nasty workaround til I find the reason,
-	   why aggregates like max() don't work
-	 */
-	int rows = ing_res->num_rows;
-	ING_ROW *rowtemp;
-	ing_res->act_row = ing_res->first_row;
-	while (ing_res->act_row != NULL && rows > 0)
-	{
-	    rowtemp = ing_res->act_row->next;
-	    INGfreeRowSpace(ing_res->act_row, ing_res->sqlda);
-	    ing_res->act_row = rowtemp;
-	    --rows;
-	}
-	free(ing_res->fields);
-    }
-    free(ing_res);
-    ing_res = NULL;
+   int rows;
+   ING_ROW *rowtemp;
+
+   /*
+    * Free all rows and fields, then res, not descriptor!
+    */
+   if (ing_res != NULL) {
+      /*
+       * Use of rows is a nasty workaround til I find the reason,
+       * why aggregates like max() don't work
+       */
+      rows = ing_res->num_rows;
+      ing_res->act_row = ing_res->first_row;
+      while (ing_res->act_row != NULL && rows > 0) {
+         rowtemp = ing_res->act_row->next;
+         INGfreeRowSpace(ing_res->act_row, ing_res->sqlda);
+         ing_res->act_row = rowtemp;
+         --rows;
+      }
+      if (ing_res->fields) {
+         free(ing_res->fields);
+      }
+   }
+   free(ing_res);
+   ing_res = NULL;
 }
 
 ING_ROW *INGgetRowSpace(INGresult *ing_res)
 {
-    IISQLDA *sqlda = ing_res->sqlda;
-    ING_ROW *row = NULL;
-    IISQLVAR *vars = NULL;
-    row = (ING_ROW *)calloc(1,sizeof(ING_ROW));
-    if (row == (ING_ROW *)0)
-	{ printf("Failure allocating ING_ROW\n"); }
+   int i;
+   unsigned short len; /* used for VARCHAR type length */
+   IISQLDA *sqlda = ing_res->sqlda;
+   ING_ROW *row = NULL;
+   IISQLVAR *vars = NULL;
 
-    vars = (IISQLVAR *)calloc(1,sizeof(IISQLVAR) * sqlda->sqld);
-    if (vars == (IISQLVAR *)0)
-	{ printf("Failure allocating %d SQLVAR elements\n",sqlda->sqld); }
+   row = (ING_ROW *)malloc(sizeof(ING_ROW));
+   memset(row, 0, sizeof(ING_ROW));
 
-    row->sqlvar = vars;
-    row->next = NULL;
+   vars = (IISQLVAR *)malloc(sizeof(IISQLVAR) * sqlda->sqld);
+   memset(vars, 0, sizeof(IISQLVAR) * sqlda->sqld);
 
-    int i;
-    unsigned short len; /* used for VARCHAR type length */
-    for (i=0;i<sqlda->sqld;++i)
-    {
-	/* make strings out of the data, then the space and assign 
-	    (why string? at least it seems that way, looking into the sources)
-	 */
-	switch (abs(ing_res->fields[i].type))
-	{
-	    case IISQ_VCH_TYPE:
-		len = ((ING_VARCHAR *)sqlda->sqlvar[i].sqldata)->len;
-		DEBB(2)
-		    printf("length of varchar: %d\n", len);
-		DEBE
-		vars[i].sqldata = (char *)malloc(len+1);
-		if (vars[i].sqldata == (char *)0)
-		    { printf("Failure allocating %d bytes for SQLVAR data\n",len+1); }
-		memcpy(vars[i].sqldata,sqlda->sqlvar[i].sqldata+2,len);
-		vars[i].sqldata[len] = '\0';
-		break;
-	    case IISQ_CHA_TYPE:
-		vars[i].sqldata = (char *)malloc(ing_res->fields[i].max_length+1);
-		if (vars[i].sqldata == (char *)0)
-		    { printf("Failure allocating %d bytes for SQLVAR data\n",ing_res->fields[i].max_length); }
-		memcpy(vars[i].sqldata,sqlda->sqlvar[i].sqldata,sqlda->sqlvar[i].sqllen);
-		vars[i].sqldata[ing_res->fields[i].max_length] = '\0';
-		break;
-	    case IISQ_INT_TYPE:
-		vars[i].sqldata = (char *)malloc(20);
-		memset(vars[i].sqldata,'\0',20);
-		sprintf(vars[i].sqldata,"%d",*(int*)sqlda->sqlvar[i].sqldata);
-		break;
-	}
-	vars[i].sqlind = (short *)malloc(sizeof(short));
-	if (sqlda->sqlvar[i].sqlind == (short *)0) 
-	    { printf("Failure allocating sqlind\n"); }
-	memcpy(vars[i].sqlind,sqlda->sqlvar[i].sqlind,sizeof(short));
-	DEBB(2)
-	    printf("INGgetRowSpace, Field %d, type %d, length %d, name %s\n",
-	    i, sqlda->sqlvar[i].sqltype, sqlda->sqlvar[i].sqllen, ing_res->fields[i].name);
-	DEBE
-    }
-    
-    return row;
+   row->sqlvar = vars;
+   row->next = NULL;
+
+   for (i = 0; i < sqlda->sqld; ++i) {
+      /*
+       * Make strings out of the data, then the space and assign 
+       * (why string? at least it seems that way, looking into the sources)
+       */
+      switch (ing_res->fields[i].type) {
+      case IISQ_VCH_TYPE:
+         len = ((ING_VARCHAR *)sqlda->sqlvar[i].sqldata)->len;
+         vars[i].sqldata = (char *)malloc(len+1);
+         memcpy(vars[i].sqldata,sqlda->sqlvar[i].sqldata+2,len);
+         vars[i].sqldata[len] = '\0';
+         break;
+      case IISQ_CHA_TYPE:
+         vars[i].sqldata = (char *)malloc(ing_res->fields[i].max_length+1);
+         memcpy(vars[i].sqldata,sqlda->sqlvar[i].sqldata,sqlda->sqlvar[i].sqllen);
+         vars[i].sqldata[ing_res->fields[i].max_length] = '\0';
+         break;
+      case IISQ_INT_TYPE:
+         vars[i].sqldata = (char *)malloc(20);
+         memset(vars[i].sqldata, 0, 20);
+         switch (sqlda->sqlvar[i].sqllen) {
+         case 2:
+            bsnprintf(vars[i].sqldata, 20, "%d",*(short*)sqlda->sqlvar[i].sqldata);
+            break;
+         case 4:
+            bsnprintf(vars[i].sqldata, 20, "%ld",*(int*)sqlda->sqlvar[i].sqldata);
+            break;
+         case 8:
+            bsnprintf(vars[i].sqldata, 20, "%lld",*(long*)sqlda->sqlvar[i].sqldata);
+            break;
+         }
+         break;
+      case IISQ_TSTMP_TYPE:
+         vars[i].sqldata = (char *)malloc(IISQ_TSTMP_LEN+1);
+         vars[i].sqldata[IISQ_TSTMP_LEN] = '\0';
+         break;
+      case IISQ_TSWO_TYPE:
+         vars[i].sqldata = (char *)malloc(IISQ_TSWO_LEN+1);
+         vars[i].sqldata[IISQ_TSWO_LEN] = '\0';
+         break;
+      case IISQ_TSW_TYPE:
+         vars[i].sqldata = (char *)malloc(IISQ_TSW_LEN+1);
+         vars[i].sqldata[IISQ_TSW_LEN] = '\0';
+         break;
+      }
+      vars[i].sqlind = (short *)malloc(sizeof(short));
+      if (sqlda->sqlvar[i].sqlind) {
+         memcpy(vars[i].sqlind,sqlda->sqlvar[i].sqlind,sizeof(short));
+      } else {
+         *vars[i].sqlind = 0;
+      }
+   }
+   
+   return row;
 }
 
 
 void INGfreeRowSpace(ING_ROW *row, IISQLDA *sqlda)
 {
-    int i;
-    if (row == NULL || sqlda == NULL)
-    {
-	printf("INGfreeRowSpace: one argument is NULL!\n");
-	return;
-    }
+   int i;
 
-    for ( i = 0 ; i < sqlda->sqld ; ++i )
-    {
-    	free(row->sqlvar[i].sqldata);
-	free(row->sqlvar[i].sqlind);
-    }
-    free(row->sqlvar);
-    free(row);
+   if (row == NULL || sqlda == NULL) {
+      return;
+   }
+
+   for (i = 0; i < sqlda->sqld; ++i) {
+      if (row->sqlvar[i].sqldata) {
+         free(row->sqlvar[i].sqldata);
+      }
+      if (row->sqlvar[i].sqlind) {
+         free(row->sqlvar[i].sqlind);
+      }
+   }
+   free(row->sqlvar);
+   free(row);
 }
 
 int INGfetchAll(const char *stmt, INGresult *ing_res)
 {
-    int linecount = 0;
-    ING_ROW *row;
-    IISQLDA *desc;
-    
-    EXEC SQL BEGIN DECLARE SECTION;
-	char	stmt_buffer[2000];
-    EXEC SQL END DECLARE SECTION;
-    
-    strcpy(stmt_buffer,stmt);
-    desc = ing_res->sqlda;
-    
-    EXEC SQL DECLARE c2 CURSOR FOR s2;
-    INGcheck();
-    
-    EXEC SQL OPEN c2;
-    INGcheck();
-        
-    /* for (linecount=0;sqlca.sqlcode==0;++linecount) */
-    while(sqlca.sqlcode==0)
-    {
-        EXEC SQL FETCH c2 USING DESCRIPTOR :desc;
-	INGcheck();
+   int linecount = 0;
+   ING_ROW *row;
+   IISQLDA *desc;
+   int check = -1;
+   
+   desc = ing_res->sqlda;
+   
+   EXEC SQL DECLARE c2 CURSOR FOR s2;
+   if ((check = INGcheck()) < 0) {
+      return check;
+   }
+   
+   EXEC SQL OPEN c2;
+   if ((check = INGcheck()) < 0) {
+      return check;
+   }
+      
+   /* for (linecount = 0; sqlca.sqlcode == 0; ++linecount) */
+   while(sqlca.sqlcode == 0) {
+      EXEC SQL FETCH c2 USING DESCRIPTOR :desc;
+      if ((check = INGcheck()) < 0) {
+         EXEC SQL CLOSE c2;
+         return check;
+      }
 
-	if (sqlca.sqlcode == 0)
-	{
-	    row = INGgetRowSpace(ing_res); /* alloc space for fetched row */
-	        
-	    /* initialize list when encountered first time */
-	    if (ing_res->first_row == 0) 
-    	    {
-		ing_res->first_row = row; /* head of the list */
-		ing_res->first_row->next = NULL;
-		ing_res->act_row = ing_res->first_row;
-	    }	
-    	    ing_res->act_row->next = row; /* append row to old act_row */
-    	    ing_res->act_row = row; /* set row as act_row */
-	    row->row_number = linecount;
-	    ++linecount;
-		
-	    DEBB(2)
-	    int i;
-	    printf("Row %d ", linecount);
-	    for (i=0;i<ing_res->num_fields;++i)
-		{ printf("F%d:%s ",i,row->sqlvar[i].sqldata); }
-	    printf("\n");
-	    DEBE
-	
-	}
-    }
-    
-    EXEC SQL CLOSE c2;
-    
-    ing_res->status = ING_COMMAND_OK;
-    ing_res->num_rows = linecount;
-    return linecount;
+      if (sqlca.sqlcode == 0) {
+         row = INGgetRowSpace(ing_res); /* alloc space for fetched row */
+            
+         /*
+          * Initialize list when encountered first time
+          */
+         if (ing_res->first_row == 0) {
+            ing_res->first_row = row; /* head of the list */
+            ing_res->first_row->next = NULL;
+            ing_res->act_row = ing_res->first_row;
+         }      
+         ing_res->act_row->next = row; /* append row to old act_row */
+         ing_res->act_row = row; /* set row as act_row */
+         row->row_number = linecount;
+         ++linecount;
+      }
+   }
+   
+   EXEC SQL CLOSE c2;
+   
+   ing_res->status = ING_COMMAND_OK;
+   ing_res->num_rows = linecount;
+   return linecount;
 }
 
 ING_STATUS INGresultStatus(INGresult *res)
 {
-    if (res == NULL) {return ING_NO_RESULT;}
-    return res->status;
+   if (res == NULL) {return ING_NO_RESULT;}
+   return res->status;
 }
 
 void INGrowSeek(INGresult *res, int row_number)
 {
-    if (res->act_row->row_number == row_number) { return; }
-    
-    /* TODO: real error handling */
-    if (row_number<0 || row_number>res->num_rows) { return;}
+   ING_ROW *trow;
+   if (res->act_row->row_number == row_number) {
+      return;
+   }
+   
+   /*
+    * TODO: real error handling
+    */
+   if (row_number<0 || row_number>res->num_rows) {
+      return;
+   }
 
-    ING_ROW *trow = res->first_row;
-    while ( trow->row_number != row_number )
-    { trow = trow->next; }
-    res->act_row = trow;
-    /* note - can be null - if row_number not found, right? */
+   for (trow = res->first_row; trow->row_number != row_number; trow = trow->next) ;
+   res->act_row = trow;
+   /*
+    * Note - can be null - if row_number not found, right?
+    */
 }
 
 char *INGgetvalue(INGresult *res, int row_number, int column_number)
 {
-    if (row_number != res->act_row->row_number)
-	{ INGrowSeek(res, row_number); }
-    return res->act_row->sqlvar[column_number].sqldata;
+   if (row_number != res->act_row->row_number) {
+      INGrowSeek(res, row_number);
+   }
+   return res->act_row->sqlvar[column_number].sqldata;
 }
 
 int INGgetisnull(INGresult *res, int row_number, int column_number)
 {
-    if (row_number != res->act_row->row_number)
-	{ INGrowSeek(res, row_number); }
-    return (short)*res->act_row->sqlvar[column_number].sqlind;
+   if (row_number != res->act_row->row_number) {
+      INGrowSeek(res, row_number);
+   }
+   return (short)*res->act_row->sqlvar[column_number].sqlind;
 }
 
 int INGntuples(const INGresult *res)
 {
-    return res->num_rows;
+   return res->num_rows;
 }
 
 int INGnfields(const INGresult *res)
 {
-    return res->num_fields;
+   return res->num_fields;
 }
 
 char *INGfname(const INGresult *res, int column_number)
 {
-    if ( (column_number > res->num_fields) || (column_number < 0) )
-	{ return NULL; }
-    else
-	{ return res->fields[column_number].name; }
+   if ((column_number > res->num_fields) || (column_number < 0)) {
+      return NULL;
+   } else {
+      return res->fields[column_number].name;
+   }
 }
 
 short INGftype(const INGresult *res, int column_number)
 {
-    return res->fields[column_number].type;
+   return res->fields[column_number].type;
 }
 
-INGresult *INGexec(INGconn *conn, const char *query)
+int INGexec(INGconn *conn, const char *query)
 {
-    /* TODO: error handling -> res->status? */
-    IISQLDA *desc = NULL;
-    INGresult *res = NULL;
-    int cols = -1;
+   int check;
+   EXEC SQL BEGIN DECLARE SECTION;
+   int rowcount;
+   char *stmt;
+   EXEC SQL END DECLARE SECTION;
+   
+   stmt = (char *)malloc(strlen(query)+1);
+   strncpy(stmt,query,strlen(query)+1);
+   rowcount = -1;
 
-    EXEC SQL BEGIN DECLARE SECTION;
-        char stmt[2000];
-    EXEC SQL END DECLARE SECTION;
-    strncpy(stmt,query,strlen(query));
-    stmt[strlen(query)]='\0';
+   EXEC SQL EXECUTE IMMEDIATE :stmt;
+   free(stmt);
+   if ((check = INGcheck()) < 0) {
+      return check;
+   }
 
-    DEBB(1)
-	printf("INGexec: query is >>%s<<\n",stmt);
-    DEBE
+   EXEC SQL INQUIRE_INGRES(:rowcount = ROWCOUNT);
+   if ((check = INGcheck()) < 0) {
+      return check;
+   }
+   
+   return rowcount;
+}
 
-    if ((cols = INGgetCols(query)) == 0)
-    {
-	DEBB(1)
-	    printf("INGexec: non-select\n");
-	DEBE
-	/* non-select statement - TODO: EXECUTE IMMEDIATE */
-	EXEC SQL EXECUTE IMMEDIATE :stmt;
-    }
-    else
-    {
-	DEBB(1)
-	    printf("INGexec: select\n");
-	DEBE
-	/* select statement */
-	desc = INGgetDescriptor(cols, query);
-	res = INGgetINGresult(desc);
-	INGfetchAll(query, res);
-    }
-    return res;
+INGresult *INGquery(INGconn *conn, const char *query)
+{
+   /*
+    * TODO: error handling
+    */
+   IISQLDA *desc = NULL;
+   INGresult *res = NULL;
+   int rows = -1;
+   int cols = INGgetCols(query);
+
+   desc = INGgetDescriptor(cols, query);
+   res = INGgetINGresult(desc);
+   rows = INGfetchAll(query, res);
+
+   if (rows < 0) {
+     INGfreeINGresult(res);
+     return NULL;
+   }
+   return res;
 }
 
 void INGclear(INGresult *res)
 {
-    if (res == NULL) { return; }
-    IISQLDA *desc = res->sqlda;
-    INGfreeINGresult(res);
-    INGfreeDescriptor(desc);
+   if (res == NULL) {
+      return;
+   }
+   IISQLDA *desc = res->sqlda;
+   INGfreeINGresult(res);
+   INGfreeDescriptor(desc);
 }
 
 INGconn *INGconnectDB(char *dbname, char *user, char *passwd)
 {
-    if (dbname == NULL || strlen(dbname) == 0)
-	{ return NULL; }
+   if (dbname == NULL || strlen(dbname) == 0) {
+      return NULL;
+   }
 
-    INGconn *dbconn = (INGconn *)calloc(1,sizeof(INGconn));
-    if (dbconn == (INGconn *)0)
-	{ printf("Failure allocating INGconn\n"); }
+   INGconn *dbconn = (INGconn *)malloc(sizeof(INGconn));
+   memset(dbconn, 0, sizeof(INGconn));
 
-    EXEC SQL BEGIN DECLARE SECTION;
-	char	ingdbname[24];
-	char	ingdbuser[32];
-	char	ingdbpasw[32];
-	char	conn_name[32];
-	int	sess_id;
-    EXEC SQL END DECLARE SECTION;
+   EXEC SQL BEGIN DECLARE SECTION;
+   char ingdbname[24];
+   char ingdbuser[32];
+   char ingdbpasw[32];
+   char conn_name[32];
+   int sess_id;
+   EXEC SQL END DECLARE SECTION;
 
-    strcpy(ingdbname,dbname);
-    
-    if ( user != NULL)
-    {
-	DEBB(1)
-	    printf("Connection: with user/passwd\n");
-	DEBE
-        strcpy(ingdbuser,user);
-	if ( passwd != NULL)
-	    { strcpy(ingdbpasw,passwd); }
-	else
-	    { strcpy(ingdbpasw, ""); }
-	EXEC SQL CONNECT
-	    :ingdbname
-	    identified by :ingdbuser
-	    dbms_password = :ingdbpasw;
-    }
-    else
-    {
-	DEBB(1)
-	    printf("Connection: w/ user/passwd\n");
-	DEBE
-	EXEC SQL CONNECT :ingdbname;
-    }   
+   bstrncpy(ingdbname, dbname, sizeof(ingdbname));
    
-    EXEC SQL INQUIRE_SQL(:conn_name = connection_name);
-    EXEC SQL INQUIRE_SQL(:sess_id = session);
-    
-    strcpy(dbconn->dbname,ingdbname);
-    strcpy(dbconn->user,ingdbuser);
-    strcpy(dbconn->password,ingdbpasw);
-    strcpy(dbconn->connection_name,conn_name);
-    dbconn->session_id = sess_id;
+   if (user != NULL) {
+      bstrncpy(ingdbuser, user, sizeof(ingdbuser));
+      if (passwd != NULL) {
+         bstrncpy(ingdbpasw, passwd, sizeof(ingdbpasw));
+      } else {
+         memset(ingdbpasw, 0, sizeof(ingdbpasw));
+      }
+      EXEC SQL CONNECT
+         :ingdbname
+         identified by :ingdbuser
+         dbms_password = :ingdbpasw;
+   } else {
+      EXEC SQL CONNECT :ingdbname;
+   }   
+   
+   EXEC SQL INQUIRE_SQL(:conn_name = connection_name);
+   EXEC SQL INQUIRE_SQL(:sess_id = session);
+   
+   strncpy(dbconn->dbname, ingdbname, sizeof(dbconn->dbname));
+   strncpy(dbconn->user, ingdbuser, sizeof(dbconn->user));
+   strncpy(dbconn->password, ingdbpasw, sizeof(dbconn->password));
+   strncpy(dbconn->connection_name, conn_name, sizeof(dbconn->connection_name));
+   dbconn->session_id = sess_id;
+   dbconn->msg = (char*)malloc(257);
+   memset(dbconn->msg, 0, 257);
 
-    DEBB(1)
-	printf("Connected to '%s' with user/passwd %s/%s, sessID/name %i/%s\n",
-	    dbconn->dbname,
-	    dbconn->user,
-	    dbconn->password,
-	    dbconn->session_id,
-	    dbconn->connection_name
-	);
-    DEBE
-
-    return dbconn;
+   return dbconn;
 }
 
 void INGdisconnectDB(INGconn *dbconn)
 {
-    /* TODO: use of dbconn */
-    EXEC SQL DISCONNECT;
-    free(dbconn);
+   /*
+    * TODO: check for any real use of dbconn: maybe whenn multithreaded?
+    */
+   EXEC SQL DISCONNECT;
+   if (dbconn != NULL) {
+      free(dbconn->msg);
+      free(dbconn);
+   }
 }
 
 char *INGerrorMessage(const INGconn *conn)
 {
-    return NULL;
+   EXEC SQL BEGIN DECLARE SECTION;
+   char errbuf[256];
+   EXEC SQL END DECLARE SECTION;
+
+   EXEC SQL INQUIRE_INGRES(:errbuf = ERRORTEXT);
+   memcpy(conn->msg,&errbuf,256);
+   return conn->msg;
 }
 
-char	*INGcmdTuples(INGresult *res)
+char *INGcmdTuples(INGresult *res)
 {
-    return res->numrowstring;
+   return res->numrowstring;
 }
 
-
-/*      TODO?
-char *INGerrorMessage(const INGconn *conn);
+/* TODO?
 int INGputCopyEnd(INGconn *conn, const char *errormsg);
 int INGputCopyData(INGconn *conn, const char *buffer, int nbytes);
 */
+
+#endif

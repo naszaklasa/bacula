@@ -1,3 +1,36 @@
+bacula (5.0.1-1) unstable; urgency=low
+
+  * New upstream release.  Closes: #572166.
+  * Revert dbcheck.8 to exact upstream version.
+  * Drop Debian patches that add indices to databases.  This is per the
+    new upstream statement saying "we strongly recommend to avoid the
+    temptation to add new indexes.  In general, these will cause very
+    significant performance problems in other areas."
+  * Reverted other Debian-specific patches to database update scripts
+    that are no longer included in our packages.
+  * Fix for MySQL and PostgreSQL postinst to correctly put catalog backup
+    name in bacula-dir.conf.
+
+ -- John Goerzen <jgoerzen@complete.org>  Wed, 03 Mar 2010 08:38:35 -0600
+
+bacula (5.0.0-6) unstable; urgency=low
+
+  * Generate default passwords at install time instead of at build time.
+    Closes: #365097.  Patch originated in Ubuntu; modified for Debian.
+    Merged to Debian master at 8381602cfbecaea0ca8559100020f878af81a237.
+  * Call rm -rf /var/{log,lib}/bacula on purge.  This patch was part of
+    Ubuntu's set merged above.
+  * Modified Ubuntu's password patch to use
+    /etc/bacula/common_default_passwords instead of debconf per Debian
+    practice.
+  * Added full LSB support to init scripts.  Patch originated in Ubuntu,
+    and was merged with LSB status support already in Debian.
+    Merged to Debian master at b3e2b4bc8dc1ad2a66b1e80c4cfa6176a15a062d.
+  * Correct perms on new Sqlite3 database so it's owned by bacula:bacula.
+  * Correct Sqlite3 postinst to handle paths of DBNAME correctly.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 01 Mar 2010 15:43:02 -0600
+
 bacula (5.0.0-5~bpo50+1) lenny-backports; urgency=low
 
   * Rebuild for lenny-backports.
@@ -8,6 +41,7 @@ bacula (5.0.0-5~bpo50+1) lenny-backports; urgency=low
     - postgresql-server-dev-8.4 -> postgresql-server-dev-8.3
 
  -- Gerfried Fuchs <rhonda@debian.at>  Thu, 25 Feb 2010 19:46:04 +0100
+
 
 bacula (5.0.0-5) unstable; urgency=medium
 

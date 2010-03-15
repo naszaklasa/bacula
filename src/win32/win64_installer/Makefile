@@ -165,6 +165,9 @@ $(INSTALL_EXE): winbacula.nsi $(addprefix release64/,$(BACULA_BINARIES) $(DEPKGS
 	cp -f ../win32_installer/release32/zlib1.dll release64/zlib132.dll
 	cp -f ../release32/bacula.dll release64/bacula32.dll
 	cp -f ../win32_installer/release32/pthreadGCE.dll release64/pthreadGCE32.dll
+	rm -rf release64/help
+	mkdir release64/help
+	cp -f ../win32_installer/release32/help/* release64/help/
 	NSISDIR=$(NSIS_DIR) \
 	$(NSIS_DIR)/makensis -V3 $(DEFINES) winbacula.nsi
 

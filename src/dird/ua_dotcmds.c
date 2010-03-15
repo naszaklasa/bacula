@@ -187,12 +187,19 @@ static int bvfs_result_handler(void *ctx, int fields, char **row)
    UAContext *ua = (UAContext *)ctx;
    struct stat statp;
    int32_t LinkFI;
-   const char *fileid;
-   char *lstat;
+   char *fileid=row[BVFS_FileId];
+   char *lstat=row[BVFS_LStat];
+   char *jobid=row[BVFS_JobId];
+   
    char empty[] = "A A A A A A A A A A A A A A";
+   char zero[] = "0";
 
-   lstat = (row[BVFS_LStat] && row[BVFS_LStat][0])?row[BVFS_LStat]:empty;
-   fileid = (row[BVFS_FileId] && row[BVFS_FileId][0])?row[BVFS_FileId]:"0";
+   /* We need to deal with non existant path */
+   if (!fileid || !is_a_number(fileid)) {
+      lstat = empty;
+      jobid = zero;
+      fileid = zero;
+   }
 
    memset(&statp, 0, sizeof(struct stat));
    decode_stat(lstat, &statp, &LinkFI);
@@ -201,12 +208,12 @@ static int bvfs_result_handler(void *ctx, int fields, char **row)
    if (bvfs_is_dir(row)) {
       char *path = bvfs_basename_dir(row[BVFS_Name]);
       ua->send_msg("%s\t0\t%s\t%s\t%s\t%s\n", row[BVFS_PathId], fileid,
-                   row[BVFS_JobId], row[BVFS_LStat], path);
+                   jobid, lstat, path);
 
    } else if (bvfs_is_file(row)) {
       ua->send_msg("%s\t%s\t%s\t%s\t%s\t%s\n", row[BVFS_PathId],
-                   row[BVFS_FilenameId], fileid, row[BVFS_JobId],
-                   row[BVFS_LStat], row[BVFS_Name]);
+                   row[BVFS_FilenameId], fileid, jobid,
+                   lstat, row[BVFS_Name]);
    }
 
    return 0;

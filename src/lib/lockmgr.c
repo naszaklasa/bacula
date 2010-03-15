@@ -577,7 +577,7 @@ void *check_deadlock(void *)
       pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &old);
       pthread_testcancel();
    }
-   Pmsg0(000, "Undertaker is leaving...\n");
+   Dmsg0(100, "Exit check_deadlock.\n");
    pthread_cleanup_pop(1);
    return NULL;
 }

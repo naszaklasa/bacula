@@ -2,11 +2,14 @@
 # This file contains sample queries that you can possibly use in
 # your query.sql file.  However, please note that these examples
 # are not supported. They may or may not work -- in fact, they may
-# work with one SQL engine and not another.
+# work with one SQL engine and not another.  As a consequence,
+# please do not submit bug reports on either query.sql or 
+# sample-query.sql
 #
 # If you find that they work for MySQL and not for PostgreSQL,
 #  then please send us a whole new file corrected for PostgreSQL
-#  and we will post it here for everyone to use.
+#  and we will post it in the examples directory for everyone
+#  to use.
 #
 
 # 1 
@@ -236,5 +239,4 @@ Start, sum(JobFiles) AS Files,sum(JobBytes) AS Bytes
  AND JobMedia.MediaId=Media.MediaId
  GROUP by VolumeName, Job.JobID, Job.Name, Job.StartTime
  ORDER by JobName, Start;
-
 

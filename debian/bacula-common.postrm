@@ -23,6 +23,8 @@ case "$1" in
 		userdel bacula 2>&1 > /dev/null || true
 		rm -rf /var/run/bacula
 		rm -rf /etc/bacula
+		rm -rf /var/log/bacula
+		rm -rf /var/lib/bacula
 	;;
 
 	remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)

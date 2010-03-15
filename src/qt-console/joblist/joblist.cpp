@@ -353,7 +353,9 @@ void JobList::PgSeltreeWidgetClicked()
          m_splitter->setSizes(sizes);
       }
    }
-   dockPage();
+   if (!isOnceDocked()) {
+      dockPage();
+   }
 }
 
 /*

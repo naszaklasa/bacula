@@ -183,7 +183,9 @@ void FileSet::PgSeltreeWidgetClicked()
       populateTable();
       createContextMenu();
    }
-   dockPage();
+   if (!isOnceDocked()) {
+      dockPage();
+   }
 }
 
 /*

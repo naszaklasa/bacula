@@ -5,3 +5,45 @@ create_var_run_dir()
 		chown bacula:daemon /var/run/bacula/
 	fi
 }
+
+genRandomPassword()
+{
+    cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c33
+}
+
+readOrCreatePasswords()
+{
+    BACULAPWFILE=/etc/bacula/common_default_passwords
+    if [ -f $BACULAPWFILE ]; then
+        . $BACULAPWFILE
+    fi
+
+    if [ -z "$DIRPASSWD" -o -z "$DIRMPASSWD" -o -z "$SDPASSWD" -o \
+         -z "$SDMPASSWD" -o -z "$FDPASSWD" -o -z "$FDMPASSWD" ] ; then
+        # Create the passwords.
+        DIRPASSWD=`genRandomPassword`
+        DIRMPASSWD=`genRandomPassword`
+        SDPASSWD=`genRandomPassword`
+        SDMPASSWD=`genRandomPassword`
+        FDPASSWD=`genRandomPassword`
+        FDMPASSWD=`genRandomPassword`
+
+        # Save the passwords.
+        echo "# " > $BACULAPWFILE
+        chown root:root $BACULAPWFILE
+        chmod 0600 $BACULAPWFILE
+        cat >>$BACULAPWFILE <<EOF
+# This file holds defaults for new Bacula packages installed on this system.
+# It is used only when you install a new Bacula package, and can be
+# safely removed at any time.
+
+DIRPASSWD=$DIRPASSWD
+DIRMPASSWD=$DIRMPASSWD
+SDPASSWD=$SDPASSWD
+SDMPASSWD=$SDMPASSWD
+FDPASSWD=$FDPASSWD
+FDMPASSWD=$FDMPASSWD
+EOF
+    fi
+}
+

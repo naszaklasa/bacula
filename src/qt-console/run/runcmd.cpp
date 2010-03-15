@@ -61,7 +61,7 @@ runCmdPage::runCmdPage(int conn)
 
    connect(okButton, SIGNAL(pressed()), this, SLOT(okButtonPushed()));
    connect(cancelButton, SIGNAL(pressed()), this, SLOT(cancelButtonPushed()));
-   dockPage();
+   //dockPage();
    setCurrent();
    this->show();
 

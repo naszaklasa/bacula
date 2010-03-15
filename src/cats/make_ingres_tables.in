@@ -400,7 +400,7 @@ INSERT INTO Status (JobStatus,JobStatusLong) VALUES
 INSERT INTO Status (JobStatus,JobStatusLong) VALUES
    ('i', 'Doing batch insert file records');
 
-INSERT INTO Version (VersionId) VALUES (11);
+INSERT INTO Version (VersionId) VALUES (12);
 
 -- Make sure we have appropriate permissions
 \g

@@ -28,7 +28,9 @@ set -e
 SRCDIR="/usr/share/bacula-common/defconfig"
 DSTDIR="/etc/bacula"
 CONFIG="bacula-sd.conf"
-  
+
+. /usr/share/bacula-common/common-functions
+readOrCreatePasswords
 
 case "$1" in
     configure)
@@ -39,7 +41,9 @@ case "$1" in
 		TARGET=$DSTDIR/$CONFIG.dist
 	fi
 
-	sed -e s~@hostname@~`hostname`~ < $SRCDIR/$CONFIG > $TARGET
+	sed -e s~@hostname@~`hostname`~ \
+	-e s~XXX_SDPASSWORD_XXX~$SDPASSWD~ \
+	-e s~XXX_MONSDPASSWORD_XXX~$SDMPASSWD~ < $SRCDIR/$CONFIG > $TARGET
 	
 	# Harden permissions, so that passwords can not be looked at
 	chown bacula:bacula $TARGET

@@ -80,8 +80,8 @@ public:
    int notifyOff(); // enables/disables socket notification - returns the previous state
    bool notify(int conn, bool enable); // enables/disables socket notification - returns the previous state
    bool is_notify_enabled(int conn) const;
-   bool availableDirComm(int &conn);
-   bool currentDirComm(int &conn);
+   bool getDirComm(int &conn);  
+   bool findDirComm(int &conn);
    void displayToPrompt(int conn);
    QString returnFromPrompt(int conn);
 

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -27,6 +27,11 @@
 */
 /*
  * Bacula message handling routines
+ *
+ * NOTE: don't use any Jmsg or Qmsg calls within this file,
+ *   except in q_msg or j_msg (setup routines), 
+ *   otherwise you may get into recursive calls if there are
+ *   errors, and that can lead to looping or deadlocks.
  *
  *   Kern Sibbald, April 2000
  *
@@ -84,6 +89,43 @@ const char *host_os = HOST_OS;
 const char *distname = DISTNAME;
 const char *distver = DISTVER;
 
+/*
+ * Handle message delivery errors
+ */
+static void delivery_error(const char *fmt,...)
+{
+   va_list   arg_ptr;
+   int i, len, maxlen;
+   POOLMEM *pool_buf;
+   char dt[MAX_TIME_LENGTH];
+   int dtlen;
+
+   pool_buf = get_pool_memory(PM_EMSG);
+
+   bstrftime_ny(dt, sizeof(dt), time(NULL));
+   dtlen = strlen(dt);
+   dt[dtlen++] = ' ';
+   dt[dtlen] = 0;
+
+   i = Mmsg(pool_buf, "%s Message delivery ERROR: ", dt);
+
+   for (;;) {
+      maxlen = sizeof_pool_memory(pool_buf) - i - 1;
+      va_start(arg_ptr, fmt);
+      len = bvsnprintf(pool_buf+i, maxlen, fmt, arg_ptr);
+      va_end(arg_ptr);
+      if (len < 0 || len >= (maxlen-5)) {
+         pool_buf = realloc_pool_memory(pool_buf, maxlen + i + maxlen/2);
+         continue;
+      }
+      break;
+   }
+
+   fputs(pool_buf, stdout);  /* print this here to INSURE that it is printed */
+   fflush(stdout);
+   syslog(LOG_DAEMON|LOG_ERR, pool_buf);
+   free_memory(pool_buf);
+}                 
 
 void register_message_callback(void msg_callback(int type, char *msg))
 {
@@ -397,7 +439,7 @@ static BPIPE *open_mail_pipe(JCR *jcr, POOLMEM *&cmd, DEST *d)
       }
    } else {
       berrno be;
-      Jmsg(jcr, M_ERROR, 0, _("open mail pipe %s failed: ERR=%s\n"),
+      delivery_error(_("open mail pipe %s failed: ERR=%s\n"),
          cmd, be.bstrerror());
    }
    return bpipe;
@@ -480,7 +522,7 @@ void close_msg(JCR *jcr)
             if (msgs != daemon_msgs) {
                /* read what mail prog returned -- should be nothing */
                while (fgets(line, len, bpipe->rfd)) {
-                  Qmsg1(jcr, M_INFO, 0, _("Mail prog: %s"), line);
+                  delivery_error(_("Mail prog: %s"), line);
                }
             }
 
@@ -489,9 +531,9 @@ void close_msg(JCR *jcr)
                berrno be;
                be.set_errno(stat);
                Dmsg1(850, "Calling emsg. CMD=%s\n", cmd);
-               Qmsg2(jcr, M_ERROR, 0, _("Mail program terminated in error.\n"
-                                        "CMD=%s\n"
-                                        "ERR=%s\n"), cmd, be.bstrerror());
+               delivery_error(_("Mail program terminated in error.\n"
+                                 "CMD=%s\n"
+                                 "ERR=%s\n"), cmd, be.bstrerror());
             }
             free_memory(line);
 rem_temp_file:
@@ -586,9 +628,7 @@ static bool open_dest_file(JCR *jcr, DEST *d, const char *mode)
    d->fd = fopen(d->where, mode);
    if (!d->fd) {
       berrno be;
-      d->fd = stdout;
-      Qmsg2(jcr, M_ERROR, 0, _("fopen %s failed: ERR=%s\n"), d->where, be.bstrerror());
-      d->fd = NULL;
+      delivery_error(_("fopen %s failed: ERR=%s\n"), d->where, be.bstrerror());
       return false;
    }
    return true;
@@ -635,11 +675,14 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
        return;
     }
 
+    /* For serious errors make sure message is printed or logged */
     if (type == M_ABORT || type == M_ERROR_TERM) {
        fputs(dt, stdout);
-       fputs(msg, stdout);         /* print this here to INSURE that it is printed */
+       fputs(msg, stdout);
        fflush(stdout);
-       syslog(LOG_DAEMON|LOG_ERR, "%s", msg);
+       if (type == M_ABORT) {
+          syslog(LOG_DAEMON|LOG_ERR, "%s", msg);
+       }
     }
 
 
@@ -724,7 +767,7 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                    if (stat != 0) {
                       berrno be;
                       be.set_errno(stat);
-                      Qmsg2(jcr, M_ERROR, 0, _("Operator mail program terminated in error.\n"
+                      delivery_error(_("Msg delivery error: Operator mail program terminated in error.\n"
                             "CMD=%s\n"
                             "ERR=%s\n"), mcmd, be.bstrerror());
                    }
@@ -742,10 +785,8 @@ void dispatch_message(JCR *jcr, int type, utime_t mtime, char *msg)
                    d->fd = fopen(name, "w+b");
                    if (!d->fd) {
                       berrno be;
-                      d->fd = stdout;
-                      Qmsg2(jcr, M_ERROR, 0, _("fopen %s failed: ERR=%s\n"), name,
+                      delivery_error(_("Msg delivery error: fopen %s failed: ERR=%s\n"), name,
                             be.bstrerror());
-                      d->fd = NULL;
                       free_pool_memory(name);
                       V(fides_mutex);
                       break;
@@ -841,6 +882,34 @@ get_basename(const char *pathname)
 #endif
 }
 
+/*
+ * print or write output to trace file 
+ */
+static void pt_out(char *buf)
+{
+    /*
+     * Used the "trace on" command in the console to turn on
+     *  output to the trace file.  "trace off" will close the file.
+     */
+    if (trace) {
+       if (!trace_fd) {
+          char fn[200];
+          bsnprintf(fn, sizeof(fn), "%s/%s.trace", working_directory ? working_directory : "./", my_name);
+          trace_fd = fopen(fn, "a+b");
+       }
+       if (trace_fd) {
+          fputs(buf, trace_fd);
+          fflush(trace_fd);
+       } else {
+          /* Some problem, turn off tracing */
+          trace = false;
+       }
+    } else {   /* not tracing */
+       fputs(buf, stdout);
+       fflush(stdout);
+    }
+}
+
 /*********************************************************************
  *
  *  This subroutine prints a debug message if the level number
@@ -889,27 +958,7 @@ d_msg(const char *file, int line, int level, const char *fmt,...)
        bvsnprintf(buf+len, sizeof(buf)-len, (char *)fmt, arg_ptr);
        va_end(arg_ptr);
 
-       /*
-        * Used the "trace on" command in the console to turn on
-        *  output to the trace file.  "trace off" will close the file.
-        */
-       if (trace) {
-          if (!trace_fd) {
-             char fn[200];
-             bsnprintf(fn, sizeof(fn), "%s/%s.trace", working_directory ? working_directory : "./", my_name);
-             trace_fd = fopen(fn, "a+b");
-          }
-          if (trace_fd) {
-             fputs(buf, trace_fd);
-             fflush(trace_fd);
-          } else {
-             /* Some problem, turn off tracing */
-             trace = false;
-          }
-       } else {   /* not tracing */
-          fputs(buf, stdout);
-          fflush(stdout);
-       }
+       pt_out(buf);
     }
 }
 
@@ -964,8 +1013,8 @@ p_msg(const char *file, int line, int level, const char *fmt,...)
     va_start(arg_ptr, fmt);
     bvsnprintf(buf+len, sizeof(buf)-len, (char *)fmt, arg_ptr);
     va_end(arg_ptr);
-    fputs(buf, stdout);
-    fflush(stdout);
+
+    pt_out(buf);     
 }
 
 

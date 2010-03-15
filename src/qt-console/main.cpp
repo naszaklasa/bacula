@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,8 +26,6 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id$
- *
  *  Main program for bat (qt-console)
  *
  *   Kern Sibbald, January MMVII
@@ -48,6 +46,8 @@ static void usage();
 static int check_resources();
 
 extern bool parse_bat_config(CONFIG *config, const char *configfile, int exit_code);
+extern void message_callback(int /* type */, char *msg);
+
 
 #define CONFIG_FILE "bat.conf"     /* default configuration file */
 
@@ -74,12 +74,16 @@ int main(int argc, char *argv[])
    batTranslator.load(QString("bat_") + QLocale::system().name());
    app->installTranslator(&batTranslator);
 
-
+   register_message_callback(message_callback);
 
 #ifdef xENABLE_NLS
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
+#endif
+
+#ifdef HAVE_WIN32
+   set_trace(true);          /* output to trace file */
 #endif
 
    init_stack_dump();

@@ -1021,11 +1021,19 @@ static bool check_catalog(cat_op mode)
          }
          bstrncpy(sr.Name, store->name(), sizeof(sr.Name));
          sr.AutoChanger = store->autochanger;
-         db_create_storage_record(NULL, db, &sr);
+         if (!db_create_storage_record(NULL, db, &sr)) {
+            Jmsg(NULL, M_FATAL, 0, _("Could not create storage record for %s\n"), 
+                 store->name());
+            OK = false;
+         }
          store->StorageId = sr.StorageId;   /* set storage Id */
          if (!sr.created) {                 /* if not created, update it */
             sr.AutoChanger = store->autochanger;
-            db_update_storage_record(NULL, db, &sr);
+            if (!db_update_storage_record(NULL, db, &sr)) {
+               Jmsg(NULL, M_FATAL, 0, _("Could not update storage record for %s\n"),
+                    store->name());
+               OK = false;
+            }
          }
 
          /* tls_require implies tls_enable */

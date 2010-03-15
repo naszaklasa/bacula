@@ -32,6 +32,9 @@ case "$1" in
 	chown bacula:adm /var/log/bacula
 	chmod 750 /var/log/bacula
 
+        . /usr/share/bacula-common/common-functions
+        readOrCreatePasswords # create our common passwords if needed
+
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

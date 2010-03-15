@@ -53,7 +53,6 @@ MediaInfo::MediaInfo(QTreeWidgetItem *parentWidget, QString &mediaName)
    connect(pbEdit, SIGNAL(clicked()), this, SLOT(editVol()));
    connect(tableJob, SIGNAL(itemDoubleClicked(QTableWidgetItem*)), this, SLOT(showInfoForJob(QTableWidgetItem *)));
    
-   m_closeable = true;
    dockPage();
    setCurrent();
    populateForm();
@@ -138,12 +137,12 @@ void MediaInfo::populateForm()
       "LastWritten, VolMounts, VolBytes, Media.Enabled,"
       "Location.Location, VolStatus, RecyclePool.Name, Media.Recycle, "
       "VolReadTime/1000000, VolWriteTime/1000000, Media.VolUseDuration, "
-      "Media.MaxVolJobs, "
-      "Media.MaxVolFiles, Media.MaxVolBytes, Media.VolRetention,InChanger,Slot "
+      "Media.MaxVolJobs, Media.MaxVolFiles, Media.MaxVolBytes, "
+      "Media.VolRetention,InChanger,Slot "
       "FROM Media JOIN Pool USING (PoolId) LEFT JOIN Pool AS RecyclePool "
-      "ON (Media.RecyclePoolId = RecyclePool.PoolId) "
-      "LEFT JOIN Location USING (LocationId) "
-      "WHERE Media.VolumeName = '" + m_mediaName + "'";
+      "ON (Media.RecyclePoolId=RecyclePool.PoolId) "
+      "LEFT JOIN Location ON (Media.LocationId=Location.LocationId) "
+      "WHERE Media.VolumeName='" + m_mediaName + "'";
 
    QStringList results;
    if (m_console->sql_cmd(query, results)) {

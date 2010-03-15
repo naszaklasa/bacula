@@ -26,6 +26,7 @@ set -e
 #     `abort-remove' or `abort-deconfigure'.
 
 dbc_first_version=3.0.3-3
+dbc_dbfile_owner=bacula:bacula
 # set in config, must not be set here: dbc_dbuser=bacula
 # set in config, must not be set here: dbc_dbname=bacula.db
 # set in config, must not be set here: dbc_basepath=/var/lib/bacula
@@ -94,6 +95,9 @@ POSTINST_COMMON="/usr/share/bacula-director/postinst-common"
 DEFCONFIG="/usr/share/bacula-common/defconfig"
 CFGFILE="/etc/bacula/bacula-dir.conf"
 
+. /usr/share/bacula-common/common-functions
+readOrCreatePasswords
+
 case "$1" in
 configure)
 
@@ -101,9 +105,17 @@ configure)
         . /etc/dbconfig-common/bacula-director-sqlite3.conf
 	TARGET=$CFGFILE.dpkg-tmp
         # FIXME: should this tweak make_catalog_backup like bacula-director-pgsql.postinst does?
-	sed -e "s,dbname = bacula;,dbname = \"$dbc_basepath/$dbc_dbname\";," \
-            -e 's/ user = @db_user@;//' -e 's/ password = "@db_pswd@";//' \
-		$DEFCONFIG/bacula-dir.conf > $TARGET
+        BACULADBNAME=`echo "$dbc_dbname" | sed 's/.db$//'`
+
+	sed -e s~XXX_DIRPASSWORD_XXX~$DIRPASSWD~ \
+	        -e s~XXX_MONDIRPASSWORD_XXX~$DIRMPASSWD~ \
+	        -e s~XXX_SDPASSWORD_XXX~$SDPASSWD~ \
+	        -e s~XXX_FDPASSWORD_XXX~$FDPASSWD~ \
+                -e "s~/XXX_DBNAME_XXX~/$BACULADBNAME~" \
+		-e "s~\"XXX_DBNAME_XXX~\"$BACULADBNAME~" \
+		-e s~XXX_DBUSER_XXX~~ \
+		-e s~XXX_DBPASSWORD_XXX~~ \
+			$DEFCONFIG/bacula-dir.conf > $TARGET
         
 	/bin/bash $POSTINST_COMMON
 

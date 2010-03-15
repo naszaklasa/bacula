@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -29,8 +29,6 @@
  * tls.c TLS support functions
  *
  * Author: Landon Fuller <landonf@threerings.net>
- *
- * Version $Id$
  *
  * This file was contributed to the Bacula project by Landon Fuller
  * and Three Rings Design, Inc.
@@ -294,9 +292,11 @@ bool tls_postconnect_verify_host(JCR *jcr, TLS_CONNECTION *tls, const char *host
    X509_NAME *subject;
    bool auth_success = false;
    int extensions;
-   char data[256];
    int i, j;
 
+   int cnLastPos = -1;
+   X509_NAME_ENTRY *neCN;
+   ASN1_STRING *asn1CN;
 
    /* Check if peer provided a certificate */
    if (!(cert = SSL_get_peer_certificate(ssl))) {
@@ -370,11 +370,17 @@ bool tls_postconnect_verify_host(JCR *jcr, TLS_CONNECTION *tls, const char *host
    /* Try verifying against the subject name */
    if (!auth_success) {
       if ((subject = X509_get_subject_name(cert)) != NULL) {
-         if (X509_NAME_get_text_by_NID(subject, NID_commonName, data, sizeof(data)) > 0) {
-            /* NULL terminate data */
-            data[255] = 0;
-            if (strcasecmp(data, host) == 0) {
+         /* Loop through all CNs */
+         for (;;) {
+            cnLastPos = X509_NAME_get_index_by_NID(subject, NID_commonName, cnLastPos);
+            if (cnLastPos == -1) {
+               break;
+            }
+            neCN = X509_NAME_get_entry(subject, cnLastPos);
+            asn1CN = X509_NAME_ENTRY_get_data(neCN);
+            if (strcasecmp((const char*)asn1CN->data, host) == 0) {
                auth_success = true;
+               break;
             }
          }
       }

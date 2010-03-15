@@ -50,7 +50,6 @@ labelPage::labelPage()
  */
 labelPage::labelPage(QString &defString)
 {
-   m_closeable = true;
    showPage(defString);
 }
 

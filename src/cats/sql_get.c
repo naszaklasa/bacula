@@ -848,10 +848,10 @@ int db_get_num_media_records(JCR *jcr, B_DB *mdb)
    return stat;
 }
 
-
 /*
  * This function returns a list of all the Media record ids for
- *     the current Pool with the correct Media Type.
+ *     the current Pool, the correct Media Type, Recyle, Enabled, StorageId, VolBytes
+ *     VolumeName if specified
  *  The caller must free ids if non-NULL.
  *
  *  Returns false: on failure
@@ -864,12 +864,50 @@ bool db_get_media_ids(JCR *jcr, B_DB *mdb, MEDIA_DBR *mr, int *num_ids, uint32_t
    uint32_t *id;
    char ed1[50];
    bool ok = false;
+   char buf[MAX_NAME_LENGTH*3]; /* Can contain MAX_NAME_LENGTH*2+1 + AND ....='' */
+   char esc[MAX_NAME_LENGTH*2+1];
 
    db_lock(mdb);
    *ids = NULL;
-   Mmsg(mdb->cmd, "SELECT DISTINCT MediaId FROM Media WHERE PoolId=%s "
-         " AND MediaType='%s'",
-       edit_int64(mr->PoolId, ed1), mr->MediaType);
+
+   Mmsg(mdb->cmd, "SELECT DISTINCT MediaId FROM Media WHERE Recycle=%d AND Enabled=%d ",
+        mr->Recycle, mr->Enabled);
+
+   if (*mr->MediaType) {
+      db_escape_string(jcr, mdb, esc, mr->MediaType, strlen(mr->MediaType));
+      bsnprintf(buf, sizeof(buf), "AND MediaType='%s' ", esc);
+      pm_strcat(mdb->cmd, buf);
+   }
+
+   if (mr->StorageId) {
+      bsnprintf(buf, sizeof(buf), "AND StorageId=%s ", edit_uint64(mr->StorageId, ed1));
+      pm_strcat(mdb->cmd, buf);
+   }
+
+   if (mr->PoolId) {
+      bsnprintf(buf, sizeof(buf), "AND PoolId=%s ", edit_uint64(mr->PoolId, ed1));
+      pm_strcat(mdb->cmd, buf);
+   }
+
+   if (mr->VolBytes) {
+      bsnprintf(buf, sizeof(buf), "AND VolBytes > %s ", edit_uint64(mr->VolBytes, ed1));
+      pm_strcat(mdb->cmd, buf);
+   }
+
+   if (*mr->VolumeName) {
+      db_escape_string(jcr, mdb, esc, mr->VolumeName, strlen(mr->VolumeName));
+      bsnprintf(buf, sizeof(buf), "AND VolumeName = '%s' ", esc);
+      pm_strcat(mdb->cmd, buf);
+   }
+
+   if (*mr->VolStatus) {
+      db_escape_string(jcr, mdb, esc, mr->VolStatus, strlen(mr->VolStatus));
+      bsnprintf(buf, sizeof(buf), "AND VolStatus = '%s' ", esc);
+      pm_strcat(mdb->cmd, buf);
+   }
+
+   Dmsg1(100, "q=%s\n", mdb->cmd);
+
    if (QUERY_DB(jcr, mdb, mdb->cmd)) {
       *num_ids = sql_num_rows(mdb);
       if (*num_ids > 0) {

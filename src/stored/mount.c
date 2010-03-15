@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,6 @@
  *
  *   Kern Sibbald, August MMII
  *
- *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -72,7 +71,6 @@ bool DCR::mount_next_write_volume()
 {
    int retry = 0;
    bool ask = false, recycle, autochanger;
-   bool do_find = true;
    int mode;
    DCR *dcr = this;
 
@@ -90,7 +88,7 @@ bool DCR::mount_next_write_volume()
 mount_next_vol:
    Dmsg1(150, "mount_next_vol retry=%d\n", retry);
    /* Ignore retry if this is poll request */
-   if (!dev->poll && retry++ > 4) {
+   if (retry++ > 4) {
       /* Last ditch effort before giving up, force operator to respond */
       VolCatInfo.Slot = 0;
       unlock_volumes();
@@ -108,21 +106,16 @@ mount_next_vol:
    }
    recycle = false;
 
-   if (retry >= 2) {
-      do_find = false; 
-   }
-
    if (dev->must_unload()) {
       ask = true;                     /* ask operator to mount tape */
-      do_find = true;                 /* re-find a volume after unload */
    }
    unlock_volumes();
    do_unload();
    do_swapping(true /*is_writing*/);
    do_load(true /*is_writing*/);
-   lock_volumes();
 
-   if (do_find && !find_a_volume()) {
+   lock_volumes();
+   if (!find_a_volume()) {
       goto no_lock_bail_out;
    }
 
@@ -130,7 +123,7 @@ mount_next_vol:
       goto bail_out;
    }
    Dmsg3(150, "After find_next_append. Vol=%s Slot=%d Parts=%d\n",
-         VolCatInfo.VolCatName, VolCatInfo.Slot, VolCatInfo.VolCatParts);
+         getVolCatName(), VolCatInfo.Slot, VolCatInfo.VolCatParts);
    
    /*
     * Get next volume and ready it for append
@@ -144,6 +137,7 @@ mount_next_vol:
     *
     */
    unlock_volumes();
+   dcr->setVolCatInfo(false);   /* out of date when Vols unlocked */
    if (autoload_device(dcr, true/*writing*/, NULL) > 0) {
       autochanger = true;
       ask = false;
@@ -151,7 +145,6 @@ mount_next_vol:
       autochanger = false;
       VolCatInfo.Slot = 0;
       ask = retry >= 2;
-      do_find = true;           /* do find_a_volume if we retry */
    }
    lock_volumes();
    Dmsg1(150, "autoload_dev returns %d\n", autochanger);
@@ -174,6 +167,7 @@ mount_next_vol:
 
    if (ask) {
       unlock_volumes();
+      dcr->setVolCatInfo(false);   /* out of date when Vols unlocked */
       if (!dir_ask_sysop_to_mount_volume(dcr, ST_APPEND)) {
          Dmsg0(150, "Error return ask_sysop ...\n");
          goto no_lock_bail_out;
@@ -249,6 +243,16 @@ read_volume:
    case check_ok:
       break;
    }
+   /*
+    * Check that volcatinfo is good   
+    */
+   if (!dev->haveVolCatInfo()) {
+      Dmsg0(010, "Do not have volcatinfo\n");
+      if (!find_a_volume()) {
+         goto mount_next_vol;
+      }
+      dev->VolCatInfo = VolCatInfo;      /* structure assignment */
+   }
 
    /*
     * See if we have a fresh tape or a tape with data.
@@ -275,18 +279,21 @@ read_volume:
        * we need to position to the end of the volume, since we are
        * just now putting it into append mode.
        */
-      Dmsg0(200, "Device previously written, moving to end of data\n");
+      Dmsg1(100, "Device previously written, moving to end of data. Expect %lld bytes\n",
+           dev->VolCatInfo.VolCatBytes);
       Jmsg(jcr, M_INFO, 0, _("Volume \"%s\" previously written, moving to end of data.\n"),
          VolumeName);
 
       if (!dev->eod(dcr)) {
+         Dmsg2(050, "Unable to position to end of data on device %s: ERR=%s\n", 
+            dev->print_name(), dev->bstrerror());
          Jmsg(jcr, M_ERROR, 0, _("Unable to position to end of data on device %s: ERR=%s\n"),
             dev->print_name(), dev->bstrerror());
          mark_volume_in_error();
          goto mount_next_vol;
       }
       if (!is_eod_valid()) {
-         Dmsg0(150, "goto mount_next_vol\n");
+         Dmsg0(100, "goto mount_next_vol\n");
          goto mount_next_vol;
       }
 
@@ -352,7 +359,10 @@ bool DCR::find_a_volume()
          }
       }
    }
-   return true;
+   if (dcr->haveVolCatInfo()) {
+      return true;
+   }
+   return dir_get_volume_info(dcr, GET_VOL_INFO_FOR_WRITE);
 }
 
 int DCR::check_volume_label(bool &ask, bool &autochanger)
@@ -375,6 +385,7 @@ int DCR::check_volume_label(bool &ask, bool &autochanger)
 
    Dmsg2(150, "Want dirVol=%s dirStat=%s\n", VolumeName,
       VolCatInfo.VolCatStatus);
+
    /*
     * At this point, dev->VolCatInfo has what is in the drive, if anything,
     *          and   dcr->VolCatInfo has what the Director wants.
@@ -451,6 +462,8 @@ int DCR::check_volume_label(bool &ask, bool &autochanger)
          Jmsg2(jcr, M_WARNING, 0, _("Could not reserve volume %s on %s\n"),
             dev->VolHdr.VolumeName, dev->print_name());
          ask = true;
+         dev->setVolCatInfo(false);
+         setVolCatInfo(false);
          goto check_next_volume;
       }
       break;                /* got a Volume */
@@ -495,6 +508,8 @@ int DCR::check_volume_label(bool &ask, bool &autochanger)
    return check_ok;
 
 check_next_volume:
+   dev->setVolCatInfo(false);
+   setVolCatInfo(false);
    return check_next_vol;
 
 check_bail_out:
@@ -616,11 +631,13 @@ bool DCR::is_eod_valid()
               " size=%s\n"), VolumeName, 
               edit_uint64(dev->VolCatInfo.VolCatBytes, ed1));
       } else {
-         Jmsg(jcr, M_ERROR, 0, _("Bacula cannot write on disk Volume \"%s\" because: "
+         Mmsg(jcr->errmsg, _("Bacula cannot write on disk Volume \"%s\" because: "
               "The sizes do not match! Volume=%s Catalog=%s\n"),
               VolumeName,
               edit_uint64(pos, ed1),
               edit_uint64(dev->VolCatInfo.VolCatBytes, ed2));
+         Jmsg(jcr, M_ERROR, 0, jcr->errmsg);
+         Dmsg0(050, jcr->errmsg);
          mark_volume_in_error();
          return false;
       }
@@ -720,7 +737,7 @@ void DCR::mark_volume_not_inchanger()
 {
    Jmsg(jcr, M_ERROR, 0, _("Autochanger Volume \"%s\" not found in slot %d.\n"
 "    Setting InChanger to zero in catalog.\n"),
-        VolCatInfo.VolCatName, VolCatInfo.Slot);
+        getVolCatName(), VolCatInfo.Slot);
    dev->VolCatInfo = VolCatInfo;    /* structure assignment */
    VolCatInfo.InChanger = false;
    dev->VolCatInfo.InChanger = false;

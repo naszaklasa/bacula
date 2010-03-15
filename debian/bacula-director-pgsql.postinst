@@ -51,6 +51,8 @@ if [ -n "$2" ]; then
 	sleep 1
 fi
 
+. /usr/share/bacula-common/common-functions
+readOrCreatePasswords
 
 case "$1" in
 configure)
@@ -61,8 +63,14 @@ configure)
 
         if [ "$dbc_install" = "true" ] ; then
             sed -e "s/make_catalog_backup bacula bacula/make_catalog_backup -h '$dbc_dbserver' -U $dbc_dbuser/" \
-                -e "s/dbname =.*/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\"; dbuser = \"$dbc_dbuser\"; dbpassword = \"$dbc_dbpass\";/" \
-		$DEFCONFIG/bacula-dir.conf > $TARGET
+        -e "s/dbname = \"XXX_DBNAME_XXX\";/dbname = $dbc_dbname; DB Address = \"$dbc_dbserver\";/" \
+	-e "s~/XXX_DBNAME_XXX~/$dbc_dbname~" \
+        -e "s/XXX_DBUSER_XXX/$dbc_dbuser/" -e "s/XXX_DBPASSWORD_XXX/$dbc_dbpass/" \
+        -e s~XXX_DIRPASSWORD_XXX~$DIRPASSWD~ \
+        -e s~XXX_MONDIRPASSWORD_XXX~$DIRMPASSWD~ \
+        -e s~XXX_SDPASSWORD_XXX~$SDPASSWD~ \
+        -e s~XXX_FDPASSWORD_XXX~$FDPASSWD~ \
+                $DEFCONFIG/bacula-dir.conf > $TARGET
         fi
 
 	/bin/sh $POSTINST_COMMON

@@ -52,7 +52,16 @@ CONF_ALL	= --enable-smartalloc \
 	--enable-batch-insert \
 	--disable-bwx-console \
 	--without-qwt \
-	--enable-ipv6
+	--enable-ipv6 \
+	--with-dir-passowrd=XXX_DIRPASSWORD_XXX \
+	--with-fd-password=XXX_FDPASSWORD_XXX \
+	--with-sd-password=XXX_SDPASSWORD_XXX \
+	--with-mon-dir-password=XXX_MONDIRPASSWORD_XXX \
+	--with-mon-fd-password=XXX_MONFDPASSWORD_XXX \
+	--with-mon-sd-password=XXX_MONSDPASSWORD_XXX \
+	--with-db-name=XXX_DBNAME_XXX \
+	--with-db-user=XXX_DBUSER_XXX \
+	--with-db-password=XXX_DBPASSWORD_XXX
 
 
 CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \

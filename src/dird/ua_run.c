@@ -939,7 +939,7 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
       break;
    case JT_COPY:
    case JT_MIGRATE:
-      char *prt_type;
+      const char *prt_type;
       if (jcr->getJobType() == JT_COPY) {
          prt_type = _("Run Copy job\n");
       } else {

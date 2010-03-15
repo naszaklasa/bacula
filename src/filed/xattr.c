@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -749,7 +749,10 @@ static bxattr_exit_code bsd_build_xattr_streams(JCR *jcr, FF_PKT *ff_pkt)
           * Print the current name into the buffer as its not null terminated we need to
           * use the length encoded in the string for copying only the needed bytes.
           */
-         cnt = MIN((sizeof(current_attrname) - 1), xattr_list[index]);
+         cnt = xattr_list[index];
+         if (cnt > ((int)sizeof(current_attrname) - 1)) {
+            cnt = ((int)sizeof(current_attrname) - 1);
+         }
          strncpy(current_attrname, xattr_list + (index + 1), cnt);
          current_attrname[cnt] = '\0';
 
@@ -980,7 +983,7 @@ static bxattr_exit_code bsd_parse_xattr_streams(JCR *jcr, int stream)
        */
       cnt = extattr_set_link(jcr->last_fname, current_attrnamespace,
                              attrname, current_xattr->value, current_xattr->value_length);
-      if (cnt < 0 || cnt != current_xattr->value_length) {
+      if (cnt < 0 || cnt != (int)current_xattr->value_length) {
          switch (errno) {
          case ENOENT:
             goto bail_out;
