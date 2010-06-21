@@ -112,7 +112,7 @@ Description: network backup, recovery and verification - SQLite 2 director trans
 Package: bacula-director-sqlite3
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (= ${binary:Version}), sqlite3, ${shlibs:Depends}, bacula-common-sqlite3 (>= ${binary:Version}), file, dbconfig-common (>= 1.8.19), ${misc:Depends}
+Depends: bacula-director-common (= ${binary:Version}), sqlite3, sqlite, ${shlibs:Depends}, bacula-common-sqlite3 (>= ${binary:Version}), file, dbconfig-common (>= 1.8.19), ${misc:Depends}
 # Can remove dep on file once sqlite2 migration code is dropped from postinst
 # after squeeze (that migration code is for lenny -> squeeze)
 Conflicts: bacula-director

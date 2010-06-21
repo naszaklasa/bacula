@@ -4,6 +4,7 @@ bacula (5.0.1-2) unstable; urgency=medium
   * Drop bacula-sd-tools from Conflicts and Replaces line of bacula-sq-sqlite.
     Fixes RC bug.  Closes: #582422.
   * Update PostgreSQL recommendations to 8.4.
+  * Add sqlite to deps for bacula-director-sqlite3.  Closes: #542825.
 
  -- John Goerzen <jgoerzen@complete.org>  Mon, 21 Jun 2010 09:22:47 -0500
 
