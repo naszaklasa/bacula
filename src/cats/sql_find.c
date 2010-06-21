@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,7 +34,6 @@
  *
  *    Kern Sibbald, December 2000
  *
- *    Version $Id: sql_find.c 8508 2009-03-07 20:59:46Z kerns $
  */
 
 
@@ -211,8 +210,8 @@ db_find_failed_job_since(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM *stime, int &
    db_lock(mdb);
    /* Differential is since last Full backup */
    Mmsg(mdb->cmd,
-"SELECT Level FROM Job WHERE JobStatus!='T' AND Type='%c' AND "
-"Level IN ('%c','%c') AND Name='%s' AND ClientId=%s "
+"SELECT Level FROM Job WHERE JobStatus NOT IN ('T','W') AND "
+"Type='%c' AND Level IN ('%c','%c') AND Name='%s' AND ClientId=%s "
 "AND FileSetId=%s AND StartTime>'%s' "
 "ORDER BY StartTime DESC LIMIT 1",
          jr->JobType, L_FULL, L_DIFFERENTIAL, jr->Name,

@@ -375,21 +375,24 @@ static bool send_fileset(JCR *jcr)
             /* Strip out compression option Zn if disallowed for this Storage */
             if (store && !store->AllowCompress) {
                char newopts[MAX_FOPTS];
+               bool done=false;         /* print warning only if compression enabled in FS */ 
                int j = 0;
                for (k=0; fo->opts[k]!='\0'; k++) {                   
                  /* Z compress option is followed by the single-digit compress level */
                  if (fo->opts[k]=='Z') {
+                    done=true;
                     k++;                /* skip option and level */
                  } else {
                     newopts[j] = fo->opts[k];
-                   j++;
+                    j++;
                  }
                }
                newopts[j] = '\0';
 
-               Jmsg(jcr, M_INFO, 0,
-                   _("FD compression disabled for this Job because AllowCompress=No in Storage resource.\n") );
-
+               if (done) {
+                  Jmsg(jcr, M_INFO, 0,
+                      _("FD compression disabled for this Job because AllowCompress=No in Storage resource.\n") );
+               }
                /* Send the new trimmed option set without overwriting fo->opts */
                fd->fsend("O %s\n", newopts);
             } else {

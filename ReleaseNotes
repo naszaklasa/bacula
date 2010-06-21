@@ -1,9 +1,61 @@
 
-               Release Notes for Bacula 5.0.1
+               Release Notes for Bacula 5.0.2
 
-  Bacula code: Total files = 1,081 Total lines = 217,272 (Using SLOCCount)
+  Bacula code: Total files = 1,088 Total lines = 219,172 (Using SLOCCount)
 
-!!!!!!!!!!!!!!!!!!!!! NOTE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+General:
+--------
+
+This 5.0.2 version is primarily a important bug fix update to version 5.0.1.
+
+Note, if you are running 5.0.0, read the 5.0.1 release notes below.
+  Important!!!
+
+Compatibility:
+--------------
+ As always, both the Director and Storage daemon must be upgraded at
+ the same time.
+
+ Older 5.0.x and 3.0.x File Daemons are compatible with the 5.0.2
+ Director and Storage daemons. There should be no need to upgrade older File
+ Daemons.
+
+Changes since 5.0.1
+-------------------
+
+Bug fixes
+1502 1511 1517 1524 1527 1532 1536 1541 1549 1551 1553 1559 1560
+
+- Probable fix for SD crash bug #1553
+- Fix #1559 problem when restoring pruned jobs with a regexp
+- Fix for bug #1560 bcopy cannot find Volume
+- Fix cancel crash bug #1551
+- Check if sql backend is thread-safe
+- Correct Pool display in SD status. Fixes bug #1541
+- Fix cancel crash reported by Stephen Thompson
+- Rewind on close to fix #1549
+- Remove closelog() in bpipe fixes bug #1536
+- Fix #1517 about missing Base level in .level command
+- Replace ASSERT in block.c with fail Job
+- Fix database locking calling db_lock and returning from function without
+  calling db_unlock.
+- Add missing db_unlock to bvfs_update_cache.
+- Fix #1532 about permission on binaries
+- Fix #1527 about deadlock during migration
+- Another fix for OpenSSLv1
+- Add -lrt to Solaris links
+- Fix tls.c for OpenSSLv1
+- Fix #1511 when trying to insert more than 50.000 directories in bvfs
+- Fix plugin load not to stop if one plugin bad -- pointed out by James
+- Remove --without-qwt from configure statement.
+- Second correct fix to bug #1524 verify fails after adding or removing files
+- Fix bug #1524 verify fails after adding or removing files
+- Apply fix suggested by Andreas in bug #1502 for mediaview column sort problem
+- Fix OpenSSL 1.x problem in crypto.c on Fedora 12
+- Display AllowCompress warning message only if compression used in FileSet
+
+
+!!!!!!!!!!!!!!! NOTE FOR 5.0.0 USERS !!!!!!!!!!!!!!!!!!!!
 The Allow Duplicate Jobs directive has been significantly 
 reworked, and the default value has changed. See below.
 
@@ -201,8 +253,6 @@ Please note the three Warnings below before doing any install or
 upgrade.
        
 
-
-
 Changes since 3.0.3a (the last Bacula Project release):
 -------------------------------------------------------
 
@@ -346,6 +396,6 @@ features.
 Please see the New Features chapter of the new manual, which documents
 some but not all the new features (we are still working on it):
 
-http://www.bacula.org/5.0.x-manuals/en/main/main/New_Features_in_5_0_0.html
+http://www.bacula.org/5.0.x-manuals/en/main/main/New_Features_in_5_0_1.html
   
 The ChangeLog has more details.

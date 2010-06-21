@@ -123,7 +123,7 @@ static void delivery_error(const char *fmt,...)
 
    fputs(pool_buf, stdout);  /* print this here to INSURE that it is printed */
    fflush(stdout);
-   syslog(LOG_DAEMON|LOG_ERR, pool_buf);
+   syslog(LOG_DAEMON|LOG_ERR, "%s", pool_buf);
    free_memory(pool_buf);
 }                 
 

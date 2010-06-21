@@ -958,7 +958,10 @@ static bool check_catalog(cat_op mode)
          OK = false;
          continue;
       }
-      
+
+      /* Check if the SQL library is thread-safe */
+      db_check_backend_thread_safe();
+
       /* Display a message if the db max_connections is too low */
       if (!db_check_max_connections(NULL, db, director->MaxConcurrentJobs+1)) {
          Pmsg1(000, "Warning, settings problem for Catalog=%s\n", catalog->name());

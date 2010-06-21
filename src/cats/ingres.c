@@ -313,21 +313,32 @@ int db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index)
  *   NOTE! len is the length of the old string. Your new
  *         string must be long enough (max 2*old+1) to hold
  *         the escaped output.
- * SRE: TODO! 
  */
 void
 db_escape_string(JCR *jcr, B_DB *mdb, char *snew, char *old, int len)
 {
-/*
-   int error;
-  
-   PQescapeStringConn(mdb->db, snew, old, len, &error);
-   if (error) {
-      Jmsg(jcr, M_FATAL, 0, _("PQescapeStringConn returned non-zero.\n"));*/
-      /* error on encoding, probably invalid multibyte encoding in the source string
-        see PQescapeStringConn documentation for details. */
-/*      Dmsg0(500, "PQescapeStringConn failed\n");
-   }*/
+   char *n, *o;
+
+   n = snew;
+   o = old;
+   while (len--) {
+      switch (*o) {
+      case '\'':
+         *n++ = '\'';
+         *n++ = '\'';
+         o++;
+         break;
+      case 0:
+         *n++ = '\\';
+         *n++ = 0;
+         o++;
+         break;
+      default:
+         *n++ = *o++;
+         break;
+      }
+   }
+   *n = 0;
 }
 
 /*
@@ -351,7 +362,7 @@ bool db_sql_query(B_DB *mdb, const char *query, DB_RESULT_HANDLER *result_handle
 
    if (result_handler != NULL) {
       Dmsg0(500, "db_sql_query invoking handler\n");
-      if ((mdb->result = sql_store_result(mdb)) != NULL) {
+      if (mdb->result != NULL) {
          int num_fields = sql_num_fields(mdb);
 
          Dmsg0(500, "db_sql_query sql_store_result suceeded\n");
@@ -386,6 +397,13 @@ INGRES_ROW my_ingres_fetch_row(B_DB *mdb)
    int j;
    INGRES_ROW row = NULL; // by default, return NULL
 
+   if (!mdb->result) {
+      return row;
+   }
+   if (mdb->result->num_rows <= 0) {
+      return row;
+   }
+
    Dmsg0(500, "my_ingres_fetch_row start\n");
 
    if (!mdb->row || mdb->row_size < mdb->num_fields) {
@@ -401,11 +419,11 @@ INGRES_ROW my_ingres_fetch_row(B_DB *mdb)
       mdb->row_size = num_fields;
 
       // now reset the row_number now that we have the space allocated
-      mdb->row_number = 0;
+      mdb->row_number = 1;
    }
 
    // if still within the result set
-   if (mdb->row_number < mdb->num_rows) {
+   if (mdb->row_number <= mdb->num_rows) {
       Dmsg2(500, "my_ingres_fetch_row row number '%d' is acceptable (0..%d)\n", mdb->row_number, mdb->num_rows);
       // get each value from this row
       for (j = 0; j < mdb->num_fields; j++) {

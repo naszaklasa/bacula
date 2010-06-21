@@ -557,8 +557,15 @@ void add_findex_all(RBSR *bsr, uint32_t JobId)
          /* Add new JobId at end of chain */
          for (nbsr=bsr; nbsr->next; nbsr=nbsr->next)
             {  }
+
          nbsr->next = new_bsr();
          nbsr->next->JobId = JobId;
+
+         /* If we use regexp to restore, set it for each jobid */
+         if (bsr->fileregex) { 
+            nbsr->next->fileregex = bstrdup(bsr->fileregex);
+         }
+
          nbsr->next->fi = new_findex();
          nbsr->next->fi->findex = 1;
          nbsr->next->fi->findex2 = INT32_MAX;

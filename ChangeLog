@@ -1,6 +1,122 @@
               Changelog on version 5.0.x
 
-General:
+Release Version 5.0.2
+
+27Apr10
+- Add lmgr_is_locked() function to test if a thread own a mutex
+- Probable fix for SD crash bug #1553
+
+24Apr10
+- Fix #1559 problem when restoring pruned jobs with a regexp
+- Fix for bug #1560 bcopy cannot find Volume
+
+23Apr10
+- Remove comment field added in last patch
+- Fix cancel crash bug #1551
+
+21Apr10
+- Check if sql backend is thread-safe
+
+20Apr10
+- Correct Pool display in SD status. Fixes bug #1541
+
+19Apr10
+- Fix cancel crash reported by Stephen Thompson
+
+18Apr10
+- Rewind on close to fix #1549
+
+16Apr10
+- Remove closelog() in bpipe fixes bug #1536
+- Fix #1517 about missing Base level in .level command
+
+08Apr10
+- fix grant_postgresql_privileges doesn t grant permissions on jobhisto_jobid_seq
+
+07Apr10
+- Add lock position info to volume manager
+- Permits to use lock manager with file/line from outside
+
+03Apr10
+- Replace ASSERT in block.c with fail Job
+- Use uint32_t for max_concurrent_jobs
+
+29Mar10
+- Use file and line for rwlock and lmgr in db_lock()
+- Add File and Line info to rw_lock for lmgr
+
+27Mar10
+- Fix database locking calling db_lock and returning from function without
+  calling db_unlock.
+
+26Mar10
+- Add missing db_unlock to bvfs_update_cache.
+
+22Mar10
+- Fix #1532 about permission on binaries
+
+14Mar10
+- Allow users to build bat without static QT if desired.
+- Fix for qt mkspecs location on Fedora 12.
+
+12Mar10
+- Fix #1527 about deadlock during migration
+
+10Mar10
+- Another fix for OpenSSLv1
+- Add -lrt to Solaris links
+
+09Mar10
+- Fix tls.c for OpenSSLv1
+
+08Mar10
+- Fix #1511 when trying to insert more than 50.000 directories in bvfs
+- Fix plugin load not to stop if one plugin bad -- pointed out by James
+
+07Mar10
+- Remove --without-qwt from configure statement.
+- Fix bug in bvfs_update function, should work much better now
+
+06Mar10
+- Second correct fix to bug #1524 verify fails after adding or removing files
+- Fix bug #1524 verify fails after adding or removing files
+- Fix bug 1523.
+- Apply fix suggested by Andreas in bug #1502 for mediaview column sort problem
+- Lets not generate the ingres code automatically when the .sc or .sh files 
+  changes as it seems these files get outdated on some systems and then this 
+  rule kicks in on systems that don't have the esqlcc ingres compiler installed.
+- Fix CentOS detection in regression get-os script
+
+05Mar10
+- Create subroutines to add exclusion for plugins
+- This adds sql debugging to these classes that Eric wrote.
+- This is a 1/2 fix of the issue. It allows for the sorting of the two non 
+  graphic columns, but still does not allow for sorting the graphic columns. 
+  The issue is with last. By setting the sort value, you are setting the value 
+  on the last. To experiment with what I mean, use the set background that I 
+  have commented out in this commit.
+
+03Mar10
+- Fix OpenSSL 1.x problem in crypto.c on Fedora 12
+- Display AllowCompress warning message only if compression used in FileSet
+
+01Mar10
+- Added comment on dbi backend needing a recent version of libdbi from CVS as 
+  the version currently released 0.8.3 wont work for compiling the code.
+- Add Warning check to SQL
+- Fix readline to use TERM_LIB found for conio
+
+27Feb10
+- Move bacula shared objects in separate bacula-libs package.
+- Fix for termcap lib on suse.
+
+26Feb10
+- Fix for shared objects name convention change.
+- Remove mandrive and suse bacula.spec from configure
+
+25Feb10
+- Fix compile link flags for gigaslam
+- Add missing defines for gccver.
 
 Release Version 5.0.1
 

@@ -202,10 +202,11 @@ public:
    const char *get_ActionName(bool past); /* in lib/jcr.c */
    void setJobStatus(int JobStatus);      /* in lib/jcr.c */
    bool JobReads();                       /* in lib/jcr.c */
-   
+   void my_thread_send_signal(int sig);   /* in lib/jcr.c */
 
    /* Global part of JCR common to all daemons */
    dlink link;                        /* JCR chain link */
+   bool my_thread_running;            /* is the thread controlling jcr running*/
    pthread_t my_thread_id;            /* id of thread controlling jcr */
    BSOCK *dir_bsock;                  /* Director bsock or NULL if we are him */
    BSOCK *store_bsock;                /* Storage connection socket */

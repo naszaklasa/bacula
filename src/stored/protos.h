@@ -214,9 +214,9 @@ bool read_records(DCR *dcr,
 /* From reserve.c */
 void    init_reservations_lock();
 void    term_reservations_lock();
-void    _lock_reservations();
+void    _lock_reservations(const char *file="**Unknown**", int line=0);
 void    _unlock_reservations();
-void    _lock_volumes();
+void    _lock_volumes(const char *file="**Unknown**", int line=0);
 void    _unlock_volumes();
 void    unreserve_device(DCR *dcr);
 void    send_drive_reserve_messages(JCR *jcr, void sendit(const char *msg, int len, void *sarg), void *arg);
@@ -232,7 +232,7 @@ extern int reservations_lock_count;
          do { Dmsg3(sd_dbglvl, "lock_reservations at %s:%d precnt=%d\n", \
               __FILE__, __LINE__, \
               reservations_lock_count); \
-              _lock_reservations(); \
+              _lock_reservations(__FILE__, __LINE__); \
               Dmsg0(sd_dbglvl, "lock_reservations: got lock\n"); \
          } while (0)
 #define unlock_reservations() \
@@ -245,7 +245,7 @@ extern int reservations_lock_count;
          do { Dmsg3(sd_dbglvl, "lock_volumes at %s:%d precnt=%d\n", \
               __FILE__, __LINE__, \
               vol_list_lock_count); \
-              _lock_volumes(); \
+              _lock_volumes(__FILE__, __LINE__); \
               Dmsg0(sd_dbglvl, "lock_volumes: got lock\n"); \
          } while (0)
 
@@ -257,9 +257,9 @@ extern int reservations_lock_count;
 
 #else
 
-#define lock_reservations() _lock_reservations()
+#define lock_reservations() _lock_reservations(__FILE__, __LINE__)
 #define unlock_reservations() _unlock_reservations()
-#define lock_volumes() _lock_volumes()
+#define lock_volumes() _lock_volumes(__FILE__, __LINE__)
 #define unlock_volumes() _unlock_volumes()
 
 #endif

@@ -365,6 +365,18 @@ static void *job_thread(void *arg)
    return NULL;
 }
 
+void sd_msg_thread_send_signal(JCR *jcr, int sig)
+{
+   jcr->lock();
+   if (  !jcr->sd_msg_thread_done
+       && jcr->SD_msg_chan 
+       && !pthread_equal(jcr->SD_msg_chan, pthread_self()))
+   {
+      Dmsg1(800, "Send kill to SD msg chan jid=%d\n", jcr->JobId);
+      pthread_kill(jcr->SD_msg_chan, sig);
+   }
+   jcr->unlock();
+}
 
 /*
  * Cancel a job -- typically called by the UA (Console program), but may also
@@ -412,10 +424,7 @@ bool cancel_job(UAContext *ua, JCR *jcr)
          fd->close();
          ua->jcr->file_bsock = NULL;
          jcr->file_bsock->set_terminated();
-         if (jcr->my_thread_id) {
-            pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
-            Dmsg1(800, "Send kill to jid=%d\n", jcr->JobId);
-         }
+         jcr->my_thread_send_signal(TIMEOUT_SIGNAL);
       }
 
       /* Cancel Storage daemon */
@@ -451,13 +460,8 @@ bool cancel_job(UAContext *ua, JCR *jcr)
          ua->jcr->store_bsock = NULL;
          jcr->store_bsock->set_timed_out();
          jcr->store_bsock->set_terminated();
-         if (jcr->SD_msg_chan) {
-            Dmsg2(400, "kill jobid=%d use=%d\n", (int)jcr->JobId, jcr->use_count());
-            pthread_kill(jcr->SD_msg_chan, TIMEOUT_SIGNAL);
-         }
-         if (jcr->my_thread_id) {
-            pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
-         }
+         sd_msg_thread_send_signal(jcr, TIMEOUT_SIGNAL);
+         jcr->my_thread_send_signal(TIMEOUT_SIGNAL);
       }
       break;
    }
@@ -507,13 +511,8 @@ void cancel_storage_daemon_job(JCR *jcr)
       jcr->sd_canceled = true;
       jcr->store_bsock->set_timed_out();
       jcr->store_bsock->set_terminated();
-      if (jcr->SD_msg_chan) {
-         Dmsg2(400, "kill jobid=%d use=%d\n", (int)jcr->JobId, jcr->use_count());
-         pthread_kill(jcr->SD_msg_chan, TIMEOUT_SIGNAL);
-      }
-      if (jcr->my_thread_id) {
-         pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
-      }
+      sd_msg_thread_send_signal(jcr, TIMEOUT_SIGNAL);
+      jcr->my_thread_send_signal(TIMEOUT_SIGNAL);
    }
 bail_out:
    free_jcr(control_jcr);

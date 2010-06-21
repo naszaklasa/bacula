@@ -205,7 +205,7 @@ JCR     *jcr_walk_start();
 JCR     *jcr_walk_next(JCR *prev_jcr);
 void     jcr_walk_end(JCR *jcr);
 JCR     *get_jcr_from_tsd();
-void     set_jcr_in_tsd(JCR *jcr);
+void     set_jcr_in_tsd(JCR *jcr, bool update_thread_info=true);
 void     remove_jcr_from_tsd(JCR *jcr);
 uint32_t get_jobid_from_tsd();             
 uint32_t get_jobid_from_tid(pthread_t tid);

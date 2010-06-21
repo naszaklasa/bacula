@@ -66,6 +66,22 @@ Plugin *new_plugin()
    return plugin;
 }
 
+static void close_plugin(Plugin *plugin)
+{
+   if (plugin->file) {
+      Dmsg1(50, "Got plugin=%s but not accepted.\n", plugin->file);
+   }
+   if (plugin->unloadPlugin) {
+      plugin->unloadPlugin();
+   }
+   if (plugin->pHandle) {
+      dlclose(plugin->pHandle);
+   }
+   if (plugin->file) {
+      free(plugin->file);
+   }
+   free(plugin);
+}
 
 /*
  * Load all the plugins in the specified directory.
@@ -143,7 +159,8 @@ bool load_plugins(void *binfo, void *bfuncs, const char *plugin_dir,
               fname.c_str(), NPRT(dlerror()));
          Dmsg2(dbglvl, "Plugin load %s failed: ERR=%s\n", fname.c_str(), 
                NPRT(dlerror()));
-         goto get_out;
+         close_plugin(plugin);
+         continue;
       }
 
       /* Get two global entry points */
@@ -153,7 +170,8 @@ bool load_plugins(void *binfo, void *bfuncs, const char *plugin_dir,
             fname.c_str(), NPRT(dlerror()));
          Dmsg2(dbglvl, "Lookup of loadPlugin in plugin %s failed: ERR=%s\n", 
             fname.c_str(), NPRT(dlerror()));
-         goto get_out;
+         close_plugin(plugin);
+         continue;
       }
       plugin->unloadPlugin = (t_unloadPlugin)dlsym(plugin->pHandle, "unloadPlugin");
       if (!plugin->unloadPlugin) {
@@ -161,17 +179,20 @@ bool load_plugins(void *binfo, void *bfuncs, const char *plugin_dir,
             fname.c_str(), NPRT(dlerror()));
          Dmsg2(dbglvl, "Lookup of unloadPlugin in plugin %s failed: ERR=%s\n",
             fname.c_str(), NPRT(dlerror()));
-         goto get_out;
+         close_plugin(plugin);
+         continue;
       }
 
       /* Initialize the plugin */
       if (loadPlugin(binfo, bfuncs, &plugin->pinfo, &plugin->pfuncs) != bRC_OK) {
-         goto get_out;
+         close_plugin(plugin);
+         continue;
       }
       if (!is_plugin_compatible) {
          Dmsg0(50, "Plugin compatibility pointer not set.\n");   
       } else if (!is_plugin_compatible(plugin)) {
-         goto get_out;
+         close_plugin(plugin);
+         continue;
       }
 
       found = true;                /* found a plugin */
@@ -180,19 +201,7 @@ bool load_plugins(void *binfo, void *bfuncs, const char *plugin_dir,
 
 get_out:
    if (!found && plugin) {
-      if (plugin->file) {
-         Dmsg1(50, "Got plugin=%s but not accepted.\n", plugin->file);
-      }
-      if (plugin->unloadPlugin) {
-         plugin->unloadPlugin();
-      }
-      if (plugin->pHandle) {
-         dlclose(plugin->pHandle);
-      }
-      if (plugin->file) {
-         free(plugin->file);
-      }
-      free(plugin);
+      close_plugin(plugin);
    }
    if (entry) {
       free(entry);

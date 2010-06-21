@@ -144,6 +144,9 @@ void MediaInfo::populateForm()
       "LEFT JOIN Location ON (Media.LocationId=Location.LocationId) "
       "WHERE Media.VolumeName='" + m_mediaName + "'";
 
+   if (mainWin->m_sqlDebug) {
+      Pmsg1(000, "MediaInfo query cmd : %s\n",query.toUtf8().data());
+   }
    QStringList results;
    if (m_console->sql_cmd(query, results)) {
       QString resultline;
@@ -211,6 +214,9 @@ void MediaInfo::populateForm()
       "FROM Job JOIN JobMedia USING (JobId) JOIN Media USING (MediaId) "
       "WHERE Media.VolumeName = '" + m_mediaName + "'";
 
+   if (mainWin->m_sqlDebug) {
+      Pmsg1(000, "MediaInfo query cmd : %s\n",query.toUtf8().data());
+   }
    results.clear();
    if (m_console->sql_cmd(query, results)) {
       QString resultline;

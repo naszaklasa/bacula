@@ -135,7 +135,8 @@ BPIPE *open_bpipe(char *prog, int wait, const char *mode)
          dup2(readp[1], 1);           /* dup our read to his stdout */
          dup2(readp[1], 2);           /*   and his stderr */
       }
-      closelog();                     /* close syslog if open */
+/* Note, the close log cause problems, see bug #1536 */
+/*    closelog();                        close syslog if open */
       for (i=3; i<=32; i++) {         /* close any open file descriptors */
          close(i);
       }

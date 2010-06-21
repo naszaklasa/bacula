@@ -291,10 +291,11 @@ void db_list_joblog_records(JCR *jcr, B_DB *mdb, uint32_t JobId,
                               DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
 {
    char ed1[50];
-   db_lock(mdb);
+
    if (JobId <= 0) {
       return;
    }
+   db_lock(mdb);
    if (type == VERT_LIST) {
       Mmsg(mdb->cmd, "SELECT Time,LogText FROM Log "
            "WHERE Log.JobId=%s", edit_int64(JobId, ed1));

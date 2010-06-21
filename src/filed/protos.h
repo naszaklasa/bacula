@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,7 +26,8 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id$
+ * Written by Kern Sibbald, MM 
+ *
  */
 
 extern bool blast_data_to_storage_daemon(JCR *jcr, char *addr);
@@ -64,3 +65,8 @@ void unstrip_path(FF_PKT *ff_pkt);
 /* from xattr.c */
 bxattr_exit_code build_xattr_streams(JCR *jcr, FF_PKT *ff_pkt);
 bxattr_exit_code parse_xattr_streams(JCR *jcr, int stream);
+
+/* from job.c */
+findFILESET *new_exclude(JCR *jcr);
+void add_file_to_fileset(JCR *jcr, const char *fname, findFILESET *fileset,
+                         bool is_file); 

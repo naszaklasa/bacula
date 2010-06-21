@@ -124,16 +124,6 @@ int db_get_file_record(JCR *jcr, B_DB *mdb, JOB_DBR *jr, FILE_DBR *fdbr)
       edit_int64(fdbr->PathId, ed1), 
       edit_int64(fdbr->FilenameId, ed2), 
       edit_int64(jr->ClientId,ed3));
-
-   } else if (jr != NULL) {
-      /* Called from Verify so jr->FileIndex is valid */
-      Mmsg(mdb->cmd,
-"SELECT FileId, LStat, MD5 FROM File WHERE File.JobId=%s AND File.PathId=%s AND "
-"File.FilenameId=%s AND FileIndex=%u", 
-      edit_int64(fdbr->JobId, ed1), 
-      edit_int64(fdbr->PathId, ed2), 
-      edit_int64(fdbr->FilenameId,ed3),
-      jr->FileIndex);
    } else {
       Mmsg(mdb->cmd,
 "SELECT FileId, LStat, MD5 FROM File WHERE File.JobId=%s AND File.PathId=%s AND "

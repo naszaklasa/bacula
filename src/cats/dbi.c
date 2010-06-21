@@ -35,6 +35,21 @@
  *
  *    Version $Id$
  */
+/*
+ * This code only compiles against a recent version of libdbi. The current
+ * release found on the libdbi website (0.8.3) won't work for this code.
+ *
+ * You find the libdbi library on http://sourceforge.net/projects/libdbi
+ *
+ * A fairly recent version of libdbi from CVS works, so either make sure
+ * your distribution has a fairly recent version of libdbi installed or
+ * clone the CVS repositories from sourceforge and compile that code and
+ * install it.
+ *
+ * You need:
+ * cvs co :pserver:anonymous@libdbi.cvs.sourceforge.net:/cvsroot/libdbi
+ * cvs co :pserver:anonymous@libdbi-drivers.cvs.sourceforge.net:/cvsroot/libdbi-drivers
+ */
 
 
 /* The following is necessary so that we do not include

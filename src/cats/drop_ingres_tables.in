@@ -6,29 +6,47 @@ bindir=@SQL_BINDIR@
 db_name=@db_name@
 
 sql -u${db_user} ${db_name} $* <<END-OF-DATA
-drop table unsavedfiles;
-drop table basefiles;
-drop table jobmedia;
-drop table file;
-drop table job;
-drop table jobhisto;
-drop table media;
-drop table client;
-drop table pool;
-drop table fileset;
-drop table path;
-drop table filename;
-drop table counters;
-drop table version;
-drop table CDImages;
-drop table Device;
-drop table Storage;
-drop table MediaType;
-drop table Status;
-drop table MAC;
-drop table log;
-drop table Location;
-drop table locationlog;
+DROP TABLE filename\g
+DROP TABLE path\g
+DROP TABLE file\g
+DROP TABLE Job\g
+DROP TABLE JobHisto\g
+DROP TABLE Location\g
+DROP TABLE fileset\g
+DROP TABLE jobmedia\g
+DROP TABLE media\g
+DROP TABLE MediaType\g
+DROP TABLE Storage\g
+DROP TABLE Device\g
+DROP TABLE pool\g
+DROP TABLE client\g
+DROP TABLE Log\g
+DROP TABLE LocationLog\g
+DROP TABLE counters\g
+DROP TABLE basefiles\g
+DROP TABLE unsavedfiles\g
+DROP TABLE CDImages \g
+DROP TABLE PathHierarchy\g
+DROP TABLE PathVisibility\g
+DROP TABLE version\g
+DROP TABLE Status\g
+DROP SEQUENCE filename_seq\g
+DROP SEQUENCE path_seq\g
+DROP SEQUENCE file_seq\g
+DROP SEQUENCE Job_seq\g
+DROP SEQUENCE JobHisto_seq\g
+DROP SEQUENCE Location_seq\g
+DROP SEQUENCE fileset_seq\g
+DROP SEQUENCE jobmedia_seq\g
+DROP SEQUENCE media_seq\g
+DROP SEQUENCE MediaType_seq\g
+DROP SEQUENCE Storage_seq\g
+DROP SEQUENCE Device_seq\g
+DROP SEQUENCE pool_seq\g
+DROP SEQUENCE client_seq\g
+DROP SEQUENCE Log_seq\g
+DROP SEQUENCE LocationLog_seq\g
+DROP SEQUENCE basefiles_seq\g
 END-OF-DATA
 pstat=$?
 if test $pstat = 0; 
