@@ -151,11 +151,11 @@ Description: network backup, recovery and verification - MySQL storage for Direc
 Package: bacula-director-pgsql
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), postgresql-client (>= 7.4) | postgresql-client-8.3, ${shlibs:Depends}, bacula-common-pgsql (>= ${binary:Version}), ${misc:Depends}
+Depends: bacula-director-common (= ${binary:Version}), dbconfig-common (>= 1.8.19), postgresql-client (>= 7.4) | postgresql-client-8.4, ${shlibs:Depends}, bacula-common-pgsql (>= ${binary:Version}), ${misc:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
-Recommends: postgresql-8.3 | postgresql-8.2 | postgresql-8.1 | postgresql-8.0 | postgresql (>= 7.4)
+Recommends: postgresql-8.4 | postgresql-8.3 | postgresql-8.2 | postgresql-8.1 | postgresql-8.0 | postgresql (>= 7.4)
 Suggests: postgresql-contrib, postgresql-doc
 Description: network backup, recovery and verification - PostgreSQL storage for Director
  Bacula is a set of programs to manage backup, recovery and verification of
