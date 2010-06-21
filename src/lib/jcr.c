@@ -342,7 +342,6 @@ JCR *new_jcr(int size, JCR_free_HANDLER *daemon_free_jcr)
    }
    jcr = (JCR *)malloc(size);
    memset(jcr, 0, size);
-   jcr->my_thread_id = pthread_self();
    jcr->msg_queue = New(dlist(item, &item->link));
    if ((status = pthread_mutex_init(&jcr->msg_queue_mutex, NULL)) != 0) {
       berrno be;
@@ -410,6 +409,9 @@ static void remove_jcr(JCR *jcr)
  */
 static void free_common_jcr(JCR *jcr)
 {
+   /* Uses jcr lock/unlock */
+   remove_jcr_from_tsd(jcr);
+
    jcr->destroy_mutex();
 
    if (jcr->msg_queue) {
@@ -469,7 +471,6 @@ static void free_common_jcr(JCR *jcr)
       free_guid_list(jcr->id_list);
       jcr->id_list = NULL;
    }
-   remove_jcr_from_tsd(jcr);
    free(jcr);
 }
 
@@ -581,20 +582,54 @@ void remove_jcr_from_tsd(JCR *jcr)
 {
    JCR *tjcr = get_jcr_from_tsd();
    if (tjcr == jcr) { 
+      jcr->lock();
+      jcr->my_thread_running = false;
+      memset(&jcr->my_thread_id, 0, sizeof(jcr->my_thread_id));
+      jcr->unlock();
       set_jcr_in_tsd(INVALID_JCR);
    }
 }
 
 /*
- * Put this jcr in the thread specifc data 
+ * Put this jcr in the thread specifc data
+ *  if update_thread_info is true and the jcr is valide,
+ *  we update the my_thread_id in the JCR
  */
-void set_jcr_in_tsd(JCR *jcr)
+void set_jcr_in_tsd(JCR *jcr, bool update_thread_info)
 {
    int status = pthread_setspecific(jcr_key, (void *)jcr);
    if (status != 0) {
       berrno be;
-      Jmsg1(jcr, M_ABORT, 0, _("pthread_setspecific failed: ERR=%s\n"), be.bstrerror(status));
+      Jmsg1(jcr, M_ABORT, 0, _("pthread_setspecific failed: ERR=%s\n"), 
+            be.bstrerror(status));
    }
+
+   /* We explicitly ask to set a jcr in tsd, we can update jcr->my_thread
+    */
+   if (update_thread_info && jcr && jcr != INVALID_JCR) {
+      Dmsg2(100, "setting my_thread_stuffs 0x%p => 0x%p\n", 
+            jcr->my_thread_id, pthread_self());
+      jcr->lock();
+      //ASSERT(jcr->my_thread_running == false);
+      jcr->my_thread_id = pthread_self();
+      jcr->my_thread_running = true;
+      jcr->unlock();
+   }
+}
+
+void JCR::my_thread_send_signal(int sig)
+{
+   this->lock();
+   if (   this->my_thread_running 
+       && !pthread_equal(this->my_thread_id, pthread_self()))
+   {
+      Dmsg1(800, "Send kill to jid=%d\n", this->JobId);
+      pthread_kill(this->my_thread_id, sig);
+
+   } else if (!this->my_thread_running) {
+      Dmsg1(10, "Warning, can't send kill to jid=%d\n", this->JobId);
+   }
+   this->unlock();
 }
 
 /*

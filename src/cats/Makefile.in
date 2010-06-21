@@ -56,10 +56,11 @@ all: Makefile libbacsql$(DEFAULT_ARCHIVE_TYPE)
 	@echo "==== Make of sqllib is good ===="
 	@echo " "
 
-# SRE: embeddedSQL precompiler run
 esql:
-	$(II_SYSTEM)/ingres/bin/esqlc -omyingres.c myingres.sc
-	$(II_SYSTEM)/ingres/bin/esqlc -omyingres.h myingres.sh
+	@echo "Generating myingres.c from myingres.sc"
+	$(NO_ECHO)$(II_SYSTEM)/ingres/bin/esqlcc -extension=c myingres.sc
+	@echo "Generating myingres.h from myingres.sh"
+	$(NO_ECHO)$(II_SYSTEM)/ingres/bin/esqlcc -extension=h myingres.sh
 
 libbacsql.a: $(LIBBACSQL_OBJS)
 	@echo "Making $@ ..."	  

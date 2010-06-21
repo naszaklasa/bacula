@@ -436,8 +436,9 @@ get_out:
  * This job is done, so release the device. From a Unix standpoint,
  *  the device remains open.
  *
- * Note, if we are spooling, we may enter with the device blocked.
- * However, in all cases, unblock the device when leaving.
+ * Note, if we were spooling, we may enter with the device blocked.
+ *   We unblock at the end, only if it was us who blocked the
+ *   device.
  *
  */
 bool release_device(DCR *dcr)
@@ -446,11 +447,13 @@ bool release_device(DCR *dcr)
    DEVICE *dev = dcr->dev;
    bool ok = true;
    char tbuf[100];
+   int was_blocked = BST_NOT_BLOCKED;
 
    dev->dlock();
    if (!dev->is_blocked()) {
       block_device(dev, BST_RELEASING);
-   } else if (dev->blocked() == BST_DESPOOLING) {
+   } else {
+      was_blocked = dev->blocked();
       dev->set_blocked(BST_RELEASING);
    }
    lock_volumes();
@@ -551,7 +554,18 @@ bool release_device(DCR *dcr)
          (uint32_t)jcr->JobId, bstrftimes(tbuf, sizeof(tbuf), (utime_t)time(NULL)));
    pthread_cond_broadcast(&wait_device_release);
    unlock_volumes();
-   dev->dunblock(true);
+
+   /*
+    * If we are the thread that blocked the device, then unblock it
+    */
+   if (pthread_equal(dev->no_wait_id, pthread_self())) {
+      dev->dunblock(true);
+   } else {
+      /* Otherwise, reset the prior block status and unlock */
+      dev->set_blocked(was_blocked);
+      dev->dunlock();
+   }
+
    if (dcr->keep_dcr) {
       detach_dcr_from_dev(dcr);
    } else {

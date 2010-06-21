@@ -115,7 +115,7 @@ gigaslam.o: gigaslam.c
 	$(CXX) $(CFLAGS) -c $<	
 
 gigaslam: gigaslam.o
-	$(CXX) -o $@ gigaslam.o
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -o $@ gigaslam.o
 
 grow: Makefile grow.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ grow.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)

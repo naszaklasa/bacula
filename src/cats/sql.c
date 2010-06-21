@@ -382,7 +382,7 @@ char *db_strerror(B_DB *mdb)
 void _db_lock(const char *file, int line, B_DB *mdb)
 {
    int errstat;
-   if ((errstat=rwl_writelock(&mdb->lock)) != 0) {
+   if ((errstat=rwl_writelock_p(&mdb->lock, file, line)) != 0) {
       berrno be;
       e_msg(file, line, M_FATAL, 0, "rwl_writelock failure. stat=%d: ERR=%s\n",
            errstat, be.bstrerror(errstat));

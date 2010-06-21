@@ -56,7 +56,7 @@ depend:
 bacula-fd: Makefile	   
 	@for I in ${fd_subdirs}; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; \
-	      $(MAKE) DESTDIR=$(DESTDIR) all || (echo ""; echo ""; echo "   ====== Error in `pwd` ======; \
+	      $(MAKE) DESTDIR=$(DESTDIR) all || (echo ""; echo ""; echo "   ====== Error in `pwd` ======"; \
 			    echo ""; echo ""; exit 1;)); \
 	done
 

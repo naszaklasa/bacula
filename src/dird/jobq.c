@@ -450,7 +450,7 @@ void *jobq_server(void *arg)
          jq->engine(je->jcr);
 
          /* Job finished detach from thread */
-         set_jcr_in_tsd(INVALID_JCR);
+         remove_jcr_from_tsd(je->jcr);
 
          Dmsg2(2300, "Back from user engine jobid=%d use=%d.\n", jcr->JobId,
             jcr->use_count());

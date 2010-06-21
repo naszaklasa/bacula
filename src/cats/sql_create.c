@@ -1091,7 +1091,7 @@ bool db_write_batch_file_records(JCR *jcr)
 
 
 /* List of SQL commands to create temp table and indicies  */
-const char *create_temp_basefile[4] = {
+const char *create_temp_basefile[5] = {
    /* MySQL */
    "CREATE TEMPORARY TABLE basefile%lld ("
 //   "CREATE TABLE basefile%lld ("
@@ -1112,7 +1112,13 @@ const char *create_temp_basefile[4] = {
    /* SQLite3 */
    "CREATE TEMPORARY TABLE basefile%lld (" 
    "Path TEXT,"
-   "Name TEXT)"
+   "Name TEXT)",
+
+   /* Ingres */
+   "DECLARE GLOBAL TEMPORARY TABLE basefile%lld (" 
+   "Path TEXT NOT NULL,"
+   "Name TEXT NOT NULL)"
+   "ON COMMIT PRESERVE ROWS WITH NORECOVERY"
 };
 
 /* 

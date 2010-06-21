@@ -142,6 +142,7 @@ extern void dird_free_jcr(JCR *jcr);
 extern void dird_free_jcr_pointers(JCR *jcr);
 extern void cancel_storage_daemon_job(JCR *jcr);
 extern bool run_console_command(JCR *jcr, const char *cmd);
+extern void sd_msg_thread_send_signal(JCR *jcr, int sig);
 
 /* migration.c */
 extern bool do_migration(JCR *jcr);

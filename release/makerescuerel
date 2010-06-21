@@ -32,7 +32,6 @@ if [ $?  -ne 0 ]; then
    exit 1
 fi
 
-ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' version.h`
 src=`pwd` 
 git checkout ${branch}
 if [ $? -ne 0 ]; then
@@ -40,6 +39,7 @@ if [ $? -ne 0 ]; then
    exit 1
 fi
 git pull origin ${branch}
+ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' version.h`
 fulltag=$tagbase$ver
 echo " "
 echo "Making $reltype for $base_pkg-$ver ..."

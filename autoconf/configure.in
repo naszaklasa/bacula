@@ -2,6 +2,8 @@ dnl
 dnl
 dnl Process this file with autoconf to produce a configure script.
 dnl
+dnl require a recent autoconf
+AC_PREREQ(2.61)
 AC_INIT(src/version.h)
 BUILD_DIR=`pwd`
 cd ..
@@ -10,7 +12,7 @@ cd ${BUILD_DIR}
 AC_SUBST(BUILD_DIR)
 AC_SUBST(TOP_DIR)
 AC_CONFIG_AUX_DIR(${BUILD_DIR}/autoconf)
-AC_CONFIG_HEADER(src/config.h:autoconf/config.h.in)
+AC_CONFIG_HEADERS(src/config.h:autoconf/config.h.in)
 
 dnl minimal Win32 stuff for "make clean"
 WIN32BUILDDIR=${BUILD_DIR}/src/win32
@@ -19,10 +21,6 @@ WIN32TOPDIR=${TOP_DIR}
 AC_SUBST(WIN32BUILDDIR)
 AC_SUBST(WIN32MAINDIR)
 AC_SUBST(WIN32TOPDIR)
-
-dnl require a recent autoconf
-AC_PREREQ(2.61)
-
 
 dnl search for true and false programs.
 AC_PATH_PROGS(TRUEPRG, true, :)
@@ -819,45 +817,33 @@ if test x$support_ipv6 = xyes; then
    AC_DEFINE(HAVE_IPV6,1,[Whether to enable IPv6 support])
 fi
 
+TERM_LIB=""
+AC_CHECK_HEADER(termcap.h, 
+  [ AC_CHECK_LIB(termcap, tgetent, 
+    [ TERM_LIB="-ltermcap" ],
+    [ AC_CHECK_LIB(ncurses, tgetent, [ TERM_LIB="-lncurses" ])
+    ])
+  ],
+  [  AC_CHECK_HEADERS(curses.h)
+     AC_CHECK_HEADER(term.h,
+       [ AC_CHECK_LIB(curses, tgetent, 
+	 [ TERM_LIB="-lcurses" ] )
+       ])
+  ])
+
+
 got_conio="no"
 if test x$support_conio = xyes; then
-   AC_CHECK_HEADER(termcap.h, 
-     [ AC_CHECK_LIB(termcap, tgetent, 
-       [ CONS_LIBS="-ltermcap"
-    CONS_OBJ="conio.o"
-    CONS_SRC="conio.c"
-    got_conio="yes"
-    support_readline=no
-    AC_DEFINE(HAVE_CONIO, 1, [Set if Bacula conio support enabled]) 
-       ],   
-       [ AC_CHECK_LIB(ncurses, tgetent,
-    [ CONS_LIBS="-lncurses"
+   if test x$TERM_LIB != x; then
+      CONS_LIBS=$TERM_LIB
       CONS_OBJ="conio.o"
       CONS_SRC="conio.c"
       got_conio="yes"
       support_readline=no
       AC_DEFINE(HAVE_CONIO, 1, [Set if Bacula conio support enabled]) 
-    ])
-       ])
-     ],
-     [
-    AC_CHECK_HEADERS(curses.h)
-    AC_CHECK_HEADER(term.h,
-	  [ AC_CHECK_LIB(curses, tgetent, 
-       [ CONS_LIBS="-lcurses"
-	 CONS_OBJ="conio.o"
-	 CONS_SRC="conio.c"
-	 got_conio="yes"
-	 support_readline=no
-	 AC_DEFINE(HAVE_CONIO, 1, [Set if Bacula conio support enabled]) 
-       ])
-	  ],
-	  [ echo " "; echo "Required libraries not found. CONIO turned off ..."; echo " "],
-[#if HAVE_CURSES_H
-#include <curses.h>
-#endif
-])
-     ])
+   else
+      echo " "; echo "Required libraries not found. CONIO turned off ..."; echo " "],
+   fi
 fi
 
 
@@ -873,6 +859,9 @@ AC_ARG_ENABLE(readline,
        fi
    ]
 )
+if test x$TERM_LIB = x ; then
+   support_readline=no
+fi
 
 got_readline="no"
 READLINE_SRC=
@@ -899,7 +888,7 @@ if test x$support_readline = xyes; then
 	     AC_CHECK_HEADER(${with_readline}/readline.h, 
 		[
 		    AC_DEFINE(HAVE_READLINE, 1, [Set to enable readline support])
-		    CONS_LIBS="-lreadline -lhistory -ltermcap"
+		    CONS_LIBS="-lreadline -lhistory $TERM_LIB"
 		    got_readline="yes"	 
 		], [
 		    echo " "
@@ -916,7 +905,7 @@ if test x$support_readline = xyes; then
 		AC_DEFINE(HAVE_READLINE, 1, [Set to enable readline support])
 		got_readline="yes"
 		CONS_INC="-I/usr/include/readline"
-		CONS_LIBS="-lreadline -ltermcap"
+		CONS_LIBS="-lreadline $TERM_LIB"
 	    ], [
 		dnl Did not find standard library, so try Bacula's default
 		AC_CHECK_HEADER(${TOP_DIR}/depkgs/readline/readline.h, 
@@ -924,7 +913,7 @@ if test x$support_readline = xyes; then
 			AC_DEFINE(HAVE_READLINE, 1, [Set to enable readline support])
 			got_readline="yes"   
 			CONS_INC="-I${TOP_DIR}/depkgs/readline"
-			CONS_LIBS="-lreadline -lhistory -ltermcap"
+			CONS_LIBS="-lreadline -lhistory $TERM_LIB"
 			CONS_LDFLAGS="-L${TOP_DIR}/depkgs/readline"
 			PRTREADLINE_SRC="${TOP_DIR}/depkgs/readline"
 		    ], [
@@ -1219,6 +1208,8 @@ fi
 if test "$support_crypto" = "no"; then
    OPENSSL_LIBS=""
    OPENSSL_INC=""
+else
+   AC_CHECK_LIB(ssl, EVP_PKEY_encrypt_old, AC_DEFINE(HAVE_OPENSSLv1, 1, [Set if have OpenSSL version 1.x]))
 fi  
 
 AC_MSG_RESULT([$support_tls])
@@ -1708,9 +1699,9 @@ AC_SUBST(fd_group)
 dnl
 dnl allow setting default executable permissions
 dnl
-SBINPERM=0754
+SBINPERM=0750
 AC_ARG_WITH(sbin-perm,
-   AC_HELP_STRING([--with-sbin-perm=MODE], [specify permissions for sbin binaries @<:@default=0754@:>@]),
+   AC_HELP_STRING([--with-sbin-perm=MODE], [specify permissions for sbin binaries @<:@default=0750@:>@]),
    [
        if test "x$withval" != "x" ; then   
 	  SBINPERM=$withval
@@ -2881,7 +2872,6 @@ mandrake)
        platforms/mandrake/bacula-fd \
        platforms/mandrake/bacula-sd \
        platforms/mandrake/bacula-dir \
-       platforms/mandrake/bacula.spec \
        "
   ;;
 gentoo)
@@ -2918,7 +2908,7 @@ solaris)
    if test x$DISTVER = x5.6 ; then
        AC_DEFINE(HAVE_OLD_SOCKOPT)
    fi
-   LIBS="$LIBS -lresolv"
+   LIBS="$LIBS -lresolv -lrt"
   ;;
 suse)
    DISTVER=`cat /etc/SuSE-release |grep VERSION|\
@@ -2929,9 +2919,7 @@ suse)
        platforms/suse/Makefile \
        platforms/suse/bacula-fd \
        platforms/suse/bacula-sd \
-       platforms/suse/bacula-dir \
-       platforms/suse/bacula \
-       platforms/suse/bacula.spec"
+       platforms/suse/bacula-dir"
   ;;
 suse5)
    DISTNAME=suse
@@ -3042,7 +3030,7 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/filed/Makefile \
 	   src/filed/bacula-fd.conf \
 	   src/cats/Makefile \
-           src/cats/make_catalog_backup.pl \
+	   src/cats/make_catalog_backup.pl \
 	   src/cats/make_catalog_backup \
 	   src/cats/delete_catalog_backup \
 	   src/cats/create_postgresql_database \

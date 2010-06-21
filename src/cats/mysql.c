@@ -97,7 +97,6 @@ db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char 
          }
       }
    }
-   db_check_backend_thread_safe();
    Dmsg0(100, "db_open first time\n");
    mdb = (B_DB *)malloc(sizeof(B_DB));
    memset(mdb, 0, sizeof(B_DB));

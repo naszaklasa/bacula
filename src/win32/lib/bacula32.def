@@ -27,8 +27,6 @@ _Z18cvt_ftime_to_utimeRK9_FILETIME
 _Z18cvt_utime_to_ftimeRKlR9_FILETIME
 _Z18unix_name_to_win32PPcS_
 _Z21Win32ConvCleanupCachev
-_Z21make_wchar_win32_pathPcPi
-_Z23conv_unix_to_win32_pathPKcPcm
 _Z28make_win32_path_UTF8_2_wcharPPcPKcPi
 _Z4forkv
 _Z4killii
@@ -494,7 +492,7 @@ _Z12job_end_pushP3JCRPFvS0_PvES1_
 _Z13get_jcr_by_idj
 _Z13jcr_walk_nextP3JCR
 _Z14jcr_walk_startv
-_Z14set_jcr_in_tsdP3JCR
+_Z14set_jcr_in_tsdP3JCRb
 _Z16get_jcr_from_tsdv
 _Z18get_jobid_from_tsdv
 _Z18get_jcr_by_sessionjj
@@ -514,6 +512,7 @@ _Z7new_jcriPFvP3JCRE
 _Z9lock_jobsv
 _ZN3JCR14get_ActionNameEb
 _ZN3JCR17get_OperationNameEv
+_ZN3JCR21my_thread_send_signalEi
 _ZN3JCR8JobReadsEv
 _Z16dbg_jcr_add_hookPFvP3JCRP6_iobufE
 timeout_handler
@@ -636,7 +635,7 @@ _ZN9RUNSCRIPT8is_localEv
 ; rwlock.o
 _Z11rwl_destroyP12s_rwlock_tag
 _Z12rwl_readlockP12s_rwlock_tag
-_Z13rwl_writelockP12s_rwlock_tag
+_Z15rwl_writelock_pP12s_rwlock_tagPKci
 _Z14rwl_readunlockP12s_rwlock_tag
 _Z15rwl_readtrylockP12s_rwlock_tag
 _Z15rwl_writeunlockP12s_rwlock_tag
@@ -731,7 +730,6 @@ _Z16make_session_keyPcS_i
 _Z17job_status_to_stri
 _Z18do_shell_expansionPci
 _Z18jobstatus_to_asciiiPci
-_Z10aop_to_striR8POOL_MEM
 _Z19last_path_separatorPKc
 _Z21set_working_directoryPc
 _Z5lcasePc

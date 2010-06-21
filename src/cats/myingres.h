@@ -1,15 +1,9 @@
-<<<<<<< HEAD:bacula/src/cats/myingres.h
-# include "/opt/Ingres/IngresII/ingres/files/eqdefc.h"
 #ifndef _MYINGRES_SH
 #define _MYINGRES_SH
-# include "/opt/Ingres/IngresII/ingres/files/eqsqlda.h"
-=======
-#ifndef _MYINGRES_SH
-#define _MYINGRES_SH
-#include <eqdefc.h>
+#include <eqpname.h>
+#include <eqdefcc.h>
 #include <eqsqlda.h>
 /* # line 6 "myingres.sh" */	/* host code */
->>>>>>> 289e3c7... Added patch from Stefan Reddig -- fixed date types, errmsg:bacula/src/cats/myingres.h
 /* ---typedefs--- */
 typedef struct ing_field {
    char          name[34];

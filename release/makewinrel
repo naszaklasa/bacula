@@ -30,7 +30,6 @@ if [ $?  -ne 0 ]; then
    echo "Directory: $1 does not exist"
    exit 1
 fi
-ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' src/version.h`
 src=`pwd` 
 git checkout ${branch}
 if [ $? -ne 0 ]; then
@@ -38,6 +37,7 @@ if [ $? -ne 0 ]; then
    exit 1
 fi
 git pull origin ${branch}
+ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' src/version.h`
 fulltag=$tagbase$ver
 echo " "
 echo "Making $reltype for $base_pkg-$ver ..."
@@ -46,16 +46,16 @@ echo "OK?  ctl-c to stop"
 read a
 
 cd src/win32
-rm -f release32/winbacula-$ver.exe
+rm -f release32/win32bacula-$ver.exe
 rm -f release64/win64bacula-$ver.exe
 make clean
 ./makeall
-cp release32/winbacula-$ver.exe ${cwd}
+cp release32/win32bacula-$ver.exe ${cwd}
 cp release64/win64bacula-$ver.exe ${cwd}
 git checkout master
 cd ${cwd}
 rm -f *.exe.sig
-./sign winbacula-$ver.exe
+./sign win32bacula-$ver.exe
 ./sign win64bacula-$ver.exe
 ls -l win*.exe*
 

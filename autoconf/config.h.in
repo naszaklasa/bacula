@@ -573,7 +573,7 @@
 /* Define to 1 if you have the `munmap' function. */
 #undef HAVE_MUNMAP
 
-/* Set if you have an Ingres Database */
+/* Set if you have an MySQL Database */
 #undef HAVE_MYSQL
 
 /* Define to 1 if you have the `nanosleep' function. */
@@ -600,6 +600,9 @@
 /* Define if the OpenSSL library is export-contrained to 128bit ciphers */
 #undef HAVE_OPENSSL_EXPORT_LIBRARY
 
+/* Set if have OpenSSL version 1.x */
+#undef HAVE_OPENSSLv1
+
 /* Define to 1 if you have the `posix_fadvise' function. */
 #undef HAVE_POSIX_FADVISE
 
@@ -611,9 +614,6 @@
 
 /* Set if have PQputCopyData */
 #undef HAVE_PQ_COPY
-
-/* Set if have sqlite3_threadsafe */
-#undef HAVE_SQLITE3_THREADSAFE
 
 /* Define to 1 if you have the `prctl' function. */
 #undef HAVE_PRCTL
@@ -671,6 +671,9 @@
 
 /* Set if socklen_t exists */
 #undef HAVE_SOCKLEN_T
+
+/* Set if have sqlite3_threadsafe */
+#undef HAVE_SQLITE3_THREADSAFE
 
 /* Define to 1 if you have the <stdarg.h> header file. */
 #undef HAVE_STDARG_H

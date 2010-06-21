@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,8 +30,6 @@
  *
  * Author: Landon Fuller <landonf@opendarwin.org>
  *
- * Version $Id$
- *
  * This file was contributed to the Bacula project by Landon Fuller.
  *
  * Landon Fuller has been granted a perpetual, worldwide, non-exclusive,
@@ -48,6 +46,15 @@
 #include "bacula.h"
 #include "jcr.h"
 #include <assert.h>
+
+/**
+ * For OpenSSL version 1.x, EVP_PKEY_encrypt no longer
+ *  exists.  It was not an official API.
+ */
+#ifdef HAVE_OPENSSLv1
+#define EVP_PKEY_encrypt EVP_PKEY_encrypt_old
+#define EVP_PKEY_decrypt EVP_PKEY_decrypt_old
+#endif
 
 /*
  * Bacula ASN.1 Syntax
@@ -309,7 +316,7 @@ typedef struct PEM_CB_Context {
  */
 static ASN1_OCTET_STRING *openssl_cert_keyid(X509 *cert) {
    X509_EXTENSION *ext;
-   X509V3_EXT_METHOD *method;
+   const X509V3_EXT_METHOD *method;
    ASN1_OCTET_STRING *keyid;
    int i;
 #if (OPENSSL_VERSION_NUMBER >= 0x0090800FL)

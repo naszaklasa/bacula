@@ -1,2 +1,2 @@
 #!/bin/sh
-rm -rf bacula-* winbacula* win64bacula*
+rm -rf bacula-* win32bacula* win64bacula*

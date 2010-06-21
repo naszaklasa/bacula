@@ -422,7 +422,7 @@ AC_HELP_STRING([--with-mysql@<:@=DIR@:>@], [Include MySQL support. DIR is the My
     SQL_BINDIR=$MYSQL_BINDIR
     SQL_LIB=$MYSQL_LIBDIR/libmysqlclient_r.a
 
-    AC_DEFINE(HAVE_MYSQL, 1, [Set if you have an Ingres Database])
+    AC_DEFINE(HAVE_MYSQL, 1, [Set if you have an MySQL Database])
     AC_MSG_RESULT(yes)
     db_found=yes
     support_mysql=yes
@@ -549,7 +549,7 @@ AC_HELP_STRING([--with-ingres@<:@=DIR@:>@], [Include Ingres support. DIR is the 
         elif test -f ${II_SYSTEM}/ingres/files/eqdefc.h; then
            INGRES_INCDIR=${II_SYSTEM}/ingres/files
            INGRES_LIBDIR=${II_SYSTEM}/ingres/lib
-           INGRES_BINDIR=${II_SYSTEM}/bin      
+           INGRES_BINDIR=${II_SYSTEM}/ingres/bin      
         else
            AC_MSG_RESULT(no)
            AC_MSG_ERROR(Unable to find eqdefc.h in standard locations)
@@ -561,7 +561,7 @@ AC_HELP_STRING([--with-ingres@<:@=DIR@:>@], [Include Ingres support. DIR is the 
            INGRES_BINDIR=$withval/bin
         else
            AC_MSG_RESULT(no)
-           AC_MSG_ERROR(Invalid Ingres directory $withval - unable to find sqlite3.h under $withval)
+           AC_MSG_ERROR(Invalid Ingres directory $withval - unable to find Ingres headers under $withval)
         fi
      fi
      SQL_INCLUDE=-I$INGRES_INCDIR

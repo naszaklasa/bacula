@@ -95,6 +95,9 @@ private:
    hlink *nodes;
    int nb_node;
    int max_node;
+
+   alist *table_node;
+
    htable *cache_ppathid;
 
 public:
@@ -105,14 +108,17 @@ public:
       max_node = NITEMS;
       nodes = (hlink *) malloc(max_node * sizeof (hlink));
       nb_node = 0;
+      table_node = New(alist(5, owned_by_alist));
+      table_node->append(nodes);
    }
 
    hlink *get_hlink() {
-      if (nb_node >= max_node) {
-         max_node *= 2;
-         nodes = (hlink *)brealloc(nodes, sizeof(hlink) * max_node);
+      if (++nb_node >= max_node) {
+         nb_node = 0;
+         nodes = (hlink *)malloc(max_node * sizeof(hlink));
+         table_node->append(nodes);
       }
-      return nodes + nb_node++;
+      return nodes + nb_node;
    }
 
    bool lookup(char *pathid) {
@@ -128,7 +134,7 @@ public:
    ~pathid_cache() {
       cache_ppathid->destroy();
       free(cache_ppathid);
-      free(nodes);
+      delete table_node;
    }
 private:
    pathid_cache(const pathid_cache &); /* prohibit pass by value */
@@ -412,7 +418,7 @@ void bvfs_update_cache(JCR *jcr, B_DB *mdb)
 
    Mmsg(mdb->cmd, 
  "SELECT JobId from Job "
-  "WHERE HashCache = 0 "
+  "WHERE HasCache = 0 "
     "AND Type IN ('B') AND JobStatus IN ('T', 'f', 'A') "
   "ORDER BY JobId");
 
@@ -431,6 +437,7 @@ void bvfs_update_cache(JCR *jcr, B_DB *mdb)
    Dmsg1(dbglevel, "Affected row(s) = %d\n", nb);
 
    db_end_transaction(jcr, mdb);
+   db_unlock(mdb);
 }
 
 /*

@@ -463,7 +463,7 @@ bool unload_dev(DCR *dcr, DEVICE *dev)
    save_slot = dcr->VolCatInfo.Slot;
    dcr->VolCatInfo.Slot = dev->get_slot();
 
-   dev->dlock();
+//   dev->dlock();
 
    POOLMEM *changer_cmd = get_pool_memory(PM_FNAME);
    POOL_MEM results(PM_MESSAGE);
@@ -503,7 +503,7 @@ bool unload_dev(DCR *dcr, DEVICE *dev)
    }
    unlock_changer(dcr);
 
-   dev->dunlock();
+//   dev->dunlock();
 
    free_volume(dev);               /* Free any volume associated with this drive */
    free_pool_memory(changer_cmd);
