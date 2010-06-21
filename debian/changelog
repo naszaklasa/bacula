@@ -1,4 +1,4 @@
-bacula (5.0.1-2) unstable; urgency=medium
+bacula (5.0.2-1) unstable; urgency=medium
 
   * New upstream release.  Closes: #585729, #582484.
   * Drop bacula-sd-tools from Conflicts and Replaces line of bacula-sq-sqlite.
