@@ -243,8 +243,8 @@ Description: network backup, recovery and verification - SQLite 3 SD tools
 Package: bacula-sd-sqlite
 Architecture: any
 Depends: bacula-sd (= ${binary:Version}), bacula-sd-sqlite3 (>= 3.0.0), ${misc:Depends}
-Conflicts: bacula-sd-tools, bacula-sd (<< 1.38.9)
-Replaces: bacula-sd-tools, bacula-sd (<< 1.38.9)
+Conflicts: bacula-sd (<< 1.38.9)
+Replaces: bacula-sd (<< 1.38.9)
 Description: network backup, recovery and verification - SQLite SD tools
  This is a transition package.  SQLite v2 support has been deprecated
  as of Bacula 3.0.0.  This package depends on the SQLite v3 version of the
