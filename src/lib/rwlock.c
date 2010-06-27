@@ -219,7 +219,7 @@ int rwl_readunlock(brwlock_t *rwl)
  * Lock for write access, wait until locked (or error).
  *   Multiple nested write locking is permitted.
  */
-int rwl_writelock(brwlock_t *rwl)
+int rwl_writelock_p(brwlock_t *rwl, const char *file, int line)
 {
    int stat;
 
@@ -234,7 +234,7 @@ int rwl_writelock(brwlock_t *rwl)
       pthread_mutex_unlock(&rwl->mutex);
       return 0;
    }
-   lmgr_pre_lock(rwl, rwl->priority, __FILE__, __LINE__);
+   lmgr_pre_lock(rwl, rwl->priority, file, line);
    if (rwl->w_active || rwl->r_active > 0) {
       rwl->w_wait++;                  /* indicate that we are waiting */
       pthread_cleanup_push(rwl_write_release, (void *)rwl);

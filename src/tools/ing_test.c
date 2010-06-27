@@ -72,13 +72,23 @@ PROG_COPYRIGHT
    exit(1);
 }
 
-/* simple handler for debug output of CRUD example*/
+/*
+ * simple handler for debug output of CRUD example
+ */
 static int test_handler(void *ctx, int num_fields, char **row)
 {
    Dmsg2(200, "   Values are %d, %s\n", str_to_int64(row[0]), row[1]);
    return 0;
 }
 
+/*
+ * string handler for debug output of simple SELECT tests
+ */
+static int string_handler(void *ctx, int num_fields, char **row)
+{
+   Dmsg1(200, "   Value is >>%s<<\n", row[0]);
+   return 0;
+}
 
 
 /* number of thread started */
@@ -196,54 +206,72 @@ int main (int argc, char *argv[])
    Pmsg0(0, "\nsimple CRUD test...\n\n");
 
    Dmsg0(200, "DB-Statement: CREATE TABLE t1 ( c1 integer, c2 varchar(29))\n");
-   if (!db_sql_query(db, "CREATE TABLE t1 ( c1 integer, c2 varchar(29))", NULL, NULL))
-   {
+   if (!db_sql_query(db, "CREATE TABLE t1 ( c1 integer, c2 varchar(29))", NULL, NULL)) {
       Emsg0(M_ERROR_TERM, 0, _("CREATE-Stmt went wrong\n"));
    }
 
    Dmsg0(200, "DB-Statement: INSERT INTO t1 VALUES (1, 'foo')\n");
-   if (!db_sql_query(db, "INSERT INTO t1 VALUES (1, 'foo')", NULL, NULL))
-   {
+   if (!db_sql_query(db, "INSERT INTO t1 VALUES (1, 'foo')", NULL, NULL)) {
       Emsg0(M_ERROR_TERM, 0, _("INSERT-Stmt went wrong\n"));
    }
 
-   Dmsg0(200, "DB-Statement: SELECT * FROM t1 (should be 1, foo)\n");
-   if (!db_sql_query(db, "SELECT * FROM t1", test_handler, NULL))
-   {
+   Dmsg0(200, "DB-Statement: SELECT c1,c2 FROM t1 (should be 1, foo)\n");
+   if (!db_sql_query(db, "SELECT c1,c2 FROM t1", test_handler, NULL)) {
       Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
    }
 
    Dmsg0(200, "DB-Statement: UPDATE t1 SET c2='bar' WHERE c1=1\n");
-   if (!db_sql_query(db, "UPDATE t1 SET c2='bar' WHERE c1=1", NULL, NULL))
-   {
+   if (!db_sql_query(db, "UPDATE t1 SET c2='bar' WHERE c1=1", NULL, NULL)) {
       Emsg0(M_ERROR_TERM, 0, _("UPDATE-Stmt went wrong\n"));
    }
 
    Dmsg0(200, "DB-Statement: SELECT * FROM t1 (should be 1, bar)\n");
-   if (!db_sql_query(db, "SELECT * FROM t1", test_handler, NULL))
-   {
+   if (!db_sql_query(db, "SELECT * FROM t1", test_handler, NULL)) {
       Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
    }
 
-   Dmsg0(200, "DB-Statement: DELETE FROM t1 WHERE c2 LIKE '%r'\n");
-   if (!db_sql_query(db, "DELETE FROM t1 WHERE c2 LIKE '%r'", NULL, NULL))
-   {
+   Dmsg0(200, "DB-Statement: DELETE FROM t1 WHERE c2 LIKE '\%r'\n");
+   if (!db_sql_query(db, "DELETE FROM t1 WHERE c2 LIKE '%r'", NULL, NULL)) {
       Emsg0(M_ERROR_TERM, 0, _("DELETE-Stmt went wrong\n"));
    }
 
    Dmsg0(200, "DB-Statement: SELECT * FROM t1 (should be 0 rows)\n");
-   if (!db_sql_query(db, "SELECT * FROM t1", test_handler, NULL))
-   {
+   if (!db_sql_query(db, "SELECT * FROM t1", test_handler, NULL)) {
       Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
    }
 
    Dmsg0(200, "DB-Statement: DROP TABLE t1\n");
-   if (!db_sql_query(db, "DROP TABLE t1", NULL, NULL))
-   {
+   if (!db_sql_query(db, "DROP TABLE t1", NULL, NULL)) {
       Emsg0(M_ERROR_TERM, 0, _("DROP-Stmt went wrong\n"));
    }
 
-   /* datatypes test */
+   /*
+    * simple SELECT test without tables
+    */
+    
+   Dmsg0(200, "DB-Statement: SELECT 'Test of simple SELECT!'\n");
+   if (!db_sql_query(db, "SELECT 'Test of simple SELECT!'", string_handler, NULL)) {
+      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
+   }
+
+   Dmsg0(200, "DB-Statement: SELECT 'Test of simple SELECT!' as Text\n");
+   if (!db_sql_query(db, "SELECT 'Test of simple SELECT!' as Text", string_handler, NULL)) {
+      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
+   }
+
+   Dmsg0(200, "DB-Statement: SELECT VARCHAR(LENGTH('Test of simple SELECT!'))\n");
+   if (!db_sql_query(db, "SELECT VARCHAR(LENGTH('Test of simple SELECT!'))", string_handler, NULL)) {
+      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
+   }
+
+   Dmsg0(200, "DB-Statement: SELECT DBMSINFO('_version')\n");
+   if (!db_sql_query(db, "SELECT DBMSINFO('_version')", string_handler, NULL)) {
+      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
+   }
+
+   /* 
+    * datatypes test
+    */
    Pmsg0(0, "\ndatatypes test... (TODO)\n\n");
 
 
@@ -253,14 +281,12 @@ int main (int argc, char *argv[])
      "c2        varchar(255),"
      "c3        char(255)"
      /* some more datatypes... "c4      ," */
-     ")" , NULL, NULL))
-   {
+     ")" , NULL, NULL)) {
       Emsg0(M_ERROR_TERM, 0, _("CREATE-Stmt went wrong\n"));
    }
 
    Dmsg0(200, "DB-Statement: DROP TABLE for datatypes\n");
-   if (!db_sql_query(db, "DROP TABLE t2", NULL, NULL))
-   {
+   if (!db_sql_query(db, "DROP TABLE t2", NULL, NULL)) {
       Emsg0(M_ERROR_TERM, 0, _("DROP-Stmt went wrong\n"));
    }
 

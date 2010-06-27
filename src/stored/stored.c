@@ -615,8 +615,8 @@ void terminate_stored(int sig)
          fd = jcr->file_bsock;
          if (fd) {
             fd->set_timed_out();
+            jcr->my_thread_send_signal(TIMEOUT_SIGNAL);
             Dmsg1(100, "term_stored killing JobId=%d\n", jcr->JobId);
-            pthread_kill(jcr->my_thread_id, TIMEOUT_SIGNAL);
             /* ***FIXME*** wiffle through all dcrs */
             if (jcr->dcr && jcr->dcr->dev && jcr->dcr->dev->blocked()) {
                pthread_cond_broadcast(&jcr->dcr->dev->wait_next_vol);
@@ -661,7 +661,7 @@ void terminate_stored(int sig)
       config->free_resources();
       free(config);
       config = NULL;
-  }
+   }
 
    if (debug_level > 10) {
       print_memory_pool_stats();

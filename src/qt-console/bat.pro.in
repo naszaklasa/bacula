@@ -24,7 +24,7 @@ LIBS        += -L../lib -lbaccfg -lbac @OPENSSL_LIBS@
 LIBTOOL_LINK = @QMAKE_LIBTOOL@ --silent --tag=CXX --mode=link
 LIBTOOL_INSTALL = @QMAKE_LIBTOOL@ --silent --mode=install
 QMAKE_LINK   = $${LIBTOOL_LINK} $(CXX)
-QMAKE_INSTALL_PROGRAM = $${LIBTOOL_INSTALL} install -m 0754 -p
+QMAKE_INSTALL_PROGRAM = $${LIBTOOL_INSTALL} install -m @SBINPERM@ -p
 QMAKE_CLEAN += .libs/* bat
 
 qwt {

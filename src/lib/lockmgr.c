@@ -820,6 +820,25 @@ int bthread_cond_timedwait_p(pthread_cond_t *cond,
    return ret;
 }
 
+/*  Test if this mutex is locked by the current thread 
+ *  returns:
+ *     0 - unlocked
+ *     1 - locked by the current thread
+ *     2 - locked by an other thread
+ */
+int lmgr_mutex_is_locked(void *m)
+{
+   lmgr_thread_t *self = lmgr_get_thread_info();
+
+   for(int i=0; i <= self->current; i++) {
+      if (self->lock_list[i].lock == m) {
+         return 1;              /* locked by us */
+      }
+   }
+
+   return 0;                    /* not locked by us */
+}
+
 /*
  * Use this function when the caller handle the mutex directly
  *
@@ -1189,7 +1208,9 @@ int main(int argc, char **argv)
    P(mutex4);
    P(mutex5);
    P(mutex6);
+   ok(lmgr_mutex_is_locked(&mutex6) == 1, "Check if mutex is locked"); 
    V(mutex6);
+   ok(lmgr_mutex_is_locked(&mutex6) == 0, "Check if mutex is locked"); 
    V(mutex5);
    V(mutex4);
 

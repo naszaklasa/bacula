@@ -1,13 +1,17 @@
 # Bacula RPM spec file
 #
-# Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+# Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
 # Platform Build Configuration
 
 # basic defines for every build
 %define _release           1
-%define _version           5.0.0
+%define _version           5.0.2
 %define depkgs_qt_version  28Jul09
+
+# this is the QT version in depkgs_qt
+%define qt4ver             4.3.4
+
 %define _packager D. Scott Barninger <barninger@fairfieldcomputers.com>
 
 %define manpage_ext gz
@@ -55,22 +59,28 @@
 
 %{?contrib_packager:%define _packager %{contrib_packager}}
 
+%{expand: %%define gccver %(rpm -q --queryformat %%{version} gcc)}
+%{expand: %%define gccrel %(rpm -q --queryformat %%{release} gcc)}
+
+%define staticqt 1
+%{?nobuild_staticqt:%define staticqt 0}
+
 # determine what platform we are building on
 %define fedora 0
 %define suse 0
 %define mdk 0
 
 %if %{_vendor} == redhat
-	%define fedora 1
-	%define _dist %(cat /etc/redhat-release)
+        %define fedora 1
+        %define _dist %(cat /etc/redhat-release)
 %endif
 %if %{_vendor} == suse
-	%define suse 1
-	%define _dist %(grep -i SuSE /etc/SuSE-release)
+        %define suse 1
+        %define _dist %(grep -i SuSE /etc/SuSE-release)
 %endif
 %if %{_vendor} == Mandriva
-	%define mdk 1
-	%define _dist %(grep Mand /etc/mandrake-release)
+        %define mdk 1
+        %define _dist %(grep Mand /etc/mandrake-release)
 %endif
 %if ! %{fedora} && ! %{suse} && ! %{mdk}
 %{error: Unknown platform. Please examine the spec file.}
@@ -99,11 +109,11 @@ BuildRequires: openssl-devel, fontconfig-devel, libpng-devel, libstdc++-devel, z
 
 Requires: openssl
 Requires: fontconfig
-Requires: freetype2
 Requires: libgcc
 Requires: libpng
 Requires: libstdc++
 Requires: zlib
+Requires: bacula-libs
 
 %if %{suse}
 Requires: /usr/bin/kdesu
@@ -153,10 +163,12 @@ It is an add-on to the client or server packages.
 
 
 cwd=${PWD}
-#export QTDIR=$(pkg-config --variable=prefix QtCore)
-#export QTINC=$(pkg-config --variable=includedir QtCore)
-#export QTLIB=$(pkg-config --variable=libdir QtCore)
-#export PATH=${QTDIR}/bin/:${PATH}
+%if ! %{staticqt}
+export QTDIR=$(pkg-config --variable=prefix QtCore)
+export QTINC=$(pkg-config --variable=includedir QtCore)
+export QTLIB=$(pkg-config --variable=libdir QtCore)
+export PATH=${QTDIR}/bin/:${PATH}
+%else
 cd %{depkgs_qt}
 make qt4 <<EOF
 yes
@@ -166,7 +178,9 @@ export PATH=${qtdir}/qt4/bin:$PATH
 export QTDIR=${qtdir}/qt4/
 export QTINC=${qtdir}/qt4/include/
 export QTLIB=${qtdir}/qt4/lib/
+export QMAKESPEC=${qtdir}/qt-x11-opensource-src-%{qt4ver}/mkspecs/linux-g++/
 cd ${cwd}
+%endif
 
 # Main Bacula configuration with bat
 %configure \
@@ -218,7 +232,7 @@ rm -rf $RPM_BUILD_ROOT%{_prefix}/share/doc/bacula
 %if %{suse}
 cp -p src/qt-console/images/bat_icon.png $RPM_BUILD_ROOT/usr/share/pixmaps/bat_icon.png
 cp -p scripts/bat.desktop.xsu $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
-touch RPM_BUILD_ROOT%{sysconfdir}/bat.kdesu
+touch $RPM_BUILD_ROOT%{sysconf_dir}/bat.kdesu
 %else
 cp -p src/qt-console/images/bat_icon.png $RPM_BUILD_ROOT/usr/share/pixmaps/bat_icon.png
 cp -p scripts/bat.desktop.consolehelper $RPM_BUILD_ROOT/usr/share/applications/bat.desktop
@@ -288,6 +302,11 @@ fi
 rm -rf $RPM_BUILD_DIR/depkgs-qt
 
 %changelog
+* Sun Mar 14 2010 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- Fix for QT mkspecs location on FC12
+- allow user to build without embedded static QT
+* Sat Feb 27 2010 D. Scott Barninger <barninger@fairfieldcomputers.com>
+- add dependency on bacula-libs
 * Sat Feb 13 2010 D. Scott Barninger <barninger@fairfieldcomputers.com>
 - create file to allow bat to run nonroot with kdesu
 - add dependency information

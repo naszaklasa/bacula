@@ -354,8 +354,10 @@ extern "C" void msg_thread_cleanup(void *arg)
 {
    JCR *jcr = (JCR *)arg;
    db_end_transaction(jcr, jcr->db);       /* terminate any open transaction */
+   jcr->lock();
    jcr->sd_msg_thread_done = true;
    jcr->SD_msg_chan = 0;
+   jcr->unlock();
    pthread_cond_broadcast(&jcr->term_wait); /* wakeup any waiting threads */
    Dmsg2(100, "=== End msg_thread. JobId=%d usecnt=%d\n", jcr->JobId, jcr->use_count());
    free_jcr(jcr);                     /* release jcr */
@@ -377,7 +379,7 @@ extern "C" void *msg_thread(void *arg)
    uint64_t JobBytes;
 
    pthread_detach(pthread_self());
-   set_jcr_in_tsd(jcr);
+   set_jcr_in_tsd(jcr, false /* no thread update in jcr */);
    jcr->SD_msg_chan = pthread_self();
    pthread_cleanup_push(msg_thread_cleanup, arg);
    sd = jcr->store_bsock;
@@ -427,8 +429,7 @@ void wait_for_storage_daemon_termination(JCR *jcr)
          if (jcr->SD_msg_chan) {
             jcr->store_bsock->set_timed_out();
             jcr->store_bsock->set_terminated();
-            Dmsg2(400, "kill jobid=%d use=%d\n", (int)jcr->JobId, jcr->use_count());
-            pthread_kill(jcr->SD_msg_chan, TIMEOUT_SIGNAL);
+            sd_msg_thread_send_signal(jcr, TIMEOUT_SIGNAL);
          }
          cancel_count++;
       }

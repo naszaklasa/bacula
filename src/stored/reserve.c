@@ -101,11 +101,11 @@ void term_reservations_lock()
 int reservations_lock_count = 0;
 
 /* This applies to a drive and to Volumes */
-void _lock_reservations()
+void _lock_reservations(const char *file, int line)
 {
    int errstat;
    reservations_lock_count++;
-   if ((errstat=rwl_writelock(&reservation_lock)) != 0) {
+   if ((errstat=rwl_writelock_p(&reservation_lock, file, line)) != 0) {
       berrno be;
       Emsg2(M_ABORT, 0, "rwl_writelock failure. stat=%d: ERR=%s\n",
            errstat, be.bstrerror(errstat));

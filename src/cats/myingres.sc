@@ -33,7 +33,7 @@ short INGgetCols(const char *stmt)
    sqlda->sqln = number;
    
    stmtd = (char*)malloc(strlen(stmt)+1);
-   strncpy(stmtd,stmt,strlen(stmt)+1);
+   bstrncpy(stmtd,stmt,strlen(stmt)+1);
      
    EXEC SQL PREPARE s1 from :stmtd;
    if (INGcheck() < 0) {
@@ -69,7 +69,7 @@ IISQLDA *INGgetDescriptor(short numCols, const char *stmt)
    sqlda->sqln = numCols;
    
    stmtd = (char *)malloc(strlen(stmt)+1);
-   strncpy(stmtd,stmt,strlen(stmt)+1);
+   bstrncpy(stmtd,stmt,strlen(stmt)+1);
   
    EXEC SQL PREPARE s2 INTO :sqlda FROM :stmtd;
   
@@ -101,6 +101,10 @@ IISQLDA *INGgetDescriptor(short numCols, const char *stmt)
 
 void INGfreeDescriptor(IISQLDA *sqlda)
 {
+   if (!sqlda) {
+      return;
+   }
+
    int i;
 
    for (i = 0; i < sqlda->sqld; ++i) {
@@ -139,6 +143,10 @@ int INGgetTypeSize(IISQLVAR *ingvar)
 
 INGresult *INGgetINGresult(IISQLDA *sqlda)
 {
+   if (!sqlda) {
+      return NULL;
+   }
+
    int i;
    INGresult *result = NULL;
    
@@ -159,7 +167,7 @@ INGresult *INGgetINGresult(IISQLDA *sqlda)
 
       for (i = 0; i < result->num_fields; ++i) {
          memset(result->fields[i].name, 0, 34);
-         strncpy(result->fields[i].name, sqlda->sqlvar[i].sqlname.sqlnamec, sqlda->sqlvar[i].sqlname.sqlnamel);
+         bstrncpy(result->fields[i].name, sqlda->sqlvar[i].sqlname.sqlnamec, sqlda->sqlvar[i].sqlname.sqlnamel);
          result->fields[i].max_length = INGgetTypeSize(&sqlda->sqlvar[i]);
          result->fields[i].type = abs(sqlda->sqlvar[i].sqltype);
          result->fields[i].flags = (abs(sqlda->sqlvar[i].sqltype)<0) ? 1 : 0;
@@ -171,6 +179,10 @@ INGresult *INGgetINGresult(IISQLDA *sqlda)
 
 void INGfreeINGresult(INGresult *ing_res)
 {
+   if (!ing_res) {
+      return;
+   }
+
    int rows;
    ING_ROW *rowtemp;
 
@@ -312,14 +324,10 @@ int INGfetchAll(const char *stmt, INGresult *ing_res)
    }
       
    /* for (linecount = 0; sqlca.sqlcode == 0; ++linecount) */
-   while(sqlca.sqlcode == 0) {
+   do {
       EXEC SQL FETCH c2 USING DESCRIPTOR :desc;
-      if ((check = INGcheck()) < 0) {
-         EXEC SQL CLOSE c2;
-         return check;
-      }
 
-      if (sqlca.sqlcode == 0) {
+      if ( (sqlca.sqlcode == 0) || (sqlca.sqlcode == -40202) ) {
          row = INGgetRowSpace(ing_res); /* alloc space for fetched row */
             
          /*
@@ -332,10 +340,10 @@ int INGfetchAll(const char *stmt, INGresult *ing_res)
          }      
          ing_res->act_row->next = row; /* append row to old act_row */
          ing_res->act_row = row; /* set row as act_row */
-         row->row_number = linecount;
          ++linecount;
+         row->row_number = linecount;
       }
-   }
+   } while ( (sqlca.sqlcode == 0) || (sqlca.sqlcode == -40202) );
    
    EXEC SQL CLOSE c2;
    
@@ -352,7 +360,7 @@ ING_STATUS INGresultStatus(INGresult *res)
 
 void INGrowSeek(INGresult *res, int row_number)
 {
-   ING_ROW *trow;
+   ING_ROW *trow = NULL;
    if (res->act_row->row_number == row_number) {
       return;
    }
@@ -364,7 +372,7 @@ void INGrowSeek(INGresult *res, int row_number)
       return;
    }
 
-   for (trow = res->first_row; trow->row_number != row_number; trow = trow->next) ;
+   for (trow = res->first_row ; trow->row_number != row_number ; trow = trow->next );
    res->act_row = trow;
    /*
     * Note - can be null - if row_number not found, right?
@@ -420,7 +428,7 @@ int INGexec(INGconn *conn, const char *query)
    EXEC SQL END DECLARE SECTION;
    
    stmt = (char *)malloc(strlen(query)+1);
-   strncpy(stmt,query,strlen(query)+1);
+   bstrncpy(stmt,query,strlen(query)+1);
    rowcount = -1;
 
    EXEC SQL EXECUTE IMMEDIATE :stmt;
@@ -448,11 +456,18 @@ INGresult *INGquery(INGconn *conn, const char *query)
    int cols = INGgetCols(query);
 
    desc = INGgetDescriptor(cols, query);
+   if (!desc) {
+      return NULL;
+   }
    res = INGgetINGresult(desc);
+   if (!res) {
+      return NULL;
+   }
    rows = INGfetchAll(query, res);
 
    if (rows < 0) {
      INGfreeINGresult(res);
+     INGfreeDescriptor(desc);
      return NULL;
    }
    return res;
@@ -505,10 +520,10 @@ INGconn *INGconnectDB(char *dbname, char *user, char *passwd)
    EXEC SQL INQUIRE_SQL(:conn_name = connection_name);
    EXEC SQL INQUIRE_SQL(:sess_id = session);
    
-   strncpy(dbconn->dbname, ingdbname, sizeof(dbconn->dbname));
-   strncpy(dbconn->user, ingdbuser, sizeof(dbconn->user));
-   strncpy(dbconn->password, ingdbpasw, sizeof(dbconn->password));
-   strncpy(dbconn->connection_name, conn_name, sizeof(dbconn->connection_name));
+   bstrncpy(dbconn->dbname, ingdbname, sizeof(dbconn->dbname));
+   bstrncpy(dbconn->user, ingdbuser, sizeof(dbconn->user));
+   bstrncpy(dbconn->password, ingdbpasw, sizeof(dbconn->password));
+   bstrncpy(dbconn->connection_name, conn_name, sizeof(dbconn->connection_name));
    dbconn->session_id = sess_id;
    dbconn->msg = (char*)malloc(257);
    memset(dbconn->msg, 0, 257);

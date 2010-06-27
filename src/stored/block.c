@@ -418,25 +418,31 @@ bool write_block_to_dev(DCR *dcr)
    if (job_canceled(jcr)) {
       return false;
    }
+
    ASSERT(block->binbuf == ((uint32_t) (block->bufp - block->buf)));
-   ASSERT(dev->is_open());
+
+   wlen = block->binbuf;
+   if (wlen <= WRITE_BLKHDR_LENGTH) {  /* Does block have data in it? */
+      Dmsg0(100, "return write_block_to_dev no data to write\n");
+      return true;
+   }
 
    /* dump_block(block, "before write"); */
    if (dev->at_weot()) {
       Dmsg0(100, "return write_block_to_dev with ST_WEOT\n");
       dev->dev_errno = ENOSPC;
-      Jmsg0(jcr, M_FATAL, 0,  _("Cannot write block. Device at EOM.\n"));
+      Jmsg1(jcr, M_FATAL, 0,  _("Cannot write block. Device at EOM. dev=%s\n"), dev->print_name());
       return false;
    }
    if (!dev->can_append()) {
       dev->dev_errno = EIO;
-      Jmsg(jcr, M_FATAL, 0, _("Attempt to write on read-only Volume.\n"));
+      Jmsg1(jcr, M_FATAL, 0, _("Attempt to write on read-only Volume. dev=%s\n"), dev->print_name());
       return false;
    }
-   wlen = block->binbuf;
-   if (wlen <= WRITE_BLKHDR_LENGTH) {  /* Does block have data in it? */
-      Dmsg0(100, "return write_block_to_dev no data to write\n");
-      return true;
+
+   if (!dev->is_open()) {
+      Jmsg1(jcr, M_FATAL, 0, _("Attempt to write on closed device=%s\n"), dev->print_name());
+      return false;
    }
    /*
     * Clear to the end of the buffer if it is not full,

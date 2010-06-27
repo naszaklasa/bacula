@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,18 +30,17 @@
  *
  *     Kern Sibbald, Jan MMI
  *
- *   Version $Id$
  */
 
 /*
  * Number of acl errors to report per job.
  */
-#define ACL_REPORT_ERR_MAX_PER_JOB	25
+#define ACL_REPORT_ERR_MAX_PER_JOB      25
 
 /*
  * Number of xattr errors to report per job.
  */
-#define XATTR_REPORT_ERR_MAX_PER_JOB	25
+#define XATTR_REPORT_ERR_MAX_PER_JOB    25
 
 /*
  * Return codes from acl subroutines.

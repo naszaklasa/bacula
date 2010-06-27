@@ -777,6 +777,7 @@ static bool levelscmd(UAContext *ua, const char *cmd)
    ua->send_msg("Catalog\n");
    ua->send_msg("InitCatalog\n");
    ua->send_msg("VolumeToCatalog\n");
+   ua->send_msg("Base\n");
    return true;
 }
 

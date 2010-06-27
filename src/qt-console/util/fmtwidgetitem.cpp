@@ -213,7 +213,8 @@ void ItemFormatterBase::setPercent(int index, float value)
       pix = ":images/96p.png";
    }
    setPixmap(index, QPixmap(pix), val);
-   setSortValue(index, (int) value);
+   //setSortValue(index, (int) value);
+   //setBackground(index, Qt::green);
 }
 
 /* By default, the setPixmap implementation with tooltip don't implement
@@ -227,9 +228,8 @@ void ItemFormatterBase::setPixmap(int index, const QPixmap &pix,
 
 void ItemFormatterBase::setInChanger(int index, const QString &InChanger)
 {
-   setPixmap(index, 
-             QPixmap(":images/inflag"+InChanger+".png"));
-   setSortValue(index, InChanger.toInt() );
+   setPixmap(index, QPixmap(":images/inflag"+InChanger+".png"));
+   //setSortValue(index, InChanger.toInt() );
 }
 
 void ItemFormatterBase::setTextFld(int index, const QString &fld, bool center)

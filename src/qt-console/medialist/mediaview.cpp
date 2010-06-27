@@ -287,6 +287,9 @@ void MediaView::populateTable()
       "WHERE VolStatus IN ('Full', 'Used') "
       "GROUP BY MediaType";
 
+   if (mainWin->m_sqlDebug) {
+      Pmsg1(000, "MediaView query cmd : %s\n",query.toUtf8().data());
+   }
    if (m_console->sql_cmd(query, results)) {
       foreach (resultline, results) {
          fieldlist = resultline.split("\t");
@@ -308,9 +311,12 @@ void MediaView::populateTable()
       + cmd + 
       " ORDER BY VolumeName LIMIT " + m_sbLimit->cleanText();
 
-//   Pmsg1(000, "MediaView query cmd : %s\n",query.toUtf8().data());
+   m_tableMedia->sortByColumn(0, Qt::AscendingOrder);
    m_tableMedia->setSortingEnabled(false); /* Don't sort during insert */
    results.clear();
+   if (mainWin->m_sqlDebug) {
+      Pmsg1(000, "MediaView query cmd : %s\n",query.toUtf8().data());
+   }
    if (m_console->sql_cmd(query, results)) {
       int row=0;
       filterExipired(results);
