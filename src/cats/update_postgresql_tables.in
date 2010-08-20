@@ -69,8 +69,6 @@ DROP INDEX file_fp_idx;
 -- CREATE INDEX CONCURRENTLY file_jpf_idx ON File (JobId, PathId, FilenameId)
 -- to make it without locks (require PostgreSQL 8.2 version)
 
-CREATE INDEX file_jpfid_idx on File (JobId, PathId, FilenameId);
-
 ANALYSE;
 
 END-OF-DATA
