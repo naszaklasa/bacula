@@ -61,9 +61,6 @@ COMMIT;
 
 CREATE INDEX basefiles_jobid_idx ON BaseFiles ( JobId );
 
--- suppress output for index modification
-SET client_min_messages TO 'fatal';
-
 -- Remove bad PostgreSQL index
 DROP INDEX file_fp_idx;
 
@@ -71,11 +68,6 @@ DROP INDEX file_fp_idx;
 -- If you want to create this index during production, you can use 
 -- CREATE INDEX CONCURRENTLY file_jpf_idx ON File (JobId, PathId, FilenameId)
 -- to make it without locks (require PostgreSQL 8.2 version)
-
-CREATE INDEX file_jpfid_idx on File (JobId, PathId, FilenameId);
-
--- restore output
-SET client_min_messages TO DEFAULT;
 
 ANALYSE;
 

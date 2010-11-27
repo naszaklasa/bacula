@@ -1,3 +1,12 @@
+bacula (5.0.2-2.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Fix "bacula meta-package not installable with recommended packages":
+    bacula-sd: Recommends: add a real package to the virtual bacula-sd-tools;
+    thanks to Hideki Yamane for the proposal (closes: #602222).
+
+ -- gregor herrmann <gregoa@debian.org>  Sat, 27 Nov 2010 17:18:41 +0100
+
 bacula (5.0.2-2) unstable; urgency=medium
 
   * Remove spurious creation of file_jpfid_idx on upgrade.  Closes: #591293.

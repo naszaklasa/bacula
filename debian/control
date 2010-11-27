@@ -210,7 +210,7 @@ Package: bacula-sd
 Architecture: any
 Pre-Depends: bacula-common (= ${binary:Version})
 Depends: ${shlibs:Depends}, mtx, python, lsb-base (>= 3.2-13), ${misc:Depends}
-Recommends: mt-st, bacula-sd-tools
+Recommends: mt-st, bacula-sd-sqlite3 (>= ${source:Version})|bacula-sd-tools
 Suggests: dds2tar, scsitools, sg3-utils
 Description: network backup, recovery and verification - storage daemon
  Bacula is a set of programs to manage backup, recovery and verification of
