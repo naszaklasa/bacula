@@ -1,3 +1,12 @@
+bacula (5.0.2-2.2) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Fix "make_catalog_backup is broken": patch configure to use /usr/bin as
+    the path of the PostgreSQL binaries instead of dynamically setting it at
+    build time to /usr/lib/postgresql/$VERSION/bin (closes: #606802).
+
+ -- gregor herrmann <gregoa@debian.org>  Wed, 15 Dec 2010 16:42:56 +0100
+
 bacula (5.0.2-2.1) unstable; urgency=low
 
   * Non-maintainer upload.
