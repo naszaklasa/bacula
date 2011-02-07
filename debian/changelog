@@ -1,3 +1,11 @@
+bacula (5.0.2-3) unstable; urgency=low
+
+  * Wrap password commands in quotes.  Closes: #607443.
+  * Orphaning this package; changing maintainer to QA group.
+    WNPP bug #612296 filed.
+
+ -- John Goerzen <jgoerzen@complete.org>  Mon, 07 Feb 2011 08:20:22 -0600
+
 bacula (5.0.2-2.2) unstable; urgency=low
 
   * Non-maintainer upload.

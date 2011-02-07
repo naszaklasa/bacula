@@ -1,7 +1,7 @@
 Source: bacula
 Section: admin
 Priority: optional
-Maintainer: John Goerzen <jgoerzen@complete.org>
+Maintainer: Debian QA Group <packages@qa.debian.org>
 Build-Depends: autotools-dev, debhelper (>= 6.0.7~), po-debconf (>= 0.8.2), 
  zlib1g-dev, libreadline-dev, libjconv-dev,
  libsqlite0-dev, libsqlite3-dev, libmysqlclient-dev, libpq-dev (>= 8.4), 
