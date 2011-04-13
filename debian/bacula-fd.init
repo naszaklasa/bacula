@@ -39,7 +39,7 @@ PIDFILE=/var/run/bacula/$NAME.$PORT.pid
 do_start()
 {
         start-stop-daemon --start --quiet --pidfile $PIDFILE \
-        --exec $DAEMON -- $ARGS
+        --oknodo --exec $DAEMON -- $ARGS
 }
 
 do_stop()
