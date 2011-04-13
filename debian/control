@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Debian QA Group <packages@qa.debian.org>
 Build-Depends: autotools-dev, debhelper (>= 6.0.7~), po-debconf (>= 0.8.2), 
  zlib1g-dev, libreadline-dev, libjconv-dev,
- libsqlite0-dev, libsqlite3-dev, libmysqlclient-dev, libpq-dev (>= 8.4), 
+ libsqlite3-dev, libmysqlclient-dev, libpq-dev (>= 8.4),
  postgresql-server-dev-8.4,
  libwrap0-dev, python-dev, libgtk2.0-dev (>= 2.10),
  libgnome2-dev, libacl1-dev, libkrb5-dev, libgnomeui-dev,
@@ -97,24 +97,10 @@ Description: network backup, recovery and verification - Director common files
  .
  This package provides common files for the Bacula Director daemon.
 
-Package: bacula-director-sqlite
-Depends: bacula-director-sqlite3 (>= ${binary:Version}), sqlite3, sqlite, ${shlibs:Depends}, ${misc:Depends}
-Architecture: all
-Description: network backup, recovery and verification - SQLite 2 director transition
- This package exists to upload pre-3.0 Bacula SQLite v2 installations to
- SQLite v3 with Bacula 3.0.  The SQLite v2 support has been deprecated
- in Bacula 3.0, and this package will get you migrated to Bacula 3.0.
- .
- Once you are successfully migrated, you can safely delete this package.
- .
- This package does nothing for people that aren't upgrading.
-
 Package: bacula-director-sqlite3
 Pre-Depends: debconf (>= 1.4.30) | debconf-2.0
 Architecture: any
-Depends: bacula-director-common (= ${binary:Version}), sqlite3, sqlite, ${shlibs:Depends}, bacula-common-sqlite3 (>= ${binary:Version}), file, dbconfig-common (>= 1.8.19), ${misc:Depends}
-# Can remove dep on file once sqlite2 migration code is dropped from postinst
-# after squeeze (that migration code is for lenny -> squeeze)
+Depends: bacula-director-common (= ${binary:Version}), sqlite3, ${shlibs:Depends}, bacula-common-sqlite3 (>= ${binary:Version}), file, dbconfig-common (>= 1.8.19), ${misc:Depends}
 Conflicts: bacula-director
 Provides: bacula-director
 Replaces: bacula-director
@@ -239,16 +225,6 @@ Description: network backup, recovery and verification - SQLite 3 SD tools
  .
  This package contains SQLite 3 versions of the bscan and bcopy utilities,
  which are used for recovery when Bacula's catalog is unavailable.
-
-Package: bacula-sd-sqlite
-Architecture: any
-Depends: bacula-sd (= ${binary:Version}), bacula-sd-sqlite3 (>= 3.0.0), ${misc:Depends}
-Conflicts: bacula-sd (<< 1.38.9)
-Replaces: bacula-sd (<< 1.38.9)
-Description: network backup, recovery and verification - SQLite SD tools
- This is a transition package.  SQLite v2 support has been deprecated
- as of Bacula 3.0.0.  This package depends on the SQLite v3 version of the
- storage daemon.
 
 Package: bacula-sd-mysql
 Architecture: any

@@ -1,10 +1,3 @@
-POST SQUEEZE:
-
- * Remove old -sqlite (sqlitev2) packages
- * Remove old -sqlite logic in sqlite3 .config, .postinst
- * Remove old -sqlite logic in rules, if any
- * Remove dep on sqlite from bacula-director-sqlite3
-
 * Make sure btraceback can be found in /usr/lib/bacula?
 
 * Verify upgrades work as expected
