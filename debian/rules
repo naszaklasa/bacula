@@ -162,7 +162,7 @@ clean:
 # Macro to extract a here document and put it in place
 # args: 1 -- db name, 2 -- file to extract, 3 -- version
 define ext-upgrade
-debian/patches/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/upgrade/$(1)/$(3)
+debian/patches-scripts/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/upgrade/$(1)/$(3)
 endef
 
 # Macro to process upgrades for all flavors
@@ -186,7 +186,7 @@ endef
 # args: 1 -- db name, 2 -- file to extract
 # We append so we can do the postgresql hack for datestyle
 define ext-install
-debian/patches/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/install/$(1)
+debian/patches-scripts/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/install/$(1)
 endef
 
 install: build install-stamp
@@ -256,11 +256,11 @@ install-arch: build install-stamp
 	dh_link -pbacula-common
 	for f in bconsole.conf bat.conf \
 		bacula-sd.conf bacula-fd.conf tray-monitor.conf; do \
-		debian/patches/fix_config \
+		debian/patches-scripts/fix_config \
 			debian/tmp-install-sqlite3/etc/bacula/$$f \
 			debian/bacula-common/usr/share/bacula-common/defconfig/$$f; \
 	done
-	debian/patches/fix_director \
+	debian/patches-scripts/fix_director \
 		debian/tmp-install-sqlite3/etc/bacula/bacula-dir.conf \
 		debian/bacula-common/usr/share/bacula-common/defconfig/bacula-dir.conf
 
@@ -269,8 +269,8 @@ install-arch: build install-stamp
 
 patch: patch-stamp
 patch-stamp:
-	chmod 755 debian/patches/fix_config debian/patches/fix_director \
-		debian/patches/extract_here
+	chmod 755 debian/patches-scripts/fix_config debian/patches-scripts/fix_director \
+		debian/patches-scripts/extract_here
 	chmod 755 debian/additions/bconsole
 
 	touch patch-stamp
