@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -28,8 +28,6 @@
 /*
 
         Definitions for the smart memory allocator
-
-     Version $Id$
 
 */
 
@@ -148,20 +146,16 @@ void *operator new[](size_t s) throw() { (void)s; return 0; }
 class SMARTALLOC
 {
    public:
-      void *operator new(size_t s)
-      {
+      void *operator new(size_t s) {
           return malloc(s);
       }
-      void *operator new[](size_t s)
-      {
+      void *operator new[](size_t s) {
           return malloc(s);
       }
-      void  operator delete(void *ptr)
-      {
+      void  operator delete(void *ptr) {
           free(ptr);
       }
-      void  operator delete[](void *ptr, size_t i)
-      {
+      void  operator delete[](void *ptr, size_t i) {
           free(ptr);
       }
 };

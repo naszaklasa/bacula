@@ -4,7 +4,7 @@
 #	       the bacula Storage daemon.
 #
 # chkconfig: 2345 90 99
-# description: It comes by night and sucks the vital essence from your computers.
+# description: The Leading Open Source Backup Solution.
 #
 #  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
 #
@@ -14,7 +14,7 @@
 
 case "$1" in
     start)
-        [ -x ${BACSDBIN}/bacula-sd ] && { 
+	[ -x ${BACSDBIN}/bacula-sd ] && { 
 	    sleep 2
 	    echo -n "Starting the Storage daemon: "
 	    OPTIONS=''
@@ -27,29 +27,28 @@ case "$1" in
 	    fi
 
 	    ${BACSDBIN}/bacula-sd $2 ${OPTIONS} -v -c ${BACSDCFG}/bacula-sd.conf
-            echo Done.
-        }
-        ;;
+	    echo Done.
+	}
+	;;
     stop)
-        [ -x ${BACSDBIN}/bacula-sd ] && {
+	[ -x ${BACSDBIN}/bacula-sd ] && {
 	    echo -n "Stopping the Storage daemon: "
 	    killproc ${BACSDBIN}/bacula-sd ${SD_PORT}
-            echo Done.
-        }
-        ;;
+	    echo Done.
+	}
+	;;
     restart)
-        $0 stop
-        sleep 5
-        $0 start
-        ;;
+	$0 stop
+	sleep 5
+	$0 start
+	;;
     status)
-        [ -x ${BACSDBIN}/bacula-sd ] && status ${BACSDBIN}/bacula-sd ${SD_PORT}
-        ;;
+	[ -x ${BACSDBIN}/bacula-sd ] && status ${BACSDBIN}/bacula-sd ${SD_PORT}
+	;;
     *)
-        echo "Usage: $0 {start|stop|restart|status}"
-        exit 1
-        ;;
+	echo "Usage: $0 {start|stop|restart|status}"
+	exit 1
+	;;
 esac
 exit 0
-
 

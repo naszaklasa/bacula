@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -653,7 +653,15 @@ char *edit_device_codes(DCR *dcr, char *omsg, const char *imsg, const char *cmd)
             str = dcr->jcr->Job;
             break;
          case 'v':
-            str = NPRT(dcr->VolumeName);
+            if (dcr->VolCatInfo.VolCatName[0]) {
+               str = dcr->VolCatInfo.VolCatName;
+            } else if (dcr->VolumeName[0]) {
+               str = dcr->VolumeName;
+            } else if (dcr->dev->vol && dcr->dev->vol->vol_name) {
+               str = dcr->dev->vol->vol_name;
+            } else {
+               str = dcr->dev->VolHdr.VolumeName;
+            }
             break;
          case 'f':
             str = NPRT(dcr->jcr->client_name);

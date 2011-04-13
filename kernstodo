@@ -37,6 +37,14 @@ Document:
  
 Priority:
 ================
+- Add external command to lookup hostname (eg nmblookup timmy-win7)
+nmblookup gato
+querying gato on 127.255.255.255
+querying gato on 192.168.1.255
+   192.168.1.8 gato<00>
+   192.168.1.11 gato<00>
+   192.168.1.8 gato<00>
+   192.168.1.11 gato<00>
 - Possibly allow SD to spool even if a tape is not mounted.
 - How to sync remote offices.
 - Windows Bare Metal 

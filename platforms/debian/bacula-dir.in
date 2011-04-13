@@ -9,13 +9,13 @@
 #  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
 #
 ### BEGIN INIT INFO
-# Provides:          bacula-dir
+# Provides:	     bacula-dir
 # Required-Start:    $network
 # Required-Stop:     $network
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Start @BACULA@ Director daemon at boot time
-# Description:       Enable @BACULA@ Director.
+# Description:	     Enable @BACULA@ Director.
 ### END INIT INFO
 #
 
@@ -48,11 +48,13 @@ case "$1" in
    start)
       echo -n "Starting ${DESC}: "
       start-stop-daemon --start --quiet --pidfile ${PIDFILE} --exec ${DAEMON} -- ${BOPTIONS}
+      RETVAL=$?
       echo "${NAME}"
       ;;
    stop)
       echo -n "Stopping ${DESC}: "
       start-stop-daemon --oknodo --stop --quiet --exec ${DAEMON} -- ${BOPTIONS}
+      RETVAL=$?
       echo "${NAME}"
       ;;
    restart|force-reload)
@@ -65,4 +67,4 @@ case "$1" in
       exit 1
       ;;
 esac
-exit 0
+exit $RETVAL

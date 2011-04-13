@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -33,7 +33,6 @@
  *
  * Kern Sibbald, Nov MM
  *
- *   Version $Id$
  */
 
 
@@ -70,31 +69,32 @@
 #define JT_SCAN                  'S'  /* Scan Job */
 
 /* Job Status. Some of these are stored in the DB */
-#define JS_Created               'C'  /* created but not yet running */
-#define JS_Running               'R'  /* running */
+#define JS_Canceled              'A'  /* canceled by user */
 #define JS_Blocked               'B'  /* blocked */
+#define JS_Created               'C'  /* created but not yet running */
+#define JS_Differences           'D'  /* Verify differences */
+#define JS_ErrorTerminated       'E'  /* Job terminated in error */
+#define JS_WaitFD                'F'  /* waiting on File daemon */
+#define JS_Incomplete            'I'  /* Incomplete Job */
+#define JS_DataCommitting        'L'  /* Committing data (last despool) */
+#define JS_WaitMount             'M'  /* waiting for Mount */
+#define JS_Running               'R'  /* running */
+#define JS_WaitSD                'S'  /* waiting on the Storage daemon */
 #define JS_Terminated            'T'  /* terminated normally */
 #define JS_Warnings              'W'  /* Terminated normally with warnings */
-#define JS_ErrorTerminated       'E'  /* Job terminated in error */
-#define JS_Error                 'e'  /* Non-fatal error */
-#define JS_FatalError            'f'  /* Fatal error */
-#define JS_Differences           'D'  /* Verify differences */
-#define JS_Canceled              'A'  /* canceled by user */
-#define JS_Incomplete            'I'  /* Incomplete Job */
-#define JS_WaitFD                'F'  /* waiting on File daemon */
-#define JS_WaitSD                'S'  /* waiting on the Storage daemon */
-#define JS_WaitMedia             'm'  /* waiting for new media */
-#define JS_WaitMount             'M'  /* waiting for Mount */
-#define JS_WaitStoreRes          's'  /* Waiting for storage resource */
-#define JS_WaitJobRes            'j'  /* Waiting for job resource */
+
+#define JS_AttrDespooling        'a'  /* SD despooling attributes */
 #define JS_WaitClientRes         'c'  /* Waiting for Client resource */
 #define JS_WaitMaxJobs           'd'  /* Waiting for maximum jobs */
-#define JS_WaitStartTime         't'  /* Waiting for start time */
-#define JS_WaitPriority          'p'  /* Waiting for higher priority jobs to finish */
-#define JS_AttrDespooling        'a'  /* SD despooling attributes */
+#define JS_Error                 'e'  /* Non-fatal error */
+#define JS_FatalError            'f'  /* Fatal error */
 #define JS_AttrInserting         'i'  /* Doing batch insert file records */
+#define JS_WaitJobRes            'j'  /* Waiting for job resource */
 #define JS_DataDespooling        'l'  /* Doing data despooling */
-#define JS_DataCommitting        'L'  /* Committing data (last despool) */
+#define JS_WaitMedia             'm'  /* waiting for new media */
+#define JS_WaitPriority          'p'  /* Waiting for higher priority jobs to finish */
+#define JS_WaitStoreRes          's'  /* Waiting for storage resource */
+#define JS_WaitStartTime         't'  /* Waiting for start time */ 
 
 /* Migration selection types */
 enum {
@@ -178,6 +178,7 @@ private:
    volatile int32_t _use_count;       /* use count */
    int32_t m_JobType;                 /* backup, restore, verify ... */
    int32_t m_JobLevel;                /* Job level */
+   bool my_thread_killable;           /* can we kill the thread? */
 public:
    void lock() {P(mutex); };
    void unlock() {V(mutex); };
@@ -203,10 +204,11 @@ public:
    void setJobStatus(int JobStatus);      /* in lib/jcr.c */
    bool JobReads();                       /* in lib/jcr.c */
    void my_thread_send_signal(int sig);   /* in lib/jcr.c */
+   void set_killable(bool killable);      /* in lib/jcr.c */
+   bool is_killable() const { return my_thread_killable; };
 
    /* Global part of JCR common to all daemons */
    dlink link;                        /* JCR chain link */
-   bool my_thread_running;            /* is the thread controlling jcr running*/
    pthread_t my_thread_id;            /* id of thread controlling jcr */
    BSOCK *dir_bsock;                  /* Director bsock or NULL if we are him */
    BSOCK *store_bsock;                /* Storage connection socket */
@@ -240,6 +242,7 @@ public:
    time_t wait_time_sum;              /* cumulative wait time since job start */
    time_t wait_time;                  /* timestamp when job have started to wait */
    POOLMEM *client_name;              /* client name */
+   POOLMEM *JobIds;                   /* User entered string of JobIds */
    POOLMEM *RestoreBootstrap;         /* Bootstrap file to restore */
    POOLMEM *stime;                    /* start time for incremental/differential */
    char *sd_auth_key;                 /* SD auth key */
@@ -275,6 +278,7 @@ public:
    save_pkt *plugin_sp;               /* plugin save packet */
    char *plugin_options;              /* user set options for plugin */
    bool cmd_plugin;                   /* Set when processing a command Plugin = */
+   POOLMEM *comment;                  /* Comment for this Job */
 
    /* Daemon specific part of JCR */
    /* This should be empty in the library */
@@ -357,6 +361,7 @@ public:
    /* File Daemon specific part of JCR */
    uint32_t num_files_examined;       /* files examined this job */
    POOLMEM *last_fname;               /* last file saved/verified */
+   POOLMEM *job_metadata;             /* VSS job metadata */
    acl_data_t *acl_data;              /* ACLs for backup/restore */
    xattr_data_t *xattr_data;          /* Extended Attributes for backup/restore */
    int32_t last_type;                 /* type of last file saved/verified */

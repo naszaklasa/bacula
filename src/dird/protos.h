@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -27,8 +27,6 @@
 */
 /*
  * Director external function prototypes
- *
- *   Version $Id$
  */
 
 /* admin.c */
@@ -104,6 +102,7 @@ extern int put_file_into_catalog(JCR *jcr, long file_index, char *fname,
                           char *link, char *attr, int stream);
 extern void get_level_since_time(JCR *jcr, char *since, int since_len);
 extern int send_runscripts_commands(JCR *jcr);
+extern bool send_restore_objects(JCR *jcr);
 
 /* getmsg.c */
 enum e_prtmsg {
@@ -143,6 +142,10 @@ extern void dird_free_jcr_pointers(JCR *jcr);
 extern void cancel_storage_daemon_job(JCR *jcr);
 extern bool run_console_command(JCR *jcr, const char *cmd);
 extern void sd_msg_thread_send_signal(JCR *jcr, int sig);
+
+/* jobq.c */
+extern bool inc_read_store(JCR *jcr);
+extern void dec_read_store(JCR *jcr);
 
 /* migration.c */
 extern bool do_migration(JCR *jcr);
@@ -192,6 +195,7 @@ bool acl_access_ok(UAContext *ua, int acl, const char *item, int len);
 bool do_a_command(UAContext *ua);
 bool do_a_dot_command(UAContext *ua);
 int qmessagescmd(UAContext *ua, const char *cmd);
+bool open_new_client_db(UAContext *ua);
 bool open_client_db(UAContext *ua);
 bool open_db(UAContext *ua);
 void close_db(UAContext *ua);
@@ -212,6 +216,7 @@ bool get_yesno(UAContext *ua, const char *prompt);
 bool is_yesno(char *val, int *ret);
 int get_enabled(UAContext *ua, const char *val);
 void parse_ua_args(UAContext *ua);
+bool is_comment_legal(UAContext *ua, const char *name);
 
 /* ua_label.c */
 bool is_volume_name_legal(UAContext *ua, const char *name);

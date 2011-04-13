@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -759,6 +759,9 @@ void do_restore(JCR *jcr)
          Dmsg1(50, "restore stream_plugin_name=%s\n", sd->msg);
          plugin_name_stream(jcr, sd->msg);
          break;
+
+      case STREAM_RESTORE_OBJECT:
+         break;                    /* these are sent by Director */
 
       default:
          close_previous_stream(rctx);

@@ -4,7 +4,7 @@
 #	       the bacula Storage daemon.
 #
 # chkconfig: 2345 90 9
-# description: It comes by night and sucks the vital essence from your computers.
+# description: The Leading Open Source Backup Solution.
 #
 #  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
 # Modified to work on SuSE 1/31/2004 D. Scott Barninger <barninger at fairfieldcomputers.com>
@@ -49,6 +49,7 @@ case "$1" in
        ;;
     status)
        /sbin/checkproc @sbindir@/bacula-sd
+       RETVAL=$?
        rc_status -v
        ;;
     *)
@@ -56,4 +57,4 @@ case "$1" in
        exit 1
        ;;
 esac
-exit 0
+exit $RETVAL

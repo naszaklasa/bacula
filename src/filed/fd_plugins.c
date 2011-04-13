@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation, which is 
    listed in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -103,22 +103,28 @@ struct bacula_ctx {
    bool disabled;                        /* set if plugin disabled */
 };
 
-static bool is_plugin_disabled(JCR *jcr)
+static bool is_plugin_disabled(bpContext *plugin_ctx)
 {
    bacula_ctx *b_ctx;
-   if (!jcr->plugin_ctx) {
+   if (!plugin_ctx) {
       return true;
    }
-   b_ctx = (bacula_ctx *)jcr->plugin_ctx->bContext;
+   b_ctx = (bacula_ctx *)plugin_ctx->bContext;
    return b_ctx->disabled;
 }
 
+static bool is_plugin_disabled(JCR *jcr)
+{
+   return is_plugin_disabled(jcr->plugin_ctx);
+}
 
 /*
  * Create a plugin event 
+ * When receiving bEventCancelCommand, this function is called by an other thread. 
  */
 void generate_plugin_event(JCR *jcr, bEventType eventType, void *value)     
 {
+   bpContext *plugin_ctx;
    bEvent event;
    Plugin *plugin;
    int i = 0;
@@ -135,19 +141,15 @@ void generate_plugin_event(JCR *jcr, bEventType eventType, void *value)
    /* Pass event to every plugin */
    foreach_alist(plugin, plugin_list) {
       bRC rc;
-      jcr->plugin_ctx = &plugin_ctx_list[i++];
-      jcr->plugin = plugin;
-      if (is_plugin_disabled(jcr)) {
+      plugin_ctx = &plugin_ctx_list[i++];
+      if (is_plugin_disabled(plugin_ctx)) {
          continue;
       }
-      rc = plug_func(plugin)->handlePluginEvent(jcr->plugin_ctx, &event, value);
+      rc = plug_func(plugin)->handlePluginEvent(plugin_ctx, &event, value);
       if (rc != bRC_OK) {
          break;
       }
    }
-
-   jcr->plugin = NULL;
-   jcr->plugin_ctx = NULL;
    return;
 }
 
@@ -217,8 +219,8 @@ int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    POOL_MEM fname(PM_FNAME);
    POOL_MEM link(PM_FNAME);
 
-   if (!plugin_list || !jcr->plugin_ctx_list || job_canceled(jcr)) {
-      Jmsg1(jcr, M_FATAL, 0, "Command plugin \"%s\" not loaded.\n", cmd);
+   if (!plugin_list || !jcr->plugin_ctx_list || jcr->is_job_canceled()) {
+      Jmsg1(jcr, M_FATAL, 0, "Command plugin \"%s\" requested, but is not loaded.\n", cmd);
       return 1;                            /* Return if no plugins loaded */
    }
 
@@ -626,8 +628,8 @@ static bool is_plugin_compatible(Plugin *plugin)
            plugin->file, FD_PLUGIN_INTERFACE_VERSION, info->version);
       return false;
    }
-   if (strcmp(info->plugin_license, "Bacula GPLv2") != 0 &&
-       strcmp(info->plugin_license, "GPLv2") != 0) {
+   if (strcmp(info->plugin_license, "Bacula AGPLv3") != 0 &&
+       strcmp(info->plugin_license, "AGPLv3") != 0) {
       Jmsg(NULL, M_ERROR, 0, _("Plugin license incompatible. Plugin=%s license=%s\n"),
            plugin->file, info->plugin_license);
       Dmsg2(50, "Plugin license incompatible. Plugin=%s license=%s\n",
@@ -1054,7 +1056,7 @@ int main(int argc, char *argv[])
 
    Dmsg0(dbglvl, "bacula: OK ...\n");
    close_memory_pool();
-   sm_dump(false);
+   sm_dump(false);     /* unit test */
    return 0;
 }
 

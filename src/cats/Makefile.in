@@ -24,19 +24,17 @@ dummy:
 #
 # include files installed when using libtool
 #
-INCLUDE_FILES = bdb.h cats.h protos.h sql_cmds.h
+INCLUDE_FILES = cats.h protos.h sql_cmds.h
 
-LIBBACSQL_SRCS = mysql.c bdb.c dbi.c \
+LIBBACSQL_SRCS = mysql.c dbi.c \
 		 sql.c sql_cmds.c sql_create.c sql_delete.c sql_find.c \
 		 sql_get.c sql_list.c sql_update.c sqlite.c \
-		 postgresql.c ingres.c myingres.c \
+		 postgresql.c \
 		 bvfs.c
 LIBBACSQL_OBJS = $(LIBBACSQL_SRCS:.c=.o)
 LIBBACSQL_LOBJS = $(LIBBACSQL_SRCS:.c=.lo)
 
-LIBBACSQL_LT_CURRENT = @LIBBACSQL_LT_CURRENT@
-LIBBACSQL_LT_REVISION = @LIBBACSQL_LT_REVISION@
-LIBBACSQL_LT_AGE = @LIBBACSQL_LT_AGE@
+LIBBACSQL_LT_RELEASE = @LIBBACSQL_LT_RELEASE@
 
 .SUFFIXES:	.c .o .lo
 .PHONY:
@@ -58,7 +56,7 @@ all: Makefile libbacsql$(DEFAULT_ARCHIVE_TYPE)
 
 esql:
 	@echo "Generating myingres.c from myingres.sc"
-	$(NO_ECHO)$(II_SYSTEM)/ingres/bin/esqlcc -extension=c myingres.sc
+	$(NO_ECHO)$(II_SYSTEM)/ingres/bin/esqlcc -multi -extension=c myingres.sc
 	@echo "Generating myingres.h from myingres.sh"
 	$(NO_ECHO)$(II_SYSTEM)/ingres/bin/esqlcc -extension=h myingres.sh
 
@@ -69,7 +67,7 @@ libbacsql.a: $(LIBBACSQL_OBJS)
 
 libbacsql.la: Makefile $(LIBBACSQL_LOBJS)
 	@echo "Making $@ ..."	  
-	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACSQL_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBACSQL_LT_CURRENT).$(LIBBACSQL_LT_REVISION).$(LIBBACSQL_LT_AGE) $(DB_LIBS)
+	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACSQL_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBACSQL_LT_RELEASE) $(DB_LIBS)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
@@ -88,9 +86,6 @@ realclean: clean
 
 	$(RMF) create_bacula_database	   update_bacula_tables     make_bacula_tables
 	$(RMF) grant_bacula_privileges	   drop_bacula_tables	    drop_bacula_database
-
-	$(RMF) create_bdb_database	   update_bdb_tables	    make_bdb_tables
-	$(RMF) grant_bdb_privileges	   drop_bdb_tables	    drop_bdb_database
 
 	$(RMF) create_mysql_database	   update_mysql_tables	    make_mysql_tables
 	$(RMF) grant_mysql_privileges	   drop_mysql_tables	    drop_mysql_database
@@ -131,7 +126,7 @@ uninstall-includes:
 
 libtool-install: all
 	$(MKDIR) $(DESTDIR)$(libdir)
-	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_PROGRAM) libbacsql$(DEFAULT_ARCHIVE_TYPE) $(DESTDIR)$(libdir)
+	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_LIB) libbacsql$(DEFAULT_ARCHIVE_TYPE) $(DESTDIR)$(libdir)
 
 libtool-uninstall:
 	$(LIBTOOL_UNINSTALL) $(RMF) $(DESTDIR)$(libdir)/libbacsql.la

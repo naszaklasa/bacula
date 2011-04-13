@@ -59,7 +59,7 @@ static void usage()
 "Copyright (C) 2005 Christian Masopust\n"
 "Written by Christian Masopust (2005)\n"
 "\nVersion: " VERSION " (" BDATE ") %s %s %s\n\n"
-"Usage: check_bacula [-d debug_level] -H host -D daemon -N name -P port\n"
+"Usage: check_bacula [-d debug_level] -H host -D daemon -M name -P port\n"
 "       -H <host>     hostname where daemon runs\n"
 "       -D <daemon>   which daemon to check: dir|sd|fd\n"
 "       -M <name>     name of monitor (as in bacula-*.conf)\n"

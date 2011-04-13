@@ -1,57 +1,66 @@
 #!/bin/sh
 #
-# shell script to grant privileges to the bacula database
+# shell script TO GRANT privileges to the bacula database
 #
-db_user=${db_user:-@db_user@}
 bindir=@SQL_BINDIR@
+PATH="$bindir:$PATH"
 db_name=${db_name:-@db_name@}
+db_user=${db_user:-@db_user@}
 
-if sql ${db_name} $* <<END-OF-DATA
+sql iidbdb $* <<END-OF-DATA
+CREATE USER ${db_user}
+\g
+END-OF-DATA
 
-create user ${db_user};
+if sql -u${db_user} ${db_name} $* <<END-OF-DATA
 
 -- for tables
-grant all on unsavedfiles to ${db_user};
-grant all on basefiles	  to ${db_user};
-grant all on jobmedia	  to ${db_user};
-grant all on file	  to ${db_user};
-grant all on job	  to ${db_user};
-grant all on media	  to ${db_user};
-grant all on client	  to ${db_user};
-grant all on pool	  to ${db_user};
-grant all on fileset	  to ${db_user};
-grant all on path	  to ${db_user};
-grant all on filename	  to ${db_user};
-grant all on counters	  to ${db_user};
-grant all on version	  to ${db_user};
-grant all on cdimages	  to ${db_user};
-grant all on mediatype	  to ${db_user};
-grant all on storage	  to ${db_user};
-grant all on device	  to ${db_user};
-grant all on status	  to ${db_user};
-grant all on location	  to ${db_user};
-grant all on locationlog  to ${db_user};
-grant all on log	  to ${db_user};
-grant all on jobhisto	  to ${db_user};
+GRANT ALL ON TABLE Filename TO ${db_user};
+GRANT ALL ON TABLE Path TO ${db_user};
+GRANT ALL ON TABLE File TO ${db_user};
+GRANT ALL ON TABLE RestoreObject TO ${db_user};
+GRANT ALL ON TABLE Job TO ${db_user};
+GRANT ALL ON TABLE JobHisto TO ${db_user};
+GRANT ALL ON TABLE Location TO ${db_user};
+GRANT ALL ON TABLE Fileset TO ${db_user};
+GRANT ALL ON TABLE JobMedia TO ${db_user};
+GRANT ALL ON TABLE Media TO ${db_user};
+GRANT ALL ON TABLE MediaType TO ${db_user};
+GRANT ALL ON TABLE Storage TO ${db_user};
+GRANT ALL ON TABLE Device TO ${db_user};
+GRANT ALL ON TABLE Pool TO ${db_user};
+GRANT ALL ON TABLE Client TO ${db_user};
+GRANT ALL ON TABLE Log TO ${db_user};
+GRANT ALL ON TABLE LocationLog TO ${db_user};
+GRANT ALL ON TABLE Counters TO ${db_user};
+GRANT ALL ON TABLE BaseFiles TO ${db_user};
+GRANT ALL ON TABLE UnsavedFiles TO ${db_user};
+GRANT ALL ON TABLE CDImages  TO ${db_user};
+GRANT ALL ON TABLE PathHierarchy TO ${db_user};
+GRANT ALL ON TABLE PathVisibility TO ${db_user};
+GRANT ALL ON TABLE Version TO ${db_user};
+GRANT ALL ON TABLE Status TO ${db_user};
 
--- for sequences on those tables
-
-grant select, update on filename_filenameid_seq    to ${db_user};
-grant select, update on path_pathid_seq 	   to ${db_user};
-grant select, update on fileset_filesetid_seq	   to ${db_user};
-grant select, update on pool_poolid_seq 	   to ${db_user};
-grant select, update on client_clientid_seq	   to ${db_user};
-grant select, update on media_mediaid_seq	   to ${db_user};
-grant select, update on job_jobid_seq		   to ${db_user};
-grant select, update on file_fileid_seq 	   to ${db_user};
-grant select, update on jobmedia_jobmediaid_seq    to ${db_user};
-grant select, update on basefiles_baseid_seq	   to ${db_user};
-grant select, update on storage_storageid_seq	   to ${db_user};
-grant select, update on mediatype_mediatypeid_seq  to ${db_user};
-grant select, update on device_deviceid_seq	   to ${db_user};
-grant select, update on location_locationid_seq    to ${db_user};
-grant select, update on locationlog_loclogid_seq   to ${db_user};
-grant select, update on log_logid_seq		   to ${db_user};
+-- for sequences ON those tables
+GRANT NEXT ON SEQUENCE Filename_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Path_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE File_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE RestoreObject_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Job_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE JobHisto_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Location_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Fileset_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Jobmedia_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Media_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE MediaType_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Storage_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Device_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Pool_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Client_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE Log_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE LocationLog_Seq TO ${db_user};
+GRANT NEXT ON SEQUENCE BaseFiles_Seq TO ${db_user};
+\g
 
 END-OF-DATA
 then

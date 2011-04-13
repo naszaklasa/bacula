@@ -22,7 +22,7 @@ dummy:
 #
 # include files installed when using libtool
 #
-INCLUDE_FILES = bfile.h find.h protos.h savecwd.h
+INCLUDE_FILES = bfile.h find.h protos.h 
 
 #
 LIBBACFIND_SRCS = find.c match.c find_one.c attribs.c create_file.c \
@@ -31,9 +31,7 @@ LIBBACFIND_SRCS = find.c match.c find_one.c attribs.c create_file.c \
 LIBBACFIND_OBJS = $(LIBBACFIND_SRCS:.c=.o)
 LIBBACFIND_LOBJS = $(LIBBACFIND_SRCS:.c=.lo)
 
-LIBBACFIND_LT_CURRENT = @LIBBACFIND_LT_CURRENT@
-LIBBACFIND_LT_REVISION = @LIBBACFIND_LT_REVISION@
-LIBBACFIND_LT_AGE = @LIBBACFIND_LT_AGE@
+LIBBACFIND_LT_RELEASE = @LIBBACFIND_LT_RELEASE@
 
 .SUFFIXES:	.c .o .lo
 .PHONY:
@@ -59,7 +57,7 @@ libbacfind.a: $(LIBBACFIND_OBJS)
 
 libbacfind.la: Makefile $(LIBBACFIND_LOBJS) 
 	@echo "Making $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACFIND_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBACFIND_LT_CURRENT).$(LIBBACFIND_LT_REVISION).$(LIBBACFIND_LT_AGE)
+	$(LIBTOOL_LINK) $(CXX) $(DEFS) $(DEBUG) $(LDFLAGS) -o $@ $(LIBBACFIND_LOBJS) -export-dynamic -rpath $(libdir) -release $(LIBBACFIND_LT_RELEASE)
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
 	cd $(topdir) \
@@ -78,7 +76,7 @@ uninstall-includes:
 
 libtool-install: all
 	$(MKDIR) $(DESTDIR)$(libdir)
-	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_PROGRAM) libbacfind$(DEFAULT_ARCHIVE_TYPE) $(DESTDIR)$(libdir)
+	$(LIBTOOL_INSTALL_FINISH) $(INSTALL_LIB) libbacfind$(DEFAULT_ARCHIVE_TYPE) $(DESTDIR)$(libdir)
 
 libtool-uninstall:
 	$(LIBTOOL_UNINSTALL) $(RMF) $(DESTDIR)$(libdir)/libbacfind.la

@@ -65,8 +65,10 @@ install: installdirs
 	$(INSTALL_SCRIPT) dvd-handler $(DESTDIR)$(scriptdir)/dvd-handler
 	$(INSTALL_DATA)   btraceback.gdb $(DESTDIR)$(scriptdir)/btraceback.gdb
 	$(INSTALL_DATA)   btraceback.dbx $(DESTDIR)$(scriptdir)/btraceback.dbx
+	$(INSTALL_DATA)   btraceback.mdb $(DESTDIR)$(scriptdir)/btraceback.mdb
 	chmod 0644 $(DESTDIR)$(scriptdir)/btraceback.gdb \
-		   $(DESTDIR)$(scriptdir)/btraceback.dbx
+		   $(DESTDIR)$(scriptdir)/btraceback.dbx \
+		   $(DESTDIR)$(scriptdir)/btraceback.mdb
 	$(INSTALL_SCRIPT) btraceback $(DESTDIR)$(sbindir)/btraceback
 
 
@@ -86,6 +88,7 @@ uninstall:
 	(cd $(DESTDIR)$(scriptdir); $(RMF) dvd-handler)  
 	(cd $(DESTDIR)$(scriptdir); $(RMF) btraceback.gdb)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) btraceback.dbx)
+	(cd $(DESTDIR)$(scriptdir); $(RMF) btraceback.mdb)
 	(cd $(DESTDIR)$(sbindir);   $(RMF) btraceback)
 
 Makefile: Makefile.in

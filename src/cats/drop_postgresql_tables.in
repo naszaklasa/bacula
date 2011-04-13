@@ -31,6 +31,7 @@ drop table Location;
 drop table locationlog;
 drop table PathVisibility;
 drop table PathHierarchy;
+drop table RestoreObject;
 END-OF-DATA
 pstat=$?
 if test $pstat = 0; 

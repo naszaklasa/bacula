@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -135,6 +135,7 @@ bool job_cmd(JCR *jcr)
       free_jcr(ojcr);
    }
    jcr->JobId = JobId;
+   Dmsg2(800, "Start JobId=%d %p\n", JobId, jcr);
    jcr->VolSessionId = newVolSessionId();
    jcr->VolSessionTime = VolSessionTime;
    bstrncpy(jcr->Job, job, sizeof(jcr->Job));
@@ -201,6 +202,7 @@ bool run_cmd(JCR *jcr)
 
    Dmsg3(50, "%s waiting %d sec for FD to contact SD key=%s\n",
          jcr->Job, (int)(timeout.tv_sec-time(NULL)), jcr->sd_auth_key);
+   Dmsg2(800, "Wait FD for jid=%d %p\n", jcr->JobId, jcr);
 
    /*
     * Wait for the File daemon to contact us to start the Job,
@@ -213,17 +215,20 @@ bool run_cmd(JCR *jcr)
       if (errstat == ETIMEDOUT || errstat == EINVAL || errstat == EPERM) {
          break;
       }
+      Dmsg1(800, "=== Auth cond errstat=%d\n", errstat);
    }
    Dmsg3(50, "Auth=%d canceled=%d errstat=%d\n", jcr->authenticated,
       job_canceled(jcr), errstat);
    V(mutex);
+   Dmsg2(800, "Auth fail or cancel for jid=%d %p\n", jcr->JobId, jcr);
 
    memset(jcr->sd_auth_key, 0, strlen(jcr->sd_auth_key));
 
    if (jcr->authenticated && !job_canceled(jcr)) {
-      Dmsg1(50, "Running job %s\n", jcr->Job);
+      Dmsg2(800, "Running jid=%d %p\n", jcr->JobId, jcr);
       run_job(jcr);                   /* Run the job */
    }
+   Dmsg2(800, "Done jid=%d %p\n", jcr->JobId, jcr);
    return false;
 }
 
@@ -362,7 +367,12 @@ bool query_cmd(JCR *jcr)
  */
 void stored_free_jcr(JCR *jcr)
 {
-   Dmsg1(900, "stored_free_jcr JobId=%u\n", jcr->JobId);
+   Dmsg2(800, "End Job JobId=%u %p\n", jcr->JobId, jcr);
+   if (jcr->dir_bsock) {
+      Dmsg2(800, "Send terminate jid=%d %p\n", jcr->JobId, jcr);
+      jcr->dir_bsock->signal(BNET_EOD);
+      jcr->dir_bsock->signal(BNET_TERMINATE);
+   }
    if (jcr->file_bsock) {
       jcr->file_bsock->close();
       jcr->file_bsock = NULL;

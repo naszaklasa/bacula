@@ -227,11 +227,17 @@
        <string> Volume Name </string>
       </property>
      </column>
+     <property name="sortingEnabled" >
+      <bool>true</bool>
+     </property>
      <column>
       <property name="text" >
        <string>Online</string>
       </property>
      </column>
+     <property name="sortingEnabled" >
+      <bool>true</bool>
+     </property>
      <column>
       <property name="text" >
        <string>Vol Bytes</string>
@@ -242,11 +248,17 @@
        <string>Vol Usage</string>
       </property>
      </column>
+     <property name="sortingEnabled" >
+      <bool>true</bool>
+     </property>
      <column>
       <property name="text" >
        <string>Vol Status</string>
       </property>
      </column>
+     <property name="sortingEnabled" >
+      <bool>true</bool>
+     </property>
      <column>
       <property name="text" >
        <string>Pool</string>
@@ -257,11 +269,17 @@
        <string>Media Type</string>
       </property>
      </column>
+     <property name="sortingEnabled" >
+      <bool>true</bool>
+     </property>
      <column>
       <property name="text" >
        <string>Last Written</string>
       </property>
      </column>
+     <property name="sortingEnabled" >
+      <bool>true</bool>
+     </property>
      <column>
       <property name="text" >
        <string>When expire?</string>

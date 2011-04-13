@@ -11,7 +11,7 @@ else
     echo "Creating MySQL database"
     @scriptdir@/create_mysql_database $*
   elif test xingres = x@DB_TYPE@ ; then
-    echo "Creating Ingres database"
+    echo "Creating Ingres database with $*"
     @scriptdir@/create_ingres_database $*
   else
     echo "Creating PostgreSQL database"

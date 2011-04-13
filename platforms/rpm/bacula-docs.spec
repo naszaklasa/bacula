@@ -1,12 +1,12 @@
 # Bacula RPM spec file
 #
-# Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+# Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
 
 # Platform Build Configuration
 
 # basic defines for every build
 %define _release           1
-%define _version           5.0.2
+%define _version           5.0.3
 %define _packager D. Scott Barninger <barninger@fairfieldcomputers.com>
 
 %define _prefix        /usr
@@ -41,7 +41,7 @@ Source: %{name}-%{_version}.tar.bz2
 %define _docsrc .
 
 # define the basic package description
-%define blurb Bacula - It comes by night and sucks the vital essence from your computers.
+%define blurb Bacula - The Leading Open Source Backup Solution.
 %define blurb2 Bacula is a set of computer programs that permit you (or the system
 %define blurb3 administrator) to manage backup, recovery, and verification of computer
 %define blurb4 data across a network of computers of different kinds. In technical terms,

@@ -15,7 +15,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -24,7 +24,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -87,6 +87,7 @@ PROG_COPYRIGHT
 "       -P <password      specify database password (default none)\n"
 "       -h <host>         specify database host (default NULL)\n"
 "       -w <working>      specify working directory\n"
+"       -r <jobids>       call restore code with given jobids\n"
 "       -v                verbose\n"
 "       -f <file>         specify data file\n"
 "       -?                print this message\n\n"), 2001, VERSION, BDATE);
@@ -96,9 +97,17 @@ PROG_COPYRIGHT
 /* number of thread started */
 int nb=0;
 
+static int list_handler(void *ctx, int num_fields, char **row)
+{
+   uint64_t *a = (uint64_t*) ctx;
+   (*a)++;
+   return 0;
+}
+
 int main (int argc, char *argv[])
 {
    int ch;
+   char *restore_list=NULL;
    setlocale(LC_ALL, "");
    bindtextdomain("bacula", LOCALEDIR);
    textdomain("bacula");
@@ -112,8 +121,12 @@ int main (int argc, char *argv[])
 
    OSDependentInit();
 
-   while ((ch = getopt(argc, argv, "h:c:d:n:P:Su:vf:w:?")) != -1) {
+   while ((ch = getopt(argc, argv, "h:c:d:n:P:Su:vf:w:r:?")) != -1) {
       switch (ch) {
+      case 'r':
+         restore_list=bstrdup(optarg);
+         break;
+
       case 'd':                    /* debug level */
          if (*optarg == 't') {
             dbg_timestamp = true;
@@ -169,6 +182,30 @@ int main (int argc, char *argv[])
       usage();
    }
 
+   if (restore_list) {
+      uint64_t nb_file=0;
+      btime_t start, end;
+      /* To use the -r option, the catalog should already contains records */
+      
+      if ((db=db_init(NULL, NULL, db_name, db_user, db_password,
+                      db_host, 0, NULL, 0)) == NULL) {
+         Emsg0(M_ERROR_TERM, 0, _("Could not init Bacula database\n"));
+      }
+      if (!db_open_database(NULL, db)) {
+         Emsg0(M_ERROR_TERM, 0, db_strerror(db));
+      }
+
+      start = get_current_btime();
+      db_get_file_list(NULL, db, restore_list, list_handler, &nb_file);
+      end = get_current_btime();
+
+      Pmsg3(0, _("Computing file list for jobid=%s files=%lld secs=%d\n"), 
+            restore_list, nb_file, (uint32_t)btime_to_unix(end-start));
+      
+      free(restore_list);
+      return 0;
+   }
+
 #ifdef HAVE_BATCH_FILE_INSERT
    printf("With new Batch mode\n");
 #else
@@ -198,8 +235,8 @@ int main (int argc, char *argv[])
       bjcr->fileset_md5 = get_pool_memory(PM_FNAME);
       pm_strcpy(bjcr->fileset_md5, "Dummy.fileset.md5");
       
-      if ((db=db_init_database(NULL, db_name, db_user, db_password,
-                               db_host, 0, NULL, 0)) == NULL) {
+      if ((db=db_init(NULL, NULL, db_name, db_user, db_password,
+                      db_host, 0, NULL, 0)) == NULL) {
          Emsg0(M_ERROR_TERM, 0, _("Could not init Bacula database\n"));
       }
       if (!db_open_database(NULL, db)) {

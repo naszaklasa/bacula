@@ -3,14 +3,14 @@
 # shell script to create Bacula database(s)
 #
 
-bindir=@SQL_BINDIR@
-db_name=@db_name@
+PATH="@SQL_BINDIR@:$PATH"
+db_name=${db_name:-@db_name@}
 
 #
 # use SQL_ASCII to be able to put any filename into
 #  the database even those created with unusual character sets
 
-PSQLVERSION=`$bindir/psql -d template1 -c 'select version()' | head -n1  | cut -d ' ' -f 2 | cut -d '.' -f 1,2`
+PSQLVERSION=`psql -d template1 -c 'select version()' | awk '/PostgreSQL/ {print $2}' | cut -d '.' -f 1,2`
 
 #
 # Note, LC_COLLATE and LC_TYPE are needed on 8.4 and beyond, but are
@@ -39,7 +39,7 @@ esac
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 #
-if $bindir/psql -f - -d template1 $* <<END-OF-DATA
+if psql -f - -d template1 $* <<END-OF-DATA
 \set ON_ERROR_STOP on
 CREATE DATABASE ${db_name} $ENCODING TEMPLATE template0;
 ALTER DATABASE ${db_name} SET datestyle TO 'ISO, YMD';
@@ -52,7 +52,7 @@ else
    echo "!!!! Creation of ${db_name} database failed. !!!!"
    echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 fi
-if $bindir/psql -l ${dbname} | grep " ${db_name}.*SQL_ASCII" >/dev/null; then 
+if psql -l ${dbname} | grep " ${db_name}.*SQL_ASCII" >/dev/null; then 
    echo "Database encoding OK"
 else
    echo " "

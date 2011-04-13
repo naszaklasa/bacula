@@ -6,7 +6,7 @@
 #   This is pretty much watered down version of the RedHat script
 #   that works on Solaris as well as Linux, but it won't work everywhere.
 #
-# description: It comes by night and sucks the vital essence from your computers.
+# description: The Leading Open Source Backup Solution.
 #
 
 # All these are not *really* needed but it makes it

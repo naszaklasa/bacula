@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -29,7 +29,6 @@
  * Append code for Storage daemon
  *  Kern Sibbald, May MM
  *
- *  Version $Id$
  */
 
 #include "bacula.h"
@@ -139,7 +138,7 @@ bool do_append_data(JCR *jcr)
     */
    dcr->VolFirstIndex = dcr->VolLastIndex = 0;
    jcr->run_time = time(NULL);              /* start counting time for rates */
-   for (last_file_index = 0; ok && !job_canceled(jcr); ) {
+   for (last_file_index = 0; ok && !jcr->is_job_canceled(); ) {
 
       /* Read Stream header from the File daemon.
        *  The stream header consists of the following:
@@ -180,7 +179,7 @@ bool do_append_data(JCR *jcr)
       /* Read data stream from the File daemon.
        *  The data stream is just raw bytes
        */
-      while ((n=bget_msg(fd)) > 0 && !job_canceled(jcr)) {
+      while ((n=bget_msg(fd)) > 0 && !jcr->is_job_canceled()) {
          rec.VolSessionId = jcr->VolSessionId;
          rec.VolSessionTime = jcr->VolSessionTime;
          rec.FileIndex = file_index;
@@ -212,31 +211,13 @@ bool do_append_data(JCR *jcr)
             FI_to_ascii(buf1, rec.FileIndex), rec.VolSessionId,
             stream_to_ascii(buf2, rec.Stream, rec.FileIndex), rec.data_len);
 
-         /* Send attributes and digest to Director for Catalog */
-         if (stream == STREAM_UNIX_ATTRIBUTES || stream == STREAM_UNIX_ATTRIBUTES_EX ||
-             crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
-            if (!jcr->no_attributes) {
-               BSOCK *dir = jcr->dir_bsock;
-               if (are_attributes_spooled(jcr)) {
-                  dir->set_spooling();
-               }
-               Dmsg0(850, "Send attributes to dir.\n");
-               if (!dir_update_file_attributes(dcr, &rec)) {
-                  dir->clear_spooling();
-                  Jmsg(jcr, M_FATAL, 0, _("Error updating file attributes. ERR=%s\n"),
-                     dir->bstrerror());
-                  ok = false;
-                  break;
-               }
-               dir->clear_spooling();
-            }
-         }
+         send_attrs_to_dir(jcr, &rec);
          Dmsg0(650, "Enter bnet_get\n");
       }
       Dmsg1(650, "End read loop with FD. Stat=%d\n", n);
 
       if (fd->is_error()) {
-         if (!job_canceled(jcr)) {
+         if (!jcr->is_job_canceled()) {
             Dmsg1(350, "Network read error from FD. ERR=%s\n", fd->bstrerror());
             Jmsg1(jcr, M_FATAL, 0, _("Network error reading from FD. ERR=%s\n"),
                   fd->bstrerror());
@@ -281,7 +262,7 @@ bool do_append_data(JCR *jcr)
    if (ok || dev->can_write()) {
       if (!write_session_label(dcr, EOS_LABEL)) {
          /* Print only if ok and not cancelled to avoid spurious messages */
-         if (ok && !job_canceled(jcr)) {
+         if (ok && !jcr->is_job_canceled()) {
             Jmsg1(jcr, M_FATAL, 0, _("Error writing end session label. ERR=%s\n"),
                   dev->bstrerror());
          }
@@ -296,7 +277,7 @@ bool do_append_data(JCR *jcr)
       /* Flush out final partial block of this session */
       if (!write_block_to_device(dcr)) {
          /* Print only if ok and not cancelled to avoid spurious messages */
-         if (ok && !job_canceled(jcr)) {
+         if (ok && !jcr->is_job_canceled()) {
             Jmsg2(jcr, M_FATAL, 0, _("Fatal append error on device %s: ERR=%s\n"),
                   dev->print_name(), dev->bstrerror());
             Dmsg0(100, _("Set ok=FALSE after write_block_to_device.\n"));
@@ -328,7 +309,7 @@ bool do_append_data(JCR *jcr)
     */
    release_device(dcr);
 
-   if (!ok || job_canceled(jcr)) {
+   if (!ok || jcr->is_job_canceled()) {
       discard_attribute_spool(jcr);
    } else {
       commit_attribute_spool(jcr);
@@ -338,4 +319,32 @@ bool do_append_data(JCR *jcr)
 
    Dmsg1(100, "return from do_append_data() ok=%d\n", ok);
    return ok;
+}
+
+
+/* Send attributes and digest to Director for Catalog */
+bool send_attrs_to_dir(JCR *jcr, DEV_RECORD *rec)
+{
+   int stream = rec->Stream;
+
+   if (stream == STREAM_UNIX_ATTRIBUTES    || 
+       stream == STREAM_UNIX_ATTRIBUTES_EX ||
+       stream == STREAM_RESTORE_OBJECT     ||
+       crypto_digest_stream_type(stream) != CRYPTO_DIGEST_NONE) {
+      if (!jcr->no_attributes) {
+         BSOCK *dir = jcr->dir_bsock;
+         if (are_attributes_spooled(jcr)) {
+            dir->set_spooling();
+         }
+         Dmsg0(850, "Send attributes to dir.\n");
+         if (!dir_update_file_attributes(jcr->dcr, rec)) {
+            Jmsg(jcr, M_FATAL, 0, _("Error updating file attributes. ERR=%s\n"),
+               dir->bstrerror());
+            dir->clear_spooling();
+            return false;
+         }
+         dir->clear_spooling();
+      }
+   }
+   return true;
 }

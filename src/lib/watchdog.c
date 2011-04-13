@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -59,6 +59,19 @@ static brwlock_t lock;                /* watchdog lock */
 static pthread_t wd_tid;
 static dlist *wd_queue;
 static dlist *wd_inactive;
+
+/* 
+ * Returns: 0 if the current thread is NOT the watchdog
+ *          1 if the current thread is the watchdog
+ */
+bool is_watchdog()
+{
+   if (wd_is_init && pthread_equal(pthread_self(), wd_tid)) {
+      return true;
+   } else {
+      return false;
+   }
+}
 
 /*
  * Start watchdog thread
