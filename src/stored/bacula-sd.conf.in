@@ -16,7 +16,6 @@ Storage {                             # definition of myself
   WorkingDirectory = "@working_dir@"
   Pid Directory = "@piddir@"
   Maximum Concurrent Jobs = 20
-  SDAddress = 127.0.0.1
 }
 
 #

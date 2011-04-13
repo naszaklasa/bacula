@@ -13,7 +13,6 @@ Storage {
   WorkingDirectory = "@working_dir@"
   Pid Directory = "@piddir@"
   Subsys Directory = "@subsysdir@"
-  SDAddress = 127.0.0.1
 }
 
 #

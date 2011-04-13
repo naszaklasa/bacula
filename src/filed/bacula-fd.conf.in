@@ -34,7 +34,6 @@ FileDaemon {                          # this is me
   WorkingDirectory = @working_dir@
   Pid Directory = @piddir@
   Maximum Concurrent Jobs = 20
-  FDAddress = 127.0.0.1
 }
 
 # Send all messages except skipped files back to Director
