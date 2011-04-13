@@ -37,7 +37,7 @@ case "$1" in
 	fi
 
 	# bconsole & wx-console use the same config file ;)
-	sed -e "s~@hostname@~localhost~" < $SRCDIR/$CFGFILE > $TARGET
+	sed -e "s~@debian_hostname@~localhost~" < $SRCDIR/$CFGFILE > $TARGET
 
 	chown root:bacula $TARGET
 	chmod 640 $TARGET

@@ -1,0 +1,20 @@
+--- a/configure
++++ b/configure
+@@ -27993,7 +27993,7 @@
+           if test -n "$PG_CONFIG";then
+               POSTGRESQL_INCDIR=`"$PG_CONFIG" --includedir`
+               POSTGRESQL_LIBDIR=`"$PG_CONFIG" --libdir`
+-              POSTGRESQL_BINDIR=`"$PG_CONFIG" --bindir`
++              POSTGRESQL_BINDIR=/usr/bin
+           elif test -f /usr/local/include/libpq-fe.h; then
+               POSTGRESQL_INCDIR=/usr/local/include
+               if test -d /usr/local/lib64; then
+@@ -28880,7 +28880,7 @@
+            db_prog="postgresql"
+            PG_CONFIG=`which pg_config`
+            if test -n "$PG_CONFIG"; then
+-              SQL_BINDIR=`"$PG_CONFIG" --bindir`
++              SQL_BINDIR=/usr/bin
+               SQL_LIBDIR=`"$PG_CONFIG" --libdir`
+            elif test -f /usr/local/bin/psql; then
+               SQL_BINDIR=/usr/local/bin

@@ -41,7 +41,7 @@ case "$1" in
 		TARGET=$DSTDIR/$CONFIG.dist
 	fi
 
-	sed -e s~@hostname@~`hostname`~ \
+	sed -e s~@debian_hostname@~`hostname`~ \
 	-e s~XXX_FDPASSWORD_XXX~$FDPASSWD~ \
 	-e s~XXX_MONFDPASSWORD_XXX~$FDMPASSWD~ < $SRCDIR/$CONFIG > $TARGET
 	

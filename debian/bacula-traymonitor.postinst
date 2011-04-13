@@ -38,7 +38,7 @@ case "$1" in
             TARGET=$DSTDIR/$CONFIG.dist
         fi
 
-        sed -e "s~@hostname@~localhost~" < $SRCDIR/$CONFIG > $TARGET
+        sed -e "s~@debian_hostname@~localhost~" < $SRCDIR/$CONFIG > $TARGET
         chown root:bacula $TARGET
         chmod 640 $TARGET
 

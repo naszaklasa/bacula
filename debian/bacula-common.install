@@ -6,3 +6,9 @@ debian/tmp-install-sqlite3/usr/lib/bacula/libbac.* usr/lib/bacula
 debian/tmp-install-sqlite3/usr/lib/bacula/libbac-* usr/lib/bacula
 debian/tmp-install-sqlite3/usr/lib/bacula/libbacpy* usr/lib/bacula
 debian/tmp-install-sqlite3/usr/sbin/bsmtp		usr/lib/bacula
+debian/tmp-install-sqlite3/etc/bacula/tray-monitor.conf	usr/share/bacula-common/defconfig
+debian/tmp-install-sqlite3/etc/bacula/bat.conf			usr/share/bacula-common/defconfig
+debian/tmp-install-sqlite3/etc/bacula/bconsole.conf		usr/share/bacula-common/defconfig
+debian/tmp-install-sqlite3/etc/bacula/bacula-sd.conf		usr/share/bacula-common/defconfig
+debian/tmp-install-sqlite3/etc/bacula/bacula-fd.conf		usr/share/bacula-common/defconfig
+debian/tmp-install-sqlite3/etc/bacula/bacula-dir.conf		usr/share/bacula-common/defconfig
