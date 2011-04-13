@@ -1,0 +1,277 @@
+--- a/examples/nagios/check_bacula/Makefile.in
++++ b/examples/nagios/check_bacula/Makefile.in
+@@ -45,7 +45,7 @@
+ 
+ check_bacula: Makefile $(CHECKOBJS) $(basedir)/lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) $(CHECK_LDFLAGS) -L$(basedir)/lib -o $@ \
+-	  $(CHECKOBJS) $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
++	  $(CHECKOBJS) $(DLIB) -lbac -ldl -lm $(LIBS) $(OPENSSL_LIBS)
+ 
+ 
+ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+--- a/src/console/Makefile.in
++++ b/src/console/Makefile.in
+@@ -48,12 +48,12 @@
+ 
+ bconsole: Makefile $(CONSOBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -L../cats -o $@ $(CONSOBJS) \
+-	      $(DLIB) $(CONS_LIBS) -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) \
++	      $(DLIB) $(CONS_LIBS) -lbaccfg -lbac -ldl -ldl -lm $(LIBS) $(GETTEXT_LIBS) \
+ 	      $(OPENSSL_LIBS)
+ 
+ static-bconsole: Makefile $(CONSOBJS) ../lib/libbac.a ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) -static $(LDFLAGS) $(CONS_LDFLAGS) -L../lib -L../cats -o $@ $(CONSOBJS) \
+-	      $(DLIB) $(CONS_LIBS) -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) \
++	      $(DLIB) $(CONS_LIBS) -lbaccfg -lbac -ldl -ldl -lm $(LIBS) $(GETTEXT_LIBS) \
+ 	      $(OPENSSL_LIBS)
+ 	strip $@
+ 
+--- a/src/dird/Makefile.in
++++ b/src/dird/Makefile.in
+@@ -64,12 +64,12 @@
+ bacula-dir: Makefile $(SVROBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+ 	@echo "Linking $@ ..."
+ 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
+-	      -lbacfind -lbacsql -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
++	      -lbacfind -lbacsql -lbacpy -lbaccfg -lbac -ldl -ldl -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
+ 	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
+ 
+ static-bacula-dir:  Makefile $(SVROBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
+-	      -lbacfind -lbacsql -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
++	      -lbacfind -lbacsql -lbacpy -lbaccfg -lbac -ldl -ldl -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
+ 	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
+ 	strip $@
+ 
+--- a/src/filed/Makefile.in
++++ b/src/filed/Makefile.in
+@@ -94,12 +94,12 @@
+ bacula-fd:  Makefile $(SVROBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) @WIN32@
+ 	@echo "Linking $@ ..."
+ 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(SVROBJS) \
+-	  $(WIN32LIBS) $(FDLIBS) $(ZLIBS) -lbacfind -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(LIBS) \
++	  $(WIN32LIBS) $(FDLIBS) $(ZLIBS) -lbacfind -lbacpy -lbaccfg -lbac -ldl -ldl -lm $(PYTHON_LIBS) $(LIBS) \
+ 	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS) $(AFS_LIBS)
+ 
+ static-bacula-fd: Makefile $(SVROBJS) ../findlib/libbacfind.a ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) @WIN32@
+ 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../findlib -o $@ $(SVROBJS) \
+-	   $(WIN32LIBS) $(FDLIBS) $(ZLIBS) -lbacfind -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(LIBS) \
++	   $(WIN32LIBS) $(FDLIBS) $(ZLIBS) -lbacfind -lbacpy -lbaccfg -lbac -ldl -ldl -lm $(PYTHON_LIBS) $(LIBS) \
+ 	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS) $(AFS_LIBS)
+ 	strip $@
+ 
+--- a/src/lib/Makefile.in
++++ b/src/lib/Makefile.in
+@@ -146,35 +146,35 @@
+ lockmgr_test: Makefile
+ 	rm -f lockmgr.o
+ 	$(CXX) -D _TEST_IT $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) lockmgr.c
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ lockmgr.o $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ lockmgr.o $(DLIB) -lbac -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(OPENSSL_LIBS)
+ 	rm -f lockmgr.o
+ 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) lockmgr.c
+ 
+ rwlock_test: Makefile
+ 	rm -f rwlock.o
+ 	$(CXX) -DTEST_RWLOCK $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) rwlock.c
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ rwlock.o $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ rwlock.o $(DLIB) -lbac -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(OPENSSL_LIBS)
+ 	rm -f rwlock.o
+ 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) rwlock.c
+ 
+ md5sum: Makefile md5.o	 
+ 	rm -f md5.o
+ 	$(CXX) -DMD5_SUM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) md5.c
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ md5.o $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ md5.o $(DLIB) -lbac -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(OPENSSL_LIBS)
+ 	rm -f md5.o
+ 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) md5.c
+ 
+ sha1sum: Makefile sha1.o
+ 	rm -f sha1.o
+ 	$(CXX) -DSHA1_SUM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)	$(CFLAGS) sha1.c
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ sha1.o $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ sha1.o $(DLIB) -lbac -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(OPENSSL_LIBS)
+ 	rm -f sha1.o
+ 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) sha1.c
+ 
+ bsnprintf: Makefile bsnprintf.o
+ 	rm -f bsnprintf.o
+ 	$(CXX) -DTEST_PROGRAM $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE)  $(CFLAGS) bsnprintf.c
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ bsnprintf.o $(DLIB) -lbac -lm $(LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L. -o $@ bsnprintf.o $(DLIB) -lbac -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(OPENSSL_LIBS)
+ 	rm -f bsnprintf.o
+ 	$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) bsnprintf.c
+ 
+--- a/src/qt-console/bat.pro.in
++++ b/src/qt-console/bat.pro.in
+@@ -20,7 +20,7 @@
+ TARGET       = bat
+ DEPENDPATH  += .
+ INCLUDEPATH += .. . ./console ./restore ./select
+-LIBS        += -L../lib -lbaccfg -lbac @OPENSSL_LIBS@
++LIBS        += -L../lib -lbaccfg -lbac -ldl @OPENSSL_LIBS@
+ LIBTOOL_LINK = @QMAKE_LIBTOOL@ --silent --tag=CXX --mode=link
+ LIBTOOL_INSTALL = @QMAKE_LIBTOOL@ --silent --mode=install
+ QMAKE_LINK   = $${LIBTOOL_LINK} $(CXX)
+--- a/src/stored/Makefile.in
++++ b/src/stored/Makefile.in
+@@ -91,12 +91,12 @@
+ bacula-sd: Makefile $(SDOBJS) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	@echo "Linking $@ ..."
+ 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -o $@ $(SDOBJS) $(FDLIBS) \
+-	   -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
++	   -lbacpy -lbaccfg -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
+ 	$(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
+ 
+ static-bacula-sd: Makefile $(SDOBJS) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -o $@ $(SDOBJS) $(FDLIBS) \
+-	   -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
++	   -lbacpy -lbaccfg -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
+ 	$(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
+ 	strip $@
+ 
+@@ -107,7 +107,7 @@
+ 
+ btape: Makefile  $(TAPEOBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../cats  -o $@ $(TAPEOBJS) \
+-	   -lbacsql -lbaccfg -lbac $(DLIB) -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	   -lbacsql -lbaccfg -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl $(DLIB) -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bls.o:	bls.c
+ 	@echo "Compiling $<"
+@@ -117,7 +117,7 @@
+ bls:	Makefile $(BLSOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	@echo "Compiling $<"
+ 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BLSOBJS) $(DLIB) \
+-	   -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	   -lbacfind -lbaccfg -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bextract.o: bextract.c
+ 	@echo "Compiling $<"
+@@ -127,7 +127,7 @@
+ bextract: Makefile $(BEXTOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	@echo "Compiling $<"
+ 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BEXTOBJS) $(DLIB) $(FDLIBS) \
+-	   -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	   -lbacfind -lbaccfg -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bscan.o: bscan.c
+ 	@echo "Compiling $<"
+@@ -136,7 +136,7 @@
+ 
+ bscan:	Makefile $(SCNOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SCNOBJS) \
+-	   -lbacsql $(DB_LIBS) $(FDLIBS) -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	   -lbacsql $(DB_LIBS) $(FDLIBS) -lbacfind -lbaccfg -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bcopy.o: bcopy.c
+ 	@echo "Compiling $<"
+@@ -145,7 +145,7 @@
+ 
+ bcopy:	Makefile $(COPYOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -o $@ $(COPYOBJS) \
+-	   -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	   -lbaccfg -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+ 	cd $(topdir) \
+--- a/src/tools/Makefile.in
++++ b/src/tools/Makefile.in
+@@ -57,21 +57,21 @@
+ 	@echo " "
+ 
+ bsmtp: Makefile bsmtp.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)	    
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ bsmtp.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ bsmtp.o -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bregtest: Makefile bregtest.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)	   
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ bregtest.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ bregtest.o -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ dbcheck: Makefile dbcheck.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) $(DIRCONFOBJS)
+ 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../cats -o $@ dbcheck.o $(DIRCONFOBJS) \
+-	  -lbacsql -lbaccfg -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  -lbacsql -lbaccfg -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ fstype: Makefile fstype.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ fstype.o -lbacfind -lbac -lm \
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ fstype.o -lbacfind -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm \
+ 	  $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ drivetype: Makefile drivetype.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ drivetype.o -lbacfind -lbac -lm \
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ drivetype.o -lbacfind -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm \
+ 	  $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ dird_conf.o: ../dird/dird_conf.c
+@@ -85,31 +85,31 @@
+ 
+ testfind: Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) $(FINDOBJS)
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -o $@ $(FINDOBJS) -L. -L../lib -L../findlib \
+-	  $(DLIB) -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  $(DLIB) -lbacfind -lbaccfg -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ testls: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) testls.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L. -L../lib -L../findlib -o $@ testls.o \
+-	  $(DLIB) -lbacfind -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  $(DLIB) -lbacfind -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bregex: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) bregex.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bregex.o \
+-	  $(DLIB) -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  $(DLIB) -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bwild:	Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) bwild.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bwild.o \
+-	  $(DLIB) -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  $(DLIB) -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bbatch: Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) bbatch.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -o $@ bbatch.o \
+-	  -lbacsql -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  -lbacsql -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bvfs_test: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) bvfs_test.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -L../findlib -o $@ bvfs_test.o  \
+-	  -lbacsql -lbacfind -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  -lbacsql -lbacfind -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ ing_test: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ing_test.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -L../findlib -o $@ ing_test.o  \
+-	  -lbacsql -lbacfind -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  -lbacsql -lbacfind -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ gigaslam.o: gigaslam.c
+ 	$(CXX) $(CFLAGS) -c $<	
+@@ -118,7 +118,7 @@
+ 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -o $@ gigaslam.o
+ 
+ grow: Makefile grow.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ grow.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ grow.o -lbac -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -ldl -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+ 	cd $(topdir) \
+--- a/src/tray-monitor/Makefile.in
++++ b/src/tray-monitor/Makefile.in
+@@ -45,7 +45,7 @@
+ 
+ bacula-tray-monitor: Makefile $(MONITOROBJS) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) $(MONITOR_LDFLAGS) -L../lib -o $@ \
+-	  $(MONITOROBJS) $(DLIB) -lbaccfg -lbac -lm $(LIBS) $(OPENSSL_LIBS)
++	  $(MONITOROBJS) $(DLIB) -lbaccfg -lbac -ldl -lm $(LIBS) $(OPENSSL_LIBS)
+ 
+ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+ 	cd $(topdir) \
+--- a/src/wx-console/Makefile.in
++++ b/src/wx-console/Makefile.in
+@@ -83,7 +83,7 @@
+ 
+ bwx-console: Makefile $(CONSOBJS) @WIN32@ ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(CONSOBJS) $(WIN32RES) -o $@ -L../lib $(CONS_LDFLAGS) \
+-	  -lbaccfg -lbac $(LIBS) $(OPENSSL_LIBS)
++	  -lbaccfg -lbac -ldl $(LIBS) $(OPENSSL_LIBS)
+ 
+ win32: bwx-console_private.res
+ 	
