@@ -1,8 +1,8 @@
 
 #undef  VERSION
-#define VERSION "5.0.2"
-#define BDATE   "28 April 2010"
-#define LSMDATE "28Apr10"
+#define VERSION "5.0.3"
+#define BDATE   "04 August 2010"
+#define LSMDATE "04Aug10"
 
 #define PROG_COPYRIGHT "Copyright (C) %d-2010 Free Software Foundation Europe e.V.\n"
 #define BYEAR "2010"       /* year for copyright messages in progs */
@@ -15,7 +15,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -24,7 +24,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -36,26 +36,13 @@
 */
 
 /* Shared object library versions */
-#define LIBBAC_LT_CURRENT  5
-#define LIBBAC_LT_REVISION 0
-#define LIBBAC_LT_AGE 1
 
-#define LIBBACCFG_LT_CURRENT 5
-#define LIBBACCFG_LT_REVISION 0
-#define LIBBACCFG_LT_AGE 1
-
-#define LIBBACPY_LT_CURRENT 5
-#define LIBBACPY_LT_REVISION 0
-#define LIBBACPY_LT_AGE 1
-
-#define LIBBACSQL_LT_CURRENT 5
-#define LIBBACSQL_LT_REVISION 0
-#define LIBBACSQL_LT_AGE 1
-
-#define LIBBACFIND_LT_CURRENT 5
-#define LIBBACFIND_LT_REVISION 0
-#define LIBBACFIND_LT_AGE 1
-
+/* Uncomment to overwrite default values from VERSION */
+/* #define LIBBAC_LT_RELEASE     "5.1.0" */
+/* #define LIBBACCFG_LT_RELEASE  "5.1.0" */
+/* #define LIBBACPY_LT_RELEASE   "5.1.0" */
+/* #define LIBBACSQL_LT_RELEASE  "5.1.0" */
+/* #define LIBBACFIND_LT_RELEASE "5.1.0" */
 
 
 /* Debug flags */
@@ -137,6 +124,7 @@
 /* #define TRACE_RES 1 */
 /* #define DEBUG_MEMSET 1 */
 /* #define DEBUG_MUTEX 1 */
+#define BEEF 0
 
 /*
  * Set SMALLOC_SANITY_CHECK to zero to turn off, otherwise

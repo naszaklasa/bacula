@@ -21,15 +21,15 @@
 ###########################################################################################
 # script configuration section
 
-VERSION=5.0.0
+VERSION=5.0.2
 RELEASE=1
 
 # build platform for spec
-# set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,fc9,fc10,wb3,rhel3,rhel4,rhel5,centos3,centos4,centos5,sl3, sl4,sl5,su9,su10,su102,su103,su110,su111,su112,mdk,mdv
+# set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,fc9,wb3,rhel3,rhel4,rhel5,centos3,centos4,centos5,sl3, sl4,sl5,su9,su10,su102,su103,su110,su111,su112,mdk,mdv
 PLATFORM=su111
 
 # platform designator for file names
-# for RedHat/Fedora set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,fc9,fc10 OR
+# for RedHat/Fedora set to one of rh7,rh8,rh9,fc1,fc3,fc4,fc5,fc6,fc7,fc8,fc9 OR
 # for RHEL3/clones wb3, rhel3, sl3 & centos3 set to el3 OR
 # for RHEL4/clones rhel4, sl4 & centos4 set to el4 OR
 # for RHEL5/clones rhel5, sl5 & centos5 set to el5 OR
@@ -37,8 +37,12 @@ PLATFORM=su111
 # for Mandrake set to 101mdk or 20060mdk
 FILENAME=su111
 
+# MySQL version
+# set to empty (for MySQL 3), 4 or 5
+MYSQL=
+
 # enter your name and email address here
-PACKAGER="Your Name <your-email@site.org>"
+PACKAGER="D. Scott Barninger <barninger@fairfieldcomputers.com>"
 
 # enter the full path to your RPMS output directory
 RPMDIR=/usr/src/packages/RPMS/i586
@@ -89,7 +93,7 @@ SRPM4=${SRPMDIR}bacula-mtx-$VERSION-$RELEASE.src.rpm
 echo Building MySQL packages for "$PLATFORM"...
 sleep 2
 rpmbuild --rebuild --define "build_${PLATFORM} 1" \
---define "build_mysql 1" \
+--define "build_mysql${MYSQL} 1" \
 --define "build_python 1" \
 --define "contrib_packager ${PACKAGER}" ${SRPM}
 rm -rf ${RPMBUILD}/*
@@ -156,6 +160,9 @@ fi
 mv -f ${RPMDIR}/bacula-client-${VERSION}-${RELEASE}.${ARCH}.rpm \
 ./bacula-client-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
 
+mv -f ${RPMDIR}/bacula-libs-${VERSION}-${RELEASE}.${ARCH}.rpm \
+./bacula-libs-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
+
 if [ "$BUILDBAT" = "1" ]; then
 	mv -f ${RPMDIR}/bacula-bat-${VERSION}-${RELEASE}.${ARCH}.rpm \
 	./bacula-bat-${VERSION}-${RELEASE}.${FILENAME}.${ARCH}.rpm
@@ -192,4 +199,4 @@ ls
 # 31 Dec 2008 add su111
 # 05 Apr 2009 deprecate gconsole and wxconsole, bat built by default
 # 30 Jan 2010 adjust for mtx, bat and docs in separate srpm
-# 20 Feb 2010 remove mysql version number
+# 02 May 2010 add bacula-libs package

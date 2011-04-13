@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -28,8 +28,6 @@
 /* 
  * 
  *  Kern Sibbald, August 2007
- *
- *  Version $Id$
  *
  * This is a generic service routine, which is used by all three
  *  of the daemons. Each one compiles it with slightly different
@@ -294,7 +292,7 @@ int installService(const char *cmdOpts)
 
       /* Set a text description in the service manager's control panel */
       set_service_description(serviceManager, baculaService,
-_("Provides file backup and restore services. Bacula -- the network backup solution."));
+(char *)_("Provides file backup and restore services. Bacula -- the network backup solution."));
 
       CloseServiceHandle(serviceManager);
       CloseServiceHandle(baculaService);
@@ -363,8 +361,10 @@ int removeService()
                   }
                }
                if (status.dwCurrentState != SERVICE_STOPPED) {
-                  MessageBox(NULL, _("The Bacula service: " APP_NAME " could not be stopped"), 
-                     APP_DESC, MB_ICONEXCLAMATION | MB_OK);
+                  if (opt_debug) {
+                     MessageBox(NULL, _("The Bacula service: " APP_NAME " could not be stopped"), 
+                        APP_DESC, MB_ICONEXCLAMATION | MB_OK);
+                  }
                }
             }
 
@@ -381,9 +381,11 @@ int removeService()
             CloseServiceHandle(baculaService);
 
          } else {
-            MessageBox(NULL, _("A existing Bacula service: " APP_NAME " could not be found for "
-                "removal. This is not normally an error."),
-                APP_DESC, MB_ICONEXCLAMATION | MB_OK);
+            if (opt_debug) {
+               MessageBox(NULL, _("An existing Bacula service: " APP_NAME " could not be found for "
+                   "removal. This is not normally an error."),
+                   APP_DESC, MB_ICONEXCLAMATION | MB_OK);
+            }
          }
          CloseServiceHandle(serviceManager);
          return stat;
@@ -400,9 +402,11 @@ int removeService()
       if (RegOpenKey(HKEY_LOCAL_MACHINE, 
             "Software\\Microsoft\\Windows\\CurrentVersion\\RunServices",
             &runservices) != ERROR_SUCCESS) {
-         MessageBox(NULL, 
-            _("Could not find registry entry.\nService probably not registerd - the Bacula service was not removed"), 
-               APP_DESC, MB_ICONEXCLAMATION | MB_OK);
+         if (opt_debug) {
+            MessageBox(NULL, 
+               _("Could not find registry entry.\nService probably not registerd - the Bacula service was not removed"), 
+                  APP_DESC, MB_ICONEXCLAMATION | MB_OK);
+         }
       } else {
          /* Now delete the Bacula entry */
          if (RegDeleteValue(runservices, APP_NAME) != ERROR_SUCCESS) {
@@ -416,9 +420,11 @@ int removeService()
 
       /* Stop any running Bacula */
       if (!stopRunningBacula()) {
-         MessageBox(NULL,
-             _("Bacula could not be contacted, probably not running"),
-             APP_DESC, MB_ICONEXCLAMATION | MB_OK);
+         if (opt_debug) {
+            MessageBox(NULL,
+                _("Bacula could not be contacted, probably not running"),
+                APP_DESC, MB_ICONEXCLAMATION | MB_OK);
+         }
          return 0;   /* not really an error */
       }
 

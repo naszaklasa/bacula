@@ -64,7 +64,7 @@
 ; Basics
 ;
 Name "Bacula"
-OutFile "${OUT_DIR}\win${WINVER}bacula-${VERSION}.exe"
+OutFile "${OUT_DIR}\bacula-win${WINVER}-${VERSION}.exe"
 SetCompressor lzma
 
 InstallDir "C:\Program Files\Bacula"

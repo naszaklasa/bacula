@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -202,10 +202,11 @@ void     job_end_push(JCR *jcr, void job_end_cb(JCR *jcr,void *), void *ctx);
 void     lock_jobs();
 void     unlock_jobs();
 JCR     *jcr_walk_start();
+int      job_count();
 JCR     *jcr_walk_next(JCR *prev_jcr);
 void     jcr_walk_end(JCR *jcr);
 JCR     *get_jcr_from_tsd();
-void     set_jcr_in_tsd(JCR *jcr, bool update_thread_info=true);
+void     set_jcr_in_tsd(JCR *jcr);
 void     remove_jcr_from_tsd(JCR *jcr);
 uint32_t get_jobid_from_tsd();             
 uint32_t get_jobid_from_tid(pthread_t tid);
@@ -339,6 +340,7 @@ int stop_watchdog(void);
 watchdog_t *new_watchdog(void);
 bool register_watchdog(watchdog_t *wd);
 bool unregister_watchdog(watchdog_t *wd);
+bool is_watchdog();
 
 /* timers.c */
 btimer_t *start_child_timer(JCR *jcr, pid_t pid, uint32_t wait);

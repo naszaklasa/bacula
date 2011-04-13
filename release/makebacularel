@@ -12,37 +12,33 @@
 # Commit all changes, update the language files, 
 #    export the release, make a release tar.
 #
+. ./functions
+
 cwd=`pwd`
 reltype=release
 tagbase=Release-
+base_dir=bacula
 base_pkg=bacula
-if [ $# != 2 ] ; then
-  echo "Need $0 <source-directory> <branch>"
-  echo "e.g. $0 release-source 3.0.3"
+ver=$4
+if [ $# != 4 ] ; then
+  echo "Need $0 <source-directory> <remote-name> <branch> <version>"
+  echo "e.g. $0 release-source bee 4.0 4.0.1"
   exit 1
 fi
 cd $1
-if [ $? -ne 0 ]; then
-   echo "Directory: $1 does not exist"
-   exit 1
-fi
+check_return_code "$0: Directory $1 does not exist"
+cd bacula
+check_return_code "$0: Directory $1/bacula does not exist"
 src=`pwd` 
-cd $base_pkg 
-if [ $?  -ne 0 ]; then
-   echo "Directory: $1 does not exist"
-   exit 1
-fi
-branch=$2
+current=`git branch | awk '/*/ { print $2 }'`
+remote=$2
+branch=$3
 git checkout ${branch}
-git pull origin ${branch}
-if [ $? -ne 0 ]; then
-   echo "Checkout of branch ${branch} failed."
-   exit 1
-fi
-ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' src/version.h`
+check_return_code "$0: Checkout of branch ${branch} failed."
+git pull ${remote} ${branch}
 fulltag=$tagbase$ver
 echo " "
-echo "Making $reltype for $base_pkg-$ver ..."
+echo "$0: Making $reltype for $base_pkg-$ver ..."
 echo " "
 echo "OK?  ctl-c to stop"
 read a
@@ -61,12 +57,12 @@ if [ a$updatepo != ano ]; then
    cd ${src}   
    git commit -am "Final po changes for ${fulltag}"
 fi
-git tag -d ${fulltag}
+git tag -d ${fulltag} 2>/dev/null 1>/dev/null
 echo "Creating new tag -- $fulltag"
 git tag $fulltag
 if [ $? != 0 ] ; then
   echo " "
-  echo "Non-zero return status from Git"
+  echo "makebacularel: Non-zero return status from Git"
   echo " "
   exit 1
 fi
@@ -78,12 +74,11 @@ cd ${src}
 git archive --format=tar --prefix=$base_pkg-$ver/ $fulltag | gzip >${cwd}/$base_pkg-$ver.tar.gz
 if [ $? != 0 ] ; then
   echo " "
-  echo "Non-zero return status from Git"
+  echo "makebacularel: Non-zero return status from Git"
   echo " "
   exit 1
 fi
 echo "Exported release into ${cwd}/$base_pkg-$ver.tar.gz"
-git checkout master
 cd ${cwd}
 tar xfz $base_pkg-$ver.tar.gz 
 cd $base_pkg-$ver/
@@ -93,6 +88,7 @@ mv regress $base_pkg-regress-$ver
 tar cvfz ../$base_pkg-$ver.tar.gz $base_pkg-$ver
 tar cvfz ../$base_pkg-gui-$ver.tar.gz $base_pkg-gui-$ver
 tar cvfz ../$base_pkg-regress-$ver.tar.gz $base_pkg-regress-$ver
+rm -rf $base_pkg-$ver
 cd ..
 ./sign $base_pkg-$ver.tar.gz
 ./sign $base_pkg-gui-$ver.tar.gz
@@ -100,6 +96,11 @@ cd ..
 
 if [ a$push != ano ]; then
    cd ${src}
-   git push origin $branch
-   git push origin tag $fulltag
+   git push ${remote} ${branch}
+#   git push ${remote} tag ${fulltag}
+   echo "Pushed ${remote}"
 fi
+
+cd ${src}
+git checkout ${current}
+exit 0

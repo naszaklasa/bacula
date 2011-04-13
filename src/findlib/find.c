@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -39,6 +39,8 @@
 
 #include "bacula.h"
 #include "find.h"
+
+static const int dbglvl = 450;
 
 int32_t name_max;              /* filename max length */
 int32_t path_max;              /* path name max length */
@@ -77,7 +79,7 @@ FF_PKT *init_find_files()
    path_max++;                        /* add for EOS */
    name_max++;                        /* add for EOS */
 
-  Dmsg1(100, "init_find_files ff=%p\n", ff);
+  Dmsg1(dbglvl, "init_find_files ff=%p\n", ff);
   return ff;
 }
 
@@ -89,16 +91,16 @@ FF_PKT *init_find_files()
 void
 set_find_options(FF_PKT *ff, int incremental, time_t save_time)
 {
-  Dmsg0(100, "Enter set_find_options()\n");
+  Dmsg0(dbglvl, "Enter set_find_options()\n");
   ff->incremental = incremental;
   ff->save_time = save_time;
-  Dmsg0(100, "Leave set_find_options()\n");
+  Dmsg0(dbglvl, "Leave set_find_options()\n");
 }
 
 void
 set_find_changed_function(FF_PKT *ff, bool check_fct(JCR *jcr, FF_PKT *ff))
 {
-   Dmsg0(100, "Enter set_find_changed_function()\n");
+   Dmsg0(dbglvl, "Enter set_find_changed_function()\n");
    ff->check_fct = check_fct;
 }
 
@@ -174,13 +176,13 @@ find_files(JCR *jcr, FF_PKT *ff, int file_save(JCR *jcr, FF_PKT *ff_pkt, bool to
       ff->flags = 0;
       ff->VerifyOpts[0] = 'V';
       ff->VerifyOpts[1] = 0;
-      strcpy(ff->AccurateOpts, "C:mcs"); /* mtime+ctime+size by default */
-      strcpy(ff->BaseJobOpts, "J:mspug5"); /* mtime+size+perm+user+group+chk  */
+      strcpy(ff->AccurateOpts, "Cmcs");  /* mtime+ctime+size by default */
+      strcpy(ff->BaseJobOpts, "Jspug5"); /* size+perm+user+group+chk  */
       for (i=0; i<fileset->include_list.size(); i++) {
          findINCEXE *incexe = (findINCEXE *)fileset->include_list.get(i);
          fileset->incexe = incexe;
          /*
-          * By setting all options, we in effect or the global options
+          * By setting all options, we in effect OR the global options
           *   which is what we want.
           */
          for (j=0; j<incexe->opts_list.size(); j++) {
@@ -191,13 +193,18 @@ find_files(JCR *jcr, FF_PKT *ff, int file_save(JCR *jcr, FF_PKT *ff_pkt, bool to
             ff->fstypes = fo->fstype;
             ff->drivetypes = fo->drivetype;
             bstrncat(ff->VerifyOpts, fo->VerifyOpts, sizeof(ff->VerifyOpts));
-            bstrncat(ff->AccurateOpts, fo->AccurateOpts, sizeof(ff->AccurateOpts));
-            bstrncat(ff->BaseJobOpts, fo->BaseJobOpts, sizeof(ff->BaseJobOpts));
+            if (fo->AccurateOpts[0]) {
+               bstrncpy(ff->AccurateOpts, fo->AccurateOpts, sizeof(ff->AccurateOpts));
+            }
+            if (fo->BaseJobOpts[0]) {
+               bstrncpy(ff->BaseJobOpts, fo->BaseJobOpts, sizeof(ff->BaseJobOpts));
+            }
          }
+         Dmsg3(50, "Verify=<%s> Accurate=<%s> BaseJob=<%s>\n", ff->VerifyOpts, ff->AccurateOpts, ff->BaseJobOpts);
          dlistString *node;
          foreach_dlist(node, &incexe->name_list) {
             char *fname = node->c_str();
-            Dmsg1(100, "F %s\n", fname);
+            Dmsg1(dbglvl, "F %s\n", fname);
             ff->top_fname = fname;
             if (find_one_file(jcr, ff, our_callback, ff->top_fname, (dev_t)-1, true) == 0) {
                return 0;                  /* error return */
@@ -212,7 +219,7 @@ find_files(JCR *jcr, FF_PKT *ff, int file_save(JCR *jcr, FF_PKT *ff_pkt, bool to
                Jmsg(jcr, M_FATAL, 0, _("Plugin: \"%s\" not found.\n"), fname);
                return 0;
             }
-            Dmsg1(100, "PluginCommand: %s\n", fname);
+            Dmsg1(dbglvl, "PluginCommand: %s\n", fname);
             ff->top_fname = fname;
             ff->cmd_plugin = true;
             plugin_save(jcr, ff, true);
@@ -243,7 +250,7 @@ bool is_in_fileset(FF_PKT *ff)
          incexe = (findINCEXE *)fileset->include_list.get(i);
          foreach_dlist(node, &incexe->name_list) {
             fname = node->c_str();
-            Dmsg2(100, "Inc fname=%s ff->fname=%s\n", fname, ff->fname);
+            Dmsg2(dbglvl, "Inc fname=%s ff->fname=%s\n", fname, ff->fname);
             if (strcmp(fname, ff->fname) == 0) {
                return true;
             }
@@ -253,7 +260,7 @@ bool is_in_fileset(FF_PKT *ff)
          incexe = (findINCEXE *)fileset->exclude_list.get(i);
          foreach_dlist(node, &incexe->name_list) {
             fname = node->c_str();
-            Dmsg2(100, "Exc fname=%s ff->fname=%s\n", fname, ff->fname);
+            Dmsg2(dbglvl, "Exc fname=%s ff->fname=%s\n", fname, ff->fname);
             if (strcmp(fname, ff->fname) == 0) {
                return true;
             }
@@ -273,6 +280,7 @@ static bool accept_file(FF_PKT *ff)
    const char *basename;
    int (*match_func)(const char *pattern, const char *string, int flags);
 
+   Dmsg1(dbglvl, "enter accept_file: fname=%s\n", ff->fname);
    if (ff->flags & FO_ENHANCEDWILD) {
 //    match_func = enh_fnmatch;
       match_func = fnmatch;
@@ -299,7 +307,7 @@ static bool accept_file(FF_PKT *ff)
          for (k=0; k<fo->wilddir.size(); k++) {
             if (match_func((char *)fo->wilddir.get(k), ff->fname, fnmode|fnm_flags) == 0) {
                if (ff->flags & FO_EXCLUDE) {
-                  Dmsg2(100, "Exclude wilddir: %s file=%s\n", (char *)fo->wilddir.get(k),
+                  Dmsg2(dbglvl, "Exclude wilddir: %s file=%s\n", (char *)fo->wilddir.get(k),
                      ff->fname);
                   return false;       /* reject dir */
                }
@@ -310,7 +318,7 @@ static bool accept_file(FF_PKT *ff)
          for (k=0; k<fo->wildfile.size(); k++) {
             if (match_func((char *)fo->wildfile.get(k), ff->fname, fnmode|fnm_flags) == 0) {
                if (ff->flags & FO_EXCLUDE) {
-                  Dmsg2(100, "Exclude wildfile: %s file=%s\n", (char *)fo->wildfile.get(k),
+                  Dmsg2(dbglvl, "Exclude wildfile: %s file=%s\n", (char *)fo->wildfile.get(k),
                      ff->fname);
                   return false;       /* reject file */
                }
@@ -321,7 +329,7 @@ static bool accept_file(FF_PKT *ff)
          for (k=0; k<fo->wildbase.size(); k++) {
             if (match_func((char *)fo->wildbase.get(k), basename, fnmode|fnm_flags) == 0) {
                if (ff->flags & FO_EXCLUDE) {
-                  Dmsg2(100, "Exclude wildbase: %s file=%s\n", (char *)fo->wildbase.get(k),
+                  Dmsg2(dbglvl, "Exclude wildbase: %s file=%s\n", (char *)fo->wildbase.get(k),
                      basename);
                   return false;       /* reject file */
                }
@@ -332,7 +340,7 @@ static bool accept_file(FF_PKT *ff)
       for (k=0; k<fo->wild.size(); k++) {
          if (match_func((char *)fo->wild.get(k), ff->fname, fnmode|fnm_flags) == 0) {
             if (ff->flags & FO_EXCLUDE) {
-               Dmsg2(100, "Exclude wild: %s file=%s\n", (char *)fo->wild.get(k),
+               Dmsg2(dbglvl, "Exclude wild: %s file=%s\n", (char *)fo->wild.get(k),
                   ff->fname);
                return false;          /* reject file */
             }
@@ -393,7 +401,7 @@ static bool accept_file(FF_PKT *ff)
          fnm_flags = (fo->flags & FO_IGNORECASE) ? FNM_CASEFOLD : 0;
          for (k=0; k<fo->wild.size(); k++) {
             if (fnmatch((char *)fo->wild.get(k), ff->fname, fnmode|fnm_flags) == 0) {
-               Dmsg1(100, "Reject wild1: %s\n", ff->fname);
+               Dmsg1(dbglvl, "Reject wild1: %s\n", ff->fname);
                return false;          /* reject file */
             }
          }
@@ -404,7 +412,7 @@ static bool accept_file(FF_PKT *ff)
       foreach_dlist(node, &incexe->name_list) {
          char *fname = node->c_str();
          if (fnmatch(fname, ff->fname, fnmode|fnm_flags) == 0) {
-            Dmsg1(100, "Reject wild2: %s\n", ff->fname);
+            Dmsg1(dbglvl, "Reject wild2: %s\n", ff->fname);
             return false;          /* reject file */
          }
       }
@@ -450,7 +458,7 @@ static int our_callback(JCR *jcr, FF_PKT *ff, bool top_level)
       if (accept_file(ff)) {
          return ff->file_save(jcr, ff, top_level);
       } else {
-         Dmsg1(100, "Skip file %s\n", ff->fname);
+         Dmsg1(dbglvl, "Skip file %s\n", ff->fname);
          return -1;                   /* ignore this file */
       }
 

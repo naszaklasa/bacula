@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -27,6 +27,8 @@
 */
 /*
  * Test program for listing files during regression testing
+ *   Links have their permissions and time bashed since they cannot
+ *   be set by Bacula.
  *
  *  Kern Sibbald, MM
  *
@@ -243,7 +245,7 @@ static int print_file(JCR *jcr, FF_PKT *ff, bool top_level)
 
 static void print_ls_output(char *fname, char *link, int type, struct stat *statp)
 {
-   char buf[1000];
+   char buf[2000];
    char ec1[30];
    char *p, *f;
    int n;
@@ -257,7 +259,7 @@ static void print_ls_output(char *fname, char *link, int type, struct stat *stat
    p += n;
    n = sprintf(p, "%-4d %-4d", (int)statp->st_uid, (int)statp->st_gid);
    p += n;
-   n = sprintf(p, "%7.7s ", edit_uint64(statp->st_size, ec1));
+   n = sprintf(p, "%10.10s ", edit_uint64(statp->st_size, ec1));
    p += n;
    if (S_ISCHR(statp->st_mode) || S_ISBLK(statp->st_mode)) {
       n = sprintf(p, "%4x ", (int)statp->st_rdev);

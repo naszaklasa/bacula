@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -379,7 +379,7 @@ extern "C" void *msg_thread(void *arg)
    uint64_t JobBytes;
 
    pthread_detach(pthread_self());
-   set_jcr_in_tsd(jcr, false /* no thread update in jcr */);
+   set_jcr_in_tsd(jcr);
    jcr->SD_msg_chan = pthread_self();
    pthread_cleanup_push(msg_thread_cleanup, arg);
    sd = jcr->store_bsock;

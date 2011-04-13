@@ -258,6 +258,15 @@
 /* Normal acl support */
 #undef HAVE_ACL
 
+/* Defines if your system has AFS support */
+#undef HAVE_AFS
+
+/* Andrew FileSystem ACL support */
+#undef HAVE_AFS_ACL
+
+/* Define to 1 if you have the <afs/stds.h> header file. */
+#undef HAVE_AFS_STDS_H
+
 /* Define to 1 if you have `alloca', as a function or macro. */
 #undef HAVE_ALLOCA
 
@@ -427,6 +436,9 @@
 
 /* Define to 1 if you have the `getmntent' function. */
 #undef HAVE_GETMNTENT
+
+/* Define to 1 if you have the `getmntinfo' function. */
+#undef HAVE_GETMNTINFO
 
 /* Define to 1 if you have the `getpagesize' function. */
 #undef HAVE_GETPAGESIZE

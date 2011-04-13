@@ -481,11 +481,12 @@ _ZN6htableC2EPvS0_i
 _Z10b_free_jcrPKciP3JCR
 _Z11unlock_jobsv
 _Z12jcr_walk_endP3JCR
+_Z9job_countv
 _Z12job_end_pushP3JCRPFvS0_PvES1_
 _Z13get_jcr_by_idj
 _Z13jcr_walk_nextP3JCR
 _Z14jcr_walk_startv
-_Z14set_jcr_in_tsdP3JCRb
+_Z14set_jcr_in_tsdP3JCR
 _Z16get_jcr_from_tsdv
 _Z18get_jobid_from_tsdv
 _Z18get_jcr_by_sessionjj

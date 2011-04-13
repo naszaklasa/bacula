@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -1159,8 +1159,7 @@ bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb,
    utime_t StartTime = (jr->StartTime)?jr->StartTime:time(NULL);
 
    bstrutime(date, sizeof(date),  StartTime + 1);
-   jobids->list[0] = 0;
-   jobids->count = 0;
+   jobids->reset();
 
    /* First, find the last good Full backup for this job/client/fileset */
    Mmsg(query, 
@@ -1257,9 +1256,10 @@ bool db_get_base_jobid(JCR *jcr, B_DB *mdb, JOB_DBR *jr, JobId_t *jobid)
    db_int64_ctx lctx;
    char date[MAX_TIME_LENGTH];
    bool ret=false;
-   *jobid = 0;
-
 // char clientid[50], filesetid[50];
+   *jobid = 0;
+   lctx.count = 0;
+   lctx.value = 0;
 
    StartTime = (jr->StartTime)?jr->StartTime:time(NULL);
    bstrutime(date, sizeof(date),  StartTime + 1);

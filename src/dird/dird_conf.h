@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -258,8 +258,8 @@ public:
    char *address;
    char *password;
    CAT *catalog;                      /* Catalog resource */
-   uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
-   uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
+   int32_t MaxConcurrentJobs;         /* Maximum concurrent jobs */
+   int32_t NumConcurrentJobs;         /* number of concurrent jobs running */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
@@ -292,9 +292,9 @@ public:
    char *password;
    char *media_type;
    alist *device;                     /* Alternate devices for this Storage */
-   uint32_t MaxConcurrentJobs;        /* Maximume concurrent jobs */
-   uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
-   uint32_t NumConcurrentReadJobs;    /* number of jobs reading */
+   int32_t MaxConcurrentJobs;         /* Maximum concurrent jobs */
+   int32_t NumConcurrentJobs;         /* number of concurrent jobs running */
+   int32_t NumConcurrentReadJobs;     /* number of jobs reading */
    char *tls_ca_certfile;             /* TLS CA Certificate File */
    char *tls_ca_certdir;              /* TLS CA Certificate Directory */
    char *tls_certfile;                /* TLS Client Certificate File */
@@ -397,8 +397,8 @@ public:
    utime_t MaxDiffInterval;           /* Maximum time interval between Diffs */
    utime_t DuplicateJobProximity;     /* Permitted time between duplicicates */
    int64_t spool_size;                /* Size of spool file for this job */
-   uint32_t MaxConcurrentJobs;        /* Maximum concurrent jobs */
-   uint32_t NumConcurrentJobs;        /* number of concurrent jobs running */
+   int32_t MaxConcurrentJobs;         /* Maximum concurrent jobs */
+   int32_t NumConcurrentJobs;         /* number of concurrent jobs running */
    bool allow_mixed_priority;         /* Allow jobs with higher priority concurrently with this */
 
    MSGS      *messages;               /* How and where to send messages */

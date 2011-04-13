@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -187,6 +187,7 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
 bool has_volume_expired(JCR *jcr, MEDIA_DBR *mr)
 {
    bool expired = false;
+   char ed1[50];
    /*
     * Check limits and expirations if "Append" and it has been used
     * i.e. mr->VolJobs > 0
@@ -195,8 +196,9 @@ bool has_volume_expired(JCR *jcr, MEDIA_DBR *mr)
    if (strcmp(mr->VolStatus, "Append") == 0 && mr->VolJobs > 0) {
       /* First handle Max Volume Bytes */
       if ((mr->MaxVolBytes > 0 && mr->VolBytes >= mr->MaxVolBytes)) {
-         Jmsg(jcr, M_INFO, 0, _("Max Volume bytes exceeded. "
-             "Marking Volume \"%s\" as Full.\n"), mr->VolumeName);
+         Jmsg(jcr, M_INFO, 0, _("Max Volume bytes=%s exceeded. "
+             "Marking Volume \"%s\" as Full.\n"), 
+             edit_uint64_with_commas(mr->MaxVolBytes, ed1), mr->VolumeName);
          bstrncpy(mr->VolStatus, "Full", sizeof(mr->VolStatus));
          expired = true;
 
@@ -209,8 +211,9 @@ bool has_volume_expired(JCR *jcr, MEDIA_DBR *mr)
 
       /* Now see if Max Jobs written to volume */
       } else if (mr->MaxVolJobs > 0 && mr->MaxVolJobs <= mr->VolJobs) {
-         Jmsg(jcr, M_INFO, 0, _("Max Volume jobs exceeded. "
-             "Marking Volume \"%s\" as Used.\n"), mr->VolumeName);
+         Jmsg(jcr, M_INFO, 0, _("Max Volume jobs=%s exceeded. "
+             "Marking Volume \"%s\" as Used.\n"), 
+             edit_uint64_with_commas(mr->MaxVolJobs, ed1), mr->VolumeName);
          Dmsg3(100, "MaxVolJobs=%d JobId=%d Vol=%s\n", mr->MaxVolJobs,
                (uint32_t)jcr->JobId, mr->VolumeName);
          bstrncpy(mr->VolStatus, "Used", sizeof(mr->VolStatus));
@@ -218,8 +221,9 @@ bool has_volume_expired(JCR *jcr, MEDIA_DBR *mr)
 
       /* Now see if Max Files written to volume */
       } else if (mr->MaxVolFiles > 0 && mr->MaxVolFiles <= mr->VolFiles) {
-         Jmsg(jcr, M_INFO, 0, _("Max Volume files exceeded. "
-             "Marking Volume \"%s\" as Used.\n"), mr->VolumeName);
+         Jmsg(jcr, M_INFO, 0, _("Max Volume files=%s exceeded. "
+             "Marking Volume \"%s\" as Used.\n"), 
+             edit_uint64_with_commas(mr->MaxVolFiles, ed1), mr->VolumeName);
          bstrncpy(mr->VolStatus, "Used", sizeof(mr->VolStatus));
          expired = true;
 
@@ -228,8 +232,9 @@ bool has_volume_expired(JCR *jcr, MEDIA_DBR *mr)
          utime_t now = time(NULL);
          /* See if Vol Use has expired */
          if (mr->VolUseDuration <= (now - mr->FirstWritten)) {
-            Jmsg(jcr, M_INFO, 0, _("Max configured use duration exceeded. "
-               "Marking Volume \"%s\" as Used.\n"), mr->VolumeName);
+            Jmsg(jcr, M_INFO, 0, _("Max configured use duration=%s sec. exceeded. "
+               "Marking Volume \"%s\" as Used.\n"), 
+               edit_uint64_with_commas(mr->VolUseDuration, ed1), mr->VolumeName);
             bstrncpy(mr->VolStatus, "Used", sizeof(mr->VolStatus));
             expired = true;
          }

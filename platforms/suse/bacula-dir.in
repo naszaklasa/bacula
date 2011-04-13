@@ -1,10 +1,10 @@
 #! /bin/sh
 #
 # bacula       This shell script takes care of starting and stopping
-#              the bacula Director daemon
+#	       the bacula Director daemon
 #
 # chkconfig: 2345 90 9
-# description: It comes by night and sucks the vital essence from your computers.
+# description: The Leading Open Source Backup Solution.
 #
 #  For Bacula release @VERSION@ (@DATE@) -- @DISTNAME@
 # Modified to work on SuSE 1/31/2004 D. Scott Barninger <barninger at fairfieldcomputers.com>
@@ -12,13 +12,13 @@
 # Added LSB init info 10/14/2004 D. Scott Barninger <barninger at fairfieldcomputers.com>
 #
 ### BEGIN INIT INFO
-# Provides:                     bacula-dir
-# Required-Start:               $local_fs $network @DB_TYPE@
-# Required-Stop:                $local_fs $network @DB_TYPE@
-# Default-Start:                3 5
-# Default-Stop:         0 1 2 6
-# Short-Description:    bacula director
-# Description:                  Bacula network backup system director daemon
+# Provides:			bacula-dir
+# Required-Start:		$local_fs $network @DB_TYPE@
+# Required-Stop:		$local_fs $network @DB_TYPE@
+# Default-Start:		3 5
+# Default-Stop: 	0 1 2 6
+# Short-Description:	bacula director
+# Description:			Bacula network backup system director daemon
 ### END INIT INFO
 
 # source process status functions
@@ -50,6 +50,7 @@ case "$1" in
        ;;
     status)
        /sbin/checkproc @sbindir@/bacula-dir
+       RETVAL=$?
        rc_status -v
        ;;
     *)
@@ -57,4 +58,4 @@ case "$1" in
        exit 1
        ;;
 esac
-exit 0
+exit $RETVAL

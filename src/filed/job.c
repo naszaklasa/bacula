@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -90,6 +90,10 @@ static int runafter_cmd(JCR *jcr);
 static int runbeforenow_cmd(JCR *jcr);
 static void set_options(findFOPTS *fo, const char *opts);
 static void set_storage_auth_key(JCR *jcr, char *key);
+static int sm_dump_cmd(JCR *jcr);
+#ifdef DEVELOPER
+static int exit_cmd(JCR *jcr);
+#endif
 
 /* Exported functions */
 
@@ -124,6 +128,10 @@ static struct s_cmds cmds[] = {
    {"RunAfterJob",  runafter_cmd,  0},
    {"Run",          runscript_cmd, 0},
    {"accurate",     accurate_cmd,  0},
+   {"sm_dump",      sm_dump_cmd, 0},
+#ifdef DEVELOPER
+   {"exit",         exit_cmd, 0},
+#endif
    {NULL,       NULL}                  /* list terminator */
 };
 
@@ -384,10 +392,29 @@ void *handle_client_request(void *dirp)
    free_jcr(jcr);                     /* destroy JCR record */
    Dmsg0(100, "Done with free_jcr\n");
    Dsm_check(1);
+   garbage_collect_memory_pool();
    return NULL;
 }
 
-/*
+static int sm_dump_cmd(JCR *jcr)
+{
+   close_memory_pool();
+   sm_dump(false, true);
+   jcr->dir_bsock->fsend("2000 sm_dump OK\n");
+   return 1;
+}
+
+#ifdef DEVELOPER
+static int exit_cmd(JCR *jcr)
+{
+   jcr->dir_bsock->fsend("2000 exit OK\n");
+   terminate_filed(0);
+   return 0;
+}
+#endif
+
+
+/**
  * Hello from Director he must identify himself and provide his
  *  password.
  */
@@ -1593,8 +1620,8 @@ static int backup_cmd(JCR *jcr)
         if (get_win32_driveletters(jcr->ff, szWinDriveLetters)) {
             Jmsg(jcr, M_INFO, 0, _("Generate VSS snapshots. Driver=\"%s\", Drive(s)=\"%s\"\n"), g_pVSSClient->GetDriverName(), szWinDriveLetters);
             if (!g_pVSSClient->CreateSnapshots(szWinDriveLetters)) {               
-               Jmsg(jcr, M_WARNING, 0, _("Generate VSS snapshots failed.\n"));
-               jcr->JobErrors++;
+               berrno be;
+               Jmsg(jcr, M_FATAL, 0, _("Generate VSS snapshots failed. ERR=%s\n"), be.bstrerror());
             } else {
                /* tell user if snapshot creation of a specific drive failed */
                int i;

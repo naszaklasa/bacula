@@ -565,7 +565,7 @@ AC_HELP_STRING([--with-ingres@<:@=DIR@:>@], [Include Ingres support. DIR is the 
         fi
      fi
      SQL_INCLUDE=-I$INGRES_INCDIR
-     SQL_LFLAGS="-L$INGRES_LIBDIR -lingres"
+     SQL_LFLAGS="-L$INGRES_LIBDIR -lq.1 -lcompat.1 -lframe.1"
      SQL_BINDIR=$INGRES_BINDIR
      SQL_LIB=$INGRES_LIBDIR/libingres.a
      AC_DEFINE(HAVE_INGRES, 1, [Set if have Ingres Database])
@@ -737,6 +737,8 @@ AC_HELP_STRING([--with-postgresql@<:@=DIR@:>@], [Include PostgreSQL support. DIR
           AC_MSG_RESULT(no)
           AC_MSG_ERROR(Invalid PostgreSQL directory $withval - unable to find libpq-fe.h under $withval)
       fi
+      AC_DEFINE(HAVE_POSTGRESQL)
+      AC_MSG_RESULT(yes)
       POSTGRESQL_LFLAGS="-L$POSTGRESQL_LIBDIR -lpq"
       AC_CHECK_FUNC(crypt, , AC_CHECK_LIB(crypt, crypt, [POSTGRESQL_LFLAGS="$POSTGRESQL_LFLAGS -lcrypt"]))
       SQL_INCLUDE=-I$POSTGRESQL_INCDIR
@@ -744,8 +746,6 @@ AC_HELP_STRING([--with-postgresql@<:@=DIR@:>@], [Include PostgreSQL support. DIR
       SQL_BINDIR=$POSTGRESQL_BINDIR
       SQL_LIB=$POSTGRESQL_LIBDIR/libpq.a
 
-      AC_DEFINE(HAVE_POSTGRESQL)
-      AC_MSG_RESULT(yes)
       db_found=yes
       support_postgresql=yes
       db_type=PostgreSQL

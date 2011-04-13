@@ -236,7 +236,7 @@ Source2: bacula-2.2.7-postgresql.patch
 Source3: http://www.prdownloads.sourceforge.net/bacula/depkgs-%{depkgs_version}.tar.gz
 
 # define the basic package description
-%define blurb Bacula - It comes by night and sucks the vital essence from your computers.
+%define blurb Bacula - The Leading Open Source Backup Solution.
 %define blurb2 Bacula is a set of computer programs that permit you (or the system
 %define blurb3 administrator) to manage backup, recovery, and verification of computer
 %define blurb4 data across a network of computers of different kinds. In technical terms,

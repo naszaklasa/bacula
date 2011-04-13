@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -46,7 +46,6 @@
  *
  *     Kern Sibbald, January MM
  *
- *     Version $Id$
  */
 
 
@@ -965,8 +964,8 @@ next_run:
               edit_uint64(res->res_pool.MigrationHighBytes, ed2),
               edit_uint64(res->res_pool.MigrationLowBytes, ed3));
       sendit(sock, _("      JobRetention=%s FileRetention=%s\n"),
-         edit_utime(res->res_client.JobRetention, ed1, sizeof(ed1)),
-         edit_utime(res->res_client.FileRetention, ed2, sizeof(ed2)));
+         edit_utime(res->res_pool.JobRetention, ed1, sizeof(ed1)),
+         edit_utime(res->res_pool.FileRetention, ed2, sizeof(ed2)));
       if (res->res_pool.NextPool) {
          sendit(sock, _("      NextPool=%s\n"), res->res_pool.NextPool->name());
       }
@@ -1622,7 +1621,7 @@ static void store_actiononpurge(LEX *lc, RES_ITEM *item, int index, int pass)
    uint32_t *destination = (uint32_t*)item->value;
    lex_get_token(lc, T_NAME);
    if (strcasecmp(lc->str, "truncate") == 0) {
-      *destination = (*destination) | AOP_TRUNCATE;
+      *destination = (*destination) | ON_PURGE_TRUNCATE;
    } else {
       scan_err2(lc, _("Expected one of: %s, got: %s"), "Truncate", lc->str);
       return;

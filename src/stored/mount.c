@@ -6,7 +6,7 @@
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -36,7 +36,6 @@
 
 #include "bacula.h"                   /* pull in global headers */
 #include "stored.h"                   /* pull in Storage Deamon headers */
-
 
 enum {
    try_next_vol = 1,
@@ -78,13 +77,14 @@ bool DCR::mount_next_write_volume()
       dev->print_name());
 
    init_device_wait_timers(dcr);
-   lock_volumes();
    
    /*
     * Attempt to mount the next volume. If something non-fatal goes
     *  wrong, we come back here to re-try (new op messages, re-read
     *  Volume, ...)
     */
+   lock_volumes();
+
 mount_next_vol:
    Dmsg1(150, "mount_next_vol retry=%d\n", retry);
    /* Ignore retry if this is poll request */
@@ -109,14 +109,12 @@ mount_next_vol:
    if (dev->must_unload()) {
       ask = true;                     /* ask operator to mount tape */
    }
-//   unlock_volumes();
    do_unload();
    do_swapping(true /*is_writing*/);
    do_load(true /*is_writing*/);
 
-//   lock_volumes();
    if (!find_a_volume()) {
-      goto no_lock_bail_out;
+      goto bail_out;
    }
 
    if (job_canceled(jcr)) {
@@ -136,7 +134,6 @@ mount_next_vol:
     * and move the tape to the end of data.
     *
     */
-//   unlock_volumes();
    dcr->setVolCatInfo(false);   /* out of date when Vols unlocked */
    if (autoload_device(dcr, true/*writing*/, NULL) > 0) {
       autochanger = true;
@@ -146,7 +143,6 @@ mount_next_vol:
       VolCatInfo.Slot = 0;
       ask = retry >= 2;
    }
-//   lock_volumes();
    Dmsg1(150, "autoload_dev returns %d\n", autochanger);
    /*
     * If we autochanged to correct Volume or (we have not just
@@ -247,7 +243,7 @@ read_volume:
     * Check that volcatinfo is good   
     */
    if (!dev->haveVolCatInfo()) {
-      Dmsg0(010, "Do not have volcatinfo\n");
+      Dmsg0(100, "Do not have volcatinfo\n");
       if (!find_a_volume()) {
          goto mount_next_vol;
       }
@@ -324,13 +320,12 @@ no_lock_bail_out:
  * This routine is meant to be called once the first pass
  *   to ensure that we have a candidate volume to mount.
  *   Otherwise, we ask the sysop to created one.
- * Note, the the Volumes are locked on entry.
- *   They are unlocked on failure and remain locked on
- *   success.  The caller must know this!!!
+ * Note, the the Volumes are locked on entry and exit.
  */
-bool DCR::find_a_volume()  
+bool DCR::find_a_volume()
 {
    DCR *dcr = this;
+
    if (!is_suitable_volume_mounted()) {
       bool have_vol = false;
       /* Do we have a candidate volume? */
@@ -347,14 +342,17 @@ bool DCR::find_a_volume()
          while (!dir_find_next_appendable_volume(dcr)) {
             Dmsg0(200, "not dir_find_next\n");
             if (job_canceled(jcr)) {
-               unlock_volumes();
                return false;
             }
             unlock_volumes();
             if (!dir_ask_sysop_to_create_appendable_volume(dcr)) {
+               lock_volumes();
                return false;
              }
              lock_volumes();
+             if (job_canceled(jcr)) {
+                return false;
+             }
              Dmsg0(150, "Again dir_find_next_append...\n");
          }
       }
@@ -615,6 +613,18 @@ bool DCR::is_eod_valid()
       if (dev->VolCatInfo.VolCatFiles == dev->get_file()) {
          Jmsg(jcr, M_INFO, 0, _("Ready to append to end of Volume \"%s\" at file=%d.\n"),
               VolumeName, dev->get_file());
+      } else if (dev->get_file() > dev->VolCatInfo.VolCatFiles) {
+         Jmsg(jcr, M_WARNING, 0, _("For Volume \"%s\":\n"
+              "The number of files mismatch! Volume=%u Catalog=%u\n"
+              "Correcting Catalog\n"),
+              VolumeName, dev->get_file(), dev->VolCatInfo.VolCatFiles);
+         dev->VolCatInfo.VolCatFiles = dev->get_file();
+         dev->VolCatInfo.VolCatBlocks = dev->get_block_num();
+         if (!dir_update_volume_info(this, false, true)) {
+            Jmsg(jcr, M_WARNING, 0, _("Error updating Catalog\n"));
+            mark_volume_in_error();
+            return false;
+         }
       } else {
          Jmsg(jcr, M_ERROR, 0, _("Bacula cannot write on tape Volume \"%s\" because:\n"
               "The number of files mismatch! Volume=%u Catalog=%u\n"),
@@ -630,6 +640,19 @@ bool DCR::is_eod_valid()
          Jmsg(jcr, M_INFO, 0, _("Ready to append to end of Volume \"%s\""
               " size=%s\n"), VolumeName, 
               edit_uint64(dev->VolCatInfo.VolCatBytes, ed1));
+      } else if ((uint64_t)pos > dev->VolCatInfo.VolCatBytes) {
+         Jmsg(jcr, M_WARNING, 0, _("For Volume \"%s\":\n"
+              "The sizes do not match! Volume=%s Catalog=%s\n"
+              "Correcting Catalog\n"),
+              VolumeName, edit_uint64(pos, ed1), 
+              edit_uint64(dev->VolCatInfo.VolCatBytes, ed2));
+         dev->VolCatInfo.VolCatBytes = (uint64_t)pos;
+         dev->VolCatInfo.VolCatFiles = (uint32_t)(pos >> 32);
+         if (!dir_update_volume_info(this, false, true)) {
+            Jmsg(jcr, M_WARNING, 0, _("Error updating Catalog\n"));
+            mark_volume_in_error();
+            return false;
+         }
       } else {
          Mmsg(jcr->errmsg, _("Bacula cannot write on disk Volume \"%s\" because: "
               "The sizes do not match! Volume=%s Catalog=%s\n"),
@@ -780,8 +803,6 @@ void DCR::release_volume()
    if (dev->is_open()) {
       dev->offline_or_rewind();
    }
-// Dmsg0(50, "set_unload\n");
-// dev->set_unload();
    Dmsg0(190, "release_volume\n");
 }
 

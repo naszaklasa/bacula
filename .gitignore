@@ -1,5 +1,3 @@
-src/cats/make_catalog_backup.pl
-scripts/make_catalog_backup.pl
 src/TAGS
 # git-ls-files --others --exclude-from=.git/info/exclude
 # Lines that start with '#' are comments.
@@ -170,6 +168,9 @@ po/*.mo
 po/*.gmo
 
 # scripts/
+src/cats/make_catalog_backup.pl
+scripts/make_catalog_backup.pl
+scripts/breload
 scripts/bacula_config
 scripts/wxconsole.console_apps
 scripts/wxconsole.desktop.consolehelper
@@ -549,6 +550,7 @@ src/win32/wx-console.res
 src/win32/debug
 src/win32/release32
 src/win32/release64
+src/win32/dll
 
 # src/win32
 src/win32*.user
@@ -756,6 +758,9 @@ src/wx-console/bwx-console.conf
 src/wx-console/.libs
 
 # updatedb/
+updatedb/update_mysql_tables_11_to_12
+updatedb/update_postgresql_tables_11_to_12
+updatedb/update_sqlite3_tables_11_to_12
 updatedb/update_mysql_tables_10_to_11
 updatedb/update_postgresql_tables_10_to_11
 updatedb/update_sqlite3_tables_10_to_11

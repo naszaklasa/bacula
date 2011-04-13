@@ -13,12 +13,27 @@ In general, you do the following:
 
    bacula
    docs
-   rescu
+   rescue
+
+   Also ensure that you have set repo to the name of your repository.
+   Normally, it is origin, but some developers (Kern) use bee.
 
 3. Ensure that the environment variable "version" is set correctly 
-   (yes, this could be automatically pulled from $bacula).
+   in each repo.  Specifically, in:
 
-4. Run the makeall script.  There should be no errors.  If 
+   bacula/src/version.h
+   rescue/version.h
+   gui/bweb/ReleaseNotes            (for makebwebrel)
+
+   In docs, you must run 
+   ./configure --with-bacula=<bacula source directory>  
+   so that the versions of the docs are correct.
+
+4. Run the makeall script.  
+
+   ./makeall Branch-5.0   # specify branch to release
+
+5. There should be no errors.  If 
    there are, fix them, and re-run the script or re-run the scripts
    that makeall calls:
 
@@ -28,12 +43,12 @@ In general, you do the following:
    makerescuerel ...
    makewinrel ...
 
-5. All the output files should be put in this directory.
+6. All the output files should be put in this directory.
 
-6. Before releasing, detar the main Bacula source into some
+7. Before releasing, detar the main Bacula source into some
    directory and run all the regression tests using the files
    in the bacula-xx.xx.xx.tar.gz file.  This ensures that there
    are no missing files.          
 
-7. Also before releasing, run at least one backup using the 
+8. Also before releasing, run at least one backup using the 
    Win32 and/or Win64 file daemon.

@@ -4,6 +4,9 @@
     
     ./git2changelog.pl Release-3.0.1..Release-3.0.2
 
+ For bweb ReleaseNotes, use
+    FORBWEB=1 ./git2changelog.pl Release-3.0.1..Release-3.0.2
+
 =cut
 
 use strict;
@@ -13,12 +16,20 @@ my $d='';
 my $last_txt='';
 my %bugs;
 my $refs = shift || '';
-open(FP, "git log --no-merges --pretty=format:'%ct: %s' $refs|") or die "Can't run git log $!";
+my $for_bweb = $ENV{FORBWEB}?1:0;
+open(FP, "git log --no-merges --pretty=format:'%at: %s' $refs|") or die "Can't run git log $!";
 while (my $l = <FP>) {
 
     # remove non useful messages
-    next if ($l =~ /(tweak|typo|cleanup|bweb:|regress:|again|.gitignore|fix compilation|technotes)/ixs);
-    next if ($l =~ /update (version|technotes|kernstodo|projects|releasenotes|version|home|release|todo|notes|changelog)/i);
+    next if ($l =~ /(tweak|typo|cleanup|regress:|again|.gitignore|fix compilation|technotes)/ixs);
+    next if ($l =~ /update (version|technotes|kernstodo|projects|releasenotes|version|home|release|todo|notes|changelog|tpl|configure)/i);
+
+    if ($for_bweb) {
+        next if ($l !~ /bweb/ixs);
+        $l =~ s/bweb: *//ig;
+    } else {
+        next if ($l =~ /bweb:/ixs);
+    }
 
     # keep list of fixed bugs
     if ($l =~ /#(\d+)/) {

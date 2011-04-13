@@ -9,7 +9,7 @@
 #   Submitted by Volker Sauer <volker@volker-sauer.de> 21Feb04
 #    Tweaked a bit by Kern to convert it to a .in file
 #
-# description: It comes by night and sucks the vital essence from your computers.
+# description: The Leading Open Source Backup Solution.
 #
 ### BEGIN INIT INFO
 # Provides:		bacula

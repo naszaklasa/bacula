@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -963,7 +963,7 @@ static bool check_catalog(cat_op mode)
       db_check_backend_thread_safe();
 
       /* Display a message if the db max_connections is too low */
-      if (!db_check_max_connections(NULL, db, director->MaxConcurrentJobs+1)) {
+      if (!db_check_max_connections(NULL, db, director->MaxConcurrentJobs)) {
          Pmsg1(000, "Warning, settings problem for Catalog=%s\n", catalog->name());
          Pmsg1(000, "%s", db_strerror(db));
       }
@@ -1003,6 +1003,14 @@ static bool check_catalog(cat_op mode)
       CLIENT *client;
       foreach_res(client, R_CLIENT) {
          CLIENT_DBR cr;
+         /* Create clients only if they use the current catalog */
+         if (client->catalog != catalog) {
+            Dmsg3(500, "Skip client=%s with cat=%s not catalog=%s\n",
+                  client->name(), client->catalog->name(), catalog->name());
+            continue;
+         }
+         Dmsg2(500, "create cat=%s for client=%s\n", 
+               client->catalog->name(), client->name());
          memset(&cr, 0, sizeof(cr));
          bstrncpy(cr.Name, client->name(), sizeof(cr.Name));
          db_create_client_record(NULL, db, &cr);

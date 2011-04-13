@@ -45,11 +45,13 @@ case "$1" in
    start)
       echo -n "Starting ${DESC}: "
       start-stop-daemon --start --quiet --pidfile ${PIDFILE} --exec ${DAEMON} -- ${BOPTIONS}
+      RETVAL=$?
       echo "${NAME}"
       ;;
    stop)
       echo -n "Stopping ${DESC}: "
       start-stop-daemon --oknodo --stop --quiet --exec ${DAEMON} -- ${BOPTIONS}
+      RETVAL=$?
       echo "${NAME}"
       ;;
    restart|force-reload)
@@ -62,4 +64,4 @@ case "$1" in
       exit 1
       ;;
 esac
-exit 0
+exit $RETVAL

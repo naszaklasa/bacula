@@ -13,7 +13,7 @@
 %{?_with_wrap: %{expand: %%global TCPW 1}}
 %{?_without_wrap: %{expand: %%global TCPW 0}}
 
-%define blurb Bacula - It comes by night and sucks the vital essence from your computers.
+%define blurb Bacula - The Leading Open Source Backup Solution.
 
 Summary: Bacula - The Network Backup Solution
 Name: %{name}
@@ -146,25 +146,25 @@ mv doc/html-manual/*.gif doc/manual
 cd %{name}-%{version}
 %serverbuild
 %configure \
-	--enable-smartalloc \
+        --enable-smartalloc \
 %if %{MYSQL}
         --with-mysql \
 %else
         --with-sqlite \
 %endif
 %if %{GNOME}
-		--enable-gnome \
+                --enable-gnome \
 %endif
 %if %{TCPW}
-		--with-tcp-wrappers \
+                --with-tcp-wrappers \
 %endif
         --sysconfdir=%{_sysconfdir}/%{name} \
         --with-scriptdir=%{_libexecdir}/%{name} \
         --with-working-dir=%{_localstatedir}/%{name} \
         --with-subsys-dir=/var/lock/subsys \
-		--with-dir-password="#FAKE#DIR#PASSWORD#" \
-		--with-fd-password="#FAKE#FD#PASSWORD#" \
-		--with-sd-password="#FAKE#SD#PASSWORD#"
+                --with-dir-password="#FAKE#DIR#PASSWORD#" \
+                --with-fd-password="#FAKE#FD#PASSWORD#" \
+                --with-sd-password="#FAKE#SD#PASSWORD#"
 
 %make
 
@@ -246,27 +246,27 @@ rm -rf %{buildroot}
 %pre dir -p /usr/bin/perl
 umask(0077);
 if ( -f "%{_sysconfdir}/%{name}/.pw.sed") {
-	if ( -f "%{_sysconfdir}/%{name}/bacula-dir.conf") {
-	system "sed -e 's/s!\(.*\)!\(.*\)!/s!\2!\1!/' %{_sysconfdir}/%{name}/.pw.sed > %{_sysconfdir}/%{name}/.upw.sed";
-	system "sed -f %{_sysconfdir}/%{name}/.upw.sed %{_sysconfdir}/%{name}/bacula-dir.conf > %{_sysconfdir}/%{name}/bacula-dir.conf.tmp";
-	unlink "%{_sysconfdir}/%{name}/bacula-dir.conf";
-	rename "%{_sysconfdir}/%{name}/bacula-dir.conf.tmp", "%{_sysconfdir}/%{name}/bacula-dir.conf";
-	unlink "%{_sysconfdir}/%{name}/.upw.sed";
-	}
+        if ( -f "%{_sysconfdir}/%{name}/bacula-dir.conf") {
+        system "sed -e 's/s!\(.*\)!\(.*\)!/s!\2!\1!/' %{_sysconfdir}/%{name}/.pw.sed > %{_sysconfdir}/%{name}/.upw.sed";
+        system "sed -f %{_sysconfdir}/%{name}/.upw.sed %{_sysconfdir}/%{name}/bacula-dir.conf > %{_sysconfdir}/%{name}/bacula-dir.conf.tmp";
+        unlink "%{_sysconfdir}/%{name}/bacula-dir.conf";
+        rename "%{_sysconfdir}/%{name}/bacula-dir.conf.tmp", "%{_sysconfdir}/%{name}/bacula-dir.conf";
+        unlink "%{_sysconfdir}/%{name}/.upw.sed";
+        }
 } else {
-	mkdir("%{_sysconfdir}/%{name}");
-	open(IN, "/dev/random") or die "$!";
-	open(OUT, ">%{_sysconfdir}/%{name}/.pw.sed") or die "$!";
-	foreach $c ("DIR","SD","FD") {
-		read(IN, $buf, 32);
-		my $res = pack("u", $buf);
-		$res =~ s/^.//mg;
-		$res =~ s/\n//g;
-		$res =~ tr|` -_|AA-Za-z0-9+/|;
-		print OUT "s!#YOU MUST SET THE $c PASSWORD#!\"$res\"!\n";
-	}
-	close (IN);
-	close (OUT);
+        mkdir("%{_sysconfdir}/%{name}");
+        open(IN, "/dev/random") or die "$!";
+        open(OUT, ">%{_sysconfdir}/%{name}/.pw.sed") or die "$!";
+        foreach $c ("DIR","SD","FD") {
+                read(IN, $buf, 32);
+                my $res = pack("u", $buf);
+                $res =~ s/^.//mg;
+                $res =~ s/\n//g;
+                $res =~ tr|` -_|AA-Za-z0-9+/|;
+                print OUT "s!#YOU MUST SET THE $c PASSWORD#!\"$res\"!\n";
+        }
+        close (IN);
+        close (OUT);
 }
 
 %post dir
@@ -275,43 +275,43 @@ if ( -f "%{_sysconfdir}/%{name}/.pw.sed") {
 DB_VER=`mysql bacula -e 'select * from Version;'|tail -n 1 2>/dev/null`
 if [ -z "$DB_VER" ]; then
 # grant privileges and create tables
-	echo "Granting privileges for MySQL user bacula..."
-	%{_libexecdir}/%{name}/grant_mysql_privileges > dev/null
-	echo "Creating MySQL bacula database..."
-	%{_libexecdir}/%{name}/create_mysql_database > dev/null
-	echo "Creating bacula tables..."
-	%{_libexecdir}/%{name}/make_mysql_tables > dev/null
+        echo "Granting privileges for MySQL user bacula..."
+        %{_libexecdir}/%{name}/grant_mysql_privileges > dev/null
+        echo "Creating MySQL bacula database..."
+        %{_libexecdir}/%{name}/create_mysql_database > dev/null
+        echo "Creating bacula tables..."
+        %{_libexecdir}/%{name}/make_mysql_tables > dev/null
 elif [ "$DB_VER" -lt "6" ]; then
-	echo "Backing up bacula tables"
-	mysqldump -f --opt bacula | bzip2 > %{_localstatedir}/%{name}/bacula_backup.sql.bz2
-	echo "Upgrading bacula tables"
-	%{_libexecdir}/%{name}/alter_mysql_tables
-	echo "If bacula works correctly you can remove the backup file %{_localstatedir}/%{name}/bacula_backup.sql.bz2"
+        echo "Backing up bacula tables"
+        mysqldump -f --opt bacula | bzip2 > %{_localstatedir}/%{name}/bacula_backup.sql.bz2
+        echo "Upgrading bacula tables"
+        %{_libexecdir}/%{name}/alter_mysql_tables
+        echo "If bacula works correctly you can remove the backup file %{_localstatedir}/%{name}/bacula_backup.sql.bz2"
 fi
 %else
 if [ -s %{_localstatedir}/%{name}/bacula.db ]; then
 DB_VER=`echo "select * from Version;" | sqlite %{_localstatedir}/%{name}/bacula.db|tail -n 1 2>/dev/null`
-	if [ "$DB_VER" -lt "6" ]; then
-		echo "Backing up bacula tables"
-		echo ".dump" | sqlite %{_localstatedir}/%{name}/bacula.db | bzip2 > %{_localstatedir}/%{name}/bacula_backup.sql.bz2
-		echo "Upgrading bacula tables"
-		%{_libexecdir}/%{name}/alter_sqlite_tables
-		echo "If bacula works correctly you can remove the backup file %{_localstatedir}/%{name}/bacula_backup.sql.bz2"
-	fi
+        if [ "$DB_VER" -lt "6" ]; then
+                echo "Backing up bacula tables"
+                echo ".dump" | sqlite %{_localstatedir}/%{name}/bacula.db | bzip2 > %{_localstatedir}/%{name}/bacula_backup.sql.bz2
+                echo "Upgrading bacula tables"
+                %{_libexecdir}/%{name}/alter_sqlite_tables
+                echo "If bacula works correctly you can remove the backup file %{_localstatedir}/%{name}/bacula_backup.sql.bz2"
+        fi
 else
 # create the tables
-	echo "Creating bacula tables..."
-	%{_libexecdir}/%{name}/make_sqlite_tables > dev/null
+        echo "Creating bacula tables..."
+        %{_libexecdir}/%{name}/make_sqlite_tables > dev/null
 fi
 %endif
 chmod -R 600 %{_localstatedir}/%{name}/*
 for i in %{_sysconfdir}/%{name}/*.conf %{_sysconfdir}/%{name}/*.conf.rpmnew %{_sysconfdir}/%{name}/*.conf.rpmsave; do
-	if [ -s $i ]; then
-	sed -f %{_sysconfdir}/%{name}/.pw.sed $i > $i.tmp
+        if [ -s $i ]; then
+        sed -f %{_sysconfdir}/%{name}/.pw.sed $i > $i.tmp
 # this is needed if upgrading from 1.30a or lower
-	sed -e '/SubSys[[:space:]]*Directory/I d' $i.tmp > $i
-	rm -f $i.tmp
-	fi
+        sed -e '/SubSys[[:space:]]*Directory/I d' $i.tmp > $i
+        rm -f $i.tmp
+        fi
 done
 %_post_service bacula-dir
 
@@ -333,23 +333,23 @@ done
 umask 077
 i=%{_sysconfdir}/%{name}/bacula-fd.conf
 if [ -s %{_sysconfdir}/%{name}/.pw.sed -a -s $i ]; then
-	sed -e 's/s!\(.*\)!\(.*\)!/s!\2!\1!/' %{_sysconfdir}/%{name}/.pw.sed > %{_sysconfdir}/%{name}/.upw.sed
-	sed -f %{_sysconfdir}/%{name}/.upw.sed $i > $i.tmp
-	mv -f $i.tmp $i
-	rm -f %{_sysconfdir}/%{name}/.upw.sed
+        sed -e 's/s!\(.*\)!\(.*\)!/s!\2!\1!/' %{_sysconfdir}/%{name}/.pw.sed > %{_sysconfdir}/%{name}/.upw.sed
+        sed -f %{_sysconfdir}/%{name}/.upw.sed $i > $i.tmp
+        mv -f $i.tmp $i
+        rm -f %{_sysconfdir}/%{name}/.upw.sed
 fi
 
 %post fd
 %_post_service bacula-fd
 if [ -s %{_sysconfdir}/%{name}/.pw.sed ]; then
-	for i in %{_sysconfdir}/%{name}/bacula-fd.conf %{_sysconfdir}/%{name}/bacula-fd.conf.rpmnew %{_sysconfdir}/%{name}/bacula-fd.conf.rpmsave; do
-	if [ -s $i ]; then
-		sed -f %{_sysconfdir}/%{name}/.pw.sed $i > $i.tmp
+        for i in %{_sysconfdir}/%{name}/bacula-fd.conf %{_sysconfdir}/%{name}/bacula-fd.conf.rpmnew %{_sysconfdir}/%{name}/bacula-fd.conf.rpmsave; do
+        if [ -s $i ]; then
+                sed -f %{_sysconfdir}/%{name}/.pw.sed $i > $i.tmp
 # this is needed if upgrading from 1.30a or lower
-		sed -e '/SubSys[[:space:]]*Directory/I d' $i.tmp > $i
-		rm -f $i.tmp
-	fi
-	done
+                sed -e '/SubSys[[:space:]]*Directory/I d' $i.tmp > $i
+                rm -f $i.tmp
+        fi
+        done
 fi
 
 %preun fd
@@ -376,23 +376,23 @@ fi
 umask 077
 i=%{_sysconfdir}/%{name}/bacula-sd.conf
 if [ -s %{_sysconfdir}/%{name}/.pw.sed -a -s $i ]; then
-	sed -e 's/s!\(.*\)!\(.*\)!/s!\2!\1!/' %{_sysconfdir}/%{name}/.pw.sed > %{_sysconfdir}/%{name}/.upw.sed
-	sed -f %{_sysconfdir}/%{name}/.upw.sed $i > $i.tmp
-	mv -f $i.tmp $i
-	rm -f %{_sysconfdir}/%{name}/.upw.sed
+        sed -e 's/s!\(.*\)!\(.*\)!/s!\2!\1!/' %{_sysconfdir}/%{name}/.pw.sed > %{_sysconfdir}/%{name}/.upw.sed
+        sed -f %{_sysconfdir}/%{name}/.upw.sed $i > $i.tmp
+        mv -f $i.tmp $i
+        rm -f %{_sysconfdir}/%{name}/.upw.sed
 fi
 
 %post sd
 %_post_service bacula-sd
 if [ -s %{_sysconfdir}/%{name}/.pw.sed ]; then
-	for i in %{_sysconfdir}/%{name}/bacula-sd.conf %{_sysconfdir}/%{name}/bacula-sd.conf.rpmnew %{_sysconfdir}/%{name}/bacula-sd.conf.rpmsave; do
-	if [ -s $i ]; then
-		sed -f %{_sysconfdir}/%{name}/.pw.sed $i > $i.tmp
+        for i in %{_sysconfdir}/%{name}/bacula-sd.conf %{_sysconfdir}/%{name}/bacula-sd.conf.rpmnew %{_sysconfdir}/%{name}/bacula-sd.conf.rpmsave; do
+        if [ -s $i ]; then
+                sed -f %{_sysconfdir}/%{name}/.pw.sed $i > $i.tmp
 # this is needed if upgrading from 1.30a or lower
-		sed -e '/SubSys[[:space:]]*Directory/I d' $i.tmp > $i
-		rm -f $i.tmp
-	fi
-	done
+                sed -e '/SubSys[[:space:]]*Directory/I d' $i.tmp > $i
+                rm -f $i.tmp
+        fi
+        done
 fi
 
 %preun sd
@@ -411,22 +411,22 @@ fi
 umask 077
 i=%{_sysconfdir}/%{name}/console.conf
 if [ -s %{_sysconfdir}/%{name}/.pw.sed -a -s $i ]; then
-	sed -e 's/s!\(.*\)!\(.*\)!/s!\2!\1!/' %{_sysconfdir}/%{name}/.pw.sed > %{_sysconfdir}/%{name}/.upw.sed
-	sed -f %{_sysconfdir}/%{name}/.upw.sed $i > $i.tmp
-	mv -f $i.tmp $i
-	rm -f %{_sysconfdir}/%{name}/.upw.sed
+        sed -e 's/s!\(.*\)!\(.*\)!/s!\2!\1!/' %{_sysconfdir}/%{name}/.pw.sed > %{_sysconfdir}/%{name}/.upw.sed
+        sed -f %{_sysconfdir}/%{name}/.upw.sed $i > $i.tmp
+        mv -f $i.tmp $i
+        rm -f %{_sysconfdir}/%{name}/.upw.sed
 fi
 
 %post console
 if [ -s %{_sysconfdir}/%{name}/.pw.sed ]; then
-	for i in %{_sysconfdir}/%{name}/console.conf %{_sysconfdir}/%{name}/console.conf.rpmnew %{_sysconfdir}/%{name}/console.conf.rpmsave; do
-	if [ -s $i ]; then
-		sed -f %{_sysconfdir}/%{name}/.pw.sed $i > $i.tmp
+        for i in %{_sysconfdir}/%{name}/console.conf %{_sysconfdir}/%{name}/console.conf.rpmnew %{_sysconfdir}/%{name}/console.conf.rpmsave; do
+        if [ -s $i ]; then
+                sed -f %{_sysconfdir}/%{name}/.pw.sed $i > $i.tmp
 # this is needed if upgrading from 1.30a or lower
-		sed -e '/SubSys[[:space:]]*Directory/I d' $i.tmp > $i
-		rm -f $i.tmp
-	fi
-	done
+                sed -e '/SubSys[[:space:]]*Directory/I d' $i.tmp > $i
+                rm -f $i.tmp
+        fi
+        done
 fi
 
 %if %{GNOME}
@@ -447,25 +447,25 @@ fi
 umask 077
 i=%{_sysconfdir}/%{name}/gnome-console.conf
 if [ -s %{_sysconfdir}/%{name}/.pw.sed -a -s $i ]; then
-	sed -e 's/s!\(.*\)!\(.*\)!/s!\2!\1!/' %{_sysconfdir}/%{name}/.pw.sed > %{_sysconfdir}/%{name}/.upw.sed
-	sed -f %{_sysconfdir}/%{name}/.upw.sed $i > $i.tmp
-	mv -f $i.tmp $i
-	rm -f %{_sysconfdir}/%{name}/.upw.sed
+        sed -e 's/s!\(.*\)!\(.*\)!/s!\2!\1!/' %{_sysconfdir}/%{name}/.pw.sed > %{_sysconfdir}/%{name}/.upw.sed
+        sed -f %{_sysconfdir}/%{name}/.upw.sed $i > $i.tmp
+        mv -f $i.tmp $i
+        rm -f %{_sysconfdir}/%{name}/.upw.sed
 fi
 
 %post console-gnome
 %update_menus
 if [ -s %{_sysconfdir}/%{name}/.pw.sed ]; then
-	for i in %{_sysconfdir}/%{name}/gnome-console.conf %{_sysconfdir}/%{name}/gnome-console.conf.rpmnew %{_sysconfdir}/%{name}/gnome-console.conf.rpmsave; do
-	if [ -s $i ]; then
-		sed -f %{_sysconfdir}/%{name}/.pw.sed $i > $i.tmp
+        for i in %{_sysconfdir}/%{name}/gnome-console.conf %{_sysconfdir}/%{name}/gnome-console.conf.rpmnew %{_sysconfdir}/%{name}/gnome-console.conf.rpmsave; do
+        if [ -s $i ]; then
+                sed -f %{_sysconfdir}/%{name}/.pw.sed $i > $i.tmp
 # this is needed if upgrading from 1.30a or lower
-		sed -e '/SubSys[[:space:]]*Directory/I d' $i.tmp > $i
-		rm -f $i.tmp
-	fi
-	done
+                sed -e '/SubSys[[:space:]]*Directory/I d' $i.tmp > $i
+                rm -f $i.tmp
+        fi
+        done
 fi
-		
+                
 %postun console-gnome
 %clean_menus
 

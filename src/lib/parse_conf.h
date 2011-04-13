@@ -1,12 +1,12 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
    This program is Free Software; you can redistribute it and/or
-   modify it under the terms of version two of the GNU General Public
+   modify it under the terms of version three of the GNU Affero General Public
    License as published by the Free Software Foundation and included
    in the file LICENSE.
 
@@ -15,7 +15,7 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Affero General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
@@ -28,8 +28,6 @@
 /*
  *
  *     Kern Sibbald, January MM
- *
- *   Version $Id$
  *
  */
 
@@ -137,8 +135,22 @@ public:
    DEST *dest_chain;                  /* chain of destinations */
    char send_msg[nbytes_for_bits(M_MAX+1)];  /* bit array of types */
 
+private:
+   bool m_in_use;                     /* set when using to send a message */
+   bool m_closing;                    /* set when closing message resource */
+
+public:
    /* Methods */
    char *name() const;
+   void clear_in_use() { lock(); m_in_use=false; unlock(); }
+   void set_in_use() { wait_not_in_use(); m_in_use=true; unlock(); }
+   void set_closing() { m_closing=true; }
+   void clear_closing() { lock(); m_closing=false; unlock(); }
+   bool is_closing() { lock(); bool rtn=m_closing; unlock(); return rtn; }
+
+   void wait_not_in_use();            /* in message.c */
+   void lock();                       /* in message.c */
+   void unlock();                     /* in message.c */
 };
 
 inline char *MSGS::name() const { return hdr.name; }

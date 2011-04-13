@@ -1,14 +1,17 @@
 
-               Release Notes for Bacula 5.0.2
+               Release Notes for Bacula 5.0.3
 
   Bacula code: Total files = 1,088 Total lines = 219,172 (Using SLOCCount)
 
 General:
 --------
 
-This 5.0.2 version is primarily a important bug fix update to version 5.0.1.
+This 5.0.3 version is significant bug fix update to version 5.0.2.
+It includes new code and some new features.
+There is no database change since prior versions of 5.0.
 
-Note, if you are running 5.0.0, read the 5.0.1 release notes below.
+Note, if you are running 5.0.0, read the 5.0.1 and 5.0.2 release notes below in
+  the 5.0.1 release section.
   Important!!!
 
 Compatibility:
@@ -16,9 +19,82 @@ Compatibility:
  As always, both the Director and Storage daemon must be upgraded at
  the same time.
 
- Older 5.0.x and 3.0.x File Daemons are compatible with the 5.0.2
+ Older 5.0.x and 3.0.x File Daemons are compatible with the 5.0.3
  Director and Storage daemons. There should be no need to upgrade older File
  Daemons.
+
+Changes and New Features:
+- If a VSS (Windows) snapshot fails, the whole Job is failed, previously
+  it printed a warning message and continued.
+- New editing codes %b = Job Bytes and %f = Job Files for runscripts
+- Any non-Bacula project plugins (i.e. third party plugins) 
+  must be upgraded to specify AGPLv3 in place of the GPLv2 used previously 
+  for the PLUGIN_LICENSE.
+- The bat Media page text columns can be sorted by clicking on the column.
+- If possible, the SD will automatically update the catalog Volume size if 
+  it does not match the Volume size. The mismatch between the Volume sizes
+  typically occurs when the FD has a comm line drop or the FD crashes.
+
+
+Bug fixes
+1538 1554 1564 1567 1568 1569 1571 1577 1581 1582 1587 1594 1595 1606 1610
+
+- Change license from GPLv2 to AGPLv3
+- Make Win32 no filesystem change more explicit
+- Backport Branch-4.0 release to Branch-5.0
+- Massive backport from Branch-5.1 to Branch-5.0
+- Fix postgresql catalog creation when version is not on the first line
+- Fix bug #1610 handle empty xattr values on Linux and xBSD.
+- Garbage collect memory pool at end of job and before sm_dump
+- Add xattr seg fault protection suggested by Marco for bug #1610
+- Add archlinux to os.m4
+- More fixes for 32/64 bit problems in smartall
+- Fix 32/64 bit problem in smartalloc dump routine
+- Fix bad copy/paste in commit c88dccb88 prably a seg fault
+- Add .dump and .exit commands for daemons
+- Make SD automatically fix the Volume size in the Catalog when out of sync
+- Use Pmsg in smartall.c rather than printf for tracing Windows
+- Up maximum block size to 20M
+- Fix for TLS bugs #1568 and #1599
+- Improve comm line error handling for TLS, may fix bug #1568 and #1599
+- Fix problem when sending Cancel event to plugin
+- Convert all Jmsg on the watchdog thread to Qmsg
+- Fix SD crash due to mismatched lock/unlock in error condition
+- Fix bug #1587 if you have clients with different catalogs configured, both 
+  catalogs contains all clients after a reload or restart of the dir
+- Fix bug #1577 During migration: ERROR in block.c:950 Failed ASSERT: dev->is_open() 
+  by moving and commenting out the ASSERT()
+- Skip HB kill in FD if HB thread terminated
+- Fix crash from unequal volume_lock/unlock calls
+- New prunning algorithm -- should be more accurate
+- Save any dumps during regression to dumps directory
+- Fix crash from rw_lock/unlock miss match
+- Attempt to fix duplicate job kill seg fault
+- Replace pthread_kill by my_thread_send_signal() in jcr.c
+- fix #1595 about batch mode detection problem for postgresql with non standard 
+  install dir
+- Fix #1594 about prune copy jobs
+- Apply literal string fix in printf submitted by Luca Berra
+- Fix bug #1582 Restore from multiple storage daemons breaks subsequent backups
+- Fix segfault on "cancel jobid=" command
+- Fix bug #1554 Windows installer doesn't honor /S flag
+- Remove pool zap code that breaks 2drive-concurrent-test
+- Fix #1571 and install libraries with 755 perms
+- Fix bug #1581 ASSERTs in src/dird/jobq.c can never trigger
+- Fix problem with BaseJob and Accurate FileSet options on client side
+- Fix for bug #1569 deadlock/crash in Dir
+- Fix segfault when loading Plugins
+- Fix #1567 about display of long volume names truncated during restore
+- Added new bacula-libs package.
+- Fix bug #1538 Start Scripts return incorrect value
+- Fix bug #1564 init scripts not LSB compliant
+
+See ChangeLog for more details.
+
+=============================================================================
+
+
+============= Release 5.0.2 ========================
 
 Changes since 5.0.1
 -------------------
@@ -54,6 +130,10 @@ Bug fixes
 - Fix OpenSSL 1.x problem in crypto.c on Fedora 12
 - Display AllowCompress warning message only if compression used in FileSet
 
+=============================================================================
+
+
+============= Release 5.0.1 ========================
 
 !!!!!!!!!!!!!!! NOTE FOR 5.0.0 USERS !!!!!!!!!!!!!!!!!!!!
 The Allow Duplicate Jobs directive has been significantly 

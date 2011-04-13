@@ -3,50 +3,55 @@
 # shell script to delete Bacula tables for PostgreSQL
 
 bindir=@SQL_BINDIR@
-db_name=@db_name@
+PATH="$bindir:$PATH"
+db_name=${db_name:-@db_name@}
+db_user=${db_user:-@db_user@}
 
 sql -u${db_user} ${db_name} $* <<END-OF-DATA
-DROP TABLE filename\g
-DROP TABLE path\g
-DROP TABLE file\g
-DROP TABLE Job\g
-DROP TABLE JobHisto\g
-DROP TABLE Location\g
-DROP TABLE fileset\g
-DROP TABLE jobmedia\g
-DROP TABLE media\g
-DROP TABLE MediaType\g
-DROP TABLE Storage\g
-DROP TABLE Device\g
-DROP TABLE pool\g
-DROP TABLE client\g
-DROP TABLE Log\g
-DROP TABLE LocationLog\g
-DROP TABLE counters\g
-DROP TABLE basefiles\g
-DROP TABLE unsavedfiles\g
-DROP TABLE CDImages \g
-DROP TABLE PathHierarchy\g
-DROP TABLE PathVisibility\g
-DROP TABLE version\g
-DROP TABLE Status\g
-DROP SEQUENCE filename_seq\g
-DROP SEQUENCE path_seq\g
-DROP SEQUENCE file_seq\g
-DROP SEQUENCE Job_seq\g
-DROP SEQUENCE JobHisto_seq\g
-DROP SEQUENCE Location_seq\g
-DROP SEQUENCE fileset_seq\g
-DROP SEQUENCE jobmedia_seq\g
-DROP SEQUENCE media_seq\g
-DROP SEQUENCE MediaType_seq\g
-DROP SEQUENCE Storage_seq\g
-DROP SEQUENCE Device_seq\g
-DROP SEQUENCE pool_seq\g
-DROP SEQUENCE client_seq\g
-DROP SEQUENCE Log_seq\g
-DROP SEQUENCE LocationLog_seq\g
-DROP SEQUENCE basefiles_seq\g
+DROP TABLE Filename;
+DROP TABLE Path;
+DROP TABLE File;
+DROP TABLE RestoreObject;
+DROP TABLE Job;
+DROP TABLE JobHisto;
+DROP TABLE Location;
+DROP TABLE Fileset;
+DROP TABLE JobMedia;
+DROP TABLE Media;
+DROP TABLE MediaType;
+DROP TABLE Storage;
+DROP TABLE Device;
+DROP TABLE Pool;
+DROP TABLE Client;
+DROP TABLE Log;
+DROP TABLE LocationLog;
+DROP TABLE Counters;
+DROP TABLE BaseFiles;
+DROP TABLE UnsavedFiles;
+DROP TABLE CDImages ;
+DROP TABLE PathHierarchy;
+DROP TABLE PathVisibility;
+DROP TABLE Version;
+DROP TABLE Status;
+DROP SEQUENCE Filename_Seq;
+DROP SEQUENCE Path_Seq;
+DROP SEQUENCE File_Seq;
+DROP SEQUENCE RestoreObject_Seq;
+DROP SEQUENCE Job_Seq;
+DROP SEQUENCE JobHisto_Seq;
+DROP SEQUENCE Location_Seq;
+DROP SEQUENCE Fileset_Seq;
+DROP SEQUENCE JobMedia_Seq;
+DROP SEQUENCE Media_Seq;
+DROP SEQUENCE MediaType_Seq;
+DROP SEQUENCE Storage_Seq;
+DROP SEQUENCE Device_Seq;
+DROP SEQUENCE Pool_Seq;
+DROP SEQUENCE Client_Seq;
+DROP SEQUENCE Log_Seq;
+DROP SEQUENCE LocationLog_Seq;
+DROP SEQUENCE BaseFiles_Seq;
+\g
 END-OF-DATA
 pstat=$?
 if test $pstat = 0; 

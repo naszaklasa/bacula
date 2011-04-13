@@ -1,5 +1,210 @@
               Changelog on version 5.0.x
 
+
+Release version 5.0.3
+
+03Aug10
+- Fix Windows build
+- Remove patches directory
+- Fix compilation problem with zlib
+
+02Aug10
+- Remove comments field from tls-duplicate-job-test -- add back next database 
+  upgrade
+
+01Aug10
+- Make Win32 no filesystem change more explicit
+
+31Jul10
+- Update askdir.c to Branch-5.1
+- Revert block.c to fix recycling
+- More backport from Branch-5.1 to Branch-5.0
+- Backport Branch-4.0 release to Branch-5.0
+- Massive backport from Branch-5.1 to Branch-5.0 -- a bit more to do
+
+29Jul10
+- Remove some old files
+
+28Jul10
+- Fix #1606 about OpenSSLv1 detection using non-standard location
+- Backport some 5.1 changes to 5.0
+
+27Jul10
+- Update the license template files
+
+26Jul10
+- Fix postgresql catalog creation when version is not on the first line
+
+25Jul10
+- More changes from GPLv2 to AGPLv3
+- Fix some missed copyright changes
+- Change license from GPLv2 to AGPLv3
+- Define restore object stream
+
+21Jul10
+- Fix bug #1610 handle empty xattr values on Linux and xBSD.
+- Really free free pool memory before sm_dump
+- Garbage collect memory pool at end of job and before sm_dump
+- Ignore STREAM_RESTORE_OBJECTS returned by SD to FD
+
+19Jul10
+- Add xattr seg fault protection suggested by Marco for bug #1610
+
+17Jul10
+- Add archlinux to os.m4
+
+14Jul10
+- More fixes for 32/64 bit problems in smartall
+- Fix 32/64 bit problem in smartalloc dump routine
+
+11Jul10
+- Fix bad copy/paste in commit c88dccb88 prably a seg fault
+- Fix .dump, .die, .exit when DEVELOPER turned off
+
+10Jul10
+- Add .dump and .exit commands for daemons
+
+10May10
+- Add .dump command
+
+10Jul10
+- Make SD automatically fix the Volume size in the Catalog when out of sync
+- Add bigger print buffer for sm_dump
+
+09Jul10
+- Use Pmsg in smartall.c rather than printf for tracing Windows
+
+11Jul10
+- Update to master's bsnprintf.c
+
+07Jul10
+- Up maximum block size to 20M
+
+04Jul10
+- Add new tls-duplicate-job test
+
+07Jul10
+- Fix for TLS bugs #1568 and #1599
+
+02Jul10
+- Improve comm line error handling for TLS, may fix bug #1568 and #1599
+
+03Jul10
+- Remove Linux dependency (seq) in regress script
+
+06May10
+- Fix problem when sending Cancel event to plugin
+
+01Jun10
+- Update makefiles for new libtool revision
+- Simplify libtool revision and use VERSION as default
+- Simplify libtool revision
+
+28May10
+- Convert all Jmsg on the watchdog thread to Qmsg
+
+20May10
+- Do not use mtime with basejobs
+
+02Jul10
+- Fix SD crash due to mismatched lock/unlock in error condition
+
+26Jun10
+- Fix bug #1587 if you have clients with different catalogs configured, both 
+  catalogs contains all clients after a reload or restart of the dir
+- Fix bug #1577 During migration: ERROR in block.c:950 Failed ASSERT: dev->is_open() 
+  by moving and commenting out the ASSERT()
+
+23Jun10
+- Skip HB kill in FD if HB thread terminated
+
+21Jun10
+- update windows defs
+
+20Jun10
+- Fix crash from unequal volume_lock/unlock calls
+- Fix pruning for migration jobs and do some optimization
+- Print TestName at beginning of dump
+
+19Jun10
+- Remove prototypes of removed prune queries.
+
+18Jun10
+- Adapt new prune code with old db_accurate_get_jobids()
+
+17Jun10
+- Remove bdb from configure
+- update prune code
+
+16Jun10
+- Make new prune algo to work with backup
+
+19Jun10
+- Save any dumps during regression to dumps directory
+- Update LICENSE
+- Fix crash from rw_lock/unlock miss match
+
+18Jun10
+- Attempt to fix duplicate job kill seg fault
+- Replace pthread_kill by my_thread_send_signal() in jcr.c
+- fix #1595 about batch mode detection problem for postgresql with non standard 
+  install dir
+- Fix accurate code
+- Add TestName to gdb traceback
+
+17Jun10
+- Fix db_get_base_jobid()
+
+14Jun10
+- Fix #1594 about prune copy jobs
+
+07Jun10
+- Apply literal string fix in printf submitted by Luca Berra
+
+03Jun10
+- Fix bug #1582 Restore from multiple storage daemons breaks subsequent backups
+
+01Jun10
+- Fix segfault on "cancel jobid=" command
+- Change libtool version
+
+30May10
+- Fix bug #1554 Windows installer doesn't honor /S flag
+
+23Apr10
+- Remove pool zap code that breaks 2drive-concurrent-test
+
+28May10
+- Fix #1571 and install libraries with 755 perms
+
+27May10
+- Fix bug #1581 ASSERTs in src/dird/jobq.c can never trigger
+
+20May10
+- Fix problem with BaseJob and Accurate FileSet options on client side
+
+24May10
+- Add more debug code for bactrace
+
+23May10
+- Fix for bug #1569 deadlock/crash in Dir
+
+03May10
+- Fix segfault when loading Plugins
+
+04May10
+- Fix #1567 about display of long volume names truncated during restore
+
+02May10
+- Added new bacula-libs package.
+
+01May10
+- Fix bug #1538 Start Scripts return incorrect value
+- Fix bug #1564 init scripts not LSB compliant
+
+28Apr10
+- Fix File and Job Retention in show pool command
+
 Release Version 5.0.2
 
 27Apr10

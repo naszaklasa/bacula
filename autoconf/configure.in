@@ -36,48 +36,43 @@ BACULA=${BACULA:-Bacula}
 VERSION=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
 DATE=`sed -n -e 's/^.*[ \t]*BDATE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
 LSMDATE=`sed -n -e 's/^.*LSMDATE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+BDB_VERSION=`sed -n -e 's/^.*BDB_VERSION \(.*\)$/\1/p' ${srcdir}/src/cats/cats.h`
 AC_SUBST(VERSION)dnl 
 AC_SUBST(DATE)dnl 
 AC_SUBST(LSMDATE)dnl 
 AC_SUBST(BACULA)dnl
 AC_SUBST(post_host)dnl
+AC_SUBST(BDB_VERSION)dnl
 
 dnl src/lib
-LIBBAC_LT_CURRENT=`sed -n -e 's/^.*LIBBAC_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBAC_LT_REVISION=`sed -n -e 's/^.*LIBBAC_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBAC_LT_AGE=`sed -n -e 's/^.*LIBBAC_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACCFG_LT_CURRENT=`sed -n -e 's/^.*LIBBACCFG_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACCFG_LT_REVISION=`sed -n -e 's/^.*LIBBACCFG_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACCFG_LT_AGE=`sed -n -e 's/^.*LIBBACCFG_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACPY_LT_CURRENT=`sed -n -e 's/^.*LIBBACPY_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACPY_LT_REVISION=`sed -n -e 's/^.*LIBBACPY_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACPY_LT_AGE=`sed -n -e 's/^.*LIBBACPY_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
+dnl can be overwritten by specific values from version.h
+LIBBAC_LT_RELEASE=`sed -n -e 's/^#.*LIBBAC_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+LIBBACCFG_LT_RELEASE=`sed -n -e 's/^#.*LIBBACCFG_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+LIBBACPY_LT_RELEASE=`sed -n -e 's/^#.*LIBBACPY_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
 
-AC_SUBST(LIBBAC_LT_CURRENT)dnl
-AC_SUBST(LIBBAC_LT_REVISION)dnl
-AC_SUBST(LIBBAC_LT_AGE)dnl
-AC_SUBST(LIBBACCFG_LT_CURRENT)dnl
-AC_SUBST(LIBBACCFG_LT_REVISION)dnl
-AC_SUBST(LIBBACCFG_LT_AGE)dnl
-AC_SUBST(LIBBACPY_LT_CURRENT)dnl
-AC_SUBST(LIBBACPY_LT_REVISION)dnl
-AC_SUBST(LIBBACPY_LT_AGE)dnl
+LIBBAC_LT_RELEASE=${LIBBAC_LT_RELEASE:-$VERSION}
+LIBBACCFG_LT_RELEASE=${LIBBACCFG_LT_RELEASE:-$VERSION}
+LIBBACPY_LT_RELEASE=${LIBBACPY_LT_RELEASE:-$VERSION}
+
+AC_SUBST(LIBBAC_LT_RELEASE)dnl
+AC_SUBST(LIBBACCFG_LT_RELEASE)dnl
+AC_SUBST(LIBBACPY_LT_RELEASE)dnl
 
 dnl src/cats
-LIBBACSQL_LT_CURRENT=`sed -n -e 's/^.*LIBBACSQL_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACSQL_LT_REVISION=`sed -n -e 's/^.*LIBBACSQL_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACSQL_LT_AGE=`sed -n -e 's/^.*LIBBACSQL_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-AC_SUBST(LIBBACSQL_LT_CURRENT)dnl
-AC_SUBST(LIBBACSQL_LT_REVISION)dnl
-AC_SUBST(LIBBACSQL_LT_AGE)dnl
+dnl can be overwritten by specific values from version.h
+LIBBACSQL_LT_RELEASE=`sed -n -e 's/^#.*LIBBACSQL_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+
+LIBBACSQL_LT_RELEASE=${LIBBACSQL_LT_RELEASE:-$VERSION}
+
+AC_SUBST(LIBBACSQL_LT_RELEASE)dnl
 
 dnl src/findlib
-LIBBACFIND_LT_CURRENT=`sed -n -e 's/^.*LIBBACFIND_LT_CURRENT *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACFIND_LT_REVISION=`sed -n -e 's/^.*LIBBACFIND_LT_REVISION *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-LIBBACFIND_LT_AGE=`sed -n -e 's/^.*LIBBACFIND_LT_AGE *\(.*\)$/\1/p' ${srcdir}/src/version.h`
-AC_SUBST(LIBBACFIND_LT_CURRENT)dnl
-AC_SUBST(LIBBACFIND_LT_REVISION)dnl
-AC_SUBST(LIBBACFIND_LT_AGE)dnl
+dnl can be overwritten by specific values from version.h
+LIBBACFIND_LT_RELEASE=`sed -n -e 's/^#.*LIBBACFIND_LT_RELEASE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
+
+LIBBACFIND_LT_RELEASE=${LIBBACFIND_LT_RELEASE:-$VERSION}
+
+AC_SUBST(LIBBACFIND_LT_RELEASE)dnl
 
 echo "configuring for ${BACULA} $VERSION ($DATE)"
 
@@ -818,10 +813,10 @@ if test x$support_ipv6 = xyes; then
 fi
 
 TERM_LIB=""
-AC_CHECK_HEADER(termcap.h, 
-  [ AC_CHECK_LIB(termcap, tgetent, 
-    [ TERM_LIB="-ltermcap" ],
-    [ AC_CHECK_LIB(ncurses, tgetent, [ TERM_LIB="-lncurses" ])
+AC_CHECK_HEADER(curses.h, 
+  [ AC_CHECK_LIB(ncurses, tgetent, 
+    [ TERM_LIB="-lncurses" ],
+    [ AC_CHECK_LIB(termcap, tgetent, [ TERM_LIB="-ltermcap" ])
     ])
   ],
   [  AC_CHECK_HEADERS(curses.h)
@@ -1178,9 +1173,6 @@ if test "x$with_openssl_directory" != "xno"; then
       ]
    )
 
-   LIBS="${saved_LIBS}"
-   CFLAGS="${saved_CFLAGS}"
-
    if test "$support_tls" = "yes"; then
       AC_DEFINE(HAVE_OPENSSL, 1, [Define if OpenSSL library is available])
       AC_DEFINE(HAVE_TLS, 1, [Define if TLS support should be enabled])
@@ -1194,12 +1186,20 @@ if test "x$with_openssl_directory" != "xno"; then
    if test "$ac_cv_openssl_export" = "yes"; then
       AC_DEFINE(HAVE_OPENSSL_EXPORT_LIBRARY, 1, [Define if the OpenSSL library is export-contrained to 128bit ciphers])
    fi
+
+   if test "$support_crypto" = "yes"; then
+      AC_CHECK_LIB(ssl, EVP_PKEY_encrypt_old, AC_DEFINE(HAVE_OPENSSLv1, 1, [Set if have OpenSSL version 1.x]))
+   fi
+
+   LIBS="${saved_LIBS}"
+   CFLAGS="${saved_CFLAGS}"
 else
    support_tls="no"
    support_crypto="no"
    OPENSSL_LIBS=""
    OPENSSL_INC=""
 fi
+AC_MSG_RESULT([$support_tls])
 
 if test "$support_tls" = "no"; then
    OPENSSL_LIBS=""
@@ -1208,11 +1208,8 @@ fi
 if test "$support_crypto" = "no"; then
    OPENSSL_LIBS=""
    OPENSSL_INC=""
-else
-   AC_CHECK_LIB(ssl, EVP_PKEY_encrypt_old, AC_DEFINE(HAVE_OPENSSLv1, 1, [Set if have OpenSSL version 1.x]))
 fi  
 
-AC_MSG_RESULT([$support_tls])
 AC_SUBST(OPENSSL_LIBS)
 AC_SUBST(OPENSSL_INC)
 
@@ -1751,8 +1748,12 @@ if test $pkg = 0; then
       ]
    )
 fi
+
+dnl For postgresql checking
+saved_LIBS="${LIBS}"
+LIBS="${saved_LIBS} ${SQL_LFLAGS}"
    
-dnl Check if postgresql can support batch mode	 
+dnl Check if postgresql can support batch mode
 if test x$DB_TYPE = xpostgresql; then
    AC_CHECK_LIB(pq, PQisthreadsafe, AC_DEFINE(HAVE_PQISTHREADSAFE, 1, [Set if have PQisthreadsafe]))
    AC_CHECK_LIB(pq, PQputCopyData, AC_DEFINE(HAVE_PQ_COPY, 1, [Set if have PQputCopyData]))
@@ -1802,7 +1803,15 @@ else
    uncomment_dbi="#"  
 fi
 
+dnl revert after postgresql checks
+LIBS="${saved_LIBS}"
+
 AC_SUBST(uncomment_dbi)
+
+dnl For Ingres always enable batch inserts.
+if test x$DB_TYPE = xingres; then
+   support_batch_insert=yes
+fi
 
 if test $support_batch_insert = yes ; then
    AC_DEFINE(HAVE_BATCH_FILE_INSERT, 1, [Set if DB batch insert code enabled])
@@ -2387,6 +2396,7 @@ AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
 AC_FUNC_ALLOCA
 AC_FUNC_GETMNTENT
+AC_CHECK_FUNCS(getmntinfo, [AC_DEFINE(HAVE_GETMNTINFO)])
 AC_FUNC_CLOSEDIR_VOID
 AC_FUNC_SETPGRP 	    dnl check for BSD setpgrp.
 # AC_FUNC_FNMATCH    dnl use local version
@@ -2396,12 +2406,89 @@ AC_CHECK_LIB(intl, gettext, [LIBS="$LIBS -lintl"])
 AC_CHECK_LIB(sun, getpwnam)
 
 AC_CHECK_HEADERS(zlib.h)
-AC_CHECK_LIB(z, deflate, [FDLIBS="-lz"])
+AC_CHECK_LIB(z, deflate, [ZLIBS="-lz"])
 have_zlib=no
-if test x$FDLIBS = x-lz; then
+if test x$ZLIBS = x-lz; then
    AC_DEFINE(HAVE_LIBZ)
    have_zlib=yes
 fi
+AC_SUBST(ZLIBS)
+
+dnl
+dnl Check if we have AFS on this system
+dnl
+AFS_CFLAGS=""
+AFS_LIBS=""
+support_afs=auto
+AC_ARG_ENABLE(afs,
+   AC_HELP_STRING([--disable-afs], [disable afs support @<:@default=auto@:>@]),
+   [
+       if test x$enableval = xyes; then
+	  support_afs=yes
+       elif test x$enableval = xno; then
+	  support_afs=no
+       fi
+   ]
+)
+
+have_afs=no
+if test x$support_afs = xyes -o x$support_afs = xauto; then
+   AC_ARG_WITH(afsdir,
+      AC_HELP_STRING([--with-afsdir@<:@=DIR@:>@], [Directory holding AFS includes/libs]),
+      with_afsdir=$withval
+   )
+
+   dnl
+   dnl Search in standard places, or --with-afsdir not specified
+   dnl
+   if test x$with_afsdir = x; then
+      for root in /usr /usr/local; do
+	 if test -d ${root}/include/afs/ ; then
+	    with_afsdir=${root}
+	    break
+	 fi
+      done
+   fi
+
+   AFS_CFLAGS="-I${with_afsdir}/include"
+
+   saved_CFLAGS="${CFLAGS}"
+   CFLAGS="${AFS_CFLAGS} ${saved_CFLAGS}"
+
+   AC_CHECK_HEADERS(afs/stds.h)
+
+   CFLAGS="${saved_CFLAGS}"
+
+   dnl
+   dnl See if we can find a libsys with the pioctl symbol in there
+   dnl
+   for dir in ${with_afsdir}/lib ${with_afsdir}/lib/afs
+   do
+      for arch_type in .a .so
+      do
+	 A=`test -f ${dir}/libsys${arch_type} && nm ${dir}/libsys${arch_type} | grep pioctl`
+	 pkg=$?
+	 if test $pkg = 0; then
+	    have_afs=yes
+	    AFS_LIBS="-L${dir} -lsys -lrx -llwp ${dir}/util.a"
+	    break
+	 fi
+      done
+   done
+
+   if test x$support_afs = xyes -a $have_afs != yes; then
+      AC_MSG_ERROR([afs support explicitly enabled but no supported afs implementation found, 
+  please either load the afs libraries or rerun configure without --enable-afs])
+   else
+      if test $have_afs = yes; then
+	 AC_DEFINE([HAVE_AFS],1,[Defines if your system has AFS support])
+	 AC_DEFINE([HAVE_AFS_ACL],1,[Andrew FileSystem ACL support])
+      fi
+   fi
+fi
+
+AC_SUBST(AFS_CFLAGS)
+AC_SUBST(AFS_LIBS)
 
 dnl
 dnl Check for ACL support and libraries
@@ -2429,7 +2516,18 @@ if test x$support_acl = xyes -o x$support_acl = xauto; then
 	  AC_CHECK_LIB(acl, acl_get_file,
 	     [
 		 have_acl=yes;
-		 FDLIBS="-lacl $FDLIBS"
+		 if test $have_afs = yes; then
+		    dnl
+		    dnl Because of possible naming conflict with AFS libacl make sure we use the one in /usr/lib64 or /usr/lib !!!
+		    dnl
+		    if test -d /usr/lib64/; then
+		       FDLIBS="-L/usr/lib64 -lacl $FDLIBS"
+		    else
+		       FDLIBS="-L/usr/lib -lacl $FDLIBS"
+		    fi
+		 else
+		    FDLIBS="-lacl $FDLIBS"
+		 fi
 	     ], [
 		 AC_CHECK_LIB(pacl, acl_get_file,
 		    [
@@ -2919,7 +3017,8 @@ suse)
        platforms/suse/Makefile \
        platforms/suse/bacula-fd \
        platforms/suse/bacula-sd \
-       platforms/suse/bacula-dir"
+       platforms/suse/bacula-dir \
+       platforms/suse/bacula"
   ;;
 suse5)
    DISTNAME=suse
@@ -3059,12 +3158,6 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/cats/drop_ingres_database \
 	   src/cats/sqlite \
 	   src/cats/mysql \
-	   src/cats/create_bdb_database \
-	   src/cats/update_bdb_tables \
-	   src/cats/make_bdb_tables \
-	   src/cats/grant_bdb_privileges \
-	   src/cats/drop_bdb_tables \
-	   src/cats/drop_bdb_database \
 	   src/cats/create_bacula_database \
 	   src/cats/update_bacula_tables \
 	   src/cats/grant_bacula_privileges \
@@ -3128,13 +3221,11 @@ c=updatedb
 chmod 755 $c/update_mysql_tables_10_to_11   $c/update_sqlite3_tables_10_to_11
 chmod 755 $c/update_postgresql_tables_10_to_11
 
+
 c=src/cats
 
 chmod 755 $c/create_bacula_database   $c/update_bacula_tables  $c/make_bacula_tables
 chmod 755 $c/grant_bacula_privileges  $c/drop_bacula_tables    $c/drop_bacula_database
-
-chmod 755 $c/create_bdb_database      $c/update_bdb_tables     $c/make_bdb_tables
-chmod 755 $c/grant_bdb_privileges     $c/drop_bdb_tables       $c/drop_bdb_database
 
 chmod 755 $c/create_mysql_database    $c/update_mysql_tables   $c/make_mysql_tables
 chmod 755 $c/grant_mysql_privileges   $c/drop_mysql_tables     $c/drop_mysql_database
@@ -3261,6 +3352,7 @@ Configuration on `date`:
    build-dird:		    ${build_dird}
    build-stored:	    ${build_stored}
    Plugin support:	    ${have_plugins}
+   AFS support: 	    ${have_afs}
    ACL support: 	    ${have_acl}
    XATTR support:	    ${have_xattr}
    Python support:	    ${support_python} ${PYTHON_LIBS}
