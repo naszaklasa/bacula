@@ -1,3 +1,11 @@
+bacula (5.0.3-1) UNRELEASED; urgency=low
+
+  * QA upload.
+  * New upstream version (Closes: #592622)
+    + Fixes OpenSSL 1.0.0 issue (Closes: #622003)
+
+ -- Jan Hauke Rahm <jhr@debian.org>  Wed, 13 Apr 2011 11:02:40 +0200
+
 bacula (5.0.2-3) unstable; urgency=low
 
   * Wrap password commands in quotes.  Closes: #607443.
