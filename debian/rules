@@ -61,7 +61,19 @@ CONF_ALL	= --enable-smartalloc \
 	--with-mon-sd-password=XXX_MONSDPASSWORD_XXX \
 	--with-db-name=XXX_DBNAME_XXX \
 	--with-db-user=XXX_DBUSER_XXX \
-	--with-db-password=XXX_DBPASSWORD_XXX
+	--with-db-password=XXX_DBPASSWORD_XXX \
+	--config-cache \
+	--host=${DEB_HOST_GNU_TYPE} --build=${DEB_BUILD_GNU_TYPE} \
+	--prefix=/usr \
+	--with-archivedir=/nonexistant/path/to/file/archive/dir \
+	--sysconfdir=/etc/bacula --with-scriptdir=/etc/bacula/scripts \
+	--sharedstatedir=/var/lib/bacula \
+	--localstatedir=/var/lib/bacula \
+	--with-pid-dir=/var/run/bacula --with-smtp-host=localhost \
+	--with-working-dir=/var/lib/bacula \
+	--with-subsys-dir=/var/lock \
+	--mandir=\$${prefix}/share/man \
+	--infodir=\$${prefix}/share/info
 
 
 CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \
@@ -78,84 +90,32 @@ CONF_pgsql	= --with-postgresql --without-sqlite --without-mysql --without-sqlite
 
 ###########################################################################
 
-extract: extract-stamp
-extract-stamp: $(foreach s,$(VARIANTS),extract-stamp-$(s))
-extract-stamp-%:
+build-stamp-%:
+	dh_testdir
 	@echo " *** DEBIAN *** VARIANT $(*): EXTRACTING to $(BUILDDIR)-$(*)"
 	mkdir $(BUILDDIR)-$(*)
 	tar -cSf - --exclude=./.git --exclude=./debian . | tar -xSpf - -C $(BUILDDIR)-$(*)
-	touch $@
-
-configure-stamp-%: extract-stamp-%
-	dh_testdir
 	@echo " *** DEBIAN *** CONFIGURING VARIANT $*"
 	cp /usr/share/misc/config.guess /usr/share/misc/config.sub \
 		$(BUILDDIR)-$(*)/autoconf/
-	cd $(BUILDDIR)-$(*) && \
-		QMAKE=/usr/bin/qmake-qt4 ./configure --config-cache \
-		--host=${DEB_HOST_GNU_TYPE} --build=${DEB_BUILD_GNU_TYPE} \
-		--prefix=/usr \
-		--with-archivedir=/nonexistant/path/to/file/archive/dir \
-		--sysconfdir=/etc/bacula --with-scriptdir=/etc/bacula/scripts \
-		--sharedstatedir=/var/lib/bacula \
-		--localstatedir=/var/lib/bacula \
-		--with-pid-dir=/var/run/bacula --with-smtp-host=localhost \
-		--with-working-dir=/var/lib/bacula \
-		--with-subsys-dir=/var/lock \
-		--mandir=\$${prefix}/share/man \
-		--infodir=\$${prefix}/share/info \
-		$(CONF_ALL) $(CONF_$(*))
-	touch $@
-
-build-stamp-%: configure-stamp-%
-	dh_testdir
+	cd $(BUILDDIR)-$(*) && ./configure $(CONF_ALL) $(CONF_$(*))
 	@echo " *** DEBIAN *** BUILDING VARIANT $*"
-
-# Main building process
+	# Main building process
 	$(MAKE) -C $(BUILDDIR)-$(*)
-
-# Grrr... client-only does not build needed db-independent 'bsmtp', 'stored'
+	# Grrr... client-only does not build needed db-independent 'bsmtp', 'stored'
 	$(MAKE) -C $(BUILDDIR)-$(*)/src/tools
 	$(MAKE) -C $(BUILDDIR)-$(*)/src/stored
-
 	chmod 755 debian/additions/postinst-common
 	chmod 755 debian/additions/bconsole
-
 	touch $@
 
-build-arch: build-stamp
+build: build-stamp
 build-stamp: $(foreach v,$(VARIANTS),build-stamp-$(v))
 	touch $@
 
-build-indep: build-indep-stamp
-build-indep-stamp:
-	dh_testdir
-
-	touch $@
-
-
-build: build-arch build-indep
-
-###############################################
-# Cleaning macro
-###############################################
-
 clean:
-
-	$(RM) *stamp*
-
 	dh_clean
-
-	$(RM) -r debian/tmp* debian/bacula-doc \
-		scripts/disk-changer  
-
-	## delete ${FLAVORED_BINARIES} 
-	$(RM) $(foreach pkg,$(VARIANTS), src/dird/bacula-dir.$(pkg) src/tools/dbcheck.$(pkg) src/stored/bscan.$(pkg) src/stored/bcopy.$(pkg))
-
-	#-$(MAKE) -C doc/latex clean
-
-	$(RM) build-arch-flavor-stamp
-
+	$(RM) -r debian/tmp*
 
 # Macro to extract a here document and put it in place
 # args: 1 -- db name, 2 -- file to extract, 3 -- version
@@ -199,31 +159,26 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	chmod 755 debian/patches-scripts/extract_here
 	chmod 755 debian/additions/bconsole
 
-######### dbconfig-common stuff
-#	$(call ext-upgrade-all,7_to_8,1.36.0)
-#	$(call ext-upgrade-all,8_to_9,1.38.0)
-#	$(call ext-upgrade-all,9_to_10,2.0.0)
-# above lines commented out because they are pre-lenny and no longer needed
+	######### dbconfig-common stuff
+	# lenny -> squeeze is 10 -> 12
 	$(call ext-upgrade-all,10_to_11,3.0.0)
-
-# Sometimes the latest release doesn't have a copy of the data in updatedb.
-# Manually install those.  CHECK THIS FOR EACH NEW RELEASE, and move older
-# versions to an ext-upgrade-all line as above.
-
+	# Sometimes the latest release doesn't have a copy of the data in updatedb.
+	# Manually install those.  CHECK THIS FOR EACH NEW RELEASE, and move older
+	# versions to an ext-upgrade-all line as above.
 	$(call ext-upgrade-latest,5.0.0) # 5.0.0 upgrade 11 to 12
 
 
-# PostgreSQL
+	# PostgreSQL
 	echo "ALTER DATABASE _DBC_DBNAME_ SET datestyle TO 'ISO, YMD';" > \
 		debian/bacula-director-pgsql/$(DBC)/bacula-director-pgsql/install-dbadmin/pgsql
 
 	$(call ext-install,pgsql,debian/tmp-build-pgsql/src/cats/make_postgresql_tables)
-# MySQL
+	# MySQL
 	$(call ext-install,mysql,debian/tmp-build-mysql/src/cats/make_mysql_tables)
-# Remove USE bacula -- dbconfig-common selects the database for us
+	# Remove USE bacula -- dbconfig-common selects the database for us
 	sed -i -e 's/USE \$${db_name};//' -e 's/USE bacula;//' debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/install/mysql debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/upgrade/mysql/*
 
-# SQLite3
+	# SQLite3
 	$(call ext-install,sqlite3,debian/tmp-build-sqlite3/src/cats/make_sqlite3_tables)
 
 	dh_link -pbacula-console usr/share/man/man8/bconsole.8.gz usr/share/man/man8/bacula-console.8.gz
@@ -311,8 +266,8 @@ binary-arch-common: build install
 	dh_makeshlibs -a
 	dh_installdeb -a
 
-# Handle shlibs for the database packages specially so they get
-# the deps on the correct libraries.
+	# Handle shlibs for the database packages specially so they get
+	# the deps on the correct libraries.
 	dh_shlibdeps -pbacula-sd-mysql -Lbacula-common-mysql
 	dh_shlibdeps -pbacula-director-mysql -Lbacula-common-mysql
 	dh_shlibdeps -pbacula-sd-sqlite3 -Lbacula-common-sqlite3
@@ -320,7 +275,7 @@ binary-arch-common: build install
 	dh_shlibdeps -pbacula-sd-pgsql -Lbacula-common-pgsql
 	dh_shlibdeps -pbacula-director-pgsql -Lbacula-common-pgsql
 
-# Now build all other shlibdeps.
+	# Now build all other shlibdeps.
 	dh_shlibdeps -a -Nbacula-sd-mysql -Nbacula-director-mysql \
 		-Nbacula-sd-sqlite3 -Nbacula-director-sqlite3 \
 		-Nbacula-sd-pgsql -Nbacula-director-pgsql
