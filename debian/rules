@@ -99,7 +99,6 @@ build-stamp-%:
 build: build-stamp
 build-stamp: $(foreach v,$(VARIANTS),build-stamp-$(v))
 	chmod 755 debian/additions/postinst-common
-	chmod 755 debian/additions/bconsole
 	touch $@
 
 install-stamp: build $(foreach v,$(VARIANTS),install-stamp-$(v))

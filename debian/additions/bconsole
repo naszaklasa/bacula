@@ -1,3 +1,0 @@
-#!/bin/sh
-CFGFILE=/etc/bacula/bconsole.conf
-exec /usr/sbin/bacula-console -c $CFGFILE $*

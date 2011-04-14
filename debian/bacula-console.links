@@ -1,1 +1,2 @@
 usr/share/man/man8/bconsole.8.gz usr/share/man/man8/bacula-console.8.gz
+usr/sbin/bconsole usr/sbin/bacula-console
