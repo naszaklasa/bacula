@@ -1,0 +1,10 @@
+--- a/src/cats/make_mysql_tables.in
++++ b/src/cats/make_mysql_tables.in
+@@ -7,7 +7,6 @@
+ db_name=${db_name:-@db_name@}
+ 
+ if mysql $* -f <<END-OF-DATA
+-USE ${db_name};
+ --
+ -- Note, we use BLOB rather than TEXT because in MySQL,
+ --  BLOBs are identical to TEXT except that BLOB is case

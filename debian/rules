@@ -1,43 +1,15 @@
 #!/usr/bin/make -f
-# debian/rules for Bacula
-# based upon dh_make template, copyright 1997 by Joey Hess.
-#
 
 #export DH_VERBOSE=1
 
-# These are used for cross-compiling and for saving the configure script
-# from having to guess our platform (since we know it already)
-DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
-DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 DEB_HOST_ARCH_OS    ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
-
-CFLAGS = -g -Wall
-INSTALL_PROGRAM = install
-
-ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
-	CFLAGS += -O0
-else
-	CFLAGS += -O2
-endif
-
-ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
-	INSTALL_PROGRAM += -s
-endif
-
 
 VARIANTS := sqlite3 pgsql mysql
 
 ######################################################################
 
-NAME=bacula
-
-# The variant that is used when we install non-variant-specific stuff.
-# Only bother building extra consoles and stuff for this one.
-DEFAULTVARIANT := sqlite3
-TEMPLATES = $(wildcard debian/*.templates)
 BUILDDIR := $(CURDIR)/debian/tmp-build
 INSTALLDIR := $(CURDIR)/debian/tmp-install
-DEFAULTINSTALLDIR := $(INSTALLDIR)-$(DEFAULTVARIANT)
 DBC := usr/share/dbconfig-common/data/
 
 CONF_ALL	= --enable-smartalloc \
@@ -63,17 +35,13 @@ CONF_ALL	= --enable-smartalloc \
 	--with-db-user=XXX_DBUSER_XXX \
 	--with-db-password=XXX_DBPASSWORD_XXX \
 	--config-cache \
-	--host=${DEB_HOST_GNU_TYPE} --build=${DEB_BUILD_GNU_TYPE} \
-	--prefix=/usr \
 	--with-archivedir=/nonexistant/path/to/file/archive/dir \
 	--sysconfdir=/etc/bacula --with-scriptdir=/etc/bacula/scripts \
 	--sharedstatedir=/var/lib/bacula \
 	--localstatedir=/var/lib/bacula \
 	--with-pid-dir=/var/run/bacula --with-smtp-host=localhost \
 	--with-working-dir=/var/lib/bacula \
-	--with-subsys-dir=/var/lock \
-	--mandir=\$${prefix}/share/man \
-	--infodir=\$${prefix}/share/info
+	--with-subsys-dir=/var/lock
 
 
 CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \
@@ -89,33 +57,6 @@ CONF_mysql	= --with-mysql --without-sqlite --without-postgresql --without-sqlite
 CONF_pgsql	= --with-postgresql --without-sqlite --without-mysql --without-sqlite3 $(CONF_common)
 
 ###########################################################################
-
-build-stamp-%:
-	dh_testdir
-	@echo " *** DEBIAN *** VARIANT $(*): EXTRACTING to $(BUILDDIR)-$(*)"
-	mkdir $(BUILDDIR)-$(*)
-	tar -cSf - --exclude=./.git --exclude=./debian . | tar -xSpf - -C $(BUILDDIR)-$(*)
-	@echo " *** DEBIAN *** CONFIGURING VARIANT $*"
-	cp /usr/share/misc/config.guess /usr/share/misc/config.sub \
-		$(BUILDDIR)-$(*)/autoconf/
-	cd $(BUILDDIR)-$(*) && ./configure $(CONF_ALL) $(CONF_$(*))
-	@echo " *** DEBIAN *** BUILDING VARIANT $*"
-	# Main building process
-	$(MAKE) -C $(BUILDDIR)-$(*)
-	# Grrr... client-only does not build needed db-independent 'bsmtp', 'stored'
-	$(MAKE) -C $(BUILDDIR)-$(*)/src/tools
-	$(MAKE) -C $(BUILDDIR)-$(*)/src/stored
-	chmod 755 debian/additions/postinst-common
-	chmod 755 debian/additions/bconsole
-	touch $@
-
-build: build-stamp
-build-stamp: $(foreach v,$(VARIANTS),build-stamp-$(v))
-	touch $@
-
-clean:
-	dh_clean
-	$(RM) -r debian/tmp*
 
 # Macro to extract a here document and put it in place
 # args: 1 -- db name, 2 -- file to extract, 3 -- version
@@ -142,23 +83,56 @@ endef
 
 # Macro to extract a here document for install and put it in place
 # args: 1 -- db name, 2 -- file to extract
-# We append so we can do the postgresql hack for datestyle
 define ext-install
 debian/patches-scripts/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/install/$(1)
 endef
 
-install: build install-stamp
-install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
-	dh_installdirs -a
-	dh_install -pbacula-director-common
+build-stamp-%:
+	dh_testdir
+	mkdir $(BUILDDIR)-$(*)
+	tar -cSf - --exclude=./.git --exclude=./debian . | tar -xSpf - -C $(BUILDDIR)-$(*)
+	cp /usr/share/misc/config.guess /usr/share/misc/config.sub $(BUILDDIR)-$(*)/autoconf/
+	dh_auto_configure -B $(BUILDDIR)-$(*) -- $(CONF_ALL) $(CONF_$(*))
+	dh_auto_build -B $(BUILDDIR)-$(*) --parallel
+	touch $@
 
-	dh_install -pbacula-fd
-	dh_install -pbacula-console -pbacula-console-qt
-	cp $(DEFAULTINSTALLDIR)/usr/sbin/bconsole debian/bacula-console/usr/sbin/bacula-console
-	cp debian/tmp-build-$(DEFAULTVARIANT)/src/qt-console/.libs/bat debian/bacula-console-qt/usr/bin/bat
-	chmod 755 debian/patches-scripts/extract_here
+build: build-stamp
+build-stamp: $(foreach v,$(VARIANTS),build-stamp-$(v))
+	chmod 755 debian/additions/postinst-common
 	chmod 755 debian/additions/bconsole
+	touch $@
 
+install-stamp: build $(foreach v,$(VARIANTS),install-stamp-$(v))
+	touch $@
+
+install-stamp-%: build-stamp-%
+	dh install -pbacula-director-$(*) --until dh_auto_install
+	mkdir $(INSTALLDIR)-$(*)
+	$(MAKE) -C $(BUILDDIR)-$(*) install DESTDIR=$(INSTALLDIR)-$(*)
+	dh install -pbacula-director-$(*) --remaining
+	touch $@
+
+install-rest: DH-OPTIONS=-a -Nbacula-director-pgsql -Nbacula-director-mysql -Nbacula-director-sqlite3
+install-rest:
+	dh_prep
+	dh_installdirs
+	dh_install
+	dh_installdocs
+	dh_installchangelogs
+	dh_installexamples
+	dh_installman
+	dh_installinit -pbacula-sd -- defaults 90 10
+	dh_installinit -pbacula-fd -- defaults 91 9
+	dh_installinit --name=bacula-director -pbacula-director-common --no-start -- defaults 92 8
+	dh_installdebconf
+	dh_installinfo
+	dh_installmenu
+	dh_bugfiles
+	dh_lintian
+	dh_usrlocal
+	dh_link
+	chmod 755 debian/patches-scripts/extract_here
+	chmod 755 debian/bacula-common/usr/lib/bacula/btraceback
 	######### dbconfig-common stuff
 	# lenny -> squeeze is 10 -> 12
 	$(call ext-upgrade-all,10_to_11,3.0.0)
@@ -166,106 +140,26 @@ install-stamp: build-stamp $(foreach v,$(VARIANTS),install-stamp-$(v))
 	# Manually install those.  CHECK THIS FOR EACH NEW RELEASE, and move older
 	# versions to an ext-upgrade-all line as above.
 	$(call ext-upgrade-latest,5.0.0) # 5.0.0 upgrade 11 to 12
-
-
-	# PostgreSQL
-	echo "ALTER DATABASE _DBC_DBNAME_ SET datestyle TO 'ISO, YMD';" > \
-		debian/bacula-director-pgsql/$(DBC)/bacula-director-pgsql/install-dbadmin/pgsql
-
 	$(call ext-install,pgsql,debian/tmp-build-pgsql/src/cats/make_postgresql_tables)
-	# MySQL
 	$(call ext-install,mysql,debian/tmp-build-mysql/src/cats/make_mysql_tables)
-	# Remove USE bacula -- dbconfig-common selects the database for us
-	sed -i -e 's/USE \$${db_name};//' -e 's/USE bacula;//' debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/install/mysql debian/bacula-director-mysql/$(DBC)/bacula-director-mysql/upgrade/mysql/*
-
-	# SQLite3
 	$(call ext-install,sqlite3,debian/tmp-build-sqlite3/src/cats/make_sqlite3_tables)
+	dh_fixperms
+	dh_compress
 
-	dh_link -pbacula-console usr/share/man/man8/bconsole.8.gz usr/share/man/man8/bacula-console.8.gz
+binary-arch: build install-stamp install-rest
 
-	touch $@
+binary-indep:
+	dh $@
 
-install-stamp-%: build-stamp-%
-	@echo " *** DEBIAN *** INSTALLING VARIANT $*"
-	dh_installdirs -pbacula-director-$(*)
-	mkdir $(INSTALLDIR)-$(*)
-	$(MAKE) -C $(BUILDDIR)-$(*) install DESTDIR=$(INSTALLDIR)-$(*)
+binary: binary-indep binary-arch
+	dh $@ --remaining
 
-	dh_install -pbacula-director-$(*)
-	touch $@
+clean:
+	$(RM) -r $(CURDIR)/debian/tmp-*
+	$(RM) *-stamp*
+	dh $@
 
-
-install-indep: build install-stamp
-	dh_testdir
-	dh_testroot 
-	dh_install -i
-	dh_installdirs -i
-	dh_link -pbacula-director-common
-	dh_install -pbacula -pbacula-client -pbacula-server 
-	#install doc/html-manual/* \
-	#	$(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual
-	#$(RM) $(CURDIR)/debian/bacula-doc/usr/share/doc/bacula-doc/html-manual/*.wml
-
-install-arch: build install-stamp
-	dh_install -a
-	dh_link -pbacula-common
-
-	cp $(CURDIR)/debian/common-functions $(CURDIR)/debian/bacula-common/usr/share/bacula-common
-	chmod 755 $(CURDIR)/debian/bacula-common/usr/lib/bacula/btraceback
-
-# Build architecture-independent files here.
-# Pass -i to all debhelper commands in this target to reduce clutter.
-binary-indep: build install-indep
-	dh_testdir -i
-	dh_testroot -i
-#	dh_installdebconf -i
-	dh_installdocs -i -X.cvsignore -X1 -X*.wml -X*.inc -X*.list -X*.pl -X*.apf -X*.book -Nbacula
-	dh_installexamples -i
-#	dh_installmenu -i
-	dh_installlogrotate -i
-#	dh_installinit -i
-	dh_installcron -i
-	dh_installman -i
-	dh_installinfo -i
-	dh_installchangelogs ChangeLog -i
-	rm -r debian/bacula/usr/share/doc/bacula
-	dh_link -i
-	dh_compress -i -X.pdf
-	dh_lintian -i
-	dh_fixperms -i
-	dh_installdeb -i
-	dh_gencontrol -i
-	dh_md5sums -i
-	dh_builddeb -i
-
-
-# Build architecture-dependent files here.
-binary-arch: build install install-arch binary-arch-common
-
-binary-arch-common: DH_OPTIONS=
-binary-arch-common: build install
-	dh_testdir -a
-	dh_testroot -a
-	dh_installdebconf -a
-	dh_installdocs -a
-	dh_installexamples -a
-	dh_installmenu -pbacula-console -pbacula-console-qt
-	dh_installlogrotate -a
-	dh_installinit -pbacula-sd -- defaults 90 10
-	dh_installinit -pbacula-fd -- defaults 91 9
-	dh_installinit --name=bacula-director -pbacula-director-common --no-start -- defaults 92 8
-#	dh_installcron -a
-	dh_installman -a
-	dh_installinfo -a
-	dh_installchangelogs ChangeLog -a
-	dh_strip -a
-	dh_link -a
-	dh_lintian -a
-	dh_compress -a
-	dh_fixperms -a
-	dh_makeshlibs -a
-	dh_installdeb -a
-
+override_dh_shlibdeps:
 	# Handle shlibs for the database packages specially so they get
 	# the deps on the correct libraries.
 	dh_shlibdeps -pbacula-sd-mysql -Lbacula-common-mysql
@@ -274,15 +168,24 @@ binary-arch-common: build install
 	dh_shlibdeps -pbacula-director-sqlite3 -Lbacula-common-sqlite3
 	dh_shlibdeps -pbacula-sd-pgsql -Lbacula-common-pgsql
 	dh_shlibdeps -pbacula-director-pgsql -Lbacula-common-pgsql
-
 	# Now build all other shlibdeps.
 	dh_shlibdeps -a -Nbacula-sd-mysql -Nbacula-director-mysql \
 		-Nbacula-sd-sqlite3 -Nbacula-director-sqlite3 \
 		-Nbacula-sd-pgsql -Nbacula-director-pgsql
 
-	dh_gencontrol -a
-	dh_md5sums -a
-	dh_builddeb -a
+override_dh_installdocs:
+	dh_installdocs -pbacula --link-doc=bacula-common
+	dh_installdocs -X.cvsignore -X1 -X*.wml -X*.inc -X*.list -X*.pl -X*.apf -X*.book -Nbacula
 
-binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install  build-arch 
+override_dh_installchangelogs:
+	dh_installchangelogs -Nbacula
+
+override_dh_compress:
+	dh_compress -X.pdf
+
+override_dh_auto_configure:
+override_dh_auto_build:
+override_dh_auto_test:
+override_dh_auto_install:
+
+.PHONY: build clean binary-indep binary-arch binary

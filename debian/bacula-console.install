@@ -1,1 +1,2 @@
 debian/additions/bconsole		usr/bin
+debian/tmp-install-sqlite3/usr/sbin/bconsole usr/sbin/bacula-console

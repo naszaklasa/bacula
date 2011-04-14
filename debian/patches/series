@@ -1,3 +1,4 @@
 fix-binutils-gold
 fix-default-config
 fix-sql-bindir
+fix-db-installs

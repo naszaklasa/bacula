@@ -12,3 +12,4 @@ debian/tmp-install-sqlite3/etc/bacula/bconsole.conf		usr/share/bacula-common/def
 debian/tmp-install-sqlite3/etc/bacula/bacula-sd.conf		usr/share/bacula-common/defconfig
 debian/tmp-install-sqlite3/etc/bacula/bacula-fd.conf		usr/share/bacula-common/defconfig
 debian/tmp-install-sqlite3/etc/bacula/bacula-dir.conf		usr/share/bacula-common/defconfig
+debian/common-functions		usr/share/bacula-common
