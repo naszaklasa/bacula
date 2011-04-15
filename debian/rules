@@ -4,7 +4,7 @@
 
 DEB_HOST_ARCH_OS    ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 
-VARIANTS := sqlite3 pgsql mysql
+VARIANTS := pgsql mysql sqlite3
 
 ######################################################################
 
@@ -107,33 +107,16 @@ build-stamp: $(foreach v,$(VARIANTS),build-stamp-$(v))
 install-stamp: build $(foreach v,$(VARIANTS),install-stamp-$(v))
 	touch $@
 
+DHPARAMETERS_sqlite3	=
+DHPARAMETERS_mysql	= -pbacula-director-mysql -pbacula-common-mysql -pbacula-sd-mysql
+DHPARAMETERS_pgsql	= -pbacula-director-pgsql -pbacula-common-pgsql -pbacula-sd-pgsql
 install-stamp-%: build-stamp-%
-	dh install -pbacula-director-$(*) --until dh_auto_install
-	mkdir $(INSTALLDIR)-$(*)
-	$(MAKE) -C $(BUILDDIR)-$(*) install DESTDIR=$(INSTALLDIR)-$(*)
-	dh install -pbacula-director-$(*) --remaining
-	touch $@
-
-install-rest: DH-OPTIONS=-a -Nbacula-director-pgsql -Nbacula-director-mysql -Nbacula-director-sqlite3
-install-rest:
-	dh_prep
-	dh_installdirs
-	dh_install
-	dh_installdocs
-	dh_installchangelogs
-	dh_installexamples
-	dh_installman
+	dh install $(DHPARAMETERS_$(*)) --before dh_auto_install
+	dh_auto_install -B$(BUILDDIR)-$(*) -- DESTDIR=$(INSTALLDIR)-$(*)
 	dh_installinit -pbacula-sd -- defaults 90 10
 	dh_installinit -pbacula-fd -- defaults 91 9
-	dh_installinit --name=bacula-director -pbacula-director-common --no-start -- defaults 92 8
-	dh_installdebconf
-	dh_installinfo
-	dh_installmenu
-	dh_bugfiles
-	dh_lintian
-	dh_usrlocal
-	dh_link
-	chmod 755 debian/patches-scripts/extract_here
+	dh_installinit --name=bacula-director -pbacula-director-$(*) --no-start -- defaults 92 8
+	dh install $(DHPARAMETERS_$(*)) --remaining
 	######### dbconfig-common stuff
 	chmod 755 debian/patches-scripts/extract_here
 	# Sometimes the latest release doesn't have a copy of the data in updatedb.
@@ -146,13 +129,13 @@ install-rest:
 	$(call ext-install-db,$(*))
 	touch $@
 
-binary-arch: build install-stamp install-rest
+binary-arch: build install-stamp
+	dh $@ --remaining
 
 binary-indep:
 	dh $@
 
 binary: binary-indep binary-arch
-	dh $@ --remaining
 
 clean:
 	$(RM) -r $(CURDIR)/debian/tmp-*
@@ -172,16 +155,6 @@ override_dh_shlibdeps:
 	dh_shlibdeps -a -Nbacula-sd-mysql -Nbacula-director-mysql \
 		-Nbacula-sd-sqlite3 -Nbacula-director-sqlite3 \
 		-Nbacula-sd-pgsql -Nbacula-director-pgsql
-
-override_dh_installdocs:
-	dh_installdocs -pbacula --link-doc=bacula-common
-	dh_installdocs -X.cvsignore -X1 -X*.wml -X*.inc -X*.list -X*.pl -X*.apf -X*.book -Nbacula
-
-override_dh_installchangelogs:
-	dh_installchangelogs -Nbacula
-
-override_dh_compress:
-	dh_compress -X.pdf
 
 override_dh_auto_configure:
 override_dh_auto_build:
