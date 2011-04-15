@@ -56,6 +56,10 @@ CONF_sqlite3	= --with-sqlite3 --without-mysql --without-postgresql --without-sql
 CONF_mysql	= --with-mysql --without-sqlite --without-postgresql --without-sqlite3 $(CONF_common)
 CONF_pgsql	= --with-postgresql --without-sqlite --without-mysql --without-sqlite3 $(CONF_common)
 
+LONGNAME_sqlite3	= sqlite3
+LONGNAME_mysql		= mysql
+LONGNAME_pgsql		= postgresql
+
 ###########################################################################
 
 # Macro to extract a here document and put it in place
@@ -64,28 +68,27 @@ define ext-upgrade
 debian/patches-scripts/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/upgrade/$(1)/$(3)
 endef
 
-# Macro to process upgrades for all flavors
-# args: 1 -- file to extract relative to updatedb/update_x_tables_
-#       2 -- version
-define ext-upgrade-all
-$(call ext-upgrade,pgsql,debian/tmp-build-pgsql/updatedb/update_postgresql_tables_$(1),$(2))
-$(call ext-upgrade,mysql,debian/tmp-build-mysql/updatedb/update_mysql_tables_$(1),$(2))
-$(call ext-upgrade,sqlite3,debian/tmp-build-sqlite3/updatedb/update_sqlite3_tables_$(1),$(2))
+# Macro to upgrade db
+# args: 1 -- db type
+#       2 -- db version path (e.g. 10_to_11)
+#       3 -- package version
+define ext-upgrade-db
+$(call ext-upgrade,$(1),$(BUILDDIR)-$(1)/updatedb/update_$(LONGNAME_$(1))_tables_$(2),$(3))
 endef
 
-# Macro to process latest version upgrades for all flavors
-# args: 1 -- version
-define ext-upgrade-latest
-$(call ext-upgrade,pgsql,debian/tmp-build-pgsql/src/cats/update_postgresql_tables,$(1))
-$(call ext-upgrade,mysql,debian/tmp-build-mysql/src/cats/update_mysql_tables,$(1))
-$(call ext-upgrade,sqlite3,debian/tmp-build-sqlite3/src/cats/update_sqlite3_tables,$(1))
+# Macro to process latest version upgrades for db
+# args: 1 -- db type
+#       2 -- package version
+define ext-upgrade-latest-db
+$(call ext-upgrade,$(1),$(BUILDDIR)-$(1)/src/cats/update_$(LONGNAME_$(1))_tables,$(2))
 endef
 
 # Macro to extract a here document for install and put it in place
-# args: 1 -- db name, 2 -- file to extract
-define ext-install
-debian/patches-scripts/extract_here < $(2) > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/install/$(1)
+# args: 1 -- db name
+define ext-install-db
+debian/patches-scripts/extract_here < $(BUILDDIR)-$(1)/src/cats/make_$(LONGNAME_$(1))_tables > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/install/$(1)
 endef
+
 
 build-stamp-%:
 	dh_testdir
@@ -132,17 +135,16 @@ install-rest:
 	dh_link
 	chmod 755 debian/patches-scripts/extract_here
 	######### dbconfig-common stuff
-	# lenny -> squeeze is 10 -> 12
-	$(call ext-upgrade-all,10_to_11,3.0.0)
+	chmod 755 debian/patches-scripts/extract_here
 	# Sometimes the latest release doesn't have a copy of the data in updatedb.
 	# Manually install those.  CHECK THIS FOR EACH NEW RELEASE, and move older
-	# versions to an ext-upgrade-all line as above.
-	$(call ext-upgrade-latest,5.0.0) # 5.0.0 upgrade 11 to 12
-	$(call ext-install,pgsql,debian/tmp-build-pgsql/src/cats/make_postgresql_tables)
-	$(call ext-install,mysql,debian/tmp-build-mysql/src/cats/make_mysql_tables)
-	$(call ext-install,sqlite3,debian/tmp-build-sqlite3/src/cats/make_sqlite3_tables)
-	dh_fixperms
-	dh_compress
+	# versions to an ext-upgrade-db line.
+	#
+	# lenny -> squeeze is 10 -> 12
+	$(call ext-upgrade-db,$(*),10_to_11,3.0.0)
+	$(call ext-upgrade-latest-db,$(*),5.0.0)   # 5.0.0 upgrade 11 to 12
+	$(call ext-install-db,$(*))
+	touch $@
 
 binary-arch: build install-stamp install-rest
 
