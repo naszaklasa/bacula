@@ -2,3 +2,4 @@ fix-binutils-gold
 fix-default-config
 fix-sql-bindir
 remove-use-statement-for-mysql
+fix-mysql-upgrade
