@@ -8,7 +8,6 @@ VARIANTS := pgsql mysql sqlite3
 
 ######################################################################
 
-BUILDDIR := $(CURDIR)/debian/tmp-build
 INSTALLDIR := $(CURDIR)/debian/tmp-install
 DBC := usr/share/dbconfig-common/data/
 
@@ -73,74 +72,30 @@ endef
 #       2 -- db version path (e.g. 10_to_11)
 #       3 -- package version
 define ext-upgrade-db
-$(call ext-upgrade,$(1),$(BUILDDIR)-$(1)/updatedb/update_$(LONGNAME_$(1))_tables_$(2),$(3))
+$(call ext-upgrade,$(1),$(CURDIR)/updatedb/update_$(LONGNAME_$(1))_tables_$(2).in,$(3))
 endef
 
 # Macro to process latest version upgrades for db
 # args: 1 -- db type
 #       2 -- package version
 define ext-upgrade-latest-db
-$(call ext-upgrade,$(1),$(BUILDDIR)-$(1)/src/cats/update_$(LONGNAME_$(1))_tables,$(2))
+$(call ext-upgrade,$(1),$(CURDIR)/src/cats/update_$(LONGNAME_$(1))_tables.in,$(2))
 endef
 
 # Macro to extract a here document for install and put it in place
 # args: 1 -- db name
 define ext-install-db
-debian/patches-scripts/extract_here < $(BUILDDIR)-$(1)/src/cats/make_$(LONGNAME_$(1))_tables > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/install/$(1)
+debian/patches-scripts/extract_here < $(CURDIR)/src/cats/make_$(LONGNAME_$(1))_tables.in > debian/bacula-director-$(1)/$(DBC)/bacula-director-$(1)/install/$(1)
 endef
 
-
-build-stamp-%:
-	dh_testdir
-	mkdir $(BUILDDIR)-$(*)
-	tar -cSf - --exclude=./.git --exclude=./debian . | tar -xSpf - -C $(BUILDDIR)-$(*)
-	cp /usr/share/misc/config.guess /usr/share/misc/config.sub $(BUILDDIR)-$(*)/autoconf/
-	dh_auto_configure -B $(BUILDDIR)-$(*) -- $(CONF_ALL) $(CONF_$(*))
-	dh_auto_build -B $(BUILDDIR)-$(*) --parallel
-	touch $@
-
-build: build-stamp
-build-stamp: $(foreach v,$(VARIANTS),build-stamp-$(v))
-	chmod 755 debian/additions/postinst-common
-	touch $@
-
-install-stamp: build $(foreach v,$(VARIANTS),install-stamp-$(v))
-	touch $@
-
-DHPARAMETERS_sqlite3	=
-DHPARAMETERS_mysql	= -pbacula-director-mysql -pbacula-common-mysql -pbacula-sd-mysql
-DHPARAMETERS_pgsql	= -pbacula-director-pgsql -pbacula-common-pgsql -pbacula-sd-pgsql
-install-stamp-%: build-stamp-%
-	dh install $(DHPARAMETERS_$(*)) --before dh_auto_install
-	dh_auto_install -B$(BUILDDIR)-$(*) -- DESTDIR=$(INSTALLDIR)-$(*)
-	dh_installinit -pbacula-sd -- defaults 90 10
-	dh_installinit -pbacula-fd -- defaults 91 9
-	dh_installinit --name=bacula-director -pbacula-director-$(*) --no-start -- defaults 92 8
-	dh install $(DHPARAMETERS_$(*)) --remaining
-	######### dbconfig-common stuff
-	chmod 755 debian/patches-scripts/extract_here
-	# Sometimes the latest release doesn't have a copy of the data in updatedb.
-	# Manually install those.  CHECK THIS FOR EACH NEW RELEASE, and move older
-	# versions to an ext-upgrade-db line.
-	#
-	# lenny -> squeeze is 10 -> 12
-	$(call ext-upgrade-db,$(*),10_to_11,3.0.0)
-	$(call ext-upgrade-latest-db,$(*),5.0.0)   # 5.0.0 upgrade 11 to 12
-	$(call ext-install-db,$(*))
-	touch $@
-
-binary-arch: build install-stamp
-	dh $@ --remaining
-
-binary-indep:
+%:
 	dh $@
 
-binary: binary-indep binary-arch
-
-clean:
-	$(RM) -r $(CURDIR)/debian/tmp-*
-	$(RM) *-stamp*
-	dh $@
+override_dh_clean:
+	$(RM) -r $(INSTALLDIR)-*
+	[ ! -f autoconf/config.guess.upstream ] || mv autoconf/config.guess.upstream autoconf/config.guess
+	[ ! -f autoconf/config.sub.upstream ] || mv autoconf/config.sub.upstream autoconf/config.sub
+	dh_clean
 
 override_dh_shlibdeps:
 	# Handle shlibs for the database packages specially so they get
@@ -156,9 +111,51 @@ override_dh_shlibdeps:
 		-Nbacula-sd-sqlite3 -Nbacula-director-sqlite3 \
 		-Nbacula-sd-pgsql -Nbacula-director-pgsql
 
-override_dh_auto_configure:
+override_dh_installinit:
+	dh_installinit -pbacula-sd -- defaults 90 10
+	dh_installinit -pbacula-fd -- defaults 91 9
+	dh_installinit --name=bacula-director -pbacula-director-pgsql --no-start -- defaults 92 8
+	dh_installinit --name=bacula-director -pbacula-director-mysql --no-start -- defaults 92 8
+	dh_installinit --name=bacula-director -pbacula-director-sqlite3 --no-start -- defaults 92 8
+
+override_dh_install:
+	chmod 755 debian/additions/postinst-common
+	chmod 755 debian/patches-scripts/extract_here
+	dh_install
+	######### dbconfig-common stuff
+	# Sometimes the latest release doesn't have a copy of the data in updatedb.
+	# Manually install those.  CHECK THIS FOR EACH NEW RELEASE, and move older
+	# versions to an ext-upgrade-db line.
+	#
+	# lenny -> squeeze is 10 -> 12
+	$(foreach db,$(VARIANTS),$(call ext-upgrade-db,$(db),10_to_11,3.0.0))
+	$(foreach db,$(VARIANTS),$(call ext-upgrade-latest-db,$(db),5.0.0))   # 5.0.0 upgrade 11 to 12
+	$(foreach db,$(VARIANTS),$(call ext-install-db,$(db)))
+
+override_dh_installdocs:
+	dh_installdocs -pbacula --link-doc=bacula-common
+	dh_installdocs -Nbacula
+
+#override_dh_installchangelogs:
+#	dh_installchangelogs -Nbacula
+
 override_dh_auto_build:
+	# autoreconf doesn't work :-/
+	mv autoconf/config.guess autoconf/config.guess.upstream
+	mv autoconf/config.sub autoconf/config.sub.upstream
+	cp /usr/share/misc/config.guess /usr/share/misc/config.sub autoconf/
+	dh_auto_configure -- $(CONF_ALL) $(CONF_pgsql)
+	dh_auto_build --parallel
+	dh_auto_install -- DESTDIR=$(INSTALLDIR)-pgsql
+	dh_auto_clean
+	dh_auto_configure -- $(CONF_ALL) $(CONF_mysql)
+	dh_auto_build --parallel
+	dh_auto_install -- DESTDIR=$(INSTALLDIR)-mysql
+	dh_auto_clean
+	dh_auto_configure -- $(CONF_ALL) $(CONF_sqlite3)
+	dh_auto_build --parallel
+	dh_auto_install -- DESTDIR=$(INSTALLDIR)-sqlite3
+
+override_dh_auto_configure:
 override_dh_auto_test:
 override_dh_auto_install:
-
-.PHONY: build clean binary-indep binary-arch binary
