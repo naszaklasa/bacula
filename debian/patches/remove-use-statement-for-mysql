@@ -8,3 +8,13 @@
  --
  -- Note, we use BLOB rather than TEXT because in MySQL,
  --  BLOBs are identical to TEXT except that BLOB is case
+--- a/src/cats/update_mysql_tables.in
++++ b/src/cats/update_mysql_tables.in
+@@ -13,7 +13,6 @@
+ db_name=@db_name@
+ 
+ if mysql $* -f <<END-OF-DATA
+-USE ${db_name};
+ 
+ ALTER TABLE JobMedia DROP Stripe ;
+ ALTER TABLE JobMedia DROP Copy ;
