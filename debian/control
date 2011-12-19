@@ -2,7 +2,7 @@ Source: bacula
 Section: admin
 Priority: optional
 Maintainer: Debian QA Group <packages@qa.debian.org>
-Build-Depends: autotools-dev, debhelper (>= 8.1.3), po-debconf (>= 0.8.2),
+Build-Depends: autotools-dev, debhelper (>= 8.0.0), po-debconf (>= 0.8.2),
  zlib1g-dev, libreadline-dev, libjconv-dev,
  libsqlite3-dev, libmysqlclient-dev, libpq-dev (>= 8.4),
  postgresql-server-dev-8.4,
