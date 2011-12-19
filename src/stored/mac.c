@@ -94,13 +94,13 @@ bool do_mac(JCR *jcr)
    /* Ready devices for reading and writing */
    if (!acquire_device_for_read(jcr->read_dcr) ||
        !acquire_device_for_append(jcr->dcr)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       goto bail_out;
    }
 
    Dmsg2(200, "===== After acquire pos %u:%u\n", jcr->dcr->dev->file, jcr->dcr->dev->block_num);
      
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    dir_send_job_status(jcr);
 
    begin_data_spool(jcr->dcr);
@@ -164,7 +164,7 @@ ok_out:
    jcr->end_time = time(NULL);
    dequeue_messages(jcr);             /* send any queued messages */
    if (ok) {
-      set_jcr_job_status(jcr, JS_Terminated);
+      jcr->setJobStatus(JS_Terminated);
    }
    generate_daemon_event(jcr, "JobEnd");
    dir->fsend(Job_end, jcr->Job, jcr->JobStatus, jcr->JobFiles,

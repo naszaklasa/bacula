@@ -76,6 +76,10 @@ typedef enum {
 #else
 #define uLongf uint32_t
 #endif
+#ifdef HAVE_LZO
+#include <lzo/lzoconf.h>
+#include <lzo/lzo1x.h>
+#endif
 
 extern CLIENT *me;                    /* "Global" Client resource */
 

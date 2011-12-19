@@ -97,7 +97,7 @@ file_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
 {
    //HrESERestoreOpenFile with name of log file
 
-   _DebugMessage(0, "createFile_FILE state = %d\n", state);
+   _DebugMessage(100, "createFile_FILE state = %d\n", state);
    rp->create_status = CF_EXTRACT;
    return bRC_OK;
 }
@@ -105,7 +105,7 @@ file_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
 bRC
 file_node_t::endRestoreFile(exchange_fd_context_t *context)
 {
-   _DebugMessage(0, "endRestoreFile_FILE state = %d\n", state);
+   _DebugMessage(100, "endRestoreFile_FILE state = %d\n", state);
    context->current_node = parent;
    return bRC_OK;
 }
@@ -118,7 +118,7 @@ file_node_t::pluginIoOpen(exchange_fd_context_t *context, struct io_pkt *io)
    char *tmp = new char[wcslen(filename) + 1];
    wcstombs(tmp, filename, wcslen(filename) + 1);
 
-   _DebugMessage(0, "pluginIoOpen_FILE - filename = %s\n", tmp);
+   _DebugMessage(100, "pluginIoOpen_FILE - filename = %s\n", tmp);
    io->status = 0;
    io->io_errno = 0;
    if (context->job_type == JOB_TYPE_BACKUP)

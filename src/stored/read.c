@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,6 @@
  *
  *     Kern Sibbald, November MM
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -79,6 +78,8 @@ bool do_read_data(JCR *jcr)
 
    /* Tell File daemon we will send data */
    fd->fsend(OK_data);
+   jcr->setJobStatus(JS_Running);
+   dir_send_job_status(jcr);
    ok = read_records(dcr, record_cb, mount_next_read_volume);
 
    /* Send end of data to FD */

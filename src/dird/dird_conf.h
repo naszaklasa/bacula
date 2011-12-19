@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -234,6 +234,7 @@ public:
    char *db_name;
    char *db_driver;                   /* Select appropriate driver */
    uint32_t mult_db_connections;      /* set if multiple connections wanted */
+   bool disable_batch_insert;         /* set if batch inserts should be disabled */
 
    /* Methods */
    char *name() const;
@@ -420,6 +421,7 @@ public:
 
    bool where_use_regexp;             /* true if RestoreWhere is a BREGEXP */
    bool RescheduleOnError;            /* Set to reschedule on error */
+   bool RescheduleIncompleteJobs;     /* Set to reschedule incomplete Jobs */
    bool PrefixLinks;                  /* prefix soft links with Where path */
    bool PruneJobs;                    /* Force pruning of Jobs */
    bool PruneFiles;                   /* Force pruning of Files */
@@ -436,6 +438,9 @@ public:
    bool CancelLowerLevelDuplicates;   /* Cancel lower level backup jobs */
    bool CancelQueuedDuplicates;       /* Cancel queued jobs */
    bool CancelRunningDuplicates;      /* Cancel Running jobs */
+   bool PurgeMigrateJob;              /* Purges source job on completion */
+   bool IgnoreDuplicateJobChecking;   /* Ignore Duplicate Job Checking */
+
    alist *base;                       /* Base jobs */   
 
    /* Methods */

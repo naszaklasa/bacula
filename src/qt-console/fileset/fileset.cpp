@@ -41,7 +41,7 @@
 #include "fileset/fileset.h"
 #include "util/fmtwidgetitem.h"
 
-FileSet::FileSet()
+FileSet::FileSet() : Pages()
 {
    setupUi(this);
    m_name = tr("FileSets");
@@ -70,7 +70,6 @@ FileSet::~FileSet()
  */
 void FileSet::populateTable()
 {
-   m_populated = true;
 
    Freeze frz(*tableWidget); /* disable updating*/
 
@@ -171,6 +170,7 @@ void FileSet::populateTable()
          }
       }
    }
+   m_populated = true;
 }
 
 /*
@@ -195,7 +195,7 @@ void FileSet::PgSeltreeWidgetClicked()
 void FileSet::tableItemChanged(QTableWidgetItem *currentwidgetitem, QTableWidgetItem *previouswidgetitem)
 {
    /* m_checkcurwidget checks to see if this is during a refresh, which will segfault */
-   if (m_checkcurwidget) {
+   if (m_checkcurwidget && currentwidgetitem) {
       int currentRow = currentwidgetitem->row();
       QTableWidgetItem *currentrowzeroitem = tableWidget->item(currentRow, 0);
       m_currentlyselected = currentrowzeroitem->text();
@@ -252,7 +252,7 @@ void FileSet::consoleShowFileSet()
  */
 void FileSet::currentStackItem()
 {
-   if(!m_populated) {
+   if (!m_populated) {
       populateTable();
       /* Create the context menu for the fileset table */
       createContextMenu();

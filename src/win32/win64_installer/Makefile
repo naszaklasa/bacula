@@ -157,8 +157,10 @@ $(foreach file,$(addprefix $(DEPKGS32)/ssl/, $(SSL_FILES)),$(eval $(call Copy_Bi
 
 $(INSTALL_EXE): winbacula.nsi $(addprefix release64/,$(BACULA_BINARIES) $(DEPKGS_BINARIES) $(DEPKGS32_BINARIES) $(SSL_FILES) )
 	cp -f ../release32/bat.exe release64
+	cp -f ../release32/bacula-tray-monitor.exe release64
 	cp -f ../release32/QtCore4.dll release64
 	cp -f ../release32/QtGui4.dll release64
+	cp -f ../win32_installer/release32/libgcc_s_dw2-1.dll release64
 	cp -f ../win32_installer/release32/mingwm10.dll release64
 	cp -f ../win32_installer/release32/ssleay32.dll release64
 	cp -f ../win32_installer/release32/libeay32.dll release64
@@ -166,7 +168,7 @@ $(INSTALL_EXE): winbacula.nsi $(addprefix release64/,$(BACULA_BINARIES) $(DEPKGS
 	cp -f ../release32/bacula.dll release64/bacula32.dll
 	cp -f ../win32_installer/release32/pthreadGCE.dll release64/pthreadGCE32.dll
 	rm -rf release64/help
-	mkdir release64/help
+	mkdir -p release64/help
 	cp -f ../win32_installer/release32/help/* release64/help/
 	NSISDIR=$(NSIS_DIR) \
 	$(NSIS_DIR)/makensis -V3 $(DEFINES) winbacula.nsi

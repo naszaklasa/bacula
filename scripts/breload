@@ -1,0 +1,43 @@
+#! /bin/sh
+#
+# breload This shell script takes care of reloading the director after
+#         a backup of the configuration and a bacula-dir -t test
+#
+#
+
+BACDIRBIN=/sbin
+BACDIRCFG=/etc/bacula
+BACWORKDIR=/var/bacula/working
+BACBKPDIR=$BACWORKDIR/bkp
+Bacula="Bacula"
+DIR_USER=
+RET=0
+
+if [ -x ${BACDIRBIN}/bacula-dir -a -r ${BACDIRCFG}/bacula-dir.conf ]; then
+  echo "Testing the $Bacula Director daemon configuration"
+
+  if [ $(whoami) != "$DIR_USER" ]; then
+      USER_OPT="-u $DIR_USER"
+  fi
+
+  ${BACDIRBIN}/bacula-dir -t $USER_OPT -c ${BACDIRCFG}/bacula-dir.conf
+
+  RET=$?
+  if [ $RET = 0 ]; then
+      if [ ! -d $BACBKPDIR ]; then
+         echo "Creating Backup configuration directory"
+         mkdir -p $BACBKPDIR 
+         chmod 700 $BACBKPDIR
+         chown $DIR_USER $BACBKPDIR
+      fi
+      if [ -d $BACBKPDIR ]; then
+        echo "Backup configuration"
+        tar cfz $BACBKPDIR/bacula-dir-conf.$(date +%s).tgz $BACDIRCFG/*conf
+      fi
+      echo reload | ${BACDIRBIN}/bconsole >/dev/null
+      echo "Reloading configuration"
+  else
+      echo "Can't reload configuration, please correct errors first"
+  fi
+fi 
+exit $RET

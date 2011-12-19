@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,7 +34,6 @@
  *
  *     Kern Sibbald, May MM, major revision December MMIII
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -200,7 +199,7 @@ again:
    ASSERT(job);
    set_jcr_defaults(jcr, job);
    if (run->level) {
-      jcr->set_JobLevel(run->level);  /* override run level */
+      jcr->setJobLevel(run->level);  /* override run level */
    }
    if (run->pool) {
       jcr->pool = run->pool;          /* override pool */
@@ -296,7 +295,7 @@ static void find_runs()
    nh_month = tm.tm_mon;
    nh_year  = tm.tm_year;
    nh_wom = nh_mday / 7;
-   nh_woy = tm_woy(now);                     /* get week of year */
+   nh_woy = tm_woy(next_hour);              /* get week of year */
 
    Dmsg7(dbglvl, "nh = %x: h=%d m=%d md=%d wd=%d wom=%d woy=%d\n",
          next_hour, nh_hour, nh_month, nh_mday, nh_wday, nh_wom, nh_woy);

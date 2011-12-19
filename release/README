@@ -7,7 +7,7 @@ In general, you do the following:
 1. Copy the entire contents of this directory out of the 
    Bacula source tree (this may not be required, but is cleaner).
 
-2. Edit the makeall file, and update the following enviroment variables
+2. Edit the config file, and update the following enviroment variables
    to point to the correct directories on your system.  They should
    point to directories that contain git repos:
 
@@ -18,37 +18,32 @@ In general, you do the following:
    Also ensure that you have set repo to the name of your repository.
    Normally, it is origin, but some developers (Kern) use bee.
 
-3. Ensure that the environment variable "version" is set correctly 
-   in each repo.  Specifically, in:
+3. Ensure that "branch" is properly set to the right version in
+   the config file.
 
-   bacula/src/version.h
-   rescue/version.h
-   gui/bweb/ReleaseNotes            (for makebwebrel)
+4. Note, the release version is obtained from bacula/src/version.h and
+   put into a number of files in the release by the release scripts.
 
-   In docs, you must run 
-   ./configure --with-bacula=<bacula source directory>  
-   so that the versions of the docs are correct.
+5. Run the makeall script.  
 
-4. Run the makeall script.  
+   ./makeall
 
-   ./makeall Branch-5.0   # specify branch to release
-
-5. There should be no errors.  If 
+6. There should be no errors.  If 
    there are, fix them, and re-run the script or re-run the scripts
    that makeall calls:
 
-   makeclean
-   makebacularel ...
-   makedocsrel ...
-   makerescuerel ...
-   makewinrel ...
+7. All the output files should be put in this directory.
 
-6. All the output files should be put in this directory.
-
-7. Before releasing, detar the main Bacula source into some
+8. Before releasing, detar the main Bacula source into some
    directory and run all the regression tests using the files
    in the bacula-xx.xx.xx.tar.gz file.  This ensures that there
    are no missing files.          
 
-8. Also before releasing, run at least one backup using the 
+9. Also before releasing, run at least one backup using the 
    Win32 and/or Win64 file daemon.
+
+10 When you are sure, run:
+
+   pushtags
+
+   which will push each repo and push the tags.

@@ -2,6 +2,6 @@
 #
 # shell script to grant privileges to the bacula database
 #
-bindir=@SQL_BINDIR@
+bindir=@SQLITE_BINDIR@
 
 # nothing to do here

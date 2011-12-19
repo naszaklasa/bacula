@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -67,102 +67,26 @@ Device {
 
 static int dbglevel = 100;
 #define FILE_OFFSET 30
-vtape *ftape_list[FTAPE_MAX_DRIVE];
-
-static vtape *get_tape(int fd)
-{
-   ASSERT(fd >= 0);
-
-   if (fd >= FTAPE_MAX_DRIVE) {
-      /* error */
-      return NULL;
-   }
-
-   return ftape_list[fd];
-}
-
-static bool put_tape(vtape *ftape)
-{
-   ASSERT(ftape != NULL);
-
-   int fd = ftape->get_fd();
-   if (fd >= FTAPE_MAX_DRIVE) {
-      /* error */
-      return false;
-   }
-   ftape_list[fd] = ftape;
-   return true;
-}
 
 void vtape_debug(int level)
 {
    dbglevel = level;
 }
 
-/****************************************************************/
-/* theses function will replace open/read/write/close/ioctl
- * in bacula core
- */
-int vtape_open(const char *pathname, int flags, ...)
+int vtape::d_ioctl(int fd, ioctl_req_t request, char *op)
 {
-   ASSERT(pathname != NULL);
-
-   int fd;
-   vtape *tape = new vtape();
-   fd = tape->open(pathname, flags);
-   if (fd > 0) {
-      put_tape(tape);
-   }
-   return fd;
-}
-
-ssize_t vtape_read(int fd, void *buffer, size_t count)
-{
-   vtape *tape = get_tape(fd);
-   ASSERT(tape != NULL);
-   return tape->read(buffer, count);
-}
-
-ssize_t vtape_write(int fd, const void *buffer, size_t count)
-{
-   vtape *tape = get_tape(fd);
-   ASSERT(tape != NULL);
-   return tape->write(buffer, count);
-}
-
-int vtape_close(int fd)
-{
-   vtape *tape = get_tape(fd);
-   ASSERT(tape != NULL);
-   tape->close();
-   delete tape;
-   return 0;
-}
-
-int vtape_ioctl(int fd, ioctl_req_t request, ...)
-{
-   va_list argp;
    int result = 0;
 
-   vtape *t = get_tape(fd);
-   if (!t) {
-      errno = EBADF;
-      return -1;
-   }
-
-   va_start(argp, request);
-
    if (request == MTIOCTOP) {
-      result = t->tape_op(va_arg(argp, mtop *));
+      result = tape_op((mtop *)op);
    } else if (request == MTIOCGET) {
-      result = t->tape_get(va_arg(argp, mtget *));
+      result = tape_get((mtget *)op);
    } else if (request == MTIOCPOS) {
-      result = t->tape_pos(va_arg(argp, mtpos *));
+      result = tape_pos((mtpos *)op);
    } else {
       errno = ENOTTY;
       result = -1;
    }
-   va_end(argp);
 
    return result;
 }
@@ -417,6 +341,10 @@ int vtape::truncate_file()
    return 0;
 }
 
+vtape::~vtape()
+{
+}
+
 vtape::vtape()
 {
    fd = -1;
@@ -436,10 +364,6 @@ vtape::vtape()
    max_block = VTAPE_MAX_BLOCK;
 }
 
-vtape::~vtape()
-{
-}
-
 int vtape::get_fd()
 {
    return this->fd;
@@ -451,7 +375,7 @@ int vtape::get_fd()
  * vtape_header = sizeof(data)
  * if vtape_header == 0, this is a EOF
  */
-ssize_t vtape::write(const void *buffer, size_t count)
+ssize_t vtape::d_write(int, const void *buffer, size_t count)
 {
    ASSERT(online);
    ASSERT(current_file >= 0);
@@ -789,6 +713,11 @@ int vtape::bsr(int count)
    return 0;
 }
 
+boffset_t vtape::lseek(int fd, off_t offset, int whence)
+{
+   return ::lseek(fd, offset, whence);
+}
+
 /* BSF => just before last EOF
  * EOF + BSF => just before EOF
  * file 0 + BSF => BOT + errno
@@ -844,7 +773,7 @@ int vtape::offline()
 /* A filemark is automatically written to tape if the last tape operation
  * before close was a write.
  */
-int vtape::close()
+int vtape::d_close(int)
 {
    check_eof();
    ::close(fd);
@@ -860,7 +789,7 @@ int vtape::close()
  * by returning zero bytes for two consecutive read calls.  The third read
  * returns an error.
  */
-ssize_t vtape::read(void *buffer, size_t count)
+ssize_t vtape::d_read(int, void *buffer, size_t count)
 {
    ASSERT(online);
    ASSERT(current_file >= 0);
@@ -928,9 +857,9 @@ ssize_t vtape::read(void *buffer, size_t count)
    return nb;
 }
 
-int vtape::open(const char *pathname, int uflags)
+int vtape::d_open(const char *pathname, int uflags)
 {
-   Dmsg2(dbglevel, "vtape::open(%s, %i)\n", pathname, uflags);
+   Dmsg2(dbglevel, "vtape::d_open(%s, %i)\n", pathname, uflags);
 
    online = true;               /* assume that drive contains a tape */
 
@@ -996,37 +925,6 @@ void vtape::dump()
    Dmsg1(dbglevel+1, "file_block=%i\n", file_block);  
    Dmsg4(dbglevel+1, "EOF=%i EOT=%i EOD=%i BOT=%i\n", 
          atEOF, atEOT, atEOD, atBOT);  
-}
-
-#else  /* USE_VTAPE */
-
-int vtape_ioctl(int fd, ioctl_req_t request, ...)
-{
-   return -1;
-}
-
-int vtape_open(const char *pathname, int flags, ...)
-{
-   return -1;
-}
-
-int vtape_close(int fd)
-{
-   return -1;
-}
-
-void vtape_debug(int level)
-{
-}
-
-ssize_t vtape_read(int fd, void *buffer, size_t count)
-{
-   return -1;
-}
-
-ssize_t vtape_write(int fd, const void *buffer, size_t count)
-{
-   return -1;
 }
 
 #endif  /* ! USE_VTAPE */

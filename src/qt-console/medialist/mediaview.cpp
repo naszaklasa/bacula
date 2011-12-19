@@ -38,7 +38,7 @@
 #include "run/run.h"
 #include "util/fmtwidgetitem.h"
 
-MediaView::MediaView()
+MediaView::MediaView() : Pages()
 {
    setupUi(this);
    m_name = tr("Media");
@@ -324,7 +324,7 @@ void MediaView::populateTable()
 
       foreach (resultline, results) { // should have only one result
          int index = 0;
-         QString VolBytes, MediaType, LastWritten, VolStatus;
+         QString Slot, VolBytes, MediaType, LastWritten, VolStatus;
          fieldlist = resultline.split("\t");
          if (fieldlist.size() != 10) {
             continue;
@@ -337,7 +337,9 @@ void MediaView::populateTable()
          
          /* Online */
          mediaitem.setInChanger(index++, fld.next());
-         fld.next();            // Slot
+
+         Slot = fld.next();            // Slot
+         mediaitem.setTextFld(index++, Slot);
 
          MediaType = fld.next();
          VolStatus = fld.next();

@@ -49,13 +49,13 @@
  */
 JobList::JobList(const QString &mediaName, const QString &clientName,
           const QString &jobName, const QString &filesetName, QTreeWidgetItem *parentTreeWidgetItem)
+   : Pages()
 {
    setupUi(this);
    m_name = "Jobs Run"; /* treeWidgetName has a virtual override in this class */
    m_mediaName = mediaName;
    m_clientName = clientName;
    m_jobName = jobName;
-   m_filesetName = filesetName;
    m_filesetName = filesetName;
    pgInitialize("", parentTreeWidgetItem);
    QTreeWidgetItem* thisitem = mainWin->getFromHash(this);
@@ -134,6 +134,10 @@ void JobList::populateTable()
    m_startIndex = headerlist.indexOf(tr("Job Starttime"));
    m_filesIndex = headerlist.indexOf(tr("Job Files"));
    m_bytesIndex = headerlist.indexOf(tr("Job Bytes"));
+   m_levelIndex = headerlist.indexOf(tr("Job Level"));
+   m_nameIndex = headerlist.indexOf(tr("Job Name"));
+   m_filesetIndex = headerlist.indexOf(tr("File Set"));
+   m_clientIndex = headerlist.indexOf(tr("Client"));
 
    /* Initialize the QTableWidget */
    m_checkCurrentWidget = false;
@@ -415,6 +419,7 @@ void JobList::createConnections()
    connect(actionListFilesOnJob, SIGNAL(triggered()), this, SLOT(consoleListFilesOnJob()));
    connect(actionListJobMedia, SIGNAL(triggered()), this, SLOT(consoleListJobMedia()));
    connect(actionDeleteJob, SIGNAL(triggered()), this, SLOT(consoleDeleteJob()));
+   connect(actionRestartJob, SIGNAL(triggered()), this, SLOT(consoleRestartJob()));
    connect(actionPurgeFiles, SIGNAL(triggered()), this, SLOT(consolePurgeFiles()));
    connect(actionRestoreFromJob, SIGNAL(triggered()), this, SLOT(preRestoreFromJob()));
    connect(actionRestoreFromTime, SIGNAL(triggered()), this, SLOT(preRestoreFromTime()));
@@ -453,6 +458,7 @@ void JobList::consoleListJobTotals()
    if (mainWin->m_longList) { cmd.prepend("l"); }
    consoleCommand(cmd);
 }
+
 void JobList::consoleDeleteJob()
 {
    if (QMessageBox::warning(this, "Bat",
@@ -472,6 +478,23 @@ void JobList::consoleDeleteJob()
    consoleCommand(cmd, false);
    populateTable();
 }
+
+void JobList::consoleRestartJob()
+{
+   QString cmd;
+
+   cmd = tr("run job=\"%1\" client=\"%2\" level=%3").arg(m_jobName).arg(m_clientName).arg(m_levelName);
+   if (m_filesetName != "" && m_filesetName != "*None*") {
+      cmd += tr(" fileset=\"%1\"").arg(m_filesetName);
+   }
+
+   if (mainWin->m_commandDebug) Pmsg1(000, "Run cmd : %s\n",cmd.toUtf8().data());
+   consoleCommand(cmd, false);
+   populateTable();
+}
+
+
+
 void JobList::consolePurgeFiles()
 {
    if (QMessageBox::warning(this, "Bat",
@@ -639,6 +662,7 @@ void JobList::selectionChanged()
    if (m_selectedJobsCount == 1) {
       mp_tableWidget->addAction(actionListFilesOnJob);
       mp_tableWidget->addAction(actionListJobMedia);
+      mp_tableWidget->addAction(actionRestartJob);
       mp_tableWidget->addAction(actionRestoreFromJob);
       mp_tableWidget->addAction(actionRestoreFromTime);
       mp_tableWidget->addAction(actionShowLogForJob);
@@ -653,7 +677,19 @@ void JobList::selectionChanged()
    if (m_checkCurrentWidget) {
       int row = mp_tableWidget->currentRow();
       QTableWidgetItem* jobitem = mp_tableWidget->item(row, 0);
-      m_currentJob = jobitem->text();
+      m_currentJob = jobitem->text();    /* get JobId */
+      jobitem = mp_tableWidget->item(row, m_clientIndex);
+      m_clientName = jobitem->text();    /* get Client Name */
+      jobitem = mp_tableWidget->item(row, m_nameIndex);
+      m_jobName = jobitem->text();    /* get Job Name */
+      jobitem = mp_tableWidget->item(row, m_levelIndex);
+      m_levelName = jobitem->text();    /* get level */
+      jobitem = mp_tableWidget->item(row, m_filesetIndex);
+      if (jobitem) {
+         m_filesetName = jobitem->text();    /* get FileSet Name */
+      } else {
+         m_filesetName = "";
+      }
 
       /* include purged action or not */
       jobitem = mp_tableWidget->item(row, m_purgedIndex);
@@ -662,6 +698,7 @@ void JobList::selectionChanged()
       if (purged == tr("No") ) {
          mp_tableWidget->addAction(actionPurgeFiles);
       }*/
+
       /* include restore from time and job action or not */
       jobitem = mp_tableWidget->item(row, m_typeIndex);
       QString type = jobitem->text();
@@ -673,6 +710,7 @@ void JobList::selectionChanged()
             mp_tableWidget->addAction(actionRestoreFromTime);
          }
       }
+
       /* include cancel action or not */
       jobitem = mp_tableWidget->item(row, m_statusIndex);
       QString status = jobitem->text();

@@ -69,7 +69,7 @@ bool use_cmd(JCR *jcr)
     * Get the device, media, and pool information
     */
    if (!use_storage_cmd(jcr)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       memset(jcr->sd_auth_key, 0, strlen(jcr->sd_auth_key));
       return false;
    }
@@ -453,7 +453,7 @@ bool find_suitable_device_for_job(JCR *jcr, RCTX &rctx)
 
                if (vol->dev->is_autochanger()) {
                   Dmsg1(dbglvl, "vol=%s is in changer\n", vol->vol_name);
-                  if (!is_vol_in_autochanger(rctx, vol)) {
+                  if (!is_vol_in_autochanger(rctx, vol) || !vol->dev->autoselect) {
                      continue;
                   }
                } else if (strcmp(device_name, vol->dev->device->hdr.name) != 0) {

@@ -431,7 +431,7 @@
         <item row="7" column="0" >
          <widget class="QLabel" name="label_16" >
           <property name="text" >
-           <string>First Writtern:</string>
+           <string>First Written:</string>
           </property>
          </widget>
         </item>
@@ -623,41 +623,65 @@
      <layout class="QHBoxLayout" name="horizontalLayout" >
       <item>
        <widget class="QTableWidget" name="tableJob" >
+        <property name="sortingEnabled" >
+          <bool>true</bool>
+        </property>
         <column>
          <property name="text" >
           <string>JobId</string>
          </property>
         </column>
+        <property name="sortingEnabled" >
+          <bool>true</bool>
+        </property>
         <column>
          <property name="text" >
           <string>Name</string>
          </property>
         </column>
+        <property name="sortingEnabled" >
+          <bool>true</bool>
+        </property>
         <column>
          <property name="text" >
           <string>Start Time</string>
          </property>
         </column>
+        <property name="sortingEnabled" >
+          <bool>true</bool>
+        </property>
         <column>
          <property name="text" >
           <string>Type</string>
          </property>
         </column>
+        <property name="sortingEnabled" >
+          <bool>true</bool>
+        </property>
         <column>
          <property name="text" >
           <string>Level</string>
          </property>
         </column>
+        <property name="sortingEnabled" >
+          <bool>true</bool>
+        </property>
         <column>
          <property name="text" >
           <string>Files</string>
          </property>
         </column>
+        <property name="sortingEnabled" >
+          <bool>true</bool>
+        </property>
         <column>
          <property name="text" >
           <string>Bytes</string>
          </property>
         </column>
+        <property name="sortingEnabled" >
+          <bool>true</bool>
+        </property>
         <column>
          <property name="text" >
           <string>Status</string>

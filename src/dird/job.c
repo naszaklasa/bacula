@@ -42,7 +42,7 @@ static void job_monitor_watchdog(watchdog_t *self);
 static void job_monitor_destructor(watchdog_t *self);
 static bool job_check_maxwaittime(JCR *jcr);
 static bool job_check_maxruntime(JCR *jcr);
-static bool job_check_maxschedruntime(JCR *jcr);
+static bool job_check_maxrunschedtime(JCR *jcr);
 
 /* Imported subroutines */
 extern void term_scheduler();
@@ -104,7 +104,7 @@ bool setup_job(JCR *jcr)
    int errstat;
 
    jcr->lock();
-   sm_check(__FILE__, __LINE__, true);
+   Dsm_check(100);
    init_msg(jcr, jcr->messages);
 
    /* Initialize termination condition variable */
@@ -124,11 +124,11 @@ bool setup_job(JCR *jcr)
     * Open database
     */
    Dmsg0(100, "Open database\n");
-   jcr->db=db_init(jcr, jcr->catalog->db_driver, jcr->catalog->db_name, 
-                   jcr->catalog->db_user,
-                   jcr->catalog->db_password, jcr->catalog->db_address,
-                   jcr->catalog->db_port, jcr->catalog->db_socket,
-                   jcr->catalog->mult_db_connections);
+   jcr->db = db_init_database(jcr, jcr->catalog->db_driver, jcr->catalog->db_name, 
+                              jcr->catalog->db_user, jcr->catalog->db_password,
+                              jcr->catalog->db_address, jcr->catalog->db_port,
+                              jcr->catalog->db_socket, jcr->catalog->mult_db_connections,
+                              jcr->catalog->disable_batch_insert);
    if (!jcr->db || !db_open_database(jcr, jcr->db)) {
       Jmsg(jcr, M_FATAL, 0, _("Could not open database \"%s\".\n"),
                  jcr->catalog->db_name);
@@ -139,7 +139,6 @@ bool setup_job(JCR *jcr)
       goto bail_out;
    }
    Dmsg0(150, "DB opened\n");
-
    if (!jcr->fname) {
       jcr->fname = get_pool_memory(PM_FNAME);
    }
@@ -235,7 +234,7 @@ bool setup_job(JCR *jcr)
 
    generate_job_event(jcr, "JobInit");
    generate_plugin_event(jcr, bEventJobInit);
-   Dsm_check(1);
+   Dsm_check(100);
    return true;
 
 bail_out:
@@ -260,7 +259,7 @@ static void *job_thread(void *arg)
    JCR *jcr = (JCR *)arg;
 
    pthread_detach(pthread_self());
-   Dsm_check(1);
+   Dsm_check(100);
 
    Dmsg0(200, "=====Start Job=========\n");
    jcr->setJobStatus(JS_Running);   /* this will be set only if no error */
@@ -273,9 +272,9 @@ static void *job_thread(void *arg)
       Jmsg(jcr, M_FATAL, 0, _("Job canceled because max start delay time exceeded.\n"));
    }
 
-   if (job_check_maxschedruntime(jcr)) {
+   if (job_check_maxrunschedtime(jcr)) {
       jcr->setJobStatus(JS_Canceled);
-      Jmsg(jcr, M_FATAL, 0, _("Job canceled because max sched run time exceeded.\n"));
+      Jmsg(jcr, M_FATAL, 0, _("Job canceled because max run sched time exceeded.\n"));
    }
 
    /* TODO : check if it is used somewhere */
@@ -361,7 +360,7 @@ static void *job_thread(void *arg)
    generate_daemon_event(jcr, "JobEnd");
    generate_plugin_event(jcr, bEventJobEnd);
    Dmsg1(50, "======== End Job stat=%c ==========\n", jcr->JobStatus);
-   sm_check(__FILE__, __LINE__, true);
+   Dsm_check(100);
    return NULL;
 }
 
@@ -532,7 +531,7 @@ static void job_monitor_watchdog(watchdog_t *self)
 
    control_jcr = (JCR *)self->data;
 
-   Dsm_check(1);
+   Dsm_check(100);
    Dmsg1(800, "job_monitor_watchdog %p called\n", self);
 
    foreach_jcr(jcr) {
@@ -554,9 +553,9 @@ static void job_monitor_watchdog(watchdog_t *self)
          Qmsg(jcr, M_FATAL, 0, _("Max run time exceeded. Job canceled.\n"));
          cancel = true;
       /* check MaxRunSchedTime */ 
-      } else if (job_check_maxschedruntime(jcr)) {
+      } else if (job_check_maxrunschedtime(jcr)) {
          jcr->setJobStatus(JS_Canceled);
-         Qmsg(jcr, M_FATAL, 0, _("Max sched run time exceeded. Job canceled.\n"));
+         Qmsg(jcr, M_FATAL, 0, _("Max run sched time exceeded. Job canceled.\n"));
          cancel = true;
       }
 
@@ -648,14 +647,14 @@ static bool job_check_maxruntime(JCR *jcr)
  * Check if MaxRunSchedTime has expired and if the job can be
  *   canceled.
  */
-static bool job_check_maxschedruntime(JCR *jcr)
+static bool job_check_maxrunschedtime(JCR *jcr)
 {
-   if (jcr->job->MaxRunSchedTime == 0 || job_canceled(jcr)) {
+   if (jcr->MaxRunSchedTime == 0 || job_canceled(jcr)) {
       return false;
    }
-   if ((watchdog_time - jcr->sched_time) < jcr->job->MaxRunSchedTime) {
+   if ((watchdog_time - jcr->sched_time) < jcr->MaxRunSchedTime) {
       Dmsg3(200, "Job %p (%s) with MaxRunSchedTime %d not expired\n",
-            jcr, jcr->Job, jcr->job->MaxRunSchedTime);
+            jcr, jcr->Job, jcr->MaxRunSchedTime);
       return false;
    }
 
@@ -697,11 +696,19 @@ bool allow_duplicate_job(JCR *jcr)
 {
    JOB *job = jcr->job;
    JCR *djcr;                /* possible duplicate job */
+   bool cancel_dup = false;
+   bool cancel_me = false;
 
-   if (job->AllowDuplicateJobs) {
+   /*
+    * See if AllowDuplicateJobs is set or
+    * if duplicate checking is disabled for this job.
+    */
+   if (job->AllowDuplicateJobs || jcr->IgnoreDuplicateJobChecking) {
       return true;
    }
+
    Dmsg0(800, "Enter allow_duplicate_job\n");
+
    /*
     * After this point, we do not want to allow any duplicate
     * job to run.
@@ -711,9 +718,16 @@ bool allow_duplicate_job(JCR *jcr)
       if (jcr == djcr || djcr->JobId == 0) {
          continue;                   /* do not cancel this job or consoles */
       }
+
+      /*
+       * See if this Job has the IgnoreDuplicateJobChecking flag set, ignore it
+       * for any checking against other jobs.
+       */
+      if (djcr->IgnoreDuplicateJobChecking) {
+         continue;
+      }
+
       if (strcmp(job->name(), djcr->job->name()) == 0) {
-         bool cancel_dup = false;
-         bool cancel_me = false; 
          if (job->DuplicateJobProximity > 0) {
             utime_t now = (utime_t)time(NULL);
             if ((now - djcr->start_time) > job->DuplicateJobProximity) {
@@ -752,9 +766,12 @@ bool allow_duplicate_job(JCR *jcr)
                  djcr->JobId);
               break;     /* get out of foreach_jcr */
             }
-         }   
-         /* Cancel one of the two jobs (me or dup) */
-         /* If CancelQueuedDuplicates is set do so only if job is queued */
+         }
+
+         /*
+          * Cancel one of the two jobs (me or dup)
+          * If CancelQueuedDuplicates is set do so only if job is queued.
+          */
          if (job->CancelQueuedDuplicates) {
              switch (djcr->JobStatus) {
              case JS_Created:
@@ -770,8 +787,11 @@ bool allow_duplicate_job(JCR *jcr)
                 break;
              }
          }
+
          if (cancel_dup || job->CancelRunningDuplicates) {
-            /* Zap the duplicated job djcr */
+            /*
+             * Zap the duplicated job djcr
+             */
             UAContext *ua = new_ua_context(jcr);
             Jmsg(jcr, M_INFO, 0, _("Cancelling duplicate JobId=%d.\n"), djcr->JobId);
             cancel_job(ua, djcr);
@@ -780,7 +800,9 @@ bool allow_duplicate_job(JCR *jcr)
             free_ua_context(ua);
             Dmsg2(800, "Cancel dup %p JobId=%d\n", djcr, djcr->JobId);
          } else {
-            /* Zap current job */
+            /*
+             * Zap current job
+             */
             Jmsg(jcr, M_FATAL, 0, _("JobId %d already running. Duplicate job not allowed.\n"),
                djcr->JobId);
             Dmsg2(800, "Cancel me %p JobId=%d\n", jcr, jcr->JobId);
@@ -1012,14 +1034,6 @@ void create_unique_job_name(JCR *jcr, const char *base_name)
 /* Called directly from job rescheduling */
 void dird_free_jcr_pointers(JCR *jcr)
 {
-   if (jcr->sd_auth_key) {
-      free(jcr->sd_auth_key);
-      jcr->sd_auth_key = NULL;
-   }
-   if (jcr->where) {
-      free(jcr->where);
-      jcr->where = NULL;
-   }
    if (jcr->file_bsock) {
       Dmsg0(200, "Close File bsock\n");
       bnet_close(jcr->file_bsock);
@@ -1030,27 +1044,16 @@ void dird_free_jcr_pointers(JCR *jcr)
       bnet_close(jcr->store_bsock);
       jcr->store_bsock = NULL;
    }
-   if (jcr->fname) {
-      Dmsg0(200, "Free JCR fname\n");
-      free_pool_memory(jcr->fname);
-      jcr->fname = NULL;
-   }
-   if (jcr->RestoreBootstrap) {
-      free(jcr->RestoreBootstrap);
-      jcr->RestoreBootstrap = NULL;
-   }
-   if (jcr->client_uname) {
-      free_pool_memory(jcr->client_uname);
-      jcr->client_uname = NULL;
-   }
-   if (jcr->attr) {
-      free_pool_memory(jcr->attr);
-      jcr->attr = NULL;
-   }
-   if (jcr->ar) {
-      free(jcr->ar);
-      jcr->ar = NULL;
-   }
+
+   bfree_and_null(jcr->sd_auth_key);
+   bfree_and_null(jcr->where);
+   bfree_and_null(jcr->RestoreBootstrap);
+   bfree_and_null(jcr->ar);
+
+   free_and_null_pool_memory(jcr->JobIds);
+   free_and_null_pool_memory(jcr->client_uname);
+   free_and_null_pool_memory(jcr->attr);
+   free_and_null_pool_memory(jcr->fname);
 }
 
 /*
@@ -1076,36 +1079,14 @@ void dird_free_jcr(JCR *jcr)
       db_close_database(jcr, jcr->db);
       jcr->db = NULL;
    }
-   if (jcr->stime) {
-      Dmsg0(200, "Free JCR stime\n");
-      free_pool_memory(jcr->stime);
-      jcr->stime = NULL;
-   }
-   if (jcr->fname) {
-      Dmsg0(200, "Free JCR fname\n");
-      free_pool_memory(jcr->fname);
-      jcr->fname = NULL;
-   }
-   if (jcr->pool_source) {
-      free_pool_memory(jcr->pool_source);
-      jcr->pool_source = NULL;
-   }
-   if (jcr->catalog_source) {
-      free_pool_memory(jcr->catalog_source);
-      jcr->catalog_source = NULL;
-   }
-   if (jcr->rpool_source) {
-      free_pool_memory(jcr->rpool_source);
-      jcr->rpool_source = NULL;
-   }
-   if (jcr->wstore_source) {
-      free_pool_memory(jcr->wstore_source);
-      jcr->wstore_source = NULL;
-   }
-   if (jcr->rstore_source) {
-      free_pool_memory(jcr->rstore_source);
-      jcr->rstore_source = NULL;
-   }
+
+   free_and_null_pool_memory(jcr->stime);
+   free_and_null_pool_memory(jcr->fname);
+   free_and_null_pool_memory(jcr->pool_source);
+   free_and_null_pool_memory(jcr->catalog_source);
+   free_and_null_pool_memory(jcr->rpool_source);
+   free_and_null_pool_memory(jcr->wstore_source);
+   free_and_null_pool_memory(jcr->rstore_source);
 
    /* Delete lists setup to hold storage pointers */
    free_rwstorage(jcr);
@@ -1156,15 +1137,15 @@ void get_job_storage(USTORE *store, JOB *job, RUN *run)
 void set_jcr_defaults(JCR *jcr, JOB *job)
 {
    jcr->job = job;
-   jcr->set_JobType(job->JobType);
+   jcr->setJobType(job->JobType);
    jcr->JobStatus = JS_Created;
 
    switch (jcr->getJobType()) {
    case JT_ADMIN:
-      jcr->set_JobLevel(L_NONE);
+      jcr->setJobLevel(L_NONE);
       break;
    default:
-      jcr->set_JobLevel(job->JobLevel);
+      jcr->setJobLevel(job->JobLevel);
       break;
    }
 
@@ -1205,11 +1186,13 @@ void set_jcr_defaults(JCR *jcr, JOB *job)
       pm_strcpy(jcr->catalog_source, _("Client resource"));
    }
    jcr->fileset = job->fileset;
+   jcr->accurate = job->accurate;
    jcr->messages = job->messages;
    jcr->spool_data = job->spool_data;
    jcr->spool_size = job->spool_size;
    jcr->write_part_after_job = job->write_part_after_job;
-   jcr->accurate = job->accurate;
+   jcr->IgnoreDuplicateJobChecking = job->IgnoreDuplicateJobChecking;
+   jcr->MaxRunSchedTime = job->MaxRunSchedTime;
    if (jcr->RestoreBootstrap) {
       free(jcr->RestoreBootstrap);
       jcr->RestoreBootstrap = NULL;
@@ -1224,17 +1207,17 @@ void set_jcr_defaults(JCR *jcr, JOB *job)
    if (jcr->getJobLevel() == 0) {
       switch (jcr->getJobType()) {
       case JT_VERIFY:
-         jcr->set_JobLevel(L_VERIFY_CATALOG);
+         jcr->setJobLevel(L_VERIFY_CATALOG);
          break;
       case JT_BACKUP:
-         jcr->set_JobLevel(L_INCREMENTAL);
+         jcr->setJobLevel(L_INCREMENTAL);
          break;
       case JT_RESTORE:
       case JT_ADMIN:
-         jcr->set_JobLevel(L_NONE);
+         jcr->setJobLevel(L_NONE);
          break;
       default:
-         jcr->set_JobLevel(L_FULL);
+         jcr->setJobLevel(L_FULL);
          break;
       }
    }
@@ -1398,14 +1381,6 @@ void free_wstorage(JCR *jcr)
    jcr->wstore = NULL;
 }
 
-char *job_code_callback_clones(JCR *jcr, const char* param) 
-{
-   if (param[0] == 'p') {
-      return jcr->pool->name();
-   }
-   return NULL;
-}
-
 void create_clones(JCR *jcr)
 {
    /*
@@ -1419,7 +1394,7 @@ void create_clones(JCR *jcr)
       UAContext *ua = new_ua_context(jcr);
       ua->batch = true;
       foreach_alist(runcmd, job->run_cmds) {
-         cmd = edit_job_codes(jcr, cmd, runcmd, "", job_code_callback_clones);
+         cmd = edit_job_codes(jcr, cmd, runcmd, "", job_code_callback_director);
          Mmsg(ua->cmd, "run %s cloned=yes", cmd);
          Dmsg1(900, "=============== Clone cmd=%s\n", ua->cmd);
          parse_ua_args(ua);                 /* parse command */

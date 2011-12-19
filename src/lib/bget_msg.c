@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,8 +30,6 @@
  *   network signals for the FD and the SD.
  *
  *   Kern Sibbald, May MMI previously in src/stored/fdmsg.c
- *
- *   Version $Id$
  *
  */
 

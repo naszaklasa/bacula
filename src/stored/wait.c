@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,7 +33,6 @@
  *
  *   Kern Sibbald, March 2005
  *
- *   Version $Id$
  */
 
 
@@ -134,6 +133,13 @@ int wait_for_sysop(DCR *dcr)
          Jmsg1(jcr, M_FATAL, 0, _("pthread timedwait error. ERR=%s\n"), be.bstrerror(stat));
          stat = W_ERROR;               /* error */
          break;
+      }
+
+      /*
+       * Continue waiting if operator is labeling volumes 
+       */
+      if (dev->blocked() == BST_WRITING_LABEL) {
+         continue;
       }
 
       if (dev->rem_wait_sec <= 0) {  /* on exceeding wait time return */

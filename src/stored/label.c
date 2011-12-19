@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,8 +31,6 @@
  *
  *   Kern Sibbald, MM
  *
- *
- *   Version $Id$
  */
 
 #include "bacula.h"                   /* pull in global headers */
@@ -362,6 +360,7 @@ bool write_new_volume_label_to_dev(DCR *dcr, const char *VolName,
 
    create_volume_label_record(dcr, dcr->rec);
    dcr->rec->Stream = 0;
+   dcr->rec->maskedStream = 0;
 
    if (!write_record_to_block(dcr->block, dcr->rec)) {
       Dmsg2(130, "Bad Label write on %s: ERR=%s\n", dev->print_name(), dev->print_errmsg());
@@ -513,6 +512,7 @@ bool rewrite_volume_label(DCR *dcr, bool recycle)
       dev->VolCatInfo.VolCatReads = 1;
    }
    Dmsg1(150, "dir_update_vol_info. Set Append vol=%s\n", dcr->VolumeName);
+   dev->VolCatInfo.VolFirstWritten = time(NULL);
    bstrncpy(dev->VolCatInfo.VolCatStatus, "Append", sizeof(dev->VolCatInfo.VolCatStatus));
    dev->setVolCatName(dcr->VolumeName);
    if (!dir_update_volume_info(dcr, true, true)) {  /* indicate doing relabel */
@@ -591,6 +591,7 @@ static void create_volume_label_record(DCR *dcr, DEV_RECORD *rec)
    rec->VolSessionId = jcr->VolSessionId;
    rec->VolSessionTime = jcr->VolSessionTime;
    rec->Stream = jcr->NumWriteVolumes;
+   rec->maskedStream = jcr->NumWriteVolumes;
    Dmsg2(150, "Created Vol label rec: FI=%s len=%d\n", FI_to_ascii(buf, rec->FileIndex),
       rec->data_len);
 }
@@ -652,6 +653,7 @@ void create_session_label(DCR *dcr, DEV_RECORD *rec, int label)
    rec->VolSessionId   = jcr->VolSessionId;
    rec->VolSessionTime = jcr->VolSessionTime;
    rec->Stream         = jcr->JobId;
+   rec->maskedStream   = jcr->JobId;
 
    rec->data = check_pool_memory_size(rec->data, SER_LENGTH_Session_Label);
    ser_begin(rec->data, SER_LENGTH_Session_Label);

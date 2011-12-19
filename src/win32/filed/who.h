@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,15 +28,13 @@
 /*
  * Kern Sibbald, August 2007
  *
- * Version $Id$
- *
  * This file is pulled in by certain generic routines in libwin32
  *   to define the names of the daemon that is being built.
  */
 
 #define APP_NAME "Bacula-fd" 
 #define LC_APP_NAME "bacula-fd"
-#define APP_DESC "Bacula File Service"
+#define APP_DESC "Bacula File Backup Service"
 
 #define terminate_app(x) terminate_filed(x)
 extern void terminate_filed(int sig);

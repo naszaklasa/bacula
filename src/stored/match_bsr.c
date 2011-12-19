@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,6 @@
  *
  *     Kern Sibbald, June MMII
  *
- *   Version $Id$
  */
 
 /*
@@ -145,16 +144,18 @@ static int match_fileregex(BSR *bsr, DEV_RECORD *rec, JCR *jcr)
    if (bsr->fileregex_re == NULL)
       return 1;
 
-   if (bsr->attr == NULL)
+   if (bsr->attr == NULL) {
       bsr->attr = new_attr(jcr);
+   }
 
-   /* The code breaks if the first record associated with a file is
+   /*
+    * The code breaks if the first record associated with a file is
     * not of this type
     */
-   if (rec->Stream == STREAM_UNIX_ATTRIBUTES ||
-       rec->Stream == STREAM_UNIX_ATTRIBUTES_EX) {
+   if (rec->maskedStream == STREAM_UNIX_ATTRIBUTES ||
+       rec->maskedStream == STREAM_UNIX_ATTRIBUTES_EX) {
       bsr->skip_file = false;
-      if (unpack_attributes_record(jcr, rec->Stream, rec->data, bsr->attr)) {
+      if (unpack_attributes_record(jcr, rec->Stream, rec->data, rec->data_len, bsr->attr)) {
          if (regexec(bsr->fileregex_re, bsr->attr->fname, 0, NULL, 0) == 0) {
             Dmsg2(dbglevel, "Matched pattern, fname=%s FI=%d\n",
                   bsr->attr->fname, rec->FileIndex);

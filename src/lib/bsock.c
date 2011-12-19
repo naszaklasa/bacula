@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,6 @@
  *  by Kern Sibbald
  *
  */
-
 
 #include "bacula.h"
 #include "jcr.h"
@@ -66,7 +65,7 @@ void BSOCK::init()
 {
    memset(this, 0, sizeof(BSOCK));
    m_blocking = 1;
-   msg = get_pool_memory(PM_MESSAGE);
+   msg = get_pool_memory(PM_BSOCK);
    errmsg = get_pool_memory(PM_MESSAGE);
    /*
     * ****FIXME**** reduce this to a few hours once
@@ -144,12 +143,11 @@ bail_out:
    return ok;
 }
 
-
 /*       
  * Finish initialization of the pocket structure.
  */
 void BSOCK::fin_init(JCR * jcr, int sockfd, const char *who, const char *host, int port,
-            struct sockaddr *lclient_addr)
+                     struct sockaddr *lclient_addr)
 {
    Dmsg3(100, "who=%s host=%s port=%d\n", who, host, port);
    m_fd = sockfd;
@@ -179,15 +177,13 @@ void BSOCK::set_source_address(dlist *src_addr_list)
    }
 }
 
-
 /*
  * Open a TCP connection to the server
  * Returns NULL
  * Returns BSOCK * pointer on success
- *
  */
 bool BSOCK::open(JCR *jcr, const char *name, char *host, char *service,
-            int port, utime_t heart_beat, int *fatal)
+                 int port, utime_t heart_beat, int *fatal)
 {
    int sockfd = -1;
    dlist *addr_list;
@@ -554,13 +550,16 @@ int32_t BSOCK::recv()
     * buffer is at least one byte longer than the message length.
     */
    msg[nbytes] = 0; /* terminate in case it is a string */
-   sm_check(__FILE__, __LINE__, false);
+   /*
+    * The following uses *lots* of resources so turn it on only for 
+    * serious debugging.
+    */
+   Dsm_check(300);
 
 get_out:
    if (m_use_locking) V(m_mutex);
    return nbytes;                  /* return actual length of message */
 }
-
 
 /*
  * Send a signal
@@ -968,7 +967,7 @@ static char OKhello[]   = "1000 OK:";
  * Authenticate Director
  */
 bool BSOCK::authenticate_director(const char *name, const char *password,
-               TLS_CONTEXT *tls_ctx, char *msg, int msglen)
+                                  TLS_CONTEXT *tls_ctx, char *response, int response_len)
 {
    int tls_local_need = BNET_TLS_NONE;
    int tls_remote_need = BNET_TLS_NONE;
@@ -976,7 +975,7 @@ bool BSOCK::authenticate_director(const char *name, const char *password,
    char bashed_name[MAX_NAME_LENGTH];
    BSOCK *dir = this;        /* for readability */
 
-   msg[0] = 0;
+   response[0] = 0;
    /*
     * Send my name to the Director then do authentication
     */
@@ -993,14 +992,14 @@ bool BSOCK::authenticate_director(const char *name, const char *password,
    if (!cram_md5_respond(dir, password, &tls_remote_need, &compatible) ||
        /* Now challenge dir */
        !cram_md5_challenge(dir, password, tls_local_need, compatible)) {
-      bsnprintf(msg, msglen, _("Director authorization problem at \"%s:%d\"\n"),
+      bsnprintf(response, response_len, _("Director authorization problem at \"%s:%d\"\n"),
          dir->host(), dir->port());
       goto bail_out;
    }
 
    /* Verify that the remote host is willing to meet our TLS requirements */
    if (tls_remote_need < tls_local_need && tls_local_need != BNET_TLS_OK && tls_remote_need != BNET_TLS_OK) {
-      bsnprintf(msg, msglen, _("Authorization problem:"
+      bsnprintf(response, response_len, _("Authorization problem:"
              " Remote server at \"%s:%d\" did not advertise required TLS support.\n"),
              dir->host(), dir->port());
       goto bail_out;
@@ -1008,7 +1007,7 @@ bool BSOCK::authenticate_director(const char *name, const char *password,
 
    /* Verify that we are willing to meet the remote host's requirements */
    if (tls_remote_need > tls_local_need && tls_local_need != BNET_TLS_OK && tls_remote_need != BNET_TLS_OK) {
-      bsnprintf(msg, msglen, _("Authorization problem with Director at \"%s:%d\":"
+      bsnprintf(response, response_len, _("Authorization problem with Director at \"%s:%d\":"
                      " Remote server requires TLS.\n"),
                      dir->host(), dir->port());
 
@@ -1020,7 +1019,7 @@ bool BSOCK::authenticate_director(const char *name, const char *password,
       if (tls_local_need >= BNET_TLS_OK && tls_remote_need >= BNET_TLS_OK) {
          /* Engage TLS! Full Speed Ahead! */
          if (!bnet_tls_client(tls_ctx, dir, NULL)) {
-            bsnprintf(msg, msglen, _("TLS negotiation failed with Director at \"%s:%d\"\n"),
+            bsnprintf(response, response_len, _("TLS negotiation failed with Director at \"%s:%d\"\n"),
                dir->host(), dir->port());
             goto bail_out;
          }
@@ -1030,7 +1029,7 @@ bool BSOCK::authenticate_director(const char *name, const char *password,
    Dmsg1(6, ">dird: %s", dir->msg);
    if (dir->recv() <= 0) {
       dir->stop_timer();
-      bsnprintf(msg, msglen, _("Bad response to Hello command: ERR=%s\n"
+      bsnprintf(response, response_len, _("Bad response to Hello command: ERR=%s\n"
                       "The Director at \"%s:%d\" is probably not running.\n"),
                     dir->bstrerror(), dir->host(), dir->port());
       return false;
@@ -1039,20 +1038,20 @@ bool BSOCK::authenticate_director(const char *name, const char *password,
   dir->stop_timer();
    Dmsg1(10, "<dird: %s", dir->msg);
    if (strncmp(dir->msg, OKhello, sizeof(OKhello)-1) != 0) {
-      bsnprintf(msg, msglen, _("Director at \"%s:%d\" rejected Hello command\n"),
+      bsnprintf(response, response_len, _("Director at \"%s:%d\" rejected Hello command\n"),
          dir->host(), dir->port());
       return false;
    } else {
-      bsnprintf(msg, msglen, "%s", dir->msg);
+      bsnprintf(response, response_len, "%s", dir->msg);
    }
    return true;
 
 bail_out:
    dir->stop_timer();
-   bsnprintf(msg, msglen, _("Authorization problem with Director at \"%s:%d\"\n"
+   bsnprintf(response, response_len, _("Authorization problem with Director at \"%s:%d\"\n"
              "Most likely the passwords do not agree.\n"
              "If you are using TLS, there may have been a certificate validation error during the TLS handshake.\n"
-             "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"), 
+             "Please see " MANUAL_AUTH_URL " for help.\n"),
              dir->host(), dir->port());
    return false;
 }

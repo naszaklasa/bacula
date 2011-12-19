@@ -67,6 +67,12 @@ bxattr_exit_code build_xattr_streams(JCR *jcr, FF_PKT *ff_pkt);
 bxattr_exit_code parse_xattr_streams(JCR *jcr, int stream);
 
 /* from job.c */
-findFILESET *new_exclude(JCR *jcr);
-void add_file_to_fileset(JCR *jcr, const char *fname, findFILESET *fileset,
-                         bool is_file); 
+findINCEXE *new_exclude(JCR *jcr);
+findINCEXE *new_preinclude(JCR *jcr);
+void set_incexe(JCR *jcr, findINCEXE *incexe);
+void new_options(JCR *jcr, findINCEXE *incexe);
+void add_file_to_fileset(JCR *jcr, const char *fname, bool is_file); 
+int add_options_to_fileset(JCR *jcr, const char *item);
+int add_wild_to_fileset(JCR *jcr, const char *item, int type);
+int add_regex_to_fileset(JCR *jcr, const char *item, int type);
+findINCEXE *new_include(JCR *jcr);

@@ -4,8 +4,8 @@
  #
  ### BEGIN INIT INFO
  # Provides:                     bacula-dir
--# Required-Start:               $local_fs $network @DB_TYPE@
--# Required-Stop:                $local_fs $network @DB_TYPE@
+-# Required-Start:               $local_fs $network @DEFAULT_DB_TYPE@
+-# Required-Stop:                $local_fs $network @DEFAULT_DB_TYPE@
 +# Required-Start:               $local_fs $network
 +# Required-Stop:                $local_fs $network
  # Default-Start:                3 5

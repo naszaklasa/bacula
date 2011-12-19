@@ -40,7 +40,8 @@
 /*
  * A constructor 
  */
-MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId)
+MediaEdit::MediaEdit(QTreeWidgetItem *parentWidget, QString &mediaId) 
+  : Pages()
 {
    setupUi(this);
    pgInitialize(tr("Media Edit"), parentWidget);

@@ -110,7 +110,7 @@ void WINAPI serviceStartCallback(DWORD argc, char **argv)
       return;
    }
 
-   service_status.dwServiceType = SERVICE_WIN32|SERVICE_INTERACTIVE_PROCESS;
+   service_status.dwServiceType = SERVICE_WIN32;
    service_status.dwServiceSpecificExitCode = 0;
 
    /* Report status */
@@ -357,7 +357,7 @@ int removeService()
                   if (status.dwCurrentState == SERVICE_STOP_PENDING) {
                      sleep(1);
                   } else {
-                     return 0;
+                     break;
                   }
                }
                if (status.dwCurrentState != SERVICE_STOPPED) {

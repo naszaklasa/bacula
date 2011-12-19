@@ -42,13 +42,14 @@ SCRIPT_DIR=`pwd`
 
 cd ../../..
 TOP_DIR=`pwd`
+TOP_DIR=${DEPKGS:-${TOP_DIR}}
 
 if [ -e ${TOP_DIR}/cross-tools/mingw-w64/bin/x86_64-pc-mingw32-gcc ]
 then
    cd ${TOP_DIR}/cross-tools/mingw-w64/bin
    BIN_DIR=`pwd`
 else
-   echo "The GCC cross compiler isn\'t installed."
+   echo "The GCC cross compiler is not installed."
    echo "You must run build-win64-cross-tools first"
    exit 1
 fi
@@ -164,6 +165,15 @@ do_make()
    fi | tee -a make.log | parse_output
 }
 
+process_rsync()
+{
+   get_source "${URL_RSYNC}" "${DIR_RSYNC}" "${MKD_RSYNC}"
+   ./configure --host=x86_64-pc-mingw32
+   make -k # rdiff.exe has a problem
+   cp .libs/librsync.a ${DEPPKG_DIR}/lib
+   cp librsync*h ${DEPPKG_DIR}/include
+}
+
 process_zlib()
 {
    if get_source "${URL_ZLIB}" "${DIR_ZLIB}" "${MKD_ZLIB}"
@@ -274,6 +284,7 @@ process_openssl()
 if [ "$#" -eq 0 ]
 then
    process_zlib
+   process_rsync
    process_pcre
    process_pthreads
    process_openssl

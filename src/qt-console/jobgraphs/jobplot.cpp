@@ -75,6 +75,7 @@ JobPlotControls::JobPlotControls()
  * Constructor, this class does not inherit anything but pages.
  */
 JobPlot::JobPlot(QTreeWidgetItem *parentTreeWidgetItem, JobPlotPass &passVals)
+   : Pages()
 {
    setupUserInterface();
    pgInitialize(tr("JobPlot"), parentTreeWidgetItem);

@@ -76,8 +76,7 @@ private slots:
 private:
    void populateDirectoryTree();
    void populateJobTable();
-   void parseDirectory(QString &dir_in);
-   bool addDirectory(QString &, QString &);
+   void parseDirectory(const QString &dir_in);
    void setupPage();
    void writeSettings();
    void readSettings();

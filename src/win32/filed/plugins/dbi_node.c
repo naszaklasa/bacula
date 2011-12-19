@@ -86,7 +86,7 @@ dbi_node_t::endBackupFile(exchange_fd_context_t *context)
 bRC
 dbi_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
 {
-   _DebugMessage(0, "createFile_DBI state = %d\n", state);
+   _DebugMessage(100, "createFile_DBI state = %d\n", state);
 
    rp->create_status = CF_EXTRACT;
 
@@ -96,7 +96,7 @@ dbi_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *rp)
 bRC
 dbi_node_t::endRestoreFile(exchange_fd_context_t *context)
 {
-   _DebugMessage(0, "endRestoreFile_DBI state = %d\n", state);
+   _DebugMessage(100, "endRestoreFile_DBI state = %d\n", state);
 
    context->current_node = parent;
 

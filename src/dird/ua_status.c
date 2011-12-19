@@ -295,13 +295,8 @@ void list_dir_status_header(UAContext *ua)
    ua->send_msg(_("%s Version: %s (%s) %s %s %s\n"), my_name, VERSION, BDATE,
             HOST_OS, DISTNAME, DISTVER);
    bstrftime_nc(dt, sizeof(dt), daemon_start_time);
-   if (num_jobs_run == 1) {
-      ua->send_msg(_("Daemon started %s, 1 Job run since started.\n"), dt);
-   }
-   else {
-      ua->send_msg(_("Daemon started %s, %d Jobs run since started.\n"),
-        dt, num_jobs_run);
-   }
+   ua->send_msg(_("Daemon started %s. Jobs: run=%d, running=%d\n"), dt,
+                   num_jobs_run, job_count());
    ua->send_msg(_(" Heap: heap=%s smbytes=%s max_bytes=%s bufs=%s max_bufs=%s\n"),
             edit_uint64_with_commas((char *)sbrk(0)-(char *)start_heap, b1),
             edit_uint64_with_commas(sm_bytes, b2),
@@ -310,12 +305,12 @@ void list_dir_status_header(UAContext *ua)
             edit_uint64_with_commas(sm_max_buffers, b5));
 
    /* TODO: use this function once for all daemons */
-   if (debug_level > 0 && plugin_list->size() > 0) {
+   if (debug_level > 0 && bplugin_list->size() > 0) {
       int len;
       Plugin *plugin;
       POOL_MEM msg(PM_FNAME);
       pm_strcpy(msg, " Plugin: ");
-      foreach_alist(plugin, plugin_list) {
+      foreach_alist(plugin, bplugin_list) {
          len = pm_strcat(msg, plugin->file);
          if (len > 80) {
             pm_strcat(msg, "\n   ");
@@ -501,7 +496,7 @@ static void prt_runtime(UAContext *ua, sched_pkt *sp)
       db_close_database(jcr, jcr->db);
    }
    jcr->db = ua->db;                  /* restore ua db to jcr */
-   jcr->set_JobType(orig_jobtype);
+   jcr->setJobType(orig_jobtype);
 }
 
 /*
@@ -683,9 +678,9 @@ static void list_running_jobs(UAContext *ua)
       case JS_WaitSD:
          emsg = (char *) get_pool_memory(PM_FNAME);
          if (jcr->wstore) {
-            Mmsg(emsg, _("is waiting on Storage %s"), jcr->wstore->name());
+            Mmsg(emsg, _("is waiting on Storage \"%s\""), jcr->wstore->name());
          } else if (jcr->rstore) {
-            Mmsg(emsg, _("is waiting on Storage %s"), jcr->rstore->name());
+            Mmsg(emsg, _("is waiting on Storage \"%s\""), jcr->rstore->name());
          } else {
             Mmsg(emsg, _("is waiting on Storage"));
          }
@@ -786,11 +781,17 @@ static void list_running_jobs(UAContext *ua)
       }
 
       if (ua->api) {
-         ua->send_msg(_("%6d\t%-6s\t%-20s\t%s\n"),
-            jcr->JobId, level, jcr->Job, msg);
+         bash_spaces(jcr->comment);
+         ua->send_msg(_("%6d\t%-6s\t%-20s\t%s\t%s\n"),
+                      jcr->JobId, level, jcr->Job, msg, jcr->comment);
+         unbash_spaces(jcr->comment);
       } else {
          ua->send_msg(_("%6d %-6s  %-20s %s\n"),
             jcr->JobId, level, jcr->Job, msg);
+         /* Display comments if any */
+         if (*jcr->comment) {
+            ua->send_msg(_("               %-30s\n"), jcr->comment);
+         }
       }
 
       if (pool_mem) {

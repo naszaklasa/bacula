@@ -46,7 +46,7 @@ elif [ -e /mingw/bin/mingw32-gcc ]
 then
    BIN_DIR=/mingw/bin
 else
-   echo "The GCC cross compiler isn\'t installed."
+   echo "The GCC cross compiler is not installed."
    echo "You must run build-win32-cross-tools first"
    exit 1
 fi
@@ -175,6 +175,17 @@ process_zlib()
    do_make win32/Makefile.mingw32 PREFIX=${DEPPKG_DIR} all
    echo Installing zlib
    do_make win32/Makefile.mingw32 PREFIX=${DEPPKG_DIR} install
+}
+
+process_rsync()
+{
+   get_source "${URL_RSYNC}" "${DIR_RSYNC}" "${MKD_RSYNC}"
+   ./configure --host=mingw32
+   echo Building librsync
+   do_make Makefile
+   echo Installing lib and headers
+   cp .libs/librsync.a ${DEPPKG_DIR}/lib
+   cp librsync*h ${DEPPKG_DIR}/include
 }
 
 process_pcre()
@@ -525,6 +536,7 @@ process_qt4()
 if [ "$#" -eq 0 ]
 then
    process_zlib
+   process_rsync
    process_pcre
    process_pthreads
    process_openssl

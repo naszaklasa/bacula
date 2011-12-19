@@ -40,15 +40,17 @@ struct RESTORE_CIPHER_CTX {
 
 struct r_ctx {
    JCR *jcr;
-   int32_t stream;
-   int32_t prev_stream;
+   int32_t stream;                     /* stream less new bits */
+   int32_t prev_stream;                /* previous stream */
+   int32_t full_stream;                /* full stream including new bits */
+   int32_t comp_stream;                /* last compressed stream found. needed only to restore encrypted compressed backup */
    BFILE bfd;                          /* File content */
    uint64_t fileAddr;                  /* file write address */
    uint32_t size;                      /* Size of file */
    int flags;                          /* Options for extract_data() */
    BFILE forkbfd;                      /* Alternative data stream */
    uint64_t fork_addr;                 /* Write address for alternative stream */
-   intmax_t fork_size;                 /* Size of alternate stream */
+   int64_t fork_size;                  /* Size of alternate stream */
    int fork_flags;                     /* Options for extract_data() */
    int32_t type;                       /* file type FT_ */
    ATTR *attr;                         /* Pointer to attributes */

@@ -40,7 +40,7 @@
 #include "run/run.h"
 #include "util/fmtwidgetitem.h"
 
-Jobs::Jobs()
+Jobs::Jobs() : Pages()
 {
    setupUi(this);
    m_name = tr("Jobs");

@@ -34,6 +34,22 @@ export PATH="/usr/local/bin:/usr/sfw/bin:/usr/xpg4/bin:/usr/bin"
 
 MTX=mtx
 
+TMPDIR=/tmp
+
+make_temp_file() 
+{
+  TMPFILE=`mktemp ${TMPDIR}/mtx$1.XXXXXXXXXX 2> /dev/null`
+  if test $? -ne 0 || test x${TMPFILE} = x; then
+     TMPFILE="${TMPDIR}/mtx$1.$$"
+     if test -f ${TMPFILE}; then
+        echo "ERROR: Temp file security problem on: ${TMPFILE}"
+        exit 1
+     fi
+  fi
+}
+
+
+
 
 #
 # The purpose of this function to wait a maximum 
@@ -142,11 +158,12 @@ case $cmd in
       ;;
 
    loaded)
-      ${MTX} -f $ctl status >/tmp/mtx.$$
+      make_temp_file
+      ${MTX} -f $ctl status >${TMPFILE}
       rtn=$?
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element $drive:Full" | awk "{print \$7}"
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element $drive:Empty" | awk "{print 0}"
-      rm -f /tmp/mtx.$$
+      cat ${TMPFILE} | grep "^Data Transfer Element $drive:Full" | awk "{print \$7}"
+      cat ${TMPFILE} | grep "^Data Transfer Element $drive:Empty" | awk "{print 0}"
+      rm -f ${TMPFILE}
       exit $rtn
       ;;
 

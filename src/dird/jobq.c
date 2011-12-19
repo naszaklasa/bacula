@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -174,7 +174,7 @@ void *sched_wait(void *arg)
    Dmsg0(2300, "Enter sched_wait.\n");
    free(arg);
    time_t wtime = jcr->sched_time - time(NULL);
-   set_jcr_job_status(jcr, JS_WaitStartTime);
+   jcr->setJobStatus(JS_WaitStartTime);
    /* Wait until scheduled time arrives */
    if (wtime > 0) {
       Jmsg(jcr, M_INFO, 0, _("Job %s waiting %d seconds for scheduled start time.\n"),
@@ -533,7 +533,7 @@ void *jobq_server(void *arg)
             if (!(jcr->JobPriority == Priority
                   || (jcr->JobPriority < Priority &&
                       jcr->job->allow_mixed_priority && running_allow_mix))) {
-               set_jcr_job_status(jcr, JS_WaitPriority);
+               jcr->setJobStatus(JS_WaitPriority);
                break;
             }
 
@@ -612,15 +612,25 @@ void *jobq_server(void *arg)
  */
 static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je)
 {
+   bool resched = false;
    /*
-    * Reschedule the job if necessary and requested
+    * Reschedule the job if requested and possible
     */
-   if (jcr->job->RescheduleOnError &&
-       jcr->JobStatus != JS_Terminated &&
-       jcr->JobStatus != JS_Canceled &&
-       jcr->getJobType() == JT_BACKUP &&
-       (jcr->job->RescheduleTimes == 0 ||
-        jcr->reschedule_count < jcr->job->RescheduleTimes)) {
+   /* Basic condition is that more reschedule times remain */
+   if (jcr->job->RescheduleTimes == 0 ||
+       jcr->reschedule_count < jcr->job->RescheduleTimes) {
+      resched = 
+         /* Check for incomplete jobs */
+         (jcr->job->RescheduleIncompleteJobs && 
+          jcr->is_incomplete() && jcr->is_JobType(JT_BACKUP) &&
+          !jcr->is_JobLevel(L_BASE)) ||
+         /* Check for failed jobs */
+         (jcr->job->RescheduleOnError &&
+          !jcr->is_JobStatus(JS_Terminated) &&
+          !jcr->is_JobStatus(JS_Canceled) &&
+          jcr->is_JobType(JT_BACKUP));
+   }
+   if (resched) {
        char dt[50], dt2[50];
 
        /*
@@ -638,14 +648,23 @@ static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je)
            jcr->Job, dt, (int)jcr->job->RescheduleInterval, dt2);
       dird_free_jcr_pointers(jcr);     /* partial cleanup old stuff */
       jcr->JobStatus = -1;
-      set_jcr_job_status(jcr, JS_WaitStartTime);
+      jcr->setJobStatus(JS_WaitStartTime);
       jcr->SDJobStatus = 0;
+      jcr->JobErrors = 0;
       if (!allow_duplicate_job(jcr)) {
          return false;
       }
+      /* Only jobs with no output or Incomplete jobs can run on same JCR */
       if (jcr->JobBytes == 0) {
          Dmsg2(2300, "Requeue job=%d use=%d\n", jcr->JobId, jcr->use_count());
          V(jq->mutex);
+         /*
+          * Special test here since a Virtual Full gets marked
+          *  as a Full, so we look at the resource record
+          */
+         if (jcr->wasVirtualFull) {
+            jcr->setJobLevel(L_VIRTUAL_FULL);
+         }
          jobq_add(jq, jcr);     /* queue the job to run again */
          P(jq->mutex);
          free_jcr(jcr);         /* release jcr */
@@ -662,7 +681,15 @@ static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je)
       set_jcr_defaults(njcr, jcr->job);
       njcr->reschedule_count = jcr->reschedule_count;
       njcr->sched_time = jcr->sched_time;
-      njcr->set_JobLevel(jcr->getJobLevel());
+      /*
+       * Special test here since a Virtual Full gets marked
+       *  as a Full, so we look at the resource record
+       */
+      if (jcr->wasVirtualFull) {
+         njcr->setJobLevel(L_VIRTUAL_FULL);
+      } else {
+         njcr->setJobLevel(jcr->getJobLevel());
+      }
       njcr->pool = jcr->pool;
       njcr->run_pool_override = jcr->run_pool_override;
       njcr->full_pool = jcr->full_pool;
@@ -671,7 +698,7 @@ static bool reschedule_job(JCR *jcr, jobq_t *jq, jobq_item_t *je)
       njcr->run_inc_pool_override = jcr->run_inc_pool_override;
       njcr->diff_pool = jcr->diff_pool;
       njcr->JobStatus = -1;
-      set_jcr_job_status(njcr, jcr->JobStatus);
+      njcr->setJobStatus(jcr->JobStatus);
       if (jcr->rstore) {
          copy_rstorage(njcr, jcr->rstorage, _("previous Job"));
       } else {
@@ -718,7 +745,7 @@ static bool acquire_resources(JCR *jcr)
       Jmsg(jcr, M_FATAL, 0, _("Job canceled. Attempt to read and write same device.\n"
          "    Read storage \"%s\" (From %s) -- Write storage \"%s\" (From %s)\n"), 
          jcr->rstore->name(), jcr->rstore_source, jcr->wstore->name(), jcr->wstore_source);
-      set_jcr_job_status(jcr, JS_Canceled);
+      jcr->setJobStatus(JS_Canceled);
       return false;
    }
 #endif
@@ -726,7 +753,7 @@ static bool acquire_resources(JCR *jcr)
       Dmsg1(200, "Rstore=%s\n", jcr->rstore->name());
       if (!inc_read_store(jcr)) {
          Dmsg1(200, "Fail rncj=%d\n", jcr->rstore->NumConcurrentJobs);
-         set_jcr_job_status(jcr, JS_WaitStoreRes);
+         jcr->setJobStatus(JS_WaitStoreRes);
          return false;
       }
    }
@@ -745,7 +772,7 @@ static bool acquire_resources(JCR *jcr)
       }
    }
    if (skip_this_jcr) {
-      set_jcr_job_status(jcr, JS_WaitStoreRes);
+      jcr->setJobStatus(JS_WaitStoreRes);
       return false;
    }
 
@@ -755,7 +782,7 @@ static bool acquire_resources(JCR *jcr)
       /* Back out previous locks */
       dec_write_store(jcr);
       dec_read_store(jcr);
-      set_jcr_job_status(jcr, JS_WaitClientRes);
+      jcr->setJobStatus(JS_WaitClientRes);
       return false;
    }
    if (jcr->job->NumConcurrentJobs < jcr->job->MaxConcurrentJobs) {
@@ -765,7 +792,7 @@ static bool acquire_resources(JCR *jcr)
       dec_write_store(jcr);
       dec_read_store(jcr);
       jcr->client->NumConcurrentJobs--;
-      set_jcr_job_status(jcr, JS_WaitJobRes);
+      jcr->setJobStatus(JS_WaitJobRes);
       return false;
    }
 

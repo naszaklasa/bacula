@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -36,8 +36,6 @@
  *        bsr.c July MMIII
  *
  *     Kern Sibbald, July MMII
- *
- *   Version $Id$
  */
 
 
@@ -46,7 +44,6 @@
 
 /* Imported functions */
 extern void print_bsr(UAContext *ua, RBSR *bsr);
-
 
 
 /* Forward referenced functions */
@@ -67,7 +64,7 @@ static bool insert_dir_into_findex_list(UAContext *ua, RESTORE_CTX *rx, char *di
 static void insert_one_file_or_dir(UAContext *ua, RESTORE_CTX *rx, char *date, bool dir);
 static int get_client_name(UAContext *ua, RESTORE_CTX *rx);
 static int get_restore_client_name(UAContext *ua, RESTORE_CTX &rx);
-static int get_date(UAContext *ua, char *date, int date_len);
+static bool get_date(UAContext *ua, char *date, int date_len);
 static int restore_count_handler(void *ctx, int num_fields, char **row);
 static bool insert_table_into_findex_list(UAContext *ua, RESTORE_CTX *rx, char *table);
 static void get_and_display_basejobs(UAContext *ua, RESTORE_CTX *rx);
@@ -79,6 +76,7 @@ static void get_and_display_basejobs(UAContext *ua, RESTORE_CTX *rx);
 int restore_cmd(UAContext *ua, const char *cmd)
 {
    RESTORE_CTX rx;                    /* restore context */
+   POOL_MEM buf;
    JOB *job;
    int i;
    JCR *jcr = ua->jcr;
@@ -91,14 +89,29 @@ int restore_cmd(UAContext *ua, const char *cmd)
    rx.path = get_pool_memory(PM_FNAME);
    rx.fname = get_pool_memory(PM_FNAME);
    rx.JobIds = get_pool_memory(PM_FNAME);
+   rx.JobIds[0] = 0;
    rx.BaseJobIds = get_pool_memory(PM_FNAME);
    rx.query = get_pool_memory(PM_FNAME);
    rx.bsr = new_bsr();
+
+   i = find_arg_with_value(ua, "comment");
+   if (i >= 0) {
+      rx.comment = ua->argv[i];
+      if (!is_comment_legal(ua, rx.comment)) {
+         goto bail_out;
+      }
+   }
 
    i = find_arg_with_value(ua, "where");
    if (i >= 0) {
       rx.where = ua->argv[i];
    }
+
+   i = find_arg_with_value(ua, "replace");
+   if (i >= 0) {
+      rx.replace = ua->argv[i];
+   }
+   
 
    i = find_arg_with_value(ua, "strip_prefix");
    if (i >= 0) {
@@ -212,7 +225,7 @@ int restore_cmd(UAContext *ua, const char *cmd)
    if (rx.restore_jobs == 1) {
       job = rx.restore_job;
    } else {
-      job = select_restore_job_resource(ua);
+      job = get_restore_job(ua);
    }
    if (!job) {
       goto bail_out;
@@ -227,37 +240,36 @@ int restore_cmd(UAContext *ua, const char *cmd)
 
    escaped_bsr_name = escape_filename(jcr->RestoreBootstrap);
 
+   Mmsg(ua->cmd,
+        "run job=\"%s\" client=\"%s\" restoreclient=\"%s\" storage=\"%s\""
+        " bootstrap=\"%s\" files=%u catalog=\"%s\"",
+        job->name(), rx.ClientName, rx.RestoreClientName,
+        rx.store?rx.store->name():"",
+        escaped_bsr_name ? escaped_bsr_name : jcr->RestoreBootstrap,
+        rx.selected_files, ua->catalog->name());
+
    /* Build run command */
+   pm_strcpy(buf, "");
    if (rx.RegexWhere) {
       escaped_where_name = escape_filename(rx.RegexWhere);
-      Mmsg(ua->cmd,
-          "run job=\"%s\" client=\"%s\" restoreclient=\"%s\" storage=\"%s\""
-          " bootstrap=\"%s\" regexwhere=\"%s\" files=%u catalog=\"%s\"",
-          job->name(), rx.ClientName, rx.RestoreClientName, 
-          rx.store?rx.store->name():"",
-          escaped_bsr_name ? escaped_bsr_name : jcr->RestoreBootstrap,
-          escaped_where_name ? escaped_where_name : rx.RegexWhere,
-          rx.selected_files, ua->catalog->name());
+      Mmsg(buf, " regexwhere=\"%s\"", 
+           escaped_where_name ? escaped_where_name : rx.RegexWhere);
 
    } else if (rx.where) {
       escaped_where_name = escape_filename(rx.where);
-      Mmsg(ua->cmd,
-          "run job=\"%s\" client=\"%s\" restoreclient=\"%s\" storage=\"%s\""
-          " bootstrap=\"%s\" where=\"%s\" files=%u catalog=\"%s\"",
-          job->name(), rx.ClientName, rx.RestoreClientName,
-          rx.store?rx.store->name():"",
-          escaped_bsr_name ? escaped_bsr_name : jcr->RestoreBootstrap,
-          escaped_where_name ? escaped_where_name : rx.where,
-          rx.selected_files, ua->catalog->name());
+      Mmsg(buf," where=\"%s\"", 
+           escaped_where_name ? escaped_where_name : rx.where);
+   }
+   pm_strcat(ua->cmd, buf);
 
-   } else {
-      Mmsg(ua->cmd,
-          "run job=\"%s\" client=\"%s\" restoreclient=\"%s\" storage=\"%s\""
-          " bootstrap=\"%s\" files=%u catalog=\"%s\"",
-          job->name(), rx.ClientName, rx.RestoreClientName,
-          rx.store?rx.store->name():"",
-          escaped_bsr_name ? escaped_bsr_name : jcr->RestoreBootstrap,
-          rx.selected_files, ua->catalog->name());
+   if (rx.replace) {
+      Mmsg(buf, " replace=%s", rx.replace);
+      pm_strcat(ua->cmd, buf);
+   }
+
+   if (rx.comment) {
+      Mmsg(buf, " comment=\"%s\"", rx.comment);
+      pm_strcat(ua->cmd, buf);
    }
 
    if (escaped_bsr_name != NULL) {
@@ -276,9 +288,13 @@ int restore_cmd(UAContext *ua, const char *cmd)
       pm_strcat(ua->cmd, " yes");    /* pass it on to the run command */
    }
    Dmsg1(200, "Submitting: %s\n", ua->cmd);
+   /* Transfer jobids to jcr to for picking up restore objects */
+   jcr->JobIds = rx.JobIds;
+   rx.JobIds = NULL;
    parse_ua_args(ua);
    run_cmd(ua, ua->cmd);
    free_rx(&rx);
+   garbage_collect_memory();       /* release unused memory */
    return 1;
 
 bail_out:
@@ -295,6 +311,7 @@ bail_out:
    }
 
    free_rx(&rx);
+   garbage_collect_memory();       /* release unused memory */
    return 0;
 
 }
@@ -354,7 +371,8 @@ static int get_client_name(UAContext *ua, RESTORE_CTX *rx)
          i = find_arg_with_value(ua, NT_("backupclient"));
       }
       if (i >= 0) {
-         if (!has_value(ua, i)) {
+         if (!is_name_valid(ua->argv[i], &ua->errmsg)) {
+            ua->error_msg("%s argument: %s", ua->argk[i], ua->errmsg);
             return 0;
          }
          bstrncpy(rx->ClientName, ua->argv[i], sizeof(rx->ClientName));
@@ -380,7 +398,8 @@ static int get_restore_client_name(UAContext *ua, RESTORE_CTX &rx)
    /* try command line argument */
    int i = find_arg_with_value(ua, NT_("restoreclient"));
    if (i >= 0) {
-      if (!has_value(ua, i)) {
+      if (!is_name_valid(ua->argv[i], &ua->errmsg)) {
+         ua->error_msg("%s argument: %s", ua->argk[i], ua->errmsg);
          return 0;
       }
       bstrncpy(rx.RestoreClientName, ua->argv[i], sizeof(rx.RestoreClientName));
@@ -452,6 +471,9 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
       "regexwhere",   /* 18 */
       "restoreclient", /* 19 */
       "copies",        /* 20 */
+      "comment",       /* 21 */
+      "restorejob",    /* 22 */
+      "replace",       /* 23 */
       NULL
    };
 
@@ -593,7 +615,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
          len = strlen(ua->cmd);
          fname = (char *)malloc(len * 2 + 1);
          db_escape_string(ua->jcr, ua->db, fname, ua->cmd, len);
-         Mmsg(rx->query, uar_file[db_type], rx->ClientName, fname);
+         Mmsg(rx->query, uar_file[db_get_type_index(ua->db)], rx->ClientName, fname);
          free(fname);
          gui_save = ua->jcr->gui;
          ua->jcr->gui = true;
@@ -717,6 +739,7 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
             pm_strcat(rx->JobIds, ua->cmd);
          }
          if (*rx->JobIds == 0 || *rx->JobIds == '.') {
+            *rx->JobIds = 0;
             return 0;                 /* nothing entered, return */
          }
          if (!have_date) {
@@ -831,13 +854,13 @@ static int user_select_jobids_or_files(UAContext *ua, RESTORE_CTX *rx)
 /*
  * Get date from user
  */
-static int get_date(UAContext *ua, char *date, int date_len)
+static bool get_date(UAContext *ua, char *date, int date_len)
 {
    ua->send_msg(_("The restored files will the most current backup\n"
                   "BEFORE the date you specify below.\n\n"));
    for ( ;; ) {
       if (!get_cmd(ua, _("Enter date as YYYY-MM-DD HH:MM:SS :"))) {
-         return 0;
+         return false;
       }
       if (str_to_utime(ua->cmd) != 0) {
          break;
@@ -845,7 +868,7 @@ static int get_date(UAContext *ua, char *date, int date_len)
       ua->error_msg(_("Improper date format.\n"));
    }
    bstrncpy(date, ua->cmd, date_len);
-   return 1;
+   return true;
 }
 
 /*
@@ -938,7 +961,7 @@ static bool insert_dir_into_findex_list(UAContext *ua, RESTORE_CTX *rx, char *di
       ua->error_msg(_("No JobId specified cannot continue.\n"));
       return false;
    } else {
-      Mmsg(rx->query, uar_jobid_fileindex_from_dir[db_type], rx->JobIds, dir, rx->ClientName);
+      Mmsg(rx->query, uar_jobid_fileindex_from_dir[db_get_type_index(ua->db)], rx->JobIds, dir, rx->ClientName);
    }
    rx->found = false;
    /* Find and insert jobid and File Index */
@@ -1059,6 +1082,23 @@ static bool ask_for_fileregex(UAContext *ua, RESTORE_CTX *rx)
    return false;
 }
 
+/* Walk on the delta_list of a TREE_NODE item and insert all parts
+ * TODO: Optimize for bootstrap creation, remove recursion
+ * 6 -> 5 -> 4 -> 3 -> 2 -> 1 -> 0
+ * should insert as
+ * 0, 1, 2, 3, 4, 5, 6
+ */
+static void add_delta_list_findex(RESTORE_CTX *rx, struct delta_list *lst)
+{
+   if (lst == NULL) {
+      return;
+   }
+   if (lst->next) {
+      add_delta_list_findex(rx, lst->next);
+   }
+   add_findex(rx->bsr, lst->JobId, lst->FileIndex);
+}
+
 static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
 {
    TREE_CTX tree;
@@ -1099,7 +1139,11 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
 
 #define new_get_file_list
 #ifdef new_get_file_list
-   if (!db_get_file_list(ua->jcr, ua->db, rx->JobIds, insert_tree_handler, (void *)&tree)) {
+   if (!db_get_file_list(ua->jcr, ua->db, 
+                         rx->JobIds, false /* do not use md5 */, 
+                         true /* get delta */,
+                         insert_tree_handler, (void *)&tree))
+   {
       ua->error_msg("%s", db_strerror(ua->db));
    }
    if (*rx->BaseJobIds) {
@@ -1123,6 +1167,13 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
       }
    }
 #endif
+   /* 
+    * At this point, the tree is built, so we can garbage collect
+    * any memory released by the SQL engine that RedHat has 
+    * not returned to the OS :-( 
+    */
+    garbage_collect_memory();
+
    /*
     * Look at the first JobId on the list (presumably the oldest) and
     *  if it is marked purged, don't do the manual selection because
@@ -1174,6 +1225,8 @@ static bool build_directory_tree(UAContext *ua, RESTORE_CTX *rx)
             Dmsg2(400, "FI=%d node=0x%x\n", node->FileIndex, node);
             if (node->extract || node->extract_dir) {
                Dmsg3(400, "JobId=%lld type=%d FI=%d\n", (uint64_t)node->JobId, node->type, node->FileIndex);
+               /* TODO: optimize bsr insertion when jobid are non sorted */
+               add_delta_list_findex(rx, node->delta_list);
                add_findex(rx->bsr, node->JobId, node->FileIndex);
                if (node->extract && node->type != TN_NEWDIR) {
                   rx->selected_files++;  /* count only saved files */
@@ -1205,10 +1258,10 @@ static bool select_backups_before_date(UAContext *ua, RESTORE_CTX *rx, char *dat
    /* Create temp tables */
    db_sql_query(ua->db, uar_del_temp, NULL, NULL);
    db_sql_query(ua->db, uar_del_temp1, NULL, NULL);
-   if (!db_sql_query(ua->db, uar_create_temp[db_type], NULL, NULL)) {
+   if (!db_sql_query(ua->db, uar_create_temp[db_get_type_index(ua->db)], NULL, NULL)) {
       ua->error_msg("%s\n", db_strerror(ua->db));
    }
-   if (!db_sql_query(ua->db, uar_create_temp1[db_type], NULL, NULL)) {
+   if (!db_sql_query(ua->db, uar_create_temp1[db_get_type_index(ua->db)], NULL, NULL)) {
       ua->error_msg("%s\n", db_strerror(ua->db));
    }
    /*
@@ -1225,14 +1278,18 @@ static bool select_backups_before_date(UAContext *ua, RESTORE_CTX *rx, char *dat
     */
    memset(&fsr, 0, sizeof(fsr));
    i = find_arg_with_value(ua, "FileSet");
-   if (i >= 0) {
+
+   if (i >= 0 && is_name_valid(ua->argv[i], &ua->errmsg)) {
       bstrncpy(fsr.FileSet, ua->argv[i], sizeof(fsr.FileSet));
       if (!db_get_fileset_record(ua->jcr, ua->db, &fsr)) {
          ua->error_msg(_("Error getting FileSet \"%s\": ERR=%s\n"), fsr.FileSet,
             db_strerror(ua->db));
          i = -1;
       }
+   } else if (i >= 0) {         /* name is invalid */
+      ua->error_msg(_("FileSet argument: %s\n"), ua->errmsg);
    }
+
    if (i < 0) {                       /* fileset not found */
       edit_int64(cr.ClientId, ed1);
       Mmsg(rx->query, uar_sel_fileset, ed1, ed1);

@@ -57,9 +57,7 @@ static char SDFDhello[]    = "Hello Director %s calling\n";
 /* Response from SD */
 static char SDOKhello[]   = "3000 OK Hello\n";
 /* Response from FD */
-static char FDOKhello[] = "2000 OK Hello\n";
-static char FD3OKhello[] = "2000 OK Hello 1\n";
-static char FD31OKhello[] = "2000 OK Hello 2\n";
+static char FDOKhello[] = "2000 OK Hello";
 
 /* Forward referenced functions */
 
@@ -171,9 +169,7 @@ int authenticate_file_daemon(BSOCK *fd, char *fdname, char *password)
    }
    Dmsg1(110, "<stored: %s", fd->msg);
    stop_bsock_timer(tid);
-   if ((strncmp(fd->msg, FDOKhello, sizeof(FDOKhello)) != 0) &&
-       (strncmp(fd->msg, FD3OKhello, sizeof(FD3OKhello)) != 0) &&
-       (strncmp(fd->msg, FD31OKhello, sizeof(FD31OKhello)) != 0) ) {
+   if ((strncmp(fd->msg, FDOKhello, strlen(FDOKhello)) != 0)) {
       return 0;
    }
    return 1;

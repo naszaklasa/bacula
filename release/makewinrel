@@ -9,44 +9,51 @@
 #
 # Commit all changes, export the release, make a release tar.
 #
-. ./functions
+# source ./config
+. ./config
 
-cwd=`pwd`
-reltype=release
 tagbase=Release-
 base_pkg=bacula
 remote=$2
 branch=$3
 ver=$4
+fulltag=$tagbase$ver
 
 if [ $# != 4 ] ; then
   echo "Need $0 <bacula-source-directory> <remote-name> <branch> <version>"
-  echo "e.g. $0 rescue-source bee Branch-4.0 4.0.1"
+  echo "e.g. $0 rescue-source bee Branch-4.0 4.0.3"
   exit 1
 fi
-cd $1/bacula
-check_return_code "$0: Directory $1/bacula does not exist"
-src=$1/bacula
-
+cd $1
+if [ $? -ne 0 ]; then
+   echo "Directory: $1 does not exist"
+   exit 1
+fi
+cd bacula
+if [ $?  -ne 0 ]; then
+   echo "Directory: $1 does not exist"
+   exit 1
+fi
 current=`git branch | awk '/*/ { print $2 }'`
 src=`pwd` 
 git checkout ${branch}
-check_return_code "$0: Checkout of branch ${branch} in ${src} failed."
-
+if [ $? -ne 0 ]; then
+   echo "Checkout of branch ${branch} in ${src} failed."
+   exit 1
+fi
 git pull ${remote} ${branch}
-fulltag=$tagbase$ver
 echo " "
-echo "$0: Making $reltype for Windows $base_pkg-$ver ..."
+echo "Making $reltype for Windows $base_pkg-$ver ..."
 echo " "
-echo "OK?  ctl-c to stop"
-read a
+#echo "OK?  ctl-c to stop"
+#read a
 
 cd src/win32
 rm -f release32/${base_pkg}-win32-$ver.exe
 rm -f release64/${base_pkg}-win64-$ver.exe
 make clean
 cd ../..
-./configure
+./configure --with-sqlite3
 cd src/win32
 ./makeall
 cp release32/${base_pkg}-win32-$ver.exe ${cwd}
@@ -60,4 +67,3 @@ ls -l ${base_pkg}-win*.exe*
 cd ${src}
 # get back to original branch
 git checkout ${current}
-exit 0

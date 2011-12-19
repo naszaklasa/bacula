@@ -296,8 +296,8 @@ int main (int argc, char *argv[])
    my_name_is(0, NULL, director->name());    /* set user defined name */
 
    /* Plug database interface for library routines */
-   p_sql_query = (sql_query)dir_sql_query;
-   p_sql_escape = (sql_escape)db_escape_string;
+   p_sql_query = (sql_query_func)dir_sql_query;
+   p_sql_escape = (sql_escape_func)db_escape_string;
 
    FDConnectTimeout = (int)director->FDConnectTimeout;
    SDConnectTimeout = (int)director->SDConnectTimeout;
@@ -447,7 +447,7 @@ static void free_saved_resources(int table)
  */
 static void reload_job_end_cb(JCR *jcr, void *ctx)
 {
-   int reload_id = (int)((long int)ctx);
+   int reload_id = (int)((intptr_t)ctx);
    Dmsg3(100, "reload job_end JobId=%d table=%d cnt=%d\n", jcr->JobId,
       reload_id, reload_table[reload_id].job_count);
    lock_jobs();
@@ -941,10 +941,11 @@ static bool check_catalog(cat_op mode)
        * Make sure we can open catalog, otherwise print a warning
        * message because the server is probably not running.
        */
-      db = db_init(NULL, catalog->db_driver, catalog->db_name, catalog->db_user,
-                         catalog->db_password, catalog->db_address,
-                         catalog->db_port, catalog->db_socket,
-                         catalog->mult_db_connections);
+      db = db_init_database(NULL, catalog->db_driver, catalog->db_name, catalog->db_user,
+                            catalog->db_password, catalog->db_address,
+                            catalog->db_port, catalog->db_socket,
+                            catalog->mult_db_connections,
+                            catalog->disable_batch_insert);
       if (!db || !db_open_database(NULL, db)) {
          Pmsg2(000, _("Could not open Catalog \"%s\", database \"%s\".\n"),
               catalog->name(), catalog->db_name);
@@ -958,9 +959,6 @@ static bool check_catalog(cat_op mode)
          OK = false;
          continue;
       }
-
-      /* Check if the SQL library is thread-safe */
-      db_check_backend_thread_safe();
 
       /* Display a message if the db max_connections is too low */
       if (!db_check_max_connections(NULL, db, director->MaxConcurrentJobs)) {
@@ -1115,9 +1113,10 @@ static bool check_catalog(cat_op mode)
          db_sql_query(db, cleanup_running_job, NULL, NULL);
       }
 
+      /* Set type in global for debugging */
+      set_db_type(db_get_type(db));
+
       db_close_database(NULL, db);
    }
-   /* Set type in global for debugging */
-   set_db_type(db_get_type());
    return OK;
 }

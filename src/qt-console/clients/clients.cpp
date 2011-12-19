@@ -43,7 +43,7 @@
 #include "status/clientstat.h"
 #include "util/fmtwidgetitem.h"
 
-Clients::Clients()
+Clients::Clients() : Pages()
 {
    setupUi(this);
    m_name = tr("Clients");

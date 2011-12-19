@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2006-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2006-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -46,6 +46,9 @@
  
 #ifdef WIN32_VSS
 
+#define VSS_INIT_RESTORE_AFTER_INIT   1
+#define VSS_INIT_RESTORE_AFTER_GATHER 2
+
 // some forward declarations
 struct IVssAsync;
 
@@ -56,44 +59,52 @@ public:
     virtual ~VSSClient();
 
     // Backup Process
-    BOOL InitializeForBackup();
-    virtual BOOL CreateSnapshots(char* szDriveLetters) = 0;
-    virtual BOOL CloseBackup() = 0;
+    bool InitializeForBackup(JCR *jcr);
+    bool InitializeForRestore(JCR *jcr, bool (*VssInitCallback)(JCR *, int) = NULL, WCHAR *job_metadata = NULL);
+    virtual bool CreateSnapshots(char* szDriveLetters) = 0;
+    virtual bool CloseBackup() = 0;
+    virtual bool CloseRestore() = 0;
+    virtual WCHAR *GetMetadata() = 0;
     virtual const char* GetDriverName() = 0;
-    BOOL GetShadowPath  (const char* szFilePath, char* szShadowPath, int nBuflen);
-    BOOL GetShadowPathW (const wchar_t* szFilePath, wchar_t* szShadowPath, int nBuflen); /* nBuflen in characters */
+    bool GetShadowPath  (const char* szFilePath, char* szShadowPath, int nBuflen);
+    bool GetShadowPathW (const wchar_t* szFilePath, wchar_t* szShadowPath, int nBuflen); /* nBuflen in characters */
 
     const size_t GetWriterCount();
     const char* GetWriterInfo(int nIndex);
     const int   GetWriterState(int nIndex);
     void DestroyWriterInfo();
     void AppendWriterInfo(int nState, const char* pszInfo);
-    const BOOL  IsInitialized() { return m_bBackupIsInitialized; };
+    const bool  IsInitialized() { return m_bBackupIsInitialized; };
+    HMODULE GetVssDllHandle() { return m_hLib; };
+    IUnknown *GetVssObject() { return m_pVssObject; };
          
 private:
-    virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore = FALSE) = 0;
-    virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync*  pAsync) = 0;
+    virtual bool Initialize(DWORD dwContext, bool bDuringRestore = FALSE, bool (*VssInitCallback)(JCR *, int) = NULL) = 0;
+    virtual bool WaitAndCheckForAsyncOperation(IVssAsync*  pAsync) = 0;
     virtual void QuerySnapshotSet(GUID snapshotSetID) = 0;
 
 protected:
-    HMODULE                         m_hLib;
+    HMODULE    m_hLib;
+    JCR       *m_jcr;
 
-    BOOL                            m_bCoInitializeCalled;
-    BOOL                            m_bCoInitializeSecurityCalled;
-    DWORD                           m_dwContext;
+    DWORD      m_dwContext;
 
-    IUnknown*                       m_pVssObject;
-    GUID                            m_uidCurrentSnapshotSet;
-    // TRUE if we are during restore
-    BOOL                            m_bDuringRestore;
-    BOOL                            m_bBackupIsInitialized;
+    IUnknown*  m_pVssObject;
+    GUID       m_uidCurrentSnapshotSet;
 
     // drive A will be stored on position 0,Z on pos. 25
-    wchar_t                           m_wszUniqueVolumeName[26][MAX_PATH]; // approx. 7 KB
-    wchar_t                           m_szShadowCopyName[26][MAX_PATH]; // approx. 7 KB
+    wchar_t    m_wszUniqueVolumeName[26][MAX_PATH]; // approx. 7 KB
+    wchar_t    m_szShadowCopyName[26][MAX_PATH]; // approx. 7 KB
     
-    void*                           m_pAlistWriterState;
-    void*                           m_pAlistWriterInfoText;
+    alist     *m_pAlistWriterState;
+    alist     *m_pAlistWriterInfoText;
+
+    bool       m_bCoInitializeCalled;
+    bool       m_bCoInitializeSecurityCalled;
+    bool       m_bDuringRestore;  /* true if we are doing a restore */
+    bool       m_bBackupIsInitialized;
+
+    WCHAR     *m_metadata;
 };
 
 class VSSClientXP:public VSSClient
@@ -101,14 +112,16 @@ class VSSClientXP:public VSSClient
 public:
    VSSClientXP();
    virtual ~VSSClientXP();
-   virtual BOOL CreateSnapshots(char* szDriveLetters);
-   virtual BOOL CloseBackup();
+   virtual bool CreateSnapshots(char* szDriveLetters);
+   virtual bool CloseBackup();
+   virtual bool CloseRestore();
+   virtual WCHAR *GetMetadata();
    virtual const char* GetDriverName() { return "VSS WinXP"; };
 private:
-   virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore);
-   virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync* pAsync);
+   virtual bool Initialize(DWORD dwContext, bool bDuringRestore, bool (*VssInitCallback)(JCR *, int) = NULL);
+   virtual bool WaitAndCheckForAsyncOperation(IVssAsync* pAsync);
    virtual void QuerySnapshotSet(GUID snapshotSetID);
-   BOOL CheckWriterStatus();   
+   bool CheckWriterStatus();   
 };
 
 class VSSClient2003:public VSSClient
@@ -116,14 +129,16 @@ class VSSClient2003:public VSSClient
 public:
    VSSClient2003();
    virtual ~VSSClient2003();
-   virtual BOOL CreateSnapshots(char* szDriveLetters);
-   virtual BOOL CloseBackup();   
+   virtual bool CreateSnapshots(char* szDriveLetters);
+   virtual bool CloseBackup();   
+   virtual bool CloseRestore();
+   virtual WCHAR *GetMetadata();
    virtual const char* GetDriverName() { return "VSS Win 2003"; };
 private:
-   virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore);
-   virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync*  pAsync);
+   virtual bool Initialize(DWORD dwContext, bool bDuringRestore, bool (*VssInitCallback)(JCR *, int) = NULL);
+   virtual bool WaitAndCheckForAsyncOperation(IVssAsync*  pAsync);
    virtual void QuerySnapshotSet(GUID snapshotSetID);
-   BOOL CheckWriterStatus();
+   bool CheckWriterStatus();
 };
 
 class VSSClientVista:public VSSClient
@@ -131,18 +146,23 @@ class VSSClientVista:public VSSClient
 public:
    VSSClientVista();
    virtual ~VSSClientVista();
-   virtual BOOL CreateSnapshots(char* szDriveLetters);
-   virtual BOOL CloseBackup();   
+   virtual bool CreateSnapshots(char* szDriveLetters);
+   virtual bool CloseBackup();   
+   virtual bool CloseRestore();
+   virtual WCHAR *GetMetadata();
    virtual const char* GetDriverName() { return "VSS Vista"; };
 private:
-   virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore);
-   virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync*  pAsync);
+   virtual bool Initialize(DWORD dwContext, bool bDuringRestore, bool (*VssInitCallback)(JCR *, int) = NULL);
+   virtual bool WaitAndCheckForAsyncOperation(IVssAsync*  pAsync);
    virtual void QuerySnapshotSet(GUID snapshotSetID);
-   BOOL CheckWriterStatus();
+   bool CheckWriterStatus();
 };
 
 
 extern VSSClient *g_pVSSClient;
+
+BOOL VSSPathConvert(const char *szFilePath, char *szShadowPath, int nBuflen);
+BOOL VSSPathConvertW(const wchar_t *szFilePath, wchar_t *szShadowPath, int nBuflen);
 
 #endif /* WIN32_VSS */
 

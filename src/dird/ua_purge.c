@@ -387,26 +387,14 @@ void upgrade_copies(UAContext *ua, char *jobs)
    POOL_MEM query(PM_MESSAGE);
    
    db_lock(ua->db);
+
    /* Do it in two times for mysql */
-   Mmsg(query, "CREATE TEMPORARY TABLE cpy_tmp AS "
-                  "SELECT MIN(JobId) AS JobId FROM Job "     /* Choose the oldest job */
-                   "WHERE Type='%c' "
-                     "AND ( PriorJobId IN (%s) "
-                         "OR "
-                          " PriorJobId IN ( "
-                             "SELECT PriorJobId "
-                               "FROM Job "
-                              "WHERE JobId IN (%s) "
-                               " AND Type='B' "
-                            ") "
-                         ") "
-                   "GROUP BY PriorJobId ",           /* one result per copy */
-        JT_JOB_COPY, jobs, jobs);
+   Mmsg(query, uap_upgrade_copies_oldest_job[db_get_type_index(ua->db)], JT_JOB_COPY, jobs, jobs);
    db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
    Dmsg1(050, "Upgrade copies Log sql=%s\n", query.c_str());
 
    /* Now upgrade first copy to Backup */
-   Mmsg(query, "UPDATE Job SET Type='B' "           /* JT_JOB_COPY => JT_BACKUP  */
+   Mmsg(query, "UPDATE Job SET Type='B' "      /* JT_JOB_COPY => JT_BACKUP  */
                 "WHERE JobId IN ( SELECT JobId FROM cpy_tmp )");
 
    db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
@@ -435,6 +423,14 @@ void purge_jobs_from_catalog(UAContext *ua, char *jobs)
    db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
    Dmsg1(050, "Delete Log sql=%s\n", query.c_str());
 
+   Mmsg(query, "DELETE FROM RestoreObject WHERE JobId IN (%s)", jobs);
+   db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
+   Dmsg1(050, "Delete RestoreObject sql=%s\n", query.c_str());
+
+   Mmsg(query, "DELETE FROM PathVisibility WHERE JobId IN (%s)", jobs);
+   db_sql_query(ua->db, query.c_str(), NULL, (void *)NULL);
+   Dmsg1(050, "Delete PathVisibility sql=%s\n", query.c_str());
+
    upgrade_copies(ua, jobs);
 
    /* Now remove the Job record itself */
@@ -454,12 +450,11 @@ void purge_files_from_volume(UAContext *ua, MEDIA_DBR *mr )
 bool purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr, bool force)
 {
    POOL_MEM query(PM_MESSAGE);
-   struct del_ctx del;
+   db_list_ctx lst;
+   char *jobids=NULL;
    int i;
    bool purged = false;
    bool stat;
-   JOB_DBR jr;
-   char ed1[50];
 
    stat = strcmp(mr->VolStatus, "Append") == 0 ||
           strcmp(mr->VolStatus, "Full")   == 0 ||
@@ -472,42 +467,34 @@ bool purge_jobs_from_volume(UAContext *ua, MEDIA_DBR *mr, bool force)
       return 0;
    }
 
-   memset(&jr, 0, sizeof(jr));
-   memset(&del, 0, sizeof(del));
-   del.max_ids = 1000;
-   del.JobId = (JobId_t *)malloc(sizeof(JobId_t) * del.max_ids);
-
    /*
     * Check if he wants to purge a single jobid
     */
    i = find_arg_with_value(ua, "jobid");
-   if (i >= 0) {
-      del.num_ids = 1;
-      del.JobId[0] = str_to_int64(ua->argv[i]);
+   if (i >= 0 && is_a_number_list(ua->argv[i])) {
+      jobids = ua->argv[i];
    } else {
       /*
        * Purge ALL JobIds
        */
-      Mmsg(query, "SELECT DISTINCT JobId FROM JobMedia WHERE MediaId=%s", 
-           edit_int64(mr->MediaId, ed1));
-      if (!db_sql_query(ua->db, query.c_str(), file_delete_handler, (void *)&del)) {
+      if (!db_get_volume_jobids(ua->jcr, ua->db, mr, &lst)) {
          ua->error_msg("%s", db_strerror(ua->db));
          Dmsg0(050, "Count failed\n");
          goto bail_out;
       }
+      jobids = lst.list;
    }
 
-   purge_job_list_from_catalog(ua, del);
+   if (*jobids) {
+      purge_jobs_from_catalog(ua, jobids);
+   }
 
-   ua->info_msg(_("%d File%s on Volume \"%s\" purged from catalog.\n"), del.num_del,
-      del.num_del==1?"":"s", mr->VolumeName);
+   ua->info_msg(_("%d File%s on Volume \"%s\" purged from catalog.\n"), 
+                lst.count, lst.count<=1?"":"s", mr->VolumeName);
 
    purged = is_volume_purged(ua, mr, force); 
 
 bail_out:
-   if (del.JobId) {
-      free(del.JobId);
-   }
    return purged;
 }
 
@@ -542,7 +529,7 @@ bool is_volume_purged(UAContext *ua, MEDIA_DBR *mr, bool force)
 
    /* If purged, mark it so */
    cnt.count = 0;
-   Mmsg(query, "SELECT count(*) FROM JobMedia WHERE MediaId=%s", 
+   Mmsg(query, "SELECT 1 FROM JobMedia WHERE MediaId=%s LIMIT 1", 
         edit_int64(mr->MediaId, ed1));
    if (!db_sql_query(ua->db, query.c_str(), del_count_handler, (void *)&cnt)) {
       ua->error_msg("%s", db_strerror(ua->db));
@@ -576,6 +563,10 @@ static BSOCK *open_sd_bsock(UAContext *ua)
    return ua->jcr->store_bsock;
 }
 
+/* 
+ * Called here to send the appropriate commands to the SD
+ *  to do truncate on purge.
+ */
 static void do_truncate_on_purge(UAContext *ua, MEDIA_DBR *mr, 
                                  char *pool, char *storage,
                                  int drive, BSOCK *sd)
@@ -589,84 +580,91 @@ static void do_truncate_on_purge(UAContext *ua, MEDIA_DBR *mr,
       return;
    }
 
-   if (mr->ActionOnPurge & AOP_TRUNCATE) {
-      /* Send the command to truncate the volume after purge. If this feature
-       * is disabled for the specific device, this will be a no-op.
-       */
+   /* Do it only if action on purge = truncate is set */
+   if (!(mr->ActionOnPurge & ON_PURGE_TRUNCATE)) {
+      return;
+   }
+   /*
+    * Send the command to truncate the volume after purge. If this feature
+    * is disabled for the specific device, this will be a no-op.
+    */
 
-      /* Protect us from spaces */
-      bash_spaces(mr->VolumeName);
-      bash_spaces(mr->MediaType);
-      bash_spaces(pool);
-      bash_spaces(storage);
-         
-      sd->fsend("relabel %s OldName=%s NewName=%s PoolName=%s "
-                "MediaType=%s Slot=%d drive=%d\n",
-                   storage,
-                   mr->VolumeName, mr->VolumeName,
-                   pool, mr->MediaType, mr->Slot, drive);
-         
-      unbash_spaces(mr->VolumeName);
-      unbash_spaces(mr->MediaType);
-      unbash_spaces(pool);
-      unbash_spaces(storage);
+   /* Protect us from spaces */
+   bash_spaces(mr->VolumeName);
+   bash_spaces(mr->MediaType);
+   bash_spaces(pool);
+   bash_spaces(storage);
+      
+   /* Do it by relabeling the Volume, which truncates it */
+   sd->fsend("relabel %s OldName=%s NewName=%s PoolName=%s "
+             "MediaType=%s Slot=%d drive=%d\n",
+                storage,
+                mr->VolumeName, mr->VolumeName,
+                pool, mr->MediaType, mr->Slot, drive);
+      
+   unbash_spaces(mr->VolumeName);
+   unbash_spaces(mr->MediaType);
+   unbash_spaces(pool);
+   unbash_spaces(storage);
 
-      while (sd->recv() >= 0) {
-         ua->send_msg("%s", sd->msg);
-         if (sscanf(sd->msg, "3000 OK label. VolBytes=%llu DVD=%d ",
-                    &VolBytes, &dvd) == 2) 
-         {
-            ok = true;
-         }
+   /* Send relabel command, and check for valid response */
+   while (sd->recv() >= 0) {
+      ua->send_msg("%s", sd->msg);
+      if (sscanf(sd->msg, "3000 OK label. VolBytes=%llu DVD=%d ", &VolBytes, &dvd) == 2) {
+         ok = true;
       }
+   }
 
-      if (ok) {
-         mr->VolBytes = VolBytes;
-         mr->VolFiles = 0;
-         if (!db_update_media_record(ua->jcr, ua->db, mr)) {
-            ua->error_msg(_("Can't update volume size in the catalog\n"));
-         }
-         ua->send_msg(_("The volume \"%s\" has been truncated\n"), mr->VolumeName);
-      } else {
-         ua->warning_msg(_("Unable to truncate volume \"%s\"\n"), mr->VolumeName);
+   if (ok) {
+      mr->VolBytes = VolBytes;
+      mr->VolFiles = 0;
+      if (!db_update_media_record(ua->jcr, ua->db, mr)) {
+         ua->error_msg(_("Can't update volume size in the catalog\n"));
       }
+      ua->send_msg(_("The volume \"%s\" has been truncated\n"), mr->VolumeName);
+   } else {
+      ua->warning_msg(_("Unable to truncate volume \"%s\"\n"), mr->VolumeName);
    }
 }
 
-/* purge action= pool= volume= storage= devicetype= */
+/* 
+ * Implement Bacula bconsole command  purge action
+ *     purge action= pool= volume= storage= devicetype= 
+ */
 static int action_on_purge_cmd(UAContext *ua, const char *cmd)
 {
-   bool allpools=false;
-   int drive=-1;
-   int nb=0;
-
-   uint32_t *results=NULL;
-   const char *action="all";
-   STORE *store=NULL;
-   POOL *pool=NULL;
+   bool allpools = false;
+   int drive = -1;
+   int nb = 0;
+   uint32_t *results = NULL;
+   const char *action = "all";
+   STORE *store = NULL;
+   POOL *pool = NULL;
    MEDIA_DBR mr;
    POOL_DBR pr;
-
-   BSOCK *sd=NULL;
+   BSOCK *sd = NULL;
    
    memset(&pr, 0, sizeof(pr));
    memset(&mr, 0, sizeof(mr));
 
-   /* Look arguments */
+   /* Look at arguments */
    for (int i=1; i<ua->argc; i++) {
       if (strcasecmp(ua->argk[i], NT_("allpools")) == 0) {
          allpools = true;
             
-      } else if (strcasecmp(ua->argk[i], NT_("volume")) == 0 && ua->argv[i]) {
+      } else if (strcasecmp(ua->argk[i], NT_("volume")) == 0 
+                 && is_name_valid(ua->argv[i], NULL)) {
          bstrncpy(mr.VolumeName, ua->argv[i], sizeof(mr.VolumeName));
 
-      } else if (strcasecmp(ua->argk[i], NT_("devicetype")) == 0 && ua->argv[i]) {
+      } else if (strcasecmp(ua->argk[i], NT_("devicetype")) == 0 
+                 && ua->argv[i]) {
          bstrncpy(mr.MediaType, ua->argv[i], sizeof(mr.MediaType));
          
       } else if (strcasecmp(ua->argk[i], NT_("drive")) == 0 && ua->argv[i]) {
          drive = atoi(ua->argv[i]);
 
-      } else if (strcasecmp(ua->argk[i], NT_("action")) == 0 && ua->argv[i]) {
+      } else if (strcasecmp(ua->argk[i], NT_("action")) == 0 
+                 && is_name_valid(ua->argv[i], NULL)) {
          action=ua->argv[i];
       }
    }
@@ -698,18 +696,21 @@ static int action_on_purge_cmd(UAContext *ua, const char *cmd)
       mr.PoolId = pr.PoolId;
    }
 
+   /* 
+    * Look for all Purged volumes that can be recycled, are enabled and
+    *  have more the 10,000 bytes.
+    */
    mr.Recycle = 1;
    mr.Enabled = 1;
    mr.VolBytes = 10000;
    bstrncpy(mr.VolStatus, "Purged", sizeof(mr.VolStatus));
-
    if (!db_get_media_ids(ua->jcr, ua->db, &mr, &nb, &results)) {
       Dmsg0(100, "No results from db_get_media_ids\n");
       goto bail_out;
    }
    
    if (!nb) {
-      ua->send_msg(_("No volume founds to perform %s action(s)\n"), action);
+      ua->send_msg(_("No Volumes found to perform %s action.\n"), action);
       goto bail_out;
    }
 
@@ -718,6 +719,9 @@ static int action_on_purge_cmd(UAContext *ua, const char *cmd)
       goto bail_out;
    }
 
+   /*
+    * Loop over the candidate Volumes and actually truncate them
+    */
    for (int i=0; i < nb; i++) {
       memset(&mr, 0, sizeof(mr));
       mr.MediaId = results[i];

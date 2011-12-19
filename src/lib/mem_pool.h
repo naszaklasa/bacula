@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -76,6 +76,7 @@ extern void garbage_collect_memory_pool();
 extern void  close_memory_pool();
 extern void  print_memory_pool_stats();
 
+extern void garbage_collect_memory();
 
 
 #define PM_NOPOOL  0                  /* nonpooled memory */
@@ -83,7 +84,8 @@ extern void  print_memory_pool_stats();
 #define PM_FNAME   2                  /* file name buffer */
 #define PM_MESSAGE 3                  /* daemon message */
 #define PM_EMSG    4                  /* error message */
-#define PM_MAX     PM_EMSG            /* Number of types */
+#define PM_BSOCK   5                  /* BSOCK buffer */
+#define PM_MAX     PM_BSOCK           /* Number of types */
 
 class POOL_MEM {
    char *mem;

@@ -9,12 +9,12 @@ echo "Depending on the size of your database,"
 echo "this script may take several minutes to run."
 echo " "
 
-bindir=@SQL_BINDIR@
+bindir=@SQLITE_BINDIR@
+PATH="$bindir:$PATH"
 cd @working_dir@
-sqlite=@DB_TYPE@
 db_name=@db_name@
 
-${bindir}/${sqlite} $* ${db_name}.db <<END-OF-DATA
+sqlite3 $* ${db_name}.db <<END-OF-DATA
 -- Can be replaced by 
 -- ALTER TABLE Job ADD COLUMN (ReadBytes BIGINT UNSIGNED DEFAULT 0);
 

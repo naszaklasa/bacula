@@ -46,7 +46,8 @@ typedef enum {
    BACL_TYPE_ACCESS = 1,
    BACL_TYPE_DEFAULT = 2,
    BACL_TYPE_DEFAULT_DIR = 3,
-   BACL_TYPE_EXTENDED = 4
+   BACL_TYPE_EXTENDED = 4,
+   BACL_TYPE_NFS4 = 5
 } bacl_type;
 
 /*
@@ -57,17 +58,19 @@ typedef enum {
 #define ACL_TYPE_NONE 0x0
 #endif
 
-#if defined(HAVE_FREEBSD_OS)
-#define BACL_ENOTSUP          EOPNOTSUPP
-#elif defined(HAVE_DARWIN_OS)
-#define BACL_ENOTSUP          EOPNOTSUPP
-#elif defined(HAVE_HPUX_OS)
-#define BACL_ENOTSUP          EOPNOTSUPP
+#if defined(HAVE_FREEBSD_OS) || \
+    defined(HAVE_DARWIN_OS) || \
+    defined(HAVE_HPUX_OS) || \
+    defined(HAVE_LINUX_OS)
+#define BACL_ENOTSUP EOPNOTSUPP
 #elif defined(HAVE_IRIX_OS)
-#define BACL_ENOTSUP          ENOSYS
-#elif defined(HAVE_LINUX_OS) 
-#define BACL_ENOTSUP          ENOTSUP
+#define BACL_ENOTSUP ENOSYS
 #endif
+
+#define BACL_FLAG_SAVE_NATIVE    0x01
+#define BACL_FLAG_SAVE_AFS       0x02
+#define BACL_FLAG_RESTORE_NATIVE 0x04
+#define BACL_FLAG_RESTORE_AFS    0x08
 
 /*
  * Internal tracking data.
@@ -76,6 +79,8 @@ struct acl_data_t {
    POOLMEM *content;
    uint32_t content_length;
    uint32_t nr_errors;
+   uint32_t current_dev;
+   uint32_t flags;		/* See BACL_FLAG_* */
 };
 
 #endif

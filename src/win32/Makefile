@@ -1,10 +1,20 @@
+#
+#  Makefile for Win32/Win64 Bacula File daemon
+#
+#  If called make win64=yes the Win64 version will be built
+#     otherwise the Win32 version will be built.
+#
+#  If called with bat=no, bat will not be built, otherwise it will be
+#     built.
+#
+
 ECHO_CMD=@
 
 WIN32_DIRS=lib filed filed/plugins console scripts
 
 WIN64_DIRS=lib filed filed/plugins console scripts
 
-ifeq ($(WIN64),yes)
+ifeq ($(win64),yes)
 	 DIRS=$(WIN64_DIRS)
 	 INSTALLER=win64_installer
 	 SPECIAL=bsmtp
@@ -14,13 +24,21 @@ else
 	 SPECIAL=bat bsmtp
 endif
 
+ifeq ($(bat),no)
+	 SPECIAL=bsmtp
+endif	     
+
 .PHONY: $(DIRS) clean all Makefile.inc win32_installer full_win32_installer \
 	 win64_installer bsmtp
 
 all: Makefile.inc $(DIRS) $(SPECIAL) $(INSTALLER)
 
 clean: $(DIRS) win32_installer win64_installer
-	$(ECHO_CMD)-rm -rf release32 release64
+	$(MAKE) -C tools clean
+	$(ECHO_CMD)-rm -rf release32 release64 ../qt-console/obj32 ../cats/obj32 ../wx-console/obj32
+	$(ECHO_CMD)-rm -rf stored/obj32 dird/obj32 cats/obj32 wx-console/obj32
+	$(ECHO_CMD)-rm -f ../qt-console/release/bat.exe ../qt-console/debug/bat.exe
+	$(ECHO_CMD)-rm -f ../qt-console/tray-monitor/release/bacula-tray-monitor.exe ../qt-console/tray-monitor/debug/bacula-tray-monitor.exe
 
 bat:
 	(cd ../qt-console; ./make-win32)
@@ -77,7 +95,7 @@ Makefile.inc:
 	@echo Creating $@
 	$(ECHO_CMD)TOPDIR=`(cd ../../..;pwd)`; \
 	TOPDIR=$${DEPKGS:-$${TOPDIR}}; \
-	if test "$(WIN64)" = yes -a -e $${TOPDIR}/cross-tools/mingw-w64/bin/x86_64-pc-mingw32-gcc; then \
+	if test "$(win64)" = yes -a -e $${TOPDIR}/cross-tools/mingw-w64/bin/x86_64-pc-mingw32-gcc; then \
 		BINDIR=$${TOPDIR}/cross-tools/mingw-w64/bin; \
 		INCDIR=$${TOPDIR}/cross-tools/mingw-w64/x86_64-pc-mingw32/include; \
 		DLLDIR=$${TOPDIR}/cross-tools/mingw-w64/x86_64-pc-mingw32/bin; \
@@ -97,7 +115,8 @@ Makefile.inc:
 	BUILDDIR=`(pwd)`; \
 	MAINDIR=`(cd ../..;pwd)`; \
 	sed \
-		-e "s^@WIN64@^$${WIN64}^" \
+		-e "s^@WIN64@^$${win64}^" \
+		-e "s^@BAT@^$${bat}^" \
 		-e "s^@WIN32DEPKGS@^$${DEPKGSDIR}^" \
 		-e "s^@WIN32DEPKGS32@^$${DEPKGSDIR32}^" \
 		-e "s^@WIN32BUILDDIR@^$${BUILDDIR}^" \

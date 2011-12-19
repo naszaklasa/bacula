@@ -95,7 +95,7 @@ static RES_ITEM dir_items[] = {
    {"name",        store_name,     ITEM(res_dir.hdr.name), 0, ITEM_REQUIRED, 0},
    {"description", store_str,      ITEM(res_dir.hdr.desc), 0, 0, 0},
    {"dirport",     store_pint32,   ITEM(res_dir.DIRport),  0, ITEM_DEFAULT, 9101},
-   {"address",     store_str,      ITEM(res_dir.address),  0, 0, 0},
+   {"address",     store_str,      ITEM(res_dir.address),  0, ITEM_REQUIRED, 0},
    {"enablessl",   store_bool,     ITEM(res_dir.enable_ssl), 1, ITEM_DEFAULT, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };

@@ -2,9 +2,6 @@
 /* ------------------------------------------------------------------------- */
 /* --                     CONFIGURE SPECIFIED FEATURES                    -- */
 /* ------------------------------------------------------------------------- */
-
-/* Define if you want to use the lock manager */
-#undef _USE_LOCKMGR
    
 /* Define if you want to use MySQL as Catalog database */
 #undef USE_MYSQL_DB
@@ -36,42 +33,8 @@
 /* Define if you want to use embedded MySQL */
 #undef HAVE_EMBEDDED_MYSQL
 
-/* Define if you want to use SQLite */
-#undef HAVE_SQLITE
-
 /* Define if you want to use SQLite3 */
 #undef HAVE_SQLITE3
-
-/* Define if you want to use Berkeley DB */
-#undef HAVE_BERKELEY_DB
-
-/* Define if you want to use mSQL */
-#undef HAVE_MSQL
-
-/* Define if you want to use iODBC */
-#undef HAVE_IODBC
-
-/* Define if you want to use unixODBC */
-#undef HAVE_UNIXODBC
-
-/* Define if you want to use Solid SQL Server */
-#undef HAVE_SOLID
-
-/* Define if you want to use OpenLink ODBC (Virtuoso) */
-#undef HAVE_VIRT
-
-/* Define if you want to use EasySoft ODBC */
-#undef HAVE_EASYSOFT
-
-/* Define if you want to use Interbase SQL Server */
-#undef HAVE_IBASE
-
-/* Define if you want to use Oracle 8 SQL Server */
-#undef HAVE_ORACLE8
-
-/* Define if you want to use Oracle 7 SQL Server */
-#undef HAVE_ORACLE7
-
 
 /* ------------------------------------------------------------------------- */
 /* --                     CONFIGURE DETECTED FEATURES                     -- */
@@ -90,7 +53,7 @@
 #undef HAVE_GCC
 
 /* Define if you have the Andrew File System.  */
-#undef AFS
+#undef HAVE_AFS
 
 /* Define If you want find -nouser and -nogroup to make tables of
    used UIDs and GIDs at startup instead of using getpwuid or
@@ -126,10 +89,6 @@
 /* Define to 1 if utime.h exists and declares struct utimbuf.  */
 #undef HAVE_UTIME_H
 
-#if (HAVE_MYSQL||HAVE_POSTGRESQL||HAVE_MSQL||HAVE_IODBC||HAVE_UNIXODBC||HAVE_SOLID||HAVE_VIRT||HAVE_IBASE||HAVE_ORACLE8||HAVE_ORACLE7||HAVE_EASYSOFT)
-#define HAVE_SQL
-#endif
-
 /* Data types */
 #undef HAVE_U_INT
 #undef HAVE_INTXX_T
@@ -155,30 +114,8 @@
 /* Define if you have zlib */
 #undef HAVE_LIBZ
 
-/* Defines if your system have the sys/acl.h header file */
-#undef HAVE_SYS_ACL_H
-
 /* Define if you have libacl */
 #undef HAVE_ACL
-
-/* Define if you have extended acls */
-#undef HAVE_EXTENDED_ACL
-
-/* Defines if your system have the sys/xattr.h header file */
-#undef HAVE_SYS_XATTR_H
-
-/* Define if you have extended attributes */
-#undef HAVE_XATTR
-
-/* Define when you have extended attributes functions starting with l (like lstat) */
-#undef HAVE_LLISTXATTR
-#undef HAVE_LGETXATTR
-#undef HAVE_LSETXATTR
-
-/* Define when you have extended attributes functions not starting with l (like stat) */
-#undef HAVE_LISTXATTR
-#undef HAVE_GETXATTR
-#undef HAVE_SETXATTR
 
 /* General libs */
 #undef LIBS
@@ -239,9 +176,8 @@
 #undef HAVE_SOCKLEN_T
 
 #undef HAVE_OLD_SOCKOPT
+#undef USE_THR_SETCONCURRENCY
  
-#undef HAVE_BIGENDIAN
-
 /* Defined if Gtk+-2.4 or greater is present */
 #undef HAVE_GTK_2_4
 
@@ -266,7 +202,6 @@
 /* Define if language support is enabled */
 #undef ENABLE_NLS
 
-
 /* Define to 1 if the `closedir' function returns void instead of `int'. */
 #undef CLOSEDIR_VOID
 
@@ -281,6 +216,9 @@
 /* Define to 1 if translation of program messages to the user's native
    language is requested. */
 #undef ENABLE_NLS
+
+/* Normal acl support */
+#undef HAVE_ACL
 
 /* Define to 1 if you have `alloca', as a function or macro. */
 #undef HAVE_ALLOCA
@@ -301,11 +239,11 @@
 /* Define to 1 if you have the <assert.h> header file. */
 #undef HAVE_ASSERT_H
 
+/* Defines if your system have the attr.h header file */
+#undef HAVE_ATTR_H
+
 /* Set if Bacula bat Qt4 GUI support enabled */
 #undef HAVE_BAT
-
-/* Set if DB batch insert code enabled */
-#undef HAVE_BATCH_FILE_INSERT
 
 /* Define to 1 if you have the MacOS X function CFLocaleCopyCurrent in the
    CoreFoundation framework. */
@@ -329,6 +267,9 @@
 
 /* Set if you have the DBI driver */
 #undef HAVE_DBI
+
+/* Set if DBI DB batch insert code enabled */
+#undef HAVE_DBI_BATCH_FILE_INSERT
 
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
@@ -368,8 +309,41 @@
 /* Define to 1 if you don't have `vprintf' but do have `_doprnt.' */
 #undef HAVE_DOPRNT
 
+/* Define to 1 if you have the 'extattr_get_file' function. */
+#undef HAVE_EXTATTR_GET_FILE
+
+/* Define to 1 if you have the 'extattr_get_link' function. */
+#undef HAVE_EXTATTR_GET_LINK
+
+/* Define to 1 if you have the 'extattr_list_file' function. */
+#undef HAVE_EXTATTR_LIST_FILE
+
+/* Define to 1 if you have the 'extattr_list_link' function. */
+#undef HAVE_EXTATTR_LIST_LINK
+
+/* Define to 1 if you have the 'extattr_namespace_to_string' function. */
+#undef HAVE_EXTATTR_NAMESPACE_TO_STRING
+
+/* Define to 1 if you have the 'extattr_set_file' function. */
+#undef HAVE_EXTATTR_SET_FILE
+
+/* Define to 1 if you have the 'extattr_set_link' function. */
+#undef HAVE_EXTATTR_SET_LINK
+
+/* Define to 1 if you have the 'extattr_string_to_namespace' function. */
+#undef HAVE_EXTATTR_STRING_TO_NAMESPACE
+
+/* Extended acl support */
+#undef HAVE_EXTENDED_ACL
+
+/* AFS ACL support */
+#undef HAVE_AFS_ACL
+
 /* Define to 1 if you have the `fchdir' function. */
 #undef HAVE_FCHDIR
+
+/* Define to 1 if you have the 'fchownat' function. */
+#undef HAVE_FCHOWNAT
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
@@ -382,6 +356,12 @@
 
 /* Define to 1 if you have the `fseeko' function. */
 #undef HAVE_FSEEKO
+
+/* Define to 1 if you have the 'fstatat' function. */
+#undef HAVE_FSTATAT
+
+/* Define to 1 if you have the 'futimesat' function. */
+#undef HAVE_FUTIMESAT
 
 /* Define to 1 if you have the `fwprintf' function. */
 #undef HAVE_FWPRINTF
@@ -428,6 +408,9 @@
 /* Define to 1 if you have the `getuid' function. */
 #undef HAVE_GETUID
 
+/* Define to 1 if you have the 'getxattr' function. */
+#undef HAVE_GETXATTR
+
 /* Define to 1 if you have the <grp.h> header file. */
 #undef HAVE_GRP_H
 
@@ -443,8 +426,14 @@
 /* Define to 1 if you have the `inet_pton' function. */
 #undef HAVE_INET_PTON
 
+/* Set if have Ingres Database */
+#undef HAVE_INGRES
+
 /* Define if you have the 'intmax_t' type in <stdint.h> or <inttypes.h>. */
 #undef HAVE_INTMAX_T
+
+/* Define to 1 if the system has the type `intptr_t'. */
+#undef HAVE_INTPTR_T
 
 /* Define if <inttypes.h> exists and doesn't clash with <sys/types.h>. */
 #undef HAVE_INTTYPES_H
@@ -452,6 +441,9 @@
 /* Define if <inttypes.h> exists, doesn't clash with <sys/types.h>, and
    declares uintmax_t. */
 #undef HAVE_INTTYPES_H_WITH_UINTMAX
+
+/* Set if ioctl request is unsigned long int */
+#undef HAVE_IOCTL_ULINT_REQUEST
 
 /* Whether to enable IPv6 support */
 #undef HAVE_IPV6
@@ -464,6 +456,12 @@
 
 /* Define if your <locale.h> file defines LC_MESSAGES. */
 #undef HAVE_LC_MESSAGES
+
+/* Define to 1 if you have the 'lgetxattr' function. */
+#undef HAVE_LGETXATTR
+
+/* Define if you have libcap */
+#undef HAVE_LIBCAP
 
 /* Define to 1 if you have the <libc.h> header file. */
 #undef HAVE_LIBC_H
@@ -486,6 +484,9 @@
 /* Define to 1 if you have the `util' library (-lutil). */
 #undef HAVE_LIBUTIL
 
+/* Defines if your system have the libutil.h header file */
+#undef HAVE_LIBUTIL_H
+
 /* Set to enable libwraper support */
 #undef HAVE_LIBWRAP
 
@@ -494,6 +495,12 @@
 
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
+
+/* Define to 1 if you have the 'listxattr' function. */
+#undef HAVE_LISTXATTR
+
+/* Define to 1 if you have the 'llistxattr' function. */
+#undef HAVE_LLISTXATTR
 
 /* Define to 1 if you have the <locale.h> header file. */
 #undef HAVE_LOCALE_H
@@ -506,6 +513,9 @@
 
 /* Define if you have the 'long long' type. */
 #undef HAVE_LONG_LONG
+
+/* Define to 1 if you have the 'lsetxattr' function. */
+#undef HAVE_LSETXATTR
 
 /* Define to 1 if you have the `lstat' function. */
 #undef HAVE_LSTAT
@@ -528,6 +538,12 @@
 /* Define to 1 if you have the `munmap' function. */
 #undef HAVE_MUNMAP
 
+/* Set if you have an MySQL Database */
+#undef HAVE_MYSQL
+
+/* Set if have mysql_thread_safe */
+#undef HAVE_MYSQL_THREAD_SAFE
+
 /* Define to 1 if you have the `nanosleep' function. */
 #undef HAVE_NANOSLEEP
 
@@ -540,11 +556,20 @@
 /* Define to 1 if you have the <nl_types.h> header file. */
 #undef HAVE_NL_TYPES_H
 
+/* Define to 1 if you have the 'nvlist_next_nvpair' function. */
+#undef HAVE_NVLIST_NEXT_NVPAIR
+
+/* Define to 1 if you have the 'openat' function. */
+#undef HAVE_OPENAT
+
 /* Define if OpenSSL library is available */
 #undef HAVE_OPENSSL
 
 /* Define if the OpenSSL library is export-contrained to 128bit ciphers */
 #undef HAVE_OPENSSL_EXPORT_LIBRARY
+
+/* Set if have OpenSSL version 1.x */
+#undef HAVE_OPENSSLv1
 
 /* Define to 1 if you have the `posix_fadvise' function. */
 #undef HAVE_POSIX_FADVISE
@@ -552,14 +577,23 @@
 /* Define if your printf() function supports format strings with positions. */
 #undef HAVE_POSIX_PRINTF
 
+/* Set if PostgreSQL DB batch insert code enabled */
+#undef HAVE_POSTGRESQL_BATCH_FILE_INSERT
+
+/* Set if have PQisthreadsafe */
+#undef HAVE_PQISTHREADSAFE
+
+/* Set if have PQputCopyData */
+#undef HAVE_PQ_COPY
+
+/* Define to 1 if you have the `prctl' function. */
+#undef HAVE_PRCTL
+
 /* Define to 1 if you have the `putenv' function. */
 #undef HAVE_PUTENV
 
 /* Define to 1 if you have the <pwd.h> header file. */
 #undef HAVE_PWD_H
-
-/* Set if bat QWT library found */
-#undef HAVE_QWT
 
 /* Define to 1 if you have the `readdir_r' function. */
 #undef HAVE_READDIR_R
@@ -569,9 +603,6 @@
 
 /* Define to 1 if you have the <regex.h> header file. */
 #undef HAVE_REGEX_H
-
-/* Define to 1 if you have the <resolv.h> header file. */
-#undef HAVE_RESOLV_H
 
 /* Define if sa_len field exists in struct sockaddr */
 #undef HAVE_SA_LEN
@@ -591,8 +622,14 @@
 /* Define to 1 if you have the `setpgrp' function. */
 #undef HAVE_SETPGRP
 
+/* Define to 1 if you have the `setreuid' function. */
+#undef HAVE_SETREUID
+
 /* Define to 1 if you have the `setsid' function. */
 #undef HAVE_SETSID
+
+/* Define to 1 if you have the 'setxattr' function. */
+#undef HAVE_SETXATTR
 
 /* Define if the SHA-2 family of digest algorithms is available */
 #undef HAVE_SHA2
@@ -602,6 +639,12 @@
 
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
+
+/* Set if socklen_t exists */
+#undef HAVE_SOCKLEN_T
+
+/* Set if have sqlite3_threadsafe */
+#undef HAVE_SQLITE3_THREADSAFE
 
 /* Define to 1 if you have the <stdarg.h> header file. */
 #undef HAVE_STDARG_H
@@ -679,15 +722,27 @@
    `HAVE_STRUCT_STAT_ST_RDEV' instead. */
 #undef HAVE_ST_RDEV
 
+/* Defines if your system have the sys/acl.h header file */
+#undef HAVE_SYS_ACL_H
+
+/* Defines if your system have the sys/attr.h header file */
+#undef HAVE_SYS_ATTR_H
+
 /* Define to 1 if you have the <sys/bitypes.h> header file. */
 #undef HAVE_SYS_BITYPES_H
 
 /* Define to 1 if you have the <sys/byteorder.h> header file. */
 #undef HAVE_SYS_BYTEORDER_H
 
+/* Define to 1 if you have the <sys/capability.h> header file. */
+#undef HAVE_SYS_CAPABILITY_H
+
 /* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
    */
 #undef HAVE_SYS_DIR_H
+
+/* Defines if your system have the sys/extattr.h header file */
+#undef HAVE_SYS_EXTATTR_H
 
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
 #undef HAVE_SYS_IOCTL_H
@@ -699,8 +754,14 @@
    */
 #undef HAVE_SYS_NDIR_H
 
+/* Defines if your system have the sys/nvpair.h header file */
+#undef HAVE_SYS_NVPAIR_H
+
 /* Define to 1 if you have the <sys/param.h> header file. */
 #undef HAVE_SYS_PARAM_H
+
+/* Define to 1 if you have the <sys/prctl.h> header file. */
+#undef HAVE_SYS_PRCTL_H
 
 /* Define to 1 if you have the <sys/select.h> header file. */
 #undef HAVE_SYS_SELECT_H
@@ -728,6 +789,9 @@
 
 /* Define to 1 if you have <sys/wait.h> that is POSIX.1 compatible. */
 #undef HAVE_SYS_WAIT_H
+
+/* Defines if your system have the sys/xattr.h header file */
+#undef HAVE_SYS_XATTR_H
 
 /* Define to 1 if you have the `tcgetattr' function. */
 #undef HAVE_TCGETATTR
@@ -761,8 +825,14 @@
 /* Define if you have the 'uintmax_t' type in <stdint.h> or <inttypes.h>. */
 #undef HAVE_UINTMAX_T
 
+/* Define to 1 if the system has the type `uintptr_t'. */
+#undef HAVE_UINTPTR_T
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the 'unlinkat' function. */
+#undef HAVE_UNLINKAT
 
 /* Define if you have the 'unsigned long long' type. */
 #undef HAVE_UNSIGNED_LONG_LONG
@@ -793,6 +863,9 @@
 
 /* Define if you have the 'wint_t' type. */
 #undef HAVE_WINT_T
+
+/* Extended Attributes support */
+#undef HAVE_XATTR
 
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
@@ -899,6 +972,9 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
 
+/* Set if DB batch insert code enabled */
+#undef USE_BATCH_FILE_INSERT
+
 /* Define to 1 if the X Window System is missing or not being used. */
 #undef X_DISPLAY_MISSING
 
@@ -910,6 +986,9 @@
 
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
+
+/* Set if you want Lock Manager enabled */
+#undef _USE_LOCKMGR
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
@@ -931,6 +1010,10 @@
 
 /* Define to `unsigned long' if <sys/types.h> does not define. */
 #undef ino_t
+
+/* Define to the type of a signed integer type wide enough to hold a pointer,
+   if such a type exists, and if the system does not define it. */
+#undef intptr_t
 
 /* Define to `int' if <sys/types.h> does not define. */
 #undef major_t
@@ -966,3 +1049,7 @@
 /* Define to unsigned long or unsigned long long if <stdint.h> and
    <inttypes.h> don't define. */
 #undef uintmax_t
+
+/* Define to the type of an unsigned integer type wide enough to hold a
+   pointer, if such a type exists, and if the system does not define it. */
+#undef uintptr_t

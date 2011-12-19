@@ -75,8 +75,8 @@ public:
    char *eor;                   /* end of regexp in expr */
 
    char *return_fname(const char *fname, int len); /* return fname as result */
-   char *edit_subst(const char *fname, regmatch_t regs[]);
-   int compute_dest_len(const char *fname, regmatch_t regs[]);
+   char *edit_subst(const char *fname, regmatch_t pmatch[]);
+   int compute_dest_len(const char *fname, regmatch_t pmatch[]);
    bool extract_regexp(const char *motif);
 };
 

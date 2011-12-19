@@ -140,7 +140,7 @@
           </sizepolicy>
          </property>
          <property name="title" >
-          <string>Jolist Limit Options</string>
+          <string>Joblist Limit Options</string>
          </property>
          <layout class="QGridLayout" >
           <property name="leftMargin" >

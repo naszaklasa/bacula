@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,7 +26,6 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id: dirstat.cpp 5880 2007-11-09 01:20:40Z bartleyd2 $
  *
  *   Dirk Bartley, March 2007
  */
@@ -36,10 +35,12 @@
 #include <QTableWidgetItem>
 #include "dirstat.h"
 
+static bool working = false;         /* prevent timer recursion */
+
 /*
  * Constructor for the class
  */
-DirStat::DirStat()
+DirStat::DirStat() : Pages()
 {
    setupUi(this);
    m_name = tr("Director Status");
@@ -97,12 +98,14 @@ void DirStat::timerTriggered()
 {
    double value = timerDisplay->value();
    value -= 1;
-   if (value == 0) {
+   if (value <= 0 && !working) {
+      working = true;
       value = spinBox->value();
       bool iscurrent = mainWin->tabWidget->currentIndex() == mainWin->tabWidget->indexOf(this);
       if (((isDocked() && iscurrent) || ((!isDocked()) && isOnceDocked())) && (checkBox->checkState() == Qt::Checked)) {
          populateAll();
       }
+      working = false;
    }
    timerDisplay->display(value);
 }
@@ -171,7 +174,7 @@ void DirStat::populateTerminated()
                   p_tableitem->setBackground(Qt::green);
                else
                   p_tableitem->setBackground(Qt::red);
-	    }
+            }
             terminatedTable->setItem(results.size() - row - 1, column, p_tableitem);
             column += 1;
          }

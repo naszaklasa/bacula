@@ -2,67 +2,31 @@
 #
 # Make full release
 #
-. ./functions
 
-# Bacula git repos
-bacula=${bacula:-${HOME}/bacula/k}
-docs=${docs:-${HOME}/bacula/docs}
-rescue=${rescue:-${HOME}/bacula/rescue}
-#
-# Set the following to your remote name.  By default it is origin.
-remote=bs
+# Source config
+. ./config
 
-#
-# Note, you will probably want to set updatepo=no if you
-#   run this script multiple times for a given release.
-export updatepo=no
-export push=yes
+echo "Creating release version: ${ver}"
 
-
-if [ $# != 1 ] ; then
-  echo "Need $0 <Branch-to-release>"
-  echo "e.g. $0 Branch-5.0"
-  exit 1
-fi
-
-branch=$1
-
-cwd=`pwd`
-
-# We pull the version $ver from the main bacula source directory
-cd $bacula/bacula
-check_return_code "makeall: Directory $bacula/bacula does not exist"
-
-current=`git branch | awk '/*/ { print $2 }'`
-git checkout ${branch}
-check_return_code "makeall: Checkout of branch ${branch} failed."
-
-git pull ${remote} ${branch}
-ver=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' src/version.h`
-git checkout ${current}
 cd $cwd
 
-# ./makeclean
 ./makebacularel $bacula $remote $branch $ver
-check_return_code "$0: makebacularel bad return code"
-
 ./makedocsrel $bacula $docs $remote $branch $ver
-check_return_code "$0: makedocsrel bad return code"
-
-
 ./makewinrel $bacula $remote $branch $ver | tee win$$.log
-check_return_code "$0: makewinrel bad return code"
 
 # strip ./configure strerror from Win log file
 sed -i -e 's%strerror%%' win$$.log
 # check for warning and error messages
 grep -i warning win$$.log >/dev/null
-check_return_code "makeall: Warnings in win$$.log"
+if [ $? -eq 0 ] ; then
+  echo " "
+  echo "Warnings in win$$.log"
+  exit 1
+fi
 grep -i error win$$.log >/dev/null
-check_return_code "makeall: Errors in win$$.log"
+if [ $? -eq 0 ] ; then
+  echo " "
+  echo "Errors in win$$.log"
+  exit 1
+fi
 rm -f win$$.log
-
-./makerescuerel $rescue $remote $branch $ver
-check_return_code "$0: makerescuerel bad return code"
-
-exit 0

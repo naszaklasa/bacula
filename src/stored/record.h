@@ -98,7 +98,8 @@ struct DEV_RECORD {
    uint32_t VolSessionId;             /* sequential id within this session */
    uint32_t VolSessionTime;           /* session start time */
    int32_t  FileIndex;                /* sequential file number */
-   int32_t  Stream;                   /* stream number */
+   int32_t  Stream;                   /* Full Stream number with high bits */
+   int32_t  maskedStream;             /* Masked Stream without high bits */
    uint32_t data_len;                 /* current record length */
    uint32_t remainder;                /* remaining bytes to read/write */
    uint32_t state;                    /* state bits */

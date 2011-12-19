@@ -72,6 +72,10 @@ const int sd_dbglvl = 300;
 #else
 #define uLongf uint32_t
 #endif
+#ifdef HAVE_LZO
+#include <lzo/lzoconf.h>
+#include <lzo/lzo1x.h>
+#endif
 #ifdef HAVE_FNMATCH
 #include <fnmatch.h>
 #else

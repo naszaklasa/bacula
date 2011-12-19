@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,6 @@
  *
  *     Kern Sibbald, September MM
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -346,8 +345,7 @@ void update_vol_recyclepool(UAContext *ua, char *val, MEDIA_DBR *mr)
 {
    POOL_DBR pr;
    POOL_MEM query(PM_MESSAGE);
-   char ed1[50], ed2[50];
-   const char *poolname;
+   char ed1[50], ed2[50], *poolname;
 
    if(val && *val) { /* update volume recyclepool="Scratch" */
      /* If a pool name is given, look up the PoolId */
@@ -479,7 +477,7 @@ static void update_vol_actiononpurge(UAContext *ua, char *val, MEDIA_DBR *mr)
 {
    POOL_MEM ret;
    if (strcasecmp(val, "truncate") == 0) {
-      mr->ActionOnPurge = AOP_TRUNCATE;
+      mr->ActionOnPurge = ON_PURGE_TRUNCATE;
    } else {
       mr->ActionOnPurge = 0;
    }
@@ -489,7 +487,7 @@ static void update_vol_actiononpurge(UAContext *ua, char *val, MEDIA_DBR *mr)
                     db_strerror(ua->db));
    } else {
       ua->info_msg(_("New ActionOnPurge is: %s\n"), 
-                   aop_to_str(mr->ActionOnPurge, ret));
+                   action_on_purge_to_string(mr->ActionOnPurge, ret));
    }
 }
 
@@ -820,7 +818,7 @@ static int update_volume(UAContext *ua)
       case 16:
          pm_strcpy(ret, "");
          ua->info_msg(_("Current ActionOnPurge is: %s\n"), 
-                      aop_to_str(mr.ActionOnPurge, ret));
+                      action_on_purge_to_string(mr.ActionOnPurge, ret));
          if (!get_cmd(ua, _("Enter new ActionOnPurge (one of: Truncate, None): "))) {
             return 0;
          }

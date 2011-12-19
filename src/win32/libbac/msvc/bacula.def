@@ -359,8 +359,6 @@ fnmatch
  
 ; message.obj 
 ?my_name_is@@YAXHQAPADPBD@Z
-?get_db_type@@YAPBDXZ
-?set_db_type@@YAXPBD@Z
 ?init_msg@@YAXPAVJCR@@PAVMSGS@@@Z
 ?init_console_msg@@YAXPBD@Z
 ?add_msg_dest@@YAXPAVMSGS@@HHPAD1@Z

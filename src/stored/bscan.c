@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -39,6 +39,7 @@
 #include "stored.h"
 #include "findlib/find.h"
 #include "cats/cats.h"
+#include "cats/sql_glue.h"
  
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) { return 1; }
@@ -296,8 +297,8 @@ int main (int argc, char *argv[])
          edit_uint64(currentVolumeSize, ed1));
    }
 
-   if ((db=db_init(NULL, db_driver, db_name, db_user, db_password,
-        db_host, db_port, NULL, 0)) == NULL) {
+   if ((db = db_init_database(NULL, db_driver, db_name, db_user, db_password,
+                              db_host, db_port, NULL, false, false)) == NULL) {
       Emsg0(M_ERROR_TERM, 0, _("Could not init Bacula database\n"));
    }
    if (!db_open_database(NULL, db)) {
@@ -347,9 +348,11 @@ static bool bscan_mount_next_read_volume(DCR *dcr)
       mdcr->EndFile = dcr->EndFile;
       mdcr->VolMediaId = dcr->VolMediaId;
       mjcr->read_dcr->VolLastIndex = dcr->VolLastIndex;
-      if (!create_jobmedia_record(db, mjcr)) {
-         Pmsg2(000, _("Could not create JobMedia record for Volume=%s Job=%s\n"),
-            dev->getVolCatName(), mjcr->Job);
+      if( mjcr->bscan_insert_jobmedia_records ) {
+         if (!create_jobmedia_record(db, mjcr)) {
+            Pmsg2(000, _("Could not create JobMedia record for Volume=%s Job=%s\n"),
+               dev->getVolCatName(), mjcr->Job);
+         }
       }
    }
 
@@ -404,6 +407,9 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    DEVICE *dev = dcr->dev;
    JCR *bjcr = dcr->jcr;
    DEV_BLOCK *block = dcr->block;
+   POOL_MEM sql_buffer;
+   db_int64_ctx jmr_count;
+
    char digest[BASE64_SIZE(CRYPTO_DIGEST_MAX_SIZE)];
 
    if (rec->data_len > 0) {
@@ -526,10 +532,11 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
                   jr.JobId);
             }
          }
+
          /* Create Client record if not already there */
-            bstrncpy(cr.Name, label.ClientName, sizeof(cr.Name));
-            create_client_record(db, &cr);
-            jr.ClientId = cr.ClientId;
+         bstrncpy(cr.Name, label.ClientName, sizeof(cr.Name));
+         create_client_record(db, &cr);
+         jr.ClientId = cr.ClientId;
 
          /* process label, if Job record exists don't update db */
          mjcr = create_job_record(db, &jr, &label, rec);
@@ -538,7 +545,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
 
          jr.PoolId = pr.PoolId;
          mjcr->start_time = jr.StartTime;
-         mjcr->set_JobLevel(jr.JobLevel);
+         mjcr->setJobLevel(jr.JobLevel);
 
          mjcr->client_name = get_pool_memory(PM_FNAME);
          pm_strcpy(mjcr->client_name, label.ClientName);
@@ -546,6 +553,19 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          pm_strcpy(mjcr->fileset_name, label.FileSetName);
          bstrncpy(dcr->pool_type, label.PoolType, sizeof(dcr->pool_type));
          bstrncpy(dcr->pool_name, label.PoolName, sizeof(dcr->pool_name));
+
+         /* Look for existing Job Media records for this job.  If there are 
+            any, no new ones need be created.  This may occur if File 
+            Retention has expired before Job Retention, or if the volume
+            has already been bscan'd */
+         Mmsg(sql_buffer, "SELECT count(*) from JobMedia where JobId=%d", jr.JobId);
+         db_sql_query(db, sql_buffer.c_str(), db_int64_handler, &jmr_count); 
+         if( jmr_count.value > 0 ) {
+            //FIELD NAME TO BE DEFINED/CONFIRMED (maybe a struct?)
+            mjcr->bscan_insert_jobmedia_records = false; 
+         } else {
+            mjcr->bscan_insert_jobmedia_records = true;
+         }
 
          if (rec->VolSessionId != jr.VolSessionId) {
             Pmsg3(000, _("SOS_LABEL: VolSessId mismatch for JobId=%u. DB=%d Vol=%d\n"),
@@ -591,7 +611,9 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
 
          /* Create JobMedia record */
          mjcr->read_dcr->VolLastIndex = dcr->VolLastIndex;
-         create_jobmedia_record(db, mjcr);
+         if( mjcr->bscan_insert_jobmedia_records ) {
+            create_jobmedia_record(db, mjcr); 
+         }
          free_dcr(mjcr->read_dcr);
          free_jcr(mjcr);
 
@@ -658,16 +680,16 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    }
 
    /* File Attributes stream */
-   switch (rec->Stream) {
+   switch (rec->maskedStream) {
    case STREAM_UNIX_ATTRIBUTES:
    case STREAM_UNIX_ATTRIBUTES_EX:
 
-      if (!unpack_attributes_record(bjcr, rec->Stream, rec->data, attr)) {
+      if (!unpack_attributes_record(bjcr, rec->Stream, rec->data, rec->data_len, attr)) {
          Emsg0(M_ERROR_TERM, 0, _("Cannot continue.\n"));
       }
 
       if (verbose > 1) {
-         decode_stat(attr->attr, &attr->statp, &attr->LinkFI);
+         decode_stat(attr->attr, &attr->statp, sizeof(attr->statp), &attr->LinkFI);
          build_attr_output_fnames(bjcr, attr);
          print_ls_output(bjcr, attr);
       }
@@ -687,10 +709,16 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       free_jcr(mjcr);
       break;
 
+   case STREAM_RESTORE_OBJECT:
+   /* ****FIXME*****/
+      /* Implement putting into catalog */
+      break;
+
    /* Data stream */
    case STREAM_WIN32_DATA:
    case STREAM_FILE_DATA:
    case STREAM_SPARSE_DATA:
+   case STREAM_MACOS_FORK_DATA:
    case STREAM_ENCRYPTED_FILE_DATA:
    case STREAM_ENCRYPTED_WIN32_DATA:
    case STREAM_ENCRYPTED_MACOS_FORK_DATA:
@@ -699,7 +727,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
        * The data must be decrypted to know the correct length.
        */
       mjcr->JobBytes += rec->data_len;
-      if (rec->Stream == STREAM_SPARSE_DATA) {
+      if (rec->maskedStream == STREAM_SPARSE_DATA) {
          mjcr->JobBytes -= sizeof(uint64_t);
       }
 
@@ -707,8 +735,11 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       break;
 
    case STREAM_GZIP_DATA:
+   case STREAM_COMPRESSED_DATA:
    case STREAM_ENCRYPTED_FILE_GZIP_DATA:
+   case STREAM_ENCRYPTED_FILE_COMPRESSED_DATA:
    case STREAM_ENCRYPTED_WIN32_GZIP_DATA:
+   case STREAM_ENCRYPTED_WIN32_COMPRESSED_DATA:
       /* No correct, we should (decrypt and) expand it 
          done using JCR 
       */
@@ -717,12 +748,14 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       break;
 
    case STREAM_SPARSE_GZIP_DATA:
+   case STREAM_SPARSE_COMPRESSED_DATA:
       mjcr->JobBytes += rec->data_len - sizeof(uint64_t); /* No correct, we should expand it */
       free_jcr(mjcr);                 /* done using JCR */
       break;
 
    /* Win32 GZIP stream */
    case STREAM_WIN32_GZIP_DATA:
+   case STREAM_WIN32_COMPRESSED_DATA:
       mjcr->JobBytes += rec->data_len;
       free_jcr(mjcr);                 /* done using JCR */
       break;
@@ -787,6 +820,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
 
    case STREAM_UNIX_ACCESS_ACL:          /* Deprecated Standard ACL attributes on UNIX */
    case STREAM_UNIX_DEFAULT_ACL:         /* Deprecated Default ACL attributes on UNIX */
+   case STREAM_HFSPLUS_ATTRIBUTES:
    case STREAM_ACL_AIX_TEXT:
    case STREAM_ACL_DARWIN_ACCESS_ACL:
    case STREAM_ACL_FREEBSD_DEFAULT_ACL:
@@ -801,9 +835,15 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    case STREAM_ACL_TRU64_ACCESS_ACL:
    case STREAM_ACL_SOLARIS_ACLENT:
    case STREAM_ACL_SOLARIS_ACE:
+   case STREAM_ACL_AFS_TEXT:
+   case STREAM_ACL_AIX_AIXC:
+   case STREAM_ACL_AIX_NFS4:
+   case STREAM_ACL_FREEBSD_NFS4_ACL:
       /* Ignore Unix ACL attributes */
       break;
 
+   case STREAM_XATTR_TRU64:
+   case STREAM_XATTR_AIX:
    case STREAM_XATTR_OPENBSD:
    case STREAM_XATTR_SOLARIS_SYS:
    case STREAM_XATTR_SOLARIS:
@@ -832,11 +872,11 @@ static void bscan_free_jcr(JCR *jcr)
 
    if (jcr->file_bsock) {
       Dmsg0(200, "Close File bsock\n");
-      bnet_close(jcr->file_bsock);
+      jcr->file_bsock->close();
    }
    if (jcr->store_bsock) {
       Dmsg0(200, "Close Store bsock\n");
-      bnet_close(jcr->store_bsock);
+      jcr->store_bsock->close();
    }
    if (jcr->RestoreBootstrap) {
       free(jcr->RestoreBootstrap);
@@ -1133,6 +1173,9 @@ static int update_job_record(B_DB *db, JOB_DBR *jr, SESSION_LABEL *elabel,
    jr->JobStatus = elabel->JobStatus;
    mjcr->JobStatus = elabel->JobStatus;
    jr->JobFiles = elabel->JobFiles;
+   if (jr->JobFiles > 0) {  /* If we found files, force PurgedFiles */
+      jr->PurgedFiles = 0;
+   }
    jr->JobBytes = elabel->JobBytes;
    jr->VolSessionId = rec->VolSessionId;
    jr->VolSessionTime = rec->VolSessionTime;
@@ -1295,8 +1338,8 @@ static JCR *create_jcr(JOB_DBR *jr, DEV_RECORD *rec, uint32_t JobId)
     *   the JobId and the ClientId.
     */
    jobjcr = new_jcr(sizeof(JCR), bscan_free_jcr);
-   jobjcr->set_JobType(jr->JobType);
-   jobjcr->set_JobLevel(jr->JobLevel);
+   jobjcr->setJobType(jr->JobType);
+   jobjcr->setJobLevel(jr->JobLevel);
    jobjcr->JobStatus = jr->JobStatus;
    bstrncpy(jobjcr->Job, jr->Job, sizeof(jobjcr->Job));
    jobjcr->JobId = JobId;      /* this is JobId on tape */

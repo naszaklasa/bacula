@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,6 @@
  *
  *   Kern Sibbald, March MMVII
  *
- *  $Id$
  */ 
 
 #include "bat.h"
@@ -40,7 +39,7 @@
 /*
  * Read the items for the selection
  */
-selectDialog::selectDialog(Console *console, int conn) 
+selectDialog::selectDialog(Console *console, int conn) : QDialog()
 {
    m_conn = conn;
    QDateTime dt;
@@ -105,7 +104,7 @@ void selectDialog::index_change(int index)
 /*
  * Read the items for the selection
  */
-yesnoPopUp::yesnoPopUp(Console *console, int conn) 
+yesnoPopUp::yesnoPopUp(Console *console, int conn)  : QDialog()
 {
    QMessageBox msgBox;
 

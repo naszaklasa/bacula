@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -36,6 +36,15 @@
 #include "bat.h"
 #include <QApplication>
 #include <QTranslator>
+
+/*
+ * We need Qt version 4.6.2 or later to be able to comple correctly
+ */
+#if QT_VERSION < 0x040602
+#error "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+#error "You need Qt version 4.6.2 or later to build Bat"
+#error "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+#endif
 
 MainWin *mainWin;
 QApplication *app;
@@ -158,6 +167,9 @@ int main(int argc, char *argv[])
 
    if (!check_resources()) {
       Emsg1(M_ERROR_TERM, 0, _("Please correct configuration file: %s\n"), configfile);
+   }
+   if (test_config) {
+      exit(0);
    }
 
    mainWin = new MainWin;

@@ -244,6 +244,7 @@ void store_bool(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_time(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_size64(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_size32(LEX *lc, RES_ITEM *item, int index, int pass);
+void store_speed(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_defs(LEX *lc, RES_ITEM *item, int index, int pass);
 void store_label(LEX *lc, RES_ITEM *item, int index, int pass);
 

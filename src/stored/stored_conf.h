@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,7 +28,6 @@
 /*
  * Resource codes -- they must be sequential for indexing
  *
- *   Version $Id$
  */
 
 enum {
@@ -110,7 +109,7 @@ public:
    alist *device;                     /* List of DEVRES device pointers */
    char *changer_name;                /* Changer device name */
    char *changer_command;             /* Changer command  -- external program */
-   pthread_mutex_t changer_mutex;     /* One changer operation at a time */
+   brwlock_t changer_lock;            /* One changer operation at a time */
 };
 
 /* Device specific definitions */

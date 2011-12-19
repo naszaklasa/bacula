@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -25,7 +25,7 @@
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
 */
-/*
+/**
  * Main program to test loading and running Bacula plugins.
  *   Destined to become Bacula pluginloader, ...
  *
@@ -33,6 +33,12 @@
  */
 #include "bacula.h"
 #include "filed.h"
+
+extern CLIENT *me;
+extern DLL_IMP_EXP char *exepath;
+extern DLL_IMP_EXP char *version;
+extern DLL_IMP_EXP char *dist_name;
+extern DLL_IMP_EXP int beef;
 
 const int dbglvl = 150;
 #ifdef HAVE_WIN32
@@ -42,6 +48,7 @@ const char *plugin_type = "-fd.so";
 #endif
 
 extern int save_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level);
+extern bool check_changes(JCR *jcr, FF_PKT *ff_pkt);
 
 /* Function pointers to be set here */
 extern DLL_IMP_EXP int     (*plugin_bopen)(BFILE *bfd, const char *fname, int flags, mode_t mode);
@@ -62,7 +69,16 @@ static bRC baculaDebugMsg(bpContext *ctx, const char *file, int line,
 static void *baculaMalloc(bpContext *ctx, const char *file, int line,
               size_t size);
 static void baculaFree(bpContext *ctx, const char *file, int line, void *mem);
+static bRC  baculaAddExclude(bpContext *ctx, const char *file);
+static bRC baculaAddInclude(bpContext *ctx, const char *file);
+static bRC baculaAddOptions(bpContext *ctx, const char *opts);
+static bRC baculaAddRegex(bpContext *ctx, const char *item, int type);
+static bRC baculaAddWild(bpContext *ctx, const char *item, int type);
+static bRC baculaNewOptions(bpContext *ctx);
+static bRC baculaNewInclude(bpContext *ctx);
 static bool is_plugin_compatible(Plugin *plugin);
+static bool get_plugin_name(JCR *jcr, char *cmd, int *ret);
+static bRC baculaCheckChanges(bpContext *ctx, struct save_pkt *sp);
 
 /*
  * These will be plugged into the global pointer structure for
@@ -74,6 +90,7 @@ static ssize_t my_plugin_bread(BFILE *bfd, void *buf, size_t count);
 static ssize_t my_plugin_bwrite(BFILE *bfd, void *buf, size_t count);
 static boffset_t my_plugin_blseek(BFILE *bfd, boffset_t offset, int whence);
 
+#define for_this_plug(plugin, str, len) (((len) == (plugin)->file_len) && strncmp((plugin)->file, str, len) == 0)
 
 /* Bacula info */
 static bInfo binfo = {
@@ -91,7 +108,15 @@ static bFuncs bfuncs = {
    baculaJobMsg,
    baculaDebugMsg,
    baculaMalloc,
-   baculaFree
+   baculaFree,
+   baculaAddExclude,
+   baculaAddInclude,
+   baculaAddOptions,
+   baculaAddRegex,
+   baculaAddWild,
+   baculaNewOptions,
+   baculaNewInclude,
+   baculaCheckChanges
 };
 
 /* 
@@ -101,6 +126,8 @@ struct bacula_ctx {
    JCR *jcr;                             /* jcr for plugin */
    bRC  rc;                              /* last return code */
    bool disabled;                        /* set if plugin disabled */
+   findINCEXE *exclude;                  /* pointer to exclude files */
+   findINCEXE *include;                  /* pointer to include/exclude files */
 };
 
 static bool is_plugin_disabled(bpContext *plugin_ctx)
@@ -118,7 +145,7 @@ static bool is_plugin_disabled(JCR *jcr)
    return is_plugin_disabled(jcr->plugin_ctx);
 }
 
-/*
+/**
  * Create a plugin event 
  * When receiving bEventCancelCommand, this function is called by an other thread. 
  */
@@ -128,9 +155,50 @@ void generate_plugin_event(JCR *jcr, bEventType eventType, void *value)
    bEvent event;
    Plugin *plugin;
    int i = 0;
+   char *name = NULL;
+   int len = 0;
+   bool call_if_canceled = false;
+   bRC rc;
 
-   if (!plugin_list || !jcr || !jcr->plugin_ctx_list || job_canceled(jcr)) {
+   if (!bplugin_list || !jcr || !jcr->plugin_ctx_list) {
       return;                         /* Return if no plugins loaded */
+   }
+   
+   /*
+    * Some events are sent to only a particular plugin or must be
+    *  called even if the job is canceled
+    */
+   switch(eventType) {
+   case bEventPluginCommand:
+      name = (char *)value;
+      if (!get_plugin_name(jcr, name, &len)) {
+         return;
+      }
+      break;
+   case bEventEndBackupJob:
+   case bEventEndVerifyJob:
+      call_if_canceled = true;
+      break;
+   case bEventStartRestoreJob:
+      if (jcr->plugin) {
+         jcr->plugin->restoreFileStarted = false;
+         jcr->plugin->createFileCalled = false;
+      }
+      break;
+   case bEventEndRestoreJob:
+      call_if_canceled = true;
+      if (jcr->plugin && jcr->plugin->restoreFileStarted) {
+         plug_func(jcr->plugin)->endRestoreFile(jcr->plugin_ctx);
+         jcr->plugin->restoreFileStarted = false;
+         jcr->plugin->createFileCalled = false;
+      }
+      break;
+   default:
+      break;
+   }
+
+   if (!call_if_canceled && jcr->is_job_canceled()) {
+      return;
    }
 
    bpContext *plugin_ctx_list = (bpContext *)jcr->plugin_ctx_list;
@@ -138,9 +206,15 @@ void generate_plugin_event(JCR *jcr, bEventType eventType, void *value)
 
    Dmsg2(dbglvl, "plugin_ctx=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
 
-   /* Pass event to every plugin */
-   foreach_alist(plugin, plugin_list) {
-      bRC rc;
+   /*
+    * Pass event to every plugin (except if name is set). If name
+    *   is set, we pass it only to the plugin with that name.
+    */
+   foreach_alist(plugin, bplugin_list) {
+      if (name && !for_this_plug(plugin, name, len)) {
+         i++;
+         continue;
+      }
       plugin_ctx = &plugin_ctx_list[i++];
       if (is_plugin_disabled(plugin_ctx)) {
          continue;
@@ -153,7 +227,7 @@ void generate_plugin_event(JCR *jcr, bEventType eventType, void *value)
    return;
 }
 
-/*
+/**
  * Check if file was seen for accurate
  */
 bool plugin_check_file(JCR *jcr, char *fname)
@@ -162,7 +236,7 @@ bool plugin_check_file(JCR *jcr, char *fname)
    int rc = bRC_OK;
    int i = 0;
 
-   if (!plugin_list || !jcr || !jcr->plugin_ctx_list || job_canceled(jcr)) {
+   if (!bplugin_list || !jcr || !jcr->plugin_ctx_list || jcr->is_job_canceled()) {
       return false;                      /* Return if no plugins loaded */
    }
 
@@ -171,7 +245,7 @@ bool plugin_check_file(JCR *jcr, char *fname)
    Dmsg2(dbglvl, "plugin_ctx=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
 
    /* Pass event to every plugin */
-   foreach_alist(plugin, plugin_list) {
+   foreach_alist(plugin, bplugin_list) {
       jcr->plugin_ctx = &plugin_ctx_list[i++];
       jcr->plugin = plugin;
       if (is_plugin_disabled(jcr)) {
@@ -191,8 +265,42 @@ bool plugin_check_file(JCR *jcr, char *fname)
    return rc == bRC_Seen;
 }
 
+/* Get the first part of the the plugin command
+ *  systemstate:/@SYSTEMSTATE/ 
+ * => ret = 11
+ * => can use for_this_plug(plug, cmd, ret);
+ *
+ * The plugin command can contain only the plugin name
+ *  Plugin = alldrives
+ * => ret = 9
+ */
+static bool get_plugin_name(JCR *jcr, char *cmd, int *ret)
+{
+   char *p;
+   int len;
+   if (!cmd || (*cmd == '\0')) {
+      return false;
+   }
+   /* Handle plugin command here backup */
+   Dmsg1(dbglvl, "plugin cmd=%s\n", cmd);
+   if ((p = strchr(cmd, ':')) == NULL) {
+      if (strchr(cmd, ' ') == NULL) { /* we have just the plugin name */
+         len = strlen(cmd);
+      } else {
+         Jmsg1(jcr, M_ERROR, 0, "Malformed plugin command: %s\n", cmd);
+         return false;
+      }
+   } else {                     /* plugin:argument */
+      len = p - cmd;
+      if (len <= 0) {
+         return false;
+      }
+   }
+   *ret = len;
+   return true;
+}
 
-/*   
+/**  
  * Sequence of calls for a backup:
  * 1. plugin_save() here is called with ff_pkt
  * 2. we find the plugin requested on the command string
@@ -212,14 +320,13 @@ int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    Plugin *plugin;
    int i = 0;
    int len;
-   char *p;
    char *cmd = ff_pkt->top_fname;
    struct save_pkt sp;
    bEvent event;
    POOL_MEM fname(PM_FNAME);
    POOL_MEM link(PM_FNAME);
 
-   if (!plugin_list || !jcr->plugin_ctx_list || jcr->is_job_canceled()) {
+   if (!bplugin_list || !jcr->plugin_ctx_list || jcr->is_job_canceled()) {
       Jmsg1(jcr, M_FATAL, 0, "Command plugin \"%s\" requested, but is not loaded.\n", cmd);
       return 1;                            /* Return if no plugins loaded */
    }
@@ -228,21 +335,14 @@ int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    bpContext *plugin_ctx_list = (bpContext *)jcr->plugin_ctx_list;
    event.eventType = bEventBackupCommand;
 
-   /* Handle plugin command here backup */
-   Dmsg1(dbglvl, "plugin cmd=%s\n", cmd);
-   if (!(p = strchr(cmd, ':'))) {
-      Jmsg1(jcr, M_ERROR, 0, "Malformed plugin command: %s\n", cmd);
-      goto bail_out;
-   }
-   len = p - cmd;
-   if (len <= 0) {
+   if (!get_plugin_name(jcr, cmd, &len)) {
       goto bail_out;
    }
 
    /* Note, we stop the loop on the first plugin that matches the name */
-   foreach_alist(plugin, plugin_list) {
-      Dmsg3(dbglvl, "plugin=%s cmd=%s len=%d\n", plugin->file, cmd, len);
-      if (strncmp(plugin->file, cmd, len) != 0) {
+   foreach_alist(plugin, bplugin_list) {
+      Dmsg4(dbglvl, "plugin=%s plen=%d cmd=%s len=%d\n", plugin->file, plugin->file_len, cmd, len);
+      if (!for_this_plug(plugin, cmd, len)) {
          i++;
          continue;
       }
@@ -263,20 +363,21 @@ int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
          goto bail_out;
       }
       /* Loop getting filenames to backup then saving them */
-      while (!job_canceled(jcr)) { 
+      while (!jcr->is_job_canceled()) { 
          memset(&sp, 0, sizeof(sp));
          sp.pkt_size = sizeof(sp);
          sp.pkt_end = sizeof(sp);
          sp.portable = true;
+         sp.flags = 0;
          sp.cmd = cmd;
          Dmsg3(dbglvl, "startBackup st_size=%p st_blocks=%p sp=%p\n", &sp.statp.st_size, &sp.statp.st_blocks,
                 &sp);
-         /* Get the file save parameters */
+         /* Get the file save parameters. I.e. the stat pkt ... */
          if (plug_func(plugin)->startBackupFile(jcr->plugin_ctx, &sp) != bRC_OK) {
             goto bail_out;
          }
-         if (sp.type == 0 || sp.fname == NULL) {
-            Jmsg1(jcr, M_FATAL, 0, _("Command plugin \"%s\" returned bad startBackupFile packet.\n"),
+         if (sp.type == 0) {
+            Jmsg1(jcr, M_FATAL, 0, _("Command plugin \"%s\": no type in startBackupFile packet.\n"),
                cmd);
             goto bail_out;
          }
@@ -286,13 +387,52 @@ int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
           * Copy fname and link because save_file() zaps them.  This 
           *  avoids zaping the plugin's strings.
           */
-         pm_strcpy(fname, sp.fname);
-         pm_strcpy(link, sp.link);
-         ff_pkt->fname = fname.c_str();
-         ff_pkt->link = link.c_str();
          ff_pkt->type = sp.type;
+         if (sp.type == FT_RESTORE_FIRST) {
+            if (!sp.object_name) {
+               Jmsg1(jcr, M_FATAL, 0, _("Command plugin \"%s\": no object_name in startBackupFile packet.\n"),
+                  cmd);
+               goto bail_out;
+            }
+            ff_pkt->fname = cmd;                 /* full plugin string */
+            ff_pkt->object_name = sp.object_name;
+            ff_pkt->object_index = sp.index;     /* restore object index */
+            ff_pkt->object_compression = 0;      /* no compression for now */
+            ff_pkt->object = sp.object;
+            ff_pkt->object_len = sp.object_len;
+         } else {
+            if (!sp.fname) {
+               Jmsg1(jcr, M_FATAL, 0, _("Command plugin \"%s\": no fname in startBackupFile packet.\n"),
+                  cmd);
+               goto bail_out;
+            }
+            pm_strcpy(fname, sp.fname);
+            pm_strcpy(link, sp.link);
+            ff_pkt->fname = fname.c_str();
+            ff_pkt->link = link.c_str();
+            ff_pkt->delta_seq = sp.delta_seq;
+            if (sp.flags & FO_DELTA) {
+               ff_pkt->flags |= FO_DELTA;
+               ff_pkt->delta_seq++;          /* make new delta sequence number */
+            } else {
+               ff_pkt->flags &= ~FO_DELTA;   /* clean delta sequence number */
+               ff_pkt->delta_seq = 0;
+            }
+            if (sp.flags & FO_OFFSETS) {
+               ff_pkt->flags |= FO_OFFSETS;
+            }
+            if (sp.flags & FO_PORTABLE_DATA) {
+               ff_pkt->flags |= FO_PORTABLE_DATA;
+            }
+            ff_pkt->flags |= FO_PLUGIN;       /* data from plugin */
+         }
+
          memcpy(&ff_pkt->statp, &sp.statp, sizeof(ff_pkt->statp));
-         Dmsg1(dbglvl, "Save_file: file=%s\n", fname.c_str());
+         Dmsg2(dbglvl, "startBackup returned type=%d, fname=%s\n", sp.type, sp.fname);
+         if (sp.object) {
+            Dmsg2(dbglvl, "index=%d object=%s\n", sp.index, sp.object);
+         }   
+         /* Call Bacula core code to backup the plugin's file */
          save_file(jcr, ff_pkt, true);
          bRC rc = plug_func(plugin)->endBackupFile(jcr->plugin_ctx);
          if (rc == bRC_More || rc == bRC_OK) {
@@ -302,9 +442,9 @@ int plugin_save(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
             continue;
          }
          goto bail_out;
-      }
+      } /* end while loop */
       goto bail_out;
-   }
+   } /* end loop over all plugins */
    Jmsg1(jcr, M_FATAL, 0, "Command plugin \"%s\" not found.\n", cmd);
 
 bail_out:
@@ -314,7 +454,7 @@ bail_out:
    return 1;
 }
 
-/* 
+/**
  * Send plugin name start/end record to SD
  */
 bool send_plugin_name(JCR *jcr, BSOCK *sd, bool start)
@@ -327,7 +467,7 @@ bool send_plugin_name(JCR *jcr, BSOCK *sd, bool start)
       Jmsg0(jcr, M_FATAL, 0, _("Plugin save packet not found.\n"));
       return false;
    }
-   if (job_canceled(jcr)) {
+   if (jcr->is_job_canceled()) {
       return false;
    }
   
@@ -341,26 +481,26 @@ bool send_plugin_name(JCR *jcr, BSOCK *sd, bool start)
            sd->bstrerror());
      return false;
    }
-   Dmsg1(50, "send: %s\n", sd->msg);
+   Dmsg1(50, "send plugin name hdr: %s\n", sd->msg);
 
    if (start) {
       /* Send data -- not much */
       stat = sd->fsend("%ld 1 %d %s%c", index, sp->portable, sp->cmd, 0);
    } else {
       /* Send end of data */
-      stat = sd->fsend("0 0");
+      stat = sd->fsend("%ld 0", jcr->JobFiles);
    }
    if (!stat) {
       Jmsg1(jcr, M_FATAL, 0, _("Network send error to SD. ERR=%s\n"),
             sd->bstrerror());
          return false;
    }
-   Dmsg1(dbglvl, "send: %s\n", sd->msg);
+   Dmsg1(dbglvl, "send plugin start/end: %s\n", sd->msg);
    sd->signal(BNET_EOD);            /* indicate end of plugin name data */
    return true;
 }
 
-/*
+/**
  * Plugin name stream found during restore.  The record passed in
  *  argument name was generated in send_plugin_name() above.
  *
@@ -394,8 +534,10 @@ bool plugin_name_stream(JCR *jcr, char *name)
        * End of plugin data, notify plugin, then clear flags   
        */
       Dmsg2(dbglvl, "End plugin data plugin=%p ctx=%p\n", jcr->plugin, jcr->plugin_ctx);
-      if (jcr->plugin) {
+      if (jcr->plugin && jcr->plugin->restoreFileStarted) {
          plug_func(jcr->plugin)->endRestoreFile(jcr->plugin_ctx);
+         jcr->plugin->restoreFileStarted = false;
+         jcr->plugin->createFileCalled = false;
       }
       jcr->plugin_ctx = NULL;
       jcr->plugin = NULL;
@@ -408,25 +550,17 @@ bool plugin_name_stream(JCR *jcr, char *name)
    /*
     * After this point, we are dealing with a restore start
     */
-
-// Dmsg1(dbglvl, "plugin restore cmd=%s\n", cmd);
-   if (!(p = strchr(cmd, ':'))) {
-      Jmsg1(jcr, M_ERROR, 0,
-           _("Malformed plugin command. Name not terminated by colon: %s\n"), cmd);
-      goto bail_out;
-   }
-   len = p - cmd;
-   if (len <= 0) {
+   if (!get_plugin_name(jcr, cmd, &len)) {
       goto bail_out;
    }
 
    /*
     * Search for correct plugin as specified on the command 
     */
-   foreach_alist(plugin, plugin_list) {
+   foreach_alist(plugin, bplugin_list) {
       bEvent event;
       Dmsg3(dbglvl, "plugin=%s cmd=%s len=%d\n", plugin->file, cmd, len);
-      if (strncmp(plugin->file, cmd, len) != 0) {
+      if (!for_this_plug(plugin, cmd, len)) {
          i++;
          continue;
       }
@@ -441,8 +575,13 @@ bool plugin_name_stream(JCR *jcr, char *name)
             &event, cmd) != bRC_OK) {
          goto bail_out;
       }
-      /* ***FIXME**** check error code */
-      plug_func(plugin)->startRestoreFile((bpContext *)jcr->plugin_ctx, cmd);
+      if (plugin->restoreFileStarted)
+      {
+         Jmsg0(jcr, M_FATAL, 0, "Unbalanced call to startRestoreFile\n");
+         goto bail_out;
+      }
+      plug_func(plugin)->startRestoreFile(jcr->plugin_ctx, cmd);
+      plugin->restoreFileStarted = true;
       goto bail_out;
    }
    Jmsg1(jcr, M_WARNING, 0, _("Plugin=%s not found.\n"), cmd);
@@ -451,7 +590,7 @@ bail_out:
    return start;
 }
 
-/*
+/**
  * Tell the plugin to create the file.  Return values are
  *   This is called only during Restore
  *
@@ -469,11 +608,13 @@ int plugin_create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
    int flags;
    int rc;
 
-   if (!plugin || !plugin_ctx || !set_cmd_plugin(bfd, jcr) || job_canceled(jcr)) {
+   if (!plugin || !plugin_ctx || !set_cmd_plugin(bfd, jcr) || jcr->is_job_canceled()) {
       return CF_ERROR;
    }
+
    rp.pkt_size = sizeof(rp);
    rp.pkt_end = sizeof(rp);
+   rp.delta_seq = attr->delta_seq;
    rp.stream = attr->stream;
    rp.data_stream = attr->data_stream;
    rp.type = attr->type;
@@ -488,12 +629,24 @@ int plugin_create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
    rp.RegexWhere = jcr->RegexWhere;
    rp.replace = jcr->replace;
    rp.create_status = CF_ERROR;
-   Dmsg1(dbglvl, "call plugin createFile=%s\n", rp.ofname);
+   Dmsg4(dbglvl, "call plugin createFile stream=%d type=%d LinkFI=%d File=%s\n", 
+         rp.stream, rp.type, rp.LinkFI, rp.ofname);
+   if (rp.attrEx) {
+      Dmsg1(dbglvl, "attrEx=\"%s\"\n", rp.attrEx);
+   }
+   if (!plugin->restoreFileStarted || plugin->createFileCalled)
+   {
+      Jmsg0(jcr, M_FATAL, 0, "Unbalanced call to createFile\n");
+      return CF_ERROR;
+   }
    rc = plug_func(plugin)->createFile(plugin_ctx, &rp);
    if (rc != bRC_OK) {
       Qmsg2(jcr, M_ERROR, 0, _("Plugin createFile call failed. Stat=%d file=%s\n"),
             rc, attr->ofname);
       return CF_ERROR;
+   }
+   if (rp.create_status == CF_SKIP) {
+      return CF_SKIP;
    }
    if (rp.create_status == CF_ERROR) {
       Qmsg1(jcr, M_ERROR, 0, _("Plugin createFile call failed. Returned CF_ERROR file=%s\n"),
@@ -524,7 +677,7 @@ int plugin_create_file(JCR *jcr, ATTR *attr, BFILE *bfd, int replace)
    return CF_EXTRACT;
 }
 
-/*
+/**
  * Reset the file attributes after all file I/O is done -- this allows
  *  the previous access time/dates to be set properly, and it also allows
  *  us to properly set directory permissions.
@@ -558,7 +711,7 @@ void dump_fd_plugin(Plugin *plugin, FILE *fp)
    fprintf(fp, "\tdescription=%s\n", NPRTB(info->plugin_description));
 }
 
-/*
+/**
  * This entry point is called internally by Bacula to ensure
  *  that the plugin IO calls come into this code.
  */
@@ -571,13 +724,13 @@ void load_fd_plugins(const char *plugin_dir)
       return;
    }
 
-   plugin_list = New(alist(10, not_owned_by_alist));
+   bplugin_list = New(alist(10, not_owned_by_alist));
    if (!load_plugins((void *)&binfo, (void *)&bfuncs, plugin_dir, plugin_type,
                      is_plugin_compatible)) {
       /* Either none found, or some error */
-      if (plugin_list->size() == 0) {
-         delete plugin_list;
-         plugin_list = NULL;
+      if (bplugin_list->size() == 0) {
+         delete bplugin_list;
+         bplugin_list = NULL;
          Dmsg0(dbglvl, "No plugins loaded\n");
          return;
       }
@@ -594,7 +747,7 @@ void load_fd_plugins(const char *plugin_dir)
     * Verify that the plugin is acceptable, and print information
     *  about it.
     */
-   foreach_alist(plugin, plugin_list) {
+   foreach_alist(plugin, bplugin_list) {
       Jmsg(NULL, M_INFO, 0, _("Loaded plugin: %s\n"), plugin->file);
       Dmsg1(dbglvl, "Loaded plugin: %s\n", plugin->file);
    }
@@ -602,7 +755,7 @@ void load_fd_plugins(const char *plugin_dir)
    dbg_plugin_add_hook(dump_fd_plugin);
 }
 
-/*
+/**
  * Check if a plugin is compatible.  Called by the load_plugin function
  *  to allow us to verify the plugin.
  */
@@ -636,14 +789,17 @@ static bool is_plugin_compatible(Plugin *plugin)
            plugin->file, info->plugin_license);
       return false;
    }
-      
+   if (info->size != sizeof(pInfo)) {
+      Jmsg(NULL, M_ERROR, 0, _("Plugin size mismatch.\n"));
+      return false;
+   }
    return true;
 }
 
 
-/*
+/**
  * Create a new instance of each plugin for this Job
- *   Note, plugin_list can exist but jcr->plugin_ctx_list can
+ *   Note, bplugin_list can exist but jcr->plugin_ctx_list can
  *   be NULL if no plugins were loaded.
  */
 void new_plugins(JCR *jcr)
@@ -651,15 +807,15 @@ void new_plugins(JCR *jcr)
    Plugin *plugin;
    int i = 0;
 
-   if (!plugin_list) {
+   if (!bplugin_list) {
       Dmsg0(dbglvl, "plugin list is NULL\n");
       return;
    }
-   if (job_canceled(jcr)) {
+   if (jcr->is_job_canceled() || jcr->JobId == 0) {
       return;
    }
 
-   int num = plugin_list->size();
+   int num = bplugin_list->size();
 
    if (num == 0) {
       Dmsg0(dbglvl, "No plugins loaded\n");
@@ -670,7 +826,7 @@ void new_plugins(JCR *jcr)
 
    bpContext *plugin_ctx_list = (bpContext *)jcr->plugin_ctx_list;
    Dmsg2(dbglvl, "Instantiate plugin_ctx=%p JobId=%d\n", plugin_ctx_list, jcr->JobId);
-   foreach_alist(plugin, plugin_list) {
+   foreach_alist(plugin, bplugin_list) {
       /* Start a new instance of each plugin */
       bacula_ctx *b_ctx = (bacula_ctx *)malloc(sizeof(bacula_ctx));
       memset(b_ctx, 0, sizeof(bacula_ctx));
@@ -683,7 +839,7 @@ void new_plugins(JCR *jcr)
    }
 }
 
-/*
+/**
  * Free the plugin instances for this Job
  */
 void free_plugins(JCR *jcr)
@@ -691,13 +847,13 @@ void free_plugins(JCR *jcr)
    Plugin *plugin;
    int i = 0;
 
-   if (!plugin_list || !jcr->plugin_ctx_list) {
+   if (!bplugin_list || !jcr->plugin_ctx_list) {
       return;                         /* no plugins, nothing to do */
    }
 
    bpContext *plugin_ctx_list = (bpContext *)jcr->plugin_ctx_list;
    Dmsg2(dbglvl, "Free instance plugin_ctx=%p JobId=%d\n", plugin_ctx_list, jcr->JobId);
-   foreach_alist(plugin, plugin_list) {   
+   foreach_alist(plugin, bplugin_list) {   
       /* Free the plugin instance */
       plug_func(plugin)->freePlugin(&plugin_ctx_list[i]);
       free(plugin_ctx_list[i++].bContext);     /* free Bacula private context */
@@ -783,8 +939,10 @@ static ssize_t my_plugin_bread(BFILE *bfd, void *buf, size_t count)
    io.count = count;
    io.buf = (char *)buf;
    io.win32 = false;
+   io.offset = 0;
    io.lerror = 0;
    plug_func(plugin)->pluginIO(jcr->plugin_ctx, &io);
+   bfd->offset = io.offset;
    bfd->berrno = io.io_errno;
    if (io.win32) {
       errno = b_errno_win32;
@@ -860,24 +1018,46 @@ static boffset_t my_plugin_blseek(BFILE *bfd, boffset_t offset, int whence)
 static bRC baculaGetValue(bpContext *ctx, bVariable var, void *value)
 {
    JCR *jcr;
-   if (!value || !ctx) {
+   if (!value) {
       return bRC_Error;
    }
-   jcr = ((bacula_ctx *)ctx->bContext)->jcr;
-// Dmsg1(dbglvl, "bacula: baculaGetValue var=%d\n", var);
+
+   switch (var) {               /* General variables, no need of ctx */
+   case bVarFDName:
+      *((char **)value) = my_name;
+      break;
+   case bVarWorkingDir:
+      *(void **)value = me->working_directory;
+      break;
+   case bVarExePath:
+      *(char **)value = exepath;
+      break;
+   case bVarVersion:
+      *(char **)value = version;
+      break;
+   case bVarDistName:
+      *(char **)value = dist_name;
+      break;
+   case bVarBEEF:
+      *((int *)value) = beef;
+      break;
+   default:
+      break;
+   }
+
+   if (!ctx) {                  /* Other variables need context */
+      return bRC_Error;
+   }
+
    jcr = ((bacula_ctx *)ctx->bContext)->jcr;
    if (!jcr) {
       return bRC_Error;
    }
-// Dmsg1(dbglvl, "Bacula: jcr=%p\n", jcr); 
+
    switch (var) {
    case bVarJobId:
       *((int *)value) = jcr->JobId;
       Dmsg1(dbglvl, "Bacula: return bVarJobId=%d\n", jcr->JobId);
-      break;
-   case bVarFDName:
-      *((char **)value) = my_name;
-      Dmsg1(dbglvl, "Bacula: return my_name=%s\n", my_name);
       break;
    case bVarLevel:
       *((int *)value) = jcr->getJobLevel();
@@ -909,6 +1089,36 @@ static bRC baculaGetValue(bpContext *ctx, bVariable var, void *value)
       break;
    case bVarFileSeen:
       break;                 /* a write only variable, ignore read request */
+   case bVarVssObject:
+#ifdef HAVE_WIN32
+      if (g_pVSSClient) {
+         *(void **)value = g_pVSSClient->GetVssObject();
+         break;
+       }
+#endif
+       return bRC_Error;
+   case bVarVssDllHandle:
+#ifdef HAVE_WIN32
+      if (g_pVSSClient) {
+         *(void **)value = g_pVSSClient->GetVssDllHandle();
+         break;
+       }
+#endif
+       return bRC_Error;
+   case bVarWhere:
+      *(char **)value = jcr->where;
+      break;
+   case bVarRegexWhere:
+      *(char **)value = jcr->RegexWhere;
+      break;
+
+   case bVarFDName:             /* get warning with g++ if we missed one */
+   case bVarWorkingDir:
+   case bVarExePath:
+   case bVarVersion:
+   case bVarDistName:
+   case bVarBEEF:
+      break;
    }
    return bRC_OK;
 }
@@ -919,7 +1129,6 @@ static bRC baculaSetValue(bpContext *ctx, bVariable var, void *value)
    if (!value || !ctx) {
       return bRC_Error;
    }
-   jcr = ((bacula_ctx *)ctx->bContext)->jcr;
 // Dmsg1(dbglvl, "bacula: baculaGetValue var=%d\n", var);
    jcr = ((bacula_ctx *)ctx->bContext)->jcr;
    if (!jcr) {
@@ -1007,6 +1216,185 @@ static void baculaFree(bpContext *ctx, const char *file, int line, void *mem)
 #endif
 }
 
+static bool is_ctx_good(bpContext *ctx, JCR *&jcr, bacula_ctx *&bctx)
+{
+   if (!ctx) {
+      return false;
+   }
+   bctx = (bacula_ctx *)ctx->bContext;
+   if (!bctx) {
+      return false;
+   }
+   jcr = bctx->jcr;
+   if (!jcr) {
+      return false;
+   }
+   return true;
+}
+
+/**
+ * Let the plugin define files/directories to be excluded
+ *  from the main backup.
+ */
+static bRC baculaAddExclude(bpContext *ctx, const char *file)
+{
+   JCR *jcr;
+   bacula_ctx *bctx;
+   if (!is_ctx_good(ctx, jcr, bctx)) {
+      return bRC_Error;
+   }
+   if (!file) {
+      return bRC_Error;
+   }
+   if (!bctx->exclude) {  
+      bctx->exclude = new_exclude(jcr);
+      new_options(jcr, bctx->exclude);
+   }
+   set_incexe(jcr, bctx->exclude);
+   add_file_to_fileset(jcr, file, true);
+   Dmsg1(100, "Add exclude file=%s\n", file);
+   return bRC_OK;
+}
+
+/**
+ * Let the plugin define files/directories to be excluded
+ *  from the main backup.
+ */
+static bRC baculaAddInclude(bpContext *ctx, const char *file)
+{
+   JCR *jcr;
+   bacula_ctx *bctx;
+   if (!is_ctx_good(ctx, jcr, bctx)) {
+      return bRC_Error;
+   }
+   if (!file) {
+      return bRC_Error;
+   }
+   if (!bctx->include) {  
+      bctx->include = new_preinclude(jcr);
+      new_options(jcr, bctx->include);
+   }
+   set_incexe(jcr, bctx->include);
+   add_file_to_fileset(jcr, file, true);
+   Dmsg1(100, "Add include file=%s\n", file);
+   return bRC_OK;
+}
+
+static bRC baculaAddOptions(bpContext *ctx, const char *opts)
+{
+   JCR *jcr;
+   bacula_ctx *bctx;
+   if (!is_ctx_good(ctx, jcr, bctx)) {
+      return bRC_Error;
+   }
+   if (!opts) {
+      return bRC_Error;
+   }
+   add_options_to_fileset(jcr, opts);
+   Dmsg1(1000, "Add options=%s\n", opts);
+   return bRC_OK;
+}
+
+static bRC baculaAddRegex(bpContext *ctx, const char *item, int type)
+{
+   JCR *jcr;
+   bacula_ctx *bctx;
+   if (!is_ctx_good(ctx, jcr, bctx)) {
+      return bRC_Error;
+   }
+   if (!item) {
+      return bRC_Error;
+   }
+   add_regex_to_fileset(jcr, item, type);
+   Dmsg1(100, "Add regex=%s\n", item);
+   return bRC_OK;
+}
+
+static bRC baculaAddWild(bpContext *ctx, const char *item, int type)
+{
+   JCR *jcr;
+   bacula_ctx *bctx;
+   if (!is_ctx_good(ctx, jcr, bctx)) {
+      return bRC_Error;
+   }
+   if (!item) {
+      return bRC_Error;
+   }
+   add_wild_to_fileset(jcr, item, type);
+   Dmsg1(100, "Add wild=%s\n", item);
+   return bRC_OK;
+}
+
+static bRC baculaNewOptions(bpContext *ctx)
+{
+   JCR *jcr;
+   bacula_ctx *bctx;
+   if (!is_ctx_good(ctx, jcr, bctx)) {
+      return bRC_Error;
+   }
+   (void)new_options(jcr, NULL);
+   return bRC_OK;
+}
+
+static bRC baculaNewInclude(bpContext *ctx)
+{
+   JCR *jcr;
+   bacula_ctx *bctx;
+   if (!is_ctx_good(ctx, jcr, bctx)) {
+      return bRC_Error;
+   }
+   (void)new_include(jcr);
+   return bRC_OK;
+}
+
+
+/* 
+ * Check if a file have to be backuped using Accurate code
+ */
+static bRC baculaCheckChanges(bpContext *ctx, struct save_pkt *sp)
+{
+   JCR *jcr;
+   bacula_ctx *bctx;
+   FF_PKT *ff_pkt;
+   bRC ret = bRC_Error;
+
+   if (!is_ctx_good(ctx, jcr, bctx)) {
+      goto bail_out;
+   }
+   if (!sp) {
+      goto bail_out;
+   }
+   
+   ff_pkt = jcr->ff;
+   /*
+    * Copy fname and link because save_file() zaps them.  This 
+    *  avoids zaping the plugin's strings.
+    */
+   ff_pkt->type = sp->type;
+   if (!sp->fname) {
+      Jmsg0(jcr, M_FATAL, 0, _("Command plugin: no fname in baculaCheckChanges packet.\n"));
+      goto bail_out;
+   }
+
+   ff_pkt->fname = sp->fname;
+   ff_pkt->link = sp->link;
+   memcpy(&ff_pkt->statp, &sp->statp, sizeof(ff_pkt->statp));
+
+   if (check_changes(jcr, ff_pkt))  {
+      ret = bRC_OK;
+   } else {
+      ret = bRC_Seen;
+   }
+
+   /* check_changes() can update delta sequence number, return it to the
+    * plugin 
+    */
+   sp->delta_seq = ff_pkt->delta_seq;
+
+bail_out:
+   Dmsg1(100, "checkChanges=%i\n", ret);
+   return ret;
+}
 
 
 #ifdef TEST_PROGRAM

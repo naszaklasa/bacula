@@ -92,6 +92,9 @@ public:
    /* Normal text field. Centers field if center true*/
    void setTextFld(int index, const QString &fld, bool center = false);
 
+   /* Normal date field. Centers field if center true*/
+   void setDateFld(int index, utime_t fld, bool center = false);
+
    /* Right-aligned text field. */
    void setRightFld(int index, const QString &fld);
 
@@ -120,6 +123,9 @@ public:
    /* fld value interpreted as Online/Offline */
    void setInChanger(int index, const QString &InChanger);
   
+   /* fld value interpreted as file or folder */
+   void setFileType(int index, const QString &type);
+
    static void setBytesConversion(BYTES_CONVERSION b) {
       cnvFlag = b;
    }

@@ -522,8 +522,8 @@ int main(int argc, char *argv[])
             break;
          }
          //writecmd(&items[i], "quit");
-         bnet_sig(items[i].D_sock, BNET_TERMINATE); /* send EOF */
-         bnet_close(items[i].D_sock);
+         items[i].D_sock->signal(BNET_TERMINATE); /* send EOF */
+         items[i].D_sock->close();
       }
    }
 
@@ -1015,7 +1015,7 @@ int docmd(monitoritem* item, const char* command, GSList** list)
       writecmd(item, command);
 
    while(1) {
-      if ((stat = bnet_recv(item->D_sock)) >= 0) {
+      if ((stat = item->D_sock->recv()) >= 0) {
          *list = g_slist_append(*list, g_string_new(item->D_sock->msg));
       }
       else if (stat == BNET_SIGNAL) {
@@ -1023,13 +1023,13 @@ int docmd(monitoritem* item, const char* command, GSList** list)
             //fprintf(stderr, "<< EOD >>\n");
             return 1;
          }
-         else if (item->D_sock->msglen == BNET_PROMPT) {
+         else if (item->D_sock->msglen == BNET_SUB_PROMPT) {
             //fprintf(stderr, "<< PROMPT >>\n");
-            *list = g_slist_append(*list, g_string_new(_("<< Error: BNET_PROMPT signal received. >>\n")));
+            *list = g_slist_append(*list, g_string_new(_("<< Error: BNET_SUB_PROMPT signal received. >>\n")));
             return 0;
          }
          else if (item->D_sock->msglen == BNET_HEARTBEAT) {
-            bnet_sig(item->D_sock, BNET_HB_RESPONSE);
+            item->D_sock->signal(BNET_HB_RESPONSE);
             *list = g_slist_append(*list, g_string_new(_("<< Heartbeat signal received, answered. >>\n")));
          }
          else {
@@ -1048,7 +1048,7 @@ int docmd(monitoritem* item, const char* command, GSList** list)
          return 0;
       }
 
-      if (is_bnet_stop(item->D_sock)) {
+      if (item->D_sock->is_stop()) {
          g_string_append_printf(str, _("<STOP>\n"));
          item->D_sock = NULL;
          item->state = error;
@@ -1064,7 +1064,7 @@ void writecmd(monitoritem* item, const char* command) {
    if (item->D_sock) {
       item->D_sock->msglen = strlen(command);
       pm_strcpy(&item->D_sock->msg, command);
-      bnet_send(item->D_sock);
+      item->D_sock->send();
    }
 }
 

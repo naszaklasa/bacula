@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -187,7 +187,7 @@ void sm_free(const char *file, int line, void *fp)
    P(mutex);
    Dmsg4(1150, "sm_free %d at %p from %s:%d\n",
          head->ablen, fp,
-         head->abfname, head->ablineno);
+         get_basename(head->abfname), head->ablineno);
 
    if (!head->abin_use) {
       V(mutex);
@@ -212,7 +212,8 @@ void sm_free(const char *file, int line, void *fp)
 
    if (((unsigned char *)cp)[head->ablen - 1] != ((((intptr_t) cp) & 0xFF) ^ 0xC5)) {
       V(mutex);
-      Emsg2(M_ABORT, 0, _("Buffer overrun called from %s:%d\n"), file, line);
+      Emsg6(M_ABORT, 0, _("Overrun buffer: len=%d addr=%p allocated: %s:%d called from %s:%d\n"), 
+         head->ablen, fp, get_basename(head->abfname), head->ablineno, file, line);
    }
    if (sm_buffers > 0) {
       sm_buffers--;
@@ -287,7 +288,7 @@ void *sm_realloc(const char *fname, int lineno, void *ptr, unsigned int size)
    void *buf;
    char *cp = (char *) ptr;
 
-   Dmsg4(1400, "sm_realloc %s:%d %p %d\n", fname, (uint32_t)lineno, ptr, size);
+   Dmsg4(1400, "sm_realloc %s:%d %p %d\n", get_basename(fname), (uint32_t)lineno, ptr, size);
    if (size <= 0) {
       e_msg(fname, lineno, M_ABORT, 0, _("sm_realloc size: %d\n"), size);
    }
@@ -327,7 +328,7 @@ void *sm_realloc(const char *fname, int lineno, void *ptr, unsigned int size)
       /* All done.  Free and dechain the original buffer. */
       sm_free(fname, lineno, ptr);
    }
-   Dmsg4(4150, _("sm_realloc %d at %p from %s:%d\n"), size, buf, fname, (uint32_t)lineno);
+   Dmsg4(4150, _("sm_realloc %d at %p from %s:%d\n"), size, buf, get_basename(fname), (uint32_t)lineno);
    return buf;
 }
 
@@ -400,7 +401,7 @@ void sm_dump(bool bufdump, bool in_use)
 
          Pmsg6(0, "%s buffer: %s %d bytes at %p from %s:%d\n", 
             in_use?"In use":"Orphaned",
-            my_name, memsize, cp, ap->abfname, ap->ablineno);
+            my_name, memsize, cp, get_basename(ap->abfname), ap->ablineno);
          if (bufdump) {
             char buf[20];
             unsigned llen = 0;
@@ -433,7 +434,7 @@ void sm_check(const char *fname, int lineno, bool bufdump)
 {
    if (!sm_check_rtn(fname, lineno, bufdump)) {
       Emsg2(M_ABORT, 0, _("Damaged buffer found. Called from %s:%d\n"),
-            fname, (uint32_t)lineno);
+            get_basename(fname), (uint32_t)lineno);
    }
 }
 
@@ -465,7 +466,7 @@ int sm_check_rtn(const char *fname, int lineno, bool bufdump)
       badbuf |= bad;
       if (bad) {
          Pmsg2(0, 
-            _("\nDamaged buffers found at %s:%d\n"), fname, (uint32_t)lineno);
+            _("\nDamaged buffers found at %s:%d\n"), get_basename(fname), (uint32_t)lineno);
 
          if (bad & 0x1) {
             Pmsg0(0,  _("  discovery of bad prev link.\n"));
@@ -491,7 +492,7 @@ int sm_check_rtn(const char *fname, int lineno, bool bufdump)
 
             Pmsg4(0, 
               _("Damaged buffer:  %6u bytes allocated at line %d of %s %s\n"),
-               memsize, ap->ablineno, my_name, ap->abfname
+               memsize, ap->ablineno, my_name, get_basename(ap->abfname)
             );
             if (bufdump) {
                unsigned llen = 0;

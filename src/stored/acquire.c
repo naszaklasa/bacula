@@ -317,7 +317,7 @@ default_path:
 
    dev->clear_append();
    dev->set_read();
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    dir_send_job_status(jcr);
    Jmsg(jcr, M_INFO, 0, _("Ready to read from volume \"%s\" on device %s.\n"),
       dcr->VolumeName, dev->print_name());
@@ -682,8 +682,11 @@ static void attach_dcr_to_dev(DCR *dcr)
    dev = dcr->dev;
    jcr = dcr->jcr;
    if (jcr) Dmsg1(500, "JobId=%u enter attach_dcr_to_dev\n", (uint32_t)jcr->JobId);
+   /* ***FIXME*** return error if dev not initiated */
    if (!dcr->attached_to_dev && dev->initiated && jcr && jcr->getJobType() != JT_SYSTEM) {
+      dev->dlock();
       dev->attached_dcrs->append(dcr);  /* attach dcr to device */
+      dev->dunlock();
       dcr->attached_to_dev = true;
       Dmsg1(500, "JobId=%u attach_dcr_to_dev\n", (uint32_t)jcr->JobId);
    }

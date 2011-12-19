@@ -279,7 +279,7 @@ extern HrESERestoreSaveEnvironment_t HrESERestoreSaveEnvironment;
 extern HrESERestoreAddDatabase_t HrESERestoreAddDatabase;
 extern HrESERestoreOpenFile_t HrESERestoreOpenFile;
 
-#if !defined(MINGW64)
+#if !defined(MINGW64)  && (_WIN32_WINNT < 0x0500)
 typedef enum _COMPUTER_NAME_FORMAT {
    ComputerNameNetBIOS,
    ComputerNameDnsHostname,

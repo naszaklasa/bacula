@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,12 @@
  *  This is tricky code, especially when writing from scratch. Fortunately,
  *    a non-copyrighted version of mkdir was available to consult.
  *
- *  Version $Id$
+ * ***FIXME*** the mkpath code could be significantly optimized by
+ *   walking up the path chain from the bottom until it either gets
+ *   to the top or finds an existing directory then walk back down
+ *   creating the path components.  Currently, it always starts at
+ *   the top, which can be rather inefficient for long path names.
+ *
  */
 #include "bacula.h"
 #include "jcr.h"
@@ -169,6 +174,7 @@ bool makepath(ATTR *attr, const char *apath, mode_t mode, mode_t parent_mode,
       if (!makedir(jcr, path, tmode, &created)) {
          goto bail_out;
       }
+      Dmsg2(400, "makedir: created=%d %s\n", created, path);
       if (ndir < max_dirs) {
          new_dir[ndir++] = created;
       }
@@ -181,6 +187,7 @@ bool makepath(ATTR *attr, const char *apath, mode_t mode, mode_t parent_mode,
    if (!makedir(jcr, path, tmode, &created)) {
       goto bail_out;
    }
+   Dmsg2(400, "makedir: created=%d %s\n", created, path);
    if (ndir < max_dirs) {
       new_dir[ndir++] = created;
    }

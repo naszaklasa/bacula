@@ -268,7 +268,7 @@ int docmd(monitoritem* item, const char* command, char *answer) {
 
    int stat;
    char num;
-   char *dname;
+   const char *dname;
    
    dname = "";
 
@@ -336,8 +336,8 @@ int docmd(monitoritem* item, const char* command, char *answer) {
 	    	strcpy(answer, "BACULA WARNING - << EOD >>");
 	    	return STATE_WARNING;
 	 }
-	 else if (item->D_sock->msglen == BNET_PROMPT) {
-	    strcpy(answer, "BACULA WARNING - BNET_PROMPT signal received.");
+	 else if (item->D_sock->msglen == BNET_SUB_PROMPT) {
+	    strcpy(answer, "BACULA WARNING - BNET_SUB_PROMPT signal received.");
 	    return STATE_WARNING;
 	 }
 	 else if (item->D_sock->msglen == BNET_HEARTBEAT) {

@@ -69,7 +69,6 @@ struct DIRRES {
    char *tls_keyfile;                 /* TLS Server Key File */
    char *tls_dhfile;                  /* TLS Diffie-Hellman Parameters */
    alist *tls_allowed_cns;            /* TLS Allowed Clients */
-
    TLS_CONTEXT *tls_ctx;              /* Shared TLS Context */
 };
 

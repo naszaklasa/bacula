@@ -35,25 +35,29 @@ if [ -n "`getent services ${NAME}`" ]; then
    BPORT=`getent services ${NAME} | awk '{ gsub("/tcp","",$2); print $2; }'`
 fi
 
+if [ -f /etc/default/$NAME ]; then
+   . /etc/default/$NAME
+fi
+
 PIDFILE=@piddir@/${NAME}.${BPORT}.pid
 
 if [ "x${BUSER}" != "x" ]; then
-   BOPTIONS="${BOPTIONS} -u ${BUSER}"
-fi
-if [ "x${BGROUP}" != "x" ]; then
-   BOPTIONS="${BOPTIONS} -g ${BGROUP}"
+   USERGRP="--chuid ${BUSER}"
+   if [ "x${BGROUP}" != "x" ]; then
+      USERGRP="${USERGRP}:${BGROUP}"
+   fi
 fi
 
 case "$1" in
    start)
       echo -n "Starting ${DESC}: "
-      start-stop-daemon --start --quiet --pidfile ${PIDFILE} --exec ${DAEMON} -- ${BOPTIONS}
+      start-stop-daemon --start --quiet --pidfile ${PIDFILE} ${USERGRP} --exec ${DAEMON} -- ${BOPTIONS}
       RETVAL=$?
       echo "${NAME}"
       ;;
    stop)
       echo -n "Stopping ${DESC}: "
-      start-stop-daemon --oknodo --stop --quiet --exec ${DAEMON} -- ${BOPTIONS}
+      start-stop-daemon --oknodo --stop --quiet ${USERGRP} --exec ${DAEMON} -- ${BOPTIONS}
       RETVAL=$?
       echo "${NAME}"
       ;;

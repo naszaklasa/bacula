@@ -47,7 +47,7 @@ int make_estimate(JCR *jcr)
 {
    int stat;
 
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
    set_find_options((FF_PKT *)jcr->ff, jcr->incremental, jcr->mtime);
    /* in accurate mode, we overwrite the find_one check function */
@@ -82,6 +82,7 @@ static int tally_file(JCR *jcr, FF_PKT *ff_pkt, bool top_level)
    case FT_INVALIDFS:
    case FT_INVALIDDT:
    case FT_REPARSE:
+   case FT_JUNCTION:
    case FT_DIREND:
    case FT_SPEC:
    case FT_RAW:

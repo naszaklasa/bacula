@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,7 +30,6 @@
  *
  *    Kern Sibbald, June MMIII
  *
- *   Version $Id$
  */
 
 #ifndef __ATTR_H_
@@ -43,6 +42,7 @@ struct ATTR {
    int32_t type;                      /* file type FT */
    int32_t file_index;                /* file index */
    int32_t LinkFI;                    /* file index to data if hard link */
+   int32_t delta_seq;                 /* delta sequence numbr */
    uid_t uid;                         /* userid */
    struct stat statp;                 /* decoded stat packet */
    POOLMEM *attrEx;                   /* extended attributes if any */

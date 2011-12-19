@@ -50,6 +50,11 @@ struct s_mem {
 #define first_child(node) \
         ((TREE_NODE *)(node->child.first())
 
+struct delta_list {
+   struct delta_list *next;
+   JobId_t JobId;
+   int32_t FileIndex;
+};
 
 /*
  * Keep this node as small as possible because
@@ -63,6 +68,7 @@ struct s_tree_node {
    char *fname;                       /* file name */
    int32_t FileIndex;                 /* file index */
    uint32_t JobId;                    /* JobId */
+   int32_t delta_seq;                 /* current delta sequence */
    uint16_t fname_len;                /* filename length */
    int type: 8;                       /* node type */
    unsigned int extract: 1;           /* extract item */
@@ -73,6 +79,7 @@ struct s_tree_node {
    unsigned int loaded: 1;            /* set when the dir is in the tree */
    struct s_tree_node *parent;
    struct s_tree_node *next;          /* next hash of FileIndex */
+   struct delta_list *delta_list;     /* delta parts for this node */
 };
 typedef struct s_tree_node TREE_NODE;
 
@@ -84,6 +91,7 @@ struct s_tree_root {
    const char *fname;                 /* file name */
    int32_t FileIndex;                 /* file index */
    uint32_t JobId;                    /* JobId */
+   int32_t delta_seq;                 /* current delta sequence */
    uint16_t fname_len;                /* filename length */
    unsigned int type: 8;              /* node type */
    unsigned int extract: 1;           /* extract item */
@@ -93,6 +101,7 @@ struct s_tree_root {
    unsigned int loaded: 1;            /* set when the dir is in the tree */
    struct s_tree_node *parent;
    struct s_tree_node *next;          /* next hash of FileIndex */
+   struct delta_list *delta_list;     /* delta parts for this node */
 
    /* The above ^^^ must be identical to a TREE_NODE structure */
    struct s_tree_node *first;         /* first entry in the tree */
@@ -121,8 +130,11 @@ TREE_NODE *insert_tree_node(char *path, char *fname, int type,
 TREE_NODE *make_tree_path(char *path, TREE_ROOT *root);
 TREE_NODE *tree_cwd(char *path, TREE_ROOT *root, TREE_NODE *node);
 TREE_NODE *tree_relcwd(char *path, TREE_ROOT *root, TREE_NODE *node);
+void tree_add_delta_part(TREE_ROOT *root, TREE_NODE *node, 
+                         JobId_t JobId, int32_t FileIndex);
 void free_tree(TREE_ROOT *root);
 int tree_getpath(TREE_NODE *node, char *buf, int buf_size);
+void tree_remove_node(TREE_ROOT *root, TREE_NODE *node);
 
 /*
  * Use the following for traversing the whole tree. It will be

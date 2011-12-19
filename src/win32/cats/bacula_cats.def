@@ -38,7 +38,6 @@ _Z20db_start_transactionP3JCRP4B_DB
 _Z23db_open_batch_connexionP3JCRP4B_DB
 _Z24db_check_max_connectionsP3JCRP4B_DBj
 _Z28db_check_backend_thread_safev
-_Z7db_initP3JCRPKcS2_S2_S2_S2_iS2_i
 _Z7QueryDBPKciP3JCRP4B_DBPc
 _Z8DeleteDBPKciP3JCRP4B_DBPc
 _Z8InsertDBPKciP3JCRP4B_DBPc
@@ -130,14 +129,12 @@ _Z28db_add_digest_to_file_recordP3JCRP4B_DByPci
  
 _Z11db_get_typev
 _Z12db_sql_queryP4B_DBPKcPFiPviPPcES3_
-_Z13db_next_indexP3JCRP4B_DBPcS3_
 _Z16db_escape_stringP3JCRP4B_DBPcS3_i
 _Z16db_init_databaseP3JCRPKcS2_S2_S2_iS2_i
 _Z16db_open_databaseP3JCRP4B_DB
 _Z17db_close_databaseP3JCRP4B_DB
 _Z17db_thread_cleanupv
 
-db_type DATA
 client_backups DATA
 list_pool DATA
 drop_deltabs DATA

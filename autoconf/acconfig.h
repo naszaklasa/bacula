@@ -32,42 +32,8 @@
 /* Define if you want to use embedded MySQL */
 #undef HAVE_EMBEDDED_MYSQL
 
-/* Define if you want to use SQLite */
-#undef HAVE_SQLITE
-
 /* Define if you want to use SQLite3 */
 #undef HAVE_SQLITE3
-
-/* Define if you want to use Berkeley DB */
-#undef HAVE_BERKELEY_DB
-
-/* Define if you want to use mSQL */
-#undef HAVE_MSQL
-
-/* Define if you want to use iODBC */
-#undef HAVE_IODBC
-
-/* Define if you want to use unixODBC */
-#undef HAVE_UNIXODBC
-
-/* Define if you want to use Solid SQL Server */
-#undef HAVE_SOLID
-
-/* Define if you want to use OpenLink ODBC (Virtuoso) */
-#undef HAVE_VIRT
-
-/* Define if you want to use EasySoft ODBC */
-#undef HAVE_EASYSOFT
-
-/* Define if you want to use Interbase SQL Server */
-#undef HAVE_IBASE
-
-/* Define if you want to use Oracle 8 SQL Server */
-#undef HAVE_ORACLE8
-
-/* Define if you want to use Oracle 7 SQL Server */
-#undef HAVE_ORACLE7
-
 
 /* ------------------------------------------------------------------------- */
 /* --                     CONFIGURE DETECTED FEATURES                     -- */
@@ -123,10 +89,6 @@
 /* Define to 1 if utime.h exists and declares struct utimbuf.  */
 #undef HAVE_UTIME_H
 
-#if (HAVE_MYSQL||HAVE_POSTGRESQL||HAVE_MSQL||HAVE_IODBC||HAVE_UNIXODBC||HAVE_SOLID||HAVE_VIRT||HAVE_IBASE||HAVE_ORACLE8||HAVE_ORACLE7||HAVE_EASYSOFT)
-#define HAVE_SQL
-#endif
-
 /* Data types */
 #undef HAVE_U_INT
 #undef HAVE_INTXX_T
@@ -152,8 +114,14 @@
 /* Define if you have zlib */
 #undef HAVE_LIBZ
 
+/* Define if you have lzo lib */
+#undef HAVE_LZO
+
 /* Define if you have libacl */
 #undef HAVE_ACL
+
+/* Define if you have AFS acls */
+#undef HAVE_AFS_ACL
 
 /* General libs */
 #undef LIBS
@@ -214,6 +182,7 @@
 #undef HAVE_SOCKLEN_T
 
 #undef HAVE_OLD_SOCKOPT
+#undef USE_THR_SETCONCURRENCY
  
 /* Defined if Gtk+-2.4 or greater is present */
 #undef HAVE_GTK_2_4

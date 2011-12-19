@@ -110,6 +110,21 @@ MTX=/usr/local/sbin/mtx
 
 ######################### Functions
 
+TMPDIR=/tmp
+
+make_temp_file() 
+{
+  TMPFILE=`mktemp ${TMPDIR}/mtx$1.XXXXXXXXXX 2> /dev/null`
+  if test $? -ne 0 || test x${TMPFILE} = x; then
+     TMPFILE="${TMPDIR}/mtx$1.$$"
+     if test -f ${TMPFILE}; then
+        echo "ERROR: Temp file security problem on: ${TMPFILE}"
+        exit 1
+     fi
+  fi
+}
+
+
 
 
 
@@ -372,17 +387,18 @@ case "$2" in
 
    loaded)
       echo "Request loaded, DREW YOU HAVEN'T IMPLEMENTED YET!!!!"
-      ${MTX} -f $1 status >/tmp/mtx.$$
+      make_temp_file
+      ${MTX} -f $1 status >${TMPFILE}
       rtn=$?
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element 0:Full" | awk "{print
+      cat ${TMPFILE} | grep "^Data Transfer Element 0:Full" | awk "{print
 \$7}"
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element 0:Empty" | awk "{print
+      cat ${TMPFILE} | grep "^Data Transfer Element 0:Empty" | awk "{print
 0}"
-#       cat /tmp/mtx.$$ | grep "^Data Transfer Element 1:Full" | awk "{print
+#       cat ${TMPFILE} | grep "^Data Transfer Element 1:Full" | awk "{print
 \$7}"
-#       cat /tmp/mtx.$$ | grep "^Data Transfer Element 1:Empty" | awk
+#       cat ${TMPFILE} | grep "^Data Transfer Element 1:Empty" | awk
 "{print 0}"
-      rm -f /tmp/mtx.$$
+      rm -f ${TMPFILE}
 
       echo "mtx-changer returning value: $rtn"
       exit $rtn

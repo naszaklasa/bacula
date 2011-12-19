@@ -41,6 +41,7 @@
 
 #include "dir_plugins.h"
 #include "cats/cats.h"
+#include "cats/sql_glue.h"
 
 #include "jcr.h"
 #include "bsr.h"

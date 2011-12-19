@@ -1,16 +1,16 @@
 
 #undef  VERSION
-#define VERSION "5.0.3"
-#define BDATE   "04 August 2010"
-#define LSMDATE "04Aug10"
+#define VERSION "5.2.3"
+#define BDATE   "16 December 2011"
+#define LSMDATE "16Dec11"
 
-#define PROG_COPYRIGHT "Copyright (C) %d-2010 Free Software Foundation Europe e.V.\n"
-#define BYEAR "2010"       /* year for copyright messages in progs */
+#define PROG_COPYRIGHT "Copyright (C) %d-2011 Free Software Foundation Europe e.V.\n"
+#define BYEAR "2011"       /* year for copyright messages in progs */
 
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,6 +30,7 @@
    02110-1301, USA.
 
    Bacula® is a registered trademark of Kern Sibbald.
+
    The licensor of Bacula is the Free Software Foundation Europe
    (FSFE), Fiduciary Program, Sumatrastrasse 25, 8006 Zürich,
    Switzerland, email:ftf@fsfeurope.org.
@@ -37,11 +38,12 @@
 
 /* Shared object library versions */
 
-/* Uncomment to overwrite default values from VERSION */
+/* Uncomment to overwrite default value from VERSION */
 /* #define LIBBAC_LT_RELEASE     "5.1.0" */
 /* #define LIBBACCFG_LT_RELEASE  "5.1.0" */
 /* #define LIBBACPY_LT_RELEASE   "5.1.0" */
 /* #define LIBBACSQL_LT_RELEASE  "5.1.0" */
+/* #define LIBBACCATS_LT_RELEASE  "5.1.0" */
 /* #define LIBBACFIND_LT_RELEASE "5.1.0" */
 
 
@@ -53,6 +55,13 @@
 
 /* If this is set stdout will not be closed on startup */
 /* #define DEVELOPER 1 */
+
+/* adjust DEVELOPER_MODE for status command */
+#ifdef DEVELOPER
+# define DEVELOPER_MODE 1
+#else
+# define DEVELOPER_MODE 0
+#endif
 
 /*
  * SMCHECK does orphaned buffer checking (memory leaks)
@@ -81,6 +90,14 @@
  *  deadlock, so turn this on only for debugging.
  */
 #define USE_LOCKMGR_PRIORITY
+
+/*
+ * Enable thread verification before kill 
+ *
+ * Note, this extra check have a high cost when using
+ * dozens of thread, so turn this only for debugging.
+ */
+/* #define USE_LOCKMGR_SAFEKILL */
 #endif  /* DEVELOPER */
 
 #if !HAVE_LINUX_OS && !HAVE_SUN_OS && !HAVE_DARWIN_OS && !HAVE_FREEBSD_OS
@@ -94,6 +111,11 @@
 #ifdef HAVE_LINUX_OS
 # define USE_VTAPE
 #endif
+
+/*
+ * USE_FTP is a ftp driver for the FD using curl.
+ */
+// #define USE_FTP
 
 /* 
  * for fastest speed but you must have a UPS to avoid unwanted shutdowns

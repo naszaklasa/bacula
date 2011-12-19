@@ -1,7 +1,6 @@
 #
 # Bacula Makefile for the File daemon
 #
-#  Version $Id$
 #
 
 @MCOMMON@
@@ -9,6 +8,8 @@
 srcdir =	.
 VPATH = 	.
 .PATH:		.
+
+fd_group=@fd_group@
 
 # one up
 basedir = ..
@@ -23,8 +24,6 @@ GETTEXT_LIBS = @LIBINTL@
 
 PYTHON_LIBS = @PYTHON_LIBS@
 PYTHON_INC = @PYTHON_INCDIR@
-AFS_CFLAGS = @AFS_CFLAGS@
-AFS_LIBS = @AFS_LIBS@
 
 first_rule: all
 dummy:
@@ -42,6 +41,7 @@ EXTRAOBJS = @OBJLIST@
 CAP_LIBS = @CAP_LIBS@
 FDLIBS = @FDLIBS@		  # extra libs for File daemon
 ZLIBS = @ZLIBS@
+LZOLIBS = @LZOLIBS@
 
 # extra items for linking on Win32
 WIN32OBJS = win32/winmain.o win32/winlib.a win32/winres.res
@@ -64,7 +64,7 @@ all: Makefile @WIN32@ bacula-fd @STATIC_FD@
 
 acl.o: acl.c
 	@echo "Compiling $<"
-	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $(AFS_CFLAGS) $<
+	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
 win32/winlib.a:
 	@if test -f win32/Makefile -a "${GMAKE}" != "none"; then \
@@ -94,13 +94,13 @@ win32:	$(WIN32OBJS)
 bacula-fd:  Makefile $(SVROBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) @WIN32@
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(SVROBJS) \
-	  $(WIN32LIBS) $(FDLIBS) $(ZLIBS) -lbacfind -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(LIBS) \
-	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS) $(AFS_LIBS)
+	  $(WIN32LIBS) $(FDLIBS) $(ZLIBS) $(LZOLIBS) -lbacfind -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(LIBS) \
+	  $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
 
 static-bacula-fd: Makefile $(SVROBJS) ../findlib/libbacfind.a ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) @WIN32@
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../findlib -o $@ $(SVROBJS) \
-	   $(WIN32LIBS) $(FDLIBS) $(ZLIBS) -lbacfind -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(LIBS) \
-	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS) $(AFS_LIBS)
+	   $(WIN32LIBS) $(FDLIBS) $(ZLIBS) $(LZOLIBS) -lbacfind -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(LIBS) \
+	   $(DLIB) $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
 	strip $@
 
 Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
@@ -145,6 +145,9 @@ install: all
 	fi; \
 	echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
 	${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
+	@if test "x${fd_group}" != "x"; then \
+	   chgrp -f ${fd_group} ${DESTDIR}${sysconfdir}/$$destconf ; \
+	fi
 	@if test -f static-bacula-fd; then \
 	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-bacula-fd $(DESTDIR)$(sbindir)/static-bacula-fd; \
 	fi
@@ -167,7 +170,7 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \

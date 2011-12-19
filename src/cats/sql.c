@@ -38,63 +38,17 @@
  *    Version $Id: sql.c 8034 2008-11-11 14:33:46Z ricozz $
  */
 
-/* The following is necessary so that we do not include
- * the dummy external definition of B_DB.
- */
-#define __SQL_C                       /* indicate that this is sql.c */
-
 #include "bacula.h"
+
+#if HAVE_SQLITE3 || HAVE_MYSQL || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
+
 #include "cats.h"
-
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
-
-uint32_t bacula_db_version = 0;
-
-int db_type = -1;        /* SQL engine type index */
+#include "bdb_priv.h"
+#include "sql_glue.h"
 
 /* Forward referenced subroutines */
 void print_dashes(B_DB *mdb);
 void print_result(B_DB *mdb);
-
-B_DB *db_init(JCR *jcr, const char *db_driver, const char *db_name, const char *db_user,
-              const char *db_password, const char *db_address, int db_port,
-              const char *db_socket, int mult_db_connections)
-{
-#ifdef HAVE_DBI
-   char *p;
-   if (!db_driver) {
-      Jmsg0(jcr, M_ABORT, 0, _("Driver type not specified in Catalog resource.\n"));
-   }
-   if (strlen(db_driver) < 5 || db_driver[3] != ':' || strncasecmp(db_driver, "dbi", 3) != 0) {
-      Jmsg0(jcr, M_ABORT, 0, _("Invalid driver type, must be \"dbi:<type>\"\n"));
-   }
-   p = (char *)(db_driver + 4);
-   if (strcasecmp(p, "mysql") == 0) {
-      db_type = SQL_TYPE_MYSQL;
-   } else if (strcasecmp(p, "postgresql") == 0) {
-      db_type = SQL_TYPE_POSTGRESQL;
-   } else if (strcasecmp(p, "sqlite") == 0) {
-      db_type = SQL_TYPE_SQLITE;
-   } else if (strcasecmp(p, "sqlite3") == 0) {
-      db_type = SQL_TYPE_SQLITE3;
-   } else {
-      Jmsg1(jcr, M_ABORT, 0, _("Unknown database type: %s\n"), p);
-   }
-#elif HAVE_MYSQL
-   db_type = SQL_TYPE_MYSQL;
-#elif HAVE_POSTGRESQL
-   db_type = SQL_TYPE_POSTGRESQL;
-#elif HAVE_INGRES
-   db_type = SQL_TYPE_INGRES;
-#elif HAVE_SQLITE
-   db_type = SQL_TYPE_SQLITE;
-#elif HAVE_SQLITE3
-   db_type = SQL_TYPE_SQLITE3;
-#endif
-
-   return db_init_database(jcr, db_name, db_user, db_password, db_address,
-             db_port, db_socket, mult_db_connections);
-}
 
 dbid_list::dbid_list()
 {
@@ -146,67 +100,96 @@ int db_int64_handler(void *ctx, int num_fields, char **row)
 }
 
 /*
+ * Called here to retrieve a btime from the database.
+ *   The returned integer will be extended to 64 bit.
+ */
+int db_strtime_handler(void *ctx, int num_fields, char **row)
+{
+   db_int64_ctx *lctx = (db_int64_ctx *)ctx;
+
+   if (row[0]) {
+      lctx->value = str_to_utime(row[0]);
+      lctx->count++;
+   }
+   return 0;
+}
+
+/*
  * Use to build a comma separated list of values from a query. "10,20,30"
  */
 int db_list_handler(void *ctx, int num_fields, char **row)
 {
    db_list_ctx *lctx = (db_list_ctx *)ctx;
    if (num_fields == 1 && row[0]) {
-      if (lctx->list[0]) {
-         pm_strcat(lctx->list, ",");
-      }
-      pm_strcat(lctx->list, row[0]);
-      lctx->count++;
+      lctx->add(row[0]);
    }
    return 0;
 }
-
 
 /*
- * Called here to retrieve an integer from the database
- */
-static int db_max_connections_handler(void *ctx, int num_fields, char **row)
+ *  * specific context passed from db_check_max_connections to db_max_connections_handler.
+ *   */
+struct max_connections_context {
+   B_DB *db;
+   uint32_t nr_connections;
+};
+
+/*
+ *  * Called here to retrieve an integer from the database
+ *   */
+static inline int db_max_connections_handler(void *ctx, int num_fields, char **row)
 {
-   uint32_t *val = (uint32_t *)ctx;
-   uint32_t index = sql_get_max_connections_index[db_type];
+   struct max_connections_context *context;
+   uint32_t index;
+
+   context = (struct max_connections_context *)ctx;
+   switch (db_get_type_index(context->db)) {
+   case SQL_TYPE_MYSQL:
+      index = 1;
+   default:
+      index = 0;
+   }
+
    if (row[index]) {
-      *val = str_to_int64(row[index]);
+      context->nr_connections = str_to_int64(row[index]);
    } else {
       Dmsg0(800, "int_handler finds zero\n");
-      *val = 0;
+      context->nr_connections = 0;
    }
    return 0;
 }
 
-/* 
- * Check catalog max_connections setting
- */
+/*
+ *  * Check catalog max_connections setting
+ *   */
 bool db_check_max_connections(JCR *jcr, B_DB *mdb, uint32_t max_concurrent_jobs)
 {
-   uint32_t max_conn=0;
-   int ret=true;
+   struct max_connections_context context;
 
    /* Without Batch insert, no need to verify max_connections */
-#ifndef HAVE_BATCH_FILE_INSERT
-   return ret;
-#endif
+   if (!mdb->batch_insert_available())
+      return true;
+
+   context.db = mdb;
+   context.nr_connections = 0;
 
    /* Check max_connections setting */
-   if (!db_sql_query(mdb, sql_get_max_connections[db_type], 
-                     db_max_connections_handler, &max_conn)) {
+   if (!db_sql_query(mdb, sql_get_max_connections[db_get_type_index(mdb)],
+                     db_max_connections_handler, &context)) {
       Jmsg(jcr, M_ERROR, 0, "Can't verify max_connections settings %s", mdb->errmsg);
-      return ret;
+      return false;
    }
-   if (max_conn && max_concurrent_jobs && max_concurrent_jobs > max_conn) {
-      Mmsg(mdb->errmsg, 
-           _("On db_name=%s, %s max_connections=%d is lower than Director "
-             "MaxConcurentJobs=%d\n"),
-           mdb->db_name, db_get_type(), max_conn, max_concurrent_jobs);
+   if (context.nr_connections && max_concurrent_jobs && max_concurrent_jobs > context.nr_connections) {
+      Mmsg(mdb->errmsg,
+           _("Potential performance problem:\n"
+             "max_connections=%d set for %s database \"%s\" should be larger than Director's "
+             "MaxConcurrentJobs=%d\n"),
+           context.nr_connections, db_get_type(mdb), mdb->get_db_name(), max_concurrent_jobs);
       Jmsg(jcr, M_WARNING, 0, "%s", mdb->errmsg);
-      ret = false;
+      return false;
    }
 
-   return ret;
+   return true;
 }
 
 /* NOTE!!! The following routines expect that the
@@ -216,6 +199,7 @@ bool db_check_max_connections(JCR *jcr, B_DB *mdb, uint32_t max_concurrent_jobs)
 /* Check that the tables correspond to the version we want */
 bool check_tables_version(JCR *jcr, B_DB *mdb)
 {
+   uint32_t bacula_db_version = 0;
    const char *query = "SELECT VersionId FROM Version";
 
    bacula_db_version = 0;
@@ -225,21 +209,23 @@ bool check_tables_version(JCR *jcr, B_DB *mdb)
    }
    if (bacula_db_version != BDB_VERSION) {
       Mmsg(mdb->errmsg, "Version error for database \"%s\". Wanted %d, got %d\n",
-          mdb->db_name, BDB_VERSION, bacula_db_version);
+          mdb->get_db_name(), BDB_VERSION, bacula_db_version);
       Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
       return false;
    }
    return true;
 }
 
-/* Utility routine for queries. The database MUST be locked before calling here. */
+/*
+ * Utility routine for queries. The database MUST be locked before calling here.
+ * Returns: 0 on failure
+ *          1 on success
+ */
 int
 QueryDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
 {
-   int status;
-
    sql_free_result(mdb);
-   if ((status=sql_query(mdb, cmd)) != 0) {
+   if (!sql_query(mdb, cmd, QF_STORE_RESULT)) {
       m_msg(file, line, &mdb->errmsg, _("query %s failed:\n%s\n"), cmd, sql_strerror(mdb));
       j_msg(file, line, jcr, M_FATAL, 0, "%s", mdb->errmsg);
       if (verbose) {
@@ -248,9 +234,7 @@ QueryDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
       return 0;
    }
 
-   mdb->result = sql_store_result(mdb);
-
-   return mdb->result != NULL;
+   return 1;
 }
 
 /*
@@ -261,7 +245,9 @@ QueryDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
 int
 InsertDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
 {
-   if (sql_query(mdb, cmd)) {
+   int num_rows;
+
+   if (!sql_query(mdb, cmd)) {
       m_msg(file, line, &mdb->errmsg,  _("insert %s failed:\n%s\n"), cmd, sql_strerror(mdb));
       j_msg(file, line, jcr, M_FATAL, 0, "%s", mdb->errmsg);
       if (verbose) {
@@ -269,15 +255,11 @@ InsertDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
       }
       return 0;
    }
-   if (mdb->have_insert_id) {
-      mdb->num_rows = sql_affected_rows(mdb);
-   } else {
-      mdb->num_rows = 1;
-   }
-   if (mdb->num_rows != 1) {
+   num_rows = sql_affected_rows(mdb);
+   if (num_rows != 1) {
       char ed1[30];
       m_msg(file, line, &mdb->errmsg, _("Insertion problem: affected_rows=%s\n"),
-         edit_uint64(mdb->num_rows, ed1));
+         edit_uint64(num_rows, ed1));
       if (verbose) {
          j_msg(file, line, jcr, M_INFO, 0, "%s\n", cmd);
       }
@@ -294,8 +276,9 @@ InsertDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
 int
 UpdateDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
 {
+   int num_rows;
 
-   if (sql_query(mdb, cmd)) {
+   if (!sql_query(mdb, cmd)) {
       m_msg(file, line, &mdb->errmsg, _("update %s failed:\n%s\n"), cmd, sql_strerror(mdb));
       j_msg(file, line, jcr, M_ERROR, 0, "%s", mdb->errmsg);
       if (verbose) {
@@ -303,11 +286,11 @@ UpdateDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
       }
       return 0;
    }
-   mdb->num_rows = sql_affected_rows(mdb);
-   if (mdb->num_rows < 1) {
+   num_rows = sql_affected_rows(mdb);
+   if (num_rows < 1) {
       char ed1[30];
       m_msg(file, line, &mdb->errmsg, _("Update failed: affected_rows=%s for %s\n"),
-         edit_uint64(mdb->num_rows, ed1), cmd);
+         edit_uint64(num_rows, ed1), cmd);
       if (verbose) {
 //       j_msg(file, line, jcr, M_INFO, 0, "%s\n", cmd);
       }
@@ -326,7 +309,7 @@ int
 DeleteDB(const char *file, int line, JCR *jcr, B_DB *mdb, char *cmd)
 {
 
-   if (sql_query(mdb, cmd)) {
+   if (!sql_query(mdb, cmd)) {
       m_msg(file, line, &mdb->errmsg, _("delete %s failed:\n%s\n"), cmd, sql_strerror(mdb));
       j_msg(file, line, jcr, M_ERROR, 0, "%s", mdb->errmsg);
       if (verbose) {
@@ -367,239 +350,11 @@ int get_sql_record_max(JCR *jcr, B_DB *mdb)
 }
 
 /*
- * Return pre-edited error message
- */
+ *  * Return pre-edited error message
+ *   */
 char *db_strerror(B_DB *mdb)
 {
    return mdb->errmsg;
-}
-
-/*
- * Lock database, this can be called multiple times by the same
- *   thread without blocking, but must be unlocked the number of
- *   times it was locked.
- */
-void _db_lock(const char *file, int line, B_DB *mdb)
-{
-   int errstat;
-   if ((errstat=rwl_writelock_p(&mdb->lock, file, line)) != 0) {
-      berrno be;
-      e_msg(file, line, M_FATAL, 0, "rwl_writelock failure. stat=%d: ERR=%s\n",
-           errstat, be.bstrerror(errstat));
-   }
-}
-
-/*
- * Unlock the database. This can be called multiple times by the
- *   same thread up to the number of times that thread called
- *   db_lock()/
- */
-void _db_unlock(const char *file, int line, B_DB *mdb)
-{
-   int errstat;
-   if ((errstat=rwl_writeunlock(&mdb->lock)) != 0) {
-      berrno be;
-      e_msg(file, line, M_FATAL, 0, "rwl_writeunlock failure. stat=%d: ERR=%s\n",
-           errstat, be.bstrerror(errstat));
-   }
-}
-
-/*
- * Start a transaction. This groups inserts and makes things
- *  much more efficient. Usually started when inserting
- *  file attributes.
- */
-void db_start_transaction(JCR *jcr, B_DB *mdb)
-{
-   if (!jcr->attr) {
-      jcr->attr = get_pool_memory(PM_FNAME);
-   }
-   if (!jcr->ar) {
-      jcr->ar = (ATTR_DBR *)malloc(sizeof(ATTR_DBR));
-   }
-
-#ifdef HAVE_SQLITE
-   if (!mdb->allow_transactions) {
-      return;
-   }
-   db_lock(mdb);
-   /* Allow only 10,000 changes per transaction */
-   if (mdb->transaction && mdb->changes > 10000) {
-      db_end_transaction(jcr, mdb);
-   }
-   if (!mdb->transaction) {
-      my_sqlite_query(mdb, "BEGIN");  /* begin transaction */
-      Dmsg0(400, "Start SQLite transaction\n");
-      mdb->transaction = 1;
-   }
-   db_unlock(mdb);
-#endif
-
-/*
- * This is turned off because transactions break
- * if multiple simultaneous jobs are run.
- */
-#ifdef HAVE_POSTGRESQL
-   if (!mdb->allow_transactions) {
-      return;
-   }
-   db_lock(mdb);
-   /* Allow only 25,000 changes per transaction */
-   if (mdb->transaction && mdb->changes > 25000) {
-      db_end_transaction(jcr, mdb);
-   }
-   if (!mdb->transaction) {
-      db_sql_query(mdb, "BEGIN", NULL, NULL);  /* begin transaction */
-      Dmsg0(400, "Start PosgreSQL transaction\n");
-      mdb->transaction = 1;
-   }
-   db_unlock(mdb);
-#endif
-
-#ifdef HAVE_INGRES
-   if (!mdb->allow_transactions) {
-      return;
-   }
-   db_lock(mdb);
-   /* Allow only 25,000 changes per transaction */
-   if (mdb->transaction && mdb->changes > 25000) {
-      db_end_transaction(jcr, mdb);
-   }
-   if (!mdb->transaction) {
-      db_sql_query(mdb, "BEGIN", NULL, NULL);  /* begin transaction */
-      Dmsg0(400, "Start Ingres transaction\n");
-      mdb->transaction = 1;
-   }
-   db_unlock(mdb);
-#endif
-
-#ifdef HAVE_DBI
-   if (db_type == SQL_TYPE_SQLITE) {
-      if (!mdb->allow_transactions) {
-         return;
-      }
-      db_lock(mdb);
-      /* Allow only 10,000 changes per transaction */
-      if (mdb->transaction && mdb->changes > 10000) {
-         db_end_transaction(jcr, mdb);
-      }
-      if (!mdb->transaction) {
-         //my_sqlite_query(mdb, "BEGIN");  /* begin transaction */
-         db_sql_query(mdb, "BEGIN", NULL, NULL);  /* begin transaction */
-         Dmsg0(400, "Start SQLite transaction\n");
-         mdb->transaction = 1;
-      }
-      db_unlock(mdb);
-   } else if (db_type == SQL_TYPE_POSTGRESQL) {
-      if (!mdb->allow_transactions) {
-         return;
-      }
-      db_lock(mdb);
-      /* Allow only 25,000 changes per transaction */
-      if (mdb->transaction && mdb->changes > 25000) {
-         db_end_transaction(jcr, mdb);
-      }
-      if (!mdb->transaction) {
-         db_sql_query(mdb, "BEGIN", NULL, NULL);  /* begin transaction */
-         Dmsg0(400, "Start PosgreSQL transaction\n");
-         mdb->transaction = 1;
-      }
-      db_unlock(mdb);
-   }
-#endif
-}
-
-void db_end_transaction(JCR *jcr, B_DB *mdb)
-{
-   /*
-    * This can be called during thread cleanup and
-    *   the db may already be closed.  So simply return.
-    */
-   if (!mdb) {
-      return;
-   }
-
-   if (jcr && jcr->cached_attribute) {
-      Dmsg0(400, "Flush last cached attribute.\n");
-      if (!db_create_attributes_record(jcr, mdb, jcr->ar)) {
-         Jmsg1(jcr, M_FATAL, 0, _("Attribute create error. %s"), db_strerror(jcr->db));
-      }
-      jcr->cached_attribute = false;
-   }
-
-#ifdef HAVE_SQLITE
-   if (!mdb->allow_transactions) {
-      return;
-   }
-   db_lock(mdb);
-   if (mdb->transaction) {
-      my_sqlite_query(mdb, "COMMIT"); /* end transaction */
-      mdb->transaction = 0;
-      Dmsg1(400, "End SQLite transaction changes=%d\n", mdb->changes);
-   }
-   mdb->changes = 0;
-   db_unlock(mdb);
-#endif
-
-
-
-#ifdef HAVE_INGRES
-   if (!mdb->allow_transactions) {
-      return;
-   }
-   db_lock(mdb);
-   if (mdb->transaction) {
-      db_sql_query(mdb, "COMMIT", NULL, NULL); /* end transaction */
-      mdb->transaction = 0;
-      Dmsg1(400, "End Ingres transaction changes=%d\n", mdb->changes);
-   }
-   mdb->changes = 0;
-   db_unlock(mdb);
-#endif
-
-
-#ifdef HAVE_POSTGRESQL
-   if (!mdb->allow_transactions) {
-      return;
-   }
-   db_lock(mdb);
-   if (mdb->transaction) {
-      db_sql_query(mdb, "COMMIT", NULL, NULL); /* end transaction */
-      mdb->transaction = 0;
-      Dmsg1(400, "End PostgreSQL transaction changes=%d\n", mdb->changes);
-   }
-   mdb->changes = 0;
-   db_unlock(mdb);
-#endif
-
-#ifdef HAVE_DBI
-   if (db_type == SQL_TYPE_SQLITE) {
-      if (!mdb->allow_transactions) {
-         return;
-      }
-      db_lock(mdb);
-      if (mdb->transaction) {
-         //my_sqlite_query(mdb, "COMMIT"); /* end transaction */
-         db_sql_query(mdb, "COMMIT", NULL, NULL); /* end transaction */
-         mdb->transaction = 0;
-         Dmsg1(400, "End SQLite transaction changes=%d\n", mdb->changes);
-      }
-      mdb->changes = 0;
-      db_unlock(mdb);
-   } else if (db_type == SQL_TYPE_POSTGRESQL) {
-      if (!mdb->allow_transactions) {
-         return;
-      }
-      db_lock(mdb);
-      if (mdb->transaction) {
-         db_sql_query(mdb, "COMMIT", NULL, NULL); /* end transaction */
-         mdb->transaction = 0;
-         Dmsg1(400, "End PostgreSQL transaction changes=%d\n", mdb->changes);
-      }
-      mdb->changes = 0;
-      db_unlock(mdb);
-   }
-#endif
 }
 
 /*
@@ -676,16 +431,17 @@ static int max_length(int max_length)
 /*
  * List dashes as part of header for listing SQL results in a table
  */
-void
-list_dashes(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx)
+void list_dashes(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx)
 {
    SQL_FIELD  *field;
    int i, j;
    int len;
+   int num_fields;
 
    sql_field_seek(mdb, 0);
    send(ctx, "+");
-   for (i = 0; i < sql_num_fields(mdb); i++) {
+   num_fields = sql_num_fields(mdb);
+   for (i = 0; i < num_fields; i++) {
       field = sql_fetch_field(mdb);
       if (!field) {
          break;
@@ -699,28 +455,158 @@ list_dashes(B_DB *mdb, DB_LIST_HANDLER *send, void *ctx)
    send(ctx, "\n");
 }
 
+/* Small handler to print the last line of a list xxx command */
+static void last_line_handler(void *vctx, const char *str)
+{
+   LIST_CTX *ctx = (LIST_CTX *)vctx;
+   bstrncat(ctx->line, str, sizeof(ctx->line));
+}
+
+int list_result(void *vctx, int nb_col, char **row)
+{
+   SQL_FIELD *field;
+   int i, col_len, max_len = 0;
+   int num_fields;
+   char buf[2000], ewc[30];
+
+   LIST_CTX *pctx = (LIST_CTX *)vctx;
+   DB_LIST_HANDLER *send = pctx->send;
+   e_list_type type = pctx->type;
+   B_DB *mdb = pctx->mdb;
+   void *ctx = pctx->ctx;
+   JCR *jcr = pctx->jcr;
+
+   num_fields = sql_num_fields(mdb);
+   if (!pctx->once) {
+      pctx->once = true;
+
+      Dmsg1(800, "list_result starts looking at %d fields\n", num_fields);
+      /* determine column display widths */
+      sql_field_seek(mdb, 0);
+      for (i = 0; i < num_fields; i++) {
+         Dmsg1(800, "list_result processing field %d\n", i);
+         field = sql_fetch_field(mdb);
+         if (!field) {
+            break;
+         }
+         col_len = cstrlen(field->name);
+         if (type == VERT_LIST) {
+            if (col_len > max_len) {
+               max_len = col_len;
+            }
+         } else {
+            if (sql_field_is_numeric(mdb, field->type) && (int)field->max_length > 0) { /* fixup for commas */
+               field->max_length += (field->max_length - 1) / 3;
+            }  
+            if (col_len < (int)field->max_length) {
+               col_len = field->max_length;
+            }  
+            if (col_len < 4 && !sql_field_is_not_null(mdb, field->flags)) {
+               col_len = 4;                 /* 4 = length of the word "NULL" */
+            }
+            field->max_length = col_len;    /* reset column info */
+         }
+      }
+
+      pctx->num_rows++;
+
+      Dmsg0(800, "list_result finished first loop\n");
+      if (type == VERT_LIST) {
+         goto vertical_list;
+      }
+
+      Dmsg1(800, "list_result starts second loop looking at %d fields\n", num_fields);
+
+      /* Keep the result to display the same line at the end of the table */
+      list_dashes(mdb, last_line_handler, pctx);
+      send(ctx, pctx->line);
+
+      send(ctx, "|");
+      sql_field_seek(mdb, 0);
+      for (i = 0; i < num_fields; i++) {
+         Dmsg1(800, "list_result looking at field %d\n", i);
+         field = sql_fetch_field(mdb);
+         if (!field) {
+            break;
+         }
+         max_len = max_length(field->max_length);
+         bsnprintf(buf, sizeof(buf), " %-*s |", max_len, field->name);
+         send(ctx, buf);
+      }
+      send(ctx, "\n");
+      list_dashes(mdb, send, ctx);      
+   }
+   
+   Dmsg1(800, "list_result starts third loop looking at %d fields\n", num_fields);
+
+   sql_field_seek(mdb, 0);
+   send(ctx, "|");
+   for (i = 0; i < num_fields; i++) {
+      field = sql_fetch_field(mdb);
+      if (!field) {
+         break;
+      }
+      max_len = max_length(field->max_length);
+      if (row[i] == NULL) {
+         bsnprintf(buf, sizeof(buf), " %-*s |", max_len, "NULL");
+      } else if (sql_field_is_numeric(mdb, field->type) && !jcr->gui && is_an_integer(row[i])) {
+         bsnprintf(buf, sizeof(buf), " %*s |", max_len,
+                   add_commas(row[i], ewc));
+      } else {
+         bsnprintf(buf, sizeof(buf), " %-*s |", max_len, row[i]);
+      }
+      send(ctx, buf);
+   }
+   send(ctx, "\n");
+   return 0;
+
+vertical_list:
+
+   Dmsg1(800, "list_result starts vertical list at %d fields\n", num_fields);
+
+   sql_field_seek(mdb, 0);
+   for (i = 0; i < num_fields; i++) {
+      field = sql_fetch_field(mdb);
+      if (!field) {
+         break;
+      }
+      if (row[i] == NULL) {
+         bsnprintf(buf, sizeof(buf), " %*s: %s\n", max_len, field->name, "NULL");
+      } else if (sql_field_is_numeric(mdb, field->type) && !jcr->gui && is_an_integer(row[i])) {
+         bsnprintf(buf, sizeof(buf), " %*s: %s\n", max_len, field->name,
+                   add_commas(row[i], ewc));
+      } else {
+         bsnprintf(buf, sizeof(buf), " %*s: %s\n", max_len, field->name, row[i]);
+      }
+      send(ctx, buf);
+   }
+   send(ctx, "\n");
+   return 0;
+}
+
 /*
  * If full_list is set, we list vertically, otherwise, we
  * list on one line horizontally.
  */
-void
-list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type type)
+void list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type type)
 {
    SQL_FIELD *field;
    SQL_ROW row;
    int i, col_len, max_len = 0;
+   int num_fields;
    char buf[2000], ewc[30];
 
    Dmsg0(800, "list_result starts\n");
-   if (mdb->result == NULL || sql_num_rows(mdb) == 0) {
+   if (sql_num_rows(mdb) == 0) {
       send(ctx, _("No results to list.\n"));
       return;
    }
 
-   Dmsg1(800, "list_result starts looking at %d fields\n", sql_num_fields(mdb));
+   num_fields = sql_num_fields(mdb);
+   Dmsg1(800, "list_result starts looking at %d fields\n", num_fields);
    /* determine column display widths */
    sql_field_seek(mdb, 0);
-   for (i = 0; i < sql_num_fields(mdb); i++) {
+   for (i = 0; i < num_fields; i++) {
       Dmsg1(800, "list_result processing field %d\n", i);
       field = sql_fetch_field(mdb);
       if (!field) {
@@ -732,13 +618,13 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
             max_len = col_len;
          }
       } else {
-         if (IS_NUM(field->type) && (int)field->max_length > 0) { /* fixup for commas */
+         if (sql_field_is_numeric(mdb, field->type) && (int)field->max_length > 0) { /* fixup for commas */
             field->max_length += (field->max_length - 1) / 3;
-         }
+         }  
          if (col_len < (int)field->max_length) {
             col_len = field->max_length;
-         }
-         if (col_len < 4 && !IS_NOT_NULL(field->flags)) {
+         }  
+         if (col_len < 4 && !sql_field_is_not_null(mdb, field->flags)) {
             col_len = 4;                 /* 4 = length of the word "NULL" */
          }
          field->max_length = col_len;    /* reset column info */
@@ -750,11 +636,11 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
       goto vertical_list;
    }
 
-   Dmsg1(800, "list_result starts second loop looking at %d fields\n", sql_num_fields(mdb));
+   Dmsg1(800, "list_result starts second loop looking at %d fields\n", num_fields);
    list_dashes(mdb, send, ctx);
    send(ctx, "|");
    sql_field_seek(mdb, 0);
-   for (i = 0; i < sql_num_fields(mdb); i++) {
+   for (i = 0; i < num_fields; i++) {
       Dmsg1(800, "list_result looking at field %d\n", i);
       field = sql_fetch_field(mdb);
       if (!field) {
@@ -767,11 +653,11 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
    send(ctx, "\n");
    list_dashes(mdb, send, ctx);
 
-   Dmsg1(800, "list_result starts third loop looking at %d fields\n", sql_num_fields(mdb));
+   Dmsg1(800, "list_result starts third loop looking at %d fields\n", num_fields);
    while ((row = sql_fetch_row(mdb)) != NULL) {
       sql_field_seek(mdb, 0);
       send(ctx, "|");
-      for (i = 0; i < sql_num_fields(mdb); i++) {
+      for (i = 0; i < num_fields; i++) {
          field = sql_fetch_field(mdb);
          if (!field) {
             break;
@@ -779,7 +665,7 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
          max_len = max_length(field->max_length);
          if (row[i] == NULL) {
             bsnprintf(buf, sizeof(buf), " %-*s |", max_len, "NULL");
-         } else if (IS_NUM(field->type) && !jcr->gui && is_an_integer(row[i])) {
+         } else if (sql_field_is_numeric(mdb, field->type) && !jcr->gui && is_an_integer(row[i])) {
             bsnprintf(buf, sizeof(buf), " %*s |", max_len,
                       add_commas(row[i], ewc));
          } else {
@@ -794,17 +680,17 @@ list_result(JCR *jcr, B_DB *mdb, DB_LIST_HANDLER *send, void *ctx, e_list_type t
 
 vertical_list:
 
-   Dmsg1(800, "list_result starts vertical list at %d fields\n", sql_num_fields(mdb));
+   Dmsg1(800, "list_result starts vertical list at %d fields\n", num_fields);
    while ((row = sql_fetch_row(mdb)) != NULL) {
       sql_field_seek(mdb, 0);
-      for (i = 0; i < sql_num_fields(mdb); i++) {
+      for (i = 0; i < num_fields; i++) {
          field = sql_fetch_field(mdb);
          if (!field) {
             break;
          }
          if (row[i] == NULL) {
             bsnprintf(buf, sizeof(buf), " %*s: %s\n", max_len, field->name, "NULL");
-         } else if (IS_NUM(field->type) && !jcr->gui && is_an_integer(row[i])) {
+         } else if (sql_field_is_numeric(mdb, field->type) && !jcr->gui && is_an_integer(row[i])) {
             bsnprintf(buf, sizeof(buf), " %*s: %s\n", max_len, field->name,
                 add_commas(row[i], ewc));
          } else {
@@ -823,21 +709,15 @@ vertical_list:
  */
 bool db_open_batch_connexion(JCR *jcr, B_DB *mdb)
 {
-#ifdef HAVE_BATCH_FILE_INSERT
-   const int multi_db = true;   /* we force a new connection only if batch insert is enabled */
-#else
-   const int multi_db = false;
-#endif
+   bool multi_db;
+
+   if (mdb->batch_insert_available())
+      multi_db = true;   /* we force a new connection only if batch insert is enabled */
+   else
+      multi_db = false;
 
    if (!jcr->db_batch) {
-      jcr->db_batch = db_init_database(jcr, 
-                                      mdb->db_name, 
-                                      mdb->db_user,
-                                      mdb->db_password, 
-                                      mdb->db_address,
-                                      mdb->db_port,
-                                      mdb->db_socket,
-                                      multi_db /* multi_db = true when using batch mode */);
+      jcr->db_batch = db_clone_database_connection(mdb, jcr, multi_db);
       if (!jcr->db_batch) {
          Mmsg0(&mdb->errmsg, _("Could not init database batch connection"));
          Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
@@ -846,13 +726,10 @@ bool db_open_batch_connexion(JCR *jcr, B_DB *mdb)
 
       if (!db_open_database(jcr, jcr->db_batch)) {
          Mmsg2(&mdb->errmsg,  _("Could not open database \"%s\": ERR=%s\n"),
-              jcr->db_batch->db_name, db_strerror(jcr->db_batch));
+              jcr->db_batch->get_db_name(), db_strerror(jcr->db_batch));
          Jmsg(jcr, M_FATAL, 0, "%s", mdb->errmsg);
          return false;
       }      
-      Dmsg3(100, "initdb ref=%d connected=%d db=%p\n", jcr->db_batch->ref_count,
-            jcr->db_batch->connected, jcr->db_batch->db);
-
    }
    return true;
 }
@@ -870,12 +747,10 @@ void db_debug_print(JCR *jcr, FILE *fp)
       return;
    }
 
-   fprintf(fp, "B_DB=%p db_name=%s db_user=%s connected=%i\n",
-           mdb, NPRTB(mdb->db_name), NPRTB(mdb->db_user), mdb->connected);
+   fprintf(fp, "B_DB=%p db_name=%s db_user=%s connected=%s\n",
+           mdb, NPRTB(mdb->get_db_name()), NPRTB(mdb->get_db_user()), mdb->is_connected() ? "true" : "false");
    fprintf(fp, "\tcmd=\"%s\" changes=%i\n", NPRTB(mdb->cmd), mdb->changes);
-   if (mdb->lock.valid == RWLOCK_VALID) { 
-      fprintf(fp, "\tRWLOCK=%p w_active=%i w_wait=%i\n", &mdb->lock, mdb->lock.w_active, mdb->lock.w_wait);
-   }
+   mdb->print_lock_info(fp);
 }
 
-#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES*/
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI */

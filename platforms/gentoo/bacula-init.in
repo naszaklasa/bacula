@@ -6,7 +6,7 @@
 
 depend() {
 	need net
-	use @DB_TYPE@
+	use @DEFAULT_DB_TYPE@
 }
 
 opts="test"

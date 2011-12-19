@@ -190,11 +190,16 @@ Makefiles:
 	 chmod 755 dvd-handler)
 
 	(cd src/cats; \
-	 chmod 755 create_bacula_database      update_bacula_tables	make_bacula_tables; \
-	 chmod 755 grant_bacula_privileges     drop_bacula_tables	drop_bacula_database; \
-	 chmod 755 create_@DB_TYPE@_database   update_@DB_TYPE@_tables	make_@DB_TYPE@_tables; \
-	 chmod 755 grant_@DB_TYPE@_privileges  drop_@DB_TYPE@_tables	drop_@DB_TYPE@_database; \
+	 chmod 755 create_bacula_database update_bacula_tables make_bacula_tables; \
+	 chmod 755 grant_bacula_privileges drop_bacula_tables drop_bacula_database; \
 	 chmod 755 make_catalog_backup delete_catalog_backup)
+
+	@for I in @DB_BACKENDS@ ; do \
+	  (cd src/cats; \
+	   chmod 755 create_$${I}_database update_$${I}_tables make_$${I}_tables; \
+	   chmod 755 grant_$${I}_privileges drop_$${I}_tables drop_$${I}_database); \
+	  done
+
 	(cd src/qt-console; \
 	 chmod 755 install_conf_file build-depkgs-qt-console)
 

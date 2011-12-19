@@ -5,7 +5,7 @@
 echo " "
 echo "This script will update a Bacula Ingres database (if needed)"
 echo " "
-bindir=@SQL_BINDIR@
+bindir=@INGRES_BINDIR@
 db_name=@db_name@
 
 echo "Update of Bacula Ingres tables succeeded. (nothing to do)"

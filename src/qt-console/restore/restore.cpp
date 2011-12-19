@@ -38,7 +38,7 @@
 
 static const int dbglvl = 100;
 
-restorePage::restorePage(int conn)
+restorePage::restorePage(int conn) : Pages()
 {
    Dmsg1(dbglvl, "Construcing restorePage Instance connection %i\n", conn);
    m_conn = conn;
@@ -194,25 +194,17 @@ void restorePage::addDirectory(QString &newdirr)
    QString newdir = newdirr;
    QString fullpath = m_cwd + newdirr;
    bool ok = true;
-   bool windrive = false;
 
    if (mainWin->m_miscDebug) {
       QString msg = QString(tr("In addDirectory cwd \"%1\" newdir \"%2\" fullpath \"%3\"\n"))
                     .arg(m_cwd)
                     .arg(newdir)
                     .arg(fullpath);
-      Pmsg0(dbglvl, msg.toUtf8().data());
+      Pmsg1(dbglvl, "%s\n", msg.toUtf8().data());
    }
 
-   if (isWin32Path(newdir)) {
-      /* this is a windows drive */
-      if (mainWin->m_miscDebug) {
-         Pmsg0(dbglvl, "Found windows drive\n");
-      }
-      windrive = true;
-   }
-   
-   if (windrive) {
+   if (isWin32Path(fullpath)) {
+      if (mainWin->m_miscDebug) Pmsg0(dbglvl, "Windows drive\n");
       if (fullpath.left(1) == "/") {
          fullpath.replace(0, 1, "");           /* strip leading / */
       }
@@ -247,10 +239,11 @@ void restorePage::addDirectory(QString &newdirr)
    /* Does it already exist ?? */
    if (!m_dirPaths.contains(fullpath)) {
       QTreeWidgetItem *item = NULL;
-      if (windrive) {
+      if (isWin32Path(fullpath)) {
          /* this is the base widget */
          item = new QTreeWidgetItem(directoryWidget);
          item->setText(0, fullpath.toUtf8().data());
+         if (mainWin->m_miscDebug) Pmsg1(dbglvl, "Windows: %s\n", fullpath.toUtf8().data());
          item->setIcon(0,QIcon(QString::fromUtf8(":images/folder.png")));
       } else {
          QTreeWidgetItem *parent = m_dirPaths.value(m_cwd);
@@ -260,13 +253,16 @@ void restorePage::addDirectory(QString &newdirr)
             item->setText(0, newdir.toUtf8().data());
             item->setIcon(0,QIcon(QString::fromUtf8(":images/folder.png")));
             directoryWidget->expandItem(parent);
+            if (mainWin->m_miscDebug) {
+               Pmsg1(dbglvl, "%s\n", newdir.toUtf8().data());
+            }
          } else {
             ok = false;
             if (mainWin->m_miscDebug) {
                QString msg = QString(tr("In else of if parent cwd \"%1\" newdir \"%2\"\n"))
                     .arg(m_cwd)
                     .arg(newdir);
-               Pmsg0(dbglvl, msg.toUtf8().data());
+               Pmsg1(dbglvl, "%s\n", msg.toUtf8().data());
             }
          }
       }
@@ -349,13 +345,16 @@ void restorePage::fileDoubleClicked(QTreeWidgetItem *item, int column)
    if (item->text(1).endsWith("/")) {
       QString fullpath = m_cwd + item->text(1);
       QTreeWidgetItem *item = m_dirPaths.value(fullpath);
+      if (mainWin->m_miscDebug) {
+         Pmsg1(dbglvl, "%s\n", fullpath.toUtf8().data());
+      }
       if (item) {
          directoryWidget->setCurrentItem(item);
       } else {
          QString msg = QString("DoubleClick else of item column %1 fullpath %2\n")
               .arg(column,10)
               .arg(fullpath);
-         Pmsg0(dbglvl, msg.toUtf8().data());
+         if (mainWin->m_miscDebug) Pmsg1(dbglvl, "%s\n", msg.toUtf8().data());
       }
    }
 }
