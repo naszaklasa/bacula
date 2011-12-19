@@ -53,7 +53,7 @@ CONF_ALL	= --enable-smartalloc \
 	--disable-bwx-console \
 	--without-qwt \
 	--enable-ipv6 \
-	--with-dir-passowrd=XXX_DIRPASSWORD_XXX \
+	--with-dir-password=XXX_DIRPASSWORD_XXX \
 	--with-fd-password=XXX_FDPASSWORD_XXX \
 	--with-sd-password=XXX_SDPASSWORD_XXX \
 	--with-mon-dir-password=XXX_MONDIRPASSWORD_XXX \
