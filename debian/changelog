@@ -1,3 +1,10 @@
+bacula (5.2.3-1) UNRELEASED; urgency=low
+
+  * Non-maintainer upload.
+  * Build of 5.2.3 version
+
+ -- Bartosz Cisek <bartosz.cisek@nasza-klasa.pl>  Mon, 19 Dec 2011 17:15:02 +0100
+
 bacula (5.0.3-1) UNRELEASED; urgency=low
 
   * QA upload.
