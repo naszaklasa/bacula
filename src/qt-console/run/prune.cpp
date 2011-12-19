@@ -40,7 +40,7 @@
 /*
  * Setup all the combo boxes and display the dialog
  */
-prunePage::prunePage(const QString &volume, const QString &client)
+prunePage::prunePage(const QString &volume, const QString &client) : Pages()
 {
    QDateTime dt;
 

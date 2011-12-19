@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -33,7 +33,6 @@
  * Adapted and enhanced for Bacula, originally written
  * for inclusion in the Apcupsd package
  *
- *   Version $Id$
  */
 
 
@@ -79,8 +78,27 @@ int32_t read_nbytes(BSOCK * bsock, char *ptr, int32_t nbytes)
       errno = 0;
       nread = socketRead(bsock->m_fd, ptr, nleft);
       if (bsock->is_timed_out() || bsock->is_terminated()) {
-         return nread;
+         return -1;
       }
+
+#ifdef HAVE_WIN32
+      /*
+       * For Windows, we must simulate Unix errno on a socket
+       *  error in order to handle errors correctly.
+       */
+      if (nread == SOCKET_ERROR) {
+        DWORD err = WSAGetLastError();
+        nread = -1;
+        if (err == WSAEINTR) {
+           errno = EINTR;
+        } else if (err == WSAEWOULDBLOCK) {
+           errno = EAGAIN;
+        } else {
+           errno = EIO;            /* some other error */
+        }
+     }
+#endif
+
       if (nread == -1) {
          if (errno == EINTR) {
             continue;
@@ -91,7 +109,7 @@ int32_t read_nbytes(BSOCK * bsock, char *ptr, int32_t nbytes)
          }
       }
       if (nread <= 0) {
-         return nread;             /* error, or EOF */
+         return -1;                /* error, or EOF */
       }
       nleft -= nread;
       ptr += nread;
@@ -135,8 +153,27 @@ int32_t write_nbytes(BSOCK * bsock, char *ptr, int32_t nbytes)
          errno = 0;
          nwritten = socketWrite(bsock->m_fd, ptr, nleft);
          if (bsock->is_timed_out() || bsock->is_terminated()) {
-            return nwritten;
+            return -1;
          }
+
+#ifdef HAVE_WIN32
+         /*
+          * For Windows, we must simulate Unix errno on a socket
+          *  error in order to handle errors correctly.
+          */
+         if (nwritten == SOCKET_ERROR) {
+            DWORD err = WSAGetLastError();
+            nwritten = -1;
+            if (err == WSAEINTR) {
+               errno = EINTR;
+            } else if (err == WSAEWOULDBLOCK) {
+               errno = EAGAIN;
+            } else {
+               errno = EIO;        /* some other error */
+            }
+         }
+#endif
+
       } while (nwritten == -1 && errno == EINTR);
       /*
        * If connection is non-blocking, we will get EAGAIN, so
@@ -155,7 +192,7 @@ int32_t write_nbytes(BSOCK * bsock, char *ptr, int32_t nbytes)
          continue;
       }
       if (nwritten <= 0) {
-         return nwritten;          /* error */
+         return -1;                /* error */
       }
       nleft -= nwritten;
       ptr += nwritten;
@@ -652,8 +689,10 @@ const char *bnet_sig_to_ascii(BSOCK * bs)
       return "BNET_HEARTBEAT";
    case BNET_HB_RESPONSE:
       return "BNET_HB_RESPONSE";
-   case BNET_PROMPT:
-      return "BNET_PROMPT";
+   case BNET_SUB_PROMPT:
+      return "BNET_SUB_PROMPT";
+   case BNET_TEXT_INPUT:
+      return "BNET_TEXT_INPUT";
    default:
       sprintf(buf, _("Unknown sig %d"), (int)bs->msglen);
       return buf;
@@ -673,7 +712,7 @@ BSOCK *init_bsock(JCR * jcr, int sockfd, const char *who, const char *host, int 
    bsock->tls = NULL;
    bsock->errors = 0;
    bsock->m_blocking = 1;
-   bsock->msg = get_pool_memory(PM_MESSAGE);
+   bsock->msg = get_pool_memory(PM_BSOCK);
    bsock->errmsg = get_pool_memory(PM_MESSAGE);
    bsock->set_who(bstrdup(who));
    bsock->set_host(bstrdup(host));
@@ -693,7 +732,7 @@ BSOCK *dup_bsock(BSOCK *osock)
 {
    BSOCK *bsock = (BSOCK *)malloc(sizeof(BSOCK));
    memcpy(bsock, osock, sizeof(BSOCK));
-   bsock->msg = get_pool_memory(PM_MESSAGE);
+   bsock->msg = get_pool_memory(PM_BSOCK);
    bsock->errmsg = get_pool_memory(PM_MESSAGE);
    if (osock->who()) {
       bsock->set_who(bstrdup(osock->who()));

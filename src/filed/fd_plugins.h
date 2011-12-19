@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -66,6 +66,28 @@
 #include "bc_types.h"
 #include "lib/plugins.h"
 #include <sys/stat.h>
+#ifdef HAVE_WIN32
+#include "../win32/filed/vss.h"
+#endif
+
+/*
+ * This packet is used for the restore objects
+ *  It is passed to the plugin when restoring
+ *  the object.
+ */
+struct restore_object_pkt {
+   int32_t pkt_size;                  /* size of this packet */
+   char *object_name;                 /* Object name */
+   char *object;                      /* restore object data to save */
+   int32_t object_type;               /* FT_xx for this file */             
+   int32_t object_len;                /* restore object length */
+   int32_t object_full_len;           /* restore object uncompressed length */
+   int32_t object_index;              /* restore object index */
+   int32_t object_compression;        /* set to compression type */
+   int32_t stream;                    /* attribute stream id */
+   uint32_t JobId;                    /* JobId object came from */
+   int32_t pkt_end;                   /* end packet sentinel */
+};
 
 /*
  * This packet is used for file save info transfer.
@@ -79,6 +101,11 @@ struct save_pkt {
    uint32_t flags;                    /* Bacula internal flags */
    bool portable;                     /* set if data format is portable */
    char *cmd;                         /* command */
+   uint32_t delta_seq;                /* Delta sequence number */
+   char *object_name;                 /* Object name to create */
+   char *object;                      /* restore object data to save */
+   int32_t object_len;                /* restore object length */
+   int32_t index;                     /* restore object index */
    int32_t pkt_end;                   /* end packet sentinel */
 };
 
@@ -101,6 +128,7 @@ struct restore_pkt {
    const char *RegexWhere;            /* regex where */
    int replace;                       /* replace flag */
    int create_status;                 /* status from createFile() */
+   uint32_t delta_seq;                /* Delta sequence number */
    int32_t pkt_end;                   /* end packet sentinel */
 };
 
@@ -146,24 +174,47 @@ typedef enum {
   bVarJobStatus = 7,
   bVarSinceTime = 8,
   bVarAccurate  = 9,
-  bVarFileSeen  = 10
+  bVarFileSeen  = 10,
+  bVarVssObject = 11,
+  bVarVssDllHandle = 12,
+  bVarWorkingDir = 13,
+  bVarWhere      = 14,
+  bVarRegexWhere = 15,
+  bVarExePath    = 16,
+  bVarVersion    = 17,
+  bVarDistName   = 18,
+  bVarBEEF       = 19
 } bVariable;
 
 /* Events that are passed to plugin */
 typedef enum {
-  bEventJobStart        = 1,
-  bEventJobEnd          = 2,
-  bEventStartBackupJob  = 3,
-  bEventEndBackupJob    = 4,
-  bEventStartRestoreJob = 5,
-  bEventEndRestoreJob   = 6,
-  bEventStartVerifyJob  = 7,
-  bEventEndVerifyJob    = 8,
-  bEventBackupCommand   = 9,
-  bEventRestoreCommand  = 10,
-  bEventLevel           = 11,
-  bEventSince           = 12,
-  bEventCancelCommand   = 13
+  bEventJobStart                        = 1,
+  bEventJobEnd                          = 2,
+  bEventStartBackupJob                  = 3,
+  bEventEndBackupJob                    = 4,
+  bEventStartRestoreJob                 = 5,
+  bEventEndRestoreJob                   = 6,
+  bEventStartVerifyJob                  = 7,
+  bEventEndVerifyJob                    = 8,
+  bEventBackupCommand                   = 9,
+  bEventRestoreCommand                  = 10,
+  bEventLevel                           = 11,
+  bEventSince                           = 12,
+  bEventCancelCommand                   = 13, /* Executed by another thread */
+  bEventVssBackupAddComponents          = 14, /* Just before bEventVssPrepareSnapshot */
+  bEventVssRestoreLoadComponentMetadata = 15,
+  bEventVssRestoreSetComponentsSelected = 16,
+  bEventRestoreObject                   = 17,
+  bEventEndFileSet                      = 18,
+  bEventPluginCommand                   = 19, /* Sent during FileSet creation */
+  bEventVssBeforeCloseRestore           = 20,
+
+  /* Add drives to VSS snapshot 
+   *  argument: char[27] drivelist
+   * You need to add them without duplicates, 
+   * see fd_common.h add_drive() copy_drives() to get help
+   */
+  bEventVssPrepareSnapshot              = 21
 } bEventType;
 
 typedef struct s_bEvent {
@@ -212,6 +263,14 @@ typedef struct s_baculaFuncs {
    void *(*baculaMalloc)(bpContext *ctx, const char *file, int line, 
        size_t size);
    void (*baculaFree)(bpContext *ctx, const char *file, int line, void *mem);
+   bRC (*AddExclude)(bpContext *ctx, const char *file);
+   bRC (*AddInclude)(bpContext *ctx, const char *file);
+   bRC (*AddOptions)(bpContext *ctx, const char *opts);
+   bRC (*AddRegex)(bpContext *ctx, const char *item, int type);
+   bRC (*AddWild)(bpContext *ctx, const char *item, int type);
+   bRC (*NewOptions)(bpContext *ctx);
+   bRC (*NewInclude)(bpContext *ctx);
+   bRC (*checkChanges)(bpContext *ctx, struct save_pkt *sp);
 } bFuncs;
 
 
@@ -230,7 +289,7 @@ typedef enum {
 
 
 #define FD_PLUGIN_MAGIC     "*FDPluginData*" 
-#define FD_PLUGIN_INTERFACE_VERSION  4
+#define FD_PLUGIN_INTERFACE_VERSION  5
 
 typedef struct s_pluginInfo {
    uint32_t size;

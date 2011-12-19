@@ -6,10 +6,11 @@ echo " "
 echo "This script will update a Bacula MySQL database from version 10 to 11"
 echo " which is needed to convert from Bacula version 2.0.x to 3.0.x or higher"
 echo " "
-bindir=@SQL_BINDIR@
-db_name=@db_name@
+bindir=@MYSQL_BINDIR@
+PATH="$bindir:$PATH"
+db_name=${db_name:-@db_name@}
 
-if $bindir/mysql $* -f <<END-OF-DATA
+if mysql $* -f <<END-OF-DATA
 USE ${db_name};
 
 -- Fix bad index on Media table

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2003-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2003-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,6 @@
  *
  *     Kern Sibbald, April MMIII
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -157,6 +156,7 @@ static bool get_user_slot_list(UAContext *ua, char *slot_list, int num_slots)
    return true;
 
 bail_out:
+   Dmsg1(100, "Problem with user selection ERR=%s\n", msg);
    return false;
 }
 

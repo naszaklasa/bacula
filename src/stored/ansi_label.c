@@ -330,8 +330,8 @@ bool write_ansi_ibm_labels(DCR *dcr, int type, const char *VolName)
          stat = dev->write(label, sizeof(label));
          if (stat != sizeof(label)) {
             berrno be;
-            Jmsg1(jcr, M_FATAL, 0,  _("Could not write ANSI VOL1 label. ERR=%s\n"),
-               be.bstrerror());
+            Jmsg3(jcr, M_FATAL, 0,  _("Could not write ANSI VOL1 label. Wanted size=%d got=%d ERR=%s\n"),
+               sizeof(label), stat, be.bstrerror());
             return false;
          }
       }

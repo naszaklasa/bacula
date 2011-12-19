@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -317,7 +317,10 @@ int main(int margc, char *margv[])
 static void terminate_btape(int stat)
 {
 
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(200);
+   free_jcr(jcr);
+   jcr = NULL;
+
    if (configfile) {
       free(configfile);
    }
@@ -339,8 +342,6 @@ static void terminate_btape(int stat)
       free_bsr(bsr);
    }
 
-   free_jcr(jcr);
-   jcr = NULL;
 
    free_volume_lists();
 
@@ -748,7 +749,7 @@ static void rectestcmd()
       return;
    }
 
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(200);
    block = new_block(dev);
    rec = new_record();
 
@@ -756,7 +757,7 @@ static void rectestcmd()
       rec->data = check_pool_memory_size(rec->data, i);
       memset(rec->data, i & 0xFF, i);
       rec->data_len = i;
-      sm_check(__FILE__, __LINE__, false);
+      Dsm_check(200);
       if (write_record_to_block(block, rec)) {
          empty_block(block);
          blkno++;
@@ -764,11 +765,11 @@ static void rectestcmd()
       } else {
          break;
       }
-      sm_check(__FILE__, __LINE__, false);
+      Dsm_check(200);
    }
    free_record(rec);
    free_block(block);
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(200);
 }
 
 /*
@@ -1112,7 +1113,13 @@ static bool write_two_files()
    int len, i, j;
    int *p;
    bool rc = false;       /* bad return code */
+   DEVICE *dev = dcr->dev;
 
+   /*
+    * Set big max_file_size so that write_record_to_block
+    * doesn't insert any additional EOF marks
+    */
+   dev->max_file_size = 2 * num_recs * dev->max_block_size;
    Pmsg2(-1, _("\n=== Write, rewind, and re-read test ===\n\n"
       "I'm going to write %d records and an EOF\n"
       "then write %d records and an EOF, then rewind,\n"
@@ -1882,7 +1889,7 @@ static void wrcmd()
    if (!dev->is_open()) {
       open_the_device();
    }
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(200);
    empty_block(block);
    if (verbose > 1) {
       dump_block(block, "test");
@@ -1893,7 +1900,7 @@ static void wrcmd()
    rec->data = check_pool_memory_size(rec->data, i);
    memset(rec->data, i & 0xFF, i);
    rec->data_len = i;
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(200);
    if (!write_record_to_block(block, rec)) {
       Pmsg0(0, _("Error writing record to block.\n"));
       goto bail_out;
@@ -1907,8 +1914,7 @@ static void wrcmd()
    Pmsg0(0, _("Wrote block to device.\n"));
 
 bail_out:
-   sm_check(__FILE__, __LINE__, false);
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(200);
 }
 
 /*
@@ -2212,7 +2218,7 @@ static void fillcmd()
     */
    Dmsg0(100, "just before acquire_device\n");
    if (!acquire_device_for_append(dcr)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       exit_code = 1;
       return;
    }
@@ -2223,7 +2229,7 @@ static void fillcmd()
     * Write Begin Session Record
     */
    if (!write_session_label(dcr, SOS_LABEL)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       Jmsg1(jcr, M_FATAL, 0, _("Write session label failed. ERR=%s\n"),
          dev->bstrerror());
       ok = false;
@@ -2256,6 +2262,7 @@ static void fillcmd()
       rec.VolSessionTime = jcr->VolSessionTime;
       rec.FileIndex = ++file_index;
       rec.Stream = STREAM_FILE_DATA;
+      rec.maskedStream = STREAM_FILE_DATA;
 
       /* Mix up the data just a bit */
       mix_buffer(FILL_RANDOM, rec.data, rec.data_len);
@@ -2335,10 +2342,10 @@ static void fillcmd()
       Dmsg0(100, "Write_end_session_label()\n");
       /* Create Job status for end of session label */
       if (!job_canceled(jcr) && ok) {
-         set_jcr_job_status(jcr, JS_Terminated);
+         jcr->setJobStatus(JS_Terminated);
       } else if (!ok) {
          Pmsg0(000, _("Job canceled.\n"));
-         set_jcr_job_status(jcr, JS_ErrorTerminated);
+         jcr->setJobStatus(JS_ErrorTerminated);
          exit_code = 1;
       }
       if (!write_session_label(dcr, EOS_LABEL)) {
@@ -2791,7 +2798,7 @@ static void qfillcmd()
       count = 1000;
    }
 
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(200);
 
    i = block->buf_len - 100;
    ASSERT (i > 0);
@@ -2826,7 +2833,7 @@ static void qfillcmd()
    scan_blocks();
 
 bail_out:
-   sm_check(__FILE__, __LINE__, false);
+   Dsm_check(200);
 }
 
 /*
@@ -2914,7 +2921,7 @@ do_tape_cmds()
    bool found;
 
    while (!quit && get_cmd("*")) {
-      sm_check(__FILE__, __LINE__, false);
+      Dsm_check(200);
       found = false;
       parse_args(cmd, &args, &argc, argk, argv, MAX_CMD_ARGS);
       for (i=0; i<comsize; i++)       /* search for command */

@@ -32,9 +32,9 @@
  */
 
 /* from attribs.c */
-void    encode_stat       (char *buf, struct stat *statp, int32_t LinkFI, int data_stream);
-int     decode_stat       (char *buf, struct stat *statp, int32_t *LinkFI);
-int32_t decode_LinkFI     (char *buf, struct stat *statp);
+void    encode_stat       (char *buf, struct stat *statp, int stat_size, int32_t LinkFI, int data_stream);
+int     decode_stat       (char *buf, struct stat *statp, int stat_size, int32_t *LinkFI);
+int32_t decode_LinkFI     (char *buf, struct stat *statp, int stat_size);
 int     encode_attribsEx  (JCR *jcr, char *attribsEx, FF_PKT *ff_pkt);
 bool    set_attributes    (JCR *jcr, ATTR *attr, BFILE *ofd);
 int     select_data_stream(FF_PKT *ff_pkt);
@@ -69,6 +69,9 @@ int   find_one_file(JCR *jcr, FF_PKT *ff,
                char *p, dev_t parent_device, bool top_level);
 int   term_find_one(FF_PKT *ff);
 bool  has_file_changed(JCR *jcr, FF_PKT *ff_pkt);
+bool check_changes(JCR *jcr, FF_PKT *ff_pkt);
+void ff_pkt_set_link_digest(FF_PKT *ff_pkt, 
+                            int32_t digest_stream, const char *digest, uint32_t len);
 
 /* From get_priv.c */
 int enable_backup_privileges(JCR *jcr, int ignore_errors);
@@ -81,6 +84,7 @@ bool makepath(ATTR *attr, const char *path, mode_t mode,
 
 /* from fstype.c */
 bool fstype(const char *fname, char *fs, int fslen);
+bool fstype_equals(const char *fname, const char *fstypename);
 
 /* from drivetype.c */
 bool drivetype(const char *fname, char *fs, int fslen);

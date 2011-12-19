@@ -127,6 +127,7 @@ private:
 
 public:
    QStringList job_list;
+   QStringList restore_list;
    QStringList client_list;
    QStringList fileset_list;
    QStringList messages_list;

@@ -87,6 +87,7 @@ Freeze::~Freeze()
 
 ItemFormatterBase::BYTES_CONVERSION ItemFormatterBase::cnvFlag(BYTES_CONVERSION_IEC);
 
+/* String to Electronic value based on K=1024 */
 QString convertBytesIEC(qint64 qfld)
 {
    static const qint64 KB = Q_INT64_C(1024);
@@ -132,6 +133,7 @@ QString convertBytesIEC(qint64 qfld)
    return QString("%1 %2iB").arg(qfld / 1000.0, 0, 'f', 2).arg(suffix);
 }
 
+/* String to human value based on k=1000 */
 QString convertBytesSI(qint64 qfld)
 {
    static const qint64 KB = Q_INT64_C(1000);
@@ -232,9 +234,25 @@ void ItemFormatterBase::setInChanger(int index, const QString &InChanger)
    //setSortValue(index, InChanger.toInt() );
 }
 
+void ItemFormatterBase::setFileType(int index, const QString &type)
+{
+   setPixmap(index, QPixmap(":images/"+type+".png"));
+   //setSortValue(index, InChanger.toInt() );
+}
+
 void ItemFormatterBase::setTextFld(int index, const QString &fld, bool center)
 {
    setText(index, fld.trimmed());
+   if (center) {
+      setTextAlignment(index, Qt::AlignCenter);
+   }
+}
+
+void ItemFormatterBase::setDateFld(int index, utime_t fld, bool center)
+{
+   char buf[200];
+   bstrutime(buf, sizeof(buf), fld);
+   setText(index, QString(buf).trimmed());
    if (center) {
       setTextAlignment(index, Qt::AlignCenter);
    }
@@ -288,9 +306,12 @@ void ItemFormatterBase::setBytesFld(int index, const QString &fld)
    case BYTES_CONVERSION_SI:
       msg = convertBytesSI(qfld);
       break;
+   default:
+      msg = " ";
+      break;
    }
 
-   setNumericFld(index, msg, qfld);
+   setNumericFld(index, msg, QVariant(qfld));
 }
 
 void ItemFormatterBase::setDurationFld(int index, const QString &fld)
@@ -333,7 +354,7 @@ void ItemFormatterBase::setDurationFld(int index, const QString &fld)
          msg += QString(" %1s").arg(dfld);
    }
 
-   setNumericFld(index, msg, fld.trimmed().toLongLong());
+   setNumericFld(index, msg, QVariant(fld.trimmed().toLongLong()));
 }
 
 void ItemFormatterBase::setVolStatusFld(int index, const QString &fld, bool center)

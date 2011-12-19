@@ -84,7 +84,7 @@ extern bool despool_attributes_from_file(JCR *jcr, const char *file);
 
 /* dird_conf.c */
 extern const char *level_to_str(int level);
-extern "C" char *job_code_callback_filesetname(JCR *jcr, const char*);
+extern "C" char *job_code_callback_director(JCR *jcr, const char*);
 
 /* expand.c */
 int variable_expansion(JCR *jcr, char *inp, POOLMEM **exp);
@@ -210,7 +210,7 @@ void set_pooldbr_from_poolres(POOL_DBR *pr, POOL *pool, e_pool_op op);
 int update_pool_references(JCR *jcr, B_DB *db, POOL *pool);
 
 /* ua_input.c */
-int get_cmd(UAContext *ua, const char *prompt);
+int get_cmd(UAContext *ua, const char *prompt, bool subprompt=false);
 bool get_pint(UAContext *ua, const char *prompt);
 bool get_yesno(UAContext *ua, const char *prompt);
 bool is_yesno(char *val, int *ret);
@@ -266,7 +266,9 @@ int     get_media_type(UAContext *ua, char *MediaType, int max_media);
 bool    get_pool_dbr(UAContext *ua, POOL_DBR *pr, const char *argk="pool");
 bool    get_client_dbr(UAContext *ua, CLIENT_DBR *cr);
 POOL   *get_pool_resource(UAContext *ua);
+JOB    *get_restore_job(UAContext *ua);
 POOL   *select_pool_resource(UAContext *ua);
+JCR *select_running_job(UAContext *ua, const char *reason);
 CLIENT *get_client_resource(UAContext *ua);
 int     get_job_dbr(UAContext *ua, JOB_DBR *jr);
 

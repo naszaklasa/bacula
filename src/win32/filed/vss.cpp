@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -56,29 +56,34 @@ VSSCleanup()
 {
    if (g_pVSSClient) {
       delete (g_pVSSClient);
+      g_pVSSClient = NULL;
    }
 }
 
+/*
+ * May be called multiple times 
+ */
 void VSSInit()
 {
+   if (g_pVSSClient) {
+      return;                   /* already initialized */
+   }
    /* decide which vss class to initialize */
    if (g_MajorVersion == 5) {
       switch (g_MinorVersion) {
       case 1: 
          g_pVSSClient = new VSSClientXP();
-         atexit(VSSCleanup);
-         return;
+         break;
       case 2: 
          g_pVSSClient = new VSSClient2003();
-         atexit(VSSCleanup);
-         return;
+         break;
       }
    /* Vista or Longhorn or later */
-//       } else if (g_MajorVersion == 6 && g_MinorVersion == 0) {
    } else if (g_MajorVersion >= 6) {
       g_pVSSClient = new VSSClientVista();
+   }
+   if (g_pVSSClient) {
       atexit(VSSCleanup);
-      return;
    }
 }
 
@@ -121,30 +126,36 @@ VSSClient::~VSSClient()
    }
 
    DestroyWriterInfo();
-   delete (alist*)m_pAlistWriterState;
-   delete (alist*)m_pAlistWriterInfoText;
+   delete m_pAlistWriterState;
+   delete m_pAlistWriterInfoText;
 
    // Call CoUninitialize if the CoInitialize was performed successfully
    if (m_bCoInitializeCalled)
       CoUninitialize();
 }
 
-BOOL VSSClient::InitializeForBackup()
+bool VSSClient::InitializeForBackup(JCR *jcr)
 {
     //return Initialize (VSS_CTX_BACKUP);
+   m_jcr = jcr;
    return Initialize(0);
 }
 
 
+bool VSSClient::InitializeForRestore(JCR *jcr, bool (*VssInitCallback)(JCR *, int), WCHAR *job_metadata)
+{
+   m_metadata = job_metadata;
+   m_jcr = jcr;
+   return Initialize(0, true/*=>Restore*/, VssInitCallback);
+}
 
-
-BOOL VSSClient::GetShadowPath(const char *szFilePath, char *szShadowPath, int nBuflen)
+bool VSSClient::GetShadowPath(const char *szFilePath, char *szShadowPath, int nBuflen)
 {
    if (!m_bBackupIsInitialized)
-      return FALSE;
+      return false;
 
    /* check for valid pathname */
-   BOOL bIsValidName;
+   bool bIsValidName;
    
    bIsValidName = strlen(szFilePath) > 3;
    if (bIsValidName)
@@ -159,23 +170,23 @@ BOOL VSSClient::GetShadowPath(const char *szFilePath, char *szShadowPath, int nB
          if (WideCharToMultiByte(CP_UTF8,0,m_szShadowCopyName[nDriveIndex],-1,szShadowPath,nBuflen-1,NULL,NULL)) {
             nBuflen -= (int)strlen(szShadowPath);
             bstrncat(szShadowPath, szFilePath+2, nBuflen);
-            return TRUE;
+            return true;
          }
       }
    }
    
    bstrncpy(szShadowPath, szFilePath, nBuflen);
    errno = EINVAL;
-   return FALSE;   
+   return false;   
 }
 
-BOOL VSSClient::GetShadowPathW(const wchar_t *szFilePath, wchar_t *szShadowPath, int nBuflen)
+bool VSSClient::GetShadowPathW(const wchar_t *szFilePath, wchar_t *szShadowPath, int nBuflen)
 {
    if (!m_bBackupIsInitialized)
-      return FALSE;
+      return false;
 
    /* check for valid pathname */
-   BOOL bIsValidName;
+   bool bIsValidName;
    
    bIsValidName = wcslen(szFilePath) > 3;
    if (bIsValidName)
@@ -189,54 +200,58 @@ BOOL VSSClient::GetShadowPathW(const wchar_t *szFilePath, wchar_t *szShadowPath,
          wcsncpy(szShadowPath, m_szShadowCopyName[nDriveIndex], nBuflen);
          nBuflen -= (int)wcslen(m_szShadowCopyName[nDriveIndex]);
          wcsncat(szShadowPath, szFilePath+2, nBuflen);
-         return TRUE;
+         return true;
       }
    }
    
    wcsncpy(szShadowPath, szFilePath, nBuflen);
    errno = EINVAL;
-   return FALSE;   
+   return false;   
 }
 
 
 const size_t VSSClient::GetWriterCount()
 {
-   alist* pV = (alist*)m_pAlistWriterInfoText;
-   return pV->size();
+   return m_pAlistWriterInfoText->size();
 }
 
 const char* VSSClient::GetWriterInfo(int nIndex)
 {
-   alist* pV = (alist*)m_pAlistWriterInfoText;
-   return (char*)pV->get(nIndex);
+   return (char*)m_pAlistWriterInfoText->get(nIndex);
 }
 
 
 const int VSSClient::GetWriterState(int nIndex)
 {
-   alist* pV = (alist*)m_pAlistWriterState;   
-   return (intptr_t)pV->get(nIndex);
+   void *item = m_pAlistWriterState->get(nIndex);
+
+/* Eliminate compiler warnings */
+#ifdef HAVE_VSS64
+   return (int64_t)(char *)item;
+#else
+   return (int)(char *)item;
+#endif
 }
 
 void VSSClient::AppendWriterInfo(int nState, const char* pszInfo)
 {
-   alist* pT = (alist*) m_pAlistWriterInfoText;
-   alist* pS = (alist*) m_pAlistWriterState;
-
-   pT->push(bstrdup(pszInfo));
-   pS->push((void*)nState);   
+   m_pAlistWriterInfoText->push(bstrdup(pszInfo));
+   m_pAlistWriterState->push((void*)nState);   
 }
 
+/*
+ * Note, this is called at the end of every job, so release all
+ *  the items in the alists, but do not delete the alist.
+ */
 void VSSClient::DestroyWriterInfo()
 {
-   alist* pT = (alist*)m_pAlistWriterInfoText;
-   alist* pS = (alist*)m_pAlistWriterState;
+   while (!m_pAlistWriterInfoText->empty()) {
+      free(m_pAlistWriterInfoText->pop());
+   }
 
-   while (!pT->empty())
-      free(pT->pop());
-
-   while (!pS->empty())
-      pS->pop();      
+   while (!m_pAlistWriterState->empty()) {
+      m_pAlistWriterState->pop();      
+   }
 }
 
 #endif

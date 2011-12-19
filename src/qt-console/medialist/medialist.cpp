@@ -45,7 +45,7 @@
 #include "run/run.h"
 #include "util/fmtwidgetitem.h"
 
-MediaList::MediaList()
+MediaList::MediaList() : Pages()
 {
    setupUi(this);
    m_name = tr("Pools");

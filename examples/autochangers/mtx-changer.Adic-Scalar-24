@@ -29,6 +29,21 @@
 
 MTX=/usr/sbin/mtx
 
+TMPDIR=/tmp
+
+make_temp_file() 
+{
+  TMPFILE=`mktemp ${TMPDIR}/mtx$1.XXXXXXXXXX 2> /dev/null`
+  if test $? -ne 0 || test x${TMPFILE} = x; then
+     TMPFILE="${TMPDIR}/mtx$1.$$"
+     if test -f ${TMPFILE}; then
+        echo "ERROR: Temp file security problem on: ${TMPFILE}"
+        exit 1
+     fi
+  fi
+}
+
+
 if test $# -lt 2 ; then
   echo "usage: mtx-changer ctl-device command slot archive-device drive"
   echo "  Insufficient number of arguments arguments given."
@@ -102,12 +117,12 @@ case $cmd in
       ;;
 
    loaded)
-      tempfile=`mktemp -t` || exit 33 
-      ${MTX} -f $ctl status > $tempfile
+      make_temp_file
+      ${MTX} -f $ctl status > ${TMPFILE}
       rtn=$?
-      cat $tempfile | grep "^Data Transfer Element $drive:Full"  | awk '{print $7}'
-      cat $tempfile | grep "^Data Transfer Element $drive:Empty" | awk '{print 0}'
-      rm -f $tempfile
+      cat ${TMPFILE} | grep "^Data Transfer Element $drive:Full"  | awk '{print $7}'
+      cat ${TMPFILE} | grep "^Data Transfer Element $drive:Empty" | awk '{print 0}'
+      rm -f ${TMPFILE}
       exit $rtn
       ;;
 

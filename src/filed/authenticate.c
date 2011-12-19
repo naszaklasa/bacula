@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -30,8 +30,6 @@
  *
  *   Kern Sibbald, October 2000
  *
- *   Version $Id$
- *
  */
 
 #include "bacula.h"
@@ -43,8 +41,9 @@ const int dbglvl = 50;
  *   prior to 10Mar08 no version
  *   1 10Mar08
  *   2 13Mar09 - added the ability to restore from multiple storages
+ *   3 03Sep10 - added the restore object command for vss plugin 4.0
  */
-static char OK_hello[]  = "2000 OK Hello 2\n";
+static char OK_hello[]  = "2000 OK Hello 3\n";
 static char Dir_sorry[] = "2999 Authentication failed.\n";
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -260,7 +259,7 @@ int authenticate_storagedaemon(JCR *jcr)
 
    if (!auth_success) {
       Jmsg(jcr, M_FATAL, 0, _("Authorization key rejected by Storage daemon.\n"
-       "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"));
+       "Please see " MANUAL_AUTH_URL " for help.\n"));
       goto auth_fatal;
    }
 

@@ -4,4 +4,4 @@ make clean
 make
 #
 # Build win64 Bacula
-make WIN64=yes
+make win64=yes

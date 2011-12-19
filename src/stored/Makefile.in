@@ -1,9 +1,11 @@
-# $Id$
+#
 @MCOMMON@
 
 srcdir =	.
 VPATH = 	.
 .PATH:		.
+
+sd_group=@sd_group@
 
 # one up
 basedir = ..
@@ -15,6 +17,8 @@ thisdir = src/stored
 DEBUG=@DEBUG@
 
 GETTEXT_LIBS = @LIBINTL@
+
+DB_LIBS=@DB_LIBS@
 
 first_rule: all
 dummy:
@@ -71,7 +75,8 @@ COPYOBJS = bcopy.o block.o device.o dev.o label.o vtape.o \
 EXTRAOBJS = @OBJLIST@
 
 CAP_LIBS = @CAP_LIBS@
-FDLIBS=@FDLIBS@
+ZLIBS=@ZLIBS@
+LZOLIBS = @LZOLIBS@
 
 
 .SUFFIXES:	.c .o
@@ -90,12 +95,12 @@ all: Makefile bacula-sd @STATIC_SD@ bls bextract bscan btape bcopy
 
 bacula-sd: Makefile $(SDOBJS) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
 	@echo "Linking $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -o $@ $(SDOBJS) $(FDLIBS) \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -o $@ $(SDOBJS) $(ZLIBS) \
 	   -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
 	$(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
 
 static-bacula-sd: Makefile $(SDOBJS) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -o $@ $(SDOBJS) $(FDLIBS) \
+	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -o $@ $(SDOBJS) $(ZLIBS) \
 	   -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
 	$(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
 	strip $@
@@ -105,9 +110,9 @@ btape.o: btape.c
 	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) \
 	   -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
-btape: Makefile  $(TAPEOBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE)
-	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../cats  -o $@ $(TAPEOBJS) \
-	   -lbacsql -lbaccfg -lbac $(DLIB) -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+btape: Makefile  $(TAPEOBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -o $@ $(TAPEOBJS) \
+	   -lbaccfg -lbac $(DLIB) -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 bls.o:	bls.c
 	@echo "Compiling $<"
@@ -126,7 +131,7 @@ bextract.o: bextract.c
 
 bextract: Makefile $(BEXTOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
 	@echo "Compiling $<"
-	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BEXTOBJS) $(DLIB) $(FDLIBS) \
+	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BEXTOBJS) $(DLIB) $(ZLIBS) $(LZOLIBS) \
 	   -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 bscan.o: bscan.c
@@ -134,9 +139,10 @@ bscan.o: bscan.c
 	$(NO_ECHO)$(CXX) $(DEFS) $(DEBUG) -c $(CPPFLAGS) -I$(srcdir) \
 	   -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
 
-bscan:	Makefile $(SCNOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE)
+bscan:	Makefile $(SCNOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) \
+	../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../cats/libbaccats$(DEFAULT_ARCHIVE_TYPE)
 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SCNOBJS) \
-	   -lbacsql $(DB_LIBS) $(FDLIBS) -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+	   -lbacsql -lbaccats $(DB_LIBS) $(ZLIBS) -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
 
 bcopy.o: bcopy.c
 	@echo "Compiling $<"
@@ -167,6 +173,9 @@ install: all
 	fi; \
 	echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
 	${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
+	@if test "x${sd_group}" != "x"; then \
+	   chgrp -f ${sd_group} ${DESTDIR}${sysconfdir}/$$destconf; \
+	fi
 	@if test -f static-bacula-sd; then \
 	   $(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) static-bacula-sd $(DESTDIR)$(sbindir)/static-bacula-sd; \
 	fi
@@ -207,7 +216,7 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \

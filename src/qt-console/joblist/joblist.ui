@@ -385,7 +385,7 @@
      <normaloff>:/images/utilities-terminal.png</normaloff>:/images/utilities-terminal.png</iconset>
    </property>
    <property name="text">
-    <string>ListJobMedia</string>
+    <string>List Job Volumes</string>
    </property>
   </action>
   <action name="actionListVolumes">
@@ -394,7 +394,7 @@
      <normaloff>:/images/utilities-terminal.png</normaloff>:/images/utilities-terminal.png</iconset>
    </property>
    <property name="text">
-    <string>ListVolumes</string>
+    <string>List Volumes</string>
    </property>
   </action>
   <action name="actionDeleteJob">
@@ -403,7 +403,7 @@
      <normaloff>:/images/weather-severe-alert.png</normaloff>:/images/weather-severe-alert.png</iconset>
    </property>
    <property name="text">
-    <string>DeleteJob</string>
+    <string>Delete Job</string>
    </property>
   </action>
   <action name="actionPurgeFiles">
@@ -412,7 +412,16 @@
      <normaloff>:/images/weather-severe-alert.png</normaloff>:/images/weather-severe-alert.png</iconset>
    </property>
    <property name="text">
-    <string>PurgeFiles</string>
+    <string>Purge Files</string>
+   </property>
+  </action>
+  <action name="actionRestartJob">
+   <property name="icon">
+    <iconset resource="../main.qrc">
+     <normaloff>:/images/weather-severe-alert.png</normaloff>:/images/weather-severe-alert.png</iconset>
+   </property>
+   <property name="text">
+    <string>Restart Job</string>
    </property>
   </action>
   <action name="actionRestoreFromJob">
@@ -439,7 +448,7 @@
      <normaloff>:/images/joblog.png</normaloff>:/images/joblog.png</iconset>
    </property>
    <property name="text">
-    <string>Show Log for Job</string>
+    <string>Show Job Log</string>
    </property>
   </action>
   <action name="actionShowInfoForJob">
@@ -448,7 +457,7 @@
      <normaloff>:/images/joblog.png</normaloff>:/images/joblog.png</iconset>
    </property>
    <property name="text">
-    <string>Show Info for Job</string>
+    <string>Show Job Info</string>
    </property>
   </action>
   <action name="actionCancelJob">
@@ -466,7 +475,7 @@
      <normaloff>:/images/utilities-terminal.png</normaloff>:/images/utilities-terminal.png</iconset>
    </property>
    <property name="text">
-    <string>List Job Totals in Console</string>
+    <string>List Job Totals on Console</string>
    </property>
   </action>
  </widget>

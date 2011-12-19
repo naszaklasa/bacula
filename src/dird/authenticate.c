@@ -116,7 +116,7 @@ bool authenticate_storage_daemon(JCR *jcr, STORE *store)
             "Passwords or names not the same or\n"
             "Maximum Concurrent Jobs exceeded on the SD or\n"
             "SD networking messed up (restart daemon).\n"
-            "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"),
+            "Please see " MANUAL_AUTH_URL " for help.\n"),
             sd->host(), sd->port());
       return 0;
    }
@@ -225,7 +225,7 @@ int authenticate_file_daemon(JCR *jcr)
             "Passwords or names not the same or\n"
             "Maximum Concurrent Jobs exceeded on the FD or\n"
             "FD networking messed up (restart daemon).\n"
-            "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"),
+            "Please see " MANUAL_AUTH_URL " for help.\n"),
             fd->host(), fd->port());
       return 0;
    }

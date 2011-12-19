@@ -1,5 +1,4 @@
 # 
-# Version $Id$
 # 
 @MCOMMON@
 
@@ -33,8 +32,6 @@ installdirs:
 	$(MKDIR) $(DESTDIR)$(mandir)
 
 install: installdirs
-	$(INSTALL_SCRIPT) startmysql $(DESTDIR)$(scriptdir)/startmysql
-	$(INSTALL_SCRIPT) stopmysql $(DESTDIR)$(scriptdir)/stopmysql
 	$(INSTALL_SCRIPT) bconsole $(DESTDIR)$(scriptdir)/bconsole
 	$(INSTALL_SCRIPT) bacula $(DESTDIR)$(scriptdir)/bacula
 	$(INSTALL_SCRIPT) bacula_config $(DESTDIR)$(scriptdir)/bacula_config
@@ -73,8 +70,6 @@ install: installdirs
 
 
 uninstall:
-	(cd $(DESTDIR)$(scriptdir); $(RMF) startmysql)
-	(cd $(DESTDIR)$(scriptdir); $(RMF) stopmysql)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) bconsole)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) bacula)
 	(cd $(DESTDIR)$(scriptdir); $(RMF) bacula_config)
@@ -94,24 +89,24 @@ uninstall:
 Makefile: Makefile.in
 	cd $(topdir) \
 	    && CONFIG_FILES=$(thisdir)/$@ CONFIG_HEADERS= $(SHELL) ./config.status
-	chmod 755 startmysql stopmysql bacula startit stopit btraceback
+	chmod 755 bacula btraceback
 	chmod 755 bacula-ctl-dir bacula-ctl-fd bacula-ctl-sd bacula_config
-	chmod 755 disk-changer mtx-changer dvd-handler bconsole gconsole
+	chmod 755 disk-changer mtx-changer dvd-handler bconsole
 
 Makefiles:
 	$(SHELL) config.status
-	chmod 755 startmysql stopmysql bacula startit stopit btraceback
+	chmod 755 bacula btraceback
 	chmod 755 bacula-ctl-dir bacula-ctl-fd bacula-ctl-sd
-	chmod 755 mtx-changer dvd-handler bconsole gconsole
+	chmod 755 mtx-changer dvd-handler bconsole
 
 clean:
 	@$(RMF) *~ 1 2 3
 
 # clean for distribution
 distclean: clean
-	@$(RMF) startmysql stopmysql bacula fd startit stopit btraceback
+	@$(RMF) bacula fd btraceback
 	@$(RMF) bacula-ctl-dir bacula-ctl-fd bacula-ctl-sd bacula_config
-	@$(RMF) bconsole gconsole logrotate bacula.desktop 
+	@$(RMF) bconsole logrotate bacula.desktop 
 	@$(RMF) bacula.desktop.gnome1 bacula.desktop.gnome2 mtx-changer dvd-handler
 	@$(RMF) gnome-console.console_apps bacula.desktop.gnome2.xsu
 	@$(RMF) bgnome-console.console_apps

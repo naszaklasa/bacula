@@ -61,11 +61,11 @@ void do_verify_volume(JCR *jcr)
    sd = jcr->store_bsock;
    if (!sd) {
       Jmsg(jcr, M_FATAL, 0, _("Storage command not issued before Verify.\n"));
-      set_jcr_job_status(jcr, JS_FatalError);
+      jcr->setJobStatus(JS_FatalError);
       return;
    }
    dir = jcr->dir_bsock;
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
    LockRes();
    CLIENT *client = (CLIENT *)GetNextRes(R_CLIENT, NULL);
@@ -77,7 +77,7 @@ void do_verify_volume(JCR *jcr)
       buf_size = 0;                   /* use default */
    }
    if (!bnet_set_buffer_size(sd, buf_size, BNET_SETBUF_WRITE)) {
-      set_jcr_job_status(jcr, JS_FatalError);
+      jcr->setJobStatus(JS_FatalError);
       return;
    }
    jcr->buf_size = sd->msglen;
@@ -246,11 +246,11 @@ void do_verify_volume(JCR *jcr)
 
       } /* end switch */
    } /* end while bnet_get */
-   set_jcr_job_status(jcr, JS_Terminated);
+   jcr->setJobStatus(JS_Terminated);
    goto ok_out;
 
 bail_out:
-   set_jcr_job_status(jcr, JS_ErrorTerminated);
+   jcr->setJobStatus(JS_ErrorTerminated);
 
 ok_out:
    if (jcr->compress_buf) {

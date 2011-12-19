@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -35,6 +35,7 @@
 
 #include "bacula.h"
 #include "stored.h"
+#include "ch.h"
 #include "findlib/find.h"
 
 extern bool parse_sd_config(CONFIG *config, const char *configfile, int exit_code);
@@ -308,7 +309,7 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
 
    /* File Attributes stream */
 
-   switch (rec->Stream) {
+   switch (rec->maskedStream) {
    case STREAM_UNIX_ATTRIBUTES:
    case STREAM_UNIX_ATTRIBUTES_EX:
 
@@ -323,12 +324,12 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          extract = false;
       }
 
-      if (!unpack_attributes_record(jcr, rec->Stream, rec->data, attr)) {
+      if (!unpack_attributes_record(jcr, rec->Stream, rec->data, rec->data_len, attr)) {
          Emsg0(M_ERROR_TERM, 0, _("Cannot continue.\n"));
       }
 
       if (file_is_included(ff, attr->fname) && !file_is_excluded(ff, attr->fname)) {
-         attr->data_stream = decode_stat(attr->attr, &attr->statp, &attr->LinkFI);
+         attr->data_stream = decode_stat(attr->attr, &attr->statp, sizeof(attr->statp), &attr->LinkFI);
          if (!is_restore_stream_supported(attr->data_stream)) {
             if (!non_support_data++) {
                Jmsg(jcr, M_ERROR, 0, _("%s stream not supported on this Client.\n"),
@@ -368,18 +369,22 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
       }
       break;
 
+   case STREAM_RESTORE_OBJECT:
+      /* nothing to do */
+      break;
+
    /* Data stream and extracting */
    case STREAM_FILE_DATA:
    case STREAM_SPARSE_DATA:
    case STREAM_WIN32_DATA:
 
       if (extract) {
-         if (rec->Stream == STREAM_SPARSE_DATA) {
+         if (rec->maskedStream == STREAM_SPARSE_DATA) {
             ser_declare;
             uint64_t faddr;
-            wbuf = rec->data + SPARSE_FADDR_SIZE;
-            wsize = rec->data_len - SPARSE_FADDR_SIZE;
-            ser_begin(rec->data, SPARSE_FADDR_SIZE);
+            wbuf = rec->data + OFFSET_FADDR_SIZE;
+            wsize = rec->data_len - OFFSET_FADDR_SIZE;
+            ser_begin(rec->data, OFFSET_FADDR_SIZE);
             unser_uint64(faddr);
             if (fileAddr != faddr) {
                fileAddr = faddr;
@@ -406,16 +411,16 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
    case STREAM_WIN32_GZIP_DATA:
 #ifdef HAVE_LIBZ
       if (extract) {
-         uLong compress_len;
-         int stat;
+         uLong compress_len = compress_buf_size;
+         int stat = Z_BUF_ERROR;
 
-         if (rec->Stream == STREAM_SPARSE_GZIP_DATA) {
+         if (rec->maskedStream == STREAM_SPARSE_GZIP_DATA) {
             ser_declare;
             uint64_t faddr;
             char ec1[50];
-            wbuf = rec->data + SPARSE_FADDR_SIZE;
-            wsize = rec->data_len - SPARSE_FADDR_SIZE;
-            ser_begin(rec->data, SPARSE_FADDR_SIZE);
+            wbuf = rec->data + OFFSET_FADDR_SIZE;
+            wsize = rec->data_len - OFFSET_FADDR_SIZE;
+            ser_begin(rec->data, OFFSET_FADDR_SIZE);
             unser_uint64(faddr);
             if (fileAddr != faddr) {
                fileAddr = faddr;
@@ -432,11 +437,10 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
             wsize = rec->data_len;
          }
 
-         while ((stat=uncompress((Byte *)compress_buf, &compress_len,
-                                 (const Byte *)wbuf, (uLong)wsize)) == Z_BUF_ERROR)
-         {
+         while (compress_len < 10000000 && (stat=uncompress((Byte *)compress_buf, &compress_len,
+                                 (const Byte *)wbuf, (uLong)wsize)) == Z_BUF_ERROR) {
             /* The buffer size is too small, try with a bigger one */
-            compress_len = compress_len + (compress_len >> 1);
+            compress_len = 2 * compress_len;
             compress_buf = check_pool_memory_size(compress_buf,
                                                   compress_len);
          }
@@ -460,6 +464,101 @@ static bool record_cb(DCR *dcr, DEV_RECORD *rec)
          return true;
       }
 #endif
+      break;
+
+   /* Compressed data stream */
+   case STREAM_COMPRESSED_DATA:
+   case STREAM_SPARSE_COMPRESSED_DATA:
+   case STREAM_WIN32_COMPRESSED_DATA:
+      if (extract) {
+         uint32_t comp_magic, comp_len;
+         uint16_t comp_level, comp_version;
+#ifdef HAVE_LZO
+         lzo_uint compress_len;
+         const unsigned char *cbuf;
+         int r, real_compress_len;
+#endif
+
+         if (rec->maskedStream == STREAM_SPARSE_COMPRESSED_DATA) {
+            ser_declare;
+            uint64_t faddr;
+            char ec1[50];
+            wbuf = rec->data + OFFSET_FADDR_SIZE;
+            wsize = rec->data_len - OFFSET_FADDR_SIZE;
+            ser_begin(rec->data, OFFSET_FADDR_SIZE);
+            unser_uint64(faddr);
+            if (fileAddr != faddr) {
+               fileAddr = faddr;
+               if (blseek(&bfd, (boffset_t)fileAddr, SEEK_SET) < 0) {
+                  berrno be;
+                  Emsg3(M_ERROR, 0, _("Seek to %s error on %s: ERR=%s\n"),
+                     edit_uint64(fileAddr, ec1), attr->ofname, be.bstrerror());
+                  extract = false;
+                  return true;
+               }
+            }
+         } else {
+            wbuf = rec->data;
+            wsize = rec->data_len;
+         }
+
+         /* read compress header */
+         unser_declare;
+         unser_begin(wbuf, sizeof(comp_stream_header));
+         unser_uint32(comp_magic);
+         unser_uint32(comp_len);
+         unser_uint16(comp_level);
+         unser_uint16(comp_version);
+         Dmsg4(200, "Compressed data stream found: magic=0x%x, len=%d, level=%d, ver=0x%x\n", comp_magic, comp_len,
+                                 comp_level, comp_version);
+
+         /* version check */
+         if (comp_version != COMP_HEAD_VERSION) {
+            Emsg1(M_ERROR, 0, _("Compressed header version error. version=0x%x\n"), comp_version);
+            return false;
+         }
+         /* size check */
+         if (comp_len + sizeof(comp_stream_header) != wsize) {
+            Emsg2(M_ERROR, 0, _("Compressed header size error. comp_len=%d, msglen=%d\n"),
+                 comp_len, wsize);
+            return false;
+         }
+
+          switch(comp_magic) {
+#ifdef HAVE_LZO
+            case COMPRESS_LZO1X:
+               compress_len = compress_buf_size;
+               cbuf = (const unsigned char*) wbuf + sizeof(comp_stream_header);
+               real_compress_len = wsize - sizeof(comp_stream_header);
+               Dmsg2(200, "Comp_len=%d msglen=%d\n", compress_len, wsize);
+               while ((r=lzo1x_decompress_safe(cbuf, real_compress_len,
+                                               (unsigned char *)compress_buf, &compress_len, NULL)) == LZO_E_OUTPUT_OVERRUN)
+               {
+
+                  /* The buffer size is too small, try with a bigger one */
+                  compress_len = 2 * compress_len;
+                  compress_buf = check_pool_memory_size(compress_buf,
+                                                  compress_len);
+               }
+               if (r != LZO_E_OK) {
+                  Emsg1(M_ERROR, 0, _("LZO uncompression error. ERR=%d\n"), r);
+                  extract = false;
+                  return true;
+               }
+               Dmsg2(100, "Write uncompressed %d bytes, total before write=%d\n", compress_len, total);
+               store_data(&bfd, compress_buf, compress_len);
+               total += compress_len;
+               fileAddr += compress_len;
+               Dmsg2(100, "Compress len=%d uncompressed=%d\n", rec->data_len, compress_len);
+               break;
+#endif
+            default:
+               Emsg1(M_ERROR, 0, _("Compression algorithm 0x%x found, but not supported!\n"), comp_magic);
+               extract = false;
+               return true;
+         }
+
+      }
       break;
 
    case STREAM_MD5_DIGEST:

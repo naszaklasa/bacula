@@ -157,7 +157,7 @@ bool do_migration_init(JCR *jcr)
    }
 
    if (jcr->previous_jr.JobId == 0 || jcr->ExpectedFiles == 0) {
-      set_jcr_job_status(jcr, JS_Terminated);
+      jcr->setJobStatus(JS_Terminated);
       Dmsg1(dbglevel, "JobId=%d expected files == 0\n", (int)jcr->JobId);
       if (jcr->previous_jr.JobId == 0) {
          Jmsg(jcr, M_INFO, 0, _("No previous Job found to %s.\n"), jcr->get_ActionName(0));
@@ -213,6 +213,11 @@ bool do_migration_init(JCR *jcr)
    /* Don't let WatchDog checks Max*Time value on this Job */
    mig_jcr->no_maxtime = true;
 
+   /*
+    * Don't check for duplicates on migration and copy jobs
+    */
+   mig_jcr->job->IgnoreDuplicateJobChecking = true;
+
    Dmsg4(dbglevel, "mig_jcr: Name=%s JobId=%d Type=%c Level=%c\n",
       mig_jcr->jr.Name, (int)mig_jcr->jr.JobId, 
       mig_jcr->jr.JobType, mig_jcr->jr.JobLevel);
@@ -233,8 +238,9 @@ bool do_migration_init(JCR *jcr)
 /*
  * set_migration_next_pool() called by do_migration_init()
  * at differents stages.
- * The  idea here is tofactorize the NextPool's search code and
- * to permit do_migration_init() to return with NextPool set in jcr struct.
+ * The  idea here is to make a common subroutine for the 
+ *   NextPool's search code and to permit do_migration_init() 
+ *   to return with NextPool set in jcr struct.
  */
 static bool set_migration_next_pool(JCR *jcr, POOL **retpool)
 {
@@ -301,7 +307,7 @@ bool do_migration(JCR *jcr)
     *  so set a normal status, cleanup and return OK.
     */
    if (!mig_jcr) {
-      set_jcr_job_status(jcr, JS_Terminated);
+      jcr->setJobStatus(JS_Terminated);
       migration_cleanup(jcr, jcr->JobStatus);
       return true;
    }
@@ -311,7 +317,7 @@ bool do_migration(JCR *jcr)
            edit_int64(jcr->previous_jr.JobId, ed1),
            jcr->get_ActionName(0),
            db_strerror(jcr->db));
-      set_jcr_job_status(jcr, JS_Terminated);
+      jcr->setJobStatus(JS_Terminated);
       migration_cleanup(jcr, jcr->JobStatus);
       return true;
    }
@@ -322,7 +328,7 @@ bool do_migration(JCR *jcr)
          edit_int64(jcr->previous_jr.JobId, ed1),
          jcr->get_ActionName(1),
          jcr->get_OperationName());
-      set_jcr_job_status(jcr, JS_Terminated);
+      jcr->setJobStatus(JS_Terminated);
       migration_cleanup(jcr, jcr->JobStatus);
       return true;
    }
@@ -338,8 +344,8 @@ bool do_migration(JCR *jcr)
     *
     */
    Dmsg0(110, "Open connection with storage daemon\n");
-   set_jcr_job_status(jcr, JS_WaitSD);
-   set_jcr_job_status(mig_jcr, JS_WaitSD);
+   jcr->setJobStatus(JS_WaitSD);
+   mig_jcr->setJobStatus(JS_WaitSD);
    /*
     * Start conversation with Storage daemon
     */
@@ -373,7 +379,7 @@ bool do_migration(JCR *jcr)
    jcr->start_time = time(NULL);
    jcr->jr.StartTime = jcr->start_time;
    jcr->jr.JobTDate = jcr->start_time;
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
    /* Update job start record for this migration control job */
    if (!db_update_job_start_record(jcr, jcr->db, &jcr->jr)) {
@@ -385,7 +391,7 @@ bool do_migration(JCR *jcr)
    mig_jcr->start_time = time(NULL);
    mig_jcr->jr.StartTime = mig_jcr->start_time;
    mig_jcr->jr.JobTDate = mig_jcr->start_time;
-   set_jcr_job_status(mig_jcr, JS_Running);
+   mig_jcr->setJobStatus(JS_Running);
 
    /* Update job start record for the real migration backup job */
    if (!db_update_job_start_record(mig_jcr, mig_jcr->db, &mig_jcr->jr)) {
@@ -415,13 +421,13 @@ bool do_migration(JCR *jcr)
    }
 
 
-   set_jcr_job_status(jcr, JS_Running);
-   set_jcr_job_status(mig_jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
+   mig_jcr->setJobStatus(JS_Running);
 
    /* Pickup Job termination data */
    /* Note, the SD stores in jcr->JobFiles/ReadBytes/JobBytes/JobErrors */
    wait_for_storage_daemon_termination(jcr);
-   set_jcr_job_status(jcr, jcr->SDJobStatus);
+   jcr->setJobStatus(jcr->SDJobStatus);
    db_write_batch_file_records(jcr);    /* used by bulk batch file insert */
    if (jcr->JobStatus != JS_Terminated) {
       return false;
@@ -673,7 +679,6 @@ static int getJob_to_migrate(JCR *jcr)
    jids.list[0] = 0;
    jids.count = 0;
 
-
    /*
     * If MigrateJobId is set, then we migrate only that Job,
     *  otherwise, we go through the full selection of jobs to
@@ -681,8 +686,7 @@ static int getJob_to_migrate(JCR *jcr)
     */
    if (jcr->MigrateJobId != 0) {
       Dmsg1(dbglevel, "At Job start previous jobid=%u\n", jcr->MigrateJobId);
-      edit_uint64(jcr->MigrateJobId, ids.list);
-      ids.count = 1;
+      JobId = jcr->MigrateJobId;
    } else {
       switch (jcr->job->selection_type) {
       case MT_JOB:
@@ -830,28 +834,43 @@ static int getJob_to_migrate(JCR *jcr)
          Jmsg(jcr, M_FATAL, 0, _("Unknown %s Selection Type.\n"), jcr->get_OperationName());
          goto bail_out;
       }
-   }
 
-   /*
-    * Loop over all jobids except the last one, sending
-    *  them to start_migration_job(), which will start a job
-    *  for each of them.  For the last JobId, we handle it below.
-    */
-   p = ids.list;
-   if (ids.count == 0) {
-      Jmsg(jcr, M_INFO, 0, _("No JobIds found to %s.\n"), jcr->get_ActionName(0));
-      goto ok_out;
-   }
+      /*
+       * Loop over all jobids except the last one, sending
+       * them to start_migration_job(), which will start a job
+       * for each of them.  For the last JobId, we handle it below.
+       */
+      p = ids.list;
+      if (ids.count == 0) {
+         Jmsg(jcr, M_INFO, 0, _("No JobIds found to %s.\n"), jcr->get_ActionName(0));
+         goto ok_out;
+      }
 
-   Jmsg(jcr, M_INFO, 0, _("The following %u JobId%s chosen to be %s: %s\n"),
-      ids.count, (ids.count < 2) ? _(" was") : _("s were"),
-      jcr->get_ActionName(1), ids.list);
+      Jmsg(jcr, M_INFO, 0, _("The following %u JobId%s chosen to be %s: %s\n"),
+         ids.count, (ids.count < 2) ? _(" was") : _("s were"),
+         jcr->get_ActionName(1), ids.list);
 
-   Dmsg2(dbglevel, "Before loop count=%d ids=%s\n", ids.count, ids.list);
-   for (int i=1; i < (int)ids.count; i++) {
+      Dmsg2(dbglevel, "Before loop count=%d ids=%s\n", ids.count, ids.list);
+      for (int i=1; i < (int)ids.count; i++) {
+         JobId = 0;
+         stat = get_next_jobid_from_list(&p, &JobId);
+         Dmsg3(dbglevel, "getJobid_no=%d stat=%d JobId=%u\n", i, stat, JobId);
+         if (stat < 0) {
+            Jmsg(jcr, M_FATAL, 0, _("Invalid JobId found.\n"));
+            goto bail_out;
+         } else if (stat == 0) {
+            Jmsg(jcr, M_INFO, 0, _("No JobIds found to %s.\n"), jcr->get_ActionName(0));
+            goto ok_out;
+         }
+         jcr->MigrateJobId = JobId;
+         start_migration_job(jcr);
+         Dmsg0(dbglevel, "Back from start_migration_job\n");
+      }
+   
+      /* Now get the last JobId and handle it in the current job */
       JobId = 0;
       stat = get_next_jobid_from_list(&p, &JobId);
-      Dmsg3(dbglevel, "getJobid_no=%d stat=%d JobId=%u\n", i, stat, JobId);
+      Dmsg2(dbglevel, "Last get_next_jobid stat=%d JobId=%u\n", stat, (int)JobId);
       if (stat < 0) {
          Jmsg(jcr, M_FATAL, 0, _("Invalid JobId found.\n"));
          goto bail_out;
@@ -859,21 +878,6 @@ static int getJob_to_migrate(JCR *jcr)
          Jmsg(jcr, M_INFO, 0, _("No JobIds found to %s.\n"), jcr->get_ActionName(0));
          goto ok_out;
       }
-      jcr->MigrateJobId = JobId;
-      start_migration_job(jcr);
-      Dmsg0(dbglevel, "Back from start_migration_job\n");
-   }
-   
-   /* Now get the last JobId and handle it in the current job */
-   JobId = 0;
-   stat = get_next_jobid_from_list(&p, &JobId);
-   Dmsg2(dbglevel, "Last get_next_jobid stat=%d JobId=%u\n", stat, (int)JobId);
-   if (stat < 0) {
-      Jmsg(jcr, M_FATAL, 0, _("Invalid JobId found.\n"));
-      goto bail_out;
-   } else if (stat == 0) {
-      Jmsg(jcr, M_INFO, 0, _("No JobIds found to %s.\n"), jcr->get_ActionName(0));
-      goto ok_out;
    }
 
    jcr->previous_jr.JobId = JobId;
@@ -886,6 +890,7 @@ static int getJob_to_migrate(JCR *jcr)
            db_strerror(jcr->db));
       goto bail_out;
    }
+
    Jmsg(jcr, M_INFO, 0, _("%s using JobId=%s Job=%s\n"),
       jcr->get_OperationName(),
       edit_int64(jcr->previous_jr.JobId, ed1), jcr->previous_jr.Job);
@@ -913,8 +918,9 @@ static void start_migration_job(JCR *jcr)
    UAContext *ua = new_ua_context(jcr);
    char ed1[50];
    ua->batch = true;
-   Mmsg(ua->cmd, "run job=\"%s\" jobid=%s", jcr->job->name(),
-        edit_uint64(jcr->MigrateJobId, ed1));
+   Mmsg(ua->cmd, "run job=\"%s\" jobid=%s ignoreduplicatecheck=yes pool=\"%s\"", 
+        jcr->job->name(), edit_uint64(jcr->MigrateJobId, ed1),
+        jcr->pool->name());
    Dmsg2(dbglevel, "=============== %s cmd=%s\n", jcr->get_OperationName(), ua->cmd);
    parse_ua_args(ua);                 /* parse command */
    JobId_t jobid = run_cmd(ua, ua->cmd);
@@ -1179,8 +1185,15 @@ void migration_cleanup(JCR *jcr, int TermCode)
          Mmsg(query, "UPDATE Log SET JobId=%s WHERE JobId=%s",
            new_jobid, old_jobid);
          db_sql_query(mig_jcr->db, query.c_str(), NULL, NULL);
-         /* Purge all old file records, but leave Job record */
-         purge_files_from_jobs(ua, old_jobid);
+
+         if (jcr->job->PurgeMigrateJob) {
+            /* Purge old Job record */
+            purge_jobs_from_catalog(ua, old_jobid);
+         } else {
+            /* Purge all old file records, but leave Job record */
+            purge_files_from_jobs(ua, old_jobid);
+         }
+
          free_ua_context(ua);
       } 
 
@@ -1203,7 +1216,7 @@ void migration_cleanup(JCR *jcr, int TermCode)
       if (!db_get_job_record(jcr, jcr->db, &jcr->jr)) {
          Jmsg(jcr, M_WARNING, 0, _("Error getting Job record for Job report: ERR=%s"),
             db_strerror(jcr->db));
-         set_jcr_job_status(jcr, JS_ErrorTerminated);
+         jcr->setJobStatus(JS_ErrorTerminated);
       }
 
       update_bootstrap_file(mig_jcr);
@@ -1290,7 +1303,7 @@ void migration_cleanup(JCR *jcr, int TermCode)
 
    jobstatus_to_ascii(jcr->SDJobStatus, sd_term_msg, sizeof(sd_term_msg));
 
-   Jmsg(jcr, msg_type, 0, _("%s %s %s (%s): %s\n"
+   Jmsg(jcr, msg_type, 0, _("%s %s %s (%s):\n"
 "  Build OS:               %s %s %s\n"
 "  Prev Backup JobId:      %s\n"
 "  Prev Backup Job:        %s\n"
@@ -1319,7 +1332,7 @@ void migration_cleanup(JCR *jcr, int TermCode)
 "  SD Errors:              %d\n"
 "  SD termination status:  %s\n"
 "  Termination:            %s\n\n"),
-        BACULA, my_name, VERSION, LSMDATE, edt,
+        BACULA, my_name, VERSION, LSMDATE,
         HOST_OS, DISTNAME, DISTVER,
         edit_uint64(jcr->previous_jr.JobId, ec6),
         jcr->previous_jr.Job,

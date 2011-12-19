@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2008-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -41,7 +41,6 @@
  *       to do the backup.
  *     When the File daemon finishes the job, update the DB.
  *
- *   Version $Id: $
  */
 
 #include "bacula.h"
@@ -142,6 +141,8 @@ bool do_vbackup(JCR *jcr)
       ((STORE *)jcr->rstorage->first())->name(),
       ((STORE *)jcr->wstorage->first())->name());
 
+   jcr->wasVirtualFull = true;        /* remember where we came from */
+
    /* Print Job Start message */
    Jmsg(jcr, M_INFO, 0, _("Start Virtual Backup JobId %s, Job=%s\n"),
         edit_uint64(jcr->JobId, ed1), jcr->Job);
@@ -193,7 +194,7 @@ _("This Job is not an Accurate backup so is not equivalent to a Full backup.\n")
     *
     */
    Dmsg0(110, "Open connection with storage daemon\n");
-   set_jcr_job_status(jcr, JS_WaitSD);
+   jcr->setJobStatus(JS_WaitSD);
    /*
     * Start conversation with Storage daemon
     */
@@ -223,7 +224,7 @@ _("This Job is not an Accurate backup so is not equivalent to a Full backup.\n")
    jcr->start_time = time(NULL);
    jcr->jr.StartTime = jcr->start_time;
    jcr->jr.JobTDate = jcr->start_time;
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
    /* Update job start record */
    if (!db_update_job_start_record(jcr, jcr->db, &jcr->jr)) {
@@ -247,12 +248,12 @@ _("This Job is not an Accurate backup so is not equivalent to a Full backup.\n")
       return false;
    }
 
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
    /* Pickup Job termination data */
    /* Note, the SD stores in jcr->JobFiles/ReadBytes/JobBytes/JobErrors */
    wait_for_storage_daemon_termination(jcr);
-   set_jcr_job_status(jcr, jcr->SDJobStatus);
+   jcr->setJobStatus(jcr->SDJobStatus);
    db_write_batch_file_records(jcr);    /* used by bulk batch file insert */
    if (jcr->JobStatus != JS_Terminated) {
       return false;
@@ -284,7 +285,7 @@ void vbackup_cleanup(JCR *jcr, int TermCode)
    memset(&mr, 0, sizeof(mr));
    memset(&cr, 0, sizeof(cr));
 
-   jcr->set_JobLevel(L_FULL);         /* we want this to appear as a Full backup */
+   jcr->setJobLevel(L_FULL);         /* we want this to appear as a Full backup */
    jcr->jr.JobLevel = L_FULL;         /* we want this to appear as a Full backup */
    jcr->JobFiles = jcr->SDJobFiles;
    jcr->JobBytes = jcr->SDJobBytes;
@@ -302,7 +303,7 @@ void vbackup_cleanup(JCR *jcr, int TermCode)
    if (!db_get_job_record(jcr, jcr->db, &jcr->jr)) {
       Jmsg(jcr, M_WARNING, 0, _("Error getting Job record for Job report: ERR=%s"),
          db_strerror(jcr->db));
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
    }
 
    bstrncpy(cr.Name, jcr->client->name(), sizeof(cr.Name));
@@ -315,7 +316,7 @@ void vbackup_cleanup(JCR *jcr, int TermCode)
    if (!db_get_media_record(jcr, jcr->db, &mr)) {
       Jmsg(jcr, M_WARNING, 0, _("Error getting Media record for Volume \"%s\": ERR=%s"),
          mr.VolumeName, db_strerror(jcr->db));
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
    }
 
    update_bootstrap_file(jcr);
@@ -387,7 +388,7 @@ void vbackup_cleanup(JCR *jcr, int TermCode)
    }
    jobstatus_to_ascii(jcr->SDJobStatus, sd_term_msg, sizeof(sd_term_msg));
 
-   Jmsg(jcr, msg_type, 0, _("%s %s %s (%s): %s\n"
+   Jmsg(jcr, msg_type, 0, _("%s %s %s (%s):\n"
 "  Build OS:               %s %s %s\n"
 "  JobId:                  %d\n"
 "  Job:                    %s\n"
@@ -412,7 +413,7 @@ void vbackup_cleanup(JCR *jcr, int TermCode)
 "  SD Errors:              %d\n"
 "  SD termination status:  %s\n"
 "  Termination:            %s\n\n"),
-        BACULA, my_name, VERSION, LSMDATE, edt,
+        BACULA, my_name, VERSION, LSMDATE,
         HOST_OS, DISTNAME, DISTVER,
         jcr->jr.JobId,
         jcr->jr.Job,
@@ -478,8 +479,16 @@ static bool create_bootstrap_file(JCR *jcr, char *jobids)
 
 #define new_get_file_list
 #ifdef new_get_file_list
-   if (!db_get_file_list(jcr, ua->db, jobids, insert_bootstrap_handler, (void *)rx.bsr)) {
-      Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(ua->db));
+   if (!db_open_batch_connexion(jcr, jcr->db)) {
+      Jmsg0(jcr, M_FATAL, 0, "Can't get batch sql connexion");
+      return false;
+   }
+
+   if (!db_get_file_list(jcr, jcr->db_batch, jobids, false /* don't use md5 */,
+                         true /* use delta */,
+                         insert_bootstrap_handler, (void *)rx.bsr))
+   {
+      Jmsg(jcr, M_ERROR, 0, "%s", db_strerror(jcr->db_batch));
    }
 #else
    char *p;

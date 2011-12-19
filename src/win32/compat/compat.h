@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2004-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2004-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,18 +34,17 @@
 /*
  * Author          : Christopher S. Hull
  * Created On      : Fri Jan 30 13:00:51 2004
- * Last Modified By: Thorsten Engel
- * Last Modified On: Fri Apr 22 19:30:00 2004
- * Update Count    : 218
- * $Id$
  */
 
 
 #if !defined(__COMPAT_H_)
 #define __COMPAT_H_
 #if !defined(_STAT_H)
-#define _STAT_H       /* don't pull in MinGW stat.h */
-#define _STAT_DEFINED /* don't pull in MinGW stat.h */
+#define _STAT_H         /* don't pull in MinGW stat.h */
+#endif
+
+#ifndef _STAT_DEFINED
+#define _STAT_DEFINED 1 /* don't pull in MinGW struct stat from wchar.h */
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1400) // VC8+
@@ -60,7 +59,36 @@
 #ifdef MINGW64
 #include <direct.h>
 #define _declspec __declspec
+
+/* Missing in 64 bit mingw */
+typedef struct _REPARSE_DATA_BUFFER {
+        DWORD  ReparseTag;
+        WORD   ReparseDataLength;
+        WORD   Reserved;
+        union {
+                struct {
+                        WORD   SubstituteNameOffset;
+                        WORD   SubstituteNameLength;
+                        WORD   PrintNameOffset;
+                        WORD   PrintNameLength;
+                        WCHAR PathBuffer[1];
+                } SymbolicLinkReparseBuffer;
+                struct {
+                        WORD   SubstituteNameOffset;
+                        WORD   SubstituteNameLength;
+                        WORD   PrintNameOffset;
+                        WORD   PrintNameLength;
+                        WCHAR PathBuffer[1];
+                } MountPointReparseBuffer;
+                struct {
+                        BYTE   DataBuffer[1];
+                } GenericReparseBuffer;
+        } DUMMYUNIONNAME;
+} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
+
 #endif
+
+#include <winioctl.h>
 
 #ifdef _WIN64
 # define GWL_USERDATA  GWLP_USERDATA
@@ -380,6 +408,27 @@ void Win32ConvCleanupCache();
 void closelog();
 void openlog(const char *ident, int option, int facility);
 #endif //HAVE_MINGW
+
+/* Don't let OS go to sleep (usually a Laptop) while we are backing up */
+void prevent_os_suspensions();
+void allow_os_suspensions();
+
+typedef DWORD EXECUTION_STATE;
+#ifndef ES_CONTINUOUS
+#define ES_CONTINUOUS            0x80000000
+#endif
+#ifndef ES_SYSTEM_REQUIRED
+#define ES_SYSTEM_REQUIRED       0x00000001
+#endif
+#ifndef ES_DISPLAY_REQUIRED
+#define ES_DISPLAY_REQUIRED      0x00000002
+#endif
+#ifndef ES_USER_PRESENT
+# define ES_USER_PRESENT          0x00000004
+#endif
+
+WINBASEAPI EXECUTION_STATE WINAPI SetThreadExecutionState(EXECUTION_STATE esFlags);
+
 
 extern void LogErrorMsg(const char *message);
 

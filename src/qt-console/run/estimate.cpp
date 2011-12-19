@@ -40,7 +40,7 @@
 /*
  * Setup all the combo boxes and display the dialog
  */
-estimatePage::estimatePage()
+estimatePage::estimatePage() : Pages()
 {
    QDateTime dt;
 

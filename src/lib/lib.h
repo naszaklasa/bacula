@@ -69,5 +69,5 @@
 #include "attr.h"
 #include "var.h"
 #include "guid_to_name.h"
-
+#include "htable.h"
 #include "protos.h"

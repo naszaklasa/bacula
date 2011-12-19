@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -31,7 +31,6 @@
  *
  *     Kern Sibbald, December MMI
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -41,7 +40,7 @@ class run_ctx {
 public:
    char *job_name, *level_name, *jid, *store_name, *pool_name;
    char *where, *fileset_name, *client_name, *bootstrap, *regexwhere;
-   char *restore_client_name;
+   char *restore_client_name, *comment;
    const char *replace;
    char *when, *verify_job_name, *catalog_name;
    char *previous_job_name;
@@ -62,6 +61,8 @@ public:
    bool mod;
    int spool_data;
    bool spool_data_set;
+   int ignoreduplicatecheck;
+   bool ignoreduplicatecheck_set;
 
    /* Methods */
    run_ctx() { memset(this, 0, sizeof(run_ctx)); 
@@ -121,6 +122,11 @@ int run_cmd(UAContext *ua, const char *cmd)
       set_jcr_defaults(jcr, rc.job);
       jcr->unlink_bsr = ua->jcr->unlink_bsr;    /* copy unlink flag from caller */
       ua->jcr->unlink_bsr = false;
+   }
+   /* Transfer JobIds to new restore Job */
+   if (ua->jcr->JobIds) {
+      jcr->JobIds = ua->jcr->JobIds;
+      ua->jcr->JobIds = NULL;
    }
 
 try_again:
@@ -199,6 +205,21 @@ bail_out:
 int modify_job_parameters(UAContext *ua, JCR *jcr, run_ctx &rc)
 {
    int i, opt;
+   
+   /* Some options are not available through the menu
+    * TODO: Add an advanced menu?
+    */
+   if (rc.spool_data_set) {
+      jcr->spool_data = rc.spool_data;
+   }
+
+   /* Used by migration jobs that can have the same name,
+    * but can run at the same time
+    */
+   if (rc.ignoreduplicatecheck_set) {
+      jcr->IgnoreDuplicateJobChecking = rc.ignoreduplicatecheck;
+   }
+
    /*
     * At user request modify parameters of job to be run.
     */
@@ -438,6 +459,9 @@ static bool reset_restore_context(UAContext *ua, JCR *jcr, run_ctx &rc)
       jcr->catalog = rc.catalog;
       pm_strcpy(jcr->catalog_source, _("User input"));
    }
+
+   pm_strcpy(jcr->comment, rc.comment);
+
    if (rc.where) {
       if (jcr->where) {
          free(jcr->where);
@@ -479,7 +503,6 @@ static bool reset_restore_context(UAContext *ua, JCR *jcr, run_ctx &rc)
       rc.plugin_options = NULL;
    }
 
-
    if (rc.replace) {
       jcr->replace = 0;
       for (i=0; ReplaceOptions[i].name; i++) {
@@ -516,10 +539,9 @@ static bool reset_restore_context(UAContext *ua, JCR *jcr, run_ctx &rc)
       rc.cloned = false;
    }
 
-
    /* If pool changed, update migration write storage */
-   if (jcr->getJobType() == JT_MIGRATE || jcr->getJobType() == JT_COPY ||
-      (jcr->getJobType() == JT_BACKUP && jcr->getJobLevel() == L_VIRTUAL_FULL)) {
+   if (jcr->is_JobType(JT_MIGRATE) || jcr->is_JobType(JT_COPY) ||
+      (jcr->is_JobType(JT_BACKUP) && jcr->is_JobLevel(L_VIRTUAL_FULL))) {
       if (!set_migration_wstorage(jcr, rc.pool)) {
          return false;
       }
@@ -538,7 +560,7 @@ static bool reset_restore_context(UAContext *ua, JCR *jcr, run_ctx &rc)
       rc.level_name = NULL;
    }
    if (rc.jid) {
-      /* Note, this is also MigrateJobId */
+      /* Note, this is also MigrateJobId and a VerifyJobId */
       jcr->RestoreJobId = str_to_int64(rc.jid);
       rc.jid = 0;
    }
@@ -693,19 +715,19 @@ static void select_job_level(UAContext *ua, JCR *jcr)
 //       jcr->JobLevel = L_BASE;
 //       break;
       case 0:
-         jcr->set_JobLevel(L_FULL);
+         jcr->setJobLevel(L_FULL);
          break;
       case 1:
-         jcr->set_JobLevel(L_INCREMENTAL);
+         jcr->setJobLevel(L_INCREMENTAL);
          break;
       case 2:
-         jcr->set_JobLevel(L_DIFFERENTIAL);
+         jcr->setJobLevel(L_DIFFERENTIAL);
          break;
       case 3:
-         jcr->set_JobLevel(L_SINCE);
+         jcr->setJobLevel(L_SINCE);
          break;
       case 4:
-         jcr->set_JobLevel(L_VIRTUAL_FULL);
+         jcr->setJobLevel(L_VIRTUAL_FULL);
          break;
       default:
          break;
@@ -719,19 +741,19 @@ static void select_job_level(UAContext *ua, JCR *jcr)
       add_prompt(ua, _("Verify Volume Data (not yet implemented)"));
       switch (do_prompt(ua, "",  _("Select level"), NULL, 0)) {
       case 0:
-         jcr->set_JobLevel(L_VERIFY_INIT);
+         jcr->setJobLevel(L_VERIFY_INIT);
          break;
       case 1:
-         jcr->set_JobLevel(L_VERIFY_CATALOG);
+         jcr->setJobLevel(L_VERIFY_CATALOG);
          break;
       case 2:
-         jcr->set_JobLevel(L_VERIFY_VOLUME_TO_CATALOG);
+         jcr->setJobLevel(L_VERIFY_VOLUME_TO_CATALOG);
          break;
       case 3:
-         jcr->set_JobLevel(L_VERIFY_DISK_TO_CATALOG);
+         jcr->setJobLevel(L_VERIFY_DISK_TO_CATALOG);
          break;
       case 4:
-         jcr->set_JobLevel(L_VERIFY_DATA);
+         jcr->setJobLevel(L_VERIFY_DATA);
          break;
       default:
          break;
@@ -745,33 +767,74 @@ static void select_job_level(UAContext *ua, JCR *jcr)
 static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char *verify_list,
    char *jid, const char *replace, char *client_name) 
 {
+   char ec1[30];
+   char dt[MAX_TIME_LENGTH];
+
    Dmsg1(800, "JobType=%c\n", jcr->getJobType());
    switch (jcr->getJobType()) {
-      char ec1[30];
-      char dt[MAX_TIME_LENGTH];
    case JT_ADMIN:
-      if (ua->api) ua->signal(BNET_RUN_CMD);   
-      ua->send_msg(_("Run %s job\n"
+      if (ua->api) {
+         ua->signal(BNET_RUN_CMD);   
+         ua->send_msg("Type: Admin\n"
+                     "Title: Run Admin Job\n"
                      "JobName:  %s\n"
                      "FileSet:  %s\n"
                      "Client:   %s\n"
                      "Storage:  %s\n"
                      "When:     %s\n"
-                     "Priority: %d\n"),
-                 _("Admin"),
+                     "Priority: %d\n",
                  job->name(),
                  jcr->fileset->name(),
                  NPRT(jcr->client->name()),
                  jcr->wstore?jcr->wstore->name():"*None*",
                  bstrutime(dt, sizeof(dt), jcr->sched_time),
                  jcr->JobPriority);
-      jcr->set_JobLevel(L_FULL);
+      } else {
+         ua->send_msg(_("Run Admin Job\n"
+                     "JobName:  %s\n"
+                     "FileSet:  %s\n"
+                     "Client:   %s\n"
+                     "Storage:  %s\n"
+                     "When:     %s\n"
+                     "Priority: %d\n"),
+                 job->name(),
+                 jcr->fileset->name(),
+                 NPRT(jcr->client->name()),
+                 jcr->wstore?jcr->wstore->name():"*None*",
+                 bstrutime(dt, sizeof(dt), jcr->sched_time),
+                 jcr->JobPriority);
+      }
+      jcr->setJobLevel(L_FULL);
       break;
    case JT_BACKUP:
    case JT_VERIFY:
       if (jcr->getJobType() == JT_BACKUP) {
-         if (ua->api) ua->signal(BNET_RUN_CMD);   
-         ua->send_msg(_("Run %s job\n"
+         if (ua->api) {
+            ua->signal(BNET_RUN_CMD);   
+            ua->send_msg("Type: Backup\n"
+                        "Title: Run Backup Job\n"
+                        "JobName:  %s\n"
+                        "Level:    %s\n"
+                        "Client:   %s\n"
+                        "FileSet:  %s\n"
+                        "Pool:     %s\n"
+                        "Storage:  %s\n"
+                        "When:     %s\n"
+                        "Priority: %d\n"
+                        "%s%s%s",
+                 job->name(),
+                 level_to_str(jcr->getJobLevel()),
+                 jcr->client->name(),
+                 jcr->fileset->name(),
+                 NPRT(jcr->pool->name()),
+                 jcr->wstore?jcr->wstore->name():"*None*",
+                 bstrutime(dt, sizeof(dt), jcr->sched_time),
+                 jcr->JobPriority,
+                 jcr->plugin_options?"Plugin Options: ":"",
+                 jcr->plugin_options?jcr->plugin_options:"",
+                 jcr->plugin_options?"\n":"");
+         } else {
+            ua->send_msg(_("Run Backup job\n"
                         "JobName:  %s\n"
                         "Level:    %s\n"
                         "Client:   %s\n"
@@ -781,7 +844,6 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
                         "When:     %s\n"
                         "Priority: %d\n"
                         "%s%s%s"),
-                 _("Backup"),
                  job->name(),
                  level_to_str(jcr->getJobLevel()),
                  jcr->client->name(),
@@ -793,10 +855,21 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
                  jcr->plugin_options?"Plugin Options: ":"",
                  jcr->plugin_options?jcr->plugin_options:"",
                  jcr->plugin_options?"\n":"");
+         }
       } else {  /* JT_VERIFY */
+         JOB_DBR jr;
          const char *Name;
          if (jcr->verify_job) {
             Name = jcr->verify_job->name();
+         } else if (jcr->RestoreJobId) { /* Display job name if jobid requested */
+            memset(&jr, 0, sizeof(jr));
+            jr.JobId = jcr->RestoreJobId;
+            if (!db_get_job_record(jcr, ua->db, &jr)) {
+               ua->error_msg(_("Could not get job record for selected JobId. ERR=%s"),
+                    db_strerror(ua->db));
+               return false;
+            }
+            Name = jr.Job;
          } else {
             Name = "";
          }
@@ -806,8 +879,10 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
          if (!verify_list) {
             verify_list = "";
          }
-         if (ua->api) ua->signal(BNET_RUN_CMD);   
-         ua->send_msg(_("Run %s job\n"
+         if (ua->api) {
+            ua->signal(BNET_RUN_CMD);   
+            ua->send_msg("Type: Verify\n"
+                        "Title: Run Verify Job\n"
                         "JobName:     %s\n"
                         "Level:       %s\n"
                         "Client:      %s\n"
@@ -817,8 +892,7 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
                         "Verify Job:  %s\n"
                         "Verify List: %s\n"
                         "When:        %s\n"
-                        "Priority:    %d\n"),
-              _("Verify"),
+                        "Priority:    %d\n",
               job->name(),
               level_to_str(jcr->getJobLevel()),
               jcr->client->name(),
@@ -829,6 +903,29 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
               verify_list,
               bstrutime(dt, sizeof(dt), jcr->sched_time),
               jcr->JobPriority);
+         } else {
+            ua->send_msg(_("Run Verify Job\n"
+                        "JobName:     %s\n"
+                        "Level:       %s\n"
+                        "Client:      %s\n"
+                        "FileSet:     %s\n"
+                        "Pool:        %s (From %s)\n"
+                        "Storage:     %s (From %s)\n"
+                        "Verify Job:  %s\n"
+                        "Verify List: %s\n"
+                        "When:        %s\n"
+                        "Priority:    %d\n"),
+              job->name(),
+              level_to_str(jcr->getJobLevel()),
+              jcr->client->name(),
+              jcr->fileset->name(),
+              NPRT(jcr->pool->name()), jcr->pool_source,
+              jcr->rstore->name(), jcr->rstore_source,
+              Name,
+              verify_list,
+              bstrutime(dt, sizeof(dt), jcr->sched_time),
+              jcr->JobPriority);
+         }
       }
       break;
    case JT_RESTORE:
@@ -842,13 +939,41 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
             jcr->RestoreJobId = ua->int64_val;
          }
       }
-      jcr->set_JobLevel(L_FULL);      /* default level */
+      jcr->setJobLevel(L_FULL);      /* default level */
       Dmsg1(800, "JobId to restore=%d\n", jcr->RestoreJobId);
       if (jcr->RestoreJobId == 0) {
-         if (ua->api) ua->signal(BNET_RUN_CMD);   
          /* RegexWhere is take before RestoreWhere */
          if (jcr->RegexWhere || (job->RegexWhere && !jcr->where)) {
-            ua->send_msg(_("Run Restore job\n"
+            if (ua->api) {
+               ua->signal(BNET_RUN_CMD);   
+               ua->send_msg("Type: Restore\n"
+                        "Title: Run Restore Job\n"
+                        "JobName:         %s\n"
+                        "Bootstrap:       %s\n"
+                        "RegexWhere:      %s\n"
+                        "Replace:         %s\n"
+                        "FileSet:         %s\n"
+                        "Backup Client:   %s\n"
+                        "Restore Client:  %s\n"
+                        "Storage:         %s\n"
+                        "When:            %s\n"
+                        "Catalog:         %s\n"
+                        "Priority:        %d\n"
+                        "Plugin Options:  %s\n",
+                 job->name(),
+                 NPRT(jcr->RestoreBootstrap), 
+                 jcr->RegexWhere?jcr->RegexWhere:job->RegexWhere,
+                 replace,
+                 jcr->fileset->name(),
+                 client_name,
+                 jcr->client->name(),
+                 jcr->rstore->name(),
+                 bstrutime(dt, sizeof(dt), jcr->sched_time),
+                 jcr->catalog->name(),
+                 jcr->JobPriority,
+                 NPRT(jcr->plugin_options));
+            } else {
+               ua->send_msg(_("Run Restore job\n"
                         "JobName:         %s\n"
                         "Bootstrap:       %s\n"
                         "RegexWhere:      %s\n"
@@ -873,9 +998,38 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
                  jcr->catalog->name(),
                  jcr->JobPriority,
                  NPRT(jcr->plugin_options));
-
+            }
          } else {
-            ua->send_msg(_("Run Restore job\n"
+            if (ua->api) {
+               ua->signal(BNET_RUN_CMD);   
+               ua->send_msg("Type: Restore\n"
+                        "Title: Run Restore job\n"
+                        "JobName:         %s\n"
+                        "Bootstrap:       %s\n"
+                        "Where:           %s\n"
+                        "Replace:         %s\n"
+                        "FileSet:         %s\n"
+                        "Backup Client:   %s\n"
+                        "Restore Client:  %s\n"
+                        "Storage:         %s\n"
+                        "When:            %s\n"
+                        "Catalog:         %s\n"
+                        "Priority:        %d\n"
+                        "Plugin Options:  %s\n",
+                 job->name(),
+                 NPRT(jcr->RestoreBootstrap), 
+                 jcr->where?jcr->where:NPRT(job->RestoreWhere), 
+                 replace,
+                 jcr->fileset->name(),
+                 client_name,
+                 jcr->client->name(),
+                 jcr->rstore->name(),
+                 bstrutime(dt, sizeof(dt), jcr->sched_time),
+                 jcr->catalog->name(),
+                 jcr->JobPriority,
+                 NPRT(jcr->plugin_options));
+            } else {
+               ua->send_msg(_("Run Restore job\n"
                         "JobName:         %s\n"
                         "Bootstrap:       %s\n"
                         "Where:           %s\n"
@@ -900,9 +1054,11 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
                  jcr->catalog->name(),
                  jcr->JobPriority,
                  NPRT(jcr->plugin_options));
+            }
          }
 
       } else {
+         /* ***FIXME*** This needs to be fixed for bat */
          if (ua->api) ua->signal(BNET_RUN_CMD);   
          ua->send_msg(_("Run Restore job\n"
                         "JobName:    %s\n"
@@ -939,15 +1095,46 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
       break;
    case JT_COPY:
    case JT_MIGRATE:
-      const char *prt_type;
-      if (jcr->getJobType() == JT_COPY) {
-         prt_type = _("Run Copy job\n");
+      char *prt_type;
+      jcr->setJobLevel(L_FULL);      /* default level */
+      if (ua->api) {
+         ua->signal(BNET_RUN_CMD);
+         if (jcr->getJobType() == JT_COPY) {
+            prt_type = (char *)"Type: Copy\nTitle: Run Copy Job\n";
+         } else {
+            prt_type = (char *)"Type: Migration\nTitle: Run Migration Job\n";
+         }
+         ua->send_msg("%s"
+                     "JobName:       %s\n"
+                     "Bootstrap:     %s\n"
+                     "Client:        %s\n"
+                     "FileSet:       %s\n"
+                     "Pool:          %s\n"
+                     "Read Storage:  %s\n"
+                     "Write Storage: %s\n"
+                     "JobId:         %s\n"
+                     "When:          %s\n"
+                     "Catalog:       %s\n"
+                     "Priority:      %d\n",
+           prt_type,
+           job->name(),
+           NPRT(jcr->RestoreBootstrap),
+           jcr->client->name(),
+           jcr->fileset->name(),
+           NPRT(jcr->pool->name()),
+           jcr->rstore->name(),
+           jcr->wstore?jcr->wstore->name():"*None*",
+           jcr->MigrateJobId==0?"*None*":edit_uint64(jcr->MigrateJobId, ec1),
+           bstrutime(dt, sizeof(dt), jcr->sched_time),
+           jcr->catalog->name(),
+           jcr->JobPriority);
       } else {
-         prt_type = _("Run Migration job\n");
-      }
-      jcr->set_JobLevel(L_FULL);      /* default level */
-      if (ua->api) ua->signal(BNET_RUN_CMD);   
-      ua->send_msg("%s"
+         if (jcr->getJobType() == JT_COPY) {
+            prt_type = _("Run Copy job\n");
+         } else {
+            prt_type = _("Run Migration job\n");
+         }
+         ua->send_msg("%s"
                      "JobName:       %s\n"
                      "Bootstrap:     %s\n"
                      "Client:        %s\n"
@@ -971,6 +1158,7 @@ static bool display_job_parameters(UAContext *ua, JCR *jcr, JOB *job, const char
            bstrutime(dt, sizeof(dt), jcr->sched_time),
            jcr->catalog->name(),
            jcr->JobPriority);
+      }
       break;
    default:
       ua->error_msg(_("Unknown Job Type=%d\n"), jcr->getJobType());
@@ -988,7 +1176,7 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
       "job",                          /*  Used in a switch() */
       "jobid",                        /* 1 */
       "client",                       /* 2 */
-      "fd",
+      "fd",                           /* 3 */
       "fileset",                      /* 4 */
       "level",                        /* 5 */
       "storage",                      /* 6 */
@@ -999,7 +1187,7 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
       "replace",                      /* 11 */
       "when",                         /* 12 */
       "priority",                     /* 13 */
-      "yes",          /* 14  -- if you change this change YES_POS too */
+      "yes",                          /* 14  -- if you change this change YES_POS too */
       "verifyjob",                    /* 15 */
       "files",                        /* 16 number of files to restore */
       "catalog",                      /* 17 override catalog */
@@ -1012,7 +1200,10 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
       "restoreclient",                /* 24 */
       "pluginoptions",                /* 25 */
       "spooldata",                    /* 26 */
-      NULL};
+      "comment",                      /* 27 */
+      "ignoreduplicatecheck",         /* 28 */
+      NULL
+   };
 
 #define YES_POS 14
 
@@ -1025,8 +1216,9 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
    rc.fileset_name = NULL;
    rc.verify_job_name = NULL;
    rc.previous_job_name = NULL;
-   rc.spool_data_set = 0;
-
+   rc.spool_data_set = false;
+   rc.ignoreduplicatecheck = false;
+   rc.comment = NULL;
 
    for (i=1; i<ua->argc; i++) {
       Dmsg2(800, "Doing arg %d = %s\n", i, ua->argk[i]);
@@ -1166,22 +1358,18 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
                rc.files = atoi(ua->argv[i]);
                kw_ok = true;
                break;
-
             case 17: /* catalog */
                rc.catalog_name = ua->argv[i];
                kw_ok = true;
                break;
-
             case 18: /* since */
                rc.since = ua->argv[i];
                kw_ok = true; 
                break;
-
             case 19: /* cloned */
                rc. cloned = true;
                kw_ok = true;
                break;
-
             case 20: /* write verify list output */
                rc.verify_list = ua->argv[i];
                kw_ok = true;
@@ -1238,10 +1426,26 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
                   return false;
                }
                if (is_yesno(ua->argv[i], &rc.spool_data)) {
-                  rc.spool_data_set = 1;
+                  rc.spool_data_set = true;
                   kw_ok = true;
                } else {
                   ua->send_msg(_("Invalid spooldata flag.\n"));
+               }
+               break;
+            case 27: /* comment */
+               rc.comment = ua->argv[i];
+               kw_ok = true;
+               break;
+            case 28: /* ignoreduplicatecheck */
+               if (rc.ignoreduplicatecheck_set) {
+                  ua->send_msg(_("IgnoreDuplicateCheck flag specified twice.\n"));
+                  return false;
+               }
+               if (is_yesno(ua->argv[i], &rc.ignoreduplicatecheck)) {
+                  rc.ignoreduplicatecheck_set = true;
+                  kw_ok = true;
+               } else {
+                  ua->send_msg(_("Invalid ignoreduplicatecheck flag.\n"));
                }
                break;
             default:
@@ -1269,7 +1473,11 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
    } /* end argc loop */
              
    Dmsg0(800, "Done scan.\n");
-
+   if (rc.comment) {
+      if (!is_comment_legal(ua, rc.comment)) {
+         return false;
+      }
+   }
    if (rc.catalog_name) {
        rc.catalog = GetCatalogResWithName(rc.catalog_name);
        if (rc.catalog == NULL) {
@@ -1323,11 +1531,6 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
       return false;
    }
    Dmsg1(100, "Using pool %s\n", rc.pool->name());
-
-   if (rc.spool_data_set) {
-      rc.job->spool_data = rc.spool_data;
-   }
-   Dmsg1(900, "Spooling data: %s\n", (rc.job->spool_data ? "Yes" : "No"));
 
    if (rc.store_name) {
       rc.store->store = GetStoreResWithName(rc.store_name);
@@ -1391,7 +1594,6 @@ static bool scan_command_line_arguments(UAContext *ua, run_ctx &rc)
       return false;
    }
    Dmsg1(800, "Using restore client=%s\n", rc.client->name());
-
 
    if (rc.fileset_name) {
       rc.fileset = GetFileSetResWithName(rc.fileset_name);

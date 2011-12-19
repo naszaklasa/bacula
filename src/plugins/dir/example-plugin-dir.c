@@ -163,7 +163,7 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
    }
    bfuncs->getBaculaValue(ctx, bVarJobName, (void *)&name);
    printf("Job Name=%s\n", name);
-   bfuncs->JobMessage(ctx, __FILE__, __LINE__, 1, 0, "JobMesssage message");
+   bfuncs->JobMessage(ctx, __FILE__, __LINE__, M_INFO, 0, "JobMesssage message");
    bfuncs->DebugMessage(ctx, __FILE__, __LINE__, 1, "DebugMesssage message");
    return bRC_OK;
 }

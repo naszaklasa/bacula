@@ -38,6 +38,8 @@
 #include "bacula.h"
 #include "dird.h"
 
+static int const dbglvl = 50;   /* debug level */
+
 /*
  *  Items needed:
  *   mr.PoolId must be set
@@ -58,7 +60,7 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
    STORE *store = jcr->wstore;
 
    bstrncpy(mr->MediaType, store->media_type, sizeof(mr->MediaType));
-   Dmsg3(100, "find_next_vol_for_append: JobId=%u PoolId=%d, MediaType=%s\n", 
+   Dmsg3(dbglvl, "find_next_vol_for_append: JobId=%u PoolId=%d, MediaType=%s\n", 
          (uint32_t)jcr->JobId, (int)mr->PoolId, mr->MediaType);
    /*
     * If we are using an Autochanger, restrict Volume
@@ -77,13 +79,13 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
       ok = db_find_next_volume(jcr, jcr->db, index, InChanger, mr);
 
       if (!ok) {
-         Dmsg4(150, "after find_next_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
+         Dmsg4(dbglvl, "after find_next_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
                ok, index, InChanger, mr->VolStatus);
          /*
           * 2. Try finding a recycled volume
           */
          ok = find_recycled_volume(jcr, InChanger, mr);
-         Dmsg2(150, "find_recycled_volume ok=%d FW=%d\n", ok, mr->FirstWritten);
+         Dmsg2(dbglvl, "find_recycled_volume ok=%d FW=%d\n", ok, mr->FirstWritten);
          if (!ok) {
             /*
              * 3. Try recycling any purged volume
@@ -94,18 +96,18 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
                 * 4. Try pruning Volumes
                 */
                if (prune) {
-                  Dmsg0(150, "Call prune_volumes\n");
+                  Dmsg0(dbglvl, "Call prune_volumes\n");
                   prune_volumes(jcr, InChanger, mr);
                }
                ok = recycle_oldest_purged_volume(jcr, InChanger, mr);
                if (!ok && create) {
-                  Dmsg4(150, "after prune volumes_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
+                  Dmsg4(dbglvl, "after prune volumes_vol ok=%d index=%d InChanger=%d Vstat=%s\n",
                         ok, index, InChanger, mr->VolStatus);
                   /*
                    * 5. Try pulling a volume from the Scratch pool
                    */ 
                   ok = get_scratch_volume(jcr, InChanger, mr);
-                  Dmsg4(150, "after get scratch volume ok=%d index=%d InChanger=%d Vstat=%s\n",
+                  Dmsg4(dbglvl, "after get scratch volume ok=%d index=%d InChanger=%d Vstat=%s\n",
                         ok, index, InChanger, mr->VolStatus);
                }
                /*
@@ -131,14 +133,14 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
           */
          if (!ok && (jcr->pool->purge_oldest_volume ||
                      jcr->pool->recycle_oldest_volume)) {
-            Dmsg2(200, "No next volume found. PurgeOldest=%d\n RecyleOldest=%d",
+            Dmsg2(dbglvl, "No next volume found. PurgeOldest=%d\n RecyleOldest=%d",
                 jcr->pool->purge_oldest_volume, jcr->pool->recycle_oldest_volume);
             /* Find oldest volume to recycle */
             ok = db_find_next_volume(jcr, jcr->db, -1, InChanger, mr);
-            Dmsg1(200, "Find oldest=%d Volume\n", ok);
+            Dmsg1(dbglvl, "Find oldest=%d Volume\n", ok);
             if (ok && prune) {
                UAContext *ua;
-               Dmsg0(200, "Try purge Volume.\n");
+               Dmsg0(dbglvl, "Try purge Volume.\n");
                /*
                 * 7.  Try to purging oldest volume only if not UA calling us.
                 */
@@ -156,12 +158,12 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
                free_ua_context(ua);
                if (ok) {
                   ok = recycle_volume(jcr, mr);
-                  Dmsg1(400, "Recycle after purge oldest=%d\n", ok);
+                  Dmsg1(dbglvl, "Recycle after purge oldest=%d\n", ok);
                }
             }
          }
       }
-      Dmsg2(100, "VolJobs=%d FirstWritten=%d\n", mr->VolJobs, mr->FirstWritten);
+      Dmsg2(dbglvl, "VolJobs=%d FirstWritten=%d\n", mr->VolJobs, mr->FirstWritten);
       if (ok) {
          /* If we can use the volume, check if it is expired */
          if (has_volume_expired(jcr, mr)) {
@@ -176,7 +178,7 @@ int find_next_volume_for_append(JCR *jcr, MEDIA_DBR *mr, int index,
       break;
    } /* end for loop */
    db_unlock(jcr->db);
-   Dmsg1(150, "return ok=%d find_next_vol\n", ok);
+   Dmsg1(dbglvl, "return ok=%d find_next_vol\n", ok);
    return ok;
 }
 
@@ -214,7 +216,7 @@ bool has_volume_expired(JCR *jcr, MEDIA_DBR *mr)
          Jmsg(jcr, M_INFO, 0, _("Max Volume jobs=%s exceeded. "
              "Marking Volume \"%s\" as Used.\n"), 
              edit_uint64_with_commas(mr->MaxVolJobs, ed1), mr->VolumeName);
-         Dmsg3(100, "MaxVolJobs=%d JobId=%d Vol=%s\n", mr->MaxVolJobs,
+         Dmsg3(dbglvl, "MaxVolJobs=%d JobId=%d Vol=%s\n", mr->MaxVolJobs,
                (uint32_t)jcr->JobId, mr->VolumeName);
          bstrncpy(mr->VolStatus, "Used", sizeof(mr->VolStatus));
          expired = true;
@@ -242,13 +244,13 @@ bool has_volume_expired(JCR *jcr, MEDIA_DBR *mr)
    }
    if (expired) {
       /* Need to update media */
-      Dmsg1(150, "Vol=%s has expired update media record\n", mr->VolumeName);
+      Dmsg1(dbglvl, "Vol=%s has expired update media record\n", mr->VolumeName);
       if (!db_update_media_record(jcr, jcr->db, mr)) {
          Jmsg(jcr, M_ERROR, 0, _("Catalog error updating volume \"%s\". ERR=%s"),
               mr->VolumeName, db_strerror(jcr->db));
       }
    }
-   Dmsg2(150, "Vol=%s expired=%d\n", mr->VolumeName, expired);
+   Dmsg2(dbglvl, "Vol=%s expired=%d\n", mr->VolumeName, expired);
    return expired;
 }
 
@@ -307,7 +309,11 @@ void check_if_volume_valid_or_recyclable(JCR *jcr, MEDIA_DBR *mr, const char **r
       *reason = _("volume has recycling disabled");
       return;
    }
-   if ((mr->LastWritten + mr->VolRetention) < (utime_t)time(NULL)
+   /*
+    * Check retention period from last written, but recycle to within
+    *   a minute to try to catch close calls ...
+    */
+   if ((mr->LastWritten + mr->VolRetention - 60) < (utime_t)time(NULL)
          && jcr->pool->recycle_current_volume
          && (strcmp(mr->VolStatus, "Full") == 0 ||
             strcmp(mr->VolStatus, "Used") == 0)) {

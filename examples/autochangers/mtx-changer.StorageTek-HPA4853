@@ -10,6 +10,23 @@
 #TAPEDRIVE0 holds the device/name of your 1st and only DLT drive (Bacula supports only 1 drive currently)
 #
 #Read TAPEDRIVE from command line parameters
+
+TMPDIR=/tmp
+
+make_temp_file() 
+{
+  TMPFILE=`mktemp ${TMPDIR}/mtx$1.XXXXXXXXXX 2> /dev/null`
+  if test $? -ne 0 || test x${TMPFILE} = x; then
+     TMPFILE="${TMPDIR}/mtx$1.$$"
+     if test -f ${TMPFILE}; then
+        echo "ERROR: Temp file security problem on: ${TMPFILE}"
+        exit 1
+     fi
+  fi
+}
+
+
+
 if [ -z "$4" ] ; then
   TAPEDRIVE0=/dev/st0 
 else
@@ -51,10 +68,11 @@ case "$2" in
 #
       #Check if you want to fool me
       if [ $MTXCHVERBOSE -eq 1 ] ; then echo "mtx-changer: Checking if drive is loaded before we unload. I Request loaded" ; fi
-      mtx -f $1 status >/tmp/mtx.$$
+      make_temp_file
+      mtx -f $1 status >${TMPFILE}
       rm -f /tmp/mtxloaded
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element 0:Full" | awk "{print \$7}" > /tmp/mtxloaded
-      rm -f /tmp/mtx.$$
+      cat ${TMPFILE} | grep "^Data Transfer Element 0:Full" | awk "{print \$7}" > /tmp/mtxloaded
+      rm -f ${TMPFILE}
       read LOADEDVOL </tmp/mtxloaded
       if [ -z "$LOADEDVOL" ] ; then
          LOADEDVOL=0
@@ -71,10 +89,11 @@ case "$2" in
    load)
       #Let's check if drive is loaded before we load it
       if [ $MTXCHVERBOSE -eq 1 ] ; then echo "mtx-changer: Checking if drive is loaded before we load. I Request loaded" ; fi
-      mtx -f $1 status >/tmp/mtx.$$
+      make_temp_file
+      mtx -f $1 status >${TMPFILE}
       rm -f /tmp/mtxloaded
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element 0:Full" | awk "{print \$7}" > /tmp/mtxloaded
-      rm -f /tmp/mtx.$$
+      cat ${TMPFILE}| grep "^Data Transfer Element 0:Full" | awk "{print \$7}" > /tmp/mtxloaded
+      rm -f ${TMPFILE}
       read LOADEDVOL </tmp/mtxloaded 
       if [ -z "$LOADEDVOL" ] ; then 
          LOADEDVOL=0
@@ -124,10 +143,11 @@ case "$2" in
 
    loaded)
       if [ $MTXCHVERBOSE -eq 1 ] ; then echo "mtx-changer: Request loaded" ; fi
-      mtx -f $1 status >/tmp/mtx.$$
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element 0:Full" | awk "{print \$7}" 
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element 0:Empty" | awk "{print 0}"  
-      rm -f /tmp/mtx.$$
+      make_temp_file
+      mtx -f $1 status >${TMPFILE}
+      cat ${TMPFILE} | grep "^Data Transfer Element 0:Full" | awk "{print \$7}" 
+      cat ${TMPFILE} | grep "^Data Transfer Element 0:Empty" | awk "{print 0}"  
+      rm -f ${TMPFILE}
       ;;
 
    slots)

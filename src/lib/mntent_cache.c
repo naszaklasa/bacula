@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2009-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2009-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -41,7 +41,7 @@
  * - DARWIN (OSX)
  * - IRIX
  * - AIX
- * - OSF1 (True64)
+ * - OSF1 (Tru64)
  * - Solaris
  *
  * Currently we only use this code for Linux and OSF1 based fstype determination.
@@ -68,19 +68,22 @@
 #include <sys/stat.h>
 
 #if defined(HAVE_GETMNTENT)
-#if defined(HAVE_LINUX_OS) || defined(HAVE_HPUX_OS)
+#if defined(HAVE_LINUX_OS) || defined(HAVE_HPUX_OS) || defined(HAVE_AIX_OS)
 #include <mntent.h>
 #elif defined(HAVE_SUN_OS)
 #include <sys/mnttab.h>
 #endif /* HAVE_GETMNTENT */
 #elif defined(HAVE_GETMNTINFO)
-#if defined(HAVE_DARWIN_OS)
+#if defined(HAVE_OPENBSD_OS)
 #include <sys/param.h>
-#include <sys/ucred.h> 
-#include <sys/mount.h> 
-#else
+#include <sys/mount.h>
+#elif defined(HAVE_NETBSD_OS)
 #include <sys/types.h>
 #include <sys/statvfs.h>
+#else
+#include <sys/param.h>
+#include <sys/ucred.h>
+#include <sys/mount.h>
 #endif
 #elif defined(HAVE_AIX_OS)
 #include <fshelp.h>
@@ -89,62 +92,65 @@
 #include <sys/mount.h>
 #endif
 
-static char cache_initialized = 0;
-
-/**
+/*
  * Protected data by mutex lock.
  */
 static pthread_mutex_t mntent_cache_lock = PTHREAD_MUTEX_INITIALIZER;
-static mntent_cache_entry_t *mntent_cache_entry_hashtable[NR_MNTENT_CACHE_ENTRIES];
 static mntent_cache_entry_t *previous_cache_hit = NULL;
+static htable *mntent_cache_entry_hashtable = NULL;
 
-/**
- * Simple hash function.
+/*
+ * Last time a rescan of the mountlist took place.
  */
-static uint32_t mntent_hash_function(uint32_t dev)
-{
-   return (dev % NR_MNTENT_CACHE_ENTRIES);
-}
+static time_t last_rescan = 0;
 
 /**
  * Add a new entry to the cache.
  * This function should be called with a write lock on the mntent_cache.
  */
-static void add_mntent_mapping(uint32_t dev, const char *special, const char *mountpoint,
-                               const char *fstype, const char *mntopts)
+static inline void add_mntent_mapping(uint32_t dev,
+                                      const char *special,
+                                      const char *mountpoint,
+                                      const char *fstype,
+                                      const char *mntopts)
 {
-   uint32_t hash;
+   int len;
    mntent_cache_entry_t *mce;
 
-   /**
-    * Select the correct hash bucket.
+   /*
+    * Calculate the length of all strings so we can allocate the buffer
+    * as one big chunk of memory using the hash_malloc method.
     */
-   hash = mntent_hash_function(dev);
-
-   /**
-    * See if this is the first being put into the hash bucket.
-    */
-   if (mntent_cache_entry_hashtable[hash] == (mntent_cache_entry_t *)NULL) {
-      mce = (mntent_cache_entry_t *)malloc(sizeof(mntent_cache_entry_t));
-      memset((caddr_t)mce, 0, sizeof(mntent_cache_entry_t));
-      mntent_cache_entry_hashtable[hash] = mce;
-   } else {
-      /**
-       * Walk the linked list in the hash bucket.
-       */
-      for (mce = mntent_cache_entry_hashtable[hash]; mce->next != NULL; mce = mce->next) ;
-      mce->next = (mntent_cache_entry_t *)malloc(sizeof(mntent_cache_entry_t));
-      mce = mce->next;
-      memset((caddr_t)mce, 0, sizeof(mntent_cache_entry_t));
-   }
-
-   mce->dev = dev;
-   mce->special = bstrdup(special);
-   mce->mountpoint = bstrdup(mountpoint);
-   mce->fstype = bstrdup(fstype);
+   len = strlen(special) + 1;
+   len += strlen(mountpoint) + 1;
+   len += strlen(fstype) + 1;
    if (mntopts) {
-      mce->mntopts = bstrdup(mntopts);
+      len += strlen(mntopts) + 1;
    }
+
+   /*
+    * We allocate all members of the hash entry in the same memory chunk.
+    */
+   mce = (mntent_cache_entry_t *)mntent_cache_entry_hashtable->hash_malloc(sizeof(mntent_cache_entry_t) + len);
+   mce->dev = dev;
+
+   mce->special = (char *)mce + sizeof(mntent_cache_entry_t);
+   strcpy(mce->special, special);
+
+   mce->mountpoint = mce->special + strlen(mce->special) + 1;
+   strcpy(mce->mountpoint, mountpoint);
+
+   mce->fstype = mce->mountpoint + strlen(mce->mountpoint) + 1;
+   strcpy(mce->fstype, fstype);
+
+   if (mntopts) {
+      mce->mntopts = mce->fstype + strlen(mce->fstype) + 1;
+      strcpy(mce->mntopts, mntopts);
+   } else {
+      mce->mntopts = NULL;
+   }
+
+   mntent_cache_entry_hashtable->insert(mce->dev, mce);
 }
 
 /**
@@ -156,7 +162,7 @@ static void refresh_mount_cache(void)
 #if defined(HAVE_GETMNTENT)
    FILE *fp;
    struct stat st;
-#if defined(HAVE_LINUX_OS) || defined(HAVE_HPUX_OS) || defined(HAVE_IRIX_OS)
+#if defined(HAVE_LINUX_OS) || defined(HAVE_HPUX_OS) || defined(HAVE_IRIX_OS) || defined(HAVE_AIX_OS)
    struct mntent *mnt;
 
 #if defined(HAVE_LINUX_OS)
@@ -171,6 +177,10 @@ static void refresh_mount_cache(void)
    }
 #elif defined(HAVE_IRIX_OS)
    if ((fp = setmntent(MOUNTED, "r")) == (FILE *)NULL) {
+      return;
+   }
+#elif defined(HAVE_AIX_OS)
+   if ((fp = setmntent(MNTTAB, "r")) == (FILE *)NULL) {
       return;
    }
 #endif
@@ -203,13 +213,20 @@ static void refresh_mount_cache(void)
 #elif defined(HAVE_GETMNTINFO)
    int cnt;
    struct stat st;
-#if defined(HAVE_DARWIN_OS)
-   struct statfs *mntinfo;
-#else
+#if defined(HAVE_NETBSD_OS)
    struct statvfs *mntinfo;
+#else
+   struct statfs *mntinfo;
+#endif
+#if defined(ST_NOWAIT)
+   int flags = ST_NOWAIT;
+#elif defined(MNT_NOWAIT)
+   int flags = MNT_NOWAIT;
+#else
+   int flags = 0;
 #endif
 
-   if ((cnt = getmntinfo(&mntinfo, MNT_NOWAIT)) > 0) {
+   if ((cnt = getmntinfo(&mntinfo, flags)) > 0) {
       while (cnt > 0) {
          if (stat(mntinfo->f_mntonname, &st) == 0) {
             add_mntent_mapping(st.st_dev,
@@ -303,15 +320,16 @@ static void refresh_mount_cache(void)
  */
 static void clear_mount_cache()
 {
-   uint32_t hash;
-   mntent_cache_entry_t *mce, *mce_next;
+   mntent_cache_entry_t *mce = NULL;
 
-   if (cache_initialized == 0) {
+   if (!mntent_cache_entry_hashtable) {
       /**
        * Initialize the hash table.
        */
-      memset((caddr_t)mntent_cache_entry_hashtable, 0, NR_MNTENT_CACHE_ENTRIES * sizeof(mntent_cache_entry_t *));
-      cache_initialized = 1;
+      mntent_cache_entry_hashtable = (htable *)malloc(sizeof(htable));
+      mntent_cache_entry_hashtable->init(mce, &mce->link,
+                                         NR_MNTENT_CACHE_ENTRIES,
+                                         NR_MNTENT_HTABLE_PAGES);
    } else {
       /**
        * Clear the previous_cache_hit.
@@ -319,46 +337,21 @@ static void clear_mount_cache()
       previous_cache_hit = NULL;
 
       /**
-       * Walk all hash buckets.
+       * Destroy the current content and (re)initialize the hashtable.
        */
-      for (hash = 0; hash < NR_MNTENT_CACHE_ENTRIES; hash++) {
-         /**
-          * Walk the content of this hash bucket.
-          */
-         mce = mntent_cache_entry_hashtable[hash];
-         mntent_cache_entry_hashtable[hash] = NULL;
-         while (mce != NULL) {
-            /**
-             * Save the pointer to the next entry.
-             */
-            mce_next = mce->next;
-
-            /**
-             * Free the structure.
-             */
-            if (mce->mntopts)
-               free(mce->mntopts);
-            free(mce->fstype);
-            free(mce->mountpoint);
-            free(mce->special);
-            free(mce);
-
-            mce = mce_next;
-         }
-      }
+      mntent_cache_entry_hashtable->destroy();
+      mntent_cache_entry_hashtable->init(mce, &mce->link,
+                                         NR_MNTENT_CACHE_ENTRIES,
+                                         NR_MNTENT_HTABLE_PAGES);
    }
 }
 
 /**
  * Initialize the cache for use.
+ * This function should be called with a write lock on the mntent_cache.
  */
 static void initialize_mntent_cache(void)
 {
-   /**
-    * Lock the cache while we update it.
-    */
-   P(mntent_cache_lock);
-
    /**
     * Make sure the cache is empty (either by flushing it or by initializing it.)
     */
@@ -368,33 +361,24 @@ static void initialize_mntent_cache(void)
     * Refresh the cache.
     */
    refresh_mount_cache();
-
-   /**
-    * We are done updating the cache.
-    */
-   V(mntent_cache_lock);
 }
 
-void preload_mntent_cache(void)
-{
-   initialize_mntent_cache();
-}
-
+/**
+ * Flush the current content from the cache.
+ */
 void flush_mntent_cache(void)
 {
    /**
-    * Lock the cache while we update it.
+    * Lock the cache.
     */
    P(mntent_cache_lock);
 
-   /**
-    * Make sure the cache is empty (either by flushing it or by initializing it.)
-    */
-   clear_mount_cache();
+   if (mntent_cache_entry_hashtable) {
+      previous_cache_hit = NULL;
+      mntent_cache_entry_hashtable->destroy();
+      mntent_cache_entry_hashtable = NULL;
+   }
 
-   /**
-    * We are done updating the cache.
-    */
    V(mntent_cache_lock);
 }
 
@@ -403,47 +387,61 @@ void flush_mntent_cache(void)
  */
 mntent_cache_entry_t *find_mntent_mapping(uint32_t dev)
 {
-   uint32_t hash;
-   mntent_cache_entry_t *mce;
+   mntent_cache_entry_t *mce = NULL;
+   time_t now;
 
    /**
-    * Initialize the cache if that was not done before.
+    * Lock the cache.
     */
-   if (cache_initialized == 0) {
-      initialize_mntent_cache();
-   }
+   P(mntent_cache_lock);
 
    /**
     * Shortcut when we get a request for the same device again.
     */
    if (previous_cache_hit && previous_cache_hit->dev == dev) {
-      return previous_cache_hit;
+      mce = previous_cache_hit;
+      goto ok_out;
    }
 
    /**
-    * Lock the cache while we walk it.
+    * Initialize the cache if that was not done before.
     */
-   P(mntent_cache_lock);
-
-   /**
-    * Select the correct hash bucket.
-    */
-   hash = mntent_hash_function(dev);
-
-   /**
-    * Walk the hash bucket.
-    */
-   for (mce = mntent_cache_entry_hashtable[hash]; mce != NULL; mce = mce->next) {
-      if (mce->dev == dev) {
-         previous_cache_hit = mce;
-         V(mntent_cache_lock);
-         return mce;
+   if (!mntent_cache_entry_hashtable) {
+      initialize_mntent_cache();
+      last_rescan = time(NULL);
+   } else {
+      /**
+       * We rescan the mountlist when called when more then
+       * MNTENT_RESCAN_INTERVAL seconds have past since the
+       * last rescan. This way we never work with data older
+       * then MNTENT_RESCAN_INTERVAL seconds.
+       */
+      now = time(NULL);
+      if ((now - last_rescan) > MNTENT_RESCAN_INTERVAL) {
+         initialize_mntent_cache();
       }
    }
 
+   mce = (mntent_cache_entry_t *)mntent_cache_entry_hashtable->lookup(dev);
+
    /**
-    * We are done walking the cache.
+    * If we fail to lookup the mountpoint its probably a mountpoint added
+    * after we did our initial scan. Lets rescan the mountlist and try
+    * the lookup again.
     */
+   if (!mce) {
+      initialize_mntent_cache();
+      mce = (mntent_cache_entry_t *)mntent_cache_entry_hashtable->lookup(dev);
+   }
+
+   /*
+    * Store the last successfull lookup as the previous_cache_hit.
+    */
+   if (mce) {
+      previous_cache_hit = mce;
+   }
+
+ok_out:
    V(mntent_cache_lock);
-   return NULL;
+   return mce;
 }

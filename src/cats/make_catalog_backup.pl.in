@@ -41,20 +41,9 @@ use strict;
 
 =cut
 
-$ENV{PATH}="@SQL_BINDIR@:$ENV{PATH}";
-
 my $cat = shift or die "Usage: $0 catalogname";
 my $dir_conf='@sbindir@/dbcheck -B -c @sysconfdir@/bacula-dir.conf';
 my $wd = "@working_dir@";
-
-sub dump_sqlite
-{
-    my %args = @_;
-
-    exec("echo .dump | sqlite '$wd/$args{db_name}.db' > '$wd/$args{db_name}.sql'");
-    print "Error while executing sqlite dump $!\n";
-    return 1;
-}
 
 sub dump_sqlite3
 {
@@ -122,20 +111,21 @@ password=$args{db_password}
 sub dump_catalog
 {
     my %args = @_;
-    if ($args{db_type} eq 'SQLite') {
-        dump_sqlite(%args);
-    } elsif ($args{db_type} eq 'SQLite3') {
+    if ($args{db_type} eq 'SQLite3') {
+        $ENV{PATH}="@SQLITE_BINDIR@:$ENV{PATH}";
         dump_sqlite3(%args);
     } elsif ($args{db_type} eq 'PostgreSQL') {
+        $ENV{PATH}="@POSTGRESQL_BINDIR@:$ENV{PATH}";
         dump_pgsql(%args);
     } elsif ($args{db_type} eq 'MySQL') {
+        $ENV{PATH}="@MYSQL_BINDIR@:$ENV{PATH}";
         dump_mysql(%args);
     } else {
         die "This database type isn't supported";
     }
 }
 
-open(FP, "$dir_conf|") or die "Can't get catalog information $@";
+open(FP, "$dir_conf -C '$cat'|") or die "Can't get catalog information $@";
 # catalog=MyCatalog
 # db_type=SQLite
 # db_name=regress

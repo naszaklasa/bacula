@@ -172,6 +172,6 @@ bail_out:
    sendit( _("Director authorization problem.\n"
              "Most likely the passwords do not agree.\n"
              "If you are using TLS, there may have been a certificate validation error during the TLS handshake.\n"
-             "Please see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"));
+             "Please see " MANUAL_AUTH_URL " for help.\n"));
    return 0;
 }

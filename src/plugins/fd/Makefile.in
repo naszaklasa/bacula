@@ -1,7 +1,6 @@
 #
 # Simple Makefile for building test FD plugins for Bacula
 #
-# Version $Id$
 #
 @MCOMMON@
 
@@ -17,7 +16,7 @@ LIBDIR=../../lib
 .c.lo:
 	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) -I${SRCDIR} -I${FDDIR} -DTEST_PROGRAM -c $<
 
-all: bpipe-fd.la
+all: bpipe-fd.la test-plugin-fd.la delta-test-fd.la
 
 bpipe-fd.lo: bpipe-fd.c ${FDDIR}/fd_plugins.h
 	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) $(CFLAGS) -I../.. -I${FDDIR} -c bpipe-fd.c
@@ -25,10 +24,29 @@ bpipe-fd.lo: bpipe-fd.c ${FDDIR}/fd_plugins.h
 bpipe-fd.la: Makefile bpipe-fd$(DEFAULT_OBJECT_TYPE)
 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -shared bpipe-fd.lo -o $@ -rpath $(plugindir) -module -export-dynamic -avoid-version 
 
+delta-test-fd.lo: delta-test-fd.c ${FDDIR}/fd_plugins.h fd_common.h
+	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) $(CFLAGS) -I../.. -I${FDDIR} -c delta-test-fd.c
+
+delta-test-fd.la: Makefile delta-test-fd$(DEFAULT_OBJECT_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -shared delta-test-fd.lo -o $@ -rpath $(plugindir) -module -export-dynamic -avoid-version 
+
+test-plugin-fd.lo: test-plugin-fd.c ${FDDIR}/fd_plugins.h
+	$(LIBTOOL_COMPILE) $(CXX) $(DEFS) $(DEBUG) $(CPPFLAGS) $(CFLAGS) -I../.. -I${FDDIR} -c test-plugin-fd.c
+
+test-plugin-fd.la: Makefile test-plugin-fd$(DEFAULT_OBJECT_TYPE)
+	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -shared test-plugin-fd.lo -o $@ -rpath $(plugindir) -module -export-dynamic -avoid-version 
+
 install: all
 	$(MKDIR) $(DESTDIR)$(plugindir)
 	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) bpipe-fd.la $(DESTDIR)$(plugindir)
 	$(RMF) $(DESTDIR)$(plugindir)/bpipe-fd.la
+
+install-test-plugin: all
+	$(MKDIR) $(DESTDIR)$(plugindir)
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) test-plugin-fd.la $(DESTDIR)$(plugindir)
+	$(RMF) $(DESTDIR)$(plugindir)/test-plugin-fd.la
+	$(LIBTOOL_INSTALL) $(INSTALL_PROGRAM) delta-test-fd.la $(DESTDIR)$(plugindir)
+	$(RMF) $(DESTDIR)$(plugindir)/delta-test-fd.la
 
 libtool-clean:
 	@find . -name '*.lo' -print | xargs $(LIBTOOL_CLEAN) $(RMF)

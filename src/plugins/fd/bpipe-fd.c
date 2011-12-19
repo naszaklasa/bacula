@@ -218,6 +218,10 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
     *   what is really going on.
     */
    switch (event->eventType) {
+   case bEventPluginCommand:
+      bfuncs->DebugMessage(ctx, fi, li, dbglvl, 
+                           "bpipe-fd: PluginCommand=%s\n", (char *)value);
+      break;
    case bEventJobStart:
       bfuncs->DebugMessage(ctx, fi, li, dbglvl, "bpipe-fd: JobStart=%s\n", (char *)value);
       break;

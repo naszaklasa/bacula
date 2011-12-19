@@ -1,13 +1,14 @@
 #
 #  Bacula Director Makefile
 #
-#  Version $Id$
 #  
 @MCOMMON@
 
 srcdir =	.
 VPATH = 	.
 .PATH:		.
+
+dir_group=@dir_group@
 
 # one up
 basedir = ..
@@ -23,6 +24,8 @@ CAP_LIBS = @CAP_LIBS@
 
 PYTHON_LIBS = @PYTHON_LIBS@
 PYTHON_INC = @PYTHON_INCDIR@
+
+DB_LIBS=@DB_LIBS@
 
 first_rule: all
 dummy:
@@ -61,15 +64,19 @@ all: Makefile bacula-dir @STATIC_DIR@
 	@echo "==== Make of dird is good ===="
 	@echo " "
 
-bacula-dir: Makefile $(SVROBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+bacula-dir: Makefile $(SVROBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) \
+	    ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) \
+	    ../cats/libbaccats$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
-	      -lbacfind -lbacsql -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
+	      -lbacfind -lbacsql -lbaccats -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
 	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
 
-static-bacula-dir:  Makefile $(SVROBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+static-bacula-dir:  Makefile $(SVROBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) \
+		   ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) \
+		   ../cats/libbaccats$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
-	      -lbacfind -lbacsql -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
+	      -lbacfind -lbacsql -lbaccats -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
 	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
 	strip $@
 
@@ -106,6 +113,9 @@ install: all
 	   fi; \
 	   echo "${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf"; \
 	   ${INSTALL_CONFIG} $$srcconf ${DESTDIR}${sysconfdir}/$$destconf
+	   @if test "x${dir_group}" != "x"; then \
+	      chgrp -f ${dir_group} ${DESTDIR}${sysconfdir}/$$destconf ; \
+	   fi
 	@if  test -f ${DESTDIR}${scriptdir}/query.sql; then \
 	   echo "  ==> Saving existing query.sql to query.sql.old"; \
 	   $(MV) -f ${DESTDIR}${scriptdir}/query.sql ${DESTDIR}${scriptdir}/query.sql.old; \
@@ -132,7 +142,7 @@ depend:
 	@$(MV) Makefile Makefile.bak
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) $(XINC) $(PYTHON_INC) -I$(srcdir) -I$(basedir) *.c >> Makefile
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \
 	else \

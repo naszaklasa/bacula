@@ -35,6 +35,21 @@
 MTX=/lysator/bin/mtx
 LOCKDIR=/tmp
 
+TMPDIR=/tmp
+
+make_temp_file() 
+{
+  TMPFILE=`mktemp ${TMPDIR}/mtx$1.XXXXXXXXXX 2> /dev/null`
+  if test $? -ne 0 || test x${TMPFILE} = x; then
+     TMPFILE="${TMPDIR}/mtx$1.$$"
+     if test -f ${TMPFILE}; then
+        echo "ERROR: Temp file security problem on: ${TMPFILE}"
+        exit 1
+     fi
+  fi
+}
+
+
 if test $# -lt 2 ; then
   echo "usage: mtx-changer ctl-device command slot archive-device drive"
   echo "  Insufficient number of arguments arguments given."
@@ -64,14 +79,15 @@ wait_for_drive() {
 LOCKFILE="${LOCKDIR}/mtx-changer:`echo $ctl | tr / _'"
 
 changer_lock() {
-    echo "$$" >$LOCKFILE.$$
+	make_temp_file lock
+    echo "$$" >${TMPFILE}
     
-    while ! ln -n $LOCKFILE.$$ $LOCKFILE 2>/dev/null; do
+    while ! ln -n ${TMPFILE} $LOCKFILE 2>/dev/null; do
        echo "$0: changer lock busy, retrying in 30 seconds..."
        sleep 30
     done
 
-    rm $LOCKFILE.$$
+    rm ${TMPFILE}
 }
 
 changer_unlock() {
@@ -141,11 +157,12 @@ case $cmd in
       ;;
 
    loaded)
-      ${MTX} -f $ctl status >/tmp/mtx.$$
+	  make_temp_file
+      ${MTX} -f $ctl status >${TMPFILE}
       rtn=$?
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element $drive:Full" | awk "{print \$7}"
-      cat /tmp/mtx.$$ | grep "^Data Transfer Element $drive:Empty" | awk "{print 0}"
-      rm -f /tmp/mtx.$$
+      cat ${TMPFILE} | grep "^Data Transfer Element $drive:Full" | awk "{print \$7}"
+      cat ${TMPFILE} | grep "^Data Transfer Element $drive:Empty" | awk "{print 0}"
+      rm -f ${TMPFILE}
       changer_unlock $ctl
       exit $rtn
       ;;

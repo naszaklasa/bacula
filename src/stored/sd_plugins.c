@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -35,64 +35,101 @@
 #include "stored.h"
 #include "sd_plugins.h"
 
-const int dbglvl = 0;
+const int dbglvl = 50;
 const char *plugin_type = "-sd.so";
 
 
 /* Forward referenced functions */
-static bRC baculaGetValue(bpContext *ctx, brVariable var, void *value);
-static bRC baculaSetValue(bpContext *ctx, bwVariable var, void *value);
+static bRC baculaGetValue(bpContext *ctx, bsdrVariable var, void *value);
+static bRC baculaSetValue(bpContext *ctx, bsdwVariable var, void *value);
 static bRC baculaRegisterEvents(bpContext *ctx, ...);
 static bRC baculaJobMsg(bpContext *ctx, const char *file, int line,
-  int type, utime_t mtime, const char *msg);
+  int type, utime_t mtime, const char *fmt, ...);
 static bRC baculaDebugMsg(bpContext *ctx, const char *file, int line,
-  int level, const char *msg);
+  int level, const char *fmt, ...);
+static char *baculaEditDeviceCodes(DCR *dcr, char *omsg, 
+  const char *imsg, const char *cmd);
 
 
 /* Bacula info */
-static bInfo binfo = {
-   sizeof(bFuncs),
-   SD_PLUGIN_INTERFACE_VERSION,
+static bsdInfo binfo = {
+   sizeof(bsdFuncs),
+   SD_PLUGIN_INTERFACE_VERSION
 };
 
 /* Bacula entry points */
-static bFuncs bfuncs = {
-   sizeof(bFuncs),
+static bsdFuncs bfuncs = {
+   sizeof(bsdFuncs),
    SD_PLUGIN_INTERFACE_VERSION,
    baculaRegisterEvents,
    baculaGetValue,
    baculaSetValue,
    baculaJobMsg,
-   baculaDebugMsg
+   baculaDebugMsg,
+   baculaEditDeviceCodes
 };
+
+/* 
+ * Bacula private context
+ */
+struct bacula_ctx {
+   JCR *jcr;                             /* jcr for plugin */
+   bRC  rc;                              /* last return code */
+   bool disabled;                        /* set if plugin disabled */
+};
+
+static bool is_plugin_disabled(bpContext *plugin_ctx)
+{
+   bacula_ctx *b_ctx;
+   if (!plugin_ctx) {
+      return true;
+   }
+   b_ctx = (bacula_ctx *)plugin_ctx->bContext;
+   return b_ctx->disabled;
+}
+
+#ifdef needed
+static bool is_plugin_disabled(JCR *jcr)
+{
+   return is_plugin_disabled(jcr->plugin_ctx);
+}
+#endif
 
 /*
  * Create a plugin event 
  */
-void generate_plugin_event(JCR *jcr, bEventType eventType, void *value)
+int generate_plugin_event(JCR *jcr, bsdEventType eventType, void *value)
 {
-   bEvent event;
+   bpContext *plugin_ctx;
+   bsdEvent event;
    Plugin *plugin;
    int i = 0;
+   bRC rc = bRC_OK;
 
-   if (!plugin_list) {
-      return;
+   if (!bplugin_list || !jcr || !jcr->plugin_ctx_list) {
+      return bRC_OK;                  /* Return if no plugins loaded */
+   }
+   if (jcr->is_job_canceled()) {
+      return bRC_Cancel;
    }
 
    bpContext *plugin_ctx_list = (bpContext *)jcr->plugin_ctx_list;
    event.eventType = eventType;
 
-   Dmsg2(dbglvl, "plugin_ctx_list=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
+   Dmsg2(dbglvl, "sd-plugin_ctx_list=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
 
-   foreach_alist(plugin, plugin_list) {
-      bRC rc;
-      rc = plug_func(plugin)->handlePluginEvent(&plugin_ctx_list[i++], &event, value);
+   foreach_alist(plugin, bplugin_list) {
+      plugin_ctx = &plugin_ctx_list[i++];
+      if (is_plugin_disabled(plugin_ctx)) {
+         continue;
+      }
+      rc = sdplug_func(plugin)->handlePluginEvent(plugin_ctx, &event, value);
       if (rc != bRC_OK) {
          break;
       }
    }
 
-   return;
+   return rc;
 }
 
 static void dump_sd_plugin(Plugin *plugin, FILE *fp)
@@ -100,7 +137,7 @@ static void dump_sd_plugin(Plugin *plugin, FILE *fp)
    if (!plugin) {
       return ;
    }
-   pInfo *info = (pInfo *) plugin->pinfo;
+   psdInfo *info = (psdInfo *) plugin->pinfo;
    fprintf(fp, "\tversion=%d\n", info->version);
    fprintf(fp, "\tdate=%s\n", NPRTB(info->plugin_date));
    fprintf(fp, "\tmagic=%s\n", NPRTB(info->plugin_magic));
@@ -112,12 +149,14 @@ static void dump_sd_plugin(Plugin *plugin, FILE *fp)
 
 void load_sd_plugins(const char *plugin_dir)
 {
+   Dmsg0(dbglvl, "Load sd plugins\n");
    if (!plugin_dir) {
+      Dmsg0(dbglvl, "No sd plugin dir!\n");
       return;
    }
-
-   plugin_list = New(alist(10, not_owned_by_alist));
+   bplugin_list = New(alist(10, not_owned_by_alist));
    load_plugins((void *)&binfo, (void *)&bfuncs, plugin_dir, plugin_type, NULL);
+   Dmsg1(dbglvl, "num plugins=%d\n", bplugin_list->size());
    dbg_plugin_add_hook(dump_sd_plugin);
 }
 
@@ -129,12 +168,18 @@ void new_plugins(JCR *jcr)
    Plugin *plugin;
    int i = 0;
 
-   if (!plugin_list) {
+   Dmsg0(dbglvl, "=== enter new_plugins ===\n");
+   if (!bplugin_list) {
+      Dmsg0(dbglvl, "No sd plugin list!\n");
+      return;
+   }
+   if (jcr->is_job_canceled()) {
       return;
    }
 
-   int num = plugin_list->size();
+   int num = bplugin_list->size();
 
+   Dmsg1(dbglvl, "sd-plugin-list size=%d\n", num);
    if (num == 0) {
       return;
    }
@@ -142,12 +187,17 @@ void new_plugins(JCR *jcr)
    jcr->plugin_ctx_list = (bpContext *)malloc(sizeof(bpContext) * num);
 
    bpContext *plugin_ctx_list = jcr->plugin_ctx_list;
-   Dmsg2(dbglvl, "Instantiate plugin_ctx_list=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
-   foreach_alist(plugin, plugin_list) {
+   Dmsg2(dbglvl, "Instantiate sd-plugin_ctx_list=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
+   foreach_alist(plugin, bplugin_list) {
       /* Start a new instance of each plugin */
-      plugin_ctx_list[i].bContext = (void *)jcr;
+      bacula_ctx *b_ctx = (bacula_ctx *)malloc(sizeof(bacula_ctx));
+      memset(b_ctx, 0, sizeof(bacula_ctx));
+      b_ctx->jcr = jcr;
+      plugin_ctx_list[i].bContext = (void *)b_ctx;
       plugin_ctx_list[i].pContext = NULL;
-      plug_func(plugin)->newPlugin(&plugin_ctx_list[i++]);
+      if (sdplug_func(plugin)->newPlugin(&plugin_ctx_list[i++]) != bRC_OK) {
+         b_ctx->disabled = true;
+      }
    }
 }
 
@@ -159,15 +209,15 @@ void free_plugins(JCR *jcr)
    Plugin *plugin;
    int i = 0;
 
-   if (!plugin_list) {
+   if (!bplugin_list) {
       return;
    }
 
    bpContext *plugin_ctx_list = (bpContext *)jcr->plugin_ctx_list;
-   Dmsg2(dbglvl, "Free instance plugin_ctx_list=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
-   foreach_alist(plugin, plugin_list) {
+   Dmsg2(dbglvl, "Free instance sd-plugin_ctx_list=%p JobId=%d\n", jcr->plugin_ctx_list, jcr->JobId);
+   foreach_alist(plugin, bplugin_list) {
       /* Free the plugin instance */
-      plug_func(plugin)->freePlugin(&plugin_ctx_list[i++]);
+      sdplug_func(plugin)->freePlugin(&plugin_ctx_list[i++]);
    }
    free(plugin_ctx_list);
    jcr->plugin_ctx_list = NULL;
@@ -180,18 +230,27 @@ void free_plugins(JCR *jcr)
  *
  * ==============================================================
  */
-static bRC baculaGetValue(bpContext *ctx, brVariable var, void *value)
+static bRC baculaGetValue(bpContext *ctx, bsdrVariable var, void *value)
 {
-   JCR *jcr = (JCR *)(ctx->bContext);
-// Dmsg1(dbglvl, "bacula: baculaGetValue var=%d\n", var);
+   JCR *jcr;
+   if (!ctx) {
+      return bRC_Error;
+   }
+   jcr = ((bacula_ctx *)ctx->bContext)->jcr;
+   if (!jcr) {
+      return bRC_Error;
+   }
    if (!value) {
       return bRC_Error;
    }
-// Dmsg1(dbglvl, "Bacula: jcr=%p\n", jcr); 
    switch (var) {
-   case bVarJobId:
+   case bsdVarJobId:
       *((int *)value) = jcr->JobId;
-      Dmsg1(dbglvl, "Bacula: return bVarJobId=%d\n", jcr->JobId);
+      Dmsg1(dbglvl, "sd-plugin: return bVarJobId=%d\n", jcr->JobId);
+      break;
+   case bsdVarJobName:
+      *((char **)value) = jcr->Job;
+      Dmsg1(dbglvl, "Bacula: return Job name=%s\n", jcr->Job);
       break;
    default:
       break;
@@ -199,9 +258,20 @@ static bRC baculaGetValue(bpContext *ctx, brVariable var, void *value)
    return bRC_OK;
 }
 
-static bRC baculaSetValue(bpContext *ctx, bwVariable var, void *value)
+static bRC baculaSetValue(bpContext *ctx, bsdwVariable var, void *value)
 {
-   Dmsg1(dbglvl, "bacula: baculaSetValue var=%d\n", var);
+   JCR *jcr;   
+   if (!value || !ctx) {
+      return bRC_Error;
+   }
+// Dmsg1(dbglvl, "bacula: baculaGetValue var=%d\n", var);
+   jcr = ((bacula_ctx *)ctx->bContext)->jcr;
+   if (!jcr) {
+      return bRC_Error;
+   }
+// Dmsg1(dbglvl, "Bacula: jcr=%p\n", jcr); 
+   /* Nothing implemented yet */
+   Dmsg1(dbglvl, "sd-plugin: baculaSetValue var=%d\n", var);
    return bRC_OK;
 }
 
@@ -212,30 +282,52 @@ static bRC baculaRegisterEvents(bpContext *ctx, ...)
 
    va_start(args, ctx);
    while ((event = va_arg(args, uint32_t))) {
-      Dmsg1(dbglvl, "Plugin wants event=%u\n", event);
+      Dmsg1(dbglvl, "sd-Plugin wants event=%u\n", event);
    }
    va_end(args);
    return bRC_OK;
 }
 
 static bRC baculaJobMsg(bpContext *ctx, const char *file, int line,
-  int type, utime_t mtime, const char *msg)
+  int type, utime_t mtime, const char *fmt, ...)
 {
-   Dmsg5(dbglvl, "Job message: %s:%d type=%d time=%lld msg=%s\n",
-      file, line, type, mtime, msg);
+   va_list arg_ptr;
+   char buf[2000];
+   JCR *jcr;
+
+   if (ctx) {
+      jcr = ((bacula_ctx *)ctx->bContext)->jcr;
+   } else {
+      jcr = NULL;
+   }
+
+   va_start(arg_ptr, fmt);
+   bvsnprintf(buf, sizeof(buf), fmt, arg_ptr);
+   va_end(arg_ptr);
+   Jmsg(jcr, type, mtime, "%s", buf);
    return bRC_OK;
 }
 
 static bRC baculaDebugMsg(bpContext *ctx, const char *file, int line,
-  int level, const char *msg)
+  int level, const char *fmt, ...)
 {
-   Dmsg4(dbglvl, "Debug message: %s:%d level=%d msg=%s\n",
-      file, line, level, msg);
+   va_list arg_ptr;
+   char buf[2000];
+
+   va_start(arg_ptr, fmt);
+   bvsnprintf(buf, sizeof(buf), fmt, arg_ptr);
+   va_end(arg_ptr);
+   d_msg(file, line, level, "%s", buf);
    return bRC_OK;
 }
 
-#ifdef TEST_PROGRAM
+static char *baculaEditDeviceCodes(DCR *dcr, char *omsg, 
+  const char *imsg, const char *cmd)
+{
+   return edit_device_codes(dcr, omsg, imsg, cmd);
+}
 
+#ifdef TEST_PROGRAM
 
 int main(int argc, char *argv[])
 {
@@ -255,16 +347,16 @@ int main(int argc, char *argv[])
    jcr2->JobId = 222;
    new_plugins(jcr2);
 
-   generate_plugin_event(jcr1, bEventJobStart, (void *)"Start Job 1");
-   generate_plugin_event(jcr1, bEventJobEnd);
-   generate_plugin_event(jcr2, bEventJobStart, (void *)"Start Job 1");
+   generate_plugin_event(jcr1, bsdEventJobStart, (void *)"Start Job 1");
+   generate_plugin_event(jcr1, bsdEventJobEnd);
+   generate_plugin_event(jcr2, bsdEventJobStart, (void *)"Start Job 1");
    free_plugins(jcr1);
-   generate_plugin_event(jcr2, bEventJobEnd);
+   generate_plugin_event(jcr2, bsdEventJobEnd);
    free_plugins(jcr2);
 
    unload_plugins();
 
-   Dmsg0(dbglvl, "bacula: OK ...\n");
+   Dmsg0(dbglvl, "sd-plugin: OK ...\n");
    close_memory_pool();
    sm_dump(false);
    return 0;

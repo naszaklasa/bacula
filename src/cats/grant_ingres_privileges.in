@@ -2,7 +2,7 @@
 #
 # shell script TO GRANT privileges to the bacula database
 #
-bindir=@SQL_BINDIR@
+bindir=@INGRES_BINDIR@
 PATH="$bindir:$PATH"
 db_name=${db_name:-@db_name@}
 db_user=${db_user:-@db_user@}

@@ -225,7 +225,6 @@ static void list_status_header(STATUS_PKT *sp)
    len = Mmsg(msg, _("Daemon started %s. Jobs: run=%d, running=%d.\n"),
         dt, num_jobs_run, job_count());
    sendit(msg, len, sp);
-
    len = Mmsg(msg, _(" Heap: heap=%s smbytes=%s max_bytes=%s bufs=%s max_bufs=%s\n"),
          edit_uint64_with_commas((char *)sbrk(0)-(char *)start_heap, b1),
          edit_uint64_with_commas(sm_bytes, b2),
@@ -233,9 +232,10 @@ static void list_status_header(STATUS_PKT *sp)
          edit_uint64_with_commas(sm_buffers, b4),
          edit_uint64_with_commas(sm_max_buffers, b5));
    sendit(msg, len, sp);
-   len = Mmsg(msg, "Sizes: boffset_t=%d size_t=%d int32_t=%d int64_t=%d\n", 
-         (int)sizeof(boffset_t), (int)sizeof(size_t), (int)sizeof(int32_t),
-         (int)sizeof(int64_t));
+   len = Mmsg(msg, " Sizes: boffset_t=%d size_t=%d int32_t=%d int64_t=%d "
+              "mode=%d,%d\n", 
+              (int)sizeof(boffset_t), (int)sizeof(size_t), (int)sizeof(int32_t),
+              (int)sizeof(int64_t), (int)DEVELOPER_MODE, (int)BEEF);
    sendit(msg, len, sp);
 }
 

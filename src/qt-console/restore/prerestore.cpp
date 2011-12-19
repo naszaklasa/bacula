@@ -27,8 +27,6 @@
 */
  
 /*
- *   Version $Id$
- *
  *  preRestore -> dialog put up to determine the restore type
  *
  *   Kern Sibbald, February MMVII
@@ -39,7 +37,7 @@
 #include "restore.h"
 
 /* Constructor to have job id list default in */
-prerestorePage::prerestorePage(QString &data, unsigned int datatype)
+prerestorePage::prerestorePage(QString &data, unsigned int datatype) : Pages()
 {
    m_dataIn = data;
    m_dataInType = datatype;
@@ -139,6 +137,7 @@ void prerestorePage::okButtonPushed()
    QString cmd;
 
    this->hide();
+
 
    cmd = QString("restore");
    cmd += " fileset=\"" + filesetCombo->currentText() + "\"";

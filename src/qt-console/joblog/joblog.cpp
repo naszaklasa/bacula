@@ -38,7 +38,7 @@
 #include "bat.h"
 #include "joblog.h"
 
-JobLog::JobLog(QString &jobId, QTreeWidgetItem *parentTreeWidgetItem)
+JobLog::JobLog(QString &jobId, QTreeWidgetItem *parentTreeWidgetItem) : Pages()
 {
    setupUi(this);
    pgInitialize(tr("JobLog"), parentTreeWidgetItem);

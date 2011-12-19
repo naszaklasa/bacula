@@ -36,6 +36,7 @@
 
 #include "bacula.h"
 #include "findlib/find.h"
+#include "lib/mntent_cache.h"
 
 /* Dummy functions */
 int generate_daemon_event(JCR *jcr, const char *event) 
@@ -102,6 +103,8 @@ main (int argc, char *const *argv)
          status = 1;
       }
    }
+
+   flush_mntent_cache();
 
    exit(status);
 }

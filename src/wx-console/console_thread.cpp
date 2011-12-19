@@ -278,8 +278,8 @@ console_thread::console_thread() {
 // class destructor
 console_thread::~console_thread() {
    if (UA_sock) {
-      bnet_sig(UA_sock, BNET_TERMINATE); /* send EOF */
-      bnet_close(UA_sock);
+      UA_sock->signal(BNET_TERMINATE); /* send EOF */
+      UA_sock->close();
       UA_sock = NULL;
    }
 }
@@ -466,7 +466,7 @@ void* console_thread::Entry() {
 
    /* main loop */
    while(!TestDestroy()) {   /* Tests if thread has been ended */
-      stat = bnet_wait_data(UA_sock, 10);
+      stat = UA_sock->wait_data(10);
       if (stat == 0) {
          if (last_is_eod) {
             Write(".messages\n");
@@ -476,21 +476,21 @@ void* console_thread::Entry() {
       }
       
       last_is_eod = 0;
-      if ((stat = bnet_recv(UA_sock)) >= 0) {
+      if ((stat = UA_sock->recv()) >= 0) {
          if (do_not_forward_eod) { /* .messages got data: remove the prompt */
             csprint(NULL, CS_REMOVEPROMPT);
          }
          csprint(UA_sock->msg);
       }
       else if (stat == BNET_SIGNAL) {
-         if (UA_sock->msglen == BNET_PROMPT) {
+         if (UA_sock->msglen == BNET_SUB_PROMPT) {
             csprint(NULL, CS_PROMPT);
          } else if (UA_sock->msglen == BNET_EOD) {
             last_is_eod = 1;
             if (!do_not_forward_eod)
                csprint(NULL, CS_END);
          } else if (UA_sock->msglen == BNET_HEARTBEAT) {
-            bnet_sig(UA_sock, BNET_HB_RESPONSE);
+            UA_sock->signal(BNET_HB_RESPONSE);
             csprint(_("<< Heartbeat signal received, answered. >>\n"), CS_DEBUG);
          } else if (UA_sock->msglen == BNET_START_SELECT ||
                     UA_sock->msglen == BNET_END_SELECT) {
@@ -506,7 +506,7 @@ void* console_thread::Entry() {
          break;
       }
            
-      if (is_bnet_stop(UA_sock)) {
+      if (UA_sock->is_stop()) {
          csprint(NULL, CS_END);
          break;            /* error or term */
       }
@@ -534,7 +534,7 @@ void console_thread::Write(const char* str)
    if (UA_sock) {
       UA_sock->msglen = (int32_t)strlen(str);
       pm_strcpy(&UA_sock->msg, str);
-      bnet_send(UA_sock);
+      UA_sock->send();
    } else if (choosingdirector) {
 //      wxString number = str;
 //      number.RemoveLast(); /* Removes \n */
@@ -553,8 +553,8 @@ void console_thread::Write(const char* str)
 void console_thread::Delete() {
    Write("quit\n");
    if (UA_sock) {
-      bnet_sig(UA_sock, BNET_TERMINATE); /* send EOF */
-      bnet_close(UA_sock);
+      UA_sock->signal(BNET_TERMINATE); /* send EOF */
+      UA_sock->close();
       UA_sock = NULL;
       /*csprint(NULL, CS_END);
       csprint(NULL, CS_DISCONNECTED);

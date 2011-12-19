@@ -114,7 +114,7 @@ depend:
 	@$(SED) "/^# DO NOT DELETE:/,$$ d" Makefile.bak > Makefile
 	@$(ECHO) "# DO NOT DELETE: nice dependency list follows" >> Makefile
 	@for src in $(LIBBACFIND_SRCS); do \
-	    $(CXX) -S -M -MT `basename $$src .c`$(DEFAULT_OBJECT_TYPE) $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) $$src >> Makefile; \
+	    $(CXX) -S -M -MT `basename $$src .c`$(DEFAULT_OBJECT_TYPE) $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $$src >> Makefile; \
 	done
 	@if test -f Makefile ; then \
 	    $(RMF) Makefile.bak; \

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2010-2011 Bacula Systems(R) SA
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -134,6 +134,7 @@ struct exchange_fd_context_t {
    bool notrunconfull_option;
    bool truncate_logs;
    bool accurate;
+   bool plugin_active;
 };
 
 static inline char *tocharstring(WCHAR *src)

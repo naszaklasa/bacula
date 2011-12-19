@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -576,7 +576,6 @@ void free_jcr(JCR *jcr)
 
    free_common_jcr(jcr);
    close_msg(NULL);                   /* flush any daemon messages */
-   garbage_collect_memory_pool();
    Dmsg0(dbglvl, "Exit free_jcr\n");
 }
 
@@ -846,11 +845,13 @@ static int get_status_priority(int JobStatus)
 {
    int priority = 0;
    switch (JobStatus) {
+   case JS_Incomplete:
+      priority = 10;
+      break;
    case JS_ErrorTerminated:
    case JS_FatalError:
    case JS_Canceled:
-   case JS_Incomplete:
-      priority = 10;
+      priority = 9;
       break;
    case JS_Error:
       priority = 8;
@@ -860,12 +861,6 @@ static int get_status_priority(int JobStatus)
       break;
    }
    return priority;
-}
-
-
-void set_jcr_job_status(JCR *jcr, int JobStatus)
-{
-   jcr->setJobStatus(JobStatus);
 }
 
 void JCR::setJobStatus(int newJobStatus)
@@ -901,7 +896,7 @@ void JCR::setJobStatus(int newJobStatus)
    }
 
    if (oldJobStatus != jcr->JobStatus) {
-      Dmsg2(800, "leave set_job_status old=%c new=%c\n", oldJobStatus, newJobStatus);
+      Dmsg2(800, "leave setJobStatus old=%c new=%c\n", oldJobStatus, newJobStatus);
 //    generate_plugin_event(jcr, bEventStatusChange, NULL);
    }
 }

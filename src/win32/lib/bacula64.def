@@ -15,6 +15,7 @@ _Z12UTF8_2_wcharPPcPKc
 _Z12gettimeofdayP7timevalP8timezone
 _Z12init_signalsPFviE
 _Z12wchar_2_UTF8PcPKwi
+_Z12wchar_2_UTF8PPcPKw
 _Z12win32_getcwdPci
 _Z12win32_unlinkPKc
 _Z15init_stack_dumpv
@@ -81,9 +82,9 @@ _Z4doprPcyPKcS_PFvS_PyyiE
 _Z17InitWinAPIWrapperv
  
 ; attribs.o
-_Z11decode_statPcP4statPi
-_Z11encode_statPcP4statii
-_Z13decode_LinkFIPcP4stat
+_Z11decode_statPcP4statiPi
+_Z11encode_statPcP4statiii
+_Z13decode_LinkFIPcP4stati
 _Z14set_attributesP3JCRP4ATTRP5BFILE
 _Z16encode_attribsExP3JCRPcP6FF_PKT
 _Z18select_data_streamP6FF_PKT
@@ -133,6 +134,8 @@ _Z25set_find_changed_functionP6FF_PKTPFbP3JCRS0_E
 _Z13find_one_fileP3JCRP6FF_PKTPFiS0_S2_bEPcjb
 _Z13term_find_oneP6FF_PKT
 _Z16has_file_changedP3JCRP6FF_PKT
+_Z13check_changesP3JCRP6FF_PKT
+_Z22ff_pkt_set_link_digestP6FF_PKTiPKcj
  
 ; fstype.o
 _Z6fstypePKcPci
@@ -191,7 +194,7 @@ _ZN5alist9grow_listEv
 ; attr.o
 _Z15print_ls_outputP3JCRP4ATTR
 _Z24build_attr_output_fnamesP3JCRP4ATTR
-_Z24unpack_attributes_recordP3JCRiPcP4ATTR
+_Z24unpack_attributes_recordP3JCRiPciP4ATTR
 _Z8new_attrP3JCR
 _Z9free_attrP4ATTR
  
@@ -323,6 +326,10 @@ _Z8bstrncatPcPKci
 _Z8bstrncatPcR8POOL_MEMi
 _Z8bstrncpyPcPKci
 _Z8bstrncpyPcR8POOL_MEMi
+
+; binflate.o
+_Z8ZdeflatePciS_Ri
+_Z8ZinflatePciS_Ri
  
 ; btime.o
 _Z10bstrftimesPcix
@@ -441,9 +448,10 @@ _Z11edit_uint64yPc
 _Z11is_a_numberPKc
 _Z12str_to_int64Pc
 _Z13is_an_integerPKc
-_Z13is_name_validPcPS_
+_Z13is_name_validPKcPPc
 _Z13str_to_uint64Pc
 _Z14size_to_uint64PciPy
+_Z15speed_to_uint64PciPy
 _Z17duration_to_utimePcPx
 _Z22edit_int64_with_commasxPc
 _Z23edit_uint64_with_commasyPc
@@ -465,7 +473,7 @@ _Z8hmac_md5PhiS_iS_
 _ZN6htable11hash_mallocEi
 _ZN6htable10grow_tableEv
 _ZN6htable10hash_indexEPc
-_ZN6htable4initEPvS0_i
+_ZN6htable4initEPvS0_ii
 _ZN6htable4nextEv
 _ZN6htable4sizeEv
 _ZN6htable5firstEv
@@ -473,8 +481,8 @@ _ZN6htable5statsEv
 _ZN6htable6insertEPcPv
 _ZN6htable6lookupEPc
 _ZN6htable7destroyEv
-_ZN6htableC1EPvS0_i
-_ZN6htableC2EPvS0_i
+_ZN6htableC1EPvS0_ii
+_ZN6htableC2EPvS0_ii
     
  
 ; jcr.o
@@ -491,7 +499,6 @@ _Z16get_jcr_from_tsdv
 _Z18get_jobid_from_tsdv
 _Z18get_jcr_by_sessionjj
 _Z18init_jcr_subsystemv
-_Z18set_jcr_job_statusP3JCRi
 _ZN3JCR12setJobStatusEi
 _Z19init_last_jobs_listv
 _Z19lock_last_jobs_listv
@@ -559,9 +566,9 @@ _ZN8POOL_MEM6strcpyEPKc
 _ZN8POOL_MEM8max_sizeEv
  
 ; message.o
+_Z10get_hangupv
+_Z10set_hangupi
 _Z10my_name_isiPPcPKc
-_Z11get_db_typev
-_Z11set_db_typePKc
 _Z12add_msg_destP4MSGSiiPcS1_
 _Z12rem_msg_destP4MSGSiiPc
 _Z13free_msgs_resP4MSGS
@@ -587,7 +594,14 @@ _Z8term_msgv
 _Z9close_msgP3JCR
 _Z9get_tracev
 _Z9set_tracei
- 
+
+; mkpath.o
+_Z8makepathP4ATTRPKcttjji
+
+; mntent_cache.o
+_Z18flush_mntent_cachev
+_Z19find_mntent_mappingj
+
 ; priv.o
 _Z4dropPcS_b
 
@@ -753,9 +767,13 @@ _Z6lmgr_pPP16pthread_mutex_t_
 _Z6lmgr_vPP16pthread_mutex_t_
 
 console_command DATA
-plugin_list DATA
+bplugin_list DATA
 plugin_bopen DATA
 plugin_bclose DATA
 plugin_bwrite DATA
 plugin_bread DATA
 plugin_blseek DATA
+exepath DATA
+beef DATA
+version DATA
+dist_name DATA

@@ -103,9 +103,9 @@ JCR *new_control_jcr(const char *base_name, int job_type)
    jcr->sd_auth_key = bstrdup("dummy"); /* dummy Storage daemon key */
    create_unique_job_name(jcr, base_name);
    jcr->sched_time = jcr->start_time;
-   jcr->set_JobType(job_type);
-   jcr->set_JobLevel(L_NONE);
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobType(job_type);
+   jcr->setJobLevel(L_NONE);
+   jcr->setJobStatus(JS_Running);
    jcr->JobId = 0;
    return jcr;
 }
@@ -195,6 +195,7 @@ UAContext *new_ua_context(JCR *jcr)
    ua->db = jcr->db;
    ua->cmd = get_pool_memory(PM_FNAME);
    ua->args = get_pool_memory(PM_FNAME);
+   ua->errmsg = get_pool_memory(PM_FNAME);
    ua->verbose = true;
    ua->automount = true;
    return ua;
@@ -208,10 +209,12 @@ void free_ua_context(UAContext *ua)
    if (ua->args) {
       free_pool_memory(ua->args);
    }
+   if (ua->errmsg) {
+      free_pool_memory(ua->errmsg);
+   }
    if (ua->prompt) {
       free(ua->prompt);
    }
-
    if (ua->UA_sock) {
       bnet_close(ua->UA_sock);
       ua->UA_sock = NULL;

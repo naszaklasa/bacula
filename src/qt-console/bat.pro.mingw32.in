@@ -1,11 +1,10 @@
 ######################################################################
-# Version $Id: bat.pro.in 7051 2008-05-29 01:19:31Z bartleyd2 $
 #
-#   !!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
-#      Edit only bat.pro.in  -- bat.pro is built by the ./configure program
+# Edit only bat.pro.mingw32.in  -- bat.pro.mingw32 is built by the ./configure program
 #
-#   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #    
 CONFIG += qt cross-win32
 # CONFIG += debug 
@@ -25,7 +24,7 @@ cross-win32 {
   LIBS       +=  -mwindows -L../win32/release32 -lbacula
 }
 !cross-win32 {
-  LIBS        += -L../lib -lbac @OPENSSL_LIBS@
+  LIBS        += -L../lib -lbac -L../findlib -lbacfind @OPENSSL_LIBS@
 }
 
 qwt {
@@ -46,7 +45,7 @@ FORMS += relabel/relabel.ui
 FORMS += mount/mount.ui     
 FORMS += console/console.ui 
 FORMS += restore/restore.ui restore/prerestore.ui restore/brestore.ui
-FORMS += restore/restoretree.ui                                      
+FORMS += restore/runrestore.ui restore/restoretree.ui                                      
 FORMS += run/run.ui run/runcmd.ui run/estimate.ui run/prune.ui       
 FORMS += select/select.ui select/textinput.ui                        
 FORMS += medialist/medialist.ui mediaedit/mediaedit.ui joblist/joblist.ui

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -37,7 +37,6 @@
  *  Utility functions for sending info to File Daemon.
  *   These functions are used by both backup and verify.
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -60,6 +59,7 @@ static char OKjob[]          = "2000 OK Job";
 static char OKlevel[]        = "2000 OK level\n";
 static char OKRunScript[]    = "2000 OK RunScript\n";
 static char OKRunBeforeNow[] = "2000 OK RunBeforeNow\n";
+static char OKRestoreObject[] = "2000 OK ObjectRestored\n";
 
 /* Forward referenced functions */
 static bool send_list_item(JCR *jcr, const char *code, char *item, BSOCK *fd);
@@ -103,7 +103,7 @@ int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
       }
 
       if (fd == NULL) {
-         set_jcr_job_status(jcr, JS_ErrorTerminated);
+         jcr->setJobStatus(JS_ErrorTerminated);
          return 0;
       }
       Dmsg0(10, "Opened connection with File daemon\n");
@@ -112,10 +112,10 @@ int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
    }
    fd->res = (RES *)jcr->client;      /* save resource in BSOCK */
    jcr->file_bsock = fd;
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
    if (!authenticate_file_daemon(jcr)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       return 0;
    }
 
@@ -136,7 +136,7 @@ int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
        if (strncmp(fd->msg, OKjob, strlen(OKjob)) != 0) {
           Jmsg(jcr, M_FATAL, 0, _("File daemon \"%s\" rejected Job command: %s\n"),
              jcr->client->hdr.name, fd->msg);
-          set_jcr_job_status(jcr, JS_ErrorTerminated);
+          jcr->setJobStatus(JS_ErrorTerminated);
           return 0;
        } else if (jcr->db) {
           CLIENT_DBR cr;
@@ -154,7 +154,7 @@ int connect_to_file_daemon(JCR *jcr, int retry_interval, int max_retry_time,
    } else {
       Jmsg(jcr, M_FATAL, 0, _("FD gave bad response to JobId command: %s\n"),
          bnet_strerror(fd));
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       return 0;
    }
    return 1;
@@ -246,13 +246,13 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
          Jmsg(jcr, M_INFO, 0, _("No prior or suitable Full backup found in catalog. Doing FULL backup.\n"));
          bsnprintf(since, since_len, _(" (upgraded from %s)"),
             level_to_str(jcr->getJobLevel()));
-         jcr->set_JobLevel(jcr->jr.JobLevel = L_FULL);
+         jcr->setJobLevel(jcr->jr.JobLevel = L_FULL);
        } else if (do_diff) {
          /* No recent diff job found, so upgrade this one to Diff */
          Jmsg(jcr, M_INFO, 0, _("No prior or suitable Differential backup found in catalog. Doing Differential backup.\n"));
          bsnprintf(since, since_len, _(" (upgraded from %s)"),
             level_to_str(jcr->getJobLevel()));
-         jcr->set_JobLevel(jcr->jr.JobLevel = L_DIFFERENTIAL);
+         jcr->setJobLevel(jcr->jr.JobLevel = L_DIFFERENTIAL);
       } else {
          if (jcr->job->rerun_failed_levels) {
             if (db_find_failed_job_since(jcr, jcr->db, &jcr->jr, jcr->stime, JobLevel)) {
@@ -260,7 +260,7 @@ void get_level_since_time(JCR *jcr, char *since, int since_len)
                   level_to_str(JobLevel));
                bsnprintf(since, since_len, _(" (upgraded from %s)"),
                   level_to_str(jcr->getJobLevel()));
-               jcr->set_JobLevel(jcr->jr.JobLevel = JobLevel);
+               jcr->setJobLevel(jcr->jr.JobLevel = JobLevel);
                jcr->jr.JobId = jcr->JobId;
                break;
             }
@@ -296,24 +296,25 @@ bool send_level_command(JCR *jcr)
    BSOCK   *fd = jcr->file_bsock;
    const char *accurate = jcr->accurate?"accurate_":"";
    const char *not_accurate = "";
+   const char *rerunning = jcr->rerunning?" rerunning ":" ";
    /*
     * Send Level command to File daemon
     */
    switch (jcr->getJobLevel()) {
    case L_BASE:
-      fd->fsend(levelcmd, not_accurate, "base", " ", 0);
+      fd->fsend(levelcmd, not_accurate, "base", rerunning, 0);
       break;
    /* L_NONE is the console, sending something off to the FD */
    case L_NONE:
    case L_FULL:
-      fd->fsend(levelcmd, not_accurate, "full", " ", 0);
+      fd->fsend(levelcmd, not_accurate, "full", rerunning, 0);
       break;
    case L_DIFFERENTIAL:
-      fd->fsend(levelcmd, accurate, "differential", " ", 0);
+      fd->fsend(levelcmd, accurate, "differential", rerunning, 0);
       send_since_time(jcr);
       break;
    case L_INCREMENTAL:
-      fd->fsend(levelcmd, accurate, "incremental", " ", 0);
+      fd->fsend(levelcmd, accurate, "incremental", rerunning, 0);
       send_since_time(jcr);
       break;
    case L_SINCE:
@@ -324,9 +325,9 @@ bool send_level_command(JCR *jcr)
    }
    Dmsg1(120, ">filed: %s", fd->msg);
    if (!response(jcr, fd, OKlevel, "Level", DISPLAY_ERROR)) {
-      return 0;
+      return false;
    }
-   return 1;
+   return true;
 }
 
 /*
@@ -378,7 +379,7 @@ static bool send_fileset(JCR *jcr)
                bool done=false;         /* print warning only if compression enabled in FS */ 
                int j = 0;
                for (k=0; fo->opts[k]!='\0'; k++) {                   
-                 /* Z compress option is followed by the single-digit compress level */
+                 /* Z compress option is followed by the single-digit compress level or 'o' */
                  if (fo->opts[k]=='Z') {
                     done=true;
                     k++;                /* skip option and level */
@@ -470,7 +471,7 @@ static bool send_fileset(JCR *jcr)
    return true;
 
 bail_out:
-   set_jcr_job_status(jcr, JS_ErrorTerminated);
+   jcr->setJobStatus(JS_ErrorTerminated);
    return false;
 
 }
@@ -668,6 +669,96 @@ bail_out:
    return 0;
 }
 
+struct OBJ_CTX {
+   JCR *jcr;
+   int count;
+};
+
+static int restore_object_handler(void *ctx, int num_fields, char **row)
+{
+   OBJ_CTX *octx = (OBJ_CTX *)ctx;
+   JCR *jcr = octx->jcr;
+   BSOCK *fd;
+
+   fd = jcr->file_bsock;
+   if (jcr->is_job_canceled()) {
+      return 1;
+   }
+   /* Old File Daemon doesn't handle restore objects */
+   if (jcr->FDVersion < 3) {
+      Jmsg(jcr, M_WARNING, 0, _("Client \"%s\" may not be used to restore "
+                                "this job. Please upgrade your client.\n"), 
+           jcr->client->name());
+      return 1;
+   }
+
+   fd->fsend("restoreobject JobId=%s %s,%s,%s,%s,%s,%s\n",
+      row[0], row[1], row[2], row[3], row[4], row[5], row[6]);
+
+   Dmsg1(010, "Send obj hdr=%s", fd->msg);
+
+   fd->msglen = pm_strcpy(fd->msg, row[7]);
+   fd->send();                            /* send Object name */
+
+   Dmsg1(010, "Send obj: %s\n", fd->msg);
+
+//   fd->msglen = str_to_uint64(row[1]);   /* object length */
+//   Dmsg1(000, "obj size: %lld\n", (uint64_t)fd->msglen);
+
+   /* object */
+   db_unescape_object(jcr, jcr->db, 
+                      row[8],                /* Object  */
+                      str_to_uint64(row[1]), /* Object length */
+                      &fd->msg, &fd->msglen);
+   fd->send();                           /* send object */
+   octx->count++;
+
+   if (debug_level) {
+      for (int i=0; i < fd->msglen; i++)
+         if (!fd->msg[i]) 
+            fd->msg[i] = ' ';
+      Dmsg1(000, "Send obj: %s\n", fd->msg);
+   }
+
+   return 0;
+}
+
+bool send_restore_objects(JCR *jcr)
+{
+   POOL_MEM query(PM_MESSAGE);
+   BSOCK *fd;
+   OBJ_CTX octx;
+
+   if (!jcr->JobIds || !jcr->JobIds[0]) {
+      return true;
+   }
+   octx.jcr = jcr;
+   octx.count = 0;
+   Mmsg(query, "SELECT JobId,ObjectLength,ObjectFullLength,ObjectIndex,"
+                      "ObjectType,ObjectCompression,FileIndex,ObjectName,"
+                      "RestoreObject "
+               "FROM RestoreObject "
+              "WHERE JobId IN (%s) "
+              "ORDER BY ObjectIndex ASC", jcr->JobIds);
+   
+   /* restore_object_handler is called for each file found */
+   db_sql_query(jcr->db, query.c_str(), restore_object_handler, (void *)&octx);
+
+   /*
+    * Send to FD only if we have at least one restore object.
+    * This permits backward compatibility with older FDs.
+    */
+   if (octx.count > 0) {
+      fd = jcr->file_bsock;
+      fd->fsend("restoreobject end\n");
+      if (!response(jcr, fd, OKRestoreObject, "RestoreObject", DISPLAY_ERROR)) {
+         Jmsg(jcr, M_FATAL, 0, _("RestoreObject failed.\n"));
+         return false;
+      }
+   }
+   return true;
+}
+
 
 
 /*
@@ -699,7 +790,7 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
       if ((len = sscanf(fd->msg, "%ld %d %s", &file_index, &stream, Digest)) != 3) {
          Jmsg(jcr, M_FATAL, 0, _("<filed: bad attributes, expected 3 fields got %d\n"
 "msglen=%d msg=%s\n"), len, fd->msglen, fd->msg);
-         set_jcr_job_status(jcr, JS_ErrorTerminated);
+         jcr->setJobStatus(JS_ErrorTerminated);
          return 0;
       }
       p = fd->msg;
@@ -739,6 +830,7 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
          ar->FilenameId = 0;
          ar->Digest = NULL;
          ar->DigestType = CRYPTO_DIGEST_NONE;
+         ar->DeltaSeq = 0;
          jcr->cached_attribute = true;
 
          Dmsg2(dbglvl, "dird<filed: stream=%d %s\n", stream, jcr->fname);
@@ -778,6 +870,6 @@ int get_attributes_and_put_in_catalog(JCR *jcr)
       }
       jcr->cached_attribute = false; 
    }
-   set_jcr_job_status(jcr, JS_Terminated);
+   jcr->setJobStatus(JS_Terminated);
    return 1;
 }

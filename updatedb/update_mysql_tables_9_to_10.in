@@ -8,10 +8,11 @@ echo " which is needed to convert from Bacula version 1.38.x to 2.0.x or higher"
 echo "Depending on the size of your database,"
 echo "this script may take several minutes to run."
 echo " "
-bindir=@SQL_BINDIR@
-db_name=@db_name@
+bindir=@MYSQL_BINDIR@
+PATH="$bindir:$PATH"
+db_name=${db_name:-@db_name@}
 
-if $bindir/mysql $* -f <<END-OF-DATA
+if mysql $* -f <<END-OF-DATA
 USE ${db_name};
 
 DROP TABLE IF EXISTS MAC;

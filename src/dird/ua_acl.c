@@ -49,6 +49,11 @@ bool acl_access_ok(UAContext *ua, int acl, const char *item)
 /* This version expects the length of the item which we must check. */
 bool acl_access_ok(UAContext *ua, int acl, const char *item, int len)
 {
+   /* The resource name contains nasty characters */
+   if (acl != Where_ACL && !is_name_valid(item, NULL)) {
+      Dmsg1(1400, "Access denied for item=%s\n", item);
+      return false;
+   }
 
    /* If no console resource => default console and all is permitted */
    if (!ua->cons) {

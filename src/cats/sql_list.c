@@ -33,18 +33,13 @@
  *    Version $Id: sql_list.c 8508 2009-03-07 20:59:46Z kerns $
  */
 
-
-/* The following is necessary so that we do not include
- * the dummy external definition of DB.
- */
-#define __SQL_C                       /* indicate that this is sql.c */
-
 #include "bacula.h"
+
+#if HAVE_SQLITE3 || HAVE_MYSQL || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
+
 #include "cats.h"
-
-extern int db_type;
-
-#if    HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI
+#include "bdb_priv.h"
+#include "sql_glue.h"
 
 /* -----------------------------------------------------------------------
  *
@@ -60,7 +55,7 @@ int db_list_sql_query(JCR *jcr, B_DB *mdb, const char *query, DB_LIST_HANDLER *s
                       void *ctx, int verbose, e_list_type type)
 {
    db_lock(mdb);
-   if (sql_query(mdb, query) != 0) {
+   if (!sql_query(mdb, query, QF_STORE_RESULT)) {
       Mmsg(mdb->errmsg, _("Query failed: %s\n"), sql_strerror(mdb));
       if (verbose) {
          sendit(ctx, mdb->errmsg);
@@ -69,12 +64,8 @@ int db_list_sql_query(JCR *jcr, B_DB *mdb, const char *query, DB_LIST_HANDLER *s
       return 0;
    }
 
-   mdb->result = sql_store_result(mdb);
-
-   if (mdb->result) {
-      list_result(jcr, mdb, sendit, ctx, type);
-      sql_free_result(mdb);
-   }
+   list_result(jcr, mdb, sendit, ctx, type);
+   sql_free_result(mdb);
    db_unlock(mdb);
    return 1;
 }
@@ -83,14 +74,18 @@ void
 db_list_pool_records(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr,
                      DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
 {
+   char esc[MAX_ESCAPE_NAME_LENGTH];
+
    db_lock(mdb);
+   mdb->db_escape_string(jcr, esc, pdbr->Name, strlen(pdbr->Name));
+
    if (type == VERT_LIST) {
       if (pdbr->Name[0] != 0) {
          Mmsg(mdb->cmd, "SELECT PoolId,Name,NumVols,MaxVols,UseOnce,UseCatalog,"
             "AcceptAnyVolume,VolRetention,VolUseDuration,MaxVolJobs,MaxVolBytes,"
             "AutoPrune,Recycle,PoolType,LabelFormat,Enabled,ScratchPoolId,"
             "RecyclePoolId,LabelType "
-            " FROM Pool WHERE Name='%s'", pdbr->Name);
+            " FROM Pool WHERE Name='%s'", esc);
       } else {
          Mmsg(mdb->cmd, "SELECT PoolId,Name,NumVols,MaxVols,UseOnce,UseCatalog,"
             "AcceptAnyVolume,VolRetention,VolUseDuration,MaxVolJobs,MaxVolBytes,"
@@ -101,7 +96,7 @@ db_list_pool_records(JCR *jcr, B_DB *mdb, POOL_DBR *pdbr,
    } else {
       if (pdbr->Name[0] != 0) {
          Mmsg(mdb->cmd, "SELECT PoolId,Name,NumVols,MaxVols,PoolType,LabelFormat "
-           "FROM Pool WHERE Name='%s'", pdbr->Name);
+           "FROM Pool WHERE Name='%s'", esc);
       } else {
          Mmsg(mdb->cmd, "SELECT PoolId,Name,NumVols,MaxVols,PoolType,LabelFormat "
            "FROM Pool ORDER BY PoolId");
@@ -153,7 +148,11 @@ db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
                       DB_LIST_HANDLER *sendit, void *ctx, e_list_type type)
 {
    char ed1[50];
+   char esc[MAX_ESCAPE_NAME_LENGTH];
+
    db_lock(mdb);
+   mdb->db_escape_string(jcr, esc, mdbr->VolumeName, strlen(mdbr->VolumeName));
+
    if (type == VERT_LIST) {
       if (mdbr->VolumeName[0] != 0) {
          Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,Slot,PoolId,"
@@ -164,7 +163,7 @@ db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
             "EndFile,EndBlock,VolParts,LabelType,StorageId,DeviceId,"
             "LocationId,RecycleCount,InitialWrite,ScratchPoolId,RecyclePoolId, "
             "Comment"
-            " FROM Media WHERE Media.VolumeName='%s'", mdbr->VolumeName);
+            " FROM Media WHERE Media.VolumeName='%s'", esc);
       } else {
          Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,Slot,PoolId,"
             "MediaType,FirstWritten,LastWritten,LabelDate,VolJobs,"
@@ -181,7 +180,7 @@ db_list_media_records(JCR *jcr, B_DB *mdb, MEDIA_DBR *mdbr,
       if (mdbr->VolumeName[0] != 0) {
          Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,VolStatus,Enabled,"
             "VolBytes,VolFiles,VolRetention,Recycle,Slot,InChanger,MediaType,LastWritten "
-            "FROM Media WHERE Media.VolumeName='%s'", mdbr->VolumeName);
+            "FROM Media WHERE Media.VolumeName='%s'", esc);
       } else {
          Mmsg(mdb->cmd, "SELECT MediaId,VolumeName,VolStatus,Enabled,"
             "VolBytes,VolFiles,VolRetention,Recycle,Slot,InChanger,MediaType,LastWritten "
@@ -271,7 +270,7 @@ void db_list_copies_records(JCR *jcr, B_DB *mdb, uint32_t limit, char *JobIds,
       goto bail_out;
    }
 
-   if (mdb->result && sql_num_rows(mdb)) {
+   if (sql_num_rows(mdb)) {
       if (JobIds && JobIds[0]) {
          sendit(ctx, _("These JobIds have copies as follows:\n"));
       } else {
@@ -328,6 +327,8 @@ db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr, DB_LIST_HANDLER *sendit,
 {
    char ed1[50];
    char limit[100];
+   char esc[MAX_ESCAPE_NAME_LENGTH];
+
    db_lock(mdb);
    if (jr->limit > 0) {
       snprintf(limit, sizeof(limit), " LIMIT %d", jr->limit);
@@ -361,13 +362,15 @@ db_list_job_records(JCR *jcr, B_DB *mdb, JOB_DBR *jr, DB_LIST_HANDLER *sendit,
       }
    } else {
       if (jr->Name[0] != 0) {
+         mdb->db_escape_string(jcr, esc, jr->Name, strlen(jr->Name));
          Mmsg(mdb->cmd,
-            "SELECT JobId,Name,StartTime,Type,Level,JobFiles,JobBytes,JobStatus "
-            "FROM Job WHERE Name='%s' ORDER BY StartTime,JobId ASC", jr->Name);
+           "SELECT JobId,Name,StartTime,Type,Level,JobFiles,JobBytes,JobStatus "
+             "FROM Job WHERE Name='%s' ORDER BY StartTime,JobId ASC", esc);
       } else if (jr->Job[0] != 0) {
+         mdb->db_escape_string(jcr, esc, jr->Job, strlen(jr->Job));
          Mmsg(mdb->cmd,
             "SELECT JobId,Name,StartTime,Type,Level,JobFiles,JobBytes,JobStatus "
-            "FROM Job WHERE Job='%s' ORDER BY StartTime,JobId ASC", jr->Job);
+            "FROM Job WHERE Job='%s' ORDER BY StartTime,JobId ASC", esc);
       } else if (jr->JobId != 0) {
          Mmsg(mdb->cmd,
             "SELECT JobId,Name,StartTime,Type,Level,JobFiles,JobBytes,JobStatus "
@@ -429,12 +432,14 @@ void
 db_list_files_for_job(JCR *jcr, B_DB *mdb, JobId_t jobid, DB_LIST_HANDLER *sendit, void *ctx)
 {
    char ed1[50];
+   LIST_CTX lctx(jcr, mdb, sendit, ctx, HORZ_LIST);
+
    db_lock(mdb);
 
    /*
     * Stupid MySQL is NON-STANDARD !
     */
-   if (db_type == SQL_TYPE_MYSQL) {
+   if (db_get_type_index(mdb) == SQL_TYPE_MYSQL) {
       Mmsg(mdb->cmd, "SELECT CONCAT(Path.Path,Filename.Name) AS Filename "
            "FROM (SELECT PathId, FilenameId FROM File WHERE JobId=%s "
                   "UNION ALL "
@@ -460,12 +465,12 @@ db_list_files_for_job(JCR *jcr, B_DB *mdb, JobId_t jobid, DB_LIST_HANDLER *sendi
            edit_int64(jobid, ed1), ed1);
    }
 
-   if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
-      db_unlock(mdb);
-      return;
+   if (!db_big_sql_query(mdb, mdb->cmd, list_result, &lctx)) {
+       db_unlock(mdb);
+       return;
    }
 
-   list_result(jcr, mdb, sendit, ctx, HORZ_LIST);
+   lctx.send_dashes();
 
    sql_free_result(mdb);
    db_unlock(mdb);
@@ -475,12 +480,14 @@ void
 db_list_base_files_for_job(JCR *jcr, B_DB *mdb, JobId_t jobid, DB_LIST_HANDLER *sendit, void *ctx)
 {
    char ed1[50];
+   LIST_CTX lctx(jcr, mdb, sendit, ctx, HORZ_LIST);
+
    db_lock(mdb);
 
    /*
     * Stupid MySQL is NON-STANDARD !
     */
-   if (db_type == SQL_TYPE_MYSQL) {
+   if (db_get_type_index(mdb) == SQL_TYPE_MYSQL) {
       Mmsg(mdb->cmd, "SELECT CONCAT(Path.Path,Filename.Name) AS Filename "
            "FROM BaseFiles, File, Filename, Path "
            "WHERE BaseFiles.JobId=%s AND BaseFiles.BaseJobId = File.JobId "
@@ -498,16 +505,15 @@ db_list_base_files_for_job(JCR *jcr, B_DB *mdb, JobId_t jobid, DB_LIST_HANDLER *
            edit_int64(jobid, ed1));
    }
 
-   if (!QUERY_DB(jcr, mdb, mdb->cmd)) {
-      db_unlock(mdb);
-      return;
+   if (!db_big_sql_query(mdb, mdb->cmd, list_result, &lctx)) {
+       db_unlock(mdb);
+       return;
    }
 
-   list_result(jcr, mdb, sendit, ctx, HORZ_LIST);
+   lctx.send_dashes();
 
    sql_free_result(mdb);
    db_unlock(mdb);
 }
 
-
-#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_SQLITE || HAVE_POSTGRESQL || HAVE_INGRES */
+#endif /* HAVE_SQLITE3 || HAVE_MYSQL || HAVE_POSTGRESQL || HAVE_INGRES || HAVE_DBI */

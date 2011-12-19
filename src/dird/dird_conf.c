@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -256,6 +256,7 @@ static RES_ITEM cat_items[] = {
    {"dbsocket", store_str,      ITEM(res_cat.db_socket),   0, 0, 0},
    /* Turned off for the moment */
    {"multipleconnections", store_bit, ITEM(res_cat.mult_db_connections), 0, 0, 0},
+   {"disablebatchinsert", store_bool, ITEM(res_cat.disable_batch_insert), 0, ITEM_DEFAULT, false},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -311,6 +312,7 @@ RES_ITEM job_items[] = {
    {"prunejobs",   store_bool, ITEM(res_job.PruneJobs), 0, ITEM_DEFAULT, false},
    {"prunefiles",  store_bool, ITEM(res_job.PruneFiles), 0, ITEM_DEFAULT, false},
    {"prunevolumes",store_bool, ITEM(res_job.PruneVolumes), 0, ITEM_DEFAULT, false},
+   {"purgemigrationjob",  store_bool, ITEM(res_job.PurgeMigrateJob), 0, ITEM_DEFAULT, false},
    {"enabled",     store_bool, ITEM(res_job.enabled), 0, ITEM_DEFAULT, true},
    {"spoolattributes",store_bool, ITEM(res_job.SpoolAttributes), 0, ITEM_DEFAULT, false},
    {"spooldata",   store_bool, ITEM(res_job.spool_data), 0, ITEM_DEFAULT, false},
@@ -325,7 +327,7 @@ RES_ITEM job_items[] = {
    {"maximumconcurrentjobs", store_pint32, ITEM(res_job.MaxConcurrentJobs), 0, ITEM_DEFAULT, 1},
    {"rescheduleonerror", store_bool, ITEM(res_job.RescheduleOnError), 0, ITEM_DEFAULT, false},
    {"rescheduleinterval", store_time, ITEM(res_job.RescheduleInterval), 0, ITEM_DEFAULT, 60 * 30},
-   {"rescheduletimes",    store_pint32, ITEM(res_job.RescheduleTimes), 0, 0, 0},
+   {"rescheduletimes",    store_pint32, ITEM(res_job.RescheduleTimes), 0, 0, 5},
    {"priority",           store_pint32, ITEM(res_job.Priority), 0, ITEM_DEFAULT, 10},
    {"allowmixedpriority", store_bool, ITEM(res_job.allow_mixed_priority), 0, ITEM_DEFAULT, false},
    {"writepartafterjob",  store_bool, ITEM(res_job.write_part_after_job), 0, ITEM_DEFAULT, true},
@@ -363,9 +365,9 @@ static RES_ITEM fs_items[] = {
  *   name          handler     value                 code flags    default_value
  */
 static RES_ITEM sch_items[] = {
-   {"name",     store_name,  ITEM(res_sch.hdr.name), 0, ITEM_REQUIRED, 0},
-   {"description", store_str, ITEM(res_sch.hdr.desc), 0, 0, 0},
-   {"run",      store_run,   ITEM(res_sch.run),      0, 0, 0},
+   {"name",        store_name,  ITEM(res_sch.hdr.name), 0, ITEM_REQUIRED, 0},
+   {"description", store_str,   ITEM(res_sch.hdr.desc), 0, 0, 0},
+   {"run",         store_run,   ITEM(res_sch.run),      0, 0, 0},
    {NULL, NULL, {0}, 0, 0, 0}
 };
 
@@ -698,6 +700,9 @@ void dump_resource(int type, RES *reshdr, void sendit(void *sock, const char *fm
       }
       if (res->res_job.MaxStartDelay) {
          sendit(sock, _("  --> MaxStartDelay=%u\n"), res->res_job.MaxStartDelay);
+      }
+      if (res->res_job.MaxRunSchedTime) {
+         sendit(sock, _("  --> MaxRunSchedTime=%u\n"), res->res_job.MaxRunSchedTime);
       }
       if (res->res_job.storage) {
          STORE *store;
@@ -1861,7 +1866,7 @@ static void store_runscript_cmd(LEX *lc, RES_ITEM *item, int index, int pass)
       /* Each runscript command takes 2 entries in commands list */
       pm_strcpy(c, lc->str);
       ((RUNSCRIPT*) item->value)->commands->prepend(c); /* command line */
-      ((RUNSCRIPT*) item->value)->commands->prepend((void *)item->code); /* command type */
+      ((RUNSCRIPT*) item->value)->commands->prepend((void *)(intptr_t)item->code); /* command type */
    }
    scan_to_eol(lc);
 }
@@ -1873,7 +1878,7 @@ static void store_short_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
 
    if (pass == 2) {
       RUNSCRIPT *script = new_runscript();
-      script->set_job_code_callback(job_code_callback_filesetname);
+      script->set_job_code_callback(job_code_callback_director);
 
       script->set_command(lc->str);
 
@@ -2020,7 +2025,7 @@ static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
        *  - POOLMEM command string (ex: /bin/true) 
        *  - int command type (ex: SHELL_CMD)
        */
-      res_runscript.set_job_code_callback(job_code_callback_filesetname);
+      res_runscript.set_job_code_callback(job_code_callback_director);
       while ((c=(char*)res_runscript.commands->pop()) != NULL) {
          t = (intptr_t)res_runscript.commands->pop();
          RUNSCRIPT *script = new_runscript();
@@ -2046,13 +2051,38 @@ static void store_runscript(LEX *lc, RES_ITEM *item, int index, int pass)
 }
 
 /* callback function for edit_job_codes */
-extern "C" char *job_code_callback_filesetname(JCR *jcr, const char* param)
+/* See ../lib/util.c, function edit_job_codes, for more remaining codes */
+extern "C" char *job_code_callback_director(JCR *jcr, const char* param)
 {
-   if (param[0] == 'f') {
-      return jcr->fileset->name();
-   } else {
-      return NULL;
+   static char yes[] = "yes";
+   static char no[] = "no";
+   switch (param[0]) {
+      case 'f':
+         if (jcr->fileset) {
+            return jcr->fileset->name();
+         }
+         break;
+      case 'h':
+         if (jcr->client) {
+            return jcr->client->address;
+         }
+         break;
+      case 'p':
+         if (jcr->pool) {
+            return jcr->pool->name();
+         }
+         break;
+      case 'w':
+         if (jcr->wstore) {
+            return jcr->wstore->name();
+         }
+         break;
+      case 'x':
+         return jcr->spool_data ? yes : no;
+      case 'D':
+         return my_name;
    }
+   return NULL;
 }
 
 bool parse_dir_config(CONFIG *config, const char *configfile, int exit_code)

@@ -60,6 +60,7 @@ private slots:
    void consoleListJobMedia();
    void consoleListJobTotals();
    void consoleDeleteJob();
+   void consoleRestartJob();
    void consolePurgeFiles();
    void preRestoreFromJob();
    void preRestoreFromTime();
@@ -76,6 +77,7 @@ private:
    void prepareFilterWidgets();
    void fillQueryString(QString &query);
    QSplitter *m_splitter;
+
    QString m_groupText;
    QString m_splitText;
    QString m_mediaName;
@@ -83,11 +85,17 @@ private:
    QString m_jobName;
    QString m_filesetName;
    QString m_currentJob;
+   QString m_levelName;
+
    bool m_populated;
    bool m_checkCurrentWidget;
    int m_jobIdIndex;
    int m_purgedIndex;
    int m_typeIndex;
+   int m_levelIndex;
+   int m_clientIndex;
+   int m_nameIndex;
+   int m_filesetIndex;
    int m_statusIndex;
    int m_startIndex;
    int m_bytesIndex;

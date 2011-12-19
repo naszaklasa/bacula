@@ -38,8 +38,7 @@
  */
 #include "bacula.h"
 #include "cats/cats.h"
-#include "cats/bvfs.h"
-#include "findlib/find.h"
+#include "cats/sql_glue.h"
  
 /* Local variables */
 static B_DB *db;
@@ -77,7 +76,7 @@ PROG_COPYRIGHT
  */
 static int test_handler(void *ctx, int num_fields, char **row)
 {
-   Dmsg2(200, "   Values are %d, %s\n", str_to_int64(row[0]), row[1]);
+   Pmsg2(0, "   Values are %d, %s\n", str_to_int64(row[0]), row[1]);
    return 0;
 }
 
@@ -86,7 +85,7 @@ static int test_handler(void *ctx, int num_fields, char **row)
  */
 static int string_handler(void *ctx, int num_fields, char **row)
 {
-   Dmsg1(200, "   Value is >>%s<<\n", row[0]);
+   Pmsg1(0, "   Value is >>%s<<\n", row[0]);
    return 0;
 }
 
@@ -186,11 +185,11 @@ int main (int argc, char *argv[])
       usage();
    }
    
-   if ((db=db_init_database(NULL, db_name, db_user, db_password,
-                            db_host, 0, NULL, 0)) == NULL) {
+   if ((db = db_init_database(NULL, NULL, db_name, db_user, db_password,
+                              db_host, 0, NULL, false, false)) == NULL) {
       Emsg0(M_ERROR_TERM, 0, _("Could not init Bacula database\n"));
    }
-   Dmsg1(0, "db_type=%s\n", db_get_type());
+   Dmsg1(0, "db_type=%s\n", db_get_type(db));
 
    if (!db_open_database(NULL, db)) {
       Emsg0(M_ERROR_TERM, 0, db_strerror(db));
@@ -199,75 +198,110 @@ int main (int argc, char *argv[])
    if (verbose) {
       Pmsg2(000, _("Using Database: %s, User: %s\n"), db_name, db_user);
    }
-   
 
-   /* simple CRUD test including create/drop table */
-
+   /*
+    * simple CRUD test including create/drop table
+    */
    Pmsg0(0, "\nsimple CRUD test...\n\n");
+   const char *stmt1[8] = {
+      "CREATE TABLE t1 ( c1 integer, c2 varchar(29))",
+      "INSERT INTO t1 VALUES (1, 'foo')",
+      "SELECT c1,c2 FROM t1",
+      "UPDATE t1 SET c2='bar' WHERE c1=1",
+      "SELECT * FROM t1",
+      "DELETE FROM t1 WHERE c2 LIKE '\%r'",
+      "SELECT * FROM t1",
+      "DROP TABLE t1"
+   };
+   int (*hndl1[8])(void*,int,char**) = {
+      NULL,
+      NULL,
+      test_handler,
+      NULL,
+      test_handler,
+      NULL,
+      test_handler,
+      NULL
+   };
 
-   Dmsg0(200, "DB-Statement: CREATE TABLE t1 ( c1 integer, c2 varchar(29))\n");
-   if (!db_sql_query(db, "CREATE TABLE t1 ( c1 integer, c2 varchar(29))", NULL, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("CREATE-Stmt went wrong\n"));
+   for (int i=0; i<8; ++i) {
+      Pmsg1(0, "DB-Statement: %s\n",stmt1[i]);
+      if (!db_sql_query(db, stmt1[i], hndl1[i], NULL)) {
+         Emsg0(M_ERROR_TERM, 0, _("Stmt went wrong\n"));
+      }
    }
 
-   Dmsg0(200, "DB-Statement: INSERT INTO t1 VALUES (1, 'foo')\n");
-   if (!db_sql_query(db, "INSERT INTO t1 VALUES (1, 'foo')", NULL, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("INSERT-Stmt went wrong\n"));
-   }
 
-   Dmsg0(200, "DB-Statement: SELECT c1,c2 FROM t1 (should be 1, foo)\n");
-   if (!db_sql_query(db, "SELECT c1,c2 FROM t1", test_handler, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
-   }
+   /*
+    * simple SELECT tests without tables
+    */
+   Pmsg0(0, "\nsimple SELECT tests without tables...\n\n");
+   const char *stmt2[8] = {
+      "SELECT 'Test of simple SELECT!'",
+      "SELECT 'Test of simple SELECT!' as Text",
+      "SELECT VARCHAR(LENGTH('Test of simple SELECT!'))",
+      "SELECT DBMSINFO('_version')",
+      "SELECT 'This is a ''quoting'' test with single quotes'",
+      "SELECT 'This is a \"quoting\" test with double quotes'",
+      "SELECT null",
+      "SELECT ''"
+   };
+   int (*hndl2[8])(void*,int,char**) = {
+      string_handler,
+      string_handler,
+      string_handler,
+      string_handler,
+      string_handler,
+      string_handler,
+      string_handler,
+      string_handler
+   };
 
-   Dmsg0(200, "DB-Statement: UPDATE t1 SET c2='bar' WHERE c1=1\n");
-   if (!db_sql_query(db, "UPDATE t1 SET c2='bar' WHERE c1=1", NULL, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("UPDATE-Stmt went wrong\n"));
-   }
-
-   Dmsg0(200, "DB-Statement: SELECT * FROM t1 (should be 1, bar)\n");
-   if (!db_sql_query(db, "SELECT * FROM t1", test_handler, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
-   }
-
-   Dmsg0(200, "DB-Statement: DELETE FROM t1 WHERE c2 LIKE '\%r'\n");
-   if (!db_sql_query(db, "DELETE FROM t1 WHERE c2 LIKE '%r'", NULL, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("DELETE-Stmt went wrong\n"));
-   }
-
-   Dmsg0(200, "DB-Statement: SELECT * FROM t1 (should be 0 rows)\n");
-   if (!db_sql_query(db, "SELECT * FROM t1", test_handler, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
-   }
-
-   Dmsg0(200, "DB-Statement: DROP TABLE t1\n");
-   if (!db_sql_query(db, "DROP TABLE t1", NULL, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("DROP-Stmt went wrong\n"));
+   for (int i=0; i<8; ++i) {
+      Pmsg1(0, "DB-Statement: %s\n",stmt2[i]);
+      if (!db_sql_query(db, stmt2[i], hndl2[i], NULL)) {
+         Emsg0(M_ERROR_TERM, 0, _("Stmt went wrong\n"));
+      }
    }
 
    /*
-    * simple SELECT test without tables
+    * testing aggregates like avg, max, sum
     */
-    
-   Dmsg0(200, "DB-Statement: SELECT 'Test of simple SELECT!'\n");
-   if (!db_sql_query(db, "SELECT 'Test of simple SELECT!'", string_handler, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
+   Pmsg0(0, "\ntesting aggregates...\n\n");
+   const char *stmt[11] = {
+      "CREATE TABLE t1 (c1 integer, c2 varchar(29))",
+      "INSERT INTO t1 VALUES (1,'foo')",
+      "INSERT INTO t1 VALUES (2,'bar')",
+      "INSERT INTO t1 VALUES (3,'fun')",
+      "INSERT INTO t1 VALUES (4,'egg')",
+      "SELECT max(c1) from t1",
+      "SELECT sum(c1) from t1",
+      "INSERT INTO t1 VALUES (5,NULL)",
+      "SELECT count(*) from t1",
+      "SELECT count(c2) from t1",
+      "DROP TABLE t1"
+   };
+   int (*hndl[11])(void*,int,char**) = {
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      string_handler,
+      string_handler,
+      NULL,
+      string_handler,
+      string_handler,
+      NULL
+   };
+
+   for (int i=0; i<11; ++i) {
+      Pmsg1(0, "DB-Statement: %s\n",stmt[i]);
+      if (!db_sql_query(db, stmt[i], hndl[i], NULL)) {
+         Emsg0(M_ERROR_TERM, 0, _("Stmt went wrong\n"));
+      }
    }
 
-   Dmsg0(200, "DB-Statement: SELECT 'Test of simple SELECT!' as Text\n");
-   if (!db_sql_query(db, "SELECT 'Test of simple SELECT!' as Text", string_handler, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
-   }
-
-   Dmsg0(200, "DB-Statement: SELECT VARCHAR(LENGTH('Test of simple SELECT!'))\n");
-   if (!db_sql_query(db, "SELECT VARCHAR(LENGTH('Test of simple SELECT!'))", string_handler, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
-   }
-
-   Dmsg0(200, "DB-Statement: SELECT DBMSINFO('_version')\n");
-   if (!db_sql_query(db, "SELECT DBMSINFO('_version')", string_handler, NULL)) {
-      Emsg0(M_ERROR_TERM, 0, _("SELECT-Stmt went wrong\n"));
-   }
 
    /* 
     * datatypes test

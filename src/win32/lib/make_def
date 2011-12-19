@@ -23,7 +23,7 @@ done
 
 DATA="\
    console_command \
-   plugin_list"
+   bplugin_list"
 
 for i in ${DATA}; do \
    echo "$i DATA"; \

@@ -189,7 +189,7 @@ PyObject *job_getattr(PyObject *self, char *attrname)
          jcr->catalog->db_name, jcr->catalog->db_address, 
          jcr->catalog->db_user, jcr->catalog->db_password,
          jcr->catalog->db_socket, jcr->catalog->db_port,
-         db_get_type());
+         db_get_type(jcr->db));
    case 15:                           /* JobErrors */
       return Py_BuildValue((char *)getvars[i].fmt, jcr->JobErrors);
    case 16:                           /* JobFiles */
@@ -294,7 +294,7 @@ int job_setattr(PyObject *self, char *attrname, PyObject *value)
          for (i=0; joblevels[i].level_name; i++) {
             if (strcmp(strval, joblevels[i].level_name) == 0) {
                if (joblevels[i].job_type == jcr->getJobType()) {
-                  jcr->set_JobLevel(joblevels[i].level);
+                  jcr->setJobLevel(joblevels[i].level);
                   jcr->jr.JobLevel = jcr->getJobLevel();
                   return 0;
                }

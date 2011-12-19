@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,6 +34,7 @@
 
 #include "bacula.h"
 #include "filed.h"
+#include "ch.h"
 
 #if defined(WIN32_VSS)
 #include "vss.h"
@@ -42,7 +43,7 @@ static pthread_mutex_t vss_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int enable_vss = 0;
 #endif
 
-/*
+/**
  * As Windows saves ACLs as part of the standard backup stream
  * we just pretend here that is has implicit acl support.
  */
@@ -88,7 +89,8 @@ static int runscript_cmd(JCR *jcr);
 static int runbefore_cmd(JCR *jcr);
 static int runafter_cmd(JCR *jcr);
 static int runbeforenow_cmd(JCR *jcr);
-static void set_options(findFOPTS *fo, const char *opts);
+static int restore_object_cmd(JCR *jcr);
+static int set_options(findFOPTS *fo, const char *opts);
 static void set_storage_auth_key(JCR *jcr, char *key);
 static int sm_dump_cmd(JCR *jcr);
 #ifdef DEVELOPER
@@ -103,7 +105,7 @@ struct s_cmds {
    int monitoraccess; /* specify if monitors have access to this function */
 };
 
-/*
+/**
  * The following are the recognized commands from the Director.
  */
 static struct s_cmds cmds[] = {
@@ -115,7 +117,7 @@ static struct s_cmds cmds[] = {
    {"fileset",      fileset_cmd,   0},
    {"JobId=",       job_cmd,       0},
    {"level = ",     level_cmd,     0},
-   {"restore",      restore_cmd,   0},
+   {"restore ",     restore_cmd,   0},
    {"endrestore",   end_restore_cmd, 0},
    {"session",      session_cmd,   0},
    {"status",       status_cmd,    1},
@@ -128,6 +130,7 @@ static struct s_cmds cmds[] = {
    {"RunAfterJob",  runafter_cmd,  0},
    {"Run",          runscript_cmd, 0},
    {"accurate",     accurate_cmd,  0},
+   {"restoreobject", restore_object_cmd, 0},
    {"sm_dump",      sm_dump_cmd, 0},
 #ifdef DEVELOPER
    {"exit",         exit_cmd, 0},
@@ -143,6 +146,8 @@ static char sessioncmd[]  = "session %127s %ld %ld %ld %ld %ld %ld\n";
 static char restorecmd[]  = "restore replace=%c prelinks=%d where=%s\n";
 static char restorecmd1[] = "restore replace=%c prelinks=%d where=\n";
 static char restorecmdR[] = "restore replace=%c prelinks=%d regexwhere=%s\n";
+static char restoreobjcmd[] = "restoreobject JobId=%u %d,%d,%d,%d,%d,%d\n";
+static char endrestoreobjectcmd[] = "restoreobject end\n";
 static char verifycmd[]   = "verify level=%30s";
 static char estimatecmd[] = "estimate listing=%d";
 static char runbefore[]   = "RunBeforeJob %s";
@@ -164,7 +169,7 @@ static char OKsession[]   = "2000 OK session\n";
 static char OKstore[]     = "2000 OK storage\n";
 static char OKstoreend[]  = "2000 OK storage end\n";
 static char OKjob[]       = "2000 OK Job %s (%s) %s,%s,%s";
-static char OKsetdebug[]  = "2000 OK setdebug=%d\n";
+static char OKsetdebug[]  = "2000 OK setdebug=%d trace=%d hangup=%d\n";
 static char BADjob[]      = "2901 Bad Job\n";
 static char EndJob[]      = "2800 End Job TermCode=%d JobFiles=%u ReadBytes=%s"
                             " JobBytes=%s Errors=%u VSS=%d Encrypt=%d\n";
@@ -173,6 +178,7 @@ static char OKRunBeforeNow[] = "2000 OK RunBeforeNow\n";
 static char OKRunAfter[]  = "2000 OK RunAfter\n";
 static char OKRunScript[] = "2000 OK RunScript\n";
 static char BADcmd[]      = "2902 Bad %s\n";
+static char OKRestoreObject[] = "2000 OK ObjectRestored\n";
 
 
 /* Responses received from Storage Daemon */
@@ -193,7 +199,7 @@ static char read_open[]    = "read open session = %s %ld %ld %ld %ld %ld %ld\n";
 static char read_data[]    = "read data %d\n";
 static char read_close[]   = "read close session %d\n";
 
-/*
+/**
  * Accept requests from a Director
  *
  * NOTE! We are running as a separate thread
@@ -233,10 +239,12 @@ void *handle_client_request(void *dirp)
    JCR *jcr;
    BSOCK *dir = (BSOCK *)dirp;
    const char jobname[12] = "*Director*";
+// saveCWD save_cwd;
 
    jcr = new_jcr(sizeof(JCR), filed_free_jcr); /* create JCR */
    jcr->dir_bsock = dir;
    jcr->ff = init_find_files();
+// save_cwd.save(jcr);
    jcr->start_time = time(NULL);
    jcr->RunScripts = New(alist(10, not_owned_by_alist));
    jcr->last_fname = get_pool_memory(PM_FNAME);
@@ -318,6 +326,7 @@ void *handle_client_request(void *dirp)
    dir->signal(BNET_TERMINATE);
 
    free_plugins(jcr);                 /* release instantiated plugins */
+   free_and_null_pool_memory(jcr->job_metadata);
 
    /* Clean up fileset */
    FF_PKT *ff = jcr->ff;
@@ -387,11 +396,13 @@ void *handle_client_request(void *dirp)
    ff->fileset = NULL;
    Dmsg0(100, "Calling term_find_files\n");
    term_find_files(jcr->ff);
+// save_cwd.restore(jcr);
+// save_cwd.release();
    jcr->ff = NULL;
    Dmsg0(100, "Done with term_find_files\n");
    free_jcr(jcr);                     /* destroy JCR record */
    Dmsg0(100, "Done with free_jcr\n");
-   Dsm_check(1);
+   Dsm_check(100);
    garbage_collect_memory_pool();
    return NULL;
 }
@@ -429,7 +440,7 @@ static int hello_cmd(JCR *jcr)
    return 1;
 }
 
-/*
+/**
  * Cancel a Job
  */
 static int cancel_cmd(JCR *jcr)
@@ -442,13 +453,13 @@ static int cancel_cmd(JCR *jcr)
       if (!(cjcr=get_jcr_by_full_name(Job))) {
          dir->fsend(_("2901 Job %s not found.\n"), Job);
       } else {
+         generate_plugin_event(cjcr, bEventCancelCommand, NULL);
+         cjcr->setJobStatus(JS_Canceled);
          if (cjcr->store_bsock) {
             cjcr->store_bsock->set_timed_out();
             cjcr->store_bsock->set_terminated();
             cjcr->my_thread_send_signal(TIMEOUT_SIGNAL);
          }
-         generate_plugin_event(cjcr, bEventCancelCommand, NULL);
-         set_jcr_job_status(cjcr, JS_Canceled);
          free_jcr(cjcr);
          dir->fsend(_("2001 Job %s marked to be canceled.\n"), Job);
       }
@@ -459,25 +470,36 @@ static int cancel_cmd(JCR *jcr)
    return 1;
 }
 
-
-/*
+/**
  * Set debug level as requested by the Director
  *
  */
 static int setdebug_cmd(JCR *jcr)
 {
    BSOCK *dir = jcr->dir_bsock;
-   int level, trace_flag;
+   int32_t level, trace, hangup;
+   int scan;
 
-   Dmsg1(110, "setdebug_cmd: %s", dir->msg);
-   if (sscanf(dir->msg, "setdebug=%d trace=%d", &level, &trace_flag) != 2 || level < 0) {
-      pm_strcpy(jcr->errmsg, dir->msg);
-      dir->fsend(_("2991 Bad setdebug command: %s\n"), jcr->errmsg);
-      return 0;
+   Dmsg1(50, "setdebug_cmd: %s", dir->msg);
+   scan = sscanf(dir->msg, "setdebug=%d trace=%d hangup=%d",
+       &level, &trace, &hangup);
+   if (scan != 3) {
+      Dmsg2(20, "sscanf failed: msg=%s scan=%d\n", dir->msg, scan);
+      if (sscanf(dir->msg, "setdebug=%d trace=%d", &level, &trace) != 2) {
+         pm_strcpy(jcr->errmsg, dir->msg);
+         dir->fsend(_("2991 Bad setdebug command: %s\n"), jcr->errmsg);
+         return 0;
+      } else {
+         hangup = -1;
+      }
    }
-   debug_level = level;
-   set_trace(trace_flag);
-   return dir->fsend(OKsetdebug, level);
+   if (level >= 0) {
+      debug_level = level;
+   }
+   set_trace(trace);
+   set_hangup(hangup);
+   Dmsg3(50, "level=%d trace=%d hangup=%d\n", level, get_trace(), get_hangup());
+   return dir->fsend(OKsetdebug, level, get_trace(), get_hangup());
 }
 
 
@@ -499,7 +521,7 @@ static int estimate_cmd(JCR *jcr)
    return 1;
 }
 
-/*
+/**
  * Get JobId and Storage Daemon Authorization key from Director
  */
 static int job_cmd(JCR *jcr)
@@ -521,7 +543,24 @@ static int job_cmd(JCR *jcr)
    Mmsg(jcr->errmsg, "JobId=%d Job=%s", jcr->JobId, jcr->Job);
    new_plugins(jcr);                  /* instantiate plugins for this jcr */
    generate_plugin_event(jcr, bEventJobStart, (void *)jcr->errmsg);
+#ifdef HAVE_WIN32
+   return dir->fsend(OKjob, VERSION, LSMDATE, win_os, DISTNAME, DISTVER);
+#else
    return dir->fsend(OKjob, VERSION, LSMDATE, HOST_OS, DISTNAME, DISTVER);
+#endif
+}
+
+extern "C" char *job_code_callback_filed(JCR *jcr, const char* param)
+{
+   switch (param[0]) {
+      case 'D':
+         if (jcr->director) { 
+            return jcr->director->hdr.name;
+         }
+         break;
+   }
+   return NULL;
+
 }
 
 static int runbefore_cmd(JCR *jcr)
@@ -543,6 +582,7 @@ static int runbefore_cmd(JCR *jcr)
 
    /* Run the command now */
    script = new_runscript();
+   script->set_job_code_callback(job_code_callback_filed);
    script->set_command(cmd);
    script->when = SCRIPT_Before;
    ok = script->run(jcr, "ClientRunBeforeJob");
@@ -591,6 +631,7 @@ static int runafter_cmd(JCR *jcr)
    unbash_spaces(msg);
 
    cmd = new_runscript();
+   cmd->set_job_code_callback(job_code_callback_filed);
    cmd->set_command(msg);
    cmd->on_success = true;
    cmd->on_failure = false;
@@ -609,6 +650,7 @@ static int runscript_cmd(JCR *jcr)
    int on_success, on_failure, fail_on_error;
 
    RUNSCRIPT *cmd = new_runscript() ;
+   cmd->set_job_code_callback(job_code_callback_filed);
 
    Dmsg1(100, "runscript_cmd: '%s'\n", dir->msg);
    /* Note, we cannot sscanf into bools */
@@ -637,6 +679,98 @@ static int runscript_cmd(JCR *jcr)
    return dir->fsend(OKRunScript);
 }
 
+/*
+ * This reads data sent from the Director from the
+ *   RestoreObject table that allows us to get objects
+ *   that were backed up (VSS .xml data) and are needed
+ *   before starting the restore.
+ */
+static int restore_object_cmd(JCR *jcr)
+{
+   BSOCK *dir = jcr->dir_bsock;
+   int32_t FileIndex;
+   restore_object_pkt rop;
+
+   memset(&rop, 0, sizeof(rop));
+   rop.pkt_size = sizeof(rop);
+   rop.pkt_end = sizeof(rop);
+   Dmsg1(100, "Enter restoreobject_cmd: %s", dir->msg);
+   if (strcmp(dir->msg, endrestoreobjectcmd) == 0) {
+      generate_plugin_event(jcr, bEventRestoreObject, NULL);
+      return dir->fsend(OKRestoreObject);
+   }
+
+   if (sscanf(dir->msg, restoreobjcmd, &rop.JobId, &rop.object_len, 
+              &rop.object_full_len, &rop.object_index, 
+              &rop.object_type, &rop.object_compression, &FileIndex) != 7) {
+      Dmsg0(5, "Bad restore object command\n");
+      pm_strcpy(jcr->errmsg, dir->msg);
+      Jmsg1(jcr, M_FATAL, 0, _("Bad RestoreObject command: %s\n"), jcr->errmsg);
+      goto bail_out;
+   }
+
+   Dmsg6(100, "Recv object: JobId=%u objlen=%d full_len=%d objinx=%d objtype=%d FI=%d\n",
+         rop.JobId, rop.object_len, rop.object_full_len, 
+         rop.object_index, rop.object_type, FileIndex);
+   /* Read Object name */
+   if (dir->recv() < 0) {
+      goto bail_out;
+   }
+   Dmsg2(100, "Recv Oname object: len=%d Oname=%s\n", dir->msglen, dir->msg);
+   rop.object_name = bstrdup(dir->msg);
+
+   /* Read Object */
+   if (dir->recv() < 0) {
+      goto bail_out;
+   }
+   /* Transfer object from message buffer, and get new message buffer */
+   rop.object = dir->msg;
+   dir->msg = get_pool_memory(PM_MESSAGE);
+
+   /* If object is compressed, uncompress it */
+   if (rop.object_compression == 1) {   /* zlib level 9 */
+      int stat;
+      int out_len = rop.object_full_len + 100;
+      POOLMEM *obj = get_memory(out_len);
+      Dmsg2(100, "Inflating from %d to %d\n", rop.object_len, rop.object_full_len);
+      stat = Zinflate(rop.object, rop.object_len, obj, out_len);
+      Dmsg1(100, "Zinflate stat=%d\n", stat);
+      if (out_len != rop.object_full_len) {
+         Jmsg3(jcr, M_ERROR, 0, ("Decompression failed. Len wanted=%d got=%d. Object=%s\n"),
+            rop.object_full_len, out_len, rop.object_name);
+      }
+      free_pool_memory(rop.object);   /* release compressed object */
+      rop.object = obj;               /* new uncompressed object */
+      rop.object_len = out_len;
+   }
+   Dmsg2(100, "Recv Object: len=%d Object=%s\n", rop.object_len, rop.object);
+   /* Special Job meta data */
+   if (strcmp(rop.object_name, "job_metadata.xml") == 0) {
+      Dmsg0(100, "got job metadata\n");
+      free_and_null_pool_memory(jcr->job_metadata);
+      jcr->job_metadata = rop.object;
+      rop.object = NULL;
+   } else {
+      /* pass to plugin */
+      generate_plugin_event(jcr, bEventRestoreObject, (void *)&rop);
+   }
+
+   if (rop.object_name) {
+      free(rop.object_name);
+   }
+   if (rop.object) {
+      free_pool_memory(rop.object);
+   }
+
+   Dmsg1(100, "Send: %s", OKRestoreObject);
+   return 1;
+
+bail_out:
+   dir->fsend(_("2909 Bad RestoreObject command.\n"));
+   return 0;
+
+}
+
 
 static bool init_fileset(JCR *jcr)
 {
@@ -657,6 +791,147 @@ static bool init_fileset(JCR *jcr)
    fileset->include_list.init(1, true);
    fileset->exclude_list.init(1, true);
    return true;
+}
+
+static void append_file(JCR *jcr, findINCEXE *incexe, 
+                        const char *buf, bool is_file)
+{
+   if (is_file) {
+      incexe->name_list.append(new_dlistString(buf));
+
+   } else if (me->plugin_directory) {
+      generate_plugin_event(jcr, bEventPluginCommand, (void *)buf);
+      incexe->plugin_list.append(new_dlistString(buf));
+
+   } else {
+      Jmsg(jcr, M_FATAL, 0, 
+           _("Plugin Directory not defined. Cannot use plugin: \"%s\"\n"),
+           buf);
+   }
+}
+
+/**
+ * Add fname to include/exclude fileset list. First check for
+ * | and < and if necessary perform command.
+ */
+void add_file_to_fileset(JCR *jcr, const char *fname, bool is_file)
+{
+   findFILESET *fileset = jcr->ff->fileset;
+   char *p;
+   BPIPE *bpipe;
+   POOLMEM *fn;
+   FILE *ffd;
+   char buf[1000];
+   int ch;
+   int stat;
+
+   p = (char *)fname;
+   ch = (uint8_t)*p;
+   switch (ch) {
+   case '|':
+      p++;                            /* skip over | */
+      fn = get_pool_memory(PM_FNAME);
+      fn = edit_job_codes(jcr, fn, p, "", job_code_callback_filed);
+      bpipe = open_bpipe(fn, 0, "r");
+      if (!bpipe) {
+         berrno be;
+         Jmsg(jcr, M_FATAL, 0, _("Cannot run program: %s. ERR=%s\n"),
+            p, be.bstrerror());
+         free_pool_memory(fn);
+         return;
+      }
+      free_pool_memory(fn);
+      while (fgets(buf, sizeof(buf), bpipe->rfd)) {
+         strip_trailing_junk(buf);
+         append_file(jcr, fileset->incexe, buf, is_file);
+      }
+      if ((stat=close_bpipe(bpipe)) != 0) {
+         berrno be;
+         Jmsg(jcr, M_FATAL, 0, _("Error running program: %s. stat=%d: ERR=%s\n"),
+            p, be.code(stat), be.bstrerror(stat));
+         return;
+      }
+      break;
+   case '<':
+      Dmsg1(100, "Doing < of '%s' include on client.\n", p + 1);
+      p++;                      /* skip over < */
+      if ((ffd = fopen(p, "rb")) == NULL) {
+         berrno be;
+         Jmsg(jcr, M_FATAL, 0, 
+              _("Cannot open FileSet input file: %s. ERR=%s\n"),
+            p, be.bstrerror());
+         return;
+      }
+      while (fgets(buf, sizeof(buf), ffd)) {
+         strip_trailing_junk(buf);
+         append_file(jcr, fileset->incexe, buf, is_file);
+      }
+      fclose(ffd);
+      break;
+   default:
+      append_file(jcr, fileset->incexe, fname, is_file);
+      break;
+   }
+}
+
+void set_incexe(JCR *jcr, findINCEXE *incexe)
+{
+   findFILESET *fileset = jcr->ff->fileset;
+   fileset->incexe = incexe;
+}
+
+
+/**
+ * Define a new Exclude block in the FileSet
+ */
+findINCEXE *new_exclude(JCR *jcr)
+{
+   findFILESET *fileset = jcr->ff->fileset;
+
+   /* New exclude */
+   fileset->incexe = (findINCEXE *)malloc(sizeof(findINCEXE));
+   memset(fileset->incexe, 0, sizeof(findINCEXE));
+   fileset->incexe->opts_list.init(1, true);
+   fileset->incexe->name_list.init();
+   fileset->incexe->plugin_list.init();
+   fileset->exclude_list.append(fileset->incexe);
+   return fileset->incexe;
+}
+
+/**
+ * Define a new Include block in the FileSet
+ */
+findINCEXE *new_include(JCR *jcr)
+{
+   findFILESET *fileset = jcr->ff->fileset;
+
+   /* New include */
+   fileset->incexe = (findINCEXE *)malloc(sizeof(findINCEXE));
+   memset(fileset->incexe, 0, sizeof(findINCEXE));
+   fileset->incexe->opts_list.init(1, true);
+   fileset->incexe->name_list.init(); /* for dlist;  was 1,true for alist */
+   fileset->incexe->plugin_list.init();
+   fileset->include_list.append(fileset->incexe);
+   return fileset->incexe;
+}
+
+/**
+ * Define a new preInclude block in the FileSet
+ *   That is the include is prepended to the other
+ *   Includes.  This is used for plugin exclusions.
+ */
+findINCEXE *new_preinclude(JCR *jcr)
+{
+   findFILESET *fileset = jcr->ff->fileset;
+
+   /* New pre-include */
+   fileset->incexe = (findINCEXE *)malloc(sizeof(findINCEXE));
+   memset(fileset->incexe, 0, sizeof(findINCEXE));
+   fileset->incexe->opts_list.init(1, true);
+   fileset->incexe->name_list.init(); /* for dlist;  was 1,true for alist */
+   fileset->incexe->plugin_list.init();
+   fileset->include_list.prepend(fileset->incexe);
+   return fileset->incexe;
 }
 
 static findFOPTS *start_options(FF_PKT *ff)
@@ -682,105 +957,100 @@ static findFOPTS *start_options(FF_PKT *ff)
       incexe->opts_list.append(fo);
    }
    return incexe->current_opts;
-
 }
 
 /*
- * Add fname to include/exclude fileset list. First check for
- * | and < and if necessary perform command.
+ * Used by plugins to define a new options block
  */
-void add_file_to_fileset(JCR *jcr, const char *fname, findFILESET *fileset,
-                         bool is_file)
+void new_options(JCR *jcr, findINCEXE *incexe)
 {
-   char *p;
-   BPIPE *bpipe;
-   POOLMEM *fn;
-   FILE *ffd;
-   char buf[1000];
-   int ch;
-   int stat;
-
-   p = (char *)fname;
-   ch = (uint8_t)*p;
-   switch (ch) {
-   case '|':
-      p++;                            /* skip over | */
-      fn = get_pool_memory(PM_FNAME);
-      fn = edit_job_codes(jcr, fn, p, "");
-      bpipe = open_bpipe(fn, 0, "r");
-      if (!bpipe) {
-         berrno be;
-         Jmsg(jcr, M_FATAL, 0, _("Cannot run program: %s. ERR=%s\n"),
-            p, be.bstrerror());
-         free_pool_memory(fn);
-         return;
-      }
-      free_pool_memory(fn);
-      while (fgets(buf, sizeof(buf), bpipe->rfd)) {
-         strip_trailing_junk(buf);
-         if (is_file) {
-            fileset->incexe->name_list.append(new_dlistString(buf));
-         } else {
-            fileset->incexe->plugin_list.append(new_dlistString(buf));
-         }
-      }
-      if ((stat=close_bpipe(bpipe)) != 0) {
-         berrno be;
-         Jmsg(jcr, M_FATAL, 0, _("Error running program: %s. stat=%d: ERR=%s\n"),
-            p, be.code(stat), be.bstrerror(stat));
-         return;
-      }
-      break;
-   case '<':
-      Dmsg1(100, "Doing < of '%s' include on client.\n", p + 1);
-      p++;                      /* skip over < */
-      if ((ffd = fopen(p, "rb")) == NULL) {
-         berrno be;
-         Jmsg(jcr, M_FATAL, 0, _("Cannot open FileSet input file: %s. ERR=%s\n"),
-            p, be.bstrerror());
-         return;
-      }
-      while (fgets(buf, sizeof(buf), ffd)) {
-         strip_trailing_junk(buf);
-         Dmsg1(100, "%s\n", buf);
-         if (is_file) {
-            fileset->incexe->name_list.append(new_dlistString(buf));
-         } else {
-            fileset->incexe->plugin_list.append(new_dlistString(buf));
-         }
-      }
-      fclose(ffd);
-      break;
-   default:
-      if (is_file) {
-         fileset->incexe->name_list.append(new_dlistString(fname));
-      } else {
-         if (me->plugin_directory) {
-            fileset->incexe->plugin_list.append(new_dlistString(fname));
-         } else {
-            Jmsg(jcr, M_FATAL, 0, _("Plugin Directory not defined. Cannot use plugin: \"%\"\n"),
-               fname);
-         }
-      }
-      break;
+   if (!incexe) {
+      incexe = jcr->ff->fileset->incexe;
    }
+   findFOPTS *fo = (findFOPTS *)malloc(sizeof(findFOPTS));
+   memset(fo, 0, sizeof(findFOPTS));
+   fo->regex.init(1, true);
+   fo->regexdir.init(1, true);
+   fo->regexfile.init(1, true);
+   fo->wild.init(1, true);
+   fo->wilddir.init(1, true);
+   fo->wildfile.init(1, true);
+   fo->wildbase.init(1, true);
+   fo->base.init(1, true);
+   fo->fstype.init(1, true);
+   fo->drivetype.init(1, true);
+   incexe->current_opts = fo;
+   incexe->opts_list.prepend(fo);
+   jcr->ff->fileset->state = state_options;
 }
 
-findFILESET *new_exclude(JCR *jcr)
+/**
+ * Add a regex to the current fileset
+ */
+int add_regex_to_fileset(JCR *jcr, const char *item, int type)
 {
-   FF_PKT *ff = jcr->ff;
-   findFILESET *fileset = ff->fileset;
+   findFOPTS *current_opts = start_options(jcr->ff);
+   regex_t *preg;
+   int rc;
+   char prbuf[500];
 
-   /* New exclude */
-   fileset->incexe = (findINCEXE *)malloc(sizeof(findINCEXE));
-   memset(fileset->incexe, 0, sizeof(findINCEXE));
-   fileset->incexe->opts_list.init(1, true);
-   fileset->incexe->name_list.init();
-   fileset->incexe->plugin_list.init();
-   fileset->exclude_list.append(fileset->incexe);
-   return fileset;
+   preg = (regex_t *)malloc(sizeof(regex_t));
+   if (current_opts->flags & FO_IGNORECASE) {
+      rc = regcomp(preg, item, REG_EXTENDED|REG_ICASE);
+   } else {
+      rc = regcomp(preg, item, REG_EXTENDED);
+   }
+   if (rc != 0) {
+      regerror(rc, preg, prbuf, sizeof(prbuf));
+      regfree(preg);
+      free(preg);
+      Jmsg(jcr, M_FATAL, 0, _("REGEX %s compile error. ERR=%s\n"), item, prbuf);
+      return state_error;
+   }
+   if (type == ' ') {
+      current_opts->regex.append(preg);
+   } else if (type == 'D') {
+      current_opts->regexdir.append(preg);
+   } else if (type == 'F') {
+      current_opts->regexfile.append(preg);
+   } else {
+      return state_error;
+   }
+   return state_options;
 }
 
+/**
+ * Add a wild card to the current fileset
+ */
+int add_wild_to_fileset(JCR *jcr, const char *item, int type)
+{
+   findFOPTS *current_opts = start_options(jcr->ff);
+
+   if (type == ' ') {
+      current_opts->wild.append(bstrdup(item));
+   } else if (type == 'D') {
+      current_opts->wilddir.append(bstrdup(item));
+   } else if (type == 'F') {
+      current_opts->wildfile.append(bstrdup(item));
+   } else if (type == 'B') {
+      current_opts->wildbase.append(bstrdup(item));
+   } else {
+      return state_error;
+   }
+   return state_options;
+}
+
+
+/**
+ * Add options to the current fileset
+ */
+int add_options_to_fileset(JCR *jcr, const char *item)
+{
+   findFOPTS *current_opts = start_options(jcr->ff);
+
+   set_options(current_opts, item);
+   return state_options;
+}
 
 static void add_fileset(JCR *jcr, const char *item)
 {
@@ -810,7 +1080,7 @@ static void add_fileset(JCR *jcr, const char *item)
       return;
    }
 
-   /*
+   /**
     * The switch tests the code for validity.
     * The subcode is always good if it is a space, otherwise we must confirm.
     * We set state to state_error first assuming the subcode is invalid,
@@ -822,66 +1092,33 @@ static void add_fileset(JCR *jcr, const char *item)
    }
    switch (code) {
    case 'I':
-      /* New include */
-      fileset->incexe = (findINCEXE *)malloc(sizeof(findINCEXE));
-      memset(fileset->incexe, 0, sizeof(findINCEXE));
-      fileset->incexe->opts_list.init(1, true);
-      fileset->incexe->name_list.init(); /* for dlist;  was 1,true for alist */
-      fileset->incexe->plugin_list.init();
-      fileset->include_list.append(fileset->incexe);
+      (void)new_include(jcr);
       break;
    case 'E':
-      fileset = new_exclude(jcr);
+      (void)new_exclude(jcr);
       break;
-   case 'N':
+   case 'N':                             /* null */
       state = state_none;
       break;
-   case 'F':
+   case 'F':                             /* file = */
       /* File item to include or exclude list */
       state = state_include;
-      add_file_to_fileset(jcr, item, fileset, true);
+      add_file_to_fileset(jcr, item, true);
       break;
-   case 'P':
+   case 'P':                              /* plugin */
       /* Plugin item to include list */
       state = state_include;
-      add_file_to_fileset(jcr, item, fileset, false);
+      add_file_to_fileset(jcr, item, false);
       break;
-   case 'R':
-      current_opts = start_options(ff);
-      regex_t *preg;
-      int rc;
-      char prbuf[500];
-      preg = (regex_t *)malloc(sizeof(regex_t));
-      if (current_opts->flags & FO_IGNORECASE) {
-         rc = regcomp(preg, item, REG_EXTENDED|REG_ICASE);
-      } else {
-         rc = regcomp(preg, item, REG_EXTENDED);
-      }
-      if (rc != 0) {
-         regerror(rc, preg, prbuf, sizeof(prbuf));
-         regfree(preg);
-         free(preg);
-         Jmsg(jcr, M_FATAL, 0, _("REGEX %s compile error. ERR=%s\n"), item, prbuf);
-         state = state_error;
-         break;
-      }
-      state = state_options;
-      if (subcode == ' ') {
-         current_opts->regex.append(preg);
-      } else if (subcode == 'D') {
-         current_opts->regexdir.append(preg);
-      } else if (subcode == 'F') {
-         current_opts->regexfile.append(preg);
-      } else {
-         state = state_error;
-      }
+   case 'R':                              /* regex */
+      state = add_regex_to_fileset(jcr, item, subcode);
       break;
    case 'B':
       current_opts = start_options(ff);
       current_opts->base.append(bstrdup(item));
       state = state_options;
       break;
-   case 'X':
+   case 'X':                             /* Filetype or Drive type */
       current_opts = start_options(ff);
       state = state_options;
       if (subcode == ' ') {
@@ -892,38 +1129,24 @@ static void add_fileset(JCR *jcr, const char *item)
          state = state_error;
       }
       break;
-   case 'W':
-      current_opts = start_options(ff);
-      state = state_options;
-      if (subcode == ' ') {
-         current_opts->wild.append(bstrdup(item));
-      } else if (subcode == 'D') {
-         current_opts->wilddir.append(bstrdup(item));
-      } else if (subcode == 'F') {
-         current_opts->wildfile.append(bstrdup(item));
-      } else if (subcode == 'B') {
-         current_opts->wildbase.append(bstrdup(item));
-      } else {
-         state = state_error;
-      }
+   case 'W':                               /* wild cards */
+      state = add_wild_to_fileset(jcr, item, subcode);
       break;
-   case 'O':
-      current_opts = start_options(ff);
-      set_options(current_opts, item);
-      state = state_options;
+   case 'O':                                /* Options */
+      state = add_options_to_fileset(jcr, item);
       break;
-   case 'Z':
+   case 'Z':                                /* ignore dir */
       state = state_include;
       fileset->incexe->ignoredir = bstrdup(item);
       break;
    case 'D':
       current_opts = start_options(ff);
-//    current_opts->reader = bstrdup(item);
+//    current_opts->reader = bstrdup(item); /* deprecated */
       state = state_options;
       break;
    case 'T':
       current_opts = start_options(ff);
-//    current_opts->writer = bstrdup(item);
+//    current_opts->writer = bstrdup(item); /* deprecated */
       state = state_options;
       break;
    default:
@@ -1026,7 +1249,7 @@ static bool term_fileset(JCR *jcr)
          }
       }
       dlistString *node;
-      foreach_dlist(node, incexe->name_list) {
+      foreach_dlist(node, &incexe->name_list) {
          Dmsg1(400, "F %s\n", node->c_str());
       }
       foreach_dlist(node, &incexe->plugin_list) {
@@ -1038,12 +1261,12 @@ static bool term_fileset(JCR *jcr)
 }
 
 
-/*
+/**
  * As an optimization, we should do this during
  *  "compile" time in filed/job.c, and keep only a bit mask
  *  and the Verify options.
  */
-static void set_options(findFOPTS *fo, const char *opts)
+static int set_options(findFOPTS *fo, const char *opts)
 {
    int j;
    const char *p;
@@ -1085,6 +1308,7 @@ static void set_options(findFOPTS *fo, const char *opts)
          break;
       case 'R':                 /* Resource forks and Finder Info */
          fo->flags |= FO_HFSPLUS;
+         break;
       case 'r':                 /* read fifo */
          fo->flags |= FO_READFIFO;
          break;
@@ -1178,9 +1402,18 @@ static void set_options(findFOPTS *fo, const char *opts)
       case 'W':
          fo->flags |= FO_ENHANCEDWILD;
          break;
-      case 'Z':                 /* gzip compression */
-         fo->flags |= FO_GZIP;
-         fo->GZIP_level = *++p - '0';
+      case 'Z':                 /* compression */
+         p++;                   /* skip Z */
+         if (*p >= '0' && *p <= '9') {
+            fo->flags |= FO_COMPRESS;
+            fo->Compress_algo = COMPRESS_GZIP;
+            fo->Compress_level = *p - '0';
+         }
+         else if (*p == 'o') {
+            fo->flags |= FO_COMPRESS;
+            fo->Compress_algo = COMPRESS_LZO1X;
+            fo->Compress_level = 1; /* not used with LZO */
+         }
          break;
       case 'K':
          fo->flags |= FO_NOATIME;
@@ -1199,15 +1432,17 @@ static void set_options(findFOPTS *fo, const char *opts)
          break;
       }
    }
+   return state_options;
 }
 
 
-/*
+/**
  * Director is passing his Fileset
  */
 static int fileset_cmd(JCR *jcr)
 {
    BSOCK *dir = jcr->dir_bsock;
+   int rtnstat;
 
 #if defined(WIN32_VSS)
    int vss = 0;
@@ -1227,7 +1462,9 @@ static int fileset_cmd(JCR *jcr)
    if (!term_fileset(jcr)) {
       return 0;
    }
-   return dir->fsend(OKinc);
+   rtnstat = dir->fsend(OKinc);
+   generate_plugin_event(jcr, bEventEndFileSet);
+   return rtnstat;
 }
 
 static void free_bootstrap(JCR *jcr)
@@ -1243,9 +1480,11 @@ static void free_bootstrap(JCR *jcr)
 static pthread_mutex_t bsr_mutex = PTHREAD_MUTEX_INITIALIZER;
 static uint32_t bsr_uniq = 0;
 
-/* 
+/**
  * The Director sends us the bootstrap file, which
  *   we will in turn pass to the SD.
+ *   Deprecated.  The bsr is now sent directly from the
+ *   Director to the SD.
  */
 static int bootstrap_cmd(JCR *jcr)
 {
@@ -1273,7 +1512,7 @@ static int bootstrap_cmd(JCR *jcr)
       while (dir->recv() >= 0)
         {  }
       free_bootstrap(jcr);
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       return 0;
    }
 
@@ -1290,7 +1529,7 @@ static int bootstrap_cmd(JCR *jcr)
 }
 
 
-/*
+/**
  * Get backup level from Director
  *
  */
@@ -1301,27 +1540,30 @@ static int level_cmd(JCR *jcr)
    int mtime_only;
 
    level = get_memory(dir->msglen+1);
-   Dmsg1(100, "level_cmd: %s", dir->msg);
+   Dmsg1(10, "level_cmd: %s", dir->msg);
 
    /* keep compatibility with older directors */
    if (strstr(dir->msg, "accurate")) {
       jcr->accurate = true;
+   }
+   if (strstr(dir->msg, "rerunning")) {
+      jcr->rerunning = true;
    }
    if (sscanf(dir->msg, "level = %s ", level) != 1) {
       goto bail_out;
    }
    /* Base backup requested? */
    if (strcmp(level, "base") == 0) {
-      jcr->set_JobLevel(L_BASE);
+      jcr->setJobLevel(L_BASE);
    /* Full backup requested? */
    } else if (strcmp(level, "full") == 0) {
-      jcr->set_JobLevel(L_FULL);
+      jcr->setJobLevel(L_FULL);
    } else if (strstr(level, "differential")) {
-      jcr->set_JobLevel(L_DIFFERENTIAL);
+      jcr->setJobLevel(L_DIFFERENTIAL);
       free_memory(level);
       return 1;
    } else if (strstr(level, "incremental")) {
-      jcr->set_JobLevel(L_INCREMENTAL);
+      jcr->setJobLevel(L_INCREMENTAL);
       free_memory(level);
       return 1;
    /*
@@ -1333,7 +1575,7 @@ static int level_cmd(JCR *jcr)
       utime_t since_time, adj;
       btime_t his_time, bt_start, rt=0, bt_adj=0;
       if (jcr->getJobLevel() == L_NONE) {
-         jcr->set_JobLevel(L_SINCE);     /* if no other job level set, do it now */
+         jcr->setJobLevel(L_SINCE);     /* if no other job level set, do it now */
       }
       if (sscanf(dir->msg, "level = since_utime %s mtime_only=%d",
                  buf, &mtime_only) != 2) {
@@ -1395,7 +1637,7 @@ static int level_cmd(JCR *jcr)
    if (buf) {
       free_memory(buf);
    }
-   generate_plugin_event(jcr, bEventLevel, (void *)jcr->getJobLevel());
+   generate_plugin_event(jcr, bEventLevel, (void*)(intptr_t)jcr->getJobLevel());
    return dir->fsend(OKlevel);
 
 bail_out:
@@ -1408,8 +1650,9 @@ bail_out:
    return 0;
 }
 
-/*
+/**
  * Get session parameters from Director -- this is for a Restore command
+ *   This is deprecated. It is now passed via the bsr.
  */
 static int session_cmd(JCR *jcr)
 {
@@ -1435,7 +1678,8 @@ static void set_storage_auth_key(JCR *jcr, char *key)
       return;
    }
 
-   /* We can be contacting multiple storage daemons.
+   /**
+    * We can be contacting multiple storage daemons.
     * So, make sure that any old jcr->store_bsock is cleaned up. 
     */
    if (jcr->store_bsock) {
@@ -1443,11 +1687,13 @@ static void set_storage_auth_key(JCR *jcr, char *key)
       jcr->store_bsock = NULL;
    }
 
-   /* We can be contacting multiple storage daemons.
+   /**
+    * We can be contacting multiple storage daemons.
     *   So, make sure that any old jcr->sd_auth_key is cleaned up. 
     */
    if (jcr->sd_auth_key) {
-      /* If we already have a Authorization key, director can do multi
+      /*
+       * If we already have a Authorization key, director can do multi
        * storage restore
        */
       Dmsg0(5, "set multi_restore=true\n");
@@ -1456,9 +1702,10 @@ static void set_storage_auth_key(JCR *jcr, char *key)
    }
 
    jcr->sd_auth_key = bstrdup(key);
+   Dmsg0(5, "set sd auth key\n");
 }
 
-/*
+/**
  * Get address of storage daemon from Director
  *
  */
@@ -1474,11 +1721,9 @@ static int storage_cmd(JCR *jcr)
    Dmsg1(100, "StorageCmd: %s", dir->msg);
    sd_auth_key.check_size(dir->msglen);
    if (sscanf(dir->msg, storaddr, &jcr->stored_addr, &stored_port, 
-              &enable_ssl, sd_auth_key.c_str()) != 4)
-   {
+              &enable_ssl, sd_auth_key.c_str()) != 4) {
       if (sscanf(dir->msg, storaddr_v1, &jcr->stored_addr,
-                 &stored_port, &enable_ssl) != 3)
-      {
+                 &stored_port, &enable_ssl) != 3) {
          pm_strcpy(jcr->errmsg, dir->msg);
          Jmsg(jcr, M_FATAL, 0, _("Bad storage command: %s"), jcr->errmsg);
          goto bail_out;
@@ -1493,6 +1738,7 @@ static int storage_cmd(JCR *jcr)
    /* Try to connect for 1 hour at 10 second intervals */
 
    sd->set_source_address(me->FDsrc_addr);
+
    if (!sd->connect(jcr, 10, (int)me->SDConnectTimeout, me->heartbeat_interval,
                 _("Storage daemon"), jcr->stored_addr, NULL, stored_port, 1)) {
      sd->destroy();
@@ -1527,7 +1773,7 @@ bail_out:
 }
 
 
-/*
+/**
  * Do a backup.
  */
 static int backup_cmd(JCR *jcr)
@@ -1536,6 +1782,7 @@ static int backup_cmd(JCR *jcr)
    BSOCK *sd = jcr->store_bsock;
    int ok = 0;
    int SDJobStatus;
+   int32_t FileIndex;
 
 #if defined(WIN32_VSS)
    // capture state here, if client is backed up by multiple directors
@@ -1547,8 +1794,13 @@ static int backup_cmd(JCR *jcr)
       P(vss_mutex);
    }
 #endif
+  
+   if (sscanf(dir->msg, "backup FileIndex=%ld\n", &FileIndex) == 1) {
+      jcr->JobFiles = FileIndex;
+      Dmsg1(100, "JobFiles=%ld\n", jcr->JobFiles);
+   }
 
-   /*
+   /**
     * Validate some options given to the backup make sense for the compiled in
     * options of this filed.
     */
@@ -1561,8 +1813,8 @@ static int backup_cmd(JCR *jcr)
       goto cleanup;
    }
 
-   set_jcr_job_status(jcr, JS_Blocked);
-   jcr->set_JobType(JT_BACKUP);
+   jcr->setJobStatus(JS_Blocked);
+   jcr->setJobType(JT_BACKUP);
    Dmsg1(100, "begin backup ff=%p\n", jcr->ff);
 
    if (sd == NULL) {
@@ -1574,12 +1826,12 @@ static int backup_cmd(JCR *jcr)
    dir->fsend(OKbackup);
    Dmsg1(110, "filed>dird: %s", dir->msg);
 
-   /*
+   /**
     * Send Append Open Session to Storage daemon
     */
    sd->fsend(append_open);
    Dmsg1(110, ">stored: %s", sd->msg);
-   /*
+   /**
     * Expect to receive back the Ticket number
     */
    if (bget_msg(sd) >= 0) {
@@ -1594,13 +1846,13 @@ static int backup_cmd(JCR *jcr)
       goto cleanup;
    }
 
-   /*
+   /**
     * Send Append data command to Storage daemon
     */
    sd->fsend(append_data, jcr->Ticket);
    Dmsg1(110, ">stored: %s", sd->msg);
 
-   /*
+   /**
     * Expect to get OK data
     */
    Dmsg1(110, "<stored: %s", sd->msg);
@@ -1614,9 +1866,12 @@ static int backup_cmd(JCR *jcr)
 #if defined(WIN32_VSS)
    /* START VSS ON WIN32 */
    if (jcr->VSS) {      
-      if (g_pVSSClient->InitializeForBackup()) {   
+      if (g_pVSSClient->InitializeForBackup(jcr)) {   
+        generate_plugin_event(jcr, bEventVssBackupAddComponents);
         /* tell vss which drives to snapshot */   
-        char szWinDriveLetters[27];   
+        char szWinDriveLetters[27];
+        *szWinDriveLetters=0;
+        generate_plugin_event(jcr, bEventVssPrepareSnapshot, szWinDriveLetters);
         if (get_win32_driveletters(jcr->ff, szWinDriveLetters)) {
             Jmsg(jcr, M_INFO, 0, _("Generate VSS snapshots. Driver=\"%s\", Drive(s)=\"%s\"\n"), g_pVSSClient->GetDriverName(), szWinDriveLetters);
             if (!g_pVSSClient->CreateSnapshots(szWinDriveLetters)) {               
@@ -1627,63 +1882,61 @@ static int backup_cmd(JCR *jcr)
                int i;
                for (i=0; i < (int)strlen(szWinDriveLetters); i++) {
                   if (islower(szWinDriveLetters[i])) {
-                     Jmsg(jcr, M_WARNING, 0, _("Generate VSS snapshot of drive \"%c:\\\" failed. VSS support is disabled on this drive.\n"), szWinDriveLetters[i]);
-                     jcr->JobErrors++;
+                     Jmsg(jcr, M_FATAL, 0, _("Generate VSS snapshot of drive \"%c:\\\" failed.\n"), szWinDriveLetters[i]);
                   }
                }
                /* inform user about writer states */
-               for (i=0; i < (int)g_pVSSClient->GetWriterCount(); i++)                
+               for (i=0; i < (int)g_pVSSClient->GetWriterCount(); i++) {               
                   if (g_pVSSClient->GetWriterState(i) < 1) {
-                     Jmsg(jcr, M_WARNING, 0, _("VSS Writer (PrepareForBackup): %s\n"), g_pVSSClient->GetWriterInfo(i));                    
-                     jcr->JobErrors++;
+                     Jmsg(jcr, M_INFO, 0, _("VSS Writer (PrepareForBackup): %s\n"), g_pVSSClient->GetWriterInfo(i));                    
                   }                            
+               }
             }
         } else {
-            Jmsg(jcr, M_INFO, 0, _("No drive letters found for generating VSS snapshots.\n"));
+            Jmsg(jcr, M_FATAL, 0, _("No drive letters found for generating VSS snapshots.\n"));
         }
       } else {
          berrno be;
-         Jmsg(jcr, M_WARNING, 0, _("VSS was not initialized properly. VSS support is disabled. ERR=%s\n"), be.bstrerror());
+         Jmsg(jcr, M_FATAL, 0, _("VSS was not initialized properly. ERR=%s\n"), be.bstrerror());
       } 
       run_scripts(jcr, jcr->RunScripts, "ClientAfterVSS");
    }
 #endif
 
-   /*
+   /**
     * Send Files to Storage daemon
     */
    Dmsg1(110, "begin blast ff=%p\n", (FF_PKT *)jcr->ff);
    if (!blast_data_to_storage_daemon(jcr, NULL)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       bnet_suppress_error_messages(sd, 1);
-      bget_msg(sd);                   /* Read final response from append_data */
       Dmsg0(110, "Error in blast_data.\n");
    } else {
-      set_jcr_job_status(jcr, JS_Terminated);
+      jcr->setJobStatus(JS_Terminated);
       /* Note, the above set status will not override an error */
       if (!(jcr->JobStatus == JS_Terminated || jcr->JobStatus == JS_Warnings)) {
          bnet_suppress_error_messages(sd, 1);
          goto cleanup;                /* bail out now */
       }
-      /*
+      /**
        * Expect to get response to append_data from Storage daemon
        */
       if (!response(jcr, sd, OK_append, "Append Data")) {
-         set_jcr_job_status(jcr, JS_ErrorTerminated);
+         jcr->setJobStatus(JS_ErrorTerminated);
          goto cleanup;
       }
 
-      /*
+      /**
        * Send Append End Data to Storage daemon
        */
       sd->fsend(append_end, jcr->Ticket);
       /* Get end OK */
       if (!response(jcr, sd, OK_end, "Append End")) {
-         set_jcr_job_status(jcr, JS_ErrorTerminated);
+         jcr->setJobStatus(JS_ErrorTerminated);
          goto cleanup;
       }
 
-      /*
+      /**
        * Send Append Close to Storage daemon
        */
       sd->fsend(append_close, jcr->Ticket);
@@ -1705,21 +1958,9 @@ static int backup_cmd(JCR *jcr)
 
 cleanup:
 #if defined(WIN32_VSS)
-   /* STOP VSS ON WIN32 */
-   /* tell vss to close the backup session */
    if (jcr->VSS) {
-      if (g_pVSSClient->CloseBackup()) {             
-         /* inform user about writer states */
-         for (int i=0; i<(int)g_pVSSClient->GetWriterCount(); i++) {
-            int msg_type = M_INFO;
-            if (g_pVSSClient->GetWriterState(i) < 1) {
-               msg_type = M_WARNING;
-               jcr->JobErrors++;
-            }
-            Jmsg(jcr, msg_type, 0, _("VSS Writer (BackupComplete): %s\n"), g_pVSSClient->GetWriterInfo(i));
-         }
-      }
       Win32ConvCleanupCache();
+      g_pVSSClient->DestroyWriterInfo();
       V(vss_mutex);
    }
 #endif
@@ -1728,7 +1969,7 @@ cleanup:
    return 0;                          /* return and stop command loop */
 }
 
-/*
+/**
  * Do a Verify for Director
  *
  */
@@ -1738,22 +1979,22 @@ static int verify_cmd(JCR *jcr)
    BSOCK *sd  = jcr->store_bsock;
    char level[100];
 
-   jcr->set_JobType(JT_VERIFY);
+   jcr->setJobType(JT_VERIFY);
    if (sscanf(dir->msg, verifycmd, level) != 1) {
       dir->fsend(_("2994 Bad verify command: %s\n"), dir->msg);
       return 0;
    }
 
    if (strcasecmp(level, "init") == 0) {
-      jcr->set_JobLevel(L_VERIFY_INIT);
+      jcr->setJobLevel(L_VERIFY_INIT);
    } else if (strcasecmp(level, "catalog") == 0){
-      jcr->set_JobLevel(L_VERIFY_CATALOG);
+      jcr->setJobLevel(L_VERIFY_CATALOG);
    } else if (strcasecmp(level, "volume") == 0){
-      jcr->set_JobLevel(L_VERIFY_VOLUME_TO_CATALOG);
+      jcr->setJobLevel(L_VERIFY_VOLUME_TO_CATALOG);
    } else if (strcasecmp(level, "data") == 0){
-      jcr->set_JobLevel(L_VERIFY_DATA);
+      jcr->setJobLevel(L_VERIFY_DATA);
    } else if (strcasecmp(level, "disk_to_catalog") == 0) {
-      jcr->set_JobLevel(L_VERIFY_DISK_TO_CATALOG);
+      jcr->setJobLevel(L_VERIFY_DISK_TO_CATALOG);
    } else {
       dir->fsend(_("2994 Bad verify level: %s\n"), dir->msg);
       return 0;
@@ -1762,7 +2003,7 @@ static int verify_cmd(JCR *jcr)
    dir->fsend(OKverify);
 
    generate_daemon_event(jcr, "JobStart");
-   generate_plugin_event(jcr, bEventLevel, (void *)jcr->getJobLevel());
+   generate_plugin_event(jcr, bEventLevel,(void *)(intptr_t)jcr->getJobLevel());
    generate_plugin_event(jcr, bEventStartVerifyJob);
 
    Dmsg1(110, "filed>dird: %s", dir->msg);
@@ -1805,7 +2046,24 @@ static int verify_cmd(JCR *jcr)
    return 0;                          /* return and terminate command loop */
 }
 
-/*
+#ifdef WIN32_VSS
+static bool vss_restore_init_callback(JCR *jcr, int init_type)
+{
+   switch (init_type) {
+   case VSS_INIT_RESTORE_AFTER_INIT:
+      generate_plugin_event(jcr, bEventVssRestoreLoadComponentMetadata);
+      return true;
+   case VSS_INIT_RESTORE_AFTER_GATHER:
+      generate_plugin_event(jcr, bEventVssRestoreSetComponentsSelected);
+      return true;
+   default:
+      return false;
+      break;
+   }
+}
+#endif
+
+/**
  * Do a Restore for Director
  *
  */
@@ -1818,10 +2076,28 @@ static int restore_cmd(JCR *jcr)
    int prefix_links;
    char replace;
 
-   /*
+   /**
     * Scan WHERE (base directory for restore) from command
     */
-   Dmsg0(150, "restore command\n");
+   Dmsg0(100, "restore command\n");
+#if defined(WIN32_VSS)
+
+   /**
+    * No need to enable VSS for restore if we do not have plugin
+    *  data to restore 
+    */
+   enable_vss = jcr->job_metadata != NULL;
+
+   Dmsg2(50, "g_pVSSClient = %p, enable_vss = %d\n", g_pVSSClient, enable_vss);
+   // capture state here, if client is backed up by multiple directors
+   // and one enables vss and the other does not then enable_vss can change
+   // between here and where its evaluated after the job completes.
+   jcr->VSS = g_pVSSClient && enable_vss;
+   if (jcr->VSS) {
+      /* Run only one at a time */
+      P(vss_mutex);
+   }
+#endif
    /* Pickup where string */
    args = get_memory(dir->msglen+1);
    *args = 0;
@@ -1863,57 +2139,116 @@ static int restore_cmd(JCR *jcr)
    dir->fsend(OKrestore);
    Dmsg1(110, "filed>dird: %s", dir->msg);
 
-   jcr->set_JobType(JT_RESTORE);
+   jcr->setJobType(JT_RESTORE);
 
-   set_jcr_job_status(jcr, JS_Blocked);
+   jcr->setJobStatus(JS_Blocked);
 
    if (!open_sd_read_session(jcr)) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       goto bail_out;
    }
 
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
 
-   /*
+   /**
     * Do restore of files and data
     */
    start_dir_heartbeat(jcr);
    generate_daemon_event(jcr, "JobStart");
    generate_plugin_event(jcr, bEventStartRestoreJob);
+
+#if defined(WIN32_VSS)
+   /* START VSS ON WIN32 */
+   if (jcr->VSS) {
+      if (g_pVSSClient->InitializeForRestore(jcr, vss_restore_init_callback,
+            (WCHAR *)jcr->job_metadata)) {
+
+         /* inform user about writer states */
+         int i;
+         for (i=0; i < (int)g_pVSSClient->GetWriterCount(); i++) {
+            if (g_pVSSClient->GetWriterState(i) < 1) {
+               Jmsg(jcr, M_INFO, 0, _("VSS Writer (PreRestore): %s\n"), g_pVSSClient->GetWriterInfo(i));
+               //jcr->JobErrors++;
+            }
+         }
+      } else {
+/*
+   int fd = open("C:\\eric.xml", O_CREAT | O_WRONLY | O_TRUNC, 0777);
+   write(fd, (WCHAR *)jcr->job_metadata, wcslen((WCHAR *)jcr->job_metadata) * sizeof(WCHAR));
+   close(fd);
+*/
+         berrno be;
+         Jmsg(jcr, M_WARNING, 0, _("VSS was not initialized properly. VSS support is disabled. ERR=%s\n"), be.bstrerror());
+      }
+      free_and_null_pool_memory(jcr->job_metadata);
+      run_scripts(jcr, jcr->RunScripts, "ClientAfterVSS");
+   }
+#endif
+
    do_restore(jcr);
    stop_dir_heartbeat(jcr);
 
-   set_jcr_job_status(jcr, JS_Terminated);
+   jcr->setJobStatus(JS_Terminated);
    if (jcr->JobStatus != JS_Terminated) {
       bnet_suppress_error_messages(sd, 1);
    }
 
-   /*
+   /**
     * Send Close session command to Storage daemon
     */
    sd->fsend(read_close, jcr->Ticket);
-   Dmsg1(130, "filed>stored: %s", sd->msg);
+   Dmsg1(100, "filed>stored: %s", sd->msg);
 
    bget_msg(sd);                      /* get OK */
 
    /* Inform Storage daemon that we are done */
    sd->signal(BNET_TERMINATE);
 
+#if defined(WIN32_VSS)
+   /* STOP VSS ON WIN32 */
+   /* tell vss to close the restore session */
+   Dmsg0(100, "About to call CloseRestore\n");
+   if (jcr->VSS) {
+      generate_plugin_event(jcr, bEventVssBeforeCloseRestore);
+      Dmsg0(100, "Really about to call CloseRestore\n");
+      if (g_pVSSClient->CloseRestore()) {
+         Dmsg0(100, "CloseRestore success\n");
+         /* inform user about writer states */
+         for (int i=0; i<(int)g_pVSSClient->GetWriterCount(); i++) {
+            int msg_type = M_INFO;
+            if (g_pVSSClient->GetWriterState(i) < 1) {
+               //msg_type = M_WARNING;
+               //jcr->JobErrors++;
+            }
+            Jmsg(jcr, msg_type, 0, _("VSS Writer (RestoreComplete): %s\n"), g_pVSSClient->GetWriterInfo(i));
+         }
+      }
+      else
+         Dmsg1(100, "CloseRestore fail - %08x\n", errno);
+      V(vss_mutex);
+   }
+#endif
+
 bail_out:
    bfree_and_null(jcr->where);
 
    if (jcr->JobErrors) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
    }
 
-   Dmsg0(130, "Done in job.c\n");
+   Dmsg0(100, "Done in job.c\n");
 
    int ret;
    if (jcr->multi_restore) {
+      Dmsg0(100, OKstoreend);
       dir->fsend(OKstoreend);
       ret = 1;     /* we continue the loop, waiting for next part */
    } else {
       end_restore_cmd(jcr);
+      ret = 0;     /* we stop here */
+   }
+
+   if (job_canceled(jcr)) {
       ret = 0;     /* we stop here */
    }
 
@@ -1980,7 +2315,7 @@ static int open_sd_read_session(JCR *jcr)
    return 1;
 }
 
-/*
+/**
  * Destroy the Job Control Record and associated
  * resources (sockets).
  */
@@ -2002,7 +2337,7 @@ static void filed_free_jcr(JCR *jcr)
    return;
 }
 
-/*
+/**
  * Get response from Storage daemon to a command we
  * sent. Check that the response is OK.
  *
@@ -2050,7 +2385,7 @@ static int send_bootstrap_file(JCR *jcr)
       berrno be;
       Jmsg(jcr, M_FATAL, 0, _("Could not open bootstrap file %s: ERR=%s\n"),
          jcr->RestoreBootstrap, be.bstrerror());
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       goto bail_out;
    }
    sd->msglen = pm_strcpy(sd->msg, bootstrap);
@@ -2062,7 +2397,7 @@ static int send_bootstrap_file(JCR *jcr)
    sd->signal(BNET_EOD);
    fclose(bs);
    if (!response(jcr, sd, OKSDbootstrap, "Bootstrap")) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       goto bail_out;
    }
    stat = 1;

@@ -52,7 +52,7 @@ static uint8_t const base64_digits[64] =
 };
 
 static int base64_inited = 0;
-static uint8_t base64_map[128];
+static uint8_t base64_map[256];
 
 
 /* Initialize the Base 64 conversion routines */
@@ -74,9 +74,9 @@ base64_init(void)
  * stored (not including the EOS).
  */
 int
-to_base64(intmax_t value, char *where)
+to_base64(int64_t value, char *where)
 {
-   uintmax_t val;
+   uint64_t val;
    int i = 0;
    int n;
 
@@ -98,7 +98,7 @@ to_base64(intmax_t value, char *where)
    val = value;
    where[i] = 0;
    do {
-      where[--i] = base64_digits[val & (uintmax_t)0x3F];
+      where[--i] = base64_digits[val & (uint64_t)0x3F];
       val >>= 6;
    } while (val);
    return n;
@@ -112,9 +112,9 @@ to_base64(intmax_t value, char *where)
  * Returns the value.
  */
 int
-from_base64(intmax_t *value, char *where)
+from_base64(int64_t *value, char *where)
 {
-   uintmax_t val = 0;
+   uint64_t val = 0;
    int i, neg;
 
    if (!base64_inited)
@@ -131,7 +131,7 @@ from_base64(intmax_t *value, char *where)
       val += base64_map[(uint8_t)where[i++]];
    }
 
-   *value = neg ? -(intmax_t)val : (intmax_t)val;
+   *value = neg ? -(int64_t)val : (int64_t)val;
    return i;
 }
 
@@ -186,6 +186,66 @@ bin_to_base64(char *buf, int buflen, char *bin, int binlen, int compatible)
    return j;
 }
 
+/*
+ * Decode base64 data in bin of len bytes into
+ * buf as binary characters.
+ *
+ * the base64_to_bin routine is compatible with what the rest of the world
+ * uses.
+ *
+ *  Returns: the number of characters stored not
+ *           including the EOS
+ */
+int base64_to_bin(char *dest, int dest_size, char *src, int srclen)
+{
+   int nprbytes;
+   uint8_t *bufout;
+   uint8_t *bufplain = (uint8_t*) dest;
+   const uint8_t *bufin;
+
+   if (!base64_inited)
+      base64_init();
+
+   if (dest_size < (((srclen + 3) / 4) * 3)) {
+      /* dest buffer too small */
+      *dest = 0;
+      return 0;
+   }
+
+   bufin = (const uint8_t *) src;
+   while ((*bufin != ' ') && (srclen != 0)) {
+      bufin++;
+      srclen--;
+   }
+
+   nprbytes = bufin - (const uint8_t *) src;
+   bufin = (const uint8_t *) src;
+   bufout = (uint8_t *) bufplain;
+
+   while (nprbytes > 4)
+   {
+      *(bufout++) = (base64_map[bufin[0]] << 2 | base64_map[bufin[1]] >> 4);
+      *(bufout++) = (base64_map[bufin[1]] << 4 | base64_map[bufin[2]] >> 2);
+      *(bufout++) = (base64_map[bufin[2]] << 6 | base64_map[bufin[3]]);
+      bufin += 4;
+      nprbytes -= 4;
+   }
+
+   /* Bacula base64 strings are not always padded with = */
+   if (nprbytes > 1) {
+      *(bufout++) = (base64_map[bufin[0]] << 2 | base64_map[bufin[1]] >> 4);
+   }
+   if (nprbytes > 2) {
+      *(bufout++) = (base64_map[bufin[1]] << 4 | base64_map[bufin[2]] >> 2);
+   }
+   if (nprbytes > 3) {
+      *(bufout++) = (base64_map[bufin[2]] << 6 | base64_map[bufin[3]]);
+   }
+   *bufout = 0;
+   
+   return (bufout - (uint8_t *) dest);
+}
+
 #ifdef BIN_TEST
 int main(int argc, char *argv[])
 {
@@ -206,8 +266,14 @@ int main(int argc, char *argv[])
    for (i=1; i<100; i++) {
       junk[i] = junk[i-1]-1;
    }
-   len = bin_to_base64(buf, sizeof(buf) junk, 16, true);
+   len = bin_to_base64(buf, sizeof(buf), junk, 16, true);
    printf("len=%d junk=%s\n", len, buf);
+
+   strcpy(junk, "This is a sample stringa");
+   len = bin_to_base64(buf, sizeof(buf), junk, strlen(junk), true);
+   buf[len] = 0;
+   base64_to_bin(junk, sizeof(junk), buf, len);
+   printf("buf=<%s>\n", junk);
    return 0;
 }
 #endif
@@ -234,6 +300,7 @@ int main(int argc, char *argv[])
    struct stat statn;
    int debug_level = 0;
    char *p;
+   int32_t j;
    time_t t = 1028712799;
 
    if (argc > 1 && strcmp(argv[1], "-v") == 0)
@@ -251,36 +318,36 @@ int main(int argc, char *argv[])
          printf("Cannot stat %s: %s\n", fname, be.bstrerror(errno));
          continue;
       }
-      encode_stat(where, &statp, 0, 0);
+      encode_stat(where, &statp, sizeof(statp), 0, 0);
 
       printf("Encoded stat=%s\n", where);
 
 #ifdef xxx
       p = where;
-      p += to_base64((intmax_t)(statp.st_atime), p);
+      p += to_base64((int64_t)(statp.st_atime), p);
       *p++ = ' ';
-      p += to_base64((intmax_t)t, p);
+      p += to_base64((int64_t)t, p);
       printf("%s %s\n", fname, where);
 
-      printf("%s %lld\n", "st_dev", (intmax_t)statp.st_dev);
-      printf("%s %lld\n", "st_ino", (intmax_t)statp.st_ino);
-      printf("%s %lld\n", "st_mode", (intmax_t)statp.st_mode);
-      printf("%s %lld\n", "st_nlink", (intmax_t)statp.st_nlink);
-      printf("%s %lld\n", "st_uid", (intmax_t)statp.st_uid);
-      printf("%s %lld\n", "st_gid", (intmax_t)statp.st_gid);
-      printf("%s %lld\n", "st_rdev", (intmax_t)statp.st_rdev);
-      printf("%s %lld\n", "st_size", (intmax_t)statp.st_size);
-      printf("%s %lld\n", "st_blksize", (intmax_t)statp.st_blksize);
-      printf("%s %lld\n", "st_blocks", (intmax_t)statp.st_blocks);
-      printf("%s %lld\n", "st_atime", (intmax_t)statp.st_atime);
-      printf("%s %lld\n", "st_mtime", (intmax_t)statp.st_mtime);
-      printf("%s %lld\n", "st_ctime", (intmax_t)statp.st_ctime);
+      printf("%s %lld\n", "st_dev", (int64_t)statp.st_dev);
+      printf("%s %lld\n", "st_ino", (int64_t)statp.st_ino);
+      printf("%s %lld\n", "st_mode", (int64_t)statp.st_mode);
+      printf("%s %lld\n", "st_nlink", (int64_t)statp.st_nlink);
+      printf("%s %lld\n", "st_uid", (int64_t)statp.st_uid);
+      printf("%s %lld\n", "st_gid", (int64_t)statp.st_gid);
+      printf("%s %lld\n", "st_rdev", (int64_t)statp.st_rdev);
+      printf("%s %lld\n", "st_size", (int64_t)statp.st_size);
+      printf("%s %lld\n", "st_blksize", (int64_t)statp.st_blksize);
+      printf("%s %lld\n", "st_blocks", (int64_t)statp.st_blocks);
+      printf("%s %lld\n", "st_atime", (int64_t)statp.st_atime);
+      printf("%s %lld\n", "st_mtime", (int64_t)statp.st_mtime);
+      printf("%s %lld\n", "st_ctime", (int64_t)statp.st_ctime);
 #endif
 
       if (debug_level)
          printf("%s: len=%d val=%s\n", fname, strlen(where), where);
 
-      decode_stat(where, &statn);
+      decode_stat(where, &statn, sizeof(statn), &j);
 
       if (statp.st_dev != statn.st_dev ||
           statp.st_ino != statn.st_ino ||
@@ -297,7 +364,7 @@ int main(int argc, char *argv[])
           statp.st_ctime != statn.st_ctime) {
 
          printf("%s: %s\n", fname, where);
-         encode_stat(where, &statn, 0, 0);
+         encode_stat(where, &statn, sizeof(statn), 0, 0);
          printf("%s: %s\n", fname, where);
          printf("NOT EQAL\n");
       }

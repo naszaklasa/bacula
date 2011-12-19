@@ -40,7 +40,8 @@
 /*
  * A constructor 
  */
-MediaInfo::MediaInfo(QTreeWidgetItem *parentWidget, QString &mediaName)
+MediaInfo::MediaInfo(QTreeWidgetItem *parentWidget, QString &mediaName) 
+  : Pages()
 {
    setupUi(this);
    pgInitialize(tr("Media Info"), parentWidget);

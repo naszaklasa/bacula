@@ -479,10 +479,6 @@ bool dir_update_file_attributes(DCR *dcr, DEV_RECORD *rec)
    ser_bytes(rec->data, rec->data_len);
    dir->msglen = ser_length(dir->msg);
    Dmsg1(1800, ">dird %s\n", dir->msg);    /* Attributes */
-   if (rec->Stream == STREAM_UNIX_ATTRIBUTES || 
-       rec->Stream == STREAM_UNIX_ATTRIBUTES_EX) {
-      dir->set_data_end();                 /* set offset of last valid data */
-   }
    return dir->send();
 }
 
@@ -545,7 +541,7 @@ bool dir_ask_sysop_to_create_appendable_volume(DCR *dcr)
          }
       }
 
-      set_jcr_job_status(jcr, JS_WaitMedia);
+      jcr->setJobStatus(JS_WaitMedia);
       dir_send_job_status(jcr);
 
       stat = wait_for_sysop(dcr);
@@ -575,7 +571,7 @@ bool dir_ask_sysop_to_create_appendable_volume(DCR *dcr)
    }
 
 get_out:
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    dir_send_job_status(jcr);
    Dmsg0(100, "leave dir_ask_sysop_to_mount_create_appendable_volume\n");
    return true;
@@ -646,7 +642,7 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr, int mode)
                dcr->VolumeName, dev->print_name(), jcr->Job);
       }
 
-      set_jcr_job_status(jcr, JS_WaitMount);
+      jcr->setJobStatus(JS_WaitMount);
       dir_send_job_status(jcr);
 
       stat = wait_for_sysop(dcr);          /* wait on device */
@@ -678,7 +674,7 @@ bool dir_ask_sysop_to_mount_volume(DCR *dcr, int mode)
    }
 
 get_out:
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    dir_send_job_status(jcr);
    Dmsg0(400, "leave dir_ask_sysop_to_mount_volume\n");
    return true;

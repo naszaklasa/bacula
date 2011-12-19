@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2008-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2010-2011 Bacula Systems(R) SA
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -65,6 +65,7 @@ static bRC startRestoreFile(bpContext *ctx, const char *cmd);
 static bRC endRestoreFile(bpContext *ctx);
 static bRC createFile(bpContext *ctx, struct restore_pkt *rp);
 static bRC setFileAttributes(bpContext *ctx, struct restore_pkt *rp);
+static bRC checkFile(bpContext *ctx, char *fname);
 
 static pFuncs pluginFuncs = {
    sizeof(pluginFuncs),
@@ -82,7 +83,8 @@ static pFuncs pluginFuncs = {
    endRestoreFile,
    pluginIO,
    createFile,
-   setFileAttributes
+   setFileAttributes,
+   checkFile,
 };
 
 extern "C" {
@@ -126,8 +128,7 @@ loadPlugin(bInfo *lbinfo, bFuncs *lbfuncs, pInfo **pinfo, pFuncs **pfuncs)
    *pinfo = &pluginInfo;
    *pfuncs = &pluginFuncs;
    retval = loadExchangeApi();
-   if (retval != bRC_OK)
-   {
+   if (retval != bRC_OK) {
       printf("Cannot load Exchange DLL\n");
       return retval;
    }
@@ -167,8 +168,9 @@ static bRC newPlugin(bpContext *ctx)
    context->bpContext = ctx;
    context->job_since = 0;
    context->notrunconfull_option = false;
+   context->plugin_active = false;
    bfuncs->getBaculaValue(ctx, bVarJobId, (void *)&JobId);
-   _DebugMessage(0, "newPlugin JobId=%d\n", JobId);
+   _DebugMessage(100, "newPlugin JobId=%d\n", JobId);
    bfuncs->registerBaculaEvents(ctx, 1, 2, 0);
    size = MAX_COMPUTERNAME_LENGTH + 1;
    context->computer_name = new WCHAR[size];
@@ -211,23 +213,40 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
    char *name;
    int i, intval;
    int accurate;
+   char *command;
+   char *plugin_name;
 
    switch (event->eventType) {
    case bEventJobStart:
-      _DebugMessage(0, "JobStart=%s\n", (char *)value);
+      _DebugMessage(100, "JobStart=%s\n", (char *)value);
+      context->plugin_active = false;
       break;
    case bEventJobEnd:
-      _DebugMessage(0, "JobEnd\n");
+      _DebugMessage(100, "JobEnd\n");
+      break;
+   case bEventPluginCommand:
+      _DebugMessage(100, "bEventPluginCommand %s\n", value);
+      command = bstrdup((char *)value);
+      /* this isn't really unused */
+      plugin_name = strtok((char *)command, ":");
+      if (strcmp(plugin_name, "exchange") != 0) {
+         context->plugin_active = false;
+      } else {
+         context->plugin_active = true;
+      }
+      free(command);
       break;
    case bEventStartBackupJob:
-      _DebugMessage(0, "BackupStart\n");
+      if (!context->plugin_active) {
+         break;
+      }
+      _DebugMessage(100, "BackupStart\n");
       bfuncs->getBaculaValue(ctx, bVarAccurate, (void *)&accurate);
       context->accurate = accurate;
       context->job_type = JOB_TYPE_BACKUP;
       // level should have been specified by now - check it
       // if level is D or I, since should have been specified too
-      switch (context->job_level)
-      {
+      switch (context->job_level) {
       case 'F':
          if (context->notrunconfull_option) {
             context->truncate_logs = false;
@@ -242,77 +261,91 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
          context->truncate_logs = false;
          break;
       default:
-         _DebugMessage(0, "Invalid job level %c\n", context->job_level);
+         _DebugMessage(100, "Invalid job level %c\n", context->job_level);
          return bRC_Error;
       }
       break;
    case bEventEndBackupJob:
-      _DebugMessage(0, "BackupEnd\n");
+      _DebugMessage(100, "BackupEnd\n");
+      if (!context->plugin_active) {
+         break;
+      }
       break;
    case bEventLevel:
+      if (!context->plugin_active) {
+         break;
+      }
       intval = (intptr_t)value;
-      _DebugMessage(0, "JobLevel=%c %d\n", intval, intval);
+      _DebugMessage(100, "JobLevel=%c %d\n", intval, intval);
       context->job_level = intval;
       break;
    case bEventSince:
+      if (!context->plugin_active) {
+         break;
+      }
       intval = (intptr_t)value;
-      _DebugMessage(0, "since=%d\n", intval);
+      _DebugMessage(100, "since=%d\n", intval);
       context->job_since = (time_t)value;
       break;
    case bEventStartRestoreJob:
-      _DebugMessage(0, "StartRestoreJob\n");
+      _DebugMessage(100, "StartRestoreJob\n");
       context->job_type = JOB_TYPE_RESTORE;
+      context->plugin_active = true;
       break;
    case bEventEndRestoreJob:
-      _DebugMessage(0, "EndRestoreJob\n");
+      if (!context->plugin_active) {
+         break;
+      }
+      _DebugMessage(100, "EndRestoreJob\n");
+      context->plugin_active = false;
       break;
    
    /* Plugin command e.g. plugin = <plugin-name>:<name-space>:command */
    case bEventRestoreCommand:
-      _DebugMessage(0, "restore\n"); // command=%s\n", (char *)value);
+      _DebugMessage(100, "restore\n"); // command=%s\n", (char *)value);
+      if (!context->plugin_active) {
+         break;
+      }
       break;
 
    case bEventBackupCommand:
+      if (!context->plugin_active) {
+         break;
+      }
       {
-      _DebugMessage(0, "backup command=%s\n", (char *)value);    
-      char *command = new char[strlen((char *)value)];
+      _DebugMessage(100, "backup command=%s\n", (char *)value);    
+      char *command = new char[strlen((char *)value) + 1];
       strcpy(command, (char *)value);
       char *plugin_name = strtok((char *)command, ":");
       char *path = strtok(NULL, ":");
       char *option;
-      while ((option = strtok(NULL, ":")) != NULL)
-      {
+      while ((option = strtok(NULL, ":")) != NULL) {
          _DebugMessage(100, "option %s\n", option);
-         if (stricmp(option, "notrunconfull") == 0)
-         {
+         if (stricmp(option, "notrunconfull") == 0) {
             context->notrunconfull_option = true;
-         }
-         else
-         {
+         } else {
             _JobMessage(M_WARNING, "Unknown plugin option '%s'\n", option);
          }
       }
-      _DebugMessage(0, "name = %s\n", plugin_name);
-      _DebugMessage(0, "path = %s\n", path);
-      if (*path != '/')
-      {
+      _DebugMessage(100, "name = %s\n", plugin_name);
+      _DebugMessage(100, "path = %s\n", path);
+      if (*path != '/') {
          _JobMessage(M_FATAL, "Path does not begin with a '/'\n");
          return bRC_Error;
       }
 
-      for (i = 0; i < 6; i++)
+      for (i = 0; i < 6; i++) {
          context->path_bits[i] = NULL;
+      }
 
       char *path_bit = strtok(path, "/");
-      for (i = 0; path_bit != NULL && i < 6; i++)
-      {
+      for (i = 0; path_bit != NULL && i < 6; i++) {
          context->path_bits[i] = new char[strlen(path_bit) + 1];
          strcpy(context->path_bits[i], path_bit);
          path_bit = strtok(NULL, "/");
       }
 
-      if (i < 2 || i > 4)
-      {
+      if (i < 2 || i > 4) {
          _JobMessage(M_FATAL, "Invalid plugin backup path\n");
          return bRC_Error;
       }
@@ -323,7 +356,8 @@ static bRC handlePluginEvent(bpContext *ctx, bEvent *event, void *value)
       break;
 
    default:
-      _JobMessage(M_FATAL, "unknown event=%d\n", event->eventType);
+      _DebugMessage(100, "Ignored event=%d\n", event->eventType);
+      break;
    }
    bfuncs->getBaculaValue(ctx, bVarFDName, (void *)&name);
    return bRC_OK;
@@ -337,8 +371,7 @@ startBackupFile(bpContext *ctx, struct save_pkt *sp)
    node_t *current_node;
 
    _DebugMessage(100, "startBackupFile, cmd = %s\n", sp->cmd);
-   if (sp->pkt_size != sizeof(struct save_pkt) || sp->pkt_end != sizeof(struct save_pkt))
-   {
+   if (sp->pkt_size != sizeof(struct save_pkt) || sp->pkt_end != sizeof(struct save_pkt)) {
       _JobMessage(M_FATAL, "save_pkt size mismatch - sizeof(struct save_pkt) = %d, pkt_size = %d, pkt_end = %d\n", sizeof(struct save_pkt), sp->pkt_size, sp->pkt_end);
       return bRC_Error;
    }
@@ -480,4 +513,12 @@ static bRC setFileAttributes(bpContext *ctx, struct restore_pkt *rp)
    exchange_fd_context_t *context = (exchange_fd_context_t *)ctx->pContext;
    _DebugMessage(100, "setFileAttributes\n");
    return bRC_OK;
+}
+
+static bRC checkFile(bpContext *ctx, char *fname)
+{
+   exchange_fd_context_t *context = (exchange_fd_context_t *)ctx->pContext;
+   _DebugMessage(100, "checkFile\n");
+   /* previous files are always Seen */
+   return bRC_Seen;
 }

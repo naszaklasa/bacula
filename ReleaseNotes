@@ -1,12 +1,300 @@
 
-               Release Notes for Bacula 5.0.3
+               Release Notes for Bacula 5.2.3
 
-  Bacula code: Total files = 1,088 Total lines = 219,172 (Using SLOCCount)
+  Bacula code: Total files = 1,110 Total lines = 231,439 (Using SLOCCount)
 
 General:
 --------
+The 5.2.3 version is an bug fix release.
 
-This 5.0.3 version is significant bug fix update to version 5.0.2.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+If you are upgrading directly from 5.0.3 to this version, please see the
+important notices below for version 5.2.2, particularly
+the database upgrade and the difference in packaging the
+SQL shared libraries.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Compatibility:
+--------------
+ As always, both the Director and Storage daemon must be upgraded at
+ the same time.
+
+ Older 5.0.x and 3.0.x File Daemons are compatible with the 5.2.3
+ Director and Storage daemons. There should be no need to upgrade older File
+ Daemons.
+
+Changes since 5.2.2:
+
+ - Revert patch from Ben to not compress man pages on Solaris fix #1801
+ - Fix bug #3322 don't poll when operator is labeling tapes
+ - bvfs: Fix mysql REGEXP operator
+ - Fix Mysql 5.5.18 symbol lookup
+ - fix utf8/iso8859 problems
+ - Fix #3419, update stats problem
+ - Fix cats_test to use the new method names.
+ - Update accurate code to use 1 byte instead of 3
+ - Fix segfault in accurate code
+ - Fix compilation warning on FreeBSD
+
+Bugs fixed/closed since last release:
+1801 3322 3419
+
+
+================================================================
+Version 5.2.2
+
+General:
+--------
+The 5.2.2 version is an important bug fix release. It contains also some
+additions and performance improvements. 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+If you are upgrading directly from 5.0.3 to this version, please see the
+important notices below for version 5.2.1, particularly
+the database upgrade and the difference in packaging the
+SQL shared libraries.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Compatibility:
+--------------
+ As always, both the Director and Storage daemon must be upgraded at
+ the same time.
+
+ Older 5.0.x and 3.0.x File Daemons are compatible with the 5.2.2
+ Director and Storage daemons. There should be no need to upgrade older File
+ Daemons.
+
+Changes since 5.2.1:
+-----------------
+ - Implement -t option for Bat
+ - Require correct Qt version 4.6.2 or later to build bat
+ - Get new lib/plugins.h
+ - Pull new SD plugin files from Master
+ - Fix script to set mode of cats scripts
+ - Add Systemd configure options
+ - Split messages line by line before sending it to syslog() fix #3325
+ - Fix bvfs_restore on MySQL
+ - Fix #3308 where a SMTP problem can block the director
+ - Change locking scheme of the mountpoint cache.
+ - Enhance mountcache with rescan option after interval.
+ - Add %D option to edit_job_code, simplify callbacks on director side
+ - Move Zdeflate and Zinflate to seperate file.
+ - Put libraries in the correct order for non shared libs.
+ - Remove last traces of @SQL_BINDIR@ and @DB_TYPE@
+ - Fix bug #1774
+ - Move batch insert detection into db.m4
+ - bat: try to fix offset button problem when clicking too much on previous
+ - bvfs: Use single transaction for each job during update
+ - Add missing bwild & bregex man8 pages
+ - Fix compilation issue of wx-console #1778
+ - bvfs: fix filter for pattern= bvfs parameter
+ - Improve speed of BVFS with SQLite, Thanks to J.Starek
+ - bvfs: add clear_cache function
+ - bvfs: Handle windows drive when building path hierarchy
+
+Closed Bugs Since 5.2.1
+-----------------------
+1774 1778 3308 3325
+
+
+================================================================
+
+Version 5.2.1
+
+The 5.2.1 version is a major release since the last version 5.0.3.
+It includes well over 299,387 lines of changes made by 20 contributors,
+lots of bug fixes (see below), 1,851 software commits,and a 
+number of important new features:
+
+Version 5.2.0 was short lived, because Marco (thanks) found
+a number of last minute bugs. So the first official release of 5.2
+is 5.2.1.
+
+Compatibility:
+--------------
+ As always, both the Director and Storage daemon must be upgraded at
+ the same time.
+
+ Older 5.0.x and 3.0.x File Daemons are compatible with the 5.2.1
+ Director and Storage daemons. There should be no need to upgrade older File
+ Daemons.
+
+5.2.1 New Features:
+-----------------
+- LZO Compression
+- New Tray Monitor
+- Purge Migration Job
+- Changes in Bvfs (Bacula Virtual FileSystem)
+- Changes in the Pruning Algorithm
+- Ability to Verify any specified Job
+- Additions to RunScript variables
+- Additions to the Plugin API
+- ACL enhancements
+- XATTR enhancements
+- Class Based Database Backend Drivers
+- Hash List Enhancements
+
+Some of the above are described below; all the above are
+described in more detail in the New Features chapter of the
+manual.
+
+Closed Bugs since 5.0.3:
+---------------------
+1389 1444 1448 1466 1467 1468 1476 1481 1486 1488 1493 1494 1497 1499 1501
+1502 1504 1509 1511 1513 1516 1524 1526 1527 1532 1536 1538 1541 1542 1549
+1551 1553 1554 1558 1559 1560 1564 1567 1568 1569 1571 1574 1577 1581 1582
+1584 1587 1594 1595 1600 1601 1602 1603 1604 1606 1608 1610 1612 1623 1624
+1633 1643 1648 1655 1661 1664 1666 1669 1672 1675 1684 1685 1695 1696 1699
+1700 1703 1735 1741 1749 1751 1761 1762 1764 1768 1770 1771 2710
+
+Note on bug 1612 where Bacula does not save a checksum for hard links during
+full backup, but expects one during accurate differential backups. You need
+a Full backup with the 5.2.x code to have these checksums in the Catalog.
+Doing Incr/Diff over a 5.0.x Full backup will still display lot of errors.
+
+
+
+================== Warning !!!!!! ==========================
+
+ The new pruning algorithm will not allow pruning of jobs that are essential to
+ restore since the last Full backup. This is, of course, correct and desirable,
+ but it is different from older Bacula versions that could inappropriately
+ prune jobs. Pruning of volumes is not affected.
+
+Building Bat:
+-------------
+To build Bat, you need Qt4 version 4.6.2.  If you build with any other
+version it is likely not to work.  If you do not have version 4.6.2, on
+your system, you can download the Bacula depkgs_qt version 16Dec10.
+
+Packaging the SQL backend:
+--------------------------
+The main Bacula Director code is independent of the SQL backend
+in this version. This means that the Bacula Director can be packaged
+by itself, then each of the different SQL backends supported can
+be packaged separately.  It is possible to build all the DB backends
+at the same time.
+
+- configure can be run with multiple database configure options.
+   --with-sqlite3
+   --with-mysql
+   --with-postgresql
+
+Order of testing for database is
+- postgresql
+- mysql
+- sqlite3
+
+Each configured backend generates a libbaccats-<backend_name>-<version>.so
+A dummy catalog library is created named libbaccats-version.so
+
+At configure time the first detected backend is used as the so called default
+backend and at install time the dummy libbaccats-<version>.so is replaced with
+the default backend type.
+
+If you configure all three backends you get three backend libraries and the
+postgresql gets installed as the default.  When you want to switch the default
+you can copy one of the three backend libraries over the
+libbaccats-<version>.so e.g.
+
+cp libbaccats-postgresql-<version>.so libbaccats-<version>.so
+
+And update the default backend in the following files:
+
+create_bacula_database
+drop_bacula_database
+drop_bacula_tables
+grant_bacula_privileges
+make_bacula_tables
+make_catalog_backup
+update_bacula_tables 
+
+New Catalog format in version 5.2.0 and greater
+-----------------------------------------------
+This release of Bacula uses a new catalog format. We provide a set of
+scripts that permit to convert a 5.0.x (version 12) catalog to 5.2.1 (version
+14).  The Bacula project rpm spec files have been modified to
+detect the database change and do the upgrade for you.  We strongly
+recommend that you save a copy of your existing database before upgrading
+using rpms.
+
+The simplest way to upgrade the database assuming you are building from
+source (i.e. manually):
+1. Stop any current version of Bacula from running.
+2. Save a copy of your existing database.
+3. Configure, build, and install the 5.2.1 version of Bacula
+   Note the new ./configure options in the manuals see the link
+   at the bottom of this file.
+4. cd <your-scripts-installation-directory>
+5. ./update_bacula_tables
+6. If you have multiple catalogs, edit the update_bacula_tables
+   script and put the name of another database, and then
+   execute the script again. Repeat this until all Bacula
+   catalogs have been updated.
+7. Start the new Bacula.  If everything worked, it should
+   not print any error messages.
+
+If you start from scratch, you don't need to run the update_bacula_tables
+script because the create_bacula_tables script automatically creates the new
+table format.  However, if you are using a version of Bacula older than 5.0.0
+(e.g.  3.0.3) then you need to run the update_bacula_tables script that will
+be found in the <bacula>/src/cats directory after you run the ./configure
+command.  As mentioned above, before running this script, please backup your
+catalog database, and when you do running it, be sure shutdown Bacula and be
+aware that running the script can take some time depending on your database
+size.
+
+================================================================
+
+Changes:
+
+Speed and Memory Usage Enhancements:
+- Implement LZO compression algorithm (need lzo2 headers to activate this option)
+- New Pruning algoritm -- safer and faster
+- Use of PostgreSQL cursor when doing large queries, should reduce the
+  memory usage during restore and accurate backups.
+- limit command in some list commands
+- Bacula Virtual File System for fast catalog access
+- Faster crc32 algorithm
+
+Security Enhancements:
+- Additional security against injection of illegal characters
+- Fix possible fnmatch problem
+
+Features Enhancements:
+- Improvements in ACL and xattr handling on additional platforms:
+  AIX, Darwind, FreeBSD, HPUX, IRIX, Solaris, Tru64
+- Tray monitor for Windows
+- New SQL backend and ./configure that permits building multiple catalog
+  backends in one build, and has the main Bacula core code totally independent
+  of the SQL backend, which should simplify packaging (only the
+  libbacsql.so/dll needs to be changed to switch from one database backend
+  to another (e.g. MySQL to PostgreSQL).
+- Indent lsmark during restore
+- Disable batch insert config item
+- Director selection option in bconsole
+- restorejob command in bconsole
+- Many additional features for bat such as "brestore" panel
+- The old bat version browser has been turned off since it does not
+  work correctly and the brestore panel provides the same functionality
+- Improved hash table for hard links
+- Additional script variable editing such as %b (JobBytes), %F (JobFiles) 
+  and %h (Client Address)
+
+Other Enhancements:
+- Includes better handling for Windows repares points, mount points, and 
+  junction points.
+- New database format
+- Many new plugin API features
+- Improved memory handling for restores
+- Significant stability enhancements to bat
+- xattr/ACL restore failure are now printed as Warning
+- A few path name length limits in Windows have been removed.
+
+
+===========================================================================
+
+The 5.0.3 version is significant bug fix update to version 5.0.2.
 It includes new code and some new features.
 There is no database change since prior versions of 5.0.
 

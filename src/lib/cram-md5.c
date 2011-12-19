@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -32,7 +32,6 @@
  *
  * Written for Bacula by Kern E. Sibbald, May MMI.
  *
- *   Version $Id$
  */
 
 #include "bacula.h"
@@ -72,21 +71,21 @@ bool cram_md5_challenge(BSOCK *bs, const char *password, int tls_local_need, int
    if (compatible) {
       Dmsg2(dbglvl, "send: auth cram-md5 %s ssl=%d\n", chal, tls_local_need);
       if (!bs->fsend("auth cram-md5 %s ssl=%d\n", chal, tls_local_need)) {
-         Dmsg1(dbglvl, "Bnet send challenge error.\n", bs->bstrerror());
+         Dmsg1(dbglvl, "Bnet send challenge comm error. ERR=%s\n", bs->bstrerror());
          return false;
       }
    } else {
       /* Old non-compatible system */
       Dmsg2(dbglvl, "send: auth cram-md5 %s ssl=%d\n", chal, tls_local_need);
       if (!bs->fsend("auth cram-md5 %s ssl=%d\n", chal, tls_local_need)) {
-         Dmsg1(dbglvl, "Bnet send challenge error.\n", bs->bstrerror());
+         Dmsg1(dbglvl, "Bnet send challenge comm error. ERR=%s\n", bs->bstrerror());
          return false;
       }
    }
 
    /* Read hashed response to challenge */
    if (bs->wait_data(180) <= 0 || bs->recv() <= 0) {
-      Dmsg1(dbglvl, "Bnet receive challenge response error.\n", bs->bstrerror());
+      Dmsg1(dbglvl, "Bnet receive challenge response comm error. ERR=%s\n", bs->bstrerror());
       bmicrosleep(5, 0);
       return false;
    }

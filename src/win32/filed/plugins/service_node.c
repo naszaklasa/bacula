@@ -171,7 +171,7 @@ service_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *r
 {
    storage_group_node_t *curr_sg, *prev_sg;
 
-   _DebugMessage(0, "createFile_SERVICE state = %d\n", state);
+   _DebugMessage(100, "createFile_SERVICE state = %d\n", state);
    if (strcmp(name, "Microsoft Information Store") != 0)
    {
       _JobMessage(M_FATAL, "Invalid restore path specified, must start with '/" PLUGIN_PATH_PREFIX_BASE "/" PLUGIN_PATH_PREFIX_SERVICE "/'\n", state);
@@ -215,7 +215,7 @@ service_node_t::createFile(exchange_fd_context_t *context, struct restore_pkt *r
 bRC
 service_node_t::endRestoreFile(exchange_fd_context_t *context)
 {
-   _DebugMessage(0, "endRestoreFile_SERVICE state = %d\n", state);
+   _DebugMessage(100, "endRestoreFile_SERVICE state = %d\n", state);
    switch(state)
    {
    case 0:

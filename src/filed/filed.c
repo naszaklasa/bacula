@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -34,6 +34,7 @@
 
 #include "bacula.h"
 #include "filed.h"
+#include "lib/mntent_cache.h"
 
 #ifdef HAVE_PYTHON
 
@@ -70,7 +71,7 @@ static CONFIG *config;
 
 static void usage()
 {
-   Pmsg3(-1, _(
+   fprintf(stderr, _(
 PROG_COPYRIGHT
 "\nVersion: %s (%s)\n\n"
 "Usage: bacula-fd [-f -s] [-c config_file] [-d debug_level]\n"
@@ -87,6 +88,7 @@ PROG_COPYRIGHT
 "        -v          verbose user messages\n"
 "        -?          print this message.\n"
 "\n"), 2000, VERSION, BDATE);
+
    exit(1);
 }
 
@@ -294,6 +296,7 @@ void terminate_filed(int sig)
    bnet_stop_thread_server(server_tid);
    generate_daemon_event(NULL, "Exit");
    unload_plugins();
+   flush_mntent_cache();
    write_state_file(me->working_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
    delete_pid_file(me->pid_directory, "bacula-fd", get_first_port_host_order(me->FDaddrs));
 

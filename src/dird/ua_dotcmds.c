@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2002-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2002-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -43,6 +43,8 @@
 #include "findlib/find.h"
 
 /* Imported variables */
+extern struct s_jl joblevels[];
+extern struct s_jt jobtypes[];
 
 /* Imported functions */
 extern void do_messages(UAContext *ua, const char *cmd);
@@ -69,45 +71,56 @@ static bool mediatypescmd(UAContext *ua, const char *cmd);
 static bool locationscmd(UAContext *ua, const char *cmd);
 static bool mediacmd(UAContext *ua, const char *cmd);
 static bool aopcmd(UAContext *ua, const char *cmd);
+static bool catalogscmd(UAContext *ua, const char *cmd);
 
 static bool dot_bvfs_lsdirs(UAContext *ua, const char *cmd);
 static bool dot_bvfs_lsfiles(UAContext *ua, const char *cmd);
 static bool dot_bvfs_update(UAContext *ua, const char *cmd);
+static bool dot_bvfs_get_jobids(UAContext *ua, const char *cmd);
+static bool dot_bvfs_versions(UAContext *ua, const char *cmd);
+static bool dot_bvfs_restore(UAContext *ua, const char *cmd);
+static bool dot_bvfs_cleanup(UAContext *ua, const char *cmd);
 
 static bool api_cmd(UAContext *ua, const char *cmd);
 static bool sql_cmd(UAContext *ua, const char *cmd);
 static bool dot_quit_cmd(UAContext *ua, const char *cmd);
 static bool dot_help_cmd(UAContext *ua, const char *cmd);
+static int one_handler(void *ctx, int num_field, char **row);
 
 struct cmdstruct { const char *key; bool (*func)(UAContext *ua, const char *cmd); const char *help;const bool use_in_rs;};
 static struct cmdstruct commands[] = { /* help */  /* can be used in runscript */
- { NT_(".api"),        api_cmd,          NULL,       false},
- { NT_(".backups"),    backupscmd,       NULL,       false},
- { NT_(".clients"),    clientscmd,       NULL,       true},
- { NT_(".defaults"),   defaultscmd,      NULL,       false},
- { NT_(".die"),        admin_cmds,       NULL,       false},
- { NT_(".dump"),       admin_cmds,       NULL,       false},
- { NT_(".exit"),       admin_cmds,       NULL,       false},
- { NT_(".filesets"),   filesetscmd,      NULL,       false},
- { NT_(".help"),       dot_help_cmd,     NULL,       false},
- { NT_(".jobs"),       jobscmd,          NULL,       true},
- { NT_(".levels"),     levelscmd,        NULL,       false},
- { NT_(".messages"),   getmsgscmd,       NULL,       false},
- { NT_(".msgs"),       msgscmd,          NULL,       false},
- { NT_(".pools"),      poolscmd,         NULL,       true},
- { NT_(".quit"),       dot_quit_cmd,     NULL,       false},
- { NT_(".sql"),        sql_cmd,          NULL,       false},
- { NT_(".status"),     dot_status_cmd,   NULL,       false},
- { NT_(".storage"),    storagecmd,       NULL,       true},
- { NT_(".volstatus"),  volstatuscmd,     NULL,       true},
- { NT_(".media"),      mediacmd,         NULL,       true},
- { NT_(".mediatypes"), mediatypescmd,    NULL,       true},
- { NT_(".locations"),  locationscmd,     NULL,       true},
- { NT_(".actiononpurge"),aopcmd,         NULL,       true},
- { NT_(".bvfs_lsdirs"), dot_bvfs_lsdirs, NULL,       true},
- { NT_(".bvfs_lsfiles"),dot_bvfs_lsfiles,NULL,       true},
- { NT_(".bvfs_update"), dot_bvfs_update, NULL,       true},
- { NT_(".types"),      typescmd,         NULL,       false}
+ { NT_(".api"),        api_cmd,                  NULL,       false},
+ { NT_(".backups"),    backupscmd,               NULL,       false},
+ { NT_(".clients"),    clientscmd,               NULL,       true},
+ { NT_(".catalogs"),   catalogscmd,              NULL,       false},
+ { NT_(".defaults"),   defaultscmd,              NULL,       false},
+ { NT_(".die"),        admin_cmds,               NULL,       false},
+ { NT_(".dump"),       admin_cmds,               NULL,       false},
+ { NT_(".exit"),       admin_cmds,               NULL,       false},
+ { NT_(".filesets"),   filesetscmd,              NULL,       false},
+ { NT_(".help"),       dot_help_cmd,             NULL,       false},
+ { NT_(".jobs"),       jobscmd,                  NULL,       true},
+ { NT_(".levels"),     levelscmd,                NULL,       false},
+ { NT_(".messages"),   getmsgscmd,               NULL,       false},
+ { NT_(".msgs"),       msgscmd,                  NULL,       false},
+ { NT_(".pools"),      poolscmd,                 NULL,       true},
+ { NT_(".quit"),       dot_quit_cmd,             NULL,       false},
+ { NT_(".sql"),        sql_cmd,                  NULL,       false},
+ { NT_(".status"),     dot_status_cmd,           NULL,       false},
+ { NT_(".storage"),    storagecmd,               NULL,       true},
+ { NT_(".volstatus"),  volstatuscmd,             NULL,       true},
+ { NT_(".media"),      mediacmd,                 NULL,       true},
+ { NT_(".mediatypes"), mediatypescmd,            NULL,       true},
+ { NT_(".locations"),  locationscmd,             NULL,       true},
+ { NT_(".actiononpurge"),aopcmd,                 NULL,       true},
+ { NT_(".bvfs_lsdirs"), dot_bvfs_lsdirs,         NULL,       true},
+ { NT_(".bvfs_lsfiles"),dot_bvfs_lsfiles,        NULL,       true},
+ { NT_(".bvfs_update"), dot_bvfs_update,         NULL,       true},
+ { NT_(".bvfs_get_jobids"), dot_bvfs_get_jobids, NULL,       true},
+ { NT_(".bvfs_versions"), dot_bvfs_versions,     NULL,       true},
+ { NT_(".bvfs_restore"), dot_bvfs_restore,       NULL,       true},
+ { NT_(".bvfs_cleanup"), dot_bvfs_cleanup,       NULL,       true},
+ { NT_(".types"),      typescmd,                 NULL,       false}
              };
 #define comsize ((int)(sizeof(commands)/sizeof(struct cmdstruct)))
 
@@ -157,8 +170,7 @@ bool do_a_dot_command(UAContext *ua)
       }
    }
    if (!found) {
-      pm_strcat(user->msg, _(": is an invalid command.\n"));
-      ua->error_msg("%s", user->msg);
+      ua->error_msg("%s%s", ua->argk[0], _(": is an invalid command.\n"));
       ok = false;
    }
    return ok;
@@ -172,9 +184,7 @@ static bool dot_bvfs_update(UAContext *ua, const char *cmd)
 
    int pos = find_arg_with_value(ua, "jobid");
    if (pos != -1 && is_a_number_list(ua->argv[pos])) {
-      POOL_MEM jobids;
-      pm_strcpy(jobids, ua->argv[pos]);
-      bvfs_update_path_hierarchy_cache(ua->jcr, ua->db, jobids.c_str());
+      bvfs_update_path_hierarchy_cache(ua->jcr, ua->db, ua->argv[pos]);
    } else {
       /* update cache for all jobids */
       bvfs_update_cache(ua->jcr, ua->db);
@@ -204,13 +214,19 @@ static int bvfs_result_handler(void *ctx, int fields, char **row)
    }
 
    memset(&statp, 0, sizeof(struct stat));
-   decode_stat(lstat, &statp, &LinkFI);
+   decode_stat(lstat, &statp, sizeof(statp), &LinkFI);
 
    Dmsg1(100, "type=%s\n", row[0]);
    if (bvfs_is_dir(row)) {
       char *path = bvfs_basename_dir(row[BVFS_Name]);
       ua->send_msg("%s\t0\t%s\t%s\t%s\t%s\n", row[BVFS_PathId], fileid,
                    jobid, lstat, path);
+
+   } else if (bvfs_is_version(row)) {
+      ua->send_msg("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", row[BVFS_PathId],
+                   row[BVFS_FilenameId], fileid, jobid,
+                   lstat, row[BVFS_Md5], row[BVFS_VolName], 
+                   row[BVFS_VolInchanger]);
 
    } else if (bvfs_is_file(row)) {
       ua->send_msg("%s\t%s\t%s\t%s\t%s\t%s\n", row[BVFS_PathId],
@@ -221,8 +237,42 @@ static int bvfs_result_handler(void *ctx, int fields, char **row)
    return 0;
 }
 
+static bool bvfs_parse_arg_version(UAContext *ua,
+                                   char **client,
+                                   DBId_t *fnid, 
+                                   bool *versions, 
+                                   bool *copies)
+{
+   *fnid=0;
+   *client=NULL;
+   *versions=false;
+   *copies=false;
+
+   for (int i=1; i<ua->argc; i++) {
+      if (fnid && strcasecmp(ua->argk[i], NT_("fnid")) == 0) {
+         if (is_a_number(ua->argv[i])) {
+            *fnid = str_to_int64(ua->argv[i]);
+         }
+      }
+
+      if (strcasecmp(ua->argk[i], NT_("client")) == 0) {
+         *client = ua->argv[i];
+      }
+
+      if (copies && strcasecmp(ua->argk[i], NT_("copies")) == 0) {
+         *copies = true;
+      }
+
+      if (versions && strcasecmp(ua->argk[i], NT_("versions")) == 0) {
+         *versions = true;
+      }
+   }
+   return (*client && *fnid > 0);
+}
+
 static bool bvfs_parse_arg(UAContext *ua, 
                            DBId_t *pathid, char **path, char **jobid,
+                           char **username,
                            int *limit, int *offset)
 {
    *pathid=0;
@@ -230,6 +280,7 @@ static bool bvfs_parse_arg(UAContext *ua,
    *offset=0;
    *path=NULL;
    *jobid=NULL;
+   *username=NULL;
 
    for (int i=1; i<ua->argc; i++) {
       if (strcasecmp(ua->argk[i], NT_("pathid")) == 0) {
@@ -237,8 +288,13 @@ static bool bvfs_parse_arg(UAContext *ua,
             *pathid = str_to_int64(ua->argv[i]);
          }
       }
+
       if (strcasecmp(ua->argk[i], NT_("path")) == 0) {
          *path = ua->argv[i];
+      }
+
+      if (strcasecmp(ua->argk[i], NT_("username")) == 0) {
+         *username = ua->argv[i];
       }
       
       if (strcasecmp(ua->argk[i], NT_("jobid")) == 0) {
@@ -271,6 +327,59 @@ static bool bvfs_parse_arg(UAContext *ua,
    return true;
 }
 
+/* .bvfs_cleanup path=b2XXXXX
+ */
+static bool dot_bvfs_cleanup(UAContext *ua, const char *cmd)
+{
+   int i;
+   if ((i = find_arg_with_value(ua, "path")) >= 0) {
+      open_client_db(ua);
+      Bvfs fs(ua->jcr, ua->db);
+      fs.drop_restore_list(ua->argv[i]);
+   }
+   return true;
+}
+
+/* .bvfs_restore path=b2XXXXX jobid=1,2 fileid=1,2 dirid=1,2 hardlink=1,2,3,4
+ */
+static bool dot_bvfs_restore(UAContext *ua, const char *cmd)
+{
+   DBId_t pathid=0;
+   int limit=2000, offset=0, i;
+   char *path=NULL, *jobid=NULL, *username=NULL;
+   char *empty = (char *)"";
+   char *fileid, *dirid, *hardlink;
+   fileid = dirid = hardlink = empty;
+
+   if (!bvfs_parse_arg(ua, &pathid, &path, &jobid, &username,
+                       &limit, &offset))
+   {
+      ua->error_msg("Can't find jobid, pathid or path argument\n");
+      return true;              /* not enough param */
+   }
+
+   Bvfs fs(ua->jcr, ua->db);
+   fs.set_username(username);
+   fs.set_jobids(jobid);
+
+   if ((i = find_arg_with_value(ua, "fileid")) >= 0) {
+      fileid = ua->argv[i];
+   }
+   if ((i = find_arg_with_value(ua, "dirid")) >= 0) {
+      dirid = ua->argv[i];
+   }
+   if ((i = find_arg_with_value(ua, "hardlink")) >= 0) {
+      hardlink = ua->argv[i];
+   }
+
+   if (fs.compute_restore_list(fileid, dirid, hardlink, path)) {
+      ua->send_msg("OK\n");
+   } else {
+      ua->error_msg("Can't create restore list\n");
+   }
+   return true;
+}
+
 /* 
  * .bvfs_lsfiles jobid=1,2,3,4 pathid=10
  * .bvfs_lsfiles jobid=1,2,3,4 path=/
@@ -279,26 +388,34 @@ static bool dot_bvfs_lsfiles(UAContext *ua, const char *cmd)
 {
    DBId_t pathid=0;
    int limit=2000, offset=0;
-   char *path=NULL, *jobid=NULL;
+   char *path=NULL, *jobid=NULL, *username=NULL;
+   char *pattern=NULL;
+   int i;
 
-   if (!bvfs_parse_arg(ua, &pathid, &path, &jobid,
+   if (!bvfs_parse_arg(ua, &pathid, &path, &jobid, &username,
                        &limit, &offset))
    {
       ua->error_msg("Can't find jobid, pathid or path argument\n");
       return true;              /* not enough param */
    }
+   if ((i = find_arg_with_value(ua, "pattern")) >= 0) {
+      pattern = ua->argv[i];
+   }
 
    Bvfs fs(ua->jcr, ua->db);
+   fs.set_username(username);
    fs.set_jobids(jobid);   
    fs.set_handler(bvfs_result_handler, ua);
    fs.set_limit(limit);
-
+   if (pattern) {
+      fs.set_pattern(pattern);
+   }
    if (pathid) {
       fs.ch_dir(pathid);
    } else {
       fs.ch_dir(path);
    }
-
+   
    fs.set_offset(offset);
 
    fs.ls_files();
@@ -315,9 +432,9 @@ static bool dot_bvfs_lsdirs(UAContext *ua, const char *cmd)
 {
    DBId_t pathid=0;
    int limit=2000, offset=0;
-   char *path=NULL, *jobid=NULL;
+   char *path=NULL, *jobid=NULL, *username=NULL;
 
-   if (!bvfs_parse_arg(ua, &pathid, &path, &jobid,
+   if (!bvfs_parse_arg(ua, &pathid, &path, &jobid, &username,
                        &limit, &offset))
    {
       ua->error_msg("Can't find jobid, pathid or path argument\n");
@@ -325,6 +442,7 @@ static bool dot_bvfs_lsdirs(UAContext *ua, const char *cmd)
    }
 
    Bvfs fs(ua->jcr, ua->db);
+   fs.set_username(username);
    fs.set_jobids(jobid);   
    fs.set_limit(limit);
    fs.set_handler(bvfs_result_handler, ua);
@@ -340,6 +458,96 @@ static bool dot_bvfs_lsdirs(UAContext *ua, const char *cmd)
    fs.ls_special_dirs();
    fs.ls_dirs();
 
+   return true;
+}
+
+/* 
+ * .bvfs_versions jobid=x fnid=10 pathid=10 copies versions
+ * (jobid isn't used)
+ */
+static bool dot_bvfs_versions(UAContext *ua, const char *cmd)
+{
+   DBId_t pathid=0, fnid=0;
+   int limit=2000, offset=0;
+   char *path=NULL, *jobid=NULL, *client=NULL, *username=NULL;
+   bool copies=false, versions=false;
+   if (!bvfs_parse_arg(ua, &pathid, &path, &jobid, &username,
+                       &limit, &offset))
+   {
+      ua->error_msg("Can't find jobid, pathid or path argument\n");
+      return true;              /* not enough param */
+   }
+
+   if (!bvfs_parse_arg_version(ua, &client, &fnid, &versions, &copies))
+   {
+      ua->error_msg("Can't find client or fnid argument\n");
+      return true;              /* not enough param */
+   }
+
+   Bvfs fs(ua->jcr, ua->db);
+   fs.set_limit(limit);
+   fs.set_see_all_versions(versions);
+   fs.set_see_copies(copies);
+   fs.set_handler(bvfs_result_handler, ua);
+   fs.set_offset(offset);
+   fs.get_all_file_versions(pathid, fnid, client);
+
+   return true;
+}
+
+/* .bvfs_get_jobids jobid=1
+ *  -> returns needed jobids to restore
+ * .bvfs_get_jobids jobid=1 all
+ *  -> returns needed jobids to restore with all filesets a JobId=1 time
+ */
+static bool dot_bvfs_get_jobids(UAContext *ua, const char *cmd)
+{
+   JOB_DBR jr;
+   db_list_ctx jobids, tempids;
+   int pos;
+   char ed1[50];
+   POOL_MEM query;
+   dbid_list ids;               /* Store all FileSetIds for this client */
+
+   if (!open_client_db(ua)) {
+      return true;
+   }
+
+   memset(&jr, 0, sizeof(JOB_DBR));
+   if ((pos = find_arg_with_value(ua, "jobid")) >= 0) {
+      jr.JobId = str_to_int64(ua->argv[pos]);
+   }
+
+   if (!db_get_job_record(ua->jcr, ua->db, &jr)) {
+      ua->error_msg(_("Unable to get Job record for JobId=%s: ERR=%s\n"),
+                    ua->cmd, db_strerror(ua->db));
+      return true;
+   }
+
+   /* If we have the "all" option, we do a search on all defined fileset
+    * for this client
+    */
+   if (find_arg(ua, "all") > 0) {
+      edit_int64(jr.ClientId, ed1);
+      Mmsg(query, uar_sel_filesetid, ed1);
+      db_get_query_dbids(ua->jcr, ua->db, query, ids);
+   } else {
+      ids.num_ids = 1;
+      ids.DBId[0] = jr.FileSetId;
+   }
+
+   jr.JobLevel = L_INCREMENTAL; /* Take Full+Diff+Incr */
+
+   /* Foreach different FileSet, we build a restore jobid list */
+   for (int i=0; i < ids.num_ids; i++) {
+      jr.FileSetId = ids.DBId[i];
+      if (!db_accurate_get_jobids(ua->jcr, ua->db, &jr, &tempids)) {
+         return true;
+      }
+      jobids.add(tempids);
+   }
+
+   ua->send_msg("%s\n", jobids.list);
    return true;
 }
 
@@ -582,6 +790,19 @@ static bool filesetscmd(UAContext *ua, const char *cmd)
    return true;
 }
 
+static bool catalogscmd(UAContext *ua, const char *cmd)
+{
+   CAT *cat;
+   LockRes();
+   foreach_res(cat, R_CATALOG) {
+      if (acl_access_ok(ua, Catalog_ACL, cat->name())) {
+         ua->send_msg("%s\n", cat->name());
+      }
+   }
+   UnlockRes();
+   return true;
+}
+
 static bool clientscmd(UAContext *ua, const char *cmd)
 {
    CLIENT *client;       
@@ -799,14 +1020,30 @@ static bool locationscmd(UAContext *ua, const char *cmd)
 
 static bool levelscmd(UAContext *ua, const char *cmd)
 {
-   ua->send_msg("Incremental\n");
-   ua->send_msg("Full\n");
-   ua->send_msg("Differential\n");
-   ua->send_msg("VirtualFull\n");
-   ua->send_msg("Catalog\n");
-   ua->send_msg("InitCatalog\n");
-   ua->send_msg("VolumeToCatalog\n");
-   ua->send_msg("Base\n");
+   int i;
+   /* Note some levels are blank, which means none is needed */
+   if (ua->argc == 1) {
+      for (i=0; joblevels[i].level_name; i++) {
+         if (joblevels[i].level_name[0] != ' ') {
+            ua->send_msg("%s\n", joblevels[i].level_name);
+         }
+      }
+   } else if (ua->argc == 2) {
+      int jobtype = 0;
+      /* Assume that first argument is the Job Type */
+      for (i=0; jobtypes[i].type_name; i++) {
+         if (strcasecmp(ua->argk[1], jobtypes[i].type_name) == 0) {
+            jobtype = jobtypes[i].job_type;
+            break;
+         }
+      }
+      for (i=0; joblevels[i].level_name; i++) {
+         if ((joblevels[i].job_type == jobtype) && (joblevels[i].level_name[0] != ' ')) {
+            ua->send_msg("%s\n", joblevels[i].level_name);
+         }
+      }
+   }
+
    return true;
 }
 

@@ -18,8 +18,10 @@ INCLUDES = \
 	$(INCLUDE_BACULA) \
 	$(INCLUDE_ZLIB) \
 	$(INCLUDE_OPENSSL) \
+	$(INCLUDE_VSS) \
 	-I$(MAINDIR)/src \
-	-I$(MAINDIR)/src/filed
+	-I$(MAINDIR)/src/filed \
+	-I$(MAINDIR)/src/win32/filed
 
 DEFINES = \
 	$(HAVES)
@@ -42,6 +44,9 @@ EXCHANGE_OBJS = \
 	$(OBJDIR)/dbi_node.o \
 	$(OBJDIR)/file_node.o
 
+BPIPE_OBJS = \
+	$(OBJDIR)/bpipe-fd.o
+
 LIBS_DLL = \
 	$(LIBS_SSL) \
 	$(LIBS_CRYPTO) \
@@ -58,7 +63,7 @@ LIBS_DLL = \
 
 .PHONY: all clean
 
-all: $(BINDIR)/exchange-fd.dll
+all: $(BINDIR)/exchange-fd.dll $(BINDIR)/bpipe-fd.dll
 
 clean:
 	@echo "Cleaning `pwd`"
@@ -85,6 +90,14 @@ $(BINDIR)/exchange-fd.dll: $(EXCHANGE_OBJS) exchange-fd.def
 	@echo "Linking $@"
 	$(call checkdir,$@)
 	$(ECHO_CMD)$(CXX) $(LDFLAGS) -mdll -mwindows -Wl,--out-implib,$(OBJDIR)/exchange-fd.a $^ $(LIBS_DLL) -o $@
+
+$(BINDIR)/bpipe-fd.dll: DLL_DEFINE=BUILDING_DLL
+
+$(BINDIR)/bpipe-fd.dll: $(BPIPE_OBJS) bpipe-fd.def $(LIBS_BACULA)
+	@echo "Linking $@"
+	$(call checkdir,$@)
+	$(ECHO_CMD)$(CXX) $(CFLAGS) $(LDFLAGS) -mdll -mwindows -Wl,--out-implib,$(OBJDIR)/bpipe-fd.a $^ $(LIBS_DLL) -o $@
+
 
 include $(BUILDDIR)/Makefile.rules
 

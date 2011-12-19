@@ -41,24 +41,11 @@
 /* Database prototypes */
 
 /* sql.c */
-B_DB *db_init(JCR *jcr, const char *db_driver, const char *db_name, const char *db_user, 
-              const char *db_password, const char *db_address, int db_port, 
-              const char *db_socket, int mult_db_connections);
-B_DB *db_init_database(JCR *jcr, const char *db_name, const char *db_user, const char *db_password,
-                       const char *db_address, int db_port, const char *db_socket,
-                       int mult_db_connections);
-int  db_open_database(JCR *jcr, B_DB *db);
-void db_close_database(JCR *jcr, B_DB *db);
 bool db_open_batch_connexion(JCR *jcr, B_DB *mdb);
-void db_escape_string(JCR *jcr, B_DB *db, char *snew, char *old, int len);
 char *db_strerror(B_DB *mdb);
-int  db_next_index(JCR *jcr, B_DB *mdb, char *table, char *index);
-bool db_sql_query(B_DB *mdb, const char *cmd, DB_RESULT_HANDLER *result_handler, void *ctx);
-void db_start_transaction(JCR *jcr, B_DB *mdb);
-void db_end_transaction(JCR *jcr, B_DB *mdb);
 int db_int64_handler(void *ctx, int num_fields, char **row);
+int db_strtime_handler(void *ctx, int num_fields, char **row);
 int db_list_handler(void *ctx, int num_fields, char **row);
-void db_thread_cleanup();
 void db_debug_print(JCR *jcr, FILE *fp);
 int db_int_handler(void *ctx, int num_fields, char **row);
 void db_check_backend_thread_safe();
@@ -77,10 +64,8 @@ bool db_create_device_record(JCR *jcr, B_DB *mdb, DEVICE_DBR *dr);
 bool db_create_storage_record(JCR *jcr, B_DB *mdb, STORAGE_DBR *sr);
 bool db_create_mediatype_record(JCR *jcr, B_DB *mdb, MEDIATYPE_DBR *mr);
 bool db_write_batch_file_records(JCR *jcr);
-bool my_batch_start(JCR *jcr, B_DB *mdb);
-bool my_batch_end(JCR *jcr, B_DB *mdb, const char *error);
-bool my_batch_insert(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 bool db_create_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
+bool db_create_restore_object_record(JCR *jcr, B_DB *mdb, ROBJECT_DBR *ar);
 bool db_create_base_file_attributes_record(JCR *jcr, B_DB *mdb, ATTR_DBR *ar);
 bool db_commit_base_file_attributes_record(JCR *jcr, B_DB *mdb);
 bool db_create_base_file_list(JCR *jcr, B_DB *mdb, char *jobids);
@@ -97,7 +82,9 @@ int db_find_next_volume(JCR *jcr, B_DB *mdb, int index, bool InChanger, MEDIA_DB
 bool db_find_failed_job_since(JCR *jcr, B_DB *mdb, JOB_DBR *jr, POOLMEM *stime, int &JobLevel);
 
 /* sql_get.c */
-bool db_get_base_file_list(JCR *jcr, B_DB *mdb,
+bool db_get_volume_jobids(JCR *jcr, B_DB *mdb, 
+                         MEDIA_DBR *mr, db_list_ctx *lst);
+bool db_get_base_file_list(JCR *jcr, B_DB *mdb, bool use_md5,
                            DB_RESULT_HANDLER *result_handler,void *ctx);
 int db_get_path_record(JCR *jcr, B_DB *mdb);
 bool db_get_pool_record(JCR *jcr, B_DB *db, POOL_DBR *pdbr);
@@ -116,7 +103,9 @@ int db_get_job_volume_parameters(JCR *jcr, B_DB *mdb, JobId_t JobId, VOL_PARAMS 
 int db_get_client_record(JCR *jcr, B_DB *mdb, CLIENT_DBR *cdbr);
 int db_get_counter_record(JCR *jcr, B_DB *mdb, COUNTER_DBR *cr);
 bool db_get_query_dbids(JCR *jcr, B_DB *mdb, POOL_MEM &query, dbid_list &ids);
-bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids, DB_RESULT_HANDLER *result_handler, void *ctx);
+bool db_get_file_list(JCR *jcr, B_DB *mdb, char *jobids,
+                      bool use_md5, bool use_delta,
+                      DB_RESULT_HANDLER *result_handler, void *ctx);
 bool db_get_base_jobid(JCR *jcr, B_DB *mdb, JOB_DBR *jr, JobId_t *jobid);
 bool db_accurate_get_jobids(JCR *jcr, B_DB *mdb, JOB_DBR *jr, db_list_ctx *jobids);
 bool db_get_used_base_jobids(JCR *jcr, B_DB *mdb, POOLMEM *jobids, db_list_ctx *result);
@@ -125,6 +114,7 @@ enum e_list_type {
    HORZ_LIST,
    VERT_LIST
 };
+
 void db_list_pool_records(JCR *jcr, B_DB *db, POOL_DBR *pr, DB_LIST_HANDLER sendit, void *ctx, e_list_type type);
 void db_list_job_records(JCR *jcr, B_DB *db, JOB_DBR *jr, DB_LIST_HANDLER sendit, void *ctx, e_list_type type);
 void db_list_job_totals(JCR *jcr, B_DB *db, JOB_DBR *jr, DB_LIST_HANDLER sendit, void *ctx);

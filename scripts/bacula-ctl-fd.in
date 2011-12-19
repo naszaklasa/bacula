@@ -208,7 +208,11 @@ case "$1" in
 	    OPTIONS="${OPTIONS} -g ${FD_GROUP}"
 	 fi
 
-	 ${BACFDBIN}/bacula-fd $2 $3 ${OPTIONS} -v -c ${BACFDCFG}/bacula-fd.conf
+	 if [ "x${VALGRIND_FD}" = "x1" ]; then
+	    valgrind --leak-check=full ${BACFDBIN}/bacula-fd $2 $3 ${OPTIONS} -v -c ${BACFDCFG}/bacula-fd.conf
+	 else
+	    ${BACFDBIN}/bacula-fd $2 $3 ${OPTIONS} -v -c ${BACFDCFG}/bacula-fd.conf
+	 fi
       }
       ;;
 

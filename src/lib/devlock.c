@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2001-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2001-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -513,9 +513,9 @@ int main (int argc, char *argv[])
     int thread_writes = 0;
     int data_writes = 0;
 
-#ifdef sun
+#ifdef USE_THR_SETCONCURRENCY
     /*
-     * On Solaris 2.5, threads are not timesliced. To ensure
+     * On Solaris 2.5,2.6,7 and 8 threads are not timesliced. To ensure
      * that our threads can run concurrently, we need to
      * increase the concurrency level to THREADS.
      */
@@ -596,7 +596,7 @@ int main (int argc, char *argv[])
  *
  * Demonstrate use of non-blocking read-write locks.
  *
- * Special notes: On a Solaris system, call thr_setconcurrency()
+ * Special notes: On older Solaris system, call thr_setconcurrency()
  * to allow interleaved thread execution, since threads are not
  * timesliced.
  */
@@ -686,9 +686,9 @@ int main (int argc, char *argv[])
     int thread_updates = 0, data_updates = 0;
     int status;
 
-#ifdef sun
+#ifdef USE_THR_SETCONCURRENCY
     /*
-     * On Solaris 2.5, threads are not timesliced. To ensure
+     * On Solaris 2.5,2.6,7 and 8 threads are not timesliced. To ensure
      * that our threads can run concurrently, we need to
      * increase the concurrency level to THREADS.
      */

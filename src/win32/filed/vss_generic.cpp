@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2005-2008 Free Software Foundation Europe e.V.
+   Copyright (C) 2005-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -38,6 +38,7 @@
 #ifdef WIN32_VSS
 
 #include "bacula.h"
+#include "jcr.h"
 
 #undef setlocale
 
@@ -81,10 +82,10 @@ class IXMLDOMDocument;
 #endif
 
 /* Reduce compiler warnings from Windows vss code */
+#undef uuid
 #define uuid(x)
 
 #ifdef B_VSS_XP
-// #pragma message("compile VSS for Windows XP")   
    #define VSSClientGeneric VSSClientXP
    
    #include "inc/WinXP/vss.h"
@@ -94,7 +95,6 @@ class IXMLDOMDocument;
 #endif
 
 #ifdef B_VSS_W2K3
-// #pragma message("compile VSS for Windows 2003")
    #define VSSClientGeneric VSSClient2003
    
    #include "inc/Win2003/vss.h"
@@ -103,7 +103,6 @@ class IXMLDOMDocument;
 #endif
 
 #ifdef B_VSS_VISTA
-// #pragma message("compile VSS for Vista")
    #define VSSClientGeneric VSSClientVista
 
    #include "inc/Win2003/vss.h"
@@ -232,12 +231,15 @@ VSSClientGeneric::~VSSClientGeneric()
 }
 
 // Initialize the COM infrastructure and the internal pointers
-BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
+bool VSSClientGeneric::Initialize(DWORD dwContext, bool bDuringRestore, bool (*VssInitCallback)(JCR *, int))
 {
+   CComPtr<IVssAsync>  pAsync1;
+   VSS_BACKUP_TYPE backup_type;
+
    if (!(p_CreateVssBackupComponents && p_VssFreeSnapshotProperties)) {
       Dmsg2(0, "VSSClientGeneric::Initialize: p_CreateVssBackupComponents = 0x%08X, p_VssFreeSnapshotProperties = 0x%08X\n", p_CreateVssBackupComponents, p_VssFreeSnapshotProperties);
       errno = ENOSYS;
-      return FALSE;
+      return false;
    }
 
    HRESULT hr;
@@ -247,7 +249,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
       if (FAILED(hr)) {
          Dmsg1(0, "VSSClientGeneric::Initialize: CoInitialize returned 0x%08X\n", hr);
          errno = b_errno_win32;
-         return FALSE;
+         return false;
       }
       m_bCoInitializeCalled = true;
    }
@@ -270,7 +272,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
       if (FAILED(hr)) {
          Dmsg1(0, "VSSClientGeneric::Initialize: CoInitializeSecurity returned 0x%08X\n", hr);
          errno = b_errno_win32;
-         return FALSE;
+         return false;
       }
       m_bCoInitializeSecurityCalled = true;
    }
@@ -288,7 +290,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
       Dmsg2(0, "VSSClientGeneric::Initialize: CreateVssBackupComponents returned 0x%08X. ERR=%s\n",
             hr, be.bstrerror(b_errno_win32));
       errno = b_errno_win32;
-      return FALSE;
+      return false;
    }
 
 #if   defined(B_VSS_W2K3) || defined(B_VSS_VISTA)
@@ -297,7 +299,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
       if (FAILED(hr)) {
          Dmsg1(0, "VSSClientGeneric::Initialize: IVssBackupComponents->SetContext returned 0x%08X\n", hr);
          errno = b_errno_win32;
-         return FALSE;
+         return false;
       }
    }
 #endif
@@ -308,27 +310,98 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
       if (FAILED(hr)) {
          Dmsg1(0, "VSSClientGeneric::Initialize: IVssBackupComponents->InitializeForBackup returned 0x%08X\n", hr);
          errno = b_errno_win32; 
-         return FALSE;
+         return false;
       }
  
       // 2. SetBackupState
-      hr = ((IVssBackupComponents*) m_pVssObject)->SetBackupState(true, true, VSS_BT_FULL, false);
+      switch (m_jcr->getJobLevel())
+      {
+      case L_FULL:
+         backup_type = VSS_BT_FULL;
+         break;
+      case L_DIFFERENTIAL:
+         backup_type = VSS_BT_DIFFERENTIAL;
+         break;
+      case L_INCREMENTAL:
+         backup_type = VSS_BT_INCREMENTAL;
+         break;
+      default:
+         Dmsg1(0, "VSSClientGeneric::Initialize: unknown backup level %d\n", m_jcr->getJobLevel());
+         backup_type = VSS_BT_FULL;
+         break;
+      }
+      hr = ((IVssBackupComponents*) m_pVssObject)->SetBackupState(true, true, backup_type, false);
       if (FAILED(hr)) {
          Dmsg1(0, "VSSClientGeneric::Initialize: IVssBackupComponents->SetBackupState returned 0x%08X\n", hr);
          errno = b_errno_win32;
-         return FALSE;
+         return false;
       }
 
-      CComPtr<IVssAsync>  pAsync1;
       // 3. GatherWriterMetaData
       hr = ((IVssBackupComponents*) m_pVssObject)->GatherWriterMetadata(&pAsync1.p);
       if (FAILED(hr)) {
          Dmsg1(0, "VSSClientGeneric::Initialize: IVssBackupComponents->GatherWriterMetadata returned 0x%08X\n", hr);
          errno = b_errno_win32;
-         return FALSE;
+         return false;
       }
       // Waits for the async operation to finish and checks the result
       WaitAndCheckForAsyncOperation(pAsync1.p);
+   } else {
+ 
+   /*
+    * Initialize for restore
+    */
+
+      HRESULT hr;
+
+#if 0
+      WCHAR *xml;
+      int fd;
+      struct stat stat;
+      /* obviously this is just temporary - the xml should come from somewhere like the catalog */
+      fd = open("C:\\james.xml", O_RDONLY);
+      Dmsg1(0, "fd = %d\n", fd);
+      fstat(fd, &stat);
+      Dmsg1(0, "size = %d\n", stat.st_size);
+      xml = new WCHAR[stat.st_size / sizeof(WCHAR) + 1];
+      read(fd, xml, stat.st_size);
+      close(fd);
+      xml[stat.st_size / sizeof(WCHAR)] = 0;
+#endif
+
+      // 1. InitializeForRestore
+      hr = ((IVssBackupComponents*) m_pVssObject)->InitializeForRestore(m_metadata);
+      if (FAILED(hr)) {
+         Dmsg1(0, "VSSClientGeneric::Initialize: IVssBackupComponents->InitializeForRestore returned 0x%08X\n", hr);
+         errno = b_errno_win32;
+         return false;
+      }
+      VssInitCallback(m_jcr, VSS_INIT_RESTORE_AFTER_INIT);
+
+      // 2. GatherWriterMetaData
+      hr = ((IVssBackupComponents*) m_pVssObject)->GatherWriterMetadata(&pAsync1.p);
+      if (FAILED(hr)) {
+         Dmsg1(0, "VSSClientGeneric::Initialize: IVssBackupComponents->GatherWriterMetadata returned 0x%08X\n", hr);
+         errno = b_errno_win32;
+         return false;
+      }
+      WaitAndCheckForAsyncOperation(pAsync1.p);
+      VssInitCallback(m_jcr, VSS_INIT_RESTORE_AFTER_GATHER);
+
+      // 3. PreRestore
+      hr = ((IVssBackupComponents*) m_pVssObject)->PreRestore(&pAsync1.p);
+      if (FAILED(hr)) {
+         Dmsg1(0, "VSSClientGeneric::Initialize: IVssBackupComponents->PreRestore returned 0x%08X\n", hr);
+         errno = b_errno_win32;
+         return false;
+      }
+      WaitAndCheckForAsyncOperation(pAsync1.p);
+      /* get latest info about writer status */
+      if (!CheckWriterStatus()) {
+         Dmsg0(0, "VSSClientGeneric::InitializePostPlugin: Failed to CheckWriterstatus\n");
+         errno = b_errno_win32;
+         return false;
+      }
    }
 
    // We are during restore now?
@@ -337,11 +410,10 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
    // Keep the context
    m_dwContext = dwContext;
 
-   return TRUE;
+   return true;
 }
 
-
-BOOL VSSClientGeneric::WaitAndCheckForAsyncOperation(IVssAsync* pAsync)
+bool VSSClientGeneric::WaitAndCheckForAsyncOperation(IVssAsync* pAsync)
 {
    // Wait until the async operation finishes
    // unfortunately we can't use a timeout here yet.
@@ -368,7 +440,7 @@ BOOL VSSClientGeneric::WaitAndCheckForAsyncOperation(IVssAsync* pAsync)
    } while ((timeout-- > 0) && (hrReturned == VSS_S_ASYNC_PENDING));
 
    if (hrReturned == VSS_S_ASYNC_FINISHED)
-      return TRUE;
+      return true;
 
    
 #ifdef xDEBUG 
@@ -389,10 +461,10 @@ BOOL VSSClientGeneric::WaitAndCheckForAsyncOperation(IVssAsync* pAsync)
    }
 #endif
 
-   return FALSE;
+   return false;
 }
 
-BOOL VSSClientGeneric::CreateSnapshots(char* szDriveLetters)
+bool VSSClientGeneric::CreateSnapshots(char* szDriveLetters)
 {
    /* szDriveLetters contains all drive letters in uppercase */
    /* if a drive can not being added, it's converted to lowercase in szDriveLetters */
@@ -400,7 +472,7 @@ BOOL VSSClientGeneric::CreateSnapshots(char* szDriveLetters)
    
    if (!m_pVssObject || m_bBackupIsInitialized) {
       errno = ENOSYS;
-      return FALSE;  
+      return false;  
    }
 
    m_uidCurrentSnapshotSet = GUID_NULL;
@@ -437,7 +509,7 @@ BOOL VSSClientGeneric::CreateSnapshots(char* szDriveLetters)
    /* PrepareForBackup */
    if (FAILED(pVss->PrepareForBackup(&pAsync1.p))) {      
       errno = b_errno_win32;
-      return FALSE;   
+      return false;   
    }
    
    // Waits for the async operation to finish and checks the result
@@ -446,13 +518,13 @@ BOOL VSSClientGeneric::CreateSnapshots(char* szDriveLetters)
    /* get latest info about writer status */
    if (!CheckWriterStatus()) {
       errno = b_errno_win32;
-      return FALSE;
+      return false;
    }
 
    /* DoSnapShotSet */   
    if (FAILED(pVss->DoSnapshotSet(&pAsync2.p))) {      
       errno = b_errno_win32;
-      return FALSE;   
+      return false;   
    }
 
    // Waits for the async operation to finish and checks the result
@@ -465,12 +537,15 @@ BOOL VSSClientGeneric::CreateSnapshots(char* szDriveLetters)
 
    m_bBackupIsInitialized = true;
 
-   return TRUE;
+   return true;
 }
 
-BOOL VSSClientGeneric::CloseBackup()
+bool VSSClientGeneric::CloseBackup()
 {
-   BOOL bRet = FALSE;
+   bool bRet = false;
+   HRESULT hr;
+   BSTR xml;
+
    if (!m_pVssObject)
       errno = ENOSYS;
    else {
@@ -481,10 +556,27 @@ BOOL VSSClientGeneric::CloseBackup()
 
       m_bBackupIsInitialized = false;
 
+      hr = pVss->SaveAsXML(&xml);
+      if (hr == ERROR_SUCCESS)
+         m_metadata = xml;
+      else
+         m_metadata = NULL;
+#if 0
+{
+   HRESULT hr;
+   BSTR xml;
+   int fd;
+
+   hr = pVss->SaveAsXML(&xml);
+   fd = open("C:\\james.xml", O_CREAT | O_WRONLY | O_TRUNC, 0777);
+   write(fd, xml, wcslen(xml) * sizeof(WCHAR));
+   close(fd);
+}
+#endif
       if (SUCCEEDED(pVss->BackupComplete(&pAsync.p))) {
          // Waits for the async operation to finish and checks the result
          WaitAndCheckForAsyncOperation(pAsync.p);
-         bRet = TRUE;     
+         bRet = true;     
       } else {
          errno = b_errno_win32;
          pVss->AbortBackup();
@@ -500,7 +592,7 @@ BOOL VSSClientGeneric::CloseBackup()
          pVss->DeleteSnapshots(
             m_uidCurrentSnapshotSet, 
             VSS_OBJECT_SNAPSHOT_SET,
-            FALSE,
+            false,
             &lSnapshots,
             &idNonDeletedSnapshotID);
 
@@ -518,6 +610,37 @@ BOOL VSSClientGeneric::CloseBackup()
    }
 
    return bRet;
+}
+
+WCHAR *VSSClientGeneric::GetMetadata()
+{
+   return m_metadata;
+}
+
+bool VSSClientGeneric::CloseRestore()
+{
+   HRESULT hr;
+   IVssBackupComponents* pVss = (IVssBackupComponents*) m_pVssObject;
+   CComPtr<IVssAsync> pAsync;
+
+   if (!pVss)
+   {
+      errno = ENOSYS;
+      return false;
+   }
+   if (SUCCEEDED(hr = pVss->PostRestore(&pAsync.p))) {
+      // Waits for the async operation to finish and checks the result
+      WaitAndCheckForAsyncOperation(pAsync.p);
+      /* get latest info about writer status */
+      if (!CheckWriterStatus()) {
+         errno = b_errno_win32;
+         return false;
+      }
+   } else {
+      errno = b_errno_win32;
+      return false;
+   }
+   return true;
 }
 
 // Query all the shadow copies in the given set
@@ -578,7 +701,7 @@ void VSSClientGeneric::QuerySnapshotSet(GUID snapshotSetID)
 }
 
 // Check the status for all selected writers
-BOOL VSSClientGeneric::CheckWriterStatus()
+bool VSSClientGeneric::CheckWriterStatus()
 {
     /* 
     http://msdn.microsoft.com/library/default.asp?url=/library/en-us/vss/base/ivssbackupcomponents_startsnapshotset.asp
@@ -592,7 +715,7 @@ BOOL VSSClientGeneric::CheckWriterStatus()
     HRESULT hr = pVss->GatherWriterStatus(&pAsync.p);
     if (FAILED(hr)) {
        errno = b_errno_win32;
-       return FALSE;
+       return false;
     } 
 
     // Waits for the async operation to finish and checks the result
@@ -603,7 +726,7 @@ BOOL VSSClientGeneric::CheckWriterStatus()
     hr = pVss->GetWriterStatusCount(&cWriters);
     if (FAILED(hr)) {
        errno = b_errno_win32;
-       return FALSE;
+       return false;
     }
 
     int nState;
@@ -671,11 +794,11 @@ BOOL VSSClientGeneric::CheckWriterStatus()
 
     if (FAILED(hr)) {
         errno = b_errno_win32;
-        return FALSE;
+        return false;
     } 
 
     errno = 0;
-    return TRUE;
+    return true;
 }
 
 #endif /* WIN32_VSS */

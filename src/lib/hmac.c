@@ -5,7 +5,6 @@
  *
  * Adapted to Bacula by Kern E. Sibbald, February MMI.
  *
- *   Version $Id$
  */
 /*
    Bacula® - The Network Backup Solution

@@ -169,6 +169,8 @@ extern "C" {
 
 #include "version.h"
 #include "bc_types.h"
+#include "streams.h"
+#include "filetypes.h"
 #include "baconfig.h"
 #include "lib/lib.h"
 

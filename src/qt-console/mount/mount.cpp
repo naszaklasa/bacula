@@ -40,7 +40,7 @@
 /*
  * A constructor 
  */
-mountDialog::mountDialog(Console *console, QString &storageName)
+mountDialog::mountDialog(Console *console, QString &storageName) : QDialog()
 {
    m_console = console;
    m_storageName = storageName;

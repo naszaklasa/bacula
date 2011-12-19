@@ -3,7 +3,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2007 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -28,8 +28,6 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id$
- *
  *   Dirk Bartley, March 2007
  */
 
@@ -55,15 +53,15 @@ class Console;
 class Pages : public QWidget
 {
 public:
+   /* methods */
    Pages();
    void dockPage();
    void undockPage();
+   void hidePage();
    void togglePageDocking();
    bool isDocked();
    bool isOnceDocked();
    bool isCloseable();
-   QTabWidget *m_parent;
-   QList<QAction*> m_contextActions;
    virtual void PgSeltreeWidgetClicked();
    virtual void currentStackItem();
    void closeStackPage();
@@ -80,11 +78,17 @@ public:
    void getStatusList(QStringList &);
    void firstUseDock();
 
+   /* members */
+   QTabWidget *m_parent;
+   QList<QAction*> m_contextActions;
+
+
 public slots:
    /* closeEvent is a virtual function inherited from QWidget */
    virtual void closeEvent(QCloseEvent* event);
 
 protected:
+   /* methods */
    void pgInitialize();
    void pgInitialize(const QString &);
    void pgInitialize(const QString &, QTreeWidgetItem *);
@@ -92,6 +96,8 @@ protected:
    virtual void changeEvent(QEvent *event);
    void setConsoleCurrent();
    void setTitle();
+
+   /* members */
    bool m_closeable;
    bool m_docked;
    bool m_onceDocked;

@@ -62,8 +62,8 @@ typedef enum {
 
    /* Only if File Version record */
    BVFS_Md5     = 3,
-   BVFS_VolName = 4,
-   BVFS_VolInchanger = 5
+   BVFS_VolName = 7,
+   BVFS_VolInchanger = 8
 } bvfs_row_index;
 
 class Bvfs {
@@ -72,13 +72,8 @@ public:
    Bvfs(JCR *j, B_DB *mdb);
    virtual ~Bvfs();
 
-   void set_jobid(JobId_t id) {
-      Mmsg(jobids, "%lld", (uint64_t)id);
-   }
-
-   void set_jobids(char *ids) {
-      pm_strcpy(jobids, ids);
-   }
+   void set_jobid(JobId_t id);
+   void set_jobids(char *ids);
 
    void set_limit(uint32_t max) {
       limit = max;
@@ -89,8 +84,8 @@ public:
    }
 
    void set_pattern(char *p) {
-      uint32_t len = strlen(p)*2+1;
-      pattern = check_pool_memory_size(pattern, len);
+      uint32_t len = strlen(p);
+      pattern = check_pool_memory_size(pattern, len*2+1);
       db_escape_string(jcr, db, pattern, p, len);
    }
 
@@ -117,12 +112,20 @@ public:
 
    void update_cache();
 
-   void set_see_all_version(bool val) {
-      see_all_version = val;
+   void set_see_all_versions(bool val) {
+      see_all_versions = val;
    }
 
    void set_see_copies(bool val) {
       see_copies = val;
+   }
+
+   void filter_jobid();         /* Call after set_username */
+
+   void set_username(char *user) {
+      if (user) {
+         username = bstrdup(user);
+      }
    }
 
    void set_handler(DB_RESULT_HANDLER *h, void *ctx) {
@@ -150,6 +153,16 @@ public:
       offset+=limit;
    }
 
+   /* Clear all cache */
+   void clear_cache();
+
+   /* Compute restore list */
+   bool compute_restore_list(char *fileid, char *dirid, char *hardlink, 
+                             char *output_table);
+   
+   /* Drop previous restore list */
+   bool drop_restore_list(char *output_table);
+
    /* for internal use */
    int _handle_path(void *, int, char **);
    
@@ -160,6 +173,7 @@ private:
    JCR *jcr;
    B_DB *db;
    POOLMEM *jobids;
+   char *username;              /* Used with Bweb */
    uint32_t limit;
    uint32_t offset;
    uint32_t nb_record;          /* number of records of the last query */
@@ -169,7 +183,7 @@ private:
    POOLMEM *prev_dir; /* ls_dirs query returns all versions, take the 1st one */
    ATTR *attr;        /* Can be use by handler to call decode_stat() */
 
-   bool see_all_version;
+   bool see_all_versions;
    bool see_copies;
 
    DBId_t get_dir_filenameid();
@@ -180,6 +194,8 @@ private:
 
 #define bvfs_is_dir(row) ((row)[BVFS_Type][0] == BVFS_DIR_RECORD)
 #define bvfs_is_file(row) ((row)[BVFS_Type][0] == BVFS_FILE_RECORD)
+#define bvfs_is_version(row) ((row)[BVFS_Type][0] == BVFS_FILE_VERSION)
+
 
 void bvfs_update_path_hierarchy_cache(JCR *jcr, B_DB *mdb, char *jobids);
 void bvfs_update_cache(JCR *jcr, B_DB *mdb);

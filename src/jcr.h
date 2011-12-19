@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -112,8 +112,7 @@ enum {
 #define job_canceled(jcr) \
   (jcr->JobStatus == JS_Canceled || \
    jcr->JobStatus == JS_ErrorTerminated || \
-   jcr->JobStatus == JS_FatalError || \
-   jcr->JobStatus == JS_Incomplete \
+   jcr->JobStatus == JS_FatalError \
   )
 
 #define job_waiting(jcr) \
@@ -143,7 +142,7 @@ enum {
 /* Forward referenced structures */
 class JCR;
 struct FF_PKT;
-struct B_DB;
+class  B_DB;
 struct ATTR_DBR;
 struct Plugin;
 struct save_pkt;
@@ -188,10 +187,14 @@ public:
    void init_mutex(void) {pthread_mutex_init(&mutex, NULL); };
    void destroy_mutex(void) {pthread_mutex_destroy(&mutex); };
    bool is_job_canceled() {return job_canceled(this); };
-   void set_JobLevel(int32_t JobLevel) { m_JobLevel = JobLevel; };
+   bool is_canceled() {return job_canceled(this); };
+   bool is_incomplete() { return JobStatus == JS_Incomplete; };
+   bool is_JobLevel(int32_t JobLevel) { return JobLevel == m_JobLevel; };
+   bool is_JobType(int32_t JobType) { return JobType == m_JobType; };
+   bool is_JobStatus(int32_t aJobStatus) { return aJobStatus == JobStatus; };
    void setJobLevel(int32_t JobLevel) { m_JobLevel = JobLevel; };
-   void set_JobType(int32_t JobType) { m_JobType = JobType; };
    void setJobType(int32_t JobType) { m_JobType = JobType; };
+   void forceJobStatus(int32_t aJobStatus) { JobStatus = aJobStatus; };
    int32_t getJobType() const { return m_JobType; };
    int32_t getJobLevel() const { return m_JobLevel; };
    int32_t getJobStatus() const { return JobStatus; };
@@ -256,29 +259,33 @@ public:
    bool prefix_links;                 /* Prefix links with Where path */
    bool gui;                          /* set if gui using console */
    bool authenticated;                /* set when client authenticated */
+   bool cached_attribute;             /* set if attribute is cached */
+   bool batch_started;                /* is batch mode already started ? */
+   bool cmd_plugin;                   /* Set when processing a command Plugin = */
+   bool keep_path_list;               /* Keep newly created path in a hash */
+   bool accurate;                     /* true if job is accurate */
+   bool HasBase;                      /* True if job use base jobs */
+   bool rerunning;                    /* rerunning an incomplete job */
+
    void *Python_job;                  /* Python Job Object */
    void *Python_events;               /* Python Events Object */
-
-   bool cached_attribute;             /* set if attribute is cached */
    POOLMEM *attr;                     /* Attribute string from SD */
    B_DB *db;                          /* database pointer */
    B_DB *db_batch;                    /* database pointer for batch and accurate */
-   bool batch_started;                /* is batch mode already started ? */
-   bool HasBase;                      /* True if job use base jobs */
    uint64_t nb_base_files;            /* Number of base files */
    uint64_t nb_base_files_used;       /* Number of useful files in base */
 
    ATTR_DBR *ar;                      /* DB attribute record */
    guid_list *id_list;                /* User/group id to name list */
-   bool accurate;                     /* true if job is accurate */
 
    bpContext *plugin_ctx_list;        /* list of contexts for plugins */
    bpContext *plugin_ctx;             /* current plugin context */
    Plugin *plugin;                    /* plugin instance */
    save_pkt *plugin_sp;               /* plugin save packet */
    char *plugin_options;              /* user set options for plugin */
-   bool cmd_plugin;                   /* Set when processing a command Plugin = */
    POOLMEM *comment;                  /* Comment for this Job */
+   int64_t max_bandwidth;             /* Bandwidth limit for this Job */
+   htable *path_list;                 /* Directory list (used by findlib) */
 
    /* Daemon specific part of JCR */
    /* This should be empty in the library */
@@ -302,11 +309,6 @@ public:
    POOL *full_pool;                   /* Full backup pool resource */
    POOL *inc_pool;                    /* Incremental backup pool resource */
    POOL *diff_pool;                   /* Differential backup pool resource */
-   bool run_pool_override;
-   bool run_full_pool_override;
-   bool run_inc_pool_override;
-   bool run_diff_pool_override;
-   bool sd_canceled;                  /* set if SD canceled */
    FILESET *fileset;                  /* FileSet resource */
    CAT *catalog;                      /* Catalog resource */
    MSGS *messages;                    /* Default message handler */
@@ -318,6 +320,7 @@ public:
    uint32_t ExpectedFiles;            /* Expected restore files */
    uint32_t MediaId;                  /* DB record IDs associated with this job */
    uint32_t FileIndex;                /* Last FileIndex processed */
+   utime_t MaxRunSchedTime;           /* max run time in seconds from Scheduled time*/
    POOLMEM *fname;                    /* name to put into catalog */
    JOB_DBR jr;                        /* Job DB record for current job */
    JOB_DBR previous_jr;               /* previous job database record */
@@ -340,6 +343,8 @@ public:
    int32_t reschedule_count;          /* Number of times rescheduled */
    int32_t FDVersion;                 /* File daemon version number */
    int64_t spool_size;                /* Spool size for this job */
+   bool wasVirtualFull;               /* set if job was VirtualFull */
+   bool IgnoreDuplicateJobChecking;   /* set in migration jobs */
    bool spool_data;                   /* Spool data in SD */
    bool acquired_resource_locks;      /* set if resource locks acquired */
    bool term_wait_inited;             /* Set when cond var inited */
@@ -354,6 +359,11 @@ public:
    bool no_maxtime;                   /* Don't check Max*Time for this JCR */
    bool keep_sd_auth_key;             /* Clear or not the SD auth key after connection*/
    bool use_accurate_chksum;          /* Use or not checksum option in accurate code */
+   bool run_pool_override;
+   bool run_full_pool_override;
+   bool run_inc_pool_override;
+   bool run_diff_pool_override;
+   bool sd_canceled;                  /* set if SD canceled */
 #endif /* DIRECTOR_DAEMON */
 
 
@@ -373,6 +383,7 @@ public:
    POOLMEM *compress_buf;             /* Compression buffer */
    int32_t compress_buf_size;         /* Length of compression buffer */
    void *pZLIB_compress_workset;      /* zlib compression session data */
+   void *LZO_compress_workset;        /* lzo compression session data */
    int32_t replace;                   /* Replace options */
    int32_t buf_size;                  /* length of buffer */
    FF_PKT *ff;                        /* Find Files packet */
@@ -428,6 +439,7 @@ public:
    bool write_part_after_job;         /* Set to write part after job */
    bool PreferMountedVols;            /* Prefer mounted vols rather than new */
    bool Resched;                      /* Job may be rescheduled */
+   bool bscan_insert_jobmedia_records; /*Bscan: needs to insert job media records */
 
    /* Parmaters for Open Read Session */
    BSR *bsr;                          /* Bootstrap record -- has everything */

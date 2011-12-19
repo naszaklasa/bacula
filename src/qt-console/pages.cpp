@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -26,8 +26,6 @@
    Switzerland, email:ftf@fsfeurope.org.
 */
 /*
- *   Version $Id$
- *
  *   Dirk Bartley, March 2007
  */
 
@@ -52,12 +50,14 @@ bool isWin32Path(QString &fullPath)
 }
 
 /* Need to initialize variables here */
-Pages::Pages()
+Pages::Pages() : QWidget()
 {
    m_docked = false;
    m_onceDocked = false;
    m_closeable = true;
    m_dockOnFirstUse = true;
+   m_console = NULL;
+   m_parent = NULL;
 }
 
 /* first Use Dock */
@@ -176,6 +176,20 @@ bool Pages::isCloseable()
    return m_closeable;
 }
 
+void Pages::hidePage()
+{
+   if (!m_parent || (m_parent->indexOf(this) <= 0)) {
+      return;
+   }
+   /* Remove any tab that may exist */
+   m_parent->removeTab(m_parent->indexOf(this));
+   hide();
+   /* Clear docked flag */
+   m_docked = false;
+   /* The window has been undocked, lets change the context menu */
+   setContextMenuDockText();
+}
+
 /*
  * When a window is closed, this slot is called.  The idea is to put it back in the
  * stack here, and it works.  I wanted to get it to the top of the stack so that the
@@ -225,9 +239,11 @@ void Pages::closeStackPage()
    /* First get the tree widget item and destroy it */
    QTreeWidgetItem *item=mainWin->getFromHash(this);
    /* remove the QTreeWidgetItem <-> page from the hash */
-   mainWin->hashRemove(item, this);
-   /* remove the item from the page selector by destroying it */
-   delete item;
+   if (item) {
+      mainWin->hashRemove(item, this);
+      /* remove the item from the page selector by destroying it */
+      delete item;
+   }
    /* remove this */
    delete this;
 }
@@ -285,6 +301,7 @@ void Pages::consoleCommand(QString &command)
 {
    consoleCommand(command, true);
 }
+
 void Pages::consoleCommand(QString &command, bool setCurrent)
 {
    int conn;
@@ -298,10 +315,12 @@ void Pages::consoleCommand(QString &command, bool setCurrent)
       if (donotify) { m_console->notify(conn, true); }
    }
 }
+
 void Pages::consoleCommand(QString &command, int conn)
 {
    consoleCommand(command, conn, true);
 }
+
 void Pages::consoleCommand(QString &command, int conn, bool setCurrent)
 {
    /* Bring this director's console to the front of the stack */

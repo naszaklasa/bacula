@@ -42,6 +42,7 @@
 
 #include "bacula.h"
 #include "find.h"
+#include "ch.h"
 
 #include <sys/types.h>
 
@@ -185,10 +186,19 @@ void add_fname_to_include_list(FF_PKT *ff, int prefixed, const char *fname)
          case 'A':
             inc->options |= FO_ACL;
             break;
-         case 'Z':                 /* gzip compression */
-            inc->options |= FO_GZIP;
-            inc->level = *++rp - '0';
-            Dmsg1(200, "Compression level=%d\n", inc->level);
+         case 'Z':                 /* compression */
+            rp++;                   /* skip Z */
+            if (*rp >= '0' && *rp <= '9') {
+               inc->options |= FO_COMPRESS;
+               inc->algo = COMPRESS_GZIP;
+               inc->level = *rp - '0';
+            }
+            else if (*rp == 'o') {
+               inc->options |= FO_COMPRESS;
+               inc->algo = COMPRESS_LZO1X;
+               inc->level = 1; /* not used with LZO */
+            }
+            Dmsg2(200, "Compression alg=%d level=%d\n", inc->algo, inc->level);
             break;
          case 'K':
             inc->options |= FO_NOATIME;
@@ -246,8 +256,8 @@ void add_fname_to_include_list(FF_PKT *ff, int prefixed, const char *fname)
          { }
       next->next = inc;
    }
-   Dmsg3(100, "add_fname_to_include prefix=%d gzip=%d fname=%s\n", 
-         prefixed, !!(inc->options & FO_GZIP), inc->fname);
+   Dmsg4(100, "add_fname_to_include prefix=%d compres=%d alg= %d fname=%s\n", 
+         prefixed, !!(inc->options & FO_COMPRESS), inc->algo, inc->fname);
 }
 
 /*
@@ -302,7 +312,8 @@ struct s_included_file *get_next_included_file(FF_PKT *ff, struct s_included_fil
     */
    if (inc) {
       ff->flags = inc->options;
-      ff->GZIP_level = inc->level;
+      ff->Compress_algo = inc->algo;
+      ff->Compress_level = inc->level;
    }
    return inc;
 }

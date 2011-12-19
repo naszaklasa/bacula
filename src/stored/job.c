@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -49,22 +49,11 @@ extern bool do_mac(JCR *jcr);
 static char jobcmd[] = "JobId=%d job=%127s job_name=%127s client_name=%127s "
       "type=%d level=%d FileSet=%127s NoAttr=%d SpoolAttr=%d FileSetMD5=%127s "
       "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d SpoolSize=%s "
-      "Resched=%d\n";
-static char oldjobcmd[] = "JobId=%d job=%127s job_name=%127s client_name=%127s "
-      "type=%d level=%d FileSet=%127s NoAttr=%d SpoolAttr=%d FileSetMD5=%127s "
-      "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d SpoolSize=%s\n";
-static char oldoldjobcmd[] = "JobId=%d job=%127s job_name=%127s client_name=%127s "
-      "type=%d level=%d FileSet=%127s NoAttr=%d SpoolAttr=%d FileSetMD5=%127s "
-      "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d\n";
-
-
+      "rerunning=%d VolSessionId=%d VolSessionTime=%d\n";
 
 /* Responses sent to Director daemon */
 static char OKjob[]     = "3000 OK Job SDid=%u SDtime=%u Authorization=%s\n";
 static char BAD_job[]   = "3915 Bad Job command. stat=%d CMD: %s\n";
-//static char OK_query[]  = "3001 OK query\n";
-//static char NO_query[]  = "3918 Query failed\n";
-//static char BAD_query[] = "3917 Bad query command: %s\n";
 
 /*
  * Director requests us to start a job
@@ -86,7 +75,6 @@ bool job_cmd(JCR *jcr)
    POOL_MEM job_name, client_name, job, fileset_name, fileset_md5;
    int JobType, level, spool_attributes, no_attributes, spool_data;
    int write_part_after_job, PreferMountedVols;
-   int Resched = 0;
    int stat;
    JCR *ojcr;
 
@@ -100,30 +88,16 @@ bool job_cmd(JCR *jcr)
               &JobType, &level, fileset_name.c_str(), &no_attributes,
               &spool_attributes, fileset_md5.c_str(), &spool_data,
               &write_part_after_job, &PreferMountedVols, spool_size,
-              &Resched);
-   if (stat != 15) {
-      /* Try old version */
-      stat = sscanf(dir->msg, oldjobcmd, &JobId, job.c_str(), job_name.c_str(),
-                 client_name.c_str(),
-                 &JobType, &level, fileset_name.c_str(), &no_attributes,
-                 &spool_attributes, fileset_md5.c_str(), &spool_data,
-                 &write_part_after_job, &PreferMountedVols, spool_size);
-      if (stat != 14) {
-         /* Try oldold version */
-         stat = sscanf(dir->msg, oldoldjobcmd, &JobId, job.c_str(), job_name.c_str(),
-                 client_name.c_str(),
-                 &JobType, &level, fileset_name.c_str(), &no_attributes,
-                 &spool_attributes, fileset_md5.c_str(), &spool_data,
-                 &write_part_after_job, &PreferMountedVols);
-         if (stat != 13) {
-            pm_strcpy(jcr->errmsg, dir->msg);
-            dir->fsend(BAD_job, stat, jcr->errmsg);
-            Dmsg1(100, ">dird: %s", dir->msg);
-            set_jcr_job_status(jcr, JS_ErrorTerminated);
-            return false;
-         }
-      }
+              &jcr->rerunning, &jcr->VolSessionId, &jcr->VolSessionTime);
+   if (stat != 17) {
+      pm_strcpy(jcr->errmsg, dir->msg);
+      dir->fsend(BAD_job, stat, jcr->errmsg);
+      Dmsg1(100, ">dird: %s", dir->msg);
+      jcr->setJobStatus(JS_ErrorTerminated);
+      return false;
    }
+   Dmsg3(100, "==== rerunning=%d VolSesId=%d VolSesTime=%d\n", jcr->rerunning,
+         jcr->VolSessionId, jcr->VolSessionTime);
    /*
     * Since this job could be rescheduled, we
     *  check to see if we have it already. If so
@@ -131,13 +105,20 @@ bool job_cmd(JCR *jcr)
     */
    ojcr = get_jcr_by_full_name(job.c_str());
    if (ojcr && !ojcr->authenticated) {
-      Dmsg2(100, "Found ojcr=0x%x Job %s\n", (unsigned)(long)ojcr, job.c_str());
+      Dmsg2(100, "Found ojcr=0x%x Job %s\n", (unsigned)(intptr_t)ojcr, job.c_str());
       free_jcr(ojcr);
    }
    jcr->JobId = JobId;
    Dmsg2(800, "Start JobId=%d %p\n", JobId, jcr);
-   jcr->VolSessionId = newVolSessionId();
-   jcr->VolSessionTime = VolSessionTime;
+   /*
+    * If job rescheduled because previous was incomplete,
+    * the Resched flag is set and VolSessionId and VolSessionTime
+    * are given to us (same as restarted job).
+    */
+   if (!jcr->rerunning) {
+      jcr->VolSessionId = newVolSessionId();
+      jcr->VolSessionTime = VolSessionTime;
+   }
    bstrncpy(jcr->Job, job, sizeof(jcr->Job));
    unbash_spaces(job_name);
    jcr->job_name = get_pool_memory(PM_NAME);
@@ -148,8 +129,8 @@ bool job_cmd(JCR *jcr)
    unbash_spaces(fileset_name);
    jcr->fileset_name = get_pool_memory(PM_NAME);
    pm_strcpy(jcr->fileset_name, fileset_name);
-   jcr->set_JobType(JobType);
-   jcr->set_JobLevel(level);
+   jcr->setJobType(JobType);
+   jcr->setJobLevel(level);
    jcr->no_attributes = no_attributes;
    jcr->spool_attributes = spool_attributes;
    jcr->spool_data = spool_data;
@@ -182,7 +163,7 @@ bool run_cmd(JCR *jcr)
    struct timespec timeout;
    int errstat = 0;
 
-   Dsm_check(1);
+   Dsm_check(200);
    Dmsg1(200, "Run_cmd: %s\n", jcr->dir_bsock->msg);
 
    /* If we do not need the FD, we are doing a migrate, copy, or virtual
@@ -193,7 +174,7 @@ bool run_cmd(JCR *jcr)
       return false;
    }
 
-   set_jcr_job_status(jcr, JS_WaitFD);          /* wait for FD to connect */
+   jcr->setJobStatus(JS_WaitFD);          /* wait for FD to connect */
    dir_send_job_status(jcr);
 
    gettimeofday(&tv, &tz);
@@ -280,7 +261,7 @@ void handle_filed_connection(BSOCK *fd, char *job_name)
    }
 
    if (!jcr->authenticated) {
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
    }
    pthread_cond_signal(&jcr->job_start_wait); /* wake waiting job */
    free_jcr(jcr);
@@ -441,7 +422,7 @@ void stored_free_jcr(JCR *jcr)
       delete jcr->write_store;
       jcr->write_store = NULL;
    }
-   Dsm_check(1);
+   Dsm_check(200);
 
    if (jcr->JobId != 0)
       write_state_file(me->working_directory, "bacula-sd", get_first_port_host_order(me->sdaddrs));

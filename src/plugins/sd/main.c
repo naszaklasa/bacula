@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
    bEvent event;
    Plugin *plugin;
     
-   plugin_list = New(alist(10, not_owned_by_alist));
+   bplugin_list = New(alist(10, not_owned_by_alist));
 
    ctx.bContext = NULL;
    ctx.pContext = NULL;
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 
    load_plugins((void *)&bfuncs, plugin_dir, plugin_type);
 
-   foreach_alist(plugin, plugin_list) {
+   foreach_alist(plugin, bplugin_list) {
       printf("bacula: plugin_size=%d plugin_version=%d\n", 
               pref(plugin)->size, pref(plugin)->interface);
       printf("License: %s\nAuthor: %s\nDate: %s\nVersion: %s\nDescription: %s\n",

@@ -72,12 +72,13 @@ public:
    int write(QString msg);
 
 public slots:
-   void read_dir(int fd);
+   void notify_read_dir(int fd);
 
 private:
    BSOCK *m_sock;   
    bool m_at_prompt;
    bool m_at_main_prompt;
+   bool m_sent_blank;
    int  m_in_command;
    QSocketNotifier *m_notifier;
    bool m_api_set;

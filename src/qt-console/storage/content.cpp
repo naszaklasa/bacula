@@ -42,7 +42,7 @@
 //       use user selection to add slot= argument
 // 
 
-Content::Content(QString storage, QTreeWidgetItem *parentWidget)
+Content::Content(QString storage, QTreeWidgetItem *parentWidget) : Pages()
 {
    setupUi(this);
    pgInitialize(storage, parentWidget);

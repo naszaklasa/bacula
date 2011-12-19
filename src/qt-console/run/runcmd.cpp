@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2007-2009 Free Software Foundation Europe e.V.
+   Copyright (C) 2007-2010 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -37,7 +37,6 @@
  *
  *   Kern Sibbald, March MMVII
  *
- *  $Id$
  */ 
 
 #include "bat.h"
@@ -46,7 +45,7 @@
 /*
  * Setup all the combo boxes and display the dialog
  */
-runCmdPage::runCmdPage(int conn)
+runCmdPage::runCmdPage(int conn) : Pages()
 {
    m_name = tr("Restore Run");
    pgInitialize();
@@ -84,15 +83,15 @@ void runCmdPage::fill()
    m_console->read(m_conn);
    item = m_console->msg(m_conn);
    items = item.split("\n");
-   label->setText(items[0]);
-   Dmsg1(200, "Title=%s\n", items[0].toUtf8().data());
-   items.removeFirst();               /* remove title */
    foreach(item, items) {
       rx.indexIn(item);
       val = rx.cap(1);
-      Dmsg1(200, "Item=%s\n", item.toUtf8().data());
-      Dmsg1(200, "Value=%s\n", val.toUtf8().data());
+      Dmsg1(100, "Item=%s\n", item.toUtf8().data());
+      Dmsg1(100, "Value=%s\n", val.toUtf8().data());
 
+      if (item.startsWith("Title:")) {
+         run->setText(val);
+      }
       if (item.startsWith("JobName:")) {
          jobCombo->addItem(val);
          continue;

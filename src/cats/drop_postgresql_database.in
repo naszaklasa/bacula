@@ -3,7 +3,7 @@
 # shell script to drop Bacula database(s)
 #
 
-bindir=@SQL_BINDIR@
+bindir=@POSTGRESQL_BINDIR@
 db_name=@db_name@
 
 if $bindir/dropdb ${db_name}

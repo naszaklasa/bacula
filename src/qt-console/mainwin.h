@@ -61,6 +61,7 @@ public:
    void hashRemove(QTreeWidgetItem *, Pages *);
    void setMessageIcon();
    bool getWaitState() {return m_waitState; };
+   bool isClosing() {return m_isClosing; };
    Console *currentConsole();
    QTreeWidgetItem *currentTopItem();
    Pages* getFromHash(QTreeWidgetItem *);
@@ -104,6 +105,9 @@ public:
    bool m_openPlot;
    bool m_openDirStat;
 
+   /* Global */
+   bool m_notify;                     /* global flag to turn on/off all notifiers */
+
 public slots:
    void input_line();
    void about();
@@ -120,7 +124,8 @@ public slots:
    void treeItemChanged(QTreeWidgetItem *, QTreeWidgetItem *);
    void stackItemChanged(int);
    void toggleDockContextWindow();
-   void closePage();
+   void closePage(int item);
+   void closeCurrentPage();
    void setPreferences();
    void readPreferences();
    void waitEnter();

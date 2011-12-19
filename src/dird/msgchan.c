@@ -51,7 +51,7 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static char jobcmd[]     = "JobId=%s job=%s job_name=%s client_name=%s "
    "type=%d level=%d FileSet=%s NoAttr=%d SpoolAttr=%d FileSetMD5=%s "
    "SpoolData=%d WritePartAfterJob=%d PreferMountedVols=%d SpoolSize=%s "
-   "Resched=%d\n";
+   "rerunning=%d VolSessionId=%d VolSessionTime=%d\n";
 static char use_storage[] = "use storage=%s media_type=%s pool_name=%s "
    "pool_type=%s append=%d copy=%d stripe=%d\n";
 static char use_device[] = "use device=%s\n";
@@ -194,7 +194,8 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore, bool send_
              fileset_name.c_str(), !jcr->pool->catalog_files,
              jcr->job->SpoolAttributes, jcr->fileset->MD5, jcr->spool_data, 
              jcr->write_part_after_job, jcr->job->PreferMountedVolumes,
-             edit_int64(jcr->spool_size, ed2));
+             edit_int64(jcr->spool_size, ed2), jcr->rerunning,
+             jcr->VolSessionId, jcr->VolSessionTime);
    Dmsg1(100, ">stored: %s", sd->msg);
    if (bget_dirmsg(sd) > 0) {
        Dmsg1(100, "<stored: %s", sd->msg);
@@ -231,8 +232,8 @@ bool start_storage_daemon_job(JCR *jcr, alist *rstore, alist *wstore, bool send_
    /* Do read side of storage daemon */
    if (ok && rstore) {
       /* For the moment, only migrate, copy and vbackup have rpool */
-      if (jcr->getJobType() == JT_MIGRATE || jcr->getJobType() == JT_COPY ||
-           (jcr->getJobType() == JT_BACKUP && jcr->getJobLevel() == L_VIRTUAL_FULL)) {
+      if (jcr->is_JobType(JT_MIGRATE) || jcr->is_JobType(JT_COPY) ||
+           (jcr->is_JobType(JT_BACKUP) && jcr->is_JobLevel(L_VIRTUAL_FULL))) {
          pm_strcpy(pool_type, jcr->rpool->pool_type);
          pm_strcpy(pool_name, jcr->rpool->name());
       } else {
@@ -353,15 +354,15 @@ bool start_storage_daemon_message_thread(JCR *jcr)
 extern "C" void msg_thread_cleanup(void *arg)
 {
    JCR *jcr = (JCR *)arg;
-   db_end_transaction(jcr, jcr->db);       /* terminate any open transaction */
+   db_end_transaction(jcr, jcr->db);        /* terminate any open transaction */
    jcr->lock();
    jcr->sd_msg_thread_done = true;
    jcr->SD_msg_chan = 0;
    jcr->unlock();
    pthread_cond_broadcast(&jcr->term_wait); /* wakeup any waiting threads */
    Dmsg2(100, "=== End msg_thread. JobId=%d usecnt=%d\n", jcr->JobId, jcr->use_count());
-   free_jcr(jcr);                     /* release jcr */
-   db_thread_cleanup();               /* remove thread specific data */
+   db_thread_cleanup(jcr->db);              /* remove thread specific data */
+   free_jcr(jcr);                           /* release jcr */
 }
 
 /*
@@ -425,7 +426,7 @@ void wait_for_storage_daemon_termination(JCR *jcr)
       P(mutex);
       pthread_cond_timedwait(&jcr->term_wait, &mutex, &timeout);
       V(mutex);
-      if (job_canceled(jcr)) {
+      if (jcr->is_canceled()) {
          if (jcr->SD_msg_chan) {
             jcr->store_bsock->set_timed_out();
             jcr->store_bsock->set_terminated();
@@ -438,7 +439,7 @@ void wait_for_storage_daemon_termination(JCR *jcr)
          break;
       }
    }
-   set_jcr_job_status(jcr, JS_Terminated);
+   jcr->setJobStatus(JS_Terminated);
 }
 
 /*
@@ -461,7 +462,7 @@ bool send_bootstrap_file(JCR *jcr, BSOCK *sd)
       berrno be;
       Jmsg(jcr, M_FATAL, 0, _("Could not open bootstrap file %s: ERR=%s\n"),
          jcr->RestoreBootstrap, be.bstrerror());
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
       return false;
    }
    sd->fsend(bootstrap);

@@ -1,3 +1,4 @@
 #!/bin/sh
-gpg --detach-sign --armor --default-key bacula -o $1.sig $1
+gpgkey=${gpgkey:-bacula}
+gpg --detach-sign --armor --default-key $gpgkey -o $1.sig $1
 gpg --verify $1.sig

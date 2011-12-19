@@ -2,7 +2,7 @@
 #
 # shell script to delete Bacula tables for PostgreSQL
 
-bindir=@SQL_BINDIR@
+bindir=@POSTGRESQL_BINDIR@
 db_name=@db_name@
 
 $bindir/psql -f - -d ${db_name} $* <<END-OF-DATA

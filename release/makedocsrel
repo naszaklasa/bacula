@@ -9,62 +9,86 @@
 #
 # Commit all changes, export the release, make a release tar.
 #
-. ./functions
+# source ./config
+. ./config
 
-cwd=`pwd`
-reltype=release
 tagbase=Release-
 base_dir=docs
 base_pkg=bacula-$base_dir
 remote=$3
 branch=$4
 ver=$5
+fulltag=$tagbase$ver
 
 if [ $# != 5 ] ; then
   echo "Need $0 <bacula-source-directory> <docs-source-directory> <remote-name> <branch> <version>"
-  echo "e.g. $0 bacula-source docs-source bee master 4.0.1"
+  echo "e.g. $0 bacula-source docs-source bee Branch-4.0 4.0.3"
   exit 1
 fi
-
-# Get Bacula branch setup
-cd $1/bacula
-check_return_code "$0: Directory $1/bacula does not exist"
-
+cd $1
+if [ $? -ne 0 ]; then
+   echo "Directory: $1 does not exist"
+   exit 1
+fi
+cd bacula
+if [ $?  -ne 0 ]; then
+   echo "Directory: $1 does not exist"
+   exit 1
+fi
 bcurrent=`git branch | awk '/*/ { print $2 }'`
 git checkout ${branch}
-check_return_code "$0: Checkout of branch ${branch} in $1/bacula failed."
+if [ $? -ne 0 ]; then
+   echo "Checkout of branch ${branch} in $1/bacula failed."
+   exit 1
+fi
 git pull ${remote} ${branch}
 bsrc=`pwd` 
 cd ${cwd}
-
-# Go to docs
-cd $2/$base_dir
-check_return_code "$0: Directory $2/$base_dir does not exist"
-
+cd $2
+if [ $? -ne 0 ]; then
+   echo "Directory: $2 does not exist"
+   exit 1
+fi
+cd $base_dir
+if [ $?  -ne 0 ]; then
+   echo "Directory: $2 does not exist"
+   exit 1
+fi
 current=`git branch | awk '/*/ { print $2 }'`
 src=`pwd` 
 git checkout ${branch}
-check_return_code "$0: Checkout of branch ${branch} in ${src} failed."
-
+if [ $? -ne 0 ]; then
+   echo "Checkout of branch ${branch} in ${src} failed."
+   exit 1
+fi
 git pull ${remote} ${branch}
-fulltag=$tagbase$ver
 echo " "
-echo "$0: Making $reltype for $base_pkg-$ver ..."
+echo "Making $reltype for $base_pkg-$ver ..."
 echo " "
-echo "OK?  ctl-c to stop"
-read a
+#echo "OK?  ctl-c to stop"
+#read a
 
-git tag -d ${fulltag} 2>/dev/null 1>/dev/null
+git tag -d ${fulltag}  2>/dev/null 1>/dev/null
 echo "Creating new tag -- $fulltag"
 git tag $fulltag
-check_return_code "$0: Non-zero return status from Git"
+if [ $? != 0 ] ; then
+  echo " "
+  echo "Non-zero return status from Git"
+  echo " "
+  exit 1
+fi
 echo "Create Tag $fulltag done"
 cd ${cwd}
 rm -rf $base_pkg-$ver $base_pkg-$ver.tar.gz $base_pkg-$ver.tar.gz.sig
 rm -rf $fulltag
 cd ${src}
 git archive --format=tar --prefix=$base_pkg-$ver/ $fulltag | gzip >${cwd}/$base_pkg-$ver.tar.gz
-check_return_code "$0: Non-zero return status from Git"
+if [ $? != 0 ] ; then
+  echo " "
+  echo "Non-zero return status from Git"
+  echo " "
+  exit 1
+fi
 echo "Exported release into ${cwd}/$base_pkg-$ver.tar.gz"
 cd ${cwd}
 tar xfz $base_pkg-$ver.tar.gz 
@@ -85,8 +109,8 @@ ls -l $base_pkg-$ver.tar.*
 if [ a$push != ano ]; then
    cd ${src}
    git push ${remote} ${branch}
-#   git push ${remote} tag ${fulltag}
-   echo "Pushed ${remote}"
+   git push ${remote} tag ${fulltag}
+   echo "Pushed ${remote} and push tag ${fulltag}"
 fi
 
 cd ${src}
@@ -94,4 +118,3 @@ git checkout ${current}
 
 cd ${bsrc}
 git checkout ${bcurrent}
-exit 0

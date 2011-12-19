@@ -66,7 +66,7 @@ bool do_admin(JCR *jcr)
    Jmsg(jcr, M_INFO, 0, _("Start Admin JobId %d, Job=%s\n"),
         jcr->JobId, jcr->Job);
 
-   set_jcr_job_status(jcr, JS_Running);
+   jcr->setJobStatus(JS_Running);
    admin_cleanup(jcr, JS_Terminated);
    return true;
 }
@@ -91,7 +91,7 @@ void admin_cleanup(JCR *jcr, int TermCode)
    if (!db_get_job_record(jcr, jcr->db, &jcr->jr)) {
       Jmsg(jcr, M_WARNING, 0, _("Error getting Job record for Job report: ERR=%s"),
          db_strerror(jcr->db));
-      set_jcr_job_status(jcr, JS_ErrorTerminated);
+      jcr->setJobStatus(JS_ErrorTerminated);
    }
 
    msg_type = M_INFO;                 /* by default INFO message */

@@ -45,7 +45,7 @@
 #include "status/storstat.h"
 #include "util/fmtwidgetitem.h"
 
-Storage::Storage()
+Storage::Storage() : Pages()
 {
    setupUi(this);
    pgInitialize(tr("Storage"));

@@ -164,7 +164,7 @@ int authenticate_director(JCR *jcr, DIRRES *director, CONRES *cons)
 
 bail_out:
    stop_bsock_timer(tid);
-   csprint( _("Director authorization problem.\nMost likely the passwords do not agree.\nIf you are using TLS, there may have been a certificate validation error during the TLS handshake.\nPlease see http://www.bacula.org/en/rel-manual/Bacula_Freque_Asked_Questi.html#SECTION003760000000000000000 for help.\n"));
+   csprint( _("Director authorization problem.\nMost likely the passwords do not agree.\nIf you are using TLS, there may have been a certificate validation error during the TLS handshake.\nPlease see " MANUAL_AUTH_URL " for help.\n"));
    return 0;
 
 }

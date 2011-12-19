@@ -1,5 +1,5 @@
                     Kern's ToDo List
-                     17 July 2009
+                     21 September 2009
 
 Rescue:
 Add to USB key:
@@ -37,6 +37,9 @@ Document:
  
 Priority:
 ================
+24-Jul 09:56 rufus-fd JobId 1: VSS Writer (BackupComplete): "System Writer", State: 0x1 (VSS_WS_STABLE)
+24-Jul 09:56 rufus-fd JobId 1: Warning: VSS Writer (BackupComplete): "ASR Writer", State: 0x8 (VSS_WS_FAILED_AT_PREPARE_SNAPSHOT)
+24-Jul 09:56 rufus-fd JobId 1: VSS Writer (BackupComplete): "WMI Writer", State: 0x1 (VSS_WS_STABLE)
 - Add external command to lookup hostname (eg nmblookup timmy-win7)
 nmblookup gato
 querying gato on 127.255.255.255

@@ -1,7 +1,7 @@
 /*
    Bacula® - The Network Backup Solution
 
-   Copyright (C) 2000-2010 Free Software Foundation Europe e.V.
+   Copyright (C) 2000-2011 Free Software Foundation Europe e.V.
 
    The main author of Bacula is Kern Sibbald, with contributions from
    many others, a complete list can be found in the file AUTHORS.
@@ -35,9 +35,6 @@
  */
 
 #include "bacula.h"
-#ifdef HAVE_LIBZ
-#include <zlib.h>
-#endif
 
 
 static pthread_mutex_t timer_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -547,12 +544,15 @@ bail_out:
 /*
  * Write the state file
  */
+static pthread_mutex_t state_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 void write_state_file(char *dir, const char *progname, int port)
 {
    int sfd;
    bool ok = false;
    POOLMEM *fname = get_pool_memory(PM_FNAME);
-
+   
+   P(state_mutex);                    /* Only one job at a time can call here */
    Mmsg(&fname, "%s/%s.%d.state", dir, progname, port);
    /* Create new state file */
    unlink(fname);
@@ -590,6 +590,7 @@ bail_out:
    if (!ok) {
       unlink(fname);
    }
+   V(state_mutex);
    free_pool_memory(fname);
 }
 
@@ -676,78 +677,57 @@ char *escape_filename(const char *file_path)
    return escaped_path;
 }
 
-/*
- * Deflate or compress and input buffer.  You must supply an
- *  output buffer sufficiently long and the length of the
- *  output buffer. Generally, if the output buffer is the
- *  same size as the input buffer, it should work (at least
- *  for text).
- */
-int Zdeflate(char *in, int in_len, char *out, int &out_len)
+#if HAVE_BACKTRACE && HAVE_GCC
+#include <cxxabi.h>
+#include <execinfo.h>
+void stack_trace()
 {
-#ifdef HAVE_LIBZ
-   z_stream strm;
-   int ret;
+   const size_t max_depth = 100;
+   size_t stack_depth;
+   void *stack_addrs[max_depth];
+   char **stack_strings;
+   
+   stack_depth = backtrace(stack_addrs, max_depth);
+   stack_strings = backtrace_symbols(stack_addrs, stack_depth);
+   
+   for (size_t i = 3; i < stack_depth; i++) {
+      size_t sz = 200; /* just a guess, template names will go much wider */
+      char *function = (char *)actuallymalloc(sz);
+      char *begin = 0, *end = 0;
+      /* find the parentheses and address offset surrounding the mangled name */
+      for (char *j = stack_strings[i]; *j; ++j) {
+         if (*j == '(') {
+            begin = j;
+         } else if (*j == '+') {
+            end = j;
+         }
+      }
+      if (begin && end) {
+         *begin++ = '\0';
+         *end = '\0';
+         /* found our mangled name, now in [begin, end] */
+         
+         int status;
+         char *ret = abi::__cxa_demangle(begin, function, &sz, &status);
+         if (ret) {
+            /* return value may be a realloc() of the input */
+            function = ret;
+         } else {
+            /* demangling failed, just pretend it's a C function with no args */
+            strncpy(function, begin, sz);
+            strncat(function, "()", sz);
+            function[sz-1] = '\0';
+         }
+         Pmsg2(000, "    %s:%s\n", stack_strings[i], function);
 
-   /* allocate deflate state */
-   strm.zalloc = Z_NULL;
-   strm.zfree = Z_NULL;
-   strm.opaque = Z_NULL;
-   ret = deflateInit(&strm, 9);
-   if (ret != Z_OK) {
-      Dmsg0(200, "deflateInit error\n");
-      (void)deflateEnd(&strm);
-      return ret;
+      } else {
+         /* didn't find the mangled name, just print the whole line */
+         Pmsg1(000, "    %s\n", stack_strings[i]);
+      }
+      actuallyfree(function);
    }
-
-   strm.next_in = (Bytef *)in;
-   strm.avail_in = in_len;
-   Dmsg1(200, "In: %d bytes\n", strm.avail_in);
-   strm.avail_out = out_len;
-   strm.next_out = (Bytef *)out;
-   ret = deflate(&strm, Z_FINISH);
-   out_len = out_len - strm.avail_out;
-   Dmsg1(200, "compressed=%d\n", out_len);
-   (void)deflateEnd(&strm);
-   return ret;
-#else
-   return 1;
-#endif
+   actuallyfree(stack_strings); /* malloc()ed by backtrace_symbols */
 }
-
-/* 
- * Inflate or uncompress an input buffer.  You must supply
- *  and output buffer and an output length sufficiently long
- *  or there will be an error.  This uncompresses in one call.
- */
-int Zinflate(char *in, int in_len, char *out, int &out_len)
-{
-#ifdef HAVE_LIBZ
-   z_stream strm;
-   int ret;
-
-   /* allocate deflate state */
-   strm.zalloc = Z_NULL;
-   strm.zfree = Z_NULL;
-   strm.opaque = Z_NULL;
-   strm.next_in = (Bytef *)in;
-   strm.avail_in = in_len;
-   ret = inflateInit(&strm);
-   if (ret != Z_OK) {
-      Dmsg0(200, "inflateInit error\n");
-      (void)inflateEnd(&strm);
-      return ret;
-   }
-
-   Dmsg1(200, "In len: %d bytes\n", strm.avail_in);
-   strm.avail_out = out_len;
-   strm.next_out = (Bytef *)out;
-   ret = inflate(&strm, Z_FINISH);
-   out_len -= strm.avail_out;
-   Dmsg1(200, "Uncompressed=%d\n", out_len);
-   (void)inflateEnd(&strm);
-   return ret;
-#else
-   return 1;
-#endif
-}
+#else /* HAVE_BACKTRACE && HAVE_GCC */
+void stack_trace() {}
+#endif /* HAVE_BACKTRACE && HAVE_GCC */

@@ -228,6 +228,7 @@ static struct s_fs_opt FS_options[] = {
    {"gzip7",    INC_KW_COMPRESSION,  "Z7"},
    {"gzip8",    INC_KW_COMPRESSION,  "Z8"},
    {"gzip9",    INC_KW_COMPRESSION,  "Z9"},
+   {"lzo",      INC_KW_COMPRESSION,  "Zo"},
    {"blowfish", INC_KW_ENCRYPTION,    "B"},   /* ***FIXME*** not implemented */
    {"3des",     INC_KW_ENCRYPTION,    "3"},   /* ***FIXME*** not implemented */
    {"yes",      INC_KW_ONEFS,         "0"},

@@ -121,10 +121,14 @@ get_win32_driveletters(FF_PKT *ff, char* szDrives)
 #if !defined(HAVE_WIN32)
    return 0;
 #endif
+   int nCount;
+   /* Can be already filled by plugin, so check that everything
+    * is on upper case. TODO: can check for dupplicate?
+    */
+   for (nCount = 0; nCount < 27 && szDrives[nCount] ; nCount++) {
+      szDrives[nCount] = toupper(szDrives[nCount]);
+   }
 
-   szDrives[0] = 0; /* make empty */
-   int nCount = 0;
-    
    findFILESET *fileset = ff->fileset;
    if (fileset) {
       int i;
@@ -188,7 +192,8 @@ find_files(JCR *jcr, FF_PKT *ff, int file_save(JCR *jcr, FF_PKT *ff_pkt, bool to
          for (j=0; j<incexe->opts_list.size(); j++) {
             findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
             ff->flags |= fo->flags;
-            ff->GZIP_level = fo->GZIP_level;
+            ff->Compress_algo = fo->Compress_algo;
+            ff->Compress_level = fo->Compress_level;
             ff->strip_path = fo->strip_path;
             ff->fstypes = fo->fstype;
             ff->drivetypes = fo->drivetype;
@@ -296,7 +301,8 @@ static bool accept_file(FF_PKT *ff)
    for (j = 0; j < incexe->opts_list.size(); j++) {
       findFOPTS *fo = (findFOPTS *)incexe->opts_list.get(j);
       ff->flags = fo->flags;
-      ff->GZIP_level = fo->GZIP_level;
+      ff->Compress_algo = fo->Compress_algo;
+      ff->Compress_level = fo->Compress_level;
       ff->fstypes = fo->fstype;
       ff->drivetypes = fo->drivetype;
 
@@ -441,7 +447,6 @@ static int our_callback(JCR *jcr, FF_PKT *ff, bool top_level)
    case FT_INVALIDFS:
    case FT_INVALIDDT:
    case FT_NOOPEN:
-   case FT_REPARSE:
 //    return ff->file_save(jcr, ff, top_level);
 
    /* These items can be filtered */
@@ -455,6 +460,8 @@ static int our_callback(JCR *jcr, FF_PKT *ff, bool top_level)
    case FT_FIFO:
    case FT_SPEC:
    case FT_DIRNOCHG:
+   case FT_REPARSE:
+   case FT_JUNCTION:
       if (accept_file(ff)) {
          return ff->file_save(jcr, ff, top_level);
       } else {

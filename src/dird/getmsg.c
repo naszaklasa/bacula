@@ -94,6 +94,10 @@ static void set_jcr_sd_job_status(JCR *jcr, int SDJobStatus)
       jcr->wait_time = time(NULL);
    }
    jcr->SDJobStatus = SDJobStatus;
+   if (jcr->SDJobStatus == JS_Incomplete) {
+      jcr->setJobStatus(JS_Incomplete);
+   }
+      
 }
 
 /*
