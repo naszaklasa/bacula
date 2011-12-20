@@ -1,0 +1,62 @@
+--- a/src/stored/Makefile.in
++++ b/src/stored/Makefile.in
+@@ -96,12 +96,12 @@
+ bacula-sd: Makefile $(SDOBJS) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	@echo "Linking $@ ..."
+ 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -o $@ $(SDOBJS) $(ZLIBS) \
+-	   -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
++	   -lbacpy -lbaccfg -lbac -ldl -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
+ 	$(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
+ 
+ static-bacula-sd: Makefile $(SDOBJS) ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -o $@ $(SDOBJS) $(ZLIBS) \
+-	   -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
++	   -lbacpy -lbaccfg -lbac -ldl -lm $(PYTHON_LIBS) $(DLIB) $(LIBS) $(WRAPLIBS) \
+ 	$(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
+ 	strip $@
+ 
+@@ -112,7 +112,7 @@
+ 
+ btape: Makefile  $(TAPEOBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -o $@ $(TAPEOBJS) \
+-	   -lbaccfg -lbac $(DLIB) -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	   -lbaccfg -lbac -ldl $(DLIB) -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bls.o:	bls.c
+ 	@echo "Compiling $<"
+@@ -122,7 +122,7 @@
+ bls:	Makefile $(BLSOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	@echo "Compiling $<"
+ 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BLSOBJS) $(DLIB) \
+-	   -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	   -lbacfind -lbaccfg -lbac -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bextract.o: bextract.c
+ 	@echo "Compiling $<"
+@@ -132,7 +132,7 @@
+ bextract: Makefile $(BEXTOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	@echo "Compiling $<"
+ 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../findlib -o $@ $(BEXTOBJS) $(DLIB) $(ZLIBS) $(LZOLIBS) \
+-	   -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	   -lbacfind -lbaccfg -lbac -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bscan.o: bscan.c
+ 	@echo "Compiling $<"
+@@ -142,7 +142,7 @@
+ bscan:	Makefile $(SCNOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) \
+ 	../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../cats/libbaccats$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SCNOBJS) \
+-	   -lbacsql -lbaccats $(DB_LIBS) $(ZLIBS) -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	   -lbacsql -lbaccats $(DB_LIBS) $(ZLIBS) -lbacfind -lbaccfg -lbac -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bcopy.o: bcopy.c
+ 	@echo "Compiling $<"
+@@ -151,7 +151,7 @@
+ 
+ bcopy:	Makefile $(COPYOBJS) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(TTOOL_LDFLAGS) $(LDFLAGS) -L../lib -o $@ $(COPYOBJS) \
+-	   -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	   -lbaccfg -lbac -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+ 	cd $(topdir) \

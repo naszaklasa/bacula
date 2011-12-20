@@ -1,6 +1,6 @@
 --- a/src/cats/make_mysql_tables.in
 +++ b/src/cats/make_mysql_tables.in
-@@ -7,7 +7,6 @@
+@@ -11,7 +11,6 @@
  db_name=${db_name:-@db_name@}
  
  if mysql $* -f <<END-OF-DATA
@@ -10,11 +10,11 @@
  --  BLOBs are identical to TEXT except that BLOB is case
 --- a/src/cats/update_mysql_tables.in
 +++ b/src/cats/update_mysql_tables.in
-@@ -13,7 +13,6 @@
- db_name=@db_name@
+@@ -22,7 +22,6 @@
+ fi
  
  if mysql $* -f <<END-OF-DATA
 -USE ${db_name};
  
- ALTER TABLE JobMedia DROP Stripe ;
- ALTER TABLE JobMedia DROP Copy ;
+ CREATE TABLE RestoreObject (
+    RestoreObjectId INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,

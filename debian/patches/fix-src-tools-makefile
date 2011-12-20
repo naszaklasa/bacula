@@ -1,0 +1,90 @@
+--- a/src/tools/Makefile.in
++++ b/src/tools/Makefile.in
+@@ -58,22 +58,22 @@
+ 	@echo " "
+ 
+ bsmtp: Makefile bsmtp.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)	    
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ bsmtp.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ bsmtp.o -lbac -ldl -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bregtest: Makefile bregtest.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)	   
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ bregtest.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ bregtest.o -lbac -ldl -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ dbcheck: Makefile dbcheck.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) \
+ 	 ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../cats/libbaccats$(DEFAULT_ARCHIVE_TYPE) $(DIRCONFOBJS)
+ 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../cats -o $@ dbcheck.o $(DIRCONFOBJS) \
+-	  -lbaccats -lbacsql -lbaccfg -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  -lbaccats -lbacsql -lbaccfg -lbac -ldl -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ fstype: Makefile fstype.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ fstype.o -lbacfind -lbac -lm \
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ fstype.o -lbacfind -lbac -ldl -lm \
+ 	  $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ drivetype: Makefile drivetype.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ drivetype.o -lbacfind -lbac -lm \
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -L../findlib -o $@ drivetype.o -lbacfind -lbac -ldl -lm \
+ 	  $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ dird_conf.o: ../dird/dird_conf.c
+@@ -88,34 +88,34 @@
+ testfind: Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) \
+ 	  ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) $(FINDOBJS)
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -o $@ $(FINDOBJS) -L. -L../lib -L../findlib \
+-	  $(DLIB) -lbacfind -lbaccfg -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  $(DLIB) -lbacfind -lbaccfg -lbac -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ testls: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) testls.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L. -L../lib -L../findlib -o $@ testls.o \
+-	  $(DLIB) -lbacfind -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  $(DLIB) -lbacfind -lbac -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bregex: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) bregex.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bregex.o \
+-	  $(DLIB) -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  $(DLIB) -lbac -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bwild:	Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) bwild.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L. -L../lib -o $@ bwild.o \
+-	  $(DLIB) -lbac -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  $(DLIB) -lbac -ldl -lm $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bbatch: Makefile ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) \
+ 	../cats/libbaccats$(DEFAULT_ARCHIVE_TYPE) bbatch.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -o $@ bbatch.o \
+-	  -lbaccats -lbacsql -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  -lbaccats -lbacsql -lbac -ldl -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ bvfs_test: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) \
+ 	   ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../cats/libbaccats$(DEFAULT_ARCHIVE_TYPE) bvfs_test.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -L../findlib -o $@ bvfs_test.o  \
+-	  -lbaccats -lbacsql -lbacfind -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  -lbaccats -lbacsql -lbacfind -lbac -ldl -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ ing_test: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) \
+ 	  ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) ../cats/libbaccats$(DEFAULT_ARCHIVE_TYPE) ing_test.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -L../findlib -o $@ ing_test.o  \
+-	  -lbaccats -lbacsql -lbacfind -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  -lbaccats -lbacsql -lbacfind -lbac -ldl -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ cats_test.o: cats_test.c
+ 	echo "Compiling $<"
+@@ -123,7 +123,7 @@
+ 
+ cats_test: Makefile ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) cats_test.o
+ 	$(LIBTOOL_LINK) $(CXX) -g $(LDFLAGS) -L../cats -L. -L../lib -L../findlib -o $@ cats_test.o  \
+-	  -lbaccats -lbacsql -lbacfind -lbac -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	  -lbaccats -lbacsql -lbacfind -lbac -ldl -lm $(DB_LIBS) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ gigaslam.o: gigaslam.c
+ 	$(CXX) $(CFLAGS) -c $<	
+@@ -132,7 +132,7 @@
+ 	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -o $@ gigaslam.o
+ 
+ grow: Makefile grow.o ../lib/libbac$(DEFAULT_ARCHIVE_TYPE)
+-	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ grow.o -lbac -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
++	$(LIBTOOL_LINK) $(CXX) $(LDFLAGS) -L../lib -o $@ grow.o -lbac -ldl -lm $(DLIB) $(LIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS)
+ 
+ Makefile: $(srcdir)/Makefile.in $(topdir)/config.status
+ 	cd $(topdir) \

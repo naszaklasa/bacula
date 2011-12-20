@@ -1,0 +1,19 @@
+--- a/src/dird/Makefile.in
++++ b/src/dird/Makefile.in
+@@ -69,14 +69,14 @@
+ 	    ../cats/libbaccats$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+ 	@echo "Linking $@ ..."
+ 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
+-	      -lbacfind -lbacsql -lbaccats -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
++	      -lbacfind -lbacsql -lbaccats -lbacpy -lbaccfg -lbac -ldl -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
+ 	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
+ 
+ static-bacula-dir:  Makefile $(SVROBJS) ../lib/libbac$(DEFAULT_ARCHIVE_TYPE) ../lib/libbaccfg$(DEFAULT_ARCHIVE_TYPE) \
+ 		   ../lib/libbacpy$(DEFAULT_ARCHIVE_TYPE) ../cats/libbacsql$(DEFAULT_ARCHIVE_TYPE) \
+ 		   ../cats/libbaccats$(DEFAULT_ARCHIVE_TYPE) ../findlib/libbacfind$(DEFAULT_ARCHIVE_TYPE)
+ 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -static -L../lib -L../cats -L../findlib -o $@ $(SVROBJS) \
+-	      -lbacfind -lbacsql -lbaccats -lbacpy -lbaccfg -lbac -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
++	      -lbacfind -lbacsql -lbaccats -lbacpy -lbaccfg -lbac -ldl -lm $(PYTHON_LIBS) $(DLIB) $(DB_LIBS) $(LIBS) \
+ 	      $(WRAPLIBS) $(GETTEXT_LIBS) $(OPENSSL_LIBS) $(CAP_LIBS)
+ 	strip $@
+ 

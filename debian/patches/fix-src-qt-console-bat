@@ -1,0 +1,11 @@
+--- a/src/qt-console/bat.pro.in
++++ b/src/qt-console/bat.pro.in
+@@ -19,7 +19,7 @@
+ TARGET       = bat
+ DEPENDPATH  += .
+ INCLUDEPATH += .. . ./console ./restore ./select
+-LIBS        += -L../lib -lbaccfg -lbac -L../findlib -lbacfind @OPENSSL_LIBS@
++LIBS        += -L../lib -lbaccfg -lbac -L../findlib -lbacfind -ldl @OPENSSL_LIBS@
+ LIBTOOL_LINK = @QMAKE_LIBTOOL@ --silent --tag=CXX --mode=link
+ LIBTOOL_INSTALL = @QMAKE_LIBTOOL@ --silent --mode=install
+ QMAKE_LINK   = $${LIBTOOL_LINK} $(CXX)
