@@ -1,2 +1,2 @@
-usr/lib/bacula/libbaccats-pgsql-5.2.3.so usr/lib/bacula/libbaccats-5.2.3.so 
-usr/lib/bacula/libbaccats-pgsql-5.2.3.so usr/lib/bacula/libbaccats-pgsql.so 
+usr/lib/bacula/libbaccats-postgresql-5.2.3.so usr/lib/bacula/libbaccats-5.2.3.so 
+usr/lib/bacula/libbaccats-postgresql-5.2.3.so usr/lib/bacula/libbaccats-pgsql.so 
