@@ -1,4 +1,10 @@
-remove-use-statement-for-mysql
-fix-binutils-gold
 fix-default-config
+fix-dird-makefile
+fix-filed-makefile
+fix-src-lib-makefile
+fix-src-qt-console-bat
+fix-src-stored-makefile
+fix-src-tools-makefile
+fix-binutils-gold
 fix-sql-bindir
+remove-use-statement-for-mysql
