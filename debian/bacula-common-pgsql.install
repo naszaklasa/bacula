@@ -1,1 +1,2 @@
 usr/lib/bacula/libbacsql* usr/lib/bacula
+usr/lib/bacula/libbaccats-pgsql* usr/lib/bacula
