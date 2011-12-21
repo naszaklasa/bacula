@@ -1,4 +1,4 @@
-debian/tmp-install-sqlite3/etc/bacula/scripts/query.sql etc/bacula/scripts
-debian/tmp-install-sqlite3/usr/sbin/bwild usr/sbin
-debian/tmp-install-sqlite3/usr/sbin/bregex usr/sbin
+etc/bacula/scripts/query.sql etc/bacula/scripts
+usr/sbin/bwild usr/sbin
+usr/sbin/bregex usr/sbin
 debian/additions/postinst-common	usr/share/bacula-director

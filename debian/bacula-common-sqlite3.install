@@ -1,1 +1,1 @@
-debian/tmp-install-sqlite3/usr/lib/bacula/libbacsql* usr/lib/bacula
+usr/lib/bacula/libbacsql* usr/lib/bacula

@@ -1,7 +1,7 @@
-debian/tmp-install-sqlite3/usr/sbin/bacula-sd usr/sbin
-debian/tmp-install-sqlite3/usr/sbin/bls       usr/sbin
-debian/tmp-install-sqlite3/usr/sbin/bextract  usr/sbin
-debian/tmp-install-sqlite3/etc/bacula/scripts/mtx-changer etc/bacula/scripts
-debian/tmp-install-sqlite3/etc/bacula/scripts/mtx-changer.conf etc/bacula/scripts
-debian/tmp-install-sqlite3/etc/bacula/scripts/disk-changer etc/bacula/scripts
-debian/tmp-install-sqlite3/etc/bacula/scripts/dvd-handler etc/bacula/scripts
+usr/sbin/bacula-sd usr/sbin
+usr/sbin/bls       usr/sbin
+usr/sbin/bextract  usr/sbin
+etc/bacula/scripts/mtx-changer etc/bacula/scripts
+etc/bacula/scripts/mtx-changer.conf etc/bacula/scripts
+etc/bacula/scripts/disk-changer etc/bacula/scripts
+etc/bacula/scripts/dvd-handler etc/bacula/scripts
