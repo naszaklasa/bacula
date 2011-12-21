@@ -43,7 +43,8 @@ CONF_ALL	= --enable-smartalloc \
 	--with-mysql \
 	--with-postgresql \
 	--enable-tray-monitor \
-	--enable-bat
+	--enable-bat \
+	--disable-rpath 
 
 
 ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
