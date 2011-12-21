@@ -4,11 +4,9 @@
 
 DEB_HOST_ARCH_OS    ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 
-VARIANTS := pgsql mysql sqlite3
-
 ######################################################################
 
-INSTALLDIR := $(CURDIR)/debian/tmp-install
+#INSTALLDIR := $(CURDIR)/debian/tmp-install
 DBC := usr/share/dbconfig-common/data/
 
 CONF_ALL	= --enable-smartalloc \
@@ -17,9 +15,9 @@ CONF_ALL	= --enable-smartalloc \
 	--with-libiconv-prefix=/usr/include --with-readline=/usr/include/readline \
 	--disable-conio \
 	--with-libintl-prefix=/usr/include --with-x \
-		--docdir=\$${prefix}/share/doc/bacula-common \
-		--htmldir=\$${prefix}/share/doc/bacula-common/html \
-		--libdir=\$${prefix}/lib/bacula \
+	--docdir=\$${prefix}/share/doc/bacula-common \
+	--htmldir=\$${prefix}/share/doc/bacula-common/html \
+	--libdir=\$${prefix}/lib/bacula \
 	--enable-batch-insert \
 	--disable-bwx-console \
 	--without-qwt \
@@ -40,24 +38,17 @@ CONF_ALL	= --enable-smartalloc \
 	--localstatedir=/var/lib/bacula \
 	--with-pid-dir=/var/run/bacula --with-smtp-host=localhost \
 	--with-working-dir=/var/lib/bacula \
-	--with-subsys-dir=/var/lock
+	--with-subsys-dir=/var/lock \
+	--with-sqlite3 \
+	--with-mysql \
+	--with-postgresql \
+	--enable-tray-monitor \
+	--enable-bat
 
-
-CONF_common	= --disable-gnome --disable-bwx-console --disable-tray-monitor \
-			--disable-bat
 
 ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
 CONF_ALL	+= --disable-acl --disable-xattr
 endif
-
-CONF_sqlite3	= --with-sqlite3 --without-mysql --without-postgresql --without-sqlite \
-			--enable-tray-monitor --enable-bat
-CONF_mysql	= --with-mysql --without-sqlite --without-postgresql --without-sqlite3 $(CONF_common)
-CONF_pgsql	= --with-postgresql --without-sqlite --without-mysql --without-sqlite3 $(CONF_common)
-
-LONGNAME_sqlite3	= sqlite3
-LONGNAME_mysql		= mysql
-LONGNAME_pgsql		= postgresql
 
 ###########################################################################
 
@@ -92,7 +83,6 @@ endef
 	dh $@
 
 override_dh_clean:
-	$(RM) -r $(INSTALLDIR)-*
 	[ ! -f autoconf/config.guess.upstream ] || mv autoconf/config.guess.upstream autoconf/config.guess
 	[ ! -f autoconf/config.sub.upstream ] || mv autoconf/config.sub.upstream autoconf/config.sub
 	dh_clean
@@ -139,23 +129,14 @@ override_dh_installdocs:
 #override_dh_installchangelogs:
 #	dh_installchangelogs -Nbacula
 
+override_dh_auto_configure:
+	dh_auto_configure -- $(CONF_ALL)
+
 override_dh_auto_build:
 	# autoreconf doesn't work :-/
 	mv autoconf/config.guess autoconf/config.guess.upstream
 	mv autoconf/config.sub autoconf/config.sub.upstream
 	cp /usr/share/misc/config.guess /usr/share/misc/config.sub autoconf/
-	dh_auto_configure -- $(CONF_ALL) $(CONF_pgsql)
 	dh_auto_build --parallel
-	dh_auto_install -- DESTDIR=$(INSTALLDIR)-pgsql
-	dh_auto_clean
-	dh_auto_configure -- $(CONF_ALL) $(CONF_mysql)
-	dh_auto_build --parallel
-	dh_auto_install -- DESTDIR=$(INSTALLDIR)-mysql
-	dh_auto_clean
-	dh_auto_configure -- $(CONF_ALL) $(CONF_sqlite3)
-	dh_auto_build --parallel
-	dh_auto_install -- DESTDIR=$(INSTALLDIR)-sqlite3
 
-override_dh_auto_configure:
 override_dh_auto_test:
-override_dh_auto_install:
