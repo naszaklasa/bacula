@@ -21,7 +21,7 @@ Package: bacula
 Architecture: all
 Depends: bacula-server, bacula-client, bacula-common, ${misc:Depends}
 Suggests: bacula-doc
-Description: network backup, recovery and verification - meta-package
+Description: network backup, recovery and verification - metapackage
  Bacula is a set of programs to manage backup, recovery and verification
  of computer data across a network of computers of different kinds.
  .
@@ -30,7 +30,7 @@ Description: network backup, recovery and verification - meta-package
  damaged files. Due to its modular design, Bacula is scalable from small
  single computer systems to networks of hundreds of machines.
  .
- This meta-package installs the entire suite of Bacula applications: job
+ This metapackage installs the entire suite of Bacula applications: job
  scheduling, storage control, node connector, and administrative console.
 
 Package: bacula-common
@@ -173,7 +173,7 @@ Package: bacula-client
 Architecture: all
 Depends: bacula-console (>= ${source:Version}), bacula-fd (>= ${source:Version}), ${misc:Depends}
 Recommends: bacula-traymonitor
-Description: network backup, recovery and verification - client meta-package
+Description: network backup, recovery and verification - client metapackage
  Bacula is a set of programs to manage backup, recovery and verification of
  data across a network of computers of different kinds.
  .
@@ -181,7 +181,7 @@ Description: network backup, recovery and verification - client meta-package
  archive operations. It can run as a daemon or as a foreground service which
  administrators can use to schedule backups and recover files.
  .
- The package is a meta-package for client installations (file daemon and
+ The package is a metapackage for client installations (file daemon and
  console only).
 
 Package: bacula-fd
@@ -200,11 +200,11 @@ Package: bacula-server
 Architecture: all
 Depends: bacula-director-sqlite3 (>= ${source:Version})|bacula-director, bacula-sd (>= ${source:Version}), bacula-sd-sqlite3 (>= ${source:Version})|bacula-sd-tools, ${misc:Depends}
 Recommends: bacula-fd
-Description: network backup, recovery and verification - server meta-package
+Description: network backup, recovery and verification - server metapackage
  Bacula is a set of programs to manage backup, recovery and verification of
  data across a network of computers of different kinds.
  .
- This meta-package provides a standard server install, consisting of the
+ This metapackage provides a standard server install, consisting of the
  director and storage daemons.
 
 Package: bacula-sd
